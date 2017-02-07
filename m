@@ -1,49 +1,34 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH] ext4: mark inode dirty after converting inline directory
-Date: Wed, 22 Feb 2017 13:22:46 -0800
-Message-Id: <20170222212246.60931-1-ebiggers3@gmail.com>
-To: linux-ext4@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Andreas Dilger <adilger.kernel@dilger.ca>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
+Return-Path: <tytso@thunk.org>
+Date: Mon, 6 Feb 2017 23:39:39 -0500
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [PATCH] fscrypt: split supp and notsupp declarations into their
+ own headers
+Message-ID: <20170207043938.52b4ta3pt6xyjlel@thunk.org>
+References: <20170124185806.125261-1-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170124185806.125261-1-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Tue, Jan 24, 2017 at 10:58:06AM -0800, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Previously, each filesystem configured without encryption support would
+> define all the public fscrypt functions to their notsupp_* stubs.  This
+> list of #defines had to be updated in every filesystem whenever a change
+> was made to the public fscrypt functions.  To make things more
+> maintainable now that we have three filesystems using fscrypt, split the
+> old header fscrypto.h into several new headers.  fscrypt_supp.h contains
+> the real declarations and is included by filesystems when configured
+> with encryption support, whereas fscrypt_notsupp.h contains the inline
+> stubs and is included by filesystems when configured without encryption
+> support.  fscrypt_common.h contains common declarations needed by both.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-If ext4_convert_inline_data() was called on a directory with inline
-data, the filesystem was left in an inconsistent state (as considered by
-e2fsck) because the file size was not increased to cover the new block.
-This happened because the inode was not marked dirty after i_disksize
-was updated.  Fix this by marking the inode dirty at the end of
-ext4_finish_convert_inline_dir().
+Nice.  Thanks, applied.
 
-This bug was probably not noticed before because most users mark the
-inode dirty afterwards for other reasons.  But if userspace executed
-FS_IOC_SET_ENCRYPTION_POLICY with invalid parameters, as exercised by
-'kvm-xfstests -c adv generic/396', then the inode was never marked dirty
-after updating i_disksize.
-
-Cc: stable@vger.kernel.org
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/inline.c | 5 ++---
- 1 file changed, 2 insertions(+), 3 deletions(-)
-
-diff --git a/fs/ext4/inline.c b/fs/ext4/inline.c
-index 3a1f2822541b..75b29c25313c 100644
---- a/fs/ext4/inline.c
-+++ b/fs/ext4/inline.c
-@@ -1169,10 +1169,9 @@ static int ext4_finish_convert_inline_dir(handle_t *handle,
- 	set_buffer_uptodate(dir_block);
- 	err = ext4_handle_dirty_dirent_node(handle, inode, dir_block);
- 	if (err)
--		goto out;
-+		return err;
- 	set_buffer_verified(dir_block);
--out:
--	return err;
-+	return ext4_mark_inode_dirty(handle, inode);
- }
- 
- static int ext4_convert_inline_data_nolock(handle_t *handle,
--- 
-2.11.0.483.g087da7b7c-goog
+					- Ted
