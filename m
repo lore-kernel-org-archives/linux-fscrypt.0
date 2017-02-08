@@ -1,34 +1,26 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Tue, 21 Feb 2017 17:16:57 -0800
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Why does keyctl_invalidate() only require Search permission?
-Message-ID: <20170222011657.GC101993@gmail.com>
+Return-Path: <tytso@thunk.org>
+Date: Wed, 8 Feb 2017 11:17:33 -0500
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [PATCH v2] fscrypt: constify struct fscrypt_operations
+Message-ID: <20170208161733.3uo4jszw7aer3jop@thunk.org>
+References: <20170123201646.GA3417@gmail.com>
+ <20170207204210.25971-1-ebiggers3@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-To: keyrings@vger.kernel.org
-Cc: David Howells <dhowells@redhat.com>, linux-fscrypt@vger.kernel.org, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>
+In-Reply-To: <20170207204210.25971-1-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi David (or anyone else experienced with Linux keyrings),
+On Tue, Feb 07, 2017 at 12:42:10PM -0800, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> [v2: fix conflict with .key_prefix change]
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> Reviewed-by: Richard Weinberger <richard@nod.at>
 
-I was surprised to discover that the keyctl_invalidate() operation, as added by
-commit fd75815f727f1 ("KEYS: Add invalidation support") only requires Search
-permission.
+Thanks, applied.
 
-AFAICS, this means that any process which has permission to find a key in
-searches can also "invalidate" it, which deletes it from all keyrings
-system-wide.  This cannot even be forbidden by SELinux, which likewise is only
-asked for "Search" permission on the key.
-
-This is very problematic on systems that want to have a privileged process like
-'init' set up a keyring, then give less privileged processes read-only access.
-
-What is the motivation behind only requiring Search permission, and how should
-this be fixed?  Perhaps "invalidation" should require write access to all the
-keyrings the key is in, since it's similar to unlinking it from all of them?  Or
-am I missing something about why it was designed the way it is?
-
-Thanks!
-
-Eric
+					- Ted
