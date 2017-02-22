@@ -1,82 +1,96 @@
-Return-Path: <linux-fsdevel-owner@vger.kernel.org>
-Date: Mon, 20 Feb 2017 15:27:03 -0500
-From: Theodore Ts'o <tytso@mit.edu>
-Subject: [GIT PULL] fscrypt update for 4.11
-Message-ID: <20170220202703.yw4cri7gloicu34j@thunk.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Sender: linux-fsdevel-owner@vger.kernel.org
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: Linux FS Dev Mailing List <linux-fsdevel@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH] fscrypt: eliminate ->prepare_context() operation
+Date: Wed, 22 Feb 2017 13:25:14 -0800
+Message-Id: <20170222212514.61919-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The following changes since commit 42d97eb0ade31e1bc537d086842f5d6e766d9d51:
+From: Eric Biggers <ebiggers@google.com>
 
-  fscrypt: fix renaming and linking special files (2016-12-31 00:47:05 -0500)
+The only use of the ->prepare_context() fscrypt operation was to allow
+ext4 to evict inline data from the inode before ->set_context().
+However, there is no reason why this cannot be done as simply the first
+step in ->set_context(), and in fact it makes more sense to do it that
+way because then the policy modes and flags get validated before any
+real work is done.  Therefore, merge ext4_prepare_context() into
+ext4_set_context(), and remove ->prepare_context().
 
-are available in the git repository at:
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/policy.c             |  7 -------
+ fs/ext4/super.c                | 10 ++++------
+ include/linux/fscrypt_common.h |  1 -
+ 3 files changed, 4 insertions(+), 14 deletions(-)
 
-  git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git tags/fscrypt-for-linus
-
-for you to fetch changes up to 6f69f0ed6136c302976f8e8f859b73d47f0c0c5c:
-
-  fscrypt: constify struct fscrypt_operations (2017-02-08 10:59:57 -0500)
-
-----------------------------------------------------------------
-Various cleanups for the file system encryption feature.
-
-----------------------------------------------------------------
-Colin Ian King (1):
-      fscrypt: remove redundant assignment of res
-
-Eric Biggers (9):
-      fscrypt: use ENOKEY when file cannot be created w/o key
-      fscrypt: use ENOTDIR when setting encryption policy on nondirectory
-      fscrypt: use EEXIST when file already uses different policy
-      fscrypt: remove user-triggerable warning messages
-      fscrypt: pass up error codes from ->get_context()
-      fscrypt: remove unused 'mode' member of fscrypt_ctx
-      fscrypt: make fscrypt_operations.key_prefix a string
-      fscrypt: split supp and notsupp declarations into their own headers
-      fscrypt: constify struct fscrypt_operations
-
-Richard Weinberger (2):
-      fscrypt: factor out bio specific functions
-      fscrypt: properly declare on-stack completion
-
-Theodore Ts'o (2):
-      fscrypt: make test_dummy_encryption require a keyring key
-      ext4: don't allow encrypted operations without keys
-
- MAINTAINERS                     |   2 +-
- fs/crypto/Kconfig               |   1 -
- fs/crypto/Makefile              |   1 +
- fs/crypto/bio.c                 | 145 ++++++++++++++++++++++++++++++
- fs/crypto/crypto.c              | 157 ++++----------------------------
- fs/crypto/fname.c               |   4 +-
- fs/crypto/fscrypt_private.h     |  20 ++++-
- fs/crypto/keyinfo.c             |  45 ++++------
- fs/crypto/policy.c              |  95 +++++++-------------
- fs/ext4/ext4.h                  |  39 ++------
- fs/ext4/ialloc.c                |   2 +-
- fs/ext4/namei.c                 |  16 +++-
- fs/ext4/page-io.c               |   1 -
- fs/ext4/super.c                 |  17 +---
- fs/f2fs/dir.c                   |   5 +-
- fs/f2fs/f2fs.h                  |  39 ++------
- fs/f2fs/namei.c                 |   4 +-
- fs/f2fs/super.c                 |  18 +---
- fs/ubifs/crypto.c               |  13 +--
- fs/ubifs/super.c                |   2 +-
- fs/ubifs/ubifs.h                |  30 ++-----
- include/linux/fscrypt_common.h  | 146 ++++++++++++++++++++++++++++++
- include/linux/fscrypt_notsupp.h | 168 ++++++++++++++++++++++++++++++++++
- include/linux/fscrypt_supp.h    |  66 ++++++++++++++
- include/linux/fscrypto.h        | 345 ----------------------------------------------------------------------
- 25 files changed, 659 insertions(+), 722 deletions(-)
- create mode 100644 fs/crypto/bio.c
- create mode 100644 include/linux/fscrypt_common.h
- create mode 100644 include/linux/fscrypt_notsupp.h
- create mode 100644 include/linux/fscrypt_supp.h
- delete mode 100644 include/linux/fscrypto.h
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index 14b76da71269..4908906d54d5 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -33,17 +33,10 @@ static int create_encryption_context_from_policy(struct inode *inode,
+ 				const struct fscrypt_policy *policy)
+ {
+ 	struct fscrypt_context ctx;
+-	int res;
+ 
+ 	if (!inode->i_sb->s_cop->set_context)
+ 		return -EOPNOTSUPP;
+ 
+-	if (inode->i_sb->s_cop->prepare_context) {
+-		res = inode->i_sb->s_cop->prepare_context(inode);
+-		if (res)
+-			return res;
+-	}
+-
+ 	ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
+ 	memcpy(ctx.master_key_descriptor, policy->master_key_descriptor,
+ 					FS_KEY_DESCRIPTOR_SIZE);
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 2e03a0a88d92..a9448db1cf7e 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1120,17 +1120,16 @@ static int ext4_get_context(struct inode *inode, void *ctx, size_t len)
+ 				 EXT4_XATTR_NAME_ENCRYPTION_CONTEXT, ctx, len);
+ }
+ 
+-static int ext4_prepare_context(struct inode *inode)
+-{
+-	return ext4_convert_inline_data(inode);
+-}
+-
+ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+ 							void *fs_data)
+ {
+ 	handle_t *handle = fs_data;
+ 	int res, res2, retries = 0;
+ 
++	res = ext4_convert_inline_data(inode);
++	if (res)
++		return res;
++
+ 	/*
+ 	 * If a journal handle was specified, then the encryption context is
+ 	 * being set on a new inode via inheritance and is part of a larger
+@@ -1196,7 +1195,6 @@ static unsigned ext4_max_namelen(struct inode *inode)
+ static const struct fscrypt_operations ext4_cryptops = {
+ 	.key_prefix		= "ext4:",
+ 	.get_context		= ext4_get_context,
+-	.prepare_context	= ext4_prepare_context,
+ 	.set_context		= ext4_set_context,
+ 	.dummy_context		= ext4_dummy_context,
+ 	.is_encrypted		= ext4_encrypted_inode,
+diff --git a/include/linux/fscrypt_common.h b/include/linux/fscrypt_common.h
+index 547f81592ba1..10c1abfbac6c 100644
+--- a/include/linux/fscrypt_common.h
++++ b/include/linux/fscrypt_common.h
+@@ -87,7 +87,6 @@ struct fscrypt_operations {
+ 	unsigned int flags;
+ 	const char *key_prefix;
+ 	int (*get_context)(struct inode *, void *, size_t);
+-	int (*prepare_context)(struct inode *);
+ 	int (*set_context)(struct inode *, const void *, size_t, void *);
+ 	int (*dummy_context)(struct inode *);
+ 	bool (*is_encrypted)(struct inode *);
+-- 
+2.11.0.483.g087da7b7c-goog
