@@ -1,46 +1,34 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Wed, 8 Mar 2017 14:18:00 -0800
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: Why does keyctl_invalidate() only require Search permission?
-Message-ID: <20170308221800.GA90803@gmail.com>
-References: <20170222011657.GC101993@gmail.com>
+Return-Path: <linux-ext4-owner@vger.kernel.org>
+Date: Mon, 6 Mar 2017 00:58:27 -0500
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: New kvm-xfstests images uploaded
+Message-ID: <20170306055827.omfoahfisn44l6bc@thunk.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170222011657.GC101993@gmail.com>
-To: keyrings@vger.kernel.org
-Cc: David Howells <dhowells@redhat.com>, linux-fscrypt@vger.kernel.org, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>
+Sender: linux-ext4-owner@vger.kernel.org
+To: linux-fstests@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Feb 21, 2017 at 05:16:57PM -0800, Eric Biggers wrote:
-> Hi David (or anyone else experienced with Linux keyrings),
-> 
-> I was surprised to discover that the keyctl_invalidate() operation, as added by
-> commit fd75815f727f1 ("KEYS: Add invalidation support") only requires Search
-> permission.
-> 
-> AFAICS, this means that any process which has permission to find a key in
-> searches can also "invalidate" it, which deletes it from all keyrings
-> system-wide.  This cannot even be forbidden by SELinux, which likewise is only
-> asked for "Search" permission on the key.
-> 
-> This is very problematic on systems that want to have a privileged process like
-> 'init' set up a keyring, then give less privileged processes read-only access.
-> 
-> What is the motivation behind only requiring Search permission, and how should
-> this be fixed?  Perhaps "invalidation" should require write access to all the
-> keyrings the key is in, since it's similar to unlinking it from all of them?  Or
-> am I missing something about why it was designed the way it is?
-> 
-> Thanks!
-> 
-> Eric
-> 
+I've uploaded a new kvm-xfstests image at:
 
-David, do you have any comments on this?  This seems to be a pretty serious flaw
-because it makes it impossible to give processes read-only access to keys.
+https://www.kernel.org/pub/linux/kernel/people/tytso/kvm-xfstests
 
-What would you say about solving this by making keyctl_invalidate() require both
-Setattr and Search permission?
+This has the latest xfstests, xfsprogs, and e2fsprogs update, as well
+as changes to help debug problems in the journal_lazy patches:
 
-- Eric
+e2fsprogs	v1.43.4-27-g686994eb (Fri, 3 Mar 2017 10:02:14 -0500)
+fio		fio-2.17-1-g54441e7 (Wed, 18 Jan 2017 08:18:28 -0700)
+quota		e0b6335 (Thu, 9 Feb 2017 11:55:45 +0100)
+stress-ng	4ad62e1 (Mon, 27 Feb 2017 14:28:36 -0500)
+xfsprogs	v4.10.0-rc1 (Wed, 15 Feb 2017 21:48:31 -0600)
+xfstests-bld	032c8c3 (Fri, 3 Mar 2017 21:03:05 -0500)
+xfstests	linux-v3.8-1414-g999e3f6 (Sun, 5 Mar 2017 19:11:35 -0500)
+
+Also updated is the armhf_rootfs.tar.gz, and there is also a new
+gce-xfstests test appliance image available as well.
+
+Cheers,
+
+					- Ted
