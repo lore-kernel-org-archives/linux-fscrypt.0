@@ -1,69 +1,46 @@
 Return-Path: <ebiggers3@gmail.com>
+Date: Wed, 8 Mar 2017 14:18:00 -0800
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH] ext4: inherit encryption xattr before other xattrs
-Date: Fri, 17 Feb 2017 15:33:21 -0800
-Message-Id: <20170217233321.108637-1-ebiggers3@gmail.com>
-To: linux-ext4@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, Andreas Dilger <adilger.kernel@dilger.ca>, Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@google.com>
+Subject: Re: Why does keyctl_invalidate() only require Search permission?
+Message-ID: <20170308221800.GA90803@gmail.com>
+References: <20170222011657.GC101993@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170222011657.GC101993@gmail.com>
+To: keyrings@vger.kernel.org
+Cc: David Howells <dhowells@redhat.com>, linux-fscrypt@vger.kernel.org, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Tue, Feb 21, 2017 at 05:16:57PM -0800, Eric Biggers wrote:
+> Hi David (or anyone else experienced with Linux keyrings),
+> 
+> I was surprised to discover that the keyctl_invalidate() operation, as added by
+> commit fd75815f727f1 ("KEYS: Add invalidation support") only requires Search
+> permission.
+> 
+> AFAICS, this means that any process which has permission to find a key in
+> searches can also "invalidate" it, which deletes it from all keyrings
+> system-wide.  This cannot even be forbidden by SELinux, which likewise is only
+> asked for "Search" permission on the key.
+> 
+> This is very problematic on systems that want to have a privileged process like
+> 'init' set up a keyring, then give less privileged processes read-only access.
+> 
+> What is the motivation behind only requiring Search permission, and how should
+> this be fixed?  Perhaps "invalidation" should require write access to all the
+> keyrings the key is in, since it's similar to unlinking it from all of them?  Or
+> am I missing something about why it was designed the way it is?
+> 
+> Thanks!
+> 
+> Eric
+> 
 
-When using both encryption and SELinux (or another feature that requires
-an xattr per file) on a filesystem with 256-byte inodes, each file's
-xattrs usually spill into an external xattr block.  Currently, the
-xattrs are inherited in the order ACL, security, then encryption.
-Therefore, if spillage occurs, the encryption xattr will always end up
-in the external block.  This is not ideal because the encryption xattrs
-contain a nonce, so they will always be unique and will prevent the
-external xattr blocks from being deduplicated.
+David, do you have any comments on this?  This seems to be a pretty serious flaw
+because it makes it impossible to give processes read-only access to keys.
 
-To improve the situation, change the inheritance order to encryption,
-ACL, then security.  This gives the encryption xattr a better chance to
-be stored in-inode, allowing the other xattr(s) to be deduplicated.
+What would you say about solving this by making keyctl_invalidate() require both
+Setattr and Search permission?
 
-Note that it may be better for userspace to format the filesystem with
-512-byte inodes in this case.  However, it's not the default.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/ialloc.c | 17 +++++++++++------
- 1 file changed, 11 insertions(+), 6 deletions(-)
-
-diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-index b14bae2598bc..0304e28c2014 100644
---- a/fs/ext4/ialloc.c
-+++ b/fs/ext4/ialloc.c
-@@ -1096,6 +1096,17 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
- 	if (err)
- 		goto fail_drop;
- 
-+	/*
-+	 * Since the encryption xattr will always be unique, create it first so
-+	 * that it's less likely to end up in an external xattr block and
-+	 * prevent its deduplication.
-+	 */
-+	if (encrypt) {
-+		err = fscrypt_inherit_context(dir, inode, handle, true);
-+		if (err)
-+			goto fail_free_drop;
-+	}
-+
- 	err = ext4_init_acl(handle, inode, dir);
- 	if (err)
- 		goto fail_free_drop;
-@@ -1117,12 +1128,6 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
- 		ei->i_datasync_tid = handle->h_transaction->t_tid;
- 	}
- 
--	if (encrypt) {
--		err = fscrypt_inherit_context(dir, inode, handle, true);
--		if (err)
--			goto fail_free_drop;
--	}
--
- 	err = ext4_mark_inode_dirty(handle, inode);
- 	if (err) {
- 		ext4_std_error(sb, err);
--- 
-2.11.0.483.g087da7b7c-goog
+- Eric
