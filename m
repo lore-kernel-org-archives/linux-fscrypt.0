@@ -1,16 +1,16 @@
-Return-Path: <tytso@thunk.org>
-Date: Wed, 15 Mar 2017 13:12:41 -0400
-From: Theodore Ts'o <tytso@mit.edu>
+Return-Path: <ebiggers3@gmail.com>
+Date: Tue, 14 Mar 2017 16:48:42 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
 Subject: Re: [PATCH] fscrypt: remove broken support for detecting keyring key
  revocation
-Message-ID: <20170315171241.u3l4a3u5z25c6iim@thunk.org>
+Message-ID: <20170314234842.GB127087@gmail.com>
 References: <20170221230711.85222-1-ebiggers3@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20170221230711.85222-1-ebiggers3@gmail.com>
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Anand Jain <anand.jain@oracle.com>, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
+To: linux-fsdevel@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Anand Jain <anand.jain@oracle.com>, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 On Tue, Feb 21, 2017 at 03:07:11PM -0800, Eric Biggers wrote:
@@ -53,6 +53,8 @@ On Tue, Feb 21, 2017 at 03:07:11PM -0800, Eric Biggers wrote:
 > Cc: stable@vger.kernel.org # v4.2+
 > Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Thanks, applied.
 
-						- Ted
+Ted, can this be sent to Linus soon?  This needs to be fixed as it's a security
+vulnerability on some systems.
+
+Eric
