@@ -1,8 +1,8 @@
 Return-Path: <tytso@thunk.org>
-Date: Wed, 15 Mar 2017 14:53:12 -0400
+Date: Wed, 15 Mar 2017 14:41:40 -0400
 From: Theodore Ts'o <tytso@mit.edu>
 Subject: Re: [PATCH] ext4: mark inode dirty after converting inline directory
-Message-ID: <20170315185312.3bd7xc4m37cx3bn2@thunk.org>
+Message-ID: <20170315184139.ranpl7cxfc4edlrz@thunk.org>
 References: <20170222212246.60931-1-ebiggers3@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
@@ -31,6 +31,6 @@ On Wed, Feb 22, 2017 at 01:22:46PM -0800, Eric Biggers wrote:
 > Cc: stable@vger.kernel.org
 > Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Thanks, applied.
+Applied, thanks.
 
 					- Ted
