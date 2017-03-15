@@ -1,34 +1,58 @@
-Return-Path: <linux-ext4-owner@vger.kernel.org>
-Date: Mon, 6 Mar 2017 00:58:27 -0500
+Return-Path: <tytso@thunk.org>
+Date: Wed, 15 Mar 2017 13:12:41 -0400
 From: Theodore Ts'o <tytso@mit.edu>
-Subject: New kvm-xfstests images uploaded
-Message-ID: <20170306055827.omfoahfisn44l6bc@thunk.org>
+Subject: Re: [PATCH] fscrypt: remove broken support for detecting keyring key
+ revocation
+Message-ID: <20170315171241.u3l4a3u5z25c6iim@thunk.org>
+References: <20170221230711.85222-1-ebiggers3@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-Sender: linux-ext4-owner@vger.kernel.org
-To: linux-fstests@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
+In-Reply-To: <20170221230711.85222-1-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Anand Jain <anand.jain@oracle.com>, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-I've uploaded a new kvm-xfstests image at:
+On Tue, Feb 21, 2017 at 03:07:11PM -0800, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Filesystem encryption ostensibly supported revoking a keyring key that
+> had been used to "unlock" encrypted files, causing those files to become
+> "locked" again.  This was, however, buggy for several reasons, the most
+> severe of which was that when key revocation happened to be detected for
+> an inode, its fscrypt_info was immediately freed, even while other
+> threads could be using it for encryption or decryption concurrently.
+> This could be exploited to crash the kernel or worse.
+> 
+> This patch fixes the use-after-free by removing the code which detects
+> the keyring key having been revoked, invalidated, or expired.  Instead,
+> an encrypted inode that is "unlocked" now simply remains unlocked until
+> it is evicted from memory.  Note that this is no worse than the case for
+> block device-level encryption, e.g. dm-crypt, and it still remains
+> possible for a privileged user to evict unused pages, inodes, and
+> dentries by running 'sync; echo 3 > /proc/sys/vm/drop_caches', or by
+> simply unmounting the filesystem.  In fact, one of those actions was
+> already needed anyway for key revocation to work even somewhat sanely.
+> This change is not expected to break any applications.
+> 
+> In the future I'd like to implement a real API for fscrypt key
+> revocation that interacts sanely with ongoing filesystem operations ---
+> waiting for existing operations to complete and blocking new operations,
+> and invalidating and sanitizing key material and plaintext from the VFS
+> caches.  But this is a hard problem, and for now this bug must be fixed.
+> 
+> This bug affected almost all versions of ext4, f2fs, and ubifs
+> encryption, and it was potentially reachable in any kernel configured
+> with encryption support (CONFIG_EXT4_ENCRYPTION=y,
+> CONFIG_EXT4_FS_ENCRYPTION=y, CONFIG_F2FS_FS_ENCRYPTION=y, or
+> CONFIG_UBIFS_FS_ENCRYPTION=y).  Note that older kernels did not use the
+> shared fs/crypto/ code, but due to the potential security implications
+> of this bug, it may still be worthwhile to backport this fix to them.
+> 
+> Fixes: b7236e21d55f ("ext4 crypto: reorganize how we store keys in the inode")
+> Cc: stable@vger.kernel.org # v4.2+
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-https://www.kernel.org/pub/linux/kernel/people/tytso/kvm-xfstests
+Thanks, applied.
 
-This has the latest xfstests, xfsprogs, and e2fsprogs update, as well
-as changes to help debug problems in the journal_lazy patches:
-
-e2fsprogs	v1.43.4-27-g686994eb (Fri, 3 Mar 2017 10:02:14 -0500)
-fio		fio-2.17-1-g54441e7 (Wed, 18 Jan 2017 08:18:28 -0700)
-quota		e0b6335 (Thu, 9 Feb 2017 11:55:45 +0100)
-stress-ng	4ad62e1 (Mon, 27 Feb 2017 14:28:36 -0500)
-xfsprogs	v4.10.0-rc1 (Wed, 15 Feb 2017 21:48:31 -0600)
-xfstests-bld	032c8c3 (Fri, 3 Mar 2017 21:03:05 -0500)
-xfstests	linux-v3.8-1414-g999e3f6 (Sun, 5 Mar 2017 19:11:35 -0500)
-
-Also updated is the armhf_rootfs.tar.gz, and there is also a new
-gce-xfstests test appliance image available as well.
-
-Cheers,
-
-					- Ted
+						- Ted
