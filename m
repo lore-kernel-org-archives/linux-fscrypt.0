@@ -1,106 +1,36 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@google.com>
-Subject: [PATCH] KEYS: make keyctl_invalidate() also require Setattr permission
-Date: Wed, 29 Mar 2017 15:01:01 -0700
-Message-Id: <20170329220101.26067-1-ebiggers@google.com>
-Sender: keyrings-owner@vger.kernel.org
-To: keyrings@vger.kernel.org
-Cc: David Howells <dhowells@redhat.com>, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Theodore Ts'o <tytso@mit.edu>, stable@vger.kernel.org
+Return-Path: <tytso@thunk.org>
+Date: Wed, 15 Mar 2017 14:53:12 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [PATCH] ext4: mark inode dirty after converting inline directory
+Message-ID: <20170315185312.3bd7xc4m37cx3bn2@thunk.org>
+References: <20170222212246.60931-1-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170222212246.60931-1-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-ext4@vger.kernel.org, Andreas Dilger <adilger.kernel@dilger.ca>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Currently, a process only needs Search permission on a key to invalidate
-it with keyctl_invalidate(), which has an effect similar to unlinking it
-from all keyrings.  Unfortunately, this significantly compromises the
-keys permission system because as a result, there is no way to grant
-read-only access to keys without also granting de-facto "delete" access.
-Even worse, processes may invalidate entire _keyrings_, given only
-permission to "search" them.
+On Wed, Feb 22, 2017 at 01:22:46PM -0800, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> If ext4_convert_inline_data() was called on a directory with inline
+> data, the filesystem was left in an inconsistent state (as considered by
+> e2fsck) because the file size was not increased to cover the new block.
+> This happened because the inode was not marked dirty after i_disksize
+> was updated.  Fix this by marking the inode dirty at the end of
+> ext4_finish_convert_inline_dir().
+> 
+> This bug was probably not noticed before because most users mark the
+> inode dirty afterwards for other reasons.  But if userspace executed
+> FS_IOC_SET_ENCRYPTION_POLICY with invalid parameters, as exercised by
+> 'kvm-xfstests -c adv generic/396', then the inode was never marked dirty
+> after updating i_disksize.
+> 
+> Cc: stable@vger.kernel.org
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Key invalidation seems to have intended for cases where keyrings are
-used as caches, and keys can be re-requested at any time by an upcall to
-/sbin/request-key.  However, keyrings are not always used in this way.
-For example, users of ext4, f2fs, and ubifs encryption may wish to grant
-many differently-privileged processes access to the same keys, set up in
-a shared keyring ahead of time.  Permitting everyone to invalidate keys
-in this scenario enables a trivial denial-of-service.  And even users of
-keyrings as "just caches" may wish to restrict invalidation because it
-may require significant work or user interaction to regenerate keys.
+Thanks, applied.
 
-This patch fixes the flaw by requiring both Search and Setattr
-permission to invalidate a key rather than just Search permission.
-Requiring Setattr permission is appropriate because Setattr permission
-also allows revoking (via keyctl_revoke()) or expiring (via
-keyctl_set_timeout()) the key, which also make the key inaccessible
-regardless of how many keyrings it is in.  Continuing to require Search
-permission ensures we do not decrease the level of permissions required.
-
-The problem could also be solved by requiring Write permission, but this
-would arguably be less relevant because Write is supposed to deal with
-the key payload, not the key itself.  A new "Invalidate" permission
-would also work but would require keyctl_setperm() users to start
-including a new permission which never existed before.
-
-This is a user-visible API change.  But we don't seem to have much
-choice, and any breakage will be limited to users who override the
-default key permissions using keyctl_setperm() to remove Setattr
-permission, then later call keyctl_invalidate().  There are probably not
-many such users, possibly even none at all.  In fact, the only user of
-keyctl_invalidate() I could find is nfsidmap, which will be unaffected
-because it relies on the "root is permitted to invalidate certain
-special keys" exception rather than the actual key permissions.
-
-Cc: linux-api@vger.kernel.org
-Cc: linux-cifs@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
-Cc: linux-nfs@vger.kernel.org
-Cc: Gwendal Grignou <gwendal@chromium.org>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: Richard Weinberger <richard@nod.at>
-Cc: Theodore Ts'o <tytso@mit.edu>
-Cc: stable@vger.kernel.org # v3.5+
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/security/keys.txt | 4 ++--
- security/keys/keyctl.c          | 4 ++--
- 2 files changed, 4 insertions(+), 4 deletions(-)
-
-diff --git a/Documentation/security/keys.txt b/Documentation/security/keys.txt
-index 0e03baf271bd..b167f352c043 100644
---- a/Documentation/security/keys.txt
-+++ b/Documentation/security/keys.txt
-@@ -820,8 +820,8 @@ The keyctl syscall functions are:
-      immediately, though they are still visible in /proc/keys until deleted
-      (they're marked with an 'i' flag).
- 
--     A process must have search permission on the key for this function to be
--     successful.
-+     A process must have Search and Setattr permission on the key for this
-+     function to be successful.
- 
-  (*) Compute a Diffie-Hellman shared secret or public key
- 
-diff --git a/security/keys/keyctl.c b/security/keys/keyctl.c
-index 52c34532c785..c58674710251 100644
---- a/security/keys/keyctl.c
-+++ b/security/keys/keyctl.c
-@@ -397,7 +397,7 @@ long keyctl_revoke_key(key_serial_t id)
- /*
-  * Invalidate a key.
-  *
-- * The key must be grant the caller Invalidate permission for this to work.
-+ * The key must grant the caller Search and Setattr permission for this to work.
-  * The key and any links to the key will be automatically garbage collected
-  * immediately.
-  *
-@@ -413,7 +413,7 @@ long keyctl_invalidate_key(key_serial_t id)
- 
- 	kenter("%d", id);
- 
--	key_ref = lookup_user_key(id, 0, KEY_NEED_SEARCH);
-+	key_ref = lookup_user_key(id, 0, KEY_NEED_SEARCH | KEY_NEED_SETATTR);
- 	if (IS_ERR(key_ref)) {
- 		ret = PTR_ERR(key_ref);
- 
--- 
-2.12.2.564.g063fe858b8-goog
-
+					- Ted
