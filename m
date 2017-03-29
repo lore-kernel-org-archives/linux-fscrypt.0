@@ -1,184 +1,106 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH] generic: test encryption key revocation during concurrent I/O
-Date: Tue, 14 Mar 2017 17:25:51 -0700
-Message-Id: <20170315002551.9423-1-ebiggers3@gmail.com>
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>, Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>
+Return-Path: <keyrings-owner@vger.kernel.org>
+From: Eric Biggers <ebiggers@google.com>
+Subject: [PATCH] KEYS: make keyctl_invalidate() also require Setattr permission
+Date: Wed, 29 Mar 2017 15:01:01 -0700
+Message-Id: <20170329220101.26067-1-ebiggers@google.com>
+Sender: keyrings-owner@vger.kernel.org
+To: keyrings@vger.kernel.org
+Cc: David Howells <dhowells@redhat.com>, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Theodore Ts'o <tytso@mit.edu>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Currently, a process only needs Search permission on a key to invalidate
+it with keyctl_invalidate(), which has an effect similar to unlinking it
+from all keyrings.  Unfortunately, this significantly compromises the
+keys permission system because as a result, there is no way to grant
+read-only access to keys without also granting de-facto "delete" access.
+Even worse, processes may invalidate entire _keyrings_, given only
+permission to "search" them.
 
-Add a test which revokes a keyring key while other processes are
-performing I/O on an encrypted file that was "unlocked" using that key.
-This crashes unpatched kernels with filesystem encryption enabled, so
-place it in the "dangerous" group.
+Key invalidation seems to have intended for cases where keyrings are
+used as caches, and keys can be re-requested at any time by an upcall to
+/sbin/request-key.  However, keyrings are not always used in this way.
+For example, users of ext4, f2fs, and ubifs encryption may wish to grant
+many differently-privileged processes access to the same keys, set up in
+a shared keyring ahead of time.  Permitting everyone to invalidate keys
+in this scenario enables a trivial denial-of-service.  And even users of
+keyrings as "just caches" may wish to restrict invalidation because it
+may require significant work or user interaction to regenerate keys.
 
-[The patch to fix this is titled "fscrypt: remove broken support for
-detecting keyring key revocation" but hasn't been merged yet; we may
-want to wait a bit before merging this test.]
+This patch fixes the flaw by requiring both Search and Setattr
+permission to invalidate a key rather than just Search permission.
+Requiring Setattr permission is appropriate because Setattr permission
+also allows revoking (via keyctl_revoke()) or expiring (via
+keyctl_set_timeout()) the key, which also make the key inaccessible
+regardless of how many keyrings it is in.  Continuing to require Search
+permission ensures we do not decrease the level of permissions required.
 
-Cc: Theodore Ts'o <tytso@mit.edu>
+The problem could also be solved by requiring Write permission, but this
+would arguably be less relevant because Write is supposed to deal with
+the key payload, not the key itself.  A new "Invalidate" permission
+would also work but would require keyctl_setperm() users to start
+including a new permission which never existed before.
+
+This is a user-visible API change.  But we don't seem to have much
+choice, and any breakage will be limited to users who override the
+default key permissions using keyctl_setperm() to remove Setattr
+permission, then later call keyctl_invalidate().  There are probably not
+many such users, possibly even none at all.  In fact, the only user of
+keyctl_invalidate() I could find is nfsidmap, which will be unaffected
+because it relies on the "root is permitted to invalidate certain
+special keys" exception rather than the actual key permissions.
+
+Cc: linux-api@vger.kernel.org
+Cc: linux-cifs@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
+Cc: linux-nfs@vger.kernel.org
+Cc: Gwendal Grignou <gwendal@chromium.org>
 Cc: Jaegeuk Kim <jaegeuk@kernel.org>
 Cc: Richard Weinberger <richard@nod.at>
-Cc: Michael Halcrow <mhalcrow@google.com>
+Cc: Theodore Ts'o <tytso@mit.edu>
+Cc: stable@vger.kernel.org # v3.5+
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- common/encrypt        |   8 ++++
- tests/generic/500     | 109 ++++++++++++++++++++++++++++++++++++++++++++++++++
- tests/generic/500.out |   2 +
- tests/generic/group   |   1 +
- 4 files changed, 120 insertions(+)
- create mode 100755 tests/generic/500
- create mode 100644 tests/generic/500.out
+ Documentation/security/keys.txt | 4 ++--
+ security/keys/keyctl.c          | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/common/encrypt b/common/encrypt
-index f09104d1..85f71d5b 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -144,3 +144,11 @@ _unlink_encryption_key()
- 	local keyid=$($KEYCTL_PROG search @s logon $FSTYP:$keydesc)
- 	$KEYCTL_PROG unlink $keyid >>$seqres.full
- }
-+
-+# Revoke an encryption key from the keyring, given its key descriptor.
-+_revoke_encryption_key()
-+{
-+	local keydesc=$1
-+	local keyid=$($KEYCTL_PROG search @s logon $FSTYP:$keydesc)
-+	$KEYCTL_PROG revoke $keyid >>$seqres.full
-+}
-diff --git a/tests/generic/500 b/tests/generic/500
-new file mode 100755
-index 00000000..44c8e81b
---- /dev/null
-+++ b/tests/generic/500
-@@ -0,0 +1,109 @@
-+#! /bin/bash
-+# FS QA Test generic/500
-+#
-+# Test revoking an encryption key during concurrent I/O.  Regression test for
-+# "fscrypt: remove broken support for detecting keyring key revocation".
-+#
-+#-----------------------------------------------------------------------
-+# Copyright (c) 2017 Google, Inc.  All Rights Reserved.
-+#
-+# Author: Eric Biggers <ebiggers@google.com>
-+#
-+# This program is free software; you can redistribute it and/or
-+# modify it under the terms of the GNU General Public License as
-+# published by the Free Software Foundation.
-+#
-+# This program is distributed in the hope that it would be useful,
-+# but WITHOUT ANY WARRANTY; without even the implied warranty of
-+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+# GNU General Public License for more details.
-+#
-+# You should have received a copy of the GNU General Public License
-+# along with this program; if not, write the Free Software Foundation,
-+# Inc.,  51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-+#-----------------------------------------------------------------------
-+#
-+
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/encrypt
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs ext4 f2fs
-+_supported_os Linux
-+_require_scratch_encryption
-+_require_xfs_io_command "set_encpolicy"
-+_require_command "$KEYCTL_PROG" keyctl
-+
-+_new_session_keyring
-+_scratch_mkfs_encrypted &>> $seqres.full
-+_scratch_mount
-+
-+dir=$SCRATCH_MNT/encrypted_dir
-+file=$dir/file
-+
-+# 4 processes, 2 MB per process
-+nproc=4
-+slice=2
-+
-+# Create an encrypted file and sync its data to disk.
-+rm -rf $dir
-+mkdir $dir
-+keydesc=$(_generate_encryption_key)
-+$XFS_IO_PROG -c "set_encpolicy $keydesc" $dir
-+$XFS_IO_PROG -f $file -c "pwrite 0 $((nproc*slice))M" -c "fsync" > /dev/null
-+
-+# Create processes to read from the encrypted file.  Use fadvise to wipe the
-+# pagecache before each read, ensuring that each read actually does decryption.
-+for ((proc = 0; proc < nproc; proc++)); do
-+	(
-+		range="$((proc * slice))M ${slice}M"
-+		while [ ! -e $tmp.done ]; do
-+			$XFS_IO_PROG $file -c "fadvise -d $range" \
-+					   -c "pread $range" &> /dev/null
-+		done
-+	) &
-+done
-+
-+# Wait a second for the readers to start up.
-+sleep 1
-+
-+# Revoke the encryption key.
-+keyid=$(_revoke_encryption_key $keydesc)
-+
-+# Now try to open the file again.  In buggy kernels this caused concurrent
-+# readers to crash with a NULL pointer dereference during decryption.
-+#
-+# Note that the fix also made filenames stop "immediately" reverting to their
-+# ciphertext on key revocation.  Therefore, the name of the file we're opening
-+# here may be in either plaintext or ciphertext depending on the kernel version,
-+# and ciphertext names are unpredictable anyway, so just use 'find' to find it.
-+cat $(find $dir -type f) > /dev/null
-+
-+# Wait for readers to exit
-+touch $tmp.done
-+wait
-+
-+# success, all done
-+echo "Didn't crash!"
-+status=0
-+exit
-diff --git a/tests/generic/500.out b/tests/generic/500.out
-new file mode 100644
-index 00000000..b46461f3
---- /dev/null
-+++ b/tests/generic/500.out
-@@ -0,0 +1,2 @@
-+QA output created by 500
-+Didn't crash!
-diff --git a/tests/generic/group b/tests/generic/group
-index f0096bbc..f2c4755c 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -420,3 +420,4 @@
- 415 auto clone
- 416 auto enospc
- 417 auto quick shutdown log
-+500 auto quick encrypt dangerous
+diff --git a/Documentation/security/keys.txt b/Documentation/security/keys.txt
+index 0e03baf271bd..b167f352c043 100644
+--- a/Documentation/security/keys.txt
++++ b/Documentation/security/keys.txt
+@@ -820,8 +820,8 @@ The keyctl syscall functions are:
+      immediately, though they are still visible in /proc/keys until deleted
+      (they're marked with an 'i' flag).
+ 
+-     A process must have search permission on the key for this function to be
+-     successful.
++     A process must have Search and Setattr permission on the key for this
++     function to be successful.
+ 
+  (*) Compute a Diffie-Hellman shared secret or public key
+ 
+diff --git a/security/keys/keyctl.c b/security/keys/keyctl.c
+index 52c34532c785..c58674710251 100644
+--- a/security/keys/keyctl.c
++++ b/security/keys/keyctl.c
+@@ -397,7 +397,7 @@ long keyctl_revoke_key(key_serial_t id)
+ /*
+  * Invalidate a key.
+  *
+- * The key must be grant the caller Invalidate permission for this to work.
++ * The key must grant the caller Search and Setattr permission for this to work.
+  * The key and any links to the key will be automatically garbage collected
+  * immediately.
+  *
+@@ -413,7 +413,7 @@ long keyctl_invalidate_key(key_serial_t id)
+ 
+ 	kenter("%d", id);
+ 
+-	key_ref = lookup_user_key(id, 0, KEY_NEED_SEARCH);
++	key_ref = lookup_user_key(id, 0, KEY_NEED_SEARCH | KEY_NEED_SETATTR);
+ 	if (IS_ERR(key_ref)) {
+ 		ret = PTR_ERR(key_ref);
+ 
 -- 
-2.12.0.367.g23dc2f6d3c-goog
+2.12.2.564.g063fe858b8-goog
+
