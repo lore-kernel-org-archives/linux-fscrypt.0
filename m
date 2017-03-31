@@ -1,275 +1,149 @@
-Return-Path: <mhalcrow@google.com>
-Return-Path: <mhalcrow@google.com>
-Date: Mon, 13 Mar 2017 20:45:51 -0700
-From: Michael Halcrow <mhalcrow@google.com>
-Subject: Re: [PATCH] fscrypt: remove broken support for detecting keyring key
- revocation
-Message-ID: <20170314034551.GA7522@google.com>
-References: <20170221230711.85222-1-ebiggers3@gmail.com>
-MIME-Version: 1.0
+Return-Path: <david@sigma-star.at>
 Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170221230711.85222-1-ebiggers3@gmail.com>
+Mime-Version: 1.0 (Mac OS X Mail 9.3 \(3124\))
+Subject: Re: [PATCH] fscrypt: Add support for AES-128-CBC
+From: David Gstir <david@sigma-star.at>
+In-Reply-To: <20170331062149.GA32409@zzz>
+Date: Fri, 31 Mar 2017 13:11:59 +0200
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <033D8C72-1F2F-40EF-AD86-A1646EA1A0D6@sigma-star.at>
+References: <20170330173840.72909-1-david@sigma-star.at> <20170331062149.GA32409@zzz>
 To: Eric Biggers <ebiggers3@gmail.com>
-Cc: linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-kernel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Anand Jain <anand.jain@oracle.com>, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
+Cc: tytso@mit.edu, jaegeuk@kernel.org, dwalter@sigma-star.at, Richard Weinberger <richard@sigma-star.at>, herbert@gondor.apana.org.au, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Feb 21, 2017 at 03:07:11PM -0800, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> Filesystem encryption ostensibly supported revoking a keyring key
-> that had been used to "unlock" encrypted files, causing those files
-> to become "locked" again. This was, however, buggy for several
-> reasons, the most severe of which was that when key revocation
-> happened to be detected for an inode, its fscrypt_info was
-> immediately freed, even while other threads could be using it for
-> encryption or decryption concurrently.  This could be exploited to
-> crash the kernel or worse.
+Hi Eric,
 
-Removing the attempt at that functionality seems like the right
-approach.
+thanks for the feedback!
 
-> This patch fixes the use-after-free by removing the code which
-> detects the keyring key having been revoked, invalidated, or
-> expired.  Instead, an encrypted inode that is "unlocked" now simply
-> remains unlocked until it is evicted from memory.  Note that this is
-> no worse than the case for block device-level encryption,
-> e.g. dm-crypt, and it still remains possible for a privileged user
-> to evict unused pages, inodes, and dentries by running 'sync; echo 3
-> > /proc/sys/vm/drop_caches', or by simply unmounting the filesystem.
-> In fact, one of those actions was already needed anyway for key
-> revocation to work even somewhat sanely.  This change is not
-> expected to break any applications.
+> On 31.03.2017, at 08:21, Eric Biggers <ebiggers3@gmail.com> wrote:
+>=20
+> [+Cc linux-fscrypt]
 
-I don't see any problem with this reasoning.
+Oh, I didn't know about that list. I think MAINTAINERS should be updated =
+to reflect that. :)
 
-> In the future I'd like to implement a real API for fscrypt key
-> revocation that interacts sanely with ongoing filesystem operations ---
-> waiting for existing operations to complete and blocking new operations,
-> and invalidating and sanitizing key material and plaintext from the VFS
-> caches.  But this is a hard problem, and for now this bug must be fixed.
-> 
-> This bug affected almost all versions of ext4, f2fs, and ubifs
-> encryption, and it was potentially reachable in any kernel configured
-> with encryption support (CONFIG_EXT4_ENCRYPTION=y,
-> CONFIG_EXT4_FS_ENCRYPTION=y, CONFIG_F2FS_FS_ENCRYPTION=y, or
-> CONFIG_UBIFS_FS_ENCRYPTION=y).  Note that older kernels did not use the
-> shared fs/crypto/ code, but due to the potential security implications
-> of this bug, it may still be worthwhile to backport this fix to them.
+>=20
+> Hi David and Daniel,
+>=20
+> On Thu, Mar 30, 2017 at 07:38:40PM +0200, David Gstir wrote:
+>> From: Daniel Walter <dwalter@sigma-star.at>
+>>=20
+>> fscrypt provides facilities to use different encryption algorithms =
+which are
+>> selectable by userspace when setting the encryption policy. =
+Currently, only
+>> AES-256-XTS for file contents and AES-256-CBC-CTS for file names are =
+implemented.
+>> Which is a clear case of kernel offers the mechanism and userspace =
+selects a
+>> policy. Similar to what dm-crypt and ecryptfs have.
+>>=20
+>> This patch adds support for using AES-128-CBC for file contents and
+>> AES-128-CBC-CTS for file name encryption. To mitigate watermarking =
+attacks, IVs
+>> are generated using the ESSIV algorithm. While AES-CBC is actually =
+slightly
+>> less secure than AES-XTS from a security point of view, there is more
+>> widespread hardware support. Especially low-powered embedded devices =
+crypto
+>> accelerators such as CAAM or CESA support only AES-CBC-128 with an =
+acceptable
+>> speed. Using AES-CBC gives us the acceptable performance while still =
+providing
+>> a moderate level of security for persistent storage.
+>>=20
+>=20
+> Thanks for sending this!  I can't object too much to adding =
+AES-CBC-128 if you
+> find it useful, though of course AES-256-XTS will remain the =
+recommendation for
+> general use. =20
 
-Agreed.
+Yes, AES-256-XTS should definitely be the recommendation and default =
+here!
+AES-128-CBC is a last resort if XTS is not possible for whatever reason.
 
-> Fixes: b7236e21d55f ("ext4 crypto: reorganize how we store keys in the inode")
-> Cc: stable@vger.kernel.org # v4.2+
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Acked-by: Michael Halcrow <mhalcrow@google.com>
+> And I don't suppose AES-256-CBC is an option for you?
 
-> ---
->  fs/crypto/crypto.c          | 10 +--------
->  fs/crypto/fname.c           |  2 +-
->  fs/crypto/fscrypt_private.h |  4 ----
->  fs/crypto/keyinfo.c         | 52 ++++++++-------------------------------------
->  4 files changed, 11 insertions(+), 57 deletions(-)
-> 
-> diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-> index 02a7a9286449..6d6eca394d4d 100644
-> --- a/fs/crypto/crypto.c
-> +++ b/fs/crypto/crypto.c
-> @@ -327,7 +327,6 @@ EXPORT_SYMBOL(fscrypt_decrypt_page);
->  static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
->  {
->  	struct dentry *dir;
-> -	struct fscrypt_info *ci;
->  	int dir_has_key, cached_with_key;
->  
->  	if (flags & LOOKUP_RCU)
-> @@ -339,18 +338,11 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
->  		return 0;
->  	}
->  
-> -	ci = d_inode(dir)->i_crypt_info;
-> -	if (ci && ci->ci_keyring_key &&
-> -	    (ci->ci_keyring_key->flags & ((1 << KEY_FLAG_INVALIDATED) |
-> -					  (1 << KEY_FLAG_REVOKED) |
-> -					  (1 << KEY_FLAG_DEAD))))
-> -		ci = NULL;
-> -
->  	/* this should eventually be an flag in d_flags */
->  	spin_lock(&dentry->d_lock);
->  	cached_with_key = dentry->d_flags & DCACHE_ENCRYPTED_WITH_KEY;
->  	spin_unlock(&dentry->d_lock);
-> -	dir_has_key = (ci != NULL);
-> +	dir_has_key = (d_inode(dir)->i_crypt_info != NULL);
->  	dput(dir);
->  
->  	/*
-> diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-> index 13052b85c393..37b49894c762 100644
-> --- a/fs/crypto/fname.c
-> +++ b/fs/crypto/fname.c
-> @@ -350,7 +350,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
->  		fname->disk_name.len = iname->len;
->  		return 0;
->  	}
-> -	ret = fscrypt_get_crypt_info(dir);
-> +	ret = fscrypt_get_encryption_info(dir);
->  	if (ret && ret != -EOPNOTSUPP)
->  		return ret;
->  
-> diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-> index fdbb8af32eaf..e39696e64494 100644
-> --- a/fs/crypto/fscrypt_private.h
-> +++ b/fs/crypto/fscrypt_private.h
-> @@ -67,7 +67,6 @@ struct fscrypt_info {
->  	u8 ci_filename_mode;
->  	u8 ci_flags;
->  	struct crypto_skcipher *ci_ctfm;
-> -	struct key *ci_keyring_key;
->  	u8 ci_master_key[FS_KEY_DESCRIPTOR_SIZE];
->  };
->  
-> @@ -101,7 +100,4 @@ extern int fscrypt_do_page_crypto(const struct inode *inode,
->  extern struct page *fscrypt_alloc_bounce_page(struct fscrypt_ctx *ctx,
->  					      gfp_t gfp_flags);
->  
-> -/* keyinfo.c */
-> -extern int fscrypt_get_crypt_info(struct inode *);
-> -
->  #endif /* _FSCRYPT_PRIVATE_H */
-> diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-> index 02eb6b9e4438..cb3e82abf034 100644
-> --- a/fs/crypto/keyinfo.c
-> +++ b/fs/crypto/keyinfo.c
-> @@ -95,6 +95,7 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
->  	kfree(description);
->  	if (IS_ERR(keyring_key))
->  		return PTR_ERR(keyring_key);
-> +	down_read(&keyring_key->sem);
->  
->  	if (keyring_key->type != &key_type_logon) {
->  		printk_once(KERN_WARNING
-> @@ -102,11 +103,9 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
->  		res = -ENOKEY;
->  		goto out;
->  	}
-> -	down_read(&keyring_key->sem);
->  	ukp = user_key_payload(keyring_key);
->  	if (ukp->datalen != sizeof(struct fscrypt_key)) {
->  		res = -EINVAL;
-> -		up_read(&keyring_key->sem);
->  		goto out;
->  	}
->  	master_key = (struct fscrypt_key *)ukp->data;
-> @@ -117,17 +116,11 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
->  				"%s: key size incorrect: %d\n",
->  				__func__, master_key->size);
->  		res = -ENOKEY;
-> -		up_read(&keyring_key->sem);
->  		goto out;
->  	}
->  	res = derive_key_aes(ctx->nonce, master_key->raw, raw_key);
-> -	up_read(&keyring_key->sem);
-> -	if (res)
-> -		goto out;
-> -
-> -	crypt_info->ci_keyring_key = keyring_key;
-> -	return 0;
->  out:
-> +	up_read(&keyring_key->sem);
->  	key_put(keyring_key);
->  	return res;
->  }
-> @@ -169,12 +162,11 @@ static void put_crypt_info(struct fscrypt_info *ci)
->  	if (!ci)
->  		return;
->  
-> -	key_put(ci->ci_keyring_key);
->  	crypto_free_skcipher(ci->ci_ctfm);
->  	kmem_cache_free(fscrypt_info_cachep, ci);
->  }
->  
-> -int fscrypt_get_crypt_info(struct inode *inode)
-> +int fscrypt_get_encryption_info(struct inode *inode)
->  {
->  	struct fscrypt_info *crypt_info;
->  	struct fscrypt_context ctx;
-> @@ -184,21 +176,15 @@ int fscrypt_get_crypt_info(struct inode *inode)
->  	u8 *raw_key = NULL;
->  	int res;
->  
-> +	if (inode->i_crypt_info)
-> +		return 0;
-> +
->  	res = fscrypt_initialize(inode->i_sb->s_cop->flags);
->  	if (res)
->  		return res;
->  
->  	if (!inode->i_sb->s_cop->get_context)
->  		return -EOPNOTSUPP;
-> -retry:
-> -	crypt_info = ACCESS_ONCE(inode->i_crypt_info);
-> -	if (crypt_info) {
-> -		if (!crypt_info->ci_keyring_key ||
-> -				key_validate(crypt_info->ci_keyring_key) == 0)
-> -			return 0;
-> -		fscrypt_put_encryption_info(inode, crypt_info);
-> -		goto retry;
-> -	}
->  
->  	res = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
->  	if (res < 0) {
-> @@ -229,7 +215,6 @@ int fscrypt_get_crypt_info(struct inode *inode)
->  	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
->  	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
->  	crypt_info->ci_ctfm = NULL;
-> -	crypt_info->ci_keyring_key = NULL;
->  	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
->  				sizeof(crypt_info->ci_master_key));
->  
-> @@ -273,14 +258,8 @@ int fscrypt_get_crypt_info(struct inode *inode)
->  	if (res)
->  		goto out;
->  
-> -	kzfree(raw_key);
-> -	raw_key = NULL;
-> -	if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) != NULL) {
-> -		put_crypt_info(crypt_info);
-> -		goto retry;
-> -	}
-> -	return 0;
-> -
-> +	if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) == NULL)
-> +		crypt_info = NULL;
->  out:
->  	if (res == -ENOKEY)
->  		res = 0;
-> @@ -288,6 +267,7 @@ int fscrypt_get_crypt_info(struct inode *inode)
->  	kzfree(raw_key);
->  	return res;
->  }
-> +EXPORT_SYMBOL(fscrypt_get_encryption_info);
->  
->  void fscrypt_put_encryption_info(struct inode *inode, struct fscrypt_info *ci)
->  {
-> @@ -305,17 +285,3 @@ void fscrypt_put_encryption_info(struct inode *inode, struct fscrypt_info *ci)
->  	put_crypt_info(ci);
->  }
->  EXPORT_SYMBOL(fscrypt_put_encryption_info);
-> -
-> -int fscrypt_get_encryption_info(struct inode *inode)
-> -{
-> -	struct fscrypt_info *ci = inode->i_crypt_info;
-> -
-> -	if (!ci ||
-> -		(ci->ci_keyring_key &&
-> -		 (ci->ci_keyring_key->flags & ((1 << KEY_FLAG_INVALIDATED) |
-> -					       (1 << KEY_FLAG_REVOKED) |
-> -					       (1 << KEY_FLAG_DEAD)))))
-> -		return fscrypt_get_crypt_info(inode);
-> -	return 0;
-> -}
-> -EXPORT_SYMBOL(fscrypt_get_encryption_info);
-> -- 
-> 2.11.0.483.g087da7b7c-goog
-> 
+We went for AES-128 since it has less rounds and yields better =
+performance. At least on the hardware we looked at, there was quite a =
+difference in speed between AES-128-CBC and AES-256-CBC.
+
+Anyways, AES-256-CBC could be added with just a few lines after this =
+patch. :)
+
+
+> Anyway, more comments below:
+
+[...]
+
+>> +	if (ctx.contents_encryption_mode =3D=3D =
+FS_ENCRYPTION_MODE_AES_128_CBC &&
+>> +	    ctx.filenames_encryption_mode !=3D =
+FS_ENCRYPTION_MODE_AES_128_CTS)
+>> +		return -EINVAL;
+>> +
+>=20
+> I think for now we should only allow the two pairs:
+>=20
+> 	contents_encryption_mode=3DFS_ENCRYPTION_MODE_AES_256_XTS
+> 	filenames_encryption_mode=3DFS_ENCRYPTION_MODE_AES_256_CTS
+>=20
+> and
+>=20
+> 	contents_encryption_mode=3DFS_ENCRYPTION_MODE_AES_128_CBC
+> 	filenames_encryption_mode=3DFS_ENCRYPTION_MODE_AES_128_CTS
+>=20
+> Other combinations like AES-256-XTS paired with AES-128-CTS should be =
+forbidden.
+
+Yes, I agree.
+
+
+> This also needs to be enforced in =
+create_encryption_context_from_policy() so
+> that FS_IOC_SET_ENCRYPTION_POLICY fails with bad combinations.
+>=20
+>> +	if (crypt_info->ci_data_mode =3D=3D =
+FS_ENCRYPTION_MODE_AES_128_CBC) {
+>> +		/* init ESSIV generator */
+>> +		essiv_tfm =3D crypto_alloc_cipher("aes", 0, 0);
+>> +		if (!essiv_tfm || IS_ERR(essiv_tfm)) {
+>> +			res =3D essiv_tfm ? PTR_ERR(essiv_tfm) : =
+-ENOMEM;
+>> +			printk(KERN_DEBUG
+>> +			       "%s: error %d (inode %u) allocating essiv =
+tfm\n",
+>> +			       __func__, res, (unsigned) inode->i_ino);
+>> +			goto out;
+>> +		}
+>> +		/* calc sha of key for essiv generation */
+>> +		memset(sha_ws, 0, sizeof(sha_ws));
+>> +		sha_init(essiv_key);
+>> +		sha_transform(essiv_key, raw_key, sha_ws);
+>> +		res =3D crypto_cipher_setkey(essiv_tfm, (u8 *)essiv_key, =
+keysize);
+>> +		if (res)
+>> +			goto out;
+>> +
+>> +		crypt_info->ci_essiv_tfm =3D essiv_tfm;
+>> +	}
+>=20
+> I think the ESSIV hash should be SHA-256 not SHA-1.  SHA-1 is becoming =
+more and
+> more obsolete these days.  Another issue with SHA-1 is that it only =
+produces a
+> 20 byte hash, which means it couldn't be used if someone ever wanted =
+to add
+> AES-256-CBC as another mode.
+
+Good point! We'll change this to always use sha-256.
+
+
+I'll wait for some more feedback and will provide a v2 which includes =
+all your comments.
+
+Thanks,
+David=
