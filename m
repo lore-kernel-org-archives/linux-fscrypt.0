@@ -1,171 +1,71 @@
 Return-Path: <ebiggers3@gmail.com>
+Date: Tue, 4 Apr 2017 11:44:33 -0700
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 1/4] fscrypt: fix context consistency check when key(s) unavailable
-Date: Fri,  7 Apr 2017 10:58:37 -0700
-Message-Id: <20170407175840.95740-2-ebiggers3@gmail.com>
-In-Reply-To: <20170407175840.95740-1-ebiggers3@gmail.com>
-References: <20170407175840.95740-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Subject: Re: [PATCH] KEYS: make keyctl_invalidate() also require Setattr
+ permission
+Message-ID: <20170404184433.GA46469@gmail.com>
+References: <20170329220101.26067-1-ebiggers@google.com>
+ <10049.1491207629@warthog.procyon.org.uk>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <10049.1491207629@warthog.procyon.org.uk>
+To: David Howells <dhowells@redhat.com>
+Cc: Eric Biggers <ebiggers@google.com>, keyrings@vger.kernel.org, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Theodore Ts'o <tytso@mit.edu>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi David,
 
-To mitigate some types of offline attacks, filesystem encryption is
-designed to enforce that all files in an encrypted directory tree use
-the same encryption policy (i.e. the same encryption context excluding
-the nonce).  However, the fscrypt_has_permitted_context() function which
-enforces this relies on comparing struct fscrypt_info's, which are only
-available when we have the encryption keys.  This can cause two
-incorrect behaviors:
+On Mon, Apr 03, 2017 at 09:20:29AM +0100, David Howells wrote:
+> Eric Biggers <ebiggers@google.com> wrote:
+> 
+> > Currently, a process only needs Search permission on a key to invalidate
+> > it with keyctl_invalidate(), which has an effect similar to unlinking it
+> > from all keyrings.  Unfortunately, this significantly compromises the
+> > keys permission system because as a result, there is no way to grant
+> > read-only access to keys without also granting de-facto "delete" access.
+> > Even worse, processes may invalidate entire _keyrings_, given only
+> > permission to "search" them.
+> > 
+> > Key invalidation seems to have intended for cases where keyrings are
+> > used as caches, and keys can be re-requested at any time by an upcall to
+> > /sbin/request-key.  However, keyrings are not always used in this way.
+> > For example, users of ext4, f2fs, and ubifs encryption may wish to grant
+> > many differently-privileged processes access to the same keys, set up in
+> > a shared keyring ahead of time.  Permitting everyone to invalidate keys
+> > in this scenario enables a trivial denial-of-service.  And even users of
+> > keyrings as "just caches" may wish to restrict invalidation because it
+> > may require significant work or user interaction to regenerate keys.
+> > 
+> > This patch fixes the flaw by requiring both Search and Setattr
+> > permission to invalidate a key rather than just Search permission.
+> > Requiring Setattr permission is appropriate because Setattr permission
+> > also allows revoking (via keyctl_revoke()) or expiring (via
+> > keyctl_set_timeout()) the key, which also make the key inaccessible
+> > regardless of how many keyrings it is in.  Continuing to require Search
+> > permission ensures we do not decrease the level of permissions required.
+> 
+> I'm not sure this is the right method either.  It might be better to allocate
+> one of the remaining two permissions bits for this and/or mark keys that are
+> invalidateable.
+> 
 
-1. If we have the parent directory's key but not the child's key, or
-   vice versa, then fscrypt_has_permitted_context() returned false,
-   causing applications to see EPERM or ENOKEY.  This is incorrect if
-   the encryption contexts are in fact consistent.  Although we'd
-   normally have either both keys or neither key in that case since the
-   master_key_descriptors would be the same, this is not guaranteed
-   because keys can be added or removed from keyrings at any time.
+What do you think is the right solution?  We really need to do _something_.  Can
+you elaborate on what the use case(s) for "invalidate" were intended to be, and
+what users of it are known?
 
-2. If we have neither the parent's key nor the child's key, then
-   fscrypt_has_permitted_context() returned true, causing applications
-   to see no error (or else an error for some other reason).  This is
-   incorrect if the encryption contexts are in fact inconsistent, since
-   in that case we should deny access.
+As I noted in the commit message I was hesistant to create a new Invalidate
+permission because that would require that users of keyctl_setperm +
+keyctl_invalidate to start including a new permission which never existed
+before.  Note that the new permission would be rejected with EINVAL by old
+kernels, so applications might even need to try it both ways.
 
-To fix this, retrieve and compare the fscrypt_contexts if we are unable
-to set up both fscrypt_infos.
+However perhaps no one cares and doing that would be a non-issue.
 
-While this slightly hurts performance when accessing an encrypted
-directory tree without the key, this isn't a case we really need to be
-optimizing for; access *with* the key is much more important.
-Furthermore, the performance hit is barely noticeable given that we are
-already retrieving the fscrypt_context and doing two keyring searches in
-fscrypt_get_encryption_info().  If we ever actually wanted to optimize
-this case we might start by caching the fscrypt_contexts.
+If furthermore the only users of "invalidate" are nfsidmap and the in-kernel
+dns_resolver, then it may be fine to rename the KEY_FLAG_ROOT_CAN_INVAL flag to
+something like "KEY_FLAG_INVALIDATABLE" and making it so only those keys can be
+invalidated.  That would be much better, but I don't know for sure that there
+aren't other users of keyctl_invalidate() (you may know more).
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/policy.c | 87 ++++++++++++++++++++++++++++++++++++++++++------------
- 1 file changed, 68 insertions(+), 19 deletions(-)
-
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 4908906d54d5..fc3660d82a7f 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -143,27 +143,61 @@ int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg)
- }
- EXPORT_SYMBOL(fscrypt_ioctl_get_policy);
- 
-+/**
-+ * fscrypt_has_permitted_context() - is a file's encryption policy permitted
-+ *				     within its directory?
-+ *
-+ * @parent: inode for parent directory
-+ * @child: inode for file being looked up, opened, or linked into @parent
-+ *
-+ * Filesystems must call this before permitting access to an inode in a
-+ * situation where the parent directory is encrypted (either before allowing
-+ * ->lookup() to succeed, or for a regular file before allowing it to be opened)
-+ * and before any operation that involves linking an inode into an encrypted
-+ * directory, including link, rename, and cross rename.  It enforces the
-+ * constraint that within a given encrypted directory tree, all files use the
-+ * same encryption policy.  The pre-access check is needed to detect potentially
-+ * malicious offline violations of this constraint, while the link and rename
-+ * checks are needed to prevent online violations of this constraint.
-+ *
-+ * Return: 1 if permitted, 0 if forbidden.  If forbidden, the caller must fail
-+ * the filesystem operation with EPERM.
-+ */
- int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- {
--	struct fscrypt_info *parent_ci, *child_ci;
-+	const struct fscrypt_operations *cops = parent->i_sb->s_cop;
-+	const struct fscrypt_info *parent_ci, *child_ci;
-+	struct fscrypt_context parent_ctx, child_ctx;
- 	int res;
- 
--	if ((parent == NULL) || (child == NULL)) {
--		printk(KERN_ERR	"parent %p child %p\n", parent, child);
--		BUG_ON(1);
--	}
--
- 	/* No restrictions on file types which are never encrypted */
- 	if (!S_ISREG(child->i_mode) && !S_ISDIR(child->i_mode) &&
- 	    !S_ISLNK(child->i_mode))
- 		return 1;
- 
--	/* no restrictions if the parent directory is not encrypted */
--	if (!parent->i_sb->s_cop->is_encrypted(parent))
-+	/* No restrictions if the parent directory is unencrypted */
-+	if (!cops->is_encrypted(parent))
- 		return 1;
--	/* if the child directory is not encrypted, this is always a problem */
--	if (!parent->i_sb->s_cop->is_encrypted(child))
-+
-+	/* Encrypted directories must not contain unencrypted files */
-+	if (!cops->is_encrypted(child))
- 		return 0;
-+
-+	/*
-+	 * Both parent and child are encrypted, so verify they use the same
-+	 * encryption policy.  Compare the fscrypt_info structs if the keys are
-+	 * available, otherwise retrieve and compare the fscrypt_contexts.
-+	 *
-+	 * Note that the fscrypt_context retrieval will be required frequently
-+	 * when accessing an encrypted directory tree without the key.
-+	 * Performance-wise this is not a big deal because we already don't
-+	 * really optimize for file access without the key (to the extent that
-+	 * such access is even possible), given that any attempted access
-+	 * already causes a fscrypt_context retrieval and keyring search.
-+	 *
-+	 * In any case, if an unexpected error occurs, fall back to "forbidden".
-+	 */
-+
- 	res = fscrypt_get_encryption_info(parent);
- 	if (res)
- 		return 0;
-@@ -172,17 +206,32 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- 		return 0;
- 	parent_ci = parent->i_crypt_info;
- 	child_ci = child->i_crypt_info;
--	if (!parent_ci && !child_ci)
--		return 1;
--	if (!parent_ci || !child_ci)
-+
-+	if (parent_ci && child_ci) {
-+		return memcmp(parent_ci->ci_master_key, child_ci->ci_master_key,
-+			      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
-+			(parent_ci->ci_data_mode == child_ci->ci_data_mode) &&
-+			(parent_ci->ci_filename_mode ==
-+			 child_ci->ci_filename_mode) &&
-+			(parent_ci->ci_flags == child_ci->ci_flags);
-+	}
-+
-+	res = cops->get_context(parent, &parent_ctx, sizeof(parent_ctx));
-+	if (res != sizeof(parent_ctx))
-+		return 0;
-+
-+	res = cops->get_context(child, &child_ctx, sizeof(child_ctx));
-+	if (res != sizeof(child_ctx))
- 		return 0;
- 
--	return (memcmp(parent_ci->ci_master_key,
--			child_ci->ci_master_key,
--			FS_KEY_DESCRIPTOR_SIZE) == 0 &&
--		(parent_ci->ci_data_mode == child_ci->ci_data_mode) &&
--		(parent_ci->ci_filename_mode == child_ci->ci_filename_mode) &&
--		(parent_ci->ci_flags == child_ci->ci_flags));
-+	return memcmp(parent_ctx.master_key_descriptor,
-+		      child_ctx.master_key_descriptor,
-+		      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
-+		(parent_ctx.contents_encryption_mode ==
-+		 child_ctx.contents_encryption_mode) &&
-+		(parent_ctx.filenames_encryption_mode ==
-+		 child_ctx.filenames_encryption_mode) &&
-+		(parent_ctx.flags == child_ctx.flags);
- }
- EXPORT_SYMBOL(fscrypt_has_permitted_context);
- 
--- 
-2.12.2.715.g7642488e1d-goog
+- Eric
