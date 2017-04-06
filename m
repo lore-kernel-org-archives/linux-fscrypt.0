@@ -1,46 +1,87 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 2/4] ext4: remove "nokey" check from ext4_lookup()
-Date: Fri,  7 Apr 2017 10:58:38 -0700
-Message-Id: <20170407175840.95740-3-ebiggers3@gmail.com>
-In-Reply-To: <20170407175840.95740-1-ebiggers3@gmail.com>
-References: <20170407175840.95740-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fsdevel-owner@vger.kernel.org>
+From: Joe Richey <joerichey94@gmail.com>
+Subject: [PATCH v2] fscrypt: Move key structure and constants to uapi
+Date: Thu,  6 Apr 2017 16:14:05 -0700
+Message-Id: <20170406231405.153919-1-joerichey94@gmail.com>
+Sender: linux-fsdevel-owner@vger.kernel.org
+To: linux-fsdevel@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-api@vger.kernel.org, Richard Weinberger <richard.weinberger@gmail.com>, Jaegeuk Kim <jaegeuk@kernel.org>, Theodore Ts'o <tytso@mit.edu>, Michael Halcrow <mhalcrow@google.com>, Joe Richey <joerichey@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+From: Joe Richey <joerichey@google.com>
 
-Now that fscrypt_has_permitted_context() correctly handles the case
-where we have the key for the parent directory but not the child, we
-don't need to try to work around this in ext4_lookup().
+This commit exposes the necessary constants and structures for a
+userspace program to pass filesystem encryption keys into the keyring.
+The fscrypt_key structure was already part of the kernel ABI, this
+change just makes it so programs no longer have to redeclare these
+structures (like e4crypt in e2fsprogs currently does).
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Note that we do not expose the other FS_*_KEY_SIZE constants as they are
+not necessary. Only XTS is supported for contents_encryption_mode, so
+currently FS_MAX_KEY_SIZE bytes of key material must always be passed to
+the kernel.
+
+This commit also removes __packed from fscrypt_key as it does not
+contain any implicit padding and does not refer to an on-disk structure.
+
+Signed-off-by: Joe Richey <joerichey@google.com>
 ---
- fs/ext4/namei.c | 9 +--------
- 1 file changed, 1 insertion(+), 8 deletions(-)
+ fs/crypto/fscrypt_private.h | 11 -----------
+ include/uapi/linux/fs.h     | 13 +++++++++++++
+ 2 files changed, 13 insertions(+), 11 deletions(-)
 
-diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-index 6ad612c576fc..600b37874038 100644
---- a/fs/ext4/namei.c
-+++ b/fs/ext4/namei.c
-@@ -1616,16 +1616,9 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
- 		if (!IS_ERR(inode) && ext4_encrypted_inode(dir) &&
- 		    (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)) &&
- 		    !fscrypt_has_permitted_context(dir, inode)) {
--			int nokey = ext4_encrypted_inode(inode) &&
--				!fscrypt_has_encryption_key(inode);
--			if (nokey) {
--				iput(inode);
--				return ERR_PTR(-ENOKEY);
--			}
- 			ext4_warning(inode->i_sb,
- 				     "Inconsistent encryption contexts: %lu/%lu",
--				     (unsigned long) dir->i_ino,
--				     (unsigned long) inode->i_ino);
-+				     dir->i_ino, inode->i_ino);
- 			iput(inode);
- 			return ERR_PTR(-EPERM);
- 		}
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index e39696e64494..e08ca6d1ca0f 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -22,10 +22,6 @@
+ #define FS_AES_256_CBC_KEY_SIZE		32
+ #define FS_AES_256_CTS_KEY_SIZE		32
+ #define FS_AES_256_XTS_KEY_SIZE		64
+-#define FS_MAX_KEY_SIZE			64
+-
+-#define FS_KEY_DESC_PREFIX		"fscrypt:"
+-#define FS_KEY_DESC_PREFIX_SIZE		8
+ 
+ #define FS_KEY_DERIVATION_NONCE_SIZE		16
+ 
+@@ -51,13 +47,6 @@ struct fscrypt_context {
+ 
+ #define FS_ENCRYPTION_CONTEXT_FORMAT_V1		1
+ 
+-/* This is passed in from userspace into the kernel keyring */
+-struct fscrypt_key {
+-	u32 mode;
+-	u8 raw[FS_MAX_KEY_SIZE];
+-	u32 size;
+-} __packed;
+-
+ /*
+  * A pointer to this structure is stored in the file system's in-core
+  * representation of an inode.
+diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
+index 048a85e9f017..9691fda01245 100644
+--- a/include/uapi/linux/fs.h
++++ b/include/uapi/linux/fs.h
+@@ -285,6 +285,19 @@ struct fscrypt_policy {
+ #define FS_IOC_GET_ENCRYPTION_PWSALT	_IOW('f', 20, __u8[16])
+ #define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
+ 
++/* Parameters for passing an encryption key into the kernel keyring */
++#define FS_KEY_DESC_PREFIX		"fscrypt:"
++#define FS_KEY_DESC_PREFIX_SIZE		8
++
++/* Structure that userspace passes to the kernel keyring */
++#define FS_MAX_KEY_SIZE			64
++
++struct fscrypt_key {
++	__u32 mode;
++	__u8 raw[FS_MAX_KEY_SIZE];
++	__u32 size;
++};
++
+ /*
+  * Inode flags (FS_IOC_GETFLAGS / FS_IOC_SETFLAGS)
+  *
 -- 
 2.12.2.715.g7642488e1d-goog
