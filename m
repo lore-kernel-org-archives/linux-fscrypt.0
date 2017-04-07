@@ -1,54 +1,43 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 4/4] ubifs: check for consistent encryption contexts in ubifs_lookup()
-Date: Fri,  7 Apr 2017 10:58:40 -0700
-Message-Id: <20170407175840.95740-5-ebiggers3@gmail.com>
-In-Reply-To: <20170407175840.95740-1-ebiggers3@gmail.com>
-References: <20170407175840.95740-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fsdevel-owner@vger.kernel.org>
+Subject: Re: [PATCH v2] fscrypt: Remove __packed from fscrypt_policy
+References: <20170406231428.154187-1-joerichey94@gmail.com>
+From: Richard Weinberger <richard@nod.at>
+Message-ID: <d6e1c40b-ad3d-bf8f-5adc-d0d123e7a28e@nod.at>
+Date: Fri, 7 Apr 2017 11:22:58 +0200
+MIME-Version: 1.0
+In-Reply-To: <20170406231428.154187-1-joerichey94@gmail.com>
+Content-Type: text/plain; charset=iso-8859-15
+Content-Transfer-Encoding: 7bit
+Sender: linux-fsdevel-owner@vger.kernel.org
+To: Joe Richey <joerichey94@gmail.com>, linux-fsdevel@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-api@vger.kernel.org, Richard Weinberger <richard.weinberger@gmail.com>, Jaegeuk Kim <jaegeuk@kernel.org>, Theodore Ts'o <tytso@mit.edu>, Michael Halcrow <mhalcrow@google.com>, Joe Richey <joerichey@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Am 07.04.2017 um 01:14 schrieb Joe Richey:
+> From: Joe Richey <joerichey@google.com>
+> 
+> This commit removes __packed from fscrypt_policy as it does not contain
+> any implicit padding and does not refer to an on-disk structure. Even
+> though this is a change to a UAPI file, no users will be broken as the
+> structure doesn't change.
+> 
+> Signed-off-by: Joe Richey <joerichey@google.com>
+> ---
+>  include/uapi/linux/fs.h | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
+> index 048a85e9f017..f6e1c54ac5e2 100644
+> --- a/include/uapi/linux/fs.h
+> +++ b/include/uapi/linux/fs.h
+> @@ -279,7 +279,7 @@ struct fscrypt_policy {
+>  	__u8 filenames_encryption_mode;
+>  	__u8 flags;
+>  	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
+> -} __packed;
+> +};
 
-As ext4 and f2fs do, ubifs should check for consistent encryption
-contexts during ->lookup() in an encrypted directory.  This protects
-certain users of filesystem encryption against certain types of offline
-attacks.
+Both patches are fine, just keep my Reviewed-by. :)
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ubifs/dir.c | 11 +++++++++++
- 1 file changed, 11 insertions(+)
-
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index 30825d882aa9..bbe2b346a94f 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -285,6 +285,15 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
- 		goto out_dent;
- 	}
- 
-+	if (ubifs_crypt_is_encrypted(dir) &&
-+	    (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)) &&
-+	    !fscrypt_has_permitted_context(dir, inode)) {
-+		ubifs_warn(c, "Inconsistent encryption contexts: %lu/%lu",
-+			   dir->i_ino, inode->i_ino);
-+		err = -EPERM;
-+		goto out_inode;
-+	}
-+
- done:
- 	kfree(dent);
- 	fscrypt_free_filename(&nm);
-@@ -295,6 +304,8 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
- 	d_add(dentry, inode);
- 	return NULL;
- 
-+out_inode:
-+	iput(inode);
- out_dent:
- 	kfree(dent);
- out_fname:
--- 
-2.12.2.715.g7642488e1d-goog
+Thanks,
+//richard
