@@ -1,81 +1,161 @@
-Return-Path: <richard.weinberger@gmail.com>
+Return-Path: <linux-ext4-owner@vger.kernel.org>
 MIME-Version: 1.0
-In-Reply-To: <20170418230136.GA96152@gmail.com>
-References: <20170418210642.6039-1-gwendal@chromium.org> <20170418230136.GA96152@gmail.com>
+In-Reply-To: <20170418210642.6039-1-gwendal@chromium.org>
+References: <20170418210642.6039-1-gwendal@chromium.org>
 From: Richard Weinberger <richard.weinberger@gmail.com>
-Date: Wed, 19 Apr 2017 15:40:13 +0200
-Message-ID: <CAFLxGvwtFQW=NL3NrNHx-vWR3wSUtewnBRy1XzMqRNTV8f5vwQ@mail.gmail.com>
+Date: Wed, 19 Apr 2017 15:37:42 +0200
+Message-ID: <CAFLxGvz+kODD+8s9aPw_DeYtf3Gjv0aQBC=UfoBFx3Wn2b=wxQ@mail.gmail.com>
 Subject: Re: [PATCH] fscrypt: use 32 bytes of encrypted filename
 Content-Type: text/plain; charset=UTF-8
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, Eric Biggers <ebiggers@google.com>, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, "linux-mtd@lists.infradead.org" <linux-mtd@lists.infradead.org>, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, kinaba@chromium.org
+Sender: linux-ext4-owner@vger.kernel.org
+To: Gwendal Grignou <gwendal@chromium.org>
+Cc: Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, kinaba@chromium.org, hashimoto@chromium.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Eric,
+On Tue, Apr 18, 2017 at 11:06 PM, Gwendal Grignou <gwendal@chromium.org> wrote:
+> If we use only 16 bytes, due to how CBC works, if the names have the
+> same beginning, their last ciphertext block (16 bytes) may be identical.
+>
+> It happens when two file names share the first 16k bytes and both have
+> length withn 16 * n + 13 and 16 * n + 16.
+>
+> Instead use 32 bytes to build the filenames from encrypted data when
+> directory is scrambled.
+>
+> The drawback is the scrambled filenames change after applying the patch.
+> Consider an encrypted directory with:
+>
+> ls -il
+> total 8
+> 1177380 -rw-r--r--. 1 root root 0 Apr 18 12:10
+> system@framework@boot-telephony-common.art.crc
+> 1177379 -rw-r--r--. 1 root root 0 Apr 18 12:10
+> system@framework@boot-telephony-common.oat.crc
+>
+> Once the key is invalidated, without the patch, ls -li produces:
+> 1177379 -rw-r--r--. 1 root root 0 Apr 18 12:10
+> _a1Psh01n8FdhC8s9pUywlAyFzlz7n6C3
+> 1177379 -rw-r--r--. 1 root root 0 Apr 18 12:10
+> _wJS,0akq14ehC8s9pUywlAyFzlz7n6C3
+>
+> Both files show with the same inode.
+>
+> After the patch, the names are different, but the inode information is
+> now correct:
+> ls -li
+> 1177380 -rw-r--r--. 1 root root 0 Apr 18 12:10
+> _a1Psh01n8FtxbeglW8BqhuthSUxMqh6cFKwz2nSJDXCIXMXOvfqLcD
+> 1177379 -rw-r--r--. 1 root root 0 Apr 18 12:10
+> _wJS,0akq14eJcuQks7f2Vsg,zE0Jdz98FKwz2nSJDXCIXMXOvfqLcD
+>
+> Tested only on ext4.
 
-On Wed, Apr 19, 2017 at 1:01 AM, Eric Biggers <ebiggers3@gmail.com> wrote:
-> +Cc linux-f2fs-devel@lists.sourceforge.net
-> +Cc linux-mtd@lists.infradead.org (for ubifs)
->
-> Hi Gwendal,
->
-> On Tue, Apr 18, 2017 at 02:06:42PM -0700, Gwendal Grignou wrote:
->> If we use only 16 bytes, due to how CBC works, if the names have the
->> same beginning, their last ciphertext block (16 bytes) may be identical.
->>
->> It happens when two file names share the first 16k bytes and both have
->> length withn 16 * n + 13 and 16 * n + 16.
->>
->> Instead use 32 bytes to build the filenames from encrypted data when
->> directory is scrambled.
->
-> Just some background for people who may be unfamiliar with what's going on here
-> (and it may be useful to include some of this in the patch description):
->
-> When accessing files without access to the key, userspace needs to operate on a
-> filename derived from the ciphertext filename, which contains arbitrary bytes.
->
-> But since it's supported to use filenames up to FILENAME_MAX (255 bytes) in
-> length when using encryption, we can't always base-64 encode the filename, since
-> that may make it too long.
->
-> The way this is solved currently is that for filenames with ciphertext length
-> greater than 32 bytes, the filesystem provides an 8-byte "cookie" (split into
-> 'hash' and 'minor_hash'), which along with the last 16 bytes of the filename
-> ciphertext is base-64 encoded into a fixed-length name.  The filesystem returns
-> this on readdir.  Then, when a lookup is done, the filesystem translates this
-> info back into a specific directory entry.
->
-> Since ext4 directory entries do not contain a hash field, ext4 relies only on
-> the 16 bytes of ciphertext to distinguish collisions within a directory block.
-> Unfortunately, this is broken because with the encryption mode used for
-> filenames (CTS), the ciphertext of the last 16-byte block depends only on the
-> plaintext up to and including the *second to last* block, not up to the last
-> block.  This causes long filenames that differ just near the end to collide.
->
-> We could fix this by using the second to last block of ciphertext rather than
-> the last one.  However, using the last *two* blocks as you're proposing should
-> be fine too.
->
-> Of course we could also hash the filename's ciphertext with SHA-256 or
-> something, but it's nice to take advantage of the encryption mode, and not have
-> to do yet another hash.
->
-> I am not too worried about changing the way encrypted filenames are presented,
-> since applications are not supposed to rely on this.  (Though we probably should
-> be doing something to catch broken applications, like encoding the filenames
-> slightly differently after each reboot...)
->
-> Strangely, f2fs and ubifs do not use the bytes from the filename at all when
-> trying to find a specific directory entry in this case.  So this patch doesn't
-> really affect them.  This seems unreliable; perhaps we should introduce a
-> function like "fscrypt_name_matches()" which all the filesystems could call?
-> Can any of the f2fs and ubifs developers explain why they don't look at any
-> bytes from the filename?
+I hope you classify this patch as RFC then.
+We'll have problems when you just develop and test for ext4. :-)
 
-Not sure if I understand you correctly, but for long filenames UBIFS
-does a lookup
-by hash/cookie, not by filename.
+> Signed-off-by: Gwendal Grignou <gwendal@chromium.org>
+> ---
+> Script to reproduce the error:
+>
+> BASE_DIR="~/"
+> DIR="${BASE_DIR}/tmp"
+> # Create directory.
+> mkdir -p "${DIR}"
+> echo foobar | e4crypt add_key "${DIR}"
+> # Fill directory.
+> cd "${DIR}"
+> touch system@framework@boot-telephony-common.oat.crc
+> touch system@framework@boot-telephony-common.art.crc
+> cd ..
+> # Check files have different inode.
+> ls -il "${DIR}"
+> # Invalidate key
+> KEY="$(keyctl show | grep $(e4crypt get_policy "${DIR}" | cut -d ':' -f 2) | sed -ne 's/\(.*\) --al.*/\1/p')"
+> sync
+> keyctl invalidate "${KEY}"
+> echo 3 > /proc/sys/vm/drop_caches
+> # Once the key is invalidated, both files have the same inode:
+> ls -il "${DIR}"
+> if [ $(ls -i1 "${DIR}" | cut -d ' ' -f 1 | uniq | wc -l) -eq 1 ] ; then
+>   echo same inode!
+> fi
+> # if we try to remove the directory, we will get an error
+> # : Structure needs cleaning
+> # rm -rf "${DIR}"
+>
+>  fs/crypto/fname.c | 20 +++++++++++++-------
+>  fs/ext4/namei.c   |  4 ++--
+>  2 files changed, 15 insertions(+), 9 deletions(-)
+>
+> diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+> index 80bb956e14e5..71ddc3eaa62d 100644
+> --- a/fs/crypto/fname.c
+> +++ b/fs/crypto/fname.c
+> @@ -274,7 +274,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
+>                         struct fscrypt_str *oname)
+>  {
+>         const struct qstr qname = FSTR_TO_QSTR(iname);
+> -       char buf[24];
+> +       char buf[FS_FNAME_CRYPTO_DIGEST_SIZE + sizeof(u64)];
+>
+>         if (fscrypt_is_dot_dotdot(&qname)) {
+>                 oname->name[0] = '.';
+> @@ -295,14 +295,19 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
+>                 return 0;
+>         }
+>         if (hash) {
+> -               memcpy(buf, &hash, 4);
+> -               memcpy(buf + 4, &minor_hash, 4);
+> +               memcpy(buf, &hash, sizeof(u32));
+> +               memcpy(buf + 4, &minor_hash, sizeof(u32));
+>         } else {
+>                 memset(buf, 0, 8);
+>         }
+> -       memcpy(buf + 8, iname->name + iname->len - 16, 16);
+> +       memcpy(buf + sizeof(u64),
+> +              iname->name + iname->len - FS_FNAME_CRYPTO_DIGEST_SIZE,
+> +              FS_FNAME_CRYPTO_DIGEST_SIZE);
+>         oname->name[0] = '_';
+> -       oname->len = 1 + digest_encode(buf, 24, oname->name + 1);
+> +       oname->len = 1 + digest_encode(
+> +                       buf,
+> +                       FS_FNAME_CRYPTO_DIGEST_SIZE + sizeof(u64),
+> +                       oname->name + 1);
+>         return 0;
+>  }
+>  EXPORT_SYMBOL(fscrypt_fname_disk_to_usr);
+> @@ -375,10 +380,11 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
+>          */
+>         if (iname->name[0] == '_')
+>                 bigname = 1;
+> -       if ((bigname && (iname->len != 33)) || (!bigname && (iname->len > 43)))
+> +       if ((bigname && iname->len != 55) || (!bigname && (iname->len > 43)))
+>                 return -ENOENT;
+>
+> -       fname->crypto_buf.name = kmalloc(32, GFP_KERNEL);
+> +       fname->crypto_buf.name = kmalloc(
+> +                       FS_FNAME_CRYPTO_DIGEST_SIZE + sizeof(u64), GFP_KERNEL);
+>         if (fname->crypto_buf.name == NULL)
+>                 return -ENOMEM;
+>
+> diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
+> index c4a389a6027b..14b2a2335a32 100644
+> --- a/fs/ext4/namei.c
+> +++ b/fs/ext4/namei.c
+> @@ -1257,8 +1257,8 @@ static inline int ext4_match(struct ext4_filename *fname,
+>                         int ret;
+>                         if (de->name_len < 16)
+>                                 return 0;
+> -                       ret = memcmp(de->name + de->name_len - 16,
+> -                                    fname->crypto_buf.name + 8, 16);
+> +                       ret = memcmp(de->name + de->name_len - 32,
+> +                                    fname->crypto_buf.name + 8, 32);
+>                         return (ret == 0) ? 1 : 0;
+>                 }
+>                 name = fname->crypto_buf.name;
+
+Can the code still be able to read filenames which have been encrypted
+using the "old" scheme?
 
 -- 
 Thanks,
