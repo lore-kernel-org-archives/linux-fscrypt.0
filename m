@@ -1,39 +1,67 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Wed, 19 Apr 2017 10:16:33 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
+Return-Path: <richard@nod.at>
 Subject: Re: [PATCH] fscrypt: use 32 bytes of encrypted filename
-Message-ID: <20170419171633.GB89688@gmail.com>
 References: <20170418210642.6039-1-gwendal@chromium.org>
- <20170418230136.GA96152@gmail.com>
- <CAFLxGvwtFQW=NL3NrNHx-vWR3wSUtewnBRy1XzMqRNTV8f5vwQ@mail.gmail.com>
+ <CAFLxGvz+kODD+8s9aPw_DeYtf3Gjv0aQBC=UfoBFx3Wn2b=wxQ@mail.gmail.com>
+ <20170419170940.GA89688@gmail.com>
+From: Richard Weinberger <richard@nod.at>
+Message-ID: <bdda413c-1452-9e55-53ff-34eb17ef4c3b@nod.at>
+Date: Wed, 19 Apr 2017 19:12:01 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAFLxGvwtFQW=NL3NrNHx-vWR3wSUtewnBRy1XzMqRNTV8f5vwQ@mail.gmail.com>
-To: Richard Weinberger <richard.weinberger@gmail.com>
-Cc: Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, Eric Biggers <ebiggers@google.com>, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, "linux-mtd@lists.infradead.org" <linux-mtd@lists.infradead.org>, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, kinaba@chromium.org
+In-Reply-To: <20170419170940.GA89688@gmail.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: Gwendal Grignou <gwendal@chromium.org>, Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, kinaba@chromium.org, hashimoto@chromium.org, David Oberhollenzer <david.oberhollenzer@sigma-star.at>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, Apr 19, 2017 at 03:40:13PM +0200, Richard Weinberger wrote:
-> > Strangely, f2fs and ubifs do not use the bytes from the filename at all when
-> > trying to find a specific directory entry in this case.  So this patch doesn't
-> > really affect them.  This seems unreliable; perhaps we should introduce a
-> > function like "fscrypt_name_matches()" which all the filesystems could call?
-> > Can any of the f2fs and ubifs developers explain why they don't look at any
-> > bytes from the filename?
-> 
-> Not sure if I understand you correctly, but for long filenames UBIFS
-> does a lookup
-> by hash/cookie, not by filename.
-> 
+Eric,
 
-Well, like I said to Jaegeuk for F2FS, that's what the code does, but _why_?
-Like F2FS, it's probably not the case that the hash is sufficient to reliably
-identify a directory entry.  Granted, UBIFS does it a lot better than F2FS since
-UBIFS uses two 32-bit hashes rather than just one, but it seems the second hash
-may be neither necessary nor sufficient to identify a specific directory entry,
-and it should be looking at the bytes of ciphertext from the filename instead,
-like what ext4 does.  (Provided that is fixed to account for how CTS mode
-encryption works.)
+Am 19.04.2017 um 19:09 schrieb Eric Biggers:
+> Hi Richard,
+> 
+> On Wed, Apr 19, 2017 at 03:37:42PM +0200, Richard Weinberger wrote:
+>>>
+>>> Tested only on ext4.
+>>
+>> I hope you classify this patch as RFC then.
+>> We'll have problems when you just develop and test for ext4. :-)
+>>
+> 
+> It's a little difficult for people to test stuff on UBIFS without a turn-key
+> solution like kvm-xfstests where they can just run something like
+> 'kvm-xfstests -c ext4,f2fs,ubifs -g encrypt'.
+> 
+> I did post patches to add UBIFS support to xfstests and kvm-xfstests a few
+> months ago; maybe you're interested in taking them over and working to get them
+> merged?
 
-- Eric
+I assigned this talk already to David.
+He can tell what the status is.
+
+>>> diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
+>>> index c4a389a6027b..14b2a2335a32 100644
+>>> --- a/fs/ext4/namei.c
+>>> +++ b/fs/ext4/namei.c
+>>> @@ -1257,8 +1257,8 @@ static inline int ext4_match(struct ext4_filename *fname,
+>>>                         int ret;
+>>>                         if (de->name_len < 16)
+>>>                                 return 0;
+>>> -                       ret = memcmp(de->name + de->name_len - 16,
+>>> -                                    fname->crypto_buf.name + 8, 16);
+>>> +                       ret = memcmp(de->name + de->name_len - 32,
+>>> +                                    fname->crypto_buf.name + 8, 32);
+>>>                         return (ret == 0) ? 1 : 0;
+>>>                 }
+>>>                 name = fname->crypto_buf.name;
+>>
+>> Can the code still be able to read filenames which have been encrypted
+>> using the "old" scheme?
+>>
+> 
+> The patch only changes the presentation of long encrypted filenames when
+> accessed without the key.  It doesn't change how filenames are encrypted.
+
+Thanks for pointing this out.
+
+Thanks,
+//richard
