@@ -1,74 +1,138 @@
-Return-Path: <david.oberhollenzer@sigma-star.at>
-Subject: Re: [PATCH] fscrypt: use 32 bytes of encrypted filename
+Return-Path: <jaegeuk@kernel.org>
+Date: Wed, 19 Apr 2017 13:44:48 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [f2fs-dev] [PATCH] fscrypt: use 32 bytes of encrypted filename
+Message-ID: <20170419204448.GA1021@jaegeuk.local>
 References: <20170418210642.6039-1-gwendal@chromium.org>
- <CAFLxGvz+kODD+8s9aPw_DeYtf3Gjv0aQBC=UfoBFx3Wn2b=wxQ@mail.gmail.com>
- <20170419170940.GA89688@gmail.com>
- <bdda413c-1452-9e55-53ff-34eb17ef4c3b@nod.at>
-From: David Oberhollenzer <david.oberhollenzer@sigma-star.at>
-Message-ID: <39a844e5-5718-3a63-1f8d-9f6d3568ca51@sigma-star.at>
-Date: Thu, 20 Apr 2017 13:24:04 +0200
+ <20170418230136.GA96152@gmail.com>
+ <20170419001005.GA143911@gmail.com>
+ <20170419014209.GB12215@jaegeuk.local>
+ <20170419040138.GA563@zzz>
 MIME-Version: 1.0
-In-Reply-To: <bdda413c-1452-9e55-53ff-34eb17ef4c3b@nod.at>
-Content-Type: text/plain; charset=windows-1252
-Content-Transfer-Encoding: 7bit
-To: Richard Weinberger <richard@nod.at>, Eric Biggers <ebiggers3@gmail.com>
-Cc: Gwendal Grignou <gwendal@chromium.org>, Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, kinaba@chromium.org, hashimoto@chromium.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170419040138.GA563@zzz>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, ebiggers@google.com, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, linux-mtd@lists.infradead.org, tytso@mit.edu, linux-ext4@vger.kernel.org, kinaba@chromium.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On 04/19/2017 07:12 PM, Richard Weinberger wrote:
-> Eric,
+On 04/18, Eric Biggers wrote:
+> On Tue, Apr 18, 2017 at 06:42:09PM -0700, Jaegeuk Kim wrote:
+> > Hi Eric,
+> > 
+> > On 04/18, Eric Biggers wrote:
+> > > On Tue, Apr 18, 2017 at 04:01:36PM -0700, Eric Biggers wrote:
+> > > > 
+> > > > Strangely, f2fs and ubifs do not use the bytes from the filename at all when
+> > > > trying to find a specific directory entry in this case.  So this patch doesn't
+> > > > really affect them.  This seems unreliable; perhaps we should introduce a
+> > > > function like "fscrypt_name_matches()" which all the filesystems could call?
+> > > > Can any of the f2fs and ubifs developers explain why they don't look at any
+> > > > bytes from the filename?
+> > > > 
+> > 
+> > The fscrypt_setup_filename sets fname->hash in the bigname case, but doesn't
+> > give fname->disk_name. If it's not such the bigname case, we check its name
+> > since fname->hash is zero.
+> > 
 > 
-> Am 19.04.2017 um 19:09 schrieb Eric Biggers:
->> Hi Richard,
->>
->> On Wed, Apr 19, 2017 at 03:37:42PM +0200, Richard Weinberger wrote:
->>>>
->>>> Tested only on ext4.
->>>
->>> I hope you classify this patch as RFC then.
->>> We'll have problems when you just develop and test for ext4. :-)
->>>
->>
->> It's a little difficult for people to test stuff on UBIFS without a turn-key
->> solution like kvm-xfstests where they can just run something like
->> 'kvm-xfstests -c ext4,f2fs,ubifs -g encrypt'.
->>
->> I did post patches to add UBIFS support to xfstests and kvm-xfstests a few
->> months ago; maybe you're interested in taking them over and working to get them
->> merged?
+> Yes, that's what it does now.  The question is, in the "bigname" case why
+> doesn't f2fs check the 16 bytes of ciphertext in fname->crypto_buf too?  f2fs
+> doesn't even use 'minor_hash'; it can't possibly be the case that there are
+> never any collisions of a 32-bit hash in a directory, can it?
 > 
-> I assigned this talk already to David.
-> He can tell what the status is.
+> I actually tested it, and it definitely happens if you put a lot of files in an
+> encrypted directory on f2fs.  An example with 100000 files:
 > 
-What I have right now is mostly similar to the previous patch for
-xfstests-dev that was submitted to the mailing list. I haven't looked
-into the xfstests-bld patch yet.
+> # seq -f "edir/abcdefghijklmnopqrstuvwxyz012345%.0f" 100000 | xargs touch
+> # find edir -type f | xargs stat -c %i | sort | uniq | wc -l
+> 100000
+> # sync
+> # echo 3 > /proc/sys/vm/drop_caches
+> # keyctl new_session
+> # find edir -type f | xargs stat -c %i | sort | uniq | wc -l
+> 99999
+> 
+> So when I tried accessing the encrypted directory without the key, two dentries
+> showed the same inode, due to a hash collision.
 
+Thank you for sharing more details. I could reproduce this issue and reach out
+to what you mentioned. In order to resolve this, I wrote a patch for f2fs first
+to act like ext4 for easy backports. Then, I expect a global fscrypt function
+is easily able to clean them up.
 
-To sumarize what happend so far:
+Thanks,
 
-A while ago, I took a look at Erics xfstest patches and the similar
-patch series from Dongsheng Yang. Based on those, I got the xfstests
-running with UBIFS on nandsim inside a VM with fairly little changes.
-AFAIR there were two tests failing, one of them being generic/129,
-apparently because it exhausts the space on one of the UBI volumes, and
-another one for which a fix was provided.
+>From 63ca24a64fb1625dac9740a2183fd8966388e185 Mon Sep 17 00:00:00 2001
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Date: Wed, 19 Apr 2017 10:49:21 -0700
+Subject: [PATCH] f2fs: check entire encrypted bigname when finding a dentry
 
-My work on the xfstests-dev patch was preempted by other projects, but I
-briefly got back to it when an O_TMPFILE regression was reported on the
-mtd mailing list. This should have been caught by generic/004 but
-wasn't because the UBIFS error message didn't match the grep pattern
-run on dmesg.
+If user has no key under an encrypted dir, fscrypt gives digested dentries.
+Previously, when looking up a dentry, f2fs only checks its hash value with
+first 4 bytes of the digested dentry, which didn't handle hash collisions fully.
+This patch enhances to check entire dentry bytes likewise ext4.
 
-Other such cases may exist.
+Eric reported how to reproduce this issue by:
 
-Today, after rebasing/porting my local changes to upstream xfstets-dev,
-I ran the tests against on both Richards UBIFS tree and Linus' tree. On
-both kernels I'm now getting 5 failing tests out of 94 (with one of
-them being generic/129 again).
+ # seq -f "edir/abcdefghijklmnopqrstuvwxyz012345%.0f" 100000 | xargs touch
+ # find edir -type f | xargs stat -c %i | sort | uniq | wc -l
+100000
+ # sync
+ # echo 3 > /proc/sys/vm/drop_caches
+ # keyctl new_session
+ # find edir -type f | xargs stat -c %i | sort | uniq | wc -l
+99999
 
+Cc: <stable@vger.kernel.org>
+Reported-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+---
+ fs/f2fs/dir.c | 28 +++++++++++++++++++---------
+ 1 file changed, 19 insertions(+), 9 deletions(-)
 
-Further work on some of the test scripts is required.
-
-
-David
+diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
+index c143dffcae6e..007c3b4adc85 100644
+--- a/fs/f2fs/dir.c
++++ b/fs/f2fs/dir.c
+@@ -130,19 +130,29 @@ struct f2fs_dir_entry *find_target_dentry(struct fscrypt_name *fname,
+ 			continue;
+ 		}
+ 
+-		/* encrypted case */
++		if (de->hash_code != namehash)
++			goto not_match;
++
+ 		de_name.name = d->filename[bit_pos];
+ 		de_name.len = le16_to_cpu(de->name_len);
+ 
+-		/* show encrypted name */
+-		if (fname->hash) {
+-			if (de->hash_code == cpu_to_le32(fname->hash))
+-				goto found;
+-		} else if (de_name.len == name->len &&
+-			de->hash_code == namehash &&
+-			!memcmp(de_name.name, name->name, name->len))
++#ifdef CONFIG_F2FS_FS_ENCRYPTION
++		if (unlikely(!name->name)) {
++			if (fname->usr_fname->name[0] == '_') {
++				if (de_name.len >= 16 &&
++					!memcmp(de_name.name + de_name.len - 16,
++						fname->crypto_buf.name + 8, 16))
++					goto found;
++				goto not_match;
++			}
++			name->name = fname->crypto_buf.name;
++			name->len = fname->crypto_buf.len;
++		}
++#endif
++		if (de_name.len == name->len &&
++				!memcmp(de_name.name, name->name, name->len))
+ 			goto found;
+-
++not_match:
+ 		if (max_slots && max_len > *max_slots)
+ 			*max_slots = max_len;
+ 		max_len = 0;
+-- 
+2.11.0
