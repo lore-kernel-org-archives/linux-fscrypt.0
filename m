@@ -1,57 +1,25 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Wed, 19 Apr 2017 10:09:40 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH] fscrypt: use 32 bytes of encrypted filename
-Message-ID: <20170419170940.GA89688@gmail.com>
-References: <20170418210642.6039-1-gwendal@chromium.org>
- <CAFLxGvz+kODD+8s9aPw_DeYtf3Gjv0aQBC=UfoBFx3Wn2b=wxQ@mail.gmail.com>
+Return-Path: <linux-ext4-owner@vger.kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
 In-Reply-To: <CAFLxGvz+kODD+8s9aPw_DeYtf3Gjv0aQBC=UfoBFx3Wn2b=wxQ@mail.gmail.com>
-To: Richard Weinberger <richard.weinberger@gmail.com>
-Cc: Gwendal Grignou <gwendal@chromium.org>, Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, kinaba@chromium.org, hashimoto@chromium.org
+References: <20170418210642.6039-1-gwendal@chromium.org> <CAFLxGvz+kODD+8s9aPw_DeYtf3Gjv0aQBC=UfoBFx3Wn2b=wxQ@mail.gmail.com>
+From: Richard Weinberger <richard.weinberger@gmail.com>
+Date: Wed, 19 Apr 2017 15:41:33 +0200
+Message-ID: <CAFLxGvzFLkLAhgE3ZEzH_80=onrdSHN0ue7Qjv17mkMv+eRSEQ@mail.gmail.com>
+Subject: Re: [PATCH] fscrypt: use 32 bytes of encrypted filename
+Content-Type: text/plain; charset=UTF-8
+Sender: linux-ext4-owner@vger.kernel.org
+To: Gwendal Grignou <gwendal@chromium.org>
+Cc: Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, kinaba@chromium.org, hashimoto@chromium.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Richard,
-
-On Wed, Apr 19, 2017 at 03:37:42PM +0200, Richard Weinberger wrote:
-> >
-> > Tested only on ext4.
-> 
-> I hope you classify this patch as RFC then.
-> We'll have problems when you just develop and test for ext4. :-)
-> 
-
-It's a little difficult for people to test stuff on UBIFS without a turn-key
-solution like kvm-xfstests where they can just run something like
-'kvm-xfstests -c ext4,f2fs,ubifs -g encrypt'.
-
-I did post patches to add UBIFS support to xfstests and kvm-xfstests a few
-months ago; maybe you're interested in taking them over and working to get them
-merged?
-
-> > diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-> > index c4a389a6027b..14b2a2335a32 100644
-> > --- a/fs/ext4/namei.c
-> > +++ b/fs/ext4/namei.c
-> > @@ -1257,8 +1257,8 @@ static inline int ext4_match(struct ext4_filename *fname,
-> >                         int ret;
-> >                         if (de->name_len < 16)
-> >                                 return 0;
-> > -                       ret = memcmp(de->name + de->name_len - 16,
-> > -                                    fname->crypto_buf.name + 8, 16);
-> > +                       ret = memcmp(de->name + de->name_len - 32,
-> > +                                    fname->crypto_buf.name + 8, 32);
-> >                         return (ret == 0) ? 1 : 0;
-> >                 }
-> >                 name = fname->crypto_buf.name;
-> 
+On Wed, Apr 19, 2017 at 3:37 PM, Richard Weinberger
+<richard.weinberger@gmail.com> wrote:
 > Can the code still be able to read filenames which have been encrypted
 > using the "old" scheme?
-> 
 
-The patch only changes the presentation of long encrypted filenames when
-accessed without the key.  It doesn't change how filenames are encrypted.
+Bah, typing is hard.
+Should be read: Will the code still be able to read ...
 
-- Eric
+-- 
+Thanks,
+//richard
