@@ -1,162 +1,107 @@
-Return-Path: <linux-ext4-owner@vger.kernel.org>
-MIME-Version: 1.0
-In-Reply-To: <20170418210642.6039-1-gwendal@chromium.org>
+Return-Path: <ebiggers3@gmail.com>
+Date: Tue, 18 Apr 2017 21:01:38 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: Re: [f2fs-dev] [PATCH] fscrypt: use 32 bytes of encrypted filename
+Message-ID: <20170419040138.GA563@zzz>
 References: <20170418210642.6039-1-gwendal@chromium.org>
-From: Richard Weinberger <richard.weinberger@gmail.com>
-Date: Wed, 19 Apr 2017 15:37:42 +0200
-Message-ID: <CAFLxGvz+kODD+8s9aPw_DeYtf3Gjv0aQBC=UfoBFx3Wn2b=wxQ@mail.gmail.com>
-Subject: Re: [PATCH] fscrypt: use 32 bytes of encrypted filename
-Content-Type: text/plain; charset=UTF-8
-Sender: linux-ext4-owner@vger.kernel.org
-To: Gwendal Grignou <gwendal@chromium.org>
-Cc: Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, kinaba@chromium.org, hashimoto@chromium.org
+ <20170418230136.GA96152@gmail.com>
+ <20170419001005.GA143911@gmail.com>
+ <20170419014209.GB12215@jaegeuk.local>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170419014209.GB12215@jaegeuk.local>
+To: Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, ebiggers@google.com, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, linux-mtd@lists.infradead.org, tytso@mit.edu, linux-ext4@vger.kernel.org, kinaba@chromium.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Apr 18, 2017 at 11:06 PM, Gwendal Grignou <gwendal@chromium.org> wrote:
-> If we use only 16 bytes, due to how CBC works, if the names have the
-> same beginning, their last ciphertext block (16 bytes) may be identical.
->
-> It happens when two file names share the first 16k bytes and both have
-> length withn 16 * n + 13 and 16 * n + 16.
->
-> Instead use 32 bytes to build the filenames from encrypted data when
-> directory is scrambled.
->
-> The drawback is the scrambled filenames change after applying the patch.
-> Consider an encrypted directory with:
->
-> ls -il
-> total 8
-> 1177380 -rw-r--r--. 1 root root 0 Apr 18 12:10
-> system@framework@boot-telephony-common.art.crc
-> 1177379 -rw-r--r--. 1 root root 0 Apr 18 12:10
-> system@framework@boot-telephony-common.oat.crc
->
-> Once the key is invalidated, without the patch, ls -li produces:
-> 1177379 -rw-r--r--. 1 root root 0 Apr 18 12:10
-> _a1Psh01n8FdhC8s9pUywlAyFzlz7n6C3
-> 1177379 -rw-r--r--. 1 root root 0 Apr 18 12:10
-> _wJS,0akq14ehC8s9pUywlAyFzlz7n6C3
->
-> Both files show with the same inode.
->
-> After the patch, the names are different, but the inode information is
-> now correct:
-> ls -li
-> 1177380 -rw-r--r--. 1 root root 0 Apr 18 12:10
-> _a1Psh01n8FtxbeglW8BqhuthSUxMqh6cFKwz2nSJDXCIXMXOvfqLcD
-> 1177379 -rw-r--r--. 1 root root 0 Apr 18 12:10
-> _wJS,0akq14eJcuQks7f2Vsg,zE0Jdz98FKwz2nSJDXCIXMXOvfqLcD
->
-> Tested only on ext4.
+On Tue, Apr 18, 2017 at 06:42:09PM -0700, Jaegeuk Kim wrote:
+> Hi Eric,
+> 
+> On 04/18, Eric Biggers wrote:
+> > On Tue, Apr 18, 2017 at 04:01:36PM -0700, Eric Biggers wrote:
+> > > 
+> > > Strangely, f2fs and ubifs do not use the bytes from the filename at all when
+> > > trying to find a specific directory entry in this case.  So this patch doesn't
+> > > really affect them.  This seems unreliable; perhaps we should introduce a
+> > > function like "fscrypt_name_matches()" which all the filesystems could call?
+> > > Can any of the f2fs and ubifs developers explain why they don't look at any
+> > > bytes from the filename?
+> > > 
+> 
+> The fscrypt_setup_filename sets fname->hash in the bigname case, but doesn't
+> give fname->disk_name. If it's not such the bigname case, we check its name
+> since fname->hash is zero.
+> 
 
-I hope you classify this patch as RFC then.
-We'll have problems when you just develop and test for ext4. :-)
+Yes, that's what it does now.  The question is, in the "bigname" case why
+doesn't f2fs check the 16 bytes of ciphertext in fname->crypto_buf too?  f2fs
+doesn't even use 'minor_hash'; it can't possibly be the case that there are
+never any collisions of a 32-bit hash in a directory, can it?
 
-> Signed-off-by: Gwendal Grignou <gwendal@chromium.org>
-> ---
-> Script to reproduce the error:
->
-> BASE_DIR="~/"
-> DIR="${BASE_DIR}/tmp"
-> # Create directory.
-> mkdir -p "${DIR}"
-> echo foobar | e4crypt add_key "${DIR}"
-> # Fill directory.
-> cd "${DIR}"
-> touch system@framework@boot-telephony-common.oat.crc
-> touch system@framework@boot-telephony-common.art.crc
-> cd ..
-> # Check files have different inode.
-> ls -il "${DIR}"
-> # Invalidate key
-> KEY="$(keyctl show | grep $(e4crypt get_policy "${DIR}" | cut -d ':' -f 2) | sed -ne 's/\(.*\) --al.*/\1/p')"
-> sync
-> keyctl invalidate "${KEY}"
-> echo 3 > /proc/sys/vm/drop_caches
-> # Once the key is invalidated, both files have the same inode:
-> ls -il "${DIR}"
-> if [ $(ls -i1 "${DIR}" | cut -d ' ' -f 1 | uniq | wc -l) -eq 1 ] ; then
->   echo same inode!
-> fi
-> # if we try to remove the directory, we will get an error
-> # : Structure needs cleaning
-> # rm -rf "${DIR}"
->
->  fs/crypto/fname.c | 20 +++++++++++++-------
->  fs/ext4/namei.c   |  4 ++--
->  2 files changed, 15 insertions(+), 9 deletions(-)
->
-> diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-> index 80bb956e14e5..71ddc3eaa62d 100644
-> --- a/fs/crypto/fname.c
-> +++ b/fs/crypto/fname.c
-> @@ -274,7 +274,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
->                         struct fscrypt_str *oname)
->  {
->         const struct qstr qname = FSTR_TO_QSTR(iname);
-> -       char buf[24];
-> +       char buf[FS_FNAME_CRYPTO_DIGEST_SIZE + sizeof(u64)];
->
->         if (fscrypt_is_dot_dotdot(&qname)) {
->                 oname->name[0] = '.';
-> @@ -295,14 +295,19 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
->                 return 0;
->         }
->         if (hash) {
-> -               memcpy(buf, &hash, 4);
-> -               memcpy(buf + 4, &minor_hash, 4);
-> +               memcpy(buf, &hash, sizeof(u32));
-> +               memcpy(buf + 4, &minor_hash, sizeof(u32));
->         } else {
->                 memset(buf, 0, 8);
->         }
-> -       memcpy(buf + 8, iname->name + iname->len - 16, 16);
-> +       memcpy(buf + sizeof(u64),
-> +              iname->name + iname->len - FS_FNAME_CRYPTO_DIGEST_SIZE,
-> +              FS_FNAME_CRYPTO_DIGEST_SIZE);
->         oname->name[0] = '_';
-> -       oname->len = 1 + digest_encode(buf, 24, oname->name + 1);
-> +       oname->len = 1 + digest_encode(
-> +                       buf,
-> +                       FS_FNAME_CRYPTO_DIGEST_SIZE + sizeof(u64),
-> +                       oname->name + 1);
->         return 0;
->  }
->  EXPORT_SYMBOL(fscrypt_fname_disk_to_usr);
-> @@ -375,10 +380,11 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
->          */
->         if (iname->name[0] == '_')
->                 bigname = 1;
-> -       if ((bigname && (iname->len != 33)) || (!bigname && (iname->len > 43)))
-> +       if ((bigname && iname->len != 55) || (!bigname && (iname->len > 43)))
->                 return -ENOENT;
->
-> -       fname->crypto_buf.name = kmalloc(32, GFP_KERNEL);
-> +       fname->crypto_buf.name = kmalloc(
-> +                       FS_FNAME_CRYPTO_DIGEST_SIZE + sizeof(u64), GFP_KERNEL);
->         if (fname->crypto_buf.name == NULL)
->                 return -ENOMEM;
->
-> diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-> index c4a389a6027b..14b2a2335a32 100644
-> --- a/fs/ext4/namei.c
-> +++ b/fs/ext4/namei.c
-> @@ -1257,8 +1257,8 @@ static inline int ext4_match(struct ext4_filename *fname,
->                         int ret;
->                         if (de->name_len < 16)
->                                 return 0;
-> -                       ret = memcmp(de->name + de->name_len - 16,
-> -                                    fname->crypto_buf.name + 8, 16);
-> +                       ret = memcmp(de->name + de->name_len - 32,
-> +                                    fname->crypto_buf.name + 8, 32);
->                         return (ret == 0) ? 1 : 0;
->                 }
->                 name = fname->crypto_buf.name;
+I actually tested it, and it definitely happens if you put a lot of files in an
+encrypted directory on f2fs.  An example with 100000 files:
 
-Can the code still be able to read filenames which have been encrypted
-using the "old" scheme?
+# seq -f "edir/abcdefghijklmnopqrstuvwxyz012345%.0f" 100000 | xargs touch
+# find edir -type f | xargs stat -c %i | sort | uniq | wc -l
+100000
+# sync
+# echo 3 > /proc/sys/vm/drop_caches
+# keyctl new_session
+# find edir -type f | xargs stat -c %i | sort | uniq | wc -l
+99999
 
--- 
-Thanks,
-//richard
+So when I tried accessing the encrypted directory without the key, two dentries
+showed the same inode, due to a hash collision.
+
+Actually, checking the last 16 bytes of ciphertext currently wouldn't even help
+for those filenames since it's all the same, as they share a long common prefix:
+
+# ls -1  edir | head -n 4
+_++09VCAAAAgsQQf6Q5YgLgoO4f3PPSfb
+_++1UWDAAAAgsQQf6Q5YgLgoO4f3PPSfb
+_++2HAAAAAAgsQQf6Q5YgLgoO4f3PPSfb
+_++4UxBAAAAgsQQf6Q5YgLgoO4f3PPSfb
+
+But that's the bug, since the last two AES blocks are swapped when using
+ciphertext stealing.  We should at least be using the second-to-last block in
+which case we'd see:
+
+# ls -1  edir | head -n 4
+_++09VCAAAAw9VONwQEXOVv3RR,kOAKwB
+_++1UWDAAAAAHDi7c3QZxbiltjOo1m0,F
+_++2HAAAAAAAfd1Vx0oC31SmhzYpaYfwz
+_++4UxBAAAAwZxcWjzORdAef50FB9sKY4
+
+(In either case there are still a few A's at the beginning since f2fs doesn't
+set 'minor_hash'.  That's okay, but only if collisions are ruled out by other
+means.)
+
+> > -		/* encrypted case */
+> > -		de_name.name = d->filename[bit_pos];
+> > -		de_name.len = le16_to_cpu(de->name_len);
+> > -
+> > -		/* show encrypted name */
+> > -		if (fname->hash) {
+> > -			if (de->hash_code == cpu_to_le32(fname->hash))
+> > -				goto found;
+> > -		} else if (de_name.len == name->len &&
+> > -			de->hash_code == namehash &&
+> > -			!memcmp(de_name.name, name->name, name->len))
+> > +		if ((fname->hash == 0 ||
+> > +		     fname->hash == le32_to_cpu(de->hash_code)) &&
+> > +		    fscrypt_name_matches(fname, d->filename[bit_pos],
+> > +					 le16_to_cpu(de->name_len)))
+> 
+> BTW, this slips checking namehash?
+> 
+
+Yes that's a mistake.  Actually it seems that 'namehash' is the same as
+'fname->hash' when 'fname->hash' is nonzero, so the code should just be:
+
+	if (de->hash_code == namehash &&
+	    fscrypt_name_matches(fname, d->filename[bit_pos],
+				 le16_to_cpu(de->name_len)))
+		goto found;
+
+- Eric
