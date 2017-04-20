@@ -1,88 +1,74 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Fri, 21 Apr 2017 00:44:02 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [f2fs-dev] [PATCH] fscrypt: use 32 bytes of encrypted filename
-Message-ID: <20170421074402.GA7459@zzz>
+Return-Path: <david.oberhollenzer@sigma-star.at>
+Subject: Re: [PATCH] fscrypt: use 32 bytes of encrypted filename
 References: <20170418210642.6039-1-gwendal@chromium.org>
- <20170418230136.GA96152@gmail.com>
- <20170419001005.GA143911@gmail.com>
- <20170419014209.GB12215@jaegeuk.local>
- <20170419040138.GA563@zzz>
- <20170419204448.GA1021@jaegeuk.local>
+ <CAFLxGvz+kODD+8s9aPw_DeYtf3Gjv0aQBC=UfoBFx3Wn2b=wxQ@mail.gmail.com>
+ <20170419170940.GA89688@gmail.com>
+ <bdda413c-1452-9e55-53ff-34eb17ef4c3b@nod.at>
+From: David Oberhollenzer <david.oberhollenzer@sigma-star.at>
+Message-ID: <39a844e5-5718-3a63-1f8d-9f6d3568ca51@sigma-star.at>
+Date: Thu, 20 Apr 2017 13:24:04 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170419204448.GA1021@jaegeuk.local>
-To: Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, ebiggers@google.com, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, linux-mtd@lists.infradead.org, tytso@mit.edu, linux-ext4@vger.kernel.org, kinaba@chromium.org
+In-Reply-To: <bdda413c-1452-9e55-53ff-34eb17ef4c3b@nod.at>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 7bit
+To: Richard Weinberger <richard@nod.at>, Eric Biggers <ebiggers3@gmail.com>
+Cc: Gwendal Grignou <gwendal@chromium.org>, Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, kinaba@chromium.org, hashimoto@chromium.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Jaegeuk,
-
-On Wed, Apr 19, 2017 at 01:44:48PM -0700, Jaegeuk Kim wrote:
+On 04/19/2017 07:12 PM, Richard Weinberger wrote:
+> Eric,
 > 
-> Thank you for sharing more details. I could reproduce this issue and reach out
-> to what you mentioned. In order to resolve this, I wrote a patch for f2fs first
-> to act like ext4 for easy backports. Then, I expect a global fscrypt function
-> is easily able to clean them up.
-[...]
-> @@ -130,19 +130,29 @@ struct f2fs_dir_entry *find_target_dentry(struct fscrypt_name *fname,
->  			continue;
->  		}
->  
-> -		/* encrypted case */
-> +		if (de->hash_code != namehash)
-> +			goto not_match;
-> +
->  		de_name.name = d->filename[bit_pos];
->  		de_name.len = le16_to_cpu(de->name_len);
->  
-> -		/* show encrypted name */
-> -		if (fname->hash) {
-> -			if (de->hash_code == cpu_to_le32(fname->hash))
-> -				goto found;
-> -		} else if (de_name.len == name->len &&
-> -			de->hash_code == namehash &&
-> -			!memcmp(de_name.name, name->name, name->len))
-> +#ifdef CONFIG_F2FS_FS_ENCRYPTION
-> +		if (unlikely(!name->name)) {
-> +			if (fname->usr_fname->name[0] == '_') {
-> +				if (de_name.len >= 16 &&
-> +					!memcmp(de_name.name + de_name.len - 16,
-> +						fname->crypto_buf.name + 8, 16))
-> +					goto found;
-> +				goto not_match;
-> +			}
-> +			name->name = fname->crypto_buf.name;
-> +			name->len = fname->crypto_buf.len;
-> +		}
-> +#endif
-> +		if (de_name.len == name->len &&
-> +				!memcmp(de_name.name, name->name, name->len))
->  			goto found;
-> -
-> +not_match:
+> Am 19.04.2017 um 19:09 schrieb Eric Biggers:
+>> Hi Richard,
+>>
+>> On Wed, Apr 19, 2017 at 03:37:42PM +0200, Richard Weinberger wrote:
+>>>>
+>>>> Tested only on ext4.
+>>>
+>>> I hope you classify this patch as RFC then.
+>>> We'll have problems when you just develop and test for ext4. :-)
+>>>
+>>
+>> It's a little difficult for people to test stuff on UBIFS without a turn-key
+>> solution like kvm-xfstests where they can just run something like
+>> 'kvm-xfstests -c ext4,f2fs,ubifs -g encrypt'.
+>>
+>> I did post patches to add UBIFS support to xfstests and kvm-xfstests a few
+>> months ago; maybe you're interested in taking them over and working to get them
+>> merged?
+> 
+> I assigned this talk already to David.
+> He can tell what the status is.
+> 
+What I have right now is mostly similar to the previous patch for
+xfstests-dev that was submitted to the mailing list. I haven't looked
+into the xfstests-bld patch yet.
 
-I agree with this approach, but I don't think it's ever the case that
-fname->usr_fname->name[0] != '_'.  (Yes, ext4 checks it, but I think it's
-unneeded there too.)  And if it was, it doesn't make sense to modify the 'name'
-that is passed in.
 
-In any case, I guess that unless there are other ideas we can do these patches:
+To sumarize what happend so far:
 
-1.) f2fs patch to start checking the name, as above
-2.) patch to start encoding last 32 bytes of the name (or second-to-last CTS
-    block, I haven't decided yet) rather than last 16 bytes, changing
-    fs/crypto/, fs/ext4/, and fs/f2fs/
-3.) cleanup patches to introduce helper function and switch ext4 and f2fs to it
+A while ago, I took a look at Erics xfstest patches and the similar
+patch series from Dongsheng Yang. Based on those, I got the xfstests
+running with UBIFS on nandsim inside a VM with fairly little changes.
+AFAIR there were two tests failing, one of them being generic/129,
+apparently because it exhausts the space on one of the UBI volumes, and
+another one for which a fix was provided.
 
-(1) and (2) will be backported.
+My work on the xfstests-dev patch was preempted by other projects, but I
+briefly got back to it when an O_TMPFILE regression was reported on the
+mtd mailing list. This should have been caught by generic/004 but
+wasn't because the UBIFS error message didn't match the grep pattern
+run on dmesg.
 
-UBIFS can be changed to use the helper function later if needed.  It's not as
-important for it to be backported there since UBIFS does the "double hashing",
-and UBIFS encryption was just added in 4.10 anyway.
+Other such cases may exist.
 
-I can try to put together the full series when I have time.  It probably would
-make sense for it to go through the fscrypt tree, given the dependencies.
+Today, after rebasing/porting my local changes to upstream xfstets-dev,
+I ran the tests against on both Richards UBIFS tree and Linus' tree. On
+both kernels I'm now getting 5 failing tests out of 94 (with one of
+them being generic/129 again).
 
-Eric
+
+Further work on some of the test scripts is required.
+
+
+David
