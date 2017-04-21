@@ -1,45 +1,61 @@
-Return-Path: <richard.weinberger@gmail.com>
+Return-Path: <ebiggers3@gmail.com>
+Date: Fri, 21 Apr 2017 12:26:25 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: Re: [f2fs-dev] [PATCH] fscrypt: use 32 bytes of encrypted filename
+Message-ID: <20170421192625.GD12755@gmail.com>
+References: <20170418210642.6039-1-gwendal@chromium.org>
+ <20170418230136.GA96152@gmail.com>
+ <20170419001005.GA143911@gmail.com>
+ <20170419014209.GB12215@jaegeuk.local>
+ <20170419040138.GA563@zzz>
+ <20170419204448.GA1021@jaegeuk.local>
+ <20170421074402.GA7459@zzz>
+ <20170421173503.GA1228@jaegeuk.local>
 MIME-Version: 1.0
-In-Reply-To: <f415bfef-12d9-6444-9e94-9ae3e3363cfb@nod.at>
-References: <20170418210642.6039-1-gwendal@chromium.org> <20170418230136.GA96152@gmail.com>
- <CAFLxGvwtFQW=NL3NrNHx-vWR3wSUtewnBRy1XzMqRNTV8f5vwQ@mail.gmail.com>
- <20170419171633.GB89688@gmail.com> <f415bfef-12d9-6444-9e94-9ae3e3363cfb@nod.at>
-From: Richard Weinberger <richard.weinberger@gmail.com>
-Date: Mon, 24 Apr 2017 23:19:00 +0200
-Message-ID: <CAFLxGvwuiZ+5zPnQJ6bXKhWHs5jPA=0c5+3Vq5EZn_AsrgzeGg@mail.gmail.com>
-Subject: Re: [PATCH] fscrypt: use 32 bytes of encrypted filename
-Content-Type: text/plain; charset=UTF-8
-To: Richard Weinberger <richard@nod.at>
-Cc: Eric Biggers <ebiggers3@gmail.com>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Eric Biggers <ebiggers@google.com>, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, "linux-mtd@lists.infradead.org" <linux-mtd@lists.infradead.org>, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, Kazuhiro Inaba <kinaba@chromium.org>, David Gstir <david@sigma-star.at>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170421173503.GA1228@jaegeuk.local>
+To: Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, ebiggers@google.com, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, linux-mtd@lists.infradead.org, tytso@mit.edu, linux-ext4@vger.kernel.org, kinaba@chromium.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Eric,
+Hi Jaegeuk,
 
-On Wed, Apr 19, 2017 at 7:21 PM, Richard Weinberger <richard@nod.at> wrote:
->> Well, like I said to Jaegeuk for F2FS, that's what the code does, but _why_?
->> Like F2FS, it's probably not the case that the hash is sufficient to reliably
->> identify a directory entry.  Granted, UBIFS does it a lot better than F2FS since
->> UBIFS uses two 32-bit hashes rather than just one, but it seems the second hash
->> may be neither necessary nor sufficient to identify a specific directory entry,
->> and it should be looking at the bytes of ciphertext from the filename instead,
->> like what ext4 does.  (Provided that is fixed to account for how CTS mode
->> encryption works.)
->
-> Let me dig into this, maybe I made a boo boo.
-> The idea was looking up by the filename hash and resolving
-> possible collisions using the secondary hash.
+On Fri, Apr 21, 2017 at 10:35:03AM -0700, Jaegeuk Kim wrote:
+> 
+> > In any case, I guess that unless there are other ideas we can do these patches:
+> > 
+> > 1.) f2fs patch to start checking the name, as above
+> > 2.) patch to start encoding last 32 bytes of the name (or second-to-last CTS
+> >     block, I haven't decided yet) rather than last 16 bytes, changing
+> >     fs/crypto/, fs/ext4/, and fs/f2fs/
+> > 3.) cleanup patches to introduce helper function and switch ext4 and f2fs to it
+> 
+> IMO, it'd better to do 3.) followed by 2.), since 2.) already needs to change
+> fs/crypto which does not give much backporting effort.
+> 
 
-In ubifs_lookup() we handle two cases:
-1. lookup of a bigname, both fscrypt_name->hash and ->minor_hash are valid.
-    ->hash is r5(diskname) and ->minor_hash is the secondary hash, AKA cookie.
-   UBIFS fed this hashes in ubifs_readdir() to fscrypt.
-2. lookup of a non-bigname, in this case we compute r5(diskname) and
-use the diskname
-    itself for lookups.
+That would be ideal, but unfortunately the main users of filesystem encryption
+are using old kernel versions which don't have fs/crypto/, usually 4.4 at
+latest.  So it would be nice for it to be easier to backport the "use different
+bytes from the encrypted filename" change to 4.4-stable, as I've been doing for
+some of the other filesystem encryption fixes.  And people do need it, it seems,
+as it causes real problems like undeletable files; Gwendal is even already
+trying to merge a fix into some Chrome OS kernel.
 
-So, in case 1 we avoid collisions by using a 64bit key and in case 2 by using
-the 32bit key plus a linear search and memcmp() of diskname.
+> 
+> I found one issue in my patch and modified it in f2fs tree [1]. Given next merge
+> window probable starting next week, let me upstream this modified one first
+> through f2fs. Then, you can see it in 4.12-rc1 two weeks later, so fscrypt
+> patches can be easily integrated after then. If you have any concern, I'm also
+> okay to push this patch through fscrypt. Let me know.
+> 
+> [1] https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs.git/commit/?h=dev-test&id=1585cfbbb269be6a112e0629a52123c0f9eaf4fa
+> 
 
--- 
-Thanks,
-//richard
+I think the series through fscrypt makes more sense, though if I don't have it
+ready soon please go ahead and take the f2fs portion through the f2fs tree.
+
+Thanks!
+
+- Eric
