@@ -1,170 +1,62 @@
 Return-Path: <ebiggers3@gmail.com>
+Date: Wed, 26 Apr 2017 14:56:16 -0700
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 1/6] f2fs: check entire encrypted bigname when finding a dentry
-Date: Mon, 24 Apr 2017 10:00:08 -0700
-Message-Id: <20170424170013.85175-2-ebiggers3@gmail.com>
-In-Reply-To: <20170424170013.85175-1-ebiggers3@gmail.com>
-References: <20170424170013.85175-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, kinaba@chromium.org, stable@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Subject: Re: [PATCH v2] fscrypt: Add support for AES-128-CBC
+Message-ID: <20170426215616.GA104929@gmail.com>
+References: <20170330173840.72909-1-david@sigma-star.at>
+ <20170425144100.11484-1-david@sigma-star.at>
+ <20170425201001.GA133970@gmail.com>
+ <451DF465-A8CA-4F54-9EC1-67B49B522D0B@sigma-star.at>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <451DF465-A8CA-4F54-9EC1-67B49B522D0B@sigma-star.at>
+To: David Gstir <david@sigma-star.at>
+Cc: tytso@mit.edu, jaegeuk@kernel.org, dwalter@sigma-star.at, richard@sigma-star.at, herbert@gondor.apana.org.au, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Jaegeuk Kim <jaegeuk@kernel.org>
+Hi David,
 
-If user has no key under an encrypted dir, fscrypt gives digested dentries.
-Previously, when looking up a dentry, f2fs only checks its hash value with
-first 4 bytes of the digested dentry, which didn't handle hash collisions fully.
-This patch enhances to check entire dentry bytes likewise ext4.
+On Wed, Apr 26, 2017 at 08:18:51AM +0200, David Gstir wrote:
+> > 3.) It's always keying the ESSIV transform using a 256-bit AES key.  It's still
+> >    secure of course, but I'm not sure it's what you intended, given that it's
+> >    used in combination with AES-128.  I really think that someone who's more of
+> >    an expert on ESSIV really should weigh in, but my intuition is that you
+> >    really only need to be using AES-128, using the first 'keysize' bytes of the
+> >    hash.
+> 
+> My intention is to use all 256 bits we get from the hash. Yes, this will then use
+> AES-256 for the IV generation, but this will still yield just a 128 bit IV for
+> file contents encryption since the block size of AES is the same. So this is
+> just a case of using AES with a 256 bit key over a 128 bit one which is then
+> used for AES-128 computations.
+> 
+> On the other hand, as you pointed out, truncating the hash and using AES-128 *should*
+> suffice too. Especially since we are using AES-128 everywhere else!
+> 
+> I'm also no export on ESSIV, so I'm not a 100% sure if there is something we're
+> missing here. If using AES-128 is okay, I'll change it to truncate the hash.
+> 
 
-Eric reported how to reproduce this issue by:
+After thinking about it some more I'm actually slightly leaning towards AES-256,
+since it matches the size of the message digest being used.  I think that's how
+ESSIV was designed to work, since message digests are not necessarily designed
+to be truncated.  Also I doubt there would be any noticable performance
+difference from using AES-256 instead of AES-128, given that it's just for the
+IV generation and not for the "real" encryption.
 
- # seq -f "edir/abcdefghijklmnopqrstuvwxyz012345%.0f" 100000 | xargs touch
- # find edir -type f | xargs stat -c %i | sort | uniq | wc -l
-100000
- # sync
- # echo 3 > /proc/sys/vm/drop_caches
- # keyctl new_session
- # find edir -type f | xargs stat -c %i | sort | uniq | wc -l
-99999
+On the other hand, the message digest *is* hard-coded to SHA-256, and the
+SHA-256 specification actually states that it can be truncated, with the
+collision resistance decreased in the expected way.
 
-Cc: <stable@vger.kernel.org>
-Reported-by: Eric Biggers <ebiggers@google.com>
-Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
-(fixed f2fs_dentry_hash() to work even when the hash is 0)
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/f2fs/dir.c    | 37 +++++++++++++++++++++----------------
- fs/f2fs/f2fs.h   |  3 ++-
- fs/f2fs/hash.c   |  7 ++++++-
- fs/f2fs/inline.c |  4 ++--
- 4 files changed, 31 insertions(+), 20 deletions(-)
+> 
+> One optimization Richard pointed out is that we should do the
+> crypto_alloc_shash("sha256", 0, 0) just once and reuse hash_tfm for all sha256 computations.
+> This will save us some alloc/frees in derive_essiv_salt.
+> 
 
-diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
-index c143dffcae6e..374e4b8f9b70 100644
---- a/fs/f2fs/dir.c
-+++ b/fs/f2fs/dir.c
-@@ -130,19 +130,29 @@ struct f2fs_dir_entry *find_target_dentry(struct fscrypt_name *fname,
- 			continue;
- 		}
- 
--		/* encrypted case */
-+		if (de->hash_code != namehash)
-+			goto not_match;
-+
- 		de_name.name = d->filename[bit_pos];
- 		de_name.len = le16_to_cpu(de->name_len);
- 
--		/* show encrypted name */
--		if (fname->hash) {
--			if (de->hash_code == cpu_to_le32(fname->hash))
--				goto found;
--		} else if (de_name.len == name->len &&
--			de->hash_code == namehash &&
--			!memcmp(de_name.name, name->name, name->len))
-+#ifdef CONFIG_F2FS_FS_ENCRYPTION
-+		if (unlikely(!name->name)) {
-+			if (fname->usr_fname->name[0] == '_') {
-+				if (de_name.len >= 16 &&
-+					!memcmp(de_name.name + de_name.len - 16,
-+						fname->crypto_buf.name + 8, 16))
-+					goto found;
-+				goto not_match;
-+			}
-+			name->name = fname->crypto_buf.name;
-+			name->len = fname->crypto_buf.len;
-+		}
-+#endif
-+		if (de_name.len == name->len &&
-+				!memcmp(de_name.name, name->name, name->len))
- 			goto found;
--
-+not_match:
- 		if (max_slots && max_len > *max_slots)
- 			*max_slots = max_len;
- 		max_len = 0;
-@@ -170,12 +180,7 @@ static struct f2fs_dir_entry *find_in_level(struct inode *dir,
- 	struct f2fs_dir_entry *de = NULL;
- 	bool room = false;
- 	int max_slots;
--	f2fs_hash_t namehash;
--
--	if(fname->hash)
--		namehash = cpu_to_le32(fname->hash);
--	else
--		namehash = f2fs_dentry_hash(&name);
-+	f2fs_hash_t namehash = f2fs_dentry_hash(&name, fname);
- 
- 	nbucket = dir_buckets(level, F2FS_I(dir)->i_dir_level);
- 	nblock = bucket_blocks(level);
-@@ -527,7 +532,7 @@ int f2fs_add_regular_entry(struct inode *dir, const struct qstr *new_name,
- 
- 	level = 0;
- 	slots = GET_DENTRY_SLOTS(new_name->len);
--	dentry_hash = f2fs_dentry_hash(new_name);
-+	dentry_hash = f2fs_dentry_hash(new_name, NULL);
- 
- 	current_depth = F2FS_I(dir)->i_current_depth;
- 	if (F2FS_I(dir)->chash == dentry_hash) {
-diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-index 562db8989a4e..5bc232e21a6e 100644
---- a/fs/f2fs/f2fs.h
-+++ b/fs/f2fs/f2fs.h
-@@ -2145,7 +2145,8 @@ int sanity_check_ckpt(struct f2fs_sb_info *sbi);
- /*
-  * hash.c
-  */
--f2fs_hash_t f2fs_dentry_hash(const struct qstr *name_info);
-+f2fs_hash_t f2fs_dentry_hash(const struct qstr *name_info,
-+				struct fscrypt_name *fname);
- 
- /*
-  * node.c
-diff --git a/fs/f2fs/hash.c b/fs/f2fs/hash.c
-index 71b7206c431e..eb2e031ea887 100644
---- a/fs/f2fs/hash.c
-+++ b/fs/f2fs/hash.c
-@@ -70,7 +70,8 @@ static void str2hashbuf(const unsigned char *msg, size_t len,
- 		*buf++ = pad;
- }
- 
--f2fs_hash_t f2fs_dentry_hash(const struct qstr *name_info)
-+f2fs_hash_t f2fs_dentry_hash(const struct qstr *name_info,
-+				struct fscrypt_name *fname)
- {
- 	__u32 hash;
- 	f2fs_hash_t f2fs_hash;
-@@ -79,6 +80,10 @@ f2fs_hash_t f2fs_dentry_hash(const struct qstr *name_info)
- 	const unsigned char *name = name_info->name;
- 	size_t len = name_info->len;
- 
-+	/* encrypted bigname case */
-+	if (fname && !fname->disk_name.name)
-+		return cpu_to_le32(fname->hash);
-+
- 	if (is_dot_dotdot(name_info))
- 		return 0;
- 
-diff --git a/fs/f2fs/inline.c b/fs/f2fs/inline.c
-index 0ccdefe9fdba..e4c527c4e7d0 100644
---- a/fs/f2fs/inline.c
-+++ b/fs/f2fs/inline.c
-@@ -298,7 +298,7 @@ struct f2fs_dir_entry *find_in_inline_dir(struct inode *dir,
- 		return NULL;
- 	}
- 
--	namehash = f2fs_dentry_hash(&name);
-+	namehash = f2fs_dentry_hash(&name, fname);
- 
- 	inline_dentry = inline_data_addr(ipage);
- 
-@@ -533,7 +533,7 @@ int f2fs_add_inline_entry(struct inode *dir, const struct qstr *new_name,
- 
- 	f2fs_wait_on_page_writeback(ipage, NODE, true);
- 
--	name_hash = f2fs_dentry_hash(new_name);
-+	name_hash = f2fs_dentry_hash(new_name, NULL);
- 	make_dentry_ptr_inline(NULL, &d, dentry_blk);
- 	f2fs_update_dentry(ino, mode, &d, new_name, name_hash, bit_pos);
- 
--- 
-2.12.2.816.g2cccc81164-goog
+Yes, I had the same idea too.  I suggest allocating it only the first time it's
+used rather than always doing it in fscrypt_init(), since not everyone will be
+needing it.
+
+- Eric
