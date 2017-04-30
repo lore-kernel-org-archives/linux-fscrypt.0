@@ -1,165 +1,26 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 6/6] ext4: clean up ext4_match() and callers
-Date: Mon, 24 Apr 2017 10:00:13 -0700
-Message-Id: <20170424170013.85175-7-ebiggers3@gmail.com>
-In-Reply-To: <20170424170013.85175-1-ebiggers3@gmail.com>
-References: <20170424170013.85175-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, kinaba@chromium.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <tytso@thunk.org>
+Date: Sun, 30 Apr 2017 02:17:49 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [2/4] ext4: remove "nokey" check from ext4_lookup()
+Message-ID: <20170430061749.tk4zaoatjqqt2avf@thunk.org>
+References: <20170407175840.95740-3-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170407175840.95740-3-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Apr 07, 2017 at 10:58:38AM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Now that fscrypt_has_permitted_context() correctly handles the case
+> where we have the key for the parent directory but not the child, we
+> don't need to try to work around this in ext4_lookup().
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-When ext4 encryption was originally merged, we were encrypting the
-user-specified filename in ext4_match(), introducing a lot of additional
-complexity into ext4_match() and its callers.  This has since been
-changed to encrypt the filename earlier, so we can remove the gunk
-that's no longer needed.  This more or less reverts ext4_search_dir()
-and ext4_find_dest_de() to the way they were in the v4.0 kernel.
+Thanks, applied.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/namei.c | 81 ++++++++++++++++++---------------------------------------
- 1 file changed, 25 insertions(+), 56 deletions(-)
-
-diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-index 6ecc3ae87a79..b6b8d073fdc4 100644
---- a/fs/ext4/namei.c
-+++ b/fs/ext4/namei.c
-@@ -1237,18 +1237,17 @@ static void dx_insert_block(struct dx_frame *frame, u32 hash, ext4_lblk_t block)
- }
- 
- /*
-- * NOTE! unlike strncmp, ext4_match returns 1 for success, 0 for failure.
-+ * Test whether a directory entry matches the filename being searched for.
-  *
-- * `len <= EXT4_NAME_LEN' is guaranteed by caller.
-- * `de != NULL' is guaranteed by caller.
-+ * Return: %true if the directory entry matches, otherwise %false.
-  */
--static inline int ext4_match(struct ext4_filename *fname,
--			     struct ext4_dir_entry_2 *de)
-+static inline bool ext4_match(const struct ext4_filename *fname,
-+			      const struct ext4_dir_entry_2 *de)
- {
- 	struct fscrypt_name f;
- 
- 	if (!de->inode)
--		return 0;
-+		return false;
- 
- 	f.usr_fname = fname->usr_fname;
- 	f.disk_name = fname->disk_name;
-@@ -1269,48 +1268,31 @@ int ext4_search_dir(struct buffer_head *bh, char *search_buf, int buf_size,
- 	struct ext4_dir_entry_2 * de;
- 	char * dlimit;
- 	int de_len;
--	int res;
- 
- 	de = (struct ext4_dir_entry_2 *)search_buf;
- 	dlimit = search_buf + buf_size;
- 	while ((char *) de < dlimit) {
- 		/* this code is executed quadratically often */
- 		/* do minimal checking `by hand' */
--		if ((char *) de + de->name_len <= dlimit) {
--			res = ext4_match(fname, de);
--			if (res < 0) {
--				res = -1;
--				goto return_result;
--			}
--			if (res > 0) {
--				/* found a match - just to be sure, do
--				 * a full check */
--				if (ext4_check_dir_entry(dir, NULL, de, bh,
--						bh->b_data,
--						 bh->b_size, offset)) {
--					res = -1;
--					goto return_result;
--				}
--				*res_dir = de;
--				res = 1;
--				goto return_result;
--			}
--
-+		if ((char *) de + de->name_len <= dlimit &&
-+		    ext4_match(fname, de)) {
-+			/* found a match - just to be sure, do
-+			 * a full check */
-+			if (ext4_check_dir_entry(dir, NULL, de, bh, bh->b_data,
-+						 bh->b_size, offset))
-+				return -1;
-+			*res_dir = de;
-+			return 1;
- 		}
- 		/* prevent looping on a bad block */
- 		de_len = ext4_rec_len_from_disk(de->rec_len,
- 						dir->i_sb->s_blocksize);
--		if (de_len <= 0) {
--			res = -1;
--			goto return_result;
--		}
-+		if (de_len <= 0)
-+			return -1;
- 		offset += de_len;
- 		de = (struct ext4_dir_entry_2 *) ((char *) de + de_len);
- 	}
--
--	res = 0;
--return_result:
--	return res;
-+	return 0;
- }
- 
- static int is_dx_internal_node(struct inode *dir, ext4_lblk_t block,
-@@ -1821,24 +1803,15 @@ int ext4_find_dest_de(struct inode *dir, struct inode *inode,
- 	int nlen, rlen;
- 	unsigned int offset = 0;
- 	char *top;
--	int res;
- 
- 	de = (struct ext4_dir_entry_2 *)buf;
- 	top = buf + buf_size - reclen;
- 	while ((char *) de <= top) {
- 		if (ext4_check_dir_entry(dir, NULL, de, bh,
--					 buf, buf_size, offset)) {
--			res = -EFSCORRUPTED;
--			goto return_result;
--		}
--		/* Provide crypto context and crypto buffer to ext4 match */
--		res = ext4_match(fname, de);
--		if (res < 0)
--			goto return_result;
--		if (res > 0) {
--			res = -EEXIST;
--			goto return_result;
--		}
-+					 buf, buf_size, offset))
-+			return -EFSCORRUPTED;
-+		if (ext4_match(fname, de))
-+			return -EEXIST;
- 		nlen = EXT4_DIR_REC_LEN(de->name_len);
- 		rlen = ext4_rec_len_from_disk(de->rec_len, buf_size);
- 		if ((de->inode ? rlen - nlen : rlen) >= reclen)
-@@ -1846,15 +1819,11 @@ int ext4_find_dest_de(struct inode *dir, struct inode *inode,
- 		de = (struct ext4_dir_entry_2 *)((char *)de + rlen);
- 		offset += rlen;
- 	}
--
- 	if ((char *) de > top)
--		res = -ENOSPC;
--	else {
--		*dest_de = de;
--		res = 0;
--	}
--return_result:
--	return res;
-+		return -ENOSPC;
-+
-+	*dest_de = de;
-+	return 0;
- }
- 
- int ext4_insert_dentry(struct inode *dir,
--- 
-2.12.2.816.g2cccc81164-goog
+					- Ted
