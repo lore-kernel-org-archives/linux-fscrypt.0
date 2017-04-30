@@ -1,41 +1,28 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH] MAINTAINERS: fscrypt: update mailing list, patchwork, and git
-Date: Wed, 26 Apr 2017 16:43:00 -0700
-Message-Id: <20170426234300.54741-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <tytso@thunk.org>
+Date: Sun, 30 Apr 2017 02:18:21 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [4/4] ubifs: check for consistent encryption contexts in
+ ubifs_lookup()
+Message-ID: <20170430061821.2vzsfs4y6f6tavro@thunk.org>
+References: <20170407175840.95740-5-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170407175840.95740-5-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Apr 07, 2017 at 10:58:40AM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> As ext4 and f2fs do, ubifs should check for consistent encryption
+> contexts during ->lookup() in an encrypted directory.  This protects
+> certain users of filesystem encryption against certain types of offline
+> attacks.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Now that there has been a dedicated mailing list, patchwork project, and
-git repository set up for filesystem encryption, update the MAINTAINERS
-file accordingly.
+Thanks, applied.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- MAINTAINERS | 6 ++++--
- 1 file changed, 4 insertions(+), 2 deletions(-)
-
-diff --git a/MAINTAINERS b/MAINTAINERS
-index 38d3e4ed7208..22b509fb1c5e 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -5365,10 +5365,12 @@ F:	Documentation/filesystems/caching/
- F:	fs/fscache/
- F:	include/linux/fscache*.h
- 
--FS-CRYPTO: FILE SYSTEM LEVEL ENCRYPTION SUPPORT
-+FSCRYPT: FILE SYSTEM LEVEL ENCRYPTION SUPPORT
- M:	Theodore Y. Ts'o <tytso@mit.edu>
- M:	Jaegeuk Kim <jaegeuk@kernel.org>
--L:	linux-fsdevel@vger.kernel.org
-+L:	linux-fscrypt@vger.kernel.org
-+Q:	https://patchwork.kernel.org/project/linux-fscrypt/list/
-+T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git
- S:	Supported
- F:	fs/crypto/
- F:	include/linux/fscrypt*.h
--- 
-2.13.0.rc0.306.g87b477812d-goog
+						- Ted
