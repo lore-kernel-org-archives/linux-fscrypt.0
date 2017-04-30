@@ -1,37 +1,42 @@
-Return-Path: <linux-fsdevel-owner@vger.kernel.org>
-From: Joe Richey <joerichey94@gmail.com>
-Subject: [PATCH v2] fscrypt: Remove __packed from fscrypt_policy
-Date: Thu,  6 Apr 2017 16:14:28 -0700
-Message-Id: <20170406231428.154187-1-joerichey94@gmail.com>
-Sender: linux-fsdevel-owner@vger.kernel.org
-To: linux-fsdevel@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-api@vger.kernel.org, Richard Weinberger <richard.weinberger@gmail.com>, Jaegeuk Kim <jaegeuk@kernel.org>, Theodore Ts'o <tytso@mit.edu>, Michael Halcrow <mhalcrow@google.com>, Joe Richey <joerichey@google.com>
+Return-Path: <tytso@thunk.org>
+Date: Sun, 30 Apr 2017 02:19:22 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [1/6] f2fs: check entire encrypted bigname when finding a dentry
+Message-ID: <20170430061922.djpzcguihke4o4lo@thunk.org>
+References: <20170424170013.85175-2-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170424170013.85175-2-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, kinaba@chromium.org, stable@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Joe Richey <joerichey@google.com>
+On Mon, Apr 24, 2017 at 10:00:08AM -0700, Eric Biggers wrote:
+> From: Jaegeuk Kim <jaegeuk@kernel.org>
+> 
+> If user has no key under an encrypted dir, fscrypt gives digested dentries.
+> Previously, when looking up a dentry, f2fs only checks its hash value with
+> first 4 bytes of the digested dentry, which didn't handle hash collisions fully.
+> This patch enhances to check entire dentry bytes likewise ext4.
+> 
+> Eric reported how to reproduce this issue by:
+> 
+>  # seq -f "edir/abcdefghijklmnopqrstuvwxyz012345%.0f" 100000 | xargs touch
+>  # find edir -type f | xargs stat -c %i | sort | uniq | wc -l
+> 100000
+>  # sync
+>  # echo 3 > /proc/sys/vm/drop_caches
+>  # keyctl new_session
+>  # find edir -type f | xargs stat -c %i | sort | uniq | wc -l
+> 99999
+> 
+> Cc: <stable@vger.kernel.org>
+> Reported-by: Eric Biggers <ebiggers@google.com>
+> Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+> (fixed f2fs_dentry_hash() to work even when the hash is 0)
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-This commit removes __packed from fscrypt_policy as it does not contain
-any implicit padding and does not refer to an on-disk structure. Even
-though this is a change to a UAPI file, no users will be broken as the
-structure doesn't change.
+Thanks, applied to the fscrypt tree.
 
-Signed-off-by: Joe Richey <joerichey@google.com>
----
- include/uapi/linux/fs.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index 048a85e9f017..f6e1c54ac5e2 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -279,7 +279,7 @@ struct fscrypt_policy {
- 	__u8 filenames_encryption_mode;
- 	__u8 flags;
- 	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
--} __packed;
-+};
- 
- #define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
- #define FS_IOC_GET_ENCRYPTION_PWSALT	_IOW('f', 20, __u8[16])
--- 
-2.12.2.715.g7642488e1d-goog
+					- Ted
