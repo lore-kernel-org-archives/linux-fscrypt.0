@@ -1,34 +1,31 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Wed, 29 Mar 2017 14:14:12 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: Creating a mailing list, git tree, and patchwork project for
- fscrypt
-Message-ID: <20170329211412.GB29310@gmail.com>
-References: <20161216203732.g65wjf2wgc6rsijy@thunk.org>
+Return-Path: <tytso@thunk.org>
+Date: Sun, 30 Apr 2017 02:16:02 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: fscrypt: remove unnecessary checks for NULL operations
+Message-ID: <20170430061602.gzmagwz7z7pc2guy@thunk.org>
+References: <20170404213941.113427-1-ebiggers3@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20161216203732.g65wjf2wgc6rsijy@thunk.org>
-To: Theodore Ts'o <tytso@mit.edu>
-Cc: linux-fsdevel@vger.kernel.org, jaegeuk@kernel.org, ebiggers@google.com, mhalcrow@google.com, richard@nod.at, linux-ext4@vger.kernel.org, linux-f2fs@vger.kernel.org, linux-fscrypt@vger.kernel.org
+In-Reply-To: <20170404213941.113427-1-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Fri, Dec 16, 2016 at 03:37:32PM -0500, Theodore Ts'o wrote:
-> I'm thinking about creating a separate mailing list (linux-fscrypt),
-> git tree and patchwork project, just to make it easier to track the
-> patches which are coming in.
+On Tue, Apr 04, 2017 at 02:39:41PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
 > 
-> Does anyone have any objections with that plan?
+> The functions in fs/crypto/*.c are only called by filesystems configured
+> with encryption support.  Since the ->get_context(), ->set_context(),
+> and ->empty_dir() operations are always provided in that case (and must
+> be, otherwise there would be no way to get/set encryption policies, or
+> in the case of ->get_context() even access encrypted files at all),
+> there is no need to check for these operations being NULL and we can
+> remove these unneeded checks.
 > 
-> Cheers,
-> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> Reviewed-by: Richard Weinberger <richard@nod.at>
 
-This seems to have done for a while now:
-	
-    * http://vger.kernel.org/vger-lists.html#linux-fscrypt
-    * https://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git/
-    * https://patchwork.kernel.org/project/linux-fscrypt/list/
+Thanks, applied.
 
-Were you planning to also update the MAINTAINERS file to refer to the new list?
-
-- Eric
+						- Ted
