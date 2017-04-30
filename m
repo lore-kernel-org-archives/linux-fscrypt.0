@@ -1,121 +1,56 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 2/6] fscrypt: avoid collisions when presenting long encrypted filenames
-Date: Mon, 24 Apr 2017 10:00:09 -0700
-Message-Id: <20170424170013.85175-3-ebiggers3@gmail.com>
-In-Reply-To: <20170424170013.85175-1-ebiggers3@gmail.com>
-References: <20170424170013.85175-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, kinaba@chromium.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
+Return-Path: <tytso@thunk.org>
+Date: Sun, 30 Apr 2017 02:17:25 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [1/4] fscrypt: fix context consistency check when key(s)
+ unavailable
+Message-ID: <20170430061725.wgdhived7oqvzqso@thunk.org>
+References: <20170407175840.95740-2-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170407175840.95740-2-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Apr 07, 2017 at 10:58:37AM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> To mitigate some types of offline attacks, filesystem encryption is
+> designed to enforce that all files in an encrypted directory tree use
+> the same encryption policy (i.e. the same encryption context excluding
+> the nonce).  However, the fscrypt_has_permitted_context() function which
+> enforces this relies on comparing struct fscrypt_info's, which are only
+> available when we have the encryption keys.  This can cause two
+> incorrect behaviors:
+> 
+> 1. If we have the parent directory's key but not the child's key, or
+>    vice versa, then fscrypt_has_permitted_context() returned false,
+>    causing applications to see EPERM or ENOKEY.  This is incorrect if
+>    the encryption contexts are in fact consistent.  Although we'd
+>    normally have either both keys or neither key in that case since the
+>    master_key_descriptors would be the same, this is not guaranteed
+>    because keys can be added or removed from keyrings at any time.
+> 
+> 2. If we have neither the parent's key nor the child's key, then
+>    fscrypt_has_permitted_context() returned true, causing applications
+>    to see no error (or else an error for some other reason).  This is
+>    incorrect if the encryption contexts are in fact inconsistent, since
+>    in that case we should deny access.
+> 
+> To fix this, retrieve and compare the fscrypt_contexts if we are unable
+> to set up both fscrypt_infos.
+> 
+> While this slightly hurts performance when accessing an encrypted
+> directory tree without the key, this isn't a case we really need to be
+> optimizing for; access *with* the key is much more important.
+> Furthermore, the performance hit is barely noticeable given that we are
+> already retrieving the fscrypt_context and doing two keyring searches in
+> fscrypt_get_encryption_info().  If we ever actually wanted to optimize
+> this case we might start by caching the fscrypt_contexts.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-When accessing an encrypted directory without the key, userspace must
-operate on filenames derived from the ciphertext names, which contain
-arbitrary bytes.  Since we must support filenames as long as NAME_MAX,
-we can't always just base64-encode the ciphertext, since that may make
-it too long.  Currently, this is solved by presenting long names in an
-abbreviated form containing any needed filesystem-specific hashes (e.g.
-to identify a directory block), then the last 16 bytes of ciphertext.
-This needs to be sufficient to identify the actual name on lookup.
+Thanks, applied.
 
-However, there is a bug.  It seems to have been assumed that due to the
-use of a CBC (ciphertext block chaining)-based encryption mode, the last
-16 bytes (i.e. the AES block size) of ciphertext would depend on the
-full plaintext, preventing collisions.  However, we actually use CBC
-with ciphertext stealing (CTS), which handles the last two blocks
-specially, causing them to appear "flipped".  Thus, it's actually the
-second-to-last block which depends on the full plaintext.
-
-This caused long filenames that differ only near the end of their
-plaintexts to, when observed without the key, point to the wrong inode
-and be undeletable.  For example, with ext4:
-
-    # echo pass | e4crypt add_key -p 16 edir/
-    # seq -f "edir/abcdefghijklmnopqrstuvwxyz012345%.0f" 100000 | xargs touch
-    # find edir/ -type f | xargs stat -c %i | sort | uniq | wc -l
-    100000
-    # sync
-    # echo 3 > /proc/sys/vm/drop_caches
-    # keyctl new_session
-    # find edir/ -type f | xargs stat -c %i | sort | uniq | wc -l
-    2004
-    # rm -rf edir/
-    rm: cannot remove 'edir/_A7nNFi3rhkEQlJ6P,hdzluhODKOeWx5V': Structure needs cleaning
-    ...
-
-To fix this, when presenting long encrypted filenames, encode the
-second-to-last block of ciphertext rather than the last 16 bytes.
-
-Although it would be nice to solve this without depending on a specific
-encryption mode, that would mean doing a cryptographic hash like SHA-256
-which would be much less efficient.  This way is sufficient for now, and
-it's still compatible with encryption modes like HEH which are strong
-pseudorandom permutations.  Also, changing the presented names is still
-allowed at any time because they are only provided to allow applications
-to do things like delete encrypted directories.  They're not designed to
-be used to persistently identify files --- which would be hard to do
-anyway, given that they're encrypted after all.
-
-For ease of backports, this patch only makes the minimal fix to both
-ext4 and f2fs.  It leaves ubifs as-is, since ubifs doesn't compare the
-ciphertext block yet.  Follow-on patches will clean things up properly
-and make the filesystems use a shared helper function.
-
-Fixes: 5de0b4d0cd15 ("ext4 crypto: simplify and speed up filename encryption")
-Reported-by: Gwendal Grignou <gwendal@chromium.org>
-Cc: stable@vger.kernel.org
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fname.c | 2 +-
- fs/ext4/namei.c   | 4 ++--
- fs/f2fs/dir.c     | 4 ++--
- 3 files changed, 5 insertions(+), 5 deletions(-)
-
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 13052b85c393..932881f27f2f 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -300,7 +300,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
- 	} else {
- 		memset(buf, 0, 8);
- 	}
--	memcpy(buf + 8, iname->name + iname->len - 16, 16);
-+	memcpy(buf + 8, iname->name + ((iname->len - 17) & ~15), 16);
- 	oname->name[0] = '_';
- 	oname->len = 1 + digest_encode(buf, 24, oname->name + 1);
- 	return 0;
-diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-index 6ad612c576fc..e6301b6933fc 100644
---- a/fs/ext4/namei.c
-+++ b/fs/ext4/namei.c
-@@ -1255,9 +1255,9 @@ static inline int ext4_match(struct ext4_filename *fname,
- 	if (unlikely(!name)) {
- 		if (fname->usr_fname->name[0] == '_') {
- 			int ret;
--			if (de->name_len < 16)
-+			if (de->name_len <= 32)
- 				return 0;
--			ret = memcmp(de->name + de->name_len - 16,
-+			ret = memcmp(de->name + ((de->name_len - 17) & ~15),
- 				     fname->crypto_buf.name + 8, 16);
- 			return (ret == 0) ? 1 : 0;
- 		}
-diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
-index 374e4b8f9b70..5df3596a667a 100644
---- a/fs/f2fs/dir.c
-+++ b/fs/f2fs/dir.c
-@@ -139,8 +139,8 @@ struct f2fs_dir_entry *find_target_dentry(struct fscrypt_name *fname,
- #ifdef CONFIG_F2FS_FS_ENCRYPTION
- 		if (unlikely(!name->name)) {
- 			if (fname->usr_fname->name[0] == '_') {
--				if (de_name.len >= 16 &&
--					!memcmp(de_name.name + de_name.len - 16,
-+				if (de_name.len > 32 &&
-+					!memcmp(de_name.name + ((de_name.len - 17) & ~15),
- 						fname->crypto_buf.name + 8, 16))
- 					goto found;
- 				goto not_match;
--- 
-2.12.2.816.g2cccc81164-goog
+					- Ted
