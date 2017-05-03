@@ -1,44 +1,41 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 3/4] ubifs: don't bother checking for encryption key in ->mmap()
-Date: Mon, 22 May 2017 17:39:44 -0700
-Message-Id: <20170523003945.14279-4-ebiggers3@gmail.com>
-In-Reply-To: <20170523003945.14279-1-ebiggers3@gmail.com>
-References: <20170523003945.14279-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <jaegeuk@kernel.org>
+Date: Tue, 2 May 2017 21:21:49 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH 1/6] f2fs: check entire encrypted bigname when finding a
+ dentry
+Message-ID: <20170503042149.GA92555@jaegeuk.local>
+References: <20170424170013.85175-1-ebiggers3@gmail.com>
+ <20170424170013.85175-2-ebiggers3@gmail.com>
+ <20170425001023.GA4983@jaegeuk.local>
+ <20170503025628.GA624@zzz>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170503025628.GA624@zzz>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, kinaba@chromium.org, stable@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Eric,
 
-Since only an open file can be mmap'ed, and we only allow open()ing an
-encrypted file when its key is available, there is no need to check for
-the key again before permitting each mmap().
+On 05/02, Eric Biggers wrote:
+> Hi Jaegeuk,
+> 
+> On Mon, Apr 24, 2017 at 05:10:23PM -0700, Jaegeuk Kim wrote:
+> > Hi Eric,
+> > 
+> > This looks good to me.
+> > I'll drop it from my tree, so please move forward through fscrypt.
+> > 
+> > Thanks,
+> 
+> This is in fscrypt/master now (along with the other patches in the series), but
+> it's also in f2fs/dev.  Are you still planning to drop it from the f2fs tree?
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ubifs/file.c | 9 ---------
- 1 file changed, 9 deletions(-)
+Oh, yup. I dropped it.
+Thank you for pointing this out.
 
-diff --git a/fs/ubifs/file.c b/fs/ubifs/file.c
-index 2cda3d67e2d0..7dc58bda279b 100644
---- a/fs/ubifs/file.c
-+++ b/fs/ubifs/file.c
-@@ -1607,15 +1607,6 @@ static const struct vm_operations_struct ubifs_file_vm_ops = {
- static int ubifs_file_mmap(struct file *file, struct vm_area_struct *vma)
- {
- 	int err;
--	struct inode *inode = file->f_mapping->host;
--
--	if (ubifs_crypt_is_encrypted(inode)) {
--		err = fscrypt_get_encryption_info(inode);
--		if (err)
--			return -EACCES;
--		if (!fscrypt_has_encryption_key(inode))
--			return -ENOKEY;
--	}
- 
- 	err = generic_file_mmap(file, vma);
- 	if (err)
--- 
-2.13.0.303.g4ebf302169-goog
+Thanks,
+
+> 
+> - Eric
