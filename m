@@ -1,101 +1,26 @@
-Return-Path: <gilad@benyossef.com>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v2 04/11] crypto: move drbg to generic async completion
-Date: Mon, 29 May 2017 11:22:51 +0300
-Message-Id: <1496046180-21962-5-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1496046180-21962-1-git-send-email-gilad@benyossef.com>
-References: <1496046180-21962-1-git-send-email-gilad@benyossef.com>
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Eric Biggers <ebiggers3@gmail.com>, Ofir Drang <ofir.drang@arm.com>, Pavel Shilovsky <pshilov@microsoft.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <tytso@thunk.org>
+Date: Thu, 4 May 2017 10:55:16 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [PATCH] fscrypt: correct collision claim for digested names
+Message-ID: <20170504145516.7vwyb3f44iz7njly@thunk.org>
+References: <20170501184332.37532-1-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170501184332.37532-1-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Gwendal Grignou <gwendal@chromium.org>, hashimoto@chromium.org, kinaba@chromium.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-DRBG is starting an async. crypto op and waiting for it complete.
-Move it over to generic code doing the same.
+On Mon, May 01, 2017 at 11:43:32AM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> As I noted on the mailing list, it's easier than I originally thought to
+> create intentional collisions in the digested names.  Unfortunately it's
+> not too easy to solve this, so for now just fix the comment to not lie.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-The code now also passes CRYPTO_TFM_REQ_MAY_SLEEP flag indicating
-crypto request memory allocation may use GFP_KERNEL which should
-be perfectly fine as the code is obviously sleeping for the
-completion of the request any way.
+Applied, thanks.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
----
- crypto/drbg.c         | 34 ++++++++--------------------------
- include/crypto/drbg.h |  3 +--
- 2 files changed, 9 insertions(+), 28 deletions(-)
-
-diff --git a/crypto/drbg.c b/crypto/drbg.c
-index cdb27ac..101d9f0 100644
---- a/crypto/drbg.c
-+++ b/crypto/drbg.c
-@@ -1651,16 +1651,6 @@ static int drbg_fini_sym_kernel(struct drbg_state *drbg)
- 	return 0;
- }
- 
--static void drbg_skcipher_cb(struct crypto_async_request *req, int error)
--{
--	struct drbg_state *drbg = req->data;
--
--	if (error == -EINPROGRESS)
--		return;
--	drbg->ctr_async_err = error;
--	complete(&drbg->ctr_completion);
--}
--
- static int drbg_init_sym_kernel(struct drbg_state *drbg)
- {
- 	struct crypto_cipher *tfm;
-@@ -1699,8 +1689,9 @@ static int drbg_init_sym_kernel(struct drbg_state *drbg)
- 		return -ENOMEM;
- 	}
- 	drbg->ctr_req = req;
--	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--					drbg_skcipher_cb, drbg);
-+	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
-+						CRYPTO_TFM_REQ_MAY_SLEEP,
-+					crypto_req_done, &drbg->ctr_wait);
- 
- 	alignmask = crypto_skcipher_alignmask(sk_tfm);
- 	drbg->ctr_null_value_buf = kzalloc(DRBG_CTR_NULL_LEN + alignmask,
-@@ -1761,21 +1752,12 @@ static int drbg_kcapi_sym_ctr(struct drbg_state *drbg,
- 		/* Output buffer may not be valid for SGL, use scratchpad */
- 		skcipher_request_set_crypt(drbg->ctr_req, &sg_in, &sg_out,
- 					   cryptlen, drbg->V);
--		ret = crypto_skcipher_encrypt(drbg->ctr_req);
--		switch (ret) {
--		case 0:
--			break;
--		case -EINPROGRESS:
--		case -EBUSY:
--			wait_for_completion(&drbg->ctr_completion);
--			if (!drbg->ctr_async_err) {
--				reinit_completion(&drbg->ctr_completion);
--				break;
--			}
--		default:
-+		ret = crypto_wait_req(crypto_skcipher_encrypt(drbg->ctr_req),
-+					&drbg->ctr_wait);
-+		if (ret)
- 			goto out;
--		}
--		init_completion(&drbg->ctr_completion);
-+
-+		crypto_init_wait(&drbg->ctr_wait);
- 
- 		memcpy(outbuf, drbg->outscratchpad, cryptlen);
- 
-diff --git a/include/crypto/drbg.h b/include/crypto/drbg.h
-index 22f884c..8f94110 100644
---- a/include/crypto/drbg.h
-+++ b/include/crypto/drbg.h
-@@ -126,8 +126,7 @@ struct drbg_state {
- 	__u8 *ctr_null_value;			/* CTR mode aligned zero buf */
- 	__u8 *outscratchpadbuf;			/* CTR mode output scratchpad */
-         __u8 *outscratchpad;			/* CTR mode aligned outbuf */
--	struct completion ctr_completion;	/* CTR mode async handler */
--	int ctr_async_err;			/* CTR mode async error */
-+	struct crypto_wait ctr_wait;		/* CTR mode async wait obj */
- 
- 	bool seeded;		/* DRBG fully seeded? */
- 	bool pr;		/* Prediction resistance enabled? */
--- 
-2.1.4
+					- Ted
