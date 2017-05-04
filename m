@@ -1,41 +1,32 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH] ext4: remove redundant check for encrypted file on dio write path
-Date: Mon, 22 May 2017 17:53:16 -0700
-Message-Id: <20170523005316.18996-1-ebiggers3@gmail.com>
-To: linux-ext4@vger.kernel.org
-Cc: Theodore Ts'o <tytso@mit.edu>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <tytso@thunk.org>
+Date: Thu, 4 May 2017 11:49:40 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [1/4] fscrypt: fix context consistency check when key(s)
+ unavailable
+Message-ID: <20170504154940.6kof2mn3p4oo6vnj@thunk.org>
+References: <20170407175840.95740-2-ebiggers3@gmail.com>
+ <20170430061725.wgdhived7oqvzqso@thunk.org>
+ <20170502173601.GA75651@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170502173601.GA75651@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Tue, May 02, 2017 at 10:36:01AM -0700, Eric Biggers wrote:
+> Ted, can you add Cc stable to this commit?  (Just this one; the others in the
+> series aren't as important.)  I think this fix is more important than I
+> originally thought, because it's actually pretty easy to end up in a situation
+> where a directory has its key but a file in it does not, due to the file's inode
+> having been evicted from the inode cache but not the directory's inode.  This
+> makes the file undeletable.
 
-Currently we don't allow direct I/O on encrypted regular files, so in
-such cases we return 0 early in ext4_direct_IO().  There was also an
-additional BUG_ON() check in ext4_direct_IO_write(), but it can never be
-hit because of the earlier check for the exact same condition in
-ext4_direct_IO().  There was also no matching check on the read path,
-which made the write path specific check seem very ad-hoc.
+Done.  This meant I had to do a rewind on the fscrypt tree, so if
+someone has built something on top of fscrypt since Sunday you may
+need to take special precautions.  This was just a change to the
+commit description so git rebase should take of the problem relatively
+easily.
 
-Just remove the unnecessary BUG_ON().
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/inode.c | 3 ---
- 1 file changed, 3 deletions(-)
-
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 1bd0bfa547f6..7c6e715b4d2e 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3629,9 +3629,6 @@ static ssize_t ext4_direct_IO_write(struct kiocb *iocb, struct iov_iter *iter)
- 		get_block_func = ext4_dio_get_block_unwritten_async;
- 		dio_flags = DIO_LOCKING;
- 	}
--#ifdef CONFIG_EXT4_FS_ENCRYPTION
--	BUG_ON(ext4_encrypted_inode(inode) && S_ISREG(inode->i_mode));
--#endif
- 	ret = __blockdev_direct_IO(iocb, inode, inode->i_sb->s_bdev, iter,
- 				   get_block_func, ext4_end_io_dio, NULL,
- 				   dio_flags);
--- 
-2.13.0.303.g4ebf302169-goog
+					- Ted
