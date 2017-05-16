@@ -1,99 +1,48 @@
-Return-Path: <gilad@benyossef.com>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v2 05/11] crypto: move gcm to generic async completion
-Date: Mon, 29 May 2017 11:22:52 +0300
-Message-Id: <1496046180-21962-6-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1496046180-21962-1-git-send-email-gilad@benyossef.com>
-References: <1496046180-21962-1-git-send-email-gilad@benyossef.com>
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Eric Biggers <ebiggers3@gmail.com>, Ofir Drang <ofir.drang@arm.com>, Pavel Shilovsky <pshilov@microsoft.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <richard@nod.at>
+Subject: Re: Question on fscrypt_d_revalidate() and fstest generic/429
+References: <e2d845a3-a863-1506-a0de-576049c84e81@nod.at>
+ <20170515194553.GA20264@gmail.com>
+ <489e1437-990f-3e88-d426-b47b82441009@nod.at>
+ <20170515232556.GA46783@gmail.com>
+ <fbf20418-0819-b980-7b68-089e0d1c3d18@nod.at>
+ <20170516220709.GB113464@gmail.com>
+From: Richard Weinberger <richard@nod.at>
+Message-ID: <76ca65df-8ffb-97b8-50ca-29f22ecf7c34@nod.at>
+Date: Wed, 17 May 2017 00:27:44 +0200
+MIME-Version: 1.0
+In-Reply-To: <20170516220709.GB113464@gmail.com>
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: 8bit
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Eric Biggers <ebiggers@google.com>, Theodore Ts'o <tytso@mit.edu>, Al Viro <viro@zeniv.linux.org.uk>, David Gstir <david@sigma-star.at>, David Oberhollenzer <david.oberhollenzer@sigma-star.at>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "linux-mtd@lists.infradead.org" <linux-mtd@lists.infradead.org>, Artem Bityutskiy <dedekind1@gmail.com>, Adrian Hunter <adrian.hunter@intel.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-gcm is starting an async. crypto op and waiting for it complete.
-Move it over to generic code doing the same.
+Eric,
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
----
- crypto/gcm.c | 32 ++++++--------------------------
- 1 file changed, 6 insertions(+), 26 deletions(-)
+Am 17.05.2017 um 00:07 schrieb Eric Biggers:
+>>> I can reproduce this on an unencrypted directory after updating path_init() in
+>>> fs/namei.c to always clear LOOKUP_RCU, so that all path lookups are done in
+>>> ref-walk mode.  So I think fscrypt_d_revalidate() was only relevant because it
+>>> causes all path lookups to drop out of rcu-walk mode.
+>>
+>> On ext4 or UBIFS?
+>
+> Both; the inode "leak" isn't filesystem-specific, beyond the fact that UBIFS
+> apparently limits the number of inodes on its orphan list while ext4 does not.
+> (How do I know it happens on ext4 then?  /proc/slabinfo shows that lots of ext4
+> inodes have been allocated, and after an unclean shutdown and remounting, it's
+> reported that 50,000+ orphan inodes were deleted.)
 
-diff --git a/crypto/gcm.c b/crypto/gcm.c
-index 3841b5e..fb923a5 100644
---- a/crypto/gcm.c
-+++ b/crypto/gcm.c
-@@ -16,7 +16,6 @@
- #include <crypto/scatterwalk.h>
- #include <crypto/hash.h>
- #include "internal.h"
--#include <linux/completion.h>
- #include <linux/err.h>
- #include <linux/init.h>
- #include <linux/kernel.h>
-@@ -78,11 +77,6 @@ struct crypto_gcm_req_priv_ctx {
- 	} u;
- };
- 
--struct crypto_gcm_setkey_result {
--	int err;
--	struct completion completion;
--};
--
- static struct {
- 	u8 buf[16];
- 	struct scatterlist sg;
-@@ -98,17 +92,6 @@ static inline struct crypto_gcm_req_priv_ctx *crypto_gcm_reqctx(
- 	return (void *)PTR_ALIGN((u8 *)aead_request_ctx(req), align + 1);
- }
- 
--static void crypto_gcm_setkey_done(struct crypto_async_request *req, int err)
--{
--	struct crypto_gcm_setkey_result *result = req->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	result->err = err;
--	complete(&result->completion);
--}
--
- static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
- 			     unsigned int keylen)
- {
-@@ -119,7 +102,7 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
- 		be128 hash;
- 		u8 iv[16];
- 
--		struct crypto_gcm_setkey_result result;
-+		struct crypto_wait wait;
- 
- 		struct scatterlist sg[1];
- 		struct skcipher_request req;
-@@ -140,21 +123,18 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
- 	if (!data)
- 		return -ENOMEM;
- 
--	init_completion(&data->result.completion);
-+	crypto_init_wait(&data->wait);
- 	sg_init_one(data->sg, &data->hash, sizeof(data->hash));
- 	skcipher_request_set_tfm(&data->req, ctr);
- 	skcipher_request_set_callback(&data->req, CRYPTO_TFM_REQ_MAY_SLEEP |
- 						  CRYPTO_TFM_REQ_MAY_BACKLOG,
--				      crypto_gcm_setkey_done,
--				      &data->result);
-+				      crypto_req_done,
-+				      &data->wait);
- 	skcipher_request_set_crypt(&data->req, data->sg, data->sg,
- 				   sizeof(data->hash), data->iv);
- 
--	err = crypto_skcipher_encrypt(&data->req);
--	if (err == -EINPROGRESS || err == -EBUSY) {
--		wait_for_completion(&data->result.completion);
--		err = data->result.err;
--	}
-+	err = crypto_wait_req(crypto_skcipher_encrypt(&data->req),
-+							&data->wait);
- 
- 	if (err)
- 		goto out;
--- 
-2.1.4
+UBIFS's orphan list is limited by the size of a LEB (logical erase block).
+With nandsim's default settings such a LEB is rather small and can store only
+2k orphans.
+
+> There are lots of cases in which path lookups switch from rcu-walk mode into
+> ref-walk mode, so the fact that it was being caused by ->d_revalidate() in this
+> specific situation isn't really important, IMO.
+> 
+> I think the actual fix would be something along the lines of making vfs_rmdir()
+> unhash any negative child dentries, so that they get "killed" by dput() later.
+
+Thanks,
+//richard
