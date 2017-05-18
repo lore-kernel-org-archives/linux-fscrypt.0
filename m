@@ -1,497 +1,554 @@
 Return-Path: <david@sigma-star.at>
 From: David Gstir <david@sigma-star.at>
-Subject: [PATCH v4] fscrypt: Add support for AES-128-CBC
-Date: Tue, 23 May 2017 07:11:20 +0200
-Message-Id: <20170523051120.15698-1-david@sigma-star.at>
+Message-Id: <6E436FB9-B223-4B78-8383-96A179801A35@sigma-star.at>
+Content-Type: multipart/alternative;
+ boundary="Apple-Mail=_371BEDCD-8DAE-4A54-AA24-E3C43B6A3BBB"
+Mime-Version: 1.0 (Mac OS X Mail 10.3 \(3273\))
+Subject: Re: [PATCH v3] fscrypt: Add support for AES-128-CBC
+Date: Thu, 18 May 2017 15:43:11 +0200
 In-Reply-To: <20170517180850.GA91213@gmail.com>
-References: <20170517180850.GA91213@gmail.com>
-To: tytso@mit.edu, jaegeuk@kernel.org
-Cc: ebiggers3@gmail.com, richard@sigma-star.at, herbert@gondor.apana.org.au, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, Daniel Walter <dwalter@sigma-star.at>, David Gstir <david@sigma-star.at>
+References: <20170426215616.GA104929@gmail.com>
+ <20170517112104.61106-1-david@sigma-star.at>
+ <20170517180850.GA91213@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: tytso@mit.edu, jaegeuk@kernel.org, richard@sigma-star.at, herbert@gondor.apana.org.au, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, Daniel Walter <dwalter@sigma-star.at>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Daniel Walter <dwalter@sigma-star.at>
 
-fscrypt provides facilities to use different encryption algorithms which
-are selectable by userspace when setting the encryption policy. Currently,
-only AES-256-XTS for file contents and AES-256-CBC-CTS for file names are
-implemented. This is a clear case of kernel offers the mechanism and
-userspace selects a policy. Similar to what dm-crypt and ecryptfs have.
+--Apple-Mail=_371BEDCD-8DAE-4A54-AA24-E3C43B6A3BBB
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain;
+	charset=us-ascii
 
-This patch adds support for using AES-128-CBC for file contents and
-AES-128-CBC-CTS for file name encryption. To mitigate watermarking
-attacks, IVs are generated using the ESSIV algorithm. While AES-CBC is
-actually slightly less secure than AES-XTS from a security point of view,
-there is more widespread hardware support. Using AES-CBC gives us the
-acceptable performance while still providing a moderate level of security
-for persistent storage.
+Hi Eric!
 
-Especially low-powered embedded devices with crypto accelerators such as
-CAAM or CESA often only support AES-CBC. Since using AES-CBC over AES-XTS
-is basically thought of a last resort, we use AES-128-CBC over AES-256-CBC
-since it has less encryption rounds and yields noticeable better
-performance starting from a file size of just a few kB.
+Thanks for the thorough review! :)
 
-Signed-off-by: Daniel Walter <dwalter@sigma-star.at>
-[david@sigma-star.at: addressed review comments]
-Signed-off-by: David Gstir <david@sigma-star.at>
----
- fs/crypto/Kconfig              |   1 +
- fs/crypto/crypto.c             |  23 ++++--
- fs/crypto/fscrypt_private.h    |   9 ++-
- fs/crypto/keyinfo.c            | 171 ++++++++++++++++++++++++++++++++---------
- fs/crypto/policy.c             |   8 +-
- include/linux/fscrypt_common.h |  16 ++--
- include/uapi/linux/fs.h        |   2 +
- 7 files changed, 172 insertions(+), 58 deletions(-)
+> On 17 May 2017, at 20:08, Eric Biggers <ebiggers3@gmail.com> wrote:
+>=20
+> Hi David, thanks for the update!
+>=20
+> On Wed, May 17, 2017 at 01:21:04PM +0200, David Gstir wrote:
+>> From: Daniel Walter <dwalter@sigma-star.at>
+>>=20
+>> fscrypt provides facilities to use different encryption algorithms =
+which
+>> are selectable by userspace when setting the encryption policy. =
+Currently,
+>> only AES-256-XTS for file contents and AES-256-CBC-CTS for file names =
+are
+>> implemented. This is a clear case of kernel offers the mechanism and
+>> userspace selects a policy. Similar to what dm-crypt and ecryptfs =
+have.
+>>=20
+>> This patch adds support for using AES-128-CBC for file contents and
+>> AES-128-CBC-CTS for file name encryption. To mitigate watermarking
+>> attacks, IVs are generated using the ESSIV algorithm. While AES-CBC =
+is
+>> actually slightly less secure than AES-XTS from a security point of =
+view,
+>> there is more widespread hardware support. Especially low-powered =
+embedded
+>> devices with crypto accelerators such as CAAM or CESA support only
+>> AES-CBC-128 with an acceptable speed. Using AES-CBC gives us the =
+acceptable
+>> performance while still providing a moderate level of security for
+>> persistent storage.
+>=20
+> You covered this briefly in an email, but can you include more detail =
+in the
+> commit message on the reasoning behind choosing AES-128 instead of =
+AES-256?
+> Note that this is independent of the decision of CBC vs. XTS.
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 08b46e6e3995..02b7d91c9231 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -7,6 +7,7 @@ config FS_ENCRYPTION
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select CRYPTO_CTR
-+	select CRYPTO_SHA256
- 	select KEYS
- 	help
- 	  Enable encryption of files and directories.  This
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 6d6eca394d4d..c7835df7e7b8 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -26,6 +26,7 @@
- #include <linux/ratelimit.h>
- #include <linux/dcache.h>
- #include <linux/namei.h>
-+#include <crypto/aes.h>
- #include "fscrypt_private.h"
- 
- static unsigned int num_prealloc_crypto_pages = 32;
-@@ -147,8 +148,8 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- {
- 	struct {
- 		__le64 index;
--		u8 padding[FS_XTS_TWEAK_SIZE - sizeof(__le64)];
--	} xts_tweak;
-+		u8 padding[FS_IV_SIZE - sizeof(__le64)];
-+	} iv;
- 	struct skcipher_request *req = NULL;
- 	DECLARE_FS_COMPLETION_RESULT(ecr);
- 	struct scatterlist dst, src;
-@@ -158,6 +159,16 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 
- 	BUG_ON(len == 0);
- 
-+	BUILD_BUG_ON(sizeof(iv) != FS_IV_SIZE);
-+	BUILD_BUG_ON(AES_BLOCK_SIZE != FS_IV_SIZE);
-+	iv.index = cpu_to_le64(lblk_num);
-+	memset(iv.padding, 0, sizeof(iv.padding));
-+
-+	if (ci->ci_essiv_tfm != NULL) {
-+		crypto_cipher_encrypt_one(ci->ci_essiv_tfm, (u8 *)&iv,
-+					  (u8 *)&iv);
-+	}
-+
- 	req = skcipher_request_alloc(tfm, gfp_flags);
- 	if (!req) {
- 		printk_ratelimited(KERN_ERR
-@@ -170,15 +181,11 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 		req, CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
- 		page_crypt_complete, &ecr);
- 
--	BUILD_BUG_ON(sizeof(xts_tweak) != FS_XTS_TWEAK_SIZE);
--	xts_tweak.index = cpu_to_le64(lblk_num);
--	memset(xts_tweak.padding, 0, sizeof(xts_tweak.padding));
--
- 	sg_init_table(&dst, 1);
- 	sg_set_page(&dst, dest_page, len, offs);
- 	sg_init_table(&src, 1);
- 	sg_set_page(&src, src_page, len, offs);
--	skcipher_request_set_crypt(req, &src, &dst, len, &xts_tweak);
-+	skcipher_request_set_crypt(req, &src, &dst, len, &iv);
- 	if (rw == FS_DECRYPT)
- 		res = crypto_skcipher_decrypt(req);
- 	else
-@@ -477,6 +484,8 @@ static void __exit fscrypt_exit(void)
- 		destroy_workqueue(fscrypt_read_workqueue);
- 	kmem_cache_destroy(fscrypt_ctx_cachep);
- 	kmem_cache_destroy(fscrypt_info_cachep);
-+
-+	fscrypt_essiv_cleanup();
- }
- module_exit(fscrypt_exit);
- 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 1e1f8a361b75..a1d5021c31ef 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -12,10 +12,13 @@
- #define _FSCRYPT_PRIVATE_H
- 
- #include <linux/fscrypt_supp.h>
-+#include <crypto/hash.h>
- 
- /* Encryption parameters */
--#define FS_XTS_TWEAK_SIZE		16
-+#define FS_IV_SIZE			16
- #define FS_AES_128_ECB_KEY_SIZE		16
-+#define FS_AES_128_CBC_KEY_SIZE		16
-+#define FS_AES_128_CTS_KEY_SIZE		16
- #define FS_AES_256_GCM_KEY_SIZE		32
- #define FS_AES_256_CBC_KEY_SIZE		32
- #define FS_AES_256_CTS_KEY_SIZE		32
-@@ -54,6 +57,7 @@ struct fscrypt_info {
- 	u8 ci_filename_mode;
- 	u8 ci_flags;
- 	struct crypto_skcipher *ci_ctfm;
-+	struct crypto_cipher *ci_essiv_tfm;
- 	u8 ci_master_key[FS_KEY_DESCRIPTOR_SIZE];
- };
- 
-@@ -87,4 +91,7 @@ extern int fscrypt_do_page_crypto(const struct inode *inode,
- extern struct page *fscrypt_alloc_bounce_page(struct fscrypt_ctx *ctx,
- 					      gfp_t gfp_flags);
- 
-+/* keyinfo.c */
-+extern void __exit fscrypt_essiv_cleanup(void);
-+
- #endif /* _FSCRYPT_PRIVATE_H */
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 179e578b875b..b8f5e1d5a3cc 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -10,8 +10,13 @@
- 
- #include <keys/user-type.h>
- #include <linux/scatterlist.h>
-+#include <linux/ratelimit.h>
-+#include <crypto/aes.h>
-+#include <crypto/sha.h>
- #include "fscrypt_private.h"
- 
-+static struct crypto_shash *essiv_hash_tfm;
-+
- static void derive_crypt_complete(struct crypto_async_request *req, int rc)
- {
- 	struct fscrypt_completion_result *ecr = req->data;
-@@ -27,13 +32,13 @@ static void derive_crypt_complete(struct crypto_async_request *req, int rc)
-  * derive_key_aes() - Derive a key using AES-128-ECB
-  * @deriving_key: Encryption key used for derivation.
-  * @source_key:   Source key to which to apply derivation.
-- * @derived_key:  Derived key.
-+ * @derived_raw_key:  Derived raw key.
-  *
-  * Return: Zero on success; non-zero otherwise.
-  */
- static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
--				u8 source_key[FS_AES_256_XTS_KEY_SIZE],
--				u8 derived_key[FS_AES_256_XTS_KEY_SIZE])
-+				const struct fscrypt_key *source_key,
-+				u8 derived_raw_key[FS_MAX_KEY_SIZE])
- {
- 	int res = 0;
- 	struct skcipher_request *req = NULL;
-@@ -60,10 +65,10 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- 	if (res < 0)
- 		goto out;
- 
--	sg_init_one(&src_sg, source_key, FS_AES_256_XTS_KEY_SIZE);
--	sg_init_one(&dst_sg, derived_key, FS_AES_256_XTS_KEY_SIZE);
--	skcipher_request_set_crypt(req, &src_sg, &dst_sg,
--					FS_AES_256_XTS_KEY_SIZE, NULL);
-+	sg_init_one(&src_sg, source_key->raw, source_key->size);
-+	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
-+	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
-+				   NULL);
- 	res = crypto_skcipher_encrypt(req);
- 	if (res == -EINPROGRESS || res == -EBUSY) {
- 		wait_for_completion(&ecr.completion);
-@@ -77,7 +82,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- 
- static int validate_user_key(struct fscrypt_info *crypt_info,
- 			struct fscrypt_context *ctx, u8 *raw_key,
--			const char *prefix)
-+			const char *prefix, int min_keysize)
- {
- 	char *description;
- 	struct key *keyring_key;
-@@ -111,50 +116,60 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
- 	master_key = (struct fscrypt_key *)ukp->data;
- 	BUILD_BUG_ON(FS_AES_128_ECB_KEY_SIZE != FS_KEY_DERIVATION_NONCE_SIZE);
- 
--	if (master_key->size != FS_AES_256_XTS_KEY_SIZE) {
-+	if (master_key->size < min_keysize || master_key->size > FS_MAX_KEY_SIZE
-+	    || master_key->size % AES_BLOCK_SIZE != 0) {
- 		printk_once(KERN_WARNING
- 				"%s: key size incorrect: %d\n",
- 				__func__, master_key->size);
- 		res = -ENOKEY;
- 		goto out;
- 	}
--	res = derive_key_aes(ctx->nonce, master_key->raw, raw_key);
-+	res = derive_key_aes(ctx->nonce, master_key, raw_key);
- out:
- 	up_read(&keyring_key->sem);
- 	key_put(keyring_key);
- 	return res;
- }
- 
-+static const struct {
-+	const char *cipher_str;
-+	int keysize;
-+} available_modes[] = {
-+	[FS_ENCRYPTION_MODE_AES_256_XTS] = { "xts(aes)",
-+					     FS_AES_256_XTS_KEY_SIZE },
-+	[FS_ENCRYPTION_MODE_AES_256_CTS] = { "cts(cbc(aes))",
-+					     FS_AES_256_CTS_KEY_SIZE },
-+	[FS_ENCRYPTION_MODE_AES_128_CBC] = { "cbc(aes)",
-+					     FS_AES_128_CBC_KEY_SIZE },
-+	[FS_ENCRYPTION_MODE_AES_128_CTS] = { "cts(cbc(aes))",
-+					     FS_AES_128_CTS_KEY_SIZE },
-+};
-+
- static int determine_cipher_type(struct fscrypt_info *ci, struct inode *inode,
- 				 const char **cipher_str_ret, int *keysize_ret)
- {
--	if (S_ISREG(inode->i_mode)) {
--		if (ci->ci_data_mode == FS_ENCRYPTION_MODE_AES_256_XTS) {
--			*cipher_str_ret = "xts(aes)";
--			*keysize_ret = FS_AES_256_XTS_KEY_SIZE;
--			return 0;
--		}
--		pr_warn_once("fscrypto: unsupported contents encryption mode "
--			     "%d for inode %lu\n",
--			     ci->ci_data_mode, inode->i_ino);
--		return -ENOKEY;
-+	u32 mode;
-+
-+	if (!fscrypt_valid_enc_modes(ci->ci_data_mode, ci->ci_filename_mode)) {
-+		pr_warn_ratelimited("fscrypt: inode %lu uses unsupported encryption modes (contents mode %d, filenames mode %d)\n",
-+				    inode->i_ino,
-+				    ci->ci_data_mode, ci->ci_filename_mode);
-+		return -EINVAL;
- 	}
- 
--	if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)) {
--		if (ci->ci_filename_mode == FS_ENCRYPTION_MODE_AES_256_CTS) {
--			*cipher_str_ret = "cts(cbc(aes))";
--			*keysize_ret = FS_AES_256_CTS_KEY_SIZE;
--			return 0;
--		}
--		pr_warn_once("fscrypto: unsupported filenames encryption mode "
--			     "%d for inode %lu\n",
--			     ci->ci_filename_mode, inode->i_ino);
--		return -ENOKEY;
-+	if (S_ISREG(inode->i_mode)) {
-+		mode = ci->ci_data_mode;
-+	} else if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)) {
-+		mode = ci->ci_filename_mode;
-+	} else {
-+		WARN_ONCE(1, "fscrypt: filesystem tried to load encryption info for inode %lu, which is not encryptable (file type %d)\n",
-+			  inode->i_ino, (inode->i_mode & S_IFMT));
-+		return -EINVAL;
- 	}
- 
--	pr_warn_once("fscrypto: unsupported file type %d for inode %lu\n",
--		     (inode->i_mode & S_IFMT), inode->i_ino);
--	return -ENOKEY;
-+	*cipher_str_ret = available_modes[mode].cipher_str;
-+	*keysize_ret = available_modes[mode].keysize;
-+	return 0;
- }
- 
- static void put_crypt_info(struct fscrypt_info *ci)
-@@ -163,9 +178,79 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 		return;
- 
- 	crypto_free_skcipher(ci->ci_ctfm);
-+	crypto_free_cipher(ci->ci_essiv_tfm);
- 	kmem_cache_free(fscrypt_info_cachep, ci);
- }
- 
-+static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
-+{
-+	struct crypto_shash *tfm = READ_ONCE(essiv_hash_tfm);
-+
-+	/* init hash transform on demand */
-+	if (unlikely(!tfm)) {
-+		struct crypto_shash *prev_tfm;
-+
-+		tfm = crypto_alloc_shash("sha256", 0, 0);
-+		if (IS_ERR(tfm)) {
-+			pr_warn_ratelimited("fscrypt: error allocating SHA-256 transform: %ld\n",
-+					    PTR_ERR(tfm));
-+			return PTR_ERR(tfm);
-+		}
-+		prev_tfm = cmpxchg(&essiv_hash_tfm, NULL, tfm);
-+		if (prev_tfm) {
-+			crypto_free_shash(tfm);
-+			tfm = prev_tfm;
-+		}
-+	}
-+
-+	{
-+		SHASH_DESC_ON_STACK(desc, tfm);
-+		desc->tfm = tfm;
-+		desc->flags = 0;
-+
-+		return crypto_shash_digest(desc, key, keysize, salt);
-+	}
-+}
-+
-+static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
-+				int keysize)
-+{
-+	int err;
-+	struct crypto_cipher *essiv_tfm;
-+	u8 salt[SHA256_DIGEST_SIZE];
-+
-+	if (WARN_ON_ONCE(keysize > sizeof(salt)))
-+		return -EINVAL;
-+
-+	essiv_tfm = crypto_alloc_cipher("aes", 0, 0);
-+	if (IS_ERR(essiv_tfm))
-+		return PTR_ERR(essiv_tfm);
-+
-+	ci->ci_essiv_tfm = essiv_tfm;
-+
-+	err = derive_essiv_salt(raw_key, keysize, salt);
-+	if (err)
-+		goto out;
-+
-+	/*
-+	 * Using SHA256 to derive the salt/key will result in AES-256 being
-+	 * used for IV generation. File contents encryption will still use the
-+	 * configured keysize (AES-128) nevertheless.
-+	 */
-+	err = crypto_cipher_setkey(essiv_tfm, salt, sizeof(salt));
-+	if (err)
-+		goto out;
-+
-+out:
-+	memzero_explicit(salt, sizeof(salt));
-+	return err;
-+}
-+
-+void __exit fscrypt_essiv_cleanup(void)
-+{
-+	crypto_free_shash(essiv_hash_tfm);
-+}
-+
- int fscrypt_get_encryption_info(struct inode *inode)
- {
- 	struct fscrypt_info *crypt_info;
-@@ -212,6 +297,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
- 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
- 	crypt_info->ci_ctfm = NULL;
-+	crypt_info->ci_essiv_tfm = NULL;
- 	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
- 				sizeof(crypt_info->ci_master_key));
- 
-@@ -228,10 +314,12 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (!raw_key)
- 		goto out;
- 
--	res = validate_user_key(crypt_info, &ctx, raw_key, FS_KEY_DESC_PREFIX);
-+	res = validate_user_key(crypt_info, &ctx, raw_key, FS_KEY_DESC_PREFIX,
-+				keysize);
- 	if (res && inode->i_sb->s_cop->key_prefix) {
- 		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
--					     inode->i_sb->s_cop->key_prefix);
-+					     inode->i_sb->s_cop->key_prefix,
-+					     keysize);
- 		if (res2) {
- 			if (res2 == -ENOKEY)
- 				res = -ENOKEY;
-@@ -243,9 +331,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	ctfm = crypto_alloc_skcipher(cipher_str, 0, 0);
- 	if (!ctfm || IS_ERR(ctfm)) {
- 		res = ctfm ? PTR_ERR(ctfm) : -ENOMEM;
--		printk(KERN_DEBUG
--		       "%s: error %d (inode %u) allocating crypto tfm\n",
--		       __func__, res, (unsigned) inode->i_ino);
-+		pr_debug("%s: error %d (inode %lu) allocating crypto tfm\n",
-+			 __func__, res, inode->i_ino);
- 		goto out;
- 	}
- 	crypt_info->ci_ctfm = ctfm;
-@@ -255,6 +342,14 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (res)
- 		goto out;
- 
-+	if (crypt_info->ci_data_mode == FS_ENCRYPTION_MODE_AES_128_CBC) {
-+		res = init_essiv_generator(crypt_info, raw_key, keysize);
-+		if (res) {
-+			pr_debug("%s: error %d (inode %lu) allocating essiv tfm\n",
-+				 __func__, res, inode->i_ino);
-+			goto out;
-+		}
-+	}
- 	if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) == NULL)
- 		crypt_info = NULL;
- out:
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 210976e7a269..9914d51dff86 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -38,12 +38,8 @@ static int create_encryption_context_from_policy(struct inode *inode,
- 	memcpy(ctx.master_key_descriptor, policy->master_key_descriptor,
- 					FS_KEY_DESCRIPTOR_SIZE);
- 
--	if (!fscrypt_valid_contents_enc_mode(
--				policy->contents_encryption_mode))
--		return -EINVAL;
--
--	if (!fscrypt_valid_filenames_enc_mode(
--				policy->filenames_encryption_mode))
-+	if (!fscrypt_valid_enc_modes(policy->contents_encryption_mode,
-+				     policy->filenames_encryption_mode))
- 		return -EINVAL;
- 
- 	if (policy->flags & ~FS_POLICY_FLAGS_VALID)
-diff --git a/include/linux/fscrypt_common.h b/include/linux/fscrypt_common.h
-index 0a30c106c1e5..4022c61f7e9b 100644
---- a/include/linux/fscrypt_common.h
-+++ b/include/linux/fscrypt_common.h
-@@ -91,14 +91,18 @@ static inline bool fscrypt_dummy_context_enabled(struct inode *inode)
- 	return false;
- }
- 
--static inline bool fscrypt_valid_contents_enc_mode(u32 mode)
-+static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
-+					u32 filenames_mode)
- {
--	return (mode == FS_ENCRYPTION_MODE_AES_256_XTS);
--}
-+	if (contents_mode == FS_ENCRYPTION_MODE_AES_128_CBC &&
-+	    filenames_mode == FS_ENCRYPTION_MODE_AES_128_CTS)
-+		return true;
- 
--static inline bool fscrypt_valid_filenames_enc_mode(u32 mode)
--{
--	return (mode == FS_ENCRYPTION_MODE_AES_256_CTS);
-+	if (contents_mode == FS_ENCRYPTION_MODE_AES_256_XTS &&
-+	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
-+		return true;
-+
-+	return false;
- }
- 
- static inline bool fscrypt_is_dot_dotdot(const struct qstr *str)
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index 24e61a54feaa..a2a3ffb06038 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -272,6 +272,8 @@ struct fsxattr {
- #define FS_ENCRYPTION_MODE_AES_256_GCM		2
- #define FS_ENCRYPTION_MODE_AES_256_CBC		3
- #define FS_ENCRYPTION_MODE_AES_256_CTS		4
-+#define FS_ENCRYPTION_MODE_AES_128_CBC		5
-+#define FS_ENCRYPTION_MODE_AES_128_CTS		6
- 
- struct fscrypt_policy {
- 	__u8 version;
--- 
-2.12.0
+Sure, I'll extend the commit message to include that.
+
+
+>=20
+>> @@ -129,27 +136,37 @@ static int determine_cipher_type(struct =
+fscrypt_info *ci, struct inode *inode,
+>> 				 const char **cipher_str_ret, int =
+*keysize_ret)
+>> {
+>> 	if (S_ISREG(inode->i_mode)) {
+>> -		if (ci->ci_data_mode =3D=3D =
+FS_ENCRYPTION_MODE_AES_256_XTS) {
+>> +		switch (ci->ci_data_mode) {
+>> +		case FS_ENCRYPTION_MODE_AES_256_XTS:
+>> 			*cipher_str_ret =3D "xts(aes)";
+>> 			*keysize_ret =3D FS_AES_256_XTS_KEY_SIZE;
+>> 			return 0;
+>> +		case FS_ENCRYPTION_MODE_AES_128_CBC:
+>> +			*cipher_str_ret =3D "cbc(aes)";
+>> +			*keysize_ret =3D FS_AES_128_CBC_KEY_SIZE;
+>> +			return 0;
+>> +		default:
+>> +			pr_warn_once("fscrypto: unsupported contents =
+encryption mode %d for inode %lu\n",
+>> +				     ci->ci_data_mode, inode->i_ino);
+>> +			return -ENOKEY;
+>> 		}
+>> -		pr_warn_once("fscrypto: unsupported contents encryption =
+mode "
+>> -			     "%d for inode %lu\n",
+>> -			     ci->ci_data_mode, inode->i_ino);
+>> -		return -ENOKEY;
+>> 	}
+>>=20
+>> 	if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)) {
+>> -		if (ci->ci_filename_mode =3D=3D =
+FS_ENCRYPTION_MODE_AES_256_CTS) {
+>> +		switch (ci->ci_filename_mode) {
+>> +		case FS_ENCRYPTION_MODE_AES_256_CTS:
+>> 			*cipher_str_ret =3D "cts(cbc(aes))";
+>> 			*keysize_ret =3D FS_AES_256_CTS_KEY_SIZE;
+>> 			return 0;
+>> +		case FS_ENCRYPTION_MODE_AES_128_CTS:
+>> +			*cipher_str_ret =3D "cts(cbc(aes))";
+>> +			*keysize_ret =3D FS_AES_128_CTS_KEY_SIZE;
+>> +			return 0;
+>> +		default:
+>> +			pr_warn_once("fscrypto: unsupported filenames =
+encryption mode %d for inode %lu\n",
+>> +				     ci->ci_filename_mode, =
+inode->i_ino);
+>> +			return -ENOKEY;
+>> 		}
+>> -		pr_warn_once("fscrypto: unsupported filenames encryption =
+mode "
+>> -			     "%d for inode %lu\n",
+>> -			     ci->ci_filename_mode, inode->i_ino);
+>> -		return -ENOKEY;
+>> 	}
+>=20
+> With the added call to fscrypt_valid_enc_modes() earlier, the warnings =
+about
+> unsupported encryption modes are no longer reachable.  IMO, the
+> fscrypt_valid_enc_modes() check should be moved into this function, a =
+proper
+> warning message added for it, and the redundant warnings removed.  =
+Also now that
+> there will be more modes I think it would be appropriate to put the =
+algorithm
+> names and key sizes in a table, to avoid the ugly switch statements. =20=
+
+
+I agree. I'll clean this up.
+
+
+
+>> +	int err;
+>> +
+>> +	/* init hash transform on demand */
+>> +	if (unlikely(essiv_hash_tfm =3D=3D NULL)) {
+>> +		mutex_lock(&essiv_hash_lock);
+>> +		if (essiv_hash_tfm =3D=3D NULL) {
+>> +			essiv_hash_tfm =3D crypto_alloc_shash("sha256", =
+0, 0);
+>> +			if (IS_ERR(essiv_hash_tfm)) {
+>> +				pr_warn_ratelimited("fscrypt: error =
+allocating SHA-256 transform: %ld\n",
+>> +						    =
+PTR_ERR(essiv_hash_tfm));
+>> +				err =3D PTR_ERR(essiv_hash_tfm);
+>> +				essiv_hash_tfm =3D NULL;
+>> +				mutex_unlock(&essiv_hash_lock);
+>> +				return err;
+>> +			}
+>> +		}
+>> +		mutex_unlock(&essiv_hash_lock);
+>> +	}
+>=20
+> There is a bug here: a thread can set essiv_hash_tfm to an ERR_PTR(), =
+and
+> another thread can use it before it's set back to NULL. =20
+
+Sorry, I missed that... :-(
+
+
+
+>> +	err =3D crypto_cipher_setkey(essiv_tfm, salt, =
+SHA256_DIGEST_SIZE);
+>> +	if (err)
+>> +		goto out;
+>=20
+> sizeof(salt) instead of hardcoding SHA256_DIGEST_SIZE.
+>=20
+> I think there should also be a brief comment explaining that the ESSIV =
+cipher
+> uses AES-256 so that its key size matches the size of the hash, even =
+though the
+> "real" encryption may use AES-128.
+
+Good point!
+
+
+>=20
+>> +void fscrypt_essiv_cleanup(void)
+>> +{
+>> +	crypto_free_shash(essiv_hash_tfm);
+>> +	essiv_hash_tfm =3D NULL;
+>> +}
+>=20
+> This is called from fscrypt_destroy(), which is a little weird because
+> fscrypt_destroy() is meant to clean up only from =
+"fscrypt_initialize()", which
+> only allocates certain things.  I think it should be called from
+> "fscrypt_exit()" instead.  Then you could also add the __exit =
+annotation, and
+> remove setting essiv_hash_tfm to NULL which would clearly be =
+unnecessary.
+
+fscrypt_destroy() is actually also called from fscrypt_exit(). Thats why =
+I chose it,
+but changing this fscrypt_exit() seems the cleaner approach. :)
+
+Thanks,
+David
+
+--
+sigma star gmbh | Eduard-Bodem-Gasse 6, 6020 Innsbruck, Austria
+UID/VAT Nr: ATU 66964118 | FN: 374287y
+
+
+--Apple-Mail=_371BEDCD-8DAE-4A54-AA24-E3C43B6A3BBB
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html;
+	charset=us-ascii
+
+<html><head><meta http-equiv=3D"Content-Type" content=3D"text/html =
+charset=3Dus-ascii"></head><body style=3D"word-wrap: break-word; =
+-webkit-nbsp-mode: space; -webkit-line-break: after-white-space;" =
+class=3D""><div dir=3D"auto" style=3D"word-wrap: break-word; =
+-webkit-nbsp-mode: space; -webkit-line-break: after-white-space;" =
+class=3D""><div dir=3D"auto" style=3D"word-wrap: break-word; =
+-webkit-nbsp-mode: space; -webkit-line-break: after-white-space;">Hi =
+Eric!<div class=3D""><br class=3D""></div><div class=3D"">Thanks for the =
+thorough review! :)</div><div class=3D""><br class=3D""><blockquote =
+type=3D"cite" class=3D"">On 17 May 2017, at 20:08, Eric Biggers &lt;<a =
+href=3D"mailto:ebiggers3@gmail.com" class=3D"">ebiggers3@gmail.com</a>&gt;=
+ wrote:<br class=3D""><br class=3D"">Hi David, thanks for the update!<br =
+class=3D""><br class=3D"">On Wed, May 17, 2017 at 01:21:04PM +0200, =
+David Gstir wrote:<br class=3D""><blockquote type=3D"cite" =
+style=3D"font-family: Menlo-Regular; font-size: 12px; font-style: =
+normal; font-variant-caps: normal; font-weight: normal; letter-spacing: =
+normal; orphans: auto; text-align: start; text-indent: 0px; =
+text-transform: none; white-space: normal; widows: auto; word-spacing: =
+0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px;" =
+class=3D"">From: Daniel Walter &lt;<a =
+href=3D"mailto:dwalter@sigma-star.at" =
+class=3D"">dwalter@sigma-star.at</a>&gt;<br class=3D""><br =
+class=3D"">fscrypt provides facilities to use different encryption =
+algorithms which<br class=3D"">are selectable by userspace when setting =
+the encryption policy. Currently,<br class=3D"">only AES-256-XTS for =
+file contents and AES-256-CBC-CTS for file names are<br =
+class=3D"">implemented. This is a clear case of kernel offers the =
+mechanism and<br class=3D"">userspace selects a policy. Similar to what =
+dm-crypt and ecryptfs have.<br class=3D""><br class=3D"">This patch adds =
+support for using AES-128-CBC for file contents and<br =
+class=3D"">AES-128-CBC-CTS for file name encryption. To mitigate =
+watermarking<br class=3D"">attacks, IVs are generated using the ESSIV =
+algorithm. While AES-CBC is<br class=3D"">actually slightly less secure =
+than AES-XTS from a security point of view,<br class=3D"">there is more =
+widespread hardware support. Especially low-powered embedded<br =
+class=3D"">devices with crypto accelerators such as CAAM or CESA support =
+only<br class=3D"">AES-CBC-128 with an acceptable speed. Using AES-CBC =
+gives us the acceptable<br class=3D"">performance while still providing =
+a moderate level of security for<br class=3D"">persistent storage.<br =
+class=3D""></blockquote><br class=3D"">You covered this briefly in an =
+email, but can you include more detail in the<br class=3D"">commit =
+message on the reasoning behind choosing AES-128 instead of AES-256?<br =
+class=3D"">Note that this is independent of the decision of CBC vs. =
+XTS.<br class=3D""></blockquote><div class=3D""><br class=3D""></div><div =
+class=3D"">Sure, I'll extend the commit message to include =
+that.</div><div class=3D""><br class=3D""></div><br class=3D""><blockquote=
+ type=3D"cite" class=3D""><br class=3D""><blockquote type=3D"cite" =
+style=3D"font-family: Menlo-Regular; font-size: 12px; font-style: =
+normal; font-variant-caps: normal; font-weight: normal; letter-spacing: =
+normal; orphans: auto; text-align: start; text-indent: 0px; =
+text-transform: none; white-space: normal; widows: auto; word-spacing: =
+0px; -webkit-text-size-adjust: auto; -webkit-text-stroke-width: 0px;" =
+class=3D"">@@ -129,27 +136,37 @@ static int determine_cipher_type(struct =
+fscrypt_info *ci, struct inode *inode,<br class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>&nbsp;const char **cipher_str_ret, int *keysize_ret)<br =
+class=3D"">{<br class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>if (S_ISREG(inode-&gt;i_mode)) =
+{<br class=3D"">-<span class=3D"Apple-tab-span" style=3D"white-space:pre">=
+	</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>if (ci-&gt;ci_data_mode =3D=3D FS_ENCRYPTION_MODE_AES_256_XTS) =
+{<br class=3D"">+<span class=3D"Apple-tab-span" style=3D"white-space:pre">=
+	</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>switch (ci-&gt;ci_data_mode) {<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>case =
+FS_ENCRYPTION_MODE_AES_256_XTS:<br class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>*cipher_str_ret =3D "xts(aes)";<br class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>*keysize_ret =3D FS_AES_256_XTS_KEY_SIZE;<br class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>return =
+0;<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>case =
+FS_ENCRYPTION_MODE_AES_128_CBC:<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>*cipher_str_ret =3D "cbc(aes)";<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>*keysize_ret =3D FS_AES_128_CBC_KEY_SIZE;<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>return =
+0;<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>default:<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>pr_warn_once("fscrypto: unsupported contents encryption mode %d =
+for inode %lu\n",<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>&nbsp;&nbsp; &nbsp; =
+ci-&gt;ci_data_mode, inode-&gt;i_ino);<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>return =
+-ENOKEY;<br class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>}<br class=3D"">-<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>pr_warn_once("fscrypto: unsupported contents encryption mode "<br =
+class=3D"">-<span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>&nbsp;&nbsp; &nbsp; "%d for inode %lu\n",<br class=3D"">-<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>&nbsp;&nbsp; &nbsp; ci-&gt;ci_data_mode, inode-&gt;i_ino);<br =
+class=3D"">-<span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>return -ENOKEY;<br class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>}<br class=3D""><br =
+class=3D""><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>if (S_ISDIR(inode-&gt;i_mode) || S_ISLNK(inode-&gt;i_mode)) {<br =
+class=3D"">-<span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>if (ci-&gt;ci_filename_mode =3D=3D =
+FS_ENCRYPTION_MODE_AES_256_CTS) {<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>switch =
+(ci-&gt;ci_filename_mode) {<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>case =
+FS_ENCRYPTION_MODE_AES_256_CTS:<br class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>*cipher_str_ret =3D "cts(cbc(aes))";<br class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>*keysize_ret =3D FS_AES_256_CTS_KEY_SIZE;<br class=3D""><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>return =
+0;<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>case =
+FS_ENCRYPTION_MODE_AES_128_CTS:<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>*cipher_str_ret =3D "cts(cbc(aes))";<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>*keysize_ret =3D FS_AES_128_CTS_KEY_SIZE;<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>return =
+0;<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>default:<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>pr_warn_once("fscrypto: unsupported filenames encryption mode %d =
+for inode %lu\n",<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>&nbsp;&nbsp; &nbsp; =
+ci-&gt;ci_filename_mode, inode-&gt;i_ino);<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>return =
+-ENOKEY;<br class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>}<br class=3D"">-<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>pr_warn_once("fscrypto: unsupported filenames encryption mode =
+"<br class=3D"">-<span class=3D"Apple-tab-span" style=3D"white-space:pre">=
+	</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>&nbsp;&nbsp; &nbsp; "%d for inode %lu\n",<br class=3D"">-<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>&nbsp;&nbsp; &nbsp; ci-&gt;ci_filename_mode, inode-&gt;i_ino);<br =
+class=3D"">-<span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>return -ENOKEY;<br class=3D""><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>}<br class=3D""></blockquote><br =
+class=3D"">With the added call to fscrypt_valid_enc_modes() earlier, the =
+warnings about<br class=3D"">unsupported encryption modes are no longer =
+reachable. &nbsp;IMO, the<br class=3D"">fscrypt_valid_enc_modes() check =
+should be moved into this function, a proper<br class=3D"">warning =
+message added for it, and the redundant warnings removed. &nbsp;Also now =
+that<br class=3D"">there will be more modes I think it would be =
+appropriate to put the algorithm<br class=3D"">names and key sizes in a =
+table, to avoid the ugly switch statements. &nbsp;</blockquote><div =
+class=3D""><br class=3D""></div><div class=3D"">I agree. I'll clean this =
+up.</div><div class=3D""><br class=3D""></div><div class=3D""><br =
+class=3D""></div><div class=3D""><br class=3D""></div><blockquote =
+type=3D"cite" class=3D""><blockquote type=3D"cite" style=3D"font-family: =
+Menlo-Regular; font-size: 12px; font-style: normal; font-variant-caps: =
+normal; font-weight: normal; letter-spacing: normal; orphans: auto; =
+text-align: start; text-indent: 0px; text-transform: none; white-space: =
+normal; widows: auto; word-spacing: 0px; -webkit-text-size-adjust: auto; =
+-webkit-text-stroke-width: 0px;" class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>int =
+err;<br class=3D"">+<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>/* init hash transform on demand =
+*/<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>if (unlikely(essiv_hash_tfm =3D=3D =
+NULL)) {<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	=
+</span>mutex_lock(&amp;essiv_hash_lock);<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>if =
+(essiv_hash_tfm =3D=3D NULL) {<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>essiv_hash_tfm =3D crypto_alloc_shash("sha256", 0, 0);<br =
+class=3D"">+<span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>if (IS_ERR(essiv_hash_tfm)) {<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>pr_warn_ratelimited("fscrypt: error allocating SHA-256 transform: =
+%ld\n",<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>&nbsp;&nbsp; =
+&nbsp;PTR_ERR(essiv_hash_tfm));<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>err =3D =
+PTR_ERR(essiv_hash_tfm);<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>essiv_hash_tfm =3D NULL;<br =
+class=3D"">+<span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>mutex_unlock(&amp;essiv_hash_lock);<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>return =
+err;<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>}<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span><span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>}<br =
+class=3D"">+<span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span><span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>mutex_unlock(&amp;essiv_hash_lock);<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>}<br =
+class=3D""></blockquote><br class=3D"">There is a bug here: a thread can =
+set essiv_hash_tfm to an ERR_PTR(), and<br class=3D"">another thread can =
+use it before it's set back to NULL. &nbsp;</blockquote><div =
+class=3D""><br class=3D""></div><div class=3D"">Sorry, I missed that... =
+:-(</div><div class=3D""><br class=3D""></div><div class=3D""><br =
+class=3D""></div><br class=3D""><blockquote type=3D"cite" =
+class=3D""><blockquote type=3D"cite" style=3D"font-family: =
+Menlo-Regular; font-size: 12px; font-style: normal; font-variant-caps: =
+normal; font-weight: normal; letter-spacing: normal; orphans: auto; =
+text-align: start; text-indent: 0px; text-transform: none; white-space: =
+normal; widows: auto; word-spacing: 0px; -webkit-text-size-adjust: auto; =
+-webkit-text-stroke-width: 0px;" class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	</span>err =3D =
+crypto_cipher_setkey(essiv_tfm, salt, SHA256_DIGEST_SIZE);<br =
+class=3D"">+<span class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>if (err)<br class=3D"">+<span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span><span class=3D"Apple-tab-span" =
+style=3D"white-space:pre">	</span>goto out;<br =
+class=3D""></blockquote><br class=3D"">sizeof(salt) instead of =
+hardcoding SHA256_DIGEST_SIZE.<br class=3D""><br class=3D"">I think =
+there should also be a brief comment explaining that the ESSIV cipher<br =
+class=3D"">uses AES-256 so that its key size matches the size of the =
+hash, even though the<br class=3D"">"real" encryption may use =
+AES-128.<br class=3D""></blockquote><div class=3D""><br =
+class=3D""></div><div class=3D"">Good point!</div><div class=3D""><br =
+class=3D""></div><br class=3D""><blockquote type=3D"cite" class=3D""><br =
+class=3D""><blockquote type=3D"cite" style=3D"font-family: =
+Menlo-Regular; font-size: 12px; font-style: normal; font-variant-caps: =
+normal; font-weight: normal; letter-spacing: normal; orphans: auto; =
+text-align: start; text-indent: 0px; text-transform: none; white-space: =
+normal; widows: auto; word-spacing: 0px; -webkit-text-size-adjust: auto; =
+-webkit-text-stroke-width: 0px;" class=3D"">+void =
+fscrypt_essiv_cleanup(void)<br class=3D"">+{<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>crypto_free_shash(essiv_hash_tfm);<br class=3D"">+<span =
+class=3D"Apple-tab-span" style=3D"white-space:pre">	=
+</span>essiv_hash_tfm =3D NULL;<br class=3D"">+}<br =
+class=3D""></blockquote><br class=3D"">This is called from =
+fscrypt_destroy(), which is a little weird because<br =
+class=3D"">fscrypt_destroy() is meant to clean up only from =
+"fscrypt_initialize()", which<br class=3D"">only allocates certain =
+things. &nbsp;I think it should be called from<br =
+class=3D"">"fscrypt_exit()" instead. &nbsp;Then you could also add the =
+__exit annotation, and<br class=3D"">remove setting essiv_hash_tfm to =
+NULL which would clearly be unnecessary.<br class=3D""></blockquote><div =
+class=3D""><br class=3D""></div><div class=3D"">fscrypt_destroy() is =
+actually also called from fscrypt_exit(). Thats why I chose =
+it,</div><div class=3D"">but changing this fscrypt_exit() seems the =
+cleaner approach. :)</div><div class=3D""><br class=3D""></div><div =
+class=3D"">Thanks,</div><div class=3D"">David</div><br class=3D""><div =
+class=3D"">--<br class=3D"">sigma star gmbh | Eduard-Bodem-Gasse 6, 6020 =
+Innsbruck, Austria<br class=3D"">UID/VAT Nr: ATU 66964118 | FN: =
+374287y<br class=3D""></div><br =
+class=3D""></div></div></div></body></html>=
+
+--Apple-Mail=_371BEDCD-8DAE-4A54-AA24-E3C43B6A3BBB--
