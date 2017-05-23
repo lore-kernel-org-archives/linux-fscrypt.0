@@ -1,32 +1,27 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 0/4] fscrypt: remove checks for encryption key after file open
-Date: Mon, 22 May 2017 17:39:41 -0700
-Message-Id: <20170523003945.14279-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <richard.weinberger@gmail.com>
+MIME-Version: 1.0
+In-Reply-To: <20170523003945.14279-4-ebiggers3@gmail.com>
+References: <20170523003945.14279-1-ebiggers3@gmail.com> <20170523003945.14279-4-ebiggers3@gmail.com>
+From: Richard Weinberger <richard.weinberger@gmail.com>
+Date: Tue, 23 May 2017 16:14:20 +0200
+Message-ID: <CAFLxGvxaiWFKH5L_BwPXGuG9PxA+0BkJ1qMvaDgAeVwBw+nCoQ@mail.gmail.com>
+Subject: Re: [PATCH 3/4] ubifs: don't bother checking for encryption key in ->mmap()
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-f2fs-devel@lists.sourceforge.net, "linux-mtd@lists.infradead.org" <linux-mtd@lists.infradead.org>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Tue, May 23, 2017 at 2:39 AM, Eric Biggers <ebiggers3@gmail.com> wrote:
+> From: Eric Biggers <ebiggers@google.com>
+>
+> Since only an open file can be mmap'ed, and we only allow open()ing an
+> encrypted file when its key is available, there is no need to check for
+> the key again before permitting each mmap().
+>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-This series removes checks for a regular file's encryption key that occur
-after we've already opened the file.  We're guaranteed to already have
-the key in such places, since we require it in ->open().  open() fails
-with ENOKEY otherwise, and a file descriptor is never made available.
-
-This pertains to regular files only.  (Directories can be opened with or
-without their key.)
-
-Eric Biggers (4):
-  ext4: don't bother checking for encryption key in ->mmap()
-  f2fs: don't bother checking for encryption key in ->mmap()
-  ubifs: don't bother checking for encryption key in ->mmap()
-  f2fs: don't bother checking for encryption key in ->write_iter()
-
- fs/ext4/file.c  |  7 -------
- fs/f2fs/file.c  | 13 -------------
- fs/ubifs/file.c |  9 ---------
- 3 files changed, 29 deletions(-)
+Acked-by: Richard Weinberger <richard@nod.at>
 
 -- 
-2.13.0.303.g4ebf302169-goog
+Thanks,
+//richard
