@@ -1,72 +1,57 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from imap.thunk.org ([74.207.234.97]:55508 "EHLO imap.thunk.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1752150AbdEGWuC (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 7 May 2017 18:50:02 -0400
-Date: Sun, 7 May 2017 14:09:43 -0400
-From: Theodore Ts'o <tytso@mit.edu>
-Subject: [GIT PULL] fscrypt updates for 4.12
-Message-ID: <20170507180943.kov5t4o32whivkvz@thunk.org>
+Return-Path: <chao@kernel.org>
+Subject: Re: [f2fs-dev] [PATCH 2/4] f2fs: don't bother checking for encryption
+ key in ->mmap()
+References: <20170523003945.14279-1-ebiggers3@gmail.com>
+ <20170523003945.14279-3-ebiggers3@gmail.com>
+From: Chao Yu <chao@kernel.org>
+Message-ID: <c38f38c1-7d74-d4a9-8b0a-51317fb20162@kernel.org>
+Date: Tue, 23 May 2017 21:38:40 +0800
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: torvalds@linux-foundation.org
-Cc: linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org
+In-Reply-To: <20170523003945.14279-3-ebiggers3@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+To: Eric Biggers <ebiggers3@gmail.com>, linux-fscrypt@vger.kernel.org
+Cc: Theodore Ts'o <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The following changes since commit 39da7c509acff13fc8cb12ec1bb20337c988ed36:
+On 2017/5/23 8:39, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Since only an open file can be mmap'ed, and we only allow open()ing an
+> encrypted file when its key is available, there is no need to check for
+> the key again before permitting each mmap().
+> 
+> This f2fs copy of this code was also broken in that it wouldn't actually
+> have failed if the key was in fact unavailable.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-  Linux 4.11-rc6 (2017-04-09 09:49:44 -0700)
+Acked-by: Chao Yu <yuchao0@huawei.com>
 
-are available in the git repository at:
+Thanks,
 
-  git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git tags/fscrypt_for_linus
-
-for you to fetch changes up to 6f9d696f016f5b42f6c6e8c9f723f8d3380e5903:
-
-  fscrypt: correct collision claim for digested names (2017-05-04 11:44:41 -0400)
-
-----------------------------------------------------------------
-Only bug fixes and cleanups for this merge window.
-
-----------------------------------------------------------------
-Eric Biggers (13):
-      fscrypt: remove unnecessary checks for NULL operations
-      fscrypt: remove fscrypt_symlink_data_len()
-      fscrypt: fix context consistency check when key(s) unavailable
-      ext4: remove "nokey" check from ext4_lookup()
-      f2fs: sync f2fs_lookup() with ext4_lookup()
-      ubifs: check for consistent encryption contexts in ubifs_lookup()
-      fscrypt: avoid collisions when presenting long encrypted filenames
-      fscrypt: introduce helper function for filename matching
-      ext4: switch to using fscrypt_match_name()
-      f2fs: switch to using fscrypt_match_name()
-      ext4: clean up ext4_match() and callers
-      MAINTAINERS: fscrypt: update mailing list, patchwork, and git
-      fscrypt: correct collision claim for digested names
-
-Jaegeuk Kim (1):
-      f2fs: check entire encrypted bigname when finding a dentry
-
-Joe Richey (2):
-      fscrypt: Move key structure and constants to uapi
-      fscrypt: Remove __packed from fscrypt_policy
-
- MAINTAINERS                     |   6 ++-
- fs/crypto/fname.c               |  90 ++++++++++++++++++++++++++++++++++----------
- fs/crypto/fscrypt_private.h     |  13 -------
- fs/crypto/keyinfo.c             |   3 --
- fs/crypto/policy.c              |  98 ++++++++++++++++++++++++++++++++++--------------
- fs/ext4/namei.c                 | 112 +++++++++++++++----------------------------------------
- fs/f2fs/dir.c                   |  25 +++----------
- fs/f2fs/f2fs.h                  |   3 +-
- fs/f2fs/hash.c                  |   7 +++-
- fs/f2fs/inline.c                |   4 +-
- fs/f2fs/namei.c                 |   7 ++--
- fs/ubifs/dir.c                  |  11 ++++++
- include/linux/fscrypt_common.h  |  11 ------
- include/linux/fscrypt_notsupp.h |   9 +++++
- include/linux/fscrypt_supp.h    |  74 ++++++++++++++++++++++++++++++++++++
- include/uapi/linux/fs.h         |  15 +++++++-
- 16 files changed, 301 insertions(+), 187 deletions(-)
+> ---
+>  fs/f2fs/file.c | 8 --------
+>  1 file changed, 8 deletions(-)
+> 
+> diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+> index 61af721329fa..ff4db3efc0ac 100644
+> --- a/fs/f2fs/file.c
+> +++ b/fs/f2fs/file.c
+> @@ -415,14 +415,6 @@ static int f2fs_file_mmap(struct file *file, struct vm_area_struct *vma)
+>  	struct inode *inode = file_inode(file);
+>  	int err;
+>  
+> -	if (f2fs_encrypted_inode(inode)) {
+> -		err = fscrypt_get_encryption_info(inode);
+> -		if (err)
+> -			return 0;
+> -		if (!f2fs_encrypted_inode(inode))
+> -			return -ENOKEY;
+> -	}
+> -
+>  	/* we don't need to use inline_data strictly */
+>  	err = f2fs_convert_inline_inode(inode);
+>  	if (err)
+> 
