@@ -1,90 +1,522 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Tue, 16 May 2017 14:49:57 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH] KEYS: make keyctl_invalidate() also require Setattr
- permission
-Message-ID: <20170516214957.GA113464@gmail.com>
-References: <20170329220101.26067-1-ebiggers@google.com>
- <10049.1491207629@warthog.procyon.org.uk>
- <20170404184433.GA46469@gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170404184433.GA46469@gmail.com>
-To: David Howells <dhowells@redhat.com>
-Cc: Eric Biggers <ebiggers@google.com>, keyrings@vger.kernel.org, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Theodore Ts'o <tytso@mit.edu>, stable@vger.kernel.org
+Return-Path: <gilad@benyossef.com>
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v2 06/11] crypto: move testmgr to generic async completion
+Date: Mon, 29 May 2017 11:22:53 +0300
+Message-Id: <1496046180-21962-7-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1496046180-21962-1-git-send-email-gilad@benyossef.com>
+References: <1496046180-21962-1-git-send-email-gilad@benyossef.com>
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Eric Biggers <ebiggers3@gmail.com>, Ofir Drang <ofir.drang@arm.com>, Pavel Shilovsky <pshilov@microsoft.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi David,
+testmgr is starting async. crypto ops and waiting for them to complete.
+Move it over to generic code doing the same.
 
-On Tue, Apr 04, 2017 at 11:44:33AM -0700, Eric Biggers wrote:
-> On Mon, Apr 03, 2017 at 09:20:29AM +0100, David Howells wrote:
-> > Eric Biggers <ebiggers@google.com> wrote:
-> > 
-> > > Currently, a process only needs Search permission on a key to invalidate
-> > > it with keyctl_invalidate(), which has an effect similar to unlinking it
-> > > from all keyrings.  Unfortunately, this significantly compromises the
-> > > keys permission system because as a result, there is no way to grant
-> > > read-only access to keys without also granting de-facto "delete" access.
-> > > Even worse, processes may invalidate entire _keyrings_, given only
-> > > permission to "search" them.
-> > > 
-> > > Key invalidation seems to have intended for cases where keyrings are
-> > > used as caches, and keys can be re-requested at any time by an upcall to
-> > > /sbin/request-key.  However, keyrings are not always used in this way.
-> > > For example, users of ext4, f2fs, and ubifs encryption may wish to grant
-> > > many differently-privileged processes access to the same keys, set up in
-> > > a shared keyring ahead of time.  Permitting everyone to invalidate keys
-> > > in this scenario enables a trivial denial-of-service.  And even users of
-> > > keyrings as "just caches" may wish to restrict invalidation because it
-> > > may require significant work or user interaction to regenerate keys.
-> > > 
-> > > This patch fixes the flaw by requiring both Search and Setattr
-> > > permission to invalidate a key rather than just Search permission.
-> > > Requiring Setattr permission is appropriate because Setattr permission
-> > > also allows revoking (via keyctl_revoke()) or expiring (via
-> > > keyctl_set_timeout()) the key, which also make the key inaccessible
-> > > regardless of how many keyrings it is in.  Continuing to require Search
-> > > permission ensures we do not decrease the level of permissions required.
-> > 
-> > I'm not sure this is the right method either.  It might be better to allocate
-> > one of the remaining two permissions bits for this and/or mark keys that are
-> > invalidateable.
-> > 
-> 
-> What do you think is the right solution?  We really need to do _something_.  Can
-> you elaborate on what the use case(s) for "invalidate" were intended to be, and
-> what users of it are known?
-> 
-> As I noted in the commit message I was hesistant to create a new Invalidate
-> permission because that would require that users of keyctl_setperm +
-> keyctl_invalidate to start including a new permission which never existed
-> before.  Note that the new permission would be rejected with EINVAL by old
-> kernels, so applications might even need to try it both ways.
-> 
-> However perhaps no one cares and doing that would be a non-issue.
-> 
-> If furthermore the only users of "invalidate" are nfsidmap and the in-kernel
-> dns_resolver, then it may be fine to rename the KEY_FLAG_ROOT_CAN_INVAL flag to
-> something like "KEY_FLAG_INVALIDATABLE" and making it so only those keys can be
-> invalidated.  That would be much better, but I don't know for sure that there
-> aren't other users of keyctl_invalidate() (you may know more).
-> 
+This also provides a test of the generic crypto async. wait code.
 
-I'm still thinking my proposed fix to require Setattr permission is the best
-solution.  Allocating a new permission bit breaks everyone calling
-keyctl_setperm() along with keyctl_invalidate(), while marking only certain keys
-as invalidatable breaks everyone using keyctl_invalidate() for some "unintended"
-key.
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+---
+ crypto/testmgr.c | 184 +++++++++++++++++--------------------------------------
+ 1 file changed, 56 insertions(+), 128 deletions(-)
 
-Personally, I've now seen keyctl_invalidate() used in two different places for
-removing ext4 encryption keys: in Chrome OS userspace, and in a test script.
-The fact is that almost everyone using the keyrings API gets confused about the
-difference between revocation, invalidation, expiration, and unlinking, so they
-may end up doing "invalidate" when maybe they were "supposed" to do something
-else.  And it may not be a good idea to break the people who happened to choose
-"invalidate", beyond what we have to do to close the security hole.
-
-What do you say?
-
-- Eric
+diff --git a/crypto/testmgr.c b/crypto/testmgr.c
+index 6f5f3ed..4b779ca 100644
+--- a/crypto/testmgr.c
++++ b/crypto/testmgr.c
+@@ -76,11 +76,6 @@ int alg_test(const char *driver, const char *alg, u32 type, u32 mask)
+ #define ENCRYPT 1
+ #define DECRYPT 0
+ 
+-struct tcrypt_result {
+-	struct completion completion;
+-	int err;
+-};
+-
+ struct aead_test_suite {
+ 	struct {
+ 		const struct aead_testvec *vecs;
+@@ -155,17 +150,6 @@ static void hexdump(unsigned char *buf, unsigned int len)
+ 			buf, len, false);
+ }
+ 
+-static void tcrypt_complete(struct crypto_async_request *req, int err)
+-{
+-	struct tcrypt_result *res = req->data;
+-
+-	if (err == -EINPROGRESS)
+-		return;
+-
+-	res->err = err;
+-	complete(&res->completion);
+-}
+-
+ static int testmgr_alloc_buf(char *buf[XBUFSIZE])
+ {
+ 	int i;
+@@ -193,20 +177,10 @@ static void testmgr_free_buf(char *buf[XBUFSIZE])
+ 		free_page((unsigned long)buf[i]);
+ }
+ 
+-static int wait_async_op(struct tcrypt_result *tr, int ret)
+-{
+-	if (ret == -EINPROGRESS || ret == -EBUSY) {
+-		wait_for_completion(&tr->completion);
+-		reinit_completion(&tr->completion);
+-		ret = tr->err;
+-	}
+-	return ret;
+-}
+-
+ static int ahash_partial_update(struct ahash_request **preq,
+ 	struct crypto_ahash *tfm, const struct hash_testvec *template,
+ 	void *hash_buff, int k, int temp, struct scatterlist *sg,
+-	const char *algo, char *result, struct tcrypt_result *tresult)
++	const char *algo, char *result, struct crypto_wait *wait)
+ {
+ 	char *state;
+ 	struct ahash_request *req;
+@@ -236,7 +210,7 @@ static int ahash_partial_update(struct ahash_request **preq,
+ 	}
+ 	ahash_request_set_callback(req,
+ 		CRYPTO_TFM_REQ_MAY_BACKLOG,
+-		tcrypt_complete, tresult);
++		crypto_req_done, wait);
+ 
+ 	memcpy(hash_buff, template->plaintext + temp,
+ 		template->tap[k]);
+@@ -247,7 +221,7 @@ static int ahash_partial_update(struct ahash_request **preq,
+ 		pr_err("alg: hash: Failed to import() for %s\n", algo);
+ 		goto out;
+ 	}
+-	ret = wait_async_op(tresult, crypto_ahash_update(req));
++	ret = crypto_wait_req(crypto_ahash_update(req), wait);
+ 	if (ret)
+ 		goto out;
+ 	*preq = req;
+@@ -272,7 +246,7 @@ static int __test_hash(struct crypto_ahash *tfm,
+ 	char *result;
+ 	char *key;
+ 	struct ahash_request *req;
+-	struct tcrypt_result tresult;
++	struct crypto_wait wait;
+ 	void *hash_buff;
+ 	char *xbuf[XBUFSIZE];
+ 	int ret = -ENOMEM;
+@@ -286,7 +260,7 @@ static int __test_hash(struct crypto_ahash *tfm,
+ 	if (testmgr_alloc_buf(xbuf))
+ 		goto out_nobuf;
+ 
+-	init_completion(&tresult.completion);
++	crypto_init_wait(&wait);
+ 
+ 	req = ahash_request_alloc(tfm, GFP_KERNEL);
+ 	if (!req) {
+@@ -295,7 +269,7 @@ static int __test_hash(struct crypto_ahash *tfm,
+ 		goto out_noreq;
+ 	}
+ 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				   tcrypt_complete, &tresult);
++				   crypto_req_done, &wait);
+ 
+ 	j = 0;
+ 	for (i = 0; i < tcount; i++) {
+@@ -335,26 +309,26 @@ static int __test_hash(struct crypto_ahash *tfm,
+ 
+ 		ahash_request_set_crypt(req, sg, result, template[i].psize);
+ 		if (use_digest) {
+-			ret = wait_async_op(&tresult, crypto_ahash_digest(req));
++			ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
+ 			if (ret) {
+ 				pr_err("alg: hash: digest failed on test %d "
+ 				       "for %s: ret=%d\n", j, algo, -ret);
+ 				goto out;
+ 			}
+ 		} else {
+-			ret = wait_async_op(&tresult, crypto_ahash_init(req));
++			ret = crypto_wait_req(crypto_ahash_init(req), &wait);
+ 			if (ret) {
+ 				pr_err("alt: hash: init failed on test %d "
+ 				       "for %s: ret=%d\n", j, algo, -ret);
+ 				goto out;
+ 			}
+-			ret = wait_async_op(&tresult, crypto_ahash_update(req));
++			ret = crypto_wait_req(crypto_ahash_update(req), &wait);
+ 			if (ret) {
+ 				pr_err("alt: hash: update failed on test %d "
+ 				       "for %s: ret=%d\n", j, algo, -ret);
+ 				goto out;
+ 			}
+-			ret = wait_async_op(&tresult, crypto_ahash_final(req));
++			ret = crypto_wait_req(crypto_ahash_final(req), &wait);
+ 			if (ret) {
+ 				pr_err("alt: hash: final failed on test %d "
+ 				       "for %s: ret=%d\n", j, algo, -ret);
+@@ -420,22 +394,10 @@ static int __test_hash(struct crypto_ahash *tfm,
+ 		}
+ 
+ 		ahash_request_set_crypt(req, sg, result, template[i].psize);
+-		ret = crypto_ahash_digest(req);
+-		switch (ret) {
+-		case 0:
+-			break;
+-		case -EINPROGRESS:
+-		case -EBUSY:
+-			wait_for_completion(&tresult.completion);
+-			reinit_completion(&tresult.completion);
+-			ret = tresult.err;
+-			if (!ret)
+-				break;
+-			/* fall through */
+-		default:
+-			printk(KERN_ERR "alg: hash: digest failed "
+-			       "on chunking test %d for %s: "
+-			       "ret=%d\n", j, algo, -ret);
++		ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
++		if (ret) {
++			pr_err("alg: hash: digest failed on chunking test %d for %s: ret=%d\n",
++				j, algo, -ret);
+ 			goto out;
+ 		}
+ 
+@@ -486,13 +448,13 @@ static int __test_hash(struct crypto_ahash *tfm,
+ 		}
+ 
+ 		ahash_request_set_crypt(req, sg, result, template[i].tap[0]);
+-		ret = wait_async_op(&tresult, crypto_ahash_init(req));
++		ret = crypto_wait_req(crypto_ahash_init(req), &wait);
+ 		if (ret) {
+ 			pr_err("alt: hash: init failed on test %d for %s: ret=%d\n",
+ 				j, algo, -ret);
+ 			goto out;
+ 		}
+-		ret = wait_async_op(&tresult, crypto_ahash_update(req));
++		ret = crypto_wait_req(crypto_ahash_update(req), &wait);
+ 		if (ret) {
+ 			pr_err("alt: hash: update failed on test %d for %s: ret=%d\n",
+ 				j, algo, -ret);
+@@ -503,7 +465,7 @@ static int __test_hash(struct crypto_ahash *tfm,
+ 		for (k = 1; k < template[i].np; k++) {
+ 			ret = ahash_partial_update(&req, tfm, &template[i],
+ 				hash_buff, k, temp, &sg[0], algo, result,
+-				&tresult);
++				&wait);
+ 			if (ret) {
+ 				pr_err("hash: partial update failed on test %d for %s: ret=%d\n",
+ 					j, algo, -ret);
+@@ -511,7 +473,7 @@ static int __test_hash(struct crypto_ahash *tfm,
+ 			}
+ 			temp += template[i].tap[k];
+ 		}
+-		ret = wait_async_op(&tresult, crypto_ahash_final(req));
++		ret = crypto_wait_req(crypto_ahash_final(req), &wait);
+ 		if (ret) {
+ 			pr_err("alt: hash: final failed on test %d for %s: ret=%d\n",
+ 				j, algo, -ret);
+@@ -580,7 +542,7 @@ static int __test_aead(struct crypto_aead *tfm, int enc,
+ 	struct scatterlist *sg;
+ 	struct scatterlist *sgout;
+ 	const char *e, *d;
+-	struct tcrypt_result result;
++	struct crypto_wait wait;
+ 	unsigned int authsize, iv_len;
+ 	void *input;
+ 	void *output;
+@@ -619,7 +581,7 @@ static int __test_aead(struct crypto_aead *tfm, int enc,
+ 	else
+ 		e = "decryption";
+ 
+-	init_completion(&result.completion);
++	crypto_init_wait(&wait);
+ 
+ 	req = aead_request_alloc(tfm, GFP_KERNEL);
+ 	if (!req) {
+@@ -629,7 +591,7 @@ static int __test_aead(struct crypto_aead *tfm, int enc,
+ 	}
+ 
+ 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				  tcrypt_complete, &result);
++				  crypto_req_done, &wait);
+ 
+ 	iv_len = crypto_aead_ivsize(tfm);
+ 
+@@ -709,7 +671,8 @@ static int __test_aead(struct crypto_aead *tfm, int enc,
+ 
+ 		aead_request_set_ad(req, template[i].alen);
+ 
+-		ret = enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
++		ret = crypto_wait_req(enc ? crypto_aead_encrypt(req)
++					: crypto_aead_decrypt(req), &wait);
+ 
+ 		switch (ret) {
+ 		case 0:
+@@ -722,13 +685,6 @@ static int __test_aead(struct crypto_aead *tfm, int enc,
+ 				goto out;
+ 			}
+ 			break;
+-		case -EINPROGRESS:
+-		case -EBUSY:
+-			wait_for_completion(&result.completion);
+-			reinit_completion(&result.completion);
+-			ret = result.err;
+-			if (!ret)
+-				break;
+ 		case -EBADMSG:
+ 			if (template[i].novrfy)
+ 				/* verification failure was expected */
+@@ -866,7 +822,8 @@ static int __test_aead(struct crypto_aead *tfm, int enc,
+ 
+ 		aead_request_set_ad(req, template[i].alen);
+ 
+-		ret = enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
++		ret = crypto_wait_req(enc ? crypto_aead_encrypt(req)
++					: crypto_aead_decrypt(req), &wait);
+ 
+ 		switch (ret) {
+ 		case 0:
+@@ -879,13 +836,6 @@ static int __test_aead(struct crypto_aead *tfm, int enc,
+ 				goto out;
+ 			}
+ 			break;
+-		case -EINPROGRESS:
+-		case -EBUSY:
+-			wait_for_completion(&result.completion);
+-			reinit_completion(&result.completion);
+-			ret = result.err;
+-			if (!ret)
+-				break;
+ 		case -EBADMSG:
+ 			if (template[i].novrfy)
+ 				/* verification failure was expected */
+@@ -1083,7 +1033,7 @@ static int __test_skcipher(struct crypto_skcipher *tfm, int enc,
+ 	struct scatterlist sg[8];
+ 	struct scatterlist sgout[8];
+ 	const char *e, *d;
+-	struct tcrypt_result result;
++	struct crypto_wait wait;
+ 	void *data;
+ 	char iv[MAX_IVLEN];
+ 	char *xbuf[XBUFSIZE];
+@@ -1107,7 +1057,7 @@ static int __test_skcipher(struct crypto_skcipher *tfm, int enc,
+ 	else
+ 		e = "decryption";
+ 
+-	init_completion(&result.completion);
++	crypto_init_wait(&wait);
+ 
+ 	req = skcipher_request_alloc(tfm, GFP_KERNEL);
+ 	if (!req) {
+@@ -1117,7 +1067,7 @@ static int __test_skcipher(struct crypto_skcipher *tfm, int enc,
+ 	}
+ 
+ 	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				      tcrypt_complete, &result);
++				      crypto_req_done, &wait);
+ 
+ 	j = 0;
+ 	for (i = 0; i < tcount; i++) {
+@@ -1164,23 +1114,12 @@ static int __test_skcipher(struct crypto_skcipher *tfm, int enc,
+ 
+ 		skcipher_request_set_crypt(req, sg, (diff_dst) ? sgout : sg,
+ 					   template[i].ilen, iv);
+-		ret = enc ? crypto_skcipher_encrypt(req) :
+-			    crypto_skcipher_decrypt(req);
++		ret = crypto_wait_req(enc ? crypto_skcipher_encrypt(req) :
++					crypto_skcipher_decrypt(req), &wait);
+ 
+-		switch (ret) {
+-		case 0:
+-			break;
+-		case -EINPROGRESS:
+-		case -EBUSY:
+-			wait_for_completion(&result.completion);
+-			reinit_completion(&result.completion);
+-			ret = result.err;
+-			if (!ret)
+-				break;
+-			/* fall through */
+-		default:
++		if (ret) {
+ 			pr_err("alg: skcipher%s: %s failed on test %d for %s: ret=%d\n",
+-			       d, e, j, algo, -ret);
++				d, e, j, algo, -ret);
+ 			goto out;
+ 		}
+ 
+@@ -1272,21 +1211,10 @@ static int __test_skcipher(struct crypto_skcipher *tfm, int enc,
+ 		skcipher_request_set_crypt(req, sg, (diff_dst) ? sgout : sg,
+ 					   template[i].ilen, iv);
+ 
+-		ret = enc ? crypto_skcipher_encrypt(req) :
+-			    crypto_skcipher_decrypt(req);
++		ret = crypto_wait_req(enc ? crypto_skcipher_encrypt(req) :
++					crypto_skcipher_decrypt(req), &wait);
+ 
+-		switch (ret) {
+-		case 0:
+-			break;
+-		case -EINPROGRESS:
+-		case -EBUSY:
+-			wait_for_completion(&result.completion);
+-			reinit_completion(&result.completion);
+-			ret = result.err;
+-			if (!ret)
+-				break;
+-			/* fall through */
+-		default:
++		if (ret) {
+ 			pr_err("alg: skcipher%s: %s failed on chunk test %d for %s: ret=%d\n",
+ 			       d, e, j, algo, -ret);
+ 			goto out;
+@@ -1462,7 +1390,7 @@ static int test_acomp(struct crypto_acomp *tfm,
+ 	int ret;
+ 	struct scatterlist src, dst;
+ 	struct acomp_req *req;
+-	struct tcrypt_result result;
++	struct crypto_wait wait;
+ 
+ 	output = kmalloc(COMP_BUF_SIZE, GFP_KERNEL);
+ 	if (!output)
+@@ -1486,7 +1414,7 @@ static int test_acomp(struct crypto_acomp *tfm,
+ 		}
+ 
+ 		memset(output, 0, dlen);
+-		init_completion(&result.completion);
++		crypto_init_wait(&wait);
+ 		sg_init_one(&src, input_vec, ilen);
+ 		sg_init_one(&dst, output, dlen);
+ 
+@@ -1501,9 +1429,9 @@ static int test_acomp(struct crypto_acomp *tfm,
+ 
+ 		acomp_request_set_params(req, &src, &dst, ilen, dlen);
+ 		acomp_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-					   tcrypt_complete, &result);
++					   crypto_req_done, &wait);
+ 
+-		ret = wait_async_op(&result, crypto_acomp_compress(req));
++		ret = crypto_wait_req(crypto_acomp_compress(req), &wait);
+ 		if (ret) {
+ 			pr_err("alg: acomp: compression failed on test %d for %s: ret=%d\n",
+ 			       i + 1, algo, -ret);
+@@ -1516,10 +1444,10 @@ static int test_acomp(struct crypto_acomp *tfm,
+ 		dlen = COMP_BUF_SIZE;
+ 		sg_init_one(&src, output, ilen);
+ 		sg_init_one(&dst, decomp_out, dlen);
+-		init_completion(&result.completion);
++		crypto_init_wait(&wait);
+ 		acomp_request_set_params(req, &src, &dst, ilen, dlen);
+ 
+-		ret = wait_async_op(&result, crypto_acomp_decompress(req));
++		ret = crypto_wait_req(crypto_acomp_decompress(req), &wait);
+ 		if (ret) {
+ 			pr_err("alg: acomp: compression failed on test %d for %s: ret=%d\n",
+ 			       i + 1, algo, -ret);
+@@ -1563,7 +1491,7 @@ static int test_acomp(struct crypto_acomp *tfm,
+ 		}
+ 
+ 		memset(output, 0, dlen);
+-		init_completion(&result.completion);
++		crypto_init_wait(&wait);
+ 		sg_init_one(&src, input_vec, ilen);
+ 		sg_init_one(&dst, output, dlen);
+ 
+@@ -1578,9 +1506,9 @@ static int test_acomp(struct crypto_acomp *tfm,
+ 
+ 		acomp_request_set_params(req, &src, &dst, ilen, dlen);
+ 		acomp_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-					   tcrypt_complete, &result);
++					   crypto_req_done, &wait);
+ 
+-		ret = wait_async_op(&result, crypto_acomp_decompress(req));
++		ret = crypto_wait_req(crypto_acomp_decompress(req), &wait);
+ 		if (ret) {
+ 			pr_err("alg: acomp: decompression failed on test %d for %s: ret=%d\n",
+ 			       i + 1, algo, -ret);
+@@ -1997,7 +1925,7 @@ static int do_test_kpp(struct crypto_kpp *tfm, const struct kpp_testvec *vec,
+ 	struct kpp_request *req;
+ 	void *input_buf = NULL;
+ 	void *output_buf = NULL;
+-	struct tcrypt_result result;
++	struct crypto_wait wait;
+ 	unsigned int out_len_max;
+ 	int err = -ENOMEM;
+ 	struct scatterlist src, dst;
+@@ -2006,7 +1934,7 @@ static int do_test_kpp(struct crypto_kpp *tfm, const struct kpp_testvec *vec,
+ 	if (!req)
+ 		return err;
+ 
+-	init_completion(&result.completion);
++	crypto_init_wait(&wait);
+ 
+ 	err = crypto_kpp_set_secret(tfm, vec->secret, vec->secret_size);
+ 	if (err < 0)
+@@ -2024,10 +1952,10 @@ static int do_test_kpp(struct crypto_kpp *tfm, const struct kpp_testvec *vec,
+ 	sg_init_one(&dst, output_buf, out_len_max);
+ 	kpp_request_set_output(req, &dst, out_len_max);
+ 	kpp_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				 tcrypt_complete, &result);
++				 crypto_req_done, &wait);
+ 
+ 	/* Compute public key */
+-	err = wait_async_op(&result, crypto_kpp_generate_public_key(req));
++	err = crypto_wait_req(crypto_kpp_generate_public_key(req), &wait);
+ 	if (err) {
+ 		pr_err("alg: %s: generate public key test failed. err %d\n",
+ 		       alg, err);
+@@ -2055,8 +1983,8 @@ static int do_test_kpp(struct crypto_kpp *tfm, const struct kpp_testvec *vec,
+ 	kpp_request_set_input(req, &src, vec->b_public_size);
+ 	kpp_request_set_output(req, &dst, out_len_max);
+ 	kpp_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				 tcrypt_complete, &result);
+-	err = wait_async_op(&result, crypto_kpp_compute_shared_secret(req));
++				 crypto_req_done, &wait);
++	err = crypto_wait_req(crypto_kpp_compute_shared_secret(req), &wait);
+ 	if (err) {
+ 		pr_err("alg: %s: compute shard secret test failed. err %d\n",
+ 		       alg, err);
+@@ -2125,7 +2053,7 @@ static int test_akcipher_one(struct crypto_akcipher *tfm,
+ 	struct akcipher_request *req;
+ 	void *outbuf_enc = NULL;
+ 	void *outbuf_dec = NULL;
+-	struct tcrypt_result result;
++	struct crypto_wait wait;
+ 	unsigned int out_len_max, out_len = 0;
+ 	int err = -ENOMEM;
+ 	struct scatterlist src, dst, src_tab[2];
+@@ -2137,7 +2065,7 @@ static int test_akcipher_one(struct crypto_akcipher *tfm,
+ 	if (!req)
+ 		goto free_xbuf;
+ 
+-	init_completion(&result.completion);
++	crypto_init_wait(&wait);
+ 
+ 	if (vecs->public_key_vec)
+ 		err = crypto_akcipher_set_pub_key(tfm, vecs->key,
+@@ -2166,10 +2094,10 @@ static int test_akcipher_one(struct crypto_akcipher *tfm,
+ 	akcipher_request_set_crypt(req, src_tab, &dst, vecs->m_size,
+ 				   out_len_max);
+ 	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				      tcrypt_complete, &result);
++				      crypto_req_done, &wait);
+ 
+ 	/* Run RSA encrypt - c = m^e mod n;*/
+-	err = wait_async_op(&result, crypto_akcipher_encrypt(req));
++	err = crypto_wait_req(crypto_akcipher_encrypt(req), &wait);
+ 	if (err) {
+ 		pr_err("alg: akcipher: encrypt test failed. err %d\n", err);
+ 		goto free_all;
+@@ -2204,11 +2132,11 @@ static int test_akcipher_one(struct crypto_akcipher *tfm,
+ 
+ 	sg_init_one(&src, xbuf[0], vecs->c_size);
+ 	sg_init_one(&dst, outbuf_dec, out_len_max);
+-	init_completion(&result.completion);
++	crypto_init_wait(&wait);
+ 	akcipher_request_set_crypt(req, &src, &dst, vecs->c_size, out_len_max);
+ 
+ 	/* Run RSA decrypt - m = c^d mod n;*/
+-	err = wait_async_op(&result, crypto_akcipher_decrypt(req));
++	err = crypto_wait_req(crypto_akcipher_decrypt(req), &wait);
+ 	if (err) {
+ 		pr_err("alg: akcipher: decrypt test failed. err %d\n", err);
+ 		goto free_all;
+-- 
+2.1.4
