@@ -1,48 +1,38 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 1/3] ext4: require key for truncate(2) of encrypted file
-Date: Tue, 13 Jun 2017 16:47:53 -0700
-Message-Id: <20170613234755.111167-2-ebiggers3@gmail.com>
-In-Reply-To: <20170613234755.111167-1-ebiggers3@gmail.com>
-References: <20170613234755.111167-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: Theodore Ts'o <tytso@mit.edu>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <herbert@gondor.apana.org.au>
+Date: Sat, 10 Jun 2017 17:01:31 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Subject: Re: [PATCH v2 01/11] crypto: introduce crypto wait for async op
+Message-ID: <20170610090131.GA15594@gondor.apana.org.au>
+References: <1496046180-21962-1-git-send-email-gilad@benyossef.com>
+ <1496046180-21962-2-git-send-email-gilad@benyossef.com>
+ <20170610034336.GB14206@gondor.apana.org.au>
+ <CAOtvUMeRtcVcp8HE9oJAkJO35yF9XBsry3tdNQYj-e31DnDFQQ@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAOtvUMeRtcVcp8HE9oJAkJO35yF9XBsry3tdNQYj-e31DnDFQQ@mail.gmail.com>
+To: Gilad Ben-Yossef <gilad@benyossef.com>
+Cc: "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, device-mapper development <dm-devel@redhat.com>, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Eric Biggers <ebiggers3@gmail.com>, Ofir Drang <ofir.drang@arm.com>, Pavel Shilovsky <pshilov@microsoft.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, Linux kernel mailing list <linux-kernel@vger.kernel.org>, keyrings@vger.kernel.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Sat, Jun 10, 2017 at 11:05:39AM +0300, Gilad Ben-Yossef wrote:
+>
+> I guess there is a question if it really is important to know that
+> your request ended up
+> on the backlog, rather than being handled.I can imagine it can be used
+> as back pressure
+> indication but I wonder if someone is using that.
 
-Currently, filesystems allow truncate(2) on an encrypted file without
-the encryption key.  However, it's impossible to correctly handle the
-case where the size being truncated to is not a multiple of the
-filesystem block size, because that would require decrypting the final
-block, zeroing the part beyond i_size, then encrypting the block.
+Oh yes we do want it to return EBUSY if we put it on the backlog
+because in that case we want the user to stop sending us new
+requests.
 
-As other modifications to encrypted file contents are prohibited without
-the key, just prohibit truncate(2) as well, making it fail with ENOKEY.
+It's the other case where we dropped the request and returned
+EBUSY where I think we could return something other than EBUSY
+and get rid of the ambiguity.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/inode.c | 8 ++++++++
- 1 file changed, 8 insertions(+)
-
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 5cf82d03968c..baf8630de6a5 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -5307,6 +5307,14 @@ int ext4_setattr(struct dentry *dentry, struct iattr *attr)
- 		loff_t oldsize = inode->i_size;
- 		int shrink = (attr->ia_size <= inode->i_size);
- 
-+		if (ext4_encrypted_inode(inode)) {
-+			error = fscrypt_get_encryption_info(inode);
-+			if (error)
-+				return error;
-+			if (!fscrypt_has_encryption_key(inode))
-+				return -ENOKEY;
-+		}
-+
- 		if (!(ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS))) {
- 			struct ext4_sb_info *sbi = EXT4_SB(inode->i_sb);
- 
+Thanks,
 -- 
-2.13.1.508.gb3defc5cc-goog
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
