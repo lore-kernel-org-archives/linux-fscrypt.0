@@ -1,58 +1,52 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH] ext4: forbid encrypting root directory
-Date: Wed, 14 Jun 2017 16:17:53 -0700
-Message-Id: <20170614231753.113206-1-ebiggers3@gmail.com>
-To: linux-ext4@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, Andreas Dilger <adilger.kernel@dilger.ca>, Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fsdevel-owner@vger.kernel.org>
+From: Michael Halcrow <mhalcrow@google.com>
+Subject: [RFC PATCH 1/4] block: Add bio req flag to disable encryption in block
+Date: Wed, 14 Jun 2017 16:40:37 -0700
+Message-Id: <20170614234040.4326-2-mhalcrow@google.com>
+In-Reply-To: <20170614234040.4326-1-mhalcrow@google.com>
+References: <20170614234040.4326-1-mhalcrow@google.com>
+Sender: linux-fsdevel-owner@vger.kernel.org
+To: Michael Halcrow <mhalcrow@google.com>, "Theodore Y . Ts'o" <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-block@vger.kernel.org, dm-devel@redhat.com, linux-ext4@vger.kernel.org, Tyler Hicks <tyler.hicks@canonical.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+When both the file system and a lower layer such as dm-crypt encrypt
+the same file contents, it impacts performance and power utilization.
+Depending on how the operating environment manages the encryption
+keys, there is often no significant security benefit to redundantly
+encrypting.
 
-Currently it's possible to encrypt all files and directories on an ext4
-filesystem by deleting everything, including lost+found, then setting an
-encryption policy on the root directory.  However, this is incompatible
-with e2fsck because e2fsck expects to find, create, and/or write to
-lost+found and does not have access to any encryption keys.  Especially
-problematic is that if e2fsck can't find lost+found, it will create it
-without regard for whether the root directory is encrypted.  This is
-wrong for obvious reasons, and it causes a later run of e2fsck to
-consider the lost+found directory entry to be corrupted.
+File systems that encrypt some of their blocks can set the
+REQ_NOENCRYPT flag as a directive to lower layers to not encrypt.
 
-It's not clear it would be useful to support encrypting the root
-directory, because in that scenario dm-crypt might as well be used
-instead.  But in any case, it's broken currently and must not be
-allowed; so start returning an error if userspace tries to set an
-encryption policy on the root directory.
+Lower layers may optionally observe the flag, but once thay do, they
+must continue to observe it on subsequent I/O on the device.
+Otherwise they will decrypt content that they didn't previously
+encrypt, resulting in data corruption.
 
-For now do this in ext4 only, because f2fs and ubifs do not appear to
-have the lost+found requirement.  We could move it into
-fscrypt_ioctl_set_policy() later if desired, though.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Michael Halcrow <mhalcrow@google.com>
 ---
- fs/ext4/super.c | 9 +++++++++
- 1 file changed, 9 insertions(+)
+ include/linux/blk_types.h | 2 ++
+ 1 file changed, 2 insertions(+)
 
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index d37c81f327e7..ed8eacdf61da 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1145,6 +1145,15 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
- 	handle_t *handle = fs_data;
- 	int res, res2, retries = 0;
+diff --git a/include/linux/blk_types.h b/include/linux/blk_types.h
+index 61339bc44400..89da8f5f7be1 100644
+--- a/include/linux/blk_types.h
++++ b/include/linux/blk_types.h
+@@ -205,6 +205,7 @@ enum req_flag_bits {
+ 	/* command specific flags for REQ_OP_WRITE_ZEROES: */
+ 	__REQ_NOUNMAP,		/* do not free blocks when zeroing */
  
-+	/*
-+	 * Encrypting the root directory is not allowed because e2fsck expects
-+	 * lost+found to exist and be unencrypted, and encrypting the root
-+	 * directory would imply encrypting the lost+found directory as well as
-+	 * the filename "lost+found" itself.
-+	 */
-+	if (inode->i_ino == EXT4_ROOT_INO)
-+		return -EBUSY;
-+
- 	res = ext4_convert_inline_data(inode);
- 	if (res)
- 		return res;
++	__REQ_NOENCRYPT,	/* ok to not encrypt */
+ 	__REQ_NR_BITS,		/* stops here */
+ };
+ 
+@@ -223,6 +224,7 @@ enum req_flag_bits {
+ #define REQ_BACKGROUND		(1ULL << __REQ_BACKGROUND)
+ 
+ #define REQ_NOUNMAP		(1ULL << __REQ_NOUNMAP)
++#define REQ_NOENCRYPT		(1ULL << __REQ_NOENCRYPT)
+ 
+ #define REQ_FAILFAST_MASK \
+ 	(REQ_FAILFAST_DEV | REQ_FAILFAST_TRANSPORT | REQ_FAILFAST_DRIVER)
 -- 
 2.13.1.508.gb3defc5cc-goog
