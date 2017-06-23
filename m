@@ -1,28 +1,32 @@
 Return-Path: <tytso@thunk.org>
-Date: Thu, 1 Jun 2017 10:25:30 -0400
+Date: Fri, 23 Jun 2017 19:52:54 -0400
 From: Theodore Ts'o <tytso@mit.edu>
-Subject: Re: [PATCH v4] fscrypt: Add support for AES-128-CBC
-Message-ID: <20170601142530.n6rfwuwwdzmkzyfp@thunk.org>
-References: <20170517180850.GA91213@gmail.com>
- <20170523051120.15698-1-david@sigma-star.at>
- <20170523190041.GA132828@gmail.com>
- <54DA453A-BC92-466E-B3D2-6C67D7D32A90@sigma-star.at>
+Subject: Re: [PATCH 1/3] ext4: require key for truncate(2) of encrypted file
+Message-ID: <20170623235254.l5wyukjiy2mdms3m@thunk.org>
+References: <20170613234755.111167-1-ebiggers3@gmail.com>
+ <20170613234755.111167-2-ebiggers3@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <54DA453A-BC92-466E-B3D2-6C67D7D32A90@sigma-star.at>
-To: David Gstir <david@sigma-star.at>
-Cc: Eric Biggers <ebiggers3@gmail.com>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@sigma-star.at>, herbert@gondor.apana.org.au, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, Daniel Walter <dwalter@sigma-star.at>
+In-Reply-To: <20170613234755.111167-2-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, May 31, 2017 at 05:57:22PM +0200, David Gstir wrote:
-> > The 'keysize > sizeof(salt)' check is now pointless and should be removed, since
-> > we decided not to key the ESSIV cipher with 'keysize' bytes, but rather with
-> > sizeof(salt) bytes.  So this function is compatible with any 'keysize', not just
-> > keysize <= sizeof(salt).
+On Tue, Jun 13, 2017 at 04:47:53PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
 > 
-> You're right. Just let me know if I should send a new version of this patch with these minor issues fixed.
+> Currently, filesystems allow truncate(2) on an encrypted file without
+> the encryption key.  However, it's impossible to correctly handle the
+> case where the size being truncated to is not a multiple of the
+> filesystem block size, because that would require decrypting the final
+> block, zeroing the part beyond i_size, then encrypting the block.
+> 
+> As other modifications to encrypted file contents are prohibited without
+> the key, just prohibit truncate(2) as well, making it fail with ENOKEY.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Please do, thanks!
+Thanks, applied.
 
 					- Ted
