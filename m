@@ -1,118 +1,83 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
+Return-Path: <keyrings-owner@vger.kernel.org>
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v3 28/28] crypto: adapt api sample to use async. op wait
-Date: Sun,  2 Jul 2017 17:42:10 +0300
-Message-Id: <1499006535-19760-29-git-send-email-gilad@benyossef.com>
+Subject: [PATCH v3 22/28] cifs: move to generic async completion
+Date: Sun,  2 Jul 2017 17:42:04 +0300
+Message-Id: <1499006535-19760-23-git-send-email-gilad@benyossef.com>
 In-Reply-To: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
 References: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
-Sender: linux-crypto-owner@vger.kernel.org
+Sender: keyrings-owner@vger.kernel.org
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The code sample is waiting for an async. crypto op completion.
-Adapt sample to use the new generic infrastructure to do the same.
-
-This also fixes a possible data coruption bug created by the
-use of wait_for_completion_interruptible() without dealing
-correctly with an interrupt aborting the wait prior to the
-async op finishing.
+cifs starts an async. crypto op and waits for their completion.
+Move it over to generic code doing the same.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Acked-by: Pavel Shilovsky <pshilov@microsoft.com>
 ---
- Documentation/crypto/api-samples.rst | 52 +++++++-----------------------------
- 1 file changed, 10 insertions(+), 42 deletions(-)
+ fs/cifs/smb2ops.c | 30 ++++--------------------------
+ 1 file changed, 4 insertions(+), 26 deletions(-)
 
-diff --git a/Documentation/crypto/api-samples.rst b/Documentation/crypto/api-samples.rst
-index c6aa4ba..006827e 100644
---- a/Documentation/crypto/api-samples.rst
-+++ b/Documentation/crypto/api-samples.rst
-@@ -7,59 +7,27 @@ Code Example For Symmetric Key Cipher Operation
- ::
+diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
+index 00b1143..46abe62 100644
+--- a/fs/cifs/smb2ops.c
++++ b/fs/cifs/smb2ops.c
+@@ -1809,22 +1809,6 @@ init_sg(struct smb_rqst *rqst, u8 *sign)
+ 	return sg;
+ }
  
- 
--    struct tcrypt_result {
--        struct completion completion;
--        int err;
--    };
+-struct cifs_crypt_result {
+-	int err;
+-	struct completion completion;
+-};
 -
-     /* tie all data structures together */
-     struct skcipher_def {
-         struct scatterlist sg;
-         struct crypto_skcipher *tfm;
-         struct skcipher_request *req;
--        struct tcrypt_result result;
-+        struct crypto_wait wait;
-     };
- 
--    /* Callback function */
--    static void test_skcipher_cb(struct crypto_async_request *req, int error)
--    {
--        struct tcrypt_result *result = req->data;
+-static void cifs_crypt_complete(struct crypto_async_request *req, int err)
+-{
+-	struct cifs_crypt_result *res = req->data;
 -
--        if (error == -EINPROGRESS)
--            return;
--        result->err = error;
--        complete(&result->completion);
--        pr_info("Encryption finished successfully\n");
--    }
+-	if (err == -EINPROGRESS)
+-		return;
 -
-     /* Perform cipher operation */
-     static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
-                          int enc)
-     {
--        int rc = 0;
-+        int rc;
- 
-         if (enc)
--            rc = crypto_skcipher_encrypt(sk->req);
-+            rc = crypto_wait_req(crypto_skcipher_encrypt(sk->req), &sk->wait);
-         else
--            rc = crypto_skcipher_decrypt(sk->req);
+-	res->err = err;
+-	complete(&res->completion);
+-}
 -
--        switch (rc) {
--        case 0:
--            break;
--        case -EINPROGRESS:
--        case -EIOCBQUEUED:
--            rc = wait_for_completion_interruptible(
--                &sk->result.completion);
--            if (!rc && !sk->result.err) {
--                reinit_completion(&sk->result.completion);
--                break;
--            }
--        default:
--            pr_info("skcipher encrypt returned with %d result %d\n",
--                rc, sk->result.err);
--            break;
--        }
--        init_completion(&sk->result.completion);
-+            rc = crypto_wait_req(crypto_skcipher_decrypt(sk->req), &sk->wait);
-+
-+	if (rc)
-+		pr_info("skcipher encrypt returned with result %d\n", rc);
+ static int
+ smb2_get_enc_key(struct TCP_Server_Info *server, __u64 ses_id, int enc, u8 *key)
+ {
+@@ -1865,12 +1849,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
+ 	struct aead_request *req;
+ 	char *iv;
+ 	unsigned int iv_len;
+-	struct cifs_crypt_result result = {0, };
++	DECLARE_CRYPTO_WAIT(wait);
+ 	struct crypto_aead *tfm;
+ 	unsigned int crypt_len = le32_to_cpu(tr_hdr->OriginalMessageSize);
  
-         return rc;
-     }
-@@ -89,8 +57,8 @@ Code Example For Symmetric Key Cipher Operation
-         }
+-	init_completion(&result.completion);
+-
+ 	rc = smb2_get_enc_key(server, tr_hdr->SessionId, enc, key);
+ 	if (rc) {
+ 		cifs_dbg(VFS, "%s: Could not get %scryption key\n", __func__,
+@@ -1930,14 +1912,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
+ 	aead_request_set_ad(req, assoc_data_len);
  
-         skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--                          test_skcipher_cb,
--                          &sk.result);
-+                          crypto_req_done,
-+                          &sk.wait);
+ 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				  cifs_crypt_complete, &result);
++				  crypto_req_done, &wait);
  
-         /* AES 256 with random key */
-         get_random_bytes(&key, 32);
-@@ -122,7 +90,7 @@ Code Example For Symmetric Key Cipher Operation
-         /* We encrypt one block */
-         sg_init_one(&sk.sg, scratchpad, 16);
-         skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
--        init_completion(&sk.result.completion);
-+        crypto_init_wait(&sk.wait);
+-	rc = enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
+-
+-	if (rc == -EINPROGRESS || rc == -EIOCBQUEUED) {
+-		wait_for_completion(&result.completion);
+-		rc = result.err;
+-	}
++	rc = crypto_wait_req(enc ? crypto_aead_encrypt(req)
++				: crypto_aead_decrypt(req), &wait);
  
-         /* encrypt data */
-         ret = test_skcipher_encdec(&sk, 1);
+ 	if (!rc && enc)
+ 		memcpy(&tr_hdr->Signature, sign, SMB2_SIGNATURE_SIZE);
 -- 
 2.1.4
+
