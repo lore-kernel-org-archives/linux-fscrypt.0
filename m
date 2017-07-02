@@ -1,82 +1,96 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:54836 "EHLO
+        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1751635AbdGBOsl (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 2 Jul 2017 10:48:41 -0400
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v3 16/28] crypto: move pub key to generic async completion
-Date: Sun,  2 Jul 2017 17:41:58 +0300
-Message-Id: <1499006535-19760-17-git-send-email-gilad@benyossef.com>
+Subject: [PATCH v3 27/28] crypto: mediatek: move to generic async completion
+Date: Sun,  2 Jul 2017 17:42:09 +0300
+Message-Id: <1499006535-19760-28-git-send-email-gilad@benyossef.com>
 In-Reply-To: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
 References: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-public_key_verify_signature() is starting an async crypto op and
-waiting for it to complete. Move it over to generic code doing
-the same.
+The mediatek driver starts several async crypto ops and waits for their
+completions. Move it over to generic code doing the same.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- crypto/asymmetric_keys/public_key.c | 28 ++++------------------------
- 1 file changed, 4 insertions(+), 24 deletions(-)
+ drivers/crypto/mediatek/mtk-aes.c | 31 +++++--------------------------
+ 1 file changed, 5 insertions(+), 26 deletions(-)
 
-diff --git a/crypto/asymmetric_keys/public_key.c b/crypto/asymmetric_keys/public_key.c
-index 3fad1fd..d916235 100644
---- a/crypto/asymmetric_keys/public_key.c
-+++ b/crypto/asymmetric_keys/public_key.c
-@@ -57,29 +57,13 @@ static void public_key_destroy(void *payload0, void *payload3)
- 	public_key_signature_free(payload3);
- }
+diff --git a/drivers/crypto/mediatek/mtk-aes.c b/drivers/crypto/mediatek/mtk-aes.c
+index 5254e13..e2c7c95 100644
+--- a/drivers/crypto/mediatek/mtk-aes.c
++++ b/drivers/crypto/mediatek/mtk-aes.c
+@@ -137,11 +137,6 @@ struct mtk_aes_gcm_ctx {
+ 	struct crypto_skcipher *ctr;
+ };
  
--struct public_key_completion {
--	struct completion completion;
+-struct mtk_aes_gcm_setkey_result {
 -	int err;
+-	struct completion completion;
 -};
 -
--static void public_key_verify_done(struct crypto_async_request *req, int err)
+ struct mtk_aes_drv {
+ 	struct list_head dev_list;
+ 	/* Device list lock */
+@@ -936,17 +931,6 @@ static int mtk_aes_gcm_crypt(struct aead_request *req, u64 mode)
+ 				    &req->base);
+ }
+ 
+-static void mtk_gcm_setkey_done(struct crypto_async_request *req, int err)
 -{
--	struct public_key_completion *compl = req->data;
+-	struct mtk_aes_gcm_setkey_result *result = req->data;
 -
 -	if (err == -EINPROGRESS)
 -		return;
 -
--	compl->err = err;
--	complete(&compl->completion);
+-	result->err = err;
+-	complete(&result->completion);
 -}
 -
  /*
-  * Verify a signature using a public key.
-  */
- int public_key_verify_signature(const struct public_key *pkey,
- 				const struct public_key_signature *sig)
- {
--	struct public_key_completion compl;
-+	struct crypto_wait cwait;
- 	struct crypto_akcipher *tfm;
- 	struct akcipher_request *req;
- 	struct scatterlist sig_sg, digest_sg;
-@@ -131,20 +115,16 @@ int public_key_verify_signature(const struct public_key *pkey,
- 	sg_init_one(&digest_sg, output, outlen);
- 	akcipher_request_set_crypt(req, &sig_sg, &digest_sg, sig->s_size,
- 				   outlen);
--	init_completion(&compl.completion);
-+	crypto_init_wait(&cwait);
- 	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
- 				      CRYPTO_TFM_REQ_MAY_SLEEP,
--				      public_key_verify_done, &compl);
-+				      crypto_req_done, &cwait);
+  * Because of the hardware limitation, we need to pre-calculate key(H)
+  * for the GHASH operation. The result of the encryption operation
+@@ -962,7 +946,7 @@ static int mtk_aes_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 		u32 hash[4];
+ 		u8 iv[8];
  
- 	/* Perform the verification calculation.  This doesn't actually do the
- 	 * verification, but rather calculates the hash expected by the
- 	 * signature and returns that to us.
- 	 */
--	ret = crypto_akcipher_verify(req);
--	if ((ret == -EINPROGRESS) || (ret == -EIOCBQUEUED)) {
--		wait_for_completion(&compl.completion);
--		ret = compl.err;
+-		struct mtk_aes_gcm_setkey_result result;
++		struct crypto_wait wait;
+ 
+ 		struct scatterlist sg[1];
+ 		struct skcipher_request req;
+@@ -1002,22 +986,17 @@ static int mtk_aes_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 	if (!data)
+ 		return -ENOMEM;
+ 
+-	init_completion(&data->result.completion);
++	crypto_init_wait(&data->wait);
+ 	sg_init_one(data->sg, &data->hash, AES_BLOCK_SIZE);
+ 	skcipher_request_set_tfm(&data->req, ctr);
+ 	skcipher_request_set_callback(&data->req, CRYPTO_TFM_REQ_MAY_SLEEP |
+ 				      CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				      mtk_gcm_setkey_done, &data->result);
++				      crypto_req_done, &data->wait);
+ 	skcipher_request_set_crypt(&data->req, data->sg, data->sg,
+ 				   AES_BLOCK_SIZE, data->iv);
+ 
+-	err = crypto_skcipher_encrypt(&data->req);
+-	if (err == -EINPROGRESS || err == -EIOCBQUEUED) {
+-		err = wait_for_completion_interruptible(
+-			&data->result.completion);
+-		if (!err)
+-			err = data->result.err;
 -	}
-+	ret = crypto_wait_req(crypto_akcipher_verify(req), &cwait);
- 	if (ret < 0)
- 		goto out_free_output;
++	err = crypto_wait_req(crypto_skcipher_encrypt(&data->req),
++			      &data->wait);
+ 	if (err)
+ 		goto out;
  
 -- 
 2.1.4
