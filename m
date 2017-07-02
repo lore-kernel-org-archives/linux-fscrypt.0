@@ -1,59 +1,44 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH] fscrypt: lock mutex before checking for bounce page pool
-Date: Thu,  6 Jul 2017 10:57:48 -0700
-Message-Id: <20170706175748.33093-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-kernel@vger.kernel.org, stable@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:53710 "EHLO
+        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1752390AbdGBOn6 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 2 Jul 2017 10:43:58 -0400
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v3 06/28] crypto: omap: use -EIOCBQUEUED for backlog indication
+Date: Sun,  2 Jul 2017 17:41:48 +0300
+Message-Id: <1499006535-19760-7-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
+References: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Replace -EBUSY with -EIOCBQUEUED for backlog queueing indication
+as part of new API.
 
-fscrypt_initialize(), which allocates the global bounce page pool when
-an encrypted file is first accessed, uses "double-checked locking" to
-try to avoid locking fscrypt_init_mutex.  However, it doesn't use any
-memory barriers, so it's theoretically possible for a thread to observe
-a bounce page pool which has not been fully initialized.  This is a
-classic bug with "double-checked locking".
-
-While "only a theoretical issue" in the latest kernel, in pre-4.8
-kernels the pointer that was checked was not even the last to be
-initialized, so it was easily possible for a crash (NULL pointer
-dereference) to happen.  This was changed only incidentally by the large
-refactor to use fs/crypto/.
-
-Solve both problems in a trivial way that can easily be backported: just
-always take the mutex.  It's theoretically less efficient, but it
-shouldn't be noticeable in practice as the mutex is only acquired very
-briefly once per encrypted file.
-
-Later I'd like to make this use a helper macro like DO_ONCE().  However,
-DO_ONCE() runs in atomic context, so we'd need to add a new macro that
-allows blocking.
-
-Cc: stable@vger.kernel.org # v4.1+
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- fs/crypto/crypto.c | 7 ++-----
- 1 file changed, 2 insertions(+), 5 deletions(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index c7835df7e7b8..d262a93d9b31 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -410,11 +410,8 @@ int fscrypt_initialize(unsigned int cop_flags)
- {
- 	int i, res = -ENOMEM;
+This patch should be squashed with the first patch in the series
+when applied.
+
+ drivers/crypto/omap-sham.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/crypto/omap-sham.c b/drivers/crypto/omap-sham.c
+index 9ad9d39..dfac821 100644
+--- a/drivers/crypto/omap-sham.c
++++ b/drivers/crypto/omap-sham.c
+@@ -1279,7 +1279,7 @@ static int omap_sham_finup(struct ahash_request *req)
+ 	ctx->flags |= BIT(FLAGS_FINUP);
  
--	/*
--	 * No need to allocate a bounce page pool if there already is one or
--	 * this FS won't use it.
--	 */
--	if (cop_flags & FS_CFLG_OWN_PAGES || fscrypt_bounce_page_pool)
-+	/* No need to allocate a bounce page pool if this FS won't use it. */
-+	if (cop_flags & FS_CFLG_OWN_PAGES)
- 		return 0;
- 
- 	mutex_lock(&fscrypt_init_mutex);
+ 	err1 = omap_sham_update(req);
+-	if (err1 == -EINPROGRESS || err1 == -EBUSY)
++	if (err1 == -EINPROGRESS || err1 == -EIOCBQUEUED)
+ 		return err1;
+ 	/*
+ 	 * final() has to be always called to cleanup resources
 -- 
-2.13.2.725.g09c95d1e9-goog
+2.1.4
+
