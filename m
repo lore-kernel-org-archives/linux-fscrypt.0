@@ -1,297 +1,58 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 5/6] fscrypt: cache the HMAC transform for each master key
-Date: Wed, 12 Jul 2017 14:00:34 -0700
-Message-Id: <20170712210035.51534-6-ebiggers3@gmail.com>
-In-Reply-To: <20170712210035.51534-1-ebiggers3@gmail.com>
-References: <20170712210035.51534-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Alex Cope <alexcope@google.com>, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:53584 "EHLO
+        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1752214AbdGBOn1 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 2 Jul 2017 10:43:27 -0400
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v3 04/28] crypto: marvell/cesa: use -EIOCBQUEUED for backlog indication
+Date: Sun,  2 Jul 2017 17:41:46 +0300
+Message-Id: <1499006535-19760-5-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
+References: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Replace -EBUSY with -EIOCBQUEUED for backlog queueing indication
+as part of new API.
 
-Now that we have a key_hash field which securely identifies a master key
-payload, introduce a cache of the HMAC transforms for the master keys
-currently in use for inodes using v2+ encryption policies.  The entries
-in this cache are called 'struct fscrypt_master_key' and are identified
-by key_hash.  The cache is per-superblock.  (It could be global, but
-making it per-superblock should reduce the lock contention a bit, and we
-may need to keep track of keys on a per-superblock basis for other
-reasons later, e.g. to implement an ioctl for evicting keys.)
-
-This results in a large efficiency gain: we now only have to allocate
-and key an "hmac(sha512)" transformation, execute HKDF-Extract, and
-compute key_hash once per master key rather than once per inode.  Note
-that this optimization can't easily be applied to the original AES-based
-KDF because that uses a different AES key for each KDF execution.  In
-practice, this difference makes the HKDF per-inode encryption key
-derivation performance comparable to or even faster than the old KDF,
-which typically spends more time allocating an "ecb(aes)" transformation
-from the crypto API than doing actual crypto work.
-
-Note that it would have been possible to make the mapping be from
-raw_key => fscrypt_master_key (where raw_key denotes the actual bytes of
-the master key) rather than from key_hash => fscrypt_master_key.
-However, an advantage of doing lookups by key_hash is that it replaces
-the keyring lookup in most cases, which opens up the future
-possibilities of not even having the master key in memory following an
-initial provisioning step (if the HMAC-SHA512 implementation is
-hardware-backed), or of introducing an ioctl to provision a key to the
-filesystem directly, avoiding keyrings and their visibility problems
-entirely.  Also, because key_hash is public information while raw_key is
-secret information, it would have been very difficult to use raw_key as
-a map key in a way that would prevent timing attacks while still being
-scalable to a large number of entries.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- fs/crypto/fscrypt_private.h |  11 ++++
- fs/crypto/keyinfo.c         | 134 +++++++++++++++++++++++++++++++++++++++++++-
- fs/crypto/policy.c          |   5 +-
- fs/super.c                  |   4 ++
- include/linux/fs.h          |   5 ++
- 5 files changed, 152 insertions(+), 7 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index a7baeac92575..4b158717a8c3 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -88,11 +88,22 @@ fscrypt_valid_context_format(const struct fscrypt_context *ctx, int size)
+This patch should be squashed with the first patch in the series
+when applied.
+
+ drivers/crypto/marvell/cesa.c | 2 +-
+ drivers/crypto/marvell/cesa.h | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/crypto/marvell/cesa.c b/drivers/crypto/marvell/cesa.c
+index 6e7a5c7..5a0f7d1 100644
+--- a/drivers/crypto/marvell/cesa.c
++++ b/drivers/crypto/marvell/cesa.c
+@@ -184,7 +184,7 @@ int mv_cesa_queue_req(struct crypto_async_request *req,
+ 	ret = crypto_enqueue_request(&engine->queue, req);
+ 	if ((mv_cesa_req_get_type(creq) == CESA_DMA_REQ) &&
+ 	    (ret == -EINPROGRESS ||
+-	    (ret == -EBUSY && req->flags & CRYPTO_TFM_REQ_MAY_BACKLOG)))
++	     ret == -EIOCBQUEUED))
+ 		mv_cesa_tdma_chain(engine, creq);
+ 	spin_unlock_bh(&engine->lock);
  
- /*
-  * fscrypt_master_key - an in-use master key
-+ *
-+ * This is referenced from each in-core inode that has been "unlocked" using a
-+ * particular master key.  It's primarily used to cache the HMAC transform so
-+ * that the per-inode encryption keys can be derived efficiently with HKDF.  It
-+ * is securely erased once all inodes referencing it have been evicted.
-+ *
-+ * If the same master key is used on different filesystems (unusual, but
-+ * possible), we'll create one of these structs for each filesystem.
-  */
- struct fscrypt_master_key {
- 	struct crypto_shash	*mk_hmac;
- 	unsigned int		mk_size;
- 	u8			mk_hash[FSCRYPT_KEY_HASH_SIZE];
-+	refcount_t		mk_refcount;
-+	struct rb_node		mk_node;
-+	struct super_block	*mk_sb;
- };
+diff --git a/drivers/crypto/marvell/cesa.h b/drivers/crypto/marvell/cesa.h
+index b7872f6..4ca755f 100644
+--- a/drivers/crypto/marvell/cesa.h
++++ b/drivers/crypto/marvell/cesa.h
+@@ -763,7 +763,7 @@ static inline int mv_cesa_req_needs_cleanup(struct crypto_async_request *req,
+ 	 * the backlog and will be processed later. There's no need to
+ 	 * clean it up.
+ 	 */
+-	if (ret == -EBUSY && req->flags & CRYPTO_TFM_REQ_MAY_BACKLOG)
++	if (ret == -EIOCBQUEUED)
+ 		return false;
  
- /*
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 12a60eacf819..bf60e76f9599 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -176,6 +176,14 @@ static void put_master_key(struct fscrypt_master_key *k)
- 	if (!k)
- 		return;
- 
-+	if (refcount_read(&k->mk_refcount) != 0) { /* in ->s_master_keys? */
-+		if (!refcount_dec_and_lock(&k->mk_refcount,
-+					   &k->mk_sb->s_master_keys_lock))
-+			return;
-+		rb_erase(&k->mk_node, &k->mk_sb->s_master_keys);
-+		spin_unlock(&k->mk_sb->s_master_keys_lock);
-+	}
-+
- 	crypto_free_shash(k->mk_hmac);
- 	kzfree(k);
- }
-@@ -231,6 +239,87 @@ alloc_master_key(const struct fscrypt_key *payload)
- 	goto out;
- }
- 
-+/*
-+ * ->s_master_keys is a map of master keys currently in use by in-core inodes on
-+ * a given filesystem, identified by key_hash which is a cryptographically
-+ * secure identifier for an actual key payload.
-+ *
-+ * Note that master_key_descriptor cannot be used to identify the keys because
-+ * master_key_descriptor only identifies the "location" of a key in the keyring,
-+ * not the actual key payload --- i.e., buggy or malicious userspace may provide
-+ * different keys with the same master_key_descriptor.
-+ */
-+
-+/*
-+ * Search ->s_master_keys for the fscrypt_master_key having the specified hash.
-+ * If found return it with a reference taken, otherwise return NULL.
-+ */
-+static struct fscrypt_master_key *
-+get_cached_master_key(struct super_block *sb,
-+		      const u8 hash[FSCRYPT_KEY_HASH_SIZE])
-+{
-+	struct rb_node *node;
-+	struct fscrypt_master_key *k;
-+	int res;
-+
-+	spin_lock(&sb->s_master_keys_lock);
-+	node = sb->s_master_keys.rb_node;
-+	while (node) {
-+		k = rb_entry(node, struct fscrypt_master_key, mk_node);
-+		res = memcmp(hash, k->mk_hash, FSCRYPT_KEY_HASH_SIZE);
-+		if (res < 0)
-+			node = node->rb_left;
-+		else if (res > 0)
-+			node = node->rb_right;
-+		else {
-+			refcount_inc(&k->mk_refcount);
-+			goto out;
-+		}
-+	}
-+	k = NULL;
-+out:
-+	spin_unlock(&sb->s_master_keys_lock);
-+	return k;
-+}
-+
-+/*
-+ * Try to insert the specified fscrypt_master_key into ->s_master_keys.  If it
-+ * already exists, then drop the key being inserted and take a reference to the
-+ * existing one instead.
-+ */
-+static struct fscrypt_master_key *
-+insert_master_key(struct super_block *sb, struct fscrypt_master_key *new)
-+{
-+	struct fscrypt_master_key *k;
-+	struct rb_node *parent = NULL, **p;
-+	int res;
-+
-+	spin_lock(&sb->s_master_keys_lock);
-+	p = &sb->s_master_keys.rb_node;
-+	while (*p) {
-+		parent = *p;
-+		k = rb_entry(parent, struct fscrypt_master_key, mk_node);
-+		res = memcmp(new->mk_hash, k->mk_hash, FSCRYPT_KEY_HASH_SIZE);
-+		if (res < 0)
-+			p = &parent->rb_left;
-+		else if (res > 0)
-+			p = &parent->rb_right;
-+		else {
-+			refcount_inc(&k->mk_refcount);
-+			spin_unlock(&sb->s_master_keys_lock);
-+			put_master_key(new);
-+			return k;
-+		}
-+	}
-+
-+	rb_link_node(&new->mk_node, parent, p);
-+	rb_insert_color(&new->mk_node, &sb->s_master_keys);
-+	refcount_set(&new->mk_refcount, 1);
-+	new->mk_sb = sb;
-+	spin_unlock(&sb->s_master_keys_lock);
-+	return new;
-+}
-+
- static void release_keyring_key(struct key *keyring_key)
- {
- 	up_read(&keyring_key->sem);
-@@ -321,6 +410,47 @@ load_master_key_from_keyring(const struct inode *inode,
- 	return master_key;
- }
- 
-+/*
-+ * Get the fscrypt_master_key identified by the specified v2+ encryption
-+ * context, or create it if not found.
-+ *
-+ * Returns the fscrypt_master_key with a reference taken, or an ERR_PTR().
-+ */
-+static struct fscrypt_master_key *
-+find_or_create_master_key(const struct inode *inode,
-+			  const struct fscrypt_context *ctx,
-+			  unsigned int min_keysize)
-+{
-+	struct fscrypt_master_key *master_key;
-+
-+	if (WARN_ON(ctx->version < FSCRYPT_CONTEXT_V2))
-+		return ERR_PTR(-EINVAL);
-+
-+	/*
-+	 * First try looking up the master key by its cryptographically secure
-+	 * key_hash.  If it's already in memory, there's no need to do a keyring
-+	 * search.  (Note that we don't enforce access control based on which
-+	 * processes "have the key" and which don't, as encryption is meant to
-+	 * be orthogonal to operating-system level access control.  Hence, it's
-+	 * sufficient for anyone on the system to have added the needed key.)
-+	 */
-+	master_key = get_cached_master_key(inode->i_sb, ctx->key_hash);
-+	if (master_key)
-+		return master_key;
-+
-+	/*
-+	 * The needed master key isn't in memory yet.  Load it from the keyring.
-+	 */
-+	master_key = load_master_key_from_keyring(inode,
-+						  ctx->master_key_descriptor,
-+						  min_keysize);
-+	if (IS_ERR(master_key))
-+		return master_key;
-+
-+	/* Cache the key for later */
-+	return insert_master_key(inode->i_sb, master_key);
-+}
-+
- static void derive_crypt_complete(struct crypto_async_request *req, int rc)
- {
- 	struct fscrypt_completion_result *ecr = req->data;
-@@ -638,9 +768,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 					     derived_keysize);
- 	} else {
- 		crypt_info->ci_master_key =
--			load_master_key_from_keyring(inode,
--						     ctx.master_key_descriptor,
--						     derived_keysize);
-+			find_or_create_master_key(inode, &ctx, derived_keysize);
- 		if (IS_ERR(crypt_info->ci_master_key)) {
- 			res = PTR_ERR(crypt_info->ci_master_key);
- 			crypt_info->ci_master_key = NULL;
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 2934bc2bff4b..7661c66a3533 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -259,10 +259,7 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- 			(parent_ci->ci_filename_mode ==
- 			 child_ci->ci_filename_mode) &&
- 			(parent_ci->ci_flags == child_ci->ci_flags) &&
--			(parent_ci->ci_context_version == FSCRYPT_CONTEXT_V1 ||
--			 (memcmp(parent_ci->ci_master_key->mk_hash,
--				 child_ci->ci_master_key->mk_hash,
--				 FSCRYPT_KEY_HASH_SIZE) == 0));
-+			(parent_ci->ci_master_key == child_ci->ci_master_key);
- 	}
- 
- 	res = cops->get_context(parent, &parent_ctx, sizeof(parent_ctx));
-diff --git a/fs/super.c b/fs/super.c
-index adb0c0de428c..90bd61ea139c 100644
---- a/fs/super.c
-+++ b/fs/super.c
-@@ -215,6 +215,10 @@ static struct super_block *alloc_super(struct file_system_type *type, int flags,
- 	spin_lock_init(&s->s_inode_list_lock);
- 	INIT_LIST_HEAD(&s->s_inodes_wb);
- 	spin_lock_init(&s->s_inode_wblist_lock);
-+#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
-+	s->s_master_keys = RB_ROOT;
-+	spin_lock_init(&s->s_master_keys_lock);
-+#endif
- 
- 	if (list_lru_init_memcg(&s->s_dentry_lru))
- 		goto fail;
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 976aaa1af82a..4f47e1bc81bc 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -1417,6 +1417,11 @@ struct super_block {
- 
- 	spinlock_t		s_inode_wblist_lock;
- 	struct list_head	s_inodes_wb;	/* writeback inodes */
-+
-+#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
-+	spinlock_t		s_master_keys_lock;
-+	struct rb_root		s_master_keys;	/* master crypto keys in use */
-+#endif
- };
- 
- /* Helper functions so that in most cases filesystems will
+ 	/* Request wasn't queued, we need to clean it up */
 -- 
-2.13.2.932.g7449e964c-goog
+2.1.4
+
