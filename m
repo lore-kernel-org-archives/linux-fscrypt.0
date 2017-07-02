@@ -1,52 +1,116 @@
-Return-Path: <linux-ext4-owner@vger.kernel.org>
-From: Tahsin Erdogan <tahsin@google.com>
-Subject: [PATCH 1/2] ext4: skip ext4_init_security() and encryption on ea_inodes
-Date: Wed,  5 Jul 2017 19:38:18 -0700
-Message-Id: <20170706023819.32272-1-tahsin@google.com>
-Sender: linux-ext4-owner@vger.kernel.org
-To: Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Andreas Dilger <adilger@dilger.ca>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org
-Cc: linux-kernel@vger.kernel.org, Tahsin Erdogan <tahsin@google.com>
+Return-Path: <gilad@benyossef.com>
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v3 14/28] crypto: introduce crypto wait for async op
+Date: Sun,  2 Jul 2017 17:41:56 +0300
+Message-Id: <1499006535-19760-15-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
+References: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Cc: Ofir Drang <ofir.drang@arm.com>, Eric Biggers <ebiggers3@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Extended attribute inodes are internal to ext4. Adding encryption/security
-related attributes on them would mean dealing with nested calls into ea code.
-Since they have no direct exposure to user mode, just avoid creating ea
-entries for them.
+Invoking a possibly async. crypto op and waiting for completion
+while correctly handling backlog processing is a common task
+in the crypto API implementation and outside users of it.
 
-Signed-off-by: Tahsin Erdogan <tahsin@google.com>
+This patch adds a generic implementation for doing so in
+preparation for using it across the board instead of hand
+rolled versions.
+
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+CC: Eric Biggers <ebiggers3@gmail.com>
 ---
- fs/ext4/ialloc.c | 11 ++++++-----
- 1 file changed, 6 insertions(+), 5 deletions(-)
+ crypto/api.c           | 13 +++++++++++++
+ include/linux/crypto.h | 40 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 53 insertions(+)
 
-diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-index fb1b3df17f6e..0c79e3efcaf7 100644
---- a/fs/ext4/ialloc.c
-+++ b/fs/ext4/ialloc.c
-@@ -771,7 +771,8 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
+diff --git a/crypto/api.c b/crypto/api.c
+index 941cd4c..2a2479d 100644
+--- a/crypto/api.c
++++ b/crypto/api.c
+@@ -24,6 +24,7 @@
+ #include <linux/sched/signal.h>
+ #include <linux/slab.h>
+ #include <linux/string.h>
++#include <linux/completion.h>
+ #include "internal.h"
  
- 	if ((ext4_encrypted_inode(dir) ||
- 	     DUMMY_ENCRYPTION_ENABLED(EXT4_SB(dir->i_sb))) &&
--	    (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode))) {
-+	    (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode)) &&
-+	    !(i_flags & EXT4_EA_INODE_FL)) {
- 		err = fscrypt_get_encryption_info(dir);
- 		if (err)
- 			return ERR_PTR(err);
-@@ -1114,11 +1115,11 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
- 		err = ext4_init_acl(handle, inode, dir);
- 		if (err)
- 			goto fail_free_drop;
--	}
+ LIST_HEAD(crypto_alg_list);
+@@ -595,5 +596,17 @@ int crypto_has_alg(const char *name, u32 type, u32 mask)
+ }
+ EXPORT_SYMBOL_GPL(crypto_has_alg);
  
--	err = ext4_init_security(handle, inode, dir, qstr);
--	if (err)
--		goto fail_free_drop;
-+		err = ext4_init_security(handle, inode, dir, qstr);
-+		if (err)
-+			goto fail_free_drop;
-+	}
++void crypto_req_done(struct crypto_async_request *req, int err)
++{
++	struct crypto_wait *wait = req->data;
++
++	if (err == -EINPROGRESS)
++		return;
++
++	wait->err = err;
++	complete(&wait->completion);
++}
++EXPORT_SYMBOL_GPL(crypto_req_done);
++
+ MODULE_DESCRIPTION("Cryptographic core API");
+ MODULE_LICENSE("GPL");
+diff --git a/include/linux/crypto.h b/include/linux/crypto.h
+index 84da997..47e884a 100644
+--- a/include/linux/crypto.h
++++ b/include/linux/crypto.h
+@@ -24,6 +24,7 @@
+ #include <linux/slab.h>
+ #include <linux/string.h>
+ #include <linux/uaccess.h>
++#include <linux/completion.h>
  
- 	if (ext4_has_feature_extents(sb)) {
- 		/* set extent flag only for directory, file and normal symlink*/
+ /*
+  * Autoloaded crypto modules should only use a prefixed name to avoid allowing
+@@ -468,6 +469,45 @@ struct crypto_alg {
+ } CRYPTO_MINALIGN_ATTR;
+ 
+ /*
++ * A helper struct for waiting for completion of async crypto ops
++ */
++struct crypto_wait {
++	struct completion completion;
++	int err;
++};
++
++/*
++ * Macro for declaring a crypto op async wait object on stack
++ */
++#define DECLARE_CRYPTO_WAIT(_wait) \
++	struct crypto_wait _wait = { \
++		COMPLETION_INITIALIZER_ONSTACK((_wait).completion), 0 }
++
++/*
++ * Async ops completion helper functioons
++ */
++void crypto_req_done(struct crypto_async_request *req, int err);
++
++static inline int crypto_wait_req(int err, struct crypto_wait *wait)
++{
++	switch (err) {
++	case -EINPROGRESS:
++	case -EIOCBQUEUED:
++		wait_for_completion(&wait->completion);
++		reinit_completion(&wait->completion);
++		err = wait->err;
++		break;
++	};
++
++	return err;
++}
++
++static inline void crypto_init_wait(struct crypto_wait *wait)
++{
++	init_completion(&wait->completion);
++}
++
++/*
+  * Algorithm registration interface.
+  */
+ int crypto_register_alg(struct crypto_alg *alg);
 -- 
-2.13.2.725.g09c95d1e9-goog
+2.1.4
