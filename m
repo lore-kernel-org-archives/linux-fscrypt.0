@@ -1,96 +1,52 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:54720 "EHLO
-        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1751717AbdGBOsJ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 2 Jul 2017 10:48:09 -0400
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v3 25/28] crypto: talitos: move to generic async completion
-Date: Sun,  2 Jul 2017 17:42:07 +0300
-Message-Id: <1499006535-19760-26-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
-References: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
-Cc: Ofir Drang <ofir.drang@arm.com>
+Return-Path: <linux-ext4-owner@vger.kernel.org>
+From: Tahsin Erdogan <tahsin@google.com>
+Subject: [PATCH 1/2] ext4: skip ext4_init_security() and encryption on ea_inodes
+Date: Wed,  5 Jul 2017 19:38:18 -0700
+Message-Id: <20170706023819.32272-1-tahsin@google.com>
+Sender: linux-ext4-owner@vger.kernel.org
+To: Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Andreas Dilger <adilger@dilger.ca>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org, Tahsin Erdogan <tahsin@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The talitos driver starts several async crypto ops and  waits for their
-completions. Move it over to generic code doing the same.
+Extended attribute inodes are internal to ext4. Adding encryption/security
+related attributes on them would mean dealing with nested calls into ea code.
+Since they have no direct exposure to user mode, just avoid creating ea
+entries for them.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Signed-off-by: Tahsin Erdogan <tahsin@google.com>
 ---
- drivers/crypto/talitos.c | 39 +++++----------------------------------
- 1 file changed, 5 insertions(+), 34 deletions(-)
+ fs/ext4/ialloc.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/crypto/talitos.c b/drivers/crypto/talitos.c
-index 0ab3c4d..bf80d3b 100644
---- a/drivers/crypto/talitos.c
-+++ b/drivers/crypto/talitos.c
-@@ -2037,22 +2037,6 @@ static int ahash_import(struct ahash_request *areq, const void *in)
- 	return 0;
- }
+diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
+index fb1b3df17f6e..0c79e3efcaf7 100644
+--- a/fs/ext4/ialloc.c
++++ b/fs/ext4/ialloc.c
+@@ -771,7 +771,8 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
  
--struct keyhash_result {
--	struct completion completion;
--	int err;
--};
--
--static void keyhash_complete(struct crypto_async_request *req, int err)
--{
--	struct keyhash_result *res = req->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	res->err = err;
--	complete(&res->completion);
--}
--
- static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
- 		   u8 *hash)
- {
-@@ -2060,10 +2044,10 @@ static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
- 
- 	struct scatterlist sg[1];
- 	struct ahash_request *req;
--	struct keyhash_result hresult;
-+	struct crypto_wait wait;
- 	int ret;
- 
--	init_completion(&hresult.completion);
-+	crypto_init_wait(&wait);
- 
- 	req = ahash_request_alloc(tfm, GFP_KERNEL);
- 	if (!req)
-@@ -2072,25 +2056,12 @@ static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
- 	/* Keep tfm keylen == 0 during hash of the long key */
- 	ctx->keylen = 0;
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				   keyhash_complete, &hresult);
-+				   crypto_req_done, &wait);
- 
- 	sg_init_one(&sg[0], key, keylen);
- 
--	ahash_request_set_crypt(req, sg, hash, keylen);
--	ret = crypto_ahash_digest(req);
--	switch (ret) {
--	case 0:
--		break;
--	case -EINPROGRESS:
--	case -EIOCBQUEUED:
--		ret = wait_for_completion_interruptible(
--			&hresult.completion);
--		if (!ret)
--			ret = hresult.err;
--		break;
--	default:
--		break;
+ 	if ((ext4_encrypted_inode(dir) ||
+ 	     DUMMY_ENCRYPTION_ENABLED(EXT4_SB(dir->i_sb))) &&
+-	    (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode))) {
++	    (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode)) &&
++	    !(i_flags & EXT4_EA_INODE_FL)) {
+ 		err = fscrypt_get_encryption_info(dir);
+ 		if (err)
+ 			return ERR_PTR(err);
+@@ -1114,11 +1115,11 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
+ 		err = ext4_init_acl(handle, inode, dir);
+ 		if (err)
+ 			goto fail_free_drop;
 -	}
-+	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
-+
- 	ahash_request_free(req);
  
- 	return ret;
+-	err = ext4_init_security(handle, inode, dir, qstr);
+-	if (err)
+-		goto fail_free_drop;
++		err = ext4_init_security(handle, inode, dir, qstr);
++		if (err)
++			goto fail_free_drop;
++	}
+ 
+ 	if (ext4_has_feature_extents(sb)) {
+ 		/* set extent flag only for directory, file and normal symlink*/
 -- 
-2.1.4
-
+2.13.2.725.g09c95d1e9-goog
