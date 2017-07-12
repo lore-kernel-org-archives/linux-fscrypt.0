@@ -1,316 +1,71 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-pf0-f174.google.com ([209.85.192.174]:33104 "EHLO
-        mail-pf0-f174.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1752315AbdGFCi1 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 5 Jul 2017 22:38:27 -0400
-Received: by mail-pf0-f174.google.com with SMTP id e7so3781563pfk.0
-        for <linux-fscrypt@vger.kernel.org>; Wed, 05 Jul 2017 19:38:27 -0700 (PDT)
-From: Tahsin Erdogan <tahsin@google.com>
-Subject: [PATCH 2/2] ext4: fix __ext4_new_inode() journal credits calculation
-Date: Wed,  5 Jul 2017 19:38:19 -0700
-Message-Id: <20170706023819.32272-2-tahsin@google.com>
-In-Reply-To: <20170706023819.32272-1-tahsin@google.com>
-References: <20170706023819.32272-1-tahsin@google.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Andreas Dilger <adilger@dilger.ca>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org
-Cc: linux-kernel@vger.kernel.org, Tahsin Erdogan <tahsin@google.com>
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 0/6] fscrypt: key verification and KDF improvement
+Date: Wed, 12 Jul 2017 14:00:29 -0700
+Message-Id: <20170712210035.51534-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Alex Cope <alexcope@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-ea_inode feature allows creating extended attributes that are up to
-64k in size. Update __ext4_new_inode() to pick increased credit limits.
+From: Eric Biggers <ebiggers@google.com>
 
-To avoid overallocating too many journal credits, update
-__ext4_xattr_set_credits() to make a distinction between xattr create
-vs update. This helps __ext4_new_inode() because all attributes are
-known to be new, so we can save credits that are normally needed to
-delete old values.
+This patch series solves two major problems which filesystem-level
+encryption has currently.  First, the user-supplied master keys are not
+verified, which means a malicious user can provide the wrong key for
+another user's file and cause a DOS attack or worse.  This flaw has been
+criticized in the past [1].  Second, the KDF (Key Derivation Function)
+used to derive per-file keys is ad-hoc and nonstandard.  While it meets
+the primary security requirement, it's inflexible and is missing some
+useful properties such as non-reversibility, which is important under
+some threat models.  This weakness was noted by Unterluggauer and
+Mangard (2016) [2] who also demonstrated an EM attack against the
+current AES-based KDF.
 
-Also, have fscrypt specify its maximum context size so that we don't
-end up allocating credits for 64k size.
+These problems are solved together by introducing a new encryption
+policy version where the KDF is changed to HKDF-SHA512, i.e. RFC-5869
+[3] with SHA-512 as the underlying hash function.  HKDF is used to
+derive the per-file keys as well as to generate a "key hash" which is
+stored on-disk to allow key verification.  The HMAC transform for each
+master key is pre-keyed and cached, which in practice makes the new KDF
+about as fast or even faster than the old one which did not use the
+crypto API efficiently.
 
-Signed-off-by: Tahsin Erdogan <tahsin@google.com>
----
- fs/crypto/policy.c             |  1 +
- fs/ext4/acl.c                  | 13 ++++++------
- fs/ext4/ialloc.c               | 26 +++++++++++++++++-------
- fs/ext4/super.c                |  3 ++-
- fs/ext4/xattr.c                | 46 +++++++++++++++++++++++++-----------------
- fs/ext4/xattr.h                |  5 ++++-
- include/linux/fscrypt_common.h |  3 +++
- 7 files changed, 63 insertions(+), 34 deletions(-)
+Please give special consideration to the choice and usage of crypto
+algorithms and any other on-disk format and API changes, since we will
+be locked into these once merged.
 
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 210976e7a269..94becf5a1519 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -260,6 +260,7 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
- 	memcpy(ctx.master_key_descriptor, ci->ci_master_key,
- 	       FS_KEY_DESCRIPTOR_SIZE);
- 	get_random_bytes(ctx.nonce, FS_KEY_DERIVATION_NONCE_SIZE);
-+	BUILD_BUG_ON(sizeof(ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
- 	res = parent->i_sb->s_cop->set_context(child, &ctx,
- 						sizeof(ctx), fs_data);
- 	if (res)
-diff --git a/fs/ext4/acl.c b/fs/ext4/acl.c
-index 8db03e5c78bc..09441ae07a5b 100644
---- a/fs/ext4/acl.c
-+++ b/fs/ext4/acl.c
-@@ -183,7 +183,7 @@ ext4_get_acl(struct inode *inode, int type)
-  */
- static int
- __ext4_set_acl(handle_t *handle, struct inode *inode, int type,
--	     struct posix_acl *acl)
-+	     struct posix_acl *acl, int xattr_flags)
- {
- 	int name_index;
- 	void *value = NULL;
-@@ -218,7 +218,7 @@ __ext4_set_acl(handle_t *handle, struct inode *inode, int type,
- 	}
- 
- 	error = ext4_xattr_set_handle(handle, inode, name_index, "",
--				      value, size, 0);
-+				      value, size, xattr_flags);
- 
- 	kfree(value);
- 	if (!error)
-@@ -238,7 +238,8 @@ ext4_set_acl(struct inode *inode, struct posix_acl *acl, int type)
- 	if (error)
- 		return error;
- retry:
--	error = ext4_xattr_set_credits(inode, acl_size, &credits);
-+	error = ext4_xattr_set_credits(inode, acl_size, false /* is_create */,
-+				       &credits);
- 	if (error)
- 		return error;
- 
-@@ -246,7 +247,7 @@ ext4_set_acl(struct inode *inode, struct posix_acl *acl, int type)
- 	if (IS_ERR(handle))
- 		return PTR_ERR(handle);
- 
--	error = __ext4_set_acl(handle, inode, type, acl);
-+	error = __ext4_set_acl(handle, inode, type, acl, 0 /* xattr_flags */);
- 	ext4_journal_stop(handle);
- 	if (error == -ENOSPC && ext4_should_retry_alloc(inode->i_sb, &retries))
- 		goto retry;
-@@ -271,13 +272,13 @@ ext4_init_acl(handle_t *handle, struct inode *inode, struct inode *dir)
- 
- 	if (default_acl) {
- 		error = __ext4_set_acl(handle, inode, ACL_TYPE_DEFAULT,
--				       default_acl);
-+				       default_acl, XATTR_CREATE);
- 		posix_acl_release(default_acl);
- 	}
- 	if (acl) {
- 		if (!error)
- 			error = __ext4_set_acl(handle, inode, ACL_TYPE_ACCESS,
--					       acl);
-+					       acl, XATTR_CREATE);
- 		posix_acl_release(acl);
- 	}
- 	return error;
-diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-index 0c79e3efcaf7..21a2538afcc2 100644
---- a/fs/ext4/ialloc.c
-+++ b/fs/ext4/ialloc.c
-@@ -766,11 +766,13 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
- 	if (!dir || !dir->i_nlink)
- 		return ERR_PTR(-EPERM);
- 
--	if (unlikely(ext4_forced_shutdown(EXT4_SB(dir->i_sb))))
-+	sb = dir->i_sb;
-+	sbi = EXT4_SB(sb);
-+
-+	if (unlikely(ext4_forced_shutdown(sbi)))
- 		return ERR_PTR(-EIO);
- 
--	if ((ext4_encrypted_inode(dir) ||
--	     DUMMY_ENCRYPTION_ENABLED(EXT4_SB(dir->i_sb))) &&
-+	if ((ext4_encrypted_inode(dir) || DUMMY_ENCRYPTION_ENABLED(sbi)) &&
- 	    (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode)) &&
- 	    !(i_flags & EXT4_EA_INODE_FL)) {
- 		err = fscrypt_get_encryption_info(dir);
-@@ -778,19 +780,29 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
- 			return ERR_PTR(err);
- 		if (!fscrypt_has_encryption_key(dir))
- 			return ERR_PTR(-ENOKEY);
--		if (!handle)
--			nblocks += EXT4_DATA_TRANS_BLOCKS(dir->i_sb);
- 		encrypt = 1;
- 	}
- 
--	sb = dir->i_sb;
-+	if (!handle && sbi->s_journal && !(i_flags & EXT4_EA_INODE_FL)) {
-+		/*
-+		 * 2 ea entries for ext4_init_acl(), 2 for ext4_init_security().
-+		 */
-+		nblocks += 4 * __ext4_xattr_set_credits(sb, NULL /* inode */,
-+					NULL /* block_bh */, XATTR_SIZE_MAX,
-+					true /* is_create */);
-+		if (encrypt)
-+			nblocks += __ext4_xattr_set_credits(sb,
-+					NULL /* inode */, NULL /* block_bh */,
-+					FSCRYPT_SET_CONTEXT_MAX_SIZE,
-+					true /* is_create */);
-+	}
-+
- 	ngroups = ext4_get_groups_count(sb);
- 	trace_ext4_request_inode(dir, mode);
- 	inode = new_inode(sb);
- 	if (!inode)
- 		return ERR_PTR(-ENOMEM);
- 	ei = EXT4_I(inode);
--	sbi = EXT4_SB(sb);
- 
- 	/*
- 	 * Initialize owners and quota early so that we don't have to account
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 56c971807df5..f666042a3d58 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1194,7 +1194,8 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
- 	if (res)
- 		return res;
- retry:
--	res = ext4_xattr_set_credits(inode, len, &credits);
-+	res = ext4_xattr_set_credits(inode, len, false /* is_create */,
-+				     &credits);
- 	if (res)
- 		return res;
- 
-diff --git a/fs/ext4/xattr.c b/fs/ext4/xattr.c
-index 624aad69991d..1f617ffb775a 100644
---- a/fs/ext4/xattr.c
-+++ b/fs/ext4/xattr.c
-@@ -829,11 +829,10 @@ static void ext4_xattr_inode_free_quota(struct inode *inode, size_t len)
- 	dquot_free_inode(inode);
- }
- 
--static int __ext4_xattr_set_credits(struct inode *inode,
--				    struct buffer_head *block_bh,
--				    size_t value_len)
-+int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
-+			     struct buffer_head *block_bh, size_t value_len,
-+			     bool is_create)
- {
--	struct super_block *sb = inode->i_sb;
- 	int credits;
- 	int blocks;
- 
-@@ -859,7 +858,7 @@ static int __ext4_xattr_set_credits(struct inode *inode,
- 	 * In case of inline data, we may push out the data to a block,
- 	 * so we need to reserve credits for this eventuality
- 	 */
--	if (ext4_has_inline_data(inode))
-+	if (inode && ext4_has_inline_data(inode))
- 		credits += ext4_writepage_trans_blocks(inode) + 1;
- 
- 	/* We are done if ea_inode feature is not enabled. */
-@@ -881,19 +880,23 @@ static int __ext4_xattr_set_credits(struct inode *inode,
- 	/* Blocks themselves. */
- 	credits += blocks;
- 
--	/* Dereference ea_inode holding old xattr value.
--	 * Old ea_inode, inode map, block bitmap, group descriptor.
--	 */
--	credits += 4;
-+	if (!is_create) {
-+		/* Dereference ea_inode holding old xattr value.
-+		 * Old ea_inode, inode map, block bitmap, group descriptor.
-+		 */
-+		credits += 4;
- 
--	/* Data blocks for old ea_inode. */
--	blocks = XATTR_SIZE_MAX >> sb->s_blocksize_bits;
-+		/* Data blocks for old ea_inode. */
-+		blocks = XATTR_SIZE_MAX >> sb->s_blocksize_bits;
- 
--	/* Indirection block or one level of extent tree for old ea_inode. */
--	blocks += 1;
-+		/* Indirection block or one level of extent tree for old
-+		 * ea_inode.
-+		 */
-+		blocks += 1;
- 
--	/* Block bitmap and group descriptor updates for each block. */
--	credits += blocks * 2;
-+		/* Block bitmap and group descriptor updates for each block. */
-+		credits += blocks * 2;
-+	}
- 
- 	/* We may need to clone the existing xattr block in which case we need
- 	 * to increment ref counts for existing ea_inodes referenced by it.
-@@ -2262,7 +2265,9 @@ ext4_xattr_set_handle(handle_t *handle, struct inode *inode, int name_index,
- 			goto cleanup;
- 		}
- 
--		credits = __ext4_xattr_set_credits(inode, bh, value_len);
-+		credits = __ext4_xattr_set_credits(inode->i_sb, inode, bh,
-+						   value_len,
-+						   flags & XATTR_CREATE);
- 		brelse(bh);
- 
- 		if (!ext4_handle_has_enough_credits(handle, credits)) {
-@@ -2369,7 +2374,8 @@ ext4_xattr_set_handle(handle_t *handle, struct inode *inode, int name_index,
- 	return error;
- }
- 
--int ext4_xattr_set_credits(struct inode *inode, size_t value_len, int *credits)
-+int ext4_xattr_set_credits(struct inode *inode, size_t value_len,
-+			   bool is_create, int *credits)
- {
- 	struct buffer_head *bh;
- 	int err;
-@@ -2385,7 +2391,8 @@ int ext4_xattr_set_credits(struct inode *inode, size_t value_len, int *credits)
- 	if (IS_ERR(bh)) {
- 		err = PTR_ERR(bh);
- 	} else {
--		*credits = __ext4_xattr_set_credits(inode, bh, value_len);
-+		*credits = __ext4_xattr_set_credits(inode->i_sb, inode, bh,
-+						    value_len, is_create);
- 		brelse(bh);
- 		err = 0;
- 	}
-@@ -2416,7 +2423,8 @@ ext4_xattr_set(struct inode *inode, int name_index, const char *name,
- 		return error;
- 
- retry:
--	error = ext4_xattr_set_credits(inode, value_len, &credits);
-+	error = ext4_xattr_set_credits(inode, value_len, flags & XATTR_CREATE,
-+				       &credits);
- 	if (error)
- 		return error;
- 
-diff --git a/fs/ext4/xattr.h b/fs/ext4/xattr.h
-index 26119a67c8c3..0d2dde1fa87a 100644
---- a/fs/ext4/xattr.h
-+++ b/fs/ext4/xattr.h
-@@ -153,7 +153,10 @@ extern int ext4_xattr_get(struct inode *, int, const char *, void *, size_t);
- extern int ext4_xattr_set(struct inode *, int, const char *, const void *, size_t, int);
- extern int ext4_xattr_set_handle(handle_t *, struct inode *, int, const char *, const void *, size_t, int);
- extern int ext4_xattr_set_credits(struct inode *inode, size_t value_len,
--				  int *credits);
-+				  bool is_create, int *credits);
-+extern int __ext4_xattr_set_credits(struct super_block *sb, struct inode *inode,
-+				struct buffer_head *block_bh, size_t value_len,
-+				bool is_create);
- 
- extern int ext4_xattr_delete_inode(handle_t *handle, struct inode *inode,
- 				   struct ext4_xattr_inode_array **array,
-diff --git a/include/linux/fscrypt_common.h b/include/linux/fscrypt_common.h
-index 0a30c106c1e5..82beaf70e7e2 100644
---- a/include/linux/fscrypt_common.h
-+++ b/include/linux/fscrypt_common.h
-@@ -83,6 +83,9 @@ struct fscrypt_operations {
- 	unsigned (*max_namelen)(struct inode *);
- };
- 
-+/* Maximum value for the third parameter of fscrypt_operations.set_context(). */
-+#define FSCRYPT_SET_CONTEXT_MAX_SIZE	28
-+
- static inline bool fscrypt_dummy_context_enabled(struct inode *inode)
- {
- 	if (inode->i_sb->s_cop->dummy_context &&
+All these changes are independent of filesystem and encryption mode,
+i.e. the "v2" encryption policies can be used on any fscrypt-capable
+filesystem (ext4, f2fs, or ubifs currently) and with any of the
+supported encryption modes.
+
+References:
+  [1] https://blog.quarkslab.com/a-glimpse-of-ext4-filesystem-level-encryption.html
+
+  [2] Unterluggauer and Mangard (2016).  "Exploiting the Physical
+      Disparity: Side-Channel Attacks on Memory Encryption".
+      https://eprint.iacr.org/2016/473.pdf
+
+  [3] RFC 5869. "HMAC-based Extract-and-Expand Key Derivation Function
+      (HKDF)".  https://tools.ietf.org/html/rfc5869
+
+Eric Biggers (6):
+  fscrypt: add v2 encryption context and policy
+  fscrypt: rename ->ci_master_key to ->ci_master_key_descriptor
+  fscrypt: use HKDF-SHA512 to derive the per-inode encryption keys
+  fscrypt: verify that the correct master key was supplied
+  fscrypt: cache the HMAC transform for each master key
+  fscrypt: for v2 policies, support "fscrypt:" key prefix only
+
+ fs/crypto/Kconfig              |   2 +
+ fs/crypto/fscrypt_private.h    | 109 ++++++-
+ fs/crypto/keyinfo.c            | 669 ++++++++++++++++++++++++++++++++++-------
+ fs/crypto/policy.c             | 118 ++++++--
+ fs/super.c                     |   4 +
+ include/linux/fs.h             |   5 +
+ include/linux/fscrypt_common.h |   2 +-
+ include/uapi/linux/fs.h        |   6 +
+ 8 files changed, 766 insertions(+), 149 deletions(-)
+
 -- 
-2.13.2.725.g09c95d1e9-goog
-
+2.13.2.932.g7449e964c-goog
