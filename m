@@ -1,43 +1,59 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from orcrist.hmeau.com ([104.223.48.154]:40510 "EHLO
-        deadmen.hmeau.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1751179AbdGSE7U (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 19 Jul 2017 00:59:20 -0400
-Date: Wed, 19 Jul 2017 12:58:52 +0800
-From: Herbert Xu <herbert@gondor.apana.org.au>
+Return-Path: <ebiggers3@gmail.com>
+Date: Tue, 18 Jul 2017 16:17:47 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
 Subject: Re: fscrypt request_module() deadlock
-Message-ID: <20170719045852.GA8653@gondor.apana.org.au>
+Message-ID: <20170718231747.GA51535@gmail.com>
 References: <3450b67a-6766-d24e-5a84-18fff64d1b73@nod.at>
  <20170718061351.GD4764@gondor.apana.org.au>
- <20170718231747.GA51535@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170718231747.GA51535@gmail.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Eric Biggers <ebiggers3@gmail.com>
+In-Reply-To: <20170718061351.GD4764@gondor.apana.org.au>
+To: Herbert Xu <herbert@gondor.apana.org.au>
 Cc: Richard Weinberger <richard@nod.at>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, David Gstir <david@sigma-star.at>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Jul 18, 2017 at 04:17:47PM -0700, Eric Biggers wrote:
+On Tue, Jul 18, 2017 at 02:13:51PM +0800, Herbert Xu wrote:
+> On Fri, Jun 30, 2017 at 05:27:34PM +0200, Richard Weinberger wrote:
+> > Hi!
+> > 
+> > David and I faced a deadlock with switch_root when fscrypt was in use.
+> > When /sbin/modprobe is encrypted using fscrypt and no other kernel component
+> > requested an AES cipher before, first access to an encrypted file will trigger the
+> > module_request() function, which will execute usermode helper /sbin/modprobe.
+> > Is /sbin/modprobe also encrypted the kernel will deadlock because executing
+> > it will again enter the module_request() path...
+> > 
+> > As workaround we currently do something like "ls /new_root > /dev/null" in our
+> > initramfs to make request_module() happen before we change the root directory
+> > to /new_root.
+> > 
+> > While this workaround is legit we think that this could be handled better.
+> > Is there a way to request these ciphers before first usage? Herbert?
+> > e.g. such that the filesystem can request them upon mount time.
+> > 
+> > Btw: This happens even when AES modules are builtins.
 > 
-> While that should solve the problem, isn't it possible to actually have a module
-> which supplies an algorithm like "xts(aes)"?  In that case it wouldn't be
-> desirable to instantiate the generic "xts" template.
+> I think you're running into the problem because of templates, where
+> the first instantiation will always be preceded by a request_module.
+> 
+> We should be able to fix this by doing two template probes instead
+> of one.  So instead of the current order:
+> 
+> 1. Look up registered algorithms.
+> 2. Request module.
+> 3. Find templates (may request module).
+> 
+> We can do
+> 
+> 1. Look up registered algorithms.
+> 2. Find templates without loading modules.
+> 3. Request module.
+> 4. Find templates (may request module).
+> 
 
-Well, in the case where only xts and aes are built into the kernel
-I think we have to use that instead of going to request_module as
-otherwise we cannot avoid the dead-lock that is the subject of this
-discussion.
+While that should solve the problem, isn't it possible to actually have a module
+which supplies an algorithm like "xts(aes)"?  In that case it wouldn't be
+desirable to instantiate the generic "xts" template.
 
-If you want accelerated xts(aes) to work while building generic xts
-and aes into the kernel then you should also build the accelerated
-xts(aes) into the kernel (or load the manually once modules can be
-loaded).
-
-Cheers,
--- 
-Email: Herbert Xu <herbert@gondor.apana.org.au>
-Home Page: http://gondor.apana.org.au/~herbert/
-PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
+Eric
