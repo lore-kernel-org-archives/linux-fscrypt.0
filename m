@@ -1,83 +1,82 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v3 22/28] cifs: move to generic async completion
-Date: Sun,  2 Jul 2017 17:42:04 +0300
-Message-Id: <1499006535-19760-23-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
-References: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
-Cc: Ofir Drang <ofir.drang@arm.com>
+Return-Path: <ebiggers3@gmail.com>
+Date: Wed, 19 Jul 2017 10:32:37 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: Re: [PATCH 3/6] fscrypt: use HKDF-SHA512 to derive the per-inode
+ encryption keys
+Message-ID: <20170719173237.GA78811@gmail.com>
+References: <20170712210035.51534-1-ebiggers3@gmail.com>
+ <20170712210035.51534-4-ebiggers3@gmail.com>
+ <20170714162440.GB25453@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20170714162440.GB25453@google.com>
+To: Michael Halcrow <mhalcrow@google.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Alex Cope <alexcope@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-cifs starts an async. crypto op and waits for their completion.
-Move it over to generic code doing the same.
+On Fri, Jul 14, 2017 at 09:24:40AM -0700, Michael Halcrow wrote:
+> > +static int hkdf_expand(struct crypto_shash *hmac, u8 context,
+> > +		       const u8 *info, unsigned int infolen,
+> > +		       u8 *okm, unsigned int okmlen)
+> > +{
+> > +	SHASH_DESC_ON_STACK(desc, hmac);
+> > +	int err;
+> > +	const u8 *prev = NULL;
+> > +	unsigned int i;
+> > +	u8 counter = 1;
+> > +	u8 tmp[HKDF_HASHLEN];
+> > +
+> > +	desc->tfm = hmac;
+> > +	desc->flags = 0;
+> > +
+> > +	if (unlikely(okmlen > 255 * HKDF_HASHLEN))
+> > +		return -EINVAL;
+> > +
+> > +	for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
+> > +
+> > +		err = crypto_shash_init(desc);
+> > +		if (err)
+> > +			goto out;
+> > +
+> > +		if (prev) {
+> > +			err = crypto_shash_update(desc, prev, HKDF_HASHLEN);
+> > +			if (err)
+> > +				goto out;
+> > +		}
+> > +
+> > +		err = crypto_shash_update(desc, &context, 1);
+> 
+> One potential shortcut would be to just increment context on each
+> iteration rather than maintain the counter.
+> 
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-Acked-by: Pavel Shilovsky <pshilov@microsoft.com>
----
- fs/cifs/smb2ops.c | 30 ++++--------------------------
- 1 file changed, 4 insertions(+), 26 deletions(-)
+That's not a good idea because then it wouldn't be standard HKDF, and it would
+be relying on the "feedback" mode to keep the HMAC inputs unique which isn't
+guaranteed to be sufficient.
 
-diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
-index 00b1143..46abe62 100644
---- a/fs/cifs/smb2ops.c
-+++ b/fs/cifs/smb2ops.c
-@@ -1809,22 +1809,6 @@ init_sg(struct smb_rqst *rqst, u8 *sign)
- 	return sg;
- }
- 
--struct cifs_crypt_result {
--	int err;
--	struct completion completion;
--};
--
--static void cifs_crypt_complete(struct crypto_async_request *req, int err)
--{
--	struct cifs_crypt_result *res = req->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	res->err = err;
--	complete(&res->completion);
--}
--
- static int
- smb2_get_enc_key(struct TCP_Server_Info *server, __u64 ses_id, int enc, u8 *key)
- {
-@@ -1865,12 +1849,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
- 	struct aead_request *req;
- 	char *iv;
- 	unsigned int iv_len;
--	struct cifs_crypt_result result = {0, };
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct crypto_aead *tfm;
- 	unsigned int crypt_len = le32_to_cpu(tr_hdr->OriginalMessageSize);
- 
--	init_completion(&result.completion);
--
- 	rc = smb2_get_enc_key(server, tr_hdr->SessionId, enc, key);
- 	if (rc) {
- 		cifs_dbg(VFS, "%s: Could not get %scryption key\n", __func__,
-@@ -1930,14 +1912,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
- 	aead_request_set_ad(req, assoc_data_len);
- 
- 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				  cifs_crypt_complete, &result);
-+				  crypto_req_done, &wait);
- 
--	rc = enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
--
--	if (rc == -EINPROGRESS || rc == -EIOCBQUEUED) {
--		wait_for_completion(&result.completion);
--		rc = result.err;
--	}
-+	rc = crypto_wait_req(enc ? crypto_aead_encrypt(req)
-+				: crypto_aead_decrypt(req), &wait);
- 
- 	if (!rc && enc)
- 		memcpy(&tr_hdr->Signature, sign, SMB2_SIGNATURE_SIZE);
--- 
-2.1.4
+> >  
+> > -	res = validate_user_key(crypt_info, &ctx, raw_key, FS_KEY_DESC_PREFIX,
+> > -				keysize);
+> > -	if (res && inode->i_sb->s_cop->key_prefix) {
+> > -		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
+> > -					     inode->i_sb->s_cop->key_prefix,
+> > -					     keysize);
+> > -		if (res2) {
+> > -			if (res2 == -ENOKEY)
+> > -				res = -ENOKEY;
+> > +	if (ctx.version == FSCRYPT_CONTEXT_V1) {
+> > +		res = find_and_derive_key_v1(inode, &ctx, derived_key,
+> > +					     derived_keysize);
+> 
+> Why not make this consistent with the else clause, i.e. doing
+> load_master_key_from_keyring() followed by derive_key_v1()?
+> 
 
+struct fscrypt_master_key contains the HMAC transform but not the raw master
+key.  For the v1 key derivation we need the raw master key.  We could put it in
+the fscrypt_master_key and then try to allow fscrypt_master_key's both with and
+without HMAC transforms depending on the policy versions they are used for, but
+there's no point in doing so currently.
+
+Eric
