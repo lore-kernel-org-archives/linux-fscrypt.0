@@ -1,83 +1,61 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v3 26/28] crypto: qce: move to generic async completion
-Date: Sun,  2 Jul 2017 17:42:08 +0300
-Message-Id: <1499006535-19760-27-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
-References: <1499006535-19760-1-git-send-email-gilad@benyossef.com>
-Sender: linux-crypto-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
-Cc: Ofir Drang <ofir.drang@arm.com>
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH v2 4/7] fscrypt: validate modes and flags earlier when setting policy
+Date: Wed, 26 Jul 2017 11:19:26 -0700
+Message-Id: <20170726181929.99880-5-ebiggers3@gmail.com>
+In-Reply-To: <20170726181929.99880-1-ebiggers3@gmail.com>
+References: <20170726181929.99880-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Alex Cope <alexcope@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The qce driver starts several async crypto ops and  waits for their
-completions. Move it over to generic code doing the same.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+For FS_IOC_SET_ENCRYPTION_POLICY, currently the encryption modes and
+flags are only validated when a new encryption policy is being set, not
+when an existing policy is being compared to the one specified.
+However, we're going to start needing to compute the key_hash in both
+cases, and for this it's helpful to validate that the master key has the
+minimum length required by the specified encryption modes.  Therefore,
+move the modes and flags validation earlier in the ioctl, next to where
+we validate the policy version.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- drivers/crypto/qce/sha.c | 30 ++++--------------------------
- 1 file changed, 4 insertions(+), 26 deletions(-)
+ fs/crypto/policy.c | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
 
-diff --git a/drivers/crypto/qce/sha.c b/drivers/crypto/qce/sha.c
-index a21d2a1c..53227d7 100644
---- a/drivers/crypto/qce/sha.c
-+++ b/drivers/crypto/qce/sha.c
-@@ -349,28 +349,12 @@ static int qce_ahash_digest(struct ahash_request *req)
- 	return qce->async_req_enqueue(tmpl->qce, &req->base);
- }
- 
--struct qce_ahash_result {
--	struct completion completion;
--	int error;
--};
--
--static void qce_digest_complete(struct crypto_async_request *req, int error)
--{
--	struct qce_ahash_result *result = req->data;
--
--	if (error == -EINPROGRESS)
--		return;
--
--	result->error = error;
--	complete(&result->completion);
--}
--
- static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 				 unsigned int keylen)
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index fe525da9e79c..d1e58798da3c 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -60,13 +60,6 @@ static int create_encryption_context_from_policy(struct inode *inode,
  {
- 	unsigned int digestsize = crypto_ahash_digestsize(tfm);
- 	struct qce_sha_ctx *ctx = crypto_tfm_ctx(&tfm->base);
--	struct qce_ahash_result result;
-+	struct crypto_wait wait;
- 	struct ahash_request *req;
- 	struct scatterlist sg;
- 	unsigned int blocksize;
-@@ -405,9 +389,9 @@ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 		goto err_free_ahash;
- 	}
+ 	struct fscrypt_context ctx;
  
--	init_completion(&result.completion);
-+	crypto_init_wait(&wait);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				   qce_digest_complete, &result);
-+				   crypto_req_done, &wait);
- 	crypto_ahash_clear_flags(ahash_tfm, ~0);
- 
- 	buf = kzalloc(keylen + QCE_MAX_ALIGN_SIZE, GFP_KERNEL);
-@@ -420,13 +404,7 @@ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 	sg_init_one(&sg, buf, keylen);
- 	ahash_request_set_crypt(req, &sg, ctx->authkey, keylen);
- 
--	ret = crypto_ahash_digest(req);
--	if (ret == -EINPROGRESS || ret == -EIOCBQUEUED) {
--		ret = wait_for_completion_interruptible(&result.completion);
--		if (!ret)
--			ret = result.error;
--	}
+-	if (!fscrypt_valid_enc_modes(policy->contents_encryption_mode,
+-				     policy->filenames_encryption_mode))
+-		return -EINVAL;
 -
-+	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
- 	if (ret)
- 		crypto_ahash_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
+-	if (policy->flags & ~FS_POLICY_FLAGS_VALID)
+-		return -EINVAL;
+-
+ 	ctx.version = context_version_for_policy(policy);
+ 	ctx.contents_encryption_mode = policy->contents_encryption_mode;
+ 	ctx.filenames_encryption_mode = policy->filenames_encryption_mode;
+@@ -100,6 +93,13 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
+ 	    policy.version != FS_POLICY_VERSION_HKDF)
+ 		return -EINVAL;
  
++	if (!fscrypt_valid_enc_modes(policy.contents_encryption_mode,
++				     policy.filenames_encryption_mode))
++		return -EINVAL;
++
++	if (policy.flags & ~FS_POLICY_FLAGS_VALID)
++		return -EINVAL;
++
+ 	ret = mnt_want_write_file(filp);
+ 	if (ret)
+ 		return ret;
 -- 
-2.1.4
+2.14.0.rc0.400.g1c36432dff-goog
