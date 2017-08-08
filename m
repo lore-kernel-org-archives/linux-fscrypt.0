@@ -1,94 +1,133 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from imap.thunk.org ([74.207.234.97]:42622 "EHLO imap.thunk.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1751333AbdHFT1F (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 6 Aug 2017 15:27:05 -0400
-Date: Sun, 6 Aug 2017 15:27:03 -0400
-From: Theodore Ts'o <tytso@mit.edu>
-Subject: [GIT PULL] ext4 bug fixes for 4.13
-Message-ID: <20170806192703.5xelufkwd2a4jkha@thunk.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: torvalds@linux-foundation.org
-Cc: linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Return-Path: <keyrings-owner@vger.kernel.org>
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v4 01/19] crypto: change transient busy return code to -EAGAIN
+Date: Tue,  8 Aug 2017 15:03:32 +0300
+Message-Id: <1502193834-11289-2-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1502193834-11289-1-git-send-email-gilad@benyossef.com>
+References: <1502193834-11289-1-git-send-email-gilad@benyossef.com>
+Sender: keyrings-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The following changes since commit 16f73eb02d7e1765ccab3d2018e0bd98eb93d973:
+The crypto API was using the -EBUSY return value to indicate
+both a hard failure to submit a crypto operation into a
+transformation provider when the latter was busy and the backlog
+mechanism was not enabled as well as a notification that the
+operation was queued into the backlog when the backlog mechanism
+was enabled.
 
-  Linux 4.13-rc3 (2017-07-30 12:40:36 -0700)
+Having the same return code indicate two very different conditions
+depending on a flag is both error prone and requires extra runtime
+check like the following to discern between the cases:
 
-are available in the git repository at:
+	if (err == -EINPROGRESS ||
+	    (err == -EBUSY && (ahash_request_flags(req) &
+			       CRYPTO_TFM_REQ_MAY_BACKLOG)))
 
-  git://git.kernel.org/pub/scm/linux/kernel/git/tytso/ext4.git tags/ext4_for_linus_stable
+This patch changes the return code used to indicate a crypto op
+failed due to the transformation provider being transiently busy
+to -EAGAIN.
 
-for you to fetch changes up to 4e5620132144666ab41fc2799fbc055830187b7e:
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+---
+ crypto/algapi.c     |  6 ++++--
+ crypto/algif_hash.c | 20 +++++++++++++++++---
+ crypto/cryptd.c     |  4 +---
+ 3 files changed, 22 insertions(+), 8 deletions(-)
 
-  ext4: fix copy paste error in ext4_swap_extents() (2017-08-06 01:33:07 -0400)
+diff --git a/crypto/algapi.c b/crypto/algapi.c
+index aa699ff..916bee3 100644
+--- a/crypto/algapi.c
++++ b/crypto/algapi.c
+@@ -897,9 +897,11 @@ int crypto_enqueue_request(struct crypto_queue *queue,
+ 	int err = -EINPROGRESS;
+ 
+ 	if (unlikely(queue->qlen >= queue->max_qlen)) {
+-		err = -EBUSY;
+-		if (!(request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG))
++		if (!(request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG)) {
++			err = -EAGAIN;
+ 			goto out;
++		}
++		err = -EBUSY;
+ 		if (queue->backlog == &queue->list)
+ 			queue->backlog = &request->list;
+ 	}
+diff --git a/crypto/algif_hash.c b/crypto/algif_hash.c
+index 5e92bd2..3b3c154 100644
+--- a/crypto/algif_hash.c
++++ b/crypto/algif_hash.c
+@@ -39,6 +39,20 @@ struct algif_hash_tfm {
+ 	bool has_key;
+ };
+ 
++/* Previous versions of crypto_* ops used to return -EBUSY
++ * rather than -EAGAIN to indicate being tied up. The in
++ * kernel API changed but we don't want to break the user
++ * space API. As only the hash user interface exposed this
++ * error ever to the user, do the translation here.
++ */
++static inline int crypto_user_err(int err)
++{
++	if (err == -EAGAIN)
++		return -EBUSY;
++
++	return err;
++}
++
+ static int hash_alloc_result(struct sock *sk, struct hash_ctx *ctx)
+ {
+ 	unsigned ds;
+@@ -136,7 +150,7 @@ static int hash_sendmsg(struct socket *sock, struct msghdr *msg,
+ unlock:
+ 	release_sock(sk);
+ 
+-	return err ?: copied;
++	return err ? crypto_user_err(err) : copied;
+ }
+ 
+ static ssize_t hash_sendpage(struct socket *sock, struct page *page,
+@@ -188,7 +202,7 @@ static ssize_t hash_sendpage(struct socket *sock, struct page *page,
+ unlock:
+ 	release_sock(sk);
+ 
+-	return err ?: size;
++	return err ? crypto_user_err(err) : size;
+ }
+ 
+ static int hash_recvmsg(struct socket *sock, struct msghdr *msg, size_t len,
+@@ -236,7 +250,7 @@ static int hash_recvmsg(struct socket *sock, struct msghdr *msg, size_t len,
+ 	hash_free_result(sk, ctx);
+ 	release_sock(sk);
+ 
+-	return err ?: len;
++	return err ? crypto_user_err(err) : len;
+ }
+ 
+ static int hash_accept(struct socket *sock, struct socket *newsock, int flags,
+diff --git a/crypto/cryptd.c b/crypto/cryptd.c
+index 0508c48..d1dbdce 100644
+--- a/crypto/cryptd.c
++++ b/crypto/cryptd.c
+@@ -137,16 +137,14 @@ static int cryptd_enqueue_request(struct cryptd_queue *queue,
+ 	int cpu, err;
+ 	struct cryptd_cpu_queue *cpu_queue;
+ 	atomic_t *refcnt;
+-	bool may_backlog;
+ 
+ 	cpu = get_cpu();
+ 	cpu_queue = this_cpu_ptr(queue->cpu_queue);
+ 	err = crypto_enqueue_request(&cpu_queue->queue, request);
+ 
+ 	refcnt = crypto_tfm_ctx(request->tfm);
+-	may_backlog = request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG;
+ 
+-	if (err == -EBUSY && !may_backlog)
++	if (err == -EAGAIN)
+ 		goto out_put_cpu;
+ 
+ 	queue_work_on(cpu, kcrypto_wq, &cpu_queue->work);
+-- 
+2.1.4
 
-----------------------------------------------------------------
-A large number of ext4 bug fixes and cleanups for v4.13
-
-----------------------------------------------------------------
-Andreas Dilger (1):
-      ext4: fix dir_nlink behaviour
-
-Arnd Bergmann (1):
-      ext4: fix warning about stack corruption
-
-Daeho Jeong (1):
-      ext4: release discard bio after sending discard commands
-
-Dan Carpenter (1):
-      ext4: silence array overflow warning
-
-Emoly Liu (1):
-      ext4: error should be cleared if ea_inode isn't added to the cache
-
-Eric Whitney (2):
-      ext4: correct comment references to ext4_ext_direct_IO()
-      ext4: remove unused metadata accounting variables
-
-Ernesto A. Fern�ndez (1):
-      ext4: preserve i_mode if __ext4_set_acl() fails
-
-Jan Kara (2):
-      ext4: Don't clear SGID when inheriting ACLs
-      ext4: fix SEEK_HOLE/SEEK_DATA for blocksize < pagesize
-
-Jeff Layton (1):
-      ext4: convert swap_inode_data() over to use swap() on most of the fields
-
-Jerry Lee (1):
-      ext4: fix overflow caused by missing cast in ext4_resize_fs()
-
-Maninder Singh (1):
-      ext4: fix copy paste error in ext4_swap_extents()
-
-Miao Xie (4):
-      ext4: fix forgetten xattr lock protection in ext4_expand_extra_isize
-      ext4: restructure ext4_expand_extra_isize
-      ext4: cleanup ext4_expand_extra_isize_ea()
-      ext4, project: expand inode extra size if possible
-
-Tahsin Erdogan (3):
-      ext4: remove unused mode parameter
-      ext4: inplace xattr block update fails to deduplicate blocks
-      ext4: make xattr inode reads faster
-
- fs/ext4/acl.c               |  25 +++++---
- fs/ext4/ext4.h              |  13 ++--
- fs/ext4/ext4_jbd2.h         |   3 +
- fs/ext4/extents.c           |  11 ++--
- fs/ext4/file.c              |   3 +
- fs/ext4/inode.c             | 198 ++++++++++++++++++++++++++++++++++++++++++++++---------------
- fs/ext4/ioctl.c             |  27 +++++----
- fs/ext4/mballoc.c           |  15 +++--
- fs/ext4/namei.c             |  64 ++++++++------------
- fs/ext4/resize.c            |   3 +-
- fs/ext4/super.c             |   2 -
- fs/ext4/xattr.c             |  87 ++++++++++++++-------------
- include/trace/events/ext4.h |  35 +++--------
- 13 files changed, 290 insertions(+), 196 deletions(-)
