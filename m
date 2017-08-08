@@ -1,116 +1,101 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:39928 "EHLO
-        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1751785AbdHNPXb (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 14 Aug 2017 11:23:31 -0400
+Return-Path: <keyrings-owner@vger.kernel.org>
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v5 08/19] crypto: move drbg to generic async completion
-Date: Mon, 14 Aug 2017 18:21:18 +0300
-Message-Id: <1502724094-23305-9-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
-References: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
+Subject: [PATCH v4 09/19] crypto: move gcm to generic async completion
+Date: Tue,  8 Aug 2017 15:03:40 +0300
+Message-Id: <1502193834-11289-10-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1502193834-11289-1-git-send-email-gilad@benyossef.com>
+References: <1502193834-11289-1-git-send-email-gilad@benyossef.com>
+Sender: keyrings-owner@vger.kernel.org
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-DRBG is starting an async. crypto op and waiting for it complete.
+gcm is starting an async. crypto op and waiting for it complete.
 Move it over to generic code doing the same.
-
-The code now also passes CRYPTO_TFM_REQ_MAY_SLEEP flag indicating
-crypto request memory allocation may use GFP_KERNEL which should
-be perfectly fine as the code is obviously sleeping for the
-completion of the request any way.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- crypto/drbg.c         | 36 +++++++++---------------------------
- include/crypto/drbg.h |  3 +--
- 2 files changed, 10 insertions(+), 29 deletions(-)
+ crypto/gcm.c | 32 ++++++--------------------------
+ 1 file changed, 6 insertions(+), 26 deletions(-)
 
-diff --git a/crypto/drbg.c b/crypto/drbg.c
-index 633a88e..c522251 100644
---- a/crypto/drbg.c
-+++ b/crypto/drbg.c
-@@ -1651,16 +1651,6 @@ static int drbg_fini_sym_kernel(struct drbg_state *drbg)
- 	return 0;
+diff --git a/crypto/gcm.c b/crypto/gcm.c
+index 3841b5e..fb923a5 100644
+--- a/crypto/gcm.c
++++ b/crypto/gcm.c
+@@ -16,7 +16,6 @@
+ #include <crypto/scatterwalk.h>
+ #include <crypto/hash.h>
+ #include "internal.h"
+-#include <linux/completion.h>
+ #include <linux/err.h>
+ #include <linux/init.h>
+ #include <linux/kernel.h>
+@@ -78,11 +77,6 @@ struct crypto_gcm_req_priv_ctx {
+ 	} u;
+ };
+ 
+-struct crypto_gcm_setkey_result {
+-	int err;
+-	struct completion completion;
+-};
+-
+ static struct {
+ 	u8 buf[16];
+ 	struct scatterlist sg;
+@@ -98,17 +92,6 @@ static inline struct crypto_gcm_req_priv_ctx *crypto_gcm_reqctx(
+ 	return (void *)PTR_ALIGN((u8 *)aead_request_ctx(req), align + 1);
  }
  
--static void drbg_skcipher_cb(struct crypto_async_request *req, int error)
+-static void crypto_gcm_setkey_done(struct crypto_async_request *req, int err)
 -{
--	struct drbg_state *drbg = req->data;
+-	struct crypto_gcm_setkey_result *result = req->data;
 -
--	if (error == -EINPROGRESS)
+-	if (err == -EINPROGRESS)
 -		return;
--	drbg->ctr_async_err = error;
--	complete(&drbg->ctr_completion);
+-
+-	result->err = err;
+-	complete(&result->completion);
 -}
 -
- static int drbg_init_sym_kernel(struct drbg_state *drbg)
+ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 			     unsigned int keylen)
  {
- 	struct crypto_cipher *tfm;
-@@ -1691,7 +1681,7 @@ static int drbg_init_sym_kernel(struct drbg_state *drbg)
- 		return PTR_ERR(sk_tfm);
- 	}
- 	drbg->ctr_handle = sk_tfm;
--	init_completion(&drbg->ctr_completion);
-+	crypto_init_wait(&drbg->ctr_wait);
+@@ -119,7 +102,7 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 		be128 hash;
+ 		u8 iv[16];
  
- 	req = skcipher_request_alloc(sk_tfm, GFP_KERNEL);
- 	if (!req) {
-@@ -1700,8 +1690,9 @@ static int drbg_init_sym_kernel(struct drbg_state *drbg)
+-		struct crypto_gcm_setkey_result result;
++		struct crypto_wait wait;
+ 
+ 		struct scatterlist sg[1];
+ 		struct skcipher_request req;
+@@ -140,21 +123,18 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 	if (!data)
  		return -ENOMEM;
- 	}
- 	drbg->ctr_req = req;
--	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--					drbg_skcipher_cb, drbg);
-+	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
-+						CRYPTO_TFM_REQ_MAY_SLEEP,
-+					crypto_req_done, &drbg->ctr_wait);
  
- 	alignmask = crypto_skcipher_alignmask(sk_tfm);
- 	drbg->ctr_null_value_buf = kzalloc(DRBG_CTR_NULL_LEN + alignmask,
-@@ -1762,21 +1753,12 @@ static int drbg_kcapi_sym_ctr(struct drbg_state *drbg,
- 		/* Output buffer may not be valid for SGL, use scratchpad */
- 		skcipher_request_set_crypt(drbg->ctr_req, &sg_in, &sg_out,
- 					   cryptlen, drbg->V);
--		ret = crypto_skcipher_encrypt(drbg->ctr_req);
--		switch (ret) {
--		case 0:
--			break;
--		case -EINPROGRESS:
--		case -EBUSY:
--			wait_for_completion(&drbg->ctr_completion);
--			if (!drbg->ctr_async_err) {
--				reinit_completion(&drbg->ctr_completion);
--				break;
--			}
--		default:
-+		ret = crypto_wait_req(crypto_skcipher_encrypt(drbg->ctr_req),
-+					&drbg->ctr_wait);
-+		if (ret)
- 			goto out;
--		}
--		init_completion(&drbg->ctr_completion);
-+
-+		crypto_init_wait(&drbg->ctr_wait);
+-	init_completion(&data->result.completion);
++	crypto_init_wait(&data->wait);
+ 	sg_init_one(data->sg, &data->hash, sizeof(data->hash));
+ 	skcipher_request_set_tfm(&data->req, ctr);
+ 	skcipher_request_set_callback(&data->req, CRYPTO_TFM_REQ_MAY_SLEEP |
+ 						  CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				      crypto_gcm_setkey_done,
+-				      &data->result);
++				      crypto_req_done,
++				      &data->wait);
+ 	skcipher_request_set_crypt(&data->req, data->sg, data->sg,
+ 				   sizeof(data->hash), data->iv);
  
- 		memcpy(outbuf, drbg->outscratchpad, cryptlen);
+-	err = crypto_skcipher_encrypt(&data->req);
+-	if (err == -EINPROGRESS || err == -EBUSY) {
+-		wait_for_completion(&data->result.completion);
+-		err = data->result.err;
+-	}
++	err = crypto_wait_req(crypto_skcipher_encrypt(&data->req),
++							&data->wait);
  
-diff --git a/include/crypto/drbg.h b/include/crypto/drbg.h
-index 22f884c..8f94110 100644
---- a/include/crypto/drbg.h
-+++ b/include/crypto/drbg.h
-@@ -126,8 +126,7 @@ struct drbg_state {
- 	__u8 *ctr_null_value;			/* CTR mode aligned zero buf */
- 	__u8 *outscratchpadbuf;			/* CTR mode output scratchpad */
-         __u8 *outscratchpad;			/* CTR mode aligned outbuf */
--	struct completion ctr_completion;	/* CTR mode async handler */
--	int ctr_async_err;			/* CTR mode async error */
-+	struct crypto_wait ctr_wait;		/* CTR mode async wait obj */
- 
- 	bool seeded;		/* DRBG fully seeded? */
- 	bool pr;		/* Prediction resistance enabled? */
+ 	if (err)
+ 		goto out;
 -- 
 2.1.4
 
