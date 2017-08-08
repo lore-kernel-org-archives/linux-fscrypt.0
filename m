@@ -1,11 +1,15 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from foss.arm.com ([217.140.101.70]:34222 "EHLO foss.arm.com"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1752278AbdHHMIb (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 8 Aug 2017 08:08:31 -0400
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v5 19/19] crypto: adapt api sample to use async. op wait
-Date: Mon, 14 Aug 2017 18:21:29 +0300
-Message-Id: <1502724094-23305-20-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
-References: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
+Subject: [PATCH v4 19/19] crypto: adapt api sample to use async. op wait
+Date: Tue,  8 Aug 2017 15:03:50 +0300
+Message-Id: <1502193834-11289-20-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1502193834-11289-1-git-send-email-gilad@benyossef.com>
+References: <1502193834-11289-1-git-send-email-gilad@benyossef.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
