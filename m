@@ -1,74 +1,105 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from foss.arm.com ([217.140.101.70]:33286 "EHLO foss.arm.com"
+Received: from foss.arm.com ([217.140.101.70]:39980 "EHLO foss.arm.com"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1752427AbdHHMEg (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 8 Aug 2017 08:04:36 -0400
+        id S1751785AbdHNPXo (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 14 Aug 2017 11:23:44 -0400
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v4 02/19] crypto: ccm: use -EAGAIN for transient busy indication
-Date: Tue,  8 Aug 2017 15:03:33 +0300
-Message-Id: <1502193834-11289-3-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1502193834-11289-1-git-send-email-gilad@benyossef.com>
-References: <1502193834-11289-1-git-send-email-gilad@benyossef.com>
+Subject: [PATCH v5 09/19] crypto: move gcm to generic async completion
+Date: Mon, 14 Aug 2017 18:21:19 +0300
+Message-Id: <1502724094-23305-10-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
+References: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Replace -EBUSY with -EAGAIN when reporting transient busy
-indication in the absence of backlog.
+gcm is starting an async. crypto op and waiting for it complete.
+Move it over to generic code doing the same.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- drivers/crypto/ccp/ccp-crypto-main.c | 8 +++-----
- drivers/crypto/ccp/ccp-dev.c         | 7 +++++--
- 2 files changed, 8 insertions(+), 7 deletions(-)
+ crypto/gcm.c | 32 ++++++--------------------------
+ 1 file changed, 6 insertions(+), 26 deletions(-)
 
-diff --git a/drivers/crypto/ccp/ccp-crypto-main.c b/drivers/crypto/ccp/ccp-crypto-main.c
-index 35a9de7..403ff0a 100644
---- a/drivers/crypto/ccp/ccp-crypto-main.c
-+++ b/drivers/crypto/ccp/ccp-crypto-main.c
-@@ -222,9 +222,10 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
+diff --git a/crypto/gcm.c b/crypto/gcm.c
+index 3841b5e..fb923a5 100644
+--- a/crypto/gcm.c
++++ b/crypto/gcm.c
+@@ -16,7 +16,6 @@
+ #include <crypto/scatterwalk.h>
+ #include <crypto/hash.h>
+ #include "internal.h"
+-#include <linux/completion.h>
+ #include <linux/err.h>
+ #include <linux/init.h>
+ #include <linux/kernel.h>
+@@ -78,11 +77,6 @@ struct crypto_gcm_req_priv_ctx {
+ 	} u;
+ };
  
- 	/* Check if the cmd can/should be queued */
- 	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
--		ret = -EBUSY;
--		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
-+		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG)) {
-+			ret = -EAGAIN;
- 			goto e_lock;
-+		}
- 	}
+-struct crypto_gcm_setkey_result {
+-	int err;
+-	struct completion completion;
+-};
+-
+ static struct {
+ 	u8 buf[16];
+ 	struct scatterlist sg;
+@@ -98,17 +92,6 @@ static inline struct crypto_gcm_req_priv_ctx *crypto_gcm_reqctx(
+ 	return (void *)PTR_ALIGN((u8 *)aead_request_ctx(req), align + 1);
+ }
  
- 	/* Look for an entry with the same tfm.  If there is a cmd
-@@ -243,9 +244,6 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
- 		ret = ccp_enqueue_cmd(crypto_cmd->cmd);
- 		if (!ccp_crypto_success(ret))
- 			goto e_lock;	/* Error, don't queue it */
--		if ((ret == -EBUSY) &&
--		    !(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
--			goto e_lock;	/* Not backlogging, don't queue it */
- 	}
+-static void crypto_gcm_setkey_done(struct crypto_async_request *req, int err)
+-{
+-	struct crypto_gcm_setkey_result *result = req->data;
+-
+-	if (err == -EINPROGRESS)
+-		return;
+-
+-	result->err = err;
+-	complete(&result->completion);
+-}
+-
+ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 			     unsigned int keylen)
+ {
+@@ -119,7 +102,7 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 		be128 hash;
+ 		u8 iv[16];
  
- 	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
-diff --git a/drivers/crypto/ccp/ccp-dev.c b/drivers/crypto/ccp/ccp-dev.c
-index 4e029b1..3d637e3 100644
---- a/drivers/crypto/ccp/ccp-dev.c
-+++ b/drivers/crypto/ccp/ccp-dev.c
-@@ -292,9 +292,12 @@ int ccp_enqueue_cmd(struct ccp_cmd *cmd)
- 	i = ccp->cmd_q_count;
+-		struct crypto_gcm_setkey_result result;
++		struct crypto_wait wait;
  
- 	if (ccp->cmd_count >= MAX_CMD_QLEN) {
--		ret = -EBUSY;
--		if (cmd->flags & CCP_CMD_MAY_BACKLOG)
-+		if (cmd->flags & CCP_CMD_MAY_BACKLOG) {
-+			ret = -EBUSY;
- 			list_add_tail(&cmd->entry, &ccp->backlog);
-+		} else {
-+			ret = -EAGAIN;
-+		}
- 	} else {
- 		ret = -EINPROGRESS;
- 		ccp->cmd_count++;
+ 		struct scatterlist sg[1];
+ 		struct skcipher_request req;
+@@ -140,21 +123,18 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 	if (!data)
+ 		return -ENOMEM;
+ 
+-	init_completion(&data->result.completion);
++	crypto_init_wait(&data->wait);
+ 	sg_init_one(data->sg, &data->hash, sizeof(data->hash));
+ 	skcipher_request_set_tfm(&data->req, ctr);
+ 	skcipher_request_set_callback(&data->req, CRYPTO_TFM_REQ_MAY_SLEEP |
+ 						  CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				      crypto_gcm_setkey_done,
+-				      &data->result);
++				      crypto_req_done,
++				      &data->wait);
+ 	skcipher_request_set_crypt(&data->req, data->sg, data->sg,
+ 				   sizeof(data->hash), data->iv);
+ 
+-	err = crypto_skcipher_encrypt(&data->req);
+-	if (err == -EINPROGRESS || err == -EBUSY) {
+-		wait_for_completion(&data->result.completion);
+-		err = data->result.err;
+-	}
++	err = crypto_wait_req(crypto_skcipher_encrypt(&data->req),
++							&data->wait);
+ 
+ 	if (err)
+ 		goto out;
 -- 
 2.1.4
 
