@@ -1,77 +1,74 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-Subject: Re: [PATCH v5 02/19] crypto: ccp: use -EAGAIN for transient busy
- indication
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:39620 "EHLO
+        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1752900AbdHNPWO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 14 Aug 2017 11:22:14 -0400
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v5 02/19] crypto: ccp: use -EAGAIN for transient busy indication
+Date: Mon, 14 Aug 2017 18:21:12 +0300
+Message-Id: <1502724094-23305-3-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
 References: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
- <1502724094-23305-3-git-send-email-gilad@benyossef.com>
-From: Gary R Hook <gary.hook@amd.com>
-Message-ID: <28b9a7d4-d329-bb1e-d4eb-6530795eaa0b@amd.com>
-Date: Mon, 14 Aug 2017 11:55:44 -0500
-MIME-Version: 1.0
-In-Reply-To: <1502724094-23305-3-git-send-email-gilad@benyossef.com>
-Content-Type: text/plain; charset=windows-1252; format=flowed
-Content-Transfer-Encoding: 7bit
-Sender: keyrings-owner@vger.kernel.org
-To: Gilad Ben-Yossef <gilad@benyossef.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, "Lendacky, Thomas" <Thomas.Lendacky@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, "dm-devel@redhat.com" <dm-devel@redhat.com>, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>, "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>, "keyrings@vger.kernel.org" <keyrings@vger.kernel.org>, "linux-arm-kernel@lists.infradead.org" <linux-arm-kernel@lists.infradead.org>, "linux-mediatek@lists.infradead.org" <linux-mediatek@lists.infradead.org>, "linux-raid@vger.kernel.org" <linux-raid@vger.kernel.org>, "linux-cifs@vger.kernel.org" <linux-cifs@vger.kernel.org>, "samba-technical@lists.samba.org" <samba-technical@lists.samba.org>, "linux-fscrypt@vger.kernel.org" <linux-fscrypt@vger.kernel.org>, "linux-ima-devel@lists.sourceforge.net" <linux-ima-devel@lists.sourceforge.net>, "linux-ima-user@lists.sourceforge.net" <linux-ima-user@lists.sourceforge.net>, "linux-security-module@vger.kernel.org" <linux-security-module@vger.kernel.org>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On 08/14/2017 10:21 AM, Gilad Ben-Yossef wrote:
-> Replace -EBUSY with -EAGAIN when reporting transient busy
-> indication in the absence of backlog.
->
-> Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Replace -EBUSY with -EAGAIN when reporting transient busy
+indication in the absence of backlog.
 
-Reviewed-by: Gary R Hook <gary.hook@amd.com>
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+---
+ drivers/crypto/ccp/ccp-crypto-main.c | 8 +++-----
+ drivers/crypto/ccp/ccp-dev.c         | 7 +++++--
+ 2 files changed, 8 insertions(+), 7 deletions(-)
 
-> ---
->  drivers/crypto/ccp/ccp-crypto-main.c | 8 +++-----
->  drivers/crypto/ccp/ccp-dev.c         | 7 +++++--
->  2 files changed, 8 insertions(+), 7 deletions(-)
->
-> diff --git a/drivers/crypto/ccp/ccp-crypto-main.c b/drivers/crypto/ccp/ccp-crypto-main.c
-> index 35a9de7..403ff0a 100644
-> --- a/drivers/crypto/ccp/ccp-crypto-main.c
-> +++ b/drivers/crypto/ccp/ccp-crypto-main.c
-> @@ -222,9 +222,10 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
->
->  	/* Check if the cmd can/should be queued */
->  	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
-> -		ret = -EBUSY;
-> -		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
-> +		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG)) {
-> +			ret = -EAGAIN;
->  			goto e_lock;
-> +		}
->  	}
->
->  	/* Look for an entry with the same tfm.  If there is a cmd
-> @@ -243,9 +244,6 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
->  		ret = ccp_enqueue_cmd(crypto_cmd->cmd);
->  		if (!ccp_crypto_success(ret))
->  			goto e_lock;	/* Error, don't queue it */
-> -		if ((ret == -EBUSY) &&
-> -		    !(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
-> -			goto e_lock;	/* Not backlogging, don't queue it */
->  	}
->
->  	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
-> diff --git a/drivers/crypto/ccp/ccp-dev.c b/drivers/crypto/ccp/ccp-dev.c
-> index 4e029b1..3d637e3 100644
-> --- a/drivers/crypto/ccp/ccp-dev.c
-> +++ b/drivers/crypto/ccp/ccp-dev.c
-> @@ -292,9 +292,12 @@ int ccp_enqueue_cmd(struct ccp_cmd *cmd)
->  	i = ccp->cmd_q_count;
->
->  	if (ccp->cmd_count >= MAX_CMD_QLEN) {
-> -		ret = -EBUSY;
-> -		if (cmd->flags & CCP_CMD_MAY_BACKLOG)
-> +		if (cmd->flags & CCP_CMD_MAY_BACKLOG) {
-> +			ret = -EBUSY;
->  			list_add_tail(&cmd->entry, &ccp->backlog);
-> +		} else {
-> +			ret = -EAGAIN;
-> +		}
->  	} else {
->  		ret = -EINPROGRESS;
->  		ccp->cmd_count++;
->
+diff --git a/drivers/crypto/ccp/ccp-crypto-main.c b/drivers/crypto/ccp/ccp-crypto-main.c
+index 35a9de7..403ff0a 100644
+--- a/drivers/crypto/ccp/ccp-crypto-main.c
++++ b/drivers/crypto/ccp/ccp-crypto-main.c
+@@ -222,9 +222,10 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
+ 
+ 	/* Check if the cmd can/should be queued */
+ 	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
+-		ret = -EBUSY;
+-		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
++		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG)) {
++			ret = -EAGAIN;
+ 			goto e_lock;
++		}
+ 	}
+ 
+ 	/* Look for an entry with the same tfm.  If there is a cmd
+@@ -243,9 +244,6 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
+ 		ret = ccp_enqueue_cmd(crypto_cmd->cmd);
+ 		if (!ccp_crypto_success(ret))
+ 			goto e_lock;	/* Error, don't queue it */
+-		if ((ret == -EBUSY) &&
+-		    !(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
+-			goto e_lock;	/* Not backlogging, don't queue it */
+ 	}
+ 
+ 	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
+diff --git a/drivers/crypto/ccp/ccp-dev.c b/drivers/crypto/ccp/ccp-dev.c
+index 4e029b1..3d637e3 100644
+--- a/drivers/crypto/ccp/ccp-dev.c
++++ b/drivers/crypto/ccp/ccp-dev.c
+@@ -292,9 +292,12 @@ int ccp_enqueue_cmd(struct ccp_cmd *cmd)
+ 	i = ccp->cmd_q_count;
+ 
+ 	if (ccp->cmd_count >= MAX_CMD_QLEN) {
+-		ret = -EBUSY;
+-		if (cmd->flags & CCP_CMD_MAY_BACKLOG)
++		if (cmd->flags & CCP_CMD_MAY_BACKLOG) {
++			ret = -EBUSY;
+ 			list_add_tail(&cmd->entry, &ccp->backlog);
++		} else {
++			ret = -EAGAIN;
++		}
+ 	} else {
+ 		ret = -EINPROGRESS;
+ 		ccp->cmd_count++;
+-- 
+2.1.4
+
