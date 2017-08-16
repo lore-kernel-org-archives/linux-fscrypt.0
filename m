@@ -1,87 +1,142 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:40194 "EHLO
-        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1751785AbdHNPYf (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 14 Aug 2017 11:24:35 -0400
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v5 13/19] cifs: move to generic async completion
-Date: Mon, 14 Aug 2017 18:21:23 +0300
-Message-Id: <1502724094-23305-14-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
-References: <1502724094-23305-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
-Cc: Ofir Drang <ofir.drang@arm.com>
+Return-Path: <joerichey94@gmail.com>
+Return-Path: <joerichey94@gmail.com>
+MIME-Version: 1.0
+In-Reply-To: <20170816211403.121920-1-ebiggers3@gmail.com>
+References: <20170816211403.121920-1-ebiggers3@gmail.com>
+From: Joe Richey <joerichey94@gmail.com>
+Date: Wed, 16 Aug 2017 15:08:05 -0700
+Message-ID: <CAKpBdu2r0UZQ7AVngRNYaasG4zznOqFdjgbriK+bqguoEKXF1A@mail.gmail.com>
+Subject: Re: [PATCH v2] KEYS: make keyctl_invalidate() also require Setattr permission
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: keyrings@vger.kernel.org, David Howells <dhowells@redhat.com>, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Paul Crowley <paulcrowley@google.com>, Richard Weinberger <richard@nod.at>, Ryo Hashimoto <hashimoto@google.com>, Tyler Hicks <tyhicks@canonical.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-cifs starts an async. crypto op and waits for their completion.
-Move it over to generic code doing the same.
+On Wed, Aug 16, 2017 at 2:14 PM, Eric Biggers <ebiggers3@gmail.com> wrote:
+> From: Eric Biggers <ebiggers@google.com>
+>
+> Currently, a process only needs Search permission on a key to invalidate
+> it with keyctl_invalidate(), which has an effect similar to unlinking it
+> from all keyrings.  Unfortunately, this significantly compromises the
+> keys permission system because as a result, there is no way to grant
+> read-only access to keys without also granting de-facto "delete" access.
+> Even worse, processes may invalidate entire _keyrings_, given only
+> permission to "search" them.  It is not even possible to block this
+> using SELinux, because SELinux is likewise only asked for Search
+> permission, which needs to be allowed for read-only access.
+>
+> Key invalidation seems to have intended for cases where keyrings are
+> used as caches, and keys can be re-requested at any time by an upcall to
+> /sbin/request-key.  However, keyrings are not always used in this way.
+> For example, users of filesystem-level encryption (EXT4, F2FS, and/or
+> UBIFS encryption) usually wish to grant many differently-privileged
+> processes access to the same keys, set up in a shared keyring ahead of
+> time.  Permitting everyone to invalidate keys in this scenario enables a
+> trivial denial-of-service.  And even users of keyrings as "just caches"
+> may wish to restrict invalidation because it may require significant
+> work or user interaction to regenerate keys.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-Acked-by: Pavel Shilovsky <pshilov@microsoft.com>
----
- fs/cifs/smb2ops.c | 30 ++++--------------------------
- 1 file changed, 4 insertions(+), 26 deletions(-)
+This patch is great for our work on EXT4 encryption. Currently, if User
+A wishes to decrypt a file and have it shared with User B, the
+encryption keys must be in a keyring searchable by both users. However,
+this also means that User B can just invalidate this shared keyring,
+causing User A to lose access to their files.
 
-diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
-index cfacf2c..16fb041 100644
---- a/fs/cifs/smb2ops.c
-+++ b/fs/cifs/smb2ops.c
-@@ -1878,22 +1878,6 @@ init_sg(struct smb_rqst *rqst, u8 *sign)
- 	return sg;
- }
- 
--struct cifs_crypt_result {
--	int err;
--	struct completion completion;
--};
--
--static void cifs_crypt_complete(struct crypto_async_request *req, int err)
--{
--	struct cifs_crypt_result *res = req->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	res->err = err;
--	complete(&res->completion);
--}
--
- static int
- smb2_get_enc_key(struct TCP_Server_Info *server, __u64 ses_id, int enc, u8 *key)
- {
-@@ -1934,12 +1918,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
- 	struct aead_request *req;
- 	char *iv;
- 	unsigned int iv_len;
--	struct cifs_crypt_result result = {0, };
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct crypto_aead *tfm;
- 	unsigned int crypt_len = le32_to_cpu(tr_hdr->OriginalMessageSize);
- 
--	init_completion(&result.completion);
--
- 	rc = smb2_get_enc_key(server, tr_hdr->SessionId, enc, key);
- 	if (rc) {
- 		cifs_dbg(VFS, "%s: Could not get %scryption key\n", __func__,
-@@ -1999,14 +1981,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
- 	aead_request_set_ad(req, assoc_data_len);
- 
- 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				  cifs_crypt_complete, &result);
-+				  crypto_req_done, &wait);
- 
--	rc = enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
--
--	if (rc == -EINPROGRESS || rc == -EBUSY) {
--		wait_for_completion(&result.completion);
--		rc = result.err;
--	}
-+	rc = crypto_wait_req(enc ? crypto_aead_encrypt(req)
-+				: crypto_aead_decrypt(req), &wait);
- 
- 	if (!rc && enc)
- 		memcpy(&tr_hdr->Signature, sign, SMB2_SIGNATURE_SIZE);
--- 
-2.1.4
+Fixing this security issue will let us have a global keyring containing
+all the EXT4 encryption keys (with type logon).
 
+-- Joe Richey <joerichey@google.com>
+
+>
+> This patch fixes the flaw by requiring both Search and Setattr
+> permission to invalidate a key rather than just Search permission.
+> Requiring Setattr permission is appropriate because Setattr permission
+> also allows revoking (via keyctl_revoke()) or expiring (via
+> keyctl_set_timeout()) the key, which also make the key inaccessible
+> regardless of how many keyrings it is in.  Continuing to require Search
+> permission ensures we do not decrease the level of permissions required.
+>
+> Alternatively, the problem could be solved by requiring Write
+> permission.  However, that would be less appropriate because Write
+> permission is ostensibly meant to deal with the key payload, not the key
+> itself.  A new "Invalidate" permission would also work, but that would
+> require keyctl_setperm() users to start including a new permission which
+> never existed before, which would be much more likely to break users of
+> keyctl_invalidate().  Finally, we could only allow invalidating keys
+> which the kernel has explicitly marked as invalidatible, e.g. the
+> "id_resolver" keys created for NFSv4 ID mapping.  However, that likewise
+> would be much more likely to break users.
+>
+> This is a user-visible API change.  But we don't seem to have much
+> choice, and any breakage will be limited to users who override the
+> default key permissions using keyctl_setperm() to remove Setattr
+> permission, then later call keyctl_invalidate().  There are probably not
+> many such users, possibly even none at all.  In fact, the only users of
+> keyctl_invalidate() I could find are nfsidmap and the Chromium OS
+> cryptohome daemon.  nfsidmap will be unaffected because it runs as root
+> and actually relies on the "root is permitted to invalidate certain
+> special keys" exception (KEY_FLAG_ROOT_CAN_INVAL) rather than the actual
+> key permissions.  cryptohomed will be unaffected because it already owns
+> the keys and sets KEY_USR_SETATTR permission on them.
+>
+> Cc: linux-api@vger.kernel.org
+> Cc: linux-cifs@vger.kernel.org
+> Cc: linux-fscrypt@vger.kernel.org
+> Cc: linux-nfs@vger.kernel.org
+> Cc: Gwendal Grignou <gwendal@chromium.org>
+> Cc: Jaegeuk Kim <jaegeuk@kernel.org>
+> Cc: Paul Crowley <paulcrowley@google.com>
+> Cc: Richard Weinberger <richard@nod.at>
+> Cc: Ryo Hashimoto <hashimoto@google.com>
+> Cc: Tyler Hicks <tyhicks@canonical.com>
+> Cc: stable@vger.kernel.org # v3.5+
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  Documentation/security/keys/core.rst | 4 ++--
+>  security/keys/keyctl.c               | 4 ++--
+>  2 files changed, 4 insertions(+), 4 deletions(-)
+>
+> diff --git a/Documentation/security/keys/core.rst b/Documentation/security/keys/core.rst
+> index 1648fa80b3bf..c8030f628810 100644
+> --- a/Documentation/security/keys/core.rst
+> +++ b/Documentation/security/keys/core.rst
+> @@ -815,8 +815,8 @@ The keyctl syscall functions are:
+>       immediately, though they are still visible in /proc/keys until deleted
+>       (they're marked with an 'i' flag).
+>
+> -     A process must have search permission on the key for this function to be
+> -     successful.
+> +     A process must have Search and Setattr permission on the key for this
+> +     function to be successful.
+>
+>    *  Compute a Diffie-Hellman shared secret or public key::
+>
+> diff --git a/security/keys/keyctl.c b/security/keys/keyctl.c
+> index ab0b337c84b4..0739e7934e74 100644
+> --- a/security/keys/keyctl.c
+> +++ b/security/keys/keyctl.c
+> @@ -400,7 +400,7 @@ long keyctl_revoke_key(key_serial_t id)
+>  /*
+>   * Invalidate a key.
+>   *
+> - * The key must be grant the caller Invalidate permission for this to work.
+> + * The key must grant the caller Search and Setattr permission for this to work.
+>   * The key and any links to the key will be automatically garbage collected
+>   * immediately.
+>   *
+> @@ -416,7 +416,7 @@ long keyctl_invalidate_key(key_serial_t id)
+>
+>         kenter("%d", id);
+>
+> -       key_ref = lookup_user_key(id, 0, KEY_NEED_SEARCH);
+> +       key_ref = lookup_user_key(id, 0, KEY_NEED_SEARCH | KEY_NEED_SETATTR);
+>         if (IS_ERR(key_ref)) {
+>                 ret = PTR_ERR(key_ref);
+>
+> --
+> 2.14.1.480.gb18f417b89-goog
+>
+> --
+> To unsubscribe from this list: send the line "unsubscribe linux-fscrypt" in
+> the body of a message to majordomo@vger.kernel.org
+> More majordomo info at  http://vger.kernel.org/majordomo-info.html
