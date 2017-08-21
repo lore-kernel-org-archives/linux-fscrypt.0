@@ -1,68 +1,53 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Mon, 21 Aug 2017 15:33:37 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
+Return-Path: <tytso@thunk.org>
+Date: Mon, 21 Aug 2017 17:02:14 -0400
+From: Theodore Ts'o <tytso@mit.edu>
 Subject: Re: [PATCH] fscrypt: add a documentation file for filesystem-level
  encryption
-Message-ID: <20170821223337.GA8847@gmail.com>
+Message-ID: <20170821210214.34ksroseab4mjgph@thunk.org>
 References: <20170818194730.61575-1-ebiggers3@gmail.com>
- <8EA94C5A-A3F7-48BC-91BE-3C0BD17D7927@dilger.ca>
- <20170820023227.slfqjq6dbcva74du@thunk.org>
+ <9dcef6c6-a758-ea57-0d51-55f33e365931@oracle.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20170820023227.slfqjq6dbcva74du@thunk.org>
-To: Theodore Ts'o <tytso@mit.edu>
-Cc: Andreas Dilger <adilger@dilger.ca>, linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+In-Reply-To: <9dcef6c6-a758-ea57-0d51-55f33e365931@oracle.com>
+To: Anand Jain <anand.jain@oracle.com>
+Cc: Eric Biggers <ebiggers3@gmail.com>, linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Sat, Aug 19, 2017 at 10:32:27PM -0400, Theodore Ts'o wrote:
-> On Fri, Aug 18, 2017 at 03:06:52PM -0600, Andreas Dilger wrote:
-> > On Aug 18, 2017, at 1:47 PM, Eric Biggers <ebiggers3@gmail.com> wrote:
-> > > +Key hierarchy
-> > > +=============
-> > > +
-> > > +Master Keys
-> > > +-----------
-> > > +
-> > > +Userspace should generate master keys either using a cryptographically
-> > > +secure random number generator, e.g. by reading from ``/dev/urandom``
-> > > +or calling getrandom(), or by using a KDF (Key Derivation Function).
-> > > +Note that whenever a KDF is used to "stretch" a lower-entropy secret
-> > > +such as a passphrase, it is critical that a KDF designed for this
-> > > +purpose be used, such as scrypt, PBKDF2, or Argon2.
-> > 
-> > One minor suggestion - when generating a master key for a filesystem,
-> > I'd think it is preferable to use /dev/random instead of /dev/urandom
-> > to ensure there is enough entropy.
+On Mon, Aug 21, 2017 at 09:44:11PM +0800, Anand Jain wrote:
 > 
-> I would just say "use getrandom" and be done with it.  More
-> importantly, we probably just want to direct users to use either
-> https://github.com/google/fscrypt or Android key management system at
-> the beginning of the file.
 > 
-> If the readers of this documentation file need to be told how to get
-> good random number generators, they're very likely to make any number
-> of other basic security mistakes.  If people don't think the fscrypt
-> user program isn't user-friendly or flexible enough to encompass their
-> use case, it's probably better to encourage them to submit
-> enhancements to an existing open source key management system such as
-> google/fscrypt.  If we minimize the number of userspace
-> implementations, the easier it will be to make sure they are
-> appropriately audited for security issues...
+> > +fscrypt is not guaranteed to protect confidentiality or authenticity
+> > +if an attacker is able to manipulate the filesystem offline prior to
+> > +an authorized user later accessing the filesystem.
 > 
+>  How does fscrypt / Android protect against Evil Maid attack. ?
 
-Yes, the intent wasn't really to start a debate about /dev/random vs.
-/dev/urandom vs. getrandom().  I'll probably just remove the text "e.g. by
-reading from /dev/urandom or calling getrandom()".
+In order to answer that question it's important to be specific about
+threat model is like; exactly what powers does the Evil Maid actually
+have?
 
-I agree that we should recommend the 'fscrypt' userspace tool more strongly as
-well.  I did mention it at the beginning of the document, but I didn't
-explicitly say something like "use this instead of writing your own tool".
+One of the stronger form of the Evil Maid attack posits that the Evil
+Made can remove the device from your hotel room, modify the hardware
+undetectably (up to and including desoldering the flash chip so it can
+be read and write directly), then replace it back to your hotel room,
+wait for you to login, and then later on, steal your phone and
+desolder the flash chip again.
 
-Either way, the kernel API should still be fully documented.  And part of that
-is documenting that the master key needs to be a good pseudorandom key.
-Otherwise I could imagine someone mistakenly thinking that the filesystem does
-key stretching for them, for example.  (Yes, that person probably wouldn't read
-the documentation and would screw up anyway, but we might as well try.)
+This sort of attack is going to require a combination of hardware and
+software features.  Without talking about future product features on
+any specific future device being shipped by Google or any other
+company --- theoretically, if the keys are stored a hardware device
+which only disgorges the keys sends them directly to the in-line
+crypto engine without letting the keys be visible to the Linux kernel
+(or the Host CPU in any way at all), then it makes these sorts of Evil
+Maid much more difficult.
 
-Eric
+Of course, if the Evil Maid can somehow insert something to tap the
+communications channel between the key storage device and the
+inline-crypto engine, then all bets are off.  Presumably, though, this
+could be made harder; for example, by putting them on the
+system-on-a-chip.
+
+					- Ted
+					
