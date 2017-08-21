@@ -1,119 +1,136 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2] KEYS: make keyctl_invalidate() also require Setattr permission
-Date: Wed, 16 Aug 2017 14:14:03 -0700
-Message-Id: <20170816211403.121920-1-ebiggers3@gmail.com>
-To: keyrings@vger.kernel.org
-Cc: David Howells <dhowells@redhat.com>, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Paul Crowley <paulcrowley@google.com>, Richard Weinberger <richard@nod.at>, Ryo Hashimoto <hashimoto@google.com>, Tyler Hicks <tyhicks@canonical.com>, stable@vger.kernel.org
+Return-Path: <linux-crypto-owner@vger.kernel.org>
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v6 00/19] simplify crypto wait for async op
+Date: Mon, 21 Aug 2017 17:04:46 +0300
+Message-Id: <1503324309-13673-1-git-send-email-gilad@benyossef.com>
+Sender: linux-crypto-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Many users of kernel async. crypto services have a pattern of
+starting an async. crypto op and than using a completion
+to wait for it to end.
 
-Currently, a process only needs Search permission on a key to invalidate
-it with keyctl_invalidate(), which has an effect similar to unlinking it
-from all keyrings.  Unfortunately, this significantly compromises the
-keys permission system because as a result, there is no way to grant
-read-only access to keys without also granting de-facto "delete" access.
-Even worse, processes may invalidate entire _keyrings_, given only
-permission to "search" them.  It is not even possible to block this
-using SELinux, because SELinux is likewise only asked for Search
-permission, which needs to be allowed for read-only access.
+This patch set simplifies this common use case in two ways:
 
-Key invalidation seems to have intended for cases where keyrings are
-used as caches, and keys can be re-requested at any time by an upcall to
-/sbin/request-key.  However, keyrings are not always used in this way.
-For example, users of filesystem-level encryption (EXT4, F2FS, and/or
-UBIFS encryption) usually wish to grant many differently-privileged
-processes access to the same keys, set up in a shared keyring ahead of
-time.  Permitting everyone to invalidate keys in this scenario enables a
-trivial denial-of-service.  And even users of keyrings as "just caches"
-may wish to restrict invalidation because it may require significant
-work or user interaction to regenerate keys.
+First, by separating the return codes of the case where a
+request is queued to a backlog due to the provider being
+busy (-EBUSY) from the case the request has failed due
+to the provider being busy and backlogging is not enabled
+(-EAGAIN).
 
-This patch fixes the flaw by requiring both Search and Setattr
-permission to invalidate a key rather than just Search permission.
-Requiring Setattr permission is appropriate because Setattr permission
-also allows revoking (via keyctl_revoke()) or expiring (via
-keyctl_set_timeout()) the key, which also make the key inaccessible
-regardless of how many keyrings it is in.  Continuing to require Search
-permission ensures we do not decrease the level of permissions required.
+Next, this change is than built on to create a generic API
+to wait for a async. crypto operation to complete.
 
-Alternatively, the problem could be solved by requiring Write
-permission.  However, that would be less appropriate because Write
-permission is ostensibly meant to deal with the key payload, not the key
-itself.  A new "Invalidate" permission would also work, but that would
-require keyctl_setperm() users to start including a new permission which
-never existed before, which would be much more likely to break users of
-keyctl_invalidate().  Finally, we could only allow invalidating keys
-which the kernel has explicitly marked as invalidatible, e.g. the
-"id_resolver" keys created for NFSv4 ID mapping.  However, that likewise
-would be much more likely to break users.
+The end result is a smaller code base and an API that is
+easier to use and more difficult to get wrong.
 
-This is a user-visible API change.  But we don't seem to have much
-choice, and any breakage will be limited to users who override the
-default key permissions using keyctl_setperm() to remove Setattr
-permission, then later call keyctl_invalidate().  There are probably not
-many such users, possibly even none at all.  In fact, the only users of
-keyctl_invalidate() I could find are nfsidmap and the Chromium OS
-cryptohome daemon.  nfsidmap will be unaffected because it runs as root
-and actually relies on the "root is permitted to invalidate certain
-special keys" exception (KEY_FLAG_ROOT_CAN_INVAL) rather than the actual
-key permissions.  cryptohomed will be unaffected because it already owns
-the keys and sets KEY_USR_SETATTR permission on them.
+The patch set was boot tested on x86_64 and arm64 which
+at the very least tests the crypto users via testmgr and
+tcrypt but I do note that I do not have access to some
+of the HW whose drivers are modified nor do I claim I was
+able to test all of the corner cases.
 
-Cc: linux-api@vger.kernel.org
-Cc: linux-cifs@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
-Cc: linux-nfs@vger.kernel.org
-Cc: Gwendal Grignou <gwendal@chromium.org>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: Paul Crowley <paulcrowley@google.com>
-Cc: Richard Weinberger <richard@nod.at>
-Cc: Ryo Hashimoto <hashimoto@google.com>
-Cc: Tyler Hicks <tyhicks@canonical.com>
-Cc: stable@vger.kernel.org # v3.5+
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/security/keys/core.rst | 4 ++--
- security/keys/keyctl.c               | 4 ++--
- 2 files changed, 4 insertions(+), 4 deletions(-)
+The patch set is based upon linux-next release tagged
+next-20170817.
 
-diff --git a/Documentation/security/keys/core.rst b/Documentation/security/keys/core.rst
-index 1648fa80b3bf..c8030f628810 100644
---- a/Documentation/security/keys/core.rst
-+++ b/Documentation/security/keys/core.rst
-@@ -815,8 +815,8 @@ The keyctl syscall functions are:
-      immediately, though they are still visible in /proc/keys until deleted
-      (they're marked with an 'i' flag).
- 
--     A process must have search permission on the key for this function to be
--     successful.
-+     A process must have Search and Setattr permission on the key for this
-+     function to be successful.
- 
-   *  Compute a Diffie-Hellman shared secret or public key::
- 
-diff --git a/security/keys/keyctl.c b/security/keys/keyctl.c
-index ab0b337c84b4..0739e7934e74 100644
---- a/security/keys/keyctl.c
-+++ b/security/keys/keyctl.c
-@@ -400,7 +400,7 @@ long keyctl_revoke_key(key_serial_t id)
- /*
-  * Invalidate a key.
-  *
-- * The key must be grant the caller Invalidate permission for this to work.
-+ * The key must grant the caller Search and Setattr permission for this to work.
-  * The key and any links to the key will be automatically garbage collected
-  * immediately.
-  *
-@@ -416,7 +416,7 @@ long keyctl_invalidate_key(key_serial_t id)
- 
- 	kenter("%d", id);
- 
--	key_ref = lookup_user_key(id, 0, KEY_NEED_SEARCH);
-+	key_ref = lookup_user_key(id, 0, KEY_NEED_SEARCH | KEY_NEED_SETATTR);
- 	if (IS_ERR(key_ref)) {
- 		ret = PTR_ERR(key_ref);
- 
+Changes from v5:
+- Remove redundant new line as spotted by Jonathan
+  Cameron.
+- Reworded dm-verity change commit message to better
+  clarify potential issue averted by change as
+  pointed out by Mikulas Patocka.
+
+Changes from v4:
+- Rebase on top of latest algif changes from Stephan
+  Mueller.
+- Fix typo in ccp patch title.
+
+Changes from v3:
+- Instead of changing the return code to indicate
+  backlog queueing, change the return code to indicate
+  transient busy state, as suggested by Herbert Xu.
+
+Changes from v2:
+- Patch title changed from "introduce crypto wait for
+  async op" to better reflect the current state.
+- Rebase on top of latest linux-next.
+- Add a new return code of -EIOCBQUEUED for backlog
+  queueing, as suggested by Herbert Xu.
+- Transform more users to the new API.
+- Update the drbg change to account for new init as
+  indicated by Stephan Muller.
+
+Changes from v1:
+- Address review comments from Eric Biggers.
+- Separated out bug fixes of existing code and rebase
+  on top of that patch set.
+- Rename 'ecr' to 'wait' in fscrypto code.
+- Split patch introducing the new API from the change
+  moving over the algif code which it originated from
+  to the new API.
+- Inline crypto_wait_req().
+- Some code indentation fixes.
+
+Gilad Ben-Yossef (19):
+  crypto: change transient busy return code to -EAGAIN
+  crypto: ccp: use -EAGAIN for transient busy indication
+  crypto: remove redundant backlog checks on EBUSY
+  crypto: marvell/cesa: remove redundant backlog checks on EBUSY
+  crypto: introduce crypto wait for async op
+  crypto: move algif to generic async completion
+  crypto: move pub key to generic async completion
+  crypto: move drbg to generic async completion
+  crypto: move gcm to generic async completion
+  crypto: move testmgr to generic async completion
+  fscrypt: move to generic async completion
+  dm: move dm-verity to generic async completion
+  cifs: move to generic async completion
+  ima: move to generic async completion
+  crypto: tcrypt: move to generic async completion
+  crypto: talitos: move to generic async completion
+  crypto: qce: move to generic async completion
+  crypto: mediatek: move to generic async completion
+  crypto: adapt api sample to use async. op wait
+
+ Documentation/crypto/api-samples.rst |  52 ++-------
+ crypto/af_alg.c                      |  27 -----
+ crypto/ahash.c                       |  12 +--
+ crypto/algapi.c                      |   6 +-
+ crypto/algif_aead.c                  |   8 +-
+ crypto/algif_hash.c                  |  50 +++++----
+ crypto/algif_skcipher.c              |   9 +-
+ crypto/api.c                         |  13 +++
+ crypto/asymmetric_keys/public_key.c  |  28 +----
+ crypto/cryptd.c                      |   4 +-
+ crypto/cts.c                         |   6 +-
+ crypto/drbg.c                        |  36 ++-----
+ crypto/gcm.c                         |  32 ++----
+ crypto/lrw.c                         |   8 +-
+ crypto/rsa-pkcs1pad.c                |  16 +--
+ crypto/tcrypt.c                      |  84 +++++----------
+ crypto/testmgr.c                     | 204 ++++++++++++-----------------------
+ crypto/xts.c                         |   8 +-
+ drivers/crypto/ccp/ccp-crypto-main.c |   8 +-
+ drivers/crypto/ccp/ccp-dev.c         |   7 +-
+ drivers/crypto/marvell/cesa.c        |   3 +-
+ drivers/crypto/marvell/cesa.h        |   2 +-
+ drivers/crypto/mediatek/mtk-aes.c    |  31 +-----
+ drivers/crypto/qce/sha.c             |  30 +-----
+ drivers/crypto/talitos.c             |  38 +------
+ drivers/md/dm-verity-target.c        |  81 ++++----------
+ drivers/md/dm-verity.h               |   5 -
+ fs/cifs/smb2ops.c                    |  30 +-----
+ fs/crypto/crypto.c                   |  28 +----
+ fs/crypto/fname.c                    |  36 ++-----
+ fs/crypto/fscrypt_private.h          |  10 --
+ fs/crypto/keyinfo.c                  |  21 +---
+ include/crypto/drbg.h                |   3 +-
+ include/crypto/if_alg.h              |  15 +--
+ include/linux/crypto.h               |  40 +++++++
+ security/integrity/ima/ima_crypto.c  |  56 +++-------
+ 36 files changed, 310 insertions(+), 737 deletions(-)
+
 -- 
-2.14.1.480.gb18f417b89-goog
+2.1.4
