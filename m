@@ -1,105 +1,82 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:42018 "EHLO
-        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1751280AbdHXOVT (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 24 Aug 2017 10:21:19 -0400
+Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v7 09/19] crypto: move gcm to generic async completion
-Date: Thu, 24 Aug 2017 17:18:56 +0300
-Message-Id: <1503584350-7831-10-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1503584350-7831-1-git-send-email-gilad@benyossef.com>
-References: <1503584350-7831-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
+Subject: [PATCH v6 13/19] cifs: move to generic async completion
+Date: Mon, 21 Aug 2017 17:04:59 +0300
+Message-Id: <1503324309-13673-14-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1503324309-13673-1-git-send-email-gilad@benyossef.com>
+References: <1503324309-13673-1-git-send-email-gilad@benyossef.com>
+Sender: linux-crypto-owner@vger.kernel.org
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-gcm is starting an async. crypto op and waiting for it complete.
+cifs starts an async. crypto op and waits for their completion.
 Move it over to generic code doing the same.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Acked-by: Pavel Shilovsky <pshilov@microsoft.com>
 ---
- crypto/gcm.c | 32 ++++++--------------------------
- 1 file changed, 6 insertions(+), 26 deletions(-)
+ fs/cifs/smb2ops.c | 30 ++++--------------------------
+ 1 file changed, 4 insertions(+), 26 deletions(-)
 
-diff --git a/crypto/gcm.c b/crypto/gcm.c
-index 3841b5e..fb923a5 100644
---- a/crypto/gcm.c
-+++ b/crypto/gcm.c
-@@ -16,7 +16,6 @@
- #include <crypto/scatterwalk.h>
- #include <crypto/hash.h>
- #include "internal.h"
--#include <linux/completion.h>
- #include <linux/err.h>
- #include <linux/init.h>
- #include <linux/kernel.h>
-@@ -78,11 +77,6 @@ struct crypto_gcm_req_priv_ctx {
- 	} u;
- };
+diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
+index cfacf2c..16fb041 100644
+--- a/fs/cifs/smb2ops.c
++++ b/fs/cifs/smb2ops.c
+@@ -1878,22 +1878,6 @@ init_sg(struct smb_rqst *rqst, u8 *sign)
+ 	return sg;
+ }
  
--struct crypto_gcm_setkey_result {
+-struct cifs_crypt_result {
 -	int err;
 -	struct completion completion;
 -};
 -
- static struct {
- 	u8 buf[16];
- 	struct scatterlist sg;
-@@ -98,17 +92,6 @@ static inline struct crypto_gcm_req_priv_ctx *crypto_gcm_reqctx(
- 	return (void *)PTR_ALIGN((u8 *)aead_request_ctx(req), align + 1);
- }
- 
--static void crypto_gcm_setkey_done(struct crypto_async_request *req, int err)
+-static void cifs_crypt_complete(struct crypto_async_request *req, int err)
 -{
--	struct crypto_gcm_setkey_result *result = req->data;
+-	struct cifs_crypt_result *res = req->data;
 -
 -	if (err == -EINPROGRESS)
 -		return;
 -
--	result->err = err;
--	complete(&result->completion);
+-	res->err = err;
+-	complete(&res->completion);
 -}
 -
- static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
- 			     unsigned int keylen)
+ static int
+ smb2_get_enc_key(struct TCP_Server_Info *server, __u64 ses_id, int enc, u8 *key)
  {
-@@ -119,7 +102,7 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
- 		be128 hash;
- 		u8 iv[16];
+@@ -1934,12 +1918,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
+ 	struct aead_request *req;
+ 	char *iv;
+ 	unsigned int iv_len;
+-	struct cifs_crypt_result result = {0, };
++	DECLARE_CRYPTO_WAIT(wait);
+ 	struct crypto_aead *tfm;
+ 	unsigned int crypt_len = le32_to_cpu(tr_hdr->OriginalMessageSize);
  
--		struct crypto_gcm_setkey_result result;
-+		struct crypto_wait wait;
+-	init_completion(&result.completion);
+-
+ 	rc = smb2_get_enc_key(server, tr_hdr->SessionId, enc, key);
+ 	if (rc) {
+ 		cifs_dbg(VFS, "%s: Could not get %scryption key\n", __func__,
+@@ -1999,14 +1981,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
+ 	aead_request_set_ad(req, assoc_data_len);
  
- 		struct scatterlist sg[1];
- 		struct skcipher_request req;
-@@ -140,21 +123,18 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
- 	if (!data)
- 		return -ENOMEM;
+ 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				  cifs_crypt_complete, &result);
++				  crypto_req_done, &wait);
  
--	init_completion(&data->result.completion);
-+	crypto_init_wait(&data->wait);
- 	sg_init_one(data->sg, &data->hash, sizeof(data->hash));
- 	skcipher_request_set_tfm(&data->req, ctr);
- 	skcipher_request_set_callback(&data->req, CRYPTO_TFM_REQ_MAY_SLEEP |
- 						  CRYPTO_TFM_REQ_MAY_BACKLOG,
--				      crypto_gcm_setkey_done,
--				      &data->result);
-+				      crypto_req_done,
-+				      &data->wait);
- 	skcipher_request_set_crypt(&data->req, data->sg, data->sg,
- 				   sizeof(data->hash), data->iv);
- 
--	err = crypto_skcipher_encrypt(&data->req);
--	if (err == -EINPROGRESS || err == -EBUSY) {
--		wait_for_completion(&data->result.completion);
--		err = data->result.err;
+-	rc = enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
+-
+-	if (rc == -EINPROGRESS || rc == -EBUSY) {
+-		wait_for_completion(&result.completion);
+-		rc = result.err;
 -	}
-+	err = crypto_wait_req(crypto_skcipher_encrypt(&data->req),
-+							&data->wait);
++	rc = crypto_wait_req(enc ? crypto_aead_encrypt(req)
++				: crypto_aead_decrypt(req), &wait);
  
- 	if (err)
- 		goto out;
+ 	if (!rc && enc)
+ 		memcpy(&tr_hdr->Signature, sign, SMB2_SIGNATURE_SIZE);
 -- 
 2.1.4
-
