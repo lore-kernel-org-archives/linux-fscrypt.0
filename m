@@ -1,75 +1,59 @@
-Return-Path: <anand.jain@oracle.com>
-From: Anand Jain <anand.jain@oracle.com>
+Return-Path: <ebiggers3@gmail.com>
+Date: Tue, 22 Aug 2017 10:36:00 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
 Subject: Re: [PATCH] fscrypt: add a documentation file for filesystem-level
  encryption
+Message-ID: <20170822173600.GB9587@gmail.com>
 References: <20170818194730.61575-1-ebiggers3@gmail.com>
- <9a86b7af-5e07-9b6f-958a-bd72ab28926e@oracle.com>
- <20170822025545.GA3577@zzz.localdomain>
- <7d4a9f66-7473-2e36-09bb-79d7885301bd@oracle.com>
- <20170822170720.GA9587@gmail.com>
-Message-ID: <9e3f608d-5410-b8f7-cdf0-93045be7a995@oracle.com>
-Date: Mon, 28 Aug 2017 20:18:46 +0800
+ <9dcef6c6-a758-ea57-0d51-55f33e365931@oracle.com>
+ <20170821230821.GB8847@gmail.com>
+ <7a34337d-3214-0a8a-5521-7727364cceb4@oracle.com>
+ <20170822030730.GB3577@zzz.localdomain>
+ <a84707f9-b9b9-fe7e-b2f5-d5edfcb9c91a@oracle.com>
 MIME-Version: 1.0
-In-Reply-To: <20170822170720.GA9587@gmail.com>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <a84707f9-b9b9-fe7e-b2f5-d5edfcb9c91a@oracle.com>
+To: Anand Jain <anand.jain@oracle.com>
+Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-
-
-On 08/23/2017 01:07 AM, Eric Biggers wrote:
-> On Tue, Aug 22, 2017 at 11:33:51PM +0800, Anand Jain wrote:
->>
->>
->> On 08/22/2017 10:55 AM, Eric Biggers wrote:
->>> On Tue, Aug 22, 2017 at 10:22:30AM +0800, Anand Jain wrote:
->>>>
->>>> Hi Eric,
->>>>
->>>>    How about a section on the threat model specific to the file-name ?
->>>>
->>>>    (Sorry if I am missing something).
->>>>
->>>> Thanks, Anand
->>>
->>> It's already mentioned that filenames are encrypted: "fscrypt protects the
->>> confidentiality of file contents and filenames in the event of a single
->>> point-in-time permanent offline compromise of the block device content."
->>> There's not much more to it than that; all the other points in the "Threat
->>> model" section (offline manipulations, timing attacks, access control, key
->>> eviction, etc.) are essentially the same between contents and filenames
->>> encryption.
->>
->>   Do you think if application does not keep the sensitive information
->> in the file-name, would that remove the file-name from the list of
->> items that should be protected ?
->>
+On Tue, Aug 22, 2017 at 11:35:20PM +0800, Anand Jain wrote:
+> >>
+> >>   I think AE is the only good solution for this, File-name encryption at
+> >>this stage won't solve any kind of Evil Maid attack, (as it was quoted
+> >>somewhere else in ML).
+> >>
+> >>
+> >>  Further, below,  is define but not used.
+> >>-----
+> >>  #define FS_AES_256_GCM_KEY_SIZE		32
+> >>-----
+> >>
+> >
+> >Yes, authenticated encryption with AES-256-GCM was in an older version of the
+> >ext4 encryption design document.  But unfortunately it was never really thought
+> >through. The primary problem, even ignoring rollback protection, is that there
+> >is nowhere to store the per-block metadata (GCM authentication tag and IV) *and*
+> >have it updated atomicly with the block contents.  Recently, dm-integrity solves
+> >this at the block device layer, but it uses data journaling which is very
+> >inefficient.  This maybe could be implemented more efficiently on a COW
+> >filesystem like BTRFS.  But even after that, another problem is that
+> >authenticated encryption of file contents only would not stop an attacker from
+> >swapping around blocks, files, directories, or creating links, etc.
 > 
-> If *no* applications care whether the filenames are encrypted or not, sure.
-> But are you absolutely sure that no applications care?  How do you know?  And what
-> is the advantage of not encrypting the filenames anyway?  It is better to
-> encrypt by default.
 > 
-> Eric
+>  Some of the problems to be solved in this area are quite
+> interesting and challenging and IMO BTRFS fits nicely. Per extent AE
+> for BTRFS is drafted, it needs scrutiny and constructive feedback.
+> 
+> Thanks, Anand
+> 
+> 
+> >Eric
+> >
 
-  (sorry for the delay in reply due to my vacation).
+Where is the code?  Is there a design document, and it is it readable by people
+not as familiar with btrfs?  Is the API compatible with ext4, f2fs, and ubifs?
 
-  It all depends on the use case, Android is one such use case. Some 
-data center use a known set of application. Again it all depends on the 
-use case.
-
-  File-name is a kind of File-system semantic and altering based on the 
-on the user key context does not guarantee the system will be compatible 
-with all their legacy applications.
-
-  Also a section on backup and restore in this doc will be a good idea. 
-As I think that will be affected IMO. And needing to have the user 
-master key to restore encrypted file isn't practical in some data center 
-multi tenanted solutions. Albeit it may work in some cases but hard to 
-generalize.
-
-
-Thanks, Anand
+Eric
