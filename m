@@ -1,44 +1,50 @@
-Return-Path: <anand.jain@oracle.com>
+Return-Path: <tytso@thunk.org>
+Date: Mon, 21 Aug 2017 23:07:57 -0400
+From: Theodore Ts'o <tytso@mit.edu>
 Subject: Re: [PATCH] fscrypt: add a documentation file for filesystem-level
  encryption
+Message-ID: <20170822030757.z5da7up5k7gnrfja@thunk.org>
 References: <20170818194730.61575-1-ebiggers3@gmail.com>
- <9a86b7af-5e07-9b6f-958a-bd72ab28926e@oracle.com>
- <20170822025545.GA3577@zzz.localdomain>
-From: Anand Jain <anand.jain@oracle.com>
-Message-ID: <7d4a9f66-7473-2e36-09bb-79d7885301bd@oracle.com>
-Date: Tue, 22 Aug 2017 23:33:51 +0800
+ <9dcef6c6-a758-ea57-0d51-55f33e365931@oracle.com>
+ <20170821230821.GB8847@gmail.com>
+ <7a34337d-3214-0a8a-5521-7727364cceb4@oracle.com>
 MIME-Version: 1.0
-In-Reply-To: <20170822025545.GA3577@zzz.localdomain>
-Content-Type: text/plain; charset=utf-8; format=flowed
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <7a34337d-3214-0a8a-5521-7727364cceb4@oracle.com>
+To: Anand Jain <anand.jain@oracle.com>
+Cc: Eric Biggers <ebiggers3@gmail.com>, linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Richard Weinberger <richard@nod.at>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-
-
-On 08/22/2017 10:55 AM, Eric Biggers wrote:
-> On Tue, Aug 22, 2017 at 10:22:30AM +0800, Anand Jain wrote:
->>
->> Hi Eric,
->>
->>    How about a section on the threat model specific to the file-name ?
->>
->>    (Sorry if I am missing something).
->>
->> Thanks, Anand
+On Tue, Aug 22, 2017 at 10:22:13AM +0800, Anand Jain wrote:
 > 
-> It's already mentioned that filenames are encrypted: "fscrypt protects the
-> confidentiality of file contents and filenames in the event of a single
-> point-in-time permanent offline compromise of the block device content."
-> There's not much more to it than that; all the other points in the "Threat
-> model" section (offline manipulations, timing attacks, access control, key
-> eviction, etc.) are essentially the same between contents and filenames
-> encryption.
+>   I think AE is the only good solution for this, File-name encryption at
+> this stage won't solve any kind of Evil Maid attack, (as it was quoted
+> somewhere else in ML).
 
-  Do you think if application does not keep the sensitive information in 
-the file-name, would that remove the file-name from the list of items 
-that should be protected ?
+AE doesn't help at all against the Evil Maid attack, since the Evil
+Maid is trying get the user's keying material, and what kind of
+encryption you are using is pretty much irrelevant.
 
-Thanks, Anand
+The typical attack (where the user's keys are available to the host
+CPU) involves compromising the system software --- and system software
+is public (everyone can get a copy of the Android system image for a
+particular device), so encryption is pointless.  That's why the system
+image is protected using dm-verity, which provides data integrity, but
+not confidentiality.
+
+The bootloader will protect against installing a new system image
+unless you have the private key of the handset manufacturer to sign
+said system image.  But the Evil Maid can carry out a "chip off"
+attack, where flash chip is desoldered and the system image, and the
+dm-verity information can be written directly without the bootloader
+being able to prevent it.
+
+This is why using AE isn't going to help you.  Sure, the Evil Maid
+could try to diddle directories and use complicated crypto attacks.
+But why bother when they can just simply steal the user's keys, at
+which point all the AE in the world doesn't help a whit.
+
+Cheers,
+
+						- Ted
