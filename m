@@ -1,8 +1,8 @@
 Return-Path: <keyrings-owner@vger.kernel.org>
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v7 02/19] crypto: ccp: use -EAGAIN for transient busy indication
-Date: Thu, 24 Aug 2017 17:18:49 +0300
-Message-Id: <1503584350-7831-3-git-send-email-gilad@benyossef.com>
+Subject: [PATCH v7 19/19] crypto: adapt api sample to use async. op wait
+Date: Thu, 24 Aug 2017 17:19:06 +0300
+Message-Id: <1503584350-7831-20-git-send-email-gilad@benyossef.com>
 In-Reply-To: <1503584350-7831-1-git-send-email-gilad@benyossef.com>
 References: <1503584350-7831-1-git-send-email-gilad@benyossef.com>
 Sender: keyrings-owner@vger.kernel.org
@@ -10,62 +10,110 @@ To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Replace -EBUSY with -EAGAIN when reporting transient busy
-indication in the absence of backlog.
+The code sample is waiting for an async. crypto op completion.
+Adapt sample to use the new generic infrastructure to do the same.
+
+This also fixes a possible data coruption bug created by the
+use of wait_for_completion_interruptible() without dealing
+correctly with an interrupt aborting the wait prior to the
+async op finishing.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-Reviewed-by: Gary R Hook <gary.hook@amd.com>
 ---
- drivers/crypto/ccp/ccp-crypto-main.c | 8 +++-----
- drivers/crypto/ccp/ccp-dev.c         | 7 +++++--
- 2 files changed, 8 insertions(+), 7 deletions(-)
+ Documentation/crypto/api-samples.rst | 52 +++++++-----------------------------
+ 1 file changed, 10 insertions(+), 42 deletions(-)
 
-diff --git a/drivers/crypto/ccp/ccp-crypto-main.c b/drivers/crypto/ccp/ccp-crypto-main.c
-index 35a9de7..403ff0a 100644
---- a/drivers/crypto/ccp/ccp-crypto-main.c
-+++ b/drivers/crypto/ccp/ccp-crypto-main.c
-@@ -222,9 +222,10 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
+diff --git a/Documentation/crypto/api-samples.rst b/Documentation/crypto/api-samples.rst
+index 2531948..006827e 100644
+--- a/Documentation/crypto/api-samples.rst
++++ b/Documentation/crypto/api-samples.rst
+@@ -7,59 +7,27 @@ Code Example For Symmetric Key Cipher Operation
+ ::
  
- 	/* Check if the cmd can/should be queued */
- 	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
--		ret = -EBUSY;
--		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
-+		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG)) {
-+			ret = -EAGAIN;
- 			goto e_lock;
-+		}
- 	}
  
- 	/* Look for an entry with the same tfm.  If there is a cmd
-@@ -243,9 +244,6 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
- 		ret = ccp_enqueue_cmd(crypto_cmd->cmd);
- 		if (!ccp_crypto_success(ret))
- 			goto e_lock;	/* Error, don't queue it */
--		if ((ret == -EBUSY) &&
--		    !(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
--			goto e_lock;	/* Not backlogging, don't queue it */
- 	}
+-    struct tcrypt_result {
+-        struct completion completion;
+-        int err;
+-    };
+-
+     /* tie all data structures together */
+     struct skcipher_def {
+         struct scatterlist sg;
+         struct crypto_skcipher *tfm;
+         struct skcipher_request *req;
+-        struct tcrypt_result result;
++        struct crypto_wait wait;
+     };
  
- 	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
-diff --git a/drivers/crypto/ccp/ccp-dev.c b/drivers/crypto/ccp/ccp-dev.c
-index 4e029b1..3d637e3 100644
---- a/drivers/crypto/ccp/ccp-dev.c
-+++ b/drivers/crypto/ccp/ccp-dev.c
-@@ -292,9 +292,12 @@ int ccp_enqueue_cmd(struct ccp_cmd *cmd)
- 	i = ccp->cmd_q_count;
+-    /* Callback function */
+-    static void test_skcipher_cb(struct crypto_async_request *req, int error)
+-    {
+-        struct tcrypt_result *result = req->data;
+-
+-        if (error == -EINPROGRESS)
+-            return;
+-        result->err = error;
+-        complete(&result->completion);
+-        pr_info("Encryption finished successfully\n");
+-    }
+-
+     /* Perform cipher operation */
+     static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
+                          int enc)
+     {
+-        int rc = 0;
++        int rc;
  
- 	if (ccp->cmd_count >= MAX_CMD_QLEN) {
--		ret = -EBUSY;
--		if (cmd->flags & CCP_CMD_MAY_BACKLOG)
-+		if (cmd->flags & CCP_CMD_MAY_BACKLOG) {
-+			ret = -EBUSY;
- 			list_add_tail(&cmd->entry, &ccp->backlog);
-+		} else {
-+			ret = -EAGAIN;
-+		}
- 	} else {
- 		ret = -EINPROGRESS;
- 		ccp->cmd_count++;
+         if (enc)
+-            rc = crypto_skcipher_encrypt(sk->req);
++            rc = crypto_wait_req(crypto_skcipher_encrypt(sk->req), &sk->wait);
+         else
+-            rc = crypto_skcipher_decrypt(sk->req);
+-
+-        switch (rc) {
+-        case 0:
+-            break;
+-        case -EINPROGRESS:
+-        case -EBUSY:
+-            rc = wait_for_completion_interruptible(
+-                &sk->result.completion);
+-            if (!rc && !sk->result.err) {
+-                reinit_completion(&sk->result.completion);
+-                break;
+-            }
+-        default:
+-            pr_info("skcipher encrypt returned with %d result %d\n",
+-                rc, sk->result.err);
+-            break;
+-        }
+-        init_completion(&sk->result.completion);
++            rc = crypto_wait_req(crypto_skcipher_decrypt(sk->req), &sk->wait);
++
++	if (rc)
++		pr_info("skcipher encrypt returned with result %d\n", rc);
+ 
+         return rc;
+     }
+@@ -89,8 +57,8 @@ Code Example For Symmetric Key Cipher Operation
+         }
+ 
+         skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-                          test_skcipher_cb,
+-                          &sk.result);
++                          crypto_req_done,
++                          &sk.wait);
+ 
+         /* AES 256 with random key */
+         get_random_bytes(&key, 32);
+@@ -122,7 +90,7 @@ Code Example For Symmetric Key Cipher Operation
+         /* We encrypt one block */
+         sg_init_one(&sk.sg, scratchpad, 16);
+         skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
+-        init_completion(&sk.result.completion);
++        crypto_init_wait(&sk.wait);
+ 
+         /* encrypt data */
+         ret = test_skcipher_encdec(&sk, 1);
 -- 
 2.1.4
 
