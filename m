@@ -1,172 +1,87 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from foss.arm.com ([217.140.101.70]:41912 "EHLO foss.arm.com"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1751352AbdHXOUy (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 24 Aug 2017 10:20:54 -0400
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v7 14/19] ima: move to generic async completion
-Date: Thu, 24 Aug 2017 17:19:01 +0300
-Message-Id: <1503584350-7831-15-git-send-email-gilad@benyossef.com>
+Subject: [PATCH v7 07/19] crypto: move pub key to generic async completion
+Date: Thu, 24 Aug 2017 17:18:54 +0300
+Message-Id: <1503584350-7831-8-git-send-email-gilad@benyossef.com>
 In-Reply-To: <1503584350-7831-1-git-send-email-gilad@benyossef.com>
 References: <1503584350-7831-1-git-send-email-gilad@benyossef.com>
-Sender: linux-crypto-owner@vger.kernel.org
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-ima starts several async crypto ops and  waits for their completions.
-Move it over to generic code doing the same.
+public_key_verify_signature() is starting an async crypto op and
+waiting for it to complete. Move it over to generic code doing
+the same.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
 ---
- security/integrity/ima/ima_crypto.c | 56 +++++++++++--------------------------
- 1 file changed, 17 insertions(+), 39 deletions(-)
+ crypto/asymmetric_keys/public_key.c | 28 ++++------------------------
+ 1 file changed, 4 insertions(+), 24 deletions(-)
 
-diff --git a/security/integrity/ima/ima_crypto.c b/security/integrity/ima/ima_crypto.c
-index a856d8c..9057b16 100644
---- a/security/integrity/ima/ima_crypto.c
-+++ b/security/integrity/ima/ima_crypto.c
-@@ -27,11 +27,6 @@
+diff --git a/crypto/asymmetric_keys/public_key.c b/crypto/asymmetric_keys/public_key.c
+index 3cd6e12..d916235 100644
+--- a/crypto/asymmetric_keys/public_key.c
++++ b/crypto/asymmetric_keys/public_key.c
+@@ -57,29 +57,13 @@ static void public_key_destroy(void *payload0, void *payload3)
+ 	public_key_signature_free(payload3);
+ }
  
- #include "ima.h"
- 
--struct ahash_completion {
+-struct public_key_completion {
 -	struct completion completion;
 -	int err;
 -};
 -
- /* minimum file size for ahash use */
- static unsigned long ima_ahash_minsize;
- module_param_named(ahash_minsize, ima_ahash_minsize, ulong, 0644);
-@@ -196,30 +191,13 @@ static void ima_free_atfm(struct crypto_ahash *tfm)
- 		crypto_free_ahash(tfm);
- }
- 
--static void ahash_complete(struct crypto_async_request *req, int err)
-+static inline int ahash_wait(int err, struct crypto_wait *wait)
- {
--	struct ahash_completion *res = req->data;
- 
+-static void public_key_verify_done(struct crypto_async_request *req, int err)
+-{
+-	struct public_key_completion *compl = req->data;
+-
 -	if (err == -EINPROGRESS)
 -		return;
--	res->err = err;
--	complete(&res->completion);
+-
+-	compl->err = err;
+-	complete(&compl->completion);
 -}
-+	err = crypto_wait_req(err, wait);
- 
--static int ahash_wait(int err, struct ahash_completion *res)
--{
--	switch (err) {
--	case 0:
--		break;
--	case -EINPROGRESS:
--	case -EBUSY:
--		wait_for_completion(&res->completion);
--		reinit_completion(&res->completion);
--		err = res->err;
--		/* fall through */
--	default:
-+	if (err)
- 		pr_crit_ratelimited("ahash calculation failed: err: %d\n", err);
--	}
- 
- 	return err;
- }
-@@ -233,7 +211,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 	int rc, read = 0, rbuf_len, active = 0, ahash_rc = 0;
- 	struct ahash_request *req;
- 	struct scatterlist sg[1];
--	struct ahash_completion res;
-+	struct crypto_wait wait;
- 	size_t rbuf_size[2];
- 
- 	hash->length = crypto_ahash_digestsize(tfm);
-@@ -242,12 +220,12 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 	if (!req)
- 		return -ENOMEM;
- 
--	init_completion(&res.completion);
-+	crypto_init_wait(&wait);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
- 				   CRYPTO_TFM_REQ_MAY_SLEEP,
--				   ahash_complete, &res);
-+				   crypto_req_done, &wait);
- 
--	rc = ahash_wait(crypto_ahash_init(req), &res);
-+	rc = ahash_wait(crypto_ahash_init(req), &wait);
- 	if (rc)
- 		goto out1;
- 
-@@ -288,7 +266,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 			 * read/request, wait for the completion of the
- 			 * previous ahash_update() request.
- 			 */
--			rc = ahash_wait(ahash_rc, &res);
-+			rc = ahash_wait(ahash_rc, &wait);
- 			if (rc)
- 				goto out3;
- 		}
-@@ -304,7 +282,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 			 * read/request, wait for the completion of the
- 			 * previous ahash_update() request.
- 			 */
--			rc = ahash_wait(ahash_rc, &res);
-+			rc = ahash_wait(ahash_rc, &wait);
- 			if (rc)
- 				goto out3;
- 		}
-@@ -318,7 +296,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 			active = !active; /* swap buffers, if we use two */
- 	}
- 	/* wait for the last update request to complete */
--	rc = ahash_wait(ahash_rc, &res);
-+	rc = ahash_wait(ahash_rc, &wait);
- out3:
- 	if (read)
- 		file->f_mode &= ~FMODE_READ;
-@@ -327,7 +305,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- out2:
- 	if (!rc) {
- 		ahash_request_set_crypt(req, NULL, hash->digest, 0);
--		rc = ahash_wait(crypto_ahash_final(req), &res);
-+		rc = ahash_wait(crypto_ahash_final(req), &wait);
- 	}
- out1:
- 	ahash_request_free(req);
-@@ -537,7 +515,7 @@ static int calc_buffer_ahash_atfm(const void *buf, loff_t len,
+-
+ /*
+  * Verify a signature using a public key.
+  */
+ int public_key_verify_signature(const struct public_key *pkey,
+ 				const struct public_key_signature *sig)
  {
- 	struct ahash_request *req;
- 	struct scatterlist sg;
--	struct ahash_completion res;
-+	struct crypto_wait wait;
- 	int rc, ahash_rc = 0;
+-	struct public_key_completion compl;
++	struct crypto_wait cwait;
+ 	struct crypto_akcipher *tfm;
+ 	struct akcipher_request *req;
+ 	struct scatterlist sig_sg, digest_sg;
+@@ -131,20 +115,16 @@ int public_key_verify_signature(const struct public_key *pkey,
+ 	sg_init_one(&digest_sg, output, outlen);
+ 	akcipher_request_set_crypt(req, &sig_sg, &digest_sg, sig->s_size,
+ 				   outlen);
+-	init_completion(&compl.completion);
++	crypto_init_wait(&cwait);
+ 	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
+ 				      CRYPTO_TFM_REQ_MAY_SLEEP,
+-				      public_key_verify_done, &compl);
++				      crypto_req_done, &cwait);
  
- 	hash->length = crypto_ahash_digestsize(tfm);
-@@ -546,12 +524,12 @@ static int calc_buffer_ahash_atfm(const void *buf, loff_t len,
- 	if (!req)
- 		return -ENOMEM;
+ 	/* Perform the verification calculation.  This doesn't actually do the
+ 	 * verification, but rather calculates the hash expected by the
+ 	 * signature and returns that to us.
+ 	 */
+-	ret = crypto_akcipher_verify(req);
+-	if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
+-		wait_for_completion(&compl.completion);
+-		ret = compl.err;
+-	}
++	ret = crypto_wait_req(crypto_akcipher_verify(req), &cwait);
+ 	if (ret < 0)
+ 		goto out_free_output;
  
--	init_completion(&res.completion);
-+	crypto_init_wait(&wait);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
- 				   CRYPTO_TFM_REQ_MAY_SLEEP,
--				   ahash_complete, &res);
-+				   crypto_req_done, &wait);
- 
--	rc = ahash_wait(crypto_ahash_init(req), &res);
-+	rc = ahash_wait(crypto_ahash_init(req), &wait);
- 	if (rc)
- 		goto out;
- 
-@@ -561,10 +539,10 @@ static int calc_buffer_ahash_atfm(const void *buf, loff_t len,
- 	ahash_rc = crypto_ahash_update(req);
- 
- 	/* wait for the update request to complete */
--	rc = ahash_wait(ahash_rc, &res);
-+	rc = ahash_wait(ahash_rc, &wait);
- 	if (!rc) {
- 		ahash_request_set_crypt(req, NULL, hash->digest, 0);
--		rc = ahash_wait(crypto_ahash_final(req), &res);
-+		rc = ahash_wait(crypto_ahash_final(req), &wait);
- 	}
- out:
- 	ahash_request_free(req);
 -- 
 2.1.4
+
