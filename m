@@ -1,79 +1,160 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 2/7] fscrypt: rename ->ci_master_key to ->ci_master_key_descriptor
-Date: Wed, 26 Jul 2017 11:19:24 -0700
-Message-Id: <20170726181929.99880-3-ebiggers3@gmail.com>
-In-Reply-To: <20170726181929.99880-1-ebiggers3@gmail.com>
-References: <20170726181929.99880-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Alex Cope <alexcope@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-crypto-owner@vger.kernel.org>
+MIME-Version: 1.0
+In-Reply-To: <1503584350-7831-1-git-send-email-gilad@benyossef.com>
+References: <1503584350-7831-1-git-send-email-gilad@benyossef.com>
+From: Harsh Jain <harshjain.prof@gmail.com>
+Date: Thu, 31 Aug 2017 18:01:51 +0530
+Message-ID: <CAFXBA=n6W_n1P=NKHEUAgpaDDrdmh4QwB4aYma9xyio7UFP3Vw@mail.gmail.com>
+Subject: Re: [PATCH v7 00/19] simplify crypto wait for async op
+Content-Type: text/plain; charset="UTF-8"
+Sender: linux-crypto-owner@vger.kernel.org
+To: Gilad Ben-Yossef <gilad@benyossef.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org, Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+HI Gilad,
 
-In struct fscrypt_info, ->ci_master_key is the master key descriptor,
-not the master key itself.  In preparation for introducing a struct
-fscrypt_master_key and making ->ci_master_key point to it, rename the
-existing ->ci_master_key to ->ci_master_key_descriptor.
+I think we need an update in ESP also. Now EBUSY return means driver
+has accepted, Packet should not be dropped in
 
-Acked-by: Michael Halcrow <mhalcrow@google.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fscrypt_private.h | 2 +-
- fs/crypto/keyinfo.c         | 4 ++--
- fs/crypto/policy.c          | 5 +++--
- 3 files changed, 6 insertions(+), 5 deletions(-)
+esp_output_tail() function.
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 8329fb905ac6..4b0205accae9 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -110,7 +110,7 @@ struct fscrypt_info {
- 	u8 ci_data_mode;
- 	u8 ci_filename_mode;
- 	u8 ci_flags;
--	u8 ci_master_key[FS_KEY_DESCRIPTOR_SIZE];
-+	u8 ci_master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
- };
- 
- typedef enum {
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 7e664a11340a..5591fd24e4b2 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -293,8 +293,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
- 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
- 	crypt_info->ci_flags = ctx.flags;
--	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
--				sizeof(crypt_info->ci_master_key));
-+	memcpy(crypt_info->ci_master_key_descriptor, ctx.master_key_descriptor,
-+	       FS_KEY_DESCRIPTOR_SIZE);
- 
- 	res = determine_cipher_type(crypt_info, inode, &cipher_str, &keysize);
- 	if (res)
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index d6beb48f08fc..fe525da9e79c 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -226,7 +226,8 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- 	child_ci = child->i_crypt_info;
- 
- 	if (parent_ci && child_ci) {
--		return memcmp(parent_ci->ci_master_key, child_ci->ci_master_key,
-+		return memcmp(parent_ci->ci_master_key_descriptor,
-+			      child_ci->ci_master_key_descriptor,
- 			      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
- 			(parent_ci->ci_context_version ==
- 			 child_ci->ci_context_version) &&
-@@ -284,7 +285,7 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
- 	ctx.contents_encryption_mode = ci->ci_data_mode;
- 	ctx.filenames_encryption_mode = ci->ci_filename_mode;
- 	ctx.flags = ci->ci_flags;
--	memcpy(ctx.master_key_descriptor, ci->ci_master_key,
-+	memcpy(ctx.master_key_descriptor, ci->ci_master_key_descriptor,
- 	       FS_KEY_DESCRIPTOR_SIZE);
- 	get_random_bytes(ctx.nonce, FS_KEY_DERIVATION_NONCE_SIZE);
- 	if (ctx.version != FSCRYPT_CONTEXT_V1)
--- 
-2.14.0.rc0.400.g1c36432dff-goog
+.
+
+Regards
+Harsh Jain
+
+
+
+On Thu, Aug 24, 2017 at 7:48 PM, Gilad Ben-Yossef <gilad@benyossef.com> wrote:
+> Many users of kernel async. crypto services have a pattern of
+> starting an async. crypto op and than using a completion
+> to wait for it to end.
+>
+> This patch set simplifies this common use case in two ways:
+>
+> First, by separating the return codes of the case where a
+> request is queued to a backlog due to the provider being
+> busy (-EBUSY) from the case the request has failed due
+> to the provider being busy and backlogging is not enabled
+> (-EAGAIN).
+>
+> Next, this change is than built on to create a generic API
+> to wait for a async. crypto operation to complete.
+>
+> The end result is a smaller code base and an API that is
+> easier to use and more difficult to get wrong.
+>
+> The patch set was boot tested on x86_64 and arm64 which
+> at the very least tests the crypto users via testmgr and
+> tcrypt but I do note that I do not have access to some
+> of the HW whose drivers are modified nor do I claim I was
+> able to test all of the corner cases.
+>
+> The patch set is based upon linux-next release tagged
+> next-20170824.
+>
+> Changes from v6:
+> - Fix brown paper bag compile error on marvell/cesa
+>   code.
+>
+> Changes from v5:
+> - Remove redundant new line as spotted by Jonathan
+>   Cameron.
+> - Reworded dm-verity change commit message to better
+>   clarify potential issue averted by change as
+>   pointed out by Mikulas Patocka.
+>
+> Changes from v4:
+> - Rebase on top of latest algif changes from Stephan
+>   Mueller.
+> - Fix typo in ccp patch title.
+>
+> Changes from v3:
+> - Instead of changing the return code to indicate
+>   backlog queueing, change the return code to indicate
+>   transient busy state, as suggested by Herbert Xu.
+>
+> Changes from v2:
+> - Patch title changed from "introduce crypto wait for
+>   async op" to better reflect the current state.
+> - Rebase on top of latest linux-next.
+> - Add a new return code of -EIOCBQUEUED for backlog
+>   queueing, as suggested by Herbert Xu.
+> - Transform more users to the new API.
+> - Update the drbg change to account for new init as
+>   indicated by Stephan Muller.
+>
+> Changes from v1:
+> - Address review comments from Eric Biggers.
+> - Separated out bug fixes of existing code and rebase
+>   on top of that patch set.
+> - Rename 'ecr' to 'wait' in fscrypto code.
+> - Split patch introducing the new API from the change
+>   moving over the algif code which it originated from
+>   to the new API.
+> - Inline crypto_wait_req().
+> - Some code indentation fixes.
+>
+> Gilad Ben-Yossef (19):
+>   crypto: change transient busy return code to -EAGAIN
+>   crypto: ccp: use -EAGAIN for transient busy indication
+>   crypto: remove redundant backlog checks on EBUSY
+>   crypto: marvell/cesa: remove redundant backlog checks on EBUSY
+>   crypto: introduce crypto wait for async op
+>   crypto: move algif to generic async completion
+>   crypto: move pub key to generic async completion
+>   crypto: move drbg to generic async completion
+>   crypto: move gcm to generic async completion
+>   crypto: move testmgr to generic async completion
+>   fscrypt: move to generic async completion
+>   dm: move dm-verity to generic async completion
+>   cifs: move to generic async completion
+>   ima: move to generic async completion
+>   crypto: tcrypt: move to generic async completion
+>   crypto: talitos: move to generic async completion
+>   crypto: qce: move to generic async completion
+>   crypto: mediatek: move to generic async completion
+>   crypto: adapt api sample to use async. op wait
+>
+>  Documentation/crypto/api-samples.rst |  52 ++-------
+>  crypto/af_alg.c                      |  27 -----
+>  crypto/ahash.c                       |  12 +--
+>  crypto/algapi.c                      |   6 +-
+>  crypto/algif_aead.c                  |   8 +-
+>  crypto/algif_hash.c                  |  50 +++++----
+>  crypto/algif_skcipher.c              |   9 +-
+>  crypto/api.c                         |  13 +++
+>  crypto/asymmetric_keys/public_key.c  |  28 +----
+>  crypto/cryptd.c                      |   4 +-
+>  crypto/cts.c                         |   6 +-
+>  crypto/drbg.c                        |  36 ++-----
+>  crypto/gcm.c                         |  32 ++----
+>  crypto/lrw.c                         |   8 +-
+>  crypto/rsa-pkcs1pad.c                |  16 +--
+>  crypto/tcrypt.c                      |  84 +++++----------
+>  crypto/testmgr.c                     | 204 ++++++++++++-----------------------
+>  crypto/xts.c                         |   8 +-
+>  drivers/crypto/ccp/ccp-crypto-main.c |   8 +-
+>  drivers/crypto/ccp/ccp-dev.c         |   7 +-
+>  drivers/crypto/marvell/cesa.c        |   3 +-
+>  drivers/crypto/marvell/cesa.h        |   2 +-
+>  drivers/crypto/mediatek/mtk-aes.c    |  31 +-----
+>  drivers/crypto/qce/sha.c             |  30 +-----
+>  drivers/crypto/talitos.c             |  38 +------
+>  drivers/md/dm-verity-target.c        |  81 ++++----------
+>  drivers/md/dm-verity.h               |   5 -
+>  fs/cifs/smb2ops.c                    |  30 +-----
+>  fs/crypto/crypto.c                   |  28 +----
+>  fs/crypto/fname.c                    |  36 ++-----
+>  fs/crypto/fscrypt_private.h          |  10 --
+>  fs/crypto/keyinfo.c                  |  21 +---
+>  include/crypto/drbg.h                |   3 +-
+>  include/crypto/if_alg.h              |  15 +--
+>  include/linux/crypto.h               |  40 +++++++
+>  security/integrity/ima/ima_crypto.c  |  56 +++-------
+>  36 files changed, 310 insertions(+), 737 deletions(-)
+>
+> --
+> 2.1.4
+>
