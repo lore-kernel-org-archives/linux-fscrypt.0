@@ -1,77 +1,54 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Tue, 5 Sep 2017 11:32:50 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH v2] KEYS: make keyctl_invalidate() also require Setattr
- permission
-Message-ID: <20170905183250.GA92687@gmail.com>
+Return-Path: <dhowells@redhat.com>
+From: David Howells <dhowells@redhat.com>
+In-Reply-To: <20170816211403.121920-1-ebiggers3@gmail.com>
 References: <20170816211403.121920-1-ebiggers3@gmail.com>
- <13221.1504605295@warthog.procyon.org.uk>
+Subject: Re: [PATCH v2] KEYS: make keyctl_invalidate() also require Setattr permission
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <13221.1504605295@warthog.procyon.org.uk>
-To: David Howells <dhowells@redhat.com>
-Cc: keyrings@vger.kernel.org, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Paul Crowley <paulcrowley@google.com>, Richard Weinberger <richard@nod.at>, Ryo Hashimoto <hashimoto@google.com>, Tyler Hicks <tyhicks@canonical.com>, stable@vger.kernel.org
+Content-Type: text/plain; charset="us-ascii"
+Content-ID: <13220.1504605295.1@warthog.procyon.org.uk>
+Date: Tue, 05 Sep 2017 10:54:55 +0100
+Message-ID: <13221.1504605295@warthog.procyon.org.uk>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: dhowells@redhat.com, keyrings@vger.kernel.org, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Paul Crowley <paulcrowley@google.com>, Richard Weinberger <richard@nod.at>, Ryo Hashimoto <hashimoto@google.com>, Tyler Hicks <tyhicks@canonical.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi David,
+Eric Biggers <ebiggers3@gmail.com> wrote:
 
-On Tue, Sep 05, 2017 at 10:54:55AM +0100, David Howells wrote:
-> Eric Biggers <ebiggers3@gmail.com> wrote:
-> 
-> > This patch fixes the flaw by requiring both Search and Setattr permission to
-> > invalidate a key rather than just Search permission.
-> 
-> I'm not sure I agree.  The problem is that you then have to grant someone
-> Setattr permission for them to be able to do this, which then opens up a whole
-> host of other things they can also do.
-> 
+> This patch fixes the flaw by requiring both Search and Setattr permission to
+> invalidate a key rather than just Search permission.
 
-True, but Setattr permission has already been overloaded to allow several
-different types of modifications, and it makes *much* more sense than Search
-permission which should not allow any modifications.  And in practice I expect
-people care more about whether modifications are permitted or not, than the
-details of the finer-grained permissions.
+I'm not sure I agree.  The problem is that you then have to grant someone
+Setattr permission for them to be able to do this, which then opens up a whole
+host of other things they can also do.
 
-> > Requiring Setattr permission is appropriate because Setattr permission also
-> > allows revoking (via keyctl_revoke()) or expiring (via keyctl_set_timeout())
-> > the key, which also make the key inaccessible regardless of how many
-> > keyrings it is in.
-> 
-> Note that setting the expiry time is not really equivalent to revokation in
-> this regard as setting the expiry time is something you do when setting up a
-> key, whereas revokation is something you do later to kill a key off.
-> 
+> Requiring Setattr permission is appropriate because Setattr permission also
+> allows revoking (via keyctl_revoke()) or expiring (via keyctl_set_timeout())
+> the key, which also make the key inaccessible regardless of how many
+> keyrings it is in.
 
-Sort of, but actually keyctl_set_timeout() can be called at any time, and the
-timeout can be set to as little as 1 second.  So I don't see how keyctl_revoke()
-is that much different, fundamentally.
+Note that setting the expiry time is not really equivalent to revokation in
+this regard as setting the expiry time is something you do when setting up a
+key, whereas revokation is something you do later to kill a key off.
 
-> How about another solution:
-> 
->  (1) I add a flag to a key to say that it can be invalidated and a keyctl to
->      change that flag.
+> Alternatively, the problem could be solved by requiring Write permission.
 
-And who would have permission to change that flag?  It seems to be the same
-problem again.
+That's not really a viable solution as things stand.  You can't turn Write
+permission on on a key whose type doesn't have an ->update() method (though
+this could be changed) and it also opens up a key to being modified.
 
-> 
->  (2) I add a new key type op called ->allow_invalidation() that allows key
->      types to govern separately who is allowed to invalidate keys of that
->      type.
-> 
->      So, for instance, DNS record invalidation would require CAP_NET_ADMIN.
+How about another solution:
 
-What would the behavior be if ->allow_invalidation() was not supplied?  In other
-words, would the purpose of this be to lock down invalidation of dns_resolver
-keys, or to restrict invalidation to *only* dns_resolver keys?
+ (1) I add a flag to a key to say that it can be invalidated and a keyctl to
+     change that flag.
 
-> 
->  (3) Allow keyrings to be cleared by users who don't have Write permission but
->      do have other permission, such as CAP_NET_ADMIN.  This would need to be
->      granted on a per-keyring basis.
+ (2) I add a new key type op called ->allow_invalidation() that allows key
+     types to govern separately who is allowed to invalidate keys of that
+     type.
 
-Granted by who, and how?  And do you mean keyctl_clear(), or
-keyctl_invalidate()?
+     So, for instance, DNS record invalidation would require CAP_NET_ADMIN.
 
-- Eric
+ (3) Allow keyrings to be cleared by users who don't have Write permission but
+     do have other permission, such as CAP_NET_ADMIN.  This would need to be
+     granted on a per-keyring basis.
+
+David
