@@ -1,8 +1,8 @@
 Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v8 16/20] crypto: tcrypt: move to generic async completion
-Date: Tue,  5 Sep 2017 15:38:55 +0300
-Message-Id: <1504615144-29770-17-git-send-email-gilad@benyossef.com>
+Subject: [PATCH v8 19/20] crypto: mediatek: move to generic async completion
+Date: Tue,  5 Sep 2017 15:38:58 +0300
+Message-Id: <1504615144-29770-20-git-send-email-gilad@benyossef.com>
 In-Reply-To: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
 References: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
 Sender: linux-crypto-owner@vger.kernel.org
@@ -10,215 +10,84 @@ To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft
 Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-tcrypt starts several async crypto ops and  waits for their completions.
-Move it over to generic code doing the same.
+The mediatek driver starts several async crypto ops and waits for their
+completions. Move it over to generic code doing the same.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Acked-by: Ryder Lee <ryder.lee@mediatek.com>
 ---
- crypto/tcrypt.c | 84 +++++++++++++++++----------------------------------------
- 1 file changed, 25 insertions(+), 59 deletions(-)
+ drivers/crypto/mediatek/mtk-aes.c | 31 +++++--------------------------
+ 1 file changed, 5 insertions(+), 26 deletions(-)
 
-diff --git a/crypto/tcrypt.c b/crypto/tcrypt.c
-index 0022a18..802aa81 100644
---- a/crypto/tcrypt.c
-+++ b/crypto/tcrypt.c
-@@ -79,34 +79,11 @@ static char *check[] = {
- 	NULL
+diff --git a/drivers/crypto/mediatek/mtk-aes.c b/drivers/crypto/mediatek/mtk-aes.c
+index 9e845e8..e2c7c95 100644
+--- a/drivers/crypto/mediatek/mtk-aes.c
++++ b/drivers/crypto/mediatek/mtk-aes.c
+@@ -137,11 +137,6 @@ struct mtk_aes_gcm_ctx {
+ 	struct crypto_skcipher *ctr;
  };
  
--struct tcrypt_result {
--	struct completion completion;
+-struct mtk_aes_gcm_setkey_result {
 -	int err;
+-	struct completion completion;
 -};
 -
--static void tcrypt_complete(struct crypto_async_request *req, int err)
+ struct mtk_aes_drv {
+ 	struct list_head dev_list;
+ 	/* Device list lock */
+@@ -936,17 +931,6 @@ static int mtk_aes_gcm_crypt(struct aead_request *req, u64 mode)
+ 				    &req->base);
+ }
+ 
+-static void mtk_gcm_setkey_done(struct crypto_async_request *req, int err)
 -{
--	struct tcrypt_result *res = req->data;
+-	struct mtk_aes_gcm_setkey_result *result = req->data;
 -
 -	if (err == -EINPROGRESS)
 -		return;
 -
--	res->err = err;
--	complete(&res->completion);
+-	result->err = err;
+-	complete(&result->completion);
 -}
 -
- static inline int do_one_aead_op(struct aead_request *req, int ret)
- {
--	if (ret == -EINPROGRESS || ret == -EBUSY) {
--		struct tcrypt_result *tr = req->base.data;
-+	struct crypto_wait *wait = req->base.data;
+ /*
+  * Because of the hardware limitation, we need to pre-calculate key(H)
+  * for the GHASH operation. The result of the encryption operation
+@@ -962,7 +946,7 @@ static int mtk_aes_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 		u32 hash[4];
+ 		u8 iv[8];
  
--		ret = wait_for_completion_interruptible(&tr->completion);
--		if (!ret)
--			ret = tr->err;
--		reinit_completion(&tr->completion);
+-		struct mtk_aes_gcm_setkey_result result;
++		struct crypto_wait wait;
+ 
+ 		struct scatterlist sg[1];
+ 		struct skcipher_request req;
+@@ -1002,22 +986,17 @@ static int mtk_aes_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 	if (!data)
+ 		return -ENOMEM;
+ 
+-	init_completion(&data->result.completion);
++	crypto_init_wait(&data->wait);
+ 	sg_init_one(data->sg, &data->hash, AES_BLOCK_SIZE);
+ 	skcipher_request_set_tfm(&data->req, ctr);
+ 	skcipher_request_set_callback(&data->req, CRYPTO_TFM_REQ_MAY_SLEEP |
+ 				      CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				      mtk_gcm_setkey_done, &data->result);
++				      crypto_req_done, &data->wait);
+ 	skcipher_request_set_crypt(&data->req, data->sg, data->sg,
+ 				   AES_BLOCK_SIZE, data->iv);
+ 
+-	err = crypto_skcipher_encrypt(&data->req);
+-	if (err == -EINPROGRESS || err == -EBUSY) {
+-		err = wait_for_completion_interruptible(
+-			&data->result.completion);
+-		if (!err)
+-			err = data->result.err;
 -	}
--
--	return ret;
-+	return crypto_wait_req(ret, wait);
- }
- 
- static int test_aead_jiffies(struct aead_request *req, int enc,
-@@ -248,7 +225,7 @@ static void test_aead_speed(const char *algo, int enc, unsigned int secs,
- 	char *axbuf[XBUFSIZE];
- 	unsigned int *b_size;
- 	unsigned int iv_len;
--	struct tcrypt_result result;
-+	struct crypto_wait wait;
- 
- 	iv = kzalloc(MAX_IVLEN, GFP_KERNEL);
- 	if (!iv)
-@@ -284,7 +261,7 @@ static void test_aead_speed(const char *algo, int enc, unsigned int secs,
- 		goto out_notfm;
- 	}
- 
--	init_completion(&result.completion);
-+	crypto_init_wait(&wait);
- 	printk(KERN_INFO "\ntesting speed of %s (%s) %s\n", algo,
- 			get_driver_name(crypto_aead, tfm), e);
- 
-@@ -296,7 +273,7 @@ static void test_aead_speed(const char *algo, int enc, unsigned int secs,
- 	}
- 
- 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				  tcrypt_complete, &result);
-+				  crypto_req_done, &wait);
- 
- 	i = 0;
- 	do {
-@@ -397,21 +374,16 @@ static void test_hash_sg_init(struct scatterlist *sg)
- 
- static inline int do_one_ahash_op(struct ahash_request *req, int ret)
- {
--	if (ret == -EINPROGRESS || ret == -EBUSY) {
--		struct tcrypt_result *tr = req->base.data;
-+	struct crypto_wait *wait = req->base.data;
- 
--		wait_for_completion(&tr->completion);
--		reinit_completion(&tr->completion);
--		ret = tr->err;
--	}
--	return ret;
-+	return crypto_wait_req(ret, wait);
- }
- 
- struct test_mb_ahash_data {
- 	struct scatterlist sg[TVMEMSIZE];
- 	char result[64];
- 	struct ahash_request *req;
--	struct tcrypt_result tresult;
-+	struct crypto_wait wait;
- 	char *xbuf[XBUFSIZE];
- };
- 
-@@ -440,7 +412,7 @@ static void test_mb_ahash_speed(const char *algo, unsigned int sec,
- 		if (testmgr_alloc_buf(data[i].xbuf))
- 			goto out;
- 
--		init_completion(&data[i].tresult.completion);
-+		crypto_init_wait(&data[i].wait);
- 
- 		data[i].req = ahash_request_alloc(tfm, GFP_KERNEL);
- 		if (!data[i].req) {
-@@ -449,8 +421,8 @@ static void test_mb_ahash_speed(const char *algo, unsigned int sec,
- 			goto out;
- 		}
- 
--		ahash_request_set_callback(data[i].req, 0,
--					   tcrypt_complete, &data[i].tresult);
-+		ahash_request_set_callback(data[i].req, 0, crypto_req_done,
-+					   &data[i].wait);
- 		test_hash_sg_init(data[i].sg);
- 	}
- 
-@@ -492,16 +464,16 @@ static void test_mb_ahash_speed(const char *algo, unsigned int sec,
- 			if (ret)
- 				break;
- 
--			complete(&data[k].tresult.completion);
--			data[k].tresult.err = 0;
-+			crypto_req_done(&data[k].req->base, 0);
- 		}
- 
- 		for (j = 0; j < k; j++) {
--			struct tcrypt_result *tr = &data[j].tresult;
-+			struct crypto_wait *wait = &data[j].wait;
-+			int wait_ret;
- 
--			wait_for_completion(&tr->completion);
--			if (tr->err)
--				ret = tr->err;
-+			wait_ret = crypto_wait_req(-EINPROGRESS, wait);
-+			if (wait_ret)
-+				ret = wait_ret;
- 		}
- 
- 		end = get_cycles();
-@@ -679,7 +651,7 @@ static void test_ahash_speed_common(const char *algo, unsigned int secs,
- 				    struct hash_speed *speed, unsigned mask)
- {
- 	struct scatterlist sg[TVMEMSIZE];
--	struct tcrypt_result tresult;
-+	struct crypto_wait wait;
- 	struct ahash_request *req;
- 	struct crypto_ahash *tfm;
- 	char *output;
-@@ -708,9 +680,9 @@ static void test_ahash_speed_common(const char *algo, unsigned int secs,
++	err = crypto_wait_req(crypto_skcipher_encrypt(&data->req),
++			      &data->wait);
+ 	if (err)
  		goto out;
- 	}
  
--	init_completion(&tresult.completion);
-+	crypto_init_wait(&wait);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				   tcrypt_complete, &tresult);
-+				   crypto_req_done, &wait);
- 
- 	output = kmalloc(MAX_DIGEST_SIZE, GFP_KERNEL);
- 	if (!output)
-@@ -765,15 +737,9 @@ static void test_hash_speed(const char *algo, unsigned int secs,
- 
- static inline int do_one_acipher_op(struct skcipher_request *req, int ret)
- {
--	if (ret == -EINPROGRESS || ret == -EBUSY) {
--		struct tcrypt_result *tr = req->base.data;
--
--		wait_for_completion(&tr->completion);
--		reinit_completion(&tr->completion);
--		ret = tr->err;
--	}
-+	struct crypto_wait *wait = req->base.data;
- 
--	return ret;
-+	return crypto_wait_req(ret, wait);
- }
- 
- static int test_acipher_jiffies(struct skcipher_request *req, int enc,
-@@ -853,7 +819,7 @@ static void test_skcipher_speed(const char *algo, int enc, unsigned int secs,
- 				unsigned int tcount, u8 *keysize, bool async)
- {
- 	unsigned int ret, i, j, k, iv_len;
--	struct tcrypt_result tresult;
-+	struct crypto_wait wait;
- 	const char *key;
- 	char iv[128];
- 	struct skcipher_request *req;
-@@ -866,7 +832,7 @@ static void test_skcipher_speed(const char *algo, int enc, unsigned int secs,
- 	else
- 		e = "decryption";
- 
--	init_completion(&tresult.completion);
-+	crypto_init_wait(&wait);
- 
- 	tfm = crypto_alloc_skcipher(algo, 0, async ? 0 : CRYPTO_ALG_ASYNC);
- 
-@@ -887,7 +853,7 @@ static void test_skcipher_speed(const char *algo, int enc, unsigned int secs,
- 	}
- 
- 	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				      tcrypt_complete, &tresult);
-+				      crypto_req_done, &wait);
- 
- 	i = 0;
- 	do {
 -- 
 2.1.4
