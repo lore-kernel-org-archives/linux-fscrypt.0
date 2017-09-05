@@ -1,80 +1,84 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 05/25] fscrypt: new helper function - fscrypt_require_key()
-Date: Wed, 20 Sep 2017 15:45:45 -0700
-Message-Id: <20170920224605.22030-6-ebiggers3@gmail.com>
-In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
-References: <20170920224605.22030-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Return-Path: <keyrings-owner@vger.kernel.org>
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v8 18/20] crypto: qce: move to generic async completion
+Date: Tue,  5 Sep 2017 15:38:57 +0300
+Message-Id: <1504615144-29770-19-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
+References: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
+Sender: keyrings-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Cc: Ofir Drang <ofir.drang@arm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+The qce driver starts several async crypto ops and  waits for their
+completions. Move it over to generic code doing the same.
 
-Add a helper function which checks if an inode is encrypted, and if so,
-tries to set up its encryption key.  This is a pattern which is
-duplicated in multiple places in each of ext4, f2fs, and ubifs --- for
-example, when a regular file is asked to be opened or truncated.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- include/linux/fscrypt_notsupp.h |  8 ++++++++
- include/linux/fscrypt_supp.h    | 28 ++++++++++++++++++++++++++++
- 2 files changed, 36 insertions(+)
+ drivers/crypto/qce/sha.c | 30 ++++--------------------------
+ 1 file changed, 4 insertions(+), 26 deletions(-)
 
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index 3f1325ec4646..3cfc953fef71 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -174,4 +174,12 @@ static inline int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 	return -EOPNOTSUPP;
+diff --git a/drivers/crypto/qce/sha.c b/drivers/crypto/qce/sha.c
+index 47e114a..53227d7 100644
+--- a/drivers/crypto/qce/sha.c
++++ b/drivers/crypto/qce/sha.c
+@@ -349,28 +349,12 @@ static int qce_ahash_digest(struct ahash_request *req)
+ 	return qce->async_req_enqueue(tmpl->qce, &req->base);
  }
  
-+/* hooks.c */
-+static inline int fscrypt_require_key(struct inode *inode)
-+{
-+	if (IS_ENCRYPTED(inode))
-+		return -EOPNOTSUPP;
-+	return 0;
-+}
-+
- #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index 32e2fcf13b01..b6d4b5d303a3 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -142,4 +142,32 @@ extern void fscrypt_pullback_bio_page(struct page **, bool);
- extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
- 				 unsigned int);
+-struct qce_ahash_result {
+-	struct completion completion;
+-	int error;
+-};
+-
+-static void qce_digest_complete(struct crypto_async_request *req, int error)
+-{
+-	struct qce_ahash_result *result = req->data;
+-
+-	if (error == -EINPROGRESS)
+-		return;
+-
+-	result->error = error;
+-	complete(&result->completion);
+-}
+-
+ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
+ 				 unsigned int keylen)
+ {
+ 	unsigned int digestsize = crypto_ahash_digestsize(tfm);
+ 	struct qce_sha_ctx *ctx = crypto_tfm_ctx(&tfm->base);
+-	struct qce_ahash_result result;
++	struct crypto_wait wait;
+ 	struct ahash_request *req;
+ 	struct scatterlist sg;
+ 	unsigned int blocksize;
+@@ -405,9 +389,9 @@ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
+ 		goto err_free_ahash;
+ 	}
  
-+/* hooks.c */
-+
-+/**
-+ * fscrypt_require_key - require an inode's encryption key
-+ * @inode: the inode we need the key for
-+ *
-+ * If the inode is encrypted, set up its encryption key if not already done.
-+ * Then require that the key be present and return -ENOKEY otherwise.
-+ *
-+ * No locks are needed, and currently the key will live as long as the struct
-+ * inode --- so it won't go away from under you.
-+ *
-+ * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
-+ * if a problem occurred while setting up the encryption key.
-+ */
-+static inline int fscrypt_require_key(struct inode *inode)
-+{
-+	if (IS_ENCRYPTED(inode)) {
-+		int err = fscrypt_get_encryption_info(inode);
-+
-+		if (err)
-+			return err;
-+		if (!fscrypt_has_encryption_key(inode))
-+			return -ENOKEY;
-+	}
-+	return 0;
-+}
-+
- #endif	/* _LINUX_FSCRYPT_SUPP_H */
+-	init_completion(&result.completion);
++	crypto_init_wait(&wait);
+ 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				   qce_digest_complete, &result);
++				   crypto_req_done, &wait);
+ 	crypto_ahash_clear_flags(ahash_tfm, ~0);
+ 
+ 	buf = kzalloc(keylen + QCE_MAX_ALIGN_SIZE, GFP_KERNEL);
+@@ -420,13 +404,7 @@ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
+ 	sg_init_one(&sg, buf, keylen);
+ 	ahash_request_set_crypt(req, &sg, ctx->authkey, keylen);
+ 
+-	ret = crypto_ahash_digest(req);
+-	if (ret == -EINPROGRESS || ret == -EBUSY) {
+-		ret = wait_for_completion_interruptible(&result.completion);
+-		if (!ret)
+-			ret = result.error;
+-	}
+-
++	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
+ 	if (ret)
+ 		crypto_ahash_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
+ 
 -- 
-2.14.1.821.g8fa685d3b7-goog
+2.1.4
+
