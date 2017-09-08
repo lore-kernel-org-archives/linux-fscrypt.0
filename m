@@ -1,48 +1,52 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 19/25] f2fs: switch to fscrypt_prepare_lookup()
-Date: Wed, 20 Sep 2017 15:45:59 -0700
-Message-Id: <20170920224605.22030-20-ebiggers3@gmail.com>
-In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
-References: <20170920224605.22030-1-ebiggers3@gmail.com>
+Return-Path: <linux-ext4-owner@vger.kernel.org>
+From: Michael Halcrow <mhalcrow@google.com>
+Subject: [PATCH 1/3] ext4 crypto: Return -EXDEV for link, rename, and cross-rename between incompat contexts
+Date: Thu,  7 Sep 2017 17:12:02 -0700
+Message-Id: <20170908001204.18174-2-mhalcrow@google.com>
+In-Reply-To: <20170908001204.18174-1-mhalcrow@google.com>
+References: <20170908001204.18174-1-mhalcrow@google.com>
+Sender: linux-ext4-owner@vger.kernel.org
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, tytso@mit.edu, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Gives user space the opportunity to fall back to copy-and-delete.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Michael Halcrow <mhalcrow@google.com>
 ---
- fs/f2fs/namei.c | 17 +++--------------
- 1 file changed, 3 insertions(+), 14 deletions(-)
+ fs/ext4/namei.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
-index 80bcf2185fd8..f4b99f1468d8 100644
---- a/fs/f2fs/namei.c
-+++ b/fs/f2fs/namei.c
-@@ -335,20 +335,9 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
- 	int err = 0;
- 	unsigned int root_ino = F2FS_ROOT_INO(F2FS_I_SB(dir));
+diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
+index c1cf020d1889..3c493bc4273d 100644
+--- a/fs/ext4/namei.c
++++ b/fs/ext4/namei.c
+@@ -3223,7 +3223,7 @@ static int ext4_link(struct dentry *old_dentry,
+ 		return -EMLINK;
+ 	if (ext4_encrypted_inode(dir) &&
+ 			!fscrypt_has_permitted_context(dir, inode))
+-		return -EPERM;
++		return -EXDEV;
  
--	if (f2fs_encrypted_inode(dir)) {
--		int res = fscrypt_get_encryption_info(dir);
--
--		/*
--		 * DCACHE_ENCRYPTED_WITH_KEY is set if the dentry is
--		 * created while the directory was encrypted and we
--		 * don't have access to the key.
--		 */
--		if (fscrypt_has_encryption_key(dir))
--			fscrypt_set_encrypted_dentry(dentry);
--		fscrypt_set_d_op(dentry);
--		if (res && res != -ENOKEY)
--			return ERR_PTR(res);
--	}
-+	err = fscrypt_prepare_lookup(dir, dentry, flags);
-+	if (err)
-+		return ERR_PTR(err);
+        if ((ext4_test_inode_flag(dir, EXT4_INODE_PROJINHERIT)) &&
+ 	   (!projid_eq(EXT4_I(dir)->i_projid,
+@@ -3552,7 +3552,7 @@ static int ext4_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 	if ((old.dir != new.dir) &&
+ 	    ext4_encrypted_inode(new.dir) &&
+ 	    !fscrypt_has_permitted_context(new.dir, old.inode)) {
+-		retval = -EPERM;
++		retval = -EXDEV;
+ 		goto end_rename;
+ 	}
  
- 	if (dentry->d_name.len > F2FS_NAME_LEN)
- 		return ERR_PTR(-ENAMETOOLONG);
+@@ -3732,7 +3732,7 @@ static int ext4_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 	    (old_dir != new_dir) &&
+ 	    (!fscrypt_has_permitted_context(new_dir, old.inode) ||
+ 	     !fscrypt_has_permitted_context(old_dir, new.inode)))
+-		return -EPERM;
++		return -EXDEV;
+ 
+ 	if ((ext4_test_inode_flag(new_dir, EXT4_INODE_PROJINHERIT) &&
+ 	     !projid_eq(EXT4_I(new_dir)->i_projid,
 -- 
-2.14.1.821.g8fa685d3b7-goog
+2.14.1.581.gf28d330327-goog
