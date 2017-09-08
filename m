@@ -1,83 +1,60 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v8 08/20] crypto: move pub key to generic async completion
-Date: Tue,  5 Sep 2017 15:38:47 +0300
-Message-Id: <1504615144-29770-9-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
-References: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
-Cc: Ofir Drang <ofir.drang@arm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-pg0-f47.google.com ([74.125.83.47]:34016 "EHLO
+        mail-pg0-f47.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1753055AbdIHAMi (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 7 Sep 2017 20:12:38 -0400
+Received: by mail-pg0-f47.google.com with SMTP id q68so2123125pgq.1
+        for <linux-fscrypt@vger.kernel.org>; Thu, 07 Sep 2017 17:12:38 -0700 (PDT)
+From: Michael Halcrow <mhalcrow@google.com>
+Subject: [PATCH 3/3] UBIFS crypto: Return -EXDEV for link, rename, and cross-rename between incompat contexts
+Date: Thu,  7 Sep 2017 17:12:04 -0700
+Message-Id: <20170908001204.18174-4-mhalcrow@google.com>
+In-Reply-To: <20170908001204.18174-1-mhalcrow@google.com>
+References: <20170908001204.18174-1-mhalcrow@google.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, tytso@mit.edu, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-public_key_verify_signature() is starting an async crypto op and
-waiting for it to complete. Move it over to generic code doing
-the same.
+Gives user space the opportunity to fall back to copy-and-delete.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Signed-off-by: Michael Halcrow <mhalcrow@google.com>
 ---
- crypto/asymmetric_keys/public_key.c | 28 ++++------------------------
- 1 file changed, 4 insertions(+), 24 deletions(-)
+ fs/ubifs/dir.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/crypto/asymmetric_keys/public_key.c b/crypto/asymmetric_keys/public_key.c
-index 3cd6e12..d916235 100644
---- a/crypto/asymmetric_keys/public_key.c
-+++ b/crypto/asymmetric_keys/public_key.c
-@@ -57,29 +57,13 @@ static void public_key_destroy(void *payload0, void *payload3)
- 	public_key_signature_free(payload3);
- }
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 417fe0b29f23..6c5753a2f79f 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -745,7 +745,7 @@ static int ubifs_link(struct dentry *old_dentry, struct inode *dir,
  
--struct public_key_completion {
--	struct completion completion;
--	int err;
--};
--
--static void public_key_verify_done(struct crypto_async_request *req, int err)
--{
--	struct public_key_completion *compl = req->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	compl->err = err;
--	complete(&compl->completion);
--}
--
- /*
-  * Verify a signature using a public key.
-  */
- int public_key_verify_signature(const struct public_key *pkey,
- 				const struct public_key_signature *sig)
- {
--	struct public_key_completion compl;
-+	struct crypto_wait cwait;
- 	struct crypto_akcipher *tfm;
- 	struct akcipher_request *req;
- 	struct scatterlist sig_sg, digest_sg;
-@@ -131,20 +115,16 @@ int public_key_verify_signature(const struct public_key *pkey,
- 	sg_init_one(&digest_sg, output, outlen);
- 	akcipher_request_set_crypt(req, &sig_sg, &digest_sg, sig->s_size,
- 				   outlen);
--	init_completion(&compl.completion);
-+	crypto_init_wait(&cwait);
- 	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
- 				      CRYPTO_TFM_REQ_MAY_SLEEP,
--				      public_key_verify_done, &compl);
-+				      crypto_req_done, &cwait);
+ 	if (ubifs_crypt_is_encrypted(dir) &&
+ 	    !fscrypt_has_permitted_context(dir, inode))
+-		return -EPERM;
++		return -EXDEV;
  
- 	/* Perform the verification calculation.  This doesn't actually do the
- 	 * verification, but rather calculates the hash expected by the
- 	 * signature and returns that to us.
- 	 */
--	ret = crypto_akcipher_verify(req);
--	if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
--		wait_for_completion(&compl.completion);
--		ret = compl.err;
--	}
-+	ret = crypto_wait_req(crypto_akcipher_verify(req), &cwait);
- 	if (ret < 0)
- 		goto out_free_output;
+ 	err = fscrypt_setup_filename(dir, &dentry->d_name, 0, &nm);
+ 	if (err)
+@@ -1356,7 +1356,7 @@ static int do_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 	if (old_dir != new_dir) {
+ 		if (ubifs_crypt_is_encrypted(new_dir) &&
+ 		    !fscrypt_has_permitted_context(new_dir, old_inode))
+-			return -EPERM;
++			return -EXDEV;
+ 	}
  
+ 	if (unlink && is_dir) {
+@@ -1578,7 +1578,7 @@ static int ubifs_xrename(struct inode *old_dir, struct dentry *old_dentry,
+ 	    (old_dir != new_dir) &&
+ 	    (!fscrypt_has_permitted_context(new_dir, fst_inode) ||
+ 	     !fscrypt_has_permitted_context(old_dir, snd_inode)))
+-		return -EPERM;
++		return -EXDEV;
+ 
+ 	err = fscrypt_setup_filename(old_dir, &old_dentry->d_name, 0, &fst_nm);
+ 	if (err)
 -- 
-2.1.4
+2.14.1.581.gf28d330327-goog
 
