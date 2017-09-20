@@ -1,88 +1,71 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 00/25] fscrypt: add some higher-level helper functions
-Date: Wed, 20 Sep 2017 15:45:40 -0700
-Message-Id: <20170920224605.22030-1-ebiggers3@gmail.com>
+Subject: [PATCH 23/25] ubifs: switch to fscrypt_prepare_rename()
+Date: Wed, 20 Sep 2017 15:46:03 -0700
+Message-Id: <20170920224605.22030-24-ebiggers3@gmail.com>
+In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
+References: <20170920224605.22030-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
 Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-This series reduces code duplication among ext4, f2fs, and ubifs by
-introducing a S_ENCRYPTED inode flag (so we don't have to call back into
-the filesystem to test the filesystem-specific inode flag), then
-introducing new helper functions that are called at the beginning of the
-open, link, rename, lookup, and setattr operations.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ubifs/dir.c | 20 +++++++-------------
+ 1 file changed, 7 insertions(+), 13 deletions(-)
 
-In the future we maybe should even call these new helpers from the VFS
-so that each individual filesystem doesn't have to do it.  But that's
-not possible currently because fs/crypto/ can be built as a module.
-
-Making changes like this is a bit challenging due to interdependencies
-between fscrypt and the individual filesystems, all of which have
-different maintainers.  For now my intent is that patches 1-10 be taken
-through the fscrypt tree --- though it's not perfect since patches 1-4
-do make some changes to each filesystem, as everyone must set
-S_ENCRYPTED before we can use it everywhere in the shared code.  But
-afterwards, patches 11-25 can be picked up by the individual filesystems
-to switch to the new helpers.
-
-Eric Biggers (25):
-  fs, fscrypt: add an S_ENCRYPTED inode flag
-  fscrypt: switch from ->is_encrypted() to IS_ENCRYPTED()
-  fscrypt: remove ->is_encrypted()
-  fscrypt: remove unneeded empty fscrypt_operations structs
-  fscrypt: new helper function - fscrypt_require_key()
-  fscrypt: new helper function - fscrypt_file_open()
-  fscrypt: new helper function - fscrypt_prepare_link()
-  fscrypt: new helper function - fscrypt_prepare_rename()
-  fscrypt: new helper function - fscrypt_prepare_lookup()
-  fscrypt: new helper function - fscrypt_prepare_setattr()
-  ext4: switch to fscrypt_file_open()
-  ext4: switch to fscrypt_prepare_link()
-  ext4: switch to fscrypt_prepare_rename()
-  ext4: switch to fscrypt_prepare_lookup()
-  ext4: switch to fscrypt_prepare_setattr()
-  f2fs: switch to fscrypt_file_open()
-  f2fs: switch to fscrypt_prepare_link()
-  f2fs: switch to fscrypt_prepare_rename()
-  f2fs: switch to fscrypt_prepare_lookup()
-  f2fs: switch to fscrypt_prepare_setattr()
-  ubifs: switch to fscrypt_file_open()
-  ubifs: switch to fscrypt_prepare_link()
-  ubifs: switch to fscrypt_prepare_rename()
-  ubifs: switch to fscrypt_prepare_lookup()
-  ubifs: switch to fscrypt_prepare_setattr()
-
- fs/crypto/Makefile              |   2 +-
- fs/crypto/crypto.c              |   2 +-
- fs/crypto/fname.c               |   3 +-
- fs/crypto/hooks.c               | 112 +++++++++++++++++++++++++++++
- fs/crypto/keyinfo.c             |   2 +-
- fs/crypto/policy.c              |   6 +-
- fs/ext4/file.c                  |  23 ++----
- fs/ext4/inode.c                 |  19 +++--
- fs/ext4/namei.c                 |  62 +++++-----------
- fs/ext4/super.c                 |  15 ++--
- fs/f2fs/f2fs.h                  |   1 +
- fs/f2fs/file.c                  |  30 ++------
- fs/f2fs/inode.c                 |   5 +-
- fs/f2fs/namei.c                 |  54 ++++----------
- fs/f2fs/super.c                 |   7 +-
- fs/ubifs/crypto.c               |   1 -
- fs/ubifs/dir.c                  |  43 ++++-------
- fs/ubifs/file.c                 |  41 ++---------
- fs/ubifs/ioctl.c                |   5 +-
- fs/ubifs/super.c                |   8 +--
- fs/ubifs/ubifs.h                |   9 +--
- fs/ubifs/xattr.c                |   1 +
- include/linux/fs.h              |   2 +
- include/linux/fscrypt_common.h  |   1 -
- include/linux/fscrypt_notsupp.h |  54 +++++++++++++-
- include/linux/fscrypt_supp.h    | 153 ++++++++++++++++++++++++++++++++++++++++
- 26 files changed, 418 insertions(+), 243 deletions(-)
- create mode 100644 fs/crypto/hooks.c
-
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 09e6c56b11bc..7bf847d79b4a 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -1353,12 +1353,6 @@ static int do_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 	if (unlink)
+ 		ubifs_assert(inode_is_locked(new_inode));
+ 
+-	if (old_dir != new_dir) {
+-		if (ubifs_crypt_is_encrypted(new_dir) &&
+-		    !fscrypt_has_permitted_context(new_dir, old_inode))
+-			return -EPERM;
+-	}
+-
+ 	if (unlink && is_dir) {
+ 		err = ubifs_check_dir_empty(new_inode);
+ 		if (err)
+@@ -1573,13 +1567,6 @@ static int ubifs_xrename(struct inode *old_dir, struct dentry *old_dentry,
+ 
+ 	ubifs_assert(fst_inode && snd_inode);
+ 
+-	if ((ubifs_crypt_is_encrypted(old_dir) ||
+-	    ubifs_crypt_is_encrypted(new_dir)) &&
+-	    (old_dir != new_dir) &&
+-	    (!fscrypt_has_permitted_context(new_dir, fst_inode) ||
+-	     !fscrypt_has_permitted_context(old_dir, snd_inode)))
+-		return -EPERM;
+-
+ 	err = fscrypt_setup_filename(old_dir, &old_dentry->d_name, 0, &fst_nm);
+ 	if (err)
+ 		return err;
+@@ -1624,12 +1611,19 @@ static int ubifs_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 			struct inode *new_dir, struct dentry *new_dentry,
+ 			unsigned int flags)
+ {
++	int err;
++
+ 	if (flags & ~(RENAME_NOREPLACE | RENAME_WHITEOUT | RENAME_EXCHANGE))
+ 		return -EINVAL;
+ 
+ 	ubifs_assert(inode_is_locked(old_dir));
+ 	ubifs_assert(inode_is_locked(new_dir));
+ 
++	err = fscrypt_prepare_rename(old_dir, old_dentry, new_dir, new_dentry,
++				     flags);
++	if (err)
++		return err;
++
+ 	if (flags & RENAME_EXCHANGE)
+ 		return ubifs_xrename(old_dir, old_dentry, new_dir, new_dentry);
+ 
 -- 
 2.14.1.821.g8fa685d3b7-goog
