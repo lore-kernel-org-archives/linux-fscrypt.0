@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 10/25] fscrypt: new helper function - fscrypt_prepare_setattr()
-Date: Wed, 20 Sep 2017 15:45:50 -0700
-Message-Id: <20170920224605.22030-11-ebiggers3@gmail.com>
+Subject: [PATCH 09/25] fscrypt: new helper function - fscrypt_prepare_lookup()
+Date: Wed, 20 Sep 2017 15:45:49 -0700
+Message-Id: <20170920224605.22030-10-ebiggers3@gmail.com>
 In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
 References: <20170920224605.22030-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
@@ -11,63 +11,101 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Introduce a helper function for filesystems to call when processing
-->setattr() on a possibly-encrypted inode.  It handles enforcing that an
-encrypted file can only be truncated if its encryption key is available.
+Introduce a helper function which prepares to look up the given dentry
+in the given directory.  If the directory is encrypted, it handles
+loading the directory's encryption key, setting the dentry's ->d_op to
+fscrypt_d_ops, and setting DCACHE_ENCRYPTED_WITH_KEY if the directory's
+encryption key is available.
+
+Note: once all filesystems switch over to this, we'll be able to move
+fscrypt_d_ops and fscrypt_set_encrypted_dentry() to fscrypt_private.h.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- include/linux/fscrypt_notsupp.h |  8 ++++++++
- include/linux/fscrypt_supp.h    | 25 +++++++++++++++++++++++++
- 2 files changed, 33 insertions(+)
+ fs/crypto/hooks.c               | 18 ++++++++++++++++++
+ include/linux/fscrypt_notsupp.h |  9 +++++++++
+ include/linux/fscrypt_supp.h    | 30 ++++++++++++++++++++++++++++++
+ 3 files changed, 57 insertions(+)
 
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index 822cb78f9b45..9f5fb2eb9cf7 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -92,3 +92,21 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(__fscrypt_prepare_rename);
++
++int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry)
++{
++	int err = fscrypt_get_encryption_info(dir);
++
++	if (err)
++		return err;
++
++	if (fscrypt_has_encryption_key(dir)) {
++		spin_lock(&dentry->d_lock);
++		dentry->d_flags |= DCACHE_ENCRYPTED_WITH_KEY;
++		spin_unlock(&dentry->d_lock);
++	}
++
++	d_set_d_op(dentry, &fscrypt_d_ops);
++	return 0;
++}
++EXPORT_SYMBOL_GPL(__fscrypt_prepare_lookup);
 diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index e9b437605f9c..b0dd2d1756b2 100644
+index a88a2959cd8c..e9b437605f9c 100644
 --- a/include/linux/fscrypt_notsupp.h
 +++ b/include/linux/fscrypt_notsupp.h
-@@ -218,4 +218,12 @@ static inline int fscrypt_prepare_lookup(struct inode *dir,
+@@ -209,4 +209,13 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
  	return 0;
  }
  
-+static inline int fscrypt_prepare_setattr(struct dentry *dentry,
-+					  struct iattr *attr)
++static inline int fscrypt_prepare_lookup(struct inode *dir,
++					 struct dentry *dentry,
++					 unsigned int flags)
 +{
-+	if (IS_ENCRYPTED(d_inode(dentry)) && (attr->ia_valid & ATTR_SIZE))
++	if (IS_ENCRYPTED(dir))
 +		return -EOPNOTSUPP;
 +	return 0;
 +}
 +
  #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
 diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index 2b99bc01c59b..bdd01e02435b 100644
+index fa062d41b39a..2b99bc01c59b 100644
 --- a/include/linux/fscrypt_supp.h
 +++ b/include/linux/fscrypt_supp.h
-@@ -270,4 +270,29 @@ static inline int fscrypt_prepare_lookup(struct inode *dir,
+@@ -240,4 +240,34 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
  	return 0;
  }
  
++extern int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry);
++
 +/**
-+ * fscrypt_prepare_setattr - prepare to change a possibly-encrypted inode's attributes
-+ * @dentry: dentry through which the inode is being changed
-+ * @attr: attributes to change
++ * fscrypt_prepare_lookup - prepare to lookup a name in a possibly-encrypted directory
++ * @dir: directory being searched
++ * @dentry: filename being looked up
++ * @flags: lookup flags
 + *
-+ * Prepare for ->setattr() on a possibly-encrypted inode.  On an encrypted file,
-+ * most attribute changes are allowed even without the encryption key.  However,
-+ * without the encryption key we do have to forbid truncates.  This is needed
-+ * because the size being truncated to may not be a multiple of the filesystem
-+ * block size, and in that case we'd have to decrypt the final block, zero the
-+ * portion past i_size, and re-encrypt it.  (We *could* allow truncating to a
-+ * filesystem block boundary, but it's simpler to just forbid all truncates ---
-+ * and we already forbid all other contents modifications without the key.)
++ * Prepare for ->lookup() in a directory which may be encrypted.  Lookups can be
++ * done with or without the directory's encryption key; without the key,
++ * filenames are presented in encrypted form.  Therefore, we'll try to set up
++ * the directory's encryption key, but even without it the lookup can continue.
 + *
-+ * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
-+ * if a problem occurred while setting up the encryption key.
++ * To allow invalidating stale dentries if the directory's encryption key is
++ * added later, we also install a custom ->d_revalidate() method and use the
++ * DCACHE_ENCRYPTED_WITH_KEY flag to indicate whether a given dentry is a
++ * plaintext name (flag set) or a ciphertext name (flag cleared).
++ *
++ * Return: 0 on success, -errno if a problem occurred while setting up the
++ * encryption key
 + */
-+static inline int fscrypt_prepare_setattr(struct dentry *dentry,
-+					  struct iattr *attr)
++static inline int fscrypt_prepare_lookup(struct inode *dir,
++					 struct dentry *dentry,
++					 unsigned int flags)
 +{
-+	if (IS_ENCRYPTED(d_inode(dentry)) && (attr->ia_valid & ATTR_SIZE))
-+		return fscrypt_require_key(d_inode(dentry));
++	if (IS_ENCRYPTED(dir))
++		return __fscrypt_prepare_lookup(dir, dentry);
 +	return 0;
 +}
 +
