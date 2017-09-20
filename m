@@ -1,54 +1,50 @@
-Return-Path: <dhowells@redhat.com>
-From: David Howells <dhowells@redhat.com>
-In-Reply-To: <20170816211403.121920-1-ebiggers3@gmail.com>
-References: <20170816211403.121920-1-ebiggers3@gmail.com>
-Subject: Re: [PATCH v2] KEYS: make keyctl_invalidate() also require Setattr permission
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-ID: <13220.1504605295.1@warthog.procyon.org.uk>
-Date: Tue, 05 Sep 2017 10:54:55 +0100
-Message-ID: <13221.1504605295@warthog.procyon.org.uk>
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: dhowells@redhat.com, keyrings@vger.kernel.org, linux-api@vger.kernel.org, linux-cifs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-nfs@vger.kernel.org, Gwendal Grignou <gwendal@chromium.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Paul Crowley <paulcrowley@google.com>, Richard Weinberger <richard@nod.at>, Ryo Hashimoto <hashimoto@google.com>, Tyler Hicks <tyhicks@canonical.com>, stable@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 20/25] f2fs: switch to fscrypt_prepare_setattr()
+Date: Wed, 20 Sep 2017 15:46:00 -0700
+Message-Id: <20170920224605.22030-21-ebiggers3@gmail.com>
+In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
+References: <20170920224605.22030-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Eric Biggers <ebiggers3@gmail.com> wrote:
+From: Eric Biggers <ebiggers@google.com>
 
-> This patch fixes the flaw by requiring both Search and Setattr permission to
-> invalidate a key rather than just Search permission.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/f2fs/file.c | 12 ++++--------
+ 1 file changed, 4 insertions(+), 8 deletions(-)
 
-I'm not sure I agree.  The problem is that you then have to grant someone
-Setattr permission for them to be able to do this, which then opens up a whole
-host of other things they can also do.
-
-> Requiring Setattr permission is appropriate because Setattr permission also
-> allows revoking (via keyctl_revoke()) or expiring (via keyctl_set_timeout())
-> the key, which also make the key inaccessible regardless of how many
-> keyrings it is in.
-
-Note that setting the expiry time is not really equivalent to revokation in
-this regard as setting the expiry time is something you do when setting up a
-key, whereas revokation is something you do later to kill a key off.
-
-> Alternatively, the problem could be solved by requiring Write permission.
-
-That's not really a viable solution as things stand.  You can't turn Write
-permission on on a key whose type doesn't have an ->update() method (though
-this could be changed) and it also opens up a key to being modified.
-
-How about another solution:
-
- (1) I add a flag to a key to say that it can be invalidated and a keyctl to
-     change that flag.
-
- (2) I add a new key type op called ->allow_invalidation() that allows key
-     types to govern separately who is allowed to invalidate keys of that
-     type.
-
-     So, for instance, DNS record invalidation would require CAP_NET_ADMIN.
-
- (3) Allow keyrings to be cleared by users who don't have Write permission but
-     do have other permission, such as CAP_NET_ADMIN.  This would need to be
-     granted on a per-keyring basis.
-
-David
+diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+index 8cef3931a00b..629bb91fa44e 100644
+--- a/fs/f2fs/file.c
++++ b/fs/f2fs/file.c
+@@ -714,6 +714,10 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
+ 	if (err)
+ 		return err;
+ 
++	err = fscrypt_prepare_setattr(dentry, attr);
++	if (err)
++		return err;
++
+ 	if (is_quota_modification(inode, attr)) {
+ 		err = dquot_initialize(inode);
+ 		if (err)
+@@ -729,14 +733,6 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
+ 	}
+ 
+ 	if (attr->ia_valid & ATTR_SIZE) {
+-		if (f2fs_encrypted_inode(inode)) {
+-			err = fscrypt_get_encryption_info(inode);
+-			if (err)
+-				return err;
+-			if (!fscrypt_has_encryption_key(inode))
+-				return -ENOKEY;
+-		}
+-
+ 		if (attr->ia_size <= i_size_read(inode)) {
+ 			down_write(&F2FS_I(inode)->i_mmap_sem);
+ 			truncate_setsize(inode, attr->ia_size);
+-- 
+2.14.1.821.g8fa685d3b7-goog
