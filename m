@@ -1,58 +1,48 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-pg0-f49.google.com ([74.125.83.49]:36230 "EHLO
-        mail-pg0-f49.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1752606AbdIHAMV (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 7 Sep 2017 20:12:21 -0400
-Received: by mail-pg0-f49.google.com with SMTP id m9so2116159pgd.3
-        for <linux-fscrypt@vger.kernel.org>; Thu, 07 Sep 2017 17:12:21 -0700 (PDT)
-From: Michael Halcrow <mhalcrow@google.com>
-Subject: [PATCH 0/3] fscrypto: Return -EXDEV for link, rename, and cross-rename between incompat contexts
-Date: Thu,  7 Sep 2017 17:12:01 -0700
-Message-Id: <20170908001204.18174-1-mhalcrow@google.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 24/25] ubifs: switch to fscrypt_prepare_lookup()
+Date: Wed, 20 Sep 2017 15:46:04 -0700
+Message-Id: <20170920224605.22030-25-ebiggers3@gmail.com>
+In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
+References: <20170920224605.22030-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, tytso@mit.edu, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Currently file systems support fscrypto will return -EPERM when the
-user attempts to link, rename, or cross-rename between two directories
-that have incompatible encryption policy contexts.  User space tools
-will fail the operation when receiving this errno.  With -EXDEV, user
-space tools will typically fall back to copy-and-delete instead.
+From: Eric Biggers <ebiggers@google.com>
 
-Our original motivation for returning -EPERM was to force users to try
-harder when doing these operations, hopefully making them think more
-carefully about whether what they're doing is secure.  One security
-concern is that when moving files between unencrypted locations into
-encrypted locations, the data in the unencrypted location will remain
-in the clear on the storage device until the freed blocks are
-overwritten at some arbitrary point in the future (if ever).  Moving
-files from encrypted locations into unencrypted locations is also
-(perhaps more obviously) problematic.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ubifs/dir.c | 17 +++--------------
+ 1 file changed, 3 insertions(+), 14 deletions(-)
 
-Whether making things fail will have the intended effect on users is
-up for debate.  Meanwhile I've had at least one person tell me their
-userspace tools are failing and that they would prefer seeing the same
-sort of behavior that they see when (for example) moving files from
-one project quota hierarchy to another (ext4 returns -EXDEV).
-
-Note that xfstests generic/398 will require an update with this
-change.
-
-Michael Halcrow (3):
-  ext4 crypto: Return -EXDEV for link, rename, and cross-rename between
-    incompat contexts
-  F2FS crypto: Return -EXDEV for link, rename, and cross-rename between
-    incompat contexts
-  UBIFS crypto: Return -EXDEV for link, rename, and cross-rename between
-    incompat contexts
-
- fs/ext4/namei.c | 6 +++---
- fs/f2fs/namei.c | 6 +++---
- fs/ubifs/dir.c  | 6 +++---
- 3 files changed, 9 insertions(+), 9 deletions(-)
-
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 7bf847d79b4a..a2ea4856e67b 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -220,20 +220,9 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
+ 
+ 	dbg_gen("'%pd' in dir ino %lu", dentry, dir->i_ino);
+ 
+-	if (ubifs_crypt_is_encrypted(dir)) {
+-		err = fscrypt_get_encryption_info(dir);
+-
+-		/*
+-		 * DCACHE_ENCRYPTED_WITH_KEY is set if the dentry is
+-		 * created while the directory was encrypted and we
+-		 * have access to the key.
+-		 */
+-		if (fscrypt_has_encryption_key(dir))
+-			fscrypt_set_encrypted_dentry(dentry);
+-		fscrypt_set_d_op(dentry);
+-		if (err && err != -ENOKEY)
+-			return ERR_PTR(err);
+-	}
++	err = fscrypt_prepare_lookup(dir, dentry, flags);
++	if (err)
++		return ERR_PTR(err);
+ 
+ 	err = fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
+ 	if (err)
 -- 
-2.14.1.581.gf28d330327-goog
-
+2.14.1.821.g8fa685d3b7-goog
