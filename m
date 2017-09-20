@@ -1,84 +1,48 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v8 18/20] crypto: qce: move to generic async completion
-Date: Tue,  5 Sep 2017 15:38:57 +0300
-Message-Id: <1504615144-29770-19-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
-References: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
-Cc: Ofir Drang <ofir.drang@arm.com>
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 19/25] f2fs: switch to fscrypt_prepare_lookup()
+Date: Wed, 20 Sep 2017 15:45:59 -0700
+Message-Id: <20170920224605.22030-20-ebiggers3@gmail.com>
+In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
+References: <20170920224605.22030-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The qce driver starts several async crypto ops and  waits for their
-completions. Move it over to generic code doing the same.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- drivers/crypto/qce/sha.c | 30 ++++--------------------------
- 1 file changed, 4 insertions(+), 26 deletions(-)
+ fs/f2fs/namei.c | 17 +++--------------
+ 1 file changed, 3 insertions(+), 14 deletions(-)
 
-diff --git a/drivers/crypto/qce/sha.c b/drivers/crypto/qce/sha.c
-index 47e114a..53227d7 100644
---- a/drivers/crypto/qce/sha.c
-+++ b/drivers/crypto/qce/sha.c
-@@ -349,28 +349,12 @@ static int qce_ahash_digest(struct ahash_request *req)
- 	return qce->async_req_enqueue(tmpl->qce, &req->base);
- }
+diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
+index 80bcf2185fd8..f4b99f1468d8 100644
+--- a/fs/f2fs/namei.c
++++ b/fs/f2fs/namei.c
+@@ -335,20 +335,9 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
+ 	int err = 0;
+ 	unsigned int root_ino = F2FS_ROOT_INO(F2FS_I_SB(dir));
  
--struct qce_ahash_result {
--	struct completion completion;
--	int error;
--};
+-	if (f2fs_encrypted_inode(dir)) {
+-		int res = fscrypt_get_encryption_info(dir);
 -
--static void qce_digest_complete(struct crypto_async_request *req, int error)
--{
--	struct qce_ahash_result *result = req->data;
--
--	if (error == -EINPROGRESS)
--		return;
--
--	result->error = error;
--	complete(&result->completion);
--}
--
- static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 				 unsigned int keylen)
- {
- 	unsigned int digestsize = crypto_ahash_digestsize(tfm);
- 	struct qce_sha_ctx *ctx = crypto_tfm_ctx(&tfm->base);
--	struct qce_ahash_result result;
-+	struct crypto_wait wait;
- 	struct ahash_request *req;
- 	struct scatterlist sg;
- 	unsigned int blocksize;
-@@ -405,9 +389,9 @@ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 		goto err_free_ahash;
- 	}
- 
--	init_completion(&result.completion);
-+	crypto_init_wait(&wait);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				   qce_digest_complete, &result);
-+				   crypto_req_done, &wait);
- 	crypto_ahash_clear_flags(ahash_tfm, ~0);
- 
- 	buf = kzalloc(keylen + QCE_MAX_ALIGN_SIZE, GFP_KERNEL);
-@@ -420,13 +404,7 @@ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 	sg_init_one(&sg, buf, keylen);
- 	ahash_request_set_crypt(req, &sg, ctx->authkey, keylen);
- 
--	ret = crypto_ahash_digest(req);
--	if (ret == -EINPROGRESS || ret == -EBUSY) {
--		ret = wait_for_completion_interruptible(&result.completion);
--		if (!ret)
--			ret = result.error;
+-		/*
+-		 * DCACHE_ENCRYPTED_WITH_KEY is set if the dentry is
+-		 * created while the directory was encrypted and we
+-		 * don't have access to the key.
+-		 */
+-		if (fscrypt_has_encryption_key(dir))
+-			fscrypt_set_encrypted_dentry(dentry);
+-		fscrypt_set_d_op(dentry);
+-		if (res && res != -ENOKEY)
+-			return ERR_PTR(res);
 -	}
--
-+	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
- 	if (ret)
- 		crypto_ahash_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
++	err = fscrypt_prepare_lookup(dir, dentry, flags);
++	if (err)
++		return ERR_PTR(err);
  
+ 	if (dentry->d_name.len > F2FS_NAME_LEN)
+ 		return ERR_PTR(-ENAMETOOLONG);
 -- 
-2.1.4
-
+2.14.1.821.g8fa685d3b7-goog
