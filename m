@@ -1,123 +1,107 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from foss.arm.com ([217.140.101.70]:40036 "EHLO foss.arm.com"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1752374AbdIEMoN (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Sep 2017 08:44:13 -0400
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v8 20/20] crypto: adapt api sample to use async. op wait
-Date: Tue,  5 Sep 2017 15:38:59 +0300
-Message-Id: <1504615144-29770-21-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
-References: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
-Cc: Ofir Drang <ofir.drang@arm.com>
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 07/25] fscrypt: new helper function - fscrypt_prepare_link()
+Date: Wed, 20 Sep 2017 15:45:47 -0700
+Message-Id: <20170920224605.22030-8-ebiggers3@gmail.com>
+In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
+References: <20170920224605.22030-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The code sample is waiting for an async. crypto op completion.
-Adapt sample to use the new generic infrastructure to do the same.
+From: Eric Biggers <ebiggers@google.com>
 
-This also fixes a possible data coruption bug created by the
-use of wait_for_completion_interruptible() without dealing
-correctly with an interrupt aborting the wait prior to the
-async op finishing.
+Introduce a helper function which prepares to link an inode into a
+possibly-encrypted directory.  It handles setting up the target
+directory's encryption key, then verifying that the link won't violate
+the constraint that all files in an encrypted directory tree use the
+same encryption policy.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- Documentation/crypto/api-samples.rst | 52 +++++++-----------------------------
- 1 file changed, 10 insertions(+), 42 deletions(-)
+ fs/crypto/hooks.c               | 15 +++++++++++++++
+ include/linux/fscrypt_notsupp.h |  9 +++++++++
+ include/linux/fscrypt_supp.h    | 29 +++++++++++++++++++++++++++++
+ 3 files changed, 53 insertions(+)
 
-diff --git a/Documentation/crypto/api-samples.rst b/Documentation/crypto/api-samples.rst
-index 2531948..006827e 100644
---- a/Documentation/crypto/api-samples.rst
-+++ b/Documentation/crypto/api-samples.rst
-@@ -7,59 +7,27 @@ Code Example For Symmetric Key Cipher Operation
- ::
- 
- 
--    struct tcrypt_result {
--        struct completion completion;
--        int err;
--    };
--
-     /* tie all data structures together */
-     struct skcipher_def {
-         struct scatterlist sg;
-         struct crypto_skcipher *tfm;
-         struct skcipher_request *req;
--        struct tcrypt_result result;
-+        struct crypto_wait wait;
-     };
- 
--    /* Callback function */
--    static void test_skcipher_cb(struct crypto_async_request *req, int error)
--    {
--        struct tcrypt_result *result = req->data;
--
--        if (error == -EINPROGRESS)
--            return;
--        result->err = error;
--        complete(&result->completion);
--        pr_info("Encryption finished successfully\n");
--    }
--
-     /* Perform cipher operation */
-     static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
-                          int enc)
-     {
--        int rc = 0;
-+        int rc;
- 
-         if (enc)
--            rc = crypto_skcipher_encrypt(sk->req);
-+            rc = crypto_wait_req(crypto_skcipher_encrypt(sk->req), &sk->wait);
-         else
--            rc = crypto_skcipher_decrypt(sk->req);
--
--        switch (rc) {
--        case 0:
--            break;
--        case -EINPROGRESS:
--        case -EBUSY:
--            rc = wait_for_completion_interruptible(
--                &sk->result.completion);
--            if (!rc && !sk->result.err) {
--                reinit_completion(&sk->result.completion);
--                break;
--            }
--        default:
--            pr_info("skcipher encrypt returned with %d result %d\n",
--                rc, sk->result.err);
--            break;
--        }
--        init_completion(&sk->result.completion);
-+            rc = crypto_wait_req(crypto_skcipher_decrypt(sk->req), &sk->wait);
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index 069088e91ea9..8b90217320dd 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -47,3 +47,18 @@ int fscrypt_file_open(struct inode *inode, struct file *filp)
+ 	return err;
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_file_open);
 +
-+	if (rc)
-+		pr_info("skcipher encrypt returned with result %d\n", rc);
++int __fscrypt_prepare_link(struct inode *inode, struct inode *dir)
++{
++	int err;
++
++	err = fscrypt_require_key(dir);
++	if (err)
++		return err;
++
++	if (!fscrypt_has_permitted_context(dir, inode))
++		return -EPERM;
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(__fscrypt_prepare_link);
+diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
+index 99e8ee6f2ce4..2cb400440be3 100644
+--- a/include/linux/fscrypt_notsupp.h
++++ b/include/linux/fscrypt_notsupp.h
+@@ -189,4 +189,13 @@ static inline int fscrypt_file_open(struct inode *inode, struct file *filp)
+ 	return 0;
+ }
  
-         return rc;
-     }
-@@ -89,8 +57,8 @@ Code Example For Symmetric Key Cipher Operation
-         }
++static inline int fscrypt_prepare_link(struct dentry *old_dentry,
++				       struct inode *dir,
++				       struct dentry *dentry)
++{
++	if (IS_ENCRYPTED(dir))
++		return -EOPNOTSUPP;
++	return 0;
++}
++
+ #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
+diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
+index 521f15adf83c..ebc0cc41aaf9 100644
+--- a/include/linux/fscrypt_supp.h
++++ b/include/linux/fscrypt_supp.h
+@@ -172,4 +172,33 @@ static inline int fscrypt_require_key(struct inode *inode)
  
-         skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--                          test_skcipher_cb,
--                          &sk.result);
-+                          crypto_req_done,
-+                          &sk.wait);
+ extern int fscrypt_file_open(struct inode *inode, struct file *filp);
  
-         /* AES 256 with random key */
-         get_random_bytes(&key, 32);
-@@ -122,7 +90,7 @@ Code Example For Symmetric Key Cipher Operation
-         /* We encrypt one block */
-         sg_init_one(&sk.sg, scratchpad, 16);
-         skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
--        init_completion(&sk.result.completion);
-+        crypto_init_wait(&sk.wait);
- 
-         /* encrypt data */
-         ret = test_skcipher_encdec(&sk, 1);
++extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir);
++
++/**
++ * fscrypt_prepare_link - prepare to link an inode into a possibly-encrypted directory
++ * @old_dentry: an existing dentry for the inode being linked
++ * @dir: the target directory
++ * @dentry: negative dentry for the target filename
++ *
++ * A new link can only be added to an encrypted directory if the directory's
++ * encryption key is available --- since otherwise we'd have no way to encrypt
++ * the filename.  Therefore, we first set up the directory's encryption key (if
++ * not already done) and return an error if it's unavailable.
++ *
++ * We also verify that the link will not violate the constraint that all files
++ * in an encrypted directory tree use the same encryption policy.
++ *
++ * Return: 0 on success, -ENOKEY if the directory's encryption key is missing,
++ * -EPERM if the link would result in an inconsistent encryption policy, or
++ * another -errno code.
++ */
++static inline int fscrypt_prepare_link(struct dentry *old_dentry,
++				       struct inode *dir,
++				       struct dentry *dentry)
++{
++	if (IS_ENCRYPTED(dir))
++		return __fscrypt_prepare_link(d_inode(old_dentry), dir);
++	return 0;
++}
++
+ #endif	/* _LINUX_FSCRYPT_SUPP_H */
 -- 
-2.1.4
-
+2.14.1.821.g8fa685d3b7-goog
