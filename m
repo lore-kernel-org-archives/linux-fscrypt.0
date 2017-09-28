@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 1/7] KEYS: encrypted: fix dereference of NULL user_key_payload
-Date: Thu, 28 Sep 2017 14:25:56 -0700
-Message-Id: <20170928212602.41744-2-ebiggers3@gmail.com>
+Subject: [PATCH 3/7] lib/digsig: fix dereference of NULL user_key_payload
+Date: Thu, 28 Sep 2017 14:25:58 -0700
+Message-Id: <20170928212602.41744-4-ebiggers3@gmail.com>
 In-Reply-To: <20170928212602.41744-1-ebiggers3@gmail.com>
 References: <20170928212602.41744-1-ebiggers3@gmail.com>
 To: keyrings@vger.kernel.org
@@ -11,43 +11,37 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-A key of type "encrypted" references a "master key" which is used to
-encrypt and decrypt the encrypted key's payload.  However, when we
-accessed the master key's payload, we failed to handle the case where
-the master key has been revoked, which sets the payload pointer to NULL.
-Note that request_key() *does* skip revoked keys, but there is still a
+digsig_verify() requests a user key, then accesses its payload.
+However, a revoked key has a NULL payload, and we failed to check for
+this.  request_key() *does* skip revoked keys, but there is still a
 window where the key can be revoked before we acquire its semaphore.
 
 Fix it by checking for a NULL payload, treating it like a key which was
 already revoked at the time it was requested.
 
-This was an issue for master keys of type "user" only.  Master keys can
-also be of type "trusted", but those cannot be revoked.
-
-Fixes: 7e70cb497850 ("keys: add new key-type encrypted")
-Cc: <stable@vger.kernel.org>    [v2.6.38+]
+Fixes: 051dbb918c7f ("crypto: digital signature verification support")
+Cc: <stable@vger.kernel.org>    [v3.3+]
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- security/keys/encrypted-keys/encrypted.c | 7 +++++++
- 1 file changed, 7 insertions(+)
+ lib/digsig.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
-diff --git a/security/keys/encrypted-keys/encrypted.c b/security/keys/encrypted-keys/encrypted.c
-index f54b92868bc3..d92cbf9687c3 100644
---- a/security/keys/encrypted-keys/encrypted.c
-+++ b/security/keys/encrypted-keys/encrypted.c
-@@ -309,6 +309,13 @@ static struct key *request_user_key(const char *master_desc, const u8 **master_k
+diff --git a/lib/digsig.c b/lib/digsig.c
+index 03d7c63837ae..6ba6fcd92dd1 100644
+--- a/lib/digsig.c
++++ b/lib/digsig.c
+@@ -87,6 +87,12 @@ static int digsig_verify_rsa(struct key *key,
+ 	down_read(&key->sem);
+ 	ukp = user_key_payload_locked(key);
  
- 	down_read(&ukey->sem);
- 	upayload = user_key_payload_locked(ukey);
-+	if (!upayload) {
++	if (!ukp) {
 +		/* key was revoked before we acquired its semaphore */
-+		up_read(&ukey->sem);
-+		key_put(ukey);
-+		ukey = ERR_PTR(-EKEYREVOKED);
-+		goto error;
++		err = -EKEYREVOKED;
++		goto err1;
 +	}
- 	*master_key = upayload->data;
- 	*master_keylen = upayload->datalen;
- error:
++
+ 	if (ukp->datalen < sizeof(*pkh))
+ 		goto err1;
+ 
 -- 
 2.14.2.822.g60be5d43e6-goog
