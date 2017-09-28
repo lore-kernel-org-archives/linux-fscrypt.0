@@ -1,50 +1,111 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 20/25] f2fs: switch to fscrypt_prepare_setattr()
-Date: Wed, 20 Sep 2017 15:46:00 -0700
-Message-Id: <20170920224605.22030-21-ebiggers3@gmail.com>
-In-Reply-To: <20170920224605.22030-1-ebiggers3@gmail.com>
-References: <20170920224605.22030-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH 5/7] ecryptfs: fix dereference of NULL user_key_payload
+Date: Thu, 28 Sep 2017 14:26:00 -0700
+Message-Id: <20170928212602.41744-6-ebiggers3@gmail.com>
+In-Reply-To: <20170928212602.41744-1-ebiggers3@gmail.com>
+References: <20170928212602.41744-1-ebiggers3@gmail.com>
+To: keyrings@vger.kernel.org
+Cc: David Howells <dhowells@redhat.com>, Michael Halcrow <mhalcrow@google.com>, linux-cachefs@redhat.com, ecryptfs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-security-module@vger.kernel.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
+In eCryptfs, we failed to verify that the authentication token keys are
+not revoked before dereferencing their payloads, which is problematic
+because the payload of a revoked key is NULL.  request_key() *does* skip
+revoked keys, but there is still a window where the key can be revoked
+before we acquire the key semaphore.
+
+Fix it by updating ecryptfs_get_key_payload_data() to return
+-EKEYREVOKED if the key payload is NULL.  For completeness we check this
+for "encrypted" keys as well as "user" keys, although encrypted keys
+cannot be revoked currently.
+
+Alternatively we could use key_validate(), but since we'll also need to
+fix ecryptfs_get_key_payload_data() to validate the payload length, it
+seems appropriate to just check the payload pointer.
+
+Fixes: 237fead61998 ("[PATCH] ecryptfs: fs/Makefile and fs/Kconfig")
+Cc: <stable@vger.kernel.org>    [v2.6.19+]
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/f2fs/file.c | 12 ++++--------
- 1 file changed, 4 insertions(+), 8 deletions(-)
+ fs/ecryptfs/ecryptfs_kernel.h | 24 +++++++++++++++++-------
+ fs/ecryptfs/keystore.c        |  9 ++++++++-
+ 2 files changed, 25 insertions(+), 8 deletions(-)
 
-diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
-index 8cef3931a00b..629bb91fa44e 100644
---- a/fs/f2fs/file.c
-+++ b/fs/f2fs/file.c
-@@ -714,6 +714,10 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
- 	if (err)
- 		return err;
- 
-+	err = fscrypt_prepare_setattr(dentry, attr);
-+	if (err)
-+		return err;
+diff --git a/fs/ecryptfs/ecryptfs_kernel.h b/fs/ecryptfs/ecryptfs_kernel.h
+index 9c351bf757b2..3fbc0ff79699 100644
+--- a/fs/ecryptfs/ecryptfs_kernel.h
++++ b/fs/ecryptfs/ecryptfs_kernel.h
+@@ -84,11 +84,16 @@ struct ecryptfs_page_crypt_context {
+ static inline struct ecryptfs_auth_tok *
+ ecryptfs_get_encrypted_key_payload_data(struct key *key)
+ {
+-	if (key->type == &key_type_encrypted)
+-		return (struct ecryptfs_auth_tok *)
+-			(&((struct encrypted_key_payload *)key->payload.data[0])->payload_data);
+-	else
++	struct encrypted_key_payload *payload;
 +
- 	if (is_quota_modification(inode, attr)) {
- 		err = dquot_initialize(inode);
- 		if (err)
-@@ -729,14 +733,6 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
- 	}
++	if (key->type != &key_type_encrypted)
+ 		return NULL;
++
++	payload = key->payload.data[0];
++	if (!payload)
++		return ERR_PTR(-EKEYREVOKED);
++
++	return (struct ecryptfs_auth_tok *)payload->payload_data;
+ }
  
- 	if (attr->ia_valid & ATTR_SIZE) {
--		if (f2fs_encrypted_inode(inode)) {
--			err = fscrypt_get_encryption_info(inode);
--			if (err)
--				return err;
--			if (!fscrypt_has_encryption_key(inode))
--				return -ENOKEY;
--		}
--
- 		if (attr->ia_size <= i_size_read(inode)) {
- 			down_write(&F2FS_I(inode)->i_mmap_sem);
- 			truncate_setsize(inode, attr->ia_size);
+ static inline struct key *ecryptfs_get_encrypted_key(char *sig)
+@@ -114,12 +119,17 @@ static inline struct ecryptfs_auth_tok *
+ ecryptfs_get_key_payload_data(struct key *key)
+ {
+ 	struct ecryptfs_auth_tok *auth_tok;
++	struct user_key_payload *ukp;
+ 
+ 	auth_tok = ecryptfs_get_encrypted_key_payload_data(key);
+-	if (!auth_tok)
+-		return (struct ecryptfs_auth_tok *)user_key_payload_locked(key)->data;
+-	else
++	if (auth_tok)
+ 		return auth_tok;
++
++	ukp = user_key_payload_locked(key);
++	if (!ukp)
++		return ERR_PTR(-EKEYREVOKED);
++
++	return (struct ecryptfs_auth_tok *)ukp->data;
+ }
+ 
+ #define ECRYPTFS_MAX_KEYSET_SIZE 1024
+diff --git a/fs/ecryptfs/keystore.c b/fs/ecryptfs/keystore.c
+index 3cf1546dca82..fa218cd64f74 100644
+--- a/fs/ecryptfs/keystore.c
++++ b/fs/ecryptfs/keystore.c
+@@ -459,7 +459,8 @@ static int ecryptfs_verify_version(u16 version)
+  * @auth_tok_key: key containing the authentication token
+  * @auth_tok: authentication token
+  *
+- * Returns zero on valid auth tok; -EINVAL otherwise
++ * Returns zero on valid auth tok; -EINVAL if the payload is invalid; or
++ * -EKEYREVOKED if the key was revoked before we acquired its semaphore.
+  */
+ static int
+ ecryptfs_verify_auth_tok_from_key(struct key *auth_tok_key,
+@@ -468,6 +469,12 @@ ecryptfs_verify_auth_tok_from_key(struct key *auth_tok_key,
+ 	int rc = 0;
+ 
+ 	(*auth_tok) = ecryptfs_get_key_payload_data(auth_tok_key);
++	if (IS_ERR(*auth_tok)) {
++		rc = PTR_ERR(*auth_tok);
++		*auth_tok = NULL;
++		goto out;
++	}
++
+ 	if (ecryptfs_verify_version((*auth_tok)->version)) {
+ 		printk(KERN_ERR "Data structure version mismatch. Userspace "
+ 		       "tools must match eCryptfs kernel module with major "
 -- 
-2.14.1.821.g8fa685d3b7-goog
+2.14.2.822.g60be5d43e6-goog
