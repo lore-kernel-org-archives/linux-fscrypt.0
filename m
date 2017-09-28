@@ -1,92 +1,66 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v8 17/20] crypto: talitos: move to generic async completion
-Date: Tue,  5 Sep 2017 15:38:56 +0300
-Message-Id: <1504615144-29770-18-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
-References: <1504615144-29770-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Shaohua Li <shli@kernel.org>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-raid@vger.kernel.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
-Cc: Ofir Drang <ofir.drang@arm.com>
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 6/7] ecryptfs: fix out-of-bounds read of key payload
+Date: Thu, 28 Sep 2017 14:26:01 -0700
+Message-Id: <20170928212602.41744-7-ebiggers3@gmail.com>
+In-Reply-To: <20170928212602.41744-1-ebiggers3@gmail.com>
+References: <20170928212602.41744-1-ebiggers3@gmail.com>
+To: keyrings@vger.kernel.org
+Cc: David Howells <dhowells@redhat.com>, Michael Halcrow <mhalcrow@google.com>, linux-cachefs@redhat.com, ecryptfs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-security-module@vger.kernel.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The talitos driver starts several async crypto ops and  waits for their
-completions. Move it over to generic code doing the same.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+eCryptfs blindly casts the user-supplied key payload to a
+'struct ecryptfs_auth_tok' without validating that the payload does, in
+fact, have the size of a 'struct ecryptfs_auth_tok'.  Fix it.
+
+Fixes: 237fead61998 ("[PATCH] ecryptfs: fs/Makefile and fs/Kconfig")
+Cc: <stable@vger.kernel.org>    [v2.6.19+]
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- drivers/crypto/talitos.c | 38 +++++---------------------------------
- 1 file changed, 5 insertions(+), 33 deletions(-)
+ fs/ecryptfs/ecryptfs_kernel.h | 6 ++++++
+ fs/ecryptfs/keystore.c        | 4 ++++
+ 2 files changed, 10 insertions(+)
 
-diff --git a/drivers/crypto/talitos.c b/drivers/crypto/talitos.c
-index 79791c6..194a307 100644
---- a/drivers/crypto/talitos.c
-+++ b/drivers/crypto/talitos.c
-@@ -2037,22 +2037,6 @@ static int ahash_import(struct ahash_request *areq, const void *in)
- 	return 0;
+diff --git a/fs/ecryptfs/ecryptfs_kernel.h b/fs/ecryptfs/ecryptfs_kernel.h
+index 3fbc0ff79699..945844d5f0ef 100644
+--- a/fs/ecryptfs/ecryptfs_kernel.h
++++ b/fs/ecryptfs/ecryptfs_kernel.h
+@@ -93,6 +93,9 @@ ecryptfs_get_encrypted_key_payload_data(struct key *key)
+ 	if (!payload)
+ 		return ERR_PTR(-EKEYREVOKED);
+ 
++	if (payload->payload_datalen != sizeof(struct ecryptfs_auth_tok))
++		return ERR_PTR(-EINVAL);
++
+ 	return (struct ecryptfs_auth_tok *)payload->payload_data;
  }
  
--struct keyhash_result {
--	struct completion completion;
--	int err;
--};
--
--static void keyhash_complete(struct crypto_async_request *req, int err)
--{
--	struct keyhash_result *res = req->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	res->err = err;
--	complete(&res->completion);
--}
--
- static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
- 		   u8 *hash)
- {
-@@ -2060,10 +2044,10 @@ static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
+@@ -129,6 +132,9 @@ ecryptfs_get_key_payload_data(struct key *key)
+ 	if (!ukp)
+ 		return ERR_PTR(-EKEYREVOKED);
  
- 	struct scatterlist sg[1];
- 	struct ahash_request *req;
--	struct keyhash_result hresult;
-+	struct crypto_wait wait;
- 	int ret;
- 
--	init_completion(&hresult.completion);
-+	crypto_init_wait(&wait);
- 
- 	req = ahash_request_alloc(tfm, GFP_KERNEL);
- 	if (!req)
-@@ -2072,25 +2056,13 @@ static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
- 	/* Keep tfm keylen == 0 during hash of the long key */
- 	ctx->keylen = 0;
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				   keyhash_complete, &hresult);
-+				   crypto_req_done, &wait);
- 
- 	sg_init_one(&sg[0], key, keylen);
- 
- 	ahash_request_set_crypt(req, sg, hash, keylen);
--	ret = crypto_ahash_digest(req);
--	switch (ret) {
--	case 0:
--		break;
--	case -EINPROGRESS:
--	case -EBUSY:
--		ret = wait_for_completion_interruptible(
--			&hresult.completion);
--		if (!ret)
--			ret = hresult.err;
--		break;
--	default:
--		break;
--	}
-+	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
++	if (ukp->datalen != sizeof(struct ecryptfs_auth_tok))
++		return ERR_PTR(-EINVAL);
 +
- 	ahash_request_free(req);
+ 	return (struct ecryptfs_auth_tok *)ukp->data;
+ }
  
- 	return ret;
+diff --git a/fs/ecryptfs/keystore.c b/fs/ecryptfs/keystore.c
+index fa218cd64f74..95e20ab67df3 100644
+--- a/fs/ecryptfs/keystore.c
++++ b/fs/ecryptfs/keystore.c
+@@ -471,6 +471,10 @@ ecryptfs_verify_auth_tok_from_key(struct key *auth_tok_key,
+ 	(*auth_tok) = ecryptfs_get_key_payload_data(auth_tok_key);
+ 	if (IS_ERR(*auth_tok)) {
+ 		rc = PTR_ERR(*auth_tok);
++		if (rc == -EINVAL) {
++			ecryptfs_printk(KERN_ERR,
++					"Authentication token payload has wrong length\n");
++		}
+ 		*auth_tok = NULL;
+ 		goto out;
+ 	}
 -- 
-2.1.4
-
+2.14.2.822.g60be5d43e6-goog
