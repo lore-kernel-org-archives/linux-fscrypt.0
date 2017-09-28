@@ -1,60 +1,44 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-pg0-f41.google.com ([74.125.83.41]:38217 "EHLO
-        mail-pg0-f41.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1752663AbdIHAMf (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 7 Sep 2017 20:12:35 -0400
-Received: by mail-pg0-f41.google.com with SMTP id v66so2086896pgb.5
-        for <linux-fscrypt@vger.kernel.org>; Thu, 07 Sep 2017 17:12:35 -0700 (PDT)
-From: Michael Halcrow <mhalcrow@google.com>
-Subject: [PATCH 2/3] F2FS crypto: Return -EXDEV for link, rename, and cross-rename between incompat contexts
-Date: Thu,  7 Sep 2017 17:12:03 -0700
-Message-Id: <20170908001204.18174-3-mhalcrow@google.com>
-In-Reply-To: <20170908001204.18174-1-mhalcrow@google.com>
-References: <20170908001204.18174-1-mhalcrow@google.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, tytso@mit.edu, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 0/7] Fix dereferencing payload of revoked keys
+Date: Thu, 28 Sep 2017 14:25:55 -0700
+Message-Id: <20170928212602.41744-1-ebiggers3@gmail.com>
+To: keyrings@vger.kernel.org
+Cc: David Howells <dhowells@redhat.com>, Michael Halcrow <mhalcrow@google.com>, linux-cachefs@redhat.com, ecryptfs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-security-module@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Gives user space the opportunity to fall back to copy-and-delete.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Michael Halcrow <mhalcrow@google.com>
----
- fs/f2fs/namei.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+This series fixes the various users of the keyrings service that access
+a "user" or "logon" key's payload without first checking whether the
+payload pointer is NULL, or calling key_validate() while holding the key
+semaphore.  Without one of these two checks, a NULL pointer dereference
+will occur if the key has been revoked concurrently.  Usually this is
+pretty easy to reproduce (in most of the cases even as an unprivileged
+user), although it may be unlikely to happen by accident.
 
-diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
-index 760d85223c81..689c671cf8b8 100644
---- a/fs/f2fs/namei.c
-+++ b/fs/f2fs/namei.c
-@@ -202,7 +202,7 @@ static int f2fs_link(struct dentry *old_dentry, struct inode *dir,
- 
- 	if (f2fs_encrypted_inode(dir) &&
- 			!fscrypt_has_permitted_context(dir, inode))
--		return -EPERM;
-+		return -EXDEV;
- 
- 	err = dquot_initialize(dir);
- 	if (err)
-@@ -720,7 +720,7 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
- 
- 	if ((old_dir != new_dir) && f2fs_encrypted_inode(new_dir) &&
- 			!fscrypt_has_permitted_context(new_dir, old_inode)) {
--		err = -EPERM;
-+		err = -EXDEV;
- 		goto out;
- 	}
- 
-@@ -910,7 +910,7 @@ static int f2fs_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
- 			(old_dir != new_dir) &&
- 			(!fscrypt_has_permitted_context(new_dir, old_inode) ||
- 			 !fscrypt_has_permitted_context(old_dir, new_inode)))
--		return -EPERM;
-+		return -EXDEV;
- 
- 	err = dquot_initialize(old_dir);
- 	if (err)
+Patch 6 also fixes the lack of key length validation in ecryptfs.
+
+These fixes probably will need to be split up between a few different
+maintainers, but initially I'm sending the full series so that people
+can see the full context of the fixes.
+
+Eric Biggers (7):
+  KEYS: encrypted: fix dereference of NULL user_key_payload
+  FS-Cache: fix dereference of NULL user_key_payload
+  lib/digsig: fix dereference of NULL user_key_payload
+  fscrypt: fix dereference of NULL user_key_payload
+  ecryptfs: fix dereference of NULL user_key_payload
+  ecryptfs: fix out-of-bounds read of key payload
+  ecryptfs: move key payload accessor functions into keystore.c
+
+ fs/crypto/keyinfo.c                      |  5 +++
+ fs/ecryptfs/ecryptfs_kernel.h            | 44 -------------------
+ fs/ecryptfs/keystore.c                   | 73 +++++++++++++++++++++++++++++++-
+ fs/fscache/object-list.c                 |  7 +++
+ lib/digsig.c                             |  6 +++
+ security/keys/encrypted-keys/encrypted.c |  7 +++
+ 6 files changed, 97 insertions(+), 45 deletions(-)
+
 -- 
-2.14.1.581.gf28d330327-goog
-
+2.14.2.822.g60be5d43e6-goog
