@@ -1,60 +1,47 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-pg0-f47.google.com ([74.125.83.47]:34016 "EHLO
-        mail-pg0-f47.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1753055AbdIHAMi (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 7 Sep 2017 20:12:38 -0400
-Received: by mail-pg0-f47.google.com with SMTP id q68so2123125pgq.1
-        for <linux-fscrypt@vger.kernel.org>; Thu, 07 Sep 2017 17:12:38 -0700 (PDT)
-From: Michael Halcrow <mhalcrow@google.com>
-Subject: [PATCH 3/3] UBIFS crypto: Return -EXDEV for link, rename, and cross-rename between incompat contexts
-Date: Thu,  7 Sep 2017 17:12:04 -0700
-Message-Id: <20170908001204.18174-4-mhalcrow@google.com>
-In-Reply-To: <20170908001204.18174-1-mhalcrow@google.com>
-References: <20170908001204.18174-1-mhalcrow@google.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, tytso@mit.edu, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 4/7] fscrypt: fix dereference of NULL user_key_payload
+Date: Thu, 28 Sep 2017 14:25:59 -0700
+Message-Id: <20170928212602.41744-5-ebiggers3@gmail.com>
+In-Reply-To: <20170928212602.41744-1-ebiggers3@gmail.com>
+References: <20170928212602.41744-1-ebiggers3@gmail.com>
+To: keyrings@vger.kernel.org
+Cc: David Howells <dhowells@redhat.com>, Michael Halcrow <mhalcrow@google.com>, linux-cachefs@redhat.com, ecryptfs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-security-module@vger.kernel.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Gives user space the opportunity to fall back to copy-and-delete.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Michael Halcrow <mhalcrow@google.com>
+When an fscrypt-encrypted file is opened, we request the file's master
+key from the keyrings service as a logon key, then access its payload.
+However, a revoked key has a NULL payload, and we failed to check for
+this.  request_key() *does* skip revoked keys, but there is still a
+window where the key can be revoked before we acquire its semaphore.
+
+Fix it by checking for a NULL payload, treating it like a key which was
+already revoked at the time it was requested.
+
+Fixes: 88bd6ccdcdd6 ("ext4 crypto: add encryption key management facilities")
+Cc: <stable@vger.kernel.org>    [v4.1+]
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ubifs/dir.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ fs/crypto/keyinfo.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index 417fe0b29f23..6c5753a2f79f 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -745,7 +745,7 @@ static int ubifs_link(struct dentry *old_dentry, struct inode *dir,
- 
- 	if (ubifs_crypt_is_encrypted(dir) &&
- 	    !fscrypt_has_permitted_context(dir, inode))
--		return -EPERM;
-+		return -EXDEV;
- 
- 	err = fscrypt_setup_filename(dir, &dentry->d_name, 0, &nm);
- 	if (err)
-@@ -1356,7 +1356,7 @@ static int do_rename(struct inode *old_dir, struct dentry *old_dentry,
- 	if (old_dir != new_dir) {
- 		if (ubifs_crypt_is_encrypted(new_dir) &&
- 		    !fscrypt_has_permitted_context(new_dir, old_inode))
--			return -EPERM;
-+			return -EXDEV;
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 018c588c7ac3..8e704d12a1cf 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -109,6 +109,11 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
+ 		goto out;
  	}
- 
- 	if (unlink && is_dir) {
-@@ -1578,7 +1578,7 @@ static int ubifs_xrename(struct inode *old_dir, struct dentry *old_dentry,
- 	    (old_dir != new_dir) &&
- 	    (!fscrypt_has_permitted_context(new_dir, fst_inode) ||
- 	     !fscrypt_has_permitted_context(old_dir, snd_inode)))
--		return -EPERM;
-+		return -EXDEV;
- 
- 	err = fscrypt_setup_filename(old_dir, &old_dentry->d_name, 0, &fst_nm);
- 	if (err)
+ 	ukp = user_key_payload_locked(keyring_key);
++	if (!ukp) {
++		/* key was revoked before we acquired its semaphore */
++		res = -EKEYREVOKED;
++		goto out;
++	}
+ 	if (ukp->datalen != sizeof(struct fscrypt_key)) {
+ 		res = -EINVAL;
+ 		goto out;
 -- 
-2.14.1.581.gf28d330327-goog
-
+2.14.2.822.g60be5d43e6-goog
