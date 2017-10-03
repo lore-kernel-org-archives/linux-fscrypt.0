@@ -1,93 +1,40 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v10 17/20] crypto: talitos: move to generic async completion
-Date: Wed, 18 Oct 2017 08:00:49 +0100
-Message-Id: <1508310057-25369-18-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <jmorris@namei.org>
+Date: Tue, 3 Oct 2017 22:05:05 +1100 (AEDT)
+From: James Morris <jmorris@namei.org>
+Subject: Re: [PATCH 7/7] ecryptfs: move key payload accessor functions into
+ keystore.c
+In-Reply-To: <20170928212602.41744-8-ebiggers3@gmail.com>
+Message-ID: <alpine.LRH.2.21.1710032204010.25033@namei.org>
+References: <20170928212602.41744-1-ebiggers3@gmail.com> <20170928212602.41744-8-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: keyrings@vger.kernel.org, David Howells <dhowells@redhat.com>, Michael Halcrow <mhalcrow@google.com>, linux-cachefs@redhat.com, ecryptfs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-security-module@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The talitos driver starts several async crypto ops and  waits for their
-completions. Move it over to generic code doing the same.
+On Thu, 28 Sep 2017, Eric Biggers wrote:
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-Tested-by: Christophe Leroy <christophe.leroy@c-s.fr>
----
- drivers/crypto/talitos.c | 38 +++++---------------------------------
- 1 file changed, 5 insertions(+), 33 deletions(-)
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> As experience has shown, accessing the 'struct key' payload is very
+> error-prone, since we need to hold the key semaphore and properly
+> validate everything.  Fortunately eCryptfs only does it from one place,
+> in ecryptfs_verify_auth_tok_from_key() in keystore.c.  Therefore, move
+> the payload accessor functions like ecryptfs_get_key_payload_data() out
+> of ecryptfs_kernel.h and into keystore.c so that people might be less
+> tempted to use them directly.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/ecryptfs/ecryptfs_kernel.h | 60 -------------------------------------------
+>  fs/ecryptfs/keystore.c        | 60 +++++++++++++++++++++++++++++++++++++++++++
+>  2 files changed, 60 insertions(+), 60 deletions(-)
 
-diff --git a/drivers/crypto/talitos.c b/drivers/crypto/talitos.c
-index 5bd8191..9c80e0c 100644
---- a/drivers/crypto/talitos.c
-+++ b/drivers/crypto/talitos.c
-@@ -2160,22 +2160,6 @@ static int ahash_import(struct ahash_request *areq, const void *in)
- 	return 0;
- }
- 
--struct keyhash_result {
--	struct completion completion;
--	int err;
--};
--
--static void keyhash_complete(struct crypto_async_request *req, int err)
--{
--	struct keyhash_result *res = req->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	res->err = err;
--	complete(&res->completion);
--}
--
- static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
- 		   u8 *hash)
- {
-@@ -2183,10 +2167,10 @@ static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
- 
- 	struct scatterlist sg[1];
- 	struct ahash_request *req;
--	struct keyhash_result hresult;
-+	struct crypto_wait wait;
- 	int ret;
- 
--	init_completion(&hresult.completion);
-+	crypto_init_wait(&wait);
- 
- 	req = ahash_request_alloc(tfm, GFP_KERNEL);
- 	if (!req)
-@@ -2195,25 +2179,13 @@ static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
- 	/* Keep tfm keylen == 0 during hash of the long key */
- 	ctx->keylen = 0;
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				   keyhash_complete, &hresult);
-+				   crypto_req_done, &wait);
- 
- 	sg_init_one(&sg[0], key, keylen);
- 
- 	ahash_request_set_crypt(req, sg, hash, keylen);
--	ret = crypto_ahash_digest(req);
--	switch (ret) {
--	case 0:
--		break;
--	case -EINPROGRESS:
--	case -EBUSY:
--		ret = wait_for_completion_interruptible(
--			&hresult.completion);
--		if (!ret)
--			ret = hresult.err;
--		break;
--	default:
--		break;
--	}
-+	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
-+
- 	ahash_request_free(req);
- 
- 	return ret;
+Ok, I should have started at this patch :)
+
+Reviewed-by: James Morris <james.l.morris@oracle.com>
+
+
 -- 
-2.7.4
-
+James Morris
+<jmorris@namei.org>
