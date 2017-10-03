@@ -1,47 +1,44 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [RFC PATCH 13/25] f2fs crypto: wire up new ioctls for managing encryption keys
-Date: Mon, 23 Oct 2017 14:40:46 -0700
-Message-Id: <20171023214058.128121-14-ebiggers3@gmail.com>
-In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
-References: <20171023214058.128121-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Return-Path: <jmorris@namei.org>
+Date: Tue, 3 Oct 2017 22:01:21 +1100 (AEDT)
+From: James Morris <jmorris@namei.org>
+Subject: Re: [PATCH 5/7] ecryptfs: fix dereference of NULL user_key_payload
+In-Reply-To: <20170928212602.41744-6-ebiggers3@gmail.com>
+Message-ID: <alpine.LRH.2.21.1710032158230.25033@namei.org>
+References: <20170928212602.41744-1-ebiggers3@gmail.com> <20170928212602.41744-6-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: keyrings@vger.kernel.org, David Howells <dhowells@redhat.com>, Michael Halcrow <mhalcrow@google.com>, linux-cachefs@redhat.com, ecryptfs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-security-module@vger.kernel.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Thu, 28 Sep 2017, Eric Biggers wrote:
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/f2fs/file.c | 9 +++++++++
- 1 file changed, 9 insertions(+)
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> In eCryptfs, we failed to verify that the authentication token keys are
+> not revoked before dereferencing their payloads, which is problematic
+> because the payload of a revoked key is NULL.  request_key() *does* skip
+> revoked keys, but there is still a window where the key can be revoked
+> before we acquire the key semaphore.
+> 
+> Fix it by updating ecryptfs_get_key_payload_data() to return
+> -EKEYREVOKED if the key payload is NULL.  For completeness we check this
+> for "encrypted" keys as well as "user" keys, although encrypted keys
+> cannot be revoked currently.
+> 
+> Alternatively we could use key_validate(), but since we'll also need to
+> fix ecryptfs_get_key_payload_data() to validate the payload length, it
+> seems appropriate to just check the payload pointer.
+> 
+> Fixes: 237fead61998 ("[PATCH] ecryptfs: fs/Makefile and fs/Kconfig")
+> Cc: <stable@vger.kernel.org>    [v2.6.19+]
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
-index 517e112c8a9a..0296a9594fe7 100644
---- a/fs/f2fs/file.c
-+++ b/fs/f2fs/file.c
-@@ -2651,6 +2651,12 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
- 		return f2fs_ioc_get_encryption_policy(filp, arg);
- 	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
- 		return f2fs_ioc_get_encryption_pwsalt(filp, arg);
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_add_key(filp, (void __user *)arg);
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_remove_key(filp, (const void __user *)arg);
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-+		return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
- 	case F2FS_IOC_GARBAGE_COLLECT:
- 		return f2fs_ioc_gc(filp, arg);
- 	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
-@@ -2731,6 +2737,9 @@ long f2fs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- 	case F2FS_IOC_SET_ENCRYPTION_POLICY:
- 	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
- 	case F2FS_IOC_GET_ENCRYPTION_POLICY:
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
- 	case F2FS_IOC_GARBAGE_COLLECT:
- 	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
- 	case F2FS_IOC_WRITE_CHECKPOINT:
+(A further cleanup might add some inline accessor functions for key data, 
+but it's not necessary now).
+
+Reviewed-by: James Morris <james.l.morris@oracle.com>
+
 -- 
-2.15.0.rc0.271.g36b669edcc-goog
+James Morris
+<jmorris@namei.org>
