@@ -1,41 +1,38 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Mon, 9 Oct 2017 13:33:33 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH v3] fscrypt: add a documentation file for
- filesystem-level encryption
-Message-ID: <20171009203333.GC67463@gmail.com>
-References: <20170909001512.72431-1-ebiggers3@gmail.com>
+Return-Path: <jmorris@namei.org>
+Date: Tue, 3 Oct 2017 21:51:35 +1100 (AEDT)
+From: James Morris <jmorris@namei.org>
+Subject: Re: [PATCH 2/7] FS-Cache: fix dereference of NULL user_key_payload
+In-Reply-To: <20170928212602.41744-3-ebiggers3@gmail.com>
+Message-ID: <alpine.LRH.2.21.1710032151220.25033@namei.org>
+References: <20170928212602.41744-1-ebiggers3@gmail.com> <20170928212602.41744-3-ebiggers3@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170909001512.72431-1-ebiggers3@gmail.com>
-To: Theodore Ts'o <tytso@mit.edu>, linux-fscrypt@vger.kernel.org
-Cc: linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Content-Type: text/plain; charset=US-ASCII
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: keyrings@vger.kernel.org, David Howells <dhowells@redhat.com>, Michael Halcrow <mhalcrow@google.com>, linux-cachefs@redhat.com, ecryptfs@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-security-module@vger.kernel.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Fri, Sep 08, 2017 at 05:15:12PM -0700, Eric Biggers wrote:
+On Thu, 28 Sep 2017, Eric Biggers wrote:
+
 > From: Eric Biggers <ebiggers@google.com>
 > 
-> Perhaps long overdue, add a documentation file for filesystem-level
-> encryption, a.k.a. fscrypt or fs/crypto/, to the Documentation
-> directory.  The new file is based loosely on the latest version of the
-> "EXT4 Encryption Design Document (public version)" Google Doc, but with
-> many improvements made, including:
+> When the file /proc/fs/fscache/objects (available with
+> CONFIG_FSCACHE_OBJECT_LIST=y) is opened, we request a user key with
+> description "fscache:objlist", then access its payload.  However, a
+> revoked key has a NULL payload, and we failed to check for this.
+> request_key() *does* skip revoked keys, but there is still a window
+> where the key can be revoked before we access its payload.
 > 
-> - Reflect the reality that it is not specific to ext4 anymore.
-> - More thoroughly document the design and user-visible API/behavior.
-> - Replace outdated information, such as the outdated explanation of how
->   encrypted filenames are hashed for indexed directories and how
->   encrypted filenames are presented to userspace without the key.
->   (This was changed just before release.)
+> Fix it by checking for a NULL payload, treating it like a key which was
+> already revoked at the time it was requested.
 > 
-> For now the focus is on the design and user-visible API/behavior, not on
-> how to add encryption support to a filesystem --- since the internal API
-> is still pretty messy and any standalone documentation for it would
-> become outdated as things get refactored over time.
-> 
-> Reviewed-by: Michael Halcrow <mhalcrow@google.com>
+> Fixes: 4fbf4291aa15 ("FS-Cache: Allow the current state of all objects to be dumped")
+> Cc: <stable@vger.kernel.org>    [v2.6.32+]
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Ted, are you interested in taking this through the fscrypt tree for v4.15?
 
-Eric
+Reviewed-by: James Morris <james.l.morris@oracle.com>
+
+
+-- 
+James Morris
+<jmorris@namei.org>
