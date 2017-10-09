@@ -1,16 +1,16 @@
-Return-Path: <tytso@thunk.org>
-Date: Sun, 29 Oct 2017 06:24:06 -0400
-From: Theodore Ts'o <tytso@mit.edu>
+Return-Path: <ebiggers3@gmail.com>
+Date: Mon, 9 Oct 2017 13:33:33 -0700
+From: Eric Biggers <ebiggers3@gmail.com>
 Subject: Re: [PATCH v3] fscrypt: add a documentation file for
  filesystem-level encryption
-Message-ID: <20171029102406.hc6zzeepgbntwesx@thunk.org>
+Message-ID: <20171009203333.GC67463@gmail.com>
 References: <20170909001512.72431-1-ebiggers3@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20170909001512.72431-1-ebiggers3@gmail.com>
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+To: Theodore Ts'o <tytso@mit.edu>, linux-fscrypt@vger.kernel.org
+Cc: linux-doc@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 On Fri, Sep 08, 2017 at 05:15:12PM -0700, Eric Biggers wrote:
@@ -35,8 +35,7 @@ On Fri, Sep 08, 2017 at 05:15:12PM -0700, Eric Biggers wrote:
 > become outdated as things get refactored over time.
 > 
 > Reviewed-by: Michael Halcrow <mhalcrow@google.com>
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Applied, thanks.
+Ted, are you interested in taking this through the fscrypt tree for v4.15?
 
-					- Ted
+Eric
