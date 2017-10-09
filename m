@@ -1,112 +1,127 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v10 09/20] crypto: move drbg to generic async completion
-Date: Wed, 18 Oct 2017 08:00:41 +0100
-Message-Id: <1508310057-25369-10-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH v2 04/11] fscrypt: remove ->is_encrypted()
+Date: Mon,  9 Oct 2017 12:15:37 -0700
+Message-Id: <20171009191544.43656-5-ebiggers3@gmail.com>
+In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
+References: <20171009191544.43656-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-DRBG is starting an async. crypto op and waiting for it complete.
-Move it over to generic code doing the same.
+From: Eric Biggers <ebiggers@google.com>
 
-The code now also passes CRYPTO_TFM_REQ_MAY_SLEEP flag indicating
-crypto request memory allocation may use GFP_KERNEL which should
-be perfectly fine as the code is obviously sleeping for the
-completion of the request any way.
+Now that all callers of fscrypt_operations.is_encrypted() have been
+switched to IS_ENCRYPTED(), remove ->is_encrypted().
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Reviewed-by: Chao Yu <yuchao0@huawei.com>
+Acked-by: Dave Chinner <dchinner@redhat.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- crypto/drbg.c         | 36 +++++++++---------------------------
- include/crypto/drbg.h |  3 +--
- 2 files changed, 10 insertions(+), 29 deletions(-)
+ fs/ext4/super.c         | 2 --
+ fs/f2fs/super.c         | 2 --
+ fs/ubifs/crypto.c       | 1 -
+ fs/ubifs/super.c        | 1 -
+ fs/ubifs/ubifs.h        | 9 ++-------
+ include/linux/fscrypt.h | 1 -
+ 6 files changed, 2 insertions(+), 14 deletions(-)
 
-diff --git a/crypto/drbg.c b/crypto/drbg.c
-index 7001839..4faa278 100644
---- a/crypto/drbg.c
-+++ b/crypto/drbg.c
-@@ -1651,16 +1651,6 @@ static int drbg_fini_sym_kernel(struct drbg_state *drbg)
- 	return 0;
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index dcfb19539871..bc63cdf194e3 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1241,13 +1241,11 @@ static const struct fscrypt_operations ext4_cryptops = {
+ 	.get_context		= ext4_get_context,
+ 	.set_context		= ext4_set_context,
+ 	.dummy_context		= ext4_dummy_context,
+-	.is_encrypted		= ext4_encrypted_inode,
+ 	.empty_dir		= ext4_empty_dir,
+ 	.max_namelen		= ext4_max_namelen,
+ };
+ #else
+ static const struct fscrypt_operations ext4_cryptops = {
+-	.is_encrypted		= ext4_encrypted_inode,
+ };
+ #endif
+ 
+diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+index 89f61eb3d167..1cb41f711ab8 100644
+--- a/fs/f2fs/super.c
++++ b/fs/f2fs/super.c
+@@ -1594,13 +1594,11 @@ static const struct fscrypt_operations f2fs_cryptops = {
+ 	.key_prefix	= "f2fs:",
+ 	.get_context	= f2fs_get_context,
+ 	.set_context	= f2fs_set_context,
+-	.is_encrypted	= f2fs_encrypted_inode,
+ 	.empty_dir	= f2fs_empty_dir,
+ 	.max_namelen	= f2fs_max_namelen,
+ };
+ #else
+ static const struct fscrypt_operations f2fs_cryptops = {
+-	.is_encrypted	= f2fs_encrypted_inode,
+ };
+ #endif
+ 
+diff --git a/fs/ubifs/crypto.c b/fs/ubifs/crypto.c
+index 114ba455bac3..8880fa7733d8 100644
+--- a/fs/ubifs/crypto.c
++++ b/fs/ubifs/crypto.c
+@@ -87,7 +87,6 @@ const struct fscrypt_operations ubifs_crypt_operations = {
+ 	.key_prefix		= "ubifs:",
+ 	.get_context		= ubifs_crypt_get_context,
+ 	.set_context		= ubifs_crypt_set_context,
+-	.is_encrypted		= __ubifs_crypt_is_encrypted,
+ 	.empty_dir		= ubifs_crypt_empty_dir,
+ 	.max_namelen		= ubifs_crypt_max_namelen,
+ };
+diff --git a/fs/ubifs/super.c b/fs/ubifs/super.c
+index 5496b17b959c..adaca6088836 100644
+--- a/fs/ubifs/super.c
++++ b/fs/ubifs/super.c
+@@ -2009,7 +2009,6 @@ static struct ubifs_info *alloc_ubifs_info(struct ubi_volume_desc *ubi)
+ 
+ #ifndef CONFIG_UBIFS_FS_ENCRYPTION
+ const struct fscrypt_operations ubifs_crypt_operations = {
+-	.is_encrypted		= __ubifs_crypt_is_encrypted,
+ };
+ #endif
+ 
+diff --git a/fs/ubifs/ubifs.h b/fs/ubifs/ubifs.h
+index 6a346d4af98f..63c7468147eb 100644
+--- a/fs/ubifs/ubifs.h
++++ b/fs/ubifs/ubifs.h
+@@ -1834,18 +1834,13 @@ int ubifs_decrypt(const struct inode *inode, struct ubifs_data_node *dn,
+ 
+ extern const struct fscrypt_operations ubifs_crypt_operations;
+ 
+-static inline bool __ubifs_crypt_is_encrypted(struct inode *inode)
++static inline bool ubifs_crypt_is_encrypted(const struct inode *inode)
+ {
+-	struct ubifs_inode *ui = ubifs_inode(inode);
++	const struct ubifs_inode *ui = ubifs_inode(inode);
+ 
+ 	return ui->flags & UBIFS_CRYPT_FL;
  }
  
--static void drbg_skcipher_cb(struct crypto_async_request *req, int error)
+-static inline bool ubifs_crypt_is_encrypted(const struct inode *inode)
 -{
--	struct drbg_state *drbg = req->data;
--
--	if (error == -EINPROGRESS)
--		return;
--	drbg->ctr_async_err = error;
--	complete(&drbg->ctr_completion);
+-	return __ubifs_crypt_is_encrypted((struct inode *)inode);
 -}
 -
- static int drbg_init_sym_kernel(struct drbg_state *drbg)
- {
- 	struct crypto_cipher *tfm;
-@@ -1691,7 +1681,7 @@ static int drbg_init_sym_kernel(struct drbg_state *drbg)
- 		return PTR_ERR(sk_tfm);
- 	}
- 	drbg->ctr_handle = sk_tfm;
--	init_completion(&drbg->ctr_completion);
-+	crypto_init_wait(&drbg->ctr_wait);
- 
- 	req = skcipher_request_alloc(sk_tfm, GFP_KERNEL);
- 	if (!req) {
-@@ -1700,8 +1690,9 @@ static int drbg_init_sym_kernel(struct drbg_state *drbg)
- 		return -ENOMEM;
- 	}
- 	drbg->ctr_req = req;
--	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--					drbg_skcipher_cb, drbg);
-+	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
-+						CRYPTO_TFM_REQ_MAY_SLEEP,
-+					crypto_req_done, &drbg->ctr_wait);
- 
- 	alignmask = crypto_skcipher_alignmask(sk_tfm);
- 	drbg->ctr_null_value_buf = kzalloc(DRBG_CTR_NULL_LEN + alignmask,
-@@ -1762,21 +1753,12 @@ static int drbg_kcapi_sym_ctr(struct drbg_state *drbg,
- 		/* Output buffer may not be valid for SGL, use scratchpad */
- 		skcipher_request_set_crypt(drbg->ctr_req, &sg_in, &sg_out,
- 					   cryptlen, drbg->V);
--		ret = crypto_skcipher_encrypt(drbg->ctr_req);
--		switch (ret) {
--		case 0:
--			break;
--		case -EINPROGRESS:
--		case -EBUSY:
--			wait_for_completion(&drbg->ctr_completion);
--			if (!drbg->ctr_async_err) {
--				reinit_completion(&drbg->ctr_completion);
--				break;
--			}
--		default:
-+		ret = crypto_wait_req(crypto_skcipher_encrypt(drbg->ctr_req),
-+					&drbg->ctr_wait);
-+		if (ret)
- 			goto out;
--		}
--		init_completion(&drbg->ctr_completion);
-+
-+		crypto_init_wait(&drbg->ctr_wait);
- 
- 		memcpy(outbuf, drbg->outscratchpad, cryptlen);
- 
-diff --git a/include/crypto/drbg.h b/include/crypto/drbg.h
-index 22f884c..8f94110 100644
---- a/include/crypto/drbg.h
-+++ b/include/crypto/drbg.h
-@@ -126,8 +126,7 @@ struct drbg_state {
- 	__u8 *ctr_null_value;			/* CTR mode aligned zero buf */
- 	__u8 *outscratchpadbuf;			/* CTR mode output scratchpad */
-         __u8 *outscratchpad;			/* CTR mode aligned outbuf */
--	struct completion ctr_completion;	/* CTR mode async handler */
--	int ctr_async_err;			/* CTR mode async error */
-+	struct crypto_wait ctr_wait;		/* CTR mode async wait obj */
- 
- 	bool seeded;		/* DRBG fully seeded? */
- 	bool pr;		/* Prediction resistance enabled? */
+ /* Normal UBIFS messages */
+ __printf(2, 3)
+ void ubifs_msg(const struct ubifs_info *c, const char *fmt, ...);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index bfc962e62078..d58e6a90cfe4 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -81,7 +81,6 @@ struct fscrypt_operations {
+ 	int (*get_context)(struct inode *, void *, size_t);
+ 	int (*set_context)(struct inode *, const void *, size_t, void *);
+ 	bool (*dummy_context)(struct inode *);
+-	bool (*is_encrypted)(struct inode *);
+ 	bool (*empty_dir)(struct inode *);
+ 	unsigned (*max_namelen)(struct inode *);
+ };
 -- 
-2.7.4
-
+2.14.2.920.gcf0c67979c-goog
