@@ -1,86 +1,144 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:33336 "EHLO
-        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S966495AbdJRHCn (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 18 Oct 2017 03:02:43 -0400
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v10 03/20] net: use -ENOSPC for transient busy indication
-Date: Wed, 18 Oct 2017 08:00:35 +0100
-Message-Id: <1508310057-25369-4-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH v2 09/11] fscrypt: new helper function - fscrypt_prepare_rename()
+Date: Mon,  9 Oct 2017 12:15:42 -0700
+Message-Id: <20171009191544.43656-10-ebiggers3@gmail.com>
+In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
+References: <20171009191544.43656-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Replace -EBUSY with -ENOSPC when handling transient busy
-indication in the absence of backlog.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Introduce a helper function which prepares to rename a file into a
+possibly encrypted directory.  It handles loading the encryption keys
+for the source and target directories if needed, and it handles
+enforcing that if the target directory (and the source directory for a
+cross-rename) is encrypted, then the file being moved into the directory
+has the same encryption policy as its containing directory.
 
+Acked-by: Dave Chinner <dchinner@redhat.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
+ fs/crypto/hooks.c               | 30 ++++++++++++++++++++++++++++++
+ include/linux/fscrypt.h         | 33 +++++++++++++++++++++++++++++++++
+ include/linux/fscrypt_notsupp.h |  9 +++++++++
+ include/linux/fscrypt_supp.h    |  5 +++++
+ 4 files changed, 77 insertions(+)
 
-Please squash this patch with the previous one when merging upstream.
-
- net/ipv4/ah4.c  | 2 +-
- net/ipv4/esp4.c | 2 +-
- net/ipv6/ah6.c  | 2 +-
- net/ipv6/esp6.c | 2 +-
- 4 files changed, 4 insertions(+), 4 deletions(-)
-
-diff --git a/net/ipv4/ah4.c b/net/ipv4/ah4.c
-index 37db44f..4dd95cd 100644
---- a/net/ipv4/ah4.c
-+++ b/net/ipv4/ah4.c
-@@ -240,7 +240,7 @@ static int ah_output(struct xfrm_state *x, struct sk_buff *skb)
- 		if (err == -EINPROGRESS)
- 			goto out;
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index 8b90217320dd..822cb78f9b45 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -62,3 +62,33 @@ int __fscrypt_prepare_link(struct inode *inode, struct inode *dir)
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(__fscrypt_prepare_link);
++
++int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
++			     struct inode *new_dir, struct dentry *new_dentry,
++			     unsigned int flags)
++{
++	int err;
++
++	err = fscrypt_require_key(old_dir);
++	if (err)
++		return err;
++
++	err = fscrypt_require_key(new_dir);
++	if (err)
++		return err;
++
++	if (old_dir != new_dir) {
++		if (IS_ENCRYPTED(new_dir) &&
++		    !fscrypt_has_permitted_context(new_dir,
++						   d_inode(old_dentry)))
++			return -EPERM;
++
++		if ((flags & RENAME_EXCHANGE) &&
++		    IS_ENCRYPTED(old_dir) &&
++		    !fscrypt_has_permitted_context(old_dir,
++						   d_inode(new_dentry)))
++			return -EPERM;
++	}
++	return 0;
++}
++EXPORT_SYMBOL_GPL(__fscrypt_prepare_rename);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 9c9a53f99327..c422367baed9 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -204,4 +204,37 @@ static inline int fscrypt_prepare_link(struct dentry *old_dentry,
+ 	return 0;
+ }
  
--		if (err == -EBUSY)
-+		if (err == -ENOSPC)
- 			err = NET_XMIT_DROP;
- 		goto out_free;
- 	}
-diff --git a/net/ipv4/esp4.c b/net/ipv4/esp4.c
-index b00e4a4..d57aa64 100644
---- a/net/ipv4/esp4.c
-+++ b/net/ipv4/esp4.c
-@@ -432,7 +432,7 @@ int esp_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *
- 	case -EINPROGRESS:
- 		goto error;
++/**
++ * fscrypt_prepare_rename - prepare for a rename between possibly-encrypted directories
++ * @old_dir: source directory
++ * @old_dentry: dentry for source file
++ * @new_dir: target directory
++ * @new_dentry: dentry for target location (may be negative unless exchanging)
++ * @flags: rename flags (we care at least about %RENAME_EXCHANGE)
++ *
++ * Prepare for ->rename() where the source and/or target directories may be
++ * encrypted.  A new link can only be added to an encrypted directory if the
++ * directory's encryption key is available --- since otherwise we'd have no way
++ * to encrypt the filename.  A rename to an existing name, on the other hand,
++ * *is* cryptographically possible without the key.  However, we take the more
++ * conservative approach and just forbid all no-key renames.
++ *
++ * We also verify that the rename will not violate the constraint that all files
++ * in an encrypted directory tree use the same encryption policy.
++ *
++ * Return: 0 on success, -ENOKEY if an encryption key is missing, -EPERM if the
++ * rename would cause inconsistent encryption policies, or another -errno code.
++ */
++static inline int fscrypt_prepare_rename(struct inode *old_dir,
++					 struct dentry *old_dentry,
++					 struct inode *new_dir,
++					 struct dentry *new_dentry,
++					 unsigned int flags)
++{
++	if (IS_ENCRYPTED(old_dir) || IS_ENCRYPTED(new_dir))
++		return __fscrypt_prepare_rename(old_dir, old_dentry,
++						new_dir, new_dentry, flags);
++	return 0;
++}
++
+ #endif	/* _LINUX_FSCRYPT_H */
+diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
+index d7d1039eb6b5..6af378d8126e 100644
+--- a/include/linux/fscrypt_notsupp.h
++++ b/include/linux/fscrypt_notsupp.h
+@@ -192,4 +192,13 @@ static inline int __fscrypt_prepare_link(struct inode *inode,
+ 	return -EOPNOTSUPP;
+ }
  
--	case -EBUSY:
-+	case -ENOSPC:
- 		err = NET_XMIT_DROP;
- 		break;
++static inline int __fscrypt_prepare_rename(struct inode *old_dir,
++					   struct dentry *old_dentry,
++					   struct inode *new_dir,
++					   struct dentry *new_dentry,
++					   unsigned int flags)
++{
++	return -EOPNOTSUPP;
++}
++
+ #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
+diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
+index 80706283da75..40f35073145f 100644
+--- a/include/linux/fscrypt_supp.h
++++ b/include/linux/fscrypt_supp.h
+@@ -146,5 +146,10 @@ extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
+ /* hooks.c */
+ extern int fscrypt_file_open(struct inode *inode, struct file *filp);
+ extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir);
++extern int __fscrypt_prepare_rename(struct inode *old_dir,
++				    struct dentry *old_dentry,
++				    struct inode *new_dir,
++				    struct dentry *new_dentry,
++				    unsigned int flags);
  
-diff --git a/net/ipv6/ah6.c b/net/ipv6/ah6.c
-index 7802b72..3bd9d80 100644
---- a/net/ipv6/ah6.c
-+++ b/net/ipv6/ah6.c
-@@ -443,7 +443,7 @@ static int ah6_output(struct xfrm_state *x, struct sk_buff *skb)
- 		if (err == -EINPROGRESS)
- 			goto out;
- 
--		if (err == -EBUSY)
-+		if (err == -ENOSPC)
- 			err = NET_XMIT_DROP;
- 		goto out_free;
- 	}
-diff --git a/net/ipv6/esp6.c b/net/ipv6/esp6.c
-index 89910e2..c04d995 100644
---- a/net/ipv6/esp6.c
-+++ b/net/ipv6/esp6.c
-@@ -396,7 +396,7 @@ int esp6_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info
- 	case -EINPROGRESS:
- 		goto error;
- 
--	case -EBUSY:
-+	case -ENOSPC:
- 		err = NET_XMIT_DROP;
- 		break;
- 
+ #endif	/* _LINUX_FSCRYPT_SUPP_H */
 -- 
-2.7.4
-
+2.14.2.920.gcf0c67979c-goog
