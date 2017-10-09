@@ -1,115 +1,110 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [RFC PATCH 08/25] fs/inode.c: rename and export dispose_list()
-Date: Mon, 23 Oct 2017 14:40:41 -0700
-Message-Id: <20171023214058.128121-9-ebiggers3@gmail.com>
-In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
-References: <20171023214058.128121-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v2 03/11] fscrypt: switch from ->is_encrypted() to IS_ENCRYPTED()
+Date: Mon,  9 Oct 2017 12:15:36 -0700
+Message-Id: <20171009191544.43656-4-ebiggers3@gmail.com>
+In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
+References: <20171009191544.43656-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-When a filesystem encryption key is removed, we need all files which had
-been "unlocked" (had ->i_crypt_info set up) with it to appear "locked"
-again.  This is most easily done by evicting the inodes.  This can
-currently be done using 'echo 2 > /proc/sys/vm/drop_caches'; however,
-that is overkill and not usable by non-root users.  In preparation for
-allowing fs/crypto/ to evict just the needed inodes, export
-dispose_list() to modules.  For clarity also rename it to
-evict_inode_list().
+IS_ENCRYPTED() now gives the same information as
+i_sb->s_cop->is_encrypted() but is more efficient, since IS_ENCRYPTED()
+is just a simple flag check.  Prepare to remove ->is_encrypted() by
+switching all callers to IS_ENCRYPTED().
 
+Acked-by: Dave Chinner <dchinner@redhat.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/inode.c         | 19 ++++++++++---------
- include/linux/fs.h |  1 +
- 2 files changed, 11 insertions(+), 9 deletions(-)
+ fs/crypto/crypto.c              | 2 +-
+ fs/crypto/fname.c               | 3 +--
+ fs/crypto/keyinfo.c             | 2 +-
+ fs/crypto/policy.c              | 6 +++---
+ include/linux/fscrypt_notsupp.h | 2 +-
+ 5 files changed, 7 insertions(+), 8 deletions(-)
 
-diff --git a/fs/inode.c b/fs/inode.c
-index 30ce98956801..fe47930835c0 100644
---- a/fs/inode.c
-+++ b/fs/inode.c
-@@ -570,13 +570,13 @@ static void evict(struct inode *inode)
- }
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index c7835df7e7b8..608f6bbe0f31 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -340,7 +340,7 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
+ 		return -ECHILD;
  
- /*
-- * dispose_list - dispose of the contents of a local list
-- * @head: the head of the list to free
-+ * evict_inode_list - evict each inode in a local list of inodes
-+ * @head: the head of the list
-  *
-- * Dispose-list gets a local list with local inodes in it, so it doesn't
-+ * This gets a local list with local inodes in it, so it doesn't
-  * need to worry about list corruption and SMP locks.
-  */
--static void dispose_list(struct list_head *head)
-+void evict_inode_list(struct list_head *head)
+ 	dir = dget_parent(dentry);
+-	if (!d_inode(dir)->i_sb->s_cop->is_encrypted(d_inode(dir))) {
++	if (!IS_ENCRYPTED(d_inode(dir))) {
+ 		dput(dir);
+ 		return 0;
+ 	}
+diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+index ad9f814fdead..2878289b3ed2 100644
+--- a/fs/crypto/fname.c
++++ b/fs/crypto/fname.c
+@@ -382,8 +382,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
+ 	memset(fname, 0, sizeof(struct fscrypt_name));
+ 	fname->usr_fname = iname;
+ 
+-	if (!dir->i_sb->s_cop->is_encrypted(dir) ||
+-				fscrypt_is_dot_dotdot(iname)) {
++	if (!IS_ENCRYPTED(dir) || fscrypt_is_dot_dotdot(iname)) {
+ 		fname->disk_name.name = (unsigned char *)iname->name;
+ 		fname->disk_name.len = iname->len;
+ 		return 0;
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 018c588c7ac3..236a68d4ea72 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -268,7 +268,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	res = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
+ 	if (res < 0) {
+ 		if (!fscrypt_dummy_context_enabled(inode) ||
+-		    inode->i_sb->s_cop->is_encrypted(inode))
++		    IS_ENCRYPTED(inode))
+ 			return res;
+ 		/* Fake up a context for an unencrypted directory */
+ 		memset(&ctx, 0, sizeof(ctx));
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index ce07a86200f3..6a63b8a0d46c 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -109,7 +109,7 @@ int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg)
+ 	struct fscrypt_policy policy;
+ 	int res;
+ 
+-	if (!inode->i_sb->s_cop->is_encrypted(inode))
++	if (!IS_ENCRYPTED(inode))
+ 		return -ENODATA;
+ 
+ 	res = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
+@@ -166,11 +166,11 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
+ 		return 1;
+ 
+ 	/* No restrictions if the parent directory is unencrypted */
+-	if (!cops->is_encrypted(parent))
++	if (!IS_ENCRYPTED(parent))
+ 		return 1;
+ 
+ 	/* Encrypted directories must not contain unencrypted files */
+-	if (!cops->is_encrypted(child))
++	if (!IS_ENCRYPTED(child))
+ 		return 0;
+ 
+ 	/*
+diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
+index 2d0b6960831e..7b390e356f7f 100644
+--- a/include/linux/fscrypt_notsupp.h
++++ b/include/linux/fscrypt_notsupp.h
+@@ -100,7 +100,7 @@ static inline int fscrypt_setup_filename(struct inode *dir,
+ 					 const struct qstr *iname,
+ 					 int lookup, struct fscrypt_name *fname)
  {
- 	while (!list_empty(head)) {
- 		struct inode *inode;
-@@ -588,6 +588,7 @@ static void dispose_list(struct list_head *head)
- 		cond_resched();
- 	}
- }
-+EXPORT_SYMBOL_GPL(evict_inode_list);
+-	if (dir->i_sb->s_cop->is_encrypted(dir))
++	if (IS_ENCRYPTED(dir))
+ 		return -EOPNOTSUPP;
  
- /**
-  * evict_inodes	- evict all evictable inodes for a superblock
-@@ -628,13 +629,13 @@ void evict_inodes(struct super_block *sb)
- 		if (need_resched()) {
- 			spin_unlock(&sb->s_inode_list_lock);
- 			cond_resched();
--			dispose_list(&dispose);
-+			evict_inode_list(&dispose);
- 			goto again;
- 		}
- 	}
- 	spin_unlock(&sb->s_inode_list_lock);
- 
--	dispose_list(&dispose);
-+	evict_inode_list(&dispose);
- }
- EXPORT_SYMBOL_GPL(evict_inodes);
- 
-@@ -679,7 +680,7 @@ int invalidate_inodes(struct super_block *sb, bool kill_dirty)
- 	}
- 	spin_unlock(&sb->s_inode_list_lock);
- 
--	dispose_list(&dispose);
-+	evict_inode_list(&dispose);
- 
- 	return busy;
- }
-@@ -763,7 +764,7 @@ static enum lru_status inode_lru_isolate(struct list_head *item,
-  * Walk the superblock inode LRU for freeable inodes and attempt to free them.
-  * This is called from the superblock shrinker function with a number of inodes
-  * to trim from the LRU. Inodes to be freed are moved to a temporary list and
-- * then are freed outside inode_lock by dispose_list().
-+ * then are freed outside inode_lock by evict_inode_list().
-  */
- long prune_icache_sb(struct super_block *sb, struct shrink_control *sc)
- {
-@@ -772,7 +773,7 @@ long prune_icache_sb(struct super_block *sb, struct shrink_control *sc)
- 
- 	freed = list_lru_shrink_walk(&sb->s_inode_lru, sc,
- 				     inode_lru_isolate, &freeable);
--	dispose_list(&freeable);
-+	evict_inode_list(&freeable);
- 	return freed;
- }
- 
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 2833ace2f01d..e0a8dae5f9dc 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -2880,6 +2880,7 @@ extern void unlock_new_inode(struct inode *);
- extern unsigned int get_next_ino(void);
- extern void evict_inodes(struct super_block *sb);
- extern void inode_lru_list_del(struct inode *inode);
-+extern void evict_inode_list(struct list_head *head);
- 
- extern void __iget(struct inode * inode);
- extern void iget_failed(struct inode *);
+ 	memset(fname, 0, sizeof(struct fscrypt_name));
 -- 
-2.15.0.rc0.271.g36b669edcc-goog
+2.14.2.920.gcf0c67979c-goog
