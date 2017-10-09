@@ -1,246 +1,191 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v9 12/20] fscrypt: move to generic async completion
-Date: Sun, 15 Oct 2017 10:19:57 +0100
-Message-Id: <1508059209-25529-13-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-Sender: linux-crypto-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH v2 02/11] fs, fscrypt: add an S_ENCRYPTED inode flag
+Date: Mon,  9 Oct 2017 12:15:35 -0700
+Message-Id: <20171009191544.43656-3-ebiggers3@gmail.com>
+In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
+References: <20171009191544.43656-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-fscrypt starts several async. crypto ops and waiting for them to
-complete. Move it over to generic code doing the same.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Introduce a flag S_ENCRYPTED which can be set in ->i_flags to indicate
+that the inode is encrypted using the fscrypt (fs/crypto/) mechanism.
+
+Checking this flag will give the same information that
+inode->i_sb->s_cop->is_encrypted(inode) currently does, but will be more
+efficient.  This will be useful for adding higher-level helper functions
+for filesystems to use.  For example we'll be able to replace this:
+
+	if (ext4_encrypted_inode(inode)) {
+		ret = fscrypt_get_encryption_info(inode);
+		if (ret)
+			return ret;
+		if (!fscrypt_has_encryption_key(inode))
+			return -ENOKEY;
+	}
+
+with this:
+
+	ret = fscrypt_require_key(inode);
+	if (ret)
+		return ret;
+
+... since we'll be able to retain the fast path for unencrypted files as
+a single flag check, using an inline function.  This wasn't possible
+before because we'd have had to frequently call through the
+->i_sb->s_cop->is_encrypted function pointer, even when the encryption
+support was disabled or not being used.
+
+Note: we don't define S_ENCRYPTED to 0 if CONFIG_FS_ENCRYPTION is
+disabled because we want to continue to return an error if an encrypted
+file is accessed without encryption support, rather than pretending that
+it is unencrypted.
+
+Reviewed-by: Chao Yu <yuchao0@huawei.com>
+Acked-by: Dave Chinner <dchinner@redhat.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/crypto.c          | 28 ++++------------------------
- fs/crypto/fname.c           | 36 ++++++------------------------------
- fs/crypto/fscrypt_private.h | 10 ----------
- fs/crypto/keyinfo.c         | 21 +++------------------
- 4 files changed, 13 insertions(+), 82 deletions(-)
+ fs/ext4/inode.c    | 7 +++++--
+ fs/ext4/super.c    | 8 ++++++--
+ fs/f2fs/f2fs.h     | 1 +
+ fs/f2fs/inode.c    | 5 ++++-
+ fs/ubifs/ioctl.c   | 5 ++++-
+ fs/ubifs/xattr.c   | 1 +
+ include/linux/fs.h | 2 ++
+ 7 files changed, 23 insertions(+), 6 deletions(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index c7835df..80a3cad 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -126,21 +126,6 @@ struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *inode, gfp_t gfp_flags)
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 31db875bc7a1..d5a471939fbc 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -4589,10 +4589,13 @@ void ext4_set_inode_flags(struct inode *inode)
+ 		new_fl |= S_DIRSYNC;
+ 	if (test_opt(inode->i_sb, DAX) && S_ISREG(inode->i_mode) &&
+ 	    !ext4_should_journal_data(inode) && !ext4_has_inline_data(inode) &&
+-	    !ext4_encrypted_inode(inode))
++	    !(flags & EXT4_ENCRYPT_FL))
+ 		new_fl |= S_DAX;
++	if (flags & EXT4_ENCRYPT_FL)
++		new_fl |= S_ENCRYPTED;
+ 	inode_set_flags(inode, new_fl,
+-			S_SYNC|S_APPEND|S_IMMUTABLE|S_NOATIME|S_DIRSYNC|S_DAX);
++			S_SYNC|S_APPEND|S_IMMUTABLE|S_NOATIME|S_DIRSYNC|S_DAX|
++			S_ENCRYPTED);
  }
- EXPORT_SYMBOL(fscrypt_get_ctx);
  
--/**
-- * page_crypt_complete() - completion callback for page crypto
-- * @req: The asynchronous cipher request context
-- * @res: The result of the cipher operation
-- */
--static void page_crypt_complete(struct crypto_async_request *req, int res)
--{
--	struct fscrypt_completion_result *ecr = req->data;
--
--	if (res == -EINPROGRESS)
--		return;
--	ecr->res = res;
--	complete(&ecr->completion);
--}
--
- int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 			   u64 lblk_num, struct page *src_page,
- 			   struct page *dest_page, unsigned int len,
-@@ -151,7 +136,7 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 		u8 padding[FS_IV_SIZE - sizeof(__le64)];
- 	} iv;
- 	struct skcipher_request *req = NULL;
--	DECLARE_FS_COMPLETION_RESULT(ecr);
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist dst, src;
- 	struct fscrypt_info *ci = inode->i_crypt_info;
- 	struct crypto_skcipher *tfm = ci->ci_ctfm;
-@@ -179,7 +164,7 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 
- 	skcipher_request_set_callback(
- 		req, CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
--		page_crypt_complete, &ecr);
-+		crypto_req_done, &wait);
- 
- 	sg_init_table(&dst, 1);
- 	sg_set_page(&dst, dest_page, len, offs);
-@@ -187,14 +172,9 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 	sg_set_page(&src, src_page, len, offs);
- 	skcipher_request_set_crypt(req, &src, &dst, len, &iv);
- 	if (rw == FS_DECRYPT)
--		res = crypto_skcipher_decrypt(req);
-+		res = crypto_wait_req(crypto_skcipher_decrypt(req), &wait);
- 	else
--		res = crypto_skcipher_encrypt(req);
--	if (res == -EINPROGRESS || res == -EBUSY) {
--		BUG_ON(req->base.data != &ecr);
--		wait_for_completion(&ecr.completion);
--		res = ecr.res;
--	}
-+		res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res) {
- 		printk_ratelimited(KERN_ERR
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index ad9f814..a80a0d3 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -15,21 +15,6 @@
- #include "fscrypt_private.h"
- 
- /**
-- * fname_crypt_complete() - completion callback for filename crypto
-- * @req: The asynchronous cipher request context
-- * @res: The result of the cipher operation
-- */
--static void fname_crypt_complete(struct crypto_async_request *req, int res)
--{
--	struct fscrypt_completion_result *ecr = req->data;
--
--	if (res == -EINPROGRESS)
--		return;
--	ecr->res = res;
--	complete(&ecr->completion);
--}
--
--/**
-  * fname_encrypt() - encrypt a filename
-  *
-  * The caller must have allocated sufficient memory for the @oname string.
-@@ -40,7 +25,7 @@ static int fname_encrypt(struct inode *inode,
- 			const struct qstr *iname, struct fscrypt_str *oname)
+ static blkcnt_t ext4_inode_blocks(struct ext4_inode *raw_inode,
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index b104096fce9e..dcfb19539871 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1181,7 +1181,8 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+ 			ext4_clear_inode_state(inode,
+ 					EXT4_STATE_MAY_INLINE_DATA);
+ 			/*
+-			 * Update inode->i_flags - e.g. S_DAX may get disabled
++			 * Update inode->i_flags - S_ENCRYPTED will be enabled,
++			 * S_DAX may be disabled
+ 			 */
+ 			ext4_set_inode_flags(inode);
+ 		}
+@@ -1206,7 +1207,10 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+ 				    ctx, len, 0);
+ 	if (!res) {
+ 		ext4_set_inode_flag(inode, EXT4_INODE_ENCRYPT);
+-		/* Update inode->i_flags - e.g. S_DAX may get disabled */
++		/*
++		 * Update inode->i_flags - S_ENCRYPTED will be enabled,
++		 * S_DAX may be disabled
++		 */
+ 		ext4_set_inode_flags(inode);
+ 		res = ext4_mark_inode_dirty(handle, inode);
+ 		if (res)
+diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+index fc53aebaf3ae..34d6e9ae8422 100644
+--- a/fs/f2fs/f2fs.h
++++ b/fs/f2fs/f2fs.h
+@@ -2947,6 +2947,7 @@ static inline void f2fs_set_encrypted_inode(struct inode *inode)
  {
- 	struct skcipher_request *req = NULL;
--	DECLARE_FS_COMPLETION_RESULT(ecr);
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct fscrypt_info *ci = inode->i_crypt_info;
- 	struct crypto_skcipher *tfm = ci->ci_ctfm;
- 	int res = 0;
-@@ -76,17 +61,12 @@ static int fname_encrypt(struct inode *inode,
- 	}
- 	skcipher_request_set_callback(req,
- 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
--			fname_crypt_complete, &ecr);
-+			crypto_req_done, &wait);
- 	sg_init_one(&sg, oname->name, cryptlen);
- 	skcipher_request_set_crypt(req, &sg, &sg, cryptlen, iv);
+ #ifdef CONFIG_F2FS_FS_ENCRYPTION
+ 	file_set_encrypt(inode);
++	inode->i_flags |= S_ENCRYPTED;
+ #endif
+ }
  
- 	/* Do the encryption */
--	res = crypto_skcipher_encrypt(req);
--	if (res == -EINPROGRESS || res == -EBUSY) {
--		/* Request is being completed asynchronously; wait for it */
--		wait_for_completion(&ecr.completion);
--		res = ecr.res;
--	}
-+	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res < 0) {
- 		printk_ratelimited(KERN_ERR
-@@ -110,7 +90,7 @@ static int fname_decrypt(struct inode *inode,
- 				struct fscrypt_str *oname)
+diff --git a/fs/f2fs/inode.c b/fs/f2fs/inode.c
+index 50c88e37ed66..53fb08810ee9 100644
+--- a/fs/f2fs/inode.c
++++ b/fs/f2fs/inode.c
+@@ -43,8 +43,11 @@ void f2fs_set_inode_flags(struct inode *inode)
+ 		new_fl |= S_NOATIME;
+ 	if (flags & FS_DIRSYNC_FL)
+ 		new_fl |= S_DIRSYNC;
++	if (f2fs_encrypted_inode(inode))
++		new_fl |= S_ENCRYPTED;
+ 	inode_set_flags(inode, new_fl,
+-			S_SYNC|S_APPEND|S_IMMUTABLE|S_NOATIME|S_DIRSYNC);
++			S_SYNC|S_APPEND|S_IMMUTABLE|S_NOATIME|S_DIRSYNC|
++			S_ENCRYPTED);
+ }
+ 
+ static void __get_inode_rdev(struct inode *inode, struct f2fs_inode *ri)
+diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
+index fdc311246807..0164bcc827f8 100644
+--- a/fs/ubifs/ioctl.c
++++ b/fs/ubifs/ioctl.c
+@@ -38,7 +38,8 @@ void ubifs_set_inode_flags(struct inode *inode)
  {
- 	struct skcipher_request *req = NULL;
--	DECLARE_FS_COMPLETION_RESULT(ecr);
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist src_sg, dst_sg;
- 	struct fscrypt_info *ci = inode->i_crypt_info;
- 	struct crypto_skcipher *tfm = ci->ci_ctfm;
-@@ -131,7 +111,7 @@ static int fname_decrypt(struct inode *inode,
- 	}
- 	skcipher_request_set_callback(req,
- 		CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
--		fname_crypt_complete, &ecr);
-+		crypto_req_done, &wait);
+ 	unsigned int flags = ubifs_inode(inode)->flags;
  
- 	/* Initialize IV */
- 	memset(iv, 0, FS_CRYPTO_BLOCK_SIZE);
-@@ -140,11 +120,7 @@ static int fname_decrypt(struct inode *inode,
- 	sg_init_one(&src_sg, iname->name, iname->len);
- 	sg_init_one(&dst_sg, oname->name, oname->len);
- 	skcipher_request_set_crypt(req, &src_sg, &dst_sg, iname->len, iv);
--	res = crypto_skcipher_decrypt(req);
--	if (res == -EINPROGRESS || res == -EBUSY) {
--		wait_for_completion(&ecr.completion);
--		res = ecr.res;
--	}
-+	res = crypto_wait_req(crypto_skcipher_decrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res < 0) {
- 		printk_ratelimited(KERN_ERR
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index a1d5021..c0f1881 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -69,16 +69,6 @@ typedef enum {
- #define FS_CTX_REQUIRES_FREE_ENCRYPT_FL		0x00000001
- #define FS_CTX_HAS_BOUNCE_BUFFER_FL		0x00000002
+-	inode->i_flags &= ~(S_SYNC | S_APPEND | S_IMMUTABLE | S_DIRSYNC);
++	inode->i_flags &= ~(S_SYNC | S_APPEND | S_IMMUTABLE | S_DIRSYNC |
++			    S_ENCRYPTED);
+ 	if (flags & UBIFS_SYNC_FL)
+ 		inode->i_flags |= S_SYNC;
+ 	if (flags & UBIFS_APPEND_FL)
+@@ -47,6 +48,8 @@ void ubifs_set_inode_flags(struct inode *inode)
+ 		inode->i_flags |= S_IMMUTABLE;
+ 	if (flags & UBIFS_DIRSYNC_FL)
+ 		inode->i_flags |= S_DIRSYNC;
++	if (flags & UBIFS_CRYPT_FL)
++		inode->i_flags |= S_ENCRYPTED;
+ }
  
--struct fscrypt_completion_result {
--	struct completion completion;
--	int res;
--};
--
--#define DECLARE_FS_COMPLETION_RESULT(ecr) \
--	struct fscrypt_completion_result ecr = { \
--		COMPLETION_INITIALIZER_ONSTACK((ecr).completion), 0 }
--
--
- /* crypto.c */
- extern int fscrypt_initialize(unsigned int cop_flags);
- extern struct workqueue_struct *fscrypt_read_workqueue;
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 018c588..3c84cac 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -17,17 +17,6 @@
+ /*
+diff --git a/fs/ubifs/xattr.c b/fs/ubifs/xattr.c
+index c13eae819cbc..5ddc89d564fd 100644
+--- a/fs/ubifs/xattr.c
++++ b/fs/ubifs/xattr.c
+@@ -170,6 +170,7 @@ static int create_xattr(struct ubifs_info *c, struct inode *host,
+ 	err = ubifs_jnl_update(c, host, nm, inode, 0, 1);
+ 	if (err)
+ 		goto out_cancel;
++	ubifs_set_inode_flags(host);
+ 	mutex_unlock(&host_ui->ui_mutex);
  
- static struct crypto_shash *essiv_hash_tfm;
+ 	ubifs_release_budget(c, &req);
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 13dab191a23e..3efd5ded21c9 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -1853,6 +1853,7 @@ struct super_operations {
+ #else
+ #define S_DAX		0	/* Make all the DAX code disappear */
+ #endif
++#define S_ENCRYPTED	16384	/* Encrypted file (using fs/crypto/) */
  
--static void derive_crypt_complete(struct crypto_async_request *req, int rc)
--{
--	struct fscrypt_completion_result *ecr = req->data;
--
--	if (rc == -EINPROGRESS)
--		return;
--
--	ecr->res = rc;
--	complete(&ecr->completion);
--}
--
- /**
-  * derive_key_aes() - Derive a key using AES-128-ECB
-  * @deriving_key: Encryption key used for derivation.
-@@ -42,7 +31,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- {
- 	int res = 0;
- 	struct skcipher_request *req = NULL;
--	DECLARE_FS_COMPLETION_RESULT(ecr);
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist src_sg, dst_sg;
- 	struct crypto_skcipher *tfm = crypto_alloc_skcipher("ecb(aes)", 0, 0);
+ /*
+  * Note that nosuid etc flags are inode-specific: setting some file-system
+@@ -1892,6 +1893,7 @@ static inline bool sb_rdonly(const struct super_block *sb) { return sb->s_flags
+ #define IS_AUTOMOUNT(inode)	((inode)->i_flags & S_AUTOMOUNT)
+ #define IS_NOSEC(inode)		((inode)->i_flags & S_NOSEC)
+ #define IS_DAX(inode)		((inode)->i_flags & S_DAX)
++#define IS_ENCRYPTED(inode)	((inode)->i_flags & S_ENCRYPTED)
  
-@@ -59,7 +48,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- 	}
- 	skcipher_request_set_callback(req,
- 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
--			derive_crypt_complete, &ecr);
-+			crypto_req_done, &wait);
- 	res = crypto_skcipher_setkey(tfm, deriving_key,
- 					FS_AES_128_ECB_KEY_SIZE);
- 	if (res < 0)
-@@ -69,11 +58,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- 	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
- 	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
- 				   NULL);
--	res = crypto_skcipher_encrypt(req);
--	if (res == -EINPROGRESS || res == -EBUSY) {
--		wait_for_completion(&ecr.completion);
--		res = ecr.res;
--	}
-+	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- out:
- 	skcipher_request_free(req);
- 	crypto_free_skcipher(tfm);
+ #define IS_WHITEOUT(inode)	(S_ISCHR(inode->i_mode) && \
+ 				 (inode)->i_rdev == WHITEOUT_DEV)
 -- 
-2.7.4
+2.14.2.920.gcf0c67979c-goog
