@@ -1,123 +1,59 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from foss.arm.com ([217.140.101.70]:48226 "EHLO foss.arm.com"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1752282AbdJOJZ5 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 15 Oct 2017 05:25:57 -0400
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v9 20/20] crypto: adapt api sample to use async. op wait
-Date: Sun, 15 Oct 2017 10:20:05 +0100
-Message-Id: <1508059209-25529-21-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH v2 11/11] fscrypt: new helper function - fscrypt_prepare_setattr()
+Date: Mon,  9 Oct 2017 12:15:44 -0700
+Message-Id: <20171009191544.43656-12-ebiggers3@gmail.com>
+In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
+References: <20171009191544.43656-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The code sample is waiting for an async. crypto op completion.
-Adapt sample to use the new generic infrastructure to do the same.
+From: Eric Biggers <ebiggers@google.com>
 
-This also fixes a possible data coruption bug created by the
-use of wait_for_completion_interruptible() without dealing
-correctly with an interrupt aborting the wait prior to the
-async op finishing.
+Introduce a helper function for filesystems to call when processing
+->setattr() on a possibly-encrypted inode.  It handles enforcing that an
+encrypted file can only be truncated if its encryption key is available.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Acked-by: Dave Chinner <dchinner@redhat.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- Documentation/crypto/api-samples.rst | 52 +++++++-----------------------------
- 1 file changed, 10 insertions(+), 42 deletions(-)
+ include/linux/fscrypt.h | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
 
-diff --git a/Documentation/crypto/api-samples.rst b/Documentation/crypto/api-samples.rst
-index 2531948..006827e 100644
---- a/Documentation/crypto/api-samples.rst
-+++ b/Documentation/crypto/api-samples.rst
-@@ -7,59 +7,27 @@ Code Example For Symmetric Key Cipher Operation
- ::
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 2327859c8cd2..53437bfdfcbc 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -265,4 +265,29 @@ static inline int fscrypt_prepare_lookup(struct inode *dir,
+ 	return 0;
+ }
  
- 
--    struct tcrypt_result {
--        struct completion completion;
--        int err;
--    };
--
-     /* tie all data structures together */
-     struct skcipher_def {
-         struct scatterlist sg;
-         struct crypto_skcipher *tfm;
-         struct skcipher_request *req;
--        struct tcrypt_result result;
-+        struct crypto_wait wait;
-     };
- 
--    /* Callback function */
--    static void test_skcipher_cb(struct crypto_async_request *req, int error)
--    {
--        struct tcrypt_result *result = req->data;
--
--        if (error == -EINPROGRESS)
--            return;
--        result->err = error;
--        complete(&result->completion);
--        pr_info("Encryption finished successfully\n");
--    }
--
-     /* Perform cipher operation */
-     static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
-                          int enc)
-     {
--        int rc = 0;
-+        int rc;
- 
-         if (enc)
--            rc = crypto_skcipher_encrypt(sk->req);
-+            rc = crypto_wait_req(crypto_skcipher_encrypt(sk->req), &sk->wait);
-         else
--            rc = crypto_skcipher_decrypt(sk->req);
--
--        switch (rc) {
--        case 0:
--            break;
--        case -EINPROGRESS:
--        case -EBUSY:
--            rc = wait_for_completion_interruptible(
--                &sk->result.completion);
--            if (!rc && !sk->result.err) {
--                reinit_completion(&sk->result.completion);
--                break;
--            }
--        default:
--            pr_info("skcipher encrypt returned with %d result %d\n",
--                rc, sk->result.err);
--            break;
--        }
--        init_completion(&sk->result.completion);
-+            rc = crypto_wait_req(crypto_skcipher_decrypt(sk->req), &sk->wait);
++/**
++ * fscrypt_prepare_setattr - prepare to change a possibly-encrypted inode's attributes
++ * @dentry: dentry through which the inode is being changed
++ * @attr: attributes to change
++ *
++ * Prepare for ->setattr() on a possibly-encrypted inode.  On an encrypted file,
++ * most attribute changes are allowed even without the encryption key.  However,
++ * without the encryption key we do have to forbid truncates.  This is needed
++ * because the size being truncated to may not be a multiple of the filesystem
++ * block size, and in that case we'd have to decrypt the final block, zero the
++ * portion past i_size, and re-encrypt it.  (We *could* allow truncating to a
++ * filesystem block boundary, but it's simpler to just forbid all truncates ---
++ * and we already forbid all other contents modifications without the key.)
++ *
++ * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
++ * if a problem occurred while setting up the encryption key.
++ */
++static inline int fscrypt_prepare_setattr(struct dentry *dentry,
++					  struct iattr *attr)
++{
++	if (attr->ia_valid & ATTR_SIZE)
++		return fscrypt_require_key(d_inode(dentry));
++	return 0;
++}
 +
-+	if (rc)
-+		pr_info("skcipher encrypt returned with result %d\n", rc);
- 
-         return rc;
-     }
-@@ -89,8 +57,8 @@ Code Example For Symmetric Key Cipher Operation
-         }
- 
-         skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--                          test_skcipher_cb,
--                          &sk.result);
-+                          crypto_req_done,
-+                          &sk.wait);
- 
-         /* AES 256 with random key */
-         get_random_bytes(&key, 32);
-@@ -122,7 +90,7 @@ Code Example For Symmetric Key Cipher Operation
-         /* We encrypt one block */
-         sg_init_one(&sk.sg, scratchpad, 16);
-         skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
--        init_completion(&sk.result.completion);
-+        crypto_init_wait(&sk.wait);
- 
-         /* encrypt data */
-         ret = test_skcipher_encdec(&sk, 1);
+ #endif	/* _LINUX_FSCRYPT_H */
 -- 
-2.7.4
-
+2.14.2.920.gcf0c67979c-goog
