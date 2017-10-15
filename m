@@ -1,89 +1,87 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [RFC PATCH 09/25] fs/dcache.c: add shrink_dcache_inode()
-Date: Mon, 23 Oct 2017 14:40:42 -0700
-Message-Id: <20171023214058.128121-10-ebiggers3@gmail.com>
-In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
-References: <20171023214058.128121-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from foss.arm.com ([217.140.101.70]:47906 "EHLO foss.arm.com"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1751739AbdJOJYc (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 15 Oct 2017 05:24:32 -0400
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v9 14/20] cifs: move to generic async completion
+Date: Sun, 15 Oct 2017 10:19:59 +0100
+Message-Id: <1508059209-25529-15-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
+References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+cifs starts an async. crypto op and waits for their completion.
+Move it over to generic code doing the same.
 
-When a filesystem encryption key is removed, we need all files which had
-been "unlocked" (had ->i_crypt_info set up) with it to appear "locked"
-again.  This is most easily done by evicting the inodes.  This can
-currently be done using 'echo 2 > /proc/sys/vm/drop_caches'; however,
-that is overkill and not usable by non-root users.
-
-To evict just the needed inodes we also need the ability to evict those
-inodes' dentries, since an inode is pinned by its dentries.  Therefore,
-add a function shrink_dcache_inode() which iterates through an inode's
-dentries and evicts any unused ones as well as any unused descendants
-(since there may be negative dentries pinning the inode's dentries).
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Acked-by: Pavel Shilovsky <pshilov@microsoft.com>
 ---
- fs/dcache.c            | 33 +++++++++++++++++++++++++++++++++
- include/linux/dcache.h |  1 +
- 2 files changed, 34 insertions(+)
+ fs/cifs/smb2ops.c | 30 ++++--------------------------
+ 1 file changed, 4 insertions(+), 26 deletions(-)
 
-diff --git a/fs/dcache.c b/fs/dcache.c
-index f90141387f01..455540e889f8 100644
---- a/fs/dcache.c
-+++ b/fs/dcache.c
-@@ -1456,6 +1456,39 @@ void shrink_dcache_parent(struct dentry *parent)
+diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
+index bdb963d..e067404 100644
+--- a/fs/cifs/smb2ops.c
++++ b/fs/cifs/smb2ops.c
+@@ -2087,22 +2087,6 @@ init_sg(struct smb_rqst *rqst, u8 *sign)
+ 	return sg;
  }
- EXPORT_SYMBOL(shrink_dcache_parent);
  
-+/**
-+ * shrink_dcache_inode - prune dcache for inode
-+ * @inode: inode to prune
-+ *
-+ * Evict all unused aliases of the specified inode from the dcache.  This is
-+ * intended to be used when trying to evict a specific inode, since inodes are
-+ * pinned by their dentries.  We also have to descend to ->d_subdirs for each
-+ * alias, since aliases may be pinned by negative child dentries.
-+ */
-+void shrink_dcache_inode(struct inode *inode)
-+{
-+	for (;;) {
-+		struct select_data data;
-+		struct dentry *dentry;
-+
-+		INIT_LIST_HEAD(&data.dispose);
-+		data.start = NULL;
-+		data.found = 0;
-+
-+		spin_lock(&inode->i_lock);
-+		hlist_for_each_entry(dentry, &inode->i_dentry, d_u.d_alias)
-+			d_walk(dentry, &data, select_collect, NULL);
-+		spin_unlock(&inode->i_lock);
-+
-+		if (!data.found)
-+			break;
-+
-+		shrink_dentry_list(&data.dispose);
-+		cond_resched();
-+	}
-+}
-+EXPORT_SYMBOL(shrink_dcache_inode);
-+
- static enum d_walk_ret umount_check(void *_data, struct dentry *dentry)
+-struct cifs_crypt_result {
+-	int err;
+-	struct completion completion;
+-};
+-
+-static void cifs_crypt_complete(struct crypto_async_request *req, int err)
+-{
+-	struct cifs_crypt_result *res = req->data;
+-
+-	if (err == -EINPROGRESS)
+-		return;
+-
+-	res->err = err;
+-	complete(&res->completion);
+-}
+-
+ static int
+ smb2_get_enc_key(struct TCP_Server_Info *server, __u64 ses_id, int enc, u8 *key)
  {
- 	/* it has busy descendents; complain about those instead */
-diff --git a/include/linux/dcache.h b/include/linux/dcache.h
-index ed1a7cf6923a..fb08199d67d5 100644
---- a/include/linux/dcache.h
-+++ b/include/linux/dcache.h
-@@ -245,6 +245,7 @@ extern struct dentry * d_obtain_alias(struct inode *);
- extern struct dentry * d_obtain_root(struct inode *);
- extern void shrink_dcache_sb(struct super_block *);
- extern void shrink_dcache_parent(struct dentry *);
-+extern void shrink_dcache_inode(struct inode *);
- extern void shrink_dcache_for_umount(struct super_block *);
- extern void d_invalidate(struct dentry *);
+@@ -2143,12 +2127,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
+ 	struct aead_request *req;
+ 	char *iv;
+ 	unsigned int iv_len;
+-	struct cifs_crypt_result result = {0, };
++	DECLARE_CRYPTO_WAIT(wait);
+ 	struct crypto_aead *tfm;
+ 	unsigned int crypt_len = le32_to_cpu(tr_hdr->OriginalMessageSize);
  
+-	init_completion(&result.completion);
+-
+ 	rc = smb2_get_enc_key(server, tr_hdr->SessionId, enc, key);
+ 	if (rc) {
+ 		cifs_dbg(VFS, "%s: Could not get %scryption key\n", __func__,
+@@ -2208,14 +2190,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
+ 	aead_request_set_ad(req, assoc_data_len);
+ 
+ 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				  cifs_crypt_complete, &result);
++				  crypto_req_done, &wait);
+ 
+-	rc = enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
+-
+-	if (rc == -EINPROGRESS || rc == -EBUSY) {
+-		wait_for_completion(&result.completion);
+-		rc = result.err;
+-	}
++	rc = crypto_wait_req(enc ? crypto_aead_encrypt(req)
++				: crypto_aead_decrypt(req), &wait);
+ 
+ 	if (!rc && enc)
+ 		memcpy(&tr_hdr->Signature, sign, SMB2_SIGNATURE_SIZE);
 -- 
-2.15.0.rc0.271.g36b669edcc-goog
+2.7.4
+
