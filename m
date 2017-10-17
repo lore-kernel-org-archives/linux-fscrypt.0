@@ -1,59 +1,31 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from pandora.armlinux.org.uk ([78.32.30.218]:55066 "EHLO
-        pandora.armlinux.org.uk" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1752318AbdJQOHq (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 17 Oct 2017 10:07:46 -0400
-Date: Tue, 17 Oct 2017 15:06:29 +0100
-From: Russell King - ARM Linux <linux@armlinux.org.uk>
+Return-Path: <keyrings-owner@vger.kernel.org>
+Date: Tue, 17 Oct 2017 21:09:10 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
 Subject: Re: [PATCH v9 00/20] simplify crypto wait for async op
-Message-ID: <20171017140629.GO20805@n2100.armlinux.org.uk>
+Message-ID: <20171017130910.GA28534@gondor.apana.org.au>
 References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
+ <20171015153831.GA22867@gondor.apana.org.au>
+ <CAOtvUMeESbKKaEvpW_MKrRaCxwQWnBa00m4v4F1jNZ_+Xq7pWA@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
+In-Reply-To: <CAOtvUMeESbKKaEvpW_MKrRaCxwQWnBa00m4v4F1jNZ_+Xq7pWA@mail.gmail.com>
+Sender: keyrings-owner@vger.kernel.org
 To: Gilad Ben-Yossef <gilad@benyossef.com>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, linux-cifs@vger.kernel.org, linux-doc@vger.kernel.org, linux-ima-user@lists.sourceforge.net, netdev@vger.kernel.org, samba-technical@lists.samba.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, keyrings@vger.kernel.org, linux-mediatek@lists.infradead.org, linux-crypto@vger.kernel.org, linux-security-module@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-arm-kernel@lists.infradead.org, Ofir Drang <ofir.drang@arm.com>
+Cc: "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, device-mapper development <dm-devel@redhat.com>, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Ofir Drang <ofir.drang@arm.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-doc@vger.kernel.org, Linux kernel mailing list <linux-kernel@vger.kernel.org>, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Sun, Oct 15, 2017 at 10:19:45AM +0100, Gilad Ben-Yossef wrote:
-> Many users of kernel async. crypto services have a pattern of
-> starting an async. crypto op and than using a completion
-> to wait for it to end.
+On Tue, Oct 17, 2017 at 02:55:21PM +0300, Gilad Ben-Yossef wrote:
+>
+> Would you mind if we used ENOSPC instead of E2BIG?
 > 
-> This patch set simplifies this common use case in two ways:
-> 
-> First, by separating the return codes of the case where a
-> request is queued to a backlog due to the provider being
-> busy (-EBUSY) from the case the request has failed due
-> to the provider being busy and backlogging is not enabled
-> (-EAGAIN).
-> 
-> Next, this change is than built on to create a generic API
-> to wait for a async. crypto operation to complete.
-> 
-> The end result is a smaller code base and an API that is
-> easier to use and more difficult to get wrong.
-> 
-> The patch set was boot tested on x86_64 and arm64 which
-> at the very least tests the crypto users via testmgr and
-> tcrypt but I do note that I do not have access to some
-> of the HW whose drivers are modified nor do I claim I was
-> able to test all of the corner cases.
-> 
-> The patch set is based upon linux-next release tagged
-> next-20171013.
+> "No space left on device" seems more appropriate than
+> "Argument list too long".
 
-Has there been any performance impact analysis of these changes?  I
-ended up with patches for one of the crypto drivers which converted
-its interrupt handling to threaded interrupts being reverted because
-it caused a performance degredation.
+It's fine by me.
 
-Moving code to latest APIs to simplify it is not always beneficial.
-
+Thanks,
 -- 
-RMK's Patch system: http://www.armlinux.org.uk/developer/patches/
-FTTC broadband for 0.8mile line in suburbia: sync at 8.8Mbps down 630kbps up
-According to speedtest.net: 8.21Mbps down 510kbps up
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
