@@ -1,115 +1,100 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 08/11] fscrypt: new helper function - fscrypt_prepare_link()
-Date: Mon,  9 Oct 2017 12:15:41 -0700
-Message-Id: <20171009191544.43656-9-ebiggers3@gmail.com>
-In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
-References: <20171009191544.43656-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-crypto-owner@vger.kernel.org>
+Subject: Re: [PATCH v9 17/20] crypto: talitos: move to generic async
+ completion
+References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
+ <1508059209-25529-18-git-send-email-gilad@benyossef.com>
+From: Christophe LEROY <christophe.leroy@c-s.fr>
+Message-ID: <b75d3b02-2aba-124c-ccf5-7241775c004c@c-s.fr>
+Date: Tue, 17 Oct 2017 12:50:41 +0200
+MIME-Version: 1.0
+In-Reply-To: <1508059209-25529-18-git-send-email-gilad@benyossef.com>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Language: fr
+Content-Transfer-Encoding: 8bit
+Sender: linux-crypto-owner@vger.kernel.org
+To: Gilad Ben-Yossef <gilad@benyossef.com>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Le 15/10/2017 à 11:20, Gilad Ben-Yossef a écrit :
+> The talitos driver starts several async crypto ops and  waits for their
+> completions. Move it over to generic code doing the same.
+> 
+> Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 
-Introduce a helper function which prepares to link an inode into a
-possibly-encrypted directory.  It handles setting up the target
-directory's encryption key, then verifying that the link won't violate
-the constraint that all files in an encrypted directory tree use the
-same encryption policy.
+Tested-by: Christophe Leroy <christophe.leroy@c-s.fr>
 
-Acked-by: Dave Chinner <dchinner@redhat.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/hooks.c               | 15 +++++++++++++++
- include/linux/fscrypt.h         | 27 +++++++++++++++++++++++++++
- include/linux/fscrypt_notsupp.h |  6 ++++++
- include/linux/fscrypt_supp.h    |  1 +
- 4 files changed, 49 insertions(+)
-
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 069088e91ea9..8b90217320dd 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -47,3 +47,18 @@ int fscrypt_file_open(struct inode *inode, struct file *filp)
- 	return err;
- }
- EXPORT_SYMBOL_GPL(fscrypt_file_open);
-+
-+int __fscrypt_prepare_link(struct inode *inode, struct inode *dir)
-+{
-+	int err;
-+
-+	err = fscrypt_require_key(dir);
-+	if (err)
-+		return err;
-+
-+	if (!fscrypt_has_permitted_context(dir, inode))
-+		return -EPERM;
-+
-+	return 0;
-+}
-+EXPORT_SYMBOL_GPL(__fscrypt_prepare_link);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index b3e2a5f93415..9c9a53f99327 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -177,4 +177,31 @@ static inline int fscrypt_require_key(struct inode *inode)
- 	return 0;
- }
- 
-+/**
-+ * fscrypt_prepare_link - prepare to link an inode into a possibly-encrypted directory
-+ * @old_dentry: an existing dentry for the inode being linked
-+ * @dir: the target directory
-+ * @dentry: negative dentry for the target filename
-+ *
-+ * A new link can only be added to an encrypted directory if the directory's
-+ * encryption key is available --- since otherwise we'd have no way to encrypt
-+ * the filename.  Therefore, we first set up the directory's encryption key (if
-+ * not already done) and return an error if it's unavailable.
-+ *
-+ * We also verify that the link will not violate the constraint that all files
-+ * in an encrypted directory tree use the same encryption policy.
-+ *
-+ * Return: 0 on success, -ENOKEY if the directory's encryption key is missing,
-+ * -EPERM if the link would result in an inconsistent encryption policy, or
-+ * another -errno code.
-+ */
-+static inline int fscrypt_prepare_link(struct dentry *old_dentry,
-+				       struct inode *dir,
-+				       struct dentry *dentry)
-+{
-+	if (IS_ENCRYPTED(dir))
-+		return __fscrypt_prepare_link(d_inode(old_dentry), dir);
-+	return 0;
-+}
-+
- #endif	/* _LINUX_FSCRYPT_H */
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index 162da6517ac4..d7d1039eb6b5 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -186,4 +186,10 @@ static inline int fscrypt_file_open(struct inode *inode, struct file *filp)
- 	return 0;
- }
- 
-+static inline int __fscrypt_prepare_link(struct inode *inode,
-+					 struct inode *dir)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
- #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index fd2f6decaee4..80706283da75 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -145,5 +145,6 @@ extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
- 
- /* hooks.c */
- extern int fscrypt_file_open(struct inode *inode, struct file *filp);
-+extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir);
- 
- #endif	/* _LINUX_FSCRYPT_SUPP_H */
--- 
-2.14.2.920.gcf0c67979c-goog
+> ---
+>   drivers/crypto/talitos.c | 38 +++++---------------------------------
+>   1 file changed, 5 insertions(+), 33 deletions(-)
+> 
+> diff --git a/drivers/crypto/talitos.c b/drivers/crypto/talitos.c
+> index 5bd8191..9c80e0c 100644
+> --- a/drivers/crypto/talitos.c
+> +++ b/drivers/crypto/talitos.c
+> @@ -2160,22 +2160,6 @@ static int ahash_import(struct ahash_request *areq, const void *in)
+>   	return 0;
+>   }
+>   
+> -struct keyhash_result {
+> -	struct completion completion;
+> -	int err;
+> -};
+> -
+> -static void keyhash_complete(struct crypto_async_request *req, int err)
+> -{
+> -	struct keyhash_result *res = req->data;
+> -
+> -	if (err == -EINPROGRESS)
+> -		return;
+> -
+> -	res->err = err;
+> -	complete(&res->completion);
+> -}
+> -
+>   static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
+>   		   u8 *hash)
+>   {
+> @@ -2183,10 +2167,10 @@ static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
+>   
+>   	struct scatterlist sg[1];
+>   	struct ahash_request *req;
+> -	struct keyhash_result hresult;
+> +	struct crypto_wait wait;
+>   	int ret;
+>   
+> -	init_completion(&hresult.completion);
+> +	crypto_init_wait(&wait);
+>   
+>   	req = ahash_request_alloc(tfm, GFP_KERNEL);
+>   	if (!req)
+> @@ -2195,25 +2179,13 @@ static int keyhash(struct crypto_ahash *tfm, const u8 *key, unsigned int keylen,
+>   	/* Keep tfm keylen == 0 during hash of the long key */
+>   	ctx->keylen = 0;
+>   	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+> -				   keyhash_complete, &hresult);
+> +				   crypto_req_done, &wait);
+>   
+>   	sg_init_one(&sg[0], key, keylen);
+>   
+>   	ahash_request_set_crypt(req, sg, hash, keylen);
+> -	ret = crypto_ahash_digest(req);
+> -	switch (ret) {
+> -	case 0:
+> -		break;
+> -	case -EINPROGRESS:
+> -	case -EBUSY:
+> -		ret = wait_for_completion_interruptible(
+> -			&hresult.completion);
+> -		if (!ret)
+> -			ret = hresult.err;
+> -		break;
+> -	default:
+> -		break;
+> -	}
+> +	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
+> +
+>   	ahash_request_free(req);
+>   
+>   	return ret;
+> 
