@@ -1,122 +1,101 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 10/11] fscrypt: new helper function - fscrypt_prepare_lookup()
-Date: Mon,  9 Oct 2017 12:15:43 -0700
-Message-Id: <20171009191544.43656-11-ebiggers3@gmail.com>
-In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
-References: <20171009191544.43656-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <keyrings-owner@vger.kernel.org>
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v10 10/20] crypto: move gcm to generic async completion
+Date: Wed, 18 Oct 2017 08:00:42 +0100
+Message-Id: <1508310057-25369-11-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
+References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
+Sender: keyrings-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+gcm is starting an async. crypto op and waiting for it complete.
+Move it over to generic code doing the same.
 
-Introduce a helper function which prepares to look up the given dentry
-in the given directory.  If the directory is encrypted, it handles
-loading the directory's encryption key, setting the dentry's ->d_op to
-fscrypt_d_ops, and setting DCACHE_ENCRYPTED_WITH_KEY if the directory's
-encryption key is available.
-
-Note: once all filesystems switch over to this, we'll be able to move
-fscrypt_d_ops and fscrypt_set_encrypted_dentry() to fscrypt_private.h.
-
-Acked-by: Dave Chinner <dchinner@redhat.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- fs/crypto/hooks.c               | 18 ++++++++++++++++++
- include/linux/fscrypt.h         | 28 ++++++++++++++++++++++++++++
- include/linux/fscrypt_notsupp.h |  6 ++++++
- include/linux/fscrypt_supp.h    |  1 +
- 4 files changed, 53 insertions(+)
+ crypto/gcm.c | 32 ++++++--------------------------
+ 1 file changed, 6 insertions(+), 26 deletions(-)
 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 822cb78f9b45..9f5fb2eb9cf7 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -92,3 +92,21 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
- 	return 0;
- }
- EXPORT_SYMBOL_GPL(__fscrypt_prepare_rename);
-+
-+int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry)
-+{
-+	int err = fscrypt_get_encryption_info(dir);
-+
-+	if (err)
-+		return err;
-+
-+	if (fscrypt_has_encryption_key(dir)) {
-+		spin_lock(&dentry->d_lock);
-+		dentry->d_flags |= DCACHE_ENCRYPTED_WITH_KEY;
-+		spin_unlock(&dentry->d_lock);
-+	}
-+
-+	d_set_d_op(dentry, &fscrypt_d_ops);
-+	return 0;
-+}
-+EXPORT_SYMBOL_GPL(__fscrypt_prepare_lookup);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index c422367baed9..2327859c8cd2 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -237,4 +237,32 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
- 	return 0;
+diff --git a/crypto/gcm.c b/crypto/gcm.c
+index 80cf6cf..8589681 100644
+--- a/crypto/gcm.c
++++ b/crypto/gcm.c
+@@ -17,7 +17,6 @@
+ #include <crypto/gcm.h>
+ #include <crypto/hash.h>
+ #include "internal.h"
+-#include <linux/completion.h>
+ #include <linux/err.h>
+ #include <linux/init.h>
+ #include <linux/kernel.h>
+@@ -79,11 +78,6 @@ struct crypto_gcm_req_priv_ctx {
+ 	} u;
+ };
+ 
+-struct crypto_gcm_setkey_result {
+-	int err;
+-	struct completion completion;
+-};
+-
+ static struct {
+ 	u8 buf[16];
+ 	struct scatterlist sg;
+@@ -99,17 +93,6 @@ static inline struct crypto_gcm_req_priv_ctx *crypto_gcm_reqctx(
+ 	return (void *)PTR_ALIGN((u8 *)aead_request_ctx(req), align + 1);
  }
  
-+/**
-+ * fscrypt_prepare_lookup - prepare to lookup a name in a possibly-encrypted directory
-+ * @dir: directory being searched
-+ * @dentry: filename being looked up
-+ * @flags: lookup flags
-+ *
-+ * Prepare for ->lookup() in a directory which may be encrypted.  Lookups can be
-+ * done with or without the directory's encryption key; without the key,
-+ * filenames are presented in encrypted form.  Therefore, we'll try to set up
-+ * the directory's encryption key, but even without it the lookup can continue.
-+ *
-+ * To allow invalidating stale dentries if the directory's encryption key is
-+ * added later, we also install a custom ->d_revalidate() method and use the
-+ * DCACHE_ENCRYPTED_WITH_KEY flag to indicate whether a given dentry is a
-+ * plaintext name (flag set) or a ciphertext name (flag cleared).
-+ *
-+ * Return: 0 on success, -errno if a problem occurred while setting up the
-+ * encryption key
-+ */
-+static inline int fscrypt_prepare_lookup(struct inode *dir,
-+					 struct dentry *dentry,
-+					 unsigned int flags)
-+{
-+	if (IS_ENCRYPTED(dir))
-+		return __fscrypt_prepare_lookup(dir, dentry);
-+	return 0;
-+}
-+
- #endif	/* _LINUX_FSCRYPT_H */
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index 6af378d8126e..c4c6bf2c390e 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -201,4 +201,10 @@ static inline int __fscrypt_prepare_rename(struct inode *old_dir,
- 	return -EOPNOTSUPP;
- }
+-static void crypto_gcm_setkey_done(struct crypto_async_request *req, int err)
+-{
+-	struct crypto_gcm_setkey_result *result = req->data;
+-
+-	if (err == -EINPROGRESS)
+-		return;
+-
+-	result->err = err;
+-	complete(&result->completion);
+-}
+-
+ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 			     unsigned int keylen)
+ {
+@@ -120,7 +103,7 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 		be128 hash;
+ 		u8 iv[16];
  
-+static inline int __fscrypt_prepare_lookup(struct inode *dir,
-+					   struct dentry *dentry)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
- #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index 40f35073145f..2db5e9706f60 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -151,5 +151,6 @@ extern int __fscrypt_prepare_rename(struct inode *old_dir,
- 				    struct inode *new_dir,
- 				    struct dentry *new_dentry,
- 				    unsigned int flags);
-+extern int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry);
+-		struct crypto_gcm_setkey_result result;
++		struct crypto_wait wait;
  
- #endif	/* _LINUX_FSCRYPT_SUPP_H */
+ 		struct scatterlist sg[1];
+ 		struct skcipher_request req;
+@@ -141,21 +124,18 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
+ 	if (!data)
+ 		return -ENOMEM;
+ 
+-	init_completion(&data->result.completion);
++	crypto_init_wait(&data->wait);
+ 	sg_init_one(data->sg, &data->hash, sizeof(data->hash));
+ 	skcipher_request_set_tfm(&data->req, ctr);
+ 	skcipher_request_set_callback(&data->req, CRYPTO_TFM_REQ_MAY_SLEEP |
+ 						  CRYPTO_TFM_REQ_MAY_BACKLOG,
+-				      crypto_gcm_setkey_done,
+-				      &data->result);
++				      crypto_req_done,
++				      &data->wait);
+ 	skcipher_request_set_crypt(&data->req, data->sg, data->sg,
+ 				   sizeof(data->hash), data->iv);
+ 
+-	err = crypto_skcipher_encrypt(&data->req);
+-	if (err == -EINPROGRESS || err == -EBUSY) {
+-		wait_for_completion(&data->result.completion);
+-		err = data->result.err;
+-	}
++	err = crypto_wait_req(crypto_skcipher_encrypt(&data->req),
++							&data->wait);
+ 
+ 	if (err)
+ 		goto out;
 -- 
-2.14.2.920.gcf0c67979c-goog
+2.7.4
+
