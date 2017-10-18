@@ -1,12 +1,12 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:34276 "EHLO
+Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:33336 "EHLO
         foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1761450AbdJRHGp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 18 Oct 2017 03:06:45 -0400
+        id S966495AbdJRHCn (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 18 Oct 2017 03:02:43 -0400
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v10 20/20] crypto: adapt api sample to use async. op wait
-Date: Wed, 18 Oct 2017 08:00:52 +0100
-Message-Id: <1508310057-25369-21-git-send-email-gilad@benyossef.com>
+Subject: [PATCH v10 03/20] net: use -ENOSPC for transient busy indication
+Date: Wed, 18 Oct 2017 08:00:35 +0100
+Message-Id: <1508310057-25369-4-git-send-email-gilad@benyossef.com>
 In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
 References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -14,110 +14,73 @@ To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft
 Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The code sample is waiting for an async. crypto op completion.
-Adapt sample to use the new generic infrastructure to do the same.
-
-This also fixes a possible data coruption bug created by the
-use of wait_for_completion_interruptible() without dealing
-correctly with an interrupt aborting the wait prior to the
-async op finishing.
+Replace -EBUSY with -ENOSPC when handling transient busy
+indication in the absence of backlog.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
----
- Documentation/crypto/api-samples.rst | 52 +++++++-----------------------------
- 1 file changed, 10 insertions(+), 42 deletions(-)
 
-diff --git a/Documentation/crypto/api-samples.rst b/Documentation/crypto/api-samples.rst
-index 2531948..006827e 100644
---- a/Documentation/crypto/api-samples.rst
-+++ b/Documentation/crypto/api-samples.rst
-@@ -7,59 +7,27 @@ Code Example For Symmetric Key Cipher Operation
- ::
+---
+
+Please squash this patch with the previous one when merging upstream.
+
+ net/ipv4/ah4.c  | 2 +-
+ net/ipv4/esp4.c | 2 +-
+ net/ipv6/ah6.c  | 2 +-
+ net/ipv6/esp6.c | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/net/ipv4/ah4.c b/net/ipv4/ah4.c
+index 37db44f..4dd95cd 100644
+--- a/net/ipv4/ah4.c
++++ b/net/ipv4/ah4.c
+@@ -240,7 +240,7 @@ static int ah_output(struct xfrm_state *x, struct sk_buff *skb)
+ 		if (err == -EINPROGRESS)
+ 			goto out;
  
+-		if (err == -EBUSY)
++		if (err == -ENOSPC)
+ 			err = NET_XMIT_DROP;
+ 		goto out_free;
+ 	}
+diff --git a/net/ipv4/esp4.c b/net/ipv4/esp4.c
+index b00e4a4..d57aa64 100644
+--- a/net/ipv4/esp4.c
++++ b/net/ipv4/esp4.c
+@@ -432,7 +432,7 @@ int esp_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info *
+ 	case -EINPROGRESS:
+ 		goto error;
  
--    struct tcrypt_result {
--        struct completion completion;
--        int err;
--    };
--
-     /* tie all data structures together */
-     struct skcipher_def {
-         struct scatterlist sg;
-         struct crypto_skcipher *tfm;
-         struct skcipher_request *req;
--        struct tcrypt_result result;
-+        struct crypto_wait wait;
-     };
+-	case -EBUSY:
++	case -ENOSPC:
+ 		err = NET_XMIT_DROP;
+ 		break;
  
--    /* Callback function */
--    static void test_skcipher_cb(struct crypto_async_request *req, int error)
--    {
--        struct tcrypt_result *result = req->data;
--
--        if (error == -EINPROGRESS)
--            return;
--        result->err = error;
--        complete(&result->completion);
--        pr_info("Encryption finished successfully\n");
--    }
--
-     /* Perform cipher operation */
-     static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
-                          int enc)
-     {
--        int rc = 0;
-+        int rc;
+diff --git a/net/ipv6/ah6.c b/net/ipv6/ah6.c
+index 7802b72..3bd9d80 100644
+--- a/net/ipv6/ah6.c
++++ b/net/ipv6/ah6.c
+@@ -443,7 +443,7 @@ static int ah6_output(struct xfrm_state *x, struct sk_buff *skb)
+ 		if (err == -EINPROGRESS)
+ 			goto out;
  
-         if (enc)
--            rc = crypto_skcipher_encrypt(sk->req);
-+            rc = crypto_wait_req(crypto_skcipher_encrypt(sk->req), &sk->wait);
-         else
--            rc = crypto_skcipher_decrypt(sk->req);
--
--        switch (rc) {
--        case 0:
--            break;
--        case -EINPROGRESS:
--        case -EBUSY:
--            rc = wait_for_completion_interruptible(
--                &sk->result.completion);
--            if (!rc && !sk->result.err) {
--                reinit_completion(&sk->result.completion);
--                break;
--            }
--        default:
--            pr_info("skcipher encrypt returned with %d result %d\n",
--                rc, sk->result.err);
--            break;
--        }
--        init_completion(&sk->result.completion);
-+            rc = crypto_wait_req(crypto_skcipher_decrypt(sk->req), &sk->wait);
-+
-+	if (rc)
-+		pr_info("skcipher encrypt returned with result %d\n", rc);
+-		if (err == -EBUSY)
++		if (err == -ENOSPC)
+ 			err = NET_XMIT_DROP;
+ 		goto out_free;
+ 	}
+diff --git a/net/ipv6/esp6.c b/net/ipv6/esp6.c
+index 89910e2..c04d995 100644
+--- a/net/ipv6/esp6.c
++++ b/net/ipv6/esp6.c
+@@ -396,7 +396,7 @@ int esp6_output_tail(struct xfrm_state *x, struct sk_buff *skb, struct esp_info
+ 	case -EINPROGRESS:
+ 		goto error;
  
-         return rc;
-     }
-@@ -89,8 +57,8 @@ Code Example For Symmetric Key Cipher Operation
-         }
+-	case -EBUSY:
++	case -ENOSPC:
+ 		err = NET_XMIT_DROP;
+ 		break;
  
-         skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--                          test_skcipher_cb,
--                          &sk.result);
-+                          crypto_req_done,
-+                          &sk.wait);
- 
-         /* AES 256 with random key */
-         get_random_bytes(&key, 32);
-@@ -122,7 +90,7 @@ Code Example For Symmetric Key Cipher Operation
-         /* We encrypt one block */
-         sg_init_one(&sk.sg, scratchpad, 16);
-         skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
--        init_completion(&sk.result.completion);
-+        crypto_init_wait(&sk.wait);
- 
-         /* encrypt data */
-         ret = test_skcipher_encdec(&sk, 1);
 -- 
 2.7.4
 
