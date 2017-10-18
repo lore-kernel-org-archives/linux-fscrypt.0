@@ -1,102 +1,80 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 05/11] fscrypt: remove unneeded empty fscrypt_operations structs
-Date: Mon,  9 Oct 2017 12:15:38 -0700
-Message-Id: <20171009191544.43656-6-ebiggers3@gmail.com>
-In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
-References: <20171009191544.43656-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <keyrings-owner@vger.kernel.org>
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v10 01/20] crypto: change transient busy return code to -ENOSPC
+Date: Wed, 18 Oct 2017 08:00:33 +0100
+Message-Id: <1508310057-25369-2-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
+References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
+Sender: keyrings-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+The crypto API was using the -EBUSY return value to indicate
+both a hard failure to submit a crypto operation into a
+transformation provider when the latter was busy and the backlog
+mechanism was not enabled as well as a notification that the
+operation was queued into the backlog when the backlog mechanism
+was enabled.
 
-In the case where a filesystem has been configured without encryption
-support, there is no longer any need to initialize ->s_cop at all, since
-none of the methods are ever called.
+Having the same return code indicate two very different conditions
+depending on a flag is both error prone and requires extra runtime
+check like the following to discern between the cases:
 
-Reviewed-by: Chao Yu <yuchao0@huawei.com>
-Acked-by: Dave Chinner <dchinner@redhat.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+	if (err == -EINPROGRESS ||
+	    (err == -EBUSY && (ahash_request_flags(req) &
+			       CRYPTO_TFM_REQ_MAY_BACKLOG)))
+
+This patch changes the return code used to indicate a crypto op
+failed due to the transformation provider being transiently busy
+to -ENOSPC.
+
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- fs/ext4/super.c  | 5 ++---
- fs/f2fs/super.c  | 5 ++---
- fs/ubifs/super.c | 7 ++-----
- 3 files changed, 6 insertions(+), 11 deletions(-)
+ crypto/algapi.c | 6 ++++--
+ crypto/cryptd.c | 4 +---
+ 2 files changed, 5 insertions(+), 5 deletions(-)
 
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index bc63cdf194e3..04f3670748e7 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1244,9 +1244,6 @@ static const struct fscrypt_operations ext4_cryptops = {
- 	.empty_dir		= ext4_empty_dir,
- 	.max_namelen		= ext4_max_namelen,
- };
--#else
--static const struct fscrypt_operations ext4_cryptops = {
--};
- #endif
+diff --git a/crypto/algapi.c b/crypto/algapi.c
+index aa699ff..60d7366 100644
+--- a/crypto/algapi.c
++++ b/crypto/algapi.c
+@@ -897,9 +897,11 @@ int crypto_enqueue_request(struct crypto_queue *queue,
+ 	int err = -EINPROGRESS;
  
- #ifdef CONFIG_QUOTA
-@@ -3998,7 +3995,9 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
- 	sb->s_op = &ext4_sops;
- 	sb->s_export_op = &ext4_export_ops;
- 	sb->s_xattr = ext4_xattr_handlers;
-+#ifdef CONFIG_EXT4_FS_ENCRYPTION
- 	sb->s_cop = &ext4_cryptops;
-+#endif
- #ifdef CONFIG_QUOTA
- 	sb->dq_op = &ext4_quota_operations;
- 	if (ext4_has_feature_quota(sb))
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 1cb41f711ab8..c1c7183b3527 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -1597,9 +1597,6 @@ static const struct fscrypt_operations f2fs_cryptops = {
- 	.empty_dir	= f2fs_empty_dir,
- 	.max_namelen	= f2fs_max_namelen,
- };
--#else
--static const struct fscrypt_operations f2fs_cryptops = {
--};
- #endif
+ 	if (unlikely(queue->qlen >= queue->max_qlen)) {
+-		err = -EBUSY;
+-		if (!(request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG))
++		if (!(request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG)) {
++			err = -ENOSPC;
+ 			goto out;
++		}
++		err = -EBUSY;
+ 		if (queue->backlog == &queue->list)
+ 			queue->backlog = &request->list;
+ 	}
+diff --git a/crypto/cryptd.c b/crypto/cryptd.c
+index 0508c48..bd43cf5 100644
+--- a/crypto/cryptd.c
++++ b/crypto/cryptd.c
+@@ -137,16 +137,14 @@ static int cryptd_enqueue_request(struct cryptd_queue *queue,
+ 	int cpu, err;
+ 	struct cryptd_cpu_queue *cpu_queue;
+ 	atomic_t *refcnt;
+-	bool may_backlog;
  
- static struct inode *f2fs_nfs_get_inode(struct super_block *sb,
-@@ -2318,7 +2315,9 @@ static int f2fs_fill_super(struct super_block *sb, void *data, int silent)
- #endif
+ 	cpu = get_cpu();
+ 	cpu_queue = this_cpu_ptr(queue->cpu_queue);
+ 	err = crypto_enqueue_request(&cpu_queue->queue, request);
  
- 	sb->s_op = &f2fs_sops;
-+#ifdef CONFIG_F2FS_FS_ENCRYPTION
- 	sb->s_cop = &f2fs_cryptops;
-+#endif
- 	sb->s_xattr = f2fs_xattr_handlers;
- 	sb->s_export_op = &f2fs_export_ops;
- 	sb->s_magic = F2FS_SUPER_MAGIC;
-diff --git a/fs/ubifs/super.c b/fs/ubifs/super.c
-index adaca6088836..7503e7cdf870 100644
---- a/fs/ubifs/super.c
-+++ b/fs/ubifs/super.c
-@@ -2007,11 +2007,6 @@ static struct ubifs_info *alloc_ubifs_info(struct ubi_volume_desc *ubi)
- 	return c;
- }
+ 	refcnt = crypto_tfm_ctx(request->tfm);
+-	may_backlog = request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG;
  
--#ifndef CONFIG_UBIFS_FS_ENCRYPTION
--const struct fscrypt_operations ubifs_crypt_operations = {
--};
--#endif
--
- static int ubifs_fill_super(struct super_block *sb, void *data, int silent)
- {
- 	struct ubifs_info *c = sb->s_fs_info;
-@@ -2054,7 +2049,9 @@ static int ubifs_fill_super(struct super_block *sb, void *data, int silent)
- 		sb->s_maxbytes = c->max_inode_sz = MAX_LFS_FILESIZE;
- 	sb->s_op = &ubifs_super_operations;
- 	sb->s_xattr = ubifs_xattr_handlers;
-+#ifdef CONFIG_UBIFS_FS_ENCRYPTION
- 	sb->s_cop = &ubifs_crypt_operations;
-+#endif
+-	if (err == -EBUSY && !may_backlog)
++	if (err == -ENOSPC)
+ 		goto out_put_cpu;
  
- 	mutex_lock(&c->umount_mutex);
- 	err = mount_ubifs(c);
+ 	queue_work_on(cpu, kcrypto_wq, &cpu_queue->work);
 -- 
-2.14.2.920.gcf0c67979c-goog
+2.7.4
+
