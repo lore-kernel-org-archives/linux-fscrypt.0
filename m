@@ -1,80 +1,123 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:34276 "EHLO
+        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1761450AbdJRHGp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 18 Oct 2017 03:06:45 -0400
 From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v9 01/20] crypto: change transient busy return code to -EAGAIN
-Date: Sun, 15 Oct 2017 10:19:46 +0100
-Message-Id: <1508059209-25529-2-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
+Subject: [PATCH v10 20/20] crypto: adapt api sample to use async. op wait
+Date: Wed, 18 Oct 2017 08:00:52 +0100
+Message-Id: <1508310057-25369-21-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
+References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
 Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The crypto API was using the -EBUSY return value to indicate
-both a hard failure to submit a crypto operation into a
-transformation provider when the latter was busy and the backlog
-mechanism was not enabled as well as a notification that the
-operation was queued into the backlog when the backlog mechanism
-was enabled.
+The code sample is waiting for an async. crypto op completion.
+Adapt sample to use the new generic infrastructure to do the same.
 
-Having the same return code indicate two very different conditions
-depending on a flag is both error prone and requires extra runtime
-check like the following to discern between the cases:
-
-	if (err == -EINPROGRESS ||
-	    (err == -EBUSY && (ahash_request_flags(req) &
-			       CRYPTO_TFM_REQ_MAY_BACKLOG)))
-
-This patch changes the return code used to indicate a crypto op
-failed due to the transformation provider being transiently busy
-to -EAGAIN.
+This also fixes a possible data coruption bug created by the
+use of wait_for_completion_interruptible() without dealing
+correctly with an interrupt aborting the wait prior to the
+async op finishing.
 
 Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
 ---
- crypto/algapi.c | 6 ++++--
- crypto/cryptd.c | 4 +---
- 2 files changed, 5 insertions(+), 5 deletions(-)
+ Documentation/crypto/api-samples.rst | 52 +++++++-----------------------------
+ 1 file changed, 10 insertions(+), 42 deletions(-)
 
-diff --git a/crypto/algapi.c b/crypto/algapi.c
-index aa699ff..916bee3 100644
---- a/crypto/algapi.c
-+++ b/crypto/algapi.c
-@@ -897,9 +897,11 @@ int crypto_enqueue_request(struct crypto_queue *queue,
- 	int err = -EINPROGRESS;
+diff --git a/Documentation/crypto/api-samples.rst b/Documentation/crypto/api-samples.rst
+index 2531948..006827e 100644
+--- a/Documentation/crypto/api-samples.rst
++++ b/Documentation/crypto/api-samples.rst
+@@ -7,59 +7,27 @@ Code Example For Symmetric Key Cipher Operation
+ ::
  
- 	if (unlikely(queue->qlen >= queue->max_qlen)) {
--		err = -EBUSY;
--		if (!(request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG))
-+		if (!(request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG)) {
-+			err = -EAGAIN;
- 			goto out;
-+		}
-+		err = -EBUSY;
- 		if (queue->backlog == &queue->list)
- 			queue->backlog = &request->list;
- 	}
-diff --git a/crypto/cryptd.c b/crypto/cryptd.c
-index 0508c48..d1dbdce 100644
---- a/crypto/cryptd.c
-+++ b/crypto/cryptd.c
-@@ -137,16 +137,14 @@ static int cryptd_enqueue_request(struct cryptd_queue *queue,
- 	int cpu, err;
- 	struct cryptd_cpu_queue *cpu_queue;
- 	atomic_t *refcnt;
--	bool may_backlog;
  
- 	cpu = get_cpu();
- 	cpu_queue = this_cpu_ptr(queue->cpu_queue);
- 	err = crypto_enqueue_request(&cpu_queue->queue, request);
+-    struct tcrypt_result {
+-        struct completion completion;
+-        int err;
+-    };
+-
+     /* tie all data structures together */
+     struct skcipher_def {
+         struct scatterlist sg;
+         struct crypto_skcipher *tfm;
+         struct skcipher_request *req;
+-        struct tcrypt_result result;
++        struct crypto_wait wait;
+     };
  
- 	refcnt = crypto_tfm_ctx(request->tfm);
--	may_backlog = request->flags & CRYPTO_TFM_REQ_MAY_BACKLOG;
+-    /* Callback function */
+-    static void test_skcipher_cb(struct crypto_async_request *req, int error)
+-    {
+-        struct tcrypt_result *result = req->data;
+-
+-        if (error == -EINPROGRESS)
+-            return;
+-        result->err = error;
+-        complete(&result->completion);
+-        pr_info("Encryption finished successfully\n");
+-    }
+-
+     /* Perform cipher operation */
+     static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
+                          int enc)
+     {
+-        int rc = 0;
++        int rc;
  
--	if (err == -EBUSY && !may_backlog)
-+	if (err == -EAGAIN)
- 		goto out_put_cpu;
+         if (enc)
+-            rc = crypto_skcipher_encrypt(sk->req);
++            rc = crypto_wait_req(crypto_skcipher_encrypt(sk->req), &sk->wait);
+         else
+-            rc = crypto_skcipher_decrypt(sk->req);
+-
+-        switch (rc) {
+-        case 0:
+-            break;
+-        case -EINPROGRESS:
+-        case -EBUSY:
+-            rc = wait_for_completion_interruptible(
+-                &sk->result.completion);
+-            if (!rc && !sk->result.err) {
+-                reinit_completion(&sk->result.completion);
+-                break;
+-            }
+-        default:
+-            pr_info("skcipher encrypt returned with %d result %d\n",
+-                rc, sk->result.err);
+-            break;
+-        }
+-        init_completion(&sk->result.completion);
++            rc = crypto_wait_req(crypto_skcipher_decrypt(sk->req), &sk->wait);
++
++	if (rc)
++		pr_info("skcipher encrypt returned with result %d\n", rc);
  
- 	queue_work_on(cpu, kcrypto_wq, &cpu_queue->work);
+         return rc;
+     }
+@@ -89,8 +57,8 @@ Code Example For Symmetric Key Cipher Operation
+         }
+ 
+         skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+-                          test_skcipher_cb,
+-                          &sk.result);
++                          crypto_req_done,
++                          &sk.wait);
+ 
+         /* AES 256 with random key */
+         get_random_bytes(&key, 32);
+@@ -122,7 +90,7 @@ Code Example For Symmetric Key Cipher Operation
+         /* We encrypt one block */
+         sg_init_one(&sk.sg, scratchpad, 16);
+         skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
+-        init_completion(&sk.result.completion);
++        crypto_init_wait(&sk.wait);
+ 
+         /* encrypt data */
+         ret = test_skcipher_encdec(&sk, 1);
 -- 
 2.7.4
 
