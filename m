@@ -1,49 +1,75 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Mon, 9 Oct 2017 13:53:00 -0700
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH] fscrypt: lock mutex before checking for bounce page pool
-Message-ID: <20171009205300.GE67463@gmail.com>
-References: <20170706175748.33093-1-ebiggers3@gmail.com>
- <20170913052252.GA16966@zzz.localdomain>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20170913052252.GA16966@zzz.localdomain>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-kernel@vger.kernel.org, stable@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <keyrings-owner@vger.kernel.org>
+From: Gilad Ben-Yossef <gilad@benyossef.com>
+Subject: [PATCH v10 02/20] crypto: ccp: use -ENOSPC for transient busy indication
+Date: Wed, 18 Oct 2017 08:00:34 +0100
+Message-Id: <1508310057-25369-3-git-send-email-gilad@benyossef.com>
+In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
+References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
+Sender: keyrings-owner@vger.kernel.org
+To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
+Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Sep 12, 2017 at 10:22:52PM -0700, Eric Biggers wrote:
-> On Thu, Jul 06, 2017 at 10:57:48AM -0700, Eric Biggers wrote:
-> > fscrypt_initialize(), which allocates the global bounce page pool when
-> > an encrypted file is first accessed, uses "double-checked locking" to
-> > try to avoid locking fscrypt_init_mutex.  However, it doesn't use any
-> > memory barriers, so it's theoretically possible for a thread to observe
-> > a bounce page pool which has not been fully initialized.  This is a
-> > classic bug with "double-checked locking".
-> > 
-> > While "only a theoretical issue" in the latest kernel, in pre-4.8
-> > kernels the pointer that was checked was not even the last to be
-> > initialized, so it was easily possible for a crash (NULL pointer
-> > dereference) to happen.  This was changed only incidentally by the large
-> > refactor to use fs/crypto/.
-> > 
-> > Solve both problems in a trivial way that can easily be backported: just
-> > always take the mutex.  It's theoretically less efficient, but it
-> > shouldn't be noticeable in practice as the mutex is only acquired very
-> > briefly once per encrypted file.
-> > 
-> 
-> Ted, can you take this patch?  On Android this bug has been causing a NULL
-> pointer dereference in ext4_get_encryption_info on boot.  Granted, due to the
-> way the code has been moved around it no longer would happen in practice in the
-> latest kernel, but we still need something to backport to 4.4, etc.
-> 
-> Eric
+Replace -EBUSY with -ENOSPC when reporting transient busy
+indication in the absence of backlog.
 
-Ping.  Ted, can you take this through the fscrypt tree?  Or should I sent a
-similar patch just for 4.4-stable (and earlier), then do something fancier with
-smp_store_release, smp_load_acquire, etc. for the latest version?  Personally
-I'd prefer starting with the trivial fix, as it can be optimized later.
+Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+Reviewed-by: Gary R Hook <gary.hook@amd.com>
 
-Eric
+---
+
+Please squash this patch with the previous one when merging upstream.
+
+ drivers/crypto/ccp/ccp-crypto-main.c | 8 +++-----
+ drivers/crypto/ccp/ccp-dev.c         | 7 +++++--
+ 2 files changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/crypto/ccp/ccp-crypto-main.c b/drivers/crypto/ccp/ccp-crypto-main.c
+index 35a9de7..b95d199 100644
+--- a/drivers/crypto/ccp/ccp-crypto-main.c
++++ b/drivers/crypto/ccp/ccp-crypto-main.c
+@@ -222,9 +222,10 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
+ 
+ 	/* Check if the cmd can/should be queued */
+ 	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
+-		ret = -EBUSY;
+-		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
++		if (!(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG)) {
++			ret = -ENOSPC;
+ 			goto e_lock;
++		}
+ 	}
+ 
+ 	/* Look for an entry with the same tfm.  If there is a cmd
+@@ -243,9 +244,6 @@ static int ccp_crypto_enqueue_cmd(struct ccp_crypto_cmd *crypto_cmd)
+ 		ret = ccp_enqueue_cmd(crypto_cmd->cmd);
+ 		if (!ccp_crypto_success(ret))
+ 			goto e_lock;	/* Error, don't queue it */
+-		if ((ret == -EBUSY) &&
+-		    !(crypto_cmd->cmd->flags & CCP_CMD_MAY_BACKLOG))
+-			goto e_lock;	/* Not backlogging, don't queue it */
+ 	}
+ 
+ 	if (req_queue.cmd_count >= CCP_CRYPTO_MAX_QLEN) {
+diff --git a/drivers/crypto/ccp/ccp-dev.c b/drivers/crypto/ccp/ccp-dev.c
+index 4e029b1..1b5035d 100644
+--- a/drivers/crypto/ccp/ccp-dev.c
++++ b/drivers/crypto/ccp/ccp-dev.c
+@@ -292,9 +292,12 @@ int ccp_enqueue_cmd(struct ccp_cmd *cmd)
+ 	i = ccp->cmd_q_count;
+ 
+ 	if (ccp->cmd_count >= MAX_CMD_QLEN) {
+-		ret = -EBUSY;
+-		if (cmd->flags & CCP_CMD_MAY_BACKLOG)
++		if (cmd->flags & CCP_CMD_MAY_BACKLOG) {
++			ret = -EBUSY;
+ 			list_add_tail(&cmd->entry, &ccp->backlog);
++		} else {
++			ret = -ENOSPC;
++		}
+ 	} else {
+ 		ret = -EINPROGRESS;
+ 		ccp->cmd_count++;
+-- 
+2.7.4
+
