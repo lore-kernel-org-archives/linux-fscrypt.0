@@ -1,87 +1,41 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from foss.arm.com ([217.140.101.70]:47906 "EHLO foss.arm.com"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1751739AbdJOJYc (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 15 Oct 2017 05:24:32 -0400
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v9 14/20] cifs: move to generic async completion
-Date: Sun, 15 Oct 2017 10:19:59 +0100
-Message-Id: <1508059209-25529-15-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <tytso@thunk.org>
+Date: Fri, 20 Oct 2017 15:44:45 -0400
+From: Theodore Ts'o <tytso@mit.edu>
+Subject: Re: [PATCH v2 00/11] fscrypt: add some higher-level helper functions
+Message-ID: <20171020194445.dirxpfu2nk2n7a6b@thunk.org>
+References: <20171009191544.43656-1-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-cifs starts an async. crypto op and waits for their completion.
-Move it over to generic code doing the same.
+On Mon, Oct 09, 2017 at 12:15:33PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> This series prepares to reduce code duplication among ext4, f2fs, and
+> ubifs by introducing a S_ENCRYPTED inode flag (so we don't have to call
+> back into the filesystem to test the filesystem-specific inode flag),
+> then introducing new helper functions that are called at the beginning
+> of the open, link, rename, lookup, and setattr operations.
+> 
+> In the future we maybe should even call these new helpers from the VFS
+> so that each individual filesystem doesn't have to do it.  But that's
+> not possible currently because fs/crypto/ can be built as a module.
+> 
+> The patches to switch the filesystems over to use the helper functions
+> were included in v1 of this patchset.  They are not included now since
+> I'm planning to get them picked up by the individual filesystem
+> maintainers after this goes in.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-Acked-by: Pavel Shilovsky <pshilov@microsoft.com>
----
- fs/cifs/smb2ops.c | 30 ++++--------------------------
- 1 file changed, 4 insertions(+), 26 deletions(-)
+Thanks, I've applied these patches plus the ones for ext4 on the
+fscrypt.git tree.
 
-diff --git a/fs/cifs/smb2ops.c b/fs/cifs/smb2ops.c
-index bdb963d..e067404 100644
---- a/fs/cifs/smb2ops.c
-+++ b/fs/cifs/smb2ops.c
-@@ -2087,22 +2087,6 @@ init_sg(struct smb_rqst *rqst, u8 *sign)
- 	return sg;
- }
- 
--struct cifs_crypt_result {
--	int err;
--	struct completion completion;
--};
--
--static void cifs_crypt_complete(struct crypto_async_request *req, int err)
--{
--	struct cifs_crypt_result *res = req->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	res->err = err;
--	complete(&res->completion);
--}
--
- static int
- smb2_get_enc_key(struct TCP_Server_Info *server, __u64 ses_id, int enc, u8 *key)
- {
-@@ -2143,12 +2127,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
- 	struct aead_request *req;
- 	char *iv;
- 	unsigned int iv_len;
--	struct cifs_crypt_result result = {0, };
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct crypto_aead *tfm;
- 	unsigned int crypt_len = le32_to_cpu(tr_hdr->OriginalMessageSize);
- 
--	init_completion(&result.completion);
--
- 	rc = smb2_get_enc_key(server, tr_hdr->SessionId, enc, key);
- 	if (rc) {
- 		cifs_dbg(VFS, "%s: Could not get %scryption key\n", __func__,
-@@ -2208,14 +2190,10 @@ crypt_message(struct TCP_Server_Info *server, struct smb_rqst *rqst, int enc)
- 	aead_request_set_ad(req, assoc_data_len);
- 
- 	aead_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				  cifs_crypt_complete, &result);
-+				  crypto_req_done, &wait);
- 
--	rc = enc ? crypto_aead_encrypt(req) : crypto_aead_decrypt(req);
--
--	if (rc == -EINPROGRESS || rc == -EBUSY) {
--		wait_for_completion(&result.completion);
--		rc = result.err;
--	}
-+	rc = crypto_wait_req(enc ? crypto_aead_encrypt(req)
-+				: crypto_aead_decrypt(req), &wait);
- 
- 	if (!rc && enc)
- 		memcpy(&tr_hdr->Signature, sign, SMB2_SIGNATURE_SIZE);
--- 
-2.7.4
+The only concern I have is that in fscrypt_file_name() the warning
+prints just the inode numbers, but not the block device (it replaced
+an ext4_warning() call which automatically printed the block device).
+I'll add a patch to fix that up in the next day or two.
 
+     	   	    	     	- Ted
