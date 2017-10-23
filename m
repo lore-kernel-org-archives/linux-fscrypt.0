@@ -1,84 +1,196 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v10 18/20] crypto: qce: move to generic async completion
-Date: Wed, 18 Oct 2017 08:00:50 +0100
-Message-Id: <1508310057-25369-19-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [RFC PATCH 19/25] fscrypt: use HKDF-SHA512 to derive the per-file keys for v2 policies
+Date: Mon, 23 Oct 2017 14:40:52 -0700
+Message-Id: <20171023214058.128121-20-ebiggers3@gmail.com>
+In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
+References: <20171023214058.128121-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The qce driver starts several async crypto ops and  waits for their
-completions. Move it over to generic code doing the same.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
+The AES-ECB-based method we're using to derive the per-inode encryption
+keys is nonstandard and has a number of problems, such as being
+trivially reversible.  Fix these problems for v2 encryption policies by
+deriving the keys using HKDF-SHA512 instead.  The inode's nonce prefixed
+with a context byte is used as the application-specific info string.
+
+Supposedly, one of the reasons that HKDF wasn't used originally was
+because of performance concerns.  However, we actually can derive on the
+order of 1 million keys per second, so it's likely not a bottleneck in
+practice.  Moreover, although HKDF-SHA512 can require a bit more actual
+crypto work per key derivation than the old KDF, the real world
+performance is actually just as good or even better than the old KDF.
+This is because the old KDF has to allocate and key a new "ecb(aes)"
+transform for every key derivation (since it's keyed with the nonce
+rather than the master key), whereas with HKDF we simply use a cached,
+pre-keyed "hmac(sha512)" transform.  And the old KDF often spends more
+time allocating its crypto transform than doing actual crypto work.
+
+Another benefit to switching to HKDF is that we no longer need to hold
+the raw master key in memory, but rather only an HMAC transform keyed by
+a pseudorandom key extracted from the master key.  Of course, for the
+software HMAC implementation there is no security benefit, since
+compromising the state of the HMAC transform is equivalent to
+compromising the raw master key.  However, there could be a security
+benefit if used with an HMAC implementation that holds the secret in
+crypto accelerator hardware rather than in main memory.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- drivers/crypto/qce/sha.c | 30 ++++--------------------------
- 1 file changed, 4 insertions(+), 26 deletions(-)
+ fs/crypto/fscrypt_private.h |  4 ++--
+ fs/crypto/keyinfo.c         | 58 ++++++++++++++++++++++++++++++++++-----------
+ 2 files changed, 46 insertions(+), 16 deletions(-)
 
-diff --git a/drivers/crypto/qce/sha.c b/drivers/crypto/qce/sha.c
-index 47e114a..53227d7 100644
---- a/drivers/crypto/qce/sha.c
-+++ b/drivers/crypto/qce/sha.c
-@@ -349,28 +349,12 @@ static int qce_ahash_digest(struct ahash_request *req)
- 	return qce->async_req_enqueue(tmpl->qce, &req->base);
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index dec85c4b14a8..6d420c9a85bd 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -49,7 +49,7 @@ struct fscrypt_context_v1 {
+ 
+ 	/*
+ 	 * A unique value used in combination with the master key to derive the
+-	 * file's actual encryption key
++	 * file's actual encryption key, using the AES-ECB-based KDF.
+ 	 */
+ 	u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
+ };
+@@ -78,7 +78,7 @@ struct fscrypt_context_v2 {
+ 
+ 	/*
+ 	 * A unique value used in combination with the master key to derive the
+-	 * file's actual encryption key
++	 * file's actual encryption key, using HKDF-SHA512.
+ 	 */
+ 	u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
+ };
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index c9e7b2b262d2..ec181c4eca56 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -44,6 +44,7 @@
+  * "key identifier", as that is stored in the clear.)
+  */
+ #define HKDF_CONTEXT_KEY_IDENTIFIER	1
++#define HKDF_CONTEXT_PER_FILE_KEY	2
+ 
+ /*
+  * HKDF consists of two steps:
+@@ -213,10 +214,18 @@ static struct crypto_shash *allocate_hmac_tfm(const u8 *master_key, u32 size)
+  */
+ struct fscrypt_master_key_secret {
+ 
+-	/* Size of the raw key in bytes */
++	/*
++	 * For v2 policy keys: an HMAC transform keyed by the pseudorandom key
++	 * generated by computing HKDF-Extract with the raw master key as the
++	 * input key material.  This is used to efficiently derive the per-inode
++	 * encryption keys using HKDF-Expand later.
++	 */
++	struct crypto_shash	*hmac_tfm;
++
++	/* Size of the raw key in bytes.  Set even if ->raw isn't set. */
+ 	u32			size;
+ 
+-	/* The raw key */
++	/* For v1 policy keys: the raw key. */
+ 	u8			raw[FSCRYPT_MAX_KEY_SIZE];
+ };
+ 
+@@ -291,6 +300,7 @@ is_master_key_secret_present(const struct fscrypt_master_key_secret *secret)
+ 
+ static void wipe_master_key_secret(struct fscrypt_master_key_secret *secret)
+ {
++	crypto_free_shash(secret->hmac_tfm);
+ 	memzero_explicit(secret, sizeof(*secret));
  }
  
--struct qce_ahash_result {
--	struct completion completion;
--	int error;
--};
--
--static void qce_digest_complete(struct crypto_async_request *req, int error)
--{
--	struct qce_ahash_result *result = req->data;
--
--	if (error == -EINPROGRESS)
--		return;
--
--	result->error = error;
--	complete(&result->completion);
--}
--
- static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 				 unsigned int keylen)
- {
- 	unsigned int digestsize = crypto_ahash_digestsize(tfm);
- 	struct qce_sha_ctx *ctx = crypto_tfm_ctx(&tfm->base);
--	struct qce_ahash_result result;
-+	struct crypto_wait wait;
- 	struct ahash_request *req;
- 	struct scatterlist sg;
- 	unsigned int blocksize;
-@@ -405,9 +389,9 @@ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 		goto err_free_ahash;
+@@ -571,14 +581,17 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
+ 		goto out_wipe_secret;
+ 
+ 	if (arg.key_spec.type == FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER) {
+-		struct crypto_shash *hmac_tfm;
+ 
+-		hmac_tfm = allocate_hmac_tfm(secret.raw, secret.size);
+-		if (IS_ERR(hmac_tfm)) {
+-			err = PTR_ERR(hmac_tfm);
++		secret.hmac_tfm = allocate_hmac_tfm(secret.raw, secret.size);
++		if (IS_ERR(secret.hmac_tfm)) {
++			err = PTR_ERR(secret.hmac_tfm);
++			secret.hmac_tfm = NULL;
+ 			goto out_wipe_secret;
+ 		}
+ 
++		/* The raw key is no longer needed */
++		memzero_explicit(secret.raw, sizeof(secret.raw));
++
+ 		/*
+ 		 * Hash the master key to get the key identifier, then return it
+ 		 * to userspace.  Specifically, we derive the key identifier
+@@ -589,10 +602,9 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
+ 		 * rather than two (HKDF-SHA512 and SHA512).  It *maybe* would
+ 		 * be okay, but cryptographically it would be bad practice.
+ 		 */
+-		err = hkdf_expand(hmac_tfm, HKDF_CONTEXT_KEY_IDENTIFIER,
++		err = hkdf_expand(secret.hmac_tfm, HKDF_CONTEXT_KEY_IDENTIFIER,
+ 				  NULL, 0, arg.key_spec.identifier,
+ 				  FSCRYPT_KEY_IDENTIFIER_SIZE);
+-		crypto_free_shash(hmac_tfm);
+ 		if (err)
+ 			goto out_wipe_secret;
+ 
+@@ -871,8 +883,13 @@ static void derive_crypt_complete(struct crypto_async_request *req, int rc)
+ }
+ 
+ /*
+- * Key derivation function.  This generates the derived key by encrypting the
+- * master key with AES-128-ECB using the nonce as the AES key.
++ * Legacy key derivation function.  This generates the derived key by encrypting
++ * the master key with AES-128-ECB using the nonce as the AES key.  This
++ * provides a unique derived key with sufficient entropy for each inode.
++ * However, it's nonstandard, non-extensible, doesn't evenly distribute the
++ * entropy from the master key, and is trivially reversible: an attacker who
++ * compromises a derived key can "decrypt" it to get back to the master key,
++ * then derive any other key.  For all new code, use HKDF instead.
+  *
+  * The master key must be at least as long as the derived key.  If the master
+  * key is longer, then only the first 'derived_keysize' bytes are used.
+@@ -1078,8 +1095,21 @@ static int find_and_derive_key(const struct inode *inode,
+ 		goto out_release_key;
  	}
  
--	init_completion(&result.completion);
-+	crypto_init_wait(&wait);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
--				   qce_digest_complete, &result);
-+				   crypto_req_done, &wait);
- 	crypto_ahash_clear_flags(ahash_tfm, ~0);
+-	err = derive_key_aes(mk->mk_secret.raw, &ctx->v1,
+-			     derived_key, derived_keysize);
++	/*
++	 * Derive the inode's encryption key, given the master key and the nonce
++	 * from the inode's fscrypt_context.  v1 policies used an AES-ECB-based
++	 * KDF (Key Derivation Function).  Newer policies use HKDF-SHA512, which
++	 * fixes a number of problems with the AES-ECB-based KDF.
++	 */
++	if (ctx->v1.version == FSCRYPT_CONTEXT_V1) {
++		err = derive_key_aes(mk->mk_secret.raw, &ctx->v1,
++				     derived_key, derived_keysize);
++	} else {
++		err = hkdf_expand(mk->mk_secret.hmac_tfm,
++				  HKDF_CONTEXT_PER_FILE_KEY,
++				  ctx->v2.nonce, sizeof(ctx->v2.nonce),
++				  derived_key, derived_keysize);
++	}
+ 	if (err)
+ 		goto out_release_key;
  
- 	buf = kzalloc(keylen + QCE_MAX_ALIGN_SIZE, GFP_KERNEL);
-@@ -420,13 +404,7 @@ static int qce_ahash_hmac_setkey(struct crypto_ahash *tfm, const u8 *key,
- 	sg_init_one(&sg, buf, keylen);
- 	ahash_request_set_crypt(req, &sg, ctx->authkey, keylen);
+@@ -1275,8 +1305,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 		goto out;
  
--	ret = crypto_ahash_digest(req);
--	if (ret == -EINPROGRESS || ret == -EBUSY) {
--		ret = wait_for_completion_interruptible(&result.completion);
--		if (!ret)
--			ret = result.error;
--	}
--
-+	ret = crypto_wait_req(crypto_ahash_digest(req), &wait);
- 	if (ret)
- 		crypto_ahash_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
- 
+ 	/*
+-	 * This cannot be a stack buffer because it is passed to the scatterlist
+-	 * crypto API as part of key derivation.
++	 * This cannot be a stack buffer because it may be passed to the
++	 * scatterlist crypto API during key derivation.
+ 	 */
+ 	res = -ENOMEM;
+ 	derived_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
 -- 
-2.7.4
-
+2.15.0.rc0.271.g36b669edcc-goog
