@@ -1,368 +1,335 @@
-Return-Path: <mhalcrow@google.com>
-Return-Path: <mhalcrow@google.com>
-Date: Fri, 27 Oct 2017 11:23:03 -0700
-From: Michael Halcrow <mhalcrow@google.com>
-Subject: Re: [RFC PATCH 04/25] fscrypt: refactor finding and deriving key
-Message-ID: <20171027182303.GD10611@google.com>
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [RFC PATCH 04/25] fscrypt: refactor finding and deriving key
+Date: Mon, 23 Oct 2017 14:40:37 -0700
+Message-Id: <20171023214058.128121-5-ebiggers3@gmail.com>
+In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
 References: <20171023214058.128121-1-ebiggers3@gmail.com>
- <20171023214058.128121-5-ebiggers3@gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171023214058.128121-5-ebiggers3@gmail.com>
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Eric Biggers <ebiggers@google.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Mon, Oct 23, 2017 at 02:40:37PM -0700, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> In preparation for introducing a new way to find the master keys and
-> derive the per-file keys, clean up the current method.  This includes:
-> 
-> - Introduce a helper function find_and_derive_key() so that we don't
->   have to add more code directly to fscrypt_get_encryption_info().
-> 
-> - Don't pass the 'struct fscrypt_key' directly into derive_key_aes().
->   This is in preparation for the case where we find the master key in a
->   filesystem-level keyring, where (for good reasons) the key payload
->   will *not* be formatted as the UAPI 'struct fscrypt_key'.
-> 
-> - Separate finding the key from key derivation.  In particular, it
->   *only* makes sense to fall back to the alternate key description
->   prefix if searching for the "fscrypt:" prefix returns -ENOKEY.  It
->   doesn't make sense to do so when derive_key_aes() fails, for example.
-> 
-> - Improve the error messages for when the fscrypt_key is invalid.
-> 
-> - Rename 'raw_key' to 'derived_key' for clarity.
+From: Eric Biggers <ebiggers@google.com>
 
-With all the crypto code I've delt with where a 'key' is actually just
-a handle or a reference, I've developed a personal habit is to call
-the buffer that contains the actual key bytes 'raw' to emphasize that
-there's tangible secret material present.
+In preparation for introducing a new way to find the master keys and
+derive the per-file keys, clean up the current method.  This includes:
 
-That said, it's probably fine to call it 'derived_key' in this
-instance.
+- Introduce a helper function find_and_derive_key() so that we don't
+  have to add more code directly to fscrypt_get_encryption_info().
 
-> 
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
+- Don't pass the 'struct fscrypt_key' directly into derive_key_aes().
+  This is in preparation for the case where we find the master key in a
+  filesystem-level keyring, where (for good reasons) the key payload
+  will *not* be formatted as the UAPI 'struct fscrypt_key'.
 
-Reviewed-by: Michael Halcrow <mhalcrow@google.com>
+- Separate finding the key from key derivation.  In particular, it
+  *only* makes sense to fall back to the alternate key description
+  prefix if searching for the "fscrypt:" prefix returns -ENOKEY.  It
+  doesn't make sense to do so when derive_key_aes() fails, for example.
 
-> ---
->  fs/crypto/keyinfo.c | 205 ++++++++++++++++++++++++++++------------------------
->  1 file changed, 109 insertions(+), 96 deletions(-)
-> 
-> diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-> index ac41f646e7b7..d3a97c2cd4dd 100644
-> --- a/fs/crypto/keyinfo.c
-> +++ b/fs/crypto/keyinfo.c
-> @@ -28,113 +28,138 @@ static void derive_crypt_complete(struct crypto_async_request *req, int rc)
->  	complete(&ecr->completion);
->  }
->  
-> -/**
-> - * derive_key_aes() - Derive a key using AES-128-ECB
-> - * @deriving_key: Encryption key used for derivation.
-> - * @source_key:   Source key to which to apply derivation.
-> - * @derived_raw_key:  Derived raw key.
-> +/*
-> + * Key derivation function.  This generates the derived key by encrypting the
-> + * master key with AES-128-ECB using the nonce as the AES key.
->   *
-> - * Return: Zero on success; non-zero otherwise.
-> + * The master key must be at least as long as the derived key.  If the master
-> + * key is longer, then only the first 'derived_keysize' bytes are used.
->   */
-> -static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
-> -				const struct fscrypt_key *source_key,
-> -				u8 derived_raw_key[FSCRYPT_MAX_KEY_SIZE])
-> +static int derive_key_aes(const u8 *master_key,
-> +			  const struct fscrypt_context *ctx,
-> +			  u8 *derived_key, unsigned int derived_keysize)
->  {
-> -	int res = 0;
-> +	int err;
->  	struct skcipher_request *req = NULL;
->  	DECLARE_FS_COMPLETION_RESULT(ecr);
->  	struct scatterlist src_sg, dst_sg;
-> -	struct crypto_skcipher *tfm = crypto_alloc_skcipher("ecb(aes)", 0, 0);
-> +	struct crypto_skcipher *tfm;
-> +
-> +	tfm = crypto_alloc_skcipher("ecb(aes)", 0, 0);
-> +	if (IS_ERR(tfm))
-> +		return PTR_ERR(tfm);
->  
-> -	if (IS_ERR(tfm)) {
-> -		res = PTR_ERR(tfm);
-> -		tfm = NULL;
-> -		goto out;
-> -	}
->  	crypto_skcipher_set_flags(tfm, CRYPTO_TFM_REQ_WEAK_KEY);
->  	req = skcipher_request_alloc(tfm, GFP_NOFS);
->  	if (!req) {
-> -		res = -ENOMEM;
-> +		err = -ENOMEM;
->  		goto out;
->  	}
->  	skcipher_request_set_callback(req,
->  			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
->  			derive_crypt_complete, &ecr);
-> -	res = crypto_skcipher_setkey(tfm, deriving_key,
-> -					FS_AES_128_ECB_KEY_SIZE);
-> -	if (res < 0)
-> +
-> +	BUILD_BUG_ON(sizeof(ctx->nonce) != FS_AES_128_ECB_KEY_SIZE);
-> +	err = crypto_skcipher_setkey(tfm, ctx->nonce, sizeof(ctx->nonce));
-> +	if (err)
->  		goto out;
->  
-> -	sg_init_one(&src_sg, source_key->raw, source_key->size);
-> -	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
-> -	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
-> +	sg_init_one(&src_sg, master_key, derived_keysize);
-> +	sg_init_one(&dst_sg, derived_key, derived_keysize);
-> +	skcipher_request_set_crypt(req, &src_sg, &dst_sg, derived_keysize,
->  				   NULL);
-> -	res = crypto_skcipher_encrypt(req);
-> -	if (res == -EINPROGRESS || res == -EBUSY) {
-> +	err = crypto_skcipher_encrypt(req);
-> +	if (err == -EINPROGRESS || err == -EBUSY) {
->  		wait_for_completion(&ecr.completion);
-> -		res = ecr.res;
-> +		err = ecr.res;
->  	}
->  out:
->  	skcipher_request_free(req);
->  	crypto_free_skcipher(tfm);
-> -	return res;
-> +	return err;
->  }
->  
-> -static int validate_user_key(struct fscrypt_info *crypt_info,
-> -			struct fscrypt_context *ctx, u8 *raw_key,
-> -			const char *prefix, int min_keysize)
-> +/*
-> + * Search the current task's subscribed keyrings for a "logon" key with
-> + * description prefix:descriptor, and if found acquire a read lock on it and
-> + * return a pointer to its validated payload in *payload_ret.
-> + */
-> +static struct key *
-> +find_and_lock_process_key(const char *prefix,
-> +			  const u8 descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE],
-> +			  unsigned int min_keysize,
-> +			  const struct fscrypt_key **payload_ret)
+- Improve the error messages for when the fscrypt_key is invalid.
 
-Since we've already crossed the threshold of returning at least one
-object via a ptr-to-ptr param, maybe doing that for struct key too and
-just making the return value of the function be an int err would be
-cleaner than PTR_ERR/ERR_PTR?
+- Rename 'raw_key' to 'derived_key' for clarity.
 
->  {
->  	char *description;
-> -	struct key *keyring_key;
-> -	struct fscrypt_key *master_key;
-> +	struct key *key;
->  	const struct user_key_payload *ukp;
-> -	int res;
-> +	const struct fscrypt_key *payload;
->  
->  	description = kasprintf(GFP_NOFS, "%s%*phN", prefix,
-> -				FSCRYPT_KEY_DESCRIPTOR_SIZE,
-> -				ctx->master_key_descriptor);
-> +				FSCRYPT_KEY_DESCRIPTOR_SIZE, descriptor);
->  	if (!description)
-> -		return -ENOMEM;
-> +		return ERR_PTR(-ENOMEM);
->  
-> -	keyring_key = request_key(&key_type_logon, description, NULL);
-> +	key = request_key(&key_type_logon, description, NULL);
->  	kfree(description);
-> -	if (IS_ERR(keyring_key))
-> -		return PTR_ERR(keyring_key);
-> -	down_read(&keyring_key->sem);
-> -
-> -	if (keyring_key->type != &key_type_logon) {
-> -		printk_once(KERN_WARNING
-> -				"%s: key type must be logon\n", __func__);
-> -		res = -ENOKEY;
-> -		goto out;
-> -	}
-> -	ukp = user_key_payload_locked(keyring_key);
-> -	if (!ukp) {
-> -		/* key was revoked before we acquired its semaphore */
-> -		res = -EKEYREVOKED;
-> -		goto out;
-> +	if (IS_ERR(key))
-> +		return key;
-> +
-> +	down_read(&key->sem);
-> +	ukp = user_key_payload_locked(key);
-> +
-> +	if (!ukp) /* was the key revoked before we acquired its semaphore? */
-> +		goto invalid;
-> +
-> +	payload = (const struct fscrypt_key *)ukp->data;
-> +
-> +	if (ukp->datalen != sizeof(struct fscrypt_key) ||
-> +	    payload->size < 1 || payload->size > FSCRYPT_MAX_KEY_SIZE) {
-> +		pr_warn_ratelimited("fscrypt: key with description '%s' has invalid payload\n",
-> +				    key->description);
-> +		goto invalid;
->  	}
-> -	if (ukp->datalen != sizeof(struct fscrypt_key)) {
-> -		res = -EINVAL;
-> -		goto out;
-> +
-> +	if (payload->size < min_keysize) {
-> +		pr_warn_ratelimited("fscrypt: key with description '%s' is too short "
-> +				    "(got %u bytes, need %u+ bytes)\n",
-> +				    key->description,
-> +				    payload->size, min_keysize);
-> +		goto invalid;
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/keyinfo.c | 205 ++++++++++++++++++++++++++++------------------------
+ 1 file changed, 109 insertions(+), 96 deletions(-)
 
-A common (yet high-impact) mistake is to pass in only 256 bits of
-entropic key material in the 512-bit buffer for AES-256-XTS, leaving
-the second half all 0's.  I've actually seen that done in pre-release
-code.  It would be an easy check just to see if userspace did that,
-but then we're on the slippery slope of how much key strength
-validation we should do on the key, if we're going to do any at all.
-
->  	}
-> -	master_key = (struct fscrypt_key *)ukp->data;
-> -	BUILD_BUG_ON(FS_AES_128_ECB_KEY_SIZE != FS_KEY_DERIVATION_NONCE_SIZE);
-> -
-> -	if (master_key->size < min_keysize ||
-> -	    master_key->size > FSCRYPT_MAX_KEY_SIZE
-> -	    || master_key->size % AES_BLOCK_SIZE != 0) {
-> -		printk_once(KERN_WARNING
-> -				"%s: key size incorrect: %d\n",
-> -				__func__, master_key->size);
-> -		res = -ENOKEY;
-> -		goto out;
-> +
-> +	*payload_ret = payload;
-> +	return key;
-> +
-> +invalid:
-> +	up_read(&key->sem);
-> +	key_put(key);
-> +	return ERR_PTR(-ENOKEY);
-> +}
-> +
-> +/* Find the master key, then derive the inode's actual encryption key */
-> +static int find_and_derive_key(const struct inode *inode,
-> +			       const struct fscrypt_context *ctx,
-> +			       u8 *derived_key, unsigned int derived_keysize)
-> +{
-> +	struct key *key;
-> +	const struct fscrypt_key *payload;
-> +	int err;
-> +
-> +	key = find_and_lock_process_key(FSCRYPT_KEY_DESC_PREFIX,
-> +					ctx->master_key_descriptor,
-> +					derived_keysize, &payload);
-> +	if (key == ERR_PTR(-ENOKEY) && inode->i_sb->s_cop->key_prefix) {
-> +		key = find_and_lock_process_key(inode->i_sb->s_cop->key_prefix,
-> +						ctx->master_key_descriptor,
-> +						derived_keysize, &payload);
->  	}
-> -	res = derive_key_aes(ctx->nonce, master_key, raw_key);
-> -out:
-> -	up_read(&keyring_key->sem);
-> -	key_put(keyring_key);
-> -	return res;
-> +	if (IS_ERR(key))
-> +		return PTR_ERR(key);
-> +	err = derive_key_aes(payload->raw, ctx, derived_key, derived_keysize);
-> +	up_read(&key->sem);
-> +	key_put(key);
-> +	return err;
->  }
->  
->  static const struct {
-> @@ -256,8 +281,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
->  	struct fscrypt_context ctx;
->  	struct crypto_skcipher *ctfm;
->  	const char *cipher_str;
-> -	int keysize;
-> -	u8 *raw_key = NULL;
-> +	unsigned int derived_keysize;
-> +	u8 *derived_key = NULL;
->  	int res;
->  
->  	if (inode->i_crypt_info)
-> @@ -301,7 +326,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
->  	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
->  				sizeof(crypt_info->ci_master_key));
->  
-> -	res = determine_cipher_type(crypt_info, inode, &cipher_str, &keysize);
-> +	res = determine_cipher_type(crypt_info, inode,
-> +				    &cipher_str, &derived_keysize);
->  	if (res)
->  		goto out;
->  
-> @@ -310,24 +336,14 @@ int fscrypt_get_encryption_info(struct inode *inode)
->  	 * crypto API as part of key derivation.
->  	 */
->  	res = -ENOMEM;
-> -	raw_key = kmalloc(FSCRYPT_MAX_KEY_SIZE, GFP_NOFS);
-> -	if (!raw_key)
-> +	derived_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
-> +	if (!derived_key)
->  		goto out;
->  
-> -	res = validate_user_key(crypt_info, &ctx, raw_key,
-> -				FSCRYPT_KEY_DESC_PREFIX, keysize);
-> -	if (res && inode->i_sb->s_cop->key_prefix) {
-> -		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
-> -					     inode->i_sb->s_cop->key_prefix,
-> -					     keysize);
-> -		if (res2) {
-> -			if (res2 == -ENOKEY)
-> -				res = -ENOKEY;
-> -			goto out;
-> -		}
-> -	} else if (res) {
-> +	res = find_and_derive_key(inode, &ctx, derived_key, derived_keysize);
-> +	if (res)
->  		goto out;
-> -	}
-> +
->  	ctfm = crypto_alloc_skcipher(cipher_str, 0, 0);
->  	if (!ctfm || IS_ERR(ctfm)) {
->  		res = ctfm ? PTR_ERR(ctfm) : -ENOMEM;
-> @@ -338,17 +354,14 @@ int fscrypt_get_encryption_info(struct inode *inode)
->  	crypt_info->ci_ctfm = ctfm;
->  	crypto_skcipher_clear_flags(ctfm, ~0);
->  	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
-> -	/*
-> -	 * if the provided key is longer than keysize, we use the first
-> -	 * keysize bytes of the derived key only
-> -	 */
-> -	res = crypto_skcipher_setkey(ctfm, raw_key, keysize);
-> +	res = crypto_skcipher_setkey(ctfm, derived_key, derived_keysize);
->  	if (res)
->  		goto out;
->  
->  	if (S_ISREG(inode->i_mode) &&
->  	    crypt_info->ci_data_mode == FSCRYPT_MODE_AES_128_CBC) {
-> -		res = init_essiv_generator(crypt_info, raw_key, keysize);
-> +		res = init_essiv_generator(crypt_info, derived_key,
-> +					   derived_keysize);
->  		if (res) {
->  			pr_debug("%s: error %d (inode %lu) allocating essiv tfm\n",
->  				 __func__, res, inode->i_ino);
-> @@ -361,7 +374,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
->  	if (res == -ENOKEY)
->  		res = 0;
->  	put_crypt_info(crypt_info);
-> -	kzfree(raw_key);
-> +	kzfree(derived_key);
->  	return res;
->  }
->  EXPORT_SYMBOL(fscrypt_get_encryption_info);
-> -- 
-> 2.15.0.rc0.271.g36b669edcc-goog
-> 
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index ac41f646e7b7..d3a97c2cd4dd 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -28,113 +28,138 @@ static void derive_crypt_complete(struct crypto_async_request *req, int rc)
+ 	complete(&ecr->completion);
+ }
+ 
+-/**
+- * derive_key_aes() - Derive a key using AES-128-ECB
+- * @deriving_key: Encryption key used for derivation.
+- * @source_key:   Source key to which to apply derivation.
+- * @derived_raw_key:  Derived raw key.
++/*
++ * Key derivation function.  This generates the derived key by encrypting the
++ * master key with AES-128-ECB using the nonce as the AES key.
+  *
+- * Return: Zero on success; non-zero otherwise.
++ * The master key must be at least as long as the derived key.  If the master
++ * key is longer, then only the first 'derived_keysize' bytes are used.
+  */
+-static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
+-				const struct fscrypt_key *source_key,
+-				u8 derived_raw_key[FSCRYPT_MAX_KEY_SIZE])
++static int derive_key_aes(const u8 *master_key,
++			  const struct fscrypt_context *ctx,
++			  u8 *derived_key, unsigned int derived_keysize)
+ {
+-	int res = 0;
++	int err;
+ 	struct skcipher_request *req = NULL;
+ 	DECLARE_FS_COMPLETION_RESULT(ecr);
+ 	struct scatterlist src_sg, dst_sg;
+-	struct crypto_skcipher *tfm = crypto_alloc_skcipher("ecb(aes)", 0, 0);
++	struct crypto_skcipher *tfm;
++
++	tfm = crypto_alloc_skcipher("ecb(aes)", 0, 0);
++	if (IS_ERR(tfm))
++		return PTR_ERR(tfm);
+ 
+-	if (IS_ERR(tfm)) {
+-		res = PTR_ERR(tfm);
+-		tfm = NULL;
+-		goto out;
+-	}
+ 	crypto_skcipher_set_flags(tfm, CRYPTO_TFM_REQ_WEAK_KEY);
+ 	req = skcipher_request_alloc(tfm, GFP_NOFS);
+ 	if (!req) {
+-		res = -ENOMEM;
++		err = -ENOMEM;
+ 		goto out;
+ 	}
+ 	skcipher_request_set_callback(req,
+ 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
+ 			derive_crypt_complete, &ecr);
+-	res = crypto_skcipher_setkey(tfm, deriving_key,
+-					FS_AES_128_ECB_KEY_SIZE);
+-	if (res < 0)
++
++	BUILD_BUG_ON(sizeof(ctx->nonce) != FS_AES_128_ECB_KEY_SIZE);
++	err = crypto_skcipher_setkey(tfm, ctx->nonce, sizeof(ctx->nonce));
++	if (err)
+ 		goto out;
+ 
+-	sg_init_one(&src_sg, source_key->raw, source_key->size);
+-	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
+-	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
++	sg_init_one(&src_sg, master_key, derived_keysize);
++	sg_init_one(&dst_sg, derived_key, derived_keysize);
++	skcipher_request_set_crypt(req, &src_sg, &dst_sg, derived_keysize,
+ 				   NULL);
+-	res = crypto_skcipher_encrypt(req);
+-	if (res == -EINPROGRESS || res == -EBUSY) {
++	err = crypto_skcipher_encrypt(req);
++	if (err == -EINPROGRESS || err == -EBUSY) {
+ 		wait_for_completion(&ecr.completion);
+-		res = ecr.res;
++		err = ecr.res;
+ 	}
+ out:
+ 	skcipher_request_free(req);
+ 	crypto_free_skcipher(tfm);
+-	return res;
++	return err;
+ }
+ 
+-static int validate_user_key(struct fscrypt_info *crypt_info,
+-			struct fscrypt_context *ctx, u8 *raw_key,
+-			const char *prefix, int min_keysize)
++/*
++ * Search the current task's subscribed keyrings for a "logon" key with
++ * description prefix:descriptor, and if found acquire a read lock on it and
++ * return a pointer to its validated payload in *payload_ret.
++ */
++static struct key *
++find_and_lock_process_key(const char *prefix,
++			  const u8 descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE],
++			  unsigned int min_keysize,
++			  const struct fscrypt_key **payload_ret)
+ {
+ 	char *description;
+-	struct key *keyring_key;
+-	struct fscrypt_key *master_key;
++	struct key *key;
+ 	const struct user_key_payload *ukp;
+-	int res;
++	const struct fscrypt_key *payload;
+ 
+ 	description = kasprintf(GFP_NOFS, "%s%*phN", prefix,
+-				FSCRYPT_KEY_DESCRIPTOR_SIZE,
+-				ctx->master_key_descriptor);
++				FSCRYPT_KEY_DESCRIPTOR_SIZE, descriptor);
+ 	if (!description)
+-		return -ENOMEM;
++		return ERR_PTR(-ENOMEM);
+ 
+-	keyring_key = request_key(&key_type_logon, description, NULL);
++	key = request_key(&key_type_logon, description, NULL);
+ 	kfree(description);
+-	if (IS_ERR(keyring_key))
+-		return PTR_ERR(keyring_key);
+-	down_read(&keyring_key->sem);
+-
+-	if (keyring_key->type != &key_type_logon) {
+-		printk_once(KERN_WARNING
+-				"%s: key type must be logon\n", __func__);
+-		res = -ENOKEY;
+-		goto out;
+-	}
+-	ukp = user_key_payload_locked(keyring_key);
+-	if (!ukp) {
+-		/* key was revoked before we acquired its semaphore */
+-		res = -EKEYREVOKED;
+-		goto out;
++	if (IS_ERR(key))
++		return key;
++
++	down_read(&key->sem);
++	ukp = user_key_payload_locked(key);
++
++	if (!ukp) /* was the key revoked before we acquired its semaphore? */
++		goto invalid;
++
++	payload = (const struct fscrypt_key *)ukp->data;
++
++	if (ukp->datalen != sizeof(struct fscrypt_key) ||
++	    payload->size < 1 || payload->size > FSCRYPT_MAX_KEY_SIZE) {
++		pr_warn_ratelimited("fscrypt: key with description '%s' has invalid payload\n",
++				    key->description);
++		goto invalid;
+ 	}
+-	if (ukp->datalen != sizeof(struct fscrypt_key)) {
+-		res = -EINVAL;
+-		goto out;
++
++	if (payload->size < min_keysize) {
++		pr_warn_ratelimited("fscrypt: key with description '%s' is too short "
++				    "(got %u bytes, need %u+ bytes)\n",
++				    key->description,
++				    payload->size, min_keysize);
++		goto invalid;
+ 	}
+-	master_key = (struct fscrypt_key *)ukp->data;
+-	BUILD_BUG_ON(FS_AES_128_ECB_KEY_SIZE != FS_KEY_DERIVATION_NONCE_SIZE);
+-
+-	if (master_key->size < min_keysize ||
+-	    master_key->size > FSCRYPT_MAX_KEY_SIZE
+-	    || master_key->size % AES_BLOCK_SIZE != 0) {
+-		printk_once(KERN_WARNING
+-				"%s: key size incorrect: %d\n",
+-				__func__, master_key->size);
+-		res = -ENOKEY;
+-		goto out;
++
++	*payload_ret = payload;
++	return key;
++
++invalid:
++	up_read(&key->sem);
++	key_put(key);
++	return ERR_PTR(-ENOKEY);
++}
++
++/* Find the master key, then derive the inode's actual encryption key */
++static int find_and_derive_key(const struct inode *inode,
++			       const struct fscrypt_context *ctx,
++			       u8 *derived_key, unsigned int derived_keysize)
++{
++	struct key *key;
++	const struct fscrypt_key *payload;
++	int err;
++
++	key = find_and_lock_process_key(FSCRYPT_KEY_DESC_PREFIX,
++					ctx->master_key_descriptor,
++					derived_keysize, &payload);
++	if (key == ERR_PTR(-ENOKEY) && inode->i_sb->s_cop->key_prefix) {
++		key = find_and_lock_process_key(inode->i_sb->s_cop->key_prefix,
++						ctx->master_key_descriptor,
++						derived_keysize, &payload);
+ 	}
+-	res = derive_key_aes(ctx->nonce, master_key, raw_key);
+-out:
+-	up_read(&keyring_key->sem);
+-	key_put(keyring_key);
+-	return res;
++	if (IS_ERR(key))
++		return PTR_ERR(key);
++	err = derive_key_aes(payload->raw, ctx, derived_key, derived_keysize);
++	up_read(&key->sem);
++	key_put(key);
++	return err;
+ }
+ 
+ static const struct {
+@@ -256,8 +281,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	struct fscrypt_context ctx;
+ 	struct crypto_skcipher *ctfm;
+ 	const char *cipher_str;
+-	int keysize;
+-	u8 *raw_key = NULL;
++	unsigned int derived_keysize;
++	u8 *derived_key = NULL;
+ 	int res;
+ 
+ 	if (inode->i_crypt_info)
+@@ -301,7 +326,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
+ 				sizeof(crypt_info->ci_master_key));
+ 
+-	res = determine_cipher_type(crypt_info, inode, &cipher_str, &keysize);
++	res = determine_cipher_type(crypt_info, inode,
++				    &cipher_str, &derived_keysize);
+ 	if (res)
+ 		goto out;
+ 
+@@ -310,24 +336,14 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	 * crypto API as part of key derivation.
+ 	 */
+ 	res = -ENOMEM;
+-	raw_key = kmalloc(FSCRYPT_MAX_KEY_SIZE, GFP_NOFS);
+-	if (!raw_key)
++	derived_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
++	if (!derived_key)
+ 		goto out;
+ 
+-	res = validate_user_key(crypt_info, &ctx, raw_key,
+-				FSCRYPT_KEY_DESC_PREFIX, keysize);
+-	if (res && inode->i_sb->s_cop->key_prefix) {
+-		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
+-					     inode->i_sb->s_cop->key_prefix,
+-					     keysize);
+-		if (res2) {
+-			if (res2 == -ENOKEY)
+-				res = -ENOKEY;
+-			goto out;
+-		}
+-	} else if (res) {
++	res = find_and_derive_key(inode, &ctx, derived_key, derived_keysize);
++	if (res)
+ 		goto out;
+-	}
++
+ 	ctfm = crypto_alloc_skcipher(cipher_str, 0, 0);
+ 	if (!ctfm || IS_ERR(ctfm)) {
+ 		res = ctfm ? PTR_ERR(ctfm) : -ENOMEM;
+@@ -338,17 +354,14 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	crypt_info->ci_ctfm = ctfm;
+ 	crypto_skcipher_clear_flags(ctfm, ~0);
+ 	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
+-	/*
+-	 * if the provided key is longer than keysize, we use the first
+-	 * keysize bytes of the derived key only
+-	 */
+-	res = crypto_skcipher_setkey(ctfm, raw_key, keysize);
++	res = crypto_skcipher_setkey(ctfm, derived_key, derived_keysize);
+ 	if (res)
+ 		goto out;
+ 
+ 	if (S_ISREG(inode->i_mode) &&
+ 	    crypt_info->ci_data_mode == FSCRYPT_MODE_AES_128_CBC) {
+-		res = init_essiv_generator(crypt_info, raw_key, keysize);
++		res = init_essiv_generator(crypt_info, derived_key,
++					   derived_keysize);
+ 		if (res) {
+ 			pr_debug("%s: error %d (inode %lu) allocating essiv tfm\n",
+ 				 __func__, res, inode->i_ino);
+@@ -361,7 +374,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	if (res == -ENOKEY)
+ 		res = 0;
+ 	put_crypt_info(crypt_info);
+-	kzfree(raw_key);
++	kzfree(derived_key);
+ 	return res;
+ }
+ EXPORT_SYMBOL(fscrypt_get_encryption_info);
+-- 
+2.15.0.rc0.271.g36b669edcc-goog
