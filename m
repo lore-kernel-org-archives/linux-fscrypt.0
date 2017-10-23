@@ -1,59 +1,50 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 11/11] fscrypt: new helper function - fscrypt_prepare_setattr()
-Date: Mon,  9 Oct 2017 12:15:44 -0700
-Message-Id: <20171009191544.43656-12-ebiggers3@gmail.com>
-In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
-References: <20171009191544.43656-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Subject: [RFC PATCH 14/25] ubifs crypto: wire up new ioctls for managing encryption keys
+Date: Mon, 23 Oct 2017 14:40:47 -0700
+Message-Id: <20171023214058.128121-15-ebiggers3@gmail.com>
+In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
+References: <20171023214058.128121-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Introduce a helper function for filesystems to call when processing
-->setattr() on a possibly-encrypted inode.  It handles enforcing that an
-encrypted file can only be truncated if its encryption key is available.
-
-Acked-by: Dave Chinner <dchinner@redhat.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- include/linux/fscrypt.h | 25 +++++++++++++++++++++++++
- 1 file changed, 25 insertions(+)
+ fs/ubifs/ioctl.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 2327859c8cd2..53437bfdfcbc 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -265,4 +265,29 @@ static inline int fscrypt_prepare_lookup(struct inode *dir,
- 	return 0;
- }
+diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
+index 0164bcc827f8..09ede2d1898f 100644
+--- a/fs/ubifs/ioctl.c
++++ b/fs/ubifs/ioctl.c
+@@ -205,6 +205,15 @@ long ubifs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ #endif
+ 	}
  
-+/**
-+ * fscrypt_prepare_setattr - prepare to change a possibly-encrypted inode's attributes
-+ * @dentry: dentry through which the inode is being changed
-+ * @attr: attributes to change
-+ *
-+ * Prepare for ->setattr() on a possibly-encrypted inode.  On an encrypted file,
-+ * most attribute changes are allowed even without the encryption key.  However,
-+ * without the encryption key we do have to forbid truncates.  This is needed
-+ * because the size being truncated to may not be a multiple of the filesystem
-+ * block size, and in that case we'd have to decrypt the final block, zero the
-+ * portion past i_size, and re-encrypt it.  (We *could* allow truncating to a
-+ * filesystem block boundary, but it's simpler to just forbid all truncates ---
-+ * and we already forbid all other contents modifications without the key.)
-+ *
-+ * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
-+ * if a problem occurred while setting up the encryption key.
-+ */
-+static inline int fscrypt_prepare_setattr(struct dentry *dentry,
-+					  struct iattr *attr)
-+{
-+	if (attr->ia_valid & ATTR_SIZE)
-+		return fscrypt_require_key(d_inode(dentry));
-+	return 0;
-+}
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		return fscrypt_ioctl_add_key(file, (void __user *)arg);
 +
- #endif	/* _LINUX_FSCRYPT_H */
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		return fscrypt_ioctl_remove_key(file, (const void __user *)arg);
++
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
++
+ 	default:
+ 		return -ENOTTY;
+ 	}
+@@ -222,6 +231,9 @@ long ubifs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 		break;
+ 	case FS_IOC_SET_ENCRYPTION_POLICY:
+ 	case FS_IOC_GET_ENCRYPTION_POLICY:
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+ 		break;
+ 	default:
+ 		return -ENOIOCTLCMD;
 -- 
-2.14.2.920.gcf0c67979c-goog
+2.15.0.rc0.271.g36b669edcc-goog
