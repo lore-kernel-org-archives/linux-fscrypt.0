@@ -1,110 +1,48 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 03/11] fscrypt: switch from ->is_encrypted() to IS_ENCRYPTED()
-Date: Mon,  9 Oct 2017 12:15:36 -0700
-Message-Id: <20171009191544.43656-4-ebiggers3@gmail.com>
-In-Reply-To: <20171009191544.43656-1-ebiggers3@gmail.com>
-References: <20171009191544.43656-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Subject: [RFC PATCH 22/25] ext4 crypto: wire up FS_IOC_GET_ENCRYPTION_POLICY_EX
+Date: Mon, 23 Oct 2017 14:40:55 -0700
+Message-Id: <20171023214058.128121-23-ebiggers3@gmail.com>
+In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
+References: <20171023214058.128121-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-IS_ENCRYPTED() now gives the same information as
-i_sb->s_cop->is_encrypted() but is more efficient, since IS_ENCRYPTED()
-is just a simple flag check.  Prepare to remove ->is_encrypted() by
-switching all callers to IS_ENCRYPTED().
+FS_IOC_GET_ENCRYPTION_POLICY_EX allows filesystem encryption users to
+retrieve the encryption policy for files and directories that use a v2
+encryption policy.  Unlike the original FS_IOC_GET_ENCRYPTION_POLICY,
+FS_IOC_GET_ENCRYPTION_POLICY_EX is also extensible to new versions of
+the policy struct that may be added in the future.
 
-Acked-by: Dave Chinner <dchinner@redhat.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/crypto.c              | 2 +-
- fs/crypto/fname.c               | 3 +--
- fs/crypto/keyinfo.c             | 2 +-
- fs/crypto/policy.c              | 6 +++---
- include/linux/fscrypt_notsupp.h | 2 +-
- 5 files changed, 7 insertions(+), 8 deletions(-)
+ fs/ext4/ioctl.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index c7835df7e7b8..608f6bbe0f31 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -340,7 +340,7 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
- 		return -ECHILD;
+diff --git a/fs/ext4/ioctl.c b/fs/ext4/ioctl.c
+index b8a6765a556f..954042f311dc 100644
+--- a/fs/ext4/ioctl.c
++++ b/fs/ext4/ioctl.c
+@@ -978,6 +978,9 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 	case EXT4_IOC_GET_ENCRYPTION_POLICY:
+ 		return fscrypt_ioctl_get_policy(filp, (void __user *)arg);
  
- 	dir = dget_parent(dentry);
--	if (!d_inode(dir)->i_sb->s_cop->is_encrypted(d_inode(dir))) {
-+	if (!IS_ENCRYPTED(d_inode(dir))) {
- 		dput(dir);
- 		return 0;
- 	}
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index ad9f814fdead..2878289b3ed2 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -382,8 +382,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	memset(fname, 0, sizeof(struct fscrypt_name));
- 	fname->usr_fname = iname;
- 
--	if (!dir->i_sb->s_cop->is_encrypted(dir) ||
--				fscrypt_is_dot_dotdot(iname)) {
-+	if (!IS_ENCRYPTED(dir) || fscrypt_is_dot_dotdot(iname)) {
- 		fname->disk_name.name = (unsigned char *)iname->name;
- 		fname->disk_name.len = iname->len;
- 		return 0;
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 018c588c7ac3..236a68d4ea72 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -268,7 +268,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	res = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
- 	if (res < 0) {
- 		if (!fscrypt_dummy_context_enabled(inode) ||
--		    inode->i_sb->s_cop->is_encrypted(inode))
-+		    IS_ENCRYPTED(inode))
- 			return res;
- 		/* Fake up a context for an unencrypted directory */
- 		memset(&ctx, 0, sizeof(ctx));
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index ce07a86200f3..6a63b8a0d46c 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -109,7 +109,7 @@ int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg)
- 	struct fscrypt_policy policy;
- 	int res;
- 
--	if (!inode->i_sb->s_cop->is_encrypted(inode))
-+	if (!IS_ENCRYPTED(inode))
- 		return -ENODATA;
- 
- 	res = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
-@@ -166,11 +166,11 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- 		return 1;
- 
- 	/* No restrictions if the parent directory is unencrypted */
--	if (!cops->is_encrypted(parent))
-+	if (!IS_ENCRYPTED(parent))
- 		return 1;
- 
- 	/* Encrypted directories must not contain unencrypted files */
--	if (!cops->is_encrypted(child))
-+	if (!IS_ENCRYPTED(child))
- 		return 0;
- 
- 	/*
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index 2d0b6960831e..7b390e356f7f 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -100,7 +100,7 @@ static inline int fscrypt_setup_filename(struct inode *dir,
- 					 const struct qstr *iname,
- 					 int lookup, struct fscrypt_name *fname)
- {
--	if (dir->i_sb->s_cop->is_encrypted(dir))
-+	if (IS_ENCRYPTED(dir))
- 		return -EOPNOTSUPP;
- 
- 	memset(fname, 0, sizeof(struct fscrypt_name));
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		return fscrypt_ioctl_get_policy_ex(filp, (void __user *)arg);
++
+ 	case FS_IOC_ADD_ENCRYPTION_KEY:
+ 		if (!ext4_has_feature_encrypt(sb))
+ 			return -EOPNOTSUPP;
+@@ -1117,6 +1120,7 @@ long ext4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 	case EXT4_IOC_SET_ENCRYPTION_POLICY:
+ 	case EXT4_IOC_GET_ENCRYPTION_PWSALT:
+ 	case EXT4_IOC_GET_ENCRYPTION_POLICY:
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
+ 	case FS_IOC_ADD_ENCRYPTION_KEY:
+ 	case FS_IOC_REMOVE_ENCRYPTION_KEY:
+ 	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
 -- 
-2.14.2.920.gcf0c67979c-goog
+2.15.0.rc0.271.g36b669edcc-goog
