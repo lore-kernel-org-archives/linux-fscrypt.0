@@ -1,117 +1,129 @@
-Return-Path: <gilad@benyossef.com>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v10 06/20] crypto: introduce crypto wait for async op
-Date: Wed, 18 Oct 2017 08:00:38 +0100
-Message-Id: <1508310057-25369-7-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, Eric Biggers <ebiggers3@gmail.com>, Jonathan Cameron <Jonathan.Cameron@huawei.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [RFC PATCH 15/25] fscrypt: add UAPI definitions to get/set v2 encryption policies
+Date: Mon, 23 Oct 2017 14:40:48 -0700
+Message-Id: <20171023214058.128121-16-ebiggers3@gmail.com>
+In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
+References: <20171023214058.128121-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Michael Halcrow <mhalcrow@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Invoking a possibly async. crypto op and waiting for completion
-while correctly handling backlog processing is a common task
-in the crypto API implementation and outside users of it.
+From: Eric Biggers <ebiggers@google.com>
 
-This patch adds a generic implementation for doing so in
-preparation for using it across the board instead of hand
-rolled versions.
+Currently, fscrypt policies and xattrs identify the master key by
+master_key_descriptor, which is an arbitrary 8-byte value used to form
+the description of the keyring key.  However, there is no verification
+that the key descriptor in any way corresponds with the key payload.
+Since ->i_crypt_info by necessity gets set up on a "first come, first
+serve" basis, this flaw allows a process with only read-only access to
+an encrypted file or directory to provide the wrong key, causing the
+file contents or directory listing to be corrupted.  This is a bug with
+security implications which must be fixed.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-CC: Eric Biggers <ebiggers3@gmail.com>
-CC: Jonathan Cameron <Jonathan.Cameron@huawei.com>
+To fix this bug without simply locking down adding keys to root, we must
+replace master_key_descriptor with a cryptographic hash of the key.  We
+name the replacement master_key_identifier and make it 16 bytes long,
+which should provide enough collision resistance, and more importantly
+preimage resistance, without bloating the size of the encryption xattr
+too much.
+
+This will be both an on-disk format and API change, since we'll need to
+define new versions of both the fscrypt_context and fscrypt_policy.
+This patch begins this process by defining the UAPI changes to manage v2
+policies.  (Note: we jump to version 2 even though the previous policy
+version number was 0 because the fscrypt_context was actually already
+using version 1, not version 0.  It would be really confusing to have
+them always be 1 off from each other.)
+
+The existing FS_IOC_SET_ENCRYPTION_POLICY will be used to set a v2
+policy, as the kernel will be able to examine the 'version' field.
+
+However, a new ioctl FS_IOC_GET_ENCRYPTION_POLICY_EX is needed to get a
+v2 policy, since the returned struct needs to be larger.  This ioctl
+includes a size field as input, so that it can be used for both v1 and
+v2 policies as well as any new policy versions that may get added in the
+future.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- crypto/api.c           | 13 +++++++++++++
- include/linux/crypto.h | 40 ++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 53 insertions(+)
+ include/uapi/linux/fscrypt.h | 37 +++++++++++++++++++++++++++++++++++--
+ 1 file changed, 35 insertions(+), 2 deletions(-)
 
-diff --git a/crypto/api.c b/crypto/api.c
-index 941cd4c..2a2479d 100644
---- a/crypto/api.c
-+++ b/crypto/api.c
-@@ -24,6 +24,7 @@
- #include <linux/sched/signal.h>
- #include <linux/slab.h>
- #include <linux/string.h>
-+#include <linux/completion.h>
- #include "internal.h"
+diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+index 9da153df238a..065060b20a34 100644
+--- a/include/uapi/linux/fscrypt.h
++++ b/include/uapi/linux/fscrypt.h
+@@ -7,7 +7,6 @@
+  * File system encryption support
+  */
+ /* Policy provided via an ioctl on the topmost directory */
+-#define FSCRYPT_KEY_DESCRIPTOR_SIZE	8
  
- LIST_HEAD(crypto_alg_list);
-@@ -595,5 +596,17 @@ int crypto_has_alg(const char *name, u32 type, u32 mask)
- }
- EXPORT_SYMBOL_GPL(crypto_has_alg);
+ /* Encryption policy flags */
+ #define FSCRYPT_POLICY_FLAGS_PAD_4	0x00
+@@ -26,13 +25,22 @@
+ #define FSCRYPT_MODE_AES_128_CBC	5
+ #define FSCRYPT_MODE_AES_128_CTS	6
  
-+void crypto_req_done(struct crypto_async_request *req, int err)
-+{
-+	struct crypto_wait *wait = req->data;
-+
-+	if (err == -EINPROGRESS)
-+		return;
-+
-+	wait->err = err;
-+	complete(&wait->completion);
-+}
-+EXPORT_SYMBOL_GPL(crypto_req_done);
-+
- MODULE_DESCRIPTION("Cryptographic core API");
- MODULE_LICENSE("GPL");
-diff --git a/include/linux/crypto.h b/include/linux/crypto.h
-index 84da997..78508ca 100644
---- a/include/linux/crypto.h
-+++ b/include/linux/crypto.h
-@@ -24,6 +24,7 @@
- #include <linux/slab.h>
- #include <linux/string.h>
- #include <linux/uaccess.h>
-+#include <linux/completion.h>
- 
- /*
-  * Autoloaded crypto modules should only use a prefixed name to avoid allowing
-@@ -468,6 +469,45 @@ struct crypto_alg {
- } CRYPTO_MINALIGN_ATTR;
- 
- /*
-+ * A helper struct for waiting for completion of async crypto ops
+-struct fscrypt_policy {
++/*
++ * Legacy policy version; no key verification (potentially insecure).
++ * For new encrypted directories, use fscrypt_policy_v2 instead.
++ *
++ * Careful: the .version field for this is actually 0, not 1.
 + */
-+struct crypto_wait {
-+	struct completion completion;
-+	int err;
++#define FSCRYPT_POLICY_VERSION_LEGACY	0
++#define FSCRYPT_KEY_DESCRIPTOR_SIZE	8
++struct fscrypt_policy_v1 {
+ 	__u8 version;
+ 	__u8 contents_encryption_mode;
+ 	__u8 filenames_encryption_mode;
+ 	__u8 flags;
+ 	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+ };
++#define fscrypt_policy	fscrypt_policy_v1
+ 
+ /*
+  * Process-subscribed "logon" key description prefix and payload format.
+@@ -47,6 +55,30 @@ struct fscrypt_key {
+ 	__u32 size;
+ };
+ 
++/*
++ * New policy version with HKDF and key verification (recommended).
++ */
++#define FSCRYPT_POLICY_VERSION_2	2
++#define FSCRYPT_KEY_IDENTIFIER_SIZE	16
++struct fscrypt_policy_v2 {
++	__u8 version;
++	__u8 contents_encryption_mode;
++	__u8 filenames_encryption_mode;
++	__u8 flags;
++	__u8 reserved[4];
++	__u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
 +};
 +
-+/*
-+ * Macro for declaring a crypto op async wait object on stack
-+ */
-+#define DECLARE_CRYPTO_WAIT(_wait) \
-+	struct crypto_wait _wait = { \
-+		COMPLETION_INITIALIZER_ONSTACK((_wait).completion), 0 }
++/* Struct passed to FS_IOC_GET_ENCRYPTION_POLICY_EX */
++struct fscrypt_get_policy_ex_args {
++	__u64 size; /* input/output */
++	union {
++		__u8 version;
++		struct fscrypt_policy_v1 v1;
++		struct fscrypt_policy_v2 v2;
++	} policy; /* output */
++};
 +
-+/*
-+ * Async ops completion helper functioons
-+ */
-+void crypto_req_done(struct crypto_async_request *req, int err);
-+
-+static inline int crypto_wait_req(int err, struct crypto_wait *wait)
-+{
-+	switch (err) {
-+	case -EINPROGRESS:
-+	case -EBUSY:
-+		wait_for_completion(&wait->completion);
-+		reinit_completion(&wait->completion);
-+		err = wait->err;
-+		break;
-+	};
-+
-+	return err;
-+}
-+
-+static inline void crypto_init_wait(struct crypto_wait *wait)
-+{
-+	init_completion(&wait->completion);
-+}
-+
-+/*
-  * Algorithm registration interface.
-  */
- int crypto_register_alg(struct crypto_alg *alg);
+ struct fscrypt_key_specifier {
+ 	__u32 type;
+ #define FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR	1
+@@ -91,6 +123,7 @@ struct fscrypt_get_key_status_args {
+ #define FS_IOC_SET_ENCRYPTION_POLICY	_IOR( 'f', 19, struct fscrypt_policy)
+ #define FS_IOC_GET_ENCRYPTION_PWSALT	_IOW( 'f', 20, __u8[16])
+ #define FS_IOC_GET_ENCRYPTION_POLICY	_IOW( 'f', 21, struct fscrypt_policy)
++#define FS_IOC_GET_ENCRYPTION_POLICY_EX	_IOWR('f', 21, __u8[9]) /* size + version */
+ #define FS_IOC_ADD_ENCRYPTION_KEY	_IOWR('f', 22, struct fscrypt_add_key_args)
+ #define FS_IOC_REMOVE_ENCRYPTION_KEY	_IOR( 'f', 23, struct fscrypt_remove_key_args)
+ #define FS_IOC_GET_ENCRYPTION_KEY_STATUS _IOWR('f',24, struct fscrypt_get_key_status_args)
 -- 
-2.7.4
+2.15.0.rc0.271.g36b669edcc-goog
