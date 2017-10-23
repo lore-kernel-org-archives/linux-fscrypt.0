@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [RFC PATCH 17/25] fscrypt: add an HKDF-SHA512 implementation
-Date: Mon, 23 Oct 2017 14:40:50 -0700
-Message-Id: <20171023214058.128121-18-ebiggers3@gmail.com>
+Subject: [RFC PATCH 18/25] fscrypt: allow adding and removing keys for v2 encryption policies
+Date: Mon, 23 Oct 2017 14:40:51 -0700
+Message-Id: <20171023214058.128121-19-ebiggers3@gmail.com>
 In-Reply-To: <20171023214058.128121-1-ebiggers3@gmail.com>
 References: <20171023214058.128121-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
@@ -11,304 +11,188 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-For v2 encryption policies, we need to hash the master key to compute a
-master_key_identifier.  Naively, we could just use a truncated SHA-512
-or another common cryptographic hash function.  However, that would
-cause the same key material to be used in two different ways: both as
-input to the hash function, and as input to the AES-ECB-based KDF when
-deriving the per-inode encryption keys.  There *probably* isn't any
-practical attack on that, but still it would be better "crypto hygiene"
-to use the key material for one purpose only, e.g. just for a KDF.
+Extend the FS_IOC_ADD_ENCRYPTION_KEY and FS_IOC_REMOVE_ENCRYPTION_KEY
+ioctls to support adding and removing keys for use by v2 encryption
+policies.
 
-It also happens that the AES-based KDF is on our list of things to fix.
-While it does generate unique derived keys with sufficient entropy, it
-is nonstandard and has some problems that don't exist in standard KDFs
-such as HKDF.  For example, the AES-based KDF is reversible: given a
-derived key and nonce, an attacker can easily compute the master key.
-This was maybe okay for the original threat model of ext4 encryption
-where the master key and derived keys were considered equally hard to
-compromise.  But now we would like to be more robust against threats
-such as a derived key being compromised through a timing attack, or a
-derived key for an in-use file being compromised after the master key
-has already been wiped from memory via FS_IOC_REMOVE_ENCRYPTION_KEY.
+Keys for v2 encryption policies are identified by a 16-byte
+"identifier", which is a cryptographic hash of the key, instead of by an
+8-byte "descriptor".  For FS_IOC_ADD_ENCRYPTION_KEY, the kernel
+calculates the key identifier and copies it to userspace.  Userspace is
+not allowed to choose the key identifier, since the kernel would have to
+recalculate it anyway to verify that it is correct.
 
-HKDF also has other advantages over the AES-ECB-based KDF such as evenly
-distributing the entropy from the input key material and being more
-extensible to deriving other key material that may be needed.
+For FS_IOC_REMOVE_ENCRYPTION_KEY, userspace provides the key identifier
+rather than the key descriptor to identify the key to be removed.  For
+both ioctls, a type field indicates whether the old or new way of
+specifying keys is being used.  A common structure is used, 'struct
+fscrypt_key_specifier', and it has some extra space just in case we have
+to introduce a new way to identify keys in the future.
 
-Since we're introducing a new encryption policy version that already
-includes an on-disk format change, and we also now have a good place to
-cache an HMAC transform for each master key (struct fscrypt_master_key)
-so that HKDF can be implemented efficiently, we finally have a chance to
-switch to HKDF to derive the per-file keys.
+Note that keys for v1 and v2 encryption policies are both stored in
+->s_master_keys, but their descriptions will be of different lengths.
+Therefore, they cannot be mixed up when we search for a key.
 
-In addition, we'll use HKDF to derive the master_key_identifier,
-avoiding the need for a separate cryptographic hash primitive.  This is
-secure because the output from HKDF is cryptographically isolated, i.e.
-sending some output in the clear doesn't reveal any other output, in a
-computational sense.  (This is assuming that application-specific info
-strings aren't repeated between different uses of HKDF, but we'll use
-context bytes to ensure that.)
-
-Thus, this patch adds an implementation of HKDF to keyinfo.c, using an
-HMAC transform allocated from the crypto API.  Later patches will make
-use of it.
-
-Note that using HKDF-SHA512 as the key derivation function will
-introduce a dependency on the security and implementation of SHA-512,
-whereas before we were using only AES for both key derivation and
-encryption.  However, by using HMAC rather than the hash function
-directly, HKDF is designed to remain secure even if various classes of
-attacks, e.g. collision attacks, are found against the underlying
-unkeyed hash function.  Even HMAC-MD5 is still considered secure in
-practice, despite MD5 itself having been heavily compromised.  And
-meanwhile, the AES-based KDF used the public nonce as the cipher *key*,
-which is an unusual case which probably hasn't undergone much
-cryptanalysis.  HKDF-SHA512 seems like a safer bet.
-
-We *could* actually avoid introducing a hash primitive by instantiating
-HKDF-Expand with CMAC-AES256 as the pseudorandom function rather than
-HMAC-SHA512.  That would work; however, the HKDF specification doesn't
-explicitly allow a non-HMAC pseudorandom function, so it would be less
-standard.  It would also require skipping HKDF-Extract and making the
-API accept only 32-byte master keys, since otherwise HKDF-Extract using
-CMAC-AES would produce a pseudorandom key only 16 bytes long which would
-only be enough for AES-128, not AES-256.
-
-References:
-
-   - RFC 5869. "HMAC-based Extract-and-Expand Key Derivation Function
-     (HKDF)".  https://tools.ietf.org/html/rfc5869
-
-   - Krawczyk (2010). "Cryptographic Extraction and Key Derivation: The
-     HKDF Scheme".  https://eprint.iacr.org/2010/264.pdf
+For now the ioctls still always require capable(CAP_SYS_ADMIN).  We'll
+be able to relax that soon, but only for v2 policies.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/Kconfig   |   2 +
- fs/crypto/keyinfo.c | 180 +++++++++++++++++++++++++++++++++++++++++++++++++++-
- 2 files changed, 181 insertions(+), 1 deletion(-)
+ fs/crypto/keyinfo.c          | 75 ++++++++++++++++++++++++++++++++++++++++----
+ include/uapi/linux/fscrypt.h |  2 ++
+ 2 files changed, 71 insertions(+), 6 deletions(-)
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 02b7d91c9231..bbd4e38b293c 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -8,6 +8,8 @@ config FS_ENCRYPTION
- 	select CRYPTO_CTS
- 	select CRYPTO_CTR
- 	select CRYPTO_SHA256
-+	select CRYPTO_SHA512
-+	select CRYPTO_HMAC
- 	select KEYS
- 	help
- 	  Enable encryption of files and directories.  This
 diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 937a678ebba1..e9de625ddfe4 100644
+index e9de625ddfe4..c9e7b2b262d2 100644
 --- a/fs/crypto/keyinfo.c
 +++ b/fs/crypto/keyinfo.c
-@@ -6,6 +6,11 @@
-  * This contains encryption key functions.
-  *
-  * Written by Michael Halcrow, Ildar Muslukhov, and Uday Savagaonkar, 2015.
-+ *
-+ * HKDF support and key add/remove API added by Eric Biggers, 2017.
-+ *
-+ * The implementation and usage of HKDF should conform to RFC-5869 ("HMAC-based
-+ * Extract-and-Expand Key Derivation Function").
-  */
+@@ -32,6 +32,19 @@
+ #define HKDF_HMAC_ALG		"hmac(sha512)"
+ #define HKDF_HASHLEN		SHA512_DIGEST_SIZE
  
- #include <keys/user-type.h>
-@@ -14,10 +19,181 @@
- #include <linux/scatterlist.h>
- #include <linux/seq_file.h>
- #include <crypto/aes.h>
-+#include <crypto/hash.h>
- #include <crypto/sha.h>
- #include "fscrypt_private.h"
- 
--static struct crypto_shash *essiv_hash_tfm;
 +/*
-+ * Any unkeyed cryptographic hash algorithm can be used with HKDF, but we use
-+ * SHA-512 because it is reasonably secure and efficient; and since it produces
-+ * a 64-byte digest, deriving an AES-256-XTS key preserves all 64 bytes of
-+ * entropy from the master key and requires only one iteration of HKDF-Expand.
-+ */
-+#define HKDF_HMAC_ALG		"hmac(sha512)"
-+#define HKDF_HASHLEN		SHA512_DIGEST_SIZE
-+
-+/*
-+ * HKDF consists of two steps:
++ * The list of contexts in which we use HKDF to derive additional keys from a
++ * master key.  The values in this list are used as the first byte of the
++ * application-specific info string to guarantee that info strings are never
++ * repeated between contexts.
 + *
-+ * 1. HKDF-Extract: extract a fixed-length pseudorandom key from the
-+ *    input keying material and optional salt.
-+ * 2. HKDF-Expand: expand the pseudorandom key into output keying material of
-+ *    any length, parameterized by an application-specific info string.
-+ *
-+ * HKDF-Extract can be skipped if the input is already a good pseudorandom key
-+ * that is at least as long as the hash.  While the fscrypt master keys should
-+ * already be good pseudorandom keys, when using encryption algorithms that use
-+ * short keys (e.g. AES-128-CBC) we'd like to permit the master key to be
-+ * shorter than HKDF_HASHLEN bytes.  Thus, we still must do HKDF-Extract.
-+ *
-+ * Ideally, HKDF-Extract would be passed a random salt for each distinct input
-+ * key.  Details about the advantages of a random salt can be found in the HKDF
-+ * paper (Krawczyk, 2010; "Cryptographic Extraction and Key Derivation: The HKDF
-+ * Scheme").  However, we do not have the ability to store a salt on a
-+ * per-master-key basis.  Thus, we have to use a fixed salt.  This is sufficient
-+ * as long as the master keys are already pseudorandom and are long enough to
-+ * make dictionary attacks infeasible.  This should be the case if userspace
-+ * used a cryptographically secure random number generator, e.g. /dev/urandom,
-+ * to generate the master keys and it was initialized with sufficient entropy.
-+ *
-+ * For the fixed salt we use "fscrypt_hkdf_salt" rather than default of all 0's
-+ * defined by RFC-5869.  This is only to be slightly more robust against
-+ * userspace (unwisely) reusing the master keys for different purposes.
-+ * Logically, it's more likely that the keys would be passed to unsalted
-+ * HKDF-SHA512 than specifically to "fscrypt_hkdf_salt"-salted HKDF-SHA512.
-+ * Of course, a random salt would be better for this purpose.
++ * Keys derived with different info strings are cryptographically isolated from
++ * each other --- knowledge of one derived key doesn't reveal any others.
++ * (This property is particularly important for the derived key used as the
++ * "key identifier", as that is stored in the clear.)
 + */
++#define HKDF_CONTEXT_KEY_IDENTIFIER	1
 +
-+#define HKDF_SALT		"fscrypt_hkdf_salt"
-+#define HKDF_SALT_LEN		(sizeof(HKDF_SALT) - 1)
-+
-+/*
-+ * HKDF-Extract (RFC-5869 section 2.2).  This extracts a pseudorandom key 'prk'
-+ * from the input key material 'ikm' and a salt.  See explanation above for why
-+ * we use a fixed salt.
-+ */
-+static int hkdf_extract(struct crypto_shash *hmac_tfm,
-+			const u8 *ikm, unsigned int ikmlen,
-+			u8 prk[HKDF_HASHLEN])
-+{
-+	SHASH_DESC_ON_STACK(desc, hmac_tfm);
-+	int err;
-+
-+	desc->tfm = hmac_tfm;
-+	desc->flags = 0;
-+
-+	err = crypto_shash_setkey(hmac_tfm, HKDF_SALT, HKDF_SALT_LEN);
-+	if (err)
-+		goto out;
-+
-+	err = crypto_shash_digest(desc, ikm, ikmlen, prk);
-+out:
-+	shash_desc_zero(desc);
-+	return err;
-+}
-+
-+/*
-+ * HKDF-Expand (RFC-5869 section 2.3).  This expands the pseudorandom key, which
-+ * has already been keyed into 'hmac_tfm', into 'okmlen' bytes of output keying
-+ * material, parameterized by the application-specific information string of
-+ * 'info' prefixed with the 'context' byte.  ('context' isn't part of the HKDF
-+ * specification; it's just a prefix we add to our application-specific info
-+ * strings to guarantee that we don't accidentally repeat an info string when
-+ * using HKDF for different purposes.)
-+ */
-+static int hkdf_expand(struct crypto_shash *hmac_tfm, u8 context,
-+		       const u8 *info, unsigned int infolen,
-+		       u8 *okm, unsigned int okmlen)
-+{
-+	SHASH_DESC_ON_STACK(desc, hmac_tfm);
-+	int err;
-+	const u8 *prev = NULL;
-+	unsigned int i;
-+	u8 counter = 1;
-+	u8 tmp[HKDF_HASHLEN];
-+
-+	desc->tfm = hmac_tfm;
-+	desc->flags = 0;
-+
-+	if (unlikely(okmlen > 255 * HKDF_HASHLEN))
-+		return -EINVAL;
-+
-+	for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
-+
-+		err = crypto_shash_init(desc);
-+		if (err)
-+			goto out;
-+
-+		if (prev) {
-+			err = crypto_shash_update(desc, prev, HKDF_HASHLEN);
-+			if (err)
-+				goto out;
-+		}
-+
-+		err = crypto_shash_update(desc, &context, 1);
-+		if (err)
-+			goto out;
-+
-+		err = crypto_shash_update(desc, info, infolen);
-+		if (err)
-+			goto out;
-+
-+		if (okmlen - i < HKDF_HASHLEN) {
-+			err = crypto_shash_finup(desc, &counter, 1, tmp);
-+			if (err)
-+				goto out;
-+			memcpy(&okm[i], tmp, okmlen - i);
-+			memzero_explicit(tmp, sizeof(tmp));
-+		} else {
-+			err = crypto_shash_finup(desc, &counter, 1, &okm[i]);
-+			if (err)
-+				goto out;
-+		}
-+		counter++;
-+		prev = &okm[i];
-+	}
-+	err = 0;
-+out:
-+	shash_desc_zero(desc);
-+	return err;
-+}
-+
-+/*
-+ * Precompute HKDF-Extract using the master key as the input key material, then
-+ * return an HMAC transform that is keyed using the resulting pseudorandom key.
-+ * This can be used to derive further key material using HKDF-Expand.
-+ */
-+static struct crypto_shash *allocate_hmac_tfm(const u8 *master_key, u32 size)
-+{
-+	struct crypto_shash *hmac_tfm;
-+	u8 prk[HKDF_HASHLEN];
-+	int err;
-+
-+	hmac_tfm = crypto_alloc_shash(HKDF_HMAC_ALG, 0, 0);
-+	if (IS_ERR(hmac_tfm)) {
-+		pr_warn("fscrypt: error allocating " HKDF_HMAC_ALG ": %ld\n",
-+			PTR_ERR(hmac_tfm));
-+		goto out;
-+	}
-+
-+	BUG_ON(crypto_shash_digestsize(hmac_tfm) != sizeof(prk));
-+
-+	err = hkdf_extract(hmac_tfm, master_key, size, prk);
-+	if (err)
-+		goto fail;
-+
-+	err = crypto_shash_setkey(hmac_tfm, prk, sizeof(prk));
-+	if (err)
-+		goto fail;
-+out:
-+	memzero_explicit(prk, sizeof(prk));
-+	return hmac_tfm;
-+
-+fail:
-+	crypto_free_shash(hmac_tfm);
-+	hmac_tfm = ERR_PTR(err);
-+	goto out;
-+}
- 
  /*
-  * fscrypt_master_key_secret - secret key material of an in-use master key
-@@ -914,6 +1090,8 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 	kmem_cache_free(fscrypt_info_cachep, ci);
- }
+  * HKDF consists of two steps:
+  *
+@@ -228,7 +241,12 @@ struct fscrypt_master_key {
+ 	 */
+ 	struct fscrypt_master_key_secret	mk_secret;
  
-+static struct crypto_shash *essiv_hash_tfm;
+-	/* Arbitrary key descriptor which was assigned by userspace */
++	/*
++	 * For v1 policy keys: an arbitrary key descriptor which was assigned by
++	 * userspace (->descriptor).
++	 *
++	 * For v2 policy keys: a cryptographic hash of this key (->identifier).
++	 */
+ 	struct fscrypt_key_specifier		mk_spec;
+ 
+ 	/*
+@@ -252,6 +270,8 @@ static inline int master_key_spec_len(const struct fscrypt_key_specifier *spec)
+ 	switch (spec->type) {
+ 	case FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR:
+ 		return FSCRYPT_KEY_DESCRIPTOR_SIZE;
++	case FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER:
++		return FSCRYPT_KEY_IDENTIFIER_SIZE;
+ 	}
+ 	return 0;
+ }
+@@ -346,7 +366,7 @@ static struct key *search_fscrypt_keyring(struct key *keyring,
+ #define FSCRYPT_FS_KEYRING_DESCRIPTION_SIZE	\
+ 	(sizeof("fscrypt-") - 1 + sizeof(((struct super_block *)0)->s_id) + 1)
+ 
+-#define FSCRYPT_MK_DESCRIPTION_SIZE	(2 * FSCRYPT_KEY_DESCRIPTOR_SIZE + 1)
++#define FSCRYPT_MK_DESCRIPTION_SIZE	(2 * FSCRYPT_KEY_IDENTIFIER_SIZE + 1)
+ 
+ static void format_fs_keyring_description(
+ 			char description[FSCRYPT_FS_KEYRING_DESCRIPTION_SIZE],
+@@ -550,6 +570,39 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
+ 	if (copy_from_user(secret.raw, uarg->raw, secret.size))
+ 		goto out_wipe_secret;
+ 
++	if (arg.key_spec.type == FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER) {
++		struct crypto_shash *hmac_tfm;
 +
- static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
- {
- 	struct crypto_shash *tfm = READ_ONCE(essiv_hash_tfm);
++		hmac_tfm = allocate_hmac_tfm(secret.raw, secret.size);
++		if (IS_ERR(hmac_tfm)) {
++			err = PTR_ERR(hmac_tfm);
++			goto out_wipe_secret;
++		}
++
++		/*
++		 * Hash the master key to get the key identifier, then return it
++		 * to userspace.  Specifically, we derive the key identifier
++		 * from the master key with HKDF-SHA512, using a unique
++		 * application-specific info string.  This is preferable to a
++		 * simple truncated SHA512 because it means we only ever use the
++		 * master key for a single cryptographic primitive (HKDF-SHA512)
++		 * rather than two (HKDF-SHA512 and SHA512).  It *maybe* would
++		 * be okay, but cryptographically it would be bad practice.
++		 */
++		err = hkdf_expand(hmac_tfm, HKDF_CONTEXT_KEY_IDENTIFIER,
++				  NULL, 0, arg.key_spec.identifier,
++				  FSCRYPT_KEY_IDENTIFIER_SIZE);
++		crypto_free_shash(hmac_tfm);
++		if (err)
++			goto out_wipe_secret;
++
++		err = -EFAULT;
++		if (copy_to_user(uarg->key_spec.identifier,
++				 arg.key_spec.identifier,
++				 FSCRYPT_KEY_IDENTIFIER_SIZE))
++			goto out_wipe_secret;
++	}
++
+ 	err = add_master_key(sb, &secret, &arg.key_spec);
+ out_wipe_secret:
+ 	wipe_master_key_secret(&secret);
+@@ -872,6 +925,10 @@ static int derive_key_aes(const u8 *master_key,
+  * Search the current task's subscribed keyrings for a "logon" key with
+  * description prefix:descriptor, and if found acquire a read lock on it and
+  * return a pointer to its validated payload in *payload_ret.
++ *
++ * This is only used for v1 encryption policies, where keys are identified by
++ * master_key_descriptor.  With newer policy versions, only the filesystem-level
++ * keyring (->s_master_keys) is supported.
+  */
+ static struct key *
+ find_and_lock_process_key(const char *prefix,
+@@ -977,17 +1034,23 @@ static int find_and_derive_key(const struct inode *inode,
+ 		memcpy(mk_spec.descriptor, ctx->v1.master_key_descriptor,
+ 		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
+ 		break;
++	case FSCRYPT_CONTEXT_V2:
++		mk_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
++		memcpy(mk_spec.identifier, ctx->v2.master_key_identifier,
++		       FSCRYPT_KEY_IDENTIFIER_SIZE);
++		break;
+ 	default:
+-		return -EOPNOTSUPP;
++		return -EOPNOTSUPP; /* should have been checked earlier too */
+ 	}
+ 
+ 	key = find_master_key(inode->i_sb, &mk_spec);
+ 	if (IS_ERR(key)) {
+-		if (key != ERR_PTR(-ENOKEY))
++		if (key != ERR_PTR(-ENOKEY) ||
++		    ctx->v1.version != FSCRYPT_CONTEXT_V1)
+ 			return PTR_ERR(key);
+ 		/*
+-		 * As a legacy fallback, we search the current task's subscribed
+-		 * keyrings in addition to ->s_master_keys.
++		 * As a legacy fallback for v1 policies, we search the current
++		 * task's subscribed keyrings in addition to ->s_master_keys.
+ 		 */
+ 		return find_and_derive_key_legacy(inode, &ctx->v1, derived_key,
+ 						  derived_keysize);
+diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+index 065060b20a34..1918bdc0c6d7 100644
+--- a/include/uapi/linux/fscrypt.h
++++ b/include/uapi/linux/fscrypt.h
+@@ -82,10 +82,12 @@ struct fscrypt_get_policy_ex_args {
+ struct fscrypt_key_specifier {
+ 	__u32 type;
+ #define FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR	1
++#define FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER	2
+ 	__u32 reserved;
+ 	union {
+ 		__u8 max_specifier[32];
+ 		__u8 descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
++		__u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
+ 	};
+ };
+ 
 -- 
 2.15.0.rc0.271.g36b669edcc-goog
