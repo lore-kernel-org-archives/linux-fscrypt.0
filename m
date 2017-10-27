@@ -1,237 +1,203 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:47848 "EHLO
-        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1751739AbdJOJYT (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 15 Oct 2017 05:24:19 -0400
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v9 13/20] dm: move dm-verity to generic async completion
-Date: Sun, 15 Oct 2017 10:19:58 +0100
-Message-Id: <1508059209-25529-14-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, Mikulas Patocka <mpatocka@redhat.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <mhalcrow@google.com>
+Return-Path: <mhalcrow@google.com>
+Date: Fri, 27 Oct 2017 11:02:57 -0700
+From: Michael Halcrow <mhalcrow@google.com>
+Subject: Re: [RFC PATCH 02/25] fscrypt: use FSCRYPT_ prefix for uapi constants
+Message-ID: <20171027180257.GB10611@google.com>
+References: <20171023214058.128121-1-ebiggers3@gmail.com>
+ <20171023214058.128121-3-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171023214058.128121-3-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-dm-verity is starting async. crypto ops and waiting for them to complete.
-Move it over to generic code doing the same.
+On Mon, Oct 23, 2017 at 02:40:35PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Prefix all filesystem encryption UAPI constants except the ioctl numbers
+> with "FSCRYPT_" rather than with "FS_".  This namespaces the constants
+> more appropriately and makes it clear that they are related specifically
+> to the filesystem encryption feature, and to the 'fscrypt_*' structures.
+> With some of the old names like "FS_POLICY_FLAGS_VALID", it was not
+> immediately clear that the constant had anything to do with encryption.
+> 
+> This is also useful because we'll be adding more encryption-related
+> constants, e.g. for the policy version, and we'd otherwise have to
+> choose whether to use unclear names like FS_POLICY_VERSION_* or
+> inconsistent names like FS_ENCRYPTION_POLICY_VERSION_*.
+> 
+> For source compatibility with older userspace programs, keep the old
+> names defined as aliases to the new ones.  (It's debatable whether we
+> really need this, though; the filesystem encryption API is new enough
+> that most if not all programs that are using it have to declare it
+> themselves anyway.)
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-This also avoids a future potential data coruption bug created
-by the use of wait_for_completion_interruptible() without dealing
-correctly with an interrupt aborting the wait prior to the
-async op finishing, should this code ever move to a context
-where signals are not masked.
+Reviewed-by: Michael Halcrow <mhalcrow@google.com>
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-CC: Mikulas Patocka <mpatocka@redhat.com>
----
- drivers/md/dm-verity-target.c | 81 +++++++++++--------------------------------
- drivers/md/dm-verity.h        |  5 ---
- 2 files changed, 20 insertions(+), 66 deletions(-)
-
-diff --git a/drivers/md/dm-verity-target.c b/drivers/md/dm-verity-target.c
-index bda3cac..811ad28 100644
---- a/drivers/md/dm-verity-target.c
-+++ b/drivers/md/dm-verity-target.c
-@@ -92,74 +92,33 @@ static sector_t verity_position_at_level(struct dm_verity *v, sector_t block,
- 	return block >> (level * v->hash_per_block_bits);
- }
- 
--/*
-- * Callback function for asynchrnous crypto API completion notification
-- */
--static void verity_op_done(struct crypto_async_request *base, int err)
--{
--	struct verity_result *res = (struct verity_result *)base->data;
--
--	if (err == -EINPROGRESS)
--		return;
--
--	res->err = err;
--	complete(&res->completion);
--}
--
--/*
-- * Wait for async crypto API callback
-- */
--static inline int verity_complete_op(struct verity_result *res, int ret)
--{
--	switch (ret) {
--	case 0:
--		break;
--
--	case -EINPROGRESS:
--	case -EBUSY:
--		ret = wait_for_completion_interruptible(&res->completion);
--		if (!ret)
--			ret = res->err;
--		reinit_completion(&res->completion);
--		break;
--
--	default:
--		DMERR("verity_wait_hash: crypto op submission failed: %d", ret);
--	}
--
--	if (unlikely(ret < 0))
--		DMERR("verity_wait_hash: crypto op failed: %d", ret);
--
--	return ret;
--}
--
- static int verity_hash_update(struct dm_verity *v, struct ahash_request *req,
- 				const u8 *data, size_t len,
--				struct verity_result *res)
-+				struct crypto_wait *wait)
- {
- 	struct scatterlist sg;
- 
- 	sg_init_one(&sg, data, len);
- 	ahash_request_set_crypt(req, &sg, NULL, len);
- 
--	return verity_complete_op(res, crypto_ahash_update(req));
-+	return crypto_wait_req(crypto_ahash_update(req), wait);
- }
- 
- /*
-  * Wrapper for crypto_ahash_init, which handles verity salting.
-  */
- static int verity_hash_init(struct dm_verity *v, struct ahash_request *req,
--				struct verity_result *res)
-+				struct crypto_wait *wait)
- {
- 	int r;
- 
- 	ahash_request_set_tfm(req, v->tfm);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_SLEEP |
- 					CRYPTO_TFM_REQ_MAY_BACKLOG,
--					verity_op_done, (void *)res);
--	init_completion(&res->completion);
-+					crypto_req_done, (void *)wait);
-+	crypto_init_wait(wait);
- 
--	r = verity_complete_op(res, crypto_ahash_init(req));
-+	r = crypto_wait_req(crypto_ahash_init(req), wait);
- 
- 	if (unlikely(r < 0)) {
- 		DMERR("crypto_ahash_init failed: %d", r);
-@@ -167,18 +126,18 @@ static int verity_hash_init(struct dm_verity *v, struct ahash_request *req,
- 	}
- 
- 	if (likely(v->salt_size && (v->version >= 1)))
--		r = verity_hash_update(v, req, v->salt, v->salt_size, res);
-+		r = verity_hash_update(v, req, v->salt, v->salt_size, wait);
- 
- 	return r;
- }
- 
- static int verity_hash_final(struct dm_verity *v, struct ahash_request *req,
--			     u8 *digest, struct verity_result *res)
-+			     u8 *digest, struct crypto_wait *wait)
- {
- 	int r;
- 
- 	if (unlikely(v->salt_size && (!v->version))) {
--		r = verity_hash_update(v, req, v->salt, v->salt_size, res);
-+		r = verity_hash_update(v, req, v->salt, v->salt_size, wait);
- 
- 		if (r < 0) {
- 			DMERR("verity_hash_final failed updating salt: %d", r);
-@@ -187,7 +146,7 @@ static int verity_hash_final(struct dm_verity *v, struct ahash_request *req,
- 	}
- 
- 	ahash_request_set_crypt(req, NULL, digest, 0);
--	r = verity_complete_op(res, crypto_ahash_final(req));
-+	r = crypto_wait_req(crypto_ahash_final(req), wait);
- out:
- 	return r;
- }
-@@ -196,17 +155,17 @@ int verity_hash(struct dm_verity *v, struct ahash_request *req,
- 		const u8 *data, size_t len, u8 *digest)
- {
- 	int r;
--	struct verity_result res;
-+	struct crypto_wait wait;
- 
--	r = verity_hash_init(v, req, &res);
-+	r = verity_hash_init(v, req, &wait);
- 	if (unlikely(r < 0))
- 		goto out;
- 
--	r = verity_hash_update(v, req, data, len, &res);
-+	r = verity_hash_update(v, req, data, len, &wait);
- 	if (unlikely(r < 0))
- 		goto out;
- 
--	r = verity_hash_final(v, req, digest, &res);
-+	r = verity_hash_final(v, req, digest, &wait);
- 
- out:
- 	return r;
-@@ -389,7 +348,7 @@ int verity_hash_for_block(struct dm_verity *v, struct dm_verity_io *io,
-  * Calculates the digest for the given bio
-  */
- int verity_for_io_block(struct dm_verity *v, struct dm_verity_io *io,
--			struct bvec_iter *iter, struct verity_result *res)
-+			struct bvec_iter *iter, struct crypto_wait *wait)
- {
- 	unsigned int todo = 1 << v->data_dev_block_bits;
- 	struct bio *bio = dm_bio_from_per_bio_data(io, v->ti->per_io_data_size);
-@@ -414,7 +373,7 @@ int verity_for_io_block(struct dm_verity *v, struct dm_verity_io *io,
- 		 */
- 		sg_set_page(&sg, bv.bv_page, len, bv.bv_offset);
- 		ahash_request_set_crypt(req, &sg, NULL, len);
--		r = verity_complete_op(res, crypto_ahash_update(req));
-+		r = crypto_wait_req(crypto_ahash_update(req), wait);
- 
- 		if (unlikely(r < 0)) {
- 			DMERR("verity_for_io_block crypto op failed: %d", r);
-@@ -482,7 +441,7 @@ static int verity_verify_io(struct dm_verity_io *io)
- 	struct dm_verity *v = io->v;
- 	struct bvec_iter start;
- 	unsigned b;
--	struct verity_result res;
-+	struct crypto_wait wait;
- 
- 	for (b = 0; b < io->n_blocks; b++) {
- 		int r;
-@@ -507,17 +466,17 @@ static int verity_verify_io(struct dm_verity_io *io)
- 			continue;
- 		}
- 
--		r = verity_hash_init(v, req, &res);
-+		r = verity_hash_init(v, req, &wait);
- 		if (unlikely(r < 0))
- 			return r;
- 
- 		start = io->iter;
--		r = verity_for_io_block(v, io, &io->iter, &res);
-+		r = verity_for_io_block(v, io, &io->iter, &wait);
- 		if (unlikely(r < 0))
- 			return r;
- 
- 		r = verity_hash_final(v, req, verity_io_real_digest(v, io),
--					&res);
-+					&wait);
- 		if (unlikely(r < 0))
- 			return r;
- 
-diff --git a/drivers/md/dm-verity.h b/drivers/md/dm-verity.h
-index a59e0ad..b675bc0 100644
---- a/drivers/md/dm-verity.h
-+++ b/drivers/md/dm-verity.h
-@@ -90,11 +90,6 @@ struct dm_verity_io {
- 	 */
- };
- 
--struct verity_result {
--	struct completion completion;
--	int err;
--};
--
- static inline struct ahash_request *verity_io_hash_req(struct dm_verity *v,
- 						     struct dm_verity_io *io)
- {
--- 
-2.7.4
-
+> ---
+>  Documentation/filesystems/fscrypt.rst | 14 ++++-----
+>  include/uapi/linux/fscrypt.h          | 59 ++++++++++++++++++++++++-----------
+>  2 files changed, 47 insertions(+), 26 deletions(-)
+> 
+> diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+> index 776ddc655f79..f12956f3f1f8 100644
+> --- a/Documentation/filesystems/fscrypt.rst
+> +++ b/Documentation/filesystems/fscrypt.rst
+> @@ -251,14 +251,14 @@ empty directory or verifies that a directory or regular file already
+>  has the specified encryption policy.  It takes in a pointer to a
+>  :c:type:`struct fscrypt_policy`, defined as follows::
+>  
+> -    #define FS_KEY_DESCRIPTOR_SIZE  8
+> +    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
+>  
+>      struct fscrypt_policy {
+>              __u8 version;
+>              __u8 contents_encryption_mode;
+>              __u8 filenames_encryption_mode;
+>              __u8 flags;
+> -            __u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
+> +            __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+>      };
+>  
+>  This structure must be initialized as follows:
+> @@ -274,7 +274,7 @@ This structure must be initialized as follows:
+>  
+>  - ``flags`` must be set to a value from ``<linux/fs.h>`` which
+>    identifies the amount of NUL-padding to use when encrypting
+> -  filenames.  If unsure, use FS_POLICY_FLAGS_PAD_32 (0x3).
+> +  filenames.  If unsure, use FSCRYPT_POLICY_FLAGS_PAD_32 (0x3).
+>  
+>  - ``master_key_descriptor`` specifies how to find the master key in
+>    the keyring; see `Adding keys`_.  It is up to userspace to choose a
+> @@ -374,11 +374,11 @@ followed by the 16-character lower case hex representation of the
+>  ``master_key_descriptor`` that was set in the encryption policy.  The
+>  key payload must conform to the following structure::
+>  
+> -    #define FS_MAX_KEY_SIZE 64
+> +    #define FSCRYPT_MAX_KEY_SIZE 64
+>  
+>      struct fscrypt_key {
+>              u32 mode;
+> -            u8 raw[FS_MAX_KEY_SIZE];
+> +            u8 raw[FSCRYPT_MAX_KEY_SIZE];
+>              u32 size;
+>      };
+>  
+> @@ -533,7 +533,7 @@ much confusion if an encryption policy were to be added to or removed
+>  from anything other than an empty directory.)  The struct is defined
+>  as follows::
+>  
+> -    #define FS_KEY_DESCRIPTOR_SIZE  8
+> +    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
+>      #define FS_KEY_DERIVATION_NONCE_SIZE 16
+>  
+>      struct fscrypt_context {
+> @@ -541,7 +541,7 @@ as follows::
+>              u8 contents_encryption_mode;
+>              u8 filenames_encryption_mode;
+>              u8 flags;
+> -            u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
+> +            u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+>              u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
+>      };
+>  
+> diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+> index c09209fc42ea..26c381a40279 100644
+> --- a/include/uapi/linux/fscrypt.h
+> +++ b/include/uapi/linux/fscrypt.h
+> @@ -7,30 +7,31 @@
+>   * File system encryption support
+>   */
+>  /* Policy provided via an ioctl on the topmost directory */
+> -#define FS_KEY_DESCRIPTOR_SIZE	8
+> +#define FSCRYPT_KEY_DESCRIPTOR_SIZE	8
+>  
+> -#define FS_POLICY_FLAGS_PAD_4		0x00
+> -#define FS_POLICY_FLAGS_PAD_8		0x01
+> -#define FS_POLICY_FLAGS_PAD_16		0x02
+> -#define FS_POLICY_FLAGS_PAD_32		0x03
+> -#define FS_POLICY_FLAGS_PAD_MASK	0x03
+> -#define FS_POLICY_FLAGS_VALID		0x03
+> +/* Encryption policy flags */
+> +#define FSCRYPT_POLICY_FLAGS_PAD_4	0x00
+> +#define FSCRYPT_POLICY_FLAGS_PAD_8	0x01
+> +#define FSCRYPT_POLICY_FLAGS_PAD_16	0x02
+> +#define FSCRYPT_POLICY_FLAGS_PAD_32	0x03
+> +#define FSCRYPT_POLICY_FLAGS_PAD_MASK	0x03
+> +#define FSCRYPT_POLICY_FLAGS_VALID	0x03
+>  
+>  /* Encryption algorithms */
+> -#define FS_ENCRYPTION_MODE_INVALID		0
+> -#define FS_ENCRYPTION_MODE_AES_256_XTS		1
+> -#define FS_ENCRYPTION_MODE_AES_256_GCM		2
+> -#define FS_ENCRYPTION_MODE_AES_256_CBC		3
+> -#define FS_ENCRYPTION_MODE_AES_256_CTS		4
+> -#define FS_ENCRYPTION_MODE_AES_128_CBC		5
+> -#define FS_ENCRYPTION_MODE_AES_128_CTS		6
+> +#define FSCRYPT_MODE_INVALID		0
+> +#define FSCRYPT_MODE_AES_256_XTS	1
+> +#define FSCRYPT_MODE_AES_256_GCM	2
+> +#define FSCRYPT_MODE_AES_256_CBC	3
+> +#define FSCRYPT_MODE_AES_256_CTS	4
+> +#define FSCRYPT_MODE_AES_128_CBC	5
+> +#define FSCRYPT_MODE_AES_128_CTS	6
+>  
+>  struct fscrypt_policy {
+>  	__u8 version;
+>  	__u8 contents_encryption_mode;
+>  	__u8 filenames_encryption_mode;
+>  	__u8 flags;
+> -	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
+> +	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+>  };
+>  
+>  #define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
+> @@ -38,16 +39,36 @@ struct fscrypt_policy {
+>  #define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
+>  
+>  /* Parameters for passing an encryption key into the kernel keyring */
+> -#define FS_KEY_DESC_PREFIX		"fscrypt:"
+> -#define FS_KEY_DESC_PREFIX_SIZE		8
+> +#define FSCRYPT_KEY_DESC_PREFIX		"fscrypt:"
+> +#define FSCRYPT_KEY_DESC_PREFIX_SIZE		8
+>  
+>  /* Structure that userspace passes to the kernel keyring */
+> -#define FS_MAX_KEY_SIZE			64
+> +#define FSCRYPT_MAX_KEY_SIZE			64
+>  
+>  struct fscrypt_key {
+>  	__u32 mode;
+> -	__u8 raw[FS_MAX_KEY_SIZE];
+> +	__u8 raw[FSCRYPT_MAX_KEY_SIZE];
+>  	__u32 size;
+>  };
+> +/**********************************************************************/
+> +
+> +/* old names; don't add anything new here! */
+> +#define FS_POLICY_FLAGS_PAD_4		FSCRYPT_POLICY_FLAGS_PAD_4
+> +#define FS_POLICY_FLAGS_PAD_8		FSCRYPT_POLICY_FLAGS_PAD_8
+> +#define FS_POLICY_FLAGS_PAD_16		FSCRYPT_POLICY_FLAGS_PAD_16
+> +#define FS_POLICY_FLAGS_PAD_32		FSCRYPT_POLICY_FLAGS_PAD_32
+> +#define FS_POLICY_FLAGS_PAD_MASK	FSCRYPT_POLICY_FLAGS_PAD_MASK
+> +#define FS_POLICY_FLAGS_VALID		FSCRYPT_POLICY_FLAGS_VALID
+> +#define FS_KEY_DESCRIPTOR_SIZE		FSCRYPT_KEY_DESCRIPTOR_SIZE
+> +#define FS_ENCRYPTION_MODE_INVALID	FSCRYPT_MODE_INVALID
+> +#define FS_ENCRYPTION_MODE_AES_256_XTS	FSCRYPT_MODE_AES_256_XTS
+> +#define FS_ENCRYPTION_MODE_AES_256_GCM	FSCRYPT_MODE_AES_256_GCM
+> +#define FS_ENCRYPTION_MODE_AES_256_CBC	FSCRYPT_MODE_AES_256_CBC
+> +#define FS_ENCRYPTION_MODE_AES_256_CTS	FSCRYPT_MODE_AES_256_CTS
+> +#define FS_ENCRYPTION_MODE_AES_128_CBC	FSCRYPT_MODE_AES_128_CBC
+> +#define FS_ENCRYPTION_MODE_AES_128_CTS	FSCRYPT_MODE_AES_128_CTS
+> +#define FS_KEY_DESC_PREFIX		FSCRYPT_KEY_DESC_PREFIX
+> +#define FS_KEY_DESC_PREFIX_SIZE		FSCRYPT_KEY_DESC_PREFIX_SIZE
+> +#define FS_MAX_KEY_SIZE			FSCRYPT_MAX_KEY_SIZE
+>  
+>  #endif /* _UAPI_LINUX_FSCRYPT_H */
+> -- 
+> 2.15.0.rc0.271.g36b669edcc-goog
+> 
