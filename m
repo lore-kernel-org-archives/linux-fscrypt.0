@@ -1,251 +1,71 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from usa-sjc-mx-foss1.foss.arm.com ([217.140.101.70]:33834 "EHLO
-        foss.arm.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S966654AbdJRHEu (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 18 Oct 2017 03:04:50 -0400
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v10 12/20] fscrypt: move to generic async completion
-Date: Wed, 18 Oct 2017 08:00:44 +0100
-Message-Id: <1508310057-25369-13-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <mhalcrow@google.com>
+Return-Path: <mhalcrow@google.com>
+Date: Fri, 27 Oct 2017 13:28:28 -0700
+From: Michael Halcrow <mhalcrow@google.com>
+Subject: Re: [RFC PATCH 07/25] fs/inode.c: export inode_lru_list_del()
+Message-ID: <20171027202828.GA10022@google.com>
+References: <20171023214058.128121-1-ebiggers3@gmail.com>
+ <20171023214058.128121-8-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171023214058.128121-8-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-fscrypt starts several async. crypto ops and waiting for them to
-complete. Move it over to generic code doing the same.
+On Mon, Oct 23, 2017 at 02:40:40PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> When a filesystem encryption key is removed, we need all files which had
+> been "unlocked" (had ->i_crypt_info set up) with it to appear "locked"
+> again.  This is most easily done by evicting the inodes.  This can
+> currently be done using 'echo 2 > /proc/sys/vm/drop_caches'; however,
+> that is overkill and not usable by non-root users.  In preparation for
+> allowing fs/crypto/ to evict just the needed inodes, export
+> inode_lru_list_del() to modules.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
----
- fs/crypto/crypto.c          | 28 ++++------------------------
- fs/crypto/fname.c           | 36 ++++++------------------------------
- fs/crypto/fscrypt_private.h | 10 ----------
- fs/crypto/keyinfo.c         | 21 +++------------------
- 4 files changed, 13 insertions(+), 82 deletions(-)
+Reviewed-by: Michael Halcrow <mhalcrow@google.com>
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index c7835df..80a3cad 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -126,21 +126,6 @@ struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *inode, gfp_t gfp_flags)
- }
- EXPORT_SYMBOL(fscrypt_get_ctx);
- 
--/**
-- * page_crypt_complete() - completion callback for page crypto
-- * @req: The asynchronous cipher request context
-- * @res: The result of the cipher operation
-- */
--static void page_crypt_complete(struct crypto_async_request *req, int res)
--{
--	struct fscrypt_completion_result *ecr = req->data;
--
--	if (res == -EINPROGRESS)
--		return;
--	ecr->res = res;
--	complete(&ecr->completion);
--}
--
- int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 			   u64 lblk_num, struct page *src_page,
- 			   struct page *dest_page, unsigned int len,
-@@ -151,7 +136,7 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 		u8 padding[FS_IV_SIZE - sizeof(__le64)];
- 	} iv;
- 	struct skcipher_request *req = NULL;
--	DECLARE_FS_COMPLETION_RESULT(ecr);
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist dst, src;
- 	struct fscrypt_info *ci = inode->i_crypt_info;
- 	struct crypto_skcipher *tfm = ci->ci_ctfm;
-@@ -179,7 +164,7 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 
- 	skcipher_request_set_callback(
- 		req, CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
--		page_crypt_complete, &ecr);
-+		crypto_req_done, &wait);
- 
- 	sg_init_table(&dst, 1);
- 	sg_set_page(&dst, dest_page, len, offs);
-@@ -187,14 +172,9 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 	sg_set_page(&src, src_page, len, offs);
- 	skcipher_request_set_crypt(req, &src, &dst, len, &iv);
- 	if (rw == FS_DECRYPT)
--		res = crypto_skcipher_decrypt(req);
-+		res = crypto_wait_req(crypto_skcipher_decrypt(req), &wait);
- 	else
--		res = crypto_skcipher_encrypt(req);
--	if (res == -EINPROGRESS || res == -EBUSY) {
--		BUG_ON(req->base.data != &ecr);
--		wait_for_completion(&ecr.completion);
--		res = ecr.res;
--	}
-+		res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res) {
- 		printk_ratelimited(KERN_ERR
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index ad9f814..a80a0d3 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -15,21 +15,6 @@
- #include "fscrypt_private.h"
- 
- /**
-- * fname_crypt_complete() - completion callback for filename crypto
-- * @req: The asynchronous cipher request context
-- * @res: The result of the cipher operation
-- */
--static void fname_crypt_complete(struct crypto_async_request *req, int res)
--{
--	struct fscrypt_completion_result *ecr = req->data;
--
--	if (res == -EINPROGRESS)
--		return;
--	ecr->res = res;
--	complete(&ecr->completion);
--}
--
--/**
-  * fname_encrypt() - encrypt a filename
-  *
-  * The caller must have allocated sufficient memory for the @oname string.
-@@ -40,7 +25,7 @@ static int fname_encrypt(struct inode *inode,
- 			const struct qstr *iname, struct fscrypt_str *oname)
- {
- 	struct skcipher_request *req = NULL;
--	DECLARE_FS_COMPLETION_RESULT(ecr);
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct fscrypt_info *ci = inode->i_crypt_info;
- 	struct crypto_skcipher *tfm = ci->ci_ctfm;
- 	int res = 0;
-@@ -76,17 +61,12 @@ static int fname_encrypt(struct inode *inode,
- 	}
- 	skcipher_request_set_callback(req,
- 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
--			fname_crypt_complete, &ecr);
-+			crypto_req_done, &wait);
- 	sg_init_one(&sg, oname->name, cryptlen);
- 	skcipher_request_set_crypt(req, &sg, &sg, cryptlen, iv);
- 
- 	/* Do the encryption */
--	res = crypto_skcipher_encrypt(req);
--	if (res == -EINPROGRESS || res == -EBUSY) {
--		/* Request is being completed asynchronously; wait for it */
--		wait_for_completion(&ecr.completion);
--		res = ecr.res;
--	}
-+	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res < 0) {
- 		printk_ratelimited(KERN_ERR
-@@ -110,7 +90,7 @@ static int fname_decrypt(struct inode *inode,
- 				struct fscrypt_str *oname)
- {
- 	struct skcipher_request *req = NULL;
--	DECLARE_FS_COMPLETION_RESULT(ecr);
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist src_sg, dst_sg;
- 	struct fscrypt_info *ci = inode->i_crypt_info;
- 	struct crypto_skcipher *tfm = ci->ci_ctfm;
-@@ -131,7 +111,7 @@ static int fname_decrypt(struct inode *inode,
- 	}
- 	skcipher_request_set_callback(req,
- 		CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
--		fname_crypt_complete, &ecr);
-+		crypto_req_done, &wait);
- 
- 	/* Initialize IV */
- 	memset(iv, 0, FS_CRYPTO_BLOCK_SIZE);
-@@ -140,11 +120,7 @@ static int fname_decrypt(struct inode *inode,
- 	sg_init_one(&src_sg, iname->name, iname->len);
- 	sg_init_one(&dst_sg, oname->name, oname->len);
- 	skcipher_request_set_crypt(req, &src_sg, &dst_sg, iname->len, iv);
--	res = crypto_skcipher_decrypt(req);
--	if (res == -EINPROGRESS || res == -EBUSY) {
--		wait_for_completion(&ecr.completion);
--		res = ecr.res;
--	}
-+	res = crypto_wait_req(crypto_skcipher_decrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res < 0) {
- 		printk_ratelimited(KERN_ERR
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index a1d5021..c0f1881 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -69,16 +69,6 @@ typedef enum {
- #define FS_CTX_REQUIRES_FREE_ENCRYPT_FL		0x00000001
- #define FS_CTX_HAS_BOUNCE_BUFFER_FL		0x00000002
- 
--struct fscrypt_completion_result {
--	struct completion completion;
--	int res;
--};
--
--#define DECLARE_FS_COMPLETION_RESULT(ecr) \
--	struct fscrypt_completion_result ecr = { \
--		COMPLETION_INITIALIZER_ONSTACK((ecr).completion), 0 }
--
--
- /* crypto.c */
- extern int fscrypt_initialize(unsigned int cop_flags);
- extern struct workqueue_struct *fscrypt_read_workqueue;
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 018c588..3c84cac 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -17,17 +17,6 @@
- 
- static struct crypto_shash *essiv_hash_tfm;
- 
--static void derive_crypt_complete(struct crypto_async_request *req, int rc)
--{
--	struct fscrypt_completion_result *ecr = req->data;
--
--	if (rc == -EINPROGRESS)
--		return;
--
--	ecr->res = rc;
--	complete(&ecr->completion);
--}
--
- /**
-  * derive_key_aes() - Derive a key using AES-128-ECB
-  * @deriving_key: Encryption key used for derivation.
-@@ -42,7 +31,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- {
- 	int res = 0;
- 	struct skcipher_request *req = NULL;
--	DECLARE_FS_COMPLETION_RESULT(ecr);
-+	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist src_sg, dst_sg;
- 	struct crypto_skcipher *tfm = crypto_alloc_skcipher("ecb(aes)", 0, 0);
- 
-@@ -59,7 +48,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- 	}
- 	skcipher_request_set_callback(req,
- 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
--			derive_crypt_complete, &ecr);
-+			crypto_req_done, &wait);
- 	res = crypto_skcipher_setkey(tfm, deriving_key,
- 					FS_AES_128_ECB_KEY_SIZE);
- 	if (res < 0)
-@@ -69,11 +58,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- 	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
- 	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
- 				   NULL);
--	res = crypto_skcipher_encrypt(req);
--	if (res == -EINPROGRESS || res == -EBUSY) {
--		wait_for_completion(&ecr.completion);
--		res = ecr.res;
--	}
-+	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- out:
- 	skcipher_request_free(req);
- 	crypto_free_skcipher(tfm);
--- 
-2.7.4
-
+> ---
+>  fs/inode.c         | 5 ++---
+>  include/linux/fs.h | 1 +
+>  2 files changed, 3 insertions(+), 3 deletions(-)
+> 
+> diff --git a/fs/inode.c b/fs/inode.c
+> index d1e35b53bb23..30ce98956801 100644
+> --- a/fs/inode.c
+> +++ b/fs/inode.c
+> @@ -420,13 +420,12 @@ void inode_add_lru(struct inode *inode)
+>  		inode_lru_list_add(inode);
+>  }
+>  
+> -
+> -static void inode_lru_list_del(struct inode *inode)
+> +void inode_lru_list_del(struct inode *inode)
+>  {
+> -
+>  	if (list_lru_del(&inode->i_sb->s_inode_lru, &inode->i_lru))
+>  		this_cpu_dec(nr_unused);
+>  }
+> +EXPORT_SYMBOL_GPL(inode_lru_list_del);
+>  
+>  /**
+>   * inode_sb_list_add - add inode to the superblock list of inodes
+> diff --git a/include/linux/fs.h b/include/linux/fs.h
+> index 8cfb0877d32c..2833ace2f01d 100644
+> --- a/include/linux/fs.h
+> +++ b/include/linux/fs.h
+> @@ -2879,6 +2879,7 @@ static inline void lockdep_annotate_inode_mutex_key(struct inode *inode) { };
+>  extern void unlock_new_inode(struct inode *);
+>  extern unsigned int get_next_ino(void);
+>  extern void evict_inodes(struct super_block *sb);
+> +extern void inode_lru_list_del(struct inode *inode);
+>  
+>  extern void __iget(struct inode * inode);
+>  extern void iget_failed(struct inode *);
+> -- 
+> 2.15.0.rc0.271.g36b669edcc-goog
+> 
