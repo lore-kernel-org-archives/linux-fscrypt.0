@@ -1,156 +1,270 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v9 00/20] simplify crypto wait for async op
-Date: Sun, 15 Oct 2017 10:19:45 +0100
-Message-Id: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-Sender: linux-crypto-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <mhalcrow@google.com>
+Return-Path: <mhalcrow@google.com>
+Date: Fri, 27 Oct 2017 11:06:37 -0700
+From: Michael Halcrow <mhalcrow@google.com>
+Subject: Re: [RFC PATCH 03/25] fscrypt: use FSCRYPT_* definitions, not FS_*
+Message-ID: <20171027180637.GC10611@google.com>
+References: <20171023214058.128121-1-ebiggers3@gmail.com>
+ <20171023214058.128121-4-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171023214058.128121-4-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Many users of kernel async. crypto services have a pattern of
-starting an async. crypto op and than using a completion
-to wait for it to end.
+On Mon, Oct 23, 2017 at 02:40:36PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Update the filesystem encryption kernel code to use the new names for
+> the UAPI constants rather than the old names.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-This patch set simplifies this common use case in two ways:
+Reviewed-by: Michael Halcrow <mhalcrow@google.com>
 
-First, by separating the return codes of the case where a
-request is queued to a backlog due to the provider being
-busy (-EBUSY) from the case the request has failed due
-to the provider being busy and backlogging is not enabled
-(-EAGAIN).
+> ---
+>  fs/crypto/fname.c           |  4 ++--
+>  fs/crypto/fscrypt_private.h |  4 ++--
+>  fs/crypto/keyinfo.c         | 36 +++++++++++++++++-------------------
+>  fs/crypto/policy.c          | 14 +++++++-------
+>  include/linux/fscrypt.h     |  8 ++++----
+>  5 files changed, 32 insertions(+), 34 deletions(-)
+> 
+> diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+> index 2878289b3ed2..c91bcef65b9f 100644
+> --- a/fs/crypto/fname.c
+> +++ b/fs/crypto/fname.c
+> @@ -46,7 +46,7 @@ static int fname_encrypt(struct inode *inode,
+>  	int res = 0;
+>  	char iv[FS_CRYPTO_BLOCK_SIZE];
+>  	struct scatterlist sg;
+> -	int padding = 4 << (ci->ci_flags & FS_POLICY_FLAGS_PAD_MASK);
+> +	int padding = 4 << (ci->ci_flags & FSCRYPT_POLICY_FLAGS_PAD_MASK);
+>  	unsigned int lim;
+>  	unsigned int cryptlen;
+>  
+> @@ -217,7 +217,7 @@ u32 fscrypt_fname_encrypted_size(const struct inode *inode, u32 ilen)
+>  	struct fscrypt_info *ci = inode->i_crypt_info;
+>  
+>  	if (ci)
+> -		padding = 4 << (ci->ci_flags & FS_POLICY_FLAGS_PAD_MASK);
+> +		padding = 4 << (ci->ci_flags & FSCRYPT_POLICY_FLAGS_PAD_MASK);
+>  	ilen = max(ilen, (u32)FS_CRYPTO_BLOCK_SIZE);
+>  	return round_up(ilen, padding);
+>  }
+> diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+> index a180981ee6d7..5cb80a2d39ea 100644
+> --- a/fs/crypto/fscrypt_private.h
+> +++ b/fs/crypto/fscrypt_private.h
+> @@ -43,7 +43,7 @@ struct fscrypt_context {
+>  	u8 contents_encryption_mode;
+>  	u8 filenames_encryption_mode;
+>  	u8 flags;
+> -	u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
+> +	u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+>  	u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
+>  } __packed;
+>  
+> @@ -59,7 +59,7 @@ struct fscrypt_info {
+>  	u8 ci_flags;
+>  	struct crypto_skcipher *ci_ctfm;
+>  	struct crypto_cipher *ci_essiv_tfm;
+> -	u8 ci_master_key[FS_KEY_DESCRIPTOR_SIZE];
+> +	u8 ci_master_key[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+>  };
+>  
+>  typedef enum {
+> diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+> index 7aed93bcfb82..ac41f646e7b7 100644
+> --- a/fs/crypto/keyinfo.c
+> +++ b/fs/crypto/keyinfo.c
+> @@ -38,7 +38,7 @@ static void derive_crypt_complete(struct crypto_async_request *req, int rc)
+>   */
+>  static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
+>  				const struct fscrypt_key *source_key,
+> -				u8 derived_raw_key[FS_MAX_KEY_SIZE])
+> +				u8 derived_raw_key[FSCRYPT_MAX_KEY_SIZE])
+>  {
+>  	int res = 0;
+>  	struct skcipher_request *req = NULL;
+> @@ -91,7 +91,7 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
+>  	int res;
+>  
+>  	description = kasprintf(GFP_NOFS, "%s%*phN", prefix,
+> -				FS_KEY_DESCRIPTOR_SIZE,
+> +				FSCRYPT_KEY_DESCRIPTOR_SIZE,
+>  				ctx->master_key_descriptor);
+>  	if (!description)
+>  		return -ENOMEM;
+> @@ -121,7 +121,8 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
+>  	master_key = (struct fscrypt_key *)ukp->data;
+>  	BUILD_BUG_ON(FS_AES_128_ECB_KEY_SIZE != FS_KEY_DERIVATION_NONCE_SIZE);
+>  
+> -	if (master_key->size < min_keysize || master_key->size > FS_MAX_KEY_SIZE
+> +	if (master_key->size < min_keysize ||
+> +	    master_key->size > FSCRYPT_MAX_KEY_SIZE
+>  	    || master_key->size % AES_BLOCK_SIZE != 0) {
 
-Next, this change is than built on to create a generic API
-to wait for a async. crypto operation to complete.
+Format nit: This makes the placement of "||" inconsistent across lines
+in this same expression.
 
-The end result is a smaller code base and an API that is
-easier to use and more difficult to get wrong.
-
-The patch set was boot tested on x86_64 and arm64 which
-at the very least tests the crypto users via testmgr and
-tcrypt but I do note that I do not have access to some
-of the HW whose drivers are modified nor do I claim I was
-able to test all of the corner cases.
-
-The patch set is based upon linux-next release tagged
-next-20171013.
-
-Changes from v8:
-- Remove the translation of EAGAIN return code to the
-  previous return code of EBUSY for the user space
-  interface of algif as no one seems to rely on it as
-  requested by Herbert Xu.
-
-Changes from v7:
-- Turn -EBUSY to -EAGAIN also in crypto using net
-  code which I missed before, as has been pointed
-  out by Harsh Jain.
-
-Changes from v6:
-- Fix brown paper bag compile error on marvell/cesa
-  code.
-
-Changes from v5:
-- Remove redundant new line as spotted by Jonathan
-  Cameron.
-- Reworded dm-verity change commit message to better
-  clarify potential issue averted by change as
-  pointed out by Mikulas Patocka.
-
-Changes from v4:
-- Rebase on top of latest algif changes from Stephan
-  Mueller.
-- Fix typo in ccp patch title.
-
-Changes from v3:
-- Instead of changing the return code to indicate
-  backlog queueing, change the return code to indicate
-  transient busy state, as suggested by Herbert Xu.
-
-Changes from v2:
-- Patch title changed from "introduce crypto wait for
-  async op" to better reflect the current state.
-- Rebase on top of latest linux-next.
-- Add a new return code of -EIOCBQUEUED for backlog
-  queueing, as suggested by Herbert Xu.
-- Transform more users to the new API.
-- Update the drbg change to account for new init as
-  indicated by Stephan Muller.
-
-Changes from v1:
-- Address review comments from Eric Biggers.
-- Separated out bug fixes of existing code and rebase
-  on top of that patch set.
-- Rename 'ecr' to 'wait' in fscrypto code.
-- Split patch introducing the new API from the change
-  moving over the algif code which it originated from
-  to the new API.
-- Inline crypto_wait_req().
-- Some code indentation fixes.
-
-Gilad Ben-Yossef (20):
-  crypto: change transient busy return code to -EAGAIN
-  crypto: ccp: use -EAGAIN for transient busy indication
-  net: use -EAGAIN for transient busy indication
-  crypto: remove redundant backlog checks on EBUSY
-  crypto: marvell/cesa: remove redundant backlog checks on EBUSY
-  crypto: introduce crypto wait for async op
-  crypto: move algif to generic async completion
-  crypto: move pub key to generic async completion
-  crypto: move drbg to generic async completion
-  crypto: move gcm to generic async completion
-  crypto: move testmgr to generic async completion
-  fscrypt: move to generic async completion
-  dm: move dm-verity to generic async completion
-  cifs: move to generic async completion
-  ima: move to generic async completion
-  crypto: tcrypt: move to generic async completion
-  crypto: talitos: move to generic async completion
-  crypto: qce: move to generic async completion
-  crypto: mediatek: move to generic async completion
-  crypto: adapt api sample to use async. op wait
-
- Documentation/crypto/api-samples.rst |  52 ++-------
- crypto/af_alg.c                      |  27 -----
- crypto/ahash.c                       |  12 +--
- crypto/algapi.c                      |   6 +-
- crypto/algif_aead.c                  |   8 +-
- crypto/algif_hash.c                  |  30 +++---
- crypto/algif_skcipher.c              |   9 +-
- crypto/api.c                         |  13 +++
- crypto/asymmetric_keys/public_key.c  |  28 +----
- crypto/cryptd.c                      |   4 +-
- crypto/cts.c                         |   6 +-
- crypto/drbg.c                        |  36 ++-----
- crypto/gcm.c                         |  32 ++----
- crypto/lrw.c                         |   8 +-
- crypto/rsa-pkcs1pad.c                |  16 +--
- crypto/tcrypt.c                      |  84 +++++----------
- crypto/testmgr.c                     | 204 ++++++++++++-----------------------
- crypto/xts.c                         |   8 +-
- drivers/crypto/ccp/ccp-crypto-main.c |   8 +-
- drivers/crypto/ccp/ccp-dev.c         |   7 +-
- drivers/crypto/marvell/cesa.c        |   3 +-
- drivers/crypto/marvell/cesa.h        |   2 +-
- drivers/crypto/mediatek/mtk-aes.c    |  31 +-----
- drivers/crypto/qce/sha.c             |  30 +-----
- drivers/crypto/talitos.c             |  38 +------
- drivers/md/dm-verity-target.c        |  81 ++++----------
- drivers/md/dm-verity.h               |   5 -
- fs/cifs/smb2ops.c                    |  30 +-----
- fs/crypto/crypto.c                   |  28 +----
- fs/crypto/fname.c                    |  36 ++-----
- fs/crypto/fscrypt_private.h          |  10 --
- fs/crypto/keyinfo.c                  |  21 +---
- include/crypto/drbg.h                |   3 +-
- include/crypto/if_alg.h              |  15 +--
- include/linux/crypto.h               |  40 +++++++
- net/ipv4/ah4.c                       |   2 +-
- net/ipv4/esp4.c                      |   2 +-
- net/ipv6/ah6.c                       |   2 +-
- net/ipv6/esp6.c                      |   2 +-
- security/integrity/ima/ima_crypto.c  |  56 +++-------
- 40 files changed, 297 insertions(+), 738 deletions(-)
-
--- 
-2.7.4
+>  		printk_once(KERN_WARNING
+>  				"%s: key size incorrect: %d\n",
+> @@ -140,14 +141,10 @@ static const struct {
+>  	const char *cipher_str;
+>  	int keysize;
+>  } available_modes[] = {
+> -	[FS_ENCRYPTION_MODE_AES_256_XTS] = { "xts(aes)",
+> -					     FS_AES_256_XTS_KEY_SIZE },
+> -	[FS_ENCRYPTION_MODE_AES_256_CTS] = { "cts(cbc(aes))",
+> -					     FS_AES_256_CTS_KEY_SIZE },
+> -	[FS_ENCRYPTION_MODE_AES_128_CBC] = { "cbc(aes)",
+> -					     FS_AES_128_CBC_KEY_SIZE },
+> -	[FS_ENCRYPTION_MODE_AES_128_CTS] = { "cts(cbc(aes))",
+> -					     FS_AES_128_CTS_KEY_SIZE },
+> +	[FSCRYPT_MODE_AES_256_XTS] = { "xts(aes)", FS_AES_256_XTS_KEY_SIZE },
+> +	[FSCRYPT_MODE_AES_256_CTS] = { "cts(cbc(aes))", FS_AES_256_CTS_KEY_SIZE },
+> +	[FSCRYPT_MODE_AES_128_CBC] = { "cbc(aes)", FS_AES_128_CBC_KEY_SIZE },
+> +	[FSCRYPT_MODE_AES_128_CTS] = { "cts(cbc(aes))", FS_AES_128_CTS_KEY_SIZE },
+>  };
+>  
+>  static int determine_cipher_type(struct fscrypt_info *ci, struct inode *inode,
+> @@ -278,9 +275,10 @@ int fscrypt_get_encryption_info(struct inode *inode)
+>  		/* Fake up a context for an unencrypted directory */
+>  		memset(&ctx, 0, sizeof(ctx));
+>  		ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
+> -		ctx.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
+> -		ctx.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
+> -		memset(ctx.master_key_descriptor, 0x42, FS_KEY_DESCRIPTOR_SIZE);
+> +		ctx.contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
+> +		ctx.filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
+> +		memset(ctx.master_key_descriptor, 0x42,
+> +		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
+>  	} else if (res != sizeof(ctx)) {
+>  		return -EINVAL;
+>  	}
+> @@ -288,7 +286,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
+>  	if (ctx.format != FS_ENCRYPTION_CONTEXT_FORMAT_V1)
+>  		return -EINVAL;
+>  
+> -	if (ctx.flags & ~FS_POLICY_FLAGS_VALID)
+> +	if (ctx.flags & ~FSCRYPT_POLICY_FLAGS_VALID)
+>  		return -EINVAL;
+>  
+>  	crypt_info = kmem_cache_alloc(fscrypt_info_cachep, GFP_NOFS);
+> @@ -312,12 +310,12 @@ int fscrypt_get_encryption_info(struct inode *inode)
+>  	 * crypto API as part of key derivation.
+>  	 */
+>  	res = -ENOMEM;
+> -	raw_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
+> +	raw_key = kmalloc(FSCRYPT_MAX_KEY_SIZE, GFP_NOFS);
+>  	if (!raw_key)
+>  		goto out;
+>  
+> -	res = validate_user_key(crypt_info, &ctx, raw_key, FS_KEY_DESC_PREFIX,
+> -				keysize);
+> +	res = validate_user_key(crypt_info, &ctx, raw_key,
+> +				FSCRYPT_KEY_DESC_PREFIX, keysize);
+>  	if (res && inode->i_sb->s_cop->key_prefix) {
+>  		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
+>  					     inode->i_sb->s_cop->key_prefix,
+> @@ -349,7 +347,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
+>  		goto out;
+>  
+>  	if (S_ISREG(inode->i_mode) &&
+> -	    crypt_info->ci_data_mode == FS_ENCRYPTION_MODE_AES_128_CBC) {
+> +	    crypt_info->ci_data_mode == FSCRYPT_MODE_AES_128_CBC) {
+>  		res = init_essiv_generator(crypt_info, raw_key, keysize);
+>  		if (res) {
+>  			pr_debug("%s: error %d (inode %lu) allocating essiv tfm\n",
+> diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+> index 6a63b8a0d46c..19332a6fd52d 100644
+> --- a/fs/crypto/policy.c
+> +++ b/fs/crypto/policy.c
+> @@ -21,7 +21,7 @@ static bool is_encryption_context_consistent_with_policy(
+>  				const struct fscrypt_policy *policy)
+>  {
+>  	return memcmp(ctx->master_key_descriptor, policy->master_key_descriptor,
+> -		      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
+> +		      FSCRYPT_KEY_DESCRIPTOR_SIZE) == 0 &&
+>  		(ctx->flags == policy->flags) &&
+>  		(ctx->contents_encryption_mode ==
+>  		 policy->contents_encryption_mode) &&
+> @@ -36,13 +36,13 @@ static int create_encryption_context_from_policy(struct inode *inode,
+>  
+>  	ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
+>  	memcpy(ctx.master_key_descriptor, policy->master_key_descriptor,
+> -					FS_KEY_DESCRIPTOR_SIZE);
+> +					FSCRYPT_KEY_DESCRIPTOR_SIZE);
+>  
+>  	if (!fscrypt_valid_enc_modes(policy->contents_encryption_mode,
+>  				     policy->filenames_encryption_mode))
+>  		return -EINVAL;
+>  
+> -	if (policy->flags & ~FS_POLICY_FLAGS_VALID)
+> +	if (policy->flags & ~FSCRYPT_POLICY_FLAGS_VALID)
+>  		return -EINVAL;
+>  
+>  	ctx.contents_encryption_mode = policy->contents_encryption_mode;
+> @@ -125,7 +125,7 @@ int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg)
+>  	policy.filenames_encryption_mode = ctx.filenames_encryption_mode;
+>  	policy.flags = ctx.flags;
+>  	memcpy(policy.master_key_descriptor, ctx.master_key_descriptor,
+> -				FS_KEY_DESCRIPTOR_SIZE);
+> +				FSCRYPT_KEY_DESCRIPTOR_SIZE);
+>  
+>  	if (copy_to_user(arg, &policy, sizeof(policy)))
+>  		return -EFAULT;
+> @@ -199,7 +199,7 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
+>  
+>  	if (parent_ci && child_ci) {
+>  		return memcmp(parent_ci->ci_master_key, child_ci->ci_master_key,
+> -			      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
+> +			      FSCRYPT_KEY_DESCRIPTOR_SIZE) == 0 &&
+>  			(parent_ci->ci_data_mode == child_ci->ci_data_mode) &&
+>  			(parent_ci->ci_filename_mode ==
+>  			 child_ci->ci_filename_mode) &&
+> @@ -216,7 +216,7 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
+>  
+>  	return memcmp(parent_ctx.master_key_descriptor,
+>  		      child_ctx.master_key_descriptor,
+> -		      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
+> +		      FSCRYPT_KEY_DESCRIPTOR_SIZE) == 0 &&
+>  		(parent_ctx.contents_encryption_mode ==
+>  		 child_ctx.contents_encryption_mode) &&
+>  		(parent_ctx.filenames_encryption_mode ==
+> @@ -254,7 +254,7 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
+>  	ctx.filenames_encryption_mode = ci->ci_filename_mode;
+>  	ctx.flags = ci->ci_flags;
+>  	memcpy(ctx.master_key_descriptor, ci->ci_master_key,
+> -	       FS_KEY_DESCRIPTOR_SIZE);
+> +	       FSCRYPT_KEY_DESCRIPTOR_SIZE);
+>  	get_random_bytes(ctx.nonce, FS_KEY_DERIVATION_NONCE_SIZE);
+>  	BUILD_BUG_ON(sizeof(ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
+>  	res = parent->i_sb->s_cop->set_context(child, &ctx,
+> diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+> index f7aa7d62e235..671ce57e4673 100644
+> --- a/include/linux/fscrypt.h
+> +++ b/include/linux/fscrypt.h
+> @@ -99,12 +99,12 @@ static inline bool fscrypt_dummy_context_enabled(struct inode *inode)
+>  static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
+>  					u32 filenames_mode)
+>  {
+> -	if (contents_mode == FS_ENCRYPTION_MODE_AES_128_CBC &&
+> -	    filenames_mode == FS_ENCRYPTION_MODE_AES_128_CTS)
+> +	if (contents_mode == FSCRYPT_MODE_AES_128_CBC &&
+> +	    filenames_mode == FSCRYPT_MODE_AES_128_CTS)
+>  		return true;
+>  
+> -	if (contents_mode == FS_ENCRYPTION_MODE_AES_256_XTS &&
+> -	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
+> +	if (contents_mode == FSCRYPT_MODE_AES_256_XTS &&
+> +	    filenames_mode == FSCRYPT_MODE_AES_256_CTS)
+>  		return true;
+>  
+>  	return false;
+> -- 
+> 2.15.0.rc0.271.g36b669edcc-goog
+> 
