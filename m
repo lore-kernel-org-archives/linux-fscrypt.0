@@ -1,173 +1,182 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Subject: [PATCH v9 15/20] ima: move to generic async completion
-Date: Sun, 15 Oct 2017 10:20:00 +0100
-Message-Id: <1508059209-25529-16-git-send-email-gilad@benyossef.com>
-In-Reply-To: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-References: <1508059209-25529-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>
-Cc: Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <mhalcrow@google.com>
+Return-Path: <mhalcrow@google.com>
+Date: Fri, 27 Oct 2017 13:14:46 -0700
+From: Michael Halcrow <mhalcrow@google.com>
+Subject: Re: [RFC PATCH 06/25] fscrypt: add FS_IOC_ADD_ENCRYPTION_KEY ioctl
+Message-ID: <20171027201446.GF10611@google.com>
+References: <20171023214058.128121-1-ebiggers3@gmail.com>
+ <20171023214058.128121-7-ebiggers3@gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171023214058.128121-7-ebiggers3@gmail.com>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Gwendal Grignou <gwendal@chromium.org>, Ryo Hashimoto <hashimoto@chromium.org>, Sarthak Kukreti <sarthakkukreti@chromium.org>, Nick Desaulniers <ndesaulniers@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-ima starts several async crypto ops and  waits for their completions.
-Move it over to generic code doing the same.
+On Mon, Oct 23, 2017 at 02:40:39PM -0700, Eric Biggers wrote:
+> By having an API to add a key to the *filesystem* we'll be able to
+> eliminate all the above hacks and better express the intended semantics:
+> the "locked/unlocked" status of an encrypted directory is global.  And
+> orthogonally to encryption, existing mechanisms such as file permissions
+> and LSMs can and should continue to be used for the purpose of *access
+> control*.
 
-Signed-off-by: Gilad Ben-Yossef <gilad@benyossef.com>
-Acked-by: Mimi Zohar <zohar@linux.vnet.ibm.com>
----
- security/integrity/ima/ima_crypto.c | 56 +++++++++++--------------------------
- 1 file changed, 17 insertions(+), 39 deletions(-)
+At some point I'd like to try to tackle the problem of making the
+encryption policy somehow *reflect* the access control policy.
 
-diff --git a/security/integrity/ima/ima_crypto.c b/security/integrity/ima/ima_crypto.c
-index a856d8c..9057b16 100644
---- a/security/integrity/ima/ima_crypto.c
-+++ b/security/integrity/ima/ima_crypto.c
-@@ -27,11 +27,6 @@
- 
- #include "ima.h"
- 
--struct ahash_completion {
--	struct completion completion;
--	int err;
--};
--
- /* minimum file size for ahash use */
- static unsigned long ima_ahash_minsize;
- module_param_named(ahash_minsize, ima_ahash_minsize, ulong, 0644);
-@@ -196,30 +191,13 @@ static void ima_free_atfm(struct crypto_ahash *tfm)
- 		crypto_free_ahash(tfm);
- }
- 
--static void ahash_complete(struct crypto_async_request *req, int err)
-+static inline int ahash_wait(int err, struct crypto_wait *wait)
- {
--	struct ahash_completion *res = req->data;
- 
--	if (err == -EINPROGRESS)
--		return;
--	res->err = err;
--	complete(&res->completion);
--}
-+	err = crypto_wait_req(err, wait);
- 
--static int ahash_wait(int err, struct ahash_completion *res)
--{
--	switch (err) {
--	case 0:
--		break;
--	case -EINPROGRESS:
--	case -EBUSY:
--		wait_for_completion(&res->completion);
--		reinit_completion(&res->completion);
--		err = res->err;
--		/* fall through */
--	default:
-+	if (err)
- 		pr_crit_ratelimited("ahash calculation failed: err: %d\n", err);
--	}
- 
- 	return err;
- }
-@@ -233,7 +211,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 	int rc, read = 0, rbuf_len, active = 0, ahash_rc = 0;
- 	struct ahash_request *req;
- 	struct scatterlist sg[1];
--	struct ahash_completion res;
-+	struct crypto_wait wait;
- 	size_t rbuf_size[2];
- 
- 	hash->length = crypto_ahash_digestsize(tfm);
-@@ -242,12 +220,12 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 	if (!req)
- 		return -ENOMEM;
- 
--	init_completion(&res.completion);
-+	crypto_init_wait(&wait);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
- 				   CRYPTO_TFM_REQ_MAY_SLEEP,
--				   ahash_complete, &res);
-+				   crypto_req_done, &wait);
- 
--	rc = ahash_wait(crypto_ahash_init(req), &res);
-+	rc = ahash_wait(crypto_ahash_init(req), &wait);
- 	if (rc)
- 		goto out1;
- 
-@@ -288,7 +266,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 			 * read/request, wait for the completion of the
- 			 * previous ahash_update() request.
- 			 */
--			rc = ahash_wait(ahash_rc, &res);
-+			rc = ahash_wait(ahash_rc, &wait);
- 			if (rc)
- 				goto out3;
- 		}
-@@ -304,7 +282,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 			 * read/request, wait for the completion of the
- 			 * previous ahash_update() request.
- 			 */
--			rc = ahash_wait(ahash_rc, &res);
-+			rc = ahash_wait(ahash_rc, &wait);
- 			if (rc)
- 				goto out3;
- 		}
-@@ -318,7 +296,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- 			active = !active; /* swap buffers, if we use two */
- 	}
- 	/* wait for the last update request to complete */
--	rc = ahash_wait(ahash_rc, &res);
-+	rc = ahash_wait(ahash_rc, &wait);
- out3:
- 	if (read)
- 		file->f_mode &= ~FMODE_READ;
-@@ -327,7 +305,7 @@ static int ima_calc_file_hash_atfm(struct file *file,
- out2:
- 	if (!rc) {
- 		ahash_request_set_crypt(req, NULL, hash->digest, 0);
--		rc = ahash_wait(crypto_ahash_final(req), &res);
-+		rc = ahash_wait(crypto_ahash_final(req), &wait);
- 	}
- out1:
- 	ahash_request_free(req);
-@@ -537,7 +515,7 @@ static int calc_buffer_ahash_atfm(const void *buf, loff_t len,
- {
- 	struct ahash_request *req;
- 	struct scatterlist sg;
--	struct ahash_completion res;
-+	struct crypto_wait wait;
- 	int rc, ahash_rc = 0;
- 
- 	hash->length = crypto_ahash_digestsize(tfm);
-@@ -546,12 +524,12 @@ static int calc_buffer_ahash_atfm(const void *buf, loff_t len,
- 	if (!req)
- 		return -ENOMEM;
- 
--	init_completion(&res.completion);
-+	crypto_init_wait(&wait);
- 	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG |
- 				   CRYPTO_TFM_REQ_MAY_SLEEP,
--				   ahash_complete, &res);
-+				   crypto_req_done, &wait);
- 
--	rc = ahash_wait(crypto_ahash_init(req), &res);
-+	rc = ahash_wait(crypto_ahash_init(req), &wait);
- 	if (rc)
- 		goto out;
- 
-@@ -561,10 +539,10 @@ static int calc_buffer_ahash_atfm(const void *buf, loff_t len,
- 	ahash_rc = crypto_ahash_update(req);
- 
- 	/* wait for the update request to complete */
--	rc = ahash_wait(ahash_rc, &res);
-+	rc = ahash_wait(ahash_rc, &wait);
- 	if (!rc) {
- 		ahash_request_set_crypt(req, NULL, hash->digest, 0);
--		rc = ahash_wait(crypto_ahash_final(req), &res);
-+		rc = ahash_wait(crypto_ahash_final(req), &wait);
- 	}
- out:
- 	ahash_request_free(req);
--- 
-2.7.4
+For now this change cleans up a real mess and makes things much more
+manageable and predictable.
 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+
+Reviewed-by: Michael Halcrow <mhalcrow@google.com>
+
+> ---
+>  fs/crypto/crypto.c              |  12 +-
+>  fs/crypto/fscrypt_private.h     |   3 +
+>  fs/crypto/keyinfo.c             | 351 +++++++++++++++++++++++++++++++++++++++-
+>  include/linux/fscrypt_notsupp.h |   5 +
+>  include/linux/fscrypt_supp.h    |   1 +
+>  include/uapi/linux/fscrypt.h    |  41 +++--
+>  6 files changed, 397 insertions(+), 16 deletions(-)
+> 
+> diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+> index 608f6bbe0f31..489c504ac20d 100644
+> --- a/fs/crypto/crypto.c
+> +++ b/fs/crypto/crypto.c
+> @@ -24,6 +24,7 @@
+>  #include <linux/module.h>
+>  #include <linux/scatterlist.h>
+>  #include <linux/ratelimit.h>
+> +#include <linux/key-type.h>
+>  #include <linux/dcache.h>
+>  #include <linux/namei.h>
+>  #include <crypto/aes.h>
+> @@ -449,6 +450,8 @@ int fscrypt_initialize(unsigned int cop_flags)
+>   */
+>  static int __init fscrypt_init(void)
+>  {
+> +	int err = -ENOMEM;
+> +
+>  	fscrypt_read_workqueue = alloc_workqueue("fscrypt_read_queue",
+>  							WQ_HIGHPRI, 0);
+>  	if (!fscrypt_read_workqueue)
+> @@ -462,14 +465,20 @@ static int __init fscrypt_init(void)
+>  	if (!fscrypt_info_cachep)
+>  		goto fail_free_ctx;
+>  
+> +	err = register_key_type(&key_type_fscrypt_mk);
+> +	if (err)
+> +		goto fail_free_info;
+> +
+>  	return 0;
+>  
+> +fail_free_info:
+> +	kmem_cache_destroy(fscrypt_info_cachep);
+>  fail_free_ctx:
+>  	kmem_cache_destroy(fscrypt_ctx_cachep);
+>  fail_free_queue:
+>  	destroy_workqueue(fscrypt_read_workqueue);
+>  fail:
+> -	return -ENOMEM;
+> +	return err;
+>  }
+>  module_init(fscrypt_init)
+>  
+> @@ -484,6 +493,7 @@ static void __exit fscrypt_exit(void)
+>  		destroy_workqueue(fscrypt_read_workqueue);
+>  	kmem_cache_destroy(fscrypt_ctx_cachep);
+>  	kmem_cache_destroy(fscrypt_info_cachep);
+> +	unregister_key_type(&key_type_fscrypt_mk);
+>  
+>  	fscrypt_essiv_cleanup();
+>  }
+> diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+> index 5cb80a2d39ea..b2fad12eeedb 100644
+> --- a/fs/crypto/fscrypt_private.h
+> +++ b/fs/crypto/fscrypt_private.h
+> @@ -27,6 +27,8 @@
+>  
+>  #define FS_KEY_DERIVATION_NONCE_SIZE		16
+>  
+> +#define FSCRYPT_MIN_KEY_SIZE		16
+> +
+>  /**
+>   * Encryption context for inode
+>   *
+> @@ -93,6 +95,7 @@ extern struct page *fscrypt_alloc_bounce_page(struct fscrypt_ctx *ctx,
+>  					      gfp_t gfp_flags);
+>  
+>  /* keyinfo.c */
+> +extern struct key_type key_type_fscrypt_mk;
+>  extern void __exit fscrypt_essiv_cleanup(void);
+>  
+>  #endif /* _FSCRYPT_PRIVATE_H */
+> diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+> index d3a97c2cd4dd..3f1cb8bbc1e5 100644
+> --- a/fs/crypto/keyinfo.c
+> +++ b/fs/crypto/keyinfo.c
+> @@ -9,14 +9,307 @@
+>   */
+>  
+>  #include <keys/user-type.h>
+> -#include <linux/scatterlist.h>
+> +#include <linux/key-type.h>
+>  #include <linux/ratelimit.h>
+> +#include <linux/scatterlist.h>
+> +#include <linux/seq_file.h>
+>  #include <crypto/aes.h>
+>  #include <crypto/sha.h>
+>  #include "fscrypt_private.h"
+>  
+>  static struct crypto_shash *essiv_hash_tfm;
+>  
+> +/*
+> + * fscrypt_master_key_secret - secret key material of an in-use master key
+> + */
+> +struct fscrypt_master_key_secret {
+> +
+> +	/* Size of the raw key in bytes */
+> +	u32			size;
+> +
+> +	/* The raw key */
+> +	u8			raw[FSCRYPT_MAX_KEY_SIZE];
+> +};
+
+With structs fscrypt introduces, I suggest __randomize_layout wherever
+feasible.
+
+> +#define FSCRYPT_FS_KEYRING_DESCRIPTION_SIZE	\
+> +	(sizeof("fscrypt-") - 1 + sizeof(((struct super_block
+> *)0)->s_id) + 1)
+
+What function do the " - 1" and " + 1" parts serve here?  Readability?
+
+> +	key = find_master_key(inode->i_sb, &mk_spec);
+> +	if (IS_ERR(key)) {
+> +		if (key != ERR_PTR(-ENOKEY))
+> +			return PTR_ERR(key);
+> +		/*
+> +		 * As a legacy fallback, we search the current task's subscribed
+> +		 * keyrings in addition to ->s_master_keys.
+
+Please add an explicit comment that it's important for security that
+the ordering of these two searches be preserved.
+
+> +		 */
+> +		return find_and_derive_key_legacy(inode, ctx, derived_key,
+> +						  derived_keysize);
+> +	}
+> +	mk = key->payload.data[0];
+> +
+> +	/*
+> +	 * Require that the master key be at least as long as the derived key.
+> +	 * Otherwise, the derived key cannot possibly contain as much entropy as
+> +	 * that required by the encryption mode it will be used for.
+> +	 */
+> +	if (mk->mk_secret.size < derived_keysize) {
+
+As I've mentioned in a previous patch in this set, if we're going to
+get opinionated about source entropy, there's more we could
+measure/estimate than just the length.
