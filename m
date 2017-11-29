@@ -1,48 +1,51 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 4/5] ubifs: switch to fscrypt_prepare_lookup()
-Date: Wed, 29 Nov 2017 12:43:16 -0800
-Message-Id: <20171129204317.91205-5-ebiggers3@gmail.com>
-In-Reply-To: <20171129204317.91205-1-ebiggers3@gmail.com>
-References: <20171129204317.91205-1-ebiggers3@gmail.com>
-To: linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
-Cc: linux-fscrypt@vger.kernel.org, Artem Bityutskiy <dedekind1@gmail.com>, Adrian Hunter <adrian.hunter@intel.com>, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v2 1/5] f2fs: switch to fscrypt_file_open()
+Date: Wed, 29 Nov 2017 12:35:28 -0800
+Message-Id: <20171129203532.87729-2-ebiggers3@gmail.com>
+In-Reply-To: <20171129203532.87729-1-ebiggers3@gmail.com>
+References: <20171129203532.87729-1-ebiggers3@gmail.com>
+To: linux-f2fs-devel@lists.sourceforge.net
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <yuchao0@huawei.com>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
+Reviewed-by: Chao Yu <yuchao0@huawei.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ubifs/dir.c | 17 +++--------------
- 1 file changed, 3 insertions(+), 14 deletions(-)
+ fs/f2fs/file.c | 18 +++---------------
+ 1 file changed, 3 insertions(+), 15 deletions(-)
 
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index 7bf847d79b4a..a2ea4856e67b 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -220,20 +220,9 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
+diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+index 7874bbd7311d..ae2cf96190e4 100644
+--- a/fs/f2fs/file.c
++++ b/fs/f2fs/file.c
+@@ -472,22 +472,10 @@ static int f2fs_file_mmap(struct file *file, struct vm_area_struct *vma)
  
- 	dbg_gen("'%pd' in dir ino %lu", dentry, dir->i_ino);
+ static int f2fs_file_open(struct inode *inode, struct file *filp)
+ {
+-	struct dentry *dir;
++	int err = fscrypt_file_open(inode, filp);
  
--	if (ubifs_crypt_is_encrypted(dir)) {
--		err = fscrypt_get_encryption_info(dir);
--
--		/*
--		 * DCACHE_ENCRYPTED_WITH_KEY is set if the dentry is
--		 * created while the directory was encrypted and we
--		 * have access to the key.
--		 */
--		if (fscrypt_has_encryption_key(dir))
--			fscrypt_set_encrypted_dentry(dentry);
--		fscrypt_set_d_op(dentry);
--		if (err && err != -ENOKEY)
--			return ERR_PTR(err);
+-	if (f2fs_encrypted_inode(inode)) {
+-		int ret = fscrypt_get_encryption_info(inode);
+-		if (ret)
+-			return -EACCES;
+-		if (!fscrypt_has_encryption_key(inode))
+-			return -ENOKEY;
 -	}
-+	err = fscrypt_prepare_lookup(dir, dentry, flags);
+-	dir = dget_parent(file_dentry(filp));
+-	if (f2fs_encrypted_inode(d_inode(dir)) &&
+-			!fscrypt_has_permitted_context(d_inode(dir), inode)) {
+-		dput(dir);
+-		return -EPERM;
+-	}
+-	dput(dir);
 +	if (err)
-+		return ERR_PTR(err);
++		return err;
+ 	return dquot_file_open(inode, filp);
+ }
  
- 	err = fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
- 	if (err)
 -- 
 2.15.0.531.g2ccb3012c9-goog
