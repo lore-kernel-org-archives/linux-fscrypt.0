@@ -1,41 +1,38 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 5/5] ubifs: switch to fscrypt_prepare_setattr()
-Date: Wed, 29 Nov 2017 12:43:17 -0800
-Message-Id: <20171129204317.91205-6-ebiggers3@gmail.com>
-In-Reply-To: <20171129204317.91205-1-ebiggers3@gmail.com>
-References: <20171129204317.91205-1-ebiggers3@gmail.com>
-To: linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
-Cc: linux-fscrypt@vger.kernel.org, Artem Bityutskiy <dedekind1@gmail.com>, Adrian Hunter <adrian.hunter@intel.com>, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v2 2/5] f2fs: switch to fscrypt_prepare_link()
+Date: Wed, 29 Nov 2017 12:35:29 -0800
+Message-Id: <20171129203532.87729-3-ebiggers3@gmail.com>
+In-Reply-To: <20171129203532.87729-1-ebiggers3@gmail.com>
+References: <20171129203532.87729-1-ebiggers3@gmail.com>
+To: linux-f2fs-devel@lists.sourceforge.net
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <yuchao0@huawei.com>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
+Reviewed-by: Chao Yu <yuchao0@huawei.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ubifs/file.c | 10 +++-------
- 1 file changed, 3 insertions(+), 7 deletions(-)
+ fs/f2fs/namei.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/fs/ubifs/file.c b/fs/ubifs/file.c
-index 31dc632a52fc..f5578f1bd170 100644
---- a/fs/ubifs/file.c
-+++ b/fs/ubifs/file.c
-@@ -1284,13 +1284,9 @@ int ubifs_setattr(struct dentry *dentry, struct iattr *attr)
- 	if (err)
- 		return err;
+diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
+index 28bdf8828e73..dcf5c3a97059 100644
+--- a/fs/f2fs/namei.c
++++ b/fs/f2fs/namei.c
+@@ -240,9 +240,9 @@ static int f2fs_link(struct dentry *old_dentry, struct inode *dir,
+ 	if (unlikely(f2fs_cp_error(sbi)))
+ 		return -EIO;
  
--	if (ubifs_crypt_is_encrypted(inode) && (attr->ia_valid & ATTR_SIZE)) {
--		err = fscrypt_get_encryption_info(inode);
--		if (err)
--			return err;
--		if (!fscrypt_has_encryption_key(inode))
--			return -ENOKEY;
--	}
-+	err = fscrypt_prepare_setattr(dentry, attr);
+-	if (f2fs_encrypted_inode(dir) &&
+-			!fscrypt_has_permitted_context(dir, inode))
+-		return -EPERM;
++	err = fscrypt_prepare_link(old_dentry, dir, dentry);
 +	if (err)
 +		return err;
  
- 	if ((attr->ia_valid & ATTR_SIZE) && attr->ia_size < inode->i_size)
- 		/* Truncation to a smaller size */
+ 	if (is_inode_flag_set(dir, FI_PROJ_INHERIT) &&
+ 			(!projid_eq(F2FS_I(dir)->i_projid,
 -- 
 2.15.0.531.g2ccb3012c9-goog
