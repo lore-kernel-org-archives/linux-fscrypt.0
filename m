@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 4/5] f2fs: switch to fscrypt_prepare_lookup()
-Date: Wed, 29 Nov 2017 12:35:31 -0800
-Message-Id: <20171129203532.87729-5-ebiggers3@gmail.com>
+Subject: [PATCH v2 5/5] f2fs: switch to fscrypt_prepare_setattr()
+Date: Wed, 29 Nov 2017 12:35:32 -0800
+Message-Id: <20171129203532.87729-6-ebiggers3@gmail.com>
 In-Reply-To: <20171129203532.87729-1-ebiggers3@gmail.com>
 References: <20171129203532.87729-1-ebiggers3@gmail.com>
 To: linux-f2fs-devel@lists.sourceforge.net
@@ -14,36 +14,38 @@ From: Eric Biggers <ebiggers@google.com>
 Reviewed-by: Chao Yu <yuchao0@huawei.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/f2fs/namei.c | 17 +++--------------
- 1 file changed, 3 insertions(+), 14 deletions(-)
+ fs/f2fs/file.c | 12 ++++--------
+ 1 file changed, 4 insertions(+), 8 deletions(-)
 
-diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
-index e910d2ebe0c6..bbb3fc1e2bef 100644
---- a/fs/f2fs/namei.c
-+++ b/fs/f2fs/namei.c
-@@ -357,20 +357,9 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
+diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+index ae2cf96190e4..52b8f95b9bee 100644
+--- a/fs/f2fs/file.c
++++ b/fs/f2fs/file.c
+@@ -743,6 +743,10 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
+ 	if (err)
+ 		return err;
  
- 	trace_f2fs_lookup_start(dir, dentry, flags);
- 
--	if (f2fs_encrypted_inode(dir)) {
--		err = fscrypt_get_encryption_info(dir);
--
--		/*
--		 * DCACHE_ENCRYPTED_WITH_KEY is set if the dentry is
--		 * created while the directory was encrypted and we
--		 * don't have access to the key.
--		 */
--		if (fscrypt_has_encryption_key(dir))
--			fscrypt_set_encrypted_dentry(dentry);
--		fscrypt_set_d_op(dentry);
--		if (err && err != -ENOKEY)
--			goto out;
--	}
-+	err = fscrypt_prepare_lookup(dir, dentry, flags);
++	err = fscrypt_prepare_setattr(dentry, attr);
 +	if (err)
-+		goto out;
++		return err;
++
+ 	if (is_quota_modification(inode, attr)) {
+ 		err = dquot_initialize(inode);
+ 		if (err)
+@@ -758,14 +762,6 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
+ 	}
  
- 	if (dentry->d_name.len > F2FS_NAME_LEN) {
- 		err = -ENAMETOOLONG;
+ 	if (attr->ia_valid & ATTR_SIZE) {
+-		if (f2fs_encrypted_inode(inode)) {
+-			err = fscrypt_get_encryption_info(inode);
+-			if (err)
+-				return err;
+-			if (!fscrypt_has_encryption_key(inode))
+-				return -ENOKEY;
+-		}
+-
+ 		if (attr->ia_size <= i_size_read(inode)) {
+ 			down_write(&F2FS_I(inode)->i_mmap_sem);
+ 			truncate_setsize(inode, attr->ia_size);
 -- 
 2.15.0.531.g2ccb3012c9-goog
