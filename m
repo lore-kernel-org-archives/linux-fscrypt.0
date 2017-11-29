@@ -1,48 +1,71 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-Date: Fri, 3 Nov 2017 22:25:29 +0800
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Subject: Re: [PATCH v10 00/20] simplify crypto wait for async op
-Message-ID: <20171103142528.GL9011@gondor.apana.org.au>
-References: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1508310057-25369-1-git-send-email-gilad@benyossef.com>
-Sender: keyrings-owner@vger.kernel.org
-To: Gilad Ben-Yossef <gilad@benyossef.com>
-Cc: "David S. Miller" <davem@davemloft.net>, Jonathan Corbet <corbet@lwn.net>, David Howells <dhowells@redhat.com>, Tom Lendacky <thomas.lendacky@amd.com>, Gary Hook <gary.hook@amd.com>, Boris Brezillon <boris.brezillon@free-electrons.com>, Arnaud Ebalard <arno@natisbad.org>, Matthias Brugger <matthias.bgg@gmail.com>, Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@redhat.com>, dm-devel@redhat.com, Steve French <sfrench@samba.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Steffen Klassert <steffen.klassert@secunet.com>, Alexey Kuznetsov <kuznet@ms2.inr.ac.ru>, Hideaki YOSHIFUJI <yoshfuji@linux-ipv6.org>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Ofir Drang <ofir.drang@arm.com>, linux-crypto@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, keyrings@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-mediatek@lists.infradead.org, linux-cifs@vger.kernel.org, samba-technical@lists.samba.org, linux-fscrypt@vger.kernel.org, netdev@vger.kernel.org, linux-ima-devel@lists.sourceforge.net, linux-ima-user@lists.sourceforge.net, linux-security-module@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH v2 3/5] ubifs: switch to fscrypt_prepare_rename()
+Date: Wed, 29 Nov 2017 12:43:15 -0800
+Message-Id: <20171129204317.91205-4-ebiggers3@gmail.com>
+In-Reply-To: <20171129204317.91205-1-ebiggers3@gmail.com>
+References: <20171129204317.91205-1-ebiggers3@gmail.com>
+To: linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
+Cc: linux-fscrypt@vger.kernel.org, Artem Bityutskiy <dedekind1@gmail.com>, Adrian Hunter <adrian.hunter@intel.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, Oct 18, 2017 at 08:00:32AM +0100, Gilad Ben-Yossef wrote:
-> Many users of kernel async. crypto services have a pattern of
-> starting an async. crypto op and than using a completion
-> to wait for it to end.
-> 
-> This patch set simplifies this common use case in two ways:
-> 
-> First, by separating the return codes of the case where a
-> request is queued to a backlog due to the provider being
-> busy (-EBUSY) from the case the request has failed due
-> to the provider being busy and backlogging is not enabled
-> (-ENOSPC).
-> 
-> Next, this change is than built on to create a generic API
-> to wait for a async. crypto operation to complete.
-> 
-> The end result is a smaller code base and an API that is
-> easier to use and more difficult to get wrong.
-> 
-> The patch set was boot tested on x86_64 and arm64 which
-> at the very least tests the crypto users via testmgr and
-> tcrypt but I do note that I do not have access to some
-> of the HW whose drivers are modified nor do I claim I was
-> able to test all of the corner cases.
-> 
-> The patch set is based upon linux-next release tagged
-> next-20171017.
+From: Eric Biggers <ebiggers@google.com>
 
-All applied.  Thanks.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ubifs/dir.c | 20 +++++++-------------
+ 1 file changed, 7 insertions(+), 13 deletions(-)
+
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 09e6c56b11bc..7bf847d79b4a 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -1353,12 +1353,6 @@ static int do_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 	if (unlink)
+ 		ubifs_assert(inode_is_locked(new_inode));
+ 
+-	if (old_dir != new_dir) {
+-		if (ubifs_crypt_is_encrypted(new_dir) &&
+-		    !fscrypt_has_permitted_context(new_dir, old_inode))
+-			return -EPERM;
+-	}
+-
+ 	if (unlink && is_dir) {
+ 		err = ubifs_check_dir_empty(new_inode);
+ 		if (err)
+@@ -1573,13 +1567,6 @@ static int ubifs_xrename(struct inode *old_dir, struct dentry *old_dentry,
+ 
+ 	ubifs_assert(fst_inode && snd_inode);
+ 
+-	if ((ubifs_crypt_is_encrypted(old_dir) ||
+-	    ubifs_crypt_is_encrypted(new_dir)) &&
+-	    (old_dir != new_dir) &&
+-	    (!fscrypt_has_permitted_context(new_dir, fst_inode) ||
+-	     !fscrypt_has_permitted_context(old_dir, snd_inode)))
+-		return -EPERM;
+-
+ 	err = fscrypt_setup_filename(old_dir, &old_dentry->d_name, 0, &fst_nm);
+ 	if (err)
+ 		return err;
+@@ -1624,12 +1611,19 @@ static int ubifs_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 			struct inode *new_dir, struct dentry *new_dentry,
+ 			unsigned int flags)
+ {
++	int err;
++
+ 	if (flags & ~(RENAME_NOREPLACE | RENAME_WHITEOUT | RENAME_EXCHANGE))
+ 		return -EINVAL;
+ 
+ 	ubifs_assert(inode_is_locked(old_dir));
+ 	ubifs_assert(inode_is_locked(new_dir));
+ 
++	err = fscrypt_prepare_rename(old_dir, old_dentry, new_dir, new_dentry,
++				     flags);
++	if (err)
++		return err;
++
+ 	if (flags & RENAME_EXCHANGE)
+ 		return ubifs_xrename(old_dir, old_dentry, new_dir, new_dentry);
+ 
 -- 
-Email: Herbert Xu <herbert@gondor.apana.org.au>
-Home Page: http://gondor.apana.org.au/~herbert/
-PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
+2.15.0.531.g2ccb3012c9-goog
