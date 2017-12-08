@@ -1,67 +1,42 @@
-Return-Path: <ebiggers3@gmail.com>
-Date: Fri, 8 Dec 2017 13:42:13 -0800
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH] fscrypt: add support for ChaCha20 contents encryption
-Message-ID: <20171208214213.GA104193@gmail.com>
-References: <20171208013838.105034-1-ebiggers3@gmail.com>
- <CAHmME9ob8eG1yS=jkGHFnYDq+FtiJCP38CKpzUs0Z33R8_0Msw@mail.gmail.com>
- <CAKv+Gu85X5OZWhwQxNrc8RonPL3XdRhzK=JeWcWXLu=8KUsQAg@mail.gmail.com>
+Return-Path: <ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKv+Gu85X5OZWhwQxNrc8RonPL3XdRhzK=JeWcWXLu=8KUsQAg@mail.gmail.com>
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Paul Crowley <paulcrowley@google.com>, Martin Willi <martin@strongswan.org>, David Gstir <david@sigma-star.at>, Eric Biggers <ebiggers@google.com>
+In-Reply-To: <6974144.ZTrPlmK77A@tauon.chronox.de>
+References: <20171208013838.105034-1-ebiggers3@gmail.com> <CAKv+Gu_7vMAOP371MJh+FoYb81gwF1y_zy+OES9q5eWTTdOBTg@mail.gmail.com>
+ <CAKv+Gu-GfHpukc0WA6z13xAfdcmL9LQUmH41J4GsuMP+m4ge3g@mail.gmail.com> <6974144.ZTrPlmK77A@tauon.chronox.de>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Fri, 8 Dec 2017 10:27:07 +0000
+Message-ID: <CAKv+Gu-5htHxD3gOLWdSNabfiHD=_ssdZLsdksv3FJ_ueK=XEQ@mail.gmail.com>
+Subject: Re: [PATCH] fscrypt: add support for ChaCha20 contents encryption
+Content-Type: text/plain; charset="UTF-8"
+To: Stephan Mueller <smueller@chronox.de>
+Cc: Eric Biggers <ebiggers3@gmail.com>, linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, "linux-crypto@vger.kernel.org" <linux-crypto@vger.kernel.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Paul Crowley <paulcrowley@google.com>, Martin Willi <martin@strongswan.org>, David Gstir <david@sigma-star.at>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Fri, Dec 08, 2017 at 07:20:43AM +0000, Ard Biesheuvel wrote:
-> On 8 December 2017 at 02:51, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
-> > Hi Eric,
-> >
-> > Nice to see more use of ChaCha20. However...
-> >
-> > Can we skip over the "sort of worse than XTS, but not having _real_
-> > authentication sucks anyway in either case, so whatever" and move
-> > directly to, "linux finally supports authenticated encryption for disk
-> > encryption!"?
-> 
-> Ehm, it doesn't? This is plain ChaCha20, not any AEAD variant.
-> 
-> > This would be a big deal and would actually be a
-> > noticeable security improvement, instead of a potentially dubious step
-> > sidewaysbackish.
-> >
-> 
-> It is actually dubious, given the large scale reuse of IVs with a
-> stream cipher. I do suppose though that using an AEAD variant would at
-> least catch any attacks involving flipping ciphertext bits resulting
-> in plaintext bits being flipped at the same offset (but file updates
-> would still be visible in the clear)
-> 
+On 8 December 2017 at 10:14, Stephan Mueller <smueller@chronox.de> wrote:
+> Am Freitag, 8. Dezember 2017, 11:06:31 CET schrieb Ard Biesheuvel:
+>
+> Hi Ard,
+>
+>>
+>> Given how it is not uncommon for counters to be used as IV, this is a
+>> fundamental flaw that could rear its head in other places as well, so
+>> I propose we fix this one way (fix the current code) or the other
+>> (deprecate the current code and create a new chacha20-rfc7539
+>> blockcipher that uses a 96-bit IV and sets the counter to 0)
+>
+> Instead of having a complete new implementation of the ChaCha20 cipher, what
+> about using a specific IV generator for which the kernel crypto API has
+> already support (see crypto/seqiv.c for example)?
+>
+> I.e. we have the current ChaCha20 cipher, but use some "rfc7539iv(chacha20)"
+> cipher mode where that rfc7539iv is the mentioned IV generator that turns the
+> given IV (sector number?) into the proper IV for ChaCha20.
+>
 
-It *is* dubious, but it would be a replacement for No Encryption, not a
-replacement for AES.  AES would continue to be required on devices that can do
-AES fast enough.  This would only be for devices that do not meet the AES
-performance bar, so their status quo is No Encryption.  I know, it is fun to
-poke holes in bad crypto, but much less interesting to poke holes in "no crypto"
-:-)
+To be honest, I don't fully understand how the IV generators work.
+seqiv is implemented as an AEAD not as a skcipher, and we'd need to
+wrap chacha20 in something that is usable as a skcipher.
 
-We can't use authenticated encryption for the same reason we can't use random or
-sequential nonces: there is nowhere to store the additional metadata
-(authentication tag and nonce) per filesystem block *and* have it updated
-atomically with respect to the contents of said block.  Copy-on-write
-filesystems such as btrfs or bcachefs can do it.  Traditional filesystems
-cannot.  F2FS comes closer than EXT4 since F2FS is based on a log-structured
-filesystem, but only partially; for one, it still updates data in-place
-sometimes.  This is not a new problem; this is also the reason why we haven't
-been able to add AES-GCM support yet.
-
-Authentication aside, the greater problem here is the IV reuse.  Unfortunately
-it actually will likely be even worse than we thought originally, because this
-would be used on flash storage that does wear leveling, and likely also with
-F2FS which often doesn't overwrite data in-place.  So even under the "single
-point-in-time permanent offline compromise" threat model it may not be good
-enough.  We are going to spend some more time investigating alternatives, but
-unfortunately there are not many.
-
-Eric
+In any case, it does make sense to address this by wrapping chacha20
+in something generic, rather than having to extend all
+implementations.
