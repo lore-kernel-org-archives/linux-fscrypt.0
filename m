@@ -1,70 +1,57 @@
-Return-Path: <david@sigma-star.at>
-Content-Type: text/plain;
-	charset=us-ascii
-Mime-Version: 1.0 (Mac OS X Mail 11.2 \(3445.5.20\))
+Return-Path: <ebiggers3@gmail.com>
+Date: Sun, 10 Dec 2017 11:05:47 -0800
+From: Eric Biggers <ebiggers3@gmail.com>
 Subject: Re: [PATCH] fscrypt: add support for ChaCha20 contents encryption
-From: David Gstir <david@sigma-star.at>
-In-Reply-To: <CAHmME9ob8eG1yS=jkGHFnYDq+FtiJCP38CKpzUs0Z33R8_0Msw@mail.gmail.com>
-Date: Mon, 11 Dec 2017 17:11:41 +0100
-Content-Transfer-Encoding: quoted-printable
-Message-Id: <899E2752-1AD9-4DF4-ABC7-E0D1582AF292@sigma-star.at>
+Message-ID: <20171210190547.GB1170@zzz.localdomain>
 References: <20171208013838.105034-1-ebiggers3@gmail.com>
  <CAHmME9ob8eG1yS=jkGHFnYDq+FtiJCP38CKpzUs0Z33R8_0Msw@mail.gmail.com>
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: Eric Biggers <ebiggers3@gmail.com>, linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Paul Crowley <paulcrowley@google.com>, Martin Willi <martin@strongswan.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Eric Biggers <ebiggers@google.com>, Richard Weinberger <richard@nod.at>
+ <CAKv+Gu85X5OZWhwQxNrc8RonPL3XdRhzK=JeWcWXLu=8KUsQAg@mail.gmail.com>
+ <20171208214213.GA104193@gmail.com>
+ <483722360.123210.1512834056036@ichabod.co-bxl>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <483722360.123210.1512834056036@ichabod.co-bxl>
+To: Geo Kozey <geokozey@mailfence.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, linux-fscrypt@vger.kernel.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, ebiggers@google.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
+On Sat, Dec 09, 2017 at 04:40:56PM +0100, Geo Kozey wrote:
+> > From: Eric Biggers <ebiggers3@gmail.com>
+> > Sent: Fri Dec 08 22:42:13 CET 2017
+> > Subject: Re: [PATCH] fscrypt: add support for ChaCha20 contents encryption
+> > 
+> > We can't use authenticated encryption for the same reason we can't use random or
+> > sequential nonces: there is nowhere to store the additional metadata
+> > (authentication tag and nonce) per filesystem block *and* have it updated
+> > atomically with respect to the contents of said block. 
+> 
+> I saw that LUKS/dm-crypt guys are able to do AE regardless of the same issues[1].
+> Is it really impossible for fscrypt?
+> 
+> [1] http://www.saout.de/pipermail/dm-crypt/2017-November/005745.html
+> 
 
-> On 08.12.2017, at 03:51, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
->=20
-> Hi Eric,
->=20
-> Nice to see more use of ChaCha20. However...
->=20
-> Can we skip over the "sort of worse than XTS, but not having _real_
-> authentication sucks anyway in either case, so whatever" and move
-> directly to, "linux finally supports authenticated encryption for disk
-> encryption!"? This would be a big deal and would actually be a
-> noticeable security improvement, instead of a potentially dubious step
-> sidewaysbackish.
+dm-crypt only supports authenticated encryption when it is running on top of
+dm-integrity, which emulates a block device that has per-sector tags that can be
+used to store the integrity information (nonce and authentication tag).
 
-Out of curiosity, does anybody know of any specific attacks that =
-authenticated
-encryption for disk encryption would solve as opposed to just using =
-encryption
-with AES-XTS?
+While it is very cool that they've actually gotten this to work, it is really
+more of a proof-of-concept because the per-sector tag emulation is really
+inefficient.  Primarily, it has to use data journaling to maintain consistency,
+which results in all data having to be written twice.  Very few users are
+willing to take that performance hit.
 
-To my knowledge the XTS mode is frowned upon [1], but I don't know of =
-any
-serious flaws that would eg. allow an attacker to modify file contents
-without a *serious* amount of effort. CBC is another story though [2].
+Now, it does have a nice design which is that the per-sector tag support is
+abstracted out as an integrity profile which it appears could be used by
+filesystems.  So we probably could actually support authenticated encryption
+pretty easily in fscrypt, but presently it would only work when the filesystem
+was formatted on top of dm-integrity, which means almost no one would use it.
 
-Don't get me wrong, I'd like to have authenticated encryption too.
-In fact we are currently working on a concept for adding authentication =
-to
-UBIFS (I'll share more details as soon as its in a presentable state).
-However, the reason for this is mainly because UBIFS does *not* operate =
-on
-the block layer, so dm-integrity/dm-verity is not an option and fscrypt
-only protects the confidentiality of file contents and filenames.
-This means that the filesystem index is unprotected which makes it =
-rather
-easy to move files around - eg. replace /bin/bash with something =
-completely
-different without knowing the fscrypt master key or any derived key.
+Ideally, in the future there will be *hardware* that supports per-sector tags,
+which would then provide the "DM-DIF-EXT-TAG" integrity profile rather than
+dm-integrity.  That would make authenticated full-disk encryption, as well as
+authenticated encryption of file contents on non-CoW filesystems, actually
+practical (albeit without rollback protection).
 
-For the general use case though (eg. securing *really important* files =
-on my desktop),
-I'd use authenticated encryption at a higher layer to get more =
-flexibility
-to eg. easily use explicit IVs over implicit ones derived from =
-block/sector
-number. But maybe there are some uses cases I didn't think of just =
-now... :)
-
-David
-
-[1] https://sockpuppet.org/blog/2014/04/30/you-dont-want-xts/
-[2] =
-http://www.jakoblell.com/blog/2013/12/22/practical-malleability-attack-aga=
-inst-cbc-encrypted-luks-partitions/
+Eric
