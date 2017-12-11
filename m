@@ -1,83 +1,37 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 06/24] fscrypt: move fscrypt_operations declaration to fscrypt_supp.h
-Date: Fri, 15 Dec 2017 09:42:07 -0800
-Message-Id: <20171215174225.31583-7-ebiggers3@gmail.com>
-In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
-References: <20171215174225.31583-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <martin@strongswan.org>
+Message-ID: <1512977925.28078.12.camel@strongswan.org>
+Subject: Re: [RFC PATCH] crypto: chacha20 - add implementation using 96-bit
+ nonce
+From: Martin Willi <martin@strongswan.org>
+Date: Mon, 11 Dec 2017 08:38:45 +0100
+In-Reply-To: <20171208221716.GB104193@gmail.com>
+References: <20171208115502.21775-1-ard.biesheuvel@linaro.org>
+	 <20171208221716.GB104193@gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+To: Eric Biggers <ebiggers3@gmail.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-crypto@vger.kernel.org, herbert@gondor.apana.org.au, Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Paul Crowley <paulcrowley@google.com>, David Gstir <david@sigma-star.at>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Stephan Mueller <smueller@chronox.de>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi,
 
-Filesystems now only define their fscrypt_operations when they are
-compiled with encryption support, so move the fscrypt_operations
-declaration from fscrypt.h to fscrypt_supp.h.
+> Anyway, I actually thought it was intentional that the ChaCha
+> implementations in the Linux kernel allowed specifying the block
+> counter, and therefore allowed seeking to any point in the keystream,
+> exposing the full functionality of the cipher.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- include/linux/fscrypt.h      | 18 ------------------
- include/linux/fscrypt_supp.h | 18 ++++++++++++++++++
- 2 files changed, 18 insertions(+), 18 deletions(-)
+If I remember correctly, it was indeed intentional. When building the
+chacha20poly1305 AEAD both in [1] and [2], a block counter of 0 is used
+to generate the Poly1305 key. For the ChaCha20 encryption, an explicit
+initial block counter of 1 is used to avoid reusing the same counter.
 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index b671a4eef47f..33b95a91f720 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -54,24 +54,6 @@ struct fscrypt_name {
- #define fname_name(p)		((p)->disk_name.name)
- #define fname_len(p)		((p)->disk_name.len)
- 
--/*
-- * fscrypt superblock flags
-- */
--#define FS_CFLG_OWN_PAGES (1U << 1)
--
--/*
-- * crypto opertions for filesystems
-- */
--struct fscrypt_operations {
--	unsigned int flags;
--	const char *key_prefix;
--	int (*get_context)(struct inode *, void *, size_t);
--	int (*set_context)(struct inode *, const void *, size_t, void *);
--	bool (*dummy_context)(struct inode *);
--	bool (*empty_dir)(struct inode *);
--	unsigned (*max_namelen)(struct inode *);
--};
--
- /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
- #define FSCRYPT_SET_CONTEXT_MAX_SIZE	28
- 
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index e7dfa2974906..ce61caf26f40 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -11,6 +11,24 @@
- #ifndef _LINUX_FSCRYPT_SUPP_H
- #define _LINUX_FSCRYPT_SUPP_H
- 
-+/*
-+ * fscrypt superblock flags
-+ */
-+#define FS_CFLG_OWN_PAGES (1U << 1)
-+
-+/*
-+ * crypto operations for filesystems
-+ */
-+struct fscrypt_operations {
-+	unsigned int flags;
-+	const char *key_prefix;
-+	int (*get_context)(struct inode *, void *, size_t);
-+	int (*set_context)(struct inode *, const void *, size_t, void *);
-+	bool (*dummy_context)(struct inode *);
-+	bool (*empty_dir)(struct inode *);
-+	unsigned (*max_namelen)(struct inode *);
-+};
-+
- struct fscrypt_ctx {
- 	union {
- 		struct {
--- 
-2.15.1
+Maybe it would be possible to implement this with implicit counters,
+but doing this explicitly looked much clearer to me. So I guess there
+are use cases for explicit block counters in ChaCha20.
+
+Best regards
+Martin
+
+[1] https://tools.ietf.org/html/rfc7539#section-2.8
+[2] https://tools.ietf.org/html/rfc7634#section-2
