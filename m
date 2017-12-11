@@ -1,75 +1,70 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 07/24] fscrypt: move fscrypt_valid_enc_modes() to fscrypt_private.h
-Date: Fri, 15 Dec 2017 09:42:08 -0800
-Message-Id: <20171215174225.31583-8-ebiggers3@gmail.com>
-In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
-References: <20171215174225.31583-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <david@sigma-star.at>
+Content-Type: text/plain;
+	charset=us-ascii
+Mime-Version: 1.0 (Mac OS X Mail 11.2 \(3445.5.20\))
+Subject: Re: [PATCH] fscrypt: add support for ChaCha20 contents encryption
+From: David Gstir <david@sigma-star.at>
+In-Reply-To: <CAHmME9ob8eG1yS=jkGHFnYDq+FtiJCP38CKpzUs0Z33R8_0Msw@mail.gmail.com>
+Date: Mon, 11 Dec 2017 17:11:41 +0100
+Content-Transfer-Encoding: quoted-printable
+Message-Id: <899E2752-1AD9-4DF4-ABC7-E0D1582AF292@sigma-star.at>
+References: <20171208013838.105034-1-ebiggers3@gmail.com>
+ <CAHmME9ob8eG1yS=jkGHFnYDq+FtiJCP38CKpzUs0Z33R8_0Msw@mail.gmail.com>
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Eric Biggers <ebiggers3@gmail.com>, linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Paul Crowley <paulcrowley@google.com>, Martin Willi <martin@strongswan.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Eric Biggers <ebiggers@google.com>, Richard Weinberger <richard@nod.at>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
 
-The encryption modes are validated by fs/crypto/, not by individual
-filesystems.  Therefore, move fscrypt_valid_enc_modes() from fscrypt.h
-to fscrypt_private.h.
+> On 08.12.2017, at 03:51, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+>=20
+> Hi Eric,
+>=20
+> Nice to see more use of ChaCha20. However...
+>=20
+> Can we skip over the "sort of worse than XTS, but not having _real_
+> authentication sucks anyway in either case, so whatever" and move
+> directly to, "linux finally supports authenticated encryption for disk
+> encryption!"? This would be a big deal and would actually be a
+> noticeable security improvement, instead of a potentially dubious step
+> sidewaysbackish.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fscrypt_private.h | 14 ++++++++++++++
- include/linux/fscrypt.h     | 14 --------------
- 2 files changed, 14 insertions(+), 14 deletions(-)
+Out of curiosity, does anybody know of any specific attacks that =
+authenticated
+encryption for disk encryption would solve as opposed to just using =
+encryption
+with AES-XTS?
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 823c43a00bf7..2b848e7c92f0 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -71,6 +71,20 @@ typedef enum {
- #define FS_CTX_REQUIRES_FREE_ENCRYPT_FL		0x00000001
- #define FS_CTX_HAS_BOUNCE_BUFFER_FL		0x00000002
- 
-+static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
-+					   u32 filenames_mode)
-+{
-+	if (contents_mode == FS_ENCRYPTION_MODE_AES_128_CBC &&
-+	    filenames_mode == FS_ENCRYPTION_MODE_AES_128_CTS)
-+		return true;
-+
-+	if (contents_mode == FS_ENCRYPTION_MODE_AES_256_XTS &&
-+	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
-+		return true;
-+
-+	return false;
-+}
-+
- /* crypto.c */
- extern struct kmem_cache *fscrypt_info_cachep;
- extern int fscrypt_initialize(unsigned int cop_flags);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 33b95a91f720..2e4dce0365cf 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -57,20 +57,6 @@ struct fscrypt_name {
- /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
- #define FSCRYPT_SET_CONTEXT_MAX_SIZE	28
- 
--static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
--					u32 filenames_mode)
--{
--	if (contents_mode == FS_ENCRYPTION_MODE_AES_128_CBC &&
--	    filenames_mode == FS_ENCRYPTION_MODE_AES_128_CTS)
--		return true;
--
--	if (contents_mode == FS_ENCRYPTION_MODE_AES_256_XTS &&
--	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
--		return true;
--
--	return false;
--}
--
- static inline bool fscrypt_is_dot_dotdot(const struct qstr *str)
- {
- 	if (str->len == 1 && str->name[0] == '.')
--- 
-2.15.1
+To my knowledge the XTS mode is frowned upon [1], but I don't know of =
+any
+serious flaws that would eg. allow an attacker to modify file contents
+without a *serious* amount of effort. CBC is another story though [2].
+
+Don't get me wrong, I'd like to have authenticated encryption too.
+In fact we are currently working on a concept for adding authentication =
+to
+UBIFS (I'll share more details as soon as its in a presentable state).
+However, the reason for this is mainly because UBIFS does *not* operate =
+on
+the block layer, so dm-integrity/dm-verity is not an option and fscrypt
+only protects the confidentiality of file contents and filenames.
+This means that the filesystem index is unprotected which makes it =
+rather
+easy to move files around - eg. replace /bin/bash with something =
+completely
+different without knowing the fscrypt master key or any derived key.
+
+For the general use case though (eg. securing *really important* files =
+on my desktop),
+I'd use authenticated encryption at a higher layer to get more =
+flexibility
+to eg. easily use explicit IVs over implicit ones derived from =
+block/sector
+number. But maybe there are some uses cases I didn't think of just =
+now... :)
+
+David
+
+[1] https://sockpuppet.org/blog/2014/04/30/you-dont-want-xts/
+[2] =
+http://www.jakoblell.com/blog/2013/12/22/practical-malleability-attack-aga=
+inst-cbc-encrypted-luks-partitions/
