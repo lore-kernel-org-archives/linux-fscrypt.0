@@ -1,37 +1,48 @@
-Return-Path: <martin@strongswan.org>
-Message-ID: <1512977925.28078.12.camel@strongswan.org>
+Return-Path: <linux-crypto-owner@vger.kernel.org>
+Date: Mon, 11 Dec 2017 17:55:35 +1100
+From: Herbert Xu <herbert@gondor.apana.org.au>
 Subject: Re: [RFC PATCH] crypto: chacha20 - add implementation using 96-bit
  nonce
-From: Martin Willi <martin@strongswan.org>
-Date: Mon, 11 Dec 2017 08:38:45 +0100
-In-Reply-To: <20171208221716.GB104193@gmail.com>
-References: <20171208115502.21775-1-ard.biesheuvel@linaro.org>
-	 <20171208221716.GB104193@gmail.com>
-Content-Type: text/plain; charset="UTF-8"
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-To: Eric Biggers <ebiggers3@gmail.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: linux-crypto@vger.kernel.org, herbert@gondor.apana.org.au, Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, Paul Crowley <paulcrowley@google.com>, David Gstir <david@sigma-star.at>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Stephan Mueller <smueller@chronox.de>
+Message-ID: <20171211065535.GA8457@gondor.apana.org.au>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20171208115502.21775-1-ard.biesheuvel@linaro.org>
+Sender: linux-crypto-owner@vger.kernel.org
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-crypto@vger.kernel.org, ebiggers@google.com, linux-fscrypt@vger.kernel.org, tytso@mit.edu, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, jaegeuk@kernel.org, mhalcrow@google.com, paulcrowley@google.com, martin@strongswan.org, david@sigma-star.at, Jason@zx2c4.com, smueller@chronox.de
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi,
+Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+> As pointed out by Eric [0], the way RFC7539 was interpreted when creating
+> our implementation of ChaCha20 creates a risk of IV reuse when using a
+> little endian counter as the IV generator. The reason is that the low end
+> bits of the counter get mapped onto the ChaCha20 block counter, which
+> advances every 64 bytes. This means that the counter value that gets
+> selected as IV for the next input block will collide with the ChaCha20
+> block counter of the previous block, basically recreating the same
+> keystream but shifted by 64 bytes.
 
-> Anyway, I actually thought it was intentional that the ChaCha
-> implementations in the Linux kernel allowed specifying the block
-> counter, and therefore allowed seeking to any point in the keystream,
-> exposing the full functionality of the cipher.
+As Eric pointed out for steram ciphers such as chacha20 our policy
+is to expose the raw IV in the base algorithm, and then layer
+more restrictive implementations on top that can then be used
+in different scenarios such as IPsec or disk encryption.
 
-If I remember correctly, it was indeed intentional. When building the
-chacha20poly1305 AEAD both in [1] and [2], a block counter of 0 is used
-to generate the Poly1305 key. For the ChaCha20 encryption, an explicit
-initial block counter of 1 is used to avoid reusing the same counter.
+For example, with CTR, ctr(aes) is the base algorithm and places
+no restrictions on the IV, while rfc3686(ctr(aes)) is the more
+restrictive version that's used by IPsec.
 
-Maybe it would be possible to implement this with implicit counters,
-but doing this explicitly looked much clearer to me. So I guess there
-are use cases for explicit block counters in ChaCha20.
+Within the kernel I don't really see an issue with abuse because
+all users are hopefully reviewed by the community.  If you're
+worried about incorrect use in user-space we could think about
+restricting access to these base implementations.
 
-Best regards
-Martin
+For chacha20 we did not add a restrictive template because the
+primary user IPsec uses it only through AEAD where the IV restriction
+is in place.
 
-[1] https://tools.ietf.org/html/rfc7539#section-2.8
-[2] https://tools.ietf.org/html/rfc7634#section-2
+Cheers,
+-- 
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
