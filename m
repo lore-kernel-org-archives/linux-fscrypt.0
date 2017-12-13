@@ -1,120 +1,128 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 17/24] ubifs: switch to fscrypt ->symlink() helper functions
-Date: Fri, 15 Dec 2017 09:42:18 -0800
-Message-Id: <20171215174225.31583-18-ebiggers3@gmail.com>
-In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
-References: <20171215174225.31583-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH] fscrypt: remove 'ci' parameter from fscrypt_put_encryption_info()
+Date: Wed, 13 Dec 2017 10:37:05 -0800
+Message-Id: <20171213183705.195254-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
+fscrypt_put_encryption_info() is only called when evicting an inode, so
+the 'struct fscrypt_info *ci' parameter is always NULL, and there cannot
+be races with other threads.  This was cruft left over from the broken
+key revocation code.  Remove the unused parameter and the cmpxchg().
+
+Also remove the #ifdefs around the fscrypt_put_encryption_info() calls,
+since fscrypt_notsupp.h defines a no-op stub for it.
+
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ubifs/dir.c | 55 ++++++++++++-------------------------------------------
- 1 file changed, 12 insertions(+), 43 deletions(-)
+ fs/crypto/keyinfo.c             | 16 +++-------------
+ fs/ext4/super.c                 |  4 +---
+ fs/f2fs/inode.c                 |  2 +-
+ fs/ubifs/super.c                |  4 +---
+ include/linux/fscrypt_notsupp.h |  3 +--
+ include/linux/fscrypt_supp.h    |  2 +-
+ 6 files changed, 8 insertions(+), 23 deletions(-)
 
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index ef820f803176..518c10255881 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -1149,38 +1149,24 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 	struct ubifs_info *c = dir->i_sb->s_fs_info;
- 	int err, len = strlen(symname);
- 	int sz_change = CALC_DENT_SIZE(len);
--	struct fscrypt_str disk_link = FSTR_INIT((char *)symname, len + 1);
--	struct fscrypt_symlink_data *sd = NULL;
-+	struct fscrypt_str disk_link;
- 	struct ubifs_budget_req req = { .new_ino = 1, .new_dent = 1,
- 					.new_ino_d = ALIGN(len, 8),
- 					.dirtied_ino = 1 };
- 	struct fscrypt_name nm;
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 5e6e846f5a24..4d75af57aa52 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -354,19 +354,9 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ }
+ EXPORT_SYMBOL(fscrypt_get_encryption_info);
  
--	if (ubifs_crypt_is_encrypted(dir)) {
--		err = fscrypt_get_encryption_info(dir);
--		if (err)
--			goto out_budg;
+-void fscrypt_put_encryption_info(struct inode *inode, struct fscrypt_info *ci)
++void fscrypt_put_encryption_info(struct inode *inode)
+ {
+-	struct fscrypt_info *prev;
 -
--		if (!fscrypt_has_encryption_key(dir)) {
--			err = -EPERM;
--			goto out_budg;
--		}
-+	dbg_gen("dent '%pd', target '%s' in dir ino %lu", dentry,
-+		symname, dir->i_ino);
- 
--		disk_link.len = (fscrypt_fname_encrypted_size(dir, len) +
--				sizeof(struct fscrypt_symlink_data));
--	}
-+	err = fscrypt_prepare_symlink(dir, symname, len, UBIFS_MAX_INO_DATA,
-+				      &disk_link);
-+	if (err)
-+		return err;
- 
- 	/*
- 	 * Budget request settings: new inode, new direntry and changing parent
- 	 * directory inode.
- 	 */
+-	if (ci == NULL)
+-		ci = READ_ONCE(inode->i_crypt_info);
+-	if (ci == NULL)
+-		return;
 -
--	dbg_gen("dent '%pd', target '%s' in dir ino %lu", dentry,
--		symname, dir->i_ino);
+-	prev = cmpxchg(&inode->i_crypt_info, ci, NULL);
+-	if (prev != ci)
+-		return;
 -
--	if (disk_link.len > UBIFS_MAX_INO_DATA)
--		return -ENAMETOOLONG;
--
- 	err = ubifs_budget_space(c, &req);
- 	if (err)
- 		return err;
-@@ -1202,36 +1188,20 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 		goto out_inode;
+-	put_crypt_info(ci);
++	put_crypt_info(inode->i_crypt_info);
++	inode->i_crypt_info = NULL;
+ }
+ EXPORT_SYMBOL(fscrypt_put_encryption_info);
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 7c46693a14d7..152d05d983f6 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1069,9 +1069,7 @@ void ext4_clear_inode(struct inode *inode)
+ 		jbd2_free_inode(EXT4_I(inode)->jinode);
+ 		EXT4_I(inode)->jinode = NULL;
  	}
- 
--	if (ubifs_crypt_is_encrypted(dir)) {
--		struct qstr istr = QSTR_INIT(symname, len);
--		struct fscrypt_str ostr;
--
--		sd = kzalloc(disk_link.len, GFP_NOFS);
--		if (!sd) {
--			err = -ENOMEM;
--			goto out_inode;
--		}
--
--		ostr.name = sd->encrypted_path;
--		ostr.len = disk_link.len;
--
--		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
-+	if (IS_ENCRYPTED(inode)) {
-+		disk_link.name = ui->data; /* encrypt directly into ui->data */
-+		err = fscrypt_encrypt_symlink(inode, symname, len, &disk_link);
- 		if (err)
- 			goto out_inode;
--
--		sd->len = cpu_to_le16(ostr.len);
--		disk_link.name = (char *)sd;
- 	} else {
-+		memcpy(ui->data, disk_link.name, disk_link.len);
- 		inode->i_link = ui->data;
- 	}
- 
--	memcpy(ui->data, disk_link.name, disk_link.len);
--	((char *)ui->data)[disk_link.len - 1] = '\0';
--
- 	/*
- 	 * The terminating zero byte is not written to the flash media and it
- 	 * is put just to make later in-memory string processing simpler. Thus,
--	 * data length is @len, not @len + %1.
-+	 * data length is @disk_link.len - 1, not @disk_link.len.
- 	 */
- 	ui->data_len = disk_link.len - 1;
- 	inode->i_size = ubifs_inode(inode)->ui_size = disk_link.len - 1;
-@@ -1265,7 +1235,6 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 	fscrypt_free_filename(&nm);
- out_budg:
- 	ubifs_release_budget(c, &req);
--	kfree(sd);
- 	return err;
+-#ifdef CONFIG_EXT4_FS_ENCRYPTION
+-	fscrypt_put_encryption_info(inode, NULL);
+-#endif
++	fscrypt_put_encryption_info(inode);
  }
  
+ static struct inode *ext4_nfs_get_inode(struct super_block *sb,
+diff --git a/fs/f2fs/inode.c b/fs/f2fs/inode.c
+index b4c4f2b25304..22a5607a0518 100644
+--- a/fs/f2fs/inode.c
++++ b/fs/f2fs/inode.c
+@@ -569,7 +569,7 @@ void f2fs_evict_inode(struct inode *inode)
+ 			!exist_written_data(sbi, inode->i_ino, ORPHAN_INO));
+ 	}
+ out_clear:
+-	fscrypt_put_encryption_info(inode, NULL);
++	fscrypt_put_encryption_info(inode);
+ 	clear_inode(inode);
+ }
+ 
+diff --git a/fs/ubifs/super.c b/fs/ubifs/super.c
+index 0beb285b143d..b16ef162344a 100644
+--- a/fs/ubifs/super.c
++++ b/fs/ubifs/super.c
+@@ -379,9 +379,7 @@ static void ubifs_evict_inode(struct inode *inode)
+ 	}
+ done:
+ 	clear_inode(inode);
+-#ifdef CONFIG_UBIFS_FS_ENCRYPTION
+-	fscrypt_put_encryption_info(inode, NULL);
+-#endif
++	fscrypt_put_encryption_info(inode);
+ }
+ 
+ static void ubifs_dirty_inode(struct inode *inode, int flags)
+diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
+index 63e58808519a..71cee8a431fc 100644
+--- a/include/linux/fscrypt_notsupp.h
++++ b/include/linux/fscrypt_notsupp.h
+@@ -90,8 +90,7 @@ static inline int fscrypt_get_encryption_info(struct inode *inode)
+ 	return -EOPNOTSUPP;
+ }
+ 
+-static inline void fscrypt_put_encryption_info(struct inode *inode,
+-					       struct fscrypt_info *ci)
++static inline void fscrypt_put_encryption_info(struct inode *inode)
+ {
+ 	return;
+ }
+diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
+index cf9e9fc02f0a..872f7514e63c 100644
+--- a/include/linux/fscrypt_supp.h
++++ b/include/linux/fscrypt_supp.h
+@@ -44,7 +44,7 @@ extern int fscrypt_inherit_context(struct inode *, struct inode *,
+ 					void *, bool);
+ /* keyinfo.c */
+ extern int fscrypt_get_encryption_info(struct inode *);
+-extern void fscrypt_put_encryption_info(struct inode *, struct fscrypt_info *);
++extern void fscrypt_put_encryption_info(struct inode *);
+ 
+ /* fname.c */
+ extern int fscrypt_setup_filename(struct inode *, const struct qstr *,
 -- 
-2.15.1
+2.15.1.504.g5279b80103-goog
