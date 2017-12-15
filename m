@@ -1,67 +1,97 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 16/24] ubifs: free the encrypted symlink target
-Date: Fri, 15 Dec 2017 09:42:17 -0800
-Message-Id: <20171215174225.31583-17-ebiggers3@gmail.com>
+Subject: [PATCH 09/24] fscrypt: trim down fscrypt.h includes
+Date: Fri, 15 Dec 2017 09:42:10 -0800
+Message-Id: <20171215174225.31583-10-ebiggers3@gmail.com>
 In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
 References: <20171215174225.31583-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
+Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-ubifs_symlink() forgot to free the kmalloc()'ed buffer holding the
-encrypted symlink target, creating a memory leak.  Fix it.
+fscrypt.h included way too many other headers, given that it is included
+by filesystems both with and without encryption support.  Trim down the
+includes list by moving the needed includes into more appropriate
+places, and removing the unneeded ones.
 
-(UBIFS could actually encrypt directly into ui->data, removing the
-temporary buffer, but that is left for the patch that switches to use
-the symlink helper functions.)
-
-Fixes: ca7f85be8d6c ("ubifs: Add support for encrypted symlinks")
-Cc: <stable@vger.kernel.org> # v4.10+
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ubifs/dir.c | 10 ++++------
- 1 file changed, 4 insertions(+), 6 deletions(-)
+ fs/crypto/crypto.c           | 1 +
+ fs/crypto/fname.c            | 1 +
+ fs/crypto/keyinfo.c          | 1 +
+ include/linux/fscrypt.h      | 6 ------
+ include/linux/fscrypt_supp.h | 3 +++
+ 5 files changed, 6 insertions(+), 6 deletions(-)
 
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index 417fe0b29f23..ef820f803176 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -1216,10 +1216,8 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 		ostr.len = disk_link.len;
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 732a786cce9d..ce654526c0fb 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -27,6 +27,7 @@
+ #include <linux/dcache.h>
+ #include <linux/namei.h>
+ #include <crypto/aes.h>
++#include <crypto/skcipher.h>
+ #include "fscrypt_private.h"
  
- 		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
--		if (err) {
--			kfree(sd);
-+		if (err)
- 			goto out_inode;
--		}
+ static unsigned int num_prealloc_crypto_pages = 32;
+diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+index b8c5061553b1..52d4dbe1e8e7 100644
+--- a/fs/crypto/fname.c
++++ b/fs/crypto/fname.c
+@@ -13,6 +13,7 @@
  
- 		sd->len = cpu_to_le16(ostr.len);
- 		disk_link.name = (char *)sd;
-@@ -1251,11 +1249,10 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 		goto out_cancel;
- 	mutex_unlock(&dir_ui->ui_mutex);
+ #include <linux/scatterlist.h>
+ #include <linux/ratelimit.h>
++#include <crypto/skcipher.h>
+ #include "fscrypt_private.h"
  
--	ubifs_release_budget(c, &req);
- 	insert_inode_hash(inode);
- 	d_instantiate(dentry, inode);
--	fscrypt_free_filename(&nm);
--	return 0;
-+	err = 0;
-+	goto out_fname;
+ static inline bool fscrypt_is_dot_dotdot(const struct qstr *str)
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 5e6e846f5a24..c115eac4b4cf 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -14,6 +14,7 @@
+ #include <linux/ratelimit.h>
+ #include <crypto/aes.h>
+ #include <crypto/sha.h>
++#include <crypto/skcipher.h>
+ #include "fscrypt_private.h"
  
- out_cancel:
- 	dir->i_size -= sz_change;
-@@ -1268,6 +1265,7 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 	fscrypt_free_filename(&nm);
- out_budg:
- 	ubifs_release_budget(c, &req);
-+	kfree(sd);
- 	return err;
- }
+ static struct crypto_shash *essiv_hash_tfm;
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 3045fc49d3ca..071ebabfc287 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -14,13 +14,7 @@
+ #ifndef _LINUX_FSCRYPT_H
+ #define _LINUX_FSCRYPT_H
  
+-#include <linux/key.h>
+ #include <linux/fs.h>
+-#include <linux/mm.h>
+-#include <linux/bio.h>
+-#include <linux/dcache.h>
+-#include <crypto/skcipher.h>
+-#include <uapi/linux/fs.h>
+ 
+ #define FS_CRYPTO_BLOCK_SIZE		16
+ 
+diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
+index ce61caf26f40..562a9bc04560 100644
+--- a/include/linux/fscrypt_supp.h
++++ b/include/linux/fscrypt_supp.h
+@@ -11,6 +11,9 @@
+ #ifndef _LINUX_FSCRYPT_SUPP_H
+ #define _LINUX_FSCRYPT_SUPP_H
+ 
++#include <linux/mm.h>
++#include <linux/slab.h>
++
+ /*
+  * fscrypt superblock flags
+  */
 -- 
 2.15.1
