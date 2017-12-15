@@ -1,48 +1,67 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 03/24] fscrypt: move fscrypt_info_cachep declaration to fscrypt_private.h
-Date: Fri, 15 Dec 2017 09:42:04 -0800
-Message-Id: <20171215174225.31583-4-ebiggers3@gmail.com>
+Subject: [PATCH 16/24] ubifs: free the encrypted symlink target
+Date: Fri, 15 Dec 2017 09:42:17 -0800
+Message-Id: <20171215174225.31583-17-ebiggers3@gmail.com>
 In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
 References: <20171215174225.31583-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-The fscrypt_info kmem_cache is internal to fscrypt; filesystems don't
-need to access it.  So move its declaration into fscrypt_private.h.
+ubifs_symlink() forgot to free the kmalloc()'ed buffer holding the
+encrypted symlink target, creating a memory leak.  Fix it.
 
+(UBIFS could actually encrypt directly into ui->data, removing the
+temporary buffer, but that is left for the patch that switches to use
+the symlink helper functions.)
+
+Fixes: ca7f85be8d6c ("ubifs: Add support for encrypted symlinks")
+Cc: <stable@vger.kernel.org> # v4.10+
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fscrypt_private.h  | 1 +
- include/linux/fscrypt_supp.h | 1 -
- 2 files changed, 1 insertion(+), 1 deletion(-)
+ fs/ubifs/dir.c | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index c0b4f5597e1a..823c43a00bf7 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -72,6 +72,7 @@ typedef enum {
- #define FS_CTX_HAS_BOUNCE_BUFFER_FL		0x00000002
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 417fe0b29f23..ef820f803176 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -1216,10 +1216,8 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 		ostr.len = disk_link.len;
  
- /* crypto.c */
-+extern struct kmem_cache *fscrypt_info_cachep;
- extern int fscrypt_initialize(unsigned int cop_flags);
- extern struct workqueue_struct *fscrypt_read_workqueue;
- extern int fscrypt_do_page_crypto(const struct inode *inode,
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index ad40780d4653..33d641e27c18 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -17,7 +17,6 @@ static inline bool fscrypt_has_encryption_key(const struct inode *inode)
+ 		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
+-		if (err) {
+-			kfree(sd);
++		if (err)
+ 			goto out_inode;
+-		}
+ 
+ 		sd->len = cpu_to_le16(ostr.len);
+ 		disk_link.name = (char *)sd;
+@@ -1251,11 +1249,10 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 		goto out_cancel;
+ 	mutex_unlock(&dir_ui->ui_mutex);
+ 
+-	ubifs_release_budget(c, &req);
+ 	insert_inode_hash(inode);
+ 	d_instantiate(dentry, inode);
+-	fscrypt_free_filename(&nm);
+-	return 0;
++	err = 0;
++	goto out_fname;
+ 
+ out_cancel:
+ 	dir->i_size -= sz_change;
+@@ -1268,6 +1265,7 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 	fscrypt_free_filename(&nm);
+ out_budg:
+ 	ubifs_release_budget(c, &req);
++	kfree(sd);
+ 	return err;
  }
  
- /* crypto.c */
--extern struct kmem_cache *fscrypt_info_cachep;
- extern struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *, gfp_t);
- extern void fscrypt_release_ctx(struct fscrypt_ctx *);
- extern struct page *fscrypt_encrypt_page(const struct inode *, struct page *,
 -- 
 2.15.1
