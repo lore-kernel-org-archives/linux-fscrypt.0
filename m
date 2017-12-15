@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 11/24] fscrypt: new helper function - fscrypt_get_symlink()
-Date: Fri, 15 Dec 2017 09:42:12 -0800
-Message-Id: <20171215174225.31583-12-ebiggers3@gmail.com>
+Subject: [PATCH 03/24] fscrypt: move fscrypt_info_cachep declaration to fscrypt_private.h
+Date: Fri, 15 Dec 2017 09:42:04 -0800
+Message-Id: <20171215174225.31583-4-ebiggers3@gmail.com>
 In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
 References: <20171215174225.31583-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
@@ -11,129 +11,38 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Filesystems also have duplicate code to support ->get_link() on
-encrypted symlinks.  Factor it out into a new function
-fscrypt_get_symlink().  It takes in the contents of the encrypted
-symlink on-disk and provides the target (decrypted or encoded) that
-should be returned from ->get_link().
+The fscrypt_info kmem_cache is internal to fscrypt; filesystems don't
+need to access it.  So move its declaration into fscrypt_private.h.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/hooks.c               | 73 +++++++++++++++++++++++++++++++++++++++++
- include/linux/fscrypt_notsupp.h |  8 +++++
- include/linux/fscrypt_supp.h    |  3 ++
- 3 files changed, 84 insertions(+)
+ fs/crypto/fscrypt_private.h  | 1 +
+ include/linux/fscrypt_supp.h | 1 -
+ 2 files changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 483e87d40f03..0f103a5cb1aa 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -196,3 +196,76 @@ int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
- 	return 0;
- }
- EXPORT_SYMBOL_GPL(__fscrypt_encrypt_symlink);
-+
-+/**
-+ * fscrypt_get_symlink - get the target of an encrypted symlink
-+ * @inode: the symlink inode
-+ * @caddr: the on-disk contents of the symlink
-+ * @max_size: size of @caddr buffer
-+ * @done: if successful, will be set up to free the returned target
-+ *
-+ * If the symlink's encryption key is available, we decrypt its target.
-+ * Otherwise, we encode its target for presentation.
-+ *
-+ * This may sleep, so the filesystem must have dropped out of RCU mode already.
-+ *
-+ * Return: the presentable symlink target or an ERR_PTR()
-+ */
-+const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
-+				unsigned int max_size,
-+				struct delayed_call *done)
-+{
-+	const struct fscrypt_symlink_data *sd;
-+	struct fscrypt_str cstr, pstr;
-+	int err;
-+
-+	/* This is for encrypted symlinks only */
-+	if (WARN_ON(!IS_ENCRYPTED(inode)))
-+		return ERR_PTR(-EINVAL);
-+
-+	/*
-+	 * Try to set up the symlink's encryption key, but we can continue
-+	 * regardless of whether the key is available or not.
-+	 */
-+	err = fscrypt_get_encryption_info(inode);
-+	if (err)
-+		return ERR_PTR(err);
-+
-+	/*
-+	 * For historical reasons, encrypted symlink targets are prefixed with
-+	 * the ciphertext length, even though this is redundant with i_size.
-+	 */
-+
-+	if (max_size < sizeof(*sd))
-+		return ERR_PTR(-EUCLEAN);
-+	sd = caddr;
-+	cstr.name = (unsigned char *)sd->encrypted_path;
-+	cstr.len = le16_to_cpu(sd->len);
-+
-+	if (cstr.len == 0)
-+		return ERR_PTR(-EUCLEAN);
-+
-+	if (cstr.len + sizeof(*sd) - 1 > max_size)
-+		return ERR_PTR(-EUCLEAN);
-+
-+	err = fscrypt_fname_alloc_buffer(inode, cstr.len, &pstr);
-+	if (err)
-+		return ERR_PTR(err);
-+
-+	err = fscrypt_fname_disk_to_usr(inode, 0, 0, &cstr, &pstr);
-+	if (err)
-+		goto err_kfree;
-+
-+	err = -EUCLEAN;
-+	if (pstr.name[0] == '\0')
-+		goto err_kfree;
-+
-+	pstr.name[pstr.len] = '\0';
-+	set_delayed_call(done, kfree_link, pstr.name);
-+	return pstr.name;
-+
-+err_kfree:
-+	kfree(pstr.name);
-+	return ERR_PTR(err);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_get_symlink);
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index 02ec0aa894d8..dd106640c6ea 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -239,4 +239,12 @@ static inline int __fscrypt_encrypt_symlink(struct inode *inode,
- 	return -EOPNOTSUPP;
- }
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index c0b4f5597e1a..823c43a00bf7 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -72,6 +72,7 @@ typedef enum {
+ #define FS_CTX_HAS_BOUNCE_BUFFER_FL		0x00000002
  
-+static inline const char *fscrypt_get_symlink(struct inode *inode,
-+					      const void *caddr,
-+					      unsigned int max_size,
-+					      struct delayed_call *done)
-+{
-+	return ERR_PTR(-EOPNOTSUPP);
-+}
-+
- #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
+ /* crypto.c */
++extern struct kmem_cache *fscrypt_info_cachep;
+ extern int fscrypt_initialize(unsigned int cop_flags);
+ extern struct workqueue_struct *fscrypt_read_workqueue;
+ extern int fscrypt_do_page_crypto(const struct inode *inode,
 diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index 7e0b67ccd816..dc2babf3f7d3 100644
+index ad40780d4653..33d641e27c18 100644
 --- a/include/linux/fscrypt_supp.h
 +++ b/include/linux/fscrypt_supp.h
-@@ -211,5 +211,8 @@ extern int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
- extern int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
- 				     unsigned int len,
- 				     struct fscrypt_str *disk_link);
-+extern const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
-+				       unsigned int max_size,
-+				       struct delayed_call *done);
+@@ -17,7 +17,6 @@ static inline bool fscrypt_has_encryption_key(const struct inode *inode)
+ }
  
- #endif	/* _LINUX_FSCRYPT_SUPP_H */
+ /* crypto.c */
+-extern struct kmem_cache *fscrypt_info_cachep;
+ extern struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *, gfp_t);
+ extern void fscrypt_release_ctx(struct fscrypt_ctx *);
+ extern struct page *fscrypt_encrypt_page(const struct inode *, struct page *,
 -- 
 2.15.1
