@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 24/24] fscrypt: document symlink length restriction
-Date: Fri, 15 Dec 2017 09:42:25 -0800
-Message-Id: <20171215174225.31583-25-ebiggers3@gmail.com>
+Subject: [PATCH 20/24] fscrypt: move fscrypt_symlink_data to fscrypt_private.h
+Date: Fri, 15 Dec 2017 09:42:21 -0800
+Message-Id: <20171215174225.31583-21-ebiggers3@gmail.com>
 In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
 References: <20171215174225.31583-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
@@ -11,34 +11,55 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Document that encryption reduces the maximum length of a symlink target
-slightly.
+Now that all filesystems have been converted to use the symlink helper
+functions, they no longer need the declaration of 'struct
+fscrypt_symlink_data'.  Move it from fscrypt.h to fscrypt_private.h.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- Documentation/filesystems/fscrypt.rst | 10 ++++++++--
- 1 file changed, 8 insertions(+), 2 deletions(-)
+ fs/crypto/fscrypt_private.h | 9 +++++++++
+ include/linux/fscrypt.h     | 9 ---------
+ 2 files changed, 9 insertions(+), 9 deletions(-)
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 776ddc655f79..cfbc18f0d9c9 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -448,8 +448,14 @@ astute users may notice some differences in behavior:
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 6995bca5006b..cec9ce309f41 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -50,6 +50,15 @@ struct fscrypt_context {
  
- - The st_size of an encrypted symlink will not necessarily give the
-   length of the symlink target as required by POSIX.  It will actually
--  give the length of the ciphertext, which may be slightly longer than
--  the plaintext due to the NUL-padding.
-+  give the length of the ciphertext, which will be slightly longer
-+  than the plaintext due to NUL-padding and an extra 2-byte overhead.
+ #define FS_ENCRYPTION_CONTEXT_FORMAT_V1		1
+ 
++/**
++ * For encrypted symlinks, the ciphertext length is stored at the beginning
++ * of the string in little-endian format.
++ */
++struct fscrypt_symlink_data {
++	__le16 len;
++	char encrypted_path[1];
++} __packed;
 +
-+- The maximum length of an encrypted symlink is 2 bytes shorter than
-+  the maximum length of an unencrypted symlink.  For example, on an
-+  EXT4 filesystem with a 4K block size, unencrypted symlinks can be up
-+  to 4095 bytes long, while encrypted symlinks can only be up to 4093
-+  bytes long (both lengths excluding the terminating null).
+ /*
+  * A pointer to this structure is stored in the file system's in-core
+  * representation of an inode.
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 6a678d0e956a..952ab97af325 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -21,15 +21,6 @@
+ struct fscrypt_ctx;
+ struct fscrypt_info;
  
- Note that mmap *is* supported.  This is possible because the pagecache
- for an encrypted file contains the plaintext, not the ciphertext.
+-/**
+- * For encrypted symlinks, the ciphertext length is stored at the beginning
+- * of the string in little-endian format.
+- */
+-struct fscrypt_symlink_data {
+-	__le16 len;
+-	char encrypted_path[1];
+-} __packed;
+-
+ struct fscrypt_str {
+ 	unsigned char *name;
+ 	u32 len;
 -- 
 2.15.1
