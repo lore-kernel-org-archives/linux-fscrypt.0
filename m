@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 19/24] fscrypt: remove fscrypt_fname_usr_to_disk()
-Date: Fri, 15 Dec 2017 09:42:20 -0800
-Message-Id: <20171215174225.31583-20-ebiggers3@gmail.com>
+Subject: [PATCH 17/24] ubifs: switch to fscrypt ->symlink() helper functions
+Date: Fri, 15 Dec 2017 09:42:18 -0800
+Message-Id: <20171215174225.31583-18-ebiggers3@gmail.com>
 In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
 References: <20171215174225.31583-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org
@@ -11,87 +11,110 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-fscrypt_fname_usr_to_disk() sounded very generic but was actually only
-used to encrypt symlinks.  Remove it now that all filesystems have been
-switched over to fscrypt_encrypt_symlink().
-
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fname.c               | 29 -----------------------------
- include/linux/fscrypt_notsupp.h |  7 -------
- include/linux/fscrypt_supp.h    |  2 --
- 3 files changed, 38 deletions(-)
+ fs/ubifs/dir.c | 55 ++++++++++++-------------------------------------------
+ 1 file changed, 12 insertions(+), 43 deletions(-)
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 62f13d533439..cae7d1bcc8c5 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -311,35 +311,6 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
- }
- EXPORT_SYMBOL(fscrypt_fname_disk_to_usr);
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index ef820f803176..518c10255881 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -1149,38 +1149,24 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 	struct ubifs_info *c = dir->i_sb->s_fs_info;
+ 	int err, len = strlen(symname);
+ 	int sz_change = CALC_DENT_SIZE(len);
+-	struct fscrypt_str disk_link = FSTR_INIT((char *)symname, len + 1);
+-	struct fscrypt_symlink_data *sd = NULL;
++	struct fscrypt_str disk_link;
+ 	struct ubifs_budget_req req = { .new_ino = 1, .new_dent = 1,
+ 					.new_ino_d = ALIGN(len, 8),
+ 					.dirtied_ino = 1 };
+ 	struct fscrypt_name nm;
  
--/**
-- * fscrypt_fname_usr_to_disk() - converts a filename from user space to disk
-- * space
-- *
-- * The caller must have allocated sufficient memory for the @oname string.
-- *
-- * Return: 0 on success, -errno on failure
-- */
--int fscrypt_fname_usr_to_disk(struct inode *inode,
--			const struct qstr *iname,
--			struct fscrypt_str *oname)
--{
--	if (fscrypt_is_dot_dotdot(iname)) {
--		oname->name[0] = '.';
--		oname->name[iname->len - 1] = '.';
--		oname->len = iname->len;
--		return 0;
+-	if (ubifs_crypt_is_encrypted(dir)) {
+-		err = fscrypt_get_encryption_info(dir);
+-		if (err)
+-			goto out_budg;
+-
+-		if (!fscrypt_has_encryption_key(dir)) {
+-			err = -EPERM;
+-			goto out_budg;
+-		}
++	dbg_gen("dent '%pd', target '%s' in dir ino %lu", dentry,
++		symname, dir->i_ino);
+ 
+-		disk_link.len = (fscrypt_fname_encrypted_size(dir, len) +
+-				sizeof(struct fscrypt_symlink_data));
 -	}
--	if (inode->i_crypt_info)
--		return fname_encrypt(inode, iname, oname);
--	/*
--	 * Without a proper key, a user is not allowed to modify the filenames
--	 * in a directory. Consequently, a user space name cannot be mapped to
--	 * a disk-space name
--	 */
--	return -ENOKEY;
--}
--EXPORT_SYMBOL(fscrypt_fname_usr_to_disk);
++	err = fscrypt_prepare_symlink(dir, symname, len, UBIFS_MAX_INO_DATA,
++				      &disk_link);
++	if (err)
++		return err;
+ 
+ 	/*
+ 	 * Budget request settings: new inode, new direntry and changing parent
+ 	 * directory inode.
+ 	 */
 -
- /**
-  * fscrypt_setup_filename() - prepare to search a possibly encrypted directory
-  * @dir: the directory that will be searched
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index dd106640c6ea..0962f504aa91 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -159,13 +159,6 @@ static inline int fscrypt_fname_disk_to_usr(struct inode *inode,
- 	return -EOPNOTSUPP;
+-	dbg_gen("dent '%pd', target '%s' in dir ino %lu", dentry,
+-		symname, dir->i_ino);
+-
+-	if (disk_link.len > UBIFS_MAX_INO_DATA)
+-		return -ENAMETOOLONG;
+-
+ 	err = ubifs_budget_space(c, &req);
+ 	if (err)
+ 		return err;
+@@ -1202,36 +1188,20 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 		goto out_inode;
+ 	}
+ 
+-	if (ubifs_crypt_is_encrypted(dir)) {
+-		struct qstr istr = QSTR_INIT(symname, len);
+-		struct fscrypt_str ostr;
+-
+-		sd = kzalloc(disk_link.len, GFP_NOFS);
+-		if (!sd) {
+-			err = -ENOMEM;
+-			goto out_inode;
+-		}
+-
+-		ostr.name = sd->encrypted_path;
+-		ostr.len = disk_link.len;
+-
+-		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
++	if (IS_ENCRYPTED(inode)) {
++		disk_link.name = ui->data; /* encrypt directly into ui->data */
++		err = fscrypt_encrypt_symlink(inode, symname, len, &disk_link);
+ 		if (err)
+ 			goto out_inode;
+-
+-		sd->len = cpu_to_le16(ostr.len);
+-		disk_link.name = (char *)sd;
+ 	} else {
++		memcpy(ui->data, disk_link.name, disk_link.len);
+ 		inode->i_link = ui->data;
+ 	}
+ 
+-	memcpy(ui->data, disk_link.name, disk_link.len);
+-	((char *)ui->data)[disk_link.len - 1] = '\0';
+-
+ 	/*
+ 	 * The terminating zero byte is not written to the flash media and it
+ 	 * is put just to make later in-memory string processing simpler. Thus,
+-	 * data length is @len, not @len + %1.
++	 * data length is @disk_link.len - 1, not @disk_link.len.
+ 	 */
+ 	ui->data_len = disk_link.len - 1;
+ 	inode->i_size = ubifs_inode(inode)->ui_size = disk_link.len - 1;
+@@ -1265,7 +1235,6 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 	fscrypt_free_filename(&nm);
+ out_budg:
+ 	ubifs_release_budget(c, &req);
+-	kfree(sd);
+ 	return err;
  }
- 
--static inline int fscrypt_fname_usr_to_disk(struct inode *inode,
--					    const struct qstr *iname,
--					    struct fscrypt_str *oname)
--{
--	return -EOPNOTSUPP;
--}
--
- static inline bool fscrypt_match_name(const struct fscrypt_name *fname,
- 				      const u8 *de_name, u32 de_name_len)
- {
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index dc2babf3f7d3..e00191deb0d6 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -113,8 +113,6 @@ extern int fscrypt_fname_alloc_buffer(const struct inode *, u32,
- extern void fscrypt_fname_free_buffer(struct fscrypt_str *);
- extern int fscrypt_fname_disk_to_usr(struct inode *, u32, u32,
- 			const struct fscrypt_str *, struct fscrypt_str *);
--extern int fscrypt_fname_usr_to_disk(struct inode *, const struct qstr *,
--			struct fscrypt_str *);
- 
- #define FSCRYPT_FNAME_MAX_UNDIGESTED_SIZE	32
  
 -- 
 2.15.1
