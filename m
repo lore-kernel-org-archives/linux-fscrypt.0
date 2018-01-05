@@ -1,164 +1,139 @@
-Return-Path: <linux-kernel-owner@vger.kernel.org>
-From: =?UTF-8?q?Andr=C3=A9=20Draszik?= <git@andred.net>
-Subject: [PATCH v2 1/2] fscrypt: add support for the encrypted key type
-Date: Wed, 17 Jan 2018 14:13:18 +0000
-Message-Id: <20180117141319.8060-1-git@andred.net>
-In-Reply-To: <20180111040022.GA943@zzz.localdomain>
-References: <20180111040022.GA943@zzz.localdomain>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Sender: linux-kernel-owner@vger.kernel.org
-To: linux-kernel@vger.kernel.org
-Cc: =?UTF-8?q?Andr=C3=A9=20Draszik?= <git@andred.net>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH v2 11/11] fscrypt: new helper function - fscrypt_get_symlink()
+Date: Fri,  5 Jan 2018 10:45:02 -0800
+Message-Id: <20180105184502.48473-12-ebiggers3@gmail.com>
+In-Reply-To: <20180105184502.48473-1-ebiggers3@gmail.com>
+References: <20180105184502.48473-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-We now try to acquire the key according to the
-encryption policy from both key types, 'logon'
-as well as 'encrypted'.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: André Draszik <git@andred.net>
-Cc: "Theodore Y. Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: linux-fscrypt@vger.kernel.org
-Cc: linux-kernel@vger.kernel.org
-Cc: Eric Biggers <ebiggers@google.com>
+Filesystems also have duplicate code to support ->get_link() on
+encrypted symlinks.  Factor it out into a new function
+fscrypt_get_symlink().  It takes in the contents of the encrypted
+symlink on-disk and provides the target (decrypted or encoded) that
+should be returned from ->get_link().
 
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
-changes in v2:
-* dropped the previously added 'fscrypt' encrypted-key,
-  and just use the 'default' format
----
- fs/crypto/keyinfo.c | 72 +++++++++++++++++++++++++++++++++++++----------------
- 1 file changed, 50 insertions(+), 22 deletions(-)
+ fs/crypto/hooks.c               | 73 +++++++++++++++++++++++++++++++++++++++++
+ include/linux/fscrypt_notsupp.h |  8 +++++
+ include/linux/fscrypt_supp.h    |  3 ++
+ 3 files changed, 84 insertions(+)
 
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 5e6e846f5a24..925af599f954 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -10,6 +10,7 @@
-  */
- 
- #include <keys/user-type.h>
-+#include <keys/encrypted-type.h>
- #include <linux/scatterlist.h>
- #include <linux/ratelimit.h>
- #include <crypto/aes.h>
-@@ -66,14 +67,20 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
- 	return res;
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index 4b83e4af2e41..8900e348ba6e 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -200,3 +200,76 @@ int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(__fscrypt_encrypt_symlink);
++
++/**
++ * fscrypt_get_symlink - get the target of an encrypted symlink
++ * @inode: the symlink inode
++ * @caddr: the on-disk contents of the symlink
++ * @max_size: size of @caddr buffer
++ * @done: if successful, will be set up to free the returned target
++ *
++ * If the symlink's encryption key is available, we decrypt its target.
++ * Otherwise, we encode its target for presentation.
++ *
++ * This may sleep, so the filesystem must have dropped out of RCU mode already.
++ *
++ * Return: the presentable symlink target or an ERR_PTR()
++ */
++const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
++				unsigned int max_size,
++				struct delayed_call *done)
++{
++	const struct fscrypt_symlink_data *sd;
++	struct fscrypt_str cstr, pstr;
++	int err;
++
++	/* This is for encrypted symlinks only */
++	if (WARN_ON(!IS_ENCRYPTED(inode)))
++		return ERR_PTR(-EINVAL);
++
++	/*
++	 * Try to set up the symlink's encryption key, but we can continue
++	 * regardless of whether the key is available or not.
++	 */
++	err = fscrypt_get_encryption_info(inode);
++	if (err)
++		return ERR_PTR(err);
++
++	/*
++	 * For historical reasons, encrypted symlink targets are prefixed with
++	 * the ciphertext length, even though this is redundant with i_size.
++	 */
++
++	if (max_size < sizeof(*sd))
++		return ERR_PTR(-EUCLEAN);
++	sd = caddr;
++	cstr.name = (unsigned char *)sd->encrypted_path;
++	cstr.len = le16_to_cpu(sd->len);
++
++	if (cstr.len == 0)
++		return ERR_PTR(-EUCLEAN);
++
++	if (cstr.len + sizeof(*sd) - 1 > max_size)
++		return ERR_PTR(-EUCLEAN);
++
++	err = fscrypt_fname_alloc_buffer(inode, cstr.len, &pstr);
++	if (err)
++		return ERR_PTR(err);
++
++	err = fscrypt_fname_disk_to_usr(inode, 0, 0, &cstr, &pstr);
++	if (err)
++		goto err_kfree;
++
++	err = -EUCLEAN;
++	if (pstr.name[0] == '\0')
++		goto err_kfree;
++
++	pstr.name[pstr.len] = '\0';
++	set_delayed_call(done, kfree_link, pstr.name);
++	return pstr.name;
++
++err_kfree:
++	kfree(pstr.name);
++	return ERR_PTR(err);
++}
++EXPORT_SYMBOL_GPL(fscrypt_get_symlink);
+diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
+index 02ec0aa894d8..dd106640c6ea 100644
+--- a/include/linux/fscrypt_notsupp.h
++++ b/include/linux/fscrypt_notsupp.h
+@@ -239,4 +239,12 @@ static inline int __fscrypt_encrypt_symlink(struct inode *inode,
+ 	return -EOPNOTSUPP;
  }
  
--static int validate_user_key(struct fscrypt_info *crypt_info,
-+static inline struct key *fscrypt_get_encrypted_key(const char *sig)
++static inline const char *fscrypt_get_symlink(struct inode *inode,
++					      const void *caddr,
++					      unsigned int max_size,
++					      struct delayed_call *done)
 +{
-+	if (IS_ENABLED(CONFIG_ENCRYPTED_KEYS))
-+		return request_key(&key_type_encrypted, sig, NULL);
-+	return ERR_PTR(-ENOKEY);
++	return ERR_PTR(-EOPNOTSUPP);
 +}
 +
-+static int validate_keyring_key(struct fscrypt_info *crypt_info,
- 			struct fscrypt_context *ctx, u8 *raw_key,
- 			const char *prefix, int min_keysize)
- {
- 	char *description;
- 	struct key *keyring_key;
--	struct fscrypt_key *master_key;
--	const struct user_key_payload *ukp;
-+	struct fscrypt_key *master_key, master_key_;
- 	int res;
+ #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
+diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
+index 7e0b67ccd816..dc2babf3f7d3 100644
+--- a/include/linux/fscrypt_supp.h
++++ b/include/linux/fscrypt_supp.h
+@@ -211,5 +211,8 @@ extern int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
+ extern int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
+ 				     unsigned int len,
+ 				     struct fscrypt_str *disk_link);
++extern const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
++				       unsigned int max_size,
++				       struct delayed_call *done);
  
- 	description = kasprintf(GFP_NOFS, "%s%*phN", prefix,
-@@ -83,28 +90,45 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
- 		return -ENOMEM;
- 
- 	keyring_key = request_key(&key_type_logon, description, NULL);
-+	if (IS_ERR(keyring_key))
-+		keyring_key = fscrypt_get_encrypted_key(description);
- 	kfree(description);
- 	if (IS_ERR(keyring_key))
- 		return PTR_ERR(keyring_key);
- 	down_read(&keyring_key->sem);
- 
--	if (keyring_key->type != &key_type_logon) {
-+	if (keyring_key->type == &key_type_logon) {
-+		const struct user_key_payload *ukp;
-+
-+		ukp = user_key_payload_locked(keyring_key);
-+		if (!ukp) {
-+			/* key was revoked before we acquired its semaphore */
-+			res = -EKEYREVOKED;
-+			goto out;
-+		}
-+		if (ukp->datalen != sizeof(struct fscrypt_key)) {
-+			res = -EINVAL;
-+			goto out;
-+		}
-+		master_key = (struct fscrypt_key *)ukp->data;
-+	} else if (keyring_key->type == &key_type_encrypted) {
-+		const struct encrypted_key_payload *ekp;
-+
-+		ekp = keyring_key->payload.data[0];
-+		master_key = &master_key_;
-+
-+		master_key->mode = 0;
-+		memcpy (master_key->raw, ekp->decrypted_data,
-+			min (sizeof (master_key->raw),
-+			     (size_t) ekp->decrypted_datalen));
-+		master_key->size = ekp->decrypted_datalen;
-+	} else {
- 		printk_once(KERN_WARNING
--				"%s: key type must be logon\n", __func__);
-+				"%s: key type must be logon or encrypted\n",
-+				__func__);
- 		res = -ENOKEY;
- 		goto out;
- 	}
--	ukp = user_key_payload_locked(keyring_key);
--	if (!ukp) {
--		/* key was revoked before we acquired its semaphore */
--		res = -EKEYREVOKED;
--		goto out;
--	}
--	if (ukp->datalen != sizeof(struct fscrypt_key)) {
--		res = -EINVAL;
--		goto out;
--	}
--	master_key = (struct fscrypt_key *)ukp->data;
- 	BUILD_BUG_ON(FS_AES_128_ECB_KEY_SIZE != FS_KEY_DERIVATION_NONCE_SIZE);
- 
- 	if (master_key->size < min_keysize || master_key->size > FS_MAX_KEY_SIZE
-@@ -113,9 +137,13 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
- 				"%s: key size incorrect: %d\n",
- 				__func__, master_key->size);
- 		res = -ENOKEY;
--		goto out;
-+		goto out_clear_key;
- 	}
- 	res = derive_key_aes(ctx->nonce, master_key, raw_key);
-+
-+out_clear_key:
-+	if (master_key == &master_key_)
-+		memzero_explicit(master_key->raw, sizeof (master_key->raw));
- out:
- 	up_read(&keyring_key->sem);
- 	key_put(keyring_key);
-@@ -302,12 +330,12 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (!raw_key)
- 		goto out;
- 
--	res = validate_user_key(crypt_info, &ctx, raw_key, FS_KEY_DESC_PREFIX,
--				keysize);
-+	res = validate_keyring_key(crypt_info, &ctx, raw_key,
-+				   FS_KEY_DESC_PREFIX, keysize);
- 	if (res && inode->i_sb->s_cop->key_prefix) {
--		int res2 = validate_user_key(crypt_info, &ctx, raw_key,
--					     inode->i_sb->s_cop->key_prefix,
--					     keysize);
-+		int res2 = validate_keyring_key(crypt_info, &ctx, raw_key,
-+						inode->i_sb->s_cop->key_prefix,
-+						keysize);
- 		if (res2) {
- 			if (res2 == -ENOKEY)
- 				res = -ENOKEY;
+ #endif	/* _LINUX_FSCRYPT_SUPP_H */
 -- 
-2.15.1
+2.16.0.rc0.223.g4a4ac83678-goog
