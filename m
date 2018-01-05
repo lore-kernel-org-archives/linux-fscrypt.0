@@ -1,41 +1,90 @@
 Return-Path: <ebiggers3@gmail.com>
-Date: Fri, 5 Jan 2018 10:37:44 -0800
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: Re: [PATCH v2 0/5] ubifs: switch to new fscrypt helper functions
-Message-ID: <20180105183744.GA44929@gmail.com>
-References: <20171129204317.91205-1-ebiggers3@gmail.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20171129204317.91205-1-ebiggers3@gmail.com>
-To: linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
-Cc: linux-fscrypt@vger.kernel.org, Artem Bityutskiy <dedekind1@gmail.com>, Adrian Hunter <adrian.hunter@intel.com>, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v2 02/11] fscrypt: move fscrypt_control_page() to supp/notsupp headers
+Date: Fri,  5 Jan 2018 10:44:53 -0800
+Message-Id: <20180105184502.48473-3-ebiggers3@gmail.com>
+In-Reply-To: <20180105184502.48473-1-ebiggers3@gmail.com>
+References: <20180105184502.48473-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, Nov 29, 2017 at 12:43:12PM -0800, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> This series switches ubifs to use the fscrypt helper functions for
-> open/link/rename/lookup/setattr introduced in v4.15.
-> 
-> These patches were originally sent in "[PATCH 00/25] fscrypt: add some
-> higher-level helper functions".  I've rebased them onto v4.15-rc1.
-> 
-> Eric Biggers (5):
->   ubifs: switch to fscrypt_file_open()
->   ubifs: switch to fscrypt_prepare_link()
->   ubifs: switch to fscrypt_prepare_rename()
->   ubifs: switch to fscrypt_prepare_lookup()
->   ubifs: switch to fscrypt_prepare_setattr()
-> 
->  fs/ubifs/dir.c  | 43 +++++++++++++------------------------------
->  fs/ubifs/file.c | 41 ++++-------------------------------------
->  2 files changed, 17 insertions(+), 67 deletions(-)
-> 
-> -- 
-> 2.15.0.531.g2ccb3012c9-goog
-> 
+From: Eric Biggers <ebiggers@google.com>
 
-Richard, can you take these for UBIFS for v4.16?
+fscrypt_control_page() is already split into two versions depending on
+whether the filesystem is being built with encryption support or not.
+Move them into the appropriate headers.
 
-Eric
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ include/linux/fscrypt.h         | 18 ++----------------
+ include/linux/fscrypt_notsupp.h |  5 +++++
+ include/linux/fscrypt_supp.h    |  6 ++++++
+ 3 files changed, 13 insertions(+), 16 deletions(-)
+
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index d1c891b5bd9c..c23b2f16129a 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -123,24 +123,10 @@ static inline bool fscrypt_is_dot_dotdot(const struct qstr *str)
+ }
+ 
+ #if __FS_HAS_ENCRYPTION
+-
+-static inline struct page *fscrypt_control_page(struct page *page)
+-{
+-	return ((struct fscrypt_ctx *)page_private(page))->w.control_page;
+-}
+-
+ #include <linux/fscrypt_supp.h>
+-
+-#else /* !__FS_HAS_ENCRYPTION */
+-
+-static inline struct page *fscrypt_control_page(struct page *page)
+-{
+-	WARN_ON_ONCE(1);
+-	return ERR_PTR(-EINVAL);
+-}
+-
++#else
+ #include <linux/fscrypt_notsupp.h>
+-#endif /* __FS_HAS_ENCRYPTION */
++#endif
+ 
+ /**
+  * fscrypt_require_key - require an inode's encryption key
+diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
+index 52e330285457..812dc701a5b3 100644
+--- a/include/linux/fscrypt_notsupp.h
++++ b/include/linux/fscrypt_notsupp.h
+@@ -48,6 +48,11 @@ static inline int fscrypt_decrypt_page(const struct inode *inode,
+ 	return -EOPNOTSUPP;
+ }
+ 
++static inline struct page *fscrypt_control_page(struct page *page)
++{
++	WARN_ON_ONCE(1);
++	return ERR_PTR(-EINVAL);
++}
+ 
+ static inline void fscrypt_restore_control_page(struct page *page)
+ {
+diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
+index 79bb8beae018..ad40780d4653 100644
+--- a/include/linux/fscrypt_supp.h
++++ b/include/linux/fscrypt_supp.h
+@@ -25,6 +25,12 @@ extern struct page *fscrypt_encrypt_page(const struct inode *, struct page *,
+ 						u64, gfp_t);
+ extern int fscrypt_decrypt_page(const struct inode *, struct page *, unsigned int,
+ 				unsigned int, u64);
++
++static inline struct page *fscrypt_control_page(struct page *page)
++{
++	return ((struct fscrypt_ctx *)page_private(page))->w.control_page;
++}
++
+ extern void fscrypt_restore_control_page(struct page *);
+ 
+ extern const struct dentry_operations fscrypt_d_ops;
+-- 
+2.16.0.rc0.223.g4a4ac83678-goog
