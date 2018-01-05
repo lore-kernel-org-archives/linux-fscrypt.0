@@ -1,90 +1,68 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 02/11] fscrypt: move fscrypt_control_page() to supp/notsupp headers
-Date: Fri,  5 Jan 2018 10:44:53 -0800
-Message-Id: <20180105184502.48473-3-ebiggers3@gmail.com>
-In-Reply-To: <20180105184502.48473-1-ebiggers3@gmail.com>
-References: <20180105184502.48473-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v2] ubifs: free the encrypted symlink target
+Date: Fri,  5 Jan 2018 11:30:03 -0800
+Message-Id: <20180105193003.118283-1-ebiggers3@gmail.com>
+To: linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
+Cc: Artem Bityutskiy <dedekind1@gmail.com>, Adrian Hunter <adrian.hunter@intel.com>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-fscrypt_control_page() is already split into two versions depending on
-whether the filesystem is being built with encryption support or not.
-Move them into the appropriate headers.
+ubifs_symlink() forgot to free the kmalloc()'ed buffer holding the
+encrypted symlink target, creating a memory leak.  Fix it.
 
+(UBIFS could actually encrypt directly into ui->data, removing the
+temporary buffer, but that is left for the patch that switches to use
+the symlink helper functions.)
+
+Fixes: ca7f85be8d6c ("ubifs: Add support for encrypted symlinks")
+Cc: <stable@vger.kernel.org> # v4.10+
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- include/linux/fscrypt.h         | 18 ++----------------
- include/linux/fscrypt_notsupp.h |  5 +++++
- include/linux/fscrypt_supp.h    |  6 ++++++
- 3 files changed, 13 insertions(+), 16 deletions(-)
 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index d1c891b5bd9c..c23b2f16129a 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -123,24 +123,10 @@ static inline bool fscrypt_is_dot_dotdot(const struct qstr *str)
+No changes since v1, just resent as standalone patch.
+	
+ fs/ubifs/dir.c | 10 ++++------
+ 1 file changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 417fe0b29f23..ef820f803176 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -1216,10 +1216,8 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 		ostr.len = disk_link.len;
+ 
+ 		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
+-		if (err) {
+-			kfree(sd);
++		if (err)
+ 			goto out_inode;
+-		}
+ 
+ 		sd->len = cpu_to_le16(ostr.len);
+ 		disk_link.name = (char *)sd;
+@@ -1251,11 +1249,10 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 		goto out_cancel;
+ 	mutex_unlock(&dir_ui->ui_mutex);
+ 
+-	ubifs_release_budget(c, &req);
+ 	insert_inode_hash(inode);
+ 	d_instantiate(dentry, inode);
+-	fscrypt_free_filename(&nm);
+-	return 0;
++	err = 0;
++	goto out_fname;
+ 
+ out_cancel:
+ 	dir->i_size -= sz_change;
+@@ -1268,6 +1265,7 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 	fscrypt_free_filename(&nm);
+ out_budg:
+ 	ubifs_release_budget(c, &req);
++	kfree(sd);
+ 	return err;
  }
  
- #if __FS_HAS_ENCRYPTION
--
--static inline struct page *fscrypt_control_page(struct page *page)
--{
--	return ((struct fscrypt_ctx *)page_private(page))->w.control_page;
--}
--
- #include <linux/fscrypt_supp.h>
--
--#else /* !__FS_HAS_ENCRYPTION */
--
--static inline struct page *fscrypt_control_page(struct page *page)
--{
--	WARN_ON_ONCE(1);
--	return ERR_PTR(-EINVAL);
--}
--
-+#else
- #include <linux/fscrypt_notsupp.h>
--#endif /* __FS_HAS_ENCRYPTION */
-+#endif
- 
- /**
-  * fscrypt_require_key - require an inode's encryption key
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index 52e330285457..812dc701a5b3 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -48,6 +48,11 @@ static inline int fscrypt_decrypt_page(const struct inode *inode,
- 	return -EOPNOTSUPP;
- }
- 
-+static inline struct page *fscrypt_control_page(struct page *page)
-+{
-+	WARN_ON_ONCE(1);
-+	return ERR_PTR(-EINVAL);
-+}
- 
- static inline void fscrypt_restore_control_page(struct page *page)
- {
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index 79bb8beae018..ad40780d4653 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -25,6 +25,12 @@ extern struct page *fscrypt_encrypt_page(const struct inode *, struct page *,
- 						u64, gfp_t);
- extern int fscrypt_decrypt_page(const struct inode *, struct page *, unsigned int,
- 				unsigned int, u64);
-+
-+static inline struct page *fscrypt_control_page(struct page *page)
-+{
-+	return ((struct fscrypt_ctx *)page_private(page))->w.control_page;
-+}
-+
- extern void fscrypt_restore_control_page(struct page *);
- 
- extern const struct dentry_operations fscrypt_d_ops;
 -- 
 2.16.0.rc0.223.g4a4ac83678-goog
