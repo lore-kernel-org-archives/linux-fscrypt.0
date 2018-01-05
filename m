@@ -1,132 +1,86 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 12/24] ext4: switch to fscrypt ->symlink() helper functions
-Date: Fri, 15 Dec 2017 09:42:13 -0800
-Message-Id: <20171215174225.31583-13-ebiggers3@gmail.com>
-In-Reply-To: <20171215174225.31583-1-ebiggers3@gmail.com>
-References: <20171215174225.31583-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v2 01/11] fscrypt: move fscrypt_has_encryption_key() to supp/notsupp headers
+Date: Fri,  5 Jan 2018 10:44:52 -0800
+Message-Id: <20180105184502.48473-2-ebiggers3@gmail.com>
+In-Reply-To: <20180105184502.48473-1-ebiggers3@gmail.com>
+References: <20180105184502.48473-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
+fscrypt_has_encryption_key() is already split into two versions
+depending on whether the filesystem is being built with encryption
+support or not.  Move them into the appropriate headers.
+
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/namei.c | 58 +++++++++++++++------------------------------------------
- 1 file changed, 15 insertions(+), 43 deletions(-)
+ include/linux/fscrypt.h         | 10 ----------
+ include/linux/fscrypt_notsupp.h |  5 +++++
+ include/linux/fscrypt_supp.h    |  5 +++++
+ 3 files changed, 10 insertions(+), 10 deletions(-)
 
-diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-index 798b3ac680db..e291bb90a233 100644
---- a/fs/ext4/namei.c
-+++ b/fs/ext4/namei.c
-@@ -3052,39 +3052,19 @@ static int ext4_symlink(struct inode *dir,
- 	struct inode *inode;
- 	int err, len = strlen(symname);
- 	int credits;
--	bool encryption_required;
- 	struct fscrypt_str disk_link;
--	struct fscrypt_symlink_data *sd = NULL;
- 
- 	if (unlikely(ext4_forced_shutdown(EXT4_SB(dir->i_sb))))
- 		return -EIO;
- 
--	disk_link.len = len + 1;
--	disk_link.name = (char *) symname;
--
--	encryption_required = (ext4_encrypted_inode(dir) ||
--			       DUMMY_ENCRYPTION_ENABLED(EXT4_SB(dir->i_sb)));
--	if (encryption_required) {
--		err = fscrypt_get_encryption_info(dir);
--		if (err)
--			return err;
--		if (!fscrypt_has_encryption_key(dir))
--			return -ENOKEY;
--		disk_link.len = (fscrypt_fname_encrypted_size(dir, len) +
--				 sizeof(struct fscrypt_symlink_data));
--		sd = kzalloc(disk_link.len, GFP_KERNEL);
--		if (!sd)
--			return -ENOMEM;
--	}
--
--	if (disk_link.len > dir->i_sb->s_blocksize) {
--		err = -ENAMETOOLONG;
--		goto err_free_sd;
--	}
-+	err = fscrypt_prepare_symlink(dir, symname, len, dir->i_sb->s_blocksize,
-+				      &disk_link);
-+	if (err)
-+		return err;
- 
- 	err = dquot_initialize(dir);
- 	if (err)
--		goto err_free_sd;
-+		return err;
- 
- 	if ((disk_link.len > EXT4_N_BLOCKS * 4)) {
- 		/*
-@@ -3113,27 +3093,18 @@ static int ext4_symlink(struct inode *dir,
- 	if (IS_ERR(inode)) {
- 		if (handle)
- 			ext4_journal_stop(handle);
--		err = PTR_ERR(inode);
--		goto err_free_sd;
-+		return PTR_ERR(inode);
- 	}
- 
--	if (encryption_required) {
--		struct qstr istr;
--		struct fscrypt_str ostr =
--			FSTR_INIT(sd->encrypted_path, disk_link.len);
--
--		istr.name = (const unsigned char *) symname;
--		istr.len = len;
--		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
-+	if (IS_ENCRYPTED(inode)) {
-+		err = fscrypt_encrypt_symlink(inode, symname, len, &disk_link);
- 		if (err)
- 			goto err_drop_inode;
--		sd->len = cpu_to_le16(ostr.len);
--		disk_link.name = (char *) sd;
- 		inode->i_op = &ext4_encrypted_symlink_inode_operations;
- 	}
- 
- 	if ((disk_link.len > EXT4_N_BLOCKS * 4)) {
--		if (!encryption_required)
-+		if (!IS_ENCRYPTED(inode))
- 			inode->i_op = &ext4_symlink_inode_operations;
- 		inode_nohighmem(inode);
- 		ext4_set_aops(inode);
-@@ -3175,7 +3146,7 @@ static int ext4_symlink(struct inode *dir,
- 	} else {
- 		/* clear the extent format for fast symlink */
- 		ext4_clear_inode_flag(inode, EXT4_INODE_EXTENTS);
--		if (!encryption_required) {
-+		if (!IS_ENCRYPTED(inode)) {
- 			inode->i_op = &ext4_fast_symlink_inode_operations;
- 			inode->i_link = (char *)&EXT4_I(inode)->i_data;
- 		}
-@@ -3190,16 +3161,17 @@ static int ext4_symlink(struct inode *dir,
- 
- 	if (handle)
- 		ext4_journal_stop(handle);
--	kfree(sd);
--	return err;
-+	goto out_free_encrypted_link;
-+
- err_drop_inode:
- 	if (handle)
- 		ext4_journal_stop(handle);
- 	clear_nlink(inode);
- 	unlock_new_inode(inode);
- 	iput(inode);
--err_free_sd:
--	kfree(sd);
-+out_free_encrypted_link:
-+	if (disk_link.name != (unsigned char *)symname)
-+		kfree(disk_link.name);
- 	return err;
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 08b4b40c5aa8..d1c891b5bd9c 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -129,11 +129,6 @@ static inline struct page *fscrypt_control_page(struct page *page)
+ 	return ((struct fscrypt_ctx *)page_private(page))->w.control_page;
  }
  
+-static inline bool fscrypt_has_encryption_key(const struct inode *inode)
+-{
+-	return (inode->i_crypt_info != NULL);
+-}
+-
+ #include <linux/fscrypt_supp.h>
+ 
+ #else /* !__FS_HAS_ENCRYPTION */
+@@ -144,11 +139,6 @@ static inline struct page *fscrypt_control_page(struct page *page)
+ 	return ERR_PTR(-EINVAL);
+ }
+ 
+-static inline bool fscrypt_has_encryption_key(const struct inode *inode)
+-{
+-	return 0;
+-}
+-
+ #include <linux/fscrypt_notsupp.h>
+ #endif /* __FS_HAS_ENCRYPTION */
+ 
+diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
+index 63e58808519a..52e330285457 100644
+--- a/include/linux/fscrypt_notsupp.h
++++ b/include/linux/fscrypt_notsupp.h
+@@ -14,6 +14,11 @@
+ #ifndef _LINUX_FSCRYPT_NOTSUPP_H
+ #define _LINUX_FSCRYPT_NOTSUPP_H
+ 
++static inline bool fscrypt_has_encryption_key(const struct inode *inode)
++{
++	return false;
++}
++
+ /* crypto.c */
+ static inline struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *inode,
+ 						  gfp_t gfp_flags)
+diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
+index cf9e9fc02f0a..79bb8beae018 100644
+--- a/include/linux/fscrypt_supp.h
++++ b/include/linux/fscrypt_supp.h
+@@ -11,6 +11,11 @@
+ #ifndef _LINUX_FSCRYPT_SUPP_H
+ #define _LINUX_FSCRYPT_SUPP_H
+ 
++static inline bool fscrypt_has_encryption_key(const struct inode *inode)
++{
++	return (inode->i_crypt_info != NULL);
++}
++
+ /* crypto.c */
+ extern struct kmem_cache *fscrypt_info_cachep;
+ extern struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *, gfp_t);
 -- 
-2.15.1
+2.16.0.rc0.223.g4a4ac83678-goog
