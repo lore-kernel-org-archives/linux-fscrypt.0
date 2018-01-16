@@ -1,68 +1,33 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2] ubifs: free the encrypted symlink target
-Date: Fri,  5 Jan 2018 11:30:03 -0800
-Message-Id: <20180105193003.118283-1-ebiggers3@gmail.com>
-To: linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
-Cc: Artem Bityutskiy <dedekind1@gmail.com>, Adrian Hunter <adrian.hunter@intel.com>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <jaegeuk@kernel.org>
+Date: Tue, 16 Jan 2018 15:46:57 -0800
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH v2 00/11] fscrypt: symlink helpers and fscrypt.h cleanup
+Message-ID: <20180116234657.GA22224@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20180105184502.48473-1-ebiggers3@gmail.com>
+ <20180112043338.GA8249@thunk.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180112043338.GA8249@thunk.org>
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: Eric Biggers <ebiggers3@gmail.com>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On 01/11, Theodore Ts'o wrote:
+> I've taken the v2 version of this series, plus the ext4-specific
+> patches to use the new symlink helpers (from the v1 patch series).
+> After testing and validating them, I included the patches to convert
+> f2fs and ubifs to use the symlink helpers, so I could also grab the
+> cleanup patches from the V1 series.
+> 
+> Jaeguk, Richard, please let me know if you are OK with my taking the
+> f2fs and ubifs changes in the fscrypt tree.  It seems like it would
+> keep things simpler if we did that.
 
-ubifs_symlink() forgot to free the kmalloc()'ed buffer holding the
-encrypted symlink target, creating a memory leak.  Fix it.
+I'm fine with that.
+Thanks,
 
-(UBIFS could actually encrypt directly into ui->data, removing the
-temporary buffer, but that is left for the patch that switches to use
-the symlink helper functions.)
-
-Fixes: ca7f85be8d6c ("ubifs: Add support for encrypted symlinks")
-Cc: <stable@vger.kernel.org> # v4.10+
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
-
-No changes since v1, just resent as standalone patch.
-	
- fs/ubifs/dir.c | 10 ++++------
- 1 file changed, 4 insertions(+), 6 deletions(-)
-
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index 417fe0b29f23..ef820f803176 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -1216,10 +1216,8 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 		ostr.len = disk_link.len;
- 
- 		err = fscrypt_fname_usr_to_disk(inode, &istr, &ostr);
--		if (err) {
--			kfree(sd);
-+		if (err)
- 			goto out_inode;
--		}
- 
- 		sd->len = cpu_to_le16(ostr.len);
- 		disk_link.name = (char *)sd;
-@@ -1251,11 +1249,10 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 		goto out_cancel;
- 	mutex_unlock(&dir_ui->ui_mutex);
- 
--	ubifs_release_budget(c, &req);
- 	insert_inode_hash(inode);
- 	d_instantiate(dentry, inode);
--	fscrypt_free_filename(&nm);
--	return 0;
-+	err = 0;
-+	goto out_fname;
- 
- out_cancel:
- 	dir->i_size -= sz_change;
-@@ -1268,6 +1265,7 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
- 	fscrypt_free_filename(&nm);
- out_budg:
- 	ubifs_release_budget(c, &req);
-+	kfree(sd);
- 	return err;
- }
- 
--- 
-2.16.0.rc0.223.g4a4ac83678-goog
+> 
+> Cheers,
+> 
+> 						- Ted
