@@ -1,111 +1,79 @@
-Return-Path: <linux-kernel-owner@vger.kernel.org>
-From: =?UTF-8?q?Andr=C3=A9=20Draszik?= <git@andred.net>
-Subject: [PATCH v2 2/2] fscrypt: update documentation for encrypted key support
-Date: Wed, 17 Jan 2018 14:13:19 +0000
-Message-Id: <20180117141319.8060-2-git@andred.net>
-In-Reply-To: <20180117141319.8060-1-git@andred.net>
-References: <20180111040022.GA943@zzz.localdomain>
- <20180117141319.8060-1-git@andred.net>
+Return-Path: <ebiggers3@gmail.com>
+Date: Wed, 17 Jan 2018 15:44:58 -0800
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: Re: [PATCH v2 0/5] ubifs: switch to new fscrypt helper functions
+Message-ID: <20180117234458.iw37mht6jtp5gdwn@gmail.com>
+References: <20171129204317.91205-1-ebiggers3@gmail.com>
+ <CAFLxGvzGeMkm_1HhcFDe4twTGsVHaXvjoM6GezxtCNW+NZw84Q@mail.gmail.com>
+ <20180117212354.xrsog7pekzoomq7p@gmail.com>
+ <6120539.HEfP5UEqVm@blindfold>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-Sender: linux-kernel-owner@vger.kernel.org
-To: linux-kernel@vger.kernel.org
-Cc: =?UTF-8?q?Andr=C3=A9=20Draszik?= <git@andred.net>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Jonathan Corbet <corbet@lwn.net>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>, linux-doc@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <6120539.HEfP5UEqVm@blindfold>
+To: Richard Weinberger <richard@nod.at>
+Cc: linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>, linux-mtd@lists.infradead.org, Adrian Hunter <adrian.hunter@intel.com>, Artem Bityutskiy <dedekind1@gmail.com>, Theodore Ts'o <tytso@mit.edu>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Signed-off-by: André Draszik <git@andred.net>
-Cc: "Theodore Y. Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: Jonathan Corbet <corbet@lwn.net>
-Cc: linux-fscrypt@vger.kernel.org
-Cc: linux-kernel@vger.kernel.org
-Cc: Eric Biggers <ebiggers@google.com>
-Cc: linux-doc@vger.kernel.org
----
- Documentation/filesystems/fscrypt.rst | 56 +++++++++++++++++++++++++++++++----
- 1 file changed, 51 insertions(+), 5 deletions(-)
+On Wed, Jan 17, 2018 at 10:36:12PM +0100, Richard Weinberger wrote:
+> Am Mittwoch, 17. Januar 2018, 22:23:54 CET schrieb Eric Biggers:
+> > On Wed, Jan 17, 2018 at 10:12:27PM +0100, Richard Weinberger wrote:
+> > > On Fri, Jan 5, 2018 at 11:11 PM, Richard Weinberger <richard@nod.at> 
+> wrote:
+> > > > Eric,
+> > > > 
+> > > > Am Freitag, 5. Januar 2018, 19:37:44 CET schrieb Eric Biggers:
+> > > >> On Wed, Nov 29, 2017 at 12:43:12PM -0800, Eric Biggers wrote:
+> > > >> > From: Eric Biggers <ebiggers@google.com>
+> > > >> > 
+> > > >> > This series switches ubifs to use the fscrypt helper functions for
+> > > >> > open/link/rename/lookup/setattr introduced in v4.15.
+> > > >> > 
+> > > >> > These patches were originally sent in "[PATCH 00/25] fscrypt: add
+> > > >> > some
+> > > >> > higher-level helper functions".  I've rebased them onto v4.15-rc1.
+> > > >> > 
+> > > >> > Eric Biggers (5):
+> > > >> >   ubifs: switch to fscrypt_file_open()
+> > > >> >   ubifs: switch to fscrypt_prepare_link()
+> > > >> >   ubifs: switch to fscrypt_prepare_rename()
+> > > >> >   ubifs: switch to fscrypt_prepare_lookup()
+> > > >> >   ubifs: switch to fscrypt_prepare_setattr()
+> > > >> >  
+> > > >> >  fs/ubifs/dir.c  | 43 +++++++++++++------------------------------
+> > > >> >  fs/ubifs/file.c | 41 ++++-------------------------------------
+> > > >> >  2 files changed, 17 insertions(+), 67 deletions(-)
+> > > >> 
+> > > >> Richard, can you take these for UBIFS for v4.16?
+> > > > 
+> > > > Yes. Thanks a lot for cleaning this up.
+> > > 
+> > > FYI, this series has merge conflicts with other fscrypt related
+> > > changes that went via Ted into fs/ubifs.
+> > 
+> > How so?  These apply cleanly to both Linus' tree and to fscrypt/master
+> > currently.
+> 
+> Just checked, the problem is this commit:
+> 
+> commit 9a2cebc6e2368072490a574eafe0f0747d330bbd
+> Author: Eric Biggers <ebiggers@google.com>
+> Date:   Fri Jan 5 11:30:03 2018 -0800
+> 
+>     ubifs: free the encrypted symlink target
+> 
+> It exists also in my tree. I'll drop it and force push.
+> Sorry for messing up, next time I try hard to be more responsive.
+> 
+> Thanks,
+> //richard
+> 
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 776ddc655f79..852ac2900b66 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -368,11 +368,19 @@ Adding keys
- To provide a master key, userspace must add it to an appropriate
- keyring using the add_key() system call (see:
- ``Documentation/security/keys/core.rst``).  The key type must be
--"logon"; keys of this type are kept in kernel memory and cannot be
--read back by userspace.  The key description must be "fscrypt:"
--followed by the 16-character lower case hex representation of the
--``master_key_descriptor`` that was set in the encryption policy.  The
--key payload must conform to the following structure::
-+either "logon" or "encrypted"; "logon" keys are kept in kernel
-+memory and cannot be read back by userspace while "encrypted"
-+keys can be rooted in a "trusted" key and thus are protected by
-+a TPM and cannot be read by userspace in unencrypted form. Note
-+that while an "encrypted" key can also be rooted in a "user" key,
-+any "encrypted" key rooted in a "user" key can effectively be
-+retrieved in the clear, hence only rooting the key in a "trusted"
-+key has any useful security properties!
-+
-+The key description must be "fscrypt:" followed by the 16-character
-+lower case hex representation of the ``master_key_descriptor`` that
-+was set in the encryption policy.  For a "logon" key, key payload
-+must conform to the following structure::
- 
-     #define FS_MAX_KEY_SIZE 64
- 
-@@ -386,6 +394,17 @@ key payload must conform to the following structure::
- ``raw`` with ``size`` indicating its size in bytes.  That is, the
- bytes ``raw[0..size-1]`` (inclusive) are the actual key.
- 
-+When using an "encrypted" key, only the actual ``raw`` key from above
-+fscrypt_key structure is needed::
-+
-+    keyctl add encrypted "fscrypt:``master_key_descriptor``" "new default trusted:``master-key-name`` ``size``" ``ring``
-+    keyctl add encrypted "fscrypt:``master_key_descriptor``" "load ``hex_blob``" ``ring``
-+
-+Where::
-+
-+    master-key-name:= name of the trusted key this fscrypt master key
-+                      shall be rooted in
-+
- The key description prefix "fscrypt:" may alternatively be replaced
- with a filesystem-specific prefix such as "ext4:".  However, the
- filesystem-specific prefixes are deprecated and should not be used in
-@@ -412,6 +431,33 @@ evicted.  In the future there probably should be a way to provide keys
- directly to the filesystem instead, which would make the intended
- semantics clearer.
- 
-+Complete Examples
-+------------------
-+
-+Set fscrypt policy on an (empty) encrypted directory, /encrypted::
-+
-+    $ fscryptctl set_policy 1234567890123456 /encrypted
-+
-+Create an encrypted key "1234567890123456" of length 64 bytes with format
-+'fscrypt' and root it in a previously loaded trusted "kmk"::
-+
-+    $ keyctl add encrypted "fscrypt:1234567890123456" "new default trusted:kmk 64" @u
-+    839715473
-+
-+    $ keyctl print 839715473
-+    default trusted:kmk 64 e98a49dc11eb9312f46530879aac869300ee734035100f4ee
-+    5441279369a4c9d83d6e59b8158d0a3de01790c0bb99af82e9603cb6977c7d1229338cda
-+    80375aaf034678405a00c19806d6fb12490e39b1d7ca603c491b58a962345160e344ae51
-+    83483e066692d05f5ab3d8b9ea39cab0e
-+
-+    $ keyctl pipe 839715473 > fscrypt.blob
-+
-+The directory policy will remain across reboots, so after a reboot the key
-+generated earlier will simply have to be loaded into the kernel keyring
-+again::
-+
-+    $ keyctl add encrypted fscrypt:1234567890123456 "load $(cat fscrypt.blob)" @u
-+
- Access semantics
- ================
- 
--- 
-2.15.1
+Ah yes, sorry for the confusion.  The original plan was to just take the initial
+patches in the "fscrypt: symlink helpers and fscrypt.h cleanup" series, but we
+decided to take the fs-specific patches through the fscrypt tree too, since the
+only merge conflict was a "trivial" one in f2fs_symlink(), and it otherwise
+would have taken a long time to get all those patches as well as the follow-on
+fscrypt patches applied.
+
+Eric
