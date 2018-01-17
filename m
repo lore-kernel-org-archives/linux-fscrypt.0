@@ -1,80 +1,111 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 05/11] fscrypt: split fscrypt_dummy_context_enabled() into supp/notsupp versions
-Date: Fri,  5 Jan 2018 10:44:56 -0800
-Message-Id: <20180105184502.48473-6-ebiggers3@gmail.com>
-In-Reply-To: <20180105184502.48473-1-ebiggers3@gmail.com>
-References: <20180105184502.48473-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-kernel-owner@vger.kernel.org>
+From: =?UTF-8?q?Andr=C3=A9=20Draszik?= <git@andred.net>
+Subject: [PATCH v2 2/2] fscrypt: update documentation for encrypted key support
+Date: Wed, 17 Jan 2018 14:13:19 +0000
+Message-Id: <20180117141319.8060-2-git@andred.net>
+In-Reply-To: <20180117141319.8060-1-git@andred.net>
+References: <20180111040022.GA943@zzz.localdomain>
+ <20180117141319.8060-1-git@andred.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Sender: linux-kernel-owner@vger.kernel.org
+To: linux-kernel@vger.kernel.org
+Cc: =?UTF-8?q?Andr=C3=A9=20Draszik?= <git@andred.net>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Jonathan Corbet <corbet@lwn.net>, linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@google.com>, linux-doc@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
-
-fscrypt_dummy_context_enabled() accesses ->s_cop, which now is only set
-when the filesystem is built with encryption support.  This didn't
-actually matter because no filesystems called it.  However, it will
-start being used soon, so fix it by moving it from fscrypt.h to
-fscrypt_supp.h and stubbing it out in fscrypt_notsupp.h.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: André Draszik <git@andred.net>
+Cc: "Theodore Y. Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: Jonathan Corbet <corbet@lwn.net>
+Cc: linux-fscrypt@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org
+Cc: Eric Biggers <ebiggers@google.com>
+Cc: linux-doc@vger.kernel.org
 ---
- include/linux/fscrypt.h         | 8 --------
- include/linux/fscrypt_notsupp.h | 5 +++++
- include/linux/fscrypt_supp.h    | 6 ++++++
- 3 files changed, 11 insertions(+), 8 deletions(-)
+ Documentation/filesystems/fscrypt.rst | 56 +++++++++++++++++++++++++++++++----
+ 1 file changed, 51 insertions(+), 5 deletions(-)
 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 0f94d087a6d1..b671a4eef47f 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -75,14 +75,6 @@ struct fscrypt_operations {
- /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
- #define FSCRYPT_SET_CONTEXT_MAX_SIZE	28
- 
--static inline bool fscrypt_dummy_context_enabled(struct inode *inode)
--{
--	if (inode->i_sb->s_cop->dummy_context &&
--				inode->i_sb->s_cop->dummy_context(inode))
--		return true;
--	return false;
--}
--
- static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
- 					u32 filenames_mode)
- {
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index 812dc701a5b3..81e02201b215 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -19,6 +19,11 @@ static inline bool fscrypt_has_encryption_key(const struct inode *inode)
- 	return false;
- }
- 
-+static inline bool fscrypt_dummy_context_enabled(struct inode *inode)
-+{
-+	return false;
-+}
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 776ddc655f79..852ac2900b66 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -368,11 +368,19 @@ Adding keys
+ To provide a master key, userspace must add it to an appropriate
+ keyring using the add_key() system call (see:
+ ``Documentation/security/keys/core.rst``).  The key type must be
+-"logon"; keys of this type are kept in kernel memory and cannot be
+-read back by userspace.  The key description must be "fscrypt:"
+-followed by the 16-character lower case hex representation of the
+-``master_key_descriptor`` that was set in the encryption policy.  The
+-key payload must conform to the following structure::
++either "logon" or "encrypted"; "logon" keys are kept in kernel
++memory and cannot be read back by userspace while "encrypted"
++keys can be rooted in a "trusted" key and thus are protected by
++a TPM and cannot be read by userspace in unencrypted form. Note
++that while an "encrypted" key can also be rooted in a "user" key,
++any "encrypted" key rooted in a "user" key can effectively be
++retrieved in the clear, hence only rooting the key in a "trusted"
++key has any useful security properties!
 +
- /* crypto.c */
- static inline struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *inode,
- 						  gfp_t gfp_flags)
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index fd6ee089ced0..e7dfa2974906 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -31,6 +31,12 @@ static inline bool fscrypt_has_encryption_key(const struct inode *inode)
- 	return (inode->i_crypt_info != NULL);
- }
++The key description must be "fscrypt:" followed by the 16-character
++lower case hex representation of the ``master_key_descriptor`` that
++was set in the encryption policy.  For a "logon" key, key payload
++must conform to the following structure::
  
-+static inline bool fscrypt_dummy_context_enabled(struct inode *inode)
-+{
-+	return inode->i_sb->s_cop->dummy_context &&
-+		inode->i_sb->s_cop->dummy_context(inode);
-+}
+     #define FS_MAX_KEY_SIZE 64
+ 
+@@ -386,6 +394,17 @@ key payload must conform to the following structure::
+ ``raw`` with ``size`` indicating its size in bytes.  That is, the
+ bytes ``raw[0..size-1]`` (inclusive) are the actual key.
+ 
++When using an "encrypted" key, only the actual ``raw`` key from above
++fscrypt_key structure is needed::
 +
- /* crypto.c */
- extern struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *, gfp_t);
- extern void fscrypt_release_ctx(struct fscrypt_ctx *);
++    keyctl add encrypted "fscrypt:``master_key_descriptor``" "new default trusted:``master-key-name`` ``size``" ``ring``
++    keyctl add encrypted "fscrypt:``master_key_descriptor``" "load ``hex_blob``" ``ring``
++
++Where::
++
++    master-key-name:= name of the trusted key this fscrypt master key
++                      shall be rooted in
++
+ The key description prefix "fscrypt:" may alternatively be replaced
+ with a filesystem-specific prefix such as "ext4:".  However, the
+ filesystem-specific prefixes are deprecated and should not be used in
+@@ -412,6 +431,33 @@ evicted.  In the future there probably should be a way to provide keys
+ directly to the filesystem instead, which would make the intended
+ semantics clearer.
+ 
++Complete Examples
++------------------
++
++Set fscrypt policy on an (empty) encrypted directory, /encrypted::
++
++    $ fscryptctl set_policy 1234567890123456 /encrypted
++
++Create an encrypted key "1234567890123456" of length 64 bytes with format
++'fscrypt' and root it in a previously loaded trusted "kmk"::
++
++    $ keyctl add encrypted "fscrypt:1234567890123456" "new default trusted:kmk 64" @u
++    839715473
++
++    $ keyctl print 839715473
++    default trusted:kmk 64 e98a49dc11eb9312f46530879aac869300ee734035100f4ee
++    5441279369a4c9d83d6e59b8158d0a3de01790c0bb99af82e9603cb6977c7d1229338cda
++    80375aaf034678405a00c19806d6fb12490e39b1d7ca603c491b58a962345160e344ae51
++    83483e066692d05f5ab3d8b9ea39cab0e
++
++    $ keyctl pipe 839715473 > fscrypt.blob
++
++The directory policy will remain across reboots, so after a reboot the key
++generated earlier will simply have to be loaded into the kernel keyring
++again::
++
++    $ keyctl add encrypted fscrypt:1234567890123456 "load $(cat fscrypt.blob)" @u
++
+ Access semantics
+ ================
+ 
 -- 
-2.16.0.rc0.223.g4a4ac83678-goog
+2.15.1
