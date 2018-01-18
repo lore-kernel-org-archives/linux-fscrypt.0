@@ -1,139 +1,101 @@
 Return-Path: <ebiggers3@gmail.com>
+Date: Wed, 17 Jan 2018 16:18:41 -0800
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 11/11] fscrypt: new helper function - fscrypt_get_symlink()
-Date: Fri,  5 Jan 2018 10:45:02 -0800
-Message-Id: <20180105184502.48473-12-ebiggers3@gmail.com>
-In-Reply-To: <20180105184502.48473-1-ebiggers3@gmail.com>
-References: <20180105184502.48473-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Subject: Re: [PATCH 1/3] encrypted-keys: add fscrypt format support
+Message-ID: <20180118001841.ntui5j2nsszgy3aj@gmail.com>
+References: <20180110124418.24385-1-git@andred.net>
+ <20180111040022.GA943@zzz.localdomain>
+ <1516199369.28972.93.camel@andred.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <1516199369.28972.93.camel@andred.net>
+To: =?iso-8859-1?Q?Andr=E9?= Draszik <git@andred.net>
+Cc: linux-kernel@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Andr�,
 
-Filesystems also have duplicate code to support ->get_link() on
-encrypted symlinks.  Factor it out into a new function
-fscrypt_get_symlink().  It takes in the contents of the encrypted
-symlink on-disk and provides the target (decrypted or encoded) that
-should be returned from ->get_link().
+On Wed, Jan 17, 2018 at 02:29:29PM +0000, Andr� Draszik wrote:
+> Thanks Eric for the review!
+> 
+> On Wed, 2018-01-10 at 20:00 -0800, Eric Biggers wrote:
+> > Hi Andr�,
+> > 
+> > On Wed, Jan 10, 2018 at 12:44:16PM +0000, Andr� Draszik wrote:
+> > > This is heavily based on commit 79a73d188726
+> > > ("encrypted-keys: add ecryptfs format support").
+> > > 
+> > > The 'encrypted' key type defines its own payload format which contains a
+> > > symmetric key randomly generated that cannot be used directly by the
+> > > fscrypt subsystem, because it instead expects an fscrypt_key structure.
+> > > 
+> > > This patch introduces the new format 'fscrypt' that allows to store an
+> > > fscrypt_key structure inside the encrypted key payload containing
+> > > a randomly generated symmetric key, as the same for the format 'default'
+> > > and 'ecryptfs'.
+> > > 
+> > > More details about the usage of encrypted keys with the fscrypt
+> > > subsystem can be found in the file
+> > > 'Documentation/security/keys/fscrypt.rst'.
+> > > 
+> > 
+> > I don't think a new encrypted-key format is needed.  fscrypt really only
+> > needs
+> > the raw key.
+> 
+> This was actually my original approach, but I thought it might potentially
+> be useful to have a new encrypted-key type to be able to do verification of
+> parameters (e.g. key size) early.
+> Additionally, because the type is then encoded in the blob stored in the
+> file system (keyctl pipe), it'd be easy to spot incompatibilities in case
+> fscrypt internal data structures change, whereas without one can only rely
+> on the name of the key (key description), should such a change ever happen.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/hooks.c               | 73 +++++++++++++++++++++++++++++++++++++++++
- include/linux/fscrypt_notsupp.h |  8 +++++
- include/linux/fscrypt_supp.h    |  3 ++
- 3 files changed, 84 insertions(+)
+'struct fscrypt_key' isn't really useful because it doesn't have any reserved
+fields.  So if we wanted to change the format we'd have to change the key
+description anyway, by setting some flag in the fscrypt_policy and the
+fscrypt_context that indicates a different key description should be used.
 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 4b83e4af2e41..8900e348ba6e 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -200,3 +200,76 @@ int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
- 	return 0;
- }
- EXPORT_SYMBOL_GPL(__fscrypt_encrypt_symlink);
-+
-+/**
-+ * fscrypt_get_symlink - get the target of an encrypted symlink
-+ * @inode: the symlink inode
-+ * @caddr: the on-disk contents of the symlink
-+ * @max_size: size of @caddr buffer
-+ * @done: if successful, will be set up to free the returned target
-+ *
-+ * If the symlink's encryption key is available, we decrypt its target.
-+ * Otherwise, we encode its target for presentation.
-+ *
-+ * This may sleep, so the filesystem must have dropped out of RCU mode already.
-+ *
-+ * Return: the presentable symlink target or an ERR_PTR()
-+ */
-+const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
-+				unsigned int max_size,
-+				struct delayed_call *done)
-+{
-+	const struct fscrypt_symlink_data *sd;
-+	struct fscrypt_str cstr, pstr;
-+	int err;
-+
-+	/* This is for encrypted symlinks only */
-+	if (WARN_ON(!IS_ENCRYPTED(inode)))
-+		return ERR_PTR(-EINVAL);
-+
-+	/*
-+	 * Try to set up the symlink's encryption key, but we can continue
-+	 * regardless of whether the key is available or not.
-+	 */
-+	err = fscrypt_get_encryption_info(inode);
-+	if (err)
-+		return ERR_PTR(err);
-+
-+	/*
-+	 * For historical reasons, encrypted symlink targets are prefixed with
-+	 * the ciphertext length, even though this is redundant with i_size.
-+	 */
-+
-+	if (max_size < sizeof(*sd))
-+		return ERR_PTR(-EUCLEAN);
-+	sd = caddr;
-+	cstr.name = (unsigned char *)sd->encrypted_path;
-+	cstr.len = le16_to_cpu(sd->len);
-+
-+	if (cstr.len == 0)
-+		return ERR_PTR(-EUCLEAN);
-+
-+	if (cstr.len + sizeof(*sd) - 1 > max_size)
-+		return ERR_PTR(-EUCLEAN);
-+
-+	err = fscrypt_fname_alloc_buffer(inode, cstr.len, &pstr);
-+	if (err)
-+		return ERR_PTR(err);
-+
-+	err = fscrypt_fname_disk_to_usr(inode, 0, 0, &cstr, &pstr);
-+	if (err)
-+		goto err_kfree;
-+
-+	err = -EUCLEAN;
-+	if (pstr.name[0] == '\0')
-+		goto err_kfree;
-+
-+	pstr.name[pstr.len] = '\0';
-+	set_delayed_call(done, kfree_link, pstr.name);
-+	return pstr.name;
-+
-+err_kfree:
-+	kfree(pstr.name);
-+	return ERR_PTR(err);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_get_symlink);
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index 02ec0aa894d8..dd106640c6ea 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -239,4 +239,12 @@ static inline int __fscrypt_encrypt_symlink(struct inode *inode,
- 	return -EOPNOTSUPP;
- }
- 
-+static inline const char *fscrypt_get_symlink(struct inode *inode,
-+					      const void *caddr,
-+					      unsigned int max_size,
-+					      struct delayed_call *done)
-+{
-+	return ERR_PTR(-EOPNOTSUPP);
-+}
-+
- #endif	/* _LINUX_FSCRYPT_NOTSUPP_H */
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index 7e0b67ccd816..dc2babf3f7d3 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -211,5 +211,8 @@ extern int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
- extern int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
- 				     unsigned int len,
- 				     struct fscrypt_str *disk_link);
-+extern const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
-+				       unsigned int max_size,
-+				       struct delayed_call *done);
- 
- #endif	/* _LINUX_FSCRYPT_SUPP_H */
--- 
-2.16.0.rc0.223.g4a4ac83678-goog
+And fscrypt does verify the key's size before it uses it already.  Sure, it
+might to nice to verify it at add_key() time, but I don't think it's necessary.
+
+> 
+> > Also I have proposed an fscrypt ioctl to add keys to a filesystem-level
+> > keyring,
+> > and it doesn't use 'struct fscrypt_key' at all:
+> > https://marc.info/?l=linux-fsdevel&m=150879505206393
+> > 
+> > So I think you should just use the "default" encrypted-key format, where
+> > the
+> > payload is just the raw key.  fscrypt can very easily be updated to work
+> > with
+> > such keys.
+> 
+> I've done that in v2 - I am generating the fscrypt_key temporarily on the
+> fly but haven't gotten rid of fscrypt_key altogether... Is that what you had
+> in mind?
+
+That would work, but we don't actually need the fscrypt_key structure at all.
+Just declare 'const u8 *raw' and 'u32 size' local variables and set them
+appropriately, then pass those into derive_key_aes() (changing its prototype)
+rather than the fscrypt_key.
+
+> 
+> I also haven't based it on your work mentioned above, would that be
+> preferred?
+
+Not really, that patch series ("fscrypt: filesystem-level keyring and v2 policy
+support") is still in RFC status, so we don't know which would be merged first.
+I'm still looking for people with the interest and expertise to review it :-)
+
+That being said, we could choose to support the "encrypted" key type using only
+FS_IOC_ADD_ENCRYPTION_KEY, rather than the current mechanism of
+process-subscribed keyrings.  (With FS_IOC_ADD_ENCRYPTION_KEY, we'd need to use
+a flag in 'struct fscrypt_add_key_args' to indicate that the key should be found
+by searching the current process's keyrings for an "encrypted" key with the
+given description, rather than taking the key directly from the ioctl argument.)
+But it wouldn't be a huge deal to support it both ways.
+
+Eric
