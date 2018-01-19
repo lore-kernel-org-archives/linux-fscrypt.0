@@ -1,83 +1,45 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 06/11] fscrypt: move fscrypt_operations declaration to fscrypt_supp.h
-Date: Fri,  5 Jan 2018 10:44:57 -0800
-Message-Id: <20180105184502.48473-7-ebiggers3@gmail.com>
-In-Reply-To: <20180105184502.48473-1-ebiggers3@gmail.com>
-References: <20180105184502.48473-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <andre.draszik@gmail.com>
+Return-Path: <andre.draszik@gmail.com>
+Message-ID: <1516353413.28972.119.camel@andred.net>
+Subject: Re: [PATCH 3/3] encrypted-keys: document new fscrypt key format
+From: =?ISO-8859-1?Q?Andr=E9?= Draszik <git@andred.net>
+Date: Fri, 19 Jan 2018 09:16:53 +0000
+In-Reply-To: <20180117180537.GB6948@thunk.org>
+References: <20180110124418.24385-1-git@andred.net>
+	 <20180110124418.24385-3-git@andred.net>
+	 <20180111044801.GB943@zzz.localdomain>
+	 <1516199939.28972.101.camel@andred.net> <20180117180537.GB6948@thunk.org>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 8bit
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: Eric Biggers <ebiggers3@gmail.com>, linux-kernel@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, David Howells <dhowells@redhat.com>, James Morris <james.l.morris@oracle.com>, "Serge E. Hallyn" <serge@hallyn.com>, Jaegeuk Kim <jaegeuk@kernel.org>, Jonathan Corbet <corbet@lwn.net>, Kees Cook <keescook@chromium.org>, linux-integrity@vger.kernel.org, keyrings@vger.kernel.org, linux-security-module@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Thank you Ted,
 
-Filesystems now only define their fscrypt_operations when they are
-compiled with encryption support, so move the fscrypt_operations
-declaration from fscrypt.h to fscrypt_supp.h.
+On Wed, 2018-01-17 at 13:05 -0500, Theodore Ts'o wrote:
+> On Wed, Jan 17, 2018 at 02:38:59PM +0000, André Draszik wrote:
+> > > > [...]
+> > > 
+> > > Please be very clear about exactly what security properties are
+> > > achieved
+> > > by
+> > > using encrypted-keys.
+> > 
+> > I've left out all of this in the updated documentation, as any such
+> > information should probably be in Documentation/security/keys/trusted-
+> > encrypted.rst in the first place.
+> 
+> Where is this document going to be found / when will it be written?
+> It seems really odd to be requesting a do code review when the
+> specifications aren't available and/or haven't been written yet.  I
+> prefer to review the *design* first, as opposed to trying to both
+> review the code and try to guess at the design and review my guess of
+> the design at the same time....
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- include/linux/fscrypt.h      | 18 ------------------
- include/linux/fscrypt_supp.h | 18 ++++++++++++++++++
- 2 files changed, 18 insertions(+), 18 deletions(-)
+Does v3's commit message https://patchwork.kernel.org/patch/10173189/ serve
+as a good enough design document?
 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index b671a4eef47f..33b95a91f720 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -54,24 +54,6 @@ struct fscrypt_name {
- #define fname_name(p)		((p)->disk_name.name)
- #define fname_len(p)		((p)->disk_name.len)
- 
--/*
-- * fscrypt superblock flags
-- */
--#define FS_CFLG_OWN_PAGES (1U << 1)
--
--/*
-- * crypto opertions for filesystems
-- */
--struct fscrypt_operations {
--	unsigned int flags;
--	const char *key_prefix;
--	int (*get_context)(struct inode *, void *, size_t);
--	int (*set_context)(struct inode *, const void *, size_t, void *);
--	bool (*dummy_context)(struct inode *);
--	bool (*empty_dir)(struct inode *);
--	unsigned (*max_namelen)(struct inode *);
--};
--
- /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
- #define FSCRYPT_SET_CONTEXT_MAX_SIZE	28
- 
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index e7dfa2974906..ce61caf26f40 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -11,6 +11,24 @@
- #ifndef _LINUX_FSCRYPT_SUPP_H
- #define _LINUX_FSCRYPT_SUPP_H
- 
-+/*
-+ * fscrypt superblock flags
-+ */
-+#define FS_CFLG_OWN_PAGES (1U << 1)
-+
-+/*
-+ * crypto operations for filesystems
-+ */
-+struct fscrypt_operations {
-+	unsigned int flags;
-+	const char *key_prefix;
-+	int (*get_context)(struct inode *, void *, size_t);
-+	int (*set_context)(struct inode *, const void *, size_t, void *);
-+	bool (*dummy_context)(struct inode *);
-+	bool (*empty_dir)(struct inode *);
-+	unsigned (*max_namelen)(struct inode *);
-+};
-+
- struct fscrypt_ctx {
- 	union {
- 		struct {
--- 
-2.16.0.rc0.223.g4a4ac83678-goog
+Cheers,
+Andre'
