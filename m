@@ -1,81 +1,51 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH v2 04/11] fscrypt: move fscrypt_ctx declaration to fscrypt_supp.h
-Date: Fri,  5 Jan 2018 10:44:55 -0800
-Message-Id: <20180105184502.48473-5-ebiggers3@gmail.com>
-In-Reply-To: <20180105184502.48473-1-ebiggers3@gmail.com>
-References: <20180105184502.48473-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fsdevel-owner@vger.kernel.org>
+Content-Type: text/plain;
+        charset=us-ascii
+Mime-Version: 1.0 (Mac OS X Mail 11.2 \(3445.5.20\))
+Subject: Re: [RFC] UBIFS authentication
+From: David Gstir <david@sigma-star.at>
+In-Reply-To: <E6D3BD02-AF3A-4B75-92FD-A8A07B4C9C51@sigma-star.at>
+Date: Thu, 25 Jan 2018 09:49:32 +0100
+Content-Transfer-Encoding: 8BIT
+Message-Id: <AF303146-8E37-48B2-B9DF-8C3193138EFA@sigma-star.at>
+References: <E6D3BD02-AF3A-4B75-92FD-A8A07B4C9C51@sigma-star.at>
+Sender: linux-fsdevel-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-mtd@lists.infradead.org
+Cc: Richard Weinberger <richard@nod.at>, linux-kernel@vger.kernel.org, kernel@pengutronix.de
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi!
 
-Filesystems only ever access 'struct fscrypt_ctx' through fscrypt
-functions.  But when a filesystem is built without encryption support,
-these functions are all stubbed out, so the declaration of fscrypt_ctx
-is unneeded.  Therefore, move it from fscrypt.h to fscrypt_supp.h.
+> On 17.01.2018, at 16:19, David Gstir <david@sigma-star.at> wrote:
+> 
+> Hi everybody!
+> 
+> Richard and I have been working on extending UBIFS' security features and came
+> up with the following concept to add full file contents and metadata authentication.
+> 
+> For block devices like eMMCs dm-crypt and dm-verity/dm-integrity can be used to
+> get full data confidentiality and authenticity, but for raw flash or more
+> specifically UBIFS, existing options are not ideal:
+> 
+> One option is to use eCryptfs with some out-of-tree patches that add AEAD cipher
+> (AES-GCM) support, but does not look like there was much progress recently [1].
+> 
+> Another option is to use IMA/EVM as described by Marc Kleine-Budde in his
+> ELCE 2016 talk [2], but this just protects the file payload and some attributes
+> and not the full filesystem data structures.
+> 
+> A short overview of existing options is also given here [3].
+> 
+> Due to the design of UBIFS it is actually a bit easier than on other filesystems
+> to authenticate its data structures and ensure consistency of on-flash data.
+> 
+> I've attached the whitepaper below and also published it here [4].
+> 
+> Comments are welcome. :)
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- include/linux/fscrypt.h      | 16 +---------------
- include/linux/fscrypt_supp.h | 15 +++++++++++++++
- 2 files changed, 16 insertions(+), 15 deletions(-)
+*ping*
 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index c23b2f16129a..0f94d087a6d1 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -24,23 +24,9 @@
- 
- #define FS_CRYPTO_BLOCK_SIZE		16
- 
-+struct fscrypt_ctx;
- struct fscrypt_info;
- 
--struct fscrypt_ctx {
--	union {
--		struct {
--			struct page *bounce_page;	/* Ciphertext page */
--			struct page *control_page;	/* Original page  */
--		} w;
--		struct {
--			struct bio *bio;
--			struct work_struct work;
--		} r;
--		struct list_head free_list;	/* Free list */
--	};
--	u8 flags;				/* Flags */
--};
--
- /**
-  * For encrypted symlinks, the ciphertext length is stored at the beginning
-  * of the string in little-endian format.
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index 33d641e27c18..fd6ee089ced0 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -11,6 +11,21 @@
- #ifndef _LINUX_FSCRYPT_SUPP_H
- #define _LINUX_FSCRYPT_SUPP_H
- 
-+struct fscrypt_ctx {
-+	union {
-+		struct {
-+			struct page *bounce_page;	/* Ciphertext page */
-+			struct page *control_page;	/* Original page  */
-+		} w;
-+		struct {
-+			struct bio *bio;
-+			struct work_struct work;
-+		} r;
-+		struct list_head free_list;	/* Free list */
-+	};
-+	u8 flags;				/* Flags */
-+};
-+
- static inline bool fscrypt_has_encryption_key(const struct inode *inode)
- {
- 	return (inode->i_crypt_info != NULL);
--- 
-2.16.0.rc0.223.g4a4ac83678-goog
+Did anybody get a chance to look at this yet, or is everybody still busy with Meltdown and Spectre? ;D
+
+Thanks,
+David
