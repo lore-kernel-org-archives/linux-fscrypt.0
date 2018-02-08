@@ -1,837 +1,743 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-io0-f169.google.com ([209.85.223.169]:38923 "EHLO
-        mail-io0-f169.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1751968AbeBHALI (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 7 Feb 2018 19:11:08 -0500
-Received: by mail-io0-f169.google.com with SMTP id b198so3952915iof.6
-        for <linux-fscrypt@vger.kernel.org>; Wed, 07 Feb 2018 16:11:08 -0800 (PST)
+Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@google.com>
-Subject: [PATCH 3/5] crypto: arm/speck: add NEON-accelerated implementation of Speck-XTS
-Date: Wed,  7 Feb 2018 16:09:59 -0800
-Message-Id: <20180208001001.19180-4-ebiggers@google.com>
+Subject: [PATCH 4/5] crypto: speck - add test vectors for Speck128-XTS
+Date: Wed,  7 Feb 2018 16:10:00 -0800
+Message-Id: <20180208001001.19180-5-ebiggers@google.com>
 In-Reply-To: <20180208001001.19180-1-ebiggers@google.com>
 References: <20180208001001.19180-1-ebiggers@google.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
+Sender: linux-crypto-owner@vger.kernel.org
 To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
 Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>, Alex Cope <alexcope@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Add an ARM NEON-accelerated implementation of Speck-XTS.  It operates on
-128-byte chunks at a time, i.e. 8 blocks for Speck128 or 16 blocks for
-Speck64.  Each 128-byte chunk goes through XTS preprocessing, then is
-encrypted/decrypted (doing one cipher round for all the blocks, then the
-next round, etc.), then goes through XTS postprocessing.
+Add test vectors for Speck128-XTS, generated in userspace using C code.
+The inputs were borrowed from the AES-XTS test vectors.
 
-The performance depends on the processor but generally is 2-3 times
-faster than the generic code.  For example, on an ARMv7 processor we
-observe the following performance with Speck128/128-XTS:
-
-    xts-speck128-neon:     Encryption 103.2 MB/s, Decryption 103.3 MB/s
-    xts(speck128-generic): Encryption  28.9 MB/s, Decryption  37.1 MB/s
-
-In comparison to AES-128-XTS without the cryptographic extensions:
-
-    xts-aes-neonbs:        Encryption  50.7 MB/s, Decryption  45.4 MB/s
-    xts(aes-asm):          Encryption  37.9 MB/s, Decryption  36.4 MB/s
-    xts(aes-generic):      Encryption  24.7 MB/s, Decryption  24.6 MB/s
-
-Speck64/128-XTS is even faster:
-
-    xts-speck64-neon:      Encryption 125.5 MB/s, Decryption 126.1 MB/s
-
-Note that as with the generic code, only the Speck128 and Speck64
-variants are supported.  Also, for now only the XTS mode of operation is
-supported, to target the disk and file encryption use cases.  The NEON
-code also only handles the portion of the data that is evenly divisible
-into 128-byte chunks, with any remainder handled by a C fallback.  Of
-course, other modes of operation could be added later if needed, and/or
-the NEON code could be updated to handle other buffer sizes.
-
-The XTS specification is only defined for AES which has a 128-bit block
-size, so for the GF(2^64) math needed for Speck64-XTS we use the
-reducing polynomial 'x^64 + x^4 + x^3 + x + 1' given by the original XEX
-paper.  Of course, when possible users should use Speck128-XTS, but even
-that may be too slow on some processors; Speck64-XTS can be faster.
+Both xts(speck128-generic) and xts-speck128-neon pass these tests.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- arch/arm/crypto/Kconfig           |   6 +
- arch/arm/crypto/Makefile          |   2 +
- arch/arm/crypto/speck-neon-core.S | 431 ++++++++++++++++++++++++++++++++++++++
- arch/arm/crypto/speck-neon-glue.c | 290 +++++++++++++++++++++++++
- 4 files changed, 729 insertions(+)
- create mode 100644 arch/arm/crypto/speck-neon-core.S
- create mode 100644 arch/arm/crypto/speck-neon-glue.c
+ crypto/testmgr.c |   9 +
+ crypto/testmgr.h | 687 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 696 insertions(+)
 
-diff --git a/arch/arm/crypto/Kconfig b/arch/arm/crypto/Kconfig
-index b8e69fe282b8..925d1364727a 100644
---- a/arch/arm/crypto/Kconfig
-+++ b/arch/arm/crypto/Kconfig
-@@ -121,4 +121,10 @@ config CRYPTO_CHACHA20_NEON
- 	select CRYPTO_BLKCIPHER
- 	select CRYPTO_CHACHA20
- 
-+config CRYPTO_SPECK_NEON
-+	tristate "NEON accelerated Speck cipher algorithms"
-+	depends on KERNEL_MODE_NEON
-+	select CRYPTO_BLKCIPHER
-+	select CRYPTO_SPECK
-+
- endif
-diff --git a/arch/arm/crypto/Makefile b/arch/arm/crypto/Makefile
-index 30ef8e291271..a758107c5525 100644
---- a/arch/arm/crypto/Makefile
-+++ b/arch/arm/crypto/Makefile
-@@ -10,6 +10,7 @@ obj-$(CONFIG_CRYPTO_SHA1_ARM_NEON) += sha1-arm-neon.o
- obj-$(CONFIG_CRYPTO_SHA256_ARM) += sha256-arm.o
- obj-$(CONFIG_CRYPTO_SHA512_ARM) += sha512-arm.o
- obj-$(CONFIG_CRYPTO_CHACHA20_NEON) += chacha20-neon.o
-+obj-$(CONFIG_CRYPTO_SPECK_NEON) += speck-neon.o
- 
- ce-obj-$(CONFIG_CRYPTO_AES_ARM_CE) += aes-arm-ce.o
- ce-obj-$(CONFIG_CRYPTO_SHA1_ARM_CE) += sha1-arm-ce.o
-@@ -53,6 +54,7 @@ ghash-arm-ce-y	:= ghash-ce-core.o ghash-ce-glue.o
- crct10dif-arm-ce-y	:= crct10dif-ce-core.o crct10dif-ce-glue.o
- crc32-arm-ce-y:= crc32-ce-core.o crc32-ce-glue.o
- chacha20-neon-y := chacha20-neon-core.o chacha20-neon-glue.o
-+speck-neon-y := speck-neon-core.o speck-neon-glue.o
- 
- quiet_cmd_perl = PERL    $@
-       cmd_perl = $(PERL) $(<) > $(@)
-diff --git a/arch/arm/crypto/speck-neon-core.S b/arch/arm/crypto/speck-neon-core.S
-new file mode 100644
-index 000000000000..3c0829caa302
---- /dev/null
-+++ b/arch/arm/crypto/speck-neon-core.S
-@@ -0,0 +1,431 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * NEON-accelerated implementation of Speck128-XTS and Speck64-XTS
-+ *
-+ * Copyright (c) 2018 Google, Inc
-+ *
-+ * Author: Eric Biggers <ebiggers@google.com>
-+ */
-+
-+#include <linux/linkage.h>
-+
-+	.text
-+	.fpu		neon
-+
-+	// arguments
-+	ROUND_KEYS	.req	r0	// const {u64,u32} *round_keys
-+	NROUNDS		.req	r1	// int nrounds
-+	DST		.req	r2	// void *dst
-+	SRC		.req	r3	// const void *src
-+	NBYTES		.req	r4	// unsigned int nbytes
-+	TWEAK		.req	r5	// void *tweak
-+
-+	// registers which hold the data being encrypted/decrypted
-+	X0		.req	q0
-+	X0_L		.req	d0
-+	X0_H		.req	d1
-+	Y0		.req	q1
-+	Y0_L		.req	d2
-+	X1		.req	q2
-+	X1_L		.req	d4
-+	X1_H		.req	d5
-+	Y1		.req	q3
-+	Y1_L		.req	d6
-+	X2		.req	q4
-+	X2_L		.req	d8
-+	X2_H		.req	d9
-+	Y2		.req	q5
-+	Y2_L		.req	d10
-+	X3		.req	q6
-+	X3_L		.req	d12
-+	X3_H		.req	d13
-+	Y3		.req	q7
-+	Y3_L		.req	d14
-+
-+	// the round key, duplicated in all lanes
-+	ROUND_KEY	.req	q8
-+	ROUND_KEY_L	.req	d16
-+	ROUND_KEY_H	.req	d17
-+
-+	// index vector for vtbl-based 8-bit rotates
-+	ROTATE_TABLE	.req	d18
-+
-+	// multiplication table for updating XTS tweaks
-+	GF128MUL_TABLE	.req	d19
-+	GF64MUL_TABLE	.req	d19
-+
-+	// current XTS tweak value(s)
-+	TWEAKV		.req	q10
-+	TWEAKV_L	.req	d20
-+	TWEAKV_H	.req	d21
-+
-+	TMP0		.req	q12
-+	TMP0_L		.req	d24
-+	TMP0_H		.req	d25
-+	TMP1		.req	q13
-+	TMP2		.req	q14
-+	TMP3		.req	q15
-+
-+	.align		4
-+.Lror64_8_table:
-+	.byte		1, 2, 3, 4, 5, 6, 7, 0
-+.Lror32_8_table:
-+	.byte		1, 2, 3, 0, 5, 6, 7, 4
-+.Lrol64_8_table:
-+	.byte		7, 0, 1, 2, 3, 4, 5, 6
-+.Lrol32_8_table:
-+	.byte		3, 0, 1, 2, 7, 4, 5, 6
-+.Lgf128mul_table:
-+	.byte		0, 0x87
-+	.fill		14
-+.Lgf64mul_table:
-+	.byte		0, 0x1b, (0x1b << 1), (0x1b << 1) ^ 0x1b
-+	.fill		12
-+
-+/*
-+ * _speck_round_128bytes() - Speck encryption round on 128 bytes at a time
-+ *
-+ * Do one Speck encryption round on the 128 bytes (8 blocks for Speck128, 16 for
-+ * Speck64) stored in X0-X3 and Y0-Y3, using the round key stored in all lanes
-+ * of ROUND_KEY.  'n' is the lane size: 64 for Speck128, or 32 for Speck64.
-+ *
-+ * The 8-bit rotates are implemented using vtbl instead of vshr + vsli because
-+ * the vtbl approach is faster on some processors and the same speed on others.
-+ */
-+.macro _speck_round_128bytes	n
-+
-+	// x = ror(x, 8)
-+	vtbl.8		X0_L, {X0_L}, ROTATE_TABLE
-+	vtbl.8		X0_H, {X0_H}, ROTATE_TABLE
-+	vtbl.8		X1_L, {X1_L}, ROTATE_TABLE
-+	vtbl.8		X1_H, {X1_H}, ROTATE_TABLE
-+	vtbl.8		X2_L, {X2_L}, ROTATE_TABLE
-+	vtbl.8		X2_H, {X2_H}, ROTATE_TABLE
-+	vtbl.8		X3_L, {X3_L}, ROTATE_TABLE
-+	vtbl.8		X3_H, {X3_H}, ROTATE_TABLE
-+
-+	// x += y
-+	vadd.u\n	X0, Y0
-+	vadd.u\n	X1, Y1
-+	vadd.u\n	X2, Y2
-+	vadd.u\n	X3, Y3
-+
-+	// x ^= k
-+	veor		X0, ROUND_KEY
-+	veor		X1, ROUND_KEY
-+	veor		X2, ROUND_KEY
-+	veor		X3, ROUND_KEY
-+
-+	// y = rol(y, 3)
-+	vshl.u\n	TMP0, Y0, #3
-+	vshl.u\n	TMP1, Y1, #3
-+	vshl.u\n	TMP2, Y2, #3
-+	vshl.u\n	TMP3, Y3, #3
-+	vsri.u\n	TMP0, Y0, #(\n - 3)
-+	vsri.u\n	TMP1, Y1, #(\n - 3)
-+	vsri.u\n	TMP2, Y2, #(\n - 3)
-+	vsri.u\n	TMP3, Y3, #(\n - 3)
-+
-+	// y ^= x
-+	veor		Y0, TMP0, X0
-+	veor		Y1, TMP1, X1
-+	veor		Y2, TMP2, X2
-+	veor		Y3, TMP3, X3
-+.endm
-+
-+/*
-+ * _speck_unround_128bytes() - Speck decryption round on 128 bytes at a time
-+ *
-+ * This is the inverse of _speck_round_128bytes().
-+ */
-+.macro _speck_unround_128bytes	n
-+
-+	// y ^= x
-+	veor		TMP0, Y0, X0
-+	veor		TMP1, Y1, X1
-+	veor		TMP2, Y2, X2
-+	veor		TMP3, Y3, X3
-+
-+	// y = ror(y, 3)
-+	vshr.u\n	Y0, TMP0, #3
-+	vshr.u\n	Y1, TMP1, #3
-+	vshr.u\n	Y2, TMP2, #3
-+	vshr.u\n	Y3, TMP3, #3
-+	vsli.u\n	Y0, TMP0, #(\n - 3)
-+	vsli.u\n	Y1, TMP1, #(\n - 3)
-+	vsli.u\n	Y2, TMP2, #(\n - 3)
-+	vsli.u\n	Y3, TMP3, #(\n - 3)
-+
-+	// x ^= k
-+	veor		X0, ROUND_KEY
-+	veor		X1, ROUND_KEY
-+	veor		X2, ROUND_KEY
-+	veor		X3, ROUND_KEY
-+
-+	// x -= y
-+	vsub.u\n	X0, Y0
-+	vsub.u\n	X1, Y1
-+	vsub.u\n	X2, Y2
-+	vsub.u\n	X3, Y3
-+
-+	// x = rol(x, 8);
-+	vtbl.8		X0_L, {X0_L}, ROTATE_TABLE
-+	vtbl.8		X0_H, {X0_H}, ROTATE_TABLE
-+	vtbl.8		X1_L, {X1_L}, ROTATE_TABLE
-+	vtbl.8		X1_H, {X1_H}, ROTATE_TABLE
-+	vtbl.8		X2_L, {X2_L}, ROTATE_TABLE
-+	vtbl.8		X2_H, {X2_H}, ROTATE_TABLE
-+	vtbl.8		X3_L, {X3_L}, ROTATE_TABLE
-+	vtbl.8		X3_H, {X3_H}, ROTATE_TABLE
-+.endm
-+
-+.macro _xts128_precrypt_one, dst_reg, tweak_buf, tmp
-+
-+	// Load the next source block
-+	vld1.8		{\dst_reg}, [SRC]!
-+
-+	// Save the current tweak in the tweak buffer
-+	vst1.8		{TWEAKV}, [\tweak_buf:128]!
-+
-+	// XOR the next source block with the current tweak
-+	veor		\dst_reg, TWEAKV
-+
-+	/*
-+	 * Calculate the next tweak by multiplying the current one by x,
-+	 * modulo p(x) = x^128 + x^7 + x^2 + x + 1.
-+	 */
-+	vshr.u64	\tmp, TWEAKV, #63
-+	vshl.u64	TWEAKV, #1
-+	veor		TWEAKV_H, \tmp\()_L
-+	vtbl.8		\tmp\()_H, {GF128MUL_TABLE}, \tmp\()_H
-+	veor		TWEAKV_L, \tmp\()_H
-+.endm
-+
-+.macro _xts64_precrypt_two	dst_reg, tweak_buf, tmp
-+
-+	// Load the next two source blocks
-+	vld1.8		{\dst_reg}, [SRC]!
-+
-+	// Save the current two tweaks in the tweak buffer
-+	vst1.8		{TWEAKV}, [\tweak_buf:128]!
-+
-+	// XOR the next two source blocks with the current two tweaks
-+	veor		\dst_reg, TWEAKV
-+
-+	/*
-+	 * Calculate the next two tweaks by multiplying the current ones by x^2,
-+	 * modulo p(x) = x^64 + x^4 + x^3 + x + 1.
-+	 */
-+	vshr.u64	\tmp, TWEAKV, #62
-+	vshl.u64	TWEAKV, #2
-+	vtbl.8		\tmp\()_L, {GF64MUL_TABLE}, \tmp\()_L
-+	vtbl.8		\tmp\()_H, {GF64MUL_TABLE}, \tmp\()_H
-+	veor		TWEAKV, \tmp
-+.endm
-+
-+/*
-+ * _speck_xts_crypt() - Speck XTS encryption/decryption
-+ *
-+ * Encrypt or decrypt NBYTES bytes of data from the SRC buffer to the DST buffer
-+ * using Speck-XTS, specifically the variant with a block size of '2n' and round
-+ * count given by NROUNDS.  The expanded round keys are given in ROUND_KEYS, and
-+ * the current XTS tweak value is given in TWEAK.  It's assumed that NBYTES is a
-+ * nonzero multiple of 128.
-+ */
-+.macro _speck_xts_crypt	n, decrypting
-+	push		{r4-r7}
-+	mov		r7, sp
-+
-+	/*
-+	 * The first four parameters were passed in registers r0-r3.  Load the
-+	 * additional parameters, which were passed on the stack.
-+	 */
-+	ldr		NBYTES, [sp, #16]
-+	ldr		TWEAK, [sp, #20]
-+
-+	/*
-+	 * If decrypting, modify the ROUND_KEYS parameter to point to the last
-+	 * round key rather than the first, since for decryption the round keys
-+	 * are used in reverse order.
-+	 */
-+.if \decrypting
-+.if \n == 64
-+	add		ROUND_KEYS, ROUND_KEYS, NROUNDS, lsl #3
-+	sub		ROUND_KEYS, #8
-+.else
-+	add		ROUND_KEYS, ROUND_KEYS, NROUNDS, lsl #2
-+	sub		ROUND_KEYS, #4
-+.endif
-+.endif
-+
-+	// Load the index vector for vtbl-based 8-bit rotates
-+.if \decrypting
-+	ldr		r12, =.Lrol\n\()_8_table
-+.else
-+	ldr		r12, =.Lror\n\()_8_table
-+.endif
-+	vld1.8		{ROTATE_TABLE}, [r12:64]
-+
-+	// One-time XTS preparation
-+
-+	/*
-+	 * Allocate stack space to store 128 bytes worth of tweaks.  For
-+	 * performance, this space is aligned to a 16-byte boundary so that we
-+	 * can use the load/store instructions that declare 16-byte alignment.
-+	 */
-+	sub		sp, #128
-+	bic		sp, #0xf
-+
-+.if \n == 64
-+	// Load first tweak
-+	vld1.8		{TWEAKV}, [TWEAK]
-+
-+	// Load GF(2^128) multiplication table
-+	ldr		r12, =.Lgf128mul_table
-+	vld1.8		{GF128MUL_TABLE}, [r12:64]
-+.else
-+	// Load first tweak
-+	vld1.8		{TWEAKV_L}, [TWEAK]
-+
-+	// Load GF(2^64) multiplication table
-+	ldr		r12, =.Lgf64mul_table
-+	vld1.8		{GF64MUL_TABLE}, [r12:64]
-+
-+	// Calculate second tweak, packing it together with the first
-+	vshr.u64	TMP0_L, TWEAKV_L, #63
-+	vtbl.u8		TMP0_L, {GF64MUL_TABLE}, TMP0_L
-+	vshl.u64	TWEAKV_H, TWEAKV_L, #1
-+	veor		TWEAKV_H, TMP0_L
-+.endif
-+
-+.Lnext_128bytes_\@:
-+
-+	/*
-+	 * Load the source blocks into {X,Y}[0-3], XOR them with their XTS tweak
-+	 * values, and save the tweaks on the stack for later.  Then
-+	 * de-interleave the 'x' and 'y' elements of each block, i.e. make it so
-+	 * that the X[0-3] registers contain only the first halves of blocks,
-+	 * and the Y[0-3] registers contain only the second halves of blocks.
-+	 */
-+	mov		r12, sp
-+.if \n == 64
-+	_xts128_precrypt_one	X0, r12, TMP0
-+	_xts128_precrypt_one	Y0, r12, TMP0
-+	_xts128_precrypt_one	X1, r12, TMP0
-+	_xts128_precrypt_one	Y1, r12, TMP0
-+	_xts128_precrypt_one	X2, r12, TMP0
-+	_xts128_precrypt_one	Y2, r12, TMP0
-+	_xts128_precrypt_one	X3, r12, TMP0
-+	_xts128_precrypt_one	Y3, r12, TMP0
-+	vswp		X0_H, Y0_L
-+	vswp		X1_H, Y1_L
-+	vswp		X2_H, Y2_L
-+	vswp		X3_H, Y3_L
-+.else
-+	_xts64_precrypt_two	X0, r12, TMP0
-+	_xts64_precrypt_two	Y0, r12, TMP0
-+	_xts64_precrypt_two	X1, r12, TMP0
-+	_xts64_precrypt_two	Y1, r12, TMP0
-+	_xts64_precrypt_two	X2, r12, TMP0
-+	_xts64_precrypt_two	Y2, r12, TMP0
-+	_xts64_precrypt_two	X3, r12, TMP0
-+	_xts64_precrypt_two	Y3, r12, TMP0
-+	vuzp.32		X0, Y0
-+	vuzp.32		X1, Y1
-+	vuzp.32		X2, Y2
-+	vuzp.32		X3, Y3
-+.endif
-+
-+	// Do the cipher rounds
-+
-+	mov		r12, ROUND_KEYS
-+	mov		r6, NROUNDS
-+
-+.Lnext_round_\@:
-+.if \decrypting
-+.if \n == 64
-+	vld1.64		ROUND_KEY_L, [r12]
-+	sub		r12, #8
-+	vmov		ROUND_KEY_H, ROUND_KEY_L
-+.else
-+	vld1.32		{ROUND_KEY_L[],ROUND_KEY_H[]}, [r12]
-+	sub		r12, #4
-+.endif
-+	_speck_unround_128bytes	\n
-+.else
-+.if \n == 64
-+	vld1.64		ROUND_KEY_L, [r12]!
-+	vmov		ROUND_KEY_H, ROUND_KEY_L
-+.else
-+	vld1.32		{ROUND_KEY_L[],ROUND_KEY_H[]}, [r12]!
-+.endif
-+	_speck_round_128bytes	\n
-+.endif
-+	subs		r6, r6, #1
-+	bne		.Lnext_round_\@
-+
-+	// Re-interleave the 'x' and 'y' elements of each block
-+.if \n == 64
-+	vswp		X0_H, Y0_L
-+	vswp		X1_H, Y1_L
-+	vswp		X2_H, Y2_L
-+	vswp		X3_H, Y3_L
-+.else
-+	vzip.32		X0, Y0
-+	vzip.32		X1, Y1
-+	vzip.32		X2, Y2
-+	vzip.32		X3, Y3
-+.endif
-+
-+	// XOR the encrypted/decrypted blocks with the tweaks we saved earlier
-+	mov		r12, sp
-+	vld1.8		{TMP0, TMP1}, [r12:128]!
-+	vld1.8		{TMP2, TMP3}, [r12:128]!
-+	veor		X0, TMP0
-+	veor		Y0, TMP1
-+	veor		X1, TMP2
-+	veor		Y1, TMP3
-+	vld1.8		{TMP0, TMP1}, [r12:128]!
-+	vld1.8		{TMP2, TMP3}, [r12:128]!
-+	veor		X2, TMP0
-+	veor		Y2, TMP1
-+	veor		X3, TMP2
-+	veor		Y3, TMP3
-+
-+	// Store the ciphertext in the destination buffer
-+	vst1.8		{X0, Y0}, [DST]!
-+	vst1.8		{X1, Y1}, [DST]!
-+	vst1.8		{X2, Y2}, [DST]!
-+	vst1.8		{X3, Y3}, [DST]!
-+
-+	// Continue if there are more 128-byte chunks remaining, else return
-+	subs		NBYTES, #128
-+	bne		.Lnext_128bytes_\@
-+
-+	// Store the next tweak
-+.if \n == 64
-+	vst1.8		{TWEAKV}, [TWEAK]
-+.else
-+	vst1.8		{TWEAKV_L}, [TWEAK]
-+.endif
-+
-+	mov		sp, r7
-+	pop		{r4-r7}
-+	bx		lr
-+.endm
-+
-+ENTRY(speck128_xts_encrypt_neon)
-+	_speck_xts_crypt	n=64, decrypting=0
-+ENDPROC(speck128_xts_encrypt_neon)
-+
-+ENTRY(speck128_xts_decrypt_neon)
-+	_speck_xts_crypt	n=64, decrypting=1
-+ENDPROC(speck128_xts_decrypt_neon)
-+
-+ENTRY(speck64_xts_encrypt_neon)
-+	_speck_xts_crypt	n=32, decrypting=0
-+ENDPROC(speck64_xts_encrypt_neon)
-+
-+ENTRY(speck64_xts_decrypt_neon)
-+	_speck_xts_crypt	n=32, decrypting=1
-+ENDPROC(speck64_xts_decrypt_neon)
-diff --git a/arch/arm/crypto/speck-neon-glue.c b/arch/arm/crypto/speck-neon-glue.c
-new file mode 100644
-index 000000000000..3987dd6e063e
---- /dev/null
-+++ b/arch/arm/crypto/speck-neon-glue.c
-@@ -0,0 +1,290 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * NEON-accelerated implementation of Speck128-XTS and Speck64-XTS
-+ *
-+ * Copyright (c) 2018 Google, Inc
-+ *
-+ * Note: the NIST recommendation for XTS only specifies a 128-bit block size,
-+ * but a 64-bit version (needed for Speck64) is fairly straightforward; the math
-+ * is just done in GF(2^64) instead of GF(2^128), with the reducing polynomial
-+ * x^64 + x^4 + x^3 + x + 1 from the original XEX paper (Rogaway, 2004:
-+ * "Efficient Instantiations of Tweakable Blockciphers and Refinements to Modes
-+ * OCB and PMAC"), represented as 0x1B.
-+ */
-+
-+#include <asm/hwcap.h>
-+#include <asm/neon.h>
-+#include <asm/simd.h>
-+#include <crypto/algapi.h>
-+#include <crypto/gf128mul.h>
-+#include <crypto/internal/skcipher.h>
-+#include <crypto/speck.h>
-+#include <crypto/xts.h>
-+#include <linux/kernel.h>
-+#include <linux/module.h>
-+
-+/* The assembly functions only handle multiples of 128 bytes */
-+#define SPECK_NEON_CHUNK_SIZE	128
-+
-+/* Speck128 */
-+
-+struct speck128_xts_tfm_ctx {
-+	struct speck128_tfm_ctx main_key;
-+	struct speck128_tfm_ctx tweak_key;
-+};
-+
-+asmlinkage void speck128_xts_encrypt_neon(const u64 *round_keys, int nrounds,
-+					  void *dst, const void *src,
-+					  unsigned int nbytes, void *tweak);
-+
-+asmlinkage void speck128_xts_decrypt_neon(const u64 *round_keys, int nrounds,
-+					  void *dst, const void *src,
-+					  unsigned int nbytes, void *tweak);
-+
-+typedef void (*speck128_crypt_one_t)(const struct speck128_tfm_ctx *,
-+				     u8 *, const u8 *);
-+typedef void (*speck128_xts_crypt_many_t)(const u64 *, int, void *,
-+					  const void *, unsigned int, void *);
-+
-+
-+static __always_inline int
-+__speck128_xts_crypt(struct skcipher_request *req,
-+		     speck128_crypt_one_t crypt_one,
-+		     speck128_xts_crypt_many_t crypt_many)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	const struct speck128_xts_tfm_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct skcipher_walk walk;
-+	le128 tweak;
-+	int err;
-+
-+	err = skcipher_walk_virt(&walk, req, true);
-+
-+	crypto_speck128_encrypt(&ctx->tweak_key, (u8 *)&tweak, walk.iv);
-+
-+	while (walk.nbytes > 0) {
-+		unsigned int nbytes = walk.nbytes;
-+		u8 *dst = walk.dst.virt.addr;
-+		const u8 *src = walk.src.virt.addr;
-+
-+		if (nbytes >= SPECK_NEON_CHUNK_SIZE && may_use_simd()) {
-+			unsigned int count;
-+
-+			count = round_down(nbytes, SPECK_NEON_CHUNK_SIZE);
-+			kernel_neon_begin();
-+			(*crypt_many)(ctx->main_key.round_keys,
-+				      ctx->main_key.nrounds,
-+				      dst, src, count, &tweak);
-+			kernel_neon_end();
-+			dst += count;
-+			src += count;
-+			nbytes -= count;
-+		}
-+
-+		/* Handle any remainder with generic code */
-+		while (nbytes >= sizeof(le128)) {
-+			le128_xor((le128 *)dst, (const le128 *)src, &tweak);
-+			(*crypt_one)(&ctx->main_key, dst, dst);
-+			le128_xor((le128 *)dst, (const le128 *)dst, &tweak);
-+			gf128mul_x_ble(&tweak, &tweak);
-+
-+			dst += sizeof(le128);
-+			src += sizeof(le128);
-+			nbytes -= sizeof(le128);
-+		}
-+		err = skcipher_walk_done(&walk, nbytes);
-+	}
-+
-+	return err;
-+}
-+
-+static int speck128_xts_encrypt(struct skcipher_request *req)
-+{
-+	return __speck128_xts_crypt(req, crypto_speck128_encrypt,
-+				    speck128_xts_encrypt_neon);
-+
-+}
-+
-+static int speck128_xts_decrypt(struct skcipher_request *req)
-+{
-+	return __speck128_xts_crypt(req, crypto_speck128_decrypt,
-+				    speck128_xts_decrypt_neon);
-+}
-+
-+static int speck128_xts_setkey(struct crypto_skcipher *tfm, const u8 *key,
-+			       unsigned int keylen)
-+{
-+	struct speck128_xts_tfm_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err;
-+
-+	err = xts_verify_key(tfm, key, keylen);
-+	if (err)
-+		return err;
-+
-+	keylen /= 2;
-+
-+	err = crypto_speck128_setkey(&ctx->main_key, key, keylen);
-+	if (err)
-+		return err;
-+
-+	return crypto_speck128_setkey(&ctx->tweak_key, key + keylen, keylen);
-+}
-+
-+/* Speck64 */
-+
-+struct speck64_xts_tfm_ctx {
-+	struct speck64_tfm_ctx main_key;
-+	struct speck64_tfm_ctx tweak_key;
-+};
-+
-+asmlinkage void speck64_xts_encrypt_neon(const u32 *round_keys, int nrounds,
-+					 void *dst, const void *src,
-+					 unsigned int nbytes, void *tweak);
-+
-+asmlinkage void speck64_xts_decrypt_neon(const u32 *round_keys, int nrounds,
-+					 void *dst, const void *src,
-+					 unsigned int nbytes, void *tweak);
-+
-+typedef void (*speck64_crypt_one_t)(const struct speck64_tfm_ctx *,
-+				    u8 *, const u8 *);
-+typedef void (*speck64_xts_crypt_many_t)(const u32 *, int, void *,
-+					 const void *, unsigned int, void *);
-+
-+static __always_inline int
-+__speck64_xts_crypt(struct skcipher_request *req, speck64_crypt_one_t crypt_one,
-+		    speck64_xts_crypt_many_t crypt_many)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	const struct speck64_xts_tfm_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct skcipher_walk walk;
-+	u64 tweak;
-+	int err;
-+
-+	err = skcipher_walk_virt(&walk, req, true);
-+
-+	crypto_speck64_encrypt(&ctx->tweak_key, (u8 *)&tweak, walk.iv);
-+
-+	while (walk.nbytes > 0) {
-+		unsigned int nbytes = walk.nbytes;
-+		u8 *dst = walk.dst.virt.addr;
-+		const u8 *src = walk.src.virt.addr;
-+
-+		if (nbytes >= SPECK_NEON_CHUNK_SIZE && may_use_simd()) {
-+			unsigned int count;
-+
-+			count = round_down(nbytes, SPECK_NEON_CHUNK_SIZE);
-+			kernel_neon_begin();
-+			(*crypt_many)(ctx->main_key.round_keys,
-+				      ctx->main_key.nrounds,
-+				      dst, src, count, &tweak);
-+			kernel_neon_end();
-+			dst += count;
-+			src += count;
-+			nbytes -= count;
-+		}
-+
-+		/* Handle any remainder with generic code */
-+		while (nbytes >= sizeof(u64)) {
-+			*(u64 *)dst = *(u64 *)src ^ tweak;
-+			(*crypt_one)(&ctx->main_key, dst, dst);
-+			*(u64 *)dst ^= tweak;
-+			tweak = (tweak << 1) ^
-+				((tweak & (1ULL << 63)) ? 0x1B : 0);
-+
-+			dst += sizeof(u64);
-+			src += sizeof(u64);
-+			nbytes -= sizeof(u64);
-+		}
-+		err = skcipher_walk_done(&walk, nbytes);
-+	}
-+
-+	return err;
-+}
-+
-+static int speck64_xts_encrypt(struct skcipher_request *req)
-+{
-+	return __speck64_xts_crypt(req, crypto_speck64_encrypt,
-+				   speck64_xts_encrypt_neon);
-+}
-+
-+static int speck64_xts_decrypt(struct skcipher_request *req)
-+{
-+	return __speck64_xts_crypt(req, crypto_speck64_decrypt,
-+				   speck64_xts_decrypt_neon);
-+}
-+
-+static int speck64_xts_setkey(struct crypto_skcipher *tfm, const u8 *key,
-+			      unsigned int keylen)
-+{
-+	struct speck64_xts_tfm_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err;
-+
-+	err = xts_verify_key(tfm, key, keylen);
-+	if (err)
-+		return err;
-+
-+	keylen /= 2;
-+
-+	err = crypto_speck64_setkey(&ctx->main_key, key, keylen);
-+	if (err)
-+		return err;
-+
-+	return crypto_speck64_setkey(&ctx->tweak_key, key + keylen, keylen);
-+}
-+
-+static struct skcipher_alg speck_algs[] = {
-+	{
-+		.base.cra_name		= "xts(speck128)",
-+		.base.cra_driver_name	= "xts-speck128-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= SPECK128_BLOCK_SIZE,
-+		.base.cra_ctxsize	= sizeof(struct speck128_xts_tfm_ctx),
-+		.base.cra_alignmask	= 7,
-+		.base.cra_module	= THIS_MODULE,
-+		.min_keysize		= 2 * SPECK128_128_KEY_SIZE,
-+		.max_keysize		= 2 * SPECK128_256_KEY_SIZE,
-+		.ivsize			= SPECK128_BLOCK_SIZE,
-+		.walksize		= SPECK_NEON_CHUNK_SIZE,
-+		.setkey			= speck128_xts_setkey,
-+		.encrypt		= speck128_xts_encrypt,
-+		.decrypt		= speck128_xts_decrypt,
+diff --git a/crypto/testmgr.c b/crypto/testmgr.c
+index d5be42149e29..6583c11f0f0b 100644
+--- a/crypto/testmgr.c
++++ b/crypto/testmgr.c
+@@ -3575,6 +3575,15 @@ static const struct alg_test_desc alg_test_descs[] = {
+ 				.dec = __VECS(serpent_xts_dec_tv_template)
+ 			}
+ 		}
 +	}, {
-+		.base.cra_name		= "xts(speck64)",
-+		.base.cra_driver_name	= "xts-speck64-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= SPECK64_BLOCK_SIZE,
-+		.base.cra_ctxsize	= sizeof(struct speck64_xts_tfm_ctx),
-+		.base.cra_alignmask	= 7,
-+		.base.cra_module	= THIS_MODULE,
-+		.min_keysize		= 2 * SPECK64_96_KEY_SIZE,
-+		.max_keysize		= 2 * SPECK64_128_KEY_SIZE,
-+		.ivsize			= SPECK64_BLOCK_SIZE,
-+		.walksize		= SPECK_NEON_CHUNK_SIZE,
-+		.setkey			= speck64_xts_setkey,
-+		.encrypt		= speck64_xts_encrypt,
-+		.decrypt		= speck64_xts_decrypt,
++		.alg = "xts(speck128)",
++		.test = alg_test_skcipher,
++		.suite = {
++			.cipher = {
++				.enc = __VECS(speck128_xts_enc_tv_template),
++				.dec = __VECS(speck128_xts_dec_tv_template),
++			}
++		}
+ 	}, {
+ 		.alg = "xts(twofish)",
+ 		.test = alg_test_skcipher,
+diff --git a/crypto/testmgr.h b/crypto/testmgr.h
+index 255de47f1d20..4c0fbf5cec75 100644
+--- a/crypto/testmgr.h
++++ b/crypto/testmgr.h
+@@ -14403,6 +14403,693 @@ static const struct cipher_testvec speck128_dec_tv_template[] = {
+ 	},
+ };
+ 
++/*
++ * Speck128-XTS test vectors, taken from the AES-XTS test vectors with the
++ * result recomputed with Speck128 as the cipher
++ */
++
++static const struct cipher_testvec speck128_xts_enc_tv_template[] = {
++	{
++		.key    = "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.klen   = 32,
++		.iv     = "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input  = "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.ilen   = 32,
++		.result = "\x3b\x99\x4a\x64\x74\x77\xac\xed"
++			  "\xbe\xa0\xe7\x03\xd7\xfe\xab\x62"
++			  "\x51\xd9\xb6\x1d\xe0\x5e\xbc\x54"
++			  "\xd8\xf4\xa6\xcf\xae\xb9\x07\x42",
++		.rlen   = 32,
++	}, {
++		.key    = "\x11\x11\x11\x11\x11\x11\x11\x11"
++			  "\x11\x11\x11\x11\x11\x11\x11\x11"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22",
++		.klen   = 32,
++		.iv     = "\x33\x33\x33\x33\x33\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input  = "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44",
++		.ilen   = 32,
++		.result = "\x31\x9c\x54\x41\x95\xdd\x0b\x6d"
++			  "\xa4\x68\xf7\x31\x49\x83\xd3\x9b"
++			  "\x68\x83\x4e\x5f\x80\x78\x7f\x6f"
++			  "\xd6\x93\xce\x6e\x0a\x9e\xfc\x85",
++		.rlen   = 32,
++	}, {
++		.key    = "\xff\xfe\xfd\xfc\xfb\xfa\xf9\xf8"
++			  "\xf7\xf6\xf5\xf4\xf3\xf2\xf1\xf0"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22",
++		.klen   = 32,
++		.iv     = "\x33\x33\x33\x33\x33\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input  = "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44",
++		.ilen   = 32,
++		.result = "\x96\xbc\x98\xee\x4b\x3d\xb7\x55"
++			  "\xfb\xe2\x0f\x52\x9e\x35\x5e\x3c"
++			  "\xab\xd2\xaf\xe2\x0c\xc6\x46\x77"
++			  "\x4f\x32\x6a\xa5\x10\x75\xc9\x12",
++		.rlen   = 32,
++	}, {
++		.key    = "\x27\x18\x28\x18\x28\x45\x90\x45"
++			  "\x23\x53\x60\x28\x74\x71\x35\x26"
++			  "\x31\x41\x59\x26\x53\x58\x97\x93"
++			  "\x23\x84\x62\x64\x33\x83\x27\x95",
++		.klen   = 32,
++		.iv     = "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input  = "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
++		.ilen   = 512,
++		.result = "\x53\x43\x2f\x73\x46\x14\xe8\xa0"
++			  "\xd4\xf2\x41\x65\x6d\x95\xb9\x1d"
++			  "\x12\xb5\x92\xd0\x5e\x8b\x85\x6d"
++			  "\x88\xba\xb8\x89\x0d\x2d\x81\x2b"
++			  "\x1a\x21\x28\x58\x3d\xcc\xb1\x5e"
++			  "\x53\x1c\xa1\x12\xe1\x03\xb7\x34"
++			  "\x37\xb8\x60\x28\x90\xcb\x16\x43"
++			  "\x9d\x47\x8a\xc4\x4f\x47\x74\xa4"
++			  "\x84\x9e\xb3\x3e\x5d\x4d\x95\x9b"
++			  "\x43\xcb\xf7\x03\xa9\xe9\x9b\xf4"
++			  "\xc5\x13\x3a\xa9\x2b\x18\xd8\xb6"
++			  "\x58\xbd\x2a\xb9\x79\x4a\x8e\x99"
++			  "\x9b\x57\x1a\x2e\xf8\x3e\xd2\x8b"
++			  "\x52\x31\x1c\x45\x73\xb6\x12\x8f"
++			  "\xda\xf0\xa1\x8d\x9f\xf4\xaa\x7b"
++			  "\xc1\x6b\xbc\xe3\x4b\xda\xd8\x91"
++			  "\xe3\x48\x73\x06\x08\xf6\x01\xf1"
++			  "\x41\xba\x46\x08\xbf\x22\x3d\x74"
++			  "\x44\x12\xbc\x43\x34\x66\x94\x68"
++			  "\xb2\xb7\x56\x26\xdc\x7f\x1e\xd2"
++			  "\xb2\xfc\x52\x50\xbf\x4c\x02\xf8"
++			  "\xb5\xca\x2f\xe9\x00\xab\x28\x6c"
++			  "\xbe\x9e\x27\x10\x2f\xea\x76\x70"
++			  "\xfa\x18\x6d\x56\x35\x37\xc5\xc1"
++			  "\x20\xef\xf4\xcb\x85\x05\x0f\xe2"
++			  "\xe9\x0a\xff\x1e\xad\x0f\xb2\x99"
++			  "\xc6\x4c\x8d\xd9\x97\xc6\x9e\x7c"
++			  "\xa0\x19\x29\x1e\xe7\x23\xda\x41"
++			  "\xe7\x18\x00\x24\xec\x02\xef\x96"
++			  "\xec\x51\xcc\xe9\x7c\xbc\x00\xa9"
++			  "\x99\x53\x78\x1d\xe4\xac\x9e\x42"
++			  "\xf2\x2f\xc4\x75\x17\x42\xa2\x7b"
++			  "\x0e\xc9\xf0\xd7\x79\xd9\x89\x33"
++			  "\x50\x4c\xaa\x5c\xc3\x65\xd0\x0b"
++			  "\xba\xb9\x5f\x94\x91\x07\xa3\xd2"
++			  "\x8c\xe3\xfc\xea\x9a\xad\xa4\xc2"
++			  "\x5a\xd9\x34\x99\x67\xb4\xbe\x75"
++			  "\x30\x55\x9f\x6a\x32\x1d\xb9\x00"
++			  "\xd3\x31\xac\xe9\x64\x62\x4c\x53"
++			  "\xd0\xcc\x4a\x06\xe5\x14\x76\x9e"
++			  "\xa4\x6c\x27\x2f\x93\x74\xca\x33"
++			  "\x5e\xf2\xfa\x1b\x6e\xc5\x06\x85"
++			  "\x1b\x39\xac\x53\xb2\xdd\x2e\xe7"
++			  "\x76\x3a\x92\xcf\x17\x0a\x22\xb6"
++			  "\x2f\x99\x28\xff\x93\xca\xd0\x66"
++			  "\x9b\xe9\x0c\xe2\x93\xd3\x59\x1e"
++			  "\x62\x9e\x54\x4d\xeb\x67\x70\x2c"
++			  "\x78\x44\x5c\x0a\xcc\x9b\xf9\xb5"
++			  "\x33\xe6\x84\x99\xcd\x32\xa6\x0c"
++			  "\x54\x38\x11\x55\xda\x05\x0b\xc2"
++			  "\xdc\x0a\x9b\x1e\xcb\xa1\x4e\x8a"
++			  "\x66\x38\x8f\x68\xc5\x21\x0f\x5e"
++			  "\x9e\x60\x3c\x46\x5e\xbe\x1a\xc1"
++			  "\x61\x45\xc0\x23\x69\x90\xab\xb9"
++			  "\x82\x43\xd6\x36\x8d\x7b\x88\x63"
++			  "\x39\x70\x09\x5b\x12\x63\xc3\x7a"
++			  "\xb1\x3e\xbf\x14\xf9\x8b\x1d\xb0"
++			  "\x39\xb7\x3a\xbb\x93\x59\xf4\x8b"
++			  "\x06\xbe\x89\xfb\x7b\xb8\xba\xf3"
++			  "\x9a\x40\xca\x17\x7c\x5d\x4f\xef"
++			  "\x7d\x8e\x0a\x93\x93\x87\xdf\xec"
++			  "\xdc\xa6\x42\x7b\x92\x7b\xdd\x9c"
++			  "\xed\x6c\x16\xb2\xce\x12\x70\x2d"
++			  "\x41\xee\x69\x24\xc2\x95\xa0\x18",
++		.rlen   = 512,
++	}, {
++		.key	= "\x27\x18\x28\x18\x28\x45\x90\x45"
++			  "\x23\x53\x60\x28\x74\x71\x35\x26"
++			  "\x62\x49\x77\x57\x24\x70\x93\x69"
++			  "\x99\x59\x57\x49\x66\x96\x76\x27"
++			  "\x31\x41\x59\x26\x53\x58\x97\x93"
++			  "\x23\x84\x62\x64\x33\x83\x27\x95"
++			  "\x02\x88\x41\x97\x16\x93\x99\x37"
++			  "\x51\x05\x82\x09\x74\x94\x45\x92",
++		.klen	= 64,
++		.iv	= "\xff\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
++		.ilen	= 512,
++		.result = "\x15\xfb\x91\x93\xc1\x29\x04\xaf"
++			  "\x1b\xaf\x23\x4e\x5b\xfd\x81\x86"
++			  "\x76\xef\x3a\xef\xd7\x77\x36\x44"
++			  "\xda\xcb\xbb\x2e\xa9\x59\x56\xba"
++			  "\x31\x0c\x76\x3c\x2a\xe7\x6b\xba"
++			  "\xb4\xbd\x03\xe0\xd9\xe2\x3f\xea"
++			  "\xa0\x10\xf2\xa6\x0f\x1b\xf6\x75"
++			  "\x45\x90\x58\xbb\xce\xd6\xdf\x82"
++			  "\x96\x85\x64\x59\x00\x45\x19\x88"
++			  "\x81\xa1\x83\xa5\x05\x2b\x22\x91"
++			  "\xeb\x25\x24\xca\x9e\x15\x79\xff"
++			  "\x66\xb5\xa2\xef\x22\x4a\xbd\xd5"
++			  "\x80\x0d\x1e\x04\xd3\xb6\xd6\x79"
++			  "\x17\x31\xfb\xe7\x48\xc7\x57\x56"
++			  "\x03\x8f\x32\x5f\x8a\x08\x12\xbd"
++			  "\xd5\xcb\xba\x48\x2c\x49\xa5\xcc"
++			  "\xbb\xb6\x13\x1a\x43\x63\x57\x7c"
++			  "\xa5\xfc\xc1\x4c\x87\xfe\xab\x4a"
++			  "\x5e\x73\x42\x7c\x08\x04\x57\xf5"
++			  "\x56\xe0\x4f\xe6\x1d\xe2\xcc\x51"
++			  "\xdd\xb0\xc0\x3b\x23\xf3\x9e\x67"
++			  "\x27\x7d\x4b\x18\x4f\xdd\x71\xe7"
++			  "\x86\x6b\x71\x4f\xb1\xc4\x24\x44"
++			  "\x3e\x8b\x7e\xac\xdf\x01\x7d\xf7"
++			  "\x35\x01\xaf\x79\xfa\xeb\xd6\xae"
++			  "\x50\x47\xe9\x7f\x3d\xdf\x3f\x46"
++			  "\x99\x0d\xd0\x50\x1d\x5e\x4b\x6b"
++			  "\x2c\xd8\xe1\x59\xb2\xb9\x53\x9c"
++			  "\xa7\xc7\xba\xa9\xcf\xd6\xd5\xbe"
++			  "\xd9\x70\xd5\x88\x4f\x05\x89\x76"
++			  "\x5f\x95\x21\x12\x3f\x34\xe8\x4b"
++			  "\x5a\xba\xcf\xd4\x7d\x61\x1c\x59"
++			  "\xd9\xd2\xe8\x52\xb3\xa1\x64\x14"
++			  "\x0b\x88\xf3\x96\x0d\xc0\x6a\xca"
++			  "\xd0\xe4\x43\xe5\x1b\x1d\x35\xef"
++			  "\xac\x4c\x09\x09\xf4\x2a\x4b\x85"
++			  "\xd6\xf4\xb0\x4e\xbe\x49\x69\xf8"
++			  "\x9b\xc9\xc4\x7f\xac\x9f\x11\x62"
++			  "\xed\x6c\x93\x2c\x17\xc7\x13\xd0"
++			  "\x8c\xfd\xdd\x89\x73\xcf\x27\x4f"
++			  "\x19\x33\xf8\x72\xb7\x45\x91\x60"
++			  "\xbe\x30\x7d\x06\x43\x70\x98\xcb"
++			  "\x62\x12\x1d\x5a\x3d\xf2\x75\xe2"
++			  "\x3f\x3c\x26\xb6\xea\x6d\xf8\xe9"
++			  "\x1e\xad\x69\xae\x50\x50\xf6\x71"
++			  "\xda\x33\xc0\x21\x30\x42\xf9\xcd"
++			  "\x59\xb3\x5f\xde\xd5\xaa\x63\xe4"
++			  "\xee\x53\xc4\xce\xcf\xc3\x23\xcd"
++			  "\xd7\xf4\x40\x64\x35\x7e\x3a\x84"
++			  "\x76\xca\x52\x3c\x27\xdd\xd3\xa4"
++			  "\x1e\x9f\x80\x46\x37\xf6\x31\x29"
++			  "\x6d\xe9\x51\x87\xe6\x7c\xf6\xda"
++			  "\x98\x87\x61\x4c\x26\xc0\xdf\xd8"
++			  "\xe1\xf4\x42\x6e\xbb\x30\xe1\xe8"
++			  "\x48\x9d\x86\x0f\xea\x8f\x35\x74"
++			  "\xaa\x49\x99\x81\xd4\x4b\xe8\x77"
++			  "\x09\x27\xd2\x47\xae\xe7\x8e\x5e"
++			  "\xbe\x57\x53\xf7\x61\x15\x89\xf9"
++			  "\xe9\xcc\x51\xbc\x3e\x1a\x4c\x1b"
++			  "\x4d\xbb\x62\xba\xb3\x1a\xd0\xdf"
++			  "\x1c\xaa\x5c\x9f\x5b\x0f\x7b\xda"
++			  "\x69\x67\x2f\x23\xf0\x91\xd8\x09"
++			  "\x3f\xce\x51\x68\x6a\x20\x7c\x79"
++			  "\x59\x9d\x0d\x9f\xac\xac\x98\xc0",
++		.rlen	= 512,
++		.also_non_np = 1,
++		.np	= 3,
++		.tap	= { 512 - 20, 4, 16 },
 +	}
 +};
 +
-+static int __init speck_neon_module_init(void)
-+{
-+	if (!(elf_hwcap & HWCAP_NEON))
-+		return -ENODEV;
-+	return crypto_register_skciphers(speck_algs, ARRAY_SIZE(speck_algs));
-+}
++static const struct cipher_testvec speck128_xts_dec_tv_template[] = {
++	{
++		.key    = "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.klen   = 32,
++		.iv     = "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x3b\x99\x4a\x64\x74\x77\xac\xed"
++			  "\xbe\xa0\xe7\x03\xd7\xfe\xab\x62"
++			  "\x51\xd9\xb6\x1d\xe0\x5e\xbc\x54"
++			  "\xd8\xf4\xa6\xcf\xae\xb9\x07\x42",
++		.ilen   = 32,
++		.result = "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.rlen   = 32,
++	}, {
++		.key    = "\x11\x11\x11\x11\x11\x11\x11\x11"
++			  "\x11\x11\x11\x11\x11\x11\x11\x11"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22",
++		.klen   = 32,
++		.iv     = "\x33\x33\x33\x33\x33\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x31\x9c\x54\x41\x95\xdd\x0b\x6d"
++			  "\xa4\x68\xf7\x31\x49\x83\xd3\x9b"
++			  "\x68\x83\x4e\x5f\x80\x78\x7f\x6f"
++			  "\xd6\x93\xce\x6e\x0a\x9e\xfc\x85",
++		.ilen   = 32,
++		.result	= "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44",
++		.rlen   = 32,
++	}, {
++		.key    = "\xff\xfe\xfd\xfc\xfb\xfa\xf9\xf8"
++			  "\xf7\xf6\xf5\xf4\xf3\xf2\xf1\xf0"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22",
++		.klen   = 32,
++		.iv     = "\x33\x33\x33\x33\x33\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x96\xbc\x98\xee\x4b\x3d\xb7\x55"
++			  "\xfb\xe2\x0f\x52\x9e\x35\x5e\x3c"
++			  "\xab\xd2\xaf\xe2\x0c\xc6\x46\x77"
++			  "\x4f\x32\x6a\xa5\x10\x75\xc9\x12",
++		.ilen   = 32,
++		.result = "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44",
++		.rlen   = 32,
++	}, {
++		.key    = "\x27\x18\x28\x18\x28\x45\x90\x45"
++			  "\x23\x53\x60\x28\x74\x71\x35\x26"
++			  "\x31\x41\x59\x26\x53\x58\x97\x93"
++			  "\x23\x84\x62\x64\x33\x83\x27\x95",
++		.klen   = 32,
++		.iv     = "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x53\x43\x2f\x73\x46\x14\xe8\xa0"
++			  "\xd4\xf2\x41\x65\x6d\x95\xb9\x1d"
++			  "\x12\xb5\x92\xd0\x5e\x8b\x85\x6d"
++			  "\x88\xba\xb8\x89\x0d\x2d\x81\x2b"
++			  "\x1a\x21\x28\x58\x3d\xcc\xb1\x5e"
++			  "\x53\x1c\xa1\x12\xe1\x03\xb7\x34"
++			  "\x37\xb8\x60\x28\x90\xcb\x16\x43"
++			  "\x9d\x47\x8a\xc4\x4f\x47\x74\xa4"
++			  "\x84\x9e\xb3\x3e\x5d\x4d\x95\x9b"
++			  "\x43\xcb\xf7\x03\xa9\xe9\x9b\xf4"
++			  "\xc5\x13\x3a\xa9\x2b\x18\xd8\xb6"
++			  "\x58\xbd\x2a\xb9\x79\x4a\x8e\x99"
++			  "\x9b\x57\x1a\x2e\xf8\x3e\xd2\x8b"
++			  "\x52\x31\x1c\x45\x73\xb6\x12\x8f"
++			  "\xda\xf0\xa1\x8d\x9f\xf4\xaa\x7b"
++			  "\xc1\x6b\xbc\xe3\x4b\xda\xd8\x91"
++			  "\xe3\x48\x73\x06\x08\xf6\x01\xf1"
++			  "\x41\xba\x46\x08\xbf\x22\x3d\x74"
++			  "\x44\x12\xbc\x43\x34\x66\x94\x68"
++			  "\xb2\xb7\x56\x26\xdc\x7f\x1e\xd2"
++			  "\xb2\xfc\x52\x50\xbf\x4c\x02\xf8"
++			  "\xb5\xca\x2f\xe9\x00\xab\x28\x6c"
++			  "\xbe\x9e\x27\x10\x2f\xea\x76\x70"
++			  "\xfa\x18\x6d\x56\x35\x37\xc5\xc1"
++			  "\x20\xef\xf4\xcb\x85\x05\x0f\xe2"
++			  "\xe9\x0a\xff\x1e\xad\x0f\xb2\x99"
++			  "\xc6\x4c\x8d\xd9\x97\xc6\x9e\x7c"
++			  "\xa0\x19\x29\x1e\xe7\x23\xda\x41"
++			  "\xe7\x18\x00\x24\xec\x02\xef\x96"
++			  "\xec\x51\xcc\xe9\x7c\xbc\x00\xa9"
++			  "\x99\x53\x78\x1d\xe4\xac\x9e\x42"
++			  "\xf2\x2f\xc4\x75\x17\x42\xa2\x7b"
++			  "\x0e\xc9\xf0\xd7\x79\xd9\x89\x33"
++			  "\x50\x4c\xaa\x5c\xc3\x65\xd0\x0b"
++			  "\xba\xb9\x5f\x94\x91\x07\xa3\xd2"
++			  "\x8c\xe3\xfc\xea\x9a\xad\xa4\xc2"
++			  "\x5a\xd9\x34\x99\x67\xb4\xbe\x75"
++			  "\x30\x55\x9f\x6a\x32\x1d\xb9\x00"
++			  "\xd3\x31\xac\xe9\x64\x62\x4c\x53"
++			  "\xd0\xcc\x4a\x06\xe5\x14\x76\x9e"
++			  "\xa4\x6c\x27\x2f\x93\x74\xca\x33"
++			  "\x5e\xf2\xfa\x1b\x6e\xc5\x06\x85"
++			  "\x1b\x39\xac\x53\xb2\xdd\x2e\xe7"
++			  "\x76\x3a\x92\xcf\x17\x0a\x22\xb6"
++			  "\x2f\x99\x28\xff\x93\xca\xd0\x66"
++			  "\x9b\xe9\x0c\xe2\x93\xd3\x59\x1e"
++			  "\x62\x9e\x54\x4d\xeb\x67\x70\x2c"
++			  "\x78\x44\x5c\x0a\xcc\x9b\xf9\xb5"
++			  "\x33\xe6\x84\x99\xcd\x32\xa6\x0c"
++			  "\x54\x38\x11\x55\xda\x05\x0b\xc2"
++			  "\xdc\x0a\x9b\x1e\xcb\xa1\x4e\x8a"
++			  "\x66\x38\x8f\x68\xc5\x21\x0f\x5e"
++			  "\x9e\x60\x3c\x46\x5e\xbe\x1a\xc1"
++			  "\x61\x45\xc0\x23\x69\x90\xab\xb9"
++			  "\x82\x43\xd6\x36\x8d\x7b\x88\x63"
++			  "\x39\x70\x09\x5b\x12\x63\xc3\x7a"
++			  "\xb1\x3e\xbf\x14\xf9\x8b\x1d\xb0"
++			  "\x39\xb7\x3a\xbb\x93\x59\xf4\x8b"
++			  "\x06\xbe\x89\xfb\x7b\xb8\xba\xf3"
++			  "\x9a\x40\xca\x17\x7c\x5d\x4f\xef"
++			  "\x7d\x8e\x0a\x93\x93\x87\xdf\xec"
++			  "\xdc\xa6\x42\x7b\x92\x7b\xdd\x9c"
++			  "\xed\x6c\x16\xb2\xce\x12\x70\x2d"
++			  "\x41\xee\x69\x24\xc2\x95\xa0\x18",
++		.ilen   = 512,
++		.result	= "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
++		.rlen   = 512,
++	}, {
++		.key	= "\x27\x18\x28\x18\x28\x45\x90\x45"
++			  "\x23\x53\x60\x28\x74\x71\x35\x26"
++			  "\x62\x49\x77\x57\x24\x70\x93\x69"
++			  "\x99\x59\x57\x49\x66\x96\x76\x27"
++			  "\x31\x41\x59\x26\x53\x58\x97\x93"
++			  "\x23\x84\x62\x64\x33\x83\x27\x95"
++			  "\x02\x88\x41\x97\x16\x93\x99\x37"
++			  "\x51\x05\x82\x09\x74\x94\x45\x92",
++		.klen	= 64,
++		.iv	= "\xff\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x15\xfb\x91\x93\xc1\x29\x04\xaf"
++			  "\x1b\xaf\x23\x4e\x5b\xfd\x81\x86"
++			  "\x76\xef\x3a\xef\xd7\x77\x36\x44"
++			  "\xda\xcb\xbb\x2e\xa9\x59\x56\xba"
++			  "\x31\x0c\x76\x3c\x2a\xe7\x6b\xba"
++			  "\xb4\xbd\x03\xe0\xd9\xe2\x3f\xea"
++			  "\xa0\x10\xf2\xa6\x0f\x1b\xf6\x75"
++			  "\x45\x90\x58\xbb\xce\xd6\xdf\x82"
++			  "\x96\x85\x64\x59\x00\x45\x19\x88"
++			  "\x81\xa1\x83\xa5\x05\x2b\x22\x91"
++			  "\xeb\x25\x24\xca\x9e\x15\x79\xff"
++			  "\x66\xb5\xa2\xef\x22\x4a\xbd\xd5"
++			  "\x80\x0d\x1e\x04\xd3\xb6\xd6\x79"
++			  "\x17\x31\xfb\xe7\x48\xc7\x57\x56"
++			  "\x03\x8f\x32\x5f\x8a\x08\x12\xbd"
++			  "\xd5\xcb\xba\x48\x2c\x49\xa5\xcc"
++			  "\xbb\xb6\x13\x1a\x43\x63\x57\x7c"
++			  "\xa5\xfc\xc1\x4c\x87\xfe\xab\x4a"
++			  "\x5e\x73\x42\x7c\x08\x04\x57\xf5"
++			  "\x56\xe0\x4f\xe6\x1d\xe2\xcc\x51"
++			  "\xdd\xb0\xc0\x3b\x23\xf3\x9e\x67"
++			  "\x27\x7d\x4b\x18\x4f\xdd\x71\xe7"
++			  "\x86\x6b\x71\x4f\xb1\xc4\x24\x44"
++			  "\x3e\x8b\x7e\xac\xdf\x01\x7d\xf7"
++			  "\x35\x01\xaf\x79\xfa\xeb\xd6\xae"
++			  "\x50\x47\xe9\x7f\x3d\xdf\x3f\x46"
++			  "\x99\x0d\xd0\x50\x1d\x5e\x4b\x6b"
++			  "\x2c\xd8\xe1\x59\xb2\xb9\x53\x9c"
++			  "\xa7\xc7\xba\xa9\xcf\xd6\xd5\xbe"
++			  "\xd9\x70\xd5\x88\x4f\x05\x89\x76"
++			  "\x5f\x95\x21\x12\x3f\x34\xe8\x4b"
++			  "\x5a\xba\xcf\xd4\x7d\x61\x1c\x59"
++			  "\xd9\xd2\xe8\x52\xb3\xa1\x64\x14"
++			  "\x0b\x88\xf3\x96\x0d\xc0\x6a\xca"
++			  "\xd0\xe4\x43\xe5\x1b\x1d\x35\xef"
++			  "\xac\x4c\x09\x09\xf4\x2a\x4b\x85"
++			  "\xd6\xf4\xb0\x4e\xbe\x49\x69\xf8"
++			  "\x9b\xc9\xc4\x7f\xac\x9f\x11\x62"
++			  "\xed\x6c\x93\x2c\x17\xc7\x13\xd0"
++			  "\x8c\xfd\xdd\x89\x73\xcf\x27\x4f"
++			  "\x19\x33\xf8\x72\xb7\x45\x91\x60"
++			  "\xbe\x30\x7d\x06\x43\x70\x98\xcb"
++			  "\x62\x12\x1d\x5a\x3d\xf2\x75\xe2"
++			  "\x3f\x3c\x26\xb6\xea\x6d\xf8\xe9"
++			  "\x1e\xad\x69\xae\x50\x50\xf6\x71"
++			  "\xda\x33\xc0\x21\x30\x42\xf9\xcd"
++			  "\x59\xb3\x5f\xde\xd5\xaa\x63\xe4"
++			  "\xee\x53\xc4\xce\xcf\xc3\x23\xcd"
++			  "\xd7\xf4\x40\x64\x35\x7e\x3a\x84"
++			  "\x76\xca\x52\x3c\x27\xdd\xd3\xa4"
++			  "\x1e\x9f\x80\x46\x37\xf6\x31\x29"
++			  "\x6d\xe9\x51\x87\xe6\x7c\xf6\xda"
++			  "\x98\x87\x61\x4c\x26\xc0\xdf\xd8"
++			  "\xe1\xf4\x42\x6e\xbb\x30\xe1\xe8"
++			  "\x48\x9d\x86\x0f\xea\x8f\x35\x74"
++			  "\xaa\x49\x99\x81\xd4\x4b\xe8\x77"
++			  "\x09\x27\xd2\x47\xae\xe7\x8e\x5e"
++			  "\xbe\x57\x53\xf7\x61\x15\x89\xf9"
++			  "\xe9\xcc\x51\xbc\x3e\x1a\x4c\x1b"
++			  "\x4d\xbb\x62\xba\xb3\x1a\xd0\xdf"
++			  "\x1c\xaa\x5c\x9f\x5b\x0f\x7b\xda"
++			  "\x69\x67\x2f\x23\xf0\x91\xd8\x09"
++			  "\x3f\xce\x51\x68\x6a\x20\x7c\x79"
++			  "\x59\x9d\x0d\x9f\xac\xac\x98\xc0",
++		.ilen	= 512,
++		.result	= "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
++		.rlen	= 512,
++		.also_non_np = 1,
++		.np	= 3,
++		.tap	= { 512 - 20, 4, 16 },
++	}
++};
 +
-+static void __exit speck_neon_module_exit(void)
-+{
-+	crypto_unregister_skciphers(speck_algs, ARRAY_SIZE(speck_algs));
-+}
-+
-+module_init(speck_neon_module_init);
-+module_exit(speck_neon_module_exit);
-+
-+MODULE_DESCRIPTION("Speck block cipher (NEON-accelerated)");
-+MODULE_LICENSE("GPL");
-+MODULE_AUTHOR("Eric Biggers <ebiggers@google.com>");
-+MODULE_ALIAS_CRYPTO("xts(speck128)");
-+MODULE_ALIAS_CRYPTO("xts-speck128-neon");
-+MODULE_ALIAS_CRYPTO("xts(speck64)");
-+MODULE_ALIAS_CRYPTO("xts-speck64-neon");
+ static const struct cipher_testvec speck64_enc_tv_template[] = {
+ 	{ /* Speck64/96 */
+ 		.key	= "\x10\x11\x12\x13\x08\x09\x0a\x0b"
 -- 
 2.16.0.rc1.238.g530d649a79-goog
-
