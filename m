@@ -1,836 +1,554 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-it0-f50.google.com ([209.85.214.50]:40604 "EHLO
-        mail-it0-f50.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1162101AbeBNSoT (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 14 Feb 2018 13:44:19 -0500
-Received: by mail-it0-f50.google.com with SMTP id v186so10909644itc.5
-        for <linux-fscrypt@vger.kernel.org>; Wed, 14 Feb 2018 10:44:18 -0800 (PST)
+Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@google.com>
-Subject: [PATCH v3 3/5] crypto: arm/speck - add NEON-accelerated implementation of Speck-XTS
-Date: Wed, 14 Feb 2018 10:42:21 -0800
-Message-Id: <20180214184223.254359-4-ebiggers@google.com>
-In-Reply-To: <20180214184223.254359-1-ebiggers@google.com>
-References: <20180214184223.254359-1-ebiggers@google.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
+Subject: [PATCH 1/5] crypto: add support for the Speck block cipher
+Date: Wed,  7 Feb 2018 16:09:57 -0800
+Message-Id: <20180208001001.19180-2-ebiggers@google.com>
+In-Reply-To: <20180208001001.19180-1-ebiggers@google.com>
+References: <20180208001001.19180-1-ebiggers@google.com>
+Sender: linux-crypto-owner@vger.kernel.org
 To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jeffrey Walton <noloader@gmail.com>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Greg Kaiser <gkaiser@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>, Alex Cope <alexcope@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers@google.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>, Alex Cope <alexcope@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Add an ARM NEON-accelerated implementation of Speck-XTS.  It operates on
-128-byte chunks at a time, i.e. 8 blocks for Speck128 or 16 blocks for
-Speck64.  Each 128-byte chunk goes through XTS preprocessing, then is
-encrypted/decrypted (doing one cipher round for all the blocks, then the
-next round, etc.), then goes through XTS postprocessing.
+Add a generic implementation of Speck, including the Speck128 and
+Speck64 variants.  Speck is a lightweight block cipher that can be much
+faster than AES on processors that don't have AES instructions.
 
-The performance depends on the processor but can be about 3 times faster
-than the generic code.  For example, on an ARMv7 processor we observe
-the following performance with Speck128/256-XTS:
+We are planning to offer Speck-XTS (probably Speck128/256-XTS) as an
+option for dm-crypt and fscrypt on Android, for low-end mobile devices
+with older CPUs such as ARMv7 which don't have the Cryptography
+Extensions.  Currently, such devices are unencrypted because AES is not
+fast enough, even when the NEON bit-sliced implementation of AES is
+used.  Other AES alternatives such as Blowfish, Twofish, Camellia,
+Cast6, and Serpent aren't fast enough either; it seems that only a
+modern ARX cipher can provide sufficient performance on these devices.
 
-    xts-speck128-neon:     Encryption 107.9 MB/s, Decryption 108.1 MB/s
-    xts(speck128-generic): Encryption  32.1 MB/s, Decryption  36.6 MB/s
+This is a replacement for our original proposal
+(https://patchwork.kernel.org/patch/10101451/) which was to offer
+ChaCha20 for these devices.  However, the use of a stream cipher for
+disk/file encryption with no space to store nonces would have been much
+more insecure than we thought initially, given that it would be used on
+top of flash storage as well as potentially on top of F2FS, neither of
+which is guaranteed to overwrite data in-place.
 
-In comparison to AES-256-XTS without the Cryptography Extensions:
+Speck has been somewhat controversial due to its origin.  Nevertheless,
+it has a straightforward design (it's an ARX cipher), and it appears to
+be the leading software-optimized lightweight block cipher currently,
+with the most cryptanalysis.  It's also easy to implement without side
+channels, unlike AES.  Moreover, we only intend Speck to be used when
+the status quo is no encryption, due to AES not being fast enough.
 
-    xts-aes-neonbs:        Encryption  41.2 MB/s, Decryption  36.7 MB/s
-    xts(aes-asm):          Encryption  31.7 MB/s, Decryption  30.8 MB/s
-    xts(aes-generic):      Encryption  21.2 MB/s, Decryption  20.9 MB/s
-
-Speck64/128-XTS is even faster:
-
-    xts-speck64-neon:      Encryption 138.6 MB/s, Decryption 139.1 MB/s
-
-Note that as with the generic code, only the Speck128 and Speck64
-variants are supported.  Also, for now only the XTS mode of operation is
-supported, to target the disk and file encryption use cases.  The NEON
-code also only handles the portion of the data that is evenly divisible
-into 128-byte chunks, with any remainder handled by a C fallback.  Of
-course, other modes of operation could be added later if needed, and/or
-the NEON code could be updated to handle other buffer sizes.
-
-The XTS specification is only defined for AES which has a 128-bit block
-size, so for the GF(2^64) math needed for Speck64-XTS we use the
-reducing polynomial 'x^64 + x^4 + x^3 + x + 1' given by the original XEX
-paper.  Of course, when possible users should use Speck128-XTS, but even
-that may be too slow on some processors; Speck64-XTS can be faster.
+We've also considered a novel length-preserving encryption mode based on
+ChaCha20 and Poly1305.  While theoretically attractive, such a mode
+would be a brand new crypto construction and would be more complicated
+and difficult to implement efficiently in comparison to Speck-XTS.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- arch/arm/crypto/Kconfig           |   6 +
- arch/arm/crypto/Makefile          |   2 +
- arch/arm/crypto/speck-neon-core.S | 432 ++++++++++++++++++++++++++++++
- arch/arm/crypto/speck-neon-glue.c | 288 ++++++++++++++++++++
- 4 files changed, 728 insertions(+)
- create mode 100644 arch/arm/crypto/speck-neon-core.S
- create mode 100644 arch/arm/crypto/speck-neon-glue.c
+ crypto/Kconfig   |  14 +++
+ crypto/Makefile  |   1 +
+ crypto/speck.c   | 294 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ crypto/testmgr.c |  18 ++++
+ crypto/testmgr.h | 120 +++++++++++++++++++++++
+ 5 files changed, 447 insertions(+)
+ create mode 100644 crypto/speck.c
 
-diff --git a/arch/arm/crypto/Kconfig b/arch/arm/crypto/Kconfig
-index b8e69fe282b8..925d1364727a 100644
---- a/arch/arm/crypto/Kconfig
-+++ b/arch/arm/crypto/Kconfig
-@@ -121,4 +121,10 @@ config CRYPTO_CHACHA20_NEON
- 	select CRYPTO_BLKCIPHER
- 	select CRYPTO_CHACHA20
+diff --git a/crypto/Kconfig b/crypto/Kconfig
+index b75264b09a46..558eff07b799 100644
+--- a/crypto/Kconfig
++++ b/crypto/Kconfig
+@@ -1508,6 +1508,20 @@ config CRYPTO_SERPENT_AVX2_X86_64
+ 	  See also:
+ 	  <http://www.cl.cam.ac.uk/~rja14/serpent.html>
  
-+config CRYPTO_SPECK_NEON
-+	tristate "NEON accelerated Speck cipher algorithms"
-+	depends on KERNEL_MODE_NEON
-+	select CRYPTO_BLKCIPHER
-+	select CRYPTO_SPECK
++config CRYPTO_SPECK
++	tristate "Speck cipher algorithm"
++	select CRYPTO_ALGAPI
++	help
++	  Speck is a lightweight block cipher that is tuned for optimal
++	  performance in software (rather than hardware).
 +
- endif
-diff --git a/arch/arm/crypto/Makefile b/arch/arm/crypto/Makefile
-index 30ef8e291271..a758107c5525 100644
---- a/arch/arm/crypto/Makefile
-+++ b/arch/arm/crypto/Makefile
-@@ -10,6 +10,7 @@ obj-$(CONFIG_CRYPTO_SHA1_ARM_NEON) += sha1-arm-neon.o
- obj-$(CONFIG_CRYPTO_SHA256_ARM) += sha256-arm.o
- obj-$(CONFIG_CRYPTO_SHA512_ARM) += sha512-arm.o
- obj-$(CONFIG_CRYPTO_CHACHA20_NEON) += chacha20-neon.o
-+obj-$(CONFIG_CRYPTO_SPECK_NEON) += speck-neon.o
- 
- ce-obj-$(CONFIG_CRYPTO_AES_ARM_CE) += aes-arm-ce.o
- ce-obj-$(CONFIG_CRYPTO_SHA1_ARM_CE) += sha1-arm-ce.o
-@@ -53,6 +54,7 @@ ghash-arm-ce-y	:= ghash-ce-core.o ghash-ce-glue.o
- crct10dif-arm-ce-y	:= crct10dif-ce-core.o crct10dif-ce-glue.o
- crc32-arm-ce-y:= crc32-ce-core.o crc32-ce-glue.o
- chacha20-neon-y := chacha20-neon-core.o chacha20-neon-glue.o
-+speck-neon-y := speck-neon-core.o speck-neon-glue.o
- 
- quiet_cmd_perl = PERL    $@
-       cmd_perl = $(PERL) $(<) > $(@)
-diff --git a/arch/arm/crypto/speck-neon-core.S b/arch/arm/crypto/speck-neon-core.S
++	  Speck may not be as secure as AES, and should only be used on systems
++	  where AES is not fast enough.
++
++	  See also: <https://eprint.iacr.org/2013/404.pdf>
++
++	  If unsure, say N.
++
+ config CRYPTO_TEA
+ 	tristate "TEA, XTEA and XETA cipher algorithms"
+ 	select CRYPTO_ALGAPI
+diff --git a/crypto/Makefile b/crypto/Makefile
+index cdbc03b35510..ba6019471447 100644
+--- a/crypto/Makefile
++++ b/crypto/Makefile
+@@ -110,6 +110,7 @@ obj-$(CONFIG_CRYPTO_TEA) += tea.o
+ obj-$(CONFIG_CRYPTO_KHAZAD) += khazad.o
+ obj-$(CONFIG_CRYPTO_ANUBIS) += anubis.o
+ obj-$(CONFIG_CRYPTO_SEED) += seed.o
++obj-$(CONFIG_CRYPTO_SPECK) += speck.o
+ obj-$(CONFIG_CRYPTO_SALSA20) += salsa20_generic.o
+ obj-$(CONFIG_CRYPTO_CHACHA20) += chacha20_generic.o
+ obj-$(CONFIG_CRYPTO_POLY1305) += poly1305_generic.o
+diff --git a/crypto/speck.c b/crypto/speck.c
 new file mode 100644
-index 000000000000..3c1e203e53b9
+index 000000000000..89860688bf00
 --- /dev/null
-+++ b/arch/arm/crypto/speck-neon-core.S
-@@ -0,0 +1,432 @@
++++ b/crypto/speck.c
+@@ -0,0 +1,294 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
-+ * NEON-accelerated implementation of Speck128-XTS and Speck64-XTS
++ * Speck: a lightweight block cipher
 + *
 + * Copyright (c) 2018 Google, Inc
 + *
-+ * Author: Eric Biggers <ebiggers@google.com>
++ * Speck has 10 variants, including 5 block sizes.  For now we only implement
++ * the variants Speck128/128, Speck128/192, Speck128/256, Speck64/96, and
++ * Speck64/128.   Speck${B}/${K} denotes the variant with a block size of B bits
++ * and a key size of K bits.  The Speck128 variants are believed to be the most
++ * secure variants, and they use the same block size and key sizes as AES.  The
++ * Speck64 variants are less secure, but on 32-bit processors are usually
++ * faster.  The remaining variants (Speck32, Speck48, and Speck96) are even less
++ * secure and/or not as well suited for implementation on either 32-bit or
++ * 64-bit processors, so are omitted.
++ *
++ * Reference: "The Simon and Speck Families of Lightweight Block Ciphers"
++ * https://eprint.iacr.org/2013/404.pdf
 + */
 +
-+#include <linux/linkage.h>
-+
-+	.text
-+	.fpu		neon
-+
-+	// arguments
-+	ROUND_KEYS	.req	r0	// const {u64,u32} *round_keys
-+	NROUNDS		.req	r1	// int nrounds
-+	DST		.req	r2	// void *dst
-+	SRC		.req	r3	// const void *src
-+	NBYTES		.req	r4	// unsigned int nbytes
-+	TWEAK		.req	r5	// void *tweak
-+
-+	// registers which hold the data being encrypted/decrypted
-+	X0		.req	q0
-+	X0_L		.req	d0
-+	X0_H		.req	d1
-+	Y0		.req	q1
-+	Y0_H		.req	d3
-+	X1		.req	q2
-+	X1_L		.req	d4
-+	X1_H		.req	d5
-+	Y1		.req	q3
-+	Y1_H		.req	d7
-+	X2		.req	q4
-+	X2_L		.req	d8
-+	X2_H		.req	d9
-+	Y2		.req	q5
-+	Y2_H		.req	d11
-+	X3		.req	q6
-+	X3_L		.req	d12
-+	X3_H		.req	d13
-+	Y3		.req	q7
-+	Y3_H		.req	d15
-+
-+	// the round key, duplicated in all lanes
-+	ROUND_KEY	.req	q8
-+	ROUND_KEY_L	.req	d16
-+	ROUND_KEY_H	.req	d17
-+
-+	// index vector for vtbl-based 8-bit rotates
-+	ROTATE_TABLE	.req	d18
-+
-+	// multiplication table for updating XTS tweaks
-+	GF128MUL_TABLE	.req	d19
-+	GF64MUL_TABLE	.req	d19
-+
-+	// current XTS tweak value(s)
-+	TWEAKV		.req	q10
-+	TWEAKV_L	.req	d20
-+	TWEAKV_H	.req	d21
-+
-+	TMP0		.req	q12
-+	TMP0_L		.req	d24
-+	TMP0_H		.req	d25
-+	TMP1		.req	q13
-+	TMP2		.req	q14
-+	TMP3		.req	q15
-+
-+	.align		4
-+.Lror64_8_table:
-+	.byte		1, 2, 3, 4, 5, 6, 7, 0
-+.Lror32_8_table:
-+	.byte		1, 2, 3, 0, 5, 6, 7, 4
-+.Lrol64_8_table:
-+	.byte		7, 0, 1, 2, 3, 4, 5, 6
-+.Lrol32_8_table:
-+	.byte		3, 0, 1, 2, 7, 4, 5, 6
-+.Lgf128mul_table:
-+	.byte		0, 0x87
-+	.fill		14
-+.Lgf64mul_table:
-+	.byte		0, 0x1b, (0x1b << 1), (0x1b << 1) ^ 0x1b
-+	.fill		12
-+
-+/*
-+ * _speck_round_128bytes() - Speck encryption round on 128 bytes at a time
-+ *
-+ * Do one Speck encryption round on the 128 bytes (8 blocks for Speck128, 16 for
-+ * Speck64) stored in X0-X3 and Y0-Y3, using the round key stored in all lanes
-+ * of ROUND_KEY.  'n' is the lane size: 64 for Speck128, or 32 for Speck64.
-+ *
-+ * The 8-bit rotates are implemented using vtbl instead of vshr + vsli because
-+ * the vtbl approach is faster on some processors and the same speed on others.
-+ */
-+.macro _speck_round_128bytes	n
-+
-+	// x = ror(x, 8)
-+	vtbl.8		X0_L, {X0_L}, ROTATE_TABLE
-+	vtbl.8		X0_H, {X0_H}, ROTATE_TABLE
-+	vtbl.8		X1_L, {X1_L}, ROTATE_TABLE
-+	vtbl.8		X1_H, {X1_H}, ROTATE_TABLE
-+	vtbl.8		X2_L, {X2_L}, ROTATE_TABLE
-+	vtbl.8		X2_H, {X2_H}, ROTATE_TABLE
-+	vtbl.8		X3_L, {X3_L}, ROTATE_TABLE
-+	vtbl.8		X3_H, {X3_H}, ROTATE_TABLE
-+
-+	// x += y
-+	vadd.u\n	X0, Y0
-+	vadd.u\n	X1, Y1
-+	vadd.u\n	X2, Y2
-+	vadd.u\n	X3, Y3
-+
-+	// x ^= k
-+	veor		X0, ROUND_KEY
-+	veor		X1, ROUND_KEY
-+	veor		X2, ROUND_KEY
-+	veor		X3, ROUND_KEY
-+
-+	// y = rol(y, 3)
-+	vshl.u\n	TMP0, Y0, #3
-+	vshl.u\n	TMP1, Y1, #3
-+	vshl.u\n	TMP2, Y2, #3
-+	vshl.u\n	TMP3, Y3, #3
-+	vsri.u\n	TMP0, Y0, #(\n - 3)
-+	vsri.u\n	TMP1, Y1, #(\n - 3)
-+	vsri.u\n	TMP2, Y2, #(\n - 3)
-+	vsri.u\n	TMP3, Y3, #(\n - 3)
-+
-+	// y ^= x
-+	veor		Y0, TMP0, X0
-+	veor		Y1, TMP1, X1
-+	veor		Y2, TMP2, X2
-+	veor		Y3, TMP3, X3
-+.endm
-+
-+/*
-+ * _speck_unround_128bytes() - Speck decryption round on 128 bytes at a time
-+ *
-+ * This is the inverse of _speck_round_128bytes().
-+ */
-+.macro _speck_unround_128bytes	n
-+
-+	// y ^= x
-+	veor		TMP0, Y0, X0
-+	veor		TMP1, Y1, X1
-+	veor		TMP2, Y2, X2
-+	veor		TMP3, Y3, X3
-+
-+	// y = ror(y, 3)
-+	vshr.u\n	Y0, TMP0, #3
-+	vshr.u\n	Y1, TMP1, #3
-+	vshr.u\n	Y2, TMP2, #3
-+	vshr.u\n	Y3, TMP3, #3
-+	vsli.u\n	Y0, TMP0, #(\n - 3)
-+	vsli.u\n	Y1, TMP1, #(\n - 3)
-+	vsli.u\n	Y2, TMP2, #(\n - 3)
-+	vsli.u\n	Y3, TMP3, #(\n - 3)
-+
-+	// x ^= k
-+	veor		X0, ROUND_KEY
-+	veor		X1, ROUND_KEY
-+	veor		X2, ROUND_KEY
-+	veor		X3, ROUND_KEY
-+
-+	// x -= y
-+	vsub.u\n	X0, Y0
-+	vsub.u\n	X1, Y1
-+	vsub.u\n	X2, Y2
-+	vsub.u\n	X3, Y3
-+
-+	// x = rol(x, 8);
-+	vtbl.8		X0_L, {X0_L}, ROTATE_TABLE
-+	vtbl.8		X0_H, {X0_H}, ROTATE_TABLE
-+	vtbl.8		X1_L, {X1_L}, ROTATE_TABLE
-+	vtbl.8		X1_H, {X1_H}, ROTATE_TABLE
-+	vtbl.8		X2_L, {X2_L}, ROTATE_TABLE
-+	vtbl.8		X2_H, {X2_H}, ROTATE_TABLE
-+	vtbl.8		X3_L, {X3_L}, ROTATE_TABLE
-+	vtbl.8		X3_H, {X3_H}, ROTATE_TABLE
-+.endm
-+
-+.macro _xts128_precrypt_one	dst_reg, tweak_buf, tmp
-+
-+	// Load the next source block
-+	vld1.8		{\dst_reg}, [SRC]!
-+
-+	// Save the current tweak in the tweak buffer
-+	vst1.8		{TWEAKV}, [\tweak_buf:128]!
-+
-+	// XOR the next source block with the current tweak
-+	veor		\dst_reg, TWEAKV
-+
-+	/*
-+	 * Calculate the next tweak by multiplying the current one by x,
-+	 * modulo p(x) = x^128 + x^7 + x^2 + x + 1.
-+	 */
-+	vshr.u64	\tmp, TWEAKV, #63
-+	vshl.u64	TWEAKV, #1
-+	veor		TWEAKV_H, \tmp\()_L
-+	vtbl.8		\tmp\()_H, {GF128MUL_TABLE}, \tmp\()_H
-+	veor		TWEAKV_L, \tmp\()_H
-+.endm
-+
-+.macro _xts64_precrypt_two	dst_reg, tweak_buf, tmp
-+
-+	// Load the next two source blocks
-+	vld1.8		{\dst_reg}, [SRC]!
-+
-+	// Save the current two tweaks in the tweak buffer
-+	vst1.8		{TWEAKV}, [\tweak_buf:128]!
-+
-+	// XOR the next two source blocks with the current two tweaks
-+	veor		\dst_reg, TWEAKV
-+
-+	/*
-+	 * Calculate the next two tweaks by multiplying the current ones by x^2,
-+	 * modulo p(x) = x^64 + x^4 + x^3 + x + 1.
-+	 */
-+	vshr.u64	\tmp, TWEAKV, #62
-+	vshl.u64	TWEAKV, #2
-+	vtbl.8		\tmp\()_L, {GF64MUL_TABLE}, \tmp\()_L
-+	vtbl.8		\tmp\()_H, {GF64MUL_TABLE}, \tmp\()_H
-+	veor		TWEAKV, \tmp
-+.endm
-+
-+/*
-+ * _speck_xts_crypt() - Speck-XTS encryption/decryption
-+ *
-+ * Encrypt or decrypt NBYTES bytes of data from the SRC buffer to the DST buffer
-+ * using Speck-XTS, specifically the variant with a block size of '2n' and round
-+ * count given by NROUNDS.  The expanded round keys are given in ROUND_KEYS, and
-+ * the current XTS tweak value is given in TWEAK.  It's assumed that NBYTES is a
-+ * nonzero multiple of 128.
-+ */
-+.macro _speck_xts_crypt	n, decrypting
-+	push		{r4-r7}
-+	mov		r7, sp
-+
-+	/*
-+	 * The first four parameters were passed in registers r0-r3.  Load the
-+	 * additional parameters, which were passed on the stack.
-+	 */
-+	ldr		NBYTES, [sp, #16]
-+	ldr		TWEAK, [sp, #20]
-+
-+	/*
-+	 * If decrypting, modify the ROUND_KEYS parameter to point to the last
-+	 * round key rather than the first, since for decryption the round keys
-+	 * are used in reverse order.
-+	 */
-+.if \decrypting
-+.if \n == 64
-+	add		ROUND_KEYS, ROUND_KEYS, NROUNDS, lsl #3
-+	sub		ROUND_KEYS, #8
-+.else
-+	add		ROUND_KEYS, ROUND_KEYS, NROUNDS, lsl #2
-+	sub		ROUND_KEYS, #4
-+.endif
-+.endif
-+
-+	// Load the index vector for vtbl-based 8-bit rotates
-+.if \decrypting
-+	ldr		r12, =.Lrol\n\()_8_table
-+.else
-+	ldr		r12, =.Lror\n\()_8_table
-+.endif
-+	vld1.8		{ROTATE_TABLE}, [r12:64]
-+
-+	// One-time XTS preparation
-+
-+	/*
-+	 * Allocate stack space to store 128 bytes worth of tweaks.  For
-+	 * performance, this space is aligned to a 16-byte boundary so that we
-+	 * can use the load/store instructions that declare 16-byte alignment.
-+	 */
-+	sub		sp, #128
-+	bic		sp, #0xf
-+
-+.if \n == 64
-+	// Load first tweak
-+	vld1.8		{TWEAKV}, [TWEAK]
-+
-+	// Load GF(2^128) multiplication table
-+	ldr		r12, =.Lgf128mul_table
-+	vld1.8		{GF128MUL_TABLE}, [r12:64]
-+.else
-+	// Load first tweak
-+	vld1.8		{TWEAKV_L}, [TWEAK]
-+
-+	// Load GF(2^64) multiplication table
-+	ldr		r12, =.Lgf64mul_table
-+	vld1.8		{GF64MUL_TABLE}, [r12:64]
-+
-+	// Calculate second tweak, packing it together with the first
-+	vshr.u64	TMP0_L, TWEAKV_L, #63
-+	vtbl.u8		TMP0_L, {GF64MUL_TABLE}, TMP0_L
-+	vshl.u64	TWEAKV_H, TWEAKV_L, #1
-+	veor		TWEAKV_H, TMP0_L
-+.endif
-+
-+.Lnext_128bytes_\@:
-+
-+	/*
-+	 * Load the source blocks into {X,Y}[0-3], XOR them with their XTS tweak
-+	 * values, and save the tweaks on the stack for later.  Then
-+	 * de-interleave the 'x' and 'y' elements of each block, i.e. make it so
-+	 * that the X[0-3] registers contain only the second halves of blocks,
-+	 * and the Y[0-3] registers contain only the first halves of blocks.
-+	 * (Speck uses the order (y, x) rather than the more intuitive (x, y).)
-+	 */
-+	mov		r12, sp
-+.if \n == 64
-+	_xts128_precrypt_one	X0, r12, TMP0
-+	_xts128_precrypt_one	Y0, r12, TMP0
-+	_xts128_precrypt_one	X1, r12, TMP0
-+	_xts128_precrypt_one	Y1, r12, TMP0
-+	_xts128_precrypt_one	X2, r12, TMP0
-+	_xts128_precrypt_one	Y2, r12, TMP0
-+	_xts128_precrypt_one	X3, r12, TMP0
-+	_xts128_precrypt_one	Y3, r12, TMP0
-+	vswp		X0_L, Y0_H
-+	vswp		X1_L, Y1_H
-+	vswp		X2_L, Y2_H
-+	vswp		X3_L, Y3_H
-+.else
-+	_xts64_precrypt_two	X0, r12, TMP0
-+	_xts64_precrypt_two	Y0, r12, TMP0
-+	_xts64_precrypt_two	X1, r12, TMP0
-+	_xts64_precrypt_two	Y1, r12, TMP0
-+	_xts64_precrypt_two	X2, r12, TMP0
-+	_xts64_precrypt_two	Y2, r12, TMP0
-+	_xts64_precrypt_two	X3, r12, TMP0
-+	_xts64_precrypt_two	Y3, r12, TMP0
-+	vuzp.32		Y0, X0
-+	vuzp.32		Y1, X1
-+	vuzp.32		Y2, X2
-+	vuzp.32		Y3, X3
-+.endif
-+
-+	// Do the cipher rounds
-+
-+	mov		r12, ROUND_KEYS
-+	mov		r6, NROUNDS
-+
-+.Lnext_round_\@:
-+.if \decrypting
-+.if \n == 64
-+	vld1.64		ROUND_KEY_L, [r12]
-+	sub		r12, #8
-+	vmov		ROUND_KEY_H, ROUND_KEY_L
-+.else
-+	vld1.32		{ROUND_KEY_L[],ROUND_KEY_H[]}, [r12]
-+	sub		r12, #4
-+.endif
-+	_speck_unround_128bytes	\n
-+.else
-+.if \n == 64
-+	vld1.64		ROUND_KEY_L, [r12]!
-+	vmov		ROUND_KEY_H, ROUND_KEY_L
-+.else
-+	vld1.32		{ROUND_KEY_L[],ROUND_KEY_H[]}, [r12]!
-+.endif
-+	_speck_round_128bytes	\n
-+.endif
-+	subs		r6, r6, #1
-+	bne		.Lnext_round_\@
-+
-+	// Re-interleave the 'x' and 'y' elements of each block
-+.if \n == 64
-+	vswp		X0_L, Y0_H
-+	vswp		X1_L, Y1_H
-+	vswp		X2_L, Y2_H
-+	vswp		X3_L, Y3_H
-+.else
-+	vzip.32		Y0, X0
-+	vzip.32		Y1, X1
-+	vzip.32		Y2, X2
-+	vzip.32		Y3, X3
-+.endif
-+
-+	// XOR the encrypted/decrypted blocks with the tweaks we saved earlier
-+	mov		r12, sp
-+	vld1.8		{TMP0, TMP1}, [r12:128]!
-+	vld1.8		{TMP2, TMP3}, [r12:128]!
-+	veor		X0, TMP0
-+	veor		Y0, TMP1
-+	veor		X1, TMP2
-+	veor		Y1, TMP3
-+	vld1.8		{TMP0, TMP1}, [r12:128]!
-+	vld1.8		{TMP2, TMP3}, [r12:128]!
-+	veor		X2, TMP0
-+	veor		Y2, TMP1
-+	veor		X3, TMP2
-+	veor		Y3, TMP3
-+
-+	// Store the ciphertext in the destination buffer
-+	vst1.8		{X0, Y0}, [DST]!
-+	vst1.8		{X1, Y1}, [DST]!
-+	vst1.8		{X2, Y2}, [DST]!
-+	vst1.8		{X3, Y3}, [DST]!
-+
-+	// Continue if there are more 128-byte chunks remaining, else return
-+	subs		NBYTES, #128
-+	bne		.Lnext_128bytes_\@
-+
-+	// Store the next tweak
-+.if \n == 64
-+	vst1.8		{TWEAKV}, [TWEAK]
-+.else
-+	vst1.8		{TWEAKV_L}, [TWEAK]
-+.endif
-+
-+	mov		sp, r7
-+	pop		{r4-r7}
-+	bx		lr
-+.endm
-+
-+ENTRY(speck128_xts_encrypt_neon)
-+	_speck_xts_crypt	n=64, decrypting=0
-+ENDPROC(speck128_xts_encrypt_neon)
-+
-+ENTRY(speck128_xts_decrypt_neon)
-+	_speck_xts_crypt	n=64, decrypting=1
-+ENDPROC(speck128_xts_decrypt_neon)
-+
-+ENTRY(speck64_xts_encrypt_neon)
-+	_speck_xts_crypt	n=32, decrypting=0
-+ENDPROC(speck64_xts_encrypt_neon)
-+
-+ENTRY(speck64_xts_decrypt_neon)
-+	_speck_xts_crypt	n=32, decrypting=1
-+ENDPROC(speck64_xts_decrypt_neon)
-diff --git a/arch/arm/crypto/speck-neon-glue.c b/arch/arm/crypto/speck-neon-glue.c
-new file mode 100644
-index 000000000000..f012c3ea998f
---- /dev/null
-+++ b/arch/arm/crypto/speck-neon-glue.c
-@@ -0,0 +1,288 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * NEON-accelerated implementation of Speck128-XTS and Speck64-XTS
-+ *
-+ * Copyright (c) 2018 Google, Inc
-+ *
-+ * Note: the NIST recommendation for XTS only specifies a 128-bit block size,
-+ * but a 64-bit version (needed for Speck64) is fairly straightforward; the math
-+ * is just done in GF(2^64) instead of GF(2^128), with the reducing polynomial
-+ * x^64 + x^4 + x^3 + x + 1 from the original XEX paper (Rogaway, 2004:
-+ * "Efficient Instantiations of Tweakable Blockciphers and Refinements to Modes
-+ * OCB and PMAC"), represented as 0x1B.
-+ */
-+
-+#include <asm/hwcap.h>
-+#include <asm/neon.h>
-+#include <asm/simd.h>
-+#include <crypto/algapi.h>
-+#include <crypto/gf128mul.h>
-+#include <crypto/internal/skcipher.h>
-+#include <crypto/speck.h>
-+#include <crypto/xts.h>
-+#include <linux/kernel.h>
++#include <asm/unaligned.h>
++#include <linux/bitops.h>
++#include <linux/crypto.h>
++#include <linux/init.h>
 +#include <linux/module.h>
-+
-+/* The assembly functions only handle multiples of 128 bytes */
-+#define SPECK_NEON_CHUNK_SIZE	128
 +
 +/* Speck128 */
 +
-+struct speck128_xts_tfm_ctx {
-+	struct speck128_tfm_ctx main_key;
-+	struct speck128_tfm_ctx tweak_key;
++#define SPECK128_BLOCK_SIZE	16
++
++#define SPECK128_128_KEY_SIZE	16
++#define SPECK128_128_NROUNDS	32
++
++#define SPECK128_192_KEY_SIZE	24
++#define SPECK128_192_NROUNDS	33
++
++#define SPECK128_256_KEY_SIZE	32
++#define SPECK128_256_NROUNDS	34
++
++struct speck128_tfm_ctx {
++	u64 round_keys[SPECK128_256_NROUNDS];
++	int nrounds;
 +};
 +
-+asmlinkage void speck128_xts_encrypt_neon(const u64 *round_keys, int nrounds,
-+					  void *dst, const void *src,
-+					  unsigned int nbytes, void *tweak);
-+
-+asmlinkage void speck128_xts_decrypt_neon(const u64 *round_keys, int nrounds,
-+					  void *dst, const void *src,
-+					  unsigned int nbytes, void *tweak);
-+
-+typedef void (*speck128_crypt_one_t)(const struct speck128_tfm_ctx *,
-+				     u8 *, const u8 *);
-+typedef void (*speck128_xts_crypt_many_t)(const u64 *, int, void *,
-+					  const void *, unsigned int, void *);
-+
-+static __always_inline int
-+__speck128_xts_crypt(struct skcipher_request *req,
-+		     speck128_crypt_one_t crypt_one,
-+		     speck128_xts_crypt_many_t crypt_many)
++static __always_inline void speck128_round(u64 *x, u64 *y, u64 k)
 +{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	const struct speck128_xts_tfm_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct skcipher_walk walk;
-+	le128 tweak;
-+	int err;
++	*x = ror64(*x, 8);
++	*x += *y;
++	*x ^= k;
++	*y = rol64(*y, 3);
++	*y ^= *x;
++}
 +
-+	err = skcipher_walk_virt(&walk, req, true);
++static __always_inline void speck128_unround(u64 *x, u64 *y, u64 k)
++{
++	*y ^= *x;
++	*y = ror64(*y, 3);
++	*x ^= k;
++	*x -= *y;
++	*x = rol64(*x, 8);
++}
 +
-+	crypto_speck128_encrypt(&ctx->tweak_key, (u8 *)&tweak, walk.iv);
++static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++{
++	const struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
++	u64 x = get_unaligned_le64(in + 0);
++	u64 y = get_unaligned_le64(in + 8);
++	int i;
 +
-+	while (walk.nbytes > 0) {
-+		unsigned int nbytes = walk.nbytes;
-+		u8 *dst = walk.dst.virt.addr;
-+		const u8 *src = walk.src.virt.addr;
++	for (i = 0; i < ctx->nrounds; i++)
++		speck128_round(&x, &y, ctx->round_keys[i]);
 +
-+		if (nbytes >= SPECK_NEON_CHUNK_SIZE && may_use_simd()) {
-+			unsigned int count;
++	put_unaligned_le64(x, out + 0);
++	put_unaligned_le64(y, out + 8);
++}
 +
-+			count = round_down(nbytes, SPECK_NEON_CHUNK_SIZE);
-+			kernel_neon_begin();
-+			(*crypt_many)(ctx->main_key.round_keys,
-+				      ctx->main_key.nrounds,
-+				      dst, src, count, &tweak);
-+			kernel_neon_end();
-+			dst += count;
-+			src += count;
-+			nbytes -= count;
++static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++{
++	const struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
++	u64 x = get_unaligned_le64(in + 0);
++	u64 y = get_unaligned_le64(in + 8);
++	int i;
++
++	for (i = ctx->nrounds - 1; i >= 0; i--)
++		speck128_unround(&x, &y, ctx->round_keys[i]);
++
++	put_unaligned_le64(x, out + 0);
++	put_unaligned_le64(y, out + 8);
++}
++
++static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
++			   unsigned int keylen)
++{
++	struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
++	u64 l[3];
++	u64 k;
++	int i;
++
++	switch (keylen) {
++	case SPECK128_128_KEY_SIZE:
++		l[0] = get_unaligned_le64(key + 0);
++		k = get_unaligned_le64(key + 8);
++		ctx->nrounds = SPECK128_128_NROUNDS;
++		for (i = 0; i < ctx->nrounds; i++) {
++			ctx->round_keys[i] = k;
++			speck128_round(&l[0], &k, i);
 +		}
-+
-+		/* Handle any remainder with generic code */
-+		while (nbytes >= sizeof(tweak)) {
-+			le128_xor((le128 *)dst, (const le128 *)src, &tweak);
-+			(*crypt_one)(&ctx->main_key, dst, dst);
-+			le128_xor((le128 *)dst, (const le128 *)dst, &tweak);
-+			gf128mul_x_ble(&tweak, &tweak);
-+
-+			dst += sizeof(tweak);
-+			src += sizeof(tweak);
-+			nbytes -= sizeof(tweak);
++		break;
++	case SPECK128_192_KEY_SIZE:
++		l[1] = get_unaligned_le64(key + 0);
++		l[0] = get_unaligned_le64(key + 8);
++		k = get_unaligned_le64(key + 16);
++		ctx->nrounds = SPECK128_192_NROUNDS;
++		for (i = 0; i < ctx->nrounds; i++) {
++			ctx->round_keys[i] = k;
++			speck128_round(&l[i % 2], &k, i);
 +		}
-+		err = skcipher_walk_done(&walk, nbytes);
++		break;
++	case SPECK128_256_KEY_SIZE:
++		l[2] = get_unaligned_le64(key + 0);
++		l[1] = get_unaligned_le64(key + 8);
++		l[0] = get_unaligned_le64(key + 16);
++		k = get_unaligned_le64(key + 24);
++		ctx->nrounds = SPECK128_256_NROUNDS;
++		for (i = 0; i < ctx->nrounds; i++) {
++			ctx->round_keys[i] = k;
++			speck128_round(&l[i % 3], &k, i);
++		}
++		break;
++	default:
++		return -EINVAL;
 +	}
 +
-+	return err;
-+}
-+
-+static int speck128_xts_encrypt(struct skcipher_request *req)
-+{
-+	return __speck128_xts_crypt(req, crypto_speck128_encrypt,
-+				    speck128_xts_encrypt_neon);
-+}
-+
-+static int speck128_xts_decrypt(struct skcipher_request *req)
-+{
-+	return __speck128_xts_crypt(req, crypto_speck128_decrypt,
-+				    speck128_xts_decrypt_neon);
-+}
-+
-+static int speck128_xts_setkey(struct crypto_skcipher *tfm, const u8 *key,
-+			       unsigned int keylen)
-+{
-+	struct speck128_xts_tfm_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err;
-+
-+	err = xts_verify_key(tfm, key, keylen);
-+	if (err)
-+		return err;
-+
-+	keylen /= 2;
-+
-+	err = crypto_speck128_setkey(&ctx->main_key, key, keylen);
-+	if (err)
-+		return err;
-+
-+	return crypto_speck128_setkey(&ctx->tweak_key, key + keylen, keylen);
++	return 0;
 +}
 +
 +/* Speck64 */
 +
-+struct speck64_xts_tfm_ctx {
-+	struct speck64_tfm_ctx main_key;
-+	struct speck64_tfm_ctx tweak_key;
++#define SPECK64_BLOCK_SIZE	8
++
++#define SPECK64_96_KEY_SIZE	12
++#define SPECK64_96_NROUNDS	26
++
++#define SPECK64_128_KEY_SIZE	16
++#define SPECK64_128_NROUNDS	27
++
++struct speck64_tfm_ctx {
++	u32 round_keys[SPECK64_128_NROUNDS];
++	int nrounds;
 +};
 +
-+asmlinkage void speck64_xts_encrypt_neon(const u32 *round_keys, int nrounds,
-+					 void *dst, const void *src,
-+					 unsigned int nbytes, void *tweak);
-+
-+asmlinkage void speck64_xts_decrypt_neon(const u32 *round_keys, int nrounds,
-+					 void *dst, const void *src,
-+					 unsigned int nbytes, void *tweak);
-+
-+typedef void (*speck64_crypt_one_t)(const struct speck64_tfm_ctx *,
-+				    u8 *, const u8 *);
-+typedef void (*speck64_xts_crypt_many_t)(const u32 *, int, void *,
-+					 const void *, unsigned int, void *);
-+
-+static __always_inline int
-+__speck64_xts_crypt(struct skcipher_request *req, speck64_crypt_one_t crypt_one,
-+		    speck64_xts_crypt_many_t crypt_many)
++static __always_inline void speck64_round(u32 *x, u32 *y, u32 k)
 +{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	const struct speck64_xts_tfm_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct skcipher_walk walk;
-+	__le64 tweak;
-+	int err;
++	*x = ror32(*x, 8);
++	*x += *y;
++	*x ^= k;
++	*y = rol32(*y, 3);
++	*y ^= *x;
++}
 +
-+	err = skcipher_walk_virt(&walk, req, true);
++static __always_inline void speck64_unround(u32 *x, u32 *y, u32 k)
++{
++	*y ^= *x;
++	*y = ror32(*y, 3);
++	*x ^= k;
++	*x -= *y;
++	*x = rol32(*x, 8);
++}
 +
-+	crypto_speck64_encrypt(&ctx->tweak_key, (u8 *)&tweak, walk.iv);
++static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++{
++	const struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
++	u32 x = get_unaligned_le32(in + 0);
++	u32 y = get_unaligned_le32(in + 4);
++	int i;
 +
-+	while (walk.nbytes > 0) {
-+		unsigned int nbytes = walk.nbytes;
-+		u8 *dst = walk.dst.virt.addr;
-+		const u8 *src = walk.src.virt.addr;
++	for (i = 0; i < ctx->nrounds; i++)
++		speck64_round(&x, &y, ctx->round_keys[i]);
 +
-+		if (nbytes >= SPECK_NEON_CHUNK_SIZE && may_use_simd()) {
-+			unsigned int count;
++	put_unaligned_le32(x, out + 0);
++	put_unaligned_le32(y, out + 4);
++}
 +
-+			count = round_down(nbytes, SPECK_NEON_CHUNK_SIZE);
-+			kernel_neon_begin();
-+			(*crypt_many)(ctx->main_key.round_keys,
-+				      ctx->main_key.nrounds,
-+				      dst, src, count, &tweak);
-+			kernel_neon_end();
-+			dst += count;
-+			src += count;
-+			nbytes -= count;
++static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++{
++	const struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
++	u32 x = get_unaligned_le32(in + 0);
++	u32 y = get_unaligned_le32(in + 4);
++	int i;
++
++	for (i = ctx->nrounds - 1; i >= 0; i--)
++		speck64_unround(&x, &y, ctx->round_keys[i]);
++
++	put_unaligned_le32(x, out + 0);
++	put_unaligned_le32(y, out + 4);
++}
++
++static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
++			  unsigned int keylen)
++{
++	struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
++	u32 l[3];
++	u32 k;
++	int i;
++
++	switch (keylen) {
++	case SPECK64_96_KEY_SIZE:
++		l[1] = get_unaligned_le32(key + 0);
++		l[0] = get_unaligned_le32(key + 4);
++		k = get_unaligned_le32(key + 8);
++		ctx->nrounds = SPECK64_96_NROUNDS;
++		for (i = 0; i < ctx->nrounds; i++) {
++			ctx->round_keys[i] = k;
++			speck64_round(&l[i % 2], &k, i);
 +		}
-+
-+		/* Handle any remainder with generic code */
-+		while (nbytes >= sizeof(tweak)) {
-+			*(__le64 *)dst = *(__le64 *)src ^ tweak;
-+			(*crypt_one)(&ctx->main_key, dst, dst);
-+			*(__le64 *)dst ^= tweak;
-+			tweak = cpu_to_le64((le64_to_cpu(tweak) << 1) ^
-+					    ((tweak & cpu_to_le64(1ULL << 63)) ?
-+					     0x1B : 0));
-+			dst += sizeof(tweak);
-+			src += sizeof(tweak);
-+			nbytes -= sizeof(tweak);
++		break;
++	case SPECK64_128_KEY_SIZE:
++		l[2] = get_unaligned_le32(key + 0);
++		l[1] = get_unaligned_le32(key + 4);
++		l[0] = get_unaligned_le32(key + 8);
++		k = get_unaligned_le32(key + 12);
++		ctx->nrounds = SPECK64_128_NROUNDS;
++		for (i = 0; i < ctx->nrounds; i++) {
++			ctx->round_keys[i] = k;
++			speck64_round(&l[i % 3], &k, i);
 +		}
-+		err = skcipher_walk_done(&walk, nbytes);
++		break;
++	default:
++		return -EINVAL;
 +	}
 +
-+	return err;
++	return 0;
 +}
 +
-+static int speck64_xts_encrypt(struct skcipher_request *req)
-+{
-+	return __speck64_xts_crypt(req, crypto_speck64_encrypt,
-+				   speck64_xts_encrypt_neon);
-+}
++/* Algorithm definitions */
 +
-+static int speck64_xts_decrypt(struct skcipher_request *req)
-+{
-+	return __speck64_xts_crypt(req, crypto_speck64_decrypt,
-+				   speck64_xts_decrypt_neon);
-+}
-+
-+static int speck64_xts_setkey(struct crypto_skcipher *tfm, const u8 *key,
-+			      unsigned int keylen)
-+{
-+	struct speck64_xts_tfm_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err;
-+
-+	err = xts_verify_key(tfm, key, keylen);
-+	if (err)
-+		return err;
-+
-+	keylen /= 2;
-+
-+	err = crypto_speck64_setkey(&ctx->main_key, key, keylen);
-+	if (err)
-+		return err;
-+
-+	return crypto_speck64_setkey(&ctx->tweak_key, key + keylen, keylen);
-+}
-+
-+static struct skcipher_alg speck_algs[] = {
++static struct crypto_alg speck_algs[] = {
 +	{
-+		.base.cra_name		= "xts(speck128)",
-+		.base.cra_driver_name	= "xts-speck128-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= SPECK128_BLOCK_SIZE,
-+		.base.cra_ctxsize	= sizeof(struct speck128_xts_tfm_ctx),
-+		.base.cra_alignmask	= 7,
-+		.base.cra_module	= THIS_MODULE,
-+		.min_keysize		= 2 * SPECK128_128_KEY_SIZE,
-+		.max_keysize		= 2 * SPECK128_256_KEY_SIZE,
-+		.ivsize			= SPECK128_BLOCK_SIZE,
-+		.walksize		= SPECK_NEON_CHUNK_SIZE,
-+		.setkey			= speck128_xts_setkey,
-+		.encrypt		= speck128_xts_encrypt,
-+		.decrypt		= speck128_xts_decrypt,
++		.cra_name		= "speck128",
++		.cra_driver_name	= "speck128-generic",
++		.cra_priority		= 100,
++		.cra_flags		= CRYPTO_ALG_TYPE_CIPHER,
++		.cra_blocksize		= SPECK128_BLOCK_SIZE,
++		.cra_ctxsize		= sizeof(struct speck128_tfm_ctx),
++		.cra_module		= THIS_MODULE,
++		.cra_u			= {
++			.cipher = {
++				.cia_min_keysize	= SPECK128_128_KEY_SIZE,
++				.cia_max_keysize	= SPECK128_256_KEY_SIZE,
++				.cia_setkey		= speck128_setkey,
++				.cia_encrypt		= speck128_encrypt,
++				.cia_decrypt		= speck128_decrypt
++			}
++		}
 +	}, {
-+		.base.cra_name		= "xts(speck64)",
-+		.base.cra_driver_name	= "xts-speck64-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= SPECK64_BLOCK_SIZE,
-+		.base.cra_ctxsize	= sizeof(struct speck64_xts_tfm_ctx),
-+		.base.cra_alignmask	= 7,
-+		.base.cra_module	= THIS_MODULE,
-+		.min_keysize		= 2 * SPECK64_96_KEY_SIZE,
-+		.max_keysize		= 2 * SPECK64_128_KEY_SIZE,
-+		.ivsize			= SPECK64_BLOCK_SIZE,
-+		.walksize		= SPECK_NEON_CHUNK_SIZE,
-+		.setkey			= speck64_xts_setkey,
-+		.encrypt		= speck64_xts_encrypt,
-+		.decrypt		= speck64_xts_decrypt,
++		.cra_name		= "speck64",
++		.cra_driver_name	= "speck64-generic",
++		.cra_priority		= 100,
++		.cra_flags		= CRYPTO_ALG_TYPE_CIPHER,
++		.cra_blocksize		= SPECK64_BLOCK_SIZE,
++		.cra_ctxsize		= sizeof(struct speck64_tfm_ctx),
++		.cra_module		= THIS_MODULE,
++		.cra_u			= {
++			.cipher = {
++				.cia_min_keysize	= SPECK64_96_KEY_SIZE,
++				.cia_max_keysize	= SPECK64_128_KEY_SIZE,
++				.cia_setkey		= speck64_setkey,
++				.cia_encrypt		= speck64_encrypt,
++				.cia_decrypt		= speck64_decrypt
++			}
++		}
 +	}
 +};
 +
-+static int __init speck_neon_module_init(void)
++static int __init speck_module_init(void)
 +{
-+	if (!(elf_hwcap & HWCAP_NEON))
-+		return -ENODEV;
-+	return crypto_register_skciphers(speck_algs, ARRAY_SIZE(speck_algs));
++	return crypto_register_algs(speck_algs, ARRAY_SIZE(speck_algs));
 +}
 +
-+static void __exit speck_neon_module_exit(void)
++static void __exit speck_module_exit(void)
 +{
-+	crypto_unregister_skciphers(speck_algs, ARRAY_SIZE(speck_algs));
++	crypto_unregister_algs(speck_algs, ARRAY_SIZE(speck_algs));
 +}
 +
-+module_init(speck_neon_module_init);
-+module_exit(speck_neon_module_exit);
++module_init(speck_module_init);
++module_exit(speck_module_exit);
 +
-+MODULE_DESCRIPTION("Speck block cipher (NEON-accelerated)");
++MODULE_DESCRIPTION("Speck block cipher (generic)");
 +MODULE_LICENSE("GPL");
 +MODULE_AUTHOR("Eric Biggers <ebiggers@google.com>");
-+MODULE_ALIAS_CRYPTO("xts(speck128)");
-+MODULE_ALIAS_CRYPTO("xts-speck128-neon");
-+MODULE_ALIAS_CRYPTO("xts(speck64)");
-+MODULE_ALIAS_CRYPTO("xts-speck64-neon");
++MODULE_ALIAS_CRYPTO("speck128");
++MODULE_ALIAS_CRYPTO("speck128-generic");
++MODULE_ALIAS_CRYPTO("speck64");
++MODULE_ALIAS_CRYPTO("speck64-generic");
+diff --git a/crypto/testmgr.c b/crypto/testmgr.c
+index d5e23a142a04..d5be42149e29 100644
+--- a/crypto/testmgr.c
++++ b/crypto/testmgr.c
+@@ -3000,6 +3000,24 @@ static const struct alg_test_desc alg_test_descs[] = {
+ 				.dec = __VECS(serpent_dec_tv_template)
+ 			}
+ 		}
++	}, {
++		.alg = "ecb(speck128)",
++		.test = alg_test_skcipher,
++		.suite = {
++			.cipher = {
++				.enc = __VECS(speck128_enc_tv_template),
++				.dec = __VECS(speck128_dec_tv_template),
++			}
++		}
++	}, {
++		.alg = "ecb(speck64)",
++		.test = alg_test_skcipher,
++		.suite = {
++			.cipher = {
++				.enc = __VECS(speck64_enc_tv_template),
++				.dec = __VECS(speck64_dec_tv_template),
++			}
++		}
+ 	}, {
+ 		.alg = "ecb(tea)",
+ 		.test = alg_test_skcipher,
+diff --git a/crypto/testmgr.h b/crypto/testmgr.h
+index 6044f6906bd6..255de47f1d20 100644
+--- a/crypto/testmgr.h
++++ b/crypto/testmgr.h
+@@ -14323,6 +14323,126 @@ static const struct cipher_testvec serpent_xts_dec_tv_template[] = {
+ 	},
+ };
+ 
++/*
++ * Speck test vectors taken from the original paper:
++ * "The Simon and Speck Families of Lightweight Block Ciphers"
++ * https://eprint.iacr.org/2013/404.pdf
++ */
++
++static const struct cipher_testvec speck128_enc_tv_template[] = {
++	{ /* Speck128/128 */
++		.key	= "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07",
++		.klen	= 16,
++		.input	= "\x20\x65\x71\x75\x69\x76\x61\x6c"
++			  "\x20\x6d\x61\x64\x65\x20\x69\x74",
++		.ilen	= 16,
++		.result	= "\x65\x32\x78\x79\x51\x98\x5d\xa6"
++			  "\x18\x0d\x57\x5c\xdf\xfe\x60\x78",
++		.rlen	= 16,
++	}, { /* Speck128/192 */
++		.key	= "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07",
++		.klen	= 24,
++		.input	= "\x68\x69\x65\x66\x20\x48\x61\x72"
++			  "\x65\x6e\x74\x20\x74\x6f\x20\x43",
++		.ilen	= 16,
++		.result	= "\x66\x55\x13\x13\x3a\xcf\xe4\x1b"
++			  "\x86\x18\x3c\xe0\x5d\x18\xbc\xf9",
++		.rlen	= 16,
++	}, { /* Speck128/256 */
++		.key	= "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07",
++		.klen	= 32,
++		.input	= "\x49\x6e\x20\x74\x68\x6f\x73\x65"
++			  "\x70\x6f\x6f\x6e\x65\x72\x2e\x20",
++		.ilen	= 16,
++		.result = "\x3e\xf5\xc0\x05\x04\x01\x09\x41"
++			  "\x43\x8f\x18\x9c\x8d\xb4\xee\x4e",
++		.rlen	= 16,
++	},
++};
++
++static const struct cipher_testvec speck128_dec_tv_template[] = {
++	{ /* Speck128/128 */
++		.key	= "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07",
++		.klen	= 16,
++		.input	= "\x65\x32\x78\x79\x51\x98\x5d\xa6"
++			  "\x18\x0d\x57\x5c\xdf\xfe\x60\x78",
++		.ilen	= 16,
++		.result	= "\x20\x65\x71\x75\x69\x76\x61\x6c"
++			  "\x20\x6d\x61\x64\x65\x20\x69\x74",
++		.rlen	= 16,
++	}, { /* Speck128/192 */
++		.key	= "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07",
++		.klen	= 24,
++		.input	= "\x66\x55\x13\x13\x3a\xcf\xe4\x1b"
++			  "\x86\x18\x3c\xe0\x5d\x18\xbc\xf9",
++		.ilen	= 16,
++		.result	= "\x68\x69\x65\x66\x20\x48\x61\x72"
++			  "\x65\x6e\x74\x20\x74\x6f\x20\x43",
++		.rlen	= 16,
++	}, { /* Speck128/256 */
++		.key	= "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07",
++		.klen	= 32,
++		.input	= "\x3e\xf5\xc0\x05\x04\x01\x09\x41"
++			  "\x43\x8f\x18\x9c\x8d\xb4\xee\x4e",
++		.ilen	= 16,
++		.result	= "\x49\x6e\x20\x74\x68\x6f\x73\x65"
++			  "\x70\x6f\x6f\x6e\x65\x72\x2e\x20",
++		.rlen	= 16,
++	},
++};
++
++static const struct cipher_testvec speck64_enc_tv_template[] = {
++	{ /* Speck64/96 */
++		.key	= "\x10\x11\x12\x13\x08\x09\x0a\x0b"
++			  "\x00\x01\x02\x03",
++		.klen	= 12,
++		.input	= "\x20\x46\x61\x74\x65\x61\x6e\x73",
++		.ilen	= 8,
++		.result	= "\xec\x52\x79\x9f\x6c\x94\x75\x41",
++		.rlen	= 8,
++	}, { /* Speck64/128 */
++		.key	= "\x18\x19\x1a\x1b\x10\x11\x12\x13"
++			  "\x08\x09\x0a\x0b\x00\x01\x02\x03",
++		.klen	= 16,
++		.input	= "\x74\x65\x72\x3b\x2d\x43\x75\x74",
++		.ilen	= 8,
++		.result	= "\x48\xa5\x6f\x8c\x8b\x02\x4e\x45",
++		.rlen	= 8,
++	},
++};
++
++static const struct cipher_testvec speck64_dec_tv_template[] = {
++	{ /* Speck64/96 */
++		.key	= "\x10\x11\x12\x13\x08\x09\x0a\x0b"
++			  "\x00\x01\x02\x03",
++		.klen	= 12,
++		.input	= "\xec\x52\x79\x9f\x6c\x94\x75\x41",
++		.ilen	= 8,
++		.result	= "\x20\x46\x61\x74\x65\x61\x6e\x73",
++		.rlen	= 8,
++	}, { /* Speck64/128 */
++		.key	= "\x18\x19\x1a\x1b\x10\x11\x12\x13"
++			  "\x08\x09\x0a\x0b\x00\x01\x02\x03",
++		.klen	= 16,
++		.input	= "\x48\xa5\x6f\x8c\x8b\x02\x4e\x45",
++		.ilen	= 8,
++		.result	= "\x74\x65\x72\x3b\x2d\x43\x75\x74",
++		.rlen	= 8,
++	},
++};
++
+ /* Cast6 test vectors from RFC 2612 */
+ static const struct cipher_testvec cast6_enc_tv_template[] = {
+ 	{
 -- 
-2.16.1.291.g4437f3f132-goog
-
+2.16.0.rc1.238.g530d649a79-goog
