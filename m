@@ -1,274 +1,39 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@google.com>
-Subject: [PATCH v2 2/5] crypto: speck - export common helpers
-Date: Mon, 12 Feb 2018 15:52:06 -0800
-Message-Id: <20180212235209.117393-3-ebiggers@google.com>
-In-Reply-To: <20180212235209.117393-1-ebiggers@google.com>
-References: <20180212235209.117393-1-ebiggers@google.com>
-Sender: linux-crypto-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jeffrey Walton <noloader@gmail.com>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Greg Kaiser <gkaiser@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>, Alex Cope <alexcope@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers@google.com>
+Return-Path: <chandan@linux.vnet.ibm.com>
+From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Subject: [RFC PATCH V2 06/11] ext4: Decrypt the block that needs to be partially zeroed
+Date: Mon, 12 Feb 2018 15:13:42 +0530
+In-Reply-To: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
+References: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
+Message-Id: <20180212094347.22071-7-chandan@linux.vnet.ibm.com>
+To: linux-ext4@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, linux-fsdevel@vger.kernel.org, ebiggers3@gmail.com, linux-fscrypt@vger.kernel.org, tytso@mit.edu
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Export the Speck constants and transform context and the ->setkey(),
-->encrypt(), and ->decrypt() functions so that they can be reused by the
-ARM NEON implementation of Speck-XTS.  The generic key expansion code
-will be reused because it is not performance-critical and is not
-vectorizable, while the generic encryption and decryption functions are
-needed as fallbacks and for the XTS tweak encryption.
+__ext4_block_zero_page_range decrypts the entire page. This commit
+changes the code to decrypt the block that needs to be partially zeroed
+instead of the whole page.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
 ---
- crypto/speck.c         | 90 +++++++++++++++++++++++++++-----------------------
- include/crypto/speck.h | 62 ++++++++++++++++++++++++++++++++++
- 2 files changed, 111 insertions(+), 41 deletions(-)
- create mode 100644 include/crypto/speck.h
+ fs/ext4/inode.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 
-diff --git a/crypto/speck.c b/crypto/speck.c
-index 4e80ad76bcd7..58aa9f7f91f7 100644
---- a/crypto/speck.c
-+++ b/crypto/speck.c
-@@ -24,6 +24,7 @@
-  */
- 
- #include <asm/unaligned.h>
-+#include <crypto/speck.h>
- #include <linux/bitops.h>
- #include <linux/crypto.h>
- #include <linux/init.h>
-@@ -31,22 +32,6 @@
- 
- /* Speck128 */
- 
--#define SPECK128_BLOCK_SIZE	16
--
--#define SPECK128_128_KEY_SIZE	16
--#define SPECK128_128_NROUNDS	32
--
--#define SPECK128_192_KEY_SIZE	24
--#define SPECK128_192_NROUNDS	33
--
--#define SPECK128_256_KEY_SIZE	32
--#define SPECK128_256_NROUNDS	34
--
--struct speck128_tfm_ctx {
--	u64 round_keys[SPECK128_256_NROUNDS];
--	int nrounds;
--};
--
- static __always_inline void speck128_round(u64 *x, u64 *y, u64 k)
- {
- 	*x = ror64(*x, 8);
-@@ -65,9 +50,9 @@ static __always_inline void speck128_unround(u64 *x, u64 *y, u64 k)
- 	*x = rol64(*x, 8);
- }
- 
--static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-+void crypto_speck128_encrypt(const struct speck128_tfm_ctx *ctx,
-+			     u8 *out, const u8 *in)
- {
--	const struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u64 y = get_unaligned_le64(in);
- 	u64 x = get_unaligned_le64(in + 8);
- 	int i;
-@@ -78,10 +63,16 @@ static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
- 	put_unaligned_le64(y, out);
- 	put_unaligned_le64(x, out + 8);
- }
-+EXPORT_SYMBOL_GPL(crypto_speck128_encrypt);
- 
--static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-+static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-+{
-+	crypto_speck128_encrypt(crypto_tfm_ctx(tfm), out, in);
-+}
-+
-+void crypto_speck128_decrypt(const struct speck128_tfm_ctx *ctx,
-+			     u8 *out, const u8 *in)
- {
--	const struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u64 y = get_unaligned_le64(in);
- 	u64 x = get_unaligned_le64(in + 8);
- 	int i;
-@@ -92,11 +83,16 @@ static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
- 	put_unaligned_le64(y, out);
- 	put_unaligned_le64(x, out + 8);
- }
-+EXPORT_SYMBOL_GPL(crypto_speck128_decrypt);
- 
--static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
-+static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-+{
-+	crypto_speck128_decrypt(crypto_tfm_ctx(tfm), out, in);
-+}
-+
-+int crypto_speck128_setkey(struct speck128_tfm_ctx *ctx, const u8 *key,
- 			   unsigned int keylen)
- {
--	struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u64 l[3];
- 	u64 k;
- 	int i;
-@@ -138,21 +134,15 @@ static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
- 
- 	return 0;
- }
-+EXPORT_SYMBOL_GPL(crypto_speck128_setkey);
- 
--/* Speck64 */
--
--#define SPECK64_BLOCK_SIZE	8
--
--#define SPECK64_96_KEY_SIZE	12
--#define SPECK64_96_NROUNDS	26
--
--#define SPECK64_128_KEY_SIZE	16
--#define SPECK64_128_NROUNDS	27
-+static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
-+			   unsigned int keylen)
-+{
-+	return crypto_speck128_setkey(crypto_tfm_ctx(tfm), key, keylen);
-+}
- 
--struct speck64_tfm_ctx {
--	u32 round_keys[SPECK64_128_NROUNDS];
--	int nrounds;
--};
-+/* Speck64 */
- 
- static __always_inline void speck64_round(u32 *x, u32 *y, u32 k)
- {
-@@ -172,9 +162,9 @@ static __always_inline void speck64_unround(u32 *x, u32 *y, u32 k)
- 	*x = rol32(*x, 8);
- }
- 
--static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-+void crypto_speck64_encrypt(const struct speck64_tfm_ctx *ctx,
-+			    u8 *out, const u8 *in)
- {
--	const struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u32 y = get_unaligned_le32(in);
- 	u32 x = get_unaligned_le32(in + 4);
- 	int i;
-@@ -185,10 +175,16 @@ static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
- 	put_unaligned_le32(y, out);
- 	put_unaligned_le32(x, out + 4);
- }
-+EXPORT_SYMBOL_GPL(crypto_speck64_encrypt);
- 
--static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-+static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-+{
-+	crypto_speck64_encrypt(crypto_tfm_ctx(tfm), out, in);
-+}
-+
-+void crypto_speck64_decrypt(const struct speck64_tfm_ctx *ctx,
-+			    u8 *out, const u8 *in)
- {
--	const struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u32 y = get_unaligned_le32(in);
- 	u32 x = get_unaligned_le32(in + 4);
- 	int i;
-@@ -199,11 +195,16 @@ static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
- 	put_unaligned_le32(y, out);
- 	put_unaligned_le32(x, out + 4);
- }
-+EXPORT_SYMBOL_GPL(crypto_speck64_decrypt);
- 
--static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
-+static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-+{
-+	crypto_speck64_decrypt(crypto_tfm_ctx(tfm), out, in);
-+}
-+
-+int crypto_speck64_setkey(struct speck64_tfm_ctx *ctx, const u8 *key,
- 			  unsigned int keylen)
- {
--	struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u32 l[3];
- 	u32 k;
- 	int i;
-@@ -236,6 +237,13 @@ static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
- 
- 	return 0;
- }
-+EXPORT_SYMBOL_GPL(crypto_speck64_setkey);
-+
-+static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
-+			  unsigned int keylen)
-+{
-+	return crypto_speck64_setkey(crypto_tfm_ctx(tfm), key, keylen);
-+}
- 
- /* Algorithm definitions */
- 
-diff --git a/include/crypto/speck.h b/include/crypto/speck.h
-new file mode 100644
-index 000000000000..73cfc952d405
---- /dev/null
-+++ b/include/crypto/speck.h
-@@ -0,0 +1,62 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Common values for the Speck algorithm
-+ */
-+
-+#ifndef _CRYPTO_SPECK_H
-+#define _CRYPTO_SPECK_H
-+
-+#include <linux/types.h>
-+
-+/* Speck128 */
-+
-+#define SPECK128_BLOCK_SIZE	16
-+
-+#define SPECK128_128_KEY_SIZE	16
-+#define SPECK128_128_NROUNDS	32
-+
-+#define SPECK128_192_KEY_SIZE	24
-+#define SPECK128_192_NROUNDS	33
-+
-+#define SPECK128_256_KEY_SIZE	32
-+#define SPECK128_256_NROUNDS	34
-+
-+struct speck128_tfm_ctx {
-+	u64 round_keys[SPECK128_256_NROUNDS];
-+	int nrounds;
-+};
-+
-+void crypto_speck128_encrypt(const struct speck128_tfm_ctx *ctx,
-+			     u8 *out, const u8 *in);
-+
-+void crypto_speck128_decrypt(const struct speck128_tfm_ctx *ctx,
-+			     u8 *out, const u8 *in);
-+
-+int crypto_speck128_setkey(struct speck128_tfm_ctx *ctx, const u8 *key,
-+			   unsigned int keysize);
-+
-+/* Speck64 */
-+
-+#define SPECK64_BLOCK_SIZE	8
-+
-+#define SPECK64_96_KEY_SIZE	12
-+#define SPECK64_96_NROUNDS	26
-+
-+#define SPECK64_128_KEY_SIZE	16
-+#define SPECK64_128_NROUNDS	27
-+
-+struct speck64_tfm_ctx {
-+	u32 round_keys[SPECK64_128_NROUNDS];
-+	int nrounds;
-+};
-+
-+void crypto_speck64_encrypt(const struct speck64_tfm_ctx *ctx,
-+			    u8 *out, const u8 *in);
-+
-+void crypto_speck64_decrypt(const struct speck64_tfm_ctx *ctx,
-+			    u8 *out, const u8 *in);
-+
-+int crypto_speck64_setkey(struct speck64_tfm_ctx *ctx, const u8 *key,
-+			  unsigned int keysize);
-+
-+#endif /* _CRYPTO_SPECK_H */
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 180dd2d..aac0e04 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -4034,9 +4034,10 @@ static int __ext4_block_zero_page_range(handle_t *handle,
+ 		    ext4_encrypted_inode(inode)) {
+ 			/* We expect the key to be set. */
+ 			BUG_ON(!fscrypt_has_encryption_key(inode));
+-			BUG_ON(blocksize != PAGE_SIZE);
+ 			WARN_ON_ONCE(fscrypt_decrypt_block(page->mapping->host,
+-						page, PAGE_SIZE, 0, page->index));
++						page, blocksize,
++						round_down(offset, blocksize),
++						iblock));
+ 		}
+ 	}
+ 	if (ext4_should_journal_data(inode)) {
 -- 
-2.16.0.rc1.238.g530d649a79-goog
+2.9.5
