@@ -1,13 +1,13 @@
 Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@google.com>
-Subject: [PATCH 2/5] crypto: speck - export common helpers
-Date: Wed,  7 Feb 2018 16:09:58 -0800
-Message-Id: <20180208001001.19180-3-ebiggers@google.com>
-In-Reply-To: <20180208001001.19180-1-ebiggers@google.com>
-References: <20180208001001.19180-1-ebiggers@google.com>
+Subject: [PATCH v2 2/5] crypto: speck - export common helpers
+Date: Mon, 12 Feb 2018 15:52:06 -0800
+Message-Id: <20180212235209.117393-3-ebiggers@google.com>
+In-Reply-To: <20180212235209.117393-1-ebiggers@google.com>
+References: <20180212235209.117393-1-ebiggers@google.com>
 Sender: linux-crypto-owner@vger.kernel.org
 To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>, Alex Cope <alexcope@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers@google.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jeffrey Walton <noloader@gmail.com>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Greg Kaiser <gkaiser@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>, Alex Cope <alexcope@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 Export the Speck constants and transform context and the ->setkey(),
@@ -25,10 +25,10 @@ Signed-off-by: Eric Biggers <ebiggers@google.com>
  create mode 100644 include/crypto/speck.h
 
 diff --git a/crypto/speck.c b/crypto/speck.c
-index 89860688bf00..c78c8a782b0c 100644
+index 4e80ad76bcd7..58aa9f7f91f7 100644
 --- a/crypto/speck.c
 +++ b/crypto/speck.c
-@@ -19,6 +19,7 @@
+@@ -24,6 +24,7 @@
   */
  
  #include <asm/unaligned.h>
@@ -36,7 +36,7 @@ index 89860688bf00..c78c8a782b0c 100644
  #include <linux/bitops.h>
  #include <linux/crypto.h>
  #include <linux/init.h>
-@@ -26,22 +27,6 @@
+@@ -31,22 +32,6 @@
  
  /* Speck128 */
  
@@ -59,7 +59,7 @@ index 89860688bf00..c78c8a782b0c 100644
  static __always_inline void speck128_round(u64 *x, u64 *y, u64 k)
  {
  	*x = ror64(*x, 8);
-@@ -60,9 +45,9 @@ static __always_inline void speck128_unround(u64 *x, u64 *y, u64 k)
+@@ -65,9 +50,9 @@ static __always_inline void speck128_unround(u64 *x, u64 *y, u64 k)
  	*x = rol64(*x, 8);
  }
  
@@ -68,12 +68,12 @@ index 89860688bf00..c78c8a782b0c 100644
 +			     u8 *out, const u8 *in)
  {
 -	const struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u64 x = get_unaligned_le64(in + 0);
- 	u64 y = get_unaligned_le64(in + 8);
+ 	u64 y = get_unaligned_le64(in);
+ 	u64 x = get_unaligned_le64(in + 8);
  	int i;
-@@ -73,10 +58,16 @@ static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
- 	put_unaligned_le64(x, out + 0);
- 	put_unaligned_le64(y, out + 8);
+@@ -78,10 +63,16 @@ static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+ 	put_unaligned_le64(y, out);
+ 	put_unaligned_le64(x, out + 8);
  }
 +EXPORT_SYMBOL_GPL(crypto_speck128_encrypt);
  
@@ -87,12 +87,12 @@ index 89860688bf00..c78c8a782b0c 100644
 +			     u8 *out, const u8 *in)
  {
 -	const struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u64 x = get_unaligned_le64(in + 0);
- 	u64 y = get_unaligned_le64(in + 8);
+ 	u64 y = get_unaligned_le64(in);
+ 	u64 x = get_unaligned_le64(in + 8);
  	int i;
-@@ -87,11 +78,16 @@ static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
- 	put_unaligned_le64(x, out + 0);
- 	put_unaligned_le64(y, out + 8);
+@@ -92,11 +83,16 @@ static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+ 	put_unaligned_le64(y, out);
+ 	put_unaligned_le64(x, out + 8);
  }
 +EXPORT_SYMBOL_GPL(crypto_speck128_decrypt);
  
@@ -109,7 +109,7 @@ index 89860688bf00..c78c8a782b0c 100644
  	u64 l[3];
  	u64 k;
  	int i;
-@@ -133,21 +129,15 @@ static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
+@@ -138,21 +134,15 @@ static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
  
  	return 0;
  }
@@ -138,7 +138,7 @@ index 89860688bf00..c78c8a782b0c 100644
  
  static __always_inline void speck64_round(u32 *x, u32 *y, u32 k)
  {
-@@ -167,9 +157,9 @@ static __always_inline void speck64_unround(u32 *x, u32 *y, u32 k)
+@@ -172,9 +162,9 @@ static __always_inline void speck64_unround(u32 *x, u32 *y, u32 k)
  	*x = rol32(*x, 8);
  }
  
@@ -147,12 +147,12 @@ index 89860688bf00..c78c8a782b0c 100644
 +			    u8 *out, const u8 *in)
  {
 -	const struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u32 x = get_unaligned_le32(in + 0);
- 	u32 y = get_unaligned_le32(in + 4);
+ 	u32 y = get_unaligned_le32(in);
+ 	u32 x = get_unaligned_le32(in + 4);
  	int i;
-@@ -180,10 +170,16 @@ static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
- 	put_unaligned_le32(x, out + 0);
- 	put_unaligned_le32(y, out + 4);
+@@ -185,10 +175,16 @@ static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+ 	put_unaligned_le32(y, out);
+ 	put_unaligned_le32(x, out + 4);
  }
 +EXPORT_SYMBOL_GPL(crypto_speck64_encrypt);
  
@@ -166,12 +166,12 @@ index 89860688bf00..c78c8a782b0c 100644
 +			    u8 *out, const u8 *in)
  {
 -	const struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
- 	u32 x = get_unaligned_le32(in + 0);
- 	u32 y = get_unaligned_le32(in + 4);
+ 	u32 y = get_unaligned_le32(in);
+ 	u32 x = get_unaligned_le32(in + 4);
  	int i;
-@@ -194,11 +190,16 @@ static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
- 	put_unaligned_le32(x, out + 0);
- 	put_unaligned_le32(y, out + 4);
+@@ -199,11 +195,16 @@ static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+ 	put_unaligned_le32(y, out);
+ 	put_unaligned_le32(x, out + 4);
  }
 +EXPORT_SYMBOL_GPL(crypto_speck64_decrypt);
  
@@ -188,7 +188,7 @@ index 89860688bf00..c78c8a782b0c 100644
  	u32 l[3];
  	u32 k;
  	int i;
-@@ -231,6 +232,13 @@ static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
+@@ -236,6 +237,13 @@ static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
  
  	return 0;
  }
