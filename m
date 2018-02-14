@@ -1,969 +1,738 @@
-Return-Path: <chandan@linux.vnet.ibm.com>
-From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: [RFC PATCH V2 08/11] Enable reading encrypted files in blocksize less than pagesize setup
-Date: Mon, 12 Feb 2018 15:13:44 +0530
-In-Reply-To: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
-References: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
-Message-Id: <20180212094347.22071-9-chandan@linux.vnet.ibm.com>
-To: linux-ext4@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, linux-fsdevel@vger.kernel.org, ebiggers3@gmail.com, linux-fscrypt@vger.kernel.org, tytso@mit.edu
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-it0-f68.google.com ([209.85.214.68]:36436 "EHLO
+        mail-it0-f68.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1162216AbeBNSoX (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 14 Feb 2018 13:44:23 -0500
+Received: by mail-it0-f68.google.com with SMTP id 18so1027762itj.1
+        for <linux-fscrypt@vger.kernel.org>; Wed, 14 Feb 2018 10:44:22 -0800 (PST)
+From: Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v3 5/5] crypto: speck - add test vectors for Speck64-XTS
+Date: Wed, 14 Feb 2018 10:42:23 -0800
+Message-Id: <20180214184223.254359-6-ebiggers@google.com>
+In-Reply-To: <20180214184223.254359-1-ebiggers@google.com>
+References: <20180214184223.254359-1-ebiggers@google.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
+Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jeffrey Walton <noloader@gmail.com>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Greg Kaiser <gkaiser@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>, Alex Cope <alexcope@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit moves ext4/readpage.c to crypto/readpage.c and adds new
-functionality to enable reading encrypted files in blocksize less than
-pagesize setup.
+Add test vectors for Speck64-XTS, generated in userspace using C code.
+The inputs were borrowed from the AES-XTS test vectors, with key lengths
+adjusted.
 
-Ext4 now uses the new fscrypt API when CONFIG_EXT4_FS_ENCRYPTION is
-enabled. Otherwise it invokes mpage_readpage[s]() functions.
+xts-speck64-neon passes these tests.  However, they aren't currently
+applicable for the generic XTS template, as that only supports a 128-bit
+block size.
 
-Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/Makefile              |   2 +-
- fs/crypto/bio.c                 |  18 +-
- fs/crypto/fscrypt_private.h     |   3 +
- fs/crypto/readpage.c            | 461 ++++++++++++++++++++++++++++++++++++++++
- fs/ext4/Makefile                |   2 +-
- fs/ext4/ext4.h                  |   5 -
- fs/ext4/inode.c                 |  13 +-
- fs/ext4/readpage.c              | 294 -------------------------
- include/linux/fscrypt.h         |   1 +
- include/linux/fscrypt_notsupp.h |   3 +-
- include/linux/fscrypt_supp.h    |   9 +-
- 11 files changed, 502 insertions(+), 309 deletions(-)
- create mode 100644 fs/crypto/readpage.c
- delete mode 100644 fs/ext4/readpage.c
+ crypto/testmgr.c |   9 +
+ crypto/testmgr.h | 671 +++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 680 insertions(+)
 
-diff --git a/fs/crypto/Makefile b/fs/crypto/Makefile
-index cb49698..84400e9 100644
---- a/fs/crypto/Makefile
-+++ b/fs/crypto/Makefile
-@@ -1,4 +1,4 @@
- obj-$(CONFIG_FS_ENCRYPTION)	+= fscrypto.o
+diff --git a/crypto/testmgr.c b/crypto/testmgr.c
+index e011a347d51b..9f82e7bc9c56 100644
+--- a/crypto/testmgr.c
++++ b/crypto/testmgr.c
+@@ -3584,6 +3584,15 @@ static const struct alg_test_desc alg_test_descs[] = {
+ 				.dec = __VECS(speck128_xts_dec_tv_template)
+ 			}
+ 		}
++	}, {
++		.alg = "xts(speck64)",
++		.test = alg_test_skcipher,
++		.suite = {
++			.cipher = {
++				.enc = __VECS(speck64_xts_enc_tv_template),
++				.dec = __VECS(speck64_xts_dec_tv_template)
++			}
++		}
+ 	}, {
+ 		.alg = "xts(twofish)",
+ 		.test = alg_test_skcipher,
+diff --git a/crypto/testmgr.h b/crypto/testmgr.h
+index 0212e0ebcd0c..da72fd394f35 100644
+--- a/crypto/testmgr.h
++++ b/crypto/testmgr.h
+@@ -15138,6 +15138,677 @@ static const struct cipher_testvec speck64_dec_tv_template[] = {
+ 	},
+ };
  
- fscrypto-y := crypto.o fname.o hooks.o keyinfo.o policy.o
--fscrypto-$(CONFIG_BLOCK) += bio.o
-+fscrypto-$(CONFIG_BLOCK) += bio.o readpage.o
-diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
-index 4d0d14f..265cba3 100644
---- a/fs/crypto/bio.c
-+++ b/fs/crypto/bio.c
-@@ -70,9 +70,23 @@ static void completion_pages(struct work_struct *work)
- 	bio_put(bio);
- }
- 
--void fscrypt_decrypt_bio_blocks(struct fscrypt_ctx *ctx, struct bio *bio)
-+bool fscrypt_bio_encrypted(struct bio *bio)
- {
--	INIT_WORK(&ctx->r.work, completion_pages);
-+	if (bio->bi_vcnt) {
-+		struct inode *inode = bio->bi_io_vec->bv_page->mapping->host;
-+
-+		if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
-+			return true;
-+	}
-+
-+	return false;
-+}
-+
-+void fscrypt_decrypt_bio_blocks(struct fscrypt_ctx *ctx, struct bio *bio,
-+			void (*process_bio)(struct work_struct *))
-+{
-+	INIT_WORK(&ctx->r.work,
-+		process_bio ? process_bio : completion_pages);
- 	ctx->r.bio = bio;
- 	queue_work(fscrypt_read_workqueue, &ctx->r.work);
- }
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 9821e97..63e2b10 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -71,6 +71,9 @@ typedef enum {
- #define FS_CTX_REQUIRES_FREE_ENCRYPT_FL		0x00000001
- #define FS_CTX_HAS_BOUNCE_BUFFER_FL		0x00000002
- 
-+/* bio.c */
-+extern bool fscrypt_bio_encrypted(struct bio *bio);
-+
- /* crypto.c */
- extern int fscrypt_initialize(unsigned int cop_flags);
- extern struct workqueue_struct *fscrypt_read_workqueue;
-diff --git a/fs/crypto/readpage.c b/fs/crypto/readpage.c
-new file mode 100644
-index 0000000..7372173
---- /dev/null
-+++ b/fs/crypto/readpage.c
-@@ -0,0 +1,461 @@
-+// SPDX-License-Identifier: GPL-2.0
 +/*
-+ * linux/fs/crypto/readpage.c
-+ *
-+ * Copyright (C) 2002, Linus Torvalds.
-+ * Copyright (C) 2015, Google, Inc.
-+ *
-+ * This was originally taken from fs/ext4/readpage.c which in turn was
-+ * taken from fs/mpage.c
-+ *
++ * Speck64-XTS test vectors, taken from the AES-XTS test vectors with the result
++ * recomputed with Speck64 as the cipher, and key lengths adjusted
 + */
 +
-+#include <linux/kernel.h>
-+#include <linux/export.h>
-+#include <linux/mm.h>
-+#include <linux/kdev_t.h>
-+#include <linux/gfp.h>
-+#include <linux/bio.h>
-+#include <linux/fs.h>
-+#include <linux/buffer_head.h>
-+#include <linux/blkdev.h>
-+#include <linux/highmem.h>
-+#include <linux/prefetch.h>
-+#include <linux/mpage.h>
-+#include <linux/writeback.h>
-+#include <linux/backing-dev.h>
-+#include <linux/pagevec.h>
-+#include <linux/cleancache.h>
-+
-+#include "fscrypt_private.h"
-+
-+static void fscrypt_complete_block(struct work_struct *work)
-+{
-+	struct fscrypt_ctx *ctx =
-+		container_of(work, struct fscrypt_ctx, r.work);
-+	struct buffer_head *bh;
-+	struct bio *bio;
-+	struct bio_vec *bv;
-+	struct page *page;
-+	struct inode *inode;
-+	u64 blk_nr;
-+	int ret;
-+
-+	bio = ctx->r.bio;
-+	BUG_ON(bio->bi_vcnt != 1);
-+
-+	bv = bio->bi_io_vec;
-+	page = bv->bv_page;
-+	inode = page->mapping->host;
-+
-+	BUG_ON(bv->bv_len != i_blocksize(inode));
-+
-+	blk_nr = page->index << (PAGE_SHIFT - inode->i_blkbits);
-+	blk_nr += bv->bv_offset >> inode->i_blkbits;
-+
-+	bh = ctx->r.bh;
-+
-+	ret = fscrypt_decrypt_block(inode, page, bv->bv_len,
-+				bv->bv_offset, blk_nr);
-+
-+	end_buffer_async_read(bh, !ret);
-+
-+	fscrypt_release_ctx(ctx);
-+	bio_put(bio);
-+}
-+
-+static void fscrypt_block_end_io(struct bio *bio)
-+{
-+	struct buffer_head *bh;
-+
-+	if (fscrypt_bio_encrypted(bio)) {
-+		struct fscrypt_ctx *ctx = bio->bi_private;
-+
-+		bh = ctx->r.bh;
-+
-+		if (bio->bi_status) {
-+			fscrypt_release_ctx(ctx);
-+		} else {
-+			fscrypt_decrypt_bio_blocks(ctx, bio,
-+						fscrypt_complete_block);
-+			return;
-+		}
-+	} else {
-+		bh = bio->bi_private;
++static const struct cipher_testvec speck64_xts_enc_tv_template[] = {
++	{
++		.key	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.klen	= 24,
++		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.ilen	= 32,
++		.result	= "\x84\xaf\x54\x07\x19\xd4\x7c\xa6"
++			  "\xe4\xfe\xdf\xc4\x1f\x34\xc3\xc2"
++			  "\x80\xf5\x72\xe7\xcd\xf0\x99\x22"
++			  "\x35\xa7\x2f\x06\xef\xdc\x51\xaa",
++		.rlen	= 32,
++	}, {
++		.key	= "\x11\x11\x11\x11\x11\x11\x11\x11"
++			  "\x11\x11\x11\x11\x11\x11\x11\x11"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22",
++		.klen	= 24,
++		.iv	= "\x33\x33\x33\x33\x33\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44",
++		.ilen	= 32,
++		.result	= "\x12\x56\x73\xcd\x15\x87\xa8\x59"
++			  "\xcf\x84\xae\xd9\x1c\x66\xd6\x9f"
++			  "\xb3\x12\x69\x7e\x36\xeb\x52\xff"
++			  "\x62\xdd\xba\x90\xb3\xe1\xee\x99",
++		.rlen	= 32,
++	}, {
++		.key	= "\xff\xfe\xfd\xfc\xfb\xfa\xf9\xf8"
++			  "\xf7\xf6\xf5\xf4\xf3\xf2\xf1\xf0"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22",
++		.klen	= 24,
++		.iv	= "\x33\x33\x33\x33\x33\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44",
++		.ilen	= 32,
++		.result	= "\x15\x1b\xe4\x2c\xa2\x5a\x2d\x2c"
++			  "\x27\x36\xc0\xbf\x5d\xea\x36\x37"
++			  "\x2d\x1a\x88\xbc\x66\xb5\xd0\x0b"
++			  "\xa1\xbc\x19\xb2\x0f\x3b\x75\x34",
++		.rlen	= 32,
++	}, {
++		.key	= "\x27\x18\x28\x18\x28\x45\x90\x45"
++			  "\x23\x53\x60\x28\x74\x71\x35\x26"
++			  "\x31\x41\x59\x26\x53\x58\x97\x93",
++		.klen	= 24,
++		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
++		.ilen	= 512,
++		.result	= "\xaf\xa1\x81\xa6\x32\xbb\x15\x8e"
++			  "\xf8\x95\x2e\xd3\xe6\xee\x7e\x09"
++			  "\x0c\x1a\xf5\x02\x97\x8b\xe3\xb3"
++			  "\x11\xc7\x39\x96\xd0\x95\xf4\x56"
++			  "\xf4\xdd\x03\x38\x01\x44\x2c\xcf"
++			  "\x88\xae\x8e\x3c\xcd\xe7\xaa\x66"
++			  "\xfe\x3d\xc6\xfb\x01\x23\x51\x43"
++			  "\xd5\xd2\x13\x86\x94\x34\xe9\x62"
++			  "\xf9\x89\xe3\xd1\x7b\xbe\xf8\xef"
++			  "\x76\x35\x04\x3f\xdb\x23\x9d\x0b"
++			  "\x85\x42\xb9\x02\xd6\xcc\xdb\x96"
++			  "\xa7\x6b\x27\xb6\xd4\x45\x8f\x7d"
++			  "\xae\xd2\x04\xd5\xda\xc1\x7e\x24"
++			  "\x8c\x73\xbe\x48\x7e\xcf\x65\x28"
++			  "\x29\xe5\xbe\x54\x30\xcb\x46\x95"
++			  "\x4f\x2e\x8a\x36\xc8\x27\xc5\xbe"
++			  "\xd0\x1a\xaf\xab\x26\xcd\x9e\x69"
++			  "\xa1\x09\x95\x71\x26\xe9\xc4\xdf"
++			  "\xe6\x31\xc3\x46\xda\xaf\x0b\x41"
++			  "\x1f\xab\xb1\x8e\xd6\xfc\x0b\xb3"
++			  "\x82\xc0\x37\x27\xfc\x91\xa7\x05"
++			  "\xfb\xc5\xdc\x2b\x74\x96\x48\x43"
++			  "\x5d\x9c\x19\x0f\x60\x63\x3a\x1f"
++			  "\x6f\xf0\x03\xbe\x4d\xfd\xc8\x4a"
++			  "\xc6\xa4\x81\x6d\xc3\x12\x2a\x5c"
++			  "\x07\xff\xf3\x72\x74\x48\xb5\x40"
++			  "\x50\xb5\xdd\x90\x43\x31\x18\x15"
++			  "\x7b\xf2\xa6\xdb\x83\xc8\x4b\x4a"
++			  "\x29\x93\x90\x8b\xda\x07\xf0\x35"
++			  "\x6d\x90\x88\x09\x4e\x83\xf5\x5b"
++			  "\x94\x12\xbb\x33\x27\x1d\x3f\x23"
++			  "\x51\xa8\x7c\x07\xa2\xae\x77\xa6"
++			  "\x50\xfd\xcc\xc0\x4f\x80\x7a\x9f"
++			  "\x66\xdd\xcd\x75\x24\x8b\x33\xf7"
++			  "\x20\xdb\x83\x9b\x4f\x11\x63\x6e"
++			  "\xcf\x37\xef\xc9\x11\x01\x5c\x45"
++			  "\x32\x99\x7c\x3c\x9e\x42\x89\xe3"
++			  "\x70\x6d\x15\x9f\xb1\xe6\xb6\x05"
++			  "\xfe\x0c\xb9\x49\x2d\x90\x6d\xcc"
++			  "\x5d\x3f\xc1\xfe\x89\x0a\x2e\x2d"
++			  "\xa0\xa8\x89\x3b\x73\x39\xa5\x94"
++			  "\x4c\xa4\xa6\xbb\xa7\x14\x46\x89"
++			  "\x10\xff\xaf\xef\xca\xdd\x4f\x80"
++			  "\xb3\xdf\x3b\xab\xd4\xe5\x5a\xc7"
++			  "\x33\xca\x00\x8b\x8b\x3f\xea\xec"
++			  "\x68\x8a\xc2\x6d\xfd\xd4\x67\x0f"
++			  "\x22\x31\xe1\x0e\xfe\x5a\x04\xd5"
++			  "\x64\xa3\xf1\x1a\x76\x28\xcc\x35"
++			  "\x36\xa7\x0a\x74\xf7\x1c\x44\x9b"
++			  "\xc7\x1b\x53\x17\x02\xea\xd1\xad"
++			  "\x13\x51\x73\xc0\xa0\xb2\x05\x32"
++			  "\xa8\xa2\x37\x2e\xe1\x7a\x3a\x19"
++			  "\x26\xb4\x6c\x62\x5d\xb3\x1a\x1d"
++			  "\x59\xda\xee\x1a\x22\x18\xda\x0d"
++			  "\x88\x0f\x55\x8b\x72\x62\xfd\xc1"
++			  "\x69\x13\xcd\x0d\x5f\xc1\x09\x52"
++			  "\xee\xd6\xe3\x84\x4d\xee\xf6\x88"
++			  "\xaf\x83\xdc\x76\xf4\xc0\x93\x3f"
++			  "\x4a\x75\x2f\xb0\x0b\x3e\xc4\x54"
++			  "\x7d\x69\x8d\x00\x62\x77\x0d\x14"
++			  "\xbe\x7c\xa6\x7d\xc5\x24\x4f\xf3"
++			  "\x50\xf7\x5f\xf4\xc2\xca\x41\x97"
++			  "\x37\xbe\x75\x74\xcd\xf0\x75\x6e"
++			  "\x25\x23\x94\xbd\xda\x8d\xb0\xd4",
++		.rlen	= 512,
++	}, {
++		.key	= "\x27\x18\x28\x18\x28\x45\x90\x45"
++			  "\x23\x53\x60\x28\x74\x71\x35\x26"
++			  "\x62\x49\x77\x57\x24\x70\x93\x69"
++			  "\x99\x59\x57\x49\x66\x96\x76\x27",
++		.klen	= 32,
++		.iv	= "\xff\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
++		.ilen	= 512,
++		.result	= "\x55\xed\x71\xd3\x02\x8e\x15\x3b"
++			  "\xc6\x71\x29\x2d\x3e\x89\x9f\x59"
++			  "\x68\x6a\xcc\x8a\x56\x97\xf3\x95"
++			  "\x4e\x51\x08\xda\x2a\xf8\x6f\x3c"
++			  "\x78\x16\xea\x80\xdb\x33\x75\x94"
++			  "\xf9\x29\xc4\x2b\x76\x75\x97\xc7"
++			  "\xf2\x98\x2c\xf9\xff\xc8\xd5\x2b"
++			  "\x18\xf1\xaf\xcf\x7c\xc5\x0b\xee"
++			  "\xad\x3c\x76\x7c\xe6\x27\xa2\x2a"
++			  "\xe4\x66\xe1\xab\xa2\x39\xfc\x7c"
++			  "\xf5\xec\x32\x74\xa3\xb8\x03\x88"
++			  "\x52\xfc\x2e\x56\x3f\xa1\xf0\x9f"
++			  "\x84\x5e\x46\xed\x20\x89\xb6\x44"
++			  "\x8d\xd0\xed\x54\x47\x16\xbe\x95"
++			  "\x8a\xb3\x6b\x72\xc4\x32\x52\x13"
++			  "\x1b\xb0\x82\xbe\xac\xf9\x70\xa6"
++			  "\x44\x18\xdd\x8c\x6e\xca\x6e\x45"
++			  "\x8f\x1e\x10\x07\x57\x25\x98\x7b"
++			  "\x17\x8c\x78\xdd\x80\xa7\xd9\xd8"
++			  "\x63\xaf\xb9\x67\x57\xfd\xbc\xdb"
++			  "\x44\xe9\xc5\x65\xd1\xc7\x3b\xff"
++			  "\x20\xa0\x80\x1a\xc3\x9a\xad\x5e"
++			  "\x5d\x3b\xd3\x07\xd9\xf5\xfd\x3d"
++			  "\x4a\x8b\xa8\xd2\x6e\x7a\x51\x65"
++			  "\x6c\x8e\x95\xe0\x45\xc9\x5f\x4a"
++			  "\x09\x3c\x3d\x71\x7f\x0c\x84\x2a"
++			  "\xc8\x48\x52\x1a\xc2\xd5\xd6\x78"
++			  "\x92\x1e\xa0\x90\x2e\xea\xf0\xf3"
++			  "\xdc\x0f\xb1\xaf\x0d\x9b\x06\x2e"
++			  "\x35\x10\x30\x82\x0d\xe7\xc5\x9b"
++			  "\xde\x44\x18\xbd\x9f\xd1\x45\xa9"
++			  "\x7b\x7a\x4a\xad\x35\x65\x27\xca"
++			  "\xb2\xc3\xd4\x9b\x71\x86\x70\xee"
++			  "\xf1\x89\x3b\x85\x4b\x5b\xaa\xaf"
++			  "\xfc\x42\xc8\x31\x59\xbe\x16\x60"
++			  "\x4f\xf9\xfa\x12\xea\xd0\xa7\x14"
++			  "\xf0\x7a\xf3\xd5\x8d\xbd\x81\xef"
++			  "\x52\x7f\x29\x51\x94\x20\x67\x3c"
++			  "\xd1\xaf\x77\x9f\x22\x5a\x4e\x63"
++			  "\xe7\xff\x73\x25\xd1\xdd\x96\x8a"
++			  "\x98\x52\x6d\xf3\xac\x3e\xf2\x18"
++			  "\x6d\xf6\x0a\x29\xa6\x34\x3d\xed"
++			  "\xe3\x27\x0d\x9d\x0a\x02\x44\x7e"
++			  "\x5a\x7e\x67\x0f\x0a\x9e\xd6\xad"
++			  "\x91\xe6\x4d\x81\x8c\x5c\x59\xaa"
++			  "\xfb\xeb\x56\x53\xd2\x7d\x4c\x81"
++			  "\x65\x53\x0f\x41\x11\xbd\x98\x99"
++			  "\xf9\xc6\xfa\x51\x2e\xa3\xdd\x8d"
++			  "\x84\x98\xf9\x34\xed\x33\x2a\x1f"
++			  "\x82\xed\xc1\x73\x98\xd3\x02\xdc"
++			  "\xe6\xc2\x33\x1d\xa2\xb4\xca\x76"
++			  "\x63\x51\x34\x9d\x96\x12\xae\xce"
++			  "\x83\xc9\x76\x5e\xa4\x1b\x53\x37"
++			  "\x17\xd5\xc0\x80\x1d\x62\xf8\x3d"
++			  "\x54\x27\x74\xbb\x10\x86\x57\x46"
++			  "\x68\xe1\xed\x14\xe7\x9d\xfc\x84"
++			  "\x47\xbc\xc2\xf8\x19\x4b\x99\xcf"
++			  "\x7a\xe9\xc4\xb8\x8c\x82\x72\x4d"
++			  "\x7b\x4f\x38\x55\x36\x71\x64\xc1"
++			  "\xfc\x5c\x75\x52\x33\x02\x18\xf8"
++			  "\x17\xe1\x2b\xc2\x43\x39\xbd\x76"
++			  "\x9b\x63\x76\x32\x2f\x19\x72\x10"
++			  "\x9f\x21\x0c\xf1\x66\x50\x7f\xa5"
++			  "\x0d\x1f\x46\xe0\xba\xd3\x2f\x3c",
++		.rlen	= 512,
++		.also_non_np = 1,
++		.np	= 3,
++		.tap	= { 512 - 20, 4, 16 },
 +	}
++};
 +
-+	end_buffer_async_read(bh, !bio->bi_status);
-+}
-+
-+/*
-+ * I/O completion handler for multipage BIOs.
-+ *
-+ * The mpage code never puts partial pages into a BIO (except for end-of-file).
-+ * If a page does not map to a contiguous run of blocks then it simply falls
-+ * back to block_read_full_page().
-+ *
-+ * Why is this?  If a page's completion depends on a number of different BIOs
-+ * which can complete in any order (or at the same time) then determining the
-+ * status of that page is hard.  See end_buffer_async_read() for the details.
-+ * There is no point in duplicating all that complexity.
-+ */
-+static void fscrypt_mpage_end_io(struct bio *bio)
-+{
-+	struct bio_vec *bv;
-+	int i;
-+
-+	if (fscrypt_bio_encrypted(bio)) {
-+		if (bio->bi_status) {
-+			fscrypt_release_ctx(bio->bi_private);
-+		} else {
-+			fscrypt_decrypt_bio_blocks(bio->bi_private, bio, NULL);
-+			return;
-+		}
++static const struct cipher_testvec speck64_xts_dec_tv_template[] = {
++	{
++		.key	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.klen	= 24,
++		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x84\xaf\x54\x07\x19\xd4\x7c\xa6"
++			  "\xe4\xfe\xdf\xc4\x1f\x34\xc3\xc2"
++			  "\x80\xf5\x72\xe7\xcd\xf0\x99\x22"
++			  "\x35\xa7\x2f\x06\xef\xdc\x51\xaa",
++		.ilen	= 32,
++		.result	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.rlen	= 32,
++	}, {
++		.key	= "\x11\x11\x11\x11\x11\x11\x11\x11"
++			  "\x11\x11\x11\x11\x11\x11\x11\x11"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22",
++		.klen	= 24,
++		.iv	= "\x33\x33\x33\x33\x33\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x12\x56\x73\xcd\x15\x87\xa8\x59"
++			  "\xcf\x84\xae\xd9\x1c\x66\xd6\x9f"
++			  "\xb3\x12\x69\x7e\x36\xeb\x52\xff"
++			  "\x62\xdd\xba\x90\xb3\xe1\xee\x99",
++		.ilen	= 32,
++		.result	= "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44",
++		.rlen	= 32,
++	}, {
++		.key	= "\xff\xfe\xfd\xfc\xfb\xfa\xf9\xf8"
++			  "\xf7\xf6\xf5\xf4\xf3\xf2\xf1\xf0"
++			  "\x22\x22\x22\x22\x22\x22\x22\x22",
++		.klen	= 24,
++		.iv	= "\x33\x33\x33\x33\x33\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x15\x1b\xe4\x2c\xa2\x5a\x2d\x2c"
++			  "\x27\x36\xc0\xbf\x5d\xea\x36\x37"
++			  "\x2d\x1a\x88\xbc\x66\xb5\xd0\x0b"
++			  "\xa1\xbc\x19\xb2\x0f\x3b\x75\x34",
++		.ilen	= 32,
++		.result	= "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44"
++			  "\x44\x44\x44\x44\x44\x44\x44\x44",
++		.rlen	= 32,
++	}, {
++		.key	= "\x27\x18\x28\x18\x28\x45\x90\x45"
++			  "\x23\x53\x60\x28\x74\x71\x35\x26"
++			  "\x31\x41\x59\x26\x53\x58\x97\x93",
++		.klen	= 24,
++		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\xaf\xa1\x81\xa6\x32\xbb\x15\x8e"
++			  "\xf8\x95\x2e\xd3\xe6\xee\x7e\x09"
++			  "\x0c\x1a\xf5\x02\x97\x8b\xe3\xb3"
++			  "\x11\xc7\x39\x96\xd0\x95\xf4\x56"
++			  "\xf4\xdd\x03\x38\x01\x44\x2c\xcf"
++			  "\x88\xae\x8e\x3c\xcd\xe7\xaa\x66"
++			  "\xfe\x3d\xc6\xfb\x01\x23\x51\x43"
++			  "\xd5\xd2\x13\x86\x94\x34\xe9\x62"
++			  "\xf9\x89\xe3\xd1\x7b\xbe\xf8\xef"
++			  "\x76\x35\x04\x3f\xdb\x23\x9d\x0b"
++			  "\x85\x42\xb9\x02\xd6\xcc\xdb\x96"
++			  "\xa7\x6b\x27\xb6\xd4\x45\x8f\x7d"
++			  "\xae\xd2\x04\xd5\xda\xc1\x7e\x24"
++			  "\x8c\x73\xbe\x48\x7e\xcf\x65\x28"
++			  "\x29\xe5\xbe\x54\x30\xcb\x46\x95"
++			  "\x4f\x2e\x8a\x36\xc8\x27\xc5\xbe"
++			  "\xd0\x1a\xaf\xab\x26\xcd\x9e\x69"
++			  "\xa1\x09\x95\x71\x26\xe9\xc4\xdf"
++			  "\xe6\x31\xc3\x46\xda\xaf\x0b\x41"
++			  "\x1f\xab\xb1\x8e\xd6\xfc\x0b\xb3"
++			  "\x82\xc0\x37\x27\xfc\x91\xa7\x05"
++			  "\xfb\xc5\xdc\x2b\x74\x96\x48\x43"
++			  "\x5d\x9c\x19\x0f\x60\x63\x3a\x1f"
++			  "\x6f\xf0\x03\xbe\x4d\xfd\xc8\x4a"
++			  "\xc6\xa4\x81\x6d\xc3\x12\x2a\x5c"
++			  "\x07\xff\xf3\x72\x74\x48\xb5\x40"
++			  "\x50\xb5\xdd\x90\x43\x31\x18\x15"
++			  "\x7b\xf2\xa6\xdb\x83\xc8\x4b\x4a"
++			  "\x29\x93\x90\x8b\xda\x07\xf0\x35"
++			  "\x6d\x90\x88\x09\x4e\x83\xf5\x5b"
++			  "\x94\x12\xbb\x33\x27\x1d\x3f\x23"
++			  "\x51\xa8\x7c\x07\xa2\xae\x77\xa6"
++			  "\x50\xfd\xcc\xc0\x4f\x80\x7a\x9f"
++			  "\x66\xdd\xcd\x75\x24\x8b\x33\xf7"
++			  "\x20\xdb\x83\x9b\x4f\x11\x63\x6e"
++			  "\xcf\x37\xef\xc9\x11\x01\x5c\x45"
++			  "\x32\x99\x7c\x3c\x9e\x42\x89\xe3"
++			  "\x70\x6d\x15\x9f\xb1\xe6\xb6\x05"
++			  "\xfe\x0c\xb9\x49\x2d\x90\x6d\xcc"
++			  "\x5d\x3f\xc1\xfe\x89\x0a\x2e\x2d"
++			  "\xa0\xa8\x89\x3b\x73\x39\xa5\x94"
++			  "\x4c\xa4\xa6\xbb\xa7\x14\x46\x89"
++			  "\x10\xff\xaf\xef\xca\xdd\x4f\x80"
++			  "\xb3\xdf\x3b\xab\xd4\xe5\x5a\xc7"
++			  "\x33\xca\x00\x8b\x8b\x3f\xea\xec"
++			  "\x68\x8a\xc2\x6d\xfd\xd4\x67\x0f"
++			  "\x22\x31\xe1\x0e\xfe\x5a\x04\xd5"
++			  "\x64\xa3\xf1\x1a\x76\x28\xcc\x35"
++			  "\x36\xa7\x0a\x74\xf7\x1c\x44\x9b"
++			  "\xc7\x1b\x53\x17\x02\xea\xd1\xad"
++			  "\x13\x51\x73\xc0\xa0\xb2\x05\x32"
++			  "\xa8\xa2\x37\x2e\xe1\x7a\x3a\x19"
++			  "\x26\xb4\x6c\x62\x5d\xb3\x1a\x1d"
++			  "\x59\xda\xee\x1a\x22\x18\xda\x0d"
++			  "\x88\x0f\x55\x8b\x72\x62\xfd\xc1"
++			  "\x69\x13\xcd\x0d\x5f\xc1\x09\x52"
++			  "\xee\xd6\xe3\x84\x4d\xee\xf6\x88"
++			  "\xaf\x83\xdc\x76\xf4\xc0\x93\x3f"
++			  "\x4a\x75\x2f\xb0\x0b\x3e\xc4\x54"
++			  "\x7d\x69\x8d\x00\x62\x77\x0d\x14"
++			  "\xbe\x7c\xa6\x7d\xc5\x24\x4f\xf3"
++			  "\x50\xf7\x5f\xf4\xc2\xca\x41\x97"
++			  "\x37\xbe\x75\x74\xcd\xf0\x75\x6e"
++			  "\x25\x23\x94\xbd\xda\x8d\xb0\xd4",
++		.ilen	= 512,
++		.result	= "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
++		.rlen	= 512,
++	}, {
++		.key	= "\x27\x18\x28\x18\x28\x45\x90\x45"
++			  "\x23\x53\x60\x28\x74\x71\x35\x26"
++			  "\x62\x49\x77\x57\x24\x70\x93\x69"
++			  "\x99\x59\x57\x49\x66\x96\x76\x27",
++		.klen	= 32,
++		.iv	= "\xff\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.input	= "\x55\xed\x71\xd3\x02\x8e\x15\x3b"
++			  "\xc6\x71\x29\x2d\x3e\x89\x9f\x59"
++			  "\x68\x6a\xcc\x8a\x56\x97\xf3\x95"
++			  "\x4e\x51\x08\xda\x2a\xf8\x6f\x3c"
++			  "\x78\x16\xea\x80\xdb\x33\x75\x94"
++			  "\xf9\x29\xc4\x2b\x76\x75\x97\xc7"
++			  "\xf2\x98\x2c\xf9\xff\xc8\xd5\x2b"
++			  "\x18\xf1\xaf\xcf\x7c\xc5\x0b\xee"
++			  "\xad\x3c\x76\x7c\xe6\x27\xa2\x2a"
++			  "\xe4\x66\xe1\xab\xa2\x39\xfc\x7c"
++			  "\xf5\xec\x32\x74\xa3\xb8\x03\x88"
++			  "\x52\xfc\x2e\x56\x3f\xa1\xf0\x9f"
++			  "\x84\x5e\x46\xed\x20\x89\xb6\x44"
++			  "\x8d\xd0\xed\x54\x47\x16\xbe\x95"
++			  "\x8a\xb3\x6b\x72\xc4\x32\x52\x13"
++			  "\x1b\xb0\x82\xbe\xac\xf9\x70\xa6"
++			  "\x44\x18\xdd\x8c\x6e\xca\x6e\x45"
++			  "\x8f\x1e\x10\x07\x57\x25\x98\x7b"
++			  "\x17\x8c\x78\xdd\x80\xa7\xd9\xd8"
++			  "\x63\xaf\xb9\x67\x57\xfd\xbc\xdb"
++			  "\x44\xe9\xc5\x65\xd1\xc7\x3b\xff"
++			  "\x20\xa0\x80\x1a\xc3\x9a\xad\x5e"
++			  "\x5d\x3b\xd3\x07\xd9\xf5\xfd\x3d"
++			  "\x4a\x8b\xa8\xd2\x6e\x7a\x51\x65"
++			  "\x6c\x8e\x95\xe0\x45\xc9\x5f\x4a"
++			  "\x09\x3c\x3d\x71\x7f\x0c\x84\x2a"
++			  "\xc8\x48\x52\x1a\xc2\xd5\xd6\x78"
++			  "\x92\x1e\xa0\x90\x2e\xea\xf0\xf3"
++			  "\xdc\x0f\xb1\xaf\x0d\x9b\x06\x2e"
++			  "\x35\x10\x30\x82\x0d\xe7\xc5\x9b"
++			  "\xde\x44\x18\xbd\x9f\xd1\x45\xa9"
++			  "\x7b\x7a\x4a\xad\x35\x65\x27\xca"
++			  "\xb2\xc3\xd4\x9b\x71\x86\x70\xee"
++			  "\xf1\x89\x3b\x85\x4b\x5b\xaa\xaf"
++			  "\xfc\x42\xc8\x31\x59\xbe\x16\x60"
++			  "\x4f\xf9\xfa\x12\xea\xd0\xa7\x14"
++			  "\xf0\x7a\xf3\xd5\x8d\xbd\x81\xef"
++			  "\x52\x7f\x29\x51\x94\x20\x67\x3c"
++			  "\xd1\xaf\x77\x9f\x22\x5a\x4e\x63"
++			  "\xe7\xff\x73\x25\xd1\xdd\x96\x8a"
++			  "\x98\x52\x6d\xf3\xac\x3e\xf2\x18"
++			  "\x6d\xf6\x0a\x29\xa6\x34\x3d\xed"
++			  "\xe3\x27\x0d\x9d\x0a\x02\x44\x7e"
++			  "\x5a\x7e\x67\x0f\x0a\x9e\xd6\xad"
++			  "\x91\xe6\x4d\x81\x8c\x5c\x59\xaa"
++			  "\xfb\xeb\x56\x53\xd2\x7d\x4c\x81"
++			  "\x65\x53\x0f\x41\x11\xbd\x98\x99"
++			  "\xf9\xc6\xfa\x51\x2e\xa3\xdd\x8d"
++			  "\x84\x98\xf9\x34\xed\x33\x2a\x1f"
++			  "\x82\xed\xc1\x73\x98\xd3\x02\xdc"
++			  "\xe6\xc2\x33\x1d\xa2\xb4\xca\x76"
++			  "\x63\x51\x34\x9d\x96\x12\xae\xce"
++			  "\x83\xc9\x76\x5e\xa4\x1b\x53\x37"
++			  "\x17\xd5\xc0\x80\x1d\x62\xf8\x3d"
++			  "\x54\x27\x74\xbb\x10\x86\x57\x46"
++			  "\x68\xe1\xed\x14\xe7\x9d\xfc\x84"
++			  "\x47\xbc\xc2\xf8\x19\x4b\x99\xcf"
++			  "\x7a\xe9\xc4\xb8\x8c\x82\x72\x4d"
++			  "\x7b\x4f\x38\x55\x36\x71\x64\xc1"
++			  "\xfc\x5c\x75\x52\x33\x02\x18\xf8"
++			  "\x17\xe1\x2b\xc2\x43\x39\xbd\x76"
++			  "\x9b\x63\x76\x32\x2f\x19\x72\x10"
++			  "\x9f\x21\x0c\xf1\x66\x50\x7f\xa5"
++			  "\x0d\x1f\x46\xe0\xba\xd3\x2f\x3c",
++		.ilen	= 512,
++		.result	= "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff"
++			  "\x00\x01\x02\x03\x04\x05\x06\x07"
++			  "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
++			  "\x10\x11\x12\x13\x14\x15\x16\x17"
++			  "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
++			  "\x20\x21\x22\x23\x24\x25\x26\x27"
++			  "\x28\x29\x2a\x2b\x2c\x2d\x2e\x2f"
++			  "\x30\x31\x32\x33\x34\x35\x36\x37"
++			  "\x38\x39\x3a\x3b\x3c\x3d\x3e\x3f"
++			  "\x40\x41\x42\x43\x44\x45\x46\x47"
++			  "\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f"
++			  "\x50\x51\x52\x53\x54\x55\x56\x57"
++			  "\x58\x59\x5a\x5b\x5c\x5d\x5e\x5f"
++			  "\x60\x61\x62\x63\x64\x65\x66\x67"
++			  "\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f"
++			  "\x70\x71\x72\x73\x74\x75\x76\x77"
++			  "\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f"
++			  "\x80\x81\x82\x83\x84\x85\x86\x87"
++			  "\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
++			  "\x90\x91\x92\x93\x94\x95\x96\x97"
++			  "\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
++			  "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7"
++			  "\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
++			  "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7"
++			  "\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
++			  "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7"
++			  "\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
++			  "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7"
++			  "\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
++			  "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7"
++			  "\xe8\xe9\xea\xeb\xec\xed\xee\xef"
++			  "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7"
++			  "\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
++		.rlen	= 512,
++		.also_non_np = 1,
++		.np	= 3,
++		.tap	= { 512 - 20, 4, 16 },
 +	}
-+	bio_for_each_segment_all(bv, bio, i) {
-+		struct page *page = bv->bv_page;
++};
 +
-+		if (!bio->bi_status) {
-+			SetPageUptodate(page);
-+		} else {
-+			ClearPageUptodate(page);
-+			SetPageError(page);
-+		}
-+		unlock_page(page);
-+	}
-+
-+	bio_put(bio);
-+}
-+
-+static int fscrypt_block_read_full_page(struct page *page, get_block_t *get_block)
-+{
-+	struct inode *inode = page->mapping->host;
-+	struct fscrypt_ctx *ctx;
-+	struct bio *bio;
-+	sector_t iblock, lblock;
-+	struct buffer_head *bh, *head, *arr[MAX_BUF_PER_PAGE];
-+	unsigned int blocksize, bbits;
-+	int nr, i;
-+	int fully_mapped = 1;
-+	int ret;
-+
-+	head = create_page_buffers(page, inode, 0);
-+	blocksize = head->b_size;
-+	bbits = inode->i_blkbits;
-+
-+	iblock = (sector_t)page->index << (PAGE_SHIFT - bbits);
-+	lblock = (i_size_read(inode)+blocksize-1) >> bbits;
-+	bh = head;
-+	nr = 0;
-+	i = 0;
-+
-+	do {
-+		if (buffer_uptodate(bh))
-+			continue;
-+
-+		if (!buffer_mapped(bh)) {
-+			int err = 0;
-+
-+			fully_mapped = 0;
-+			if (iblock < lblock) {
-+				WARN_ON(bh->b_size != blocksize);
-+				err = get_block(inode, iblock, bh, 0);
-+				if (err)
-+					SetPageError(page);
-+			}
-+			if (!buffer_mapped(bh)) {
-+				zero_user(page, i << bbits, blocksize);
-+				if (!err)
-+					set_buffer_uptodate(bh);
-+				continue;
-+			}
-+			/*
-+			 * get_block() might have updated the buffer
-+			 * synchronously
-+			 */
-+			if (buffer_uptodate(bh))
-+				continue;
-+		}
-+		arr[nr++] = bh;
-+	} while (i++, iblock++, (bh = bh->b_this_page) != head);
-+
-+	if (fully_mapped)
-+		SetPageMappedToDisk(page);
-+
-+	if (!nr) {
-+		/*
-+		 * All buffers are uptodate - we can set the page uptodate
-+		 * as well. But not if ext4_get_block() returned an error.
-+		 */
-+		if (!PageError(page))
-+			SetPageUptodate(page);
-+		unlock_page(page);
-+		return 0;
-+	}
-+
-+	/* Stage two: lock the buffers */
-+	for (i = 0; i < nr; i++) {
-+		bh = arr[i];
-+		lock_buffer(bh);
-+		set_buffer_async_read(bh);
-+	}
-+
-+	/*
-+	 * Stage 3: start the IO.  Check for uptodateness
-+	 * inside the buffer lock in case another process reading
-+	 * the underlying blockdev brought it uptodate (the sct fix).
-+	 */
-+	for (i = 0; i < nr; i++) {
-+		ctx = NULL;
-+		bh = arr[i];
-+
-+		if (buffer_uptodate(bh)) {
-+			end_buffer_async_read(bh, 1);
-+			continue;
-+		}
-+
-+		if (IS_ENCRYPTED(inode)
-+			&& S_ISREG(inode->i_mode)) {
-+			ctx = fscrypt_get_ctx(inode, GFP_NOFS);
-+			if (IS_ERR(ctx)) {
-+			set_page_error:
-+				zero_user_segment(page, bh_offset(bh),
-+						  blocksize);
-+				end_buffer_async_read(bh, 0);
-+				continue;
-+			}
-+			ctx->r.bh = bh;
-+		}
-+
-+		bio = bio_alloc(GFP_NOIO, 1);
-+		if (!bio) {
-+			if (ctx)
-+				fscrypt_release_ctx(ctx);
-+			goto set_page_error;
-+		}
-+
-+		bio->bi_iter.bi_sector = bh->b_blocknr * (blocksize >> 9);
-+		bio_set_dev(bio, bh->b_bdev);
-+		bio->bi_write_hint = 0;
-+
-+		ret = bio_add_page(bio, bh->b_page, blocksize, bh_offset(bh));
-+		BUG_ON(bio->bi_iter.bi_size != blocksize);
-+
-+		bio->bi_end_io = fscrypt_block_end_io;
-+		if (ctx)
-+			bio->bi_private = ctx;
-+		else
-+			bio->bi_private = bh;
-+		bio_set_op_attrs(bio, REQ_OP_READ, 0);
-+
-+		submit_bio(bio);
-+	}
-+
-+	return 0;
-+}
-+
-+int fscrypt_mpage_readpages(struct address_space *mapping,
-+		struct list_head *pages, struct page *page,
-+		unsigned nr_pages, get_block_t get_block)
-+{
-+	struct bio *bio = NULL;
-+	sector_t last_block_in_bio = 0;
-+
-+	struct inode *inode = mapping->host;
-+	const unsigned blkbits = inode->i_blkbits;
-+	const unsigned blocks_per_page = PAGE_SIZE >> blkbits;
-+	const unsigned blocksize = 1 << blkbits;
-+	sector_t block_in_file;
-+	sector_t last_block;
-+	sector_t last_block_in_file;
-+	sector_t blocks[MAX_BUF_PER_PAGE];
-+	unsigned page_block;
-+	struct block_device *bdev = inode->i_sb->s_bdev;
-+	int length;
-+	unsigned relative_block = 0;
-+	struct buffer_head map_bh;
-+	unsigned int nblocks;
-+	unsigned long first_logical_block = 0;
-+
-+	map_bh.b_state = 0;
-+	map_bh.b_size = 0;
-+
-+	for (; nr_pages; nr_pages--) {
-+		int fully_mapped = 1;
-+		unsigned first_hole = blocks_per_page;
-+
-+		prefetchw(&page->flags);
-+		if (pages) {
-+			page = list_entry(pages->prev, struct page, lru);
-+			list_del(&page->lru);
-+			if (add_to_page_cache_lru(page, mapping, page->index,
-+				  readahead_gfp_mask(mapping)))
-+				goto next_page;
-+		}
-+
-+		if (page_has_buffers(page))
-+			goto confused;
-+
-+		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
-+		last_block = block_in_file + nr_pages * blocks_per_page;
-+		last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
-+		if (last_block > last_block_in_file)
-+			last_block = last_block_in_file;
-+		page_block = 0;
-+
-+		/*
-+		 * Map blocks using the previous result first.
-+		 */
-+		nblocks = map_bh.b_size >> blkbits;
-+		if (buffer_mapped(&map_bh) &&
-+		    block_in_file > first_logical_block &&
-+		    block_in_file < (first_logical_block + nblocks)) {
-+			unsigned map_offset = block_in_file - first_logical_block;
-+			unsigned last = nblocks - map_offset;
-+
-+			for (relative_block = 0; ; relative_block++) {
-+				if (relative_block == last) {
-+					/* needed? */
-+					clear_buffer_mapped(&map_bh);
-+					break;
-+				}
-+				if (page_block == blocks_per_page)
-+					break;
-+				blocks[page_block] = map_bh.b_blocknr + map_offset +
-+					relative_block;
-+				page_block++;
-+				block_in_file++;
-+			}
-+		}
-+
-+		/*
-+		 * Then do more get_blocks() calls until we are
-+		 * done with this page.
-+		 */
-+		while (page_block < blocks_per_page) {
-+			if (block_in_file < last_block) {
-+				/*
-+				 * map.m_lblk = block_in_file;
-+				 * map.m_len = last_block - block_in_file;
-+				 */
-+				map_bh.b_state = 0;
-+				map_bh.b_size = (last_block - block_in_file) << blkbits;
-+
-+				if (get_block(inode, block_in_file, &map_bh, 0)) {
-+				set_error_page:
-+					SetPageError(page);
-+					zero_user_segment(page, 0,
-+							  PAGE_SIZE);
-+					unlock_page(page);
-+					goto next_page;
-+				}
-+				first_logical_block = block_in_file;
-+			}
-+
-+			if (!buffer_mapped(&map_bh)) {
-+				fully_mapped = 0;
-+				if (first_hole == blocks_per_page)
-+					first_hole = page_block;
-+				page_block++;
-+				block_in_file++;
-+				continue;
-+			}
-+			if (first_hole != blocks_per_page)
-+				goto confused;		/* hole -> non-hole */
-+
-+			/* Contiguous blocks? */
-+			if (page_block && blocks[page_block-1] != map_bh.b_blocknr-1)
-+				goto confused;
-+			nblocks = map_bh.b_size >> blkbits;
-+			for (relative_block = 0; ; relative_block++) {
-+				if (relative_block == nblocks) {
-+					/* needed? */
-+					clear_buffer_mapped(&map_bh);
-+					break;
-+				} else if (page_block == blocks_per_page)
-+					break;
-+				blocks[page_block] = map_bh.b_blocknr+relative_block;
-+				page_block++;
-+				block_in_file++;
-+			}
-+		}
-+		if (first_hole != blocks_per_page) {
-+			zero_user_segment(page, first_hole << blkbits,
-+					  PAGE_SIZE);
-+			if (first_hole == 0) {
-+				SetPageUptodate(page);
-+				unlock_page(page);
-+				goto next_page;
-+			}
-+		} else if (fully_mapped) {
-+			SetPageMappedToDisk(page);
-+		}
-+		if (fully_mapped && blocks_per_page == 1 &&
-+		    !PageUptodate(page) && cleancache_get_page(page) == 0) {
-+			SetPageUptodate(page);
-+			goto confused;
-+		}
-+
-+		/*
-+		 * This page will go to BIO.  Do we need to send this
-+		 * BIO off first?
-+		 */
-+		if (bio && (last_block_in_bio != blocks[0] - 1)) {
-+		submit_and_realloc:
-+			submit_bio(bio);
-+			bio = NULL;
-+		}
-+		if (bio == NULL) {
-+			struct fscrypt_ctx *ctx = NULL;
-+			if (IS_ENCRYPTED(inode) &&
-+			    S_ISREG(inode->i_mode)) {
-+				ctx = fscrypt_get_ctx(inode, GFP_NOFS);
-+				if (IS_ERR(ctx))
-+					goto set_error_page;
-+			}
-+			bio = bio_alloc(GFP_KERNEL,
-+				min_t(int, nr_pages, BIO_MAX_PAGES));
-+			if (!bio) {
-+				if (ctx)
-+					fscrypt_release_ctx(ctx);
-+				goto set_error_page;
-+			}
-+			bio_set_dev(bio, bdev);
-+			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
-+			bio->bi_end_io = fscrypt_mpage_end_io;
-+			bio->bi_private = ctx;
-+			bio_set_op_attrs(bio, REQ_OP_READ, 0);
-+		}
-+
-+		length = first_hole << blkbits;
-+		if (bio_add_page(bio, page, length, 0) < length)
-+			goto submit_and_realloc;
-+
-+		relative_block = block_in_file - first_logical_block;
-+		if ((buffer_boundary(&map_bh) && relative_block == nblocks) ||
-+			(first_hole != blocks_per_page)) {
-+			submit_bio(bio);
-+			bio = NULL;
-+		} else {
-+			last_block_in_bio = blocks[blocks_per_page - 1];
-+		}
-+		goto next_page;
-+	confused:
-+		if (bio) {
-+			submit_bio(bio);
-+			bio = NULL;
-+		}
-+		if (!PageUptodate(page))
-+			fscrypt_block_read_full_page(page, get_block);
-+		else
-+			unlock_page(page);
-+	next_page:
-+		if (pages)
-+			put_page(page);
-+	}
-+	BUG_ON(pages && !list_empty(pages));
-+	if (bio)
-+		submit_bio(bio);
-+	return 0;
-+}
-+EXPORT_SYMBOL(fscrypt_mpage_readpages);
-diff --git a/fs/ext4/Makefile b/fs/ext4/Makefile
-index 8fdfcd3..7c38803 100644
---- a/fs/ext4/Makefile
-+++ b/fs/ext4/Makefile
-@@ -8,7 +8,7 @@ obj-$(CONFIG_EXT4_FS) += ext4.o
- ext4-y	:= balloc.o bitmap.o block_validity.o dir.o ext4_jbd2.o extents.o \
- 		extents_status.o file.o fsmap.o fsync.o hash.o ialloc.o \
- 		indirect.o inline.o inode.o ioctl.o mballoc.o migrate.o \
--		mmp.o move_extent.o namei.o page-io.o readpage.o resize.o \
-+		mmp.o move_extent.o namei.o page-io.o resize.o \
- 		super.o symlink.o sysfs.o xattr.o xattr_trusted.o xattr_user.o
- 
- ext4-$(CONFIG_EXT4_FS_POSIX_ACL)	+= acl.o
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index 4e091eae..98c1b83 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -3053,11 +3053,6 @@ static inline void ext4_set_de_type(struct super_block *sb,
- 		de->file_type = ext4_type_by_mode[(mode & S_IFMT)>>S_SHIFT];
- }
- 
--/* readpages.c */
--extern int ext4_mpage_readpages(struct address_space *mapping,
--				struct list_head *pages, struct page *page,
--				unsigned nr_pages);
--
- /* symlink.c */
- extern const struct inode_operations ext4_encrypted_symlink_inode_operations;
- extern const struct inode_operations ext4_symlink_inode_operations;
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index aac0e04..66b768c 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3342,7 +3342,11 @@ static int ext4_readpage(struct file *file, struct page *page)
- 		ret = ext4_readpage_inline(inode, page);
- 
- 	if (ret == -EAGAIN)
--		return ext4_mpage_readpages(page->mapping, NULL, page, 1);
-+#ifdef CONFIG_EXT4_FS_ENCRYPTION
-+		return fscrypt_mpage_readpages(page->mapping, NULL, page, 1, ext4_get_block);
-+#else
-+		return mpage_readpage(page, ext4_get_block);
-+#endif
- 
- 	return ret;
- }
-@@ -3356,8 +3360,11 @@ ext4_readpages(struct file *file, struct address_space *mapping,
- 	/* If the file has inline data, no need to do readpages. */
- 	if (ext4_has_inline_data(inode))
- 		return 0;
--
--	return ext4_mpage_readpages(mapping, pages, NULL, nr_pages);
-+#ifdef CONFIG_EXT4_FS_ENCRYPTION
-+	return fscrypt_mpage_readpages(mapping, pages, NULL, nr_pages, ext4_get_block);
-+#else
-+	return mpage_readpages(mapping, pages, nr_pages, ext4_get_block);
-+#endif
- }
- 
- static void ext4_invalidatepage(struct page *page, unsigned int offset,
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-deleted file mode 100644
-index 8b2789f..0000000
---- a/fs/ext4/readpage.c
-+++ /dev/null
-@@ -1,294 +0,0 @@
--// SPDX-License-Identifier: GPL-2.0
--/*
-- * linux/fs/ext4/readpage.c
-- *
-- * Copyright (C) 2002, Linus Torvalds.
-- * Copyright (C) 2015, Google, Inc.
-- *
-- * This was originally taken from fs/mpage.c
-- *
-- * The intent is the ext4_mpage_readpages() function here is intended
-- * to replace mpage_readpages() in the general case, not just for
-- * encrypted files.  It has some limitations (see below), where it
-- * will fall back to read_block_full_page(), but these limitations
-- * should only be hit when page_size != block_size.
-- *
-- * This will allow us to attach a callback function to support ext4
-- * encryption.
-- *
-- * If anything unusual happens, such as:
-- *
-- * - encountering a page which has buffers
-- * - encountering a page which has a non-hole after a hole
-- * - encountering a page with non-contiguous blocks
-- *
-- * then this code just gives up and calls the buffer_head-based read function.
-- * It does handle a page which has holes at the end - that is a common case:
-- * the end-of-file on blocksize < PAGE_SIZE setups.
-- *
-- */
--
--#include <linux/kernel.h>
--#include <linux/export.h>
--#include <linux/mm.h>
--#include <linux/kdev_t.h>
--#include <linux/gfp.h>
--#include <linux/bio.h>
--#include <linux/fs.h>
--#include <linux/buffer_head.h>
--#include <linux/blkdev.h>
--#include <linux/highmem.h>
--#include <linux/prefetch.h>
--#include <linux/mpage.h>
--#include <linux/writeback.h>
--#include <linux/backing-dev.h>
--#include <linux/pagevec.h>
--#include <linux/cleancache.h>
--
--#include "ext4.h"
--
--static inline bool ext4_bio_encrypted(struct bio *bio)
--{
--#ifdef CONFIG_EXT4_FS_ENCRYPTION
--	return unlikely(bio->bi_private != NULL);
--#else
--	return false;
--#endif
--}
--
--/*
-- * I/O completion handler for multipage BIOs.
-- *
-- * The mpage code never puts partial pages into a BIO (except for end-of-file).
-- * If a page does not map to a contiguous run of blocks then it simply falls
-- * back to block_read_full_page().
-- *
-- * Why is this?  If a page's completion depends on a number of different BIOs
-- * which can complete in any order (or at the same time) then determining the
-- * status of that page is hard.  See end_buffer_async_read() for the details.
-- * There is no point in duplicating all that complexity.
-- */
--static void mpage_end_io(struct bio *bio)
--{
--	struct bio_vec *bv;
--	int i;
--
--	if (ext4_bio_encrypted(bio)) {
--		if (bio->bi_status) {
--			fscrypt_release_ctx(bio->bi_private);
--		} else {
--			fscrypt_decrypt_bio_blocks(bio->bi_private, bio);
--			return;
--		}
--	}
--	bio_for_each_segment_all(bv, bio, i) {
--		struct page *page = bv->bv_page;
--
--		if (!bio->bi_status) {
--			SetPageUptodate(page);
--		} else {
--			ClearPageUptodate(page);
--			SetPageError(page);
--		}
--		unlock_page(page);
--	}
--
--	bio_put(bio);
--}
--
--int ext4_mpage_readpages(struct address_space *mapping,
--			 struct list_head *pages, struct page *page,
--			 unsigned nr_pages)
--{
--	struct bio *bio = NULL;
--	sector_t last_block_in_bio = 0;
--
--	struct inode *inode = mapping->host;
--	const unsigned blkbits = inode->i_blkbits;
--	const unsigned blocks_per_page = PAGE_SIZE >> blkbits;
--	const unsigned blocksize = 1 << blkbits;
--	sector_t block_in_file;
--	sector_t last_block;
--	sector_t last_block_in_file;
--	sector_t blocks[MAX_BUF_PER_PAGE];
--	unsigned page_block;
--	struct block_device *bdev = inode->i_sb->s_bdev;
--	int length;
--	unsigned relative_block = 0;
--	struct ext4_map_blocks map;
--
--	map.m_pblk = 0;
--	map.m_lblk = 0;
--	map.m_len = 0;
--	map.m_flags = 0;
--
--	for (; nr_pages; nr_pages--) {
--		int fully_mapped = 1;
--		unsigned first_hole = blocks_per_page;
--
--		prefetchw(&page->flags);
--		if (pages) {
--			page = list_entry(pages->prev, struct page, lru);
--			list_del(&page->lru);
--			if (add_to_page_cache_lru(page, mapping, page->index,
--				  readahead_gfp_mask(mapping)))
--				goto next_page;
--		}
--
--		if (page_has_buffers(page))
--			goto confused;
--
--		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
--		last_block = block_in_file + nr_pages * blocks_per_page;
--		last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
--		if (last_block > last_block_in_file)
--			last_block = last_block_in_file;
--		page_block = 0;
--
--		/*
--		 * Map blocks using the previous result first.
--		 */
--		if ((map.m_flags & EXT4_MAP_MAPPED) &&
--		    block_in_file > map.m_lblk &&
--		    block_in_file < (map.m_lblk + map.m_len)) {
--			unsigned map_offset = block_in_file - map.m_lblk;
--			unsigned last = map.m_len - map_offset;
--
--			for (relative_block = 0; ; relative_block++) {
--				if (relative_block == last) {
--					/* needed? */
--					map.m_flags &= ~EXT4_MAP_MAPPED;
--					break;
--				}
--				if (page_block == blocks_per_page)
--					break;
--				blocks[page_block] = map.m_pblk + map_offset +
--					relative_block;
--				page_block++;
--				block_in_file++;
--			}
--		}
--
--		/*
--		 * Then do more ext4_map_blocks() calls until we are
--		 * done with this page.
--		 */
--		while (page_block < blocks_per_page) {
--			if (block_in_file < last_block) {
--				map.m_lblk = block_in_file;
--				map.m_len = last_block - block_in_file;
--
--				if (ext4_map_blocks(NULL, inode, &map, 0) < 0) {
--				set_error_page:
--					SetPageError(page);
--					zero_user_segment(page, 0,
--							  PAGE_SIZE);
--					unlock_page(page);
--					goto next_page;
--				}
--			}
--			if ((map.m_flags & EXT4_MAP_MAPPED) == 0) {
--				fully_mapped = 0;
--				if (first_hole == blocks_per_page)
--					first_hole = page_block;
--				page_block++;
--				block_in_file++;
--				continue;
--			}
--			if (first_hole != blocks_per_page)
--				goto confused;		/* hole -> non-hole */
--
--			/* Contiguous blocks? */
--			if (page_block && blocks[page_block-1] != map.m_pblk-1)
--				goto confused;
--			for (relative_block = 0; ; relative_block++) {
--				if (relative_block == map.m_len) {
--					/* needed? */
--					map.m_flags &= ~EXT4_MAP_MAPPED;
--					break;
--				} else if (page_block == blocks_per_page)
--					break;
--				blocks[page_block] = map.m_pblk+relative_block;
--				page_block++;
--				block_in_file++;
--			}
--		}
--		if (first_hole != blocks_per_page) {
--			zero_user_segment(page, first_hole << blkbits,
--					  PAGE_SIZE);
--			if (first_hole == 0) {
--				SetPageUptodate(page);
--				unlock_page(page);
--				goto next_page;
--			}
--		} else if (fully_mapped) {
--			SetPageMappedToDisk(page);
--		}
--		if (fully_mapped && blocks_per_page == 1 &&
--		    !PageUptodate(page) && cleancache_get_page(page) == 0) {
--			SetPageUptodate(page);
--			goto confused;
--		}
--
--		/*
--		 * This page will go to BIO.  Do we need to send this
--		 * BIO off first?
--		 */
--		if (bio && (last_block_in_bio != blocks[0] - 1)) {
--		submit_and_realloc:
--			submit_bio(bio);
--			bio = NULL;
--		}
--		if (bio == NULL) {
--			struct fscrypt_ctx *ctx = NULL;
--
--			if (ext4_encrypted_inode(inode) &&
--			    S_ISREG(inode->i_mode)) {
--				ctx = fscrypt_get_ctx(inode, GFP_NOFS);
--				if (IS_ERR(ctx))
--					goto set_error_page;
--			}
--			bio = bio_alloc(GFP_KERNEL,
--				min_t(int, nr_pages, BIO_MAX_PAGES));
--			if (!bio) {
--				if (ctx)
--					fscrypt_release_ctx(ctx);
--				goto set_error_page;
--			}
--			bio_set_dev(bio, bdev);
--			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
--			bio->bi_end_io = mpage_end_io;
--			bio->bi_private = ctx;
--			bio_set_op_attrs(bio, REQ_OP_READ, 0);
--		}
--
--		length = first_hole << blkbits;
--		if (bio_add_page(bio, page, length, 0) < length)
--			goto submit_and_realloc;
--
--		if (((map.m_flags & EXT4_MAP_BOUNDARY) &&
--		     (relative_block == map.m_len)) ||
--		    (first_hole != blocks_per_page)) {
--			submit_bio(bio);
--			bio = NULL;
--		} else
--			last_block_in_bio = blocks[blocks_per_page - 1];
--		goto next_page;
--	confused:
--		if (bio) {
--			submit_bio(bio);
--			bio = NULL;
--		}
--		if (!PageUptodate(page))
--			block_read_full_page(page, ext4_get_block);
--		else
--			unlock_page(page);
--	next_page:
--		if (pages)
--			put_page(page);
--	}
--	BUG_ON(pages && !list_empty(pages));
--	if (bio)
--		submit_bio(bio);
--	return 0;
--}
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 08b4b40..98c51eb 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -34,6 +34,7 @@ struct fscrypt_ctx {
- 		} w;
- 		struct {
- 			struct bio *bio;
-+			struct buffer_head *bh;
- 			struct work_struct work;
- 		} r;
- 		struct list_head free_list;	/* Free list */
-diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
-index d726b53..aeb6b6d 100644
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -162,7 +162,8 @@ static inline bool fscrypt_match_name(const struct fscrypt_name *fname,
- 
- /* bio.c */
- static inline void fscrypt_decrypt_bio_blocks(struct fscrypt_ctx *ctx,
--					     struct bio *bio)
-+					    struct bio *bio,
-+					    void (*process_bio)(struct work_struct *))
- {
- 	return;
- }
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index 7720e4a..b4c5231 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -139,7 +139,10 @@ static inline bool fscrypt_match_name(const struct fscrypt_name *fname,
- }
- 
- /* bio.c */
--extern void fscrypt_decrypt_bio_blocks(struct fscrypt_ctx *, struct bio *);
-+
-+extern void fscrypt_decrypt_bio_blocks(struct fscrypt_ctx *ctx, struct bio *bio,
-+				      void (*process_bio)(struct work_struct *));
-+extern bool fscrypt_bio_encrypted(struct bio *bio);
- extern void fscrypt_pullback_bio_page(struct page **, bool);
- extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
- 				 unsigned int);
-@@ -153,5 +156,7 @@ extern int __fscrypt_prepare_rename(struct inode *old_dir,
- 				    struct dentry *new_dentry,
- 				    unsigned int flags);
- extern int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry);
--
-+extern int fscrypt_mpage_readpages(struct address_space *mapping,
-+				struct list_head *pages, struct page *page,
-+				unsigned nr_pages, get_block_t get_block);
- #endif	/* _LINUX_FSCRYPT_SUPP_H */
+ /* Cast6 test vectors from RFC 2612 */
+ static const struct cipher_testvec cast6_enc_tv_template[] = {
+ 	{
 -- 
-2.9.5
+2.16.1.291.g4437f3f132-goog
+
