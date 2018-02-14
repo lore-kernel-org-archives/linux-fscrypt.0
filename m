@@ -1,91 +1,282 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from imap.thunk.org ([74.207.234.97]:34250 "EHLO imap.thunk.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1752193AbeBDAfj (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 3 Feb 2018 19:35:39 -0500
-Date: Sat, 3 Feb 2018 19:35:32 -0500
-From: Theodore Ts'o <tytso@mit.edu>
-Subject: [GIT PULL] fscrypt updates for 4.16
-Message-ID: <20180204003532.GA13997@thunk.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
+Received: from mail-io0-f196.google.com ([209.85.223.196]:39761 "EHLO
+        mail-io0-f196.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1162205AbeBNSoQ (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 14 Feb 2018 13:44:16 -0500
+Received: by mail-io0-f196.google.com with SMTP id b198so26202293iof.6
+        for <linux-fscrypt@vger.kernel.org>; Wed, 14 Feb 2018 10:44:16 -0800 (PST)
+From: Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v3 2/5] crypto: speck - export common helpers
+Date: Wed, 14 Feb 2018 10:42:20 -0800
+Message-Id: <20180214184223.254359-3-ebiggers@google.com>
+In-Reply-To: <20180214184223.254359-1-ebiggers@google.com>
+References: <20180214184223.254359-1-ebiggers@google.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: torvalds@linux-foundation.org
-Cc: linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
+To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
+Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Jeffrey Walton <noloader@gmail.com>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Greg Kaiser <gkaiser@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>, Alex Cope <alexcope@google.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Note: there will be a merge conflict; please just take the chunk
-which calls fscrypt_encrypt_symlink() from the fscrypt tree.  This
-will end up dropping the kzalloc() -> f2fs_kzalloc() change, which
-means the fscrypt-specific allocation won't get tested by f2fs's
-kmalloc error injection system; which is fine.
+Export the Speck constants and transform context and the ->setkey(),
+->encrypt(), and ->decrypt() functions so that they can be reused by the
+ARM NEON implementation of Speck-XTS.  The generic key expansion code
+will be reused because it is not performance-critical and is not
+vectorizable, while the generic encryption and decryption functions are
+needed as fallbacks and for the XTS tweak encryption.
 
-The ubifs and f2fs changes have been reviewed by their respective
-maintainers and I got their approval to run all of these changes
-through the fscrypt tree.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ crypto/speck.c         | 90 +++++++++++++++++++++++-------------------
+ include/crypto/speck.h | 62 +++++++++++++++++++++++++++++
+ 2 files changed, 111 insertions(+), 41 deletions(-)
+ create mode 100644 include/crypto/speck.h
 
-	      			      	 - Ted
-					 
-The following changes since commit 1291a0d5049dbc06baaaf66a9ff3f53db493b19b:
+diff --git a/crypto/speck.c b/crypto/speck.c
+index 4e80ad76bcd7..58aa9f7f91f7 100644
+--- a/crypto/speck.c
++++ b/crypto/speck.c
+@@ -24,6 +24,7 @@
+  */
+ 
+ #include <asm/unaligned.h>
++#include <crypto/speck.h>
+ #include <linux/bitops.h>
+ #include <linux/crypto.h>
+ #include <linux/init.h>
+@@ -31,22 +32,6 @@
+ 
+ /* Speck128 */
+ 
+-#define SPECK128_BLOCK_SIZE	16
+-
+-#define SPECK128_128_KEY_SIZE	16
+-#define SPECK128_128_NROUNDS	32
+-
+-#define SPECK128_192_KEY_SIZE	24
+-#define SPECK128_192_NROUNDS	33
+-
+-#define SPECK128_256_KEY_SIZE	32
+-#define SPECK128_256_NROUNDS	34
+-
+-struct speck128_tfm_ctx {
+-	u64 round_keys[SPECK128_256_NROUNDS];
+-	int nrounds;
+-};
+-
+ static __always_inline void speck128_round(u64 *x, u64 *y, u64 k)
+ {
+ 	*x = ror64(*x, 8);
+@@ -65,9 +50,9 @@ static __always_inline void speck128_unround(u64 *x, u64 *y, u64 k)
+ 	*x = rol64(*x, 8);
+ }
+ 
+-static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++void crypto_speck128_encrypt(const struct speck128_tfm_ctx *ctx,
++			     u8 *out, const u8 *in)
+ {
+-	const struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
+ 	u64 y = get_unaligned_le64(in);
+ 	u64 x = get_unaligned_le64(in + 8);
+ 	int i;
+@@ -78,10 +63,16 @@ static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+ 	put_unaligned_le64(y, out);
+ 	put_unaligned_le64(x, out + 8);
+ }
++EXPORT_SYMBOL_GPL(crypto_speck128_encrypt);
+ 
+-static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++static void speck128_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++{
++	crypto_speck128_encrypt(crypto_tfm_ctx(tfm), out, in);
++}
++
++void crypto_speck128_decrypt(const struct speck128_tfm_ctx *ctx,
++			     u8 *out, const u8 *in)
+ {
+-	const struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
+ 	u64 y = get_unaligned_le64(in);
+ 	u64 x = get_unaligned_le64(in + 8);
+ 	int i;
+@@ -92,11 +83,16 @@ static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+ 	put_unaligned_le64(y, out);
+ 	put_unaligned_le64(x, out + 8);
+ }
++EXPORT_SYMBOL_GPL(crypto_speck128_decrypt);
+ 
+-static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
++static void speck128_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++{
++	crypto_speck128_decrypt(crypto_tfm_ctx(tfm), out, in);
++}
++
++int crypto_speck128_setkey(struct speck128_tfm_ctx *ctx, const u8 *key,
+ 			   unsigned int keylen)
+ {
+-	struct speck128_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
+ 	u64 l[3];
+ 	u64 k;
+ 	int i;
+@@ -138,21 +134,15 @@ static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
+ 
+ 	return 0;
+ }
++EXPORT_SYMBOL_GPL(crypto_speck128_setkey);
+ 
+-/* Speck64 */
+-
+-#define SPECK64_BLOCK_SIZE	8
+-
+-#define SPECK64_96_KEY_SIZE	12
+-#define SPECK64_96_NROUNDS	26
+-
+-#define SPECK64_128_KEY_SIZE	16
+-#define SPECK64_128_NROUNDS	27
++static int speck128_setkey(struct crypto_tfm *tfm, const u8 *key,
++			   unsigned int keylen)
++{
++	return crypto_speck128_setkey(crypto_tfm_ctx(tfm), key, keylen);
++}
+ 
+-struct speck64_tfm_ctx {
+-	u32 round_keys[SPECK64_128_NROUNDS];
+-	int nrounds;
+-};
++/* Speck64 */
+ 
+ static __always_inline void speck64_round(u32 *x, u32 *y, u32 k)
+ {
+@@ -172,9 +162,9 @@ static __always_inline void speck64_unround(u32 *x, u32 *y, u32 k)
+ 	*x = rol32(*x, 8);
+ }
+ 
+-static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++void crypto_speck64_encrypt(const struct speck64_tfm_ctx *ctx,
++			    u8 *out, const u8 *in)
+ {
+-	const struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
+ 	u32 y = get_unaligned_le32(in);
+ 	u32 x = get_unaligned_le32(in + 4);
+ 	int i;
+@@ -185,10 +175,16 @@ static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+ 	put_unaligned_le32(y, out);
+ 	put_unaligned_le32(x, out + 4);
+ }
++EXPORT_SYMBOL_GPL(crypto_speck64_encrypt);
+ 
+-static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++static void speck64_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++{
++	crypto_speck64_encrypt(crypto_tfm_ctx(tfm), out, in);
++}
++
++void crypto_speck64_decrypt(const struct speck64_tfm_ctx *ctx,
++			    u8 *out, const u8 *in)
+ {
+-	const struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
+ 	u32 y = get_unaligned_le32(in);
+ 	u32 x = get_unaligned_le32(in + 4);
+ 	int i;
+@@ -199,11 +195,16 @@ static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
+ 	put_unaligned_le32(y, out);
+ 	put_unaligned_le32(x, out + 4);
+ }
++EXPORT_SYMBOL_GPL(crypto_speck64_decrypt);
+ 
+-static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
++static void speck64_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
++{
++	crypto_speck64_decrypt(crypto_tfm_ctx(tfm), out, in);
++}
++
++int crypto_speck64_setkey(struct speck64_tfm_ctx *ctx, const u8 *key,
+ 			  unsigned int keylen)
+ {
+-	struct speck64_tfm_ctx *ctx = crypto_tfm_ctx(tfm);
+ 	u32 l[3];
+ 	u32 k;
+ 	int i;
+@@ -236,6 +237,13 @@ static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
+ 
+ 	return 0;
+ }
++EXPORT_SYMBOL_GPL(crypto_speck64_setkey);
++
++static int speck64_setkey(struct crypto_tfm *tfm, const u8 *key,
++			  unsigned int keylen)
++{
++	return crypto_speck64_setkey(crypto_tfm_ctx(tfm), key, keylen);
++}
+ 
+ /* Algorithm definitions */
+ 
+diff --git a/include/crypto/speck.h b/include/crypto/speck.h
+new file mode 100644
+index 000000000000..73cfc952d405
+--- /dev/null
++++ b/include/crypto/speck.h
+@@ -0,0 +1,62 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Common values for the Speck algorithm
++ */
++
++#ifndef _CRYPTO_SPECK_H
++#define _CRYPTO_SPECK_H
++
++#include <linux/types.h>
++
++/* Speck128 */
++
++#define SPECK128_BLOCK_SIZE	16
++
++#define SPECK128_128_KEY_SIZE	16
++#define SPECK128_128_NROUNDS	32
++
++#define SPECK128_192_KEY_SIZE	24
++#define SPECK128_192_NROUNDS	33
++
++#define SPECK128_256_KEY_SIZE	32
++#define SPECK128_256_NROUNDS	34
++
++struct speck128_tfm_ctx {
++	u64 round_keys[SPECK128_256_NROUNDS];
++	int nrounds;
++};
++
++void crypto_speck128_encrypt(const struct speck128_tfm_ctx *ctx,
++			     u8 *out, const u8 *in);
++
++void crypto_speck128_decrypt(const struct speck128_tfm_ctx *ctx,
++			     u8 *out, const u8 *in);
++
++int crypto_speck128_setkey(struct speck128_tfm_ctx *ctx, const u8 *key,
++			   unsigned int keysize);
++
++/* Speck64 */
++
++#define SPECK64_BLOCK_SIZE	8
++
++#define SPECK64_96_KEY_SIZE	12
++#define SPECK64_96_NROUNDS	26
++
++#define SPECK64_128_KEY_SIZE	16
++#define SPECK64_128_NROUNDS	27
++
++struct speck64_tfm_ctx {
++	u32 round_keys[SPECK64_128_NROUNDS];
++	int nrounds;
++};
++
++void crypto_speck64_encrypt(const struct speck64_tfm_ctx *ctx,
++			    u8 *out, const u8 *in);
++
++void crypto_speck64_decrypt(const struct speck64_tfm_ctx *ctx,
++			    u8 *out, const u8 *in);
++
++int crypto_speck64_setkey(struct speck64_tfm_ctx *ctx, const u8 *key,
++			  unsigned int keysize);
++
++#endif /* _CRYPTO_SPECK_H */
+-- 
+2.16.1.291.g4437f3f132-goog
 
-  Linux 4.15-rc4 (2017-12-17 18:59:59 -0800)
-
-are available in the git repository at:
-
-  git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git tags/fscrypt_for_linus
-
-for you to fetch changes up to 0b1dfa4cc6c60052b2c30ead316fa84c46d3c43c:
-
-  fscrypt: fix build with pre-4.6 gcc versions (2018-02-01 10:51:18 -0500)
-
-----------------------------------------------------------------
-Refactor support for encrypted symlinks to move common code to fscrypt.
-
-----------------------------------------------------------------
-Eric Biggers (26):
-      fscrypt: move fscrypt_has_encryption_key() to supp/notsupp headers
-      fscrypt: move fscrypt_control_page() to supp/notsupp headers
-      fscrypt: move fscrypt_info_cachep declaration to fscrypt_private.h
-      fscrypt: move fscrypt_ctx declaration to fscrypt_supp.h
-      fscrypt: split fscrypt_dummy_context_enabled() into supp/notsupp versions
-      fscrypt: move fscrypt_operations declaration to fscrypt_supp.h
-      fscrypt: move fscrypt_valid_enc_modes() to fscrypt_private.h
-      fscrypt: move fscrypt_is_dot_dotdot() to fs/crypto/fname.c
-      fscrypt: trim down fscrypt.h includes
-      fscrypt: new helper functions for ->symlink()
-      fscrypt: new helper function - fscrypt_get_symlink()
-      ext4: switch to fscrypt ->symlink() helper functions
-      ext4: switch to fscrypt_get_symlink()
-      f2fs: switch to fscrypt ->symlink() helper functions
-      f2fs: switch to fscrypt_get_symlink()
-      ubifs: free the encrypted symlink target
-      ubifs: switch to fscrypt ->symlink() helper functions
-      ubifs: switch to fscrypt_get_symlink()
-      fscrypt: remove fscrypt_fname_usr_to_disk()
-      fscrypt: move fscrypt_symlink_data to fscrypt_private.h
-      fscrypt: calculate NUL-padding length in one place only
-      fscrypt: define fscrypt_fname_alloc_buffer() to be for presented names
-      fscrypt: fix up fscrypt_fname_encrypted_size() for internal use
-      fscrypt: document symlink length restriction
-      fscrypt: remove 'ci' parameter from fscrypt_put_encryption_info()
-      fscrypt: fix build with pre-4.6 gcc versions
-
- Documentation/filesystems/fscrypt.rst |  10 ++++-
- fs/crypto/crypto.c                    |   1 +
- fs/crypto/fname.c                     | 140 +++++++++++++++++++++++++++----------------------------------
- fs/crypto/fscrypt_private.h           |  31 ++++++++++++++
- fs/crypto/hooks.c                     | 158 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- fs/crypto/keyinfo.c                   |  17 ++------
- fs/ext4/namei.c                       |  58 +++++++-------------------
- fs/ext4/super.c                       |   4 +-
- fs/ext4/symlink.c                     |  43 +++----------------
- fs/f2fs/inode.c                       |   2 +-
- fs/f2fs/namei.c                       | 132 +++++++++++----------------------------------------------
- fs/ubifs/dir.c                        |  63 +++++++---------------------
- fs/ubifs/file.c                       |  36 +---------------
- fs/ubifs/super.c                      |   4 +-
- include/linux/fscrypt.h               | 174 +++++++++++++++++++++++++++++-----------------------------------------------
- include/linux/fscrypt_notsupp.h       |  59 ++++++++++++++++++--------
- include/linux/fscrypt_supp.h          |  68 +++++++++++++++++++++++++++---
- 17 files changed, 500 insertions(+), 500 deletions(-)
