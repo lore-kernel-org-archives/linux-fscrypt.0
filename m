@@ -1,85 +1,90 @@
 Return-Path: <chandan@linux.vnet.ibm.com>
 From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: [RFC PATCH V2 00/11] Ext4 encryption support for blocksize < pagesize
-Date: Mon, 12 Feb 2018 15:13:36 +0530
-Message-Id: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
-To: linux-ext4@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, linux-fsdevel@vger.kernel.org, ebiggers3@gmail.com, linux-fscrypt@vger.kernel.org, tytso@mit.edu
+Subject: Re: [RFC PATCH V2 05/11] ext4: Decrypt all boundary blocks when doing buffered write
+Date: Wed, 21 Feb 2018 15:27:18 +0530
+In-Reply-To: <20180221010155.GC252219@gmail.com>
+References: <20180212094347.22071-1-chandan@linux.vnet.ibm.com> <20180212094347.22071-6-chandan@linux.vnet.ibm.com> <20180221010155.GC252219@gmail.com>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Message-Id: <11341004.sBrkMnv4Fk@localhost.localdomain>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, tytso@mit.edu
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patchset implements code to support encryption of Ext4 filesystem
-instances that have blocksize less than pagesize. The patchset has
-been tested on both ppc64 and x86_64 machines.
+On Wednesday, February 21, 2018 6:31:55 AM IST Eric Biggers wrote:
+> Hi Chandan,
+> 
+> On Mon, Feb 12, 2018 at 03:13:41PM +0530, Chandan Rajendra wrote:
+> > With block size < page size, ext4_block_write_begin() can have up to two
+> > blocks to decrypt. Hence this commit invokes fscrypt_decrypt_block() for
+> > each of those blocks.
+> > 
+> > Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+> > ---
+> >  fs/ext4/inode.c | 33 +++++++++++++++++++++++----------
+> >  1 file changed, 23 insertions(+), 10 deletions(-)
+> > 
+> > diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+> > index 69a4fd6..180dd2d 100644
+> > --- a/fs/ext4/inode.c
+> > +++ b/fs/ext4/inode.c
+> > @@ -1158,12 +1158,13 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+> >  	unsigned to = from + len;
+> >  	struct inode *inode = page->mapping->host;
+> >  	unsigned block_start, block_end;
+> > -	sector_t block;
+> > +	sector_t block, page_blk_nr;
+> >  	int err = 0;
+> >  	unsigned blocksize = inode->i_sb->s_blocksize;
+> >  	unsigned bbits;
+> >  	struct buffer_head *bh, *head, *wait[2], **wait_bh = wait;
+> >  	bool decrypt = false;
+> > +	int i;
+> >  
+> >  	BUG_ON(!PageLocked(page));
+> >  	BUG_ON(from > PAGE_SIZE);
+> > @@ -1224,18 +1225,30 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+> >  	/*
+> >  	 * If we issued read requests, let them complete.
+> >  	 */
+> > -	while (wait_bh > wait) {
+> > -		wait_on_buffer(*--wait_bh);
+> > -		if (!buffer_uptodate(*wait_bh))
+> > +	for (i = 0; &wait[i] < wait_bh; i++) {
+> > +		wait_on_buffer(wait[i]);
+> > +		if (!buffer_uptodate(wait[i]))
+> >  			err = -EIO;
+> > 	}
+> 
+> [...]
+> 
+> > +		for (i = 0; &wait[i] < wait_bh; i++) {
+> > +			int err2;
+> > +
+> > +			--wait_bh;
+> > +			block = page_blk_nr + (bh_offset(wait[i]) >> bbits);
+> > +			err2 = fscrypt_decrypt_block(page->mapping->host, page,
+> > +						wait[i]->b_size,
+> > +						bh_offset(wait[i]),
+> > +						block);
+> > +			if (err2) {
+> > +				clear_buffer_uptodate(wait[i]);
+> > +				err = err2;
+> > +			}
+> > +		}
+> 
+> These are very confusing ways to iterate through an array, especially the second
+> loop which is actually going in reverse order (why?).  Why not just use a
+> variable like 'nr_wait' for the number of valid buffer_head's like I had
+> suggested?  Then you can just do 'for (i = 0; i < nr_wait; i++)'.
+> 
 
-Eric, fscrypt_mpage_readpages() (originally, ext4_mpage_readpages())
-still retains the ability to read non-encrypted file data. Please let
-me know if the code has to be changed such that
-fscrypt_mpage_readpages() makes it mandatory for the file's data to be
-encrypted.
-
-TODO:
-F2FS and UBIFS code needs to be updated to make use of the newly added
-fscrypt functions. I will do that in the next version of the patchset.
-
-Changelog:
-"RFC V1" -> "RFC V2":
-1. Ext4's "encryption aware" functionality in fs/ext4/readpage.c has
-   been moved to fs/crypto/.
-2. fscrypt functions have now been renamed to indicate that they work
-   on blocks rather than pages.
-   Eric, I have renamed completion_pages() to fscrypt_complete_pages()
-   rather than to fscrypt_complete_blocks(). This is because we have a
-   new function fscrypt_complete_block() (which operates on a single
-   block) and IMHO having the identifier fscrypt_complete_blocks()
-   which differs from it by just one letter would confuse the reader.
-3. ext4_block_write_begin() now clears BH_Uptodate flag when
-   decryption of boundary blocks fail.
-4. fscrypt_encrypt_page() (now renamed to fscrypt_encrypt_block()) is
-   now split into two functions. fscrypt_prep_ciphertext_page()
-   allocates and initializes the fscrypt context and the bounce
-   page. fscrypt_encrypt_block() is limited to encrypting the
-   filesystem's block.
-5. fscrypt_zeroout_range() has been updated to work on blocksize <
-   pagesize scenario.
-6. Documentation/filesystems/fscrypt.rst has been updated to indicate
-   encryption support for blocksize < pagesize.
-
-Thanks to Eric Biggers for providing review comments for "RFC V1".
-
-Chandan Rajendra (11):
-  ext4: Clear BH_Uptodate flag on decryption error
-  fs/buffer.c: Export end_buffer_async_read and create_page_buffers
-  fs/crypto/: Rename functions to indicate that they operate on FS
-    blocks
-  completion_pages: Decrypt all contiguous blocks in a page
-  ext4: Decrypt all boundary blocks when doing buffered write
-  ext4: Decrypt the block that needs to be partially zeroed
-  fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
-  Enable reading encrypted files in blocksize less than pagesize setup
-  fscrypt: Move completion_pages to crypto/readpage.c
-  Enable writing encrypted files in blocksize less than pagesize setup
-  ext4: Enable encryption for blocksize less than page size
-
- Documentation/filesystems/fscrypt.rst |  14 +-
- fs/buffer.c                           |   6 +-
- fs/crypto/Makefile                    |   2 +-
- fs/crypto/bio.c                       |  77 +++---
- fs/crypto/crypto.c                    |  91 +++---
- fs/crypto/fscrypt_private.h           |   5 +-
- fs/crypto/readpage.c                  | 506 ++++++++++++++++++++++++++++++++++
- fs/ext4/Makefile                      |   2 +-
- fs/ext4/ext4.h                        |   5 -
- fs/ext4/inode.c                       |  53 +++-
- fs/ext4/page-io.c                     |  34 ++-
- fs/ext4/readpage.c                    | 294 --------------------
- fs/ext4/super.c                       |   7 -
- include/linux/buffer_head.h           |   3 +
- include/linux/fscrypt.h               |   1 +
- include/linux/fscrypt_notsupp.h       |  23 +-
- include/linux/fscrypt_supp.h          |  20 +-
- 17 files changed, 700 insertions(+), 443 deletions(-)
- create mode 100644 fs/crypto/readpage.c
- delete mode 100644 fs/ext4/readpage.c
+Sorry, the "--wait_bh;" part was a remanent from the "RFC PATCH V1". Without
+that statement, we loop in increasing order of elements in wait[] array. I
+will use the 'nr_wait' counter approach and post the next version of the
+patchset.  I misunderstood your advice to mean that the code should use
+similar looping order in both loops.
 
 -- 
-2.9.5
+chandan
