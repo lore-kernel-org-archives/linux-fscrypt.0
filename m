@@ -1,76 +1,39 @@
-Return-Path: <chandan@linux.vnet.ibm.com>
-From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: [RFC PATCH V2 02/11] fs/buffer.c: Export end_buffer_async_read and create_page_buffers
-Date: Mon, 12 Feb 2018 15:13:38 +0530
-In-Reply-To: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
-References: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
-Message-Id: <20180212094347.22071-3-chandan@linux.vnet.ibm.com>
-To: linux-ext4@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, linux-fsdevel@vger.kernel.org, ebiggers3@gmail.com, linux-fscrypt@vger.kernel.org, tytso@mit.edu
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH] fs, fscrypt: only define ->s_cop when FS_ENCRYPTION is enabled
+Date: Thu, 22 Feb 2018 15:39:04 -0800
+Message-Id: <20180222233904.70985-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The functions end_buffer_async_read() and create_page_buffers() will be
-required by the fscrypt module to implement decrypting encrypted blocks
-that have been read from the filesystem.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Now that filesystems only set and use their fscrypt_operations when they
+are built with encryption support, we can remove ->s_cop from
+'struct super_block' when FS_ENCRYPTION is disabled.  This saves a few
+bytes on some kernels and also makes it consistent with ->i_crypt_info.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/buffer.c                 | 6 ++++--
- include/linux/buffer_head.h | 3 +++
- 2 files changed, 7 insertions(+), 2 deletions(-)
+ include/linux/fs.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/fs/buffer.c b/fs/buffer.c
-index 551b781..663180d 100644
---- a/fs/buffer.c
-+++ b/fs/buffer.c
-@@ -256,7 +256,7 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
-  * I/O completion handler for block_read_full_page() - pages
-  * which come unlocked at the end of I/O.
-  */
--static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
-+void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- {
- 	unsigned long flags;
- 	struct buffer_head *first;
-@@ -312,6 +312,7 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- 	local_irq_restore(flags);
- 	return;
- }
-+EXPORT_SYMBOL(end_buffer_async_read);
- 
- /*
-  * Completion handler for block_write_full_page() - pages which are unlocked
-@@ -1647,7 +1648,7 @@ static inline int block_size_bits(unsigned int blocksize)
- 	return ilog2(blocksize);
- }
- 
--static struct buffer_head *create_page_buffers(struct page *page, struct inode *inode, unsigned int b_state)
-+struct buffer_head *create_page_buffers(struct page *page, struct inode *inode, unsigned int b_state)
- {
- 	BUG_ON(!PageLocked(page));
- 
-@@ -1656,6 +1657,7 @@ static struct buffer_head *create_page_buffers(struct page *page, struct inode *
- 				     b_state);
- 	return page_buffers(page);
- }
-+EXPORT_SYMBOL(create_page_buffers);
- 
- /*
-  * NOTE! All mapped/uptodate combinations are valid:
-diff --git a/include/linux/buffer_head.h b/include/linux/buffer_head.h
-index f1aed01..edc0983 100644
---- a/include/linux/buffer_head.h
-+++ b/include/linux/buffer_head.h
-@@ -161,7 +161,10 @@ struct buffer_head *alloc_page_buffers(struct page *page, unsigned long size,
- 		bool retry);
- void create_empty_buffers(struct page *, unsigned long,
- 			unsigned long b_state);
-+struct buffer_head *create_page_buffers(struct page *page, struct inode *inode,
-+					unsigned int b_state);
- void end_buffer_read_sync(struct buffer_head *bh, int uptodate);
-+void end_buffer_async_read(struct buffer_head *bh, int uptodate);
- void end_buffer_write_sync(struct buffer_head *bh, int uptodate);
- void end_buffer_async_write(struct buffer_head *bh, int uptodate);
- 
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 2a815560fda0..ae0dae78d1c6 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -1361,9 +1361,9 @@ struct super_block {
+ 	void                    *s_security;
+ #endif
+ 	const struct xattr_handler **s_xattr;
+-
++#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
+ 	const struct fscrypt_operations	*s_cop;
+-
++#endif
+ 	struct hlist_bl_head	s_roots;	/* alternate root dentries for NFS */
+ 	struct list_head	s_mounts;	/* list of mounts; _not_ for fs use */
+ 	struct block_device	*s_bdev;
 -- 
-2.9.5
+2.16.1.291.g4437f3f132-goog
