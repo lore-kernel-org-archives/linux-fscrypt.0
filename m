@@ -1,49 +1,33 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 07/14] fscrypt: drop max_namelen check from fname_decrypt()
-Date: Fri, 23 Mar 2018 12:23:51 -0700
-Message-Id: <20180323192358.95691-8-ebiggers3@gmail.com>
-In-Reply-To: <20180323192358.95691-1-ebiggers3@gmail.com>
-References: <20180323192358.95691-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from szxga04-in.huawei.com ([45.249.212.190]:6651 "EHLO huawei.com"
+        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
+        id S1751665AbeCPIuH (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 16 Mar 2018 04:50:07 -0400
+Subject: Re: [RFC PATCH v5 2/3] f2fs: introduce a new mount option
+ test_dummy_encryption
+References: <20180315105143.133050-1-shengyong1@huawei.com>
+ <20180315105143.133050-3-shengyong1@huawei.com>
+From: Chao Yu <yuchao0@huawei.com>
+Message-ID: <656a3814-7454-f12a-ad4a-4bd673c17fa3@huawei.com>
+Date: Fri, 16 Mar 2018 16:49:49 +0800
+MIME-Version: 1.0
+In-Reply-To: <20180315105143.133050-3-shengyong1@huawei.com>
+Content-Type: text/plain; charset="windows-1252"
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Sheng Yong <shengyong1@huawei.com>, jaegeuk@kernel.org, ebiggers@google.com, tytso@mit.edu
+Cc: miaoxie@huawei.com, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On 2018/3/15 18:51, Sheng Yong wrote:
+> This patch introduces a new mount option `test_dummy_encryption'
+> to allow fscrypt to create a fake fscrypt context. This is used
+> by xfstests.
+> 
+> Signed-off-by: Sheng Yong <shengyong1@huawei.com>
 
-fname_decrypt() returns an error if the input filename is longer than
-the inode's ->max_namelen() as given by the filesystem.  But, this
-doesn't actually make sense because the filesystem provided the input
-filename in the first place, where it was subject to the filesystem's
-limits.  And fscrypt_decrypt() has no internal limit itself.
+Reviewed-by: Chao Yu <yuchao0@huawei.com>
 
-Thus, remove this unnecessary check.
+Thanks,
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fname.c | 7 ++-----
- 1 file changed, 2 insertions(+), 5 deletions(-)
-
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 8088a606c0aa..cc9590b5f371 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -93,14 +93,11 @@ static int fname_decrypt(struct inode *inode,
- 	struct skcipher_request *req = NULL;
- 	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist src_sg, dst_sg;
--	struct fscrypt_info *ci = inode->i_crypt_info;
--	struct crypto_skcipher *tfm = ci->ci_ctfm;
-+	struct crypto_skcipher *tfm = inode->i_crypt_info->ci_ctfm;
- 	int res = 0;
- 	char iv[FS_CRYPTO_BLOCK_SIZE];
--	unsigned lim;
- 
--	lim = inode->i_sb->s_cop->max_namelen(inode);
--	if (iname->len <= 0 || iname->len > lim)
-+	if (iname->len <= 0)
- 		return -EIO;
- 
- 	/* Allocate request */
--- 
-2.17.0.rc0.231.g781580f067-goog
