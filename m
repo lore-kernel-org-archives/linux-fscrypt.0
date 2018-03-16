@@ -1,121 +1,61 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 14/14] fscrypt: only derive the needed portion of the key
-Date: Fri, 23 Mar 2018 12:23:58 -0700
-Message-Id: <20180323192358.95691-15-ebiggers3@gmail.com>
-In-Reply-To: <20180323192358.95691-1-ebiggers3@gmail.com>
-References: <20180323192358.95691-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-crypto-owner@vger.kernel.org>
+Date: Fri, 16 Mar 2018 23:53:43 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Subject: Re: [RFC PATCH] crypto: arm64/speck - add NEON-accelerated
+ implementation of Speck-XTS
+Message-ID: <20180316155343.GC7095@gondor.apana.org.au>
+References: <20180305191707.143961-1-ebiggers@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180305191707.143961-1-ebiggers@google.com>
+Sender: linux-crypto-owner@vger.kernel.org
+To: Eric Biggers <ebiggers@google.com>
+Cc: linux-crypto@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Greg Kaiser <gkaiser@google.com>, Paul Lawrence <paullawrence@google.com>, Michael Halcrow <mhalcrow@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, Mar 05, 2018 at 11:17:07AM -0800, Eric Biggers wrote:
+> Add a NEON-accelerated implementation of Speck128-XTS and Speck64-XTS
+> for ARM64.  This is ported from the 32-bit version.  It may be useful on
+> devices with 64-bit ARM CPUs that don't have the Cryptography
+> Extensions, so cannot do AES efficiently -- e.g. the Cortex-A53
+> processor on the Raspberry Pi 3.
+> 
+> It generally works the same way as the 32-bit version, but there are
+> some slight differences due to the different instructions, registers,
+> and syntax available in ARM64 vs. in ARM32.  For example, in the 64-bit
+> version there are enough registers to hold the XTS tweaks for each
+> 128-byte chunk, so they don't need to be saved on the stack.
+> 
+> Benchmarks on a Raspberry Pi 3 running a 64-bit kernel:
+> 
+>    Algorithm                              Encryption     Decryption
+>    ---------                              ----------     ----------
+>    Speck64/128-XTS (NEON)                 92.2 MB/s      92.2 MB/s
+>    Speck128/256-XTS (NEON)                75.0 MB/s      75.0 MB/s
+>    Speck128/256-XTS (generic)             47.4 MB/s      35.6 MB/s
+>    AES-128-XTS (NEON bit-sliced)          33.4 MB/s      29.6 MB/s
+>    AES-256-XTS (NEON bit-sliced)          24.6 MB/s      21.7 MB/s
+> 
+> The code performs well on higher-end ARM64 processors as well, though
+> such processors tend to have the Crypto Extensions which make AES
+> preferred.  For example, here are the same benchmarks run on a HiKey960
+> (with CPU affinity set for the A73 cores), with the Crypto Extensions
+> implementation of AES-256-XTS added:
+> 
+>    Algorithm                              Encryption     Decryption
+>    ---------                              -----------    -----------
+>    AES-256-XTS (Crypto Extensions)        1273.3 MB/s    1274.7 MB/s
+>    Speck64/128-XTS (NEON)                  359.8 MB/s     348.0 MB/s
+>    Speck128/256-XTS (NEON)                 292.5 MB/s     286.1 MB/s
+>    Speck128/256-XTS (generic)              186.3 MB/s     181.8 MB/s
+>    AES-128-XTS (NEON bit-sliced)           142.0 MB/s     124.3 MB/s
+>    AES-256-XTS (NEON bit-sliced)           104.7 MB/s      91.1 MB/s
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Currently the key derivation function in fscrypt uses the master key
-length as the amount of output key material to derive.  This works, but
-it means we can waste time deriving more key material than is actually
-used, e.g. most commonly, deriving 64 bytes for directories which only
-take a 32-byte AES-256-CTS-CBC key.  It also forces us to validate that
-the master key length is a multiple of AES_BLOCK_SIZE, which wouldn't
-otherwise be necessary.
-
-Fix it to only derive the needed length key.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/keyinfo.c | 39 ++++++++++++++++-----------------------
- 1 file changed, 16 insertions(+), 23 deletions(-)
-
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index f00bf1437c3c..81cd7ea86c07 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -19,17 +19,16 @@
- 
- static struct crypto_shash *essiv_hash_tfm;
- 
--/**
-- * derive_key_aes() - Derive a key using AES-128-ECB
-- * @deriving_key: Encryption key used for derivation.
-- * @source_key:   Source key to which to apply derivation.
-- * @derived_raw_key:  Derived raw key.
-+/*
-+ * Key derivation function.  This generates the derived key by encrypting the
-+ * master key with AES-128-ECB using the inode's nonce as the AES key.
-  *
-- * Return: Zero on success; non-zero otherwise.
-+ * The master key must be at least as long as the derived key.  If the master
-+ * key is longer, then only the first 'derived_keysize' bytes are used.
-  */
--static int derive_key_aes(const u8 deriving_key[FS_KEY_DERIVATION_NONCE_SIZE],
--				const struct fscrypt_key *source_key,
--				u8 derived_raw_key[FS_MAX_KEY_SIZE])
-+static int derive_key_aes(const u8 *master_key,
-+			  const struct fscrypt_context *ctx,
-+			  u8 *derived_key, unsigned int derived_keysize)
- {
- 	int res = 0;
- 	struct skcipher_request *req = NULL;
-@@ -51,14 +50,13 @@ static int derive_key_aes(const u8 deriving_key[FS_KEY_DERIVATION_NONCE_SIZE],
- 	skcipher_request_set_callback(req,
- 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
- 			crypto_req_done, &wait);
--	res = crypto_skcipher_setkey(tfm, deriving_key,
--				     FS_KEY_DERIVATION_NONCE_SIZE);
-+	res = crypto_skcipher_setkey(tfm, ctx->nonce, sizeof(ctx->nonce));
- 	if (res < 0)
- 		goto out;
- 
--	sg_init_one(&src_sg, source_key->raw, source_key->size);
--	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
--	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
-+	sg_init_one(&src_sg, master_key, derived_keysize);
-+	sg_init_one(&dst_sg, derived_key, derived_keysize);
-+	skcipher_request_set_crypt(req, &src_sg, &dst_sg, derived_keysize,
- 				   NULL);
- 	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- out:
-@@ -109,10 +107,9 @@ find_and_lock_process_key(const char *prefix,
- 		goto invalid;
- 	}
- 
--	if (payload->size < min_keysize ||
--	    payload->size % AES_BLOCK_SIZE != 0) {
-+	if (payload->size < min_keysize) {
- 		fscrypt_warn(NULL,
--			     "key with description '%s' is too short or is misaligned (got %u bytes, need %u+ bytes)",
-+			     "key with description '%s' is too short (got %u bytes, need %u+ bytes)",
- 			     key->description, payload->size, min_keysize);
- 		goto invalid;
- 	}
-@@ -145,7 +142,7 @@ static int find_and_derive_key(const struct inode *inode,
- 	}
- 	if (IS_ERR(key))
- 		return PTR_ERR(key);
--	err = derive_key_aes(ctx->nonce, payload, derived_key);
-+	err = derive_key_aes(payload->raw, ctx, derived_key, derived_keysize);
- 	up_read(&key->sem);
- 	key_put(key);
- 	return err;
-@@ -327,7 +324,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	 * crypto API as part of key derivation.
- 	 */
- 	res = -ENOMEM;
--	raw_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
-+	raw_key = kmalloc(keysize, GFP_NOFS);
- 	if (!raw_key)
- 		goto out;
- 
-@@ -345,10 +342,6 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	}
- 	crypt_info->ci_ctfm = ctfm;
- 	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
--	/*
--	 * if the provided key is longer than keysize, we use the first
--	 * keysize bytes of the derived key only
--	 */
- 	res = crypto_skcipher_setkey(ctfm, raw_key, keysize);
- 	if (res)
- 		goto out;
+Patch applied.  Thanks.
 -- 
-2.17.0.rc0.231.g781580f067-goog
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
