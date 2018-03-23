@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 02/14] fscrypt: remove error messages for skcipher_request_alloc() failure
-Date: Fri, 23 Mar 2018 12:23:46 -0700
-Message-Id: <20180323192358.95691-3-ebiggers3@gmail.com>
+Subject: [PATCH 05/14] fscrypt: don't clear flags on crypto transform
+Date: Fri, 23 Mar 2018 12:23:49 -0700
+Message-Id: <20180323192358.95691-6-ebiggers3@gmail.com>
 In-Reply-To: <20180323192358.95691-1-ebiggers3@gmail.com>
 References: <20180323192358.95691-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
@@ -11,63 +11,29 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-skcipher_request_alloc() can only fail due to lack of memory, and in
-that case the memory allocator will have already printed a detailed
-error message.  Thus, remove the redundant error messages from fscrypt.
+fscrypt is clearing the flags on the crypto_skcipher it allocates for
+each inode.  But, this is unnecessary and may cause problems in the
+future because it will even clear flags that are meant to be internal to
+the crypto API, e.g. CRYPTO_TFM_NEED_KEY.
+
+Remove the unnecessary flag clearing.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/crypto.c |  6 +-----
- fs/crypto/fname.c  | 10 ++--------
- 2 files changed, 3 insertions(+), 13 deletions(-)
+ fs/crypto/keyinfo.c | 1 -
+ 1 file changed, 1 deletion(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index f2b2d8408a01..58761d816751 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -156,12 +156,8 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 8099388f5581..1435a1c81010 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -327,7 +327,6 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 		goto out;
  	}
- 
- 	req = skcipher_request_alloc(tfm, gfp_flags);
--	if (!req) {
--		printk_ratelimited(KERN_ERR
--				"%s: crypto_request_alloc() failed\n",
--				__func__);
-+	if (!req)
- 		return -ENOMEM;
--	}
- 
- 	skcipher_request_set_callback(
- 		req, CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index e33f3d3c5ade..3b5164b159cb 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -59,11 +59,8 @@ int fname_encrypt(struct inode *inode, const struct qstr *iname,
- 
- 	/* Set up the encryption request */
- 	req = skcipher_request_alloc(tfm, GFP_NOFS);
--	if (!req) {
--		printk_ratelimited(KERN_ERR
--			"%s: skcipher_request_alloc() failed\n", __func__);
-+	if (!req)
- 		return -ENOMEM;
--	}
- 	skcipher_request_set_callback(req,
- 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
- 			crypto_req_done, &wait);
-@@ -108,11 +105,8 @@ static int fname_decrypt(struct inode *inode,
- 
- 	/* Allocate request */
- 	req = skcipher_request_alloc(tfm, GFP_NOFS);
--	if (!req) {
--		printk_ratelimited(KERN_ERR
--			"%s: crypto_request_alloc() failed\n",  __func__);
-+	if (!req)
- 		return -ENOMEM;
--	}
- 	skcipher_request_set_callback(req,
- 		CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
- 		crypto_req_done, &wait);
+ 	crypt_info->ci_ctfm = ctfm;
+-	crypto_skcipher_clear_flags(ctfm, ~0);
+ 	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
+ 	/*
+ 	 * if the provided key is longer than keysize, we use the first
 -- 
 2.17.0.rc0.231.g781580f067-goog
