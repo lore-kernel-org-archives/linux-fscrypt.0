@@ -1,143 +1,121 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-it0-f43.google.com ([209.85.214.43]:35711 "EHLO
-        mail-it0-f43.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S933178AbeCFTif (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 6 Mar 2018 14:38:35 -0500
-Received: by mail-it0-f43.google.com with SMTP id v194so311441itb.0
-        for <linux-fscrypt@vger.kernel.org>; Tue, 06 Mar 2018 11:38:35 -0800 (PST)
-Date: Tue, 6 Mar 2018 11:38:31 -0800
-From: Eric Biggers <ebiggers@google.com>
-Subject: Re: [RFC PATCH v3] f2fs: introduce F2FS_FEATURE_LOST_FOUND feature
-Message-ID: <20180306193831.GA166451@google.com>
-References: <20180306033904.122540-1-shengyong1@huawei.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180306033904.122540-1-shengyong1@huawei.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Sheng Yong <shengyong1@huawei.com>
-Cc: jaegeuk@kernel.org, yuchao0@huawei.com, miaoxie@huawei.com, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 14/14] fscrypt: only derive the needed portion of the key
+Date: Fri, 23 Mar 2018 12:23:58 -0700
+Message-Id: <20180323192358.95691-15-ebiggers3@gmail.com>
+In-Reply-To: <20180323192358.95691-1-ebiggers3@gmail.com>
+References: <20180323192358.95691-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-[+Cc linux-fscrypt]
+From: Eric Biggers <ebiggers@google.com>
 
-Hi Sheng,
+Currently the key derivation function in fscrypt uses the master key
+length as the amount of output key material to derive.  This works, but
+it means we can waste time deriving more key material than is actually
+used, e.g. most commonly, deriving 64 bytes for directories which only
+take a 32-byte AES-256-CTS-CBC key.  It also forces us to validate that
+the master key length is a multiple of AES_BLOCK_SIZE, which wouldn't
+otherwise be necessary.
 
-On Tue, Mar 06, 2018 at 11:39:04AM +0800, Sheng Yong wrote:
-> This patch introduces a new feature, F2FS_FEATURE_LOST_FOUND, which
-> is set by mkfs. It creates a directory named lost+found, which saves
-> unreachable files. If fsck finds a file which has no parent, or its
-> parent is removed by fsck, the file will be placed under lost+found
-> directory by fsck.
-> 
-> lost+found directory could not be encrypted. As a result, the root
-> directory cannot be encrypted too. So if LOST_FOUND feature is enabled,
-> let's avoid to encrypt root directory.
-> 
-> This patch also introduces a new mount option `test_dummy_encryption'
-> to allow fscrypt to create a fake fscrypt context. This is used by
-> xfstests.
+Fix it to only derive the needed length key.
 
-It would be a bit easier to review if this was split into 2 patches:
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/keyinfo.c | 39 ++++++++++++++++-----------------------
+ 1 file changed, 16 insertions(+), 23 deletions(-)
 
-1. Add LOST_FOUND feature
-2. Add test_dummy_encryption mount option
-
-> diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
-> index 797eb05cb538..7f908be8d525 100644
-> --- a/fs/f2fs/dir.c
-> +++ b/fs/f2fs/dir.c
-> @@ -361,6 +361,7 @@ struct page *init_inode_metadata(struct inode *inode, struct inode *dir,
->  			struct page *dpage)
->  {
->  	struct page *page;
-> +	int encrypt = DUMMY_ENCRYPTION_ENABLED(F2FS_I_SB(dir));
->  	int err;
->  
->  	if (is_inode_flag_set(inode, FI_NEW_INODE)) {
-> @@ -387,7 +388,8 @@ struct page *init_inode_metadata(struct inode *inode, struct inode *dir,
->  		if (err)
->  			goto put_error;
->  
-> -		if (f2fs_encrypted_inode(dir) && f2fs_may_encrypt(inode)) {
-> +		if ((f2fs_encrypted_inode(dir) || encrypt) &&
-> +					f2fs_may_encrypt(inode)) {
->  			err = fscrypt_inherit_context(dir, inode, page, false);
->  			if (err)
->  				goto put_error;
-> @@ -402,7 +404,7 @@ struct page *init_inode_metadata(struct inode *inode, struct inode *dir,
->  
->  	if (new_name) {
->  		init_dent_inode(new_name, page);
-> -		if (f2fs_encrypted_inode(dir))
-> +		if (f2fs_encrypted_inode(dir) || encrypt)
->  			file_set_enc_name(inode);
->  	}
->  
-
-'enc_name' should only be set if the parent directory is encrypted, right?  So
-the condition for file_set_enc_name() should stay 'f2fs_encrypted_inode(dir)'.
-
-> diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-> @@ -719,6 +721,18 @@ static int parse_options(struct super_block *sb, char *options)
->  			}
->  			kfree(name);
->  			break;
-> +#ifdef CONFIG_F2FS_FS_ENCRYPTION
-> +		case Opt_test_dummy_encryption:
-> +			sbi->mount_flags |= F2FS_MF_TEST_DUMMY_ENCRYPTION;
-> +			f2fs_msg(sb, KERN_INFO,
-> +					"Test dummy encryption mode enabled");
-> +			break;
-> +#else
-> +		case Opt_test_dummy_encryption:
-> +			f2fs_msg(sb, KERN_INFO,
-> +					"Test dummy encryption mount option ignored");
-> +			break;
-> +#endif
-
-You could write the 'case Opt_test_dummy_encryption:" and break just once, and
-put the #ifdef inside it.
-
-> @@ -2696,6 +2732,12 @@ static int f2fs_fill_super(struct super_block *sb, void *data, int silent)
->  		}
->  	}
->  
-> +	if (DUMMY_ENCRYPTION_ENABLED(sbi) && !f2fs_readonly(sb) &&
-> +				!f2fs_sb_has_encrypt(sb)) {
-> +		f2fs_sb_set_encrypt(sb);
-> +		recovery = 1;
-> +	}
-> +
-[...]
->  	/* get an inode for meta space */
->  	sbi->meta_inode = f2fs_iget(sb, F2FS_META_INO(sbi));
->  	if (IS_ERR(sbi->meta_inode)) {
-> @@ -2870,12 +2912,16 @@ static int f2fs_fill_super(struct super_block *sb, void *data, int silent)
->  	}
->  	kfree(options);
->  
-> -	/* recover broken superblock */
-> +	/* recover broken superblock or enable encrypt feature */
->  	if (recovery) {
-> -		err = f2fs_commit_super(sbi, true);
-> -		f2fs_msg(sb, KERN_INFO,
-> -			"Try to recover %dth superblock, ret: %d",
-> -			sbi->valid_super_block ? 1 : 2, err);
-> +		if (sbi->mount_flags & F2FS_MF_TEST_DUMMY_ENCRYPTION) {
-> +			f2fs_commit_super(sbi, false);
-> +		} else {
-> +			err = f2fs_commit_super(sbi, true);
-> +			f2fs_msg(sb, KERN_INFO,
-> +				"Try to recover %dth superblock, ret: %d",
-> +				sbi->valid_super_block ? 1 : 2, err);
-> +		}
->  	}
-
-How about just not allowing mounting with test_dummy_encryption if the 'encrypt'
-feature flag isn't already set?  That would be simpler.  I think it was a
-mistake that ext4 automatically turns the 'encrypt' flag on when
-test_dummy_encryption is specified.
-
-- Eric
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index f00bf1437c3c..81cd7ea86c07 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -19,17 +19,16 @@
+ 
+ static struct crypto_shash *essiv_hash_tfm;
+ 
+-/**
+- * derive_key_aes() - Derive a key using AES-128-ECB
+- * @deriving_key: Encryption key used for derivation.
+- * @source_key:   Source key to which to apply derivation.
+- * @derived_raw_key:  Derived raw key.
++/*
++ * Key derivation function.  This generates the derived key by encrypting the
++ * master key with AES-128-ECB using the inode's nonce as the AES key.
+  *
+- * Return: Zero on success; non-zero otherwise.
++ * The master key must be at least as long as the derived key.  If the master
++ * key is longer, then only the first 'derived_keysize' bytes are used.
+  */
+-static int derive_key_aes(const u8 deriving_key[FS_KEY_DERIVATION_NONCE_SIZE],
+-				const struct fscrypt_key *source_key,
+-				u8 derived_raw_key[FS_MAX_KEY_SIZE])
++static int derive_key_aes(const u8 *master_key,
++			  const struct fscrypt_context *ctx,
++			  u8 *derived_key, unsigned int derived_keysize)
+ {
+ 	int res = 0;
+ 	struct skcipher_request *req = NULL;
+@@ -51,14 +50,13 @@ static int derive_key_aes(const u8 deriving_key[FS_KEY_DERIVATION_NONCE_SIZE],
+ 	skcipher_request_set_callback(req,
+ 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
+ 			crypto_req_done, &wait);
+-	res = crypto_skcipher_setkey(tfm, deriving_key,
+-				     FS_KEY_DERIVATION_NONCE_SIZE);
++	res = crypto_skcipher_setkey(tfm, ctx->nonce, sizeof(ctx->nonce));
+ 	if (res < 0)
+ 		goto out;
+ 
+-	sg_init_one(&src_sg, source_key->raw, source_key->size);
+-	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
+-	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
++	sg_init_one(&src_sg, master_key, derived_keysize);
++	sg_init_one(&dst_sg, derived_key, derived_keysize);
++	skcipher_request_set_crypt(req, &src_sg, &dst_sg, derived_keysize,
+ 				   NULL);
+ 	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
+ out:
+@@ -109,10 +107,9 @@ find_and_lock_process_key(const char *prefix,
+ 		goto invalid;
+ 	}
+ 
+-	if (payload->size < min_keysize ||
+-	    payload->size % AES_BLOCK_SIZE != 0) {
++	if (payload->size < min_keysize) {
+ 		fscrypt_warn(NULL,
+-			     "key with description '%s' is too short or is misaligned (got %u bytes, need %u+ bytes)",
++			     "key with description '%s' is too short (got %u bytes, need %u+ bytes)",
+ 			     key->description, payload->size, min_keysize);
+ 		goto invalid;
+ 	}
+@@ -145,7 +142,7 @@ static int find_and_derive_key(const struct inode *inode,
+ 	}
+ 	if (IS_ERR(key))
+ 		return PTR_ERR(key);
+-	err = derive_key_aes(ctx->nonce, payload, derived_key);
++	err = derive_key_aes(payload->raw, ctx, derived_key, derived_keysize);
+ 	up_read(&key->sem);
+ 	key_put(key);
+ 	return err;
+@@ -327,7 +324,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	 * crypto API as part of key derivation.
+ 	 */
+ 	res = -ENOMEM;
+-	raw_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
++	raw_key = kmalloc(keysize, GFP_NOFS);
+ 	if (!raw_key)
+ 		goto out;
+ 
+@@ -345,10 +342,6 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	}
+ 	crypt_info->ci_ctfm = ctfm;
+ 	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
+-	/*
+-	 * if the provided key is longer than keysize, we use the first
+-	 * keysize bytes of the derived key only
+-	 */
+ 	res = crypto_skcipher_setkey(ctfm, raw_key, keysize);
+ 	if (res)
+ 		goto out;
+-- 
+2.17.0.rc0.231.g781580f067-goog
