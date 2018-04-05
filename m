@@ -1,49 +1,29 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 08/15] fscrypt: drop max_namelen check from fname_decrypt()
-Date: Mon, 30 Apr 2018 15:51:42 -0700
-Message-Id: <20180430225149.183514-9-ebiggers3@gmail.com>
-In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
-References: <20180430225149.183514-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <tytso@thunk.org>
+Date: Thu, 5 Apr 2018 16:50:36 -0400
+From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Subject: Re: [RFC PATCH V2 07/11] fscrypt_zeroout_range: Encrypt all zeroed
+ out blocks of a page
+Message-ID: <20180405205036.GA32529@thunk.org>
+References: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
+ <3388885.zk0F4oSU7q@localhost.localdomain>
+ <20180405124745.GA20556@thunk.org>
+ <2019099.0S9cVZxUkm@localhost.localdomain>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <2019099.0S9cVZxUkm@localhost.localdomain>
+To: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Cc: Eric Biggers <ebiggers3@gmail.com>, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Thu, Apr 05, 2018 at 06:37:24PM +0530, Chandan Rajendra wrote:
+> Sorry, I wasn't clear enough with my explaination. I actually meant to say
+> that not all blocks mapped by a page might be dirty and hence only a subset
+> of the dirty blocks might need to be written to the disk.
 
-fname_decrypt() returns an error if the input filename is longer than
-the inode's ->max_namelen() as given by the filesystem.  But, this
-doesn't actually make sense because the filesystem provided the input
-filename in the first place, where it was subject to the filesystem's
-limits.  And fname_decrypt() has no internal limit itself.
+But we only track dirtiness on a per-page level.  That's all the page
+cache gives us.  Remember, the function name is ext4_bio_write_page()
+or {btrfs,xfs,ext4}_writepage() --- we will always be writing a full
+page at a time.
 
-Thus, remove this unnecessary check.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fname.c | 7 ++-----
- 1 file changed, 2 insertions(+), 5 deletions(-)
-
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 8088a606c0aa..cc9590b5f371 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -93,14 +93,11 @@ static int fname_decrypt(struct inode *inode,
- 	struct skcipher_request *req = NULL;
- 	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist src_sg, dst_sg;
--	struct fscrypt_info *ci = inode->i_crypt_info;
--	struct crypto_skcipher *tfm = ci->ci_ctfm;
-+	struct crypto_skcipher *tfm = inode->i_crypt_info->ci_ctfm;
- 	int res = 0;
- 	char iv[FS_CRYPTO_BLOCK_SIZE];
--	unsigned lim;
- 
--	lim = inode->i_sb->s_cop->max_namelen(inode);
--	if (iname->len <= 0 || iname->len > lim)
-+	if (iname->len <= 0)
- 		return -EIO;
- 
- 	/* Allocate request */
--- 
-2.17.0.441.gb46fe60e1d-goog
+						- Ted
