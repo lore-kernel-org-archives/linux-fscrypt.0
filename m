@@ -1,64 +1,51 @@
-Return-Path: <tytso@thunk.org>
-Date: Thu, 5 Apr 2018 08:47:45 -0400
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
-Subject: Re: [RFC PATCH V2 07/11] fscrypt_zeroout_range: Encrypt all zeroed
- out blocks of a page
-Message-ID: <20180405124745.GA20556@thunk.org>
-References: <20180212094347.22071-1-chandan@linux.vnet.ibm.com>
- <18565695.50sL0kI9m1@localhost.localdomain>
- <20180327194056.GD15608@thunk.org>
- <3388885.zk0F4oSU7q@localhost.localdomain>
+Return-Path: <chandan@linux.vnet.ibm.com>
+From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Subject: Re: [RFC PATCH V2 07/11] fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
+Date: Thu, 05 Apr 2018 12:33:26 +0530
+In-Reply-To: <20180327194056.GD15608@thunk.org>
+References: <20180212094347.22071-1-chandan@linux.vnet.ibm.com> <18565695.50sL0kI9m1@localhost.localdomain> <20180327194056.GD15608@thunk.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <3388885.zk0F4oSU7q@localhost.localdomain>
-To: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Message-Id: <3388885.zk0F4oSU7q@localhost.localdomain>
+To: "Theodore Y. Ts'o" <tytso@mit.edu>
 Cc: Eric Biggers <ebiggers3@gmail.com>, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Thu, Apr 05, 2018 at 12:33:26PM +0530, Chandan Rajendra wrote:
+On Wednesday, March 28, 2018 1:10:56 AM IST Theodore Y. Ts'o wrote:
+> On Mon, Mar 26, 2018 at 01:52:54PM +0530, Chandan Rajendra wrote:
+> > > Also, it looks like when you renamed the *_page fscrypt functions to
+> > > *_blocks, on the write side, a bounce page is still being used for
+> > > each block.  So so an an architecture which has 64k pages, and we are
+> > > writing to a file sytem with 4k blocks, to write a 64k page, the
+> > > fscrypt layer will have to allocate 16 64k bounce pages to write a
+> > > single 64k page to an encrypted file.  Am I missing something?
+> > > 
+> > 
+> > ext4_bio_write_page() invokes the new fscrypt_encrypt_block() function for
+> > each block of the page that has been marked with "Async write". For all blocks
+> > of the page that needs to be written to the disk, we pass the same bounce page
+> > as an argument to fscrypt_encrypt_block().
 > 
-> I encountered a problem when refactoring the code to get fscrypt layer to
-> encrypt all the blocks of a page by internally calling
-> fscrypt_encrypt_block().
+> Thanks for the explanation.  I do wonder if the proper thing to export
+> from the fscrypt layer is fscrypt_encrypt_page(), since for all file
+> systems, the only thing which really makes sense is to read and write
+> a full page at a time, since we cache things at the page cache a full
+> page a time.  So instead of teaching each file system how to use
+> fscrypt_{encrypt,decrypt}_block, maybe push that into the fscrypt
+> layer, and implement a new fscrypt_encrypt_page() which calls
+> fs_encrypt_block()?
 > 
-> It is the filesystem which knows which subset of blocks mapped by a page that
-> needs to be encrypted.
 
-That's not quite correct.  All blocks in a file are either always
-encrypted, or not.  So that's not really the problem.
+I encountered a problem when refactoring the code to get fscrypt layer to
+encrypt all the blocks of a page by internally calling
+fscrypt_encrypt_block().
 
-> For example, ext4_bio_write_page() marks such blocks
-> with "Async Write" flag and later in another pass, it encrypts and also adds
-> these blocks to a bio.
+It is the filesystem which knows which subset of blocks mapped by a page that
+needs to be encrypted. For example, ext4_bio_write_page() marks such blocks
+with "Async Write" flag and later in another pass, it encrypts and also adds
+these blocks to a bio. So IMHO, I think fscrypt layer should limit itself to
+encrypting/decrypting file data in block size units.
 
-The tricky bits with ext4_bio_write_page() all are in handling the
-case where page_size > block_size.  In that case, where there are multiple
-file system blocks covering a page, we need to know the on-disk
-block numbers are for the blocks covering the page, and the encryption
-is intertwined with the I/O submission path, which is file system
-specific -- mainly because how the completion callback and the
-parameters which need to be passed *into* the the callback function is
-file system specific.
-
-However, none of that is needed or relevant to the encryption
-operation.  It's an accident of code development history that
-fscrypt_encrypt_page was placed where it was.
-
-That is, none of work done in the first pass (starting with the
-comment "In the first loop we prepare and mark buffers to submit....")
-is needed to be done before we call fscrypt_encrypt_page().  That call:
-
-	data_page = fscrypt_encrypt_page(inode, page, PAGE_SIZE, 0,
-					page->index, gfp_flags);
-
-... could easily be moved to the beginning of ext4_bio_write_page().
-
-I can do that to make the function easier to understand, but that
-particular cleanup is merely cosmetic.  It doesn't what you would need
-to do order to make fscrypt_encrypt_page() iterate over the page as it
-calls fscrypt_encrypt_buffer().
-
-Regards,
-
-						- Ted
+-- 
+chandan
