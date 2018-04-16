@@ -1,26 +1,73 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from szxga06-in.huawei.com ([45.249.212.32]:59365 "EHLO huawei.com"
-        rhost-flags-OK-FAIL-OK-FAIL) by vger.kernel.org with ESMTP
-        id S1751211AbeDQJNT (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 17 Apr 2018 05:13:19 -0400
-Subject: Re: [f2fs-dev] [PATCH 2/2] f2fs: refactor read path to allow multiple
+Received: from mail-pf0-f178.google.com ([209.85.192.178]:35793 "EHLO
+        mail-pf0-f178.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1750989AbeDPWPp (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 16 Apr 2018 18:15:45 -0400
+Received: by mail-pf0-f178.google.com with SMTP id j5so1662326pfh.2
+        for <linux-fscrypt@vger.kernel.org>; Mon, 16 Apr 2018 15:15:45 -0700 (PDT)
+Date: Mon, 16 Apr 2018 15:15:42 -0700
+From: Michael Halcrow <mhalcrow@google.com>
+Subject: Re: [PATCH 2/2] f2fs: refactor read path to allow multiple
  postprocessing steps
+Message-ID: <20180416221542.GB51421@google.com>
 References: <20180416193147.104555-1-ebiggers@google.com>
  <20180416193147.104555-3-ebiggers@google.com>
-From: Chao Yu <yuchao0@huawei.com>
-Message-ID: <2ccf62e8-070a-7ddc-77a3-cb5ba9347bba@huawei.com>
-Date: Tue, 17 Apr 2018 17:13:12 +0800
 MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 In-Reply-To: <20180416193147.104555-3-ebiggers@google.com>
-Content-Type: text/plain; charset="windows-1252"
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: Eric Biggers <ebiggers@google.com>, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: Michael Halcrow <mhalcrow@google.com>, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
+To: Eric Biggers <ebiggers@google.com>
+Cc: linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Chuck Lever <chuck.lever@oracle.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On 2018/4/17 3:31, Eric Biggers via Linux-f2fs-devel wrote:
+Given recent talk I've seen on potentially applying file-based
+protections in NFS, I think it's worth making some cautionary
+observations at this stage.
+
+Moxie's Cryptographic Doom Principle is an approachable take on the
+argument that one should verify before performing any other
+cryptographic operations.
+
+https://moxie.org/blog/the-cryptographic-doom-principle/
+
+As we consider inline cryptographic engines, this becomes challenging
+because encryption is delegated to the block layer, but authenticity
+still happens at the file system layer.
+
+That said, the feasibility of applying attacks such as CCA2 against
+file sytem content is in question, depending on the adversarial model
+for the context in which the file system is integrated.  In
+particular, does the model include a MiTM between the kernel and the
+storage?
+
+The fs-crypt adversarial model explicitly concerns itself only with a
+single point-in-time permanent offline compromise of storage.  I'm not
+aware of any real analysis anyone has done when we're instead dealing
+with storage that can be arbitrarily modified at arbitrary points in
+time.
+
+Is the user concerned about malicious drive controller firmware?  Will
+the content be transmitted over an insecure network connection?  Will
+the content be otherwise manipulatable by an adversary who can change
+to the backing storage?
+
+The other caution relates to compress-then-encrypt.  I refer to the
+CRIME and BREACH attacks.
+
+https://en.wikipedia.org/wiki/CRIME
+
+https://en.wikipedia.org/wiki/BREACH
+
+Again, it's context-dependent whether or how attacks like this can
+apply to a file system.  We'll need to be explicit about our
+expectations as we investigate whether or how to use fs-crypt and
+fs-verity capabilities in NFS.  I think this feeds into a discussion
+on efficient protection of file system metadata, but I'll defer to
+some future thread for that.
+
+On Mon, Apr 16, 2018 at 12:31:47PM -0700, Eric Biggers wrote:
 > Currently f2fs's ->readpage() and ->readpages() assume that either the
 > data undergoes no postprocessing, or decryption only.  But with
 > fs-verity, there will be an additional authenticity verification step,
@@ -83,6 +130,16 @@ On 2018/4/17 3:31, Eric Biggers via Linux-f2fs-devel wrote:
 > +	struct work_struct work;
 > +	unsigned int cur_step;
 > +	unsigned int enabled_steps;
+
+What if enabled_steps has gaps?  E.g., 0x09 will be feasible if
+there's compression, encryption, virus signature scanning, and verity.
+I'm don't really see how the cur_step logic can be made to be elegant
+in that case.
+
+If you start "inital" at 1, then you could collapse these two into
+"pending_steps", setting each bit position to 0 after processing.
+Just a thought.
+
 > +};
 > +
 > +static void __read_end_io(struct bio *bio)
@@ -135,35 +192,6 @@ On 2018/4/17 3:31, Eric Biggers via Linux-f2fs-devel wrote:
 > +	default:
 > +		__read_end_io(ctx->bio);
 > +	}
-
-How about introducing __bio_post_read_processing()
-
-switch (step) {
-case STEP_DECRYPT:
-	...
-	break;
-case STEP_COMPRESS:
-	...
-	break;
-case STEP_GENERIC:
-	__read_end_io;
-	break;
-...
-}
-
-Then we can customize flexible read processes like:
-
-bio_post_read_processing()
-{
-	if (encrypt_enabled)
-		__bio_post_read_processing(, STEP_DECRYPT);
-	if (compress_enabled)
-		__bio_post_read_processing(, STEP_COMPRESS);
-	__bio_post_read_processing(, STEP_GENERIC);
-}
-
-Or other flow.
-
 > +}
 > +
 > +static bool f2fs_bio_post_read_required(struct bio *bio)
@@ -240,9 +268,6 @@ Or other flow.
 >  	f2fs_target_device(sbi, blkaddr, bio);
 >  	bio->bi_end_io = f2fs_read_end_io;
 > -	bio->bi_private = ctx;
-
-bio->bi_private = NULL;
-
 >  	bio_set_op_attrs(bio, REQ_OP_READ, 0);
 >  
 > +	if (f2fs_encrypted_file(inode))
@@ -296,11 +321,6 @@ bio->bi_private = NULL;
 > +		goto fail;
 > +	bio_post_read_ctx_pool =
 > +		mempool_create_slab_pool(128, bio_post_read_ctx_cache);
-
-#define MAX_POST_READ_CACHE_SIZE	128
-
-Thanks,
-
 > +	if (!bio_post_read_ctx_pool)
 > +		goto fail_free_cache;
 > +	return 0;
@@ -432,5 +452,6 @@ Thanks,
 >  	f2fs_destroy_root_stats();
 >  	unregister_filesystem(&f2fs_fs_type);
 >  	unregister_shrinker(&f2fs_shrinker_info);
+> -- 
+> 2.17.0.484.g0c8726318c-goog
 > 
-
