@@ -1,132 +1,131 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-pl0-f68.google.com ([209.85.160.68]:34024 "EHLO
-        mail-pl0-f68.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1752427AbeDQRm0 (ORCPT
+Received: from mail-pf0-f175.google.com ([209.85.192.175]:37862 "EHLO
+        mail-pf0-f175.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1752665AbeDQRbY (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 17 Apr 2018 13:42:26 -0400
-Received: by mail-pl0-f68.google.com with SMTP id z12-v6so4918764plo.1
-        for <linux-fscrypt@vger.kernel.org>; Tue, 17 Apr 2018 10:42:26 -0700 (PDT)
-Date: Tue, 17 Apr 2018 10:42:21 -0700
+        Tue, 17 Apr 2018 13:31:24 -0400
+Received: by mail-pf0-f175.google.com with SMTP id p6so12472889pfn.4
+        for <linux-fscrypt@vger.kernel.org>; Tue, 17 Apr 2018 10:31:24 -0700 (PDT)
+Date: Tue, 17 Apr 2018 10:31:20 -0700
 From: Eric Biggers <ebiggers@google.com>
-Subject: Re: [f2fs-dev] [PATCH 2/2] f2fs: refactor read path to allow
- multiple postprocessing steps
-Message-ID: <20180417174221.GB7428@google.com>
+Subject: Re: [PATCH 2/2] f2fs: refactor read path to allow multiple
+ postprocessing steps
+Message-ID: <20180417173120.GA7428@google.com>
 References: <20180416193147.104555-1-ebiggers@google.com>
  <20180416193147.104555-3-ebiggers@google.com>
- <2ccf62e8-070a-7ddc-77a3-cb5ba9347bba@huawei.com>
+ <20180416221542.GB51421@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <2ccf62e8-070a-7ddc-77a3-cb5ba9347bba@huawei.com>
+In-Reply-To: <20180416221542.GB51421@google.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: Chao Yu <yuchao0@huawei.com>
-Cc: linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, Michael Halcrow <mhalcrow@google.com>, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
+To: Michael Halcrow <mhalcrow@google.com>
+Cc: linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Mimi Zohar <zohar@linux.vnet.ibm.com>, Chuck Lever <chuck.lever@oracle.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Chao,
+Hi Michael,
 
-On Tue, Apr 17, 2018 at 05:13:12PM +0800, Chao Yu wrote:
-> > +
-> > +static void bio_post_read_processing(struct bio_post_read_ctx *ctx);
-> > +
-> > +static void decrypt_work(struct work_struct *work)
-> > +{
-> > +	struct bio_post_read_ctx *ctx =
-> > +		container_of(work, struct bio_post_read_ctx, work);
-> > +
-> > +	fscrypt_decrypt_bio(ctx->bio);
-> > +
-> > +	bio_post_read_processing(ctx);
-> > +}
-> > +
-> > +static void bio_post_read_processing(struct bio_post_read_ctx *ctx)
-> > +{
-> > +	switch (++ctx->cur_step) {
-> > +	case STEP_DECRYPT:
-> > +		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
-> > +			INIT_WORK(&ctx->work, decrypt_work);
-> > +			fscrypt_enqueue_decrypt_work(&ctx->work);
-> > +			return;
-> > +		}
-> > +		ctx->cur_step++;
-> > +		/* fall-through */
-> > +	default:
-> > +		__read_end_io(ctx->bio);
-> > +	}
+On Mon, Apr 16, 2018 at 03:15:42PM -0700, Michael Halcrow wrote:
+> Given recent talk I've seen on potentially applying file-based
+> protections in NFS, I think it's worth making some cautionary
+> observations at this stage.
 > 
-> How about introducing __bio_post_read_processing()
+> Moxie's Cryptographic Doom Principle is an approachable take on the
+> argument that one should verify before performing any other
+> cryptographic operations.
 > 
-> switch (step) {
-> case STEP_DECRYPT:
-> 	...
-> 	break;
-> case STEP_COMPRESS:
-> 	...
-> 	break;
-> case STEP_GENERIC:
-> 	__read_end_io;
-> 	break;
-> ...
-> }
+> https://moxie.org/blog/the-cryptographic-doom-principle/
 > 
-> Then we can customize flexible read processes like:
+> As we consider inline cryptographic engines, this becomes challenging
+> because encryption is delegated to the block layer, but authenticity
+> still happens at the file system layer.
 > 
-> bio_post_read_processing()
-> {
-> 	if (encrypt_enabled)
-> 		__bio_post_read_processing(, STEP_DECRYPT);
-> 	if (compress_enabled)
-> 		__bio_post_read_processing(, STEP_COMPRESS);
-> 	__bio_post_read_processing(, STEP_GENERIC);
-> }
+> That said, the feasibility of applying attacks such as CCA2 against
+> file sytem content is in question, depending on the adversarial model
+> for the context in which the file system is integrated.  In
+> particular, does the model include a MiTM between the kernel and the
+> storage?
 > 
-> Or other flow.
+> The fs-crypt adversarial model explicitly concerns itself only with a
+> single point-in-time permanent offline compromise of storage.  I'm not
+> aware of any real analysis anyone has done when we're instead dealing
+> with storage that can be arbitrarily modified at arbitrary points in
+> time.
 
-If I understand correctly, you're suggesting that all the steps be done in a
-single workqueue item?  The problem with that is that the verity work will
-require I/O to the file to read hashes, which may need STEP_DECRYPT.  Hence,
-decryption and verity will need separate workqueues.
+I feel that your concerns are a bit off-topic for what this patch actually does,
+but yes I don't think data confidentiality with fscrypt is guaranteed when an
+attacker controls the disk.  And actually, fs-verity won't really change this
+because fs-verity will only protect the file contents of immutable files.  It
+won't protect filesystem metadata, or of mutable files.  In other words, most
+files the user cares about the confidentiality of won't be protected by
+fs-verity anyway.
 
-> > @@ -481,29 +537,33 @@ static struct bio *f2fs_grab_read_bio(struct inode *inode, block_t blkaddr,
-> >  							 unsigned nr_pages)
-> >  {
-> >  	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
-> > -	struct fscrypt_ctx *ctx = NULL;
-> >  	struct bio *bio;
-> > -
-> > -	if (f2fs_encrypted_file(inode)) {
-> > -		ctx = fscrypt_get_ctx(inode, GFP_NOFS);
-> > -		if (IS_ERR(ctx))
-> > -			return ERR_CAST(ctx);
-> > -
-> > -		/* wait the page to be moved by cleaning */
-> > -		f2fs_wait_on_block_writeback(sbi, blkaddr);
-> > -	}
-> > +	struct bio_post_read_ctx *ctx;
-> > +	unsigned int post_read_steps = 0;
+Also, fs-verity will need to authenticate the plaintext (i.e. STEP_VERITY will
+come after STEP_DECRYPT) because it may need to authenticate some well known
+file, like an APK file that was signed by a certain entity.  But, when combined
+with fscrypt, by the design of fscrypt on each device the file will be encrypted
+with a unique key, resulting in a unique ciphertext.  The ciphertext is also not
+visible to userspace currently so it would not be possible for a userspace tool
+to generate the fs-verity metadata.
+
+> 
+> Is the user concerned about malicious drive controller firmware?  Will
+> the content be transmitted over an insecure network connection?  Will
+> the content be otherwise manipulatable by an adversary who can change
+> to the backing storage?
+> 
+> The other caution relates to compress-then-encrypt.  I refer to the
+> CRIME and BREACH attacks.
+> 
+> https://en.wikipedia.org/wiki/CRIME
+> 
+> https://en.wikipedia.org/wiki/BREACH
+> 
+> Again, it's context-dependent whether or how attacks like this can
+> apply to a file system.  We'll need to be explicit about our
+> expectations as we investigate whether or how to use fs-crypt and
+> fs-verity capabilities in NFS.  I think this feeds into a discussion
+> on efficient protection of file system metadata, but I'll defer to
+> some future thread for that.
+
+To be clear, neither f2fs nor NFS actually supports compression yet.  At least
+for f2fs it's just a feature that some people want, and *might* be implemented
+in the future.  Note that some people will want just compression and others will
+want just encryption, so having both features available won't mean that everyone
+will use both.  It will need to be discussed at that time how risky combining
+them really is and whether it should be allowed or not -- or perhaps allowed but
+with a warning explaining the risk.
+
 > >  
-> >  	bio = f2fs_bio_alloc(sbi, min_t(int, nr_pages, BIO_MAX_PAGES), false);
-> > -	if (!bio) {
-> > -		if (ctx)
-> > -			fscrypt_release_ctx(ctx);
-> > +	if (!bio)
-> >  		return ERR_PTR(-ENOMEM);
-> > -	}
-> >  	f2fs_target_device(sbi, blkaddr, bio);
-> >  	bio->bi_end_io = f2fs_read_end_io;
-> > -	bio->bi_private = ctx;
+> > -static void f2fs_read_end_io(struct bio *bio)
+> > +/* postprocessing steps for read bios */
+> > +enum bio_post_read_step {
+> > +	STEP_INITIAL = 0,
+> > +	STEP_DECRYPT,
+> > +};
+> > +
+> > +struct bio_post_read_ctx {
+> > +	struct bio *bio;
+> > +	struct work_struct work;
+> > +	unsigned int cur_step;
+> > +	unsigned int enabled_steps;
 > 
-> bio->bi_private = NULL;
+> What if enabled_steps has gaps?  E.g., 0x09 will be feasible if
+> there's compression, encryption, virus signature scanning, and verity.
+> I'm don't really see how the cur_step logic can be made to be elegant
+> in that case.
+> 
+> If you start "inital" at 1, then you could collapse these two into
+> "pending_steps", setting each bit position to 0 after processing.
+> Just a thought.
 > 
 
-I don't see why.  ->bi_private is NULL by default.
+It will actually work fine.  In bio_post_read_processing(), we'll just fall
+through and increment 'cur_step' until we get to the next step.  When there are
+many steps we certainly could optimize it to use a bitmask and ffs() to
+efficiently find the next step, but for now we are talking about maybe 1-3 steps
+only, so I went with what seemed simplest.
 
-> > +	bio_post_read_ctx_pool =
-> > +		mempool_create_slab_pool(128, bio_post_read_ctx_cache);
-> 
-> #define MAX_POST_READ_CACHE_SIZE	128
-> 
+Thanks,
 
-Yes, that makes sense.
-
-- Eric
+Eric
