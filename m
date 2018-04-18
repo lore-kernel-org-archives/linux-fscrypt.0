@@ -1,205 +1,57 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 13/15] fscrypt: use a common logging function
-Date: Mon, 30 Apr 2018 15:51:47 -0700
-Message-Id: <20180430225149.183514-14-ebiggers3@gmail.com>
-In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
-References: <20180430225149.183514-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-pl0-f49.google.com ([209.85.160.49]:42532 "EHLO
+        mail-pl0-f49.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1752658AbeDRSMw (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 18 Apr 2018 14:12:52 -0400
+Received: by mail-pl0-f49.google.com with SMTP id t20-v6so1588515ply.9
+        for <linux-fscrypt@vger.kernel.org>; Wed, 18 Apr 2018 11:12:52 -0700 (PDT)
+From: Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v2 0/2] fscrypt / f2fs: prepare I/O path for fs-verity
+Date: Wed, 18 Apr 2018 11:09:46 -0700
+Message-Id: <20180418180948.152031-1-ebiggers@google.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Michael Halcrow <mhalcrow@google.com>, Victor Hsieh <victorhsieh@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hello,
 
-Use a common function for fscrypt warning and error messages so that all
-the messages are consistently ratelimited, include the "fscrypt:"
-prefix, and include the filesystem name if applicable.
+These two patches restructure f2fs's read path to allow the data to go
+through multiple postprocessing steps, rather than just decryption as is
+implemented currently.  This is mainly in preparation for doing
+authenticity verification of data via fs-verity, though this change
+might also be useful for other future f2fs features, e.g. compression.
 
-Also fix up a few of the log messages to be more descriptive.
+These patches don't yet add the fs-verity work, however, as it depends
+on the rest of the fs-verity patchset.  I'm planning to send the full
+patchset out as an RFC, but some parts need further investigation first.
+(The work-in-progress version can be found at
+ git://git.kernel.org/pub/scm/linux/kernel/git/mhalcrow/linux.git,
+ branch "fs-verity-dev".)
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/crypto.c          | 28 +++++++++++++++++++++++++---
- fs/crypto/fname.c           | 10 ++++++----
- fs/crypto/fscrypt_private.h |  8 ++++++++
- fs/crypto/hooks.c           |  5 +++--
- fs/crypto/keyinfo.c         | 27 +++++++++++++++------------
- 5 files changed, 57 insertions(+), 21 deletions(-)
+Changed since v1:
+	
+	- Define NUM_PREALLOC_POST_READ_CTXS
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index d22887f689ad..a40d7d73b633 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -174,9 +174,10 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 		res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res) {
--		printk_ratelimited(KERN_ERR
--			"%s: crypto_skcipher_encrypt() returned %d\n",
--			__func__, res);
-+		fscrypt_err(inode->i_sb,
-+			    "%scryption failed for inode %lu, block %llu: %d",
-+			    (rw == FS_DECRYPT ? "de" : "en"),
-+			    inode->i_ino, lblk_num, res);
- 		return res;
- 	}
- 	return 0;
-@@ -416,6 +417,27 @@ int fscrypt_initialize(unsigned int cop_flags)
- 	return res;
- }
- 
-+void fscrypt_msg(struct super_block *sb, const char *level,
-+		 const char *fmt, ...)
-+{
-+	static DEFINE_RATELIMIT_STATE(rs, DEFAULT_RATELIMIT_INTERVAL,
-+				      DEFAULT_RATELIMIT_BURST);
-+	struct va_format vaf;
-+	va_list args;
-+
-+	if (!__ratelimit(&rs))
-+		return;
-+
-+	va_start(args, fmt);
-+	vaf.fmt = fmt;
-+	vaf.va = &args;
-+	if (sb)
-+		printk("%sfscrypt (%s): %pV\n", level, sb->s_id, &vaf);
-+	else
-+		printk("%sfscrypt: %pV\n", level, &vaf);
-+	va_end(args);
-+}
-+
- /**
-  * fscrypt_init() - Set up for fs encryption.
-  */
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 39091fc31e98..d7a0f682ca12 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -71,8 +71,9 @@ int fname_encrypt(struct inode *inode, const struct qstr *iname,
- 	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res < 0) {
--		printk_ratelimited(KERN_ERR
--				"%s: Error (error code %d)\n", __func__, res);
-+		fscrypt_err(inode->i_sb,
-+			    "Filename encryption failed for inode %lu: %d",
-+			    inode->i_ino, res);
- 		return res;
- 	}
- 
-@@ -115,8 +116,9 @@ static int fname_decrypt(struct inode *inode,
- 	res = crypto_wait_req(crypto_skcipher_decrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res < 0) {
--		printk_ratelimited(KERN_ERR
--				"%s: Error (error code %d)\n", __func__, res);
-+		fscrypt_err(inode->i_sb,
-+			    "Filename decryption failed for inode %lu: %d",
-+			    inode->i_ino, res);
- 		return res;
- 	}
- 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 8358610d6558..09d6c72635b6 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -100,6 +100,14 @@ extern struct page *fscrypt_alloc_bounce_page(struct fscrypt_ctx *ctx,
- 					      gfp_t gfp_flags);
- extern const struct dentry_operations fscrypt_d_ops;
- 
-+extern void __printf(3, 4) __cold
-+fscrypt_msg(struct super_block *sb, const char *level, const char *fmt, ...);
-+
-+#define fscrypt_warn(sb, fmt, ...)		\
-+	fscrypt_msg(sb, KERN_WARNING, fmt, ##__VA_ARGS__)
-+#define fscrypt_err(sb, fmt, ...)		\
-+	fscrypt_msg(sb, KERN_ERR, fmt, ##__VA_ARGS__)
-+
- /* fname.c */
- extern int fname_encrypt(struct inode *inode, const struct qstr *iname,
- 			 u8 *out, unsigned int olen);
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index bec06490fb13..926e5df20ec3 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -39,8 +39,9 @@ int fscrypt_file_open(struct inode *inode, struct file *filp)
- 	dir = dget_parent(file_dentry(filp));
- 	if (IS_ENCRYPTED(d_inode(dir)) &&
- 	    !fscrypt_has_permitted_context(d_inode(dir), inode)) {
--		pr_warn_ratelimited("fscrypt: inconsistent encryption contexts: %lu/%lu",
--				    d_inode(dir)->i_ino, inode->i_ino);
-+		fscrypt_warn(inode->i_sb,
-+			     "inconsistent encryption contexts: %lu/%lu",
-+			     d_inode(dir)->i_ino, inode->i_ino);
- 		err = -EPERM;
- 	}
- 	dput(dir);
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index f6d6acd37b97..f63bfd6dffd6 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -103,9 +103,8 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
- 
- 	if (master_key->size < min_keysize || master_key->size > FS_MAX_KEY_SIZE
- 	    || master_key->size % AES_BLOCK_SIZE != 0) {
--		printk_once(KERN_WARNING
--				"%s: key size incorrect: %d\n",
--				__func__, master_key->size);
-+		fscrypt_warn(NULL, "key size incorrect: %u",
-+			     master_key->size);
- 		res = -ENOKEY;
- 		goto out;
- 	}
-@@ -132,9 +131,10 @@ static int determine_cipher_type(struct fscrypt_info *ci, struct inode *inode,
- 	u32 mode;
- 
- 	if (!fscrypt_valid_enc_modes(ci->ci_data_mode, ci->ci_filename_mode)) {
--		pr_warn_ratelimited("fscrypt: inode %lu uses unsupported encryption modes (contents mode %d, filenames mode %d)\n",
--				    inode->i_ino,
--				    ci->ci_data_mode, ci->ci_filename_mode);
-+		fscrypt_warn(inode->i_sb,
-+			     "inode %lu uses unsupported encryption modes (contents mode %d, filenames mode %d)",
-+			     inode->i_ino, ci->ci_data_mode,
-+			     ci->ci_filename_mode);
- 		return -EINVAL;
- 	}
- 
-@@ -173,8 +173,9 @@ static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
- 
- 		tfm = crypto_alloc_shash("sha256", 0, 0);
- 		if (IS_ERR(tfm)) {
--			pr_warn_ratelimited("fscrypt: error allocating SHA-256 transform: %ld\n",
--					    PTR_ERR(tfm));
-+			fscrypt_warn(NULL,
-+				     "error allocating SHA-256 transform: %ld",
-+				     PTR_ERR(tfm));
- 			return PTR_ERR(tfm);
- 		}
- 		prev_tfm = cmpxchg(&essiv_hash_tfm, NULL, tfm);
-@@ -309,8 +310,9 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	ctfm = crypto_alloc_skcipher(cipher_str, 0, 0);
- 	if (IS_ERR(ctfm)) {
- 		res = PTR_ERR(ctfm);
--		pr_debug("%s: error %d (inode %lu) allocating crypto tfm\n",
--			 __func__, res, inode->i_ino);
-+		fscrypt_warn(inode->i_sb,
-+			     "error allocating '%s' transform for inode %lu: %d",
-+			     cipher_str, inode->i_ino, res);
- 		goto out;
- 	}
- 	crypt_info->ci_ctfm = ctfm;
-@@ -327,8 +329,9 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	    crypt_info->ci_data_mode == FS_ENCRYPTION_MODE_AES_128_CBC) {
- 		res = init_essiv_generator(crypt_info, raw_key, keysize);
- 		if (res) {
--			pr_debug("%s: error %d (inode %lu) allocating essiv tfm\n",
--				 __func__, res, inode->i_ino);
-+			fscrypt_warn(inode->i_sb,
-+				     "error initializing ESSIV generator for inode %lu: %d",
-+				     inode->i_ino, res);
- 			goto out;
- 		}
- 	}
+Eric Biggers (2):
+  fscrypt: allow synchronous bio decryption
+  f2fs: refactor read path to allow multiple postprocessing steps
+
+ fs/crypto/bio.c                 |  35 ++++---
+ fs/crypto/crypto.c              |   8 +-
+ fs/crypto/fscrypt_private.h     |   1 -
+ fs/ext4/readpage.c              |   2 +-
+ fs/f2fs/data.c                  | 166 ++++++++++++++++++++++++--------
+ fs/f2fs/f2fs.h                  |  12 ++-
+ fs/f2fs/file.c                  |   4 +-
+ fs/f2fs/gc.c                    |   6 +-
+ fs/f2fs/inline.c                |   2 +-
+ fs/f2fs/super.c                 |   6 ++
+ include/linux/fscrypt_notsupp.h |  13 ++-
+ include/linux/fscrypt_supp.h    |   5 +-
+ 12 files changed, 191 insertions(+), 69 deletions(-)
+
 -- 
-2.17.0.441.gb46fe60e1d-goog
+2.17.0.484.g0c8726318c-goog
+
