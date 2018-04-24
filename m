@@ -1,32 +1,55 @@
-Return-Path: <ebiggers3@gmail.com>
-From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 05/15] fscrypt: remove stale comment from fscrypt_d_revalidate()
-Date: Mon, 30 Apr 2018 15:51:39 -0700
-Message-Id: <20180430225149.183514-6-ebiggers3@gmail.com>
-In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
-References: <20180430225149.183514-1-ebiggers3@gmail.com>
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+Return-Path: <linux-crypto-owner@vger.kernel.org>
+Date: Tue, 24 Apr 2018 11:24:29 -0700
+From: Eric Biggers <ebiggers@google.com>
+Subject: Re: [PATCH] crypto: remove Speck
+Message-ID: <20180424182429.GB174675@google.com>
+References: <20180424161826.31211-1-Jason@zx2c4.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180424161826.31211-1-Jason@zx2c4.com>
+Sender: linux-crypto-owner@vger.kernel.org
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: herbert@gondor.apana.org.au, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Jason,
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/crypto.c | 1 -
- 1 file changed, 1 deletion(-)
+On Tue, Apr 24, 2018 at 06:18:26PM +0200, Jason A. Donenfeld wrote:
+> This NSA-designed cipher was rejected for inclusion in international
+> standards by ISO/IEC. Before anyone actually starts using it by
+> accident, let's just not ship it at all.
+> 
+> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+> ---
+>  arch/arm/crypto/Kconfig             |    6 -
+>  arch/arm/crypto/Makefile            |    2 -
+>  arch/arm/crypto/speck-neon-core.S   |  432 --------
+>  arch/arm/crypto/speck-neon-glue.c   |  288 ------
+>  arch/arm64/crypto/Kconfig           |    6 -
+>  arch/arm64/crypto/Makefile          |    3 -
+>  arch/arm64/crypto/speck-neon-core.S |  352 -------
+>  arch/arm64/crypto/speck-neon-glue.c |  282 -----
+>  arch/s390/defconfig                 |    1 -
+>  crypto/Kconfig                      |   14 -
+>  crypto/Makefile                     |    1 -
+>  crypto/speck.c                      |  307 ------
+>  crypto/testmgr.c                    |   36 -
+>  crypto/testmgr.h                    | 1486 ---------------------------
+>  include/crypto/speck.h              |   62 --
+>  15 files changed, 3278 deletions(-)
+>  delete mode 100644 arch/arm/crypto/speck-neon-core.S
+>  delete mode 100644 arch/arm/crypto/speck-neon-glue.c
+>  delete mode 100644 arch/arm64/crypto/speck-neon-core.S
+>  delete mode 100644 arch/arm64/crypto/speck-neon-glue.c
+>  delete mode 100644 crypto/speck.c
+>  delete mode 100644 include/crypto/speck.h
+> 
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 58761d816751..d22887f689ad 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -322,7 +322,6 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
- 		return 0;
- 	}
- 
--	/* this should eventually be an flag in d_flags */
- 	spin_lock(&dentry->d_lock);
- 	cached_with_key = dentry->d_flags & DCACHE_ENCRYPTED_WITH_KEY;
- 	spin_unlock(&dentry->d_lock);
--- 
-2.17.0.441.gb46fe60e1d-goog
+Please see my response on the other thread ("[PATCH v2 0/5] crypto: Speck support"):
+
+https://marc.info/?l=linux-crypto-vger&m=152459378914647
+
+Thanks,
+
+- Eric
