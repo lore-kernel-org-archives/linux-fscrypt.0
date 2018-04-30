@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 07/15] fscrypt: don't special-case EOPNOTSUPP from fscrypt_get_encryption_info()
-Date: Mon, 30 Apr 2018 15:51:41 -0700
-Message-Id: <20180430225149.183514-8-ebiggers3@gmail.com>
+Subject: [PATCH 03/15] fscrypt: remove unnecessary NULL check when allocating skcipher
+Date: Mon, 30 Apr 2018 15:51:37 -0700
+Message-Id: <20180430225149.183514-4-ebiggers3@gmail.com>
 In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
 References: <20180430225149.183514-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
@@ -11,30 +11,28 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-In fscrypt_setup_filename(), remove the unnecessary check for
-fscrypt_get_encryption_info() returning EOPNOTSUPP.  There's no reason
-to handle this error differently from any other.  I think there may have
-been some confusion because the "notsupp" version of
-fscrypt_get_encryption_info() returns EOPNOTSUPP -- but that's not
-applicable from inside fs/crypto/.
+crypto_alloc_skcipher() returns an ERR_PTR() on failure, not NULL.
+Remove the unnecessary check for NULL.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fname.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ fs/crypto/keyinfo.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 3b5164b159cb..8088a606c0aa 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -335,7 +335,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 		return 0;
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 05f5ee1f0705..d09df8f751df 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -318,8 +318,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 		goto out;
  	}
- 	ret = fscrypt_get_encryption_info(dir);
--	if (ret && ret != -EOPNOTSUPP)
-+	if (ret)
- 		return ret;
- 
- 	if (dir->i_crypt_info) {
+ 	ctfm = crypto_alloc_skcipher(cipher_str, 0, 0);
+-	if (!ctfm || IS_ERR(ctfm)) {
+-		res = ctfm ? PTR_ERR(ctfm) : -ENOMEM;
++	if (IS_ERR(ctfm)) {
++		res = PTR_ERR(ctfm);
+ 		pr_debug("%s: error %d (inode %lu) allocating crypto tfm\n",
+ 			 __func__, res, inode->i_ino);
+ 		goto out;
 -- 
 2.17.0.441.gb46fe60e1d-goog
