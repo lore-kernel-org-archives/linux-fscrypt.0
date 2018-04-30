@@ -1,140 +1,121 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from szxga05-in.huawei.com ([45.249.212.191]:6720 "EHLO huawei.com"
-        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
-        id S1754211AbeDBKH3 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 2 Apr 2018 06:07:29 -0400
-Subject: Re: [PATCH] f2fs: reserve bits for fs-verity
-References: <20180328181509.199870-1-ebiggers@google.com>
- <9ccabf5b-46ef-aa46-bdb8-6fcd96792ed0@huawei.com>
- <20180330164136.GE44823@jaegeuk-macbookpro.roam.corp.google.com>
- <20180330183420.GA180083@google.com>
-From: Chao Yu <yuchao0@huawei.com>
-Message-ID: <ec343a28-ad47-a494-ea36-c8fef72d3480@huawei.com>
-Date: Mon, 2 Apr 2018 18:07:10 +0800
-MIME-Version: 1.0
-In-Reply-To: <20180330183420.GA180083@google.com>
-Content-Type: text/plain; charset="windows-1252"
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Eric Biggers <ebiggers@google.com>, Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, Victor Hsieh <victorhsieh@google.com>, Michael Halcrow <mhalcrow@google.com>, Theodore Ts'o <tytso@mit.edu>
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 15/15] fscrypt: only derive the needed portion of the key
+Date: Mon, 30 Apr 2018 15:51:49 -0700
+Message-Id: <20180430225149.183514-16-ebiggers3@gmail.com>
+In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
+References: <20180430225149.183514-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Eric and Jaegeuk,
+From: Eric Biggers <ebiggers@google.com>
 
-On 2018/3/31 2:34, Eric Biggers wrote:
-> Hi Chao and Jaegeuk,
-> 
-> On Fri, Mar 30, 2018 at 09:41:36AM -0700, Jaegeuk Kim wrote:
->> On 03/30, Chao Yu wrote:
->>> Hi Eric,
->>>
->>> On 2018/3/29 2:15, Eric Biggers wrote:
->>>> Reserve an F2FS feature flag and inode flag for fs-verity.  This is an
->>>> in-development feature that is planned be discussed at LSF/MM 2018 [1].
->>>> It will provide file-based integrity and authenticity for read-only
->>>> files.  Most code will be in a filesystem-independent module, with
->>>> smaller changes needed to individual filesystems that opt-in to
->>>> supporting the feature.  An early prototype supporting F2FS is available
->>>> [2].  Reserving the F2FS on-disk bits for fs-verity will prevent users
->>>> of the prototype from conflicting with other new F2FS features.
->>>>
->>>> Note that we're reserving the inode flag in f2fs_inode.i_advise, which
->>>> isn't really appropriate since it's not a hint or advice.  But
->>>> ->i_advise is already being used to hold the 'encrypt' flag; and F2FS's
->>>> ->i_flags uses the generic FS_* values, so it seems ->i_flags can't be
->>>> used for an F2FS-specific flag without additional work to remove the
->>>> assumption that ->i_flags uses the generic flags namespace.
->>>
->>> At a glance, this is a VFS feature, can we search free slot, and define
->>> FS_VERITY_FL like other generic flags, so we can intergrate this flag into
->>> f2fs_inode::i_flags?
->>
->> Do we need to get/set this bit of i_flags to user? And, f2fs doesn't synchronize
->> it with inode block update. I think this should be set by internal f2fs
->> operations likewise fscrypt.
->>
-> 
-> The fs-verity inode flag won't be modifiable using FS_IOC_SETFLAGS.  Like
+Currently the key derivation function in fscrypt uses the master key
+length as the amount of output key material to derive.  This works, but
+it means we can waste time deriving more key material than is actually
+used, e.g. most commonly, deriving 64 bytes for directories which only
+take a 32-byte AES-256-CTS-CBC key.  It also forces us to validate that
+the master key length is a multiple of AES_BLOCK_SIZE, which wouldn't
+otherwise be necessary.
 
-Verity flag can also be wrapped by FS_FL_USER_MODIFIABLE like for FS_ENCRYPT_FL?
+Fix it to only derive the needed length key.
 
-> fscrypt, it will only be possible to set it using a dedicated ioctl (tentatively
-> called FS_IOC_ENABLE_VERITY), and it won't be supported to clear the bit once
-> set, short of deleting and re-creating the file.  So it doesn't really matter
-> where the bit goes in the on-disk inode, it just needs to go somewhere.  I'm
-> just hesitant to reserve a flag in the UAPI flags namespace which is really more
-> "owned" by ext4 than by f2fs, so has more implications than just f2fs as we
-> would effectively be reserving the flag for ext4's on-disk format too.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/keyinfo.c | 39 ++++++++++++++++-----------------------
+ 1 file changed, 16 insertions(+), 23 deletions(-)
 
-IMO, because this is a VFS feature, it will be better that we can put it in more
-generic place, also user can check this bit in generic way (via
-FS_IOC_GETFLAGS), and then for other filesystem who wants add this feature, that
-will be simple to place this bit.
-
-What I can see is, for encryption feature:
-
-vfs::i_flags
-#define FS_ENCRYPT_FL                   0x00000800 /* Encrypted file */
-
-ext4:i_flags
-#define EXT4_ENCRYPT_FL			0x00000800 /* encrypted file */
-
-f2fs::i_advice
-#define FADVISE_ENCRYPT_BIT	0x04
-
-It's very wired that f2fs didn't use well defined FS_ENCRYPT_FL bit position,
-result in that we leave a hole in on-disk i_flags, and if we want to show the
-same 'encrypted' flags status in FS_IOC_GETFLAGS, we need to change more codes.
-
-Anyway, I just ask why not let generic status goes into i_flags, and private
-status goes into i_advices?
-
-> 
-> I do think the flag *should* go in i_flags rather than i_advise, but I think the
-> assumption that f2fs's inode flags namespace matches ext4's would first need to
-> be removed so as to not tie the on-disk formats of different filesystems
-> together.
-> 
->>>
->>> And how about applying this patch inside the patchset of new fsverity feature?
->>> Since once fsverity feature has some design modification, I worry about that may
->>> be we need to change this bit? result in disk layout incompatibility.
->>
->> The whole body is not fully mergeable, so once reserving the bits first, we can
->> support it f2fs-tools and prepare the feature in advance. Based on previous
->> fscrypt experience, I don't expect we need to modify or drop these dramatically
->> later.
->>
->> Any thoughts?
-
-Since I don't know current progress of this feature development, I hope this
-feature will not be against by vfs developers or suffer design change after we
-reserved bit for it. :)
-
->>
-> 
-> Yep, the full patchset isn't ready to be merged upstream yet.  Other parts of
-> the API/ABI such as the fs-verity metadata format, the ioctl numbers, and the
-> semantics of accessing such files is subject to change.  We know we'll need a
-> superblock feature flag and a per-inode bit in any case, though.  Personally I'd
-> prefer to wait for the full patchset too, but we have people who want to start
-> using the prototype of the feature already, so having f2fs-tools support the
-> feature flag and having the bits not conflict with other f2fs features will be
-> helpful.
-
-Oh, so we want a stable on-disk layout, so image for experience will contain
-fsverity bit in stable position, after formal android released, image with
-fsverity feature can still be valid, right?
-
-Thanks,
-
-> 
-> Thanks,
-> 
-> Eric
-> 
-> .
-> 
-
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index f248ee9974fa..c4d1388fc9b4 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -19,17 +19,16 @@
+ 
+ static struct crypto_shash *essiv_hash_tfm;
+ 
+-/**
+- * derive_key_aes() - Derive a key using AES-128-ECB
+- * @deriving_key: Encryption key used for derivation.
+- * @source_key:   Source key to which to apply derivation.
+- * @derived_raw_key:  Derived raw key.
++/*
++ * Key derivation function.  This generates the derived key by encrypting the
++ * master key with AES-128-ECB using the inode's nonce as the AES key.
+  *
+- * Return: Zero on success; non-zero otherwise.
++ * The master key must be at least as long as the derived key.  If the master
++ * key is longer, then only the first 'derived_keysize' bytes are used.
+  */
+-static int derive_key_aes(const u8 deriving_key[FS_KEY_DERIVATION_NONCE_SIZE],
+-				const struct fscrypt_key *source_key,
+-				u8 derived_raw_key[FS_MAX_KEY_SIZE])
++static int derive_key_aes(const u8 *master_key,
++			  const struct fscrypt_context *ctx,
++			  u8 *derived_key, unsigned int derived_keysize)
+ {
+ 	int res = 0;
+ 	struct skcipher_request *req = NULL;
+@@ -51,14 +50,13 @@ static int derive_key_aes(const u8 deriving_key[FS_KEY_DERIVATION_NONCE_SIZE],
+ 	skcipher_request_set_callback(req,
+ 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
+ 			crypto_req_done, &wait);
+-	res = crypto_skcipher_setkey(tfm, deriving_key,
+-				     FS_KEY_DERIVATION_NONCE_SIZE);
++	res = crypto_skcipher_setkey(tfm, ctx->nonce, sizeof(ctx->nonce));
+ 	if (res < 0)
+ 		goto out;
+ 
+-	sg_init_one(&src_sg, source_key->raw, source_key->size);
+-	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
+-	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
++	sg_init_one(&src_sg, master_key, derived_keysize);
++	sg_init_one(&dst_sg, derived_key, derived_keysize);
++	skcipher_request_set_crypt(req, &src_sg, &dst_sg, derived_keysize,
+ 				   NULL);
+ 	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
+ out:
+@@ -109,10 +107,9 @@ find_and_lock_process_key(const char *prefix,
+ 		goto invalid;
+ 	}
+ 
+-	if (payload->size < min_keysize ||
+-	    payload->size % AES_BLOCK_SIZE != 0) {
++	if (payload->size < min_keysize) {
+ 		fscrypt_warn(NULL,
+-			     "key with description '%s' is too short or is misaligned (got %u bytes, need %u+ bytes)",
++			     "key with description '%s' is too short (got %u bytes, need %u+ bytes)",
+ 			     key->description, payload->size, min_keysize);
+ 		goto invalid;
+ 	}
+@@ -145,7 +142,7 @@ static int find_and_derive_key(const struct inode *inode,
+ 	}
+ 	if (IS_ERR(key))
+ 		return PTR_ERR(key);
+-	err = derive_key_aes(ctx->nonce, payload, derived_key);
++	err = derive_key_aes(payload->raw, ctx, derived_key, derived_keysize);
+ 	up_read(&key->sem);
+ 	key_put(key);
+ 	return err;
+@@ -325,7 +322,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	 * crypto API as part of key derivation.
+ 	 */
+ 	res = -ENOMEM;
+-	raw_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
++	raw_key = kmalloc(keysize, GFP_NOFS);
+ 	if (!raw_key)
+ 		goto out;
+ 
+@@ -343,10 +340,6 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	}
+ 	crypt_info->ci_ctfm = ctfm;
+ 	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
+-	/*
+-	 * if the provided key is longer than keysize, we use the first
+-	 * keysize bytes of the derived key only
+-	 */
+ 	res = crypto_skcipher_setkey(ctfm, raw_key, keysize);
+ 	if (res)
+ 		goto out;
+-- 
+2.17.0.441.gb46fe60e1d-goog
