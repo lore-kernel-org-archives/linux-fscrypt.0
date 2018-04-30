@@ -1,133 +1,64 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 09/14] fscrypt: make fscrypt_operations.max_namelen an integer
-Date: Fri, 23 Mar 2018 12:23:53 -0700
-Message-Id: <20180323192358.95691-10-ebiggers3@gmail.com>
-In-Reply-To: <20180323192358.95691-1-ebiggers3@gmail.com>
-References: <20180323192358.95691-1-ebiggers3@gmail.com>
+Subject: [PATCH v2 00/15] fscrypt: improved logging and other cleanups
+Date: Mon, 30 Apr 2018 15:51:34 -0700
+Message-Id: <20180430225149.183514-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@google.com>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Now ->max_namelen() is only called to limit the filename length when
-adding NUL padding, and only for real filenames -- not symlink targets.
-It also didn't give the correct length for symlink targets anyway since
-it forgot to subtract 'sizeof(struct fscrypt_symlink_data)'.
+Hello, here's yet another round of cleanups for fscrypt.  Please
+consider for v4.18.  These are all patches I've sent out previously.
+The series is based on v4.17-rc3.
 
-Thus, change ->max_namelen from a function to a simple 'unsigned int'
-that gives the filesystem's maximum filename length.
+Patches 1-12 mostly remove unnecessary or redundant code from a number
+of different places; nothing particularly noteworthy.  Note: to avoid a
+merge conflict with f2fs/dev, I've dropped the patch
+"fscrypt: remove WARN_ON_ONCE() when decryption fails".
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fname.c            |  2 +-
- fs/ext4/super.c              |  8 +-------
- fs/f2fs/super.c              |  8 +-------
- fs/ubifs/crypto.c            | 10 +---------
- include/linux/fscrypt_supp.h |  2 +-
- 5 files changed, 5 insertions(+), 25 deletions(-)
+Patch 13 switches the existing warning and error messages in fscrypt
+over to use a common logging function, which is ratelimited and includes
+the filesystem name (->s_id) when available as well as a consistent
+prefix of "fscrypt:".
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index c4eb3a235ae4..39091fc31e98 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -334,7 +334,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 
- 	if (dir->i_crypt_info) {
- 		if (!fscrypt_fname_encrypted_size(dir, iname->len,
--						  dir->i_sb->s_cop->max_namelen(dir),
-+						  dir->i_sb->s_cop->max_namelen,
- 						  &fname->crypto_buf.len))
- 			return -ENAMETOOLONG;
- 		fname->crypto_buf.name = kmalloc(fname->crypto_buf.len,
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 39bf464c35f1..63242840b1af 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1235,19 +1235,13 @@ static bool ext4_dummy_context(struct inode *inode)
- 	return DUMMY_ENCRYPTION_ENABLED(EXT4_SB(inode->i_sb));
- }
- 
--static unsigned ext4_max_namelen(struct inode *inode)
--{
--	return S_ISLNK(inode->i_mode) ? inode->i_sb->s_blocksize :
--		EXT4_NAME_LEN;
--}
--
- static const struct fscrypt_operations ext4_cryptops = {
- 	.key_prefix		= "ext4:",
- 	.get_context		= ext4_get_context,
- 	.set_context		= ext4_set_context,
- 	.dummy_context		= ext4_dummy_context,
- 	.empty_dir		= ext4_empty_dir,
--	.max_namelen		= ext4_max_namelen,
-+	.max_namelen		= EXT4_NAME_LEN,
- };
- #endif
- 
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 8173ae688814..d4c9d580d32f 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -1802,18 +1802,12 @@ static int f2fs_set_context(struct inode *inode, const void *ctx, size_t len,
- 				ctx, len, fs_data, XATTR_CREATE);
- }
- 
--static unsigned f2fs_max_namelen(struct inode *inode)
--{
--	return S_ISLNK(inode->i_mode) ?
--			inode->i_sb->s_blocksize : F2FS_NAME_LEN;
--}
--
- static const struct fscrypt_operations f2fs_cryptops = {
- 	.key_prefix	= "f2fs:",
- 	.get_context	= f2fs_get_context,
- 	.set_context	= f2fs_set_context,
- 	.empty_dir	= f2fs_empty_dir,
--	.max_namelen	= f2fs_max_namelen,
-+	.max_namelen	= F2FS_NAME_LEN,
- };
- #endif
- 
-diff --git a/fs/ubifs/crypto.c b/fs/ubifs/crypto.c
-index 616a688f5d8f..55c508fe8131 100644
---- a/fs/ubifs/crypto.c
-+++ b/fs/ubifs/crypto.c
-@@ -24,14 +24,6 @@ static bool ubifs_crypt_empty_dir(struct inode *inode)
- 	return ubifs_check_dir_empty(inode) == 0;
- }
- 
--static unsigned int ubifs_crypt_max_namelen(struct inode *inode)
--{
--	if (S_ISLNK(inode->i_mode))
--		return UBIFS_MAX_INO_DATA;
--	else
--		return UBIFS_MAX_NLEN;
--}
--
- int ubifs_encrypt(const struct inode *inode, struct ubifs_data_node *dn,
- 		  unsigned int in_len, unsigned int *out_len, int block)
- {
-@@ -89,5 +81,5 @@ const struct fscrypt_operations ubifs_crypt_operations = {
- 	.get_context		= ubifs_crypt_get_context,
- 	.set_context		= ubifs_crypt_set_context,
- 	.empty_dir		= ubifs_crypt_empty_dir,
--	.max_namelen		= ubifs_crypt_max_namelen,
-+	.max_namelen		= UBIFS_MAX_NLEN,
- };
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index c9c2cc26bc62..5080cb1bec4c 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -29,7 +29,7 @@ struct fscrypt_operations {
- 	int (*set_context)(struct inode *, const void *, size_t, void *);
- 	bool (*dummy_context)(struct inode *);
- 	bool (*empty_dir)(struct inode *);
--	unsigned (*max_namelen)(struct inode *);
-+	unsigned int max_namelen;
- };
- 
- struct fscrypt_ctx {
+Patches 14-15 are optimizations and cleanups for key lookup and key
+derivation.  They are extracted from the patch "fscrypt: refactor
+finding and deriving key" I had originally sent as part of the series
+"fscrypt: filesystem-level keyring and v2 policy support".  But I think
+they're useful changes by themselves, so no need to wait on them.
+
+Eric Biggers (15):
+  fs, fscrypt: only define ->s_cop when FS_ENCRYPTION is enabled
+  fscrypt: clean up after fscrypt_prepare_lookup() conversions
+  fscrypt: remove unnecessary NULL check when allocating skcipher
+  fscrypt: remove error messages for skcipher_request_alloc() failure
+  fscrypt: remove stale comment from fscrypt_d_revalidate()
+  fscrypt: don't clear flags on crypto transform
+  fscrypt: don't special-case EOPNOTSUPP from
+    fscrypt_get_encryption_info()
+  fscrypt: drop max_namelen check from fname_decrypt()
+  fscrypt: drop empty name check from fname_decrypt()
+  fscrypt: make fscrypt_operations.max_namelen an integer
+  fscrypt: remove unnecessary check for non-logon key type
+  fscrypt: remove internal key size constants
+  fscrypt: use a common logging function
+  fscrypt: separate key lookup from key derivation
+  fscrypt: only derive the needed portion of the key
+
+ fs/crypto/crypto.c              |  36 ++++--
+ fs/crypto/fname.c               |  32 ++---
+ fs/crypto/fscrypt_private.h     |  19 +--
+ fs/crypto/hooks.c               |   5 +-
+ fs/crypto/keyinfo.c             | 200 +++++++++++++++++---------------
+ fs/ext4/super.c                 |   8 +-
+ fs/f2fs/super.c                 |   8 +-
+ fs/ubifs/crypto.c               |  10 +-
+ include/linux/fs.h              |   4 +-
+ include/linux/fscrypt_notsupp.h |  10 --
+ include/linux/fscrypt_supp.h    |  16 +--
+ 11 files changed, 161 insertions(+), 187 deletions(-)
+
 -- 
-2.17.0.rc0.231.g781580f067-goog
+2.17.0.441.gb46fe60e1d-goog
