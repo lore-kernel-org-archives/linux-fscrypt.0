@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 15/15] fscrypt: only derive the needed portion of the key
-Date: Mon, 30 Apr 2018 15:51:49 -0700
-Message-Id: <20180430225149.183514-16-ebiggers3@gmail.com>
+Subject: [PATCH 02/15] fscrypt: clean up after fscrypt_prepare_lookup() conversions
+Date: Mon, 30 Apr 2018 15:51:36 -0700
+Message-Id: <20180430225149.183514-3-ebiggers3@gmail.com>
 In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
 References: <20180430225149.183514-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
@@ -11,111 +11,88 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Currently the key derivation function in fscrypt uses the master key
-length as the amount of output key material to derive.  This works, but
-it means we can waste time deriving more key material than is actually
-used, e.g. most commonly, deriving 64 bytes for directories which only
-take a 32-byte AES-256-CTS-CBC key.  It also forces us to validate that
-the master key length is a multiple of AES_BLOCK_SIZE, which wouldn't
-otherwise be necessary.
-
-Fix it to only derive the needed length key.
+Now that all filesystems have been converted to use
+fscrypt_prepare_lookup(), we can remove the fscrypt_set_d_op() and
+fscrypt_set_encrypted_dentry() functions as well as un-export
+fscrypt_d_ops.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/keyinfo.c | 39 ++++++++++++++++-----------------------
- 1 file changed, 16 insertions(+), 23 deletions(-)
+ fs/crypto/crypto.c              |  1 -
+ fs/crypto/fscrypt_private.h     |  1 +
+ include/linux/fscrypt_notsupp.h | 10 ----------
+ include/linux/fscrypt_supp.h    | 14 --------------
+ 4 files changed, 1 insertion(+), 25 deletions(-)
 
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index f248ee9974fa..c4d1388fc9b4 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -19,17 +19,16 @@
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index ce654526c0fb..f2b2d8408a01 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -353,7 +353,6 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
+ const struct dentry_operations fscrypt_d_ops = {
+ 	.d_revalidate = fscrypt_d_revalidate,
+ };
+-EXPORT_SYMBOL(fscrypt_d_ops);
  
- static struct crypto_shash *essiv_hash_tfm;
- 
--/**
-- * derive_key_aes() - Derive a key using AES-128-ECB
-- * @deriving_key: Encryption key used for derivation.
-- * @source_key:   Source key to which to apply derivation.
-- * @derived_raw_key:  Derived raw key.
-+/*
-+ * Key derivation function.  This generates the derived key by encrypting the
-+ * master key with AES-128-ECB using the inode's nonce as the AES key.
-  *
-- * Return: Zero on success; non-zero otherwise.
-+ * The master key must be at least as long as the derived key.  If the master
-+ * key is longer, then only the first 'derived_keysize' bytes are used.
-  */
--static int derive_key_aes(const u8 deriving_key[FS_KEY_DERIVATION_NONCE_SIZE],
--				const struct fscrypt_key *source_key,
--				u8 derived_raw_key[FS_MAX_KEY_SIZE])
-+static int derive_key_aes(const u8 *master_key,
-+			  const struct fscrypt_context *ctx,
-+			  u8 *derived_key, unsigned int derived_keysize)
+ void fscrypt_restore_control_page(struct page *page)
  {
- 	int res = 0;
- 	struct skcipher_request *req = NULL;
-@@ -51,14 +50,13 @@ static int derive_key_aes(const u8 deriving_key[FS_KEY_DERIVATION_NONCE_SIZE],
- 	skcipher_request_set_callback(req,
- 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
- 			crypto_req_done, &wait);
--	res = crypto_skcipher_setkey(tfm, deriving_key,
--				     FS_KEY_DERIVATION_NONCE_SIZE);
-+	res = crypto_skcipher_setkey(tfm, ctx->nonce, sizeof(ctx->nonce));
- 	if (res < 0)
- 		goto out;
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index ad6722bae8b7..fb96e493167b 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -106,6 +106,7 @@ extern int fscrypt_do_page_crypto(const struct inode *inode,
+ 				  gfp_t gfp_flags);
+ extern struct page *fscrypt_alloc_bounce_page(struct fscrypt_ctx *ctx,
+ 					      gfp_t gfp_flags);
++extern const struct dentry_operations fscrypt_d_ops;
  
--	sg_init_one(&src_sg, source_key->raw, source_key->size);
--	sg_init_one(&dst_sg, derived_raw_key, source_key->size);
--	skcipher_request_set_crypt(req, &src_sg, &dst_sg, source_key->size,
-+	sg_init_one(&src_sg, master_key, derived_keysize);
-+	sg_init_one(&dst_sg, derived_key, derived_keysize);
-+	skcipher_request_set_crypt(req, &src_sg, &dst_sg, derived_keysize,
- 				   NULL);
- 	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
- out:
-@@ -109,10 +107,9 @@ find_and_lock_process_key(const char *prefix,
- 		goto invalid;
- 	}
+ /* fname.c */
+ extern int fname_encrypt(struct inode *inode, const struct qstr *iname,
+diff --git a/include/linux/fscrypt_notsupp.h b/include/linux/fscrypt_notsupp.h
+index 44b50c04bae9..25b6492de6e5 100644
+--- a/include/linux/fscrypt_notsupp.h
++++ b/include/linux/fscrypt_notsupp.h
+@@ -64,16 +64,6 @@ static inline void fscrypt_restore_control_page(struct page *page)
+ 	return;
+ }
  
--	if (payload->size < min_keysize ||
--	    payload->size % AES_BLOCK_SIZE != 0) {
-+	if (payload->size < min_keysize) {
- 		fscrypt_warn(NULL,
--			     "key with description '%s' is too short or is misaligned (got %u bytes, need %u+ bytes)",
-+			     "key with description '%s' is too short (got %u bytes, need %u+ bytes)",
- 			     key->description, payload->size, min_keysize);
- 		goto invalid;
- 	}
-@@ -145,7 +142,7 @@ static int find_and_derive_key(const struct inode *inode,
- 	}
- 	if (IS_ERR(key))
- 		return PTR_ERR(key);
--	err = derive_key_aes(ctx->nonce, payload, derived_key);
-+	err = derive_key_aes(payload->raw, ctx, derived_key, derived_keysize);
- 	up_read(&key->sem);
- 	key_put(key);
- 	return err;
-@@ -325,7 +322,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	 * crypto API as part of key derivation.
- 	 */
- 	res = -ENOMEM;
--	raw_key = kmalloc(FS_MAX_KEY_SIZE, GFP_NOFS);
-+	raw_key = kmalloc(keysize, GFP_NOFS);
- 	if (!raw_key)
- 		goto out;
+-static inline void fscrypt_set_d_op(struct dentry *dentry)
+-{
+-	return;
+-}
+-
+-static inline void fscrypt_set_encrypted_dentry(struct dentry *dentry)
+-{
+-	return;
+-}
+-
+ /* policy.c */
+ static inline int fscrypt_ioctl_set_policy(struct file *filp,
+ 					   const void __user *arg)
+diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
+index 477a7a6504d2..c9c2cc26bc62 100644
+--- a/include/linux/fscrypt_supp.h
++++ b/include/linux/fscrypt_supp.h
+@@ -74,20 +74,6 @@ static inline struct page *fscrypt_control_page(struct page *page)
  
-@@ -343,10 +340,6 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	}
- 	crypt_info->ci_ctfm = ctfm;
- 	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
--	/*
--	 * if the provided key is longer than keysize, we use the first
--	 * keysize bytes of the derived key only
--	 */
- 	res = crypto_skcipher_setkey(ctfm, raw_key, keysize);
- 	if (res)
- 		goto out;
+ extern void fscrypt_restore_control_page(struct page *);
+ 
+-extern const struct dentry_operations fscrypt_d_ops;
+-
+-static inline void fscrypt_set_d_op(struct dentry *dentry)
+-{
+-	d_set_d_op(dentry, &fscrypt_d_ops);
+-}
+-
+-static inline void fscrypt_set_encrypted_dentry(struct dentry *dentry)
+-{
+-	spin_lock(&dentry->d_lock);
+-	dentry->d_flags |= DCACHE_ENCRYPTED_WITH_KEY;
+-	spin_unlock(&dentry->d_lock);
+-}
+-
+ /* policy.c */
+ extern int fscrypt_ioctl_set_policy(struct file *, const void __user *);
+ extern int fscrypt_ioctl_get_policy(struct file *, void __user *);
 -- 
 2.17.0.441.gb46fe60e1d-goog
