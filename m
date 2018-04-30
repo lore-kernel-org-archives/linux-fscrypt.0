@@ -1,8 +1,8 @@
 Return-Path: <ebiggers3@gmail.com>
 From: Eric Biggers <ebiggers3@gmail.com>
-Subject: [PATCH 10/15] fscrypt: make fscrypt_operations.max_namelen an integer
-Date: Mon, 30 Apr 2018 15:51:44 -0700
-Message-Id: <20180430225149.183514-11-ebiggers3@gmail.com>
+Subject: [PATCH 05/15] fscrypt: remove stale comment from fscrypt_d_revalidate()
+Date: Mon, 30 Apr 2018 15:51:39 -0700
+Message-Id: <20180430225149.183514-6-ebiggers3@gmail.com>
 In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
 References: <20180430225149.183514-1-ebiggers3@gmail.com>
 To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
@@ -11,124 +11,22 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Now ->max_namelen() is only called to limit the filename length when
-adding NUL padding, and only for real filenames -- not symlink targets.
-It also didn't give the correct length for symlink targets anyway since
-it forgot to subtract 'sizeof(struct fscrypt_symlink_data)'.
-
-Thus, change ->max_namelen from a function to a simple 'unsigned int'
-that gives the filesystem's maximum filename length.
-
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fname.c            |  2 +-
- fs/ext4/super.c              |  8 +-------
- fs/f2fs/super.c              |  8 +-------
- fs/ubifs/crypto.c            | 10 +---------
- include/linux/fscrypt_supp.h |  2 +-
- 5 files changed, 5 insertions(+), 25 deletions(-)
+ fs/crypto/crypto.c | 1 -
+ 1 file changed, 1 deletion(-)
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index c4eb3a235ae4..39091fc31e98 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -334,7 +334,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 58761d816751..d22887f689ad 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -322,7 +322,6 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
+ 		return 0;
+ 	}
  
- 	if (dir->i_crypt_info) {
- 		if (!fscrypt_fname_encrypted_size(dir, iname->len,
--						  dir->i_sb->s_cop->max_namelen(dir),
-+						  dir->i_sb->s_cop->max_namelen,
- 						  &fname->crypto_buf.len))
- 			return -ENAMETOOLONG;
- 		fname->crypto_buf.name = kmalloc(fname->crypto_buf.len,
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index eb104e8476f0..502c36da292c 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1237,19 +1237,13 @@ static bool ext4_dummy_context(struct inode *inode)
- 	return DUMMY_ENCRYPTION_ENABLED(EXT4_SB(inode->i_sb));
- }
- 
--static unsigned ext4_max_namelen(struct inode *inode)
--{
--	return S_ISLNK(inode->i_mode) ? inode->i_sb->s_blocksize :
--		EXT4_NAME_LEN;
--}
--
- static const struct fscrypt_operations ext4_cryptops = {
- 	.key_prefix		= "ext4:",
- 	.get_context		= ext4_get_context,
- 	.set_context		= ext4_set_context,
- 	.dummy_context		= ext4_dummy_context,
- 	.empty_dir		= ext4_empty_dir,
--	.max_namelen		= ext4_max_namelen,
-+	.max_namelen		= EXT4_NAME_LEN,
- };
- #endif
- 
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 42d564c5ccd0..970ae27f401c 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -1930,19 +1930,13 @@ static bool f2fs_dummy_context(struct inode *inode)
- 	return DUMMY_ENCRYPTION_ENABLED(F2FS_I_SB(inode));
- }
- 
--static unsigned f2fs_max_namelen(struct inode *inode)
--{
--	return S_ISLNK(inode->i_mode) ?
--			inode->i_sb->s_blocksize : F2FS_NAME_LEN;
--}
--
- static const struct fscrypt_operations f2fs_cryptops = {
- 	.key_prefix	= "f2fs:",
- 	.get_context	= f2fs_get_context,
- 	.set_context	= f2fs_set_context,
- 	.dummy_context	= f2fs_dummy_context,
- 	.empty_dir	= f2fs_empty_dir,
--	.max_namelen	= f2fs_max_namelen,
-+	.max_namelen	= F2FS_NAME_LEN,
- };
- #endif
- 
-diff --git a/fs/ubifs/crypto.c b/fs/ubifs/crypto.c
-index 616a688f5d8f..55c508fe8131 100644
---- a/fs/ubifs/crypto.c
-+++ b/fs/ubifs/crypto.c
-@@ -24,14 +24,6 @@ static bool ubifs_crypt_empty_dir(struct inode *inode)
- 	return ubifs_check_dir_empty(inode) == 0;
- }
- 
--static unsigned int ubifs_crypt_max_namelen(struct inode *inode)
--{
--	if (S_ISLNK(inode->i_mode))
--		return UBIFS_MAX_INO_DATA;
--	else
--		return UBIFS_MAX_NLEN;
--}
--
- int ubifs_encrypt(const struct inode *inode, struct ubifs_data_node *dn,
- 		  unsigned int in_len, unsigned int *out_len, int block)
- {
-@@ -89,5 +81,5 @@ const struct fscrypt_operations ubifs_crypt_operations = {
- 	.get_context		= ubifs_crypt_get_context,
- 	.set_context		= ubifs_crypt_set_context,
- 	.empty_dir		= ubifs_crypt_empty_dir,
--	.max_namelen		= ubifs_crypt_max_namelen,
-+	.max_namelen		= UBIFS_MAX_NLEN,
- };
-diff --git a/include/linux/fscrypt_supp.h b/include/linux/fscrypt_supp.h
-index c9c2cc26bc62..5080cb1bec4c 100644
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -29,7 +29,7 @@ struct fscrypt_operations {
- 	int (*set_context)(struct inode *, const void *, size_t, void *);
- 	bool (*dummy_context)(struct inode *);
- 	bool (*empty_dir)(struct inode *);
--	unsigned (*max_namelen)(struct inode *);
-+	unsigned int max_namelen;
- };
- 
- struct fscrypt_ctx {
+-	/* this should eventually be an flag in d_flags */
+ 	spin_lock(&dentry->d_lock);
+ 	cached_with_key = dentry->d_flags & DCACHE_ENCRYPTED_WITH_KEY;
+ 	spin_unlock(&dentry->d_lock);
 -- 
 2.17.0.441.gb46fe60e1d-goog
