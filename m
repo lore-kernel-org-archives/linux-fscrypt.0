@@ -1,51 +1,41 @@
-Return-Path: <chandan@linux.vnet.ibm.com>
-From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: Re: [RFC PATCH V2 07/11] fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
-Date: Thu, 05 Apr 2018 12:33:26 +0530
-In-Reply-To: <20180327194056.GD15608@thunk.org>
-References: <20180212094347.22071-1-chandan@linux.vnet.ibm.com> <18565695.50sL0kI9m1@localhost.localdomain> <20180327194056.GD15608@thunk.org>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Message-Id: <3388885.zk0F4oSU7q@localhost.localdomain>
-To: "Theodore Y. Ts'o" <tytso@mit.edu>
-Cc: Eric Biggers <ebiggers3@gmail.com>, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Return-Path: <ebiggers3@gmail.com>
+From: Eric Biggers <ebiggers3@gmail.com>
+Subject: [PATCH 11/15] fscrypt: remove unnecessary check for non-logon key type
+Date: Mon, 30 Apr 2018 15:51:45 -0700
+Message-Id: <20180430225149.183514-12-ebiggers3@gmail.com>
+In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
+References: <20180430225149.183514-1-ebiggers3@gmail.com>
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wednesday, March 28, 2018 1:10:56 AM IST Theodore Y. Ts'o wrote:
-> On Mon, Mar 26, 2018 at 01:52:54PM +0530, Chandan Rajendra wrote:
-> > > Also, it looks like when you renamed the *_page fscrypt functions to
-> > > *_blocks, on the write side, a bounce page is still being used for
-> > > each block.  So so an an architecture which has 64k pages, and we are
-> > > writing to a file sytem with 4k blocks, to write a 64k page, the
-> > > fscrypt layer will have to allocate 16 64k bounce pages to write a
-> > > single 64k page to an encrypted file.  Am I missing something?
-> > > 
-> > 
-> > ext4_bio_write_page() invokes the new fscrypt_encrypt_block() function for
-> > each block of the page that has been marked with "Async write". For all blocks
-> > of the page that needs to be written to the disk, we pass the same bounce page
-> > as an argument to fscrypt_encrypt_block().
-> 
-> Thanks for the explanation.  I do wonder if the proper thing to export
-> from the fscrypt layer is fscrypt_encrypt_page(), since for all file
-> systems, the only thing which really makes sense is to read and write
-> a full page at a time, since we cache things at the page cache a full
-> page a time.  So instead of teaching each file system how to use
-> fscrypt_{encrypt,decrypt}_block, maybe push that into the fscrypt
-> layer, and implement a new fscrypt_encrypt_page() which calls
-> fs_encrypt_block()?
-> 
+From: Eric Biggers <ebiggers@google.com>
 
-I encountered a problem when refactoring the code to get fscrypt layer to
-encrypt all the blocks of a page by internally calling
-fscrypt_encrypt_block().
+We're passing 'key_type_logon' to request_key(), so the found key is
+guaranteed to be of type "logon".  Thus, there is no reason to check
+later that the key is really a "logon" key.
 
-It is the filesystem which knows which subset of blocks mapped by a page that
-needs to be encrypted. For example, ext4_bio_write_page() marks such blocks
-with "Async Write" flag and later in another pass, it encrypts and also adds
-these blocks to a bio. So IMHO, I think fscrypt layer should limit itself to
-encrypting/decrypting file data in block size units.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/keyinfo.c | 6 ------
+ 1 file changed, 6 deletions(-)
 
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 0f6a65c6483b..0b48aa469453 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -89,12 +89,6 @@ static int validate_user_key(struct fscrypt_info *crypt_info,
+ 		return PTR_ERR(keyring_key);
+ 	down_read(&keyring_key->sem);
+ 
+-	if (keyring_key->type != &key_type_logon) {
+-		printk_once(KERN_WARNING
+-				"%s: key type must be logon\n", __func__);
+-		res = -ENOKEY;
+-		goto out;
+-	}
+ 	ukp = user_key_payload_locked(keyring_key);
+ 	if (!ukp) {
+ 		/* key was revoked before we acquired its semaphore */
 -- 
-chandan
+2.17.0.441.gb46fe60e1d-goog
