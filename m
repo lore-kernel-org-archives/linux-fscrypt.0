@@ -1,170 +1,217 @@
-Return-Path: <linux-ext4-owner@vger.kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-pf0-f194.google.com ([209.85.192.194]:42996 "EHLO
+        mail-pf0-f194.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1751649AbeEQXsa (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 17 May 2018 19:48:30 -0400
+Received: by mail-pf0-f194.google.com with SMTP id p14-v6so2829695pfh.9
+        for <linux-fscrypt@vger.kernel.org>; Thu, 17 May 2018 16:48:29 -0700 (PDT)
 From: Eric Biggers <ebiggers@google.com>
-Subject: [PATCH v2] fscrypt: add Speck128/256 support
-Date: Mon,  7 May 2018 17:22:08 -0700
-Message-Id: <20180508002208.7072-1-ebiggers@google.com>
-Sender: linux-ext4-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>
-Cc: linux-crypto@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Jeffrey Walton <noloader@gmail.com>, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH] fscrypt: log the crypto algorithm implementations
+Date: Thu, 17 May 2018 16:46:50 -0700
+Message-Id: <20180517234650.182957-1-ebiggers@google.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: "Theodore Y . Ts'o" <tytso@mit.edu>, linux-fscrypt@vger.kernel.org
+Cc: linux-crypto@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Paul Crowley <paulcrowley@google.com>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-fscrypt currently only supports AES encryption.  However, many low-end
-mobile devices have older CPUs that don't have AES instructions, e.g.
-the ARMv8 Cryptography Extensions.  Currently, user data on such devices
-is not encrypted at rest because AES is too slow, even when the NEON
-bit-sliced implementation of AES is used.  Unfortunately, it is
-infeasible to encrypt these devices at all when AES is the only option.
+Log the crypto algorithm driver name for each fscrypt encryption mode on
+its first use, also showing a friendly name for the mode.
 
-Therefore, this patch updates fscrypt to support the Speck block cipher,
-which was recently added to the crypto API.  The C implementation of
-Speck is not especially fast, but Speck can be implemented very
-efficiently with general-purpose vector instructions, e.g. ARM NEON.
-For example, on an ARMv7 processor, we measured the NEON-accelerated
-Speck128/256-XTS at 69 MB/s for both encryption and decryption, while
-AES-256-XTS with the NEON bit-sliced implementation was only 22 MB/s
-encryption and 19 MB/s decryption.
+This will help people determine whether the expected implementations are
+being used.  In some cases we've seen people do benchmarks and reject
+using encryption for performance reasons, when in fact they used a much
+slower implementation of AES-XTS than was possible on the hardware.  It
+can make an enormous difference; e.g., AES-XTS on ARM is about 10x
+faster with the crypto extensions (AES instructions) than without.
 
-There are multiple variants of Speck.  This patch only adds support for
-Speck128/256, which is the variant with a 128-bit block size and 256-bit
-key size -- the same as AES-256.  This is believed to be the most secure
-variant of Speck, and it's only about 6% slower than Speck128/128.
-Speck64/128 would be at least 20% faster because it has 20% rounds, and
-it can be even faster on CPUs that can't efficiently do the 64-bit
-operations needed for Speck128.  However, Speck64's 64-bit block size is
-not preferred security-wise.  ARM NEON also supports the needed 64-bit
-operations even on 32-bit CPUs, resulting in Speck128 being fast enough
-for our targeted use cases so far.
+This also makes it more obvious which modes are being used, now that
+fscrypt supports multiple combinations of modes.
 
-The chosen modes of operation are XTS for contents and CTS-CBC for
-filenames.  These are the same modes of operation that fscrypt defaults
-to for AES.  Note that as with the other fscrypt modes, Speck will not
-be used unless userspace chooses to use it.  Nor are any of the existing
-modes (which are all AES-based) being removed, of course.
+Example messages (with default modes, on x86_64):
 
-We intentionally don't make CONFIG_FS_ENCRYPTION select
-CONFIG_CRYPTO_SPECK, so people will have to enable Speck support
-themselves if they need it.  This is because we shouldn't bloat the
-FS_ENCRYPTION dependencies with every new cipher, especially ones that
-aren't recommended for most users.  Moreover, CRYPTO_SPECK is just the
-generic implementation, which won't be fast enough for many users; in
-practice, they'll need to enable CRYPTO_SPECK_NEON to get acceptable
-performance.
+[   35.492057] fscrypt: AES-256-CTS-CBC using implementation "cts(cbc-aes-aesni)"
+[   35.492171] fscrypt: AES-256-XTS using implementation "xts-aes-aesni"
 
-More details about our choice of Speck can be found in our patches that
-added Speck to the crypto API, and the follow-on discussion threads.
-We're planning a publication that explains the choice in more detail.
-But briefly, we can't use ChaCha20 as we previously proposed, since it
-would be insecure to use a stream cipher in this context, with potential
-IV reuse during writes on f2fs and/or on wear-leveling flash storage.
-
-We also evaluated many other lightweight and/or ARX-based block ciphers
-such as Chaskey-LTS, RC5, LEA, CHAM, Threefish, RC6, NOEKEON, SPARX, and
-XTEA.  However, all had disadvantages vs. Speck, such as insufficient
-performance with NEON, much less published cryptanalysis, or an
-insufficient security level.  Various design choices in Speck make it
-perform better with NEON than competing ciphers while still having a
-security margin similar to AES, and in the case of Speck128 also the
-same available security levels.  Unfortunately, Speck does have some
-political baggage attached -- it's an NSA designed cipher, and was
-rejected from an ISO standard (though for context, as far as I know none
-of the above-mentioned alternatives are ISO standards either).
-Nevertheless, we believe it is a good solution to the problem from a
-technical perspective.
-
-Certain algorithms constructed from ChaCha or the ChaCha permutation,
-such as MEM (Masked Even-Mansour) or HPolyC, may also meet our
-performance requirements.  However, these are new constructions that
-need more time to receive the cryptographic review and acceptance needed
-to be confident in their security.  HPolyC hasn't been published yet,
-and we are concerned that MEM makes stronger assumptions about the
-underlying permutation than the ChaCha stream cipher does.  In contrast,
-the XTS mode of operation is relatively well accepted, and Speck has
-over 70 cryptanalysis papers.  Of course, these ChaCha-based algorithms
-can still be added later if they become ready.
-
-The best known attack on Speck128/256 is a differential cryptanalysis
-attack on 25 of 34 rounds with 2^253 time complexity and 2^125 chosen
-plaintexts, i.e. only marginally faster than brute force.  There is no
-known attack on the full 34 rounds.
+Note: algorithms can be dynamically added to the crypto API, which can
+result in different implementations being used at different times.  But
+this is rare; for most users, showing the first will be good enough.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
 
-Changed since v1:
-    - Improved commit message and documentation.
+Note: this patch is on top of the other fscrypt patches I've sent out for 4.18.
 
- Documentation/filesystems/fscrypt.rst | 10 ++++++++++
- fs/crypto/fscrypt_private.h           |  4 ++++
- fs/crypto/keyinfo.c                   |  2 ++
- include/uapi/linux/fs.h               |  2 ++
- 4 files changed, 18 insertions(+)
+ fs/crypto/keyinfo.c | 102 +++++++++++++++++++++++++++++---------------
+ 1 file changed, 68 insertions(+), 34 deletions(-)
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index cfbc18f0d9c9..48b424de85bb 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -191,11 +191,21 @@ Currently, the following pairs of encryption modes are supported:
- 
- - AES-256-XTS for contents and AES-256-CTS-CBC for filenames
- - AES-128-CBC for contents and AES-128-CTS-CBC for filenames
-+- Speck128/256-XTS for contents and Speck128/256-CTS-CBC for filenames
- 
- It is strongly recommended to use AES-256-XTS for contents encryption.
- AES-128-CBC was added only for low-powered embedded devices with
- crypto accelerators such as CAAM or CESA that do not support XTS.
- 
-+Similarly, Speck128/256 support was only added for older or low-end
-+CPUs which cannot do AES fast enough -- especially ARM CPUs which have
-+NEON instructions but not the Cryptography Extensions -- and for which
-+it would not otherwise be feasible to use encryption at all.  It is
-+not recommended to use Speck on CPUs that have AES instructions.
-+Speck support is only available if it has been enabled in the crypto
-+API via CONFIG_CRYPTO_SPECK.  Also, on ARM platforms, to get
-+acceptable performance CONFIG_CRYPTO_SPECK_NEON must be enabled.
-+
- New encryption modes can be added relatively easily, without changes
- to individual filesystems.  However, authenticated encryption (AE)
- modes are not currently supported because of the difficulty of dealing
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index ad6722bae8b7..bceb737d4694 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -91,6 +91,10 @@ static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
- 	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
- 		return true;
- 
-+	if (contents_mode == FS_ENCRYPTION_MODE_SPECK128_256_XTS &&
-+	    filenames_mode == FS_ENCRYPTION_MODE_SPECK128_256_CTS)
-+		return true;
-+
- 	return false;
- }
- 
 diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 05f5ee1f0705..96a1eae9e51d 100644
+index 41f6025d5d7a..68b5baef5960 100644
 --- a/fs/crypto/keyinfo.c
 +++ b/fs/crypto/keyinfo.c
-@@ -135,6 +135,8 @@ static const struct {
- 					     FS_AES_128_CBC_KEY_SIZE },
- 	[FS_ENCRYPTION_MODE_AES_128_CTS] = { "cts(cbc(aes))",
- 					     FS_AES_128_CTS_KEY_SIZE },
-+	[FS_ENCRYPTION_MODE_SPECK128_256_XTS] = { "xts(speck128)", 64 },
-+	[FS_ENCRYPTION_MODE_SPECK128_256_CTS] = { "cts(cbc(speck128))", 32 },
+@@ -148,44 +148,64 @@ static int find_and_derive_key(const struct inode *inode,
+ 	return err;
+ }
+ 
+-static const struct {
++static struct fscrypt_mode {
++	const char *friendly_name;
+ 	const char *cipher_str;
+ 	int keysize;
++	bool logged_impl_name;
+ } available_modes[] = {
+-	[FS_ENCRYPTION_MODE_AES_256_XTS]      = { "xts(aes)",		64 },
+-	[FS_ENCRYPTION_MODE_AES_256_CTS]      = { "cts(cbc(aes))",	32 },
+-	[FS_ENCRYPTION_MODE_AES_128_CBC]      = { "cbc(aes)",		16 },
+-	[FS_ENCRYPTION_MODE_AES_128_CTS]      = { "cts(cbc(aes))",	16 },
+-	[FS_ENCRYPTION_MODE_SPECK128_256_XTS] = { "xts(speck128)",	64 },
+-	[FS_ENCRYPTION_MODE_SPECK128_256_CTS] = { "cts(cbc(speck128))",	32 },
++	[FS_ENCRYPTION_MODE_AES_256_XTS] = {
++		.friendly_name = "AES-256-XTS",
++		.cipher_str = "xts(aes)",
++		.keysize = 64,
++	},
++	[FS_ENCRYPTION_MODE_AES_256_CTS] = {
++		.friendly_name = "AES-256-CTS-CBC",
++		.cipher_str = "cts(cbc(aes))",
++		.keysize = 32,
++	},
++	[FS_ENCRYPTION_MODE_AES_128_CBC] = {
++		.friendly_name = "AES-128-CBC",
++		.cipher_str = "cbc(aes)",
++		.keysize = 16,
++	},
++	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
++		.friendly_name = "AES-128-CTS-CBC",
++		.cipher_str = "cts(cbc(aes))",
++		.keysize = 16,
++	},
++	[FS_ENCRYPTION_MODE_SPECK128_256_XTS] = {
++		.friendly_name = "Speck128/256-XTS",
++		.cipher_str = "xts(speck128)",
++		.keysize = 64,
++	},
++	[FS_ENCRYPTION_MODE_SPECK128_256_CTS] = {
++		.friendly_name = "Speck128/256-CTS-CBC",
++		.cipher_str = "cts(cbc(speck128))",
++		.keysize = 32,
++	},
  };
  
- static int determine_cipher_type(struct fscrypt_info *ci, struct inode *inode,
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index d2a8313fabd7..0b6e07ee63a6 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -275,6 +275,8 @@ struct fsxattr {
- #define FS_ENCRYPTION_MODE_AES_256_CTS		4
- #define FS_ENCRYPTION_MODE_AES_128_CBC		5
- #define FS_ENCRYPTION_MODE_AES_128_CTS		6
-+#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7
-+#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8
+-static int determine_cipher_type(struct fscrypt_info *ci, struct inode *inode,
+-				 const char **cipher_str_ret, int *keysize_ret)
++static struct fscrypt_mode *
++select_encryption_mode(const struct fscrypt_info *ci, const struct inode *inode)
+ {
+-	u32 mode;
+-
+ 	if (!fscrypt_valid_enc_modes(ci->ci_data_mode, ci->ci_filename_mode)) {
+ 		fscrypt_warn(inode->i_sb,
+ 			     "inode %lu uses unsupported encryption modes (contents mode %d, filenames mode %d)",
+ 			     inode->i_ino, ci->ci_data_mode,
+ 			     ci->ci_filename_mode);
+-		return -EINVAL;
++		return ERR_PTR(-EINVAL);
+ 	}
  
- struct fscrypt_policy {
- 	__u8 version;
+-	if (S_ISREG(inode->i_mode)) {
+-		mode = ci->ci_data_mode;
+-	} else if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)) {
+-		mode = ci->ci_filename_mode;
+-	} else {
+-		WARN_ONCE(1, "fscrypt: filesystem tried to load encryption info for inode %lu, which is not encryptable (file type %d)\n",
+-			  inode->i_ino, (inode->i_mode & S_IFMT));
+-		return -EINVAL;
+-	}
++	if (S_ISREG(inode->i_mode))
++		return &available_modes[ci->ci_data_mode];
++
++	if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode))
++		return &available_modes[ci->ci_filename_mode];
+ 
+-	*cipher_str_ret = available_modes[mode].cipher_str;
+-	*keysize_ret = available_modes[mode].keysize;
+-	return 0;
++	WARN_ONCE(1, "fscrypt: filesystem tried to load encryption info for inode %lu, which is not encryptable (file type %d)\n",
++		  inode->i_ino, (inode->i_mode & S_IFMT));
++	return ERR_PTR(-EINVAL);
+ }
+ 
+ static void put_crypt_info(struct fscrypt_info *ci)
+@@ -270,8 +290,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	struct fscrypt_info *crypt_info;
+ 	struct fscrypt_context ctx;
+ 	struct crypto_skcipher *ctfm;
+-	const char *cipher_str;
+-	int keysize;
++	struct fscrypt_mode *mode;
+ 	u8 *raw_key = NULL;
+ 	int res;
+ 
+@@ -315,40 +334,55 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
+ 				sizeof(crypt_info->ci_master_key));
+ 
+-	res = determine_cipher_type(crypt_info, inode, &cipher_str, &keysize);
+-	if (res)
++	mode = select_encryption_mode(crypt_info, inode);
++	if (IS_ERR(mode)) {
++		res = PTR_ERR(mode);
+ 		goto out;
++	}
+ 
+ 	/*
+ 	 * This cannot be a stack buffer because it is passed to the scatterlist
+ 	 * crypto API as part of key derivation.
+ 	 */
+ 	res = -ENOMEM;
+-	raw_key = kmalloc(keysize, GFP_NOFS);
++	raw_key = kmalloc(mode->keysize, GFP_NOFS);
+ 	if (!raw_key)
+ 		goto out;
+ 
+-	res = find_and_derive_key(inode, &ctx, raw_key, keysize);
++	res = find_and_derive_key(inode, &ctx, raw_key, mode->keysize);
+ 	if (res)
+ 		goto out;
+ 
+-	ctfm = crypto_alloc_skcipher(cipher_str, 0, 0);
++	ctfm = crypto_alloc_skcipher(mode->cipher_str, 0, 0);
+ 	if (IS_ERR(ctfm)) {
+ 		res = PTR_ERR(ctfm);
+ 		fscrypt_warn(inode->i_sb,
+ 			     "error allocating '%s' transform for inode %lu: %d",
+-			     cipher_str, inode->i_ino, res);
++			     mode->cipher_str, inode->i_ino, res);
+ 		goto out;
+ 	}
++	if (unlikely(!mode->logged_impl_name)) {
++		/*
++		 * fscrypt performance can vary greatly depending on which
++		 * crypto algorithm implementation is used.  Help people debug
++		 * performance problems by logging the ->cra_driver_name the
++		 * first time a mode is used.  Note that multiple threads can
++		 * race here, but it doesn't really matter.
++		 */
++		mode->logged_impl_name = true;
++		pr_info("fscrypt: %s using implementation \"%s\"",
++			mode->friendly_name,
++			crypto_skcipher_alg(ctfm)->base.cra_driver_name);
++	}
+ 	crypt_info->ci_ctfm = ctfm;
+ 	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
+-	res = crypto_skcipher_setkey(ctfm, raw_key, keysize);
++	res = crypto_skcipher_setkey(ctfm, raw_key, mode->keysize);
+ 	if (res)
+ 		goto out;
+ 
+ 	if (S_ISREG(inode->i_mode) &&
+ 	    crypt_info->ci_data_mode == FS_ENCRYPTION_MODE_AES_128_CBC) {
+-		res = init_essiv_generator(crypt_info, raw_key, keysize);
++		res = init_essiv_generator(crypt_info, raw_key, mode->keysize);
+ 		if (res) {
+ 			fscrypt_warn(inode->i_sb,
+ 				     "error initializing ESSIV generator for inode %lu: %d",
 -- 
 2.17.0.441.gb46fe60e1d-goog
+
