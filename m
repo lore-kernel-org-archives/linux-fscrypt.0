@@ -1,75 +1,104 @@
-Return-Path: <tytso@thunk.org>
-Date: Sun, 20 May 2018 20:55:48 -0400
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from imap.thunk.org ([74.207.234.97]:59632 "EHLO imap.thunk.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1751348AbeEUA5M (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 20 May 2018 20:57:12 -0400
+Date: Sun, 20 May 2018 20:56:57 -0400
 From: "Theodore Y. Ts'o" <tytso@mit.edu>
-Subject: Re: [PATCH v2 00/15] fscrypt: improved logging and other cleanups
-Message-ID: <20180521005548.GB4464@thunk.org>
-References: <20180430225149.183514-1-ebiggers3@gmail.com>
+Subject: Re: [PATCH v2] fscrypt: add Speck128/256 support
+Message-ID: <20180521005657.GC4464@thunk.org>
+References: <20180508002208.7072-1-ebiggers@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20180430225149.183514-1-ebiggers3@gmail.com>
-To: Eric Biggers <ebiggers3@gmail.com>
-Cc: linux-fscrypt@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Eric Biggers <ebiggers@google.com>
+In-Reply-To: <20180508002208.7072-1-ebiggers@google.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Eric Biggers <ebiggers@google.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-crypto@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Paul Crowley <paulcrowley@google.com>, Patrik Torstensson <totte@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Jeffrey Walton <noloader@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Mon, Apr 30, 2018 at 03:51:34PM -0700, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
+On Mon, May 07, 2018 at 05:22:08PM -0700, Eric Biggers wrote:
+> fscrypt currently only supports AES encryption.  However, many low-end
+> mobile devices have older CPUs that don't have AES instructions, e.g.
+> the ARMv8 Cryptography Extensions.  Currently, user data on such devices
+> is not encrypted at rest because AES is too slow, even when the NEON
+> bit-sliced implementation of AES is used.  Unfortunately, it is
+> infeasible to encrypt these devices at all when AES is the only option.
 > 
-> Hello, here's yet another round of cleanups for fscrypt.  Please
-> consider for v4.18.  These are all patches I've sent out previously.
-> The series is based on v4.17-rc3.
+> Therefore, this patch updates fscrypt to support the Speck block cipher,
+> which was recently added to the crypto API.  The C implementation of
+> Speck is not especially fast, but Speck can be implemented very
+> efficiently with general-purpose vector instructions, e.g. ARM NEON.
+> For example, on an ARMv7 processor, we measured the NEON-accelerated
+> Speck128/256-XTS at 69 MB/s for both encryption and decryption, while
+> AES-256-XTS with the NEON bit-sliced implementation was only 22 MB/s
+> encryption and 19 MB/s decryption.
 > 
-> Patches 1-12 mostly remove unnecessary or redundant code from a number
-> of different places; nothing particularly noteworthy.  Note: to avoid a
-> merge conflict with f2fs/dev, I've dropped the patch
-> "fscrypt: remove WARN_ON_ONCE() when decryption fails".
+> There are multiple variants of Speck.  This patch only adds support for
+> Speck128/256, which is the variant with a 128-bit block size and 256-bit
+> key size -- the same as AES-256.  This is believed to be the most secure
+> variant of Speck, and it's only about 6% slower than Speck128/128.
+> Speck64/128 would be at least 20% faster because it has 20% rounds, and
+> it can be even faster on CPUs that can't efficiently do the 64-bit
+> operations needed for Speck128.  However, Speck64's 64-bit block size is
+> not preferred security-wise.  ARM NEON also supports the needed 64-bit
+> operations even on 32-bit CPUs, resulting in Speck128 being fast enough
+> for our targeted use cases so far.
 > 
-> Patch 13 switches the existing warning and error messages in fscrypt
-> over to use a common logging function, which is ratelimited and includes
-> the filesystem name (->s_id) when available as well as a consistent
-> prefix of "fscrypt:".
+> The chosen modes of operation are XTS for contents and CTS-CBC for
+> filenames.  These are the same modes of operation that fscrypt defaults
+> to for AES.  Note that as with the other fscrypt modes, Speck will not
+> be used unless userspace chooses to use it.  Nor are any of the existing
+> modes (which are all AES-based) being removed, of course.
 > 
-> Patches 14-15 are optimizations and cleanups for key lookup and key
-> derivation.  They are extracted from the patch "fscrypt: refactor
-> finding and deriving key" I had originally sent as part of the series
-> "fscrypt: filesystem-level keyring and v2 policy support".  But I think
-> they're useful changes by themselves, so no need to wait on them.
+> We intentionally don't make CONFIG_FS_ENCRYPTION select
+> CONFIG_CRYPTO_SPECK, so people will have to enable Speck support
+> themselves if they need it.  This is because we shouldn't bloat the
+> FS_ENCRYPTION dependencies with every new cipher, especially ones that
+> aren't recommended for most users.  Moreover, CRYPTO_SPECK is just the
+> generic implementation, which won't be fast enough for many users; in
+> practice, they'll need to enable CRYPTO_SPECK_NEON to get acceptable
+> performance.
+> 
+> More details about our choice of Speck can be found in our patches that
+> added Speck to the crypto API, and the follow-on discussion threads.
+> We're planning a publication that explains the choice in more detail.
+> But briefly, we can't use ChaCha20 as we previously proposed, since it
+> would be insecure to use a stream cipher in this context, with potential
+> IV reuse during writes on f2fs and/or on wear-leveling flash storage.
+> 
+> We also evaluated many other lightweight and/or ARX-based block ciphers
+> such as Chaskey-LTS, RC5, LEA, CHAM, Threefish, RC6, NOEKEON, SPARX, and
+> XTEA.  However, all had disadvantages vs. Speck, such as insufficient
+> performance with NEON, much less published cryptanalysis, or an
+> insufficient security level.  Various design choices in Speck make it
+> perform better with NEON than competing ciphers while still having a
+> security margin similar to AES, and in the case of Speck128 also the
+> same available security levels.  Unfortunately, Speck does have some
+> political baggage attached -- it's an NSA designed cipher, and was
+> rejected from an ISO standard (though for context, as far as I know none
+> of the above-mentioned alternatives are ISO standards either).
+> Nevertheless, we believe it is a good solution to the problem from a
+> technical perspective.
+> 
+> Certain algorithms constructed from ChaCha or the ChaCha permutation,
+> such as MEM (Masked Even-Mansour) or HPolyC, may also meet our
+> performance requirements.  However, these are new constructions that
+> need more time to receive the cryptographic review and acceptance needed
+> to be confident in their security.  HPolyC hasn't been published yet,
+> and we are concerned that MEM makes stronger assumptions about the
+> underlying permutation than the ChaCha stream cipher does.  In contrast,
+> the XTS mode of operation is relatively well accepted, and Speck has
+> over 70 cryptanalysis papers.  Of course, these ChaCha-based algorithms
+> can still be added later if they become ready.
+> 
+> The best known attack on Speck128/256 is a differential cryptanalysis
+> attack on 25 of 34 rounds with 2^253 time complexity and 2^125 chosen
+> plaintexts, i.e. only marginally faster than brute force.  There is no
+> known attack on the full 34 rounds.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Thanks, I've applied this patch series.
+Applied, thanks.
 
 						- Ted
-
-> Eric Biggers (15):
->   fs, fscrypt: only define ->s_cop when FS_ENCRYPTION is enabled
->   fscrypt: clean up after fscrypt_prepare_lookup() conversions
->   fscrypt: remove unnecessary NULL check when allocating skcipher
->   fscrypt: remove error messages for skcipher_request_alloc() failure
->   fscrypt: remove stale comment from fscrypt_d_revalidate()
->   fscrypt: don't clear flags on crypto transform
->   fscrypt: don't special-case EOPNOTSUPP from
->     fscrypt_get_encryption_info()
->   fscrypt: drop max_namelen check from fname_decrypt()
->   fscrypt: drop empty name check from fname_decrypt()
->   fscrypt: make fscrypt_operations.max_namelen an integer
->   fscrypt: remove unnecessary check for non-logon key type
->   fscrypt: remove internal key size constants
->   fscrypt: use a common logging function
->   fscrypt: separate key lookup from key derivation
->   fscrypt: only derive the needed portion of the key
-> 
->  fs/crypto/crypto.c              |  36 ++++--
->  fs/crypto/fname.c               |  32 ++---
->  fs/crypto/fscrypt_private.h     |  19 +--
->  fs/crypto/hooks.c               |   5 +-
->  fs/crypto/keyinfo.c             | 200 +++++++++++++++++---------------
->  fs/ext4/super.c                 |   8 +-
->  fs/f2fs/super.c                 |   8 +-
->  fs/ubifs/crypto.c               |  10 +-
->  include/linux/fs.h              |   4 +-
->  include/linux/fscrypt_notsupp.h |  10 --
->  include/linux/fscrypt_supp.h    |  16 +--
->  11 files changed, 161 insertions(+), 187 deletions(-)
-> 
-> -- 
-> 2.17.0.441.gb46fe60e1d-goog
-> 
