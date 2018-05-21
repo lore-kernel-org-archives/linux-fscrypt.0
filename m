@@ -1,52 +1,46 @@
-Return-Path: <chandan@linux.vnet.ibm.com>
-From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: [RFC PATCH V3 10/12] ext4: Fix block number passed to fscrypt_encrypt_page
-Date: Tue, 22 May 2018 21:31:08 +0530
-In-Reply-To: <20180522160110.1161-1-chandan@linux.vnet.ibm.com>
-References: <20180522160110.1161-1-chandan@linux.vnet.ibm.com>
-Message-Id: <20180522160110.1161-11-chandan@linux.vnet.ibm.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, ebiggers3@gmail.com, tytso@mit.edu, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from imap.thunk.org ([74.207.234.97]:59594 "EHLO imap.thunk.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1751063AbeEUAzQ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 20 May 2018 20:55:16 -0400
+Date: Sun, 20 May 2018 20:55:02 -0400
+From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Subject: Re: [PATCH] fscrypt: use unbound workqueue for decryption
+Message-ID: <20180521005502.GA4464@thunk.org>
+References: <20180420233002.134687-1-ebiggers@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180420233002.134687-1-ebiggers@google.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Eric Biggers <ebiggers@google.com>
+Cc: linux-fscrypt@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Paul Crowley <paulcrowley@google.com>, Enric Balletbo i Serra <enric.balletbo@collabora.com>, Mikulas Patocka <mpatocka@redhat.com>, linux-kernel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-For the case of Block size < Page size, this commit computes the block
-number of the first block mapped by the page. This is required by
-fscrypt_encrypt_page() for encrypting the blocks mapped by the page.
+On Fri, Apr 20, 2018 at 04:30:02PM -0700, Eric Biggers wrote:
+> Improve fscrypt read performance by switching the decryption workqueue
+> from bound to unbound.  With the bound workqueue, when multiple bios
+> completed on the same CPU, they were decrypted on that same CPU.  But
+> with the unbound queue, they are now decrypted in parallel on any CPU.
+> 
+> Although fscrypt read performance can be tough to measure due to the
+> many sources of variation, this change is most beneficial when
+> decryption is slow, e.g. on CPUs without AES instructions.  For example,
+> I timed tarring up encrypted directories on f2fs.  On x86 with AES-NI
+> instructions disabled, the unbound workqueue improved performance by
+> about 25-35%, using 1 to NUM_CPUs jobs with 4 or 8 CPUs available.  But
+> with AES-NI enabled, performance was unchanged to within ~2%.
+> 
+> I also did the same test on a quad-core ARM CPU using xts-speck128-neon
+> encryption.  There performance was usually about 10% better with the
+> unbound workqueue, bringing it closer to the unencrypted speed.
+> 
+> The unbound workqueue may be worse in some cases due to worse locality,
+> but I think it's still the better default.  dm-crypt uses an unbound
+> workqueue by default too, so this change makes fscrypt match.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
----
- fs/ext4/page-io.c | 10 +++++++---
- 1 file changed, 7 insertions(+), 3 deletions(-)
+Applied, thanks.
 
-diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-index db75901..52f9218 100644
---- a/fs/ext4/page-io.c
-+++ b/fs/ext4/page-io.c
-@@ -480,10 +480,14 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
- 	if (ext4_encrypted_inode(inode) && S_ISREG(inode->i_mode) &&
- 	    nr_to_submit) {
- 		gfp_t gfp_flags = GFP_NOFS;
-+		u64 blk_nr;
-+
-+		blk_nr = page->index << (PAGE_SHIFT - inode->i_blkbits);
- 
- 	retry_encrypt:
--		data_page = fscrypt_encrypt_page(inode, page, PAGE_SIZE, 0,
--						page->index, gfp_flags);
-+		len = roundup(len, i_blocksize(inode));
-+		data_page = fscrypt_encrypt_page(inode, page, len, 0, blk_nr,
-+						gfp_flags);
- 		if (IS_ERR(data_page)) {
- 			ret = PTR_ERR(data_page);
- 			if (ret == -ENOMEM && wbc->sync_mode == WB_SYNC_ALL) {
-@@ -520,7 +524,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
- 	/* Error stopped previous loop? Clean up buffers... */
- 	if (ret) {
- 	out:
--		if (data_page)
-+		if (data_page && bh == head)
- 			fscrypt_restore_control_page(data_page);
- 		printk_ratelimited(KERN_ERR "%s: ret = %d\n", __func__, ret);
- 		redirty_page_for_writepage(wbc, page);
--- 
-2.9.5
+						- Ted
