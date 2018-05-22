@@ -1,61 +1,45 @@
 Return-Path: <chandan@linux.vnet.ibm.com>
 From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: [RFC PATCH V3 09/12] fscrypt_encrypt_page: Encrypt all blocks mapped by a page
-Date: Tue, 22 May 2018 21:31:07 +0530
+Subject: [RFC PATCH V3 04/12] __fscrypt_decrypt_bio: Fix page offset and len args to fscrypt_decrypt_page
+Date: Tue, 22 May 2018 21:31:02 +0530
 In-Reply-To: <20180522160110.1161-1-chandan@linux.vnet.ibm.com>
 References: <20180522160110.1161-1-chandan@linux.vnet.ibm.com>
-Message-Id: <20180522160110.1161-10-chandan@linux.vnet.ibm.com>
+Message-Id: <20180522160110.1161-5-chandan@linux.vnet.ibm.com>
 To: linux-fscrypt@vger.kernel.org
 Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, ebiggers3@gmail.com, tytso@mit.edu, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit changes fscrypt_encrypt_page() to encrypt all the blocks
-mapped by a page.
+For block size < page size scenario, the block to be decrypted can be
+mapped at a non-zero page offset and the length of the block is less
+than page size. Hence this commit fixes the corresponding arguments sent
+to fscrypt_decrypt_page().
 
 Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
 ---
- fs/crypto/crypto.c | 21 +++++++++++++++------
- 1 file changed, 15 insertions(+), 6 deletions(-)
+ fs/crypto/bio.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 2148651..fd2ebe8 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -242,6 +242,7 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- 				u64 lblk_num, gfp_t gfp_flags)
+diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+index 778b826..32288c3 100644
+--- a/fs/crypto/bio.c
++++ b/fs/crypto/bio.c
+@@ -33,9 +33,15 @@ static void __fscrypt_decrypt_bio(struct bio *bio, bool done)
  
- {
-+	unsigned int blocksize;
- 	struct fscrypt_ctx *ctx;
- 	struct page *ciphertext_page = page;
- 	int err;
-@@ -271,13 +272,21 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- 		goto errout;
+ 	bio_for_each_segment_all(bv, bio, i) {
+ 		struct page *page = bv->bv_page;
+-		int ret = fscrypt_decrypt_page(page->mapping->host, page,
+-				PAGE_SIZE, 0, page->index);
++		struct inode *inode = page->mapping->host;
++		u64 blk;
++		int ret;
  
- 	ctx->w.control_page = page;
--	err = fscrypt_do_block_crypto(inode, FS_ENCRYPT, lblk_num,
--				     page, ciphertext_page, len, offs,
--				     gfp_flags);
--	if (err) {
--		ciphertext_page = ERR_PTR(err);
--		goto errout;
++		blk = page->index << (PAGE_SHIFT - inode->i_blkbits);
++		blk += bv->bv_offset >> inode->i_blkbits;
 +
-+	blocksize = i_blocksize(inode);
-+	while (offs < len) {
-+		err = fscrypt_do_block_crypto(inode, FS_ENCRYPT, lblk_num,
-+					page, ciphertext_page, blocksize,
-+					offs, gfp_flags);
-+		if (err) {
-+			ciphertext_page = ERR_PTR(err);
-+			goto errout;
-+		}
-+
-+		offs += blocksize;
-+		++lblk_num;
- 	}
-+
- 	SetPagePrivate(ciphertext_page);
- 	set_page_private(ciphertext_page, (unsigned long)ctx);
- 	lock_page(ciphertext_page);
++		ret = fscrypt_decrypt_page(page->mapping->host, page,
++					bv->bv_len, bv->bv_offset, blk);
+ 		if (ret) {
+ 			WARN_ON_ONCE(1);
+ 			SetPageError(page);
 -- 
 2.9.5
