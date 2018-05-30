@@ -1,264 +1,102 @@
-Return-Path: <tytso@thunk.org>
-Date: Wed, 30 May 2018 01:06:42 -0400
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
-Subject: Re: [RFC PATCH V3 07/12] mpage_readpage[s]: Introduce post process
- callback parameters
-Message-ID: <20180530050642.GA27959@thunk.org>
-References: <20180522160110.1161-1-chandan@linux.vnet.ibm.com>
- <1832647.byIzkSnT1k@localhost.localdomain>
- <20180529175317.GB166256@gmail.com>
- <2745869.vkToJMq4hA@localhost.localdomain>
+Return-Path: <chandan@linux.vnet.ibm.com>
+From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Subject: Re: [RFC PATCH V3 07/12] mpage_readpage[s]: Introduce post process callback parameters
+Date: Wed, 30 May 2018 08:39:11 +0530
+In-Reply-To: <20180529175317.GB166256@gmail.com>
+References: <20180522160110.1161-1-chandan@linux.vnet.ibm.com> <1832647.byIzkSnT1k@localhost.localdomain> <20180529175317.GB166256@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <2745869.vkToJMq4hA@localhost.localdomain>
-To: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Cc: Eric Biggers <ebiggers3@gmail.com>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Message-Id: <2745869.vkToJMq4hA@localhost.localdomain>
+To: Eric Biggers <ebiggers3@gmail.com>
+Cc: "Theodore Y. Ts'o" <tytso@mit.edu>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Note: we may want to move this thread so that it's on linux-fscrypt
-exclusively.  I'm thinking that we should consider using linux-fscrypt
-for fscrypt and fsverity discussions.  That way we can avoid adding
-extra noise to the linux-fsdevel and linux-ext4 lists.  Comments?
-
-On Wed, May 30, 2018 at 08:39:11AM +0530, Chandan Rajendra wrote:
+On Tuesday, May 29, 2018 11:23:17 PM IST Eric Biggers wrote:
+> Hi Chandan,
 > 
-> I had misunderstood the requirement. Sorry about that. I had written the
-> patchset in its current form with the understanding that fs/buffer.c and
-> fs/ext4/*.c would need to get compiled even when fscrypt code isn't compiled
-> at all. When the fscrypt module isn't selected for build in the kernel config,
-> calls to fscrypt_*() functions would end up calling the equivalent nop
-> functions in fscrypt_notsupp.h file.
+> On Tue, May 29, 2018 at 08:34:21AM +0530, Chandan Rajendra wrote:
+> > On Tuesday, May 29, 2018 1:04:37 AM IST Theodore Y. Ts'o wrote:
+> > > On Mon, May 28, 2018 at 11:05:52AM +0530, Chandan Rajendra wrote:
+> > > > > Can you describe more of what you are doing here; specifically, you
+> > > > > deleted all of fs/ext4/readpage.c --- was this because you moved
+> > > > > functionality back into fs/mpage.c?  Did you make sure all of the
+> > > > > local changes in fs/ext4/readpage was moved back to fs/mpage.c?
+> > > > > 
+> > > > > If the goal is to refactor code to remove the need for
+> > > > > fs/ext4/readpage.c, you should probably make that be the first patch
+> > > > > as a prerequisite patch.  And we then need to make sure we don't
+> > > > > accidentally break anyone else who might be using fs/mpage.c.  Saying
+> > > > > a bit more about why you think the refactor is a good thing would also
+> > > > > be useful.
+> > > > 
+> > > > I will split this patch into two as suggested by you. Also, I will update 
+> > > > the commit messages.
+> > > 
+> > > Note that I was planning on making changes to fs/ext4/readpage.c as
+> > > part of integrating fsverity[1][2] support into ext4.  Basically, I
+> > > need to do something like [3] to fs/ext4/readpage.c.
+> > > 
+> > > [1] https://www.spinics.net/lists/linux-fsdevel/msg121182.html
+> > > [2] https://www.youtube.com/watch?v=GlEWcVuRbNA
+> > > [3] https://git.kernel.org/pub/scm/linux/kernel/git/mhalcrow/linux.git/commit/?h=fs-verity-dev&id=827faba05972517f49fa2f2aaf272150f5766af2
+> > > 
+> > > Which is why I'm really interested in your reasoning for why you
+> > > propose to drop fs/ext4/readpage.c.  :-)
+> > > 
+> > 
+> > The first patchset to support encryption in subpage-blocksize scenario copied
+> > the block_read_full_page() from fs/buffer.c to ext4/readpage.c and had made
+> > changes required to support encryption in that function. However, the
+> > conclusion was to not create copies of existing code but rather add support
+> > for decryption inside generic mpage_readpage[s] functions. Hence this patchset
+> > implements the required decryption logic in the generic mpage_readpage[s]
+> > functions. Since this makes the code in ext4/readpage.c redundant, I had
+> > decided to delete the ext4/readpage.c.
+> > 
 > 
-> For the generic code to be completely unaware of several stages of "post
-> processinhg" functionality, I would most likely have to add more callback
-> pointers into the newly introduced "struct post_process_read" structure. 
+> Strictly speaking, I don't think anything has been "concluded" yet.  The issue,
+> as I saw it, was that your original patchset just copy-and-pasted lots more
+> generic code from fs/buffer.c into ext4, without consideration of alternatives
+> that would allow the code to be shared, such as adding a postprocessing callback
+> to mpage_readpage{,s}().  My hope was that you would thoughtfully consider the
+> alternatives and make a decision of what was the best solution, and then explain
+> that decision as part of your patchset -- not just implement some solution
+> without much explanation, which makes it very difficult for people to decide
+> whether it's the best solution or not.
+> 
+> And yes, now that fs-verity is planned to be a thing too, we should stop
+> thinking of the problem as specifically "how to support decryption", but rather
+> how to support the ability to post-process the data using potentially multiple
+> length-preserving postprocessing steps such as decryption,
+> integrity/authenticity verification, etc.
+> 
+> I'll take a closer look at this patch when I have a chance, but as Ted pointed
+> out it really needs to be split out into multiple patches.  Just as a
+> preliminary comment, it looks like you are directly calling into fs/crypto/ from
+> fs/buffer.c, e.g. fscrypt_enqueue_decrypt_bio().  I don't understand that.  If
+> you're doing that (which would start requiring that fscrypt be built-in, not
+> modular) then there should be no need for the filesystem to pass a
+> postprocessing callback to the generic code, as you could just check
+> S_ISREG(inode->i_mode) && IS_ENCRYPTED(inode) in generic code to tell whether
+> decryption needs to be done.  The whole point of the postprocessing callback
+> would be to allow the generic read code to be used without it having to be aware
+> of all the specific types of post-read processing that filesystems may want.
 
-It's still a work in progress, but I have an initial integration of
-ext4 with fsverity.  See the fsverity branch on ext4.git, and in
-particular, the changes made to fs/ext4/readpage.c.
+Hi Eric,
 
-Let's be clear that neither Eric and I are completely happy with how
-the fsveirty post-read processing is being done.  What's there right
-now is a place-holder so we can continue to development/debug the
-other aspects of fsverity.  In particular, we're aware that there is
-code duplication between code in fs/f2fs/data.c and fs/ext4/readpage.c
+I had misunderstood the requirement. Sorry about that. I had written the
+patchset in its current form with the understanding that fs/buffer.c and
+fs/ext4/*.c would need to get compiled even when fscrypt code isn't compiled
+at all. When the fscrypt module isn't selected for build in the kernel config,
+calls to fscrypt_*() functions would end up calling the equivalent nop
+functions in fscrypt_notsupp.h file.
 
-One of the things which is a bit tricky right now is that fscrypt and
-fsverity can be enabled on a per-file system basis.  That is, there are
-separate CONFIG options:
+For the generic code to be completely unaware of several stages of "post
+processing" functionality, I would most likely have to add more callback
+pointers into the newly introduced "struct post_process_read" structure. I
+will work on this and post the results in the next version of the patchset.
 
-   * CONFIG_EXT4_FS_ENCRYPTION
-   * CONFIG_F2FS_FS_ENCRYPTION
-   * CONFIG_EXT4_FS_VERITY
-   * CONFIG_F2FS_FS_VERITY
 
-And in each file system, you have to do this before including the header files:
-
-#define __FS_HAS_ENCRYPTION IS_ENABLED(CONFIG_EXT4_FS_ENCRYPTION)
-#include <linux/fscrypt.h>
-
-#define __FS_HAS_VERITY IS_ENABLED(CONFIG_EXT4_FS_VERITY)
-#include <linux/fsverity.ha>
-
-That's because whether you get the function prototype or an inline
-function which returns EOhPNOTSUPP for functions such as
-fscrypt_decrypt_bio() depends on how __FS_HAS_ENCRYPTION is defined
-before including linux/fscrypt.h.
-
-I now think this was a mistake, and that we should handle this the
-same way we handle CONFIG_QUOTA.  If we enable fscrypt or fsverity, it
-should be enabled for all file sytems which support that feature.
-Otherwise it becomes too hard to try to support this in a file system
-independent way --- and we end up having code which is cut-and-pasted
-for each file system (e.g., in fs/f2fs/data.c and fs/ext4/readpage.c)
-but which may compile to something quite different thanks to the C
-preprocessor magic which is going on at the moment.
-
-> I will work on this and post the results in the next version of the patchset.
-
-So in order to avoid your wasting time and energy, and perhaps getting
-unnecessarily frustrated, I'd recommend that before you immediately
-start diving into implementation, that we have a design discussion
-about the best way to proceed.  And then when we have a common
-agreement about how to proceed, let's get something upstream first
-which changes the infrastructure used by the file systems and by
-fscrypt first.  And let's get that working, *before* we start
-integrating the changes for supporting fscrypt for 4k blocks for
-systems with 32k pagesize, or before we start making final (e.g.,
-non-prototype) changes to integrate fsverity.
-
-I'll include my first attempt that I played around over the weekend
-with in terms of generic infrastructure, before I realized that we
-need to decide whether the current way we configure fscrypt and
-fsverity makes sense or not.  It's an example of why we should have
-design discussions first, and not just immediately start diving into
-code.
-
-Fortunately (perhaps because I've some experience with these sorts of
-things) I only spent about an hour or so working on the prototype, and
-none trying to integrate it and doing all of the testing and
-debugging, before recognizing that we needed to have a meeting of the
-minds about design and requirements first.  :-)
-
-Cheers,
-
-						- Ted
-
-------------- include/linux/bio_post_read.h
-
-#ifndef _LINUX_BIO_POST_READ_H
-#define _LINUX_BIO_POST_READ_H
-
-#include <linux/bio.h>
-
-enum bio_post_read_step {
-	STEP_INITIAL = 0,
-	STEP_DECRYPT,
-	STEP_VERITY,
-};
-
-struct bio_post_read_ctx {
-	struct bio *bio;
-	struct work_struct work;
-	unsigned int cur_step;
-	unsigned int enabled_steps;
-};
-
-static inline bool bpr_required(struct bio *bio)
-{
-	return bio->bi_private && !bio->bi_status;
-}
-
-extern void __bpr_read_end_io(struct bio *bio);
-void bpr_do_processing(struct bio_post_read_ctx *ctx);
-
-#endif /* _LINUX_BIO_POST_READ_H */
-
-------------- fs/bio_post_read.c
-
-// SPDX-License-Identifier: GPL-2.0
-/*
- * fs/bio_post_read.c
- *
- * Copyright (C) 2018, Google LLC
- *
- * Contains helper functions used by file systems which use fscrypt
- * and/or fsverity
- */
-
-#include <linux/mempool.h>
-#include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/bio_post_read.h>
-#include <linux/pagemap.h>
-#include <linux/fscrypt.h>
-#include <linux/fsverity.h>
-
-static unsigned int num_prealloc_post_read_ctxs = 128;
-
-module_param(num_prealloc_post_read_ctxs, uint, 0444);
-MODULE_PARM_DESC(num_prealloc_post_read_ctxs,
-		"Number of bio_post_read contexts to preallocate");
-
-static struct kmem_cache *bpr_ctx_cache;
-static mempool_t *bpr_ctx_pool;
-
-void __bpr_read_end_io(struct bio *bio)
-{
-	struct page *page;
-	struct bio_vec *bv;
-	int i;
-
-	bio_for_each_segment_all(bv, bio, i) {
-		page = bv->bv_page;
-
-		/* PG_error was set if any post_read step failed */
-		if (bio->bi_status || PageError(page)) {
-			ClearPageUptodate(page);
-			SetPageError(page);
-		} else {
-			SetPageUptodate(page);
-		}
-		unlock_page(page);
-	}
-	if (bio->bi_private)
-		mempool_free(bio->bi_private, bpr_ctx_pool);
-	bio_put(bio);
-}
-
-static void decrypt_work(struct work_struct *work)
-{
-	struct bio_post_read_ctx *ctx =
-		container_of(work, struct bio_post_read_ctx, work);
-
-	fscrypt_decrypt_bio(ctx->bio);
-
-	bpr_do_processing(ctx);
-}
-
-static void verity_work(struct work_struct *work)
-{
-	struct bio_post_read_ctx *ctx =
-		container_of(work, struct bio_post_read_ctx, work);
-
-	fsverity_verify_bio(ctx->bio);
-
-	bpr_do_processing(ctx);
-}
-
-void bpr_do_processing(struct bio_post_read_ctx *ctx)
-{
-	/*
-	 * We use different work queues for decryption and for verity because
-	 * verity may require reading metadata pages that need decryption, and
-	 * we shouldn't recurse to the same workqueue.
-	 */
-	switch (++ctx->cur_step) {
-	case STEP_DECRYPT:
-		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
-			INIT_WORK(&ctx->work, decrypt_work);
-			fscrypt_enqueue_decrypt_work(&ctx->work);
-			return;
-		}
-		ctx->cur_step++;
-		/* fall-through */
-	case STEP_VERITY:
-		if (ctx->enabled_steps & (1 << STEP_VERITY)) {
-			INIT_WORK(&ctx->work, verity_work);
-			fsverity_enqueue_verify_work(&ctx->work);
-			return;
-		}
-		ctx->cur_step++;
-		/* fall-through */
-	default:
-		__bpr_read_end_io(ctx->bio);
-	}
-}
-
-int __init bpr_init(void)
-{
-	bpr_ctx_cache = KMEM_CACHE(bio_post_read_ctx, 0);
-	if (!bpr_ctx_cache)
-		goto fail;
-	bpr_ctx_pool = mempool_create_slab_pool(num_prealloc_post_read_ctxs,
-						bpr_ctx_cache);
-	if (!bpr_ctx_pool)
-		goto fail_free_cache;
-	return 0;
-
-fail_free_cache:
-	kmem_cache_destroy(bpr_ctx_cache);
-fail:
-	return -ENOMEM;
-}
-
-void __exit bpr_exit(void)
-{
-	mempool_destroy(bpr_ctx_pool);
-	kmem_cache_destroy(bpr_ctx_cache);
-}
-
-module_init(bpr_init);
-module_exit(bpr_exit);
-MODULE_LICENSE("GPL");
+-- 
+chandan
