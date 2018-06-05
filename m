@@ -1,45 +1,34 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from imap.thunk.org ([74.207.234.97]:39342 "EHLO imap.thunk.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1752708AbeFEVMl (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Jun 2018 17:12:41 -0400
-Date: Tue, 5 Jun 2018 17:12:38 -0400
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
-Subject: Re: [GIT PULL] fscrypt updates for 4.18
-Message-ID: <20180605211238.GH7839@thunk.org>
-References: <20180605150751.GA9436@thunk.org>
- <30587992.7Od65ROsjm@blindfold>
- <20180605170208.GE7839@thunk.org>
- <5151941.CDXohbuWeC@blindfold>
+Received: from mail-it0-f66.google.com ([209.85.214.66]:38435 "EHLO
+        mail-it0-f66.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1752498AbeFEUWx (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 5 Jun 2018 16:22:53 -0400
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <5151941.CDXohbuWeC@blindfold>
+References: <20180605150751.GA9436@thunk.org>
+In-Reply-To: <20180605150751.GA9436@thunk.org>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Tue, 5 Jun 2018 13:22:41 -0700
+Message-ID: <CA+55aFxt4968GaU_q+e+D5KhGLGOjvHoZwRF0FKn_mHe4zx=Wg@mail.gmail.com>
+Subject: Re: [GIT PULL] fscrypt updates for 4.18
+Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: Richard Weinberger <richard@sigma-star.at>
-Cc: Richard Weinberger <richard.weinberger@gmail.com>, Linus Torvalds <torvalds@linux-foundation.org>, LKML <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org
+To: Theodore Ts'o <tytso@mit.edu>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Jun 05, 2018 at 07:05:52PM +0200, Richard Weinberger wrote:
-> > An attack scenario where someone manages to downgrade the crypto of
-> > your phone would require replacing your kernel and your /system
-> > partition --- at which point, you've got other problems.  :-)
-> 
-> This means Speck is never enabled at kernel level on non-cheap phones?
+On Tue, Jun 5, 2018 at 8:07 AM Theodore Y. Ts'o <tytso@mit.edu> wrote:
+>
+>   git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git tags/fscrypt_for_linus
 
-No.  And even if it were, the /system partition is going to request
-that the kernel encrypt files using one and only encryption algorithm:
-namely, AES.
+That tag actually points to the same commit as the 'ext4_for_linus'
+tag pointed to.
 
-Things aren't as configurable on an Android phone as you might be used
-to on a laptop.  Some manufacturers use ext4; some manufacturers
-decide they want to use f2fs.  They make that decision not you, and
-only the file system utilities for that one file system are compiled
-into the system.
+You have the tag *message* for fscrypt, but then the commit it points
+to has nothing to do with fscrypt.
 
-Similarly, you don't get to choose what crypto algorithm you use;
-that's decided for you by the manufacturer.  Which is good; it's one
-less thing that hte attacker can spoof, and one less thing for users
-to potentially get wrong.
+I think you tagged the wrong branch.
 
-					- Ted
+(This can also be seen in the diffstat and the shortlog - they are
+describing the ext4 changes).
+
+                Linus
