@@ -1,12 +1,12 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:45154 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:45096 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1732383AbeHGAqO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 6 Aug 2018 20:46:14 -0400
+        id S1731092AbeHGAqM (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 6 Aug 2018 20:46:12 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 8/9] crypto: arm/poly1305 - add NEON accelerated Poly1305 implementation
-Date: Mon,  6 Aug 2018 15:32:59 -0700
-Message-Id: <20180806223300.113891-9-ebiggers@kernel.org>
+Subject: [RFC PATCH 2/9] crypto: chacha20-generic - add XChaCha20 support
+Date: Mon,  6 Aug 2018 15:32:53 -0700
+Message-Id: <20180806223300.113891-3-ebiggers@kernel.org>
 In-Reply-To: <20180806223300.113891-1-ebiggers@kernel.org>
 References: <20180806223300.113891-1-ebiggers@kernel.org>
 MIME-Version: 1.0
@@ -18,1515 +18,894 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add the Poly1305 code from OpenSSL, which was written by Andy Polyakov.
-I took the .S file from WireGuard, whose author has made the needed
-tweaks for Linux kernel integration and verified that Andy had given
-permission for GPLv2 distribution.  I didn't make any additional changes
-to the .S file.
+Add support for the XChaCha20 stream cipher.  XChaCha20 is the
+application of the XSalsa20 construction
+(https://cr.yp.to/snuffle/xsalsa-20081128.pdf) to ChaCha20 rather than
+to Salsa20.  XChaCha20 extends ChaCha20's nonce length from 64 bits (or
+96 bits, depending on convention) to 192 bits, while provably retaining
+ChaCha20's security.  XChaCha20 uses the ChaCha20 permutation to map the
+key and first 128 nonce bits to a 256-bit subkey.  Then, it does the
+ChaCha20 stream cipher with the subkey and remaining 64 bits of nonce.
 
-Note, for HPolyC I'd eventually like a Poly1305 implementation that
-allows precomputing powers of the key.  But for now this implementation
-just provides the existing semantics where the key and nonce are treated
-as a "one-time key" that must be provided for every message.
+We need XChaCha20 support in order to add support for the HPolyC
+construction, which uses XChaCha.  Note that to meet our performance
+requirements, we actually plan to primarily use the reduced-round
+variant XChaCha12.  But we believe it's wise to first add XChaCha20 as a
+baseline with a higher security margin, in case there are any situations
+where it can be used.  Supporting both variants is straightforward.
+
+Since XChaCha20's subkey differs for each request, XChaCha20 can't be a
+template that wraps ChaCha20; that would require re-keying the
+underlying ChaCha20 for every request, which wouldn't be thread-safe.
+Instead, we make XChaCha20 its own top-level algorithm which calls the
+ChaCha20 streaming implementation internally.
+
+Similar to the existing ChaCha20 implementation, we define the IV to be
+the nonce and stream position concatenated together.  This allows users
+to seek to any position in the stream.
+
+I considered splitting the code into separate chacha20-common, chacha20,
+and xchacha20 modules, so that chacha20 and xchacha20 could be
+enabled/disabled independently.  However, since nearly all the code is
+shared anyway, I ultimately decided there would have been little benefit
+to the added complexity of separate modules.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- arch/arm/crypto/Kconfig              |    5 +
- arch/arm/crypto/Makefile             |    2 +
- arch/arm/crypto/poly1305-neon-core.S | 1115 ++++++++++++++++++++++++++
- arch/arm/crypto/poly1305-neon-glue.c |  325 ++++++++
- 4 files changed, 1447 insertions(+)
- create mode 100644 arch/arm/crypto/poly1305-neon-core.S
- create mode 100644 arch/arm/crypto/poly1305-neon-glue.c
+ crypto/Kconfig            |  14 +-
+ crypto/chacha20_generic.c | 120 +++++---
+ crypto/testmgr.c          |   6 +
+ crypto/testmgr.h          | 577 ++++++++++++++++++++++++++++++++++++++
+ include/crypto/chacha20.h |  14 +-
+ 5 files changed, 689 insertions(+), 42 deletions(-)
 
-diff --git a/arch/arm/crypto/Kconfig b/arch/arm/crypto/Kconfig
-index 75c613413e31..8c205994120e 100644
---- a/arch/arm/crypto/Kconfig
-+++ b/arch/arm/crypto/Kconfig
-@@ -121,6 +121,11 @@ config CRYPTO_CHACHA20_NEON
+diff --git a/crypto/Kconfig b/crypto/Kconfig
+index f3e40ac56d93..a58e4b1f7967 100644
+--- a/crypto/Kconfig
++++ b/crypto/Kconfig
+@@ -1437,18 +1437,22 @@ config CRYPTO_SALSA20
+ 	  Bernstein <djb@cr.yp.to>. See <http://cr.yp.to/snuffle.html>
+ 
+ config CRYPTO_CHACHA20
+-	tristate "ChaCha20 cipher algorithm"
++	tristate "ChaCha20 stream cipher algorithms"
  	select CRYPTO_BLKCIPHER
- 	select CRYPTO_CHACHA20
+ 	help
+-	  ChaCha20 cipher algorithm, RFC7539.
++	  The ChaCha20 and XChaCha20 stream cipher algorithms.
  
-+config CRYPTO_POLY1305_NEON
-+	tristate "NEON accelerated Poly1305 authenticator algorithm"
-+	depends on KERNEL_MODE_NEON
-+	select CRYPTO_POLY1305
-+
- config CRYPTO_SPECK_NEON
- 	tristate "NEON accelerated Speck cipher algorithms"
- 	depends on KERNEL_MODE_NEON
-diff --git a/arch/arm/crypto/Makefile b/arch/arm/crypto/Makefile
-index 6f58a24faa4a..6423442c86fe 100644
---- a/arch/arm/crypto/Makefile
-+++ b/arch/arm/crypto/Makefile
-@@ -10,6 +10,7 @@ obj-$(CONFIG_CRYPTO_SHA1_ARM_NEON) += sha1-arm-neon.o
- obj-$(CONFIG_CRYPTO_SHA256_ARM) += sha256-arm.o
- obj-$(CONFIG_CRYPTO_SHA512_ARM) += sha512-arm.o
- obj-$(CONFIG_CRYPTO_CHACHA20_NEON) += chacha-neon.o
-+obj-$(CONFIG_CRYPTO_POLY1305_NEON) += poly1305-neon.o
- obj-$(CONFIG_CRYPTO_SPECK_NEON) += speck-neon.o
+ 	  ChaCha20 is a 256-bit high-speed stream cipher designed by Daniel J.
+ 	  Bernstein and further specified in RFC7539 for use in IETF protocols.
+-	  This is the portable C implementation of ChaCha20.
+-
+-	  See also:
++	  This is the portable C implementation of ChaCha20.  See also:
+ 	  <http://cr.yp.to/chacha/chacha-20080128.pdf>
  
- ce-obj-$(CONFIG_CRYPTO_AES_ARM_CE) += aes-arm-ce.o
-@@ -54,6 +55,7 @@ ghash-arm-ce-y	:= ghash-ce-core.o ghash-ce-glue.o
- crct10dif-arm-ce-y	:= crct10dif-ce-core.o crct10dif-ce-glue.o
- crc32-arm-ce-y:= crc32-ce-core.o crc32-ce-glue.o
- chacha-neon-y := chacha-neon-core.o chacha-neon-glue.o
-+poly1305-neon-y := poly1305-neon-core.o poly1305-neon-glue.o
- speck-neon-y := speck-neon-core.o speck-neon-glue.o
++	  XChaCha20 is the application of the XSalsa20 construction to ChaCha20
++	  rather than to Salsa20.  XChaCha20 extends ChaCha20's nonce length
++	  from 64 bits (or 96 bits using the RFC7539 convention) to 192 bits,
++	  while provably retaining ChaCha20's security.  See also:
++	  <https://cr.yp.to/snuffle/xsalsa-20081128.pdf>
++
+ config CRYPTO_CHACHA20_X86_64
+ 	tristate "ChaCha20 cipher algorithm (x86_64/SSSE3/AVX2)"
+ 	depends on X86 && 64BIT
+diff --git a/crypto/chacha20_generic.c b/crypto/chacha20_generic.c
+index e451c3cb6a56..ba97aac93912 100644
+--- a/crypto/chacha20_generic.c
++++ b/crypto/chacha20_generic.c
+@@ -1,7 +1,8 @@
+ /*
+- * ChaCha20 256-bit cipher algorithm, RFC7539
++ * ChaCha20 (RFC7539) and XChaCha20 stream cipher algorithms
+  *
+  * Copyright (C) 2015 Martin Willi
++ * Copyright (C) 2018 Google LLC
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+@@ -35,6 +36,31 @@ static void chacha20_docrypt(u32 *state, u8 *dst, const u8 *src,
+ 	}
+ }
  
- ifdef REGENERATE_ARM_CRYPTO
-diff --git a/arch/arm/crypto/poly1305-neon-core.S b/arch/arm/crypto/poly1305-neon-core.S
-new file mode 100644
-index 000000000000..d6b9a80dcc8b
---- /dev/null
-+++ b/arch/arm/crypto/poly1305-neon-core.S
-@@ -0,0 +1,1115 @@
-+/* SPDX-License-Identifier: OpenSSL OR (BSD-3-Clause OR GPL-2.0)
-+ *
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-+ * Copyright 2016 The OpenSSL Project Authors. All Rights Reserved.
-+ */
-+
-+#include <linux/linkage.h>
-+
-+.text
-+#if defined(__thumb2__)
-+.syntax	unified
-+.thumb
-+#else
-+.code	32
-+#endif
-+
-+.align	5
-+ENTRY(poly1305_init_arm)
-+	stmdb	sp!,{r4-r11}
-+
-+	eor	r3,r3,r3
-+	cmp	r1,#0
-+	str	r3,[r0,#0]		@ zero hash value
-+	str	r3,[r0,#4]
-+	str	r3,[r0,#8]
-+	str	r3,[r0,#12]
-+	str	r3,[r0,#16]
-+	str	r3,[r0,#36]		@ is_base2_26
-+	add	r0,r0,#20
-+
-+#ifdef	__thumb2__
-+	it	eq
-+#endif
-+	moveq	r0,#0
-+	beq	.Lno_key
-+
-+	ldrb	r4,[r1,#0]
-+	mov	r10,#0x0fffffff
-+	ldrb	r5,[r1,#1]
-+	and	r3,r10,#-4		@ 0x0ffffffc
-+	ldrb	r6,[r1,#2]
-+	ldrb	r7,[r1,#3]
-+	orr	r4,r4,r5,lsl#8
-+	ldrb	r5,[r1,#4]
-+	orr	r4,r4,r6,lsl#16
-+	ldrb	r6,[r1,#5]
-+	orr	r4,r4,r7,lsl#24
-+	ldrb	r7,[r1,#6]
-+	and	r4,r4,r10
-+
-+	ldrb	r8,[r1,#7]
-+	orr	r5,r5,r6,lsl#8
-+	ldrb	r6,[r1,#8]
-+	orr	r5,r5,r7,lsl#16
-+	ldrb	r7,[r1,#9]
-+	orr	r5,r5,r8,lsl#24
-+	ldrb	r8,[r1,#10]
-+	and	r5,r5,r3
-+
-+	ldrb	r9,[r1,#11]
-+	orr	r6,r6,r7,lsl#8
-+	ldrb	r7,[r1,#12]
-+	orr	r6,r6,r8,lsl#16
-+	ldrb	r8,[r1,#13]
-+	orr	r6,r6,r9,lsl#24
-+	ldrb	r9,[r1,#14]
-+	and	r6,r6,r3
-+
-+	ldrb	r10,[r1,#15]
-+	orr	r7,r7,r8,lsl#8
-+	str	r4,[r0,#0]
-+	orr	r7,r7,r9,lsl#16
-+	str	r5,[r0,#4]
-+	orr	r7,r7,r10,lsl#24
-+	str	r6,[r0,#8]
-+	and	r7,r7,r3
-+	str	r7,[r0,#12]
-+.Lno_key:
-+	ldmia	sp!,{r4-r11}
-+#if __LINUX_ARM_ARCH__ >= 5
-+	bx	lr				@ bx	lr
-+#else
-+	tst	lr,#1
-+	moveq	pc,lr			@ be binary compatible with V4, yet
-+	.word	0xe12fff1e			@ interoperable with Thumb ISA:-)
-+#endif
-+ENDPROC(poly1305_init_arm)
-+
-+.align	5
-+ENTRY(poly1305_blocks_arm)
-+.Lpoly1305_blocks_arm:
-+	stmdb	sp!,{r3-r11,lr}
-+
-+	ands	r2,r2,#-16
-+	beq	.Lno_data
-+
-+	cmp	r3,#0
-+	add	r2,r2,r1		@ end pointer
-+	sub	sp,sp,#32
-+
-+	ldmia	r0,{r4-r12}		@ load context
-+
-+	str	r0,[sp,#12]		@ offload stuff
-+	mov	lr,r1
-+	str	r2,[sp,#16]
-+	str	r10,[sp,#20]
-+	str	r11,[sp,#24]
-+	str	r12,[sp,#28]
-+	b	.Loop
-+
-+.Loop:
-+#if __LINUX_ARM_ARCH__ < 7
-+	ldrb	r0,[lr],#16		@ load input
-+#ifdef	__thumb2__
-+	it	hi
-+#endif
-+	addhi	r8,r8,#1		@ 1<<128
-+	ldrb	r1,[lr,#-15]
-+	ldrb	r2,[lr,#-14]
-+	ldrb	r3,[lr,#-13]
-+	orr	r1,r0,r1,lsl#8
-+	ldrb	r0,[lr,#-12]
-+	orr	r2,r1,r2,lsl#16
-+	ldrb	r1,[lr,#-11]
-+	orr	r3,r2,r3,lsl#24
-+	ldrb	r2,[lr,#-10]
-+	adds	r4,r4,r3		@ accumulate input
-+
-+	ldrb	r3,[lr,#-9]
-+	orr	r1,r0,r1,lsl#8
-+	ldrb	r0,[lr,#-8]
-+	orr	r2,r1,r2,lsl#16
-+	ldrb	r1,[lr,#-7]
-+	orr	r3,r2,r3,lsl#24
-+	ldrb	r2,[lr,#-6]
-+	adcs	r5,r5,r3
-+
-+	ldrb	r3,[lr,#-5]
-+	orr	r1,r0,r1,lsl#8
-+	ldrb	r0,[lr,#-4]
-+	orr	r2,r1,r2,lsl#16
-+	ldrb	r1,[lr,#-3]
-+	orr	r3,r2,r3,lsl#24
-+	ldrb	r2,[lr,#-2]
-+	adcs	r6,r6,r3
-+
-+	ldrb	r3,[lr,#-1]
-+	orr	r1,r0,r1,lsl#8
-+	str	lr,[sp,#8]		@ offload input pointer
-+	orr	r2,r1,r2,lsl#16
-+	add	r10,r10,r10,lsr#2
-+	orr	r3,r2,r3,lsl#24
-+#else
-+	ldr	r0,[lr],#16		@ load input
-+#ifdef	__thumb2__
-+	it	hi
-+#endif
-+	addhi	r8,r8,#1		@ padbit
-+	ldr	r1,[lr,#-12]
-+	ldr	r2,[lr,#-8]
-+	ldr	r3,[lr,#-4]
-+#ifdef	__ARMEB__
-+	rev	r0,r0
-+	rev	r1,r1
-+	rev	r2,r2
-+	rev	r3,r3
-+#endif
-+	adds	r4,r4,r0		@ accumulate input
-+	str	lr,[sp,#8]		@ offload input pointer
-+	adcs	r5,r5,r1
-+	add	r10,r10,r10,lsr#2
-+	adcs	r6,r6,r2
-+#endif
-+	add	r11,r11,r11,lsr#2
-+	adcs	r7,r7,r3
-+	add	r12,r12,r12,lsr#2
-+
-+	umull	r2,r3,r5,r9
-+	 adc	r8,r8,#0
-+	umull	r0,r1,r4,r9
-+	umlal	r2,r3,r8,r10
-+	umlal	r0,r1,r7,r10
-+	ldr	r10,[sp,#20]		@ reload r10
-+	umlal	r2,r3,r6,r12
-+	umlal	r0,r1,r5,r12
-+	umlal	r2,r3,r7,r11
-+	umlal	r0,r1,r6,r11
-+	umlal	r2,r3,r4,r10
-+	str	r0,[sp,#0]		@ future r4
-+	 mul	r0,r11,r8
-+	ldr	r11,[sp,#24]		@ reload r11
-+	adds	r2,r2,r1		@ d1+=d0>>32
-+	 eor	r1,r1,r1
-+	adc	lr,r3,#0		@ future r6
-+	str	r2,[sp,#4]		@ future r5
-+
-+	mul	r2,r12,r8
-+	eor	r3,r3,r3
-+	umlal	r0,r1,r7,r12
-+	ldr	r12,[sp,#28]		@ reload r12
-+	umlal	r2,r3,r7,r9
-+	umlal	r0,r1,r6,r9
-+	umlal	r2,r3,r6,r10
-+	umlal	r0,r1,r5,r10
-+	umlal	r2,r3,r5,r11
-+	umlal	r0,r1,r4,r11
-+	umlal	r2,r3,r4,r12
-+	ldr	r4,[sp,#0]
-+	mul	r8,r9,r8
-+	ldr	r5,[sp,#4]
-+
-+	adds	r6,lr,r0		@ d2+=d1>>32
-+	ldr	lr,[sp,#8]		@ reload input pointer
-+	adc	r1,r1,#0
-+	adds	r7,r2,r1		@ d3+=d2>>32
-+	ldr	r0,[sp,#16]		@ reload end pointer
-+	adc	r3,r3,#0
-+	add	r8,r8,r3		@ h4+=d3>>32
-+
-+	and	r1,r8,#-4
-+	and	r8,r8,#3
-+	add	r1,r1,r1,lsr#2		@ *=5
-+	adds	r4,r4,r1
-+	adcs	r5,r5,#0
-+	adcs	r6,r6,#0
-+	adcs	r7,r7,#0
-+	adc	r8,r8,#0
-+
-+	cmp	r0,lr			@ done yet?
-+	bhi	.Loop
-+
-+	ldr	r0,[sp,#12]
-+	add	sp,sp,#32
-+	stmia	r0,{r4-r8}		@ store the result
-+
-+.Lno_data:
-+#if __LINUX_ARM_ARCH__ >= 5
-+	ldmia	sp!,{r3-r11,pc}
-+#else
-+	ldmia	sp!,{r3-r11,lr}
-+	tst	lr,#1
-+	moveq	pc,lr			@ be binary compatible with V4, yet
-+	.word	0xe12fff1e			@ interoperable with Thumb ISA:-)
-+#endif
-+ENDPROC(poly1305_blocks_arm)
-+
-+.align	5
-+ENTRY(poly1305_emit_arm)
-+	stmdb	sp!,{r4-r11}
-+.Lpoly1305_emit_enter:
-+	ldmia	r0,{r3-r7}
-+	adds	r8,r3,#5		@ compare to modulus
-+	adcs	r9,r4,#0
-+	adcs	r10,r5,#0
-+	adcs	r11,r6,#0
-+	adc	r7,r7,#0
-+	tst	r7,#4			@ did it carry/borrow?
-+
-+#ifdef	__thumb2__
-+	it	ne
-+#endif
-+	movne	r3,r8
-+	ldr	r8,[r2,#0]
-+#ifdef	__thumb2__
-+	it	ne
-+#endif
-+	movne	r4,r9
-+	ldr	r9,[r2,#4]
-+#ifdef	__thumb2__
-+	it	ne
-+#endif
-+	movne	r5,r10
-+	ldr	r10,[r2,#8]
-+#ifdef	__thumb2__
-+	it	ne
-+#endif
-+	movne	r6,r11
-+	ldr	r11,[r2,#12]
-+
-+	adds	r3,r3,r8
-+	adcs	r4,r4,r9
-+	adcs	r5,r5,r10
-+	adc	r6,r6,r11
-+
-+#if __LINUX_ARM_ARCH__ >= 7
-+#ifdef __ARMEB__
-+	rev	r3,r3
-+	rev	r4,r4
-+	rev	r5,r5
-+	rev	r6,r6
-+#endif
-+	str	r3,[r1,#0]
-+	str	r4,[r1,#4]
-+	str	r5,[r1,#8]
-+	str	r6,[r1,#12]
-+#else
-+	strb	r3,[r1,#0]
-+	mov	r3,r3,lsr#8
-+	strb	r4,[r1,#4]
-+	mov	r4,r4,lsr#8
-+	strb	r5,[r1,#8]
-+	mov	r5,r5,lsr#8
-+	strb	r6,[r1,#12]
-+	mov	r6,r6,lsr#8
-+
-+	strb	r3,[r1,#1]
-+	mov	r3,r3,lsr#8
-+	strb	r4,[r1,#5]
-+	mov	r4,r4,lsr#8
-+	strb	r5,[r1,#9]
-+	mov	r5,r5,lsr#8
-+	strb	r6,[r1,#13]
-+	mov	r6,r6,lsr#8
-+
-+	strb	r3,[r1,#2]
-+	mov	r3,r3,lsr#8
-+	strb	r4,[r1,#6]
-+	mov	r4,r4,lsr#8
-+	strb	r5,[r1,#10]
-+	mov	r5,r5,lsr#8
-+	strb	r6,[r1,#14]
-+	mov	r6,r6,lsr#8
-+
-+	strb	r3,[r1,#3]
-+	strb	r4,[r1,#7]
-+	strb	r5,[r1,#11]
-+	strb	r6,[r1,#15]
-+#endif
-+	ldmia	sp!,{r4-r11}
-+#if __LINUX_ARM_ARCH__ >= 5
-+	bx	lr				@ bx	lr
-+#else
-+	tst	lr,#1
-+	moveq	pc,lr			@ be binary compatible with V4, yet
-+	.word	0xe12fff1e			@ interoperable with Thumb ISA:-)
-+#endif
-+ENDPROC(poly1305_emit_arm)
-+
-+
-+#if __LINUX_ARM_ARCH__ >= 7
-+.fpu	neon
-+
-+.align	5
-+ENTRY(poly1305_init_neon)
-+.Lpoly1305_init_neon:
-+	ldr	r4,[r0,#20]		@ load key base 2^32
-+	ldr	r5,[r0,#24]
-+	ldr	r6,[r0,#28]
-+	ldr	r7,[r0,#32]
-+
-+	and	r2,r4,#0x03ffffff	@ base 2^32 -> base 2^26
-+	mov	r3,r4,lsr#26
-+	mov	r4,r5,lsr#20
-+	orr	r3,r3,r5,lsl#6
-+	mov	r5,r6,lsr#14
-+	orr	r4,r4,r6,lsl#12
-+	mov	r6,r7,lsr#8
-+	orr	r5,r5,r7,lsl#18
-+	and	r3,r3,#0x03ffffff
-+	and	r4,r4,#0x03ffffff
-+	and	r5,r5,#0x03ffffff
-+
-+	vdup.32	d0,r2			@ r^1 in both lanes
-+	add	r2,r3,r3,lsl#2		@ *5
-+	vdup.32	d1,r3
-+	add	r3,r4,r4,lsl#2
-+	vdup.32	d2,r2
-+	vdup.32	d3,r4
-+	add	r4,r5,r5,lsl#2
-+	vdup.32	d4,r3
-+	vdup.32	d5,r5
-+	add	r5,r6,r6,lsl#2
-+	vdup.32	d6,r4
-+	vdup.32	d7,r6
-+	vdup.32	d8,r5
-+
-+	mov	r5,#2		@ counter
-+
-+.Lsquare_neon:
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ d0 = h0*r0 + h4*5*r1 + h3*5*r2 + h2*5*r3 + h1*5*r4
-+	@ d1 = h1*r0 + h0*r1   + h4*5*r2 + h3*5*r3 + h2*5*r4
-+	@ d2 = h2*r0 + h1*r1   + h0*r2   + h4*5*r3 + h3*5*r4
-+	@ d3 = h3*r0 + h2*r1   + h1*r2   + h0*r3   + h4*5*r4
-+	@ d4 = h4*r0 + h3*r1   + h2*r2   + h1*r3   + h0*r4
-+
-+	vmull.u32	q5,d0,d0[1]
-+	vmull.u32	q6,d1,d0[1]
-+	vmull.u32	q7,d3,d0[1]
-+	vmull.u32	q8,d5,d0[1]
-+	vmull.u32	q9,d7,d0[1]
-+
-+	vmlal.u32	q5,d7,d2[1]
-+	vmlal.u32	q6,d0,d1[1]
-+	vmlal.u32	q7,d1,d1[1]
-+	vmlal.u32	q8,d3,d1[1]
-+	vmlal.u32	q9,d5,d1[1]
-+
-+	vmlal.u32	q5,d5,d4[1]
-+	vmlal.u32	q6,d7,d4[1]
-+	vmlal.u32	q8,d1,d3[1]
-+	vmlal.u32	q7,d0,d3[1]
-+	vmlal.u32	q9,d3,d3[1]
-+
-+	vmlal.u32	q5,d3,d6[1]
-+	vmlal.u32	q8,d0,d5[1]
-+	vmlal.u32	q6,d5,d6[1]
-+	vmlal.u32	q7,d7,d6[1]
-+	vmlal.u32	q9,d1,d5[1]
-+
-+	vmlal.u32	q8,d7,d8[1]
-+	vmlal.u32	q5,d1,d8[1]
-+	vmlal.u32	q6,d3,d8[1]
-+	vmlal.u32	q7,d5,d8[1]
-+	vmlal.u32	q9,d0,d7[1]
-+
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ lazy reduction as discussed in "NEON crypto" by D.J. Bernstein
-+	@ and P. Schwabe
-+	@
-+	@ H0>>+H1>>+H2>>+H3>>+H4
-+	@ H3>>+H4>>*5+H0>>+H1
-+	@
-+	@ Trivia.
-+	@
-+	@ Result of multiplication of n-bit number by m-bit number is
-+	@ n+m bits wide. However! Even though 2^n is a n+1-bit number,
-+	@ m-bit number multiplied by 2^n is still n+m bits wide.
-+	@
-+	@ Sum of two n-bit numbers is n+1 bits wide, sum of three - n+2,
-+	@ and so is sum of four. Sum of 2^m n-m-bit numbers and n-bit
-+	@ one is n+1 bits wide.
-+	@
-+	@ >>+ denotes Hnext += Hn>>26, Hn &= 0x3ffffff. This means that
-+	@ H0, H2, H3 are guaranteed to be 26 bits wide, while H1 and H4
-+	@ can be 27. However! In cases when their width exceeds 26 bits
-+	@ they are limited by 2^26+2^6. This in turn means that *sum*
-+	@ of the products with these values can still be viewed as sum
-+	@ of 52-bit numbers as long as the amount of addends is not a
-+	@ power of 2. For example,
-+	@
-+	@ H4 = H4*R0 + H3*R1 + H2*R2 + H1*R3 + H0 * R4,
-+	@
-+	@ which can't be larger than 5 * (2^26 + 2^6) * (2^26 + 2^6), or
-+	@ 5 * (2^52 + 2*2^32 + 2^12), which in turn is smaller than
-+	@ 8 * (2^52) or 2^55. However, the value is then multiplied by
-+	@ by 5, so we should be looking at 5 * 5 * (2^52 + 2^33 + 2^12),
-+	@ which is less than 32 * (2^52) or 2^57. And when processing
-+	@ data we are looking at triple as many addends...
-+	@
-+	@ In key setup procedure pre-reduced H0 is limited by 5*4+1 and
-+	@ 5*H4 - by 5*5 52-bit addends, or 57 bits. But when hashing the
-+	@ input H0 is limited by (5*4+1)*3 addends, or 58 bits, while
-+	@ 5*H4 by 5*5*3, or 59[!] bits. How is this relevant? vmlal.u32
-+	@ instruction accepts 2x32-bit input and writes 2x64-bit result.
-+	@ This means that result of reduction have to be compressed upon
-+	@ loop wrap-around. This can be done in the process of reduction
-+	@ to minimize amount of instructions [as well as amount of
-+	@ 128-bit instructions, which benefits low-end processors], but
-+	@ one has to watch for H2 (which is narrower than H0) and 5*H4
-+	@ not being wider than 58 bits, so that result of right shift
-+	@ by 26 bits fits in 32 bits. This is also useful on x86,
-+	@ because it allows to use paddd in place for paddq, which
-+	@ benefits Atom, where paddq is ridiculously slow.
-+
-+	vshr.u64	q15,q8,#26
-+	vmovn.i64	d16,q8
-+	 vshr.u64	q4,q5,#26
-+	 vmovn.i64	d10,q5
-+	vadd.i64	q9,q9,q15		@ h3 -> h4
-+	vbic.i32	d16,#0xfc000000	@ &=0x03ffffff
-+	 vadd.i64	q6,q6,q4		@ h0 -> h1
-+	 vbic.i32	d10,#0xfc000000
-+
-+	vshrn.u64	d30,q9,#26
-+	vmovn.i64	d18,q9
-+	 vshr.u64	q4,q6,#26
-+	 vmovn.i64	d12,q6
-+	 vadd.i64	q7,q7,q4		@ h1 -> h2
-+	vbic.i32	d18,#0xfc000000
-+	 vbic.i32	d12,#0xfc000000
-+
-+	vadd.i32	d10,d10,d30
-+	vshl.u32	d30,d30,#2
-+	 vshrn.u64	d8,q7,#26
-+	 vmovn.i64	d14,q7
-+	vadd.i32	d10,d10,d30	@ h4 -> h0
-+	 vadd.i32	d16,d16,d8	@ h2 -> h3
-+	 vbic.i32	d14,#0xfc000000
-+
-+	vshr.u32	d30,d10,#26
-+	vbic.i32	d10,#0xfc000000
-+	 vshr.u32	d8,d16,#26
-+	 vbic.i32	d16,#0xfc000000
-+	vadd.i32	d12,d12,d30	@ h0 -> h1
-+	 vadd.i32	d18,d18,d8	@ h3 -> h4
-+
-+	subs		r5,r5,#1
-+	beq		.Lsquare_break_neon
-+
-+	add		r6,r0,#(48+0*9*4)
-+	add		r7,r0,#(48+1*9*4)
-+
-+	vtrn.32		d0,d10		@ r^2:r^1
-+	vtrn.32		d3,d14
-+	vtrn.32		d5,d16
-+	vtrn.32		d1,d12
-+	vtrn.32		d7,d18
-+
-+	vshl.u32	d4,d3,#2		@ *5
-+	vshl.u32	d6,d5,#2
-+	vshl.u32	d2,d1,#2
-+	vshl.u32	d8,d7,#2
-+	vadd.i32	d4,d4,d3
-+	vadd.i32	d2,d2,d1
-+	vadd.i32	d6,d6,d5
-+	vadd.i32	d8,d8,d7
-+
-+	vst4.32		{d0[0],d1[0],d2[0],d3[0]},[r6]!
-+	vst4.32		{d0[1],d1[1],d2[1],d3[1]},[r7]!
-+	vst4.32		{d4[0],d5[0],d6[0],d7[0]},[r6]!
-+	vst4.32		{d4[1],d5[1],d6[1],d7[1]},[r7]!
-+	vst1.32		{d8[0]},[r6,:32]
-+	vst1.32		{d8[1]},[r7,:32]
-+
-+	b		.Lsquare_neon
-+
-+.align	4
-+.Lsquare_break_neon:
-+	add		r6,r0,#(48+2*4*9)
-+	add		r7,r0,#(48+3*4*9)
-+
-+	vmov		d0,d10		@ r^4:r^3
-+	vshl.u32	d2,d12,#2		@ *5
-+	vmov		d1,d12
-+	vshl.u32	d4,d14,#2
-+	vmov		d3,d14
-+	vshl.u32	d6,d16,#2
-+	vmov		d5,d16
-+	vshl.u32	d8,d18,#2
-+	vmov		d7,d18
-+	vadd.i32	d2,d2,d12
-+	vadd.i32	d4,d4,d14
-+	vadd.i32	d6,d6,d16
-+	vadd.i32	d8,d8,d18
-+
-+	vst4.32		{d0[0],d1[0],d2[0],d3[0]},[r6]!
-+	vst4.32		{d0[1],d1[1],d2[1],d3[1]},[r7]!
-+	vst4.32		{d4[0],d5[0],d6[0],d7[0]},[r6]!
-+	vst4.32		{d4[1],d5[1],d6[1],d7[1]},[r7]!
-+	vst1.32		{d8[0]},[r6]
-+	vst1.32		{d8[1]},[r7]
-+
-+	bx	lr				@ bx	lr
-+ENDPROC(poly1305_init_neon)
-+
-+.align	5
-+ENTRY(poly1305_blocks_neon)
-+	ldr	ip,[r0,#36]		@ is_base2_26
-+	ands	r2,r2,#-16
-+	beq	.Lno_data_neon
-+
-+	cmp	r2,#64
-+	bhs	.Lenter_neon
-+	tst	ip,ip			@ is_base2_26?
-+	beq	.Lpoly1305_blocks_arm
-+
-+.Lenter_neon:
-+	stmdb	sp!,{r4-r7}
-+	vstmdb	sp!,{d8-d15}		@ ABI specification says so
-+
-+	tst	ip,ip			@ is_base2_26?
-+	bne	.Lbase2_26_neon
-+
-+	stmdb	sp!,{r1-r3,lr}
-+	bl	.Lpoly1305_init_neon
-+
-+	ldr	r4,[r0,#0]		@ load hash value base 2^32
-+	ldr	r5,[r0,#4]
-+	ldr	r6,[r0,#8]
-+	ldr	r7,[r0,#12]
-+	ldr	ip,[r0,#16]
-+
-+	and	r2,r4,#0x03ffffff	@ base 2^32 -> base 2^26
-+	mov	r3,r4,lsr#26
-+	 veor	d10,d10,d10
-+	mov	r4,r5,lsr#20
-+	orr	r3,r3,r5,lsl#6
-+	 veor	d12,d12,d12
-+	mov	r5,r6,lsr#14
-+	orr	r4,r4,r6,lsl#12
-+	 veor	d14,d14,d14
-+	mov	r6,r7,lsr#8
-+	orr	r5,r5,r7,lsl#18
-+	 veor	d16,d16,d16
-+	and	r3,r3,#0x03ffffff
-+	orr	r6,r6,ip,lsl#24
-+	 veor	d18,d18,d18
-+	and	r4,r4,#0x03ffffff
-+	mov	r1,#1
-+	and	r5,r5,#0x03ffffff
-+	str	r1,[r0,#36]		@ is_base2_26
-+
-+	vmov.32	d10[0],r2
-+	vmov.32	d12[0],r3
-+	vmov.32	d14[0],r4
-+	vmov.32	d16[0],r5
-+	vmov.32	d18[0],r6
-+	adr	r5,.Lzeros
-+
-+	ldmia	sp!,{r1-r3,lr}
-+	b	.Lbase2_32_neon
-+
-+.align	4
-+.Lbase2_26_neon:
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ load hash value
-+
-+	veor		d10,d10,d10
-+	veor		d12,d12,d12
-+	veor		d14,d14,d14
-+	veor		d16,d16,d16
-+	veor		d18,d18,d18
-+	vld4.32		{d10[0],d12[0],d14[0],d16[0]},[r0]!
-+	adr		r5,.Lzeros
-+	vld1.32		{d18[0]},[r0]
-+	sub		r0,r0,#16		@ rewind
-+
-+.Lbase2_32_neon:
-+	add		r4,r1,#32
-+	mov		r3,r3,lsl#24
-+	tst		r2,#31
-+	beq		.Leven
-+
-+	vld4.32		{d20[0],d22[0],d24[0],d26[0]},[r1]!
-+	vmov.32		d28[0],r3
-+	sub		r2,r2,#16
-+	add		r4,r1,#32
-+
-+#ifdef	__ARMEB__
-+	vrev32.8	q10,q10
-+	vrev32.8	q13,q13
-+	vrev32.8	q11,q11
-+	vrev32.8	q12,q12
-+#endif
-+	vsri.u32	d28,d26,#8	@ base 2^32 -> base 2^26
-+	vshl.u32	d26,d26,#18
-+
-+	vsri.u32	d26,d24,#14
-+	vshl.u32	d24,d24,#12
-+	vadd.i32	d29,d28,d18	@ add hash value and move to #hi
-+
-+	vbic.i32	d26,#0xfc000000
-+	vsri.u32	d24,d22,#20
-+	vshl.u32	d22,d22,#6
-+
-+	vbic.i32	d24,#0xfc000000
-+	vsri.u32	d22,d20,#26
-+	vadd.i32	d27,d26,d16
-+
-+	vbic.i32	d20,#0xfc000000
-+	vbic.i32	d22,#0xfc000000
-+	vadd.i32	d25,d24,d14
-+
-+	vadd.i32	d21,d20,d10
-+	vadd.i32	d23,d22,d12
-+
-+	mov		r7,r5
-+	add		r6,r0,#48
-+
-+	cmp		r2,r2
-+	b		.Long_tail
-+
-+.align	4
-+.Leven:
-+	subs		r2,r2,#64
-+	it		lo
-+	movlo		r4,r5
-+
-+	vmov.i32	q14,#1<<24		@ padbit, yes, always
-+	vld4.32		{d20,d22,d24,d26},[r1]	@ inp[0:1]
-+	add		r1,r1,#64
-+	vld4.32		{d21,d23,d25,d27},[r4]	@ inp[2:3] (or 0)
-+	add		r4,r4,#64
-+	itt		hi
-+	addhi		r7,r0,#(48+1*9*4)
-+	addhi		r6,r0,#(48+3*9*4)
-+
-+#ifdef	__ARMEB__
-+	vrev32.8	q10,q10
-+	vrev32.8	q13,q13
-+	vrev32.8	q11,q11
-+	vrev32.8	q12,q12
-+#endif
-+	vsri.u32	q14,q13,#8		@ base 2^32 -> base 2^26
-+	vshl.u32	q13,q13,#18
-+
-+	vsri.u32	q13,q12,#14
-+	vshl.u32	q12,q12,#12
-+
-+	vbic.i32	q13,#0xfc000000
-+	vsri.u32	q12,q11,#20
-+	vshl.u32	q11,q11,#6
-+
-+	vbic.i32	q12,#0xfc000000
-+	vsri.u32	q11,q10,#26
-+
-+	vbic.i32	q10,#0xfc000000
-+	vbic.i32	q11,#0xfc000000
-+
-+	bls		.Lskip_loop
-+
-+	vld4.32		{d0[1],d1[1],d2[1],d3[1]},[r7]!	@ load r^2
-+	vld4.32		{d0[0],d1[0],d2[0],d3[0]},[r6]!	@ load r^4
-+	vld4.32		{d4[1],d5[1],d6[1],d7[1]},[r7]!
-+	vld4.32		{d4[0],d5[0],d6[0],d7[0]},[r6]!
-+	b		.Loop_neon
-+
-+.align	5
-+.Loop_neon:
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ ((inp[0]*r^4+inp[2]*r^2+inp[4])*r^4+inp[6]*r^2
-+	@ ((inp[1]*r^4+inp[3]*r^2+inp[5])*r^3+inp[7]*r
-+	@   ___________________/
-+	@ ((inp[0]*r^4+inp[2]*r^2+inp[4])*r^4+inp[6]*r^2+inp[8])*r^2
-+	@ ((inp[1]*r^4+inp[3]*r^2+inp[5])*r^4+inp[7]*r^2+inp[9])*r
-+	@   ___________________/ ____________________/
-+	@
-+	@ Note that we start with inp[2:3]*r^2. This is because it
-+	@ doesn't depend on reduction in previous iteration.
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ d4 = h4*r0 + h3*r1   + h2*r2   + h1*r3   + h0*r4
-+	@ d3 = h3*r0 + h2*r1   + h1*r2   + h0*r3   + h4*5*r4
-+	@ d2 = h2*r0 + h1*r1   + h0*r2   + h4*5*r3 + h3*5*r4
-+	@ d1 = h1*r0 + h0*r1   + h4*5*r2 + h3*5*r3 + h2*5*r4
-+	@ d0 = h0*r0 + h4*5*r1 + h3*5*r2 + h2*5*r3 + h1*5*r4
-+
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ inp[2:3]*r^2
-+
-+	vadd.i32	d24,d24,d14	@ accumulate inp[0:1]
-+	vmull.u32	q7,d25,d0[1]
-+	vadd.i32	d20,d20,d10
-+	vmull.u32	q5,d21,d0[1]
-+	vadd.i32	d26,d26,d16
-+	vmull.u32	q8,d27,d0[1]
-+	vmlal.u32	q7,d23,d1[1]
-+	vadd.i32	d22,d22,d12
-+	vmull.u32	q6,d23,d0[1]
-+
-+	vadd.i32	d28,d28,d18
-+	vmull.u32	q9,d29,d0[1]
-+	subs		r2,r2,#64
-+	vmlal.u32	q5,d29,d2[1]
-+	it		lo
-+	movlo		r4,r5
-+	vmlal.u32	q8,d25,d1[1]
-+	vld1.32		d8[1],[r7,:32]
-+	vmlal.u32	q6,d21,d1[1]
-+	vmlal.u32	q9,d27,d1[1]
-+
-+	vmlal.u32	q5,d27,d4[1]
-+	vmlal.u32	q8,d23,d3[1]
-+	vmlal.u32	q9,d25,d3[1]
-+	vmlal.u32	q6,d29,d4[1]
-+	vmlal.u32	q7,d21,d3[1]
-+
-+	vmlal.u32	q8,d21,d5[1]
-+	vmlal.u32	q5,d25,d6[1]
-+	vmlal.u32	q9,d23,d5[1]
-+	vmlal.u32	q6,d27,d6[1]
-+	vmlal.u32	q7,d29,d6[1]
-+
-+	vmlal.u32	q8,d29,d8[1]
-+	vmlal.u32	q5,d23,d8[1]
-+	vmlal.u32	q9,d21,d7[1]
-+	vmlal.u32	q6,d25,d8[1]
-+	vmlal.u32	q7,d27,d8[1]
-+
-+	vld4.32		{d21,d23,d25,d27},[r4]	@ inp[2:3] (or 0)
-+	add		r4,r4,#64
-+
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ (hash+inp[0:1])*r^4 and accumulate
-+
-+	vmlal.u32	q8,d26,d0[0]
-+	vmlal.u32	q5,d20,d0[0]
-+	vmlal.u32	q9,d28,d0[0]
-+	vmlal.u32	q6,d22,d0[0]
-+	vmlal.u32	q7,d24,d0[0]
-+	vld1.32		d8[0],[r6,:32]
-+
-+	vmlal.u32	q8,d24,d1[0]
-+	vmlal.u32	q5,d28,d2[0]
-+	vmlal.u32	q9,d26,d1[0]
-+	vmlal.u32	q6,d20,d1[0]
-+	vmlal.u32	q7,d22,d1[0]
-+
-+	vmlal.u32	q8,d22,d3[0]
-+	vmlal.u32	q5,d26,d4[0]
-+	vmlal.u32	q9,d24,d3[0]
-+	vmlal.u32	q6,d28,d4[0]
-+	vmlal.u32	q7,d20,d3[0]
-+
-+	vmlal.u32	q8,d20,d5[0]
-+	vmlal.u32	q5,d24,d6[0]
-+	vmlal.u32	q9,d22,d5[0]
-+	vmlal.u32	q6,d26,d6[0]
-+	vmlal.u32	q8,d28,d8[0]
-+
-+	vmlal.u32	q7,d28,d6[0]
-+	vmlal.u32	q5,d22,d8[0]
-+	vmlal.u32	q9,d20,d7[0]
-+	vmov.i32	q14,#1<<24		@ padbit, yes, always
-+	vmlal.u32	q6,d24,d8[0]
-+	vmlal.u32	q7,d26,d8[0]
-+
-+	vld4.32		{d20,d22,d24,d26},[r1]	@ inp[0:1]
-+	add		r1,r1,#64
-+#ifdef	__ARMEB__
-+	vrev32.8	q10,q10
-+	vrev32.8	q11,q11
-+	vrev32.8	q12,q12
-+	vrev32.8	q13,q13
-+#endif
-+
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ lazy reduction interleaved with base 2^32 -> base 2^26 of
-+	@ inp[0:3] previously loaded to q10-q13 and smashed to q10-q14.
-+
-+	vshr.u64	q15,q8,#26
-+	vmovn.i64	d16,q8
-+	 vshr.u64	q4,q5,#26
-+	 vmovn.i64	d10,q5
-+	vadd.i64	q9,q9,q15		@ h3 -> h4
-+	vbic.i32	d16,#0xfc000000
-+	  vsri.u32	q14,q13,#8		@ base 2^32 -> base 2^26
-+	 vadd.i64	q6,q6,q4		@ h0 -> h1
-+	  vshl.u32	q13,q13,#18
-+	 vbic.i32	d10,#0xfc000000
-+
-+	vshrn.u64	d30,q9,#26
-+	vmovn.i64	d18,q9
-+	 vshr.u64	q4,q6,#26
-+	 vmovn.i64	d12,q6
-+	 vadd.i64	q7,q7,q4		@ h1 -> h2
-+	  vsri.u32	q13,q12,#14
-+	vbic.i32	d18,#0xfc000000
-+	  vshl.u32	q12,q12,#12
-+	 vbic.i32	d12,#0xfc000000
-+
-+	vadd.i32	d10,d10,d30
-+	vshl.u32	d30,d30,#2
-+	  vbic.i32	q13,#0xfc000000
-+	 vshrn.u64	d8,q7,#26
-+	 vmovn.i64	d14,q7
-+	vaddl.u32	q5,d10,d30	@ h4 -> h0 [widen for a sec]
-+	  vsri.u32	q12,q11,#20
-+	 vadd.i32	d16,d16,d8	@ h2 -> h3
-+	  vshl.u32	q11,q11,#6
-+	 vbic.i32	d14,#0xfc000000
-+	  vbic.i32	q12,#0xfc000000
-+
-+	vshrn.u64	d30,q5,#26		@ re-narrow
-+	vmovn.i64	d10,q5
-+	  vsri.u32	q11,q10,#26
-+	  vbic.i32	q10,#0xfc000000
-+	 vshr.u32	d8,d16,#26
-+	 vbic.i32	d16,#0xfc000000
-+	vbic.i32	d10,#0xfc000000
-+	vadd.i32	d12,d12,d30	@ h0 -> h1
-+	 vadd.i32	d18,d18,d8	@ h3 -> h4
-+	  vbic.i32	q11,#0xfc000000
-+
-+	bhi		.Loop_neon
-+
-+.Lskip_loop:
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ multiply (inp[0:1]+hash) or inp[2:3] by r^2:r^1
-+
-+	add		r7,r0,#(48+0*9*4)
-+	add		r6,r0,#(48+1*9*4)
-+	adds		r2,r2,#32
-+	it		ne
-+	movne		r2,#0
-+	bne		.Long_tail
-+
-+	vadd.i32	d25,d24,d14	@ add hash value and move to #hi
-+	vadd.i32	d21,d20,d10
-+	vadd.i32	d27,d26,d16
-+	vadd.i32	d23,d22,d12
-+	vadd.i32	d29,d28,d18
-+
-+.Long_tail:
-+	vld4.32		{d0[1],d1[1],d2[1],d3[1]},[r7]!	@ load r^1
-+	vld4.32		{d0[0],d1[0],d2[0],d3[0]},[r6]!	@ load r^2
-+
-+	vadd.i32	d24,d24,d14	@ can be redundant
-+	vmull.u32	q7,d25,d0
-+	vadd.i32	d20,d20,d10
-+	vmull.u32	q5,d21,d0
-+	vadd.i32	d26,d26,d16
-+	vmull.u32	q8,d27,d0
-+	vadd.i32	d22,d22,d12
-+	vmull.u32	q6,d23,d0
-+	vadd.i32	d28,d28,d18
-+	vmull.u32	q9,d29,d0
-+
-+	vmlal.u32	q5,d29,d2
-+	vld4.32		{d4[1],d5[1],d6[1],d7[1]},[r7]!
-+	vmlal.u32	q8,d25,d1
-+	vld4.32		{d4[0],d5[0],d6[0],d7[0]},[r6]!
-+	vmlal.u32	q6,d21,d1
-+	vmlal.u32	q9,d27,d1
-+	vmlal.u32	q7,d23,d1
-+
-+	vmlal.u32	q8,d23,d3
-+	vld1.32		d8[1],[r7,:32]
-+	vmlal.u32	q5,d27,d4
-+	vld1.32		d8[0],[r6,:32]
-+	vmlal.u32	q9,d25,d3
-+	vmlal.u32	q6,d29,d4
-+	vmlal.u32	q7,d21,d3
-+
-+	vmlal.u32	q8,d21,d5
-+	 it		ne
-+	 addne		r7,r0,#(48+2*9*4)
-+	vmlal.u32	q5,d25,d6
-+	 it		ne
-+	 addne		r6,r0,#(48+3*9*4)
-+	vmlal.u32	q9,d23,d5
-+	vmlal.u32	q6,d27,d6
-+	vmlal.u32	q7,d29,d6
-+
-+	vmlal.u32	q8,d29,d8
-+	 vorn		q0,q0,q0	@ all-ones, can be redundant
-+	vmlal.u32	q5,d23,d8
-+	 vshr.u64	q0,q0,#38
-+	vmlal.u32	q9,d21,d7
-+	vmlal.u32	q6,d25,d8
-+	vmlal.u32	q7,d27,d8
-+
-+	beq		.Lshort_tail
-+
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ (hash+inp[0:1])*r^4:r^3 and accumulate
-+
-+	vld4.32		{d0[1],d1[1],d2[1],d3[1]},[r7]!	@ load r^3
-+	vld4.32		{d0[0],d1[0],d2[0],d3[0]},[r6]!	@ load r^4
-+
-+	vmlal.u32	q7,d24,d0
-+	vmlal.u32	q5,d20,d0
-+	vmlal.u32	q8,d26,d0
-+	vmlal.u32	q6,d22,d0
-+	vmlal.u32	q9,d28,d0
-+
-+	vmlal.u32	q5,d28,d2
-+	vld4.32		{d4[1],d5[1],d6[1],d7[1]},[r7]!
-+	vmlal.u32	q8,d24,d1
-+	vld4.32		{d4[0],d5[0],d6[0],d7[0]},[r6]!
-+	vmlal.u32	q6,d20,d1
-+	vmlal.u32	q9,d26,d1
-+	vmlal.u32	q7,d22,d1
-+
-+	vmlal.u32	q8,d22,d3
-+	vld1.32		d8[1],[r7,:32]
-+	vmlal.u32	q5,d26,d4
-+	vld1.32		d8[0],[r6,:32]
-+	vmlal.u32	q9,d24,d3
-+	vmlal.u32	q6,d28,d4
-+	vmlal.u32	q7,d20,d3
-+
-+	vmlal.u32	q8,d20,d5
-+	vmlal.u32	q5,d24,d6
-+	vmlal.u32	q9,d22,d5
-+	vmlal.u32	q6,d26,d6
-+	vmlal.u32	q7,d28,d6
-+
-+	vmlal.u32	q8,d28,d8
-+	 vorn		q0,q0,q0	@ all-ones
-+	vmlal.u32	q5,d22,d8
-+	 vshr.u64	q0,q0,#38
-+	vmlal.u32	q9,d20,d7
-+	vmlal.u32	q6,d24,d8
-+	vmlal.u32	q7,d26,d8
-+
-+.Lshort_tail:
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ horizontal addition
-+
-+	vadd.i64	d16,d16,d17
-+	vadd.i64	d10,d10,d11
-+	vadd.i64	d18,d18,d19
-+	vadd.i64	d12,d12,d13
-+	vadd.i64	d14,d14,d15
-+
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ lazy reduction, but without narrowing
-+
-+	vshr.u64	q15,q8,#26
-+	vand.i64	q8,q8,q0
-+	 vshr.u64	q4,q5,#26
-+	 vand.i64	q5,q5,q0
-+	vadd.i64	q9,q9,q15		@ h3 -> h4
-+	 vadd.i64	q6,q6,q4		@ h0 -> h1
-+
-+	vshr.u64	q15,q9,#26
-+	vand.i64	q9,q9,q0
-+	 vshr.u64	q4,q6,#26
-+	 vand.i64	q6,q6,q0
-+	 vadd.i64	q7,q7,q4		@ h1 -> h2
-+
-+	vadd.i64	q5,q5,q15
-+	vshl.u64	q15,q15,#2
-+	 vshr.u64	q4,q7,#26
-+	 vand.i64	q7,q7,q0
-+	vadd.i64	q5,q5,q15		@ h4 -> h0
-+	 vadd.i64	q8,q8,q4		@ h2 -> h3
-+
-+	vshr.u64	q15,q5,#26
-+	vand.i64	q5,q5,q0
-+	 vshr.u64	q4,q8,#26
-+	 vand.i64	q8,q8,q0
-+	vadd.i64	q6,q6,q15		@ h0 -> h1
-+	 vadd.i64	q9,q9,q4		@ h3 -> h4
-+
-+	cmp		r2,#0
-+	bne		.Leven
-+
-+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-+	@ store hash value
-+
-+	vst4.32		{d10[0],d12[0],d14[0],d16[0]},[r0]!
-+	vst1.32		{d18[0]},[r0]
-+
-+	vldmia	sp!,{d8-d15}			@ epilogue
-+	ldmia	sp!,{r4-r7}
-+.Lno_data_neon:
-+	bx	lr					@ bx	lr
-+ENDPROC(poly1305_blocks_neon)
-+
-+.align	5
-+ENTRY(poly1305_emit_neon)
-+	ldr	ip,[r0,#36]		@ is_base2_26
-+
-+	stmdb	sp!,{r4-r11}
-+
-+	tst	ip,ip
-+	beq	.Lpoly1305_emit_enter
-+
-+	ldmia	r0,{r3-r7}
-+	eor	r8,r8,r8
-+
-+	adds	r3,r3,r4,lsl#26	@ base 2^26 -> base 2^32
-+	mov	r4,r4,lsr#6
-+	adcs	r4,r4,r5,lsl#20
-+	mov	r5,r5,lsr#12
-+	adcs	r5,r5,r6,lsl#14
-+	mov	r6,r6,lsr#18
-+	adcs	r6,r6,r7,lsl#8
-+	adc	r7,r8,r7,lsr#24	@ can be partially reduced ...
-+
-+	and	r8,r7,#-4		@ ... so reduce
-+	and	r7,r6,#3
-+	add	r8,r8,r8,lsr#2	@ *= 5
-+	adds	r3,r3,r8
-+	adcs	r4,r4,#0
-+	adcs	r5,r5,#0
-+	adcs	r6,r6,#0
-+	adc	r7,r7,#0
-+
-+	adds	r8,r3,#5		@ compare to modulus
-+	adcs	r9,r4,#0
-+	adcs	r10,r5,#0
-+	adcs	r11,r6,#0
-+	adc	r7,r7,#0
-+	tst	r7,#4			@ did it carry/borrow?
-+
-+	it	ne
-+	movne	r3,r8
-+	ldr	r8,[r2,#0]
-+	it	ne
-+	movne	r4,r9
-+	ldr	r9,[r2,#4]
-+	it	ne
-+	movne	r5,r10
-+	ldr	r10,[r2,#8]
-+	it	ne
-+	movne	r6,r11
-+	ldr	r11,[r2,#12]
-+
-+	adds	r3,r3,r8		@ accumulate nonce
-+	adcs	r4,r4,r9
-+	adcs	r5,r5,r10
-+	adc	r6,r6,r11
-+
-+#ifdef __ARMEB__
-+	rev	r3,r3
-+	rev	r4,r4
-+	rev	r5,r5
-+	rev	r6,r6
-+#endif
-+	str	r3,[r1,#0]		@ store the result
-+	str	r4,[r1,#4]
-+	str	r5,[r1,#8]
-+	str	r6,[r1,#12]
-+
-+	ldmia	sp!,{r4-r11}
-+	bx	lr				@ bx	lr
-+ENDPROC(poly1305_emit_neon)
-+
-+.align	5
-+.Lzeros:
-+.long	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-+#endif
-diff --git a/arch/arm/crypto/poly1305-neon-glue.c b/arch/arm/crypto/poly1305-neon-glue.c
-new file mode 100644
-index 000000000000..633ac0d157db
---- /dev/null
-+++ b/arch/arm/crypto/poly1305-neon-glue.c
-@@ -0,0 +1,325 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Poly1305 authenticator, NEON-accelerated -
-+ * glue code for OpenSSL implementation
-+ *
-+ * Copyright (c) 2018 Google LLC
-+ */
-+
-+#include <asm/hwcap.h>
-+#include <asm/neon.h>
-+#include <asm/simd.h>
-+#include <asm/unaligned.h>
-+#include <crypto/cryptd.h>
-+#include <crypto/internal/hash.h>
-+#include <crypto/poly1305.h>
-+#include <linux/cpufeature.h>
-+#include <linux/crypto.h>
-+#include <linux/module.h>
-+
-+asmlinkage void poly1305_init_arm(void *ctx, const u8 key[16]);
-+asmlinkage void poly1305_blocks_neon(void *ctx, const u8 *inp, size_t len,
-+				     u32 padbit);
-+asmlinkage void poly1305_emit_neon(void *ctx, u8 mac[16], const u32 nonce[4]);
-+
-+struct poly1305_neon_desc_ctx {
-+	u8 buf[POLY1305_BLOCK_SIZE];
-+	unsigned int buflen;
-+	bool key_set;
-+	bool nonce_set;
-+	u32 nonce[4];
-+	u8 neon_ctx[192] __aligned(16);
-+} __aligned(16);
-+
-+static int poly1305_neon_init(struct shash_desc *desc)
++static int chacha20_stream_xor(struct skcipher_request *req,
++			       struct chacha20_ctx *ctx, u8 *iv)
 +{
-+	struct poly1305_neon_desc_ctx *dctx = shash_desc_ctx(desc);
-+
-+	dctx->buflen = 0;
-+	dctx->key_set = false;
-+	dctx->nonce_set = false;
-+	return 0;
-+}
-+
-+static void poly1305_neon_blocks(struct poly1305_neon_desc_ctx *dctx,
-+				 const u8 *src, unsigned int srclen, u32 padbit)
-+{
-+	if (!dctx->key_set) {
-+		poly1305_init_arm(dctx->neon_ctx, src);
-+		dctx->key_set = true;
-+		src += POLY1305_BLOCK_SIZE;
-+		srclen -= POLY1305_BLOCK_SIZE;
-+		if (!srclen)
-+			return;
-+	}
-+
-+	if (!dctx->nonce_set) {
-+		dctx->nonce[0] = get_unaligned_le32(src +  0);
-+		dctx->nonce[1] = get_unaligned_le32(src +  4);
-+		dctx->nonce[2] = get_unaligned_le32(src +  8);
-+		dctx->nonce[3] = get_unaligned_le32(src + 12);
-+		dctx->nonce_set = true;
-+		src += POLY1305_BLOCK_SIZE;
-+		srclen -= POLY1305_BLOCK_SIZE;
-+		if (!srclen)
-+			return;
-+	}
-+
-+	kernel_neon_begin();
-+	poly1305_blocks_neon(dctx->neon_ctx, src, srclen, padbit);
-+	kernel_neon_end();
-+}
-+
-+static int poly1305_neon_update(struct shash_desc *desc,
-+				const u8 *src, unsigned int srclen)
-+{
-+	struct poly1305_neon_desc_ctx *dctx = shash_desc_ctx(desc);
-+	unsigned int bytes;
-+
-+	if (dctx->buflen) {
-+		bytes = min(srclen, POLY1305_BLOCK_SIZE - dctx->buflen);
-+		memcpy(&dctx->buf[dctx->buflen], src, bytes);
-+		dctx->buflen += bytes;
-+		src += bytes;
-+		srclen -= bytes;
-+
-+		if (dctx->buflen == POLY1305_BLOCK_SIZE) {
-+			poly1305_neon_blocks(dctx, dctx->buf,
-+					     POLY1305_BLOCK_SIZE, 1);
-+			dctx->buflen = 0;
-+		}
-+	}
-+
-+	if (srclen >= POLY1305_BLOCK_SIZE) {
-+		bytes = round_down(srclen, POLY1305_BLOCK_SIZE);
-+		poly1305_neon_blocks(dctx, src, bytes, 1);
-+		src += bytes;
-+		srclen -= bytes;
-+	}
-+
-+	if (srclen) {
-+		memcpy(dctx->buf, src, srclen);
-+		dctx->buflen = srclen;
-+	}
-+
-+	return 0;
-+}
-+
-+static int poly1305_neon_final(struct shash_desc *desc, u8 *dst)
-+{
-+	struct poly1305_neon_desc_ctx *dctx = shash_desc_ctx(desc);
-+
-+	if (!dctx->nonce_set)
-+		return -ENOKEY;
-+
-+	if (dctx->buflen) {
-+		dctx->buf[dctx->buflen++] = 1;
-+		memset(&dctx->buf[dctx->buflen], 0,
-+		       POLY1305_BLOCK_SIZE - dctx->buflen);
-+		poly1305_neon_blocks(dctx, dctx->buf, POLY1305_BLOCK_SIZE, 0);
-+	}
-+
-+	/*
-+	 * This part doesn't actually use NEON instructions, so no need for
-+	 * kernel_neon_begin().
-+	 */
-+	poly1305_emit_neon(dctx->neon_ctx, dst, dctx->nonce);
-+	return 0;
-+}
-+
-+static struct shash_alg poly1305_alg = {
-+	.digestsize		= POLY1305_DIGEST_SIZE,
-+	.init			= poly1305_neon_init,
-+	.update			= poly1305_neon_update,
-+	.final			= poly1305_neon_final,
-+	.descsize		= sizeof(struct poly1305_desc_ctx),
-+	.base			= {
-+		.cra_name	= "__poly1305",
-+		.cra_driver_name = "__driver-poly1305-neon",
-+		.cra_priority	= 0,
-+		.cra_flags	= CRYPTO_ALG_INTERNAL,
-+		.cra_blocksize	= POLY1305_BLOCK_SIZE,
-+		.cra_module	= THIS_MODULE,
-+	},
-+};
-+
-+/* Boilerplate to wrap the use of kernel_neon_begin() */
-+
-+struct poly1305_async_ctx {
-+	struct cryptd_ahash *cryptd_tfm;
-+};
-+
-+static int poly1305_async_init(struct ahash_request *req)
-+{
-+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-+	struct poly1305_async_ctx *ctx = crypto_ahash_ctx(tfm);
-+	struct ahash_request *cryptd_req = ahash_request_ctx(req);
-+	struct cryptd_ahash *cryptd_tfm = ctx->cryptd_tfm;
-+	struct shash_desc *desc = cryptd_shash_desc(cryptd_req);
-+	struct crypto_shash *child = cryptd_ahash_child(cryptd_tfm);
-+
-+	desc->tfm = child;
-+	desc->flags = req->base.flags;
-+	return crypto_shash_init(desc);
-+}
-+
-+static int poly1305_async_update(struct ahash_request *req)
-+{
-+	struct ahash_request *cryptd_req = ahash_request_ctx(req);
-+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-+	struct poly1305_async_ctx *ctx = crypto_ahash_ctx(tfm);
-+	struct cryptd_ahash *cryptd_tfm = ctx->cryptd_tfm;
-+
-+	if (!may_use_simd() ||
-+	    (in_atomic() && cryptd_ahash_queued(cryptd_tfm))) {
-+		memcpy(cryptd_req, req, sizeof(*req));
-+		ahash_request_set_tfm(cryptd_req, &cryptd_tfm->base);
-+		return crypto_ahash_update(cryptd_req);
-+	} else {
-+		struct shash_desc *desc = cryptd_shash_desc(cryptd_req);
-+		return shash_ahash_update(req, desc);
-+	}
-+}
-+
-+static int poly1305_async_final(struct ahash_request *req)
-+{
-+	struct ahash_request *cryptd_req = ahash_request_ctx(req);
-+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-+	struct poly1305_async_ctx *ctx = crypto_ahash_ctx(tfm);
-+	struct cryptd_ahash *cryptd_tfm = ctx->cryptd_tfm;
-+
-+	if (!may_use_simd() ||
-+	    (in_atomic() && cryptd_ahash_queued(cryptd_tfm))) {
-+		memcpy(cryptd_req, req, sizeof(*req));
-+		ahash_request_set_tfm(cryptd_req, &cryptd_tfm->base);
-+		return crypto_ahash_final(cryptd_req);
-+	} else {
-+		struct shash_desc *desc = cryptd_shash_desc(cryptd_req);
-+		return crypto_shash_final(desc, req->result);
-+	}
-+}
-+
-+static int poly1305_async_digest(struct ahash_request *req)
-+{
-+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-+	struct poly1305_async_ctx *ctx = crypto_ahash_ctx(tfm);
-+	struct ahash_request *cryptd_req = ahash_request_ctx(req);
-+	struct cryptd_ahash *cryptd_tfm = ctx->cryptd_tfm;
-+
-+	if (!may_use_simd() ||
-+	    (in_atomic() && cryptd_ahash_queued(cryptd_tfm))) {
-+		memcpy(cryptd_req, req, sizeof(*req));
-+		ahash_request_set_tfm(cryptd_req, &cryptd_tfm->base);
-+		return crypto_ahash_digest(cryptd_req);
-+	} else {
-+		struct shash_desc *desc = cryptd_shash_desc(cryptd_req);
-+		struct crypto_shash *child = cryptd_ahash_child(cryptd_tfm);
-+
-+		desc->tfm = child;
-+		desc->flags = req->base.flags;
-+		return shash_ahash_digest(req, desc);
-+	}
-+}
-+
-+static int poly1305_async_import(struct ahash_request *req, const void *in)
-+{
-+	struct ahash_request *cryptd_req = ahash_request_ctx(req);
-+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-+	struct poly1305_async_ctx *ctx = crypto_ahash_ctx(tfm);
-+	struct shash_desc *desc = cryptd_shash_desc(cryptd_req);
-+
-+	desc->tfm = cryptd_ahash_child(ctx->cryptd_tfm);
-+	desc->flags = req->base.flags;
-+
-+	return crypto_shash_import(desc, in);
-+}
-+
-+static int poly1305_async_export(struct ahash_request *req, void *out)
-+{
-+	struct ahash_request *cryptd_req = ahash_request_ctx(req);
-+	struct shash_desc *desc = cryptd_shash_desc(cryptd_req);
-+
-+	return crypto_shash_export(desc, out);
-+}
-+
-+static int poly1305_async_init_tfm(struct crypto_tfm *tfm)
-+{
-+	struct cryptd_ahash *cryptd_tfm;
-+	struct poly1305_async_ctx *ctx = crypto_tfm_ctx(tfm);
-+
-+	cryptd_tfm = cryptd_alloc_ahash("__driver-poly1305-neon",
-+					CRYPTO_ALG_INTERNAL,
-+					CRYPTO_ALG_INTERNAL);
-+	if (IS_ERR(cryptd_tfm))
-+		return PTR_ERR(cryptd_tfm);
-+	ctx->cryptd_tfm = cryptd_tfm;
-+	crypto_ahash_set_reqsize(__crypto_ahash_cast(tfm),
-+				 sizeof(struct ahash_request) +
-+				 crypto_ahash_reqsize(&cryptd_tfm->base));
-+
-+	return 0;
-+}
-+
-+static void poly1305_async_exit_tfm(struct crypto_tfm *tfm)
-+{
-+	struct poly1305_async_ctx *ctx = crypto_tfm_ctx(tfm);
-+
-+	cryptd_free_ahash(ctx->cryptd_tfm);
-+}
-+
-+static struct ahash_alg poly1305_async_alg = {
-+	.init			= poly1305_async_init,
-+	.update			= poly1305_async_update,
-+	.final			= poly1305_async_final,
-+	.digest			= poly1305_async_digest,
-+	.import			= poly1305_async_import,
-+	.export			= poly1305_async_export,
-+	.halg.digestsize	= POLY1305_DIGEST_SIZE,
-+	.halg.statesize		= sizeof(struct poly1305_neon_desc_ctx),
-+	.halg.base		= {
-+		.cra_name	= "poly1305",
-+		.cra_driver_name = "poly1305-neon",
-+		.cra_priority	= 300,
-+		.cra_flags	= CRYPTO_ALG_ASYNC,
-+		.cra_blocksize	= POLY1305_BLOCK_SIZE,
-+		.cra_ctxsize	= sizeof(struct poly1305_async_ctx),
-+		.cra_module	= THIS_MODULE,
-+		.cra_init	= poly1305_async_init_tfm,
-+		.cra_exit	= poly1305_async_exit_tfm,
-+	},
-+};
-+
-+static int __init poly1305_neon_module_init(void)
-+{
++	struct skcipher_walk walk;
++	u32 state[16];
 +	int err;
 +
-+	if (!(elf_hwcap & HWCAP_NEON))
-+		return -ENODEV;
++	err = skcipher_walk_virt(&walk, req, true);
 +
-+	err = crypto_register_shash(&poly1305_alg);
-+	if (err)
-+		return err;
-+	err = crypto_register_ahash(&poly1305_async_alg);
-+	if (err)
-+		goto err_shash;
++	crypto_chacha20_init(state, ctx, iv);
 +
-+	return 0;
++	while (walk.nbytes > 0) {
++		unsigned int nbytes = walk.nbytes;
 +
-+err_shash:
-+	crypto_unregister_shash(&poly1305_alg);
++		if (nbytes < walk.total)
++			nbytes = round_down(nbytes, walk.stride);
++
++		chacha20_docrypt(state, walk.dst.virt.addr, walk.src.virt.addr,
++				 nbytes);
++		err = skcipher_walk_done(&walk, walk.nbytes - nbytes);
++	}
++
 +	return err;
 +}
 +
-+static void __exit poly1305_neon_module_exit(void)
-+{
-+	crypto_unregister_shash(&poly1305_alg);
-+	crypto_unregister_ahash(&poly1305_async_alg);
+ void crypto_chacha20_init(u32 *state, struct chacha20_ctx *ctx, u8 *iv)
+ {
+ 	state[0]  = 0x61707865; /* "expa" */
+@@ -76,54 +102,74 @@ int crypto_chacha20_crypt(struct skcipher_request *req)
+ {
+ 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+ 	struct chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
+-	struct skcipher_walk walk;
+-	u32 state[16];
+-	int err;
+-
+-	err = skcipher_walk_virt(&walk, req, true);
+ 
+-	crypto_chacha20_init(state, ctx, walk.iv);
++	return chacha20_stream_xor(req, ctx, req->iv);
 +}
++EXPORT_SYMBOL_GPL(crypto_chacha20_crypt);
+ 
+-	while (walk.nbytes > 0) {
+-		unsigned int nbytes = walk.nbytes;
++int crypto_xchacha20_crypt(struct skcipher_request *req)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
++	struct chacha20_ctx subctx;
++	u32 state[16];
++	u8 real_iv[16];
+ 
+-		if (nbytes < walk.total)
+-			nbytes = round_down(nbytes, walk.stride);
++	/* Compute the subkey given the original key and first 128 nonce bits */
++	crypto_chacha20_init(state, ctx, req->iv);
++	hchacha20_block(state, subctx.key);
+ 
+-		chacha20_docrypt(state, walk.dst.virt.addr, walk.src.virt.addr,
+-				 nbytes);
+-		err = skcipher_walk_done(&walk, walk.nbytes - nbytes);
+-	}
++	/* Build the real IV */
++	memcpy(&real_iv[0], req->iv + 24, 8); /* stream position */
++	memcpy(&real_iv[8], req->iv + 16, 8); /* remaining 64 nonce bits */
+ 
+-	return err;
++	/* Generate the stream and XOR it with the data */
++	return chacha20_stream_xor(req, &subctx, real_iv);
+ }
+-EXPORT_SYMBOL_GPL(crypto_chacha20_crypt);
+-
+-static struct skcipher_alg alg = {
+-	.base.cra_name		= "chacha20",
+-	.base.cra_driver_name	= "chacha20-generic",
+-	.base.cra_priority	= 100,
+-	.base.cra_blocksize	= 1,
+-	.base.cra_ctxsize	= sizeof(struct chacha20_ctx),
+-	.base.cra_module	= THIS_MODULE,
+-
+-	.min_keysize		= CHACHA20_KEY_SIZE,
+-	.max_keysize		= CHACHA20_KEY_SIZE,
+-	.ivsize			= CHACHA20_IV_SIZE,
+-	.chunksize		= CHACHA20_BLOCK_SIZE,
+-	.setkey			= crypto_chacha20_setkey,
+-	.encrypt		= crypto_chacha20_crypt,
+-	.decrypt		= crypto_chacha20_crypt,
++EXPORT_SYMBOL_GPL(crypto_xchacha20_crypt);
 +
-+module_init(poly1305_neon_module_init);
-+module_exit(poly1305_neon_module_exit);
++static struct skcipher_alg algs[] = {
++	{
++		.base.cra_name		= "chacha20",
++		.base.cra_driver_name	= "chacha20-generic",
++		.base.cra_priority	= 100,
++		.base.cra_blocksize	= 1,
++		.base.cra_ctxsize	= sizeof(struct chacha20_ctx),
++		.base.cra_module	= THIS_MODULE,
 +
-+MODULE_DESCRIPTION("Poly1305 authenticator (NEON-accelerated)");
-+MODULE_LICENSE("GPL");
-+MODULE_ALIAS_CRYPTO("poly1305");
-+MODULE_ALIAS_CRYPTO("poly1305-neon");
++		.min_keysize		= CHACHA20_KEY_SIZE,
++		.max_keysize		= CHACHA20_KEY_SIZE,
++		.ivsize			= CHACHA20_IV_SIZE,
++		.chunksize		= CHACHA20_BLOCK_SIZE,
++		.setkey			= crypto_chacha20_setkey,
++		.encrypt		= crypto_chacha20_crypt,
++		.decrypt		= crypto_chacha20_crypt,
++	}, {
++		.base.cra_name		= "xchacha20",
++		.base.cra_driver_name	= "xchacha20-generic",
++		.base.cra_priority	= 100,
++		.base.cra_blocksize	= 1,
++		.base.cra_ctxsize	= sizeof(struct chacha20_ctx),
++		.base.cra_module	= THIS_MODULE,
++
++		.min_keysize		= CHACHA20_KEY_SIZE,
++		.max_keysize		= CHACHA20_KEY_SIZE,
++		.ivsize			= XCHACHA20_IV_SIZE,
++		.chunksize		= CHACHA20_BLOCK_SIZE,
++		.setkey			= crypto_chacha20_setkey,
++		.encrypt		= crypto_xchacha20_crypt,
++		.decrypt		= crypto_xchacha20_crypt,
++	}
+ };
+ 
+ static int __init chacha20_generic_mod_init(void)
+ {
+-	return crypto_register_skcipher(&alg);
++	return crypto_register_skciphers(algs, ARRAY_SIZE(algs));
+ }
+ 
+ static void __exit chacha20_generic_mod_fini(void)
+ {
+-	crypto_unregister_skcipher(&alg);
++	crypto_unregister_skciphers(algs, ARRAY_SIZE(algs));
+ }
+ 
+ module_init(chacha20_generic_mod_init);
+@@ -131,6 +177,8 @@ module_exit(chacha20_generic_mod_fini);
+ 
+ MODULE_LICENSE("GPL");
+ MODULE_AUTHOR("Martin Willi <martin@strongswan.org>");
+-MODULE_DESCRIPTION("chacha20 cipher algorithm");
++MODULE_DESCRIPTION("ChaCha20 and XChaCha20 stream ciphers (generic)");
+ MODULE_ALIAS_CRYPTO("chacha20");
+ MODULE_ALIAS_CRYPTO("chacha20-generic");
++MODULE_ALIAS_CRYPTO("xchacha20");
++MODULE_ALIAS_CRYPTO("xchacha20-generic");
+diff --git a/crypto/testmgr.c b/crypto/testmgr.c
+index a1d42245082a..bf250ca9a6c3 100644
+--- a/crypto/testmgr.c
++++ b/crypto/testmgr.c
+@@ -3544,6 +3544,12 @@ static const struct alg_test_desc alg_test_descs[] = {
+ 		.suite = {
+ 			.hash = __VECS(aes_xcbc128_tv_template)
+ 		}
++	}, {
++		.alg = "xchacha20",
++		.test = alg_test_skcipher,
++		.suite = {
++			.cipher = __VECS(xchacha20_tv_template)
++		},
+ 	}, {
+ 		.alg = "xts(aes)",
+ 		.test = alg_test_skcipher,
+diff --git a/crypto/testmgr.h b/crypto/testmgr.h
+index 173111c70746..3f992867b747 100644
+--- a/crypto/testmgr.h
++++ b/crypto/testmgr.h
+@@ -31413,6 +31413,583 @@ static const struct cipher_testvec chacha20_tv_template[] = {
+ 	},
+ };
+ 
++static const struct cipher_testvec xchacha20_tv_template[] = {
++	{ /* from libsodium test/default/xchacha20.c */
++		.key	= "\x79\xc9\x97\x98\xac\x67\x30\x0b"
++			  "\xbb\x27\x04\xc9\x5c\x34\x1e\x32"
++			  "\x45\xf3\xdc\xb2\x17\x61\xb9\x8e"
++			  "\x52\xff\x45\xb2\x4f\x30\x4f\xc4",
++		.klen	= 32,
++		.iv	= "\xb3\x3f\xfd\x30\x96\x47\x9b\xcf"
++			  "\xbc\x9a\xee\x49\x41\x76\x88\xa0"
++			  "\xa2\x55\x4f\x8d\x95\x38\x94\x19"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.ptext	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00",
++		.ctext	= "\xc6\xe9\x75\x81\x60\x08\x3a\xc6"
++			  "\x04\xef\x90\xe7\x12\xce\x6e\x75"
++			  "\xd7\x79\x75\x90\x74\x4e\x0c\xf0"
++			  "\x60\xf0\x13\x73\x9c",
++		.len	= 29,
++	}, { /* from libsodium test/default/xchacha20.c */
++		.key	= "\x9d\x23\xbd\x41\x49\xcb\x97\x9c"
++			  "\xcf\x3c\x5c\x94\xdd\x21\x7e\x98"
++			  "\x08\xcb\x0e\x50\xcd\x0f\x67\x81"
++			  "\x22\x35\xea\xaf\x60\x1d\x62\x32",
++		.klen	= 32,
++		.iv	= "\xc0\x47\x54\x82\x66\xb7\xc3\x70"
++			  "\xd3\x35\x66\xa2\x42\x5c\xbf\x30"
++			  "\xd8\x2d\x1e\xaf\x52\x94\x10\x9e"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.ptext	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00",
++		.ctext	= "\xa2\x12\x09\x09\x65\x94\xde\x8c"
++			  "\x56\x67\xb1\xd1\x3a\xd9\x3f\x74"
++			  "\x41\x06\xd0\x54\xdf\x21\x0e\x47"
++			  "\x82\xcd\x39\x6f\xec\x69\x2d\x35"
++			  "\x15\xa2\x0b\xf3\x51\xee\xc0\x11"
++			  "\xa9\x2c\x36\x78\x88\xbc\x46\x4c"
++			  "\x32\xf0\x80\x7a\xcd\x6c\x20\x3a"
++			  "\x24\x7e\x0d\xb8\x54\x14\x84\x68"
++			  "\xe9\xf9\x6b\xee\x4c\xf7\x18\xd6"
++			  "\x8d\x5f\x63\x7c\xbd\x5a\x37\x64"
++			  "\x57\x78\x8e\x6f\xae\x90\xfc\x31"
++			  "\x09\x7c\xfc",
++		.len	= 91,
++	}, { /* Taken from the ChaCha20 test vectors, appended 16 random bytes
++		to nonce, and recomputed the ciphertext with libsodium */
++		.key	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.klen	= 32,
++		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x67\xc6\x69\x73"
++			  "\x51\xff\x4a\xec\x29\xcd\xba\xab"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.ptext	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.ctext	= "\x9c\x49\x2a\xe7\x8a\x2f\x93\xc7"
++			  "\xb3\x33\x6f\x82\x17\xd8\xc4\x1e"
++			  "\xad\x80\x11\x11\x1d\x4c\x16\x18"
++			  "\x07\x73\x9b\x4f\xdb\x7c\xcb\x47"
++			  "\xfd\xef\x59\x74\xfa\x3f\xe5\x4c"
++			  "\x9b\xd0\xea\xbc\xba\x56\xad\x32"
++			  "\x03\xdc\xf8\x2b\xc1\xe1\x75\x67"
++			  "\x23\x7b\xe6\xfc\xd4\x03\x86\x54",
++		.len	= 64,
++	}, { /* Taken from the ChaCha20 test vectors, appended 16 random bytes
++		to nonce, and recomputed the ciphertext with libsodium */
++		.key	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x00\x00\x00\x00\x01",
++		.klen	= 32,
++		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x02\xf2\xfb\xe3\x46"
++			  "\x7c\xc2\x54\xf8\x1b\xe8\xe7\x8d"
++			  "\x01\x00\x00\x00\x00\x00\x00\x00",
++		.ptext	= "\x41\x6e\x79\x20\x73\x75\x62\x6d"
++			  "\x69\x73\x73\x69\x6f\x6e\x20\x74"
++			  "\x6f\x20\x74\x68\x65\x20\x49\x45"
++			  "\x54\x46\x20\x69\x6e\x74\x65\x6e"
++			  "\x64\x65\x64\x20\x62\x79\x20\x74"
++			  "\x68\x65\x20\x43\x6f\x6e\x74\x72"
++			  "\x69\x62\x75\x74\x6f\x72\x20\x66"
++			  "\x6f\x72\x20\x70\x75\x62\x6c\x69"
++			  "\x63\x61\x74\x69\x6f\x6e\x20\x61"
++			  "\x73\x20\x61\x6c\x6c\x20\x6f\x72"
++			  "\x20\x70\x61\x72\x74\x20\x6f\x66"
++			  "\x20\x61\x6e\x20\x49\x45\x54\x46"
++			  "\x20\x49\x6e\x74\x65\x72\x6e\x65"
++			  "\x74\x2d\x44\x72\x61\x66\x74\x20"
++			  "\x6f\x72\x20\x52\x46\x43\x20\x61"
++			  "\x6e\x64\x20\x61\x6e\x79\x20\x73"
++			  "\x74\x61\x74\x65\x6d\x65\x6e\x74"
++			  "\x20\x6d\x61\x64\x65\x20\x77\x69"
++			  "\x74\x68\x69\x6e\x20\x74\x68\x65"
++			  "\x20\x63\x6f\x6e\x74\x65\x78\x74"
++			  "\x20\x6f\x66\x20\x61\x6e\x20\x49"
++			  "\x45\x54\x46\x20\x61\x63\x74\x69"
++			  "\x76\x69\x74\x79\x20\x69\x73\x20"
++			  "\x63\x6f\x6e\x73\x69\x64\x65\x72"
++			  "\x65\x64\x20\x61\x6e\x20\x22\x49"
++			  "\x45\x54\x46\x20\x43\x6f\x6e\x74"
++			  "\x72\x69\x62\x75\x74\x69\x6f\x6e"
++			  "\x22\x2e\x20\x53\x75\x63\x68\x20"
++			  "\x73\x74\x61\x74\x65\x6d\x65\x6e"
++			  "\x74\x73\x20\x69\x6e\x63\x6c\x75"
++			  "\x64\x65\x20\x6f\x72\x61\x6c\x20"
++			  "\x73\x74\x61\x74\x65\x6d\x65\x6e"
++			  "\x74\x73\x20\x69\x6e\x20\x49\x45"
++			  "\x54\x46\x20\x73\x65\x73\x73\x69"
++			  "\x6f\x6e\x73\x2c\x20\x61\x73\x20"
++			  "\x77\x65\x6c\x6c\x20\x61\x73\x20"
++			  "\x77\x72\x69\x74\x74\x65\x6e\x20"
++			  "\x61\x6e\x64\x20\x65\x6c\x65\x63"
++			  "\x74\x72\x6f\x6e\x69\x63\x20\x63"
++			  "\x6f\x6d\x6d\x75\x6e\x69\x63\x61"
++			  "\x74\x69\x6f\x6e\x73\x20\x6d\x61"
++			  "\x64\x65\x20\x61\x74\x20\x61\x6e"
++			  "\x79\x20\x74\x69\x6d\x65\x20\x6f"
++			  "\x72\x20\x70\x6c\x61\x63\x65\x2c"
++			  "\x20\x77\x68\x69\x63\x68\x20\x61"
++			  "\x72\x65\x20\x61\x64\x64\x72\x65"
++			  "\x73\x73\x65\x64\x20\x74\x6f",
++		.ctext	= "\xf9\xab\x7a\x4a\x60\xb8\x5f\xa0"
++			  "\x50\xbb\x57\xce\xef\x8c\xc1\xd9"
++			  "\x24\x15\xb3\x67\x5e\x7f\x01\xf6"
++			  "\x1c\x22\xf6\xe5\x71\xb1\x43\x64"
++			  "\x63\x05\xd5\xfc\x5c\x3d\xc0\x0e"
++			  "\x23\xef\xd3\x3b\xd9\xdc\x7f\xa8"
++			  "\x58\x26\xb3\xd0\xc2\xd5\x04\x3f"
++			  "\x0a\x0e\x8f\x17\xe4\xcd\xf7\x2a"
++			  "\xb4\x2c\x09\xe4\x47\xec\x8b\xfb"
++			  "\x59\x37\x7a\xa1\xd0\x04\x7e\xaa"
++			  "\xf1\x98\x5f\x24\x3d\x72\x9a\x43"
++			  "\xa4\x36\x51\x92\x22\x87\xff\x26"
++			  "\xce\x9d\xeb\x59\x78\x84\x5e\x74"
++			  "\x97\x2e\x63\xc0\xef\x29\xf7\x8a"
++			  "\xb9\xee\x35\x08\x77\x6a\x35\x9a"
++			  "\x3e\xe6\x4f\x06\x03\x74\x1b\xc1"
++			  "\x5b\xb3\x0b\x89\x11\x07\xd3\xb7"
++			  "\x53\xd6\x25\x04\xd9\x35\xb4\x5d"
++			  "\x4c\x33\x5a\xc2\x42\x4c\xe6\xa4"
++			  "\x97\x6e\x0e\xd2\xb2\x8b\x2f\x7f"
++			  "\x28\xe5\x9f\xac\x4b\x2e\x02\xab"
++			  "\x85\xfa\xa9\x0d\x7c\x2d\x10\xe6"
++			  "\x91\xab\x55\x63\xf0\xde\x3a\x94"
++			  "\x25\x08\x10\x03\xc2\x68\xd1\xf4"
++			  "\xaf\x7d\x9c\x99\xf7\x86\x96\x30"
++			  "\x60\xfc\x0b\xe6\xa8\x80\x15\xb0"
++			  "\x81\xb1\x0c\xbe\xb9\x12\x18\x25"
++			  "\xe9\x0e\xb1\xe7\x23\xb2\xef\x4a"
++			  "\x22\x8f\xc5\x61\x89\xd4\xe7\x0c"
++			  "\x64\x36\x35\x61\xb6\x34\x60\xf7"
++			  "\x7b\x61\x37\x37\x12\x10\xa2\xf6"
++			  "\x7e\xdb\x7f\x39\x3f\xb6\x8e\x89"
++			  "\x9e\xf3\xfe\x13\x98\xbb\x66\x5a"
++			  "\xec\xea\xab\x3f\x9c\x87\xc4\x8c"
++			  "\x8a\x04\x18\x49\xfc\x77\x11\x50"
++			  "\x16\xe6\x71\x2b\xee\xc0\x9c\xb6"
++			  "\x87\xfd\x80\xff\x0b\x1d\x73\x38"
++			  "\xa4\x1d\x6f\xae\xe4\x12\xd7\x93"
++			  "\x9d\xcd\x38\x26\x09\x40\x52\xcd"
++			  "\x67\x01\x67\x26\xe0\x3e\x98\xa8"
++			  "\xe8\x1a\x13\x41\xbb\x90\x4d\x87"
++			  "\xbb\x42\x82\x39\xce\x3a\xd0\x18"
++			  "\x6d\x7b\x71\x8f\xbb\x2c\x6a\xd1"
++			  "\xbd\xf5\xc7\x8a\x7e\xe1\x1e\x0f"
++			  "\x0d\x0d\x13\x7c\xd9\xd8\x3c\x91"
++			  "\xab\xff\x1f\x12\xc3\xee\xe5\x65"
++			  "\x12\x8d\x7b\x61\xe5\x1f\x98",
++		.len	= 375,
++		.also_non_np = 1,
++		.np	= 3,
++		.tap	= { 375 - 20, 4, 16 },
++
++	}, { /* Taken from the ChaCha20 test vectors, appended 16 random bytes
++		to nonce, and recomputed the ciphertext with libsodium */
++		.key	= "\x1c\x92\x40\xa5\xeb\x55\xd3\x8a"
++			  "\xf3\x33\x88\x86\x04\xf6\xb5\xf0"
++			  "\x47\x39\x17\xc1\x40\x2b\x80\x09"
++			  "\x9d\xca\x5c\xbc\x20\x70\x75\xc0",
++		.klen	= 32,
++		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x02\x76\x5a\x2e\x63"
++			  "\x33\x9f\xc9\x9a\x66\x32\x0d\xb7"
++			  "\x2a\x00\x00\x00\x00\x00\x00\x00",
++		.ptext	= "\x27\x54\x77\x61\x73\x20\x62\x72"
++			  "\x69\x6c\x6c\x69\x67\x2c\x20\x61"
++			  "\x6e\x64\x20\x74\x68\x65\x20\x73"
++			  "\x6c\x69\x74\x68\x79\x20\x74\x6f"
++			  "\x76\x65\x73\x0a\x44\x69\x64\x20"
++			  "\x67\x79\x72\x65\x20\x61\x6e\x64"
++			  "\x20\x67\x69\x6d\x62\x6c\x65\x20"
++			  "\x69\x6e\x20\x74\x68\x65\x20\x77"
++			  "\x61\x62\x65\x3a\x0a\x41\x6c\x6c"
++			  "\x20\x6d\x69\x6d\x73\x79\x20\x77"
++			  "\x65\x72\x65\x20\x74\x68\x65\x20"
++			  "\x62\x6f\x72\x6f\x67\x6f\x76\x65"
++			  "\x73\x2c\x0a\x41\x6e\x64\x20\x74"
++			  "\x68\x65\x20\x6d\x6f\x6d\x65\x20"
++			  "\x72\x61\x74\x68\x73\x20\x6f\x75"
++			  "\x74\x67\x72\x61\x62\x65\x2e",
++		.ctext	= "\x95\xb9\x51\xe7\x8f\xb4\xa4\x03"
++			  "\xca\x37\xcc\xde\x60\x1d\x8c\xe2"
++			  "\xf1\xbb\x8a\x13\x7f\x61\x85\xcc"
++			  "\xad\xf4\xf0\xdc\x86\xa6\x1e\x10"
++			  "\xbc\x8e\xcb\x38\x2b\xa5\xc8\x8f"
++			  "\xaa\x03\x3d\x53\x4a\x42\xb1\x33"
++			  "\xfc\xd3\xef\xf0\x8e\x7e\x10\x9c"
++			  "\x6f\x12\x5e\xd4\x96\xfe\x5b\x08"
++			  "\xb6\x48\xf0\x14\x74\x51\x18\x7c"
++			  "\x07\x92\xfc\xac\x9d\xf1\x94\xc0"
++			  "\xc1\x9d\xc5\x19\x43\x1f\x1d\xbb"
++			  "\x07\xf0\x1b\x14\x25\x45\xbb\xcb"
++			  "\x5c\xe2\x8b\x28\xf3\xcf\x47\x29"
++			  "\x27\x79\x67\x24\xa6\x87\xc2\x11"
++			  "\x65\x03\xfa\x45\xf7\x9e\x53\x7a"
++			  "\x99\xf1\x82\x25\x4f\x8d\x07",
++		.len	= 127,
++	}, { /* Taken from the ChaCha20 test vectors, appended 16 random bytes
++		to nonce, and recomputed the ciphertext with libsodium */
++		.key	= "\x1c\x92\x40\xa5\xeb\x55\xd3\x8a"
++			  "\xf3\x33\x88\x86\x04\xf6\xb5\xf0"
++			  "\x47\x39\x17\xc1\x40\x2b\x80\x09"
++			  "\x9d\xca\x5c\xbc\x20\x70\x75\xc0",
++		.klen	= 32,
++		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
++			  "\x00\x00\x00\x01\x31\x58\xa3\x5a"
++			  "\x25\x5d\x05\x17\x58\xe9\x5e\xd4"
++			  "\x1c\x00\x00\x00\x00\x00\x00\x00",
++		.ptext	= "\x49\xee\xe0\xdc\x24\x90\x40\xcd"
++			  "\xc5\x40\x8f\x47\x05\xbc\xdd\x81"
++			  "\x47\xc6\x8d\xe6\xb1\x8f\xd7\xcb"
++			  "\x09\x0e\x6e\x22\x48\x1f\xbf\xb8"
++			  "\x5c\xf7\x1e\x8a\xc1\x23\xf2\xd4"
++			  "\x19\x4b\x01\x0f\x4e\xa4\x43\xce"
++			  "\x01\xc6\x67\xda\x03\x91\x18\x90"
++			  "\xa5\xa4\x8e\x45\x03\xb3\x2d\xac"
++			  "\x74\x92\xd3\x53\x47\xc8\xdd\x25"
++			  "\x53\x6c\x02\x03\x87\x0d\x11\x0c"
++			  "\x58\xe3\x12\x18\xfd\x2a\x5b\x40"
++			  "\x0c\x30\xf0\xb8\x3f\x43\xce\xae"
++			  "\x65\x3a\x7d\x7c\xf4\x54\xaa\xcc"
++			  "\x33\x97\xc3\x77\xba\xc5\x70\xde"
++			  "\xd7\xd5\x13\xa5\x65\xc4\x5f\x0f"
++			  "\x46\x1a\x0d\x97\xb5\xf3\xbb\x3c"
++			  "\x84\x0f\x2b\xc5\xaa\xea\xf2\x6c"
++			  "\xc9\xb5\x0c\xee\x15\xf3\x7d\xbe"
++			  "\x9f\x7b\x5a\xa6\xae\x4f\x83\xb6"
++			  "\x79\x49\x41\xf4\x58\x18\xcb\x86"
++			  "\x7f\x30\x0e\xf8\x7d\x44\x36\xea"
++			  "\x75\xeb\x88\x84\x40\x3c\xad\x4f"
++			  "\x6f\x31\x6b\xaa\x5d\xe5\xa5\xc5"
++			  "\x21\x66\xe9\xa7\xe3\xb2\x15\x88"
++			  "\x78\xf6\x79\xa1\x59\x47\x12\x4e"
++			  "\x9f\x9f\x64\x1a\xa0\x22\x5b\x08"
++			  "\xbe\x7c\x36\xc2\x2b\x66\x33\x1b"
++			  "\xdd\x60\x71\xf7\x47\x8c\x61\xc3"
++			  "\xda\x8a\x78\x1e\x16\xfa\x1e\x86"
++			  "\x81\xa6\x17\x2a\xa7\xb5\xc2\xe7"
++			  "\xa4\xc7\x42\xf1\xcf\x6a\xca\xb4"
++			  "\x45\xcf\xf3\x93\xf0\xe7\xea\xf6"
++			  "\xf4\xe6\x33\x43\x84\x93\xa5\x67"
++			  "\x9b\x16\x58\x58\x80\x0f\x2b\x5c"
++			  "\x24\x74\x75\x7f\x95\x81\xb7\x30"
++			  "\x7a\x33\xa7\xf7\x94\x87\x32\x27"
++			  "\x10\x5d\x14\x4c\x43\x29\xdd\x26"
++			  "\xbd\x3e\x3c\x0e\xfe\x0e\xa5\x10"
++			  "\xea\x6b\x64\xfd\x73\xc6\xed\xec"
++			  "\xa8\xc9\xbf\xb3\xba\x0b\x4d\x07"
++			  "\x70\xfc\x16\xfd\x79\x1e\xd7\xc5"
++			  "\x49\x4e\x1c\x8b\x8d\x79\x1b\xb1"
++			  "\xec\xca\x60\x09\x4c\x6a\xd5\x09"
++			  "\x49\x46\x00\x88\x22\x8d\xce\xea"
++			  "\xb1\x17\x11\xde\x42\xd2\x23\xc1"
++			  "\x72\x11\xf5\x50\x73\x04\x40\x47"
++			  "\xf9\x5d\xe7\xa7\x26\xb1\x7e\xb0"
++			  "\x3f\x58\xc1\x52\xab\x12\x67\x9d"
++			  "\x3f\x43\x4b\x68\xd4\x9c\x68\x38"
++			  "\x07\x8a\x2d\x3e\xf3\xaf\x6a\x4b"
++			  "\xf9\xe5\x31\x69\x22\xf9\xa6\x69"
++			  "\xc6\x9c\x96\x9a\x12\x35\x95\x1d"
++			  "\x95\xd5\xdd\xbe\xbf\x93\x53\x24"
++			  "\xfd\xeb\xc2\x0a\x64\xb0\x77\x00"
++			  "\x6f\x88\xc4\x37\x18\x69\x7c\xd7"
++			  "\x41\x92\x55\x4c\x03\xa1\x9a\x4b"
++			  "\x15\xe5\xdf\x7f\x37\x33\x72\xc1"
++			  "\x8b\x10\x67\xa3\x01\x57\x94\x25"
++			  "\x7b\x38\x71\x7e\xdd\x1e\xcc\x73"
++			  "\x55\xd2\x8e\xeb\x07\xdd\xf1\xda"
++			  "\x58\xb1\x47\x90\xfe\x42\x21\x72"
++			  "\xa3\x54\x7a\xa0\x40\xec\x9f\xdd"
++			  "\xc6\x84\x6e\xca\xae\xe3\x68\xb4"
++			  "\x9d\xe4\x78\xff\x57\xf2\xf8\x1b"
++			  "\x03\xa1\x31\xd9\xde\x8d\xf5\x22"
++			  "\x9c\xdd\x20\xa4\x1e\x27\xb1\x76"
++			  "\x4f\x44\x55\xe2\x9b\xa1\x9c\xfe"
++			  "\x54\xf7\x27\x1b\xf4\xde\x02\xf5"
++			  "\x1b\x55\x48\x5c\xdc\x21\x4b\x9e"
++			  "\x4b\x6e\xed\x46\x23\xdc\x65\xb2"
++			  "\xcf\x79\x5f\x28\xe0\x9e\x8b\xe7"
++			  "\x4c\x9d\x8a\xff\xc1\xa6\x28\xb8"
++			  "\x65\x69\x8a\x45\x29\xef\x74\x85"
++			  "\xde\x79\xc7\x08\xae\x30\xb0\xf4"
++			  "\xa3\x1d\x51\x41\xab\xce\xcb\xf6"
++			  "\xb5\xd8\x6d\xe0\x85\xe1\x98\xb3"
++			  "\x43\xbb\x86\x83\x0a\xa0\xf5\xb7"
++			  "\x04\x0b\xfa\x71\x1f\xb0\xf6\xd9"
++			  "\x13\x00\x15\xf0\xc7\xeb\x0d\x5a"
++			  "\x9f\xd7\xb9\x6c\x65\x14\x22\x45"
++			  "\x6e\x45\x32\x3e\x7e\x60\x1a\x12"
++			  "\x97\x82\x14\xfb\xaa\x04\x22\xfa"
++			  "\xa0\xe5\x7e\x8c\x78\x02\x48\x5d"
++			  "\x78\x33\x5a\x7c\xad\xdb\x29\xce"
++			  "\xbb\x8b\x61\xa4\xb7\x42\xe2\xac"
++			  "\x8b\x1a\xd9\x2f\x0b\x8b\x62\x21"
++			  "\x83\x35\x7e\xad\x73\xc2\xb5\x6c"
++			  "\x10\x26\x38\x07\xe5\xc7\x36\x80"
++			  "\xe2\x23\x12\x61\xf5\x48\x4b\x2b"
++			  "\xc5\xdf\x15\xd9\x87\x01\xaa\xac"
++			  "\x1e\x7c\xad\x73\x78\x18\x63\xe0"
++			  "\x8b\x9f\x81\xd8\x12\x6a\x28\x10"
++			  "\xbe\x04\x68\x8a\x09\x7c\x1b\x1c"
++			  "\x83\x66\x80\x47\x80\xe8\xfd\x35"
++			  "\x1c\x97\x6f\xae\x49\x10\x66\xcc"
++			  "\xc6\xd8\xcc\x3a\x84\x91\x20\x77"
++			  "\x72\xe4\x24\xd2\x37\x9f\xc5\xc9"
++			  "\x25\x94\x10\x5f\x40\x00\x64\x99"
++			  "\xdc\xae\xd7\x21\x09\x78\x50\x15"
++			  "\xac\x5f\xc6\x2c\xa2\x0b\xa9\x39"
++			  "\x87\x6e\x6d\xab\xde\x08\x51\x16"
++			  "\xc7\x13\xe9\xea\xed\x06\x8e\x2c"
++			  "\xf8\x37\x8c\xf0\xa6\x96\x8d\x43"
++			  "\xb6\x98\x37\xb2\x43\xed\xde\xdf"
++			  "\x89\x1a\xe7\xeb\x9d\xa1\x7b\x0b"
++			  "\x77\xb0\xe2\x75\xc0\xf1\x98\xd9"
++			  "\x80\x55\xc9\x34\x91\xd1\x59\xe8"
++			  "\x4b\x0f\xc1\xa9\x4b\x7a\x84\x06"
++			  "\x20\xa8\x5d\xfa\xd1\xde\x70\x56"
++			  "\x2f\x9e\x91\x9c\x20\xb3\x24\xd8"
++			  "\x84\x3d\xe1\x8c\x7e\x62\x52\xe5"
++			  "\x44\x4b\x9f\xc2\x93\x03\xea\x2b"
++			  "\x59\xc5\xfa\x3f\x91\x2b\xbb\x23"
++			  "\xf5\xb2\x7b\xf5\x38\xaf\xb3\xee"
++			  "\x63\xdc\x7b\xd1\xff\xaa\x8b\xab"
++			  "\x82\x6b\x37\x04\xeb\x74\xbe\x79"
++			  "\xb9\x83\x90\xef\x20\x59\x46\xff"
++			  "\xe9\x97\x3e\x2f\xee\xb6\x64\x18"
++			  "\x38\x4c\x7a\x4a\xf9\x61\xe8\x9a"
++			  "\xa1\xb5\x01\xa6\x47\xd3\x11\xd4"
++			  "\xce\xd3\x91\x49\x88\xc7\xb8\x4d"
++			  "\xb1\xb9\x07\x6d\x16\x72\xae\x46"
++			  "\x5e\x03\xa1\x4b\xb6\x02\x30\xa8"
++			  "\x3d\xa9\x07\x2a\x7c\x19\xe7\x62"
++			  "\x87\xe3\x82\x2f\x6f\xe1\x09\xd9"
++			  "\x94\x97\xea\xdd\x58\x9e\xae\x76"
++			  "\x7e\x35\xe5\xb4\xda\x7e\xf4\xde"
++			  "\xf7\x32\x87\xcd\x93\xbf\x11\x56"
++			  "\x11\xbe\x08\x74\xe1\x69\xad\xe2"
++			  "\xd7\xf8\x86\x75\x8a\x3c\xa4\xbe"
++			  "\x70\xa7\x1b\xfc\x0b\x44\x2a\x76"
++			  "\x35\xea\x5d\x85\x81\xaf\x85\xeb"
++			  "\xa0\x1c\x61\xc2\xf7\x4f\xa5\xdc"
++			  "\x02\x7f\xf6\x95\x40\x6e\x8a\x9a"
++			  "\xf3\x5d\x25\x6e\x14\x3a\x22\xc9"
++			  "\x37\x1c\xeb\x46\x54\x3f\xa5\x91"
++			  "\xc2\xb5\x8c\xfe\x53\x08\x97\x32"
++			  "\x1b\xb2\x30\x27\xfe\x25\x5d\xdc"
++			  "\x08\x87\xd0\xe5\x94\x1a\xd4\xf1"
++			  "\xfe\xd6\xb4\xa3\xe6\x74\x81\x3c"
++			  "\x1b\xb7\x31\xa7\x22\xfd\xd4\xdd"
++			  "\x20\x4e\x7c\x51\xb0\x60\x73\xb8"
++			  "\x9c\xac\x91\x90\x7e\x01\xb0\xe1"
++			  "\x8a\x2f\x75\x1c\x53\x2a\x98\x2a"
++			  "\x06\x52\x95\x52\xb2\xe9\x25\x2e"
++			  "\x4c\xe2\x5a\x00\xb2\x13\x81\x03"
++			  "\x77\x66\x0d\xa5\x99\xda\x4e\x8c"
++			  "\xac\xf3\x13\x53\x27\x45\xaf\x64"
++			  "\x46\xdc\xea\x23\xda\x97\xd1\xab"
++			  "\x7d\x6c\x30\x96\x1f\xbc\x06\x34"
++			  "\x18\x0b\x5e\x21\x35\x11\x8d\x4c"
++			  "\xe0\x2d\xe9\x50\x16\x74\x81\xa8"
++			  "\xb4\x34\xb9\x72\x42\xa6\xcc\xbc"
++			  "\xca\x34\x83\x27\x10\x5b\x68\x45"
++			  "\x8f\x52\x22\x0c\x55\x3d\x29\x7c"
++			  "\xe3\xc0\x66\x05\x42\x91\x5f\x58"
++			  "\xfe\x4a\x62\xd9\x8c\xa9\x04\x19"
++			  "\x04\xa9\x08\x4b\x57\xfc\x67\x53"
++			  "\x08\x7c\xbc\x66\x8a\xb0\xb6\x9f"
++			  "\x92\xd6\x41\x7c\x5b\x2a\x00\x79"
++			  "\x72",
++		.ctext	= "\x3a\x92\xee\x53\x31\xaf\x2b\x60"
++			  "\x5f\x55\x8d\x00\x5d\xfc\x74\x97"
++			  "\x28\x54\xf4\xa5\x75\xf1\x9b\x25"
++			  "\x62\x1c\xc0\xe0\x13\xc8\x87\x53"
++			  "\xd0\xf3\xa7\x97\x1f\x3b\x1e\xea"
++			  "\xe0\xe5\x2a\xd1\xdd\xa4\x3b\x50"
++			  "\x45\xa3\x0d\x7e\x1b\xc9\xa0\xad"
++			  "\xb9\x2c\x54\xa6\xc7\x55\x16\xd0"
++			  "\xc5\x2e\x02\x44\x35\xd0\x7e\x67"
++			  "\xf2\xc4\x9b\xcd\x95\x10\xcc\x29"
++			  "\x4b\xfa\x86\x87\xbe\x40\x36\xbe"
++			  "\xe1\xa3\x52\x89\x55\x20\x9b\xc2"
++			  "\xab\xf2\x31\x34\x16\xad\xc8\x17"
++			  "\x65\x24\xc0\xff\x12\x37\xfe\x5a"
++			  "\x62\x3b\x59\x47\x6c\x5f\x3a\x8e"
++			  "\x3b\xd9\x30\xc8\x7f\x2f\x88\xda"
++			  "\x80\xfd\x02\xda\x7f\x9a\x7a\x73"
++			  "\x59\xc5\x34\x09\x9a\x11\xcb\xa7"
++			  "\xfc\xf6\xa1\xa0\x60\xfb\x43\xbb"
++			  "\xf1\xe9\xd7\xc6\x79\x27\x4e\xff"
++			  "\x22\xb4\x24\xbf\x76\xee\x47\xb9"
++			  "\x6d\x3f\x8b\xb0\x9c\x3c\x43\xdd"
++			  "\xff\x25\x2e\x6d\xa4\x2b\xfb\x5d"
++			  "\x1b\x97\x6c\x55\x0a\x82\x7a\x7b"
++			  "\x94\x34\xc2\xdb\x2f\x1f\xc1\xea"
++			  "\xd4\x4d\x17\x46\x3b\x51\x69\x09"
++			  "\xe4\x99\x32\x25\xfd\x94\xaf\xfb"
++			  "\x10\xf7\x4f\xdd\x0b\x3c\x8b\x41"
++			  "\xb3\x6a\xb7\xd1\x33\xa8\x0c\x2f"
++			  "\x62\x4c\x72\x11\xd7\x74\xe1\x3b"
++			  "\x38\x43\x66\x7b\x6c\x36\x48\xe7"
++			  "\xe3\xe7\x9d\xb9\x42\x73\x7a\x2a"
++			  "\x89\x20\x1a\x41\x80\x03\xf7\x8f"
++			  "\x61\x78\x13\xbf\xfe\x50\xf5\x04"
++			  "\x52\xf9\xac\x47\xf8\x62\x4b\xb2"
++			  "\x24\xa9\xbf\x64\xb0\x18\x69\xd2"
++			  "\xf5\xe4\xce\xc8\xb1\x87\x75\xd6"
++			  "\x2c\x24\x79\x00\x7d\x26\xfb\x44"
++			  "\xe7\x45\x7a\xee\x58\xa5\x83\xc1"
++			  "\xb4\x24\xab\x23\x2f\x4d\xd7\x4f"
++			  "\x1c\xc7\xaa\xa9\x50\xf4\xa3\x07"
++			  "\x12\x13\x89\x74\xdc\x31\x6a\xb2"
++			  "\xf5\x0f\x13\x8b\xb9\xdb\x85\x1f"
++			  "\xf5\xbc\x88\xd9\x95\xea\x31\x6c"
++			  "\x36\x60\xb6\x49\xdc\xc4\xf7\x55"
++			  "\x3f\x21\xc1\xb5\x92\x18\x5e\xbc"
++			  "\x9f\x87\x7f\xe7\x79\x25\x40\x33"
++			  "\xd6\xb9\x33\xd5\x50\xb3\xc7\x89"
++			  "\x1b\x12\xa0\x46\xdd\xa7\xd8\x3e"
++			  "\x71\xeb\x6f\x66\xa1\x26\x0c\x67"
++			  "\xab\xb2\x38\x58\x17\xd8\x44\x3b"
++			  "\x16\xf0\x8e\x62\x8d\x16\x10\x00"
++			  "\x32\x8b\xef\xb9\x28\xd3\xc5\xad"
++			  "\x0a\x19\xa2\xe4\x03\x27\x7d\x94"
++			  "\x06\x18\xcd\xd6\x27\x00\xf9\x1f"
++			  "\xb6\xb3\xfe\x96\x35\x5f\xc4\x1c"
++			  "\x07\x62\x10\x79\x68\x50\xf1\x7e"
++			  "\x29\xe7\xc4\xc4\xe7\xee\x54\xd6"
++			  "\x58\x76\x84\x6d\x8d\xe4\x59\x31"
++			  "\xe9\xf4\xdc\xa1\x1f\xe5\x1a\xd6"
++			  "\xe6\x64\x46\xf5\x77\x9c\x60\x7a"
++			  "\x5e\x62\xe3\x0a\xd4\x9f\x7a\x2d"
++			  "\x7a\xa5\x0a\x7b\x29\x86\x7a\x74"
++			  "\x74\x71\x6b\xca\x7d\x1d\xaa\xba"
++			  "\x39\x84\x43\x76\x35\xfe\x4f\x9b"
++			  "\xbb\xbb\xb5\x6a\x32\xb5\x5d\x41"
++			  "\x51\xf0\x5b\x68\x03\x47\x4b\x8a"
++			  "\xca\x88\xf6\x37\xbd\x73\x51\x70"
++			  "\x66\xfe\x9e\x5f\x21\x9c\xf3\xdd"
++			  "\xc3\xea\x27\xf9\x64\x94\xe1\x19"
++			  "\xa0\xa9\xab\x60\xe0\x0e\xf7\x78"
++			  "\x70\x86\xeb\xe0\xd1\x5c\x05\xd3"
++			  "\xd7\xca\xe0\xc0\x47\x47\x34\xee"
++			  "\x11\xa3\xa3\x54\x98\xb7\x49\x8e"
++			  "\x84\x28\x70\x2c\x9e\xfb\x55\x54"
++			  "\x4d\xf8\x86\xf7\x85\x7c\xbd\xf3"
++			  "\x17\xd8\x47\xcb\xac\xf4\x20\x85"
++			  "\x34\x66\xad\x37\x2d\x5e\x52\xda"
++			  "\x8a\xfe\x98\x55\x30\xe7\x2d\x2b"
++			  "\x19\x10\x8e\x7b\x66\x5e\xdc\xe0"
++			  "\x45\x1f\x7b\xb4\x08\xfb\x8f\xf6"
++			  "\x8c\x89\x21\x34\x55\x27\xb2\x76"
++			  "\xb2\x07\xd9\xd6\x68\x9b\xea\x6b"
++			  "\x2d\xb4\xc4\x35\xdd\xd2\x79\xae"
++			  "\xc7\xd6\x26\x7f\x12\x01\x8c\xa7"
++			  "\xe3\xdb\xa8\xf4\xf7\x2b\xec\x99"
++			  "\x11\x00\xf1\x35\x8c\xcf\xd5\xc9"
++			  "\xbd\x91\x36\x39\x70\xcf\x7d\x70"
++			  "\x47\x1a\xfc\x6b\x56\xe0\x3f\x9c"
++			  "\x60\x49\x01\x72\xa9\xaf\x2c\x9c"
++			  "\xe8\xab\xda\x8c\x14\x19\xf3\x75"
++			  "\x07\x17\x9d\x44\x67\x7a\x2e\xef"
++			  "\xb7\x83\x35\x4a\xd1\x3d\x1c\x84"
++			  "\x32\xdd\xaa\xea\xca\x1d\xdc\x72"
++			  "\x2c\xcc\x43\xcd\x5d\xe3\x21\xa4"
++			  "\xd0\x8a\x4b\x20\x12\xa3\xd5\x86"
++			  "\x76\x96\xff\x5f\x04\x57\x0f\xe6"
++			  "\xba\xe8\x76\x50\x0c\x64\x1d\x83"
++			  "\x9c\x9b\x9a\x9a\x58\x97\x9c\x5c"
++			  "\xb4\xa4\xa6\x3e\x19\xeb\x8f\x5a"
++			  "\x61\xb2\x03\x7b\x35\x19\xbe\xa7"
++			  "\x63\x0c\xfd\xdd\xf9\x90\x6c\x08"
++			  "\x19\x11\xd3\x65\x4a\xf5\x96\x92"
++			  "\x59\xaa\x9c\x61\x0c\x29\xa7\xf8"
++			  "\x14\x39\x37\xbf\x3c\xf2\x16\x72"
++			  "\x02\xfa\xa2\xf3\x18\x67\x5d\xcb"
++			  "\xdc\x4d\xbb\x96\xff\x70\x08\x2d"
++			  "\xc2\xa8\x52\xe1\x34\x5f\x72\xfe"
++			  "\x64\xbf\xca\xa7\x74\x38\xfb\x74"
++			  "\x55\x9c\xfa\x8a\xed\xfb\x98\xeb"
++			  "\x58\x2e\x6c\xe1\x52\x76\x86\xd7"
++			  "\xcf\xa1\xa4\xfc\xb2\x47\x41\x28"
++			  "\xa3\xc1\xe5\xfd\x53\x19\x28\x2b"
++			  "\x37\x04\x65\x96\x99\x7a\x28\x0f"
++			  "\x07\x68\x4b\xc7\x52\x0a\x55\x35"
++			  "\x40\x19\x95\x61\xe8\x59\x40\x1f"
++			  "\x9d\xbf\x78\x7d\x8f\x84\xff\x6f"
++			  "\xd0\xd5\x63\xd2\x22\xbd\xc8\x4e"
++			  "\xfb\xe7\x9f\x06\xe6\xe7\x39\x6d"
++			  "\x6a\x96\x9f\xf0\x74\x7e\xc9\x35"
++			  "\xb7\x26\xb8\x1c\x0a\xa6\x27\x2c"
++			  "\xa2\x2b\xfe\xbe\x0f\x07\x73\xae"
++			  "\x7f\x7f\x54\xf5\x7c\x6a\x0a\x56"
++			  "\x49\xd4\x81\xe5\x85\x53\x99\x1f"
++			  "\x95\x05\x13\x58\x8d\x0e\x1b\x90"
++			  "\xc3\x75\x48\x64\x58\x98\x67\x84"
++			  "\xae\xe2\x21\xa2\x8a\x04\x0a\x0b"
++			  "\x61\xaa\xb0\xd4\x28\x60\x7a\xf8"
++			  "\xbc\x52\xfb\x24\x7f\xed\x0d\x2a"
++			  "\x0a\xb2\xf9\xc6\x95\xb5\x11\xc9"
++			  "\xf4\x0f\x26\x11\xcf\x2a\x57\x87"
++			  "\x7a\xf3\xe7\x94\x65\xc2\xb5\xb3"
++			  "\xab\x98\xe3\xc1\x2b\x59\x19\x7c"
++			  "\xd6\xf3\xf9\xbf\xff\x6d\xc6\x82"
++			  "\x13\x2f\x4a\x2e\xcd\x26\xfe\x2d"
++			  "\x01\x70\xf4\xc2\x7f\x1f\x4c\xcb"
++			  "\x47\x77\x0c\xa0\xa3\x03\xec\xda"
++			  "\xa9\xbf\x0d\x2d\xae\xe4\xb8\x7b"
++			  "\xa9\xbc\x08\xb4\x68\x2e\xc5\x60"
++			  "\x8d\x87\x41\x2b\x0f\x69\xf0\xaf"
++			  "\x5f\xba\x72\x20\x0f\x33\xcd\x6d"
++			  "\x36\x7d\x7b\xd5\x05\xf1\x4b\x05"
++			  "\xc4\xfc\x7f\x80\xb9\x4d\xbd\xf7"
++			  "\x7c\x84\x07\x01\xc2\x40\x66\x5b"
++			  "\x98\xc7\x2c\xe3\x97\xfa\xdf\x87"
++			  "\xa0\x1f\xe9\x21\x42\x0f\x3b\xeb"
++			  "\x89\x1c\x3b\xca\x83\x61\x77\x68"
++			  "\x84\xbb\x60\x87\x38\x2e\x25\xd5"
++			  "\x9e\x04\x41\x70\xac\xda\xc0\x9c"
++			  "\x9c\x69\xea\x8d\x4e\x55\x2a\x29"
++			  "\xed\x05\x4b\x7b\x73\x71\x90\x59"
++			  "\x4d\xc8\xd8\x44\xf0\x4c\xe1\x5e"
++			  "\x84\x47\x55\xcc\x32\x3f\xe7\x97"
++			  "\x42\xc6\x32\xac\x40\xe5\xa5\xc7"
++			  "\x8b\xed\xdb\xf7\x83\xd6\xb1\xc2"
++			  "\x52\x5e\x34\xb7\xeb\x6e\xd9\xfc"
++			  "\xe5\x93\x9a\x97\x3e\xb0\xdc\xd9"
++			  "\xd7\x06\x10\xb6\x1d\x80\x59\xdd"
++			  "\x0d\xfe\x64\x35\xcd\x5d\xec\xf0"
++			  "\xba\xd0\x34\xc9\x2d\x91\xc5\x17"
++			  "\x11",
++		.len	= 1281,
++		.also_non_np = 1,
++		.np	= 3,
++		.tap	= { 1200, 1, 80 },
++	},
++};
++
+ /*
+  * CTS (Cipher Text Stealing) mode tests
+  */
+diff --git a/include/crypto/chacha20.h b/include/crypto/chacha20.h
+index f00052137942..f977e685925d 100644
+--- a/include/crypto/chacha20.h
++++ b/include/crypto/chacha20.h
+@@ -1,6 +1,10 @@
+ /* SPDX-License-Identifier: GPL-2.0 */
+ /*
+- * Common values for the ChaCha20 algorithm
++ * Common values and helper functions for the ChaCha20 and XChaCha20 algorithms.
++ *
++ * XChaCha20 extends ChaCha20's nonce to 192 bits, while provably retaining
++ * ChaCha20's security.  Here they share the same key size, tfm context, and
++ * setkey function; only their IV size and encrypt/decrypt function differ.
+  */
+ 
+ #ifndef _CRYPTO_CHACHA20_H
+@@ -10,11 +14,16 @@
+ #include <linux/types.h>
+ #include <linux/crypto.h>
+ 
++/* 32-bit stream position, then 96-bit nonce (RFC7539 convention) */
+ #define CHACHA20_IV_SIZE	16
++
+ #define CHACHA20_KEY_SIZE	32
+ #define CHACHA20_BLOCK_SIZE	64
+ #define CHACHA20_BLOCK_WORDS	(CHACHA20_BLOCK_SIZE / sizeof(u32))
+ 
++/* 192-bit nonce, then 64-bit stream position */
++#define XCHACHA20_IV_SIZE	32
++
+ struct chacha20_ctx {
+ 	u32 key[8];
+ };
+@@ -23,8 +32,11 @@ void chacha20_block(u32 *state, u32 *stream);
+ void hchacha20_block(const u32 *in, u32 *out);
+ 
+ void crypto_chacha20_init(u32 *state, struct chacha20_ctx *ctx, u8 *iv);
++
+ int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
+ 			   unsigned int keysize);
++
+ int crypto_chacha20_crypt(struct skcipher_request *req);
++int crypto_xchacha20_crypt(struct skcipher_request *req);
+ 
+ #endif
 -- 
 2.18.0.597.ga71716f1ad-goog
 
