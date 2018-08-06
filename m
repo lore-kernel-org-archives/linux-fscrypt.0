@@ -1,360 +1,125 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Fri, 24 Aug 2018 09:16:41 -0700
-Message-Id: <20180824161642.1144-10-ebiggers@kernel.org>
-In-Reply-To: <20180824161642.1144-1-ebiggers@kernel.org>
-References: <20180824161642.1144-1-ebiggers@kernel.org>
-Subject: [f2fs-dev] [RFC PATCH 09/10] ext4: add fs-verity read support
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Subject: [RFC PATCH 1/9] crypto: chacha20-generic - add HChaCha20 library function
+Date: Mon,  6 Aug 2018 15:32:52 -0700
+Message-Id: <20180806223300.113891-2-ebiggers@kernel.org>
+In-Reply-To: <20180806223300.113891-1-ebiggers@kernel.org>
+References: <20180806223300.113891-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
-Cc: Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-integrity@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Victor Hsieh <victorhsieh@google.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-crypto-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Theodore Ts'o <tytso@mit.edu>
+From: Eric Biggers <ebiggers@google.com>
 
-Make ext4_mpage_readpages() verify data as it is read from fs-verity
-files, using the helper functions from fs/verity/.
+Refactor the unkeyed permutation part of chacha20_block() into its own
+function, then add hchacha20_block() which is the ChaCha equivalent of
+HSalsa20 and is an intermediate step towards XChaCha20 (see
+https://cr.yp.to/snuffle/xsalsa-20081128.pdf).  HChaCha20 skips the
+final addition of the initial state, and outputs only certain words of
+the state.  It should not be used for streaming directly.
 
-To be compatible with fscrypt, like in the corresponding f2fs patch this
-required refactoring the decryption workflow into a generic "post-read
-processing" workflow, which can do decryption, verification, or both.
-
-Signed-off-by: Theodore Ts'o <tytso@mit.edu>
-(EB: various fixes and other changes)
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/ext4.h     |   2 +
- fs/ext4/inode.c    |   3 +
- fs/ext4/readpage.c | 207 ++++++++++++++++++++++++++++++++++++++-------
- fs/ext4/super.c    |   6 ++
- 4 files changed, 187 insertions(+), 31 deletions(-)
+ include/crypto/chacha20.h |  2 ++
+ lib/chacha20.c            | 52 +++++++++++++++++++++++++++++++++------
+ 2 files changed, 47 insertions(+), 7 deletions(-)
 
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index 335c99e781728..f8db4b8bf133c 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -3077,6 +3077,8 @@ static inline void ext4_set_de_type(struct super_block *sb,
- extern int ext4_mpage_readpages(struct address_space *mapping,
- 				struct list_head *pages, struct page *page,
- 				unsigned nr_pages);
-+extern int __init ext4_init_post_read_processing(void);
-+extern void ext4_destroy_post_read_processing(void);
+diff --git a/include/crypto/chacha20.h b/include/crypto/chacha20.h
+index b83d66073db0..f00052137942 100644
+--- a/include/crypto/chacha20.h
++++ b/include/crypto/chacha20.h
+@@ -20,6 +20,8 @@ struct chacha20_ctx {
+ };
  
- /* symlink.c */
- extern const struct inode_operations ext4_encrypted_symlink_inode_operations;
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index bb8f50230d055..cbee798d0de17 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3848,6 +3848,9 @@ static ssize_t ext4_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
- 		return 0;
- #endif
- 
-+	if (ext4_verity_inode(inode))
-+		return 0;
+ void chacha20_block(u32 *state, u32 *stream);
++void hchacha20_block(const u32 *in, u32 *out);
 +
- 	/*
- 	 * If we are doing data journalling we don't support O_DIRECT
- 	 */
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-index 19b87a8de6ff3..7750e22c90e39 100644
---- a/fs/ext4/readpage.c
-+++ b/fs/ext4/readpage.c
-@@ -47,6 +47,11 @@
+ void crypto_chacha20_init(u32 *state, struct chacha20_ctx *ctx, u8 *iv);
+ int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
+ 			   unsigned int keysize);
+diff --git a/lib/chacha20.c b/lib/chacha20.c
+index c1cc50fb68c9..13a0bdcb1604 100644
+--- a/lib/chacha20.c
++++ b/lib/chacha20.c
+@@ -1,5 +1,5 @@
+ /*
+- * ChaCha20 256-bit cipher algorithm, RFC7539
++ * The "hash function" used as the core of the ChaCha20 stream cipher (RFC7539)
+  *
+  * Copyright (C) 2015 Martin Willi
+  *
+@@ -16,14 +16,10 @@
+ #include <asm/unaligned.h>
+ #include <crypto/chacha20.h>
  
- #include "ext4.h"
- 
-+#define NUM_PREALLOC_POST_READ_CTXS	128
-+
-+static struct kmem_cache *bio_post_read_ctx_cache;
-+static mempool_t *bio_post_read_ctx_pool;
-+
- static inline bool ext4_bio_encrypted(struct bio *bio)
+-void chacha20_block(u32 *state, u32 *stream)
++static void chacha20_permute(u32 *x)
  {
- #ifdef CONFIG_EXT4_FS_ENCRYPTION
-@@ -56,6 +61,124 @@ static inline bool ext4_bio_encrypted(struct bio *bio)
- #endif
- }
+-	u32 x[16], *out = stream;
+ 	int i;
  
-+/* postprocessing steps for read bios */
-+enum bio_post_read_step {
-+	STEP_INITIAL = 0,
-+	STEP_DECRYPT,
-+	STEP_VERITY,
-+};
+-	for (i = 0; i < ARRAY_SIZE(x); i++)
+-		x[i] = state[i];
+-
+ 	for (i = 0; i < 20; i += 2) {
+ 		x[0]  += x[4];    x[12] = rol32(x[12] ^ x[0],  16);
+ 		x[1]  += x[5];    x[13] = rol32(x[13] ^ x[1],  16);
+@@ -65,10 +61,52 @@ void chacha20_block(u32 *state, u32 *stream)
+ 		x[8]  += x[13];   x[7]  = rol32(x[7]  ^ x[8],   7);
+ 		x[9]  += x[14];   x[4]  = rol32(x[4]  ^ x[9],   7);
+ 	}
++}
 +
-+struct bio_post_read_ctx {
-+	struct bio *bio;
-+	struct work_struct work;
-+	unsigned int cur_step;
-+	unsigned int enabled_steps;
-+};
-+
-+static void __read_end_io(struct bio *bio)
++/**
++ * chacha20_block - generate one keystream block and increment block counter
++ * @state: input state matrix (16 32-bit words)
++ * @stream: output keystream block (64 bytes)
++ *
++ * This is the ChaCha20 core, a function from 64-byte strings to 64-byte
++ * strings.  The caller has already converted the endianness of the input.  This
++ * function also handles incrementing the block counter in the input matrix.
++ */
++void chacha20_block(u32 *state, u32 *stream)
 +{
-+	struct page *page;
-+	struct bio_vec *bv;
++	u32 x[16];
 +	int i;
 +
-+	bio_for_each_segment_all(bv, bio, i) {
-+		page = bv->bv_page;
++	memcpy(x, state, 64);
 +
-+		/* PG_error was set if any post_read step failed */
-+		if (bio->bi_status || PageError(page)) {
-+			ClearPageUptodate(page);
-+			SetPageError(page);
-+		} else {
-+			SetPageUptodate(page);
-+		}
-+		unlock_page(page);
-+	}
-+	if (bio->bi_private)
-+		mempool_free(bio->bi_private, bio_post_read_ctx_pool);
-+	bio_put(bio);
-+}
-+
-+static void bio_post_read_processing(struct bio_post_read_ctx *ctx);
-+
-+static void decrypt_work(struct work_struct *work)
-+{
-+	struct bio_post_read_ctx *ctx =
-+		container_of(work, struct bio_post_read_ctx, work);
-+
-+	fscrypt_decrypt_bio(ctx->bio);
-+
-+	bio_post_read_processing(ctx);
-+}
-+
-+static void verity_work(struct work_struct *work)
-+{
-+	struct bio_post_read_ctx *ctx =
-+		container_of(work, struct bio_post_read_ctx, work);
-+
-+	fsverity_verify_bio(ctx->bio);
-+
-+	bio_post_read_processing(ctx);
-+}
-+
-+static void bio_post_read_processing(struct bio_post_read_ctx *ctx)
-+{
-+	/*
-+	 * We use different work queues for decryption and for verity because
-+	 * verity may require reading metadata pages that need decryption, and
-+	 * we shouldn't recurse to the same workqueue.
-+	 */
-+	switch (++ctx->cur_step) {
-+	case STEP_DECRYPT:
-+		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
-+			INIT_WORK(&ctx->work, decrypt_work);
-+			fscrypt_enqueue_decrypt_work(&ctx->work);
-+			return;
-+		}
-+		ctx->cur_step++;
-+		/* fall-through */
-+	case STEP_VERITY:
-+		if (ctx->enabled_steps & (1 << STEP_VERITY)) {
-+			INIT_WORK(&ctx->work, verity_work);
-+			fsverity_enqueue_verify_work(&ctx->work);
-+			return;
-+		}
-+		ctx->cur_step++;
-+		/* fall-through */
-+	default:
-+		__read_end_io(ctx->bio);
-+	}
-+}
-+
-+static struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
-+						       struct bio *bio,
-+						       pgoff_t index)
-+{
-+	unsigned int post_read_steps = 0;
-+	struct bio_post_read_ctx *ctx = NULL;
-+
-+	if (ext4_encrypted_inode(inode) && S_ISREG(inode->i_mode))
-+		post_read_steps |= 1 << STEP_DECRYPT;
-+#ifdef CONFIG_EXT4_FS_VERITY
-+	if (inode->i_verity_info != NULL &&
-+	    (index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
-+		post_read_steps |= 1 << STEP_VERITY;
-+#endif
-+	if (post_read_steps) {
-+		ctx = mempool_alloc(bio_post_read_ctx_pool, GFP_NOFS);
-+		if (!ctx)
-+			return ERR_PTR(-ENOMEM);
-+		ctx->bio = bio;
-+		ctx->enabled_steps = post_read_steps;
-+		bio->bi_private = ctx;
-+	}
-+	return ctx;
-+}
-+
-+static bool bio_post_read_required(struct bio *bio)
-+{
-+	return bio->bi_private && !bio->bi_status;
-+}
-+
- /*
-  * I/O completion handler for multipage BIOs.
-  *
-@@ -70,30 +193,31 @@ static inline bool ext4_bio_encrypted(struct bio *bio)
-  */
- static void mpage_end_io(struct bio *bio)
- {
--	struct bio_vec *bv;
--	int i;
-+	if (bio_post_read_required(bio)) {
-+		struct bio_post_read_ctx *ctx = bio->bi_private;
++	chacha20_permute(x);
  
--	if (ext4_bio_encrypted(bio)) {
--		if (bio->bi_status) {
--			fscrypt_release_ctx(bio->bi_private);
--		} else {
--			fscrypt_enqueue_decrypt_bio(bio->bi_private, bio);
--			return;
--		}
-+		ctx->cur_step = STEP_INITIAL;
-+		bio_post_read_processing(ctx);
-+		return;
- 	}
--	bio_for_each_segment_all(bv, bio, i) {
--		struct page *page = bv->bv_page;
-+	__read_end_io(bio);
-+}
+ 	for (i = 0; i < ARRAY_SIZE(x); i++)
+-		out[i] = cpu_to_le32(x[i] + state[i]);
++		stream[i] = cpu_to_le32(x[i] + state[i]);
  
--		if (!bio->bi_status) {
--			SetPageUptodate(page);
--		} else {
--			ClearPageUptodate(page);
--			SetPageError(page);
--		}
--		unlock_page(page);
-+static inline loff_t ext4_readpage_limit(struct inode *inode)
-+{
-+#ifdef CONFIG_EXT4_FS_VERITY
-+	if (ext4_verity_inode(inode)) {
-+		if (inode->i_verity_info)
-+			/* limit to end of metadata region */
-+			return fsverity_full_i_size(inode);
-+		/*
-+		 * fsverity_info is currently being set up and no user reads are
-+		 * allowed yet.  It's easiest to just not enforce a limit yet.
-+		 */
-+		return inode->i_sb->s_maxbytes;
- 	}
--
--	bio_put(bio);
-+#endif
-+	return i_size_read(inode);
+ 	state[12]++;
  }
- 
- int ext4_mpage_readpages(struct address_space *mapping,
-@@ -140,7 +264,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
- 
- 		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
- 		last_block = block_in_file + nr_pages * blocks_per_page;
--		last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
-+		last_block_in_file = (ext4_readpage_limit(inode) +
-+				      blocksize - 1) >> blkbits;
- 		if (last_block > last_block_in_file)
- 			last_block = last_block_in_file;
- 		page_block = 0;
-@@ -240,19 +365,15 @@ int ext4_mpage_readpages(struct address_space *mapping,
- 			bio = NULL;
- 		}
- 		if (bio == NULL) {
--			struct fscrypt_ctx *ctx = NULL;
-+			struct bio_post_read_ctx *ctx;
- 
--			if (ext4_encrypted_inode(inode) &&
--			    S_ISREG(inode->i_mode)) {
--				ctx = fscrypt_get_ctx(inode, GFP_NOFS);
--				if (IS_ERR(ctx))
--					goto set_error_page;
--			}
- 			bio = bio_alloc(GFP_KERNEL,
- 				min_t(int, nr_pages, BIO_MAX_PAGES));
--			if (!bio) {
--				if (ctx)
--					fscrypt_release_ctx(ctx);
-+			if (!bio)
-+				goto set_error_page;
-+			ctx = get_bio_post_read_ctx(inode, bio, page->index);
-+			if (IS_ERR(ctx)) {
-+				bio_put(bio);
- 				goto set_error_page;
- 			}
- 			bio_set_dev(bio, bdev);
-@@ -292,3 +413,27 @@ int ext4_mpage_readpages(struct address_space *mapping,
- 		submit_bio(bio);
- 	return 0;
- }
+ EXPORT_SYMBOL(chacha20_block);
 +
-+int __init ext4_init_post_read_processing(void)
++/**
++ * hchacha20_block - abbreviated ChaCha20 core, for XChaCha20
++ * @in: input state matrix (16 32-bit words)
++ * @out: output (8 32-bit words)
++ *
++ * HChaCha20 is the ChaCha equivalent of HSalsa20 and is an intermediate step
++ * towards XChaCha20 (see https://cr.yp.to/snuffle/xsalsa-20081128.pdf).
++ * HChaCha20 skips the final addition of the initial state, and outputs only
++ * certain words of the state.  It should not be used for streaming directly.
++ */
++void hchacha20_block(const u32 *in, u32 *out)
 +{
-+	bio_post_read_ctx_cache = KMEM_CACHE(bio_post_read_ctx, 0);
-+	if (!bio_post_read_ctx_cache)
-+		goto fail;
-+	bio_post_read_ctx_pool =
-+		mempool_create_slab_pool(NUM_PREALLOC_POST_READ_CTXS,
-+					 bio_post_read_ctx_cache);
-+	if (!bio_post_read_ctx_pool)
-+		goto fail_free_cache;
-+	return 0;
++	u32 x[16];
 +
-+fail_free_cache:
-+	kmem_cache_destroy(bio_post_read_ctx_cache);
-+fail:
-+	return -ENOMEM;
++	memcpy(x, in, 64);
++
++	chacha20_permute(x);
++
++	memcpy(&out[0], &x[0], 16);
++	memcpy(&out[4], &x[12], 16);
 +}
-+
-+void ext4_destroy_post_read_processing(void)
-+{
-+	mempool_destroy(bio_post_read_ctx_pool);
-+	kmem_cache_destroy(bio_post_read_ctx_cache);
-+}
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index c2f372c634ccb..0a17f7c6f630a 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -6006,6 +6006,10 @@ static int __init ext4_init_fs(void)
- 	if (err)
- 		return err;
- 
-+	err = ext4_init_post_read_processing();
-+	if (err)
-+		goto out6;
-+
- 	err = ext4_init_pageio();
- 	if (err)
- 		goto out5;
-@@ -6044,6 +6048,8 @@ static int __init ext4_init_fs(void)
- out4:
- 	ext4_exit_pageio();
- out5:
-+	ext4_destroy_post_read_processing();
-+out6:
- 	ext4_exit_es();
- 
- 	return err;
++EXPORT_SYMBOL(hchacha20_block);
 -- 
-2.18.0
-
-
-------------------------------------------------------------------------------
-Check out the vibrant tech community on one of the world's most
-engaging tech sites, Slashdot.org! http://sdm.link/slashdot
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.18.0.597.ga71716f1ad-goog
