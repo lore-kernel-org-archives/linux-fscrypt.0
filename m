@@ -1,197 +1,141 @@
-Return-Path: <SRS0=14es=LH=vger.kernel.org=linux-integrity-owner@kernel.org>
+Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 03/10] fs-verity: implement FS_IOC_ENABLE_VERITY ioctl
-Date: Fri, 24 Aug 2018 09:16:35 -0700
-Message-Id: <20180824161642.1144-4-ebiggers@kernel.org>
-In-Reply-To: <20180824161642.1144-1-ebiggers@kernel.org>
-References: <20180824161642.1144-1-ebiggers@kernel.org>
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
-Cc: linux-integrity@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, Victor Hsieh <victorhsieh@google.com>
+Subject: [RFC PATCH 0/9] crypto: HPolyC support
+Date: Mon,  6 Aug 2018 15:32:51 -0700
+Message-Id: <20180806223300.113891-1-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Sender: linux-crypto-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add a function for filesystems to call to implement the
-FS_IOC_ENABLE_VERITY ioctl.  This ioctl performs various validations
-(e.g., checking that the file isn't open for writing), then calls back
-into the filesystem to set the verity bit on the inode.
+Hi all,
 
-This ioctl is used to mark a file as being fs-verity protected, after
-userspace has appended the Merkle tree and other metadata to the file.
+(Please note that this patchset is a true RFC, i.e. we're not ready for
+it to be merged quite yet!)
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/verity/Makefile       |   2 +-
- fs/verity/ioctl.c        | 121 +++++++++++++++++++++++++++++++++++++++
- include/linux/fsverity.h |  11 ++++
- 3 files changed, 133 insertions(+), 1 deletion(-)
- create mode 100644 fs/verity/ioctl.c
+It was officially decided to *not* allow Android devices to use Speck
+encryption [1].  We've been working to find an alternative way to bring
+storage encryption to entry-level Android devices like the inexpensive
+"Android Go" devices sold in developing countries.  Unfortunately, often
+these devices still ship with no encryption, since for cost reasons they
+have to use older CPUs like ARM Cortex-A7; and these CPUs lack the ARMv8
+Cryptography Extensions, making AES-XTS much too slow.
 
-diff --git a/fs/verity/Makefile b/fs/verity/Makefile
-index a6c7cefb61ab7..6450925e3a8b7 100644
---- a/fs/verity/Makefile
-+++ b/fs/verity/Makefile
-@@ -1,3 +1,3 @@
- obj-$(CONFIG_FS_VERITY)	+= fsverity.o
- 
--fsverity-y := hash_algs.o setup.o verify.o
-+fsverity-y := hash_algs.o ioctl.o setup.o verify.o
-diff --git a/fs/verity/ioctl.c b/fs/verity/ioctl.c
-new file mode 100644
-index 0000000000000..993f2afdcc734
---- /dev/null
-+++ b/fs/verity/ioctl.c
-@@ -0,0 +1,121 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * fs/verity/ioctl.c: fs-verity ioctls
-+ *
-+ * Copyright (C) 2018 Google LLC
-+ *
-+ * Originally written by Jaegeuk Kim and Michael Halcrow;
-+ * heavily rewritten by Eric Biggers.
-+ */
-+
-+#include "fsverity_private.h"
-+
-+#include <linux/capability.h>
-+#include <linux/mm.h>
-+#include <linux/mount.h>
-+#include <linux/uaccess.h>
-+
-+/**
-+ * fsverity_ioctl_enable - enable fs-verity on a file
-+ *
-+ * Set the verity bit on a file.  Userspace must have already appended verity
-+ * metadata to the file.
-+ *
-+ * Enabling fs-verity makes the file contents immutable, and the filesystem
-+ * doesn't allow disabling it (other than by replacing the file).
-+ *
-+ * To avoid races with the file contents being modified, no processes must have
-+ * the file open for writing.  This includes the caller!
-+ *
-+ * Return: 0 on success, -errno on failure
-+ */
-+int fsverity_ioctl_enable(struct file *filp, const void __user *arg)
-+{
-+	struct inode *inode = file_inode(filp);
-+	struct fsverity_info *vi;
-+	int err;
-+
-+	/*
-+	 * In principle we need only check 'inode_owner_or_capable(inode)',
-+	 * which would allow non-root users to enable fs-verity on their own
-+	 * files.  But to be conservative, for now restrict this to root-only.
-+	 */
-+	if (!capable(CAP_SYS_ADMIN))
-+		return -EACCES;
-+
-+	if (arg) /* argument is reserved */
-+		return -EINVAL;
-+
-+	if (S_ISDIR(inode->i_mode))
-+		return -EISDIR;
-+
-+	if (!S_ISREG(inode->i_mode))
-+		return -EINVAL;
-+
-+	err = mnt_want_write_file(filp);
-+	if (err)
-+		goto out;
-+
-+	/*
-+	 * Temporarily lock out writers via writable file descriptors or
-+	 * truncate().  This should stabilize the contents of the file as well
-+	 * as its size.  Note that at the end of this ioctl we will unlock
-+	 * writers, but at that point the verity bit will be set (if the ioctl
-+	 * succeeded), preventing future writers.
-+	 */
-+	err = deny_write_access(filp);
-+	if (err) /* -ETXTBSY */
-+		goto out_drop_write;
-+
-+	/*
-+	 * fsync so that the verity bit can't be persisted to disk prior to the
-+	 * data, causing verification errors after a crash.
-+	 */
-+	err = vfs_fsync(filp, 1);
-+	if (err)
-+		goto out_allow_write;
-+
-+	/* Serialize concurrent use of this ioctl on the same inode */
-+	inode_lock(inode);
-+
-+	if (get_fsverity_info(inode)) { /* fs-verity already enabled? */
-+		err = -EEXIST;
-+		goto out_unlock;
-+	}
-+
-+	/* Validate the verity metadata */
-+	vi = create_fsverity_info(inode, true);
-+	if (IS_ERR(vi)) {
-+		err = PTR_ERR(vi);
-+		if (err == -EINVAL) /* distinguish "invalid metadata" case */
-+			err = -EBADMSG;
-+		goto out_unlock;
-+	}
-+
-+	/* Set the verity bit */
-+	err = inode->i_sb->s_vop->set_verity(inode, vi->data_i_size);
-+	if (err)
-+		goto out_free_vi;
-+
-+	/* Invalidate all cached pages, forcing re-verification */
-+	truncate_inode_pages(inode->i_mapping, 0);
-+
-+	/*
-+	 * Set ->i_verity_info, unless another task managed to do it already
-+	 * between ->set_verity() and here.
-+	 */
-+	if (set_fsverity_info(inode, vi))
-+		vi = NULL;
-+	err = 0;
-+out_free_vi:
-+	free_fsverity_info(vi);
-+out_unlock:
-+	inode_unlock(inode);
-+out_allow_write:
-+	allow_write_access(filp);
-+out_drop_write:
-+	mnt_drop_write_file(filp);
-+out:
-+	return err;
-+}
-+EXPORT_SYMBOL_GPL(fsverity_ioctl_enable);
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index 56341f10aa965..c710b6b5fb4a6 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -21,6 +21,9 @@ struct fsverity_operations {
- 
- #if __FS_HAS_VERITY
- 
-+/* ioctl.c */
-+extern int fsverity_ioctl_enable(struct file *filp, const void __user *arg);
-+
- /* setup.c */
- extern int fsverity_file_open(struct inode *inode, struct file *filp);
- extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
-@@ -35,6 +38,14 @@ extern void fsverity_enqueue_verify_work(struct work_struct *work);
- 
- #else /* !__FS_HAS_VERITY */
- 
-+/* ioctl.c */
-+
-+static inline int fsverity_ioctl_enable(struct file *filp,
-+					const void __user *arg)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
- /* setup.c */
- 
- static inline int fsverity_file_open(struct inode *inode, struct file *filp)
+As we explained in detail earlier, e.g. in [2], this is a very
+challenging problem due to the lack of encryption algorithms that meet
+the very strict performance requirements, while still being secure and
+suitable for practical use in dm-crypt and fscrypt.  And as we saw with
+Speck, in this day and age the choice of cryptographic primitives also
+has a large political element, restricting the options even further.
+
+Therefore, we (well, Paul Crowley did the real work) designed a new
+encryption mode, HPolyC.  In essence, HPolyC makes it secure to use the
+ChaCha stream cipher for disk encryption.  HPolyC is specified by our
+paper here: https://eprint.iacr.org/2018/720.pdf ("HPolyC:
+length-preserving encryption for entry-level processors").  Reference
+code and test vectors are here: https://github.com/google/hpolyc.  Many
+of the high-level concepts of HPolyC are not new; similar existing modes
+include XCB, HCTR, HCH, and HMC.  HPolyC and these modes are true
+wide-block modes (tweakable super-pseudorandom permutations), so they
+actually provide a stronger notion of security than XTS.
+
+HPolyC encrypts each message using XChaCha12 or XChaCha20 sandwiched
+between two passes of Poly1305, plus a single block cipher invocation
+(e.g. AES-256) per message.  On ARM Cortex-A7, on 4096-byte messages
+HPolyC-XChaCha12-AES is slightly faster than Speck128/256-XTS.  Note
+that for long messages, the block cipher is not performance-critical
+since it's only invoked once per message; that's why we can use AES in
+HPolyC, despite the fully AES-based encryption modes being too slow.
+
+HPolyC is a construction, not a primitive.  It is proven secure if
+XChaCha and AES are secure, subject to a security bound.  Unless there
+is a mistake in this proof, one therefore does not need to trust HPolyC;
+one need only trust XChaCha (which itself has a security reduction to
+ChaCha) and AES.
+
+This RFC patchset implements HPolyC for Linux's crypto API.  Patches 1-8
+add support for XChaCha20, XChaCha12, and NEON-accelerated Poly1305.
+The final patch adds the actual HPolyC template.  Note: my patches may
+eventually need to be redone on top of Jason Donenfeld's new crypto
+library for WireGuard.  But, I decided to send them out now anyway since
+there was a strong desire to give HPolyC a wider audience and I had
+already written the patches, and to inform the design discussion for the
+new crypto library.
+
+We attest that no "backdoor" or other weakness was inserted into HPolyC,
+its implementation, or any other aspect of our work; and that to the
+best of our knowledge, HPolyC's security proof is correct.  You don't
+have to trust us, though: since HPolyC is a construction, not a
+primitive, its security proof can be independently verified by anyone.
+We invite additional independent review of HPolyC; and out of caution
+(since we did publish our paper only very recently, and we are only
+human, and humans can make mistakes even in proofs), we recommend that
+this patchset not be merged or used in production quite yet.  Also, this
+proposal is not final, and may yet be changed if improvements are found.
+
+This patchset can also be found in git at
+https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+branch "hpolyc-v1".
+
+Footnotes:
+
+[1] Yes, that means we won't actually be needing my implementations of
+    Speck for the crypto API.  So, we no longer have any objection to
+    them being removed.  I just ask that if anyone would like to restart
+    that discussion, you please start a new thread rather than using
+    this one, so as to not derail any discussion on HPolyC.
+
+[2] https://www.spinics.net/lists/linux-crypto/msg33000.html
+
+Eric Biggers (9):
+  crypto: chacha20-generic - add HChaCha20 library function
+  crypto: chacha20-generic - add XChaCha20 support
+  crypto: chacha20-generic - refactor to allow varying number of rounds
+  crypto: chacha - add XChaCha12 support
+  crypto: arm/chacha20 - add XChaCha20 support
+  crypto: arm/chacha20 - refactor to allow varying number of rounds
+  crypto: arm/chacha - add XChaCha12 support
+  crypto: arm/poly1305 - add NEON accelerated Poly1305 implementation
+  crypto: hpolyc - add support for the HPolyC encryption mode
+
+ arch/arm/crypto/Kconfig                       |    7 +-
+ arch/arm/crypto/Makefile                      |    6 +-
+ ...hacha20-neon-core.S => chacha-neon-core.S} |  107 +-
+ arch/arm/crypto/chacha-neon-glue.c            |  207 +++
+ arch/arm/crypto/chacha20-neon-glue.c          |  127 --
+ arch/arm/crypto/poly1305-neon-core.S          | 1115 ++++++++++++++
+ arch/arm/crypto/poly1305-neon-glue.c          |  325 ++++
+ arch/arm64/crypto/chacha20-neon-glue.c        |   40 +-
+ arch/x86/crypto/chacha20_glue.c               |   52 +-
+ crypto/Kconfig                                |   48 +-
+ crypto/Makefile                               |    3 +-
+ crypto/chacha20_generic.c                     |  136 --
+ crypto/chacha20poly1305.c                     |   10 +-
+ crypto/chacha_generic.c                       |  216 +++
+ crypto/hpolyc.c                               |  577 ++++++++
+ crypto/testmgr.c                              |   24 +
+ crypto/testmgr.h                              | 1313 +++++++++++++++++
+ drivers/char/random.c                         |   50 +-
+ include/crypto/chacha.h                       |   56 +
+ include/crypto/chacha20.h                     |   28 -
+ lib/Makefile                                  |    2 +-
+ lib/{chacha20.c => chacha.c}                  |   61 +-
+ 22 files changed, 4083 insertions(+), 427 deletions(-)
+ rename arch/arm/crypto/{chacha20-neon-core.S => chacha-neon-core.S} (89%)
+ create mode 100644 arch/arm/crypto/chacha-neon-glue.c
+ delete mode 100644 arch/arm/crypto/chacha20-neon-glue.c
+ create mode 100644 arch/arm/crypto/poly1305-neon-core.S
+ create mode 100644 arch/arm/crypto/poly1305-neon-glue.c
+ delete mode 100644 crypto/chacha20_generic.c
+ create mode 100644 crypto/chacha_generic.c
+ create mode 100644 crypto/hpolyc.c
+ create mode 100644 include/crypto/chacha.h
+ delete mode 100644 include/crypto/chacha20.h
+ rename lib/{chacha20.c => chacha.c} (57%)
+
 -- 
-2.18.0
+2.18.0.597.ga71716f1ad-goog
