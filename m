@@ -1,12 +1,12 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:45120 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:45160 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1731308AbeHGAqO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1732394AbeHGAqO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 6 Aug 2018 20:46:14 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 4/9] crypto: chacha - add XChaCha12 support
-Date: Mon,  6 Aug 2018 15:32:55 -0700
-Message-Id: <20180806223300.113891-5-ebiggers@kernel.org>
+Subject: [RFC PATCH 9/9] crypto: hpolyc - add support for the HPolyC encryption mode
+Date: Mon,  6 Aug 2018 15:33:00 -0700
+Message-Id: <20180806223300.113891-10-ebiggers@kernel.org>
 In-Reply-To: <20180806223300.113891-1-ebiggers@kernel.org>
 References: <20180806223300.113891-1-ebiggers@kernel.org>
 MIME-Version: 1.0
@@ -18,791 +18,915 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Now that the generic implementation of ChaCha20 has been refactored to
-allow varying the number of rounds, add support for XChaCha12, which is
-the XSalsa construction applied to ChaCha12.  ChaCha12 is one of the
-three ciphers specified by the original ChaCha paper
-(https://cr.yp.to/chacha/chacha-20080128.pdf: "ChaCha, a variant of
-Salsa20"), alongside ChaCha8 and ChaCha20.  ChaCha12 is faster than
-ChaCha20, but has a lower security margin.  Still, it hasn't been broken
-yet, as the best known attack on ChaCha makes it through only 7 rounds.
+Add support for HPolyC, which is a tweakable, length-preserving
+encryption mode that encrypts each message using XChaCha sandwiched
+between two passes of Poly1305, and one invocation of a block cipher
+such as AES.  HPolyC was designed by Paul Crowley and is fully specified
+by our paper https://eprint.iacr.org/2018/720.pdf
+("HPolyC: length-preserving encryption for entry-level processors").
+HPolyC is similar to some existing modes such as XCB, HCTR, HCH, and
+HMC, but by necessity it has some novelties.  See the paper for details;
+this patch only provides a brief overview and an explanation of why
+HPolyC is needed in the crypto API.
 
-We need XChaCha12 support so that it can be used in the construction
-HPolyC-XChaCha12-AES, which can provide reasonably fast disk/file
-encryption on low-end devices where AES-XTS is too slow as the CPUs lack
-AES instructions.  This is an alternative to using a lightweight block
-cipher such as Speck128 in XTS mode.  We'd prefer XChaCha20, but it's
-too slow on some of our target devices, so at least in some cases we do
-need the XChaCha12-based version.
+HPolyC is suitable for disk/file encryption with dm-crypt and fscrypt,
+where currently the only other suitable options in the kernel are block
+cipher modes such as XTS.  Moreover, on low-end devices whose processors
+lack AES instructions (e.g. ARM Cortex-A7), AES-XTS is much too slow to
+provide an acceptable user experience, resulting in "lightweight" block
+ciphers such as Speck being the only viable option on these devices.
+However, Speck is considered controversial in some circles; and other
+published lightweight block ciphers are too slow in software, haven't
+received sufficient cryptanalysis, or have other issues.
 
-Note that it would be trivial to add vanilla ChaCha12 in addition to
-XChaCha12.  However, it is omitted for now as we don't currently need
-it, and users should generally prefer the existing 20-round variant.
+Stream ciphers such as ChaCha perform much better but are insecure if
+naively used directly in dm-crypt or fscrypt, due to the IV reuse when
+data is overwritten.  Even restricting the threat model to offline
+attacks only isn't enough, since modern flash storage devices make no
+guarantee that "overwrites" are really overwrites, due to wear-leveling.
 
-Like discussed in the patch that introduced XChaCha20 support, I
-considered splitting the code into separate chacha-common, chacha20,
-xchacha20, and xchacha12 modules, so that these algorithms could be
-enabled/disabled independently.  However, since nearly all the code is
-shared anyway, I ultimately decided there would have been little benefit
-to the added complexity.
+Of course, the ideal solution is to store unique nonces on-disk, ideally
+alongside authentication tags.  Unfortunately, this is usually
+impractical.  Hardware support for per-sector metadata is extremely
+rare, especially in consumer-grade devices.  Software workarounds for
+this limitation struggle with the crash consistency problem (often
+ignored by academic cryptographers): the crypto metadata MUST be written
+atomically with regards to the data.  This can be solved with data
+journaling, e.g. as dm-integrity does, but that has a severe performance
+penalty.  Or, for file-level encryption only, per-block metadata is
+possible on copy-on-write and log-structured filesystems.  However, the
+most common Linux filesystems, ext4 and xfs, are neither; and even f2fs
+is not fully log-structured as it sometimes overwrites data in-place.  A
+solution that works for more than just btrfs and zfs is needed.
+
+So, we're mostly stuck with length-preserving encryption for now.
+HPolyC therefore provides a way to securely use ChaCha in this context.
+Essentially, it uses a hash-XOR-hash construction where a Poly1305 hash
+of the tweak and message is used as the nonce for XChaCha, resulting in
+a different nonce whenever either the message or tweak is changed.  A
+block cipher invocation is also needed, but only once per message.  Note
+that Poly1305 is much faster than ChaCha20, making HPolyC faster than
+might be first assumed; still, due to the overhead of the two Poly1305
+passes, some users will need ChaCha12 to get acceptable performance.
+See the Performance section of the paper.  (Currently, ChaCha12 is still
+secure, though it has a lower security margin.)
+
+HPolyC has a proof (section 5 of the paper) that shows it is secure if
+the underlying primitives are secure, subject to a security bound.
+Unless there is a mistake in this proof, one therefore does not need to
+"trust" HPolyC; they need only trust XChaCha (which itself has a
+security reduction to ChaCha) and AES.  Unlike XTS, HPolyC is also a
+true wide-block mode, or tweakable super-pseudorandom permutation:
+changing one plaintext bit affects all ciphertext bits, and vice versa.
+
+HPolyC supports any message length >= 16 bytes without any need for
+"ciphertext stealing".  Thus, it will also be useful for fscrypt
+filenames encryption, where CBC-CTS is currently used.
+
+We implement HPolyC as a template that wraps existing Poly1305, XChaCha,
+and block cipher implementations.  So, it can be used with either
+XChaCha20 or XChaCha12, and with any block cipher with a 256-bit key and
+128-bit block size -- though we recommend and plan to use AES-256, even
+on processors without AES instructions, as the block cipher performance
+is not critical when it's invoked only once per message.  We include
+test vectors for HPolyC-XChaCha20-AES and HPolyC-XChaCha12-AES.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- crypto/Kconfig          |  10 +-
- crypto/chacha_generic.c |  26 +-
- crypto/testmgr.c        |   6 +
- crypto/testmgr.h        | 578 ++++++++++++++++++++++++++++++++++++++++
- include/crypto/chacha.h |   9 +
- lib/chacha.c            |   6 +-
- 6 files changed, 629 insertions(+), 6 deletions(-)
+ crypto/Kconfig   |  28 +++
+ crypto/Makefile  |   1 +
+ crypto/hpolyc.c  | 577 +++++++++++++++++++++++++++++++++++++++++++++++
+ crypto/testmgr.c |  12 +
+ crypto/testmgr.h | 158 +++++++++++++
+ 5 files changed, 776 insertions(+)
+ create mode 100644 crypto/hpolyc.c
 
 diff --git a/crypto/Kconfig b/crypto/Kconfig
-index a58e4b1f7967..d35d423bb4d1 100644
+index d35d423bb4d1..4b412116b888 100644
 --- a/crypto/Kconfig
 +++ b/crypto/Kconfig
-@@ -1437,10 +1437,10 @@ config CRYPTO_SALSA20
- 	  Bernstein <djb@cr.yp.to>. See <http://cr.yp.to/snuffle.html>
+@@ -495,6 +495,34 @@ config CRYPTO_KEYWRAP
+ 	  Support for key wrapping (NIST SP800-38F / RFC3394) without
+ 	  padding.
  
- config CRYPTO_CHACHA20
--	tristate "ChaCha20 stream cipher algorithms"
-+	tristate "ChaCha stream cipher algorithms"
- 	select CRYPTO_BLKCIPHER
- 	help
--	  The ChaCha20 and XChaCha20 stream cipher algorithms.
-+	  The ChaCha20, XChaCha20, and XChaCha12 stream cipher algorithms.
- 
- 	  ChaCha20 is a 256-bit high-speed stream cipher designed by Daniel J.
- 	  Bernstein and further specified in RFC7539 for use in IETF protocols.
-@@ -1453,6 +1453,12 @@ config CRYPTO_CHACHA20
- 	  while provably retaining ChaCha20's security.  See also:
- 	  <https://cr.yp.to/snuffle/xsalsa-20081128.pdf>
- 
-+	  XChaCha12 is XChaCha20 reduced to 12 rounds, with correspondingly
-+	  reduced security margin but increased performance.  It can be needed
-+	  in some very performance-sensitive scenarios.  There is no known
-+	  attack on XChaCha12 (or ChaCha12) yet, but it has a higher risk of
-+	  being broken than the 20-round variant.
++config CRYPTO_HPOLYC
++	tristate "HPolyC support"
++	select CRYPTO_CHACHA20
++	select CRYPTO_POLY1305
++	help
++	  HPolyC is a tweakable, length-preserving encryption
++	  construction that encrypts each message using XChaCha
++	  sandwiched between two passes of Poly1305, and one invocation
++	  of a block cipher such as AES on a single 128-bit block.
 +
- config CRYPTO_CHACHA20_X86_64
- 	tristate "ChaCha20 cipher algorithm (x86_64/SSSE3/AVX2)"
- 	depends on X86 && 64BIT
-diff --git a/crypto/chacha_generic.c b/crypto/chacha_generic.c
-index 46496997847a..0a0b66c32d03 100644
---- a/crypto/chacha_generic.c
-+++ b/crypto/chacha_generic.c
-@@ -1,5 +1,5 @@
- /*
-- * ChaCha20 (RFC7539) and XChaCha20 stream cipher algorithms
-+ * ChaCha and XChaCha stream ciphers, including ChaCha20 (RFC7539)
-  *
-  * Copyright (C) 2015 Martin Willi
-  * Copyright (C) 2018 Google LLC
-@@ -105,6 +105,13 @@ int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
- }
- EXPORT_SYMBOL_GPL(crypto_chacha20_setkey);
++	  Unlike bare stream ciphers such as ChaCha and
++	  ciphertext-expanding modes (e.g. AEADs), HPolyC is suitable for
++	  disk and file contents encryption, e.g. with dm-crypt or
++	  fscrypt, where normally only block ciphers in the XTS, LRW, or
++	  CBC-ESSIV modes of operation are suitable.  HPolyC was designed
++	  primarily for this use case on low-end processors that lack AES
++	  instructions, resulting in traditional modes being too slow
++	  unless used with certain "lightweight" block ciphers such as
++	  Speck, but where XChaCha and Poly1305 are reasonably fast.
++
++	  HPolyC's security is proven reducible to that of the underlying
++	  XChaCha variant and block cipher, subject to a security bound.
++	  Unlike XTS, HPolyC is a true wide-block encryption mode, so it
++	  actually provides an even stronger notion of security than XTS,
++	  subject to the security bound.
++
++	  If unsure, say N.
++
+ comment "Hash modes"
  
-+int crypto_chacha12_setkey(struct crypto_skcipher *tfm, const u8 *key,
-+			   unsigned int keysize)
+ config CRYPTO_CMAC
+diff --git a/crypto/Makefile b/crypto/Makefile
+index 0701c4577dc6..e0af9efd6a08 100644
+--- a/crypto/Makefile
++++ b/crypto/Makefile
+@@ -83,6 +83,7 @@ obj-$(CONFIG_CRYPTO_LRW) += lrw.o
+ obj-$(CONFIG_CRYPTO_XTS) += xts.o
+ obj-$(CONFIG_CRYPTO_CTR) += ctr.o
+ obj-$(CONFIG_CRYPTO_KEYWRAP) += keywrap.o
++obj-$(CONFIG_CRYPTO_HPOLYC) += hpolyc.o
+ obj-$(CONFIG_CRYPTO_GCM) += gcm.o
+ obj-$(CONFIG_CRYPTO_CCM) += ccm.o
+ obj-$(CONFIG_CRYPTO_CHACHA20POLY1305) += chacha20poly1305.o
+diff --git a/crypto/hpolyc.c b/crypto/hpolyc.c
+new file mode 100644
+index 000000000000..d62f289e2705
+--- /dev/null
++++ b/crypto/hpolyc.c
+@@ -0,0 +1,577 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * HPolyC: length-preserving encryption for entry-level processors
++ *
++ * Reference: https://eprint.iacr.org/2018/720.pdf
++ *
++ * Copyright (c) 2018 Google LLC
++ */
++
++#include <crypto/algapi.h>
++#include <crypto/chacha.h>
++#include <crypto/internal/hash.h>
++#include <crypto/internal/skcipher.h>
++#include <crypto/scatterwalk.h>
++#include <linux/module.h>
++
++#include "internal.h"
++
++/* Poly1305 and block cipher block size */
++#define HPOLYC_BLOCK_SIZE		16
++
++/* Key sizes in bytes */
++#define HPOLYC_STREAM_KEY_SIZE		32	/* XChaCha stream key (K_S) */
++#define HPOLYC_HASH_KEY_SIZE		16	/* Poly1305 hash key (K_H) */
++#define HPOLYC_BLKCIPHER_KEY_SIZE	32	/* Block cipher key (K_E) */
++
++/*
++ * The HPolyC specification allows any tweak (IV) length <= UINT32_MAX bits, but
++ * Linux's crypto API currently only allows algorithms to support a single IV
++ * length.  We choose 12 bytes, which is the longest tweak that fits into a
++ * single 16-byte Poly1305 block (as HPolyC reserves 4 bytes for the tweak
++ * length), for the fastest performance.  And it's good enough for disk
++ * encryption which really only needs an 8-byte tweak anyway.
++ */
++#define HPOLYC_IV_SIZE		12
++
++struct hpolyc_instance_ctx {
++	struct crypto_ahash_spawn poly1305_spawn;
++	struct crypto_skcipher_spawn xchacha_spawn;
++	struct crypto_spawn blkcipher_spawn;
++};
++
++struct hpolyc_tfm_ctx {
++	struct crypto_ahash *poly1305;
++	struct crypto_skcipher *xchacha;
++	struct crypto_cipher *blkcipher;
++	u8 poly1305_key[HPOLYC_HASH_KEY_SIZE];	/* K_H (unclamped) */
++};
++
++struct hpolyc_request_ctx {
++
++	/* First part of data passed to the two Poly1305 hash steps */
++	struct {
++		u8 rkey[HPOLYC_BLOCK_SIZE];
++		u8 skey[HPOLYC_BLOCK_SIZE];
++		__le32 tweak_len;
++		u8 tweak[HPOLYC_IV_SIZE];
++	} hash_head;
++	struct scatterlist hash_sg[2];
++
++	/*
++	 * Buffer for rightmost portion of data, i.e. the last 16-byte block
++	 *
++	 *    P_L => P_M => C_M => C_R when encrypting, or
++	 *    C_R => C_M => P_M => P_L when decrypting.
++	 *
++	 * Also used to build the XChaCha IV as C_M || 1 || 0^63 || 0^64.
++	 */
++	u8 rbuf[XCHACHA_IV_SIZE];
++
++	bool enc; /* true if encrypting, false if decrypting */
++
++	/* Sub-requests, must be last */
++	union {
++		struct ahash_request poly1305_req;
++		struct skcipher_request xchacha_req;
++	} u;
++};
++
++/*
++ * Given the 256-bit XChaCha stream key K_S, derive the 128-bit Poly1305 hash
++ * key K_H and the 256-bit block cipher key K_E as follows:
++ *
++ *     K_H || K_E || ... = XChaCha(key=K_S, nonce=1||0^191)
++ *
++ * Note that this denotes using bits from the XChaCha keystream, which here we
++ * get indirectly by encrypting a buffer containing all 0's.
++ */
++static int hpolyc_setkey(struct crypto_skcipher *tfm, const u8 *key,
++			 unsigned int keylen)
 +{
-+	return chacha_setkey(tfm, key, keysize, 12);
++	struct hpolyc_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
++	struct {
++		u8 iv[XCHACHA_IV_SIZE];
++		u8 derived_keys[HPOLYC_HASH_KEY_SIZE +
++				HPOLYC_BLKCIPHER_KEY_SIZE];
++		struct scatterlist sg;
++		struct crypto_wait wait;
++		struct skcipher_request req; /* must be last */
++	} *data;
++	int err;
++
++	/* Set XChaCha key */
++	crypto_skcipher_clear_flags(tctx->xchacha, CRYPTO_TFM_REQ_MASK);
++	crypto_skcipher_set_flags(tctx->xchacha,
++				  crypto_skcipher_get_flags(tfm) &
++				  CRYPTO_TFM_REQ_MASK);
++	err = crypto_skcipher_setkey(tctx->xchacha, key, keylen);
++	crypto_skcipher_set_flags(tfm,
++				  crypto_skcipher_get_flags(tctx->xchacha) &
++				  CRYPTO_TFM_RES_MASK);
++	if (err)
++		return err;
++
++	/* Derive the Poly1305 and block cipher keys */
++	data = kzalloc(sizeof(*data) + crypto_skcipher_reqsize(tctx->xchacha),
++		       GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++	data->iv[0] = 1;
++	sg_init_one(&data->sg, data->derived_keys, sizeof(data->derived_keys));
++	crypto_init_wait(&data->wait);
++	skcipher_request_set_tfm(&data->req, tctx->xchacha);
++	skcipher_request_set_callback(&data->req, CRYPTO_TFM_REQ_MAY_SLEEP |
++						  CRYPTO_TFM_REQ_MAY_BACKLOG,
++				      crypto_req_done, &data->wait);
++	skcipher_request_set_crypt(&data->req, &data->sg, &data->sg,
++				   sizeof(data->derived_keys), data->iv);
++	err = crypto_wait_req(crypto_skcipher_encrypt(&data->req),
++			      &data->wait);
++	if (err)
++		goto out;
++
++	/*
++	 * Save the Poly1305 key.  It is not clamped here, since that is handled
++	 * by the Poly1305 implementation.
++	 */
++	memcpy(tctx->poly1305_key, data->derived_keys, HPOLYC_HASH_KEY_SIZE);
++
++	/* Set block cipher key */
++	crypto_cipher_clear_flags(tctx->blkcipher, CRYPTO_TFM_REQ_MASK);
++	crypto_cipher_set_flags(tctx->blkcipher,
++				crypto_skcipher_get_flags(tfm) &
++				CRYPTO_TFM_REQ_MASK);
++	err = crypto_cipher_setkey(tctx->blkcipher,
++				   &data->derived_keys[HPOLYC_HASH_KEY_SIZE],
++				   HPOLYC_BLKCIPHER_KEY_SIZE);
++	crypto_skcipher_set_flags(tfm,
++				  crypto_cipher_get_flags(tctx->blkcipher) &
++				  CRYPTO_TFM_RES_MASK);
++out:
++	kzfree(data);
++	return err;
 +}
-+EXPORT_SYMBOL_GPL(crypto_chacha12_setkey);
 +
- int crypto_chacha_crypt(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-@@ -167,6 +174,21 @@ static struct skcipher_alg algs[] = {
- 		.setkey			= crypto_chacha20_setkey,
- 		.encrypt		= crypto_xchacha_crypt,
- 		.decrypt		= crypto_xchacha_crypt,
-+	}, {
-+		.base.cra_name		= "xchacha12",
-+		.base.cra_driver_name	= "xchacha12-generic",
-+		.base.cra_priority	= 100,
-+		.base.cra_blocksize	= 1,
-+		.base.cra_ctxsize	= sizeof(struct chacha_ctx),
-+		.base.cra_module	= THIS_MODULE,
++static inline void async_done(struct crypto_async_request *areq, int err,
++			      int (*next_step)(struct skcipher_request *, u32))
++{
++	struct skcipher_request *req = areq->data;
 +
-+		.min_keysize		= CHACHA_KEY_SIZE,
-+		.max_keysize		= CHACHA_KEY_SIZE,
-+		.ivsize			= XCHACHA_IV_SIZE,
-+		.chunksize		= CHACHA_BLOCK_SIZE,
-+		.setkey			= crypto_chacha12_setkey,
-+		.encrypt		= crypto_xchacha_crypt,
-+		.decrypt		= crypto_xchacha_crypt,
- 	}
- };
- 
-@@ -190,3 +212,5 @@ MODULE_ALIAS_CRYPTO("chacha20");
- MODULE_ALIAS_CRYPTO("chacha20-generic");
- MODULE_ALIAS_CRYPTO("xchacha20");
- MODULE_ALIAS_CRYPTO("xchacha20-generic");
-+MODULE_ALIAS_CRYPTO("xchacha12");
-+MODULE_ALIAS_CRYPTO("xchacha12-generic");
++	if (err)
++		goto out;
++
++	err = next_step(req, req->base.flags & ~CRYPTO_TFM_REQ_MAY_SLEEP);
++	if (err == -EINPROGRESS || err == -EBUSY)
++		return;
++out:
++	skcipher_request_complete(req, err);
++}
++
++/*
++ * Following completion of the second hash step, do the second bitwise inversion
++ * to complete the identity a - b = ~(a + ~(b)), then copy the result to the
++ * last block of the destination scatterlist.  This completes HPolyC.
++ */
++static int hpolyc_finish(struct skcipher_request *req, u32 flags)
++{
++	struct hpolyc_request_ctx *rctx = skcipher_request_ctx(req);
++	int i;
++
++	for (i = 0; i < HPOLYC_BLOCK_SIZE; i++)
++		rctx->rbuf[i] ^= 0xff;
++
++	scatterwalk_map_and_copy(rctx->rbuf, req->dst,
++				 req->cryptlen - HPOLYC_BLOCK_SIZE,
++				 HPOLYC_BLOCK_SIZE, 1);
++	return 0;
++}
++
++static void hpolyc_hash2_done(struct crypto_async_request *areq, int err)
++{
++	async_done(areq, err, hpolyc_finish);
++}
++
++/*
++ * Following completion of the XChaCha step, do the second hash step to compute
++ * the last output block.  Note that the last block needs to be subtracted
++ * rather than added, which isn't compatible with typical Poly1305
++ * implementations.  Thus, we use the identity a - b = ~(a + (~b)).
++ */
++static int hpolyc_hash2_step(struct skcipher_request *req, u32 flags)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	const struct hpolyc_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
++	struct hpolyc_request_ctx *rctx = skcipher_request_ctx(req);
++	int i;
++
++	/* If decrypting, decrypt C_M with the block cipher to get P_M */
++	if (!rctx->enc)
++		crypto_cipher_decrypt_one(tctx->blkcipher, rctx->rbuf,
++					  rctx->rbuf);
++
++	for (i = 0; i < HPOLYC_BLOCK_SIZE; i++)
++		rctx->hash_head.skey[i] = rctx->rbuf[i] ^ 0xff;
++
++	sg_chain(rctx->hash_sg, 2, req->dst);
++
++	ahash_request_set_tfm(&rctx->u.poly1305_req, tctx->poly1305);
++	ahash_request_set_crypt(&rctx->u.poly1305_req, rctx->hash_sg,
++				rctx->rbuf, sizeof(rctx->hash_head) +
++				req->cryptlen - HPOLYC_BLOCK_SIZE);
++	ahash_request_set_callback(&rctx->u.poly1305_req, flags,
++				   hpolyc_hash2_done, req);
++	return crypto_ahash_digest(&rctx->u.poly1305_req) ?:
++		hpolyc_finish(req, flags);
++}
++
++static void hpolyc_xchacha_done(struct crypto_async_request *areq, int err)
++{
++	async_done(areq, err, hpolyc_hash2_step);
++}
++
++static int hpolyc_xchacha_step(struct skcipher_request *req, u32 flags)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	const struct hpolyc_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
++	struct hpolyc_request_ctx *rctx = skcipher_request_ctx(req);
++	unsigned int xchacha_len;
++
++	/* If encrypting, encrypt P_M with the block cipher to get C_M */
++	if (rctx->enc)
++		crypto_cipher_encrypt_one(tctx->blkcipher, rctx->rbuf,
++					  rctx->rbuf);
++
++	/* Initialize the rest of the XChaCha IV (first part is C_M) */
++	rctx->rbuf[HPOLYC_BLOCK_SIZE] = 1;
++	memset(&rctx->rbuf[HPOLYC_BLOCK_SIZE + 1], 0,
++	       sizeof(rctx->rbuf) - (HPOLYC_BLOCK_SIZE + 1));
++
++	/*
++	 * XChaCha needs to be done on all the data except the last 16 bytes;
++	 * for disk encryption that usually means 4080 or 496 bytes.  But ChaCha
++	 * implementations tend to be most efficient when passed a whole number
++	 * of 64-byte ChaCha blocks, or sometimes even a multiple of 256 bytes.
++	 * And here it doesn't matter whether the last 16 bytes are written to,
++	 * as the second hash step will overwrite them.  Thus, round the XChaCha
++	 * length up to the next 64-byte boundary if possible.
++	 */
++	xchacha_len = req->cryptlen - HPOLYC_BLOCK_SIZE;
++	if (round_up(xchacha_len, CHACHA_BLOCK_SIZE) <= req->cryptlen)
++		xchacha_len = round_up(xchacha_len, CHACHA_BLOCK_SIZE);
++
++	skcipher_request_set_tfm(&rctx->u.xchacha_req, tctx->xchacha);
++	skcipher_request_set_crypt(&rctx->u.xchacha_req, req->src, req->dst,
++				   xchacha_len, rctx->rbuf);
++	skcipher_request_set_callback(&rctx->u.xchacha_req, flags,
++				      hpolyc_xchacha_done, req);
++	return crypto_skcipher_encrypt(&rctx->u.xchacha_req) ?:
++		hpolyc_hash2_step(req, flags);
++}
++
++static void hpolyc_hash1_done(struct crypto_async_request *areq, int err)
++{
++	async_done(areq, err, hpolyc_xchacha_step);
++}
++
++/*
++ * HPolyC encryption/decryption.
++ *
++ * The first step is to Poly1305-hash the tweak and source data to get P_M (if
++ * encrypting) or C_M (if decrypting), storing the result in rctx->rbuf.
++ * Linux's Poly1305 doesn't use the usual keying mechanism and instead
++ * interprets the data as (rkey, skey, real data), so we pass:
++ *
++ *    1. rkey = poly1305_key
++ *    2. skey = last block of data (P_R or C_R)
++ *    3. tweak block (assuming 12-byte tweak, so it fits in one block)
++ *    4. rest of the data
++ *
++ * We put 1-3 in rctx->hash_head and chain it to the rest from req->src.
++ *
++ * Note: as a future optimization, a keyed version of Poly1305 that is keyed
++ * with the 'rkey' could be implemented, allowing vectorized implementations of
++ * Poly1305 to precompute powers of the key.  Though, that would be most
++ * beneficial on small messages, whereas in the disk/file encryption use case,
++ * longer 512-byte or 4096-byte messages are the most performance-critical.
++ *
++ * Afterwards, we continue on to the XChaCha step.
++ */
++static int hpolyc_crypt(struct skcipher_request *req, bool enc)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	const struct hpolyc_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
++	struct hpolyc_request_ctx *rctx = skcipher_request_ctx(req);
++
++	if (req->cryptlen < HPOLYC_BLOCK_SIZE)
++		return -EINVAL;
++
++	rctx->enc = enc;
++
++	BUILD_BUG_ON(sizeof(rctx->hash_head) % HPOLYC_BLOCK_SIZE != 0);
++	BUILD_BUG_ON(HPOLYC_HASH_KEY_SIZE != HPOLYC_BLOCK_SIZE);
++	BUILD_BUG_ON(sizeof(__le32) + HPOLYC_IV_SIZE != HPOLYC_BLOCK_SIZE);
++	memcpy(rctx->hash_head.rkey, tctx->poly1305_key, HPOLYC_BLOCK_SIZE);
++	scatterwalk_map_and_copy(rctx->hash_head.skey, req->src,
++				 req->cryptlen - HPOLYC_BLOCK_SIZE,
++				 HPOLYC_BLOCK_SIZE, 0);
++	rctx->hash_head.tweak_len = cpu_to_le32(8 * HPOLYC_IV_SIZE);
++	memcpy(rctx->hash_head.tweak, req->iv, HPOLYC_IV_SIZE);
++
++	sg_init_table(rctx->hash_sg, 2);
++	sg_set_buf(&rctx->hash_sg[0], &rctx->hash_head,
++		   sizeof(rctx->hash_head));
++	sg_chain(rctx->hash_sg, 2, req->src);
++
++	ahash_request_set_tfm(&rctx->u.poly1305_req, tctx->poly1305);
++	ahash_request_set_crypt(&rctx->u.poly1305_req, rctx->hash_sg,
++				rctx->rbuf, sizeof(rctx->hash_head) +
++				req->cryptlen - HPOLYC_BLOCK_SIZE);
++	ahash_request_set_callback(&rctx->u.poly1305_req, req->base.flags,
++				   hpolyc_hash1_done, req);
++	return crypto_ahash_digest(&rctx->u.poly1305_req) ?:
++		hpolyc_xchacha_step(req, req->base.flags);
++}
++
++static int hpolyc_encrypt(struct skcipher_request *req)
++{
++	return hpolyc_crypt(req, true);
++}
++
++static int hpolyc_decrypt(struct skcipher_request *req)
++{
++	return hpolyc_crypt(req, false);
++}
++
++static int hpolyc_init_tfm(struct crypto_skcipher *tfm)
++{
++	struct skcipher_instance *inst = skcipher_alg_instance(tfm);
++	struct hpolyc_instance_ctx *ictx = skcipher_instance_ctx(inst);
++	struct hpolyc_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
++	struct crypto_ahash *poly1305;
++	struct crypto_skcipher *xchacha;
++	struct crypto_cipher *blkcipher;
++	int err;
++
++	poly1305 = crypto_spawn_ahash(&ictx->poly1305_spawn);
++	if (IS_ERR(poly1305))
++		return PTR_ERR(poly1305);
++
++	xchacha = crypto_spawn_skcipher(&ictx->xchacha_spawn);
++	if (IS_ERR(xchacha)) {
++		err = PTR_ERR(xchacha);
++		goto err_free_poly1305;
++	}
++
++	blkcipher = crypto_spawn_cipher(&ictx->blkcipher_spawn);
++	if (IS_ERR(blkcipher)) {
++		err = PTR_ERR(blkcipher);
++		goto err_free_xchacha;
++	}
++
++	tctx->poly1305 = poly1305;
++	tctx->xchacha = xchacha;
++	tctx->blkcipher = blkcipher;
++
++	crypto_skcipher_set_reqsize(tfm,
++				    offsetof(struct hpolyc_request_ctx, u) +
++				    max(FIELD_SIZEOF(struct hpolyc_request_ctx,
++						     u.poly1305_req) +
++					crypto_ahash_reqsize(poly1305),
++					FIELD_SIZEOF(struct hpolyc_request_ctx,
++						     u.xchacha_req) +
++					crypto_skcipher_reqsize(xchacha)));
++	return 0;
++
++err_free_xchacha:
++	crypto_free_skcipher(xchacha);
++err_free_poly1305:
++	crypto_free_ahash(poly1305);
++	return err;
++}
++
++static void hpolyc_exit_tfm(struct crypto_skcipher *tfm)
++{
++	struct hpolyc_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
++
++	crypto_free_ahash(tctx->poly1305);
++	crypto_free_skcipher(tctx->xchacha);
++	crypto_free_cipher(tctx->blkcipher);
++}
++
++static void hpolyc_free_instance(struct skcipher_instance *inst)
++{
++	struct hpolyc_instance_ctx *ictx = skcipher_instance_ctx(inst);
++
++	crypto_drop_ahash(&ictx->poly1305_spawn);
++	crypto_drop_skcipher(&ictx->xchacha_spawn);
++	crypto_drop_spawn(&ictx->blkcipher_spawn);
++	kfree(inst);
++}
++
++static int hpolyc_create(struct crypto_template *tmpl, struct rtattr **tb)
++{
++	struct crypto_attr_type *algt;
++	u32 mask;
++	const char *xchacha_name;
++	const char *blkcipher_name;
++	struct skcipher_instance *inst;
++	struct hpolyc_instance_ctx *ictx;
++	struct crypto_alg *poly1305_alg;
++	struct hash_alg_common *poly1305;
++	struct crypto_alg *blkcipher_alg;
++	struct skcipher_alg *xchacha_alg;
++	int err;
++
++	algt = crypto_get_attr_type(tb);
++	if (IS_ERR(algt))
++		return PTR_ERR(algt);
++
++	if ((algt->type ^ CRYPTO_ALG_TYPE_SKCIPHER) & algt->mask)
++		return -EINVAL;
++
++	mask = crypto_requires_sync(algt->type, algt->mask);
++
++	xchacha_name = crypto_attr_alg_name(tb[1]);
++	if (IS_ERR(xchacha_name))
++		return PTR_ERR(xchacha_name);
++
++	blkcipher_name = crypto_attr_alg_name(tb[2]);
++	if (IS_ERR(blkcipher_name))
++		return PTR_ERR(blkcipher_name);
++
++	inst = kzalloc(sizeof(*inst) + sizeof(*ictx), GFP_KERNEL);
++	if (!inst)
++		return -ENOMEM;
++	ictx = skcipher_instance_ctx(inst);
++
++	/* Poly1305 */
++
++	poly1305_alg = crypto_find_alg("poly1305", &crypto_ahash_type, 0, mask);
++	if (IS_ERR(poly1305_alg)) {
++		err = PTR_ERR(poly1305_alg);
++		goto out_free_inst;
++	}
++	poly1305 = __crypto_hash_alg_common(poly1305_alg);
++	err = crypto_init_ahash_spawn(&ictx->poly1305_spawn, poly1305,
++				      skcipher_crypto_instance(inst));
++	if (err) {
++		crypto_mod_put(poly1305_alg);
++		goto out_free_inst;
++	}
++	err = -EINVAL;
++	if (poly1305->digestsize != HPOLYC_BLOCK_SIZE)
++		goto out_drop_poly1305;
++
++	/* XChaCha */
++
++	err = crypto_grab_skcipher(&ictx->xchacha_spawn, xchacha_name, 0, mask);
++	if (err)
++		goto out_drop_poly1305;
++	xchacha_alg = crypto_spawn_skcipher_alg(&ictx->xchacha_spawn);
++	err = -EINVAL;
++	if (xchacha_alg->min_keysize != HPOLYC_STREAM_KEY_SIZE ||
++	    xchacha_alg->max_keysize != HPOLYC_STREAM_KEY_SIZE)
++		goto out_drop_xchacha;
++	if (xchacha_alg->base.cra_blocksize != 1)
++		goto out_drop_xchacha;
++	if (crypto_skcipher_alg_ivsize(xchacha_alg) != XCHACHA_IV_SIZE)
++		goto out_drop_xchacha;
++
++	/* Block cipher */
++
++	err = crypto_grab_spawn(&ictx->blkcipher_spawn, blkcipher_name,
++				CRYPTO_ALG_TYPE_CIPHER, CRYPTO_ALG_TYPE_MASK);
++	if (err)
++		goto out_drop_xchacha;
++	blkcipher_alg = ictx->blkcipher_spawn.alg;
++	err = -EINVAL;
++	if (blkcipher_alg->cra_blocksize != HPOLYC_BLOCK_SIZE)
++		goto out_drop_blkcipher;
++	if (blkcipher_alg->cra_cipher.cia_min_keysize >
++	    HPOLYC_BLKCIPHER_KEY_SIZE ||
++	    blkcipher_alg->cra_cipher.cia_max_keysize <
++	    HPOLYC_BLKCIPHER_KEY_SIZE)
++		goto out_drop_blkcipher;
++
++	/* Instance fields */
++
++	err = -ENAMETOOLONG;
++	if (snprintf(inst->alg.base.cra_name, CRYPTO_MAX_ALG_NAME,
++		     "hpolyc(%s,%s)",
++		     xchacha_alg->base.cra_name,
++		     blkcipher_alg->cra_name) >= CRYPTO_MAX_ALG_NAME)
++		goto out_drop_blkcipher;
++	if (snprintf(inst->alg.base.cra_driver_name, CRYPTO_MAX_ALG_NAME,
++		     "hpolyc(%s,%s,%s)",
++		     poly1305_alg->cra_driver_name,
++		     xchacha_alg->base.cra_driver_name,
++		     blkcipher_alg->cra_driver_name) >= CRYPTO_MAX_ALG_NAME)
++		goto out_drop_blkcipher;
++
++	inst->alg.base.cra_blocksize = HPOLYC_BLOCK_SIZE;
++	inst->alg.base.cra_ctxsize = sizeof(struct hpolyc_tfm_ctx);
++	inst->alg.base.cra_alignmask = xchacha_alg->base.cra_alignmask |
++					poly1305_alg->cra_alignmask;
++	/*
++	 * The block cipher is only invoked once per message, so for long
++	 * messages (e.g. sectors for disk encryption) its performance doesn't
++	 * matter nearly as much as that of XChaCha and Poly1305.  Thus, weigh
++	 * the block cipher's ->cra_priority less.
++	 */
++	inst->alg.base.cra_priority = (2 * xchacha_alg->base.cra_priority +
++				       2 * poly1305_alg->cra_priority +
++				       blkcipher_alg->cra_priority) / 5;
++
++	inst->alg.setkey = hpolyc_setkey;
++	inst->alg.encrypt = hpolyc_encrypt;
++	inst->alg.decrypt = hpolyc_decrypt;
++	inst->alg.init = hpolyc_init_tfm;
++	inst->alg.exit = hpolyc_exit_tfm;
++	inst->alg.min_keysize = HPOLYC_STREAM_KEY_SIZE;
++	inst->alg.max_keysize = HPOLYC_STREAM_KEY_SIZE;
++	inst->alg.ivsize = HPOLYC_IV_SIZE;
++
++	inst->free = hpolyc_free_instance;
++
++	err = skcipher_register_instance(tmpl, inst);
++	if (err)
++		goto out_drop_blkcipher;
++
++	return 0;
++
++out_drop_blkcipher:
++	crypto_drop_spawn(&ictx->blkcipher_spawn);
++out_drop_xchacha:
++	crypto_drop_skcipher(&ictx->xchacha_spawn);
++out_drop_poly1305:
++	crypto_drop_ahash(&ictx->poly1305_spawn);
++out_free_inst:
++	kfree(inst);
++	return err;
++}
++
++/* hpolyc(xchacha_name, blkcipher_name) */
++static struct crypto_template hpolyc_tmpl = {
++	.name = "hpolyc",
++	.create = hpolyc_create,
++	.module = THIS_MODULE,
++};
++
++static int hpolyc_module_init(void)
++{
++	return crypto_register_template(&hpolyc_tmpl);
++}
++
++static void __exit hpolyc_module_exit(void)
++{
++	crypto_unregister_template(&hpolyc_tmpl);
++}
++
++module_init(hpolyc_module_init);
++module_exit(hpolyc_module_exit);
++
++MODULE_DESCRIPTION("HPolyC length-preserving encryption mode");
++MODULE_LICENSE("GPL v2");
++MODULE_AUTHOR("Eric Biggers <ebiggers@google.com>");
++MODULE_ALIAS_CRYPTO("hpolyc");
 diff --git a/crypto/testmgr.c b/crypto/testmgr.c
-index bf250ca9a6c3..c06aeb1f01bc 100644
+index c06aeb1f01bc..c0511ffd997e 100644
 --- a/crypto/testmgr.c
 +++ b/crypto/testmgr.c
-@@ -3544,6 +3544,12 @@ static const struct alg_test_desc alg_test_descs[] = {
+@@ -3184,6 +3184,18 @@ static const struct alg_test_desc alg_test_descs[] = {
  		.suite = {
- 			.hash = __VECS(aes_xcbc128_tv_template)
+ 			.hash = __VECS(hmac_sha512_tv_template)
  		}
 +	}, {
-+		.alg = "xchacha12",
++		.alg = "hpolyc(xchacha12,aes)",
 +		.test = alg_test_skcipher,
 +		.suite = {
-+			.cipher = __VECS(xchacha12_tv_template)
++			.cipher = __VECS(hpolyc_xchacha12_aes_tv_template)
++		},
++	}, {
++		.alg = "hpolyc(xchacha20,aes)",
++		.test = alg_test_skcipher,
++		.suite = {
++			.cipher = __VECS(hpolyc_xchacha20_aes_tv_template)
 +		},
  	}, {
- 		.alg = "xchacha20",
- 		.test = alg_test_skcipher,
+ 		.alg = "jitterentropy_rng",
+ 		.fips_allowed = 1,
 diff --git a/crypto/testmgr.h b/crypto/testmgr.h
-index 3f992867b747..ba5c31ada273 100644
+index ba5c31ada273..27242c74a1fb 100644
 --- a/crypto/testmgr.h
 +++ b/crypto/testmgr.h
-@@ -31990,6 +31990,584 @@ static const struct cipher_testvec xchacha20_tv_template[] = {
+@@ -32568,6 +32568,164 @@ static const struct cipher_testvec xchacha12_tv_template[] = {
  	},
  };
  
 +/*
-+ * Same as XChaCha20 test vectors above, but recomputed the ciphertext with
-+ * XChaCha12, using a modified libsodium.
++ * Some HPolyC-XChaCha20-AES test vectors, taken from the reference code:
++ * https://github.com/google/hpolyc/blob/master/test_vectors/ours/HPolyC/HPolyC_XChaCha20_32_AES256.json
 + */
-+static const struct cipher_testvec xchacha12_tv_template[] = {
++static const struct cipher_testvec hpolyc_xchacha20_aes_tv_template[] = {
 +	{
-+		.key	= "\x79\xc9\x97\x98\xac\x67\x30\x0b"
-+			  "\xbb\x27\x04\xc9\x5c\x34\x1e\x32"
-+			  "\x45\xf3\xdc\xb2\x17\x61\xb9\x8e"
-+			  "\x52\xff\x45\xb2\x4f\x30\x4f\xc4",
++		.key	= "\x86\x1b\xc2\xf4\xa4\x19\xa7\x5f"
++			  "\x86\xe4\xbd\x55\xc0\x36\x66\xae"
++			  "\x1b\x79\x72\x6f\x95\xc5\x85\xb7"
++			  "\xb7\xf6\x5d\xa4\xff\xef\xcd\x2f",
 +		.klen	= 32,
-+		.iv	= "\xb3\x3f\xfd\x30\x96\x47\x9b\xcf"
-+			  "\xbc\x9a\xee\x49\x41\x76\x88\xa0"
-+			  "\xa2\x55\x4f\x8d\x95\x38\x94\x19"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00",
-+		.ptext	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00",
-+		.ctext	= "\x1b\x78\x7f\xd7\xa1\x41\x68\xab"
-+			  "\x3d\x3f\xd1\x7b\x69\x56\xb2\xd5"
-+			  "\x43\xce\xeb\xaf\x36\xf0\x29\x9d"
-+			  "\x3a\xfb\x18\xae\x1b",
-+		.len	= 29,
++		.iv	= "\x23\x4f\xff\xd4\x5a\xcc\x74\x56"
++			  "\x9c\x01\x08\xb8",
++		.ptext	= "\xb1\x5b\x42\xc7\x95\xfa\x2f\xac"
++			  "\xee\x90\xe0\xa2\x97\x1c\xba\x40",
++		.ctext	= "\xa4\x02\xf0\xd1\x51\x69\x00\x5d"
++			  "\x87\x61\x9b\xa2\x75\x23\x40\x94",
++		.len	= 16,
 +	}, {
-+		.key	= "\x9d\x23\xbd\x41\x49\xcb\x97\x9c"
-+			  "\xcf\x3c\x5c\x94\xdd\x21\x7e\x98"
-+			  "\x08\xcb\x0e\x50\xcd\x0f\x67\x81"
-+			  "\x22\x35\xea\xaf\x60\x1d\x62\x32",
++		.key	= "\xce\x94\xdc\xc7\x33\xd6\x43\x99"
++			  "\x03\x51\x3f\x6f\xee\x8e\xea\x83"
++			  "\x1c\x99\x1a\x31\x88\xf9\x28\x81"
++			  "\x10\xd9\x68\x8c\xfd\x36\x3f\x81",
 +		.klen	= 32,
-+		.iv	= "\xc0\x47\x54\x82\x66\xb7\xc3\x70"
-+			  "\xd3\x35\x66\xa2\x42\x5c\xbf\x30"
-+			  "\xd8\x2d\x1e\xaf\x52\x94\x10\x9e"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00",
-+		.ptext	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00",
-+		.ctext	= "\xfb\x32\x09\x1d\x83\x05\xae\x4c"
-+			  "\x13\x1f\x12\x71\xf2\xca\xb2\xeb"
-+			  "\x5b\x83\x14\x7d\x83\xf6\x57\x77"
-+			  "\x2e\x40\x1f\x92\x2c\xf9\xec\x35"
-+			  "\x34\x1f\x93\xdf\xfb\x30\xd7\x35"
-+			  "\x03\x05\x78\xc1\x20\x3b\x7a\xe3"
-+			  "\x62\xa3\x89\xdc\x11\x11\x45\xa8"
-+			  "\x82\x89\xa0\xf1\x4e\xc7\x0f\x11"
-+			  "\x69\xdd\x0c\x84\x2b\x89\x5c\xdc"
-+			  "\xf0\xde\x01\xef\xc5\x65\x79\x23"
-+			  "\x87\x67\xd6\x50\xd9\x8d\xd9\x92"
-+			  "\x54\x5b\x0e",
-+		.len	= 91,
++		.iv	= "\xbb\x17\x6f\x18\xbc\x07\xb1\xbc"
++			  "\x21\x16\xdf\x8e",
++		.ptext	= "\x0a\xcc\x14\x3b\x1f\x4e\x69\x88"
++			  "\xe7\xe5\x69\xbb\x0d\xa5\xd6\x28"
++			  "\xfb\x14\xe1\xec\xa9\x4c\x1c\x0e"
++			  "\xe6\x0e\xce\xa4\x0b\xcc\x12",
++		.ctext	= "\xed\xfa\x38\x58\x8a\x9b\xd5\xb0"
++			  "\xda\xd5\xe7\x10\xe0\xd5\xbb\x1f"
++			  "\xe2\xd7\xe7\x61\x71\x2e\x58\xc7"
++			  "\xd9\x2d\x49\xbc\x7b\xa3\x7e",
++		.len	= 31,
 +	}, {
-+		.key	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00",
++		.key	= "\x59\x62\xdc\xdc\xd3\xb5\x6b\x49"
++			  "\xc6\xc2\xc4\xdf\xbc\x23\x66\x7a"
++			  "\x93\x9a\x11\xb6\x59\xd6\x60\x01"
++			  "\x17\x18\x76\xe2\x60\x1c\x28\xad",
 +		.klen	= 32,
-+		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x67\xc6\x69\x73"
-+			  "\x51\xff\x4a\xec\x29\xcd\xba\xab"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00",
-+		.ptext	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00",
-+		.ctext	= "\xdf\x2d\xc6\x21\x2a\x9d\xa1\xbb"
-+			  "\xc2\x77\x66\x0c\x5c\x46\xef\xa7"
-+			  "\x79\x1b\xb9\xdf\x55\xe2\xf9\x61"
-+			  "\x4c\x7b\xa4\x52\x24\xaf\xa2\xda"
-+			  "\xd1\x8f\x8f\xa2\x9e\x53\x4d\xc4"
-+			  "\xb8\x55\x98\x08\x7c\x08\xd4\x18"
-+			  "\x67\x8f\xef\x50\xb1\x5f\xa5\x77"
-+			  "\x4c\x25\xe7\x86\x26\x42\xca\x44",
-+		.len	= 64,
-+	}, {
-+		.key	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x01",
-+		.klen	= 32,
-+		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x02\xf2\xfb\xe3\x46"
-+			  "\x7c\xc2\x54\xf8\x1b\xe8\xe7\x8d"
-+			  "\x01\x00\x00\x00\x00\x00\x00\x00",
-+		.ptext	= "\x41\x6e\x79\x20\x73\x75\x62\x6d"
-+			  "\x69\x73\x73\x69\x6f\x6e\x20\x74"
-+			  "\x6f\x20\x74\x68\x65\x20\x49\x45"
-+			  "\x54\x46\x20\x69\x6e\x74\x65\x6e"
-+			  "\x64\x65\x64\x20\x62\x79\x20\x74"
-+			  "\x68\x65\x20\x43\x6f\x6e\x74\x72"
-+			  "\x69\x62\x75\x74\x6f\x72\x20\x66"
-+			  "\x6f\x72\x20\x70\x75\x62\x6c\x69"
-+			  "\x63\x61\x74\x69\x6f\x6e\x20\x61"
-+			  "\x73\x20\x61\x6c\x6c\x20\x6f\x72"
-+			  "\x20\x70\x61\x72\x74\x20\x6f\x66"
-+			  "\x20\x61\x6e\x20\x49\x45\x54\x46"
-+			  "\x20\x49\x6e\x74\x65\x72\x6e\x65"
-+			  "\x74\x2d\x44\x72\x61\x66\x74\x20"
-+			  "\x6f\x72\x20\x52\x46\x43\x20\x61"
-+			  "\x6e\x64\x20\x61\x6e\x79\x20\x73"
-+			  "\x74\x61\x74\x65\x6d\x65\x6e\x74"
-+			  "\x20\x6d\x61\x64\x65\x20\x77\x69"
-+			  "\x74\x68\x69\x6e\x20\x74\x68\x65"
-+			  "\x20\x63\x6f\x6e\x74\x65\x78\x74"
-+			  "\x20\x6f\x66\x20\x61\x6e\x20\x49"
-+			  "\x45\x54\x46\x20\x61\x63\x74\x69"
-+			  "\x76\x69\x74\x79\x20\x69\x73\x20"
-+			  "\x63\x6f\x6e\x73\x69\x64\x65\x72"
-+			  "\x65\x64\x20\x61\x6e\x20\x22\x49"
-+			  "\x45\x54\x46\x20\x43\x6f\x6e\x74"
-+			  "\x72\x69\x62\x75\x74\x69\x6f\x6e"
-+			  "\x22\x2e\x20\x53\x75\x63\x68\x20"
-+			  "\x73\x74\x61\x74\x65\x6d\x65\x6e"
-+			  "\x74\x73\x20\x69\x6e\x63\x6c\x75"
-+			  "\x64\x65\x20\x6f\x72\x61\x6c\x20"
-+			  "\x73\x74\x61\x74\x65\x6d\x65\x6e"
-+			  "\x74\x73\x20\x69\x6e\x20\x49\x45"
-+			  "\x54\x46\x20\x73\x65\x73\x73\x69"
-+			  "\x6f\x6e\x73\x2c\x20\x61\x73\x20"
-+			  "\x77\x65\x6c\x6c\x20\x61\x73\x20"
-+			  "\x77\x72\x69\x74\x74\x65\x6e\x20"
-+			  "\x61\x6e\x64\x20\x65\x6c\x65\x63"
-+			  "\x74\x72\x6f\x6e\x69\x63\x20\x63"
-+			  "\x6f\x6d\x6d\x75\x6e\x69\x63\x61"
-+			  "\x74\x69\x6f\x6e\x73\x20\x6d\x61"
-+			  "\x64\x65\x20\x61\x74\x20\x61\x6e"
-+			  "\x79\x20\x74\x69\x6d\x65\x20\x6f"
-+			  "\x72\x20\x70\x6c\x61\x63\x65\x2c"
-+			  "\x20\x77\x68\x69\x63\x68\x20\x61"
-+			  "\x72\x65\x20\x61\x64\x64\x72\x65"
-+			  "\x73\x73\x65\x64\x20\x74\x6f",
-+		.ctext	= "\xe4\xa6\xc8\x30\xc4\x23\x13\xd6"
-+			  "\x08\x4d\xc9\xb7\xa5\x64\x7c\xb9"
-+			  "\x71\xe2\xab\x3e\xa8\x30\x8a\x1c"
-+			  "\x4a\x94\x6d\x9b\xe0\xb3\x6f\xf1"
-+			  "\xdc\xe3\x1b\xb3\xa9\x6d\x0d\xd6"
-+			  "\xd0\xca\x12\xef\xe7\x5f\xd8\x61"
-+			  "\x3c\x82\xd3\x99\x86\x3c\x6f\x66"
-+			  "\x02\x06\xdc\x55\xf9\xed\xdf\x38"
-+			  "\xb4\xa6\x17\x00\x7f\xef\xbf\x4f"
-+			  "\xf8\x36\xf1\x60\x7e\x47\xaf\xdb"
-+			  "\x55\x9b\x12\xcb\x56\x44\xa7\x1f"
-+			  "\xd3\x1a\x07\x3b\x00\xec\xe6\x4c"
-+			  "\xa2\x43\x27\xdf\x86\x19\x4f\x16"
-+			  "\xed\xf9\x4a\xf3\x63\x6f\xfa\x7f"
-+			  "\x78\x11\xf6\x7d\x97\x6f\xec\x6f"
-+			  "\x85\x0f\x5c\x36\x13\x8d\x87\xe0"
-+			  "\x80\xb1\x69\x0b\x98\x89\x9c\x4e"
-+			  "\xf8\xdd\xee\x5c\x0a\x85\xce\xd4"
-+			  "\xea\x1b\x48\xbe\x08\xf8\xe2\xa8"
-+			  "\xa5\xb0\x3c\x79\xb1\x15\xb4\xb9"
-+			  "\x75\x10\x95\x35\x81\x7e\x26\xe6"
-+			  "\x78\xa4\x88\xcf\xdb\x91\x34\x18"
-+			  "\xad\xd7\x8e\x07\x7d\xab\x39\xf9"
-+			  "\xa3\x9e\xa5\x1d\xbb\xed\x61\xfd"
-+			  "\xdc\xb7\x5a\x27\xfc\xb5\xc9\x10"
-+			  "\xa8\xcc\x52\x7f\x14\x76\x90\xe7"
-+			  "\x1b\x29\x60\x74\xc0\x98\x77\xbb"
-+			  "\xe0\x54\xbb\x27\x49\x59\x1e\x62"
-+			  "\x3d\xaf\x74\x06\xa4\x42\x6f\xc6"
-+			  "\x52\x97\xc4\x1d\xc4\x9f\xe2\xe5"
-+			  "\x38\x57\x91\xd1\xa2\x28\xcc\x40"
-+			  "\xcc\x70\x59\x37\xfc\x9f\x4b\xda"
-+			  "\xa0\xeb\x97\x9a\x7d\xed\x14\x5c"
-+			  "\x9c\xb7\x93\x26\x41\xa8\x66\xdd"
-+			  "\x87\x6a\xc0\xd3\xc2\xa9\x3e\xae"
-+			  "\xe9\x72\xfe\xd1\xb3\xac\x38\xea"
-+			  "\x4d\x15\xa9\xd5\x36\x61\xe9\x96"
-+			  "\x6c\x23\xf8\x43\xe4\x92\x29\xd9"
-+			  "\x8b\x78\xf7\x0a\x52\xe0\x19\x5b"
-+			  "\x59\x69\x5b\x5d\xa1\x53\xc4\x68"
-+			  "\xe1\xbb\xac\x89\x14\xe2\xe2\x85"
-+			  "\x41\x18\xf5\xb3\xd1\xfa\x68\x19"
-+			  "\x44\x78\xdc\xcf\xe7\x88\x2d\x52"
-+			  "\x5f\x40\xb5\x7e\xf8\x88\xa2\xae"
-+			  "\x4a\xb2\x07\x35\x9d\x9b\x07\x88"
-+			  "\xb7\x00\xd0\x0c\xb6\xa0\x47\x59"
-+			  "\xda\x4e\xc9\xab\x9b\x8a\x7b",
++		.iv	= "\xac\x80\x02\x91\xfa\xd5\x31\xfe"
++			  "\xfa\xff\xec\x00",
++		.ptext	= "\xd5\x6d\x14\x2e\x21\xb4\x45\x69"
++			  "\xf4\x48\x0d\x27\x09\x69\xba\xa0"
++			  "\xe6\x2a\xd4\x23\xdb\xf4\xc3\xc6"
++			  "\x1c\xab\x74\x74\x15\x7b\x95\x0c"
++			  "\x13\x8b\x39\x74\x23\x12\x9e\xb2"
++			  "\x2a\x6a\xf6\x82\x75\xcc\x97\x3c"
++			  "\x74\xc7\x06\x90\x78\xca\x78\x7a"
++			  "\x6b\x5b\xda\xf7\xec\x07\x13\xc6"
++			  "\xd5\x51\xa2\x23\x20\x3d\xb8\x49"
++			  "\x40\x12\x99\x88\x8e\x60\x0e\x0c"
++			  "\x90\x51\x49\x5e\x52\x94\xbf\x47"
++			  "\x86\xbe\xc8\x8e\x04\xc4\xd2\x8f"
++			  "\x17\x9f\xdb\xc2\xf3\x8d\xbb\x36"
++			  "\xe8\x97\x0c\xe8\x83\xf6\xa4\xd4"
++			  "\x23\xdb\x5e\x64\xe8\x17\x80\xf5"
++			  "\xe0\x4f\x33\xdf\xc5\xac\x79\x44",
++		.ctext	= "\xde\x99\xb2\xb4\x53\xf7\xf4\xd6"
++			  "\xdd\x2e\x42\x02\xd5\x05\x4d\x20"
++			  "\xb1\xef\xa1\x6e\x9d\xa3\x58\x7c"
++			  "\x25\xfa\xd5\x5e\x79\xb4\xd6\xd1"
++			  "\x84\xad\x74\xa1\x27\x72\xc7\x37"
++			  "\x4e\x0e\x1e\x94\xa0\x87\x2f\xfa"
++			  "\xa5\xbf\xe2\xbd\x21\xd1\xe9\x16"
++			  "\xc9\x19\xcf\xfa\x84\x0a\x19\x66"
++			  "\x33\xf9\xbf\xff\xab\x6b\x87\xd2"
++			  "\x92\x69\xc3\xeb\x54\xbc\x1b\xd9"
++			  "\x58\x12\x17\xd4\x90\xa2\xc6\xe1"
++			  "\xbe\x15\x8b\x9d\x06\xde\x80\x76"
++			  "\x69\x03\xc7\x87\xff\x28\x03\x3a"
++			  "\xbe\x11\x3a\xd3\x26\x27\x9d\x91"
++			  "\x4a\x3f\x99\x10\x10\x51\xd3\x63"
++			  "\x5e\x13\x41\xd2\x82\x16\xbc\xb7",
++		.len	= 128,
++	},
++};
 +
-+		.len	= 375,
-+		.also_non_np = 1,
-+		.np	= 3,
-+		.tap	= { 375 - 20, 4, 16 },
-+
-+	}, {
-+		.key	= "\x1c\x92\x40\xa5\xeb\x55\xd3\x8a"
-+			  "\xf3\x33\x88\x86\x04\xf6\xb5\xf0"
-+			  "\x47\x39\x17\xc1\x40\x2b\x80\x09"
-+			  "\x9d\xca\x5c\xbc\x20\x70\x75\xc0",
++/*
++ * Some HPolyC-XChaCha12-AES test vectors, taken from the reference code:
++ * https://github.com/google/hpolyc/blob/master/test_vectors/ours/HPolyC/HPolyC_XChaCha12_32_AES256.json
++ */
++static const struct cipher_testvec hpolyc_xchacha12_aes_tv_template[] = {
++	{
++		.key	= "\x86\x1b\xc2\xf4\xa4\x19\xa7\x5f"
++			  "\x86\xe4\xbd\x55\xc0\x36\x66\xae"
++			  "\x1b\x79\x72\x6f\x95\xc5\x85\xb7"
++			  "\xb7\xf6\x5d\xa4\xff\xef\xcd\x2f",
 +		.klen	= 32,
-+		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x02\x76\x5a\x2e\x63"
-+			  "\x33\x9f\xc9\x9a\x66\x32\x0d\xb7"
-+			  "\x2a\x00\x00\x00\x00\x00\x00\x00",
-+		.ptext	= "\x27\x54\x77\x61\x73\x20\x62\x72"
-+			  "\x69\x6c\x6c\x69\x67\x2c\x20\x61"
-+			  "\x6e\x64\x20\x74\x68\x65\x20\x73"
-+			  "\x6c\x69\x74\x68\x79\x20\x74\x6f"
-+			  "\x76\x65\x73\x0a\x44\x69\x64\x20"
-+			  "\x67\x79\x72\x65\x20\x61\x6e\x64"
-+			  "\x20\x67\x69\x6d\x62\x6c\x65\x20"
-+			  "\x69\x6e\x20\x74\x68\x65\x20\x77"
-+			  "\x61\x62\x65\x3a\x0a\x41\x6c\x6c"
-+			  "\x20\x6d\x69\x6d\x73\x79\x20\x77"
-+			  "\x65\x72\x65\x20\x74\x68\x65\x20"
-+			  "\x62\x6f\x72\x6f\x67\x6f\x76\x65"
-+			  "\x73\x2c\x0a\x41\x6e\x64\x20\x74"
-+			  "\x68\x65\x20\x6d\x6f\x6d\x65\x20"
-+			  "\x72\x61\x74\x68\x73\x20\x6f\x75"
-+			  "\x74\x67\x72\x61\x62\x65\x2e",
-+		.ctext	= "\xb9\x68\xbc\x6a\x24\xbc\xcc\xd8"
-+			  "\x9b\x2a\x8d\x5b\x96\xaf\x56\xe3"
-+			  "\x11\x61\xe7\xa7\x9b\xce\x4e\x7d"
-+			  "\x60\x02\x48\xac\xeb\xd5\x3a\x26"
-+			  "\x9d\x77\x3b\xb5\x32\x13\x86\x8e"
-+			  "\x20\x82\x26\x72\xae\x64\x1b\x7e"
-+			  "\x2e\x01\x68\xb4\x87\x45\xa1\x24"
-+			  "\xe4\x48\x40\xf0\xaa\xac\xee\xa9"
-+			  "\xfc\x31\xad\x9d\x89\xa3\xbb\xd2"
-+			  "\xe4\x25\x13\xad\x0f\x5e\xdf\x3c"
-+			  "\x27\xab\xb8\x62\x46\x22\x30\x48"
-+			  "\x55\x2c\x4e\x84\x78\x1d\x0d\x34"
-+			  "\x8d\x3c\x91\x0a\x7f\x5b\x19\x9f"
-+			  "\x97\x05\x4c\xa7\x62\x47\x8b\xc5"
-+			  "\x44\x2e\x20\x33\xdd\xa0\x82\xa9"
-+			  "\x25\x76\x37\xe6\x3c\x67\x5b",
-+		.len	= 127,
++		.iv	= "\x23\x4f\xff\xd4\x5a\xcc\x74\x56"
++			  "\x9c\x01\x08\xb8",
++		.ptext	= "\xb1\x5b\x42\xc7\x95\xfa\x2f\xac"
++			  "\xee\x90\xe0\xa2\x97\x1c\xba\x40",
++		.ctext	= "\x9d\xe4\x4b\xa8\x34\x89\x93\x19"
++			  "\x7c\x89\x11\x0e\x50\x80\xa4\x8b",
++		.len	= 16,
 +	}, {
-+		.key	= "\x1c\x92\x40\xa5\xeb\x55\xd3\x8a"
-+			  "\xf3\x33\x88\x86\x04\xf6\xb5\xf0"
-+			  "\x47\x39\x17\xc1\x40\x2b\x80\x09"
-+			  "\x9d\xca\x5c\xbc\x20\x70\x75\xc0",
++		.key	= "\xce\x94\xdc\xc7\x33\xd6\x43\x99"
++			  "\x03\x51\x3f\x6f\xee\x8e\xea\x83"
++			  "\x1c\x99\x1a\x31\x88\xf9\x28\x81"
++			  "\x10\xd9\x68\x8c\xfd\x36\x3f\x81",
 +		.klen	= 32,
-+		.iv	= "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x01\x31\x58\xa3\x5a"
-+			  "\x25\x5d\x05\x17\x58\xe9\x5e\xd4"
-+			  "\x1c\x00\x00\x00\x00\x00\x00\x00",
-+		.ptext	= "\x49\xee\xe0\xdc\x24\x90\x40\xcd"
-+			  "\xc5\x40\x8f\x47\x05\xbc\xdd\x81"
-+			  "\x47\xc6\x8d\xe6\xb1\x8f\xd7\xcb"
-+			  "\x09\x0e\x6e\x22\x48\x1f\xbf\xb8"
-+			  "\x5c\xf7\x1e\x8a\xc1\x23\xf2\xd4"
-+			  "\x19\x4b\x01\x0f\x4e\xa4\x43\xce"
-+			  "\x01\xc6\x67\xda\x03\x91\x18\x90"
-+			  "\xa5\xa4\x8e\x45\x03\xb3\x2d\xac"
-+			  "\x74\x92\xd3\x53\x47\xc8\xdd\x25"
-+			  "\x53\x6c\x02\x03\x87\x0d\x11\x0c"
-+			  "\x58\xe3\x12\x18\xfd\x2a\x5b\x40"
-+			  "\x0c\x30\xf0\xb8\x3f\x43\xce\xae"
-+			  "\x65\x3a\x7d\x7c\xf4\x54\xaa\xcc"
-+			  "\x33\x97\xc3\x77\xba\xc5\x70\xde"
-+			  "\xd7\xd5\x13\xa5\x65\xc4\x5f\x0f"
-+			  "\x46\x1a\x0d\x97\xb5\xf3\xbb\x3c"
-+			  "\x84\x0f\x2b\xc5\xaa\xea\xf2\x6c"
-+			  "\xc9\xb5\x0c\xee\x15\xf3\x7d\xbe"
-+			  "\x9f\x7b\x5a\xa6\xae\x4f\x83\xb6"
-+			  "\x79\x49\x41\xf4\x58\x18\xcb\x86"
-+			  "\x7f\x30\x0e\xf8\x7d\x44\x36\xea"
-+			  "\x75\xeb\x88\x84\x40\x3c\xad\x4f"
-+			  "\x6f\x31\x6b\xaa\x5d\xe5\xa5\xc5"
-+			  "\x21\x66\xe9\xa7\xe3\xb2\x15\x88"
-+			  "\x78\xf6\x79\xa1\x59\x47\x12\x4e"
-+			  "\x9f\x9f\x64\x1a\xa0\x22\x5b\x08"
-+			  "\xbe\x7c\x36\xc2\x2b\x66\x33\x1b"
-+			  "\xdd\x60\x71\xf7\x47\x8c\x61\xc3"
-+			  "\xda\x8a\x78\x1e\x16\xfa\x1e\x86"
-+			  "\x81\xa6\x17\x2a\xa7\xb5\xc2\xe7"
-+			  "\xa4\xc7\x42\xf1\xcf\x6a\xca\xb4"
-+			  "\x45\xcf\xf3\x93\xf0\xe7\xea\xf6"
-+			  "\xf4\xe6\x33\x43\x84\x93\xa5\x67"
-+			  "\x9b\x16\x58\x58\x80\x0f\x2b\x5c"
-+			  "\x24\x74\x75\x7f\x95\x81\xb7\x30"
-+			  "\x7a\x33\xa7\xf7\x94\x87\x32\x27"
-+			  "\x10\x5d\x14\x4c\x43\x29\xdd\x26"
-+			  "\xbd\x3e\x3c\x0e\xfe\x0e\xa5\x10"
-+			  "\xea\x6b\x64\xfd\x73\xc6\xed\xec"
-+			  "\xa8\xc9\xbf\xb3\xba\x0b\x4d\x07"
-+			  "\x70\xfc\x16\xfd\x79\x1e\xd7\xc5"
-+			  "\x49\x4e\x1c\x8b\x8d\x79\x1b\xb1"
-+			  "\xec\xca\x60\x09\x4c\x6a\xd5\x09"
-+			  "\x49\x46\x00\x88\x22\x8d\xce\xea"
-+			  "\xb1\x17\x11\xde\x42\xd2\x23\xc1"
-+			  "\x72\x11\xf5\x50\x73\x04\x40\x47"
-+			  "\xf9\x5d\xe7\xa7\x26\xb1\x7e\xb0"
-+			  "\x3f\x58\xc1\x52\xab\x12\x67\x9d"
-+			  "\x3f\x43\x4b\x68\xd4\x9c\x68\x38"
-+			  "\x07\x8a\x2d\x3e\xf3\xaf\x6a\x4b"
-+			  "\xf9\xe5\x31\x69\x22\xf9\xa6\x69"
-+			  "\xc6\x9c\x96\x9a\x12\x35\x95\x1d"
-+			  "\x95\xd5\xdd\xbe\xbf\x93\x53\x24"
-+			  "\xfd\xeb\xc2\x0a\x64\xb0\x77\x00"
-+			  "\x6f\x88\xc4\x37\x18\x69\x7c\xd7"
-+			  "\x41\x92\x55\x4c\x03\xa1\x9a\x4b"
-+			  "\x15\xe5\xdf\x7f\x37\x33\x72\xc1"
-+			  "\x8b\x10\x67\xa3\x01\x57\x94\x25"
-+			  "\x7b\x38\x71\x7e\xdd\x1e\xcc\x73"
-+			  "\x55\xd2\x8e\xeb\x07\xdd\xf1\xda"
-+			  "\x58\xb1\x47\x90\xfe\x42\x21\x72"
-+			  "\xa3\x54\x7a\xa0\x40\xec\x9f\xdd"
-+			  "\xc6\x84\x6e\xca\xae\xe3\x68\xb4"
-+			  "\x9d\xe4\x78\xff\x57\xf2\xf8\x1b"
-+			  "\x03\xa1\x31\xd9\xde\x8d\xf5\x22"
-+			  "\x9c\xdd\x20\xa4\x1e\x27\xb1\x76"
-+			  "\x4f\x44\x55\xe2\x9b\xa1\x9c\xfe"
-+			  "\x54\xf7\x27\x1b\xf4\xde\x02\xf5"
-+			  "\x1b\x55\x48\x5c\xdc\x21\x4b\x9e"
-+			  "\x4b\x6e\xed\x46\x23\xdc\x65\xb2"
-+			  "\xcf\x79\x5f\x28\xe0\x9e\x8b\xe7"
-+			  "\x4c\x9d\x8a\xff\xc1\xa6\x28\xb8"
-+			  "\x65\x69\x8a\x45\x29\xef\x74\x85"
-+			  "\xde\x79\xc7\x08\xae\x30\xb0\xf4"
-+			  "\xa3\x1d\x51\x41\xab\xce\xcb\xf6"
-+			  "\xb5\xd8\x6d\xe0\x85\xe1\x98\xb3"
-+			  "\x43\xbb\x86\x83\x0a\xa0\xf5\xb7"
-+			  "\x04\x0b\xfa\x71\x1f\xb0\xf6\xd9"
-+			  "\x13\x00\x15\xf0\xc7\xeb\x0d\x5a"
-+			  "\x9f\xd7\xb9\x6c\x65\x14\x22\x45"
-+			  "\x6e\x45\x32\x3e\x7e\x60\x1a\x12"
-+			  "\x97\x82\x14\xfb\xaa\x04\x22\xfa"
-+			  "\xa0\xe5\x7e\x8c\x78\x02\x48\x5d"
-+			  "\x78\x33\x5a\x7c\xad\xdb\x29\xce"
-+			  "\xbb\x8b\x61\xa4\xb7\x42\xe2\xac"
-+			  "\x8b\x1a\xd9\x2f\x0b\x8b\x62\x21"
-+			  "\x83\x35\x7e\xad\x73\xc2\xb5\x6c"
-+			  "\x10\x26\x38\x07\xe5\xc7\x36\x80"
-+			  "\xe2\x23\x12\x61\xf5\x48\x4b\x2b"
-+			  "\xc5\xdf\x15\xd9\x87\x01\xaa\xac"
-+			  "\x1e\x7c\xad\x73\x78\x18\x63\xe0"
-+			  "\x8b\x9f\x81\xd8\x12\x6a\x28\x10"
-+			  "\xbe\x04\x68\x8a\x09\x7c\x1b\x1c"
-+			  "\x83\x66\x80\x47\x80\xe8\xfd\x35"
-+			  "\x1c\x97\x6f\xae\x49\x10\x66\xcc"
-+			  "\xc6\xd8\xcc\x3a\x84\x91\x20\x77"
-+			  "\x72\xe4\x24\xd2\x37\x9f\xc5\xc9"
-+			  "\x25\x94\x10\x5f\x40\x00\x64\x99"
-+			  "\xdc\xae\xd7\x21\x09\x78\x50\x15"
-+			  "\xac\x5f\xc6\x2c\xa2\x0b\xa9\x39"
-+			  "\x87\x6e\x6d\xab\xde\x08\x51\x16"
-+			  "\xc7\x13\xe9\xea\xed\x06\x8e\x2c"
-+			  "\xf8\x37\x8c\xf0\xa6\x96\x8d\x43"
-+			  "\xb6\x98\x37\xb2\x43\xed\xde\xdf"
-+			  "\x89\x1a\xe7\xeb\x9d\xa1\x7b\x0b"
-+			  "\x77\xb0\xe2\x75\xc0\xf1\x98\xd9"
-+			  "\x80\x55\xc9\x34\x91\xd1\x59\xe8"
-+			  "\x4b\x0f\xc1\xa9\x4b\x7a\x84\x06"
-+			  "\x20\xa8\x5d\xfa\xd1\xde\x70\x56"
-+			  "\x2f\x9e\x91\x9c\x20\xb3\x24\xd8"
-+			  "\x84\x3d\xe1\x8c\x7e\x62\x52\xe5"
-+			  "\x44\x4b\x9f\xc2\x93\x03\xea\x2b"
-+			  "\x59\xc5\xfa\x3f\x91\x2b\xbb\x23"
-+			  "\xf5\xb2\x7b\xf5\x38\xaf\xb3\xee"
-+			  "\x63\xdc\x7b\xd1\xff\xaa\x8b\xab"
-+			  "\x82\x6b\x37\x04\xeb\x74\xbe\x79"
-+			  "\xb9\x83\x90\xef\x20\x59\x46\xff"
-+			  "\xe9\x97\x3e\x2f\xee\xb6\x64\x18"
-+			  "\x38\x4c\x7a\x4a\xf9\x61\xe8\x9a"
-+			  "\xa1\xb5\x01\xa6\x47\xd3\x11\xd4"
-+			  "\xce\xd3\x91\x49\x88\xc7\xb8\x4d"
-+			  "\xb1\xb9\x07\x6d\x16\x72\xae\x46"
-+			  "\x5e\x03\xa1\x4b\xb6\x02\x30\xa8"
-+			  "\x3d\xa9\x07\x2a\x7c\x19\xe7\x62"
-+			  "\x87\xe3\x82\x2f\x6f\xe1\x09\xd9"
-+			  "\x94\x97\xea\xdd\x58\x9e\xae\x76"
-+			  "\x7e\x35\xe5\xb4\xda\x7e\xf4\xde"
-+			  "\xf7\x32\x87\xcd\x93\xbf\x11\x56"
-+			  "\x11\xbe\x08\x74\xe1\x69\xad\xe2"
-+			  "\xd7\xf8\x86\x75\x8a\x3c\xa4\xbe"
-+			  "\x70\xa7\x1b\xfc\x0b\x44\x2a\x76"
-+			  "\x35\xea\x5d\x85\x81\xaf\x85\xeb"
-+			  "\xa0\x1c\x61\xc2\xf7\x4f\xa5\xdc"
-+			  "\x02\x7f\xf6\x95\x40\x6e\x8a\x9a"
-+			  "\xf3\x5d\x25\x6e\x14\x3a\x22\xc9"
-+			  "\x37\x1c\xeb\x46\x54\x3f\xa5\x91"
-+			  "\xc2\xb5\x8c\xfe\x53\x08\x97\x32"
-+			  "\x1b\xb2\x30\x27\xfe\x25\x5d\xdc"
-+			  "\x08\x87\xd0\xe5\x94\x1a\xd4\xf1"
-+			  "\xfe\xd6\xb4\xa3\xe6\x74\x81\x3c"
-+			  "\x1b\xb7\x31\xa7\x22\xfd\xd4\xdd"
-+			  "\x20\x4e\x7c\x51\xb0\x60\x73\xb8"
-+			  "\x9c\xac\x91\x90\x7e\x01\xb0\xe1"
-+			  "\x8a\x2f\x75\x1c\x53\x2a\x98\x2a"
-+			  "\x06\x52\x95\x52\xb2\xe9\x25\x2e"
-+			  "\x4c\xe2\x5a\x00\xb2\x13\x81\x03"
-+			  "\x77\x66\x0d\xa5\x99\xda\x4e\x8c"
-+			  "\xac\xf3\x13\x53\x27\x45\xaf\x64"
-+			  "\x46\xdc\xea\x23\xda\x97\xd1\xab"
-+			  "\x7d\x6c\x30\x96\x1f\xbc\x06\x34"
-+			  "\x18\x0b\x5e\x21\x35\x11\x8d\x4c"
-+			  "\xe0\x2d\xe9\x50\x16\x74\x81\xa8"
-+			  "\xb4\x34\xb9\x72\x42\xa6\xcc\xbc"
-+			  "\xca\x34\x83\x27\x10\x5b\x68\x45"
-+			  "\x8f\x52\x22\x0c\x55\x3d\x29\x7c"
-+			  "\xe3\xc0\x66\x05\x42\x91\x5f\x58"
-+			  "\xfe\x4a\x62\xd9\x8c\xa9\x04\x19"
-+			  "\x04\xa9\x08\x4b\x57\xfc\x67\x53"
-+			  "\x08\x7c\xbc\x66\x8a\xb0\xb6\x9f"
-+			  "\x92\xd6\x41\x7c\x5b\x2a\x00\x79"
-+			  "\x72",
-+		.ctext	= "\xe1\xb6\x8b\x5c\x80\xb8\xcc\x08"
-+			  "\x1b\x84\xb2\xd1\xad\xa4\x70\xac"
-+			  "\x67\xa9\x39\x27\xac\xb4\x5b\xb7"
-+			  "\x4c\x26\x77\x23\x1d\xce\x0a\xbe"
-+			  "\x18\x9e\x42\x8b\xbd\x7f\xd6\xf1"
-+			  "\xf1\x6b\xe2\x6d\x7f\x92\x0e\xcb"
-+			  "\xb8\x79\xba\xb4\xac\x7e\x2d\xc0"
-+			  "\x9e\x83\x81\x91\xd5\xea\xc3\x12"
-+			  "\x8d\xa4\x26\x70\xa4\xf9\x71\x0b"
-+			  "\xbd\x2e\xe1\xb3\x80\x42\x25\xb3"
-+			  "\x0b\x31\x99\xe1\x0d\xde\xa6\x90"
-+			  "\xf2\xa3\x10\xf7\xe5\xf3\x83\x1e"
-+			  "\x2c\xfb\x4d\xf0\x45\x3d\x28\x3c"
-+			  "\xb8\xf1\xcb\xbf\x67\xd8\x43\x5a"
-+			  "\x9d\x7b\x73\x29\x88\x0f\x13\x06"
-+			  "\x37\x50\x0d\x7c\xe6\x9b\x07\xdd"
-+			  "\x7e\x01\x1f\x81\x90\x10\x69\xdb"
-+			  "\xa4\xad\x8a\x5e\xac\x30\x72\xf2"
-+			  "\x36\xcd\xe3\x23\x49\x02\x93\xfa"
-+			  "\x3d\xbb\xe2\x98\x83\xeb\xe9\x8d"
-+			  "\xb3\x8f\x11\xaa\x53\xdb\xaf\x2e"
-+			  "\x95\x13\x99\x3d\x71\xbd\x32\x92"
-+			  "\xdd\xfc\x9d\x5e\x6f\x63\x2c\xee"
-+			  "\x91\x1f\x4c\x64\x3d\x87\x55\x0f"
-+			  "\xcc\x3d\x89\x61\x53\x02\x57\x8f"
-+			  "\xe4\x77\x29\x32\xaf\xa6\x2f\x0a"
-+			  "\xae\x3c\x3f\x3f\xf4\xfb\x65\x52"
-+			  "\xc5\xc1\x78\x78\x53\x28\xad\xed"
-+			  "\xd1\x67\x37\xc7\x59\x70\xcd\x0a"
-+			  "\xb8\x0f\x80\x51\x9f\xc0\x12\x5e"
-+			  "\x06\x0a\x7e\xec\x24\x5f\x73\x00"
-+			  "\xb1\x0b\x31\x47\x4f\x73\x8d\xb4"
-+			  "\xce\xf3\x55\x45\x6c\x84\x27\xba"
-+			  "\xb9\x6f\x03\x4a\xeb\x98\x88\x6e"
-+			  "\x53\xed\x25\x19\x0d\x8f\xfe\xca"
-+			  "\x60\xe5\x00\x93\x6e\x3c\xff\x19"
-+			  "\xae\x08\x3b\x8a\xa6\x84\x05\xfe"
-+			  "\x9b\x59\xa0\x8c\xc8\x05\x45\xf5"
-+			  "\x05\x37\xdc\x45\x6f\x8b\x95\x8c"
-+			  "\x4e\x11\x45\x7a\xce\x21\xa5\xf7"
-+			  "\x71\x67\xb9\xce\xd7\xf9\xe9\x5e"
-+			  "\x60\xf5\x53\x7a\xa8\x85\x14\x03"
-+			  "\xa0\x92\xec\xf3\x51\x80\x84\xc4"
-+			  "\xdc\x11\x9e\x57\xce\x4b\x45\xcf"
-+			  "\x90\x95\x85\x0b\x96\xe9\xee\x35"
-+			  "\x10\xb8\x9b\xf2\x59\x4a\xc6\x7e"
-+			  "\x85\xe5\x6f\x38\x51\x93\x40\x0c"
-+			  "\x99\xd7\x7f\x32\xa8\x06\x27\xd1"
-+			  "\x2b\xd5\xb5\x3a\x1a\xe1\x5e\xda"
-+			  "\xcd\x5a\x50\x30\x3c\xc7\xe7\x65"
-+			  "\xa6\x07\x0b\x98\x91\xc6\x20\x27"
-+			  "\x2a\x03\x63\x1b\x1e\x3d\xaf\xc8"
-+			  "\x71\x48\x46\x6a\x64\x28\xf9\x3d"
-+			  "\xd1\x1d\xab\xc8\x40\x76\xc2\x39"
-+			  "\x4e\x00\x75\xd2\x0e\x82\x58\x8c"
-+			  "\xd3\x73\x5a\xea\x46\x89\xbe\xfd"
-+			  "\x4e\x2c\x0d\x94\xaa\x9b\x68\xac"
-+			  "\x86\x87\x30\x7e\xa9\x16\xcd\x59"
-+			  "\xd2\xa6\xbe\x0a\xd8\xf5\xfd\x2d"
-+			  "\x49\x69\xd2\x1a\x90\xd2\x1b\xed"
-+			  "\xff\x71\x04\x87\x87\x21\xc4\xb8"
-+			  "\x1f\x5b\x51\x33\xd0\xd6\x59\x9a"
-+			  "\x03\x0e\xd3\x8b\xfb\x57\x73\xfd"
-+			  "\x5a\x52\x63\x82\xc8\x85\x2f\xcb"
-+			  "\x74\x6d\x4e\xd9\x68\x37\x85\x6a"
-+			  "\xd4\xfb\x94\xed\x8d\xd1\x1a\xaf"
-+			  "\x76\xa7\xb7\x88\xd0\x2b\x4e\xda"
-+			  "\xec\x99\x94\x27\x6f\x87\x8c\xdf"
-+			  "\x4b\x5e\xa6\x66\xdd\xcb\x33\x7b"
-+			  "\x64\x94\x31\xa8\x37\xa6\x1d\xdb"
-+			  "\x0d\x5c\x93\xa4\x40\xf9\x30\x53"
-+			  "\x4b\x74\x8d\xdd\xf6\xde\x3c\xac"
-+			  "\x5c\x80\x01\x3a\xef\xb1\x9a\x02"
-+			  "\x0c\x22\x8e\xe7\x44\x09\x74\x4c"
-+			  "\xf2\x9a\x27\x69\x7f\x12\x32\x36"
-+			  "\xde\x92\xdf\xde\x8f\x5b\x31\xab"
-+			  "\x4a\x01\x26\xe0\xb1\xda\xe8\x37"
-+			  "\x21\x64\xe8\xff\x69\xfc\x9e\x41"
-+			  "\xd2\x96\x2d\x18\x64\x98\x33\x78"
-+			  "\x24\x61\x73\x9b\x47\x29\xf1\xa7"
-+			  "\xcb\x27\x0f\xf0\x85\x6d\x8c\x9d"
-+			  "\x2c\x95\x9e\xe5\xb2\x8e\x30\x29"
-+			  "\x78\x8a\x9d\x65\xb4\x8e\xde\x7b"
-+			  "\xd9\x00\x50\xf5\x7f\x81\xc3\x1b"
-+			  "\x25\x85\xeb\xc2\x8c\x33\x22\x1e"
-+			  "\x68\x38\x22\x30\xd8\x2e\x00\x98"
-+			  "\x85\x16\x06\x56\xb4\x81\x74\x20"
-+			  "\x95\xdb\x1c\x05\x19\xe8\x23\x4d"
-+			  "\x65\x5d\xcc\xd8\x7f\xc4\x2d\x0f"
-+			  "\x57\x26\x71\x07\xad\xaa\x71\x9f"
-+			  "\x19\x76\x2f\x25\x51\x88\xe4\xc0"
-+			  "\x82\x6e\x08\x05\x37\x04\xee\x25"
-+			  "\x23\x90\xe9\x4e\xce\x9b\x16\xc1"
-+			  "\x31\xe7\x6e\x2c\x1b\xe1\x85\x9a"
-+			  "\x0c\x8c\xbb\x12\x1e\x68\x7b\x93"
-+			  "\xa9\x3c\x39\x56\x23\x3e\x6e\xc7"
-+			  "\x77\x84\xd3\xe0\x86\x59\xaa\xb9"
-+			  "\xd5\x53\x58\xc9\x0a\x83\x5f\x85"
-+			  "\xd8\x47\x14\x67\x8a\x3c\x17\xe0"
-+			  "\xab\x02\x51\xea\xf1\xf0\x4f\x30"
-+			  "\x7d\xe0\x92\xc2\x5f\xfb\x19\x5a"
-+			  "\x3f\xbd\xf4\x39\xa4\x31\x0c\x39"
-+			  "\xd1\xae\x4e\xf7\x65\x7f\x1f\xce"
-+			  "\xc2\x39\xd1\x84\xd4\xe5\x02\xe0"
-+			  "\x58\xaa\xf1\x5e\x81\xaf\x7f\x72"
-+			  "\x0f\x08\x99\x43\xb9\xd8\xac\x41"
-+			  "\x35\x55\xf2\xb2\xd4\x98\xb8\x3b"
-+			  "\x2b\x3c\x3e\x16\x06\x31\xfc\x79"
-+			  "\x47\x38\x63\x51\xc5\xd0\x26\xd7"
-+			  "\x43\xb4\x2b\xd9\xc5\x05\xf2\x9d"
-+			  "\x18\xc9\x26\x82\x56\xd2\x11\x05"
-+			  "\xb6\x89\xb4\x43\x9c\xb5\x9d\x11"
-+			  "\x6c\x83\x37\x71\x27\x1c\xae\xbf"
-+			  "\xcd\x57\xd2\xee\x0d\x5a\x15\x26"
-+			  "\x67\x88\x80\x80\x1b\xdc\xc1\x62"
-+			  "\xdd\x4c\xff\x92\x5c\x6c\xe1\xa0"
-+			  "\xe3\x79\xa9\x65\x8c\x8c\x14\x42"
-+			  "\xe5\x11\xd2\x1a\xad\xa9\x56\x6f"
-+			  "\x98\xfc\x8a\x7b\x56\x1f\xc6\xc1"
-+			  "\x52\x12\x92\x9b\x41\x0f\x4b\xae"
-+			  "\x1b\x4a\xbc\xfe\x23\xb6\x94\x70"
-+			  "\x04\x30\x9e\x69\x47\xbe\xb8\x8f"
-+			  "\xca\x45\xd7\x8a\xf4\x78\x3e\xaa"
-+			  "\x71\x17\xd8\x1e\xb8\x11\x8f\xbc"
-+			  "\xc8\x1a\x65\x7b\x41\x89\x72\xc7"
-+			  "\x5f\xbe\xc5\x2a\xdb\x5c\x54\xf9"
-+			  "\x25\xa3\x7a\x80\x56\x9c\x8c\xab"
-+			  "\x26\x19\x10\x36\xa6\xf3\x14\x79"
-+			  "\x40\x98\x70\x68\xb7\x35\xd9\xb9"
-+			  "\x27\xd4\xe7\x74\x5b\x3d\x97\xb4"
-+			  "\xd9\xaa\xd9\xf2\xb5\x14\x84\x1f"
-+			  "\xa9\xde\x12\x44\x5b\x00\xc0\xbc"
-+			  "\xc8\x11\x25\x1b\x67\x7a\x15\x72"
-+			  "\xa6\x31\x6f\xf4\x68\x7a\x86\x9d"
-+			  "\x43\x1c\x5f\x16\xd3\xad\x2e\x52"
-+			  "\xf3\xb4\xc3\xfa\x27\x2e\x68\x6c"
-+			  "\x06\xe7\x4c\x4f\xa2\xe0\xe4\x21"
-+			  "\x5d\x9e\x33\x58\x8d\xbf\xd5\x70"
-+			  "\xf8\x80\xa5\xdd\xe7\x18\x79\xfa"
-+			  "\x7b\xfd\x09\x69\x2c\x37\x32\xa8"
-+			  "\x65\xfa\x8d\x8b\x5c\xcc\xe8\xf3"
-+			  "\x37\xf6\xa6\xc6\x5c\xa2\x66\x79"
-+			  "\xfa\x8a\xa7\xd1\x0b\x2e\x1b\x5e"
-+			  "\x95\x35\x00\x76\xae\x42\xf7\x50"
-+			  "\x51\x78\xfb\xb4\x28\x24\xde\x1a"
-+			  "\x70\x8b\xed\xca\x3c\x5e\xe4\xbd"
-+			  "\x28\xb5\xf3\x76\x4f\x67\x5d\x81"
-+			  "\xb2\x60\x87\xd9\x7b\x19\x1a\xa7"
-+			  "\x79\xa2\xfa\x3f\x9e\xa9\xd7\x25"
-+			  "\x61\xe1\x74\x31\xa2\x77\xa0\x1b"
-+			  "\xf6\xf7\xcb\xc5\xaa\x9e\xce\xf9"
-+			  "\x9b\x96\xef\x51\xc3\x1a\x44\x96"
-+			  "\xae\x17\x50\xab\x29\x08\xda\xcc"
-+			  "\x1a\xb3\x12\xd0\x24\xe4\xe2\xe0"
-+			  "\xc6\xe3\xcc\x82\xd0\xba\x47\x4c"
-+			  "\x3f\x49\xd7\xe8\xb6\x61\xaa\x65"
-+			  "\x25\x18\x40\x2d\x62\x25\x02\x71"
-+			  "\x61\xa2\xc1\xb2\x13\xd2\x71\x3f"
-+			  "\x43\x1a\xc9\x09\x92\xff\xd5\x57"
-+			  "\xf0\xfc\x5e\x1c\xf1\xf5\xf9\xf3"
-+			  "\x5b",
-+		.len	= 1281,
-+		.also_non_np = 1,
-+		.np	= 3,
-+		.tap	= { 1200, 1, 80 },
++		.iv	= "\xbb\x17\x6f\x18\xbc\x07\xb1\xbc"
++			  "\x21\x16\xdf\x8e",
++		.ptext	= "\xf4\x4c\x81\xb5\x26\xf4\x59\x5f"
++			  "\x5f\x8f\xa7\xc9\xa4\x3f\xf0\x5d"
++			  "\x00\xd7\x58\xe4\x5a\xb8\xc3\xf5"
++			  "\xe1\xf5\x7d\xff\xca\x8a\x00",
++		.ctext	= "\xed\xfa\x38\x58\x8a\x9b\xd5\xb0"
++			  "\xda\xd5\xe7\x10\xe0\xd5\xbb\x1f"
++			  "\xe2\xd7\xe7\x61\x71\x2e\x58\xc7"
++			  "\xd9\x2d\x49\xbc\x7b\xa3\x7e",
++		.len	= 31,
++	}, {
++		.key	= "\x59\x62\xdc\xdc\xd3\xb5\x6b\x49"
++			  "\xc6\xc2\xc4\xdf\xbc\x23\x66\x7a"
++			  "\x93\x9a\x11\xb6\x59\xd6\x60\x01"
++			  "\x17\x18\x76\xe2\x60\x1c\x28\xad",
++		.klen	= 32,
++		.iv	= "\xac\x80\x02\x91\xfa\xd5\x31\xfe"
++			  "\xfa\xff\xec\x00",
++		.ptext	= "\xd5\x6d\x14\x2e\x21\xb4\x45\x69"
++			  "\xf4\x48\x0d\x27\x09\x69\xba\xa0"
++			  "\xe6\x2a\xd4\x23\xdb\xf4\xc3\xc6"
++			  "\x1c\xab\x74\x74\x15\x7b\x95\x0c"
++			  "\x13\x8b\x39\x74\x23\x12\x9e\xb2"
++			  "\x2a\x6a\xf6\x82\x75\xcc\x97\x3c"
++			  "\x74\xc7\x06\x90\x78\xca\x78\x7a"
++			  "\x6b\x5b\xda\xf7\xec\x07\x13\xc6"
++			  "\xd5\x51\xa2\x23\x20\x3d\xb8\x49"
++			  "\x40\x12\x99\x88\x8e\x60\x0e\x0c"
++			  "\x90\x51\x49\x5e\x52\x94\xbf\x47"
++			  "\x86\xbe\xc8\x8e\x04\xc4\xd2\x8f"
++			  "\x17\x9f\xdb\xc2\xf3\x8d\xbb\x36"
++			  "\xe8\x97\x0c\xe8\x83\xf6\xa4\xd4"
++			  "\x23\xdb\x5e\x64\xe8\x17\x80\xf5"
++			  "\xe0\x4f\x33\xdf\xc5\xac\x79\x44",
++		.ctext	= "\x04\x52\x8e\x33\xb7\xa5\x37\xd7"
++			  "\x3a\x4d\x98\x3c\x25\x87\x8b\x7d"
++			  "\xa8\x10\xfe\x20\x4e\xdc\x19\xf3"
++			  "\x34\x01\xa6\x3d\xb7\xf3\x14\x4d"
++			  "\x10\xcb\xae\x4b\xe6\x5f\xa9\x50"
++			  "\xee\xe4\x41\x0c\xae\xa5\x51\x66"
++			  "\x28\xa5\x16\xed\x55\xa3\x8a\x86"
++			  "\x15\x33\x92\x98\xa3\x73\x70\x9d"
++			  "\xeb\x11\xb6\xf4\xdd\x53\xa9\xa3"
++			  "\x5e\x5f\x70\x0e\x50\x1b\xca\x34"
++			  "\x5c\xa6\xd9\x05\x47\x0b\x6d\x74"
++			  "\x64\xa1\x83\x59\x73\xfa\x83\x1c"
++			  "\x35\x79\xa9\x9d\x2c\xaf\x54\x19"
++			  "\x03\xff\x66\xfb\xb5\x55\xe4\x2b"
++			  "\x7d\x93\x0e\x85\x62\x21\x20\xc0"
++			  "\xb9\x7c\xa9\xd2\xd7\x5c\x50\x9a",
++		.len	= 128,
 +	},
 +};
 +
  /*
   * CTS (Cipher Text Stealing) mode tests
   */
-diff --git a/include/crypto/chacha.h b/include/crypto/chacha.h
-index a504350f54df..3cd9bfc71ed9 100644
---- a/include/crypto/chacha.h
-+++ b/include/crypto/chacha.h
-@@ -5,6 +5,13 @@
-  * XChaCha extends ChaCha's nonce to 192 bits, while provably retaining ChaCha's
-  * security.  Here they share the same key size, tfm context, and setkey
-  * function; only their IV size and encrypt/decrypt function differ.
-+ *
-+ * The ChaCha paper specifies 20, 12, and 8-round variants.  In general, it is
-+ * strongly recommended to use the 20-round variant ChaCha20.  However, the
-+ * reduced-round variants can be needed in some very performance-sensitive
-+ * scenarios where a reduced security margin may be tolerated.
-+ *
-+ * The generic ChaCha code currently allows only the 20 and 12-round variants.
-  */
- 
- #ifndef _CRYPTO_CHACHA_H
-@@ -40,6 +47,8 @@ void crypto_chacha_init(u32 *state, struct chacha_ctx *ctx, u8 *iv);
- 
- int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
- 			   unsigned int keysize);
-+int crypto_chacha12_setkey(struct crypto_skcipher *tfm, const u8 *key,
-+			   unsigned int keysize);
- 
- int crypto_chacha_crypt(struct skcipher_request *req);
- int crypto_xchacha_crypt(struct skcipher_request *req);
-diff --git a/lib/chacha.c b/lib/chacha.c
-index b0fd1e0882e3..d29965a5cf5e 100644
---- a/lib/chacha.c
-+++ b/lib/chacha.c
-@@ -21,7 +21,7 @@ static void chacha_permute(u32 *x, int nrounds)
- 	int i;
- 
- 	/* whitelist the allowed round counts */
--	BUG_ON(nrounds != 20);
-+	BUG_ON(nrounds != 20 && nrounds != 12);
- 
- 	for (i = 0; i < nrounds; i += 2) {
- 		x[0]  += x[4];    x[12] = rol32(x[12] ^ x[0],  16);
-@@ -70,7 +70,7 @@ static void chacha_permute(u32 *x, int nrounds)
-  * chacha_block - generate one keystream block and increment block counter
-  * @state: input state matrix (16 32-bit words)
-  * @stream: output keystream block (64 bytes)
-- * @nrounds: number of rounds (currently must be 20)
-+ * @nrounds: number of rounds (20 or 12; 20 is recommended)
-  *
-  * This is the ChaCha core, a function from 64-byte strings to 64-byte strings.
-  * The caller has already converted the endianness of the input.  This function
-@@ -96,7 +96,7 @@ EXPORT_SYMBOL(chacha_block);
-  * hchacha_block - abbreviated ChaCha core, for XChaCha
-  * @in: input state matrix (16 32-bit words)
-  * @out: output (8 32-bit words)
-- * @nrounds: number of rounds (currently must be 20)
-+ * @nrounds: number of rounds (20 or 12; 20 is recommended)
-  *
-  * HChaCha is the ChaCha equivalent of HSalsa and is an intermediate step
-  * towards XChaCha (see https://cr.yp.to/snuffle/xsalsa-20081128.pdf).  HChaCha
 -- 
 2.18.0.597.ga71716f1ad-goog
 
