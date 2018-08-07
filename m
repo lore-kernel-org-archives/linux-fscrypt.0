@@ -1,365 +1,99 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:38952 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1725881AbeHGWe2 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 7 Aug 2018 18:34:28 -0400
+Date: Tue, 7 Aug 2018 13:18:19 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 6/9] crypto: arm/chacha20 - refactor to allow varying number of rounds
-Date: Mon,  6 Aug 2018 15:32:57 -0700
-Message-Id: <20180806223300.113891-7-ebiggers@kernel.org>
-In-Reply-To: <20180806223300.113891-1-ebiggers@kernel.org>
+Subject: Re: [PATCH] crypto: remove speck
+Message-ID: <20180807201819.GA25300@gmail.com>
 References: <20180806223300.113891-1-ebiggers@kernel.org>
+ <20180806230437.21431-1-Jason@zx2c4.com>
+ <CAH8yC8kKet=fx0rYF8QEWK+TzyBgwHrLabWE72znBY=QLZVWkA@mail.gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-crypto-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAH8yC8kKet=fx0rYF8QEWK+TzyBgwHrLabWE72znBY=QLZVWkA@mail.gmail.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Jeffrey Walton <noloader@gmail.com>
+Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Jeffrey,
 
-In preparation for adding XChaCha12 support, rename/refactor the NEON
-implementation of ChaCha20 to support different numbers of rounds.
+On Mon, Aug 06, 2018 at 09:03:27PM -0400, Jeffrey Walton wrote:
+> On Mon, Aug 6, 2018 at 7:04 PM, Jason A. Donenfeld <Jason@zx2c4.com> wrote:
+> > These are unused, undesired, and have never actually been used by
+> > anybody. The original authors of this code have changed their mind about
+> > its inclusion. Therefore, this patch removes it.
+> 
+> I think it may be unwise to completely discard Speck for several
+> reasons. The two biggest pain points for me are:
+> 
+>   - political concerns addressed by other ciphers
+>   - high quality lightweight block cipher implementation
+>   - some regulated industries will need it for their problem domains
+> 
+> It seems to me the political concerns were addressed by not using
+> Speck for Android. I don't believe HPolyC and Speck are orthogonal.
+> Instead they provide the user with a choice which is usually a good
+> thing.
+> 
+> I also think allowing politics a heavy hand endangers other ciphers
+> like SM3 and SM4. I would advise against removing them just because
+> they are Chinese ciphers. I suppose the same could be argued for North
+> Korea and Jipsam and Pilsung (if North Korea ever offers their
+> ciphers).
+> 
+> I think Eric, Ard and other contributions lead to a high quality
+> implementation of Speck. High quality implementations that "just
+> works" everywhere on multiple platforms are rather hard to come by.
+> The kernel's unified implementation ensures lots of folks don't go
+> making lots of mistakes when rolling their own.
+> 
+> There are verticals that will need a choice or alternative like Speck.
+> US Aerospace, US Automotive and US Hoteliers come to mind. US
+> Financial my use them too (they having some trading platforms with
+> absurd requirements that make Simon and Speck appear bloated and
+> overweight).  Some of the verticals are going to need an alternative
+> that meets technical and security goals and pass the audits.
+> 
+> Choice is a good thing. Users need choices for technical, regulatory
+> and legal reasons.
+> 
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/arm/crypto/Makefile                      |  4 +-
- ...hacha20-neon-core.S => chacha-neon-core.S} | 51 +++++++++--------
- ...hacha20-neon-glue.c => chacha-neon-glue.c} | 56 ++++++++++---------
- 3 files changed, 59 insertions(+), 52 deletions(-)
- rename arch/arm/crypto/{chacha20-neon-core.S => chacha-neon-core.S} (93%)
- rename arch/arm/crypto/{chacha20-neon-glue.c => chacha-neon-glue.c} (73%)
+This is about the Linux kernel, though.  The purpose of the Linux kernel's
+crypto API is to allow kernel code to do crypto, and also sometimes to allow
+access to crypto accelerator hardware.  It's *not* to provide a comprehensive
+collection of algorithms for userspace programs to use, or to provide reference
+implementations for crypto algorithms.  Before our change in plans, we needed
+Speck-XTS in the kernel so that it could be used in dm-crypt and fscrypt, which
+are kernel features and therefore require in-kernel implementations.  And of
+course, our proposed new solution, HPolyC, will need to be supported in the
+kernel too for the same reason.  It's just the way transparent disk and file
+encryption works; the crypto needs to be done in the kernel.  But do your other
+mentioned use cases actually need Speck to be in the Linux kernel?
 
-diff --git a/arch/arm/crypto/Makefile b/arch/arm/crypto/Makefile
-index 8de542c48ade..6f58a24faa4a 100644
---- a/arch/arm/crypto/Makefile
-+++ b/arch/arm/crypto/Makefile
-@@ -9,7 +9,7 @@ obj-$(CONFIG_CRYPTO_SHA1_ARM) += sha1-arm.o
- obj-$(CONFIG_CRYPTO_SHA1_ARM_NEON) += sha1-arm-neon.o
- obj-$(CONFIG_CRYPTO_SHA256_ARM) += sha256-arm.o
- obj-$(CONFIG_CRYPTO_SHA512_ARM) += sha512-arm.o
--obj-$(CONFIG_CRYPTO_CHACHA20_NEON) += chacha20-neon.o
-+obj-$(CONFIG_CRYPTO_CHACHA20_NEON) += chacha-neon.o
- obj-$(CONFIG_CRYPTO_SPECK_NEON) += speck-neon.o
- 
- ce-obj-$(CONFIG_CRYPTO_AES_ARM_CE) += aes-arm-ce.o
-@@ -53,7 +53,7 @@ aes-arm-ce-y	:= aes-ce-core.o aes-ce-glue.o
- ghash-arm-ce-y	:= ghash-ce-core.o ghash-ce-glue.o
- crct10dif-arm-ce-y	:= crct10dif-ce-core.o crct10dif-ce-glue.o
- crc32-arm-ce-y:= crc32-ce-core.o crc32-ce-glue.o
--chacha20-neon-y := chacha20-neon-core.o chacha20-neon-glue.o
-+chacha-neon-y := chacha-neon-core.o chacha-neon-glue.o
- speck-neon-y := speck-neon-core.o speck-neon-glue.o
- 
- ifdef REGENERATE_ARM_CRYPTO
-diff --git a/arch/arm/crypto/chacha20-neon-core.S b/arch/arm/crypto/chacha-neon-core.S
-similarity index 93%
-rename from arch/arm/crypto/chacha20-neon-core.S
-rename to arch/arm/crypto/chacha-neon-core.S
-index 8e63208cc025..3b38d3cac522 100644
---- a/arch/arm/crypto/chacha20-neon-core.S
-+++ b/arch/arm/crypto/chacha-neon-core.S
-@@ -1,5 +1,5 @@
- /*
-- * ChaCha20 256-bit cipher algorithm, RFC7539, ARM NEON functions
-+ * ChaCha/XChaCha NEON helper functions
-  *
-  * Copyright (C) 2016 Linaro, Ltd. <ard.biesheuvel@linaro.org>
-  *
-@@ -25,18 +25,18 @@
- 	.align		5
- 
- /*
-- * _chacha20_permute - permute one block
-+ * _chacha_permute - permute one block
-  *
-  * Permute one 64-byte block where the state matrix is stored in the four NEON
-  * registers q0-q3.  It performs matrix operation on four words in parallel, but
-  * requires shuffling to rearrange the words after each round.
-  *
-+ * The round count is given in r3.
-+ *
-  * Clobbers: r3, q4
-  */
- .macro	_chacha_permute
- 
--	mov		r3, #10
--
- .Ldoubleround_\@:
- 	// x0 += x1, x3 = rotl32(x3 ^ x0, 16)
- 	vadd.i32	q0, q0, q1
-@@ -98,14 +98,15 @@
- 	// x3 = shuffle32(x3, MASK(0, 3, 2, 1))
- 	vext.8		q3, q3, q3, #4
- 
--	subs		r3, r3, #1
-+	subs		r3, r3, #2
- 	bne		.Ldoubleround_\@
- .endm
- 
--ENTRY(chacha20_block_xor_neon)
-+ENTRY(chacha_block_xor_neon)
- 	// r0: Input state matrix, s
- 	// r1: 1 data block output, o
- 	// r2: 1 data block input, i
-+	// r3: nrounds
- 
- 	// x0..3 = s0..3
- 	add		ip, r0, #0x20
-@@ -117,7 +118,7 @@ ENTRY(chacha20_block_xor_neon)
- 	vmov		q10, q2
- 	vmov		q11, q3
- 
--	_chacha20_permute
-+	_chacha_permute
- 
- 	add		ip, r2, #0x20
- 	vld1.8		{q4-q5}, [r2]
-@@ -144,37 +145,41 @@ ENTRY(chacha20_block_xor_neon)
- 	vst1.8		{q2-q3}, [ip]
- 
- 	bx		lr
--ENDPROC(chacha20_block_xor_neon)
-+ENDPROC(chacha_block_xor_neon)
- 
--ENTRY(hchacha20_block_neon)
-+ENTRY(hchacha_block_neon)
- 	// r0: Input state matrix, s
- 	// r1: output (8 32-bit words)
-+	// r2: nrounds
- 
- 	vld1.32		{q0-q1}, [r0]!
- 	vld1.32		{q2-q3}, [r0]
- 
--	_chacha20_permute
-+	mov		r3, r2
-+	_chacha_permute
- 
- 	vst1.8		{q0}, [r1]!
- 	vst1.8		{q3}, [r1]
- 
- 	bx		lr
--ENDPROC(hchacha20_block_neon)
-+ENDPROC(hchacha_block_neon)
- 
- 	.align		5
--ENTRY(chacha20_4block_xor_neon)
-+ENTRY(chacha_4block_xor_neon)
- 	push		{r4-r6, lr}
- 	mov		ip, sp			// preserve the stack pointer
--	sub		r3, sp, #0x20		// allocate a 32 byte buffer
--	bic		r3, r3, #0x1f		// aligned to 32 bytes
--	mov		sp, r3
-+	sub		r4, sp, #0x20		// allocate a 32 byte buffer
-+	bic		r4, r4, #0x1f		// aligned to 32 bytes
-+	mov		sp, r4
-+
- 
- 	// r0: Input state matrix, s
- 	// r1: 4 data blocks output, o
- 	// r2: 4 data blocks input, i
-+	// r3: nrounds
- 
- 	//
--	// This function encrypts four consecutive ChaCha20 blocks by loading
-+	// This function encrypts four consecutive ChaCha blocks by loading
- 	// the state matrix in NEON registers four times. The algorithm performs
- 	// each operation on the corresponding word of each state matrix, hence
- 	// requires no word shuffling. For final XORing step we transpose the
-@@ -183,14 +188,14 @@ ENTRY(chacha20_4block_xor_neon)
- 	//
- 
- 	// x0..15[0-3] = s0..3[0..3]
--	add		r3, r0, #0x20
-+	add		r4, r0, #0x20
- 	vld1.32		{q0-q1}, [r0]
--	vld1.32		{q2-q3}, [r3]
-+	vld1.32		{q2-q3}, [r4]
- 
--	adr		r3, CTRINC
-+	adr		r4, CTRINC
- 	vdup.32		q15, d7[1]
- 	vdup.32		q14, d7[0]
--	vld1.32		{q11}, [r3, :128]
-+	vld1.32		{q11}, [r4, :128]
- 	vdup.32		q13, d6[1]
- 	vdup.32		q12, d6[0]
- 	vadd.i32	q12, q12, q11		// x12 += counter values 0-3
-@@ -207,8 +212,6 @@ ENTRY(chacha20_4block_xor_neon)
- 	vdup.32		q1, d0[1]
- 	vdup.32		q0, d0[0]
- 
--	mov		r3, #10
--
- .Ldoubleround4:
- 	// x0 += x4, x12 = rotl32(x12 ^ x0, 16)
- 	// x1 += x5, x13 = rotl32(x13 ^ x1, 16)
-@@ -400,7 +403,7 @@ ENTRY(chacha20_4block_xor_neon)
- 	vsri.u32	q5, q8, #25
- 	vsri.u32	q6, q9, #25
- 
--	subs		r3, r3, #1
-+	subs		r3, r3, #2
- 	beq		0f
- 
- 	vld1.32		{q8-q9}, [sp, :256]
-@@ -537,7 +540,7 @@ ENTRY(chacha20_4block_xor_neon)
- 
- 	mov		sp, ip
- 	pop		{r4-r6, pc}
--ENDPROC(chacha20_4block_xor_neon)
-+ENDPROC(chacha_4block_xor_neon)
- 
- 	.align		4
- CTRINC:	.word		0, 1, 2, 3
-diff --git a/arch/arm/crypto/chacha20-neon-glue.c b/arch/arm/crypto/chacha-neon-glue.c
-similarity index 73%
-rename from arch/arm/crypto/chacha20-neon-glue.c
-rename to arch/arm/crypto/chacha-neon-glue.c
-index becc7990b1d3..b236af4889c6 100644
---- a/arch/arm/crypto/chacha20-neon-glue.c
-+++ b/arch/arm/crypto/chacha-neon-glue.c
-@@ -28,24 +28,26 @@
- #include <asm/neon.h>
- #include <asm/simd.h>
- 
--asmlinkage void chacha20_block_xor_neon(u32 *state, u8 *dst, const u8 *src);
--asmlinkage void chacha20_4block_xor_neon(u32 *state, u8 *dst, const u8 *src);
--asmlinkage void hchacha20_block_neon(const u32 *state, u32 *out);
--
--static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
--			    unsigned int bytes)
-+asmlinkage void chacha_block_xor_neon(const u32 *state, u8 *dst, const u8 *src,
-+				      int nrounds);
-+asmlinkage void chacha_4block_xor_neon(const u32 *state, u8 *dst, const u8 *src,
-+				       int nrounds);
-+asmlinkage void hchacha_block_neon(const u32 *state, u32 *out, int nrounds);
-+
-+static void chacha_doneon(u32 *state, u8 *dst, const u8 *src,
-+			  unsigned int bytes, int nrounds)
- {
- 	u8 buf[CHACHA_BLOCK_SIZE];
- 
- 	while (bytes >= CHACHA_BLOCK_SIZE * 4) {
--		chacha20_4block_xor_neon(state, dst, src);
-+		chacha_4block_xor_neon(state, dst, src, nrounds);
- 		bytes -= CHACHA_BLOCK_SIZE * 4;
- 		src += CHACHA_BLOCK_SIZE * 4;
- 		dst += CHACHA_BLOCK_SIZE * 4;
- 		state[12] += 4;
- 	}
- 	while (bytes >= CHACHA_BLOCK_SIZE) {
--		chacha20_block_xor_neon(state, dst, src);
-+		chacha_block_xor_neon(state, dst, src, nrounds);
- 		bytes -= CHACHA_BLOCK_SIZE;
- 		src += CHACHA_BLOCK_SIZE;
- 		dst += CHACHA_BLOCK_SIZE;
-@@ -53,13 +55,13 @@ static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
- 	}
- 	if (bytes) {
- 		memcpy(buf, src, bytes);
--		chacha20_block_xor_neon(state, buf, buf);
-+		chacha_block_xor_neon(state, buf, buf, nrounds);
- 		memcpy(dst, buf, bytes);
- 	}
- }
- 
--static int chacha20_neon_stream_xor(struct skcipher_request *req,
--				    struct chacha_ctx *ctx, u8 *iv)
-+static int chacha_neon_stream_xor(struct skcipher_request *req,
-+				  struct chacha_ctx *ctx, u8 *iv)
- {
- 	struct skcipher_walk walk;
- 	u32 state[16];
-@@ -75,15 +77,15 @@ static int chacha20_neon_stream_xor(struct skcipher_request *req,
- 		if (nbytes < walk.total)
- 			nbytes = round_down(nbytes, walk.stride);
- 
--		chacha20_doneon(state, walk.dst.virt.addr, walk.src.virt.addr,
--				nbytes);
-+		chacha_doneon(state, walk.dst.virt.addr, walk.src.virt.addr,
-+			      nbytes, ctx->nrounds);
- 		err = skcipher_walk_done(&walk, walk.nbytes - nbytes);
- 	}
- 
- 	return err;
- }
- 
--static int chacha20_neon(struct skcipher_request *req)
-+static int chacha_neon(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
- 	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
-@@ -93,12 +95,12 @@ static int chacha20_neon(struct skcipher_request *req)
- 		return crypto_chacha_crypt(req);
- 
- 	kernel_neon_begin();
--	err = chacha20_neon_stream_xor(req, ctx, req->iv);
-+	err = chacha_neon_stream_xor(req, ctx, req->iv);
- 	kernel_neon_end();
- 	return err;
- }
- 
--static int xchacha20_neon(struct skcipher_request *req)
-+static int xchacha_neon(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
- 	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
-@@ -114,10 +116,11 @@ static int xchacha20_neon(struct skcipher_request *req)
- 
- 	kernel_neon_begin();
- 
--	hchacha20_block_neon(state, subctx.key);
-+	hchacha_block_neon(state, subctx.key, ctx->nrounds);
-+	subctx.nrounds = ctx->nrounds;
- 	memcpy(&real_iv[0], req->iv + 24, 8);
- 	memcpy(&real_iv[8], req->iv + 16, 8);
--	err = chacha20_neon_stream_xor(req, &subctx, real_iv);
-+	err = chacha_neon_stream_xor(req, &subctx, real_iv);
- 
- 	kernel_neon_end();
- 
-@@ -139,8 +142,8 @@ static struct skcipher_alg algs[] = {
- 		.chunksize		= CHACHA_BLOCK_SIZE,
- 		.walksize		= 4 * CHACHA_BLOCK_SIZE,
- 		.setkey			= crypto_chacha20_setkey,
--		.encrypt		= chacha20_neon,
--		.decrypt		= chacha20_neon,
-+		.encrypt		= chacha_neon,
-+		.decrypt		= chacha_neon,
- 	}, {
- 		.base.cra_name		= "xchacha20",
- 		.base.cra_driver_name	= "xchacha20-neon",
-@@ -155,12 +158,12 @@ static struct skcipher_alg algs[] = {
- 		.chunksize		= CHACHA_BLOCK_SIZE,
- 		.walksize		= 4 * CHACHA_BLOCK_SIZE,
- 		.setkey			= crypto_chacha20_setkey,
--		.encrypt		= xchacha20_neon,
--		.decrypt		= xchacha20_neon,
-+		.encrypt		= xchacha_neon,
-+		.decrypt		= xchacha_neon,
- 	}
- };
- 
--static int __init chacha20_simd_mod_init(void)
-+static int __init chacha_simd_mod_init(void)
- {
- 	if (!(elf_hwcap & HWCAP_NEON))
- 		return -ENODEV;
-@@ -168,14 +171,15 @@ static int __init chacha20_simd_mod_init(void)
- 	return crypto_register_skciphers(algs, ARRAY_SIZE(algs));
- }
- 
--static void __exit chacha20_simd_mod_fini(void)
-+static void __exit chacha_simd_mod_fini(void)
- {
- 	crypto_unregister_skciphers(algs, ARRAY_SIZE(algs));
- }
- 
--module_init(chacha20_simd_mod_init);
--module_exit(chacha20_simd_mod_fini);
-+module_init(chacha_simd_mod_init);
-+module_exit(chacha_simd_mod_fini);
- 
-+MODULE_DESCRIPTION("ChaCha and XChaCha stream ciphers (NEON accelerated)");
- MODULE_AUTHOR("Ard Biesheuvel <ard.biesheuvel@linaro.org>");
- MODULE_LICENSE("GPL v2");
- MODULE_ALIAS_CRYPTO("chacha20");
--- 
-2.18.0.597.ga71716f1ad-goog
+I doubt it, in general.  Userspace applications of Speck seem likely to use
+their own implementation.  Remember, Speck is extraordinarily simple, and the
+original paper has example C code.  So if someone really wanted to use Speck in
+a userspace application, they're likely to just add an implementation directly
+to their application, rather than coding up a Linux-specific thing using AF_ALG.
+Or they'd use a Speck implementation from a library like Crypto++.
+
+And while I think it's clear that the reasons why a significant number of people
+don't want to *use* Speck (even in legitimate use cases) are heavily political,
+that doesn't necessarily mean that the reason for removing Speck from Linux
+needs to be as political.  If there's code in the kernel with no known users
+anymore, whether it's a crypto algorithm or something like an obsolete CPU
+architecture, then it's eligible to be removed so that it doesn't need to be
+maintained -- potentially even if it breaks the userspace ABI (since it's not
+really broken if no one cares)...  Note that Skein is another example of a
+crypto algorithm that was recently removed from the kernel because no one was
+using it, though to be fair it was in the staging directory too.  It's still a
+bit of a double standard as there are likely other ciphers in the kernel that
+actually no one is using either, but it's a valid argument...
+
+Thanks,
+
+- Eric
