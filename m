@@ -1,139 +1,197 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:41380 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726484AbeHXT6q (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 24 Aug 2018 15:58:46 -0400
+Return-Path: <SRS0=14es=LH=vger.kernel.org=linux-integrity-owner@kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 00/10] fs-verity: filesystem-level integrity protection
-Date: Fri, 24 Aug 2018 09:16:32 -0700
-Message-Id: <20180824161642.1144-1-ebiggers@kernel.org>
-Sender: linux-fscrypt-owner@vger.kernel.org
+Subject: [RFC PATCH 03/10] fs-verity: implement FS_IOC_ENABLE_VERITY ioctl
+Date: Fri, 24 Aug 2018 09:16:35 -0700
+Message-Id: <20180824161642.1144-4-ebiggers@kernel.org>
+In-Reply-To: <20180824161642.1144-1-ebiggers@kernel.org>
+References: <20180824161642.1144-1-ebiggers@kernel.org>
+Sender: linux-integrity-owner@vger.kernel.org
 To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
 Cc: linux-integrity@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hello,
+From: Eric Biggers <ebiggers@google.com>
 
-This RFC patchset implements fs-verity for ext4 and f2fs.  fs-verity is
-similar to dm-verity, but implemented on a per-file basis: a Merkle tree
-hidden past the end of the file is used to verify the file's data as it
-is paged in.  Most of the code is in fs/verity/, and not too many
-filesystem-specific changes are needed.  The Merkle tree is written by
-userspace before calling an ioctl to mark the file as a verity file; the
-file then becomes read-only and the tree is hidden from userspace.
+Add a function for filesystems to call to implement the
+FS_IOC_ENABLE_VERITY ioctl.  This ioctl performs various validations
+(e.g., checking that the file isn't open for writing), then calls back
+into the filesystem to set the verity bit on the inode.
 
-Note: on Monday, Michael Halcrow and I will be giving a talk about
-fs-verity at the Linux Security Summit.  fs-verity was also previously
-discussed at LSFMM 2018; see https://lwn.net/Articles/752614/.  It was
-also previously discussed on linux-fsdevel here:
-https://www.spinics.net/lists/linux-fsdevel/msg121182.html
+This ioctl is used to mark a file as being fs-verity protected, after
+userspace has appended the Merkle tree and other metadata to the file.
 
-Since fs-verity provides the Merkle tree root hash in constant time and
-verifies data blocks on-demand, it is useful for efficiently verifying
-the authenticity of, or "appraising", large files of which only a small
-portion may be accessed -- such as Android application (APK) files.  It
-can also be useful in "audit" use cases where file hashes are logged.
-fs-verity also provides better protection against malicious disk
-firmware than an ahead-of-time hash, since fs-verity re-verifies data
-each time it's paged in.
-
-This patchset doesn't yet include IMA support for fs-verity file
-measurements; this is planned and we'd like to collaborate with the IMA
-maintainers.  Although fs-verity can be used on its own without IMA,
-fs-verity is primarily a lower level feature (think of it as a way of
-hashing a file), so some users will probably still need IMA's policy
-mechanism.  The patchset *does* include an optional means of including a
-signature in the fs-verity metadata and verifying it against the
-certificates in an fs-verity keyring; though, this might need to be
-re-assessed if it turns out IMA works just as well for that use case.
-
-For now this patchset only supports the case where the fs-verity block
-sizes are equal to PAGE_SIZE.  However, the fs-verity block sizes can be
-different from the filesystem's block size.
-
-A documentation file in Documentation/filesystems/ is planned but not
-yet included.
-
-This patchset is based on Linux v4.18.  It can also be found in git at
-tag "fsverity_2018-08-24" of:
-
-	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
-
-A userspace utility for fs-verity can be found at:
-
-	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git
-
-See the README.md file in the userspace utility source tree for examples.
-
-Tests for fs-verity can be found at branch "fsverity" of:
-
-	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
-
-On ext4 and f2fs, using fs-verity requires setting the verity feature
-flag on your filesystem.  The verity feature flag is supported since
-e2fsprogs 1.44.4-2 and f2fs-tools 1.11.0.
-
-Warning: besides the feature bit and inode flag, fs-verity's on-disk
-format is not yet stable, i.e. it can still be changed.  Please don't
-use this patchset "in production" yet!
-
-Feedback on the design and implementation is greatly appreciated.
-
-Thanks!
-
-Eric Biggers (8):
-  fs-verity: add setup code, UAPI, and Kconfig
-  fs-verity: add data verification hooks for ->readpages()
-  fs-verity: implement FS_IOC_ENABLE_VERITY ioctl
-  fs-verity: implement FS_IOC_MEASURE_VERITY ioctl
-  fs-verity: add SHA-512 support
-  fs-verity: add CRC-32C support
-  fs-verity: support builtin file signatures
-  f2fs: fs-verity support
-
-Theodore Ts'o (2):
-  ext4: add basic fs-verity support
-  ext4: add fs-verity read support
-
- fs/Kconfig                    |   2 +
- fs/Makefile                   |   1 +
- fs/ext4/Kconfig               |  20 +
- fs/ext4/ext4.h                |  22 +-
- fs/ext4/file.c                |   6 +
- fs/ext4/inode.c               |  11 +
- fs/ext4/ioctl.c               |  12 +
- fs/ext4/readpage.c            | 207 ++++++--
- fs/ext4/super.c               |  87 ++++
- fs/ext4/sysfs.c               |   6 +
- fs/f2fs/Kconfig               |  20 +
- fs/f2fs/data.c                |  43 +-
- fs/f2fs/f2fs.h                |  17 +-
- fs/f2fs/file.c                |  58 +++
- fs/f2fs/inode.c               |   3 +-
- fs/f2fs/super.c               |  22 +
- fs/f2fs/sysfs.c               |  11 +
- fs/verity/Kconfig             |  53 ++
- fs/verity/Makefile            |   5 +
- fs/verity/fsverity_private.h  | 136 +++++
- fs/verity/hash_algs.c         | 115 +++++
- fs/verity/ioctl.c             | 170 +++++++
- fs/verity/setup.c             | 931 ++++++++++++++++++++++++++++++++++
- fs/verity/signature.c         | 187 +++++++
- fs/verity/verify.c            | 310 +++++++++++
- include/linux/fs.h            |   9 +
- include/linux/fsverity.h      | 102 ++++
- include/uapi/linux/fsverity.h |  98 ++++
- 28 files changed, 2623 insertions(+), 41 deletions(-)
- create mode 100644 fs/verity/Kconfig
- create mode 100644 fs/verity/Makefile
- create mode 100644 fs/verity/fsverity_private.h
- create mode 100644 fs/verity/hash_algs.c
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/verity/Makefile       |   2 +-
+ fs/verity/ioctl.c        | 121 +++++++++++++++++++++++++++++++++++++++
+ include/linux/fsverity.h |  11 ++++
+ 3 files changed, 133 insertions(+), 1 deletion(-)
  create mode 100644 fs/verity/ioctl.c
- create mode 100644 fs/verity/setup.c
- create mode 100644 fs/verity/signature.c
- create mode 100644 fs/verity/verify.c
- create mode 100644 include/linux/fsverity.h
- create mode 100644 include/uapi/linux/fsverity.h
 
+diff --git a/fs/verity/Makefile b/fs/verity/Makefile
+index a6c7cefb61ab7..6450925e3a8b7 100644
+--- a/fs/verity/Makefile
++++ b/fs/verity/Makefile
+@@ -1,3 +1,3 @@
+ obj-$(CONFIG_FS_VERITY)	+= fsverity.o
+ 
+-fsverity-y := hash_algs.o setup.o verify.o
++fsverity-y := hash_algs.o ioctl.o setup.o verify.o
+diff --git a/fs/verity/ioctl.c b/fs/verity/ioctl.c
+new file mode 100644
+index 0000000000000..993f2afdcc734
+--- /dev/null
++++ b/fs/verity/ioctl.c
+@@ -0,0 +1,121 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * fs/verity/ioctl.c: fs-verity ioctls
++ *
++ * Copyright (C) 2018 Google LLC
++ *
++ * Originally written by Jaegeuk Kim and Michael Halcrow;
++ * heavily rewritten by Eric Biggers.
++ */
++
++#include "fsverity_private.h"
++
++#include <linux/capability.h>
++#include <linux/mm.h>
++#include <linux/mount.h>
++#include <linux/uaccess.h>
++
++/**
++ * fsverity_ioctl_enable - enable fs-verity on a file
++ *
++ * Set the verity bit on a file.  Userspace must have already appended verity
++ * metadata to the file.
++ *
++ * Enabling fs-verity makes the file contents immutable, and the filesystem
++ * doesn't allow disabling it (other than by replacing the file).
++ *
++ * To avoid races with the file contents being modified, no processes must have
++ * the file open for writing.  This includes the caller!
++ *
++ * Return: 0 on success, -errno on failure
++ */
++int fsverity_ioctl_enable(struct file *filp, const void __user *arg)
++{
++	struct inode *inode = file_inode(filp);
++	struct fsverity_info *vi;
++	int err;
++
++	/*
++	 * In principle we need only check 'inode_owner_or_capable(inode)',
++	 * which would allow non-root users to enable fs-verity on their own
++	 * files.  But to be conservative, for now restrict this to root-only.
++	 */
++	if (!capable(CAP_SYS_ADMIN))
++		return -EACCES;
++
++	if (arg) /* argument is reserved */
++		return -EINVAL;
++
++	if (S_ISDIR(inode->i_mode))
++		return -EISDIR;
++
++	if (!S_ISREG(inode->i_mode))
++		return -EINVAL;
++
++	err = mnt_want_write_file(filp);
++	if (err)
++		goto out;
++
++	/*
++	 * Temporarily lock out writers via writable file descriptors or
++	 * truncate().  This should stabilize the contents of the file as well
++	 * as its size.  Note that at the end of this ioctl we will unlock
++	 * writers, but at that point the verity bit will be set (if the ioctl
++	 * succeeded), preventing future writers.
++	 */
++	err = deny_write_access(filp);
++	if (err) /* -ETXTBSY */
++		goto out_drop_write;
++
++	/*
++	 * fsync so that the verity bit can't be persisted to disk prior to the
++	 * data, causing verification errors after a crash.
++	 */
++	err = vfs_fsync(filp, 1);
++	if (err)
++		goto out_allow_write;
++
++	/* Serialize concurrent use of this ioctl on the same inode */
++	inode_lock(inode);
++
++	if (get_fsverity_info(inode)) { /* fs-verity already enabled? */
++		err = -EEXIST;
++		goto out_unlock;
++	}
++
++	/* Validate the verity metadata */
++	vi = create_fsverity_info(inode, true);
++	if (IS_ERR(vi)) {
++		err = PTR_ERR(vi);
++		if (err == -EINVAL) /* distinguish "invalid metadata" case */
++			err = -EBADMSG;
++		goto out_unlock;
++	}
++
++	/* Set the verity bit */
++	err = inode->i_sb->s_vop->set_verity(inode, vi->data_i_size);
++	if (err)
++		goto out_free_vi;
++
++	/* Invalidate all cached pages, forcing re-verification */
++	truncate_inode_pages(inode->i_mapping, 0);
++
++	/*
++	 * Set ->i_verity_info, unless another task managed to do it already
++	 * between ->set_verity() and here.
++	 */
++	if (set_fsverity_info(inode, vi))
++		vi = NULL;
++	err = 0;
++out_free_vi:
++	free_fsverity_info(vi);
++out_unlock:
++	inode_unlock(inode);
++out_allow_write:
++	allow_write_access(filp);
++out_drop_write:
++	mnt_drop_write_file(filp);
++out:
++	return err;
++}
++EXPORT_SYMBOL_GPL(fsverity_ioctl_enable);
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index 56341f10aa965..c710b6b5fb4a6 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -21,6 +21,9 @@ struct fsverity_operations {
+ 
+ #if __FS_HAS_VERITY
+ 
++/* ioctl.c */
++extern int fsverity_ioctl_enable(struct file *filp, const void __user *arg);
++
+ /* setup.c */
+ extern int fsverity_file_open(struct inode *inode, struct file *filp);
+ extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
+@@ -35,6 +38,14 @@ extern void fsverity_enqueue_verify_work(struct work_struct *work);
+ 
+ #else /* !__FS_HAS_VERITY */
+ 
++/* ioctl.c */
++
++static inline int fsverity_ioctl_enable(struct file *filp,
++					const void __user *arg)
++{
++	return -EOPNOTSUPP;
++}
++
+ /* setup.c */
+ 
+ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
 -- 
 2.18.0
