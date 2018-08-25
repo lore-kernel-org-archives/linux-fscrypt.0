@@ -1,237 +1,88 @@
-Return-Path: <SRS0=J7B4=LI=huawei.com=gaoxiang25@kernel.org>
-From: Gao Xiang <gaoxiang25@huawei.com>
-Subject: Re: [RFC PATCH 02/10] fs-verity: add data verification hooks for
- ->readpages()
+Return-Path: <SRS0=uzTQ=LI=thunk.org=tytso@kernel.org>
+Date: Sat, 25 Aug 2018 01:06:21 -0400
+From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Subject: Re: [f2fs-dev] [RFC PATCH 02/10] fs-verity: add data verification
+ hooks for ->readpages()
+Message-ID: <20180825050621.GA25031@thunk.org>
 References: <20180824161642.1144-1-ebiggers@kernel.org>
  <20180824161642.1144-3-ebiggers@kernel.org>
  <2f2382c3-e5e9-f0da-dc89-42dfc7b2b636@huawei.com>
- <20180825041647.GA726@sol.localdomain>
-Message-ID: <21e86199-28a7-4693-aef5-5fc28842535c@huawei.com>
-Date: Sat, 25 Aug 2018 14:31:16 +0800
+ <20180825034544.GA5281@thunk.org>
+ <cb646950-94ea-9b28-80f1-3c840ad85581@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <20180825041647.GA726@sol.localdomain>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-integrity@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Victor Hsieh <victorhsieh@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <cb646950-94ea-9b28-80f1-3c840ad85581@huawei.com>
+To: Gao Xiang <gaoxiang25@huawei.com>
+Cc: Eric Biggers <ebiggers@kernel.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-integrity@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Eric,
-
-Thanks for your detailed reply.
-
-My english is not quite well, I could not type logically and quickly like you and could use some words improperly,
-I just want to express my personal concern, please understand, thanks. :)
-
-On 2018/8/25 12:16, Eric Biggers wrote:
-> Hi Gao,
+On Sat, Aug 25, 2018 at 12:00:04PM +0800, Gao Xiang wrote:
 > 
-> On Sat, Aug 25, 2018 at 10:29:26AM +0800, Gao Xiang wrote:
->> Hi,
->>
->> On 2018/8/25 0:16, Eric Biggers wrote:
->>> +/**
->>> + * fsverity_verify_page - verify a data page
->>> + *
->>> + * Verify a page that has just been read from a file against that file's Merkle
->>> + * tree.  The page is assumed to be a pagecache page.
->>> + *
->>> + * Return: true if the page is valid, else false.
->>> + */
->>> +bool fsverity_verify_page(struct page *data_page)
->>> +{
->>> +	struct inode *inode = data_page->mapping->host;
->>> +	const struct fsverity_info *vi = get_fsverity_info(inode);
->>> +	struct ahash_request *req;
->>> +	bool valid;
->>> +
->>> +	req = ahash_request_alloc(vi->hash_alg->tfm, GFP_KERNEL);
->>> +	if (unlikely(!req))
->>> +		return false;
->>> +
->>> +	valid = verify_page(inode, vi, req, data_page);
->>> +
->>> +	ahash_request_free(req);
->>> +
->>> +	return valid;
->>> +}
->>> +EXPORT_SYMBOL_GPL(fsverity_verify_page);
->>> +
->>> +/**
->>> + * fsverity_verify_bio - verify a 'read' bio that has just completed
->>> + *
->>> + * Verify a set of pages that have just been read from a file against that
->>> + * file's Merkle tree.  The pages are assumed to be pagecache pages.  Pages that
->>> + * fail verification are set to the Error state.  Verification is skipped for
->>> + * pages already in the Error state, e.g. due to fscrypt decryption failure.
->>> + */
->>> +void fsverity_verify_bio(struct bio *bio)
->>> +{
->>> +	struct inode *inode = bio_first_page_all(bio)->mapping->host;
->>> +	const struct fsverity_info *vi = get_fsverity_info(inode);
->>> +	struct ahash_request *req;
->>> +	struct bio_vec *bv;
->>> +	int i;
->>> +
->>> +	req = ahash_request_alloc(vi->hash_alg->tfm, GFP_KERNEL);
->>> +	if (unlikely(!req)) {
->>> +		bio_for_each_segment_all(bv, bio, i)
->>> +			SetPageError(bv->bv_page);
->>> +		return;
->>> +	}
->>> +
->>> +	bio_for_each_segment_all(bv, bio, i) {
->>> +		struct page *page = bv->bv_page;
->>> +
->>> +		if (!PageError(page) && !verify_page(inode, vi, req, page))
->>> +			SetPageError(page);
->>> +	}
->>> +
->>> +	ahash_request_free(req);
->>> +}
->>> +EXPORT_SYMBOL_GPL(fsverity_verify_bio);
->>
->> Out of curiosity, I quickly scanned the fs-verity source code and some minor question out there....
->>
->> If something is wrong, please point out, thanks in advance...
->>
->> My first question is that 'Is there any way to skip to verify pages in a bio?'
->> I am thinking about
->> If metadata and data page are mixed in a filesystem of such kind, they could submit together in a bio, but metadata could be unsuitable for such kind of verification.
->>
+> But I have some consideration than the current implementation.... (if it is suitable to discuss, thanks...)
 > 
-> Pages below i_size are verified, pages above are not.
-> 
-> With my patches, ext4 and f2fs won't actually submit pages in both areas in the
-> same bio, and they won't call the fs-verity verification function for bios in
-> the data area.  But even if they did, there's also a check in verify_page() that
+> 1) Since it is the libfs-like library, I think bio-strict is too strict for its future fs users.
 
-I think you mean the hash area?
-Yes, I understand your design. It is a wonderful job for ext4/f2fs for now as Ted said.
+Well, it's always possible to potentially expand fs-crypt and
+fs-verity to be more flexible in the future.  For example, Chandan
+Rajendra from IBM has been working on a set of patches to support file
+systems that have a block size smaller than a page size.  This turns
+out to be important on Power architecture with 64k page sizes.
 
-> skips the verification if the page is above i_size.
->
+Fundamentally, a Merkle tree is a data structure that works on fixed
+size chunks, both for the data blocks and the hash tree.  The natural
+size to use is the page size, since data is cached in the page cache.
 
-I think it could not be as simple as you said for all cases.
+So a file system can be store data in any number of places, but
+ultimately, most interesting file systems are ones where you can
+execute ELF binaries out of said file system with demand paging, which
+in turn means that mmap has to work, which in turn means that file
+data will be stored in the page cache.  This is true of f2fs, btrfs,
+ext4, xfs, etc.  So basically, fs-verity will be verifying the page
+before it is marked as uptodate.  Right now, all of the file systems
+that we are interested in trigger the call to ask fsverity to verify
+the page via the bio endio callback function.
 
-If some fs submits contiguous access with different MAPPING (something like mixed FILE_MAPPING and META_MAPPING),
-their page->index are actually unreliable(could be logical page index for FILE_MAPPING,and physical page index for META_MAPPING),
-and data are organized by design in multi bios for a fs-specific use (such as compresssion).
+Some other file systems could theoretically call that function after
+assembling the page from a dozen random locations in a b-tree.  In
+that case, it could call fsverity after assembling the page in the
+page cache.  But I'd suggest worrying about it when such a file system
+comes out of the woodwork, and someone is willing to do the work to
+integrate fserity in that file system.
 
-You couldn't do such verification `if the page is above i_size' and it could be hard to integrate somehow.
+> 2) My last question
+> "At last, I hope filesystems could select the on-disk position of hash tree and 'struct fsverity_descriptor'
+> rather than fixed in the end of verity files...I think if fs-verity preparing such support and interfaces could be better....."
+> is also for some files partially or totally encoded (eg. compressed, or whatever ...)
 
->> The second question is related to the first question --- 'Is there any way to verify a partial page?'
->> Take scalability into consideration, some files could be totally inlined or partially inlined in metadata.
->> Is there any way to deal with them in per-file approach? at least --- support for the interface?
-> 
-> Well, one problem is that inline data has its own separate I/O path; see
-> ext4_readpage_inline() and f2fs_read_inline_data().  So it would be a large
-> effort to support features like encryption and verity which require
-> postprocessing after reads, and probably not worthwhile especially for verity
-> which is primarily intended for large files.
+Well, the userspace interface for instantiating a fs-verity file is
+that it writes the file data with the fs-verity metadata (which
+consists of the Merkle tree with a fs-verity header at the end of the
+file).  The program (which might be a package manager such as dpkg or
+rpm) would then call an ioctl which would cause the file system to
+read the fs-verity header and make only the file data visible, and the
+file system would the verify the data as it is read into the page
+cache.
 
-Yes, for the current user ext4 and f2fs, it is absolutely wonderful.
+That is the userspace API to the fs-verity system.  That has to remain
+the same, regardless of which file system is in use.  We need a common
+interface so that whether it is the Android APK management system, or
+some distribution package manager, can instantiate fs-verity protected
+file the same way regardless of the file system in use.
 
+There is a very simple, easy way to implement this in the file system,
+and f2fs and ext4 both do it that way --- which is to simply change
+the i_size exposed to the userspace when you stat the file, and we use
+the file system's existing mechanism to map logical block numbers to
+physical block numbers to read the Merkle tree.
 
-I have to admit I am curious about Google fs-verity roadmap for the future Android
-(I have to identify whether it is designed to replace dm-verity, currently I think is no)
+If the file system wants to import that file data and store it
+somewhere else random --- perhaps it breaks it apart into a zillion
+tiny pieces and puts it in a b-tree --- a file system implementor is
+free to do that.  I personally think it is a completely insane thing
+to do, but there is nothing in the fs-verity design that *prohibits*
+that.
 
-since it is very important whether our EROFS should support fs-verity or not in the near future...
+Regards,
 
-
-I could give some EROFS use case if you have some time to discuss.
-
-EROFS uses a more aggressive inline approach, which means it not only inline data for small files.
-It is designed to inline the last page, which are reasonable small (eg. only a few byte) to inline for all files, eg.
-
-                                                                 IN FILE_MAPPING
-IN META_MAPPING                                                  blk-aligned
-+--------------------------------------|                         +--------+--------+     +----------+.......+
-|inode A+inlined-last data.. inode B...|                         | page 0 | page 1 | ... | page n-1 . page n.
-+--------------------------------------+                         +--------+--------+     +----------+.......+
-         |------------------------------------------------------------------------------------------|\
-
-In priciple, this approach could be also used for read-write file systems to save more storage space.
-I think it is still easy for uncompressed file if you do the zero padding as you said below.
-
-But if considering _compression_.....especially compression in VLE, I think it should not rely on `bio' directly, because,
-1) endio with compressed data rather than FILE_MAPPING plain data, these pages which could from META_MAPPING
-(for caching compressed page on purpose) or FILE_MAPPING(for decompressing in-place to save redundant META_MAPPING memory).
-
-I think it should be decompress at first and then fs-verity, but there could be more filepages other than compresssed pages joined
-(eg. 128kb->32kb, we submit 8 pages but decompress end with 32 pages), it should not be the original bio any more...
-(actually I think it is not the bio concept anymore...)
-
-2) EROFS VLE is more complicated, we could end a bio with a compressed page but decompress a partial file page, eg.
-    +-------------------+--------------------+
-... | compressed page X |compressed page X+1 |
-    +-------------------|--------------------+
-            end of bio Y/     bio Y+1
-                 \      |      /
-                  +-------------------------+
-                  |   plain data (file page)|
-                  +-------------------------+
-which means a bio could only decompress partial data of a page, the page could be Uptodate by two bios rather than one,
-I have no idea how to fs-verity like this...
-
-`it could call fsverity after assembling the page in the page cache.` as Ted said in that case.
-
-> 
-> A somewhat separate question is whether the zero padding to a block boundary
-> after i_size, before the Merkle tree begins, is needed.  The answer is yes,
-> since mixing data and metadata in the same page would cause problems.  First,
-> userspace would be able to mmap the page and see some of the metadata rather
-> than zeroes.  That's not a huge problem, but it breaks the standard behavior.
-> Second, any page containing data cannot be set Uptodate until it's been
-> verified.  So, a special case would be needed to handle reading the part of the
-> metadata that's located in a data page.
-
-Yes, after I just thinked over, I think there should be a zero padding to a block boundary
-as you said due to Uptodate and mmap scenerio if you directly use its inode(file) mapping for verification.
-
-
-> 
->> At last, I hope filesystems could select the on-disk position of hash tree and 'struct fsverity_descriptor'
->> rather than fixed in the end of verity files...I think if fs-verity preparing such support and interfaces could be better.....hmmm... :(
-> 
-> In theory it would be a much cleaner design to store verity metadata separately
-> from the data.  But the Merkle tree can be very large.  For example, a 1 GB file
-> using SHA-512 would have a 16.6 MB Merkle tree.  So the Merkle tree can't be an
-> extended attribute, since the xattrs API requires xattrs to be small (<= 64 KB),
-> and most filesystems further limit xattr sizes in their on-disk format to as
-> little as 4 KB.  Furthermore, even if both of these limits were to be increased,
-> the xattrs functions (both the syscalls, and the internal functions that
-> filesystems have) are all based around getting/setting the entire xattr value.
-> 
-> Also when used with fscrypt, we want the Merkle tree and fsverity_descriptor to
-> be encrypted, so they doesn't leak plaintext hashes.  And we want the Merkle
-> tree to be paged into memory, just like the file contents, to take advantage of
-> the usual Linux memory management.
-> 
-> What we really need is *streams*, like NTFS has.  But the filesystems we're
-> targetting don't support streams, nor does the Linux syscall interface have any
-> API for accessing streams, nor does the VFS support them.
-> 
-> Adding streams support to all those things would be a huge multi-year effort,
-> controversial, and almost certainly not worth it just for fs-verity.
-> 
-> So simply storing the verity metadata past i_size seems like the best solution
-> for now.
-> 
-> That being said, in the future we could pretty easily swap out the calls to
-> read_mapping_page() with something else if a particular filesystem wanted to
-> store the metadata somewhere else.  We actually even originally had a function
-> ->read_metadata_page() in the filesystem's fsverity_operations, but it turned
-> out to be unnecessary and I replaced it with directly calling
-> read_mapping_page(), but it could be changed back at any time.
-
-OK, I got it.
-
-I have to look into that and think over again. Thanks for your reply again in the end. :)
-
-Thanks,
-Gao Xiang
-
-> 
-> - Eric
-> 
+						- Ted
