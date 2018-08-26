@@ -1,312 +1,95 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 5/9] crypto: arm/chacha20 - add XChaCha20 support
-Date: Mon,  6 Aug 2018 15:32:56 -0700
-Message-Id: <20180806223300.113891-6-ebiggers@kernel.org>
-In-Reply-To: <20180806223300.113891-1-ebiggers@kernel.org>
-References: <20180806223300.113891-1-ebiggers@kernel.org>
+Return-Path: <SRS0=AF9I=LJ=aol.com=hsiangkao@kernel.org>
+Subject: Re: Re: [RFC PATCH 02/10] fs-verity: add data verification hooks for
+ ->readpages()
+References: <20180824161642.1144-1-ebiggers@kernel.org>
+ <20180824161642.1144-3-ebiggers@kernel.org>
+ <C86750D6-CA95-4A7F-9204-51345C497EC2@gmail.com>
+ <20180826170433.GA728@sol.localdomain>
+From: Gao Xiang <hsiangkao@aol.com>
+Message-ID: <a83219f8-44a2-7a40-319a-dc2f9d567cbe@aol.com>
+Date: Mon, 27 Aug 2018 01:44:50 +0800
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-crypto-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@google.com>
+In-Reply-To: <20180826170433.GA728@sol.localdomain>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: Chuck Lever <chucklever@gmail.com>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Eric,
 
-Add an XChaCha20 implementation that is hooked up to the ARM NEON
-implementation of ChaCha20.  This is needed for use in the HPolyC
-construction for disk/file encryption; see the generic code patch,
-"crypto: chacha20-generic - add XChaCha20 support", for more details.
+On 2018/8/27 1:04, Eric Biggers wrote:
+> Hi Chuck,
+> 
+> On Sun, Aug 26, 2018 at 11:55:57AM -0400, Chuck Lever wrote:
+>>> +
+>>> +/**
+>>> + * fsverity_verify_page - verify a data page
+>>> + *
+>>> + * Verify a page that has just been read from a file against that file's Merkle
+>>> + * tree.  The page is assumed to be a pagecache page.
+>>> + *
+>>> + * Return: true if the page is valid, else false.
+>>> + */
+>>> +bool fsverity_verify_page(struct page *data_page)
+>>> +{
+>>> +	struct inode *inode = data_page->mapping->host;
+>>> +	const struct fsverity_info *vi = get_fsverity_info(inode);
+>>> +	struct ahash_request *req;
+>>> +	bool valid;
+>>> +
+>>> +	req = ahash_request_alloc(vi->hash_alg->tfm, GFP_KERNEL);
 
-We also update the NEON code to support HChaCha20 on one block, so we
-can use that in XChaCha20 rather than calling the generic HChaCha20.
-This required factoring the permutation out into its own macro.
+Some minor suggestions occurred to me after I saw this part of code
+again before sleeping...
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/arm/crypto/Kconfig              |   2 +-
- arch/arm/crypto/chacha20-neon-core.S |  68 ++++++++++------
- arch/arm/crypto/chacha20-neon-glue.c | 111 ++++++++++++++++++++-------
- 3 files changed, 130 insertions(+), 51 deletions(-)
+1) How about introducing an iterator callback to avoid too many
+ahash_request_alloc and ahash_request_free... (It seems too many pages
+and could be some slower than fsverity_verify_bio...)
 
-diff --git a/arch/arm/crypto/Kconfig b/arch/arm/crypto/Kconfig
-index 925d1364727a..896dcf142719 100644
---- a/arch/arm/crypto/Kconfig
-+++ b/arch/arm/crypto/Kconfig
-@@ -116,7 +116,7 @@ config CRYPTO_CRC32_ARM_CE
- 	select CRYPTO_HASH
- 
- config CRYPTO_CHACHA20_NEON
--	tristate "NEON accelerated ChaCha20 symmetric cipher"
-+	tristate "NEON accelerated ChaCha20 stream cipher algorithms"
- 	depends on KERNEL_MODE_NEON
- 	select CRYPTO_BLKCIPHER
- 	select CRYPTO_CHACHA20
-diff --git a/arch/arm/crypto/chacha20-neon-core.S b/arch/arm/crypto/chacha20-neon-core.S
-index 451a849ad518..8e63208cc025 100644
---- a/arch/arm/crypto/chacha20-neon-core.S
-+++ b/arch/arm/crypto/chacha20-neon-core.S
-@@ -24,31 +24,20 @@
- 	.fpu		neon
- 	.align		5
- 
--ENTRY(chacha20_block_xor_neon)
--	// r0: Input state matrix, s
--	// r1: 1 data block output, o
--	// r2: 1 data block input, i
--
--	//
--	// This function encrypts one ChaCha20 block by loading the state matrix
--	// in four NEON registers. It performs matrix operation on four words in
--	// parallel, but requireds shuffling to rearrange the words after each
--	// round.
--	//
--
--	// x0..3 = s0..3
--	add		ip, r0, #0x20
--	vld1.32		{q0-q1}, [r0]
--	vld1.32		{q2-q3}, [ip]
--
--	vmov		q8, q0
--	vmov		q9, q1
--	vmov		q10, q2
--	vmov		q11, q3
-+/*
-+ * _chacha20_permute - permute one block
-+ *
-+ * Permute one 64-byte block where the state matrix is stored in the four NEON
-+ * registers q0-q3.  It performs matrix operation on four words in parallel, but
-+ * requires shuffling to rearrange the words after each round.
-+ *
-+ * Clobbers: r3, q4
-+ */
-+.macro	_chacha_permute
- 
- 	mov		r3, #10
- 
--.Ldoubleround:
-+.Ldoubleround_\@:
- 	// x0 += x1, x3 = rotl32(x3 ^ x0, 16)
- 	vadd.i32	q0, q0, q1
- 	veor		q3, q3, q0
-@@ -110,7 +99,25 @@ ENTRY(chacha20_block_xor_neon)
- 	vext.8		q3, q3, q3, #4
- 
- 	subs		r3, r3, #1
--	bne		.Ldoubleround
-+	bne		.Ldoubleround_\@
-+.endm
-+
-+ENTRY(chacha20_block_xor_neon)
-+	// r0: Input state matrix, s
-+	// r1: 1 data block output, o
-+	// r2: 1 data block input, i
-+
-+	// x0..3 = s0..3
-+	add		ip, r0, #0x20
-+	vld1.32		{q0-q1}, [r0]
-+	vld1.32		{q2-q3}, [ip]
-+
-+	vmov		q8, q0
-+	vmov		q9, q1
-+	vmov		q10, q2
-+	vmov		q11, q3
-+
-+	_chacha20_permute
- 
- 	add		ip, r2, #0x20
- 	vld1.8		{q4-q5}, [r2]
-@@ -139,6 +146,21 @@ ENTRY(chacha20_block_xor_neon)
- 	bx		lr
- ENDPROC(chacha20_block_xor_neon)
- 
-+ENTRY(hchacha20_block_neon)
-+	// r0: Input state matrix, s
-+	// r1: output (8 32-bit words)
-+
-+	vld1.32		{q0-q1}, [r0]!
-+	vld1.32		{q2-q3}, [r0]
-+
-+	_chacha20_permute
-+
-+	vst1.8		{q0}, [r1]!
-+	vst1.8		{q3}, [r1]
-+
-+	bx		lr
-+ENDPROC(hchacha20_block_neon)
-+
- 	.align		5
- ENTRY(chacha20_4block_xor_neon)
- 	push		{r4-r6, lr}
-diff --git a/arch/arm/crypto/chacha20-neon-glue.c b/arch/arm/crypto/chacha20-neon-glue.c
-index ed8dec0f1768..becc7990b1d3 100644
---- a/arch/arm/crypto/chacha20-neon-glue.c
-+++ b/arch/arm/crypto/chacha20-neon-glue.c
-@@ -1,5 +1,5 @@
- /*
-- * ChaCha20 256-bit cipher algorithm, RFC7539, ARM NEON functions
-+ * ChaCha20 (RFC7539) and XChaCha20 stream ciphers, NEON accelerated
-  *
-  * Copyright (C) 2016 Linaro, Ltd. <ard.biesheuvel@linaro.org>
-  *
-@@ -30,6 +30,7 @@
- 
- asmlinkage void chacha20_block_xor_neon(u32 *state, u8 *dst, const u8 *src);
- asmlinkage void chacha20_4block_xor_neon(u32 *state, u8 *dst, const u8 *src);
-+asmlinkage void hchacha20_block_neon(const u32 *state, u32 *out);
- 
- static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
- 			    unsigned int bytes)
-@@ -57,22 +58,17 @@ static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
- 	}
- }
- 
--static int chacha20_neon(struct skcipher_request *req)
-+static int chacha20_neon_stream_xor(struct skcipher_request *req,
-+				    struct chacha_ctx *ctx, u8 *iv)
- {
--	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
- 	struct skcipher_walk walk;
- 	u32 state[16];
- 	int err;
- 
--	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
--		return crypto_chacha_crypt(req);
--
- 	err = skcipher_walk_virt(&walk, req, true);
- 
--	crypto_chacha_init(state, ctx, walk.iv);
-+	crypto_chacha_init(state, ctx, iv);
- 
--	kernel_neon_begin();
- 	while (walk.nbytes > 0) {
- 		unsigned int nbytes = walk.nbytes;
- 
-@@ -83,27 +79,85 @@ static int chacha20_neon(struct skcipher_request *req)
- 				nbytes);
- 		err = skcipher_walk_done(&walk, walk.nbytes - nbytes);
- 	}
-+
-+	return err;
-+}
-+
-+static int chacha20_neon(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err;
-+
-+	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
-+		return crypto_chacha_crypt(req);
-+
-+	kernel_neon_begin();
-+	err = chacha20_neon_stream_xor(req, ctx, req->iv);
-+	kernel_neon_end();
-+	return err;
-+}
-+
-+static int xchacha20_neon(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct chacha_ctx subctx;
-+	u32 state[16];
-+	u8 real_iv[16];
-+	int err;
-+
-+	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
-+		return crypto_xchacha_crypt(req);
-+
-+	crypto_chacha_init(state, ctx, req->iv);
-+
-+	kernel_neon_begin();
-+
-+	hchacha20_block_neon(state, subctx.key);
-+	memcpy(&real_iv[0], req->iv + 24, 8);
-+	memcpy(&real_iv[8], req->iv + 16, 8);
-+	err = chacha20_neon_stream_xor(req, &subctx, real_iv);
-+
- 	kernel_neon_end();
- 
- 	return err;
- }
- 
--static struct skcipher_alg alg = {
--	.base.cra_name		= "chacha20",
--	.base.cra_driver_name	= "chacha20-neon",
--	.base.cra_priority	= 300,
--	.base.cra_blocksize	= 1,
--	.base.cra_ctxsize	= sizeof(struct chacha_ctx),
--	.base.cra_module	= THIS_MODULE,
--
--	.min_keysize		= CHACHA_KEY_SIZE,
--	.max_keysize		= CHACHA_KEY_SIZE,
--	.ivsize			= CHACHA_IV_SIZE,
--	.chunksize		= CHACHA_BLOCK_SIZE,
--	.walksize		= 4 * CHACHA_BLOCK_SIZE,
--	.setkey			= crypto_chacha20_setkey,
--	.encrypt		= chacha_neon,
--	.decrypt		= chacha_neon,
-+static struct skcipher_alg algs[] = {
-+	{
-+		.base.cra_name		= "chacha20",
-+		.base.cra_driver_name	= "chacha20-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= 1,
-+		.base.cra_ctxsize	= sizeof(struct chacha_ctx),
-+		.base.cra_module	= THIS_MODULE,
-+
-+		.min_keysize		= CHACHA_KEY_SIZE,
-+		.max_keysize		= CHACHA_KEY_SIZE,
-+		.ivsize			= CHACHA_IV_SIZE,
-+		.chunksize		= CHACHA_BLOCK_SIZE,
-+		.walksize		= 4 * CHACHA_BLOCK_SIZE,
-+		.setkey			= crypto_chacha20_setkey,
-+		.encrypt		= chacha20_neon,
-+		.decrypt		= chacha20_neon,
-+	}, {
-+		.base.cra_name		= "xchacha20",
-+		.base.cra_driver_name	= "xchacha20-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= 1,
-+		.base.cra_ctxsize	= sizeof(struct chacha_ctx),
-+		.base.cra_module	= THIS_MODULE,
-+
-+		.min_keysize		= CHACHA_KEY_SIZE,
-+		.max_keysize		= CHACHA_KEY_SIZE,
-+		.ivsize			= XCHACHA_IV_SIZE,
-+		.chunksize		= CHACHA_BLOCK_SIZE,
-+		.walksize		= 4 * CHACHA_BLOCK_SIZE,
-+		.setkey			= crypto_chacha20_setkey,
-+		.encrypt		= xchacha20_neon,
-+		.decrypt		= xchacha20_neon,
-+	}
- };
- 
- static int __init chacha20_simd_mod_init(void)
-@@ -111,12 +165,12 @@ static int __init chacha20_simd_mod_init(void)
- 	if (!(elf_hwcap & HWCAP_NEON))
- 		return -ENODEV;
- 
--	return crypto_register_skcipher(&alg);
-+	return crypto_register_skciphers(algs, ARRAY_SIZE(algs));
- }
- 
- static void __exit chacha20_simd_mod_fini(void)
- {
--	crypto_unregister_skcipher(&alg);
-+	crypto_unregister_skciphers(algs, ARRAY_SIZE(algs));
- }
- 
- module_init(chacha20_simd_mod_init);
-@@ -125,3 +179,6 @@ module_exit(chacha20_simd_mod_fini);
- MODULE_AUTHOR("Ard Biesheuvel <ard.biesheuvel@linaro.org>");
- MODULE_LICENSE("GPL v2");
- MODULE_ALIAS_CRYPTO("chacha20");
-+MODULE_ALIAS_CRYPTO("chacha20-neon");
-+MODULE_ALIAS_CRYPTO("xchacha20");
-+MODULE_ALIAS_CRYPTO("xchacha20-neon");
--- 
-2.18.0.597.ga71716f1ad-goog
+2) How about adding a gfp_t input argument since I don't know whether
+GFP_KERNEL is suitable for all use cases...
+
+It seems there could be more fsverity_verify_page users as well as
+fsverity_verify_bio ;)
+
+Sorry for interruption...
+
+Thanks,
+Gao Xiang
+
+>>> +	if (unlikely(!req))
+>>> +		return false;
+>>> +
+>>> +	valid = verify_page(inode, vi, req, data_page);
+>>> +
+>>> +	ahash_request_free(req);
+>>> +
+>>> +	return valid;
+>>> +}
+>>> +EXPORT_SYMBOL_GPL(fsverity_verify_page);
+>>> +
+>>> +/**
+>>> + * fsverity_verify_bio - verify a 'read' bio that has just completed
+>>> + *
+>>> + * Verify a set of pages that have just been read from a file against that
+>>> + * file's Merkle tree.  The pages are assumed to be pagecache pages.  Pages that
+>>> + * fail verification are set to the Error state.  Verification is skipped for
+>>> + * pages already in the Error state, e.g. due to fscrypt decryption failure.
+>>> + */
+>>> +void fsverity_verify_bio(struct bio *bio)
+>>
+>> Hi Eric-
+>>
+>> This kind of API won't work for remote filesystems, which do not use
+>> "struct bio" to do their I/O. Could a remote filesystem solely use
+>> fsverity_verify_page instead?
+>>
+> 
+> Yes, filesystems don't have to use fsverity_verify_bio().  They can call
+> fsverity_verify_page() on each page instead.  I will clarify this in the next
+> revision of the patchset.
+> 
+> - Eric
+> 
