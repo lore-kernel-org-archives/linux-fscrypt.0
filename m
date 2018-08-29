@@ -1,141 +1,150 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 0/9] crypto: HPolyC support
-Date: Mon,  6 Aug 2018 15:32:51 -0700
-Message-Id: <20180806223300.113891-1-ebiggers@kernel.org>
+Return-Path: <jaegeuk@kernel.org>
+Date: Tue, 28 Aug 2018 18:43:47 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [f2fs-dev] [RFC PATCH 10/10] f2fs: fs-verity support
+Message-ID: <20180829014347.GA27219@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20180824161642.1144-1-ebiggers@kernel.org>
+ <20180824161642.1144-11-ebiggers@kernel.org>
+ <b2b6a810-9605-15c8-b905-a4591c0cf3a5@huawei.com>
+ <20180826173507.GC728@sol.localdomain>
+ <dbc20be8-975d-7bd2-002d-a8f30896da4a@kernel.org>
+ <20180828072756.GC29049@jaegeuk-macbookpro.roam.corp.google.com>
+ <63a19512-e938-d239-9e3c-f6ecc479478c@huawei.com>
+ <20180828170142.GB62482@jaegeuk-macbookpro.roam.corp.google.com>
+ <8b7f83db-810a-bdd6-85b0-1248dc14f8d7@huawei.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-crypto-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <8b7f83db-810a-bdd6-85b0-1248dc14f8d7@huawei.com>
+To: Chao Yu <yuchao0@huawei.com>
+Cc: Chao Yu <chao@kernel.org>, Eric Biggers <ebiggers@kernel.org>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, linux-kernel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On 08/29, Chao Yu wrote:
+> On 2018/8/29 1:01, Jaegeuk Kim wrote:
+> > On 08/28, Chao Yu wrote:
+> >> On 2018/8/28 15:27, Jaegeuk Kim wrote:
+> >>> On 08/27, Chao Yu wrote:
+> >>>> Hi Eric,
+> >>>>
+> >>>> On 2018/8/27 1:35, Eric Biggers wrote:
+> >>>>> Hi Chao,
+> >>>>>
+> >>>>> On Sat, Aug 25, 2018 at 01:54:08PM +0800, Chao Yu wrote:
+> >>>>>> On 2018/8/25 0:16, Eric Biggers wrote:
+> >>>>>>> From: Eric Biggers <ebiggers@google.com>
+> >>>>>>>  #ifdef CONFIG_F2FS_CHECK_FS
+> >>>>>>>  #define f2fs_bug_on(sbi, condition)	BUG_ON(condition)
+> >>>>>>>  #else
+> >>>>>>> @@ -146,7 +149,7 @@ struct f2fs_mount_info {
+> >>>>>>>  #define F2FS_FEATURE_QUOTA_INO		0x0080
+> >>>>>>>  #define F2FS_FEATURE_INODE_CRTIME	0x0100
+> >>>>>>>  #define F2FS_FEATURE_LOST_FOUND		0x0200
+> >>>>>>> -#define F2FS_FEATURE_VERITY		0x0400	/* reserved */
+> >>>>>>> +#define F2FS_FEATURE_VERITY		0x0400
+> >>>>>>>  
+> >>>>>>>  #define F2FS_HAS_FEATURE(sb, mask)					\
+> >>>>>>>  	((F2FS_SB(sb)->raw_super->feature & cpu_to_le32(mask)) != 0)
+> >>>>>>> @@ -598,7 +601,7 @@ enum {
+> >>>>>>>  #define FADVISE_ENC_NAME_BIT	0x08
+> >>>>>>>  #define FADVISE_KEEP_SIZE_BIT	0x10
+> >>>>>>>  #define FADVISE_HOT_BIT		0x20
+> >>>>>>> -#define FADVISE_VERITY_BIT	0x40	/* reserved */
+> >>>>>>> +#define FADVISE_VERITY_BIT	0x40
+> >>>>>>
+> >>>>>> As I suggested before, how about moving f2fs' verity_bit from i_fadvise to more
+> >>>>>> generic i_flags field like ext4, so we can a) remaining more bits for those
+> >>>>>> demands which really need file advise fields. b) using i_flags bits keeping line
+> >>>>>> with ext4. Not sure, if user want to know whether the file is verity one, it
+> >>>>>> will be easy for f2fs to export the status through FS_IOC_SETFLAGS.
+> >>>>>>
+> >>>>>> #define EXT4_VERITY_FL			0x00100000 /* Verity protected inode */
+> >>>>>>
+> >>>>>> #define F2FS_VERITY_FL			0x00100000 /* Verity protected inode */
+> >>>>>>
+> >>>>>
+> >>>>> I don't like using i_advise much either, but I actually don't see either
+> >>>>> location being much better than the other at the moment.  The real problem is an
+> >>>>> artificial one: the i_flags in f2fs's on-disk format are being assumed to use
+> >>>>
+> >>>> Yeah, but since most copied flags from vfs/ext4 are not actually used in f2fs,
+> >>>> also 0x00100000 bit is not used now, so we can just define it now directly for
+> >>>> verity bit.
+> >>>>
+> >>>> Cleanup and remapping in ioctl interface for those unused flags, we can do it
+> >>>> latter?
+> >>>
+> >>> No, it was reserved by f2fs-tools, 
+> >>
+> >> That's not a problem, since we didn't use that reserved bit in any of images
+> >> now, there is no backward compatibility issue.
+> > 
+> > We're using that.
+> 
+> Oops, if it was in production, I agree to keep it in i_advice, otherwise, we
+> still can discuss its location.
+> 
+> > 
+> >>
+> >>> and I think this should be aligned to the encryption bit. 
+> >>
+> >> Alright, we could, but if so, i_advise will run out of space earlier, after that
+> >> we have to add real advice bit into i_inline or i_flags, that would be a little
+> >> weird.
+> >>
+> >> For encryption bit, as a common vfs feature flag, in the beginning of encryption
+> >> development, it will be better to set it into i_flags, IMO, but now, we have to
+> >> keep it as it was.
+> >>
+> >>> Moreover, we guarantee i_flags less strictly from power-cut than i_advise.
+> >>
+> >> IMO, in power-cut scenario, it needs to keep both i_flags and i_advise being
+> >> recoverable strictly. Any condition that we can not recover i_flags?
+> > 
+> > In __f2fs_ioc_setflags, f2fs_mark_inode_dirty_sync(inode, false);
+> 
+> Ah, that's right, do you remember why we treat them with different recoverable
+> level?
 
-Hi all,
+Since I thought that such the flags wouln't be critical on power cuts, but be
+enough for us to guarantee by write_inode() or fsync().
 
-(Please note that this patchset is a true RFC, i.e. we're not ready for
-it to be merged quite yet!)
-
-It was officially decided to *not* allow Android devices to use Speck
-encryption [1].  We've been working to find an alternative way to bring
-storage encryption to entry-level Android devices like the inexpensive
-"Android Go" devices sold in developing countries.  Unfortunately, often
-these devices still ship with no encryption, since for cost reasons they
-have to use older CPUs like ARM Cortex-A7; and these CPUs lack the ARMv8
-Cryptography Extensions, making AES-XTS much too slow.
-
-As we explained in detail earlier, e.g. in [2], this is a very
-challenging problem due to the lack of encryption algorithms that meet
-the very strict performance requirements, while still being secure and
-suitable for practical use in dm-crypt and fscrypt.  And as we saw with
-Speck, in this day and age the choice of cryptographic primitives also
-has a large political element, restricting the options even further.
-
-Therefore, we (well, Paul Crowley did the real work) designed a new
-encryption mode, HPolyC.  In essence, HPolyC makes it secure to use the
-ChaCha stream cipher for disk encryption.  HPolyC is specified by our
-paper here: https://eprint.iacr.org/2018/720.pdf ("HPolyC:
-length-preserving encryption for entry-level processors").  Reference
-code and test vectors are here: https://github.com/google/hpolyc.  Many
-of the high-level concepts of HPolyC are not new; similar existing modes
-include XCB, HCTR, HCH, and HMC.  HPolyC and these modes are true
-wide-block modes (tweakable super-pseudorandom permutations), so they
-actually provide a stronger notion of security than XTS.
-
-HPolyC encrypts each message using XChaCha12 or XChaCha20 sandwiched
-between two passes of Poly1305, plus a single block cipher invocation
-(e.g. AES-256) per message.  On ARM Cortex-A7, on 4096-byte messages
-HPolyC-XChaCha12-AES is slightly faster than Speck128/256-XTS.  Note
-that for long messages, the block cipher is not performance-critical
-since it's only invoked once per message; that's why we can use AES in
-HPolyC, despite the fully AES-based encryption modes being too slow.
-
-HPolyC is a construction, not a primitive.  It is proven secure if
-XChaCha and AES are secure, subject to a security bound.  Unless there
-is a mistake in this proof, one therefore does not need to trust HPolyC;
-one need only trust XChaCha (which itself has a security reduction to
-ChaCha) and AES.
-
-This RFC patchset implements HPolyC for Linux's crypto API.  Patches 1-8
-add support for XChaCha20, XChaCha12, and NEON-accelerated Poly1305.
-The final patch adds the actual HPolyC template.  Note: my patches may
-eventually need to be redone on top of Jason Donenfeld's new crypto
-library for WireGuard.  But, I decided to send them out now anyway since
-there was a strong desire to give HPolyC a wider audience and I had
-already written the patches, and to inform the design discussion for the
-new crypto library.
-
-We attest that no "backdoor" or other weakness was inserted into HPolyC,
-its implementation, or any other aspect of our work; and that to the
-best of our knowledge, HPolyC's security proof is correct.  You don't
-have to trust us, though: since HPolyC is a construction, not a
-primitive, its security proof can be independently verified by anyone.
-We invite additional independent review of HPolyC; and out of caution
-(since we did publish our paper only very recently, and we are only
-human, and humans can make mistakes even in proofs), we recommend that
-this patchset not be merged or used in production quite yet.  Also, this
-proposal is not final, and may yet be changed if improvements are found.
-
-This patchset can also be found in git at
-https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
-branch "hpolyc-v1".
-
-Footnotes:
-
-[1] Yes, that means we won't actually be needing my implementations of
-    Speck for the crypto API.  So, we no longer have any objection to
-    them being removed.  I just ask that if anyone would like to restart
-    that discussion, you please start a new thread rather than using
-    this one, so as to not derail any discussion on HPolyC.
-
-[2] https://www.spinics.net/lists/linux-crypto/msg33000.html
-
-Eric Biggers (9):
-  crypto: chacha20-generic - add HChaCha20 library function
-  crypto: chacha20-generic - add XChaCha20 support
-  crypto: chacha20-generic - refactor to allow varying number of rounds
-  crypto: chacha - add XChaCha12 support
-  crypto: arm/chacha20 - add XChaCha20 support
-  crypto: arm/chacha20 - refactor to allow varying number of rounds
-  crypto: arm/chacha - add XChaCha12 support
-  crypto: arm/poly1305 - add NEON accelerated Poly1305 implementation
-  crypto: hpolyc - add support for the HPolyC encryption mode
-
- arch/arm/crypto/Kconfig                       |    7 +-
- arch/arm/crypto/Makefile                      |    6 +-
- ...hacha20-neon-core.S => chacha-neon-core.S} |  107 +-
- arch/arm/crypto/chacha-neon-glue.c            |  207 +++
- arch/arm/crypto/chacha20-neon-glue.c          |  127 --
- arch/arm/crypto/poly1305-neon-core.S          | 1115 ++++++++++++++
- arch/arm/crypto/poly1305-neon-glue.c          |  325 ++++
- arch/arm64/crypto/chacha20-neon-glue.c        |   40 +-
- arch/x86/crypto/chacha20_glue.c               |   52 +-
- crypto/Kconfig                                |   48 +-
- crypto/Makefile                               |    3 +-
- crypto/chacha20_generic.c                     |  136 --
- crypto/chacha20poly1305.c                     |   10 +-
- crypto/chacha_generic.c                       |  216 +++
- crypto/hpolyc.c                               |  577 ++++++++
- crypto/testmgr.c                              |   24 +
- crypto/testmgr.h                              | 1313 +++++++++++++++++
- drivers/char/random.c                         |   50 +-
- include/crypto/chacha.h                       |   56 +
- include/crypto/chacha20.h                     |   28 -
- lib/Makefile                                  |    2 +-
- lib/{chacha20.c => chacha.c}                  |   61 +-
- 22 files changed, 4083 insertions(+), 427 deletions(-)
- rename arch/arm/crypto/{chacha20-neon-core.S => chacha-neon-core.S} (89%)
- create mode 100644 arch/arm/crypto/chacha-neon-glue.c
- delete mode 100644 arch/arm/crypto/chacha20-neon-glue.c
- create mode 100644 arch/arm/crypto/poly1305-neon-core.S
- create mode 100644 arch/arm/crypto/poly1305-neon-glue.c
- delete mode 100644 crypto/chacha20_generic.c
- create mode 100644 crypto/chacha_generic.c
- create mode 100644 crypto/hpolyc.c
- create mode 100644 include/crypto/chacha.h
- delete mode 100644 include/crypto/chacha20.h
- rename lib/{chacha20.c => chacha.c} (57%)
-
--- 
-2.18.0.597.ga71716f1ad-goog
+> 
+> Thanks,
+> 
+> > 
+> >>
+> >> Thanks,
+> >>
+> >>>
+> >>>>
+> >>>> Thanks,
+> >>>>
+> >>>>> the same numbering scheme as ext4's on-disk format, which makes it seem that
+> >>>>> they have to be in sync, and that all new ext4 flags (say, EA_INODE) also
+> >>>>> reserve bits in f2fs and vice versa, when they in fact do not.  Instead, f2fs
+> >>>>> should use its own numbering for its i_flags, and it should map them to/from
+> >>>>> whatever is needed for common APIs like FS_IOC_{GET,SET}FLAGS and
+> >>>>> FS_IOC_FS{GET,SET}XATTR.
+> >>>>>
+> >>>>> So putting the verity flag in *either* location (i_advise or i_flags) is just
+> >>>>> kicking the can down the road.  If I get around to it I will send a patch that
+> >>>>> cleans up the f2fs flags properly...>
+> >>>>> Thanks,
+> >>>>>
+> >>>>> - Eric
+> >>>>>
+> >>>>> ------------------------------------------------------------------------------
+> >>>>> Check out the vibrant tech community on one of the world's most
+> >>>>> engaging tech sites, Slashdot.org! http://sdm.link/slashdot
+> >>>>> _______________________________________________
+> >>>>> Linux-f2fs-devel mailing list
+> >>>>> Linux-f2fs-devel@lists.sourceforge.net
+> >>>>> https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+> >>>>>
+> >>>
+> >>> .
+> >>>
+> > 
+> > .
+> > 
