@@ -1,72 +1,66 @@
-Return-Path: <SRS0=ryGb=LS=gondor.apana.org.au=herbert@kernel.org>
-Date: Tue, 4 Sep 2018 12:55:59 +0800
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Subject: Re: [PATCH v2] crypto: remove Speck
-Message-ID: <20180904045559.jfzqhwcfyq42x2cs@gondor.apana.org.au>
-References: <20180807011937.GA133621@gmail.com>
- <20180807062225.6331-1-Jason@zx2c4.com>
+Return-Path: <SRS0=IX7Q=LQ=lixom.net=olof@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20180807062225.6331-1-Jason@zx2c4.com>
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>
-Cc: linux-crypto@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@kernel.org>, stable@vger.kernel.org
+In-Reply-To: <20180825041647.GA726@sol.localdomain>
+References: <20180824161642.1144-1-ebiggers@kernel.org> <20180824161642.1144-3-ebiggers@kernel.org>
+ <2f2382c3-e5e9-f0da-dc89-42dfc7b2b636@huawei.com> <20180825041647.GA726@sol.localdomain>
+From: Olof Johansson <olof@lixom.net>
+Date: Sat, 1 Sep 2018 19:35:53 -0700
+Message-ID: <CAOesGMhGfesVQHHMpqW5r7gMOZccX4RsZZex6y-kfkmuA6K0ow@mail.gmail.com>
+Subject: Re: [RFC PATCH 02/10] fs-verity: add data verification hooks for ->readpages()
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: Gao Xiang <gaoxiang25@huawei.com>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-integrity@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Aug 07, 2018 at 08:22:25AM +0200, Jason A. Donenfeld wrote:
-> These are unused, undesired, and have never actually been used by
-> anybody. The original authors of this code have changed their mind about
-> its inclusion. While originally proposed for disk encryption on low-end
-> devices, the idea was discarded [1] in favor of something else before
-> that could really get going. Therefore, this patch removes Speck.
-> 
-> [1] https://marc.info/?l=linux-crypto-vger&m=153359499015659
-> 
-> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-> Acked-by: Eric Biggers <ebiggers@google.com>
-> Cc: stable@vger.kernel.org
-> ---
->  Documentation/filesystems/fscrypt.rst |  10 -
->  arch/arm/crypto/Kconfig               |   6 -
->  arch/arm/crypto/Makefile              |   2 -
->  arch/arm/crypto/speck-neon-core.S     | 434 ---------------
->  arch/arm/crypto/speck-neon-glue.c     | 288 ----------
->  arch/arm64/crypto/Kconfig             |   6 -
->  arch/arm64/crypto/Makefile            |   3 -
->  arch/arm64/crypto/speck-neon-core.S   | 352 ------------
->  arch/arm64/crypto/speck-neon-glue.c   | 282 ----------
->  arch/m68k/configs/amiga_defconfig     |   1 -
->  arch/m68k/configs/apollo_defconfig    |   1 -
->  arch/m68k/configs/atari_defconfig     |   1 -
->  arch/m68k/configs/bvme6000_defconfig  |   1 -
->  arch/m68k/configs/hp300_defconfig     |   1 -
->  arch/m68k/configs/mac_defconfig       |   1 -
->  arch/m68k/configs/multi_defconfig     |   1 -
->  arch/m68k/configs/mvme147_defconfig   |   1 -
->  arch/m68k/configs/mvme16x_defconfig   |   1 -
->  arch/m68k/configs/q40_defconfig       |   1 -
->  arch/m68k/configs/sun3_defconfig      |   1 -
->  arch/m68k/configs/sun3x_defconfig     |   1 -
->  arch/s390/defconfig                   |   1 -
->  crypto/Kconfig                        |  14 -
->  crypto/Makefile                       |   1 -
->  crypto/speck.c                        | 307 -----------
->  crypto/testmgr.c                      |  24 -
->  crypto/testmgr.h                      | 738 --------------------------
->  fs/crypto/fscrypt_private.h           |   4 -
->  fs/crypto/keyinfo.c                   |  10 -
->  include/crypto/speck.h                |  62 ---
->  include/uapi/linux/fs.h               |   4 +-
->  31 files changed, 2 insertions(+), 2558 deletions(-)
->  delete mode 100644 arch/arm/crypto/speck-neon-core.S
->  delete mode 100644 arch/arm/crypto/speck-neon-glue.c
->  delete mode 100644 arch/arm64/crypto/speck-neon-core.S
->  delete mode 100644 arch/arm64/crypto/speck-neon-glue.c
->  delete mode 100644 crypto/speck.c
->  delete mode 100644 include/crypto/speck.h
+Hi,
 
-Patch applied.  Thanks.
--- 
-Email: Herbert Xu <herbert@gondor.apana.org.au>
-Home Page: http://gondor.apana.org.au/~herbert/
-PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
+On Fri, Aug 24, 2018 at 9:16 PM, Eric Biggers <ebiggers@kernel.org> wrote:
+> Hi Gao,
+>
+> On Sat, Aug 25, 2018 at 10:29:26AM +0800, Gao Xiang wrote:
+>> Hi,
+>>
+>> At last, I hope filesystems could select the on-disk position of hash tree and 'struct fsverity_descriptor'
+>> rather than fixed in the end of verity files...I think if fs-verity preparing such support and interfaces could be better.....hmmm... :(
+>
+> In theory it would be a much cleaner design to store verity metadata separately
+> from the data.  But the Merkle tree can be very large.  For example, a 1 GB file
+> using SHA-512 would have a 16.6 MB Merkle tree.  So the Merkle tree can't be an
+> extended attribute, since the xattrs API requires xattrs to be small (<= 64 KB),
+> and most filesystems further limit xattr sizes in their on-disk format to as
+> little as 4 KB.  Furthermore, even if both of these limits were to be increased,
+> the xattrs functions (both the syscalls, and the internal functions that
+> filesystems have) are all based around getting/setting the entire xattr value.
+>
+> Also when used with fscrypt, we want the Merkle tree and fsverity_descriptor to
+> be encrypted, so they doesn't leak plaintext hashes.  And we want the Merkle
+> tree to be paged into memory, just like the file contents, to take advantage of
+> the usual Linux memory management.
+>
+> What we really need is *streams*, like NTFS has.  But the filesystems we're
+> targetting don't support streams, nor does the Linux syscall interface have any
+> API for accessing streams, nor does the VFS support them.
+>
+> Adding streams support to all those things would be a huge multi-year effort,
+> controversial, and almost certainly not worth it just for fs-verity.
+>
+> So simply storing the verity metadata past i_size seems like the best solution
+> for now.
+>
+> That being said, in the future we could pretty easily swap out the calls to
+> read_mapping_page() with something else if a particular filesystem wanted to
+> store the metadata somewhere else.  We actually even originally had a function
+> ->read_metadata_page() in the filesystem's fsverity_operations, but it turned
+> out to be unnecessary and I replaced it with directly calling
+> read_mapping_page(), but it could be changed back at any time.
+
+What about an xattr not to hold the Merkle tree, but to contain a
+suitable reference to a file/inode+offset that contains it (+ toplevel
+hash for said tree/file or the descriptor/struct)?
+
+If you also expose said file in the directory structure, things such
+as backups might be easier to handle. For where the tree is appended
+to the file, you could self-reference.
+
+
+-Olof
