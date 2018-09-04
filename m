@@ -1,51 +1,72 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:43708 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727575AbeIEX4f (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 5 Sep 2018 19:56:35 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH] fscrypt: remove CRYPTO_CTR dependency
-Date: Wed,  5 Sep 2018 12:24:00 -0700
-Message-Id: <20180905192400.71160-1-ebiggers@kernel.org>
+Return-Path: <SRS0=ryGb=LS=gondor.apana.org.au=herbert@kernel.org>
+Date: Tue, 4 Sep 2018 12:55:59 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Subject: Re: [PATCH v2] crypto: remove Speck
+Message-ID: <20180904045559.jfzqhwcfyq42x2cs@gondor.apana.org.au>
+References: <20180807011937.GA133621@gmail.com>
+ <20180807062225.6331-1-Jason@zx2c4.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-crypto@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20180807062225.6331-1-Jason@zx2c4.com>
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: linux-crypto@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@kernel.org>, stable@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Tue, Aug 07, 2018 at 08:22:25AM +0200, Jason A. Donenfeld wrote:
+> These are unused, undesired, and have never actually been used by
+> anybody. The original authors of this code have changed their mind about
+> its inclusion. While originally proposed for disk encryption on low-end
+> devices, the idea was discarded [1] in favor of something else before
+> that could really get going. Therefore, this patch removes Speck.
+> 
+> [1] https://marc.info/?l=linux-crypto-vger&m=153359499015659
+> 
+> Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+> Acked-by: Eric Biggers <ebiggers@google.com>
+> Cc: stable@vger.kernel.org
+> ---
+>  Documentation/filesystems/fscrypt.rst |  10 -
+>  arch/arm/crypto/Kconfig               |   6 -
+>  arch/arm/crypto/Makefile              |   2 -
+>  arch/arm/crypto/speck-neon-core.S     | 434 ---------------
+>  arch/arm/crypto/speck-neon-glue.c     | 288 ----------
+>  arch/arm64/crypto/Kconfig             |   6 -
+>  arch/arm64/crypto/Makefile            |   3 -
+>  arch/arm64/crypto/speck-neon-core.S   | 352 ------------
+>  arch/arm64/crypto/speck-neon-glue.c   | 282 ----------
+>  arch/m68k/configs/amiga_defconfig     |   1 -
+>  arch/m68k/configs/apollo_defconfig    |   1 -
+>  arch/m68k/configs/atari_defconfig     |   1 -
+>  arch/m68k/configs/bvme6000_defconfig  |   1 -
+>  arch/m68k/configs/hp300_defconfig     |   1 -
+>  arch/m68k/configs/mac_defconfig       |   1 -
+>  arch/m68k/configs/multi_defconfig     |   1 -
+>  arch/m68k/configs/mvme147_defconfig   |   1 -
+>  arch/m68k/configs/mvme16x_defconfig   |   1 -
+>  arch/m68k/configs/q40_defconfig       |   1 -
+>  arch/m68k/configs/sun3_defconfig      |   1 -
+>  arch/m68k/configs/sun3x_defconfig     |   1 -
+>  arch/s390/defconfig                   |   1 -
+>  crypto/Kconfig                        |  14 -
+>  crypto/Makefile                       |   1 -
+>  crypto/speck.c                        | 307 -----------
+>  crypto/testmgr.c                      |  24 -
+>  crypto/testmgr.h                      | 738 --------------------------
+>  fs/crypto/fscrypt_private.h           |   4 -
+>  fs/crypto/keyinfo.c                   |  10 -
+>  include/crypto/speck.h                |  62 ---
+>  include/uapi/linux/fs.h               |   4 +-
+>  31 files changed, 2 insertions(+), 2558 deletions(-)
+>  delete mode 100644 arch/arm/crypto/speck-neon-core.S
+>  delete mode 100644 arch/arm/crypto/speck-neon-glue.c
+>  delete mode 100644 arch/arm64/crypto/speck-neon-core.S
+>  delete mode 100644 arch/arm64/crypto/speck-neon-glue.c
+>  delete mode 100644 crypto/speck.c
+>  delete mode 100644 include/crypto/speck.h
 
-fscrypt doesn't use the CTR mode of operation for anything, so there's
-no need to select CRYPTO_CTR.  It was added by commit 71dea01ea2ed
-("ext4 crypto: require CONFIG_CRYPTO_CTR if ext4 encryption is
-enabled").  But, I've been unable to identify the arm64 crypto bug it
-was supposedly working around.
-
-I suspect the issue was seen only on some old Android device kernel
-(circa 3.10?).  So if the fix wasn't mistaken, the real bug is probably
-already fixed.  Or maybe it was actually a bug in a non-upstream crypto
-driver.
-
-So, remove the dependency.  If it turns out there's actually still a
-bug, we'll fix it properly.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/Kconfig | 1 -
- 1 file changed, 1 deletion(-)
-
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 02b7d91c92310..284b589b4774d 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -6,7 +6,6 @@ config FS_ENCRYPTION
- 	select CRYPTO_ECB
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
--	select CRYPTO_CTR
- 	select CRYPTO_SHA256
- 	select KEYS
- 	help
+Patch applied.  Thanks.
 -- 
-2.19.0.rc2.392.g5ba43deb5a-goog
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
