@@ -1,67 +1,64 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from szxga06-in.huawei.com ([45.249.212.32]:38942 "EHLO huawei.com"
-        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
-        id S1727269AbeIJRzp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 10 Sep 2018 13:55:45 -0400
-From: Gao Xiang <gaoxiang25@huawei.com>
-Subject: [RFC PATCH 2/2] fscrypt: enable RCU-walk path for .d_revalidate
-Date: Mon, 10 Sep 2018 21:01:08 +0800
-Message-ID: <1536584468-15695-2-git-send-email-gaoxiang25@huawei.com>
-In-Reply-To: <1536584468-15695-1-git-send-email-gaoxiang25@huawei.com>
-References: <1536584468-15695-1-git-send-email-gaoxiang25@huawei.com>
+Return-Path: <SRS0=a1Z3=LU=linaro.org=ard.biesheuvel@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org, Chao Yu <yuchao0@huawei.com>, Miao Xie <miaoxie@huawei.com>, weidu.du@huawei.com, Gao Xiang <gaoxiang25@huawei.com>
+In-Reply-To: <20180905192400.71160-1-ebiggers@kernel.org>
+References: <20180905192400.71160-1-ebiggers@kernel.org>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Thu, 6 Sep 2018 12:43:41 +0200
+Message-ID: <CAKv+Gu8=dDk+bes8O7oOQ3zTgPHyVi49-gwH1btwdys-vgfyqg@mail.gmail.com>
+Subject: Re: [PATCH] fscrypt: remove CRYPTO_CTR dependency
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patch attempts to enable RCU-walk for fscrypt.
-It looks harmless at glance and could have better
-performance than do ref-walk only.
+On 5 September 2018 at 21:24, Eric Biggers <ebiggers@kernel.org> wrote:
+> From: Eric Biggers <ebiggers@google.com>
+>
+> fscrypt doesn't use the CTR mode of operation for anything, so there's
+> no need to select CRYPTO_CTR.  It was added by commit 71dea01ea2ed
+> ("ext4 crypto: require CONFIG_CRYPTO_CTR if ext4 encryption is
+> enabled").  But, I've been unable to identify the arm64 crypto bug it
+> was supposedly working around.
+>
+> I suspect the issue was seen only on some old Android device kernel
+> (circa 3.10?).  So if the fix wasn't mistaken, the real bug is probably
+> already fixed.  Or maybe it was actually a bug in a non-upstream crypto
+> driver.
+>
+> So, remove the dependency.  If it turns out there's actually still a
+> bug, we'll fix it properly.
+>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Gao Xiang <gaoxiang25@huawei.com>
----
- fs/crypto/crypto.c | 22 +++++++++++++---------
- 1 file changed, 13 insertions(+), 9 deletions(-)
+Acked-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index b38c574..9bd21c0 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -319,20 +319,24 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
- {
- 	struct dentry *dir;
- 	int dir_has_key, cached_with_key;
--
--	if (flags & LOOKUP_RCU)
--		return -ECHILD;
--
--	dir = dget_parent(dentry);
--	if (!IS_ENCRYPTED(d_inode(dir))) {
--		dput(dir);
-+	struct inode *dir_inode;
-+
-+	rcu_read_lock();
-+repeat:
-+	dir = READ_ONCE(dentry->d_parent);
-+	dir_inode = d_inode_rcu(dir);
-+	if (!IS_ENCRYPTED(dir_inode)) {
-+		rcu_read_unlock();
- 		return 0;
- 	}
-+	dir_has_key = (dir_inode->i_crypt_info != NULL);
-+	if (unlikely(READ_ONCE(dir->d_lockref.count) < 0 ||
-+		READ_ONCE(dir->d_parent) != dir))
-+		goto repeat;
-+	rcu_read_unlock();
- 
- 	cached_with_key = READ_ONCE(dentry->d_flags) &
- 		DCACHE_ENCRYPTED_WITH_KEY;
--	dir_has_key = (d_inode(dir)->i_crypt_info != NULL);
--	dput(dir);
- 
- 	/*
- 	 * If the dentry was cached without the key, and it is a
--- 
-1.9.1
+This may be related to
+
+11e3b725cfc2 crypto: arm64/aes-blk - honour iv_out requirement in CBC
+and CTR modes
+
+given that the commit in question mentions CTS. How it actually works
+around the issue is unclear to me, though.
+
+
+
+
+> ---
+>  fs/crypto/Kconfig | 1 -
+>  1 file changed, 1 deletion(-)
+>
+> diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
+> index 02b7d91c92310..284b589b4774d 100644
+> --- a/fs/crypto/Kconfig
+> +++ b/fs/crypto/Kconfig
+> @@ -6,7 +6,6 @@ config FS_ENCRYPTION
+>         select CRYPTO_ECB
+>         select CRYPTO_XTS
+>         select CRYPTO_CTS
+> -       select CRYPTO_CTR
+>         select CRYPTO_SHA256
+>         select KEYS
+>         help
+> --
+> 2.19.0.rc2.392.g5ba43deb5a-goog
+>
