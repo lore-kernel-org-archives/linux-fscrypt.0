@@ -1,131 +1,52 @@
-Return-Path: <SRS0=14es=LH=vger.kernel.org=linux-integrity-owner@kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 04/10] fs-verity: implement FS_IOC_MEASURE_VERITY ioctl
-Date: Fri, 24 Aug 2018 09:16:36 -0700
-Message-Id: <20180824161642.1144-5-ebiggers@kernel.org>
-In-Reply-To: <20180824161642.1144-1-ebiggers@kernel.org>
-References: <20180824161642.1144-1-ebiggers@kernel.org>
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
-Cc: linux-integrity@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, Victor Hsieh <victorhsieh@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from szxga04-in.huawei.com ([45.249.212.190]:12092 "EHLO huawei.com"
+        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
+        id S1727269AbeIJRz3 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 10 Sep 2018 13:55:29 -0400
+From: Gao Xiang <gaoxiang25@huawei.com>
+Subject: [RFC PATCH 1/2] fscrypt: remove d_lock on reading DCACHE_ENCRYPTED_WITH_KEY
+Date: Mon, 10 Sep 2018 21:01:07 +0800
+Message-ID: <1536584468-15695-1-git-send-email-gaoxiang25@huawei.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org, Chao Yu <yuchao0@huawei.com>, Miao Xie <miaoxie@huawei.com>, weidu.du@huawei.com, Gao Xiang <gaoxiang25@huawei.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+It seems there is no need to take d_lock when
+accessing dentry->d_flags & DCACHE_ENCRYPTED_WITH_KEY
+in fscrypt_d_revalidate. It only needs to be
+serialized for updating.
 
-Add a function for filesystems to call to implement the
-FS_IOC_MEASURE_VERITY ioctl.  This ioctl retrieves the file measurement
-hash that fs-verity calculated for the given file and is enforcing for
-reads; i.e., reads that don't match this hash will fail.
-
-This ioctl can be used to implement lightweight auditing or
-authentication of file hashes in userspace, as an alternative to an
-in-kernel policy such as an IMA policy.
-
-Note that due to fs-verity's use of a Merkle tree, opening a file and
-executing this ioctl takes constant time, regardless of the file's size.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Gao Xiang <gaoxiang25@huawei.com>
 ---
- fs/verity/ioctl.c        | 49 ++++++++++++++++++++++++++++++++++++++++
- fs/verity/setup.c        |  4 +++-
- include/linux/fsverity.h |  6 +++++
- 3 files changed, 58 insertions(+), 1 deletion(-)
+Hi,
 
-diff --git a/fs/verity/ioctl.c b/fs/verity/ioctl.c
-index 993f2afdcc734..3da9b0f441c13 100644
---- a/fs/verity/ioctl.c
-+++ b/fs/verity/ioctl.c
-@@ -119,3 +119,52 @@ int fsverity_ioctl_enable(struct file *filp, const void __user *arg)
- 	return err;
- }
- EXPORT_SYMBOL_GPL(fsverity_ioctl_enable);
-+
-+/**
-+ * fsverity_ioctl_measure - get a verity file's measurement
-+ *
-+ * The FS_IOC_MEASURE_VERITY ioctl retrieves the file measurement that the
-+ * kernel is enforcing for reads from a verity file.
-+ *
-+ * No privileges are required to use this ioctl, since it is a read-only
-+ * operation on a single regular file.
-+ *
-+ * Return: 0 on success, -errno on failure
-+ */
-+int fsverity_ioctl_measure(struct file *filp, void __user *_uarg)
-+{
-+	const struct inode *inode = file_inode(filp);
-+	struct fsverity_digest __user *uarg = _uarg;
-+	const struct fsverity_info *vi;
-+	const struct fsverity_hash_alg *hash_alg;
-+	struct fsverity_digest arg;
-+
-+	vi = get_fsverity_info(inode);
-+	if (!vi)
-+		return -ENODATA; /* not a verity file */
-+	hash_alg = vi->hash_alg;
-+
-+	/*
-+	 * The user specifies the digest_size their buffer has space for; we can
-+	 * return the digest if it fits in the available space.  We write back
-+	 * the actual size, which may be shorter than the user-specified size.
-+	 */
-+
-+	if (get_user(arg.digest_size, &uarg->digest_size))
-+		return -EFAULT;
-+	if (arg.digest_size < hash_alg->digest_size)
-+		return -EOVERFLOW;
-+
-+	memset(&arg, 0, sizeof(arg));
-+	arg.digest_algorithm = hash_alg - fsverity_hash_algs;
-+	arg.digest_size = hash_alg->digest_size;
-+
-+	if (copy_to_user(uarg, &arg, sizeof(arg)))
-+		return -EFAULT;
-+
-+	if (copy_to_user(uarg->digest, vi->measurement, hash_alg->digest_size))
-+		return -EFAULT;
-+
-+	return 0;
-+}
-+EXPORT_SYMBOL_GPL(fsverity_ioctl_measure);
-diff --git a/fs/verity/setup.c b/fs/verity/setup.c
-index 84cc2edeca25b..3f5cb9526dbc9 100644
---- a/fs/verity/setup.c
-+++ b/fs/verity/setup.c
-@@ -842,7 +842,9 @@ static int __init fsverity_module_init(void)
- 		goto error;
+At glance, I have no idea why fscrypt_d_revalidate disables
+RCU-lookup. Therefore I made patches to raise a question and
+do some basic test, and it seems to work.
+
+Thanks,
+
+ fs/crypto/crypto.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 0f46cf5..b38c574 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -329,9 +329,8 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
+ 		return 0;
+ 	}
  
- 	err = -ENOMEM;
--	fsverity_info_cachep = KMEM_CACHE(fsverity_info, SLAB_RECLAIM_ACCOUNT);
-+	fsverity_info_cachep = KMEM_CACHE_USERCOPY(fsverity_info,
-+						   SLAB_RECLAIM_ACCOUNT,
-+						   measurement);
- 	if (!fsverity_info_cachep)
- 		goto error_free_workqueue;
+-	spin_lock(&dentry->d_lock);
+-	cached_with_key = dentry->d_flags & DCACHE_ENCRYPTED_WITH_KEY;
+-	spin_unlock(&dentry->d_lock);
++	cached_with_key = READ_ONCE(dentry->d_flags) &
++		DCACHE_ENCRYPTED_WITH_KEY;
+ 	dir_has_key = (d_inode(dir)->i_crypt_info != NULL);
+ 	dput(dir);
  
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index c710b6b5fb4a6..9d3371dbd262f 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -23,6 +23,7 @@ struct fsverity_operations {
- 
- /* ioctl.c */
- extern int fsverity_ioctl_enable(struct file *filp, const void __user *arg);
-+extern int fsverity_ioctl_measure(struct file *filp, void __user *arg);
- 
- /* setup.c */
- extern int fsverity_file_open(struct inode *inode, struct file *filp);
-@@ -46,6 +47,11 @@ static inline int fsverity_ioctl_enable(struct file *filp,
- 	return -EOPNOTSUPP;
- }
- 
-+static inline int fsverity_ioctl_measure(struct file *filp, void __user *arg)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
- /* setup.c */
- 
- static inline int fsverity_file_open(struct inode *inode, struct file *filp)
 -- 
-2.18.0
+1.9.1
