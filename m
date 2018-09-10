@@ -1,14 +1,14 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from szxga05-in.huawei.com ([45.249.212.191]:11678 "EHLO huawei.com"
+Received: from szxga06-in.huawei.com ([45.249.212.32]:38942 "EHLO huawei.com"
         rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
-        id S1727269AbeIJSDT (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 10 Sep 2018 14:03:19 -0400
+        id S1727269AbeIJRzp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 10 Sep 2018 13:55:45 -0400
 From: Gao Xiang <gaoxiang25@huawei.com>
-Subject: [RFC PATCH v2 2/2] fscrypt: enable RCU-walk path for .d_revalidate
-Date: Mon, 10 Sep 2018 21:08:57 +0800
-Message-ID: <1536584937-16960-1-git-send-email-gaoxiang25@huawei.com>
-In-Reply-To: <1536584468-15695-2-git-send-email-gaoxiang25@huawei.com>
-References: <1536584468-15695-2-git-send-email-gaoxiang25@huawei.com>
+Subject: [RFC PATCH 2/2] fscrypt: enable RCU-walk path for .d_revalidate
+Date: Mon, 10 Sep 2018 21:01:08 +0800
+Message-ID: <1536584468-15695-2-git-send-email-gaoxiang25@huawei.com>
+In-Reply-To: <1536584468-15695-1-git-send-email-gaoxiang25@huawei.com>
+References: <1536584468-15695-1-git-send-email-gaoxiang25@huawei.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -22,9 +22,6 @@ performance than do ref-walk only.
 
 Signed-off-by: Gao Xiang <gaoxiang25@huawei.com>
 ---
-change log v2:
-	- READ_ONCE(dir->d_parent) -> READ_ONCE(dentry->d_parent)
-
  fs/crypto/crypto.c | 22 +++++++++++++---------
  1 file changed, 13 insertions(+), 9 deletions(-)
 
@@ -55,7 +52,7 @@ index b38c574..9bd21c0 100644
  	}
 +	dir_has_key = (dir_inode->i_crypt_info != NULL);
 +	if (unlikely(READ_ONCE(dir->d_lockref.count) < 0 ||
-+		READ_ONCE(dentry->d_parent) != dir))
++		READ_ONCE(dir->d_parent) != dir))
 +		goto repeat;
 +	rcu_read_unlock();
  
