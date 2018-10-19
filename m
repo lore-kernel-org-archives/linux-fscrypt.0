@@ -1,88 +1,72 @@
 Return-Path: <linux-crypto-owner@vger.kernel.org>
+Date: Fri, 19 Oct 2018 11:28:05 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v2 07/12] crypto: arm/chacha - add XChaCha12 support
-Date: Mon, 15 Oct 2018 10:54:19 -0700
-Message-Id: <20181015175424.97147-8-ebiggers@kernel.org>
-In-Reply-To: <20181015175424.97147-1-ebiggers@kernel.org>
+Subject: Re: [RFC PATCH v2 04/12] crypto: chacha - add XChaCha12 support
+Message-ID: <20181019182804.GA246441@gmail.com>
 References: <20181015175424.97147-1-ebiggers@kernel.org>
+ <20181015175424.97147-5-ebiggers@kernel.org>
+ <CAKv+Gu_wVmnEND3MGTG7bqqynbBqyzmE_gTmqZfrT551_n9Hmw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu_wVmnEND3MGTG7bqqynbBqyzmE_gTmqZfrT551_n9Hmw@mail.gmail.com>
 Sender: linux-crypto-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Greg Kaiser <gkaiser@google.com>, Herbert Xu <herbert@gondor.apana.org.au>, Samuel Neves <samuel.c.p.neves@gmail.com>, Michael Halcrow <mhalcrow@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Ard,
 
-Now that the 32-bit ARM NEON implementation of ChaCha20 and XChaCha20
-has been refactored to support varying the number of rounds, add support
-for XChaCha12.  This is identical to XChaCha20 except for the number of
-rounds, which is 12 instead of 20.
+On Fri, Oct 19, 2018 at 10:34:41PM +0800, Ard Biesheuvel wrote:
+> > diff --git a/include/crypto/chacha.h b/include/crypto/chacha.h
+> > index ae79e9983c72f..3d261f5cd156d 100644
+> > --- a/include/crypto/chacha.h
+> > +++ b/include/crypto/chacha.h
+> > @@ -5,6 +5,11 @@
+> >   * XChaCha extends ChaCha's nonce to 192 bits, while provably retaining ChaCha's
+> >   * security.  Here they share the same key size, tfm context, and setkey
+> >   * function; only their IV size and encrypt/decrypt function differ.
+> > + *
+> > + * The ChaCha paper specifies 20, 12, and 8-round variants.  In general, it is
+> > + * recommended to use the 20-round variant ChaCha20.  However, the other
+> > + * variants can be needed in some performance-sensitive scenarios.  The generic
+> > + * ChaCha code currently allows only the 20 and 12-round variants.
+> >   */
+> >
+> >  #ifndef _CRYPTO_CHACHA_H
+> > @@ -39,6 +44,8 @@ void crypto_chacha_init(u32 *state, struct chacha_ctx *ctx, u8 *iv);
+> >
+> >  int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
+> >                            unsigned int keysize);
+> > +int crypto_chacha12_setkey(struct crypto_skcipher *tfm, const u8 *key,
+> > +                          unsigned int keysize);
+> >
+> >  int crypto_chacha_crypt(struct skcipher_request *req);
+> >  int crypto_xchacha_crypt(struct skcipher_request *req);
+> > diff --git a/lib/chacha.c b/lib/chacha.c
+> > index 0a2c2e5b7b84d..c4d69a83fcd2d 100644
+> > --- a/lib/chacha.c
+> > +++ b/lib/chacha.c
+> > @@ -21,7 +21,7 @@ static void chacha_permute(u32 *x, int nrounds)
+> >         int i;
+> >
+> >         /* whitelist the allowed round counts */
+> > -       BUG_ON(nrounds != 20);
+> > +       BUG_ON(nrounds != 20 && nrounds != 12);
+> >
+> 
+> I didn't spot this until this patch, but BUG_ON() may bring down the
+> kernel, and so it should really only be used as a last resort. (i.e.,
+> if this is called from non-process context things may explode rather
+> painfully)
+> 
+> I didn't look at the entire file [which is a bit cumbersome while
+> reviewing incremental changes like this] and so I don't really have
+> another suggestion right now, but please try to come up with something
+> better if you can.
+> 
 
-XChaCha12 is faster than XChaCha20 but has a lower security margin,
-though still greater than AES-256's since the best known attacks make it
-through only 7 rounds.  See the patch "crypto: chacha - add XChaCha12
-support" for more details about why we need XChaCha12 support.
+I'll change it to WARN_ON_ONCE(), I guess.  I do still want it to be very noisy
+if something fishy is going on with the round count.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/arm/crypto/Kconfig            |  2 +-
- arch/arm/crypto/chacha-neon-glue.c | 21 ++++++++++++++++++++-
- 2 files changed, 21 insertions(+), 2 deletions(-)
-
-diff --git a/arch/arm/crypto/Kconfig b/arch/arm/crypto/Kconfig
-index 0aa1471f27d2e..cc932d9bba561 100644
---- a/arch/arm/crypto/Kconfig
-+++ b/arch/arm/crypto/Kconfig
-@@ -117,7 +117,7 @@ config CRYPTO_CRC32_ARM_CE
- 	select CRYPTO_HASH
- 
- config CRYPTO_CHACHA20_NEON
--	tristate "NEON accelerated ChaCha20 stream cipher algorithms"
-+	tristate "NEON accelerated ChaCha stream cipher algorithms"
- 	depends on KERNEL_MODE_NEON
- 	select CRYPTO_BLKCIPHER
- 	select CRYPTO_CHACHA20
-diff --git a/arch/arm/crypto/chacha-neon-glue.c b/arch/arm/crypto/chacha-neon-glue.c
-index b236af4889c61..0b1b238227707 100644
---- a/arch/arm/crypto/chacha-neon-glue.c
-+++ b/arch/arm/crypto/chacha-neon-glue.c
-@@ -1,5 +1,6 @@
- /*
-- * ChaCha20 (RFC7539) and XChaCha20 stream ciphers, NEON accelerated
-+ * ARM NEON accelerated ChaCha and XChaCha stream ciphers,
-+ * including ChaCha20 (RFC7539)
-  *
-  * Copyright (C) 2016 Linaro, Ltd. <ard.biesheuvel@linaro.org>
-  *
-@@ -160,6 +161,22 @@ static struct skcipher_alg algs[] = {
- 		.setkey			= crypto_chacha20_setkey,
- 		.encrypt		= xchacha_neon,
- 		.decrypt		= xchacha_neon,
-+	}, {
-+		.base.cra_name		= "xchacha12",
-+		.base.cra_driver_name	= "xchacha12-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= 1,
-+		.base.cra_ctxsize	= sizeof(struct chacha_ctx),
-+		.base.cra_module	= THIS_MODULE,
-+
-+		.min_keysize		= CHACHA_KEY_SIZE,
-+		.max_keysize		= CHACHA_KEY_SIZE,
-+		.ivsize			= XCHACHA_IV_SIZE,
-+		.chunksize		= CHACHA_BLOCK_SIZE,
-+		.walksize		= 4 * CHACHA_BLOCK_SIZE,
-+		.setkey			= crypto_chacha12_setkey,
-+		.encrypt		= xchacha_neon,
-+		.decrypt		= xchacha_neon,
- 	}
- };
- 
-@@ -186,3 +203,5 @@ MODULE_ALIAS_CRYPTO("chacha20");
- MODULE_ALIAS_CRYPTO("chacha20-neon");
- MODULE_ALIAS_CRYPTO("xchacha20");
- MODULE_ALIAS_CRYPTO("xchacha20-neon");
-+MODULE_ALIAS_CRYPTO("xchacha12");
-+MODULE_ALIAS_CRYPTO("xchacha12-neon");
--- 
-2.19.1.331.ge82ca0e54c-goog
+- Eric
