@@ -1,55 +1,134 @@
-Return-Path: <SRS0=0t/i=L4=verbum.org=walters@kernel.org>
-Message-Id: <1536930930.1003187.1508104496.6465C44D@webmail.messagingengine.com>
-From: Colin Walters <walters@verbum.org>
+Return-Path: <SRS0=QmQ6=M7=linaro.org=ard.biesheuvel@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Type: text/plain; charset="utf-8"
-In-Reply-To: <20180825044852.GB726@sol.localdomain>
-Date: Fri, 14 Sep 2018 09:15:30 -0400
-References: <20180824161642.1144-1-ebiggers@kernel.org>
- <20180824161642.1144-2-ebiggers@kernel.org>
- <1535132549.2855027.1485213752.129E3334@webmail.messagingengine.com>
- <20180825044852.GB726@sol.localdomain>
-Subject: Re: [RFC PATCH 01/10] fs-verity: add setup code, UAPI, and Kconfig
+In-Reply-To: <20181015175424.97147-2-ebiggers@kernel.org>
+References: <20181015175424.97147-1-ebiggers@kernel.org> <20181015175424.97147-2-ebiggers@kernel.org>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Fri, 19 Oct 2018 22:13:00 +0800
+Message-ID: <CAKv+Gu8bYc_Ex4HjSasbBksj=w1KubVHtvWR=Wq1-65FPw8XBw@mail.gmail.com>
+Subject: Re: [RFC PATCH v2 01/12] crypto: chacha20-generic - add HChaCha20
+ library function
+Content-Type: text/plain; charset="UTF-8"
 To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org, Mimi Zohar <zohar@linux.vnet.ibm.com>, Dmitry Kasatkin <dmitry.kasatkin@gmail.com>, Michael Halcrow <mhalcrow@google.com>, Victor Hsieh <victorhsieh@google.com>
+Cc: "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Greg Kaiser <gkaiser@google.com>, Herbert Xu <herbert@gondor.apana.org.au>, Samuel Neves <samuel.c.p.neves@gmail.com>, Michael Halcrow <mhalcrow@google.com>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Sat, Aug 25, 2018, at 12:48 AM, Eric Biggers wrote:
+On 16 October 2018 at 01:54, Eric Biggers <ebiggers@kernel.org> wrote:
+> From: Eric Biggers <ebiggers@google.com>
 >
-> As Ted pointed out, only truncates are denied on fs-verity files, not other
-> metadata changes like chmod().
-> 
-> Think of it this way: the purpose of fs-verity is *not* to make files immutable.
-> It's to hash them.
+> Refactor the unkeyed permutation part of chacha20_block() into its own
+> function, then add hchacha20_block() which is the ChaCha equivalent of
+> HSalsa20 and is an intermediate step towards XChaCha20 (see
+> https://cr.yp.to/snuffle/xsalsa-20081128.pdf).  HChaCha20 skips the
+> final addition of the initial state, and outputs only certain words of
+> the state.  It should not be used for streaming directly.
+>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Sorry for my unfamiliarity with Android internals but - in earlier discussion
-I believe it was mentioned that APK (zip files?) that are being targeted here, right?
+Reviewed-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-Now AIUI, Zip files have an internal header that contains e.g. the size and
-indexes into the internal files.  So if someone added random data to the end
-of a zip file, nothing is going to end up actually reading it.
-
-However, there are file formats that use the size of the file reported by stat();
-at least OSTree does this with serializing GVariant.  I'm sure there are others -
-I'd imagine at least some things parsing ELF do this?
-In such a case, we really want to deny appending to the file as well.
-
-Unless there's some mechanism to deny applications reading not-verified
-data?
-
-And "hidden" data after fs-verity protected files would be a nice place
-for persistent malware to hide.
-
-Does anyone know of a use case for appending to a fs-verity file?
-
-The slides here:
-https://events.linuxfoundation.org/wp-content/uploads/2017/11/fs-verify_Mike-Halcrow_Eric-Biggers.pdf
-even say "File becomes read-only!"
-
-If not, then here's a strawman: Require that at FS_IOC_ENABLE_VERITY time
-the file does not have any +w bits set (and I guess no ACLs that do so...
-that may get ugly).  
-
-I think that would make it easier to later factor out a "_CONTENTS_IMMUTABLE"
-flag.
+> ---
+>  include/crypto/chacha20.h |  2 ++
+>  lib/chacha20.c            | 50 ++++++++++++++++++++++++++++++++++-----
+>  2 files changed, 46 insertions(+), 6 deletions(-)
+>
+> diff --git a/include/crypto/chacha20.h b/include/crypto/chacha20.h
+> index f76302d99e2be..fbec4e6a87890 100644
+> --- a/include/crypto/chacha20.h
+> +++ b/include/crypto/chacha20.h
+> @@ -19,6 +19,8 @@ struct chacha20_ctx {
+>  };
+>
+>  void chacha20_block(u32 *state, u8 *stream);
+> +void hchacha20_block(const u32 *in, u32 *out);
+> +
+>  void crypto_chacha20_init(u32 *state, struct chacha20_ctx *ctx, u8 *iv);
+>  int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
+>                            unsigned int keysize);
+> diff --git a/lib/chacha20.c b/lib/chacha20.c
+> index d907fec6a9ed1..6a484e16171d1 100644
+> --- a/lib/chacha20.c
+> +++ b/lib/chacha20.c
+> @@ -1,5 +1,5 @@
+>  /*
+> - * ChaCha20 256-bit cipher algorithm, RFC7539
+> + * The "hash function" used as the core of the ChaCha20 stream cipher (RFC7539)
+>   *
+>   * Copyright (C) 2015 Martin Willi
+>   *
+> @@ -16,14 +16,10 @@
+>  #include <asm/unaligned.h>
+>  #include <crypto/chacha20.h>
+>
+> -void chacha20_block(u32 *state, u8 *stream)
+> +static void chacha20_permute(u32 *x)
+>  {
+> -       u32 x[16];
+>         int i;
+>
+> -       for (i = 0; i < ARRAY_SIZE(x); i++)
+> -               x[i] = state[i];
+> -
+>         for (i = 0; i < 20; i += 2) {
+>                 x[0]  += x[4];    x[12] = rol32(x[12] ^ x[0],  16);
+>                 x[1]  += x[5];    x[13] = rol32(x[13] ^ x[1],  16);
+> @@ -65,6 +61,25 @@ void chacha20_block(u32 *state, u8 *stream)
+>                 x[8]  += x[13];   x[7]  = rol32(x[7]  ^ x[8],   7);
+>                 x[9]  += x[14];   x[4]  = rol32(x[4]  ^ x[9],   7);
+>         }
+> +}
+> +
+> +/**
+> + * chacha20_block - generate one keystream block and increment block counter
+> + * @state: input state matrix (16 32-bit words)
+> + * @stream: output keystream block (64 bytes)
+> + *
+> + * This is the ChaCha20 core, a function from 64-byte strings to 64-byte
+> + * strings.  The caller has already converted the endianness of the input.  This
+> + * function also handles incrementing the block counter in the input matrix.
+> + */
+> +void chacha20_block(u32 *state, u8 *stream)
+> +{
+> +       u32 x[16];
+> +       int i;
+> +
+> +       memcpy(x, state, 64);
+> +
+> +       chacha20_permute(x);
+>
+>         for (i = 0; i < ARRAY_SIZE(x); i++)
+>                 put_unaligned_le32(x[i] + state[i], &stream[i * sizeof(u32)]);
+> @@ -72,3 +87,26 @@ void chacha20_block(u32 *state, u8 *stream)
+>         state[12]++;
+>  }
+>  EXPORT_SYMBOL(chacha20_block);
+> +
+> +/**
+> + * hchacha20_block - abbreviated ChaCha20 core, for XChaCha20
+> + * @in: input state matrix (16 32-bit words)
+> + * @out: output (8 32-bit words)
+> + *
+> + * HChaCha20 is the ChaCha equivalent of HSalsa20 and is an intermediate step
+> + * towards XChaCha20 (see https://cr.yp.to/snuffle/xsalsa-20081128.pdf).
+> + * HChaCha20 skips the final addition of the initial state, and outputs only
+> + * certain words of the state.  It should not be used for streaming directly.
+> + */
+> +void hchacha20_block(const u32 *in, u32 *out)
+> +{
+> +       u32 x[16];
+> +
+> +       memcpy(x, in, 64);
+> +
+> +       chacha20_permute(x);
+> +
+> +       memcpy(&out[0], &x[0], 16);
+> +       memcpy(&out[4], &x[12], 16);
+> +}
+> +EXPORT_SYMBOL(hchacha20_block);
+> --
+> 2.19.1.331.ge82ca0e54c-goog
+>
+>
+> _______________________________________________
+> linux-arm-kernel mailing list
+> linux-arm-kernel@lists.infradead.org
+> http://lists.infradead.org/mailman/listinfo/linux-arm-kernel
