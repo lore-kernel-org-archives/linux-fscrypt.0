@@ -1,304 +1,168 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:51788 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1730963AbeKQLnh (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 17 Nov 2018 06:43:37 -0500
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v4 07/14] crypto: arm/chacha20 - add XChaCha20 support
-Date: Fri, 16 Nov 2018 17:26:24 -0800
-Message-Id: <20181117012631.23528-8-ebiggers@kernel.org>
-In-Reply-To: <20181117012631.23528-1-ebiggers@kernel.org>
-References: <20181117012631.23528-1-ebiggers@kernel.org>
+Date: Thu,  1 Nov 2018 15:52:18 -0700
+Message-Id: <20181101225230.88058-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Subject: [f2fs-dev] [PATCH v2 00/12] fs-verity: read-only file-based
+ authenticity protection
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, linux-kernel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hello,
 
-Add an XChaCha20 implementation that is hooked up to the ARM NEON
-implementation of ChaCha20.  This is needed for use in the Adiantum
-encryption mode; see the generic code patch,
-"crypto: chacha20-generic - add XChaCha20 support", for more details.
+This patchset implements fs-verity for ext4 and f2fs.  fs-verity is
+similar to dm-verity, but implemented on a per-file basis: a Merkle tree
+is used to measure (hash) the file's data as it is paged in.  ext4 and
+f2fs hide this Merkle tree beyond the end of the file, though other
+filesystems might implement it differently in the future.  In general,
+fs-verity is intended for use on writable filesystems; dm-verity is
+still recommended on read-only ones.
 
-We also update the NEON code to support HChaCha20 on one block, so we
-can use that in XChaCha20 rather than calling the generic HChaCha20.
-This required factoring the permutation out into its own macro.
+Similar to fscrypt, most of the code is in fs/verity/, and not too many
+filesystem-specific changes are needed.  The Merkle tree is written by
+userspace before calling an ioctl to mark the file as a verity file; the
+file then becomes read-only and the verity metadata is hidden or moved.
 
-Reviewed-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/arm/crypto/Kconfig              |   2 +-
- arch/arm/crypto/chacha20-neon-core.S |  70 ++++++++++++------
- arch/arm/crypto/chacha20-neon-glue.c | 103 ++++++++++++++++++++-------
- 3 files changed, 126 insertions(+), 49 deletions(-)
+fs-verity provides a file measurement (hash) in constant time and
+verifies data on-demand.  Thus, it is useful for efficiently verifying
+the authenticity of large files of which only a small portion may be
+accessed, such as Android application package (APK) files.  It may also
+be useful in "audit" use cases where file hashes are logged.
 
-diff --git a/arch/arm/crypto/Kconfig b/arch/arm/crypto/Kconfig
-index 0473a8f68389..a08759c32cb9 100644
---- a/arch/arm/crypto/Kconfig
-+++ b/arch/arm/crypto/Kconfig
-@@ -126,7 +126,7 @@ config CRYPTO_CRC32_ARM_CE
- 	select CRYPTO_HASH
- 
- config CRYPTO_CHACHA20_NEON
--	tristate "NEON accelerated ChaCha20 symmetric cipher"
-+	tristate "NEON accelerated ChaCha20 stream cipher algorithms"
- 	depends on KERNEL_MODE_NEON
- 	select CRYPTO_BLKCIPHER
- 	select CRYPTO_CHACHA20
-diff --git a/arch/arm/crypto/chacha20-neon-core.S b/arch/arm/crypto/chacha20-neon-core.S
-index 50e7b9896818..2335e5055d2b 100644
---- a/arch/arm/crypto/chacha20-neon-core.S
-+++ b/arch/arm/crypto/chacha20-neon-core.S
-@@ -52,27 +52,16 @@
- 	.fpu		neon
- 	.align		5
- 
--ENTRY(chacha20_block_xor_neon)
--	// r0: Input state matrix, s
--	// r1: 1 data block output, o
--	// r2: 1 data block input, i
--
--	//
--	// This function encrypts one ChaCha20 block by loading the state matrix
--	// in four NEON registers. It performs matrix operation on four words in
--	// parallel, but requireds shuffling to rearrange the words after each
--	// round.
--	//
--
--	// x0..3 = s0..3
--	add		ip, r0, #0x20
--	vld1.32		{q0-q1}, [r0]
--	vld1.32		{q2-q3}, [ip]
--
--	vmov		q8, q0
--	vmov		q9, q1
--	vmov		q10, q2
--	vmov		q11, q3
-+/*
-+ * chacha20_permute - permute one block
-+ *
-+ * Permute one 64-byte block where the state matrix is stored in the four NEON
-+ * registers q0-q3.  It performs matrix operations on four words in parallel,
-+ * but requires shuffling to rearrange the words after each round.
-+ *
-+ * Clobbers: r3, ip, q4-q5
-+ */
-+chacha20_permute:
- 
- 	adr		ip, .Lrol8_table
- 	mov		r3, #10
-@@ -142,6 +131,27 @@ ENTRY(chacha20_block_xor_neon)
- 	subs		r3, r3, #1
- 	bne		.Ldoubleround
- 
-+	bx		lr
-+ENDPROC(chacha20_permute)
-+
-+ENTRY(chacha20_block_xor_neon)
-+	// r0: Input state matrix, s
-+	// r1: 1 data block output, o
-+	// r2: 1 data block input, i
-+	push		{lr}
-+
-+	// x0..3 = s0..3
-+	add		ip, r0, #0x20
-+	vld1.32		{q0-q1}, [r0]
-+	vld1.32		{q2-q3}, [ip]
-+
-+	vmov		q8, q0
-+	vmov		q9, q1
-+	vmov		q10, q2
-+	vmov		q11, q3
-+
-+	bl		chacha20_permute
-+
- 	add		ip, r2, #0x20
- 	vld1.8		{q4-q5}, [r2]
- 	vld1.8		{q6-q7}, [ip]
-@@ -166,9 +176,25 @@ ENTRY(chacha20_block_xor_neon)
- 	vst1.8		{q0-q1}, [r1]
- 	vst1.8		{q2-q3}, [ip]
- 
--	bx		lr
-+	pop		{pc}
- ENDPROC(chacha20_block_xor_neon)
- 
-+ENTRY(hchacha20_block_neon)
-+	// r0: Input state matrix, s
-+	// r1: output (8 32-bit words)
-+	push		{lr}
-+
-+	vld1.32		{q0-q1}, [r0]!
-+	vld1.32		{q2-q3}, [r0]
-+
-+	bl		chacha20_permute
-+
-+	vst1.32		{q0}, [r1]!
-+	vst1.32		{q3}, [r1]
-+
-+	pop		{pc}
-+ENDPROC(hchacha20_block_neon)
-+
- 	.align		4
- .Lctrinc:	.word	0, 1, 2, 3
- .Lrol8_table:	.byte	3, 0, 1, 2, 7, 4, 5, 6
-diff --git a/arch/arm/crypto/chacha20-neon-glue.c b/arch/arm/crypto/chacha20-neon-glue.c
-index 2bc035cb8f23..f2d3b0f70a8d 100644
---- a/arch/arm/crypto/chacha20-neon-glue.c
-+++ b/arch/arm/crypto/chacha20-neon-glue.c
-@@ -1,5 +1,5 @@
- /*
-- * ChaCha20 256-bit cipher algorithm, RFC7539, ARM NEON functions
-+ * ChaCha20 (RFC7539) and XChaCha20 stream ciphers, NEON accelerated
-  *
-  * Copyright (C) 2016 Linaro, Ltd. <ard.biesheuvel@linaro.org>
-  *
-@@ -30,6 +30,7 @@
- 
- asmlinkage void chacha20_block_xor_neon(u32 *state, u8 *dst, const u8 *src);
- asmlinkage void chacha20_4block_xor_neon(u32 *state, u8 *dst, const u8 *src);
-+asmlinkage void hchacha20_block_neon(const u32 *state, u32 *out);
- 
- static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
- 			    unsigned int bytes)
-@@ -57,20 +58,16 @@ static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
- 	}
- }
- 
--static int chacha20_neon(struct skcipher_request *req)
-+static int chacha20_neon_stream_xor(struct skcipher_request *req,
-+				    struct chacha_ctx *ctx, u8 *iv)
- {
--	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
- 	struct skcipher_walk walk;
- 	u32 state[16];
- 	int err;
- 
--	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
--		return crypto_chacha_crypt(req);
--
- 	err = skcipher_walk_virt(&walk, req, false);
- 
--	crypto_chacha_init(state, ctx, walk.iv);
-+	crypto_chacha_init(state, ctx, iv);
- 
- 	while (walk.nbytes > 0) {
- 		unsigned int nbytes = walk.nbytes;
-@@ -88,22 +85,73 @@ static int chacha20_neon(struct skcipher_request *req)
- 	return err;
- }
- 
--static struct skcipher_alg alg = {
--	.base.cra_name		= "chacha20",
--	.base.cra_driver_name	= "chacha20-neon",
--	.base.cra_priority	= 300,
--	.base.cra_blocksize	= 1,
--	.base.cra_ctxsize	= sizeof(struct chacha_ctx),
--	.base.cra_module	= THIS_MODULE,
--
--	.min_keysize		= CHACHA_KEY_SIZE,
--	.max_keysize		= CHACHA_KEY_SIZE,
--	.ivsize			= CHACHA_IV_SIZE,
--	.chunksize		= CHACHA_BLOCK_SIZE,
--	.walksize		= 4 * CHACHA_BLOCK_SIZE,
--	.setkey			= crypto_chacha20_setkey,
--	.encrypt		= chacha20_neon,
--	.decrypt		= chacha20_neon,
-+static int chacha20_neon(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
-+
-+	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
-+		return crypto_chacha_crypt(req);
-+
-+	return chacha20_neon_stream_xor(req, ctx, req->iv);
-+}
-+
-+static int xchacha20_neon(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct chacha_ctx subctx;
-+	u32 state[16];
-+	u8 real_iv[16];
-+
-+	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
-+		return crypto_xchacha_crypt(req);
-+
-+	crypto_chacha_init(state, ctx, req->iv);
-+
-+	kernel_neon_begin();
-+	hchacha20_block_neon(state, subctx.key);
-+	kernel_neon_end();
-+
-+	memcpy(&real_iv[0], req->iv + 24, 8);
-+	memcpy(&real_iv[8], req->iv + 16, 8);
-+	return chacha20_neon_stream_xor(req, &subctx, real_iv);
-+}
-+
-+static struct skcipher_alg algs[] = {
-+	{
-+		.base.cra_name		= "chacha20",
-+		.base.cra_driver_name	= "chacha20-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= 1,
-+		.base.cra_ctxsize	= sizeof(struct chacha_ctx),
-+		.base.cra_module	= THIS_MODULE,
-+
-+		.min_keysize		= CHACHA_KEY_SIZE,
-+		.max_keysize		= CHACHA_KEY_SIZE,
-+		.ivsize			= CHACHA_IV_SIZE,
-+		.chunksize		= CHACHA_BLOCK_SIZE,
-+		.walksize		= 4 * CHACHA_BLOCK_SIZE,
-+		.setkey			= crypto_chacha20_setkey,
-+		.encrypt		= chacha20_neon,
-+		.decrypt		= chacha20_neon,
-+	}, {
-+		.base.cra_name		= "xchacha20",
-+		.base.cra_driver_name	= "xchacha20-neon",
-+		.base.cra_priority	= 300,
-+		.base.cra_blocksize	= 1,
-+		.base.cra_ctxsize	= sizeof(struct chacha_ctx),
-+		.base.cra_module	= THIS_MODULE,
-+
-+		.min_keysize		= CHACHA_KEY_SIZE,
-+		.max_keysize		= CHACHA_KEY_SIZE,
-+		.ivsize			= XCHACHA_IV_SIZE,
-+		.chunksize		= CHACHA_BLOCK_SIZE,
-+		.walksize		= 4 * CHACHA_BLOCK_SIZE,
-+		.setkey			= crypto_chacha20_setkey,
-+		.encrypt		= xchacha20_neon,
-+		.decrypt		= xchacha20_neon,
-+	}
- };
- 
- static int __init chacha20_simd_mod_init(void)
-@@ -111,12 +159,12 @@ static int __init chacha20_simd_mod_init(void)
- 	if (!(elf_hwcap & HWCAP_NEON))
- 		return -ENODEV;
- 
--	return crypto_register_skcipher(&alg);
-+	return crypto_register_skciphers(algs, ARRAY_SIZE(algs));
- }
- 
- static void __exit chacha20_simd_mod_fini(void)
- {
--	crypto_unregister_skcipher(&alg);
-+	crypto_unregister_skciphers(algs, ARRAY_SIZE(algs));
- }
- 
- module_init(chacha20_simd_mod_init);
-@@ -125,3 +173,6 @@ module_exit(chacha20_simd_mod_fini);
- MODULE_AUTHOR("Ard Biesheuvel <ard.biesheuvel@linaro.org>");
- MODULE_LICENSE("GPL v2");
- MODULE_ALIAS_CRYPTO("chacha20");
-+MODULE_ALIAS_CRYPTO("chacha20-neon");
-+MODULE_ALIAS_CRYPTO("xchacha20");
-+MODULE_ALIAS_CRYPTO("xchacha20-neon");
+fs-verity also provides better protection against malicious disks than
+an ahead-of-time hash, since fs-verity re-verifies data each time it's
+paged in.  Note, however, that any authenticity guarantee is still
+dependent on verification of the file measurement and other relevant
+metadata in a way that makes sense for the overall system; fs-verity is
+only a tool to help with this.
+
+This patchset doesn't yet include IMA support for fs-verity file
+measurements.  This is planned and we'd like to collaborate with the IMA
+maintainers.  Although fs-verity can be used on its own without IMA,
+fs-verity is primarily a lower level feature (think of it as a way of
+hashing a file), so some users may still need IMA's policy mechanism.
+However, an optional in-kernel signature verification mechanism within
+fs-verity itself is also included.
+
+This patchset is based on Linus' tree as of today (commit 7c6c54b505b8a).
+It can also be found in git at tag "fsverity_2018-11-01" of:
+
+	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+
+fs-verity has a userspace utility:
+
+	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git
+
+xfstests for fs-verity can be found at branch "fsverity" of:
+
+	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
+
+fs-verity is supported by e2fsprogs v1.44.4-2+ and f2fs-tools v1.11.0+.
+
+Please see the documentation file Documentation/filesystems/fsverity.rst
+(added by patch 1) for details; this cover letter only gave an overview.
+Examples of setting up fs-verity protected files can also be found in
+the README file of fsverity-utils.
+
+Other useful references include:
+
+    - LWN coverage of v1 patchset: https://lwn.net/Articles/763729/
+
+    - Presentation at Linux Security Summit North America 2018:
+        - Slides: https://schd.ws/hosted_files/lssna18/af/fs-verity%20slide%20deck.pdf
+        - Video: https://www.youtube.com/watch?v=Aw5h6aBhu6M
+
+    - Notes from discussion at LSFMM 2018: https://lwn.net/Articles/752614/
+
+Changes since v1:
+
+- Added documentation file.
+- Require write permission for FS_IOC_ENABLE_VERITY, rather than
+  CAP_SYS_ADMIN.
+- Eliminated dependency on CONFIG_BLOCK and clarified that filesystems
+  can verify a page at a time rather than a bio at a time.
+- Fixed conditions for verifying holes.
+- ext4 now only allows fs-verity on extent-based files.
+- Eliminated most of the assumptions that the verity metadata is stored
+  beyond EOF, in case filesystems want to do things differently.
+- Other cleanups.
+
+Eric Biggers (12):
+  fs-verity: add a documentation file
+  fs-verity: add setup code, UAPI, and Kconfig
+  fs-verity: add MAINTAINERS file entry
+  fs-verity: add data verification hooks for ->readpages()
+  fs-verity: implement FS_IOC_ENABLE_VERITY ioctl
+  fs-verity: implement FS_IOC_MEASURE_VERITY ioctl
+  fs-verity: add SHA-512 support
+  fs-verity: add CRC-32C support
+  fs-verity: support builtin file signatures
+  ext4: add basic fs-verity support
+  ext4: add fs-verity read support
+  f2fs: fs-verity support
+
+ Documentation/filesystems/fsverity.rst | 583 ++++++++++++++++
+ Documentation/filesystems/index.rst    |  11 +
+ Documentation/ioctl/ioctl-number.txt   |   1 +
+ MAINTAINERS                            |  11 +
+ fs/Kconfig                             |   2 +
+ fs/Makefile                            |   1 +
+ fs/ext4/Kconfig                        |  20 +
+ fs/ext4/ext4.h                         |  22 +-
+ fs/ext4/file.c                         |   6 +
+ fs/ext4/inode.c                        |  11 +
+ fs/ext4/ioctl.c                        |  12 +
+ fs/ext4/readpage.c                     | 209 +++++-
+ fs/ext4/super.c                        | 100 ++-
+ fs/ext4/sysfs.c                        |   6 +
+ fs/f2fs/Kconfig                        |  20 +
+ fs/f2fs/data.c                         |  43 +-
+ fs/f2fs/f2fs.h                         |  17 +-
+ fs/f2fs/file.c                         |  58 ++
+ fs/f2fs/inode.c                        |   3 +-
+ fs/f2fs/super.c                        |  30 +
+ fs/f2fs/sysfs.c                        |  11 +
+ fs/verity/Kconfig                      |  52 ++
+ fs/verity/Makefile                     |   5 +
+ fs/verity/fsverity_private.h           | 135 ++++
+ fs/verity/hash_algs.c                  | 115 ++++
+ fs/verity/ioctl.c                      | 164 +++++
+ fs/verity/setup.c                      | 908 +++++++++++++++++++++++++
+ fs/verity/signature.c                  | 187 +++++
+ fs/verity/verify.c                     | 298 ++++++++
+ include/linux/fs.h                     |   9 +
+ include/linux/fsverity.h               | 112 +++
+ include/uapi/linux/fsverity.h          |  98 +++
+ 32 files changed, 3218 insertions(+), 42 deletions(-)
+ create mode 100644 Documentation/filesystems/fsverity.rst
+ create mode 100644 fs/verity/Kconfig
+ create mode 100644 fs/verity/Makefile
+ create mode 100644 fs/verity/fsverity_private.h
+ create mode 100644 fs/verity/hash_algs.c
+ create mode 100644 fs/verity/ioctl.c
+ create mode 100644 fs/verity/setup.c
+ create mode 100644 fs/verity/signature.c
+ create mode 100644 fs/verity/verify.c
+ create mode 100644 include/linux/fsverity.h
+ create mode 100644 include/uapi/linux/fsverity.h
+
 -- 
-2.19.1.1215.g8438c0b245-goog
+2.19.1.568.g152ad8e336-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
