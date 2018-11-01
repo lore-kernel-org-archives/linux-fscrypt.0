@@ -1,116 +1,71 @@
-Return-Path: <SRS0=2Xim=N6=linux.vnet.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: [PATCH 5/7] ext4: use IS_VERITY() to check inode's fsverity status
-Date: Mon, 19 Nov 2018 10:53:22 +0530
-In-Reply-To: <20181119052324.31456-1-chandan@linux.vnet.ibm.com>
-References: <20181119052324.31456-1-chandan@linux.vnet.ibm.com>
+Return-Path: <SRS0=DPN/=NM=vger.kernel.org=linux-integrity-owner@kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v2 07/12] fs-verity: add SHA-512 support
+Date: Thu,  1 Nov 2018 15:52:25 -0700
+Message-Id: <20181101225230.88058-8-ebiggers@kernel.org>
+In-Reply-To: <20181101225230.88058-1-ebiggers@kernel.org>
+References: <20181101225230.88058-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20181119052324.31456-6-chandan@linux.vnet.ibm.com>
-To: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
-Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, ebiggers@kernel.org, tytso@mit.edu
+Sender: linux-integrity-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit now uses IS_VERITY() macro to check if fsverity is
-enabled on an inode.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Add SHA-512 support to fs-verity.  This is primarily a demonstration of
+the (small) changes needed to support a new hash algorithm; it's
+anticipated that most users will still prefer SHA-256 due to the smaller
+space required to store the hashes, though some may prefer SHA-512.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/ext4.h     |  9 ---------
- fs/ext4/file.c     |  2 +-
- fs/ext4/inode.c    | 10 ++++++----
- fs/ext4/readpage.c |  2 +-
- 4 files changed, 8 insertions(+), 15 deletions(-)
+ fs/verity/fsverity_private.h  | 2 +-
+ fs/verity/hash_algs.c         | 5 +++++
+ include/uapi/linux/fsverity.h | 1 +
+ 3 files changed, 7 insertions(+), 1 deletion(-)
 
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index db21df885186..64bf9fb7ef18 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -2296,15 +2296,6 @@ extern unsigned ext4_free_clusters_after_init(struct super_block *sb,
- 					      struct ext4_group_desc *gdp);
- ext4_fsblk_t ext4_inode_to_goal_block(struct inode *);
+diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
+index dfdbac3874d74..c3a261a598557 100644
+--- a/fs/verity/fsverity_private.h
++++ b/fs/verity/fsverity_private.h
+@@ -30,7 +30,7 @@
+  * Largest digest size among all hash algorithms supported by fs-verity.  This
+  * can be increased if needed.
+  */
+-#define FS_VERITY_MAX_DIGEST_SIZE	SHA256_DIGEST_SIZE
++#define FS_VERITY_MAX_DIGEST_SIZE	SHA512_DIGEST_SIZE
  
--static inline bool ext4_verity_inode(struct inode *inode)
--{
--#ifdef CONFIG_EXT4_FS_VERITY
--	return ext4_test_inode_flag(inode, EXT4_INODE_VERITY);
--#else
--	return false;
--#endif
--}
--
- #ifdef CONFIG_FS_ENCRYPTION
- static inline int ext4_fname_setup_filename(struct inode *dir,
- 			const struct qstr *iname,
-diff --git a/fs/ext4/file.c b/fs/ext4/file.c
-index cb4b69ef01a2..30fbd663354f 100644
---- a/fs/ext4/file.c
-+++ b/fs/ext4/file.c
-@@ -444,7 +444,7 @@ static int ext4_file_open(struct inode * inode, struct file * filp)
- 	if (ret)
- 		return ret;
+ /* A hash algorithm supported by fs-verity */
+ struct fsverity_hash_alg {
+diff --git a/fs/verity/hash_algs.c b/fs/verity/hash_algs.c
+index 9c19c9553f120..3174a0c08785d 100644
+--- a/fs/verity/hash_algs.c
++++ b/fs/verity/hash_algs.c
+@@ -18,6 +18,11 @@ struct fsverity_hash_alg fsverity_hash_algs[] = {
+ 		.digest_size = 32,
+ 		.cryptographic = true,
+ 	},
++	[FS_VERITY_ALG_SHA512] = {
++		.name = "sha512",
++		.digest_size = 64,
++		.cryptographic = true,
++	},
+ };
  
--	if (ext4_verity_inode(inode)) {
-+	if (IS_VERITY(inode)) {
- 		ret = fsverity_file_open(inode, filp);
- 		if (ret)
- 			return ret;
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index ae6794649817..3786740b73fa 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3884,7 +3884,7 @@ static ssize_t ext4_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
- 		return 0;
- #endif
+ /*
+diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
+index 55b9f32676220..67ed830ae2ece 100644
+--- a/include/uapi/linux/fsverity.h
++++ b/include/uapi/linux/fsverity.h
+@@ -28,6 +28,7 @@ struct fsverity_digest {
  
--	if (ext4_verity_inode(inode))
-+	if (IS_VERITY(inode))
- 		return 0;
+ /* Supported hash algorithms */
+ #define FS_VERITY_ALG_SHA256	1
++#define FS_VERITY_ALG_SHA512	2
  
- 	/*
-@@ -4726,7 +4726,7 @@ static bool ext4_should_use_dax(struct inode *inode)
- 		return false;
- 	if (IS_ENCRYPTED(inode))
- 		return false;
--	if (ext4_verity_inode(inode))
-+	if (IS_VERITY(inode))
- 		return false;
- 	return true;
- }
-@@ -4750,9 +4750,11 @@ void ext4_set_inode_flags(struct inode *inode)
- 		new_fl |= S_DAX;
- 	if (flags & EXT4_ENCRYPT_FL)
- 		new_fl |= S_ENCRYPTED;
-+	if (flags & EXT4_VERITY_FL)
-+		new_fl |= S_VERITY;
- 	inode_set_flags(inode, new_fl,
- 			S_SYNC|S_APPEND|S_IMMUTABLE|S_NOATIME|S_DIRSYNC|S_DAX|
--			S_ENCRYPTED);
-+			S_ENCRYPTED|S_VERITY);
- }
- 
- static blkcnt_t ext4_inode_blocks(struct ext4_inode *raw_inode,
-@@ -5510,7 +5512,7 @@ int ext4_setattr(struct dentry *dentry, struct iattr *attr)
- 	if (error)
- 		return error;
- 
--	if (ext4_verity_inode(inode)) {
-+	if (IS_VERITY(inode)) {
- 		error = fsverity_prepare_setattr(dentry, attr);
- 		if (error)
- 			return error;
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-index 7252f0a60cdb..2c037df629dd 100644
---- a/fs/ext4/readpage.c
-+++ b/fs/ext4/readpage.c
-@@ -206,7 +206,7 @@ static void mpage_end_io(struct bio *bio)
- static inline loff_t ext4_readpage_limit(struct inode *inode)
- {
- #ifdef CONFIG_EXT4_FS_VERITY
--	if (ext4_verity_inode(inode)) {
-+	if (IS_VERITY(inode)) {
- 		if (inode->i_verity_info)
- 			/* limit to end of metadata region */
- 			return fsverity_full_i_size(inode);
+ /* Metadata stored near the end of verity files, after the Merkle tree */
+ /* This structure is 64 bytes long */
 -- 
-2.19.1
+2.19.1.568.g152ad8e336-goog
