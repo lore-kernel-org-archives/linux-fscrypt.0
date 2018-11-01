@@ -1,987 +1,363 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:54560 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1729089AbeKFItP (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 6 Nov 2018 03:49:15 -0500
+Return-Path: <SRS0=DPN/=NM=vger.kernel.org=linux-integrity-owner@kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v3 15/15] fscrypt: add Adiantum support
-Date: Mon,  5 Nov 2018 15:25:26 -0800
-Message-Id: <20181105232526.173947-16-ebiggers@kernel.org>
-In-Reply-To: <20181105232526.173947-1-ebiggers@kernel.org>
-References: <20181105232526.173947-1-ebiggers@kernel.org>
+Subject: [PATCH v2 11/12] ext4: add fs-verity read support
+Date: Thu,  1 Nov 2018 15:52:29 -0700
+Message-Id: <20181101225230.88058-12-ebiggers@kernel.org>
+In-Reply-To: <20181101225230.88058-1-ebiggers@kernel.org>
+References: <20181101225230.88058-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>
+Sender: linux-integrity-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add support for the Adiantum encryption mode to fscrypt.  Adiantum is a
-tweakable, length-preserving encryption mode with security provably
-reducible to that of XChaCha12 and AES-256, subject to a security bound.
-It's also a true wide-block mode, unlike XTS.  See the paper
-"Adiantum: length-preserving encryption for entry-level processors"
-(https://eprint.iacr.org/2018/720.pdf) for full details;
-also see the crypto API patch which added Adiantum.
+Make ext4_mpage_readpages() verify data as it is read from fs-verity
+files, using the helper functions from fs/verity/.
 
-On sufficiently long inputs, Adiantum's performance-critical parts are
-XChaCha12 and the NH hash function.  These algorithms are fast even on
-processors without dedicated crypto instructions.  Adiantum makes it
-feasible to enable storage encryption on low-end mobile devices that
-lack AES instructions; currently such devices are unencrypted.  On ARM
-Cortex-A7, on 4096-byte messages Adiantum encryption is about 4 times
-faster than AES-256-XTS encryption; decryption is about 5 times faster.
+To be compatible with fscrypt, like in the corresponding f2fs patch this
+required refactoring the decryption workflow into a generic "post-read
+processing" workflow, which can do decryption, verification, or both.
 
-Adiantum is also suitable to replace CTS-CBC for fscrypt's filenames
-encryption, fixing the information leakage in encrypted filenames when
-two filenames in a directory share a common prefix.
-
-Adiantum accepts long IVs, so in fscrypt we include the 16-byte
-per-inode nonce in the IVs too, and we allow userspace to choose to use
-the master key directly rather than deriving per-file keys.  This is
-especially desirable because each Adiantum tfm (crypto_skcipher) uses
-more memory than an AES-XTS tfm, since Adiantum has more sub-tfms as
-well as a long subkey for NH.
-
+Co-developed-by: Theodore Ts'o <tytso@mit.edu>
+Signed-off-by: Theodore Ts'o <tytso@mit.edu>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- Documentation/filesystems/fscrypt.rst | 187 ++++++++-------
- fs/crypto/crypto.c                    |  35 +--
- fs/crypto/fname.c                     |  22 +-
- fs/crypto/fscrypt_private.h           |  66 +++++-
- fs/crypto/keyinfo.c                   | 322 ++++++++++++++++++++------
- fs/crypto/policy.c                    |   5 +-
- include/uapi/linux/fs.h               |   4 +-
- 7 files changed, 454 insertions(+), 187 deletions(-)
+ fs/ext4/ext4.h     |   2 +
+ fs/ext4/inode.c    |   3 +
+ fs/ext4/readpage.c | 209 ++++++++++++++++++++++++++++++++++++++-------
+ fs/ext4/super.c    |   9 +-
+ 4 files changed, 191 insertions(+), 32 deletions(-)
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index cfbc18f0d9c9..4e64d0fee07b 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -132,47 +132,31 @@ designed for this purpose be used, such as scrypt, PBKDF2, or Argon2.
- Per-file keys
- -------------
+diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
+index e5475a629ed80..80957f9d3cbef 100644
+--- a/fs/ext4/ext4.h
++++ b/fs/ext4/ext4.h
+@@ -3101,6 +3101,8 @@ static inline void ext4_set_de_type(struct super_block *sb,
+ extern int ext4_mpage_readpages(struct address_space *mapping,
+ 				struct list_head *pages, struct page *page,
+ 				unsigned nr_pages, bool is_readahead);
++extern int __init ext4_init_post_read_processing(void);
++extern void ext4_exit_post_read_processing(void);
  
--Master keys are not used to encrypt file contents or names directly.
--Instead, a unique key is derived for each encrypted file, including
--each regular file, directory, and symbolic link.  This has several
--advantages:
--
--- In cryptosystems, the same key material should never be used for
--  different purposes.  Using the master key as both an XTS key for
--  contents encryption and as a CTS-CBC key for filenames encryption
--  would violate this rule.
--- Per-file keys simplify the choice of IVs (Initialization Vectors)
--  for contents encryption.  Without per-file keys, to ensure IV
--  uniqueness both the inode and logical block number would need to be
--  encoded in the IVs.  This would make it impossible to renumber
--  inodes, which e.g. ``resize2fs`` can do when resizing an ext4
--  filesystem.  With per-file keys, it is sufficient to encode just the
--  logical block number in the IVs.
--- Per-file keys strengthen the encryption of filenames, where IVs are
--  reused out of necessity.  With a unique key per directory, IV reuse
--  is limited to within a single directory.
--- Per-file keys allow individual files to be securely erased simply by
--  securely erasing their keys.  (Not yet implemented.)
--
--A KDF (Key Derivation Function) is used to derive per-file keys from
--the master key.  This is done instead of wrapping a randomly-generated
--key for each file because it reduces the size of the encryption xattr,
--which for some filesystems makes the xattr more likely to fit in-line
--in the filesystem's inode table.  With a KDF, only a 16-byte nonce is
--required --- long enough to make key reuse extremely unlikely.  A
--wrapped key, on the other hand, would need to be up to 64 bytes ---
--the length of an AES-256-XTS key.  Furthermore, currently there is no
--requirement to support unlocking a file with multiple alternative
--master keys or to support rotating master keys.  Instead, the master
--keys may be wrapped in userspace, e.g. as done by the `fscrypt
--<https://github.com/google/fscrypt>`_ tool.
--
--The current KDF encrypts the master key using the 16-byte nonce as an
--AES-128-ECB key.  The output is used as the derived key.  If the
--output is longer than needed, then it is truncated to the needed
--length.  Truncation is the norm for directories and symlinks, since
--those use the CTS-CBC encryption mode which requires a key half as
--long as that required by the XTS encryption mode.
-+Since each master key can protect many files, it is necessary to
-+"tweak" the encryption of each file, so that the same plaintext in two
-+files doesn't map to the same ciphertext, or vice versa.
-+
-+In most cases, fscrypt solves this problem by deriving per-file keys.
-+When a new encrypted inode (regular file, directory, or symlink) is
-+created, fscrypt generates a 16-byte nonce uniformly at random and
-+stores it in the inode's encryption xattr.  Then, a KDF (Key
-+Derivation Function) is used to derive an inode-specific encryption
-+key from the master key and nonce.
-+
-+The Adiantum encryption mode (see `Encryption modes and usage`_) is
-+special, since it accepts long IVs and is suited for both contents and
-+filenames encryption.  For it, fscrypt includes the 16-byte nonce in
-+the IVs, and users can choose to use the master key for Adiantum
-+encryption directly, for added efficiency.  In this configuration, no
-+per-file keys are derived.  However, when doing this, users must take
-+care not to reuse the same master key for any other modes.
-+
-+Below, the KDF and design considerations are described in more detail.
-+
-+The current KDF works by encrypting the master key with AES-128-ECB,
-+using the 16-byte nonce as the AES key.  The output is used as the
-+derived key.  If the output is longer than needed, then it is
-+truncated to the needed length.
+ /* symlink.c */
+ extern const struct inode_operations ext4_encrypted_symlink_inode_operations;
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index c624c83bbad26..d7019f5dca6f1 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -3884,6 +3884,9 @@ static ssize_t ext4_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
+ 		return 0;
+ #endif
  
- Note: this KDF meets the primary security requirement, which is to
- produce unique derived keys that preserve the entropy of the master
-@@ -181,6 +165,28 @@ However, it is nonstandard and has some problems such as being
- reversible, so it is generally considered to be a mistake!  It may be
- replaced with HKDF or another more standard KDF in the future.
- 
-+Key derivation was chosen over key wrapping because wrapped keys would
-+require larger xattrs which would be less likely to fit in-line in the
-+filesystem's inode table, and there didn't appear to be any
-+significant advantages to key wrapping.  In particular, currently
-+there is no requirement to support unlocking a file with multiple
-+alternative master keys or to support rotating master keys.  Instead,
-+the master keys may be wrapped in userspace, e.g. as done by the
-+`fscrypt <https://github.com/google/fscrypt>`_ tool.
++	if (ext4_verity_inode(inode))
++		return 0;
 +
-+Including the inode number in the IVs was considered.  However, it was
-+rejected as it would have prevented ext4 filesystems from being
-+resized, and by itself still wouldn't have been sufficient to prevent
-+the same key from being directly reused for both XTS and CTS-CBC.
-+
-+Including the per-inode nonce in the IVs would allow filesystem
-+resizing, but it wouldn't allow key reuse between two different modes,
-+nor would it be compatible with XTS and CTS-CBC since a 16-byte IV
-+isn't long enough to contain both a collision-resistant nonce and a
-+block offset.  However, this method works well for Adiantum, which
-+accepts longer IVs and is suited for both contents and filenames
-+encryption.
-+
- Encryption modes and usage
- ==========================
- 
-@@ -191,54 +197,76 @@ Currently, the following pairs of encryption modes are supported:
- 
- - AES-256-XTS for contents and AES-256-CTS-CBC for filenames
- - AES-128-CBC for contents and AES-128-CTS-CBC for filenames
-+- Adiantum for both contents and filenames
-+
-+If unsure, you should use the (AES-256-XTS, AES-256-CTS-CBC) pair.
- 
--It is strongly recommended to use AES-256-XTS for contents encryption.
- AES-128-CBC was added only for low-powered embedded devices with
- crypto accelerators such as CAAM or CESA that do not support XTS.
- 
-+Adiantum is a (primarily) stream cipher-based mode that was designed
-+primarily for CPUs that don't support AES instructions.  Though
-+Adiantum actually provides a stronger formal notion of security than
-+XTS and CTS-CBC (since it's a true wide-block mode), it's also newer
-+and depends on the security of XChaCha12 in addition to AES-256.
-+Adiantum support is only available if it has been enabled in the
-+crypto API via CONFIG_CRYPTO_ADIANTUM.  Also, on ARM platforms, to get
-+good performance CONFIG_CRYPTO_CHACHA20_NEON and
-+CONFIG_CRYPTO_NHPOLY1305_NEON must be enabled.
-+
- New encryption modes can be added relatively easily, without changes
- to individual filesystems.  However, authenticated encryption (AE)
- modes are not currently supported because of the difficulty of dealing
- with ciphertext expansion.
- 
-+Contents encryption
-+-------------------
-+
- For file contents, each filesystem block is encrypted independently.
- Currently, only the case where the filesystem block size is equal to
--the system's page size (usually 4096 bytes) is supported.  With the
--XTS mode of operation (recommended), the logical block number within
--the file is used as the IV.  With the CBC mode of operation (not
--recommended), ESSIV is used; specifically, the IV for CBC is the
--logical block number encrypted with AES-256, where the AES-256 key is
--the SHA-256 hash of the inode's data encryption key.
--
--For filenames, the full filename is encrypted at once.  Because of the
--requirements to retain support for efficient directory lookups and
--filenames of up to 255 bytes, a constant initialization vector (IV) is
--used.  However, each encrypted directory uses a unique key, which
--limits IV reuse to within a single directory.  Note that IV reuse in
--the context of CTS-CBC encryption means that when the original
--filenames share a common prefix at least as long as the cipher block
--size (16 bytes for AES), the corresponding encrypted filenames will
--also share a common prefix.  This is undesirable; it may be fixed in
--the future by switching to an encryption mode that is a strong
--pseudorandom permutation on arbitrary-length messages, e.g. the HEH
--(Hash-Encrypt-Hash) mode.
--
--Since filenames are encrypted with the CTS-CBC mode of operation, the
--plaintext and ciphertext filenames need not be multiples of the AES
--block size, i.e. 16 bytes.  However, the minimum size that can be
--encrypted is 16 bytes, so shorter filenames are NUL-padded to 16 bytes
--before being encrypted.  In addition, to reduce leakage of filename
--lengths via their ciphertexts, all filenames are NUL-padded to the
--next 4, 8, 16, or 32-byte boundary (configurable).  32 is recommended
--since this provides the best confidentiality, at the cost of making
--directory entries consume slightly more space.  Note that since NUL
--(``\0``) is not otherwise a valid character in filenames, the padding
--will never produce duplicate plaintexts.
-+the system's page size (usually 4096 bytes) is supported.  IVs are
-+chosen as follows, depending on the contents encryption mode:
-+
-+- XTS: the logical block number within the file.
-+- CBC: ESSIV, specifically the logical block number within the file
-+  encrypted with AES-256, where the AES-256 key is the SHA-256 hash of
-+  the inode's data encryption key.
-+- Adiantum: the logical block number within the file concatenated with
-+  the per-file nonce.  (As noted earlier, including the nonce makes it
-+  safe to use the same key for many files.)
-+
-+Filenames encryption
-+--------------------
-+
-+For filenames, each full filename is encrypted at once.  Because of
-+the requirements to retain support for efficient directory lookups and
-+filenames of up to 255 bytes, the same IV is used for every filename
-+in a directory.
-+
-+However, each encrypted directory still uses a unique key; or
-+alternatively has the inode's nonce included in the IV (for Adiantum).
-+Thus, IV reuse is limited to within a single directory.
-+
-+With CTS-CBC, the IV reuse means that when the plaintext filenames
-+share a common prefix at least as long as the cipher block size (16
-+bytes for AES), the corresponding encrypted filenames will also share
-+a common prefix.  This is undesirable.  Adiantum does not have this
-+weakness, as it is a super-pseudorandom permutation.
-+
-+All supported filenames encryption modes accept any plaintext length
-+>= 16 bytes; cipher block alignment is not required.  However,
-+filenames shorter than 16 bytes are NUL-padded to 16 bytes before
-+being encrypted.  In addition, to reduce leakage of filename lengths
-+via their ciphertexts, all filenames are NUL-padded to the next 4, 8,
-+16, or 32-byte boundary (configurable).  32 is recommended since this
-+provides the best confidentiality, at the cost of making directory
-+entries consume slightly more space.  Note that since NUL (``\0``) is
-+not otherwise a valid character in filenames, the padding will never
-+produce duplicate plaintexts.
- 
- Symbolic link targets are considered a type of filename and are
--encrypted in the same way as filenames in directory entries.  Each
--symlink also uses a unique key; hence, the hardcoded IV is not a
--problem for symlinks.
-+encrypted in the same way as filenames in directory entries, except
-+that IV reuse is not a problem as each symlink has its own inode.
- 
- User API
- ========
-@@ -272,9 +300,12 @@ This structure must be initialized as follows:
-   and FS_ENCRYPTION_MODE_AES_256_CTS (4) for
-   ``filenames_encryption_mode``.
- 
--- ``flags`` must be set to a value from ``<linux/fs.h>`` which
-+- ``flags`` must contain a value from ``<linux/fs.h>`` which
-   identifies the amount of NUL-padding to use when encrypting
--  filenames.  If unsure, use FS_POLICY_FLAGS_PAD_32 (0x3).
-+  filenames.  In addition, if the chosen encryption modes are both
-+  FS_ENCRYPTION_MODE_ADIANTUM, this can contain FS_POLICY_FLAGS_DIRECT
-+  to specify that the master key should be used directly, without key
-+  derivation.  If unsure, use FS_POLICY_FLAGS_PAD_32 (0x3).
- 
- - ``master_key_descriptor`` specifies how to find the master key in
-   the keyring; see `Adding keys`_.  It is up to userspace to choose a
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 0f46cf550907..5dd59e790ad3 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -133,15 +133,32 @@ struct fscrypt_ctx *fscrypt_get_ctx(const struct inode *inode, gfp_t gfp_flags)
- }
- EXPORT_SYMBOL(fscrypt_get_ctx);
- 
-+void fscrypt_prepare_iv(union fscrypt_iv *iv, u64 lblk_num,
-+			const struct fscrypt_info *ci)
-+{
-+	if (ci->ci_mode->uses_long_ivs) {
-+		/* Using lblk_num and nonce as tweak */
-+		iv->long_iv.index = cpu_to_le64(lblk_num);
-+		memcpy(iv->long_iv.nonce, ci->ci_nonce,
-+		       FS_KEY_DERIVATION_NONCE_SIZE);
-+		iv->long_iv.unused = 0;
-+	} else {
-+		/* Using only lblk_num as tweak (key was derived from nonce) */
-+		iv->short_iv.index = cpu_to_le64(lblk_num);
-+		iv->short_iv.unused = 0;
-+		if (ci->ci_essiv_tfm != NULL) {
-+			crypto_cipher_encrypt_one(ci->ci_essiv_tfm, (u8 *)iv,
-+						  (const u8 *)iv);
-+		}
-+	}
-+}
-+
- int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 			   u64 lblk_num, struct page *src_page,
- 			   struct page *dest_page, unsigned int len,
- 			   unsigned int offs, gfp_t gfp_flags)
- {
--	struct {
--		__le64 index;
--		u8 padding[FS_IV_SIZE - sizeof(__le64)];
--	} iv;
-+	union fscrypt_iv iv;
- 	struct skcipher_request *req = NULL;
- 	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist dst, src;
-@@ -151,15 +168,7 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 
- 	BUG_ON(len == 0);
- 
--	BUILD_BUG_ON(sizeof(iv) != FS_IV_SIZE);
--	BUILD_BUG_ON(AES_BLOCK_SIZE != FS_IV_SIZE);
--	iv.index = cpu_to_le64(lblk_num);
--	memset(iv.padding, 0, sizeof(iv.padding));
--
--	if (ci->ci_essiv_tfm != NULL) {
--		crypto_cipher_encrypt_one(ci->ci_essiv_tfm, (u8 *)&iv,
--					  (u8 *)&iv);
--	}
-+	fscrypt_prepare_iv(&iv, lblk_num, ci);
- 
- 	req = skcipher_request_alloc(tfm, gfp_flags);
- 	if (!req)
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index d7a0f682ca12..c60ae8f70395 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -40,10 +40,11 @@ int fname_encrypt(struct inode *inode, const struct qstr *iname,
- {
- 	struct skcipher_request *req = NULL;
- 	DECLARE_CRYPTO_WAIT(wait);
--	struct crypto_skcipher *tfm = inode->i_crypt_info->ci_ctfm;
--	int res = 0;
--	char iv[FS_CRYPTO_BLOCK_SIZE];
-+	struct fscrypt_info *ci = inode->i_crypt_info;
-+	struct crypto_skcipher *tfm = ci->ci_ctfm;
-+	union fscrypt_iv iv;
- 	struct scatterlist sg;
-+	int res;
- 
  	/*
- 	 * Copy the filename to the output buffer for encrypting in-place and
-@@ -55,7 +56,7 @@ int fname_encrypt(struct inode *inode, const struct qstr *iname,
- 	memset(out + iname->len, 0, olen - iname->len);
+ 	 * If we are doing data journalling we don't support O_DIRECT
+ 	 */
+diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
+index f461d75ac049f..d3dd1ff745db8 100644
+--- a/fs/ext4/readpage.c
++++ b/fs/ext4/readpage.c
+@@ -47,6 +47,11 @@
  
- 	/* Initialize the IV */
--	memset(iv, 0, FS_CRYPTO_BLOCK_SIZE);
-+	fscrypt_prepare_iv(&iv, 0, ci);
+ #include "ext4.h"
  
- 	/* Set up the encryption request */
- 	req = skcipher_request_alloc(tfm, GFP_NOFS);
-@@ -65,7 +66,7 @@ int fname_encrypt(struct inode *inode, const struct qstr *iname,
- 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
- 			crypto_req_done, &wait);
- 	sg_init_one(&sg, out, olen);
--	skcipher_request_set_crypt(req, &sg, &sg, olen, iv);
-+	skcipher_request_set_crypt(req, &sg, &sg, olen, &iv);
- 
- 	/* Do the encryption */
- 	res = crypto_wait_req(crypto_skcipher_encrypt(req), &wait);
-@@ -94,9 +95,10 @@ static int fname_decrypt(struct inode *inode,
- 	struct skcipher_request *req = NULL;
- 	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist src_sg, dst_sg;
--	struct crypto_skcipher *tfm = inode->i_crypt_info->ci_ctfm;
--	int res = 0;
--	char iv[FS_CRYPTO_BLOCK_SIZE];
-+	struct fscrypt_info *ci = inode->i_crypt_info;
-+	struct crypto_skcipher *tfm = ci->ci_ctfm;
-+	union fscrypt_iv iv;
-+	int res;
- 
- 	/* Allocate request */
- 	req = skcipher_request_alloc(tfm, GFP_NOFS);
-@@ -107,12 +109,12 @@ static int fname_decrypt(struct inode *inode,
- 		crypto_req_done, &wait);
- 
- 	/* Initialize IV */
--	memset(iv, 0, FS_CRYPTO_BLOCK_SIZE);
-+	fscrypt_prepare_iv(&iv, 0, ci);
- 
- 	/* Create decryption request */
- 	sg_init_one(&src_sg, iname->name, iname->len);
- 	sg_init_one(&dst_sg, oname->name, oname->len);
--	skcipher_request_set_crypt(req, &src_sg, &dst_sg, iname->len, iv);
-+	skcipher_request_set_crypt(req, &src_sg, &dst_sg, iname->len, &iv);
- 	res = crypto_wait_req(crypto_skcipher_decrypt(req), &wait);
- 	skcipher_request_free(req);
- 	if (res < 0) {
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 79debfc9cef9..a3ec179051dc 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -17,7 +17,6 @@
- #include <crypto/hash.h>
- 
- /* Encryption parameters */
--#define FS_IV_SIZE			16
- #define FS_KEY_DERIVATION_NONCE_SIZE	16
- 
- /**
-@@ -52,16 +51,42 @@ struct fscrypt_symlink_data {
- } __packed;
- 
- /*
-- * A pointer to this structure is stored in the file system's in-core
-- * representation of an inode.
-+ * fscrypt_info - the "encryption key" for an inode
-+ *
-+ * When an encrypted file's key is made available, an instance of this struct is
-+ * allocated and stored in ->i_crypt_info.  Once created, it remains until the
-+ * inode is evicted.
-  */
- struct fscrypt_info {
++#define NUM_PREALLOC_POST_READ_CTXS	128
 +
-+	/* The actual crypto transform used for encryption and decryption */
-+	struct crypto_skcipher *ci_ctfm;
++static struct kmem_cache *bio_post_read_ctx_cache;
++static mempool_t *bio_post_read_ctx_pool;
 +
-+	/*
-+	 * Cipher for ESSIV IV generation.  Only set for CBC contents
-+	 * encryption, otherwise is NULL.
-+	 */
-+	struct crypto_cipher *ci_essiv_tfm;
-+
-+	/*
-+	 * Encryption mode used for this inode.  It corresponds to either
-+	 * ci_data_mode or ci_filename_mode, depending on the inode type.
-+	 */
-+	struct fscrypt_mode *ci_mode;
-+
-+	/*
-+	 * If non-NULL, then this inode uses a master key directly rather than a
-+	 * derived key, and ci_ctfm will equal ci_master_key->mk_ctfm.
-+	 * Otherwise, this inode uses a derived key.
-+	 */
-+	struct fscrypt_master_key *ci_master_key;
-+
-+	/* fields from the fscrypt_context */
- 	u8 ci_data_mode;
- 	u8 ci_filename_mode;
- 	u8 ci_flags;
--	struct crypto_skcipher *ci_ctfm;
--	struct crypto_cipher *ci_essiv_tfm;
--	u8 ci_master_key[FS_KEY_DESCRIPTOR_SIZE];
-+	u8 ci_master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+	u8 ci_nonce[FS_KEY_DERIVATION_NONCE_SIZE];
- };
- 
- typedef enum {
-@@ -83,6 +108,10 @@ static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
- 	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
- 		return true;
- 
-+	if (contents_mode == FS_ENCRYPTION_MODE_ADIANTUM &&
-+	    filenames_mode == FS_ENCRYPTION_MODE_ADIANTUM)
-+		return true;
-+
- 	return false;
- }
- 
-@@ -107,6 +136,21 @@ fscrypt_msg(struct super_block *sb, const char *level, const char *fmt, ...);
- #define fscrypt_err(sb, fmt, ...)		\
- 	fscrypt_msg(sb, KERN_ERR, fmt, ##__VA_ARGS__)
- 
-+union fscrypt_iv {
-+	struct {
-+		__le64 index;
-+		__le64 unused;
-+	} short_iv;
-+	struct {
-+		__le64 index;
-+		u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
-+		__le64 unused;
-+	} long_iv;
-+};
-+
-+void fscrypt_prepare_iv(union fscrypt_iv *iv, u64 lblk_num,
-+			const struct fscrypt_info *ci);
-+
- /* fname.c */
- extern int fname_encrypt(struct inode *inode, const struct qstr *iname,
- 			 u8 *out, unsigned int olen);
-@@ -115,6 +159,16 @@ extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
- 					 u32 *encrypted_len_ret);
- 
- /* keyinfo.c */
-+
-+struct fscrypt_mode {
-+	const char *friendly_name;
-+	const char *cipher_str;
-+	int keysize;
-+	bool logged_impl_name;
-+	bool uses_essiv;
-+	bool uses_long_ivs;
-+};
-+
- extern void __exit fscrypt_essiv_cleanup(void);
- 
- #endif /* _FSCRYPT_PRIVATE_H */
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 7874c9bb2fc5..49bfbe8c15cd 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -10,15 +10,20 @@
-  */
- 
- #include <keys/user-type.h>
-+#include <linux/hashtable.h>
- #include <linux/scatterlist.h>
- #include <linux/ratelimit.h>
- #include <crypto/aes.h>
-+#include <crypto/algapi.h>
- #include <crypto/sha.h>
- #include <crypto/skcipher.h>
- #include "fscrypt_private.h"
- 
- static struct crypto_shash *essiv_hash_tfm;
- 
-+static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
-+static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
-+
- /*
-  * Key derivation function.  This generates the derived key by encrypting the
-  * master key with AES-128-ECB using the inode's nonce as the AES key.
-@@ -123,37 +128,7 @@ find_and_lock_process_key(const char *prefix,
- 	return ERR_PTR(-ENOKEY);
- }
- 
--/* Find the master key, then derive the inode's actual encryption key */
--static int find_and_derive_key(const struct inode *inode,
--			       const struct fscrypt_context *ctx,
--			       u8 *derived_key, unsigned int derived_keysize)
--{
--	struct key *key;
--	const struct fscrypt_key *payload;
--	int err;
--
--	key = find_and_lock_process_key(FS_KEY_DESC_PREFIX,
--					ctx->master_key_descriptor,
--					derived_keysize, &payload);
--	if (key == ERR_PTR(-ENOKEY) && inode->i_sb->s_cop->key_prefix) {
--		key = find_and_lock_process_key(inode->i_sb->s_cop->key_prefix,
--						ctx->master_key_descriptor,
--						derived_keysize, &payload);
--	}
--	if (IS_ERR(key))
--		return PTR_ERR(key);
--	err = derive_key_aes(payload->raw, ctx, derived_key, derived_keysize);
--	up_read(&key->sem);
--	key_put(key);
--	return err;
--}
--
--static struct fscrypt_mode {
--	const char *friendly_name;
--	const char *cipher_str;
--	int keysize;
--	bool logged_impl_name;
--} available_modes[] = {
-+static struct fscrypt_mode available_modes[] = {
- 	[FS_ENCRYPTION_MODE_AES_256_XTS] = {
- 		.friendly_name = "AES-256-XTS",
- 		.cipher_str = "xts(aes)",
-@@ -168,12 +143,19 @@ static struct fscrypt_mode {
- 		.friendly_name = "AES-128-CBC",
- 		.cipher_str = "cbc(aes)",
- 		.keysize = 16,
-+		.uses_essiv = true,
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
- 		.friendly_name = "AES-128-CTS-CBC",
- 		.cipher_str = "cts(cbc(aes))",
- 		.keysize = 16,
- 	},
-+	[FS_ENCRYPTION_MODE_ADIANTUM] = {
-+		.friendly_name = "Adiantum",
-+		.cipher_str = "adiantum(xchacha12,aes)",
-+		.keysize = 32,
-+		.uses_long_ivs = true,
-+	},
- };
- 
- static struct fscrypt_mode *
-@@ -198,14 +180,178 @@ select_encryption_mode(const struct fscrypt_info *ci, const struct inode *inode)
- 	return ERR_PTR(-EINVAL);
- }
- 
--static void put_crypt_info(struct fscrypt_info *ci)
-+/* Find the master key, then derive the inode's actual encryption key */
-+static int find_and_derive_key(const struct inode *inode,
-+			       const struct fscrypt_context *ctx,
-+			       u8 *derived_key, const struct fscrypt_mode *mode)
+ static inline bool ext4_bio_encrypted(struct bio *bio)
  {
--	if (!ci)
-+	struct key *key;
-+	const struct fscrypt_key *payload;
-+	int err;
+ #ifdef CONFIG_EXT4_FS_ENCRYPTION
+@@ -56,6 +61,124 @@ static inline bool ext4_bio_encrypted(struct bio *bio)
+ #endif
+ }
+ 
++/* postprocessing steps for read bios */
++enum bio_post_read_step {
++	STEP_INITIAL = 0,
++	STEP_DECRYPT,
++	STEP_VERITY,
++};
 +
-+	key = find_and_lock_process_key(FS_KEY_DESC_PREFIX,
-+					ctx->master_key_descriptor,
-+					mode->keysize, &payload);
-+	if (key == ERR_PTR(-ENOKEY) && inode->i_sb->s_cop->key_prefix) {
-+		key = find_and_lock_process_key(inode->i_sb->s_cop->key_prefix,
-+						ctx->master_key_descriptor,
-+						mode->keysize, &payload);
-+	}
-+	if (IS_ERR(key))
-+		return PTR_ERR(key);
++struct bio_post_read_ctx {
++	struct bio *bio;
++	struct work_struct work;
++	unsigned int cur_step;
++	unsigned int enabled_steps;
++};
 +
-+	if (ctx->flags & FS_POLICY_FLAGS_DIRECT) {
-+		if (mode->uses_long_ivs) {
-+			memcpy(derived_key, payload->raw, mode->keysize);
-+			err = 0;
++static void __read_end_io(struct bio *bio)
++{
++	struct page *page;
++	struct bio_vec *bv;
++	int i;
++
++	bio_for_each_segment_all(bv, bio, i) {
++		page = bv->bv_page;
++
++		/* PG_error was set if any post_read step failed */
++		if (bio->bi_status || PageError(page)) {
++			ClearPageUptodate(page);
++			SetPageError(page);
 +		} else {
-+			fscrypt_warn(inode->i_sb,
-+				     "direct key mode not allowed with %s\n",
-+				     mode->friendly_name);
-+			err = -EINVAL;
++			SetPageUptodate(page);
 +		}
-+	} else {
-+		err = derive_key_aes(payload->raw, ctx, derived_key,
-+				     mode->keysize);
++		unlock_page(page);
 +	}
-+	up_read(&key->sem);
-+	key_put(key);
-+	return err;
++	if (bio->bi_private)
++		mempool_free(bio->bi_private, bio_post_read_ctx_pool);
++	bio_put(bio);
 +}
 +
-+/* Allocate and key a symmetric cipher object for the given encryption mode */
-+static struct crypto_skcipher *
-+allocate_skcipher_for_mode(struct fscrypt_mode *mode, const u8 *raw_key,
-+			   const struct inode *inode)
++static void bio_post_read_processing(struct bio_post_read_ctx *ctx);
++
++static void decrypt_work(struct work_struct *work)
 +{
-+	struct crypto_skcipher *tfm;
-+	int err;
++	struct bio_post_read_ctx *ctx =
++		container_of(work, struct bio_post_read_ctx, work);
 +
-+	tfm = crypto_alloc_skcipher(mode->cipher_str, 0, 0);
-+	if (IS_ERR(tfm)) {
-+		fscrypt_warn(inode->i_sb,
-+			     "error allocating '%s' transform for inode %lu: %ld",
-+			     mode->cipher_str, inode->i_ino, PTR_ERR(tfm));
-+		return tfm;
-+	}
-+	if (unlikely(!mode->logged_impl_name)) {
-+		/*
-+		 * fscrypt performance can vary greatly depending on which
-+		 * crypto algorithm implementation is used.  Help people debug
-+		 * performance problems by logging the ->cra_driver_name the
-+		 * first time a mode is used.  Note that multiple threads can
-+		 * race here, but it doesn't really matter.
-+		 */
-+		mode->logged_impl_name = true;
-+		pr_info("fscrypt: %s using implementation \"%s\"\n",
-+			mode->friendly_name,
-+			crypto_skcipher_alg(tfm)->base.cra_driver_name);
-+	}
-+	crypto_skcipher_set_flags(tfm, CRYPTO_TFM_REQ_WEAK_KEY);
-+	err = crypto_skcipher_setkey(tfm, raw_key, mode->keysize);
-+	if (err)
-+		goto err_free_tfm;
++	fscrypt_decrypt_bio(ctx->bio);
 +
-+	return tfm;
-+
-+err_free_tfm:
-+	crypto_free_skcipher(tfm);
-+	return ERR_PTR(err);
++	bio_post_read_processing(ctx);
 +}
 +
-+/* Master key referenced by FS_POLICY_FLAGS_DIRECT policy */
-+struct fscrypt_master_key {
-+	struct hlist_node mk_node;
-+	refcount_t mk_refcount;
-+	const struct fscrypt_mode *mk_mode;
-+	struct crypto_skcipher *mk_ctfm;
-+	u8 mk_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+	u8 mk_raw[FS_MAX_KEY_SIZE];
-+};
-+
-+static void free_master_key(struct fscrypt_master_key *mk)
++static void verity_work(struct work_struct *work)
 +{
-+	if (mk) {
-+		crypto_free_skcipher(mk->mk_ctfm);
-+		kzfree(mk);
-+	}
++	struct bio_post_read_ctx *ctx =
++		container_of(work, struct bio_post_read_ctx, work);
++
++	fsverity_verify_bio(ctx->bio);
++
++	bio_post_read_processing(ctx);
 +}
 +
-+static void put_master_key(struct fscrypt_master_key *mk)
++static void bio_post_read_processing(struct bio_post_read_ctx *ctx)
 +{
-+	if (!refcount_dec_and_lock(&mk->mk_refcount, &fscrypt_master_keys_lock))
- 		return;
-+	hash_del(&mk->mk_node);
-+	spin_unlock(&fscrypt_master_keys_lock);
- 
--	crypto_free_skcipher(ci->ci_ctfm);
--	crypto_free_cipher(ci->ci_essiv_tfm);
--	kmem_cache_free(fscrypt_info_cachep, ci);
-+	free_master_key(mk);
-+}
-+
-+static struct fscrypt_master_key *
-+find_or_insert_master_key(struct fscrypt_master_key *to_insert,
-+			  const u8 *raw_key, const struct fscrypt_mode *mode,
-+			  const struct fscrypt_info *ci)
-+{
-+	unsigned long hash_key;
-+	struct fscrypt_master_key *mk;
-+
-+	BUILD_BUG_ON(sizeof(hash_key) > FS_KEY_DESCRIPTOR_SIZE);
-+	memcpy(&hash_key, ci->ci_master_key_descriptor, sizeof(hash_key));
-+
-+	spin_lock(&fscrypt_master_keys_lock);
-+	hash_for_each_possible(fscrypt_master_keys, mk, mk_node, hash_key) {
-+		if (memcmp(mk->mk_descriptor, ci->ci_master_key_descriptor,
-+			   FS_KEY_DESCRIPTOR_SIZE) != 0)
-+			continue;
-+		if (mode != mk->mk_mode ||
-+		    crypto_memneq(raw_key, mk->mk_raw, mode->keysize))
-+			continue;
-+		/* using existing tfm with same (descriptor, mode, raw_key) */
-+		refcount_inc(&mk->mk_refcount);
-+		spin_unlock(&fscrypt_master_keys_lock);
-+		free_master_key(to_insert);
-+		return mk;
-+	}
-+	if (to_insert)
-+		hash_add(fscrypt_master_keys, &to_insert->mk_node, hash_key);
-+	spin_unlock(&fscrypt_master_keys_lock);
-+	return to_insert;
-+}
-+
-+/* Prepare to encrypt directly using the master key in the given mode */
-+static struct fscrypt_master_key *
-+fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
-+		       const u8 *raw_key, const struct inode *inode)
-+{
-+	struct fscrypt_master_key *mk;
-+	int err;
-+
-+	/* Is there already a tfm for this key? */
-+	mk = find_or_insert_master_key(NULL, raw_key, mode, ci);
-+	if (mk)
-+		return mk;
-+
-+	/* Nope, allocate one. */
-+	mk = kzalloc(sizeof(*mk), GFP_NOFS);
-+	if (!mk)
-+		return ERR_PTR(-ENOMEM);
-+	refcount_set(&mk->mk_refcount, 1);
-+	mk->mk_mode = mode;
-+	mk->mk_ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
-+	if (IS_ERR(mk->mk_ctfm)) {
-+		err = PTR_ERR(mk->mk_ctfm);
-+		mk->mk_ctfm = NULL;
-+		goto err_free_mk;
-+	}
-+	memcpy(mk->mk_descriptor, ci->ci_master_key_descriptor,
-+	       FS_KEY_DESCRIPTOR_SIZE);
-+	memcpy(mk->mk_raw, raw_key, mode->keysize);
-+
-+	return find_or_insert_master_key(mk, raw_key, mode, ci);
-+
-+err_free_mk:
-+	free_master_key(mk);
-+	return ERR_PTR(err);
- }
- 
- static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
-@@ -275,11 +421,66 @@ void __exit fscrypt_essiv_cleanup(void)
- 	crypto_free_shash(essiv_hash_tfm);
- }
- 
-+/*
-+ * Given the encryption mode and key (normally the derived key, but for
-+ * FS_POLICY_FLAGS_DIRECT mode it's the master key), set up the inode's
-+ * symmetric cipher transform object(s).
-+ */
-+static int setup_crypto_transform(struct fscrypt_info *ci,
-+				  struct fscrypt_mode *mode,
-+				  const u8 *raw_key, const struct inode *inode)
-+{
-+	struct fscrypt_master_key *mk;
-+	struct crypto_skcipher *ctfm;
-+	int err;
-+
-+	if (ci->ci_flags & FS_POLICY_FLAGS_DIRECT) {
-+		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
-+		if (IS_ERR(mk))
-+			return PTR_ERR(mk);
-+		ctfm = mk->mk_ctfm;
-+	} else {
-+		mk = NULL;
-+		ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
-+		if (IS_ERR(ctfm))
-+			return PTR_ERR(ctfm);
-+	}
-+	ci->ci_master_key = mk;
-+	ci->ci_ctfm = ctfm;
-+
-+	if (mode->uses_essiv && S_ISREG(inode->i_mode)) {
-+		WARN_ON(mode->uses_long_ivs);
-+		BUILD_BUG_ON(FIELD_SIZEOF(union fscrypt_iv, short_iv) !=
-+			     AES_BLOCK_SIZE);
-+		err = init_essiv_generator(ci, raw_key, mode->keysize);
-+		if (err) {
-+			fscrypt_warn(inode->i_sb,
-+				     "error initializing ESSIV generator for inode %lu: %d",
-+				     inode->i_ino, err);
-+			return err;
++	/*
++	 * We use different work queues for decryption and for verity because
++	 * verity may require reading metadata pages that need decryption, and
++	 * we shouldn't recurse to the same workqueue.
++	 */
++	switch (++ctx->cur_step) {
++	case STEP_DECRYPT:
++		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
++			INIT_WORK(&ctx->work, decrypt_work);
++			fscrypt_enqueue_decrypt_work(&ctx->work);
++			return;
 +		}
++		ctx->cur_step++;
++		/* fall-through */
++	case STEP_VERITY:
++		if (ctx->enabled_steps & (1 << STEP_VERITY)) {
++			INIT_WORK(&ctx->work, verity_work);
++			fsverity_enqueue_verify_work(&ctx->work);
++			return;
++		}
++		ctx->cur_step++;
++		/* fall-through */
++	default:
++		__read_end_io(ctx->bio);
 +	}
-+	return 0;
 +}
 +
-+static void put_crypt_info(struct fscrypt_info *ci)
++static struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
++						       struct bio *bio,
++						       pgoff_t index)
 +{
-+	if (!ci)
-+		return;
++	unsigned int post_read_steps = 0;
++	struct bio_post_read_ctx *ctx = NULL;
 +
-+	if (ci->ci_master_key) {
-+		put_master_key(ci->ci_master_key);
-+	} else {
-+		crypto_free_skcipher(ci->ci_ctfm);
-+		crypto_free_cipher(ci->ci_essiv_tfm);
++	if (ext4_encrypted_inode(inode) && S_ISREG(inode->i_mode))
++		post_read_steps |= 1 << STEP_DECRYPT;
++#ifdef CONFIG_EXT4_FS_VERITY
++	if (inode->i_verity_info != NULL &&
++	    (index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
++		post_read_steps |= 1 << STEP_VERITY;
++#endif
++	if (post_read_steps) {
++		ctx = mempool_alloc(bio_post_read_ctx_pool, GFP_NOFS);
++		if (!ctx)
++			return ERR_PTR(-ENOMEM);
++		ctx->bio = bio;
++		ctx->enabled_steps = post_read_steps;
++		bio->bi_private = ctx;
 +	}
-+	kmem_cache_free(fscrypt_info_cachep, ci);
++	return ctx;
 +}
 +
- int fscrypt_get_encryption_info(struct inode *inode)
++static bool bio_post_read_required(struct bio *bio)
++{
++	return bio->bi_private && !bio->bi_status;
++}
++
+ /*
+  * I/O completion handler for multipage BIOs.
+  *
+@@ -70,30 +193,31 @@ static inline bool ext4_bio_encrypted(struct bio *bio)
+  */
+ static void mpage_end_io(struct bio *bio)
  {
- 	struct fscrypt_info *crypt_info;
- 	struct fscrypt_context ctx;
--	struct crypto_skcipher *ctfm;
- 	struct fscrypt_mode *mode;
- 	u8 *raw_key = NULL;
- 	int res;
-@@ -312,23 +513,23 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (ctx.flags & ~FS_POLICY_FLAGS_VALID)
- 		return -EINVAL;
+-	struct bio_vec *bv;
+-	int i;
++	if (bio_post_read_required(bio)) {
++		struct bio_post_read_ctx *ctx = bio->bi_private;
  
--	crypt_info = kmem_cache_alloc(fscrypt_info_cachep, GFP_NOFS);
-+	crypt_info = kmem_cache_zalloc(fscrypt_info_cachep, GFP_NOFS);
- 	if (!crypt_info)
- 		return -ENOMEM;
- 
- 	crypt_info->ci_flags = ctx.flags;
- 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
- 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
--	crypt_info->ci_ctfm = NULL;
--	crypt_info->ci_essiv_tfm = NULL;
--	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
--				sizeof(crypt_info->ci_master_key));
-+	memcpy(crypt_info->ci_master_key_descriptor, ctx.master_key_descriptor,
-+	       FS_KEY_DESCRIPTOR_SIZE);
-+	memcpy(crypt_info->ci_nonce, ctx.nonce, FS_KEY_DERIVATION_NONCE_SIZE);
- 
- 	mode = select_encryption_mode(crypt_info, inode);
- 	if (IS_ERR(mode)) {
- 		res = PTR_ERR(mode);
- 		goto out;
- 	}
-+	crypt_info->ci_mode = mode;
- 
- 	/*
- 	 * This cannot be a stack buffer because it is passed to the scatterlist
-@@ -339,47 +540,14 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (!raw_key)
- 		goto out;
- 
--	res = find_and_derive_key(inode, &ctx, raw_key, mode->keysize);
-+	res = find_and_derive_key(inode, &ctx, raw_key, mode);
- 	if (res)
- 		goto out;
- 
--	ctfm = crypto_alloc_skcipher(mode->cipher_str, 0, 0);
--	if (IS_ERR(ctfm)) {
--		res = PTR_ERR(ctfm);
--		fscrypt_warn(inode->i_sb,
--			     "error allocating '%s' transform for inode %lu: %d",
--			     mode->cipher_str, inode->i_ino, res);
--		goto out;
--	}
--	if (unlikely(!mode->logged_impl_name)) {
--		/*
--		 * fscrypt performance can vary greatly depending on which
--		 * crypto algorithm implementation is used.  Help people debug
--		 * performance problems by logging the ->cra_driver_name the
--		 * first time a mode is used.  Note that multiple threads can
--		 * race here, but it doesn't really matter.
--		 */
--		mode->logged_impl_name = true;
--		pr_info("fscrypt: %s using implementation \"%s\"\n",
--			mode->friendly_name,
--			crypto_skcipher_alg(ctfm)->base.cra_driver_name);
--	}
--	crypt_info->ci_ctfm = ctfm;
--	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
--	res = crypto_skcipher_setkey(ctfm, raw_key, mode->keysize);
-+	res = setup_crypto_transform(crypt_info, mode, raw_key, inode);
- 	if (res)
- 		goto out;
- 
--	if (S_ISREG(inode->i_mode) &&
--	    crypt_info->ci_data_mode == FS_ENCRYPTION_MODE_AES_128_CBC) {
--		res = init_essiv_generator(crypt_info, raw_key, mode->keysize);
--		if (res) {
--			fscrypt_warn(inode->i_sb,
--				     "error initializing ESSIV generator for inode %lu: %d",
--				     inode->i_ino, res);
--			goto out;
+-	if (ext4_bio_encrypted(bio)) {
+-		if (bio->bi_status) {
+-			fscrypt_release_ctx(bio->bi_private);
+-		} else {
+-			fscrypt_enqueue_decrypt_bio(bio->bi_private, bio);
+-			return;
 -		}
--	}
- 	if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) == NULL)
- 		crypt_info = NULL;
- out:
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index c6d431a5cce9..f490de921ce8 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -199,7 +199,8 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- 	child_ci = child->i_crypt_info;
++		ctx->cur_step = STEP_INITIAL;
++		bio_post_read_processing(ctx);
++		return;
+ 	}
+-	bio_for_each_segment_all(bv, bio, i) {
+-		struct page *page = bv->bv_page;
++	__read_end_io(bio);
++}
  
- 	if (parent_ci && child_ci) {
--		return memcmp(parent_ci->ci_master_key, child_ci->ci_master_key,
-+		return memcmp(parent_ci->ci_master_key_descriptor,
-+			      child_ci->ci_master_key_descriptor,
- 			      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
- 			(parent_ci->ci_data_mode == child_ci->ci_data_mode) &&
- 			(parent_ci->ci_filename_mode ==
-@@ -254,7 +255,7 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
- 	ctx.contents_encryption_mode = ci->ci_data_mode;
- 	ctx.filenames_encryption_mode = ci->ci_filename_mode;
- 	ctx.flags = ci->ci_flags;
--	memcpy(ctx.master_key_descriptor, ci->ci_master_key,
-+	memcpy(ctx.master_key_descriptor, ci->ci_master_key_descriptor,
- 	       FS_KEY_DESCRIPTOR_SIZE);
- 	get_random_bytes(ctx.nonce, FS_KEY_DERIVATION_NONCE_SIZE);
- 	BUILD_BUG_ON(sizeof(ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index a441ea1bfe6d..8a49e971146d 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -269,7 +269,8 @@ struct fsxattr {
- #define FS_POLICY_FLAGS_PAD_16		0x02
- #define FS_POLICY_FLAGS_PAD_32		0x03
- #define FS_POLICY_FLAGS_PAD_MASK	0x03
--#define FS_POLICY_FLAGS_VALID		0x03
-+#define FS_POLICY_FLAGS_DIRECT		0x04	/* use master key directly */
-+#define FS_POLICY_FLAGS_VALID		0x07
+-		if (!bio->bi_status) {
+-			SetPageUptodate(page);
+-		} else {
+-			ClearPageUptodate(page);
+-			SetPageError(page);
+-		}
+-		unlock_page(page);
++static inline loff_t ext4_readpage_limit(struct inode *inode)
++{
++#ifdef CONFIG_EXT4_FS_VERITY
++	if (ext4_verity_inode(inode)) {
++		if (inode->i_verity_info)
++			/* limit to end of metadata region */
++			return fsverity_full_i_size(inode);
++		/*
++		 * fsverity_info is currently being set up and no user reads are
++		 * allowed yet.  It's easiest to just not enforce a limit yet.
++		 */
++		return inode->i_sb->s_maxbytes;
+ 	}
+-
+-	bio_put(bio);
++#endif
++	return i_size_read(inode);
+ }
  
- /* Encryption algorithms */
- #define FS_ENCRYPTION_MODE_INVALID		0
-@@ -281,6 +282,7 @@ struct fsxattr {
- #define FS_ENCRYPTION_MODE_AES_128_CTS		6
- #define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
- #define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
-+#define FS_ENCRYPTION_MODE_ADIANTUM		9
+ int ext4_mpage_readpages(struct address_space *mapping,
+@@ -140,7 +264,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
  
- struct fscrypt_policy {
- 	__u8 version;
+ 		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
+ 		last_block = block_in_file + nr_pages * blocks_per_page;
+-		last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
++		last_block_in_file = (ext4_readpage_limit(inode) +
++				      blocksize - 1) >> blkbits;
+ 		if (last_block > last_block_in_file)
+ 			last_block = last_block_in_file;
+ 		page_block = 0;
+@@ -217,6 +342,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 			zero_user_segment(page, first_hole << blkbits,
+ 					  PAGE_SIZE);
+ 			if (first_hole == 0) {
++				if (!fsverity_check_hole(inode, page))
++					goto set_error_page;
+ 				SetPageUptodate(page);
+ 				unlock_page(page);
+ 				goto next_page;
+@@ -240,19 +367,15 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 			bio = NULL;
+ 		}
+ 		if (bio == NULL) {
+-			struct fscrypt_ctx *ctx = NULL;
++			struct bio_post_read_ctx *ctx;
+ 
+-			if (ext4_encrypted_inode(inode) &&
+-			    S_ISREG(inode->i_mode)) {
+-				ctx = fscrypt_get_ctx(inode, GFP_NOFS);
+-				if (IS_ERR(ctx))
+-					goto set_error_page;
+-			}
+ 			bio = bio_alloc(GFP_KERNEL,
+ 				min_t(int, nr_pages, BIO_MAX_PAGES));
+-			if (!bio) {
+-				if (ctx)
+-					fscrypt_release_ctx(ctx);
++			if (!bio)
++				goto set_error_page;
++			ctx = get_bio_post_read_ctx(inode, bio, page->index);
++			if (IS_ERR(ctx)) {
++				bio_put(bio);
+ 				goto set_error_page;
+ 			}
+ 			bio_set_dev(bio, bdev);
+@@ -293,3 +416,27 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 		submit_bio(bio);
+ 	return 0;
+ }
++
++int __init ext4_init_post_read_processing(void)
++{
++	bio_post_read_ctx_cache = KMEM_CACHE(bio_post_read_ctx, 0);
++	if (!bio_post_read_ctx_cache)
++		goto fail;
++	bio_post_read_ctx_pool =
++		mempool_create_slab_pool(NUM_PREALLOC_POST_READ_CTXS,
++					 bio_post_read_ctx_cache);
++	if (!bio_post_read_ctx_pool)
++		goto fail_free_cache;
++	return 0;
++
++fail_free_cache:
++	kmem_cache_destroy(bio_post_read_ctx_cache);
++fail:
++	return -ENOMEM;
++}
++
++void ext4_exit_post_read_processing(void)
++{
++	mempool_destroy(bio_post_read_ctx_pool);
++	kmem_cache_destroy(bio_post_read_ctx_cache);
++}
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index c4a66b64ea604..fb4e060f28ecb 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -6070,6 +6070,10 @@ static int __init ext4_init_fs(void)
+ 		return err;
+ 
+ 	err = ext4_init_pending();
++	if (err)
++		goto out7;
++
++	err = ext4_init_post_read_processing();
+ 	if (err)
+ 		goto out6;
+ 
+@@ -6111,8 +6115,10 @@ static int __init ext4_init_fs(void)
+ out4:
+ 	ext4_exit_pageio();
+ out5:
+-	ext4_exit_pending();
++	ext4_exit_post_read_processing();
+ out6:
++	ext4_exit_pending();
++out7:
+ 	ext4_exit_es();
+ 
+ 	return err;
+@@ -6129,6 +6135,7 @@ static void __exit ext4_exit_fs(void)
+ 	ext4_exit_sysfs();
+ 	ext4_exit_system_zone();
+ 	ext4_exit_pageio();
++	ext4_exit_post_read_processing();
+ 	ext4_exit_es();
+ 	ext4_exit_pending();
+ }
 -- 
-2.19.1.930.g4563a0d9d0-goog
+2.19.1.568.g152ad8e336-goog
