@@ -1,251 +1,194 @@
-Return-Path: <SRS0=+oNo=N7=gondor.apana.org.au=herbert@kernel.org>
-Subject: [v2 PATCH 1/4] crypto: chacha20 - Export chacha20 functions without crypto API
-References: <20181120060217.t4nccaqpwnxkl4tx@gondor.apana.org.au>
-Message-Id: <E1gOz9R-00066e-5S@gondobar>
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Date: Tue, 20 Nov 2018 14:04:45 +0800
-To: "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
+Return-Path: <SRS0=DPN/=NM=vger.kernel.org=linux-integrity-owner@kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v2 05/12] fs-verity: implement FS_IOC_ENABLE_VERITY ioctl
+Date: Thu,  1 Nov 2018 15:52:23 -0700
+Message-Id: <20181101225230.88058-6-ebiggers@kernel.org>
+In-Reply-To: <20181101225230.88058-1-ebiggers@kernel.org>
+References: <20181101225230.88058-1-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patch exports the raw chacha20 functions, including the generic
-as well as x86/arm accelerated versions.  This allows them to be
-used without going through the crypto API.
+From: Eric Biggers <ebiggers@google.com>
 
-This patch also renames struct chacha20_ctx to crypto_chacha20_ctx
-to avoid naming conflicts with zinc.
+Add a function for filesystems to call to implement the
+FS_IOC_ENABLE_VERITY ioctl.  This ioctl enables fs-verity on a file,
+after userspace has appended verity metadata to it.
 
-In order to ensure that zinc can link to the requisite functions,
-this function removes the failure mode from the x86/arm accelerated
-glue code so that the modules will always load, even if the hardware
-is not available.  In that case, the crypto API functions would not
-be registered.
+This ioctl is documented in Documentation/filesystem/fsverity.rst;
+see there for more information.
 
-Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
+ fs/verity/Makefile       |   2 +-
+ fs/verity/ioctl.c        | 117 +++++++++++++++++++++++++++++++++++++++
+ include/linux/fsverity.h |  11 ++++
+ 3 files changed, 129 insertions(+), 1 deletion(-)
+ create mode 100644 fs/verity/ioctl.c
 
- arch/arm/crypto/chacha20-neon-glue.c |   16 ++++++++++------
- arch/x86/crypto/chacha20_glue.c      |   16 ++++++++++------
- crypto/chacha20_generic.c            |   15 ++++++++-------
- include/crypto/chacha20.h            |   10 ++++++++--
- 4 files changed, 36 insertions(+), 21 deletions(-)
-
-diff --git a/arch/arm/crypto/chacha20-neon-glue.c b/arch/arm/crypto/chacha20-neon-glue.c
-index 59a7be08e80c..fb198e11af08 100644
---- a/arch/arm/crypto/chacha20-neon-glue.c
-+++ b/arch/arm/crypto/chacha20-neon-glue.c
-@@ -31,7 +31,7 @@
- asmlinkage void chacha20_block_xor_neon(u32 *state, u8 *dst, const u8 *src);
- asmlinkage void chacha20_4block_xor_neon(u32 *state, u8 *dst, const u8 *src);
+diff --git a/fs/verity/Makefile b/fs/verity/Makefile
+index a6c7cefb61ab7..6450925e3a8b7 100644
+--- a/fs/verity/Makefile
++++ b/fs/verity/Makefile
+@@ -1,3 +1,3 @@
+ obj-$(CONFIG_FS_VERITY)	+= fsverity.o
  
--static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
-+void crypto_chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
- 			    unsigned int bytes)
- {
- 	u8 buf[CHACHA20_BLOCK_SIZE];
-@@ -56,11 +56,12 @@ static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
- 		memcpy(dst, buf, bytes);
- 	}
- }
-+EXPORT_SYMBOL_GPL(crypto_chacha20_doneon);
- 
- static int chacha20_neon(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct crypto_chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
- 	struct skcipher_walk walk;
- 	u32 state[16];
- 	int err;
-@@ -79,8 +80,8 @@ static int chacha20_neon(struct skcipher_request *req)
- 		if (nbytes < walk.total)
- 			nbytes = round_down(nbytes, walk.stride);
- 
--		chacha20_doneon(state, walk.dst.virt.addr, walk.src.virt.addr,
--				nbytes);
-+		crypto_chacha20_doneon(state, walk.dst.virt.addr,
-+				       walk.src.virt.addr, nbytes);
- 		err = skcipher_walk_done(&walk, walk.nbytes - nbytes);
- 	}
- 	kernel_neon_end();
-@@ -93,7 +94,7 @@ static struct skcipher_alg alg = {
- 	.base.cra_driver_name	= "chacha20-neon",
- 	.base.cra_priority	= 300,
- 	.base.cra_blocksize	= 1,
--	.base.cra_ctxsize	= sizeof(struct chacha20_ctx),
-+	.base.cra_ctxsize	= sizeof(struct crypto_chacha20_ctx),
- 	.base.cra_module	= THIS_MODULE,
- 
- 	.min_keysize		= CHACHA20_KEY_SIZE,
-@@ -109,13 +110,16 @@ static struct skcipher_alg alg = {
- static int __init chacha20_simd_mod_init(void)
- {
- 	if (!(elf_hwcap & HWCAP_NEON))
--		return -ENODEV;
-+		return 0;
- 
- 	return crypto_register_skcipher(&alg);
- }
- 
- static void __exit chacha20_simd_mod_fini(void)
- {
-+	if (!(elf_hwcap & HWCAP_NEON))
-+		return;
+-fsverity-y := hash_algs.o setup.o verify.o
++fsverity-y := hash_algs.o ioctl.o setup.o verify.o
+diff --git a/fs/verity/ioctl.c b/fs/verity/ioctl.c
+new file mode 100644
+index 0000000000000..c5f0022cb3bef
+--- /dev/null
++++ b/fs/verity/ioctl.c
+@@ -0,0 +1,117 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * fs/verity/ioctl.c: fs-verity ioctls
++ *
++ * Copyright 2018 Google LLC
++ *
++ * Originally written by Jaegeuk Kim and Michael Halcrow;
++ * heavily rewritten by Eric Biggers.
++ */
 +
- 	crypto_unregister_skcipher(&alg);
- }
- 
-diff --git a/arch/x86/crypto/chacha20_glue.c b/arch/x86/crypto/chacha20_glue.c
-index 9fd84fe6ec09..ba66e23cd752 100644
---- a/arch/x86/crypto/chacha20_glue.c
-+++ b/arch/x86/crypto/chacha20_glue.c
-@@ -39,7 +39,7 @@ static unsigned int chacha20_advance(unsigned int len, unsigned int maxblocks)
- 	return round_up(len, CHACHA20_BLOCK_SIZE) / CHACHA20_BLOCK_SIZE;
- }
- 
--static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
-+void crypto_chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
- 			    unsigned int bytes)
- {
- #ifdef CONFIG_AS_AVX2
-@@ -85,11 +85,12 @@ static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
- 		state[12]++;
- 	}
- }
-+EXPORT_SYMBOL_GPL(crypto_chacha20_dosimd);
- 
- static int chacha20_simd(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct crypto_chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
- 	u32 *state, state_buf[16 + 2] __aligned(8);
- 	struct skcipher_walk walk;
- 	int err;
-@@ -112,8 +113,8 @@ static int chacha20_simd(struct skcipher_request *req)
- 		if (nbytes < walk.total)
- 			nbytes = round_down(nbytes, walk.stride);
- 
--		chacha20_dosimd(state, walk.dst.virt.addr, walk.src.virt.addr,
--				nbytes);
-+		crypto_chacha20_dosimd(state, walk.dst.virt.addr,
-+				       walk.src.virt.addr, nbytes);
- 
- 		err = skcipher_walk_done(&walk, walk.nbytes - nbytes);
- 	}
-@@ -128,7 +129,7 @@ static struct skcipher_alg alg = {
- 	.base.cra_driver_name	= "chacha20-simd",
- 	.base.cra_priority	= 300,
- 	.base.cra_blocksize	= 1,
--	.base.cra_ctxsize	= sizeof(struct chacha20_ctx),
-+	.base.cra_ctxsize	= sizeof(struct crypto_chacha20_ctx),
- 	.base.cra_module	= THIS_MODULE,
- 
- 	.min_keysize		= CHACHA20_KEY_SIZE,
-@@ -143,7 +144,7 @@ static struct skcipher_alg alg = {
- static int __init chacha20_simd_mod_init(void)
- {
- 	if (!boot_cpu_has(X86_FEATURE_SSSE3))
--		return -ENODEV;
-+		return 0;
- 
- #ifdef CONFIG_AS_AVX2
- 	chacha20_use_avx2 = boot_cpu_has(X86_FEATURE_AVX) &&
-@@ -155,6 +156,9 @@ static int __init chacha20_simd_mod_init(void)
- 
- static void __exit chacha20_simd_mod_fini(void)
- {
-+	if (!boot_cpu_has(X86_FEATURE_SSSE3))
-+		return;
++#include "fsverity_private.h"
 +
- 	crypto_unregister_skcipher(&alg);
- }
++#include <linux/mm.h>
++#include <linux/mount.h>
++#include <linux/uaccess.h>
++
++/**
++ * fsverity_ioctl_enable - enable fs-verity on a file
++ *
++ * Enable fs-verity on a file.  Verity metadata must have already been appended
++ * to the file.  See Documentation/filesystems/fsverity.rst, section
++ * 'FS_IOC_ENABLE_VERITY' for details.
++ *
++ * Return: 0 on success, -errno on failure
++ */
++int fsverity_ioctl_enable(struct file *filp, const void __user *arg)
++{
++	struct inode *inode = file_inode(filp);
++	struct fsverity_info *vi;
++	int err;
++
++	err = inode_permission(inode, MAY_WRITE);
++	if (err)
++		return err;
++
++	if (IS_APPEND(inode))
++		return -EPERM;
++
++	if (arg) /* argument is reserved */
++		return -EINVAL;
++
++	if (S_ISDIR(inode->i_mode))
++		return -EISDIR;
++
++	if (!S_ISREG(inode->i_mode))
++		return -EINVAL;
++
++	err = mnt_want_write_file(filp);
++	if (err)
++		goto out;
++
++	/*
++	 * Temporarily lock out writers via writable file descriptors or
++	 * truncate().  This should stabilize the contents of the file as well
++	 * as its size.  Note that at the end of this ioctl we will unlock
++	 * writers, but at that point the verity bit will be set (if the ioctl
++	 * succeeded), preventing future writers.
++	 */
++	err = deny_write_access(filp);
++	if (err) /* -ETXTBSY */
++		goto out_drop_write;
++
++	/*
++	 * fsync so that the verity bit can't be persisted to disk prior to the
++	 * data, causing verification errors after a crash.
++	 */
++	err = vfs_fsync(filp, 1);
++	if (err)
++		goto out_allow_write;
++
++	/* Serialize concurrent use of this ioctl on the same inode */
++	inode_lock(inode);
++
++	if (get_fsverity_info(inode)) { /* fs-verity already enabled? */
++		err = -EEXIST;
++		goto out_unlock;
++	}
++
++	/* Validate the verity metadata */
++	vi = create_fsverity_info(inode, true);
++	if (IS_ERR(vi)) {
++		err = PTR_ERR(vi);
++		if (err == -EINVAL) /* distinguish "invalid metadata" case */
++			err = -EBADMSG;
++		goto out_unlock;
++	}
++
++	/*
++	 * Ask the filesystem to mark the file as a verity file, e.g. by setting
++	 * the verity bit in the inode.
++	 */
++	err = inode->i_sb->s_vop->set_verity(inode, vi->data_i_size);
++	if (err)
++		goto out_free_vi;
++
++	/* Invalidate all cached pages, forcing re-verification */
++	truncate_inode_pages(inode->i_mapping, 0);
++
++	/*
++	 * Set ->i_verity_info, unless another task managed to do it already
++	 * between ->set_verity() and here.
++	 */
++	if (set_fsverity_info(inode, vi))
++		vi = NULL;
++	err = 0;
++out_free_vi:
++	free_fsverity_info(vi);
++out_unlock:
++	inode_unlock(inode);
++out_allow_write:
++	allow_write_access(filp);
++out_drop_write:
++	mnt_drop_write_file(filp);
++out:
++	return err;
++}
++EXPORT_SYMBOL_GPL(fsverity_ioctl_enable);
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index 15478fe7d55aa..5de50b52ccc70 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -21,6 +21,9 @@ struct fsverity_operations {
  
-diff --git a/crypto/chacha20_generic.c b/crypto/chacha20_generic.c
-index 3ae96587caf9..405179c310b9 100644
---- a/crypto/chacha20_generic.c
-+++ b/crypto/chacha20_generic.c
-@@ -15,7 +15,7 @@
- #include <crypto/internal/skcipher.h>
- #include <linux/module.h>
+ #if __FS_HAS_VERITY
  
--static void chacha20_docrypt(u32 *state, u8 *dst, const u8 *src,
-+void crypto_chacha20_generic(u32 *state, u8 *dst, const u8 *src,
- 			     unsigned int bytes)
- {
- 	/* aligned to potentially speed up crypto_xor() */
-@@ -35,8 +35,9 @@ static void chacha20_docrypt(u32 *state, u8 *dst, const u8 *src,
- 		crypto_xor(dst, stream, bytes);
- 	}
- }
-+EXPORT_SYMBOL_GPL(crypto_chacha20_generic);
++/* ioctl.c */
++extern int fsverity_ioctl_enable(struct file *filp, const void __user *arg);
++
+ /* setup.c */
+ extern int fsverity_file_open(struct inode *inode, struct file *filp);
+ extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
+@@ -40,6 +43,14 @@ static inline bool fsverity_check_hole(struct inode *inode, struct page *page)
  
--void crypto_chacha20_init(u32 *state, struct chacha20_ctx *ctx, u8 *iv)
-+void crypto_chacha20_init(u32 *state, struct crypto_chacha20_ctx *ctx, u8 *iv)
- {
- 	state[0]  = 0x61707865; /* "expa" */
- 	state[1]  = 0x3320646e; /* "nd 3" */
-@@ -60,7 +61,7 @@ EXPORT_SYMBOL_GPL(crypto_chacha20_init);
- int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
- 			   unsigned int keysize)
- {
--	struct chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct crypto_chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
- 	int i;
+ #else /* !__FS_HAS_VERITY */
  
- 	if (keysize != CHACHA20_KEY_SIZE)
-@@ -76,7 +77,7 @@ EXPORT_SYMBOL_GPL(crypto_chacha20_setkey);
- int crypto_chacha20_crypt(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	struct crypto_chacha20_ctx *ctx = crypto_skcipher_ctx(tfm);
- 	struct skcipher_walk walk;
- 	u32 state[16];
- 	int err;
-@@ -91,8 +92,8 @@ int crypto_chacha20_crypt(struct skcipher_request *req)
- 		if (nbytes < walk.total)
- 			nbytes = round_down(nbytes, walk.stride);
++/* ioctl.c */
++
++static inline int fsverity_ioctl_enable(struct file *filp,
++					const void __user *arg)
++{
++	return -EOPNOTSUPP;
++}
++
+ /* setup.c */
  
--		chacha20_docrypt(state, walk.dst.virt.addr, walk.src.virt.addr,
--				 nbytes);
-+		crypto_chacha20_generic(state, walk.dst.virt.addr,
-+					walk.src.virt.addr, nbytes);
- 		err = skcipher_walk_done(&walk, walk.nbytes - nbytes);
- 	}
- 
-@@ -105,7 +106,7 @@ static struct skcipher_alg alg = {
- 	.base.cra_driver_name	= "chacha20-generic",
- 	.base.cra_priority	= 100,
- 	.base.cra_blocksize	= 1,
--	.base.cra_ctxsize	= sizeof(struct chacha20_ctx),
-+	.base.cra_ctxsize	= sizeof(struct crypto_chacha20_ctx),
- 	.base.cra_module	= THIS_MODULE,
- 
- 	.min_keysize		= CHACHA20_KEY_SIZE,
-diff --git a/include/crypto/chacha20.h b/include/crypto/chacha20.h
-index 2d3129442a52..0dd99c928123 100644
---- a/include/crypto/chacha20.h
-+++ b/include/crypto/chacha20.h
-@@ -15,14 +15,20 @@
- #define CHACHA20_BLOCK_SIZE	64
- #define CHACHAPOLY_IV_SIZE	12
- 
--struct chacha20_ctx {
-+struct crypto_chacha20_ctx {
- 	u32 key[8];
- };
- 
- void chacha20_block(u32 *state, u8 *stream);
--void crypto_chacha20_init(u32 *state, struct chacha20_ctx *ctx, u8 *iv);
-+void crypto_chacha20_generic(u32 *state, u8 *dst, const u8 *src,
-+			     unsigned int bytes);
-+void crypto_chacha20_init(u32 *state, struct crypto_chacha20_ctx *ctx, u8 *iv);
- int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
- 			   unsigned int keysize);
- int crypto_chacha20_crypt(struct skcipher_request *req);
-+void crypto_chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
-+			    unsigned int bytes);
-+void crypto_chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
-+			    unsigned int bytes);
- 
- #endif
+ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
+-- 
+2.19.1.568.g152ad8e336-goog
