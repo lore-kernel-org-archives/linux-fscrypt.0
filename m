@@ -1,19 +1,19 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:54506 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:51814 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725906AbeKFItN (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 6 Nov 2018 03:49:13 -0500
+        id S1729948AbeKQLni (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sat, 17 Nov 2018 06:43:38 -0500
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v3 04/15] crypto: chacha20-generic - refactor to allow varying number of rounds
-Date: Mon,  5 Nov 2018 15:25:15 -0800
-Message-Id: <20181105232526.173947-5-ebiggers@kernel.org>
-In-Reply-To: <20181105232526.173947-1-ebiggers@kernel.org>
-References: <20181105232526.173947-1-ebiggers@kernel.org>
+Subject: [PATCH v4 04/14] crypto: chacha20-generic - refactor to allow varying number of rounds
+Date: Fri, 16 Nov 2018 17:26:21 -0800
+Message-Id: <20181117012631.23528-5-ebiggers@kernel.org>
+In-Reply-To: <20181117012631.23528-1-ebiggers@kernel.org>
+References: <20181117012631.23528-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>
+To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
+Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Martin Willi <martin@strongswan.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
@@ -38,20 +38,24 @@ would have required more boilerplate code in architecture-specific
 implementations of ChaCha and XChaCha.
 
 Reviewed-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Acked-by: Martin Willi <martin@strongswan.org>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
  arch/arm/crypto/chacha20-neon-glue.c          |  40 +++----
  arch/arm64/crypto/chacha20-neon-glue.c        |  40 +++----
- arch/x86/crypto/chacha20_glue.c               |  52 ++++-----
+ arch/x86/crypto/chacha20_glue.c               |  48 ++++----
  crypto/Makefile                               |   2 +-
  crypto/chacha20poly1305.c                     |  10 +-
  .../{chacha20_generic.c => chacha_generic.c}  | 110 ++++++++++--------
  drivers/char/random.c                         |  51 ++++----
- include/crypto/chacha.h                       |  46 ++++++++
- include/crypto/chacha20.h                     |  41 -------
+ drivers/crypto/caam/caamalg.c                 |   2 +-
+ drivers/crypto/caam/caamalg_qi2.c             |   8 +-
+ drivers/crypto/caam/compat.h                  |   2 +-
+ include/crypto/chacha.h                       |  47 ++++++++
+ include/crypto/chacha20.h                     |  42 -------
  lib/Makefile                                  |   2 +-
  lib/{chacha20.c => chacha.c}                  |  43 ++++---
- 11 files changed, 227 insertions(+), 210 deletions(-)
+ 14 files changed, 232 insertions(+), 215 deletions(-)
  rename crypto/{chacha20_generic.c => chacha_generic.c} (57%)
  create mode 100644 include/crypto/chacha.h
  delete mode 100644 include/crypto/chacha20.h
@@ -237,7 +241,7 @@ index 727579c93ded..96e0cfb8c3f5 100644
  	.encrypt		= chacha20_neon,
  	.decrypt		= chacha20_neon,
 diff --git a/arch/x86/crypto/chacha20_glue.c b/arch/x86/crypto/chacha20_glue.c
-index dce7c5d39c2f..bd249f0b29dc 100644
+index 9fd84fe6ec09..1e9e66509226 100644
 --- a/arch/x86/crypto/chacha20_glue.c
 +++ b/arch/x86/crypto/chacha20_glue.c
 @@ -10,7 +10,7 @@
@@ -249,18 +253,24 @@ index dce7c5d39c2f..bd249f0b29dc 100644
  #include <crypto/internal/skcipher.h>
  #include <linux/kernel.h>
  #include <linux/module.h>
-@@ -29,31 +29,31 @@ static bool chacha20_use_avx2;
- static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
- 			    unsigned int bytes)
- {
--	u8 buf[CHACHA20_BLOCK_SIZE];
-+	u8 buf[CHACHA_BLOCK_SIZE];
+@@ -35,8 +35,8 @@ static bool chacha20_use_avx2;
  
+ static unsigned int chacha20_advance(unsigned int len, unsigned int maxblocks)
+ {
+-	len = min(len, maxblocks * CHACHA20_BLOCK_SIZE);
+-	return round_up(len, CHACHA20_BLOCK_SIZE) / CHACHA20_BLOCK_SIZE;
++	len = min(len, maxblocks * CHACHA_BLOCK_SIZE);
++	return round_up(len, CHACHA_BLOCK_SIZE) / CHACHA_BLOCK_SIZE;
+ }
+ 
+ static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
+@@ -44,38 +44,38 @@ static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
+ {
  #ifdef CONFIG_AS_AVX2
  	if (chacha20_use_avx2) {
 -		while (bytes >= CHACHA20_BLOCK_SIZE * 8) {
 +		while (bytes >= CHACHA_BLOCK_SIZE * 8) {
- 			chacha20_8block_xor_avx2(state, dst, src);
+ 			chacha20_8block_xor_avx2(state, dst, src, bytes);
 -			bytes -= CHACHA20_BLOCK_SIZE * 8;
 -			src += CHACHA20_BLOCK_SIZE * 8;
 -			dst += CHACHA20_BLOCK_SIZE * 8;
@@ -269,11 +279,29 @@ index dce7c5d39c2f..bd249f0b29dc 100644
 +			dst += CHACHA_BLOCK_SIZE * 8;
  			state[12] += 8;
  		}
+-		if (bytes > CHACHA20_BLOCK_SIZE * 4) {
++		if (bytes > CHACHA_BLOCK_SIZE * 4) {
+ 			chacha20_8block_xor_avx2(state, dst, src, bytes);
+ 			state[12] += chacha20_advance(bytes, 8);
+ 			return;
+ 		}
+-		if (bytes > CHACHA20_BLOCK_SIZE * 2) {
++		if (bytes > CHACHA_BLOCK_SIZE * 2) {
+ 			chacha20_4block_xor_avx2(state, dst, src, bytes);
+ 			state[12] += chacha20_advance(bytes, 4);
+ 			return;
+ 		}
+-		if (bytes > CHACHA20_BLOCK_SIZE) {
++		if (bytes > CHACHA_BLOCK_SIZE) {
+ 			chacha20_2block_xor_avx2(state, dst, src, bytes);
+ 			state[12] += chacha20_advance(bytes, 2);
+ 			return;
+ 		}
  	}
  #endif
 -	while (bytes >= CHACHA20_BLOCK_SIZE * 4) {
 +	while (bytes >= CHACHA_BLOCK_SIZE * 4) {
- 		chacha20_4block_xor_ssse3(state, dst, src);
+ 		chacha20_4block_xor_ssse3(state, dst, src, bytes);
 -		bytes -= CHACHA20_BLOCK_SIZE * 4;
 -		src += CHACHA20_BLOCK_SIZE * 4;
 -		dst += CHACHA20_BLOCK_SIZE * 4;
@@ -282,19 +310,12 @@ index dce7c5d39c2f..bd249f0b29dc 100644
 +		dst += CHACHA_BLOCK_SIZE * 4;
  		state[12] += 4;
  	}
--	while (bytes >= CHACHA20_BLOCK_SIZE) {
-+	while (bytes >= CHACHA_BLOCK_SIZE) {
- 		chacha20_block_xor_ssse3(state, dst, src);
--		bytes -= CHACHA20_BLOCK_SIZE;
--		src += CHACHA20_BLOCK_SIZE;
--		dst += CHACHA20_BLOCK_SIZE;
-+		bytes -= CHACHA_BLOCK_SIZE;
-+		src += CHACHA_BLOCK_SIZE;
-+		dst += CHACHA_BLOCK_SIZE;
- 		state[12]++;
- 	}
- 	if (bytes) {
-@@ -66,7 +66,7 @@ static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
+-	if (bytes > CHACHA20_BLOCK_SIZE) {
++	if (bytes > CHACHA_BLOCK_SIZE) {
+ 		chacha20_4block_xor_ssse3(state, dst, src, bytes);
+ 		state[12] += chacha20_advance(bytes, 4);
+ 		return;
+@@ -89,7 +89,7 @@ static void chacha20_dosimd(u32 *state, u8 *dst, const u8 *src,
  static int chacha20_simd(struct skcipher_request *req)
  {
  	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
@@ -303,7 +324,7 @@ index dce7c5d39c2f..bd249f0b29dc 100644
  	u32 *state, state_buf[16 + 2] __aligned(8);
  	struct skcipher_walk walk;
  	int err;
-@@ -74,20 +74,20 @@ static int chacha20_simd(struct skcipher_request *req)
+@@ -97,12 +97,12 @@ static int chacha20_simd(struct skcipher_request *req)
  	BUILD_BUG_ON(CHACHA20_STATE_ALIGN != 16);
  	state = PTR_ALIGN(state_buf + 0, CHACHA20_STATE_ALIGN);
  
@@ -319,18 +340,7 @@ index dce7c5d39c2f..bd249f0b29dc 100644
  
  	kernel_fpu_begin();
  
--	while (walk.nbytes >= CHACHA20_BLOCK_SIZE) {
-+	while (walk.nbytes >= CHACHA_BLOCK_SIZE) {
- 		chacha20_dosimd(state, walk.dst.virt.addr, walk.src.virt.addr,
--				rounddown(walk.nbytes, CHACHA20_BLOCK_SIZE));
-+				rounddown(walk.nbytes, CHACHA_BLOCK_SIZE));
- 		err = skcipher_walk_done(&walk,
--					 walk.nbytes % CHACHA20_BLOCK_SIZE);
-+					 walk.nbytes % CHACHA_BLOCK_SIZE);
- 	}
- 
- 	if (walk.nbytes) {
-@@ -106,13 +106,13 @@ static struct skcipher_alg alg = {
+@@ -128,13 +128,13 @@ static struct skcipher_alg alg = {
  	.base.cra_driver_name	= "chacha20-simd",
  	.base.cra_priority	= 300,
  	.base.cra_blocksize	= 1,
@@ -350,10 +360,10 @@ index dce7c5d39c2f..bd249f0b29dc 100644
  	.encrypt		= chacha20_simd,
  	.decrypt		= chacha20_simd,
 diff --git a/crypto/Makefile b/crypto/Makefile
-index 5c207c76abf7..7e673f7c7110 100644
+index abbd86fdbad2..102e8525814f 100644
 --- a/crypto/Makefile
 +++ b/crypto/Makefile
-@@ -116,7 +116,7 @@ obj-$(CONFIG_CRYPTO_KHAZAD) += khazad.o
+@@ -117,7 +117,7 @@ obj-$(CONFIG_CRYPTO_KHAZAD) += khazad.o
  obj-$(CONFIG_CRYPTO_ANUBIS) += anubis.o
  obj-$(CONFIG_CRYPTO_SEED) += seed.o
  obj-$(CONFIG_CRYPTO_SALSA20) += salsa20_generic.o
@@ -363,7 +373,7 @@ index 5c207c76abf7..7e673f7c7110 100644
  obj-$(CONFIG_CRYPTO_DEFLATE) += deflate.o
  obj-$(CONFIG_CRYPTO_MICHAEL_MIC) += michael_mic.o
 diff --git a/crypto/chacha20poly1305.c b/crypto/chacha20poly1305.c
-index 600afa99941f..573c07e6f189 100644
+index f9dd5453046a..fef11446ab1b 100644
 --- a/crypto/chacha20poly1305.c
 +++ b/crypto/chacha20poly1305.c
 @@ -13,7 +13,7 @@
@@ -375,7 +385,7 @@ index 600afa99941f..573c07e6f189 100644
  #include <crypto/poly1305.h>
  #include <linux/err.h>
  #include <linux/init.h>
-@@ -51,7 +51,7 @@ struct poly_req {
+@@ -49,7 +49,7 @@ struct poly_req {
  };
  
  struct chacha_req {
@@ -384,7 +394,7 @@ index 600afa99941f..573c07e6f189 100644
  	struct scatterlist src[1];
  	struct skcipher_request req; /* must be last member */
  };
-@@ -91,7 +91,7 @@ static void chacha_iv(u8 *iv, struct aead_request *req, u32 icb)
+@@ -89,7 +89,7 @@ static void chacha_iv(u8 *iv, struct aead_request *req, u32 icb)
  	memcpy(iv, &leicb, sizeof(leicb));
  	memcpy(iv + sizeof(leicb), ctx->salt, ctx->saltlen);
  	memcpy(iv + sizeof(leicb) + ctx->saltlen, req->iv,
@@ -393,7 +403,7 @@ index 600afa99941f..573c07e6f189 100644
  }
  
  static int poly_verify_tag(struct aead_request *req)
-@@ -494,7 +494,7 @@ static int chachapoly_setkey(struct crypto_aead *aead, const u8 *key,
+@@ -492,7 +492,7 @@ static int chachapoly_setkey(struct crypto_aead *aead, const u8 *key,
  	struct chachapoly_ctx *ctx = crypto_aead_ctx(aead);
  	int err;
  
@@ -402,7 +412,7 @@ index 600afa99941f..573c07e6f189 100644
  		return -EINVAL;
  
  	keylen -= ctx->saltlen;
-@@ -639,7 +639,7 @@ static int chachapoly_create(struct crypto_template *tmpl, struct rtattr **tb,
+@@ -637,7 +637,7 @@ static int chachapoly_create(struct crypto_template *tmpl, struct rtattr **tb,
  
  	err = -EINVAL;
  	/* Need 16-byte IV size, including Initial Block Counter value */
@@ -818,12 +828,64 @@ index 2eb70e76ed35..38c6d1af6d1c 100644
  	};
  	unsigned int position;
  };
+diff --git a/drivers/crypto/caam/caamalg.c b/drivers/crypto/caam/caamalg.c
+index 523565ce0060..92e593e2069a 100644
+--- a/drivers/crypto/caam/caamalg.c
++++ b/drivers/crypto/caam/caamalg.c
+@@ -559,7 +559,7 @@ static int chachapoly_setkey(struct crypto_aead *aead, const u8 *key,
+ 	unsigned int ivsize = crypto_aead_ivsize(aead);
+ 	unsigned int saltlen = CHACHAPOLY_IV_SIZE - ivsize;
+ 
+-	if (keylen != CHACHA20_KEY_SIZE + saltlen) {
++	if (keylen != CHACHA_KEY_SIZE + saltlen) {
+ 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
+ 		return -EINVAL;
+ 	}
+diff --git a/drivers/crypto/caam/caamalg_qi2.c b/drivers/crypto/caam/caamalg_qi2.c
+index 2598640aa98b..425d5d974613 100644
+--- a/drivers/crypto/caam/caamalg_qi2.c
++++ b/drivers/crypto/caam/caamalg_qi2.c
+@@ -591,7 +591,7 @@ static int chachapoly_setkey(struct crypto_aead *aead, const u8 *key,
+ 	unsigned int ivsize = crypto_aead_ivsize(aead);
+ 	unsigned int saltlen = CHACHAPOLY_IV_SIZE - ivsize;
+ 
+-	if (keylen != CHACHA20_KEY_SIZE + saltlen) {
++	if (keylen != CHACHA_KEY_SIZE + saltlen) {
+ 		crypto_aead_set_flags(aead, CRYPTO_TFM_RES_BAD_KEY_LEN);
+ 		return -EINVAL;
+ 	}
+@@ -1577,9 +1577,9 @@ static struct caam_skcipher_alg driver_algs[] = {
+ 			.setkey = skcipher_setkey,
+ 			.encrypt = skcipher_encrypt,
+ 			.decrypt = skcipher_decrypt,
+-			.min_keysize = CHACHA20_KEY_SIZE,
+-			.max_keysize = CHACHA20_KEY_SIZE,
+-			.ivsize = CHACHA20_IV_SIZE,
++			.min_keysize = CHACHA_KEY_SIZE,
++			.max_keysize = CHACHA_KEY_SIZE,
++			.ivsize = CHACHA_IV_SIZE,
+ 		},
+ 		.caam.class1_alg_type = OP_ALG_ALGSEL_CHACHA20,
+ 	},
+diff --git a/drivers/crypto/caam/compat.h b/drivers/crypto/caam/compat.h
+index 8bde903f9f4a..87d9efe4c7aa 100644
+--- a/drivers/crypto/caam/compat.h
++++ b/drivers/crypto/caam/compat.h
+@@ -36,7 +36,7 @@
+ #include <crypto/gcm.h>
+ #include <crypto/sha.h>
+ #include <crypto/md5.h>
+-#include <crypto/chacha20.h>
++#include <crypto/chacha.h>
+ #include <crypto/poly1305.h>
+ #include <crypto/internal/aead.h>
+ #include <crypto/authenc.h>
 diff --git a/include/crypto/chacha.h b/include/crypto/chacha.h
 new file mode 100644
-index 000000000000..ae79e9983c72
+index 000000000000..b722a23e54bb
 --- /dev/null
 +++ b/include/crypto/chacha.h
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,47 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*
 + * Common values and helper functions for the ChaCha and XChaCha stream ciphers.
@@ -845,6 +907,7 @@ index 000000000000..ae79e9983c72
 +
 +#define CHACHA_KEY_SIZE		32
 +#define CHACHA_BLOCK_SIZE	64
++#define CHACHAPOLY_IV_SIZE	12
 +
 +/* 192-bit nonce, then 64-bit stream position */
 +#define XCHACHA_IV_SIZE		32
@@ -872,10 +935,10 @@ index 000000000000..ae79e9983c72
 +#endif /* _CRYPTO_CHACHA_H */
 diff --git a/include/crypto/chacha20.h b/include/crypto/chacha20.h
 deleted file mode 100644
-index 6290d997060e..000000000000
+index c24b4ac03b85..000000000000
 --- a/include/crypto/chacha20.h
 +++ /dev/null
-@@ -1,41 +0,0 @@
+@@ -1,42 +0,0 @@
 -/* SPDX-License-Identifier: GPL-2.0 */
 -/*
 - * Common values and helper functions for the ChaCha20 and XChaCha20 algorithms.
@@ -897,6 +960,7 @@ index 6290d997060e..000000000000
 -
 -#define CHACHA20_KEY_SIZE	32
 -#define CHACHA20_BLOCK_SIZE	64
+-#define CHACHAPOLY_IV_SIZE	12
 -
 -/* 192-bit nonce, then 64-bit stream position */
 -#define XCHACHA20_IV_SIZE	32
@@ -1032,4 +1096,4 @@ index 6a484e16171d..1bdc688c18df 100644
 -EXPORT_SYMBOL(hchacha20_block);
 +EXPORT_SYMBOL(hchacha_block);
 -- 
-2.19.1.930.g4563a0d9d0-goog
+2.19.1.1215.g8438c0b245-goog
