@@ -1,470 +1,304 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:51788 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1730963AbeKQLnh (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sat, 17 Nov 2018 06:43:37 -0500
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Thu,  1 Nov 2018 15:52:27 -0700
-Message-Id: <20181101225230.88058-10-ebiggers@kernel.org>
-In-Reply-To: <20181101225230.88058-1-ebiggers@kernel.org>
-References: <20181101225230.88058-1-ebiggers@kernel.org>
+Subject: [PATCH v4 07/14] crypto: arm/chacha20 - add XChaCha20 support
+Date: Fri, 16 Nov 2018 17:26:24 -0800
+Message-Id: <20181117012631.23528-8-ebiggers@kernel.org>
+In-Reply-To: <20181117012631.23528-1-ebiggers@kernel.org>
+References: <20181117012631.23528-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v2 09/12] fs-verity: support builtin file
- signatures
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, linux-kernel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Victor Hsieh <victorhsieh@google.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
+Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-For ease of use, add optional support for having fs-verity handle a
-portion of the authentication policy in the kernel.  A ".fs-verity"
-keyring is created to which trusted X.509 certificates can be added;
-then a sysctl 'fs.verity.require_signatures' can be set to cause the
-kernel to enforce that all fs-verity files contain a signature of their
-file measurement, signed by a key in this keyring.
+Add an XChaCha20 implementation that is hooked up to the ARM NEON
+implementation of ChaCha20.  This is needed for use in the Adiantum
+encryption mode; see the generic code patch,
+"crypto: chacha20-generic - add XChaCha20 support", for more details.
 
-See Documentation/filesystem/fsverity.rst for more information,
-namely the "Built-in file signatures" section.
+We also update the NEON code to support HChaCha20 on one block, so we
+can use that in XChaCha20 rather than calling the generic HChaCha20.
+This required factoring the permutation out into its own macro.
 
+Reviewed-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/verity/Kconfig             |  17 ++++
- fs/verity/Makefile            |   2 +
- fs/verity/fsverity_private.h  |  34 +++++++
- fs/verity/setup.c             |  63 +++++++++++-
- fs/verity/signature.c         | 187 ++++++++++++++++++++++++++++++++++
- include/uapi/linux/fsverity.h |  10 ++
- 6 files changed, 311 insertions(+), 2 deletions(-)
- create mode 100644 fs/verity/signature.c
+ arch/arm/crypto/Kconfig              |   2 +-
+ arch/arm/crypto/chacha20-neon-core.S |  70 ++++++++++++------
+ arch/arm/crypto/chacha20-neon-glue.c | 103 ++++++++++++++++++++-------
+ 3 files changed, 126 insertions(+), 49 deletions(-)
 
-diff --git a/fs/verity/Kconfig b/fs/verity/Kconfig
-index 102c46ebe275f..a7470a2e4892f 100644
---- a/fs/verity/Kconfig
-+++ b/fs/verity/Kconfig
-@@ -33,3 +33,20 @@ config FS_VERITY_DEBUG
- 	  Enable debugging messages related to fs-verity by default.
+diff --git a/arch/arm/crypto/Kconfig b/arch/arm/crypto/Kconfig
+index 0473a8f68389..a08759c32cb9 100644
+--- a/arch/arm/crypto/Kconfig
++++ b/arch/arm/crypto/Kconfig
+@@ -126,7 +126,7 @@ config CRYPTO_CRC32_ARM_CE
+ 	select CRYPTO_HASH
  
- 	  Say N unless you are an fs-verity developer.
-+
-+config FS_VERITY_BUILTIN_SIGNATURES
-+	bool "FS Verity builtin signature support"
-+	depends on FS_VERITY
-+	select SYSTEM_DATA_VERIFICATION
-+	help
-+	  Support verifying signatures of verity files against the X.509
-+	  certificates that have been loaded into the ".fs-verity"
-+	  kernel keyring.
-+
-+	  This is meant as a relatively simple mechanism that can be
-+	  used to provide an authenticity guarantee for verity files, as
-+	  an alternative to IMA appraisal.  Userspace programs still
-+	  need to check that the verity bit is set in order to get an
-+	  authenticity guarantee.
-+
-+	  If unsure, say N.
-diff --git a/fs/verity/Makefile b/fs/verity/Makefile
-index 6450925e3a8b7..d293ea2a1b393 100644
---- a/fs/verity/Makefile
-+++ b/fs/verity/Makefile
-@@ -1,3 +1,5 @@
- obj-$(CONFIG_FS_VERITY)	+= fsverity.o
+ config CRYPTO_CHACHA20_NEON
+-	tristate "NEON accelerated ChaCha20 symmetric cipher"
++	tristate "NEON accelerated ChaCha20 stream cipher algorithms"
+ 	depends on KERNEL_MODE_NEON
+ 	select CRYPTO_BLKCIPHER
+ 	select CRYPTO_CHACHA20
+diff --git a/arch/arm/crypto/chacha20-neon-core.S b/arch/arm/crypto/chacha20-neon-core.S
+index 50e7b9896818..2335e5055d2b 100644
+--- a/arch/arm/crypto/chacha20-neon-core.S
++++ b/arch/arm/crypto/chacha20-neon-core.S
+@@ -52,27 +52,16 @@
+ 	.fpu		neon
+ 	.align		5
  
- fsverity-y := hash_algs.o ioctl.o setup.o verify.o
-+
-+fsverity-$(CONFIG_FS_VERITY_BUILTIN_SIGNATURES) += signature.o
-diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
-index c3a261a598557..4b39d0a5544ba 100644
---- a/fs/verity/fsverity_private.h
-+++ b/fs/verity/fsverity_private.h
-@@ -63,6 +63,7 @@ struct fsverity_info {
- 	u8 root_hash[FS_VERITY_MAX_DIGEST_SIZE];   /* Merkle tree root hash */
- 	u8 measurement[FS_VERITY_MAX_DIGEST_SIZE]; /* file measurement */
- 	bool have_root_hash;		/* have root hash from disk? */
-+	bool have_signed_measurement;	/* have measurement from signature? */
+-ENTRY(chacha20_block_xor_neon)
+-	// r0: Input state matrix, s
+-	// r1: 1 data block output, o
+-	// r2: 1 data block input, i
+-
+-	//
+-	// This function encrypts one ChaCha20 block by loading the state matrix
+-	// in four NEON registers. It performs matrix operation on four words in
+-	// parallel, but requireds shuffling to rearrange the words after each
+-	// round.
+-	//
+-
+-	// x0..3 = s0..3
+-	add		ip, r0, #0x20
+-	vld1.32		{q0-q1}, [r0]
+-	vld1.32		{q2-q3}, [ip]
+-
+-	vmov		q8, q0
+-	vmov		q9, q1
+-	vmov		q10, q2
+-	vmov		q11, q3
++/*
++ * chacha20_permute - permute one block
++ *
++ * Permute one 64-byte block where the state matrix is stored in the four NEON
++ * registers q0-q3.  It performs matrix operations on four words in parallel,
++ * but requires shuffling to rearrange the words after each round.
++ *
++ * Clobbers: r3, ip, q4-q5
++ */
++chacha20_permute:
  
- 	/* Starting blocks for each tree level. 'depth-1' is the root level. */
- 	u64 hash_lvl_region_idx[FS_VERITY_MAX_LEVELS];
-@@ -95,6 +96,39 @@ static inline bool set_fsverity_info(struct inode *inode,
- 	return cmpxchg_release(&inode->i_verity_info, NULL, vi) == NULL;
+ 	adr		ip, .Lrol8_table
+ 	mov		r3, #10
+@@ -142,6 +131,27 @@ ENTRY(chacha20_block_xor_neon)
+ 	subs		r3, r3, #1
+ 	bne		.Ldoubleround
+ 
++	bx		lr
++ENDPROC(chacha20_permute)
++
++ENTRY(chacha20_block_xor_neon)
++	// r0: Input state matrix, s
++	// r1: 1 data block output, o
++	// r2: 1 data block input, i
++	push		{lr}
++
++	// x0..3 = s0..3
++	add		ip, r0, #0x20
++	vld1.32		{q0-q1}, [r0]
++	vld1.32		{q2-q3}, [ip]
++
++	vmov		q8, q0
++	vmov		q9, q1
++	vmov		q10, q2
++	vmov		q11, q3
++
++	bl		chacha20_permute
++
+ 	add		ip, r2, #0x20
+ 	vld1.8		{q4-q5}, [r2]
+ 	vld1.8		{q6-q7}, [ip]
+@@ -166,9 +176,25 @@ ENTRY(chacha20_block_xor_neon)
+ 	vst1.8		{q0-q1}, [r1]
+ 	vst1.8		{q2-q3}, [ip]
+ 
+-	bx		lr
++	pop		{pc}
+ ENDPROC(chacha20_block_xor_neon)
+ 
++ENTRY(hchacha20_block_neon)
++	// r0: Input state matrix, s
++	// r1: output (8 32-bit words)
++	push		{lr}
++
++	vld1.32		{q0-q1}, [r0]!
++	vld1.32		{q2-q3}, [r0]
++
++	bl		chacha20_permute
++
++	vst1.32		{q0}, [r1]!
++	vst1.32		{q3}, [r1]
++
++	pop		{pc}
++ENDPROC(hchacha20_block_neon)
++
+ 	.align		4
+ .Lctrinc:	.word	0, 1, 2, 3
+ .Lrol8_table:	.byte	3, 0, 1, 2, 7, 4, 5, 6
+diff --git a/arch/arm/crypto/chacha20-neon-glue.c b/arch/arm/crypto/chacha20-neon-glue.c
+index 2bc035cb8f23..f2d3b0f70a8d 100644
+--- a/arch/arm/crypto/chacha20-neon-glue.c
++++ b/arch/arm/crypto/chacha20-neon-glue.c
+@@ -1,5 +1,5 @@
+ /*
+- * ChaCha20 256-bit cipher algorithm, RFC7539, ARM NEON functions
++ * ChaCha20 (RFC7539) and XChaCha20 stream ciphers, NEON accelerated
+  *
+  * Copyright (C) 2016 Linaro, Ltd. <ard.biesheuvel@linaro.org>
+  *
+@@ -30,6 +30,7 @@
+ 
+ asmlinkage void chacha20_block_xor_neon(u32 *state, u8 *dst, const u8 *src);
+ asmlinkage void chacha20_4block_xor_neon(u32 *state, u8 *dst, const u8 *src);
++asmlinkage void hchacha20_block_neon(const u32 *state, u32 *out);
+ 
+ static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
+ 			    unsigned int bytes)
+@@ -57,20 +58,16 @@ static void chacha20_doneon(u32 *state, u8 *dst, const u8 *src,
+ 	}
  }
  
-+/* signature.c */
-+#ifdef CONFIG_FS_VERITY_BUILTIN_SIGNATURES
-+extern int fsverity_require_signatures;
-+
-+int fsverity_parse_pkcs7_signature_extension(struct fsverity_info *vi,
-+					     const void *raw_pkcs7,
-+					     size_t size);
-+
-+int __init fsverity_signature_init(void);
-+
-+void __exit fsverity_signature_exit(void);
-+#else /* CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
-+
-+#define fsverity_require_signatures 0
-+
-+static inline int
-+fsverity_parse_pkcs7_signature_extension(struct fsverity_info *vi,
-+					 const void *raw_pkcs7, size_t size)
-+{
-+	pr_warn("PKCS#7 signatures not supported in this kernel build!\n");
-+	return -EINVAL;
-+}
-+
-+static inline int fsverity_signature_init(void)
-+{
-+	return 0;
-+}
-+
-+static inline void fsverity_signature_exit(void)
-+{
-+}
-+#endif /* !CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
-+
- /* verify.c */
- extern struct workqueue_struct *fsverity_read_workqueue;
+-static int chacha20_neon(struct skcipher_request *req)
++static int chacha20_neon_stream_xor(struct skcipher_request *req,
++				    struct chacha_ctx *ctx, u8 *iv)
+ {
+-	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+-	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
+ 	struct skcipher_walk walk;
+ 	u32 state[16];
+ 	int err;
  
-diff --git a/fs/verity/setup.c b/fs/verity/setup.c
-index e0b39c518b890..08b609127531b 100644
---- a/fs/verity/setup.c
-+++ b/fs/verity/setup.c
-@@ -132,6 +132,10 @@ static const struct extension_type {
- 	[FS_VERITY_EXT_SALT] = {
- 		.parse = parse_salt_extension,
- 	},
-+	[FS_VERITY_EXT_PKCS7_SIGNATURE] = {
-+		.parse = fsverity_parse_pkcs7_signature_extension,
-+		.unauthenticated = true,
-+	},
- };
+-	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
+-		return crypto_chacha_crypt(req);
+-
+ 	err = skcipher_walk_virt(&walk, req, false);
  
- static int do_parse_extensions(struct fsverity_info *vi,
-@@ -429,6 +433,54 @@ static int compute_measurement(const struct fsverity_info *vi,
+-	crypto_chacha_init(state, ctx, walk.iv);
++	crypto_chacha_init(state, ctx, iv);
+ 
+ 	while (walk.nbytes > 0) {
+ 		unsigned int nbytes = walk.nbytes;
+@@ -88,22 +85,73 @@ static int chacha20_neon(struct skcipher_request *req)
  	return err;
  }
  
-+/*
-+ * Compute the file's measurement; then, if a signature was present, verify that
-+ * the signed measurement matches the actual one.
-+ */
-+static int
-+verify_file_measurement(struct fsverity_info *vi,
-+			const struct fsverity_descriptor *desc,
-+			int desc_auth_len,
-+			struct page *desc_pages[MAX_DESCRIPTOR_PAGES],
-+			int nr_desc_pages)
+-static struct skcipher_alg alg = {
+-	.base.cra_name		= "chacha20",
+-	.base.cra_driver_name	= "chacha20-neon",
+-	.base.cra_priority	= 300,
+-	.base.cra_blocksize	= 1,
+-	.base.cra_ctxsize	= sizeof(struct chacha_ctx),
+-	.base.cra_module	= THIS_MODULE,
+-
+-	.min_keysize		= CHACHA_KEY_SIZE,
+-	.max_keysize		= CHACHA_KEY_SIZE,
+-	.ivsize			= CHACHA_IV_SIZE,
+-	.chunksize		= CHACHA_BLOCK_SIZE,
+-	.walksize		= 4 * CHACHA_BLOCK_SIZE,
+-	.setkey			= crypto_chacha20_setkey,
+-	.encrypt		= chacha20_neon,
+-	.decrypt		= chacha20_neon,
++static int chacha20_neon(struct skcipher_request *req)
 +{
-+	u8 measurement[FS_VERITY_MAX_DIGEST_SIZE];
-+	int err;
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
 +
-+	err = compute_measurement(vi, desc, desc_auth_len, desc_pages,
-+				  nr_desc_pages, measurement);
-+	if (err) {
-+		pr_warn("Error computing fs-verity measurement: %d\n", err);
-+		return err;
-+	}
++	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
++		return crypto_chacha_crypt(req);
 +
-+	if (!vi->have_signed_measurement) {
-+		pr_debug("Computed measurement: %s:%*phN (used desc_auth_len %d)\n",
-+			 vi->hash_alg->name, vi->hash_alg->digest_size,
-+			 measurement, desc_auth_len);
-+		if (fsverity_require_signatures) {
-+			pr_warn("require_signatures=1, rejecting unsigned file!\n");
-+			return -EBADMSG;
-+		}
-+		memcpy(vi->measurement, measurement, vi->hash_alg->digest_size);
-+		return 0;
-+	}
-+
-+	if (!memcmp(measurement, vi->measurement, vi->hash_alg->digest_size)) {
-+		pr_debug("Verified measurement: %s:%*phN (used desc_auth_len %d)\n",
-+			 vi->hash_alg->name, vi->hash_alg->digest_size,
-+			 measurement, desc_auth_len);
-+		return 0;
-+	}
-+
-+	pr_warn("FILE CORRUPTED (actual measurement mismatches signed measurement): "
-+		"want %s:%*phN, real %s:%*phN (used desc_auth_len %d)\n",
-+		vi->hash_alg->name, vi->hash_alg->digest_size, vi->measurement,
-+		vi->hash_alg->name, vi->hash_alg->digest_size, measurement,
-+		desc_auth_len);
-+	return -EBADMSG;
++	return chacha20_neon_stream_xor(req, ctx, req->iv);
 +}
 +
- static struct fsverity_info *alloc_fsverity_info(void)
- {
- 	return kmem_cache_zalloc(fsverity_info_cachep, GFP_NOFS);
-@@ -674,8 +726,8 @@ struct fsverity_info *create_fsverity_info(struct inode *inode, bool enabling)
- 	err = compute_tree_depth_and_offsets(vi);
- 	if (err)
- 		goto out;
--	err = compute_measurement(vi, desc, desc_auth_len, desc_pages,
--				  nr_desc_pages, vi->measurement);
-+	err = verify_file_measurement(vi, desc, desc_auth_len,
-+				      desc_pages, nr_desc_pages);
- out:
- 	if (desc)
- 		unmap_fsverity_descriptor(desc, desc_pages, nr_desc_pages);
-@@ -825,11 +877,17 @@ static int __init fsverity_module_init(void)
- 	if (!fsverity_info_cachep)
- 		goto error_free_workqueue;
- 
-+	err = fsverity_signature_init();
-+	if (err)
-+		goto error_free_info_cache;
++static int xchacha20_neon(struct skcipher_request *req)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct chacha_ctx *ctx = crypto_skcipher_ctx(tfm);
++	struct chacha_ctx subctx;
++	u32 state[16];
++	u8 real_iv[16];
 +
- 	fsverity_check_hash_algs();
++	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
++		return crypto_xchacha_crypt(req);
++
++	crypto_chacha_init(state, ctx, req->iv);
++
++	kernel_neon_begin();
++	hchacha20_block_neon(state, subctx.key);
++	kernel_neon_end();
++
++	memcpy(&real_iv[0], req->iv + 24, 8);
++	memcpy(&real_iv[8], req->iv + 16, 8);
++	return chacha20_neon_stream_xor(req, &subctx, real_iv);
++}
++
++static struct skcipher_alg algs[] = {
++	{
++		.base.cra_name		= "chacha20",
++		.base.cra_driver_name	= "chacha20-neon",
++		.base.cra_priority	= 300,
++		.base.cra_blocksize	= 1,
++		.base.cra_ctxsize	= sizeof(struct chacha_ctx),
++		.base.cra_module	= THIS_MODULE,
++
++		.min_keysize		= CHACHA_KEY_SIZE,
++		.max_keysize		= CHACHA_KEY_SIZE,
++		.ivsize			= CHACHA_IV_SIZE,
++		.chunksize		= CHACHA_BLOCK_SIZE,
++		.walksize		= 4 * CHACHA_BLOCK_SIZE,
++		.setkey			= crypto_chacha20_setkey,
++		.encrypt		= chacha20_neon,
++		.decrypt		= chacha20_neon,
++	}, {
++		.base.cra_name		= "xchacha20",
++		.base.cra_driver_name	= "xchacha20-neon",
++		.base.cra_priority	= 300,
++		.base.cra_blocksize	= 1,
++		.base.cra_ctxsize	= sizeof(struct chacha_ctx),
++		.base.cra_module	= THIS_MODULE,
++
++		.min_keysize		= CHACHA_KEY_SIZE,
++		.max_keysize		= CHACHA_KEY_SIZE,
++		.ivsize			= XCHACHA_IV_SIZE,
++		.chunksize		= CHACHA_BLOCK_SIZE,
++		.walksize		= 4 * CHACHA_BLOCK_SIZE,
++		.setkey			= crypto_chacha20_setkey,
++		.encrypt		= xchacha20_neon,
++		.decrypt		= xchacha20_neon,
++	}
+ };
  
- 	pr_debug("Initialized fs-verity\n");
- 	return 0;
+ static int __init chacha20_simd_mod_init(void)
+@@ -111,12 +159,12 @@ static int __init chacha20_simd_mod_init(void)
+ 	if (!(elf_hwcap & HWCAP_NEON))
+ 		return -ENODEV;
  
-+error_free_info_cache:
-+	kmem_cache_destroy(fsverity_info_cachep);
- error_free_workqueue:
- 	destroy_workqueue(fsverity_read_workqueue);
- error:
-@@ -840,6 +898,7 @@ static void __exit fsverity_module_exit(void)
- {
- 	destroy_workqueue(fsverity_read_workqueue);
- 	kmem_cache_destroy(fsverity_info_cachep);
-+	fsverity_signature_exit();
- 	fsverity_exit_hash_algs();
+-	return crypto_register_skcipher(&alg);
++	return crypto_register_skciphers(algs, ARRAY_SIZE(algs));
  }
  
-diff --git a/fs/verity/signature.c b/fs/verity/signature.c
-new file mode 100644
-index 0000000000000..e13b25becbc6f
---- /dev/null
-+++ b/fs/verity/signature.c
-@@ -0,0 +1,187 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * fs/verity/signature.c: verification of builtin signatures
-+ *
-+ * Copyright 2018 Google LLC
-+ *
-+ * Written by Eric Biggers.
-+ */
-+
-+#include "fsverity_private.h"
-+
-+#include <linux/cred.h>
-+#include <linux/key.h>
-+#include <linux/verification.h>
-+
-+/*
-+ * /proc/sys/fs/verity/require_signatures
-+ * If 1, all verity files must have a valid builtin signature.
-+ */
-+int fsverity_require_signatures;
-+
-+/*
-+ * Keyring that contains the trusted X.509 certificates.
-+ *
-+ * Only root (kuid=0) can modify this.  Also, root may use
-+ * keyctl_restrict_keyring() to prevent any more additions.
-+ */
-+static struct key *fsverity_keyring;
-+
-+static int extract_measurement(void *ctx, const void *data, size_t len,
-+			       size_t asn1hdrlen)
-+{
-+	struct fsverity_info *vi = ctx;
-+	const struct fsverity_digest_disk *d;
-+	const struct fsverity_hash_alg *hash_alg;
-+
-+	if (len < sizeof(*d)) {
-+		pr_warn("Signed file measurement has unrecognized format\n");
-+		return -EBADMSG;
-+	}
-+	d = (const void *)data;
-+
-+	hash_alg = fsverity_get_hash_alg(le16_to_cpu(d->digest_algorithm));
-+	if (IS_ERR(hash_alg))
-+		return PTR_ERR(hash_alg);
-+
-+	if (le16_to_cpu(d->digest_size) != hash_alg->digest_size) {
-+		pr_warn("Wrong digest_size in signed measurement: wanted %u for algorithm %s, but got %u\n",
-+			hash_alg->digest_size, hash_alg->name,
-+			le16_to_cpu(d->digest_size));
-+		return -EBADMSG;
-+	}
-+
-+	if (len < sizeof(*d) + hash_alg->digest_size) {
-+		pr_warn("Signed file measurement is truncated\n");
-+		return -EBADMSG;
-+	}
-+
-+	if (hash_alg != vi->hash_alg) {
-+		pr_warn("Signed file measurement uses %s, but file uses %s\n",
-+			hash_alg->name, vi->hash_alg->name);
-+		return -EBADMSG;
-+	}
-+
-+	memcpy(vi->measurement, d->digest, hash_alg->digest_size);
-+	vi->have_signed_measurement = true;
-+	return 0;
-+}
-+
-+/**
-+ * fsverity_parse_pkcs7_signature_extension - verify the signed file measurement
-+ *
-+ * Verify a signed fsverity_measurement against the certificates in the
-+ * fs-verity keyring.  The signature is given as a PKCS#7 formatted message, and
-+ * the signed data is included in the message (not detached).
-+ *
-+ * Return: 0 if the signature checks out and the signed measurement is
-+ * well-formed and uses the expected hash algorithm; -EBADMSG on signature
-+ * verification failure or malformed data; else another -errno code.
-+ */
-+int fsverity_parse_pkcs7_signature_extension(struct fsverity_info *vi,
-+					     const void *raw_pkcs7, size_t size)
-+{
-+	int err;
-+
-+	if (vi->have_signed_measurement) {
-+		pr_warn("Found multiple PKCS#7 signatures\n");
-+		return -EBADMSG;
-+	}
-+
-+	if (!vi->hash_alg->cryptographic) {
-+		/* Might as well check this... */
-+		pr_warn("Found signed %s file measurement, but %s isn't a cryptographic hash algorithm.\n",
-+			vi->hash_alg->name, vi->hash_alg->name);
-+		return -EBADMSG;
-+	}
-+
-+	err = verify_pkcs7_signature(NULL, 0, raw_pkcs7, size, fsverity_keyring,
-+				     VERIFYING_UNSPECIFIED_SIGNATURE,
-+				     extract_measurement, vi);
-+	if (err)
-+		pr_warn("PKCS#7 signature verification error: %d\n", err);
-+
-+	return err;
-+}
-+
-+#ifdef CONFIG_SYSCTL
-+static int zero;
-+static int one = 1;
-+static struct ctl_table_header *fsverity_sysctl_header;
-+
-+static const struct ctl_path fsverity_sysctl_path[] = {
-+	{ .procname = "fs", },
-+	{ .procname = "verity", },
-+	{ }
-+};
-+
-+static struct ctl_table fsverity_sysctl_table[] = {
-+	{
-+		.procname       = "require_signatures",
-+		.data           = &fsverity_require_signatures,
-+		.maxlen         = sizeof(int),
-+		.mode           = 0644,
-+		.proc_handler   = proc_dointvec_minmax,
-+		.extra1         = &zero,
-+		.extra2         = &one,
-+	},
-+	{ }
-+};
-+
-+static int __init fsverity_sysctl_init(void)
-+{
-+	fsverity_sysctl_header = register_sysctl_paths(fsverity_sysctl_path,
-+						       fsverity_sysctl_table);
-+	if (!fsverity_sysctl_header) {
-+		pr_warn("sysctl registration failed!");
-+		return -ENOMEM;
-+	}
-+	return 0;
-+}
-+
-+static void __exit fsverity_sysctl_exit(void)
-+{
-+	unregister_sysctl_table(fsverity_sysctl_header);
-+}
-+#else /* CONFIG_SYSCTL */
-+static inline int fsverity_sysctl_init(void)
-+{
-+	return 0;
-+}
-+
-+static inline void fsverity_sysctl_exit(void)
-+{
-+}
-+#endif /* !CONFIG_SYSCTL */
-+
-+int __init fsverity_signature_init(void)
-+{
-+	struct key *ring;
-+	int err;
-+
-+	ring = keyring_alloc(".fs-verity", KUIDT_INIT(0), KGIDT_INIT(0),
-+			     current_cred(),
-+			     ((KEY_POS_ALL & ~KEY_POS_SETATTR) |
-+			      KEY_USR_VIEW | KEY_USR_READ |
-+			      KEY_USR_WRITE | KEY_USR_SEARCH | KEY_USR_SETATTR),
-+			     KEY_ALLOC_NOT_IN_QUOTA, NULL, NULL);
-+	if (IS_ERR(ring))
-+		return PTR_ERR(ring);
-+
-+	err = fsverity_sysctl_init();
-+	if (err)
-+		goto error_put_ring;
-+
-+	fsverity_keyring = ring;
-+	return 0;
-+
-+error_put_ring:
-+	key_put(ring);
-+	return err;
-+}
-+
-+void __exit fsverity_signature_exit(void)
-+{
-+	key_put(fsverity_keyring);
-+	fsverity_sysctl_exit();
-+}
-diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
-index a96bbf87077de..b030589b8fd93 100644
---- a/include/uapi/linux/fsverity.h
-+++ b/include/uapi/linux/fsverity.h
-@@ -56,6 +56,7 @@ struct fsverity_descriptor {
- /* Extension types */
- #define FS_VERITY_EXT_ROOT_HASH		1
- #define FS_VERITY_EXT_SALT		2
-+#define FS_VERITY_EXT_PKCS7_SIGNATURE	3
+ static void __exit chacha20_simd_mod_fini(void)
+ {
+-	crypto_unregister_skcipher(&alg);
++	crypto_unregister_skciphers(algs, ARRAY_SIZE(algs));
+ }
  
- /* Header of each extension (variable-length metadata item) */
- struct fsverity_extension {
-@@ -78,6 +79,15 @@ struct fsverity_extension {
- 
- /* FS_VERITY_EXT_SALT payload is just a byte array, any size */
- 
-+/*
-+ * FS_VERITY_EXT_PKCS7_SIGNATURE payload is a DER-encoded PKCS#7 message
-+ * containing the signed file measurement in the following format:
-+ */
-+struct fsverity_digest_disk {
-+	__le16 digest_algorithm;
-+	__le16 digest_size;
-+	__u8 digest[];
-+};
- 
- /* Fields stored at the very end of the file */
- struct fsverity_footer {
+ module_init(chacha20_simd_mod_init);
+@@ -125,3 +173,6 @@ module_exit(chacha20_simd_mod_fini);
+ MODULE_AUTHOR("Ard Biesheuvel <ard.biesheuvel@linaro.org>");
+ MODULE_LICENSE("GPL v2");
+ MODULE_ALIAS_CRYPTO("chacha20");
++MODULE_ALIAS_CRYPTO("chacha20-neon");
++MODULE_ALIAS_CRYPTO("xchacha20");
++MODULE_ALIAS_CRYPTO("xchacha20-neon");
 -- 
-2.19.1.568.g152ad8e336-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.19.1.1215.g8438c0b245-goog
