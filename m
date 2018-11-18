@@ -1,130 +1,44 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:51748 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1729923AbeKQLne (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 17 Nov 2018 06:43:34 -0500
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v4 01/14] crypto: chacha20-generic - add HChaCha20 library function
-Date: Fri, 16 Nov 2018 17:26:18 -0800
-Message-Id: <20181117012631.23528-2-ebiggers@kernel.org>
-In-Reply-To: <20181117012631.23528-1-ebiggers@kernel.org>
-References: <20181117012631.23528-1-ebiggers@kernel.org>
+Return-Path: <SRS0=wM/J=N5=zx2c4.com=Jason@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Martin Willi <martin@strongswan.org>
+References: <20181105232526.173947-1-ebiggers@kernel.org> <20181105232526.173947-11-ebiggers@kernel.org>
+ <CAKv+Gu-o0khD5=0EOkv2PiczMs5uZ=XP9V=G2ogBNMK8Kb93sw@mail.gmail.com>
+ <20181112185816.GA8663@gmail.com> <20181116060227.hwu4igi6bp26ddpi@gondor.apana.org.au>
+ <20181117001718.GA175522@gmail.com>
+In-Reply-To: <20181117001718.GA175522@gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Sun, 18 Nov 2018 14:46:30 +0100
+Message-ID: <CAHmME9rtsCk8ZLt05xRKMGr4CVRnaUvCaVOS_WX3N22HOat4-A@mail.gmail.com>
+Subject: Re: [RFC PATCH v3 10/15] crypto: poly1305 - use structures for key
+ and accumulator
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Eric,
 
-Refactor the unkeyed permutation part of chacha20_block() into its own
-function, then add hchacha20_block() which is the ChaCha equivalent of
-HSalsa20 and is an intermediate step towards XChaCha20 (see
-https://cr.yp.to/snuffle/xsalsa-20081128.pdf).  HChaCha20 skips the
-final addition of the initial state, and outputs only certain words of
-the state.  It should not be used for streaming directly.
+On Sat, Nov 17, 2018 at 1:17 AM Eric Biggers <ebiggers@kernel.org> wrote:
+> Do you prefer that this be merged before or after Zinc?  It seems it may still
+> be a while before the community is satisfied with Zinc (and Wireguard which is
+> in the same patchset), and I don't want this blocked unnecessarily...  So on my
+> part I'd prefer to just have this merged as-is.
 
-Reviewed-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Acked-by: Martin Willi <martin@strongswan.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- include/crypto/chacha20.h |  2 ++
- lib/chacha20.c            | 50 ++++++++++++++++++++++++++++++++++-----
- 2 files changed, 46 insertions(+), 6 deletions(-)
+Personally I'd prefer this be merged after Zinc, since there's work to
+be done on adjusting the 20->12 in chacha20. That's not really much of
+a reason though. But maybe we can just sidestep the ordering concern
+all together:
 
-diff --git a/include/crypto/chacha20.h b/include/crypto/chacha20.h
-index 2d3129442a52..56073814eef0 100644
---- a/include/crypto/chacha20.h
-+++ b/include/crypto/chacha20.h
-@@ -20,6 +20,8 @@ struct chacha20_ctx {
- };
- 
- void chacha20_block(u32 *state, u8 *stream);
-+void hchacha20_block(const u32 *in, u32 *out);
-+
- void crypto_chacha20_init(u32 *state, struct chacha20_ctx *ctx, u8 *iv);
- int crypto_chacha20_setkey(struct crypto_skcipher *tfm, const u8 *key,
- 			   unsigned int keysize);
-diff --git a/lib/chacha20.c b/lib/chacha20.c
-index d907fec6a9ed..6a484e16171d 100644
---- a/lib/chacha20.c
-+++ b/lib/chacha20.c
-@@ -1,5 +1,5 @@
- /*
-- * ChaCha20 256-bit cipher algorithm, RFC7539
-+ * The "hash function" used as the core of the ChaCha20 stream cipher (RFC7539)
-  *
-  * Copyright (C) 2015 Martin Willi
-  *
-@@ -16,14 +16,10 @@
- #include <asm/unaligned.h>
- #include <crypto/chacha20.h>
- 
--void chacha20_block(u32 *state, u8 *stream)
-+static void chacha20_permute(u32 *x)
- {
--	u32 x[16];
- 	int i;
- 
--	for (i = 0; i < ARRAY_SIZE(x); i++)
--		x[i] = state[i];
--
- 	for (i = 0; i < 20; i += 2) {
- 		x[0]  += x[4];    x[12] = rol32(x[12] ^ x[0],  16);
- 		x[1]  += x[5];    x[13] = rol32(x[13] ^ x[1],  16);
-@@ -65,6 +61,25 @@ void chacha20_block(u32 *state, u8 *stream)
- 		x[8]  += x[13];   x[7]  = rol32(x[7]  ^ x[8],   7);
- 		x[9]  += x[14];   x[4]  = rol32(x[4]  ^ x[9],   7);
- 	}
-+}
-+
-+/**
-+ * chacha20_block - generate one keystream block and increment block counter
-+ * @state: input state matrix (16 32-bit words)
-+ * @stream: output keystream block (64 bytes)
-+ *
-+ * This is the ChaCha20 core, a function from 64-byte strings to 64-byte
-+ * strings.  The caller has already converted the endianness of the input.  This
-+ * function also handles incrementing the block counter in the input matrix.
-+ */
-+void chacha20_block(u32 *state, u8 *stream)
-+{
-+	u32 x[16];
-+	int i;
-+
-+	memcpy(x, state, 64);
-+
-+	chacha20_permute(x);
- 
- 	for (i = 0; i < ARRAY_SIZE(x); i++)
- 		put_unaligned_le32(x[i] + state[i], &stream[i * sizeof(u32)]);
-@@ -72,3 +87,26 @@ void chacha20_block(u32 *state, u8 *stream)
- 	state[12]++;
- }
- EXPORT_SYMBOL(chacha20_block);
-+
-+/**
-+ * hchacha20_block - abbreviated ChaCha20 core, for XChaCha20
-+ * @in: input state matrix (16 32-bit words)
-+ * @out: output (8 32-bit words)
-+ *
-+ * HChaCha20 is the ChaCha equivalent of HSalsa20 and is an intermediate step
-+ * towards XChaCha20 (see https://cr.yp.to/snuffle/xsalsa-20081128.pdf).
-+ * HChaCha20 skips the final addition of the initial state, and outputs only
-+ * certain words of the state.  It should not be used for streaming directly.
-+ */
-+void hchacha20_block(const u32 *in, u32 *out)
-+{
-+	u32 x[16];
-+
-+	memcpy(x, in, 64);
-+
-+	chacha20_permute(x);
-+
-+	memcpy(&out[0], &x[0], 16);
-+	memcpy(&out[4], &x[12], 16);
-+}
-+EXPORT_SYMBOL(hchacha20_block);
--- 
-2.19.1.1215.g8438c0b245-goog
+What I suspect we should do is make the initial Zinc merge _without_
+those top two patches that replace the crypto api's implementations
+with Zinc, and defer those until after the initial merges. Those
+commits are already written -- so there's no chance it won't happen
+due to laziness or something -- and I think the general merge will go
+a bit more smoothly if we wait until after. (Somebody suggested we do
+it this way at Plumbers, and was actually a bit surprised I had
+already ported the crypto API stuff to Zinc.) This way, Adiantum and
+Zinc aren't potentially co-dependent in their initial merges and we
+can work on the details carefully with each other after both have
+landed. I figure this might make things a little bit less stressful
+for both of us. How would you feel about doing it that?
+
+Jason
