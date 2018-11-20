@@ -1,291 +1,198 @@
-Return-Path: <SRS0=2Xim=N6=linux.vnet.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: [PATCH 7/7] fsverity: Remove filesystem specific build config option
-Date: Mon, 19 Nov 2018 10:53:24 +0530
-In-Reply-To: <20181119052324.31456-1-chandan@linux.vnet.ibm.com>
-References: <20181119052324.31456-1-chandan@linux.vnet.ibm.com>
+Return-Path: <SRS0=+oNo=N7=gondor.apana.org.au=herbert@kernel.org>
+Date: Tue, 20 Nov 2018 14:33:45 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Subject: Re: [PATCH v4 00/14] crypto: Adiantum support
+Message-ID: <20181120063345.ccnzw5x3kh2fphnv@gondor.apana.org.au>
+References: <20181117012631.23528-1-ebiggers@kernel.org>
 MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-Message-Id: <20181119052324.31456-8-chandan@linux.vnet.ibm.com>
-To: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
-Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, ebiggers@kernel.org, tytso@mit.edu
+In-Reply-To: <20181117012631.23528-1-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-crypto@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-In order to have a common code base for fsverity "post read" processing
-for all filesystems which support per-file verity, this commit removes
-filesystem specific build config option (e.g. CONFIG_EXT4_FS_VERITY) and
-replaces it with a build option (i.e. CONFIG_FS_VERITY) whose value
-affects all the filesystems making use of fsverity.
+On Fri, Nov 16, 2018 at 05:26:17PM -0800, Eric Biggers wrote:
+> Hello,
+> 
+> We've been working to find a way to bring storage encryption to
+> entry-level Android devices like the inexpensive "Android Go" devices
+> sold in developing countries, and some smartwatches.  Unfortunately,
+> often these devices still ship with no encryption, since for cost
+> reasons they have to use older CPUs like ARM Cortex-A7; and these CPUs
+> lack the ARMv8 Cryptography Extensions, making AES-XTS much too slow.
+> 
+> We're trying to change this, since we believe encryption is for
+> everyone, not just those who can afford it.  And while it's unknown how
+> long CPUs without AES support will be around, there will likely always
+> be a "low end"; and in any case it's immensely valuable to provide a
+> software-optimized cipher that doesn't depend on hardware support.
+> Lack of hardware support should not be an excuse for no encryption.
+> 
+> But after an extensive search (e.g. see [1]) we were unable to find an
+> existing cipher that simultaneously meets the very strict performance
+> requirements on ARM processors, is secure (including having sufficient
+> security parameters as well as sufficient cryptanalysis of any
+> primitive(s) used), is suitable for practical use in dm-crypt and
+> fscrypt, *and* avoids any particularly controversial primitive.
+> 
+> Therefore, we (well, Paul Crowley did the real work) designed a new
+> encryption mode, Adiantum.  In essence, Adiantum makes it secure to use
+> the ChaCha stream cipher for disk encryption.  Adiantum is specified by
+> our paper here: https://eprint.iacr.org/2018/720.pdf ("Adiantum:
+> length-preserving encryption for entry-level processors").  Reference
+> code and test vectors are here: https://github.com/google/adiantum.
+> Most of the high-level concepts of Adiantum are not new; similar
+> existing modes include XCB, HCTR, and HCH.  Adiantum and these modes are
+> true wide-block modes (tweakable super-pseudorandom permutations), so
+> they actually provide a stronger notion of security than XTS.
+> 
+> Adiantum is an improved version of our previous algorithm, HPolyC [2].
+> Like HPolyC, Adiantum uses XChaCha12, two passes of an
+> ε-almost-∆-universal (εA∆U) hash function, and one AES-256 encryption of
+> a single 16-byte block.  On ARM Cortex-A7, on 4096-byte messages
+> Adiantum is about 4x faster than AES-256-XTS (about 5x for decryption),
+> and about 30% faster than Speck128/256-XTS.
+> 
+> Adiantum is a construction, not a primitive.  Its security is reducible
+> to that of XChaCha12 and AES-256, subject to a security bound; the proof
+> is in Section 5 of our paper.  Therefore, one need not "trust" Adiantum;
+> they only need trust XChaCha12 and AES-256.  Note that of these two
+> primitives, AES-256 currently has the lower security margin.
+> 
+> Adiantum is ~20% faster than HPolyC, with no loss of security; in fact,
+> Adiantum's security bound is slightly better than HPolyC's.  It does
+> this by choosing a faster εA∆U hash function: it still uses Poly1305's
+> εA∆U hash function, but now a hash function from the "NH" family of hash
+> functions is used to "compress" the message by 32x first.  NH is εAU (as
+> shown in the UMAC paper[3]) but is over twice as fast as Poly1305.  Key
+> agility is reduced, but that's acceptable for disk encryption.
+> 
+> NH is also very simple, and it's easy to implement in SIMD assembly,
+> e.g. in ARM NEON.  Now, to get good performance only a SIMD
+> implementation of NH is required, not Poly1305.  Therefore, Adiantum can
+> be easier to port to new platforms than HPolyC, despite Adiantum's
+> slightly increased complexity.  For now this patchset only includes an
+> ARM32 NEON implementation of NH, but as a proof of concept I've also
+> written SSE2, AVX2, and ARM64 NEON implementations of NH; see
+> https://github.com/google/adiantum/tree/master/benchmark/src.
+> 
+> This patchset adds Adiantum to Linux's crypto API, focusing on generic
+> and ARM32 implementations.  Patches 1-9 add support for XChaCha20 and
+> XChaCha12.  Patches 10-13 add NHPoly1305 support, needed for Adiantum
+> hashing.  Patch 14 adds Adiantum support as a skcipher template.
+> 
+> This patchset applies to cryptodev.  It can also be found in git at
+> branch "adiantum-v4" of:
+> https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+> 
+> With this patchset, Adiantum is already usable in dm-crypt via the
+> "capi:" cipher syntax.  I'll also be adding Adiantum support to fscrypt
+> via the patch https://patchwork.kernel.org/patch/10669339/, but I
+> dropped it from this series for now since it will be taken through the
+> fscrypt git tree instead.  Note that in fscrypt, Adiantum will also fix
+> an information leak in filenames encryption when filenames share a
+> common prefix, and Adiantum's long IV support make it safe to use the
+> same key for many files, improving performance even more.
+> 
+> Again, for more details please read our paper:
+> 
+>     Adiantum: length-preserving encryption for entry-level processors
+>     (https://eprint.iacr.org/2018/720.pdf)
+> 
+> References:
+>   [1] https://www.spinics.net/lists/linux-crypto/msg33000.html
+>   [2] https://patchwork.kernel.org/cover/10558059/
+>   [3] https://fastcrypto.org/umac/umac_proc.pdf
+> 
+> Changed since v3:
+>   - Rebase onto cryptodev because of recent ChaCha20 changes.
+>   - Drop fscrypt patch; I'm sending it as a standalone patch.
+> 
+> Changed since v2:
+>   - Simplify the generic NH implementation.
+>   - Add patches to reduce atomic walks and disabling preemption.
+>   - Split Poly1305 changes into two patches.
+>   - Add tcrypt test mode for Adiantum.
+>   - Make NEON 'chacha_permute' a function rather than a macro.
+>   - Use .base.* style when declaring algorithms.
+>   - Replace BUG_ON() in chacha_permute() with WARN_ON_ONCE().
+>   - Set Adiantum instance {min,max}_keysize correctly in all cases.
+>   - Make the Adiantum template take the nhpoly1305 driver name as
+>     optional third argument (useful for testing).
+> 
+>   Thanks to Ard Biesheuvel for reviewing the patches.
+> 
+> Changed since v1:
+>   - Replace HPolyC with Adiantum (uses a faster hash function).
+>   - Drop ARM accelerated Poly1305.
+>   - Add fscrypt patch.
+> 
+> Eric Biggers (14):
+>   crypto: chacha20-generic - add HChaCha20 library function
+>   crypto: chacha20-generic - don't unnecessarily use atomic walk
+>   crypto: chacha20-generic - add XChaCha20 support
+>   crypto: chacha20-generic - refactor to allow varying number of rounds
+>   crypto: chacha - add XChaCha12 support
+>   crypto: arm/chacha20 - limit the preemption-disabled section
+>   crypto: arm/chacha20 - add XChaCha20 support
+>   crypto: arm/chacha20 - refactor to allow varying number of rounds
+>   crypto: arm/chacha - add XChaCha12 support
+>   crypto: poly1305 - use structures for key and accumulator
+>   crypto: poly1305 - add Poly1305 core API
+>   crypto: nhpoly1305 - add NHPoly1305 support
+>   crypto: arm/nhpoly1305 - add NEON-accelerated NHPoly1305
+>   crypto: adiantum - add Adiantum support
+> 
+>  arch/arm/crypto/Kconfig                       |    7 +-
+>  arch/arm/crypto/Makefile                      |    6 +-
+>  ...hacha20-neon-core.S => chacha-neon-core.S} |   98 +-
+>  arch/arm/crypto/chacha-neon-glue.c            |  201 ++
+>  arch/arm/crypto/chacha20-neon-glue.c          |  127 -
+>  arch/arm/crypto/nh-neon-core.S                |  116 +
+>  arch/arm/crypto/nhpoly1305-neon-glue.c        |   77 +
+>  arch/arm64/crypto/chacha20-neon-glue.c        |   40 +-
+>  arch/x86/crypto/chacha20_glue.c               |   48 +-
+>  arch/x86/crypto/poly1305_glue.c               |   20 +-
+>  crypto/Kconfig                                |   46 +-
+>  crypto/Makefile                               |    4 +-
+>  crypto/adiantum.c                             |  658 ++++
+>  crypto/chacha20_generic.c                     |  137 -
+>  crypto/chacha20poly1305.c                     |   10 +-
+>  crypto/chacha_generic.c                       |  217 ++
+>  crypto/nhpoly1305.c                           |  254 ++
+>  crypto/poly1305_generic.c                     |  174 +-
+>  crypto/tcrypt.c                               |   12 +
+>  crypto/testmgr.c                              |   30 +
+>  crypto/testmgr.h                              | 2856 ++++++++++++++++-
+>  drivers/char/random.c                         |   51 +-
+>  drivers/crypto/caam/caamalg.c                 |    2 +-
+>  drivers/crypto/caam/caamalg_qi2.c             |    8 +-
+>  drivers/crypto/caam/compat.h                  |    2 +-
+>  include/crypto/chacha.h                       |   54 +
+>  include/crypto/chacha20.h                     |   28 -
+>  include/crypto/nhpoly1305.h                   |   74 +
+>  include/crypto/poly1305.h                     |   28 +-
+>  lib/Makefile                                  |    2 +-
+>  lib/{chacha20.c => chacha.c}                  |   59 +-
+>  31 files changed, 4931 insertions(+), 515 deletions(-)
+>  rename arch/arm/crypto/{chacha20-neon-core.S => chacha-neon-core.S} (90%)
+>  create mode 100644 arch/arm/crypto/chacha-neon-glue.c
+>  delete mode 100644 arch/arm/crypto/chacha20-neon-glue.c
+>  create mode 100644 arch/arm/crypto/nh-neon-core.S
+>  create mode 100644 arch/arm/crypto/nhpoly1305-neon-glue.c
+>  create mode 100644 crypto/adiantum.c
+>  delete mode 100644 crypto/chacha20_generic.c
+>  create mode 100644 crypto/chacha_generic.c
+>  create mode 100644 crypto/nhpoly1305.c
+>  create mode 100644 include/crypto/chacha.h
+>  delete mode 100644 include/crypto/chacha20.h
+>  create mode 100644 include/crypto/nhpoly1305.h
+>  rename lib/{chacha20.c => chacha.c} (58%)
 
-Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
----
- fs/ext4/Kconfig          | 20 --------------------
- fs/ext4/ext4.h           |  2 --
- fs/ext4/readpage.c       |  4 ++--
- fs/ext4/super.c          |  6 +++---
- fs/ext4/sysfs.c          |  4 ++--
- fs/f2fs/Kconfig          | 20 --------------------
- fs/f2fs/data.c           |  2 +-
- fs/f2fs/f2fs.h           |  2 --
- fs/f2fs/super.c          |  6 +++---
- fs/f2fs/sysfs.c          |  4 ++--
- fs/verity/Kconfig        |  2 +-
- include/linux/fsverity.h |  3 +--
- 12 files changed, 15 insertions(+), 60 deletions(-)
-
-diff --git a/fs/ext4/Kconfig b/fs/ext4/Kconfig
-index e1002bbf35bf..031e5a82d556 100644
---- a/fs/ext4/Kconfig
-+++ b/fs/ext4/Kconfig
-@@ -96,26 +96,6 @@ config EXT4_FS_SECURITY
- 	  If you are not using a security module that requires using
- 	  extended attributes for file security labels, say N.
- 
--config EXT4_FS_VERITY
--	bool "Ext4 Verity"
--	depends on EXT4_FS
--	select FS_VERITY
--	help
--	  This option enables fs-verity for ext4.  fs-verity is the
--	  dm-verity mechanism implemented at the file level.  Userspace
--	  can append a Merkle tree (hash tree) to a file, then enable
--	  fs-verity on the file.  ext4 will then transparently verify
--	  any data read from the file against the Merkle tree.  The file
--	  is also made read-only.
--
--	  This serves as an integrity check, but the availability of the
--	  Merkle tree root hash also allows efficiently supporting
--	  various use cases where normally the whole file would need to
--	  be hashed at once, such as auditing and authenticity
--	  verification (appraisal).
--
--	  If unsure, say N.
--
- config EXT4_DEBUG
- 	bool "EXT4 debugging support"
- 	depends on EXT4_FS
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index 64bf9fb7ef18..bff8d639dd0c 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -41,8 +41,6 @@
- #endif
- 
- #include <linux/fscrypt.h>
--
--#define __FS_HAS_VERITY IS_ENABLED(CONFIG_EXT4_FS_VERITY)
- #include <linux/fsverity.h>
- 
- #include <linux/compiler.h>
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-index 2c037df629dd..8717ac0a5bb2 100644
---- a/fs/ext4/readpage.c
-+++ b/fs/ext4/readpage.c
-@@ -158,7 +158,7 @@ static struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
- 
- 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
- 		post_read_steps |= 1 << STEP_DECRYPT;
--#ifdef CONFIG_EXT4_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- 	if (inode->i_verity_info != NULL &&
- 	    (index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
- 		post_read_steps |= 1 << STEP_VERITY;
-@@ -205,7 +205,7 @@ static void mpage_end_io(struct bio *bio)
- 
- static inline loff_t ext4_readpage_limit(struct inode *inode)
- {
--#ifdef CONFIG_EXT4_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- 	if (IS_VERITY(inode)) {
- 		if (inode->i_verity_info)
- 			/* limit to end of metadata region */
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 16fb483a6f4a..472338c7cd03 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1316,7 +1316,7 @@ static const struct fscrypt_operations ext4_cryptops = {
- };
- #endif
- 
--#ifdef CONFIG_EXT4_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- static int ext4_set_verity(struct inode *inode, loff_t data_i_size)
- {
- 	int err;
-@@ -1401,7 +1401,7 @@ static const struct fsverity_operations ext4_verityops = {
- 	.set_verity		= ext4_set_verity,
- 	.get_metadata_end	= ext4_get_metadata_end,
- };
--#endif /* CONFIG_EXT4_FS_VERITY */
-+#endif /* CONFIG_FS_VERITY */
- 
- #ifdef CONFIG_QUOTA
- static const char * const quotatypes[] = INITQFNAMES;
-@@ -4234,7 +4234,7 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
- #ifdef CONFIG_FS_ENCRYPTION
- 	sb->s_cop = &ext4_cryptops;
- #endif
--#ifdef CONFIG_EXT4_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- 	sb->s_vop = &ext4_verityops;
- #endif
- #ifdef CONFIG_QUOTA
-diff --git a/fs/ext4/sysfs.c b/fs/ext4/sysfs.c
-index 8bc915452a38..6fa0f47c3180 100644
---- a/fs/ext4/sysfs.c
-+++ b/fs/ext4/sysfs.c
-@@ -227,7 +227,7 @@ EXT4_ATTR_FEATURE(meta_bg_resize);
- #ifdef CONFIG_FS_ENCRYPTION
- EXT4_ATTR_FEATURE(encryption);
- #endif
--#ifdef CONFIG_EXT4_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- EXT4_ATTR_FEATURE(verity);
- #endif
- EXT4_ATTR_FEATURE(metadata_csum_seed);
-@@ -239,7 +239,7 @@ static struct attribute *ext4_feat_attrs[] = {
- #ifdef CONFIG_FS_ENCRYPTION
- 	ATTR_LIST(encryption),
- #endif
--#ifdef CONFIG_EXT4_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- 	ATTR_LIST(verity),
- #endif
- 	ATTR_LIST(metadata_csum_seed),
-diff --git a/fs/f2fs/Kconfig b/fs/f2fs/Kconfig
-index ce60e480fec1..708e23816575 100644
---- a/fs/f2fs/Kconfig
-+++ b/fs/f2fs/Kconfig
-@@ -70,26 +70,6 @@ config F2FS_CHECK_FS
- 
- 	  If you want to improve the performance, say N.
- 
--config F2FS_FS_VERITY
--	bool "F2FS Verity"
--	depends on F2FS_FS
--	select FS_VERITY
--	help
--	  This option enables fs-verity for f2fs.  fs-verity is the
--	  dm-verity mechanism implemented at the file level.  Userspace
--	  can append a Merkle tree (hash tree) to a file, then enable
--	  fs-verity on the file.  f2fs will then transparently verify
--	  any data read from the file against the Merkle tree.  The file
--	  is also made read-only.
--
--	  This serves as an integrity check, but the availability of the
--	  Merkle tree root hash also allows efficiently supporting
--	  various use cases where normally the whole file would need to
--	  be hashed at once, such as auditing and authenticity
--	  verification (appraisal).
--
--	  If unsure, say N.
--
- config F2FS_IO_TRACE
- 	bool "F2FS IO tracer"
- 	depends on F2FS_FS
-diff --git a/fs/f2fs/data.c b/fs/f2fs/data.c
-index 844ec573263e..83b59b985894 100644
---- a/fs/f2fs/data.c
-+++ b/fs/f2fs/data.c
-@@ -610,7 +610,7 @@ static struct bio *f2fs_grab_read_bio(struct inode *inode, block_t blkaddr,
- 
- 	if (f2fs_encrypted_file(inode))
- 		post_read_steps |= 1 << STEP_DECRYPT;
--#ifdef CONFIG_F2FS_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- 	if (inode->i_verity_info != NULL &&
- 	    (first_idx < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
- 		post_read_steps |= 1 << STEP_VERITY;
-diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-index ea8a5ffc4f1f..dc999af932f2 100644
---- a/fs/f2fs/f2fs.h
-+++ b/fs/f2fs/f2fs.h
-@@ -25,8 +25,6 @@
- #include <crypto/hash.h>
- 
- #include <linux/fscrypt.h>
--
--#define __FS_HAS_VERITY IS_ENABLED(CONFIG_F2FS_FS_VERITY)
- #include <linux/fsverity.h>
- 
- #ifdef CONFIG_F2FS_CHECK_FS
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 4287cf348d3c..60d5338280fb 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -2197,7 +2197,7 @@ static const struct fscrypt_operations f2fs_cryptops = {
- };
- #endif
- 
--#ifdef CONFIG_F2FS_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- static int f2fs_set_verity(struct inode *inode, loff_t data_i_size)
- {
- 	int err;
-@@ -2222,7 +2222,7 @@ static const struct fsverity_operations f2fs_verityops = {
- 	.set_verity		= f2fs_set_verity,
- 	.get_metadata_end	= f2fs_get_metadata_end,
- };
--#endif /* CONFIG_F2FS_FS_VERITY */
-+#endif /* CONFIG_FS_VERITY */
- 
- static struct inode *f2fs_nfs_get_inode(struct super_block *sb,
- 		u64 ino, u32 generation)
-@@ -3146,7 +3146,7 @@ static int f2fs_fill_super(struct super_block *sb, void *data, int silent)
- #ifdef CONFIG_FS_ENCRYPTION
- 	sb->s_cop = &f2fs_cryptops;
- #endif
--#ifdef CONFIG_F2FS_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- 	sb->s_vop = &f2fs_verityops;
- #endif
- 	sb->s_xattr = f2fs_xattr_handlers;
-diff --git a/fs/f2fs/sysfs.c b/fs/f2fs/sysfs.c
-index 737677655bc0..949e6d87f4e3 100644
---- a/fs/f2fs/sysfs.c
-+++ b/fs/f2fs/sysfs.c
-@@ -444,7 +444,7 @@ F2FS_FEATURE_RO_ATTR(flexible_inline_xattr, FEAT_FLEXIBLE_INLINE_XATTR);
- F2FS_FEATURE_RO_ATTR(quota_ino, FEAT_QUOTA_INO);
- F2FS_FEATURE_RO_ATTR(inode_crtime, FEAT_INODE_CRTIME);
- F2FS_FEATURE_RO_ATTR(lost_found, FEAT_LOST_FOUND);
--#ifdef CONFIG_F2FS_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- F2FS_FEATURE_RO_ATTR(verity, FEAT_VERITY);
- #endif
- F2FS_FEATURE_RO_ATTR(sb_checksum, FEAT_SB_CHECKSUM);
-@@ -507,7 +507,7 @@ static struct attribute *f2fs_feat_attrs[] = {
- 	ATTR_LIST(quota_ino),
- 	ATTR_LIST(inode_crtime),
- 	ATTR_LIST(lost_found),
--#ifdef CONFIG_F2FS_FS_VERITY
-+#ifdef CONFIG_FS_VERITY
- 	ATTR_LIST(verity),
- #endif
- 	ATTR_LIST(sb_checksum),
-diff --git a/fs/verity/Kconfig b/fs/verity/Kconfig
-index a7470a2e4892..b5a48a9ef0ca 100644
---- a/fs/verity/Kconfig
-+++ b/fs/verity/Kconfig
-@@ -1,5 +1,5 @@
- config FS_VERITY
--	tristate "FS Verity (read-only file-based authenticity protection)"
-+	bool "FS Verity (read-only file-based authenticity protection)"
- 	select CRYPTO
- 	# SHA-256 is selected as it's intended to be the default hash algorithm.
- 	# To avoid bloat, other wanted algorithms must be selected explicitly.
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index c30c4f6ed411..f37132c640ee 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -19,8 +19,7 @@ struct fsverity_operations {
- 	int (*get_metadata_end)(struct inode *inode, loff_t *metadata_end_ret);
- };
- 
--#if __FS_HAS_VERITY
--
-+#ifdef CONFIG_FS_VERITY
- /* ioctl.c */
- extern int fsverity_ioctl_enable(struct file *filp, const void __user *arg);
- extern int fsverity_ioctl_measure(struct file *filp, void __user *arg);
+All applied.  Thanks.
 -- 
-2.19.1
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
