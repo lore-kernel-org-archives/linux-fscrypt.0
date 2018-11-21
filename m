@@ -1,60 +1,44 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:40914 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725819AbeKQIHA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 17 Nov 2018 03:07:00 -0500
-Date: Fri, 16 Nov 2018 13:52:50 -0800
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: Re: [RFC PATCH v2 00/12] crypto: Adiantum support
-Message-ID: <20181116215249.GA27149@gmail.com>
-References: <20181015175424.97147-1-ebiggers@kernel.org>
- <CAHmME9p1aiqWZ4+viaLscO8+qmixdVhMA1MAtMAFEHPG36DcPg@mail.gmail.com>
- <20181019190411.GB246441@gmail.com>
- <1f65ce09-93b3-f43e-49d5-9d9d6c0bb9e0@gmail.com>
+Return-Path: <SRS0=NNaM=OA=gondor.apana.org.au=herbert@kernel.org>
+Date: Wed, 21 Nov 2018 15:55:02 +0800
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Subject: Re: [RFC PATCH v2 0/4] Exporting existing crypto API code through
+ zinc
+Message-ID: <20181121075502.zch53qoc66lh6z22@gondor.apana.org.au>
+References: <CAKv+Gu-o0khD5=0EOkv2PiczMs5uZ=XP9V=G2ogBNMK8Kb93sw@mail.gmail.com>
+ <20181112185816.GA8663@gmail.com>
+ <20181116060227.hwu4igi6bp26ddpi@gondor.apana.org.au>
+ <20181117001718.GA175522@gmail.com>
+ <CAHmME9rtsCk8ZLt05xRKMGr4CVRnaUvCaVOS_WX3N22HOat4-A@mail.gmail.com>
+ <20181119052451.qttzfgcm4hvbdc4u@gondor.apana.org.au>
+ <20181120060217.t4nccaqpwnxkl4tx@gondor.apana.org.au>
+ <CAKv+Gu-SHS2tF665dfqSgmH5EF5vGVtef=3_4WgCE=+8+Jw7Rw@mail.gmail.com>
+ <20181120141850.zjmfwcari5kykk6y@gondor.apana.org.au>
+ <CAHmME9oPGkvEmqvfbav-AOf_P=Z4zWYxvqD3a3QhuOSh_OWd_A@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1f65ce09-93b3-f43e-49d5-9d9d6c0bb9e0@gmail.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Milan Broz <gmazyland@gmail.com>
-Cc: "Jason A. Donenfeld" <Jason@zx2c4.com>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Michael Halcrow <mhalcrow@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>
+In-Reply-To: <CAHmME9oPGkvEmqvfbav-AOf_P=Z4zWYxvqD3a3QhuOSh_OWd_A@mail.gmail.com>
+To: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Eric Biggers <ebiggers@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Milan,
-
-On Sat, Oct 20, 2018 at 12:26:20PM +0200, Milan Broz wrote:
+On Tue, Nov 20, 2018 at 05:24:41PM +0100, Jason A. Donenfeld wrote:
+> On Tue, Nov 20, 2018 at 3:19 PM Herbert Xu <herbert@gondor.apana.org.au> wrote:
+> > Yes.  In fact it's used for FIPS certification testing.
+> > Sure, nobody sane should be doing it.  But when it comes to
+> > government certification... :)
 > 
-> Adiantum (as in your current git branches on kernel.org) can be used for dm-crypt
-> without any changes (yes, I played with it :) and with some easy tricks directly
-> through cryptsetup/LUKS as well.
-> 
-> I think we should have this as an alternative to length-preserving wide-block
-> cipher modes for FDE.
-> 
+> The kernel does not aim toward any FIPS certification, and we're not
+> going to start bloating our designs to fulfill this. It's never been a
+> goal. Maybe ask Ted to add a FIPS mode to random.c and see what
+> happens... When you start arguing "because FIPS!" as your
+> justification, you really hit a head scratcher.
 
-Yes, dm-crypt can use Adiantum by specifying the cipher as
-"capi:adiantum(xchacha12,aes)-plain64".
+FIPS is not the issue.  The issue is that we need to keep the
+existing user-space ABI.  We can't break that.
 
-But, I'm having trouble getting cryptsetup/LUKS to use Adiantum.
-Using LUKS1, the following works:
-
-    cryptsetup luksFormat /dev/$partition --cipher='capi:adiantum(xchacha12,aes)-plain64' --key-size 256
-
-However, when possible we'd like people to use 4K sectors for better
-performance, which I understand requires using the LUKS2 format along with
-cryptsetup v2.0.0+ and Linux v4.12+.  But the following does *not* work:
-
-    cryptsetup luksFormat /dev/$partition --cipher='capi:adiantum(xchacha12,aes)-plain64' --key-size 256 --type luks2 --sector-size 4096
-
-The problem seems to be that when cryptsetup tries to encrypt the keyslot in
-luks2_encrypt_to_storage(), it tries to use the algorithm via AF_ALG, but it
-incorrectly requests "plain64(capi:adiantum(xchacha12,aes))" which fails.
-It should request just "adiantum(xchacha12,aes)".
-
-What are the "easy tricks" you had in mind -- do you mean there's already a way
-to use Adiantum with cryptsetup, or do you mean that cryptsetup still needs to
-be updated to fully support algorithms using the crypto API syntax?
-
-Thanks,
-
-- Eric
+Cheers,
+-- 
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
