@@ -1,18 +1,26 @@
-Return-Path: <SRS0=MMDA=OI=linux.vnet.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-Subject: Re: [f2fs-dev] [PATCH 2/7] f2fs: use IS_ENCRYPTED() to check encryption status
-Date: Thu, 29 Nov 2018 16:08:31 +0530
-In-Reply-To: <20181126173435.GA22888@thunk.org>
-References: <20181119052324.31456-1-chandan@linux.vnet.ibm.com> <20181126040038.GD7904@thunk.org> <20181126173435.GA22888@thunk.org>
+Return-Path: <jaegeuk@kernel.org>
+Date: Mon, 26 Nov 2018 15:52:59 -0800
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [f2fs-dev] [PATCH 2/7] f2fs: use IS_ENCRYPTED() to check
+ encryption status
+Message-ID: <20181126235259.GD55960@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20181119052324.31456-1-chandan@linux.vnet.ibm.com>
+ <20181119052324.31456-3-chandan@linux.vnet.ibm.com>
+ <20181119212332.GB33805@jaegeuk-macbookpro.roam.corp.google.com>
+ <20181126034132.GC7904@thunk.org>
+ <20181126040038.GD7904@thunk.org>
+ <20181126173435.GA22888@thunk.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Message-Id: <2911123.OYxvaggYeN@localhost.localdomain>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20181126173435.GA22888@thunk.org>
 To: "Theodore Y. Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, ebiggers@kernel.org
+Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, ebiggers@kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Monday, November 26, 2018 11:04:35 PM IST Theodore Y. Ts'o wrote:
+Hi Ted,
+
+On 11/26, Theodore Y. Ts'o wrote:
 > On Sun, Nov 25, 2018 at 11:00:38PM -0500, Theodore Y. Ts'o wrote:
 > > 
 > > It might be that the simplest way to solve things is to merge the f2fs
@@ -32,40 +40,15 @@ On Monday, November 26, 2018 11:04:35 PM IST Theodore Y. Ts'o wrote:
 > Jaegeuk, Eric, Chandan, please take a look and let me know what you
 > think.
 
-Ted,
+I was about to rebase f2fs-dev branch to catch up -rc4, so could you please
+update test-working with the rebased one? Then, I'll test Eric & Chandan's
+patches in the test-working branch locally. If there is no issue, I'm okay
+to push all of their work via fscrypt.git, if you prefer.
 
-I have addressed the review comments provided by Eric. Hence three out of
-the four patches in the test-working branch have new changes. I also got
-UBIFS to use CONFIG_FS_ENCRYPTION instead of the per-filesystem config
-symbol.
+Afterward, merging f2fs patches till "f2fs: clean up f2fs_sb_has_##feature_name"
+into the test-working branch would be fine as well.
 
-I am currently executing fstests to verify the changes.
+Thanks,
 
-
-Eric,
-
-When executing generic/900, I noticed that sometimes xfs_io would get stuck
-for an indefinite period. /proc/<pid of xfs_io>/stack showed that the task was
-stuck in tty_read() inside the kernel. The following change fixed it,
-
-diff --git a/tests/generic/900 b/tests/generic/900
-index 290889ce..0831eed4 100755
---- a/tests/generic/900
-+++ b/tests/generic/900
-@@ -83,7 +83,7 @@ _fsv_create_enable_file $fsv_file >> $seqres.full
- echo "* reading"
- $XFS_IO_PROG -r $fsv_file -c ''
- echo "* xfs_io writing, should be O_RDWR"
--$XFS_IO_PROG $fsv_file |& _filter_scratch
-+$XFS_IO_PROG -c '' $fsv_file 2>&1 | _filter_scratch
- echo "* bash >>, should be O_APPEND"
- bash -c "echo >> $fsv_file" |& _filter_scratch
- echo "* bash >, should be O_WRONLY|O_CREAT|O_TRUNC"
-
-xfs_io gets into interactive mode when invoked without a "-c cmd" string.
-
-However, I am not able recreate the scenario once again without the above
-changes applied. I am not sure about what changed. 
-
--- 
-chandan
+> 
+> 	    	 		       	  - Ted
