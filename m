@@ -1,58 +1,93 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
+Date: Mon, 26 Nov 2018 16:41:12 -0800
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v4 06/14] crypto: arm/chacha20 - limit the preemption-disabled section
-Date: Fri, 16 Nov 2018 17:26:23 -0800
-Message-Id: <20181117012631.23528-7-ebiggers@kernel.org>
-In-Reply-To: <20181117012631.23528-1-ebiggers@kernel.org>
-References: <20181117012631.23528-1-ebiggers@kernel.org>
+Subject: Re: [PATCH 6/7] f2fs: use IS_VERITY() to check inode's fsverity
+ status
+Message-ID: <20181127004112.GE11663@gmail.com>
+References: <20181119052324.31456-1-chandan@linux.vnet.ibm.com>
+ <20181119052324.31456-7-chandan@linux.vnet.ibm.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-crypto-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>
-Cc: linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, "Jason A . Donenfeld" <Jason@zx2c4.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20181119052324.31456-7-chandan@linux.vnet.ibm.com>
+To: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, tytso@mit.edu
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Chandan,
 
-To improve responsivesess, disable preemption for each step of the walk
-(which is at most PAGE_SIZE) rather than for the entire
-encryption/decryption operation.
+On Mon, Nov 19, 2018 at 10:53:23AM +0530, Chandan Rajendra wrote:
+> This commit now uses IS_VERITY() macro to check if fsverity is
+> enabled on an inode.
+> 
+> Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+> ---
+>  fs/f2fs/file.c  | 6 +++---
+>  fs/f2fs/inode.c | 4 +++-
+>  2 files changed, 6 insertions(+), 4 deletions(-)
+> 
+> diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+> index 6c7ad15000b9..2eb4821d95d1 100644
+> --- a/fs/f2fs/file.c
+> +++ b/fs/f2fs/file.c
+> @@ -491,7 +491,7 @@ static int f2fs_file_open(struct inode *inode, struct file *filp)
+>  	if (err)
+>  		return err;
+>  
+> -	if (f2fs_verity_file(inode)) {
+> +	if (IS_VERITY(inode)) {
+>  		err = fsverity_file_open(inode, filp);
+>  		if (err)
+>  			return err;
+> @@ -701,7 +701,7 @@ int f2fs_getattr(const struct path *path, struct kstat *stat,
+>  	struct f2fs_inode *ri;
+>  	unsigned int flags;
+>  
+> -	if (f2fs_verity_file(inode)) {
+> +	if (IS_VERITY(inode)) {
+>  		/*
+>  		 * For fs-verity we need to override i_size with the original
+>  		 * data i_size.  This requires I/O to the file which with
+> @@ -800,7 +800,7 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
+>  	if (err)
+>  		return err;
+>  
+> -	if (f2fs_verity_file(inode)) {
+> +	if (IS_VERITY(inode)) {
+>  		err = fsverity_prepare_setattr(dentry, attr);
+>  		if (err)
+>  			return err;
+> diff --git a/fs/f2fs/inode.c b/fs/f2fs/inode.c
+> index ddef483ad689..02806feed64c 100644
+> --- a/fs/f2fs/inode.c
+> +++ b/fs/f2fs/inode.c
+> @@ -45,9 +45,11 @@ void f2fs_set_inode_flags(struct inode *inode)
+>  		new_fl |= S_DIRSYNC;
+>  	if (f2fs_encrypted_inode(inode))
+>  		new_fl |= S_ENCRYPTED;
+> +	if (f2fs_verity_file(inode))
+> +		new_fl |= S_VERITY;
+>  	inode_set_flags(inode, new_fl,
+>  			S_SYNC|S_APPEND|S_IMMUTABLE|S_NOATIME|S_DIRSYNC|
+> -			S_ENCRYPTED);
+> +			S_ENCRYPTED|S_VERITY);
+>  }
+>  
+>  static void __get_inode_rdev(struct inode *inode, struct f2fs_inode *ri)
+> -- 
+> 2.19.1
 
-Suggested-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/arm/crypto/chacha20-neon-glue.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+Like the ext4 patch, it's missing syncing the verity flag to the VFS inode
+during FS_IOC_ENABLE_VERITY:
 
-diff --git a/arch/arm/crypto/chacha20-neon-glue.c b/arch/arm/crypto/chacha20-neon-glue.c
-index 7386eb1c1889..2bc035cb8f23 100644
---- a/arch/arm/crypto/chacha20-neon-glue.c
-+++ b/arch/arm/crypto/chacha20-neon-glue.c
-@@ -68,22 +68,22 @@ static int chacha20_neon(struct skcipher_request *req)
- 	if (req->cryptlen <= CHACHA_BLOCK_SIZE || !may_use_simd())
- 		return crypto_chacha_crypt(req);
+diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+index 4f58d5840d17..841019d8bc96 100644
+--- a/fs/f2fs/super.c
++++ b/fs/f2fs/super.c
+@@ -2207,6 +2207,7 @@ static int f2fs_set_verity(struct inode *inode, loff_t data_i_size)
+ 		return err;
  
--	err = skcipher_walk_virt(&walk, req, true);
-+	err = skcipher_walk_virt(&walk, req, false);
- 
- 	crypto_chacha_init(state, ctx, walk.iv);
- 
--	kernel_neon_begin();
- 	while (walk.nbytes > 0) {
- 		unsigned int nbytes = walk.nbytes;
- 
- 		if (nbytes < walk.total)
- 			nbytes = round_down(nbytes, walk.stride);
- 
-+		kernel_neon_begin();
- 		chacha20_doneon(state, walk.dst.virt.addr, walk.src.virt.addr,
- 				nbytes);
-+		kernel_neon_end();
- 		err = skcipher_walk_done(&walk, walk.nbytes - nbytes);
- 	}
--	kernel_neon_end();
- 
- 	return err;
+ 	file_set_verity(inode);
++	f2fs_set_inode_flags(inode);
+ 	f2fs_mark_inode_dirty_sync(inode, true);
+ 	return 0;
  }
--- 
-2.19.1.1215.g8438c0b245-goog
