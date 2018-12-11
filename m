@@ -1,148 +1,150 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:53542 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1729671AbeLJWZu (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 10 Dec 2018 17:25:50 -0500
+Return-Path: <linux-ext4-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 7/7] generic: test using fs-verity and fscrypt simultaneously
-Date: Mon, 10 Dec 2018 14:21:42 -0800
-Message-Id: <20181210222142.222342-8-ebiggers@kernel.org>
-In-Reply-To: <20181210222142.222342-1-ebiggers@kernel.org>
-References: <20181210222142.222342-1-ebiggers@kernel.org>
+Subject: [PATCH 2/2] fsverity: Move verity status check to fsverity_prepare_setattr
+Date: Tue, 11 Dec 2018 14:46:51 -0800
+Message-Id: <20181211224651.112510-3-ebiggers@kernel.org>
+In-Reply-To: <20181211224651.112510-1-ebiggers@kernel.org>
+References: <20181211224651.112510-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
+Sender: linux-ext4-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
+Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, Krzysztof Kozlowski <krzk@kernel.org>, linux-ext4@vger.kernel.org, Tony Lindgren <tony@atomide.com>, Kirill Tkhai <ktkhai@virtuozzo.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
 
-This primarily verifies correct ordering of the hooks for each feature:
-fscrypt needs to be first.
+Instead of conditionally checking for verity status of an inode before
+invoking fsverity_prepare_setattr(), this commit moves the check inside the
+definition of fsverity_prepare_setattr().
 
+Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+(EB: fix the !CONFIG_FS_VERITY case and inline the IS_VERITY() check)
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- tests/generic/905     | 81 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/905.out | 12 +++++++
- tests/generic/group   |  1 +
- 3 files changed, 94 insertions(+)
- create mode 100755 tests/generic/905
- create mode 100644 tests/generic/905.out
+ fs/ext4/inode.c          |  8 +++-----
+ fs/f2fs/file.c           |  8 +++-----
+ fs/verity/setup.c        | 14 ++------------
+ include/linux/fsverity.h | 25 ++++++++++++++++++++++---
+ 4 files changed, 30 insertions(+), 25 deletions(-)
 
-diff --git a/tests/generic/905 b/tests/generic/905
-new file mode 100755
-index 00000000..18d10d50
---- /dev/null
-+++ b/tests/generic/905
-@@ -0,0 +1,81 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2018 Google LLC
-+#
-+# FS QA Test generic/905
-+#
-+# Test using fs-verity and fscrypt simultaneously.  This primarily verifies
-+# correct ordering of the hooks for each feature: fscrypt needs to be first.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index b83ab0e812483..817b67c3083be 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -5510,11 +5510,9 @@ int ext4_setattr(struct dentry *dentry, struct iattr *attr)
+ 	if (error)
+ 		return error;
+ 
+-	if (IS_VERITY(inode)) {
+-		error = fsverity_prepare_setattr(dentry, attr);
+-		if (error)
+-			return error;
+-	}
++	error = fsverity_prepare_setattr(dentry, attr);
++	if (error)
++		return error;
+ 
+ 	if (is_quota_modification(inode, attr)) {
+ 		error = dquot_initialize(inode);
+diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+index 6eea508d8656e..b73609a43baa7 100644
+--- a/fs/f2fs/file.c
++++ b/fs/f2fs/file.c
+@@ -798,11 +798,9 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
+ 	if (err)
+ 		return err;
+ 
+-	if (IS_VERITY(inode)) {
+-		err = fsverity_prepare_setattr(dentry, attr);
+-		if (err)
+-			return err;
+-	}
++	err = fsverity_prepare_setattr(dentry, attr);
++	if (err)
++		return err;
+ 
+ 	if (is_quota_modification(inode, attr)) {
+ 		err = dquot_initialize(inode);
+diff --git a/fs/verity/setup.c b/fs/verity/setup.c
+index 4ecaeb89166b4..2b707589999c4 100644
+--- a/fs/verity/setup.c
++++ b/fs/verity/setup.c
+@@ -767,17 +767,7 @@ int __fsverity_file_open(struct inode *inode, struct file *filp)
+ }
+ EXPORT_SYMBOL_GPL(__fsverity_file_open);
+ 
+-/**
+- * fsverity_prepare_setattr - prepare to change a verity inode's attributes
+- * @dentry: dentry through which the inode is being changed
+- * @attr: attributes to change
+- *
+- * Verity files are immutable, so deny truncates.  This isn't covered by the
+- * open-time check because sys_truncate() takes a path, not a file descriptor.
+- *
+- * Return: 0 on success, -errno on failure
+- */
+-int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
++int __fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
+ {
+ 	if (attr->ia_valid & ATTR_SIZE) {
+ 		pr_debug("Denying truncate of verity file (ino %lu)\n",
+@@ -786,7 +776,7 @@ int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
+ 	}
+ 	return 0;
+ }
+-EXPORT_SYMBOL_GPL(fsverity_prepare_setattr);
++EXPORT_SYMBOL_GPL(__fsverity_prepare_setattr);
+ 
+ /**
+  * fsverity_prepare_getattr - prepare to get a verity inode's attributes
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index 0ce170c2c1676..099fc34936fa6 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -26,7 +26,8 @@ extern int fsverity_ioctl_measure(struct file *filp, void __user *arg);
+ 
+ /* setup.c */
+ extern int __fsverity_file_open(struct inode *inode, struct file *filp);
+-extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
++extern int __fsverity_prepare_setattr(struct dentry *dentry,
++				      struct iattr *attr);
+ extern int fsverity_prepare_getattr(struct inode *inode);
+ extern void fsverity_cleanup_inode(struct inode *inode);
+ extern loff_t fsverity_full_i_size(const struct inode *inode);
+@@ -63,8 +64,8 @@ static inline int __fsverity_file_open(struct inode *inode, struct file *filp)
+ 	return -EOPNOTSUPP;
+ }
+ 
+-static inline int fsverity_prepare_setattr(struct dentry *dentry,
+-					   struct iattr *attr)
++static inline int __fsverity_prepare_setattr(struct dentry *dentry,
++					     struct iattr *attr)
+ {
+ 	return -EOPNOTSUPP;
+ }
+@@ -129,4 +130,22 @@ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
+ 	return 0;
+ }
+ 
++/**
++ * fsverity_prepare_setattr - prepare to change a verity inode's attributes
++ * @dentry: dentry through which the inode is being changed
++ * @attr: attributes to change
++ *
++ * Verity files are immutable, so deny truncates.  This isn't covered by the
++ * open-time check because sys_truncate() takes a path, not a file descriptor.
++ *
++ * Return: 0 on success, -errno on failure
++ */
++static inline int fsverity_prepare_setattr(struct dentry *dentry,
++					   struct iattr *attr)
 +{
-+	cd /
-+	rm -f $tmp.*
++	if (IS_VERITY(d_inode(dentry)))
++		return __fsverity_prepare_setattr(dentry, attr);
++	return 0;
 +}
 +
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/verity
-+. ./common/encrypt
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+_require_scratch_verity
-+_require_scratch_encryption
-+_require_xfs_io_command "set_encpolicy"
-+_require_command "$KEYCTL_PROG" keyctl
-+
-+_scratch_mkfs_encrypted_verity &>> $seqres.full
-+_scratch_mount
-+
-+fsv_orig_file=$tmp.file
-+edir=$SCRATCH_MNT/edir
-+fsv_file=$edir/file.fsv
-+
-+# Set up an encrypted directory.
-+_new_session_keyring
-+keydesc=$(_generate_encryption_key)
-+mkdir $edir
-+$XFS_IO_PROG -c "set_encpolicy $keydesc" $edir
-+
-+# Set up an fs-verity file within the encrypted directory.
-+# Verity that it actually has an encryption policy.
-+head -c 100000 /dev/zero > $fsv_orig_file
-+_fsv_setup $fsv_orig_file $fsv_file >> $seqres.full
-+_fsv_enable $fsv_file
-+echo
-+$XFS_IO_PROG -r -c "get_encpolicy" $fsv_file |& _filter_scratch \
-+	| sed 's/Master key descriptor:.*/Master key descriptor: 0000000000000000/'
-+echo
-+
-+# Verify that the file contents are as expected.  This should be going through
-+# both the decryption and verity I/O paths.
-+cmp $fsv_orig_file $fsv_file && echo "Files matched"
-+
-+# Just in case, try again after a mount cycle to empty the page cache.
-+_scratch_cycle_mount
-+cmp $fsv_orig_file $fsv_file && echo "Files matched"
-+
-+# Corrupt some bytes as a sanity check that fs-verity is really working.
-+# This also verifies that the data on-disk is really encrypted, since otherwise
-+# the data being written here would be identical to the old data.
-+head -c 1000 /dev/zero | _fsv_corrupt_bytes $fsv_file 50000
-+md5sum $fsv_file |& _filter_scratch
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/905.out b/tests/generic/905.out
-new file mode 100644
-index 00000000..62418f7e
---- /dev/null
-+++ b/tests/generic/905.out
-@@ -0,0 +1,12 @@
-+QA output created by 905
-+
-+Encryption policy for SCRATCH_MNT/edir/file.fsv:
-+	Policy version: 0
-+	Master key descriptor: 0000000000000000
-+	Contents encryption mode: 1 (AES-256-XTS)
-+	Filenames encryption mode: 4 (AES-256-CTS)
-+	Flags: 0x02
-+
-+Files matched
-+Files matched
-+md5sum: SCRATCH_MNT/edir/file.fsv: Input/output error
-diff --git a/tests/generic/group b/tests/generic/group
-index c7e5098f..5668c046 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -530,3 +530,4 @@
- 902 auto quick verity
- 903 auto quick verity
- 904 auto quick verity
-+905 auto quick verity encrypt
+ #endif	/* _LINUX_FSVERITY_H */
 -- 
-2.20.0.rc2.403.gdbc3b29805-goog
+2.20.0.405.gbc1bbc6f85-goog
