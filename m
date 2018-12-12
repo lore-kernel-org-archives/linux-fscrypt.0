@@ -1,53 +1,43 @@
-Return-Path: <SRS0=ekgu=OY=gmail.com=guaneryu@kernel.org>
-Date: Sat, 15 Dec 2018 22:28:52 +0800
-From: Eryu Guan <guaneryu@gmail.com>
+Return-Path: <SRS0=Bj0P=OV=bombadil.srs.infradead.org=BATV+a4c84aa40f04b2dbfbde+5589+infradead.org+hch@kernel.org>
+Date: Wed, 12 Dec 2018 01:15:54 -0800
+From: Christoph Hellwig <hch@infradead.org>
 Subject: Re: [PATCH 0/7] xfstests: add fs-verity tests
-Message-ID: <20181215142852.GV3889@desktop>
+Message-ID: <20181212091554.GB7855@infradead.org>
 References: <20181210222142.222342-1-ebiggers@kernel.org>
+ <20181211135231.GA14965@infradead.org>
+ <20181211172931.GA221175@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20181210222142.222342-1-ebiggers@kernel.org>
+In-Reply-To: <20181211172931.GA221175@gmail.com>
 To: Eric Biggers <ebiggers@kernel.org>
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
+Cc: Christoph Hellwig <hch@infradead.org>, fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Mon, Dec 10, 2018 at 02:21:35PM -0800, Eric Biggers wrote:
-> Add tests for fs-verity, a new feature for read-only file-based
-> authenticity protection.  fs-verity will be supported by ext4 and f2fs,
-> and perhaps other filesystems later.  Running these tests requires:
+On Tue, Dec 11, 2018 at 09:29:32AM -0800, Eric Biggers wrote:
+> Hi Christoph,
 > 
-> - A kernel with the fs-verity patches from
->   https://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git/log/
->   (should be merged in 4.21) and configured with CONFIG_FS_VERITY.
-> - The fsverity utility program, which can be installed from
->   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git/
-> - e2fsprogs v1.44.4-2 or later for ext4 tests, or f2fs-tools v1.11.0 or
->   later for f2fs tests.
+> On Tue, Dec 11, 2018 at 05:52:31AM -0800, Christoph Hellwig wrote:
+> > On Mon, Dec 10, 2018 at 02:21:35PM -0800, Eric Biggers wrote:
+> > > Add tests for fs-verity, a new feature for read-only file-based
+> > > authenticity protection.  fs-verity will be supported by ext4 and f2fs,
+> > > and perhaps other filesystems later.  Running these tests requires:
+> > 
+> > Seriously, given how broken the current fs-verify support is we should
+> > neither merge it into the kernel nor fstests.
+> > 
+> > Nothing against the highlevel feature per-se, but the implementation
+> > posted to linux-fsdevel a while ago is simply too broken.
 > 
-> Example with kvm-xfstests:
-> 
-> 	$ kvm-xfstests -c ext4,f2fs -g verity
-> 
-> See the file Documentation/filesystem/fsverity.rst in the kernel tree
-> for more information about fs-verity.
-> 
-> Eric Biggers (7):
->   common/verity: add common functions for testing fs-verity
->   generic: test general behavior of verity files
->   generic: test access controls on the fs-verity ioctls
->   generic: test fs-verity descriptor validation
->   generic: test corrupting verity files
->   generic: test that fs-verity is using the correct measurement values
->   generic: test using fs-verity and fscrypt simultaneously
+> Please explain.  Broken, how so?  What changes do you suggest, specifically?
 
-The tests look good to me overall, and tests ran fine on my test vm (I
-only tested with ext4 though), thanks a lot! There're just a few minor
-issues, the comments go to individual patch.
+Don't magically pass the hash in the file data, that is just broken
+beyond repairable.
 
-But it seems that there're still disagreements on the implemention of
-fsverity, I'd like to wait and see what's the final decision before
-taking the tests.
+> Also, if you have feedback it would be helpful if you posted it in response to
+> the actual kernel patchset, not just the tests.  AFAICS, this is your first time
+> responding to any fs-verity related thread, despite it being out for review for
+> months; is that correct or did I miss something you previously posted?
 
-Thanks,
-Eryu
+No.  But given how broken it I'd rather ignore it rather than wasting
+my time.  It isn't like it did get any other serious review either.
