@@ -1,8 +1,12 @@
-Return-Path: <SRS0=aThg=OX=thunk.org=tytso@kernel.org>
-Date: Fri, 14 Dec 2018 00:17:22 -0500
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:52530 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726437AbeLNEsG (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 13 Dec 2018 23:48:06 -0500
+Date: Thu, 13 Dec 2018 20:48:03 -0800
+From: Eric Biggers <ebiggers@kernel.org>
 Subject: Re: [PATCH v2 01/12] fs-verity: add a documentation file
-Message-ID: <20181214051722.GF20880@thunk.org>
+Message-ID: <20181214044802.GA681@sol.localdomain>
 References: <20181101225230.88058-1-ebiggers@kernel.org>
  <20181101225230.88058-2-ebiggers@kernel.org>
  <20181212091406.GA31723@infradead.org>
@@ -12,9 +16,12 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20181213202249.GA3797@infradead.org>
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: Christoph Hellwig <hch@infradead.org>
-Cc: Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
+
+Hi Christoph,
 
 On Thu, Dec 13, 2018 at 12:22:49PM -0800, Christoph Hellwig wrote:
 > On Wed, Dec 12, 2018 at 12:26:10PM -0800, Eric Biggers wrote:
@@ -31,17 +38,18 @@ On Thu, Dec 13, 2018 at 12:22:49PM -0800, Christoph Hellwig wrote:
 > But you did not got a review from someone like Al, Linus, Andrew or me,
 > did you?
 
-I don't consider fs-verity to be part of core VFS, but rather a
-library that happens to be used by ext4 and f2fs.  This is much like
-fscrypt, which was originally an ext4-only thing, but the code was
-always set up so it could be used by other file systems, and when f2fs
-was interested in using it, we moved it to fs/crypto.  As such the
-fscrypto code never got a review from Al, Andrew, or you, and when I
-pushed it to Linus, he accepted the pull request.
+Sure, those specific people (modulo you just now) haven't responded to the
+fs-verity patches yet.  But again, the patches have been out for review for
+months.  Of course, we always prefer more reviews over fewer, and we strongly
+encourage anyone interested to review fs-verity!  (The Documentation/ file may
+be a good place to start.)  But ultimately we cannot force reviews, and as you
+know kernel reviews can be very hard to come by.  Yet, people still need
+fs-verity anyway; it isn't just some toy.  And we're committed to maintaining
+it, similar to fscrypt.  The ext4 and f2fs maintainers are also satisfied with
+the current approach to storing the verity metadata past EOF; in fact it was
+even originally Ted's idea, I think.
 
-The difference this time is that ext4 and f2fs are interested in using
-common code from the beginning.
-
+> 
 > > Can you elaborate on the actual problems you think the current solution has, and
 > > exactly what solution you'd prefer instead?  Keep in mind that (1) for large
 > > files the Merkle tree can be gigabytes long, (2) Linux doesn't have an API for
@@ -51,26 +59,25 @@ common code from the beginning.
 > Given that you alread use an ioctl as the interface what is the problem
 > of passing this data through the ioctl?
 
-The size of the Merkle tree is roughly size/129.  So for a 100MB file
-(and there can be Android APK files that bug), the Merkle tree could
-be almost 800k.  That's not really a size that we would want to push
-through an ioctl.
+Do you mean pass the verity metadata in a buffer?  That cannot work in general,
+because it may be too large to fit into memory.
 
-We could treat the ioctl as write-like interface, but using write(2)
-seemed to make a lot more sense.  Also, the fscrypt common code
-leveraged by f2fs and ext4 assume that the verity tree will be stored
-after the data blocks.
+Or do you mean pass it via a second file descriptor?  That could work, but it
+doesn't seem better than the current approach.  It would force every filesystem
+to move the metadata around, whereas currently ext4 and f2fs can simply leave it
+in place.  If you meant this, are there advantages you have in mind that would
+outweigh this?
 
-Given that the semantics of a verity-protected file is that it is
-immutable, you *could* store the Merkle tree in a separate file
-stream, but it really doesn't buy you anything --- by definition, you
-can't append to a fs-verity protected file.  Furthermore, it would
-require extra complexity in the common fsverity code --- which looks
-for the Merkle tree at the end of file data --- for no real benefit.
+We also considered generating the Merkle tree in the kernel, in which case
+FS_IOC_ENABLE_VERITY would just take a small structure similar to the current
+fsverity_descriptor.  But that would add extra complexity to the kernel, and
+generating a Merkle tree over a large file is the type of parallelizable, CPU
+intensive work that really should be done in userspace.  Also, having userspace
+provide the Merkle tree allows for it to be pre-generated and distributed with
+the file, e.g. provided in a package to be installed on many systems.
 
-Cheers,
+But please do let us know if you have any better ideas.
 
-						- Ted
+Thanks!
 
-P.S.  And if you've purchased a Pixel 3 device, it's already using the
-fsverity code, so it's quite well tested (and yes, we have xfstests).
+- Eric
