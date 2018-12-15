@@ -1,150 +1,53 @@
-Return-Path: <linux-ext4-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 2/2] fsverity: Move verity status check to fsverity_prepare_setattr
-Date: Tue, 11 Dec 2018 14:46:51 -0800
-Message-Id: <20181211224651.112510-3-ebiggers@kernel.org>
-In-Reply-To: <20181211224651.112510-1-ebiggers@kernel.org>
-References: <20181211224651.112510-1-ebiggers@kernel.org>
+Return-Path: <SRS0=ekgu=OY=gmail.com=guaneryu@kernel.org>
+Date: Sat, 15 Dec 2018 22:28:52 +0800
+From: Eryu Guan <guaneryu@gmail.com>
+Subject: Re: [PATCH 0/7] xfstests: add fs-verity tests
+Message-ID: <20181215142852.GV3889@desktop>
+References: <20181210222142.222342-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-ext4-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>
-Cc: Chandan Rajendra <chandan@linux.vnet.ibm.com>, Krzysztof Kozlowski <krzk@kernel.org>, linux-ext4@vger.kernel.org, Tony Lindgren <tony@atomide.com>, Kirill Tkhai <ktkhai@virtuozzo.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20181210222142.222342-1-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Chandan Rajendra <chandan@linux.vnet.ibm.com>
+On Mon, Dec 10, 2018 at 02:21:35PM -0800, Eric Biggers wrote:
+> Add tests for fs-verity, a new feature for read-only file-based
+> authenticity protection.  fs-verity will be supported by ext4 and f2fs,
+> and perhaps other filesystems later.  Running these tests requires:
+> 
+> - A kernel with the fs-verity patches from
+>   https://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git/log/
+>   (should be merged in 4.21) and configured with CONFIG_FS_VERITY.
+> - The fsverity utility program, which can be installed from
+>   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git/
+> - e2fsprogs v1.44.4-2 or later for ext4 tests, or f2fs-tools v1.11.0 or
+>   later for f2fs tests.
+> 
+> Example with kvm-xfstests:
+> 
+> 	$ kvm-xfstests -c ext4,f2fs -g verity
+> 
+> See the file Documentation/filesystem/fsverity.rst in the kernel tree
+> for more information about fs-verity.
+> 
+> Eric Biggers (7):
+>   common/verity: add common functions for testing fs-verity
+>   generic: test general behavior of verity files
+>   generic: test access controls on the fs-verity ioctls
+>   generic: test fs-verity descriptor validation
+>   generic: test corrupting verity files
+>   generic: test that fs-verity is using the correct measurement values
+>   generic: test using fs-verity and fscrypt simultaneously
 
-Instead of conditionally checking for verity status of an inode before
-invoking fsverity_prepare_setattr(), this commit moves the check inside the
-definition of fsverity_prepare_setattr().
+The tests look good to me overall, and tests ran fine on my test vm (I
+only tested with ext4 though), thanks a lot! There're just a few minor
+issues, the comments go to individual patch.
 
-Signed-off-by: Chandan Rajendra <chandan@linux.vnet.ibm.com>
-(EB: fix the !CONFIG_FS_VERITY case and inline the IS_VERITY() check)
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/inode.c          |  8 +++-----
- fs/f2fs/file.c           |  8 +++-----
- fs/verity/setup.c        | 14 ++------------
- include/linux/fsverity.h | 25 ++++++++++++++++++++++---
- 4 files changed, 30 insertions(+), 25 deletions(-)
+But it seems that there're still disagreements on the implemention of
+fsverity, I'd like to wait and see what's the final decision before
+taking the tests.
 
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index b83ab0e812483..817b67c3083be 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -5510,11 +5510,9 @@ int ext4_setattr(struct dentry *dentry, struct iattr *attr)
- 	if (error)
- 		return error;
- 
--	if (IS_VERITY(inode)) {
--		error = fsverity_prepare_setattr(dentry, attr);
--		if (error)
--			return error;
--	}
-+	error = fsverity_prepare_setattr(dentry, attr);
-+	if (error)
-+		return error;
- 
- 	if (is_quota_modification(inode, attr)) {
- 		error = dquot_initialize(inode);
-diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
-index 6eea508d8656e..b73609a43baa7 100644
---- a/fs/f2fs/file.c
-+++ b/fs/f2fs/file.c
-@@ -798,11 +798,9 @@ int f2fs_setattr(struct dentry *dentry, struct iattr *attr)
- 	if (err)
- 		return err;
- 
--	if (IS_VERITY(inode)) {
--		err = fsverity_prepare_setattr(dentry, attr);
--		if (err)
--			return err;
--	}
-+	err = fsverity_prepare_setattr(dentry, attr);
-+	if (err)
-+		return err;
- 
- 	if (is_quota_modification(inode, attr)) {
- 		err = dquot_initialize(inode);
-diff --git a/fs/verity/setup.c b/fs/verity/setup.c
-index 4ecaeb89166b4..2b707589999c4 100644
---- a/fs/verity/setup.c
-+++ b/fs/verity/setup.c
-@@ -767,17 +767,7 @@ int __fsverity_file_open(struct inode *inode, struct file *filp)
- }
- EXPORT_SYMBOL_GPL(__fsverity_file_open);
- 
--/**
-- * fsverity_prepare_setattr - prepare to change a verity inode's attributes
-- * @dentry: dentry through which the inode is being changed
-- * @attr: attributes to change
-- *
-- * Verity files are immutable, so deny truncates.  This isn't covered by the
-- * open-time check because sys_truncate() takes a path, not a file descriptor.
-- *
-- * Return: 0 on success, -errno on failure
-- */
--int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
-+int __fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
- {
- 	if (attr->ia_valid & ATTR_SIZE) {
- 		pr_debug("Denying truncate of verity file (ino %lu)\n",
-@@ -786,7 +776,7 @@ int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
- 	}
- 	return 0;
- }
--EXPORT_SYMBOL_GPL(fsverity_prepare_setattr);
-+EXPORT_SYMBOL_GPL(__fsverity_prepare_setattr);
- 
- /**
-  * fsverity_prepare_getattr - prepare to get a verity inode's attributes
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index 0ce170c2c1676..099fc34936fa6 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -26,7 +26,8 @@ extern int fsverity_ioctl_measure(struct file *filp, void __user *arg);
- 
- /* setup.c */
- extern int __fsverity_file_open(struct inode *inode, struct file *filp);
--extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
-+extern int __fsverity_prepare_setattr(struct dentry *dentry,
-+				      struct iattr *attr);
- extern int fsverity_prepare_getattr(struct inode *inode);
- extern void fsverity_cleanup_inode(struct inode *inode);
- extern loff_t fsverity_full_i_size(const struct inode *inode);
-@@ -63,8 +64,8 @@ static inline int __fsverity_file_open(struct inode *inode, struct file *filp)
- 	return -EOPNOTSUPP;
- }
- 
--static inline int fsverity_prepare_setattr(struct dentry *dentry,
--					   struct iattr *attr)
-+static inline int __fsverity_prepare_setattr(struct dentry *dentry,
-+					     struct iattr *attr)
- {
- 	return -EOPNOTSUPP;
- }
-@@ -129,4 +130,22 @@ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
- 	return 0;
- }
- 
-+/**
-+ * fsverity_prepare_setattr - prepare to change a verity inode's attributes
-+ * @dentry: dentry through which the inode is being changed
-+ * @attr: attributes to change
-+ *
-+ * Verity files are immutable, so deny truncates.  This isn't covered by the
-+ * open-time check because sys_truncate() takes a path, not a file descriptor.
-+ *
-+ * Return: 0 on success, -errno on failure
-+ */
-+static inline int fsverity_prepare_setattr(struct dentry *dentry,
-+					   struct iattr *attr)
-+{
-+	if (IS_VERITY(d_inode(dentry)))
-+		return __fsverity_prepare_setattr(dentry, attr);
-+	return 0;
-+}
-+
- #endif	/* _LINUX_FSVERITY_H */
--- 
-2.20.0.405.gbc1bbc6f85-goog
+Thanks,
+Eryu
