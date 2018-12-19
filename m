@@ -1,53 +1,35 @@
-Return-Path: <SRS0=S0Qi=O4=mit.edu=tytso@kernel.org>
-Date: Wed, 19 Dec 2018 14:30:05 -0500
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Return-Path: <SRS0=8CPQ=O4=bombadil.srs.infradead.org=BATV+660da67c63f4a722ad6d+5596+infradead.org+hch@kernel.org>
+Date: Tue, 18 Dec 2018 23:19:14 -0800
+From: Christoph Hellwig <hch@infradead.org>
 Subject: Re: [PATCH v2 01/12] fs-verity: add a documentation file
-Message-ID: <20181219193005.GB6889@mit.edu>
+Message-ID: <20181219071914.GA18852@infradead.org>
+References: <20181101225230.88058-1-ebiggers@kernel.org>
+ <20181101225230.88058-2-ebiggers@kernel.org>
+ <20181212091406.GA31723@infradead.org>
+ <20181212202609.GA193967@gmail.com>
+ <20181213202249.GA3797@infradead.org>
+ <20181214044802.GA681@sol.localdomain>
+ <20181217200039.GD8111@magnolia>
+ <20181219071149.GB2628@infradead.org>
+ <CAHk-=wiB8vGbje+NgNkMZupHsZ_cqg6YEBV+ZXSF4wnywFLRHQ@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20181219071420.GC2628@infradead.org>
- <20181219021953.GD31274@dastard>
-To: Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@infradead.org>
-Cc: "Darrick J. Wong" <darrick.wong@oracle.com>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Linus Torvalds <torvalds@linux-foundation.org>
+In-Reply-To: <CAHk-=wiB8vGbje+NgNkMZupHsZ_cqg6YEBV+ZXSF4wnywFLRHQ@mail.gmail.com>
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Christoph Hellwig <hch@infradead.org>, "Darrick J. Wong" <darrick.wong@oracle.com>, ebiggers@kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, Dec 19, 2018 at 01:19:53PM +1100, Dave Chinner wrote:
-> Putting metadata in user files beyond EOF doesn't work with XFS's
-> post-EOF speculative allocation algorithms.
+On Tue, Dec 18, 2018 at 11:16:08PM -0800, Linus Torvalds wrote:
+> On Tue, Dec 18, 2018, 23:11 Christoph Hellwig <hch@infradead.org wrote:
 > 
-> i.e. Filesystem design/algorithms often assume that the region
-> beyond EOF in user files is a write-only region.  e.g. We can allow
-> extents beyond EOF to be uninitialised because they are in a write
-> only region of the file and so there's no possibility of stale data
-> exposure. Unfortunately, putting filesystem/security metadata beyond
-> EOF breaks these assumptions - it's no longer a write-only region.
+> >
+> > I think the fd would have to be on the same fs for this interface to
+> > make sense. But it could be an O_TMPFILE one.  And given that ext4
+> > already supports a variant of swapext this interface should also work
+> > with the existing ext4 on disk format.
+> >
+> 
+> Why is the merkle tree not just an xattr of the file?
 
-On Tue, Dec 18, 2018 at 11:14:20PM -0800, Christoph Hellwig wrote:
-> Filesystems already use blocks beyond EOF for preallocation, either
-> speculative by the file system itself, or explicitly by the user with
-> fallocate.  I bet you will run into bugs with your creative abuse
-> sooner or later.  Indepnd of that the interface simply is gross, which
-> is enough of a reason not to merge it.
-
-Both of these concerns aren't applicable for fs-verity because the
-entire file will be read-only.  So there will be no preallocation or
-fallocation going on --- or allowed --- for a file which is protected
-by fs-verity.  Since no writes are allowed at all, it won't break any
-file systems' assumptions about "write-only regions".
-
-As far as whether it's "gross" --- that's a taste question, and I
-happen to think it's more "clever" than "gross".  It allows for a very
-simple implementation, *leveraging* the fact that the file will never
-change --- and especially, grow in length.  So why not use the space
-after EOF?
-
-The alternative requires adding Solaris-style alternate data streams
-support.  Whether or not ADS is a good idea or just an invitation to
-malware authors[1] is something which can be debated, but my position
-is it's unnecessary given the requirements of fs-verity.  And avoiding
-such complexity is a *good* thing, not a bad thing.
-
-[1] https://www.deepinstinct.com/2018/06/12/the-abuse-of-alternate-data-stream-hasnt-disappeared/
-
-						- Ted
+Because it is too large for our awkward xattrs interface..
