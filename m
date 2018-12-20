@@ -1,34 +1,53 @@
-Return-Path: <SRS0=Hoe/=O6=bombadil.srs.infradead.org=BATV+86e201e085fd36a9fd59+5598+infradead.org+hch@kernel.org>
-Date: Thu, 20 Dec 2018 23:04:47 -0800
-From: Christoph Hellwig <hch@infradead.org>
+Return-Path: <SRS0=V1rS=O5=mit.edu=tytso@kernel.org>
+Date: Thu, 20 Dec 2018 17:01:58 -0500
+From: "Theodore Y. Ts'o" <tytso@mit.edu>
 Subject: Re: [PATCH v2 01/12] fs-verity: add a documentation file
-Message-ID: <20181221070447.GA21687@infradead.org>
+Message-ID: <20181220220158.GC2360@mit.edu>
 References: <20181219071420.GC2628@infradead.org>
  <20181219021953.GD31274@dastard>
  <20181219193005.GB6889@mit.edu>
  <20181219213552.GO6311@dastard>
- <20181220220158.GC2360@mit.edu>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20181220220158.GC2360@mit.edu>
-To: "Theodore Y. Ts'o" <tytso@mit.edu>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@infradead.org>, "Darrick J. Wong" <darrick.wong@oracle.com>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Linus Torvalds <torvalds@linux-foundation.org>
+In-Reply-To: <20181219213552.GO6311@dastard>
+To: Dave Chinner <david@fromorbit.com>
+Cc: Christoph Hellwig <hch@infradead.org>, "Darrick J. Wong" <darrick.wong@oracle.com>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Thu, Dec 20, 2018 at 05:01:58PM -0500, Theodore Y. Ts'o wrote:
-> That's simply not true.  Number one, fsverity is not mandatory for all
-> file systems to implement.  If XFS doesn't want to implement fscrypt
-> or fsverity, it doesn't have to.  Number two, we're not *making* any
-> changes to the kernel code; nothing in mm/filemap.c, et. al.  So
-> saying that we are making changes that are impacted by /everyone/ just
-> doesn't make any sense.
+On Thu, Dec 20, 2018 at 08:35:52AM +1100, Dave Chinner wrote:
+> 
+> The file has to be written before it has been protected, which means
+> it may very well have user space allocated beyond EOF before the
+> merkle tree needs to be written.
 
-Ted, I think you know yourself this isn't true.  Whenever we added
-useful interface to one of the major file systems we had other pick
-it up, and that is a good thing because the last thing we need is
-fragmentation of interfaces.  And even if that wasn't the case I don't
-think we should take short cuts, because even if an interface was just
-for a file system or two it still needs to be properly desgined.
+Sure, and every file system knows how to truncate a file.  This isn't
+hard.
 
-There is no reason to rush interfacs in, because everytime we have done
-that it has turned out to be a very bad idea in retrospective.
+> But whether or not fsverity is enabled on the filesystem, the fact
+> is that the kernel code now has to support storing and reading data
+> from beyond EOF. Every user, whether they are using fsverity or not,
+> is now exposed to that code and a filesystem that no longer
+> considers the user data region beyond EOF as write only.
+
+That's simply not true.  Number one, fsverity is not mandatory for all
+file systems to implement.  If XFS doesn't want to implement fscrypt
+or fsverity, it doesn't have to.  Number two, we're not *making* any
+changes to the kernel code; nothing in mm/filemap.c, et. al.  So
+saying that we are making changes that are impacted by /everyone/ just
+doesn't make any sense.
+
+> How filesystems store and retrieve merkle tree data should be a
+> filesystem internal detail. If how metadata is stored in th e
+> filesystem is defined by the userspace API or the kernel library
+> code that implements the verification feature, then it lacks the
+> necessary abstraction to be a generic Linux filesystem feature.
+> IOWs, it needs to be redesigned and reworked before we should
+> consider it for merging.
+
+I disagree with your aesthetics that the interface has to be
+completely isolated from the implementation.  If you don't want to
+call it a generic file system feature, fine.  It can just be something
+that f2fs and ext4 uses.
+
+					- Ted
