@@ -1,64 +1,48 @@
-Return-Path: <SRS0=t8P7=O6=linuxfoundation.org=torvalds@kernel.org>
-MIME-Version: 1.0
-References: <20181219071420.GC2628@infradead.org> <20181219021953.GD31274@dastard>
- <20181219193005.GB6889@mit.edu> <20181219213552.GO6311@dastard>
- <20181220220158.GC2360@mit.edu> <20181221070447.GA21687@infradead.org> <20181221154714.GA26547@mit.edu>
-In-Reply-To: <20181221154714.GA26547@mit.edu>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Fri, 21 Dec 2018 11:13:07 -0800
-Message-ID: <CAHk-=wgdzWgoPSuHeVcqmGE1hB3Gan72r2_AhtC14e60=z45yg@mail.gmail.com>
+Return-Path: <SRS0=zyzT=O6=infradead.org=willy@kernel.org>
+Date: Fri, 21 Dec 2018 08:34:38 -0800
+From: Matthew Wilcox <willy@infradead.org>
 Subject: Re: [PATCH v2 01/12] fs-verity: add a documentation file
-Content-Type: text/plain; charset="UTF-8"
-To: "Theodore Y. Ts'o" <tytso@mit.edu>, Christoph Hellwig <hch@infradead.org>, Dave Chinner <david@fromorbit.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, Linux List Kernel Mailing <linux-kernel@vger.kernel.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Message-ID: <20181221163438.GE10600@bombadil.infradead.org>
+References: <20181219071420.GC2628@infradead.org>
+ <20181219021953.GD31274@dastard>
+ <20181219193005.GB6889@mit.edu>
+ <20181219213552.GO6311@dastard>
+ <20181220220158.GC2360@mit.edu>
+ <20181221070447.GA21687@infradead.org>
+ <20181221154714.GA26547@mit.edu>
+ <20181221155354.GC10600@bombadil.infradead.org>
+ <20181221162813.GB26547@mit.edu>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20181221162813.GB26547@mit.edu>
+To: "Theodore Y. Ts'o" <tytso@mit.edu>, Christoph Hellwig <hch@infradead.org>, Dave Chinner <david@fromorbit.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-kernel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Fri, Dec 21, 2018 at 7:47 AM Theodore Y. Ts'o <tytso@mit.edu> wrote:
->
-> Linus --- we're going round and round, and I don't think this is
-> really a technical dispute at this point, but rather an aesthetics
-> one.
+On Fri, Dec 21, 2018 at 11:28:13AM -0500, Theodore Y. Ts'o wrote:
+> On Fri, Dec 21, 2018 at 07:53:54AM -0800, Matthew Wilcox wrote:
+> > In contrast to "we'll just fix it up later" (which usually applies
+> > to in-kernel interfaces), we have a policy of not breaking userspace,
+> > so accepting this interface means setting it in stone.  We should get
+> > it right.
+> 
+> I'm not convinced it's a "fix", but my point is that if later on you
+> want to add extra complexity transforming
+> 
+>      ioctl(fd, FS_IOC_ENABLE_VERITY);
+> 
+> so it does the equivalent of
+> 
+>      ioctl(fd, FS_IOC_ENABLE_VERITY_NOW_WITH_EXTRA_USELESS_COMPLEXITY,
+> 	   fd, sizeof_data, sizeof_verity_data);
 
-Grr.
-
-So honestly, I personally *like* the model of "the file contains its
-own validation data" model. I think that's the right model, so that
-you can then basically just do "enable verification on this file, and
-verify that the root hash is this".
-
-So that part I like. I think the people who argue for "let's have a
-separate interface that writes the merkle tree data" are completely
-wrong.
-
-HOWEVER.
-
-I do agree that your particular model is pretty damn broken in lots of ways.
-
-Why is it filesystem specific? If the whole point is that the file
-itself has its own verification data (which I like), then I don't see
-why this is then documented as some filesystem-specific layout model.
-That's complete and utter garbage.
-
-In other words: either the model is that the file *itself* contains
-its own merkle tree that validates the file, or it isn't. You can't
-have it two ways. No silly "layout changes when you apply the hash"
-garbage. That's just crazy talk and invalidates the whole model.
-
-And honestly, I still think that it's very odd to add the merge data
-to the end, when the filesystem already supports xattrs. It would have
-made much more sense to just make one xattr contain the merkle tree
-validation data.
-
-So why is this sold as some unholy mess of "filesystem-specific" and
-"generic"? That part just annoys the hell out of me. Why isn't this
-sold as an *actual* generic model, where you just say "append the
-merkle tree to the file, then enable verity testing of the end result
-and validate the top-level hash".
-
-That kind of thing could be done with absolutely _zero_ per-filesystem
-code, and made 100% generic, and we'd just verify the merge data in
-readpages().
-
-So what's the excuse for doing the crazy odd "let's just support one
-single filesystem" model?
-
-                    Linus
+I disagree with your EXTRA_USELESS_COMPLEXITY appendage.  The interface
+you designed reflects the implementation you did in ext4, so I understand
+why it seems simple from your point of view.  From the user point of view,
+it looks completely weird.  You write a file, being a series of bytes,
+then all of a sudden have to know that it's composed of blocks, seek
+to the next block, write a header, then this Merkle data structure,
+then write a footer which isn't allowed to cross a block boundary
+for some unknowable reason.  It seems much more logical to have the
+header+Merkle+footer as a separate data stream which the filesystem can
+then layout according to its own rules.
