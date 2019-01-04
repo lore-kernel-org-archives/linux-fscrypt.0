@@ -1,55 +1,72 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-ed1-f54.google.com ([209.85.208.54]:42895 "EHLO
-        mail-ed1-f54.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726878AbfA0TpE (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 27 Jan 2019 14:45:04 -0500
-Received: by mail-ed1-f54.google.com with SMTP id y20so11316139edw.9
-        for <linux-fscrypt@vger.kernel.org>; Sun, 27 Jan 2019 11:45:03 -0800 (PST)
+Return-Path: <SRS0=ewVE=PM=google.com=dancol@kernel.org>
 MIME-Version: 1.0
-From: Thibaud Ecarot <thibaud.ecarot@gmail.com>
-Date: Sun, 27 Jan 2019 14:44:51 -0500
-Message-ID: <CA+XEK3=xSuRZJpfPmt0dLn6R-SWyA4h5tY1hEW33zSJLYN758w@mail.gmail.com>
-Subject: Transparent encryption mechanism
+References: <20181219071420.GC2628@infradead.org> <20181219021953.GD31274@dastard>
+ <20181219193005.GB6889@mit.edu> <20181219213552.GO6311@dastard>
+ <20181220220158.GC2360@mit.edu> <20181221070447.GA21687@infradead.org>
+ <20181221154714.GA26547@mit.edu> <CAHk-=wgdzWgoPSuHeVcqmGE1hB3Gan72r2_AhtC14e60=z45yg@mail.gmail.com>
+ <20181222041712.GC26547@mit.edu> <20181223041007.GL10600@bombadil.infradead.org>
+ <20181223044553.GG26547@mit.edu>
+In-Reply-To: <20181223044553.GG26547@mit.edu>
+From: Daniel Colascione <dancol@google.com>
+Date: Fri, 4 Jan 2019 12:41:24 -0800
+Message-ID: <CAKOZuesHHSRCzQEtGEQbm7v7j53hAjkJq-8Pgcyk+M40o-ia0g@mail.gmail.com>
+Subject: Re: [PATCH v2 01/12] fs-verity: add a documentation file
 Content-Type: text/plain; charset="UTF-8"
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
+Content-Transfer-Encoding: quoted-printable
+To: "Theodore Y. Ts'o" <tytso@mit.edu>, Matthew Wilcox <willy@infradead.org>, Linus Torvalds <torvalds@linux-foundation.org>, Christoph Hellwig <hch@infradead.org>, Dave Chinner <david@fromorbit.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, Linux List Kernel Mailing <linux-kernel@vger.kernel.org>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hello,
+On Sat, Dec 22, 2018 at 8:46 PM Theodore Y. Ts'o <tytso@mit.edu> wrote:
+>
+> On Sat, Dec 22, 2018 at 08:10:07PM -0800, Matthew Wilcox wrote:
+> > Pretty much every file format has the ability to put arbitrary blocks
+> > of information into a file somewhere the tools which don't know about
+> > it will skip it.  For example, ZIP "includes an extra field facility
+> > within file headers, which can be used to store extra data not defined
+> > by existing ZIP specifications, and which allow compliant archivers tha=
+t
+> > do not recognize the fields to safely skip them. Header IDs 0=E2=80=933=
+1 are
+> > reserved for use by PKWARE. The remaining IDs can be used by third-part=
+y
+> > vendors for proprietary usage. " (Wikipedia)
+> >
+> > ELF, PNG, PDF and many other formats have the ability to put data
+> > _somewhere_.  It might not be at the tail of the file, but there's
+> > somewhere to do it.
+> >
+> > (I appreciate this isn't what Linus is asking for, but I'm pointing out
+> > that this is by no means as intractable as you make it sound.)
+>
+> That design would require the fs-verity code to know the type of eacho
+> file, and where to find the in-band Merkle tree for each file type
+> that we wanted to support.  And if you wanted to use fs-verity to
+> protect a sudoers text configuration file (for example), we'd have to
+> teach sudo how to ignore the userspace visible Merkle tree.
 
-I am currently working on a transparent encryption mechanism that I
-can use as a Linux kernel module. I will detail below my goal and how
-I imagined a solution to meet my needs.
+I'm pretty late to the game, but I just want to bring up one approach
+that I'm not sure people have previously considered. You can't put the
+verification blob in an xattr due to xattr size limits, but you *can*
+put a filename in an xattr. What if, at open time, fs-verity looked
+for a specially-named xattr attached to a file, resolved that name
+like a symlink target, opened the pointed-to file, and just used
+*that* as the authentication blob? It'd also be possible to teach
+unlink to delete the pointed-to file when the pointer file is deleted
+--- sort of like a simple and stupid kind of data fork.
 
-I wanted to contact you today to have your opinion on my solution and
-to have some ways to follow on the function of the Linux kernel to
-hooked. I am open to any suggestions.
+For example, if you wanted to secure /usr/bin/emacs, you could set an
+security.fsverify.verification_file xattr (in the system namespace
+because the xattr has special semantics) to
+"/.verification-blobs/@usr@bin@emacs.hashtree" or something like that.
+Then, open(2) on /usr/bin/emacs would, internally to VFS, also open
+/.verification-blobs/@usr@bin@emacs.hashtree and read verification
+data from it, transparently to both users and the underlying
+filesystem. If someone deleted /usr/bin/emacs, VFS would automatically
+delete /.verification-blobs/@usr@bin@emacs.hashtree. If
+/.verification-blobs/@usr@bin@emacs.hashtree didn't exist at time of
+open(2) of /usr/bin/emacs, or couldn't be opened for whatever reason,
+the open(2) of /usr/bin/emacs would fail.
 
-Objective : Transparent encryption mechanism should be able to encrypt
-and decrypt a file on the fly based on ACLs that have been defined by
-a particular user (not necessarily root). The aim is to dispel the
-attack vector by a root. The root account is usually intended for
-administrators who may not have the credentials to see the contents of
-a particular file. To achieve this goal, an authorized user should be
-able to see the contents of a file. For unauthorized users, the file
-will display the encrypted content.
-
-My proposal : To achieve this, I think to write a Linux kernel module
-that will create a hook on the call function which opens a file (I do
-not know the name of this function, may be vfs_open). The hook will be
-implemented with ftrace. My idea is to check ACLs before opening a
-file and if there are particular ACLs for that file, I display an
-encrypted file or the decrypted content of the file if the user has
-rights on that file.
-
-What do you think about this idea ? I know there are "Linux agents"
-that do this work without being a Linux kernel module but I do not
-know how they work because it does not have to be executed in the
-userspace for security reasons. I am interested to know if you have
-other ideas. Finally, I would like to find a document on the kernel
-functions associated with the interface virtual file system because I
-do not know the function to hooked.
-
-Thanks in advance.
-Thibaud.
+ISTM that a scheme like this would give you some of the advantages of
+jumbo xattrs, but with much less implementation complexity. If
+someone's proposed something like this before, sorry for the noise.
