@@ -1,48 +1,28 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-eopbgr680133.outbound.protection.outlook.com ([40.107.68.133]:13184
-        "EHLO NAM04-BN3-obe.outbound.protection.outlook.com"
-        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
-        id S1726347AbfAXVmj (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 24 Jan 2019 16:42:39 -0500
-From: Theodore Ts'o <tytso@mit.edu>
-Subject: [PATCH] MAINTAINER: add Eric Biggers as an fscrypt maintainer
-Date: Thu, 24 Jan 2019 16:42:24 -0500
-Message-ID: <20190124214224.18563-1-tytso@mit.edu>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Content-Type: text/plain
+Received: from mail.kernel.org ([198.145.29.99]:48474 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726106AbfAFVfD (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 6 Jan 2019 16:35:03 -0500
+Subject: Re: [GIT PULL] fscrypt update for 4.21
+From: pr-tracker-bot@kernel.org
+In-Reply-To: <20190106134912.GA27028@mit.edu>
+References: <20190106134912.GA27028@mit.edu>
+Message-Id: <20190106213503.15318.9644.pr-tracker-bot@pdx-korg-gitolite-1.ci.codeaurora.org>
+Date: Sun, 06 Jan 2019 21:35:03 +0000
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: Theodore Ts'o <tytso@mit.edu>
+To: "Theodore Y. Ts'o" <tytso@mit.edu>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Also update the location of the git tree as we will be using a shared
-git tree.
+The pull request you sent on Sun, 6 Jan 2019 08:49:12 -0500:
 
-Signed-off-by: Theodore Ts'o <tytso@mit.edu>
----
+> git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git tags/fscrypt_for_linus
 
-(This is assuming we get the git tree location that I requested in the
-ticket to Konstantin and his team, of course.)
+has been merged into torvalds/linux.git:
+https://git.kernel.org/torvalds/c/baa6707381285e68cc472efba58e7e736057aacc
 
- MAINTAINERS | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
+Thank you!
 
-diff --git a/MAINTAINERS b/MAINTAINERS
-index 51029a425dbe..419b326e711a 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -6193,9 +6193,10 @@ F:	include/linux/fscache*.h
- FSCRYPT: FILE SYSTEM LEVEL ENCRYPTION SUPPORT
- M:	Theodore Y. Ts'o <tytso@mit.edu>
- M:	Jaegeuk Kim <jaegeuk@kernel.org>
-+M:	Eric Biggers <ebiggers@kernel.org>
- L:	linux-fscrypt@vger.kernel.org
- Q:	https://patchwork.kernel.org/project/linux-fscrypt/list/
--T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git
-+T:	git git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git
- S:	Supported
- F:	fs/crypto/
- F:	include/linux/fscrypt*.h
 -- 
-2.19.1
+Deet-doot-dot, I am a bot.
+https://korg.wiki.kernel.org/userdoc/prtracker
