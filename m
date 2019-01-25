@@ -1,74 +1,69 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-eopbgr680102.outbound.protection.outlook.com ([40.107.68.102]:21472
-        "EHLO NAM04-BN3-obe.outbound.protection.outlook.com"
-        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
-        id S1725795AbfA2PuZ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 29 Jan 2019 10:50:25 -0500
-Date: Tue, 29 Jan 2019 10:48:39 -0500
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
-Subject: Re: Proposal: A new fs-verity interface
-Message-ID: <20190129154839.GA4421@mit.edu>
-References: <20190110051500.GA32361@mit.edu>
- <20190114234101.GQ27534@dastard>
- <20190123051017.GA8785@mit.edu>
- <20190124212544.GS6173@dastard>
- <CAHk-=wh7jq6U3+ou_FDujB-ipg9JcJAGSjEQ_niCwLG313x6UA@mail.gmail.com>
- <20190124232237.GH8785@mit.edu>
- <CAHk-=wjw+tAKu7fM3GwUX9i7LBFuvB=ohqXj+KgQQaW3pCzfxg@mail.gmail.com>
+Return-Path: <SRS0=z5ey=QB=linuxfoundation.org=torvalds@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Disposition: inline
-In-Reply-To: <CAHk-=wjw+tAKu7fM3GwUX9i7LBFuvB=ohqXj+KgQQaW3pCzfxg@mail.gmail.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Linus Torvalds <torvalds@linux-foundation.org>
+References: <20190110051500.GA32361@mit.edu> <20190114234101.GQ27534@dastard>
+ <20190123051017.GA8785@mit.edu> <20190124212544.GS6173@dastard>
+ <CAHk-=wh7jq6U3+ou_FDujB-ipg9JcJAGSjEQ_niCwLG313x6UA@mail.gmail.com> <20190124232237.GH8785@mit.edu>
+In-Reply-To: <20190124232237.GH8785@mit.edu>
+From: Linus Torvalds <torvalds@linux-foundation.org>
+Date: Fri, 25 Jan 2019 13:35:05 +1300
+Message-ID: <CAHk-=wjw+tAKu7fM3GwUX9i7LBFuvB=ohqXj+KgQQaW3pCzfxg@mail.gmail.com>
+Subject: Re: Proposal: A new fs-verity interface
+Content-Type: text/plain; charset="UTF-8"
+To: "Theodore Y. Ts'o" <tytso@mit.edu>
 Cc: Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@infradead.org>, "Darrick J. Wong" <darrick.wong@oracle.com>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Fri, Jan 25, 2019 at 01:35:05PM +1300, Linus Torvalds wrote:
-> But that's the whole hiding thing. Why do you feel you need to do
-> that? Why not just leave it alone, and leave it visible, and say "hey,
-> the merkle data for file X comes from here".
+On Fri, Jan 25, 2019 at 12:22 PM Theodore Y. Ts'o <tytso@mit.edu> wrote:
+>
+>
+> > I understand that you don't want to load the whole merkle tree into
+> > memory, and that is the reason that you want to point to some "stable
+> > on disk" area, but the hole punching does seem to be a particularly
+> > nasty part of it. It would be much better to have the merkle data in
+> > some place where it doesn't then need to be hidden again, no?
+>
+> It's not really a "hole punch", but we are moving the data around.
+> That's because Dave Chinner and Christoph demanded it.  The original
+> approach was to put it at the end of the file, and then hide it.  If
+> the question is "why hide the metadata", it's because it's metadata.
+> We certainly don't want to make it be visible as part of the file
+> stream.
 
-There are a number of downsides:
+But that's the whole hiding thing. Why do you feel you need to do
+that? Why not just leave it alone, and leave it visible, and say "hey,
+the merkle data for file X comes from here".
 
-*) It's ugly that files that have to live somewhere (e.g., a dot file,
-   some other directory, etc.) in the directory hierarchy, when theyt
-   are fundamentally part of the file that is being protected --- that
-   is, it is file metadata.
+Punching a hole, or moving it somewhere else, or hiding or, or
+whatever you want to do, all mean "you have to modify the filesystem".
+They also mean "you can't back up the original sanely any more and
+move it somewhere else".
 
-*) We don't want to allow the files to be deted, since it breaks the
-   protection; that either has to make the original file useful, since
-   the security policy is we can't trust the file --- which might be a
-   privileged APK (think setuid binary), or we have to make the file
-   immutable and it from being deleted.
+Wouldn't it be much nicer to simple have a *separate* stream. If it's
+not an xattr, then maybe just a separate file entirely. A file that
+just contains the merkle data, and has no alignment things because
+there's no "it's at the end of the file that it describes" issues,
+it's just a standalone thing that is still visible so that you can
+copy the original data and it's still valid (even if the merkle tree
+then isn't _enabled_ in the copy, but now you could re-enable it in a
+new location).
 
-*) When we delete the original file, userspace now has to manually
-   clean up the Merkle data for the file.
+> We could store the metadata somewhere else --- for example, we could
+> store it in another inode.  But inodes have overhead, and that would
+> mean using two inodes for every fs-verity protected files --- and we
+> don't need all of the other metadata (mtime, ctime, etc.) for the
+> Merkle tree.
 
-So keeping it hidden is just cleaner.
+Well, if one of the issues is that the merkle data ends up being
+megabytes, I don't see this as being  a huge issue. Particularly since
+the alignemnt restrictions in the unified thing means that you still
+aren't exactly "packing" the merkle data efficiently to begin with..
 
-You're right that making the Merkle data explicit available in some
-form (either via an xattr or a separate file) would make it easier to
-copy the file, but that's not something that is needed in practice.
-So it's an advantage, but it wasn't one that we had considered
-important.  For example for most executables on a desktop, they are
-installed via a package manager, and they are deleted when the package
-is updated.  Or in the case of an Android APK, copying it is not
-something that is done once it is downloaded to the device.
+In fact, if you want to have merkle data for small files (where the
+merkle data itself is just a  few words), then having it in a separate
+file and as part of the inode inline data doesn't seem like it's
+likely any worse (and might be *better*) than having it at some block
+boundary due to alignment...
 
-> In fact, if you want to have merkle data for small files (where the
-> merkle data itself is just a  few words), then having it in a separate
-> file and as part of the inode inline data doesn't seem like it's
-> likely any worse (and might be *better*) than having it at some block
-> boundary due to alignment...
-> 
-> Hmm?
+Hmm?
 
-The default inode size is 256; and in that case "small files" is less
-than 12k.  With an ext4 inode size of 1024 bytes "small files" would
-be 108k --- and this is ignoring the size of the fsverity header.
-With the header these numbers would be even smaller --- and given that
-the most common use of this will be for APK and executables, using the
-inline data (or inline xattrs) is really not practical.
-
-       	    	       	       	  - Ted
+            Linus
