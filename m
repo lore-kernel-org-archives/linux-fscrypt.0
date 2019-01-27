@@ -1,72 +1,55 @@
-Return-Path: <fstests-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 0/7] xfstests: add fs-verity tests
-Date: Mon, 10 Dec 2018 14:21:35 -0800
-Message-Id: <20181210222142.222342-1-ebiggers@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-ed1-f54.google.com ([209.85.208.54]:42895 "EHLO
+        mail-ed1-f54.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726878AbfA0TpE (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 27 Jan 2019 14:45:04 -0500
+Received: by mail-ed1-f54.google.com with SMTP id y20so11316139edw.9
+        for <linux-fscrypt@vger.kernel.org>; Sun, 27 Jan 2019 11:45:03 -0800 (PST)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: fstests-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
+From: Thibaud Ecarot <thibaud.ecarot@gmail.com>
+Date: Sun, 27 Jan 2019 14:44:51 -0500
+Message-ID: <CA+XEK3=xSuRZJpfPmt0dLn6R-SWyA4h5tY1hEW33zSJLYN758w@mail.gmail.com>
+Subject: Transparent encryption mechanism
+Content-Type: text/plain; charset="UTF-8"
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Add tests for fs-verity, a new feature for read-only file-based
-authenticity protection.  fs-verity will be supported by ext4 and f2fs,
-and perhaps other filesystems later.  Running these tests requires:
+Hello,
 
-- A kernel with the fs-verity patches from
-  https://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git/log/
-  (should be merged in 4.21) and configured with CONFIG_FS_VERITY.
-- The fsverity utility program, which can be installed from
-  https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git/
-- e2fsprogs v1.44.4-2 or later for ext4 tests, or f2fs-tools v1.11.0 or
-  later for f2fs tests.
+I am currently working on a transparent encryption mechanism that I
+can use as a Linux kernel module. I will detail below my goal and how
+I imagined a solution to meet my needs.
 
-Example with kvm-xfstests:
+I wanted to contact you today to have your opinion on my solution and
+to have some ways to follow on the function of the Linux kernel to
+hooked. I am open to any suggestions.
 
-	$ kvm-xfstests -c ext4,f2fs -g verity
+Objective : Transparent encryption mechanism should be able to encrypt
+and decrypt a file on the fly based on ACLs that have been defined by
+a particular user (not necessarily root). The aim is to dispel the
+attack vector by a root. The root account is usually intended for
+administrators who may not have the credentials to see the contents of
+a particular file. To achieve this goal, an authorized user should be
+able to see the contents of a file. For unauthorized users, the file
+will display the encrypted content.
 
-See the file Documentation/filesystem/fsverity.rst in the kernel tree
-for more information about fs-verity.
+My proposal : To achieve this, I think to write a Linux kernel module
+that will create a hook on the call function which opens a file (I do
+not know the name of this function, may be vfs_open). The hook will be
+implemented with ftrace. My idea is to check ACLs before opening a
+file and if there are particular ACLs for that file, I display an
+encrypted file or the decrypted content of the file if the user has
+rights on that file.
 
-Eric Biggers (7):
-  common/verity: add common functions for testing fs-verity
-  generic: test general behavior of verity files
-  generic: test access controls on the fs-verity ioctls
-  generic: test fs-verity descriptor validation
-  generic: test corrupting verity files
-  generic: test that fs-verity is using the correct measurement values
-  generic: test using fs-verity and fscrypt simultaneously
+What do you think about this idea ? I know there are "Linux agents"
+that do this work without being a Linux kernel module but I do not
+know how they work because it does not have to be executed in the
+userspace for security reasons. I am interested to know if you have
+other ideas. Finally, I would like to find a document on the kernel
+functions associated with the interface virtual file system because I
+do not know the function to hooked.
 
- common/config         |   1 +
- common/verity         | 198 ++++++++++++++++++++++++++
- tests/generic/900     | 165 +++++++++++++++++++++
- tests/generic/900.out |  54 +++++++
- tests/generic/901     |  71 ++++++++++
- tests/generic/901.out |  14 ++
- tests/generic/902     | 323 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/902.out | 125 ++++++++++++++++
- tests/generic/903     | 126 ++++++++++++++++
- tests/generic/903.out |  91 ++++++++++++
- tests/generic/904     | 124 ++++++++++++++++
- tests/generic/904.out |   7 +
- tests/generic/905     |  81 +++++++++++
- tests/generic/905.out |  12 ++
- tests/generic/group   |   6 +
- 15 files changed, 1398 insertions(+)
- create mode 100644 common/verity
- create mode 100755 tests/generic/900
- create mode 100644 tests/generic/900.out
- create mode 100755 tests/generic/901
- create mode 100644 tests/generic/901.out
- create mode 100755 tests/generic/902
- create mode 100644 tests/generic/902.out
- create mode 100755 tests/generic/903
- create mode 100644 tests/generic/903.out
- create mode 100755 tests/generic/904
- create mode 100644 tests/generic/904.out
- create mode 100755 tests/generic/905
- create mode 100644 tests/generic/905.out
-
--- 
-2.20.0.rc2.403.gdbc3b29805-goog
+Thanks in advance.
+Thibaud.
