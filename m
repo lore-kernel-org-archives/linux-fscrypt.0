@@ -1,111 +1,74 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-eopbgr700111.outbound.protection.outlook.com ([40.107.70.111]:48960
-        "EHLO NAM04-SN1-obe.outbound.protection.outlook.com"
+Received: from mail-eopbgr680102.outbound.protection.outlook.com ([40.107.68.102]:21472
+        "EHLO NAM04-BN3-obe.outbound.protection.outlook.com"
         rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
-        id S1730901AbfACPbc (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 3 Jan 2019 10:31:32 -0500
-Date: Thu, 3 Jan 2019 10:31:26 -0500
+        id S1725795AbfA2PuZ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 29 Jan 2019 10:50:25 -0500
+Date: Tue, 29 Jan 2019 10:48:39 -0500
 From: "Theodore Y. Ts'o" <tytso@mit.edu>
-Subject: Re: [GIT PULL] fsverity for 4.21-rc
-Message-ID: <20190103153126.GE6908@mit.edu>
-References: <20181231202245.GA13792@mit.edu>
+Subject: Re: Proposal: A new fs-verity interface
+Message-ID: <20190129154839.GA4421@mit.edu>
+References: <20190110051500.GA32361@mit.edu>
+ <20190114234101.GQ27534@dastard>
+ <20190123051017.GA8785@mit.edu>
+ <20190124212544.GS6173@dastard>
+ <CAHk-=wh7jq6U3+ou_FDujB-ipg9JcJAGSjEQ_niCwLG313x6UA@mail.gmail.com>
+ <20190124232237.GH8785@mit.edu>
+ <CAHk-=wjw+tAKu7fM3GwUX9i7LBFuvB=ohqXj+KgQQaW3pCzfxg@mail.gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="us-ascii"
 Content-Disposition: inline
-In-Reply-To: <20181231202245.GA13792@mit.edu>
+In-Reply-To: <CAHk-=wjw+tAKu7fM3GwUX9i7LBFuvB=ohqXj+KgQQaW3pCzfxg@mail.gmail.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: torvalds@linux-foundation.org
-Cc: linux-fscrypt@vger.kernel.org
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@infradead.org>, "Darrick J. Wong" <darrick.wong@oracle.com>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
+On Fri, Jan 25, 2019 at 01:35:05PM +1300, Linus Torvalds wrote:
+> But that's the whole hiding thing. Why do you feel you need to do
+> that? Why not just leave it alone, and leave it visible, and say "hey,
+> the merkle data for file X comes from here".
 
-Ping?
+There are a number of downsides:
 
+*) It's ugly that files that have to live somewhere (e.g., a dot file,
+   some other directory, etc.) in the directory hierarchy, when theyt
+   are fundamentally part of the file that is being protected --- that
+   is, it is file metadata.
 
-On Mon, Dec 31, 2018 at 03:22:45PM -0500, Theodore Y. Ts'o wrote:
-> Hi Linus,
+*) We don't want to allow the files to be deted, since it breaks the
+   protection; that either has to make the original file useful, since
+   the security policy is we can't trust the file --- which might be a
+   privileged APK (think setuid binary), or we have to make the file
+   immutable and it from being deleted.
+
+*) When we delete the original file, userspace now has to manually
+   clean up the Merkle data for the file.
+
+So keeping it hidden is just cleaner.
+
+You're right that making the Merkle data explicit available in some
+form (either via an xattr or a separate file) would make it easier to
+copy the file, but that's not something that is needed in practice.
+So it's an advantage, but it wasn't one that we had considered
+important.  For example for most executables on a desktop, they are
+installed via a package manager, and they are deleted when the package
+is updated.  Or in the case of an Android APK, copying it is not
+something that is done once it is downloaded to the device.
+
+> In fact, if you want to have merkle data for small files (where the
+> merkle data itself is just a  few words), then having it in a separate
+> file and as part of the inode inline data doesn't seem like it's
+> likely any worse (and might be *better*) than having it at some block
+> boundary due to alignment...
 > 
-> Since I didn't get a reply my last e-mail on the thread to you[1], I'm
-> not sure what your current thinking is on fs-verity.  So here's the
-> pull request; please pull if you're OK with this.
-> 
-> [1] https://www.mail-archive.com/linux-kernel@vger.kernel.org/msg1886004.html
-> 
-> Thanks,
-> 
-> 					- Ted
-> 
-> The following changes since commit 7beb01f74415c56f5992922b5b902b45d365e694:
-> 
->   f2fs: clean up f2fs_sb_has_##feature_name (2018-11-26 15:53:55 -0800)
-> 
-> are available in the Git repository at:
-> 
->   git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git tags/fsverity_for_linus
-> 
-> for you to fetch changes up to 50ee9e5d8e3ef15fc4bed781df9a6b2f708230ff:
-> 
->   f2fs: fs-verity support (2018-11-28 18:14:53 -0500)
-> 
-> ----------------------------------------------------------------
-> Add fs-verity support for ext4 and f2fs
-> 
-> ----------------------------------------------------------------
-> Eric Biggers (12):
->       fs-verity: add a documentation file
->       fs-verity: add setup code, UAPI, and Kconfig
->       fs-verity: add MAINTAINERS file entry
->       fs-verity: add data verification hooks for ->readpages()
->       fs-verity: implement FS_IOC_ENABLE_VERITY ioctl
->       fs-verity: implement FS_IOC_MEASURE_VERITY ioctl
->       fs-verity: add SHA-512 support
->       fs-verity: add CRC-32C support
->       fs-verity: support builtin file signatures
->       ext4: add basic fs-verity support
->       ext4: add fs-verity read support
->       f2fs: fs-verity support
-> 
->  Documentation/filesystems/fsverity.rst | 583 ++++++++++++++++++++++++++
->  Documentation/filesystems/index.rst    |  11 +
->  Documentation/ioctl/ioctl-number.txt   |   1 +
->  MAINTAINERS                            |  12 +
->  fs/Kconfig                             |   2 +
->  fs/Makefile                            |   1 +
->  fs/ext4/Kconfig                        |  20 +
->  fs/ext4/ext4.h                         |  22 +-
->  fs/ext4/file.c                         |   6 +
->  fs/ext4/inode.c                        |  11 +
->  fs/ext4/ioctl.c                        |  12 +
->  fs/ext4/readpage.c                     | 209 ++++++++--
->  fs/ext4/super.c                        | 100 ++++-
->  fs/ext4/sysfs.c                        |   6 +
->  fs/f2fs/Kconfig                        |  20 +
->  fs/f2fs/data.c                         |  43 +-
->  fs/f2fs/f2fs.h                         |  17 +-
->  fs/f2fs/file.c                         |  58 +++
->  fs/f2fs/inode.c                        |   3 +-
->  fs/f2fs/super.c                        |  30 ++
->  fs/f2fs/sysfs.c                        |  11 +
->  fs/verity/Kconfig                      |  52 +++
->  fs/verity/Makefile                     |   5 +
->  fs/verity/fsverity_private.h           | 135 ++++++
->  fs/verity/hash_algs.c                  | 115 ++++++
->  fs/verity/ioctl.c                      | 164 ++++++++
->  fs/verity/setup.c                      | 908 +++++++++++++++++++++++++++++++++++++++++
->  fs/verity/signature.c                  | 187 +++++++++
->  fs/verity/verify.c                     | 298 ++++++++++++++
->  include/linux/fs.h                     |   9 +
->  include/linux/fsverity.h               | 112 +++++
->  include/uapi/linux/fsverity.h          |  98 +++++
->  32 files changed, 3219 insertions(+), 42 deletions(-)
->  create mode 100644 Documentation/filesystems/fsverity.rst
->  create mode 100644 fs/verity/Kconfig
->  create mode 100644 fs/verity/Makefile
->  create mode 100644 fs/verity/fsverity_private.h
->  create mode 100644 fs/verity/hash_algs.c
->  create mode 100644 fs/verity/ioctl.c
->  create mode 100644 fs/verity/setup.c
->  create mode 100644 fs/verity/signature.c
->  create mode 100644 fs/verity/verify.c
->  create mode 100644 include/linux/fsverity.h
->  create mode 100644 include/uapi/linux/fsverity.h
+> Hmm?
+
+The default inode size is 256; and in that case "small files" is less
+than 12k.  With an ext4 inode size of 1024 bytes "small files" would
+be 108k --- and this is ignoring the size of the fsverity header.
+With the header these numbers would be even smaller --- and given that
+the most common use of this will be for APK and executables, using the
+inline data (or inline xattrs) is really not practical.
+
+       	    	       	       	  - Ted
