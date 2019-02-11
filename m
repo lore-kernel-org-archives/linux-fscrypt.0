@@ -1,15 +1,19 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:54274 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726121AbfBTGyg (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 20 Feb 2019 01:54:36 -0500
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v3 00/18] fscrypt: key management improvements
-Date: Tue, 19 Feb 2019 22:52:31 -0800
-Message-Id: <20190220065249.32099-1-ebiggers@kernel.org>
+Date: Mon, 11 Feb 2019 09:27:18 -0800
+Message-Id: <20190211172738.4633-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
+Subject: [f2fs-dev] [RFC PATCH v2 00/20] fscrypt: key management improvements
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
 To: linux-fscrypt@vger.kernel.org
 Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
@@ -77,21 +81,16 @@ solved without having to restrict the fscrypt API to root only.
 
 The patchset is organized as follows:
 
-- Patches 1-10 add new ioctls FS_IOC_ADD_ENCRYPTION_KEY,
+- Patches 1-12 add new ioctls FS_IOC_ADD_ENCRYPTION_KEY,
   FS_IOC_REMOVE_ENCRYPTION_KEY, and FS_IOC_GET_ENCRYPTION_KEY_STATUS.
   Adding a key logically "unlocks" all files on the filesystem that are
   protected by that key; removing a key "locks" them again.
 
-- Patches 11-14 add support for v2 encryption policies.
+- Patches 13-16 add support for v2 encryption policies.
 
-- Patches 15-17 wire up the new ioctls to ext4, f2fs, and ubifs.
+- Patches 17-19 wire up the new ioctls to ext4, f2fs, and ubifs.
 
-- Patch 18 updates the fscrypt documentation for all the changes.
-
-Changes v2 => v3:
-    - Use ->drop_inode() to trigger the inode eviction during/after
-      FS_IOC_REMOVE_ENCRYPTION_KEY, as suggested by Dave Chinner.
-    - A few small cleanups.
+- Patch 20 updates the fscrypt documentation for all the changes.
 
 v1 of this patchset was sent in October 2017 with title "fscrypt:
 filesystem-level keyring and v2 policy support".  This revived version
@@ -103,7 +102,7 @@ implement the semantics of the DIRECT_KEY encryption policy flag.
 This applies to the fscrypt.git tree.  You can also get it from git at:
 
 	Repository:   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
-	Branch:       fscrypt-key-mgmt-improvements-v3
+	Branch:       fscrypt-key-mgmt-improvements-v2
 
 I've started writing xfstests for the new APIs.  So far they cover basic
 functionality.  They can be found at:
@@ -134,7 +133,7 @@ ioctls and eventually to v2 encryption policies.  Work-in-progress,
 proof-of-concept changes by Satya Tangirala for AOSP can be found at
 https://android-review.googlesource.com/q/topic:fscrypt-key-mgmt-improvements
 
-Eric Biggers (18):
+Eric Biggers (20):
   fs, fscrypt: move uapi definitions to new header <linux/fscrypt.h>
   fscrypt: use FSCRYPT_ prefix for uapi constants
   fscrypt: use FSCRYPT_* definitions, not FS_*
@@ -142,6 +141,8 @@ Eric Biggers (18):
   fscrypt: add ->ci_inode to fscrypt_info
   fscrypt: refactor v1 policy key setup into keysetup_legacy.c
   fscrypt: add FS_IOC_ADD_ENCRYPTION_KEY ioctl
+  fs/inode.c: export inode_lru_list_del()
+  fs/inode.c: rename and export dispose_list()
   fs/dcache.c: add shrink_dcache_inode()
   fscrypt: add FS_IOC_REMOVE_ENCRYPTION_KEY ioctl
   fscrypt: add FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
@@ -154,33 +155,31 @@ Eric Biggers (18):
   ubifs: wire up new fscrypt ioctls
   fscrypt: document the new ioctls and policy version
 
- Documentation/filesystems/fscrypt.rst | 670 +++++++++++++++----
+ Documentation/filesystems/fscrypt.rst | 668 ++++++++++++++----
  MAINTAINERS                           |   1 +
  fs/crypto/Kconfig                     |   2 +
  fs/crypto/Makefile                    |  10 +-
  fs/crypto/crypto.c                    |  14 +-
  fs/crypto/fname.c                     |   5 +-
- fs/crypto/fscrypt_private.h           | 364 ++++++++--
- fs/crypto/hkdf.c                      | 188 ++++++
- fs/crypto/keyinfo.c                   | 592 -----------------
- fs/crypto/keyring.c                   | 911 ++++++++++++++++++++++++++
- fs/crypto/keysetup.c                  | 540 +++++++++++++++
- fs/crypto/keysetup_legacy.c           | 340 ++++++++++
+ fs/crypto/fscrypt_private.h           | 357 ++++++++--
+ fs/crypto/hkdf.c                      | 188 +++++
+ fs/crypto/keyinfo.c                   | 592 ----------------
+ fs/crypto/keyring.c                   | 950 ++++++++++++++++++++++++++
+ fs/crypto/keysetup.c                  | 504 ++++++++++++++
+ fs/crypto/keysetup_legacy.c           | 342 ++++++++++
  fs/crypto/policy.c                    | 388 ++++++++---
  fs/dcache.c                           |  32 +
  fs/ext4/ioctl.c                       |  24 +
- fs/ext4/super.c                       |   3 +
  fs/f2fs/file.c                        |  46 ++
- fs/f2fs/super.c                       |   2 +
+ fs/inode.c                            |  22 +-
  fs/super.c                            |   3 +
  fs/ubifs/ioctl.c                      |  24 +-
- fs/ubifs/super.c                      |   3 +
  include/linux/dcache.h                |   1 +
- include/linux/fs.h                    |   1 +
- include/linux/fscrypt.h               |  43 +-
+ include/linux/fs.h                    |   3 +
+ include/linux/fscrypt.h               |  37 +-
  include/uapi/linux/fs.h               |  54 +-
  include/uapi/linux/fscrypt.h          | 163 +++++
- 26 files changed, 3496 insertions(+), 928 deletions(-)
+ 24 files changed, 3490 insertions(+), 940 deletions(-)
  create mode 100644 fs/crypto/hkdf.c
  delete mode 100644 fs/crypto/keyinfo.c
  create mode 100644 fs/crypto/keyring.c
@@ -190,3 +189,10 @@ Eric Biggers (18):
 
 -- 
 2.20.1
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
