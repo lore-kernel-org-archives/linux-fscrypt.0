@@ -1,371 +1,204 @@
-Return-Path: <SRS0=THX2=QZ=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [RFC PATCH 10/10] ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
-Date: Mon, 18 Feb 2019 15:34:33 +0530
-In-Reply-To: <20190218100433.20048-1-chandan@linux.ibm.com>
-References: <20190218100433.20048-1-chandan@linux.ibm.com>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Eric Biggers <ebiggers@kernel.org>
+Date: Mon, 11 Feb 2019 09:27:30 -0800
+Message-Id: <20190211172738.4633-13-ebiggers@kernel.org>
+In-Reply-To: <20190211172738.4633-1-ebiggers@kernel.org>
+References: <20190211172738.4633-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190218100433.20048-11-chandan@linux.ibm.com>
-To: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
+Subject: [f2fs-dev] [RFC PATCH v2 12/20] fscrypt: add
+ FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Now that do_mpage_readpage() is "post read process" aware, this commit
-gets ext4_readpage[s] to use mpage_readpage[s] and deletes ext4's
-readpage.c since the associated functionality is not required anymore.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Add a new fscrypt ioctl, FS_IOC_GET_ENCRYPTION_KEY_STATUS.  Given a key
+specified by 'struct fscrypt_key_specifier' (the same way a key is
+specified for the other fscrypt key management ioctls), it returns
+status information in a 'struct fscrypt_get_key_status_arg'.
+
+The main motivation for this is that applications need to be able to
+check whether an encrypted directory is "unlocked" or not, so that they
+can add the key if it is not, and avoid adding the key (which may
+involve prompting the user for a passphrase) if it already is.
+
+It's possible to use some workarounds such as checking whether opening a
+regular file fails with ENOKEY, or checking whether the filenames "look
+like gibberish" or not.  However, no workaround is usable in all cases.
+
+Like the other key management ioctls, the keyrings syscalls may seem at
+first to be a good fit for this.  Unfortunately, they are not.  Even if
+we exposed the keyring ID of the ->s_master_keys keyring and gave
+everyone Search permission on it (note: currently the keyrings
+permission system would also allow everyone to "invalidate" the keyring
+too), the fscrypt keys have an additional state that doesn't map cleanly
+to the keyrings API: the secret can be removed, but we can be still
+tracking the files that were using the key, and the removal can be
+re-attempted or the secret added again.
+
+After later patches, some applications will also need a way to determine
+whether a key was added by the current user vs. by some other user.
+Reserved fields are included in fscrypt_get_key_status_arg for this and
+other future extensions.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/Makefile   |   2 +-
- fs/ext4/inode.c    |   5 +-
- fs/ext4/readpage.c | 302 ---------------------------------------------
- 3 files changed, 3 insertions(+), 306 deletions(-)
- delete mode 100644 fs/ext4/readpage.c
+ fs/crypto/keyring.c          | 60 ++++++++++++++++++++++++++++++++++++
+ include/linux/fscrypt.h      |  7 +++++
+ include/uapi/linux/fscrypt.h | 15 +++++++++
+ 3 files changed, 82 insertions(+)
 
-diff --git a/fs/ext4/Makefile b/fs/ext4/Makefile
-index 8fdfcd3c3e04..7c38803a808d 100644
---- a/fs/ext4/Makefile
-+++ b/fs/ext4/Makefile
-@@ -8,7 +8,7 @@ obj-$(CONFIG_EXT4_FS) += ext4.o
- ext4-y	:= balloc.o bitmap.o block_validity.o dir.o ext4_jbd2.o extents.o \
- 		extents_status.o file.o fsmap.o fsync.o hash.o ialloc.o \
- 		indirect.o inline.o inode.o ioctl.o mballoc.o migrate.o \
--		mmp.o move_extent.o namei.o page-io.o readpage.o resize.o \
-+		mmp.o move_extent.o namei.o page-io.o resize.o \
- 		super.o symlink.o sysfs.o xattr.o xattr_trusted.o xattr_user.o
+diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+index 82d272c20969..73be8bda49bd 100644
+--- a/fs/crypto/keyring.c
++++ b/fs/crypto/keyring.c
+@@ -11,6 +11,7 @@
+  *
+  * - FS_IOC_ADD_ENCRYPTION_KEY: add a key
+  * - FS_IOC_REMOVE_ENCRYPTION_KEY: remove a key
++ * - FS_IOC_GET_ENCRYPTION_KEY_STATUS: get key status
+  */
  
- ext4-$(CONFIG_EXT4_FS_POSIX_ACL)	+= acl.o
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index b1d7ddd70eee..777118d7b3cd 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3355,8 +3355,7 @@ static int ext4_readpage(struct file *file, struct page *page)
- 		ret = ext4_readpage_inline(inode, page);
- 
- 	if (ret == -EAGAIN)
--		return ext4_mpage_readpages(page->mapping, NULL, page, 1,
--						false);
-+		return mpage_readpage(page, ext4_get_block);
- 
- 	return ret;
+ #include <linux/key-type.h>
+@@ -515,6 +516,65 @@ int fscrypt_ioctl_remove_key(struct file *filp, const void __user *uarg)
  }
-@@ -3371,7 +3370,7 @@ ext4_readpages(struct file *file, struct address_space *mapping,
- 	if (ext4_has_inline_data(inode))
- 		return 0;
+ EXPORT_SYMBOL_GPL(fscrypt_ioctl_remove_key);
  
--	return ext4_mpage_readpages(mapping, pages, NULL, nr_pages, true);
-+	return mpage_readpages(mapping, pages, nr_pages, ext4_get_block);
++/*
++ * Retrieve the status of an fscrypt master encryption key.
++ *
++ * We set ->status to indicate whether the key is absent, present, or
++ * incompletely removed.  "Incompletely removed" means that the master key
++ * secret has been removed, but some files which had been unlocked with it are
++ * still in use.  This field allows applications to easily determine the state
++ * of an encrypted directory without using a hack such as trying to open a
++ * regular file in it (which can confuse the "incompletely removed" state with
++ * absent or present).
++ */
++int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
++{
++	struct super_block *sb = file_inode(filp)->i_sb;
++	struct fscrypt_get_key_status_arg arg;
++	struct key *key;
++	struct fscrypt_master_key *mk;
++	int err;
++
++	if (copy_from_user(&arg, uarg, sizeof(arg)))
++		return -EFAULT;
++
++	if (memchr_inv(arg.__reserved, 0, sizeof(arg.__reserved)))
++		return -EINVAL;
++
++	if (!valid_key_spec(&arg.key_spec))
++		return -EINVAL;
++
++	memset(arg.__out_reserved, 0, sizeof(arg.__out_reserved));
++
++	key = fscrypt_find_master_key(sb, &arg.key_spec);
++	if (IS_ERR(key)) {
++		if (key != ERR_PTR(-ENOKEY))
++			return PTR_ERR(key);
++		arg.status = FSCRYPT_KEY_STATUS_ABSENT;
++		err = 0;
++		goto out;
++	}
++	mk = key->payload.data[0];
++	down_read(&key->sem);
++
++	if (!is_master_key_secret_present(&mk->mk_secret)) {
++		arg.status = FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED;
++		err = 0;
++		goto out_release_key;
++	}
++
++	arg.status = FSCRYPT_KEY_STATUS_PRESENT;
++	err = 0;
++out_release_key:
++	up_read(&key->sem);
++	key_put(key);
++out:
++	if (!err && copy_to_user(uarg, &arg, sizeof(arg)))
++		err = -EFAULT;
++	return err;
++}
++EXPORT_SYMBOL_GPL(fscrypt_ioctl_get_key_status);
++
+ int __init fscrypt_init_keyring(void)
+ {
+ 	return register_key_type(&key_type_fscrypt);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index a8fabae9a5fe..dace3fd1bf19 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -115,6 +115,7 @@ extern int fscrypt_inherit_context(struct inode *, struct inode *,
+ /* keyring.c */
+ extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
+ extern int fscrypt_ioctl_remove_key(struct file *filp, const void __user *arg);
++extern int fscrypt_ioctl_get_key_status(struct file *filp, void __user *arg);
+ 
+ /* keysetup.c */
+ extern int fscrypt_get_encryption_info(struct inode *);
+@@ -339,6 +340,12 @@ static inline void fscrypt_put_encryption_info(struct inode *inode)
+ 	return;
  }
  
- static void ext4_invalidatepage(struct page *page, unsigned int offset,
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-deleted file mode 100644
-index c7dbab35deaa..000000000000
---- a/fs/ext4/readpage.c
-+++ /dev/null
-@@ -1,302 +0,0 @@
--// SPDX-License-Identifier: GPL-2.0
--/*
-- * linux/fs/ext4/readpage.c
-- *
-- * Copyright (C) 2002, Linus Torvalds.
-- * Copyright (C) 2015, Google, Inc.
-- *
-- * This was originally taken from fs/mpage.c
-- *
-- * The intent is the ext4_mpage_readpages() function here is intended
-- * to replace mpage_readpages() in the general case, not just for
-- * encrypted files.  It has some limitations (see below), where it
-- * will fall back to read_block_full_page(), but these limitations
-- * should only be hit when page_size != block_size.
-- *
-- * This will allow us to attach a callback function to support ext4
-- * encryption.
-- *
-- * If anything unusual happens, such as:
-- *
-- * - encountering a page which has buffers
-- * - encountering a page which has a non-hole after a hole
-- * - encountering a page with non-contiguous blocks
-- *
-- * then this code just gives up and calls the buffer_head-based read function.
-- * It does handle a page which has holes at the end - that is a common case:
-- * the end-of-file on blocksize < PAGE_SIZE setups.
-- *
-- */
--
--#include <linux/kernel.h>
--#include <linux/export.h>
--#include <linux/mm.h>
--#include <linux/kdev_t.h>
--#include <linux/gfp.h>
--#include <linux/bio.h>
--#include <linux/fs.h>
--#include <linux/buffer_head.h>
--#include <linux/blkdev.h>
--#include <linux/highmem.h>
--#include <linux/prefetch.h>
--#include <linux/mpage.h>
--#include <linux/writeback.h>
--#include <linux/backing-dev.h>
--#include <linux/pagevec.h>
--#include <linux/cleancache.h>
--#include <linux/post_read_process.h>
--
--#include "ext4.h"
--
--static inline bool ext4_bio_encrypted(struct bio *bio)
--{
--#ifdef CONFIG_FS_ENCRYPTION
--	return unlikely(bio->bi_private != NULL);
--#else
--	return false;
--#endif
--}
--
--/*
-- * I/O completion handler for multipage BIOs.
-- *
-- * The mpage code never puts partial pages into a BIO (except for end-of-file).
-- * If a page does not map to a contiguous run of blocks then it simply falls
-- * back to block_read_full_page().
-- *
-- * Why is this?  If a page's completion depends on a number of different BIOs
-- * which can complete in any order (or at the same time) then determining the
-- * status of that page is hard.  See end_buffer_async_read() for the details.
-- * There is no point in duplicating all that complexity.
-- */
--static void mpage_end_io(struct bio *bio)
--{
--	if (bio_post_read_required(bio)) {
--		struct bio_post_read_ctx *ctx = bio->bi_private;
--
--		bio_post_read_processing(ctx);
--		return;
--	}
--	end_bio_post_read_processing(bio);
--}
--
--static inline loff_t ext4_readpage_limit(struct inode *inode)
--{
--#ifdef CONFIG_FS_VERITY
--	if (IS_VERITY(inode)) {
--		if (inode->i_verity_info)
--			/* limit to end of metadata region */
--			return fsverity_full_i_size(inode);
--		/*
--		 * fsverity_info is currently being set up and no user reads are
--		 * allowed yet.  It's easiest to just not enforce a limit yet.
--		 */
--		return inode->i_sb->s_maxbytes;
--	}
--#endif
--	return i_size_read(inode);
--}
--
--int ext4_mpage_readpages(struct address_space *mapping,
--			 struct list_head *pages, struct page *page,
--			 unsigned nr_pages, bool is_readahead)
--{
--	struct bio *bio = NULL;
--	sector_t last_block_in_bio = 0;
--
--	struct inode *inode = mapping->host;
--	const unsigned blkbits = inode->i_blkbits;
--	const unsigned blocks_per_page = PAGE_SIZE >> blkbits;
--	const unsigned blocksize = 1 << blkbits;
--	sector_t block_in_file;
--	sector_t last_block;
--	sector_t last_block_in_file;
--	sector_t blocks[MAX_BUF_PER_PAGE];
--	unsigned page_block;
--	struct block_device *bdev = inode->i_sb->s_bdev;
--	int length;
--	unsigned relative_block = 0;
--	struct ext4_map_blocks map;
--
--	map.m_pblk = 0;
--	map.m_lblk = 0;
--	map.m_len = 0;
--	map.m_flags = 0;
--
--	for (; nr_pages; nr_pages--) {
--		int fully_mapped = 1;
--		unsigned first_hole = blocks_per_page;
--
--		prefetchw(&page->flags);
--		if (pages) {
--			page = lru_to_page(pages);
--			list_del(&page->lru);
--			if (add_to_page_cache_lru(page, mapping, page->index,
--				  readahead_gfp_mask(mapping)))
--				goto next_page;
--		}
--
--		if (page_has_buffers(page))
--			goto confused;
--
--		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
--		last_block = block_in_file + nr_pages * blocks_per_page;
--		last_block_in_file = (ext4_readpage_limit(inode) +
--				      blocksize - 1) >> blkbits;
--		if (last_block > last_block_in_file)
--			last_block = last_block_in_file;
--		page_block = 0;
--
--		/*
--		 * Map blocks using the previous result first.
--		 */
--		if ((map.m_flags & EXT4_MAP_MAPPED) &&
--		    block_in_file > map.m_lblk &&
--		    block_in_file < (map.m_lblk + map.m_len)) {
--			unsigned map_offset = block_in_file - map.m_lblk;
--			unsigned last = map.m_len - map_offset;
--
--			for (relative_block = 0; ; relative_block++) {
--				if (relative_block == last) {
--					/* needed? */
--					map.m_flags &= ~EXT4_MAP_MAPPED;
--					break;
--				}
--				if (page_block == blocks_per_page)
--					break;
--				blocks[page_block] = map.m_pblk + map_offset +
--					relative_block;
--				page_block++;
--				block_in_file++;
--			}
--		}
--
--		/*
--		 * Then do more ext4_map_blocks() calls until we are
--		 * done with this page.
--		 */
--		while (page_block < blocks_per_page) {
--			if (block_in_file < last_block) {
--				map.m_lblk = block_in_file;
--				map.m_len = last_block - block_in_file;
--
--				if (ext4_map_blocks(NULL, inode, &map, 0) < 0) {
--				set_error_page:
--					SetPageError(page);
--					zero_user_segment(page, 0,
--							  PAGE_SIZE);
--					unlock_page(page);
--					goto next_page;
--				}
--			}
--			if ((map.m_flags & EXT4_MAP_MAPPED) == 0) {
--				fully_mapped = 0;
--				if (first_hole == blocks_per_page)
--					first_hole = page_block;
--				page_block++;
--				block_in_file++;
--				continue;
--			}
--			if (first_hole != blocks_per_page)
--				goto confused;		/* hole -> non-hole */
--
--			/* Contiguous blocks? */
--			if (page_block && blocks[page_block-1] != map.m_pblk-1)
--				goto confused;
--			for (relative_block = 0; ; relative_block++) {
--				if (relative_block == map.m_len) {
--					/* needed? */
--					map.m_flags &= ~EXT4_MAP_MAPPED;
--					break;
--				} else if (page_block == blocks_per_page)
--					break;
--				blocks[page_block] = map.m_pblk+relative_block;
--				page_block++;
--				block_in_file++;
--			}
--		}
--		if (first_hole != blocks_per_page) {
--			zero_user_segment(page, first_hole << blkbits,
--					  PAGE_SIZE);
--			if (first_hole == 0) {
--				if (!fsverity_check_hole(inode, page))
--					goto set_error_page;
--				SetPageUptodate(page);
--				unlock_page(page);
--				goto next_page;
--			}
--		} else if (fully_mapped) {
--			SetPageMappedToDisk(page);
--		}
--		if (fully_mapped && blocks_per_page == 1 &&
--		    !PageUptodate(page) && cleancache_get_page(page) == 0) {
--			SetPageUptodate(page);
--			goto confused;
--		}
--
--		/*
--		 * This page will go to BIO.  Do we need to send this
--		 * BIO off first?
--		 */
--		if (bio && (last_block_in_bio != blocks[0] - 1)) {
--		submit_and_realloc:
--			submit_bio(bio);
--			bio = NULL;
--		}
--		if (bio == NULL) {
--			struct bio_post_read_ctx *ctx;
--			unsigned int op_flags = 0;
--
--			bio = bio_alloc(GFP_KERNEL,
--				min_t(int, nr_pages, BIO_MAX_PAGES));
--			if (!bio)
--				goto set_error_page;
--			ctx = get_bio_post_read_ctx(inode, bio, page->index);
--			if (IS_ERR(ctx)) {
--				bio_put(bio);
--				goto set_error_page;
--			}
--			bio_set_dev(bio, bdev);
--			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
--			bio->bi_end_io = mpage_end_io;
--			bio->bi_private = ctx;
--
--			if (is_readahead)
--				op_flags |= REQ_RAHEAD;
--
--			if (ctx)
--				op_flags |= REQ_POST_READ_PROC;
--
--			bio_set_op_attrs(bio, REQ_OP_READ, op_flags);
--		}
--
--		length = first_hole << blkbits;
--		if (bio_add_page(bio, page, length, 0) < length)
--			goto submit_and_realloc;
--
--		if (((map.m_flags & EXT4_MAP_BOUNDARY) &&
--		     (relative_block == map.m_len)) ||
--		    (first_hole != blocks_per_page)) {
--			submit_bio(bio);
--			bio = NULL;
--		} else
--			last_block_in_bio = blocks[blocks_per_page - 1];
--		goto next_page;
--	confused:
--		if (bio) {
--			submit_bio(bio);
--			bio = NULL;
--		}
--		if (!PageUptodate(page))
--			block_read_full_page(page, ext4_get_block);
--		else
--			unlock_page(page);
--	next_page:
--		if (pages)
--			put_page(page);
--	}
--	BUG_ON(pages && !list_empty(pages));
--	if (bio)
--		submit_bio(bio);
--	return 0;
--}
++static inline int fscrypt_ioctl_get_key_status(struct file *filp,
++					       void __user *arg)
++{
++	return -EOPNOTSUPP;
++}
++
+  /* fname.c */
+ static inline int fscrypt_setup_filename(struct inode *dir,
+ 					 const struct qstr *iname,
+diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+index 3302a407131e..042e70a4ff7e 100644
+--- a/include/uapi/linux/fscrypt.h
++++ b/include/uapi/linux/fscrypt.h
+@@ -71,11 +71,26 @@ struct fscrypt_remove_key_arg {
+ 	__u32 __reserved[6];
+ };
+ 
++/* Struct passed to FS_IOC_GET_ENCRYPTION_KEY_STATUS */
++struct fscrypt_get_key_status_arg {
++	/* input */
++	struct fscrypt_key_specifier key_spec;
++	__u32 __reserved[6];
++
++	/* output */
++#define FSCRYPT_KEY_STATUS_ABSENT		1
++#define FSCRYPT_KEY_STATUS_PRESENT		2
++#define FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED	3
++	__u32 status;
++	__u32 __out_reserved[15];
++};
++
+ #define FS_IOC_SET_ENCRYPTION_POLICY	  _IOR('f', 19, struct fscrypt_policy)
+ #define FS_IOC_GET_ENCRYPTION_PWSALT	  _IOW('f', 20, __u8[16])
+ #define FS_IOC_GET_ENCRYPTION_POLICY	  _IOW('f', 21, struct fscrypt_policy)
+ #define FS_IOC_ADD_ENCRYPTION_KEY	 _IOWR('f', 23, struct fscrypt_add_key_arg)
+ #define FS_IOC_REMOVE_ENCRYPTION_KEY	  _IOW('f', 24, struct fscrypt_remove_key_arg)
++#define FS_IOC_GET_ENCRYPTION_KEY_STATUS _IOWR('f', 25, struct fscrypt_get_key_status_arg)
+ 
+ /**********************************************************************/
+ 
 -- 
-2.19.1
+2.20.1
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
