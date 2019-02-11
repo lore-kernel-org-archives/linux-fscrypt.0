@@ -1,47 +1,115 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH] KEYS: user: Align the payload buffer
-Date: Mon, 14 Jan 2019 19:37:16 -0800
-Message-Id: <20190115033716.18380-1-ebiggers@kernel.org>
+Date: Mon, 11 Feb 2019 09:27:36 -0800
+Message-Id: <20190211172738.4633-19-ebiggers@kernel.org>
+In-Reply-To: <20190211172738.4633-1-ebiggers@kernel.org>
+References: <20190211172738.4633-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: keyrings-owner@vger.kernel.org
-To: keyrings@vger.kernel.org, David Howells <dhowells@redhat.com>
-Cc: Aaro Koskinen <aaro.koskinen@iki.fi>, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
+Subject: [f2fs-dev] [RFC PATCH v2 18/20] f2fs: wire up new fscrypt ioctls
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Align the payload of "user" and "logon" keys so that users of the
-keyrings service can access it as a struct that requires more than
-2-byte alignment.  fscrypt currently does this which results in the read
-of fscrypt_key::size being misaligned as it needs 4-byte alignment.
+Wire up the new ioctls for adding and removing fscrypt keys to/from the
+filesystem, and the new ioctl for retrieving v2 encryption policies.
 
-Align to __alignof__(u64) rather than __alignof__(long) since in the
-future it's conceivable that people would use structs beginning with
-u64, which on some platforms would require more than 'long' alignment.
+For more details see Documentation/filesystems/fscrypt.rst, as well as
+the fscrypt patches that added the implementation of these ioctls.
 
-Reported-by: Aaro Koskinen <aaro.koskinen@iki.fi>
-Fixes: 2aa349f6e37c ("[PATCH] Keys: Export user-defined keyring operations")
-Fixes: 88bd6ccdcdd6 ("ext4 crypto: add encryption key management facilities")
-Cc: stable@vger.kernel.org
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- include/keys/user-type.h | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ fs/f2fs/file.c | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 46 insertions(+)
 
-diff --git a/include/keys/user-type.h b/include/keys/user-type.h
-index e098cbe27db54..12babe9915944 100644
---- a/include/keys/user-type.h
-+++ b/include/keys/user-type.h
-@@ -31,7 +31,7 @@
- struct user_key_payload {
- 	struct rcu_head	rcu;		/* RCU destructor */
- 	unsigned short	datalen;	/* length of this data */
--	char		data[0];	/* actual data */
-+	char		data[0] __aligned(__alignof__(u64)); /* actual data */
- };
+diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+index ba5954f41e14..3e6da48e0530 100644
+--- a/fs/f2fs/file.c
++++ b/fs/f2fs/file.c
+@@ -2093,6 +2093,40 @@ static int f2fs_ioc_get_encryption_pwsalt(struct file *filp, unsigned long arg)
+ 	return err;
+ }
  
- extern struct key_type key_type_user;
++static int f2fs_ioc_get_encryption_policy_ex(struct file *filp,
++					     unsigned long arg)
++{
++	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
++		return -EOPNOTSUPP;
++
++	return fscrypt_ioctl_get_policy_ex(filp, (void __user *)arg);
++}
++
++static int f2fs_ioc_add_encryption_key(struct file *filp, unsigned long arg)
++{
++	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
++		return -EOPNOTSUPP;
++
++	return fscrypt_ioctl_add_key(filp, (void __user *)arg);
++}
++
++static int f2fs_ioc_remove_encryption_key(struct file *filp, unsigned long arg)
++{
++	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
++		return -EOPNOTSUPP;
++
++	return fscrypt_ioctl_remove_key(filp, (const void __user *)arg);
++}
++
++static int f2fs_ioc_get_encryption_key_status(struct file *filp,
++					      unsigned long arg)
++{
++	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
++		return -EOPNOTSUPP;
++
++	return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
++}
++
+ static int f2fs_ioc_gc(struct file *filp, unsigned long arg)
+ {
+ 	struct inode *inode = file_inode(filp);
+@@ -2998,6 +3032,14 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 		return f2fs_ioc_get_encryption_policy(filp, arg);
+ 	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
+ 		return f2fs_ioc_get_encryption_pwsalt(filp, arg);
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		return f2fs_ioc_get_encryption_policy_ex(filp, arg);
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		return f2fs_ioc_add_encryption_key(filp, arg);
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		return f2fs_ioc_remove_encryption_key(filp, arg);
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		return f2fs_ioc_get_encryption_key_status(filp, arg);
+ 	case F2FS_IOC_GARBAGE_COLLECT:
+ 		return f2fs_ioc_gc(filp, arg);
+ 	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
+@@ -3117,6 +3159,10 @@ long f2fs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 	case F2FS_IOC_SET_ENCRYPTION_POLICY:
+ 	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
+ 	case F2FS_IOC_GET_ENCRYPTION_POLICY:
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+ 	case F2FS_IOC_GARBAGE_COLLECT:
+ 	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
+ 	case F2FS_IOC_WRITE_CHECKPOINT:
 -- 
 2.20.1
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
