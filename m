@@ -1,12 +1,12 @@
 Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 11 Feb 2019 09:27:23 -0800
-Message-Id: <20190211172738.4633-6-ebiggers@kernel.org>
+Date: Mon, 11 Feb 2019 09:27:22 -0800
+Message-Id: <20190211172738.4633-5-ebiggers@kernel.org>
 In-Reply-To: <20190211172738.4633-1-ebiggers@kernel.org>
 References: <20190211172738.4633-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [RFC PATCH v2 05/20] fscrypt: add ->ci_inode to
- fscrypt_info
+Subject: [f2fs-dev] [RFC PATCH v2 04/20] fs: add ->s_master_keys to struct
+ super_block
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
  <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
@@ -23,53 +23,60 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add an inode back-pointer to 'struct fscrypt_info', such that
-inode->i_crypt_info->ci_inode == inode.
+Add an ->s_master_keys keyring to 'struct super_block'.  New fscrypt
+ioctls will allow adding and removing encryption keys from this keyring.
+This will enable solving multiple interrelated problems with how fscrypt
+keys are provided and managed currently, including:
 
-This will be useful for:
+- Making the key status (which is currently per-process) match the
+  filesystem-level status of which encrypted files are "unlocked".
 
-1. Evicting the inodes when a fscrypt key is removed, since we'll track
-   the inodes using a given key by linking their fscrypt_infos together,
-   rather than the inodes directly.  This avoids bloating 'struct inode'
-   with a new list_head.
+- Supporting a proper API to remove encryption keys, "locking" the
+  corresponding encrypted files.
 
-2. Simplifying the per-file key setup, since the inode pointer won't
-   have to be passed around everywhere just in case something goes wrong
-   and it's needed for fscrypt_warn().
+- Caching an HMAC transform for each master key, allowing the use of
+  HKDF while still retaining good performance.
+
+- Preventing denial of service via keyctl_invalidate().
+
+Similar to the existing ->s_cop, the keyring is added to the VFS-level
+superblock struct rather than separately to the ext4, f2fs, and ubifs
+superblock structs so that it can be used by the shared code in
+fs/crypto/.  To minimize overhead, the keyring will only be allocated if
+userspace actually adds a key; otherwise will stay NULL.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fscrypt_private.h | 3 +++
- fs/crypto/keyinfo.c         | 2 ++
- 2 files changed, 5 insertions(+)
+ fs/super.c         | 3 +++
+ include/linux/fs.h | 1 +
+ 2 files changed, 4 insertions(+)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 52e09ef40bfa..ac24edfc297f 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -73,6 +73,9 @@ struct fscrypt_info {
- 	 */
- 	struct fscrypt_mode *ci_mode;
- 
-+	/* Back-pointer to the inode */
-+	struct inode *ci_inode;
-+
- 	/*
- 	 * If non-NULL, then this inode uses a master key directly rather than a
- 	 * derived key, and ci_ctfm will equal ci_master_key->mk_ctfm.
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index a8c1e886b0bc..6c1e675d4eef 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -542,6 +542,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (!crypt_info)
- 		return -ENOMEM;
- 
-+	crypt_info->ci_inode = inode;
-+
- 	crypt_info->ci_flags = ctx.flags;
- 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
- 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
+diff --git a/fs/super.c b/fs/super.c
+index 48e25eba8465..7ca05dda905c 100644
+--- a/fs/super.c
++++ b/fs/super.c
+@@ -291,6 +291,9 @@ static void __put_super(struct super_block *s)
+ 		security_sb_free(s);
+ 		put_user_ns(s->s_user_ns);
+ 		kfree(s->s_subtype);
++#ifdef CONFIG_FS_ENCRYPTION
++		key_put(s->s_master_keys);
++#endif
+ 		call_rcu(&s->rcu, destroy_super_rcu);
+ 	}
+ }
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index ba7889bb9ef6..70d929ac89f9 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -1405,6 +1405,7 @@ struct super_block {
+ 	const struct xattr_handler **s_xattr;
+ #ifdef CONFIG_FS_ENCRYPTION
+ 	const struct fscrypt_operations	*s_cop;
++	struct key		*s_master_keys; /* master crypto keys in use */
+ #endif
+ 	struct hlist_bl_head	s_roots;	/* alternate root dentries for NFS */
+ 	struct list_head	s_mounts;	/* list of mounts; _not_ for fs use */
 -- 
 2.20.1
 
