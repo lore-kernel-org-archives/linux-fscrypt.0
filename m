@@ -1,12 +1,17 @@
 Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Date: Tue, 12 Feb 2019 10:42:10 -0800
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Tue, 19 Feb 2019 22:52:33 -0800
-Message-Id: <20190220065249.32099-3-ebiggers@kernel.org>
-In-Reply-To: <20190220065249.32099-1-ebiggers@kernel.org>
-References: <20190220065249.32099-1-ebiggers@kernel.org>
+Message-ID: <20190212184209.GA3373@gmail.com>
+References: <20190207031101.GA7387@mit.edu>
+ <CAHk-=wh2j+Yy28H_QxEdsP=k9xcHxjCG1PqKAF2Uv=ckK8oPug@mail.gmail.com>
+ <1549807615.12743.109.camel@linux.ibm.com>
+ <20190212053123.GR23000@mit.edu>
+ <1549976812.12743.225.camel@linux.ibm.com>
+ <20190212172433.GT23000@mit.edu>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [RFC PATCH v3 02/18] fscrypt: use FSCRYPT_ prefix for
- uapi constants
+Content-Disposition: inline
+In-Reply-To: <20190212172433.GT23000@mit.edu>
+Subject: Re: [f2fs-dev] Proposal: Yet another possible fs-verity interface
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
  <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
@@ -14,237 +19,78 @@ List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
 List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
 List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
  <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
 Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
+To: "Theodore Y. Ts'o" <tytso@mit.edu>
+Cc: James Bottomley <James.Bottomley@HansenPartnership.com>, "Darrick J. Wong" <darrick.wong@oracle.com>, Dave Chinner <david@fromorbit.com>, Mimi Zohar <zohar@linux.ibm.com>, linux-f2fs-devel@lists.sourceforge.net, Christoph Hellwig <hch@infradead.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-ext4@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Tue, Feb 12, 2019 at 12:24:33PM -0500, Theodore Y. Ts'o wrote:
+> =
 
-Prefix all filesystem encryption UAPI constants except the ioctl numbers
-with "FSCRYPT_" rather than with "FS_".  This namespaces the constants
-more appropriately and makes it clear that they are related specifically
-to the filesystem encryption feature, and to the 'fscrypt_*' structures.
-With some of the old names like "FS_POLICY_FLAGS_VALID", it was not
-immediately clear that the constant had anything to do with encryption.
+> > > > The existing file hashes included in the measurement list and the
+> > > > audit log, are currently being used for remote attestation, forensi=
+cs
+> > > > and security analytics.
+> > =
 
-This is also useful because we'll be adding more encryption-related
-constants, e.g. for the policy version, and we'd otherwise have to
-choose whether to use unclear names like FS_POLICY_V1 or inconsistent
-names like FS_ENCRYPTION_POLICY_V1.
+> > Again, the context for this comment was Linus' suggestion "each level
+> > of the merkle tree needs to have a hash seeding thing or whatever."
+> > Up to this point, I had assumed the Merkle tree file root hash could
+> > be used as an identifier, similar to the file hash.=A0=A0With his
+> > suggestion, it sounds like the Merkle tree file root hash would be
+> > system dependent, making it useless for the above usages.
+> =
 
-For source compatibility with existing userspace programs, keep the old
-names defined as aliases to the new names.
+> Yeah, I have no idea what Linus was talking about there.  The only
+> thing that really makes sense is that if you don't have any
+> file-system place to store a seed, you don't use a seed for the Merkle
+> tree, and for a given set of bytes, the Merkle root hash is the same.
+> So it's basically an expensive to calculate crypto checksum, as I said.
+> =
 
-Finally, as long as new names are being defined anyway, I skipped
-defining new names for the fscrypt mode numbers that aren't actually
-used: INVALID (0), AES_256_GCM (2), AES_256_CBC (3), SPECK128_256_XTS
-(7), and SPECK128_256_CTS (8).
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/filesystems/fscrypt.rst | 36 +++++++--------
- include/uapi/linux/fscrypt.h          | 66 +++++++++++++++++----------
- 2 files changed, 61 insertions(+), 41 deletions(-)
+I think there's confusion due to the use of the phrase "Merkle tree root ha=
+sh".
+Linus's point was:
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 08c23b60e016..4f9df6ba669e 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -223,9 +223,10 @@ a little endian number, except that:
-   is encrypted with AES-256 where the AES-256 key is the SHA-256 hash
-   of the file's data encryption key.
- 
--- In the "direct key" configuration (FS_POLICY_FLAG_DIRECT_KEY set in
--  the fscrypt_policy), the file's nonce is also appended to the IV.
--  Currently this is only allowed with the Adiantum encryption mode.
-+- In the "direct key" configuration (FSCRYPT_POLICY_FLAG_DIRECT_KEY
-+  set in the fscrypt_policy), the file's nonce is also appended to the
-+  IV.  Currently this is only allowed with the Adiantum encryption
-+  mode.
- 
- Filenames encryption
- --------------------
-@@ -272,14 +273,14 @@ empty directory or verifies that a directory or regular file already
- has the specified encryption policy.  It takes in a pointer to a
- :c:type:`struct fscrypt_policy`, defined as follows::
- 
--    #define FS_KEY_DESCRIPTOR_SIZE  8
-+    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
- 
-     struct fscrypt_policy {
-             __u8 version;
-             __u8 contents_encryption_mode;
-             __u8 filenames_encryption_mode;
-             __u8 flags;
--            __u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+            __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-     };
- 
- This structure must be initialized as follows:
-@@ -288,18 +289,17 @@ This structure must be initialized as follows:
- 
- - ``contents_encryption_mode`` and ``filenames_encryption_mode`` must
-   be set to constants from ``<linux/fs.h>`` which identify the
--  encryption modes to use.  If unsure, use
--  FS_ENCRYPTION_MODE_AES_256_XTS (1) for ``contents_encryption_mode``
--  and FS_ENCRYPTION_MODE_AES_256_CTS (4) for
--  ``filenames_encryption_mode``.
-+  encryption modes to use.  If unsure, use FSCRYPT_MODE_AES_256_XTS
-+  (1) for ``contents_encryption_mode`` and FSCRYPT_MODE_AES_256_CTS
-+  (4) for ``filenames_encryption_mode``.
- 
- - ``flags`` must contain a value from ``<linux/fs.h>`` which
-   identifies the amount of NUL-padding to use when encrypting
--  filenames.  If unsure, use FS_POLICY_FLAGS_PAD_32 (0x3).
--  In addition, if the chosen encryption modes are both
--  FS_ENCRYPTION_MODE_ADIANTUM, this can contain
--  FS_POLICY_FLAG_DIRECT_KEY to specify that the master key should be
--  used directly, without key derivation.
-+  filenames.  If unsure, use FSCRYPT_POLICY_FLAGS_PAD_32 (0x3).  In
-+  addition, if the chosen encryption modes are both
-+  FSCRYPT_MODE_ADIANTUM, this can contain
-+  FSCRYPT_POLICY_FLAG_DIRECT_KEY to specify that the master key should
-+  be used directly, without key derivation.
- 
- - ``master_key_descriptor`` specifies how to find the master key in
-   the keyring; see `Adding keys`_.  It is up to userspace to choose a
-@@ -399,11 +399,11 @@ followed by the 16-character lower case hex representation of the
- ``master_key_descriptor`` that was set in the encryption policy.  The
- key payload must conform to the following structure::
- 
--    #define FS_MAX_KEY_SIZE 64
-+    #define FSCRYPT_MAX_KEY_SIZE 64
- 
-     struct fscrypt_key {
-             u32 mode;
--            u8 raw[FS_MAX_KEY_SIZE];
-+            u8 raw[FSCRYPT_MAX_KEY_SIZE];
-             u32 size;
-     };
- 
-@@ -572,7 +572,7 @@ much confusion if an encryption policy were to be added to or removed
- from anything other than an empty directory.)  The struct is defined
- as follows::
- 
--    #define FS_KEY_DESCRIPTOR_SIZE  8
-+    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
-     #define FS_KEY_DERIVATION_NONCE_SIZE 16
- 
-     struct fscrypt_context {
-@@ -580,7 +580,7 @@ as follows::
-             u8 contents_encryption_mode;
-             u8 filenames_encryption_mode;
-             u8 flags;
--            u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+            u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-             u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
-     };
- 
-diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-index 193339cb53fd..f9b99cc028bc 100644
---- a/include/uapi/linux/fscrypt.h
-+++ b/include/uapi/linux/fscrypt.h
-@@ -8,34 +8,30 @@
-  * File system encryption support
-  */
- /* Policy provided via an ioctl on the topmost directory */
--#define FS_KEY_DESCRIPTOR_SIZE	8
-+#define FSCRYPT_KEY_DESCRIPTOR_SIZE	8
- 
--#define FS_POLICY_FLAGS_PAD_4		0x00
--#define FS_POLICY_FLAGS_PAD_8		0x01
--#define FS_POLICY_FLAGS_PAD_16		0x02
--#define FS_POLICY_FLAGS_PAD_32		0x03
--#define FS_POLICY_FLAGS_PAD_MASK	0x03
--#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
--#define FS_POLICY_FLAGS_VALID		0x07
-+/* Encryption policy flags */
-+#define FSCRYPT_POLICY_FLAGS_PAD_4		0x00
-+#define FSCRYPT_POLICY_FLAGS_PAD_8		0x01
-+#define FSCRYPT_POLICY_FLAGS_PAD_16		0x02
-+#define FSCRYPT_POLICY_FLAGS_PAD_32		0x03
-+#define FSCRYPT_POLICY_FLAGS_PAD_MASK		0x03
-+#define FSCRYPT_POLICY_FLAG_DIRECT_KEY		0x04	/* use master key directly */
-+#define FSCRYPT_POLICY_FLAGS_VALID		0x07
- 
- /* Encryption algorithms */
--#define FS_ENCRYPTION_MODE_INVALID		0
--#define FS_ENCRYPTION_MODE_AES_256_XTS		1
--#define FS_ENCRYPTION_MODE_AES_256_GCM		2
--#define FS_ENCRYPTION_MODE_AES_256_CBC		3
--#define FS_ENCRYPTION_MODE_AES_256_CTS		4
--#define FS_ENCRYPTION_MODE_AES_128_CBC		5
--#define FS_ENCRYPTION_MODE_AES_128_CTS		6
--#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
--#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
--#define FS_ENCRYPTION_MODE_ADIANTUM		9
-+#define FSCRYPT_MODE_AES_256_XTS		1
-+#define FSCRYPT_MODE_AES_256_CTS		4
-+#define FSCRYPT_MODE_AES_128_CBC		5
-+#define FSCRYPT_MODE_AES_128_CTS		6
-+#define FSCRYPT_MODE_ADIANTUM			9
- 
- struct fscrypt_policy {
- 	__u8 version;
- 	__u8 contents_encryption_mode;
- 	__u8 filenames_encryption_mode;
- 	__u8 flags;
--	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
- };
- 
- #define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
-@@ -43,16 +39,40 @@ struct fscrypt_policy {
- #define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
- 
- /* Parameters for passing an encryption key into the kernel keyring */
--#define FS_KEY_DESC_PREFIX		"fscrypt:"
--#define FS_KEY_DESC_PREFIX_SIZE		8
-+#define FSCRYPT_KEY_DESC_PREFIX		"fscrypt:"
-+#define FSCRYPT_KEY_DESC_PREFIX_SIZE		8
- 
- /* Structure that userspace passes to the kernel keyring */
--#define FS_MAX_KEY_SIZE			64
-+#define FSCRYPT_MAX_KEY_SIZE			64
- 
- struct fscrypt_key {
- 	__u32 mode;
--	__u8 raw[FS_MAX_KEY_SIZE];
-+	__u8 raw[FSCRYPT_MAX_KEY_SIZE];
- 	__u32 size;
- };
-+/**********************************************************************/
-+
-+/* old names; don't add anything new here! */
-+#define FS_KEY_DESCRIPTOR_SIZE		FSCRYPT_KEY_DESCRIPTOR_SIZE
-+#define FS_POLICY_FLAGS_PAD_4		FSCRYPT_POLICY_FLAGS_PAD_4
-+#define FS_POLICY_FLAGS_PAD_8		FSCRYPT_POLICY_FLAGS_PAD_8
-+#define FS_POLICY_FLAGS_PAD_16		FSCRYPT_POLICY_FLAGS_PAD_16
-+#define FS_POLICY_FLAGS_PAD_32		FSCRYPT_POLICY_FLAGS_PAD_32
-+#define FS_POLICY_FLAGS_PAD_MASK	FSCRYPT_POLICY_FLAGS_PAD_MASK
-+#define FS_POLICY_FLAG_DIRECT_KEY	FSCRYPT_POLICY_FLAG_DIRECT_KEY
-+#define FS_POLICY_FLAGS_VALID		FSCRYPT_POLICY_FLAGS_VALID
-+#define FS_ENCRYPTION_MODE_INVALID	0	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_XTS	FSCRYPT_MODE_AES_256_XTS
-+#define FS_ENCRYPTION_MODE_AES_256_GCM	2	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_CBC	3	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_CTS	FSCRYPT_MODE_AES_256_CTS
-+#define FS_ENCRYPTION_MODE_AES_128_CBC	FSCRYPT_MODE_AES_128_CBC
-+#define FS_ENCRYPTION_MODE_AES_128_CTS	FSCRYPT_MODE_AES_128_CTS
-+#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7	/* removed */
-+#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8	/* removed */
-+#define FS_ENCRYPTION_MODE_ADIANTUM	FSCRYPT_MODE_ADIANTUM
-+#define FS_KEY_DESC_PREFIX		FSCRYPT_KEY_DESC_PREFIX
-+#define FS_KEY_DESC_PREFIX_SIZE		FSCRYPT_KEY_DESC_PREFIX_SIZE
-+#define FS_MAX_KEY_SIZE			FSCRYPT_MAX_KEY_SIZE
- 
- #endif /* _UAPI_LINUX_FSCRYPT_H */
--- 
-2.20.1
+> Now, since I assume that only the merkle tree root hash would be
+> returned by the "enable merkle tree" operation (so that the code
+> enabling it can verify that the hash matches the expected value), you
+> do have to worry about the preimage attack, and make sure that you
+> can't fool the hashing by making the (bad) file contents themselves be
+> just the hashes of the (good) blocks. So each level of the merkle tree
+> needs to have a hash seeding thing or whatever.
 
+This is already taken into account in the original design.  The file hash
+reported by fs-verity is *not* the Merkle tree root hash directly, but rath=
+er a
+hash of the Merkle tree root hash and additional metadata in the
+fsverity_descriptor including the file size in bytes.  This resulting hash =
+is
+referred to in the code, documentation, etc. as the "fs-verity file measure=
+ment".
+
+Thus you can't fool the hashing in the way that Linus mentioned, because the
+file size is included in the hash too.  And I don't expect this part of the
+design should change, even if we change the API.
+
+It's been difficult to get people to start saying "fs-verity file measureme=
+nt"
+rather than "Merkle tree root hash", though, so if anyone has a suggestion =
+for a
+better name it would be appreciated.  An earlier name was "fs-verity root h=
+ash",
+but I thought that would too easily be confused with the Merkle tree root h=
+ash.
+
+fs-verity does support a salt as well, but it's optional and isn't needed to
+prevent preimage attacks, assuming the user chose a strong cryptographic ha=
+sh
+function such as SHA-256 or SHA-512.
+
+- Eric
 
 
 _______________________________________________
