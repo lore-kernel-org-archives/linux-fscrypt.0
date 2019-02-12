@@ -1,204 +1,115 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 11 Feb 2019 09:27:30 -0800
-Message-Id: <20190211172738.4633-13-ebiggers@kernel.org>
-In-Reply-To: <20190211172738.4633-1-ebiggers@kernel.org>
+Return-Path: <SRS0=AyBe=QT=fromorbit.com=david@kernel.org>
+Date: Tue, 12 Feb 2019 11:03:57 +1100
+From: Dave Chinner <david@fromorbit.com>
+Subject: Re: [RFC PATCH v2 11/20] fscrypt: add FS_IOC_REMOVE_ENCRYPTION_KEY
+ ioctl
+Message-ID: <20190212000357.GI20493@dastard>
 References: <20190211172738.4633-1-ebiggers@kernel.org>
+ <20190211172738.4633-12-ebiggers@kernel.org>
+ <20190211221249.GH20493@dastard>
+ <20190211233128.GB226227@gmail.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [RFC PATCH v2 12/20] fscrypt: add
- FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190211233128.GB226227@gmail.com>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, linux-crypto@vger.kernel.org, linux-api@vger.kernel.org, keyrings@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, Feb 11, 2019 at 03:31:29PM -0800, Eric Biggers wrote:
+> Hi Dave,
+> 
+> On Tue, Feb 12, 2019 at 09:12:49AM +1100, Dave Chinner wrote:
+> > On Mon, Feb 11, 2019 at 09:27:29AM -0800, Eric Biggers wrote:
+> > 
+> > Indeed, this is exactly what ->drop_inode() is for.
+> > 
+> > Take this function:
+> > 
+> > > +static void evict_dentries_for_decrypted_inodes(struct fscrypt_master_key *mk)
+> > > +{
+> > > +	struct fscrypt_info *ci;
+> > > +	struct inode *inode;
+> > > +	struct inode *toput_inode = NULL;
+> > > +
+> > > +	spin_lock(&mk->mk_decrypted_inodes_lock);
+> > > +
+> > > +	list_for_each_entry(ci, &mk->mk_decrypted_inodes, ci_master_key_link) {
+> > > +		inode = ci->ci_inode;
+> > > +		spin_lock(&inode->i_lock);
+> > > +		if (inode->i_state & (I_FREEING | I_WILL_FREE | I_NEW)) {
+> > > +			spin_unlock(&inode->i_lock);
+> > > +			continue;
+> > > +		}
+> > > +		__iget(inode);
+> > > +		spin_unlock(&inode->i_lock);
+> > > +		spin_unlock(&mk->mk_decrypted_inodes_lock);
+> > > +
+> > > +		shrink_dcache_inode(inode);
+> > > +		iput(toput_inode);
+> > > +		toput_inode = inode;
+> > > +
+> > > +		spin_lock(&mk->mk_decrypted_inodes_lock);
+> > > +	}
+> > > +
+> > > +	spin_unlock(&mk->mk_decrypted_inodes_lock);
+> > > +	iput(toput_inode);
+> > > +}
+> > 
+> > It takes a new reference to each decrypted inode, and then drops it
+> > again after all the dentry cache references have been killed and
+> > we've got a reference to the next inode in the list.  Killing the
+> > dentry references to the inode means it should only have in-use
+> > references and the reference this function holds on it.
+> > 
+> > If the inode is not in use then there will be only one, and so it
+> > will fall into iput_final() and the ->drop_inode() function
+> > determines if the inode should be evicted from the cache and
+> > destroyed immediately.  IOWs, implement fscrypt_drop_inode() to do
+> > the right thing when the key has been destroyed, and you can get rid
+> > of all this crazy inode cache walk-and-invalidate hackery.
+> > 
+> 
+> Thanks for the feedback!  If I understand correctly, your suggestion is:
+> 
+> - Keep evict_dentries_for_decrypted_inodes() as-is, i.e. fscrypt would still
+>   evict the dentries for all inodes in ->mk_decrypted_inodes.
+>   (I don't see how it could work otherwise.)
+> 
+> - However, evict_decrypted_inodes() would be removed and fscrypt would not
+>   directly evict the list of inodes.  Instead, the filesystem's ->drop_inode()
+>   would be made to return 1 if the inode's master key has been removed.  Thus
+>   each inode, if no longer in use, would end up getting evicted during the
+>   iput() in evict_dentries_for_decrypted_inodes().
 
-Add a new fscrypt ioctl, FS_IOC_GET_ENCRYPTION_KEY_STATUS.  Given a key
-specified by 'struct fscrypt_key_specifier' (the same way a key is
-specified for the other fscrypt key management ioctls), it returns
-status information in a 'struct fscrypt_get_key_status_arg'.
+*nod*
 
-The main motivation for this is that applications need to be able to
-check whether an encrypted directory is "unlocked" or not, so that they
-can add the key if it is not, and avoid adding the key (which may
-involve prompting the user for a passphrase) if it already is.
+> I hadn't thought of this, and I think it would work; I'll try implementing it.
+> It would also have the advantage that if a key is removed while an inode is
+> still in-use, that inode will be evicted as soon as it's no longer in use rather
+> than waiting around until another FS_IOC_REMOVE_ENCRYPTION_KEY.
 
-It's possible to use some workarounds such as checking whether opening a
-regular file fails with ENOKEY, or checking whether the filenames "look
-like gibberish" or not.  However, no workaround is usable in all cases.
+*nod*
 
-Like the other key management ioctls, the keyrings syscalls may seem at
-first to be a good fit for this.  Unfortunately, they are not.  Even if
-we exposed the keyring ID of the ->s_master_keys keyring and gave
-everyone Search permission on it (note: currently the keyrings
-permission system would also allow everyone to "invalidate" the keyring
-too), the fscrypt keys have an additional state that doesn't map cleanly
-to the keyrings API: the secret can be removed, but we can be still
-tracking the files that were using the key, and the removal can be
-re-attempted or the secret added again.
+> The ioctl will need a different way to determine whether any inodes couldn't be
+> evicted, but simply checking whether ->mk_decrypted_inodes ended up empty or not
+> should work.
 
-After later patches, some applications will also need a way to determine
-whether a key was added by the current user vs. by some other user.
-Reserved fields are included in fscrypt_get_key_status_arg for this and
-other future extensions.
+*nod*
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/keyring.c          | 60 ++++++++++++++++++++++++++++++++++++
- include/linux/fscrypt.h      |  7 +++++
- include/uapi/linux/fscrypt.h | 15 +++++++++
- 3 files changed, 82 insertions(+)
+> FWIW, originally I also considered leaving the inodes in the inode cache and
+> instead only freeing ->i_crypt_info and truncating the pagecache.  But I don't
+> see a way to do it even with this new idea; for one, ->drop_inode() is called
+> under ->i_lock.  So it seems that eviction is still the way to go.
 
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 82d272c20969..73be8bda49bd 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -11,6 +11,7 @@
-  *
-  * - FS_IOC_ADD_ENCRYPTION_KEY: add a key
-  * - FS_IOC_REMOVE_ENCRYPTION_KEY: remove a key
-+ * - FS_IOC_GET_ENCRYPTION_KEY_STATUS: get key status
-  */
- 
- #include <linux/key-type.h>
-@@ -515,6 +516,65 @@ int fscrypt_ioctl_remove_key(struct file *filp, const void __user *uarg)
- }
- EXPORT_SYMBOL_GPL(fscrypt_ioctl_remove_key);
- 
-+/*
-+ * Retrieve the status of an fscrypt master encryption key.
-+ *
-+ * We set ->status to indicate whether the key is absent, present, or
-+ * incompletely removed.  "Incompletely removed" means that the master key
-+ * secret has been removed, but some files which had been unlocked with it are
-+ * still in use.  This field allows applications to easily determine the state
-+ * of an encrypted directory without using a hack such as trying to open a
-+ * regular file in it (which can confuse the "incompletely removed" state with
-+ * absent or present).
-+ */
-+int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
-+{
-+	struct super_block *sb = file_inode(filp)->i_sb;
-+	struct fscrypt_get_key_status_arg arg;
-+	struct key *key;
-+	struct fscrypt_master_key *mk;
-+	int err;
-+
-+	if (copy_from_user(&arg, uarg, sizeof(arg)))
-+		return -EFAULT;
-+
-+	if (memchr_inv(arg.__reserved, 0, sizeof(arg.__reserved)))
-+		return -EINVAL;
-+
-+	if (!valid_key_spec(&arg.key_spec))
-+		return -EINVAL;
-+
-+	memset(arg.__out_reserved, 0, sizeof(arg.__out_reserved));
-+
-+	key = fscrypt_find_master_key(sb, &arg.key_spec);
-+	if (IS_ERR(key)) {
-+		if (key != ERR_PTR(-ENOKEY))
-+			return PTR_ERR(key);
-+		arg.status = FSCRYPT_KEY_STATUS_ABSENT;
-+		err = 0;
-+		goto out;
-+	}
-+	mk = key->payload.data[0];
-+	down_read(&key->sem);
-+
-+	if (!is_master_key_secret_present(&mk->mk_secret)) {
-+		arg.status = FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED;
-+		err = 0;
-+		goto out_release_key;
-+	}
-+
-+	arg.status = FSCRYPT_KEY_STATUS_PRESENT;
-+	err = 0;
-+out_release_key:
-+	up_read(&key->sem);
-+	key_put(key);
-+out:
-+	if (!err && copy_to_user(uarg, &arg, sizeof(arg)))
-+		err = -EFAULT;
-+	return err;
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_ioctl_get_key_status);
-+
- int __init fscrypt_init_keyring(void)
- {
- 	return register_key_type(&key_type_fscrypt);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index a8fabae9a5fe..dace3fd1bf19 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -115,6 +115,7 @@ extern int fscrypt_inherit_context(struct inode *, struct inode *,
- /* keyring.c */
- extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
- extern int fscrypt_ioctl_remove_key(struct file *filp, const void __user *arg);
-+extern int fscrypt_ioctl_get_key_status(struct file *filp, void __user *arg);
- 
- /* keysetup.c */
- extern int fscrypt_get_encryption_info(struct inode *);
-@@ -339,6 +340,12 @@ static inline void fscrypt_put_encryption_info(struct inode *inode)
- 	return;
- }
- 
-+static inline int fscrypt_ioctl_get_key_status(struct file *filp,
-+					       void __user *arg)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
-  /* fname.c */
- static inline int fscrypt_setup_filename(struct inode *dir,
- 					 const struct qstr *iname,
-diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-index 3302a407131e..042e70a4ff7e 100644
---- a/include/uapi/linux/fscrypt.h
-+++ b/include/uapi/linux/fscrypt.h
-@@ -71,11 +71,26 @@ struct fscrypt_remove_key_arg {
- 	__u32 __reserved[6];
- };
- 
-+/* Struct passed to FS_IOC_GET_ENCRYPTION_KEY_STATUS */
-+struct fscrypt_get_key_status_arg {
-+	/* input */
-+	struct fscrypt_key_specifier key_spec;
-+	__u32 __reserved[6];
-+
-+	/* output */
-+#define FSCRYPT_KEY_STATUS_ABSENT		1
-+#define FSCRYPT_KEY_STATUS_PRESENT		2
-+#define FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED	3
-+	__u32 status;
-+	__u32 __out_reserved[15];
-+};
-+
- #define FS_IOC_SET_ENCRYPTION_POLICY	  _IOR('f', 19, struct fscrypt_policy)
- #define FS_IOC_GET_ENCRYPTION_PWSALT	  _IOW('f', 20, __u8[16])
- #define FS_IOC_GET_ENCRYPTION_POLICY	  _IOW('f', 21, struct fscrypt_policy)
- #define FS_IOC_ADD_ENCRYPTION_KEY	 _IOWR('f', 23, struct fscrypt_add_key_arg)
- #define FS_IOC_REMOVE_ENCRYPTION_KEY	  _IOW('f', 24, struct fscrypt_remove_key_arg)
-+#define FS_IOC_GET_ENCRYPTION_KEY_STATUS _IOWR('f', 25, struct fscrypt_get_key_status_arg)
- 
- /**********************************************************************/
- 
+Yeah, eviction is by far the easiest way to deal with this. If it's
+being frequently referenced/written, the backing buffer should be in
+memory anyway and the next access simply has to re-instantiate the
+inode cache from the buffer and won't need to do IO.
+
+Cheers,
+
+Dave.
 -- 
-2.20.1
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+Dave Chinner
+david@fromorbit.com
