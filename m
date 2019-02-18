@@ -1,317 +1,206 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 11 Feb 2019 09:27:31 -0800
-Message-Id: <20190211172738.4633-14-ebiggers@kernel.org>
-In-Reply-To: <20190211172738.4633-1-ebiggers@kernel.org>
-References: <20190211172738.4633-1-ebiggers@kernel.org>
+Return-Path: <SRS0=THX2=QZ=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [RFC PATCH 09/10] fs/mpage.c: Integrate post read processing
+Date: Mon, 18 Feb 2019 15:34:32 +0530
+In-Reply-To: <20190218100433.20048-1-chandan@linux.ibm.com>
+References: <20190218100433.20048-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [RFC PATCH v2 13/20] fscrypt: add an HKDF-SHA512
- implementation
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 8bit
+Message-Id: <20190218100433.20048-10-chandan@linux.ibm.com>
+To: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+This commit adds code to make do_mpage_readpage() to be "post read
+processing" aware i.e. for files requiring decryption/verification,
+do_mpage_readpage() now allocates a context structure and marks the bio
+with a flag to indicate that after read operation is performed, the
+bio's payload needs to be processed further before handing over the data
+to user space.
 
-Add an implementation of HKDF (RFC 5869) to fscrypt, for the purpose of
-deriving additional key material from the fscrypt master keys for v2
-encryption policies.  HKDF is a key derivation function built on top of
-HMAC.  We choose SHA-512 for the underlying unkeyed hash, and use an
-"hmac(sha512)" transform allocated from the crypto API.
+The context structure is used for tracking the state machine associated
+with post read processing.
 
-We'll be using this to replace the AES-ECB based KDF currently used to
-derive the per-file encryption keys.  While the AES-ECB based KDF is
-believed to meet the original security requirements, it is nonstandard
-and has problems that don't exist in modern KDFs such as HKDF:
-
-1. It's reversible.  Given a derived key and nonce, an attacker can
-   easily compute the master key.  This is okay if the master key and
-   derived keys are equally hard to compromise, but now we'd like to be
-   more robust against threats such as a derived key being compromised
-   through a timing attack, or a derived key for an in-use file being
-   compromised after the master key has already been removed.
-
-2. It doesn't evenly distribute the entropy from the master key; each 16
-   input bytes only affects the corresponding 16 output bytes.
-
-3. It isn't easily extensible to deriving other values or keys that are
-   or will be needed, such as per-mode keys (which is what DIRECT_KEY
-   policies really should use, rather than the master key directly as
-   they do now) or a public hash for securely identifying the key (to
-   ensure that an encrypted file cannot be set up with the wrong key).
-
-HKDF solves all the above problems.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/crypto/Kconfig           |   2 +
- fs/crypto/Makefile          |   1 +
- fs/crypto/fscrypt_private.h |  15 +++
- fs/crypto/hkdf.c            | 188 ++++++++++++++++++++++++++++++++++++
- 4 files changed, 206 insertions(+)
- create mode 100644 fs/crypto/hkdf.c
+ fs/mpage.c | 77 +++++++++++++++++++++++++++++++++++++++++-------------
+ 1 file changed, 59 insertions(+), 18 deletions(-)
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index f0de238000c0..c160598a9fe2 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -7,6 +7,8 @@ config FS_ENCRYPTION
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select CRYPTO_SHA256
-+	select CRYPTO_SHA512
-+	select CRYPTO_HMAC
- 	select KEYS
- 	help
- 	  Enable encryption of files and directories.  This
-diff --git a/fs/crypto/Makefile b/fs/crypto/Makefile
-index accdd622c908..4977b4347928 100644
---- a/fs/crypto/Makefile
-+++ b/fs/crypto/Makefile
-@@ -2,6 +2,7 @@ obj-$(CONFIG_FS_ENCRYPTION)	+= fscrypto.o
- 
- fscrypto-y := crypto.o \
- 	      fname.o \
-+	      hkdf.o \
- 	      hooks.o \
- 	      keyring.o \
- 	      keysetup.o \
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index b09fc2939a89..f8b8358e9527 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -175,6 +175,21 @@ extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
- 					 u32 orig_len, u32 max_len,
- 					 u32 *encrypted_len_ret);
- 
-+/* hkdf.c */
-+
-+struct fscrypt_hkdf {
-+	struct crypto_shash *hmac_tfm;
-+};
-+
-+extern int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
-+			     unsigned int master_key_size);
-+
-+extern int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
-+			       const u8 *info, unsigned int infolen,
-+			       u8 *okm, unsigned int okmlen);
-+
-+extern void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf);
-+
- /* keyring.c */
+diff --git a/fs/mpage.c b/fs/mpage.c
+index c820dc9bebab..09f0491e6260 100644
+--- a/fs/mpage.c
++++ b/fs/mpage.c
+@@ -30,6 +30,8 @@
+ #include <linux/backing-dev.h>
+ #include <linux/pagevec.h>
+ #include <linux/cleancache.h>
++#include <linux/fsverity.h>
++#include <linux/post_read_process.h>
+ #include "internal.h"
  
  /*
-diff --git a/fs/crypto/hkdf.c b/fs/crypto/hkdf.c
-new file mode 100644
-index 000000000000..9c6346e3f227
---- /dev/null
-+++ b/fs/crypto/hkdf.c
-@@ -0,0 +1,188 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Implementation of HKDF ("HMAC-based Extract-and-Expand Key Derivation
-+ * Function"), aka RFC 5869.  See also the original paper (Krawczyk 2010):
-+ * "Cryptographic Extraction and Key Derivation: The HKDF Scheme".
-+ *
-+ * This is used to derive keys from the fscrypt master keys.
-+ *
-+ * Copyright 2019 Google LLC
-+ */
+@@ -49,6 +51,13 @@ static void mpage_end_io(struct bio *bio)
+ 	struct bio_vec *bv;
+ 	int i;
+ 
++	if (bio_post_read_required(bio)) {
++		struct bio_post_read_ctx *ctx = bio->bi_private;
 +
-+#include <crypto/hash.h>
-+#include <crypto/sha.h>
-+
-+#include "fscrypt_private.h"
-+
-+/*
-+ * HKDF supports any unkeyed cryptographic hash algorithm, but fscrypt uses
-+ * SHA-512 because it is reasonably secure and efficient; and since it produces
-+ * a 64-byte digest, deriving an AES-256-XTS key preserves all 64 bytes of
-+ * entropy from the master key and requires only one iteration of HKDF-Expand.
-+ */
-+#define HKDF_HMAC_ALG		"hmac(sha512)"
-+#define HKDF_HASHLEN		SHA512_DIGEST_SIZE
-+
-+/*
-+ * HKDF consists of two steps:
-+ *
-+ * 1. HKDF-Extract: extract a pseudorandom key of length HKDF_HASHLEN bytes from
-+ *    the input keying material and optional salt.
-+ * 2. HKDF-Expand: expand the pseudorandom key into output keying material of
-+ *    any length, parameterized by an application-specific info string.
-+ *
-+ * HKDF-Extract can be skipped if the input is already a pseudorandom key of
-+ * length HKDF_HASHLEN bytes.  However, cipher modes other than AES-256-XTS take
-+ * shorter keys, and we don't want to force users of those modes to generate
-+ * unnecessarily long keys.  Thus fscrypt still does HKDF-Extract.
-+ *
-+ * HKDF-Extract also supports a salt.  Choosing a random salt per input key
-+ * would permit the input key to come from *any* source with sufficient entropy,
-+ * even if it's not distributed uniformly.  However, fscrypt doesn't take
-+ * advantage of this because userspace should already provide good pseudorandom
-+ * keys, which makes this unnecessary; also, having to persist a random salt per
-+ * key from kernel mode would pose significant implementation complexity.  Thus
-+ * fscrypt uses a fixed salt.  But to be slightly more robust against userspace
-+ * (unwisely) reusing the fscrypt keys for another purpose, and to force
-+ * brute-force attacks to target the fscrypt KDF specifically, fscrypt uses
-+ * "fscrypt_hkdf_salt" rather than the default of all 0's defined by RFC 5869.
-+ */
-+
-+#define HKDF_SALT		"fscrypt_hkdf_salt"
-+#define HKDF_SALT_LEN		CONST_STRLEN(HKDF_SALT)
-+
-+/* HKDF-Extract (RFC 5869 section 2.2), see explanation above */
-+static int hkdf_extract(struct crypto_shash *hmac_tfm, const u8 *ikm,
-+			unsigned int ikmlen, u8 prk[HKDF_HASHLEN])
-+{
-+	SHASH_DESC_ON_STACK(desc, hmac_tfm);
-+	int err;
-+
-+	desc->tfm = hmac_tfm;
-+	desc->flags = 0;
-+
-+	err = crypto_shash_setkey(hmac_tfm, HKDF_SALT, HKDF_SALT_LEN);
-+	if (err)
-+		goto out;
-+
-+	err = crypto_shash_digest(desc, ikm, ikmlen, prk);
-+out:
-+	shash_desc_zero(desc);
-+	return err;
-+}
-+
-+/*
-+ * Compute HKDF-Extract using the given master key as the input keying material,
-+ * and prepare an HMAC transform object keyed by the resulting pseudorandom key.
-+ *
-+ * Afterwards, the keyed HMAC transform object can be used for HKDF-Expand many
-+ * times without having to recompute HKDF-Extract each time.
-+ */
-+int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
-+		      unsigned int master_key_size)
-+{
-+	struct crypto_shash *hmac_tfm;
-+	u8 prk[HKDF_HASHLEN];
-+	int err;
-+
-+	hmac_tfm = crypto_alloc_shash(HKDF_HMAC_ALG, 0, 0);
-+	if (IS_ERR(hmac_tfm)) {
-+		fscrypt_warn(NULL, "error allocating " HKDF_HMAC_ALG ": %ld",
-+			     PTR_ERR(hmac_tfm));
-+		return PTR_ERR(hmac_tfm);
++		bio_post_read_processing(ctx);
++		return;
 +	}
 +
-+	BUG_ON(crypto_shash_digestsize(hmac_tfm) != sizeof(prk));
+ 	bio_for_each_segment_all(bv, bio, i) {
+ 		struct page *page = bv->bv_page;
+ 		page_endio(page, bio_op(bio),
+@@ -142,6 +151,7 @@ struct mpage_readpage_args {
+ 	struct buffer_head map_bh;
+ 	unsigned long first_logical_block;
+ 	get_block_t *get_block;
++	int op_flags;
+ };
+ 
+ /*
+@@ -170,25 +180,22 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 	struct block_device *bdev = NULL;
+ 	int length;
+ 	int fully_mapped = 1;
+-	int op_flags;
+ 	unsigned nblocks;
+ 	unsigned relative_block;
+ 	gfp_t gfp;
+ 
+-	if (args->is_readahead) {
+-		op_flags = REQ_RAHEAD;
+-		gfp = readahead_gfp_mask(page->mapping);
+-	} else {
+-		op_flags = 0;
+-		gfp = mapping_gfp_constraint(page->mapping, GFP_KERNEL);
+-	}
+-
+ 	if (page_has_buffers(page))
+ 		goto confused;
+ 
+ 	block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
+ 	last_block = block_in_file + args->nr_pages * blocks_per_page;
+-	last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
++#ifdef CONFIG_FS_VERITY
++	if (IS_VERITY(inode) && inode->i_sb->s_vop->readpage_limit)
++		last_block_in_file = inode->i_sb->s_vop->readpage_limit(inode);
++	else
++#endif
++		last_block_in_file = (i_size_read(inode) + blocksize - 1)
++			>> blkbits;
+ 	if (last_block > last_block_in_file)
+ 		last_block = last_block_in_file;
+ 	page_block = 0;
+@@ -276,6 +283,10 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 	if (first_hole != blocks_per_page) {
+ 		zero_user_segment(page, first_hole << blkbits, PAGE_SIZE);
+ 		if (first_hole == 0) {
++#ifdef CONFIG_FS_VERITY
++			if (IS_VERITY(inode) && inode->i_sb->s_vop->check_hole)
++				inode->i_sb->s_vop->check_hole(inode, page);
++#endif
+ 			SetPageUptodate(page);
+ 			unlock_page(page);
+ 			goto out;
+@@ -294,26 +305,54 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 	 * This page will go to BIO.  Do we need to send this BIO off first?
+ 	 */
+ 	if (args->bio && (args->last_block_in_bio != blocks[0] - 1))
+-		args->bio = mpage_bio_submit(REQ_OP_READ, op_flags, args->bio);
++		args->bio = mpage_bio_submit(REQ_OP_READ, args->op_flags,
++					args->bio);
+ 
+ alloc_new:
+ 	if (args->bio == NULL) {
+-		if (first_hole == blocks_per_page) {
++		struct bio_post_read_ctx *ctx;
 +
-+	err = hkdf_extract(hmac_tfm, master_key, master_key_size, prk);
-+	if (err)
-+		goto err_free_tfm;
++		if (first_hole == blocks_per_page
++			&& !(IS_ENCRYPTED(inode) || IS_VERITY(inode))) {
+ 			if (!bdev_read_page(bdev, blocks[0] << (blkbits - 9),
+ 								page))
+ 				goto out;
+ 		}
 +
-+	err = crypto_shash_setkey(hmac_tfm, prk, sizeof(prk));
-+	if (err)
-+		goto err_free_tfm;
++		args->op_flags = 0;
 +
-+	hkdf->hmac_tfm = hmac_tfm;
-+	goto out;
-+
-+err_free_tfm:
-+	crypto_free_shash(hmac_tfm);
-+out:
-+	memzero_explicit(prk, sizeof(prk));
-+	return err;
-+}
-+
-+/*
-+ * HKDF-Expand (RFC 5869 section 2.3).  This expands the pseudorandom key, which
-+ * was already keyed into 'hkdf->hmac_tfm' by fscrypt_init_hkdf(), into 'okmlen'
-+ * bytes of output keying material parameterized by the application-specific
-+ * 'info' of length 'infolen' bytes, prefixed with the 'context' byte.  This is
-+ * thread-safe and may be called by multiple threads in parallel.
-+ *
-+ * ('context' isn't part of the HKDF specification; it's just a prefix fscrypt
-+ * adds to its application-specific info strings to guarantee that it doesn't
-+ * accidentally repeat an info string when using HKDF for different purposes.)
-+ */
-+int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
-+			const u8 *info, unsigned int infolen,
-+			u8 *okm, unsigned int okmlen)
-+{
-+	SHASH_DESC_ON_STACK(desc, hkdf->hmac_tfm);
-+	int err;
-+	const u8 *prev = NULL;
-+	unsigned int i;
-+	u8 counter = 1;
-+	u8 tmp[HKDF_HASHLEN];
-+
-+	desc->tfm = hkdf->hmac_tfm;
-+	desc->flags = 0;
-+
-+	if (WARN_ON(okmlen > 255 * HKDF_HASHLEN))
-+		return -EINVAL;
-+
-+	for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
-+
-+		err = crypto_shash_init(desc);
-+		if (err)
-+			goto out;
-+
-+		if (prev) {
-+			err = crypto_shash_update(desc, prev, HKDF_HASHLEN);
-+			if (err)
-+				goto out;
-+		}
-+
-+		err = crypto_shash_update(desc, &context, 1);
-+		if (err)
-+			goto out;
-+
-+		err = crypto_shash_update(desc, info, infolen);
-+		if (err)
-+			goto out;
-+
-+		if (okmlen - i < HKDF_HASHLEN) {
-+			err = crypto_shash_finup(desc, &counter, 1, tmp);
-+			if (err)
-+				goto out;
-+			memcpy(&okm[i], tmp, okmlen - i);
-+			memzero_explicit(tmp, sizeof(tmp));
++		if (args->is_readahead) {
++			args->op_flags = REQ_RAHEAD;
++			gfp = readahead_gfp_mask(page->mapping);
 +		} else {
-+			err = crypto_shash_finup(desc, &counter, 1, &okm[i]);
-+			if (err)
-+				goto out;
++			gfp = mapping_gfp_constraint(page->mapping, GFP_KERNEL);
 +		}
-+		counter++;
-+		prev = &okm[i];
-+	}
-+	err = 0;
-+out:
-+	if (unlikely(err))
-+		memzero_explicit(okm, okmlen); /* so caller doesn't need to */
-+	shash_desc_zero(desc);
-+	return err;
-+}
 +
-+void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf)
-+{
-+	crypto_free_shash(hkdf->hmac_tfm);
-+}
+ 		args->bio = mpage_alloc(bdev, blocks[0] << (blkbits - 9),
+ 					min_t(int, args->nr_pages,
+ 					      BIO_MAX_PAGES),
+ 					gfp);
+-		if (args->bio == NULL)
++		if (args->bio == NULL) {
++			args->op_flags = 0;
+ 			goto confused;
++		}
++
++		ctx = get_bio_post_read_ctx(inode, args->bio, page->index);
++		if (IS_ERR(ctx)) {
++			args->op_flags = 0;
++			bio_put(args->bio);
++			args->bio = NULL;
++			goto confused;
++		}
++
++		if (ctx)
++			args->op_flags |= REQ_POST_READ_PROC;
+ 	}
+ 
+ 	length = first_hole << blkbits;
+ 	if (bio_add_page(args->bio, page, length, 0) < length) {
+-		args->bio = mpage_bio_submit(REQ_OP_READ, op_flags, args->bio);
++		args->bio = mpage_bio_submit(REQ_OP_READ, args->op_flags,
++					args->bio);
+ 		goto alloc_new;
+ 	}
+ 
+@@ -321,7 +360,8 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 	nblocks = map_bh->b_size >> blkbits;
+ 	if ((buffer_boundary(map_bh) && relative_block == nblocks) ||
+ 	    (first_hole != blocks_per_page))
+-		args->bio = mpage_bio_submit(REQ_OP_READ, op_flags, args->bio);
++		args->bio = mpage_bio_submit(REQ_OP_READ, args->op_flags,
++					args->bio);
+ 	else
+ 		args->last_block_in_bio = blocks[blocks_per_page - 1];
+ out:
+@@ -329,7 +369,8 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 
+ confused:
+ 	if (args->bio)
+-		args->bio = mpage_bio_submit(REQ_OP_READ, op_flags, args->bio);
++		args->bio = mpage_bio_submit(REQ_OP_READ, args->op_flags,
++					args->bio);
+ 	if (!PageUptodate(page))
+ 		block_read_full_page(page, args->get_block);
+ 	else
+@@ -407,7 +448,7 @@ mpage_readpages(struct address_space *mapping, struct list_head *pages,
+ 	}
+ 	BUG_ON(!list_empty(pages));
+ 	if (args.bio)
+-		mpage_bio_submit(REQ_OP_READ, REQ_RAHEAD, args.bio);
++		mpage_bio_submit(REQ_OP_READ, args.op_flags, args.bio);
+ 	return 0;
+ }
+ EXPORT_SYMBOL(mpage_readpages);
+@@ -425,7 +466,7 @@ int mpage_readpage(struct page *page, get_block_t get_block)
+ 
+ 	args.bio = do_mpage_readpage(&args);
+ 	if (args.bio)
+-		mpage_bio_submit(REQ_OP_READ, 0, args.bio);
++		mpage_bio_submit(REQ_OP_READ, args.op_flags, args.bio);
+ 	return 0;
+ }
+ EXPORT_SYMBOL(mpage_readpage);
 -- 
-2.20.1
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.19.1
