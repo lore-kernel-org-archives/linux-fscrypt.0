@@ -1,115 +1,77 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 11 Feb 2019 09:27:36 -0800
-Message-Id: <20190211172738.4633-19-ebiggers@kernel.org>
-In-Reply-To: <20190211172738.4633-1-ebiggers@kernel.org>
-References: <20190211172738.4633-1-ebiggers@kernel.org>
+Return-Path: <SRS0=THX2=QZ=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [RFC PATCH 07/10] fsverity: Add call back to determine readpage limit
+Date: Mon, 18 Feb 2019 15:34:30 +0530
+In-Reply-To: <20190218100433.20048-1-chandan@linux.ibm.com>
+References: <20190218100433.20048-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [RFC PATCH v2 18/20] f2fs: wire up new fscrypt ioctls
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 8bit
+Message-Id: <20190218100433.20048-8-chandan@linux.ibm.com>
+To: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Ext4 and F2FS store verity metadata beyond i_size. This commit adds a
+call back pointer to "struct fsverity_operations" which helps in
+determining the the real file size limit upto which data can be read
+from the file.
 
-Wire up the new ioctls for adding and removing fscrypt keys to/from the
-filesystem, and the new ioctl for retrieving v2 encryption policies.
+This call back will be required in order to get do_mpage_readpage()
+to read files having verity metadata appended beyond i_size.
 
-For more details see Documentation/filesystems/fscrypt.rst, as well as
-the fscrypt patches that added the implementation of these ioctls.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/f2fs/file.c | 46 ++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 46 insertions(+)
+ fs/ext4/super.c          | 18 ++++++++++++++++++
+ include/linux/fsverity.h |  1 +
+ 2 files changed, 19 insertions(+)
 
-diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
-index ba5954f41e14..3e6da48e0530 100644
---- a/fs/f2fs/file.c
-+++ b/fs/f2fs/file.c
-@@ -2093,6 +2093,40 @@ static int f2fs_ioc_get_encryption_pwsalt(struct file *filp, unsigned long arg)
- 	return err;
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 2d7781ab6824..4493ddc357c6 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1428,6 +1428,23 @@ static struct page *ext4_read_verity_metadata_page(struct inode *inode,
+ 	return read_mapping_page(inode->i_mapping, index, NULL);
  }
  
-+static int f2fs_ioc_get_encryption_policy_ex(struct file *filp,
-+					     unsigned long arg)
++static loff_t ext4_readpage_limit(struct inode *inode)
 +{
-+	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
-+		return -EOPNOTSUPP;
-+
-+	return fscrypt_ioctl_get_policy_ex(filp, (void __user *)arg);
++#ifdef CONFIG_FS_VERITY
++	if (IS_VERITY(inode)) {
++		if (inode->i_verity_info)
++			/* limit to end of metadata region */
++			return fsverity_full_i_size(inode);
++		/*
++		 * fsverity_info is currently being set up and no user reads are
++		 * allowed yet.  It's easiest to just not enforce a limit yet.
++		 */
++		return inode->i_sb->s_maxbytes;
++	}
++#endif
++	return i_size_read(inode);
 +}
 +
-+static int f2fs_ioc_add_encryption_key(struct file *filp, unsigned long arg)
-+{
-+	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
-+		return -EOPNOTSUPP;
-+
-+	return fscrypt_ioctl_add_key(filp, (void __user *)arg);
-+}
-+
-+static int f2fs_ioc_remove_encryption_key(struct file *filp, unsigned long arg)
-+{
-+	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
-+		return -EOPNOTSUPP;
-+
-+	return fscrypt_ioctl_remove_key(filp, (const void __user *)arg);
-+}
-+
-+static int f2fs_ioc_get_encryption_key_status(struct file *filp,
-+					      unsigned long arg)
-+{
-+	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
-+		return -EOPNOTSUPP;
-+
-+	return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
-+}
-+
- static int f2fs_ioc_gc(struct file *filp, unsigned long arg)
+ static bool ext4_verity_required(struct inode *inode, pgoff_t index)
  {
- 	struct inode *inode = file_inode(filp);
-@@ -2998,6 +3032,14 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
- 		return f2fs_ioc_get_encryption_policy(filp, arg);
- 	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
- 		return f2fs_ioc_get_encryption_pwsalt(filp, arg);
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+		return f2fs_ioc_get_encryption_policy_ex(filp, arg);
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+		return f2fs_ioc_add_encryption_key(filp, arg);
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+		return f2fs_ioc_remove_encryption_key(filp, arg);
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-+		return f2fs_ioc_get_encryption_key_status(filp, arg);
- 	case F2FS_IOC_GARBAGE_COLLECT:
- 		return f2fs_ioc_gc(filp, arg);
- 	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
-@@ -3117,6 +3159,10 @@ long f2fs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- 	case F2FS_IOC_SET_ENCRYPTION_POLICY:
- 	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
- 	case F2FS_IOC_GET_ENCRYPTION_POLICY:
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
- 	case F2FS_IOC_GARBAGE_COLLECT:
- 	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
- 	case F2FS_IOC_WRITE_CHECKPOINT:
+ 	if (index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT))
+@@ -1441,6 +1458,7 @@ static const struct fsverity_operations ext4_verityops = {
+ 	.get_metadata_end	= ext4_get_verity_metadata_end,
+ 	.read_metadata_page	= ext4_read_verity_metadata_page,
+ 	.verity_required	= ext4_verity_required,
++	.readpage_limit		= ext4_readpage_limit,
+ };
+ #endif /* CONFIG_FS_VERITY */
+ 
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index b83712d6c79a..fc8113acbbfe 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -19,6 +19,7 @@ struct fsverity_operations {
+ 	int (*get_metadata_end)(struct inode *inode, loff_t *metadata_end_ret);
+ 	struct page *(*read_metadata_page)(struct inode *inode, pgoff_t index);
+ 	bool (*verity_required)(struct inode *inode, pgoff_t index);
++	loff_t (*readpage_limit)(struct inode *inode);
+ };
+ 
+ #ifdef CONFIG_FS_VERITY
 -- 
-2.20.1
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.19.1
