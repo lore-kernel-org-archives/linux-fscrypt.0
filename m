@@ -1,30 +1,18 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-Date: Tue, 19 Feb 2019 13:17:16 -0800
-From: Eric Biggers <ebiggers@kernel.org>
-Message-ID: <20190219211715.GA12177@gmail.com>
+Return-Path: <SRS0=THX2=QZ=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: Re: [RFC PATCH 00/10] Consolidate Post read processing code
+Date: Mon, 18 Feb 2019 15:49:13 +0530
+In-Reply-To: <20190218100433.20048-1-chandan@linux.ibm.com>
 References: <20190218100433.20048-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Disposition: inline
-In-Reply-To: <20190218100433.20048-1-chandan@linux.ibm.com>
-Subject: Re: [f2fs-dev] [RFC PATCH 00/10] Consolidate Post read processing
- code
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Transfer-Encoding: 7Bit
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: Chandan Rajendra <chandan@linux.ibm.com>
-Cc: tytso@mit.edu, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, adilger.kernel@dilger.ca, jaegeuk@kernel.org, linux-ext4@vger.kernel.org
+Message-Id: <2149979.e1aSEps7Pq@localhost.localdomain>
+To: linux-ext4@vger.kernel.org
+Cc: linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Chandan,
-
-On Mon, Feb 18, 2019 at 03:34:23PM +0530, Chandan Rajendra wrote:
+On Monday, February 18, 2019 3:34:23 PM IST Chandan Rajendra wrote:
 > This patchset moves the "post read processing" code into a file of its
 > own and gets the generic do_mpage_readpge() to make use of the
 > functionality provided. With these changes in place, the patchset
@@ -38,6 +26,11 @@ On Mon, Feb 18, 2019 at 03:34:23PM +0530, Chandan Rajendra wrote:
 > patches to replace per-filesystem encryption config options with a
 > single config option that affects all filesystems making use of
 > fscrypt code.
+
+The patchset is based on fsverity_2019-01-30 branch of Eric's git tree. It can
+also be obtained from "https://github.com/chandanr/linux.git
+use-mpage-readpage-rfc".
+
 > 
 > Chandan Rajendra (10):
 >   ext4: use IS_ENCRYPTED() to check encryption status
@@ -51,33 +44,65 @@ On Mon, Feb 18, 2019 at 03:34:23PM +0530, Chandan Rajendra wrote:
 >   fs/mpage.c: Integrate post read processing
 >   ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
 > 
+>  Documentation/filesystems/fscrypt.rst   |   4 +-
+>  arch/mips/configs/generic_defconfig     |   2 +-
+>  arch/nds32/configs/defconfig            |   2 +-
+>  arch/s390/configs/debug_defconfig       |   2 +-
+>  arch/s390/configs/performance_defconfig |   2 +-
+>  fs/Makefile                             |   3 +-
+>  fs/crypto/Kconfig                       |   5 +-
+>  fs/crypto/bio.c                         |  21 +-
+>  fs/crypto/crypto.c                      |   1 +
+>  fs/crypto/fscrypt_private.h             |   4 +-
+>  fs/ext4/Kconfig                         |  15 -
+>  fs/ext4/Makefile                        |   2 +-
+>  fs/ext4/dir.c                           |  10 +-
+>  fs/ext4/ext4.h                          |  14 +-
+>  fs/ext4/ext4_jbd2.h                     |   2 +-
+>  fs/ext4/extents.c                       |   4 +-
+>  fs/ext4/ialloc.c                        |   2 +-
+>  fs/ext4/inode.c                         |  29 +-
+>  fs/ext4/ioctl.c                         |   4 +-
+>  fs/ext4/move_extent.c                   |   3 +-
+>  fs/ext4/namei.c                         |  18 +-
+>  fs/ext4/page-io.c                       |   9 +-
+>  fs/ext4/readpage.c                      | 444 ------------------------
+>  fs/ext4/super.c                         |  43 ++-
+>  fs/ext4/sysfs.c                         |   4 +-
+>  fs/f2fs/Kconfig                         |  12 +-
+>  fs/f2fs/data.c                          |   4 +-
+>  fs/f2fs/dir.c                           |  10 +-
+>  fs/f2fs/f2fs.h                          |  14 +-
+>  fs/f2fs/file.c                          |  10 +-
+>  fs/f2fs/inode.c                         |   4 +-
+>  fs/f2fs/namei.c                         |   6 +-
+>  fs/f2fs/super.c                         |   8 +-
+>  fs/f2fs/sysfs.c                         |   4 +-
+>  fs/mpage.c                              |  77 +++-
+>  fs/post_read_process.c                  | 128 +++++++
+>  fs/ubifs/Kconfig                        |  12 +-
+>  fs/ubifs/Makefile                       |   2 +-
+>  fs/ubifs/ioctl.c                        |   4 +-
+>  fs/ubifs/sb.c                           |   2 +-
+>  fs/ubifs/super.c                        |   2 +-
+>  fs/ubifs/ubifs.h                        |   5 +-
+>  fs/verity/verify.c                      |  12 +
+>  include/linux/blk_types.h               |   2 +
+>  include/linux/fs.h                      |   4 +-
+>  include/linux/fscrypt.h                 | 405 ++++++++++++++++++++-
+>  include/linux/fscrypt_notsupp.h         | 231 ------------
+>  include/linux/fscrypt_supp.h            | 204 -----------
+>  include/linux/fsverity.h                |   3 +
+>  include/linux/post_read_process.h       |  21 ++
+>  50 files changed, 757 insertions(+), 1078 deletions(-)
+>  delete mode 100644 fs/ext4/readpage.c
+>  create mode 100644 fs/post_read_process.c
+>  delete mode 100644 include/linux/fscrypt_notsupp.h
+>  delete mode 100644 include/linux/fscrypt_supp.h
+>  create mode 100644 include/linux/post_read_process.h
+> 
+> 
 
-Thanks for working on this!  This will also make it much easier to support
-block_size != PAGE_SIZE in ext4 encryption, right?  I think this is the best
-path forward, but I'll take a closer look at your new patches.
 
-FYI regarding practical matters, merging fs-verity was delayed due to
-disagreement about the API.  See https://lwn.net/Articles/775872/.
-
-We don't have to wait for fs-verity for your initial fscrypt changes, though:
-
-	ext4: use IS_ENCRYPTED() to check encryption status
-	f2fs: use IS_ENCRYPTED() to check encryption status
-	fscrypt: remove filesystem specific build config option
-
-So, a couple weeks ago Ted and I already queued those three patches in
-fscrypt.git (https://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git
-branch "master", though we plan to change the repo soon) for the upcoming merge
-window, based on upstream rather than fs-verity.  Are you fine with that?
-
-I also suggest adding linux-fsdevel to the Cc given the fs/*.c changes.
-
-Thanks!
-
-- Eric
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+-- 
+chandan
