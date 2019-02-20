@@ -1,11 +1,11 @@
 Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 11 Feb 2019 09:27:34 -0800
-Message-Id: <20190211172738.4633-17-ebiggers@kernel.org>
-In-Reply-To: <20190211172738.4633-1-ebiggers@kernel.org>
-References: <20190211172738.4633-1-ebiggers@kernel.org>
+Date: Tue, 19 Feb 2019 22:52:45 -0800
+Message-Id: <20190220065249.32099-15-ebiggers@kernel.org>
+In-Reply-To: <20190220065249.32099-1-ebiggers@kernel.org>
+References: <20190220065249.32099-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [RFC PATCH v2 16/20] fscrypt: require that key be added
+Subject: [f2fs-dev] [RFC PATCH v3 14/18] fscrypt: require that key be added
  when setting a v2 encryption policy
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
  <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
@@ -18,7 +18,7 @@ Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
 To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
@@ -42,10 +42,10 @@ Signed-off-by: Eric Biggers <ebiggers@google.com>
  3 files changed, 56 insertions(+)
 
 diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index b16cf3bd6cf1..2b58520ab0e2 100644
+index b81d4a59056d..881b43cb1d59 100644
 --- a/fs/crypto/fscrypt_private.h
 +++ b/fs/crypto/fscrypt_private.h
-@@ -402,6 +402,9 @@ extern struct key *
+@@ -409,6 +409,9 @@ extern struct key *
  fscrypt_find_master_key(struct super_block *sb,
  			const struct fscrypt_key_specifier *mk_spec);
  
@@ -56,7 +56,7 @@ index b16cf3bd6cf1..2b58520ab0e2 100644
  extern void fscrypt_exit_keyring(void);
  
 diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 15ca0f1d04e7..42462452e34e 100644
+index 48e7ab8a42e5..dae4423c6657 100644
 --- a/fs/crypto/keyring.c
 +++ b/fs/crypto/keyring.c
 @@ -556,6 +556,53 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
