@@ -1,95 +1,64 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:54406 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1730638AbfBTGyk (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 20 Feb 2019 01:54:40 -0500
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v3 08/18] fs/dcache.c: add shrink_dcache_inode()
-Date: Tue, 19 Feb 2019 22:52:39 -0800
-Message-Id: <20190220065249.32099-9-ebiggers@kernel.org>
-In-Reply-To: <20190220065249.32099-1-ebiggers@kernel.org>
-References: <20190220065249.32099-1-ebiggers@kernel.org>
+Return-Path: <SRS0=httw=Q3=gmail.com=richard.weinberger@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+References: <20190220065249.32099-1-ebiggers@kernel.org> <20190220065249.32099-5-ebiggers@kernel.org>
+In-Reply-To: <20190220065249.32099-5-ebiggers@kernel.org>
+From: Richard Weinberger <richard.weinberger@gmail.com>
+Date: Thu, 21 Feb 2019 00:19:54 +0100
+Message-ID: <CAFLxGvxLYL1raaXZPyyMS7CUUak3L6GncZ_GKYz2SSsGHEHpnQ@mail.gmail.com>
+Subject: Re: [RFC PATCH v3 04/18] fs: add ->s_master_keys to struct super_block
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, "open list:ABI/API" <linux-api@vger.kernel.org>, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Feb 20, 2019 at 7:55 AM Eric Biggers <ebiggers@kernel.org> wrote:
+>
+> From: Eric Biggers <ebiggers@google.com>
+>
+> Add an ->s_master_keys keyring to 'struct super_block'.  New fscrypt
+> ioctls will allow adding and removing encryption keys from this keyring.
+> This will enable solving multiple interrelated problems with how fscrypt
+> keys are provided and managed currently, including:
+>
+> - Making the key status (which is currently per-process) match the
+>   filesystem-level status of which encrypted files are "unlocked".
+>
+> - Supporting a proper API to remove encryption keys, "locking" the
+>   corresponding encrypted files.
+>
+> - Caching an HMAC transform for each master key, allowing the use of
+>   HKDF while still retaining good performance.
+>
+> - Preventing denial of service via keyctl_invalidate().
+>
+> Similar to the existing ->s_cop, the keyring is added to the VFS-level
+> superblock struct rather than separately to the ext4, f2fs, and ubifs
+> superblock structs so that it can be used by the shared code in
+> fs/crypto/.  To minimize overhead, the keyring will only be allocated if
+> userspace actually adds a key; otherwise will stay NULL.
+>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/super.c         | 3 +++
+>  include/linux/fs.h | 1 +
+>  2 files changed, 4 insertions(+)
+>
+> diff --git a/fs/super.c b/fs/super.c
+> index 48e25eba8465..7ca05dda905c 100644
+> --- a/fs/super.c
+> +++ b/fs/super.c
+> @@ -291,6 +291,9 @@ static void __put_super(struct super_block *s)
+>                 security_sb_free(s);
+>                 put_user_ns(s->s_user_ns);
+>                 kfree(s->s_subtype);
+> +#ifdef CONFIG_FS_ENCRYPTION
+> +               key_put(s->s_master_keys);
+> +#endif
 
-When a filesystem encryption key is removed, we need all files which had
-been "unlocked" (had ->i_crypt_info set up) with it to appear "locked"
-again.  This is most easily done by evicting the inodes.  This can
-currently be done using 'echo 2 > /proc/sys/vm/drop_caches'; however,
-that is overkill and not usable by non-root users.
+Please wrap this in a static inline function such that you can get rid
+of the ifdef here.
+Just like put_user_ns() does.
 
-To evict just the needed inodes we also need the ability to evict those
-inodes' dentries, since an inode is pinned by its dentries.  Therefore,
-add a function shrink_dcache_inode() which iterates through an inode's
-dentries and evicts any unused ones as well as any unused descendants
-(since there may be negative dentries pinning the inode's dentries).
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/dcache.c            | 32 ++++++++++++++++++++++++++++++++
- include/linux/dcache.h |  1 +
- 2 files changed, 33 insertions(+)
-
-diff --git a/fs/dcache.c b/fs/dcache.c
-index 2593153471cf..6a7db8797b2d 100644
---- a/fs/dcache.c
-+++ b/fs/dcache.c
-@@ -1484,6 +1484,38 @@ void shrink_dcache_parent(struct dentry *parent)
- }
- EXPORT_SYMBOL(shrink_dcache_parent);
- 
-+/**
-+ * shrink_dcache_inode - prune dcache for inode
-+ * @inode: inode to prune
-+ *
-+ * Evict all unused aliases of the specified inode from the dcache.  This is
-+ * intended to be used when trying to evict a specific inode, since inodes are
-+ * pinned by their dentries.  We also have to descend to ->d_subdirs for each
-+ * alias, since aliases may be pinned by negative child dentries.
-+ */
-+void shrink_dcache_inode(struct inode *inode)
-+{
-+	for (;;) {
-+		struct select_data data;
-+		struct dentry *dentry;
-+
-+		INIT_LIST_HEAD(&data.dispose);
-+		data.start = NULL;
-+		data.found = 0;
-+
-+		spin_lock(&inode->i_lock);
-+		hlist_for_each_entry(dentry, &inode->i_dentry, d_u.d_alias)
-+			d_walk(dentry, &data, select_collect);
-+		spin_unlock(&inode->i_lock);
-+
-+		if (!data.found)
-+			break;
-+
-+		shrink_dentry_list(&data.dispose);
-+		cond_resched();
-+	}
-+}
-+
- static enum d_walk_ret umount_check(void *_data, struct dentry *dentry)
- {
- 	/* it has busy descendents; complain about those instead */
-diff --git a/include/linux/dcache.h b/include/linux/dcache.h
-index ef4b70f64f33..c02dab98bc97 100644
---- a/include/linux/dcache.h
-+++ b/include/linux/dcache.h
-@@ -245,6 +245,7 @@ extern struct dentry * d_obtain_alias(struct inode *);
- extern struct dentry * d_obtain_root(struct inode *);
- extern void shrink_dcache_sb(struct super_block *);
- extern void shrink_dcache_parent(struct dentry *);
-+extern void shrink_dcache_inode(struct inode *);
- extern void shrink_dcache_for_umount(struct super_block *);
- extern void d_invalidate(struct dentry *);
- 
 -- 
-2.20.1
+Thanks,
+//richard
