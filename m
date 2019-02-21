@@ -1,194 +1,115 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v3 01/18] fs, fscrypt: move uapi definitions to new header <linux/fscrypt.h>
-Date: Tue, 19 Feb 2019 22:52:32 -0800
-Message-Id: <20190220065249.32099-2-ebiggers@kernel.org>
-In-Reply-To: <20190220065249.32099-1-ebiggers@kernel.org>
-References: <20190220065249.32099-1-ebiggers@kernel.org>
+Return-Path: <SRS0=Hy9y=Q4=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: Re: [f2fs-dev] [RFC PATCH 05/10] fsverity: Add call back to decide if verity check has to be performed
+Date: Thu, 21 Feb 2019 18:24:52 +0530
+In-Reply-To: <20190219232649.GF12177@gmail.com>
+References: <20190218100433.20048-1-chandan@linux.ibm.com> <20190218100433.20048-6-chandan@linux.ibm.com> <20190219232649.GF12177@gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: keyrings-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Message-Id: <3323472.mdDe8xBITV@localhost.localdomain>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, jaegeuk@kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Wednesday, February 20, 2019 4:56:49 AM IST Eric Biggers wrote:
+> Hi Chandan,
+> 
+> On Mon, Feb 18, 2019 at 03:34:28PM +0530, Chandan Rajendra wrote:
+> > Ext4 and F2FS store verity metadata in data extents (beyond
+> > inode->i_size) associated with a file. But other filesystems might
+> > choose alternative means to store verity metadata. Hence this commit
+> > adds a callback function pointer to 'struct fsverity_operations' to help
+> > in deciding if verity operation needs to performed against a page-cache
+> > page holding file data.
+> > 
+> > Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+> > ---
+> >  fs/ext4/super.c          | 9 +++++++++
+> >  fs/post_read_process.c   | 5 +++--
+> >  include/linux/fsverity.h | 1 +
+> >  3 files changed, 13 insertions(+), 2 deletions(-)
+> > 
+> > diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+> > index 9314dddfbf34..2d7781ab6824 100644
+> > --- a/fs/ext4/super.c
+> > +++ b/fs/ext4/super.c
+> > @@ -1428,10 +1428,19 @@ static struct page *ext4_read_verity_metadata_page(struct inode *inode,
+> >  	return read_mapping_page(inode->i_mapping, index, NULL);
+> >  }
+> >  
+> > +static bool ext4_verity_required(struct inode *inode, pgoff_t index)
+> > +{
+> > +	if (index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT))
+> > +		return true;
+> > +	else
+> > +		return false;
+> > +}
+> 
+> This can be simplified to:
+> 
+> 	return index < (i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT;
+>
 
-More fscrypt definitions are being added, and we shouldn't use a
-disproportionate amount of space in <linux/fs.h> for fscrypt stuff.
-So move the fscrypt definitions to a new header <linux/fscrypt.h>.
+You are right.
 
-For source compatibility with existing userspace programs, <linux/fs.h>
-still includes the new header.
+> > +
+> >  static const struct fsverity_operations ext4_verityops = {
+> >  	.set_verity		= ext4_set_verity,
+> >  	.get_metadata_end	= ext4_get_verity_metadata_end,
+> >  	.read_metadata_page	= ext4_read_verity_metadata_page,
+> > +	.verity_required	= ext4_verity_required,
+> >  };
+> >  #endif /* CONFIG_FS_VERITY */
+> 
+> Doesn't f2fs need this too?  This patch only changes ext4.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- MAINTAINERS                  |  1 +
- include/linux/fscrypt.h      |  1 +
- include/uapi/linux/fs.h      | 54 ++-------------------------------
- include/uapi/linux/fscrypt.h | 58 ++++++++++++++++++++++++++++++++++++
- 4 files changed, 63 insertions(+), 51 deletions(-)
- create mode 100644 include/uapi/linux/fscrypt.h
+Yes, My plan was to get review comments about the current approach and then
+make corresponding changes in F2FS.
 
-diff --git a/MAINTAINERS b/MAINTAINERS
-index 51029a425dbe..f3c60ca897cc 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -6199,6 +6199,7 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git
- S:	Supported
- F:	fs/crypto/
- F:	include/linux/fscrypt*.h
-+F:	include/uapi/linux/fscrypt.h
- F:	Documentation/filesystems/fscrypt.rst
- 
- FSI-ATTACHED I2C DRIVER
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index e5194fc3983e..8b1e44421497 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -16,6 +16,7 @@
- #include <linux/fs.h>
- #include <linux/mm.h>
- #include <linux/slab.h>
-+#include <uapi/linux/fscrypt.h>
- 
- #define FS_CRYPTO_BLOCK_SIZE		16
- 
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index 121e82ce296b..0f4e66b1bcd0 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -13,6 +13,9 @@
- #include <linux/limits.h>
- #include <linux/ioctl.h>
- #include <linux/types.h>
-+#ifndef __KERNEL__
-+#include <linux/fscrypt.h>
-+#endif
- 
- /* Use of MS_* flags within the kernel is restricted to core mount(2) code. */
- #if !defined(__KERNEL__)
-@@ -212,57 +215,6 @@ struct fsxattr {
- #define FS_IOC_GETFSLABEL		_IOR(0x94, 49, char[FSLABEL_MAX])
- #define FS_IOC_SETFSLABEL		_IOW(0x94, 50, char[FSLABEL_MAX])
- 
--/*
-- * File system encryption support
-- */
--/* Policy provided via an ioctl on the topmost directory */
--#define FS_KEY_DESCRIPTOR_SIZE	8
--
--#define FS_POLICY_FLAGS_PAD_4		0x00
--#define FS_POLICY_FLAGS_PAD_8		0x01
--#define FS_POLICY_FLAGS_PAD_16		0x02
--#define FS_POLICY_FLAGS_PAD_32		0x03
--#define FS_POLICY_FLAGS_PAD_MASK	0x03
--#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
--#define FS_POLICY_FLAGS_VALID		0x07
--
--/* Encryption algorithms */
--#define FS_ENCRYPTION_MODE_INVALID		0
--#define FS_ENCRYPTION_MODE_AES_256_XTS		1
--#define FS_ENCRYPTION_MODE_AES_256_GCM		2
--#define FS_ENCRYPTION_MODE_AES_256_CBC		3
--#define FS_ENCRYPTION_MODE_AES_256_CTS		4
--#define FS_ENCRYPTION_MODE_AES_128_CBC		5
--#define FS_ENCRYPTION_MODE_AES_128_CTS		6
--#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
--#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
--#define FS_ENCRYPTION_MODE_ADIANTUM		9
--
--struct fscrypt_policy {
--	__u8 version;
--	__u8 contents_encryption_mode;
--	__u8 filenames_encryption_mode;
--	__u8 flags;
--	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
--};
--
--#define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
--#define FS_IOC_GET_ENCRYPTION_PWSALT	_IOW('f', 20, __u8[16])
--#define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
--
--/* Parameters for passing an encryption key into the kernel keyring */
--#define FS_KEY_DESC_PREFIX		"fscrypt:"
--#define FS_KEY_DESC_PREFIX_SIZE		8
--
--/* Structure that userspace passes to the kernel keyring */
--#define FS_MAX_KEY_SIZE			64
--
--struct fscrypt_key {
--	__u32 mode;
--	__u8 raw[FS_MAX_KEY_SIZE];
--	__u32 size;
--};
--
- /*
-  * Inode flags (FS_IOC_GETFLAGS / FS_IOC_SETFLAGS)
-  *
-diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-new file mode 100644
-index 000000000000..193339cb53fd
---- /dev/null
-+++ b/include/uapi/linux/fscrypt.h
-@@ -0,0 +1,58 @@
-+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-+#ifndef _UAPI_LINUX_FSCRYPT_H
-+#define _UAPI_LINUX_FSCRYPT_H
-+
-+#include <linux/types.h>
-+
-+/*
-+ * File system encryption support
-+ */
-+/* Policy provided via an ioctl on the topmost directory */
-+#define FS_KEY_DESCRIPTOR_SIZE	8
-+
-+#define FS_POLICY_FLAGS_PAD_4		0x00
-+#define FS_POLICY_FLAGS_PAD_8		0x01
-+#define FS_POLICY_FLAGS_PAD_16		0x02
-+#define FS_POLICY_FLAGS_PAD_32		0x03
-+#define FS_POLICY_FLAGS_PAD_MASK	0x03
-+#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
-+#define FS_POLICY_FLAGS_VALID		0x07
-+
-+/* Encryption algorithms */
-+#define FS_ENCRYPTION_MODE_INVALID		0
-+#define FS_ENCRYPTION_MODE_AES_256_XTS		1
-+#define FS_ENCRYPTION_MODE_AES_256_GCM		2
-+#define FS_ENCRYPTION_MODE_AES_256_CBC		3
-+#define FS_ENCRYPTION_MODE_AES_256_CTS		4
-+#define FS_ENCRYPTION_MODE_AES_128_CBC		5
-+#define FS_ENCRYPTION_MODE_AES_128_CTS		6
-+#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
-+#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
-+#define FS_ENCRYPTION_MODE_ADIANTUM		9
-+
-+struct fscrypt_policy {
-+	__u8 version;
-+	__u8 contents_encryption_mode;
-+	__u8 filenames_encryption_mode;
-+	__u8 flags;
-+	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+};
-+
-+#define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
-+#define FS_IOC_GET_ENCRYPTION_PWSALT	_IOW('f', 20, __u8[16])
-+#define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
-+
-+/* Parameters for passing an encryption key into the kernel keyring */
-+#define FS_KEY_DESC_PREFIX		"fscrypt:"
-+#define FS_KEY_DESC_PREFIX_SIZE		8
-+
-+/* Structure that userspace passes to the kernel keyring */
-+#define FS_MAX_KEY_SIZE			64
-+
-+struct fscrypt_key {
-+	__u32 mode;
-+	__u8 raw[FS_MAX_KEY_SIZE];
-+	__u32 size;
-+};
-+
-+#endif /* _UAPI_LINUX_FSCRYPT_H */
+> 
+> >  
+> > diff --git a/fs/post_read_process.c b/fs/post_read_process.c
+> > index 9720eeff0160..1f8663d70247 100644
+> > --- a/fs/post_read_process.c
+> > +++ b/fs/post_read_process.c
+> > @@ -79,8 +79,9 @@ struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
+> >  	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
+> >  		post_read_steps |= 1 << STEP_DECRYPT;
+> >  #ifdef CONFIG_FS_VERITY
+> > -	if (inode->i_verity_info != NULL &&
+> > -		(index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
+> > +	if (inode->i_verity_info != NULL
+> > +		&& inode->i_sb->s_vop->verity_required
+> > +		&& inode->i_sb->s_vop->verity_required(inode, index))
+> >  		post_read_steps |= 1 << STEP_VERITY;
+> 
+> If ->verity_required is NULL, shouldn't that be equivalent to
+> ->verity_required() returning true?
+>
+
+Yes, you are right about that. I will fix it in the next iteration of the
+patchset.
+
+> >  #endif
+> >  	if (post_read_steps) {
+> > diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+> > index 7c33b42abf1b..b83712d6c79a 100644
+> > --- a/include/linux/fsverity.h
+> > +++ b/include/linux/fsverity.h
+> > @@ -18,6 +18,7 @@ struct fsverity_operations {
+> >  	int (*set_verity)(struct inode *inode, loff_t data_i_size);
+> >  	int (*get_metadata_end)(struct inode *inode, loff_t *metadata_end_ret);
+> >  	struct page *(*read_metadata_page)(struct inode *inode, pgoff_t index);
+> > +	bool (*verity_required)(struct inode *inode, pgoff_t index);
+> >  };
+> >  
+> >  #ifdef CONFIG_FS_VERITY
+> 
+> - Eric
+> 
+> 
+
+
 -- 
-2.20.1
+chandan
