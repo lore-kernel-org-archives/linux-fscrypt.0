@@ -1,679 +1,625 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Tue, 19 Feb 2019 22:52:40 -0800
-Message-Id: <20190220065249.32099-10-ebiggers@kernel.org>
-In-Reply-To: <20190220065249.32099-1-ebiggers@kernel.org>
-References: <20190220065249.32099-1-ebiggers@kernel.org>
+Return-Path: <SRS0=Hy9y=Q4=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: Re: [RFC PATCH 04/10] Consolidate "post read processing" into a new file
+Date: Thu, 21 Feb 2019 18:21:05 +0530
+In-Reply-To: <20190219232243.GE12177@gmail.com>
+References: <20190218100433.20048-1-chandan@linux.ibm.com> <20190218100433.20048-5-chandan@linux.ibm.com> <20190219232243.GE12177@gmail.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [RFC PATCH v3 09/18] fscrypt: add
- FS_IOC_REMOVE_ENCRYPTION_KEY ioctl
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Transfer-Encoding: 7Bit
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
+Message-Id: <3910597.haRVTmAmja@localhost.localdomain>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Wednesday, February 20, 2019 4:52:44 AM IST Eric Biggers wrote:
+> Hi Chandan,
+> 
+> On Mon, Feb 18, 2019 at 03:34:27PM +0530, Chandan Rajendra wrote:
+> > The post read processing code is used by both Ext4 and F2FS. Hence to
+> > remove duplicity, this commit moves the code into
+> > include/linux/post_read_process.h and fs/post_read_process.c.
+> > 
+> > The corresponding decrypt and verity "work" functions have been moved
+> > inside fscrypt and fsverity sources. With these in place, the post
+> > processing code now has to just invoke enqueue functions provided by
+> > fscrypt and fsverity.
+> > 
+> > Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+> > ---
+> >  fs/Makefile                       |   3 +-
+> >  fs/crypto/bio.c                   |  21 ++--
+> >  fs/crypto/crypto.c                |   1 +
+> >  fs/crypto/fscrypt_private.h       |   3 +
+> >  fs/ext4/ext4.h                    |   2 -
+> >  fs/ext4/readpage.c                | 153 +-----------------------------
+> >  fs/ext4/super.c                   |   9 +-
+> >  fs/post_read_process.c            | 127 +++++++++++++++++++++++++
+> >  fs/verity/verify.c                |  12 +++
+> >  include/linux/fscrypt.h           |  11 ---
+> >  include/linux/post_read_process.h |  21 ++++
+> >  11 files changed, 176 insertions(+), 187 deletions(-)
+> >  create mode 100644 fs/post_read_process.c
+> >  create mode 100644 include/linux/post_read_process.h
+> > 
+> > diff --git a/fs/Makefile b/fs/Makefile
+> > index 10b37f651ffd..5f6c0cba102b 100644
+> > --- a/fs/Makefile
+> > +++ b/fs/Makefile
+> > @@ -12,7 +12,8 @@ obj-y :=	open.o read_write.o file_table.o super.o \
+> >  		attr.o bad_inode.o file.o filesystems.o namespace.o \
+> >  		seq_file.o xattr.o libfs.o fs-writeback.o \
+> >  		pnode.o splice.o sync.o utimes.o d_path.o \
+> > -		stack.o fs_struct.o statfs.o fs_pin.o nsfs.o
+> > +		stack.o fs_struct.o statfs.o fs_pin.o nsfs.o \
+> > +		post_read_process.o
+> >  
+> 
+> To avoid bloating every Linux kernel in existence, post_read_process.c should
+> only be compiled if CONFIG_FS_ENCRYPTION || CONFIG_FS_VERITY.
+>
 
-Add a new fscrypt ioctl, FS_IOC_REMOVE_ENCRYPTION_KEY.  This ioctl
-removes an encryption key that was added by FS_IOC_ADD_ENCRYPTION_KEY.
-It wipes the secret key itself, then "locks" the encrypted files and
-directories that had been unlocked using that key -- implemented by
-evicting the relevant dentries and inodes from the VFS caches.
+Will do.
 
-The problem this solves is that many fscrypt users want the ability to
-remove encryption keys, causing the corresponding encrypted directories
-to appear "locked" (presented in ciphertext form) again.  Moreover,
-users want removing an encryption key to *really* remove it, in the
-sense that the removed keys cannot be recovered even if kernel memory is
-compromised, e.g. by the exploit of a kernel security vulnerability or
-by a physical attack.  This is desirable after a user logs out of the
-system, for example.  In many cases users even already assume this to be
-the case and are surprised to hear when it's not.
+> >  ifeq ($(CONFIG_BLOCK),y)
+> >  obj-y +=	buffer.o block_dev.o direct-io.o mpage.o
+> > diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+> > index 0959044c5cee..a659a76c05e4 100644
+> > --- a/fs/crypto/bio.c
+> > +++ b/fs/crypto/bio.c
+> > @@ -24,6 +24,8 @@
+> >  #include <linux/module.h>
+> >  #include <linux/bio.h>
+> >  #include <linux/namei.h>
+> > +#include <linux/post_read_process.h>
+> > +
+> >  #include "fscrypt_private.h"
+> >  
+> >  static void __fscrypt_decrypt_bio(struct bio *bio, bool done)
+> > @@ -53,24 +55,15 @@ void fscrypt_decrypt_bio(struct bio *bio)
+> >  }
+> >  EXPORT_SYMBOL(fscrypt_decrypt_bio);
+> >  
+> > -static void completion_pages(struct work_struct *work)
+> > +void fscrypt_decrypt_work(struct work_struct *work)
+> >  {
+> > -	struct fscrypt_ctx *ctx =
+> > -		container_of(work, struct fscrypt_ctx, r.work);
+> > -	struct bio *bio = ctx->r.bio;
+> > +	struct bio_post_read_ctx *ctx =
+> > +		container_of(work, struct bio_post_read_ctx, work);
+> >  
+> > -	__fscrypt_decrypt_bio(bio, true);
+> > -	fscrypt_release_ctx(ctx);
+> > -	bio_put(bio);
+> > -}
+> > +	fscrypt_decrypt_bio(ctx->bio);
+> >  
+> > -void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx, struct bio *bio)
+> > -{
+> > -	INIT_WORK(&ctx->r.work, completion_pages);
+> > -	ctx->r.bio = bio;
+> > -	fscrypt_enqueue_decrypt_work(&ctx->r.work);
+> > +	bio_post_read_processing(ctx);
+> >  }
+> > -EXPORT_SYMBOL(fscrypt_enqueue_decrypt_bio);
+> >  
+> >  void fscrypt_pullback_bio_page(struct page **page, bool restore)
+> >  {
+> > diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+> > index 4dc788e3bc96..36d599784e5a 100644
+> > --- a/fs/crypto/crypto.c
+> > +++ b/fs/crypto/crypto.c
+> > @@ -53,6 +53,7 @@ struct kmem_cache *fscrypt_info_cachep;
+> >  
+> >  void fscrypt_enqueue_decrypt_work(struct work_struct *work)
+> >  {
+> > +	INIT_WORK(work, fscrypt_decrypt_work);
+> >  	queue_work(fscrypt_read_workqueue, work);
+> >  }
+> >  EXPORT_SYMBOL(fscrypt_enqueue_decrypt_work);
+> > diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+> > index 7da276159593..412a3bcf9efd 100644
+> > --- a/fs/crypto/fscrypt_private.h
+> > +++ b/fs/crypto/fscrypt_private.h
+> > @@ -114,6 +114,9 @@ static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
+> >  	return false;
+> >  }
+> >  
+> > +/* bio.c */
+> > +void fscrypt_decrypt_work(struct work_struct *work);
+> > +
+> >  /* crypto.c */
+> >  extern struct kmem_cache *fscrypt_info_cachep;
+> >  extern int fscrypt_initialize(unsigned int cop_flags);
+> > diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
+> > index 0ffa84772667..c0245820bafe 100644
+> > --- a/fs/ext4/ext4.h
+> > +++ b/fs/ext4/ext4.h
+> > @@ -3088,8 +3088,6 @@ static inline void ext4_set_de_type(struct super_block *sb,
+> >  extern int ext4_mpage_readpages(struct address_space *mapping,
+> >  				struct list_head *pages, struct page *page,
+> >  				unsigned nr_pages, bool is_readahead);
+> > -extern int __init ext4_init_post_read_processing(void);
+> > -extern void ext4_exit_post_read_processing(void);
+> >  
+> >  /* symlink.c */
+> >  extern const struct inode_operations ext4_encrypted_symlink_inode_operations;
+> > diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
+> > index 93fbc15177a3..8943fc41fd33 100644
+> > --- a/fs/ext4/readpage.c
+> > +++ b/fs/ext4/readpage.c
+> > @@ -44,14 +44,10 @@
+> >  #include <linux/backing-dev.h>
+> >  #include <linux/pagevec.h>
+> >  #include <linux/cleancache.h>
+> > +#include <linux/post_read_process.h>
+> >  
+> >  #include "ext4.h"
+> >  
+> > -#define NUM_PREALLOC_POST_READ_CTXS	128
+> > -
+> > -static struct kmem_cache *bio_post_read_ctx_cache;
+> > -static mempool_t *bio_post_read_ctx_pool;
+> > -
+> >  static inline bool ext4_bio_encrypted(struct bio *bio)
+> >  {
+> >  #ifdef CONFIG_FS_ENCRYPTION
+> > @@ -61,124 +57,6 @@ static inline bool ext4_bio_encrypted(struct bio *bio)
+> >  #endif
+> >  }
+> >  
+> > -/* postprocessing steps for read bios */
+> > -enum bio_post_read_step {
+> > -	STEP_INITIAL = 0,
+> > -	STEP_DECRYPT,
+> > -	STEP_VERITY,
+> > -};
+> > -
+> > -struct bio_post_read_ctx {
+> > -	struct bio *bio;
+> > -	struct work_struct work;
+> > -	unsigned int cur_step;
+> > -	unsigned int enabled_steps;
+> > -};
+> > -
+> > -static void __read_end_io(struct bio *bio)
+> > -{
+> > -	struct page *page;
+> > -	struct bio_vec *bv;
+> > -	int i;
+> > -
+> > -	bio_for_each_segment_all(bv, bio, i) {
+> > -		page = bv->bv_page;
+> > -
+> > -		/* PG_error was set if any post_read step failed */
+> > -		if (bio->bi_status || PageError(page)) {
+> > -			ClearPageUptodate(page);
+> > -			SetPageError(page);
+> > -		} else {
+> > -			SetPageUptodate(page);
+> > -		}
+> > -		unlock_page(page);
+> > -	}
+> > -	if (bio->bi_private)
+> > -		mempool_free(bio->bi_private, bio_post_read_ctx_pool);
+> > -	bio_put(bio);
+> > -}
+> > -
+> > -static void bio_post_read_processing(struct bio_post_read_ctx *ctx);
+> > -
+> > -static void decrypt_work(struct work_struct *work)
+> > -{
+> > -	struct bio_post_read_ctx *ctx =
+> > -		container_of(work, struct bio_post_read_ctx, work);
+> > -
+> > -	fscrypt_decrypt_bio(ctx->bio);
+> > -
+> > -	bio_post_read_processing(ctx);
+> > -}
+> > -
+> > -static void verity_work(struct work_struct *work)
+> > -{
+> > -	struct bio_post_read_ctx *ctx =
+> > -		container_of(work, struct bio_post_read_ctx, work);
+> > -
+> > -	fsverity_verify_bio(ctx->bio);
+> > -
+> > -	bio_post_read_processing(ctx);
+> > -}
+> > -
+> > -static void bio_post_read_processing(struct bio_post_read_ctx *ctx)
+> > -{
+> > -	/*
+> > -	 * We use different work queues for decryption and for verity because
+> > -	 * verity may require reading metadata pages that need decryption, and
+> > -	 * we shouldn't recurse to the same workqueue.
+> > -	 */
+> > -	switch (++ctx->cur_step) {
+> > -	case STEP_DECRYPT:
+> > -		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
+> > -			INIT_WORK(&ctx->work, decrypt_work);
+> > -			fscrypt_enqueue_decrypt_work(&ctx->work);
+> > -			return;
+> > -		}
+> > -		ctx->cur_step++;
+> > -		/* fall-through */
+> > -	case STEP_VERITY:
+> > -		if (ctx->enabled_steps & (1 << STEP_VERITY)) {
+> > -			INIT_WORK(&ctx->work, verity_work);
+> > -			fsverity_enqueue_verify_work(&ctx->work);
+> > -			return;
+> > -		}
+> > -		ctx->cur_step++;
+> > -		/* fall-through */
+> > -	default:
+> > -		__read_end_io(ctx->bio);
+> > -	}
+> > -}
+> > -
+> > -static struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
+> > -						       struct bio *bio,
+> > -						       pgoff_t index)
+> > -{
+> > -	unsigned int post_read_steps = 0;
+> > -	struct bio_post_read_ctx *ctx = NULL;
+> > -
+> > -	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
+> > -		post_read_steps |= 1 << STEP_DECRYPT;
+> > -#ifdef CONFIG_FS_VERITY
+> > -	if (inode->i_verity_info != NULL &&
+> > -	    (index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
+> > -		post_read_steps |= 1 << STEP_VERITY;
+> > -#endif
+> > -	if (post_read_steps) {
+> > -		ctx = mempool_alloc(bio_post_read_ctx_pool, GFP_NOFS);
+> > -		if (!ctx)
+> > -			return ERR_PTR(-ENOMEM);
+> > -		ctx->bio = bio;
+> > -		ctx->enabled_steps = post_read_steps;
+> > -		bio->bi_private = ctx;
+> > -	}
+> > -	return ctx;
+> > -}
+> > -
+> > -static bool bio_post_read_required(struct bio *bio)
+> > -{
+> > -	return bio->bi_private && !bio->bi_status;
+> > -}
+> > -
+> >  /*
+> >   * I/O completion handler for multipage BIOs.
+> >   *
+> > @@ -196,11 +74,10 @@ static void mpage_end_io(struct bio *bio)
+> >  	if (bio_post_read_required(bio)) {
+> >  		struct bio_post_read_ctx *ctx = bio->bi_private;
+> >  
+> > -		ctx->cur_step = STEP_INITIAL;
+> >  		bio_post_read_processing(ctx);
+> >  		return;
+> >  	}
+> > -	__read_end_io(bio);
+> > +	end_bio_post_read_processing(bio);
+> >  }
+> >  
+> >  static inline loff_t ext4_readpage_limit(struct inode *inode)
+> > @@ -416,29 +293,3 @@ int ext4_mpage_readpages(struct address_space *mapping,
+> >  		submit_bio(bio);
+> >  	return 0;
+> >  }
+> > -
+> > -int __init ext4_init_post_read_processing(void)
+> > -{
+> > -	bio_post_read_ctx_cache =
+> > -		kmem_cache_create("ext4_bio_post_read_ctx",
+> > -				  sizeof(struct bio_post_read_ctx), 0, 0, NULL);
+> > -	if (!bio_post_read_ctx_cache)
+> > -		goto fail;
+> > -	bio_post_read_ctx_pool =
+> > -		mempool_create_slab_pool(NUM_PREALLOC_POST_READ_CTXS,
+> > -					 bio_post_read_ctx_cache);
+> > -	if (!bio_post_read_ctx_pool)
+> > -		goto fail_free_cache;
+> > -	return 0;
+> > -
+> > -fail_free_cache:
+> > -	kmem_cache_destroy(bio_post_read_ctx_cache);
+> > -fail:
+> > -	return -ENOMEM;
+> > -}
+> > -
+> > -void ext4_exit_post_read_processing(void)
+> > -{
+> > -	mempool_destroy(bio_post_read_ctx_pool);
+> > -	kmem_cache_destroy(bio_post_read_ctx_cache);
+> > -}
+> > diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+> > index 95a5d9fbbb9f..9314dddfbf34 100644
+> > --- a/fs/ext4/super.c
+> > +++ b/fs/ext4/super.c
+> > @@ -6102,10 +6102,6 @@ static int __init ext4_init_fs(void)
+> >  		return err;
+> >  
+> >  	err = ext4_init_pending();
+> > -	if (err)
+> > -		goto out7;
+> > -
+> > -	err = ext4_init_post_read_processing();
+> >  	if (err)
+> >  		goto out6;
+> >  
+> > @@ -6147,10 +6143,8 @@ static int __init ext4_init_fs(void)
+> >  out4:
+> >  	ext4_exit_pageio();
+> >  out5:
+> > -	ext4_exit_post_read_processing();
+> > -out6:
+> >  	ext4_exit_pending();
+> > -out7:
+> > +out6:
+> >  	ext4_exit_es();
+> >  
+> >  	return err;
+> > @@ -6167,7 +6161,6 @@ static void __exit ext4_exit_fs(void)
+> >  	ext4_exit_sysfs();
+> >  	ext4_exit_system_zone();
+> >  	ext4_exit_pageio();
+> > -	ext4_exit_post_read_processing();
+> >  	ext4_exit_es();
+> >  	ext4_exit_pending();
+> >  }
+> > diff --git a/fs/post_read_process.c b/fs/post_read_process.c
+> > new file mode 100644
+> > index 000000000000..9720eeff0160
+> > --- /dev/null
+> > +++ b/fs/post_read_process.c
+> > @@ -0,0 +1,127 @@
+> > +// SPDX-License-Identifier: GPL-2.0
+> > +#include <linux/module.h>
+> > +#include <linux/mm.h>
+> > +#include <linux/pagemap.h>
+> > +#include <linux/bio.h>
+> > +#include <linux/fscrypt.h>
+> > +#include <linux/fsverity.h>
+> > +#include <linux/post_read_process.h>
+> 
+> To help people who come across this code, please add a comment at the top of
+> this file that briefly describes what it is.
+>
 
-It is not sufficient to simply unlink the master key from the keyring
-(or to revoke or invalidate it), since the actual encryption transform
-objects are still pinned in memory by their inodes.  Therefore, to
-really remove a key we must also evict the relevant inodes.
+Sure, I will add a header describing the the code's utility.
 
-Currently one workaround is to run 'sync && echo 2 >
-/proc/sys/vm/drop_caches'.  But, that evicts all unused inodes in the
-system rather than just the inodes associated with the key being
-removed, causing severe performance problems.  Moreover, it requires
-root privileges, so regular users can't "lock" their encrypted files.
+> > +
+> > +#define NUM_PREALLOC_POST_READ_CTXS	128
+> > +
+> > +static struct kmem_cache *bio_post_read_ctx_cache;
+> > +static mempool_t *bio_post_read_ctx_pool;
+> > +
+> > +/* postprocessing steps for read bios */
+> > +enum bio_post_read_step {
+> > +	STEP_INITIAL = 0,
+> > +	STEP_DECRYPT,
+> > +	STEP_VERITY,
+> > +};
+> > +
+> > +void end_bio_post_read_processing(struct bio *bio)
+> > +{
+> > +	struct page *page;
+> > +	struct bio_vec *bv;
+> > +	int i;
+> > +
+> > +	bio_for_each_segment_all(bv, bio, i) {
+> > +		page = bv->bv_page;
+> > +
+> > +		/* PG_error was set if any post_read step failed */
+> > +		if (bio->bi_status || PageError(page)) {
+> > +			ClearPageUptodate(page);
+> > +			SetPageError(page);
+> > +		} else {
+> > +			SetPageUptodate(page);
+> > +		}
+> > +		unlock_page(page);
+> > +	}
+> > +	if (bio->bi_private)
+> > +		put_bio_post_read_ctx(bio->bi_private);
+> > +	bio_put(bio);
+> > +}
+> > +
+> > +void bio_post_read_processing(struct bio_post_read_ctx *ctx)
+> > +{
+> > +	/*
+> > +	 * We use different work queues for decryption and for verity because
+> > +	 * verity may require reading metadata pages that need decryption, and
+> > +	 * we shouldn't recurse to the same workqueue.
+> > +	 */
+> > +	switch (++ctx->cur_step) {
+> > +	case STEP_DECRYPT:
+> > +		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
+> > +			fscrypt_enqueue_decrypt_work(&ctx->work);
+> > +			return;
+> > +		}
+> > +		ctx->cur_step++;
+> > +		/* fall-through */
+> > +	case STEP_VERITY:
+> > +		if (ctx->enabled_steps & (1 << STEP_VERITY)) {
+> > +			fsverity_enqueue_verify_work(&ctx->work);
+> > +			return;
+> > +		}
+> > +		ctx->cur_step++;
+> > +		/* fall-through */
+> > +	default:
+> > +		end_bio_post_read_processing(ctx->bio);
+> > +	}
+> > +}
+> > +
+> > +struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
+> > +						struct bio *bio,
+> > +						pgoff_t index)
+> > +{
+> > +	unsigned int post_read_steps = 0;
+> > +	struct bio_post_read_ctx *ctx = NULL;
+> > +
+> > +	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
+> > +		post_read_steps |= 1 << STEP_DECRYPT;
+> > +#ifdef CONFIG_FS_VERITY
+> > +	if (inode->i_verity_info != NULL &&
+> > +		(index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
+> > +		post_read_steps |= 1 << STEP_VERITY;
+> > +#endif
+> > +	if (post_read_steps) {
+> > +		ctx = mempool_alloc(bio_post_read_ctx_pool, GFP_NOFS);
+> > +		if (!ctx)
+> > +			return ERR_PTR(-ENOMEM);
+> > +		ctx->bio = bio;
+> > +		ctx->inode = inode;
+> > +		ctx->enabled_steps = post_read_steps;
+> > +		ctx->cur_step = STEP_INITIAL;
+> > +		bio->bi_private = ctx;
+> > +	}
+> > +	return ctx;
+> > +}
+> > +
+> > +void put_bio_post_read_ctx(struct bio_post_read_ctx *ctx)
+> > +{
+> > +	mempool_free(ctx, bio_post_read_ctx_pool);
+> > +}
+> > +
+> > +bool bio_post_read_required(struct bio *bio)
+> > +{
+> > +	return bio->bi_private && !bio->bi_status;
+> > +}
+> > +
+> > +static int __init bio_init_post_read_processing(void)
+> > +{
+> > +	bio_post_read_ctx_cache = KMEM_CACHE(bio_post_read_ctx, 0);
+> > +	if (!bio_post_read_ctx_cache)
+> > +		goto fail;
+> > +	bio_post_read_ctx_pool =
+> > +		mempool_create_slab_pool(NUM_PREALLOC_POST_READ_CTXS,
+> > +					 bio_post_read_ctx_cache);
+> > +	if (!bio_post_read_ctx_pool)
+> > +		goto fail_free_cache;
+> > +	return 0;
+> > +
+> > +fail_free_cache:
+> > +	kmem_cache_destroy(bio_post_read_ctx_cache);
+> > +fail:
+> > +	return -ENOMEM;
+> > +}
+> > +
+> > +fs_initcall(bio_init_post_read_processing);
+> > diff --git a/fs/verity/verify.c b/fs/verity/verify.c
+> > index fbfb68eff358..4f7cd2269e83 100644
+> > --- a/fs/verity/verify.c
+> > +++ b/fs/verity/verify.c
+> > @@ -13,6 +13,7 @@
+> >  #include <linux/pagemap.h>
+> >  #include <linux/ratelimit.h>
+> >  #include <linux/scatterlist.h>
+> > +#include <linux/post_read_process.h>
+> >  
+> >  struct workqueue_struct *fsverity_read_workqueue;
+> >  
+> > @@ -283,6 +284,16 @@ void fsverity_verify_bio(struct bio *bio)
+> >  EXPORT_SYMBOL_GPL(fsverity_verify_bio);
+> >  #endif /* CONFIG_BLOCK */
+> >  
+> > +static void fsverity_verify_work(struct work_struct *work)
+> > +{
+> > +	struct bio_post_read_ctx *ctx =
+> > +		container_of(work, struct bio_post_read_ctx, work);
+> > +
+> > +	fsverity_verify_bio(ctx->bio);
+> > +
+> > +	bio_post_read_processing(ctx);
+> > +}
+> > +
+> >  /**
+> >   * fsverity_enqueue_verify_work - enqueue work on the fs-verity workqueue
+> >   *
+> > @@ -290,6 +301,7 @@ EXPORT_SYMBOL_GPL(fsverity_verify_bio);
+> >   */
+> >  void fsverity_enqueue_verify_work(struct work_struct *work)
+> >  {
+> > +	INIT_WORK(work, fsverity_verify_work);
+> >  	queue_work(fsverity_read_workqueue, work);
+> >  }
+> >  EXPORT_SYMBOL_GPL(fsverity_enqueue_verify_work);
+> > diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+> > index 6ba193c23f37..13f70e22aff2 100644
+> > --- a/include/linux/fscrypt.h
+> > +++ b/include/linux/fscrypt.h
+> > @@ -68,10 +68,6 @@ struct fscrypt_ctx {
+> >  			struct page *bounce_page;	/* Ciphertext page */
+> >  			struct page *control_page;	/* Original page  */
+> >  		} w;
+> > -		struct {
+> > -			struct bio *bio;
+> > -			struct work_struct work;
+> > -		} r;
+> 
+> Now that 'struct fscrypt_ctx' is only used for writes, the 'w' part should be
+> changed to an anonymous struct.
 
-Another workaround, used in Chromium OS kernels, is to add a new
-VFS-level ioctl FS_IOC_DROP_CACHE which is a more restricted version of
-drop_caches that operates on a single super_block.  It does:
+Ok. I will change that.
 
-        shrink_dcache_sb(sb);
-        invalidate_inodes(sb, false);
+> 
+> >  		struct list_head free_list;	/* Free list */
+> >  	};
+> >  	u8 flags;				/* Flags */
+> > @@ -206,8 +202,6 @@ static inline bool fscrypt_match_name(const struct fscrypt_name *fname,
+> >  
+> >  /* bio.c */
+> >  extern void fscrypt_decrypt_bio(struct bio *);
+> > -extern void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
+> > -					struct bio *bio);
+> >  extern void fscrypt_pullback_bio_page(struct page **, bool);
+> >  extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
+> >  				 unsigned int);
+> > @@ -376,11 +370,6 @@ static inline void fscrypt_decrypt_bio(struct bio *bio)
+> >  {
+> >  }
+> >  
+> > -static inline void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
+> > -					       struct bio *bio)
+> > -{
+> > -}
+> > -
+> >  static inline void fscrypt_pullback_bio_page(struct page **page, bool restore)
+> >  {
+> >  	return;
+> > diff --git a/include/linux/post_read_process.h b/include/linux/post_read_process.h
+> > new file mode 100644
+> > index 000000000000..09e52928f861
+> > --- /dev/null
+> > +++ b/include/linux/post_read_process.h
+> > @@ -0,0 +1,21 @@
+> > +/* SPDX-License-Identifier: GPL-2.0 */
+> > +#ifndef _POST_READ_PROCESS_H
+> > +#define _POST_READ_PROCESS_H
+> > +
+> > +struct bio_post_read_ctx {
+> > +	struct bio *bio;
+> > +	struct inode *inode;
+> > +	struct work_struct work;
+> > +	unsigned int cur_step;
+> > +	unsigned int enabled_steps;
+> > +};
+> > +
+> > +void end_bio_post_read_processing(struct bio *bio);
+> > +void bio_post_read_processing(struct bio_post_read_ctx *ctx);
+> > +struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
+> > +						struct bio *bio,
+> > +						pgoff_t index);
+> > +void put_bio_post_read_ctx(struct bio_post_read_ctx *ctx);
+> > +bool bio_post_read_required(struct bio *bio);
+> > +
+> > +#endif	/* _POST_READ_PROCESS_H */
+> 
+> - Eric
+> 
+> 
 
-But it's still a hack.  Yet, the major users of filesystem encryption
-want this feature badly enough that they are actually using these hacks.
 
-To properly solve the problem, start maintaining a list of the inodes
-which have been "unlocked" using each master key.  Originally this
-wasn't possible because the kernel didn't keep track of in-use master
-keys at all.  But, with the ->s_master_keys keyring it is now possible.
-
-Then, add an ioctl FS_IOC_REMOVE_ENCRYPTION_KEY.  It finds the specified
-master key in ->s_master_keys, then wipes the secret key itself, which
-prevents any additional inodes from being unlocked with the key.  Then,
-it syncs the filesystem and evicts the inodes in the key's list.  The
-normal inode eviction code will free and wipe the per-file keys (in
-->i_crypt_info).  Note that freeing ->i_crypt_info without evicting the
-inodes was also considered, but would have been racy.
-
-Some inodes may still be in use when a master key is removed, and we
-can't simply revoke random file descriptors, mmap's, etc.  Thus, the
-ioctl simply skips in-use inodes, and returns -EBUSY to indicate that
-some inodes weren't evicted.  The master key *secret* is still removed,
-but the fscrypt_master_key struct remains to keep track of the remaining
-inodes.  Userspace can then retry the ioctl to evict the remaining
-inodes.  Alternatively, if userspace adds the key again, the refreshed
-secret will be associated with the existing list of inodes so they
-remain correctly tracked for future key removals.
-
-The ioctl doesn't wipe pagecache pages.  Thus, we tolerate that after a
-kernel compromise some portions of plaintext file contents may still be
-recoverable from memory.  This can be solved be enabling page poisoning
-system-wide, which security conscious users may choose to do.  But it's
-very difficult to solve otherwise, e.g. note that plaintext file
-contents may have been read in other places than pagecache pages.
-
-Like FS_IOC_ADD_ENCRYPTION_KEY, FS_IOC_REMOVE_ENCRYPTION_KEY is
-initially restricted to privileged users only.  This is sufficient for
-some use cases, but not all.  A later patch will relax this restriction,
-but it will require introducing key hashes, among other changes.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fscrypt_private.h  |  53 ++++++++-
- fs/crypto/keyring.c          | 201 ++++++++++++++++++++++++++++++++++-
- fs/crypto/keysetup.c         | 103 +++++++++++++++++-
- include/linux/fscrypt.h      |  13 +++
- include/uapi/linux/fscrypt.h |   7 ++
- 5 files changed, 372 insertions(+), 5 deletions(-)
-
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index b4c431208555..cc1862c9baa1 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -78,6 +78,19 @@ struct fscrypt_info {
- 	/* Back-pointer to the inode */
- 	struct inode *ci_inode;
- 
-+	/*
-+	 * The master key with which this inode was unlocked (decrypted).  This
-+	 * will be NULL if the master key was found in a process-subscribed
-+	 * keyring rather than in the filesystem-level keyring.
-+	 */
-+	struct key *ci_master_key;
-+
-+	/*
-+	 * Link in list of inodes that were unlocked with the master key.
-+	 * Only used when ->ci_master_key is set.
-+	 */
-+	struct list_head ci_master_key_link;
-+
- 	/*
- 	 * If non-NULL, then encryption is done using the master key directly
- 	 * and ci_ctfm will equal ci_direct_key->dk_ctfm.
-@@ -186,14 +199,52 @@ struct fscrypt_master_key_secret {
-  */
- struct fscrypt_master_key {
- 
--	/* The secret key material */
-+	/*
-+	 * The secret key material.  After FS_IOC_REMOVE_ENCRYPTION_KEY is
-+	 * executed, this is wiped and no new inodes can be unlocked with this
-+	 * key; however, there may still be inodes in ->mk_decrypted_inodes
-+	 * which could not be evicted.  As long as some inodes still remain,
-+	 * FS_IOC_REMOVE_ENCRYPTION_KEY can be retried, or
-+	 * FS_IOC_ADD_ENCRYPTION_KEY can add the secret again.
-+	 *
-+	 * Locking: protected by key->sem.
-+	 */
- 	struct fscrypt_master_key_secret	mk_secret;
- 
- 	/* Arbitrary key descriptor which was assigned by userspace */
- 	struct fscrypt_key_specifier		mk_spec;
- 
-+	/*
-+	 * Length of ->mk_decrypted_inodes, plus one if mk_secret is present.
-+	 * Once this goes to 0, the master key is removed from ->s_master_keys.
-+	 * The 'struct fscrypt_master_key' will continue to live as long as the
-+	 * 'struct key' whose payload it is, but we won't let this reference
-+	 * count rise again.
-+	 */
-+	refcount_t		mk_refcount;
-+
-+	/*
-+	 * List of inodes that were unlocked using this key.  This allows the
-+	 * inodes to be evicted efficiently if the key is removed.
-+	 */
-+	struct list_head	mk_decrypted_inodes;
-+	spinlock_t		mk_decrypted_inodes_lock;
-+
- } __randomize_layout;
- 
-+static inline bool
-+is_master_key_secret_present(const struct fscrypt_master_key_secret *secret)
-+{
-+	/*
-+	 * The READ_ONCE() is only necessary for fscrypt_drop_inode() and
-+	 * fscrypt_key_describe().  These run in atomic context, so they can't
-+	 * take key->sem and thus 'secret' can change concurrently which would
-+	 * be a data race.  But they only need to know whether the secret *was*
-+	 * present at the time of check, so READ_ONCE() suffices.
-+	 */
-+	return READ_ONCE(secret->size) != 0;
-+}
-+
- extern struct key *
- fscrypt_find_master_key(struct super_block *sb,
- 			const struct fscrypt_key_specifier *mk_spec);
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index d44d595b2fd0..da1bfe5934eb 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -10,6 +10,7 @@
-  * filesystem-level keyring, including the ioctls:
-  *
-  * - FS_IOC_ADD_ENCRYPTION_KEY: add a key
-+ * - FS_IOC_REMOVE_ENCRYPTION_KEY: remove a key
-  */
- 
- #include <linux/key-type.h>
-@@ -66,6 +67,13 @@ static void fscrypt_key_destroy(struct key *key)
- static void fscrypt_key_describe(const struct key *key, struct seq_file *m)
- {
- 	seq_puts(m, key->description);
-+
-+	if (key_is_positive(key)) {
-+		const struct fscrypt_master_key *mk = key->payload.data[0];
-+
-+		if (!is_master_key_secret_present(&mk->mk_secret))
-+			seq_puts(m, ": secret removed");
-+	}
- }
- 
- /*
-@@ -186,6 +194,10 @@ static int add_new_master_key(struct fscrypt_master_key_secret *secret,
- 
- 	move_master_key_secret(&mk->mk_secret, secret);
- 
-+	refcount_set(&mk->mk_refcount, 1); /* secret is present */
-+	INIT_LIST_HEAD(&mk->mk_decrypted_inodes);
-+	spin_lock_init(&mk->mk_decrypted_inodes_lock);
-+
- 	format_mk_description(description, mk_spec);
- 	key = key_alloc(&key_type_fscrypt, description,
- 			GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, current_cred(),
-@@ -207,6 +219,22 @@ static int add_new_master_key(struct fscrypt_master_key_secret *secret,
- 	return err;
- }
- 
-+#define KEY_DEAD	1
-+
-+static int add_existing_master_key(struct fscrypt_master_key *mk,
-+				   struct fscrypt_master_key_secret *secret,
-+				   const struct fscrypt_key_specifier *mk_spec)
-+{
-+	if (is_master_key_secret_present(&mk->mk_secret))
-+		return 0;
-+
-+	if (!refcount_inc_not_zero(&mk->mk_refcount))
-+		return KEY_DEAD;
-+
-+	move_master_key_secret(&mk->mk_secret, secret);
-+	return 0;
-+}
-+
- static int add_master_key(struct super_block *sb,
- 			  struct fscrypt_master_key_secret *secret,
- 			  const struct fscrypt_key_specifier *mk_spec)
-@@ -216,6 +244,7 @@ static int add_master_key(struct super_block *sb,
- 	int err;
- 
- 	mutex_lock(&fscrypt_add_key_mutex); /* serialize find + link */
-+retry:
- 	key = fscrypt_find_master_key(sb, mk_spec);
- 	if (IS_ERR(key)) {
- 		err = PTR_ERR(key);
-@@ -227,8 +256,21 @@ static int add_master_key(struct super_block *sb,
- 			goto out_unlock;
- 		err = add_new_master_key(secret, mk_spec, sb->s_master_keys);
- 	} else {
-+		/*
-+		 * Found the key in ->s_master_keys.  Re-add the secret if
-+		 * needed.
-+		 */
-+		down_write(&key->sem);
-+		err = add_existing_master_key(key->payload.data[0], secret,
-+					      mk_spec);
-+		up_write(&key->sem);
-+		if (err == KEY_DEAD) {
-+			/* Key being removed or needs to be removed */
-+			key_invalidate(key);
-+			key_put(key);
-+			goto retry;
-+		}
- 		key_put(key);
--		err = 0;
- 	}
- out_unlock:
- 	mutex_unlock(&fscrypt_add_key_mutex);
-@@ -277,6 +319,163 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
- }
- EXPORT_SYMBOL_GPL(fscrypt_ioctl_add_key);
- 
-+static void evict_dentries_for_decrypted_inodes(struct fscrypt_master_key *mk)
-+{
-+	struct fscrypt_info *ci;
-+	struct inode *inode;
-+	struct inode *toput_inode = NULL;
-+
-+	spin_lock(&mk->mk_decrypted_inodes_lock);
-+
-+	list_for_each_entry(ci, &mk->mk_decrypted_inodes, ci_master_key_link) {
-+		inode = ci->ci_inode;
-+		spin_lock(&inode->i_lock);
-+		if (inode->i_state & (I_FREEING | I_WILL_FREE | I_NEW)) {
-+			spin_unlock(&inode->i_lock);
-+			continue;
-+		}
-+		__iget(inode);
-+		spin_unlock(&inode->i_lock);
-+		spin_unlock(&mk->mk_decrypted_inodes_lock);
-+
-+		shrink_dcache_inode(inode);
-+		iput(toput_inode);
-+		toput_inode = inode;
-+
-+		spin_lock(&mk->mk_decrypted_inodes_lock);
-+	}
-+
-+	spin_unlock(&mk->mk_decrypted_inodes_lock);
-+	iput(toput_inode);
-+}
-+
-+static int try_to_lock_encrypted_files(struct super_block *sb,
-+				       struct fscrypt_master_key *mk)
-+{
-+	int err1;
-+	int err2;
-+
-+	/*
-+	 * An inode can't be evicted while it is dirty or has dirty pages.
-+	 * Thus, we first have to clean the inodes in ->mk_decrypted_inodes.
-+	 *
-+	 * Just do it the easy way: call sync_filesystem().  It's overkill, but
-+	 * it works, and it's more important to minimize the amount of caches we
-+	 * drop than the amount of data we sync.  Also, unprivileged users can
-+	 * already call sync_filesystem() via sys_syncfs() or sys_sync().
-+	 */
-+	down_read(&sb->s_umount);
-+	err1 = sync_filesystem(sb);
-+	up_read(&sb->s_umount);
-+	/* If a sync error occurs, still try to evict as much as possible. */
-+
-+	/*
-+	 * Inodes are pinned by their dentries, so we have to evict their
-+	 * dentries.  shrink_dcache_sb() would suffice, but would be overkill
-+	 * and inappropriate for use by unprivileged users.  So instead go
-+	 * through the inodes' alias lists and try to evict each dentry.
-+	 */
-+	evict_dentries_for_decrypted_inodes(mk);
-+
-+	/*
-+	 * evict_dentries_for_decrypted_inodes() already iput() each inode in
-+	 * the list; any inodes for which that dropped the last reference will
-+	 * have been evicted due to fscrypt_drop_inode() detecting the key
-+	 * removal and telling the VFS to evict the inode.  So to finish, we
-+	 * just need to check whether any inodes couldn't be evicted.
-+	 */
-+	err2 = 0;
-+	spin_lock(&mk->mk_decrypted_inodes_lock);
-+	if (!list_empty(&mk->mk_decrypted_inodes)) {
-+		const struct fscrypt_info *first_ci =
-+			list_first_entry(&mk->mk_decrypted_inodes,
-+					 struct fscrypt_info,
-+					 ci_master_key_link);
-+		fscrypt_warn(sb,
-+			     "inodes still busy after removing key with description %*phN (first ino: %lu)",
-+			     master_key_spec_len(&mk->mk_spec),
-+			     (u8 *)&mk->mk_spec.u, first_ci->ci_inode->i_ino);
-+		err2 = -EBUSY;
-+	}
-+	spin_unlock(&mk->mk_decrypted_inodes_lock);
-+
-+	return err1 ?: err2;
-+}
-+
-+/*
-+ * Try to remove an fscrypt master encryption key.  If other users have also
-+ * added the key, we'll remove the current user's usage of the key, then return
-+ * -EUSERS.  Otherwise we'll continue on and try to actually remove the key.
-+ *
-+ * First we wipe the actual master key secret from memory, so that no more
-+ * inodes can be unlocked with it.  Then, we try to evict all cached inodes that
-+ * had been unlocked using the key.  Since this can fail for in-use inodes, this
-+ * is expected to be used in cooperation with userspace ensuring that none of
-+ * the files are still open.
-+ *
-+ * If, nevertheless, some inodes could not be evicted, we return -EBUSY
-+ * (although we still evicted as many inodes as possible) and keep the 'struct
-+ * key' and the 'struct fscrypt_master_key' around to keep track of the list of
-+ * remaining inodes.  Userspace can then retry the ioctl later to retry evicting
-+ * the remaining inodes, or alternatively can add the secret key again.
-+ *
-+ * Note that even though we wipe the encryption *keys* from memory, decrypted
-+ * data can likely still be found in memory, e.g. in pagecache pages that have
-+ * been freed.  Wiping such data is currently out of scope, short of users who
-+ * may choose to enable page and slab poisoning systemwide.
-+ */
-+int fscrypt_ioctl_remove_key(struct file *filp, const void __user *uarg)
-+{
-+	struct super_block *sb = file_inode(filp)->i_sb;
-+	struct fscrypt_remove_key_arg arg;
-+	struct key *key;
-+	struct fscrypt_master_key *mk;
-+	int err;
-+	bool dead;
-+
-+	if (copy_from_user(&arg, uarg, sizeof(arg)))
-+		return -EFAULT;
-+
-+	if (!valid_key_spec(&arg.key_spec))
-+		return -EINVAL;
-+
-+	if (memchr_inv(arg.__reserved, 0, sizeof(arg.__reserved)))
-+		return -EINVAL;
-+
-+	if (!capable(CAP_SYS_ADMIN))
-+		return -EACCES;
-+
-+	/* Find the key being removed. */
-+	key = fscrypt_find_master_key(sb, &arg.key_spec);
-+	if (IS_ERR(key))
-+		return PTR_ERR(key);
-+	mk = key->payload.data[0];
-+
-+	down_write(&key->sem);
-+
-+	/* Wipe the secret. */
-+	dead = false;
-+	if (is_master_key_secret_present(&mk->mk_secret)) {
-+		wipe_master_key_secret(&mk->mk_secret);
-+		dead = refcount_dec_and_test(&mk->mk_refcount);
-+	}
-+	up_write(&key->sem);
-+	if (dead) {
-+		/*
-+		 * We wiped the secret and no inodes reference the key anymore,
-+		 * so it's free to remove.
-+		 */
-+		key_invalidate(key);
-+		err = 0;
-+	} else {
-+		/* Some inodes still reference this key; try to evict them. */
-+		err = try_to_lock_encrypted_files(sb, mk);
-+	}
-+	key_put(key);
-+	return err;
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_ioctl_remove_key);
-+
- int __init fscrypt_init_keyring(void)
- {
- 	return register_key_type(&key_type_fscrypt);
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index b63fb4e8aebd..fb600cac8ee4 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -210,8 +210,16 @@ int fscrypt_set_derived_key(struct fscrypt_info *ci, const u8 *derived_key)
- 
- /*
-  * Find the master key, then set up the inode's actual encryption key.
-+ *
-+ * If the master key is found in the filesystem-level keyring, then the
-+ * corresponding 'struct key' is returned in *master_key_ret with
-+ * ->sem read-locked.  This is needed to ensure that only one task links the
-+ * fscrypt_info into ->mk_decrypted_inodes (as multiple tasks may race to create
-+ * an fscrypt_info for the same inode), and to synchronize the key being removed
-+ * with a new inode starting to use it.
-  */
--static int setup_file_encryption_key(struct fscrypt_info *ci)
-+static int setup_file_encryption_key(struct fscrypt_info *ci,
-+				     struct key **master_key_ret)
- {
- 	struct key *key;
- 	struct fscrypt_master_key *mk = NULL;
-@@ -231,6 +239,13 @@ static int setup_file_encryption_key(struct fscrypt_info *ci)
- 	}
- 
- 	mk = key->payload.data[0];
-+	down_read(&key->sem);
-+
-+	/* Has the secret been removed (via FS_IOC_REMOVE_ENCRYPTION_KEY)? */
-+	if (!is_master_key_secret_present(&mk->mk_secret)) {
-+		err = -ENOKEY;
-+		goto out_release_key;
-+	}
- 
- 	if (mk->mk_secret.size < ci->ci_mode->keysize) {
- 		fscrypt_warn(NULL,
-@@ -242,14 +257,22 @@ static int setup_file_encryption_key(struct fscrypt_info *ci)
- 	}
- 
- 	err = fscrypt_setup_v1_file_key(ci, mk->mk_secret.raw);
-+	if (err)
-+		goto out_release_key;
-+
-+	*master_key_ret = key;
-+	return 0;
- 
- out_release_key:
-+	up_read(&key->sem);
- 	key_put(key);
- 	return err;
- }
- 
- static void put_crypt_info(struct fscrypt_info *ci)
- {
-+	struct key *key;
-+
- 	if (!ci)
- 		return;
- 
-@@ -259,6 +282,26 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 		crypto_free_skcipher(ci->ci_ctfm);
- 		crypto_free_cipher(ci->ci_essiv_tfm);
- 	}
-+
-+	key = ci->ci_master_key;
-+	if (key) {
-+		struct fscrypt_master_key *mk = key->payload.data[0];
-+
-+		/*
-+		 * Remove this inode from the list of inodes that were unlocked
-+		 * with the master key.
-+		 *
-+		 * In addition, if we're removing the last inode from a key that
-+		 * already had its secret removed, invalidate the key so that it
-+		 * gets removed from ->s_master_keys.
-+		 */
-+		spin_lock(&mk->mk_decrypted_inodes_lock);
-+		list_del(&ci->ci_master_key_link);
-+		spin_unlock(&mk->mk_decrypted_inodes_lock);
-+		if (refcount_dec_and_test(&mk->mk_refcount))
-+			key_invalidate(key);
-+		key_put(key);
-+	}
- 	kmem_cache_free(fscrypt_info_cachep, ci);
- }
- 
-@@ -267,6 +310,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	struct fscrypt_info *crypt_info;
- 	struct fscrypt_context ctx;
- 	struct fscrypt_mode *mode;
-+	struct key *master_key = NULL;
- 	int res;
- 
- 	if (inode->i_crypt_info)
-@@ -319,13 +363,30 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	WARN_ON(mode->ivsize > FSCRYPT_MAX_IV_SIZE);
- 	crypt_info->ci_mode = mode;
- 
--	res = setup_file_encryption_key(crypt_info);
-+	res = setup_file_encryption_key(crypt_info, &master_key);
- 	if (res)
- 		goto out;
- 
--	if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) == NULL)
-+	if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) == NULL) {
-+		if (master_key) {
-+			struct fscrypt_master_key *mk =
-+				master_key->payload.data[0];
-+
-+			refcount_inc(&mk->mk_refcount);
-+			crypt_info->ci_master_key = key_get(master_key);
-+			spin_lock(&mk->mk_decrypted_inodes_lock);
-+			list_add(&crypt_info->ci_master_key_link,
-+				 &mk->mk_decrypted_inodes);
-+			spin_unlock(&mk->mk_decrypted_inodes_lock);
-+		}
- 		crypt_info = NULL;
-+	}
-+	res = 0;
- out:
-+	if (master_key) {
-+		up_read(&master_key->sem);
-+		key_put(master_key);
-+	}
- 	if (res == -ENOKEY)
- 		res = 0;
- 	put_crypt_info(crypt_info);
-@@ -339,3 +400,39 @@ void fscrypt_put_encryption_info(struct inode *inode)
- 	inode->i_crypt_info = NULL;
- }
- EXPORT_SYMBOL(fscrypt_put_encryption_info);
-+
-+/**
-+ * fscrypt_drop_inode() - check whether the inode's master key has been removed
-+ *
-+ * Filesystems supporting fscrypt must call this from their ->drop_inode()
-+ * method so that encrypted inodes are evicted as soon as they're no longer in
-+ * use and their master key has been removed.
-+ *
-+ * Return: 1 if fscrypt wants the inode to be evicted now, otherwise 0
-+ */
-+int fscrypt_drop_inode(struct inode *inode)
-+{
-+	const struct fscrypt_info *ci = inode->i_crypt_info;
-+	const struct fscrypt_master_key *mk;
-+
-+	/*
-+	 * If ci is NULL, then the inode doesn't have an encryption key set up
-+	 * so it's irrelevant.  If ci_master_key is NULL, then the master key
-+	 * was provided via the legacy mechanism of the process-subscribed
-+	 * keyrings, so we don't know whether it's been removed or not.
-+	 */
-+	if (!ci || !ci->ci_master_key)
-+		return 0;
-+	mk = ci->ci_master_key->payload.data[0];
-+
-+	/*
-+	 * Note: since we aren't holding key->sem, the result here can
-+	 * immediately become outdated.  But there's no correctness problem with
-+	 * unnecessarily evicting.  Nor is there a correctness problem with not
-+	 * evicting while iput() is racing with the key being removed, since
-+	 * then the thread removing the key will either evict the inode itself
-+	 * or will correctly detect that it wasn't evicted due to the race.
-+	 */
-+	return !is_master_key_secret_present(&mk->mk_secret);
-+}
-+EXPORT_SYMBOL(fscrypt_drop_inode);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index ddb54b8eab81..c4fff46ce847 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -114,10 +114,12 @@ extern int fscrypt_inherit_context(struct inode *, struct inode *,
- 					void *, bool);
- /* keyring.c */
- extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
-+extern int fscrypt_ioctl_remove_key(struct file *filp, const void __user *arg);
- 
- /* keysetup.c */
- extern int fscrypt_get_encryption_info(struct inode *);
- extern void fscrypt_put_encryption_info(struct inode *);
-+extern int fscrypt_drop_inode(struct inode *inode);
- 
- /* fname.c */
- extern int fscrypt_setup_filename(struct inode *, const struct qstr *,
-@@ -321,6 +323,12 @@ static inline int fscrypt_ioctl_add_key(struct file *filp, void __user *arg)
- 	return -EOPNOTSUPP;
- }
- 
-+static inline int fscrypt_ioctl_remove_key(struct file *filp,
-+					   const void __user *arg)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
- /* keysetup.c */
- static inline int fscrypt_get_encryption_info(struct inode *inode)
- {
-@@ -332,6 +340,11 @@ static inline void fscrypt_put_encryption_info(struct inode *inode)
- 	return;
- }
- 
-+static inline int fscrypt_drop_inode(struct inode *inode)
-+{
-+	return 0;
-+}
-+
-  /* fname.c */
- static inline int fscrypt_setup_filename(struct inode *dir,
- 					 const struct qstr *iname,
-diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-index 7bed24632bda..3302a407131e 100644
---- a/include/uapi/linux/fscrypt.h
-+++ b/include/uapi/linux/fscrypt.h
-@@ -65,10 +65,17 @@ struct fscrypt_add_key_arg {
- 	__u8 raw[];
- };
- 
-+/* Struct passed to FS_IOC_REMOVE_ENCRYPTION_KEY */
-+struct fscrypt_remove_key_arg {
-+	struct fscrypt_key_specifier key_spec;
-+	__u32 __reserved[6];
-+};
-+
- #define FS_IOC_SET_ENCRYPTION_POLICY	  _IOR('f', 19, struct fscrypt_policy)
- #define FS_IOC_GET_ENCRYPTION_PWSALT	  _IOW('f', 20, __u8[16])
- #define FS_IOC_GET_ENCRYPTION_POLICY	  _IOW('f', 21, struct fscrypt_policy)
- #define FS_IOC_ADD_ENCRYPTION_KEY	 _IOWR('f', 23, struct fscrypt_add_key_arg)
-+#define FS_IOC_REMOVE_ENCRYPTION_KEY	  _IOW('f', 24, struct fscrypt_remove_key_arg)
- 
- /**********************************************************************/
- 
 -- 
-2.20.1
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+chandan
