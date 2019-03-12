@@ -1,58 +1,31 @@
-Return-Path: <SRS0=+RYZ=RU=canb.auug.org.au=sfr@kernel.org>
-Date: Sun, 17 Mar 2019 16:19:08 +1100
-From: Stephen Rothwell <sfr@canb.auug.org.au>
-Subject: Re: Update fscrypt git URL for linux-next
-Message-ID: <20190317161908.03c8d104@canb.auug.org.au>
-In-Reply-To: <20190312063422.GA9123@sol.localdomain>
-References: <20190312063422.GA9123@sol.localdomain>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:32814 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726263AbfCLGeZ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 12 Mar 2019 02:34:25 -0400
+Date: Mon, 11 Mar 2019 23:34:23 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Update fscrypt git URL for linux-next
+Message-ID: <20190312063422.GA9123@sol.localdomain>
 MIME-Version: 1.0
-Content-Type: multipart/signed; micalg=pgp-sha256;
- boundary="Sig_/PM+lqPZUeC0Rhfn2kZHln1/"; protocol="application/pgp-signature"
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Stephen Rothwell <sfr@canb.auug.org.au>
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
---Sig_/PM+lqPZUeC0Rhfn2kZHln1/
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: quoted-printable
+Hi Stephen, we've updated the location of the fscrypt git tree:
 
-Hi Eric,
+Old URL: git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git
+New URL: git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git
 
-On Mon, 11 Mar 2019 23:34:23 -0700 Eric Biggers <ebiggers@kernel.org> wrote:
->
-> Hi Stephen, we've updated the location of the fscrypt git tree:
->=20
-> Old URL: git://git.kernel.org/pub/scm/linux/kernel/git/tytso/fscrypt.git
-> New URL: git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git
->=20
-> Branch is still "master".
->=20
-> MAINTAINERS in mainline has already been updated accordingly.
->=20
-> Can you make sure to update the URL for linux-next too?
+Branch is still "master".
 
-Done.  I have also updated the URL for the fscrypt-current tree (using
-the for-stable branch of the above new URL).  Should I also add you to
-the contacts for those trees (currently I only have Ted listed)?
+MAINTAINERS in mainline has already been updated accordingly.
 
---=20
-Cheers,
-Stephen Rothwell
+Can you make sure to update the URL for linux-next too?
 
---Sig_/PM+lqPZUeC0Rhfn2kZHln1/
-Content-Type: application/pgp-signature
-Content-Description: OpenPGP digital signature
+Thanks!
 
------BEGIN PGP SIGNATURE-----
-
-iQEzBAEBCAAdFiEENIC96giZ81tWdLgKAVBC80lX0GwFAlyN2MwACgkQAVBC80lX
-0Gy0qgf9FHSXX5lhSWXaFfRJYkBdmGR2NUgEQxFtlgeeJLiTW4sdm0aI2rFY+NuI
-bQ85vVWhGofC/il25fTtPzyrSIkkh6g+Uw6ckznly24qYVgULt3IsWtFXPKT6PR+
-AN/s0TC21Lqr2sY8EXPmQAXDxOvbKkZvX0pll92Md46lejoi8gWJ8l7HHSALm7an
-kxj/vlqEmLPcokUq9eAMdDXZa0Pk/3GgS4l9Cm1e3YKNJimbX6JbWN7stL/wpMxO
-7jPGw2WdmDNfI+x2HoEvnNT58ks9rvixh86sSCqYhJ8NfCzkHhlfU/OKHtGoSI4U
-DCWhSdjjugqYnpexodcMkrd3qnkBEw==
-=ooid
------END PGP SIGNATURE-----
-
---Sig_/PM+lqPZUeC0Rhfn2kZHln1/--
+- Eric
