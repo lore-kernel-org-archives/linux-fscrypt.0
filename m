@@ -1,51 +1,69 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from lithops.sigma-star.at ([195.201.40.130]:41950 "EHLO
-        lithops.sigma-star.at" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1725868AbfCMMro (ORCPT
+Received: from mail-it1-f193.google.com ([209.85.166.193]:40418 "EHLO
+        mail-it1-f193.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1725856AbfCMMgO (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 13 Mar 2019 08:47:44 -0400
-From: Richard Weinberger <richard@nod.at>
-Subject: Re: overlayfs vs. fscrypt
-Date: Wed, 13 Mar 2019 13:47:40 +0100
-Message-ID: <1852545.qrIQg0rEWx@blindfold>
-In-Reply-To: <CAJfpegsy31D+=VJ+By2a9TLCvZJwvAUpb+_bJ5JVTsmsbZJTKQ@mail.gmail.com>
-References: <4603533.ZIfxmiEf7K@blindfold> <CAJfpegsy31D+=VJ+By2a9TLCvZJwvAUpb+_bJ5JVTsmsbZJTKQ@mail.gmail.com>
+        Wed, 13 Mar 2019 08:36:14 -0400
+Received: by mail-it1-f193.google.com with SMTP id l139so2562420ita.5
+        for <linux-fscrypt@vger.kernel.org>; Wed, 13 Mar 2019 05:36:13 -0700 (PDT)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8BIT
-Content-Type: text/plain; charset="iso-8859-1"
+References: <4603533.ZIfxmiEf7K@blindfold>
+In-Reply-To: <4603533.ZIfxmiEf7K@blindfold>
+From: Miklos Szeredi <miklos@szeredi.hu>
+Date: Wed, 13 Mar 2019 13:36:02 +0100
+Message-ID: <CAJfpegsy31D+=VJ+By2a9TLCvZJwvAUpb+_bJ5JVTsmsbZJTKQ@mail.gmail.com>
+Subject: Re: overlayfs vs. fscrypt
+Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: Miklos Szeredi <miklos@szeredi.hu>
+To: Richard Weinberger <richard@nod.at>
 Cc: linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, overlayfs <linux-unionfs@vger.kernel.org>, linux-kernel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Am Mittwoch, 13. M�rz 2019, 13:36:02 CET schrieb Miklos Szeredi: 
-> I don't get it.  Does fscrypt try to check permissions via
-> ->d_revalidate?  Why is it not doing that via ->permission()?
+On Wed, Mar 13, 2019 at 1:31 PM Richard Weinberger <richard@nod.at> wrote:
+>
+> Hi!
+>
+> overlayfs and fscrypt are not friends.
+> Currently it is not possible to use a fscrypt encrypted directory as upper
+> directory with overlayfs.
+> The reason for that is, fscrypt implements ->d_revalidate().
+>
+> From fscrypt's point of view having ->d_revalidate() makes sense because it
+> wants to hide/show encrypted filenames if someone loads or unlinks a key.
+>
+> On the other hand, overlayfs makes sure that the upper directory cannot
+> change beneath it. Therefore it checks whether the upper directory is a remote
+> filesystem by checking for ->d_revalidate() and refuses to mount if so.
+>
+> In my little embedded Linux world it is common to use both UBIFS and
+> overlayfs. Now with UBIFS being encrypted using fscrypt, overlayfs is a
+> problem.
+> My current hack is not using fscrypt_d_ops in UBIFS. This works because on a
+> typical embedded target you setup your crypto keys exactly once, right before
+> you mount overlayfs in an initramfs.
+>
+> But I'm sure this problem will hit sooner or later users of ext4 and f2fs too.
+> Therefore I'd like to discuss possible solutions.
+>
+> So far I see two options:
+>
+> 1. Get rid of ->d_revalidate() in fscrypt.
+> Maybe we find a way to return a dentry via ->lookup() which is not cached at
+> all and therefore no ->d_revalidate() is needed. If unreadable and encrypted
+> filename lookups are slow, so what?
+> AFAIU this approach is impossible in the current dcache design since it is not
+> allowed to have more than one dentry to the same file.
 
-Please let me explain. Suppose we have a fscrypto directory /mnt and
-I *don't* have the key.
+I don't get it.  Does fscrypt try to check permissions via
+->d_revalidate?  Why is it not doing that via ->permission()?
 
-When reading the directory contents of /mnt will return an encrypted filename.
-e.g.
-# ls /mnt
-+mcQ46ne5Y8U6JMV9Wdq2C
+>
+> 2. Teach overlayfs to deal with a upper that has ->d_revalidate().
+> Given the complexity of overlayfs I'm not sure how feasible this is.
+> But I'm no overlayfs expert, maybe I miss something.
 
-As soon I load my key the real name is shown and I can read the file contents too.
-That's why fscrypt has ->d_revalidate(). It checks for the key, if the key is
-still not here -> stay with the old encrypted name. If the key is present
--> reveal the real name.
-
-Same happens on the other direction if I unlink my key from the keyring.
-
-> >
-> > 2. Teach overlayfs to deal with a upper that has ->d_revalidate().
-> > Given the complexity of overlayfs I'm not sure how feasible this is.
-> > But I'm no overlayfs expert, maybe I miss something.
-> 
-> I don't think it would be too complex.  But first I'd like to
-> understand exactly why fscrypt is (ab) using d_revalidate().
-
-I hope my answer makes things more clear.
+I don't think it would be too complex.  But first I'd like to
+understand exactly why fscrypt is (ab) using d_revalidate().
 
 Thanks,
-//richard
+Miklos
