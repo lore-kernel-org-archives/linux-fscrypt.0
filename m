@@ -1,39 +1,43 @@
-Return-Path: <linux-fsdevel-owner@vger.kernel.org>
-From: Richard Weinberger <richard@nod.at>
-Subject: Re: overlayfs vs. fscrypt
-Date: Wed, 13 Mar 2019 14:00:28 +0100
-Message-ID: <1854703.ve7plDhYWt@blindfold>
-In-Reply-To: <CAJfpegvrG4LfnuC62JNtdXpCf4vb+aEiDre5YCxe7xUSQP8yjw@mail.gmail.com>
-References: <4603533.ZIfxmiEf7K@blindfold> <1852545.qrIQg0rEWx@blindfold> <CAJfpegvrG4LfnuC62JNtdXpCf4vb+aEiDre5YCxe7xUSQP8yjw@mail.gmail.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-io1-f42.google.com ([209.85.166.42]:46218 "EHLO
+        mail-io1-f42.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1725870AbfCMM6Y (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 13 Mar 2019 08:58:24 -0400
+Received: by mail-io1-f42.google.com with SMTP id k21so1520457ior.13
+        for <linux-fscrypt@vger.kernel.org>; Wed, 13 Mar 2019 05:58:23 -0700 (PDT)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8BIT
-Content-Type: text/plain; charset="iso-8859-1"
-Sender: linux-fsdevel-owner@vger.kernel.org
-To: Miklos Szeredi <miklos@szeredi.hu>
+References: <4603533.ZIfxmiEf7K@blindfold> <CAJfpegsy31D+=VJ+By2a9TLCvZJwvAUpb+_bJ5JVTsmsbZJTKQ@mail.gmail.com>
+ <1852545.qrIQg0rEWx@blindfold>
+In-Reply-To: <1852545.qrIQg0rEWx@blindfold>
+From: Miklos Szeredi <miklos@szeredi.hu>
+Date: Wed, 13 Mar 2019 13:58:11 +0100
+Message-ID: <CAJfpegvrG4LfnuC62JNtdXpCf4vb+aEiDre5YCxe7xUSQP8yjw@mail.gmail.com>
+Subject: Re: overlayfs vs. fscrypt
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Richard Weinberger <richard@nod.at>
 Cc: linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, overlayfs <linux-unionfs@vger.kernel.org>, linux-kernel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Am Mittwoch, 13. M�rz 2019, 13:58:11 CET schrieb Miklos Szeredi:
-> On Wed, Mar 13, 2019 at 1:47 PM Richard Weinberger <richard@nod.at> wrote:
-> >
-> > Am Mittwoch, 13. M�rz 2019, 13:36:02 CET schrieb Miklos Szeredi:
-> > > I don't get it.  Does fscrypt try to check permissions via
-> > > ->d_revalidate?  Why is it not doing that via ->permission()?
-> >
-> > Please let me explain. Suppose we have a fscrypto directory /mnt and
-> > I *don't* have the key.
-> >
-> > When reading the directory contents of /mnt will return an encrypted filename.
-> > e.g.
-> > # ls /mnt
-> > +mcQ46ne5Y8U6JMV9Wdq2C
-> 
-> Why does showing the encrypted contents make any sense?  It could just
-> return -EPERM on all operations?
+On Wed, Mar 13, 2019 at 1:47 PM Richard Weinberger <richard@nod.at> wrote:
+>
+> Am Mittwoch, 13. M=C3=A4rz 2019, 13:36:02 CET schrieb Miklos Szeredi:
+> > I don't get it.  Does fscrypt try to check permissions via
+> > ->d_revalidate?  Why is it not doing that via ->permission()?
+>
+> Please let me explain. Suppose we have a fscrypto directory /mnt and
+> I *don't* have the key.
+>
+> When reading the directory contents of /mnt will return an encrypted file=
+name.
+> e.g.
+> # ls /mnt
+> +mcQ46ne5Y8U6JMV9Wdq2C
 
-The use case is that you can delete these files if the DAC/MAC permissions allow it.
-Just like on NTFS. If a user encrypts files, the admin cannot read them but can
-remove them if the user is gone or loses the key.
+Why does showing the encrypted contents make any sense?  It could just
+return -EPERM on all operations?
 
 Thanks,
-//richard
+Miklos
