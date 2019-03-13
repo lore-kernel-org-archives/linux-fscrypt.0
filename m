@@ -1,39 +1,86 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from lithops.sigma-star.at ([195.201.40.130]:49404 "EHLO
-        lithops.sigma-star.at" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726691AbfCMUdO (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 13 Mar 2019 16:33:14 -0400
-From: Richard Weinberger <richard@nod.at>
+Received: from mail.kernel.org ([198.145.29.99]:45394 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726656AbfCMUZX (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 13 Mar 2019 16:25:23 -0400
+Date: Wed, 13 Mar 2019 13:25:20 -0700
+From: Eric Biggers <ebiggers@kernel.org>
 Subject: Re: overlayfs vs. fscrypt
-Date: Wed, 13 Mar 2019 21:33:10 +0100
-Message-ID: <15244624.W7e5yEypHC@blindfold>
-In-Reply-To: <CAOQ4uxhqQKzriL0An4Tvzc1E_LffL-z9q1otOW_RdD1ZdKWP3Q@mail.gmail.com>
-References: <4603533.ZIfxmiEf7K@blindfold> <4066872.KGdO14EQMx@blindfold> <CAOQ4uxhqQKzriL0An4Tvzc1E_LffL-z9q1otOW_RdD1ZdKWP3Q@mail.gmail.com>
+Message-ID: <20190313202519.GD10169@gmail.com>
+References: <4066872.KGdO14EQMx@blindfold>
+ <CAOQ4uxhqQKzriL0An4Tvzc1E_LffL-z9q1otOW_RdD1ZdKWP3Q@mail.gmail.com>
+ <20190313151633.GA672@mit.edu>
+ <1552491394.3022.8.camel@HansenPartnership.com>
+ <20190313164439.GF672@mit.edu>
+ <1552499104.3022.44.camel@HansenPartnership.com>
+ <20190313185826.GA4685@mit.edu>
+ <1552504672.3022.59.camel@HansenPartnership.com>
+ <20190313195713.GC10169@gmail.com>
+ <1552507566.3022.65.camel@HansenPartnership.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8BIT
-Content-Type: text/plain; charset="iso-8859-1"
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1552507566.3022.65.camel@HansenPartnership.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: Amir Goldstein <amir73il@gmail.com>
-Cc: Miklos Szeredi <miklos@szeredi.hu>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, overlayfs <linux-unionfs@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>, Paul Lawrence <paullawrence@google.com>
+To: James Bottomley <James.Bottomley@HansenPartnership.com>
+Cc: Theodore Ts'o <tytso@mit.edu>, Amir Goldstein <amir73il@gmail.com>, Richard Weinberger <richard@nod.at>, Miklos Szeredi <miklos@szeredi.hu>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, overlayfs <linux-unionfs@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>, Paul Lawrence <paullawrence@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Am Mittwoch, 13. M�rz 2019, 15:26:54 CET schrieb Amir Goldstein:
-> IMO, the best thing for UBIFS to do would be to modify fscrypt to support
-> opting out of the revalidate behavior, IWO, sanitize your hack to an API.
+On Wed, Mar 13, 2019 at 01:06:06PM -0700, James Bottomley wrote:
+> On Wed, 2019-03-13 at 12:57 -0700, Eric Biggers wrote:
+> > On Wed, Mar 13, 2019 at 12:17:52PM -0700, James Bottomley wrote:
+> > > On Wed, 2019-03-13 at 14:58 -0400, Theodore Ts'o wrote:
+> > > > On Wed, Mar 13, 2019 at 10:45:04AM -0700, James Bottomley wrote:
+> > > > > >   If they can't break root, then the OS's user-id based
+> > > > > > access control checks (or SELinux checks if you are using
+> > > > > > SELinux) will still protect you.
+> > > > > 
+> > > > > Well, that's what one would think about the recent runc exploit
+> > > > > as well.  The thing I was looking to do was reduce the chances
+> > > > > that unencrypted data would be lying around to be
+> > > > > discovered.  I suppose the potentially biggest problem is
+> > > > > leaking the image after it's decrypted by admin means like a
+> > > > > badly configured backup, but unencryped data is potentially
+> > > > > discoverable by breakouts as well.
+> > > > 
+> > > > But while the container is running, the key is available and
+> > > > instantiated in the kernel, and the kernel is free to decrypt any
+> > > > encrypted file/block.
+> > > 
+> > > In the current encrypted tar file implementation, while the
+> > > container is running the decrypted tar file is extracted into the
+> > > container root and available for all to see.
+> > > 
+> > > The main security benefit of this implementation, as I said, is
+> > > security of at rest images and the runtime security is guaranteed
+> > > by other systems.
+> > 
+> > That's not security at rest, because you're decrypting the data and
+> > storing it onto the local disk.
+> 
+> I mean image at rest and image running.  The local disk untar only
+> happens for running image.
+> 
+> > fscrypt would allow the data to be stored encrypted on the local
+> > disk, so it's protected against offline compromise of the disk.
+> 
+> Container images are essentially tars of the overlays.  They only
+> become actual filesystems when instantiated at runtime.  The current
+> encrypted container image is an overlay or set of overlays which is
+> tarred then encrypted.  So to instantiate it is decrypted then
+> untarred.
+> 
+> The thing I was wondering about was whether instead of a tar encrypt we
+> could instead produce an encrypted image from a fscrypt filesystem.
+> 
 
-Given the WTF/s rate this thread has, this might me a good option.
-Actually people already asked me how to disable this feature because
-they saw no use of it.
-Being able to delete encrypted files looks good on the feature list but in
-reality it has very few users but causes confusion, IMHO.
+Why do you care whether the container image is encrypted on the local disk, when
+you're extracting it in plaintext onto the local disk anyway each time it runs?
+Even after the runtime files are "deleted", they may still be recoverable from
+the disk.  Are you using shred and BLKSECDISCARD, and a non-COW filesystem?
 
-I propose a new fscrypt_operations flag, FS_CFLG_NO_CRYPT_FNAMES.
-If this flag is set, a) fscrypt_setup_filename() will return -EPERM if
-no key is found.
-And b) __fscrypt_prepare_lookup() will not attach fscrypt_d_ops to the dentry.
+Now, if you wanted to avoid writing the plaintext to disk entirely (and thereby
+use encryption to actually achieve a useful security property that can't be
+achieved through file permissions), fscrypt is a good solution for that.
 
-Eric, what do you think?
-
-Thanks,
-//richard
+- Eric
