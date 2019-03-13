@@ -1,29 +1,68 @@
-Return-Path: <SRS0=S9Pi=RQ=nod.at=richard@kernel.org>
-From: Richard Weinberger <richard@nod.at>
+Return-Path: <SRS0=EQxW=RQ=HansenPartnership.com=James.Bottomley@kernel.org>
+Message-ID: <1552493632.3022.17.camel@HansenPartnership.com>
 Subject: Re: overlayfs vs. fscrypt
-Date: Wed, 13 Mar 2019 17:24:10 +0100
-Message-ID: <2287057.GpIlh1E3ca@blindfold>
-In-Reply-To: <1552493632.3022.17.camel@HansenPartnership.com>
-References: <4603533.ZIfxmiEf7K@blindfold> <20190313155144.GC703@sol.localdomain> <1552493632.3022.17.camel@HansenPartnership.com>
-MIME-Version: 1.0
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/plain; charset="iso-8859-1"
-To: James Bottomley <James.Bottomley@hansenpartnership.com>
-Cc: Eric Biggers <ebiggers@kernel.org>, Theodore Ts'o <tytso@mit.edu>, Amir Goldstein <amir73il@gmail.com>, Miklos Szeredi <miklos@szeredi.hu>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, overlayfs <linux-unionfs@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>, Paul Lawrence <paullawrence@google.com>
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Date: Wed, 13 Mar 2019 09:13:52 -0700
+In-Reply-To: <20190313155144.GC703@sol.localdomain>
+References: <4603533.ZIfxmiEf7K@blindfold> <1854703.ve7plDhYWt@blindfold>
+	 <CAJfpegtgfuAkgv26QH6Ht25OeMiev-QvEf7ror4KAbud7FADgg@mail.gmail.com>
+	 <4066872.KGdO14EQMx@blindfold>
+	 <CAOQ4uxhqQKzriL0An4Tvzc1E_LffL-z9q1otOW_RdD1ZdKWP3Q@mail.gmail.com>
+	 <20190313151633.GA672@mit.edu>
+	 <1552491394.3022.8.camel@HansenPartnership.com>
+	 <20190313155144.GC703@sol.localdomain>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: Theodore Ts'o <tytso@mit.edu>, Amir Goldstein <amir73il@gmail.com>, Richard Weinberger <richard@nod.at>, Miklos Szeredi <miklos@szeredi.hu>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, overlayfs <linux-unionfs@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>, Paul Lawrence <paullawrence@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Am Mittwoch, 13. M=E4rz 2019, 17:13:52 CET schrieb James Bottomley:
-> > What do you mean by "containment breaches by other tenants"?  Note
-> > that while the key is added, fscrypt doesn't prevent access to the
-> > encrypted files.
->=20
-> You mean it's not multiuser safe?  Even if user a owns the key they add
-> user b can still see the decrypted contents?
+On Wed, 2019-03-13 at 08:51 -0700, Eric Biggers wrote:
+> Hi James,
+> 
+> On Wed, Mar 13, 2019 at 08:36:34AM -0700, James Bottomley wrote:
+> > On Wed, 2019-03-13 at 11:16 -0400, Theodore Ts'o wrote:
+> > > So before we talk about how to make things work from a technical
+> > > perspective, we should consider what the use case happens to be,
+> > > and what are the security requirements.  *Why* are we trying to
+> > > use the combination of overlayfs and fscrypt, and what are the
+> > > security properties we are trying to provide to someone who is
+> > > relying on this combination?
+> > 
+> > I can give one: encrypted containers:
+> > 
+> > https://github.com/opencontainers/image-spec/issues/747
+> > 
+> > The current proposal imagines that the key would be delivered to
+> > the physical node and the physical node containerd would decrypt
+> > all the layers before handing them off to to the kubelet.  However,
+> > one could imagine a slightly more secure use case where the layers
+> > were constructed as an encrypted filesystem tar and so the key
+> > would go into the kernel and the layers would be constructed with
+> > encryption in place using fscrypt.
+> > 
+> > Most of the desired security properties are in image at rest but
+> > one can imagine that the running image wants some protection
+> > against containment breaches by other tenants and using fscrypt
+> > could provide that.
+> > 
+> 
+> What do you mean by "containment breaches by other tenants"?  Note
+> that while the key is added, fscrypt doesn't prevent access to the
+> encrypted files.
 
-If user a reads the file before, yes. Then user b sees it because the conte=
-nts
-got cached.
-That's why you need still make sure that your access control is sane.
+You mean it's not multiuser safe?  Even if user a owns the key they add
+user b can still see the decrypted contents?
 
-Thanks,
-//richard
+>   fscrypt is orthogonal to OS-level access control (UNIX mode bits,
+> ACLs, SELinux, etc.), which can and should be used alongside
+> fscrypt.  fscrypt is a storage encryption mechanism, not an OS-level
+> access control mechanism.
+
+I was assuming in the multi-user case that if you don't own the keyring
+you can't see the files. I suppose absent that it boils down to a
+possible way to do the layering then as an fscrypt image rather than
+tar then encrypt.
+
+James
