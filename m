@@ -1,50 +1,29 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:59322 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725926AbfCMQdw (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 13 Mar 2019 12:33:52 -0400
-Date: Wed, 13 Mar 2019 09:33:49 -0700
-From: Eric Biggers <ebiggers@kernel.org>
+Return-Path: <SRS0=S9Pi=RQ=nod.at=richard@kernel.org>
+From: Richard Weinberger <richard@nod.at>
 Subject: Re: overlayfs vs. fscrypt
-Message-ID: <20190313163348.GD703@sol.localdomain>
-References: <4603533.ZIfxmiEf7K@blindfold>
- <1852545.qrIQg0rEWx@blindfold>
- <CAJfpegvrG4LfnuC62JNtdXpCf4vb+aEiDre5YCxe7xUSQP8yjw@mail.gmail.com>
- <1854703.ve7plDhYWt@blindfold>
- <CAJfpegtgfuAkgv26QH6Ht25OeMiev-QvEf7ror4KAbud7FADgg@mail.gmail.com>
- <20190313150126.GA703@sol.localdomain>
- <20190313161147.GS2217@ZenIV.linux.org.uk>
+Date: Wed, 13 Mar 2019 17:24:10 +0100
+Message-ID: <2287057.GpIlh1E3ca@blindfold>
+In-Reply-To: <1552493632.3022.17.camel@HansenPartnership.com>
+References: <4603533.ZIfxmiEf7K@blindfold> <20190313155144.GC703@sol.localdomain> <1552493632.3022.17.camel@HansenPartnership.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190313161147.GS2217@ZenIV.linux.org.uk>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Miklos Szeredi <miklos@szeredi.hu>, Richard Weinberger <richard@nod.at>, linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, overlayfs <linux-unionfs@vger.kernel.org>, linux-kernel@vger.kernel.org
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="iso-8859-1"
+To: James Bottomley <James.Bottomley@hansenpartnership.com>
+Cc: Eric Biggers <ebiggers@kernel.org>, Theodore Ts'o <tytso@mit.edu>, Amir Goldstein <amir73il@gmail.com>, Miklos Szeredi <miklos@szeredi.hu>, linux-fsdevel <linux-fsdevel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, overlayfs <linux-unionfs@vger.kernel.org>, linux-kernel <linux-kernel@vger.kernel.org>, Paul Lawrence <paullawrence@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, Mar 13, 2019 at 04:11:48PM +0000, Al Viro wrote:
-> On Wed, Mar 13, 2019 at 08:01:27AM -0700, Eric Biggers wrote:
-> 
-> > What do you think about this?
-> 
-> That fscrypt might have some very deep flaws.  I'll need to RTFS and
-> review its model, but what I've seen in this thread so far is not
-> promising anything good.
-> 
-> It's not just overlayfs - there are all kinds of interesting trouble
-> possible just with fscrypt, unless I'm misparsing what had been said
-> so far.
+Am Mittwoch, 13. M=E4rz 2019, 17:13:52 CET schrieb James Bottomley:
+> > What do you mean by "containment breaches by other tenants"?  Note
+> > that while the key is added, fscrypt doesn't prevent access to the
+> > encrypted files.
+>=20
+> You mean it's not multiuser safe?  Even if user a owns the key they add
+> user b can still see the decrypted contents?
 
-FYI, there *is* a known bug I was very recently made aware of and am planning to
-fix.  When ->lookup() finds the plaintext name for a directory and the
-ciphertext name is already in the dcache, d_splice_alias() will __d_move() the
-existing dentry to the plaintext name.  But it doesn't set
-DCACHE_ENCRYPTED_WITH_KEY, so the dentry incorrectly is still marked as a
-ciphertext name and will be invalidated on the next lookup.  That's especially
-problematic if the lookup that caused the __d_move() came from sys_mount().
+If user a reads the file before, yes. Then user b sees it because the conte=
+nts
+got cached.
+That's why you need still make sure that your access control is sane.
 
-I'm thinking the best fix is to have __d_move() propagate
-DCACHE_ENCRYPTED_WITH_KEY from 'target' to 'dentry'.
-
-- Eric
+Thanks,
+//richard
