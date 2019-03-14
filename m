@@ -1,74 +1,73 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:56074 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727276AbfCQUHO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 17 Mar 2019 16:07:14 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 3/5] fs, fscrypt: clear DCACHE_ENCRYPTED_NAME when unaliasing directory
-Date: Sun, 17 Mar 2019 13:04:42 -0700
-Message-Id: <20190317200444.5967-4-ebiggers@kernel.org>
-In-Reply-To: <20190317200444.5967-1-ebiggers@kernel.org>
-References: <20190317200444.5967-1-ebiggers@kernel.org>
+Received: from lilium.sigma-star.at ([109.75.188.150]:53170 "EHLO
+        lilium.sigma-star.at" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726867AbfCNRXO (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 14 Mar 2019 13:23:14 -0400
+From: Richard Weinberger <richard@nod.at>
+Subject: [PATCH 2/4] fscrypt: Export fscrypt_d_ops
+Date: Thu, 14 Mar 2019 18:15:57 +0100
+Message-Id: <20190314171559.27584-3-richard@nod.at>
+In-Reply-To: <20190314171559.27584-1-richard@nod.at>
+References: <CAJfpegvX4ANfso-Jn1zaB+m4Q_0eK9i-+MCJ+sTH5QzD3PZFMQ@mail.gmail.com>
+ <20190314171559.27584-1-richard@nod.at>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Transfer-Encoding: quoted-printable
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-unionfs@vger.kernel.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, Gao Xiang <gaoxiang25@huawei.com>
+To: linux-mtd@lists.infradead.org
+Cc: linux-fscrypt@vger.kernel.org, jaegeuk@kernel.org, tytso@mit.edu, linux-unionfs@vger.kernel.org, miklos@szeredi.hu, amir73il@gmail.com, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, paullawrence@google.com, Richard Weinberger <richard@nod.at>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+If a filesystem manages dentry operations itself it might want to
+re-use fscrypt_d_ops.
 
-Make __d_move() clear DCACHE_ENCRYPTED_NAME on the source dentry.  This
-is needed for when d_splice_alias() moves a directory's encrypted alias
-to its decrypted alias as a result of the encryption key being added.
-
-Otherwise, the decrypted alias will incorrectly be invalidated on the
-next lookup, causing problems such as unmounting a mount the user just
-mount()ed there.
-
-Note that we don't have to support arbitrary moves of this flag because
-fscrypt doesn't allow dentries with DCACHE_ENCRYPTED_NAME to be the
-source or target of a rename().
-
-Fixes: 28b4c263961c ("ext4 crypto: revalidate dentry after adding or removing the key")
-Reported-by: Sarthak Kukreti <sarthakkukreti@chromium.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Richard Weinberger <richard@nod.at>
 ---
- fs/dcache.c | 15 +++++++++++++++
- 1 file changed, 15 insertions(+)
+ fs/crypto/crypto.c          | 1 +
+ fs/crypto/fscrypt_private.h | 1 -
+ include/linux/fscrypt.h     | 1 +
+ 3 files changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/fs/dcache.c b/fs/dcache.c
-index aac41adf4743..e27d11151d0e 100644
---- a/fs/dcache.c
-+++ b/fs/dcache.c
-@@ -2718,6 +2718,20 @@ static void copy_name(struct dentry *dentry, struct dentry *target)
- 		kfree_rcu(old_name, u.head);
- }
- 
-+static void fscrypt_update_flags(struct dentry *dentry)
-+{
-+#ifdef CONFIG_FS_ENCRYPTION
-+	/*
-+	 * When d_splice_alias() moves a directory's encrypted alias to its
-+	 * decrypted alias as a result of the encryption key being added,
-+	 * DCACHE_ENCRYPTED_NAME must be cleared.  Note that we don't have to
-+	 * support arbitrary moves of this flag because fscrypt doesn't allow
-+	 * encrypted aliases to be the source or target of a rename().
-+	 */
-+	dentry->d_flags &= ~DCACHE_ENCRYPTED_NAME;
-+#endif
-+}
-+
- /*
-  * __d_move - move a dentry
-  * @dentry: entry to move
-@@ -2795,6 +2809,7 @@ static void __d_move(struct dentry *dentry, struct dentry *target,
- 	list_move(&dentry->d_child, &dentry->d_parent->d_subdirs);
- 	__d_rehash(dentry);
- 	fsnotify_update_flags(dentry);
-+	fscrypt_update_flags(dentry);
- 
- 	write_seqcount_end(&target->d_seq);
- 	write_seqcount_end(&dentry->d_seq);
--- 
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 4dc788e3bc96..8018f8bba50d 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -357,6 +357,7 @@ static int fscrypt_d_revalidate(struct dentry *dentry=
+, unsigned int flags)
+ const struct dentry_operations fscrypt_d_ops =3D {
+ 	.d_revalidate =3D fscrypt_d_revalidate,
+ };
++EXPORT_SYMBOL(fscrypt_d_ops);
+=20
+ void fscrypt_restore_control_page(struct page *page)
+ {
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 7da276159593..bced1ee4fd64 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -125,7 +125,6 @@ extern int fscrypt_do_page_crypto(const struct inode =
+*inode,
+ 				  gfp_t gfp_flags);
+ extern struct page *fscrypt_alloc_bounce_page(struct fscrypt_ctx *ctx,
+ 					      gfp_t gfp_flags);
+-extern const struct dentry_operations fscrypt_d_ops;
+=20
+ extern void __printf(3, 4) __cold
+ fscrypt_msg(struct super_block *sb, const char *level, const char *fmt, =
+...);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 7139a110ac4f..2b9577e4707f 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -231,6 +231,7 @@ extern int __fscrypt_encrypt_symlink(struct inode *in=
+ode, const char *target,
+ extern const char *fscrypt_get_symlink(struct inode *inode, const void *=
+caddr,
+ 				       unsigned int max_size,
+ 				       struct delayed_call *done);
++extern const struct dentry_operations fscrypt_d_ops;
+ #else  /* !CONFIG_FS_ENCRYPTION */
+=20
+ static inline bool fscrypt_has_encryption_key(const struct inode *inode)
+--=20
 2.21.0
