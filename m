@@ -1,40 +1,63 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from metis.ext.pengutronix.de ([85.220.165.71]:54737 "EHLO
-        metis.ext.pengutronix.de" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1730422AbfCZHww (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 26 Mar 2019 03:52:52 -0400
-From: Sascha Hauer <s.hauer@pengutronix.de>
-Subject: [PATCH 0/2] ubifs: Get rid of some ifdefs
-Date: Tue, 26 Mar 2019 08:52:30 +0100
-Message-Id: <20190326075232.11717-1-s.hauer@pengutronix.de>
+Return-Path: <SRS0=vQjS=RS=gmail.com=richard.weinberger@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-mtd@lists.infradead.org
-Cc: Richard Weinberger <richard@nod.at>, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, kernel@pengutronix.de, Sascha Hauer <s.hauer@pengutronix.de>
+References: <20190315205432.195263-1-ebiggers@kernel.org>
+In-Reply-To: <20190315205432.195263-1-ebiggers@kernel.org>
+From: Richard Weinberger <richard.weinberger@gmail.com>
+Date: Fri, 15 Mar 2019 22:05:59 +0100
+Message-ID: <CAFLxGvw1ETyuLf0yV_MqGyTKmUkxLu0vvZLh2QfLgvYExTosWQ@mail.gmail.com>
+Subject: Re: [PATCH] ubifs: remove unnecessary calls to set up directory key
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-mtd@lists.infradead.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This series gets rid of some ifdefs in the UBFIS code. fscrypt folks are
-on Cc because I introduce a static inline wrapper for setting the
-super_block.s_cop ops so that filesystems do not have to add a
-#ifdef CONFIG_FS_ENCRYPTION around setting the ops. I can do this as an
-extra patch if that's desired.
+On Fri, Mar 15, 2019 at 9:55 PM Eric Biggers <ebiggers@kernel.org> wrote:
+>
+> From: Eric Biggers <ebiggers@google.com>
+>
+> In ubifs_unlink() and ubifs_rmdir(), remove the call to
+> fscrypt_get_encryption_info() that precedes fscrypt_setup_filename().
+> This call was unnecessary, because fscrypt_setup_filename() already
+> tries to set up the directory's encryption key.
+>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/ubifs/dir.c | 12 ------------
+>  1 file changed, 12 deletions(-)
+>
+> diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+> index 5767b373a8ff..c3311ea68fe5 100644
+> --- a/fs/ubifs/dir.c
+> +++ b/fs/ubifs/dir.c
+> @@ -792,12 +792,6 @@ static int ubifs_unlink(struct inode *dir, struct dentry *dentry)
+>                 dentry, inode->i_ino,
+>                 inode->i_nlink, dir->i_ino);
+>
+> -       if (ubifs_crypt_is_encrypted(dir)) {
+> -               err = fscrypt_get_encryption_info(dir);
+> -               if (err && err != -ENOKEY)
+> -                       return err;
+> -       }
+> -
+>         err = fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
+>         if (err)
+>                 return err;
+> @@ -902,12 +896,6 @@ static int ubifs_rmdir(struct inode *dir, struct dentry *dentry)
+>         if (err)
+>                 return err;
+>
+> -       if (ubifs_crypt_is_encrypted(dir)) {
+> -               err = fscrypt_get_encryption_info(dir);
+> -               if (err && err != -ENOKEY)
+> -                       return err;
+> -       }
+> -
+>         err = fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
+>         if (err)
+>                 return err;
 
-Sascha
-
-Sascha Hauer (2):
-  ubifs: Remove #ifdef around CONFIG_FS_ENCRYPTION
-  ubifs: Remove ifdefs around CONFIG_UBIFS_ATIME_SUPPORT
-
- fs/ubifs/dir.c          |  2 --
- fs/ubifs/file.c         | 16 +++++++---------
- fs/ubifs/ioctl.c        | 11 +----------
- fs/ubifs/sb.c           |  7 ++++---
- fs/ubifs/super.c        | 20 +++++++++-----------
- fs/ubifs/ubifs.h        |  2 --
- include/linux/fscrypt.h | 11 +++++++++++
- 7 files changed, 32 insertions(+), 37 deletions(-)
+Thanks for the cleanup, Eric!
 
 -- 
-2.20.1
+Thanks,
+//richard
