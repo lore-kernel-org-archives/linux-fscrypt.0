@@ -1,121 +1,68 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Sun, 17 Mar 2019 13:04:41 -0700
-Message-Id: <20190317200444.5967-3-ebiggers@kernel.org>
-In-Reply-To: <20190317200444.5967-1-ebiggers@kernel.org>
-References: <20190317200444.5967-1-ebiggers@kernel.org>
+Return-Path: <SRS0=kD35=RS=nod.at=richard@kernel.org>
+From: Richard Weinberger <richard@nod.at>
+Subject: Re: [PATCH 4/4] ubifs: Implement new mount option, fscrypt_key_required
+Date: Fri, 15 Mar 2019 14:59:26 +0100
+Message-ID: <11194150.36rPM0hNvo@blindfold>
+In-Reply-To: <20190315135128.GL11334@mit.edu>
+References: <CAJfpegvX4ANfso-Jn1zaB+m4Q_0eK9i-+MCJ+sTH5QzD3PZFMQ@mail.gmail.com> <3651600.xvQHXhhOD0@blindfold> <20190315135128.GL11334@mit.edu>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH 2/5] fscrypt: fix race allowing rename() and
- link() of ciphertext dentries
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-unionfs@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="iso-8859-1"
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: Eric Biggers <ebiggers@kernel.org>, linux-mtd@lists.infradead.org, linux-fscrypt@vger.kernel.org, jaegeuk@kernel.org, linux-unionfs@vger.kernel.org, miklos@szeredi.hu, amir73il@gmail.com, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, paullawrence@google.com, James.Bottomley@hansenpartnership.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Ted,
 
-Close some race conditions where fscrypt allowed rename() and link() on
-ciphertext dentries that had been looked up just prior to the key being
-concurrently added.  It's better to return -ENOKEY in this case.
+Am Freitag, 15. M=E4rz 2019, 14:51:28 CET schrieb Theodore Ts'o:
+> On Fri, Mar 15, 2019 at 08:48:10AM +0100, Richard Weinberger wrote:
+> > Ted,
+> >=20
+> > Am Freitag, 15. M=E4rz 2019, 00:07:02 CET schrieb Theodore Ts'o:
+> > > Richard --- stepping back for a moment, in your use case, are you
+> > > assuming that the encryption key is always going to be present while
+> > > the system is running?
+> >=20
+> > it is not a hard requirement, it is something what is common on embedded
+> > systems that utilize UBIFS and fscrypt.
+> >=20
+> > Well, fscrypt was chosen as UBIFS encryption backend because per-file e=
+ncryption
+> > with derived keys makes a lot of sense.
+> > Also the implementation was not super hard, David and I weren't keen to=
+ reinvent
+> > dm-crypt f=FCr UBI/MTD.
+> >=20
+> > That said, I'm happy with fscrypt, it works well in production.
+>=20
+> OK, but please note that fscrypt leaks i_size and timestamp
+> information; dm-crypt doesn't.  An enterprising attacker could very
+> easily be able to do something interesting with that information, so
+> be sure you've thought through what the threat model for users of
+> ubifs is going to be.
 
-This avoids doing the nonsensical thing of encrypting the names a second
-time when searching for the actual on-disk dir entries.  It also
-guarantees that DCACHE_ENCRYPTED_NAME dentries are never rename()d, so
-the dcache won't have support all possible combinations of moving
-DCACHE_ENCRYPTED_NAME around during __d_move().
+No need to worry, I'm fully aware of all this.
+=20
+> If you need per-user keying, and you need to be able to mount the file
+> system and access some of the files without having any keys, and if
+> it's useful for an admin to be able to delete files without having the
+> key, then fscrypt is a great fit.
+>=20
+> You are proposing changes that (optionally) eliminate that last
+> advantage of fscrypt.  So I just wanted to sanity check whether or not
+> the other advantages are useful to you, and worth the security
+> tradeoffs that are inherent in such a choice.  If it's worth it, then
+> great.  But if it isn't, I'd much rather that you appropriately
+> protect your users and your customers rather than be an additional
+> user of fscrypt.  :-)
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/hooks.c       | 12 +++++++++++-
- include/linux/fscrypt.h |  9 +++++----
- 2 files changed, 16 insertions(+), 5 deletions(-)
+Like I said, this patch series is an RFC, the mount option was suggested
+by Amir and Miklos, so I assumed showing some code is a good base for furth=
+er
+discussion.
+=46or most of *my* use-cases it works but having general support for fscryp=
+t+overlayfs
+would be the ultimate goal.
 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index a9492f75bbe1..2e7498a821a4 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -49,7 +49,8 @@ int fscrypt_file_open(struct inode *inode, struct file *filp)
- }
- EXPORT_SYMBOL_GPL(fscrypt_file_open);
- 
--int __fscrypt_prepare_link(struct inode *inode, struct inode *dir)
-+int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
-+			   struct dentry *dentry)
- {
- 	int err;
- 
-@@ -57,6 +58,10 @@ int __fscrypt_prepare_link(struct inode *inode, struct inode *dir)
- 	if (err)
- 		return err;
- 
-+	/* ... in case we looked up ciphertext name before key was added */
-+	if (dentry->d_flags & DCACHE_ENCRYPTED_NAME)
-+		return -ENOKEY;
-+
- 	if (!fscrypt_has_permitted_context(dir, inode))
- 		return -EXDEV;
- 
-@@ -78,6 +83,11 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
- 	if (err)
- 		return err;
- 
-+	/* ... in case we looked up ciphertext name(s) before key was added */
-+	if ((old_dentry->d_flags | new_dentry->d_flags) &
-+	    DCACHE_ENCRYPTED_NAME)
-+		return -ENOKEY;
-+
- 	if (old_dir != new_dir) {
- 		if (IS_ENCRYPTED(new_dir) &&
- 		    !fscrypt_has_permitted_context(new_dir,
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 5a0c3fee1ea2..4ad7a856e0f1 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -214,7 +214,8 @@ extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
- 
- /* hooks.c */
- extern int fscrypt_file_open(struct inode *inode, struct file *filp);
--extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir);
-+extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
-+				  struct dentry *dentry);
- extern int __fscrypt_prepare_rename(struct inode *old_dir,
- 				    struct dentry *old_dentry,
- 				    struct inode *new_dir,
-@@ -401,8 +402,8 @@ static inline int fscrypt_file_open(struct inode *inode, struct file *filp)
- 	return 0;
- }
- 
--static inline int __fscrypt_prepare_link(struct inode *inode,
--					 struct inode *dir)
-+static inline int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
-+					 struct dentry *dentry)
- {
- 	return -EOPNOTSUPP;
- }
-@@ -497,7 +498,7 @@ static inline int fscrypt_prepare_link(struct dentry *old_dentry,
- 				       struct dentry *dentry)
- {
- 	if (IS_ENCRYPTED(dir))
--		return __fscrypt_prepare_link(d_inode(old_dentry), dir);
-+		return __fscrypt_prepare_link(d_inode(old_dentry), dir, dentry);
- 	return 0;
- }
- 
--- 
-2.21.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+Thanks,
+//richard
