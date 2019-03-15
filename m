@@ -1,168 +1,228 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:56010 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:52224 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727327AbfCQUHO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 17 Mar 2019 16:07:14 -0400
+        id S1726843AbfCOAH4 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 14 Mar 2019 20:07:56 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 1/5] fscrypt: clean up and improve dentry revalidation
-Date: Sun, 17 Mar 2019 13:04:40 -0700
-Message-Id: <20190317200444.5967-2-ebiggers@kernel.org>
-In-Reply-To: <20190317200444.5967-1-ebiggers@kernel.org>
-References: <20190317200444.5967-1-ebiggers@kernel.org>
+Subject: [PATCH] generic/398: accept EXDEV for rename or link into encrypted dir
+Date: Thu, 14 Mar 2019 17:05:47 -0700
+Message-Id: <20190315000547.179665-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-unionfs@vger.kernel.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, Gao Xiang <gaoxiang25@huawei.com>
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Make various improvements to fscrypt dentry revalidation:
-
-- Don't try to handle the case where the per-directory key is removed,
-  as this can't happen without the inode (and dentries) being evicted.
-
-- Flag ciphertext dentries rather than plaintext dentries, since it's
-  ciphertext dentries that need the special handling.
-
-- Avoid doing unnecessary work for non-ciphertext dentries.
-
-- When revalidating ciphertext dentries, try to set up the directory's
-  i_crypt_info to make sure the key is really still absent, rather than
-  invalidating all negative dentries as the previous code did.  An old
-  comment suggested we can't do this locking reasons, but AFAICT this
-  comment was outdated and it actually works fine.
+Update generic/398 to pass after kernel commit f5e55e777cc9 ("fscrypt:
+return -EXDEV for incompatible rename or link into encrypted dir"),
+which intentionally changed some error codes from EPERM to EXDEV in
+order to allow standard tools like 'mv' to move files into an encrypted
+directory.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/crypto.c      | 54 ++++++++++++++++++++---------------------
- fs/crypto/hooks.c       |  4 +--
- include/linux/dcache.h  |  2 +-
- include/linux/fscrypt.h |  6 ++---
- 4 files changed, 31 insertions(+), 35 deletions(-)
+ tests/generic/398     | 69 +++++++++++++++++++++++++------------------
+ tests/generic/398.out | 22 ++++++--------
+ 2 files changed, 49 insertions(+), 42 deletions(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 4dc788e3bc96..77410b914c62 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -313,45 +313,43 @@ int fscrypt_decrypt_page(const struct inode *inode, struct page *page,
- EXPORT_SYMBOL(fscrypt_decrypt_page);
- 
- /*
-- * Validate dentries for encrypted directories to make sure we aren't
-- * potentially caching stale data after a key has been added or
-- * removed.
-+ * Validate dentries in encrypted directories to make sure we aren't potentially
-+ * caching stale dentries after a key has been added.
-  */
- static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
- {
- 	struct dentry *dir;
--	int dir_has_key, cached_with_key;
-+	int err;
-+	int valid;
-+
-+	/*
-+	 * Plaintext names are always valid, since fscrypt doesn't support
-+	 * reverting to ciphertext names without evicting the directory's inode
-+	 * -- which implies eviction of the dentries in the directory.
-+	 */
-+	if (!(dentry->d_flags & DCACHE_ENCRYPTED_NAME))
-+		return 1;
-+
-+	/*
-+	 * Ciphertext name; valid if the directory's key is still unavailable.
-+	 *
-+	 * Note: since fscrypt forbids rename() on ciphertext names, it should
-+	 * be safe to access ->d_parent directly here.  But use dget_parent() to
-+	 * be on the safe side.
-+	 */
- 
- 	if (flags & LOOKUP_RCU)
- 		return -ECHILD;
- 
- 	dir = dget_parent(dentry);
--	if (!IS_ENCRYPTED(d_inode(dir))) {
--		dput(dir);
--		return 0;
--	}
--
--	spin_lock(&dentry->d_lock);
--	cached_with_key = dentry->d_flags & DCACHE_ENCRYPTED_WITH_KEY;
--	spin_unlock(&dentry->d_lock);
--	dir_has_key = (d_inode(dir)->i_crypt_info != NULL);
-+	err = fscrypt_get_encryption_info(d_inode(dir));
-+	valid = (d_inode(dir)->i_crypt_info == NULL);
- 	dput(dir);
- 
--	/*
--	 * If the dentry was cached without the key, and it is a
--	 * negative dentry, it might be a valid name.  We can't check
--	 * if the key has since been made available due to locking
--	 * reasons, so we fail the validation so ext4_lookup() can do
--	 * this check.
--	 *
--	 * We also fail the validation if the dentry was created with
--	 * the key present, but we no longer have the key, or vice versa.
--	 */
--	if ((!cached_with_key && d_is_negative(dentry)) ||
--			(!cached_with_key && dir_has_key) ||
--			(cached_with_key && !dir_has_key))
--		return 0;
--	return 1;
-+	if (err < 0)
-+		return err;
-+
-+	return valid;
+diff --git a/tests/generic/398 b/tests/generic/398
+index efb8348c..ecf82690 100755
+--- a/tests/generic/398
++++ b/tests/generic/398
+@@ -7,9 +7,9 @@
+ # Filesystem encryption is designed to enforce that a consistent encryption
+ # policy is used within a given encrypted directory tree and that an encrypted
+ # directory tree does not contain any unencrypted files.  This test verifies
+-# that filesystem operations that would violate this constraint fail with EPERM.
+-# This does not test enforcement of this constraint on lookup, which is still
+-# needed to detect offline changes.
++# that filesystem operations that would violate this constraint fail.  This does
++# not test enforcement of this constraint on lookup, which is still needed to
++# detect offline changes.
+ #
+ seq=`basename $0`
+ seqres=$RESULT_DIR/$seq
+@@ -26,10 +26,21 @@ _cleanup()
+ 	rm -f $tmp.*
  }
  
- const struct dentry_operations fscrypt_d_ops = {
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 56debb1fcf5e..a9492f75bbe1 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -101,9 +101,9 @@ int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry)
- 	if (err)
- 		return err;
+-filter_enokey()
++# The error code for incompatible rename or link into an encrypted directory was
++# changed from EPERM to EXDEV in Linux v5.1, to allow tools like 'mv' to work.
++# See kernel commit f5e55e777cc9 ("fscrypt: return -EXDEV for incompatible
++# rename or link into encrypted dir").  Accept both errors for now.
++filter_eperm_to_exdev()
+ {
+-	# rename without key can also fail with EPERM instead of ENOKEY
+-	sed -e "s/Required key not available/Operation not permitted/g"
++	sed -e 's/Operation not permitted/Invalid cross-device link/'
++}
++
++# The error code for incompatible cross-rename without the key has been ENOKEY
++# on all filesystems since Linux v4.16.  Previously it was EPERM on some
++# filesystems.  Accept both errors for now.
++filter_eperm_to_enokey()
++{
++	sed -e 's/Operation not permitted/Required key not available/'
+ }
  
--	if (fscrypt_has_encryption_key(dir)) {
-+	if (!fscrypt_has_encryption_key(dir)) {
- 		spin_lock(&dentry->d_lock);
--		dentry->d_flags |= DCACHE_ENCRYPTED_WITH_KEY;
-+		dentry->d_flags |= DCACHE_ENCRYPTED_NAME;
- 		spin_unlock(&dentry->d_lock);
- 	}
+ # get standard environment, filters and checks
+@@ -67,27 +78,27 @@ touch $edir2/efile2
+ touch $udir/ufile
  
-diff --git a/include/linux/dcache.h b/include/linux/dcache.h
-index 60996e64c579..9b3b75d3bd21 100644
---- a/include/linux/dcache.h
-+++ b/include/linux/dcache.h
-@@ -212,7 +212,7 @@ struct dentry_operations {
  
- #define DCACHE_MAY_FREE			0x00800000
- #define DCACHE_FALLTHRU			0x01000000 /* Fall through to lower layer */
--#define DCACHE_ENCRYPTED_WITH_KEY	0x02000000 /* dir is encrypted with a valid key */
-+#define DCACHE_ENCRYPTED_NAME		0x02000000 /* Encrypted name (dir key was unavailable) */
- #define DCACHE_OP_REAL			0x04000000
+-# Test linking and moving an encrypted file into an encrypted directory with a
+-# different encryption policy.  Should fail with EPERM.
++# Test linking and renaming an encrypted file into an encrypted directory with a
++# different encryption policy.  Should fail with EXDEV.
  
- #define DCACHE_PAR_LOOKUP		0x10000000 /* being looked up (with parent locked shared) */
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index e5194fc3983e..5a0c3fee1ea2 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -545,10 +545,8 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
-  * filenames are presented in encrypted form.  Therefore, we'll try to set up
-  * the directory's encryption key, but even without it the lookup can continue.
-  *
-- * To allow invalidating stale dentries if the directory's encryption key is
-- * added later, we also install a custom ->d_revalidate() method and use the
-- * DCACHE_ENCRYPTED_WITH_KEY flag to indicate whether a given dentry is a
-- * plaintext name (flag set) or a ciphertext name (flag cleared).
-+ * This also installs a custom ->d_revalidate() method which will invalidate the
-+ * dentry if it was created without the key and the key is later added.
-  *
-  * Return: 0 on success, -errno if a problem occurred while setting up the
-  * encryption key
+ echo -e "\n*** Link encrypted <= encrypted ***"
+-ln $edir1/efile1 $edir2/efile1 |& _filter_scratch
++ln $edir1/efile1 $edir2/efile1 |& _filter_scratch | filter_eperm_to_exdev
+ 
+ echo -e "\n*** Rename encrypted => encrypted ***"
+-mv $edir1/efile1 $edir2/efile1 |& _filter_scratch
++src/renameat2 $edir1/efile1 $edir2/efile1 |& filter_eperm_to_exdev
+ 
+ 
+-# Test linking and moving an unencrypted file into an encrypted directory.
+-# Should fail with EPERM.
++# Test linking and renaming an unencrypted file into an encrypted directory.
++# Should fail with EXDEV.
+ 
+ echo -e "\n\n*** Link unencrypted <= encrypted ***"
+-ln $udir/ufile $edir1/ufile |& _filter_scratch
++ln $udir/ufile $edir1/ufile |& _filter_scratch | filter_eperm_to_exdev
+ 
+ echo -e "\n*** Rename unencrypted => encrypted ***"
+-mv $udir/ufile $edir1/ufile |& _filter_scratch
++src/renameat2 $udir/ufile $edir1/ufile |& filter_eperm_to_exdev
+ 
+ 
+-# Test linking and moving an encrypted file into an unencrypted directory.
++# Test linking and renaming an encrypted file into an unencrypted directory.
+ # Should succeed.
+ 
+ echo -e "\n\n*** Link encrypted <= unencrypted ***"
+@@ -95,33 +106,33 @@ ln -v $edir1/efile1 $udir/efile1 |& _filter_scratch
+ rm $udir/efile1 # undo
+ 
+ echo -e "\n*** Rename encrypted => unencrypted ***"
+-mv -v $edir1/efile1 $udir/efile1 |& _filter_scratch |& _filter_mv
+-mv $udir/efile1 $edir1/efile1 # undo
++src/renameat2 $edir1/efile1 $udir/efile1
++src/renameat2 $udir/efile1 $edir1/efile1 # undo
+ 
+ 
+-# Test moving a forbidden (unencrypted, or encrypted with a different encryption
+-# policy) file into an encrypted directory via an exchange (cross rename)
+-# operation.  Should fail with EPERM.
++# Test renaming a forbidden (unencrypted, or encrypted with a different
++# encryption policy) file into an encrypted directory via an exchange (cross
++# rename) operation.  Should fail with EXDEV.
+ 
+ echo -e "\n\n*** Exchange encrypted <=> encrypted ***"
+-src/renameat2 -x $edir1/efile1 $edir2/efile2 |& _filter_scratch
++src/renameat2 -x $edir1/efile1 $edir2/efile2 |& filter_eperm_to_exdev
+ 
+ echo -e "\n*** Exchange unencrypted <=> encrypted ***"
+-src/renameat2 -x $udir/ufile $edir1/efile1 |& _filter_scratch
++src/renameat2 -x $udir/ufile $edir1/efile1 |& filter_eperm_to_exdev
+ 
+ echo -e "\n*** Exchange encrypted <=> unencrypted ***"
+-src/renameat2 -x $edir1/efile1 $udir/ufile |& _filter_scratch
++src/renameat2 -x $edir1/efile1 $udir/ufile |& filter_eperm_to_exdev
+ 
+ 
+ # Test a file with a special type, i.e. not regular, directory, or symlink.
+ # Since such files are not subject to encryption, there should be no
+-# restrictions on linking or moving them into encrypted directories.
++# restrictions on linking or renaming them into encrypted directories.
+ 
+ echo -e "\n\n*** Special file tests ***"
+ mkfifo $edir1/fifo
+-mv -v $edir1/fifo $edir2/fifo | _filter_scratch |& _filter_mv
+-mv -v $edir2/fifo $udir/fifo | _filter_scratch |& _filter_mv
+-mv -v $udir/fifo $edir1/fifo | _filter_scratch |& _filter_mv
++src/renameat2 $edir1/fifo $edir2/fifo
++src/renameat2 $edir2/fifo $udir/fifo
++src/renameat2 $udir/fifo $edir1/fifo
+ mkfifo $udir/fifo
+ src/renameat2 -x $udir/fifo $edir1/fifo
+ ln -v $edir1/fifo $edir2/fifo | _filter_scratch
+@@ -138,9 +149,9 @@ efile1=$(find $edir1 -type f)
+ efile2=$(find $edir2 -type f)
+ 
+ echo -e "\n\n*** Exchange encrypted <=> encrypted without key ***"
+-src/renameat2 -x $efile1 $efile2 |& filter_enokey
++src/renameat2 -x $efile1 $efile2 |& filter_eperm_to_enokey
+ echo -e "\n*** Exchange encrypted <=> unencrypted without key ***"
+-src/renameat2 -x $efile1 $udir/ufile |& filter_enokey
++src/renameat2 -x $efile1 $udir/ufile |& filter_eperm_to_enokey
+ 
+ # success, all done
+ status=0
+diff --git a/tests/generic/398.out b/tests/generic/398.out
+index f9274878..e8caefe4 100644
+--- a/tests/generic/398.out
++++ b/tests/generic/398.out
+@@ -1,45 +1,41 @@
+ QA output created by 398
+ 
+ *** Link encrypted <= encrypted ***
+-ln: failed to create hard link 'SCRATCH_MNT/edir2/efile1' => 'SCRATCH_MNT/edir1/efile1': Operation not permitted
++ln: failed to create hard link 'SCRATCH_MNT/edir2/efile1' => 'SCRATCH_MNT/edir1/efile1': Invalid cross-device link
+ 
+ *** Rename encrypted => encrypted ***
+-mv: cannot move 'SCRATCH_MNT/edir1/efile1' to 'SCRATCH_MNT/edir2/efile1': Operation not permitted
++Invalid cross-device link
+ 
+ 
+ *** Link unencrypted <= encrypted ***
+-ln: failed to create hard link 'SCRATCH_MNT/edir1/ufile' => 'SCRATCH_MNT/udir/ufile': Operation not permitted
++ln: failed to create hard link 'SCRATCH_MNT/edir1/ufile' => 'SCRATCH_MNT/udir/ufile': Invalid cross-device link
+ 
+ *** Rename unencrypted => encrypted ***
+-mv: cannot move 'SCRATCH_MNT/udir/ufile' to 'SCRATCH_MNT/edir1/ufile': Operation not permitted
++Invalid cross-device link
+ 
+ 
+ *** Link encrypted <= unencrypted ***
+ 'SCRATCH_MNT/udir/efile1' => 'SCRATCH_MNT/edir1/efile1'
+ 
+ *** Rename encrypted => unencrypted ***
+-'SCRATCH_MNT/edir1/efile1' -> 'SCRATCH_MNT/udir/efile1'
+ 
+ 
+ *** Exchange encrypted <=> encrypted ***
+-Operation not permitted
++Invalid cross-device link
+ 
+ *** Exchange unencrypted <=> encrypted ***
+-Operation not permitted
++Invalid cross-device link
+ 
+ *** Exchange encrypted <=> unencrypted ***
+-Operation not permitted
++Invalid cross-device link
+ 
+ 
+ *** Special file tests ***
+-'SCRATCH_MNT/edir1/fifo' -> 'SCRATCH_MNT/edir2/fifo'
+-'SCRATCH_MNT/edir2/fifo' -> 'SCRATCH_MNT/udir/fifo'
+-'SCRATCH_MNT/udir/fifo' -> 'SCRATCH_MNT/edir1/fifo'
+ 'SCRATCH_MNT/edir2/fifo' => 'SCRATCH_MNT/edir1/fifo'
+ 
+ 
+ *** Exchange encrypted <=> encrypted without key ***
+-Operation not permitted
++Required key not available
+ 
+ *** Exchange encrypted <=> unencrypted without key ***
+-Operation not permitted
++Required key not available
 -- 
-2.21.0
+2.21.0.360.g471c308f928-goog
