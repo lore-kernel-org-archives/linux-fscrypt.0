@@ -1,120 +1,53 @@
-Return-Path: <SRS0=H5uw=RZ=gondor.apana.org.au=herbert@kernel.org>
-Subject: [PATCH 6/17] zinc: Add arm accelerated chacha20
-References: <20190322062740.nrwfx2rvmt7lzotj@gondor.apana.org.au>
-Message-Id: <E1h7DgV-0001Hv-7y@gondobar>
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Date: Fri, 22 Mar 2019 14:29:43 +0800
-To: Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
+Return-Path: <SRS0=+RYZ=RU=canb.auug.org.au=sfr@kernel.org>
+Date: Mon, 18 Mar 2019 09:30:21 +1100
+From: Stephen Rothwell <sfr@canb.auug.org.au>
+Subject: Re: Update fscrypt git URL for linux-next
+Message-ID: <20190318093021.23ff16d0@canb.auug.org.au>
+In-Reply-To: <20190317202248.GA689@sol.localdomain>
+References: <20190312063422.GA9123@sol.localdomain>
+	<20190317161908.03c8d104@canb.auug.org.au>
+	<20190317202248.GA689@sol.localdomain>
+MIME-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha256;
+ boundary="Sig_/rHB/Wo9HE.G=82AV4Z6nO5B"; protocol="application/pgp-signature"
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patch exposes the crypto API arm neon chacha20 implementation
-through zinc.
+--Sig_/rHB/Wo9HE.G=82AV4Z6nO5B
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: quoted-printable
 
-Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
----
+Hi Eric,
 
- lib/zinc/Kconfig                      |    2 +
- lib/zinc/chacha20/chacha20-arm-glue.c |   68 ++++++++++++++++++++++++++++++++++
- lib/zinc/chacha20/chacha20.c          |    2 +
- 3 files changed, 72 insertions(+)
+On Sun, 17 Mar 2019 13:22:49 -0700 Eric Biggers <ebiggers@kernel.org> wrote:
+>
+> > Done.  I have also updated the URL for the fscrypt-current tree (using
+> > the for-stable branch of the above new URL).  Should I also add you to
+> > the contacts for those trees (currently I only have Ted listed)?
+>=20
+> Yes, please add me to the contacts.
 
-diff --git a/lib/zinc/Kconfig b/lib/zinc/Kconfig
-index 010547fa6c9d..2d1750c50919 100644
---- a/lib/zinc/Kconfig
-+++ b/lib/zinc/Kconfig
-@@ -2,6 +2,8 @@ config ZINC_CHACHA20
- 	tristate
- 	select CRYPTO_CHACHA20
- 	select CRYPTO_CHACHA20_X86_64 if ZINC_ARCH_X86_64
-+	select CRYPTO_CHACHA20_NEON if ZINC_ARCH_ARM
-+	select CRYPTO_CHACHA20_NEON if ZINC_ARCH_ARM64
- 
- config ZINC_SELFTEST
- 	bool "Zinc cryptography library self-tests"
-diff --git a/lib/zinc/chacha20/chacha20-arm-glue.c b/lib/zinc/chacha20/chacha20-arm-glue.c
-new file mode 100644
-index 000000000000..2b6c88cf516b
---- /dev/null
-+++ b/lib/zinc/chacha20/chacha20-arm-glue.c
-@@ -0,0 +1,68 @@
-+// SPDX-License-Identifier: GPL-2.0 OR MIT
-+/*
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-+ */
-+
-+#include <asm/hwcap.h>
-+#include <asm/neon.h>
-+#if defined(CONFIG_ZINC_ARCH_ARM)
-+#include <asm/system_info.h>
-+#include <asm/cputype.h>
-+#endif
-+#include <crypto/chacha.h>
-+
-+static bool chacha20_use_neon __ro_after_init;
-+static bool *const chacha20_nobs[] __initconst = { &chacha20_use_neon };
-+static void __init chacha20_fpu_init(void)
-+{
-+#if defined(CONFIG_ZINC_ARCH_ARM64)
-+	chacha20_use_neon = elf_hwcap & HWCAP_ASIMD;
-+#elif defined(CONFIG_ZINC_ARCH_ARM)
-+	switch (read_cpuid_part()) {
-+	case ARM_CPU_PART_CORTEX_A7:
-+	case ARM_CPU_PART_CORTEX_A5:
-+		/* The Cortex-A7 and Cortex-A5 do not perform well with the NEON
-+		 * implementation but do incredibly with the scalar one and use
-+		 * less power.
-+		 */
-+		break;
-+	default:
-+		chacha20_use_neon = elf_hwcap & HWCAP_NEON;
-+	}
-+#endif
-+}
-+
-+static inline bool chacha20_arch(struct chacha20_ctx *ctx, u8 *dst,
-+				 const u8 *src, size_t len,
-+				 simd_context_t *simd_context)
-+{
-+	/* SIMD disables preemption, so relax after processing each page. */
-+	BUILD_BUG_ON(PAGE_SIZE < CHACHA20_BLOCK_SIZE ||
-+		     PAGE_SIZE % CHACHA20_BLOCK_SIZE);
-+
-+	if (!IS_ENABLED(CONFIG_KERNEL_MODE_NEON) || !chacha20_use_neon ||
-+	    len < CHACHA20_BLOCK_SIZE * 3 || !simd_use(simd_context)) {
-+
-+	for (;;) {
-+		const size_t bytes = min_t(size_t, len, PAGE_SIZE);
-+
-+		crypto_chacha_neon(ctx->state, dst, src, bytes, 20);
-+
-+		len -= bytes;
-+		if (!len)
-+			break;
-+		dst += bytes;
-+		src += bytes;
-+		simd_relax(simd_context);
-+	}
-+
-+	return true;
-+}
-+
-+static inline bool hchacha20_arch(u32 derived_key[CHACHA20_KEY_WORDS],
-+				  const u8 nonce[HCHACHA20_NONCE_SIZE],
-+				  const u8 key[HCHACHA20_KEY_SIZE],
-+				  simd_context_t *simd_context)
-+{
-+	return false;
-+}
-diff --git a/lib/zinc/chacha20/chacha20.c b/lib/zinc/chacha20/chacha20.c
-index c84fe504623f..314525f86757 100644
---- a/lib/zinc/chacha20/chacha20.c
-+++ b/lib/zinc/chacha20/chacha20.c
-@@ -19,6 +19,8 @@
- 
- #if defined(CONFIG_ZINC_ARCH_X86_64)
- #include "chacha20-x86_64-glue.c"
-+#elif defined(CONFIG_ZINC_ARCH_ARM) || defined(CONFIG_ZINC_ARCH_ARM64)
-+#include "chacha20-arm-glue.c"
- #else
- static bool *const chacha20_nobs[] __initconst = { };
- static void __init chacha20_fpu_init(void)
+Done.
+
+--=20
+Cheers,
+Stephen Rothwell
+
+--Sig_/rHB/Wo9HE.G=82AV4Z6nO5B
+Content-Type: application/pgp-signature
+Content-Description: OpenPGP digital signature
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCAAdFiEENIC96giZ81tWdLgKAVBC80lX0GwFAlyOyn0ACgkQAVBC80lX
+0GzzjAgAkFIQUY7Rbu47YYwdcLrRWg2TDLg2qZcjI/WJ5dhsHK/mnj5mStwf/TOZ
+GF+h4BQK2mi/3LQVd5S8i0+gj47B4wHw5I5mohOfIAVM2FK0ifyFBwKEtcA2OJGw
+M1EeOC/9v6Lthzg/f7Lf2457K6AMmXEEbY2KVUtxEwHgKxTGuREIZpH1D6U+ScDk
+0ICJae21cS7RtWPES6gmR0QSuMUttZgRd8MssR7Ee3x02J4acPQ0CskUHDFpcOqt
+UNMUGyAaQ4TULPLUpRviuMvV6V2fUoJRYM0SDw5y8V3dx0CV6sZGM8quqNDnsYZP
+szlDDxMJJZGXusU4/IZsDYtD0ysjeQ==
+=yLMp
+-----END PGP SIGNATURE-----
+
+--Sig_/rHB/Wo9HE.G=82AV4Z6nO5B--
