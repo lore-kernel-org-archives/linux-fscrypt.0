@@ -1,26 +1,168 @@
-Return-Path: <SRS0=ahlT=RU=ftp.linux.org.uk=viro@kernel.org>
-Date: Sun, 17 Mar 2019 20:38:22 +0000
-From: Al Viro <viro@zeniv.linux.org.uk>
-Subject: Re: [PATCH 1/5] fscrypt: clean up and improve dentry revalidation
-Message-ID: <20190317203822.GH2217@ZenIV.linux.org.uk>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:56010 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1727327AbfCQUHO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 17 Mar 2019 16:07:14 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH 1/5] fscrypt: clean up and improve dentry revalidation
+Date: Sun, 17 Mar 2019 13:04:40 -0700
+Message-Id: <20190317200444.5967-2-ebiggers@kernel.org>
+In-Reply-To: <20190317200444.5967-1-ebiggers@kernel.org>
 References: <20190317200444.5967-1-ebiggers@kernel.org>
- <20190317200444.5967-2-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190317200444.5967-2-ebiggers@kernel.org>
-Sender: Al Viro <viro@ftp.linux.org.uk>
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-unionfs@vger.kernel.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, Gao Xiang <gaoxiang25@huawei.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-unionfs@vger.kernel.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, Gao Xiang <gaoxiang25@huawei.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Sun, Mar 17, 2019 at 01:04:40PM -0700, Eric Biggers wrote:
-> +	/*
-> +	 * Ciphertext name; valid if the directory's key is still unavailable.
-> +	 *
-> +	 * Note: since fscrypt forbids rename() on ciphertext names, it should
-> +	 * be safe to access ->d_parent directly here.
+From: Eric Biggers <ebiggers@google.com>
 
-No, it is not.  Again, d_splice_alias() on buggered fs image picking a reference
-to your subdirectory when doing a lookup elsewhere.  It can relocate the
-damn thing, without rename() being allowed for _anything_.
+Make various improvements to fscrypt dentry revalidation:
+
+- Don't try to handle the case where the per-directory key is removed,
+  as this can't happen without the inode (and dentries) being evicted.
+
+- Flag ciphertext dentries rather than plaintext dentries, since it's
+  ciphertext dentries that need the special handling.
+
+- Avoid doing unnecessary work for non-ciphertext dentries.
+
+- When revalidating ciphertext dentries, try to set up the directory's
+  i_crypt_info to make sure the key is really still absent, rather than
+  invalidating all negative dentries as the previous code did.  An old
+  comment suggested we can't do this locking reasons, but AFAICT this
+  comment was outdated and it actually works fine.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/crypto.c      | 54 ++++++++++++++++++++---------------------
+ fs/crypto/hooks.c       |  4 +--
+ include/linux/dcache.h  |  2 +-
+ include/linux/fscrypt.h |  6 ++---
+ 4 files changed, 31 insertions(+), 35 deletions(-)
+
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 4dc788e3bc96..77410b914c62 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -313,45 +313,43 @@ int fscrypt_decrypt_page(const struct inode *inode, struct page *page,
+ EXPORT_SYMBOL(fscrypt_decrypt_page);
+ 
+ /*
+- * Validate dentries for encrypted directories to make sure we aren't
+- * potentially caching stale data after a key has been added or
+- * removed.
++ * Validate dentries in encrypted directories to make sure we aren't potentially
++ * caching stale dentries after a key has been added.
+  */
+ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
+ {
+ 	struct dentry *dir;
+-	int dir_has_key, cached_with_key;
++	int err;
++	int valid;
++
++	/*
++	 * Plaintext names are always valid, since fscrypt doesn't support
++	 * reverting to ciphertext names without evicting the directory's inode
++	 * -- which implies eviction of the dentries in the directory.
++	 */
++	if (!(dentry->d_flags & DCACHE_ENCRYPTED_NAME))
++		return 1;
++
++	/*
++	 * Ciphertext name; valid if the directory's key is still unavailable.
++	 *
++	 * Note: since fscrypt forbids rename() on ciphertext names, it should
++	 * be safe to access ->d_parent directly here.  But use dget_parent() to
++	 * be on the safe side.
++	 */
+ 
+ 	if (flags & LOOKUP_RCU)
+ 		return -ECHILD;
+ 
+ 	dir = dget_parent(dentry);
+-	if (!IS_ENCRYPTED(d_inode(dir))) {
+-		dput(dir);
+-		return 0;
+-	}
+-
+-	spin_lock(&dentry->d_lock);
+-	cached_with_key = dentry->d_flags & DCACHE_ENCRYPTED_WITH_KEY;
+-	spin_unlock(&dentry->d_lock);
+-	dir_has_key = (d_inode(dir)->i_crypt_info != NULL);
++	err = fscrypt_get_encryption_info(d_inode(dir));
++	valid = (d_inode(dir)->i_crypt_info == NULL);
+ 	dput(dir);
+ 
+-	/*
+-	 * If the dentry was cached without the key, and it is a
+-	 * negative dentry, it might be a valid name.  We can't check
+-	 * if the key has since been made available due to locking
+-	 * reasons, so we fail the validation so ext4_lookup() can do
+-	 * this check.
+-	 *
+-	 * We also fail the validation if the dentry was created with
+-	 * the key present, but we no longer have the key, or vice versa.
+-	 */
+-	if ((!cached_with_key && d_is_negative(dentry)) ||
+-			(!cached_with_key && dir_has_key) ||
+-			(cached_with_key && !dir_has_key))
+-		return 0;
+-	return 1;
++	if (err < 0)
++		return err;
++
++	return valid;
+ }
+ 
+ const struct dentry_operations fscrypt_d_ops = {
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index 56debb1fcf5e..a9492f75bbe1 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -101,9 +101,9 @@ int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry)
+ 	if (err)
+ 		return err;
+ 
+-	if (fscrypt_has_encryption_key(dir)) {
++	if (!fscrypt_has_encryption_key(dir)) {
+ 		spin_lock(&dentry->d_lock);
+-		dentry->d_flags |= DCACHE_ENCRYPTED_WITH_KEY;
++		dentry->d_flags |= DCACHE_ENCRYPTED_NAME;
+ 		spin_unlock(&dentry->d_lock);
+ 	}
+ 
+diff --git a/include/linux/dcache.h b/include/linux/dcache.h
+index 60996e64c579..9b3b75d3bd21 100644
+--- a/include/linux/dcache.h
++++ b/include/linux/dcache.h
+@@ -212,7 +212,7 @@ struct dentry_operations {
+ 
+ #define DCACHE_MAY_FREE			0x00800000
+ #define DCACHE_FALLTHRU			0x01000000 /* Fall through to lower layer */
+-#define DCACHE_ENCRYPTED_WITH_KEY	0x02000000 /* dir is encrypted with a valid key */
++#define DCACHE_ENCRYPTED_NAME		0x02000000 /* Encrypted name (dir key was unavailable) */
+ #define DCACHE_OP_REAL			0x04000000
+ 
+ #define DCACHE_PAR_LOOKUP		0x10000000 /* being looked up (with parent locked shared) */
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index e5194fc3983e..5a0c3fee1ea2 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -545,10 +545,8 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
+  * filenames are presented in encrypted form.  Therefore, we'll try to set up
+  * the directory's encryption key, but even without it the lookup can continue.
+  *
+- * To allow invalidating stale dentries if the directory's encryption key is
+- * added later, we also install a custom ->d_revalidate() method and use the
+- * DCACHE_ENCRYPTED_WITH_KEY flag to indicate whether a given dentry is a
+- * plaintext name (flag set) or a ciphertext name (flag cleared).
++ * This also installs a custom ->d_revalidate() method which will invalidate the
++ * dentry if it was created without the key and the key is later added.
+  *
+  * Return: 0 on success, -errno if a problem occurred while setting up the
+  * encryption key
+-- 
+2.21.0
