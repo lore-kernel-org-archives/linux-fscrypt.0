@@ -1,56 +1,121 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-Date: Thu, 7 Feb 2019 15:35:10 -0800
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: Re: [PATCH] KEYS: user: Align the payload buffer
-Message-ID: <20190207233509.GA125156@gmail.com>
-References: <20190115033716.18380-1-ebiggers@kernel.org>
+Date: Sun, 17 Mar 2019 13:04:41 -0700
+Message-Id: <20190317200444.5967-3-ebiggers@kernel.org>
+In-Reply-To: <20190317200444.5967-1-ebiggers@kernel.org>
+References: <20190317200444.5967-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190115033716.18380-1-ebiggers@kernel.org>
-Sender: keyrings-owner@vger.kernel.org
-To: keyrings@vger.kernel.org, David Howells <dhowells@redhat.com>
-Cc: Aaro Koskinen <aaro.koskinen@iki.fi>, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
+Subject: [f2fs-dev] [PATCH 2/5] fscrypt: fix race allowing rename() and
+ link() of ciphertext dentries
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-unionfs@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Mon, Jan 14, 2019 at 07:37:16PM -0800, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> Align the payload of "user" and "logon" keys so that users of the
-> keyrings service can access it as a struct that requires more than
-> 2-byte alignment.  fscrypt currently does this which results in the read
-> of fscrypt_key::size being misaligned as it needs 4-byte alignment.
-> 
-> Align to __alignof__(u64) rather than __alignof__(long) since in the
-> future it's conceivable that people would use structs beginning with
-> u64, which on some platforms would require more than 'long' alignment.
-> 
-> Reported-by: Aaro Koskinen <aaro.koskinen@iki.fi>
-> Fixes: 2aa349f6e37c ("[PATCH] Keys: Export user-defined keyring operations")
-> Fixes: 88bd6ccdcdd6 ("ext4 crypto: add encryption key management facilities")
-> Cc: stable@vger.kernel.org
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> ---
->  include/keys/user-type.h | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/include/keys/user-type.h b/include/keys/user-type.h
-> index e098cbe27db54..12babe9915944 100644
-> --- a/include/keys/user-type.h
-> +++ b/include/keys/user-type.h
-> @@ -31,7 +31,7 @@
->  struct user_key_payload {
->  	struct rcu_head	rcu;		/* RCU destructor */
->  	unsigned short	datalen;	/* length of this data */
-> -	char		data[0];	/* actual data */
-> +	char		data[0] __aligned(__alignof__(u64)); /* actual data */
->  };
->  
->  extern struct key_type key_type_user;
-> -- 
-> 2.20.1
-> 
+From: Eric Biggers <ebiggers@google.com>
 
-Ping.  David, are you planning to apply this?
+Close some race conditions where fscrypt allowed rename() and link() on
+ciphertext dentries that had been looked up just prior to the key being
+concurrently added.  It's better to return -ENOKEY in this case.
 
-- Eric
+This avoids doing the nonsensical thing of encrypting the names a second
+time when searching for the actual on-disk dir entries.  It also
+guarantees that DCACHE_ENCRYPTED_NAME dentries are never rename()d, so
+the dcache won't have support all possible combinations of moving
+DCACHE_ENCRYPTED_NAME around during __d_move().
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/hooks.c       | 12 +++++++++++-
+ include/linux/fscrypt.h |  9 +++++----
+ 2 files changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index a9492f75bbe1..2e7498a821a4 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -49,7 +49,8 @@ int fscrypt_file_open(struct inode *inode, struct file *filp)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_file_open);
+ 
+-int __fscrypt_prepare_link(struct inode *inode, struct inode *dir)
++int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
++			   struct dentry *dentry)
+ {
+ 	int err;
+ 
+@@ -57,6 +58,10 @@ int __fscrypt_prepare_link(struct inode *inode, struct inode *dir)
+ 	if (err)
+ 		return err;
+ 
++	/* ... in case we looked up ciphertext name before key was added */
++	if (dentry->d_flags & DCACHE_ENCRYPTED_NAME)
++		return -ENOKEY;
++
+ 	if (!fscrypt_has_permitted_context(dir, inode))
+ 		return -EXDEV;
+ 
+@@ -78,6 +83,11 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 	if (err)
+ 		return err;
+ 
++	/* ... in case we looked up ciphertext name(s) before key was added */
++	if ((old_dentry->d_flags | new_dentry->d_flags) &
++	    DCACHE_ENCRYPTED_NAME)
++		return -ENOKEY;
++
+ 	if (old_dir != new_dir) {
+ 		if (IS_ENCRYPTED(new_dir) &&
+ 		    !fscrypt_has_permitted_context(new_dir,
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 5a0c3fee1ea2..4ad7a856e0f1 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -214,7 +214,8 @@ extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
+ 
+ /* hooks.c */
+ extern int fscrypt_file_open(struct inode *inode, struct file *filp);
+-extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir);
++extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
++				  struct dentry *dentry);
+ extern int __fscrypt_prepare_rename(struct inode *old_dir,
+ 				    struct dentry *old_dentry,
+ 				    struct inode *new_dir,
+@@ -401,8 +402,8 @@ static inline int fscrypt_file_open(struct inode *inode, struct file *filp)
+ 	return 0;
+ }
+ 
+-static inline int __fscrypt_prepare_link(struct inode *inode,
+-					 struct inode *dir)
++static inline int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
++					 struct dentry *dentry)
+ {
+ 	return -EOPNOTSUPP;
+ }
+@@ -497,7 +498,7 @@ static inline int fscrypt_prepare_link(struct dentry *old_dentry,
+ 				       struct dentry *dentry)
+ {
+ 	if (IS_ENCRYPTED(dir))
+-		return __fscrypt_prepare_link(d_inode(old_dentry), dir);
++		return __fscrypt_prepare_link(d_inode(old_dentry), dir, dentry);
+ 	return 0;
+ }
+ 
+-- 
+2.21.0
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
