@@ -1,64 +1,73 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from lilium.sigma-star.at ([109.75.188.150]:53174 "EHLO
-        lilium.sigma-star.at" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727012AbfCNRXO (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 14 Mar 2019 13:23:14 -0400
-From: Richard Weinberger <richard@nod.at>
-Subject: [PATCH 3/4] ubifs: Simplify fscrypt_get_encryption_info() error handling
-Date: Thu, 14 Mar 2019 18:15:58 +0100
-Message-Id: <20190314171559.27584-4-richard@nod.at>
-In-Reply-To: <20190314171559.27584-1-richard@nod.at>
-References: <CAJfpegvX4ANfso-Jn1zaB+m4Q_0eK9i-+MCJ+sTH5QzD3PZFMQ@mail.gmail.com>
- <20190314171559.27584-1-richard@nod.at>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Eric Biggers <ebiggers@kernel.org>
+Date: Wed, 20 Mar 2019 11:39:12 -0700
+Message-Id: <20190320183913.12686-5-ebiggers@kernel.org>
+In-Reply-To: <20190320183913.12686-1-ebiggers@kernel.org>
+References: <20190320183913.12686-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: quoted-printable
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-mtd@lists.infradead.org
-Cc: linux-fscrypt@vger.kernel.org, jaegeuk@kernel.org, tytso@mit.edu, linux-unionfs@vger.kernel.org, miklos@szeredi.hu, amir73il@gmail.com, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, paullawrence@google.com, Richard Weinberger <richard@nod.at>
+Subject: [f2fs-dev] [PATCH v2 4/5] fscrypt: only set dentry_operations on
+ ciphertext dentries
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-unionfs@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-fscrypt_get_encryption_info() does not return -ENOKEY,
-there is no need to handle this case.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Richard Weinberger <richard@nod.at>
+Plaintext dentries are always valid, so only set fscrypt_d_ops on
+ciphertext dentries.
+
+Besides marginally improved performance, this allows overlayfs to use an
+fscrypt-encrypted upperdir, provided that all the following are true:
+
+    (1) The fscrypt encryption key is placed in the keyring before
+	mounting overlayfs, and remains while the overlayfs is mounted.
+
+    (2) The overlayfs workdir uses the same encryption policy.
+
+    (3) No dentries for the ciphertext names of subdirectories have been
+	created in the upperdir or workdir yet.  (Since otherwise
+	d_splice_alias() will reuse the old dentry with ->d_op set.)
+
+One potential use case is using an ephemeral encryption key to encrypt
+all files created or changed by a container, so that they can be
+securely erased ("crypto-shredded") after the container stops.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ubifs/dir.c | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+ fs/crypto/hooks.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index 5767b373a8ff..b0cb913697c5 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -526,7 +526,7 @@ static int ubifs_readdir(struct file *file, struct di=
-r_context *ctx)
-=20
- 	if (encrypted) {
- 		err =3D fscrypt_get_encryption_info(dir);
--		if (err && err !=3D -ENOKEY)
-+		if (err)
- 			return err;
-=20
- 		err =3D fscrypt_fname_alloc_buffer(dir, UBIFS_MAX_NLEN, &fstr);
-@@ -794,7 +794,7 @@ static int ubifs_unlink(struct inode *dir, struct den=
-try *dentry)
-=20
- 	if (ubifs_crypt_is_encrypted(dir)) {
- 		err =3D fscrypt_get_encryption_info(dir);
--		if (err && err !=3D -ENOKEY)
-+		if (err)
- 			return err;
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index 2e7498a821a48..9d8910e86ee5d 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -115,9 +115,8 @@ int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry)
+ 		spin_lock(&dentry->d_lock);
+ 		dentry->d_flags |= DCACHE_ENCRYPTED_NAME;
+ 		spin_unlock(&dentry->d_lock);
++		d_set_d_op(dentry, &fscrypt_d_ops);
  	}
-=20
-@@ -904,7 +904,7 @@ static int ubifs_rmdir(struct inode *dir, struct dent=
-ry *dentry)
-=20
- 	if (ubifs_crypt_is_encrypted(dir)) {
- 		err =3D fscrypt_get_encryption_info(dir);
--		if (err && err !=3D -ENOKEY)
-+		if (err)
- 			return err;
- 	}
-=20
---=20
-2.21.0
+-
+-	d_set_d_op(dentry, &fscrypt_d_ops);
+ 	return 0;
+ }
+ EXPORT_SYMBOL_GPL(__fscrypt_prepare_lookup);
+-- 
+2.21.0.225.g810b269d1ac-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
