@@ -1,105 +1,503 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:50644 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726038AbfCDVrZ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 4 Mar 2019 16:47:25 -0500
-Date: Mon, 4 Mar 2019 13:47:22 -0800
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [GIT PULL] fscrypt updates for v5.1
-Message-ID: <20190304214721.GA215807@gmail.com>
+Date: Wed, 20 Mar 2019 11:39:13 -0700
+Message-Id: <20190320183913.12686-6-ebiggers@kernel.org>
+In-Reply-To: <20190320183913.12686-1-ebiggers@kernel.org>
+References: <20190320183913.12686-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: [f2fs-dev] [PATCH v2 5/5] fscrypt: fix race where ->lookup() marks
+ plaintext dentry as ciphertext
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-unionfs@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The following changes since commit 49a57857aeea06ca831043acbb0fa5e0f50602fd:
+From: Eric Biggers <ebiggers@google.com>
 
-  Linux 5.0-rc3 (2019-01-21 13:14:44 +1300)
+->lookup() in an encrypted directory begins as follows:
 
-are available in the Git repository at:
+1. fscrypt_prepare_lookup():
+    a. Try to load the directory's encryption key.
+    b. If the key is unavailable, mark the dentry as a ciphertext name
+       via d_flags.
+2. fscrypt_setup_filename():
+    a. Try to load the directory's encryption key.
+    b. If the key is available, encrypt the name (treated as a plaintext
+       name) to get the on-disk name.  Otherwise decode the name
+       (treated as a ciphertext name) to get the on-disk name.
 
-  git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fscrypt-for-linus
+But if the key is concurrently added, it may be found at (2a) but not at
+(1a).  In this case, the dentry will be wrongly marked as a ciphertext
+name even though it was actually treated as plaintext.
 
-for you to fetch changes up to 129ca2d2a83f44551e73a408fa5e75a7b5169abb:
+This will cause the dentry to be wrongly invalidated on the next lookup,
+potentially causing problems.  For example, if the racy ->lookup() was
+part of sys_mount(), then the new mount will be detached when anything
+tries to access it.  This is despite the mountpoint having a plaintext
+path, which should remain valid now that the key was added.
 
-  MAINTAINERS: add Eric Biggers as an fscrypt maintainer (2019-02-20 15:33:28 -0800)
+Of course, this is only possible if there's a userspace race.  Still,
+the additional kernel-side race is confusing and unexpected.
 
-----------------------------------------------------------------
-fscrypt updates for v5.1
+Close the kernel-side race by changing fscrypt_prepare_lookup() to also
+set the on-disk filename (step 2b), consistent with the d_flags update.
 
-First: Ted, Jaegeuk, and I have decided to add me as a co-maintainer for
-fscrypt, and we're now using a shared git tree.  So we've updated
-MAINTAINERS accordingly, and I'm doing the pull request this time.
+Fixes: 28b4c263961c ("ext4 crypto: revalidate dentry after adding or removing the key")
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/fname.c       |  1 +
+ fs/crypto/hooks.c       | 11 +++---
+ fs/ext4/ext4.h          | 62 +++++++++++++++++++++++++--------
+ fs/ext4/namei.c         | 76 ++++++++++++++++++++++++++++-------------
+ fs/f2fs/namei.c         | 17 +++++----
+ fs/ubifs/dir.c          |  8 ++---
+ include/linux/fscrypt.h | 30 ++++++++++------
+ 7 files changed, 139 insertions(+), 66 deletions(-)
 
-The actual changes for v5.1 are:
+diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+index 7ff40a73dbece..dea65c091f713 100644
+--- a/fs/crypto/fname.c
++++ b/fs/crypto/fname.c
+@@ -356,6 +356,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
+ 	}
+ 	if (!lookup)
+ 		return -ENOKEY;
++	fname->is_ciphertext_name = true;
+ 
+ 	/*
+ 	 * We don't have the key and we are doing a lookup; decode the
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index 9d8910e86ee5d..042d5b44f4ed9 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -104,20 +104,21 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
+ }
+ EXPORT_SYMBOL_GPL(__fscrypt_prepare_rename);
+ 
+-int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry)
++int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
++			     struct fscrypt_name *fname)
+ {
+-	int err = fscrypt_get_encryption_info(dir);
++	int err = fscrypt_setup_filename(dir, &dentry->d_name, 1, fname);
+ 
+-	if (err)
++	if (err && err != -ENOENT)
+ 		return err;
+ 
+-	if (!fscrypt_has_encryption_key(dir)) {
++	if (fname->is_ciphertext_name) {
+ 		spin_lock(&dentry->d_lock);
+ 		dentry->d_flags |= DCACHE_ENCRYPTED_NAME;
+ 		spin_unlock(&dentry->d_lock);
+ 		d_set_d_op(dentry, &fscrypt_d_ops);
+ 	}
+-	return 0;
++	return err;
+ }
+ EXPORT_SYMBOL_GPL(__fscrypt_prepare_lookup);
+ 
+diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
+index 82ffdacdc7fac..e64a4ee96d30a 100644
+--- a/fs/ext4/ext4.h
++++ b/fs/ext4/ext4.h
+@@ -2287,23 +2287,47 @@ extern unsigned ext4_free_clusters_after_init(struct super_block *sb,
+ ext4_fsblk_t ext4_inode_to_goal_block(struct inode *);
+ 
+ #ifdef CONFIG_FS_ENCRYPTION
++static inline void ext4_fname_from_fscrypt_name(struct ext4_filename *dst,
++						const struct fscrypt_name *src)
++{
++	memset(dst, 0, sizeof(*dst));
++
++	dst->usr_fname = src->usr_fname;
++	dst->disk_name = src->disk_name;
++	dst->hinfo.hash = src->hash;
++	dst->hinfo.minor_hash = src->minor_hash;
++	dst->crypto_buf = src->crypto_buf;
++}
++
+ static inline int ext4_fname_setup_filename(struct inode *dir,
+-			const struct qstr *iname,
+-			int lookup, struct ext4_filename *fname)
++					    const struct qstr *iname,
++					    int lookup,
++					    struct ext4_filename *fname)
+ {
+ 	struct fscrypt_name name;
+ 	int err;
+ 
+-	memset(fname, 0, sizeof(struct ext4_filename));
+-
+ 	err = fscrypt_setup_filename(dir, iname, lookup, &name);
++	if (err)
++		return err;
+ 
+-	fname->usr_fname = name.usr_fname;
+-	fname->disk_name = name.disk_name;
+-	fname->hinfo.hash = name.hash;
+-	fname->hinfo.minor_hash = name.minor_hash;
+-	fname->crypto_buf = name.crypto_buf;
+-	return err;
++	ext4_fname_from_fscrypt_name(fname, &name);
++	return 0;
++}
++
++static inline int ext4_fname_prepare_lookup(struct inode *dir,
++					    struct dentry *dentry,
++					    struct ext4_filename *fname)
++{
++	struct fscrypt_name name;
++	int err;
++
++	err = fscrypt_prepare_lookup(dir, dentry, &name);
++	if (err)
++		return err;
++
++	ext4_fname_from_fscrypt_name(fname, &name);
++	return 0;
+ }
+ 
+ static inline void ext4_fname_free_filename(struct ext4_filename *fname)
+@@ -2317,19 +2341,27 @@ static inline void ext4_fname_free_filename(struct ext4_filename *fname)
+ 	fname->usr_fname = NULL;
+ 	fname->disk_name.name = NULL;
+ }
+-#else
++#else /* !CONFIG_FS_ENCRYPTION */
+ static inline int ext4_fname_setup_filename(struct inode *dir,
+-		const struct qstr *iname,
+-		int lookup, struct ext4_filename *fname)
++					    const struct qstr *iname,
++					    int lookup,
++					    struct ext4_filename *fname)
+ {
+ 	fname->usr_fname = iname;
+ 	fname->disk_name.name = (unsigned char *) iname->name;
+ 	fname->disk_name.len = iname->len;
+ 	return 0;
+ }
+-static inline void ext4_fname_free_filename(struct ext4_filename *fname) { }
+ 
+-#endif
++static inline int ext4_fname_prepare_lookup(struct inode *dir,
++					    struct dentry *dentry,
++					    struct ext4_filename *fname)
++{
++	return ext4_fname_setup_filename(dir, &dentry->d_name, 1, fname);
++}
++
++static inline void ext4_fname_free_filename(struct ext4_filename *fname) { }
++#endif /* !CONFIG_FS_ENCRYPTION */
+ 
+ /* dir.c */
+ extern int __ext4_check_dir_entry(const char *, unsigned int, struct inode *,
+diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
+index 980166a8122a6..3ba6f30db8d92 100644
+--- a/fs/ext4/namei.c
++++ b/fs/ext4/namei.c
+@@ -1327,7 +1327,7 @@ static int is_dx_internal_node(struct inode *dir, ext4_lblk_t block,
+ }
+ 
+ /*
+- *	ext4_find_entry()
++ *	__ext4_find_entry()
+  *
+  * finds an entry in the specified directory with the wanted name. It
+  * returns the cache buffer in which the entry was found, and the entry
+@@ -1337,39 +1337,32 @@ static int is_dx_internal_node(struct inode *dir, ext4_lblk_t block,
+  * The returned buffer_head has ->b_count elevated.  The caller is expected
+  * to brelse() it when appropriate.
+  */
+-static struct buffer_head * ext4_find_entry (struct inode *dir,
+-					const struct qstr *d_name,
+-					struct ext4_dir_entry_2 **res_dir,
+-					int *inlined)
++static struct buffer_head *__ext4_find_entry(struct inode *dir,
++					     struct ext4_filename *fname,
++					     struct ext4_dir_entry_2 **res_dir,
++					     int *inlined)
+ {
+ 	struct super_block *sb;
+ 	struct buffer_head *bh_use[NAMEI_RA_SIZE];
+ 	struct buffer_head *bh, *ret = NULL;
+ 	ext4_lblk_t start, block;
+-	const u8 *name = d_name->name;
++	const u8 *name = fname->usr_fname->name;
+ 	size_t ra_max = 0;	/* Number of bh's in the readahead
+ 				   buffer, bh_use[] */
+ 	size_t ra_ptr = 0;	/* Current index into readahead
+ 				   buffer */
+ 	ext4_lblk_t  nblocks;
+ 	int i, namelen, retval;
+-	struct ext4_filename fname;
+ 
+ 	*res_dir = NULL;
+ 	sb = dir->i_sb;
+-	namelen = d_name->len;
++	namelen = fname->usr_fname->len;
+ 	if (namelen > EXT4_NAME_LEN)
+ 		return NULL;
+ 
+-	retval = ext4_fname_setup_filename(dir, d_name, 1, &fname);
+-	if (retval == -ENOENT)
+-		return NULL;
+-	if (retval)
+-		return ERR_PTR(retval);
+-
+ 	if (ext4_has_inline_data(dir)) {
+ 		int has_inline_data = 1;
+-		ret = ext4_find_inline_entry(dir, &fname, res_dir,
++		ret = ext4_find_inline_entry(dir, fname, res_dir,
+ 					     &has_inline_data);
+ 		if (has_inline_data) {
+ 			if (inlined)
+@@ -1389,7 +1382,7 @@ static struct buffer_head * ext4_find_entry (struct inode *dir,
+ 		goto restart;
+ 	}
+ 	if (is_dx(dir)) {
+-		ret = ext4_dx_find_entry(dir, &fname, res_dir);
++		ret = ext4_dx_find_entry(dir, fname, res_dir);
+ 		/*
+ 		 * On success, or if the error was file not found,
+ 		 * return.  Otherwise, fall back to doing a search the
+@@ -1453,7 +1446,7 @@ static struct buffer_head * ext4_find_entry (struct inode *dir,
+ 			goto cleanup_and_exit;
+ 		}
+ 		set_buffer_verified(bh);
+-		i = search_dirblock(bh, dir, &fname,
++		i = search_dirblock(bh, dir, fname,
+ 			    block << EXT4_BLOCK_SIZE_BITS(sb), res_dir);
+ 		if (i == 1) {
+ 			EXT4_I(dir)->i_dir_start_lookup = block;
+@@ -1484,10 +1477,50 @@ static struct buffer_head * ext4_find_entry (struct inode *dir,
+ 	/* Clean up the read-ahead blocks */
+ 	for (; ra_ptr < ra_max; ra_ptr++)
+ 		brelse(bh_use[ra_ptr]);
+-	ext4_fname_free_filename(&fname);
+ 	return ret;
+ }
+ 
++static struct buffer_head *ext4_find_entry(struct inode *dir,
++					   const struct qstr *d_name,
++					   struct ext4_dir_entry_2 **res_dir,
++					   int *inlined)
++{
++	int err;
++	struct ext4_filename fname;
++	struct buffer_head *bh;
++
++	err = ext4_fname_setup_filename(dir, d_name, 1, &fname);
++	if (err == -ENOENT)
++		return NULL;
++	if (err)
++		return ERR_PTR(err);
++
++	bh = __ext4_find_entry(dir, &fname, res_dir, inlined);
++
++	ext4_fname_free_filename(&fname);
++	return bh;
++}
++
++static struct buffer_head *ext4_lookup_entry(struct inode *dir,
++					     struct dentry *dentry,
++					     struct ext4_dir_entry_2 **res_dir)
++{
++	int err;
++	struct ext4_filename fname;
++	struct buffer_head *bh;
++
++	err = ext4_fname_prepare_lookup(dir, dentry, &fname);
++	if (err == -ENOENT)
++		return NULL;
++	if (err)
++		return ERR_PTR(err);
++
++	bh = __ext4_find_entry(dir, &fname, res_dir, NULL);
++
++	ext4_fname_free_filename(&fname);
++	return bh;
++}
++
+ static struct buffer_head * ext4_dx_find_entry(struct inode *dir,
+ 			struct ext4_filename *fname,
+ 			struct ext4_dir_entry_2 **res_dir)
+@@ -1546,16 +1579,11 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
+ 	struct inode *inode;
+ 	struct ext4_dir_entry_2 *de;
+ 	struct buffer_head *bh;
+-	int err;
+-
+-	err = fscrypt_prepare_lookup(dir, dentry, flags);
+-	if (err)
+-		return ERR_PTR(err);
+ 
+ 	if (dentry->d_name.len > EXT4_NAME_LEN)
+ 		return ERR_PTR(-ENAMETOOLONG);
+ 
+-	bh = ext4_find_entry(dir, &dentry->d_name, &de, NULL);
++	bh = ext4_lookup_entry(dir, dentry, &de);
+ 	if (IS_ERR(bh))
+ 		return ERR_CAST(bh);
+ 	inode = NULL;
+diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
+index f5e34e4670031..c3e8a901d47ac 100644
+--- a/fs/f2fs/namei.c
++++ b/fs/f2fs/namei.c
+@@ -436,19 +436,23 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
+ 	nid_t ino = -1;
+ 	int err = 0;
+ 	unsigned int root_ino = F2FS_ROOT_INO(F2FS_I_SB(dir));
++	struct fscrypt_name fname;
+ 
+ 	trace_f2fs_lookup_start(dir, dentry, flags);
+ 
+-	err = fscrypt_prepare_lookup(dir, dentry, flags);
+-	if (err)
+-		goto out;
+-
+ 	if (dentry->d_name.len > F2FS_NAME_LEN) {
+ 		err = -ENAMETOOLONG;
+ 		goto out;
+ 	}
+ 
+-	de = f2fs_find_entry(dir, &dentry->d_name, &page);
++	err = fscrypt_prepare_lookup(dir, dentry, &fname);
++	if (err == -ENOENT)
++		goto out_splice;
++	if (err)
++		goto out;
++	de = __f2fs_find_entry(dir, &fname, &page);
++	fscrypt_free_filename(&fname);
++
+ 	if (!de) {
+ 		if (IS_ERR(page)) {
+ 			err = PTR_ERR(page);
+@@ -488,8 +492,7 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
+ 	}
+ out_splice:
+ 	new = d_splice_alias(inode, dentry);
+-	if (IS_ERR(new))
+-		err = PTR_ERR(new);
++	err = PTR_ERR_OR_ZERO(new);
+ 	trace_f2fs_lookup_end(dir, dentry, ino, err);
+ 	return new;
+ out_iput:
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 5767b373a8ffb..b73de6d04fa3e 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -220,11 +220,9 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
+ 
+ 	dbg_gen("'%pd' in dir ino %lu", dentry, dir->i_ino);
+ 
+-	err = fscrypt_prepare_lookup(dir, dentry, flags);
+-	if (err)
+-		return ERR_PTR(err);
+-
+-	err = fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
++	err = fscrypt_prepare_lookup(dir, dentry, &nm);
++	if (err == -ENOENT)
++		return d_splice_alias(NULL, dentry);
+ 	if (err)
+ 		return ERR_PTR(err);
+ 
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 39bd2619a3424..c00b764d6b8c9 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -33,6 +33,7 @@ struct fscrypt_name {
+ 	u32 hash;
+ 	u32 minor_hash;
+ 	struct fscrypt_str crypto_buf;
++	bool is_ciphertext_name;
+ };
+ 
+ #define FSTR_INIT(n, l)		{ .name = n, .len = l }
+@@ -233,7 +234,8 @@ extern int __fscrypt_prepare_rename(struct inode *old_dir,
+ 				    struct inode *new_dir,
+ 				    struct dentry *new_dentry,
+ 				    unsigned int flags);
+-extern int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry);
++extern int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
++				    struct fscrypt_name *fname);
+ extern int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
+ 				     unsigned int max_len,
+ 				     struct fscrypt_str *disk_link);
+@@ -347,7 +349,7 @@ static inline int fscrypt_setup_filename(struct inode *dir,
+ 	if (IS_ENCRYPTED(dir))
+ 		return -EOPNOTSUPP;
+ 
+-	memset(fname, 0, sizeof(struct fscrypt_name));
++	memset(fname, 0, sizeof(*fname));
+ 	fname->usr_fname = iname;
+ 	fname->disk_name.name = (unsigned char *)iname->name;
+ 	fname->disk_name.len = iname->len;
+@@ -434,7 +436,8 @@ static inline int __fscrypt_prepare_rename(struct inode *old_dir,
+ }
+ 
+ static inline int __fscrypt_prepare_lookup(struct inode *dir,
+-					   struct dentry *dentry)
++					   struct dentry *dentry,
++					   struct fscrypt_name *fname)
+ {
+ 	return -EOPNOTSUPP;
+ }
+@@ -555,25 +558,32 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
+  * fscrypt_prepare_lookup - prepare to lookup a name in a possibly-encrypted directory
+  * @dir: directory being searched
+  * @dentry: filename being looked up
+- * @flags: lookup flags
++ * @fname: (output) the name to use to search the on-disk directory
+  *
+- * Prepare for ->lookup() in a directory which may be encrypted.  Lookups can be
+- * done with or without the directory's encryption key; without the key,
++ * Prepare for ->lookup() in a directory which may be encrypted by determining
++ * the name that will actually be used to search the directory on-disk.  Lookups
++ * can be done with or without the directory's encryption key; without the key,
+  * filenames are presented in encrypted form.  Therefore, we'll try to set up
+  * the directory's encryption key, but even without it the lookup can continue.
+  *
+  * This also installs a custom ->d_revalidate() method which will invalidate the
+  * dentry if it was created without the key and the key is later added.
+  *
+- * Return: 0 on success, -errno if a problem occurred while setting up the
+- * encryption key
++ * Return: 0 on success; -ENOENT if key is unavailable but the filename isn't a
++ * correctly formed encoded ciphertext name, so a negative dentry should be
++ * created; or another -errno code.
+  */
+ static inline int fscrypt_prepare_lookup(struct inode *dir,
+ 					 struct dentry *dentry,
+-					 unsigned int flags)
++					 struct fscrypt_name *fname)
+ {
+ 	if (IS_ENCRYPTED(dir))
+-		return __fscrypt_prepare_lookup(dir, dentry);
++		return __fscrypt_prepare_lookup(dir, dentry, fname);
++
++	memset(fname, 0, sizeof(*fname));
++	fname->usr_fname = &dentry->d_name;
++	fname->disk_name.name = (unsigned char *)dentry->d_name.name;
++	fname->disk_name.len = dentry->d_name.len;
+ 	return 0;
+ }
+ 
+-- 
+2.21.0.225.g810b269d1ac-goog
 
-- Remove the fs-specific kconfig options like CONFIG_EXT4_ENCRYPTION and
-  make fscrypt support for all fscrypt-capable filesystems be controlled
-  by CONFIG_FS_ENCRYPTION, similar to how CONFIG_QUOTA works.
 
-- Improve error code for rename() and link() into encrypted directories.
 
-- Various cleanups.
-
-----------------------------------------------------------------
-Chandan Rajendra (3):
-      ext4: use IS_ENCRYPTED() to check encryption status
-      f2fs: use IS_ENCRYPTED() to check encryption status
-      fscrypt: remove filesystem specific build config option
-
-Eric Biggers (2):
-      fscrypt: remove CRYPTO_CTR dependency
-      fscrypt: return -EXDEV for incompatible rename or link into encrypted dir
-
-Theodore Ts'o (1):
-      MAINTAINERS: add Eric Biggers as an fscrypt maintainer
-
- Documentation/filesystems/fscrypt.rst   |  16 +-
- MAINTAINERS                             |   3 +-
- arch/mips/configs/generic_defconfig     |   2 +-
- arch/nds32/configs/defconfig            |   2 +-
- arch/s390/configs/debug_defconfig       |   2 +-
- arch/s390/configs/performance_defconfig |   2 +-
- fs/crypto/Kconfig                       |   6 +-
- fs/crypto/fscrypt_private.h             |   1 -
- fs/crypto/hooks.c                       |   6 +-
- fs/crypto/policy.c                      |   3 +-
- fs/ext4/Kconfig                         |  15 --
- fs/ext4/dir.c                           |  10 +-
- fs/ext4/ext4.h                          |  12 +-
- fs/ext4/ext4_jbd2.h                     |   2 +-
- fs/ext4/extents.c                       |   4 +-
- fs/ext4/ialloc.c                        |   2 +-
- fs/ext4/inode.c                         |  24 +-
- fs/ext4/ioctl.c                         |   4 +-
- fs/ext4/move_extent.c                   |   3 +-
- fs/ext4/namei.c                         |  18 +-
- fs/ext4/page-io.c                       |   9 +-
- fs/ext4/readpage.c                      |   5 +-
- fs/ext4/super.c                         |   6 +-
- fs/ext4/sysfs.c                         |   4 +-
- fs/f2fs/Kconfig                         |  12 +-
- fs/f2fs/data.c                          |   4 +-
- fs/f2fs/dir.c                           |  10 +-
- fs/f2fs/f2fs.h                          |  14 +-
- fs/f2fs/file.c                          |  10 +-
- fs/f2fs/inode.c                         |   4 +-
- fs/f2fs/namei.c                         |   6 +-
- fs/f2fs/super.c                         |   8 +-
- fs/f2fs/sysfs.c                         |   4 +-
- fs/ubifs/Kconfig                        |  12 +-
- fs/ubifs/Makefile                       |   2 +-
- fs/ubifs/ioctl.c                        |   4 +-
- fs/ubifs/sb.c                           |   2 +-
- fs/ubifs/super.c                        |   2 +-
- fs/ubifs/ubifs.h                        |   5 +-
- include/linux/fs.h                      |   4 +-
- include/linux/fscrypt.h                 | 420 +++++++++++++++++++++++++++++++-
- include/linux/fscrypt_notsupp.h         | 231 ------------------
- include/linux/fscrypt_supp.h            | 204 ----------------
- 43 files changed, 518 insertions(+), 601 deletions(-)
- delete mode 100644 include/linux/fscrypt_notsupp.h
- delete mode 100644 include/linux/fscrypt_supp.h
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
