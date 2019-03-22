@@ -1,96 +1,128 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-Date: Mon, 18 Mar 2019 16:08:31 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-Message-ID: <20190318230830.GA40545@gmail.com>
-References: <20190220065249.32099-1-ebiggers@kernel.org>
- <CAFLxGvy7WsV7Qo42yTbsZf9YnW563a0k6Yx2-NmASNtoektu_Q@mail.gmail.com>
- <20190221054938.GA12467@sol.localdomain>
- <2024630.T9XyBPH5Ub@blindfold> <20190221184203.GB140206@gmail.com>
-MIME-Version: 1.0
-Content-Disposition: inline
-In-Reply-To: <20190221184203.GB140206@gmail.com>
-Subject: Re: [f2fs-dev] [RFC PATCH v3 07/18] fscrypt: add
- FS_IOC_ADD_ENCRYPTION_KEY ioctl
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: Richard Weinberger <richard@nod.at>
-Cc: linux-ext4@vger.kernel.org, "open list:ABI/API" <linux-api@vger.kernel.org>, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
+Return-Path: <SRS0=H5uw=RZ=gondor.apana.org.au=herbert@kernel.org>
+Subject: [PATCH 9/17] zinc: Add x86 accelerated poly1305
+References: <20190322062740.nrwfx2rvmt7lzotj@gondor.apana.org.au>
+Message-Id: <E1h7DgZ-0001IW-E8@gondobar>
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Date: Fri, 22 Mar 2019 14:29:47 +0800
+To: Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Richard,
+This patch exposes the crypto API x86 poly1305 implementation through
+zinc.
+   
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
 
-On Thu, Feb 21, 2019 at 10:42:03AM -0800, Eric Biggers wrote:
-> On Thu, Feb 21, 2019 at 10:33:12AM +0100, Richard Weinberger wrote:
-> > Eric,
-> > 
-> > Am Donnerstag, 21. Februar 2019, 06:49:39 CET schrieb Eric Biggers:
-> > > Hi Richard,
-> > > 
-> > > On Thu, Feb 21, 2019 at 12:52:38AM +0100, Richard Weinberger wrote:
-> > > > On Wed, Feb 20, 2019 at 7:55 AM Eric Biggers <ebiggers@kernel.org> wrote:
-> > > > > +#define FSCRYPT_FS_KEYRING_DESCRIPTION_SIZE    \
-> > > > > +       (CONST_STRLEN("fscrypt-") + FIELD_SIZEOF(struct super_block, s_id))
-> > > > > +
-> > > > > +#define FSCRYPT_MK_DESCRIPTION_SIZE    (2 * FSCRYPT_KEY_DESCRIPTOR_SIZE + 1)
-> > > > > +
-> > > > > +static void format_fs_keyring_description(
-> > > > > +                       char description[FSCRYPT_FS_KEYRING_DESCRIPTION_SIZE],
-> > > > > +                       const struct super_block *sb)
-> > > > > +{
-> > > > > +       sprintf(description, "fscrypt-%s", sb->s_id);
-> > > > > +}
-> > > > 
-> > > > I fear ->s_id is not the right thing.
-> > > > For filesystems such as ext4 ->s_id is the name of the backing block device,
-> > > > so it is per filesysem instance unique.
-> > > > But this is not guaranteed. For UBIFS ->s_id is just "ubifs", always.
-> > > > So the names will clash.
-> > > > 
-> > > 
-> > > What name do you suggest using for UBIFS filesystems?  The keyring name could be
-> > > set by the filesystem via a fscrypt_operations callback if needed.
-> > 
-> > IMHO the BDI name should be used. 
+ lib/zinc/Kconfig                         |    1 
+ lib/zinc/poly1305/poly1305-x86_64-glue.c |   68 +++++++++++++++++++++++++++++++
+ lib/zinc/poly1305/poly1305.c             |    4 +
+ 3 files changed, 73 insertions(+)
 
-I tried using sb->s_bdi->name, but it's still "ubifs" for all UBIFS filesystems.
-
-Perhaps there's a way you can make ->s_id for UBIFS unique?  There are already
-existing places that log ->s_id, so perhaps you should do it anyway regardless
-of this patchset?
-
-> > 
-> > > Note that the keyring name isn't particularly important, since the ioctls will
-> > > work regardless.  But we might as well choose something logical, since the
-> > > keyring name will still show up in /proc/keys.
-> > 
-> > I'm not done with reviewing your patches, but will it be possible to use keyctl?
-> > For the a unique name is helpful. :)
-> > 
-> 
-> Not for adding keys, removing keys, or getting a key's status -- those are what
-> the ioctls are for.
-> 
-> See e.g. the discussion in patch 7 ("fscrypt: add FS_IOC_ADD_ENCRYPTION_KEY
-> ioctl") for why the keyrings syscalls are a poor fit for fscrypt.
-> 
-
-Anyway, perhaps I should reconsider whether fscrypt should even use the keyrings
-subsystem at all, even just "internally", as its quirks still leak out a bit.
-I'd prefer a nice clean API without any quirks like having to name the keyrings
-and assign SELinux labels to the keys just to make the keyrings subsystem happy.
-
-- Eric
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+diff --git a/lib/zinc/Kconfig b/lib/zinc/Kconfig
+index 70d45b3288d2..34fa49beb37f 100644
+--- a/lib/zinc/Kconfig
++++ b/lib/zinc/Kconfig
+@@ -8,6 +8,7 @@ config ZINC_CHACHA20
+ config ZINC_POLY1305
+ 	tristate
+ 	select CRYPTO_POLY1305
++	select CRYPTO_POLY1305_X86_64 if ZINC_ARCH_X86_64
+ 
+ config ZINC_SELFTEST
+ 	bool "Zinc cryptography library self-tests"
+diff --git a/lib/zinc/poly1305/poly1305-x86_64-glue.c b/lib/zinc/poly1305/poly1305-x86_64-glue.c
+new file mode 100644
+index 000000000000..9e6dbd40911d
+--- /dev/null
++++ b/lib/zinc/poly1305/poly1305-x86_64-glue.c
+@@ -0,0 +1,68 @@
++// SPDX-License-Identifier: GPL-2.0 OR MIT
++/*
++ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
++ */
++
++#include <asm/cpufeature.h>
++#include <asm/processor.h>
++#include <asm/intel-family.h>
++
++static bool poly1305_use_sse2 __ro_after_init;
++static bool *const poly1305_nobs[] __initconst = {
++	&poly1305_use_sse2 };
++
++static void __init poly1305_fpu_init(void)
++{
++	poly1305_use_sse2 = boot_cpu_has(X86_FEATURE_XMM2);
++}
++
++struct poly1305_arch_internal {
++	struct poly1305_internal base;
++	struct poly1305_simd_xtra x;
++};
++
++static inline bool poly1305_init_arch(void *ctx,
++				      const u8 key[POLY1305_KEY_SIZE])
++{
++	struct poly1305_arch_internal *state = ctx;
++
++	poly1305_simd_init(&state->x);
++	poly1305_core_setkey(&state->base.r, key);
++	return true;
++}
++
++static inline bool poly1305_blocks_arch(void *ctx, const u8 *inp,
++					size_t len, const u32 padbit,
++					simd_context_t *simd_context)
++{
++	struct poly1305_arch_internal *state = ctx;
++
++	/* SIMD disables preemption, so relax after processing each page. */
++	BUILD_BUG_ON(PAGE_SIZE < POLY1305_BLOCK_SIZE ||
++		     PAGE_SIZE % POLY1305_BLOCK_SIZE);
++
++	if (!poly1305_use_sse2 || !simd_use(simd_context) || padbit)
++		return false;
++
++	for (;;) {
++		const size_t bytes = min_t(size_t, len, PAGE_SIZE);
++
++		poly1305_simd_blocks(&state->base.h, &state->base.r,
++				     &state->x, inp, bytes);
++
++		len -= bytes;
++		if (!len)
++			break;
++		inp += bytes;
++		simd_relax(simd_context);
++	}
++
++	return true;
++}
++
++static inline bool poly1305_emit_arch(void *ctx, u8 mac[POLY1305_MAC_SIZE],
++				      const u32 nonce[4],
++				      simd_context_t *simd_context)
++{
++	return false;
++}
+diff --git a/lib/zinc/poly1305/poly1305.c b/lib/zinc/poly1305/poly1305.c
+index 1546f5ac6d1c..c6a88136abb7 100644
+--- a/lib/zinc/poly1305/poly1305.c
++++ b/lib/zinc/poly1305/poly1305.c
+@@ -22,6 +22,9 @@ struct poly1305_internal {
+ 	struct poly1305_state h;
+ };
+ 
++#if defined(CONFIG_ZINC_ARCH_X86_64)
++#include "poly1305-x86_64-glue.c"
++#else
+ static inline bool poly1305_init_arch(void *ctx,
+ 				      const u8 key[POLY1305_KEY_SIZE])
+ {
+@@ -43,6 +46,7 @@ static bool *const poly1305_nobs[] __initconst = { };
+ static void __init poly1305_fpu_init(void)
+ {
+ }
++#endif
+ 
+ static void poly1305_init_generic(void *ctx, const u8 key[16])
+ {
