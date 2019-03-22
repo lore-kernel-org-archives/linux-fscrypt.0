@@ -1,89 +1,60 @@
-Return-Path: <torvalds@linuxfoundation.org>
+Return-Path: <SRS0=kiei=RZ=zx2c4.com=Jason@kernel.org>
 MIME-Version: 1.0
 References: <20190322062740.nrwfx2rvmt7lzotj@gondor.apana.org.au> <CAKv+Gu_mgyzqUCeb+wke--8Gn8YbjOb8jyrSgFr3-tcNP8ccEQ@mail.gmail.com>
 In-Reply-To: <CAKv+Gu_mgyzqUCeb+wke--8Gn8YbjOb8jyrSgFr3-tcNP8ccEQ@mail.gmail.com>
-From: Linus Torvalds <torvalds@linux-foundation.org>
-Date: Fri, 22 Mar 2019 10:48:20 -0700
-Message-ID: <CAHk-=wg2LJ5qQ0B2y+_6Ue62SBP4h9MLxLvn89bfcP7Cp2ac6A@mail.gmail.com>
+From: "Jason A. Donenfeld" <Jason@zx2c4.com>
+Date: Fri, 22 Mar 2019 02:10:15 -0600
+Message-ID: <CAHmME9rWpTzxTCjG3ynyNwgxndW3DP5+r9NmLX2AMfp1s9vB-g@mail.gmail.com>
 Subject: Re: [PATCH 0/17] Add zinc using existing algorithm implementations
 Content-Type: text/plain; charset="UTF-8"
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller" <davem@davemloft.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, Eric Biggers <ebiggers@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Fri, Mar 22, 2019 at 12:56 AM Ard Biesheuvel
+On Fri, Mar 22, 2019 at 1:56 AM Ard Biesheuvel
 <ard.biesheuvel@linaro.org> wrote:
->
+> that implement it, the reluctance of Jason to work with the community
+> to fix the issues that he identified in the crypto API means that
+> WireGuard will not be able to use these, and is restricted to
+> synchronous software implementations.
+
+There's no reluctance to work with the community. I'm pretty deeply
+committed to this, as evidenced by the multitudes of patch
+submissions, discussions, and popping around from conference to
+conference discussing with folks face to face.
+
 > - The way WireGuard uses crypto in the kernel is essentially a
-> layering violation
+> layering violation - while we already have an asynchronous API that
+> implements ChaCha20Poly1305 in a way that WireGuard /could/ benefit
+> from, and while we even have support already for async accelerators
+> Saying accelerators will not
+> matter is a bit like saying there are no American soldiers in Iraq.
+> (Note that adding async interfaces to Zinc is not the right way to
+> deal with this IMO)
 
-What? No.
+Geopolitics aside, as explained over and over, the point of Zinc is to
+just get down simple software function calls, for instances where
+async accelerators aren't available. I consider smushing it all
+together to be the "layering violation".
 
-That's just wrong.
+> - I don't think Zinc changes should go through Greg's tree and have
+> separate maintainers
 
-It's only a layering violation if you accept and buy into the crypto/ model.
+As I've mentioned before, I'm fine with merges going whichever route
+is best for merges. If Herbert thinks it'd be useful to send things in
+that direction and would reduce clashes and such, then that's fine
+with me.
 
-And Jason obviously doesn't.
+>  in fact, I am a bit concerned about the fact
+> that, after the last Zinc/WG submission in October, Jason has not
+> really interacted
 
-And honestly, I'm 1000% with Jason on this. The crypto/ model is hard
-to use, inefficient, and completely pointless when you know what your
-cipher or hash algorithm is, and your CPU just does it well directly.
+Such as... https://www.youtube.com/watch?v=CejbCQ5wS7Q ? November is
+after October.
 
-> we even have support already for async accelerators that implement it,
+Anyway, I thought it good advice to not post v9 too swiftly after
+plumbers, letting things calm a bit and focusing on other improvements
+in Zinc in the meanwhile. I've certainly been around.
 
-Afaik, none of the async accelerator code has ever been worth anything
-on real hardware and on any sane and real loads. The cost of going
-outside the CPU is *so* expensive that you'll always lose, unless the
-algorithm has been explicitly designed to be insanely hard on a
-regular CPU.
-
-(Corollary: "insanely hard on a regular CPU" is also easy to do by
-making the CPU be weak and bad. Which is not a case we should optimize
-for).
-
-The whole "external accelerator" model is odd. It was wrong. It only
-makes sense if the accelerator does *everything* (ie it's the network
-card), and then you wouldn't use the wireguard thing on the CPU at
-all, you'd have all those things on the accelerator (ie a "network
-card that does WG").
-
-One of the (best or worst, depending on your hangups) arguments for
-external accelerators has been "but I trust the external hardware with
-the key, but not my own code", aka the TPM or Disney argument.  I
-don't think that's at all relevant to the discussion either.
-
-The whole model of async accelerators is completely bogus. The only
-crypto or hash accelerator that is worth it are the ones integrated on
-the CPU cores, which have the direct access to caches.
-
-And if the accelerator is some tightly coupled thing that has direct
-access to your caches, and doesn't need interrupt overhead or address
-translation etc (at which point it can be worth using) then you might
-as well just consider it an odd version of the above. You'd want to
-poll for the result anyway, because not polling is too expensive.
-
-Just a single interrupt would completely undo all the advantages you
-got from using specialized hardware - both power and performance.
-
-And that kind of model would work just fine with zinc.
-
-So an accelerator ends up being useful in two cases:
-
- - it's entirely external and part of the network card, so that
-there's no extra data transfer overhead
-
- - it's tightly coupled enough (either CPU instructions or some on-die
-cache coherent engine) that you can and will just use it synchronously
-anyway.
-
-In the first case, you wouldn't run wireguard on the CPU anyway - you
-have a network card that just implements the VPN.
-
-And in the second case, the zinc model is the right one.
-
-So no. I don't believe "layering violation" is the issue here at all.
-
-The only main issue as far as I'm concerned is how to deal with the
-fact that we have duplicate code and effort.
-
-                      Linus
+Looks like Herbert posting this might erupt another contentious thread
+of bikeshedding and argument, what a bummer.
