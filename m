@@ -1,502 +1,416 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Sun, 17 Mar 2019 13:04:44 -0700
-Message-Id: <20190317200444.5967-6-ebiggers@kernel.org>
-In-Reply-To: <20190317200444.5967-1-ebiggers@kernel.org>
-References: <20190317200444.5967-1-ebiggers@kernel.org>
-MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH 5/5] fscrypt: fix race where ->lookup() marks
- plaintext dentry as ciphertext
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-unionfs@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org
+Return-Path: <SRS0=H5uw=RZ=gondor.apana.org.au=herbert@kernel.org>
+Subject: [PATCH 17/17] security/keys: rewrite big_key crypto to use Zinc
+References: <20190322062740.nrwfx2rvmt7lzotj@gondor.apana.org.au>
+Message-Id: <E1h7Dgk-0001K4-Mg@gondobar>
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Date: Fri, 22 Mar 2019 14:29:58 +0800
+To: Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+From: Jason A. Donenfeld <Jason@zx2c4.com>
 
-->lookup() in an encrypted directory begins as follows:
+A while back, I noticed that the crypto and crypto API usage in big_keys
+were entirely broken in multiple ways, so I rewrote it. Now, I'm
+rewriting it again, but this time using Zinc's ChaCha20Poly1305
+function. This makes the file considerably more simple; the diffstat
+alone should justify this commit. It also should be faster, since it no
+longer requires a mutex around the "aead api object" (nor allocations),
+allowing us to encrypt multiple items in parallel. We also benefit from
+being able to pass any type of pointer to Zinc, so we can get rid of the
+ridiculously complex custom page allocator that big_key really doesn't
+need.
 
-1. fscrypt_prepare_lookup():
-    a. Try to load the directory's encryption key.
-    b. If the key is unavailable, mark the dentry as a ciphertext name
-       via d_flags.
-2. fscrypt_setup_filename():
-    a. Try to load the directory's encryption key.
-    b. If the key is available, encrypt the name (treated as a plaintext
-       name) to get the on-disk name.  Otherwise decode the name
-       (treated as a ciphertext name) to get the on-disk name.
-
-But if the key is concurrently added, it may be found at (2a) but not at
-(1a).  In this case, the dentry will be wrongly marked as a ciphertext
-name even though it was actually treated as plaintext.
-
-This will cause the dentry to be wrongly invalidated on the next lookup,
-potentially causing problems.  For example, if the racy ->lookup() was
-part of sys_mount(), then the new mount will be detached when anything
-tries to access it.  This is despite the mountpoint having a plaintext
-path, which should remain valid now that the key was added.
-
-Of course, this is only possible if there's a userspace race.  Still,
-the additional kernel-side race is confusing and unexpected.
-
-Close the kernel-side race by changing fscrypt_prepare_lookup() to also
-set the on-disk filename (step 2b), consistent with the d_flags update.
-
-Fixes: 28b4c263961c ("ext4 crypto: revalidate dentry after adding or removing the key")
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
+Cc: David Howells <dhowells@redhat.com>
+Cc: Samuel Neves <sneves@dei.uc.pt>
+Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
+Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Greg KH <gregkh@linuxfoundation.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: kernel-hardening@lists.openwall.com
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
 ---
- fs/crypto/fname.c       |  1 +
- fs/crypto/hooks.c       | 11 +++---
- fs/ext4/ext4.h          | 62 +++++++++++++++++++++++++--------
- fs/ext4/namei.c         | 76 ++++++++++++++++++++++++++++-------------
- fs/f2fs/namei.c         | 17 +++++----
- fs/ubifs/dir.c          |  8 ++---
- include/linux/fscrypt.h | 31 ++++++++++-------
- 7 files changed, 138 insertions(+), 68 deletions(-)
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 7ff40a73dbec..dea65c091f71 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -356,6 +356,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	}
- 	if (!lookup)
- 		return -ENOKEY;
-+	fname->is_ciphertext_name = true;
- 
- 	/*
- 	 * We don't have the key and we are doing a lookup; decode the
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 9d8910e86ee5..042d5b44f4ed 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -104,20 +104,21 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
- }
- EXPORT_SYMBOL_GPL(__fscrypt_prepare_rename);
- 
--int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry)
-+int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
-+			     struct fscrypt_name *fname)
- {
--	int err = fscrypt_get_encryption_info(dir);
-+	int err = fscrypt_setup_filename(dir, &dentry->d_name, 1, fname);
- 
--	if (err)
-+	if (err && err != -ENOENT)
- 		return err;
- 
--	if (!fscrypt_has_encryption_key(dir)) {
-+	if (fname->is_ciphertext_name) {
- 		spin_lock(&dentry->d_lock);
- 		dentry->d_flags |= DCACHE_ENCRYPTED_NAME;
- 		spin_unlock(&dentry->d_lock);
- 		d_set_d_op(dentry, &fscrypt_d_ops);
- 	}
--	return 0;
-+	return err;
- }
- EXPORT_SYMBOL_GPL(__fscrypt_prepare_lookup);
- 
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index 82ffdacdc7fa..e64a4ee96d30 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -2287,23 +2287,47 @@ extern unsigned ext4_free_clusters_after_init(struct super_block *sb,
- ext4_fsblk_t ext4_inode_to_goal_block(struct inode *);
- 
- #ifdef CONFIG_FS_ENCRYPTION
-+static inline void ext4_fname_from_fscrypt_name(struct ext4_filename *dst,
-+						const struct fscrypt_name *src)
-+{
-+	memset(dst, 0, sizeof(*dst));
-+
-+	dst->usr_fname = src->usr_fname;
-+	dst->disk_name = src->disk_name;
-+	dst->hinfo.hash = src->hash;
-+	dst->hinfo.minor_hash = src->minor_hash;
-+	dst->crypto_buf = src->crypto_buf;
-+}
-+
- static inline int ext4_fname_setup_filename(struct inode *dir,
--			const struct qstr *iname,
--			int lookup, struct ext4_filename *fname)
-+					    const struct qstr *iname,
-+					    int lookup,
-+					    struct ext4_filename *fname)
- {
- 	struct fscrypt_name name;
- 	int err;
- 
--	memset(fname, 0, sizeof(struct ext4_filename));
+ security/keys/Kconfig   |    4 
+ security/keys/big_key.c |  230 +++++-------------------------------------------
+ 2 files changed, 28 insertions(+), 206 deletions(-)
+
+diff --git a/security/keys/Kconfig b/security/keys/Kconfig
+index 6462e6654ccf..66ff26298fb3 100644
+--- a/security/keys/Kconfig
++++ b/security/keys/Kconfig
+@@ -45,9 +45,7 @@ config BIG_KEYS
+ 	bool "Large payload keys"
+ 	depends on KEYS
+ 	depends on TMPFS
+-	select CRYPTO
+-	select CRYPTO_AES
+-	select CRYPTO_GCM
++	select ZINC_CHACHA20POLY1305
+ 	help
+ 	  This option provides support for holding large keys within the kernel
+ 	  (for example Kerberos ticket caches).  The data may be stored out to
+diff --git a/security/keys/big_key.c b/security/keys/big_key.c
+index 2806e70d7f8f..bb15360221d8 100644
+--- a/security/keys/big_key.c
++++ b/security/keys/big_key.c
+@@ -1,6 +1,6 @@
+ /* Large capacity key type
+  *
+- * Copyright (C) 2017 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
++ * Copyright (C) 2017-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+  * Copyright (C) 2013 Red Hat, Inc. All Rights Reserved.
+  * Written by David Howells (dhowells@redhat.com)
+  *
+@@ -16,20 +16,10 @@
+ #include <linux/file.h>
+ #include <linux/shmem_fs.h>
+ #include <linux/err.h>
+-#include <linux/scatterlist.h>
+ #include <linux/random.h>
+-#include <linux/vmalloc.h>
+ #include <keys/user-type.h>
+ #include <keys/big_key-type.h>
+-#include <crypto/aead.h>
+-#include <crypto/gcm.h>
 -
- 	err = fscrypt_setup_filename(dir, iname, lookup, &name);
-+	if (err)
-+		return err;
- 
--	fname->usr_fname = name.usr_fname;
--	fname->disk_name = name.disk_name;
--	fname->hinfo.hash = name.hash;
--	fname->hinfo.minor_hash = name.minor_hash;
--	fname->crypto_buf = name.crypto_buf;
--	return err;
-+	ext4_fname_from_fscrypt_name(fname, &name);
-+	return 0;
-+}
-+
-+static inline int ext4_fname_prepare_lookup(struct inode *dir,
-+					    struct dentry *dentry,
-+					    struct ext4_filename *fname)
-+{
-+	struct fscrypt_name name;
-+	int err;
-+
-+	err = fscrypt_prepare_lookup(dir, dentry, &name);
-+	if (err)
-+		return err;
-+
-+	ext4_fname_from_fscrypt_name(fname, &name);
-+	return 0;
- }
- 
- static inline void ext4_fname_free_filename(struct ext4_filename *fname)
-@@ -2317,19 +2341,27 @@ static inline void ext4_fname_free_filename(struct ext4_filename *fname)
- 	fname->usr_fname = NULL;
- 	fname->disk_name.name = NULL;
- }
--#else
-+#else /* !CONFIG_FS_ENCRYPTION */
- static inline int ext4_fname_setup_filename(struct inode *dir,
--		const struct qstr *iname,
--		int lookup, struct ext4_filename *fname)
-+					    const struct qstr *iname,
-+					    int lookup,
-+					    struct ext4_filename *fname)
- {
- 	fname->usr_fname = iname;
- 	fname->disk_name.name = (unsigned char *) iname->name;
- 	fname->disk_name.len = iname->len;
- 	return 0;
- }
--static inline void ext4_fname_free_filename(struct ext4_filename *fname) { }
- 
--#endif
-+static inline int ext4_fname_prepare_lookup(struct inode *dir,
-+					    struct dentry *dentry,
-+					    struct ext4_filename *fname)
-+{
-+	return ext4_fname_setup_filename(dir, &dentry->d_name, 1, fname);
-+}
-+
-+static inline void ext4_fname_free_filename(struct ext4_filename *fname) { }
-+#endif /* !CONFIG_FS_ENCRYPTION */
- 
- /* dir.c */
- extern int __ext4_check_dir_entry(const char *, unsigned int, struct inode *,
-diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-index 980166a8122a..3ba6f30db8d9 100644
---- a/fs/ext4/namei.c
-+++ b/fs/ext4/namei.c
-@@ -1327,7 +1327,7 @@ static int is_dx_internal_node(struct inode *dir, ext4_lblk_t block,
- }
+-struct big_key_buf {
+-	unsigned int		nr_pages;
+-	void			*virt;
+-	struct scatterlist	*sg;
+-	struct page		*pages[];
+-};
++#include <zinc/chacha20poly1305.h>
  
  /*
-- *	ext4_find_entry()
-+ *	__ext4_find_entry()
-  *
-  * finds an entry in the specified directory with the wanted name. It
-  * returns the cache buffer in which the entry was found, and the entry
-@@ -1337,39 +1337,32 @@ static int is_dx_internal_node(struct inode *dir, ext4_lblk_t block,
-  * The returned buffer_head has ->b_count elevated.  The caller is expected
-  * to brelse() it when appropriate.
-  */
--static struct buffer_head * ext4_find_entry (struct inode *dir,
--					const struct qstr *d_name,
--					struct ext4_dir_entry_2 **res_dir,
--					int *inlined)
-+static struct buffer_head *__ext4_find_entry(struct inode *dir,
-+					     struct ext4_filename *fname,
-+					     struct ext4_dir_entry_2 **res_dir,
-+					     int *inlined)
- {
- 	struct super_block *sb;
- 	struct buffer_head *bh_use[NAMEI_RA_SIZE];
- 	struct buffer_head *bh, *ret = NULL;
- 	ext4_lblk_t start, block;
--	const u8 *name = d_name->name;
-+	const u8 *name = fname->usr_fname->name;
- 	size_t ra_max = 0;	/* Number of bh's in the readahead
- 				   buffer, bh_use[] */
- 	size_t ra_ptr = 0;	/* Current index into readahead
- 				   buffer */
- 	ext4_lblk_t  nblocks;
- 	int i, namelen, retval;
--	struct ext4_filename fname;
+  * Layout of key payload words.
+@@ -42,14 +32,6 @@ enum {
+ };
  
- 	*res_dir = NULL;
- 	sb = dir->i_sb;
--	namelen = d_name->len;
-+	namelen = fname->usr_fname->len;
- 	if (namelen > EXT4_NAME_LEN)
- 		return NULL;
- 
--	retval = ext4_fname_setup_filename(dir, d_name, 1, &fname);
--	if (retval == -ENOENT)
--		return NULL;
--	if (retval)
--		return ERR_PTR(retval);
+ /*
+- * Crypto operation with big_key data
+- */
+-enum big_key_op {
+-	BIG_KEY_ENC,
+-	BIG_KEY_DEC,
+-};
 -
- 	if (ext4_has_inline_data(dir)) {
- 		int has_inline_data = 1;
--		ret = ext4_find_inline_entry(dir, &fname, res_dir,
-+		ret = ext4_find_inline_entry(dir, fname, res_dir,
- 					     &has_inline_data);
- 		if (has_inline_data) {
- 			if (inlined)
-@@ -1389,7 +1382,7 @@ static struct buffer_head * ext4_find_entry (struct inode *dir,
- 		goto restart;
- 	}
- 	if (is_dx(dir)) {
--		ret = ext4_dx_find_entry(dir, &fname, res_dir);
-+		ret = ext4_dx_find_entry(dir, fname, res_dir);
- 		/*
- 		 * On success, or if the error was file not found,
- 		 * return.  Otherwise, fall back to doing a search the
-@@ -1453,7 +1446,7 @@ static struct buffer_head * ext4_find_entry (struct inode *dir,
- 			goto cleanup_and_exit;
+-/*
+  * If the data is under this limit, there's no point creating a shm file to
+  * hold it as the permanently resident metadata for the shmem fs will be at
+  * least as large as the data.
+@@ -57,16 +39,6 @@ enum big_key_op {
+ #define BIG_KEY_FILE_THRESHOLD (sizeof(struct inode) + sizeof(struct dentry))
+ 
+ /*
+- * Key size for big_key data encryption
+- */
+-#define ENC_KEY_SIZE 32
+-
+-/*
+- * Authentication tag length
+- */
+-#define ENC_AUTHTAG_SIZE 16
+-
+-/*
+  * big_key defined keys take an arbitrary string as the description and an
+  * arbitrary blob of data as the payload
+  */
+@@ -79,136 +51,20 @@ struct key_type key_type_big_key = {
+ 	.destroy		= big_key_destroy,
+ 	.describe		= big_key_describe,
+ 	.read			= big_key_read,
+-	/* no ->update(); don't add it without changing big_key_crypt() nonce */
++	/* no ->update(); don't add it without changing chacha20poly1305's nonce */
+ };
+ 
+ /*
+- * Crypto names for big_key data authenticated encryption
+- */
+-static const char big_key_alg_name[] = "gcm(aes)";
+-#define BIG_KEY_IV_SIZE		GCM_AES_IV_SIZE
+-
+-/*
+- * Crypto algorithms for big_key data authenticated encryption
+- */
+-static struct crypto_aead *big_key_aead;
+-
+-/*
+- * Since changing the key affects the entire object, we need a mutex.
+- */
+-static DEFINE_MUTEX(big_key_aead_lock);
+-
+-/*
+- * Encrypt/decrypt big_key data
+- */
+-static int big_key_crypt(enum big_key_op op, struct big_key_buf *buf, size_t datalen, u8 *key)
+-{
+-	int ret;
+-	struct aead_request *aead_req;
+-	/* We always use a zero nonce. The reason we can get away with this is
+-	 * because we're using a different randomly generated key for every
+-	 * different encryption. Notably, too, key_type_big_key doesn't define
+-	 * an .update function, so there's no chance we'll wind up reusing the
+-	 * key to encrypt updated data. Simply put: one key, one encryption.
+-	 */
+-	u8 zero_nonce[BIG_KEY_IV_SIZE];
+-
+-	aead_req = aead_request_alloc(big_key_aead, GFP_KERNEL);
+-	if (!aead_req)
+-		return -ENOMEM;
+-
+-	memset(zero_nonce, 0, sizeof(zero_nonce));
+-	aead_request_set_crypt(aead_req, buf->sg, buf->sg, datalen, zero_nonce);
+-	aead_request_set_callback(aead_req, CRYPTO_TFM_REQ_MAY_SLEEP, NULL, NULL);
+-	aead_request_set_ad(aead_req, 0);
+-
+-	mutex_lock(&big_key_aead_lock);
+-	if (crypto_aead_setkey(big_key_aead, key, ENC_KEY_SIZE)) {
+-		ret = -EAGAIN;
+-		goto error;
+-	}
+-	if (op == BIG_KEY_ENC)
+-		ret = crypto_aead_encrypt(aead_req);
+-	else
+-		ret = crypto_aead_decrypt(aead_req);
+-error:
+-	mutex_unlock(&big_key_aead_lock);
+-	aead_request_free(aead_req);
+-	return ret;
+-}
+-
+-/*
+- * Free up the buffer.
+- */
+-static void big_key_free_buffer(struct big_key_buf *buf)
+-{
+-	unsigned int i;
+-
+-	if (buf->virt) {
+-		memset(buf->virt, 0, buf->nr_pages * PAGE_SIZE);
+-		vunmap(buf->virt);
+-	}
+-
+-	for (i = 0; i < buf->nr_pages; i++)
+-		if (buf->pages[i])
+-			__free_page(buf->pages[i]);
+-
+-	kfree(buf);
+-}
+-
+-/*
+- * Allocate a buffer consisting of a set of pages with a virtual mapping
+- * applied over them.
+- */
+-static void *big_key_alloc_buffer(size_t len)
+-{
+-	struct big_key_buf *buf;
+-	unsigned int npg = (len + PAGE_SIZE - 1) >> PAGE_SHIFT;
+-	unsigned int i, l;
+-
+-	buf = kzalloc(sizeof(struct big_key_buf) +
+-		      sizeof(struct page) * npg +
+-		      sizeof(struct scatterlist) * npg,
+-		      GFP_KERNEL);
+-	if (!buf)
+-		return NULL;
+-
+-	buf->nr_pages = npg;
+-	buf->sg = (void *)(buf->pages + npg);
+-	sg_init_table(buf->sg, npg);
+-
+-	for (i = 0; i < buf->nr_pages; i++) {
+-		buf->pages[i] = alloc_page(GFP_KERNEL);
+-		if (!buf->pages[i])
+-			goto nomem;
+-
+-		l = min_t(size_t, len, PAGE_SIZE);
+-		sg_set_page(&buf->sg[i], buf->pages[i], l, 0);
+-		len -= l;
+-	}
+-
+-	buf->virt = vmap(buf->pages, buf->nr_pages, VM_MAP, PAGE_KERNEL);
+-	if (!buf->virt)
+-		goto nomem;
+-
+-	return buf;
+-
+-nomem:
+-	big_key_free_buffer(buf);
+-	return NULL;
+-}
+-
+-/*
+  * Preparse a big key
+  */
+ int big_key_preparse(struct key_preparsed_payload *prep)
+ {
+-	struct big_key_buf *buf;
+ 	struct path *path = (struct path *)&prep->payload.data[big_key_path];
+ 	struct file *file;
+-	u8 *enckey;
++	u8 *buf, *enckey;
+ 	ssize_t written;
+-	size_t datalen = prep->datalen, enclen = datalen + ENC_AUTHTAG_SIZE;
++	size_t datalen = prep->datalen;
++	size_t enclen = datalen + CHACHA20POLY1305_AUTHTAG_SIZE;
+ 	int ret;
+ 
+ 	if (datalen <= 0 || datalen > 1024 * 1024 || !prep->data)
+@@ -224,28 +80,28 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 		 * to be swapped out if needed.
+ 		 *
+ 		 * File content is stored encrypted with randomly generated key.
++		 * Since the key is random for each file, we can set the nonce
++		 * to zero, provided we never define a ->update() call.
+ 		 */
+ 		loff_t pos = 0;
+ 
+-		buf = big_key_alloc_buffer(enclen);
++		buf = kvmalloc(enclen, GFP_KERNEL);
+ 		if (!buf)
+ 			return -ENOMEM;
+-		memcpy(buf->virt, prep->data, datalen);
+ 
+ 		/* generate random key */
+-		enckey = kmalloc(ENC_KEY_SIZE, GFP_KERNEL);
++		enckey = kmalloc(CHACHA20POLY1305_KEY_SIZE, GFP_KERNEL);
+ 		if (!enckey) {
+ 			ret = -ENOMEM;
+ 			goto error;
  		}
- 		set_buffer_verified(bh);
--		i = search_dirblock(bh, dir, &fname,
-+		i = search_dirblock(bh, dir, fname,
- 			    block << EXT4_BLOCK_SIZE_BITS(sb), res_dir);
- 		if (i == 1) {
- 			EXT4_I(dir)->i_dir_start_lookup = block;
-@@ -1484,10 +1477,50 @@ static struct buffer_head * ext4_find_entry (struct inode *dir,
- 	/* Clean up the read-ahead blocks */
- 	for (; ra_ptr < ra_max; ra_ptr++)
- 		brelse(bh_use[ra_ptr]);
--	ext4_fname_free_filename(&fname);
+-		ret = get_random_bytes_wait(enckey, ENC_KEY_SIZE);
++		ret = get_random_bytes_wait(enckey, CHACHA20POLY1305_KEY_SIZE);
+ 		if (unlikely(ret))
+ 			goto err_enckey;
+ 
+-		/* encrypt aligned data */
+-		ret = big_key_crypt(BIG_KEY_ENC, buf, datalen, enckey);
+-		if (ret)
+-			goto err_enckey;
++		/* encrypt data */
++		chacha20poly1305_encrypt(buf, prep->data, datalen, NULL, 0,
++					 0, enckey);
+ 
+ 		/* save aligned data to file */
+ 		file = shmem_kernel_file_setup("", enclen, 0);
+@@ -254,7 +110,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 			goto err_enckey;
+ 		}
+ 
+-		written = kernel_write(file, buf->virt, enclen, &pos);
++		written = kernel_write(file, buf, enclen, &pos);
+ 		if (written != enclen) {
+ 			ret = written;
+ 			if (written >= 0)
+@@ -269,7 +125,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ 		*path = file->f_path;
+ 		path_get(path);
+ 		fput(file);
+-		big_key_free_buffer(buf);
++		kvfree(buf);
+ 	} else {
+ 		/* Just store the data in a buffer */
+ 		void *data = kmalloc(datalen, GFP_KERNEL);
+@@ -287,7 +143,7 @@ int big_key_preparse(struct key_preparsed_payload *prep)
+ err_enckey:
+ 	kzfree(enckey);
+ error:
+-	big_key_free_buffer(buf);
++	kvfree(buf);
  	return ret;
  }
  
-+static struct buffer_head *ext4_find_entry(struct inode *dir,
-+					   const struct qstr *d_name,
-+					   struct ext4_dir_entry_2 **res_dir,
-+					   int *inlined)
-+{
-+	int err;
-+	struct ext4_filename fname;
-+	struct buffer_head *bh;
-+
-+	err = ext4_fname_setup_filename(dir, d_name, 1, &fname);
-+	if (err == -ENOENT)
-+		return NULL;
-+	if (err)
-+		return ERR_PTR(err);
-+
-+	bh = __ext4_find_entry(dir, &fname, res_dir, inlined);
-+
-+	ext4_fname_free_filename(&fname);
-+	return bh;
-+}
-+
-+static struct buffer_head *ext4_lookup_entry(struct inode *dir,
-+					     struct dentry *dentry,
-+					     struct ext4_dir_entry_2 **res_dir)
-+{
-+	int err;
-+	struct ext4_filename fname;
-+	struct buffer_head *bh;
-+
-+	err = ext4_fname_prepare_lookup(dir, dentry, &fname);
-+	if (err == -ENOENT)
-+		return NULL;
-+	if (err)
-+		return ERR_PTR(err);
-+
-+	bh = __ext4_find_entry(dir, &fname, res_dir, NULL);
-+
-+	ext4_fname_free_filename(&fname);
-+	return bh;
-+}
-+
- static struct buffer_head * ext4_dx_find_entry(struct inode *dir,
- 			struct ext4_filename *fname,
- 			struct ext4_dir_entry_2 **res_dir)
-@@ -1546,16 +1579,11 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, unsi
- 	struct inode *inode;
- 	struct ext4_dir_entry_2 *de;
- 	struct buffer_head *bh;
--	int err;
--
--	err = fscrypt_prepare_lookup(dir, dentry, flags);
--	if (err)
--		return ERR_PTR(err);
+@@ -365,14 +221,13 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ 		return datalen;
  
- 	if (dentry->d_name.len > EXT4_NAME_LEN)
- 		return ERR_PTR(-ENAMETOOLONG);
+ 	if (datalen > BIG_KEY_FILE_THRESHOLD) {
+-		struct big_key_buf *buf;
+ 		struct path *path = (struct path *)&key->payload.data[big_key_path];
+ 		struct file *file;
+-		u8 *enckey = (u8 *)key->payload.data[big_key_data];
+-		size_t enclen = datalen + ENC_AUTHTAG_SIZE;
++		u8 *buf, *enckey = (u8 *)key->payload.data[big_key_data];
++		size_t enclen = datalen + CHACHA20POLY1305_AUTHTAG_SIZE;
+ 		loff_t pos = 0;
  
--	bh = ext4_find_entry(dir, &dentry->d_name, &de, NULL);
-+	bh = ext4_lookup_entry(dir, dentry, &de);
- 	if (IS_ERR(bh))
- 		return ERR_CAST(bh);
- 	inode = NULL;
-diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
-index f5e34e467003..c3e8a901d47a 100644
---- a/fs/f2fs/namei.c
-+++ b/fs/f2fs/namei.c
-@@ -436,19 +436,23 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
- 	nid_t ino = -1;
- 	int err = 0;
- 	unsigned int root_ino = F2FS_ROOT_INO(F2FS_I_SB(dir));
-+	struct fscrypt_name fname;
+-		buf = big_key_alloc_buffer(enclen);
++		buf = kvmalloc(enclen, GFP_KERNEL);
+ 		if (!buf)
+ 			return -ENOMEM;
  
- 	trace_f2fs_lookup_start(dir, dentry, flags);
+@@ -383,26 +238,27 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
+ 		}
  
--	err = fscrypt_prepare_lookup(dir, dentry, flags);
--	if (err)
--		goto out;
--
- 	if (dentry->d_name.len > F2FS_NAME_LEN) {
- 		err = -ENAMETOOLONG;
- 		goto out;
- 	}
+ 		/* read file to kernel and decrypt */
+-		ret = kernel_read(file, buf->virt, enclen, &pos);
++		ret = kernel_read(file, buf, enclen, &pos);
+ 		if (ret >= 0 && ret != enclen) {
+ 			ret = -EIO;
+ 			goto err_fput;
+ 		}
  
--	de = f2fs_find_entry(dir, &dentry->d_name, &page);
-+	err = fscrypt_prepare_lookup(dir, dentry, &fname);
-+	if (err == -ENOENT)
-+		goto out_splice;
-+	if (err)
-+		goto out;
-+	de = __f2fs_find_entry(dir, &fname, &page);
-+	fscrypt_free_filename(&fname);
-+
- 	if (!de) {
- 		if (IS_ERR(page)) {
- 			err = PTR_ERR(page);
-@@ -488,8 +492,7 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
- 	}
- out_splice:
- 	new = d_splice_alias(inode, dentry);
--	if (IS_ERR(new))
--		err = PTR_ERR(new);
-+	err = PTR_ERR_OR_ZERO(new);
- 	trace_f2fs_lookup_end(dir, dentry, ino, err);
- 	return new;
- out_iput:
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index 5767b373a8ff..b73de6d04fa3 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -220,11 +220,9 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
+-		ret = big_key_crypt(BIG_KEY_DEC, buf, enclen, enckey);
+-		if (ret)
++		ret = chacha20poly1305_decrypt(buf, buf, enclen, NULL, 0, 0,
++					       enckey) ? 0 : -EINVAL;
++		if (unlikely(ret))
+ 			goto err_fput;
  
- 	dbg_gen("'%pd' in dir ino %lu", dentry, dir->i_ino);
+ 		ret = datalen;
  
--	err = fscrypt_prepare_lookup(dir, dentry, flags);
--	if (err)
--		return ERR_PTR(err);
--
--	err = fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
-+	err = fscrypt_prepare_lookup(dir, dentry, &nm);
-+	if (err == -ENOENT)
-+		return d_splice_alias(NULL, dentry);
- 	if (err)
- 		return ERR_PTR(err);
+ 		/* copy decrypted data to user */
+-		if (copy_to_user(buffer, buf->virt, datalen) != 0)
++		if (copy_to_user(buffer, buf, datalen) != 0)
+ 			ret = -EFAULT;
  
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 4ad7a856e0f1..44e7a576c5be 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -33,6 +33,7 @@ struct fscrypt_name {
- 	u32 hash;
- 	u32 minor_hash;
- 	struct fscrypt_str crypto_buf;
-+	bool is_ciphertext_name;
- };
- 
- #define FSTR_INIT(n, l)		{ .name = n, .len = l }
-@@ -221,7 +222,8 @@ extern int __fscrypt_prepare_rename(struct inode *old_dir,
- 				    struct inode *new_dir,
- 				    struct dentry *new_dentry,
- 				    unsigned int flags);
--extern int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry);
-+extern int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
-+				    struct fscrypt_name *fname);
- extern int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
- 				     unsigned int max_len,
- 				     struct fscrypt_str *disk_link);
-@@ -331,7 +333,7 @@ static inline int fscrypt_setup_filename(struct inode *dir,
- 	if (IS_ENCRYPTED(dir))
- 		return -EOPNOTSUPP;
- 
--	memset(fname, 0, sizeof(struct fscrypt_name));
-+	memset(fname, 0, sizeof(*fname));
- 	fname->usr_fname = iname;
- 	fname->disk_name.name = (unsigned char *)iname->name;
- 	fname->disk_name.len = iname->len;
-@@ -418,7 +420,8 @@ static inline int __fscrypt_prepare_rename(struct inode *old_dir,
- }
- 
- static inline int __fscrypt_prepare_lookup(struct inode *dir,
--					   struct dentry *dentry)
-+					   struct dentry *dentry,
-+					   struct fscrypt_name *fname)
- {
- 	return -EOPNOTSUPP;
- }
-@@ -539,25 +542,29 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
-  * fscrypt_prepare_lookup - prepare to lookup a name in a possibly-encrypted directory
-  * @dir: directory being searched
-  * @dentry: filename being looked up
-- * @flags: lookup flags
-+ * @fname: (output) the name to use to search the on-disk directory
-  *
-- * Prepare for ->lookup() in a directory which may be encrypted.  Lookups can be
-- * done with or without the directory's encryption key; without the key,
-- * filenames are presented in encrypted form.  Therefore, we'll try to set up
-- * the directory's encryption key, but even without it the lookup can continue.
-+ * Prepare for ->lookup() in a directory which may be encrypted by determining
-+ * the name that will actually be used to search the directory on-disk.
-  *
-  * This also installs a custom ->d_revalidate() method which will invalidate the
-  * dentry if it was created without the key and the key is later added.
-  *
-- * Return: 0 on success, -errno if a problem occurred while setting up the
-- * encryption key
-+ * Return: 0 on success; -ENOENT if key is unavailable but the filename isn't a
-+ * correctly formed encoded ciphertext name, so a negative dentry should be
-+ * created; or another -errno code.
+ err_fput:
+ 		fput(file);
+ error:
+-		big_key_free_buffer(buf);
++		kvfree(buf);
+ 	} else {
+ 		ret = datalen;
+ 		if (copy_to_user(buffer, key->payload.data[big_key_data],
+@@ -418,39 +274,7 @@ long big_key_read(const struct key *key, char __user *buffer, size_t buflen)
   */
- static inline int fscrypt_prepare_lookup(struct inode *dir,
- 					 struct dentry *dentry,
--					 unsigned int flags)
-+					 struct fscrypt_name *fname)
+ static int __init big_key_init(void)
  {
- 	if (IS_ENCRYPTED(dir))
--		return __fscrypt_prepare_lookup(dir, dentry);
-+		return __fscrypt_prepare_lookup(dir, dentry, fname);
-+
-+	memset(fname, 0, sizeof(*fname));
-+	fname->usr_fname = &dentry->d_name;
-+	fname->disk_name.name = (unsigned char *)dentry->d_name.name;
-+	fname->disk_name.len = dentry->d_name.len;
- 	return 0;
+-	int ret;
+-
+-	/* init block cipher */
+-	big_key_aead = crypto_alloc_aead(big_key_alg_name, 0, CRYPTO_ALG_ASYNC);
+-	if (IS_ERR(big_key_aead)) {
+-		ret = PTR_ERR(big_key_aead);
+-		pr_err("Can't alloc crypto: %d\n", ret);
+-		return ret;
+-	}
+-
+-	if (unlikely(crypto_aead_ivsize(big_key_aead) != BIG_KEY_IV_SIZE)) {
+-		WARN(1, "big key algorithm changed?");
+-		ret = -EINVAL;
+-		goto free_aead;
+-	}
+-
+-	ret = crypto_aead_setauthsize(big_key_aead, ENC_AUTHTAG_SIZE);
+-	if (ret < 0) {
+-		pr_err("Can't set crypto auth tag len: %d\n", ret);
+-		goto free_aead;
+-	}
+-
+-	ret = register_key_type(&key_type_big_key);
+-	if (ret < 0) {
+-		pr_err("Can't register type: %d\n", ret);
+-		goto free_aead;
+-	}
+-
+-	return 0;
+-
+-free_aead:
+-	crypto_free_aead(big_key_aead);
+-	return ret;
++	return register_key_type(&key_type_big_key);
  }
  
--- 
-2.21.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+ late_initcall(big_key_init);
