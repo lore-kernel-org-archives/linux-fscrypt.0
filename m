@@ -1,211 +1,304 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from lilium.sigma-star.at ([109.75.188.150]:53350 "EHLO
-        lilium.sigma-star.at" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726424AbfCNR2P (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 14 Mar 2019 13:28:15 -0400
-From: Richard Weinberger <richard@nod.at>
-Subject: [PATCH 4/4] ubifs: Implement new mount option, fscrypt_key_required
-Date: Thu, 14 Mar 2019 18:15:59 +0100
-Message-Id: <20190314171559.27584-5-richard@nod.at>
-In-Reply-To: <20190314171559.27584-1-richard@nod.at>
-References: <CAJfpegvX4ANfso-Jn1zaB+m4Q_0eK9i-+MCJ+sTH5QzD3PZFMQ@mail.gmail.com>
- <20190314171559.27584-1-richard@nod.at>
-MIME-Version: 1.0
-Content-Transfer-Encoding: quoted-printable
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-mtd@lists.infradead.org
-Cc: linux-fscrypt@vger.kernel.org, jaegeuk@kernel.org, tytso@mit.edu, linux-unionfs@vger.kernel.org, miklos@szeredi.hu, amir73il@gmail.com, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, paullawrence@google.com, Richard Weinberger <richard@nod.at>
+Return-Path: <SRS0=H5uw=RZ=gondor.apana.org.au=herbert@kernel.org>
+Subject: [PATCH 7/17] crypto: poly1305 - Export core functions without crypto API
+References: <20190322062740.nrwfx2rvmt7lzotj@gondor.apana.org.au>
+Message-Id: <E1h7DgW-0001I5-Il@gondobar>
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Date: Fri, 22 Mar 2019 14:29:44 +0800
+To: Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Usually fscrypt allows limited access to encrypted files even
-if no key is available.
-Encrypted filenames are shown and based on this names users
-can unlink and move files.
-
-This is not always what people expect. The fscrypt_key_required mount
-option disables this feature.
-If no key is present all access is denied with the -ENOKEY error code.
-
-The side benefit of this is that we don't need ->d_revalidate().
-Not having ->d_revalidate() makes an encrypted ubifs usable
-as overlayfs upper directory.
-
-Signed-off-by: Richard Weinberger <richard@nod.at>
+This patch exports the raw poly1305 functions, including the generic
+as well as the x86 accelerated version.  This allows them to be
+used without going through the crypto API.
+    
+In order to ensure that zinc can link to the requisite functions,
+this function removes the failure mode from the x86 accelerated
+glue code so that the modules will always load, even if the hardware
+is not available.  In that case, the crypto API functions would not
+be registered.
+    
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
 ---
- fs/ubifs/crypto.c |  2 +-
- fs/ubifs/dir.c    | 29 ++++++++++++++++++++++++++---
- fs/ubifs/super.c  | 15 +++++++++++++++
- fs/ubifs/ubifs.h  |  1 +
- 4 files changed, 43 insertions(+), 4 deletions(-)
 
-diff --git a/fs/ubifs/crypto.c b/fs/ubifs/crypto.c
-index 4aaedf2d7f44..a6a48c5dc058 100644
---- a/fs/ubifs/crypto.c
-+++ b/fs/ubifs/crypto.c
-@@ -76,7 +76,7 @@ int ubifs_decrypt(const struct inode *inode, struct ubi=
-fs_data_node *dn,
+ arch/x86/crypto/poly1305_glue.c |   86 ++++++++++++++++++++--------------------
+ crypto/poly1305_generic.c       |   16 +------
+ include/crypto/poly1305.h       |   42 ++++++++++++++++++-
+ 3 files changed, 87 insertions(+), 57 deletions(-)
+
+diff --git a/arch/x86/crypto/poly1305_glue.c b/arch/x86/crypto/poly1305_glue.c
+index 88cc01506c84..7a70b0f42c5c 100644
+--- a/arch/x86/crypto/poly1305_glue.c
++++ b/arch/x86/crypto/poly1305_glue.c
+@@ -20,15 +20,7 @@
+ 
+ struct poly1305_simd_desc_ctx {
+ 	struct poly1305_desc_ctx base;
+-	/* derived key u set? */
+-	bool uset;
+-#ifdef CONFIG_AS_AVX2
+-	/* derived keys r^3, r^4 set? */
+-	bool wset;
+-#endif
+-	/* derived Poly1305 key r^2 */
+-	u32 u[5];
+-	/* ... silently appended r^3 and r^4 when using AVX2 */
++	struct poly1305_simd_xtra x;
+ };
+ 
+ asmlinkage void poly1305_block_sse2(u32 *h, const u8 *src,
+@@ -41,14 +33,11 @@ asmlinkage void poly1305_4block_avx2(u32 *h, const u8 *src, const u32 *r,
+ static bool poly1305_use_avx2;
+ #endif
+ 
+-static int poly1305_simd_init(struct shash_desc *desc)
++static int poly1305_simd_init2(struct shash_desc *desc)
+ {
+ 	struct poly1305_simd_desc_ctx *sctx = shash_desc_ctx(desc);
+ 
+-	sctx->uset = false;
+-#ifdef CONFIG_AS_AVX2
+-	sctx->wset = false;
+-#endif
++	poly1305_simd_init(&sctx->x);
+ 
+ 	return crypto_poly1305_init(desc);
  }
-=20
- const struct fscrypt_operations ubifs_crypt_operations =3D {
--	.flags			=3D FS_CFLG_OWN_PAGES,
-+	.flags			=3D FS_CFLG_OWN_PAGES | FS_CFLG_OWN_D_OPS,
- 	.key_prefix		=3D "ubifs:",
- 	.get_context		=3D ubifs_crypt_get_context,
- 	.set_context		=3D ubifs_crypt_set_context,
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index b0cb913697c5..4d029f08b80d 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -208,6 +208,16 @@ static int dbg_check_name(const struct ubifs_info *c=
-,
- 	return 0;
+@@ -64,60 +53,70 @@ static void poly1305_simd_mult(u32 *a, const u32 *b)
+ 	poly1305_block_sse2(a, m, b, 1);
  }
-=20
-+static void ubifs_set_dentry_ops(struct inode *dir, struct dentry *dentr=
-y)
-+{
-+#ifdef CONFIG_FS_ENCRYPTION
-+	struct ubifs_info *c =3D dir->i_sb->s_fs_info;
+ 
+-static unsigned int poly1305_simd_blocks(struct poly1305_desc_ctx *dctx,
+-					 const u8 *src, unsigned int srclen)
++unsigned int poly1305_simd_blocks(struct poly1305_state *state,
++				  const struct poly1305_key *key,
++				  struct poly1305_simd_xtra *sctx,
++				  const void *src, unsigned int srclen)
+ {
+-	struct poly1305_simd_desc_ctx *sctx;
+-	unsigned int blocks, datalen;
+-
+-	BUILD_BUG_ON(offsetof(struct poly1305_simd_desc_ctx, base));
+-	sctx = container_of(dctx, struct poly1305_simd_desc_ctx, base);
+-
+-	if (unlikely(!dctx->sset)) {
+-		datalen = crypto_poly1305_setdesckey(dctx, src, srclen);
+-		src += srclen - datalen;
+-		srclen = datalen;
+-	}
++	unsigned int blocks;
+ 
+ #ifdef CONFIG_AS_AVX2
+ 	if (poly1305_use_avx2 && srclen >= POLY1305_BLOCK_SIZE * 4) {
+ 		if (unlikely(!sctx->wset)) {
+ 			if (!sctx->uset) {
+-				memcpy(sctx->u, dctx->r.r, sizeof(sctx->u));
+-				poly1305_simd_mult(sctx->u, dctx->r.r);
++				memcpy(sctx->u, key->r, sizeof(sctx->u));
++				poly1305_simd_mult(sctx->u, key->r);
+ 				sctx->uset = true;
+ 			}
+ 			memcpy(sctx->u + 5, sctx->u, sizeof(sctx->u));
+-			poly1305_simd_mult(sctx->u + 5, dctx->r.r);
++			poly1305_simd_mult(sctx->u + 5, key->r);
+ 			memcpy(sctx->u + 10, sctx->u + 5, sizeof(sctx->u));
+-			poly1305_simd_mult(sctx->u + 10, dctx->r.r);
++			poly1305_simd_mult(sctx->u + 10, key->r);
+ 			sctx->wset = true;
+ 		}
+ 		blocks = srclen / (POLY1305_BLOCK_SIZE * 4);
+-		poly1305_4block_avx2(dctx->h.h, src, dctx->r.r, blocks,
+-				     sctx->u);
++		poly1305_4block_avx2(state->h, src, key->r, blocks, sctx->u);
+ 		src += POLY1305_BLOCK_SIZE * 4 * blocks;
+ 		srclen -= POLY1305_BLOCK_SIZE * 4 * blocks;
+ 	}
+ #endif
+ 	if (likely(srclen >= POLY1305_BLOCK_SIZE * 2)) {
+ 		if (unlikely(!sctx->uset)) {
+-			memcpy(sctx->u, dctx->r.r, sizeof(sctx->u));
+-			poly1305_simd_mult(sctx->u, dctx->r.r);
++			memcpy(sctx->u, key->r, sizeof(sctx->u));
++			poly1305_simd_mult(sctx->u, key->r);
+ 			sctx->uset = true;
+ 		}
+ 		blocks = srclen / (POLY1305_BLOCK_SIZE * 2);
+-		poly1305_2block_sse2(dctx->h.h, src, dctx->r.r, blocks,
++		poly1305_2block_sse2(state->h, src, key->r, blocks,
+ 				     sctx->u);
+ 		src += POLY1305_BLOCK_SIZE * 2 * blocks;
+ 		srclen -= POLY1305_BLOCK_SIZE * 2 * blocks;
+ 	}
+ 	if (srclen >= POLY1305_BLOCK_SIZE) {
+-		poly1305_block_sse2(dctx->h.h, src, dctx->r.r, 1);
++		poly1305_block_sse2(state->h, src, key->r, 1);
+ 		srclen -= POLY1305_BLOCK_SIZE;
+ 	}
+ 	return srclen;
+ }
++EXPORT_SYMBOL_GPL(poly1305_simd_blocks);
 +
-+	if (IS_ENCRYPTED(dir) && !c->fscrypt_key_required)
-+		d_set_d_op(dentry, &fscrypt_d_ops);
++static unsigned int poly1305_simd_blocks2(struct poly1305_desc_ctx *dctx,
++					  const u8 *src, unsigned int srclen)
++{
++	struct poly1305_simd_desc_ctx *sctx;
++	unsigned int datalen;
++
++	BUILD_BUG_ON(offsetof(struct poly1305_simd_desc_ctx, base));
++	sctx = container_of(dctx, struct poly1305_simd_desc_ctx, base);
++
++	if (unlikely(!dctx->sset)) {
++		datalen = crypto_poly1305_setdesckey(dctx, src, srclen);
++		src += srclen - datalen;
++		srclen = datalen;
++	}
++
++	return poly1305_simd_blocks(&dctx->h, &dctx->r, &sctx->x, src, srclen);
++}
+ 
+ static int poly1305_simd_update(struct shash_desc *desc,
+ 				const u8 *src, unsigned int srclen)
+@@ -139,14 +138,14 @@ static int poly1305_simd_update(struct shash_desc *desc,
+ 		dctx->buflen += bytes;
+ 
+ 		if (dctx->buflen == POLY1305_BLOCK_SIZE) {
+-			poly1305_simd_blocks(dctx, dctx->buf,
+-					     POLY1305_BLOCK_SIZE);
++			poly1305_simd_blocks2(dctx, dctx->buf,
++					      POLY1305_BLOCK_SIZE);
+ 			dctx->buflen = 0;
+ 		}
+ 	}
+ 
+ 	if (likely(srclen >= POLY1305_BLOCK_SIZE)) {
+-		bytes = poly1305_simd_blocks(dctx, src, srclen);
++		bytes = poly1305_simd_blocks2(dctx, src, srclen);
+ 		src += srclen - bytes;
+ 		srclen = bytes;
+ 	}
+@@ -163,7 +162,7 @@ static int poly1305_simd_update(struct shash_desc *desc,
+ 
+ static struct shash_alg alg = {
+ 	.digestsize	= POLY1305_DIGEST_SIZE,
+-	.init		= poly1305_simd_init,
++	.init		= poly1305_simd_init2,
+ 	.update		= poly1305_simd_update,
+ 	.final		= crypto_poly1305_final,
+ 	.descsize	= sizeof(struct poly1305_simd_desc_ctx),
+@@ -179,7 +178,7 @@ static struct shash_alg alg = {
+ static int __init poly1305_simd_mod_init(void)
+ {
+ 	if (!boot_cpu_has(X86_FEATURE_XMM2))
+-		return -ENODEV;
++		return 0;
+ 
+ #ifdef CONFIG_AS_AVX2
+ 	poly1305_use_avx2 = boot_cpu_has(X86_FEATURE_AVX) &&
+@@ -194,6 +193,9 @@ static int __init poly1305_simd_mod_init(void)
+ 
+ static void __exit poly1305_simd_mod_exit(void)
+ {
++	if (!boot_cpu_has(X86_FEATURE_XMM2))
++		return;
++
+ 	crypto_unregister_shash(&alg);
+ }
+ 
+diff --git a/crypto/poly1305_generic.c b/crypto/poly1305_generic.c
+index 2a06874204e8..2fc44fce66ca 100644
+--- a/crypto/poly1305_generic.c
++++ b/crypto/poly1305_generic.c
+@@ -87,10 +87,9 @@ unsigned int crypto_poly1305_setdesckey(struct poly1305_desc_ctx *dctx,
+ }
+ EXPORT_SYMBOL_GPL(crypto_poly1305_setdesckey);
+ 
+-static void poly1305_blocks_internal(struct poly1305_state *state,
+-				     const struct poly1305_key *key,
+-				     const void *src, unsigned int nblocks,
+-				     u32 hibit)
++void poly1305_blocks_internal(struct poly1305_state *state,
++			      const struct poly1305_key *key, const void *src,
++			      unsigned int nblocks, u32 hibit)
+ {
+ 	u32 r0, r1, r2, r3, r4;
+ 	u32 s1, s2, s3, s4;
+@@ -154,14 +153,7 @@ static void poly1305_blocks_internal(struct poly1305_state *state,
+ 	state->h[3] = h3;
+ 	state->h[4] = h4;
+ }
+-
+-void poly1305_core_blocks(struct poly1305_state *state,
+-			  const struct poly1305_key *key,
+-			  const void *src, unsigned int nblocks)
+-{
+-	poly1305_blocks_internal(state, key, src, nblocks, 1 << 24);
+-}
+-EXPORT_SYMBOL_GPL(poly1305_core_blocks);
++EXPORT_SYMBOL_GPL(poly1305_blocks_internal);
+ 
+ static void poly1305_blocks(struct poly1305_desc_ctx *dctx,
+ 			    const u8 *src, unsigned int srclen, u32 hibit)
+diff --git a/include/crypto/poly1305.h b/include/crypto/poly1305.h
+index 34317ed2071e..4cfb8a46785b 100644
+--- a/include/crypto/poly1305.h
++++ b/include/crypto/poly1305.h
+@@ -38,6 +38,20 @@ struct poly1305_desc_ctx {
+ 	bool sset;
+ };
+ 
++struct poly1305_simd_xtra {
++	/* derived key u set? */
++	bool uset;
++#ifdef CONFIG_AS_AVX2
++	/* derived keys r^3, r^4 set? */
++	bool wset;
++#endif
++	/* derived Poly1305 key r^2 */
++	u32 u[5];
++	/* ... silently appended r^3 and r^4 when using AVX2 */
++};
++
++struct shash_desc;
++
+ /*
+  * Poly1305 core functions.  These implement the ε-almost-∆-universal hash
+  * function underlying the Poly1305 MAC, i.e. they don't add an encrypted nonce
+@@ -48,9 +62,18 @@ static inline void poly1305_core_init(struct poly1305_state *state)
+ {
+ 	memset(state->h, 0, sizeof(state->h));
+ }
+-void poly1305_core_blocks(struct poly1305_state *state,
+-			  const struct poly1305_key *key,
+-			  const void *src, unsigned int nblocks);
++
++void poly1305_blocks_internal(struct poly1305_state *state,
++			      const struct poly1305_key *key, const void *src,
++			      unsigned int nblocks, u32 hibit);
++
++static inline void poly1305_core_blocks(struct poly1305_state *state,
++					const struct poly1305_key *key,
++					const void *src, unsigned int nblocks)
++{
++	poly1305_blocks_internal(state, key, src, nblocks, 1 << 24);
++}
++
+ void poly1305_core_emit(const struct poly1305_state *state, void *dst);
+ 
+ /* Crypto API helper functions for the Poly1305 MAC */
+@@ -61,4 +84,17 @@ int crypto_poly1305_update(struct shash_desc *desc,
+ 			   const u8 *src, unsigned int srclen);
+ int crypto_poly1305_final(struct shash_desc *desc, u8 *dst);
+ 
++static inline void poly1305_simd_init(struct poly1305_simd_xtra *x)
++{
++	x->uset = false;
++#ifdef CONFIG_AS_AVX2
++	x->wset = false;
 +#endif
 +}
 +
- static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *den=
-try,
- 				   unsigned int flags)
- {
-@@ -224,7 +234,10 @@ static struct dentry *ubifs_lookup(struct inode *dir=
-, struct dentry *dentry,
- 	if (err)
- 		return ERR_PTR(err);
-=20
--	err =3D fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
-+	ubifs_set_dentry_ops(dir, dentry);
++unsigned int poly1305_simd_blocks(struct poly1305_state *state,
++				  const struct poly1305_key *key,
++				  struct poly1305_simd_xtra *sctx,
++				  const void *src, unsigned int srclen);
 +
-+	err =3D fscrypt_setup_filename(dir, &dentry->d_name,
-+				     !c->fscrypt_key_required, &nm);
- 	if (err)
- 		return ERR_PTR(err);
-=20
-@@ -240,6 +253,11 @@ static struct dentry *ubifs_lookup(struct inode *dir=
-, struct dentry *dentry,
- 	}
-=20
- 	if (nm.hash) {
-+		if (c->fscrypt_key_required) {
-+			inode =3D ERR_PTR(-ENOKEY);
-+			goto done;
-+		}
-+
- 		ubifs_assert(c, fname_len(&nm) =3D=3D 0);
- 		ubifs_assert(c, fname_name(&nm) =3D=3D NULL);
- 		dent_key_init_hash(c, &key, dir->i_ino, nm.hash);
-@@ -529,6 +547,9 @@ static int ubifs_readdir(struct file *file, struct di=
-r_context *ctx)
- 		if (err)
- 			return err;
-=20
-+		if (c->fscrypt_key_required && !dir->i_crypt_info)
-+			return -ENOKEY;
-+
- 		err =3D fscrypt_fname_alloc_buffer(dir, UBIFS_MAX_NLEN, &fstr);
- 		if (err)
- 			return err;
-@@ -798,7 +819,8 @@ static int ubifs_unlink(struct inode *dir, struct den=
-try *dentry)
- 			return err;
- 	}
-=20
--	err =3D fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
-+	err =3D fscrypt_setup_filename(dir, &dentry->d_name, !c->fscrypt_key_re=
-quired,
-+				     &nm);
- 	if (err)
- 		return err;
-=20
-@@ -908,7 +930,8 @@ static int ubifs_rmdir(struct inode *dir, struct dent=
-ry *dentry)
- 			return err;
- 	}
-=20
--	err =3D fscrypt_setup_filename(dir, &dentry->d_name, 1, &nm);
-+	err =3D fscrypt_setup_filename(dir, &dentry->d_name,
-+				     !c->fscrypt_key_required, &nm);
- 	if (err)
- 		return err;
-=20
-diff --git a/fs/ubifs/super.c b/fs/ubifs/super.c
-index 8dc2818fdd84..e081b00236b6 100644
---- a/fs/ubifs/super.c
-+++ b/fs/ubifs/super.c
-@@ -445,6 +445,9 @@ static int ubifs_show_options(struct seq_file *s, str=
-uct dentry *root)
- 			   ubifs_compr_name(c, c->mount_opts.compr_type));
- 	}
-=20
-+	if (c->fscrypt_key_required)
-+		seq_puts(s, ",fscrypt_key_required");
-+
- 	seq_printf(s, ",assert=3D%s", ubifs_assert_action_name(c));
- 	seq_printf(s, ",ubi=3D%d,vol=3D%d", c->vi.ubi_num, c->vi.vol_id);
-=20
-@@ -952,6 +955,7 @@ enum {
- 	Opt_assert,
- 	Opt_auth_key,
- 	Opt_auth_hash_name,
-+	Opt_fscrypt_key_required,
- 	Opt_ignore,
- 	Opt_err,
- };
-@@ -969,6 +973,7 @@ static const match_table_t tokens =3D {
- 	{Opt_ignore, "ubi=3D%s"},
- 	{Opt_ignore, "vol=3D%s"},
- 	{Opt_assert, "assert=3D%s"},
-+	{Opt_fscrypt_key_required, "fscrypt_key_required"},
- 	{Opt_err, NULL},
- };
-=20
-@@ -1008,6 +1013,7 @@ static int ubifs_parse_options(struct ubifs_info *c=
-, char *options,
- {
- 	char *p;
- 	substring_t args[MAX_OPT_ARGS];
-+	unsigned int old_fscrypt_key_required =3D c->fscrypt_key_required;
-=20
- 	if (!options)
- 		return 0;
-@@ -1099,6 +1105,15 @@ static int ubifs_parse_options(struct ubifs_info *=
-c, char *options,
- 			if (!c->auth_hash_name)
- 				return -ENOMEM;
- 			break;
-+		case Opt_fscrypt_key_required:
-+			c->fscrypt_key_required =3D 1;
-+
-+			if (is_remount && (old_fscrypt_key_required !=3D c->fscrypt_key_requi=
-red)) {
-+				ubifs_err(c, "fscrypt_key_required cannot changed by remount");
-+				return -EINVAL;
-+			}
-+
-+			break;
- 		case Opt_ignore:
- 			break;
- 		default:
-diff --git a/fs/ubifs/ubifs.h b/fs/ubifs/ubifs.h
-index 1ae12900e01d..71b03a6798ae 100644
---- a/fs/ubifs/ubifs.h
-+++ b/fs/ubifs/ubifs.h
-@@ -1304,6 +1304,7 @@ struct ubifs_info {
- 	unsigned int rw_incompat:1;
- 	unsigned int assert_action:2;
- 	unsigned int authenticated:1;
-+	unsigned int fscrypt_key_required:1;
-=20
- 	struct mutex tnc_mutex;
- 	struct ubifs_zbranch zroot;
---=20
-2.21.0
+ #endif
