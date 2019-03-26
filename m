@@ -1,115 +1,160 @@
-Return-Path: <SRS0=H5uw=RZ=gondor.apana.org.au=herbert@kernel.org>
-Subject: [PATCH 5/17] zinc: Add x86 accelerated ChaCha20
-References: <20190322062740.nrwfx2rvmt7lzotj@gondor.apana.org.au>
-Message-Id: <E1h7DgU-0001Hl-4u@gondobar>
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Date: Fri, 22 Mar 2019 14:29:42 +0800
-To: Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from metis.ext.pengutronix.de ([85.220.165.71]:36157 "EHLO
+        metis.ext.pengutronix.de" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1730422AbfCZHwo (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 26 Mar 2019 03:52:44 -0400
+From: Sascha Hauer <s.hauer@pengutronix.de>
+Subject: [PATCH 2/2] ubifs: Remove ifdefs around CONFIG_UBIFS_ATIME_SUPPORT
+Date: Tue, 26 Mar 2019 08:52:32 +0100
+Message-Id: <20190326075232.11717-3-s.hauer@pengutronix.de>
+In-Reply-To: <20190326075232.11717-1-s.hauer@pengutronix.de>
+References: <20190326075232.11717-1-s.hauer@pengutronix.de>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-mtd@lists.infradead.org
+Cc: Richard Weinberger <richard@nod.at>, linux-fscrypt@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, kernel@pengutronix.de, Sascha Hauer <s.hauer@pengutronix.de>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patch exposes the crypto API x86 chacha20 implementation through
-zinc.
+ifdefs reduce readability and compile coverage. This removes the ifdefs
+around CONFIG_UBIFS_ATIME_SUPPORT by replacing them with IS_ENABLED()
+where applicable. The fs layer would fall back to generic_update_time()
+when .update_time doesn't exist. We do this fallback explicitly now.
 
-Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+Signed-off-by: Sascha Hauer <s.hauer@pengutronix.de>
 ---
+ fs/ubifs/dir.c   |  2 --
+ fs/ubifs/file.c  | 16 +++++++---------
+ fs/ubifs/super.c | 16 ++++++++--------
+ fs/ubifs/ubifs.h |  2 --
+ 4 files changed, 15 insertions(+), 21 deletions(-)
 
- lib/zinc/Kconfig                         |    1 
- lib/zinc/chacha20/chacha20-x86_64-glue.c |   55 +++++++++++++++++++++++++++++++
- lib/zinc/chacha20/chacha20.c             |    4 ++
- 3 files changed, 60 insertions(+)
-
-diff --git a/lib/zinc/Kconfig b/lib/zinc/Kconfig
-index 1fffd0a1a74c..010547fa6c9d 100644
---- a/lib/zinc/Kconfig
-+++ b/lib/zinc/Kconfig
-@@ -1,6 +1,7 @@
- config ZINC_CHACHA20
- 	tristate
- 	select CRYPTO_CHACHA20
-+	select CRYPTO_CHACHA20_X86_64 if ZINC_ARCH_X86_64
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 5767b373a8ff..cb286fd075fc 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -1652,9 +1652,7 @@ const struct inode_operations ubifs_dir_inode_operations = {
+ #ifdef CONFIG_UBIFS_FS_XATTR
+ 	.listxattr   = ubifs_listxattr,
+ #endif
+-#ifdef CONFIG_UBIFS_ATIME_SUPPORT
+ 	.update_time = ubifs_update_time,
+-#endif
+ 	.tmpfile     = ubifs_tmpfile,
+ };
  
- config ZINC_SELFTEST
- 	bool "Zinc cryptography library self-tests"
-diff --git a/lib/zinc/chacha20/chacha20-x86_64-glue.c b/lib/zinc/chacha20/chacha20-x86_64-glue.c
-new file mode 100644
-index 000000000000..e0b387b09c04
---- /dev/null
-+++ b/lib/zinc/chacha20/chacha20-x86_64-glue.c
-@@ -0,0 +1,55 @@
-+// SPDX-License-Identifier: GPL-2.0 OR MIT
-+/*
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-+ */
-+
-+#include <asm/fpu/api.h>
-+#include <asm/cpufeature.h>
-+#include <asm/processor.h>
-+#include <asm/intel-family.h>
-+#include <crypto/chacha.h>
-+
-+static bool chacha20_use_ssse3 __ro_after_init;
-+static bool *const chacha20_nobs[] __initconst = {
-+	&chacha20_use_ssse3 };
-+
-+static void __init chacha20_fpu_init(void)
-+{
-+	chacha20_use_ssse3 = boot_cpu_has(X86_FEATURE_SSSE3);
-+}
-+
-+static inline bool chacha20_arch(struct chacha20_ctx *ctx, u8 *dst,
-+				 const u8 *src, size_t len,
-+				 simd_context_t *simd_context)
-+{
-+	/* SIMD disables preemption, so relax after processing each page. */
-+	BUILD_BUG_ON(PAGE_SIZE < CHACHA20_BLOCK_SIZE ||
-+		     PAGE_SIZE % CHACHA20_BLOCK_SIZE);
-+
-+	if (!IS_ENABLED(CONFIG_AS_SSSE3) || !chacha20_use_ssse3 ||
-+	    len <= CHACHA20_BLOCK_SIZE || !simd_use(simd_context))
-+		return false;
-+
-+	for (;;) {
-+		const size_t bytes = min_t(size_t, len, PAGE_SIZE);
-+
-+		crypto_chacha_dosimd(ctx->state, dst, src, bytes, 20);
-+
-+		len -= bytes;
-+		if (!len)
-+			break;
-+		dst += bytes;
-+		src += bytes;
-+		simd_relax(simd_context);
-+	}
-+
-+	return true;
-+}
-+
-+static inline bool hchacha20_arch(u32 derived_key[CHACHA20_KEY_WORDS],
-+				  const u8 nonce[HCHACHA20_NONCE_SIZE],
-+				  const u8 key[HCHACHA20_KEY_SIZE],
-+				  simd_context_t *simd_context)
-+{
-+	return false;
-+}
-diff --git a/lib/zinc/chacha20/chacha20.c b/lib/zinc/chacha20/chacha20.c
-index cfbdaf4384dc..c84fe504623f 100644
---- a/lib/zinc/chacha20/chacha20.c
-+++ b/lib/zinc/chacha20/chacha20.c
-@@ -17,6 +17,9 @@
- #include <crypto/algapi.h> // For crypto_xor_cpy.
- #include <crypto/chacha.h>
- 
-+#if defined(CONFIG_ZINC_ARCH_X86_64)
-+#include "chacha20-x86_64-glue.c"
-+#else
- static bool *const chacha20_nobs[] __initconst = { };
- static void __init chacha20_fpu_init(void)
- {
-@@ -34,6 +37,7 @@ static inline bool hchacha20_arch(u32 derived_key[CHACHA20_KEY_WORDS],
- {
- 	return false;
+diff --git a/fs/ubifs/file.c b/fs/ubifs/file.c
+index 5d2ffb1a45fc..512e7d9c60cd 100644
+--- a/fs/ubifs/file.c
++++ b/fs/ubifs/file.c
+@@ -1375,7 +1375,6 @@ static inline int mctime_update_needed(const struct inode *inode,
+ 	return 0;
  }
-+#endif
  
- void chacha20(struct chacha20_ctx *ctx, u8 *dst, const u8 *src, u32 len,
- 	      simd_context_t *simd_context)
+-#ifdef CONFIG_UBIFS_ATIME_SUPPORT
+ /**
+  * ubifs_update_time - update time of inode.
+  * @inode: inode to update
+@@ -1392,6 +1391,9 @@ int ubifs_update_time(struct inode *inode, struct timespec64 *time,
+ 	int iflags = I_DIRTY_TIME;
+ 	int err, release;
+ 
++	if (!IS_ENABLED(CONFIG_UBIFS_ATIME_SUPPORT))
++		return generic_update_time(inode, time, flags);
++
+ 	err = ubifs_budget_space(c, &req);
+ 	if (err)
+ 		return err;
+@@ -1414,7 +1416,6 @@ int ubifs_update_time(struct inode *inode, struct timespec64 *time,
+ 		ubifs_release_budget(c, &req);
+ 	return 0;
+ }
+-#endif
+ 
+ /**
+  * update_mctime - update mtime and ctime of an inode.
+@@ -1623,9 +1624,10 @@ static int ubifs_file_mmap(struct file *file, struct vm_area_struct *vma)
+ 	if (err)
+ 		return err;
+ 	vma->vm_ops = &ubifs_file_vm_ops;
+-#ifdef CONFIG_UBIFS_ATIME_SUPPORT
+-	file_accessed(file);
+-#endif
++
++	if (IS_ENABLED(CONFIG_UBIFS_ATIME_SUPPORT))
++		file_accessed(file);
++
+ 	return 0;
+ }
+ 
+@@ -1663,9 +1665,7 @@ const struct inode_operations ubifs_file_inode_operations = {
+ #ifdef CONFIG_UBIFS_FS_XATTR
+ 	.listxattr   = ubifs_listxattr,
+ #endif
+-#ifdef CONFIG_UBIFS_ATIME_SUPPORT
+ 	.update_time = ubifs_update_time,
+-#endif
+ };
+ 
+ const struct inode_operations ubifs_symlink_inode_operations = {
+@@ -1675,9 +1675,7 @@ const struct inode_operations ubifs_symlink_inode_operations = {
+ #ifdef CONFIG_UBIFS_FS_XATTR
+ 	.listxattr   = ubifs_listxattr,
+ #endif
+-#ifdef CONFIG_UBIFS_ATIME_SUPPORT
+ 	.update_time = ubifs_update_time,
+-#endif
+ };
+ 
+ const struct file_operations ubifs_file_operations = {
+diff --git a/fs/ubifs/super.c b/fs/ubifs/super.c
+index e6da7fc0e2a4..2c647d66e48e 100644
+--- a/fs/ubifs/super.c
++++ b/fs/ubifs/super.c
+@@ -129,9 +129,10 @@ struct inode *ubifs_iget(struct super_block *sb, unsigned long inum)
+ 		goto out_ino;
+ 
+ 	inode->i_flags |= S_NOCMTIME;
+-#ifndef CONFIG_UBIFS_ATIME_SUPPORT
+-	inode->i_flags |= S_NOATIME;
+-#endif
++
++	if (!IS_ENABLED(CONFIG_UBIFS_ATIME_SUPPORT))
++		inode->i_flags |= S_NOATIME;
++
+ 	set_nlink(inode, le32_to_cpu(ino->nlink));
+ 	i_uid_write(inode, le32_to_cpu(ino->uid));
+ 	i_gid_write(inode, le32_to_cpu(ino->gid));
+@@ -2248,11 +2249,10 @@ static struct dentry *ubifs_mount(struct file_system_type *fs_type, int flags,
+ 			goto out_deact;
+ 		/* We do not support atime */
+ 		sb->s_flags |= SB_ACTIVE;
+-#ifndef CONFIG_UBIFS_ATIME_SUPPORT
+-		sb->s_flags |= SB_NOATIME;
+-#else
+-		ubifs_msg(c, "full atime support is enabled.");
+-#endif
++		if (IS_ENABLED(CONFIG_UBIFS_ATIME_SUPPORT))
++			ubifs_msg(c, "full atime support is enabled.");
++		else
++			sb->s_flags |= SB_NOATIME;
+ 	}
+ 
+ 	/* 'fill_super()' opens ubi again so we must close it here */
+diff --git a/fs/ubifs/ubifs.h b/fs/ubifs/ubifs.h
+index 1ae12900e01d..69dfd64d3d00 100644
+--- a/fs/ubifs/ubifs.h
++++ b/fs/ubifs/ubifs.h
+@@ -1996,9 +1996,7 @@ int ubifs_calc_dark(const struct ubifs_info *c, int spc);
+ /* file.c */
+ int ubifs_fsync(struct file *file, loff_t start, loff_t end, int datasync);
+ int ubifs_setattr(struct dentry *dentry, struct iattr *attr);
+-#ifdef CONFIG_UBIFS_ATIME_SUPPORT
+ int ubifs_update_time(struct inode *inode, struct timespec64 *time, int flags);
+-#endif
+ 
+ /* dir.c */
+ struct inode *ubifs_new_inode(struct ubifs_info *c, struct inode *dir,
+-- 
+2.20.1
