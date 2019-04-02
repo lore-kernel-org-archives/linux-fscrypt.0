@@ -1,100 +1,119 @@
-Return-Path: <SRS0=kYvk=SQ=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [RFC PATCH V2 00/14] Consolidate Post read processing code
-Date: Sun, 14 Apr 2019 17:07:50 +0530
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Eric Biggers <ebiggers@kernel.org>
+Date: Tue,  2 Apr 2019 08:45:59 -0700
+Message-Id: <20190402154600.32432-17-ebiggers@kernel.org>
+In-Reply-To: <20190402154600.32432-1-ebiggers@kernel.org>
+References: <20190402154600.32432-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190414113804.26769-1-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
+Subject: [f2fs-dev] [PATCH v4 16/17] ubifs: wire up new fscrypt ioctls
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patchset moves the "post read processing" code into a file of its
-own (i.e. fs/post_read_process.c) and modifies the generic
-do_mpage_readpge() to make use of the functionality provided.
+From: Eric Biggers <ebiggers@google.com>
 
-"Post read processing" implements code to track the state machine that
-needs to be executed after reading data from files that are encrypted
-and/or have verity metadata associated with them.
+Wire up the new ioctls for adding and removing fscrypt keys to/from the
+filesystem, and the new ioctl for retrieving v2 encryption policies.
 
-With these changes in place, the patchset changes Ext4 to use
-mpage_readpage[s] instead of its own custom ext4_readpage[s]()
-functions. This is done to reduce duplicity of code across
-filesystems. Also, Post read processing source files will be built
-only if one of CONFIG_FS_ENCRYPTION and CONFIG_FS_VERITY is enabled.
+FS_IOC_REMOVE_ENCRYPTION_KEY also required making UBIFS use
+fscrypt_drop_inode().
 
-Members of "struct fscrypt_ctx" that tracked status of a "write"
-operation are now made an anonymous structure since the decryption
-state tracking members are now moved into "struct post_read_ctx".
+For more details see Documentation/filesystems/fscrypt.rst, as well as
+the fscrypt patches that added the implementation of these ioctls.
 
-The patchset also modifies fs/buffer.c and fscrypt functionality to
-get file encryption/decryption to work with subpage-sized blocks.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ubifs/ioctl.c | 23 +++++++++++++++++------
+ fs/ubifs/super.c | 11 +++++++++++
+ 2 files changed, 28 insertions(+), 6 deletions(-)
 
-The following fixes from Eric Biggers are prerequisites for this
-patchset,
-  fscrypt: fix race where ->lookup() marks plaintext dentry as ciphertext
-  fscrypt: only set dentry_operations on ciphertext dentries
-  fscrypt: clear DCACHE_ENCRYPTED_NAME when unaliasing directory
-  fscrypt: fix race allowing rename() and link() of ciphertext dentries
-  fscrypt: clean up and improve dentry revalidation
-
-The patches can also be obtained from,
-"https://github.com/chandanr/linux.git subpage-encryption"
-
-TODO:
-1. The subset of the fscrypt_encrypt_page() that deals with
-   FS_CFLG_OWN_PAGES case still needs to be tested. UBIFS seems to be the
-   only user of this piece of code.
-2. Verity changes needs to be added for F2FS and I will add them in the
-   next patchset based on the review comments obtained for the current
-   patchset.
-
-Changelog:
-RFC V1 -> RFC V2:
-1. Describe the purpose of "Post processing code" in the cover letter.
-2. Fix build errors when CONFIG_FS_VERITY is enabled.
-
-Chandan Rajendra (14):
-  ext4: Clear BH_Uptodate flag on decryption error
-  Consolidate "post read processing" into a new file
-  fsverity: Add call back to decide if verity check has to be performed
-  fsverity: Add call back to determine readpage limit
-  fs/mpage.c: Integrate post read processing
-  ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
-  Remove the term "bio" from post read processing
-  Add decryption support for sub-pagesized blocks
-  ext4: Decrypt all boundary blocks when doing buffered write
-  ext4: Decrypt the block that needs to be partially zeroed
-  fscrypt_encrypt_page: Loop across all blocks mapped by a page range
-  ext4: Compute logical block and the page range to be encrypted
-  fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
-  ext4: Enable encryption for subpage-sized blocks
-
- Documentation/filesystems/fscrypt.rst |   4 +-
- fs/Makefile                           |   4 +
- fs/buffer.c                           |  85 +++--
- fs/crypto/bio.c                       | 109 ++++---
- fs/crypto/crypto.c                    |  73 +++--
- fs/crypto/fscrypt_private.h           |   3 +
- fs/ext4/Makefile                      |   2 +-
- fs/ext4/ext4.h                        |   2 -
- fs/ext4/inode.c                       |  47 ++-
- fs/ext4/page-io.c                     |   9 +-
- fs/ext4/readpage.c                    | 445 --------------------------
- fs/ext4/super.c                       |  40 ++-
- fs/f2fs/data.c                        | 148 ++-------
- fs/f2fs/super.c                       |   9 +-
- fs/mpage.c                            |  51 ++-
- fs/post_read_process.c                | 155 +++++++++
- fs/verity/verify.c                    |  12 +
- include/linux/buffer_head.h           |   1 +
- include/linux/fscrypt.h               |  20 +-
- include/linux/fsverity.h              |   2 +
- include/linux/post_read_process.h     |  22 ++
- 21 files changed, 511 insertions(+), 732 deletions(-)
- delete mode 100644 fs/ext4/readpage.c
- create mode 100644 fs/post_read_process.c
- create mode 100644 include/linux/post_read_process.h
-
+diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
+index 82e4e6a30b044..3c640a7e937f4 100644
+--- a/fs/ubifs/ioctl.c
++++ b/fs/ubifs/ioctl.c
+@@ -205,13 +205,20 @@ long ubifs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 		return -EOPNOTSUPP;
+ #endif
+ 	}
+-	case FS_IOC_GET_ENCRYPTION_POLICY: {
+-#ifdef CONFIG_FS_ENCRYPTION
++	case FS_IOC_GET_ENCRYPTION_POLICY:
+ 		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
+-#else
+-		return -EOPNOTSUPP;
+-#endif
+-	}
++
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
++
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		return fscrypt_ioctl_add_key(file, (void __user *)arg);
++
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		return fscrypt_ioctl_remove_key(file, (const void __user *)arg);
++
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
+ 
+ 	default:
+ 		return -ENOTTY;
+@@ -230,6 +237,10 @@ long ubifs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 		break;
+ 	case FS_IOC_SET_ENCRYPTION_POLICY:
+ 	case FS_IOC_GET_ENCRYPTION_POLICY:
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+ 		break;
+ 	default:
+ 		return -ENOIOCTLCMD;
+diff --git a/fs/ubifs/super.c b/fs/ubifs/super.c
+index 8dc2818fdd849..cd4a3e2be2043 100644
+--- a/fs/ubifs/super.c
++++ b/fs/ubifs/super.c
+@@ -334,6 +334,16 @@ static int ubifs_write_inode(struct inode *inode, struct writeback_control *wbc)
+ 	return err;
+ }
+ 
++static int ubifs_drop_inode(struct inode *inode)
++{
++	int drop = generic_drop_inode(inode);
++
++	if (!drop)
++		drop = fscrypt_drop_inode(inode);
++
++	return drop;
++}
++
+ static void ubifs_evict_inode(struct inode *inode)
+ {
+ 	int err;
+@@ -1982,6 +1992,7 @@ const struct super_operations ubifs_super_operations = {
+ 	.destroy_inode = ubifs_destroy_inode,
+ 	.put_super     = ubifs_put_super,
+ 	.write_inode   = ubifs_write_inode,
++	.drop_inode    = ubifs_drop_inode,
+ 	.evict_inode   = ubifs_evict_inode,
+ 	.statfs        = ubifs_statfs,
+ 	.dirty_inode   = ubifs_dirty_inode,
 -- 
-2.19.1
+2.21.0
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
