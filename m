@@ -1,106 +1,204 @@
-Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V2 00/13] Consolidate FS read I/O callbacks code
-Date: Sun, 28 Apr 2019 10:01:08 +0530
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Eric Biggers <ebiggers@kernel.org>
+Date: Tue,  2 Apr 2019 08:45:52 -0700
+Message-Id: <20190402154600.32432-10-ebiggers@kernel.org>
+In-Reply-To: <20190402154600.32432-1-ebiggers@kernel.org>
+References: <20190402154600.32432-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190428043121.30925-1-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Subject: [f2fs-dev] [PATCH v4 09/17] fscrypt: add
+ FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patchset moves the "FS read I/O callbacks" code into a file of its
-own (i.e. fs/read_callbacks.c) and modifies the generic
-do_mpage_readpge() to make use of the functionality provided.
+From: Eric Biggers <ebiggers@google.com>
 
-"FS read I/O callbacks" code implements the state machine that needs
-to be executed after reading data from files that are encrypted and/or
-have verity metadata associated with them.
+Add a new fscrypt ioctl, FS_IOC_GET_ENCRYPTION_KEY_STATUS.  Given a key
+specified by 'struct fscrypt_key_specifier' (the same way a key is
+specified for the other fscrypt key management ioctls), it returns
+status information in a 'struct fscrypt_get_key_status_arg'.
 
-With these changes in place, the patchset changes Ext4 to use
-mpage_readpage[s] instead of its own custom ext4_readpage[s]()
-functions. This is done to reduce duplicity of code across
-filesystems. Also, "FS read I/O callbacks" source files will be built
-only if one of CONFIG_FS_ENCRYPTION and CONFIG_FS_VERITY is enabled.
+The main motivation for this is that applications need to be able to
+check whether an encrypted directory is "unlocked" or not, so that they
+can add the key if it is not, and avoid adding the key (which may
+involve prompting the user for a passphrase) if it already is.
 
-The patchset also modifies fs/buffer.c and fscrypt functionality to
-get file encryption/decryption to work with subpage-sized blocks.
+It's possible to use some workarounds such as checking whether opening a
+regular file fails with ENOKEY, or checking whether the filenames "look
+like gibberish" or not.  However, no workaround is usable in all cases.
 
-The following fixes from Eric Biggers are prerequisites for this
-patchset,
-  fscrypt: fix race where ->lookup() marks plaintext dentry as ciphertext
-  fscrypt: only set dentry_operations on ciphertext dentries
-  fscrypt: clear DCACHE_ENCRYPTED_NAME when unaliasing directory
-  fscrypt: fix race allowing rename() and link() of ciphertext dentries
-  fscrypt: clean up and improve dentry revalidation
+Like the other key management ioctls, the keyrings syscalls may seem at
+first to be a good fit for this.  Unfortunately, they are not.  Even if
+we exposed the keyring ID of the ->s_master_keys keyring and gave
+everyone Search permission on it (note: currently the keyrings
+permission system would also allow everyone to "invalidate" the keyring
+too), the fscrypt keys have an additional state that doesn't map cleanly
+to the keyrings API: the secret can be removed, but we can be still
+tracking the files that were using the key, and the removal can be
+re-attempted or the secret added again.
 
-The patches can also be obtained from,
-"https://github.com/chandanr/linux.git subpage-encryption-v2"
+After later patches, some applications will also need a way to determine
+whether a key was added by the current user vs. by some other user.
+Reserved fields are included in fscrypt_get_key_status_arg for this and
+other future extensions.
 
-Changelog:
-V1 -> V2:
-1. Removed the phrase "post_read_process" from file names and
-   functions. Instead we now use the phrase "read_callbacks" in its
-   place.
-2. When performing changes associated with (1), the changes made by
-   the patch "Remove the term 'bio' from post read processing" are
-   made in the earlier patch "Consolidate 'read callbacks' into a new
-   file". Hence the patch "Remove the term 'bio' from post read
-   processing" is removed from the patchset.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/keyring.c          | 60 ++++++++++++++++++++++++++++++++++++
+ include/linux/fscrypt.h      |  7 +++++
+ include/uapi/linux/fscrypt.h | 15 +++++++++
+ 3 files changed, 82 insertions(+)
 
-RFC V2 -> V1:
-1. Test and verify FS_CFLG_OWN_PAGES subset of fscrypt_encrypt_page()
-   code by executing fstests on UBIFS.
-2. Implement F2fs function call back to check if the contents of a
-   page holding a verity file's data needs to be verified.
-
-RFC V1 -> RFC V2:
-1. Describe the purpose of "Post processing code" in the cover letter.
-2. Fix build errors when CONFIG_FS_VERITY is enabled.
-
-Chandan Rajendra (13):
-  ext4: Clear BH_Uptodate flag on decryption error
-  Consolidate "read callbacks" into a new file
-  fsverity: Add call back to decide if verity check has to be performed
-  fsverity: Add call back to determine readpage limit
-  fs/mpage.c: Integrate read callbacks
-  ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
-  Add decryption support for sub-pagesized blocks
-  ext4: Decrypt all boundary blocks when doing buffered write
-  ext4: Decrypt the block that needs to be partially zeroed
-  fscrypt_encrypt_page: Loop across all blocks mapped by a page range
-  ext4: Compute logical block and the page range to be encrypted
-  fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
-  ext4: Enable encryption for subpage-sized blocks
-
- Documentation/filesystems/fscrypt.rst |   4 +-
- fs/Kconfig                            |   4 +
- fs/Makefile                           |   4 +
- fs/buffer.c                           |  83 +++--
- fs/crypto/Kconfig                     |   1 +
- fs/crypto/bio.c                       | 111 ++++---
- fs/crypto/crypto.c                    |  73 +++--
- fs/crypto/fscrypt_private.h           |   3 +
- fs/ext4/Makefile                      |   2 +-
- fs/ext4/ext4.h                        |   2 -
- fs/ext4/inode.c                       |  47 ++-
- fs/ext4/page-io.c                     |   9 +-
- fs/ext4/readpage.c                    | 445 --------------------------
- fs/ext4/super.c                       |  39 ++-
- fs/f2fs/data.c                        | 148 ++-------
- fs/f2fs/super.c                       |  15 +-
- fs/mpage.c                            |  51 ++-
- fs/read_callbacks.c                   | 155 +++++++++
- fs/verity/Kconfig                     |   1 +
- fs/verity/verify.c                    |  12 +
- include/linux/buffer_head.h           |   1 +
- include/linux/fscrypt.h               |  20 +-
- include/linux/fsverity.h              |   2 +
- include/linux/read_callbacks.h        |  22 ++
- 24 files changed, 522 insertions(+), 732 deletions(-)
- delete mode 100644 fs/ext4/readpage.c
- create mode 100644 fs/read_callbacks.c
- create mode 100644 include/linux/read_callbacks.h
-
+diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+index ee9be002c1490..08e14497c8e30 100644
+--- a/fs/crypto/keyring.c
++++ b/fs/crypto/keyring.c
+@@ -11,6 +11,7 @@
+  *
+  * - FS_IOC_ADD_ENCRYPTION_KEY: add a key
+  * - FS_IOC_REMOVE_ENCRYPTION_KEY: remove a key
++ * - FS_IOC_GET_ENCRYPTION_KEY_STATUS: get key status
+  */
+ 
+ #include <linux/key-type.h>
+@@ -482,6 +483,65 @@ int fscrypt_ioctl_remove_key(struct file *filp, const void __user *uarg)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_ioctl_remove_key);
+ 
++/*
++ * Retrieve the status of an fscrypt master encryption key.
++ *
++ * We set ->status to indicate whether the key is absent, present, or
++ * incompletely removed.  "Incompletely removed" means that the master key
++ * secret has been removed, but some files which had been unlocked with it are
++ * still in use.  This field allows applications to easily determine the state
++ * of an encrypted directory without using a hack such as trying to open a
++ * regular file in it (which can confuse the "incompletely removed" state with
++ * absent or present).
++ */
++int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
++{
++	struct super_block *sb = file_inode(filp)->i_sb;
++	struct fscrypt_get_key_status_arg arg;
++	struct key *key;
++	struct fscrypt_master_key *mk;
++	int err;
++
++	if (copy_from_user(&arg, uarg, sizeof(arg)))
++		return -EFAULT;
++
++	if (!valid_key_spec(&arg.key_spec))
++		return -EINVAL;
++
++	if (memchr_inv(arg.__reserved, 0, sizeof(arg.__reserved)))
++		return -EINVAL;
++
++	memset(arg.__out_reserved, 0, sizeof(arg.__out_reserved));
++
++	key = fscrypt_find_master_key(sb, &arg.key_spec);
++	if (IS_ERR(key)) {
++		if (key != ERR_PTR(-ENOKEY))
++			return PTR_ERR(key);
++		arg.status = FSCRYPT_KEY_STATUS_ABSENT;
++		err = 0;
++		goto out;
++	}
++	mk = key->payload.data[0];
++	down_read(&key->sem);
++
++	if (!is_master_key_secret_present(&mk->mk_secret)) {
++		arg.status = FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED;
++		err = 0;
++		goto out_release_key;
++	}
++
++	arg.status = FSCRYPT_KEY_STATUS_PRESENT;
++	err = 0;
++out_release_key:
++	up_read(&key->sem);
++	key_put(key);
++out:
++	if (!err && copy_to_user(uarg, &arg, sizeof(arg)))
++		err = -EFAULT;
++	return err;
++}
++EXPORT_SYMBOL_GPL(fscrypt_ioctl_get_key_status);
++
+ int __init fscrypt_init_keyring(void)
+ {
+ 	return register_key_type(&key_type_fscrypt);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index b6f8832dadba4..5f251cad255b8 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -116,6 +116,7 @@ extern int fscrypt_inherit_context(struct inode *, struct inode *,
+ extern void fscrypt_sb_free(struct super_block *sb);
+ extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
+ extern int fscrypt_ioctl_remove_key(struct file *filp, const void __user *arg);
++extern int fscrypt_ioctl_get_key_status(struct file *filp, void __user *arg);
+ 
+ /* keysetup.c */
+ extern int fscrypt_get_encryption_info(struct inode *);
+@@ -335,6 +336,12 @@ static inline int fscrypt_ioctl_remove_key(struct file *filp,
+ 	return -EOPNOTSUPP;
+ }
+ 
++static inline int fscrypt_ioctl_get_key_status(struct file *filp,
++					       void __user *arg)
++{
++	return -EOPNOTSUPP;
++}
++
+ /* keysetup.c */
+ static inline int fscrypt_get_encryption_info(struct inode *inode)
+ {
+diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+index 3302a407131e6..042e70a4ff7ee 100644
+--- a/include/uapi/linux/fscrypt.h
++++ b/include/uapi/linux/fscrypt.h
+@@ -71,11 +71,26 @@ struct fscrypt_remove_key_arg {
+ 	__u32 __reserved[6];
+ };
+ 
++/* Struct passed to FS_IOC_GET_ENCRYPTION_KEY_STATUS */
++struct fscrypt_get_key_status_arg {
++	/* input */
++	struct fscrypt_key_specifier key_spec;
++	__u32 __reserved[6];
++
++	/* output */
++#define FSCRYPT_KEY_STATUS_ABSENT		1
++#define FSCRYPT_KEY_STATUS_PRESENT		2
++#define FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED	3
++	__u32 status;
++	__u32 __out_reserved[15];
++};
++
+ #define FS_IOC_SET_ENCRYPTION_POLICY	  _IOR('f', 19, struct fscrypt_policy)
+ #define FS_IOC_GET_ENCRYPTION_PWSALT	  _IOW('f', 20, __u8[16])
+ #define FS_IOC_GET_ENCRYPTION_POLICY	  _IOW('f', 21, struct fscrypt_policy)
+ #define FS_IOC_ADD_ENCRYPTION_KEY	 _IOWR('f', 23, struct fscrypt_add_key_arg)
+ #define FS_IOC_REMOVE_ENCRYPTION_KEY	  _IOW('f', 24, struct fscrypt_remove_key_arg)
++#define FS_IOC_GET_ENCRYPTION_KEY_STATUS _IOWR('f', 25, struct fscrypt_get_key_status_arg)
+ 
+ /**********************************************************************/
+ 
 -- 
-2.19.1
+2.21.0
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
