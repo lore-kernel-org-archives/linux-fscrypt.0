@@ -1,79 +1,69 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-Date: Wed, 3 Apr 2019 13:36:51 -0700
-From: Eric Biggers <ebiggers@kernel.org>
+Return-Path: <SRS0=dgSv=SF=ftp.linux.org.uk=viro@kernel.org>
+Date: Wed, 3 Apr 2019 19:34:12 +0100
+From: Al Viro <viro@zeniv.linux.org.uk>
 Subject: Re: [PATCH v4 07/17] fs/dcache.c: add shrink_dcache_inode()
-Message-ID: <20190403203650.GA216239@gmail.com>
+Message-ID: <20190403183411.GV2217@ZenIV.linux.org.uk>
 References: <20190402154600.32432-1-ebiggers@kernel.org>
  <20190402154600.32432-8-ebiggers@kernel.org>
- <20190403183411.GV2217@ZenIV.linux.org.uk>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190403183411.GV2217@ZenIV.linux.org.uk>
-Sender: keyrings-owner@vger.kernel.org
-To: Al Viro <viro@zeniv.linux.org.uk>
+In-Reply-To: <20190402154600.32432-8-ebiggers@kernel.org>
+Sender: Al Viro <viro@ftp.linux.org.uk>
+To: Eric Biggers <ebiggers@kernel.org>
 Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, Apr 03, 2019 at 07:34:12PM +0100, Al Viro wrote:
-> On Tue, Apr 02, 2019 at 08:45:50AM -0700, Eric Biggers wrote:
-> > From: Eric Biggers <ebiggers@google.com>
-> > 
-> > When a filesystem encryption key is removed, we need all files which had
-> > been "unlocked" (had ->i_crypt_info set up) with it to appear "locked"
-> > again.  This is most easily done by evicting the inodes.  This can
-> > currently be done using 'echo 2 > /proc/sys/vm/drop_caches'; however,
-> > that is overkill and not usable by non-root users.
-> > 
-> > To evict just the needed inodes we also need the ability to evict those
-> > inodes' dentries, since an inode is pinned by its dentries.  Therefore,
-> > add a function shrink_dcache_inode() which iterates through an inode's
-> > dentries and evicts any unused ones as well as any unused descendants
-> > (since there may be negative dentries pinning the inode's dentries).
+On Tue, Apr 02, 2019 at 08:45:50AM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
 > 
-> Huh?
+> When a filesystem encryption key is removed, we need all files which had
+> been "unlocked" (had ->i_crypt_info set up) with it to appear "locked"
+> again.  This is most easily done by evicting the inodes.  This can
+> currently be done using 'echo 2 > /proc/sys/vm/drop_caches'; however,
+> that is overkill and not usable by non-root users.
 > 
-> > + * Evict all unused aliases of the specified inode from the dcache.  This is
-> > + * intended to be used when trying to evict a specific inode, since inodes are
-> > + * pinned by their dentries.  We also have to descend to ->d_subdirs for each
-> > + * alias, since aliases may be pinned by negative child dentries.
-> > + */
-> > +void shrink_dcache_inode(struct inode *inode)
-> > +{
-> > +	for (;;) {
-> > +		struct select_data data;
-> > +		struct dentry *dentry;
-> > +
-> > +		INIT_LIST_HEAD(&data.dispose);
-> > +		data.start = NULL;
-> > +		data.found = 0;
-> > +
-> > +		spin_lock(&inode->i_lock);
-> > +		hlist_for_each_entry(dentry, &inode->i_dentry, d_u.d_alias)
-> > +			d_walk(dentry, &data, select_collect);
-> > +		spin_unlock(&inode->i_lock);
-> > +
-> > +		if (!data.found)
-> > +			break;
-> > +
-> > +		shrink_dentry_list(&data.dispose);
-> > +		cond_resched();
-> 
-> This is... odd.  What's wrong with
-> 	if (S_ISDIR(inode->i_mode)) {
-> 		dentry = d_find_any_alias(inode);
-> 		if (dentry) {
-> 			shrink_dcache_parent(dentry);
-> 			dput(dentry);
-> 		}
-> 	}
-> 	d_prune_aliases(inode);
-> instead of that thing?
+> To evict just the needed inodes we also need the ability to evict those
+> inodes' dentries, since an inode is pinned by its dentries.  Therefore,
+> add a function shrink_dcache_inode() which iterates through an inode's
+> dentries and evicts any unused ones as well as any unused descendants
+> (since there may be negative dentries pinning the inode's dentries).
 
-That works, as far as I can tell, so I'll do that instead.
+Huh?
 
-I don't think I noticed that d_prune_aliases() existed when I wrote this.
+> + * Evict all unused aliases of the specified inode from the dcache.  This is
+> + * intended to be used when trying to evict a specific inode, since inodes are
+> + * pinned by their dentries.  We also have to descend to ->d_subdirs for each
+> + * alias, since aliases may be pinned by negative child dentries.
+> + */
+> +void shrink_dcache_inode(struct inode *inode)
+> +{
+> +	for (;;) {
+> +		struct select_data data;
+> +		struct dentry *dentry;
+> +
+> +		INIT_LIST_HEAD(&data.dispose);
+> +		data.start = NULL;
+> +		data.found = 0;
+> +
+> +		spin_lock(&inode->i_lock);
+> +		hlist_for_each_entry(dentry, &inode->i_dentry, d_u.d_alias)
+> +			d_walk(dentry, &data, select_collect);
+> +		spin_unlock(&inode->i_lock);
+> +
+> +		if (!data.found)
+> +			break;
+> +
+> +		shrink_dentry_list(&data.dispose);
+> +		cond_resched();
 
-Thanks for the suggestion!
-
-- Eric
+This is... odd.  What's wrong with
+	if (S_ISDIR(inode->i_mode)) {
+		dentry = d_find_any_alias(inode);
+		if (dentry) {
+			shrink_dcache_parent(dentry);
+			dput(dentry);
+		}
+	}
+	d_prune_aliases(inode);
+instead of that thing?
