@@ -1,122 +1,33 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Fri, 26 Apr 2019 13:41:49 -0700
-Message-Id: <20190426204153.101861-4-ebiggers@kernel.org>
-In-Reply-To: <20190426204153.101861-1-ebiggers@kernel.org>
-References: <20190426204153.101861-1-ebiggers@kernel.org>
-MIME-Version: 1.0
-Subject: [f2fs-dev] [RFC PATCH 3/7] common/encrypt: support requiring other
- encryption settings
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Return-Path: <SRS0=w7HQ=SL=insidesecure.com=pvanleeuwen@kernel.org>
+From: Pascal Van Leeuwen <pvanleeuwen@insidesecure.com>
+Subject: RE: [PATCH 0/17] Add zinc using existing algorithm implementations
+Date: Tue, 9 Apr 2019 16:14:10 +0000
+Message-ID: 
+ <AM6PR09MB352310B03190FD2454DA259FD22D0@AM6PR09MB3523.eurprd09.prod.outlook.com>
+References: <20190322062740.nrwfx2rvmt7lzotj@gondor.apana.org.au>
+ <CAKv+Gu_mgyzqUCeb+wke--8Gn8YbjOb8jyrSgFr3-tcNP8ccEQ@mail.gmail.com>
+ <CAHk-=wg2LJ5qQ0B2y+_6Ue62SBP4h9MLxLvn89bfcP7Cp2ac6A@mail.gmail.com>
+ <AM5PR0901MB1155FD05113D6DC79A6274CED25E0@AM5PR0901MB1155.eurprd09.prod.outlook.com>
+ <20190326094603.nyfi2dsnt6a6u57f@08efd375aeba>
+In-Reply-To: <20190326094603.nyfi2dsnt6a6u57f@08efd375aeba>
+Content-Language: en-US
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Content-Transfer-Encoding: quoted-printable
+MIME-Version: 1.0
+To: Riku Voipio <riku.voipio@iki.fi>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, "David S. Miller  <davem@davemloft.net>,  Jason A. Donenfeld  <Jason@zx2c4.com>, Eric Biggers" <ebiggers@kernel.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, "linux-fscrypt@vger.kernel.org" <linux-fscrypt@vger.kernel.org>, linux-arm-kernel <linux-arm-kernel@lists.infradead.org>, LKML <linux-kernel@vger.kernel.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
 
-Update _require_scratch_encryption() to support checking for kernel
-support for contents and filenames encryption modes besides the default.
-This will be used by some of the ciphertext verification tests.
+> The firmware files for eip197(?) crypto accelerator are secrets we are
+> not
+> allowed download anywhere from.
+>
+Riku,
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- common/encrypt | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 58 insertions(+)
+The driver update I'm working on will fix that issue for you ;-)
+I'm planning to upstream my changes but I still need to find the right
+approach for doing so.
 
-diff --git a/common/encrypt b/common/encrypt
-index 54d873fa..37f16b94 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -4,6 +4,15 @@
- #
- # Functions for setting up and testing file encryption
- 
-+#
-+# _require_scratch_encryption [-c CONTENTS_MODE] [-n FILENAMES_MODE]
-+#
-+# Require encryption support on the scratch device.
-+#
-+# This checks for support for the default type of encryption policy (AES-256-XTS
-+# and AES-256-CTS).  Options can be specified to also require support for a
-+# different type of encryption policy.
-+#
- _require_scratch_encryption()
- {
- 	_require_scratch
-@@ -44,9 +53,58 @@ _require_scratch_encryption()
- 		_notrun "kernel does not support $FSTYP encryption"
- 	fi
- 	rmdir $SCRATCH_MNT/tmpdir
-+
-+	# If required, check for support for the specific type of encryption
-+	# policy required by the test.
-+	if [ $# -ne 0 ]; then
-+		_require_encryption_policy_support $SCRATCH_MNT "$@"
-+	fi
-+
- 	_scratch_unmount
- }
- 
-+_require_encryption_policy_support()
-+{
-+	local mnt=$1
-+	local dir=$mnt/tmpdir
-+	local set_encpolicy_args=""
-+	local c
-+
-+	OPTIND=2
-+	while getopts "c:n:" c; do
-+		case $c in
-+		c|n)
-+			set_encpolicy_args+=" -$c $OPTARG"
-+			;;
-+		*)
-+			_fail "Unrecognized option '$c'"
-+			;;
-+		esac
-+	done
-+	set_encpolicy_args=${set_encpolicy_args# }
-+
-+	echo "Checking whether kernel supports encryption policy: $set_encpolicy_args" \
-+		>> $seqres.full
-+
-+	mkdir $dir
-+	_require_command "$KEYCTL_PROG" keyctl
-+	_new_session_keyring
-+	local keydesc=$(_generate_encryption_key)
-+	if _set_encpolicy $dir $keydesc $set_encpolicy_args \
-+		2>&1 >>$seqres.full | egrep -q 'Invalid argument'; then
-+		_notrun "kernel does not support encryption policy: '$set_encpolicy_args'"
-+	fi
-+	# fscrypt allows setting policies with modes it knows about, even
-+	# without kernel crypto API support.  E.g. a policy using Adiantum
-+	# encryption can be set on a kernel without CONFIG_CRYPTO_ADIANTUM.
-+	# But actually trying to use such an encrypted directory will fail.
-+	if ! touch $dir/file; then
-+		_notrun "encryption policy '$set_encpolicy_args' is unusable; probably missing kernel crypto API support"
-+	fi
-+	$KEYCTL_PROG clear @s
-+	rm -r $dir
-+}
-+
- _scratch_mkfs_encrypted()
- {
- 	case $FSTYP in
--- 
-2.21.0.593.g511ec345e18-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+Regards,
+Pascal
