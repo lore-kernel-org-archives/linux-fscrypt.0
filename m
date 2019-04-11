@@ -1,8 +1,12 @@
-Return-Path: <SRS0=Zw4/=ST=mit.edu=tytso@kernel.org>
-Date: Wed, 17 Apr 2019 12:41:37 -0400
-From: "Theodore Ts'o" <tytso@mit.edu>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:40404 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726585AbfDKR2s (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 11 Apr 2019 13:28:48 -0400
+Date: Thu, 11 Apr 2019 10:28:45 -0700
+From: Eric Biggers <ebiggers@kernel.org>
 Subject: Re: [PATCH v2 1/2] vfs: use READ_ONCE() to access ->i_link
-Message-ID: <20190417164137.GH4686@mit.edu>
+Message-ID: <20190411172844.GA225654@gmail.com>
 References: <20190410202115.64501-1-ebiggers@kernel.org>
  <20190410202115.64501-2-ebiggers@kernel.org>
  <20190410210657.GA2217@ZenIV.linux.org.uk>
@@ -12,8 +16,9 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20190411022514.GC2217@ZenIV.linux.org.uk>
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: Al Viro <viro@zeniv.linux.org.uk>
-Cc: Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 On Thu, Apr 11, 2019 at 03:25:15AM +0100, Al Viro wrote:
@@ -40,7 +45,12 @@ On Thu, Apr 11, 2019 at 03:25:15AM +0100, Al Viro wrote:
 > Anyway, I can pick that READ_ONCE() patch through vfs.git if you wish,
 > or it can go through your tree with my Acked-by - up to you...
 
-Al, I'll take it through the fscrypt tree with your Acked-by, if you
-don't mind.
+Unless you expect merge conflicts, it's easier for me to take it through the
+fscrypt tree, since it's a small patch and the second patch technically isn't
+correct without it.  I'll add your Acked-by.
 
-					- Ted
+Are you planning to review the second patch too?
+
+Thanks!
+
+- Eric
