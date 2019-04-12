@@ -1,96 +1,122 @@
-Return-Path: <keyrings-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v5 15/16] ubifs: wire up new fscrypt ioctls
-Date: Thu, 18 Apr 2019 16:29:22 -0700
-Message-Id: <20190418232923.250800-16-ebiggers@kernel.org>
-In-Reply-To: <20190418232923.250800-1-ebiggers@kernel.org>
-References: <20190418232923.250800-1-ebiggers@kernel.org>
+Return-Path: <SRS0=XRRt=SO=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [RFC PATCH 05/14] fs/mpage.c: Integrate post read processing
+Date: Fri, 12 Apr 2019 22:40:32 +0530
+In-Reply-To: <20190412171041.31995-1-chandan@linux.ibm.com>
+References: <20190412171041.31995-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: keyrings-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Message-Id: <20190412171041.31995-6-chandan@linux.ibm.com>
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+This commit adds code to make do_mpage_readpage() to be "post read
+processing" aware i.e. for files requiring decryption/verification,
+do_mpage_readpage() now allocates a context structure and assigns the
+corresponding pointer to bio->bi_private. At endio time, a non-zero
+bio->bi_private indicates that after the read operation is performed, the
+bio's payload needs to be processed further before handing over the data
+to user space.
 
-Wire up the new ioctls for adding and removing fscrypt keys to/from the
-filesystem, and the new ioctl for retrieving v2 encryption policies.
+The context structure is used for tracking the state machine associated
+with post read processing.
 
-FS_IOC_REMOVE_ENCRYPTION_KEY also required making UBIFS use
-fscrypt_drop_inode().
-
-For more details see Documentation/filesystems/fscrypt.rst and the
-fscrypt patches that added the implementation of these ioctls.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/ubifs/ioctl.c | 16 ++++++++++++++++
- fs/ubifs/super.c | 11 +++++++++++
- 2 files changed, 27 insertions(+)
+ fs/mpage.c | 45 +++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 43 insertions(+), 2 deletions(-)
 
-diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
-index 82e4e6a30b044..c379b2505c4df 100644
---- a/fs/ubifs/ioctl.c
-+++ b/fs/ubifs/ioctl.c
-@@ -213,6 +213,18 @@ long ubifs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- #endif
+diff --git a/fs/mpage.c b/fs/mpage.c
+index 3f19da75178b..b1fe1afa626e 100644
+--- a/fs/mpage.c
++++ b/fs/mpage.c
+@@ -30,6 +30,10 @@
+ #include <linux/backing-dev.h>
+ #include <linux/pagevec.h>
+ #include <linux/cleancache.h>
++#include <linux/fsverity.h>
++#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
++#include <linux/post_read_process.h>
++#endif
+ #include "internal.h"
+ 
+ /*
+@@ -50,6 +54,20 @@ static void mpage_end_io(struct bio *bio)
+ 	int i;
+ 	struct bvec_iter_all iter_all;
+ 
++#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
++	if (!bio->bi_status && bio->bi_private) {
++		struct bio_post_read_ctx *ctx;
++
++		ctx = bio->bi_private;
++
++		bio_post_read_processing(ctx);
++		return;
++	}
++
++	if (bio->bi_private)
++		put_bio_post_read_ctx((struct bio_post_read_ctx *)(bio->bi_private));
++#endif
++
+ 	bio_for_each_segment_all(bv, bio, i, iter_all) {
+ 		struct page *page = bv->bv_page;
+ 		page_endio(page, bio_op(bio),
+@@ -189,7 +207,13 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 
+ 	block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
+ 	last_block = block_in_file + args->nr_pages * blocks_per_page;
+-	last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
++#ifdef CONFIG_FS_VERITY
++	if (IS_VERITY(inode) && inode->i_sb->s_vop->readpage_limit)
++		last_block_in_file = inode->i_sb->s_vop->readpage_limit(inode);
++	else
++#endif
++		last_block_in_file = (i_size_read(inode) + blocksize - 1)
++			>> blkbits;
+ 	if (last_block > last_block_in_file)
+ 		last_block = last_block_in_file;
+ 	page_block = 0;
+@@ -277,6 +301,10 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 	if (first_hole != blocks_per_page) {
+ 		zero_user_segment(page, first_hole << blkbits, PAGE_SIZE);
+ 		if (first_hole == 0) {
++#ifdef CONFIG_FS_VERITY
++			if (IS_VERITY(inode) && inode->i_sb->s_vop->check_hole)
++				inode->i_sb->s_vop->check_hole(inode, page);
++#endif
+ 			SetPageUptodate(page);
+ 			unlock_page(page);
+ 			goto out;
+@@ -299,7 +327,11 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 
+ alloc_new:
+ 	if (args->bio == NULL) {
+-		if (first_hole == blocks_per_page) {
++#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
++		struct bio_post_read_ctx *ctx;
++#endif
++		if (first_hole == blocks_per_page
++			&& !(IS_ENCRYPTED(inode) || IS_VERITY(inode))) {
+ 			if (!bdev_read_page(bdev, blocks[0] << (blkbits - 9),
+ 								page))
+ 				goto out;
+@@ -310,6 +342,15 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 					gfp);
+ 		if (args->bio == NULL)
+ 			goto confused;
++
++#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
++		ctx = get_bio_post_read_ctx(inode, args->bio, page->index);
++		if (IS_ERR(ctx)) {
++			bio_put(args->bio);
++			args->bio = NULL;
++			goto confused;
++		}
++#endif
  	}
  
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
-+
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_add_key(file, (void __user *)arg);
-+
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_remove_key(file, (const void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-+		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
-+
- 	default:
- 		return -ENOTTY;
- 	}
-@@ -230,6 +242,10 @@ long ubifs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- 		break;
- 	case FS_IOC_SET_ENCRYPTION_POLICY:
- 	case FS_IOC_GET_ENCRYPTION_POLICY:
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
- 		break;
- 	default:
- 		return -ENOIOCTLCMD;
-diff --git a/fs/ubifs/super.c b/fs/ubifs/super.c
-index 19fd210987457..2d68cfd872f64 100644
---- a/fs/ubifs/super.c
-+++ b/fs/ubifs/super.c
-@@ -335,6 +335,16 @@ static int ubifs_write_inode(struct inode *inode, struct writeback_control *wbc)
- 	return err;
- }
- 
-+static int ubifs_drop_inode(struct inode *inode)
-+{
-+	int drop = generic_drop_inode(inode);
-+
-+	if (!drop)
-+		drop = fscrypt_drop_inode(inode);
-+
-+	return drop;
-+}
-+
- static void ubifs_evict_inode(struct inode *inode)
- {
- 	int err;
-@@ -1983,6 +1993,7 @@ const struct super_operations ubifs_super_operations = {
- 	.destroy_inode = ubifs_destroy_inode,
- 	.put_super     = ubifs_put_super,
- 	.write_inode   = ubifs_write_inode,
-+	.drop_inode    = ubifs_drop_inode,
- 	.evict_inode   = ubifs_evict_inode,
- 	.statfs        = ubifs_statfs,
- 	.dirty_inode   = ubifs_dirty_inode,
+ 	length = first_hole << blkbits;
 -- 
-2.21.0.392.gf8f6787159e-goog
+2.19.1
