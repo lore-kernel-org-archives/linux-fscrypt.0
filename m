@@ -1,98 +1,90 @@
 Return-Path: <SRS0=XRRt=SO=linux.ibm.com=chandan@kernel.org>
 From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [RFC PATCH 13/14] fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
-Date: Fri, 12 Apr 2019 22:40:40 +0530
+Subject: [RFC PATCH 09/14] ext4: Decrypt all boundary blocks when doing buffered write
+Date: Fri, 12 Apr 2019 22:40:36 +0530
 In-Reply-To: <20190412171041.31995-1-chandan@linux.ibm.com>
 References: <20190412171041.31995-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190412171041.31995-14-chandan@linux.ibm.com>
+Message-Id: <20190412171041.31995-10-chandan@linux.ibm.com>
 To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
 Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-For subpage-sized blocks, this commit adds code to encrypt all zeroed
-out blocks mapped by a page.
+With subpage sized blocks, ext4_block_write_begin() can have up to two
+blocks to decrypt. Hence this commit invokes fscrypt_decrypt_page() for
+each of those blocks.
 
 Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/crypto/bio.c | 40 ++++++++++++++++++----------------------
- 1 file changed, 18 insertions(+), 22 deletions(-)
+ fs/ext4/inode.c | 33 +++++++++++++++++++++++----------
+ 1 file changed, 23 insertions(+), 10 deletions(-)
 
-diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
-index 83de1e46f546..2c6ce4218fd4 100644
---- a/fs/crypto/bio.c
-+++ b/fs/crypto/bio.c
-@@ -106,29 +106,23 @@ EXPORT_SYMBOL(fscrypt_pullback_bio_page);
- int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 				sector_t pblk, unsigned int len)
- {
--	struct fscrypt_ctx *ctx;
- 	struct page *ciphertext_page = NULL;
- 	struct bio *bio;
-+	u64 total_bytes, page_bytes;
- 	int ret, err = 0;
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 1327e04334df..51744a3c3964 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -1156,12 +1156,14 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+ 	unsigned to = from + len;
+ 	struct inode *inode = page->mapping->host;
+ 	unsigned block_start, block_end;
+-	sector_t block;
++	sector_t block, page_blk_nr;
+ 	int err = 0;
+ 	unsigned blocksize = inode->i_sb->s_blocksize;
+ 	unsigned bbits;
+-	struct buffer_head *bh, *head, *wait[2], **wait_bh = wait;
++	struct buffer_head *bh, *head, *wait[2];
++	int nr_wait = 0;
+ 	bool decrypt = false;
++	int i;
  
--	BUG_ON(inode->i_sb->s_blocksize != PAGE_SIZE);
--
--	ctx = fscrypt_get_ctx(inode, GFP_NOFS);
--	if (IS_ERR(ctx))
--		return PTR_ERR(ctx);
-+	total_bytes = len << inode->i_blkbits;
- 
--	ciphertext_page = fscrypt_alloc_bounce_page(ctx, GFP_NOWAIT);
--	if (IS_ERR(ciphertext_page)) {
--		err = PTR_ERR(ciphertext_page);
--		goto errout;
--	}
-+	while (total_bytes) {
-+		page_bytes = min_t(u64, total_bytes, PAGE_SIZE);
- 
--	while (len--) {
--		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk,
--					     ZERO_PAGE(0), ciphertext_page,
--					     PAGE_SIZE, 0, GFP_NOFS);
--		if (err)
-+		ciphertext_page = fscrypt_encrypt_page(inode, ZERO_PAGE(0),
-+						page_bytes, 0, lblk, GFP_NOFS);
-+		if (IS_ERR(ciphertext_page)) {
-+			err = PTR_ERR(ciphertext_page);
-+			ciphertext_page = NULL;
- 			goto errout;
-+		}
- 
- 		bio = bio_alloc(GFP_NOWAIT, 1);
- 		if (!bio) {
-@@ -139,9 +133,8 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 		bio->bi_iter.bi_sector =
- 			pblk << (inode->i_sb->s_blocksize_bits - 9);
- 		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
--		ret = bio_add_page(bio, ciphertext_page,
--					inode->i_sb->s_blocksize, 0);
--		if (ret != inode->i_sb->s_blocksize) {
-+		ret = bio_add_page(bio, ciphertext_page, page_bytes, 0);
-+		if (ret != page_bytes) {
- 			/* should never happen! */
- 			WARN_ON(1);
- 			bio_put(bio);
-@@ -154,12 +147,15 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 		bio_put(bio);
- 		if (err)
- 			goto errout;
--		lblk++;
--		pblk++;
-+
-+		lblk += page_bytes >> inode->i_blkbits;
-+		pblk += page_bytes >> inode->i_blkbits;
-+		total_bytes -= page_bytes;
+ 	BUG_ON(!PageLocked(page));
+ 	BUG_ON(from > PAGE_SIZE);
+@@ -1213,25 +1215,36 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+ 		    !buffer_unwritten(bh) &&
+ 		    (block_start < from || block_end > to)) {
+ 			ll_rw_block(REQ_OP_READ, 0, 1, &bh);
+-			*wait_bh++ = bh;
++			wait[nr_wait++] = bh;
+ 			decrypt = IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode);
+ 		}
  	}
- 	err = 0;
- errout:
--	fscrypt_release_ctx(ctx);
-+	if (!IS_ERR_OR_NULL(ciphertext_page))
-+		fscrypt_restore_control_page(ciphertext_page);
+ 	/*
+ 	 * If we issued read requests, let them complete.
+ 	 */
+-	while (wait_bh > wait) {
+-		wait_on_buffer(*--wait_bh);
+-		if (!buffer_uptodate(*wait_bh))
++	for (i = 0; i < nr_wait; i++) {
++		wait_on_buffer(wait[i]);
++		if (!buffer_uptodate(wait[i]))
+ 			err = -EIO;
+ 	}
+ 	if (unlikely(err)) {
+ 		page_zero_new_buffers(page, from, to);
+ 	} else if (decrypt) {
+-		err = fscrypt_decrypt_page(page->mapping->host, page,
+-				PAGE_SIZE, 0, page->index);
+-		if (err)
+-			clear_buffer_uptodate(*wait_bh);
++		page_blk_nr = (sector_t)page->index << (PAGE_SHIFT - bbits);
++
++		for (i = 0; i < nr_wait; i++) {
++			int err2;
++
++			block = page_blk_nr + (bh_offset(wait[i]) >> bbits);
++			err2 = fscrypt_decrypt_page(page->mapping->host, page,
++						wait[i]->b_size,
++						bh_offset(wait[i]),
++						block);
++			if (err2) {
++				clear_buffer_uptodate(wait[i]);
++				err = err2;
++			}
++		}
+ 	}
+ 
  	return err;
- }
- EXPORT_SYMBOL(fscrypt_zeroout_range);
 -- 
 2.19.1
