@@ -1,14 +1,14 @@
-Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
+Return-Path: <SRS0=XRRt=SO=linux.ibm.com=chandan@kernel.org>
 From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V2 06/13] ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
-Date: Sun, 28 Apr 2019 10:01:14 +0530
-In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
-References: <20190428043121.30925-1-chandan@linux.ibm.com>
+Subject: [RFC PATCH 06/14] ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
+Date: Fri, 12 Apr 2019 22:40:33 +0530
+In-Reply-To: <20190412171041.31995-1-chandan@linux.ibm.com>
+References: <20190412171041.31995-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190428043121.30925-7-chandan@linux.ibm.com>
+Message-Id: <20190412171041.31995-7-chandan@linux.ibm.com>
 To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 Now that do_mpage_readpage() is "post read process" aware, this commit
@@ -19,8 +19,8 @@ Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
  fs/ext4/Makefile   |   2 +-
  fs/ext4/inode.c    |   5 +-
- fs/ext4/readpage.c | 314 ---------------------------------------------
- 3 files changed, 3 insertions(+), 318 deletions(-)
+ fs/ext4/readpage.c | 295 ---------------------------------------------
+ 3 files changed, 3 insertions(+), 299 deletions(-)
  delete mode 100644 fs/ext4/readpage.c
 
 diff --git a/fs/ext4/Makefile b/fs/ext4/Makefile
@@ -61,10 +61,10 @@ index 05b258db8673..1327e04334df 100644
  static void ext4_invalidatepage(struct page *page, unsigned int offset,
 diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
 deleted file mode 100644
-index e363dededc21..000000000000
+index 8943fc41fd33..000000000000
 --- a/fs/ext4/readpage.c
 +++ /dev/null
-@@ -1,314 +0,0 @@
+@@ -1,295 +0,0 @@
 -// SPDX-License-Identifier: GPL-2.0
 -/*
 - * linux/fs/ext4/readpage.c
@@ -111,7 +111,7 @@ index e363dededc21..000000000000
 -#include <linux/backing-dev.h>
 -#include <linux/pagevec.h>
 -#include <linux/cleancache.h>
--#include <linux/read_callbacks.h>
+-#include <linux/post_read_process.h>
 -
 -#include "ext4.h"
 -
@@ -138,30 +138,13 @@ index e363dededc21..000000000000
 - */
 -static void mpage_end_io(struct bio *bio)
 -{
--	struct bio_vec *bv;
--	int i;
--	struct bvec_iter_all iter_all;
--#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
--	if (read_callbacks_required(bio)) {
--		struct read_callbacks_ctx *ctx = bio->bi_private;
+-	if (bio_post_read_required(bio)) {
+-		struct bio_post_read_ctx *ctx = bio->bi_private;
 -
--		read_callbacks(ctx);
+-		bio_post_read_processing(ctx);
 -		return;
 -	}
--#endif
--	bio_for_each_segment_all(bv, bio, i, iter_all) {
--		struct page *page = bv->bv_page;
--
--		if (!bio->bi_status) {
--			SetPageUptodate(page);
--		} else {
--			ClearPageUptodate(page);
--			SetPageError(page);
--		}
--		unlock_page(page);
--	}
--
--	bio_put(bio);
+-	end_bio_post_read_processing(bio);
 -}
 -
 -static inline loff_t ext4_readpage_limit(struct inode *inode)
@@ -328,19 +311,17 @@ index e363dededc21..000000000000
 -			bio = NULL;
 -		}
 -		if (bio == NULL) {
--			struct read_callbacks_ctx *ctx = NULL;
+-			struct bio_post_read_ctx *ctx;
 -
 -			bio = bio_alloc(GFP_KERNEL,
 -				min_t(int, nr_pages, BIO_MAX_PAGES));
 -			if (!bio)
 -				goto set_error_page;
--#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
--			ctx = get_read_callbacks_ctx(inode, bio, page->index);
+-			ctx = get_bio_post_read_ctx(inode, bio, page->index);
 -			if (IS_ERR(ctx)) {
 -				bio_put(bio);
 -				goto set_error_page;
 -			}
--#endif
 -			bio_set_dev(bio, bdev);
 -			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
 -			bio->bi_end_io = mpage_end_io;
