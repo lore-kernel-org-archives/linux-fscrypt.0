@@ -1,62 +1,54 @@
-Return-Path: <SRS0=har8=S2=linux.ibm.com=chandan@kernel.org>
+Return-Path: <SRS0=XRRt=SO=linux.ibm.com=chandan@kernel.org>
 From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V1 14/14] ext4: Enable encryption for subpage-sized blocks
-Date: Wed, 24 Apr 2019 10:07:30 +0530
-In-Reply-To: <20190424043730.13683-1-chandan@linux.ibm.com>
-References: <20190424043730.13683-1-chandan@linux.ibm.com>
+Subject: [RFC PATCH 12/14] ext4: Compute logical block and the page range to be encrypted
+Date: Fri, 12 Apr 2019 22:40:39 +0530
+In-Reply-To: <20190412171041.31995-1-chandan@linux.ibm.com>
+References: <20190412171041.31995-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190424043730.13683-15-chandan@linux.ibm.com>
+Message-Id: <20190412171041.31995-13-chandan@linux.ibm.com>
 To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
 Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Now that we have the code to support encryption for subpage-sized
-blocks, this commit removes the conditional check in filesystem mount
-code.
-
-The commit also changes the support statement in
-Documentation/filesystems/fscrypt.rst to reflect the fact that
-encryption of filesystems with blocksize less than page size now works.
+For subpage-sized blocks, the initial logical block number mapped by a
+page can be different from page->index. Hence this commit adds code to
+compute the first logical block mapped by the page and also the page
+range to be encrypted.
 
 Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- Documentation/filesystems/fscrypt.rst | 4 ++--
- fs/ext4/super.c                       | 7 -------
- 2 files changed, 2 insertions(+), 9 deletions(-)
+ fs/ext4/page-io.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 08c23b60e016..ff2fea121da9 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -213,8 +213,8 @@ Contents encryption
- -------------------
+diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
+index 3e9298e6a705..75485ee9e800 100644
+--- a/fs/ext4/page-io.c
++++ b/fs/ext4/page-io.c
+@@ -418,6 +418,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
+ {
+ 	struct page *data_page = NULL;
+ 	struct inode *inode = page->mapping->host;
++	u64 page_blk;
+ 	unsigned block_start;
+ 	struct buffer_head *bh, *head;
+ 	int ret = 0;
+@@ -478,10 +479,14 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
  
- For file contents, each filesystem block is encrypted independently.
--Currently, only the case where the filesystem block size is equal to
--the system's page size (usually 4096 bytes) is supported.
-+Starting from Linux kernel 5.3, encryption of filesystems with block
-+size less than system's page size is supported.
+ 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit) {
+ 		gfp_t gfp_flags = GFP_NOFS;
++		unsigned int page_bytes;
++
++		page_bytes = round_up(len, i_blocksize(inode));
++		page_blk = page->index << (PAGE_SHIFT - inode->i_blkbits);
  
- Each block's IV is set to the logical block number within the file as
- a little endian number, except that:
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 8e483afbaa2e..4acfefa98ec5 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -4432,13 +4432,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
- 		}
- 	}
- 
--	if ((DUMMY_ENCRYPTION_ENABLED(sbi) || ext4_has_feature_encrypt(sb)) &&
--	    (blocksize != PAGE_SIZE)) {
--		ext4_msg(sb, KERN_ERR,
--			 "Unsupported blocksize for fs encryption");
--		goto failed_mount_wq;
--	}
--
- 	if (DUMMY_ENCRYPTION_ENABLED(sbi) && !sb_rdonly(sb) &&
- 	    !ext4_has_feature_encrypt(sb)) {
- 		ext4_set_feature_encrypt(sb);
+ 	retry_encrypt:
+-		data_page = fscrypt_encrypt_page(inode, page, PAGE_SIZE, 0,
+-						page->index, gfp_flags);
++		data_page = fscrypt_encrypt_page(inode, page, page_bytes, 0,
++						page_blk, gfp_flags);
+ 		if (IS_ERR(data_page)) {
+ 			ret = PTR_ERR(data_page);
+ 			if (ret == -ENOMEM && wbc->sync_mode == WB_SYNC_ALL) {
 -- 
 2.19.1
