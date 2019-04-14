@@ -1,317 +1,364 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Tue,  2 Apr 2019 08:45:53 -0700
-Message-Id: <20190402154600.32432-11-ebiggers@kernel.org>
-In-Reply-To: <20190402154600.32432-1-ebiggers@kernel.org>
-References: <20190402154600.32432-1-ebiggers@kernel.org>
+Return-Path: <SRS0=kYvk=SQ=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [RFC PATCH V2 06/14] ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
+Date: Sun, 14 Apr 2019 17:07:56 +0530
+In-Reply-To: <20190414113804.26769-1-chandan@linux.ibm.com>
+References: <20190414113804.26769-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v4 10/17] fscrypt: add an HKDF-SHA512
- implementation
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 8bit
+Message-Id: <20190414113804.26769-7-chandan@linux.ibm.com>
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Now that do_mpage_readpage() is "post read process" aware, this commit
+gets ext4_readpage[s] to use mpage_readpage[s] and deletes ext4's
+readpage.c since the associated functionality is not required anymore.
 
-Add an implementation of HKDF (RFC 5869) to fscrypt, for the purpose of
-deriving additional key material from the fscrypt master keys for v2
-encryption policies.  HKDF is a key derivation function built on top of
-HMAC.  We choose SHA-512 for the underlying unkeyed hash, and use an
-"hmac(sha512)" transform allocated from the crypto API.
-
-We'll be using this to replace the AES-ECB based KDF currently used to
-derive the per-file encryption keys.  While the AES-ECB based KDF is
-believed to meet the original security requirements, it is nonstandard
-and has problems that don't exist in modern KDFs such as HKDF:
-
-1. It's reversible.  Given a derived key and nonce, an attacker can
-   easily compute the master key.  This is okay if the master key and
-   derived keys are equally hard to compromise, but now we'd like to be
-   more robust against threats such as a derived key being compromised
-   through a timing attack, or a derived key for an in-use file being
-   compromised after the master key has already been removed.
-
-2. It doesn't evenly distribute the entropy from the master key; each 16
-   input bytes only affects the corresponding 16 output bytes.
-
-3. It isn't easily extensible to deriving other values or keys that are
-   or will be needed, such as per-mode keys (which is what DIRECT_KEY
-   policies really should use, rather than the master key directly as
-   they do now) or a public hash for securely identifying the key (to
-   ensure that an encrypted file cannot be set up with the wrong key).
-
-HKDF solves all the above problems.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/crypto/Kconfig           |   2 +
- fs/crypto/Makefile          |   1 +
- fs/crypto/fscrypt_private.h |  15 +++
- fs/crypto/hkdf.c            | 188 ++++++++++++++++++++++++++++++++++++
- 4 files changed, 206 insertions(+)
- create mode 100644 fs/crypto/hkdf.c
+ fs/ext4/Makefile   |   2 +-
+ fs/ext4/inode.c    |   5 +-
+ fs/ext4/readpage.c | 295 ---------------------------------------------
+ 3 files changed, 3 insertions(+), 299 deletions(-)
+ delete mode 100644 fs/ext4/readpage.c
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index f0de238000c02..c160598a9fe2c 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -7,6 +7,8 @@ config FS_ENCRYPTION
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select CRYPTO_SHA256
-+	select CRYPTO_SHA512
-+	select CRYPTO_HMAC
- 	select KEYS
- 	help
- 	  Enable encryption of files and directories.  This
-diff --git a/fs/crypto/Makefile b/fs/crypto/Makefile
-index accdd622c9083..4977b43479289 100644
---- a/fs/crypto/Makefile
-+++ b/fs/crypto/Makefile
-@@ -2,6 +2,7 @@ obj-$(CONFIG_FS_ENCRYPTION)	+= fscrypto.o
+diff --git a/fs/ext4/Makefile b/fs/ext4/Makefile
+index 8fdfcd3c3e04..7c38803a808d 100644
+--- a/fs/ext4/Makefile
++++ b/fs/ext4/Makefile
+@@ -8,7 +8,7 @@ obj-$(CONFIG_EXT4_FS) += ext4.o
+ ext4-y	:= balloc.o bitmap.o block_validity.o dir.o ext4_jbd2.o extents.o \
+ 		extents_status.o file.o fsmap.o fsync.o hash.o ialloc.o \
+ 		indirect.o inline.o inode.o ioctl.o mballoc.o migrate.o \
+-		mmp.o move_extent.o namei.o page-io.o readpage.o resize.o \
++		mmp.o move_extent.o namei.o page-io.o resize.o \
+ 		super.o symlink.o sysfs.o xattr.o xattr_trusted.o xattr_user.o
  
- fscrypto-y := crypto.o \
- 	      fname.o \
-+	      hkdf.o \
- 	      hooks.o \
- 	      keyring.o \
- 	      keysetup.o \
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index cc1862c9baa1d..e2a65189eb578 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -175,6 +175,21 @@ extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
- 					 u32 orig_len, u32 max_len,
- 					 u32 *encrypted_len_ret);
+ ext4-$(CONFIG_EXT4_FS_POSIX_ACL)	+= acl.o
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 05b258db8673..1327e04334df 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -3353,8 +3353,7 @@ static int ext4_readpage(struct file *file, struct page *page)
+ 		ret = ext4_readpage_inline(inode, page);
  
-+/* hkdf.c */
-+
-+struct fscrypt_hkdf {
-+	struct crypto_shash *hmac_tfm;
-+};
-+
-+extern int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
-+			     unsigned int master_key_size);
-+
-+extern int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
-+			       const u8 *info, unsigned int infolen,
-+			       u8 *okm, unsigned int okmlen);
-+
-+extern void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf);
-+
- /* keyring.c */
+ 	if (ret == -EAGAIN)
+-		return ext4_mpage_readpages(page->mapping, NULL, page, 1,
+-						false);
++		return mpage_readpage(page, ext4_get_block);
  
- /*
-diff --git a/fs/crypto/hkdf.c b/fs/crypto/hkdf.c
-new file mode 100644
-index 0000000000000..3f9dbf171d967
---- /dev/null
-+++ b/fs/crypto/hkdf.c
-@@ -0,0 +1,188 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Implementation of HKDF ("HMAC-based Extract-and-Expand Key Derivation
-+ * Function"), aka RFC 5869.  See also the original paper (Krawczyk 2010):
-+ * "Cryptographic Extraction and Key Derivation: The HKDF Scheme".
-+ *
-+ * This is used to derive keys from the fscrypt master keys.
-+ *
-+ * Copyright 2019 Google LLC
-+ */
-+
-+#include <crypto/hash.h>
-+#include <crypto/sha.h>
-+
-+#include "fscrypt_private.h"
-+
-+/*
-+ * HKDF supports any unkeyed cryptographic hash algorithm, but fscrypt uses
-+ * SHA-512 because it is reasonably secure and efficient; and since it produces
-+ * a 64-byte digest, deriving an AES-256-XTS key preserves all 64 bytes of
-+ * entropy from the master key and requires only one iteration of HKDF-Expand.
-+ */
-+#define HKDF_HMAC_ALG		"hmac(sha512)"
-+#define HKDF_HASHLEN		SHA512_DIGEST_SIZE
-+
-+/*
-+ * HKDF consists of two steps:
-+ *
-+ * 1. HKDF-Extract: extract a pseudorandom key of length HKDF_HASHLEN bytes from
-+ *    the input keying material and optional salt.
-+ * 2. HKDF-Expand: expand the pseudorandom key into output keying material of
-+ *    any length, parameterized by an application-specific info string.
-+ *
-+ * HKDF-Extract can be skipped if the input is already a pseudorandom key of
-+ * length HKDF_HASHLEN bytes.  However, cipher modes other than AES-256-XTS take
-+ * shorter keys, and we don't want to force users of those modes to generate
-+ * unnecessarily long keys.  Thus fscrypt still does HKDF-Extract.
-+ *
-+ * HKDF-Extract also supports a salt.  Choosing a random salt per input key
-+ * would permit the input key to come from *any* source with sufficient entropy,
-+ * even if it's not distributed uniformly.  However, fscrypt doesn't take
-+ * advantage of this because userspace should already provide good pseudorandom
-+ * keys, which makes this unnecessary; also, having to persist a random salt per
-+ * key from kernel mode would pose significant implementation complexity.  Thus
-+ * fscrypt uses a fixed salt.  But to be slightly more robust against userspace
-+ * (unwisely) reusing the fscrypt keys for another purpose, and to force
-+ * brute-force attacks to target the fscrypt KDF specifically, fscrypt uses
-+ * "fscrypt_hkdf_salt" rather than the default of all 0's defined by RFC 5869.
-+ */
-+
-+#define HKDF_SALT		"fscrypt_hkdf_salt"
-+#define HKDF_SALTLEN		CONST_STRLEN(HKDF_SALT)
-+
-+/* HKDF-Extract (RFC 5869 section 2.2), see explanation above */
-+static int hkdf_extract(struct crypto_shash *hmac_tfm, const u8 *ikm,
-+			unsigned int ikmlen, u8 prk[HKDF_HASHLEN])
-+{
-+	SHASH_DESC_ON_STACK(desc, hmac_tfm);
-+	int err;
-+
-+	err = crypto_shash_setkey(hmac_tfm, HKDF_SALT, HKDF_SALTLEN);
-+	if (err)
-+		return err;
-+
-+	desc->tfm = hmac_tfm;
-+	desc->flags = 0;
-+	err = crypto_shash_digest(desc, ikm, ikmlen, prk);
-+	shash_desc_zero(desc);
-+	return err;
-+}
-+
-+/*
-+ * Compute HKDF-Extract using the given master key as the input keying material,
-+ * and prepare an HMAC transform object keyed by the resulting pseudorandom key.
-+ *
-+ * Afterwards, the keyed HMAC transform object can be used for HKDF-Expand many
-+ * times without having to recompute HKDF-Extract each time.
-+ */
-+int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
-+		      unsigned int master_key_size)
-+{
-+	struct crypto_shash *hmac_tfm;
-+	u8 prk[HKDF_HASHLEN];
-+	int err;
-+
-+	hmac_tfm = crypto_alloc_shash(HKDF_HMAC_ALG, 0, 0);
-+	if (IS_ERR(hmac_tfm)) {
-+		fscrypt_warn(NULL, "error allocating " HKDF_HMAC_ALG ": %ld",
-+			     PTR_ERR(hmac_tfm));
-+		return PTR_ERR(hmac_tfm);
-+	}
-+
-+	BUG_ON(crypto_shash_digestsize(hmac_tfm) != sizeof(prk));
-+
-+	err = hkdf_extract(hmac_tfm, master_key, master_key_size, prk);
-+	if (err)
-+		goto err_free_tfm;
-+
-+	err = crypto_shash_setkey(hmac_tfm, prk, sizeof(prk));
-+	if (err)
-+		goto err_free_tfm;
-+
-+	hkdf->hmac_tfm = hmac_tfm;
-+	goto out;
-+
-+err_free_tfm:
-+	crypto_free_shash(hmac_tfm);
-+out:
-+	memzero_explicit(prk, sizeof(prk));
-+	return err;
-+}
-+
-+/*
-+ * HKDF-Expand (RFC 5869 section 2.3).  This expands the pseudorandom key, which
-+ * was already keyed into 'hkdf->hmac_tfm' by fscrypt_init_hkdf(), into 'okmlen'
-+ * bytes of output keying material parameterized by the application-specific
-+ * 'info' of length 'infolen' bytes, prefixed with the 'context' byte.  This is
-+ * thread-safe and may be called by multiple threads in parallel.
-+ *
-+ * ('context' isn't part of the HKDF specification; it's just a prefix fscrypt
-+ * adds to its application-specific info strings to guarantee that it doesn't
-+ * accidentally repeat an info string when using HKDF for different purposes.)
-+ */
-+int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
-+			const u8 *info, unsigned int infolen,
-+			u8 *okm, unsigned int okmlen)
-+{
-+	SHASH_DESC_ON_STACK(desc, hkdf->hmac_tfm);
-+	unsigned int i;
-+	int err;
-+	const u8 *prev = NULL;
-+	u8 counter = 1;
-+	u8 tmp[HKDF_HASHLEN];
-+
-+	if (WARN_ON(okmlen > 255 * HKDF_HASHLEN))
-+		return -EINVAL;
-+
-+	desc->tfm = hkdf->hmac_tfm;
-+	desc->flags = 0;
-+
-+	for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
-+
-+		err = crypto_shash_init(desc);
-+		if (err)
-+			goto out;
-+
-+		if (prev) {
-+			err = crypto_shash_update(desc, prev, HKDF_HASHLEN);
-+			if (err)
-+				goto out;
-+		}
-+
-+		BUILD_BUG_ON(sizeof(context) != 1);
-+		err = crypto_shash_update(desc, &context, 1);
-+		if (err)
-+			goto out;
-+
-+		err = crypto_shash_update(desc, info, infolen);
-+		if (err)
-+			goto out;
-+
-+		BUILD_BUG_ON(sizeof(counter) != 1);
-+		if (okmlen - i < HKDF_HASHLEN) {
-+			err = crypto_shash_finup(desc, &counter, 1, tmp);
-+			if (err)
-+				goto out;
-+			memcpy(&okm[i], tmp, okmlen - i);
-+			memzero_explicit(tmp, sizeof(tmp));
-+		} else {
-+			err = crypto_shash_finup(desc, &counter, 1, &okm[i]);
-+			if (err)
-+				goto out;
-+		}
-+		counter++;
-+		prev = &okm[i];
-+	}
-+	err = 0;
-+out:
-+	if (unlikely(err))
-+		memzero_explicit(okm, okmlen); /* so caller doesn't need to */
-+	shash_desc_zero(desc);
-+	return err;
-+}
-+
-+void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf)
-+{
-+	crypto_free_shash(hkdf->hmac_tfm);
-+}
+ 	return ret;
+ }
+@@ -3369,7 +3368,7 @@ ext4_readpages(struct file *file, struct address_space *mapping,
+ 	if (ext4_has_inline_data(inode))
+ 		return 0;
+ 
+-	return ext4_mpage_readpages(mapping, pages, NULL, nr_pages, true);
++	return mpage_readpages(mapping, pages, nr_pages, ext4_get_block);
+ }
+ 
+ static void ext4_invalidatepage(struct page *page, unsigned int offset,
+diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
+deleted file mode 100644
+index 8943fc41fd33..000000000000
+--- a/fs/ext4/readpage.c
++++ /dev/null
+@@ -1,295 +0,0 @@
+-// SPDX-License-Identifier: GPL-2.0
+-/*
+- * linux/fs/ext4/readpage.c
+- *
+- * Copyright (C) 2002, Linus Torvalds.
+- * Copyright (C) 2015, Google, Inc.
+- *
+- * This was originally taken from fs/mpage.c
+- *
+- * The intent is the ext4_mpage_readpages() function here is intended
+- * to replace mpage_readpages() in the general case, not just for
+- * encrypted files.  It has some limitations (see below), where it
+- * will fall back to read_block_full_page(), but these limitations
+- * should only be hit when page_size != block_size.
+- *
+- * This will allow us to attach a callback function to support ext4
+- * encryption.
+- *
+- * If anything unusual happens, such as:
+- *
+- * - encountering a page which has buffers
+- * - encountering a page which has a non-hole after a hole
+- * - encountering a page with non-contiguous blocks
+- *
+- * then this code just gives up and calls the buffer_head-based read function.
+- * It does handle a page which has holes at the end - that is a common case:
+- * the end-of-file on blocksize < PAGE_SIZE setups.
+- *
+- */
+-
+-#include <linux/kernel.h>
+-#include <linux/export.h>
+-#include <linux/mm.h>
+-#include <linux/kdev_t.h>
+-#include <linux/gfp.h>
+-#include <linux/bio.h>
+-#include <linux/fs.h>
+-#include <linux/buffer_head.h>
+-#include <linux/blkdev.h>
+-#include <linux/highmem.h>
+-#include <linux/prefetch.h>
+-#include <linux/mpage.h>
+-#include <linux/writeback.h>
+-#include <linux/backing-dev.h>
+-#include <linux/pagevec.h>
+-#include <linux/cleancache.h>
+-#include <linux/post_read_process.h>
+-
+-#include "ext4.h"
+-
+-static inline bool ext4_bio_encrypted(struct bio *bio)
+-{
+-#ifdef CONFIG_FS_ENCRYPTION
+-	return unlikely(bio->bi_private != NULL);
+-#else
+-	return false;
+-#endif
+-}
+-
+-/*
+- * I/O completion handler for multipage BIOs.
+- *
+- * The mpage code never puts partial pages into a BIO (except for end-of-file).
+- * If a page does not map to a contiguous run of blocks then it simply falls
+- * back to block_read_full_page().
+- *
+- * Why is this?  If a page's completion depends on a number of different BIOs
+- * which can complete in any order (or at the same time) then determining the
+- * status of that page is hard.  See end_buffer_async_read() for the details.
+- * There is no point in duplicating all that complexity.
+- */
+-static void mpage_end_io(struct bio *bio)
+-{
+-	if (bio_post_read_required(bio)) {
+-		struct bio_post_read_ctx *ctx = bio->bi_private;
+-
+-		bio_post_read_processing(ctx);
+-		return;
+-	}
+-	end_bio_post_read_processing(bio);
+-}
+-
+-static inline loff_t ext4_readpage_limit(struct inode *inode)
+-{
+-#ifdef CONFIG_FS_VERITY
+-	if (IS_VERITY(inode)) {
+-		if (inode->i_verity_info)
+-			/* limit to end of metadata region */
+-			return fsverity_full_i_size(inode);
+-		/*
+-		 * fsverity_info is currently being set up and no user reads are
+-		 * allowed yet.  It's easiest to just not enforce a limit yet.
+-		 */
+-		return inode->i_sb->s_maxbytes;
+-	}
+-#endif
+-	return i_size_read(inode);
+-}
+-
+-int ext4_mpage_readpages(struct address_space *mapping,
+-			 struct list_head *pages, struct page *page,
+-			 unsigned nr_pages, bool is_readahead)
+-{
+-	struct bio *bio = NULL;
+-	sector_t last_block_in_bio = 0;
+-
+-	struct inode *inode = mapping->host;
+-	const unsigned blkbits = inode->i_blkbits;
+-	const unsigned blocks_per_page = PAGE_SIZE >> blkbits;
+-	const unsigned blocksize = 1 << blkbits;
+-	sector_t block_in_file;
+-	sector_t last_block;
+-	sector_t last_block_in_file;
+-	sector_t blocks[MAX_BUF_PER_PAGE];
+-	unsigned page_block;
+-	struct block_device *bdev = inode->i_sb->s_bdev;
+-	int length;
+-	unsigned relative_block = 0;
+-	struct ext4_map_blocks map;
+-
+-	map.m_pblk = 0;
+-	map.m_lblk = 0;
+-	map.m_len = 0;
+-	map.m_flags = 0;
+-
+-	for (; nr_pages; nr_pages--) {
+-		int fully_mapped = 1;
+-		unsigned first_hole = blocks_per_page;
+-
+-		prefetchw(&page->flags);
+-		if (pages) {
+-			page = lru_to_page(pages);
+-			list_del(&page->lru);
+-			if (add_to_page_cache_lru(page, mapping, page->index,
+-				  readahead_gfp_mask(mapping)))
+-				goto next_page;
+-		}
+-
+-		if (page_has_buffers(page))
+-			goto confused;
+-
+-		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
+-		last_block = block_in_file + nr_pages * blocks_per_page;
+-		last_block_in_file = (ext4_readpage_limit(inode) +
+-				      blocksize - 1) >> blkbits;
+-		if (last_block > last_block_in_file)
+-			last_block = last_block_in_file;
+-		page_block = 0;
+-
+-		/*
+-		 * Map blocks using the previous result first.
+-		 */
+-		if ((map.m_flags & EXT4_MAP_MAPPED) &&
+-		    block_in_file > map.m_lblk &&
+-		    block_in_file < (map.m_lblk + map.m_len)) {
+-			unsigned map_offset = block_in_file - map.m_lblk;
+-			unsigned last = map.m_len - map_offset;
+-
+-			for (relative_block = 0; ; relative_block++) {
+-				if (relative_block == last) {
+-					/* needed? */
+-					map.m_flags &= ~EXT4_MAP_MAPPED;
+-					break;
+-				}
+-				if (page_block == blocks_per_page)
+-					break;
+-				blocks[page_block] = map.m_pblk + map_offset +
+-					relative_block;
+-				page_block++;
+-				block_in_file++;
+-			}
+-		}
+-
+-		/*
+-		 * Then do more ext4_map_blocks() calls until we are
+-		 * done with this page.
+-		 */
+-		while (page_block < blocks_per_page) {
+-			if (block_in_file < last_block) {
+-				map.m_lblk = block_in_file;
+-				map.m_len = last_block - block_in_file;
+-
+-				if (ext4_map_blocks(NULL, inode, &map, 0) < 0) {
+-				set_error_page:
+-					SetPageError(page);
+-					zero_user_segment(page, 0,
+-							  PAGE_SIZE);
+-					unlock_page(page);
+-					goto next_page;
+-				}
+-			}
+-			if ((map.m_flags & EXT4_MAP_MAPPED) == 0) {
+-				fully_mapped = 0;
+-				if (first_hole == blocks_per_page)
+-					first_hole = page_block;
+-				page_block++;
+-				block_in_file++;
+-				continue;
+-			}
+-			if (first_hole != blocks_per_page)
+-				goto confused;		/* hole -> non-hole */
+-
+-			/* Contiguous blocks? */
+-			if (page_block && blocks[page_block-1] != map.m_pblk-1)
+-				goto confused;
+-			for (relative_block = 0; ; relative_block++) {
+-				if (relative_block == map.m_len) {
+-					/* needed? */
+-					map.m_flags &= ~EXT4_MAP_MAPPED;
+-					break;
+-				} else if (page_block == blocks_per_page)
+-					break;
+-				blocks[page_block] = map.m_pblk+relative_block;
+-				page_block++;
+-				block_in_file++;
+-			}
+-		}
+-		if (first_hole != blocks_per_page) {
+-			zero_user_segment(page, first_hole << blkbits,
+-					  PAGE_SIZE);
+-			if (first_hole == 0) {
+-				if (!fsverity_check_hole(inode, page))
+-					goto set_error_page;
+-				SetPageUptodate(page);
+-				unlock_page(page);
+-				goto next_page;
+-			}
+-		} else if (fully_mapped) {
+-			SetPageMappedToDisk(page);
+-		}
+-		if (fully_mapped && blocks_per_page == 1 &&
+-		    !PageUptodate(page) && cleancache_get_page(page) == 0) {
+-			SetPageUptodate(page);
+-			goto confused;
+-		}
+-
+-		/*
+-		 * This page will go to BIO.  Do we need to send this
+-		 * BIO off first?
+-		 */
+-		if (bio && (last_block_in_bio != blocks[0] - 1)) {
+-		submit_and_realloc:
+-			submit_bio(bio);
+-			bio = NULL;
+-		}
+-		if (bio == NULL) {
+-			struct bio_post_read_ctx *ctx;
+-
+-			bio = bio_alloc(GFP_KERNEL,
+-				min_t(int, nr_pages, BIO_MAX_PAGES));
+-			if (!bio)
+-				goto set_error_page;
+-			ctx = get_bio_post_read_ctx(inode, bio, page->index);
+-			if (IS_ERR(ctx)) {
+-				bio_put(bio);
+-				goto set_error_page;
+-			}
+-			bio_set_dev(bio, bdev);
+-			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
+-			bio->bi_end_io = mpage_end_io;
+-			bio->bi_private = ctx;
+-			bio_set_op_attrs(bio, REQ_OP_READ,
+-						is_readahead ? REQ_RAHEAD : 0);
+-		}
+-
+-		length = first_hole << blkbits;
+-		if (bio_add_page(bio, page, length, 0) < length)
+-			goto submit_and_realloc;
+-
+-		if (((map.m_flags & EXT4_MAP_BOUNDARY) &&
+-		     (relative_block == map.m_len)) ||
+-		    (first_hole != blocks_per_page)) {
+-			submit_bio(bio);
+-			bio = NULL;
+-		} else
+-			last_block_in_bio = blocks[blocks_per_page - 1];
+-		goto next_page;
+-	confused:
+-		if (bio) {
+-			submit_bio(bio);
+-			bio = NULL;
+-		}
+-		if (!PageUptodate(page))
+-			block_read_full_page(page, ext4_get_block);
+-		else
+-			unlock_page(page);
+-	next_page:
+-		if (pages)
+-			put_page(page);
+-	}
+-	BUG_ON(pages && !list_empty(pages));
+-	if (bio)
+-		submit_bio(bio);
+-	return 0;
+-}
 -- 
-2.21.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.19.1
