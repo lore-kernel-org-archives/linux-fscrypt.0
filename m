@@ -1,253 +1,77 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Thu, 18 Apr 2019 16:29:09 -0700
-Message-Id: <20190418232923.250800-3-ebiggers@kernel.org>
-In-Reply-To: <20190418232923.250800-1-ebiggers@kernel.org>
-References: <20190418232923.250800-1-ebiggers@kernel.org>
+Return-Path: <SRS0=kYvk=SQ=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [RFC PATCH V2 03/14] fsverity: Add call back to decide if verity check has to be performed
+Date: Sun, 14 Apr 2019 17:07:53 +0530
+In-Reply-To: <20190414113804.26769-1-chandan@linux.ibm.com>
+References: <20190414113804.26769-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v5 02/16] fscrypt: use FSCRYPT_ prefix for uapi
- constants
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 8bit
+Message-Id: <20190414113804.26769-4-chandan@linux.ibm.com>
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Ext4 and F2FS store verity metadata in data extents (beyond
+inode->i_size) associated with a file. But other filesystems might
+choose alternative means to store verity metadata. Hence this commit
+adds a callback function pointer to 'struct fsverity_operations' to help
+in deciding if verity operation needs to performed against a page-cache
+page holding file data.
 
-Prefix all filesystem encryption UAPI constants except the ioctl numbers
-with "FSCRYPT_" rather than with "FS_".  This namespaces the constants
-more appropriately and makes it clear that they are related specifically
-to the filesystem encryption feature, and to the 'fscrypt_*' structures.
-With some of the old names like "FS_POLICY_FLAGS_VALID", it was not
-immediately clear that the constant had anything to do with encryption.
-
-This is also useful because we'll be adding more encryption-related
-constants, e.g. for the policy version, and we'd otherwise have to
-choose whether to use unclear names like FS_POLICY_V1 or inconsistent
-names like FS_ENCRYPTION_POLICY_V1.
-
-For source compatibility with existing userspace programs, keep the old
-names defined as aliases to the new names.
-
-Finally, as long as new names are being defined anyway, I skipped
-defining new names for the fscrypt mode numbers that aren't actually
-used: INVALID (0), AES_256_GCM (2), AES_256_CBC (3), SPECK128_256_XTS
-(7), and SPECK128_256_CTS (8).
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- Documentation/filesystems/fscrypt.rst | 36 +++++++--------
- include/uapi/linux/fscrypt.h          | 66 +++++++++++++++++----------
- 2 files changed, 61 insertions(+), 41 deletions(-)
+ fs/ext4/super.c          | 6 ++++++
+ fs/post_read_process.c   | 4 +++-
+ include/linux/fsverity.h | 1 +
+ 3 files changed, 10 insertions(+), 1 deletion(-)
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 08c23b60e0164..4f9df6ba669e5 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -223,9 +223,10 @@ a little endian number, except that:
-   is encrypted with AES-256 where the AES-256 key is the SHA-256 hash
-   of the file's data encryption key.
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index aba724f82cc3..63d73b360f1d 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1428,10 +1428,16 @@ static struct page *ext4_read_verity_metadata_page(struct inode *inode,
+ 	return read_mapping_page(inode->i_mapping, index, NULL);
+ }
  
--- In the "direct key" configuration (FS_POLICY_FLAG_DIRECT_KEY set in
--  the fscrypt_policy), the file's nonce is also appended to the IV.
--  Currently this is only allowed with the Adiantum encryption mode.
-+- In the "direct key" configuration (FSCRYPT_POLICY_FLAG_DIRECT_KEY
-+  set in the fscrypt_policy), the file's nonce is also appended to the
-+  IV.  Currently this is only allowed with the Adiantum encryption
-+  mode.
- 
- Filenames encryption
- --------------------
-@@ -272,14 +273,14 @@ empty directory or verifies that a directory or regular file already
- has the specified encryption policy.  It takes in a pointer to a
- :c:type:`struct fscrypt_policy`, defined as follows::
- 
--    #define FS_KEY_DESCRIPTOR_SIZE  8
-+    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
- 
-     struct fscrypt_policy {
-             __u8 version;
-             __u8 contents_encryption_mode;
-             __u8 filenames_encryption_mode;
-             __u8 flags;
--            __u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+            __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-     };
- 
- This structure must be initialized as follows:
-@@ -288,18 +289,17 @@ This structure must be initialized as follows:
- 
- - ``contents_encryption_mode`` and ``filenames_encryption_mode`` must
-   be set to constants from ``<linux/fs.h>`` which identify the
--  encryption modes to use.  If unsure, use
--  FS_ENCRYPTION_MODE_AES_256_XTS (1) for ``contents_encryption_mode``
--  and FS_ENCRYPTION_MODE_AES_256_CTS (4) for
--  ``filenames_encryption_mode``.
-+  encryption modes to use.  If unsure, use FSCRYPT_MODE_AES_256_XTS
-+  (1) for ``contents_encryption_mode`` and FSCRYPT_MODE_AES_256_CTS
-+  (4) for ``filenames_encryption_mode``.
- 
- - ``flags`` must contain a value from ``<linux/fs.h>`` which
-   identifies the amount of NUL-padding to use when encrypting
--  filenames.  If unsure, use FS_POLICY_FLAGS_PAD_32 (0x3).
--  In addition, if the chosen encryption modes are both
--  FS_ENCRYPTION_MODE_ADIANTUM, this can contain
--  FS_POLICY_FLAG_DIRECT_KEY to specify that the master key should be
--  used directly, without key derivation.
-+  filenames.  If unsure, use FSCRYPT_POLICY_FLAGS_PAD_32 (0x3).  In
-+  addition, if the chosen encryption modes are both
-+  FSCRYPT_MODE_ADIANTUM, this can contain
-+  FSCRYPT_POLICY_FLAG_DIRECT_KEY to specify that the master key should
-+  be used directly, without key derivation.
- 
- - ``master_key_descriptor`` specifies how to find the master key in
-   the keyring; see `Adding keys`_.  It is up to userspace to choose a
-@@ -399,11 +399,11 @@ followed by the 16-character lower case hex representation of the
- ``master_key_descriptor`` that was set in the encryption policy.  The
- key payload must conform to the following structure::
- 
--    #define FS_MAX_KEY_SIZE 64
-+    #define FSCRYPT_MAX_KEY_SIZE 64
- 
-     struct fscrypt_key {
-             u32 mode;
--            u8 raw[FS_MAX_KEY_SIZE];
-+            u8 raw[FSCRYPT_MAX_KEY_SIZE];
-             u32 size;
-     };
- 
-@@ -572,7 +572,7 @@ much confusion if an encryption policy were to be added to or removed
- from anything other than an empty directory.)  The struct is defined
- as follows::
- 
--    #define FS_KEY_DESCRIPTOR_SIZE  8
-+    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
-     #define FS_KEY_DERIVATION_NONCE_SIZE 16
- 
-     struct fscrypt_context {
-@@ -580,7 +580,7 @@ as follows::
-             u8 contents_encryption_mode;
-             u8 filenames_encryption_mode;
-             u8 flags;
--            u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+            u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-             u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
-     };
- 
-diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-index 193339cb53fdb..f9b99cc028bc6 100644
---- a/include/uapi/linux/fscrypt.h
-+++ b/include/uapi/linux/fscrypt.h
-@@ -8,34 +8,30 @@
-  * File system encryption support
-  */
- /* Policy provided via an ioctl on the topmost directory */
--#define FS_KEY_DESCRIPTOR_SIZE	8
-+#define FSCRYPT_KEY_DESCRIPTOR_SIZE	8
- 
--#define FS_POLICY_FLAGS_PAD_4		0x00
--#define FS_POLICY_FLAGS_PAD_8		0x01
--#define FS_POLICY_FLAGS_PAD_16		0x02
--#define FS_POLICY_FLAGS_PAD_32		0x03
--#define FS_POLICY_FLAGS_PAD_MASK	0x03
--#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
--#define FS_POLICY_FLAGS_VALID		0x07
-+/* Encryption policy flags */
-+#define FSCRYPT_POLICY_FLAGS_PAD_4		0x00
-+#define FSCRYPT_POLICY_FLAGS_PAD_8		0x01
-+#define FSCRYPT_POLICY_FLAGS_PAD_16		0x02
-+#define FSCRYPT_POLICY_FLAGS_PAD_32		0x03
-+#define FSCRYPT_POLICY_FLAGS_PAD_MASK		0x03
-+#define FSCRYPT_POLICY_FLAG_DIRECT_KEY		0x04	/* use master key directly */
-+#define FSCRYPT_POLICY_FLAGS_VALID		0x07
- 
- /* Encryption algorithms */
--#define FS_ENCRYPTION_MODE_INVALID		0
--#define FS_ENCRYPTION_MODE_AES_256_XTS		1
--#define FS_ENCRYPTION_MODE_AES_256_GCM		2
--#define FS_ENCRYPTION_MODE_AES_256_CBC		3
--#define FS_ENCRYPTION_MODE_AES_256_CTS		4
--#define FS_ENCRYPTION_MODE_AES_128_CBC		5
--#define FS_ENCRYPTION_MODE_AES_128_CTS		6
--#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
--#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
--#define FS_ENCRYPTION_MODE_ADIANTUM		9
-+#define FSCRYPT_MODE_AES_256_XTS		1
-+#define FSCRYPT_MODE_AES_256_CTS		4
-+#define FSCRYPT_MODE_AES_128_CBC		5
-+#define FSCRYPT_MODE_AES_128_CTS		6
-+#define FSCRYPT_MODE_ADIANTUM			9
- 
- struct fscrypt_policy {
- 	__u8 version;
- 	__u8 contents_encryption_mode;
- 	__u8 filenames_encryption_mode;
- 	__u8 flags;
--	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
- };
- 
- #define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
-@@ -43,16 +39,40 @@ struct fscrypt_policy {
- #define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
- 
- /* Parameters for passing an encryption key into the kernel keyring */
--#define FS_KEY_DESC_PREFIX		"fscrypt:"
--#define FS_KEY_DESC_PREFIX_SIZE		8
-+#define FSCRYPT_KEY_DESC_PREFIX		"fscrypt:"
-+#define FSCRYPT_KEY_DESC_PREFIX_SIZE		8
- 
- /* Structure that userspace passes to the kernel keyring */
--#define FS_MAX_KEY_SIZE			64
-+#define FSCRYPT_MAX_KEY_SIZE			64
- 
- struct fscrypt_key {
- 	__u32 mode;
--	__u8 raw[FS_MAX_KEY_SIZE];
-+	__u8 raw[FSCRYPT_MAX_KEY_SIZE];
- 	__u32 size;
- };
-+/**********************************************************************/
++static bool ext4_verity_required(struct inode *inode, pgoff_t index)
++{
++	return index < (i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT;
++}
 +
-+/* old names; don't add anything new here! */
-+#define FS_KEY_DESCRIPTOR_SIZE		FSCRYPT_KEY_DESCRIPTOR_SIZE
-+#define FS_POLICY_FLAGS_PAD_4		FSCRYPT_POLICY_FLAGS_PAD_4
-+#define FS_POLICY_FLAGS_PAD_8		FSCRYPT_POLICY_FLAGS_PAD_8
-+#define FS_POLICY_FLAGS_PAD_16		FSCRYPT_POLICY_FLAGS_PAD_16
-+#define FS_POLICY_FLAGS_PAD_32		FSCRYPT_POLICY_FLAGS_PAD_32
-+#define FS_POLICY_FLAGS_PAD_MASK	FSCRYPT_POLICY_FLAGS_PAD_MASK
-+#define FS_POLICY_FLAG_DIRECT_KEY	FSCRYPT_POLICY_FLAG_DIRECT_KEY
-+#define FS_POLICY_FLAGS_VALID		FSCRYPT_POLICY_FLAGS_VALID
-+#define FS_ENCRYPTION_MODE_INVALID	0	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_XTS	FSCRYPT_MODE_AES_256_XTS
-+#define FS_ENCRYPTION_MODE_AES_256_GCM	2	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_CBC	3	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_CTS	FSCRYPT_MODE_AES_256_CTS
-+#define FS_ENCRYPTION_MODE_AES_128_CBC	FSCRYPT_MODE_AES_128_CBC
-+#define FS_ENCRYPTION_MODE_AES_128_CTS	FSCRYPT_MODE_AES_128_CTS
-+#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7	/* removed */
-+#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8	/* removed */
-+#define FS_ENCRYPTION_MODE_ADIANTUM	FSCRYPT_MODE_ADIANTUM
-+#define FS_KEY_DESC_PREFIX		FSCRYPT_KEY_DESC_PREFIX
-+#define FS_KEY_DESC_PREFIX_SIZE		FSCRYPT_KEY_DESC_PREFIX_SIZE
-+#define FS_MAX_KEY_SIZE			FSCRYPT_MAX_KEY_SIZE
+ static const struct fsverity_operations ext4_verityops = {
+ 	.set_verity		= ext4_set_verity,
+ 	.get_metadata_end	= ext4_get_verity_metadata_end,
+ 	.read_metadata_page	= ext4_read_verity_metadata_page,
++	.verity_required	= ext4_verity_required,
+ };
+ #endif /* CONFIG_FS_VERITY */
  
- #endif /* _UAPI_LINUX_FSCRYPT_H */
+diff --git a/fs/post_read_process.c b/fs/post_read_process.c
+index d203fc263091..b60be77c7217 100644
+--- a/fs/post_read_process.c
++++ b/fs/post_read_process.c
+@@ -86,7 +86,9 @@ struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
+ 		post_read_steps |= 1 << STEP_DECRYPT;
+ #ifdef CONFIG_FS_VERITY
+ 	if (inode->i_verity_info != NULL &&
+-		(index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
++		((inode->i_sb->s_vop->verity_required
++			&& inode->i_sb->s_vop->verity_required(inode, index))
++			|| (inode->i_sb->s_vop->verity_required == NULL)))
+ 		post_read_steps |= 1 << STEP_VERITY;
+ #endif
+ 	if (post_read_steps) {
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index 7c33b42abf1b..b83712d6c79a 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -18,6 +18,7 @@ struct fsverity_operations {
+ 	int (*set_verity)(struct inode *inode, loff_t data_i_size);
+ 	int (*get_metadata_end)(struct inode *inode, loff_t *metadata_end_ret);
+ 	struct page *(*read_metadata_page)(struct inode *inode, pgoff_t index);
++	bool (*verity_required)(struct inode *inode, pgoff_t index);
+ };
+ 
+ #ifdef CONFIG_FS_VERITY
 -- 
-2.21.0.392.gf8f6787159e-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.19.1
