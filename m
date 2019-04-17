@@ -1,40 +1,31 @@
 Return-Path: <SRS0=Zw4/=ST=mit.edu=tytso@kernel.org>
-Date: Wed, 17 Apr 2019 10:07:01 -0400
+Date: Wed, 17 Apr 2019 09:53:19 -0400
 From: "Theodore Ts'o" <tytso@mit.edu>
-Subject: Re: [PATCH v2 4/5] fscrypt: only set dentry_operations on ciphertext
- dentries
-Message-ID: <20190417140701.GD4686@mit.edu>
+Subject: Re: [PATCH v2 2/5] fscrypt: fix race allowing rename() and link() of
+ ciphertext dentries
+Message-ID: <20190417135319.GB4686@mit.edu>
 References: <20190320183913.12686-1-ebiggers@kernel.org>
- <20190320183913.12686-5-ebiggers@kernel.org>
+ <20190320183913.12686-3-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190320183913.12686-5-ebiggers@kernel.org>
+In-Reply-To: <20190320183913.12686-3-ebiggers@kernel.org>
 To: Eric Biggers <ebiggers@kernel.org>
 Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-unionfs@vger.kernel.org, Sarthak Kukreti <sarthakkukreti@chromium.org>, Gao Xiang <gaoxiang25@huawei.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, Mar 20, 2019 at 11:39:12AM -0700, Eric Biggers wrote:
+On Wed, Mar 20, 2019 at 11:39:10AM -0700, Eric Biggers wrote:
 > From: Eric Biggers <ebiggers@google.com>
 > 
-> Plaintext dentries are always valid, so only set fscrypt_d_ops on
-> ciphertext dentries.
+> Close some race conditions where fscrypt allowed rename() and link() on
+> ciphertext dentries that had been looked up just prior to the key being
+> concurrently added.  It's better to return -ENOKEY in this case.
 > 
-> Besides marginally improved performance, this allows overlayfs to use an
-> fscrypt-encrypted upperdir, provided that all the following are true:
-> 
->     (1) The fscrypt encryption key is placed in the keyring before
-> 	mounting overlayfs, and remains while the overlayfs is mounted.
-> 
->     (2) The overlayfs workdir uses the same encryption policy.
-> 
->     (3) No dentries for the ciphertext names of subdirectories have been
-> 	created in the upperdir or workdir yet.  (Since otherwise
-> 	d_splice_alias() will reuse the old dentry with ->d_op set.)
-> 
-> One potential use case is using an ephemeral encryption key to encrypt
-> all files created or changed by a container, so that they can be
-> securely erased ("crypto-shredded") after the container stops.
+> This avoids doing the nonsensical thing of encrypting the names a second
+> time when searching for the actual on-disk dir entries.  It also
+> guarantees that DCACHE_ENCRYPTED_NAME dentries are never rename()d, so
+> the dcache won't have support all possible combinations of moving
+> DCACHE_ENCRYPTED_NAME around during __d_move().
 > 
 > Signed-off-by: Eric Biggers <ebiggers@google.com>
 
