@@ -1,90 +1,46 @@
-Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V2 08/13] ext4: Decrypt all boundary blocks when doing buffered write
-Date: Sun, 28 Apr 2019 10:01:16 +0530
-In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
-References: <20190428043121.30925-1-chandan@linux.ibm.com>
+Return-Path: <SRS0=Zw4/=ST=mit.edu=tytso@kernel.org>
+Date: Wed, 17 Apr 2019 12:41:37 -0400
+From: "Theodore Ts'o" <tytso@mit.edu>
+Subject: Re: [PATCH v2 1/2] vfs: use READ_ONCE() to access ->i_link
+Message-ID: <20190417164137.GH4686@mit.edu>
+References: <20190410202115.64501-1-ebiggers@kernel.org>
+ <20190410202115.64501-2-ebiggers@kernel.org>
+ <20190410210657.GA2217@ZenIV.linux.org.uk>
+ <20190410231547.GC120258@gmail.com>
+ <20190411022514.GC2217@ZenIV.linux.org.uk>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190428043121.30925-9-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190411022514.GC2217@ZenIV.linux.org.uk>
+To: Al Viro <viro@zeniv.linux.org.uk>
+Cc: Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-With subpage sized blocks, ext4_block_write_begin() can have up to two
-blocks to decrypt. Hence this commit invokes fscrypt_decrypt_page() for
-each of those blocks.
+On Thu, Apr 11, 2019 at 03:25:15AM +0100, Al Viro wrote:
+> On Wed, Apr 10, 2019 at 04:15:48PM -0700, Eric Biggers wrote:
+> > On Wed, Apr 10, 2019 at 10:06:57PM +0100, Al Viro wrote:
+> > > On Wed, Apr 10, 2019 at 01:21:14PM -0700, Eric Biggers wrote:
+> > > > From: Eric Biggers <ebiggers@google.com>
+> > > > 
+> > > > Use 'READ_ONCE(inode->i_link)' to explicitly support filesystems caching
+> > > > the symlink target in ->i_link later if it was unavailable at iget()
+> > > > time, or wasn't easily available.  I'll be doing this in fscrypt, to
+> > > > improve the performance of encrypted symlinks on ext4, f2fs, and ubifs.
+> > > > 
+> > > > ->i_link will start NULL and may later be set to a non-NULL value by a
+> > > > smp_store_release() or cmpxchg_release().  READ_ONCE() is needed on the
+> > > > read side.  smp_load_acquire() is unnecessary because only a data
+> > > > dependency barrier is required.  (Thanks to Al for pointing this out.)
+> > > 
+> > > You've missed vfs_readlink()...
+> > 
+> > How so?  The patch already updates vfs_readlink().
+> 
+> Huh?  Right you are - fsck knows how have I managed to misread that...
+> Anyway, I can pick that READ_ONCE() patch through vfs.git if you wish,
+> or it can go through your tree with my Acked-by - up to you...
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- fs/ext4/inode.c | 33 +++++++++++++++++++++++----------
- 1 file changed, 23 insertions(+), 10 deletions(-)
+Al, I'll take it through the fscrypt tree with your Acked-by, if you
+don't mind.
 
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 1327e04334df..51744a3c3964 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -1156,12 +1156,14 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
- 	unsigned to = from + len;
- 	struct inode *inode = page->mapping->host;
- 	unsigned block_start, block_end;
--	sector_t block;
-+	sector_t block, page_blk_nr;
- 	int err = 0;
- 	unsigned blocksize = inode->i_sb->s_blocksize;
- 	unsigned bbits;
--	struct buffer_head *bh, *head, *wait[2], **wait_bh = wait;
-+	struct buffer_head *bh, *head, *wait[2];
-+	int nr_wait = 0;
- 	bool decrypt = false;
-+	int i;
- 
- 	BUG_ON(!PageLocked(page));
- 	BUG_ON(from > PAGE_SIZE);
-@@ -1213,25 +1215,36 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
- 		    !buffer_unwritten(bh) &&
- 		    (block_start < from || block_end > to)) {
- 			ll_rw_block(REQ_OP_READ, 0, 1, &bh);
--			*wait_bh++ = bh;
-+			wait[nr_wait++] = bh;
- 			decrypt = IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode);
- 		}
- 	}
- 	/*
- 	 * If we issued read requests, let them complete.
- 	 */
--	while (wait_bh > wait) {
--		wait_on_buffer(*--wait_bh);
--		if (!buffer_uptodate(*wait_bh))
-+	for (i = 0; i < nr_wait; i++) {
-+		wait_on_buffer(wait[i]);
-+		if (!buffer_uptodate(wait[i]))
- 			err = -EIO;
- 	}
- 	if (unlikely(err)) {
- 		page_zero_new_buffers(page, from, to);
- 	} else if (decrypt) {
--		err = fscrypt_decrypt_page(page->mapping->host, page,
--				PAGE_SIZE, 0, page->index);
--		if (err)
--			clear_buffer_uptodate(*wait_bh);
-+		page_blk_nr = (sector_t)page->index << (PAGE_SHIFT - bbits);
-+
-+		for (i = 0; i < nr_wait; i++) {
-+			int err2;
-+
-+			block = page_blk_nr + (bh_offset(wait[i]) >> bbits);
-+			err2 = fscrypt_decrypt_page(page->mapping->host, page,
-+						wait[i]->b_size,
-+						bh_offset(wait[i]),
-+						block);
-+			if (err2) {
-+				clear_buffer_uptodate(wait[i]);
-+				err = err2;
-+			}
-+		}
- 	}
- 
- 	return err;
--- 
-2.19.1
+					- Ted
