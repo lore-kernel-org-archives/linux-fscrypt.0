@@ -1,135 +1,204 @@
-Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V2 05/13] fs/mpage.c: Integrate read callbacks
-Date: Sun, 28 Apr 2019 10:01:13 +0530
-In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
-References: <20190428043121.30925-1-chandan@linux.ibm.com>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Eric Biggers <ebiggers@kernel.org>
+Date: Thu, 18 Apr 2019 16:29:15 -0700
+Message-Id: <20190418232923.250800-9-ebiggers@kernel.org>
+In-Reply-To: <20190418232923.250800-1-ebiggers@kernel.org>
+References: <20190418232923.250800-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190428043121.30925-6-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Subject: [f2fs-dev] [PATCH v5 08/16] fscrypt: add
+ FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit adds code to make do_mpage_readpage() to be "read
-callbacks" aware i.e. for files requiring decryption/verification,
-do_mpage_readpage() now allocates a context structure and assigns the
-corresponding pointer to bio->bi_private. At endio time, a non-zero
-bio->bi_private indicates that after the read operation is performed, the
-bio's payload needs to be processed further before handing over the data
-to user space.
+From: Eric Biggers <ebiggers@google.com>
 
-The context structure is used for tracking the state machine associated
-with post read processing.
+Add a new fscrypt ioctl, FS_IOC_GET_ENCRYPTION_KEY_STATUS.  Given a key
+specified by 'struct fscrypt_key_specifier' (the same way a key is
+specified for the other fscrypt key management ioctls), it returns
+status information in a 'struct fscrypt_get_key_status_arg'.
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+The main motivation for this is that applications need to be able to
+check whether an encrypted directory is "unlocked" or not, so that they
+can add the key if it is not, and avoid adding the key (which may
+involve prompting the user for a passphrase) if it already is.
+
+It's possible to use some workarounds such as checking whether opening a
+regular file fails with ENOKEY, or checking whether the filenames "look
+like gibberish" or not.  However, no workaround is usable in all cases.
+
+Like the other key management ioctls, the keyrings syscalls may seem at
+first to be a good fit for this.  Unfortunately, they are not.  Even if
+we exposed the keyring ID of the ->s_master_keys keyring and gave
+everyone Search permission on it (note: currently the keyrings
+permission system would also allow everyone to "invalidate" the keyring
+too), the fscrypt keys have an additional state that doesn't map cleanly
+to the keyrings API: the secret can be removed, but we can be still
+tracking the files that were using the key, and the removal can be
+re-attempted or the secret added again.
+
+After later patches, some applications will also need a way to determine
+whether a key was added by the current user vs. by some other user.
+Reserved fields are included in fscrypt_get_key_status_arg for this and
+other future extensions.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/mpage.c | 51 ++++++++++++++++++++++++++++++++++++++++++++++++---
- 1 file changed, 48 insertions(+), 3 deletions(-)
+ fs/crypto/keyring.c          | 60 ++++++++++++++++++++++++++++++++++++
+ include/linux/fscrypt.h      |  7 +++++
+ include/uapi/linux/fscrypt.h | 15 +++++++++
+ 3 files changed, 82 insertions(+)
 
-diff --git a/fs/mpage.c b/fs/mpage.c
-index 3f19da75178b..e342b859ee44 100644
---- a/fs/mpage.c
-+++ b/fs/mpage.c
-@@ -30,6 +30,10 @@
- #include <linux/backing-dev.h>
- #include <linux/pagevec.h>
- #include <linux/cleancache.h>
-+#include <linux/fsverity.h>
-+#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
-+#include <linux/read_callbacks.h>
-+#endif
- #include "internal.h"
+diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+index f3c2f9329e296..74ecd1c824983 100644
+--- a/fs/crypto/keyring.c
++++ b/fs/crypto/keyring.c
+@@ -11,6 +11,7 @@
+  *
+  * - FS_IOC_ADD_ENCRYPTION_KEY: add a key
+  * - FS_IOC_REMOVE_ENCRYPTION_KEY: remove a key
++ * - FS_IOC_GET_ENCRYPTION_KEY_STATUS: get key status
+  */
  
- /*
-@@ -50,6 +54,20 @@ static void mpage_end_io(struct bio *bio)
- 	int i;
- 	struct bvec_iter_all iter_all;
+ #include <linux/key-type.h>
+@@ -496,6 +497,65 @@ int fscrypt_ioctl_remove_key(struct file *filp, const void __user *uarg)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_ioctl_remove_key);
  
-+#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
-+	if (!bio->bi_status && bio->bi_private) {
-+		struct read_callbacks_ctx *ctx;
++/*
++ * Retrieve the status of an fscrypt master encryption key.
++ *
++ * We set ->status to indicate whether the key is absent, present, or
++ * incompletely removed.  "Incompletely removed" means that the master key
++ * secret has been removed, but some files which had been unlocked with it are
++ * still in use.  This field allows applications to easily determine the state
++ * of an encrypted directory without using a hack such as trying to open a
++ * regular file in it (which can confuse the "incompletely removed" state with
++ * absent or present).
++ */
++int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
++{
++	struct super_block *sb = file_inode(filp)->i_sb;
++	struct fscrypt_get_key_status_arg arg;
++	struct key *key;
++	struct fscrypt_master_key *mk;
++	int err;
 +
-+		ctx = bio->bi_private;
++	if (copy_from_user(&arg, uarg, sizeof(arg)))
++		return -EFAULT;
 +
-+		read_callbacks(ctx);
-+		return;
++	if (!valid_key_spec(&arg.key_spec))
++		return -EINVAL;
++
++	if (memchr_inv(arg.__reserved, 0, sizeof(arg.__reserved)))
++		return -EINVAL;
++
++	memset(arg.__out_reserved, 0, sizeof(arg.__out_reserved));
++
++	key = fscrypt_find_master_key(sb, &arg.key_spec);
++	if (IS_ERR(key)) {
++		if (key != ERR_PTR(-ENOKEY))
++			return PTR_ERR(key);
++		arg.status = FSCRYPT_KEY_STATUS_ABSENT;
++		err = 0;
++		goto out;
++	}
++	mk = key->payload.data[0];
++	down_read(&key->sem);
++
++	if (!is_master_key_secret_present(&mk->mk_secret)) {
++		arg.status = FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED;
++		err = 0;
++		goto out_release_key;
 +	}
 +
-+	if (bio->bi_private)
-+		put_read_callbacks_ctx((struct read_callbacks_ctx *)(bio->bi_private));
-+#endif
++	arg.status = FSCRYPT_KEY_STATUS_PRESENT;
++	err = 0;
++out_release_key:
++	up_read(&key->sem);
++	key_put(key);
++out:
++	if (!err && copy_to_user(uarg, &arg, sizeof(arg)))
++		err = -EFAULT;
++	return err;
++}
++EXPORT_SYMBOL_GPL(fscrypt_ioctl_get_key_status);
 +
- 	bio_for_each_segment_all(bv, bio, i, iter_all) {
- 		struct page *page = bv->bv_page;
- 		page_endio(page, bio_op(bio),
-@@ -189,7 +207,13 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ int __init fscrypt_init_keyring(void)
+ {
+ 	return register_key_type(&key_type_fscrypt);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 183f2bde95256..9826225d3451b 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -130,6 +130,7 @@ extern int fscrypt_inherit_context(struct inode *, struct inode *,
+ extern void fscrypt_sb_free(struct super_block *sb);
+ extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
+ extern int fscrypt_ioctl_remove_key(struct file *filp, const void __user *arg);
++extern int fscrypt_ioctl_get_key_status(struct file *filp, void __user *arg);
  
- 	block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
- 	last_block = block_in_file + args->nr_pages * blocks_per_page;
--	last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
-+#ifdef CONFIG_FS_VERITY
-+	if (IS_VERITY(inode) && inode->i_sb->s_vop->readpage_limit)
-+		last_block_in_file = inode->i_sb->s_vop->readpage_limit(inode);
-+	else
-+#endif
-+		last_block_in_file = (i_size_read(inode) + blocksize - 1)
-+			>> blkbits;
- 	if (last_block > last_block_in_file)
- 		last_block = last_block_in_file;
- 	page_block = 0;
-@@ -277,6 +301,14 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
- 	if (first_hole != blocks_per_page) {
- 		zero_user_segment(page, first_hole << blkbits, PAGE_SIZE);
- 		if (first_hole == 0) {
-+#ifdef CONFIG_FS_VERITY
-+			if (IS_VERITY(inode)) {
-+				if (!fsverity_check_hole(inode, page)) {
-+					SetPageError(page);
-+					goto confused;
-+				}
-+			}
-+#endif
- 			SetPageUptodate(page);
- 			unlock_page(page);
- 			goto out;
-@@ -299,7 +331,11 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ /* keysetup.c */
+ extern int fscrypt_get_encryption_info(struct inode *);
+@@ -355,6 +356,12 @@ static inline int fscrypt_ioctl_remove_key(struct file *filp,
+ 	return -EOPNOTSUPP;
+ }
  
- alloc_new:
- 	if (args->bio == NULL) {
--		if (first_hole == blocks_per_page) {
-+#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
-+		struct read_callbacks_ctx *ctx;
-+#endif
-+		if (first_hole == blocks_per_page
-+			&& !(IS_ENCRYPTED(inode) || IS_VERITY(inode))) {
- 			if (!bdev_read_page(bdev, blocks[0] << (blkbits - 9),
- 								page))
- 				goto out;
-@@ -310,6 +346,15 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
- 					gfp);
- 		if (args->bio == NULL)
- 			goto confused;
++static inline int fscrypt_ioctl_get_key_status(struct file *filp,
++					       void __user *arg)
++{
++	return -EOPNOTSUPP;
++}
 +
-+#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
-+		ctx = get_read_callbacks_ctx(inode, args->bio, page->index);
-+		if (IS_ERR(ctx)) {
-+			bio_put(args->bio);
-+			args->bio = NULL;
-+			goto confused;
-+		}
-+#endif
- 	}
+ /* keysetup.c */
+ static inline int fscrypt_get_encryption_info(struct inode *inode)
+ {
+diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+index 3302a407131e6..042e70a4ff7ee 100644
+--- a/include/uapi/linux/fscrypt.h
++++ b/include/uapi/linux/fscrypt.h
+@@ -71,11 +71,26 @@ struct fscrypt_remove_key_arg {
+ 	__u32 __reserved[6];
+ };
  
- 	length = first_hole << blkbits;
-@@ -331,7 +376,7 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
- confused:
- 	if (args->bio)
- 		args->bio = mpage_bio_submit(REQ_OP_READ, op_flags, args->bio);
--	if (!PageUptodate(page))
-+	if (!PageUptodate(page) && !PageError(page))
- 		block_read_full_page(page, args->get_block);
- 	else
- 		unlock_page(page);
++/* Struct passed to FS_IOC_GET_ENCRYPTION_KEY_STATUS */
++struct fscrypt_get_key_status_arg {
++	/* input */
++	struct fscrypt_key_specifier key_spec;
++	__u32 __reserved[6];
++
++	/* output */
++#define FSCRYPT_KEY_STATUS_ABSENT		1
++#define FSCRYPT_KEY_STATUS_PRESENT		2
++#define FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED	3
++	__u32 status;
++	__u32 __out_reserved[15];
++};
++
+ #define FS_IOC_SET_ENCRYPTION_POLICY	  _IOR('f', 19, struct fscrypt_policy)
+ #define FS_IOC_GET_ENCRYPTION_PWSALT	  _IOW('f', 20, __u8[16])
+ #define FS_IOC_GET_ENCRYPTION_POLICY	  _IOW('f', 21, struct fscrypt_policy)
+ #define FS_IOC_ADD_ENCRYPTION_KEY	 _IOWR('f', 23, struct fscrypt_add_key_arg)
+ #define FS_IOC_REMOVE_ENCRYPTION_KEY	  _IOW('f', 24, struct fscrypt_remove_key_arg)
++#define FS_IOC_GET_ENCRYPTION_KEY_STATUS _IOWR('f', 25, struct fscrypt_get_key_status_arg)
+ 
+ /**********************************************************************/
+ 
 -- 
-2.19.1
+2.21.0.392.gf8f6787159e-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
