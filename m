@@ -1,4313 +1,678 @@
-Return-Path: <SRS0=H5uw=RZ=gondor.apana.org.au=herbert@kernel.org>
-Subject: [PATCH 16/17] zinc: Curve25519 ARM implementation
-References: <20190322062740.nrwfx2rvmt7lzotj@gondor.apana.org.au>
-Message-Id: <E1h7Dgj-0001Jv-F3@gondobar>
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Date: Fri, 22 Mar 2019 14:29:57 +0800
-To: Linus Torvalds <torvalds@linux-foundation.org>, "David S. Miller" <davem@davemloft.net>, "Jason A. Donenfeld" <Jason@zx2c4.com>, Eric Biggers <ebiggers@kernel.org>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-arm-kernel@lists.infradead.org, LKML <linux-kernel@vger.kernel.org>, Paul Crowley <paulcrowley@google.com>, Greg Kaiser <gkaiser@google.com>, Samuel Neves <samuel.c.p.neves@gmail.com>, Tomer Ashur <tomer.ashur@esat.kuleuven.be>, Martin Willi <martin@strongswan.org>
+Return-Path: <keyrings-owner@vger.kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v5 07/16] fscrypt: add FS_IOC_REMOVE_ENCRYPTION_KEY ioctl
+Date: Thu, 18 Apr 2019 16:29:14 -0700
+Message-Id: <20190418232923.250800-8-ebiggers@kernel.org>
+In-Reply-To: <20190418232923.250800-1-ebiggers@kernel.org>
+References: <20190418232923.250800-1-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Sender: keyrings-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Jason A. Donenfeld <Jason@zx2c4.com>
+From: Eric Biggers <ebiggers@google.com>
 
-This ports the SUPERCOP implementation for usage in kernel space. In
-addition to the usual header, macro, and style changes required for
-kernel space, it makes a few small changes to the code:
+Add a new fscrypt ioctl, FS_IOC_REMOVE_ENCRYPTION_KEY.  This ioctl
+removes an encryption key that was added by FS_IOC_ADD_ENCRYPTION_KEY.
+It wipes the secret key itself, then "locks" the encrypted files and
+directories that had been unlocked using that key -- implemented by
+evicting the relevant dentries and inodes from the VFS caches.
 
-  - The stack alignment is relaxed to 16 bytes.
-  - Superfluous mov statements have been removed.
-  - ldr for constants has been replaced with movw.
-  - ldreq has been replaced with moveq.
-  - The str epilogue has been made more idiomatic.
-  - SIMD registers are not pushed and popped at the beginning and end.
-  - The prologue and epilogue have been made idiomatic.
-  - A hole has been removed from the stack, saving 32 bytes.
-  - We write-back the base register whenever possible for vld1.8.
-  - Some multiplications have been reordered for better A7 performance.
+The problem this solves is that many fscrypt users want the ability to
+remove encryption keys, causing the corresponding encrypted directories
+to appear "locked" (presented in ciphertext form) again.  Moreover,
+users want removing an encryption key to *really* remove it, in the
+sense that the removed keys cannot be recovered even if kernel memory is
+compromised, e.g. by the exploit of a kernel security vulnerability or
+by a physical attack.  This is desirable after a user logs out of the
+system, for example.  In many cases users even already assume this to be
+the case and are surprised to hear when it's not.
 
-There are more opportunities for cleanup, since this code is from qhasm,
-which doesn't always do the most opportune thing. But even prior to
-extensive hand optimizations, this code delivers significant performance
-improvements (given in get_cycles() per call):
+It is not sufficient to simply unlink the master key from the keyring
+(or to revoke or invalidate it), since the actual encryption transform
+objects are still pinned in memory by their inodes.  Therefore, to
+really remove a key we must also evict the relevant inodes.
 
-		      ----------- -------------
-	             | generic C | this commit |
-	 ------------ ----------- -------------
-	| Cortex-A7  |     49136 |       22395 |
-	 ------------ ----------- -------------
-	| Cortex-A17 |     17326 |        4983 |
-	 ------------ ----------- -------------
+Currently one workaround is to run 'sync && echo 2 >
+/proc/sys/vm/drop_caches'.  But, that evicts all unused inodes in the
+system rather than just the inodes associated with the key being
+removed, causing severe performance problems.  Moreover, it requires
+root privileges, so regular users can't "lock" their encrypted files.
 
-Signed-off-by: Jason A. Donenfeld <Jason@zx2c4.com>
-Cc: Russell King <linux@armlinux.org.uk>
-Cc: linux-arm-kernel@lists.infradead.org
-Cc: Samuel Neves <sneves@dei.uc.pt>
-Cc: Jean-Philippe Aumasson <jeanphilippe.aumasson@gmail.com>
-Cc: Andy Lutomirski <luto@kernel.org>
-Cc: Greg KH <gregkh@linuxfoundation.org>
-Cc: Andrew Morton <akpm@linux-foundation.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: kernel-hardening@lists.openwall.com
-Cc: linux-crypto@vger.kernel.org
-Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+Another workaround, used in Chromium OS kernels, is to add a new
+VFS-level ioctl FS_IOC_DROP_CACHE which is a more restricted version of
+drop_caches that operates on a single super_block.  It does:
+
+        shrink_dcache_sb(sb);
+        invalidate_inodes(sb, false);
+
+But it's still a hack.  Yet, the major users of filesystem encryption
+want this feature badly enough that they are actually using these hacks.
+
+To properly solve the problem, start maintaining a list of the inodes
+which have been "unlocked" using each master key.  Originally this
+wasn't possible because the kernel didn't keep track of in-use master
+keys at all.  But, with the ->s_master_keys keyring it is now possible.
+
+Then, add an ioctl FS_IOC_REMOVE_ENCRYPTION_KEY.  It finds the specified
+master key in ->s_master_keys, then wipes the secret key itself, which
+prevents any additional inodes from being unlocked with the key.  Then,
+it syncs the filesystem and evicts the inodes in the key's list.  The
+normal inode eviction code will free and wipe the per-file keys (in
+->i_crypt_info).  Note that freeing ->i_crypt_info without evicting the
+inodes was also considered, but would have been racy.
+
+Some inodes may still be in use when a master key is removed, and we
+can't simply revoke random file descriptors, mmap's, etc.  Thus, the
+ioctl simply skips in-use inodes, and returns -EBUSY to indicate that
+some inodes weren't evicted.  The master key *secret* is still removed,
+but the fscrypt_master_key struct remains to keep track of the remaining
+inodes.  Userspace can then retry the ioctl to evict the remaining
+inodes.  Alternatively, if userspace adds the key again, the refreshed
+secret will be associated with the existing list of inodes so they
+remain correctly tracked for future key removals.
+
+The ioctl doesn't wipe pagecache pages.  Thus, we tolerate that after a
+kernel compromise some portions of plaintext file contents may still be
+recoverable from memory.  This can be solved be enabling page poisoning
+system-wide, which security conscious users may choose to do.  But it's
+very difficult to solve otherwise, e.g. note that plaintext file
+contents may have been read in other places than pagecache pages.
+
+Like FS_IOC_ADD_ENCRYPTION_KEY, FS_IOC_REMOVE_ENCRYPTION_KEY is
+initially restricted to privileged users only.  This is sufficient for
+some use cases, but not all.  A later patch will relax this restriction,
+but it will require introducing key hashes, among other changes.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
+ fs/crypto/fscrypt_private.h  |  53 ++++++++-
+ fs/crypto/keyring.c          | 215 ++++++++++++++++++++++++++++++++++-
+ fs/crypto/keysetup.c         | 103 ++++++++++++++++-
+ include/linux/fscrypt.h      |  13 +++
+ include/uapi/linux/fscrypt.h |   7 ++
+ 5 files changed, 386 insertions(+), 5 deletions(-)
 
- lib/zinc/Makefile                             |    1 
- lib/zinc/curve25519/curve25519-arm-glue.c     |   43 
- lib/zinc/curve25519/curve25519-arm-supercop.S | 2105 --------------------------
- lib/zinc/curve25519/curve25519-arm.S          | 2064 +++++++++++++++++++++++++
- lib/zinc/curve25519/curve25519.c              |    2 
- 5 files changed, 2110 insertions(+), 2105 deletions(-)
-
-diff --git a/lib/zinc/Makefile b/lib/zinc/Makefile
-index 9050089e1b5a..0edb0c1fbb0a 100644
---- a/lib/zinc/Makefile
-+++ b/lib/zinc/Makefile
-@@ -16,4 +16,5 @@ zinc_blake2s-$(CONFIG_ZINC_ARCH_X86_64) += blake2s/blake2s-x86_64.o
- obj-$(CONFIG_ZINC_BLAKE2S) += zinc_blake2s.o
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index b4c4312085554..cc1862c9baa1d 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -78,6 +78,19 @@ struct fscrypt_info {
+ 	/* Back-pointer to the inode */
+ 	struct inode *ci_inode;
  
- zinc_curve25519-y := curve25519/curve25519.o
-+zinc_curve25519-$(CONFIG_ZINC_ARCH_ARM) += curve25519/curve25519-arm.o
- obj-$(CONFIG_ZINC_CURVE25519) += zinc_curve25519.o
-diff --git a/lib/zinc/curve25519/curve25519-arm-glue.c b/lib/zinc/curve25519/curve25519-arm-glue.c
-new file mode 100644
-index 000000000000..c71c981c3ba9
---- /dev/null
-+++ b/lib/zinc/curve25519/curve25519-arm-glue.c
-@@ -0,0 +1,43 @@
-+// SPDX-License-Identifier: GPL-2.0 OR MIT
-+/*
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-+ */
++	/*
++	 * The master key with which this inode was unlocked (decrypted).  This
++	 * will be NULL if the master key was found in a process-subscribed
++	 * keyring rather than in the filesystem-level keyring.
++	 */
++	struct key *ci_master_key;
 +
-+#include <linux/simd.h>
-+#include <asm/hwcap.h>
-+#include <asm/neon.h>
++	/*
++	 * Link in list of inodes that were unlocked with the master key.
++	 * Only used when ->ci_master_key is set.
++	 */
++	struct list_head ci_master_key_link;
 +
-+asmlinkage void curve25519_neon(u8 mypublic[CURVE25519_KEY_SIZE],
-+				const u8 secret[CURVE25519_KEY_SIZE],
-+				const u8 basepoint[CURVE25519_KEY_SIZE]);
+ 	/*
+ 	 * If non-NULL, then encryption is done using the master key directly
+ 	 * and ci_ctfm will equal ci_direct_key->dk_ctfm.
+@@ -186,14 +199,52 @@ struct fscrypt_master_key_secret {
+  */
+ struct fscrypt_master_key {
+ 
+-	/* The secret key material */
++	/*
++	 * The secret key material.  After FS_IOC_REMOVE_ENCRYPTION_KEY is
++	 * executed, this is wiped and no new inodes can be unlocked with this
++	 * key; however, there may still be inodes in ->mk_decrypted_inodes
++	 * which could not be evicted.  As long as some inodes still remain,
++	 * FS_IOC_REMOVE_ENCRYPTION_KEY can be retried, or
++	 * FS_IOC_ADD_ENCRYPTION_KEY can add the secret again.
++	 *
++	 * Locking: protected by key->sem.
++	 */
+ 	struct fscrypt_master_key_secret	mk_secret;
+ 
+ 	/* Arbitrary key descriptor which was assigned by userspace */
+ 	struct fscrypt_key_specifier		mk_spec;
+ 
++	/*
++	 * Length of ->mk_decrypted_inodes, plus one if mk_secret is present.
++	 * Once this goes to 0, the master key is removed from ->s_master_keys.
++	 * The 'struct fscrypt_master_key' will continue to live as long as the
++	 * 'struct key' whose payload it is, but we won't let this reference
++	 * count rise again.
++	 */
++	refcount_t		mk_refcount;
 +
-+static bool curve25519_use_neon __ro_after_init;
-+static bool *const curve25519_nobs[] __initconst = { &curve25519_use_neon };
-+static void __init curve25519_fpu_init(void)
++	/*
++	 * List of inodes that were unlocked using this key.  This allows the
++	 * inodes to be evicted efficiently if the key is removed.
++	 */
++	struct list_head	mk_decrypted_inodes;
++	spinlock_t		mk_decrypted_inodes_lock;
++
+ } __randomize_layout;
+ 
++static inline bool
++is_master_key_secret_present(const struct fscrypt_master_key_secret *secret)
 +{
-+	curve25519_use_neon = elf_hwcap & HWCAP_NEON;
++	/*
++	 * The READ_ONCE() is only necessary for fscrypt_drop_inode() and
++	 * fscrypt_key_describe().  These run in atomic context, so they can't
++	 * take key->sem and thus 'secret' can change concurrently which would
++	 * be a data race.  But they only need to know whether the secret *was*
++	 * present at the time of check, so READ_ONCE() suffices.
++	 */
++	return READ_ONCE(secret->size) != 0;
 +}
 +
-+static inline bool curve25519_arch(u8 mypublic[CURVE25519_KEY_SIZE],
-+				   const u8 secret[CURVE25519_KEY_SIZE],
-+				   const u8 basepoint[CURVE25519_KEY_SIZE])
-+{
-+	simd_context_t simd_context;
-+	bool used_arch = false;
+ extern struct key *
+ fscrypt_find_master_key(struct super_block *sb,
+ 			const struct fscrypt_key_specifier *mk_spec);
+diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+index 011aeb58806f7..f3c2f9329e296 100644
+--- a/fs/crypto/keyring.c
++++ b/fs/crypto/keyring.c
+@@ -10,6 +10,7 @@
+  * filesystem-level keyring, including the ioctls:
+  *
+  * - FS_IOC_ADD_ENCRYPTION_KEY: add a key
++ * - FS_IOC_REMOVE_ENCRYPTION_KEY: remove a key
+  */
+ 
+ #include <linux/key-type.h>
+@@ -66,6 +67,13 @@ static void fscrypt_key_destroy(struct key *key)
+ static void fscrypt_key_describe(const struct key *key, struct seq_file *m)
+ {
+ 	seq_puts(m, key->description);
 +
-+	simd_get(&simd_context);
-+	if (IS_ENABLED(CONFIG_KERNEL_MODE_NEON) &&
-+	    !IS_ENABLED(CONFIG_CPU_BIG_ENDIAN) && curve25519_use_neon &&
-+	    simd_use(&simd_context)) {
-+		curve25519_neon(mypublic, secret, basepoint);
-+		used_arch = true;
++	if (key_is_positive(key)) {
++		const struct fscrypt_master_key *mk = key->payload.data[0];
++
++		if (!is_master_key_secret_present(&mk->mk_secret))
++			seq_puts(m, ": secret removed");
 +	}
-+	simd_put(&simd_context);
-+	return used_arch;
-+}
-+
-+static inline bool curve25519_base_arch(u8 pub[CURVE25519_KEY_SIZE],
-+					const u8 secret[CURVE25519_KEY_SIZE])
-+{
-+	return false;
-+}
-diff --git a/lib/zinc/curve25519/curve25519-arm-supercop.S b/lib/zinc/curve25519/curve25519-arm-supercop.S
-deleted file mode 100644
-index f33b85fef382..000000000000
---- a/lib/zinc/curve25519/curve25519-arm-supercop.S
-+++ /dev/null
-@@ -1,2105 +0,0 @@
--/*
-- * Public domain code from Daniel J. Bernstein and Peter Schwabe, from
-- * SUPERCOP's curve25519/neon2/scalarmult.s.
-- */
--
--.fpu neon
--.text
--.align 4
--.global _crypto_scalarmult_curve25519_neon2
--.global crypto_scalarmult_curve25519_neon2
--.type _crypto_scalarmult_curve25519_neon2 STT_FUNC
--.type crypto_scalarmult_curve25519_neon2 STT_FUNC
--	_crypto_scalarmult_curve25519_neon2:
--	crypto_scalarmult_curve25519_neon2:
--	vpush		{q4, q5, q6, q7}
--	mov		r12, sp
--	sub		sp, sp, #736
--	and		sp, sp, #0xffffffe0
--	strd		r4, [sp, #0]
--	strd		r6, [sp, #8]
--	strd		r8, [sp, #16]
--	strd		r10, [sp, #24]
--	str		r12, [sp, #480]
--	str		r14, [sp, #484]
--	mov		r0, r0
--	mov		r1, r1
--	mov		r2, r2
--	add		r3, sp, #32
--	ldr		r4, =0
--	ldr		r5, =254
--	vmov.i32	q0, #1
--	vshr.u64	q1, q0, #7
--	vshr.u64	q0, q0, #8
--	vmov.i32	d4, #19
--	vmov.i32	d5, #38
--	add		r6, sp, #512
--	vst1.8		{d2-d3}, [r6, : 128]
--	add		r6, sp, #528
--	vst1.8		{d0-d1}, [r6, : 128]
--	add		r6, sp, #544
--	vst1.8		{d4-d5}, [r6, : 128]
--	add		r6, r3, #0
--	vmov.i32	q2, #0
--	vst1.8		{d4-d5}, [r6, : 128]!
--	vst1.8		{d4-d5}, [r6, : 128]!
--	vst1.8		d4, [r6, : 64]
--	add		r6, r3, #0
--	ldr		r7, =960
--	sub		r7, r7, #2
--	neg		r7, r7
--	sub		r7, r7, r7, LSL #7
--	str		r7, [r6]
--	add		r6, sp, #704
--	vld1.8		{d4-d5}, [r1]!
--	vld1.8		{d6-d7}, [r1]
--	vst1.8		{d4-d5}, [r6, : 128]!
--	vst1.8		{d6-d7}, [r6, : 128]
--	sub		r1, r6, #16
--	ldrb		r6, [r1]
--	and		r6, r6, #248
--	strb		r6, [r1]
--	ldrb		r6, [r1, #31]
--	and		r6, r6, #127
--	orr		r6, r6, #64
--	strb		r6, [r1, #31]
--	vmov.i64	q2, #0xffffffff
--	vshr.u64	q3, q2, #7
--	vshr.u64	q2, q2, #6
--	vld1.8		{d8}, [r2]
--	vld1.8		{d10}, [r2]
--	add		r2, r2, #6
--	vld1.8		{d12}, [r2]
--	vld1.8		{d14}, [r2]
--	add		r2, r2, #6
--	vld1.8		{d16}, [r2]
--	add		r2, r2, #4
--	vld1.8		{d18}, [r2]
--	vld1.8		{d20}, [r2]
--	add		r2, r2, #6
--	vld1.8		{d22}, [r2]
--	add		r2, r2, #2
--	vld1.8		{d24}, [r2]
--	vld1.8		{d26}, [r2]
--	vshr.u64	q5, q5, #26
--	vshr.u64	q6, q6, #3
--	vshr.u64	q7, q7, #29
--	vshr.u64	q8, q8, #6
--	vshr.u64	q10, q10, #25
--	vshr.u64	q11, q11, #3
--	vshr.u64	q12, q12, #12
--	vshr.u64	q13, q13, #38
--	vand		q4, q4, q2
--	vand		q6, q6, q2
--	vand		q8, q8, q2
--	vand		q10, q10, q2
--	vand		q2, q12, q2
--	vand		q5, q5, q3
--	vand		q7, q7, q3
--	vand		q9, q9, q3
--	vand		q11, q11, q3
--	vand		q3, q13, q3
--	add		r2, r3, #48
--	vadd.i64	q12, q4, q1
--	vadd.i64	q13, q10, q1
--	vshr.s64	q12, q12, #26
--	vshr.s64	q13, q13, #26
--	vadd.i64	q5, q5, q12
--	vshl.i64	q12, q12, #26
--	vadd.i64	q14, q5, q0
--	vadd.i64	q11, q11, q13
--	vshl.i64	q13, q13, #26
--	vadd.i64	q15, q11, q0
--	vsub.i64	q4, q4, q12
--	vshr.s64	q12, q14, #25
--	vsub.i64	q10, q10, q13
--	vshr.s64	q13, q15, #25
--	vadd.i64	q6, q6, q12
--	vshl.i64	q12, q12, #25
--	vadd.i64	q14, q6, q1
--	vadd.i64	q2, q2, q13
--	vsub.i64	q5, q5, q12
--	vshr.s64	q12, q14, #26
--	vshl.i64	q13, q13, #25
--	vadd.i64	q14, q2, q1
--	vadd.i64	q7, q7, q12
--	vshl.i64	q12, q12, #26
--	vadd.i64	q15, q7, q0
--	vsub.i64	q11, q11, q13
--	vshr.s64	q13, q14, #26
--	vsub.i64	q6, q6, q12
--	vshr.s64	q12, q15, #25
--	vadd.i64	q3, q3, q13
--	vshl.i64	q13, q13, #26
--	vadd.i64	q14, q3, q0
--	vadd.i64	q8, q8, q12
--	vshl.i64	q12, q12, #25
--	vadd.i64	q15, q8, q1
--	add		r2, r2, #8
--	vsub.i64	q2, q2, q13
--	vshr.s64	q13, q14, #25
--	vsub.i64	q7, q7, q12
--	vshr.s64	q12, q15, #26
--	vadd.i64	q14, q13, q13
--	vadd.i64	q9, q9, q12
--	vtrn.32		d12, d14
--	vshl.i64	q12, q12, #26
--	vtrn.32		d13, d15
--	vadd.i64	q0, q9, q0
--	vadd.i64	q4, q4, q14
--	vst1.8		d12, [r2, : 64]!
--	vshl.i64	q6, q13, #4
--	vsub.i64	q7, q8, q12
--	vshr.s64	q0, q0, #25
--	vadd.i64	q4, q4, q6
--	vadd.i64	q6, q10, q0
--	vshl.i64	q0, q0, #25
--	vadd.i64	q8, q6, q1
--	vadd.i64	q4, q4, q13
--	vshl.i64	q10, q13, #25
--	vadd.i64	q1, q4, q1
--	vsub.i64	q0, q9, q0
--	vshr.s64	q8, q8, #26
--	vsub.i64	q3, q3, q10
--	vtrn.32		d14, d0
--	vshr.s64	q1, q1, #26
--	vtrn.32		d15, d1
--	vadd.i64	q0, q11, q8
--	vst1.8		d14, [r2, : 64]
--	vshl.i64	q7, q8, #26
--	vadd.i64	q5, q5, q1
--	vtrn.32		d4, d6
--	vshl.i64	q1, q1, #26
--	vtrn.32		d5, d7
--	vsub.i64	q3, q6, q7
--	add		r2, r2, #16
--	vsub.i64	q1, q4, q1
--	vst1.8		d4, [r2, : 64]
--	vtrn.32		d6, d0
--	vtrn.32		d7, d1
--	sub		r2, r2, #8
--	vtrn.32		d2, d10
--	vtrn.32		d3, d11
--	vst1.8		d6, [r2, : 64]
--	sub		r2, r2, #24
--	vst1.8		d2, [r2, : 64]
--	add		r2, r3, #96
--	vmov.i32	q0, #0
--	vmov.i64	d2, #0xff
--	vmov.i64	d3, #0
--	vshr.u32	q1, q1, #7
--	vst1.8		{d2-d3}, [r2, : 128]!
--	vst1.8		{d0-d1}, [r2, : 128]!
--	vst1.8		d0, [r2, : 64]
--	add		r2, r3, #144
--	vmov.i32	q0, #0
--	vst1.8		{d0-d1}, [r2, : 128]!
--	vst1.8		{d0-d1}, [r2, : 128]!
--	vst1.8		d0, [r2, : 64]
--	add		r2, r3, #240
--	vmov.i32	q0, #0
--	vmov.i64	d2, #0xff
--	vmov.i64	d3, #0
--	vshr.u32	q1, q1, #7
--	vst1.8		{d2-d3}, [r2, : 128]!
--	vst1.8		{d0-d1}, [r2, : 128]!
--	vst1.8		d0, [r2, : 64]
--	add		r2, r3, #48
--	add		r6, r3, #192
--	vld1.8		{d0-d1}, [r2, : 128]!
--	vld1.8		{d2-d3}, [r2, : 128]!
--	vld1.8		{d4}, [r2, : 64]
--	vst1.8		{d0-d1}, [r6, : 128]!
--	vst1.8		{d2-d3}, [r6, : 128]!
--	vst1.8		d4, [r6, : 64]
--._mainloop:
--	mov		r2, r5, LSR #3
--	and		r6, r5, #7
--	ldrb		r2, [r1, r2]
--	mov		r2, r2, LSR r6
--	and		r2, r2, #1
--	str		r5, [sp, #488]
--	eor		r4, r4, r2
--	str		r2, [sp, #492]
--	neg		r2, r4
--	add		r4, r3, #96
--	add		r5, r3, #192
--	add		r6, r3, #144
--	vld1.8		{d8-d9}, [r4, : 128]!
--	add		r7, r3, #240
--	vld1.8		{d10-d11}, [r5, : 128]!
--	veor		q6, q4, q5
--	vld1.8		{d14-d15}, [r6, : 128]!
--	vdup.i32	q8, r2
--	vld1.8		{d18-d19}, [r7, : 128]!
--	veor		q10, q7, q9
--	vld1.8		{d22-d23}, [r4, : 128]!
--	vand		q6, q6, q8
--	vld1.8		{d24-d25}, [r5, : 128]!
--	vand		q10, q10, q8
--	vld1.8		{d26-d27}, [r6, : 128]!
--	veor		q4, q4, q6
--	vld1.8		{d28-d29}, [r7, : 128]!
--	veor		q5, q5, q6
--	vld1.8		{d0}, [r4, : 64]
--	veor		q6, q7, q10
--	vld1.8		{d2}, [r5, : 64]
--	veor		q7, q9, q10
--	vld1.8		{d4}, [r6, : 64]
--	veor		q9, q11, q12
--	vld1.8		{d6}, [r7, : 64]
--	veor		q10, q0, q1
--	sub		r2, r4, #32
--	vand		q9, q9, q8
--	sub		r4, r5, #32
--	vand		q10, q10, q8
--	sub		r5, r6, #32
--	veor		q11, q11, q9
--	sub		r6, r7, #32
--	veor		q0, q0, q10
--	veor		q9, q12, q9
--	veor		q1, q1, q10
--	veor		q10, q13, q14
--	veor		q12, q2, q3
--	vand		q10, q10, q8
--	vand		q8, q12, q8
--	veor		q12, q13, q10
--	veor		q2, q2, q8
--	veor		q10, q14, q10
--	veor		q3, q3, q8
--	vadd.i32	q8, q4, q6
--	vsub.i32	q4, q4, q6
--	vst1.8		{d16-d17}, [r2, : 128]!
--	vadd.i32	q6, q11, q12
--	vst1.8		{d8-d9}, [r5, : 128]!
--	vsub.i32	q4, q11, q12
--	vst1.8		{d12-d13}, [r2, : 128]!
--	vadd.i32	q6, q0, q2
--	vst1.8		{d8-d9}, [r5, : 128]!
--	vsub.i32	q0, q0, q2
--	vst1.8		d12, [r2, : 64]
--	vadd.i32	q2, q5, q7
--	vst1.8		d0, [r5, : 64]
--	vsub.i32	q0, q5, q7
--	vst1.8		{d4-d5}, [r4, : 128]!
--	vadd.i32	q2, q9, q10
--	vst1.8		{d0-d1}, [r6, : 128]!
--	vsub.i32	q0, q9, q10
--	vst1.8		{d4-d5}, [r4, : 128]!
--	vadd.i32	q2, q1, q3
--	vst1.8		{d0-d1}, [r6, : 128]!
--	vsub.i32	q0, q1, q3
--	vst1.8		d4, [r4, : 64]
--	vst1.8		d0, [r6, : 64]
--	add		r2, sp, #544
--	add		r4, r3, #96
--	add		r5, r3, #144
--	vld1.8		{d0-d1}, [r2, : 128]
--	vld1.8		{d2-d3}, [r4, : 128]!
--	vld1.8		{d4-d5}, [r5, : 128]!
--	vzip.i32	q1, q2
--	vld1.8		{d6-d7}, [r4, : 128]!
--	vld1.8		{d8-d9}, [r5, : 128]!
--	vshl.i32	q5, q1, #1
--	vzip.i32	q3, q4
--	vshl.i32	q6, q2, #1
--	vld1.8		{d14}, [r4, : 64]
--	vshl.i32	q8, q3, #1
--	vld1.8		{d15}, [r5, : 64]
--	vshl.i32	q9, q4, #1
--	vmul.i32	d21, d7, d1
--	vtrn.32		d14, d15
--	vmul.i32	q11, q4, q0
--	vmul.i32	q0, q7, q0
--	vmull.s32	q12, d2, d2
--	vmlal.s32	q12, d11, d1
--	vmlal.s32	q12, d12, d0
--	vmlal.s32	q12, d13, d23
--	vmlal.s32	q12, d16, d22
--	vmlal.s32	q12, d7, d21
--	vmull.s32	q10, d2, d11
--	vmlal.s32	q10, d4, d1
--	vmlal.s32	q10, d13, d0
--	vmlal.s32	q10, d6, d23
--	vmlal.s32	q10, d17, d22
--	vmull.s32	q13, d10, d4
--	vmlal.s32	q13, d11, d3
--	vmlal.s32	q13, d13, d1
--	vmlal.s32	q13, d16, d0
--	vmlal.s32	q13, d17, d23
--	vmlal.s32	q13, d8, d22
--	vmull.s32	q1, d10, d5
--	vmlal.s32	q1, d11, d4
--	vmlal.s32	q1, d6, d1
--	vmlal.s32	q1, d17, d0
--	vmlal.s32	q1, d8, d23
--	vmull.s32	q14, d10, d6
--	vmlal.s32	q14, d11, d13
--	vmlal.s32	q14, d4, d4
--	vmlal.s32	q14, d17, d1
--	vmlal.s32	q14, d18, d0
--	vmlal.s32	q14, d9, d23
--	vmull.s32	q11, d10, d7
--	vmlal.s32	q11, d11, d6
--	vmlal.s32	q11, d12, d5
--	vmlal.s32	q11, d8, d1
--	vmlal.s32	q11, d19, d0
--	vmull.s32	q15, d10, d8
--	vmlal.s32	q15, d11, d17
--	vmlal.s32	q15, d12, d6
--	vmlal.s32	q15, d13, d5
--	vmlal.s32	q15, d19, d1
--	vmlal.s32	q15, d14, d0
--	vmull.s32	q2, d10, d9
--	vmlal.s32	q2, d11, d8
--	vmlal.s32	q2, d12, d7
--	vmlal.s32	q2, d13, d6
--	vmlal.s32	q2, d14, d1
--	vmull.s32	q0, d15, d1
--	vmlal.s32	q0, d10, d14
--	vmlal.s32	q0, d11, d19
--	vmlal.s32	q0, d12, d8
--	vmlal.s32	q0, d13, d17
--	vmlal.s32	q0, d6, d6
--	add		r2, sp, #512
--	vld1.8		{d18-d19}, [r2, : 128]
--	vmull.s32	q3, d16, d7
--	vmlal.s32	q3, d10, d15
--	vmlal.s32	q3, d11, d14
--	vmlal.s32	q3, d12, d9
--	vmlal.s32	q3, d13, d8
--	add		r2, sp, #528
--	vld1.8		{d8-d9}, [r2, : 128]
--	vadd.i64	q5, q12, q9
--	vadd.i64	q6, q15, q9
--	vshr.s64	q5, q5, #26
--	vshr.s64	q6, q6, #26
--	vadd.i64	q7, q10, q5
--	vshl.i64	q5, q5, #26
--	vadd.i64	q8, q7, q4
--	vadd.i64	q2, q2, q6
--	vshl.i64	q6, q6, #26
--	vadd.i64	q10, q2, q4
--	vsub.i64	q5, q12, q5
--	vshr.s64	q8, q8, #25
--	vsub.i64	q6, q15, q6
--	vshr.s64	q10, q10, #25
--	vadd.i64	q12, q13, q8
--	vshl.i64	q8, q8, #25
--	vadd.i64	q13, q12, q9
--	vadd.i64	q0, q0, q10
--	vsub.i64	q7, q7, q8
--	vshr.s64	q8, q13, #26
--	vshl.i64	q10, q10, #25
--	vadd.i64	q13, q0, q9
--	vadd.i64	q1, q1, q8
--	vshl.i64	q8, q8, #26
--	vadd.i64	q15, q1, q4
--	vsub.i64	q2, q2, q10
--	vshr.s64	q10, q13, #26
--	vsub.i64	q8, q12, q8
--	vshr.s64	q12, q15, #25
--	vadd.i64	q3, q3, q10
--	vshl.i64	q10, q10, #26
--	vadd.i64	q13, q3, q4
--	vadd.i64	q14, q14, q12
--	add		r2, r3, #288
--	vshl.i64	q12, q12, #25
--	add		r4, r3, #336
--	vadd.i64	q15, q14, q9
--	add		r2, r2, #8
--	vsub.i64	q0, q0, q10
--	add		r4, r4, #8
--	vshr.s64	q10, q13, #25
--	vsub.i64	q1, q1, q12
--	vshr.s64	q12, q15, #26
--	vadd.i64	q13, q10, q10
--	vadd.i64	q11, q11, q12
--	vtrn.32		d16, d2
--	vshl.i64	q12, q12, #26
--	vtrn.32		d17, d3
--	vadd.i64	q1, q11, q4
--	vadd.i64	q4, q5, q13
--	vst1.8		d16, [r2, : 64]!
--	vshl.i64	q5, q10, #4
--	vst1.8		d17, [r4, : 64]!
--	vsub.i64	q8, q14, q12
--	vshr.s64	q1, q1, #25
--	vadd.i64	q4, q4, q5
--	vadd.i64	q5, q6, q1
--	vshl.i64	q1, q1, #25
--	vadd.i64	q6, q5, q9
--	vadd.i64	q4, q4, q10
--	vshl.i64	q10, q10, #25
--	vadd.i64	q9, q4, q9
--	vsub.i64	q1, q11, q1
--	vshr.s64	q6, q6, #26
--	vsub.i64	q3, q3, q10
--	vtrn.32		d16, d2
--	vshr.s64	q9, q9, #26
--	vtrn.32		d17, d3
--	vadd.i64	q1, q2, q6
--	vst1.8		d16, [r2, : 64]
--	vshl.i64	q2, q6, #26
--	vst1.8		d17, [r4, : 64]
--	vadd.i64	q6, q7, q9
--	vtrn.32		d0, d6
--	vshl.i64	q7, q9, #26
--	vtrn.32		d1, d7
--	vsub.i64	q2, q5, q2
--	add		r2, r2, #16
--	vsub.i64	q3, q4, q7
--	vst1.8		d0, [r2, : 64]
--	add		r4, r4, #16
--	vst1.8		d1, [r4, : 64]
--	vtrn.32		d4, d2
--	vtrn.32		d5, d3
--	sub		r2, r2, #8
--	sub		r4, r4, #8
--	vtrn.32		d6, d12
--	vtrn.32		d7, d13
--	vst1.8		d4, [r2, : 64]
--	vst1.8		d5, [r4, : 64]
--	sub		r2, r2, #24
--	sub		r4, r4, #24
--	vst1.8		d6, [r2, : 64]
--	vst1.8		d7, [r4, : 64]
--	add		r2, r3, #240
--	add		r4, r3, #96
--	vld1.8		{d0-d1}, [r4, : 128]!
--	vld1.8		{d2-d3}, [r4, : 128]!
--	vld1.8		{d4}, [r4, : 64]
--	add		r4, r3, #144
--	vld1.8		{d6-d7}, [r4, : 128]!
--	vtrn.32		q0, q3
--	vld1.8		{d8-d9}, [r4, : 128]!
--	vshl.i32	q5, q0, #4
--	vtrn.32		q1, q4
--	vshl.i32	q6, q3, #4
--	vadd.i32	q5, q5, q0
--	vadd.i32	q6, q6, q3
--	vshl.i32	q7, q1, #4
--	vld1.8		{d5}, [r4, : 64]
--	vshl.i32	q8, q4, #4
--	vtrn.32		d4, d5
--	vadd.i32	q7, q7, q1
--	vadd.i32	q8, q8, q4
--	vld1.8		{d18-d19}, [r2, : 128]!
--	vshl.i32	q10, q2, #4
--	vld1.8		{d22-d23}, [r2, : 128]!
--	vadd.i32	q10, q10, q2
--	vld1.8		{d24}, [r2, : 64]
--	vadd.i32	q5, q5, q0
--	add		r2, r3, #192
--	vld1.8		{d26-d27}, [r2, : 128]!
--	vadd.i32	q6, q6, q3
--	vld1.8		{d28-d29}, [r2, : 128]!
--	vadd.i32	q8, q8, q4
--	vld1.8		{d25}, [r2, : 64]
--	vadd.i32	q10, q10, q2
--	vtrn.32		q9, q13
--	vadd.i32	q7, q7, q1
--	vadd.i32	q5, q5, q0
--	vtrn.32		q11, q14
--	vadd.i32	q6, q6, q3
--	add		r2, sp, #560
--	vadd.i32	q10, q10, q2
--	vtrn.32		d24, d25
--	vst1.8		{d12-d13}, [r2, : 128]
--	vshl.i32	q6, q13, #1
--	add		r2, sp, #576
--	vst1.8		{d20-d21}, [r2, : 128]
--	vshl.i32	q10, q14, #1
--	add		r2, sp, #592
--	vst1.8		{d12-d13}, [r2, : 128]
--	vshl.i32	q15, q12, #1
--	vadd.i32	q8, q8, q4
--	vext.32		d10, d31, d30, #0
--	vadd.i32	q7, q7, q1
--	add		r2, sp, #608
--	vst1.8		{d16-d17}, [r2, : 128]
--	vmull.s32	q8, d18, d5
--	vmlal.s32	q8, d26, d4
--	vmlal.s32	q8, d19, d9
--	vmlal.s32	q8, d27, d3
--	vmlal.s32	q8, d22, d8
--	vmlal.s32	q8, d28, d2
--	vmlal.s32	q8, d23, d7
--	vmlal.s32	q8, d29, d1
--	vmlal.s32	q8, d24, d6
--	vmlal.s32	q8, d25, d0
--	add		r2, sp, #624
--	vst1.8		{d14-d15}, [r2, : 128]
--	vmull.s32	q2, d18, d4
--	vmlal.s32	q2, d12, d9
--	vmlal.s32	q2, d13, d8
--	vmlal.s32	q2, d19, d3
--	vmlal.s32	q2, d22, d2
--	vmlal.s32	q2, d23, d1
--	vmlal.s32	q2, d24, d0
--	add		r2, sp, #640
--	vst1.8		{d20-d21}, [r2, : 128]
--	vmull.s32	q7, d18, d9
--	vmlal.s32	q7, d26, d3
--	vmlal.s32	q7, d19, d8
--	vmlal.s32	q7, d27, d2
--	vmlal.s32	q7, d22, d7
--	vmlal.s32	q7, d28, d1
--	vmlal.s32	q7, d23, d6
--	vmlal.s32	q7, d29, d0
--	add		r2, sp, #656
--	vst1.8		{d10-d11}, [r2, : 128]
--	vmull.s32	q5, d18, d3
--	vmlal.s32	q5, d19, d2
--	vmlal.s32	q5, d22, d1
--	vmlal.s32	q5, d23, d0
--	vmlal.s32	q5, d12, d8
--	add		r2, sp, #672
--	vst1.8		{d16-d17}, [r2, : 128]
--	vmull.s32	q4, d18, d8
--	vmlal.s32	q4, d26, d2
--	vmlal.s32	q4, d19, d7
--	vmlal.s32	q4, d27, d1
--	vmlal.s32	q4, d22, d6
--	vmlal.s32	q4, d28, d0
--	vmull.s32	q8, d18, d7
--	vmlal.s32	q8, d26, d1
--	vmlal.s32	q8, d19, d6
--	vmlal.s32	q8, d27, d0
--	add		r2, sp, #576
--	vld1.8		{d20-d21}, [r2, : 128]
--	vmlal.s32	q7, d24, d21
--	vmlal.s32	q7, d25, d20
--	vmlal.s32	q4, d23, d21
--	vmlal.s32	q4, d29, d20
--	vmlal.s32	q8, d22, d21
--	vmlal.s32	q8, d28, d20
--	vmlal.s32	q5, d24, d20
--	add		r2, sp, #576
--	vst1.8		{d14-d15}, [r2, : 128]
--	vmull.s32	q7, d18, d6
--	vmlal.s32	q7, d26, d0
--	add		r2, sp, #656
--	vld1.8		{d30-d31}, [r2, : 128]
--	vmlal.s32	q2, d30, d21
--	vmlal.s32	q7, d19, d21
--	vmlal.s32	q7, d27, d20
--	add		r2, sp, #624
--	vld1.8		{d26-d27}, [r2, : 128]
--	vmlal.s32	q4, d25, d27
--	vmlal.s32	q8, d29, d27
--	vmlal.s32	q8, d25, d26
--	vmlal.s32	q7, d28, d27
--	vmlal.s32	q7, d29, d26
--	add		r2, sp, #608
--	vld1.8		{d28-d29}, [r2, : 128]
--	vmlal.s32	q4, d24, d29
--	vmlal.s32	q8, d23, d29
--	vmlal.s32	q8, d24, d28
--	vmlal.s32	q7, d22, d29
--	vmlal.s32	q7, d23, d28
--	add		r2, sp, #608
--	vst1.8		{d8-d9}, [r2, : 128]
--	add		r2, sp, #560
--	vld1.8		{d8-d9}, [r2, : 128]
--	vmlal.s32	q7, d24, d9
--	vmlal.s32	q7, d25, d31
--	vmull.s32	q1, d18, d2
--	vmlal.s32	q1, d19, d1
--	vmlal.s32	q1, d22, d0
--	vmlal.s32	q1, d24, d27
--	vmlal.s32	q1, d23, d20
--	vmlal.s32	q1, d12, d7
--	vmlal.s32	q1, d13, d6
--	vmull.s32	q6, d18, d1
--	vmlal.s32	q6, d19, d0
--	vmlal.s32	q6, d23, d27
--	vmlal.s32	q6, d22, d20
--	vmlal.s32	q6, d24, d26
--	vmull.s32	q0, d18, d0
--	vmlal.s32	q0, d22, d27
--	vmlal.s32	q0, d23, d26
--	vmlal.s32	q0, d24, d31
--	vmlal.s32	q0, d19, d20
--	add		r2, sp, #640
--	vld1.8		{d18-d19}, [r2, : 128]
--	vmlal.s32	q2, d18, d7
--	vmlal.s32	q2, d19, d6
--	vmlal.s32	q5, d18, d6
--	vmlal.s32	q5, d19, d21
--	vmlal.s32	q1, d18, d21
--	vmlal.s32	q1, d19, d29
--	vmlal.s32	q0, d18, d28
--	vmlal.s32	q0, d19, d9
--	vmlal.s32	q6, d18, d29
--	vmlal.s32	q6, d19, d28
--	add		r2, sp, #592
--	vld1.8		{d18-d19}, [r2, : 128]
--	add		r2, sp, #512
--	vld1.8		{d22-d23}, [r2, : 128]
--	vmlal.s32	q5, d19, d7
--	vmlal.s32	q0, d18, d21
--	vmlal.s32	q0, d19, d29
--	vmlal.s32	q6, d18, d6
--	add		r2, sp, #528
--	vld1.8		{d6-d7}, [r2, : 128]
--	vmlal.s32	q6, d19, d21
--	add		r2, sp, #576
--	vld1.8		{d18-d19}, [r2, : 128]
--	vmlal.s32	q0, d30, d8
--	add		r2, sp, #672
--	vld1.8		{d20-d21}, [r2, : 128]
--	vmlal.s32	q5, d30, d29
--	add		r2, sp, #608
--	vld1.8		{d24-d25}, [r2, : 128]
--	vmlal.s32	q1, d30, d28
--	vadd.i64	q13, q0, q11
--	vadd.i64	q14, q5, q11
--	vmlal.s32	q6, d30, d9
--	vshr.s64	q4, q13, #26
--	vshr.s64	q13, q14, #26
--	vadd.i64	q7, q7, q4
--	vshl.i64	q4, q4, #26
--	vadd.i64	q14, q7, q3
--	vadd.i64	q9, q9, q13
--	vshl.i64	q13, q13, #26
--	vadd.i64	q15, q9, q3
--	vsub.i64	q0, q0, q4
--	vshr.s64	q4, q14, #25
--	vsub.i64	q5, q5, q13
--	vshr.s64	q13, q15, #25
--	vadd.i64	q6, q6, q4
--	vshl.i64	q4, q4, #25
--	vadd.i64	q14, q6, q11
--	vadd.i64	q2, q2, q13
--	vsub.i64	q4, q7, q4
--	vshr.s64	q7, q14, #26
--	vshl.i64	q13, q13, #25
--	vadd.i64	q14, q2, q11
--	vadd.i64	q8, q8, q7
--	vshl.i64	q7, q7, #26
--	vadd.i64	q15, q8, q3
--	vsub.i64	q9, q9, q13
--	vshr.s64	q13, q14, #26
--	vsub.i64	q6, q6, q7
--	vshr.s64	q7, q15, #25
--	vadd.i64	q10, q10, q13
--	vshl.i64	q13, q13, #26
--	vadd.i64	q14, q10, q3
--	vadd.i64	q1, q1, q7
--	add		r2, r3, #144
--	vshl.i64	q7, q7, #25
--	add		r4, r3, #96
--	vadd.i64	q15, q1, q11
--	add		r2, r2, #8
--	vsub.i64	q2, q2, q13
--	add		r4, r4, #8
--	vshr.s64	q13, q14, #25
--	vsub.i64	q7, q8, q7
--	vshr.s64	q8, q15, #26
--	vadd.i64	q14, q13, q13
--	vadd.i64	q12, q12, q8
--	vtrn.32		d12, d14
--	vshl.i64	q8, q8, #26
--	vtrn.32		d13, d15
--	vadd.i64	q3, q12, q3
--	vadd.i64	q0, q0, q14
--	vst1.8		d12, [r2, : 64]!
--	vshl.i64	q7, q13, #4
--	vst1.8		d13, [r4, : 64]!
--	vsub.i64	q1, q1, q8
--	vshr.s64	q3, q3, #25
--	vadd.i64	q0, q0, q7
--	vadd.i64	q5, q5, q3
--	vshl.i64	q3, q3, #25
--	vadd.i64	q6, q5, q11
--	vadd.i64	q0, q0, q13
--	vshl.i64	q7, q13, #25
--	vadd.i64	q8, q0, q11
--	vsub.i64	q3, q12, q3
--	vshr.s64	q6, q6, #26
--	vsub.i64	q7, q10, q7
--	vtrn.32		d2, d6
--	vshr.s64	q8, q8, #26
--	vtrn.32		d3, d7
--	vadd.i64	q3, q9, q6
--	vst1.8		d2, [r2, : 64]
--	vshl.i64	q6, q6, #26
--	vst1.8		d3, [r4, : 64]
--	vadd.i64	q1, q4, q8
--	vtrn.32		d4, d14
--	vshl.i64	q4, q8, #26
--	vtrn.32		d5, d15
--	vsub.i64	q5, q5, q6
--	add		r2, r2, #16
--	vsub.i64	q0, q0, q4
--	vst1.8		d4, [r2, : 64]
--	add		r4, r4, #16
--	vst1.8		d5, [r4, : 64]
--	vtrn.32		d10, d6
--	vtrn.32		d11, d7
--	sub		r2, r2, #8
--	sub		r4, r4, #8
--	vtrn.32		d0, d2
--	vtrn.32		d1, d3
--	vst1.8		d10, [r2, : 64]
--	vst1.8		d11, [r4, : 64]
--	sub		r2, r2, #24
--	sub		r4, r4, #24
--	vst1.8		d0, [r2, : 64]
--	vst1.8		d1, [r4, : 64]
--	add		r2, r3, #288
--	add		r4, r3, #336
--	vld1.8		{d0-d1}, [r2, : 128]!
--	vld1.8		{d2-d3}, [r4, : 128]!
--	vsub.i32	q0, q0, q1
--	vld1.8		{d2-d3}, [r2, : 128]!
--	vld1.8		{d4-d5}, [r4, : 128]!
--	vsub.i32	q1, q1, q2
--	add		r5, r3, #240
--	vld1.8		{d4}, [r2, : 64]
--	vld1.8		{d6}, [r4, : 64]
--	vsub.i32	q2, q2, q3
--	vst1.8		{d0-d1}, [r5, : 128]!
--	vst1.8		{d2-d3}, [r5, : 128]!
--	vst1.8		d4, [r5, : 64]
--	add		r2, r3, #144
--	add		r4, r3, #96
--	add		r5, r3, #144
--	add		r6, r3, #192
--	vld1.8		{d0-d1}, [r2, : 128]!
--	vld1.8		{d2-d3}, [r4, : 128]!
--	vsub.i32	q2, q0, q1
--	vadd.i32	q0, q0, q1
--	vld1.8		{d2-d3}, [r2, : 128]!
--	vld1.8		{d6-d7}, [r4, : 128]!
--	vsub.i32	q4, q1, q3
--	vadd.i32	q1, q1, q3
--	vld1.8		{d6}, [r2, : 64]
--	vld1.8		{d10}, [r4, : 64]
--	vsub.i32	q6, q3, q5
--	vadd.i32	q3, q3, q5
--	vst1.8		{d4-d5}, [r5, : 128]!
--	vst1.8		{d0-d1}, [r6, : 128]!
--	vst1.8		{d8-d9}, [r5, : 128]!
--	vst1.8		{d2-d3}, [r6, : 128]!
--	vst1.8		d12, [r5, : 64]
--	vst1.8		d6, [r6, : 64]
--	add		r2, r3, #0
--	add		r4, r3, #240
--	vld1.8		{d0-d1}, [r4, : 128]!
--	vld1.8		{d2-d3}, [r4, : 128]!
--	vld1.8		{d4}, [r4, : 64]
--	add		r4, r3, #336
--	vld1.8		{d6-d7}, [r4, : 128]!
--	vtrn.32		q0, q3
--	vld1.8		{d8-d9}, [r4, : 128]!
--	vshl.i32	q5, q0, #4
--	vtrn.32		q1, q4
--	vshl.i32	q6, q3, #4
--	vadd.i32	q5, q5, q0
--	vadd.i32	q6, q6, q3
--	vshl.i32	q7, q1, #4
--	vld1.8		{d5}, [r4, : 64]
--	vshl.i32	q8, q4, #4
--	vtrn.32		d4, d5
--	vadd.i32	q7, q7, q1
--	vadd.i32	q8, q8, q4
--	vld1.8		{d18-d19}, [r2, : 128]!
--	vshl.i32	q10, q2, #4
--	vld1.8		{d22-d23}, [r2, : 128]!
--	vadd.i32	q10, q10, q2
--	vld1.8		{d24}, [r2, : 64]
--	vadd.i32	q5, q5, q0
--	add		r2, r3, #288
--	vld1.8		{d26-d27}, [r2, : 128]!
--	vadd.i32	q6, q6, q3
--	vld1.8		{d28-d29}, [r2, : 128]!
--	vadd.i32	q8, q8, q4
--	vld1.8		{d25}, [r2, : 64]
--	vadd.i32	q10, q10, q2
--	vtrn.32		q9, q13
--	vadd.i32	q7, q7, q1
--	vadd.i32	q5, q5, q0
--	vtrn.32		q11, q14
--	vadd.i32	q6, q6, q3
--	add		r2, sp, #560
--	vadd.i32	q10, q10, q2
--	vtrn.32		d24, d25
--	vst1.8		{d12-d13}, [r2, : 128]
--	vshl.i32	q6, q13, #1
--	add		r2, sp, #576
--	vst1.8		{d20-d21}, [r2, : 128]
--	vshl.i32	q10, q14, #1
--	add		r2, sp, #592
--	vst1.8		{d12-d13}, [r2, : 128]
--	vshl.i32	q15, q12, #1
--	vadd.i32	q8, q8, q4
--	vext.32		d10, d31, d30, #0
--	vadd.i32	q7, q7, q1
--	add		r2, sp, #608
--	vst1.8		{d16-d17}, [r2, : 128]
--	vmull.s32	q8, d18, d5
--	vmlal.s32	q8, d26, d4
--	vmlal.s32	q8, d19, d9
--	vmlal.s32	q8, d27, d3
--	vmlal.s32	q8, d22, d8
--	vmlal.s32	q8, d28, d2
--	vmlal.s32	q8, d23, d7
--	vmlal.s32	q8, d29, d1
--	vmlal.s32	q8, d24, d6
--	vmlal.s32	q8, d25, d0
--	add		r2, sp, #624
--	vst1.8		{d14-d15}, [r2, : 128]
--	vmull.s32	q2, d18, d4
--	vmlal.s32	q2, d12, d9
--	vmlal.s32	q2, d13, d8
--	vmlal.s32	q2, d19, d3
--	vmlal.s32	q2, d22, d2
--	vmlal.s32	q2, d23, d1
--	vmlal.s32	q2, d24, d0
--	add		r2, sp, #640
--	vst1.8		{d20-d21}, [r2, : 128]
--	vmull.s32	q7, d18, d9
--	vmlal.s32	q7, d26, d3
--	vmlal.s32	q7, d19, d8
--	vmlal.s32	q7, d27, d2
--	vmlal.s32	q7, d22, d7
--	vmlal.s32	q7, d28, d1
--	vmlal.s32	q7, d23, d6
--	vmlal.s32	q7, d29, d0
--	add		r2, sp, #656
--	vst1.8		{d10-d11}, [r2, : 128]
--	vmull.s32	q5, d18, d3
--	vmlal.s32	q5, d19, d2
--	vmlal.s32	q5, d22, d1
--	vmlal.s32	q5, d23, d0
--	vmlal.s32	q5, d12, d8
--	add		r2, sp, #672
--	vst1.8		{d16-d17}, [r2, : 128]
--	vmull.s32	q4, d18, d8
--	vmlal.s32	q4, d26, d2
--	vmlal.s32	q4, d19, d7
--	vmlal.s32	q4, d27, d1
--	vmlal.s32	q4, d22, d6
--	vmlal.s32	q4, d28, d0
--	vmull.s32	q8, d18, d7
--	vmlal.s32	q8, d26, d1
--	vmlal.s32	q8, d19, d6
--	vmlal.s32	q8, d27, d0
--	add		r2, sp, #576
--	vld1.8		{d20-d21}, [r2, : 128]
--	vmlal.s32	q7, d24, d21
--	vmlal.s32	q7, d25, d20
--	vmlal.s32	q4, d23, d21
--	vmlal.s32	q4, d29, d20
--	vmlal.s32	q8, d22, d21
--	vmlal.s32	q8, d28, d20
--	vmlal.s32	q5, d24, d20
--	add		r2, sp, #576
--	vst1.8		{d14-d15}, [r2, : 128]
--	vmull.s32	q7, d18, d6
--	vmlal.s32	q7, d26, d0
--	add		r2, sp, #656
--	vld1.8		{d30-d31}, [r2, : 128]
--	vmlal.s32	q2, d30, d21
--	vmlal.s32	q7, d19, d21
--	vmlal.s32	q7, d27, d20
--	add		r2, sp, #624
--	vld1.8		{d26-d27}, [r2, : 128]
--	vmlal.s32	q4, d25, d27
--	vmlal.s32	q8, d29, d27
--	vmlal.s32	q8, d25, d26
--	vmlal.s32	q7, d28, d27
--	vmlal.s32	q7, d29, d26
--	add		r2, sp, #608
--	vld1.8		{d28-d29}, [r2, : 128]
--	vmlal.s32	q4, d24, d29
--	vmlal.s32	q8, d23, d29
--	vmlal.s32	q8, d24, d28
--	vmlal.s32	q7, d22, d29
--	vmlal.s32	q7, d23, d28
--	add		r2, sp, #608
--	vst1.8		{d8-d9}, [r2, : 128]
--	add		r2, sp, #560
--	vld1.8		{d8-d9}, [r2, : 128]
--	vmlal.s32	q7, d24, d9
--	vmlal.s32	q7, d25, d31
--	vmull.s32	q1, d18, d2
--	vmlal.s32	q1, d19, d1
--	vmlal.s32	q1, d22, d0
--	vmlal.s32	q1, d24, d27
--	vmlal.s32	q1, d23, d20
--	vmlal.s32	q1, d12, d7
--	vmlal.s32	q1, d13, d6
--	vmull.s32	q6, d18, d1
--	vmlal.s32	q6, d19, d0
--	vmlal.s32	q6, d23, d27
--	vmlal.s32	q6, d22, d20
--	vmlal.s32	q6, d24, d26
--	vmull.s32	q0, d18, d0
--	vmlal.s32	q0, d22, d27
--	vmlal.s32	q0, d23, d26
--	vmlal.s32	q0, d24, d31
--	vmlal.s32	q0, d19, d20
--	add		r2, sp, #640
--	vld1.8		{d18-d19}, [r2, : 128]
--	vmlal.s32	q2, d18, d7
--	vmlal.s32	q2, d19, d6
--	vmlal.s32	q5, d18, d6
--	vmlal.s32	q5, d19, d21
--	vmlal.s32	q1, d18, d21
--	vmlal.s32	q1, d19, d29
--	vmlal.s32	q0, d18, d28
--	vmlal.s32	q0, d19, d9
--	vmlal.s32	q6, d18, d29
--	vmlal.s32	q6, d19, d28
--	add		r2, sp, #592
--	vld1.8		{d18-d19}, [r2, : 128]
--	add		r2, sp, #512
--	vld1.8		{d22-d23}, [r2, : 128]
--	vmlal.s32	q5, d19, d7
--	vmlal.s32	q0, d18, d21
--	vmlal.s32	q0, d19, d29
--	vmlal.s32	q6, d18, d6
--	add		r2, sp, #528
--	vld1.8		{d6-d7}, [r2, : 128]
--	vmlal.s32	q6, d19, d21
--	add		r2, sp, #576
--	vld1.8		{d18-d19}, [r2, : 128]
--	vmlal.s32	q0, d30, d8
--	add		r2, sp, #672
--	vld1.8		{d20-d21}, [r2, : 128]
--	vmlal.s32	q5, d30, d29
--	add		r2, sp, #608
--	vld1.8		{d24-d25}, [r2, : 128]
--	vmlal.s32	q1, d30, d28
--	vadd.i64	q13, q0, q11
--	vadd.i64	q14, q5, q11
--	vmlal.s32	q6, d30, d9
--	vshr.s64	q4, q13, #26
--	vshr.s64	q13, q14, #26
--	vadd.i64	q7, q7, q4
--	vshl.i64	q4, q4, #26
--	vadd.i64	q14, q7, q3
--	vadd.i64	q9, q9, q13
--	vshl.i64	q13, q13, #26
--	vadd.i64	q15, q9, q3
--	vsub.i64	q0, q0, q4
--	vshr.s64	q4, q14, #25
--	vsub.i64	q5, q5, q13
--	vshr.s64	q13, q15, #25
--	vadd.i64	q6, q6, q4
--	vshl.i64	q4, q4, #25
--	vadd.i64	q14, q6, q11
--	vadd.i64	q2, q2, q13
--	vsub.i64	q4, q7, q4
--	vshr.s64	q7, q14, #26
--	vshl.i64	q13, q13, #25
--	vadd.i64	q14, q2, q11
--	vadd.i64	q8, q8, q7
--	vshl.i64	q7, q7, #26
--	vadd.i64	q15, q8, q3
--	vsub.i64	q9, q9, q13
--	vshr.s64	q13, q14, #26
--	vsub.i64	q6, q6, q7
--	vshr.s64	q7, q15, #25
--	vadd.i64	q10, q10, q13
--	vshl.i64	q13, q13, #26
--	vadd.i64	q14, q10, q3
--	vadd.i64	q1, q1, q7
--	add		r2, r3, #288
--	vshl.i64	q7, q7, #25
--	add		r4, r3, #96
--	vadd.i64	q15, q1, q11
--	add		r2, r2, #8
--	vsub.i64	q2, q2, q13
--	add		r4, r4, #8
--	vshr.s64	q13, q14, #25
--	vsub.i64	q7, q8, q7
--	vshr.s64	q8, q15, #26
--	vadd.i64	q14, q13, q13
--	vadd.i64	q12, q12, q8
--	vtrn.32		d12, d14
--	vshl.i64	q8, q8, #26
--	vtrn.32		d13, d15
--	vadd.i64	q3, q12, q3
--	vadd.i64	q0, q0, q14
--	vst1.8		d12, [r2, : 64]!
--	vshl.i64	q7, q13, #4
--	vst1.8		d13, [r4, : 64]!
--	vsub.i64	q1, q1, q8
--	vshr.s64	q3, q3, #25
--	vadd.i64	q0, q0, q7
--	vadd.i64	q5, q5, q3
--	vshl.i64	q3, q3, #25
--	vadd.i64	q6, q5, q11
--	vadd.i64	q0, q0, q13
--	vshl.i64	q7, q13, #25
--	vadd.i64	q8, q0, q11
--	vsub.i64	q3, q12, q3
--	vshr.s64	q6, q6, #26
--	vsub.i64	q7, q10, q7
--	vtrn.32		d2, d6
--	vshr.s64	q8, q8, #26
--	vtrn.32		d3, d7
--	vadd.i64	q3, q9, q6
--	vst1.8		d2, [r2, : 64]
--	vshl.i64	q6, q6, #26
--	vst1.8		d3, [r4, : 64]
--	vadd.i64	q1, q4, q8
--	vtrn.32		d4, d14
--	vshl.i64	q4, q8, #26
--	vtrn.32		d5, d15
--	vsub.i64	q5, q5, q6
--	add		r2, r2, #16
--	vsub.i64	q0, q0, q4
--	vst1.8		d4, [r2, : 64]
--	add		r4, r4, #16
--	vst1.8		d5, [r4, : 64]
--	vtrn.32		d10, d6
--	vtrn.32		d11, d7
--	sub		r2, r2, #8
--	sub		r4, r4, #8
--	vtrn.32		d0, d2
--	vtrn.32		d1, d3
--	vst1.8		d10, [r2, : 64]
--	vst1.8		d11, [r4, : 64]
--	sub		r2, r2, #24
--	sub		r4, r4, #24
--	vst1.8		d0, [r2, : 64]
--	vst1.8		d1, [r4, : 64]
--	add		r2, sp, #544
--	add		r4, r3, #144
--	add		r5, r3, #192
--	vld1.8		{d0-d1}, [r2, : 128]
--	vld1.8		{d2-d3}, [r4, : 128]!
--	vld1.8		{d4-d5}, [r5, : 128]!
--	vzip.i32	q1, q2
--	vld1.8		{d6-d7}, [r4, : 128]!
--	vld1.8		{d8-d9}, [r5, : 128]!
--	vshl.i32	q5, q1, #1
--	vzip.i32	q3, q4
--	vshl.i32	q6, q2, #1
--	vld1.8		{d14}, [r4, : 64]
--	vshl.i32	q8, q3, #1
--	vld1.8		{d15}, [r5, : 64]
--	vshl.i32	q9, q4, #1
--	vmul.i32	d21, d7, d1
--	vtrn.32		d14, d15
--	vmul.i32	q11, q4, q0
--	vmul.i32	q0, q7, q0
--	vmull.s32	q12, d2, d2
--	vmlal.s32	q12, d11, d1
--	vmlal.s32	q12, d12, d0
--	vmlal.s32	q12, d13, d23
--	vmlal.s32	q12, d16, d22
--	vmlal.s32	q12, d7, d21
--	vmull.s32	q10, d2, d11
--	vmlal.s32	q10, d4, d1
--	vmlal.s32	q10, d13, d0
--	vmlal.s32	q10, d6, d23
--	vmlal.s32	q10, d17, d22
--	vmull.s32	q13, d10, d4
--	vmlal.s32	q13, d11, d3
--	vmlal.s32	q13, d13, d1
--	vmlal.s32	q13, d16, d0
--	vmlal.s32	q13, d17, d23
--	vmlal.s32	q13, d8, d22
--	vmull.s32	q1, d10, d5
--	vmlal.s32	q1, d11, d4
--	vmlal.s32	q1, d6, d1
--	vmlal.s32	q1, d17, d0
--	vmlal.s32	q1, d8, d23
--	vmull.s32	q14, d10, d6
--	vmlal.s32	q14, d11, d13
--	vmlal.s32	q14, d4, d4
--	vmlal.s32	q14, d17, d1
--	vmlal.s32	q14, d18, d0
--	vmlal.s32	q14, d9, d23
--	vmull.s32	q11, d10, d7
--	vmlal.s32	q11, d11, d6
--	vmlal.s32	q11, d12, d5
--	vmlal.s32	q11, d8, d1
--	vmlal.s32	q11, d19, d0
--	vmull.s32	q15, d10, d8
--	vmlal.s32	q15, d11, d17
--	vmlal.s32	q15, d12, d6
--	vmlal.s32	q15, d13, d5
--	vmlal.s32	q15, d19, d1
--	vmlal.s32	q15, d14, d0
--	vmull.s32	q2, d10, d9
--	vmlal.s32	q2, d11, d8
--	vmlal.s32	q2, d12, d7
--	vmlal.s32	q2, d13, d6
--	vmlal.s32	q2, d14, d1
--	vmull.s32	q0, d15, d1
--	vmlal.s32	q0, d10, d14
--	vmlal.s32	q0, d11, d19
--	vmlal.s32	q0, d12, d8
--	vmlal.s32	q0, d13, d17
--	vmlal.s32	q0, d6, d6
--	add		r2, sp, #512
--	vld1.8		{d18-d19}, [r2, : 128]
--	vmull.s32	q3, d16, d7
--	vmlal.s32	q3, d10, d15
--	vmlal.s32	q3, d11, d14
--	vmlal.s32	q3, d12, d9
--	vmlal.s32	q3, d13, d8
--	add		r2, sp, #528
--	vld1.8		{d8-d9}, [r2, : 128]
--	vadd.i64	q5, q12, q9
--	vadd.i64	q6, q15, q9
--	vshr.s64	q5, q5, #26
--	vshr.s64	q6, q6, #26
--	vadd.i64	q7, q10, q5
--	vshl.i64	q5, q5, #26
--	vadd.i64	q8, q7, q4
--	vadd.i64	q2, q2, q6
--	vshl.i64	q6, q6, #26
--	vadd.i64	q10, q2, q4
--	vsub.i64	q5, q12, q5
--	vshr.s64	q8, q8, #25
--	vsub.i64	q6, q15, q6
--	vshr.s64	q10, q10, #25
--	vadd.i64	q12, q13, q8
--	vshl.i64	q8, q8, #25
--	vadd.i64	q13, q12, q9
--	vadd.i64	q0, q0, q10
--	vsub.i64	q7, q7, q8
--	vshr.s64	q8, q13, #26
--	vshl.i64	q10, q10, #25
--	vadd.i64	q13, q0, q9
--	vadd.i64	q1, q1, q8
--	vshl.i64	q8, q8, #26
--	vadd.i64	q15, q1, q4
--	vsub.i64	q2, q2, q10
--	vshr.s64	q10, q13, #26
--	vsub.i64	q8, q12, q8
--	vshr.s64	q12, q15, #25
--	vadd.i64	q3, q3, q10
--	vshl.i64	q10, q10, #26
--	vadd.i64	q13, q3, q4
--	vadd.i64	q14, q14, q12
--	add		r2, r3, #144
--	vshl.i64	q12, q12, #25
--	add		r4, r3, #192
--	vadd.i64	q15, q14, q9
--	add		r2, r2, #8
--	vsub.i64	q0, q0, q10
--	add		r4, r4, #8
--	vshr.s64	q10, q13, #25
--	vsub.i64	q1, q1, q12
--	vshr.s64	q12, q15, #26
--	vadd.i64	q13, q10, q10
--	vadd.i64	q11, q11, q12
--	vtrn.32		d16, d2
--	vshl.i64	q12, q12, #26
--	vtrn.32		d17, d3
--	vadd.i64	q1, q11, q4
--	vadd.i64	q4, q5, q13
--	vst1.8		d16, [r2, : 64]!
--	vshl.i64	q5, q10, #4
--	vst1.8		d17, [r4, : 64]!
--	vsub.i64	q8, q14, q12
--	vshr.s64	q1, q1, #25
--	vadd.i64	q4, q4, q5
--	vadd.i64	q5, q6, q1
--	vshl.i64	q1, q1, #25
--	vadd.i64	q6, q5, q9
--	vadd.i64	q4, q4, q10
--	vshl.i64	q10, q10, #25
--	vadd.i64	q9, q4, q9
--	vsub.i64	q1, q11, q1
--	vshr.s64	q6, q6, #26
--	vsub.i64	q3, q3, q10
--	vtrn.32		d16, d2
--	vshr.s64	q9, q9, #26
--	vtrn.32		d17, d3
--	vadd.i64	q1, q2, q6
--	vst1.8		d16, [r2, : 64]
--	vshl.i64	q2, q6, #26
--	vst1.8		d17, [r4, : 64]
--	vadd.i64	q6, q7, q9
--	vtrn.32		d0, d6
--	vshl.i64	q7, q9, #26
--	vtrn.32		d1, d7
--	vsub.i64	q2, q5, q2
--	add		r2, r2, #16
--	vsub.i64	q3, q4, q7
--	vst1.8		d0, [r2, : 64]
--	add		r4, r4, #16
--	vst1.8		d1, [r4, : 64]
--	vtrn.32		d4, d2
--	vtrn.32		d5, d3
--	sub		r2, r2, #8
--	sub		r4, r4, #8
--	vtrn.32		d6, d12
--	vtrn.32		d7, d13
--	vst1.8		d4, [r2, : 64]
--	vst1.8		d5, [r4, : 64]
--	sub		r2, r2, #24
--	sub		r4, r4, #24
--	vst1.8		d6, [r2, : 64]
--	vst1.8		d7, [r4, : 64]
--	add		r2, r3, #336
--	add		r4, r3, #288
--	vld1.8		{d0-d1}, [r2, : 128]!
--	vld1.8		{d2-d3}, [r4, : 128]!
--	vadd.i32	q0, q0, q1
--	vld1.8		{d2-d3}, [r2, : 128]!
--	vld1.8		{d4-d5}, [r4, : 128]!
--	vadd.i32	q1, q1, q2
--	add		r5, r3, #288
--	vld1.8		{d4}, [r2, : 64]
--	vld1.8		{d6}, [r4, : 64]
--	vadd.i32	q2, q2, q3
--	vst1.8		{d0-d1}, [r5, : 128]!
--	vst1.8		{d2-d3}, [r5, : 128]!
--	vst1.8		d4, [r5, : 64]
--	add		r2, r3, #48
--	add		r4, r3, #144
--	vld1.8		{d0-d1}, [r4, : 128]!
--	vld1.8		{d2-d3}, [r4, : 128]!
--	vld1.8		{d4}, [r4, : 64]
--	add		r4, r3, #288
--	vld1.8		{d6-d7}, [r4, : 128]!
--	vtrn.32		q0, q3
--	vld1.8		{d8-d9}, [r4, : 128]!
--	vshl.i32	q5, q0, #4
--	vtrn.32		q1, q4
--	vshl.i32	q6, q3, #4
--	vadd.i32	q5, q5, q0
--	vadd.i32	q6, q6, q3
--	vshl.i32	q7, q1, #4
--	vld1.8		{d5}, [r4, : 64]
--	vshl.i32	q8, q4, #4
--	vtrn.32		d4, d5
--	vadd.i32	q7, q7, q1
--	vadd.i32	q8, q8, q4
--	vld1.8		{d18-d19}, [r2, : 128]!
--	vshl.i32	q10, q2, #4
--	vld1.8		{d22-d23}, [r2, : 128]!
--	vadd.i32	q10, q10, q2
--	vld1.8		{d24}, [r2, : 64]
--	vadd.i32	q5, q5, q0
--	add		r2, r3, #240
--	vld1.8		{d26-d27}, [r2, : 128]!
--	vadd.i32	q6, q6, q3
--	vld1.8		{d28-d29}, [r2, : 128]!
--	vadd.i32	q8, q8, q4
--	vld1.8		{d25}, [r2, : 64]
--	vadd.i32	q10, q10, q2
--	vtrn.32		q9, q13
--	vadd.i32	q7, q7, q1
--	vadd.i32	q5, q5, q0
--	vtrn.32		q11, q14
--	vadd.i32	q6, q6, q3
--	add		r2, sp, #560
--	vadd.i32	q10, q10, q2
--	vtrn.32		d24, d25
--	vst1.8		{d12-d13}, [r2, : 128]
--	vshl.i32	q6, q13, #1
--	add		r2, sp, #576
--	vst1.8		{d20-d21}, [r2, : 128]
--	vshl.i32	q10, q14, #1
--	add		r2, sp, #592
--	vst1.8		{d12-d13}, [r2, : 128]
--	vshl.i32	q15, q12, #1
--	vadd.i32	q8, q8, q4
--	vext.32		d10, d31, d30, #0
--	vadd.i32	q7, q7, q1
--	add		r2, sp, #608
--	vst1.8		{d16-d17}, [r2, : 128]
--	vmull.s32	q8, d18, d5
--	vmlal.s32	q8, d26, d4
--	vmlal.s32	q8, d19, d9
--	vmlal.s32	q8, d27, d3
--	vmlal.s32	q8, d22, d8
--	vmlal.s32	q8, d28, d2
--	vmlal.s32	q8, d23, d7
--	vmlal.s32	q8, d29, d1
--	vmlal.s32	q8, d24, d6
--	vmlal.s32	q8, d25, d0
--	add		r2, sp, #624
--	vst1.8		{d14-d15}, [r2, : 128]
--	vmull.s32	q2, d18, d4
--	vmlal.s32	q2, d12, d9
--	vmlal.s32	q2, d13, d8
--	vmlal.s32	q2, d19, d3
--	vmlal.s32	q2, d22, d2
--	vmlal.s32	q2, d23, d1
--	vmlal.s32	q2, d24, d0
--	add		r2, sp, #640
--	vst1.8		{d20-d21}, [r2, : 128]
--	vmull.s32	q7, d18, d9
--	vmlal.s32	q7, d26, d3
--	vmlal.s32	q7, d19, d8
--	vmlal.s32	q7, d27, d2
--	vmlal.s32	q7, d22, d7
--	vmlal.s32	q7, d28, d1
--	vmlal.s32	q7, d23, d6
--	vmlal.s32	q7, d29, d0
--	add		r2, sp, #656
--	vst1.8		{d10-d11}, [r2, : 128]
--	vmull.s32	q5, d18, d3
--	vmlal.s32	q5, d19, d2
--	vmlal.s32	q5, d22, d1
--	vmlal.s32	q5, d23, d0
--	vmlal.s32	q5, d12, d8
--	add		r2, sp, #672
--	vst1.8		{d16-d17}, [r2, : 128]
--	vmull.s32	q4, d18, d8
--	vmlal.s32	q4, d26, d2
--	vmlal.s32	q4, d19, d7
--	vmlal.s32	q4, d27, d1
--	vmlal.s32	q4, d22, d6
--	vmlal.s32	q4, d28, d0
--	vmull.s32	q8, d18, d7
--	vmlal.s32	q8, d26, d1
--	vmlal.s32	q8, d19, d6
--	vmlal.s32	q8, d27, d0
--	add		r2, sp, #576
--	vld1.8		{d20-d21}, [r2, : 128]
--	vmlal.s32	q7, d24, d21
--	vmlal.s32	q7, d25, d20
--	vmlal.s32	q4, d23, d21
--	vmlal.s32	q4, d29, d20
--	vmlal.s32	q8, d22, d21
--	vmlal.s32	q8, d28, d20
--	vmlal.s32	q5, d24, d20
--	add		r2, sp, #576
--	vst1.8		{d14-d15}, [r2, : 128]
--	vmull.s32	q7, d18, d6
--	vmlal.s32	q7, d26, d0
--	add		r2, sp, #656
--	vld1.8		{d30-d31}, [r2, : 128]
--	vmlal.s32	q2, d30, d21
--	vmlal.s32	q7, d19, d21
--	vmlal.s32	q7, d27, d20
--	add		r2, sp, #624
--	vld1.8		{d26-d27}, [r2, : 128]
--	vmlal.s32	q4, d25, d27
--	vmlal.s32	q8, d29, d27
--	vmlal.s32	q8, d25, d26
--	vmlal.s32	q7, d28, d27
--	vmlal.s32	q7, d29, d26
--	add		r2, sp, #608
--	vld1.8		{d28-d29}, [r2, : 128]
--	vmlal.s32	q4, d24, d29
--	vmlal.s32	q8, d23, d29
--	vmlal.s32	q8, d24, d28
--	vmlal.s32	q7, d22, d29
--	vmlal.s32	q7, d23, d28
--	add		r2, sp, #608
--	vst1.8		{d8-d9}, [r2, : 128]
--	add		r2, sp, #560
--	vld1.8		{d8-d9}, [r2, : 128]
--	vmlal.s32	q7, d24, d9
--	vmlal.s32	q7, d25, d31
--	vmull.s32	q1, d18, d2
--	vmlal.s32	q1, d19, d1
--	vmlal.s32	q1, d22, d0
--	vmlal.s32	q1, d24, d27
--	vmlal.s32	q1, d23, d20
--	vmlal.s32	q1, d12, d7
--	vmlal.s32	q1, d13, d6
--	vmull.s32	q6, d18, d1
--	vmlal.s32	q6, d19, d0
--	vmlal.s32	q6, d23, d27
--	vmlal.s32	q6, d22, d20
--	vmlal.s32	q6, d24, d26
--	vmull.s32	q0, d18, d0
--	vmlal.s32	q0, d22, d27
--	vmlal.s32	q0, d23, d26
--	vmlal.s32	q0, d24, d31
--	vmlal.s32	q0, d19, d20
--	add		r2, sp, #640
--	vld1.8		{d18-d19}, [r2, : 128]
--	vmlal.s32	q2, d18, d7
--	vmlal.s32	q2, d19, d6
--	vmlal.s32	q5, d18, d6
--	vmlal.s32	q5, d19, d21
--	vmlal.s32	q1, d18, d21
--	vmlal.s32	q1, d19, d29
--	vmlal.s32	q0, d18, d28
--	vmlal.s32	q0, d19, d9
--	vmlal.s32	q6, d18, d29
--	vmlal.s32	q6, d19, d28
--	add		r2, sp, #592
--	vld1.8		{d18-d19}, [r2, : 128]
--	add		r2, sp, #512
--	vld1.8		{d22-d23}, [r2, : 128]
--	vmlal.s32	q5, d19, d7
--	vmlal.s32	q0, d18, d21
--	vmlal.s32	q0, d19, d29
--	vmlal.s32	q6, d18, d6
--	add		r2, sp, #528
--	vld1.8		{d6-d7}, [r2, : 128]
--	vmlal.s32	q6, d19, d21
--	add		r2, sp, #576
--	vld1.8		{d18-d19}, [r2, : 128]
--	vmlal.s32	q0, d30, d8
--	add		r2, sp, #672
--	vld1.8		{d20-d21}, [r2, : 128]
--	vmlal.s32	q5, d30, d29
--	add		r2, sp, #608
--	vld1.8		{d24-d25}, [r2, : 128]
--	vmlal.s32	q1, d30, d28
--	vadd.i64	q13, q0, q11
--	vadd.i64	q14, q5, q11
--	vmlal.s32	q6, d30, d9
--	vshr.s64	q4, q13, #26
--	vshr.s64	q13, q14, #26
--	vadd.i64	q7, q7, q4
--	vshl.i64	q4, q4, #26
--	vadd.i64	q14, q7, q3
--	vadd.i64	q9, q9, q13
--	vshl.i64	q13, q13, #26
--	vadd.i64	q15, q9, q3
--	vsub.i64	q0, q0, q4
--	vshr.s64	q4, q14, #25
--	vsub.i64	q5, q5, q13
--	vshr.s64	q13, q15, #25
--	vadd.i64	q6, q6, q4
--	vshl.i64	q4, q4, #25
--	vadd.i64	q14, q6, q11
--	vadd.i64	q2, q2, q13
--	vsub.i64	q4, q7, q4
--	vshr.s64	q7, q14, #26
--	vshl.i64	q13, q13, #25
--	vadd.i64	q14, q2, q11
--	vadd.i64	q8, q8, q7
--	vshl.i64	q7, q7, #26
--	vadd.i64	q15, q8, q3
--	vsub.i64	q9, q9, q13
--	vshr.s64	q13, q14, #26
--	vsub.i64	q6, q6, q7
--	vshr.s64	q7, q15, #25
--	vadd.i64	q10, q10, q13
--	vshl.i64	q13, q13, #26
--	vadd.i64	q14, q10, q3
--	vadd.i64	q1, q1, q7
--	add		r2, r3, #240
--	vshl.i64	q7, q7, #25
--	add		r4, r3, #144
--	vadd.i64	q15, q1, q11
--	add		r2, r2, #8
--	vsub.i64	q2, q2, q13
--	add		r4, r4, #8
--	vshr.s64	q13, q14, #25
--	vsub.i64	q7, q8, q7
--	vshr.s64	q8, q15, #26
--	vadd.i64	q14, q13, q13
--	vadd.i64	q12, q12, q8
--	vtrn.32		d12, d14
--	vshl.i64	q8, q8, #26
--	vtrn.32		d13, d15
--	vadd.i64	q3, q12, q3
--	vadd.i64	q0, q0, q14
--	vst1.8		d12, [r2, : 64]!
--	vshl.i64	q7, q13, #4
--	vst1.8		d13, [r4, : 64]!
--	vsub.i64	q1, q1, q8
--	vshr.s64	q3, q3, #25
--	vadd.i64	q0, q0, q7
--	vadd.i64	q5, q5, q3
--	vshl.i64	q3, q3, #25
--	vadd.i64	q6, q5, q11
--	vadd.i64	q0, q0, q13
--	vshl.i64	q7, q13, #25
--	vadd.i64	q8, q0, q11
--	vsub.i64	q3, q12, q3
--	vshr.s64	q6, q6, #26
--	vsub.i64	q7, q10, q7
--	vtrn.32		d2, d6
--	vshr.s64	q8, q8, #26
--	vtrn.32		d3, d7
--	vadd.i64	q3, q9, q6
--	vst1.8		d2, [r2, : 64]
--	vshl.i64	q6, q6, #26
--	vst1.8		d3, [r4, : 64]
--	vadd.i64	q1, q4, q8
--	vtrn.32		d4, d14
--	vshl.i64	q4, q8, #26
--	vtrn.32		d5, d15
--	vsub.i64	q5, q5, q6
--	add		r2, r2, #16
--	vsub.i64	q0, q0, q4
--	vst1.8		d4, [r2, : 64]
--	add		r4, r4, #16
--	vst1.8		d5, [r4, : 64]
--	vtrn.32		d10, d6
--	vtrn.32		d11, d7
--	sub		r2, r2, #8
--	sub		r4, r4, #8
--	vtrn.32		d0, d2
--	vtrn.32		d1, d3
--	vst1.8		d10, [r2, : 64]
--	vst1.8		d11, [r4, : 64]
--	sub		r2, r2, #24
--	sub		r4, r4, #24
--	vst1.8		d0, [r2, : 64]
--	vst1.8		d1, [r4, : 64]
--	ldr		r2, [sp, #488]
--	ldr		r4, [sp, #492]
--	subs		r5, r2, #1
--	bge		._mainloop
--	add		r1, r3, #144
--	add		r2, r3, #336
--	vld1.8		{d0-d1}, [r1, : 128]!
--	vld1.8		{d2-d3}, [r1, : 128]!
--	vld1.8		{d4}, [r1, : 64]
--	vst1.8		{d0-d1}, [r2, : 128]!
--	vst1.8		{d2-d3}, [r2, : 128]!
--	vst1.8		d4, [r2, : 64]
--	ldr		r1, =0
--._invertloop:
--	add		r2, r3, #144
--	ldr		r4, =0
--	ldr		r5, =2
--	cmp		r1, #1
--	ldreq		r5, =1
--	addeq		r2, r3, #336
--	addeq		r4, r3, #48
--	cmp		r1, #2
--	ldreq		r5, =1
--	addeq		r2, r3, #48
--	cmp		r1, #3
--	ldreq		r5, =5
--	addeq		r4, r3, #336
--	cmp		r1, #4
--	ldreq		r5, =10
--	cmp		r1, #5
--	ldreq		r5, =20
--	cmp		r1, #6
--	ldreq		r5, =10
--	addeq		r2, r3, #336
--	addeq		r4, r3, #336
--	cmp		r1, #7
--	ldreq		r5, =50
--	cmp		r1, #8
--	ldreq		r5, =100
--	cmp		r1, #9
--	ldreq		r5, =50
--	addeq		r2, r3, #336
--	cmp		r1, #10
--	ldreq		r5, =5
--	addeq		r2, r3, #48
--	cmp		r1, #11
--	ldreq		r5, =0
--	addeq		r2, r3, #96
--	add		r6, r3, #144
--	add		r7, r3, #288
--	vld1.8		{d0-d1}, [r6, : 128]!
--	vld1.8		{d2-d3}, [r6, : 128]!
--	vld1.8		{d4}, [r6, : 64]
--	vst1.8		{d0-d1}, [r7, : 128]!
--	vst1.8		{d2-d3}, [r7, : 128]!
--	vst1.8		d4, [r7, : 64]
--	cmp		r5, #0
--	beq		._skipsquaringloop
--._squaringloop:
--	add		r6, r3, #288
--	add		r7, r3, #288
--	add		r8, r3, #288
--	vmov.i32	q0, #19
--	vmov.i32	q1, #0
--	vmov.i32	q2, #1
--	vzip.i32	q1, q2
--	vld1.8		{d4-d5}, [r7, : 128]!
--	vld1.8		{d6-d7}, [r7, : 128]!
--	vld1.8		{d9}, [r7, : 64]
--	vld1.8		{d10-d11}, [r6, : 128]!
--	add		r7, sp, #416
--	vld1.8		{d12-d13}, [r6, : 128]!
--	vmul.i32	q7, q2, q0
--	vld1.8		{d8}, [r6, : 64]
--	vext.32		d17, d11, d10, #1
--	vmul.i32	q9, q3, q0
--	vext.32		d16, d10, d8, #1
--	vshl.u32	q10, q5, q1
--	vext.32		d22, d14, d4, #1
--	vext.32		d24, d18, d6, #1
--	vshl.u32	q13, q6, q1
--	vshl.u32	d28, d8, d2
--	vrev64.i32	d22, d22
--	vmul.i32	d1, d9, d1
--	vrev64.i32	d24, d24
--	vext.32		d29, d8, d13, #1
--	vext.32		d0, d1, d9, #1
--	vrev64.i32	d0, d0
--	vext.32		d2, d9, d1, #1
--	vext.32		d23, d15, d5, #1
--	vmull.s32	q4, d20, d4
--	vrev64.i32	d23, d23
--	vmlal.s32	q4, d21, d1
--	vrev64.i32	d2, d2
--	vmlal.s32	q4, d26, d19
--	vext.32		d3, d5, d15, #1
--	vmlal.s32	q4, d27, d18
--	vrev64.i32	d3, d3
--	vmlal.s32	q4, d28, d15
--	vext.32		d14, d12, d11, #1
--	vmull.s32	q5, d16, d23
--	vext.32		d15, d13, d12, #1
--	vmlal.s32	q5, d17, d4
--	vst1.8		d8, [r7, : 64]!
--	vmlal.s32	q5, d14, d1
--	vext.32		d12, d9, d8, #0
--	vmlal.s32	q5, d15, d19
--	vmov.i64	d13, #0
--	vmlal.s32	q5, d29, d18
--	vext.32		d25, d19, d7, #1
--	vmlal.s32	q6, d20, d5
--	vrev64.i32	d25, d25
--	vmlal.s32	q6, d21, d4
--	vst1.8		d11, [r7, : 64]!
--	vmlal.s32	q6, d26, d1
--	vext.32		d9, d10, d10, #0
--	vmlal.s32	q6, d27, d19
--	vmov.i64	d8, #0
--	vmlal.s32	q6, d28, d18
--	vmlal.s32	q4, d16, d24
--	vmlal.s32	q4, d17, d5
--	vmlal.s32	q4, d14, d4
--	vst1.8		d12, [r7, : 64]!
--	vmlal.s32	q4, d15, d1
--	vext.32		d10, d13, d12, #0
--	vmlal.s32	q4, d29, d19
--	vmov.i64	d11, #0
--	vmlal.s32	q5, d20, d6
--	vmlal.s32	q5, d21, d5
--	vmlal.s32	q5, d26, d4
--	vext.32		d13, d8, d8, #0
--	vmlal.s32	q5, d27, d1
--	vmov.i64	d12, #0
--	vmlal.s32	q5, d28, d19
--	vst1.8		d9, [r7, : 64]!
--	vmlal.s32	q6, d16, d25
--	vmlal.s32	q6, d17, d6
--	vst1.8		d10, [r7, : 64]
--	vmlal.s32	q6, d14, d5
--	vext.32		d8, d11, d10, #0
--	vmlal.s32	q6, d15, d4
--	vmov.i64	d9, #0
--	vmlal.s32	q6, d29, d1
--	vmlal.s32	q4, d20, d7
--	vmlal.s32	q4, d21, d6
--	vmlal.s32	q4, d26, d5
--	vext.32		d11, d12, d12, #0
--	vmlal.s32	q4, d27, d4
--	vmov.i64	d10, #0
--	vmlal.s32	q4, d28, d1
--	vmlal.s32	q5, d16, d0
--	sub		r6, r7, #32
--	vmlal.s32	q5, d17, d7
--	vmlal.s32	q5, d14, d6
--	vext.32		d30, d9, d8, #0
--	vmlal.s32	q5, d15, d5
--	vld1.8		{d31}, [r6, : 64]!
--	vmlal.s32	q5, d29, d4
--	vmlal.s32	q15, d20, d0
--	vext.32		d0, d6, d18, #1
--	vmlal.s32	q15, d21, d25
--	vrev64.i32	d0, d0
--	vmlal.s32	q15, d26, d24
--	vext.32		d1, d7, d19, #1
--	vext.32		d7, d10, d10, #0
--	vmlal.s32	q15, d27, d23
--	vrev64.i32	d1, d1
--	vld1.8		{d6}, [r6, : 64]
--	vmlal.s32	q15, d28, d22
--	vmlal.s32	q3, d16, d4
--	add		r6, r6, #24
--	vmlal.s32	q3, d17, d2
--	vext.32		d4, d31, d30, #0
--	vmov		d17, d11
--	vmlal.s32	q3, d14, d1
--	vext.32		d11, d13, d13, #0
--	vext.32		d13, d30, d30, #0
--	vmlal.s32	q3, d15, d0
--	vext.32		d1, d8, d8, #0
--	vmlal.s32	q3, d29, d3
--	vld1.8		{d5}, [r6, : 64]
--	sub		r6, r6, #16
--	vext.32		d10, d6, d6, #0
--	vmov.i32	q1, #0xffffffff
--	vshl.i64	q4, q1, #25
--	add		r7, sp, #512
--	vld1.8		{d14-d15}, [r7, : 128]
--	vadd.i64	q9, q2, q7
--	vshl.i64	q1, q1, #26
--	vshr.s64	q10, q9, #26
--	vld1.8		{d0}, [r6, : 64]!
--	vadd.i64	q5, q5, q10
--	vand		q9, q9, q1
--	vld1.8		{d16}, [r6, : 64]!
--	add		r6, sp, #528
--	vld1.8		{d20-d21}, [r6, : 128]
--	vadd.i64	q11, q5, q10
--	vsub.i64	q2, q2, q9
--	vshr.s64	q9, q11, #25
--	vext.32		d12, d5, d4, #0
--	vand		q11, q11, q4
--	vadd.i64	q0, q0, q9
--	vmov		d19, d7
--	vadd.i64	q3, q0, q7
--	vsub.i64	q5, q5, q11
--	vshr.s64	q11, q3, #26
--	vext.32		d18, d11, d10, #0
--	vand		q3, q3, q1
--	vadd.i64	q8, q8, q11
--	vadd.i64	q11, q8, q10
--	vsub.i64	q0, q0, q3
--	vshr.s64	q3, q11, #25
--	vand		q11, q11, q4
--	vadd.i64	q3, q6, q3
--	vadd.i64	q6, q3, q7
--	vsub.i64	q8, q8, q11
--	vshr.s64	q11, q6, #26
--	vand		q6, q6, q1
--	vadd.i64	q9, q9, q11
--	vadd.i64	d25, d19, d21
--	vsub.i64	q3, q3, q6
--	vshr.s64	d23, d25, #25
--	vand		q4, q12, q4
--	vadd.i64	d21, d23, d23
--	vshl.i64	d25, d23, #4
--	vadd.i64	d21, d21, d23
--	vadd.i64	d25, d25, d21
--	vadd.i64	d4, d4, d25
--	vzip.i32	q0, q8
--	vadd.i64	d12, d4, d14
--	add		r6, r8, #8
--	vst1.8		d0, [r6, : 64]
--	vsub.i64	d19, d19, d9
--	add		r6, r6, #16
--	vst1.8		d16, [r6, : 64]
--	vshr.s64	d22, d12, #26
--	vand		q0, q6, q1
--	vadd.i64	d10, d10, d22
--	vzip.i32	q3, q9
--	vsub.i64	d4, d4, d0
--	sub		r6, r6, #8
--	vst1.8		d6, [r6, : 64]
--	add		r6, r6, #16
--	vst1.8		d18, [r6, : 64]
--	vzip.i32	q2, q5
--	sub		r6, r6, #32
--	vst1.8		d4, [r6, : 64]
--	subs		r5, r5, #1
--	bhi		._squaringloop
--._skipsquaringloop:
--	mov		r2, r2
--	add		r5, r3, #288
--	add		r6, r3, #144
--	vmov.i32	q0, #19
--	vmov.i32	q1, #0
--	vmov.i32	q2, #1
--	vzip.i32	q1, q2
--	vld1.8		{d4-d5}, [r5, : 128]!
--	vld1.8		{d6-d7}, [r5, : 128]!
--	vld1.8		{d9}, [r5, : 64]
--	vld1.8		{d10-d11}, [r2, : 128]!
--	add		r5, sp, #416
--	vld1.8		{d12-d13}, [r2, : 128]!
--	vmul.i32	q7, q2, q0
--	vld1.8		{d8}, [r2, : 64]
--	vext.32		d17, d11, d10, #1
--	vmul.i32	q9, q3, q0
--	vext.32		d16, d10, d8, #1
--	vshl.u32	q10, q5, q1
--	vext.32		d22, d14, d4, #1
--	vext.32		d24, d18, d6, #1
--	vshl.u32	q13, q6, q1
--	vshl.u32	d28, d8, d2
--	vrev64.i32	d22, d22
--	vmul.i32	d1, d9, d1
--	vrev64.i32	d24, d24
--	vext.32		d29, d8, d13, #1
--	vext.32		d0, d1, d9, #1
--	vrev64.i32	d0, d0
--	vext.32		d2, d9, d1, #1
--	vext.32		d23, d15, d5, #1
--	vmull.s32	q4, d20, d4
--	vrev64.i32	d23, d23
--	vmlal.s32	q4, d21, d1
--	vrev64.i32	d2, d2
--	vmlal.s32	q4, d26, d19
--	vext.32		d3, d5, d15, #1
--	vmlal.s32	q4, d27, d18
--	vrev64.i32	d3, d3
--	vmlal.s32	q4, d28, d15
--	vext.32		d14, d12, d11, #1
--	vmull.s32	q5, d16, d23
--	vext.32		d15, d13, d12, #1
--	vmlal.s32	q5, d17, d4
--	vst1.8		d8, [r5, : 64]!
--	vmlal.s32	q5, d14, d1
--	vext.32		d12, d9, d8, #0
--	vmlal.s32	q5, d15, d19
--	vmov.i64	d13, #0
--	vmlal.s32	q5, d29, d18
--	vext.32		d25, d19, d7, #1
--	vmlal.s32	q6, d20, d5
--	vrev64.i32	d25, d25
--	vmlal.s32	q6, d21, d4
--	vst1.8		d11, [r5, : 64]!
--	vmlal.s32	q6, d26, d1
--	vext.32		d9, d10, d10, #0
--	vmlal.s32	q6, d27, d19
--	vmov.i64	d8, #0
--	vmlal.s32	q6, d28, d18
--	vmlal.s32	q4, d16, d24
--	vmlal.s32	q4, d17, d5
--	vmlal.s32	q4, d14, d4
--	vst1.8		d12, [r5, : 64]!
--	vmlal.s32	q4, d15, d1
--	vext.32		d10, d13, d12, #0
--	vmlal.s32	q4, d29, d19
--	vmov.i64	d11, #0
--	vmlal.s32	q5, d20, d6
--	vmlal.s32	q5, d21, d5
--	vmlal.s32	q5, d26, d4
--	vext.32		d13, d8, d8, #0
--	vmlal.s32	q5, d27, d1
--	vmov.i64	d12, #0
--	vmlal.s32	q5, d28, d19
--	vst1.8		d9, [r5, : 64]!
--	vmlal.s32	q6, d16, d25
--	vmlal.s32	q6, d17, d6
--	vst1.8		d10, [r5, : 64]
--	vmlal.s32	q6, d14, d5
--	vext.32		d8, d11, d10, #0
--	vmlal.s32	q6, d15, d4
--	vmov.i64	d9, #0
--	vmlal.s32	q6, d29, d1
--	vmlal.s32	q4, d20, d7
--	vmlal.s32	q4, d21, d6
--	vmlal.s32	q4, d26, d5
--	vext.32		d11, d12, d12, #0
--	vmlal.s32	q4, d27, d4
--	vmov.i64	d10, #0
--	vmlal.s32	q4, d28, d1
--	vmlal.s32	q5, d16, d0
--	sub		r2, r5, #32
--	vmlal.s32	q5, d17, d7
--	vmlal.s32	q5, d14, d6
--	vext.32		d30, d9, d8, #0
--	vmlal.s32	q5, d15, d5
--	vld1.8		{d31}, [r2, : 64]!
--	vmlal.s32	q5, d29, d4
--	vmlal.s32	q15, d20, d0
--	vext.32		d0, d6, d18, #1
--	vmlal.s32	q15, d21, d25
--	vrev64.i32	d0, d0
--	vmlal.s32	q15, d26, d24
--	vext.32		d1, d7, d19, #1
--	vext.32		d7, d10, d10, #0
--	vmlal.s32	q15, d27, d23
--	vrev64.i32	d1, d1
--	vld1.8		{d6}, [r2, : 64]
--	vmlal.s32	q15, d28, d22
--	vmlal.s32	q3, d16, d4
--	add		r2, r2, #24
--	vmlal.s32	q3, d17, d2
--	vext.32		d4, d31, d30, #0
--	vmov		d17, d11
--	vmlal.s32	q3, d14, d1
--	vext.32		d11, d13, d13, #0
--	vext.32		d13, d30, d30, #0
--	vmlal.s32	q3, d15, d0
--	vext.32		d1, d8, d8, #0
--	vmlal.s32	q3, d29, d3
--	vld1.8		{d5}, [r2, : 64]
--	sub		r2, r2, #16
--	vext.32		d10, d6, d6, #0
--	vmov.i32	q1, #0xffffffff
--	vshl.i64	q4, q1, #25
--	add		r5, sp, #512
--	vld1.8		{d14-d15}, [r5, : 128]
--	vadd.i64	q9, q2, q7
--	vshl.i64	q1, q1, #26
--	vshr.s64	q10, q9, #26
--	vld1.8		{d0}, [r2, : 64]!
--	vadd.i64	q5, q5, q10
--	vand		q9, q9, q1
--	vld1.8		{d16}, [r2, : 64]!
--	add		r2, sp, #528
--	vld1.8		{d20-d21}, [r2, : 128]
--	vadd.i64	q11, q5, q10
--	vsub.i64	q2, q2, q9
--	vshr.s64	q9, q11, #25
--	vext.32		d12, d5, d4, #0
--	vand		q11, q11, q4
--	vadd.i64	q0, q0, q9
--	vmov		d19, d7
--	vadd.i64	q3, q0, q7
--	vsub.i64	q5, q5, q11
--	vshr.s64	q11, q3, #26
--	vext.32		d18, d11, d10, #0
--	vand		q3, q3, q1
--	vadd.i64	q8, q8, q11
--	vadd.i64	q11, q8, q10
--	vsub.i64	q0, q0, q3
--	vshr.s64	q3, q11, #25
--	vand		q11, q11, q4
--	vadd.i64	q3, q6, q3
--	vadd.i64	q6, q3, q7
--	vsub.i64	q8, q8, q11
--	vshr.s64	q11, q6, #26
--	vand		q6, q6, q1
--	vadd.i64	q9, q9, q11
--	vadd.i64	d25, d19, d21
--	vsub.i64	q3, q3, q6
--	vshr.s64	d23, d25, #25
--	vand		q4, q12, q4
--	vadd.i64	d21, d23, d23
--	vshl.i64	d25, d23, #4
--	vadd.i64	d21, d21, d23
--	vadd.i64	d25, d25, d21
--	vadd.i64	d4, d4, d25
--	vzip.i32	q0, q8
--	vadd.i64	d12, d4, d14
--	add		r2, r6, #8
--	vst1.8		d0, [r2, : 64]
--	vsub.i64	d19, d19, d9
--	add		r2, r2, #16
--	vst1.8		d16, [r2, : 64]
--	vshr.s64	d22, d12, #26
--	vand		q0, q6, q1
--	vadd.i64	d10, d10, d22
--	vzip.i32	q3, q9
--	vsub.i64	d4, d4, d0
--	sub		r2, r2, #8
--	vst1.8		d6, [r2, : 64]
--	add		r2, r2, #16
--	vst1.8		d18, [r2, : 64]
--	vzip.i32	q2, q5
--	sub		r2, r2, #32
--	vst1.8		d4, [r2, : 64]
--	cmp		r4, #0
--	beq		._skippostcopy
--	add		r2, r3, #144
--	mov		r4, r4
--	vld1.8		{d0-d1}, [r2, : 128]!
--	vld1.8		{d2-d3}, [r2, : 128]!
--	vld1.8		{d4}, [r2, : 64]
--	vst1.8		{d0-d1}, [r4, : 128]!
--	vst1.8		{d2-d3}, [r4, : 128]!
--	vst1.8		d4, [r4, : 64]
--._skippostcopy:
--	cmp		r1, #1
--	bne		._skipfinalcopy
--	add		r2, r3, #288
--	add		r4, r3, #144
--	vld1.8		{d0-d1}, [r2, : 128]!
--	vld1.8		{d2-d3}, [r2, : 128]!
--	vld1.8		{d4}, [r2, : 64]
--	vst1.8		{d0-d1}, [r4, : 128]!
--	vst1.8		{d2-d3}, [r4, : 128]!
--	vst1.8		d4, [r4, : 64]
--._skipfinalcopy:
--	add		r1, r1, #1
--	cmp		r1, #12
--	blo		._invertloop
--	add		r1, r3, #144
--	ldr		r2, [r1], #4
--	ldr		r3, [r1], #4
--	ldr		r4, [r1], #4
--	ldr		r5, [r1], #4
--	ldr		r6, [r1], #4
--	ldr		r7, [r1], #4
--	ldr		r8, [r1], #4
--	ldr		r9, [r1], #4
--	ldr		r10, [r1], #4
--	ldr		r1, [r1]
--	add		r11, r1, r1, LSL #4
--	add		r11, r11, r1, LSL #1
--	add		r11, r11, #16777216
--	mov		r11, r11, ASR #25
--	add		r11, r11, r2
--	mov		r11, r11, ASR #26
--	add		r11, r11, r3
--	mov		r11, r11, ASR #25
--	add		r11, r11, r4
--	mov		r11, r11, ASR #26
--	add		r11, r11, r5
--	mov		r11, r11, ASR #25
--	add		r11, r11, r6
--	mov		r11, r11, ASR #26
--	add		r11, r11, r7
--	mov		r11, r11, ASR #25
--	add		r11, r11, r8
--	mov		r11, r11, ASR #26
--	add		r11, r11, r9
--	mov		r11, r11, ASR #25
--	add		r11, r11, r10
--	mov		r11, r11, ASR #26
--	add		r11, r11, r1
--	mov		r11, r11, ASR #25
--	add		r2, r2, r11
--	add		r2, r2, r11, LSL #1
--	add		r2, r2, r11, LSL #4
--	mov		r11, r2, ASR #26
--	add		r3, r3, r11
--	sub		r2, r2, r11, LSL #26
--	mov		r11, r3, ASR #25
--	add		r4, r4, r11
--	sub		r3, r3, r11, LSL #25
--	mov		r11, r4, ASR #26
--	add		r5, r5, r11
--	sub		r4, r4, r11, LSL #26
--	mov		r11, r5, ASR #25
--	add		r6, r6, r11
--	sub		r5, r5, r11, LSL #25
--	mov		r11, r6, ASR #26
--	add		r7, r7, r11
--	sub		r6, r6, r11, LSL #26
--	mov		r11, r7, ASR #25
--	add		r8, r8, r11
--	sub		r7, r7, r11, LSL #25
--	mov		r11, r8, ASR #26
--	add		r9, r9, r11
--	sub		r8, r8, r11, LSL #26
--	mov		r11, r9, ASR #25
--	add		r10, r10, r11
--	sub		r9, r9, r11, LSL #25
--	mov		r11, r10, ASR #26
--	add		r1, r1, r11
--	sub		r10, r10, r11, LSL #26
--	mov		r11, r1, ASR #25
--	sub		r1, r1, r11, LSL #25
--	add		r2, r2, r3, LSL #26
--	mov		r3, r3, LSR #6
--	add		r3, r3, r4, LSL #19
--	mov		r4, r4, LSR #13
--	add		r4, r4, r5, LSL #13
--	mov		r5, r5, LSR #19
--	add		r5, r5, r6, LSL #6
--	add		r6, r7, r8, LSL #25
--	mov		r7, r8, LSR #7
--	add		r7, r7, r9, LSL #19
--	mov		r8, r9, LSR #13
--	add		r8, r8, r10, LSL #12
--	mov		r9, r10, LSR #20
--	add		r1, r9, r1, LSL #6
--	str		r2, [r0], #4
--	str		r3, [r0], #4
--	str		r4, [r0], #4
--	str		r5, [r0], #4
--	str		r6, [r0], #4
--	str		r7, [r0], #4
--	str		r8, [r0], #4
--	str		r1, [r0]
--	ldrd		r4, [sp, #0]
--	ldrd		r6, [sp, #8]
--	ldrd		r8, [sp, #16]
--	ldrd		r10, [sp, #24]
--	ldr		r12, [sp, #480]
--	ldr		r14, [sp, #484]
--	ldr		r0, =0
--	mov		sp, r12
--	vpop		{q4, q5, q6, q7}
--	bx		lr
-diff --git a/lib/zinc/curve25519/curve25519-arm.S b/lib/zinc/curve25519/curve25519-arm.S
-new file mode 100644
-index 000000000000..b63ac48e7f8d
---- /dev/null
-+++ b/lib/zinc/curve25519/curve25519-arm.S
-@@ -0,0 +1,2064 @@
-+/* SPDX-License-Identifier: GPL-2.0 OR MIT */
-+/*
-+ * Copyright (C) 2015-2018 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-+ *
-+ * Based on public domain code from Daniel J. Bernstein and Peter Schwabe. This
-+ * began from SUPERCOP's curve25519/neon2/scalarmult.s, but has subsequently been
-+ * manually reworked for use in kernel space.
-+ */
-+
-+#if defined(CONFIG_KERNEL_MODE_NEON) && !defined(__ARMEB__)
-+#include <linux/linkage.h>
-+
-+.text
-+.fpu neon
-+.arch armv7-a
-+.align 4
-+
-+ENTRY(curve25519_neon)
-+	push		{r4-r11, lr}
-+	mov		ip, sp
-+	sub		r3, sp, #704
-+	and		r3, r3, #0xfffffff0
-+	mov		sp, r3
-+	movw		r4, #0
-+	movw		r5, #254
-+	vmov.i32	q0, #1
-+	vshr.u64	q1, q0, #7
-+	vshr.u64	q0, q0, #8
-+	vmov.i32	d4, #19
-+	vmov.i32	d5, #38
-+	add		r6, sp, #480
-+	vst1.8		{d2-d3}, [r6, : 128]!
-+	vst1.8		{d0-d1}, [r6, : 128]!
-+	vst1.8		{d4-d5}, [r6, : 128]
-+	add		r6, r3, #0
-+	vmov.i32	q2, #0
-+	vst1.8		{d4-d5}, [r6, : 128]!
-+	vst1.8		{d4-d5}, [r6, : 128]!
-+	vst1.8		d4, [r6, : 64]
-+	add		r6, r3, #0
-+	movw		r7, #960
-+	sub		r7, r7, #2
-+	neg		r7, r7
-+	sub		r7, r7, r7, LSL #7
-+	str		r7, [r6]
-+	add		r6, sp, #672
-+	vld1.8		{d4-d5}, [r1]!
-+	vld1.8		{d6-d7}, [r1]
-+	vst1.8		{d4-d5}, [r6, : 128]!
-+	vst1.8		{d6-d7}, [r6, : 128]
-+	sub		r1, r6, #16
-+	ldrb		r6, [r1]
-+	and		r6, r6, #248
-+	strb		r6, [r1]
-+	ldrb		r6, [r1, #31]
-+	and		r6, r6, #127
-+	orr		r6, r6, #64
-+	strb		r6, [r1, #31]
-+	vmov.i64	q2, #0xffffffff
-+	vshr.u64	q3, q2, #7
-+	vshr.u64	q2, q2, #6
-+	vld1.8		{d8}, [r2]
-+	vld1.8		{d10}, [r2]
-+	add		r2, r2, #6
-+	vld1.8		{d12}, [r2]
-+	vld1.8		{d14}, [r2]
-+	add		r2, r2, #6
-+	vld1.8		{d16}, [r2]
-+	add		r2, r2, #4
-+	vld1.8		{d18}, [r2]
-+	vld1.8		{d20}, [r2]
-+	add		r2, r2, #6
-+	vld1.8		{d22}, [r2]
-+	add		r2, r2, #2
-+	vld1.8		{d24}, [r2]
-+	vld1.8		{d26}, [r2]
-+	vshr.u64	q5, q5, #26
-+	vshr.u64	q6, q6, #3
-+	vshr.u64	q7, q7, #29
-+	vshr.u64	q8, q8, #6
-+	vshr.u64	q10, q10, #25
-+	vshr.u64	q11, q11, #3
-+	vshr.u64	q12, q12, #12
-+	vshr.u64	q13, q13, #38
-+	vand		q4, q4, q2
-+	vand		q6, q6, q2
-+	vand		q8, q8, q2
-+	vand		q10, q10, q2
-+	vand		q2, q12, q2
-+	vand		q5, q5, q3
-+	vand		q7, q7, q3
-+	vand		q9, q9, q3
-+	vand		q11, q11, q3
-+	vand		q3, q13, q3
-+	add		r2, r3, #48
-+	vadd.i64	q12, q4, q1
-+	vadd.i64	q13, q10, q1
-+	vshr.s64	q12, q12, #26
-+	vshr.s64	q13, q13, #26
-+	vadd.i64	q5, q5, q12
-+	vshl.i64	q12, q12, #26
-+	vadd.i64	q14, q5, q0
-+	vadd.i64	q11, q11, q13
-+	vshl.i64	q13, q13, #26
-+	vadd.i64	q15, q11, q0
-+	vsub.i64	q4, q4, q12
-+	vshr.s64	q12, q14, #25
-+	vsub.i64	q10, q10, q13
-+	vshr.s64	q13, q15, #25
-+	vadd.i64	q6, q6, q12
-+	vshl.i64	q12, q12, #25
-+	vadd.i64	q14, q6, q1
-+	vadd.i64	q2, q2, q13
-+	vsub.i64	q5, q5, q12
-+	vshr.s64	q12, q14, #26
-+	vshl.i64	q13, q13, #25
-+	vadd.i64	q14, q2, q1
-+	vadd.i64	q7, q7, q12
-+	vshl.i64	q12, q12, #26
-+	vadd.i64	q15, q7, q0
-+	vsub.i64	q11, q11, q13
-+	vshr.s64	q13, q14, #26
-+	vsub.i64	q6, q6, q12
-+	vshr.s64	q12, q15, #25
-+	vadd.i64	q3, q3, q13
-+	vshl.i64	q13, q13, #26
-+	vadd.i64	q14, q3, q0
-+	vadd.i64	q8, q8, q12
-+	vshl.i64	q12, q12, #25
-+	vadd.i64	q15, q8, q1
-+	add		r2, r2, #8
-+	vsub.i64	q2, q2, q13
-+	vshr.s64	q13, q14, #25
-+	vsub.i64	q7, q7, q12
-+	vshr.s64	q12, q15, #26
-+	vadd.i64	q14, q13, q13
-+	vadd.i64	q9, q9, q12
-+	vtrn.32		d12, d14
-+	vshl.i64	q12, q12, #26
-+	vtrn.32		d13, d15
-+	vadd.i64	q0, q9, q0
-+	vadd.i64	q4, q4, q14
-+	vst1.8		d12, [r2, : 64]!
-+	vshl.i64	q6, q13, #4
-+	vsub.i64	q7, q8, q12
-+	vshr.s64	q0, q0, #25
-+	vadd.i64	q4, q4, q6
-+	vadd.i64	q6, q10, q0
-+	vshl.i64	q0, q0, #25
-+	vadd.i64	q8, q6, q1
-+	vadd.i64	q4, q4, q13
-+	vshl.i64	q10, q13, #25
-+	vadd.i64	q1, q4, q1
-+	vsub.i64	q0, q9, q0
-+	vshr.s64	q8, q8, #26
-+	vsub.i64	q3, q3, q10
-+	vtrn.32		d14, d0
-+	vshr.s64	q1, q1, #26
-+	vtrn.32		d15, d1
-+	vadd.i64	q0, q11, q8
-+	vst1.8		d14, [r2, : 64]
-+	vshl.i64	q7, q8, #26
-+	vadd.i64	q5, q5, q1
-+	vtrn.32		d4, d6
-+	vshl.i64	q1, q1, #26
-+	vtrn.32		d5, d7
-+	vsub.i64	q3, q6, q7
-+	add		r2, r2, #16
-+	vsub.i64	q1, q4, q1
-+	vst1.8		d4, [r2, : 64]
-+	vtrn.32		d6, d0
-+	vtrn.32		d7, d1
-+	sub		r2, r2, #8
-+	vtrn.32		d2, d10
-+	vtrn.32		d3, d11
-+	vst1.8		d6, [r2, : 64]
-+	sub		r2, r2, #24
-+	vst1.8		d2, [r2, : 64]
-+	add		r2, r3, #96
-+	vmov.i32	q0, #0
-+	vmov.i64	d2, #0xff
-+	vmov.i64	d3, #0
-+	vshr.u32	q1, q1, #7
-+	vst1.8		{d2-d3}, [r2, : 128]!
-+	vst1.8		{d0-d1}, [r2, : 128]!
-+	vst1.8		d0, [r2, : 64]
-+	add		r2, r3, #144
-+	vmov.i32	q0, #0
-+	vst1.8		{d0-d1}, [r2, : 128]!
-+	vst1.8		{d0-d1}, [r2, : 128]!
-+	vst1.8		d0, [r2, : 64]
-+	add		r2, r3, #240
-+	vmov.i32	q0, #0
-+	vmov.i64	d2, #0xff
-+	vmov.i64	d3, #0
-+	vshr.u32	q1, q1, #7
-+	vst1.8		{d2-d3}, [r2, : 128]!
-+	vst1.8		{d0-d1}, [r2, : 128]!
-+	vst1.8		d0, [r2, : 64]
-+	add		r2, r3, #48
-+	add		r6, r3, #192
-+	vld1.8		{d0-d1}, [r2, : 128]!
-+	vld1.8		{d2-d3}, [r2, : 128]!
-+	vld1.8		{d4}, [r2, : 64]
-+	vst1.8		{d0-d1}, [r6, : 128]!
-+	vst1.8		{d2-d3}, [r6, : 128]!
-+	vst1.8		d4, [r6, : 64]
-+.Lmainloop:
-+	mov		r2, r5, LSR #3
-+	and		r6, r5, #7
-+	ldrb		r2, [r1, r2]
-+	mov		r2, r2, LSR r6
-+	and		r2, r2, #1
-+	str		r5, [sp, #456]
-+	eor		r4, r4, r2
-+	str		r2, [sp, #460]
-+	neg		r2, r4
-+	add		r4, r3, #96
-+	add		r5, r3, #192
-+	add		r6, r3, #144
-+	vld1.8		{d8-d9}, [r4, : 128]!
-+	add		r7, r3, #240
-+	vld1.8		{d10-d11}, [r5, : 128]!
-+	veor		q6, q4, q5
-+	vld1.8		{d14-d15}, [r6, : 128]!
-+	vdup.i32	q8, r2
-+	vld1.8		{d18-d19}, [r7, : 128]!
-+	veor		q10, q7, q9
-+	vld1.8		{d22-d23}, [r4, : 128]!
-+	vand		q6, q6, q8
-+	vld1.8		{d24-d25}, [r5, : 128]!
-+	vand		q10, q10, q8
-+	vld1.8		{d26-d27}, [r6, : 128]!
-+	veor		q4, q4, q6
-+	vld1.8		{d28-d29}, [r7, : 128]!
-+	veor		q5, q5, q6
-+	vld1.8		{d0}, [r4, : 64]
-+	veor		q6, q7, q10
-+	vld1.8		{d2}, [r5, : 64]
-+	veor		q7, q9, q10
-+	vld1.8		{d4}, [r6, : 64]
-+	veor		q9, q11, q12
-+	vld1.8		{d6}, [r7, : 64]
-+	veor		q10, q0, q1
-+	sub		r2, r4, #32
-+	vand		q9, q9, q8
-+	sub		r4, r5, #32
-+	vand		q10, q10, q8
-+	sub		r5, r6, #32
-+	veor		q11, q11, q9
-+	sub		r6, r7, #32
-+	veor		q0, q0, q10
-+	veor		q9, q12, q9
-+	veor		q1, q1, q10
-+	veor		q10, q13, q14
-+	veor		q12, q2, q3
-+	vand		q10, q10, q8
-+	vand		q8, q12, q8
-+	veor		q12, q13, q10
-+	veor		q2, q2, q8
-+	veor		q10, q14, q10
-+	veor		q3, q3, q8
-+	vadd.i32	q8, q4, q6
-+	vsub.i32	q4, q4, q6
-+	vst1.8		{d16-d17}, [r2, : 128]!
-+	vadd.i32	q6, q11, q12
-+	vst1.8		{d8-d9}, [r5, : 128]!
-+	vsub.i32	q4, q11, q12
-+	vst1.8		{d12-d13}, [r2, : 128]!
-+	vadd.i32	q6, q0, q2
-+	vst1.8		{d8-d9}, [r5, : 128]!
-+	vsub.i32	q0, q0, q2
-+	vst1.8		d12, [r2, : 64]
-+	vadd.i32	q2, q5, q7
-+	vst1.8		d0, [r5, : 64]
-+	vsub.i32	q0, q5, q7
-+	vst1.8		{d4-d5}, [r4, : 128]!
-+	vadd.i32	q2, q9, q10
-+	vst1.8		{d0-d1}, [r6, : 128]!
-+	vsub.i32	q0, q9, q10
-+	vst1.8		{d4-d5}, [r4, : 128]!
-+	vadd.i32	q2, q1, q3
-+	vst1.8		{d0-d1}, [r6, : 128]!
-+	vsub.i32	q0, q1, q3
-+	vst1.8		d4, [r4, : 64]
-+	vst1.8		d0, [r6, : 64]
-+	add		r2, sp, #512
-+	add		r4, r3, #96
-+	add		r5, r3, #144
-+	vld1.8		{d0-d1}, [r2, : 128]
-+	vld1.8		{d2-d3}, [r4, : 128]!
-+	vld1.8		{d4-d5}, [r5, : 128]!
-+	vzip.i32	q1, q2
-+	vld1.8		{d6-d7}, [r4, : 128]!
-+	vld1.8		{d8-d9}, [r5, : 128]!
-+	vshl.i32	q5, q1, #1
-+	vzip.i32	q3, q4
-+	vshl.i32	q6, q2, #1
-+	vld1.8		{d14}, [r4, : 64]
-+	vshl.i32	q8, q3, #1
-+	vld1.8		{d15}, [r5, : 64]
-+	vshl.i32	q9, q4, #1
-+	vmul.i32	d21, d7, d1
-+	vtrn.32		d14, d15
-+	vmul.i32	q11, q4, q0
-+	vmul.i32	q0, q7, q0
-+	vmull.s32	q12, d2, d2
-+	vmlal.s32	q12, d11, d1
-+	vmlal.s32	q12, d12, d0
-+	vmlal.s32	q12, d13, d23
-+	vmlal.s32	q12, d16, d22
-+	vmlal.s32	q12, d7, d21
-+	vmull.s32	q10, d2, d11
-+	vmlal.s32	q10, d4, d1
-+	vmlal.s32	q10, d13, d0
-+	vmlal.s32	q10, d6, d23
-+	vmlal.s32	q10, d17, d22
-+	vmull.s32	q13, d10, d4
-+	vmlal.s32	q13, d11, d3
-+	vmlal.s32	q13, d13, d1
-+	vmlal.s32	q13, d16, d0
-+	vmlal.s32	q13, d17, d23
-+	vmlal.s32	q13, d8, d22
-+	vmull.s32	q1, d10, d5
-+	vmlal.s32	q1, d11, d4
-+	vmlal.s32	q1, d6, d1
-+	vmlal.s32	q1, d17, d0
-+	vmlal.s32	q1, d8, d23
-+	vmull.s32	q14, d10, d6
-+	vmlal.s32	q14, d11, d13
-+	vmlal.s32	q14, d4, d4
-+	vmlal.s32	q14, d17, d1
-+	vmlal.s32	q14, d18, d0
-+	vmlal.s32	q14, d9, d23
-+	vmull.s32	q11, d10, d7
-+	vmlal.s32	q11, d11, d6
-+	vmlal.s32	q11, d12, d5
-+	vmlal.s32	q11, d8, d1
-+	vmlal.s32	q11, d19, d0
-+	vmull.s32	q15, d10, d8
-+	vmlal.s32	q15, d11, d17
-+	vmlal.s32	q15, d12, d6
-+	vmlal.s32	q15, d13, d5
-+	vmlal.s32	q15, d19, d1
-+	vmlal.s32	q15, d14, d0
-+	vmull.s32	q2, d10, d9
-+	vmlal.s32	q2, d11, d8
-+	vmlal.s32	q2, d12, d7
-+	vmlal.s32	q2, d13, d6
-+	vmlal.s32	q2, d14, d1
-+	vmull.s32	q0, d15, d1
-+	vmlal.s32	q0, d10, d14
-+	vmlal.s32	q0, d11, d19
-+	vmlal.s32	q0, d12, d8
-+	vmlal.s32	q0, d13, d17
-+	vmlal.s32	q0, d6, d6
-+	add		r2, sp, #480
-+	vld1.8		{d18-d19}, [r2, : 128]!
-+	vmull.s32	q3, d16, d7
-+	vmlal.s32	q3, d10, d15
-+	vmlal.s32	q3, d11, d14
-+	vmlal.s32	q3, d12, d9
-+	vmlal.s32	q3, d13, d8
-+	vld1.8		{d8-d9}, [r2, : 128]
-+	vadd.i64	q5, q12, q9
-+	vadd.i64	q6, q15, q9
-+	vshr.s64	q5, q5, #26
-+	vshr.s64	q6, q6, #26
-+	vadd.i64	q7, q10, q5
-+	vshl.i64	q5, q5, #26
-+	vadd.i64	q8, q7, q4
-+	vadd.i64	q2, q2, q6
-+	vshl.i64	q6, q6, #26
-+	vadd.i64	q10, q2, q4
-+	vsub.i64	q5, q12, q5
-+	vshr.s64	q8, q8, #25
-+	vsub.i64	q6, q15, q6
-+	vshr.s64	q10, q10, #25
-+	vadd.i64	q12, q13, q8
-+	vshl.i64	q8, q8, #25
-+	vadd.i64	q13, q12, q9
-+	vadd.i64	q0, q0, q10
-+	vsub.i64	q7, q7, q8
-+	vshr.s64	q8, q13, #26
-+	vshl.i64	q10, q10, #25
-+	vadd.i64	q13, q0, q9
-+	vadd.i64	q1, q1, q8
-+	vshl.i64	q8, q8, #26
-+	vadd.i64	q15, q1, q4
-+	vsub.i64	q2, q2, q10
-+	vshr.s64	q10, q13, #26
-+	vsub.i64	q8, q12, q8
-+	vshr.s64	q12, q15, #25
-+	vadd.i64	q3, q3, q10
-+	vshl.i64	q10, q10, #26
-+	vadd.i64	q13, q3, q4
-+	vadd.i64	q14, q14, q12
-+	add		r2, r3, #288
-+	vshl.i64	q12, q12, #25
-+	add		r4, r3, #336
-+	vadd.i64	q15, q14, q9
-+	add		r2, r2, #8
-+	vsub.i64	q0, q0, q10
-+	add		r4, r4, #8
-+	vshr.s64	q10, q13, #25
-+	vsub.i64	q1, q1, q12
-+	vshr.s64	q12, q15, #26
-+	vadd.i64	q13, q10, q10
-+	vadd.i64	q11, q11, q12
-+	vtrn.32		d16, d2
-+	vshl.i64	q12, q12, #26
-+	vtrn.32		d17, d3
-+	vadd.i64	q1, q11, q4
-+	vadd.i64	q4, q5, q13
-+	vst1.8		d16, [r2, : 64]!
-+	vshl.i64	q5, q10, #4
-+	vst1.8		d17, [r4, : 64]!
-+	vsub.i64	q8, q14, q12
-+	vshr.s64	q1, q1, #25
-+	vadd.i64	q4, q4, q5
-+	vadd.i64	q5, q6, q1
-+	vshl.i64	q1, q1, #25
-+	vadd.i64	q6, q5, q9
-+	vadd.i64	q4, q4, q10
-+	vshl.i64	q10, q10, #25
-+	vadd.i64	q9, q4, q9
-+	vsub.i64	q1, q11, q1
-+	vshr.s64	q6, q6, #26
-+	vsub.i64	q3, q3, q10
-+	vtrn.32		d16, d2
-+	vshr.s64	q9, q9, #26
-+	vtrn.32		d17, d3
-+	vadd.i64	q1, q2, q6
-+	vst1.8		d16, [r2, : 64]
-+	vshl.i64	q2, q6, #26
-+	vst1.8		d17, [r4, : 64]
-+	vadd.i64	q6, q7, q9
-+	vtrn.32		d0, d6
-+	vshl.i64	q7, q9, #26
-+	vtrn.32		d1, d7
-+	vsub.i64	q2, q5, q2
-+	add		r2, r2, #16
-+	vsub.i64	q3, q4, q7
-+	vst1.8		d0, [r2, : 64]
-+	add		r4, r4, #16
-+	vst1.8		d1, [r4, : 64]
-+	vtrn.32		d4, d2
-+	vtrn.32		d5, d3
-+	sub		r2, r2, #8
-+	sub		r4, r4, #8
-+	vtrn.32		d6, d12
-+	vtrn.32		d7, d13
-+	vst1.8		d4, [r2, : 64]
-+	vst1.8		d5, [r4, : 64]
-+	sub		r2, r2, #24
-+	sub		r4, r4, #24
-+	vst1.8		d6, [r2, : 64]
-+	vst1.8		d7, [r4, : 64]
-+	add		r2, r3, #240
-+	add		r4, r3, #96
-+	vld1.8		{d0-d1}, [r4, : 128]!
-+	vld1.8		{d2-d3}, [r4, : 128]!
-+	vld1.8		{d4}, [r4, : 64]
-+	add		r4, r3, #144
-+	vld1.8		{d6-d7}, [r4, : 128]!
-+	vtrn.32		q0, q3
-+	vld1.8		{d8-d9}, [r4, : 128]!
-+	vshl.i32	q5, q0, #4
-+	vtrn.32		q1, q4
-+	vshl.i32	q6, q3, #4
-+	vadd.i32	q5, q5, q0
-+	vadd.i32	q6, q6, q3
-+	vshl.i32	q7, q1, #4
-+	vld1.8		{d5}, [r4, : 64]
-+	vshl.i32	q8, q4, #4
-+	vtrn.32		d4, d5
-+	vadd.i32	q7, q7, q1
-+	vadd.i32	q8, q8, q4
-+	vld1.8		{d18-d19}, [r2, : 128]!
-+	vshl.i32	q10, q2, #4
-+	vld1.8		{d22-d23}, [r2, : 128]!
-+	vadd.i32	q10, q10, q2
-+	vld1.8		{d24}, [r2, : 64]
-+	vadd.i32	q5, q5, q0
-+	add		r2, r3, #192
-+	vld1.8		{d26-d27}, [r2, : 128]!
-+	vadd.i32	q6, q6, q3
-+	vld1.8		{d28-d29}, [r2, : 128]!
-+	vadd.i32	q8, q8, q4
-+	vld1.8		{d25}, [r2, : 64]
-+	vadd.i32	q10, q10, q2
-+	vtrn.32		q9, q13
-+	vadd.i32	q7, q7, q1
-+	vadd.i32	q5, q5, q0
-+	vtrn.32		q11, q14
-+	vadd.i32	q6, q6, q3
-+	add		r2, sp, #528
-+	vadd.i32	q10, q10, q2
-+	vtrn.32		d24, d25
-+	vst1.8		{d12-d13}, [r2, : 128]!
-+	vshl.i32	q6, q13, #1
-+	vst1.8		{d20-d21}, [r2, : 128]!
-+	vshl.i32	q10, q14, #1
-+	vst1.8		{d12-d13}, [r2, : 128]!
-+	vshl.i32	q15, q12, #1
-+	vadd.i32	q8, q8, q4
-+	vext.32		d10, d31, d30, #0
-+	vadd.i32	q7, q7, q1
-+	vst1.8		{d16-d17}, [r2, : 128]!
-+	vmull.s32	q8, d18, d5
-+	vmlal.s32	q8, d26, d4
-+	vmlal.s32	q8, d19, d9
-+	vmlal.s32	q8, d27, d3
-+	vmlal.s32	q8, d22, d8
-+	vmlal.s32	q8, d28, d2
-+	vmlal.s32	q8, d23, d7
-+	vmlal.s32	q8, d29, d1
-+	vmlal.s32	q8, d24, d6
-+	vmlal.s32	q8, d25, d0
-+	vst1.8		{d14-d15}, [r2, : 128]!
-+	vmull.s32	q2, d18, d4
-+	vmlal.s32	q2, d12, d9
-+	vmlal.s32	q2, d13, d8
-+	vmlal.s32	q2, d19, d3
-+	vmlal.s32	q2, d22, d2
-+	vmlal.s32	q2, d23, d1
-+	vmlal.s32	q2, d24, d0
-+	vst1.8		{d20-d21}, [r2, : 128]!
-+	vmull.s32	q7, d18, d9
-+	vmlal.s32	q7, d26, d3
-+	vmlal.s32	q7, d19, d8
-+	vmlal.s32	q7, d27, d2
-+	vmlal.s32	q7, d22, d7
-+	vmlal.s32	q7, d28, d1
-+	vmlal.s32	q7, d23, d6
-+	vmlal.s32	q7, d29, d0
-+	vst1.8		{d10-d11}, [r2, : 128]!
-+	vmull.s32	q5, d18, d3
-+	vmlal.s32	q5, d19, d2
-+	vmlal.s32	q5, d22, d1
-+	vmlal.s32	q5, d23, d0
-+	vmlal.s32	q5, d12, d8
-+	vst1.8		{d16-d17}, [r2, : 128]
-+	vmull.s32	q4, d18, d8
-+	vmlal.s32	q4, d26, d2
-+	vmlal.s32	q4, d19, d7
-+	vmlal.s32	q4, d27, d1
-+	vmlal.s32	q4, d22, d6
-+	vmlal.s32	q4, d28, d0
-+	vmull.s32	q8, d18, d7
-+	vmlal.s32	q8, d26, d1
-+	vmlal.s32	q8, d19, d6
-+	vmlal.s32	q8, d27, d0
-+	add		r2, sp, #544
-+	vld1.8		{d20-d21}, [r2, : 128]
-+	vmlal.s32	q7, d24, d21
-+	vmlal.s32	q7, d25, d20
-+	vmlal.s32	q4, d23, d21
-+	vmlal.s32	q4, d29, d20
-+	vmlal.s32	q8, d22, d21
-+	vmlal.s32	q8, d28, d20
-+	vmlal.s32	q5, d24, d20
-+	vst1.8		{d14-d15}, [r2, : 128]
-+	vmull.s32	q7, d18, d6
-+	vmlal.s32	q7, d26, d0
-+	add		r2, sp, #624
-+	vld1.8		{d30-d31}, [r2, : 128]
-+	vmlal.s32	q2, d30, d21
-+	vmlal.s32	q7, d19, d21
-+	vmlal.s32	q7, d27, d20
-+	add		r2, sp, #592
-+	vld1.8		{d26-d27}, [r2, : 128]
-+	vmlal.s32	q4, d25, d27
-+	vmlal.s32	q8, d29, d27
-+	vmlal.s32	q8, d25, d26
-+	vmlal.s32	q7, d28, d27
-+	vmlal.s32	q7, d29, d26
-+	add		r2, sp, #576
-+	vld1.8		{d28-d29}, [r2, : 128]
-+	vmlal.s32	q4, d24, d29
-+	vmlal.s32	q8, d23, d29
-+	vmlal.s32	q8, d24, d28
-+	vmlal.s32	q7, d22, d29
-+	vmlal.s32	q7, d23, d28
-+	vst1.8		{d8-d9}, [r2, : 128]
-+	add		r2, sp, #528
-+	vld1.8		{d8-d9}, [r2, : 128]
-+	vmlal.s32	q7, d24, d9
-+	vmlal.s32	q7, d25, d31
-+	vmull.s32	q1, d18, d2
-+	vmlal.s32	q1, d19, d1
-+	vmlal.s32	q1, d22, d0
-+	vmlal.s32	q1, d24, d27
-+	vmlal.s32	q1, d23, d20
-+	vmlal.s32	q1, d12, d7
-+	vmlal.s32	q1, d13, d6
-+	vmull.s32	q6, d18, d1
-+	vmlal.s32	q6, d19, d0
-+	vmlal.s32	q6, d23, d27
-+	vmlal.s32	q6, d22, d20
-+	vmlal.s32	q6, d24, d26
-+	vmull.s32	q0, d18, d0
-+	vmlal.s32	q0, d22, d27
-+	vmlal.s32	q0, d23, d26
-+	vmlal.s32	q0, d24, d31
-+	vmlal.s32	q0, d19, d20
-+	add		r2, sp, #608
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	vmlal.s32	q2, d18, d7
-+	vmlal.s32	q5, d18, d6
-+	vmlal.s32	q1, d18, d21
-+	vmlal.s32	q0, d18, d28
-+	vmlal.s32	q6, d18, d29
-+	vmlal.s32	q2, d19, d6
-+	vmlal.s32	q5, d19, d21
-+	vmlal.s32	q1, d19, d29
-+	vmlal.s32	q0, d19, d9
-+	vmlal.s32	q6, d19, d28
-+	add		r2, sp, #560
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	add		r2, sp, #480
-+	vld1.8		{d22-d23}, [r2, : 128]
-+	vmlal.s32	q5, d19, d7
-+	vmlal.s32	q0, d18, d21
-+	vmlal.s32	q0, d19, d29
-+	vmlal.s32	q6, d18, d6
-+	add		r2, sp, #496
-+	vld1.8		{d6-d7}, [r2, : 128]
-+	vmlal.s32	q6, d19, d21
-+	add		r2, sp, #544
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	vmlal.s32	q0, d30, d8
-+	add		r2, sp, #640
-+	vld1.8		{d20-d21}, [r2, : 128]
-+	vmlal.s32	q5, d30, d29
-+	add		r2, sp, #576
-+	vld1.8		{d24-d25}, [r2, : 128]
-+	vmlal.s32	q1, d30, d28
-+	vadd.i64	q13, q0, q11
-+	vadd.i64	q14, q5, q11
-+	vmlal.s32	q6, d30, d9
-+	vshr.s64	q4, q13, #26
-+	vshr.s64	q13, q14, #26
-+	vadd.i64	q7, q7, q4
-+	vshl.i64	q4, q4, #26
-+	vadd.i64	q14, q7, q3
-+	vadd.i64	q9, q9, q13
-+	vshl.i64	q13, q13, #26
-+	vadd.i64	q15, q9, q3
-+	vsub.i64	q0, q0, q4
-+	vshr.s64	q4, q14, #25
-+	vsub.i64	q5, q5, q13
-+	vshr.s64	q13, q15, #25
-+	vadd.i64	q6, q6, q4
-+	vshl.i64	q4, q4, #25
-+	vadd.i64	q14, q6, q11
-+	vadd.i64	q2, q2, q13
-+	vsub.i64	q4, q7, q4
-+	vshr.s64	q7, q14, #26
-+	vshl.i64	q13, q13, #25
-+	vadd.i64	q14, q2, q11
-+	vadd.i64	q8, q8, q7
-+	vshl.i64	q7, q7, #26
-+	vadd.i64	q15, q8, q3
-+	vsub.i64	q9, q9, q13
-+	vshr.s64	q13, q14, #26
-+	vsub.i64	q6, q6, q7
-+	vshr.s64	q7, q15, #25
-+	vadd.i64	q10, q10, q13
-+	vshl.i64	q13, q13, #26
-+	vadd.i64	q14, q10, q3
-+	vadd.i64	q1, q1, q7
-+	add		r2, r3, #144
-+	vshl.i64	q7, q7, #25
-+	add		r4, r3, #96
-+	vadd.i64	q15, q1, q11
-+	add		r2, r2, #8
-+	vsub.i64	q2, q2, q13
-+	add		r4, r4, #8
-+	vshr.s64	q13, q14, #25
-+	vsub.i64	q7, q8, q7
-+	vshr.s64	q8, q15, #26
-+	vadd.i64	q14, q13, q13
-+	vadd.i64	q12, q12, q8
-+	vtrn.32		d12, d14
-+	vshl.i64	q8, q8, #26
-+	vtrn.32		d13, d15
-+	vadd.i64	q3, q12, q3
-+	vadd.i64	q0, q0, q14
-+	vst1.8		d12, [r2, : 64]!
-+	vshl.i64	q7, q13, #4
-+	vst1.8		d13, [r4, : 64]!
-+	vsub.i64	q1, q1, q8
-+	vshr.s64	q3, q3, #25
-+	vadd.i64	q0, q0, q7
-+	vadd.i64	q5, q5, q3
-+	vshl.i64	q3, q3, #25
-+	vadd.i64	q6, q5, q11
-+	vadd.i64	q0, q0, q13
-+	vshl.i64	q7, q13, #25
-+	vadd.i64	q8, q0, q11
-+	vsub.i64	q3, q12, q3
-+	vshr.s64	q6, q6, #26
-+	vsub.i64	q7, q10, q7
-+	vtrn.32		d2, d6
-+	vshr.s64	q8, q8, #26
-+	vtrn.32		d3, d7
-+	vadd.i64	q3, q9, q6
-+	vst1.8		d2, [r2, : 64]
-+	vshl.i64	q6, q6, #26
-+	vst1.8		d3, [r4, : 64]
-+	vadd.i64	q1, q4, q8
-+	vtrn.32		d4, d14
-+	vshl.i64	q4, q8, #26
-+	vtrn.32		d5, d15
-+	vsub.i64	q5, q5, q6
-+	add		r2, r2, #16
-+	vsub.i64	q0, q0, q4
-+	vst1.8		d4, [r2, : 64]
-+	add		r4, r4, #16
-+	vst1.8		d5, [r4, : 64]
-+	vtrn.32		d10, d6
-+	vtrn.32		d11, d7
-+	sub		r2, r2, #8
-+	sub		r4, r4, #8
-+	vtrn.32		d0, d2
-+	vtrn.32		d1, d3
-+	vst1.8		d10, [r2, : 64]
-+	vst1.8		d11, [r4, : 64]
-+	sub		r2, r2, #24
-+	sub		r4, r4, #24
-+	vst1.8		d0, [r2, : 64]
-+	vst1.8		d1, [r4, : 64]
-+	add		r2, r3, #288
-+	add		r4, r3, #336
-+	vld1.8		{d0-d1}, [r2, : 128]!
-+	vld1.8		{d2-d3}, [r4, : 128]!
-+	vsub.i32	q0, q0, q1
-+	vld1.8		{d2-d3}, [r2, : 128]!
-+	vld1.8		{d4-d5}, [r4, : 128]!
-+	vsub.i32	q1, q1, q2
-+	add		r5, r3, #240
-+	vld1.8		{d4}, [r2, : 64]
-+	vld1.8		{d6}, [r4, : 64]
-+	vsub.i32	q2, q2, q3
-+	vst1.8		{d0-d1}, [r5, : 128]!
-+	vst1.8		{d2-d3}, [r5, : 128]!
-+	vst1.8		d4, [r5, : 64]
-+	add		r2, r3, #144
-+	add		r4, r3, #96
-+	add		r5, r3, #144
-+	add		r6, r3, #192
-+	vld1.8		{d0-d1}, [r2, : 128]!
-+	vld1.8		{d2-d3}, [r4, : 128]!
-+	vsub.i32	q2, q0, q1
-+	vadd.i32	q0, q0, q1
-+	vld1.8		{d2-d3}, [r2, : 128]!
-+	vld1.8		{d6-d7}, [r4, : 128]!
-+	vsub.i32	q4, q1, q3
-+	vadd.i32	q1, q1, q3
-+	vld1.8		{d6}, [r2, : 64]
-+	vld1.8		{d10}, [r4, : 64]
-+	vsub.i32	q6, q3, q5
-+	vadd.i32	q3, q3, q5
-+	vst1.8		{d4-d5}, [r5, : 128]!
-+	vst1.8		{d0-d1}, [r6, : 128]!
-+	vst1.8		{d8-d9}, [r5, : 128]!
-+	vst1.8		{d2-d3}, [r6, : 128]!
-+	vst1.8		d12, [r5, : 64]
-+	vst1.8		d6, [r6, : 64]
-+	add		r2, r3, #0
-+	add		r4, r3, #240
-+	vld1.8		{d0-d1}, [r4, : 128]!
-+	vld1.8		{d2-d3}, [r4, : 128]!
-+	vld1.8		{d4}, [r4, : 64]
-+	add		r4, r3, #336
-+	vld1.8		{d6-d7}, [r4, : 128]!
-+	vtrn.32		q0, q3
-+	vld1.8		{d8-d9}, [r4, : 128]!
-+	vshl.i32	q5, q0, #4
-+	vtrn.32		q1, q4
-+	vshl.i32	q6, q3, #4
-+	vadd.i32	q5, q5, q0
-+	vadd.i32	q6, q6, q3
-+	vshl.i32	q7, q1, #4
-+	vld1.8		{d5}, [r4, : 64]
-+	vshl.i32	q8, q4, #4
-+	vtrn.32		d4, d5
-+	vadd.i32	q7, q7, q1
-+	vadd.i32	q8, q8, q4
-+	vld1.8		{d18-d19}, [r2, : 128]!
-+	vshl.i32	q10, q2, #4
-+	vld1.8		{d22-d23}, [r2, : 128]!
-+	vadd.i32	q10, q10, q2
-+	vld1.8		{d24}, [r2, : 64]
-+	vadd.i32	q5, q5, q0
-+	add		r2, r3, #288
-+	vld1.8		{d26-d27}, [r2, : 128]!
-+	vadd.i32	q6, q6, q3
-+	vld1.8		{d28-d29}, [r2, : 128]!
-+	vadd.i32	q8, q8, q4
-+	vld1.8		{d25}, [r2, : 64]
-+	vadd.i32	q10, q10, q2
-+	vtrn.32		q9, q13
-+	vadd.i32	q7, q7, q1
-+	vadd.i32	q5, q5, q0
-+	vtrn.32		q11, q14
-+	vadd.i32	q6, q6, q3
-+	add		r2, sp, #528
-+	vadd.i32	q10, q10, q2
-+	vtrn.32		d24, d25
-+	vst1.8		{d12-d13}, [r2, : 128]!
-+	vshl.i32	q6, q13, #1
-+	vst1.8		{d20-d21}, [r2, : 128]!
-+	vshl.i32	q10, q14, #1
-+	vst1.8		{d12-d13}, [r2, : 128]!
-+	vshl.i32	q15, q12, #1
-+	vadd.i32	q8, q8, q4
-+	vext.32		d10, d31, d30, #0
-+	vadd.i32	q7, q7, q1
-+	vst1.8		{d16-d17}, [r2, : 128]!
-+	vmull.s32	q8, d18, d5
-+	vmlal.s32	q8, d26, d4
-+	vmlal.s32	q8, d19, d9
-+	vmlal.s32	q8, d27, d3
-+	vmlal.s32	q8, d22, d8
-+	vmlal.s32	q8, d28, d2
-+	vmlal.s32	q8, d23, d7
-+	vmlal.s32	q8, d29, d1
-+	vmlal.s32	q8, d24, d6
-+	vmlal.s32	q8, d25, d0
-+	vst1.8		{d14-d15}, [r2, : 128]!
-+	vmull.s32	q2, d18, d4
-+	vmlal.s32	q2, d12, d9
-+	vmlal.s32	q2, d13, d8
-+	vmlal.s32	q2, d19, d3
-+	vmlal.s32	q2, d22, d2
-+	vmlal.s32	q2, d23, d1
-+	vmlal.s32	q2, d24, d0
-+	vst1.8		{d20-d21}, [r2, : 128]!
-+	vmull.s32	q7, d18, d9
-+	vmlal.s32	q7, d26, d3
-+	vmlal.s32	q7, d19, d8
-+	vmlal.s32	q7, d27, d2
-+	vmlal.s32	q7, d22, d7
-+	vmlal.s32	q7, d28, d1
-+	vmlal.s32	q7, d23, d6
-+	vmlal.s32	q7, d29, d0
-+	vst1.8		{d10-d11}, [r2, : 128]!
-+	vmull.s32	q5, d18, d3
-+	vmlal.s32	q5, d19, d2
-+	vmlal.s32	q5, d22, d1
-+	vmlal.s32	q5, d23, d0
-+	vmlal.s32	q5, d12, d8
-+	vst1.8		{d16-d17}, [r2, : 128]!
-+	vmull.s32	q4, d18, d8
-+	vmlal.s32	q4, d26, d2
-+	vmlal.s32	q4, d19, d7
-+	vmlal.s32	q4, d27, d1
-+	vmlal.s32	q4, d22, d6
-+	vmlal.s32	q4, d28, d0
-+	vmull.s32	q8, d18, d7
-+	vmlal.s32	q8, d26, d1
-+	vmlal.s32	q8, d19, d6
-+	vmlal.s32	q8, d27, d0
-+	add		r2, sp, #544
-+	vld1.8		{d20-d21}, [r2, : 128]
-+	vmlal.s32	q7, d24, d21
-+	vmlal.s32	q7, d25, d20
-+	vmlal.s32	q4, d23, d21
-+	vmlal.s32	q4, d29, d20
-+	vmlal.s32	q8, d22, d21
-+	vmlal.s32	q8, d28, d20
-+	vmlal.s32	q5, d24, d20
-+	vst1.8		{d14-d15}, [r2, : 128]
-+	vmull.s32	q7, d18, d6
-+	vmlal.s32	q7, d26, d0
-+	add		r2, sp, #624
-+	vld1.8		{d30-d31}, [r2, : 128]
-+	vmlal.s32	q2, d30, d21
-+	vmlal.s32	q7, d19, d21
-+	vmlal.s32	q7, d27, d20
-+	add		r2, sp, #592
-+	vld1.8		{d26-d27}, [r2, : 128]
-+	vmlal.s32	q4, d25, d27
-+	vmlal.s32	q8, d29, d27
-+	vmlal.s32	q8, d25, d26
-+	vmlal.s32	q7, d28, d27
-+	vmlal.s32	q7, d29, d26
-+	add		r2, sp, #576
-+	vld1.8		{d28-d29}, [r2, : 128]
-+	vmlal.s32	q4, d24, d29
-+	vmlal.s32	q8, d23, d29
-+	vmlal.s32	q8, d24, d28
-+	vmlal.s32	q7, d22, d29
-+	vmlal.s32	q7, d23, d28
-+	vst1.8		{d8-d9}, [r2, : 128]
-+	add		r2, sp, #528
-+	vld1.8		{d8-d9}, [r2, : 128]
-+	vmlal.s32	q7, d24, d9
-+	vmlal.s32	q7, d25, d31
-+	vmull.s32	q1, d18, d2
-+	vmlal.s32	q1, d19, d1
-+	vmlal.s32	q1, d22, d0
-+	vmlal.s32	q1, d24, d27
-+	vmlal.s32	q1, d23, d20
-+	vmlal.s32	q1, d12, d7
-+	vmlal.s32	q1, d13, d6
-+	vmull.s32	q6, d18, d1
-+	vmlal.s32	q6, d19, d0
-+	vmlal.s32	q6, d23, d27
-+	vmlal.s32	q6, d22, d20
-+	vmlal.s32	q6, d24, d26
-+	vmull.s32	q0, d18, d0
-+	vmlal.s32	q0, d22, d27
-+	vmlal.s32	q0, d23, d26
-+	vmlal.s32	q0, d24, d31
-+	vmlal.s32	q0, d19, d20
-+	add		r2, sp, #608
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	vmlal.s32	q2, d18, d7
-+	vmlal.s32	q5, d18, d6
-+	vmlal.s32	q1, d18, d21
-+	vmlal.s32	q0, d18, d28
-+	vmlal.s32	q6, d18, d29
-+	vmlal.s32	q2, d19, d6
-+	vmlal.s32	q5, d19, d21
-+	vmlal.s32	q1, d19, d29
-+	vmlal.s32	q0, d19, d9
-+	vmlal.s32	q6, d19, d28
-+	add		r2, sp, #560
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	add		r2, sp, #480
-+	vld1.8		{d22-d23}, [r2, : 128]
-+	vmlal.s32	q5, d19, d7
-+	vmlal.s32	q0, d18, d21
-+	vmlal.s32	q0, d19, d29
-+	vmlal.s32	q6, d18, d6
-+	add		r2, sp, #496
-+	vld1.8		{d6-d7}, [r2, : 128]
-+	vmlal.s32	q6, d19, d21
-+	add		r2, sp, #544
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	vmlal.s32	q0, d30, d8
-+	add		r2, sp, #640
-+	vld1.8		{d20-d21}, [r2, : 128]
-+	vmlal.s32	q5, d30, d29
-+	add		r2, sp, #576
-+	vld1.8		{d24-d25}, [r2, : 128]
-+	vmlal.s32	q1, d30, d28
-+	vadd.i64	q13, q0, q11
-+	vadd.i64	q14, q5, q11
-+	vmlal.s32	q6, d30, d9
-+	vshr.s64	q4, q13, #26
-+	vshr.s64	q13, q14, #26
-+	vadd.i64	q7, q7, q4
-+	vshl.i64	q4, q4, #26
-+	vadd.i64	q14, q7, q3
-+	vadd.i64	q9, q9, q13
-+	vshl.i64	q13, q13, #26
-+	vadd.i64	q15, q9, q3
-+	vsub.i64	q0, q0, q4
-+	vshr.s64	q4, q14, #25
-+	vsub.i64	q5, q5, q13
-+	vshr.s64	q13, q15, #25
-+	vadd.i64	q6, q6, q4
-+	vshl.i64	q4, q4, #25
-+	vadd.i64	q14, q6, q11
-+	vadd.i64	q2, q2, q13
-+	vsub.i64	q4, q7, q4
-+	vshr.s64	q7, q14, #26
-+	vshl.i64	q13, q13, #25
-+	vadd.i64	q14, q2, q11
-+	vadd.i64	q8, q8, q7
-+	vshl.i64	q7, q7, #26
-+	vadd.i64	q15, q8, q3
-+	vsub.i64	q9, q9, q13
-+	vshr.s64	q13, q14, #26
-+	vsub.i64	q6, q6, q7
-+	vshr.s64	q7, q15, #25
-+	vadd.i64	q10, q10, q13
-+	vshl.i64	q13, q13, #26
-+	vadd.i64	q14, q10, q3
-+	vadd.i64	q1, q1, q7
-+	add		r2, r3, #288
-+	vshl.i64	q7, q7, #25
-+	add		r4, r3, #96
-+	vadd.i64	q15, q1, q11
-+	add		r2, r2, #8
-+	vsub.i64	q2, q2, q13
-+	add		r4, r4, #8
-+	vshr.s64	q13, q14, #25
-+	vsub.i64	q7, q8, q7
-+	vshr.s64	q8, q15, #26
-+	vadd.i64	q14, q13, q13
-+	vadd.i64	q12, q12, q8
-+	vtrn.32		d12, d14
-+	vshl.i64	q8, q8, #26
-+	vtrn.32		d13, d15
-+	vadd.i64	q3, q12, q3
-+	vadd.i64	q0, q0, q14
-+	vst1.8		d12, [r2, : 64]!
-+	vshl.i64	q7, q13, #4
-+	vst1.8		d13, [r4, : 64]!
-+	vsub.i64	q1, q1, q8
-+	vshr.s64	q3, q3, #25
-+	vadd.i64	q0, q0, q7
-+	vadd.i64	q5, q5, q3
-+	vshl.i64	q3, q3, #25
-+	vadd.i64	q6, q5, q11
-+	vadd.i64	q0, q0, q13
-+	vshl.i64	q7, q13, #25
-+	vadd.i64	q8, q0, q11
-+	vsub.i64	q3, q12, q3
-+	vshr.s64	q6, q6, #26
-+	vsub.i64	q7, q10, q7
-+	vtrn.32		d2, d6
-+	vshr.s64	q8, q8, #26
-+	vtrn.32		d3, d7
-+	vadd.i64	q3, q9, q6
-+	vst1.8		d2, [r2, : 64]
-+	vshl.i64	q6, q6, #26
-+	vst1.8		d3, [r4, : 64]
-+	vadd.i64	q1, q4, q8
-+	vtrn.32		d4, d14
-+	vshl.i64	q4, q8, #26
-+	vtrn.32		d5, d15
-+	vsub.i64	q5, q5, q6
-+	add		r2, r2, #16
-+	vsub.i64	q0, q0, q4
-+	vst1.8		d4, [r2, : 64]
-+	add		r4, r4, #16
-+	vst1.8		d5, [r4, : 64]
-+	vtrn.32		d10, d6
-+	vtrn.32		d11, d7
-+	sub		r2, r2, #8
-+	sub		r4, r4, #8
-+	vtrn.32		d0, d2
-+	vtrn.32		d1, d3
-+	vst1.8		d10, [r2, : 64]
-+	vst1.8		d11, [r4, : 64]
-+	sub		r2, r2, #24
-+	sub		r4, r4, #24
-+	vst1.8		d0, [r2, : 64]
-+	vst1.8		d1, [r4, : 64]
-+	add		r2, sp, #512
-+	add		r4, r3, #144
-+	add		r5, r3, #192
-+	vld1.8		{d0-d1}, [r2, : 128]
-+	vld1.8		{d2-d3}, [r4, : 128]!
-+	vld1.8		{d4-d5}, [r5, : 128]!
-+	vzip.i32	q1, q2
-+	vld1.8		{d6-d7}, [r4, : 128]!
-+	vld1.8		{d8-d9}, [r5, : 128]!
-+	vshl.i32	q5, q1, #1
-+	vzip.i32	q3, q4
-+	vshl.i32	q6, q2, #1
-+	vld1.8		{d14}, [r4, : 64]
-+	vshl.i32	q8, q3, #1
-+	vld1.8		{d15}, [r5, : 64]
-+	vshl.i32	q9, q4, #1
-+	vmul.i32	d21, d7, d1
-+	vtrn.32		d14, d15
-+	vmul.i32	q11, q4, q0
-+	vmul.i32	q0, q7, q0
-+	vmull.s32	q12, d2, d2
-+	vmlal.s32	q12, d11, d1
-+	vmlal.s32	q12, d12, d0
-+	vmlal.s32	q12, d13, d23
-+	vmlal.s32	q12, d16, d22
-+	vmlal.s32	q12, d7, d21
-+	vmull.s32	q10, d2, d11
-+	vmlal.s32	q10, d4, d1
-+	vmlal.s32	q10, d13, d0
-+	vmlal.s32	q10, d6, d23
-+	vmlal.s32	q10, d17, d22
-+	vmull.s32	q13, d10, d4
-+	vmlal.s32	q13, d11, d3
-+	vmlal.s32	q13, d13, d1
-+	vmlal.s32	q13, d16, d0
-+	vmlal.s32	q13, d17, d23
-+	vmlal.s32	q13, d8, d22
-+	vmull.s32	q1, d10, d5
-+	vmlal.s32	q1, d11, d4
-+	vmlal.s32	q1, d6, d1
-+	vmlal.s32	q1, d17, d0
-+	vmlal.s32	q1, d8, d23
-+	vmull.s32	q14, d10, d6
-+	vmlal.s32	q14, d11, d13
-+	vmlal.s32	q14, d4, d4
-+	vmlal.s32	q14, d17, d1
-+	vmlal.s32	q14, d18, d0
-+	vmlal.s32	q14, d9, d23
-+	vmull.s32	q11, d10, d7
-+	vmlal.s32	q11, d11, d6
-+	vmlal.s32	q11, d12, d5
-+	vmlal.s32	q11, d8, d1
-+	vmlal.s32	q11, d19, d0
-+	vmull.s32	q15, d10, d8
-+	vmlal.s32	q15, d11, d17
-+	vmlal.s32	q15, d12, d6
-+	vmlal.s32	q15, d13, d5
-+	vmlal.s32	q15, d19, d1
-+	vmlal.s32	q15, d14, d0
-+	vmull.s32	q2, d10, d9
-+	vmlal.s32	q2, d11, d8
-+	vmlal.s32	q2, d12, d7
-+	vmlal.s32	q2, d13, d6
-+	vmlal.s32	q2, d14, d1
-+	vmull.s32	q0, d15, d1
-+	vmlal.s32	q0, d10, d14
-+	vmlal.s32	q0, d11, d19
-+	vmlal.s32	q0, d12, d8
-+	vmlal.s32	q0, d13, d17
-+	vmlal.s32	q0, d6, d6
-+	add		r2, sp, #480
-+	vld1.8		{d18-d19}, [r2, : 128]!
-+	vmull.s32	q3, d16, d7
-+	vmlal.s32	q3, d10, d15
-+	vmlal.s32	q3, d11, d14
-+	vmlal.s32	q3, d12, d9
-+	vmlal.s32	q3, d13, d8
-+	vld1.8		{d8-d9}, [r2, : 128]
-+	vadd.i64	q5, q12, q9
-+	vadd.i64	q6, q15, q9
-+	vshr.s64	q5, q5, #26
-+	vshr.s64	q6, q6, #26
-+	vadd.i64	q7, q10, q5
-+	vshl.i64	q5, q5, #26
-+	vadd.i64	q8, q7, q4
-+	vadd.i64	q2, q2, q6
-+	vshl.i64	q6, q6, #26
-+	vadd.i64	q10, q2, q4
-+	vsub.i64	q5, q12, q5
-+	vshr.s64	q8, q8, #25
-+	vsub.i64	q6, q15, q6
-+	vshr.s64	q10, q10, #25
-+	vadd.i64	q12, q13, q8
-+	vshl.i64	q8, q8, #25
-+	vadd.i64	q13, q12, q9
-+	vadd.i64	q0, q0, q10
-+	vsub.i64	q7, q7, q8
-+	vshr.s64	q8, q13, #26
-+	vshl.i64	q10, q10, #25
-+	vadd.i64	q13, q0, q9
-+	vadd.i64	q1, q1, q8
-+	vshl.i64	q8, q8, #26
-+	vadd.i64	q15, q1, q4
-+	vsub.i64	q2, q2, q10
-+	vshr.s64	q10, q13, #26
-+	vsub.i64	q8, q12, q8
-+	vshr.s64	q12, q15, #25
-+	vadd.i64	q3, q3, q10
-+	vshl.i64	q10, q10, #26
-+	vadd.i64	q13, q3, q4
-+	vadd.i64	q14, q14, q12
-+	add		r2, r3, #144
-+	vshl.i64	q12, q12, #25
-+	add		r4, r3, #192
-+	vadd.i64	q15, q14, q9
-+	add		r2, r2, #8
-+	vsub.i64	q0, q0, q10
-+	add		r4, r4, #8
-+	vshr.s64	q10, q13, #25
-+	vsub.i64	q1, q1, q12
-+	vshr.s64	q12, q15, #26
-+	vadd.i64	q13, q10, q10
-+	vadd.i64	q11, q11, q12
-+	vtrn.32		d16, d2
-+	vshl.i64	q12, q12, #26
-+	vtrn.32		d17, d3
-+	vadd.i64	q1, q11, q4
-+	vadd.i64	q4, q5, q13
-+	vst1.8		d16, [r2, : 64]!
-+	vshl.i64	q5, q10, #4
-+	vst1.8		d17, [r4, : 64]!
-+	vsub.i64	q8, q14, q12
-+	vshr.s64	q1, q1, #25
-+	vadd.i64	q4, q4, q5
-+	vadd.i64	q5, q6, q1
-+	vshl.i64	q1, q1, #25
-+	vadd.i64	q6, q5, q9
-+	vadd.i64	q4, q4, q10
-+	vshl.i64	q10, q10, #25
-+	vadd.i64	q9, q4, q9
-+	vsub.i64	q1, q11, q1
-+	vshr.s64	q6, q6, #26
-+	vsub.i64	q3, q3, q10
-+	vtrn.32		d16, d2
-+	vshr.s64	q9, q9, #26
-+	vtrn.32		d17, d3
-+	vadd.i64	q1, q2, q6
-+	vst1.8		d16, [r2, : 64]
-+	vshl.i64	q2, q6, #26
-+	vst1.8		d17, [r4, : 64]
-+	vadd.i64	q6, q7, q9
-+	vtrn.32		d0, d6
-+	vshl.i64	q7, q9, #26
-+	vtrn.32		d1, d7
-+	vsub.i64	q2, q5, q2
-+	add		r2, r2, #16
-+	vsub.i64	q3, q4, q7
-+	vst1.8		d0, [r2, : 64]
-+	add		r4, r4, #16
-+	vst1.8		d1, [r4, : 64]
-+	vtrn.32		d4, d2
-+	vtrn.32		d5, d3
-+	sub		r2, r2, #8
-+	sub		r4, r4, #8
-+	vtrn.32		d6, d12
-+	vtrn.32		d7, d13
-+	vst1.8		d4, [r2, : 64]
-+	vst1.8		d5, [r4, : 64]
-+	sub		r2, r2, #24
-+	sub		r4, r4, #24
-+	vst1.8		d6, [r2, : 64]
-+	vst1.8		d7, [r4, : 64]
-+	add		r2, r3, #336
-+	add		r4, r3, #288
-+	vld1.8		{d0-d1}, [r2, : 128]!
-+	vld1.8		{d2-d3}, [r4, : 128]!
-+	vadd.i32	q0, q0, q1
-+	vld1.8		{d2-d3}, [r2, : 128]!
-+	vld1.8		{d4-d5}, [r4, : 128]!
-+	vadd.i32	q1, q1, q2
-+	add		r5, r3, #288
-+	vld1.8		{d4}, [r2, : 64]
-+	vld1.8		{d6}, [r4, : 64]
-+	vadd.i32	q2, q2, q3
-+	vst1.8		{d0-d1}, [r5, : 128]!
-+	vst1.8		{d2-d3}, [r5, : 128]!
-+	vst1.8		d4, [r5, : 64]
-+	add		r2, r3, #48
-+	add		r4, r3, #144
-+	vld1.8		{d0-d1}, [r4, : 128]!
-+	vld1.8		{d2-d3}, [r4, : 128]!
-+	vld1.8		{d4}, [r4, : 64]
-+	add		r4, r3, #288
-+	vld1.8		{d6-d7}, [r4, : 128]!
-+	vtrn.32		q0, q3
-+	vld1.8		{d8-d9}, [r4, : 128]!
-+	vshl.i32	q5, q0, #4
-+	vtrn.32		q1, q4
-+	vshl.i32	q6, q3, #4
-+	vadd.i32	q5, q5, q0
-+	vadd.i32	q6, q6, q3
-+	vshl.i32	q7, q1, #4
-+	vld1.8		{d5}, [r4, : 64]
-+	vshl.i32	q8, q4, #4
-+	vtrn.32		d4, d5
-+	vadd.i32	q7, q7, q1
-+	vadd.i32	q8, q8, q4
-+	vld1.8		{d18-d19}, [r2, : 128]!
-+	vshl.i32	q10, q2, #4
-+	vld1.8		{d22-d23}, [r2, : 128]!
-+	vadd.i32	q10, q10, q2
-+	vld1.8		{d24}, [r2, : 64]
-+	vadd.i32	q5, q5, q0
-+	add		r2, r3, #240
-+	vld1.8		{d26-d27}, [r2, : 128]!
-+	vadd.i32	q6, q6, q3
-+	vld1.8		{d28-d29}, [r2, : 128]!
-+	vadd.i32	q8, q8, q4
-+	vld1.8		{d25}, [r2, : 64]
-+	vadd.i32	q10, q10, q2
-+	vtrn.32		q9, q13
-+	vadd.i32	q7, q7, q1
-+	vadd.i32	q5, q5, q0
-+	vtrn.32		q11, q14
-+	vadd.i32	q6, q6, q3
-+	add		r2, sp, #528
-+	vadd.i32	q10, q10, q2
-+	vtrn.32		d24, d25
-+	vst1.8		{d12-d13}, [r2, : 128]!
-+	vshl.i32	q6, q13, #1
-+	vst1.8		{d20-d21}, [r2, : 128]!
-+	vshl.i32	q10, q14, #1
-+	vst1.8		{d12-d13}, [r2, : 128]!
-+	vshl.i32	q15, q12, #1
-+	vadd.i32	q8, q8, q4
-+	vext.32		d10, d31, d30, #0
-+	vadd.i32	q7, q7, q1
-+	vst1.8		{d16-d17}, [r2, : 128]!
-+	vmull.s32	q8, d18, d5
-+	vmlal.s32	q8, d26, d4
-+	vmlal.s32	q8, d19, d9
-+	vmlal.s32	q8, d27, d3
-+	vmlal.s32	q8, d22, d8
-+	vmlal.s32	q8, d28, d2
-+	vmlal.s32	q8, d23, d7
-+	vmlal.s32	q8, d29, d1
-+	vmlal.s32	q8, d24, d6
-+	vmlal.s32	q8, d25, d0
-+	vst1.8		{d14-d15}, [r2, : 128]!
-+	vmull.s32	q2, d18, d4
-+	vmlal.s32	q2, d12, d9
-+	vmlal.s32	q2, d13, d8
-+	vmlal.s32	q2, d19, d3
-+	vmlal.s32	q2, d22, d2
-+	vmlal.s32	q2, d23, d1
-+	vmlal.s32	q2, d24, d0
-+	vst1.8		{d20-d21}, [r2, : 128]!
-+	vmull.s32	q7, d18, d9
-+	vmlal.s32	q7, d26, d3
-+	vmlal.s32	q7, d19, d8
-+	vmlal.s32	q7, d27, d2
-+	vmlal.s32	q7, d22, d7
-+	vmlal.s32	q7, d28, d1
-+	vmlal.s32	q7, d23, d6
-+	vmlal.s32	q7, d29, d0
-+	vst1.8		{d10-d11}, [r2, : 128]!
-+	vmull.s32	q5, d18, d3
-+	vmlal.s32	q5, d19, d2
-+	vmlal.s32	q5, d22, d1
-+	vmlal.s32	q5, d23, d0
-+	vmlal.s32	q5, d12, d8
-+	vst1.8		{d16-d17}, [r2, : 128]!
-+	vmull.s32	q4, d18, d8
-+	vmlal.s32	q4, d26, d2
-+	vmlal.s32	q4, d19, d7
-+	vmlal.s32	q4, d27, d1
-+	vmlal.s32	q4, d22, d6
-+	vmlal.s32	q4, d28, d0
-+	vmull.s32	q8, d18, d7
-+	vmlal.s32	q8, d26, d1
-+	vmlal.s32	q8, d19, d6
-+	vmlal.s32	q8, d27, d0
-+	add		r2, sp, #544
-+	vld1.8		{d20-d21}, [r2, : 128]
-+	vmlal.s32	q7, d24, d21
-+	vmlal.s32	q7, d25, d20
-+	vmlal.s32	q4, d23, d21
-+	vmlal.s32	q4, d29, d20
-+	vmlal.s32	q8, d22, d21
-+	vmlal.s32	q8, d28, d20
-+	vmlal.s32	q5, d24, d20
-+	vst1.8		{d14-d15}, [r2, : 128]
-+	vmull.s32	q7, d18, d6
-+	vmlal.s32	q7, d26, d0
-+	add		r2, sp, #624
-+	vld1.8		{d30-d31}, [r2, : 128]
-+	vmlal.s32	q2, d30, d21
-+	vmlal.s32	q7, d19, d21
-+	vmlal.s32	q7, d27, d20
-+	add		r2, sp, #592
-+	vld1.8		{d26-d27}, [r2, : 128]
-+	vmlal.s32	q4, d25, d27
-+	vmlal.s32	q8, d29, d27
-+	vmlal.s32	q8, d25, d26
-+	vmlal.s32	q7, d28, d27
-+	vmlal.s32	q7, d29, d26
-+	add		r2, sp, #576
-+	vld1.8		{d28-d29}, [r2, : 128]
-+	vmlal.s32	q4, d24, d29
-+	vmlal.s32	q8, d23, d29
-+	vmlal.s32	q8, d24, d28
-+	vmlal.s32	q7, d22, d29
-+	vmlal.s32	q7, d23, d28
-+	vst1.8		{d8-d9}, [r2, : 128]
-+	add		r2, sp, #528
-+	vld1.8		{d8-d9}, [r2, : 128]
-+	vmlal.s32	q7, d24, d9
-+	vmlal.s32	q7, d25, d31
-+	vmull.s32	q1, d18, d2
-+	vmlal.s32	q1, d19, d1
-+	vmlal.s32	q1, d22, d0
-+	vmlal.s32	q1, d24, d27
-+	vmlal.s32	q1, d23, d20
-+	vmlal.s32	q1, d12, d7
-+	vmlal.s32	q1, d13, d6
-+	vmull.s32	q6, d18, d1
-+	vmlal.s32	q6, d19, d0
-+	vmlal.s32	q6, d23, d27
-+	vmlal.s32	q6, d22, d20
-+	vmlal.s32	q6, d24, d26
-+	vmull.s32	q0, d18, d0
-+	vmlal.s32	q0, d22, d27
-+	vmlal.s32	q0, d23, d26
-+	vmlal.s32	q0, d24, d31
-+	vmlal.s32	q0, d19, d20
-+	add		r2, sp, #608
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	vmlal.s32	q2, d18, d7
-+	vmlal.s32	q5, d18, d6
-+	vmlal.s32	q1, d18, d21
-+	vmlal.s32	q0, d18, d28
-+	vmlal.s32	q6, d18, d29
-+	vmlal.s32	q2, d19, d6
-+	vmlal.s32	q5, d19, d21
-+	vmlal.s32	q1, d19, d29
-+	vmlal.s32	q0, d19, d9
-+	vmlal.s32	q6, d19, d28
-+	add		r2, sp, #560
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	add		r2, sp, #480
-+	vld1.8		{d22-d23}, [r2, : 128]
-+	vmlal.s32	q5, d19, d7
-+	vmlal.s32	q0, d18, d21
-+	vmlal.s32	q0, d19, d29
-+	vmlal.s32	q6, d18, d6
-+	add		r2, sp, #496
-+	vld1.8		{d6-d7}, [r2, : 128]
-+	vmlal.s32	q6, d19, d21
-+	add		r2, sp, #544
-+	vld1.8		{d18-d19}, [r2, : 128]
-+	vmlal.s32	q0, d30, d8
-+	add		r2, sp, #640
-+	vld1.8		{d20-d21}, [r2, : 128]
-+	vmlal.s32	q5, d30, d29
-+	add		r2, sp, #576
-+	vld1.8		{d24-d25}, [r2, : 128]
-+	vmlal.s32	q1, d30, d28
-+	vadd.i64	q13, q0, q11
-+	vadd.i64	q14, q5, q11
-+	vmlal.s32	q6, d30, d9
-+	vshr.s64	q4, q13, #26
-+	vshr.s64	q13, q14, #26
-+	vadd.i64	q7, q7, q4
-+	vshl.i64	q4, q4, #26
-+	vadd.i64	q14, q7, q3
-+	vadd.i64	q9, q9, q13
-+	vshl.i64	q13, q13, #26
-+	vadd.i64	q15, q9, q3
-+	vsub.i64	q0, q0, q4
-+	vshr.s64	q4, q14, #25
-+	vsub.i64	q5, q5, q13
-+	vshr.s64	q13, q15, #25
-+	vadd.i64	q6, q6, q4
-+	vshl.i64	q4, q4, #25
-+	vadd.i64	q14, q6, q11
-+	vadd.i64	q2, q2, q13
-+	vsub.i64	q4, q7, q4
-+	vshr.s64	q7, q14, #26
-+	vshl.i64	q13, q13, #25
-+	vadd.i64	q14, q2, q11
-+	vadd.i64	q8, q8, q7
-+	vshl.i64	q7, q7, #26
-+	vadd.i64	q15, q8, q3
-+	vsub.i64	q9, q9, q13
-+	vshr.s64	q13, q14, #26
-+	vsub.i64	q6, q6, q7
-+	vshr.s64	q7, q15, #25
-+	vadd.i64	q10, q10, q13
-+	vshl.i64	q13, q13, #26
-+	vadd.i64	q14, q10, q3
-+	vadd.i64	q1, q1, q7
-+	add		r2, r3, #240
-+	vshl.i64	q7, q7, #25
-+	add		r4, r3, #144
-+	vadd.i64	q15, q1, q11
-+	add		r2, r2, #8
-+	vsub.i64	q2, q2, q13
-+	add		r4, r4, #8
-+	vshr.s64	q13, q14, #25
-+	vsub.i64	q7, q8, q7
-+	vshr.s64	q8, q15, #26
-+	vadd.i64	q14, q13, q13
-+	vadd.i64	q12, q12, q8
-+	vtrn.32		d12, d14
-+	vshl.i64	q8, q8, #26
-+	vtrn.32		d13, d15
-+	vadd.i64	q3, q12, q3
-+	vadd.i64	q0, q0, q14
-+	vst1.8		d12, [r2, : 64]!
-+	vshl.i64	q7, q13, #4
-+	vst1.8		d13, [r4, : 64]!
-+	vsub.i64	q1, q1, q8
-+	vshr.s64	q3, q3, #25
-+	vadd.i64	q0, q0, q7
-+	vadd.i64	q5, q5, q3
-+	vshl.i64	q3, q3, #25
-+	vadd.i64	q6, q5, q11
-+	vadd.i64	q0, q0, q13
-+	vshl.i64	q7, q13, #25
-+	vadd.i64	q8, q0, q11
-+	vsub.i64	q3, q12, q3
-+	vshr.s64	q6, q6, #26
-+	vsub.i64	q7, q10, q7
-+	vtrn.32		d2, d6
-+	vshr.s64	q8, q8, #26
-+	vtrn.32		d3, d7
-+	vadd.i64	q3, q9, q6
-+	vst1.8		d2, [r2, : 64]
-+	vshl.i64	q6, q6, #26
-+	vst1.8		d3, [r4, : 64]
-+	vadd.i64	q1, q4, q8
-+	vtrn.32		d4, d14
-+	vshl.i64	q4, q8, #26
-+	vtrn.32		d5, d15
-+	vsub.i64	q5, q5, q6
-+	add		r2, r2, #16
-+	vsub.i64	q0, q0, q4
-+	vst1.8		d4, [r2, : 64]
-+	add		r4, r4, #16
-+	vst1.8		d5, [r4, : 64]
-+	vtrn.32		d10, d6
-+	vtrn.32		d11, d7
-+	sub		r2, r2, #8
-+	sub		r4, r4, #8
-+	vtrn.32		d0, d2
-+	vtrn.32		d1, d3
-+	vst1.8		d10, [r2, : 64]
-+	vst1.8		d11, [r4, : 64]
-+	sub		r2, r2, #24
-+	sub		r4, r4, #24
-+	vst1.8		d0, [r2, : 64]
-+	vst1.8		d1, [r4, : 64]
-+	ldr		r2, [sp, #456]
-+	ldr		r4, [sp, #460]
-+	subs		r5, r2, #1
-+	bge		.Lmainloop
-+	add		r1, r3, #144
-+	add		r2, r3, #336
-+	vld1.8		{d0-d1}, [r1, : 128]!
-+	vld1.8		{d2-d3}, [r1, : 128]!
-+	vld1.8		{d4}, [r1, : 64]
-+	vst1.8		{d0-d1}, [r2, : 128]!
-+	vst1.8		{d2-d3}, [r2, : 128]!
-+	vst1.8		d4, [r2, : 64]
-+	movw		r1, #0
-+.Linvertloop:
-+	add		r2, r3, #144
-+	movw		r4, #0
-+	movw		r5, #2
-+	cmp		r1, #1
-+	moveq		r5, #1
-+	addeq		r2, r3, #336
-+	addeq		r4, r3, #48
-+	cmp		r1, #2
-+	moveq		r5, #1
-+	addeq		r2, r3, #48
-+	cmp		r1, #3
-+	moveq		r5, #5
-+	addeq		r4, r3, #336
-+	cmp		r1, #4
-+	moveq		r5, #10
-+	cmp		r1, #5
-+	moveq		r5, #20
-+	cmp		r1, #6
-+	moveq		r5, #10
-+	addeq		r2, r3, #336
-+	addeq		r4, r3, #336
-+	cmp		r1, #7
-+	moveq		r5, #50
-+	cmp		r1, #8
-+	moveq		r5, #100
-+	cmp		r1, #9
-+	moveq		r5, #50
-+	addeq		r2, r3, #336
-+	cmp		r1, #10
-+	moveq		r5, #5
-+	addeq		r2, r3, #48
-+	cmp		r1, #11
-+	moveq		r5, #0
-+	addeq		r2, r3, #96
-+	add		r6, r3, #144
-+	add		r7, r3, #288
-+	vld1.8		{d0-d1}, [r6, : 128]!
-+	vld1.8		{d2-d3}, [r6, : 128]!
-+	vld1.8		{d4}, [r6, : 64]
-+	vst1.8		{d0-d1}, [r7, : 128]!
-+	vst1.8		{d2-d3}, [r7, : 128]!
-+	vst1.8		d4, [r7, : 64]
-+	cmp		r5, #0
-+	beq		.Lskipsquaringloop
-+.Lsquaringloop:
-+	add		r6, r3, #288
-+	add		r7, r3, #288
-+	add		r8, r3, #288
-+	vmov.i32	q0, #19
-+	vmov.i32	q1, #0
-+	vmov.i32	q2, #1
-+	vzip.i32	q1, q2
-+	vld1.8		{d4-d5}, [r7, : 128]!
-+	vld1.8		{d6-d7}, [r7, : 128]!
-+	vld1.8		{d9}, [r7, : 64]
-+	vld1.8		{d10-d11}, [r6, : 128]!
-+	add		r7, sp, #384
-+	vld1.8		{d12-d13}, [r6, : 128]!
-+	vmul.i32	q7, q2, q0
-+	vld1.8		{d8}, [r6, : 64]
-+	vext.32		d17, d11, d10, #1
-+	vmul.i32	q9, q3, q0
-+	vext.32		d16, d10, d8, #1
-+	vshl.u32	q10, q5, q1
-+	vext.32		d22, d14, d4, #1
-+	vext.32		d24, d18, d6, #1
-+	vshl.u32	q13, q6, q1
-+	vshl.u32	d28, d8, d2
-+	vrev64.i32	d22, d22
-+	vmul.i32	d1, d9, d1
-+	vrev64.i32	d24, d24
-+	vext.32		d29, d8, d13, #1
-+	vext.32		d0, d1, d9, #1
-+	vrev64.i32	d0, d0
-+	vext.32		d2, d9, d1, #1
-+	vext.32		d23, d15, d5, #1
-+	vmull.s32	q4, d20, d4
-+	vrev64.i32	d23, d23
-+	vmlal.s32	q4, d21, d1
-+	vrev64.i32	d2, d2
-+	vmlal.s32	q4, d26, d19
-+	vext.32		d3, d5, d15, #1
-+	vmlal.s32	q4, d27, d18
-+	vrev64.i32	d3, d3
-+	vmlal.s32	q4, d28, d15
-+	vext.32		d14, d12, d11, #1
-+	vmull.s32	q5, d16, d23
-+	vext.32		d15, d13, d12, #1
-+	vmlal.s32	q5, d17, d4
-+	vst1.8		d8, [r7, : 64]!
-+	vmlal.s32	q5, d14, d1
-+	vext.32		d12, d9, d8, #0
-+	vmlal.s32	q5, d15, d19
-+	vmov.i64	d13, #0
-+	vmlal.s32	q5, d29, d18
-+	vext.32		d25, d19, d7, #1
-+	vmlal.s32	q6, d20, d5
-+	vrev64.i32	d25, d25
-+	vmlal.s32	q6, d21, d4
-+	vst1.8		d11, [r7, : 64]!
-+	vmlal.s32	q6, d26, d1
-+	vext.32		d9, d10, d10, #0
-+	vmlal.s32	q6, d27, d19
-+	vmov.i64	d8, #0
-+	vmlal.s32	q6, d28, d18
-+	vmlal.s32	q4, d16, d24
-+	vmlal.s32	q4, d17, d5
-+	vmlal.s32	q4, d14, d4
-+	vst1.8		d12, [r7, : 64]!
-+	vmlal.s32	q4, d15, d1
-+	vext.32		d10, d13, d12, #0
-+	vmlal.s32	q4, d29, d19
-+	vmov.i64	d11, #0
-+	vmlal.s32	q5, d20, d6
-+	vmlal.s32	q5, d21, d5
-+	vmlal.s32	q5, d26, d4
-+	vext.32		d13, d8, d8, #0
-+	vmlal.s32	q5, d27, d1
-+	vmov.i64	d12, #0
-+	vmlal.s32	q5, d28, d19
-+	vst1.8		d9, [r7, : 64]!
-+	vmlal.s32	q6, d16, d25
-+	vmlal.s32	q6, d17, d6
-+	vst1.8		d10, [r7, : 64]
-+	vmlal.s32	q6, d14, d5
-+	vext.32		d8, d11, d10, #0
-+	vmlal.s32	q6, d15, d4
-+	vmov.i64	d9, #0
-+	vmlal.s32	q6, d29, d1
-+	vmlal.s32	q4, d20, d7
-+	vmlal.s32	q4, d21, d6
-+	vmlal.s32	q4, d26, d5
-+	vext.32		d11, d12, d12, #0
-+	vmlal.s32	q4, d27, d4
-+	vmov.i64	d10, #0
-+	vmlal.s32	q4, d28, d1
-+	vmlal.s32	q5, d16, d0
-+	sub		r6, r7, #32
-+	vmlal.s32	q5, d17, d7
-+	vmlal.s32	q5, d14, d6
-+	vext.32		d30, d9, d8, #0
-+	vmlal.s32	q5, d15, d5
-+	vld1.8		{d31}, [r6, : 64]!
-+	vmlal.s32	q5, d29, d4
-+	vmlal.s32	q15, d20, d0
-+	vext.32		d0, d6, d18, #1
-+	vmlal.s32	q15, d21, d25
-+	vrev64.i32	d0, d0
-+	vmlal.s32	q15, d26, d24
-+	vext.32		d1, d7, d19, #1
-+	vext.32		d7, d10, d10, #0
-+	vmlal.s32	q15, d27, d23
-+	vrev64.i32	d1, d1
-+	vld1.8		{d6}, [r6, : 64]
-+	vmlal.s32	q15, d28, d22
-+	vmlal.s32	q3, d16, d4
-+	add		r6, r6, #24
-+	vmlal.s32	q3, d17, d2
-+	vext.32		d4, d31, d30, #0
-+	vmov		d17, d11
-+	vmlal.s32	q3, d14, d1
-+	vext.32		d11, d13, d13, #0
-+	vext.32		d13, d30, d30, #0
-+	vmlal.s32	q3, d15, d0
-+	vext.32		d1, d8, d8, #0
-+	vmlal.s32	q3, d29, d3
-+	vld1.8		{d5}, [r6, : 64]
-+	sub		r6, r6, #16
-+	vext.32		d10, d6, d6, #0
-+	vmov.i32	q1, #0xffffffff
-+	vshl.i64	q4, q1, #25
-+	add		r7, sp, #480
-+	vld1.8		{d14-d15}, [r7, : 128]
-+	vadd.i64	q9, q2, q7
-+	vshl.i64	q1, q1, #26
-+	vshr.s64	q10, q9, #26
-+	vld1.8		{d0}, [r6, : 64]!
-+	vadd.i64	q5, q5, q10
-+	vand		q9, q9, q1
-+	vld1.8		{d16}, [r6, : 64]!
-+	add		r6, sp, #496
-+	vld1.8		{d20-d21}, [r6, : 128]
-+	vadd.i64	q11, q5, q10
-+	vsub.i64	q2, q2, q9
-+	vshr.s64	q9, q11, #25
-+	vext.32		d12, d5, d4, #0
-+	vand		q11, q11, q4
-+	vadd.i64	q0, q0, q9
-+	vmov		d19, d7
-+	vadd.i64	q3, q0, q7
-+	vsub.i64	q5, q5, q11
-+	vshr.s64	q11, q3, #26
-+	vext.32		d18, d11, d10, #0
-+	vand		q3, q3, q1
-+	vadd.i64	q8, q8, q11
-+	vadd.i64	q11, q8, q10
-+	vsub.i64	q0, q0, q3
-+	vshr.s64	q3, q11, #25
-+	vand		q11, q11, q4
-+	vadd.i64	q3, q6, q3
-+	vadd.i64	q6, q3, q7
-+	vsub.i64	q8, q8, q11
-+	vshr.s64	q11, q6, #26
-+	vand		q6, q6, q1
-+	vadd.i64	q9, q9, q11
-+	vadd.i64	d25, d19, d21
-+	vsub.i64	q3, q3, q6
-+	vshr.s64	d23, d25, #25
-+	vand		q4, q12, q4
-+	vadd.i64	d21, d23, d23
-+	vshl.i64	d25, d23, #4
-+	vadd.i64	d21, d21, d23
-+	vadd.i64	d25, d25, d21
-+	vadd.i64	d4, d4, d25
-+	vzip.i32	q0, q8
-+	vadd.i64	d12, d4, d14
-+	add		r6, r8, #8
-+	vst1.8		d0, [r6, : 64]
-+	vsub.i64	d19, d19, d9
-+	add		r6, r6, #16
-+	vst1.8		d16, [r6, : 64]
-+	vshr.s64	d22, d12, #26
-+	vand		q0, q6, q1
-+	vadd.i64	d10, d10, d22
-+	vzip.i32	q3, q9
-+	vsub.i64	d4, d4, d0
-+	sub		r6, r6, #8
-+	vst1.8		d6, [r6, : 64]
-+	add		r6, r6, #16
-+	vst1.8		d18, [r6, : 64]
-+	vzip.i32	q2, q5
-+	sub		r6, r6, #32
-+	vst1.8		d4, [r6, : 64]
-+	subs		r5, r5, #1
-+	bhi		.Lsquaringloop
-+.Lskipsquaringloop:
-+	mov		r2, r2
-+	add		r5, r3, #288
-+	add		r6, r3, #144
-+	vmov.i32	q0, #19
-+	vmov.i32	q1, #0
-+	vmov.i32	q2, #1
-+	vzip.i32	q1, q2
-+	vld1.8		{d4-d5}, [r5, : 128]!
-+	vld1.8		{d6-d7}, [r5, : 128]!
-+	vld1.8		{d9}, [r5, : 64]
-+	vld1.8		{d10-d11}, [r2, : 128]!
-+	add		r5, sp, #384
-+	vld1.8		{d12-d13}, [r2, : 128]!
-+	vmul.i32	q7, q2, q0
-+	vld1.8		{d8}, [r2, : 64]
-+	vext.32		d17, d11, d10, #1
-+	vmul.i32	q9, q3, q0
-+	vext.32		d16, d10, d8, #1
-+	vshl.u32	q10, q5, q1
-+	vext.32		d22, d14, d4, #1
-+	vext.32		d24, d18, d6, #1
-+	vshl.u32	q13, q6, q1
-+	vshl.u32	d28, d8, d2
-+	vrev64.i32	d22, d22
-+	vmul.i32	d1, d9, d1
-+	vrev64.i32	d24, d24
-+	vext.32		d29, d8, d13, #1
-+	vext.32		d0, d1, d9, #1
-+	vrev64.i32	d0, d0
-+	vext.32		d2, d9, d1, #1
-+	vext.32		d23, d15, d5, #1
-+	vmull.s32	q4, d20, d4
-+	vrev64.i32	d23, d23
-+	vmlal.s32	q4, d21, d1
-+	vrev64.i32	d2, d2
-+	vmlal.s32	q4, d26, d19
-+	vext.32		d3, d5, d15, #1
-+	vmlal.s32	q4, d27, d18
-+	vrev64.i32	d3, d3
-+	vmlal.s32	q4, d28, d15
-+	vext.32		d14, d12, d11, #1
-+	vmull.s32	q5, d16, d23
-+	vext.32		d15, d13, d12, #1
-+	vmlal.s32	q5, d17, d4
-+	vst1.8		d8, [r5, : 64]!
-+	vmlal.s32	q5, d14, d1
-+	vext.32		d12, d9, d8, #0
-+	vmlal.s32	q5, d15, d19
-+	vmov.i64	d13, #0
-+	vmlal.s32	q5, d29, d18
-+	vext.32		d25, d19, d7, #1
-+	vmlal.s32	q6, d20, d5
-+	vrev64.i32	d25, d25
-+	vmlal.s32	q6, d21, d4
-+	vst1.8		d11, [r5, : 64]!
-+	vmlal.s32	q6, d26, d1
-+	vext.32		d9, d10, d10, #0
-+	vmlal.s32	q6, d27, d19
-+	vmov.i64	d8, #0
-+	vmlal.s32	q6, d28, d18
-+	vmlal.s32	q4, d16, d24
-+	vmlal.s32	q4, d17, d5
-+	vmlal.s32	q4, d14, d4
-+	vst1.8		d12, [r5, : 64]!
-+	vmlal.s32	q4, d15, d1
-+	vext.32		d10, d13, d12, #0
-+	vmlal.s32	q4, d29, d19
-+	vmov.i64	d11, #0
-+	vmlal.s32	q5, d20, d6
-+	vmlal.s32	q5, d21, d5
-+	vmlal.s32	q5, d26, d4
-+	vext.32		d13, d8, d8, #0
-+	vmlal.s32	q5, d27, d1
-+	vmov.i64	d12, #0
-+	vmlal.s32	q5, d28, d19
-+	vst1.8		d9, [r5, : 64]!
-+	vmlal.s32	q6, d16, d25
-+	vmlal.s32	q6, d17, d6
-+	vst1.8		d10, [r5, : 64]
-+	vmlal.s32	q6, d14, d5
-+	vext.32		d8, d11, d10, #0
-+	vmlal.s32	q6, d15, d4
-+	vmov.i64	d9, #0
-+	vmlal.s32	q6, d29, d1
-+	vmlal.s32	q4, d20, d7
-+	vmlal.s32	q4, d21, d6
-+	vmlal.s32	q4, d26, d5
-+	vext.32		d11, d12, d12, #0
-+	vmlal.s32	q4, d27, d4
-+	vmov.i64	d10, #0
-+	vmlal.s32	q4, d28, d1
-+	vmlal.s32	q5, d16, d0
-+	sub		r2, r5, #32
-+	vmlal.s32	q5, d17, d7
-+	vmlal.s32	q5, d14, d6
-+	vext.32		d30, d9, d8, #0
-+	vmlal.s32	q5, d15, d5
-+	vld1.8		{d31}, [r2, : 64]!
-+	vmlal.s32	q5, d29, d4
-+	vmlal.s32	q15, d20, d0
-+	vext.32		d0, d6, d18, #1
-+	vmlal.s32	q15, d21, d25
-+	vrev64.i32	d0, d0
-+	vmlal.s32	q15, d26, d24
-+	vext.32		d1, d7, d19, #1
-+	vext.32		d7, d10, d10, #0
-+	vmlal.s32	q15, d27, d23
-+	vrev64.i32	d1, d1
-+	vld1.8		{d6}, [r2, : 64]
-+	vmlal.s32	q15, d28, d22
-+	vmlal.s32	q3, d16, d4
-+	add		r2, r2, #24
-+	vmlal.s32	q3, d17, d2
-+	vext.32		d4, d31, d30, #0
-+	vmov		d17, d11
-+	vmlal.s32	q3, d14, d1
-+	vext.32		d11, d13, d13, #0
-+	vext.32		d13, d30, d30, #0
-+	vmlal.s32	q3, d15, d0
-+	vext.32		d1, d8, d8, #0
-+	vmlal.s32	q3, d29, d3
-+	vld1.8		{d5}, [r2, : 64]
-+	sub		r2, r2, #16
-+	vext.32		d10, d6, d6, #0
-+	vmov.i32	q1, #0xffffffff
-+	vshl.i64	q4, q1, #25
-+	add		r5, sp, #480
-+	vld1.8		{d14-d15}, [r5, : 128]
-+	vadd.i64	q9, q2, q7
-+	vshl.i64	q1, q1, #26
-+	vshr.s64	q10, q9, #26
-+	vld1.8		{d0}, [r2, : 64]!
-+	vadd.i64	q5, q5, q10
-+	vand		q9, q9, q1
-+	vld1.8		{d16}, [r2, : 64]!
-+	add		r2, sp, #496
-+	vld1.8		{d20-d21}, [r2, : 128]
-+	vadd.i64	q11, q5, q10
-+	vsub.i64	q2, q2, q9
-+	vshr.s64	q9, q11, #25
-+	vext.32		d12, d5, d4, #0
-+	vand		q11, q11, q4
-+	vadd.i64	q0, q0, q9
-+	vmov		d19, d7
-+	vadd.i64	q3, q0, q7
-+	vsub.i64	q5, q5, q11
-+	vshr.s64	q11, q3, #26
-+	vext.32		d18, d11, d10, #0
-+	vand		q3, q3, q1
-+	vadd.i64	q8, q8, q11
-+	vadd.i64	q11, q8, q10
-+	vsub.i64	q0, q0, q3
-+	vshr.s64	q3, q11, #25
-+	vand		q11, q11, q4
-+	vadd.i64	q3, q6, q3
-+	vadd.i64	q6, q3, q7
-+	vsub.i64	q8, q8, q11
-+	vshr.s64	q11, q6, #26
-+	vand		q6, q6, q1
-+	vadd.i64	q9, q9, q11
-+	vadd.i64	d25, d19, d21
-+	vsub.i64	q3, q3, q6
-+	vshr.s64	d23, d25, #25
-+	vand		q4, q12, q4
-+	vadd.i64	d21, d23, d23
-+	vshl.i64	d25, d23, #4
-+	vadd.i64	d21, d21, d23
-+	vadd.i64	d25, d25, d21
-+	vadd.i64	d4, d4, d25
-+	vzip.i32	q0, q8
-+	vadd.i64	d12, d4, d14
-+	add		r2, r6, #8
-+	vst1.8		d0, [r2, : 64]
-+	vsub.i64	d19, d19, d9
-+	add		r2, r2, #16
-+	vst1.8		d16, [r2, : 64]
-+	vshr.s64	d22, d12, #26
-+	vand		q0, q6, q1
-+	vadd.i64	d10, d10, d22
-+	vzip.i32	q3, q9
-+	vsub.i64	d4, d4, d0
-+	sub		r2, r2, #8
-+	vst1.8		d6, [r2, : 64]
-+	add		r2, r2, #16
-+	vst1.8		d18, [r2, : 64]
-+	vzip.i32	q2, q5
-+	sub		r2, r2, #32
-+	vst1.8		d4, [r2, : 64]
-+	cmp		r4, #0
-+	beq		.Lskippostcopy
-+	add		r2, r3, #144
-+	mov		r4, r4
-+	vld1.8		{d0-d1}, [r2, : 128]!
-+	vld1.8		{d2-d3}, [r2, : 128]!
-+	vld1.8		{d4}, [r2, : 64]
-+	vst1.8		{d0-d1}, [r4, : 128]!
-+	vst1.8		{d2-d3}, [r4, : 128]!
-+	vst1.8		d4, [r4, : 64]
-+.Lskippostcopy:
-+	cmp		r1, #1
-+	bne		.Lskipfinalcopy
-+	add		r2, r3, #288
-+	add		r4, r3, #144
-+	vld1.8		{d0-d1}, [r2, : 128]!
-+	vld1.8		{d2-d3}, [r2, : 128]!
-+	vld1.8		{d4}, [r2, : 64]
-+	vst1.8		{d0-d1}, [r4, : 128]!
-+	vst1.8		{d2-d3}, [r4, : 128]!
-+	vst1.8		d4, [r4, : 64]
-+.Lskipfinalcopy:
-+	add		r1, r1, #1
-+	cmp		r1, #12
-+	blo		.Linvertloop
-+	add		r1, r3, #144
-+	ldr		r2, [r1], #4
-+	ldr		r3, [r1], #4
-+	ldr		r4, [r1], #4
-+	ldr		r5, [r1], #4
-+	ldr		r6, [r1], #4
-+	ldr		r7, [r1], #4
-+	ldr		r8, [r1], #4
-+	ldr		r9, [r1], #4
-+	ldr		r10, [r1], #4
-+	ldr		r1, [r1]
-+	add		r11, r1, r1, LSL #4
-+	add		r11, r11, r1, LSL #1
-+	add		r11, r11, #16777216
-+	mov		r11, r11, ASR #25
-+	add		r11, r11, r2
-+	mov		r11, r11, ASR #26
-+	add		r11, r11, r3
-+	mov		r11, r11, ASR #25
-+	add		r11, r11, r4
-+	mov		r11, r11, ASR #26
-+	add		r11, r11, r5
-+	mov		r11, r11, ASR #25
-+	add		r11, r11, r6
-+	mov		r11, r11, ASR #26
-+	add		r11, r11, r7
-+	mov		r11, r11, ASR #25
-+	add		r11, r11, r8
-+	mov		r11, r11, ASR #26
-+	add		r11, r11, r9
-+	mov		r11, r11, ASR #25
-+	add		r11, r11, r10
-+	mov		r11, r11, ASR #26
-+	add		r11, r11, r1
-+	mov		r11, r11, ASR #25
-+	add		r2, r2, r11
-+	add		r2, r2, r11, LSL #1
-+	add		r2, r2, r11, LSL #4
-+	mov		r11, r2, ASR #26
-+	add		r3, r3, r11
-+	sub		r2, r2, r11, LSL #26
-+	mov		r11, r3, ASR #25
-+	add		r4, r4, r11
-+	sub		r3, r3, r11, LSL #25
-+	mov		r11, r4, ASR #26
-+	add		r5, r5, r11
-+	sub		r4, r4, r11, LSL #26
-+	mov		r11, r5, ASR #25
-+	add		r6, r6, r11
-+	sub		r5, r5, r11, LSL #25
-+	mov		r11, r6, ASR #26
-+	add		r7, r7, r11
-+	sub		r6, r6, r11, LSL #26
-+	mov		r11, r7, ASR #25
-+	add		r8, r8, r11
-+	sub		r7, r7, r11, LSL #25
-+	mov		r11, r8, ASR #26
-+	add		r9, r9, r11
-+	sub		r8, r8, r11, LSL #26
-+	mov		r11, r9, ASR #25
-+	add		r10, r10, r11
-+	sub		r9, r9, r11, LSL #25
-+	mov		r11, r10, ASR #26
-+	add		r1, r1, r11
-+	sub		r10, r10, r11, LSL #26
-+	mov		r11, r1, ASR #25
-+	sub		r1, r1, r11, LSL #25
-+	add		r2, r2, r3, LSL #26
-+	mov		r3, r3, LSR #6
-+	add		r3, r3, r4, LSL #19
-+	mov		r4, r4, LSR #13
-+	add		r4, r4, r5, LSL #13
-+	mov		r5, r5, LSR #19
-+	add		r5, r5, r6, LSL #6
-+	add		r6, r7, r8, LSL #25
-+	mov		r7, r8, LSR #7
-+	add		r7, r7, r9, LSL #19
-+	mov		r8, r9, LSR #13
-+	add		r8, r8, r10, LSL #12
-+	mov		r9, r10, LSR #20
-+	add		r1, r9, r1, LSL #6
-+	str		r2, [r0]
-+	str		r3, [r0, #4]
-+	str		r4, [r0, #8]
-+	str		r5, [r0, #12]
-+	str		r6, [r0, #16]
-+	str		r7, [r0, #20]
-+	str		r8, [r0, #24]
-+	str		r1, [r0, #28]
-+	movw		r0, #0
-+	mov		sp, ip
-+	pop		{r4-r11, pc}
-+ENDPROC(curve25519_neon)
-+#endif
-diff --git a/lib/zinc/curve25519/curve25519.c b/lib/zinc/curve25519/curve25519.c
-index 074fbb1c2149..0ebe16f8c638 100644
---- a/lib/zinc/curve25519/curve25519.c
-+++ b/lib/zinc/curve25519/curve25519.c
-@@ -22,6 +22,8 @@
+ }
  
- #if defined(CONFIG_ZINC_ARCH_X86_64)
- #include "curve25519-x86_64-glue.c"
-+#elif defined(CONFIG_ZINC_ARCH_ARM)
-+#include "curve25519-arm-glue.c"
- #else
- static bool *const curve25519_nobs[] __initconst = { };
- static void __init curve25519_fpu_init(void)
+ /*
+@@ -192,6 +200,10 @@ static int add_new_master_key(struct fscrypt_master_key_secret *secret,
+ 
+ 	move_master_key_secret(&mk->mk_secret, secret);
+ 
++	refcount_set(&mk->mk_refcount, 1); /* secret is present */
++	INIT_LIST_HEAD(&mk->mk_decrypted_inodes);
++	spin_lock_init(&mk->mk_decrypted_inodes_lock);
++
+ 	format_mk_description(description, mk_spec);
+ 	key = key_alloc(&key_type_fscrypt, description,
+ 			GLOBAL_ROOT_UID, GLOBAL_ROOT_GID, current_cred(),
+@@ -213,6 +225,22 @@ static int add_new_master_key(struct fscrypt_master_key_secret *secret,
+ 	return err;
+ }
+ 
++#define KEY_DEAD	1
++
++static int add_existing_master_key(struct fscrypt_master_key *mk,
++				   struct fscrypt_master_key_secret *secret,
++				   const struct fscrypt_key_specifier *mk_spec)
++{
++	if (is_master_key_secret_present(&mk->mk_secret))
++		return 0;
++
++	if (!refcount_inc_not_zero(&mk->mk_refcount))
++		return KEY_DEAD;
++
++	move_master_key_secret(&mk->mk_secret, secret);
++	return 0;
++}
++
+ static int add_master_key(struct super_block *sb,
+ 			  struct fscrypt_master_key_secret *secret,
+ 			  const struct fscrypt_key_specifier *mk_spec)
+@@ -222,6 +250,7 @@ static int add_master_key(struct super_block *sb,
+ 	int err;
+ 
+ 	mutex_lock(&fscrypt_add_key_mutex); /* serialize find + link */
++retry:
+ 	key = fscrypt_find_master_key(sb, mk_spec);
+ 	if (IS_ERR(key)) {
+ 		err = PTR_ERR(key);
+@@ -233,8 +262,21 @@ static int add_master_key(struct super_block *sb,
+ 			goto out_unlock;
+ 		err = add_new_master_key(secret, mk_spec, sb->s_master_keys);
+ 	} else {
++		/*
++		 * Found the key in ->s_master_keys.  Re-add the secret if
++		 * needed.
++		 */
++		down_write(&key->sem);
++		err = add_existing_master_key(key->payload.data[0], secret,
++					      mk_spec);
++		up_write(&key->sem);
++		if (err == KEY_DEAD) {
++			/* Key being removed or needs to be removed */
++			key_invalidate(key);
++			key_put(key);
++			goto retry;
++		}
+ 		key_put(key);
+-		err = 0;
+ 	}
+ out_unlock:
+ 	mutex_unlock(&fscrypt_add_key_mutex);
+@@ -283,6 +325,177 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_ioctl_add_key);
+ 
++static void shrink_dcache_inode(struct inode *inode)
++{
++	struct dentry *dentry;
++
++	if (S_ISDIR(inode->i_mode)) {
++		dentry = d_find_any_alias(inode);
++		if (dentry) {
++			shrink_dcache_parent(dentry);
++			dput(dentry);
++		}
++	}
++	d_prune_aliases(inode);
++}
++
++static void evict_dentries_for_decrypted_inodes(struct fscrypt_master_key *mk)
++{
++	struct fscrypt_info *ci;
++	struct inode *inode;
++	struct inode *toput_inode = NULL;
++
++	spin_lock(&mk->mk_decrypted_inodes_lock);
++
++	list_for_each_entry(ci, &mk->mk_decrypted_inodes, ci_master_key_link) {
++		inode = ci->ci_inode;
++		spin_lock(&inode->i_lock);
++		if (inode->i_state & (I_FREEING | I_WILL_FREE | I_NEW)) {
++			spin_unlock(&inode->i_lock);
++			continue;
++		}
++		__iget(inode);
++		spin_unlock(&inode->i_lock);
++		spin_unlock(&mk->mk_decrypted_inodes_lock);
++
++		shrink_dcache_inode(inode);
++		iput(toput_inode);
++		toput_inode = inode;
++
++		spin_lock(&mk->mk_decrypted_inodes_lock);
++	}
++
++	spin_unlock(&mk->mk_decrypted_inodes_lock);
++	iput(toput_inode);
++}
++
++static int try_to_lock_encrypted_files(struct super_block *sb,
++				       struct fscrypt_master_key *mk)
++{
++	int err1;
++	int err2;
++
++	/*
++	 * An inode can't be evicted while it is dirty or has dirty pages.
++	 * Thus, we first have to clean the inodes in ->mk_decrypted_inodes.
++	 *
++	 * Just do it the easy way: call sync_filesystem().  It's overkill, but
++	 * it works, and it's more important to minimize the amount of caches we
++	 * drop than the amount of data we sync.  Also, unprivileged users can
++	 * already call sync_filesystem() via sys_syncfs() or sys_sync().
++	 */
++	down_read(&sb->s_umount);
++	err1 = sync_filesystem(sb);
++	up_read(&sb->s_umount);
++	/* If a sync error occurs, still try to evict as much as possible. */
++
++	/*
++	 * Inodes are pinned by their dentries, so we have to evict their
++	 * dentries.  shrink_dcache_sb() would suffice, but would be overkill
++	 * and inappropriate for use by unprivileged users.  So instead go
++	 * through the inodes' alias lists and try to evict each dentry.
++	 */
++	evict_dentries_for_decrypted_inodes(mk);
++
++	/*
++	 * evict_dentries_for_decrypted_inodes() already iput() each inode in
++	 * the list; any inodes for which that dropped the last reference will
++	 * have been evicted due to fscrypt_drop_inode() detecting the key
++	 * removal and telling the VFS to evict the inode.  So to finish, we
++	 * just need to check whether any inodes couldn't be evicted.
++	 */
++	err2 = 0;
++	spin_lock(&mk->mk_decrypted_inodes_lock);
++	if (!list_empty(&mk->mk_decrypted_inodes)) {
++		const struct fscrypt_info *first_ci =
++			list_first_entry(&mk->mk_decrypted_inodes,
++					 struct fscrypt_info,
++					 ci_master_key_link);
++		fscrypt_warn(sb,
++			     "inodes still busy after removing key with description %*phN (first ino: %lu)",
++			     master_key_spec_len(&mk->mk_spec),
++			     (u8 *)&mk->mk_spec.u, first_ci->ci_inode->i_ino);
++		err2 = -EBUSY;
++	}
++	spin_unlock(&mk->mk_decrypted_inodes_lock);
++
++	return err1 ?: err2;
++}
++
++/*
++ * Try to remove an fscrypt master encryption key.  If other users have also
++ * added the key, we'll remove the current user's usage of the key, then return
++ * -EUSERS.  Otherwise we'll continue on and try to actually remove the key.
++ *
++ * First we wipe the actual master key secret from memory, so that no more
++ * inodes can be unlocked with it.  Then, we try to evict all cached inodes that
++ * had been unlocked using the key.  Since this can fail for in-use inodes, this
++ * is expected to be used in cooperation with userspace ensuring that none of
++ * the files are still open.
++ *
++ * If, nevertheless, some inodes could not be evicted, we return -EBUSY
++ * (although we still evicted as many inodes as possible) and keep the 'struct
++ * key' and the 'struct fscrypt_master_key' around to keep track of the list of
++ * remaining inodes.  Userspace can then retry the ioctl later to retry evicting
++ * the remaining inodes, or alternatively can add the secret key again.
++ *
++ * Note that even though we wipe the encryption *keys* from memory, decrypted
++ * data can likely still be found in memory, e.g. in pagecache pages that have
++ * been freed.  Wiping such data is currently out of scope, short of users who
++ * may choose to enable page and slab poisoning systemwide.
++ */
++int fscrypt_ioctl_remove_key(struct file *filp, const void __user *uarg)
++{
++	struct super_block *sb = file_inode(filp)->i_sb;
++	struct fscrypt_remove_key_arg arg;
++	struct key *key;
++	struct fscrypt_master_key *mk;
++	int err;
++	bool dead;
++
++	if (copy_from_user(&arg, uarg, sizeof(arg)))
++		return -EFAULT;
++
++	if (!valid_key_spec(&arg.key_spec))
++		return -EINVAL;
++
++	if (memchr_inv(arg.__reserved, 0, sizeof(arg.__reserved)))
++		return -EINVAL;
++
++	if (!capable(CAP_SYS_ADMIN))
++		return -EACCES;
++
++	/* Find the key being removed. */
++	key = fscrypt_find_master_key(sb, &arg.key_spec);
++	if (IS_ERR(key))
++		return PTR_ERR(key);
++	mk = key->payload.data[0];
++
++	down_write(&key->sem);
++
++	/* Wipe the secret. */
++	dead = false;
++	if (is_master_key_secret_present(&mk->mk_secret)) {
++		wipe_master_key_secret(&mk->mk_secret);
++		dead = refcount_dec_and_test(&mk->mk_refcount);
++	}
++	up_write(&key->sem);
++	if (dead) {
++		/*
++		 * We wiped the secret and no inodes reference the key anymore,
++		 * so it's free to remove.
++		 */
++		key_invalidate(key);
++		err = 0;
++	} else {
++		/* Some inodes still reference this key; try to evict them. */
++		err = try_to_lock_encrypted_files(sb, mk);
++	}
++	key_put(key);
++	return err;
++}
++EXPORT_SYMBOL_GPL(fscrypt_ioctl_remove_key);
++
+ int __init fscrypt_init_keyring(void)
+ {
+ 	return register_key_type(&key_type_fscrypt);
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index 5fd2f1c301758..394eb50d7a395 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -210,8 +210,16 @@ int fscrypt_set_derived_key(struct fscrypt_info *ci, const u8 *derived_key)
+ 
+ /*
+  * Find the master key, then set up the inode's actual encryption key.
++ *
++ * If the master key is found in the filesystem-level keyring, then the
++ * corresponding 'struct key' is returned in *master_key_ret with
++ * ->sem read-locked.  This is needed to ensure that only one task links the
++ * fscrypt_info into ->mk_decrypted_inodes (as multiple tasks may race to create
++ * an fscrypt_info for the same inode), and to synchronize the key being removed
++ * with a new inode starting to use it.
+  */
+-static int setup_file_encryption_key(struct fscrypt_info *ci)
++static int setup_file_encryption_key(struct fscrypt_info *ci,
++				     struct key **master_key_ret)
+ {
+ 	struct key *key;
+ 	struct fscrypt_master_key *mk = NULL;
+@@ -231,6 +239,13 @@ static int setup_file_encryption_key(struct fscrypt_info *ci)
+ 	}
+ 
+ 	mk = key->payload.data[0];
++	down_read(&key->sem);
++
++	/* Has the secret been removed (via FS_IOC_REMOVE_ENCRYPTION_KEY)? */
++	if (!is_master_key_secret_present(&mk->mk_secret)) {
++		err = -ENOKEY;
++		goto out_release_key;
++	}
+ 
+ 	if (mk->mk_secret.size < ci->ci_mode->keysize) {
+ 		fscrypt_warn(NULL,
+@@ -242,14 +257,22 @@ static int setup_file_encryption_key(struct fscrypt_info *ci)
+ 	}
+ 
+ 	err = fscrypt_setup_v1_file_key(ci, mk->mk_secret.raw);
++	if (err)
++		goto out_release_key;
++
++	*master_key_ret = key;
++	return 0;
+ 
+ out_release_key:
++	up_read(&key->sem);
+ 	key_put(key);
+ 	return err;
+ }
+ 
+ static void put_crypt_info(struct fscrypt_info *ci)
+ {
++	struct key *key;
++
+ 	if (!ci)
+ 		return;
+ 
+@@ -259,6 +282,26 @@ static void put_crypt_info(struct fscrypt_info *ci)
+ 		crypto_free_skcipher(ci->ci_ctfm);
+ 		crypto_free_cipher(ci->ci_essiv_tfm);
+ 	}
++
++	key = ci->ci_master_key;
++	if (key) {
++		struct fscrypt_master_key *mk = key->payload.data[0];
++
++		/*
++		 * Remove this inode from the list of inodes that were unlocked
++		 * with the master key.
++		 *
++		 * In addition, if we're removing the last inode from a key that
++		 * already had its secret removed, invalidate the key so that it
++		 * gets removed from ->s_master_keys.
++		 */
++		spin_lock(&mk->mk_decrypted_inodes_lock);
++		list_del(&ci->ci_master_key_link);
++		spin_unlock(&mk->mk_decrypted_inodes_lock);
++		if (refcount_dec_and_test(&mk->mk_refcount))
++			key_invalidate(key);
++		key_put(key);
++	}
+ 	kmem_cache_free(fscrypt_info_cachep, ci);
+ }
+ 
+@@ -267,6 +310,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	struct fscrypt_info *crypt_info;
+ 	struct fscrypt_context ctx;
+ 	struct fscrypt_mode *mode;
++	struct key *master_key = NULL;
+ 	int res;
+ 
+ 	if (fscrypt_has_encryption_key(inode))
+@@ -319,13 +363,30 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	WARN_ON(mode->ivsize > FSCRYPT_MAX_IV_SIZE);
+ 	crypt_info->ci_mode = mode;
+ 
+-	res = setup_file_encryption_key(crypt_info);
++	res = setup_file_encryption_key(crypt_info, &master_key);
+ 	if (res)
+ 		goto out;
+ 
+-	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL)
++	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL) {
++		if (master_key) {
++			struct fscrypt_master_key *mk =
++				master_key->payload.data[0];
++
++			refcount_inc(&mk->mk_refcount);
++			crypt_info->ci_master_key = key_get(master_key);
++			spin_lock(&mk->mk_decrypted_inodes_lock);
++			list_add(&crypt_info->ci_master_key_link,
++				 &mk->mk_decrypted_inodes);
++			spin_unlock(&mk->mk_decrypted_inodes_lock);
++		}
+ 		crypt_info = NULL;
++	}
++	res = 0;
+ out:
++	if (master_key) {
++		up_read(&master_key->sem);
++		key_put(master_key);
++	}
+ 	if (res == -ENOKEY)
+ 		res = 0;
+ 	put_crypt_info(crypt_info);
+@@ -360,3 +421,39 @@ void fscrypt_free_inode(struct inode *inode)
+ 	}
+ }
+ EXPORT_SYMBOL(fscrypt_free_inode);
++
++/**
++ * fscrypt_drop_inode - check whether the inode's master key has been removed
++ *
++ * Filesystems supporting fscrypt must call this from their ->drop_inode()
++ * method so that encrypted inodes are evicted as soon as they're no longer in
++ * use and their master key has been removed.
++ *
++ * Return: 1 if fscrypt wants the inode to be evicted now, otherwise 0
++ */
++int fscrypt_drop_inode(struct inode *inode)
++{
++	const struct fscrypt_info *ci = READ_ONCE(inode->i_crypt_info);
++	const struct fscrypt_master_key *mk;
++
++	/*
++	 * If ci is NULL, then the inode doesn't have an encryption key set up
++	 * so it's irrelevant.  If ci_master_key is NULL, then the master key
++	 * was provided via the legacy mechanism of the process-subscribed
++	 * keyrings, so we don't know whether it's been removed or not.
++	 */
++	if (!ci || !ci->ci_master_key)
++		return 0;
++	mk = ci->ci_master_key->payload.data[0];
++
++	/*
++	 * Note: since we aren't holding key->sem, the result here can
++	 * immediately become outdated.  But there's no correctness problem with
++	 * unnecessarily evicting.  Nor is there a correctness problem with not
++	 * evicting while iput() is racing with the key being removed, since
++	 * then the thread removing the key will either evict the inode itself
++	 * or will correctly detect that it wasn't evicted due to the race.
++	 */
++	return !is_master_key_secret_present(&mk->mk_secret);
++}
++EXPORT_SYMBOL(fscrypt_drop_inode);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 63dd420505b5b..183f2bde95256 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -129,11 +129,13 @@ extern int fscrypt_inherit_context(struct inode *, struct inode *,
+ /* keyring.c */
+ extern void fscrypt_sb_free(struct super_block *sb);
+ extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
++extern int fscrypt_ioctl_remove_key(struct file *filp, const void __user *arg);
+ 
+ /* keysetup.c */
+ extern int fscrypt_get_encryption_info(struct inode *);
+ extern void fscrypt_put_encryption_info(struct inode *);
+ extern void fscrypt_free_inode(struct inode *);
++extern int fscrypt_drop_inode(struct inode *inode);
+ 
+ /* fname.c */
+ extern int fscrypt_setup_filename(struct inode *, const struct qstr *,
+@@ -347,6 +349,12 @@ static inline int fscrypt_ioctl_add_key(struct file *filp, void __user *arg)
+ 	return -EOPNOTSUPP;
+ }
+ 
++static inline int fscrypt_ioctl_remove_key(struct file *filp,
++					   const void __user *arg)
++{
++	return -EOPNOTSUPP;
++}
++
+ /* keysetup.c */
+ static inline int fscrypt_get_encryption_info(struct inode *inode)
+ {
+@@ -362,6 +370,11 @@ static inline void fscrypt_free_inode(struct inode *inode)
+ {
+ }
+ 
++static inline int fscrypt_drop_inode(struct inode *inode)
++{
++	return 0;
++}
++
+  /* fname.c */
+ static inline int fscrypt_setup_filename(struct inode *dir,
+ 					 const struct qstr *iname,
+diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+index 7bed24632bda7..3302a407131e6 100644
+--- a/include/uapi/linux/fscrypt.h
++++ b/include/uapi/linux/fscrypt.h
+@@ -65,10 +65,17 @@ struct fscrypt_add_key_arg {
+ 	__u8 raw[];
+ };
+ 
++/* Struct passed to FS_IOC_REMOVE_ENCRYPTION_KEY */
++struct fscrypt_remove_key_arg {
++	struct fscrypt_key_specifier key_spec;
++	__u32 __reserved[6];
++};
++
+ #define FS_IOC_SET_ENCRYPTION_POLICY	  _IOR('f', 19, struct fscrypt_policy)
+ #define FS_IOC_GET_ENCRYPTION_PWSALT	  _IOW('f', 20, __u8[16])
+ #define FS_IOC_GET_ENCRYPTION_POLICY	  _IOW('f', 21, struct fscrypt_policy)
+ #define FS_IOC_ADD_ENCRYPTION_KEY	 _IOWR('f', 23, struct fscrypt_add_key_arg)
++#define FS_IOC_REMOVE_ENCRYPTION_KEY	  _IOW('f', 24, struct fscrypt_remove_key_arg)
+ 
+ /**********************************************************************/
+ 
+-- 
+2.21.0.392.gf8f6787159e-goog
