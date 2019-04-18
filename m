@@ -1,12 +1,12 @@
 Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Thu, 18 Apr 2019 16:29:15 -0700
-Message-Id: <20190418232923.250800-9-ebiggers@kernel.org>
+Date: Thu, 18 Apr 2019 16:29:09 -0700
+Message-Id: <20190418232923.250800-3-ebiggers@kernel.org>
 In-Reply-To: <20190418232923.250800-1-ebiggers@kernel.org>
 References: <20190418232923.250800-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v5 08/16] fscrypt: add
- FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
+Subject: [f2fs-dev] [PATCH v5 02/16] fscrypt: use FSCRYPT_ prefix for uapi
+ constants
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
  <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
@@ -23,176 +23,225 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add a new fscrypt ioctl, FS_IOC_GET_ENCRYPTION_KEY_STATUS.  Given a key
-specified by 'struct fscrypt_key_specifier' (the same way a key is
-specified for the other fscrypt key management ioctls), it returns
-status information in a 'struct fscrypt_get_key_status_arg'.
+Prefix all filesystem encryption UAPI constants except the ioctl numbers
+with "FSCRYPT_" rather than with "FS_".  This namespaces the constants
+more appropriately and makes it clear that they are related specifically
+to the filesystem encryption feature, and to the 'fscrypt_*' structures.
+With some of the old names like "FS_POLICY_FLAGS_VALID", it was not
+immediately clear that the constant had anything to do with encryption.
 
-The main motivation for this is that applications need to be able to
-check whether an encrypted directory is "unlocked" or not, so that they
-can add the key if it is not, and avoid adding the key (which may
-involve prompting the user for a passphrase) if it already is.
+This is also useful because we'll be adding more encryption-related
+constants, e.g. for the policy version, and we'd otherwise have to
+choose whether to use unclear names like FS_POLICY_V1 or inconsistent
+names like FS_ENCRYPTION_POLICY_V1.
 
-It's possible to use some workarounds such as checking whether opening a
-regular file fails with ENOKEY, or checking whether the filenames "look
-like gibberish" or not.  However, no workaround is usable in all cases.
+For source compatibility with existing userspace programs, keep the old
+names defined as aliases to the new names.
 
-Like the other key management ioctls, the keyrings syscalls may seem at
-first to be a good fit for this.  Unfortunately, they are not.  Even if
-we exposed the keyring ID of the ->s_master_keys keyring and gave
-everyone Search permission on it (note: currently the keyrings
-permission system would also allow everyone to "invalidate" the keyring
-too), the fscrypt keys have an additional state that doesn't map cleanly
-to the keyrings API: the secret can be removed, but we can be still
-tracking the files that were using the key, and the removal can be
-re-attempted or the secret added again.
-
-After later patches, some applications will also need a way to determine
-whether a key was added by the current user vs. by some other user.
-Reserved fields are included in fscrypt_get_key_status_arg for this and
-other future extensions.
+Finally, as long as new names are being defined anyway, I skipped
+defining new names for the fscrypt mode numbers that aren't actually
+used: INVALID (0), AES_256_GCM (2), AES_256_CBC (3), SPECK128_256_XTS
+(7), and SPECK128_256_CTS (8).
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/keyring.c          | 60 ++++++++++++++++++++++++++++++++++++
- include/linux/fscrypt.h      |  7 +++++
- include/uapi/linux/fscrypt.h | 15 +++++++++
- 3 files changed, 82 insertions(+)
+ Documentation/filesystems/fscrypt.rst | 36 +++++++--------
+ include/uapi/linux/fscrypt.h          | 66 +++++++++++++++++----------
+ 2 files changed, 61 insertions(+), 41 deletions(-)
 
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index f3c2f9329e296..74ecd1c824983 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -11,6 +11,7 @@
-  *
-  * - FS_IOC_ADD_ENCRYPTION_KEY: add a key
-  * - FS_IOC_REMOVE_ENCRYPTION_KEY: remove a key
-+ * - FS_IOC_GET_ENCRYPTION_KEY_STATUS: get key status
-  */
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 08c23b60e0164..4f9df6ba669e5 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -223,9 +223,10 @@ a little endian number, except that:
+   is encrypted with AES-256 where the AES-256 key is the SHA-256 hash
+   of the file's data encryption key.
  
- #include <linux/key-type.h>
-@@ -496,6 +497,65 @@ int fscrypt_ioctl_remove_key(struct file *filp, const void __user *uarg)
- }
- EXPORT_SYMBOL_GPL(fscrypt_ioctl_remove_key);
+-- In the "direct key" configuration (FS_POLICY_FLAG_DIRECT_KEY set in
+-  the fscrypt_policy), the file's nonce is also appended to the IV.
+-  Currently this is only allowed with the Adiantum encryption mode.
++- In the "direct key" configuration (FSCRYPT_POLICY_FLAG_DIRECT_KEY
++  set in the fscrypt_policy), the file's nonce is also appended to the
++  IV.  Currently this is only allowed with the Adiantum encryption
++  mode.
  
-+/*
-+ * Retrieve the status of an fscrypt master encryption key.
-+ *
-+ * We set ->status to indicate whether the key is absent, present, or
-+ * incompletely removed.  "Incompletely removed" means that the master key
-+ * secret has been removed, but some files which had been unlocked with it are
-+ * still in use.  This field allows applications to easily determine the state
-+ * of an encrypted directory without using a hack such as trying to open a
-+ * regular file in it (which can confuse the "incompletely removed" state with
-+ * absent or present).
-+ */
-+int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
-+{
-+	struct super_block *sb = file_inode(filp)->i_sb;
-+	struct fscrypt_get_key_status_arg arg;
-+	struct key *key;
-+	struct fscrypt_master_key *mk;
-+	int err;
-+
-+	if (copy_from_user(&arg, uarg, sizeof(arg)))
-+		return -EFAULT;
-+
-+	if (!valid_key_spec(&arg.key_spec))
-+		return -EINVAL;
-+
-+	if (memchr_inv(arg.__reserved, 0, sizeof(arg.__reserved)))
-+		return -EINVAL;
-+
-+	memset(arg.__out_reserved, 0, sizeof(arg.__out_reserved));
-+
-+	key = fscrypt_find_master_key(sb, &arg.key_spec);
-+	if (IS_ERR(key)) {
-+		if (key != ERR_PTR(-ENOKEY))
-+			return PTR_ERR(key);
-+		arg.status = FSCRYPT_KEY_STATUS_ABSENT;
-+		err = 0;
-+		goto out;
-+	}
-+	mk = key->payload.data[0];
-+	down_read(&key->sem);
-+
-+	if (!is_master_key_secret_present(&mk->mk_secret)) {
-+		arg.status = FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED;
-+		err = 0;
-+		goto out_release_key;
-+	}
-+
-+	arg.status = FSCRYPT_KEY_STATUS_PRESENT;
-+	err = 0;
-+out_release_key:
-+	up_read(&key->sem);
-+	key_put(key);
-+out:
-+	if (!err && copy_to_user(uarg, &arg, sizeof(arg)))
-+		err = -EFAULT;
-+	return err;
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_ioctl_get_key_status);
-+
- int __init fscrypt_init_keyring(void)
- {
- 	return register_key_type(&key_type_fscrypt);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 183f2bde95256..9826225d3451b 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -130,6 +130,7 @@ extern int fscrypt_inherit_context(struct inode *, struct inode *,
- extern void fscrypt_sb_free(struct super_block *sb);
- extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
- extern int fscrypt_ioctl_remove_key(struct file *filp, const void __user *arg);
-+extern int fscrypt_ioctl_get_key_status(struct file *filp, void __user *arg);
+ Filenames encryption
+ --------------------
+@@ -272,14 +273,14 @@ empty directory or verifies that a directory or regular file already
+ has the specified encryption policy.  It takes in a pointer to a
+ :c:type:`struct fscrypt_policy`, defined as follows::
  
- /* keysetup.c */
- extern int fscrypt_get_encryption_info(struct inode *);
-@@ -355,6 +356,12 @@ static inline int fscrypt_ioctl_remove_key(struct file *filp,
- 	return -EOPNOTSUPP;
- }
+-    #define FS_KEY_DESCRIPTOR_SIZE  8
++    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
  
-+static inline int fscrypt_ioctl_get_key_status(struct file *filp,
-+					       void __user *arg)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
- /* keysetup.c */
- static inline int fscrypt_get_encryption_info(struct inode *inode)
- {
+     struct fscrypt_policy {
+             __u8 version;
+             __u8 contents_encryption_mode;
+             __u8 filenames_encryption_mode;
+             __u8 flags;
+-            __u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
++            __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+     };
+ 
+ This structure must be initialized as follows:
+@@ -288,18 +289,17 @@ This structure must be initialized as follows:
+ 
+ - ``contents_encryption_mode`` and ``filenames_encryption_mode`` must
+   be set to constants from ``<linux/fs.h>`` which identify the
+-  encryption modes to use.  If unsure, use
+-  FS_ENCRYPTION_MODE_AES_256_XTS (1) for ``contents_encryption_mode``
+-  and FS_ENCRYPTION_MODE_AES_256_CTS (4) for
+-  ``filenames_encryption_mode``.
++  encryption modes to use.  If unsure, use FSCRYPT_MODE_AES_256_XTS
++  (1) for ``contents_encryption_mode`` and FSCRYPT_MODE_AES_256_CTS
++  (4) for ``filenames_encryption_mode``.
+ 
+ - ``flags`` must contain a value from ``<linux/fs.h>`` which
+   identifies the amount of NUL-padding to use when encrypting
+-  filenames.  If unsure, use FS_POLICY_FLAGS_PAD_32 (0x3).
+-  In addition, if the chosen encryption modes are both
+-  FS_ENCRYPTION_MODE_ADIANTUM, this can contain
+-  FS_POLICY_FLAG_DIRECT_KEY to specify that the master key should be
+-  used directly, without key derivation.
++  filenames.  If unsure, use FSCRYPT_POLICY_FLAGS_PAD_32 (0x3).  In
++  addition, if the chosen encryption modes are both
++  FSCRYPT_MODE_ADIANTUM, this can contain
++  FSCRYPT_POLICY_FLAG_DIRECT_KEY to specify that the master key should
++  be used directly, without key derivation.
+ 
+ - ``master_key_descriptor`` specifies how to find the master key in
+   the keyring; see `Adding keys`_.  It is up to userspace to choose a
+@@ -399,11 +399,11 @@ followed by the 16-character lower case hex representation of the
+ ``master_key_descriptor`` that was set in the encryption policy.  The
+ key payload must conform to the following structure::
+ 
+-    #define FS_MAX_KEY_SIZE 64
++    #define FSCRYPT_MAX_KEY_SIZE 64
+ 
+     struct fscrypt_key {
+             u32 mode;
+-            u8 raw[FS_MAX_KEY_SIZE];
++            u8 raw[FSCRYPT_MAX_KEY_SIZE];
+             u32 size;
+     };
+ 
+@@ -572,7 +572,7 @@ much confusion if an encryption policy were to be added to or removed
+ from anything other than an empty directory.)  The struct is defined
+ as follows::
+ 
+-    #define FS_KEY_DESCRIPTOR_SIZE  8
++    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
+     #define FS_KEY_DERIVATION_NONCE_SIZE 16
+ 
+     struct fscrypt_context {
+@@ -580,7 +580,7 @@ as follows::
+             u8 contents_encryption_mode;
+             u8 filenames_encryption_mode;
+             u8 flags;
+-            u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
++            u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+             u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
+     };
+ 
 diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-index 3302a407131e6..042e70a4ff7ee 100644
+index 193339cb53fdb..f9b99cc028bc6 100644
 --- a/include/uapi/linux/fscrypt.h
 +++ b/include/uapi/linux/fscrypt.h
-@@ -71,11 +71,26 @@ struct fscrypt_remove_key_arg {
- 	__u32 __reserved[6];
+@@ -8,34 +8,30 @@
+  * File system encryption support
+  */
+ /* Policy provided via an ioctl on the topmost directory */
+-#define FS_KEY_DESCRIPTOR_SIZE	8
++#define FSCRYPT_KEY_DESCRIPTOR_SIZE	8
+ 
+-#define FS_POLICY_FLAGS_PAD_4		0x00
+-#define FS_POLICY_FLAGS_PAD_8		0x01
+-#define FS_POLICY_FLAGS_PAD_16		0x02
+-#define FS_POLICY_FLAGS_PAD_32		0x03
+-#define FS_POLICY_FLAGS_PAD_MASK	0x03
+-#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
+-#define FS_POLICY_FLAGS_VALID		0x07
++/* Encryption policy flags */
++#define FSCRYPT_POLICY_FLAGS_PAD_4		0x00
++#define FSCRYPT_POLICY_FLAGS_PAD_8		0x01
++#define FSCRYPT_POLICY_FLAGS_PAD_16		0x02
++#define FSCRYPT_POLICY_FLAGS_PAD_32		0x03
++#define FSCRYPT_POLICY_FLAGS_PAD_MASK		0x03
++#define FSCRYPT_POLICY_FLAG_DIRECT_KEY		0x04	/* use master key directly */
++#define FSCRYPT_POLICY_FLAGS_VALID		0x07
+ 
+ /* Encryption algorithms */
+-#define FS_ENCRYPTION_MODE_INVALID		0
+-#define FS_ENCRYPTION_MODE_AES_256_XTS		1
+-#define FS_ENCRYPTION_MODE_AES_256_GCM		2
+-#define FS_ENCRYPTION_MODE_AES_256_CBC		3
+-#define FS_ENCRYPTION_MODE_AES_256_CTS		4
+-#define FS_ENCRYPTION_MODE_AES_128_CBC		5
+-#define FS_ENCRYPTION_MODE_AES_128_CTS		6
+-#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
+-#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
+-#define FS_ENCRYPTION_MODE_ADIANTUM		9
++#define FSCRYPT_MODE_AES_256_XTS		1
++#define FSCRYPT_MODE_AES_256_CTS		4
++#define FSCRYPT_MODE_AES_128_CBC		5
++#define FSCRYPT_MODE_AES_128_CTS		6
++#define FSCRYPT_MODE_ADIANTUM			9
+ 
+ struct fscrypt_policy {
+ 	__u8 version;
+ 	__u8 contents_encryption_mode;
+ 	__u8 filenames_encryption_mode;
+ 	__u8 flags;
+-	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
++	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
  };
  
-+/* Struct passed to FS_IOC_GET_ENCRYPTION_KEY_STATUS */
-+struct fscrypt_get_key_status_arg {
-+	/* input */
-+	struct fscrypt_key_specifier key_spec;
-+	__u32 __reserved[6];
-+
-+	/* output */
-+#define FSCRYPT_KEY_STATUS_ABSENT		1
-+#define FSCRYPT_KEY_STATUS_PRESENT		2
-+#define FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED	3
-+	__u32 status;
-+	__u32 __out_reserved[15];
-+};
-+
- #define FS_IOC_SET_ENCRYPTION_POLICY	  _IOR('f', 19, struct fscrypt_policy)
- #define FS_IOC_GET_ENCRYPTION_PWSALT	  _IOW('f', 20, __u8[16])
- #define FS_IOC_GET_ENCRYPTION_POLICY	  _IOW('f', 21, struct fscrypt_policy)
- #define FS_IOC_ADD_ENCRYPTION_KEY	 _IOWR('f', 23, struct fscrypt_add_key_arg)
- #define FS_IOC_REMOVE_ENCRYPTION_KEY	  _IOW('f', 24, struct fscrypt_remove_key_arg)
-+#define FS_IOC_GET_ENCRYPTION_KEY_STATUS _IOWR('f', 25, struct fscrypt_get_key_status_arg)
+ #define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
+@@ -43,16 +39,40 @@ struct fscrypt_policy {
+ #define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
  
- /**********************************************************************/
+ /* Parameters for passing an encryption key into the kernel keyring */
+-#define FS_KEY_DESC_PREFIX		"fscrypt:"
+-#define FS_KEY_DESC_PREFIX_SIZE		8
++#define FSCRYPT_KEY_DESC_PREFIX		"fscrypt:"
++#define FSCRYPT_KEY_DESC_PREFIX_SIZE		8
  
+ /* Structure that userspace passes to the kernel keyring */
+-#define FS_MAX_KEY_SIZE			64
++#define FSCRYPT_MAX_KEY_SIZE			64
+ 
+ struct fscrypt_key {
+ 	__u32 mode;
+-	__u8 raw[FS_MAX_KEY_SIZE];
++	__u8 raw[FSCRYPT_MAX_KEY_SIZE];
+ 	__u32 size;
+ };
++/**********************************************************************/
++
++/* old names; don't add anything new here! */
++#define FS_KEY_DESCRIPTOR_SIZE		FSCRYPT_KEY_DESCRIPTOR_SIZE
++#define FS_POLICY_FLAGS_PAD_4		FSCRYPT_POLICY_FLAGS_PAD_4
++#define FS_POLICY_FLAGS_PAD_8		FSCRYPT_POLICY_FLAGS_PAD_8
++#define FS_POLICY_FLAGS_PAD_16		FSCRYPT_POLICY_FLAGS_PAD_16
++#define FS_POLICY_FLAGS_PAD_32		FSCRYPT_POLICY_FLAGS_PAD_32
++#define FS_POLICY_FLAGS_PAD_MASK	FSCRYPT_POLICY_FLAGS_PAD_MASK
++#define FS_POLICY_FLAG_DIRECT_KEY	FSCRYPT_POLICY_FLAG_DIRECT_KEY
++#define FS_POLICY_FLAGS_VALID		FSCRYPT_POLICY_FLAGS_VALID
++#define FS_ENCRYPTION_MODE_INVALID	0	/* never used */
++#define FS_ENCRYPTION_MODE_AES_256_XTS	FSCRYPT_MODE_AES_256_XTS
++#define FS_ENCRYPTION_MODE_AES_256_GCM	2	/* never used */
++#define FS_ENCRYPTION_MODE_AES_256_CBC	3	/* never used */
++#define FS_ENCRYPTION_MODE_AES_256_CTS	FSCRYPT_MODE_AES_256_CTS
++#define FS_ENCRYPTION_MODE_AES_128_CBC	FSCRYPT_MODE_AES_128_CBC
++#define FS_ENCRYPTION_MODE_AES_128_CTS	FSCRYPT_MODE_AES_128_CTS
++#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7	/* removed */
++#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8	/* removed */
++#define FS_ENCRYPTION_MODE_ADIANTUM	FSCRYPT_MODE_ADIANTUM
++#define FS_KEY_DESC_PREFIX		FSCRYPT_KEY_DESC_PREFIX
++#define FS_KEY_DESC_PREFIX_SIZE		FSCRYPT_KEY_DESC_PREFIX_SIZE
++#define FS_MAX_KEY_SIZE			FSCRYPT_MAX_KEY_SIZE
+ 
+ #endif /* _UAPI_LINUX_FSCRYPT_H */
 -- 
 2.21.0.392.gf8f6787159e-goog
 
