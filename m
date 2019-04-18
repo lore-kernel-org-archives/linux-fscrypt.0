@@ -1,148 +1,57 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Tue,  2 Apr 2019 08:45:56 -0700
-Message-Id: <20190402154600.32432-14-ebiggers@kernel.org>
-In-Reply-To: <20190402154600.32432-1-ebiggers@kernel.org>
-References: <20190402154600.32432-1-ebiggers@kernel.org>
+Return-Path: <SRS0=CZeC=SU=nod.at=richard@kernel.org>
+From: Richard Weinberger <richard@nod.at>
+Subject: Re: [PATCH] ubifs: remove unnecessary #ifdef around fscrypt_ioctl_get_policy()
+Date: Thu, 18 Apr 2019 21:31:22 +0200
+Message-ID: <17887943.qBNreu9ReB@blindfold>
+In-Reply-To: <20190418192953.GB20640@gmail.com>
+References: <20190315205503.195400-1-ebiggers@kernel.org> <CAFLxGvx3M61E1+Ts38BYRYu93QzmH=XMWoYYrFHTqWXUM7zREg@mail.gmail.com> <20190418192953.GB20640@gmail.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v4 13/17] fscrypt: require that key be added when
- setting a v2 encryption policy
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Transfer-Encoding: 7Bit
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+To: Eric Biggers <ebiggers@kernel.org>, linux-mtd@lists.infradead.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Am Donnerstag, 18. April 2019, 21:29:53 CEST schrieb Eric Biggers:
+> On Fri, Mar 15, 2019 at 10:08:02PM +0100, Richard Weinberger wrote:
+> > On Fri, Mar 15, 2019 at 9:55 PM Eric Biggers <ebiggers@kernel.org> wrote:
+> > >
+> > > From: Eric Biggers <ebiggers@google.com>
+> > >
+> > > When !CONFIG_FS_ENCRYPTION, fscrypt_ioctl_get_policy() is already
+> > > stubbed out to return -EOPNOTSUPP, so the extra #ifdef is not needed.
+> > >
+> > > Signed-off-by: Eric Biggers <ebiggers@google.com>
+> > > ---
+> > >  fs/ubifs/ioctl.c | 7 +------
+> > >  1 file changed, 1 insertion(+), 6 deletions(-)
+> > >
+> > > diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
+> > > index 82e4e6a30b04..cd1d4212fc45 100644
+> > > --- a/fs/ubifs/ioctl.c
+> > > +++ b/fs/ubifs/ioctl.c
+> > > @@ -205,13 +205,8 @@ long ubifs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+> > >                 return -EOPNOTSUPP;
+> > >  #endif
+> > >         }
+> > > -       case FS_IOC_GET_ENCRYPTION_POLICY: {
+> > > -#ifdef CONFIG_FS_ENCRYPTION
+> > > +       case FS_IOC_GET_ENCRYPTION_POLICY:
+> > >                 return fscrypt_ioctl_get_policy(file, (void __user *)arg);
+> > > -#else
+> > > -               return -EOPNOTSUPP;
+> > > -#endif
+> > > -       }
+> > >
+> > >         default:
+> > >                 return -ENOTTY;
+> > 
+> > Thanks for that one too. :-)
+> > 
+> 
+> Richard, can you take this through the ubifs tree for 5.2?
 
-By looking up the master keys in a filesystem-level keyring rather than
-in the calling processes' key hierarchy, it becomes possible for a user
-to set an encryption policy which refers to some key they don't actually
-know, then encrypt their files using that key.  Cryptographically this
-isn't much of a problem, but the semantics of this would be a bit weird.
-Thus, enforce that a v2 encryption policy can only be set if the user
-has previously added the key, or has capable(CAP_FOWNER).
+Sure. Queued for 5.2. :-)
 
-We tolerate that this problem will continue to exist for v1 encryption
-policies, however; there is no way around that.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fscrypt_private.h |  3 +++
- fs/crypto/keyring.c         | 47 +++++++++++++++++++++++++++++++++++++
- fs/crypto/policy.c          |  6 +++++
- 3 files changed, 56 insertions(+)
-
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 5f679ba32cece..a398383ae9e34 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -411,6 +411,9 @@ extern struct key *
- fscrypt_find_master_key(struct super_block *sb,
- 			const struct fscrypt_key_specifier *mk_spec);
- 
-+extern int fscrypt_verify_key_added(struct super_block *sb,
-+				    const u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE]);
-+
- extern int __init fscrypt_init_keyring(void);
- extern void fscrypt_exit_keyring(void);
- 
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 3d17c13136a4a..2ccabf95f294c 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -562,6 +562,53 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
- }
- EXPORT_SYMBOL_GPL(fscrypt_ioctl_add_key);
- 
-+/*
-+ * Verify that the current user has added a master key with the given identifier
-+ * (returns -ENOKEY if not).  This is needed to prevent a user from encrypting
-+ * their files using some other user's key which they don't actually know.
-+ * Cryptographically this isn't much of a problem, but the semantics of this
-+ * would be a bit weird, so it's best to just forbid it.
-+ *
-+ * The system administrator (CAP_FOWNER) can override this, which should be
-+ * enough for any use cases where encryption policies are being set using keys
-+ * that were chosen ahead of time but aren't available at the moment.
-+ *
-+ * Note that the key may have already removed by the time this returns, but
-+ * that's okay; we just care whether the key was there at some point.
-+ *
-+ * Return: 0 if the key is added, -ENOKEY if it isn't, or another -errno code
-+ */
-+int fscrypt_verify_key_added(struct super_block *sb,
-+			     const u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
-+{
-+	struct fscrypt_key_specifier mk_spec;
-+	struct key *key, *mk_user;
-+	struct fscrypt_master_key *mk;
-+	int err;
-+
-+	mk_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
-+	memcpy(mk_spec.u.identifier, identifier, FSCRYPT_KEY_IDENTIFIER_SIZE);
-+
-+	key = fscrypt_find_master_key(sb, &mk_spec);
-+	if (IS_ERR(key)) {
-+		err = PTR_ERR(key);
-+		goto out;
-+	}
-+	mk = key->payload.data[0];
-+	mk_user = find_master_key_user(mk);
-+	if (IS_ERR(mk_user)) {
-+		err = PTR_ERR(mk_user);
-+	} else {
-+		key_put(mk_user);
-+		err = 0;
-+	}
-+	key_put(key);
-+out:
-+	if (err == -ENOKEY && capable(CAP_FOWNER))
-+		err = 0;
-+	return err;
-+}
-+
- static void evict_dentries_for_decrypted_inodes(struct fscrypt_master_key *mk)
- {
- 	struct fscrypt_info *ci;
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 912ff1d030796..fa86f96741308 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -209,6 +209,7 @@ static int set_encryption_policy(struct inode *inode,
- {
- 	union fscrypt_context ctx;
- 	int ctxsize;
-+	int err;
- 
- 	if (!fscrypt_supported_policy(policy))
- 		return -EINVAL;
-@@ -227,6 +228,11 @@ static int set_encryption_policy(struct inode *inode,
- 		 */
- 		pr_warn_once("%s (pid %d) is setting deprecated v1 encryption policy; recommend upgrading to v2.\n",
- 			     current->comm, current->pid);
-+	} else {
-+		err = fscrypt_verify_key_added(inode->i_sb,
-+					       policy->v2.master_key_identifier);
-+		if (err)
-+			return err;
- 	}
- 
- 	ctxsize = fscrypt_new_context_from_policy(&ctx, policy);
--- 
-2.21.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+Thanks,
+//richard
