@@ -1,99 +1,90 @@
-Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
+Return-Path: <SRS0=har8=S2=linux.ibm.com=chandan@kernel.org>
 From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V2 03/13] fsverity: Add call back to decide if verity check has to be performed
-Date: Sun, 28 Apr 2019 10:01:11 +0530
-In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
-References: <20190428043121.30925-1-chandan@linux.ibm.com>
+Subject: [PATCH V1 09/14] ext4: Decrypt all boundary blocks when doing buffered write
+Date: Wed, 24 Apr 2019 10:07:25 +0530
+In-Reply-To: <20190424043730.13683-1-chandan@linux.ibm.com>
+References: <20190424043730.13683-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190428043121.30925-4-chandan@linux.ibm.com>
+Message-Id: <20190424043730.13683-10-chandan@linux.ibm.com>
 To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Ext4 and F2FS store verity metadata in data extents (beyond
-inode->i_size) associated with a file. But other filesystems might
-choose alternative means to store verity metadata. Hence this commit
-adds a callback function pointer to 'struct fsverity_operations' to help
-in deciding if verity operation needs to performed against a page-cache
-page holding file data.
+With subpage sized blocks, ext4_block_write_begin() can have up to two
+blocks to decrypt. Hence this commit invokes fscrypt_decrypt_page() for
+each of those blocks.
 
 Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/ext4/super.c          | 6 ++++++
- fs/f2fs/super.c          | 6 ++++++
- fs/read_callbacks.c      | 4 +++-
- include/linux/fsverity.h | 1 +
- 4 files changed, 16 insertions(+), 1 deletion(-)
+ fs/ext4/inode.c | 33 +++++++++++++++++++++++----------
+ 1 file changed, 23 insertions(+), 10 deletions(-)
 
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index aba724f82cc3..63d73b360f1d 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1428,10 +1428,16 @@ static struct page *ext4_read_verity_metadata_page(struct inode *inode,
- 	return read_mapping_page(inode->i_mapping, index, NULL);
- }
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 1327e04334df..51744a3c3964 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -1156,12 +1156,14 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+ 	unsigned to = from + len;
+ 	struct inode *inode = page->mapping->host;
+ 	unsigned block_start, block_end;
+-	sector_t block;
++	sector_t block, page_blk_nr;
+ 	int err = 0;
+ 	unsigned blocksize = inode->i_sb->s_blocksize;
+ 	unsigned bbits;
+-	struct buffer_head *bh, *head, *wait[2], **wait_bh = wait;
++	struct buffer_head *bh, *head, *wait[2];
++	int nr_wait = 0;
+ 	bool decrypt = false;
++	int i;
  
-+static bool ext4_verity_required(struct inode *inode, pgoff_t index)
-+{
-+	return index < (i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT;
-+}
+ 	BUG_ON(!PageLocked(page));
+ 	BUG_ON(from > PAGE_SIZE);
+@@ -1213,25 +1215,36 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+ 		    !buffer_unwritten(bh) &&
+ 		    (block_start < from || block_end > to)) {
+ 			ll_rw_block(REQ_OP_READ, 0, 1, &bh);
+-			*wait_bh++ = bh;
++			wait[nr_wait++] = bh;
+ 			decrypt = IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode);
+ 		}
+ 	}
+ 	/*
+ 	 * If we issued read requests, let them complete.
+ 	 */
+-	while (wait_bh > wait) {
+-		wait_on_buffer(*--wait_bh);
+-		if (!buffer_uptodate(*wait_bh))
++	for (i = 0; i < nr_wait; i++) {
++		wait_on_buffer(wait[i]);
++		if (!buffer_uptodate(wait[i]))
+ 			err = -EIO;
+ 	}
+ 	if (unlikely(err)) {
+ 		page_zero_new_buffers(page, from, to);
+ 	} else if (decrypt) {
+-		err = fscrypt_decrypt_page(page->mapping->host, page,
+-				PAGE_SIZE, 0, page->index);
+-		if (err)
+-			clear_buffer_uptodate(*wait_bh);
++		page_blk_nr = (sector_t)page->index << (PAGE_SHIFT - bbits);
 +
- static const struct fsverity_operations ext4_verityops = {
- 	.set_verity		= ext4_set_verity,
- 	.get_metadata_end	= ext4_get_verity_metadata_end,
- 	.read_metadata_page	= ext4_read_verity_metadata_page,
-+	.verity_required	= ext4_verity_required,
- };
- #endif /* CONFIG_FS_VERITY */
- 
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 2f75f06c784a..cd1299e1f92d 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -2257,10 +2257,16 @@ static struct page *f2fs_read_verity_metadata_page(struct inode *inode,
- 	return read_mapping_page(inode->i_mapping, index, NULL);
- }
- 
-+static bool f2fs_verity_required(struct inode *inode, pgoff_t index)
-+{
-+	return index < (i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT;
-+}
++		for (i = 0; i < nr_wait; i++) {
++			int err2;
 +
- static const struct fsverity_operations f2fs_verityops = {
- 	.set_verity		= f2fs_set_verity,
- 	.get_metadata_end	= f2fs_get_verity_metadata_end,
- 	.read_metadata_page	= f2fs_read_verity_metadata_page,
-+	.verity_required	= f2fs_verity_required,
- };
- #endif /* CONFIG_FS_VERITY */
++			block = page_blk_nr + (bh_offset(wait[i]) >> bbits);
++			err2 = fscrypt_decrypt_page(page->mapping->host, page,
++						wait[i]->b_size,
++						bh_offset(wait[i]),
++						block);
++			if (err2) {
++				clear_buffer_uptodate(wait[i]);
++				err = err2;
++			}
++		}
+ 	}
  
-diff --git a/fs/read_callbacks.c b/fs/read_callbacks.c
-index b6d5b95e67d7..6dea54b0baa9 100644
---- a/fs/read_callbacks.c
-+++ b/fs/read_callbacks.c
-@@ -86,7 +86,9 @@ struct read_callbacks_ctx *get_read_callbacks_ctx(struct inode *inode,
- 		read_callbacks_steps |= 1 << STEP_DECRYPT;
- #ifdef CONFIG_FS_VERITY
- 	if (inode->i_verity_info != NULL &&
--		(index < ((i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT)))
-+		((inode->i_sb->s_vop->verity_required
-+			&& inode->i_sb->s_vop->verity_required(inode, index))
-+			|| (inode->i_sb->s_vop->verity_required == NULL)))
- 		read_callbacks_steps |= 1 << STEP_VERITY;
- #endif
- 	if (read_callbacks_steps) {
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index 7c33b42abf1b..b83712d6c79a 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -18,6 +18,7 @@ struct fsverity_operations {
- 	int (*set_verity)(struct inode *inode, loff_t data_i_size);
- 	int (*get_metadata_end)(struct inode *inode, loff_t *metadata_end_ret);
- 	struct page *(*read_metadata_page)(struct inode *inode, pgoff_t index);
-+	bool (*verity_required)(struct inode *inode, pgoff_t index);
- };
- 
- #ifdef CONFIG_FS_VERITY
+ 	return err;
 -- 
 2.19.1
