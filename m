@@ -1,57 +1,76 @@
-Date: Thu, 18 Apr 2019 12:29:53 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: Re: [PATCH] ubifs: remove unnecessary #ifdef around
- fscrypt_ioctl_get_policy()
-Message-ID: <20190418192953.GB20640@gmail.com>
-References: <20190315205503.195400-1-ebiggers@kernel.org>
- <CAFLxGvx3M61E1+Ts38BYRYu93QzmH=XMWoYYrFHTqWXUM7zREg@mail.gmail.com>
+Return-Path: <SRS0=har8=S2=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH V1 04/14] fsverity: Add call back to determine readpage limit
+Date: Wed, 24 Apr 2019 10:07:20 +0530
+In-Reply-To: <20190424043730.13683-1-chandan@linux.ibm.com>
+References: <20190424043730.13683-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAFLxGvx3M61E1+Ts38BYRYu93QzmH=XMWoYYrFHTqWXUM7zREg@mail.gmail.com>
-To: Richard Weinberger <richard.weinberger@gmail.com>
-Cc: linux-mtd@lists.infradead.org, linux-fscrypt@vger.kernel.org
+Content-Transfer-Encoding: 8bit
+Message-Id: <20190424043730.13683-5-chandan@linux.ibm.com>
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Fri, Mar 15, 2019 at 10:08:02PM +0100, Richard Weinberger wrote:
-> On Fri, Mar 15, 2019 at 9:55 PM Eric Biggers <ebiggers@kernel.org> wrote:
-> >
-> > From: Eric Biggers <ebiggers@google.com>
-> >
-> > When !CONFIG_FS_ENCRYPTION, fscrypt_ioctl_get_policy() is already
-> > stubbed out to return -EOPNOTSUPP, so the extra #ifdef is not needed.
-> >
-> > Signed-off-by: Eric Biggers <ebiggers@google.com>
-> > ---
-> >  fs/ubifs/ioctl.c | 7 +------
-> >  1 file changed, 1 insertion(+), 6 deletions(-)
-> >
-> > diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
-> > index 82e4e6a30b04..cd1d4212fc45 100644
-> > --- a/fs/ubifs/ioctl.c
-> > +++ b/fs/ubifs/ioctl.c
-> > @@ -205,13 +205,8 @@ long ubifs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-> >                 return -EOPNOTSUPP;
-> >  #endif
-> >         }
-> > -       case FS_IOC_GET_ENCRYPTION_POLICY: {
-> > -#ifdef CONFIG_FS_ENCRYPTION
-> > +       case FS_IOC_GET_ENCRYPTION_POLICY:
-> >                 return fscrypt_ioctl_get_policy(file, (void __user *)arg);
-> > -#else
-> > -               return -EOPNOTSUPP;
-> > -#endif
-> > -       }
-> >
-> >         default:
-> >                 return -ENOTTY;
-> 
-> Thanks for that one too. :-)
-> 
-> -- 
-> Thanks,
-> //richard
+Ext4 and F2FS store verity metadata beyond i_size. This commit adds a
+call back pointer to "struct fsverity_operations" which helps in
+determining the the real file size limit upto which data can be read
+from the file.
 
-Richard, can you take this through the ubifs tree for 5.2?
+This call back will be required in order to get do_mpage_readpage()
+to read files having verity metadata appended beyond i_size.
 
-- Eric
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+---
+ fs/ext4/super.c          | 17 +++++++++++++++++
+ include/linux/fsverity.h |  1 +
+ 2 files changed, 18 insertions(+)
+
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 63d73b360f1d..8e483afbaa2e 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1428,6 +1428,22 @@ static struct page *ext4_read_verity_metadata_page(struct inode *inode,
+ 	return read_mapping_page(inode->i_mapping, index, NULL);
+ }
+ 
++static loff_t ext4_readpage_limit(struct inode *inode)
++{
++	if (IS_VERITY(inode)) {
++		if (inode->i_verity_info)
++			/* limit to end of metadata region */
++			return fsverity_full_i_size(inode);
++		/*
++		 * fsverity_info is currently being set up and no user reads are
++		 * allowed yet.  It's easiest to just not enforce a limit yet.
++		 */
++		return inode->i_sb->s_maxbytes;
++	}
++
++	return i_size_read(inode);
++}
++
+ static bool ext4_verity_required(struct inode *inode, pgoff_t index)
+ {
+ 	return index < (i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT;
+@@ -1438,6 +1454,7 @@ static const struct fsverity_operations ext4_verityops = {
+ 	.get_metadata_end	= ext4_get_verity_metadata_end,
+ 	.read_metadata_page	= ext4_read_verity_metadata_page,
+ 	.verity_required	= ext4_verity_required,
++	.readpage_limit		= ext4_readpage_limit,
+ };
+ #endif /* CONFIG_FS_VERITY */
+ 
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index b83712d6c79a..fc8113acbbfe 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -19,6 +19,7 @@ struct fsverity_operations {
+ 	int (*get_metadata_end)(struct inode *inode, loff_t *metadata_end_ret);
+ 	struct page *(*read_metadata_page)(struct inode *inode, pgoff_t index);
+ 	bool (*verity_required)(struct inode *inode, pgoff_t index);
++	loff_t (*readpage_limit)(struct inode *inode);
+ };
+ 
+ #ifdef CONFIG_FS_VERITY
+-- 
+2.19.1
