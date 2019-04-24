@@ -1,80 +1,54 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Tue,  2 Apr 2019 08:45:47 -0700
-Message-Id: <20190402154600.32432-5-ebiggers@kernel.org>
-In-Reply-To: <20190402154600.32432-1-ebiggers@kernel.org>
-References: <20190402154600.32432-1-ebiggers@kernel.org>
+Return-Path: <SRS0=har8=S2=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH V1 12/14] ext4: Compute logical block and the page range to be encrypted
+Date: Wed, 24 Apr 2019 10:07:28 +0530
+In-Reply-To: <20190424043730.13683-1-chandan@linux.ibm.com>
+References: <20190424043730.13683-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v4 04/17] fscrypt: add ->ci_inode to fscrypt_info
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 8bit
+Message-Id: <20190424043730.13683-13-chandan@linux.ibm.com>
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+For subpage-sized blocks, the initial logical block number mapped by a
+page can be different from page->index. Hence this commit adds code to
+compute the first logical block mapped by the page and also the page
+range to be encrypted.
 
-Add an inode back-pointer to 'struct fscrypt_info', such that
-inode->i_crypt_info->ci_inode == inode.
-
-This will be useful for:
-
-1. Evicting the inodes when a fscrypt key is removed, since we'll track
-   the inodes using a given key by linking their fscrypt_infos together,
-   rather than the inodes directly.  This avoids bloating 'struct inode'
-   with a new list_head.
-
-2. Simplifying the per-file key setup, since the inode pointer won't
-   have to be passed around everywhere just in case something goes wrong
-   and it's needed for fscrypt_warn().
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/crypto/fscrypt_private.h | 3 +++
- fs/crypto/keyinfo.c         | 2 ++
- 2 files changed, 5 insertions(+)
+ fs/ext4/page-io.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 52e09ef40bfa6..ac24edfc297f1 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -73,6 +73,9 @@ struct fscrypt_info {
- 	 */
- 	struct fscrypt_mode *ci_mode;
+diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
+index 3e9298e6a705..75485ee9e800 100644
+--- a/fs/ext4/page-io.c
++++ b/fs/ext4/page-io.c
+@@ -418,6 +418,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
+ {
+ 	struct page *data_page = NULL;
+ 	struct inode *inode = page->mapping->host;
++	u64 page_blk;
+ 	unsigned block_start;
+ 	struct buffer_head *bh, *head;
+ 	int ret = 0;
+@@ -478,10 +479,14 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
  
-+	/* Back-pointer to the inode */
-+	struct inode *ci_inode;
+ 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit) {
+ 		gfp_t gfp_flags = GFP_NOFS;
++		unsigned int page_bytes;
 +
- 	/*
- 	 * If non-NULL, then this inode uses a master key directly rather than a
- 	 * derived key, and ci_ctfm will equal ci_master_key->mk_ctfm.
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 058e2e0fda430..148a54fb556a6 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -542,6 +542,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (!crypt_info)
- 		return -ENOMEM;
++		page_bytes = round_up(len, i_blocksize(inode));
++		page_blk = page->index << (PAGE_SHIFT - inode->i_blkbits);
  
-+	crypt_info->ci_inode = inode;
-+
- 	crypt_info->ci_flags = ctx.flags;
- 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
- 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
+ 	retry_encrypt:
+-		data_page = fscrypt_encrypt_page(inode, page, PAGE_SIZE, 0,
+-						page->index, gfp_flags);
++		data_page = fscrypt_encrypt_page(inode, page, page_bytes, 0,
++						page_blk, gfp_flags);
+ 		if (IS_ERR(data_page)) {
+ 			ret = PTR_ERR(data_page);
+ 			if (ret == -ENOMEM && wbc->sync_mode == WB_SYNC_ALL) {
 -- 
-2.21.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.19.1
