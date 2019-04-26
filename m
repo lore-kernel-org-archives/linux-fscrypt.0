@@ -1,54 +1,101 @@
-Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V2 11/13] ext4: Compute logical block and the page range to be encrypted
-Date: Sun, 28 Apr 2019 10:01:19 +0530
-In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
-References: <20190428043121.30925-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:45080 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726322AbfDZUpl (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 26 Apr 2019 16:45:41 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 5/7] generic: verify ciphertext of v1 encryption policies with AES-256
+Date: Fri, 26 Apr 2019 13:41:51 -0700
+Message-Id: <20190426204153.101861-6-ebiggers@kernel.org>
+In-Reply-To: <20190426204153.101861-1-ebiggers@kernel.org>
+References: <20190426204153.101861-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190428043121.30925-12-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-For subpage-sized blocks, the initial logical block number mapped by a
-page can be different from page->index. Hence this commit adds code to
-compute the first logical block mapped by the page and also the page
-range to be encrypted.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Verify ciphertext for v1 encryption policies that use AES-256-XTS to
+encrypt file contents and AES-256-CTS-CBC to encrypt file names.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/page-io.c | 9 +++++++--
- 1 file changed, 7 insertions(+), 2 deletions(-)
+ tests/generic/700     | 41 +++++++++++++++++++++++++++++++++++++++++
+ tests/generic/700.out |  5 +++++
+ tests/generic/group   |  1 +
+ 3 files changed, 47 insertions(+)
+ create mode 100755 tests/generic/700
+ create mode 100644 tests/generic/700.out
 
-diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-index 3e9298e6a705..75485ee9e800 100644
---- a/fs/ext4/page-io.c
-+++ b/fs/ext4/page-io.c
-@@ -418,6 +418,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
- {
- 	struct page *data_page = NULL;
- 	struct inode *inode = page->mapping->host;
-+	u64 page_blk;
- 	unsigned block_start;
- 	struct buffer_head *bh, *head;
- 	int ret = 0;
-@@ -478,10 +479,14 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
- 
- 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit) {
- 		gfp_t gfp_flags = GFP_NOFS;
-+		unsigned int page_bytes;
+diff --git a/tests/generic/700 b/tests/generic/700
+new file mode 100755
+index 00000000..c6dc8b90
+--- /dev/null
++++ b/tests/generic/700
+@@ -0,0 +1,41 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/700
++#
++# Verify ciphertext for v1 encryption policies that use AES-256-XTS to encrypt
++# file contents and AES-256-CTS-CBC to encrypt file names.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
 +
-+		page_bytes = round_up(len, i_blocksize(inode));
-+		page_blk = page->index << (PAGE_SHIFT - inode->i_blkbits);
- 
- 	retry_encrypt:
--		data_page = fscrypt_encrypt_page(inode, page, PAGE_SIZE, 0,
--						page->index, gfp_flags);
-+		data_page = fscrypt_encrypt_page(inode, page, page_bytes, 0,
-+						page_blk, gfp_flags);
- 		if (IS_ERR(data_page)) {
- 			ret = PTR_ERR(data_page);
- 			if (ret == -ENOMEM && wbc->sync_mode == WB_SYNC_ALL) {
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++
++_verify_ciphertext_for_encryption_policy AES-256-XTS AES-256-CTS-CBC
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/700.out b/tests/generic/700.out
+new file mode 100644
+index 00000000..ea2de143
+--- /dev/null
++++ b/tests/generic/700.out
+@@ -0,0 +1,5 @@
++QA output created by 700
++
++Verifying ciphertext with parameters:
++	contents_encryption_mode: AES-256-XTS
++	filenames_encryption_mode: AES-256-CTS-CBC
+diff --git a/tests/generic/group b/tests/generic/group
+index 40deb4d0..22e5c028 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -547,3 +547,4 @@
+ 542 auto quick clone
+ 543 auto quick clone
+ 544 auto quick clone
++700 auto quick encrypt
 -- 
-2.19.1
+2.21.0.593.g511ec345e18-goog
