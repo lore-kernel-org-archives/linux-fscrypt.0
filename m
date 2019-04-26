@@ -1,90 +1,108 @@
-Return-Path: <SRS0=XRRt=SO=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [RFC PATCH 00/14] Consolidate Post read processing code
-Date: Fri, 12 Apr 2019 22:40:27 +0530
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:45106 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726957AbfDZUpm (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 26 Apr 2019 16:45:42 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 7/7] generic: verify ciphertext of v1 encryption policies with Adiantum
+Date: Fri, 26 Apr 2019 13:41:53 -0700
+Message-Id: <20190426204153.101861-8-ebiggers@kernel.org>
+In-Reply-To: <20190426204153.101861-1-ebiggers@kernel.org>
+References: <20190426204153.101861-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190412171041.31995-1-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patchset moves the "post read processing" code into a file of its
-own (i.e. fs/post_read_process.c) and modifies the generic
-do_mpage_readpge() to make use of the functionality provided. With
-these changes in place, the patchset changes Ext4 to use
-mpage_readpage[s] instead of its own custom ext4_readpage[s]()
-functions. This is done to reduce duplicity of code across
-filesystems. Also, Post read processing sources will be built only if
-one of CONFIG_FS_ENCRYPTION and CONFIG_FS_VERITY is enabled.
+From: Eric Biggers <ebiggers@google.com>
 
-Members of "struct fscrypt_ctx" that tracked status of a "write"
-operation are now made an anonymous structure since the decryption
-state tracking members are now moved into "struct post_read_ctx".
+Verify ciphertext for v1 encryption policies that use Adiantum to
+encrypt file contents and file names.
 
-The patchset also modifies fs/buffer.c and fscrypt functionality to
-get file encryption/decryption to work with subpage-sized blocks.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ tests/generic/702     | 43 +++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/702.out | 10 ++++++++++
+ tests/generic/group   |  1 +
+ 3 files changed, 54 insertions(+)
+ create mode 100755 tests/generic/702
+ create mode 100644 tests/generic/702.out
 
-The following fixes from Eric Biggers are prerequisites for this
-patchset,
-  fscrypt: fix race where ->lookup() marks plaintext dentry as ciphertext
-  fscrypt: only set dentry_operations on ciphertext dentries
-  fscrypt: clear DCACHE_ENCRYPTED_NAME when unaliasing directory
-  fscrypt: fix race allowing rename() and link() of ciphertext dentries
-  fscrypt: clean up and improve dentry revalidation
-
-The patches can also be obtained from,
-"https://github.com/chandanr/linux.git subpage-encryption"
-
-TODO:
-1. The subset of the fscrypt_encrypt_page() that deals with
-   FS_CFLG_OWN_PAGES case still needs to be tested. UBIFS seems to be the
-   only user of this piece of code.
-2. Verity changes needs to be added for F2FS and I will add them in the
-   next patchset based on the review comments obtained for the current
-   patchset.
-
-Chandan Rajendra (14):
-  ext4: Clear BH_Uptodate flag on decryption error
-  Consolidate "post read processing" into a new file
-  fsverity: Add call back to decide if verity check has to be performed
-  fsverity: Add call back to determine readpage limit
-  fs/mpage.c: Integrate post read processing
-  ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
-  Remove the term "bio" from post read processing
-  Add decryption support for sub-pagesized blocks
-  ext4: Decrypt all boundary blocks when doing buffered write
-  ext4: Decrypt the block that needs to be partially zeroed
-  fscrypt_encrypt_page: Loop across all blocks mapped by a page range
-  ext4: Compute logical block and the page range to be encrypted
-  fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
-  ext4: Enable encryption for subpage-sized blocks
-
- Documentation/filesystems/fscrypt.rst |   4 +-
- fs/Makefile                           |   4 +
- fs/buffer.c                           |  82 +++--
- fs/crypto/bio.c                       | 109 ++++---
- fs/crypto/crypto.c                    |  73 +++--
- fs/crypto/fscrypt_private.h           |   3 +
- fs/ext4/Makefile                      |   2 +-
- fs/ext4/ext4.h                        |   2 -
- fs/ext4/inode.c                       |  47 ++-
- fs/ext4/page-io.c                     |   9 +-
- fs/ext4/readpage.c                    | 445 --------------------------
- fs/ext4/super.c                       |  40 ++-
- fs/f2fs/data.c                        | 148 ++-------
- fs/f2fs/super.c                       |   9 +-
- fs/mpage.c                            |  45 ++-
- fs/post_read_process.c                | 155 +++++++++
- fs/verity/verify.c                    |  12 +
- include/linux/buffer_head.h           |   1 +
- include/linux/fscrypt.h               |  20 +-
- include/linux/fsverity.h              |   2 +
- include/linux/post_read_process.h     |  22 ++
- 21 files changed, 503 insertions(+), 731 deletions(-)
- delete mode 100644 fs/ext4/readpage.c
- create mode 100644 fs/post_read_process.c
- create mode 100644 include/linux/post_read_process.h
-
+diff --git a/tests/generic/702 b/tests/generic/702
+new file mode 100755
+index 00000000..c7ac7be4
+--- /dev/null
++++ b/tests/generic/702
+@@ -0,0 +1,43 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/702
++#
++# Verify ciphertext for v1 encryption policies that use Adiantum to encrypt file
++# contents and file names.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++
++# Test both with and without the DIRECT_KEY flag.
++_verify_ciphertext_for_encryption_policy Adiantum Adiantum
++_verify_ciphertext_for_encryption_policy Adiantum Adiantum direct
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/702.out b/tests/generic/702.out
+new file mode 100644
+index 00000000..0dd80dae
+--- /dev/null
++++ b/tests/generic/702.out
+@@ -0,0 +1,10 @@
++QA output created by 702
++
++Verifying ciphertext with parameters:
++	contents_encryption_mode: Adiantum
++	filenames_encryption_mode: Adiantum
++
++Verifying ciphertext with parameters:
++	contents_encryption_mode: Adiantum
++	filenames_encryption_mode: Adiantum
++	options: direct
+diff --git a/tests/generic/group b/tests/generic/group
+index 6bb793cb..f6672b93 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -549,3 +549,4 @@
+ 544 auto quick clone
+ 700 auto quick encrypt
+ 701 auto quick encrypt
++702 auto quick encrypt
 -- 
-2.19.1
+2.21.0.593.g511ec345e18-goog
