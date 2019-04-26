@@ -1,84 +1,97 @@
-Return-Path: <SRS0=har8=S2=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V1 11/14] fscrypt_encrypt_page: Loop across all blocks mapped by a page range
-Date: Wed, 24 Apr 2019 10:07:27 +0530
-In-Reply-To: <20190424043730.13683-1-chandan@linux.ibm.com>
-References: <20190424043730.13683-1-chandan@linux.ibm.com>
+Return-Path: <linux-ext4-owner@vger.kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 6/7] generic: verify ciphertext of v1 encryption policies with AES-128
+Date: Fri, 26 Apr 2019 13:41:52 -0700
+Message-Id: <20190426204153.101861-7-ebiggers@kernel.org>
+In-Reply-To: <20190426204153.101861-1-ebiggers@kernel.org>
+References: <20190426204153.101861-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190424043730.13683-12-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
+Sender: linux-ext4-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-For subpage-sized blocks, this commit now encrypts all blocks mapped by
-a page range.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Verify ciphertext for v1 encryption policies that use AES-128-CBC-ESSIV
+to encrypt file contents and AES-128-CTS-CBC to encrypt file names.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/crypto.c | 37 +++++++++++++++++++++++++------------
- 1 file changed, 25 insertions(+), 12 deletions(-)
+ tests/generic/701     | 41 +++++++++++++++++++++++++++++++++++++++++
+ tests/generic/701.out |  5 +++++
+ tests/generic/group   |  1 +
+ 3 files changed, 47 insertions(+)
+ create mode 100755 tests/generic/701
+ create mode 100644 tests/generic/701.out
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 4f0d832cae71..2d65b431563f 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -242,18 +242,26 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- {
- 	struct fscrypt_ctx *ctx;
- 	struct page *ciphertext_page = page;
-+	int i, page_nr_blks;
- 	int err;
- 
- 	BUG_ON(len % FS_CRYPTO_BLOCK_SIZE != 0);
- 
-+	page_nr_blks = len >> inode->i_blkbits;
+diff --git a/tests/generic/701 b/tests/generic/701
+new file mode 100755
+index 00000000..d477f5bd
+--- /dev/null
++++ b/tests/generic/701
+@@ -0,0 +1,41 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/701
++#
++# Verify ciphertext for v1 encryption policies that use AES-128-CBC-ESSIV to
++# encrypt file contents and AES-128-CTS-CBC to encrypt file names.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
 +
- 	if (inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES) {
- 		/* with inplace-encryption we just encrypt the page */
--		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk_num, page,
--					     ciphertext_page, len, offs,
--					     gfp_flags);
--		if (err)
--			return ERR_PTR(err);
--
-+		for (i = 0; i < page_nr_blks; i++) {
-+			err = fscrypt_do_page_crypto(inode, FS_ENCRYPT,
-+						lblk_num, page,
-+						ciphertext_page,
-+						i_blocksize(inode), offs,
-+						gfp_flags);
-+			if (err)
-+				return ERR_PTR(err);
-+			++lblk_num;
-+			offs += i_blocksize(inode);
-+		}
- 		return ciphertext_page;
- 	}
- 
-@@ -269,12 +277,17 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- 		goto errout;
- 
- 	ctx->control_page = page;
--	err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk_num,
--				     page, ciphertext_page, len, offs,
--				     gfp_flags);
--	if (err) {
--		ciphertext_page = ERR_PTR(err);
--		goto errout;
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
 +
-+	for (i = 0; i < page_nr_blks; i++) {
-+		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk_num,
-+					page, ciphertext_page,
-+					i_blocksize(inode), offs, gfp_flags);
-+		if (err) {
-+			ciphertext_page = ERR_PTR(err);
-+			goto errout;
-+		}
-+		++lblk_num;
-+		offs += i_blocksize(inode);
- 	}
- 	SetPagePrivate(ciphertext_page);
- 	set_page_private(ciphertext_page, (unsigned long)ctx);
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++
++_verify_ciphertext_for_encryption_policy AES-128-CBC-ESSIV AES-128-CTS-CBC
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/701.out b/tests/generic/701.out
+new file mode 100644
+index 00000000..cfb6c924
+--- /dev/null
++++ b/tests/generic/701.out
+@@ -0,0 +1,5 @@
++QA output created by 701
++
++Verifying ciphertext with parameters:
++	contents_encryption_mode: AES-128-CBC-ESSIV
++	filenames_encryption_mode: AES-128-CTS-CBC
+diff --git a/tests/generic/group b/tests/generic/group
+index 22e5c028..6bb793cb 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -548,3 +548,4 @@
+ 543 auto quick clone
+ 544 auto quick clone
+ 700 auto quick encrypt
++701 auto quick encrypt
 -- 
-2.19.1
+2.21.0.593.g511ec345e18-goog
