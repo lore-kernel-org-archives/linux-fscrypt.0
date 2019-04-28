@@ -1,46 +1,62 @@
-Return-Path: <SRS0=kYvk=SQ=linux.ibm.com=chandan@kernel.org>
+Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
 From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [RFC PATCH V2 01/14] ext4: Clear BH_Uptodate flag on decryption error
-Date: Sun, 14 Apr 2019 17:07:51 +0530
-In-Reply-To: <20190414113804.26769-1-chandan@linux.ibm.com>
-References: <20190414113804.26769-1-chandan@linux.ibm.com>
+Subject: [PATCH V2 13/13] ext4: Enable encryption for subpage-sized blocks
+Date: Sun, 28 Apr 2019 10:01:21 +0530
+In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
+References: <20190428043121.30925-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190414113804.26769-2-chandan@linux.ibm.com>
+Message-Id: <20190428043121.30925-14-chandan@linux.ibm.com>
 To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On an error return from fscrypt_decrypt_page(), ext4_block_write_begin()
-can return with the page's buffer_head marked with BH_Uptodate
-flag. This commit clears the BH_Uptodate flag in such cases.
+Now that we have the code to support encryption for subpage-sized
+blocks, this commit removes the conditional check in filesystem mount
+code.
+
+The commit also changes the support statement in
+Documentation/filesystems/fscrypt.rst to reflect the fact that
+encryption of filesystems with blocksize less than page size now works.
 
 Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/ext4/inode.c | 8 ++++++--
- 1 file changed, 6 insertions(+), 2 deletions(-)
+ Documentation/filesystems/fscrypt.rst | 4 ++--
+ fs/ext4/super.c                       | 7 -------
+ 2 files changed, 2 insertions(+), 9 deletions(-)
 
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 3c2e7f5a6c84..05b258db8673 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -1225,11 +1225,15 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
- 		if (!buffer_uptodate(*wait_bh))
- 			err = -EIO;
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 08c23b60e016..ff2fea121da9 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -213,8 +213,8 @@ Contents encryption
+ -------------------
+ 
+ For file contents, each filesystem block is encrypted independently.
+-Currently, only the case where the filesystem block size is equal to
+-the system's page size (usually 4096 bytes) is supported.
++Starting from Linux kernel 5.3, encryption of filesystems with block
++size less than system's page size is supported.
+ 
+ Each block's IV is set to the logical block number within the file as
+ a little endian number, except that:
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 8e483afbaa2e..4acfefa98ec5 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -4432,13 +4432,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
+ 		}
  	}
--	if (unlikely(err))
-+	if (unlikely(err)) {
- 		page_zero_new_buffers(page, from, to);
--	else if (decrypt)
-+	} else if (decrypt) {
- 		err = fscrypt_decrypt_page(page->mapping->host, page,
- 				PAGE_SIZE, 0, page->index);
-+		if (err)
-+			clear_buffer_uptodate(*wait_bh);
-+	}
-+
- 	return err;
- }
- #endif
+ 
+-	if ((DUMMY_ENCRYPTION_ENABLED(sbi) || ext4_has_feature_encrypt(sb)) &&
+-	    (blocksize != PAGE_SIZE)) {
+-		ext4_msg(sb, KERN_ERR,
+-			 "Unsupported blocksize for fs encryption");
+-		goto failed_mount_wq;
+-	}
+-
+ 	if (DUMMY_ENCRYPTION_ENABLED(sbi) && !sb_rdonly(sb) &&
+ 	    !ext4_has_feature_encrypt(sb)) {
+ 		ext4_set_feature_encrypt(sb);
 -- 
 2.19.1
