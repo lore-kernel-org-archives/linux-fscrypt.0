@@ -1,122 +1,98 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:37252 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725942AbfD3QvS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 30 Apr 2019 12:51:18 -0400
-Date: Tue, 30 Apr 2019 09:51:15 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: Re: [PATCH V2 12/13] fscrypt_zeroout_range: Encrypt all zeroed out
- blocks of a page
-Message-ID: <20190430165114.GA48973@gmail.com>
+Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH V2 12/13] fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
+Date: Sun, 28 Apr 2019 10:01:20 +0530
+In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
 References: <20190428043121.30925-1-chandan@linux.ibm.com>
- <20190428043121.30925-13-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190428043121.30925-13-chandan@linux.ibm.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Chandan Rajendra <chandan@linux.ibm.com>
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Content-Transfer-Encoding: 8bit
+Message-Id: <20190428043121.30925-13-chandan@linux.ibm.com>
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Sun, Apr 28, 2019 at 10:01:20AM +0530, Chandan Rajendra wrote:
-> For subpage-sized blocks, this commit adds code to encrypt all zeroed
-> out blocks mapped by a page.
-> 
-> Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
-> ---
->  fs/crypto/bio.c | 40 ++++++++++++++++++----------------------
->  1 file changed, 18 insertions(+), 22 deletions(-)
-> 
-> diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
-> index 856f4694902d..46dd2ec50c7d 100644
-> --- a/fs/crypto/bio.c
-> +++ b/fs/crypto/bio.c
-> @@ -108,29 +108,23 @@ EXPORT_SYMBOL(fscrypt_pullback_bio_page);
->  int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
->  				sector_t pblk, unsigned int len)
->  {
-> -	struct fscrypt_ctx *ctx;
->  	struct page *ciphertext_page = NULL;
->  	struct bio *bio;
-> +	u64 total_bytes, page_bytes;
+For subpage-sized blocks, this commit adds code to encrypt all zeroed
+out blocks mapped by a page.
 
-page_bytes should be 'unsigned int', since it's <= PAGE_SIZE.
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+---
+ fs/crypto/bio.c | 40 ++++++++++++++++++----------------------
+ 1 file changed, 18 insertions(+), 22 deletions(-)
 
->  	int ret, err = 0;
->  
-> -	BUG_ON(inode->i_sb->s_blocksize != PAGE_SIZE);
-> -
-> -	ctx = fscrypt_get_ctx(inode, GFP_NOFS);
-> -	if (IS_ERR(ctx))
-> -		return PTR_ERR(ctx);
-> +	total_bytes = len << inode->i_blkbits;
-
-Should cast len to 'u64' here, in case it's greater than UINT_MAX / blocksize.
-
->  
-> -	ciphertext_page = fscrypt_alloc_bounce_page(ctx, GFP_NOWAIT);
-> -	if (IS_ERR(ciphertext_page)) {
-> -		err = PTR_ERR(ciphertext_page);
-> -		goto errout;
-> -	}
-> +	while (total_bytes) {
-> +		page_bytes = min_t(u64, total_bytes, PAGE_SIZE);
->  
-> -	while (len--) {
-> -		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk,
-> -					     ZERO_PAGE(0), ciphertext_page,
-> -					     PAGE_SIZE, 0, GFP_NOFS);
-> -		if (err)
-> +		ciphertext_page = fscrypt_encrypt_page(inode, ZERO_PAGE(0),
-> +						page_bytes, 0, lblk, GFP_NOFS);
-> +		if (IS_ERR(ciphertext_page)) {
-> +			err = PTR_ERR(ciphertext_page);
-> +			ciphertext_page = NULL;
->  			goto errout;
-> +		}
-
-'ciphertext_page' is leaked after each loop iteration.  Did you mean to free it,
-or did you mean to reuse it for subsequent iterations?
-
->  
->  		bio = bio_alloc(GFP_NOWAIT, 1);
->  		if (!bio) {
-> @@ -141,9 +135,8 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
->  		bio->bi_iter.bi_sector =
->  			pblk << (inode->i_sb->s_blocksize_bits - 9);
-
-This line uses ->s_blocksize_bits, but your new code uses ->i_blkbits.  AFAIK
-they'll always be the same, but please pick one or the other to use.
-
->  		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
-> -		ret = bio_add_page(bio, ciphertext_page,
-> -					inode->i_sb->s_blocksize, 0);
-> -		if (ret != inode->i_sb->s_blocksize) {
-> +		ret = bio_add_page(bio, ciphertext_page, page_bytes, 0);
-> +		if (ret != page_bytes) {
->  			/* should never happen! */
->  			WARN_ON(1);
->  			bio_put(bio);
-> @@ -156,12 +149,15 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
->  		bio_put(bio);
->  		if (err)
->  			goto errout;
-> -		lblk++;
-> -		pblk++;
-> +
-> +		lblk += page_bytes >> inode->i_blkbits;
-> +		pblk += page_bytes >> inode->i_blkbits;
-> +		total_bytes -= page_bytes;
->  	}
->  	err = 0;
->  errout:
-> -	fscrypt_release_ctx(ctx);
-> +	if (!IS_ERR_OR_NULL(ciphertext_page))
-> +		fscrypt_restore_control_page(ciphertext_page);
->  	return err;
->  }
->  EXPORT_SYMBOL(fscrypt_zeroout_range);
-> -- 
-> 2.19.1
-> 
+diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+index 856f4694902d..46dd2ec50c7d 100644
+--- a/fs/crypto/bio.c
++++ b/fs/crypto/bio.c
+@@ -108,29 +108,23 @@ EXPORT_SYMBOL(fscrypt_pullback_bio_page);
+ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+ 				sector_t pblk, unsigned int len)
+ {
+-	struct fscrypt_ctx *ctx;
+ 	struct page *ciphertext_page = NULL;
+ 	struct bio *bio;
++	u64 total_bytes, page_bytes;
+ 	int ret, err = 0;
+ 
+-	BUG_ON(inode->i_sb->s_blocksize != PAGE_SIZE);
+-
+-	ctx = fscrypt_get_ctx(inode, GFP_NOFS);
+-	if (IS_ERR(ctx))
+-		return PTR_ERR(ctx);
++	total_bytes = len << inode->i_blkbits;
+ 
+-	ciphertext_page = fscrypt_alloc_bounce_page(ctx, GFP_NOWAIT);
+-	if (IS_ERR(ciphertext_page)) {
+-		err = PTR_ERR(ciphertext_page);
+-		goto errout;
+-	}
++	while (total_bytes) {
++		page_bytes = min_t(u64, total_bytes, PAGE_SIZE);
+ 
+-	while (len--) {
+-		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk,
+-					     ZERO_PAGE(0), ciphertext_page,
+-					     PAGE_SIZE, 0, GFP_NOFS);
+-		if (err)
++		ciphertext_page = fscrypt_encrypt_page(inode, ZERO_PAGE(0),
++						page_bytes, 0, lblk, GFP_NOFS);
++		if (IS_ERR(ciphertext_page)) {
++			err = PTR_ERR(ciphertext_page);
++			ciphertext_page = NULL;
+ 			goto errout;
++		}
+ 
+ 		bio = bio_alloc(GFP_NOWAIT, 1);
+ 		if (!bio) {
+@@ -141,9 +135,8 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+ 		bio->bi_iter.bi_sector =
+ 			pblk << (inode->i_sb->s_blocksize_bits - 9);
+ 		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
+-		ret = bio_add_page(bio, ciphertext_page,
+-					inode->i_sb->s_blocksize, 0);
+-		if (ret != inode->i_sb->s_blocksize) {
++		ret = bio_add_page(bio, ciphertext_page, page_bytes, 0);
++		if (ret != page_bytes) {
+ 			/* should never happen! */
+ 			WARN_ON(1);
+ 			bio_put(bio);
+@@ -156,12 +149,15 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+ 		bio_put(bio);
+ 		if (err)
+ 			goto errout;
+-		lblk++;
+-		pblk++;
++
++		lblk += page_bytes >> inode->i_blkbits;
++		pblk += page_bytes >> inode->i_blkbits;
++		total_bytes -= page_bytes;
+ 	}
+ 	err = 0;
+ errout:
+-	fscrypt_release_ctx(ctx);
++	if (!IS_ERR_OR_NULL(ciphertext_page))
++		fscrypt_restore_control_page(ciphertext_page);
+ 	return err;
+ }
+ EXPORT_SYMBOL(fscrypt_zeroout_range);
+-- 
+2.19.1
