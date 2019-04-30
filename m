@@ -1,364 +1,486 @@
-Return-Path: <SRS0=kYvk=SQ=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [RFC PATCH V2 06/14] ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
-Date: Sun, 14 Apr 2019 17:07:56 +0530
-In-Reply-To: <20190414113804.26769-1-chandan@linux.ibm.com>
-References: <20190414113804.26769-1-chandan@linux.ibm.com>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Date: Mon, 29 Apr 2019 17:38:18 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Message-ID: <20190430003817.GC251866@gmail.com>
+References: <20190428043121.30925-1-chandan@linux.ibm.com>
+ <20190428043121.30925-8-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190414113804.26769-7-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
+Content-Disposition: inline
+In-Reply-To: <20190428043121.30925-8-chandan@linux.ibm.com>
+Subject: Re: [f2fs-dev] [PATCH V2 07/13] Add decryption support for
+ sub-pagesized blocks
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: Chandan Rajendra <chandan@linux.ibm.com>
+Cc: tytso@mit.edu, linux-f2fs-devel@lists.sourceforge.net, hch@infradead.org, linux-fscrypt@vger.kernel.org, adilger.kernel@dilger.ca, linux-fsdevel@vger.kernel.org, jaegeuk@kernel.org, linux-ext4@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Now that do_mpage_readpage() is "post read process" aware, this commit
-gets ext4_readpage[s] to use mpage_readpage[s] and deletes ext4's
-readpage.c since the associated functionality is not required anymore.
+On Sun, Apr 28, 2019 at 10:01:15AM +0530, Chandan Rajendra wrote:
+> To support decryption of sub-pagesized blocks this commit adds code to,
+> 1. Track buffer head in "struct read_callbacks_ctx".
+> 2. Pass buffer head argument to all read callbacks.
+> 3. In the corresponding endio, loop across all the blocks mapped by the
+>    page, decrypting each block in turn.
+> 
+> Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+> ---
+>  fs/buffer.c                    | 83 +++++++++++++++++++++++++---------
+>  fs/crypto/bio.c                | 50 +++++++++++++-------
+>  fs/crypto/crypto.c             | 19 +++++++-
+>  fs/f2fs/data.c                 |  2 +-
+>  fs/mpage.c                     |  2 +-
+>  fs/read_callbacks.c            | 53 ++++++++++++++--------
+>  include/linux/buffer_head.h    |  1 +
+>  include/linux/read_callbacks.h |  5 +-
+>  8 files changed, 154 insertions(+), 61 deletions(-)
+> 
+> diff --git a/fs/buffer.c b/fs/buffer.c
+> index ce357602f471..f324727e24bb 100644
+> --- a/fs/buffer.c
+> +++ b/fs/buffer.c
+> @@ -45,6 +45,7 @@
+>  #include <linux/bit_spinlock.h>
+>  #include <linux/pagevec.h>
+>  #include <linux/sched/mm.h>
+> +#include <linux/read_callbacks.h>
+>  #include <trace/events/block.h>
+>  
+>  static int fsync_buffers_list(spinlock_t *lock, struct list_head *list);
+> @@ -245,11 +246,7 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
+>  	return ret;
+>  }
+>  
+> -/*
+> - * I/O completion handler for block_read_full_page() - pages
+> - * which come unlocked at the end of I/O.
+> - */
+> -static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+> +void end_buffer_page_read(struct buffer_head *bh)
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- fs/ext4/Makefile   |   2 +-
- fs/ext4/inode.c    |   5 +-
- fs/ext4/readpage.c | 295 ---------------------------------------------
- 3 files changed, 3 insertions(+), 299 deletions(-)
- delete mode 100644 fs/ext4/readpage.c
+I think __end_buffer_async_read() would be a better name, since the *page* isn't
+necessarily done yet.
 
-diff --git a/fs/ext4/Makefile b/fs/ext4/Makefile
-index 8fdfcd3c3e04..7c38803a808d 100644
---- a/fs/ext4/Makefile
-+++ b/fs/ext4/Makefile
-@@ -8,7 +8,7 @@ obj-$(CONFIG_EXT4_FS) += ext4.o
- ext4-y	:= balloc.o bitmap.o block_validity.o dir.o ext4_jbd2.o extents.o \
- 		extents_status.o file.o fsmap.o fsync.o hash.o ialloc.o \
- 		indirect.o inline.o inode.o ioctl.o mballoc.o migrate.o \
--		mmp.o move_extent.o namei.o page-io.o readpage.o resize.o \
-+		mmp.o move_extent.o namei.o page-io.o resize.o \
- 		super.o symlink.o sysfs.o xattr.o xattr_trusted.o xattr_user.o
- 
- ext4-$(CONFIG_EXT4_FS_POSIX_ACL)	+= acl.o
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 05b258db8673..1327e04334df 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3353,8 +3353,7 @@ static int ext4_readpage(struct file *file, struct page *page)
- 		ret = ext4_readpage_inline(inode, page);
- 
- 	if (ret == -EAGAIN)
--		return ext4_mpage_readpages(page->mapping, NULL, page, 1,
--						false);
-+		return mpage_readpage(page, ext4_get_block);
- 
- 	return ret;
- }
-@@ -3369,7 +3368,7 @@ ext4_readpages(struct file *file, struct address_space *mapping,
- 	if (ext4_has_inline_data(inode))
- 		return 0;
- 
--	return ext4_mpage_readpages(mapping, pages, NULL, nr_pages, true);
-+	return mpage_readpages(mapping, pages, nr_pages, ext4_get_block);
- }
- 
- static void ext4_invalidatepage(struct page *page, unsigned int offset,
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-deleted file mode 100644
-index 8943fc41fd33..000000000000
---- a/fs/ext4/readpage.c
-+++ /dev/null
-@@ -1,295 +0,0 @@
--// SPDX-License-Identifier: GPL-2.0
--/*
-- * linux/fs/ext4/readpage.c
-- *
-- * Copyright (C) 2002, Linus Torvalds.
-- * Copyright (C) 2015, Google, Inc.
-- *
-- * This was originally taken from fs/mpage.c
-- *
-- * The intent is the ext4_mpage_readpages() function here is intended
-- * to replace mpage_readpages() in the general case, not just for
-- * encrypted files.  It has some limitations (see below), where it
-- * will fall back to read_block_full_page(), but these limitations
-- * should only be hit when page_size != block_size.
-- *
-- * This will allow us to attach a callback function to support ext4
-- * encryption.
-- *
-- * If anything unusual happens, such as:
-- *
-- * - encountering a page which has buffers
-- * - encountering a page which has a non-hole after a hole
-- * - encountering a page with non-contiguous blocks
-- *
-- * then this code just gives up and calls the buffer_head-based read function.
-- * It does handle a page which has holes at the end - that is a common case:
-- * the end-of-file on blocksize < PAGE_SIZE setups.
-- *
-- */
--
--#include <linux/kernel.h>
--#include <linux/export.h>
--#include <linux/mm.h>
--#include <linux/kdev_t.h>
--#include <linux/gfp.h>
--#include <linux/bio.h>
--#include <linux/fs.h>
--#include <linux/buffer_head.h>
--#include <linux/blkdev.h>
--#include <linux/highmem.h>
--#include <linux/prefetch.h>
--#include <linux/mpage.h>
--#include <linux/writeback.h>
--#include <linux/backing-dev.h>
--#include <linux/pagevec.h>
--#include <linux/cleancache.h>
--#include <linux/post_read_process.h>
--
--#include "ext4.h"
--
--static inline bool ext4_bio_encrypted(struct bio *bio)
--{
--#ifdef CONFIG_FS_ENCRYPTION
--	return unlikely(bio->bi_private != NULL);
--#else
--	return false;
--#endif
--}
--
--/*
-- * I/O completion handler for multipage BIOs.
-- *
-- * The mpage code never puts partial pages into a BIO (except for end-of-file).
-- * If a page does not map to a contiguous run of blocks then it simply falls
-- * back to block_read_full_page().
-- *
-- * Why is this?  If a page's completion depends on a number of different BIOs
-- * which can complete in any order (or at the same time) then determining the
-- * status of that page is hard.  See end_buffer_async_read() for the details.
-- * There is no point in duplicating all that complexity.
-- */
--static void mpage_end_io(struct bio *bio)
--{
--	if (bio_post_read_required(bio)) {
--		struct bio_post_read_ctx *ctx = bio->bi_private;
--
--		bio_post_read_processing(ctx);
--		return;
--	}
--	end_bio_post_read_processing(bio);
--}
--
--static inline loff_t ext4_readpage_limit(struct inode *inode)
--{
--#ifdef CONFIG_FS_VERITY
--	if (IS_VERITY(inode)) {
--		if (inode->i_verity_info)
--			/* limit to end of metadata region */
--			return fsverity_full_i_size(inode);
--		/*
--		 * fsverity_info is currently being set up and no user reads are
--		 * allowed yet.  It's easiest to just not enforce a limit yet.
--		 */
--		return inode->i_sb->s_maxbytes;
--	}
--#endif
--	return i_size_read(inode);
--}
--
--int ext4_mpage_readpages(struct address_space *mapping,
--			 struct list_head *pages, struct page *page,
--			 unsigned nr_pages, bool is_readahead)
--{
--	struct bio *bio = NULL;
--	sector_t last_block_in_bio = 0;
--
--	struct inode *inode = mapping->host;
--	const unsigned blkbits = inode->i_blkbits;
--	const unsigned blocks_per_page = PAGE_SIZE >> blkbits;
--	const unsigned blocksize = 1 << blkbits;
--	sector_t block_in_file;
--	sector_t last_block;
--	sector_t last_block_in_file;
--	sector_t blocks[MAX_BUF_PER_PAGE];
--	unsigned page_block;
--	struct block_device *bdev = inode->i_sb->s_bdev;
--	int length;
--	unsigned relative_block = 0;
--	struct ext4_map_blocks map;
--
--	map.m_pblk = 0;
--	map.m_lblk = 0;
--	map.m_len = 0;
--	map.m_flags = 0;
--
--	for (; nr_pages; nr_pages--) {
--		int fully_mapped = 1;
--		unsigned first_hole = blocks_per_page;
--
--		prefetchw(&page->flags);
--		if (pages) {
--			page = lru_to_page(pages);
--			list_del(&page->lru);
--			if (add_to_page_cache_lru(page, mapping, page->index,
--				  readahead_gfp_mask(mapping)))
--				goto next_page;
--		}
--
--		if (page_has_buffers(page))
--			goto confused;
--
--		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
--		last_block = block_in_file + nr_pages * blocks_per_page;
--		last_block_in_file = (ext4_readpage_limit(inode) +
--				      blocksize - 1) >> blkbits;
--		if (last_block > last_block_in_file)
--			last_block = last_block_in_file;
--		page_block = 0;
--
--		/*
--		 * Map blocks using the previous result first.
--		 */
--		if ((map.m_flags & EXT4_MAP_MAPPED) &&
--		    block_in_file > map.m_lblk &&
--		    block_in_file < (map.m_lblk + map.m_len)) {
--			unsigned map_offset = block_in_file - map.m_lblk;
--			unsigned last = map.m_len - map_offset;
--
--			for (relative_block = 0; ; relative_block++) {
--				if (relative_block == last) {
--					/* needed? */
--					map.m_flags &= ~EXT4_MAP_MAPPED;
--					break;
--				}
--				if (page_block == blocks_per_page)
--					break;
--				blocks[page_block] = map.m_pblk + map_offset +
--					relative_block;
--				page_block++;
--				block_in_file++;
--			}
--		}
--
--		/*
--		 * Then do more ext4_map_blocks() calls until we are
--		 * done with this page.
--		 */
--		while (page_block < blocks_per_page) {
--			if (block_in_file < last_block) {
--				map.m_lblk = block_in_file;
--				map.m_len = last_block - block_in_file;
--
--				if (ext4_map_blocks(NULL, inode, &map, 0) < 0) {
--				set_error_page:
--					SetPageError(page);
--					zero_user_segment(page, 0,
--							  PAGE_SIZE);
--					unlock_page(page);
--					goto next_page;
--				}
--			}
--			if ((map.m_flags & EXT4_MAP_MAPPED) == 0) {
--				fully_mapped = 0;
--				if (first_hole == blocks_per_page)
--					first_hole = page_block;
--				page_block++;
--				block_in_file++;
--				continue;
--			}
--			if (first_hole != blocks_per_page)
--				goto confused;		/* hole -> non-hole */
--
--			/* Contiguous blocks? */
--			if (page_block && blocks[page_block-1] != map.m_pblk-1)
--				goto confused;
--			for (relative_block = 0; ; relative_block++) {
--				if (relative_block == map.m_len) {
--					/* needed? */
--					map.m_flags &= ~EXT4_MAP_MAPPED;
--					break;
--				} else if (page_block == blocks_per_page)
--					break;
--				blocks[page_block] = map.m_pblk+relative_block;
--				page_block++;
--				block_in_file++;
--			}
--		}
--		if (first_hole != blocks_per_page) {
--			zero_user_segment(page, first_hole << blkbits,
--					  PAGE_SIZE);
--			if (first_hole == 0) {
--				if (!fsverity_check_hole(inode, page))
--					goto set_error_page;
--				SetPageUptodate(page);
--				unlock_page(page);
--				goto next_page;
--			}
--		} else if (fully_mapped) {
--			SetPageMappedToDisk(page);
--		}
--		if (fully_mapped && blocks_per_page == 1 &&
--		    !PageUptodate(page) && cleancache_get_page(page) == 0) {
--			SetPageUptodate(page);
--			goto confused;
--		}
--
--		/*
--		 * This page will go to BIO.  Do we need to send this
--		 * BIO off first?
--		 */
--		if (bio && (last_block_in_bio != blocks[0] - 1)) {
--		submit_and_realloc:
--			submit_bio(bio);
--			bio = NULL;
--		}
--		if (bio == NULL) {
--			struct bio_post_read_ctx *ctx;
--
--			bio = bio_alloc(GFP_KERNEL,
--				min_t(int, nr_pages, BIO_MAX_PAGES));
--			if (!bio)
--				goto set_error_page;
--			ctx = get_bio_post_read_ctx(inode, bio, page->index);
--			if (IS_ERR(ctx)) {
--				bio_put(bio);
--				goto set_error_page;
--			}
--			bio_set_dev(bio, bdev);
--			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
--			bio->bi_end_io = mpage_end_io;
--			bio->bi_private = ctx;
--			bio_set_op_attrs(bio, REQ_OP_READ,
--						is_readahead ? REQ_RAHEAD : 0);
--		}
--
--		length = first_hole << blkbits;
--		if (bio_add_page(bio, page, length, 0) < length)
--			goto submit_and_realloc;
--
--		if (((map.m_flags & EXT4_MAP_BOUNDARY) &&
--		     (relative_block == map.m_len)) ||
--		    (first_hole != blocks_per_page)) {
--			submit_bio(bio);
--			bio = NULL;
--		} else
--			last_block_in_bio = blocks[blocks_per_page - 1];
--		goto next_page;
--	confused:
--		if (bio) {
--			submit_bio(bio);
--			bio = NULL;
--		}
--		if (!PageUptodate(page))
--			block_read_full_page(page, ext4_get_block);
--		else
--			unlock_page(page);
--	next_page:
--		if (pages)
--			put_page(page);
--	}
--	BUG_ON(pages && !list_empty(pages));
--	if (bio)
--		submit_bio(bio);
--	return 0;
--}
--- 
-2.19.1
+>  {
+>  	unsigned long flags;
+>  	struct buffer_head *first;
+> @@ -257,17 +254,7 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+>  	struct page *page;
+>  	int page_uptodate = 1;
+>  
+> -	BUG_ON(!buffer_async_read(bh));
+> -
+>  	page = bh->b_page;
+> -	if (uptodate) {
+> -		set_buffer_uptodate(bh);
+> -	} else {
+> -		clear_buffer_uptodate(bh);
+> -		buffer_io_error(bh, ", async page read");
+> -		SetPageError(page);
+> -	}
+> -
+>  	/*
+>  	 * Be _very_ careful from here on. Bad things can happen if
+>  	 * two buffer heads end IO at almost the same time and both
+> @@ -305,6 +292,44 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+>  	local_irq_restore(flags);
+>  	return;
+>  }
+> +EXPORT_SYMBOL(end_buffer_page_read);
+
+No need for EXPORT_SYMBOL() here, as this is only called by built-in code.
+
+> +
+> +/*
+> + * I/O completion handler for block_read_full_page() - pages
+> + * which come unlocked at the end of I/O.
+> + */
+
+This comment is no longer correct.  Change to something like:
+
+/*
+ * I/O completion handler for block_read_full_page().  Pages are unlocked after
+ * the I/O completes and the read callbacks (if any) have executed.
+ */
+
+> +static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+> +{
+> +	struct page *page;
+> +
+> +	BUG_ON(!buffer_async_read(bh));
+> +
+> +#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
+> +	if (uptodate && bh->b_private) {
+> +		struct read_callbacks_ctx *ctx = bh->b_private;
+> +
+> +		read_callbacks(ctx);
+> +		return;
+> +	}
+> +
+> +	if (bh->b_private) {
+> +		struct read_callbacks_ctx *ctx = bh->b_private;
+> +
+> +		WARN_ON(uptodate);
+> +		put_read_callbacks_ctx(ctx);
+> +	}
+> +#endif
+
+These details should be handled in read_callbacks code, not here.  AFAICS, all
+you need is a function read_callbacks_end_bh() that returns a bool indicating
+whether it handled the buffer_head or not:
+
+static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+{
+	BUG_ON(!buffer_async_read(bh));
+
+	if (read_callbacks_end_bh(bh, uptodate))
+		return;
+
+	page = bh->b_page;
+	...
+}
+
+Then read_callbacks_end_bh() would check ->b_private and uptodate, and call
+read_callbacks() or put_read_callbacks_ctx() as appropriate.  When
+CONFIG_FS_READ_CALLBACKS=n it would be a stub that always returns false.
+
+> +	page = bh->b_page;
+[...]
+
+>  	}
+> @@ -2292,11 +2323,21 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
+>  	 * the underlying blockdev brought it uptodate (the sct fix).
+>  	 */
+>  	for (i = 0; i < nr; i++) {
+> -		bh = arr[i];
+> -		if (buffer_uptodate(bh))
+> +		bh = arr[i].bh;
+> +		if (buffer_uptodate(bh)) {
+>  			end_buffer_async_read(bh, 1);
+> -		else
+> +		} else {
+> +#if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
+> +			struct read_callbacks_ctx *ctx;
+> +
+> +			ctx = get_read_callbacks_ctx(inode, NULL, bh, arr[i].blk_nr);
+> +			if (WARN_ON(IS_ERR(ctx))) {
+> +				end_buffer_async_read(bh, 0);
+> +				continue;
+> +			}
+> +#endif
+>  			submit_bh(REQ_OP_READ, 0, bh);
+> +		}
+>  	}
+>  	return 0;
+
+Similarly here.  This level of detail doesn't need to be exposed outside of the
+read_callbacks code.  Just call read_callbacks_setup_bh() or something, make it
+return an 'err' rather than the read_callbacks_ctx, and make read_callbacks.h
+stub it out when !CONFIG_FS_READ_CALLBACKS.  There should be no #ifdef here.
+
+> diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+> index 27f5618174f2..856f4694902d 100644
+> --- a/fs/crypto/bio.c
+> +++ b/fs/crypto/bio.c
+> @@ -24,44 +24,62 @@
+>  #include <linux/module.h>
+>  #include <linux/bio.h>
+>  #include <linux/namei.h>
+> +#include <linux/buffer_head.h>
+>  #include <linux/read_callbacks.h>
+>  
+>  #include "fscrypt_private.h"
+>  
+> -static void __fscrypt_decrypt_bio(struct bio *bio, bool done)
+> +static void fscrypt_decrypt(struct bio *bio, struct buffer_head *bh)
+>  {
+> +	struct inode *inode;
+> +	struct page *page;
+>  	struct bio_vec *bv;
+> +	sector_t blk_nr;
+> +	int ret;
+>  	int i;
+>  	struct bvec_iter_all iter_all;
+>  
+> -	bio_for_each_segment_all(bv, bio, i, iter_all) {
+> -		struct page *page = bv->bv_page;
+> -		int ret = fscrypt_decrypt_page(page->mapping->host, page,
+> -				PAGE_SIZE, 0, page->index);
+> +	WARN_ON(!bh && !bio);
+>  
+> +	if (bh) {
+> +		page = bh->b_page;
+> +		inode = page->mapping->host;
+> +
+> +		blk_nr = page->index << (PAGE_SHIFT - inode->i_blkbits);
+> +		blk_nr += (bh_offset(bh) >> inode->i_blkbits);
+> +
+> +		ret = fscrypt_decrypt_page(inode, page, i_blocksize(inode),
+> +					bh_offset(bh), blk_nr);
+>  		if (ret) {
+>  			WARN_ON_ONCE(1);
+>  			SetPageError(page);
+> -		} else if (done) {
+> -			SetPageUptodate(page);
+>  		}
+> -		if (done)
+> -			unlock_page(page);
+> +	} else if (bio) {
+> +		bio_for_each_segment_all(bv, bio, i, iter_all) {
+> +			unsigned int blkbits;
+> +
+> +			page = bv->bv_page;
+> +			inode = page->mapping->host;
+> +			blkbits = inode->i_blkbits;
+> +			blk_nr = page->index << (PAGE_SHIFT - blkbits);
+> +			blk_nr += (bv->bv_offset >> blkbits);
+> +			ret = fscrypt_decrypt_page(page->mapping->host,
+> +						page, bv->bv_len,
+> +						bv->bv_offset, blk_nr);
+> +			if (ret) {
+> +				WARN_ON_ONCE(1);
+> +				SetPageError(page);
+> +			}
+> +		}
+>  	}
+>  }
+
+For clarity, can you make these two different functions?
+fscrypt_decrypt_bio() and fscrypt_decrypt_bh().
+
+FYI, the WARN_ON_ONCE() here was removed in the latest fscrypt tree.
+
+>  
+> -void fscrypt_decrypt_bio(struct bio *bio)
+> -{
+> -	__fscrypt_decrypt_bio(bio, false);
+> -}
+> -EXPORT_SYMBOL(fscrypt_decrypt_bio);
+> -
+>  void fscrypt_decrypt_work(struct work_struct *work)
+>  {
+>  	struct read_callbacks_ctx *ctx =
+>  		container_of(work, struct read_callbacks_ctx, work);
+>  
+> -	fscrypt_decrypt_bio(ctx->bio);
+> +	fscrypt_decrypt(ctx->bio, ctx->bh);
+>  
+>  	read_callbacks(ctx);
+>  }
+> diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+> index ffa9302a7351..4f0d832cae71 100644
+> --- a/fs/crypto/crypto.c
+> +++ b/fs/crypto/crypto.c
+> @@ -305,11 +305,26 @@ EXPORT_SYMBOL(fscrypt_encrypt_page);
+>  int fscrypt_decrypt_page(const struct inode *inode, struct page *page,
+>  			unsigned int len, unsigned int offs, u64 lblk_num)
+>  {
+> +	int i, page_nr_blks;
+> +	int err = 0;
+> +
+>  	if (!(inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES))
+>  		BUG_ON(!PageLocked(page));
+>  
+> -	return fscrypt_do_page_crypto(inode, FS_DECRYPT, lblk_num, page, page,
+> -				      len, offs, GFP_NOFS);
+> +	page_nr_blks = len >> inode->i_blkbits;
+> +
+> +	for (i = 0; i < page_nr_blks; i++) {
+> +		err = fscrypt_do_page_crypto(inode, FS_DECRYPT, lblk_num,
+> +					page, page, i_blocksize(inode), offs,
+> +					GFP_NOFS);
+> +		if (err)
+> +			break;
+> +
+> +		++lblk_num;
+> +		offs += i_blocksize(inode);
+> +	}
+> +
+> +	return err;
+>  }
+>  EXPORT_SYMBOL(fscrypt_decrypt_page);
+
+I was confused by the code calling this until I saw you updated it to handle
+multiple blocks.  Can you please rename it to fscrypt_decrypt_blocks()?  The
+function comment also needs to be updated to clarify what it does now (decrypt a
+contiguous sequence of one or more filesystem blocks in the page).  Also,
+'lblk_num' should be renamed to 'starting_lblk_num' or similar.
+
+Please also rename fscrypt_do_page_crypto() to fscrypt_crypt_block().
+
+Also, there should be a check that the len and offset are block-aligned:
+
+	const unsigned int blocksize = i_blocksize(inode);
+
+        if (!IS_ALIGNED(len | offs, blocksize))
+                return -EINVAL;
+
+>  
+> diff --git a/fs/f2fs/data.c b/fs/f2fs/data.c
+> index 05430d3650ab..ba437a2085e7 100644
+> --- a/fs/f2fs/data.c
+> +++ b/fs/f2fs/data.c
+> @@ -527,7 +527,7 @@ static struct bio *f2fs_grab_read_bio(struct inode *inode, block_t blkaddr,
+>  	bio_set_op_attrs(bio, REQ_OP_READ, op_flag);
+>  
+>  #if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
+> -	ctx = get_read_callbacks_ctx(inode, bio, first_idx);
+> +	ctx = get_read_callbacks_ctx(inode, bio, NULL, first_idx);
+>  	if (IS_ERR(ctx)) {
+>  		bio_put(bio);
+>  		return (struct bio *)ctx;
+> diff --git a/fs/mpage.c b/fs/mpage.c
+> index e342b859ee44..0557479fdca4 100644
+> --- a/fs/mpage.c
+> +++ b/fs/mpage.c
+> @@ -348,7 +348,7 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+>  			goto confused;
+>  
+>  #if defined(CONFIG_FS_ENCRYPTION) || defined(CONFIG_FS_VERITY)
+> -		ctx = get_read_callbacks_ctx(inode, args->bio, page->index);
+> +		ctx = get_read_callbacks_ctx(inode, args->bio, NULL, page->index);
+>  		if (IS_ERR(ctx)) {
+>  			bio_put(args->bio);
+>  			args->bio = NULL;
+> diff --git a/fs/read_callbacks.c b/fs/read_callbacks.c
+> index 6dea54b0baa9..b3881c525720 100644
+> --- a/fs/read_callbacks.c
+> +++ b/fs/read_callbacks.c
+> @@ -8,6 +8,7 @@
+>  #include <linux/mm.h>
+>  #include <linux/pagemap.h>
+>  #include <linux/bio.h>
+> +#include <linux/buffer_head.h>
+>  #include <linux/fscrypt.h>
+>  #include <linux/fsverity.h>
+>  #include <linux/read_callbacks.h>
+> @@ -24,26 +25,41 @@ enum read_callbacks_step {
+>  	STEP_VERITY,
+>  };
+>  
+> -void end_read_callbacks(struct bio *bio)
+> +void end_read_callbacks(struct bio *bio, struct buffer_head *bh)
+>  {
+> +	struct read_callbacks_ctx *ctx;
+>  	struct page *page;
+>  	struct bio_vec *bv;
+>  	int i;
+>  	struct bvec_iter_all iter_all;
+>  
+> -	bio_for_each_segment_all(bv, bio, i, iter_all) {
+> -		page = bv->bv_page;
+> +	if (bh) {
+> +		if (!PageError(bh->b_page))
+> +			set_buffer_uptodate(bh);
+>  
+> -		BUG_ON(bio->bi_status);
+> +		ctx = bh->b_private;
+>  
+> -		if (!PageError(page))
+> -			SetPageUptodate(page);
+> +		end_buffer_page_read(bh);
+>  
+> -		unlock_page(page);
+> +		put_read_callbacks_ctx(ctx);
+> +	} else if (bio) {
+> +		bio_for_each_segment_all(bv, bio, i, iter_all) {
+> +			page = bv->bv_page;
+> +
+> +			WARN_ON(bio->bi_status);
+> +
+> +			if (!PageError(page))
+> +				SetPageUptodate(page);
+> +
+> +			unlock_page(page);
+> +		}
+> +		WARN_ON(!bio->bi_private);
+> +
+> +		ctx = bio->bi_private;
+> +		put_read_callbacks_ctx(ctx);
+> +
+> +		bio_put(bio);
+>  	}
+> -	if (bio->bi_private)
+> -		put_read_callbacks_ctx(bio->bi_private);
+> -	bio_put(bio);
+>  }
+>  EXPORT_SYMBOL(end_read_callbacks);
+
+To make this easier to read, can you split this into end_read_callbacks_bio()
+and end_read_callbacks_bh()?
+
+>  
+> @@ -70,18 +86,21 @@ void read_callbacks(struct read_callbacks_ctx *ctx)
+>  		ctx->cur_step++;
+>  		/* fall-through */
+>  	default:
+> -		end_read_callbacks(ctx->bio);
+> +		end_read_callbacks(ctx->bio, ctx->bh);
+>  	}
+>  }
+>  EXPORT_SYMBOL(read_callbacks);
+>  
+>  struct read_callbacks_ctx *get_read_callbacks_ctx(struct inode *inode,
+>  						struct bio *bio,
+> +						struct buffer_head *bh,
+>  						pgoff_t index)
+>  {
+>  	unsigned int read_callbacks_steps = 0;
+>  	struct read_callbacks_ctx *ctx = NULL;
+>  
+> +	WARN_ON(!bh && !bio);
+> +
+
+If this condition is true, return an error code; don't continue on.
+
+>  	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
+>  		read_callbacks_steps |= 1 << STEP_DECRYPT;
+>  #ifdef CONFIG_FS_VERITY
+> @@ -95,11 +114,15 @@ struct read_callbacks_ctx *get_read_callbacks_ctx(struct inode *inode,
+>  		ctx = mempool_alloc(read_callbacks_ctx_pool, GFP_NOFS);
+>  		if (!ctx)
+>  			return ERR_PTR(-ENOMEM);
+> +		ctx->bh = bh;
+>  		ctx->bio = bio;
+>  		ctx->inode = inode;
+>  		ctx->enabled_steps = read_callbacks_steps;
+>  		ctx->cur_step = STEP_INITIAL;
+> -		bio->bi_private = ctx;
+> +		if (bio)
+> +			bio->bi_private = ctx;
+> +		else if (bh)
+> +			bh->b_private = ctx;
+
+... and if doing that, then you don't need to check 'else if (bh)' here.
+
+>  	}
+>  	return ctx;
+>  }
+> @@ -111,12 +134,6 @@ void put_read_callbacks_ctx(struct read_callbacks_ctx *ctx)
+>  }
+>  EXPORT_SYMBOL(put_read_callbacks_ctx);
+>  
+> -bool read_callbacks_required(struct bio *bio)
+> -{
+> -	return bio->bi_private && !bio->bi_status;
+> -}
+> -EXPORT_SYMBOL(read_callbacks_required);
+> -
+
+It's unexpected that the patch series introduces this function,
+only to delete it later.
+
+- Eric
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
