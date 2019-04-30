@@ -1,62 +1,89 @@
-Return-Path: <SRS0=8usa=S6=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V2 13/13] ext4: Enable encryption for subpage-sized blocks
-Date: Sun, 28 Apr 2019 10:01:21 +0530
-In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Date: Tue, 30 Apr 2019 11:05:08 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Message-ID: <20190430180507.GD48973@gmail.com>
 References: <20190428043121.30925-1-chandan@linux.ibm.com>
+ <20190428043121.30925-3-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190428043121.30925-14-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Content-Disposition: inline
+In-Reply-To: <20190428043121.30925-3-chandan@linux.ibm.com>
+Subject: Re: [f2fs-dev] [PATCH V2 02/13] Consolidate "read callbacks" into a
+ new file
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: Chandan Rajendra <chandan@linux.ibm.com>
+Cc: tytso@mit.edu, linux-f2fs-devel@lists.sourceforge.net, hch@infradead.org, linux-fscrypt@vger.kernel.org, adilger.kernel@dilger.ca, linux-fsdevel@vger.kernel.org, jaegeuk@kernel.org, linux-ext4@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Now that we have the code to support encryption for subpage-sized
-blocks, this commit removes the conditional check in filesystem mount
-code.
-
-The commit also changes the support statement in
-Documentation/filesystems/fscrypt.rst to reflect the fact that
-encryption of filesystems with blocksize less than page size now works.
-
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- Documentation/filesystems/fscrypt.rst | 4 ++--
- fs/ext4/super.c                       | 7 -------
- 2 files changed, 2 insertions(+), 9 deletions(-)
-
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 08c23b60e016..ff2fea121da9 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -213,8 +213,8 @@ Contents encryption
- -------------------
- 
- For file contents, each filesystem block is encrypted independently.
--Currently, only the case where the filesystem block size is equal to
--the system's page size (usually 4096 bytes) is supported.
-+Starting from Linux kernel 5.3, encryption of filesystems with block
-+size less than system's page size is supported.
- 
- Each block's IV is set to the logical block number within the file as
- a little endian number, except that:
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 8e483afbaa2e..4acfefa98ec5 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -4432,13 +4432,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
- 		}
- 	}
- 
--	if ((DUMMY_ENCRYPTION_ENABLED(sbi) || ext4_has_feature_encrypt(sb)) &&
--	    (blocksize != PAGE_SIZE)) {
--		ext4_msg(sb, KERN_ERR,
--			 "Unsupported blocksize for fs encryption");
--		goto failed_mount_wq;
--	}
--
- 	if (DUMMY_ENCRYPTION_ENABLED(sbi) && !sb_rdonly(sb) &&
- 	    !ext4_has_feature_encrypt(sb)) {
- 		ext4_set_feature_encrypt(sb);
--- 
-2.19.1
+T24gU3VuLCBBcHIgMjgsIDIwMTkgYXQgMTA6MDE6MTBBTSArMDUzMCwgQ2hhbmRhbiBSYWplbmRy
+YSB3cm90ZToKPiBUaGUgInJlYWQgY2FsbGJhY2tzIiBjb2RlIGlzIHVzZWQgYnkgYm90aCBFeHQ0
+IGFuZCBGMkZTLiBIZW5jZSB0bwo+IHJlbW92ZSBkdXBsaWNpdHksIHRoaXMgY29tbWl0IG1vdmVz
+IHRoZSBjb2RlIGludG8KPiBpbmNsdWRlL2xpbnV4L3JlYWRfY2FsbGJhY2tzLmggYW5kIGZzL3Jl
+YWRfY2FsbGJhY2tzLmMuCj4gCj4gVGhlIGNvcnJlc3BvbmRpbmcgZGVjcnlwdCBhbmQgdmVyaXR5
+ICJ3b3JrIiBmdW5jdGlvbnMgaGF2ZSBiZWVuIG1vdmVkCj4gaW5zaWRlIGZzY3J5cHQgYW5kIGZz
+dmVyaXR5IHNvdXJjZXMuIFdpdGggdGhlc2UgaW4gcGxhY2UsIHRoZSByZWFkCj4gY2FsbGJhY2tz
+IGNvZGUgbm93IGhhcyB0byBqdXN0IGludm9rZSBlbnF1ZXVlIGZ1bmN0aW9ucyBwcm92aWRlZCBi
+eQo+IGZzY3J5cHQgYW5kIGZzdmVyaXR5Lgo+IAo+IFNpZ25lZC1vZmYtYnk6IENoYW5kYW4gUmFq
+ZW5kcmEgPGNoYW5kYW5AbGludXguaWJtLmNvbT4KPiAtLS0KPiAgZnMvS2NvbmZpZyAgICAgICAg
+ICAgICAgICAgICAgIHwgICA0ICsKPiAgZnMvTWFrZWZpbGUgICAgICAgICAgICAgICAgICAgIHwg
+ICA0ICsKPiAgZnMvY3J5cHRvL0tjb25maWcgICAgICAgICAgICAgIHwgICAxICsKPiAgZnMvY3J5
+cHRvL2Jpby5jICAgICAgICAgICAgICAgIHwgIDIzICsrLS0tCj4gIGZzL2NyeXB0by9jcnlwdG8u
+YyAgICAgICAgICAgICB8ICAxNyArLS0KPiAgZnMvY3J5cHRvL2ZzY3J5cHRfcHJpdmF0ZS5oICAg
+IHwgICAzICsKPiAgZnMvZXh0NC9leHQ0LmggICAgICAgICAgICAgICAgIHwgICAyIC0KPiAgZnMv
+ZXh0NC9yZWFkcGFnZS5jICAgICAgICAgICAgIHwgMTgzICsrKysrLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLQo+ICBmcy9leHQ0L3N1cGVyLmMgICAgICAgICAgICAgICAgfCAgIDkgKy0KPiAg
+ZnMvZjJmcy9kYXRhLmMgICAgICAgICAgICAgICAgIHwgMTQ4ICsrKystLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tCj4gIGZzL2YyZnMvc3VwZXIuYyAgICAgICAgICAgICAgICB8ICAgOSArLQo+ICBmcy9y
+ZWFkX2NhbGxiYWNrcy5jICAgICAgICAgICAgfCAxMzYgKysrKysrKysrKysrKysrKysrKysrKysr
+Cj4gIGZzL3Zlcml0eS9LY29uZmlnICAgICAgICAgICAgICB8ICAgMSArCj4gIGZzL3Zlcml0eS92
+ZXJpZnkuYyAgICAgICAgICAgICB8ICAxMiArKysKPiAgaW5jbHVkZS9saW51eC9mc2NyeXB0Lmgg
+ICAgICAgIHwgIDIwICstLS0KPiAgaW5jbHVkZS9saW51eC9yZWFkX2NhbGxiYWNrcy5oIHwgIDIx
+ICsrKysKPiAgMTYgZmlsZXMgY2hhbmdlZCwgMjUxIGluc2VydGlvbnMoKyksIDM0MiBkZWxldGlv
+bnMoLSkKPiAgY3JlYXRlIG1vZGUgMTAwNjQ0IGZzL3JlYWRfY2FsbGJhY2tzLmMKPiAgY3JlYXRl
+IG1vZGUgMTAwNjQ0IGluY2x1ZGUvbGludXgvcmVhZF9jYWxsYmFja3MuaAo+IAo+IGRpZmYgLS1n
+aXQgYS9mcy9LY29uZmlnIGIvZnMvS2NvbmZpZwo+IGluZGV4IDk3ZjllYjhkZjcxMy4uMDMwODRm
+MmRiZWFmIDEwMDY0NAo+IC0tLSBhL2ZzL0tjb25maWcKPiArKysgYi9mcy9LY29uZmlnCj4gQEAg
+LTMwOCw2ICszMDgsMTAgQEAgY29uZmlnIE5GU19DT01NT04KPiAgCWRlcGVuZHMgb24gTkZTRCB8
+fCBORlNfRlMgfHwgTE9DS0QKPiAgCWRlZmF1bHQgeQo+ICAKPiArY29uZmlnIEZTX1JFQURfQ0FM
+TEJBQ0tTCj4gKyAgICAgICBib29sCj4gKyAgICAgICBkZWZhdWx0IG4KPiArCj4gIHNvdXJjZSAi
+bmV0L3N1bnJwYy9LY29uZmlnIgo+ICBzb3VyY2UgImZzL2NlcGgvS2NvbmZpZyIKPiAgc291cmNl
+ICJmcy9jaWZzL0tjb25maWciCgpUaGlzIHNob3VsZG4ndCBiZSB1bmRlciB0aGUgJ2lmIE5FVFdP
+UktfRklMRVNZU1RFTVMnIGJsb2NrLCBzaW5jZSBpdCBoYXMgbm90aGluZwp0byBkbyB3aXRoIG5l
+dHdvcmsgZmlsZXN5c3RlbXMuICBXaGVuIHRyeWluZyB0byBjb21waWxlIHRoaXMgSSBnb3Q6CgoJ
+V0FSTklORzogdW5tZXQgZGlyZWN0IGRlcGVuZGVuY2llcyBkZXRlY3RlZCBmb3IgRlNfUkVBRF9D
+QUxMQkFDS1MKCSAgRGVwZW5kcyBvbiBbbl06IE5FVFdPUktfRklMRVNZU1RFTVMgWz1uXQoJICBT
+ZWxlY3RlZCBieSBbeV06CgkgIC0gRlNfRU5DUllQVElPTiBbPXldCgkgIC0gRlNfVkVSSVRZIFs9
+eV0KClBlcmhhcHMgcHV0IGl0IGp1c3QgYmVsb3cgRlNfSU9NQVA/Cgo+IGRpZmYgLS1naXQgYS9m
+cy9NYWtlZmlsZSBiL2ZzL01ha2VmaWxlCj4gaW5kZXggOWRkMjE4NmU3NGI1Li5lMGMwZmNlOGNm
+NDAgMTAwNjQ0Cj4gLS0tIGEvZnMvTWFrZWZpbGUKPiArKysgYi9mcy9NYWtlZmlsZQo+IEBAIC0y
+MSw2ICsyMSwxMCBAQCBlbHNlCj4gIG9iai15ICs9CW5vLWJsb2NrLm8KPiAgZW5kaWYKPiAgCj4g
+K2lmZXEgKCQoQ09ORklHX0ZTX1JFQURfQ0FMTEJBQ0tTKSx5KQo+ICtvYmoteSArPQlyZWFkX2Nh
+bGxiYWNrcy5vCj4gK2VuZGlmCj4gKwo+ICBvYmotJChDT05GSUdfUFJPQ19GUykgKz0gcHJvY19u
+YW1lc3BhY2Uubwo+ICAKPiAgb2JqLXkJCQkJKz0gbm90aWZ5Lwo+IGRpZmYgLS1naXQgYS9mcy9j
+cnlwdG8vS2NvbmZpZyBiL2ZzL2NyeXB0by9LY29uZmlnCj4gaW5kZXggZjBkZTIzODAwMGMwLi4x
+NjNjMzI4YmNiZDQgMTAwNjQ0Cj4gLS0tIGEvZnMvY3J5cHRvL0tjb25maWcKPiArKysgYi9mcy9j
+cnlwdG8vS2NvbmZpZwo+IEBAIC04LDYgKzgsNyBAQCBjb25maWcgRlNfRU5DUllQVElPTgo+ICAJ
+c2VsZWN0IENSWVBUT19DVFMKPiAgCXNlbGVjdCBDUllQVE9fU0hBMjU2Cj4gIAlzZWxlY3QgS0VZ
+Uwo+ICsJc2VsZWN0IEZTX1JFQURfQ0FMTEJBQ0tTCj4gIAloZWxwCj4gIAkgIEVuYWJsZSBlbmNy
+eXB0aW9uIG9mIGZpbGVzIGFuZCBkaXJlY3Rvcmllcy4gIFRoaXMKPiAgCSAgZmVhdHVyZSBpcyBz
+aW1pbGFyIHRvIGVjcnlwdGZzLCBidXQgaXQgaXMgbW9yZSBtZW1vcnkKClRoaXMgc2VsZWN0aW9u
+IG5lZWRzIHRvIGJlIGNvbmRpdGlvbmFsIG9uIEJMT0NLLgoKCXNlbGVjdCBGU19SRUFEX0NBTExC
+QUNLUyBpZiBCTE9DSwoKT3RoZXJ3aXNlLCBidWlsZGluZyB3aXRob3V0IEJMT0NLIGFuZCB3aXRo
+IFVCSUZTIGVuY3J5cHRpb24gc3VwcG9ydCBmYWlscy4KCglmcy9yZWFkX2NhbGxiYWNrcy5jOiBJ
+biBmdW5jdGlvbiDigJhlbmRfcmVhZF9jYWxsYmFja3PigJk6Cglmcy9yZWFkX2NhbGxiYWNrcy5j
+OjM0OjIzOiBlcnJvcjogc3RvcmFnZSBzaXplIG9mIOKAmGl0ZXJfYWxs4oCZIGlzbuKAmXQga25v
+d24KCSAgc3RydWN0IGJ2ZWNfaXRlcl9hbGwgaXRlcl9hbGw7CgkJCSAgICAgICBefn5+fn5+fgoJ
+ZnMvcmVhZF9jYWxsYmFja3MuYzozNzoyMDogZXJyb3I6IGRlcmVmZXJlbmNpbmcgcG9pbnRlciB0
+byBpbmNvbXBsZXRlIHR5cGUg4oCYc3RydWN0IGJ1ZmZlcl9oZWFk4oCZCgkgICBpZiAoIVBhZ2VF
+cnJvcihiaC0+Yl9wYWdlKSkKCglbLi4uXQoKLSBFcmljCgoKX19fX19fX19fX19fX19fX19fX19f
+X19fX19fX19fX19fX19fX19fX19fX19fX18KTGludXgtZjJmcy1kZXZlbCBtYWlsaW5nIGxpc3QK
+TGludXgtZjJmcy1kZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3Vy
+Y2Vmb3JnZS5uZXQvbGlzdHMvbGlzdGluZm8vbGludXgtZjJmcy1kZXZlbAo=
