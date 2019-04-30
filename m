@@ -1,146 +1,122 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:57004 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:37252 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726664AbfDKVdE (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 11 Apr 2019 17:33:04 -0400
+        id S1725942AbfD3QvS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 30 Apr 2019 12:51:18 -0400
+Date: Tue, 30 Apr 2019 09:51:15 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2] fscrypt: use READ_ONCE() to access ->i_crypt_info
-Date: Thu, 11 Apr 2019 14:32:15 -0700
-Message-Id: <20190411213215.163929-1-ebiggers@kernel.org>
+Subject: Re: [PATCH V2 12/13] fscrypt_zeroout_range: Encrypt all zeroed out
+ blocks of a page
+Message-ID: <20190430165114.GA48973@gmail.com>
+References: <20190428043121.30925-1-chandan@linux.ibm.com>
+ <20190428043121.30925-13-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190428043121.30925-13-chandan@linux.ibm.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org
+To: Chandan Rajendra <chandan@linux.ibm.com>
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Sun, Apr 28, 2019 at 10:01:20AM +0530, Chandan Rajendra wrote:
+> For subpage-sized blocks, this commit adds code to encrypt all zeroed
+> out blocks mapped by a page.
+> 
+> Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+> ---
+>  fs/crypto/bio.c | 40 ++++++++++++++++++----------------------
+>  1 file changed, 18 insertions(+), 22 deletions(-)
+> 
+> diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+> index 856f4694902d..46dd2ec50c7d 100644
+> --- a/fs/crypto/bio.c
+> +++ b/fs/crypto/bio.c
+> @@ -108,29 +108,23 @@ EXPORT_SYMBOL(fscrypt_pullback_bio_page);
+>  int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+>  				sector_t pblk, unsigned int len)
+>  {
+> -	struct fscrypt_ctx *ctx;
+>  	struct page *ciphertext_page = NULL;
+>  	struct bio *bio;
+> +	u64 total_bytes, page_bytes;
 
-->i_crypt_info starts out NULL and may later be locklessly set to a
-non-NULL value by the cmpxchg() in fscrypt_get_encryption_info().
+page_bytes should be 'unsigned int', since it's <= PAGE_SIZE.
 
-But ->i_crypt_info is used directly, which technically is incorrect.
-It's a data race, and it doesn't include the data dependency barrier
-needed to safely dereference the pointer on at least one architecture.
+>  	int ret, err = 0;
+>  
+> -	BUG_ON(inode->i_sb->s_blocksize != PAGE_SIZE);
+> -
+> -	ctx = fscrypt_get_ctx(inode, GFP_NOFS);
+> -	if (IS_ERR(ctx))
+> -		return PTR_ERR(ctx);
+> +	total_bytes = len << inode->i_blkbits;
 
-Fix this by using READ_ONCE() instead.  Note: we don't need to use
-smp_load_acquire(), since dereferencing the pointer only requires a data
-dependency barrier, which is already included in READ_ONCE().  We also
-don't need READ_ONCE() in places where ->i_crypt_info is unconditionally
-dereferenced, since it must have already been checked.
+Should cast len to 'u64' here, in case it's greater than UINT_MAX / blocksize.
 
-Also downgrade the cmpxchg() to cmpxchg_release(), since RELEASE
-semantics are sufficient on the write side.
+>  
+> -	ciphertext_page = fscrypt_alloc_bounce_page(ctx, GFP_NOWAIT);
+> -	if (IS_ERR(ciphertext_page)) {
+> -		err = PTR_ERR(ciphertext_page);
+> -		goto errout;
+> -	}
+> +	while (total_bytes) {
+> +		page_bytes = min_t(u64, total_bytes, PAGE_SIZE);
+>  
+> -	while (len--) {
+> -		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk,
+> -					     ZERO_PAGE(0), ciphertext_page,
+> -					     PAGE_SIZE, 0, GFP_NOFS);
+> -		if (err)
+> +		ciphertext_page = fscrypt_encrypt_page(inode, ZERO_PAGE(0),
+> +						page_bytes, 0, lblk, GFP_NOFS);
+> +		if (IS_ERR(ciphertext_page)) {
+> +			err = PTR_ERR(ciphertext_page);
+> +			ciphertext_page = NULL;
+>  			goto errout;
+> +		}
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
+'ciphertext_page' is leaked after each loop iteration.  Did you mean to free it,
+or did you mean to reuse it for subsequent iterations?
 
-This supersedes my earlier patch:
+>  
+>  		bio = bio_alloc(GFP_NOWAIT, 1);
+>  		if (!bio) {
+> @@ -141,9 +135,8 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+>  		bio->bi_iter.bi_sector =
+>  			pblk << (inode->i_sb->s_blocksize_bits - 9);
 
-	"fscrypt: use proper memory barriers for ->i_crypt_info"
-	https://patchwork.kernel.org/patch/10858269/
+This line uses ->s_blocksize_bits, but your new code uses ->i_blkbits.  AFAIK
+they'll always be the same, but please pick one or the other to use.
 
- fs/crypto/crypto.c      | 2 +-
- fs/crypto/fname.c       | 4 ++--
- fs/crypto/keyinfo.c     | 4 ++--
- fs/crypto/policy.c      | 6 +++---
- include/linux/fscrypt.h | 3 ++-
- 5 files changed, 10 insertions(+), 9 deletions(-)
-
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 5efc494a4e38f..0988077882574 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -328,7 +328,7 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
- 	spin_lock(&dentry->d_lock);
- 	cached_with_key = dentry->d_flags & DCACHE_ENCRYPTED_WITH_KEY;
- 	spin_unlock(&dentry->d_lock);
--	dir_has_key = (d_inode(dir)->i_crypt_info != NULL);
-+	dir_has_key = fscrypt_has_encryption_key(d_inode(dir));
- 	dput(dir);
- 
- 	/*
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 7ff40a73dbece..050384c79f40e 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -269,7 +269,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
- 	if (iname->len < FS_CRYPTO_BLOCK_SIZE)
- 		return -EUCLEAN;
- 
--	if (inode->i_crypt_info)
-+	if (fscrypt_has_encryption_key(inode))
- 		return fname_decrypt(inode, iname, oname);
- 
- 	if (iname->len <= FSCRYPT_FNAME_MAX_UNDIGESTED_SIZE) {
-@@ -336,7 +336,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	if (ret)
- 		return ret;
- 
--	if (dir->i_crypt_info) {
-+	if (fscrypt_has_encryption_key(dir)) {
- 		if (!fscrypt_fname_encrypted_size(dir, iname->len,
- 						  dir->i_sb->s_cop->max_namelen,
- 						  &fname->crypto_buf.len))
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 34c4682f23bee..82989098b2fc9 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -509,7 +509,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	u8 *raw_key = NULL;
- 	int res;
- 
--	if (inode->i_crypt_info)
-+	if (fscrypt_has_encryption_key(inode))
- 		return 0;
- 
- 	res = fscrypt_initialize(inode->i_sb->s_cop->flags);
-@@ -573,7 +573,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (res)
- 		goto out;
- 
--	if (cmpxchg(&inode->i_crypt_info, NULL, crypt_info) == NULL)
-+	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL)
- 		crypt_info = NULL;
- out:
- 	if (res == -ENOKEY)
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index bd7eaf9b3f003..d536889ac31bf 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -194,8 +194,8 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- 	res = fscrypt_get_encryption_info(child);
- 	if (res)
- 		return 0;
--	parent_ci = parent->i_crypt_info;
--	child_ci = child->i_crypt_info;
-+	parent_ci = READ_ONCE(parent->i_crypt_info);
-+	child_ci = READ_ONCE(child->i_crypt_info);
- 
- 	if (parent_ci && child_ci) {
- 		return memcmp(parent_ci->ci_master_key_descriptor,
-@@ -246,7 +246,7 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
- 	if (res < 0)
- 		return res;
- 
--	ci = parent->i_crypt_info;
-+	ci = READ_ONCE(parent->i_crypt_info);
- 	if (ci == NULL)
- 		return -ENOKEY;
- 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 02c3e320f5b3f..48145beedaa7f 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -79,7 +79,8 @@ struct fscrypt_ctx {
- 
- static inline bool fscrypt_has_encryption_key(const struct inode *inode)
- {
--	return (inode->i_crypt_info != NULL);
-+	/* pairs with cmpxchg_release() in fscrypt_get_encryption_info() */
-+	return READ_ONCE(inode->i_crypt_info) != NULL;
- }
- 
- static inline bool fscrypt_dummy_context_enabled(struct inode *inode)
--- 
-2.21.0.392.gf8f6787159e-goog
+>  		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
+> -		ret = bio_add_page(bio, ciphertext_page,
+> -					inode->i_sb->s_blocksize, 0);
+> -		if (ret != inode->i_sb->s_blocksize) {
+> +		ret = bio_add_page(bio, ciphertext_page, page_bytes, 0);
+> +		if (ret != page_bytes) {
+>  			/* should never happen! */
+>  			WARN_ON(1);
+>  			bio_put(bio);
+> @@ -156,12 +149,15 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+>  		bio_put(bio);
+>  		if (err)
+>  			goto errout;
+> -		lblk++;
+> -		pblk++;
+> +
+> +		lblk += page_bytes >> inode->i_blkbits;
+> +		pblk += page_bytes >> inode->i_blkbits;
+> +		total_bytes -= page_bytes;
+>  	}
+>  	err = 0;
+>  errout:
+> -	fscrypt_release_ctx(ctx);
+> +	if (!IS_ERR_OR_NULL(ciphertext_page))
+> +		fscrypt_restore_control_page(ciphertext_page);
+>  	return err;
+>  }
+>  EXPORT_SYMBOL(fscrypt_zeroout_range);
+> -- 
+> 2.19.1
+> 
