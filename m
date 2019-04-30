@@ -1,84 +1,20 @@
-Return-Path: <SRS0=XRRt=SO=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [RFC PATCH 11/14] fscrypt_encrypt_page: Loop across all blocks mapped by a page range
-Date: Fri, 12 Apr 2019 22:40:38 +0530
-In-Reply-To: <20190412171041.31995-1-chandan@linux.ibm.com>
-References: <20190412171041.31995-1-chandan@linux.ibm.com>
+Return-Path: <SRS0=OaQ0=TA=infradead.org=willy@kernel.org>
+Date: Mon, 29 Apr 2019 17:27:51 -0700
+From: Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH V2 00/13] Consolidate FS read I/O callbacks code
+Message-ID: <20190430002751.GB13796@bombadil.infradead.org>
+References: <20190428043121.30925-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190412171041.31995-12-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190428043121.30925-1-chandan@linux.ibm.com>
+To: Chandan Rajendra <chandan@linux.ibm.com>
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-For subpage-sized blocks, this commit now encrypts all blocks mapped by
-a page range.
+On Sun, Apr 28, 2019 at 10:01:08AM +0530, Chandan Rajendra wrote:
+> With these changes in place, the patchset changes Ext4 to use
+> mpage_readpage[s] instead of its own custom ext4_readpage[s]()
+> functions. This is done to reduce duplicity of code across
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- fs/crypto/crypto.c | 37 +++++++++++++++++++++++++------------
- 1 file changed, 25 insertions(+), 12 deletions(-)
-
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 4f0d832cae71..84d11d8eb7e3 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -242,18 +242,26 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- {
- 	struct fscrypt_ctx *ctx;
- 	struct page *ciphertext_page = page;
-+	int i, page_nr_blks;
- 	int err;
- 
- 	BUG_ON(len % FS_CRYPTO_BLOCK_SIZE != 0);
- 
-+	page_nr_blks = len >> inode->i_blkbits;
-+
- 	if (inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES) {
- 		/* with inplace-encryption we just encrypt the page */
--		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk_num, page,
--					     ciphertext_page, len, offs,
--					     gfp_flags);
--		if (err)
--			return ERR_PTR(err);
--
-+		for (i = 0; i < page_nr_blks; i++) {
-+			err = fscrypt_do_page_crypto(inode, FS_ENCRYPT,
-+						lblk_num, page,
-+						ciphertext_page,
-+						i_blocksize(inode), offs,
-+						gfp_flags);
-+			if (err)
-+				return ERR_PTR(err);
-+			++lblk_num;
-+			offs += i_blocksize(inode);
-+		}
- 		return ciphertext_page;
- 	}
- 
-@@ -269,12 +277,17 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- 		goto errout;
- 
- 	ctx->control_page = page;
--	err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk_num,
--				     page, ciphertext_page, len, offs,
--				     gfp_flags);
--	if (err) {
--		ciphertext_page = ERR_PTR(err);
--		goto errout;
-+
-+	for (i = 0; i < page_nr_blks; i++) {
-+		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk_num,
-+					page, ciphertext_page, i_blocksize(inode), offs,
-+					gfp_flags);
-+		if (err) {
-+			ciphertext_page = ERR_PTR(err);
-+			goto errout;
-+		}
-+		++lblk_num;
-+		offs += i_blocksize(inode);
- 	}
- 	SetPagePrivate(ciphertext_page);
- 	set_page_private(ciphertext_page, (unsigned long)ctx);
--- 
-2.19.1
+FYI, "duplicity" means "lying".  You meant "duplication".
