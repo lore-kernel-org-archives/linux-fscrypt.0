@@ -1,190 +1,127 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 20 May 2019 09:29:47 -0700
-Message-Id: <20190520162952.156212-10-ebiggers@kernel.org>
-In-Reply-To: <20190520162952.156212-1-ebiggers@kernel.org>
-References: <20190520162952.156212-1-ebiggers@kernel.org>
+Return-Path: <SRS0=+nDJ=TB=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: Re: [PATCH V2 12/13] fscrypt_zeroout_range: Encrypt all zeroed out blocks of a page
+Date: Wed, 01 May 2019 19:52:02 +0530
+In-Reply-To: <20190430165114.GA48973@gmail.com>
+References: <20190428043121.30925-1-chandan@linux.ibm.com> <20190428043121.30925-13-chandan@linux.ibm.com> <20190430165114.GA48973@gmail.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v2 09/14] fscrypt: support decrypting multiple
- filesystem blocks per page
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Transfer-Encoding: 7Bit
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Chandan Rajendra <chandan@linux.ibm.com>, linux-f2fs-devel@lists.sourceforge.net
+Message-Id: <5118219.DRdbvtsWY3@localhost.localdomain>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Tuesday, April 30, 2019 10:21:15 PM IST Eric Biggers wrote:
+> On Sun, Apr 28, 2019 at 10:01:20AM +0530, Chandan Rajendra wrote:
+> > For subpage-sized blocks, this commit adds code to encrypt all zeroed
+> > out blocks mapped by a page.
+> > 
+> > Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+> > ---
+> >  fs/crypto/bio.c | 40 ++++++++++++++++++----------------------
+> >  1 file changed, 18 insertions(+), 22 deletions(-)
+> > 
+> > diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+> > index 856f4694902d..46dd2ec50c7d 100644
+> > --- a/fs/crypto/bio.c
+> > +++ b/fs/crypto/bio.c
+> > @@ -108,29 +108,23 @@ EXPORT_SYMBOL(fscrypt_pullback_bio_page);
+> >  int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+> >  				sector_t pblk, unsigned int len)
+> >  {
+> > -	struct fscrypt_ctx *ctx;
+> >  	struct page *ciphertext_page = NULL;
+> >  	struct bio *bio;
+> > +	u64 total_bytes, page_bytes;
+> 
+> page_bytes should be 'unsigned int', since it's <= PAGE_SIZE.
+> 
+> >  	int ret, err = 0;
+> >  
+> > -	BUG_ON(inode->i_sb->s_blocksize != PAGE_SIZE);
+> > -
+> > -	ctx = fscrypt_get_ctx(inode, GFP_NOFS);
+> > -	if (IS_ERR(ctx))
+> > -		return PTR_ERR(ctx);
+> > +	total_bytes = len << inode->i_blkbits;
+> 
+> Should cast len to 'u64' here, in case it's greater than UINT_MAX / blocksize.
+> 
+> >  
+> > -	ciphertext_page = fscrypt_alloc_bounce_page(ctx, GFP_NOWAIT);
+> > -	if (IS_ERR(ciphertext_page)) {
+> > -		err = PTR_ERR(ciphertext_page);
+> > -		goto errout;
+> > -	}
+> > +	while (total_bytes) {
+> > +		page_bytes = min_t(u64, total_bytes, PAGE_SIZE);
+> >  
+> > -	while (len--) {
+> > -		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk,
+> > -					     ZERO_PAGE(0), ciphertext_page,
+> > -					     PAGE_SIZE, 0, GFP_NOFS);
+> > -		if (err)
+> > +		ciphertext_page = fscrypt_encrypt_page(inode, ZERO_PAGE(0),
+> > +						page_bytes, 0, lblk, GFP_NOFS);
+> > +		if (IS_ERR(ciphertext_page)) {
+> > +			err = PTR_ERR(ciphertext_page);
+> > +			ciphertext_page = NULL;
+> >  			goto errout;
+> > +		}
+> 
+> 'ciphertext_page' is leaked after each loop iteration.  Did you mean to free it,
+> or did you mean to reuse it for subsequent iterations?
 
-Rename fscrypt_decrypt_page() to fscrypt_decrypt_pagecache_blocks() and
-redefine its behavior to decrypt all filesystem blocks in the given
-region of the given page, rather than assuming that the region consists
-of just one filesystem block.  Also remove the 'inode' and 'lblk_num'
-parameters, since they can be retrieved from the page as it's already
-assumed to be a pagecache page.
+Thanks for pointing this out. I actually meant to free it. I will see if I can
+reuse ciphertext_page in my next patchset rather than freeing and allocating
+it each time the loop is executed.
 
-This is in preparation for allowing encryption on ext4 filesystems with
-blocksize != PAGE_SIZE.
+> 
+> >  
+> >  		bio = bio_alloc(GFP_NOWAIT, 1);
+> >  		if (!bio) {
+> > @@ -141,9 +135,8 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+> >  		bio->bi_iter.bi_sector =
+> >  			pblk << (inode->i_sb->s_blocksize_bits - 9);
+> 
+> This line uses ->s_blocksize_bits, but your new code uses ->i_blkbits.  AFAIK
+> they'll always be the same, but please pick one or the other to use.
 
-This is based on work by Chandan Rajendra.
+I will fix this.
 
-Reviewed-by: Chandan Rajendra <chandan@linux.ibm.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/bio.c         |  3 +--
- fs/crypto/crypto.c      | 46 ++++++++++++++++++++++++++++-------------
- fs/ext4/inode.c         |  7 +++----
- include/linux/fscrypt.h | 12 +++++------
- 4 files changed, 42 insertions(+), 26 deletions(-)
+> 
+> >  		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
+> > -		ret = bio_add_page(bio, ciphertext_page,
+> > -					inode->i_sb->s_blocksize, 0);
+> > -		if (ret != inode->i_sb->s_blocksize) {
+> > +		ret = bio_add_page(bio, ciphertext_page, page_bytes, 0);
+> > +		if (ret != page_bytes) {
+> >  			/* should never happen! */
+> >  			WARN_ON(1);
+> >  			bio_put(bio);
+> > @@ -156,12 +149,15 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+> >  		bio_put(bio);
+> >  		if (err)
+> >  			goto errout;
+> > -		lblk++;
+> > -		pblk++;
+> > +
+> > +		lblk += page_bytes >> inode->i_blkbits;
+> > +		pblk += page_bytes >> inode->i_blkbits;
+> > +		total_bytes -= page_bytes;
+> >  	}
+> >  	err = 0;
+> >  errout:
+> > -	fscrypt_release_ctx(ctx);
+> > +	if (!IS_ERR_OR_NULL(ciphertext_page))
+> > +		fscrypt_restore_control_page(ciphertext_page);
+> >  	return err;
+> >  }
+> >  EXPORT_SYMBOL(fscrypt_zeroout_range);
+> 
+> 
 
-diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
-index f9111ffa12ffd..61da06fda45cc 100644
---- a/fs/crypto/bio.c
-+++ b/fs/crypto/bio.c
-@@ -33,8 +33,7 @@ static void __fscrypt_decrypt_bio(struct bio *bio, bool done)
- 
- 	bio_for_each_segment_all(bv, bio, iter_all) {
- 		struct page *page = bv->bv_page;
--		int ret = fscrypt_decrypt_page(page->mapping->host, page,
--				PAGE_SIZE, 0, page->index);
-+		int ret = fscrypt_decrypt_pagecache_blocks(page, PAGE_SIZE, 0);
- 
- 		if (ret)
- 			SetPageError(page);
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 2e6fb5e4f7a7f..dcf630d7e4460 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -282,29 +282,47 @@ int fscrypt_encrypt_block_inplace(const struct inode *inode, struct page *page,
- EXPORT_SYMBOL(fscrypt_encrypt_block_inplace);
- 
- /**
-- * fscrypt_decrypt_page() - Decrypts a page in-place
-- * @inode:     The corresponding inode for the page to decrypt.
-- * @page:      The page to decrypt. Must be locked.
-- * @len:       Number of bytes in @page to be decrypted.
-- * @offs:      Start of data in @page.
-- * @lblk_num:  Logical block number.
-+ * fscrypt_decrypt_pagecache_blocks() - Decrypt filesystem blocks in a pagecache page
-+ * @page:      The locked pagecache page containing the block(s) to decrypt
-+ * @len:       Total size of the block(s) to decrypt.  Must be a nonzero
-+ *		multiple of the filesystem's block size.
-+ * @offs:      Byte offset within @page of the first block to decrypt.  Must be
-+ *		a multiple of the filesystem's block size.
-  *
-- * Decrypts page in-place using the ctx encryption context.
-+ * The specified block(s) are decrypted in-place within the pagecache page,
-+ * which must still be locked and not uptodate.  Normally, blocksize ==
-+ * PAGE_SIZE and the whole page is decrypted at once.
-  *
-- * Called from the read completion callback.
-+ * This is for use by the filesystem's ->readpages() method.
-  *
-- * Return: Zero on success, non-zero otherwise.
-+ * Return: 0 on success; -errno on failure
-  */
--int fscrypt_decrypt_page(const struct inode *inode, struct page *page,
--			unsigned int len, unsigned int offs, u64 lblk_num)
-+int fscrypt_decrypt_pagecache_blocks(struct page *page, unsigned int len,
-+				     unsigned int offs)
- {
-+	const struct inode *inode = page->mapping->host;
-+	const unsigned int blockbits = inode->i_blkbits;
-+	const unsigned int blocksize = 1 << blockbits;
-+	u64 lblk_num = ((u64)page->index << (PAGE_SHIFT - blockbits)) +
-+		       (offs >> blockbits);
-+	unsigned int i;
-+	int err;
-+
- 	if (WARN_ON_ONCE(!PageLocked(page)))
- 		return -EINVAL;
- 
--	return fscrypt_crypt_block(inode, FS_DECRYPT, lblk_num, page, page,
--				   len, offs, GFP_NOFS);
-+	if (WARN_ON_ONCE(len <= 0 || !IS_ALIGNED(len | offs, blocksize)))
-+		return -EINVAL;
-+
-+	for (i = offs; i < offs + len; i += blocksize, lblk_num++) {
-+		err = fscrypt_crypt_block(inode, FS_DECRYPT, lblk_num, page,
-+					  page, blocksize, i, GFP_NOFS);
-+		if (err)
-+			return err;
-+	}
-+	return 0;
- }
--EXPORT_SYMBOL(fscrypt_decrypt_page);
-+EXPORT_SYMBOL(fscrypt_decrypt_pagecache_blocks);
- 
- /**
-  * fscrypt_decrypt_block_inplace() - Decrypt a filesystem block in-place
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 82298c63ea6d6..34fda4864c0eb 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -1232,8 +1232,7 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
- 	if (unlikely(err))
- 		page_zero_new_buffers(page, from, to);
- 	else if (decrypt)
--		err = fscrypt_decrypt_page(page->mapping->host, page,
--				PAGE_SIZE, 0, page->index);
-+		err = fscrypt_decrypt_pagecache_blocks(page, PAGE_SIZE, 0);
- 	return err;
- }
- #endif
-@@ -4066,8 +4065,8 @@ static int __ext4_block_zero_page_range(handle_t *handle,
- 			/* We expect the key to be set. */
- 			BUG_ON(!fscrypt_has_encryption_key(inode));
- 			BUG_ON(blocksize != PAGE_SIZE);
--			WARN_ON_ONCE(fscrypt_decrypt_page(page->mapping->host,
--						page, PAGE_SIZE, 0, page->index));
-+			WARN_ON_ONCE(fscrypt_decrypt_pagecache_blocks(
-+						page, PAGE_SIZE, 0));
- 		}
- 	}
- 	if (ext4_should_journal_data(inode)) {
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 315affc99b050..bd8f207a2fb68 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -112,8 +112,9 @@ extern int fscrypt_encrypt_block_inplace(const struct inode *inode,
- 					 struct page *page, unsigned int len,
- 					 unsigned int offs, u64 lblk_num,
- 					 gfp_t gfp_flags);
--extern int fscrypt_decrypt_page(const struct inode *, struct page *, unsigned int,
--				unsigned int, u64);
-+
-+extern int fscrypt_decrypt_pagecache_blocks(struct page *page, unsigned int len,
-+					    unsigned int offs);
- extern int fscrypt_decrypt_block_inplace(const struct inode *inode,
- 					 struct page *page, unsigned int len,
- 					 unsigned int offs, u64 lblk_num);
-@@ -310,10 +311,9 @@ static inline int fscrypt_encrypt_block_inplace(const struct inode *inode,
- 	return -EOPNOTSUPP;
- }
- 
--static inline int fscrypt_decrypt_page(const struct inode *inode,
--				       struct page *page,
--				       unsigned int len, unsigned int offs,
--				       u64 lblk_num)
-+static inline int fscrypt_decrypt_pagecache_blocks(struct page *page,
-+						   unsigned int len,
-+						   unsigned int offs)
- {
- 	return -EOPNOTSUPP;
- }
+
 -- 
-2.21.0.1020.gf2820cf01a-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+chandan
