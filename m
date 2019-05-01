@@ -1,49 +1,60 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mx0a-001b2d01.pphosted.com ([148.163.156.1]:49314 "EHLO
-        mx0a-001b2d01.pphosted.com" rhost-flags-OK-OK-OK-OK)
-        by vger.kernel.org with ESMTP id S1725883AbfEFLd5 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 6 May 2019 07:33:57 -0400
-Received: from pps.filterd (m0098409.ppops.net [127.0.0.1])
-        by mx0a-001b2d01.pphosted.com (8.16.0.27/8.16.0.27) with SMTP id x46BWiBV025895
-        for <linux-fscrypt@vger.kernel.org>; Mon, 6 May 2019 07:33:56 -0400
-Received: from e06smtp01.uk.ibm.com (e06smtp01.uk.ibm.com [195.75.94.97])
-        by mx0a-001b2d01.pphosted.com with ESMTP id 2sah6tqgy1-1
-        (version=TLSv1.2 cipher=AES256-GCM-SHA384 bits=256 verify=NOT)
-        for <linux-fscrypt@vger.kernel.org>; Mon, 06 May 2019 07:33:56 -0400
-Received: from localhost
-        by e06smtp01.uk.ibm.com with IBM ESMTP SMTP Gateway: Authorized Use Only! Violators will be prosecuted
-        for <linux-fscrypt@vger.kernel.org> from <chandan@linux.ibm.com>;
-        Mon, 6 May 2019 12:33:53 +0100
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: Re: [PATCH 13/13] ext4: encrypt only up to last block in ext4_bio_write_page()
-Date: Mon, 06 May 2019 14:42:14 +0530
-In-Reply-To: <20190501224515.43059-14-ebiggers@kernel.org>
-References: <20190501224515.43059-1-ebiggers@kernel.org> <20190501224515.43059-14-ebiggers@kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:47246 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726126AbfEAWqJ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 1 May 2019 18:46:09 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH 13/13] ext4: encrypt only up to last block in ext4_bio_write_page()
+Date: Wed,  1 May 2019 15:45:15 -0700
+Message-Id: <20190501224515.43059-14-ebiggers@kernel.org>
+In-Reply-To: <20190501224515.43059-1-ebiggers@kernel.org>
+References: <20190501224515.43059-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Message-Id: <5247310.83GBoLVoWW@dhcp-9-109-212-164>
+Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Chandan Rajendra <chandan@linux.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Thursday, May 2, 2019 4:15:15 AM IST Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> As an optimization, don't encrypt blocks fully beyond i_size, since
-> those definitely won't need to be written out.  Also add a comment.
-> 
-> This is in preparation for allowing encryption on ext4 filesystems with
-> blocksize != PAGE_SIZE.
-> 
-> This is based on work by Chandan Rajendra.
->
+From: Eric Biggers <ebiggers@google.com>
 
-Looks good to me,
+As an optimization, don't encrypt blocks fully beyond i_size, since
+those definitely won't need to be written out.  Also add a comment.
 
-Reviewed-by: Chandan Rajendra <chandan@linux.ibm.com>
+This is in preparation for allowing encryption on ext4 filesystems with
+blocksize != PAGE_SIZE.
 
+This is based on work by Chandan Rajendra.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ext4/page-io.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
+index 457ddf051608f..ab843ad89df2f 100644
+--- a/fs/ext4/page-io.c
++++ b/fs/ext4/page-io.c
+@@ -468,11 +468,19 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
+ 
+ 	bh = head = page_buffers(page);
+ 
++	/*
++	 * If any blocks are being written to an encrypted file, encrypt them
++	 * into a bounce page.  For simplicity, just encrypt until the last
++	 * block which might be needed.  This may cause some unneeded blocks
++	 * (e.g. holes) to be unnecessarily encrypted, but this is rare and
++	 * can't happen in the common case of blocksize == PAGE_SIZE.
++	 */
+ 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit) {
+ 		gfp_t gfp_flags = GFP_NOFS;
++		unsigned int enc_bytes = round_up(len, i_blocksize(inode));
+ 
+ 	retry_encrypt:
+-		bounce_page = fscrypt_encrypt_pagecache_blocks(page, PAGE_SIZE,
++		bounce_page = fscrypt_encrypt_pagecache_blocks(page, enc_bytes,
+ 							       0, gfp_flags);
+ 		if (IS_ERR(bounce_page)) {
+ 			ret = PTR_ERR(bounce_page);
 -- 
-chandan
+2.21.0.593.g511ec345e18-goog
