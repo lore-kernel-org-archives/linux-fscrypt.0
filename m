@@ -1,85 +1,69 @@
-Return-Path: <SRS0=6d/K=TX=vger.kernel.org=linux-integrity-owner@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:47166 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726126AbfEAWqG (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 1 May 2019 18:46:06 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v3 05/15] fs-verity: add inode and superblock fields
-Date: Thu, 23 May 2019 09:18:01 -0700
-Message-Id: <20190523161811.6259-6-ebiggers@kernel.org>
-In-Reply-To: <20190523161811.6259-1-ebiggers@kernel.org>
-References: <20190523161811.6259-1-ebiggers@kernel.org>
+Subject: [PATCH 00/13] fscrypt, ext4: prepare for blocksize != PAGE_SIZE
+Date: Wed,  1 May 2019 15:45:02 -0700
+Message-Id: <20190501224515.43059-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-api@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, Chandan Rajendra <chandan@linux.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hello,
 
-Analogous to fs/crypto/, add fields to the VFS inode and superblock for
-use by the fs/verity/ support layer:
+This patch series prepares fs/crypto/, and partially ext4, for the
+'blocksize != PAGE_SIZE' case.
 
-- ->s_vop: points to the fsverity_operations if the filesystem supports
-  fs-verity, otherwise is NULL.
+This basically contains the encryption changes from Chandan Rajendra's
+patch series "[V2,00/13] Consolidate FS read I/O callbacks code"
+(https://patchwork.kernel.org/project/linux-fscrypt/list/?series=111039)
+that don't require introducing the read_callbacks and don't depend on
+fsverity stuff.  But they've been reworked to clean things up a lot.
 
-- ->i_verity_info: points to cached fs-verity information for the inode
-  after someone opens it, otherwise is NULL.
+I propose that to move things forward for ext4 encryption with
+'blocksize != PAGE_SIZE', we apply this series (or something similar) to
+the fscrypt tree for 5.3 on its own merits.  Then the read_callbacks
+series on top of it will much smaller and easier to review.
 
-- S_VERITY: bit in ->i_flags that identifies verity inodes, even when
-  they haven't been opened yet and thus still have NULL ->i_verity_info.
+AFAIK, after this series the only thing stopping ext4 encryption from
+working with blocksize != PAGE_SIZE is the lack of encryption support in
+block_read_full_page(), which the read_callbacks will address.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- include/linux/fs.h | 11 +++++++++++
- 1 file changed, 11 insertions(+)
+This series applies to the fscrypt tree, and it can also be retrieved
+from git at https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+branch "fscrypt-subpage-blocks-prep".
 
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index f7fdfe93e25d3..a80a192cdcf28 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -64,6 +64,8 @@ struct workqueue_struct;
- struct iov_iter;
- struct fscrypt_info;
- struct fscrypt_operations;
-+struct fsverity_info;
-+struct fsverity_operations;
- struct fs_context;
- struct fs_parameter_description;
- 
-@@ -723,6 +725,10 @@ struct inode {
- 	struct fscrypt_info	*i_crypt_info;
- #endif
- 
-+#ifdef CONFIG_FS_VERITY
-+	struct fsverity_info	*i_verity_info;
-+#endif
-+
- 	void			*i_private; /* fs or device private pointer */
- } __randomize_layout;
- 
-@@ -1429,6 +1435,9 @@ struct super_block {
- 	const struct xattr_handler **s_xattr;
- #ifdef CONFIG_FS_ENCRYPTION
- 	const struct fscrypt_operations	*s_cop;
-+#endif
-+#ifdef CONFIG_FS_VERITY
-+	const struct fsverity_operations *s_vop;
- #endif
- 	struct hlist_bl_head	s_roots;	/* alternate root dentries for NFS */
- 	struct list_head	s_mounts;	/* list of mounts; _not_ for fs use */
-@@ -1964,6 +1973,7 @@ struct super_operations {
- #endif
- #define S_ENCRYPTED	16384	/* Encrypted file (using fs/crypto/) */
- #define S_CASEFOLD	32768	/* Casefolded file */
-+#define S_VERITY	65536	/* Verity file (using fs/verity/) */
- 
- /*
-  * Note that nosuid etc flags are inode-specific: setting some file-system
-@@ -2005,6 +2015,7 @@ static inline bool sb_rdonly(const struct super_block *sb) { return sb->s_flags
- #define IS_DAX(inode)		((inode)->i_flags & S_DAX)
- #define IS_ENCRYPTED(inode)	((inode)->i_flags & S_ENCRYPTED)
- #define IS_CASEFOLDED(inode)	((inode)->i_flags & S_CASEFOLD)
-+#define IS_VERITY(inode)	((inode)->i_flags & S_VERITY)
- 
- #define IS_WHITEOUT(inode)	(S_ISCHR(inode->i_mode) && \
- 				 (inode)->i_rdev == WHITEOUT_DEV)
+Chandan Rajendra (3):
+  ext4: clear BH_Uptodate flag on decryption error
+  ext4: decrypt only the needed blocks in ext4_block_write_begin()
+  ext4: decrypt only the needed block in __ext4_block_zero_page_range()
+
+Eric Biggers (10):
+  fscrypt: simplify bounce page handling
+  fscrypt: remove the "write" part of struct fscrypt_ctx
+  fscrypt: rename fscrypt_do_page_crypto() to fscrypt_crypt_block()
+  fscrypt: clean up some BUG_ON()s in block encryption/decryption
+  fscrypt: introduce fscrypt_encrypt_block_inplace()
+  fscrypt: support encrypting multiple filesystem blocks per page
+  fscrypt: handle blocksize < PAGE_SIZE in fscrypt_zeroout_range()
+  fscrypt: introduce fscrypt_decrypt_block_inplace()
+  fscrypt: support decrypting multiple filesystem blocks per page
+  ext4: encrypt only up to last block in ext4_bio_write_page()
+
+ fs/crypto/bio.c             |  73 +++------
+ fs/crypto/crypto.c          | 299 ++++++++++++++++++++----------------
+ fs/crypto/fscrypt_private.h |  14 +-
+ fs/ext4/inode.c             |  35 +++--
+ fs/ext4/page-io.c           |  44 +++---
+ fs/f2fs/data.c              |  17 +-
+ fs/ubifs/crypto.c           |  19 +--
+ include/linux/fscrypt.h     |  96 ++++++++----
+ 8 files changed, 319 insertions(+), 278 deletions(-)
+
 -- 
-2.21.0
+2.21.0.593.g511ec345e18-goog
