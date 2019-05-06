@@ -1,47 +1,47 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from asrmicro.com ([210.13.118.86]:7402 "EHLO mail2012.asrmicro.com"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726466AbfEVCDP (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 21 May 2019 22:03:15 -0400
-From: Hongjie Fang <hongjiefang@asrmicro.com>
-Subject: [PATCH V3] fscrypt: don't set policy for a dead directory
-Date: Wed, 22 May 2019 10:02:53 +0800
-Message-ID: <1558490573-21562-1-git-send-email-hongjiefang@asrmicro.com>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Date: Mon, 06 May 2019 13:54:45 +0530
+In-Reply-To: <20190501224515.43059-5-ebiggers@kernel.org>
+References: <20190501224515.43059-1-ebiggers@kernel.org>
+ <20190501224515.43059-5-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: tytso@mit.edu, jaegeuk@kernel.org, ebiggers@kernel.org
-Cc: linux-fscrypt@vger.kernel.org, Hongjie Fang <hongjiefang@asrmicro.com>, stable@vger.kernel.org
+Message-Id: <4366146.XrkeSAOiMl@dhcp-9-109-212-164>
+Subject: Re: [f2fs-dev] [PATCH 04/13] fscrypt: clean up some BUG_ON()s in
+ block encryption/decryption
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-the directory maybe has been removed when enter fscrypt_ioctl_set_policy().
-if so, the empty_dir() check will return error for ext4 file system.
+On Thursday, May 2, 2019 4:15:06 AM IST Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Replace some BUG_ON()s with WARN_ON_ONCE() and returning an error code,
+> and move the check for len divisible by FS_CRYPTO_BLOCK_SIZE into
+> fscrypt_crypt_block() so that it's done for both encryption and
+> decryption, not just encryption.
 
-ext4_rmdir() sets i_size = 0, then ext4_empty_dir() reports an error
-because 'inode->i_size < EXT4_DIR_REC_LEN(1) + EXT4_DIR_REC_LEN(2)'.
-if the fs is mounted with errors=panic, it will trigger a panic issue.
+Looks good to me,
 
-add the check IS_DEADDIR() to fix this problem.
+Reviewed-by: Chandan Rajendra <chandan@linux.ibm.com>
 
-Fixes: 9bd8212f981e ("ext4 crypto: add encryption policy and password salt support")
-Cc: <stable@vger.kernel.org> # v4.1+
-Signed-off-by: Hongjie Fang <hongjiefang@asrmicro.com>
----
- fs/crypto/policy.c | 2 ++
- 1 file changed, 2 insertions(+)
-
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index d536889..4941fe8 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -81,6 +81,8 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
- 	if (ret == -ENODATA) {
- 		if (!S_ISDIR(inode->i_mode))
- 			ret = -ENOTDIR;
-+		else if (IS_DEADDIR(inode))
-+			ret = -ENOENT;
- 		else if (!inode->i_sb->s_cop->empty_dir(inode))
- 			ret = -ENOTEMPTY;
- 		else
 -- 
-1.9.1
+chandan
+
+
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
