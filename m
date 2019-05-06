@@ -2,9 +2,9 @@ Return-Path: <linux-block-owner@vger.kernel.org>
 Subject: Re: [RFC PATCH 2/4] scsi: ufs: UFS driver v2.1 crypto support
 References: <20190506223544.195371-1-satyat@google.com>
  <20190506223544.195371-3-satyat@google.com>
-From: Bart Van Assche <bvanassche@acm.org>
-Message-ID: <f689f1a4-c507-30fd-0c3e-e6fe6d63b30d@acm.org>
-Date: Mon, 6 May 2019 17:39:35 -0700
+From: Randy Dunlap <rdunlap@infradead.org>
+Message-ID: <9ca9b288-4fc1-030a-3898-8ec632113c44@infradead.org>
+Date: Mon, 6 May 2019 16:51:20 -0700
 MIME-Version: 1.0
 In-Reply-To: <20190506223544.195371-3-satyat@google.com>
 Content-Type: text/plain; charset=utf-8
@@ -16,13 +16,28 @@ Cc: Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.d
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 On 5/6/19 3:35 PM, Satya Tangirala wrote:
-> +/*TODO: worry about endianness and cpu_to_le32 */
+> diff --git a/drivers/scsi/ufs/Kconfig b/drivers/scsi/ufs/Kconfig
+> index 6db37cf306b0..c14f445a2522 100644
+> --- a/drivers/scsi/ufs/Kconfig
+> +++ b/drivers/scsi/ufs/Kconfig
+> @@ -135,3 +135,13 @@ config SCSI_UFS_BSG
+>  
+>  	  Select this if you need a bsg device node for your UFS controller.
+>  	  If unsure, say N.
+> +
+> +config SCSI_UFS_CRYPTO
+> +	bool "UFS Crypto Engine Support"
+> +	depends on SCSI_UFSHCD && BLK_KEYSLOT_MANAGER
+> +	help
+> +	Enable Crypto Engine Support in UFS.
+> +	Enabling this makes it possible for the kernel to use the crypto
+> +	capabilities of the UFS device (if present) to perform crypto
+> +	operations on data being transferred into/out of the device.
 
-Please fix endianness issues before reposting this patch series and
-please also make sure that this patch series is sparse-clean.
-Instructions for how to use sparse are available at
-https://kernelnewbies.org/Sparse.
+	                        (maybe:)     to/from the device.
+> +
 
-Thanks,
+Help text should be indented with 1 tab + 2 spaces, please.
 
-Bart.
+-- 
+~Randy
