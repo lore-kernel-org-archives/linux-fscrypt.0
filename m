@@ -1,108 +1,33 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:44310 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2404364AbfEXWEo (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 24 May 2019 18:04:44 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 7/7] generic: verify ciphertext of v1 encryption policies with Adiantum
-Date: Fri, 24 May 2019 15:04:25 -0700
-Message-Id: <20190524220425.201170-8-ebiggers@kernel.org>
-In-Reply-To: <20190524220425.201170-1-ebiggers@kernel.org>
-References: <20190524220425.201170-1-ebiggers@kernel.org>
+Return-Path: <SRS0=tmiS=TG=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: Re: [PATCH 08/13] fscrypt: introduce fscrypt_decrypt_block_inplace()
+Date: Mon, 06 May 2019 14:31:58 +0530
+In-Reply-To: <20190501224515.43059-9-ebiggers@kernel.org>
+References: <20190501224515.43059-1-ebiggers@kernel.org> <20190501224515.43059-9-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Message-Id: <1926821.WNcHRD5IIQ@dhcp-9-109-212-164>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Thursday, May 2, 2019 4:15:10 AM IST Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> fscrypt_decrypt_page() behaves very differently depending on whether the
+> filesystem set FS_CFLG_OWN_PAGES in its fscrypt_operations.  This makes
+> the function difficult to understand and document.  It also makes it so
+> that all callers have to provide inode and lblk_num, when fscrypt could
+> determine these itself for pagecache pages.
+> 
+> Therefore, move the FS_CFLG_OWN_PAGES behavior into a new function
+> fscrypt_decrypt_block_inplace().
+>
 
-Verify ciphertext for v1 encryption policies that use Adiantum to
-encrypt file contents and file names.
+Looks good to me,
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/702     | 43 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/702.out | 10 ++++++++++
- tests/generic/group   |  1 +
- 3 files changed, 54 insertions(+)
- create mode 100755 tests/generic/702
- create mode 100644 tests/generic/702.out
+Reviewed-by: Chandan Rajendra <chandan@linux.ibm.com>
 
-diff --git a/tests/generic/702 b/tests/generic/702
-new file mode 100755
-index 00000000..c7ac7be4
---- /dev/null
-+++ b/tests/generic/702
-@@ -0,0 +1,43 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
-+#
-+# FS QA Test generic/702
-+#
-+# Verify ciphertext for v1 encryption policies that use Adiantum to encrypt file
-+# contents and file names.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/encrypt
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+
-+# Test both with and without the DIRECT_KEY flag.
-+_verify_ciphertext_for_encryption_policy Adiantum Adiantum
-+_verify_ciphertext_for_encryption_policy Adiantum Adiantum direct
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/702.out b/tests/generic/702.out
-new file mode 100644
-index 00000000..0dd80dae
---- /dev/null
-+++ b/tests/generic/702.out
-@@ -0,0 +1,10 @@
-+QA output created by 702
-+
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: Adiantum
-+	filenames_encryption_mode: Adiantum
-+
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: Adiantum
-+	filenames_encryption_mode: Adiantum
-+	options: direct
-diff --git a/tests/generic/group b/tests/generic/group
-index 85cc2165..2fe51dcc 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -552,3 +552,4 @@
- 547 auto quick log
- 700 auto quick encrypt
- 701 auto quick encrypt
-+702 auto quick encrypt
 -- 
-2.22.0.rc1.257.g3120a18244-goog
+chandan
