@@ -1,80 +1,49 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 20 May 2019 10:25:40 -0700
-Message-Id: <20190520172552.217253-5-ebiggers@kernel.org>
-In-Reply-To: <20190520172552.217253-1-ebiggers@kernel.org>
-References: <20190520172552.217253-1-ebiggers@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mx0a-001b2d01.pphosted.com ([148.163.156.1]:49314 "EHLO
+        mx0a-001b2d01.pphosted.com" rhost-flags-OK-OK-OK-OK)
+        by vger.kernel.org with ESMTP id S1725883AbfEFLd5 (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 6 May 2019 07:33:57 -0400
+Received: from pps.filterd (m0098409.ppops.net [127.0.0.1])
+        by mx0a-001b2d01.pphosted.com (8.16.0.27/8.16.0.27) with SMTP id x46BWiBV025895
+        for <linux-fscrypt@vger.kernel.org>; Mon, 6 May 2019 07:33:56 -0400
+Received: from e06smtp01.uk.ibm.com (e06smtp01.uk.ibm.com [195.75.94.97])
+        by mx0a-001b2d01.pphosted.com with ESMTP id 2sah6tqgy1-1
+        (version=TLSv1.2 cipher=AES256-GCM-SHA384 bits=256 verify=NOT)
+        for <linux-fscrypt@vger.kernel.org>; Mon, 06 May 2019 07:33:56 -0400
+Received: from localhost
+        by e06smtp01.uk.ibm.com with IBM ESMTP SMTP Gateway: Authorized Use Only! Violators will be prosecuted
+        for <linux-fscrypt@vger.kernel.org> from <chandan@linux.ibm.com>;
+        Mon, 6 May 2019 12:33:53 +0100
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: Re: [PATCH 13/13] ext4: encrypt only up to last block in ext4_bio_write_page()
+Date: Mon, 06 May 2019 14:42:14 +0530
+In-Reply-To: <20190501224515.43059-14-ebiggers@kernel.org>
+References: <20190501224515.43059-1-ebiggers@kernel.org> <20190501224515.43059-14-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v6 04/16] fscrypt: add ->ci_inode to fscrypt_info
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Transfer-Encoding: 7Bit
 Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
+Message-Id: <5247310.83GBoLVoWW@dhcp-9-109-212-164>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Thursday, May 2, 2019 4:15:15 AM IST Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> As an optimization, don't encrypt blocks fully beyond i_size, since
+> those definitely won't need to be written out.  Also add a comment.
+> 
+> This is in preparation for allowing encryption on ext4 filesystems with
+> blocksize != PAGE_SIZE.
+> 
+> This is based on work by Chandan Rajendra.
+>
 
-Add an inode back-pointer to 'struct fscrypt_info', such that
-inode->i_crypt_info->ci_inode == inode.
+Looks good to me,
 
-This will be useful for:
+Reviewed-by: Chandan Rajendra <chandan@linux.ibm.com>
 
-1. Evicting the inodes when a fscrypt key is removed, since we'll track
-   the inodes using a given key by linking their fscrypt_infos together,
-   rather than the inodes directly.  This avoids bloating 'struct inode'
-   with a new list_head.
-
-2. Simplifying the per-file key setup, since the inode pointer won't
-   have to be passed around everywhere just in case something goes wrong
-   and it's needed for fscrypt_warn().
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fscrypt_private.h | 3 +++
- fs/crypto/keyinfo.c         | 2 ++
- 2 files changed, 5 insertions(+)
-
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 52e09ef40bfa6..ac24edfc297f1 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -73,6 +73,9 @@ struct fscrypt_info {
- 	 */
- 	struct fscrypt_mode *ci_mode;
- 
-+	/* Back-pointer to the inode */
-+	struct inode *ci_inode;
-+
- 	/*
- 	 * If non-NULL, then this inode uses a master key directly rather than a
- 	 * derived key, and ci_ctfm will equal ci_master_key->mk_ctfm.
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 479389a4e0559..49764d335c370 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -541,6 +541,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	if (!crypt_info)
- 		return -ENOMEM;
- 
-+	crypt_info->ci_inode = inode;
-+
- 	crypt_info->ci_flags = ctx.flags;
- 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
- 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
 -- 
-2.21.0.1020.gf2820cf01a-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+chandan
