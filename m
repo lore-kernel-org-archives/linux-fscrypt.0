@@ -1,70 +1,59 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:49668 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726452AbfE1UAH (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 28 May 2019 16:00:07 -0400
-Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id BC9BF20B1F
-        for <linux-fscrypt@vger.kernel.org>; Tue, 28 May 2019 20:00:06 +0000 (UTC)
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH] fscrypt: remove unnecessary includes of ratelimit.h
-Date: Tue, 28 May 2019 12:59:08 -0700
-Message-Id: <20190528195908.77031-1-ebiggers@kernel.org>
+Received: from mail-pf1-f193.google.com ([209.85.210.193]:40690 "EHLO
+        mail-pf1-f193.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726381AbfEGBXk (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 6 May 2019 21:23:40 -0400
+Subject: Re: [RFC PATCH 3/4] fscrypt: wire up fscrypt to use blk-crypto
+References: <20190506223544.195371-1-satyat@google.com>
+ <20190506223544.195371-4-satyat@google.com>
+From: Bart Van Assche <bvanassche@acm.org>
+Message-ID: <daa7c452-0f73-67e7-7a9a-55499372cc0d@acm.org>
+Date: Mon, 6 May 2019 18:23:35 -0700
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <20190506223544.195371-4-satyat@google.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
+To: Satya Tangirala <satyat@google.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
+Cc: Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On 5/6/19 3:35 PM, Satya Tangirala wrote:
+[ ... ]
+> diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+> index 7da276159593..d6d65c88a629 100644
+> --- a/fs/crypto/fscrypt_private.h
+> +++ b/fs/crypto/fscrypt_private.h
+> @@ -49,6 +49,16 @@ struct fscrypt_symlink_data {
+>  	char encrypted_path[1];
+>  } __packed;
+>  
+> +/* Master key referenced by FS_POLICY_FLAG_DIRECT_KEY policy */
+> +struct fscrypt_master_key {
+> +	struct hlist_node mk_node;
+> +	refcount_t mk_refcount;
+> +	const struct fscrypt_mode *mk_mode;
+> +	struct crypto_skcipher *mk_ctfm;
+> +	u8 mk_descriptor[FS_KEY_DESCRIPTOR_SIZE];
+> +	u8 mk_raw[FS_MAX_KEY_SIZE];
+> +};
+> [ ... ]
+> -/* Master key referenced by FS_POLICY_FLAG_DIRECT_KEY policy */
+> -struct fscrypt_master_key {
+> -	struct hlist_node mk_node;
+> -	refcount_t mk_refcount;
+> -	const struct fscrypt_mode *mk_mode;
+> -	struct crypto_skcipher *mk_ctfm;
+> -	u8 mk_descriptor[FS_KEY_DESCRIPTOR_SIZE];
+> -	u8 mk_raw[FS_MAX_KEY_SIZE];
+> -};
 
-These should have been removed during commit 544d08fde258 ("fscrypt: use
-a common logging function"), but I missed them.
+How about introducing the file fs/crypto/fscrypt_private.h in patch 2/4
+such that the fscrypt_master_key definition does not have to be moved
+around?
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fname.c   | 1 -
- fs/crypto/hooks.c   | 1 -
- fs/crypto/keyinfo.c | 1 -
- 3 files changed, 3 deletions(-)
+Thanks,
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index eccea3d8f9234..00d150ff30332 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -12,7 +12,6 @@
-  */
- 
- #include <linux/scatterlist.h>
--#include <linux/ratelimit.h>
- #include <crypto/skcipher.h>
- #include "fscrypt_private.h"
- 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index bd525f7573a49..c1d6715d88e93 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -5,7 +5,6 @@
-  * Encryption hooks for higher-level filesystem operations.
-  */
- 
--#include <linux/ratelimit.h>
- #include "fscrypt_private.h"
- 
- /**
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index dcd91a3fbe49a..207ebed918c15 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -12,7 +12,6 @@
- #include <keys/user-type.h>
- #include <linux/hashtable.h>
- #include <linux/scatterlist.h>
--#include <linux/ratelimit.h>
- #include <crypto/aes.h>
- #include <crypto/algapi.h>
- #include <crypto/sha.h>
--- 
-2.22.0.rc1.257.g3120a18244-goog
+Bart.
