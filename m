@@ -1,235 +1,204 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from merlin.infradead.org ([205.233.59.134]:43750 "EHLO
-        merlin.infradead.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726371AbfEHCNE (ORCPT
+Received: from mail-pl1-f195.google.com ([209.85.214.195]:45102 "EHLO
+        mail-pl1-f195.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726128AbfEGAhc (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 7 May 2019 22:13:04 -0400
+        Mon, 6 May 2019 20:37:32 -0400
 Subject: Re: [RFC PATCH 1/4] block: Block Layer changes for Inline Encryption
  Support
 References: <20190506223544.195371-1-satyat@google.com>
  <20190506223544.195371-2-satyat@google.com>
-From: Randy Dunlap <rdunlap@infradead.org>
-Message-ID: <5a1632db-c59a-6ac1-87d7-9307e4744aa7@infradead.org>
-Date: Tue, 7 May 2019 19:12:49 -0700
+From: Bart Van Assche <bvanassche@acm.org>
+Message-ID: <8d44c89f-cc61-9324-adaa-a343f2373556@acm.org>
+Date: Mon, 6 May 2019 17:37:28 -0700
 MIME-Version: 1.0
 In-Reply-To: <20190506223544.195371-2-satyat@google.com>
 Content-Type: text/plain; charset=utf-8
 Content-Language: en-US
-Content-Transfer-Encoding: 8bit
+Content-Transfer-Encoding: 7bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 To: Satya Tangirala <satyat@google.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
 Cc: Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi,
-This is documentation comments...
-
 On 5/6/19 3:35 PM, Satya Tangirala wrote:
-> diff --git a/Documentation/block/blk-crypto.txt b/Documentation/block/blk-crypto.txt
-> new file mode 100644
-> index 000000000000..a1b82361cb16
-> --- /dev/null
-> +++ b/Documentation/block/blk-crypto.txt
-> @@ -0,0 +1,185 @@
-> +BLK-CRYPTO and KEYSLOT MANAGER
-> +===========================
+> +#ifdef CONFIG_BLK_CRYPT_CTX
+> +static inline void bio_crypt_advance(struct bio *bio, unsigned int bytes)
+> +{
+> +	if (bio_is_encrypted(bio)) {
+> +		bio->bi_crypt_context.data_unit_num +=
+> +			bytes >> bio->bi_crypt_context.data_unit_size_bits;
+> +	}
+> +}
 > +
-> +CONTENTS
-> +1. Objective
-> +2. Constraints and notes
-> +3. Design
-> +4. Blk-crypto
-> + 4-1 What does blk-crypto do on bio submission
-> +5. Layered Devices
-> +6. Future optimizations for layered devices
+> +void bio_clone_crypt_context(struct bio *dst, struct bio *src)
+> +{
+> +	if (bio_crypt_swhandled(src))
+> +		return;
+> +	dst->bi_crypt_context = src->bi_crypt_context;
 > +
-> +1. Objective
-> +============
+> +	if (!bio_crypt_has_keyslot(src))
+> +		return;
 > +
-> +We want to support inline encryption (IE) in the kernel.
-> +To allow for testing, we also want a software fallback when actual
-> +IE hardware is absent. We also want IE to work with layered devices
-> +like dm and loopback (i.e. we want to be able to use the IE hardware
-> +of the underlying devices if present, or else fall back to software
-> +en/decryption).
-> +
-> +
-> +2. Constraints and notes
-> +========================
-> +
-> +1) IE hardware have a limited number of “keyslots” that can be programmed
-> +with an encryption context (key, algorithm, data unit size, etc.) at any time.
-> +One can specify a keyslot in a data requests made to the device, and when the
+> +	/**
 
-                             in data requests
-or
-                             in a data request
+Please use "/*" to start comment blocks other than kernel-doc headers.
 
-> +device will en/decrypt the data using the encryption context programmed into
-> +that specified keyslot. Of course, when possible, we want to make multiple
-> +requests with the the same encryption context share the same keyslot.
-> +
-> +2) We need a way for filesystems to specify an encryption context to use for
-> +en/decrypting a struct bio, and a device driver (like UFS) needs to be able
-> +to use that encryption context when it processes the bio.
-> +
-> +3) We need a way for device drivers to expose their capabilities in a unified
-> +way to the upper layers.
-> +
-> +
-> +3. Design
-> +=========
-> +
-> +We add a struct bio_crypt_context to struct bio that can represent an
-> +encryption context, because we need to able to pass this encryption context
-> +from the FS layer to the device driver to act upon.
-> +
-> +While IE hardware works on the notion of keyslots, the FS layer has no
-> +knowledge of keyslots - it simply wants to specify an encryption context to
-> +use while en/decrypting a bio.
-> +
-> +We introduce a keyslot manager (KSM) that handles the translation from
-> +encryption contexts specified by the FS to keyslots on the IE hardware.
-> +This KSM also serves as the way IE hardware can expose their capabilities to
-> +upper layers. The generic mode of operation is: each device driver that wants
-> +to support IE will construct a KSM and set it up in its struct request_queue.
-> +Upper layers that want to use IE on this device can then use this KSM in
-> +the device’s struct request_queue to translate an encryption context into
-> +a keyslot. The presence of the KSM in the request queue shall be used to mean
-> +that the device supports IE.
-> +
-> +On the device driver end of the interface, the device driver needs to tell the
-> +KSM how to actually manipulate the IE hardware in the device to do things like
-> +programming the crypto key into the IE hardware into a particular keyslot. All
-> +this is achieved through the struct keyslot_mgmt_ll_ops that the device driver
-> +passes to the KSM when creating it.
-> +
-> +It uses refcounts to track which keyslots are idle (either they have no
-> +encryption context programmed, or there are no in flight struct bios
-> +referencing that keyslot). When a new encryption context needs a keyslot, it
-> +tries to find a keyslot that has already been programmed with the same
-> +encryption context, and if there is no such keyslot, it evicts the least
-> +recently used idle keyslot and programs the new encryption context into that
-> +one. If no idle keyslots are available, then the caller will sleep until there
-> +is at least one.
-> +
-> +
-> +4. Blk-crypto
-> +=============
-> +
-> +The above is sufficient for simple cases, but does not work if there is a
-> +need for a software fallback, or if we are want to use IE with layered devices.
-> +To these ends, we introduce blk-crypto. Blk-crypto allows us to present a
-> +unified view of encryption to the FS (so FS only needs to specify an
-> +encryption context and not worry about keyslots at all), and block crypto can
-> +decide whether to delegate the en/decryption to IE hardware or to software
-> +(i.e. to the kernel crypto API). Block crypto maintains an internal KSM that
-> +serves as the software fallback to the kernel crypto API.
-> +
-> +Blk-crypto needs to ensure that the encryption context is programmed into the
-> +"correct" keyslot manager for IE. If a bio is submitted to a layered device
-> +that eventually passes the bio down to a device that really does support IE, we
-> +want the encryption context to be programmed into a keyslot for the KSM of the
-> +device with IE support. However, blk-crypto does not know a-priori whether a
+> +	 * This should always succeed because the src bio should already
+> +	 * have a reference to the keyslot.
+> +	 */
+> +	BUG_ON(!keyslot_manager_get_slot(src->bi_crypt_context.processing_ksm,
+> +					  src->bi_crypt_context.keyslot));
 
-                                                             a priori
+Are you aware that using BUG_ON() if there is a reasonable way to
+recover is not acceptable?
 
-> +particular device is the final device in the layering structure for a bio or
-> +not. So in the case that a particular device does not support IE, since it is
-> +possibly the final destination device for the bio, if the bio requires
-> +encryption (i.e. the bio is doing a write operation), blk-crypto must fallback
-> +to software *before* sending the bio to the device.
+> +}
 > +
-> +Blk-crypto ensures that
-> +1) The bio’s encryption context is programmed into a keyslot in the KSM of the
-> +request queue that the bio is being submitted to (or the software fallback KSM
-> +if the request queue doesn’t have a KSM), and that the processing_ksm in the
-> +bi_crypt_context is set to this KSM
+> +bool bio_crypt_should_process(struct bio *bio, struct request_queue *q)
+> +{
+> +	if (!bio_is_encrypted(bio))
+> +		return false;
 > +
-> +2) That the bio has its own individual reference to the keyslot in this KSM.
-> +Once the bio passes through block crypto, its encryption context is programmed
+> +	WARN_ON(!bio_crypt_has_keyslot(bio));
+> +	return q->ksm == bio->bi_crypt_context.processing_ksm;
+> +}
+> +EXPORT_SYMBOL(bio_crypt_should_process);
+> +
+> +#endif /* CONFIG_BLK_CRYPT_CTX */
 
-                          is   block crypto
-                 the same as   blk-crypto?
-If so, consistency would be Good.
+Please move these new functions into a separate source file instead of
+using #ifdef / #endif. I think the coding style documentation mentions
+this explicitly.
 
-> +in some KSM. The “its own individual reference to the keyslot” ensures that
-> +keyslots can be released by each bio independently of other bios while ensuring
-> +that the bio has a valid reference to the keyslot when, for e.g., the software
-> +fallback KSM in blk-crypto performs crypto for on the device’s behalf. The
-> +individual references are ensured by increasing the refcount for the keyslot in
-> +the processing_ksm when a bio with a programmed encryption context is cloned.
-> +
-> +
-> +4-1. What blk-crypto does on bio submission
-> +-------------------------------------------
-> +
-> +Case 1: blk-crypto is given a bio with only an encryption context that hasn’t
-> +been programmed into any keyslot in any KSM (for e.g. a bio from the FS). In
-> +this case, blk-crypto will program the encryption context into the KSM of the
-> +request queue the bio is being submitted to (and if this KSM does not exist,
-> +then it will program it into blk-crypto’s internal KSM for software fallback).
-> +The KSM that this encryption context was programmed into is stored as the
-> +processing_ksm in the bio’s bi_crypt_context.
-> +
-> +Case 2: blk-crypto is given a bio whose encryption context has already been
-> +programmed into a keyslot in the *software fallback KSM*. In this case,
-> +blk-crypto does nothing; it treats the bio as not having specified an
-> +encryption context. Note that we cannot do what we will do in Case 3 here
-> +because we would have already encrypted the bio in software by this point.
-> +
-> +Case 3: blk-crypto is given a bio whose encryption context has already been
-> +programmed into a keyslot in some KSM (that is *not* the software fallback
-> +KSM). In this case, blk-crypto first releases that keyslot from that KSM and
-> +then treats the bio as in Case 1.
-> +
-> +This way, when a device driver is processing a bio, it can be sure that
-> +the bio’s encryption context has been programmed into some KSM (either the
-> +device driver’s request queue’s KSM, or blk-crypto’s software fallback KSM).
-> +It then simply needs to check if the bio’s processing_ksm is the device’s
-> +request queue’s KSM. If so, then it should proceed with IE. If not, it should
-> +simply do nothing with respect to crypto, because some other KSM (perhaps the
-> +blk-crypto software fallback KSM) is handling the en/decryption.
-> +
-> +Blk-crypto will release the keyslot that is being held by the bio (and also
-> +decrypt it if the bio is using the software fallback KSM) once
-> +bio_remaining_done returns true for the bio.
-> +
-> +
-> +5. Layered Devices
-> +==================
-> +
-> +Layered devices that wish to support IE need to create their own keyslot
-> +manager for their request queue, and expose whatever functionality they choose.
-> +When a layered device wants to pass a bio to another layer (either by
-> +resubmitting the same bio, or by submitting a clone), it doesn’t need to do
-> +anything special because the bio (or the clone) will once again pass through
-> +blk-crypto, which will work as described in Case 3. If a layered device wants
-> +for some reason to do the IO by itself instead of passing it on to a child
-> +device, but it also chose to expose IE capabilities by setting up a KSM in its
-> +request queue, it is then responsible for en/decrypting the data itself. In
-> +such cases, the device can choose to call the blk-crypto function
-> +blk_crypto_fallback_to_software (TODO: Not yet implemented), which will
-> +cause the en/decryption to be done via software fallback.
-> +
-> +
-> +6. Future Optimizations for layered devices
-> +===========================================
-> +
-> +Creating a keyslot manager for the layered device uses up memory for each
-> +keyslot, and in general, a layered device (like dm-linear) merely passes the
-> +request on to a “child” device, so the keyslots in the layered device itself
-> +might be completely unused. We can instead define a new type of KSM; the
-> +“passthrough KSM”, that layered devices can use to let blk-crypto know that
-> +this layered device *will* pass the bio to some child device (and hence
-> +through blk-crypto again, at which point blk-crypto can program the encryption
-> +context, instead of programming it into the layered device’s KSM). Again, if
-> +the device “lies” and decides to do the IO itself instead of passing it on to
-> +a child device, it is responsible for doing the en/decryption (and can choose
-> +to call blk_crypto_fallback_to_software). Another use case for the
-> +"passthrough KSM" is for IE devices that want to manage their own keyslots/do
-> +not have a limited number of keyslots.
+> +static struct blk_crypto_keyslot {
+> +	struct crypto_skcipher *tfm;
+> +	int crypto_alg_id;
+> +	union {
+> +		u8 key[BLK_CRYPTO_MAX_KEY_SIZE];
+> +		u32 key_words[BLK_CRYPTO_MAX_KEY_SIZE/4];
+> +	};
+> +} *slot_mem;
 
+What is the purpose of the key_words[] member? Is it used anywhere? If
+not, can it be left out?
 
--- 
-~Randy
+> diff --git a/block/blk-merge.c b/block/blk-merge.c
+> index 1c9d4f0f96ea..55133c547bdf 100644
+> --- a/block/blk-merge.c
+> +++ b/block/blk-merge.c
+> @@ -614,6 +614,59 @@ int blk_rq_map_sg(struct request_queue *q, struct request *rq,
+>  }
+>  EXPORT_SYMBOL(blk_rq_map_sg);
+>  
+> +#ifdef CONFIG_BLK_CRYPT_CTX
+> +/*
+> + * Checks that two bio crypt contexts are compatible - i.e. that
+> + * they are mergeable except for data_unit_num continuity.
+> + */
+> +static inline bool bio_crypt_ctx_compatible(struct bio *b_1, struct bio *b_2)
+> +{
+> +	struct bio_crypt_ctx *bc1 = &b_1->bi_crypt_context;
+> +	struct bio_crypt_ctx *bc2 = &b_2->bi_crypt_context;
+> +
+> +	if (bio_is_encrypted(b_1) != bio_is_encrypted(b_2) ||
+> +	    bc1->keyslot != bc2->keyslot)
+> +		return false;
+> +
+> +	return !bio_is_encrypted(b_1) ||
+> +		bc1->data_unit_size_bits == bc2->data_unit_size_bits;
+> +}
+> +
+> +/*
+> + * Checks that two bio crypt contexts are compatible, and also
+> + * that their data_unit_nums are continuous (and can hence be merged)
+> + */
+> +static inline bool bio_crypt_ctx_back_mergeable(struct bio *b_1,
+> +						unsigned int b1_sectors,
+> +						struct bio *b_2)
+> +{
+> +	struct bio_crypt_ctx *bc1 = &b_1->bi_crypt_context;
+> +	struct bio_crypt_ctx *bc2 = &b_2->bi_crypt_context;
+> +
+> +	if (!bio_crypt_ctx_compatible(b_1, b_2))
+> +		return false;
+> +
+> +	return !bio_is_encrypted(b_1) ||
+> +		(bc1->data_unit_num +
+> +		(b1_sectors >> (bc1->data_unit_size_bits - 9)) ==
+> +		bc2->data_unit_num);
+> +}
+> +
+> +#else /* CONFIG_BLK_CRYPT_CTX */
+> +static inline bool bio_crypt_ctx_compatible(struct bio *b_1, struct bio *b_2)
+> +{
+> +	return true;
+> +}
+> +
+> +static inline bool bio_crypt_ctx_back_mergeable(struct bio *b_1,
+> +						unsigned int b1_sectors,
+> +						struct bio *b_2)
+> +{
+> +	return true;
+> +}
+> +
+> +#endif /* CONFIG_BLK_CRYPT_CTX */
+
+Can the above functions be moved into a new file such that the
+#ifdef/#endif construct can be avoided?
+
+> +	/* Wait till there is a free slot available */
+> +	while (atomic_read(&ksm->num_idle_slots) == 0) {
+> +		mutex_unlock(&ksm->lock);
+> +		wait_event(ksm->wait_queue,
+> +			   (atomic_read(&ksm->num_idle_slots) > 0));
+> +		mutex_lock(&ksm->lock);
+> +	}
+
+Using an atomic_read() inside code protected by a mutex is suspicious.
+Would protecting all ksm->num_idle_slots manipulations with ksm->lock
+and making ksm->num_idle_slots a regular integer have a negative
+performance impact?
+
+> +struct keyslot_mgmt_ll_ops {
+> +	int (*keyslot_program)(void *ll_priv_data, const u8 *key,
+> +			       unsigned int data_unit_size,
+> +			       /* crypto_alg_id returned by crypto_alg_find */
+> +			       unsigned int crypto_alg_id,
+> +			       unsigned int slot);
+> +	/**
+> +	 * Evict key from all keyslots in the keyslot manager.
+> +	 * The key, data_unit_size and crypto_alg_id are also passed down
+> +	 * so that for e.g. dm layers that have their own keyslot
+> +	 * managers can evict keys from the devices that they map over.
+> +	 * Returns 0 on success, -errno otherwise.
+> +	 */
+> +	int (*keyslot_evict)(void *ll_priv_data, unsigned int slot,
+> +			     const u8 *key, unsigned int data_unit_size,
+> +			     unsigned int crypto_alg_id);
+> +	/**
+> +	 * Get a crypto_alg_id (used internally by the lower layer driver) that
+> +	 * represents the given blk-crypto crypt_mode and data_unit_size. The
+> +	 * returned crypto_alg_id will be used in future calls to the lower
+> +	 * layer driver (in keyslot_program and keyslot_evict) to reference
+> +	 * this crypt_mode, data_unit_size combo. Returns negative error code
+> +	 * if a crypt_mode, data_unit_size combo is not supported.
+> +	 */
+> +	int (*crypto_alg_find)(void *ll_priv_data,
+> +			       enum blk_crypt_mode_index crypt_mode,
+> +			       unsigned int data_unit_size);
+> +	/**
+> +	 * Returns the slot number that matches the key,
+> +	 * or -ENOKEY if no match found, or negative on error
+> +	 */
+> +	int (*keyslot_find)(void *ll_priv_data, const u8 *key,
+> +			    unsigned int data_unit_size,
+> +			    unsigned int crypto_alg_id);
+> +};
+
+Have you considered to use kernel-doc format for documenting the members
+of the keyslot_mgmt_ll_ops structure?
+
+Thanks,
+
+Bart.
