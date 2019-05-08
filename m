@@ -1,152 +1,76 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:39798 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726653AbfEHDzR (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 7 May 2019 23:55:17 -0400
-Date: Tue, 7 May 2019 20:55:14 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: Re: [PATCH] fscrypt: don't set policy for a dead directory
-Message-ID: <20190508035513.GB26575@sol.localdomain>
+Return-Path: <SRS0=pY7t=TI=asrmicro.com=hongjiefang@kernel.org>
+From: =?utf-8?B?RmFuZyBIb25namllKOaWuea0quadsCk=?= <hongjiefang@asrmicro.com>
+Subject: RE: [PATCH] fscrypt: don't set policy for a dead directory
+Date: Wed, 8 May 2019 02:11:10 +0000
+Message-ID: <8294e7217a014c5ca64f29fdf69bdeec@mail2012.asrmicro.com>
 References: <1557204108-29048-1-git-send-email-hongjiefang@asrmicro.com>
  <20190507155531.GA1399@sol.localdomain>
- <8294e7217a014c5ca64f29fdf69bdeec@mail2012.asrmicro.com>
+In-Reply-To: <20190507155531.GA1399@sol.localdomain>
+Content-Language: zh-CN
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <8294e7217a014c5ca64f29fdf69bdeec@mail2012.asrmicro.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Fang =?utf-8?B?SG9uZ2ppZSjmlrnmtKrmnbAp?= <hongjiefang@asrmicro.com>
-Cc: "tytso@mit.edu" <tytso@mit.edu>, "jaegeuk@kernel.org" <jaegeuk@kernel.org>, "linux-fscrypt@vger.kernel.org" <linux-fscrypt@vger.kernel.org>, linux-ext4@vger.kernel.org
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: "tytso@mit.edu" <tytso@mit.edu>, "jaegeuk@kernel.org" <jaegeuk@kernel.org>, "linux-fscrypt@vger.kernel.org" <linux-fscrypt@vger.kernel.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-[+Cc linux-ext4]
-
-On Wed, May 08, 2019 at 02:11:10AM +0000, Fang Hongjie(方洪杰) wrote:
-> 
-> > -----Original Message-----
-> > From: Eric Biggers [mailto:ebiggers@kernel.org]
-> > Sent: Tuesday, May 07, 2019 11:56 PM
-> > To: Fang Hongjie(方洪杰)
-> > Cc: tytso@mit.edu; jaegeuk@kernel.org; linux-fscrypt@vger.kernel.org
-> > Subject: Re: [PATCH] fscrypt: don't set policy for a dead directory
-> > 
-> > Hi,
-> > 
-> > On Tue, May 07, 2019 at 12:41:48PM +0800, hongjiefang wrote:
-> > > if the directory had been removed, should not set policy for it.
-> > >
-> > > Signed-off-by: hongjiefang <hongjiefang@asrmicro.com>
-> > 
-> > Can you explain the motivation for this change?  It makes some sense, but I
-> > don't see why it's really needed.  If you look at all the other IS_DEADDIR()
-> > checks in the kernel, they're not for operations on the directory inode itself,
-> > but rather for creating/finding/listing entries in the directory.  I think
-> > FS_IOC_SET_ENCRYPTION_POLICY is more like the former (though it does have to
-> > check whether the directory is empty).
-> 
-> I met a panic issue when run the syzkaller on kernel 4.14.81(EXT4 FBE enabled).
-> the flow of case as follow:
-> r0 = openat$dir(0xffffffffffffff9c, &(0x7f0000000000)='.\x00', 0x0, 0x0)
-> mkdirat(r0, &(0x7f0000000040)='./file0\x00', 0x0)
-> r1 = openat$dir(0xffffffffffffff9c, &(0x7f0000000140)='./file0\x00', 0x0, 0x0)
-> unlinkat(r0, &(0x7f0000000240)='./file0\x00', 0x200)
-> ioctl$FS_IOC_SET_ENCRYPTION_POLICY(r1, 0x800c6613, &(0x7f00000000c0)
-> ={0x0, @aes128, 0x0, "8acc73da97d6accc"})
-> 
-> The file0 directory maybe removed before doing FS_IOC_SET_ENCRYPTION_POLICY.
-> In this case, fscrypt_ioctl_set_policy()-> ext4_empty_dir() will return the
-> " invalid size " and trigger a panic when check the i_size of inode.
-> the panic stack as follow:
-> PID: 2682   TASK: ffffffc087d18080  CPU: 3   COMMAND: "syz-executor"
->  #0 [ffffffc087d26fc0] panic at ffffff90080dc04c
->  #1 [ffffffc087d27260] ext4_handle_error at ffffff9008689b08
->  #2 [ffffffc087d27290] __ext4_error_inode at ffffff9008689e90
->  #3 [ffffffc087d273f0] ext4_empty_dir at ffffff900865b064
->  #4 [ffffffc087d274d0] fscrypt_ioctl_set_policy at ffffff9008565d70
->  #5 [ffffffc087d27630] ext4_ioctl at ffffff900863105c
->  #6 [ffffffc087d27b00] do_vfs_ioctl at ffffff90084cc440
->  #7 [ffffffc087d27e80] sys_ioctl at ffffff90084cdaf0
->  #8 [ffffffc087d27ff0] el0_svc_naked at ffffff9008084ffc
-> 
-> So, it need to check the directory status in the fscrypt_ioctl_set_policy().
-> 
-
-Okay, this is a real bug, thanks for reporting this!  So ext4_rmdir() sets
-i_size = 0, then ext4_empty_dir() reports an error because 'inode->i_size <
-EXT4_DIR_REC_LEN(1) + EXT4_DIR_REC_LEN(2)'.  Note that it's actually an ext4
-error, not necessarily a panic.  But the fs may be mounted with errors=panic.
-
-This could also be fixed by updating ext4_empty_dir() to allow i_size == 0.  But
-we might as well check IS_DEADDIR() in fscrypt_ioctl_set_policy() either way.
-
-Can you please update the commit message to describe the problem, and add:
-
-	Fixes: 9bd8212f981e ("ext4 crypto: add encryption policy and password salt support")
-	Cc: <stable@vger.kernel.org> # v4.1+
-
-(Another comment below)
-
-> 
-> > 
-> > > ---
-> > >  fs/crypto/policy.c | 7 +++++++
-> > >  1 file changed, 7 insertions(+)
-> > >
-> > > diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-> > > index bd7eaf9..82900a4 100644
-> > > --- a/fs/crypto/policy.c
-> > > +++ b/fs/crypto/policy.c
-> > > @@ -77,6 +77,12 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user
-> > *arg)
-> > >
-> > >  	inode_lock(inode);
-> > >
-> > > +	/* don't set policy for a dead directory */
-> > > +	if (IS_DEADDIR(inode)) {
-> > > +		ret = -ENOENT;
-> > > +		goto deaddir_out;
-> > > +	}
-> > > +
-
-This seems a bit misplaced given the actual purpose of the check, and the
-comment doesn't help explain it.  How about moving this to just before the
-->empty_dir() call, so it's only done when actually setting a new policy?
-I think that would make it more obvious:
-
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index d536889ac31bf..4941fe8471cef 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -81,6 +81,8 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
- 	if (ret == -ENODATA) {
- 		if (!S_ISDIR(inode->i_mode))
- 			ret = -ENOTDIR;
-+		else if (IS_DEADDIR(inode))
-+			ret = -ENOENT;
- 		else if (!inode->i_sb->s_cop->empty_dir(inode))
- 			ret = -ENOTEMPTY;
- 		else
-
-(Then the label below wouldn't be needed, of course.)
-
-> > >  	ret = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
-> > >  	if (ret == -ENODATA) {
-> > >  		if (!S_ISDIR(inode->i_mode))
-> > > @@ -96,6 +102,7 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user
-> > *arg)
-> > >  		ret = -EEXIST;
-> > >  	}
-> > >
-> > > +deaddir_out:
-> > >  	inode_unlock(inode);
-> > 
-> > Call this label 'out_unlock' instead?
-> > 
-> > >
-> > >  	mnt_drop_write_file(filp);
-> > > --
-
-Thanks,
-
-- Eric
+DQo+IC0tLS0tT3JpZ2luYWwgTWVzc2FnZS0tLS0tDQo+IEZyb206IEVyaWMgQmlnZ2VycyBbbWFp
+bHRvOmViaWdnZXJzQGtlcm5lbC5vcmddDQo+IFNlbnQ6IFR1ZXNkYXksIE1heSAwNywgMjAxOSAx
+MTo1NiBQTQ0KPiBUbzogRmFuZyBIb25namllKOaWuea0quadsCkNCj4gQ2M6IHR5dHNvQG1pdC5l
+ZHU7IGphZWdldWtAa2VybmVsLm9yZzsgbGludXgtZnNjcnlwdEB2Z2VyLmtlcm5lbC5vcmcNCj4g
+U3ViamVjdDogUmU6IFtQQVRDSF0gZnNjcnlwdDogZG9uJ3Qgc2V0IHBvbGljeSBmb3IgYSBkZWFk
+IGRpcmVjdG9yeQ0KPiANCj4gSGksDQo+IA0KPiBPbiBUdWUsIE1heSAwNywgMjAxOSBhdCAxMjo0
+MTo0OFBNICswODAwLCBob25namllZmFuZyB3cm90ZToNCj4gPiBpZiB0aGUgZGlyZWN0b3J5IGhh
+ZCBiZWVuIHJlbW92ZWQsIHNob3VsZCBub3Qgc2V0IHBvbGljeSBmb3IgaXQuDQo+ID4NCj4gPiBT
+aWduZWQtb2ZmLWJ5OiBob25namllZmFuZyA8aG9uZ2ppZWZhbmdAYXNybWljcm8uY29tPg0KPiAN
+Cj4gQ2FuIHlvdSBleHBsYWluIHRoZSBtb3RpdmF0aW9uIGZvciB0aGlzIGNoYW5nZT8gIEl0IG1h
+a2VzIHNvbWUgc2Vuc2UsIGJ1dCBJDQo+IGRvbid0IHNlZSB3aHkgaXQncyByZWFsbHkgbmVlZGVk
+LiAgSWYgeW91IGxvb2sgYXQgYWxsIHRoZSBvdGhlciBJU19ERUFERElSKCkNCj4gY2hlY2tzIGlu
+IHRoZSBrZXJuZWwsIHRoZXkncmUgbm90IGZvciBvcGVyYXRpb25zIG9uIHRoZSBkaXJlY3Rvcnkg
+aW5vZGUgaXRzZWxmLA0KPiBidXQgcmF0aGVyIGZvciBjcmVhdGluZy9maW5kaW5nL2xpc3Rpbmcg
+ZW50cmllcyBpbiB0aGUgZGlyZWN0b3J5LiAgSSB0aGluaw0KPiBGU19JT0NfU0VUX0VOQ1JZUFRJ
+T05fUE9MSUNZIGlzIG1vcmUgbGlrZSB0aGUgZm9ybWVyICh0aG91Z2ggaXQgZG9lcyBoYXZlIHRv
+DQo+IGNoZWNrIHdoZXRoZXIgdGhlIGRpcmVjdG9yeSBpcyBlbXB0eSkuDQoNCkkgbWV0IGEgcGFu
+aWMgaXNzdWUgd2hlbiBydW4gdGhlIHN5emthbGxlciBvbiBrZXJuZWwgNC4xNC44MShFWFQ0IEZC
+RSBlbmFibGVkKS4NCnRoZSBmbG93IG9mIGNhc2UgYXMgZm9sbG93Og0KcjAgPSBvcGVuYXQkZGly
+KDB4ZmZmZmZmZmZmZmZmZmY5YywgJigweDdmMDAwMDAwMDAwMCk9Jy5ceDAwJywgMHgwLCAweDAp
+DQpta2RpcmF0KHIwLCAmKDB4N2YwMDAwMDAwMDQwKT0nLi9maWxlMFx4MDAnLCAweDApDQpyMSA9
+IG9wZW5hdCRkaXIoMHhmZmZmZmZmZmZmZmZmZjljLCAmKDB4N2YwMDAwMDAwMTQwKT0nLi9maWxl
+MFx4MDAnLCAweDAsIDB4MCkNCnVubGlua2F0KHIwLCAmKDB4N2YwMDAwMDAwMjQwKT0nLi9maWxl
+MFx4MDAnLCAweDIwMCkNCmlvY3RsJEZTX0lPQ19TRVRfRU5DUllQVElPTl9QT0xJQ1kocjEsIDB4
+ODAwYzY2MTMsICYoMHg3ZjAwMDAwMDAwYzApDQo9ezB4MCwgQGFlczEyOCwgMHgwLCAiOGFjYzcz
+ZGE5N2Q2YWNjYyJ9KQ0KDQpUaGUgZmlsZTAgZGlyZWN0b3J5IG1heWJlIHJlbW92ZWQgYmVmb3Jl
+IGRvaW5nIEZTX0lPQ19TRVRfRU5DUllQVElPTl9QT0xJQ1kuDQpJbiB0aGlzIGNhc2UsIGZzY3J5
+cHRfaW9jdGxfc2V0X3BvbGljeSgpLT4gZXh0NF9lbXB0eV9kaXIoKSB3aWxsIHJldHVybiB0aGUN
+CiIgaW52YWxpZCBzaXplICIgYW5kIHRyaWdnZXIgYSBwYW5pYyB3aGVuIGNoZWNrIHRoZSBpX3Np
+emUgb2YgaW5vZGUuDQp0aGUgcGFuaWMgc3RhY2sgYXMgZm9sbG93Og0KUElEOiAyNjgyICAgVEFT
+SzogZmZmZmZmYzA4N2QxODA4MCAgQ1BVOiAzICAgQ09NTUFORDogInN5ei1leGVjdXRvciINCiAj
+MCBbZmZmZmZmYzA4N2QyNmZjMF0gcGFuaWMgYXQgZmZmZmZmOTAwODBkYzA0Yw0KICMxIFtmZmZm
+ZmZjMDg3ZDI3MjYwXSBleHQ0X2hhbmRsZV9lcnJvciBhdCBmZmZmZmY5MDA4Njg5YjA4DQogIzIg
+W2ZmZmZmZmMwODdkMjcyOTBdIF9fZXh0NF9lcnJvcl9pbm9kZSBhdCBmZmZmZmY5MDA4Njg5ZTkw
+DQogIzMgW2ZmZmZmZmMwODdkMjczZjBdIGV4dDRfZW1wdHlfZGlyIGF0IGZmZmZmZjkwMDg2NWIw
+NjQNCiAjNCBbZmZmZmZmYzA4N2QyNzRkMF0gZnNjcnlwdF9pb2N0bF9zZXRfcG9saWN5IGF0IGZm
+ZmZmZjkwMDg1NjVkNzANCiAjNSBbZmZmZmZmYzA4N2QyNzYzMF0gZXh0NF9pb2N0bCBhdCBmZmZm
+ZmY5MDA4NjMxMDVjDQogIzYgW2ZmZmZmZmMwODdkMjdiMDBdIGRvX3Zmc19pb2N0bCBhdCBmZmZm
+ZmY5MDA4NGNjNDQwDQogIzcgW2ZmZmZmZmMwODdkMjdlODBdIHN5c19pb2N0bCBhdCBmZmZmZmY5
+MDA4NGNkYWYwDQogIzggW2ZmZmZmZmMwODdkMjdmZjBdIGVsMF9zdmNfbmFrZWQgYXQgZmZmZmZm
+OTAwODA4NGZmYw0KDQpTbywgaXQgbmVlZCB0byBjaGVjayB0aGUgZGlyZWN0b3J5IHN0YXR1cyBp
+biB0aGUgZnNjcnlwdF9pb2N0bF9zZXRfcG9saWN5KCkuDQoNCg0KPiANCj4gPiAtLS0NCj4gPiAg
+ZnMvY3J5cHRvL3BvbGljeS5jIHwgNyArKysrKysrDQo+ID4gIDEgZmlsZSBjaGFuZ2VkLCA3IGlu
+c2VydGlvbnMoKykNCj4gPg0KPiA+IGRpZmYgLS1naXQgYS9mcy9jcnlwdG8vcG9saWN5LmMgYi9m
+cy9jcnlwdG8vcG9saWN5LmMNCj4gPiBpbmRleCBiZDdlYWY5Li44MjkwMGE0IDEwMDY0NA0KPiA+
+IC0tLSBhL2ZzL2NyeXB0by9wb2xpY3kuYw0KPiA+ICsrKyBiL2ZzL2NyeXB0by9wb2xpY3kuYw0K
+PiA+IEBAIC03Nyw2ICs3NywxMiBAQCBpbnQgZnNjcnlwdF9pb2N0bF9zZXRfcG9saWN5KHN0cnVj
+dCBmaWxlICpmaWxwLCBjb25zdCB2b2lkIF9fdXNlcg0KPiAqYXJnKQ0KPiA+DQo+ID4gIAlpbm9k
+ZV9sb2NrKGlub2RlKTsNCj4gPg0KPiA+ICsJLyogZG9uJ3Qgc2V0IHBvbGljeSBmb3IgYSBkZWFk
+IGRpcmVjdG9yeSAqLw0KPiA+ICsJaWYgKElTX0RFQURESVIoaW5vZGUpKSB7DQo+ID4gKwkJcmV0
+ID0gLUVOT0VOVDsNCj4gPiArCQlnb3RvIGRlYWRkaXJfb3V0Ow0KPiA+ICsJfQ0KPiA+ICsNCj4g
+PiAgCXJldCA9IGlub2RlLT5pX3NiLT5zX2NvcC0+Z2V0X2NvbnRleHQoaW5vZGUsICZjdHgsIHNp
+emVvZihjdHgpKTsNCj4gPiAgCWlmIChyZXQgPT0gLUVOT0RBVEEpIHsNCj4gPiAgCQlpZiAoIVNf
+SVNESVIoaW5vZGUtPmlfbW9kZSkpDQo+ID4gQEAgLTk2LDYgKzEwMiw3IEBAIGludCBmc2NyeXB0
+X2lvY3RsX3NldF9wb2xpY3koc3RydWN0IGZpbGUgKmZpbHAsIGNvbnN0IHZvaWQgX191c2VyDQo+
+ICphcmcpDQo+ID4gIAkJcmV0ID0gLUVFWElTVDsNCj4gPiAgCX0NCj4gPg0KPiA+ICtkZWFkZGly
+X291dDoNCj4gPiAgCWlub2RlX3VubG9jayhpbm9kZSk7DQo+IA0KPiBDYWxsIHRoaXMgbGFiZWwg
+J291dF91bmxvY2snIGluc3RlYWQ/DQo+IA0KPiA+DQo+ID4gIAltbnRfZHJvcF93cml0ZV9maWxl
+KGZpbHApOw0KPiA+IC0tDQo+ID4gMS45LjENCj4gPg0KPiANCj4gVGhhbmtzLA0KPiANCj4gLSBF
+cmljDQoNCkImUg0KSG9uZ2ppZQ0K
