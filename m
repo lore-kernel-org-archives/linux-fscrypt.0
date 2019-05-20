@@ -1,9 +1,12 @@
 Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 20 May 2019 10:25:36 -0700
-Message-Id: <20190520172552.217253-1-ebiggers@kernel.org>
+Date: Mon, 20 May 2019 10:25:45 -0700
+Message-Id: <20190520172552.217253-10-ebiggers@kernel.org>
+In-Reply-To: <20190520172552.217253-1-ebiggers@kernel.org>
+References: <20190520172552.217253-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v6 00/16] fscrypt: key management improvements
+Subject: [f2fs-dev] [PATCH v6 09/16] fscrypt: add an HKDF-SHA512
+ implementation
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
  <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
@@ -18,200 +21,282 @@ To: linux-fscrypt@vger.kernel.org
 Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hello,
+From: Eric Biggers <ebiggers@google.com>
 
-[Note: I'd like to apply this for v5.3.  Additional review is greatly
- appreciated, especially of the API before it's set in stone.  Thanks!]
+Add an implementation of HKDF (RFC 5869) to fscrypt, for the purpose of
+deriving additional key material from the fscrypt master keys for v2
+encryption policies.  HKDF is a key derivation function built on top of
+HMAC.  We choose SHA-512 for the underlying unkeyed hash, and use an
+"hmac(sha512)" transform allocated from the crypto API.
 
-This patchset makes major improvements to how keys are added, removed,
-and derived in fscrypt, aka ext4/f2fs/ubifs encryption.  It does this by
-adding new ioctls that add and remove encryption keys directly to/from
-the filesystem, and by adding a new encryption policy version ("v2")
-where the user-provided keys are only used as input to HKDF-SHA512 and
-are identified by their cryptographic hash.
+We'll be using this to replace the AES-ECB based KDF currently used to
+derive the per-file encryption keys.  While the AES-ECB based KDF is
+believed to meet the original security requirements, it is nonstandard
+and has problems that don't exist in modern KDFs such as HKDF:
 
-All new APIs and all cryptosystem changes are documented in
-Documentation/filesystems/fscrypt.rst.  Userspace can use the new key
-management ioctls with existing encrypted directories, but migrating to
-v2 encryption policies is needed for the full benefits.
+1. It's reversible.  Given a derived key and nonce, an attacker can
+   easily compute the master key.  This is okay if the master key and
+   derived keys are equally hard to compromise, but now we'd like to be
+   more robust against threats such as a derived key being compromised
+   through a timing attack, or a derived key for an in-use file being
+   compromised after the master key has already been removed.
 
-These changes solve four interrelated problems:
+2. It doesn't evenly distribute the entropy from the master key; each 16
+   input bytes only affects the corresponding 16 output bytes.
 
-(1) Providing fscrypt keys via process-subscribed keyrings is abusing
-    encryption as an OS-level access control mechanism, causing many
-    bugs where processes don't get access to the keys they need -- e.g.,
-    when a 'sudo' command or a system service needs to access encrypted
-    files.  It's also inconsistent with the filesystem/VFS "view" of
-    encrypted files which is global, so sometimes things randomly happen
-    to work anyway due to caching.  Regardless, currently almost all
-    fscrypt users actually do need global keys, so they're having to use
-    workarounds that heavily abuse the session or user keyrings, e.g.
-    Android and Chromium OS both use a systemwide "session keyring" and
-    the 'fscrypt' tool links all user keyrings into root's user keyring.
+3. It isn't easily extensible to deriving other values or keys, such as
+   a public hash for securely identifying the key, or per-mode keys.
+   Per-mode keys will be immediately useful for Adiantum encryption, for
+   which fscrypt currently uses the master key directly, introducing
+   unnecessary usage constraints.  Per-mode keys will also be useful for
+   hardware inline encryption, which is currently being worked on.
 
-(2) Currently there's no way to securely and efficiently remove a
-    fscrypt key such that not only is the original key wiped, but also
-    all files and directories protected by that key are "locked" and
-    their per-file keys wiped.  Many users want this and are using
-    'echo 2 > /proc/sys/vm/drop_caches' as a workaround, but this is
-    root-only, and also is overkill so can be a performance disaster.
+HKDF solves all the above problems.
 
-(3) The key derivation function (KDF) that fscrypt uses to derive
-    per-file keys is nonstandard, inflexible, and has some weaknesses
-    such as being reversible and not evenly distributing the entropy
-    from the user-provided keys.
-
-(4) fscrypt doesn't check that the correct key was supplied.  This can
-    be a security vulnerability, since it allows malicious local users
-    to associate the wrong key with files to which they have read-only
-    access, causing other users' processes to read/write the wrong data.
-
-Ultimately, the solutions to these problems all tie into each other.  By
-adding a filesystem-level encryption keyring with ioctls to add/remove
-keys to/from it, the keys are made usable filesystem-wide (solves
-problem #1).  It also becomes easy to track the inodes that were
-"unlocked" with each key, so they can be evicted when the key is removed
-(solves problem #2).  Moreover, the filesystem-level keyring is a
-natural place to store an HMAC transform keyed by each key, thus making
-it easy and efficient to switch the KDF to HKDF (solves problem #3).
-
-Finally, to check that the correct key was supplied, I use HKDF to
-derive a cryptographically secure key_identifier for each key (solves
-problem #4).  This in combination with key quotas and other careful
-precautions also makes it safe to allow non-root users to add and remove
-keys to/from the filesystem-level keyring.  Thus, all problems are
-solved without having to restrict the fscrypt API to root only.
-
-The patchset is organized as follows:
-
-- Patches 1-8 add new ioctls FS_IOC_ADD_ENCRYPTION_KEY,
-  FS_IOC_REMOVE_ENCRYPTION_KEY, and FS_IOC_GET_ENCRYPTION_KEY_STATUS.
-  Adding a key logically "unlocks" all files on the filesystem that are
-  protected by that key; removing a key "locks" them again.
-
-- Patches 9-12 add support for v2 encryption policies.
-
-- Patches 13-15 wire up the new ioctls to ext4, f2fs, and ubifs.
-
-- Patch 16 updates the fscrypt documentation for all the changes.
-
-Changes v5 => v6:
-    - Change HKDF to use the specification-defined default salt rather
-      than a custom fixed salt, and prepend the string "fscrypt" to
-      'info' instead.  This is arguably needed to match how RFC 5869 and
-      SP 800-56C are worded.  Both ways are secure in this context, so
-      prefer the "boring" way that clearly matches the standards.
-    - Rebase onto v5.2-rc1.
-    - A few small cleanups.
-
-Changes v4 => v5:
-    - Simplify shrink_dcache_inode(), as suggested by Al Viro;
-      also move it into fs/crypto/.
-    - Fix a build error on some architectures by calling
-      copy_from_user() rather than get_user() with a __u64 pointer.
-
-Changes v3 => v4:
-    - Introduce fscrypt_sb_free() to avoid an extra #ifdef.
-    - Fix UBIFS's ->drop_inode().
-    - Add 'version' to union fscrypt_policy and union fscrypt_context.
-
-Changes v2 => v3:
-    - Use ->drop_inode() to trigger the inode eviction during/after
-      FS_IOC_REMOVE_ENCRYPTION_KEY, as suggested by Dave Chinner.
-    - A few small cleanups.
-
-v1 of this patchset was sent in October 2017 with title "fscrypt:
-filesystem-level keyring and v2 policy support".  This revived version
-follows the same basic design but incorporates numerous improvements,
-such as splitting keyinfo.c into multiple files for much better
-understandability, and introducing "per-mode" encryption keys to
-implement the semantics of the DIRECT_KEY encryption policy flag.
-
-This patchset applies to v5.2-rc1.  You can also get it from git at:
-
-	Repository:   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
-	Branch:       fscrypt-key-mgmt-improvements-v6
-
-I've written xfstests for the new APIs.  They test the APIs themselves
-as well as verify the correctness of the ciphertext stored on-disk for
-v2 encryption policies.  The tests can be found at:
-
-	Repository:   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
-	Branch:       fscrypt-key-mgmt-improvements
-
-The xfstests depend on new xfs_io commands which can be found at:
-
-	Repository:   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfsprogs-dev.git
-	Branch:       fscrypt-key-mgmt-improvements
-
-I've also made proof-of-concept changes to the 'fscrypt' userspace
-program (https://github.com/google/fscrypt) to make it support v2
-encryption policies.  You can find these changes in git at:
-
-	Repository:   https://github.com/ebiggers/fscrypt.git
-	Branch:       fscrypt-key-mgmt-improvements
-
-To make the 'fscrypt' userspace program experimentally use v2 encryption
-policies on new encrypted directories, add the following to
-/etc/fscrypt.conf within the "options" section:
-
-	"policy_version": "2"
-
-Finally, it's also planned for Android and Chromium OS to switch to the
-new ioctls and eventually to v2 encryption policies.  Work-in-progress,
-proof-of-concept changes by Satya Tangirala for AOSP can be found at
-https://android-review.googlesource.com/q/topic:fscrypt-key-mgmt-improvements
-
-Eric Biggers (16):
-  fs, fscrypt: move uapi definitions to new header <linux/fscrypt.h>
-  fscrypt: use FSCRYPT_ prefix for uapi constants
-  fscrypt: use FSCRYPT_* definitions, not FS_*
-  fscrypt: add ->ci_inode to fscrypt_info
-  fscrypt: refactor v1 policy key setup into keysetup_legacy.c
-  fscrypt: add FS_IOC_ADD_ENCRYPTION_KEY ioctl
-  fscrypt: add FS_IOC_REMOVE_ENCRYPTION_KEY ioctl
-  fscrypt: add FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
-  fscrypt: add an HKDF-SHA512 implementation
-  fscrypt: v2 encryption policy support
-  fscrypt: allow unprivileged users to add/remove keys for v2 policies
-  fscrypt: require that key be added when setting a v2 encryption policy
-  ext4: wire up new fscrypt ioctls
-  f2fs: wire up new fscrypt ioctls
-  ubifs: wire up new fscrypt ioctls
-  fscrypt: document the new ioctls and policy version
-
- Documentation/filesystems/fscrypt.rst | 670 ++++++++++++++----
- MAINTAINERS                           |   1 +
- fs/crypto/Kconfig                     |   2 +
- fs/crypto/Makefile                    |  10 +-
- fs/crypto/crypto.c                    |  14 +-
- fs/crypto/fname.c                     |   5 +-
- fs/crypto/fscrypt_private.h           | 366 +++++++++-
- fs/crypto/hkdf.c                      | 178 +++++
- fs/crypto/keyinfo.c                   | 612 ----------------
- fs/crypto/keyring.c                   | 963 ++++++++++++++++++++++++++
- fs/crypto/keysetup.c                  | 560 +++++++++++++++
- fs/crypto/keysetup_legacy.c           | 340 +++++++++
- fs/crypto/policy.c                    | 392 ++++++++---
- fs/ext4/ioctl.c                       |  24 +
- fs/ext4/super.c                       |   3 +
- fs/f2fs/file.c                        |  46 ++
- fs/f2fs/super.c                       |   2 +
- fs/super.c                            |   2 +
- fs/ubifs/ioctl.c                      |  16 +
- fs/ubifs/super.c                      |  11 +
- include/linux/fs.h                    |   1 +
- include/linux/fscrypt.h               |  48 +-
- include/uapi/linux/fs.h               |  54 +-
- include/uapi/linux/fscrypt.h          | 163 +++++
- 24 files changed, 3541 insertions(+), 942 deletions(-)
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/Kconfig           |   2 +
+ fs/crypto/Makefile          |   1 +
+ fs/crypto/fscrypt_private.h |  15 +++
+ fs/crypto/hkdf.c            | 178 ++++++++++++++++++++++++++++++++++++
+ 4 files changed, 196 insertions(+)
  create mode 100644 fs/crypto/hkdf.c
- delete mode 100644 fs/crypto/keyinfo.c
- create mode 100644 fs/crypto/keyring.c
- create mode 100644 fs/crypto/keysetup.c
- create mode 100644 fs/crypto/keysetup_legacy.c
- create mode 100644 include/uapi/linux/fscrypt.h
 
+diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
+index f0de238000c02..c160598a9fe2c 100644
+--- a/fs/crypto/Kconfig
++++ b/fs/crypto/Kconfig
+@@ -7,6 +7,8 @@ config FS_ENCRYPTION
+ 	select CRYPTO_XTS
+ 	select CRYPTO_CTS
+ 	select CRYPTO_SHA256
++	select CRYPTO_SHA512
++	select CRYPTO_HMAC
+ 	select KEYS
+ 	help
+ 	  Enable encryption of files and directories.  This
+diff --git a/fs/crypto/Makefile b/fs/crypto/Makefile
+index accdd622c9083..4977b43479289 100644
+--- a/fs/crypto/Makefile
++++ b/fs/crypto/Makefile
+@@ -2,6 +2,7 @@ obj-$(CONFIG_FS_ENCRYPTION)	+= fscrypto.o
+ 
+ fscrypto-y := crypto.o \
+ 	      fname.o \
++	      hkdf.o \
+ 	      hooks.o \
+ 	      keyring.o \
+ 	      keysetup.o \
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index cc1862c9baa1d..e2a65189eb578 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -175,6 +175,21 @@ extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
+ 					 u32 orig_len, u32 max_len,
+ 					 u32 *encrypted_len_ret);
+ 
++/* hkdf.c */
++
++struct fscrypt_hkdf {
++	struct crypto_shash *hmac_tfm;
++};
++
++extern int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
++			     unsigned int master_key_size);
++
++extern int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
++			       const u8 *info, unsigned int infolen,
++			       u8 *okm, unsigned int okmlen);
++
++extern void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf);
++
+ /* keyring.c */
+ 
+ /*
+diff --git a/fs/crypto/hkdf.c b/fs/crypto/hkdf.c
+new file mode 100644
+index 0000000000000..00178567be086
+--- /dev/null
++++ b/fs/crypto/hkdf.c
+@@ -0,0 +1,178 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Implementation of HKDF ("HMAC-based Extract-and-Expand Key Derivation
++ * Function"), aka RFC 5869.  See also the original paper (Krawczyk 2010):
++ * "Cryptographic Extraction and Key Derivation: The HKDF Scheme".
++ *
++ * This is used to derive keys from the fscrypt master keys.
++ *
++ * Copyright 2019 Google LLC
++ */
++
++#include <crypto/hash.h>
++#include <crypto/sha.h>
++
++#include "fscrypt_private.h"
++
++/*
++ * HKDF supports any unkeyed cryptographic hash algorithm, but fscrypt uses
++ * SHA-512 because it is reasonably secure and efficient; and since it produces
++ * a 64-byte digest, deriving an AES-256-XTS key preserves all 64 bytes of
++ * entropy from the master key and requires only one iteration of HKDF-Expand.
++ */
++#define HKDF_HMAC_ALG		"hmac(sha512)"
++#define HKDF_HASHLEN		SHA512_DIGEST_SIZE
++
++/*
++ * HKDF consists of two steps:
++ *
++ * 1. HKDF-Extract: extract a pseudorandom key of length HKDF_HASHLEN bytes from
++ *    the input keying material and optional salt.
++ * 2. HKDF-Expand: expand the pseudorandom key into output keying material of
++ *    any length, parameterized by an application-specific info string.
++ *
++ * HKDF-Extract can be skipped if the input is already a pseudorandom key of
++ * length HKDF_HASHLEN bytes.  However, cipher modes other than AES-256-XTS take
++ * shorter keys, and we don't want to force users of those modes to provide
++ * unnecessarily long master keys.  Thus fscrypt still does HKDF-Extract.  No
++ * salt is used, since fscrypt master keys should already be pseudorandom and
++ * there's no way to persist a random salt per master key from kernel mode.
++ */
++
++/* HKDF-Extract (RFC 5869 section 2.2), unsalted */
++static int hkdf_extract(struct crypto_shash *hmac_tfm, const u8 *ikm,
++			unsigned int ikmlen, u8 prk[HKDF_HASHLEN])
++{
++	static const u8 default_salt[HKDF_HASHLEN];
++	SHASH_DESC_ON_STACK(desc, hmac_tfm);
++	int err;
++
++	err = crypto_shash_setkey(hmac_tfm, default_salt, HKDF_HASHLEN);
++	if (err)
++		return err;
++
++	desc->tfm = hmac_tfm;
++	err = crypto_shash_digest(desc, ikm, ikmlen, prk);
++	shash_desc_zero(desc);
++	return err;
++}
++
++/*
++ * Compute HKDF-Extract using the given master key as the input keying material,
++ * and prepare an HMAC transform object keyed by the resulting pseudorandom key.
++ *
++ * Afterwards, the keyed HMAC transform object can be used for HKDF-Expand many
++ * times without having to recompute HKDF-Extract each time.
++ */
++int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
++		      unsigned int master_key_size)
++{
++	struct crypto_shash *hmac_tfm;
++	u8 prk[HKDF_HASHLEN];
++	int err;
++
++	hmac_tfm = crypto_alloc_shash(HKDF_HMAC_ALG, 0, 0);
++	if (IS_ERR(hmac_tfm)) {
++		fscrypt_warn(NULL, "error allocating " HKDF_HMAC_ALG ": %ld",
++			     PTR_ERR(hmac_tfm));
++		return PTR_ERR(hmac_tfm);
++	}
++
++	BUG_ON(crypto_shash_digestsize(hmac_tfm) != sizeof(prk));
++
++	err = hkdf_extract(hmac_tfm, master_key, master_key_size, prk);
++	if (err)
++		goto err_free_tfm;
++
++	err = crypto_shash_setkey(hmac_tfm, prk, sizeof(prk));
++	if (err)
++		goto err_free_tfm;
++
++	hkdf->hmac_tfm = hmac_tfm;
++	goto out;
++
++err_free_tfm:
++	crypto_free_shash(hmac_tfm);
++out:
++	memzero_explicit(prk, sizeof(prk));
++	return err;
++}
++
++/*
++ * HKDF-Expand (RFC 5869 section 2.3).  This expands the pseudorandom key, which
++ * was already keyed into 'hkdf->hmac_tfm' by fscrypt_init_hkdf(), into 'okmlen'
++ * bytes of output keying material parameterized by the application-specific
++ * 'info' of length 'infolen' bytes, prefixed by "fscrypt" and the 'context'
++ * byte.  This is thread-safe and may be called by multiple threads in parallel.
++ *
++ * ('context' isn't part of the HKDF specification; it's just a prefix fscrypt
++ * adds to its application-specific info strings to guarantee that it doesn't
++ * accidentally repeat an info string when using HKDF for different purposes.)
++ */
++int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
++			const u8 *info, unsigned int infolen,
++			u8 *okm, unsigned int okmlen)
++{
++	SHASH_DESC_ON_STACK(desc, hkdf->hmac_tfm);
++	u8 prefix[9];
++	unsigned int i;
++	int err;
++	const u8 *prev = NULL;
++	u8 counter = 1;
++	u8 tmp[HKDF_HASHLEN];
++
++	if (WARN_ON(okmlen > 255 * HKDF_HASHLEN))
++		return -EINVAL;
++
++	desc->tfm = hkdf->hmac_tfm;
++
++	memcpy(prefix, "fscrypt\0", 8);
++	prefix[8] = context;
++
++	for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
++
++		err = crypto_shash_init(desc);
++		if (err)
++			goto out;
++
++		if (prev) {
++			err = crypto_shash_update(desc, prev, HKDF_HASHLEN);
++			if (err)
++				goto out;
++		}
++
++		err = crypto_shash_update(desc, prefix, sizeof(prefix));
++		if (err)
++			goto out;
++
++		err = crypto_shash_update(desc, info, infolen);
++		if (err)
++			goto out;
++
++		BUILD_BUG_ON(sizeof(counter) != 1);
++		if (okmlen - i < HKDF_HASHLEN) {
++			err = crypto_shash_finup(desc, &counter, 1, tmp);
++			if (err)
++				goto out;
++			memcpy(&okm[i], tmp, okmlen - i);
++			memzero_explicit(tmp, sizeof(tmp));
++		} else {
++			err = crypto_shash_finup(desc, &counter, 1, &okm[i]);
++			if (err)
++				goto out;
++		}
++		counter++;
++		prev = &okm[i];
++	}
++	err = 0;
++out:
++	if (unlikely(err))
++		memzero_explicit(okm, okmlen); /* so caller doesn't need to */
++	shash_desc_zero(desc);
++	return err;
++}
++
++void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf)
++{
++	crypto_free_shash(hkdf->hmac_tfm);
++}
 -- 
 2.21.0.1020.gf2820cf01a-goog
 
