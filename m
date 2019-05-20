@@ -1,57 +1,98 @@
-Return-Path: <linux-ext4-owner@vger.kernel.org>
-Date: Thu, 30 May 2019 17:01:56 -0400
-From: "Theodore Ts'o" <tytso@mit.edu>
-Subject: Re: [PATCH] ext4: Optimize case-insensitive lookups
-Message-ID: <20190530210156.GI2998@mit.edu>
-References: <20190529185446.22757-1-krisman@collabora.com>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Eric Biggers <ebiggers@kernel.org>
+Date: Mon, 20 May 2019 09:29:45 -0700
+Message-Id: <20190520162952.156212-8-ebiggers@kernel.org>
+In-Reply-To: <20190520162952.156212-1-ebiggers@kernel.org>
+References: <20190520162952.156212-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190529185446.22757-1-krisman@collabora.com>
-Sender: linux-ext4-owner@vger.kernel.org
-To: Gabriel Krisman Bertazi <krisman@collabora.com>
-Cc: linux-ext4@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.orglinux-fscrypt
+Subject: [f2fs-dev] [PATCH v2 07/14] fscrypt: handle blocksize < PAGE_SIZE
+ in fscrypt_zeroout_range()
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Chandan Rajendra <chandan@linux.ibm.com>, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, May 29, 2019 at 02:54:46PM -0400, Gabriel Krisman Bertazi wrote:
-> diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-> index c18ab748d20d..e3809cfda9f4 100644
-> --- a/fs/ext4/ext4.h
-> +++ b/fs/ext4/ext4.h
-> @@ -2078,6 +2078,10 @@ struct ext4_filename {
->  #ifdef CONFIG_FS_ENCRYPTION
->  	struct fscrypt_str crypto_buf;
->  #endif
-> +#ifdef CONFIG_UNICODE
-> +	int cf_len;
-> +	unsigned char cf_name[EXT4_NAME_LEN];
-> +#endif
->  };
->  
->  #define fname_name(p) ((p)->disk_name.name)
+From: Eric Biggers <ebiggers@google.com>
 
-EXT4_NAME_LEN is 256, and struct ext4_filename is allocated on the
-stack.  So this is going to increase the stack usage by 258 bytes.
-Perhaps should we just kmalloc the temporary buffer when it's needed?
+Adjust fscrypt_zeroout_range() to encrypt a block at a time rather than
+a page at a time, so that it works when blocksize < PAGE_SIZE.
 
-The other thing that this patch reminds me is that there is great
-interest in supporting case folded directories and fscrypt at the same
-time.  Today fscrypt works by encrypting the filename, and stashes it
-in fname->crypto_buf, and this allows for a byte-for-byte comparison
-of the encrypted name.  To support fscrypt && casefold, what we would
-need to do is to change the htree hash so that the hash is caluclated
-on the normalized form, and then we'll have to decrypt each filename
-in the directory block and then compare it against the normalized form
-that stashed in cf_name.  So that means we'll never need to allocate
-memory for cf_name and crypto_buf at the same time.
+This isn't optimized for performance, but then again this function
+already wasn't optimized for performance.  As a future optimization, we
+could submit much larger bios here.
 
-We can also use struct fscrypt_str for cf_name; it's defined as a
-combined unsighed char *name and u32 len.  We already use fscrypt_str
-even the !CONFIG_FS_ENCRYPTION case, since it's a convenient way of
-handling a non-NULL terminated filename blob.  And this will hopefully
-make it simpler to deal with integrating casefolding and fscrypt in
-the future.
+This is in preparation for allowing encryption on ext4 filesystems with
+blocksize != PAGE_SIZE.
 
-Cheers,
+This is based on work by Chandan Rajendra.
 
-					- Ted
+Reviewed-by: Chandan Rajendra <chandan@linux.ibm.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/bio.c | 15 ++++++---------
+ 1 file changed, 6 insertions(+), 9 deletions(-)
+
+diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+index 92b2d5da5d8e1..f9111ffa12ffd 100644
+--- a/fs/crypto/bio.c
++++ b/fs/crypto/bio.c
+@@ -72,12 +72,12 @@ EXPORT_SYMBOL(fscrypt_enqueue_decrypt_bio);
+ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+ 				sector_t pblk, unsigned int len)
+ {
++	const unsigned int blockbits = inode->i_blkbits;
++	const unsigned int blocksize = 1 << blockbits;
+ 	struct page *ciphertext_page;
+ 	struct bio *bio;
+ 	int ret, err = 0;
+ 
+-	BUG_ON(inode->i_sb->s_blocksize != PAGE_SIZE);
+-
+ 	ciphertext_page = fscrypt_alloc_bounce_page(GFP_NOWAIT);
+ 	if (!ciphertext_page)
+ 		return -ENOMEM;
+@@ -85,7 +85,7 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+ 	while (len--) {
+ 		err = fscrypt_crypt_block(inode, FS_ENCRYPT, lblk,
+ 					  ZERO_PAGE(0), ciphertext_page,
+-					  PAGE_SIZE, 0, GFP_NOFS);
++					  blocksize, 0, GFP_NOFS);
+ 		if (err)
+ 			goto errout;
+ 
+@@ -95,14 +95,11 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+ 			goto errout;
+ 		}
+ 		bio_set_dev(bio, inode->i_sb->s_bdev);
+-		bio->bi_iter.bi_sector =
+-			pblk << (inode->i_sb->s_blocksize_bits - 9);
++		bio->bi_iter.bi_sector = pblk << (blockbits - 9);
+ 		bio_set_op_attrs(bio, REQ_OP_WRITE, 0);
+-		ret = bio_add_page(bio, ciphertext_page,
+-					inode->i_sb->s_blocksize, 0);
+-		if (ret != inode->i_sb->s_blocksize) {
++		ret = bio_add_page(bio, ciphertext_page, blocksize, 0);
++		if (WARN_ON(ret != blocksize)) {
+ 			/* should never happen! */
+-			WARN_ON(1);
+ 			bio_put(bio);
+ 			err = -EIO;
+ 			goto errout;
+-- 
+2.21.0.1020.gf2820cf01a-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
