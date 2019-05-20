@@ -1,110 +1,132 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:44296 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2404303AbfEXWEn (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 24 May 2019 18:04:43 -0400
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 3/7] common/encrypt: support requiring other encryption settings
-Date: Fri, 24 May 2019 15:04:21 -0700
-Message-Id: <20190524220425.201170-4-ebiggers@kernel.org>
-In-Reply-To: <20190524220425.201170-1-ebiggers@kernel.org>
-References: <20190524220425.201170-1-ebiggers@kernel.org>
+Date: Mon, 20 May 2019 10:25:50 -0700
+Message-Id: <20190520172552.217253-15-ebiggers@kernel.org>
+In-Reply-To: <20190520172552.217253-1-ebiggers@kernel.org>
+References: <20190520172552.217253-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Subject: [f2fs-dev] [PATCH v6 14/16] f2fs: wire up new fscrypt ioctls
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Update _require_scratch_encryption() to support checking for kernel
-support for contents and filenames encryption modes besides the default.
-This will be used by some of the ciphertext verification tests.
+Wire up the new ioctls for adding and removing fscrypt keys to/from the
+filesystem, and the new ioctl for retrieving v2 encryption policies.
+
+FS_IOC_REMOVE_ENCRYPTION_KEY also required making f2fs_drop_inode() call
+fscrypt_drop_inode().
+
+For more details see Documentation/filesystems/fscrypt.rst and the
+fscrypt patches that added the implementation of these ioctls.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- common/encrypt | 58 ++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 58 insertions(+)
+ fs/f2fs/file.c  | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+ fs/f2fs/super.c |  2 ++
+ 2 files changed, 48 insertions(+)
 
-diff --git a/common/encrypt b/common/encrypt
-index cbe0b73d..a4ffc531 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -4,6 +4,15 @@
- #
- # Functions for setting up and testing file encryption
- 
-+#
-+# _require_scratch_encryption [-c CONTENTS_MODE] [-n FILENAMES_MODE]
-+#
-+# Require encryption support on the scratch device.
-+#
-+# This checks for support for the default type of encryption policy (AES-256-XTS
-+# and AES-256-CTS).  Options can be specified to also require support for a
-+# different type of encryption policy.
-+#
- _require_scratch_encryption()
- {
- 	_require_scratch
-@@ -44,9 +53,58 @@ _require_scratch_encryption()
- 		_notrun "kernel does not support $FSTYP encryption"
- 	fi
- 	rmdir $SCRATCH_MNT/tmpdir
-+
-+	# If required, check for support for the specific type of encryption
-+	# policy required by the test.
-+	if [ $# -ne 0 ]; then
-+		_require_encryption_policy_support $SCRATCH_MNT "$@"
-+	fi
-+
- 	_scratch_unmount
+diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+index 45b45f37d347e..d88b77a41117c 100644
+--- a/fs/f2fs/file.c
++++ b/fs/f2fs/file.c
+@@ -2107,6 +2107,40 @@ static int f2fs_ioc_get_encryption_pwsalt(struct file *filp, unsigned long arg)
+ 	return err;
  }
  
-+_require_encryption_policy_support()
++static int f2fs_ioc_get_encryption_policy_ex(struct file *filp,
++					     unsigned long arg)
 +{
-+	local mnt=$1
-+	local dir=$mnt/tmpdir
-+	local set_encpolicy_args=""
-+	local c
++	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
++		return -EOPNOTSUPP;
 +
-+	OPTIND=2
-+	while getopts "c:n:" c; do
-+		case $c in
-+		c|n)
-+			set_encpolicy_args+=" -$c $OPTARG"
-+			;;
-+		*)
-+			_fail "Unrecognized option '$c'"
-+			;;
-+		esac
-+	done
-+	set_encpolicy_args=${set_encpolicy_args# }
-+
-+	echo "Checking whether kernel supports encryption policy: $set_encpolicy_args" \
-+		>> $seqres.full
-+
-+	mkdir $dir
-+	_require_command "$KEYCTL_PROG" keyctl
-+	_new_session_keyring
-+	local keydesc=$(_generate_encryption_key)
-+	if _set_encpolicy $dir $keydesc $set_encpolicy_args \
-+		2>&1 >>$seqres.full | egrep -q 'Invalid argument'; then
-+		_notrun "kernel does not support encryption policy: '$set_encpolicy_args'"
-+	fi
-+	# fscrypt allows setting policies with modes it knows about, even
-+	# without kernel crypto API support.  E.g. a policy using Adiantum
-+	# encryption can be set on a kernel without CONFIG_CRYPTO_ADIANTUM.
-+	# But actually trying to use such an encrypted directory will fail.
-+	if ! touch $dir/file; then
-+		_notrun "encryption policy '$set_encpolicy_args' is unusable; probably missing kernel crypto API support"
-+	fi
-+	$KEYCTL_PROG clear @s
-+	rm -r $dir
++	return fscrypt_ioctl_get_policy_ex(filp, (void __user *)arg);
 +}
 +
- _scratch_mkfs_encrypted()
++static int f2fs_ioc_add_encryption_key(struct file *filp, unsigned long arg)
++{
++	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
++		return -EOPNOTSUPP;
++
++	return fscrypt_ioctl_add_key(filp, (void __user *)arg);
++}
++
++static int f2fs_ioc_remove_encryption_key(struct file *filp, unsigned long arg)
++{
++	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
++		return -EOPNOTSUPP;
++
++	return fscrypt_ioctl_remove_key(filp, (const void __user *)arg);
++}
++
++static int f2fs_ioc_get_encryption_key_status(struct file *filp,
++					      unsigned long arg)
++{
++	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
++		return -EOPNOTSUPP;
++
++	return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
++}
++
+ static int f2fs_ioc_gc(struct file *filp, unsigned long arg)
  {
- 	case $FSTYP in
+ 	struct inode *inode = file_inode(filp);
+@@ -3012,6 +3046,14 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 		return f2fs_ioc_get_encryption_policy(filp, arg);
+ 	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
+ 		return f2fs_ioc_get_encryption_pwsalt(filp, arg);
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		return f2fs_ioc_get_encryption_policy_ex(filp, arg);
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		return f2fs_ioc_add_encryption_key(filp, arg);
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		return f2fs_ioc_remove_encryption_key(filp, arg);
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		return f2fs_ioc_get_encryption_key_status(filp, arg);
+ 	case F2FS_IOC_GARBAGE_COLLECT:
+ 		return f2fs_ioc_gc(filp, arg);
+ 	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
+@@ -3137,6 +3179,10 @@ long f2fs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 	case F2FS_IOC_SET_ENCRYPTION_POLICY:
+ 	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
+ 	case F2FS_IOC_GET_ENCRYPTION_POLICY:
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+ 	case F2FS_IOC_GARBAGE_COLLECT:
+ 	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
+ 	case F2FS_IOC_WRITE_CHECKPOINT:
+diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+index 6b959bbb336a3..e3bf604e0d58f 100644
+--- a/fs/f2fs/super.c
++++ b/fs/f2fs/super.c
+@@ -934,6 +934,8 @@ static int f2fs_drop_inode(struct inode *inode)
+ 		return 0;
+ 	}
+ 	ret = generic_drop_inode(inode);
++	if (!ret)
++		ret = fscrypt_drop_inode(inode);
+ 	trace_f2fs_drop_inode(inode, ret);
+ 	return ret;
+ }
 -- 
-2.22.0.rc1.257.g3120a18244-goog
+2.21.0.1020.gf2820cf01a-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
