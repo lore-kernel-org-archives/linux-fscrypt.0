@@ -1,45 +1,138 @@
-Return-Path: <SRS0=//Tt=TH=asrmicro.com=hongjiefang@kernel.org>
-From: hongjiefang <hongjiefang@asrmicro.com>
-Subject: [PATCH] fscrypt: don't set policy for a dead directory
-Date: Tue, 7 May 2019 12:41:48 +0800
-Message-ID: <1557204108-29048-1-git-send-email-hongjiefang@asrmicro.com>
+Return-Path: <SRS0=6d/K=TX=vger.kernel.org=linux-integrity-owner@kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v3 10/15] fs-verity: implement FS_IOC_MEASURE_VERITY ioctl
+Date: Thu, 23 May 2019 09:18:06 -0700
+Message-Id: <20190523161811.6259-11-ebiggers@kernel.org>
+In-Reply-To: <20190523161811.6259-1-ebiggers@kernel.org>
+References: <20190523161811.6259-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain
-To: tytso@mit.edu, jaegeuk@kernel.org, ebiggers@kernel.org
-Cc: linux-fscrypt@vger.kernel.org, hongjiefang <hongjiefang@asrmicro.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-api@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-if the directory had been removed, should not set policy for it.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: hongjiefang <hongjiefang@asrmicro.com>
+Add a function for filesystems to call to implement the
+FS_IOC_MEASURE_VERITY ioctl.  This ioctl retrieves the file measurement
+that fs-verity calculated for the given file and is enforcing for reads;
+i.e., reads that don't match this hash will fail.  This ioctl can be
+used for authentication or logging of file measurements in userspace.
+
+See the "FS_IOC_MEASURE_VERITY" section of
+Documentation/filesystems/fsverity.rst for the documentation.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/policy.c | 7 +++++++
- 1 file changed, 7 insertions(+)
+ fs/verity/Makefile       |  1 +
+ fs/verity/measure.c      | 57 ++++++++++++++++++++++++++++++++++++++++
+ include/linux/fsverity.h | 11 ++++++++
+ 3 files changed, 69 insertions(+)
+ create mode 100644 fs/verity/measure.c
 
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index bd7eaf9..82900a4 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -77,6 +77,12 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
- 
- 	inode_lock(inode);
- 
-+	/* don't set policy for a dead directory */
-+	if (IS_DEADDIR(inode)) {
-+		ret = -ENOENT;
-+		goto deaddir_out;
-+	}
+diff --git a/fs/verity/Makefile b/fs/verity/Makefile
+index 04b37475fd280..6f7675ae0a311 100644
+--- a/fs/verity/Makefile
++++ b/fs/verity/Makefile
+@@ -3,5 +3,6 @@
+ obj-$(CONFIG_FS_VERITY) += enable.o \
+ 			   hash_algs.o \
+ 			   init.o \
++			   measure.o \
+ 			   open.o \
+ 			   verify.o
+diff --git a/fs/verity/measure.c b/fs/verity/measure.c
+new file mode 100644
+index 0000000000000..f29557c0ee3da
+--- /dev/null
++++ b/fs/verity/measure.c
+@@ -0,0 +1,57 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * fs/verity/measure.c: ioctl to get a verity file's measurement
++ *
++ * Copyright 2019 Google LLC
++ */
 +
- 	ret = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
- 	if (ret == -ENODATA) {
- 		if (!S_ISDIR(inode->i_mode))
-@@ -96,6 +102,7 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
- 		ret = -EEXIST;
- 	}
++#include "fsverity_private.h"
++
++#include <linux/uaccess.h>
++
++/**
++ * fsverity_ioctl_measure() - get a verity file's measurement
++ *
++ * Retrieve the file measurement that the kernel is enforcing for reads from a
++ * verity file.  See the "FS_IOC_MEASURE_VERITY" section of
++ * Documentation/filesystems/fsverity.rst for the documentation.
++ *
++ * Return: 0 on success, -errno on failure
++ */
++int fsverity_ioctl_measure(struct file *filp, void __user *_uarg)
++{
++	const struct inode *inode = file_inode(filp);
++	struct fsverity_digest __user *uarg = _uarg;
++	const struct fsverity_info *vi;
++	const struct fsverity_hash_alg *hash_alg;
++	struct fsverity_digest arg;
++
++	vi = get_verity_info(inode);
++	if (!vi)
++		return -ENODATA; /* not a verity file */
++	hash_alg = vi->tree_params.hash_alg;
++
++	/*
++	 * The user specifies the digest_size their buffer has space for; we can
++	 * return the digest if it fits in the available space.  We write back
++	 * the actual size, which may be shorter than the user-specified size.
++	 */
++
++	if (get_user(arg.digest_size, &uarg->digest_size))
++		return -EFAULT;
++	if (arg.digest_size < hash_alg->digest_size)
++		return -EOVERFLOW;
++
++	memset(&arg, 0, sizeof(arg));
++	arg.digest_algorithm = hash_alg - fsverity_hash_algs;
++	arg.digest_size = hash_alg->digest_size;
++
++	if (copy_to_user(uarg, &arg, sizeof(arg)))
++		return -EFAULT;
++
++	if (copy_to_user(uarg->digest, vi->measurement, hash_alg->digest_size))
++		return -EFAULT;
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(fsverity_ioctl_measure);
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index 9a84fe4bcfc88..df0b620c6897f 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -110,6 +110,10 @@ struct fsverity_operations {
  
-+deaddir_out:
- 	inode_unlock(inode);
+ extern int fsverity_ioctl_enable(struct file *filp, const void __user *arg);
  
- 	mnt_drop_write_file(filp);
++/* measure.c */
++
++extern int fsverity_ioctl_measure(struct file *filp, void __user *arg);
++
+ /* open.c */
+ 
+ extern int fsverity_file_open(struct inode *inode, struct file *filp);
+@@ -132,6 +136,13 @@ static inline int fsverity_ioctl_enable(struct file *filp,
+ 	return -EOPNOTSUPP;
+ }
+ 
++/* measure.c */
++
++static inline int fsverity_ioctl_measure(struct file *filp, void __user *arg)
++{
++	return -EOPNOTSUPP;
++}
++
+ /* open.c */
+ 
+ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
 -- 
-1.9.1
+2.21.0
