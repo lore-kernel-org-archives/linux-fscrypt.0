@@ -1,111 +1,48 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <SRS0=6d/K=TX=vger.kernel.org=linux-integrity-owner@kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 20 May 2019 10:25:51 -0700
-Message-Id: <20190520172552.217253-16-ebiggers@kernel.org>
-In-Reply-To: <20190520172552.217253-1-ebiggers@kernel.org>
-References: <20190520172552.217253-1-ebiggers@kernel.org>
+Subject: [PATCH v3 02/15] fs-verity: add MAINTAINERS file entry
+Date: Thu, 23 May 2019 09:17:58 -0700
+Message-Id: <20190523161811.6259-3-ebiggers@kernel.org>
+In-Reply-To: <20190523161811.6259-1-ebiggers@kernel.org>
+References: <20190523161811.6259-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v6 15/16] ubifs: wire up new fscrypt ioctls
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-api@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Wire up the new ioctls for adding and removing fscrypt keys to/from the
-filesystem, and the new ioctl for retrieving v2 encryption policies.
-
-FS_IOC_REMOVE_ENCRYPTION_KEY also required making UBIFS use
-fscrypt_drop_inode().
-
-For more details see Documentation/filesystems/fscrypt.rst and the
-fscrypt patches that added the implementation of these ioctls.
+fs-verity will be jointly maintained by Eric Biggers and Theodore Ts'o.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ubifs/ioctl.c | 16 ++++++++++++++++
- fs/ubifs/super.c | 11 +++++++++++
- 2 files changed, 27 insertions(+)
+ MAINTAINERS | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
 
-diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
-index 6b05b3ec500e1..b2a67618bef91 100644
---- a/fs/ubifs/ioctl.c
-+++ b/fs/ubifs/ioctl.c
-@@ -204,6 +204,18 @@ long ubifs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- 	case FS_IOC_GET_ENCRYPTION_POLICY:
- 		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 5cfbea4ce5750..869c836e9039f 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -6493,6 +6493,18 @@ S:	Maintained
+ F:	fs/notify/
+ F:	include/linux/fsnotify*.h
  
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
++FSVERITY: READ-ONLY FILE-BASED AUTHENTICITY PROTECTION
++M:	Eric Biggers <ebiggers@kernel.org>
++M:	Theodore Y. Ts'o <tytso@mit.edu>
++L:	linux-fscrypt@vger.kernel.org
++Q:	https://patchwork.kernel.org/project/linux-fscrypt/list/
++T:	git git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git fsverity
++S:	Supported
++F:	fs/verity/
++F:	include/linux/fsverity.h
++F:	include/uapi/linux/fsverity.h
++F:	Documentation/filesystems/fsverity.rst
 +
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_add_key(file, (void __user *)arg);
-+
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_remove_key(file, (const void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-+		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
-+
- 	default:
- 		return -ENOTTY;
- 	}
-@@ -221,6 +233,10 @@ long ubifs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- 		break;
- 	case FS_IOC_SET_ENCRYPTION_POLICY:
- 	case FS_IOC_GET_ENCRYPTION_POLICY:
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
- 		break;
- 	default:
- 		return -ENOIOCTLCMD;
-diff --git a/fs/ubifs/super.c b/fs/ubifs/super.c
-index 04b8ecfd34701..ae026a7bb1a62 100644
---- a/fs/ubifs/super.c
-+++ b/fs/ubifs/super.c
-@@ -330,6 +330,16 @@ static int ubifs_write_inode(struct inode *inode, struct writeback_control *wbc)
- 	return err;
- }
- 
-+static int ubifs_drop_inode(struct inode *inode)
-+{
-+	int drop = generic_drop_inode(inode);
-+
-+	if (!drop)
-+		drop = fscrypt_drop_inode(inode);
-+
-+	return drop;
-+}
-+
- static void ubifs_evict_inode(struct inode *inode)
- {
- 	int err;
-@@ -1980,6 +1990,7 @@ const struct super_operations ubifs_super_operations = {
- 	.free_inode    = ubifs_free_inode,
- 	.put_super     = ubifs_put_super,
- 	.write_inode   = ubifs_write_inode,
-+	.drop_inode    = ubifs_drop_inode,
- 	.evict_inode   = ubifs_evict_inode,
- 	.statfs        = ubifs_statfs,
- 	.dirty_inode   = ubifs_dirty_inode,
+ FUJITSU LAPTOP EXTRAS
+ M:	Jonathan Woithe <jwoithe@just42.net>
+ L:	platform-driver-x86@vger.kernel.org
 -- 
-2.21.0.1020.gf2820cf01a-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.21.0
