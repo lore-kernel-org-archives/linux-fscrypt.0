@@ -1,91 +1,85 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <SRS0=6d/K=TX=vger.kernel.org=linux-integrity-owner@kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Wed,  1 May 2019 15:45:06 -0700
-Message-Id: <20190501224515.43059-5-ebiggers@kernel.org>
-In-Reply-To: <20190501224515.43059-1-ebiggers@kernel.org>
-References: <20190501224515.43059-1-ebiggers@kernel.org>
+Subject: [PATCH v3 05/15] fs-verity: add inode and superblock fields
+Date: Thu, 23 May 2019 09:18:01 -0700
+Message-Id: <20190523161811.6259-6-ebiggers@kernel.org>
+In-Reply-To: <20190523161811.6259-1-ebiggers@kernel.org>
+References: <20190523161811.6259-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH 04/13] fscrypt: clean up some BUG_ON()s in block
- encryption/decryption
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-mtd@lists.infradead.org, Chandan Rajendra <chandan@linux.ibm.com>, linux-f2fs-devel@lists.sourceforge.net
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-integrity@vger.kernel.org, linux-api@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Replace some BUG_ON()s with WARN_ON_ONCE() and returning an error code,
-and move the check for len divisible by FS_CRYPTO_BLOCK_SIZE into
-fscrypt_crypt_block() so that it's done for both encryption and
-decryption, not just encryption.
+Analogous to fs/crypto/, add fields to the VFS inode and superblock for
+use by the fs/verity/ support layer:
+
+- ->s_vop: points to the fsverity_operations if the filesystem supports
+  fs-verity, otherwise is NULL.
+
+- ->i_verity_info: points to cached fs-verity information for the inode
+  after someone opens it, otherwise is NULL.
+
+- S_VERITY: bit in ->i_flags that identifies verity inodes, even when
+  they haven't been opened yet and thus still have NULL ->i_verity_info.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/crypto.c | 15 +++++++++------
- 1 file changed, 9 insertions(+), 6 deletions(-)
+ include/linux/fs.h | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index e6802d7aca3c7..9cda0147fca95 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -161,7 +161,10 @@ int fscrypt_crypt_block(const struct inode *inode, fscrypt_direction_t rw,
- 	struct crypto_skcipher *tfm = ci->ci_ctfm;
- 	int res = 0;
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index f7fdfe93e25d3..a80a192cdcf28 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -64,6 +64,8 @@ struct workqueue_struct;
+ struct iov_iter;
+ struct fscrypt_info;
+ struct fscrypt_operations;
++struct fsverity_info;
++struct fsverity_operations;
+ struct fs_context;
+ struct fs_parameter_description;
  
--	BUG_ON(len == 0);
-+	if (WARN_ON_ONCE(len <= 0))
-+		return -EINVAL;
-+	if (WARN_ON_ONCE(len % FS_CRYPTO_BLOCK_SIZE != 0))
-+		return -EINVAL;
+@@ -723,6 +725,10 @@ struct inode {
+ 	struct fscrypt_info	*i_crypt_info;
+ #endif
  
- 	fscrypt_generate_iv(&iv, lblk_num, ci);
++#ifdef CONFIG_FS_VERITY
++	struct fsverity_info	*i_verity_info;
++#endif
++
+ 	void			*i_private; /* fs or device private pointer */
+ } __randomize_layout;
  
-@@ -224,8 +227,6 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- 	struct page *ciphertext_page = page;
- 	int err;
+@@ -1429,6 +1435,9 @@ struct super_block {
+ 	const struct xattr_handler **s_xattr;
+ #ifdef CONFIG_FS_ENCRYPTION
+ 	const struct fscrypt_operations	*s_cop;
++#endif
++#ifdef CONFIG_FS_VERITY
++	const struct fsverity_operations *s_vop;
+ #endif
+ 	struct hlist_bl_head	s_roots;	/* alternate root dentries for NFS */
+ 	struct list_head	s_mounts;	/* list of mounts; _not_ for fs use */
+@@ -1964,6 +1973,7 @@ struct super_operations {
+ #endif
+ #define S_ENCRYPTED	16384	/* Encrypted file (using fs/crypto/) */
+ #define S_CASEFOLD	32768	/* Casefolded file */
++#define S_VERITY	65536	/* Verity file (using fs/verity/) */
  
--	BUG_ON(len % FS_CRYPTO_BLOCK_SIZE != 0);
--
- 	if (inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES) {
- 		/* with inplace-encryption we just encrypt the page */
- 		err = fscrypt_crypt_block(inode, FS_ENCRYPT, lblk_num, page,
-@@ -237,7 +238,8 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- 		return ciphertext_page;
- 	}
+ /*
+  * Note that nosuid etc flags are inode-specific: setting some file-system
+@@ -2005,6 +2015,7 @@ static inline bool sb_rdonly(const struct super_block *sb) { return sb->s_flags
+ #define IS_DAX(inode)		((inode)->i_flags & S_DAX)
+ #define IS_ENCRYPTED(inode)	((inode)->i_flags & S_ENCRYPTED)
+ #define IS_CASEFOLDED(inode)	((inode)->i_flags & S_CASEFOLD)
++#define IS_VERITY(inode)	((inode)->i_flags & S_VERITY)
  
--	BUG_ON(!PageLocked(page));
-+	if (WARN_ON_ONCE(!PageLocked(page)))
-+		return ERR_PTR(-EINVAL);
- 
- 	/* The encryption operation will require a bounce page. */
- 	ciphertext_page = fscrypt_alloc_bounce_page(gfp_flags);
-@@ -274,8 +276,9 @@ EXPORT_SYMBOL(fscrypt_encrypt_page);
- int fscrypt_decrypt_page(const struct inode *inode, struct page *page,
- 			unsigned int len, unsigned int offs, u64 lblk_num)
- {
--	if (!(inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES))
--		BUG_ON(!PageLocked(page));
-+	if (WARN_ON_ONCE(!PageLocked(page) &&
-+			 !(inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES)))
-+		return -EINVAL;
- 
- 	return fscrypt_crypt_block(inode, FS_DECRYPT, lblk_num, page, page,
- 				   len, offs, GFP_NOFS);
+ #define IS_WHITEOUT(inode)	(S_ISCHR(inode->i_mode) && \
+ 				 (inode)->i_rdev == WHITEOUT_DEV)
 -- 
-2.21.0.593.g511ec345e18-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.21.0
