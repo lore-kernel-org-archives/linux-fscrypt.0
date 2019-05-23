@@ -1,12 +1,12 @@
 Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 20 May 2019 10:25:48 -0700
-Message-Id: <20190520172552.217253-13-ebiggers@kernel.org>
-In-Reply-To: <20190520172552.217253-1-ebiggers@kernel.org>
-References: <20190520172552.217253-1-ebiggers@kernel.org>
+Date: Thu, 23 May 2019 09:18:03 -0700
+Message-Id: <20190523161811.6259-8-ebiggers@kernel.org>
+In-Reply-To: <20190523161811.6259-1-ebiggers@kernel.org>
+References: <20190523161811.6259-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v6 12/16] fscrypt: require that key be added when
- setting a v2 encryption policy
+Subject: [f2fs-dev] [PATCH v3 07/15] fs-verity: add the hook for file
+ ->setattr()
 List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
  <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
 List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
@@ -18,127 +18,79 @@ Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
 Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
+Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-By looking up the master keys in a filesystem-level keyring rather than
-in the calling processes' key hierarchy, it becomes possible for a user
-to set an encryption policy which refers to some key they don't actually
-know, then encrypt their files using that key.  Cryptographically this
-isn't much of a problem, but the semantics of this would be a bit weird.
-Thus, enforce that a v2 encryption policy can only be set if the user
-has previously added the key, or has capable(CAP_FOWNER).
-
-We tolerate that this problem will continue to exist for v1 encryption
-policies, however; there is no way around that.
+Add a function fsverity_prepare_setattr() which filesystems that support
+fs-verity must call to deny truncates of verity files.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fscrypt_private.h |  3 +++
- fs/crypto/keyring.c         | 47 +++++++++++++++++++++++++++++++++++++
- fs/crypto/policy.c          |  6 +++++
- 3 files changed, 56 insertions(+)
+ fs/verity/open.c         | 21 +++++++++++++++++++++
+ include/linux/fsverity.h |  7 +++++++
+ 2 files changed, 28 insertions(+)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 5f679ba32cece..a398383ae9e34 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -411,6 +411,9 @@ extern struct key *
- fscrypt_find_master_key(struct super_block *sb,
- 			const struct fscrypt_key_specifier *mk_spec);
- 
-+extern int fscrypt_verify_key_added(struct super_block *sb,
-+				    const u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE]);
-+
- extern int __init fscrypt_init_keyring(void);
- extern void fscrypt_exit_keyring(void);
- 
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 0a92f2998b437..92eadda419278 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -562,6 +562,53 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
+diff --git a/fs/verity/open.c b/fs/verity/open.c
+index e6d73d73b000d..f779a150b4ede 100644
+--- a/fs/verity/open.c
++++ b/fs/verity/open.c
+@@ -292,6 +292,27 @@ int fsverity_file_open(struct inode *inode, struct file *filp)
  }
- EXPORT_SYMBOL_GPL(fscrypt_ioctl_add_key);
+ EXPORT_SYMBOL_GPL(fsverity_file_open);
  
-+/*
-+ * Verify that the current user has added a master key with the given identifier
-+ * (returns -ENOKEY if not).  This is needed to prevent a user from encrypting
-+ * their files using some other user's key which they don't actually know.
-+ * Cryptographically this isn't much of a problem, but the semantics of this
-+ * would be a bit weird, so it's best to just forbid it.
++/**
++ * fsverity_prepare_setattr - prepare to change a verity inode's attributes
++ * @dentry: dentry through which the inode is being changed
++ * @attr: attributes to change
 + *
-+ * The system administrator (CAP_FOWNER) can override this, which should be
-+ * enough for any use cases where encryption policies are being set using keys
-+ * that were chosen ahead of time but aren't available at the moment.
++ * Verity files are immutable, so deny truncates.  This isn't covered by the
++ * open-time check because sys_truncate() takes a path, not a file descriptor.
 + *
-+ * Note that the key may have already removed by the time this returns, but
-+ * that's okay; we just care whether the key was there at some point.
-+ *
-+ * Return: 0 if the key is added, -ENOKEY if it isn't, or another -errno code
++ * Return: 0 on success, -errno on failure
 + */
-+int fscrypt_verify_key_added(struct super_block *sb,
-+			     const u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
++int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
 +{
-+	struct fscrypt_key_specifier mk_spec;
-+	struct key *key, *mk_user;
-+	struct fscrypt_master_key *mk;
-+	int err;
-+
-+	mk_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
-+	memcpy(mk_spec.u.identifier, identifier, FSCRYPT_KEY_IDENTIFIER_SIZE);
-+
-+	key = fscrypt_find_master_key(sb, &mk_spec);
-+	if (IS_ERR(key)) {
-+		err = PTR_ERR(key);
-+		goto out;
++	if (IS_VERITY(d_inode(dentry)) && (attr->ia_valid & ATTR_SIZE)) {
++		pr_debug("Denying truncate of verity file (ino %lu)\n",
++			 d_inode(dentry)->i_ino);
++		return -EPERM;
 +	}
-+	mk = key->payload.data[0];
-+	mk_user = find_master_key_user(mk);
-+	if (IS_ERR(mk_user)) {
-+		err = PTR_ERR(mk_user);
-+	} else {
-+		key_put(mk_user);
-+		err = 0;
-+	}
-+	key_put(key);
-+out:
-+	if (err == -ENOKEY && capable(CAP_FOWNER))
-+		err = 0;
-+	return err;
++	return 0;
++}
++EXPORT_SYMBOL_GPL(fsverity_prepare_setattr);
++
+ /**
+  * fsverity_cleanup_inode - free the inode's verity info, if present
+  *
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index 3b60195e3c51a..29bb4d007ad16 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -40,6 +40,7 @@ struct fsverity_operations {
+ /* open.c */
+ 
+ extern int fsverity_file_open(struct inode *inode, struct file *filp);
++extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
+ extern void fsverity_cleanup_inode(struct inode *inode);
+ 
+ #else /* !CONFIG_FS_VERITY */
+@@ -51,6 +52,12 @@ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
+ 	return IS_VERITY(inode) ? -EOPNOTSUPP : 0;
+ }
+ 
++static inline int fsverity_prepare_setattr(struct dentry *dentry,
++					   struct iattr *attr)
++{
++	return IS_VERITY(d_inode(dentry)) ? -EOPNOTSUPP : 0;
 +}
 +
- static void shrink_dcache_inode(struct inode *inode)
+ static inline void fsverity_cleanup_inode(struct inode *inode)
  {
- 	struct dentry *dentry;
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 3643156a511a7..8fb9f5ac5f8c0 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -211,6 +211,7 @@ static int set_encryption_policy(struct inode *inode,
- {
- 	union fscrypt_context ctx;
- 	int ctxsize;
-+	int err;
- 
- 	if (!fscrypt_supported_policy(policy))
- 		return -EINVAL;
-@@ -229,6 +230,11 @@ static int set_encryption_policy(struct inode *inode,
- 		 */
- 		pr_warn_once("%s (pid %d) is setting deprecated v1 encryption policy; recommend upgrading to v2.\n",
- 			     current->comm, current->pid);
-+	} else {
-+		err = fscrypt_verify_key_added(inode->i_sb,
-+					       policy->v2.master_key_identifier);
-+		if (err)
-+			return err;
- 	}
- 
- 	ctxsize = fscrypt_new_context_from_policy(&ctx, policy);
+ }
 -- 
-2.21.0.1020.gf2820cf01a-goog
+2.21.0
 
 
 
