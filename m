@@ -1,69 +1,35 @@
-Return-Path: <SRS0=+nDJ=TB=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: Re: [PATCH V2 11/13] ext4: Compute logical block and the page range to be encrypted
-Date: Wed, 01 May 2019 19:41:49 +0530
-In-Reply-To: <20190430170151.GB48973@gmail.com>
-References: <20190428043121.30925-1-chandan@linux.ibm.com> <20190428043121.30925-12-chandan@linux.ibm.com> <20190430170151.GB48973@gmail.com>
+Return-Path: <SRS0=XpvI=TY=mit.edu=tytso@kernel.org>
+Date: Fri, 24 May 2019 12:52:13 -0400
+From: "Theodore Ts'o" <tytso@mit.edu>
+Subject: Re: [PATCH] mm/vmscan.c: drop all inode/dentry cache from LRU
+Message-ID: <20190524165213.GB2765@mit.edu>
+References: <1558685161-860-1-git-send-email-stummala@codeaurora.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Message-Id: <12288535.bgPuNnGEdQ@localhost.localdomain>
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <1558685161-860-1-git-send-email-stummala@codeaurora.org>
+To: Sahitya Tummala <stummala@codeaurora.org>
+Cc: Andrew Morton <akpm@linux-foundation.org>, Kirill Tkhai <ktkhai@virtuozzo.com>, Michal Hocko <mhocko@suse.com>, Johannes Weiner <hannes@cmpxchg.org>, Vladimir Davydov <vdavydov.dev@gmail.com>, Yafang Shao <laoar.shao@gmail.com>, Roman Gushchin <guro@fb.com>, Mel Gorman <mgorman@techsingularity.net>, linux-mm@kvack.org, Jaegeuk Kim <jaegeuk@kernel.org>, Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tuesday, April 30, 2019 10:31:51 PM IST Eric Biggers wrote:
-> On Sun, Apr 28, 2019 at 10:01:19AM +0530, Chandan Rajendra wrote:
-> > For subpage-sized blocks, the initial logical block number mapped by a
-> > page can be different from page->index. Hence this commit adds code to
-> > compute the first logical block mapped by the page and also the page
-> > range to be encrypted.
-> > 
-> > Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
-> > ---
-> >  fs/ext4/page-io.c | 9 +++++++--
-> >  1 file changed, 7 insertions(+), 2 deletions(-)
-> > 
-> > diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-> > index 3e9298e6a705..75485ee9e800 100644
-> > --- a/fs/ext4/page-io.c
-> > +++ b/fs/ext4/page-io.c
-> > @@ -418,6 +418,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
-> >  {
-> >  	struct page *data_page = NULL;
-> >  	struct inode *inode = page->mapping->host;
-> > +	u64 page_blk;
-> >  	unsigned block_start;
-> >  	struct buffer_head *bh, *head;
-> >  	int ret = 0;
-> > @@ -478,10 +479,14 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
-> >  
-> >  	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit) {
-> >  		gfp_t gfp_flags = GFP_NOFS;
-> > +		unsigned int page_bytes;
-> > +
+On Fri, May 24, 2019 at 01:36:01PM +0530, Sahitya Tummala wrote:
+> This is important for the scenario where FBE (file based encryption)
+> is enabled. With FBE, the encryption context needed to en/decrypt a file
+> will be stored in inode and any inode that is left in the cache after
+> drop_caches is done will be a problem. For ex, in Android, drop_caches
+> will be used when switching work profiles.
 > 
-> page_blk should be declared here, just after page_bytes.
-> 
-> > +		page_bytes = round_up(len, i_blocksize(inode));
-> > +		page_blk = page->index << (PAGE_SHIFT - inode->i_blkbits);
-> 
-> Although block numbers are 32-bit in ext4, if you're going to make 'page_blk' a
-> u64 anyway, then for consistency page->index should be cast to u64 here.
-> 
-> >  
-> >  	retry_encrypt:
-> > -		data_page = fscrypt_encrypt_page(inode, page, PAGE_SIZE, 0,
-> > -						page->index, gfp_flags);
-> > +		data_page = fscrypt_encrypt_page(inode, page, page_bytes, 0,
-> > +						page_blk, gfp_flags);
-> >  		if (IS_ERR(data_page)) {
-> >  			ret = PTR_ERR(data_page);
-> >  			if (ret == -ENOMEM && wbc->sync_mode == WB_SYNC_ALL) {
-> 
-> 
+> Signed-off-by: Sahitya Tummala <stummala@codeaurora.org>
 
-I will implement the changes that have been suggested here.
+Instead of making a change to vmscan.c, it's probably better to
+migrate to the new fscrypt key-management framework, which solves this
+problem with an explicit FS_IOC_REMOVE_ENCRYPTION_KEY ioctl.  This
+allows the system to remove all inodes that were made available via a
+single key without having nuking all other inodes --- this would make
+it much faster after a user logs out of ChromeOS, for example:
 
--- 
-chandan
+See:
+
+	https://patchwork.kernel.org/patch/10952019/
+
+							- Ted
