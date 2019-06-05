@@ -1,378 +1,1030 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-Date: Wed, 12 Jun 2019 16:34:22 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-Message-ID: <20190612233421.GA99597@gmail.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-qt1-f201.google.com ([209.85.160.201]:42114 "EHLO
+        mail-qt1-f201.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726645AbfFEX24 (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 5 Jun 2019 19:28:56 -0400
+Received: by mail-qt1-f201.google.com with SMTP id t11so443468qtc.9
+        for <linux-fscrypt@vger.kernel.org>; Wed, 05 Jun 2019 16:28:54 -0700 (PDT)
+Date: Wed,  5 Jun 2019 16:28:32 -0700
+In-Reply-To: <20190605232837.31545-1-satyat@google.com>
+Message-Id: <20190605232837.31545-4-satyat@google.com>
+Mime-Version: 1.0
 References: <20190605232837.31545-1-satyat@google.com>
- <20190605232837.31545-4-satyat@google.com>
-MIME-Version: 1.0
-Content-Disposition: inline
-In-Reply-To: <20190605232837.31545-4-satyat@google.com>
-Subject: Re: [f2fs-dev] [RFC PATCH v2 3/8] block: blk-crypto for Inline
- Encryption
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: Satya Tangirala <satyat@google.com>
-Cc: Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, linux-scsi@vger.kernel.org, Parshuram Raju Thombare <pthombar@cadence.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, linux-f2fs-devel@lists.sourceforge.net, linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
+Subject: [RFC PATCH v2 3/8] block: blk-crypto for Inline Encryption
+From: Satya Tangirala <satyat@google.com>
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Cc: Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-T24gV2VkLCBKdW4gMDUsIDIwMTkgYXQgMDQ6Mjg6MzJQTSAtMDcwMCwgU2F0eWEgVGFuZ2lyYWxh
-IHdyb3RlOgo+IFdlIGludHJvZHVjZSBibGstY3J5cHRvLCB3aGljaCBtYW5hZ2VzIHByb2dyYW1t
-aW5nIGtleXNsb3RzIGZvciBzdHJ1Y3QKPiBiaW9zLiBXaXRoIGJsay1jcnlwdG8sIGZpbGVzeXN0
-ZW1zIG9ubHkgbmVlZCB0byBjYWxsIGJpb19jcnlwdF9zZXRfY3R4IHdpdGgKPiB0aGUgZW5jcnlw
-dGlvbiBrZXksIGFsZ29yaXRobSBhbmQgZGF0YV91bml0X251bTsgdGhleSBkb24ndCBoYXZlIHRv
-IHdvcnJ5Cj4gYWJvdXQgZ2V0dGluZyBhIGtleXNsb3QgZm9yIGVhY2ggZW5jcnlwdGlvbiBjb250
-ZXh0LCBhcyBibGstY3J5cHRvIGhhbmRsZXMKPiB0aGF0LiBCbGstY3J5cHRvIGFsc28gbWFrZXMg
-aXQgcG9zc2libGUgZm9yIGxheWVyZWQgZGV2aWNlcyBsaWtlIGRldmljZQo+IG1hcHBlciB0byBt
-YWtlIHVzZSBvZiBpbmxpbmUgZW5jcnlwdGlvbiBoYXJkd2FyZS4KPiAKPiBCbGstY3J5cHRvIGRl
-bGVnYXRlcyBjcnlwdG8gb3BlcmF0aW9ucyB0byBpbmxpbmUgZW5jcnlwdGlvbiBoYXJkd2FyZSB3
-aGVuCj4gYXZhaWxhYmxlLCBhbmQgYWxzbyBjb250YWlucyBhIHNvZnR3YXJlIGZhbGxiYWNrIHRv
-IHRoZSBrZXJuZWwgY3J5cHRvIEFQSS4KPiBGb3IgbW9yZSBkZXRhaWxzLCByZWZlciB0byBEb2N1
-bWVudGF0aW9uL2Jsb2NrL2Jsay1jcnlwdG8udHh0Lgo+IAo+IEtub3duIGlzc3VlczoKPiAxKSBX
-ZSdyZSBhbGxvY2F0aW5nIGNyeXB0b19za2NpcGhlciBpbiBibGtfY3J5cHRvX2tleXNsb3RfcHJv
-Z3JhbSwgd2hpY2gKPiAgICB1c2VzIEdGUF9LRVJORUwgdG8gYWxsb2NhdGUgbWVtb3J5LCBidXQg
-dGhpcyBmdW5jdGlvbiBpcyBvbiB0aGUgd3JpdGUKPiAgICBwYXRoIGZvciBJTyAtIHdlIG5lZWQg
-dG8gYWRkIHN1cHBvcnQgZm9yIHNwZWNpZnlpbmcgYSBkaWZmZXJlbnQgZmxhZ3MKPiAgICB0byB0
-aGUgY3J5cHRvIEFQSS4KPiAKPiBTaWduZWQtb2ZmLWJ5OiBTYXR5YSBUYW5naXJhbGEgPHNhdHlh
-dEBnb29nbGUuY29tPgo+IC0tLQo+ICBEb2N1bWVudGF0aW9uL2Jsb2NrL2Jsay1jcnlwdG8udHh0
-IHwgMTg1ICsrKysrKysrKysKPiAgYmxvY2svS2NvbmZpZyAgICAgICAgICAgICAgICAgICAgICB8
-ICAgOCArCj4gIGJsb2NrL01ha2VmaWxlICAgICAgICAgICAgICAgICAgICAgfCAgIDIgKwo+ICBi
-bG9jay9iaW8uYyAgICAgICAgICAgICAgICAgICAgICAgIHwgICA1ICsKPiAgYmxvY2svYmxrLWNv
-cmUuYyAgICAgICAgICAgICAgICAgICB8ICAxMSArLQo+ICBibG9jay9ibGstY3J5cHRvLmMgICAg
-ICAgICAgICAgICAgIHwgNTU4ICsrKysrKysrKysrKysrKysrKysrKysrKysrKysrCj4gIGluY2x1
-ZGUvbGludXgvYmxrLWNyeXB0by5oICAgICAgICAgfCAgNDAgKysrCj4gIDcgZmlsZXMgY2hhbmdl
-ZCwgODA4IGluc2VydGlvbnMoKyksIDEgZGVsZXRpb24oLSkKPiAgY3JlYXRlIG1vZGUgMTAwNjQ0
-IERvY3VtZW50YXRpb24vYmxvY2svYmxrLWNyeXB0by50eHQKPiAgY3JlYXRlIG1vZGUgMTAwNjQ0
-IGJsb2NrL2Jsay1jcnlwdG8uYwo+ICBjcmVhdGUgbW9kZSAxMDA2NDQgaW5jbHVkZS9saW51eC9i
-bGstY3J5cHRvLmgKPiAKPiBkaWZmIC0tZ2l0IGEvRG9jdW1lbnRhdGlvbi9ibG9jay9ibGstY3J5
-cHRvLnR4dCBiL0RvY3VtZW50YXRpb24vYmxvY2svYmxrLWNyeXB0by50eHQKPiBuZXcgZmlsZSBt
-b2RlIDEwMDY0NAo+IGluZGV4IDAwMDAwMDAwMDAwMC4uOTZhNzk4M2ExMTdkCj4gLS0tIC9kZXYv
-bnVsbAo+ICsrKyBiL0RvY3VtZW50YXRpb24vYmxvY2svYmxrLWNyeXB0by50eHQKPiBAQCAtMCww
-ICsxLDE4NSBAQAo+ICtCTEstQ1JZUFRPIGFuZCBLRVlTTE9UIE1BTkFHRVIKPiArPT09PT09PT09
-PT09PT09PT09PT09PT09PT09CgpIb3cgYWJvdXQgcmVuYW1pbmcgdGhpcyBkb2N1bWVudGF0aW9u
-IGZpbGUgdG8gaW5saW5lLWVuY3J5cHRpb24udHh0IGFuZCBtYWtpbmcKc3VyZSBpdCBjb3ZlcnMg
-dGhlIGlubGluZSBlbmNyeXB0aW9uIGZlYXR1cmUgYXMgYSB3aG9sZT8gICJibGstY3J5cHRvIiBp
-cyBqdXN0CnBhcnQgb2YgaXQuCgo+IGRpZmYgLS1naXQgYS9ibG9jay9NYWtlZmlsZSBiL2Jsb2Nr
-L01ha2VmaWxlCj4gaW5kZXggZWVlMWI0Y2VlY2Y5Li41ZDM4ZWE0Mzc5MzcgMTAwNjQ0Cj4gLS0t
-IGEvYmxvY2svTWFrZWZpbGUKPiArKysgYi9ibG9jay9NYWtlZmlsZQo+IEBAIC0zNSwzICszNSw1
-IEBAIG9iai0kKENPTkZJR19CTEtfREVCVUdfRlMpCSs9IGJsay1tcS1kZWJ1Z2ZzLm8KPiAgb2Jq
-LSQoQ09ORklHX0JMS19ERUJVR19GU19aT05FRCkrPSBibGstbXEtZGVidWdmcy16b25lZC5vCj4g
-IG9iai0kKENPTkZJR19CTEtfU0VEX09QQUwpCSs9IHNlZC1vcGFsLm8KPiAgb2JqLSQoQ09ORklH
-X0JMS19QTSkJCSs9IGJsay1wbS5vCj4gK29iai0kKENPTkZJR19CTEtfSU5MSU5FX0VOQ1JZUFRJ
-T04pCSs9IGJsay1jcnlwdC1jdHgubyBibGstY3J5cHRvLm8gXAo+ICsJCQkJCSAgICAga2V5c2xv
-dC1tYW5hZ2VyLm8KClR3byBvZiB0aGVzZSAuYyBmaWxlcyB3ZXJlIGFkZGVkIGJ5IGVhcmxpZXIg
-cGF0Y2hlcywgYnV0IHRoZXkncmUgbm90IGNvbXBpbGVkCnVudGlsIG5vdy4gIFRoZSB1c3VhbCBw
-cmFjdGljZSBpcyB0byBtYWtlIHRoZSBjb2RlIGFjdHVhbGx5IGNvbXBpbGVkIGFmdGVyIGVhY2gK
-cGF0Y2gsIGUuZy4gYnkgaW50cm9kdWNpbmcgdGhlIGtjb25maWcgb3B0aW9uIGZpcnN0LiAgT3Ro
-ZXJ3aXNlIHRoZXJlIGNhbiBiZQpidWlsZCBlcnJvcnMgdGhhdCBkb24ndCBzaG93IHVwIHVudGls
-IHN1ZGRlbmx5IGFsbCB0aGUgY29kZSBpcyBlbmFibGVkIGF0IG9uY2UuCgo+IGRpZmYgLS1naXQg
-YS9ibG9jay9ibGstY3J5cHRvLmMgYi9ibG9jay9ibGstY3J5cHRvLmMKPiBuZXcgZmlsZSBtb2Rl
-IDEwMDY0NAo+IGluZGV4IDAwMDAwMDAwMDAwMC4uNWFkYjUyNTFhZTdlCj4gLS0tIC9kZXYvbnVs
-bAo+ICsrKyBiL2Jsb2NrL2Jsay1jcnlwdG8uYwo+IEBAIC0wLDAgKzEsNTU4IEBACj4gKy8vIFNQ
-RFgtTGljZW5zZS1JZGVudGlmaWVyOiBHUEwtMi4wCj4gKy8qCj4gKyAqIENvcHlyaWdodCAyMDE5
-IEdvb2dsZSBMTEMKPiArICovCj4gKyNpbmNsdWRlIDxsaW51eC9ibGstY3J5cHRvLmg+Cj4gKyNp
-bmNsdWRlIDxsaW51eC9rZXlzbG90LW1hbmFnZXIuaD4KPiArI2luY2x1ZGUgPGxpbnV4L21lbXBv
-b2wuaD4KPiArI2luY2x1ZGUgPGxpbnV4L2Jsay1jZ3JvdXAuaD4KPiArI2luY2x1ZGUgPGNyeXB0
-by9za2NpcGhlci5oPgo+ICsjaW5jbHVkZSA8Y3J5cHRvL2FsZ2FwaS5oPgo+ICsKPiArc3RydWN0
-IGJsa19jcnlwdF9tb2RlIHsKPiArCWNvbnN0IGNoYXIgKmZyaWVuZGx5X25hbWU7Cj4gKwljb25z
-dCBjaGFyICpjaXBoZXJfc3RyOwo+ICsJc2l6ZV90IGtleXNpemU7Cj4gKwlzaXplX3QgaXZzaXpl
-Owo+ICsJYm9vbCBuZWVkc19lc3NpdjsKPiArfTsKCidmcmllbmRseV9uYW1lJywgJ2l2c2l6ZScs
-IGFuZCAnbmVlZHNfZXNzaXYnIGFyZSB1bnVzZWQuICBTbyB0aGV5IHNob3VsZCBiZQpyZW1vdmVk
-IHVudGlsIHRoZXkncmUgYWN0dWFsbHkgbmVlZGVkLgoKPiArCj4gK3N0YXRpYyBjb25zdCBzdHJ1
-Y3QgYmxrX2NyeXB0X21vZGUgYmxrX2NyeXB0X21vZGVzW10gPSB7Cj4gKwlbQkxLX0VOQ1JZUFRJ
-T05fTU9ERV9BRVNfMjU2X1hUU10gPSB7Cj4gKwkJLmZyaWVuZGx5X25hbWUgPSAiQUVTLTI1Ni1Y
-VFMiLAo+ICsJCS5jaXBoZXJfc3RyID0gInh0cyhhZXMpIiwKPiArCQkua2V5c2l6ZSA9IDY0LAo+
-ICsJCS5pdnNpemUgPSAxNiwKPiArCX0sCj4gKwkvKiBUT0RPOiB0aGUgcmVzdCBvZiB0aGUgYWxn
-cyB0aGF0IGZzY3J5cHQgc3VwcG9ydHMgKi8KPiArfTsKCkl0J3MgYXJndWFibHkgYSBsYXllcmlu
-ZyB2aW9sYXRpb24gdG8gbWVudGlvbiBmc2NyeXB0IHNwZWNpZmljYWxseSBoZXJlLiAgVGhlcmUK
-d2lsbCBldmVudHVhbGx5IGJlIG90aGVyIHVzZXJzIG9mIHRoaXMgdG9vLgoKPiArLyogVE9ETzog
-RG8gd2Ugd2FudCB0byBtYWtlIHRoaXMgdXNlciBjb25maWd1cmFibGUgc29tZWhvdz8gKi8KPiAr
-I2RlZmluZSBCTEtfQ1JZUFRPX05VTV9LRVlTTE9UUyAxMDAKClRoaXMgc2hvdWxkIGJlIGEga2Vy
-bmVsIGNvbW1hbmQgbGluZSBwYXJhbWV0ZXIuCgo+ICsKPiArc3RhdGljIHVuc2lnbmVkIGludCBu
-dW1fcHJlYWxsb2NfYm91bmNlX3BnID0gMzI7CgpUaGlzIHNob3VsZCBiZSBhIGtlcm5lbCBjb21t
-YW5kIGxpbmUgcGFyYW1ldGVyIHRvby4KCj4gKwo+ICtib29sIGJpb19jcnlwdF9zd2hhbmRsZWQo
-c3RydWN0IGJpbyAqYmlvKQo+ICt7Cj4gKwlyZXR1cm4gYmlvX2NyeXB0X2hhc19rZXlzbG90KGJp
-bykgJiYKPiArCSAgICAgICBiaW8tPmJpX2NyeXB0X2NvbnRleHQtPnByb2Nlc3Npbmdfa3NtID09
-IGJsa19jcnlwdG9fa3NtOwo+ICt9Cgpwcm9jZXNzaW5nX2tzbSBpcyBOVUxMIHdoZW4gdGhlcmUg
-aXNuJ3QgYSBrZXlzbG90LCBzbyBjYWxsaW5nCmJpb19jcnlwdF9oYXNfa2V5c2xvdCgpIGlzbid0
-IG5lY2Vzc2FyeSBoZXJlLgoKPiArCj4gKy8qIFRPRE86IGhhbmRsZSBtb2RlcyB0aGF0IG5lZWQg
-ZXNzaXYgKi8KPiArc3RhdGljIGludCBibGtfY3J5cHRvX2tleXNsb3RfcHJvZ3JhbSh2b2lkICpw
-cml2LCBjb25zdCB1OCAqa2V5LAo+ICsJCQkJICAgICAgZW51bSBibGtfY3J5cHRfbW9kZV9udW0g
-Y3J5cHRfbW9kZSwKPiArCQkJCSAgICAgIHVuc2lnbmVkIGludCBkYXRhX3VuaXRfc2l6ZSwKPiAr
-CQkJCSAgICAgIHVuc2lnbmVkIGludCBzbG90KQo+ICt7Cj4gKwlzdHJ1Y3QgYmxrX2NyeXB0b19r
-ZXlzbG90ICpzbG90cCA9ICZibGtfY3J5cHRvX2tleXNsb3RzW3Nsb3RdOwo+ICsJc3RydWN0IGNy
-eXB0b19za2NpcGhlciAqdGZtID0gc2xvdHAtPnRmbTsKPiArCWNvbnN0IHN0cnVjdCBibGtfY3J5
-cHRfbW9kZSAqbW9kZSA9ICZibGtfY3J5cHRfbW9kZXNbY3J5cHRfbW9kZV07Cj4gKwlzaXplX3Qg
-a2V5c2l6ZSA9IG1vZGUtPmtleXNpemU7Cj4gKwlpbnQgZXJyOwo+ICsKPiArCWlmIChjcnlwdF9t
-b2RlICE9IHNsb3RwLT5jcnlwdF9tb2RlIHx8ICF0Zm0pIHsKPiArCQljcnlwdG9fZnJlZV9za2Np
-cGhlcihzbG90cC0+dGZtKTsKPiArCQlzbG90cC0+dGZtID0gTlVMTDsKPiArCQltZW1zZXQoc2xv
-dHAtPmtleSwgMCwgQkxLX0NSWVBUT19NQVhfS0VZX1NJWkUpOwo+ICsJCXRmbSA9IGNyeXB0b19h
-bGxvY19za2NpcGhlcigKPiArCQkJbW9kZS0+Y2lwaGVyX3N0ciwgMCwgMCk7Cj4gKwkJaWYgKElT
-X0VSUih0Zm0pKQo+ICsJCQlyZXR1cm4gUFRSX0VSUih0Zm0pOwo+ICsKPiArCQljcnlwdG9fc2tj
-aXBoZXJfc2V0X2ZsYWdzKHRmbSwKPiArCQkJCQkgIENSWVBUT19URk1fUkVRX0ZPUkJJRF9XRUFL
-X0tFWVMpOwo+ICsJCXNsb3RwLT5jcnlwdF9tb2RlID0gY3J5cHRfbW9kZTsKPiArCQlzbG90cC0+
-dGZtID0gdGZtOwo+ICsJfQo+ICsKPiArCj4gKwllcnIgPSBjcnlwdG9fc2tjaXBoZXJfc2V0a2V5
-KHRmbSwga2V5LCBrZXlzaXplKTsKPiArCj4gKwlpZiAoZXJyKSB7Cj4gKwkJY3J5cHRvX2ZyZWVf
-c2tjaXBoZXIodGZtKTsKPiArCQlzbG90cC0+dGZtID0gTlVMTDsKPiArCQlyZXR1cm4gZXJyOwo+
-ICsJfQo+ICsKPiArCW1lbWNweShzbG90cC0+a2V5LCBrZXksIGtleXNpemUpOwo+ICsKPiArCXJl
-dHVybiAwOwo+ICt9Cj4gKwo+ICtzdGF0aWMgaW50IGJsa19jcnlwdG9fa2V5c2xvdF9ldmljdCh2
-b2lkICpwcml2LCBjb25zdCB1OCAqa2V5LAo+ICsJCQkJICAgIGVudW0gYmxrX2NyeXB0X21vZGVf
-bnVtIGNyeXB0X21vZGUsCj4gKwkJCQkgICAgdW5zaWduZWQgaW50IGRhdGFfdW5pdF9zaXplLAo+
-ICsJCQkJICAgIHVuc2lnbmVkIGludCBzbG90KQo+ICt7Cj4gKwljcnlwdG9fZnJlZV9za2NpcGhl
-cihibGtfY3J5cHRvX2tleXNsb3RzW3Nsb3RdLnRmbSk7Cj4gKwlibGtfY3J5cHRvX2tleXNsb3Rz
-W3Nsb3RdLnRmbSA9IE5VTEw7Cj4gKwltZW1zZXQoYmxrX2NyeXB0b19rZXlzbG90c1tzbG90XS5r
-ZXksIDAsIEJMS19DUllQVE9fTUFYX0tFWV9TSVpFKTsKPiArCj4gKwlyZXR1cm4gMDsKPiArfQoK
-SWYgdGhlIGNhbGwgdG8gY3J5cHRvX3NrY2lwaGVyX3NldGtleSgpIGZhaWxzLCB0aGVuIHRoZSAt
-PnRmbSBpcyBzZXQgdG8gTlVMTCBhcwppZiB0aGUga2V5c2xvdCB3ZXJlIGZyZWUsIGJ1dCB0aGUg
-cmF3IGtleSBpc24ndCB3aXBlZC4gIFRoZSBzdGF0ZSBzaG91bGQgYmUga2VwdApjb25zaXN0ZW50
-OiB0aGUgcmF3IGtleSBvZiBhIGZyZWUga2V5c2xvdCBzaG91bGQgYWx3YXlzIGJlIHplcm9lZC4K
-ClRoZSBlYXNpZXN0IHdheSB0byBoYW5kbGUgdGhpcyB3b3VsZCBiZSB0byBhZGQgYSBoZWxwZXIg
-ZnVuY3Rpb246CgpzdGF0aWMgdm9pZCBldmljdF9rZXlzbG90KHVuc2lnbmVkIGludCBzbG90KQp7
-CglzdHJ1Y3QgYmxrX2NyeXB0b19rZXlzbG90ICpzbG90cCA9ICZibGtfY3J5cHRvX2tleXNsb3Rz
-W3Nsb3RdOwoKCWNyeXB0b19mcmVlX3NrY2lwaGVyKHNsb3RwLT50Zm0pOwoJc2xvdHAtPnRmbSA9
-IE5VTEw7CgltZW16ZXJvX2V4cGxpY2l0KHNsb3RwLT5rZXksIEJMS19DUllQVE9fTUFYX0tFWV9T
-SVpFKTsKfQoKVGhlbiBjYWxsIHRoaXMgZnJvbSB0aGUgdHdvIHBsYWNlcyBpbiBibGtfY3J5cHRv
-X2tleXNsb3RfcHJvZ3JhbSgpLCBhbmQgZnJvbQpibGtfY3J5cHRvX2tleXNsb3RfZXZpY3QoKS4K
-CihJdCBkb2Vzbid0IHJlYWxseSBuZWVkIHRvIGJlIG1lbXplcm9fZXhwbGljaXQoKSBpbnN0ZWFk
-IG9mIG1lbXNldCgpIGhlcmUsIGJ1dAppdCdzIGdvb2QgdG8gbWFrZSB0aGUgaW50ZW50IG9mICJ0
-aGlzIGlzIHdpcGluZyBhIGNyeXB0byBrZXkiIGNsZWFyLikKCj4gKwo+ICtzdGF0aWMgaW50IGJs
-a19jcnlwdG9fa2V5c2xvdF9maW5kKHZvaWQgKnByaXYsCj4gKwkJCQkgICBjb25zdCB1OCAqa2V5
-LAo+ICsJCQkJICAgZW51bSBibGtfY3J5cHRfbW9kZV9udW0gY3J5cHRfbW9kZSwKPiArCQkJCSAg
-IHVuc2lnbmVkIGludCBkYXRhX3VuaXRfc2l6ZV9ieXRlcykKPiArewo+ICsJaW50IHNsb3Q7Cj4g
-Kwljb25zdCBzaXplX3Qga2V5c2l6ZSA9IGJsa19jcnlwdF9tb2Rlc1tjcnlwdF9tb2RlXS5rZXlz
-aXplOwo+ICsKPiArCS8qIFRPRE86IGhhc2htYXA/ICovCj4gKwlmb3IgKHNsb3QgPSAwOyBzbG90
-IDwgQkxLX0NSWVBUT19OVU1fS0VZU0xPVFM7IHNsb3QrKykgewo+ICsJCWlmIChibGtfY3J5cHRv
-X2tleXNsb3RzW3Nsb3RdLmNyeXB0X21vZGUgPT0gY3J5cHRfbW9kZSAmJgo+ICsJCSAgICAhY3J5
-cHRvX21lbW5lcShibGtfY3J5cHRvX2tleXNsb3RzW3Nsb3RdLmtleSwga2V5LAo+ICsJCQkJICAg
-a2V5c2l6ZSkpIHsKPiArCQkJcmV0dXJuIHNsb3Q7Cj4gKwkJfQoKTml0OiBjYW4gZHJvcCB0aGUg
-YnJhY2VzIGhlcmUgYW5kIGZpdCB0aGUgY3J5cHRvX21lbW5lcSgpIHBhcmFtZXRlcnMgb24gb25l
-CmxpbmUuCgo+ICtzdGF0aWMgYm9vbCBibGtfY3J5cHRfbW9kZV9zdXBwb3J0ZWQodm9pZCAqcHJp
-diwKPiArCQkJCSAgICAgZW51bSBibGtfY3J5cHRfbW9kZV9udW0gY3J5cHRfbW9kZSwKPiArCQkJ
-CSAgICAgdW5zaWduZWQgaW50IGRhdGFfdW5pdF9zaXplKQo+ICt7Cj4gKwkvLyBPZiBjb3Vyc2Us
-IGJsay1jcnlwdG8gc3VwcG9ydHMgYWxsIGJsa19jcnlwdF9tb2Rlcy4KPiArCXJldHVybiB0cnVl
-Owo+ICt9CgpUaGlzIGFjdHVhbGx5IGlzbid0IG9idmlvdXMsIHNpbmNlIHRoZXJlIGNvdWxkIGJl
-IG1vZGVzIHRoYXQgYXJlIG9ubHkgc3VwcG9ydGVkCmJ5IHBhcnRpY3VsYXIgaGFyZHdhcmUgZHJp
-dmVycy4gIEl0IHdvdWxkIGJlIG1vcmUgaGVscGZ1bCBpZiB0aGUgY29tbWVudCB3YXM6CgoJLyog
-QWxsIGJsa19jcnlwdF9tb2RlcyBhcmUgcmVxdWlyZWQgdG8gaGF2ZSBhIHNvZnR3YXJlIGZhbGxi
-YWNrLiAqLwoKPiArc3RhdGljIHZvaWQgYmxrX2NyeXB0b19wdXRfa2V5c2xvdChzdHJ1Y3QgYmlv
-ICpiaW8pCj4gK3sKPiArCXN0cnVjdCBiaW9fY3J5cHRfY3R4ICpjcnlwdF9jdHggPSBiaW8tPmJp
-X2NyeXB0X2NvbnRleHQ7Cj4gKwo+ICsJa2V5c2xvdF9tYW5hZ2VyX3B1dF9zbG90KGNyeXB0X2N0
-eC0+cHJvY2Vzc2luZ19rc20sIGNyeXB0X2N0eC0+a2V5c2xvdCk7Cj4gKwliaW9fY3J5cHRfdW5z
-ZXRfa2V5c2xvdChiaW8pOwo+ICt9Cj4gKwo+ICtzdGF0aWMgaW50IGJsa19jcnlwdG9fZ2V0X2tl
-eXNsb3Qoc3RydWN0IGJpbyAqYmlvLAo+ICsJCQkJICAgICAgc3RydWN0IGtleXNsb3RfbWFuYWdl
-ciAqa3NtKQo+ICt7Cj4gKwlpbnQgc2xvdDsKPiArCWVudW0gYmxrX2NyeXB0X21vZGVfbnVtIGNy
-eXB0X21vZGUgPSBiaW9fY3J5cHRfbW9kZShiaW8pOwo+ICsKPiArCWlmICgha3NtKQo+ICsJCXJl
-dHVybiAtRU5PTUVNOwo+ICsKPiArCXNsb3QgPSBrZXlzbG90X21hbmFnZXJfZ2V0X3Nsb3RfZm9y
-X2tleShrc20sCj4gKwkJCQkJCWJpb19jcnlwdF9yYXdfa2V5KGJpbyksCj4gKwkJCQkJCWNyeXB0
-X21vZGUsIFBBR0VfU0laRSk7CgpOZWVkcyB0byBiZSAnMSA8PCBjcnlwdF9jdHgtPmRhdGFfdW5p
-dF9zaXplX2JpdHMnLCBub3QgUEFHRV9TSVpFLgoKPiArCWlmIChzbG90IDwgMCkKPiArCQlyZXR1
-cm4gc2xvdDsKPiArCj4gKwliaW9fY3J5cHRfc2V0X2tleXNsb3QoYmlvLCBzbG90LCBrc20pOwo+
-ICsJcmV0dXJuIDA7Cj4gK30KClNpbmNlIGJsa19jcnlwdG9fe2dldCxwdXR9X2tleXNsb3QoKSBz
-dXBwb3J0IGFueSBrZXlzbG90IG1hbmFnZXIsIG5hbWluZyB0aGVtCmJsa19jcnlwdG8gaXMgYSBi
-aXQgY29uZnVzaW5nLCBzaW5jZSBpdCBzdWdnZXN0cyB0aGV5IG1pZ2h0IG9ubHkgYmUgcmVsZXZh
-bnQgdG8KdGhlIHNvZnR3YXJlIGZhbGxiYWNrIChibGtfY3J5cHRvX2tleXNsb3RzKS4gIE1heWJl
-IHRoZXkgc2hvdWxkIGJlIHJlbmFtZWQgdG8KYmlvX2NyeXB0X3thY3F1aXJlLHJlbGVhc2V9X2tl
-eXNsb3QoKSBhbmQgbW92ZWQgdG8gYmlvLWNyeXB0LWN0eC5jPwoKPiArc3RhdGljIGludCBibGtf
-Y3J5cHRvX2VuY3J5cHRfYmlvKHN0cnVjdCBiaW8gKipiaW9fcHRyKQo+ICt7Cj4gKwlzdHJ1Y3Qg
-YmlvICpzcmNfYmlvID0gKmJpb19wdHI7Cj4gKwlpbnQgc2xvdDsKPiArCXN0cnVjdCBza2NpcGhl
-cl9yZXF1ZXN0ICpjaXBoX3JlcSA9IE5VTEw7Cj4gKwlERUNMQVJFX0NSWVBUT19XQUlUKHdhaXQp
-Owo+ICsJc3RydWN0IGJpb192ZWMgYnY7Cj4gKwlzdHJ1Y3QgYnZlY19pdGVyIGl0ZXI7Cj4gKwlp
-bnQgZXJyID0gMDsKPiArCXU2NCBjdXJyX2R1bjsKPiArCXVuaW9uIHsKPiArCQlfX2xlNjQgZHVu
-Owo+ICsJCXU4IGJ5dGVzWzE2XTsKPiArCX0gaXY7Cj4gKwlzdHJ1Y3Qgc2NhdHRlcmxpc3Qgc3Jj
-LCBkc3Q7Cj4gKwlzdHJ1Y3QgYmlvICplbmNfYmlvOwo+ICsJc3RydWN0IGJpb192ZWMgKmVuY19i
-dmVjOwo+ICsJaW50IGksIGo7Cj4gKwl1bnNpZ25lZCBpbnQgbnVtX3NlY3RvcnM7Cj4gKwo+ICsJ
-aWYgKCFibGtfY3J5cHRvX2tleXNsb3RzKQo+ICsJCXJldHVybiAtRU5PTUVNOwoKV2h5IHRoZSBO
-VUxMIGNoZWNrIGZvciBibGtfY3J5cHRvX2tleXNsb3RzPyAgVGhlIGtlcm5lbCBhbHJlYWR5IHBh
-bmljcyBpZgpibGtfY3J5cHRvX2luaXQoKSBmYWlscy4KCj4gKwo+ICsJLyogU3BsaXQgdGhlIGJp
-byBpZiBpdCdzIHRvbyBiaWcgZm9yIHNpbmdsZSBwYWdlIGJ2ZWMgKi8KPiArCWkgPSAwOwo+ICsJ
-bnVtX3NlY3RvcnMgPSAwOwo+ICsJYmlvX2Zvcl9lYWNoX3NlZ21lbnQoYnYsIHNyY19iaW8sIGl0
-ZXIpIHsKPiArCQludW1fc2VjdG9ycyArPSBidi5idl9sZW4gPj4gOTsKPiArCQlpZiAoKytpID09
-IEJJT19NQVhfUEFHRVMpCj4gKwkJCWJyZWFrOwo+ICsJfQo+ICsJaWYgKG51bV9zZWN0b3JzIDwg
-YmlvX3NlY3RvcnMoc3JjX2JpbykpIHsKPiArCQlzdHJ1Y3QgYmlvICpzcGxpdF9iaW87Cj4gKwo+
-ICsJCXNwbGl0X2JpbyA9IGJpb19zcGxpdChzcmNfYmlvLCBudW1fc2VjdG9ycywgR0ZQX05PSU8s
-IE5VTEwpOwo+ICsJCWlmICghc3BsaXRfYmlvKSB7Cj4gKwkJCXNyY19iaW8tPmJpX3N0YXR1cyA9
-IEJMS19TVFNfUkVTT1VSQ0U7Cj4gKwkJCXJldHVybiAtRU5PTUVNOwo+ICsJCX0KPiArCQliaW9f
-Y2hhaW4oc3BsaXRfYmlvLCBzcmNfYmlvKTsKPiArCQlnZW5lcmljX21ha2VfcmVxdWVzdChzcmNf
-YmlvKTsKPiArCQkqYmlvX3B0ciA9IHNwbGl0X2JpbzsKPiArCX0KPiArCj4gKwlzcmNfYmlvID0g
-KmJpb19wdHI7CgpUaGlzIGxpbmUgY2FuIGJlIG1vdmVkIGludG8gdGhlIHByZXZpb3VzICdpZicg
-YmxvY2suCgo+ICsKPiArCWVuY19iaW8gPSBibGtfY3J5cHRvX2Nsb25lX2JpbyhzcmNfYmlvKTsK
-PiArCWlmICghZW5jX2Jpbykgewo+ICsJCXNyY19iaW8tPmJpX3N0YXR1cyA9IEJMS19TVFNfUkVT
-T1VSQ0U7Cj4gKwkJcmV0dXJuIC1FTk9NRU07Cj4gKwl9Cj4gKwo+ICsJZXJyID0gYmxrX2NyeXB0
-b19nZXRfa2V5c2xvdChzcmNfYmlvLCBibGtfY3J5cHRvX2tzbSk7Cj4gKwlpZiAoZXJyKSB7Cj4g
-KwkJc3JjX2Jpby0+Ymlfc3RhdHVzID0gQkxLX1NUU19JT0VSUjsKPiArCQliaW9fcHV0KGVuY19i
-aW8pOwo+ICsJCXJldHVybiBlcnI7Cj4gKwl9Cj4gKwlzbG90ID0gYmlvX2NyeXB0X2dldF9zbG90
-KHNyY19iaW8pOwo+ICsKPiArCWNpcGhfcmVxID0gc2tjaXBoZXJfcmVxdWVzdF9hbGxvYyhibGtf
-Y3J5cHRvX2tleXNsb3RzW3Nsb3RdLnRmbSwKPiArCQkJCQkgIEdGUF9OT0lPKTsKPiArCWlmICgh
-Y2lwaF9yZXEpIHsKPiArCQlzcmNfYmlvLT5iaV9zdGF0dXMgPSBCTEtfU1RTX1JFU09VUkNFOwo+
-ICsJCWVyciA9IC1FTk9NRU07Cj4gKwkJYmlvX3B1dChlbmNfYmlvKTsKPiArCQlnb3RvIG91dF9y
-ZWxlYXNlX2tleXNsb3Q7Cj4gKwl9Cj4gKwo+ICsJc2tjaXBoZXJfcmVxdWVzdF9zZXRfY2FsbGJh
-Y2soY2lwaF9yZXEsCj4gKwkJCQkgICAgICBDUllQVE9fVEZNX1JFUV9NQVlfQkFDS0xPRyB8Cj4g
-KwkJCQkgICAgICBDUllQVE9fVEZNX1JFUV9NQVlfU0xFRVAsCj4gKwkJCQkgICAgICBjcnlwdG9f
-cmVxX2RvbmUsICZ3YWl0KTsKClRoaXMgZnVuY3Rpb24gYW5kIGJsa19jcnlwdG9fZGVjcnlwdF9i
-aW8oKSBhcmUgZ2V0dGluZyBsb25nLiAgVG8gaGVscCBhIHRpbnkKYml0LCBtYXliZSBhZGQgYSBo
-ZWxwZXIgZnVuY3Rpb24gYmxrX2NyeXB0b19hbGxvY19za2NpcGhlcl9yZXF1ZXN0KGJpbykgYW5k
-IGNhbGwKaXQgZnJvbSBib3RoIHBsYWNlcz8KCj4gKwo+ICsJY3Vycl9kdW4gPSBiaW9fY3J5cHRf
-c3dfZGF0YV91bml0X251bShzcmNfYmlvKTsKPiArCXNnX2luaXRfdGFibGUoJnNyYywgMSk7Cj4g
-KwlzZ19pbml0X3RhYmxlKCZkc3QsIDEpOwo+ICsJZm9yIChpID0gMCwgZW5jX2J2ZWMgPSBlbmNf
-YmlvLT5iaV9pb192ZWM7IGkgPCBlbmNfYmlvLT5iaV92Y250Owo+ICsJICAgICBlbmNfYnZlYysr
-LCBpKyspIHsKPiArCQlzdHJ1Y3QgcGFnZSAqcGFnZSA9IGVuY19idmVjLT5idl9wYWdlOwo+ICsJ
-CXN0cnVjdCBwYWdlICpjaXBoZXJ0ZXh0X3BhZ2UgPQo+ICsJCQltZW1wb29sX2FsbG9jKGJsa19j
-cnlwdG9fcGFnZV9wb29sLCBHRlBfTk9GUyk7CgpHRlBfTk9JTywgbm90IEdGUF9OT0ZTLgoKPiAr
-Cj4gKwkJZW5jX2J2ZWMtPmJ2X3BhZ2UgPSBjaXBoZXJ0ZXh0X3BhZ2U7Cj4gKwo+ICsJCWlmICgh
-Y2lwaGVydGV4dF9wYWdlKQo+ICsJCQlnb3RvIG5vX21lbV9mb3JfY2lwaF9wYWdlOwo+ICsKPiAr
-CQltZW1zZXQoJml2LCAwLCBzaXplb2YoaXYpKTsKPiArCQlpdi5kdW4gPSBjcHVfdG9fbGU2NChj
-dXJyX2R1bik7Cj4gKwo+ICsJCXNnX3NldF9wYWdlKCZzcmMsIHBhZ2UsIGVuY19idmVjLT5idl9s
-ZW4sIGVuY19idmVjLT5idl9vZmZzZXQpOwo+ICsJCXNnX3NldF9wYWdlKCZkc3QsIGNpcGhlcnRl
-eHRfcGFnZSwgZW5jX2J2ZWMtPmJ2X2xlbiwKPiArCQkJICAgIGVuY19idmVjLT5idl9vZmZzZXQp
-Owo+ICsKPiArCQlza2NpcGhlcl9yZXF1ZXN0X3NldF9jcnlwdChjaXBoX3JlcSwgJnNyYywgJmRz
-dCwKPiArCQkJCQkgICBlbmNfYnZlYy0+YnZfbGVuLCBpdi5ieXRlcyk7Cj4gKwkJZXJyID0gY3J5
-cHRvX3dhaXRfcmVxKGNyeXB0b19za2NpcGhlcl9lbmNyeXB0KGNpcGhfcmVxKSwgJndhaXQpOwo+
-ICsJCWlmIChlcnIpCj4gKwkJCWdvdG8gbm9fbWVtX2Zvcl9jaXBoX3BhZ2U7Cj4gKwo+ICsJCWN1
-cnJfZHVuKys7Cj4gKwkJY29udGludWU7Cj4gK25vX21lbV9mb3JfY2lwaF9wYWdlOgo+ICsJCWVy
-ciA9IC1FTk9NRU07Cj4gKwkJZm9yIChqID0gaSAtIDE7IGogPj0gMDsgai0tKSB7Cj4gKwkJCW1l
-bXBvb2xfZnJlZShlbmNfYmlvLT5iaV9pb192ZWMtPmJ2X3BhZ2UsCj4gKwkJCQkgICAgIGJsa19j
-cnlwdG9fcGFnZV9wb29sKTsKPiArCQl9CgpUaGUgZXJyb3IgcGF0aCBuZWVkcyB0byBmcmVlIGJp
-X2lvX3ZlY1tqXSwgbm90IGJpX2lvX3ZlYy4KCj4gKy8qCj4gKyAqIFRPRE86IGFzc3VtcHRpb24g
-cmlnaHQgbm93IGlzOgo+ICsgKiBlYWNoIHNlZ21lbnQgaW4gYmlvIGhhcyBsZW5ndGggPT0gdGhl
-IGRhdGFfdW5pdF9zaXplCj4gKyAqLwoKVGhpcyBuZWVkcyB0byBiZSBmaXhlZCwgb3IgZWxzZSBi
-bGstY3J5cHRvIG5lZWRzIHRvIHJlamVjdCB1c2luZyB1bnN1cHBvcnRlZApkYXRhIHVuaXQgc2l6
-ZXMuICBCdXQgaXQgc2VlbXMgaXQgY2FuIGJlIHN1cHBvcnRlZCBwcmV0dHkgZWFzaWx5IGJ5IGp1
-c3QgbG9vcGluZwp0aHJvdWdoIGVhY2ggZGF0YSB1bml0IGluIGVhY2ggYmlvIHNlZ21lbnQuICBU
-byBnZXQgc29tZSBpZGVhcyB5b3UgY291bGQgbG9vayBhdApteSBwYXRjaGVzIHF1ZXVlZCBpbiBm
-c2NyeXB0LmdpdCB0aGF0IGhhbmRsZSBlbmNyeXB0aW5nL2RlY3J5cHRpbmcgZmlsZXN5c3RlbQpi
-bG9ja3Mgc21hbGxlciB0aGFuIFBBR0VfU0laRSwgZS5nLgpodHRwczovL2dpdC5rZXJuZWwub3Jn
-L3B1Yi9zY20vZnMvZnNjcnlwdC9mc2NyeXB0LmdpdC9jb21taXQvP2lkPTUzYmMxZDg1NGM2NGMy
-MGQ5NjdkYWIxNWIxMTFiYWNhMDJhNmQ5OWUKCj4gK3N0YXRpYyB2b2lkIGJsa19jcnlwdG9fZGVj
-cnlwdF9iaW8oc3RydWN0IHdvcmtfc3RydWN0ICp3KQo+ICt7Cj4gKwlzdHJ1Y3Qgd29ya19tZW0g
-KndvcmtfbWVtID0KPiArCQljb250YWluZXJfb2Yodywgc3RydWN0IHdvcmtfbWVtLCBjcnlwdG9f
-d29yayk7Cj4gKwlzdHJ1Y3QgYmlvICpiaW8gPSB3b3JrX21lbS0+YmlvOwo+ICsJaW50IHNsb3Qg
-PSBiaW9fY3J5cHRfZ2V0X3Nsb3QoYmlvKTsKPiArCXN0cnVjdCBza2NpcGhlcl9yZXF1ZXN0ICpj
-aXBoX3JlcTsKPiArCURFQ0xBUkVfQ1JZUFRPX1dBSVQod2FpdCk7Cj4gKwlzdHJ1Y3QgYmlvX3Zl
-YyBidjsKPiArCXN0cnVjdCBidmVjX2l0ZXIgaXRlcjsKPiArCXU2NCBjdXJyX2R1bjsKPiArCXVu
-aW9uIHsKPiArCQlfX2xlNjQgZHVuOwo+ICsJCXU4IGJ5dGVzWzE2XTsKPiArCX0gaXY7Cj4gKwlz
-dHJ1Y3Qgc2NhdHRlcmxpc3Qgc2c7Cj4gKwo+ICsJY3Vycl9kdW4gPSBiaW9fY3J5cHRfc3dfZGF0
-YV91bml0X251bShiaW8pOwo+ICsKPiArCWttZW1fY2FjaGVfZnJlZShibGtfY3J5cHRvX3dvcmtf
-bWVtX2NhY2hlLCB3b3JrX21lbSk7Cj4gKwljaXBoX3JlcSA9IHNrY2lwaGVyX3JlcXVlc3RfYWxs
-b2MoYmxrX2NyeXB0b19rZXlzbG90c1tzbG90XS50Zm0sCj4gKwkJCQkJICBHRlBfTk9GUyk7Cj4g
-KwlpZiAoIWNpcGhfcmVxKSB7Cj4gKwkJYmlvLT5iaV9zdGF0dXMgPSBCTEtfU1RTX1JFU09VUkNF
-Owo+ICsJCWdvdG8gb3V0Owo+ICsJfQo+ICsKPiArCXNrY2lwaGVyX3JlcXVlc3Rfc2V0X2NhbGxi
-YWNrKGNpcGhfcmVxLAo+ICsJCQkJICAgICAgQ1JZUFRPX1RGTV9SRVFfTUFZX0JBQ0tMT0cgfAo+
-ICsJCQkJICAgICAgQ1JZUFRPX1RGTV9SRVFfTUFZX1NMRUVQLAo+ICsJCQkJICAgICAgY3J5cHRv
-X3JlcV9kb25lLCAmd2FpdCk7Cj4gKwo+ICsJc2dfaW5pdF90YWJsZSgmc2csIDEpOwo+ICsJX19i
-aW9fZm9yX2VhY2hfc2VnbWVudChidiwgYmlvLCBpdGVyLAo+ICsJCQkgICAgICAgYmlvLT5iaV9j
-cnlwdF9jb250ZXh0LT5jcnlwdF9pdGVyKSB7Cj4gKwkJc3RydWN0IHBhZ2UgKnBhZ2UgPSBidi5i
-dl9wYWdlOwo+ICsJCWludCBlcnI7Cj4gKwo+ICsJCW1lbXNldCgmaXYsIDAsIHNpemVvZihpdikp
-Owo+ICsJCWl2LmR1biA9IGNwdV90b19sZTY0KGN1cnJfZHVuKTsKPiArCj4gKwkJc2dfc2V0X3Bh
-Z2UoJnNnLCBwYWdlLCBidi5idl9sZW4sIGJ2LmJ2X29mZnNldCk7Cj4gKwkJc2tjaXBoZXJfcmVx
-dWVzdF9zZXRfY3J5cHQoY2lwaF9yZXEsICZzZywgJnNnLAo+ICsJCQkJCSAgIGJ2LmJ2X2xlbiwg
-aXYuYnl0ZXMpOwo+ICsJCWVyciA9IGNyeXB0b193YWl0X3JlcShjcnlwdG9fc2tjaXBoZXJfZGVj
-cnlwdChjaXBoX3JlcSksICZ3YWl0KTsKPiArCQlpZiAoZXJyKSB7Cj4gKwkJCWJpby0+Ymlfc3Rh
-dHVzID0gQkxLX1NUU19JT0VSUjsKPiArCQkJZ290byBvdXQ7Cj4gKwkJfQo+ICsJCWN1cnJfZHVu
-Kys7Cj4gKwl9Cj4gKwo+ICtvdXQ6Cj4gKwlza2NpcGhlcl9yZXF1ZXN0X2ZyZWUoY2lwaF9yZXEp
-Owo+ICsJYmxrX2NyeXB0b19wdXRfa2V5c2xvdChiaW8pOwo+ICsJYmlvX2VuZGlvKGJpbyk7Cj4g
-K30KPiArCj4gK3N0YXRpYyB2b2lkIGJsa19jcnlwdG9fcXVldWVfZGVjcnlwdF9iaW8oc3RydWN0
-IGJpbyAqYmlvKQo+ICt7Cj4gKwlzdHJ1Y3Qgd29ya19tZW0gKndvcmtfbWVtID0KPiArCQlrbWVt
-X2NhY2hlX3phbGxvYyhibGtfY3J5cHRvX3dvcmtfbWVtX2NhY2hlLCBHRlBfQVRPTUlDKTsKPiAr
-Cj4gKwlpZiAoIXdvcmtfbWVtKSB7Cj4gKwkJYmlvLT5iaV9zdGF0dXMgPSBCTEtfU1RTX1JFU09V
-UkNFOwo+ICsJCXJldHVybiBiaW9fZW5kaW8oYmlvKTsKPiArCX0KClRoZSBrZXlzbG90IG5lZWRz
-IHRvIGJlIHJlbGVhc2VkIGlmIGFsbG9jYXRpbmcgdGhlIHdvcmtfbWVtIGZhaWxzLgoKSG93ZXZl
-ciwgSSdtIHdvbmRlcmluZzogZm9yIHNvZnR3YXJlIGZhbGxiYWNrIGRlY3J5cHRpb24sIHdoeSBp
-cyB0aGUga2V5c2xvdAphbGxvY2F0ZWQgYmVmb3JlIHRoZSBiaW8gaXMgc3VibWl0dGVkLCByYXRo
-ZXIgdGhhbiBpbiB0aGUgd29ya3F1ZXVlIHdvcmsgYWZ0ZXIKdGhlIGJpbyBjb21wbGV0ZXM/ICBU
-aGUgYWN0dWFsIGRlY3J5cHRpb24gaXMgYWxyZWFkeSBzbGVlcGFibGUsIHNvIHdoeSBub3QganVz
-dAphbGxvY2F0ZSB0aGUga2V5c2xvdCB0aGVuIHRvbz8gIEl0IHdvdWxkIGFsc28gbWFrZSBpdCBt
-b3JlIHNpbWlsYXIgdG8gdGhlCnNvZnR3YXJlIGZhbGxiYWNrIGVuY3J5cHRpb24sIHdoaWNoIGRv
-ZXNuJ3QgaG9sZCB0aGUga2V5c2xvdCBkdXJpbmcgSS9PLgoKPiArCj4gKwlJTklUX1dPUksoJndv
-cmtfbWVtLT5jcnlwdG9fd29yaywgYmxrX2NyeXB0b19kZWNyeXB0X2Jpbyk7Cj4gKwl3b3JrX21l
-bS0+YmlvID0gYmlvOwo+ICsJcXVldWVfd29yayhibGtfY3J5cHRvX3dxLCAmd29ya19tZW0tPmNy
-eXB0b193b3JrKTsKPiArfQo+ICsKPiArLyoKPiArICogRW5zdXJlcyB0aGF0Ogo+ICsgKiAxKSBU
-aGUgYmlv4oCZcyBlbmNyeXB0aW9uIGNvbnRleHQgaXMgcHJvZ3JhbW1lZCBpbnRvIGEga2V5c2xv
-dCBpbiB0aGUKPiArICoga2V5c2xvdCBtYW5hZ2VyIChLU00pIG9mIHRoZSByZXF1ZXN0IHF1ZXVl
-IHRoYXQgdGhlIGJpbyBpcyBiZWluZyBzdWJtaXR0ZWQKPiArICogdG8gKG9yIHRoZSBzb2Z0d2Fy
-ZSBmYWxsYmFjayBLU00gaWYgdGhlIHJlcXVlc3QgcXVldWUgZG9lc27igJl0IGhhdmUgYSBLU00p
-LAo+ICsgKiBhbmQgdGhhdCB0aGUgcHJvY2Vzc2luZ19rc20gaW4gdGhlIGJpX2NyeXB0X2NvbnRl
-eHQgb2YgdGhpcyBiaW8gaXMgc2V0IHRvCj4gKyAqIHRoaXMgS1NNLgo+ICsgKgo+ICsgKiAyKSBU
-aGF0IHRoZSBiaW8gaGFzIGEgcmVmZXJlbmNlIHRvIHRoaXMga2V5c2xvdCBpbiB0aGlzIEtTTS4K
-PiArICovCgpNYWtlIHRoaXMgaW50byBhIHByb3BlciBrZXJuZWxkb2MgY29tbWVudCB0aGF0IGhh
-cyBhIG9uZS1saW5lIGZ1bmN0aW9uIG92ZXJ2aWV3CmFuZCBkb2N1bWVudHMgdGhlIHJldHVybiB2
-YWx1ZT8gIEZvciBleGFtcGxlOgoKLyoqCiAqIGJsa19jcnlwdG9fc3VibWl0X2JpbyAtIGhhbmRs
-ZSBzdWJtaXR0aW5nIGJpbyBmb3IgaW5saW5lIGVuY3J5cHRpb24KICoKICogQGJpb19wdHI6IHBv
-aW50ZXIgdG8gb3JpZ2luYWwgYmlvIHBvaW50ZXIKICoKICogSWYgdGhlIGJpbyBkb2Vzbid0IGhh
-dmUgaW5saW5lIGVuY3J5cHRpb24gZW5hYmxlZCBvciB0aGUgc3VibWl0dGVyIGFscmVhZHkKICog
-c3BlY2lmaWVkIGEga2V5c2xvdCBmb3IgdGhlIHRhcmdldCBkZXZpY2UsIGRvIG5vdGhpbmcuICBF
-bHNlLCBhIHJhdyBrZXkgbXVzdAogKiBoYXZlIGJlZW4gcHJvdmlkZWQsIHNvIGFjcXVpcmUgYSBk
-ZXZpY2Uga2V5c2xvdCBmb3IgaXQgaWYgc3VwcG9ydGVkLiAgRWxzZSwKICogdXNlIHRoZSBzb2Z0
-d2FyZSBjcnlwdG8gZmFsbGJhY2suCiAqIAogKiBbU29tZXRoaW5nIGFib3V0IHRoZSBzb2Z0d2Fy
-ZSBjcnlwdG8gZmFsbGJhY2sgYW5kIGhvdyBpdCBtYXkgdXBkYXRlCiAqICpiaW9fcHRyLl0KICoK
-ICogUmV0dXJuOiAwIGlmIGJpbyBzdWJtaXNzaW9uIHNob3VsZCBjb250aW51ZTsgbm9uemVybyBp
-ZiBiaW9fZW5kaW8oKSB3YXMKICogICAgICAgIGFscmVhZHkgY2FsbGVkIHNvIGJpbyBzdWJtaXNz
-aW9uIHNob3VsZCBhYm9ydC4KICAqLwoKPiAraW50IGJsa19jcnlwdG9fc3VibWl0X2JpbyhzdHJ1
-Y3QgYmlvICoqYmlvX3B0cikKPiArewo+ICsJc3RydWN0IGJpbyAqYmlvID0gKmJpb19wdHI7Cj4g
-KwlzdHJ1Y3QgcmVxdWVzdF9xdWV1ZSAqcTsKPiArCWludCBlcnI7Cj4gKwllbnVtIGJsa19jcnlw
-dF9tb2RlX251bSBjcnlwdF9tb2RlOwoKVGhlICdjcnlwdF9tb2RlJyB2YXJpYWJsZSBpcyBuZXZl
-ciB1c2VkLgoKPiArCXN0cnVjdCBiaW9fY3J5cHRfY3R4ICpjcnlwdF9jdHg7Cj4gKwo+ICsJaWYg
-KCFiaW9faGFzX2RhdGEoYmlvKSkKPiArCQlyZXR1cm4gMDsKPiArCj4gKwlpZiAoIWJpb19pc19l
-bmNyeXB0ZWQoYmlvKSB8fCBiaW9fY3J5cHRfc3doYW5kbGVkKGJpbykpCj4gKwkJcmV0dXJuIDA7
-CgpXaHkgaXMgYmlvX2NyeXB0X3N3aGFuZGxlZCgpIGNoZWNrZWQgaGVyZT8KCkFsc28gY29uc2lk
-ZXIgcmVvcmRlcmluZyB0aGVzZSBjaGVja3MgdG86CgoJaWYgKCFiaW9faXNfZW5jcnlwdGVkKGJp
-bykgfHwgIWJpb19oYXNfZGF0YShiaW8pKQoJCXJldHVybiAwOwoKCS8qIGNvbW1lbnQgKi8KCWlm
-IChiaW9fY3J5cHRfc3doYW5kbGVkKGJpbykpCgkJcmV0dXJuIDA7CgohYmlvX2lzX2VuY3J5cHRl
-ZCgpIGlzIHRoZSBtb3N0IGNvbW1vbiBjYXNlLCBzbyBmb3IgZWZmaWNpZW5jeSBzaG91bGQgYmUg
-Y2hlY2tlZApmaXJzdC4gICFiaW9faXNfZW5jcnlwdGVkKCkgYW5kICFiaW9faGFzX2RhdGEoKSBh
-cmUgYWxzbyBlYXN5IHRvIHVuZGVyc3RhbmQgYW5kCmtpbmQgb2YgZ28gdG9nZXRoZXIsIHdoaWxl
-IGJpb19jcnlwdF9zd2hhbmRsZWQoKSBzZWVtcyBkaWZmZXJlbnQ7IGl0J3MgaGFyZGVyIHRvCnVu
-ZGVyc3RhbmQgYW5kIG1pZ2h0IG5lZWQgYSBjb21tZW50LgoKPiArCj4gKwljcnlwdF9jdHggPSBi
-aW8tPmJpX2NyeXB0X2NvbnRleHQ7Cj4gKwlxID0gYmlvLT5iaV9kaXNrLT5xdWV1ZTsKPiArCWNy
-eXB0X21vZGUgPSBiaW9fY3J5cHRfbW9kZShiaW8pOwo+ICsKPiArCWlmIChiaW9fY3J5cHRfaGFz
-X2tleXNsb3QoYmlvKSkgewo+ICsJCS8qIEtleSBhbHJlYWR5IHByb2dyYW1tZWQgaW50byBkZXZp
-Y2U/ICovCj4gKwkJaWYgKHEtPmtzbSA9PSBjcnlwdF9jdHgtPnByb2Nlc3Npbmdfa3NtKQo+ICsJ
-CQlyZXR1cm4gMDsKPiArCj4gKwkJLyogTm9wZSwgcmVsZWFzZSB0aGUgZXhpc3Rpbmcga2V5c2xv
-dC4gKi8KPiArCQlibGtfY3J5cHRvX3B1dF9rZXlzbG90KGJpbyk7Cj4gKwl9Cj4gKwo+ICsJLyog
-R2V0IGRldmljZSBrZXlzbG90IGlmIHN1cHBvcnRlZCAqLwo+ICsJaWYgKHEtPmtzbSkgewo+ICsJ
-CWVyciA9IGJsa19jcnlwdG9fZ2V0X2tleXNsb3QoYmlvLCBxLT5rc20pOwo+ICsJCWlmICghZXJy
-KQo+ICsJCQlyZXR1cm4gMDsKClBlcmhhcHMgdGhlcmUgc2hvdWxkIGJlIGEgd2FybmluZyBtZXNz
-YWdlIGhlcmUsIHNpbmNlIGl0IG1heSBiZSB1bmV4cGVjdGVkIGZvcgp0aGUgc29mdHdhcmUgZmFs
-bGJhY2sgZW5jcnlwdGlvbiB0byBiZSB1c2VkLCBhbmQgaXQgbWF5IHBlcmZvcm0gcG9vcmx5LiAg
-RS5nLgoKCXByX3dhcm5fb25jZSgiYmxrLWNyeXB0bzogZmFpbGVkIHRvIGFjcXVpcmUga2V5c2xv
-dCBmb3IgJXMgKGVycj0lZCkuICBGYWxsaW5nIGJhY2sgdG8gc29mdHdhcmUgY3J5cHRvLlxuIiwK
-CQkgICAgICBiaW8tPmJpX2Rpc2stPmRpc2tfbmFtZSwgZXJyKTsKCj4gKwl9Cj4gKwo+ICsJLyog
-RmFsbGJhY2sgdG8gc29mdHdhcmUgY3J5cHRvICovCj4gKwlpZiAoYmlvX2RhdGFfZGlyKGJpbykg
-PT0gV1JJVEUpIHsKPiArCQkvKiBFbmNyeXB0IHRoZSBkYXRhIG5vdyAqLwo+ICsJCWVyciA9IGJs
-a19jcnlwdG9fZW5jcnlwdF9iaW8oYmlvX3B0cik7Cj4gKwkJaWYgKGVycikKPiArCQkJZ290byBv
-dXRfZW5jcnlwdF9lcnI7Cj4gKwl9IGVsc2Ugewo+ICsJCWVyciA9IGJsa19jcnlwdG9fZ2V0X2tl
-eXNsb3QoYmlvLCBibGtfY3J5cHRvX2tzbSk7Cj4gKwkJaWYgKGVycikKPiArCQkJZ290byBvdXRf
-ZXJyOwo+ICsJfQo+ICsJcmV0dXJuIDA7Cj4gK291dF9lcnI6Cj4gKwliaW8tPmJpX3N0YXR1cyA9
-IEJMS19TVFNfSU9FUlI7Cj4gK291dF9lbmNyeXB0X2VycjoKPiArCWJpb19lbmRpbyhiaW8pOwo+
-ICsJcmV0dXJuIGVycjsKPiArfQo+ICsKPiArLyoKPiArICogSWYgdGhlIGJpbyBpcyBub3QgZW4v
-ZGVjcnlwdGVkIGluIHNvZnR3YXJlLCB0aGlzIGZ1bmN0aW9uIHJlbGVhc2VzIHRoZQo+ICsgKiBy
-ZWZlcmVuY2UgdG8gdGhlIGtleXNsb3QgdGhhdCBibGtfY3J5cHRvX3N1Ym1pdF9iaW8gZ290Lgo+
-ICsgKiBJZiBibGtfY3J5cHRvX3N1Ym1pdF9iaW8gZGVjaWRlZCB0byBmYWxsYmFjayB0byBzb2Z0
-d2FyZSBjcnlwdG8gZm9yIHRoaXMKPiArICogYmlvLCB0aGVuIGlmIHRoZSBiaW8gaXMgZG9pbmcg
-YSB3cml0ZSwgd2UgZnJlZSB0aGUgYWxsb2NhdGVkIGJvdW5jZSBwYWdlcywKPiArICogYW5kIGlm
-IHRoZSBiaW8gaXMgZG9pbmcgYSByZWFkLCB3ZSBxdWV1ZSB0aGUgYmlvIGZvciBkZWNyeXB0aW9u
-IGludG8gYQo+ICsgKiB3b3JrcXVldWUgYW5kIHJldHVybiAtRUFHQUlOLiBBZnRlciB0aGUgYmlv
-IGhhcyBiZWVuIGRlY3J5cHRlZCwgd2UgcmVsZWFzZQo+ICsgKiB0aGUga2V5c2xvdCBiZWZvcmUg
-d2UgY2FsbCBiaW9fZW5kaW8oYmlvKS4KPiArICovCj4gK2Jvb2wgYmxrX2NyeXB0b19lbmRpbyhz
-dHJ1Y3QgYmlvICpiaW8pCj4gK3sKPiArCWlmICghYmlvX2NyeXB0X2hhc19rZXlzbG90KGJpbykp
-Cj4gKwkJcmV0dXJuIHRydWU7Cj4gKwo+ICsJaWYgKCFiaW9fY3J5cHRfc3doYW5kbGVkKGJpbykp
-IHsKPiArCQlibGtfY3J5cHRvX3B1dF9rZXlzbG90KGJpbyk7Cj4gKwkJcmV0dXJuIHRydWU7Cj4g
-Kwl9Cj4gKwo+ICsJLyogYmlvX2RhdGFfZGlyKGJpbykgPT0gUkVBRC4gU28gZGVjcnlwdCBiaW8g
-Ki8KPiArCWJsa19jcnlwdG9fcXVldWVfZGVjcnlwdF9iaW8oYmlvKTsKPiArCXJldHVybiBmYWxz
-ZTsKPiArfQo+ICsKPiAraW50IF9faW5pdCBibGtfY3J5cHRvX2luaXQodm9pZCkKPiArewo+ICsJ
-YmxrX2NyeXB0b19rc20gPSBrZXlzbG90X21hbmFnZXJfY3JlYXRlKEJMS19DUllQVE9fTlVNX0tF
-WVNMT1RTLAo+ICsJCQkJCQkmYmxrX2NyeXB0b19rc21fbGxfb3BzLAo+ICsJCQkJCQlOVUxMKTsK
-PiArCWlmICghYmxrX2NyeXB0b19rc20pCj4gKwkJZ290byBvdXRfa3NtOwo+ICsKPiArCWJsa19j
-cnlwdG9fd3EgPSBhbGxvY193b3JrcXVldWUoImJsa19jcnlwdG9fd3EiLAo+ICsJCQkJCVdRX1VO
-Qk9VTkQgfCBXUV9ISUdIUFJJLAo+ICsJCQkJCW51bV9vbmxpbmVfY3B1cygpKTsKPiArCWlmICgh
-YmxrX2NyeXB0b193cSkKPiArCQlnb3RvIG91dF93cTsKCldRX01FTV9SRUNMQUlNIG1pZ2h0IGJl
-IG5lZWRlZCBoZXJlLgoKLSBFcmljCgoKX19fX19fX19fX19fX19fX19fX19fX19fX19fX19fX19f
-X19fX19fX19fX19fX18KTGludXgtZjJmcy1kZXZlbCBtYWlsaW5nIGxpc3QKTGludXgtZjJmcy1k
-ZXZlbEBsaXN0cy5zb3VyY2Vmb3JnZS5uZXQKaHR0cHM6Ly9saXN0cy5zb3VyY2Vmb3JnZS5uZXQv
-bGlzdHMvbGlzdGluZm8vbGludXgtZjJmcy1kZXZlbAo=
+We introduce blk-crypto, which manages programming keyslots for struct
+bios. With blk-crypto, filesystems only need to call bio_crypt_set_ctx with
+the encryption key, algorithm and data_unit_num; they don't have to worry
+about getting a keyslot for each encryption context, as blk-crypto handles
+that. Blk-crypto also makes it possible for layered devices like device
+mapper to make use of inline encryption hardware.
+
+Blk-crypto delegates crypto operations to inline encryption hardware when
+available, and also contains a software fallback to the kernel crypto API.
+For more details, refer to Documentation/block/blk-crypto.txt.
+
+Known issues:
+1) We're allocating crypto_skcipher in blk_crypto_keyslot_program, which
+   uses GFP_KERNEL to allocate memory, but this function is on the write
+   path for IO - we need to add support for specifying a different flags
+   to the crypto API.
+
+Signed-off-by: Satya Tangirala <satyat@google.com>
+---
+ Documentation/block/blk-crypto.txt | 185 ++++++++++
+ block/Kconfig                      |   8 +
+ block/Makefile                     |   2 +
+ block/bio.c                        |   5 +
+ block/blk-core.c                   |  11 +-
+ block/blk-crypto.c                 | 558 +++++++++++++++++++++++++++++
+ include/linux/blk-crypto.h         |  40 +++
+ 7 files changed, 808 insertions(+), 1 deletion(-)
+ create mode 100644 Documentation/block/blk-crypto.txt
+ create mode 100644 block/blk-crypto.c
+ create mode 100644 include/linux/blk-crypto.h
+
+diff --git a/Documentation/block/blk-crypto.txt b/Documentation/block/blk-c=
+rypto.txt
+new file mode 100644
+index 000000000000..96a7983a117d
+--- /dev/null
++++ b/Documentation/block/blk-crypto.txt
+@@ -0,0 +1,185 @@
++BLK-CRYPTO and KEYSLOT MANAGER
++=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D
++
++CONTENTS
++1. Objective
++2. Constraints and notes
++3. Design
++4. Blk-crypto
++ 4-1 What does blk-crypto do on bio submission
++5. Layered Devices
++6. Future optimizations for layered devices
++
++1. Objective
++=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
++
++We want to support inline encryption (IE) in the kernel.
++To allow for testing, we also want a software fallback when actual
++IE hardware is absent. We also want IE to work with layered devices
++like dm and loopback (i.e. we want to be able to use the IE hardware
++of the underlying devices if present, or else fall back to software
++en/decryption).
++
++
++2. Constraints and notes
++=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
++
++1) IE hardware have a limited number of =E2=80=9Ckeyslots=E2=80=9D that ca=
+n be programmed
++with an encryption context (key, algorithm, data unit size, etc.) at any t=
+ime.
++One can specify a keyslot in a data request made to the device, and the
++device will en/decrypt the data using the encryption context programmed in=
+to
++that specified keyslot. When possible, we want to make multiple requests w=
+ith
++the same encryption context share the same keyslot.
++
++2) We need a way for filesystems to specify an encryption context to use f=
+or
++en/decrypting a struct bio, and a device driver (like UFS) needs to be abl=
+e
++to use that encryption context when it processes the bio.
++
++3) We need a way for device drivers to expose their capabilities in a unif=
+ied
++way to the upper layers.
++
++
++3. Design
++=3D=3D=3D=3D=3D=3D=3D=3D=3D
++
++We add a struct bio_crypt_context to struct bio that can represent an
++encryption context, because we need to able to pass this encryption contex=
+t
++from the FS layer to the device driver to act upon.
++
++While IE hardware works on the notion of keyslots, the FS layer has no
++knowledge of keyslots - it simply wants to specify an encryption context t=
+o
++use while en/decrypting a bio.
++
++We introduce a keyslot manager (KSM) that handles the translation from
++encryption contexts specified by the FS to keyslots on the IE hardware.
++This KSM also serves as the way IE hardware can expose their capabilities =
+to
++upper layers. The generic mode of operation is: each device driver that wa=
+nts
++to support IE will construct a KSM and set it up in its struct request_que=
+ue.
++Upper layers that want to use IE on this device can then use this KSM in
++the device=E2=80=99s struct request_queue to translate an encryption conte=
+xt into
++a keyslot. The presence of the KSM in the request queue shall be used to m=
+ean
++that the device supports IE.
++
++On the device driver end of the interface, the device driver needs to tell=
+ the
++KSM how to actually manipulate the IE hardware in the device to do things =
+like
++programming the crypto key into the IE hardware into a particular keyslot.=
+ All
++this is achieved through the struct keyslot_mgmt_ll_ops that the device dr=
+iver
++passes to the KSM when creating it.
++
++It uses refcounts to track which keyslots are idle (either they have no
++encryption context programmed, or there are no in flight struct bios
++referencing that keyslot). When a new encryption context needs a keyslot, =
+it
++tries to find a keyslot that has already been programmed with the same
++encryption context, and if there is no such keyslot, it evicts the least
++recently used idle keyslot and programs the new encryption context into th=
+at
++one. If no idle keyslots are available, then the caller will sleep until t=
+here
++is at least one.
++
++
++4. Blk-crypto
++=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
++
++The above is sufficient for simple cases, but does not work if there is a
++need for a software fallback, or if we are want to use IE with layered dev=
+ices.
++To these ends, we introduce blk-crypto. Blk-crypto allows us to present a
++unified view of encryption to the FS (so FS only needs to specify an
++encryption context and not worry about keyslots at all), and blk-crypto ca=
+n
++decide whether to delegate the en/decryption to IE hardware or to software
++(i.e. to the kernel crypto API). Blk-crypto maintains an internal KSM that
++serves as the software fallback to the kernel crypto API.
++
++Blk-crypto needs to ensure that the encryption context is programmed into =
+the
++"correct" keyslot manager for IE. If a bio is submitted to a layered devic=
+e
++that eventually passes the bio down to a device that really does support I=
+E, we
++want the encryption context to be programmed into a keyslot for the KSM of=
+ the
++device with IE support. However, blk-crypto does not know a priori whether=
+ a
++particular device is the final device in the layering structure for a bio =
+or
++not. So in the case that a particular device does not support IE, since it=
+ is
++possibly the final destination device for the bio, if the bio requires
++encryption (i.e. the bio is doing a write operation), blk-crypto must fall=
+back
++to software *before* sending the bio to the device.
++
++Blk-crypto ensures that
++1) The bio=E2=80=99s encryption context is programmed into a keyslot in th=
+e KSM of the
++request queue that the bio is being submitted to (or the software fallback=
+ KSM
++if the request queue doesn=E2=80=99t have a KSM), and that the processing_=
+ksm in the
++bi_crypt_context is set to this KSM
++
++2) That the bio has its own individual reference to the keyslot in this KS=
+M.
++Once the bio passes through blk-crypto, its encryption context is programm=
+ed
++in some KSM. The =E2=80=9Cits own individual reference to the keyslot=E2=
+=80=9D ensures that
++keyslots can be released by each bio independently of other bios while ens=
+uring
++that the bio has a valid reference to the keyslot when, for e.g., the soft=
+ware
++fallback KSM in blk-crypto performs crypto for on the device=E2=80=99s beh=
+alf. The
++individual references are ensured by increasing the refcount for the keysl=
+ot in
++the processing_ksm when a bio with a programmed encryption context is clon=
+ed.
++
++
++4-1. What blk-crypto does on bio submission
++-------------------------------------------
++
++Case 1: blk-crypto is given a bio with only an encryption context that has=
+n=E2=80=99t
++been programmed into any keyslot in any KSM (for e.g. a bio from the FS). =
+In
++this case, blk-crypto will program the encryption context into the KSM of =
+the
++request queue the bio is being submitted to (and if this KSM does not exis=
+t,
++then it will program it into blk-crypto=E2=80=99s internal KSM for softwar=
+e fallback).
++The KSM that this encryption context was programmed into is stored as the
++processing_ksm in the bio=E2=80=99s bi_crypt_context.
++
++Case 2: blk-crypto is given a bio whose encryption context has already bee=
+n
++programmed into a keyslot in the *software fallback KSM*. In this case,
++blk-crypto does nothing; it treats the bio as not having specified an
++encryption context. Note that we cannot do what we will do in Case 3 here
++because we would have already encrypted the bio in software by this point.
++
++Case 3: blk-crypto is given a bio whose encryption context has already bee=
+n
++programmed into a keyslot in some KSM (that is *not* the software fallback
++KSM). In this case, blk-crypto first releases that keyslot from that KSM a=
+nd
++then treats the bio as in Case 1.
++
++This way, when a device driver is processing a bio, it can be sure that
++the bio=E2=80=99s encryption context has been programmed into some KSM (ei=
+ther the
++device driver=E2=80=99s request queue=E2=80=99s KSM, or blk-crypto=E2=80=
+=99s software fallback KSM).
++It then simply needs to check if the bio=E2=80=99s processing_ksm is the d=
+evice=E2=80=99s
++request queue=E2=80=99s KSM. If so, then it should proceed with IE. If not=
+, it should
++simply do nothing with respect to crypto, because some other KSM (perhaps =
+the
++blk-crypto software fallback KSM) is handling the en/decryption.
++
++Blk-crypto will release the keyslot that is being held by the bio (and als=
+o
++decrypt it if the bio is using the software fallback KSM) once
++bio_remaining_done returns true for the bio.
++
++
++5. Layered Devices
++=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
++
++Layered devices that wish to support IE need to create their own keyslot
++manager for their request queue, and expose whatever functionality they ch=
+oose.
++When a layered device wants to pass a bio to another layer (either by
++resubmitting the same bio, or by submitting a clone), it doesn=E2=80=99t n=
+eed to do
++anything special because the bio (or the clone) will once again pass throu=
+gh
++blk-crypto, which will work as described in Case 3. If a layered device wa=
+nts
++for some reason to do the IO by itself instead of passing it on to a child
++device, but it also chose to expose IE capabilities by setting up a KSM in=
+ its
++request queue, it is then responsible for en/decrypting the data itself. I=
+n
++such cases, the device can choose to call the blk-crypto function
++blk_crypto_fallback_to_software (TODO: Not yet implemented), which will
++cause the en/decryption to be done via software fallback.
++
++
++6. Future Optimizations for layered devices
++=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
++
++Creating a keyslot manager for the layered device uses up memory for each
++keyslot, and in general, a layered device (like dm-linear) merely passes t=
+he
++request on to a =E2=80=9Cchild=E2=80=9D device, so the keyslots in the lay=
+ered device itself
++might be completely unused. We can instead define a new type of KSM; the
++=E2=80=9Cpassthrough KSM=E2=80=9D, that layered devices can use to let blk=
+-crypto know that
++this layered device *will* pass the bio to some child device (and hence
++through blk-crypto again, at which point blk-crypto can program the encryp=
+tion
++context, instead of programming it into the layered device=E2=80=99s KSM).=
+ Again, if
++the device =E2=80=9Clies=E2=80=9D and decides to do the IO itself instead =
+of passing it on to
++a child device, it is responsible for doing the en/decryption (and can cho=
+ose
++to call blk_crypto_fallback_to_software). Another use case for the
++"passthrough KSM" is for IE devices that want to manage their own keyslots=
+/do
++not have a limited number of keyslots.
+diff --git a/block/Kconfig b/block/Kconfig
+index 1b220101a9cb..0bd4b5060bf8 100644
+--- a/block/Kconfig
++++ b/block/Kconfig
+@@ -163,6 +163,14 @@ config BLK_SED_OPAL
+ 	Enabling this option enables users to setup/unlock/lock
+ 	Locking ranges for SED devices using the Opal protocol.
+=20
++config BLK_INLINE_ENCRYPTION
++	bool "Enable inline encryption support in block layer"
++	help
++	  Build the blk-crypto subsystem.
++	  Enabling this lets the block layer handle encryption,
++	  so users can take advantage of inline encryption
++	  hardware if present.
++
+ menu "Partition Types"
+=20
+ source "block/partitions/Kconfig"
+diff --git a/block/Makefile b/block/Makefile
+index eee1b4ceecf9..5d38ea437937 100644
+--- a/block/Makefile
++++ b/block/Makefile
+@@ -35,3 +35,5 @@ obj-$(CONFIG_BLK_DEBUG_FS)	+=3D blk-mq-debugfs.o
+ obj-$(CONFIG_BLK_DEBUG_FS_ZONED)+=3D blk-mq-debugfs-zoned.o
+ obj-$(CONFIG_BLK_SED_OPAL)	+=3D sed-opal.o
+ obj-$(CONFIG_BLK_PM)		+=3D blk-pm.o
++obj-$(CONFIG_BLK_INLINE_ENCRYPTION)	+=3D blk-crypt-ctx.o blk-crypto.o \
++					     keyslot-manager.o
+diff --git a/block/bio.c b/block/bio.c
+index 87aa87288b39..711b026d5159 100644
+--- a/block/bio.c
++++ b/block/bio.c
+@@ -17,6 +17,7 @@
+ #include <linux/cgroup.h>
+ #include <linux/blk-cgroup.h>
+ #include <linux/keyslot-manager.h>
++#include <linux/blk-crypto.h>
+=20
+ #include <trace/events/block.h>
+ #include "blk.h"
+@@ -1829,6 +1830,10 @@ void bio_endio(struct bio *bio)
+ again:
+ 	if (!bio_remaining_done(bio))
+ 		return;
++
++	if (!blk_crypto_endio(bio))
++		return;
++
+ 	if (!bio_integrity_endio(bio))
+ 		return;
+=20
+diff --git a/block/blk-core.c b/block/blk-core.c
+index ee1b35fe8572..1892c3904b8c 100644
+--- a/block/blk-core.c
++++ b/block/blk-core.c
+@@ -36,6 +36,7 @@
+ #include <linux/blk-cgroup.h>
+ #include <linux/debugfs.h>
+ #include <linux/bpf.h>
++#include <linux/blk-crypto.h>
+=20
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/block.h>
+@@ -1005,7 +1006,9 @@ blk_qc_t generic_make_request(struct bio *bio)
+ 			/* Create a fresh bio_list for all subordinate requests */
+ 			bio_list_on_stack[1] =3D bio_list_on_stack[0];
+ 			bio_list_init(&bio_list_on_stack[0]);
+-			ret =3D q->make_request_fn(q, bio);
++
++			if (!blk_crypto_submit_bio(&bio))
++				ret =3D q->make_request_fn(q, bio);
+=20
+ 			blk_queue_exit(q);
+=20
+@@ -1058,6 +1061,9 @@ blk_qc_t direct_make_request(struct bio *bio)
+ 	if (!generic_make_request_checks(bio))
+ 		return BLK_QC_T_NONE;
+=20
++	if (blk_crypto_submit_bio(&bio))
++		return BLK_QC_T_NONE;
++
+ 	if (unlikely(blk_queue_enter(q, nowait ? BLK_MQ_REQ_NOWAIT : 0))) {
+ 		if (nowait && !blk_queue_dying(q))
+ 			bio->bi_status =3D BLK_STS_AGAIN;
+@@ -1737,5 +1743,8 @@ int __init blk_dev_init(void)
+ 	blk_debugfs_root =3D debugfs_create_dir("block", NULL);
+ #endif
+=20
++	if (blk_crypto_init() < 0)
++		panic("Failed to init blk-crypto\n");
++
+ 	return 0;
+ }
+diff --git a/block/blk-crypto.c b/block/blk-crypto.c
+new file mode 100644
+index 000000000000..5adb5251ae7e
+--- /dev/null
++++ b/block/blk-crypto.c
+@@ -0,0 +1,558 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright 2019 Google LLC
++ */
++#include <linux/blk-crypto.h>
++#include <linux/keyslot-manager.h>
++#include <linux/mempool.h>
++#include <linux/blk-cgroup.h>
++#include <crypto/skcipher.h>
++#include <crypto/algapi.h>
++
++struct blk_crypt_mode {
++	const char *friendly_name;
++	const char *cipher_str;
++	size_t keysize;
++	size_t ivsize;
++	bool needs_essiv;
++};
++
++static const struct blk_crypt_mode blk_crypt_modes[] =3D {
++	[BLK_ENCRYPTION_MODE_AES_256_XTS] =3D {
++		.friendly_name =3D "AES-256-XTS",
++		.cipher_str =3D "xts(aes)",
++		.keysize =3D 64,
++		.ivsize =3D 16,
++	},
++	/* TODO: the rest of the algs that fscrypt supports */
++};
++
++#define BLK_CRYPTO_MAX_KEY_SIZE 64
++/* TODO: Do we want to make this user configurable somehow? */
++#define BLK_CRYPTO_NUM_KEYSLOTS 100
++
++static struct blk_crypto_keyslot {
++	struct crypto_skcipher *tfm;
++	enum blk_crypt_mode_num crypt_mode;
++	u8 key[BLK_CRYPTO_MAX_KEY_SIZE];
++} *blk_crypto_keyslots;
++
++struct work_mem {
++	struct work_struct crypto_work;
++	struct bio *bio;
++};
++
++static struct keyslot_manager *blk_crypto_ksm;
++static struct workqueue_struct *blk_crypto_wq;
++static mempool_t *blk_crypto_page_pool;
++static struct kmem_cache *blk_crypto_work_mem_cache;
++
++static unsigned int num_prealloc_bounce_pg =3D 32;
++
++bool bio_crypt_swhandled(struct bio *bio)
++{
++	return bio_crypt_has_keyslot(bio) &&
++	       bio->bi_crypt_context->processing_ksm =3D=3D blk_crypto_ksm;
++}
++
++/* TODO: handle modes that need essiv */
++static int blk_crypto_keyslot_program(void *priv, const u8 *key,
++				      enum blk_crypt_mode_num crypt_mode,
++				      unsigned int data_unit_size,
++				      unsigned int slot)
++{
++	struct blk_crypto_keyslot *slotp =3D &blk_crypto_keyslots[slot];
++	struct crypto_skcipher *tfm =3D slotp->tfm;
++	const struct blk_crypt_mode *mode =3D &blk_crypt_modes[crypt_mode];
++	size_t keysize =3D mode->keysize;
++	int err;
++
++	if (crypt_mode !=3D slotp->crypt_mode || !tfm) {
++		crypto_free_skcipher(slotp->tfm);
++		slotp->tfm =3D NULL;
++		memset(slotp->key, 0, BLK_CRYPTO_MAX_KEY_SIZE);
++		tfm =3D crypto_alloc_skcipher(
++			mode->cipher_str, 0, 0);
++		if (IS_ERR(tfm))
++			return PTR_ERR(tfm);
++
++		crypto_skcipher_set_flags(tfm,
++					  CRYPTO_TFM_REQ_FORBID_WEAK_KEYS);
++		slotp->crypt_mode =3D crypt_mode;
++		slotp->tfm =3D tfm;
++	}
++
++
++	err =3D crypto_skcipher_setkey(tfm, key, keysize);
++
++	if (err) {
++		crypto_free_skcipher(tfm);
++		slotp->tfm =3D NULL;
++		return err;
++	}
++
++	memcpy(slotp->key, key, keysize);
++
++	return 0;
++}
++
++static int blk_crypto_keyslot_evict(void *priv, const u8 *key,
++				    enum blk_crypt_mode_num crypt_mode,
++				    unsigned int data_unit_size,
++				    unsigned int slot)
++{
++	crypto_free_skcipher(blk_crypto_keyslots[slot].tfm);
++	blk_crypto_keyslots[slot].tfm =3D NULL;
++	memset(blk_crypto_keyslots[slot].key, 0, BLK_CRYPTO_MAX_KEY_SIZE);
++
++	return 0;
++}
++
++static int blk_crypto_keyslot_find(void *priv,
++				   const u8 *key,
++				   enum blk_crypt_mode_num crypt_mode,
++				   unsigned int data_unit_size_bytes)
++{
++	int slot;
++	const size_t keysize =3D blk_crypt_modes[crypt_mode].keysize;
++
++	/* TODO: hashmap? */
++	for (slot =3D 0; slot < BLK_CRYPTO_NUM_KEYSLOTS; slot++) {
++		if (blk_crypto_keyslots[slot].crypt_mode =3D=3D crypt_mode &&
++		    !crypto_memneq(blk_crypto_keyslots[slot].key, key,
++				   keysize)) {
++			return slot;
++		}
++	}
++
++	return -ENOKEY;
++}
++
++static bool blk_crypt_mode_supported(void *priv,
++				     enum blk_crypt_mode_num crypt_mode,
++				     unsigned int data_unit_size)
++{
++	// Of course, blk-crypto supports all blk_crypt_modes.
++	return true;
++}
++
++static const struct keyslot_mgmt_ll_ops blk_crypto_ksm_ll_ops =3D {
++	.keyslot_program	=3D blk_crypto_keyslot_program,
++	.keyslot_evict		=3D blk_crypto_keyslot_evict,
++	.keyslot_find		=3D blk_crypto_keyslot_find,
++	.crypt_mode_supported	=3D blk_crypt_mode_supported,
++};
++
++static void blk_crypto_put_keyslot(struct bio *bio)
++{
++	struct bio_crypt_ctx *crypt_ctx =3D bio->bi_crypt_context;
++
++	keyslot_manager_put_slot(crypt_ctx->processing_ksm, crypt_ctx->keyslot);
++	bio_crypt_unset_keyslot(bio);
++}
++
++static int blk_crypto_get_keyslot(struct bio *bio,
++				      struct keyslot_manager *ksm)
++{
++	int slot;
++	enum blk_crypt_mode_num crypt_mode =3D bio_crypt_mode(bio);
++
++	if (!ksm)
++		return -ENOMEM;
++
++	slot =3D keyslot_manager_get_slot_for_key(ksm,
++						bio_crypt_raw_key(bio),
++						crypt_mode, PAGE_SIZE);
++	if (slot < 0)
++		return slot;
++
++	bio_crypt_set_keyslot(bio, slot, ksm);
++	return 0;
++}
++
++static void blk_crypto_encrypt_endio(struct bio *enc_bio)
++{
++	struct bio *src_bio =3D enc_bio->bi_private;
++	struct bio_vec *enc_bvec, *enc_bvec_end;
++
++	enc_bvec =3D enc_bio->bi_io_vec;
++	enc_bvec_end =3D enc_bvec + enc_bio->bi_vcnt;
++	for (; enc_bvec !=3D enc_bvec_end; enc_bvec++)
++		mempool_free(enc_bvec->bv_page, blk_crypto_page_pool);
++
++	src_bio->bi_status =3D enc_bio->bi_status;
++
++	bio_put(enc_bio);
++	bio_endio(src_bio);
++}
++
++static struct bio *blk_crypto_clone_bio(struct bio *bio_src)
++{
++	struct bvec_iter iter;
++	struct bio_vec bv;
++	struct bio *bio;
++
++	bio =3D bio_alloc_bioset(GFP_NOIO, bio_segments(bio_src), NULL);
++	if (!bio)
++		return NULL;
++	bio->bi_disk		=3D bio_src->bi_disk;
++	bio->bi_opf		=3D bio_src->bi_opf;
++	bio->bi_ioprio		=3D bio_src->bi_ioprio;
++	bio->bi_write_hint	=3D bio_src->bi_write_hint;
++	bio->bi_iter.bi_sector	=3D bio_src->bi_iter.bi_sector;
++	bio->bi_iter.bi_size	=3D bio_src->bi_iter.bi_size;
++
++	bio_for_each_segment(bv, bio_src, iter)
++		bio->bi_io_vec[bio->bi_vcnt++] =3D bv;
++
++	if (bio_integrity(bio_src)) {
++		int ret;
++
++		ret =3D bio_integrity_clone(bio, bio_src, GFP_NOIO);
++		if (ret < 0) {
++			bio_put(bio);
++			return NULL;
++		}
++	}
++
++	bio_clone_blkg_association(bio, bio_src);
++	blkcg_bio_issue_init(bio);
++
++	return bio;
++}
++
++static int blk_crypto_encrypt_bio(struct bio **bio_ptr)
++{
++	struct bio *src_bio =3D *bio_ptr;
++	int slot;
++	struct skcipher_request *ciph_req =3D NULL;
++	DECLARE_CRYPTO_WAIT(wait);
++	struct bio_vec bv;
++	struct bvec_iter iter;
++	int err =3D 0;
++	u64 curr_dun;
++	union {
++		__le64 dun;
++		u8 bytes[16];
++	} iv;
++	struct scatterlist src, dst;
++	struct bio *enc_bio;
++	struct bio_vec *enc_bvec;
++	int i, j;
++	unsigned int num_sectors;
++
++	if (!blk_crypto_keyslots)
++		return -ENOMEM;
++
++	/* Split the bio if it's too big for single page bvec */
++	i =3D 0;
++	num_sectors =3D 0;
++	bio_for_each_segment(bv, src_bio, iter) {
++		num_sectors +=3D bv.bv_len >> 9;
++		if (++i =3D=3D BIO_MAX_PAGES)
++			break;
++	}
++	if (num_sectors < bio_sectors(src_bio)) {
++		struct bio *split_bio;
++
++		split_bio =3D bio_split(src_bio, num_sectors, GFP_NOIO, NULL);
++		if (!split_bio) {
++			src_bio->bi_status =3D BLK_STS_RESOURCE;
++			return -ENOMEM;
++		}
++		bio_chain(split_bio, src_bio);
++		generic_make_request(src_bio);
++		*bio_ptr =3D split_bio;
++	}
++
++	src_bio =3D *bio_ptr;
++
++	enc_bio =3D blk_crypto_clone_bio(src_bio);
++	if (!enc_bio) {
++		src_bio->bi_status =3D BLK_STS_RESOURCE;
++		return -ENOMEM;
++	}
++
++	err =3D blk_crypto_get_keyslot(src_bio, blk_crypto_ksm);
++	if (err) {
++		src_bio->bi_status =3D BLK_STS_IOERR;
++		bio_put(enc_bio);
++		return err;
++	}
++	slot =3D bio_crypt_get_slot(src_bio);
++
++	ciph_req =3D skcipher_request_alloc(blk_crypto_keyslots[slot].tfm,
++					  GFP_NOIO);
++	if (!ciph_req) {
++		src_bio->bi_status =3D BLK_STS_RESOURCE;
++		err =3D -ENOMEM;
++		bio_put(enc_bio);
++		goto out_release_keyslot;
++	}
++
++	skcipher_request_set_callback(ciph_req,
++				      CRYPTO_TFM_REQ_MAY_BACKLOG |
++				      CRYPTO_TFM_REQ_MAY_SLEEP,
++				      crypto_req_done, &wait);
++
++	curr_dun =3D bio_crypt_sw_data_unit_num(src_bio);
++	sg_init_table(&src, 1);
++	sg_init_table(&dst, 1);
++	for (i =3D 0, enc_bvec =3D enc_bio->bi_io_vec; i < enc_bio->bi_vcnt;
++	     enc_bvec++, i++) {
++		struct page *page =3D enc_bvec->bv_page;
++		struct page *ciphertext_page =3D
++			mempool_alloc(blk_crypto_page_pool, GFP_NOFS);
++
++		enc_bvec->bv_page =3D ciphertext_page;
++
++		if (!ciphertext_page)
++			goto no_mem_for_ciph_page;
++
++		memset(&iv, 0, sizeof(iv));
++		iv.dun =3D cpu_to_le64(curr_dun);
++
++		sg_set_page(&src, page, enc_bvec->bv_len, enc_bvec->bv_offset);
++		sg_set_page(&dst, ciphertext_page, enc_bvec->bv_len,
++			    enc_bvec->bv_offset);
++
++		skcipher_request_set_crypt(ciph_req, &src, &dst,
++					   enc_bvec->bv_len, iv.bytes);
++		err =3D crypto_wait_req(crypto_skcipher_encrypt(ciph_req), &wait);
++		if (err)
++			goto no_mem_for_ciph_page;
++
++		curr_dun++;
++		continue;
++no_mem_for_ciph_page:
++		err =3D -ENOMEM;
++		for (j =3D i - 1; j >=3D 0; j--) {
++			mempool_free(enc_bio->bi_io_vec->bv_page,
++				     blk_crypto_page_pool);
++		}
++		bio_put(enc_bio);
++		goto out_release_cipher;
++	}
++
++	enc_bio->bi_private =3D src_bio;
++	enc_bio->bi_end_io =3D blk_crypto_encrypt_endio;
++
++	*bio_ptr =3D enc_bio;
++out_release_cipher:
++	skcipher_request_free(ciph_req);
++out_release_keyslot:
++	blk_crypto_put_keyslot(src_bio);
++	return err;
++}
++
++/*
++ * TODO: assumption right now is:
++ * each segment in bio has length =3D=3D the data_unit_size
++ */
++static void blk_crypto_decrypt_bio(struct work_struct *w)
++{
++	struct work_mem *work_mem =3D
++		container_of(w, struct work_mem, crypto_work);
++	struct bio *bio =3D work_mem->bio;
++	int slot =3D bio_crypt_get_slot(bio);
++	struct skcipher_request *ciph_req;
++	DECLARE_CRYPTO_WAIT(wait);
++	struct bio_vec bv;
++	struct bvec_iter iter;
++	u64 curr_dun;
++	union {
++		__le64 dun;
++		u8 bytes[16];
++	} iv;
++	struct scatterlist sg;
++
++	curr_dun =3D bio_crypt_sw_data_unit_num(bio);
++
++	kmem_cache_free(blk_crypto_work_mem_cache, work_mem);
++	ciph_req =3D skcipher_request_alloc(blk_crypto_keyslots[slot].tfm,
++					  GFP_NOFS);
++	if (!ciph_req) {
++		bio->bi_status =3D BLK_STS_RESOURCE;
++		goto out;
++	}
++
++	skcipher_request_set_callback(ciph_req,
++				      CRYPTO_TFM_REQ_MAY_BACKLOG |
++				      CRYPTO_TFM_REQ_MAY_SLEEP,
++				      crypto_req_done, &wait);
++
++	sg_init_table(&sg, 1);
++	__bio_for_each_segment(bv, bio, iter,
++			       bio->bi_crypt_context->crypt_iter) {
++		struct page *page =3D bv.bv_page;
++		int err;
++
++		memset(&iv, 0, sizeof(iv));
++		iv.dun =3D cpu_to_le64(curr_dun);
++
++		sg_set_page(&sg, page, bv.bv_len, bv.bv_offset);
++		skcipher_request_set_crypt(ciph_req, &sg, &sg,
++					   bv.bv_len, iv.bytes);
++		err =3D crypto_wait_req(crypto_skcipher_decrypt(ciph_req), &wait);
++		if (err) {
++			bio->bi_status =3D BLK_STS_IOERR;
++			goto out;
++		}
++		curr_dun++;
++	}
++
++out:
++	skcipher_request_free(ciph_req);
++	blk_crypto_put_keyslot(bio);
++	bio_endio(bio);
++}
++
++static void blk_crypto_queue_decrypt_bio(struct bio *bio)
++{
++	struct work_mem *work_mem =3D
++		kmem_cache_zalloc(blk_crypto_work_mem_cache, GFP_ATOMIC);
++
++	if (!work_mem) {
++		bio->bi_status =3D BLK_STS_RESOURCE;
++		return bio_endio(bio);
++	}
++
++	INIT_WORK(&work_mem->crypto_work, blk_crypto_decrypt_bio);
++	work_mem->bio =3D bio;
++	queue_work(blk_crypto_wq, &work_mem->crypto_work);
++}
++
++/*
++ * Ensures that:
++ * 1) The bio=E2=80=99s encryption context is programmed into a keyslot in=
+ the
++ * keyslot manager (KSM) of the request queue that the bio is being submit=
+ted
++ * to (or the software fallback KSM if the request queue doesn=E2=80=99t h=
+ave a KSM),
++ * and that the processing_ksm in the bi_crypt_context of this bio is set =
+to
++ * this KSM.
++ *
++ * 2) That the bio has a reference to this keyslot in this KSM.
++ */
++int blk_crypto_submit_bio(struct bio **bio_ptr)
++{
++	struct bio *bio =3D *bio_ptr;
++	struct request_queue *q;
++	int err;
++	enum blk_crypt_mode_num crypt_mode;
++	struct bio_crypt_ctx *crypt_ctx;
++
++	if (!bio_has_data(bio))
++		return 0;
++
++	if (!bio_is_encrypted(bio) || bio_crypt_swhandled(bio))
++		return 0;
++
++	crypt_ctx =3D bio->bi_crypt_context;
++	q =3D bio->bi_disk->queue;
++	crypt_mode =3D bio_crypt_mode(bio);
++
++	if (bio_crypt_has_keyslot(bio)) {
++		/* Key already programmed into device? */
++		if (q->ksm =3D=3D crypt_ctx->processing_ksm)
++			return 0;
++
++		/* Nope, release the existing keyslot. */
++		blk_crypto_put_keyslot(bio);
++	}
++
++	/* Get device keyslot if supported */
++	if (q->ksm) {
++		err =3D blk_crypto_get_keyslot(bio, q->ksm);
++		if (!err)
++			return 0;
++	}
++
++	/* Fallback to software crypto */
++	if (bio_data_dir(bio) =3D=3D WRITE) {
++		/* Encrypt the data now */
++		err =3D blk_crypto_encrypt_bio(bio_ptr);
++		if (err)
++			goto out_encrypt_err;
++	} else {
++		err =3D blk_crypto_get_keyslot(bio, blk_crypto_ksm);
++		if (err)
++			goto out_err;
++	}
++	return 0;
++out_err:
++	bio->bi_status =3D BLK_STS_IOERR;
++out_encrypt_err:
++	bio_endio(bio);
++	return err;
++}
++
++/*
++ * If the bio is not en/decrypted in software, this function releases the
++ * reference to the keyslot that blk_crypto_submit_bio got.
++ * If blk_crypto_submit_bio decided to fallback to software crypto for thi=
+s
++ * bio, then if the bio is doing a write, we free the allocated bounce pag=
+es,
++ * and if the bio is doing a read, we queue the bio for decryption into a
++ * workqueue and return -EAGAIN. After the bio has been decrypted, we rele=
+ase
++ * the keyslot before we call bio_endio(bio).
++ */
++bool blk_crypto_endio(struct bio *bio)
++{
++	if (!bio_crypt_has_keyslot(bio))
++		return true;
++
++	if (!bio_crypt_swhandled(bio)) {
++		blk_crypto_put_keyslot(bio);
++		return true;
++	}
++
++	/* bio_data_dir(bio) =3D=3D READ. So decrypt bio */
++	blk_crypto_queue_decrypt_bio(bio);
++	return false;
++}
++
++int __init blk_crypto_init(void)
++{
++	blk_crypto_ksm =3D keyslot_manager_create(BLK_CRYPTO_NUM_KEYSLOTS,
++						&blk_crypto_ksm_ll_ops,
++						NULL);
++	if (!blk_crypto_ksm)
++		goto out_ksm;
++
++	blk_crypto_wq =3D alloc_workqueue("blk_crypto_wq",
++					WQ_UNBOUND | WQ_HIGHPRI,
++					num_online_cpus());
++	if (!blk_crypto_wq)
++		goto out_wq;
++
++	blk_crypto_keyslots =3D kzalloc(sizeof(*blk_crypto_keyslots) *
++				      BLK_CRYPTO_NUM_KEYSLOTS,
++				      GFP_KERNEL);
++	if (!blk_crypto_keyslots)
++		goto out_blk_crypto_keyslots;
++
++	blk_crypto_page_pool =3D
++		mempool_create_page_pool(num_prealloc_bounce_pg, 0);
++	if (!blk_crypto_page_pool)
++		goto out_bounce_pool;
++
++	blk_crypto_work_mem_cache =3D KMEM_CACHE(work_mem, SLAB_RECLAIM_ACCOUNT);
++	if (!blk_crypto_work_mem_cache)
++		goto out_work_mem_cache;
++
++	return 0;
++
++out_work_mem_cache:
++	mempool_destroy(blk_crypto_page_pool);
++	blk_crypto_page_pool =3D NULL;
++out_bounce_pool:
++	kzfree(blk_crypto_keyslots);
++	blk_crypto_keyslots =3D NULL;
++out_blk_crypto_keyslots:
++	destroy_workqueue(blk_crypto_wq);
++	blk_crypto_wq =3D NULL;
++out_wq:
++	keyslot_manager_destroy(blk_crypto_ksm);
++	blk_crypto_ksm =3D NULL;
++out_ksm:
++	pr_warn("No memory for blk-crypto software fallback.");
++	return -ENOMEM;
++}
+diff --git a/include/linux/blk-crypto.h b/include/linux/blk-crypto.h
+new file mode 100644
+index 000000000000..cbb5bea6dcdb
+--- /dev/null
++++ b/include/linux/blk-crypto.h
+@@ -0,0 +1,40 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright 2019 Google LLC
++ */
++
++#ifndef __LINUX_BLK_CRYPTO_H
++#define __LINUX_BLK_CRYPTO_H
++
++#include <linux/types.h>
++
++#ifdef CONFIG_BLK_INLINE_ENCRYPTION
++
++struct bio;
++
++int blk_crypto_init(void);
++
++int blk_crypto_submit_bio(struct bio **bio_ptr);
++
++bool blk_crypto_endio(struct bio *bio);
++
++#else /* CONFIG_BLK_INLINE_ENCRYPTION */
++
++static inline int blk_crypto_init(void)
++{
++	return 0;
++}
++
++static inline int blk_crypto_submit_bio(struct bio **bio)
++{
++	return 0;
++}
++
++static inline bool blk_crypto_endio(struct bio *bio)
++{
++	return true;
++}
++
++#endif /* CONFIG_BLK_INLINE_ENCRYPTION */
++
++#endif /* __LINUX_BLK_CRYPTO_H */
+--=20
+2.22.0.rc1.311.g5d7573a151-goog
