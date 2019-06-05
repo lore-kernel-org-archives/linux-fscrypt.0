@@ -1,268 +1,232 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:47234 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726554AbfFTVil (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 20 Jun 2019 17:38:41 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v2 8/8] generic: test the fs-verity built-in signature verification support
-Date: Thu, 20 Jun 2019 14:36:14 -0700
-Message-Id: <20190620213614.113685-9-ebiggers@kernel.org>
-In-Reply-To: <20190620213614.113685-1-ebiggers@kernel.org>
-References: <20190620213614.113685-1-ebiggers@kernel.org>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Received: from mail-ot1-f73.google.com ([209.85.210.73]:53502 "EHLO
+        mail-ot1-f73.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726742AbfFEX3L (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 5 Jun 2019 19:29:11 -0400
+Received: by mail-ot1-f73.google.com with SMTP id d13so226814oth.20
+        for <linux-fscrypt@vger.kernel.org>; Wed, 05 Jun 2019 16:29:11 -0700 (PDT)
+Date: Wed,  5 Jun 2019 16:28:37 -0700
+In-Reply-To: <20190605232837.31545-1-satyat@google.com>
+Message-Id: <20190605232837.31545-9-satyat@google.com>
+Mime-Version: 1.0
+References: <20190605232837.31545-1-satyat@google.com>
+Subject: [RFC PATCH v2 8/8] f2fs: Wire up f2fs to use inline encryption via fscrypt
+From: Satya Tangirala <satyat@google.com>
+Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
+To: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Cc: Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
-
-Add a basic test for the fs-verity built-in signature verification
-support, which is an optional feature where the kernel can be configured
-to enforce that all verity files are accompanied with a valid signature
-by a key that has been loaded into the fs-verity keyring.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Satya Tangirala <satyat@google.com>
 ---
- common/config         |   1 +
- common/verity         |  11 ++++
- tests/generic/905     | 141 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/905.out |  34 ++++++++++
- tests/generic/group   |   1 +
- 5 files changed, 188 insertions(+)
- create mode 100755 tests/generic/905
- create mode 100644 tests/generic/905.out
+ fs/f2fs/data.c  | 77 ++++++++++++++++++++++++++++++++++++++++++++++---
+ fs/f2fs/super.c |  1 +
+ 2 files changed, 74 insertions(+), 4 deletions(-)
 
-diff --git a/common/config b/common/config
-index 001ddc45..1aaf0a75 100644
---- a/common/config
-+++ b/common/config
-@@ -213,6 +213,7 @@ export XFS_INFO_PROG="$(type -P xfs_info)"
- export DUPEREMOVE_PROG="$(type -P duperemove)"
- export CC_PROG="$(type -P cc)"
- export FSVERITY_PROG="$(type -P fsverity)"
-+export OPENSSL_PROG="$(type -P openssl)"
+diff --git a/fs/f2fs/data.c b/fs/f2fs/data.c
+index eda4181d2092..25e691947fb4 100644
+--- a/fs/f2fs/data.c
++++ b/fs/f2fs/data.c
+@@ -142,6 +142,8 @@ static bool f2fs_bio_post_read_required(struct bio *bio)
  
- # use 'udevadm settle' or 'udevsettle' to wait for lv to be settled.
- # newer systems have udevadm command but older systems like RHEL5 don't.
-diff --git a/common/verity b/common/verity
-index 86fb6585..edd7e523 100644
---- a/common/verity
-+++ b/common/verity
-@@ -35,6 +35,17 @@ _require_scratch_verity()
- 	FSV_BLOCK_SIZE=$(get_page_size)
+ static void f2fs_read_end_io(struct bio *bio)
+ {
++	fscrypt_unset_bio_crypt_ctx(bio);
++
+ 	if (time_to_inject(F2FS_P_SB(bio_first_page_all(bio)),
+ 						FAULT_READ_IO)) {
+ 		f2fs_show_injection_info(FAULT_READ_IO);
+@@ -165,6 +167,8 @@ static void f2fs_write_end_io(struct bio *bio)
+ 	struct bio_vec *bvec;
+ 	struct bvec_iter_all iter_all;
+ 
++	fscrypt_unset_bio_crypt_ctx(bio);
++
+ 	if (time_to_inject(sbi, FAULT_WRITE_IO)) {
+ 		f2fs_show_injection_info(FAULT_WRITE_IO);
+ 		bio->bi_status = BLK_STS_IOERR;
+@@ -282,9 +286,18 @@ static struct bio *__bio_alloc(struct f2fs_sb_info *sbi, block_t blk_addr,
+ 	return bio;
  }
  
-+# Check for CONFIG_FS_VERITY_BUILTIN_SIGNATURES=y.
-+_require_fsverity_builtin_signatures()
++static inline u64 hw_crypt_dun(struct inode *inode, pgoff_t offset)
 +{
-+	if [ ! -e /proc/keys ]; then
-+		_notrun "kernel doesn't support keyrings"
-+	fi
-+	if ! awk '{print $9}' /proc/keys | grep -q '^\.fs-verity:$'; then
-+		_notrun "kernel doesn't support fs-verity builtin signatures"
-+	fi
++	return (((u64)inode->i_ino) << 32) | lower_32_bits(offset);
 +}
 +
- _scratch_mkfs_verity()
+ static inline void __submit_bio(struct f2fs_sb_info *sbi,
+ 				struct bio *bio, enum page_type type)
  {
- 	case $FSTYP in
-diff --git a/tests/generic/905 b/tests/generic/905
-new file mode 100755
-index 00000000..db83d221
---- /dev/null
-+++ b/tests/generic/905
-@@ -0,0 +1,141 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
-+#
-+# FS QA Test generic/905
-+#
-+# Test the fs-verity built-in signature verification support.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
++	struct page *page;
++	struct inode *inode;
++	int err = 0;
 +
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
+ 	if (!is_read_io(bio_op(bio))) {
+ 		unsigned int start;
+ 
+@@ -326,7 +339,22 @@ static inline void __submit_bio(struct f2fs_sb_info *sbi,
+ 		trace_f2fs_submit_read_bio(sbi->sb, type, bio);
+ 	else
+ 		trace_f2fs_submit_write_bio(sbi->sb, type, bio);
+-	submit_bio(bio);
 +
-+_cleanup()
-+{
-+	sysctl -w fs.verity.require_signatures=0 &>/dev/null
-+	cd /
-+	rm -f $tmp.*
-+}
++	if (bio_has_data(bio)) {
++		page = bio_page(bio);
++		if (page && page->mapping && page->mapping->host) {
++			inode = page->mapping->host;
++			err = fscrypt_set_bio_crypt_ctx(inode, bio,
++						hw_crypt_dun(inode,
++							     page->index));
++		}
++	}
++	if (err) {
++		bio->bi_status = BLK_STS_IOERR;
++		bio_endio(bio);
++	} else {
++		submit_bio(bio);
++	}
+ }
+ 
+ static void __submit_merged_bio(struct f2fs_bio_info *io)
+@@ -487,6 +515,9 @@ void f2fs_submit_page_write(struct f2fs_io_info *fio)
+ 	enum page_type btype = PAGE_TYPE_OF_BIO(fio->type);
+ 	struct f2fs_bio_info *io = sbi->write_io[btype] + fio->temp;
+ 	struct page *bio_page;
++	struct inode *fio_inode, *bio_inode;
++	struct page *first_page;
++	u64 next_dun = 0;
+ 
+ 	f2fs_bug_on(sbi, is_read_io(fio->op));
+ 
+@@ -513,10 +544,27 @@ void f2fs_submit_page_write(struct f2fs_io_info *fio)
+ 
+ 	inc_page_count(sbi, WB_DATA_TYPE(bio_page));
+ 
++	fio_inode = fio->page->mapping->host;
++	bio_inode = NULL;
++	first_page = NULL;
++	next_dun = 0;
++	if (io->bio && bio_page(io->bio)->mapping) {
++		first_page = bio_page(io->bio);
++		bio_inode = first_page->mapping->host;
++		if (fscrypt_inode_is_hw_encrypted(bio_inode)) {
++			next_dun = hw_crypt_dun(bio_inode, first_page->index) +
++				   (io->bio->bi_iter.bi_size >> PAGE_SHIFT);
++		}
++	}
+ 	if (io->bio && (io->last_block_in_bio != fio->new_blkaddr - 1 ||
+ 	    (io->fio.op != fio->op || io->fio.op_flags != fio->op_flags) ||
+-			!__same_bdev(sbi, fio->new_blkaddr, io->bio)))
++			!__same_bdev(sbi, fio->new_blkaddr, io->bio) ||
++			!fscrypt_inode_crypt_mergeable(bio_inode, fio_inode) ||
++			(fscrypt_inode_is_hw_encrypted(bio_inode) &&
++			 next_dun != hw_crypt_dun(fio_inode,
++						  fio->page->index))))
+ 		__submit_merged_bio(io);
 +
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/verity
+ alloc_new:
+ 	if (io->bio == NULL) {
+ 		if ((fio->type == DATA || fio->type == NODE) &&
+@@ -568,7 +616,7 @@ static struct bio *f2fs_grab_read_bio(struct inode *inode, block_t blkaddr,
+ 	bio->bi_end_io = f2fs_read_end_io;
+ 	bio_set_op_attrs(bio, REQ_OP_READ, op_flag);
+ 
+-	if (f2fs_encrypted_file(inode))
++	if (f2fs_encrypted_file(inode) && !fscrypt_inode_is_hw_encrypted(inode))
+ 		post_read_steps |= 1 << STEP_DECRYPT;
+ 	if (post_read_steps) {
+ 		ctx = mempool_alloc(bio_post_read_ctx_pool, GFP_NOFS);
+@@ -1519,6 +1567,7 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
+ 					struct f2fs_map_blocks *map,
+ 					struct bio **bio_ret,
+ 					sector_t *last_block_in_bio,
++					u64 *next_dun,
+ 					bool is_readahead)
+ {
+ 	struct bio *bio = *bio_ret;
+@@ -1592,6 +1641,13 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
+ 		__submit_bio(F2FS_I_SB(inode), bio, DATA);
+ 		bio = NULL;
+ 	}
 +
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
++	if (bio && fscrypt_inode_is_hw_encrypted(inode) &&
++	    *next_dun != hw_crypt_dun(inode, page->index)) {
++		__submit_bio(F2FS_I_SB(inode), bio, DATA);
++		bio = NULL;
++	}
 +
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+_require_scratch_verity
-+_require_fsverity_builtin_signatures
-+_require_command "$OPENSSL_PROG" openssl
-+_require_command "$KEYCTL_PROG" keyctl
+ 	if (bio == NULL) {
+ 		bio = f2fs_grab_read_bio(inode, block_nr, nr_pages,
+ 				is_readahead ? REQ_RAHEAD : 0);
+@@ -1611,6 +1667,9 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
+ 	if (bio_add_page(bio, page, blocksize, 0) < blocksize)
+ 		goto submit_and_realloc;
+ 
++	if (fscrypt_inode_is_hw_encrypted(inode))
++		*next_dun = hw_crypt_dun(inode, page->index) + 1;
 +
-+_scratch_mkfs_verity &>> $seqres.full
-+_scratch_mount
+ 	inc_page_count(F2FS_I_SB(inode), F2FS_RD_DATA);
+ 	ClearPageError(page);
+ 	*last_block_in_bio = block_nr;
+@@ -1644,6 +1703,7 @@ static int f2fs_mpage_readpages(struct address_space *mapping,
+ 	struct inode *inode = mapping->host;
+ 	struct f2fs_map_blocks map;
+ 	int ret = 0;
++	u64 next_dun = 0;
+ 
+ 	map.m_pblk = 0;
+ 	map.m_lblk = 0;
+@@ -1667,7 +1727,8 @@ static int f2fs_mpage_readpages(struct address_space *mapping,
+ 		}
+ 
+ 		ret = f2fs_read_single_page(inode, page, nr_pages, &map, &bio,
+-					&last_block_in_bio, is_readahead);
++					&last_block_in_bio, &next_dun,
++					is_readahead);
+ 		if (ret) {
+ 			SetPageError(page);
+ 			zero_user_segment(page, 0, PAGE_SIZE);
+@@ -2617,6 +2678,8 @@ static void f2fs_dio_end_io(struct bio *bio)
+ {
+ 	struct f2fs_private_dio *dio = bio->bi_private;
+ 
++	fscrypt_unset_bio_crypt_ctx(bio);
 +
-+fsv_file=$SCRATCH_MNT/file.fsv
-+fsv_orig_file=$SCRATCH_MNT/file
-+keyfile=$tmp.key.pem
-+certfile=$tmp.cert.pem
-+certfileder=$tmp.cert.der
-+sigfile=$tmp.sig
-+othersigfile=$tmp.othersig
-+tmpfile=$tmp.tmp
+ 	dec_page_count(F2FS_I_SB(dio->inode),
+ 			dio->write ? F2FS_DIO_WRITE : F2FS_DIO_READ);
+ 
+@@ -2633,12 +2696,18 @@ static void f2fs_dio_submit_bio(struct bio *bio, struct inode *inode,
+ {
+ 	struct f2fs_private_dio *dio;
+ 	bool write = (bio_op(bio) == REQ_OP_WRITE);
++	u64 data_unit_num = hw_crypt_dun(inode, file_offset >> PAGE_SHIFT);
+ 
+ 	dio = f2fs_kzalloc(F2FS_I_SB(inode),
+ 			sizeof(struct f2fs_private_dio), GFP_NOFS);
+ 	if (!dio)
+ 		goto out;
+ 
++	if (fscrypt_set_bio_crypt_ctx(inode, bio, data_unit_num) != 0) {
++		kvfree(dio);
++		goto out;
++	}
 +
-+# Setup
-+
-+echo -e "\n# Generating certificates and private keys"
-+for suffix in '' '.2'; do
-+	if ! $OPENSSL_PROG req -newkey rsa:4096 -nodes -batch -x509 \
-+			-keyout $keyfile$suffix -out $certfile$suffix \
-+			&>> $seqres.full; then
-+		_fail "Failed to generate certificate and private key (see $seqres.full)"
-+	fi
-+	$OPENSSL_PROG x509 -in $certfile$suffix -out $certfileder$suffix \
-+		-outform der
-+done
-+
-+echo -e "\n# Clearing fs-verity keyring"
-+$KEYCTL_PROG clear %keyring:.fs-verity
-+
-+echo -e "\n# Loading first certificate into fs-verity keyring"
-+$KEYCTL_PROG padd asymmetric '' %keyring:.fs-verity \
-+	< $certfileder >> $seqres.full
-+
-+echo -e "\n# Enabling fs.verity.require_signatures"
-+sysctl -w fs.verity.require_signatures=1
-+
-+echo -e "\n# Generating file and signing it for fs-verity"
-+head -c 100000 /dev/urandom > $fsv_orig_file
-+for suffix in '' '.2'; do
-+	$FSVERITY_PROG sign $fsv_orig_file $sigfile$suffix \
-+		--key=$keyfile$suffix --cert=$certfile$suffix
-+done
-+
-+echo -e "\n# Signing a different file for fs-verity"
-+head -c 100000 /dev/zero > $tmpfile
-+$FSVERITY_PROG sign $tmpfile $othersigfile --key=$keyfile --cert=$certfile
-+
-+# Actual tests
-+
-+reset_fsv_file()
-+{
-+	rm -f $fsv_file
-+	cp $fsv_orig_file $fsv_file
-+}
-+
-+echo -e "\n# Enabling verity with valid signature (should succeed)"
-+reset_fsv_file
-+_fsv_enable $fsv_file --signature=$sigfile
-+cmp $fsv_file $fsv_orig_file
-+
-+echo -e "\n# Enabling verity without signature (should fail)"
-+reset_fsv_file
-+_fsv_enable $fsv_file |& _filter_scratch
-+
-+echo -e "\n# Opening verity file without signature (should fail)"
-+reset_fsv_file
-+sysctl -w fs.verity.require_signatures=0 &>> $seqres.full
-+_fsv_enable $fsv_file
-+sysctl -w fs.verity.require_signatures=1 &>> $seqres.full
-+_scratch_cycle_mount
-+md5sum $fsv_file |& _filter_scratch
-+
-+echo -e "\n# Enabling verity with wrong file's signature (should fail)"
-+reset_fsv_file
-+_fsv_enable $fsv_file --signature=$othersigfile |& _filter_scratch
-+
-+echo -e "\n# Enabling verity with untrusted signature (should fail)"
-+reset_fsv_file
-+_fsv_enable $fsv_file --signature=$sigfile.2 |& _filter_scratch
-+
-+echo -e "\n# Testing salt"
-+reset_fsv_file
-+$FSVERITY_PROG sign $fsv_orig_file $sigfile.salted \
-+	--key=$keyfile --cert=$certfile --salt=abcd
-+_fsv_enable $fsv_file --signature=$sigfile.salted --salt=abcd
-+
-+echo -e "\n# Testing non-default hash algorithm"
-+if _fsv_have_hash_algorithm sha512 $fsv_file; then
-+	reset_fsv_file
-+	$FSVERITY_PROG sign $fsv_orig_file $sigfile.sha512 \
-+		--key=$keyfile --cert=$certfile --hash-alg=sha512
-+	_fsv_enable $fsv_file --signature=$sigfile.sha512 --hash-alg=sha512
-+fi
-+
-+echo -e "\n# Testing empty file"
-+echo -n > $fsv_file
-+$FSVERITY_PROG sign $fsv_file $sigfile.emptyfile --key=$keyfile --cert=$certfile
-+_fsv_enable $fsv_file --signature=$sigfile.emptyfile
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/905.out b/tests/generic/905.out
-new file mode 100644
-index 00000000..76707b5c
---- /dev/null
-+++ b/tests/generic/905.out
-@@ -0,0 +1,34 @@
-+QA output created by 905
-+
-+# Generating certificates and private keys
-+
-+# Clearing fs-verity keyring
-+
-+# Loading first certificate into fs-verity keyring
-+
-+# Enabling fs.verity.require_signatures
-+fs.verity.require_signatures = 1
-+
-+# Generating file and signing it for fs-verity
-+
-+# Signing a different file for fs-verity
-+
-+# Enabling verity with valid signature (should succeed)
-+
-+# Enabling verity without signature (should fail)
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Bad message
-+
-+# Opening verity file without signature (should fail)
-+md5sum: SCRATCH_MNT/file.fsv: Bad message
-+
-+# Enabling verity with wrong file's signature (should fail)
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Bad message
-+
-+# Enabling verity with untrusted signature (should fail)
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Required key not available
-+
-+# Testing salt
-+
-+# Testing non-default hash algorithm
-+
-+# Testing empty file
-diff --git a/tests/generic/group b/tests/generic/group
-index 5b4c32ff..bfbb4957 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -564,3 +564,4 @@
- 902 auto quick verity
- 903 auto quick verity
- 904 auto quick verity encrypt
-+905 auto quick verity
+ 	dio->inode = inode;
+ 	dio->orig_end_io = bio->bi_end_io;
+ 	dio->orig_private = bio->bi_private;
+diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+index 6b959bbb336a..6399373777ce 100644
+--- a/fs/f2fs/super.c
++++ b/fs/f2fs/super.c
+@@ -2229,6 +2229,7 @@ static const struct fscrypt_operations f2fs_cryptops = {
+ 	.dummy_context	= f2fs_dummy_context,
+ 	.empty_dir	= f2fs_empty_dir,
+ 	.max_namelen	= F2FS_NAME_LEN,
++	.hw_crypt_supp	= true,
+ };
+ #endif
+ 
 -- 
-2.22.0.410.gd8fdbe21b5-goog
+2.22.0.rc1.311.g5d7573a151-goog
