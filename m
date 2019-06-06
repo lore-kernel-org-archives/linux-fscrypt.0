@@ -1,168 +1,111 @@
-Return-Path: <fstests-owner@vger.kernel.org>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v2 6/8] generic: test that fs-verity is using the correct measurement values
-Date: Thu, 20 Jun 2019 14:36:12 -0700
-Message-Id: <20190620213614.113685-7-ebiggers@kernel.org>
-In-Reply-To: <20190620213614.113685-1-ebiggers@kernel.org>
-References: <20190620213614.113685-1-ebiggers@kernel.org>
+Date: Thu,  6 Jun 2019 08:51:52 -0700
+Message-Id: <20190606155205.2872-4-ebiggers@kernel.org>
+In-Reply-To: <20190606155205.2872-1-ebiggers@kernel.org>
+References: <20190606155205.2872-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: fstests-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
+Subject: [f2fs-dev] [PATCH v4 03/16] fs-verity: add UAPI header
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, "Darrick J . Wong" <darrick.wong@oracle.com>, linux-api@vger.kernel.org, Dave Chinner <david@fromorbit.com>, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Christoph Hellwig <hch@lst.de>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-This test verifies that fs-verity is doing its Merkle tree-based hashing
-correctly, i.e. that it hasn't been broken by a change.
+Add the UAPI header for fs-verity, including two ioctls:
+
+- FS_IOC_ENABLE_VERITY
+- FS_IOC_MEASURE_VERITY
+
+These ioctls are documented in the "User API" section of
+Documentation/filesystems/fsverity.rst.
+
+Examples of using these ioctls can be found in fsverity-utils
+(https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git).
+
+I've also written xfstests that test these ioctls
+(https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git/log/?h=fsverity).
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- tests/generic/903     | 112 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/903.out |   5 ++
- tests/generic/group   |   1 +
- 3 files changed, 118 insertions(+)
- create mode 100755 tests/generic/903
- create mode 100644 tests/generic/903.out
+ Documentation/ioctl/ioctl-number.txt |  1 +
+ include/uapi/linux/fsverity.h        | 39 ++++++++++++++++++++++++++++
+ 2 files changed, 40 insertions(+)
+ create mode 100644 include/uapi/linux/fsverity.h
 
-diff --git a/tests/generic/903 b/tests/generic/903
-new file mode 100755
-index 00000000..55f4a3ba
---- /dev/null
-+++ b/tests/generic/903
-@@ -0,0 +1,112 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2018 Google LLC
-+#
-+# FS QA Test generic/903
-+#
-+# Test that fs-verity is using the correct measurement values.  This test
-+# verifies that fs-verity is doing its Merkle tree-based hashing correctly,
-+# i.e. that it hasn't been broken by a change.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/verity
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+_require_scratch_verity
-+if [ $FSV_BLOCK_SIZE != 4096 ]; then
-+	_notrun "4096-byte verity block size not supported on this platform"
-+fi
-+
-+_scratch_mkfs_verity &>> $seqres.full
-+_scratch_mount
-+fsv_orig_file=$SCRATCH_MNT/file
-+fsv_file=$SCRATCH_MNT/file.fsv
-+
-+algs=(sha256 sha512)
-+
-+# Try files with 0, 1, and multiple Merkle tree levels.
-+file_sizes=(0 4096 65536 65536 100000000)
-+
-+# Try both unsalted and salted, and check that empty salt is the same as no salt
-+salts=('' '' '' '--salt=' '--salt=f3c93fa6fb828c0e1587e5714ecf6f56')
-+
-+# The expected file measurements are here rather than in the expected output
-+# file because not all hash algorithms may be available.
-+sha256_vals=(
-+sha256:3d248ca542a24fc62d1c43b916eae5016878e2533c88238480b26128a1f1af95
-+sha256:babc284ee4ffe7f449377fbf6692715b43aec7bc39c094a95878904d34bac97e
-+sha256:011e3f2b1dc89b75d78cddcc2a1b85cd8a64b2883e5f20f277ae4c0617e0404f
-+sha256:011e3f2b1dc89b75d78cddcc2a1b85cd8a64b2883e5f20f277ae4c0617e0404f
-+sha256:9d33cab743468fcbe4edab91a275b30dd543c12dd5e6ce6f2f737f66a1558f06
-+)
-+sha512_vals=(
-+sha512:ccf9e5aea1c2a64efa2f2354a6024b90dffde6bbc017825045dce374474e13d10adb9dadcc6ca8e17a3c075fbd31336e8f266ae6fa93a6c3bed66f9e784e5abf
-+sha512:928922686c4caf32175f5236a7f964e9925d10a74dc6d8344a8bd08b23c228ff5792573987d7895f628f39c4f4ebe39a7367d7aeb16aaa0cd324ac1d53664e61
-+sha512:eab7224ce374a0a4babcb2db25e24836247f38b87806ad9be9e5ba4daac2f5b814fc0cbdfd9f1f8499b3c9a6c1b38fe08974cce49883ab4ccd04462fd2f9507f
-+sha512:eab7224ce374a0a4babcb2db25e24836247f38b87806ad9be9e5ba4daac2f5b814fc0cbdfd9f1f8499b3c9a6c1b38fe08974cce49883ab4ccd04462fd2f9507f
-+sha512:f7083a38644880d25539488313e9e5b41a4d431a0e383945129ad2c36e3c1d0f28928a424641bb1363c12b6e770578102566acea73baf1ce8ee15336f5ba2446
-+)
-+
-+test_alg()
-+{
-+	local alg=$1
-+	local -n vals=${alg}_vals
-+	local i
-+	local file_size
-+	local expected actual salt_arg
-+
-+	_fsv_scratch_begin_subtest "Check for expected measurement values ($alg)"
-+
-+	if ! _fsv_have_hash_algorithm $alg $fsv_file; then
-+		if [ "$alg" = sha256 ]; then
-+			_fail "Something is wrong - sha256 hash should always be available"
-+		fi
-+		return 0
-+	fi
-+
-+	for i in ${!file_sizes[@]}; do
-+		file_size=${file_sizes[$i]}
-+		expected=${vals[$i]}
-+		salt_arg=${salts[$i]}
-+
-+		head -c $file_size /dev/zero > $fsv_orig_file
-+		cp $fsv_orig_file $fsv_file
-+		_fsv_enable --hash-alg=$alg $salt_arg $fsv_file
-+		actual=$(_fsv_measure $fsv_file)
-+		if [ "$actual" != "$expected" ]; then
-+			echo "Mismatch: expected $expected, kernel calculated $actual (file_size=$file_size)"
-+		fi
-+		cmp $fsv_orig_file $fsv_file
-+		rm -f $fsv_file
-+	done
-+}
-+
-+for alg in ${algs[@]}; do
-+	test_alg $alg
-+done
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/903.out b/tests/generic/903.out
+diff --git a/Documentation/ioctl/ioctl-number.txt b/Documentation/ioctl/ioctl-number.txt
+index c9558146ac58..21767c81e86d 100644
+--- a/Documentation/ioctl/ioctl-number.txt
++++ b/Documentation/ioctl/ioctl-number.txt
+@@ -225,6 +225,7 @@ Code  Seq#(hex)	Include File		Comments
+ 'f'	00-0F	fs/ext4/ext4.h		conflict!
+ 'f'	00-0F	linux/fs.h		conflict!
+ 'f'	00-0F	fs/ocfs2/ocfs2_fs.h	conflict!
++'f'	81-8F	linux/fsverity.h
+ 'g'	00-0F	linux/usb/gadgetfs.h
+ 'g'	20-2F	linux/usb/g_printer.h
+ 'h'	00-7F				conflict! Charon filesystem
+diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
 new file mode 100644
-index 00000000..02508828
+index 000000000000..57d1d7fc0c34
 --- /dev/null
-+++ b/tests/generic/903.out
-@@ -0,0 +1,5 @@
-+QA output created by 903
++++ b/include/uapi/linux/fsverity.h
+@@ -0,0 +1,39 @@
++/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
++/*
++ * fs-verity user API
++ *
++ * These ioctls can be used on filesystems that support fs-verity.  See the
++ * "User API" section of Documentation/filesystems/fsverity.rst.
++ *
++ * Copyright 2019 Google LLC
++ */
++#ifndef _UAPI_LINUX_FSVERITY_H
++#define _UAPI_LINUX_FSVERITY_H
 +
-+# Check for expected measurement values (sha256)
++#include <linux/ioctl.h>
++#include <linux/types.h>
 +
-+# Check for expected measurement values (sha512)
-diff --git a/tests/generic/group b/tests/generic/group
-index ffdc7640..3927f779 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -562,3 +562,4 @@
- 900 auto quick verity
- 901 auto quick verity
- 902 auto quick verity
-+903 auto quick verity
++#define FS_VERITY_HASH_ALG_SHA256	1
++
++struct fsverity_enable_arg {
++	__u32 version;
++	__u32 hash_algorithm;
++	__u32 block_size;
++	__u32 salt_size;
++	__u64 salt_ptr;
++	__u32 sig_size;
++	__u32 __reserved1;
++	__u64 sig_ptr;
++	__u64 __reserved2[11];
++};
++
++struct fsverity_digest {
++	__u16 digest_algorithm;
++	__u16 digest_size; /* input/output */
++	__u8 digest[];
++};
++
++#define FS_IOC_ENABLE_VERITY	_IOW('f', 133, struct fsverity_enable_arg)
++#define FS_IOC_MEASURE_VERITY	_IOWR('f', 134, struct fsverity_digest)
++
++#endif /* _UAPI_LINUX_FSVERITY_H */
 -- 
-2.22.0.410.gd8fdbe21b5-goog
+2.21.0
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
