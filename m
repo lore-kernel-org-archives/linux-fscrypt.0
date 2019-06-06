@@ -1,229 +1,69 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wr1-f68.google.com ([209.85.221.68]:42907 "EHLO
-        mail-wr1-f68.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1729196AbfFRV2K (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 18 Jun 2019 17:28:10 -0400
-Received: by mail-wr1-f68.google.com with SMTP id x17so1026235wrl.9
-        for <linux-fscrypt@vger.kernel.org>; Tue, 18 Jun 2019 14:28:08 -0700 (PDT)
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v2 2/4] fs: crypto: invoke crypto API for ESSIV handling
-Date: Tue, 18 Jun 2019 23:27:47 +0200
-Message-Id: <20190618212749.8995-3-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190618212749.8995-1-ard.biesheuvel@linaro.org>
-References: <20190618212749.8995-1-ard.biesheuvel@linaro.org>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+Return-Path: <SRS0=dWk4=UF=vger.kernel.org=linux-integrity-owner@kernel.org>
+Date: Thu, 6 Jun 2019 12:43:44 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Re: [PATCH v4 00/16] fs-verity: read-only file-based authenticity
+ protection
+Message-ID: <20190606194343.GA84833@gmail.com>
+References: <20190606155205.2872-1-ebiggers@kernel.org>
+ <CAHk-=wgSzRzoro8ATO5xb6OFxN1A0fjUCQSAHfGuEPbEu+zWvA@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAHk-=wgSzRzoro8ATO5xb6OFxN1A0fjUCQSAHfGuEPbEu+zWvA@mail.gmail.com>
+Sender: linux-integrity-owner@vger.kernel.org
+To: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel <linux-fsdevel@vger.kernel.org>, Linux API <linux-api@vger.kernel.org>, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Instead of open coding the calculations for ESSIV handling, use a
-ESSIV skcipher which does all of this under the hood.
+On Thu, Jun 06, 2019 at 10:21:12AM -0700, Linus Torvalds wrote:
+> On Thu, Jun 6, 2019 at 8:54 AM Eric Biggers <ebiggers@kernel.org> wrote:
+> >
+> > This is a redesigned version of the fs-verity patchset, implementing
+> > Ted's suggestion to build the Merkle tree in the kernel
+> > (https://lore.kernel.org/linux-fsdevel/20190207031101.GA7387@mit.edu/).
+> > This greatly simplifies the UAPI, since the verity metadata no longer
+> > needs to be transferred to the kernel.
+> 
+> Interfaces look sane to me. My only real concern is whether it would
+> make sense to make the FS_IOC_ENABLE_VERITY ioctl be something that
+> could be done incrementally, since the way it is done now it looks
+> like any random user could create a big file and then do the
+> FS_IOC_ENABLE_VERITY to make the kernel do a _very_ expensive
+> operation.
+> 
+> Yes, I see the
+> 
+> +               if (fatal_signal_pending(current))
+> +                       return -EINTR;
+> +               cond_resched();
+> 
+> in there, so it's not like it's some entirely unkillable thing, and
+> maybe we don't care as a result. But maybe the ioctl interface could
+> be fundamentally restartable?
+> 
+> If that was already considered and people just went "too complex", never mind.
+> 
+>                Linus
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- fs/crypto/Kconfig           |  1 +
- fs/crypto/crypto.c          |  5 --
- fs/crypto/fscrypt_private.h |  9 --
- fs/crypto/keyinfo.c         | 88 +-------------------
- 4 files changed, 3 insertions(+), 100 deletions(-)
+Making it incremental would be complex.  We could make FS_IOC_ENABLE_VERITY
+write checkpoints periodically, and make it resume from the checkpoint if
+present.  But then we'd have to worry about sync'ing the Merkle tree before
+writing each checkpoint, and storing the Merkle tree parameters in each
+checkpoint so that if the second call to FS_IOC_ENABLE_VERITY is made with
+different parameters it knows to delete everything and restart from scratch.
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 24ed99e2eca0..b0292da8613c 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -5,6 +5,7 @@ config FS_ENCRYPTION
- 	select CRYPTO_AES
- 	select CRYPTO_CBC
- 	select CRYPTO_ECB
-+	select CRYPTO_ESSIV
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select CRYPTO_SHA256
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 335a362ee446..c53ce262a06c 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -136,9 +136,6 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY)
- 		memcpy(iv->nonce, ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE);
--
--	if (ci->ci_essiv_tfm != NULL)
--		crypto_cipher_encrypt_one(ci->ci_essiv_tfm, iv->raw, iv->raw);
- }
- 
- int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
-@@ -492,8 +489,6 @@ static void __exit fscrypt_exit(void)
- 		destroy_workqueue(fscrypt_read_workqueue);
- 	kmem_cache_destroy(fscrypt_ctx_cachep);
- 	kmem_cache_destroy(fscrypt_info_cachep);
--
--	fscrypt_essiv_cleanup();
- }
- module_exit(fscrypt_exit);
- 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 7da276159593..59d0cba9cfb9 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -61,12 +61,6 @@ struct fscrypt_info {
- 	/* The actual crypto transform used for encryption and decryption */
- 	struct crypto_skcipher *ci_ctfm;
- 
--	/*
--	 * Cipher for ESSIV IV generation.  Only set for CBC contents
--	 * encryption, otherwise is NULL.
--	 */
--	struct crypto_cipher *ci_essiv_tfm;
--
- 	/*
- 	 * Encryption mode used for this inode.  It corresponds to either
- 	 * ci_data_mode or ci_filename_mode, depending on the inode type.
-@@ -166,9 +160,6 @@ struct fscrypt_mode {
- 	int keysize;
- 	int ivsize;
- 	bool logged_impl_name;
--	bool needs_essiv;
- };
- 
--extern void __exit fscrypt_essiv_cleanup(void);
--
- #endif /* _FSCRYPT_PRIVATE_H */
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index dcd91a3fbe49..82c7eb86ca00 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -19,8 +19,6 @@
- #include <crypto/skcipher.h>
- #include "fscrypt_private.h"
- 
--static struct crypto_shash *essiv_hash_tfm;
--
- /* Table of keys referenced by FS_POLICY_FLAG_DIRECT_KEY policies */
- static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
- static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
-@@ -144,10 +142,9 @@ static struct fscrypt_mode available_modes[] = {
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CBC] = {
- 		.friendly_name = "AES-128-CBC",
--		.cipher_str = "cbc(aes)",
-+		.cipher_str = "essiv(cbc(aes),aes,sha256)",
- 		.keysize = 16,
--		.ivsize = 16,
--		.needs_essiv = true,
-+		.ivsize = 8,
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
- 		.friendly_name = "AES-128-CTS-CBC",
-@@ -377,72 +374,6 @@ fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
- 	return ERR_PTR(err);
- }
- 
--static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
--{
--	struct crypto_shash *tfm = READ_ONCE(essiv_hash_tfm);
--
--	/* init hash transform on demand */
--	if (unlikely(!tfm)) {
--		struct crypto_shash *prev_tfm;
--
--		tfm = crypto_alloc_shash("sha256", 0, 0);
--		if (IS_ERR(tfm)) {
--			fscrypt_warn(NULL,
--				     "error allocating SHA-256 transform: %ld",
--				     PTR_ERR(tfm));
--			return PTR_ERR(tfm);
--		}
--		prev_tfm = cmpxchg(&essiv_hash_tfm, NULL, tfm);
--		if (prev_tfm) {
--			crypto_free_shash(tfm);
--			tfm = prev_tfm;
--		}
--	}
--
--	{
--		SHASH_DESC_ON_STACK(desc, tfm);
--		desc->tfm = tfm;
--
--		return crypto_shash_digest(desc, key, keysize, salt);
--	}
--}
--
--static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
--				int keysize)
--{
--	int err;
--	struct crypto_cipher *essiv_tfm;
--	u8 salt[SHA256_DIGEST_SIZE];
--
--	essiv_tfm = crypto_alloc_cipher("aes", 0, 0);
--	if (IS_ERR(essiv_tfm))
--		return PTR_ERR(essiv_tfm);
--
--	ci->ci_essiv_tfm = essiv_tfm;
--
--	err = derive_essiv_salt(raw_key, keysize, salt);
--	if (err)
--		goto out;
--
--	/*
--	 * Using SHA256 to derive the salt/key will result in AES-256 being
--	 * used for IV generation. File contents encryption will still use the
--	 * configured keysize (AES-128) nevertheless.
--	 */
--	err = crypto_cipher_setkey(essiv_tfm, salt, sizeof(salt));
--	if (err)
--		goto out;
--
--out:
--	memzero_explicit(salt, sizeof(salt));
--	return err;
--}
--
--void __exit fscrypt_essiv_cleanup(void)
--{
--	crypto_free_shash(essiv_hash_tfm);
--}
--
- /*
-  * Given the encryption mode and key (normally the derived key, but for
-  * FS_POLICY_FLAG_DIRECT_KEY mode it's the master key), set up the inode's
-@@ -454,7 +385,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- {
- 	struct fscrypt_master_key *mk;
- 	struct crypto_skcipher *ctfm;
--	int err;
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY) {
- 		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
-@@ -470,19 +400,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- 	ci->ci_master_key = mk;
- 	ci->ci_ctfm = ctfm;
- 
--	if (mode->needs_essiv) {
--		/* ESSIV implies 16-byte IVs which implies !DIRECT_KEY */
--		WARN_ON(mode->ivsize != AES_BLOCK_SIZE);
--		WARN_ON(ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY);
--
--		err = init_essiv_generator(ci, raw_key, mode->keysize);
--		if (err) {
--			fscrypt_warn(inode->i_sb,
--				     "error initializing ESSIV generator for inode %lu: %d",
--				     inode->i_ino, err);
--			return err;
--		}
--	}
- 	return 0;
- }
- 
-@@ -495,7 +412,6 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 		put_master_key(ci->ci_master_key);
- 	} else {
- 		crypto_free_skcipher(ci->ci_ctfm);
--		crypto_free_cipher(ci->ci_essiv_tfm);
- 	}
- 	kmem_cache_free(fscrypt_info_cachep, ci);
- }
--- 
-2.17.1
+Or we could make it explicit in the UAPI, where userspace calls ioctls to build
+blocks 0 through 9999, then 10000 through 19999, etc.  But that would make the
+UAPI much more complex, and the kernel would need to do lots of extra validation
+of the parameters passed in.  This approach would also not be crash-safe unless
+userspace did its own checkpointing, whereas the all-or-nothing API naturally
+avoids inconsistent states.
+
+And either way of making it incremental, the "partial Merkle tree" would also
+become a valid on-disk state.  Conceptually that adds a lot of complexity, and
+probably people would want fsck to support removing all the partial trees,
+similar to how e2fsck supports optimizing directories and extent trees.
+
+So in the end, it's not something I decided to add.
+
+- Eric
