@@ -1,110 +1,199 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wr1-f66.google.com ([209.85.221.66]:42163 "EHLO
-        mail-wr1-f66.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726271AbfFZUk5 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 26 Jun 2019 16:40:57 -0400
-Received: by mail-wr1-f66.google.com with SMTP id x17so4249328wrl.9
-        for <linux-fscrypt@vger.kernel.org>; Wed, 26 Jun 2019 13:40:56 -0700 (PDT)
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v5 3/7] md: dm-crypt: infer ESSIV block cipher from cipher string directly
-Date: Wed, 26 Jun 2019 22:40:43 +0200
-Message-Id: <20190626204047.32131-4-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190626204047.32131-1-ard.biesheuvel@linaro.org>
-References: <20190626204047.32131-1-ard.biesheuvel@linaro.org>
+Received: from mail.kernel.org ([198.145.29.99]:54244 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1729166AbfFMRLR (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 13 Jun 2019 13:11:17 -0400
+Date: Thu, 13 Jun 2019 10:11:13 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Re: [RFC PATCH v2 5/8] scsi: ufs: UFS crypto API
+Message-ID: <20190613171113.GB686@sol.localdomain>
+References: <20190605232837.31545-1-satyat@google.com>
+ <20190605232837.31545-6-satyat@google.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190605232837.31545-6-satyat@google.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+To: Satya Tangirala <satyat@google.com>
+Cc: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Instead of allocating a crypto skcipher tfm 'foo' and attempting to
-infer the encapsulated block cipher from the driver's 'name' field,
-directly parse the string that we used to allocated the tfm. These
-are always identical (unless the allocation failed, in which case
-we bail anyway), but using the string allows us to use it in the
-allocation, which is something we will need when switching to the
-'essiv' crypto API template.
+Hi Satya,
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- drivers/md/dm-crypt.c | 35 +++++++++-----------
- 1 file changed, 15 insertions(+), 20 deletions(-)
+On Wed, Jun 05, 2019 at 04:28:34PM -0700, Satya Tangirala wrote:
+> Introduce functions to manipulate UFS inline encryption hardware
+> in line with the JEDEC UFSHCI v2.1 specification and to work with the
+> block keyslot manager.
+> 
+> Signed-off-by: Satya Tangirala <satyat@google.com>
+> ---
+>  drivers/scsi/ufs/Kconfig         |  10 +
+>  drivers/scsi/ufs/Makefile        |   1 +
+>  drivers/scsi/ufs/ufshcd-crypto.c | 438 +++++++++++++++++++++++++++++++
+>  drivers/scsi/ufs/ufshcd-crypto.h |  69 +++++
+>  4 files changed, 518 insertions(+)
+>  create mode 100644 drivers/scsi/ufs/ufshcd-crypto.c
+>  create mode 100644 drivers/scsi/ufs/ufshcd-crypto.h
+> 
 
-diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index 1b16d34bb785..f001f1104cb5 100644
---- a/drivers/md/dm-crypt.c
-+++ b/drivers/md/dm-crypt.c
-@@ -2321,25 +2321,17 @@ static int crypt_ctr_ivmode(struct dm_target *ti, const char *ivmode)
-  * The cc->cipher is currently used only in ESSIV.
-  * This should be probably done by crypto-api calls (once available...)
-  */
--static int crypt_ctr_blkdev_cipher(struct crypt_config *cc)
-+static int crypt_ctr_blkdev_cipher(struct crypt_config *cc, char *alg_name)
- {
--	const char *alg_name = NULL;
- 	char *start, *end;
- 
- 	if (crypt_integrity_aead(cc)) {
--		alg_name = crypto_tfm_alg_name(crypto_aead_tfm(any_tfm_aead(cc)));
--		if (!alg_name)
--			return -EINVAL;
- 		if (crypt_integrity_hmac(cc)) {
- 			alg_name = strchr(alg_name, ',');
- 			if (!alg_name)
- 				return -EINVAL;
- 		}
- 		alg_name++;
--	} else {
--		alg_name = crypto_tfm_alg_name(crypto_skcipher_tfm(any_tfm(cc)));
--		if (!alg_name)
--			return -EINVAL;
- 	}
- 
- 	start = strchr(alg_name, '(');
-@@ -2434,6 +2426,20 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 	if (*ivmode && !strcmp(*ivmode, "lmk"))
- 		cc->tfms_count = 64;
- 
-+	if (crypt_integrity_aead(cc)) {
-+		ret = crypt_ctr_auth_cipher(cc, cipher_api);
-+		if (ret < 0) {
-+			ti->error = "Invalid AEAD cipher spec";
-+			return -ENOMEM;
-+	       }
-+	}
-+
-+	ret = crypt_ctr_blkdev_cipher(cc, cipher_api);
-+	if (ret < 0) {
-+		ti->error = "Cannot allocate cipher string";
-+		return -ENOMEM;
-+	}
-+
- 	cc->key_parts = cc->tfms_count;
- 
- 	/* Allocate cipher */
-@@ -2445,21 +2451,10 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 
- 	/* Alloc AEAD, can be used only in new format. */
- 	if (crypt_integrity_aead(cc)) {
--		ret = crypt_ctr_auth_cipher(cc, cipher_api);
--		if (ret < 0) {
--			ti->error = "Invalid AEAD cipher spec";
--			return -ENOMEM;
--		}
- 		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
- 	} else
- 		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
- 
--	ret = crypt_ctr_blkdev_cipher(cc);
--	if (ret < 0) {
--		ti->error = "Cannot allocate cipher string";
--		return -ENOMEM;
--	}
--
- 	return 0;
- }
- 
--- 
-2.20.1
+There is a build error after this patch because it adds code that uses the
+crypto fields in struct ufs_hba, but those aren't added until the next patch.
+
+It needs to be possible to compile a working kernel after each patch.
+Otherwise it breaks bisection.
+
+So, perhaps add the fields in this patch instead.
+
+> +++ b/drivers/scsi/ufs/ufshcd-crypto.c
+> @@ -0,0 +1,438 @@
+> +// SPDX-License-Identifier: GPL-2.0
+> +/*
+> + * Copyright 2019 Google LLC
+> + */
+> +
+> +#include <crypto/algapi.h>
+> +
+> +#include "ufshcd.h"
+> +#include "ufshcd-crypto.h"
+> +
+> +bool ufshcd_hba_is_crypto_supported(struct ufs_hba *hba)
+> +{
+> +	return hba->crypto_capabilities.reg_val != 0;
+> +}
+> +
+> +bool ufshcd_is_crypto_enabled(struct ufs_hba *hba)
+> +{
+> +	return hba->caps & UFSHCD_CAP_CRYPTO;
+> +}
+> +
+> +static bool ufshcd_cap_idx_valid(struct ufs_hba *hba, unsigned int cap_idx)
+> +{
+> +	return cap_idx < hba->crypto_capabilities.num_crypto_cap;
+> +}
+> +
+> +#define NUM_KEYSLOTS(hba) (hba->crypto_capabilities.config_count + 1)
+> +
+> +bool ufshcd_keyslot_valid(struct ufs_hba *hba, unsigned int slot)
+> +{
+> +	/*
+> +	 * The actual number of configurations supported is (CFGC+1), so slot
+> +	 * numbers range from 0 to config_count inclusive.
+> +	 */
+> +	return slot < NUM_KEYSLOTS(hba);
+> +}
+
+Since ufshcd_hba_is_crypto_supported(), ufshcd_is_crypto_enabled(), and
+ufshcd_keyslot_valid() are one-liners, don't access any private structures, and
+are used outside this file including on the command submission path, how about
+making them inline functions in ufshcd-crypto.h?
+
+> +
+> +static int ufshcd_crypto_alg_find(void *hba_p,
+> +			   enum blk_crypt_mode_num crypt_mode,
+> +			   unsigned int data_unit_size)
+> +{
+
+Now that the concept of "crypto alg IDs" is gone, rename this to
+ufshcd_crypto_cap_find() and rename the crypto_alg_id variables to cap_idx.
+
+This would make it consistent with using cap_idx elsewhere in the code and avoid
+confusion with ufs_crypto_cap_entry::algorithm_id.
+
+> +
+> +static int ufshcd_crypto_keyslot_program(void *hba_p, const u8 *key,
+> +					 enum blk_crypt_mode_num crypt_mode,
+> +					 unsigned int data_unit_size,
+> +					 unsigned int slot)
+> +{
+> +	struct ufs_hba *hba = hba_p;
+> +	int err = 0;
+> +	u8 data_unit_mask;
+> +	union ufs_crypto_cfg_entry cfg;
+> +	union ufs_crypto_cfg_entry *cfg_arr = hba->crypto_cfgs;
+> +	int crypto_alg_id;
+> +
+> +	crypto_alg_id = ufshcd_crypto_alg_find(hba_p, crypt_mode,
+> +					       data_unit_size);
+> +
+> +	if (!ufshcd_is_crypto_enabled(hba) ||
+> +	    !ufshcd_keyslot_valid(hba, slot) ||
+> +	    !ufshcd_cap_idx_valid(hba, crypto_alg_id))
+> +		return -EINVAL;
+> +
+> +	data_unit_mask = get_data_unit_size_mask(data_unit_size);
+> +
+> +	if (!(data_unit_mask &
+> +	      hba->crypto_cap_array[crypto_alg_id].sdus_mask))
+> +		return -EINVAL;
+
+Nit: the 'if' expression with data_unit_mask fits on one line.
+
+> +static int ufshcd_crypto_keyslot_find(void *hba_p,
+> +				      const u8 *key,
+> +				      enum blk_crypt_mode_num crypt_mode,
+> +				      unsigned int data_unit_size)
+> +{
+> +	struct ufs_hba *hba = hba_p;
+> +	int err = 0;
+> +	int slot;
+> +	u8 data_unit_mask;
+> +	union ufs_crypto_cfg_entry cfg;
+> +	union ufs_crypto_cfg_entry *cfg_arr = hba->crypto_cfgs;
+> +	int crypto_alg_id;
+> +
+> +	crypto_alg_id = ufshcd_crypto_alg_find(hba_p, crypt_mode,
+> +					       data_unit_size);
+> +
+> +	if (!ufshcd_is_crypto_enabled(hba) ||
+> +	    !ufshcd_cap_idx_valid(hba, crypto_alg_id))
+> +		return -EINVAL;
+> +
+> +	data_unit_mask = get_data_unit_size_mask(data_unit_size);
+> +
+> +	if (!(data_unit_mask &
+> +	      hba->crypto_cap_array[crypto_alg_id].sdus_mask))
+> +		return -EINVAL;
+
+Same here.
+
+> +	for (slot = 0; slot < NUM_KEYSLOTS(hba); slot++) {
+> +		if ((cfg_arr[slot].config_enable &
+> +		     UFS_CRYPTO_CONFIGURATION_ENABLE) &&
+> +		    data_unit_mask == cfg_arr[slot].data_unit_size &&
+> +		    crypto_alg_id == cfg_arr[slot].crypto_cap_idx &&
+> +		    crypto_memneq(&cfg.crypto_key, cfg_arr[slot].crypto_key,
+> +				  UFS_CRYPTO_KEY_MAX_SIZE) == 0) {
+> +			memzero_explicit(&cfg, sizeof(cfg));
+> +			return slot;
+> +		}
+> +	}
+
+Nit: as I've mentioned before, I think !crypto_memneq() is easier to read than
+'crypto_memneq() == 0'.
+
+> +	hba->crypto_cap_array =
+> +		devm_kcalloc(hba->dev,
+> +			     hba->crypto_capabilities.num_crypto_cap,
+> +			     sizeof(hba->crypto_cap_array[0]),
+> +			     GFP_KERNEL);
+> +	if (!hba->crypto_cap_array) {
+> +		err = -ENOMEM;
+> +		goto out;
+> +	}
+> +
+> +	hba->crypto_cfgs =
+> +		devm_kcalloc(hba->dev,
+> +			     hba->crypto_capabilities.config_count + 1,
+> +			     sizeof(union ufs_crypto_cfg_entry),
+> +			     GFP_KERNEL);
+> +	if (!hba->crypto_cfgs) {
+> +		err = -ENOMEM;
+> +		goto out_cfg_mem;
+> +	}
+
+Nit: use 'sizeof(hba->crypto_cfgs[0])' rather than 'sizeof(union
+ufs_crypto_cfg_entry)', for consistency with the other array allocation.
+
+Thanks,
+
+- Eric
