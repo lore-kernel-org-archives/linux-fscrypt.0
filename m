@@ -1,110 +1,30 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wm1-f68.google.com ([209.85.128.68]:34618 "EHLO
-        mail-wm1-f68.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726686AbfF1PV0 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 28 Jun 2019 11:21:26 -0400
-Received: by mail-wm1-f68.google.com with SMTP id w9so9577327wmd.1
-        for <linux-fscrypt@vger.kernel.org>; Fri, 28 Jun 2019 08:21:26 -0700 (PDT)
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v6 3/7] md: dm-crypt: infer ESSIV block cipher from cipher string directly
-Date: Fri, 28 Jun 2019 17:21:08 +0200
-Message-Id: <20190628152112.914-4-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190628152112.914-1-ard.biesheuvel@linaro.org>
-References: <20190628152112.914-1-ard.biesheuvel@linaro.org>
+Return-Path: <SRS0=c4i6=UO=mit.edu=tytso@kernel.org>
+Date: Sat, 15 Jun 2019 11:11:36 -0400
+From: "Theodore Ts'o" <tytso@mit.edu>
+Subject: Re: [PATCH v4 12/16] fs-verity: add SHA-512 support
+Message-ID: <20190615151136.GM6142@mit.edu>
+References: <20190606155205.2872-1-ebiggers@kernel.org>
+ <20190606155205.2872-13-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190606155205.2872-13-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Instead of allocating a crypto skcipher tfm 'foo' and attempting to
-infer the encapsulated block cipher from the driver's 'name' field,
-directly parse the string that we used to allocated the tfm. These
-are always identical (unless the allocation failed, in which case
-we bail anyway), but using the string allows us to use it in the
-allocation, which is something we will need when switching to the
-'essiv' crypto API template.
+On Thu, Jun 06, 2019 at 08:52:01AM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Add SHA-512 support to fs-verity.  This is primarily a demonstration of
+> the trivial changes needed to support a new hash algorithm in fs-verity;
+> most users will still use SHA-256, due to the smaller space required to
+> store the hashes.  But some users may prefer SHA-512.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- drivers/md/dm-crypt.c | 35 +++++++++-----------
- 1 file changed, 15 insertions(+), 20 deletions(-)
+Looks good; you can add:
 
-diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index 1b16d34bb785..f001f1104cb5 100644
---- a/drivers/md/dm-crypt.c
-+++ b/drivers/md/dm-crypt.c
-@@ -2321,25 +2321,17 @@ static int crypt_ctr_ivmode(struct dm_target *ti, const char *ivmode)
-  * The cc->cipher is currently used only in ESSIV.
-  * This should be probably done by crypto-api calls (once available...)
-  */
--static int crypt_ctr_blkdev_cipher(struct crypt_config *cc)
-+static int crypt_ctr_blkdev_cipher(struct crypt_config *cc, char *alg_name)
- {
--	const char *alg_name = NULL;
- 	char *start, *end;
- 
- 	if (crypt_integrity_aead(cc)) {
--		alg_name = crypto_tfm_alg_name(crypto_aead_tfm(any_tfm_aead(cc)));
--		if (!alg_name)
--			return -EINVAL;
- 		if (crypt_integrity_hmac(cc)) {
- 			alg_name = strchr(alg_name, ',');
- 			if (!alg_name)
- 				return -EINVAL;
- 		}
- 		alg_name++;
--	} else {
--		alg_name = crypto_tfm_alg_name(crypto_skcipher_tfm(any_tfm(cc)));
--		if (!alg_name)
--			return -EINVAL;
- 	}
- 
- 	start = strchr(alg_name, '(');
-@@ -2434,6 +2426,20 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 	if (*ivmode && !strcmp(*ivmode, "lmk"))
- 		cc->tfms_count = 64;
- 
-+	if (crypt_integrity_aead(cc)) {
-+		ret = crypt_ctr_auth_cipher(cc, cipher_api);
-+		if (ret < 0) {
-+			ti->error = "Invalid AEAD cipher spec";
-+			return -ENOMEM;
-+	       }
-+	}
-+
-+	ret = crypt_ctr_blkdev_cipher(cc, cipher_api);
-+	if (ret < 0) {
-+		ti->error = "Cannot allocate cipher string";
-+		return -ENOMEM;
-+	}
-+
- 	cc->key_parts = cc->tfms_count;
- 
- 	/* Allocate cipher */
-@@ -2445,21 +2451,10 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 
- 	/* Alloc AEAD, can be used only in new format. */
- 	if (crypt_integrity_aead(cc)) {
--		ret = crypt_ctr_auth_cipher(cc, cipher_api);
--		if (ret < 0) {
--			ti->error = "Invalid AEAD cipher spec";
--			return -ENOMEM;
--		}
- 		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
- 	} else
- 		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
- 
--	ret = crypt_ctr_blkdev_cipher(cc);
--	if (ret < 0) {
--		ti->error = "Cannot allocate cipher string";
--		return -ENOMEM;
--	}
--
- 	return 0;
- }
- 
--- 
-2.20.1
+Reviewed-off-by: Theodore Ts'o <tytso@mit.edu>
+
+						- Ted
