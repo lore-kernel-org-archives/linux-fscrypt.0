@@ -1,64 +1,62 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Thu, 20 Jun 2019 13:50:29 -0700
-Message-Id: <20190620205043.64350-3-ebiggers@kernel.org>
-In-Reply-To: <20190620205043.64350-1-ebiggers@kernel.org>
-References: <20190620205043.64350-1-ebiggers@kernel.org>
+Return-Path: <SRS0=94sN=UP=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH V3 7/7] ext4: Enable encryption for subpage-sized blocks
+Date: Sun, 16 Jun 2019 21:38:13 +0530
+In-Reply-To: <20190616160813.24464-1-chandan@linux.ibm.com>
+References: <20190616160813.24464-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v5 02/16] fs-verity: add MAINTAINERS file entry
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, "Darrick J . Wong" <darrick.wong@oracle.com>, linux-api@vger.kernel.org, Dave Chinner <david@fromorbit.com>, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Christoph Hellwig <hch@lst.de>, Victor Hsieh <victorhsieh@google.com>
+Content-Transfer-Encoding: 8bit
+Message-Id: <20190616160813.24464-8-chandan@linux.ibm.com>
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Now that we have the code to support encryption for subpage-sized
+blocks, this commit removes the conditional check in filesystem mount
+code.
 
-fs-verity will be jointly maintained by Eric Biggers and Theodore Ts'o.
+The commit also changes the support statement in
+Documentation/filesystems/fscrypt.rst to reflect the fact that
+encryption of filesystems with blocksize less than page size now works.
 
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- MAINTAINERS | 12 ++++++++++++
- 1 file changed, 12 insertions(+)
+ Documentation/filesystems/fscrypt.rst | 4 ++--
+ fs/ext4/super.c                       | 7 -------
+ 2 files changed, 2 insertions(+), 9 deletions(-)
 
-diff --git a/MAINTAINERS b/MAINTAINERS
-index a6954776a37e70..655065116f9228 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -6505,6 +6505,18 @@ S:	Maintained
- F:	fs/notify/
- F:	include/linux/fsnotify*.h
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 08c23b60e016..c3efe86bf2b2 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -213,8 +213,8 @@ Contents encryption
+ -------------------
  
-+FSVERITY: READ-ONLY FILE-BASED AUTHENTICITY PROTECTION
-+M:	Eric Biggers <ebiggers@kernel.org>
-+M:	Theodore Y. Ts'o <tytso@mit.edu>
-+L:	linux-fscrypt@vger.kernel.org
-+Q:	https://patchwork.kernel.org/project/linux-fscrypt/list/
-+T:	git git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git fsverity
-+S:	Supported
-+F:	fs/verity/
-+F:	include/linux/fsverity.h
-+F:	include/uapi/linux/fsverity.h
-+F:	Documentation/filesystems/fsverity.rst
-+
- FUJITSU LAPTOP EXTRAS
- M:	Jonathan Woithe <jwoithe@just42.net>
- L:	platform-driver-x86@vger.kernel.org
+ For file contents, each filesystem block is encrypted independently.
+-Currently, only the case where the filesystem block size is equal to
+-the system's page size (usually 4096 bytes) is supported.
++Starting from Linux kernel 5.4, encryption of filesystems with block
++size less than system's page size is supported.
+ 
+ Each block's IV is set to the logical block number within the file as
+ a little endian number, except that:
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 4079605d437a..63661a86d148 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -4412,13 +4412,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
+ 		}
+ 	}
+ 
+-	if ((DUMMY_ENCRYPTION_ENABLED(sbi) || ext4_has_feature_encrypt(sb)) &&
+-	    (blocksize != PAGE_SIZE)) {
+-		ext4_msg(sb, KERN_ERR,
+-			 "Unsupported blocksize for fs encryption");
+-		goto failed_mount_wq;
+-	}
+-
+ 	if (DUMMY_ENCRYPTION_ENABLED(sbi) && !sb_rdonly(sb) &&
+ 	    !ext4_has_feature_encrypt(sb)) {
+ 		ext4_set_feature_encrypt(sb);
 -- 
-2.22.0.410.gd8fdbe21b5-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.19.1
