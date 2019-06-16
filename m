@@ -1,67 +1,52 @@
-Return-Path: <SRS0=VVWU=UQ=benyossef.com=gilad@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:43550 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1725920AbfFPVJG (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 16 Jun 2019 17:09:06 -0400
+Date: Sun, 16 Jun 2019 14:09:03 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Re: [dm-devel] [RFC PATCH 0/3] crypto: switch to shash for ESSIV
+ generation
+Message-ID: <20190616210903.GF923@sol.localdomain>
+References: <20190614083404.20514-1-ard.biesheuvel@linaro.org>
+ <9cd635ec-970b-bd1b-59f4-1a07395e69a0@gmail.com>
+ <CAKv+Gu88tYOmO=8mi7yP2oj=x_SOB_o7D9jo6v_3xfbUxY2R1A@mail.gmail.com>
 MIME-Version: 1.0
-References: <20190614083404.20514-1-ard.biesheuvel@linaro.org> <20190616204419.GE923@sol.localdomain>
-In-Reply-To: <20190616204419.GE923@sol.localdomain>
-From: Gilad Ben-Yossef <gilad@benyossef.com>
-Date: Mon, 17 Jun 2019 11:51:52 +0300
-Message-ID: <CAOtvUMf86_TGYLoAHWuRW0Jz2=cXbHHJnAsZhEvy6SpSp_xgOQ@mail.gmail.com>
-Subject: Re: [RFC PATCH 0/3] crypto: switch to shash for ESSIV generation
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Linux Crypto Mailing List <linux-crypto@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, device-mapper development <dm-devel@redhat.com>, linux-fscrypt@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAKv+Gu88tYOmO=8mi7yP2oj=x_SOB_o7D9jo6v_3xfbUxY2R1A@mail.gmail.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Milan Broz <gmazyland@gmail.com>, Mike Snitzer <msnitzer@redhat.com>, device-mapper development <dm-devel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Sun, Jun 16, 2019 at 11:44 PM Eric Biggers <ebiggers@kernel.org> wrote:
->
-> [+Cc dm-devel and linux-fscrypt]
->
-> On Fri, Jun 14, 2019 at 10:34:01AM +0200, Ard Biesheuvel wrote:
-> > This series is presented as an RFC for a couple of reasons:
-> > - it is only build tested
-> > - it is unclear whether this is the right way to move away from the use=
- of
-> >   bare ciphers in non-crypto code
-> > - we haven't really discussed whether moving away from the use of bare =
-ciphers
-> >   in non-crypto code is a goal we agree on
+[+Cc linux-fscrypt]
+
+On Sun, Jun 16, 2019 at 09:13:01PM +0200, Ard Biesheuvel wrote:
 > >
-> > This series creates an ESSIV shash template that takes a (cipher,hash) =
-tuple,
-> > where the digest size of the hash must be a valid key length for the ci=
-pher.
-> > The setkey() operation takes the hash of the input key, and sets into t=
-he
-> > cipher as the encryption key. Digest operations accept input up to the
-> > block size of the cipher, and perform a single block encryption operati=
-on to
-> > produce the ESSIV output.
-...
-> I agree that moving away from bare block ciphers is generally a good idea=
-.  For
-> fscrypt I'm fine with moving ESSIV into the crypto API, though I'm not su=
-re a
-> shash template is the best approach.  Did you also consider making it a s=
-kcipher
-> template so that users can do e.g. "essiv(cbc(aes),sha256,aes)"?  That wo=
-uld
-> simplify things much more on the fscrypt side, since then all the ESSIV-r=
-elated
-> code would go away entirely except for changing the string "cbc(aes)" to
-> "essiv(cbc(aes),sha256,aes)".
+> >  - ESSIV is useful only for CBC mode. I wish we move to some better mode
+> > in the future instead of cementing CBC use... But if it helps people
+> > to actually use unpredictable IV for CBC, it is the right approach.
+> > (yes, I know XTS has own problems as well... but IMO that should be the default
+> > for sector/fs-block encryption these days :)
+> >
+> 
+> I agree that XTS should be preferred. But for some reason, the
+> kernel's XTS implementation does not support ciphertext stealing (as
+> opposed to, e.g., OpenSSL), and so CBC ended up being used for
+> encrypting the filenames in fscrypt.
+> 
 
-I will also add that going the skcipher route rather than shash will
-allow hardware tfm providers like CryptoCell that can do the ESSIV
-part in hardware implement that as a single API call and/or hardware
-invocation flow.
-For those system that benefit from hardware providers this can be beneficia=
-l.
+Actually, for fscrypt CTS-CBC was also chosen because all filenames in each
+directory use the same IV, in order to efficiently support all the possible
+filesystem operations and to support filenames up to NAME_MAX.  So there was a
+desire for there to be some propagation across ciphertext blocks rather than use
+XTS which would effectively be ECB in this case.
 
-Thanks,
-Gilad
+Neither solution is great though, since CBC-CTS still has the common prefix
+problem.  Long-term we're planning to switch to an AES-based wide block mode
+such as AES-HEH or AES-HCTR for filenames encryption.  This is already solved
+for Adiantum users since Adiantum is a wide-block mode, but there should be a
+pure AES solution too to go along with AES contents encryption.
 
---=20
-Gilad Ben-Yossef
-Chief Coffee Drinker
-
-values of =CE=B2 will give rise to dom!
+- Eric
