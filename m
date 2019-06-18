@@ -1,85 +1,121 @@
-Return-Path: <SRS0=l2T0=UT=vger.kernel.org=linux-integrity-owner@kernel.org>
+Return-Path: <SRS0=SrEi=UR=vger.kernel.org=linux-integrity-owner@kernel.org>
+Date: Tue, 18 Jun 2019 09:50:18 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v5 08/16] fs-verity: add the hook for file ->setattr()
-Date: Thu, 20 Jun 2019 13:50:35 -0700
-Message-Id: <20190620205043.64350-9-ebiggers@kernel.org>
-In-Reply-To: <20190620205043.64350-1-ebiggers@kernel.org>
-References: <20190620205043.64350-1-ebiggers@kernel.org>
+Subject: Re: [PATCH v4 10/16] fs-verity: implement FS_IOC_ENABLE_VERITY ioctl
+Message-ID: <20190618165017.GD184520@gmail.com>
+References: <20190606155205.2872-1-ebiggers@kernel.org>
+ <20190606155205.2872-11-ebiggers@kernel.org>
+ <20190615150821.GK6142@mit.edu>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190615150821.GK6142@mit.edu>
 Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Sat, Jun 15, 2019 at 11:08:21AM -0400, Theodore Ts'o wrote:
+> On Thu, Jun 06, 2019 at 08:51:59AM -0700, Eric Biggers wrote:
+> > From: Eric Biggers <ebiggers@google.com>
+> > 
+> > Add a function for filesystems to call to implement the
+> > FS_IOC_ENABLE_VERITY ioctl.  This ioctl enables fs-verity on a file.
+> > 
+> > See the "FS_IOC_ENABLE_VERITY" section of
+> > Documentation/filesystems/fsverity.rst for the documentation.
+> > 
+> > Signed-off-by: Eric Biggers <ebiggers@google.com>
+> 
+> > diff --git a/fs/verity/enable.c b/fs/verity/enable.c
+> > new file mode 100644
+> > index 000000000000..7e7ef9d3c376
+> > --- /dev/null
+> > +++ b/fs/verity/enable.c
+> > +	/* Tell the filesystem to finish enabling verity on the file */
+> > +	err = vops->end_enable_verity(filp, desc, desc_size, params.tree_size);
+> > +	if (err) {
+> > +		fsverity_err(inode, "%ps() failed with err %d",
+> > +			     vops->end_enable_verity, err);
+> > +		fsverity_free_info(vi);
+> > +	} else {
+> > +		/* Successfully enabled verity */
+> > +
+> > +		WARN_ON(!IS_VERITY(inode));
+> > +
+> > +		/*
+> > +		 * Readers can start using ->i_verity_info immediately, so it
+> > +		 * can't be rolled back once set.  So don't set it until just
+> > +		 * after the filesystem has successfully enabled verity.
+> > +		 */
+> > +		fsverity_set_info(inode, vi);
+> > +	}
+> 
+> If end_enable_Verity() retuns success, and IS_VERITY is not set, I
+> would think that we should report the error via fsverity_err() and
+> return an error to userspace, and *not* call fsverity_set_info().  I
+> don't think the stack trace printed by WARN_ON is going to very
+> interesting, since the call path which gets us to enable_verity() is
+> not going to be surprising.
+> 
 
-Add a function fsverity_prepare_setattr() which filesystems that support
-fs-verity must call to deny truncates of verity files.
+I want to keep it as WARN_ON() because if it happens it's a kernel bug, and
+WARNs are reported as bugs by automated tools.  But I can do the following so it
+returns an error code too:
 
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/verity/open.c         | 21 +++++++++++++++++++++
- include/linux/fsverity.h |  7 +++++++
- 2 files changed, 28 insertions(+)
-
-diff --git a/fs/verity/open.c b/fs/verity/open.c
-index 3a3bb27e23f5e3..21ae0ef254a695 100644
---- a/fs/verity/open.c
-+++ b/fs/verity/open.c
-@@ -296,6 +296,27 @@ int fsverity_file_open(struct inode *inode, struct file *filp)
- }
- EXPORT_SYMBOL_GPL(fsverity_file_open);
+@@ -229,11 +235,12 @@ static int enable_verity(struct file *filp,
+ 		fsverity_err(inode, "%ps() failed with err %d",
+ 			     vops->end_enable_verity, err);
+ 		fsverity_free_info(vi);
++	} else if (WARN_ON(!IS_VERITY(inode))) {
++		err = -EINVAL;
++		fsverity_free_info(vi);
+ 	} else {
+ 		/* Successfully enabled verity */
  
-+/**
-+ * fsverity_prepare_setattr - prepare to change a verity inode's attributes
-+ * @dentry: dentry through which the inode is being changed
-+ * @attr: attributes to change
-+ *
-+ * Verity files are immutable, so deny truncates.  This isn't covered by the
-+ * open-time check because sys_truncate() takes a path, not a file descriptor.
-+ *
-+ * Return: 0 on success, -errno on failure
-+ */
-+int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
-+{
-+	if (IS_VERITY(d_inode(dentry)) && (attr->ia_valid & ATTR_SIZE)) {
-+		pr_debug("Denying truncate of verity file (ino %lu)\n",
-+			 d_inode(dentry)->i_ino);
-+		return -EPERM;
+-		WARN_ON(!IS_VERITY(inode));
+-
+ 		/*
+ 		 * Readers can start using ->i_verity_info immediately, so it
+ 		 * can't be rolled back once set.  So don't set it until just
+
+> > +
+> > +	if (inode->i_size <= 0) {
+> > +		err = -EINVAL;
+> > +		goto out_unlock;
+> > +	}
+> 
+> How hard would it be to support fsverity for zero-length files?  There
+> would be no Merkle tree, but there still would be an fsverity header
+> file on which we can calculate a checksum for the digital signature.
+> 
+>      	      	     	       	 - Ted
+> 
+
+Empty files would have to be special-cased, e.g. defining the root hash to be
+all 0's, since there are no blocks to checksum.  It would be straightforward,
+but it would still be a special case, e.g.:
+
+diff --git a/fs/verity/enable.c b/fs/verity/enable.c
+index ee9dd578e59fb..e859a2b6a4310 100644
+--- a/fs/verity/enable.c
++++ b/fs/verity/enable.c
+@@ -112,6 +112,12 @@ static int build_merkle_tree(struct inode *inode,
+ 	unsigned int level;
+ 	int err = -ENOMEM;
+ 
++	if (inode->i_size == 0) {
++		/* Empty file is a special case; root hash is all 0's */
++		memset(root_hash, 0, params->digest_size);
++		return 0;
 +	}
-+	return 0;
-+}
-+EXPORT_SYMBOL_GPL(fsverity_prepare_setattr);
 +
- /**
-  * fsverity_cleanup_inode - free the inode's verity info, if present
-  *
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index 1372c236c8770c..cbcc358d073652 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -46,6 +46,7 @@ static inline struct fsverity_info *fsverity_get_info(const struct inode *inode)
- /* open.c */
- 
- extern int fsverity_file_open(struct inode *inode, struct file *filp);
-+extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
- extern void fsverity_cleanup_inode(struct inode *inode);
- 
- #else /* !CONFIG_FS_VERITY */
-@@ -62,6 +63,12 @@ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
- 	return IS_VERITY(inode) ? -EOPNOTSUPP : 0;
- }
- 
-+static inline int fsverity_prepare_setattr(struct dentry *dentry,
-+					   struct iattr *attr)
-+{
-+	return IS_VERITY(d_inode(dentry)) ? -EOPNOTSUPP : 0;
-+}
-+
- static inline void fsverity_cleanup_inode(struct inode *inode)
- {
- }
--- 
-2.22.0.410.gd8fdbe21b5-goog
+
+On the other hand, *not* supporting empty files is a special case from the
+user's point of view.  It means that fs-verity isn't supported on every possible
+file.  Thinking about it, that's probably worse than having a special case in
+the *implementation*.
+
+So now I'm leaning towards changing it to support empty files.
+
+- Eric
