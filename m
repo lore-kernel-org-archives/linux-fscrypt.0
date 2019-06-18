@@ -1,83 +1,133 @@
-Return-Path: <SRS0=DkwI=US=mit.edu=tytso@kernel.org>
-Date: Tue, 18 Jun 2019 23:05:22 -0400
-From: "Theodore Ts'o" <tytso@mit.edu>
+Return-Path: <SRS0=SrEi=UR=vger.kernel.org=linux-integrity-owner@kernel.org>
+Date: Tue, 18 Jun 2019 16:41:34 -0700
+From: Eric Biggers <ebiggers@kernel.org>
 Subject: Re: [PATCH v4 14/16] ext4: add basic fs-verity support
-Message-ID: <20190619030522.GA28351@mit.edu>
+Message-ID: <20190618234133.GL184520@gmail.com>
 References: <20190606155205.2872-1-ebiggers@kernel.org>
  <20190606155205.2872-15-ebiggers@kernel.org>
  <20190615153112.GO6142@mit.edu>
  <20190618175117.GF184520@gmail.com>
  <20190618224615.GB4576@mit.edu>
- <20190618234133.GL184520@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20190618234133.GL184520@gmail.com>
-To: Eric Biggers <ebiggers@kernel.org>
+In-Reply-To: <20190618224615.GB4576@mit.edu>
+Sender: linux-integrity-owner@vger.kernel.org
+To: Theodore Ts'o <tytso@mit.edu>
 Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Jun 18, 2019 at 04:41:34PM -0700, Eric Biggers wrote:
+On Tue, Jun 18, 2019 at 06:46:15PM -0400, Theodore Ts'o wrote:
+> On Tue, Jun 18, 2019 at 10:51:18AM -0700, Eric Biggers wrote:
+> > On Sat, Jun 15, 2019 at 11:31:12AM -0400, Theodore Ts'o wrote:
+> > > On Thu, Jun 06, 2019 at 08:52:03AM -0700, Eric Biggers wrote:
+> > > > +/*
+> > > > + * Format of ext4 verity xattr.  This points to the location of the verity
+> > > > + * descriptor within the file data rather than containing it directly because
+> > > > + * the verity descriptor *must* be encrypted when ext4 encryption is used.  But,
+> > > > + * ext4 encryption does not encrypt xattrs.
+> > > > + */
+> > > > +struct fsverity_descriptor_location {
+> > > > +	__le32 version;
+> > > > +	__le32 size;
+> > > > +	__le64 pos;
+> > > > +};
+> > > 
+> > > What's the benefit of storing the location in an xattr as opposed to
+> > > just keying it off the end of i_size, rounded up to next page size (or
+> > > 64k) as I had suggested earlier?
+> > > 
+> > > Using an xattr burns xattr space, which is a limited resource, and it
+> > > adds some additional code complexity.  Does the benefits outweigh the
+> > > added complexity?
+> > > 
+> > > 						- Ted
+> > 
+> > It means that only the fs/verity/ support layer has to be aware of the format of
+> > the fsverity_descriptor, and the filesystem can just treat it an as opaque blob.
+> > 
+> > Otherwise the filesystem would need to read the first 'sizeof(struct
+> > fsverity_descriptor)' bytes and use those to calculate the size as
+> > 'sizeof(struct fsverity_descriptor) + le32_to_cpu(desc.sig_size)', then read the
+> > rest.  Is this what you have in mind?
 > 
-> I don't think your proposed solution is so simple.  By definition the last
-> extent ends on a filesystem block boundary, while the Merkle tree ends on a
-> Merkle tree block boundary.  In the future we might support the case where these
-> differ, so we don't want to preclude that in the on-disk format we choose now.
-> Therefore, just storing the desc_size isn't enough; we'd actually have to store
-> (desc_pos, desc_size), like I'm doing in the xattr.
+> So right now, the way enable_verity() works is that it appends the
+> Merkle tree to the data file, rounding up to the next page (but we
+> might change so we round up to the next 64k boundary).  Then it calls
+> end_enable_verity(), which is a file system specific function, passing
+> in the descriptor and the descriptor size.
+> 
+> Today ext4 and f2fs appends the descriptor after the Merkle, and then
+> sets the xattr containing the fsverity_descriptor_location.  Correct?
 
-I don't think any of this matters much, since what you're describing
-above is all about the Merkle tree, and that doesn't affect how we
-find the fsverity descriptor information.  We can just say that
-fsverity descriptor block begins on the next file system block
-boundary after the Merkle tree.  And in the case where say, the Merkle
-tree is 4k and the file system block size is 64k, that's fine --- the
-fs descriptor would just begin at the next 64k (fs blocksize)
-boundary.
+That's all correct, except that enable_verity() itself doesn't know or care that
+the Merkle tree is being appended to the file.  That's up to the
+->write_merkle_tree_block() and ->read_merkle_tree_page() methods which are
+filesystem-specific.
 
-> Also, using ext4_find_extent() to find the last mapped block (as the v1 and v2
-> patchsets did) assumes the file actually uses extents.  So we'd have to forbid
-> non-extents based files as a special case, as the v2 patchset did.  We'd also
-> have to find a way to implement the same functionality on f2fs (which should be
-> possible, but it seems it would require some new code; there's nothing like
-> f2fs_get_extent()) unless we did something different for f2fs.
+> 
+> What I'm suggesting that ext4 do instead is that it appends the
+> descriptor to the Merkle tree, and then assuming that there is the
+> (descriptor size % block_size) is less than PAGE_SIZE-4, we can write
+> the descriptor size into the last 4 bytes of the last block in the
+> file.  If there is not enough space at the end of the descriptor, then
+> we append a block to the file, and then write the descriptor_size into
+> last 4 bytes of that block.
+> 
+> When ext4 needs to find the descriptor, it simply reads the last block
+> from the file, reads it into the page cache, reads the last 4 bytes
+> from that block to fetch the descriptor size, and it can use the
+> logical offset of the last block and the descriptor size to calculate
+> the beginning offset of the descriptor size.
+> 
+> We can then fake up the fsverity_descriptor_location structure, and
+> pass that into fsverity.
+> 
+> It does add a bit of extra complexity, but 99.9% of the time, it
+> requires no extra space.  The last 0.098% of the time, the file size
+> will grow by 4k, but if we can avoid spilling over to an external
+> xattr block, it will all be worth it.
+> 
+> And in the V1 version of the fsverity code, I had already written the
+> code to descend the extent tree to find the last logical block in the
+> extent tree.
+> 
 
-So first, if f2fs wants to continue using the xattr, that's fine.  The
-code to write and fetch the fsverity descriptor is in file system
-specific code, and so this is something I'm happy to support just for
-ext4, and it shouldn't require any special changes in the common
-fsverity code at all.  Secondly, I suspect it's not *that* hard to
-find the last logical block mapping in f2fs, but I'll let Jaeguk
-comment on that.
+I don't think your proposed solution is so simple.  By definition the last
+extent ends on a filesystem block boundary, while the Merkle tree ends on a
+Merkle tree block boundary.  In the future we might support the case where these
+differ, so we don't want to preclude that in the on-disk format we choose now.
+Therefore, just storing the desc_size isn't enough; we'd actually have to store
+(desc_pos, desc_size), like I'm doing in the xattr.
 
-Finally, it's not that hard to find the last mapped block for indirect
-blocks, if we really care about supporting that combination.  (There
-are enough other things --- like fallocate --- which don't work with
-indirect mapped files, so I don't feel especially bad forbidding that
-combination.  A quick check in enable_verity() to return EOPNOTSUPP if
-the EXTENTS_FL flag is not present is not all that different from what
-we do with fallocate today.)
+Also, using ext4_find_extent() to find the last mapped block (as the v1 and v2
+patchsets did) assumes the file actually uses extents.  So we'd have to forbid
+non-extents based files as a special case, as the v2 patchset did.  We'd also
+have to find a way to implement the same functionality on f2fs (which should be
+possible, but it seems it would require some new code; there's nothing like
+f2fs_get_extent()) unless we did something different for f2fs.
 
-But if we *did* want to support it, it's actually quite easy to find
-the last mapped block for an indirect mapped inode.  I just didn't
-bother to write the code, but it requires at most 3 block reads if
-there is a triple indirection block.  Otherwise, if there is a double
-indirection block in the inode, it requires at most 2 block reads, and
-otherwise, at most a single block read.
+Note that on Android devices (the motivating use case for fs-verity), the xattrs
+of user data files on ext4 already spill into an external xattr block, due to
+the fscrypt and SELinux xattrs.  If/when people actually start caring about
+this, they'll need to increase the inode size to 512 bytes anyway, in which case
+there will be plenty of space for a few more in-line xattrs.  So I don't think
+we should jump through too many hoops to avoid using an xattr.
 
-> Note that on Android devices (the motivating use case for fs-verity), the xattrs
-> of user data files on ext4 already spill into an external xattr block, due to
-> the fscrypt and SELinux xattrs.  If/when people actually start caring about
-> this, they'll need to increase the inode size to 512 bytes anyway, in which case
-> there will be plenty of space for a few more in-line xattrs.  So I don't think
-> we should jump through too many hoops to avoid using an xattr.
+> > It's also somewhat nice to have the version number in the xattr, in case we ever
+> > introduce a new fs-verity format for ext4 or f2fs.
+> 
+> We already have a version number in the fsverity descriptor.  Surely
+> that is what we would bump if we need to itnroduce a new fs-verity
+> format?
+> 
 
-I'm thinking about other cases where we might not be using fscrypt,
-but where we might still be using fsverity and SELinux --- or maybe
-cases where the file systems are using 128 byte inodes, and where only
-fsverity is required.  (There are a *vast* number of production file
-systems using 128 byte inodes.)
+I'm talking about if we ever wanted to make a filesystem-specific change to
+where the verity metadata is stored.  That's what the version number in the
+filesystem-specific xattr is for.  The version number in the fsverity_descriptor
+is different: that's for if we made a change to fs-verity for *all* filesystems.
+We hopefully won't ever need the filesystem-specific version number, but as long
+as we have to store the (desc_pos, desc_size) anyway, I think it's wise to add a
+version number just in case; it doesn't really cost anything.
 
-Cheers,
-
-						- Ted
+- Eric
