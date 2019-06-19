@@ -1,355 +1,393 @@
-Return-Path: <SRS0=94sN=UP=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V3 5/7] ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
-Date: Sun, 16 Jun 2019 21:38:11 +0530
-In-Reply-To: <20190616160813.24464-1-chandan@linux.ibm.com>
-References: <20190616160813.24464-1-chandan@linux.ibm.com>
+Return-Path: <SRS0=cZDd=US=vger.kernel.org=linux-integrity-owner@kernel.org>
+Date: Wed, 19 Jun 2019 12:13:29 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Re: [PATCH v4 14/16] ext4: add basic fs-verity support
+Message-ID: <20190619191328.GB33328@gmail.com>
+References: <20190606155205.2872-1-ebiggers@kernel.org>
+ <20190606155205.2872-15-ebiggers@kernel.org>
+ <20190615153112.GO6142@mit.edu>
+ <20190618175117.GF184520@gmail.com>
+ <20190618224615.GB4576@mit.edu>
+ <20190618234133.GL184520@gmail.com>
+ <20190619030522.GA28351@mit.edu>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190616160813.24464-6-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190619030522.GA28351@mit.edu>
+Sender: linux-integrity-owner@vger.kernel.org
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Now that do_mpage_readpage() is "post read process" aware, this commit
-gets ext4_readpage[s] to use mpage_readpage[s] and deletes ext4's
-readpage.c since the associated functionality is not required anymore.
+On Tue, Jun 18, 2019 at 11:05:22PM -0400, Theodore Ts'o wrote:
+> On Tue, Jun 18, 2019 at 04:41:34PM -0700, Eric Biggers wrote:
+> > 
+> > I don't think your proposed solution is so simple.  By definition the last
+> > extent ends on a filesystem block boundary, while the Merkle tree ends on a
+> > Merkle tree block boundary.  In the future we might support the case where these
+> > differ, so we don't want to preclude that in the on-disk format we choose now.
+> > Therefore, just storing the desc_size isn't enough; we'd actually have to store
+> > (desc_pos, desc_size), like I'm doing in the xattr.
+> 
+> I don't think any of this matters much, since what you're describing
+> above is all about the Merkle tree, and that doesn't affect how we
+> find the fsverity descriptor information.  We can just say that
+> fsverity descriptor block begins on the next file system block
+> boundary after the Merkle tree.  And in the case where say, the Merkle
+> tree is 4k and the file system block size is 64k, that's fine --- the
+> fs descriptor would just begin at the next 64k (fs blocksize)
+> boundary.
+> 
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- fs/ext4/Makefile   |   2 +-
- fs/ext4/inode.c    |   5 +-
- fs/ext4/readpage.c | 286 ---------------------------------------------
- 3 files changed, 3 insertions(+), 290 deletions(-)
- delete mode 100644 fs/ext4/readpage.c
+Sure, that works.
 
-diff --git a/fs/ext4/Makefile b/fs/ext4/Makefile
-index 8fdfcd3c3e04..7c38803a808d 100644
---- a/fs/ext4/Makefile
-+++ b/fs/ext4/Makefile
-@@ -8,7 +8,7 @@ obj-$(CONFIG_EXT4_FS) += ext4.o
- ext4-y	:= balloc.o bitmap.o block_validity.o dir.o ext4_jbd2.o extents.o \
- 		extents_status.o file.o fsmap.o fsync.o hash.o ialloc.o \
- 		indirect.o inline.o inode.o ioctl.o mballoc.o migrate.o \
--		mmp.o move_extent.o namei.o page-io.o readpage.o resize.o \
-+		mmp.o move_extent.o namei.o page-io.o resize.o \
- 		super.o symlink.o sysfs.o xattr.o xattr_trusted.o xattr_user.o
+I implemented this for ext4 and extents only, and it does work, though it's a
+bit more complex than the xattr solution -- about 70 extra lines of code
+including comments.  See diff for fs/ext4/verity.c below.
+
+But we can go with it if you think it's worthwhile to avoid using xattrs at all.
+
+diff --git a/fs/ext4/verity.c b/fs/ext4/verity.c
+index 6333b9dd2dff2a..9ae89489f01bf3 100644
+--- a/fs/ext4/verity.c
++++ b/fs/ext4/verity.c
+@@ -9,7 +9,7 @@
+  * Implementation of fsverity_operations for ext4.
+  *
+  * ext4 stores the verity metadata (Merkle tree and fsverity_descriptor) past
+- * the end of the file, starting at the first page fully beyond i_size.  This
++ * the end of the file, starting at the first 64K boundary beyond i_size.  This
+  * approach works because (a) verity files are readonly, and (b) pages fully
+  * beyond i_size aren't visible to userspace but can be read/written internally
+  * by ext4 with only some relatively small changes to ext4.  This approach
+@@ -17,13 +17,22 @@
+  * ext4's xattr support to support paging multi-gigabyte xattrs into memory, and
+  * to support encrypting xattrs.  Note that the verity metadata *must* be
+  * encrypted when the file is, since it contains hashes of the plaintext data.
++ *
++ * Using a 64K boundary rather than a 4K one keeps things ready for
++ * architectures with 64K pages, and it doesn't necessarily waste space on-disk
++ * since there can be a hole between i_size and the start of the Merkle tree.
+  */
  
- ext4-$(CONFIG_EXT4_FS_POSIX_ACL)	+= acl.o
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index f65357735a1a..60010b76b566 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3363,8 +3363,7 @@ static int ext4_readpage(struct file *file, struct page *page)
- 		ret = ext4_readpage_inline(inode, page);
+ #include <linux/quotaops.h>
  
- 	if (ret == -EAGAIN)
--		return ext4_mpage_readpages(page->mapping, NULL, page, 1,
--						false);
-+		return mpage_readpage(page, ext4_get_block);
+ #include "ext4.h"
++#include "ext4_extents.h"
+ #include "ext4_jbd2.h"
+-#include "xattr.h"
++
++static inline loff_t ext4_verity_metadata_pos(const struct inode *inode)
++{
++	return round_up(inode->i_size, 65536);
++}
  
- 	return ret;
+ /*
+  * Read some verity metadata from the inode.  __vfs_read() can't be used because
+@@ -32,8 +41,6 @@
+ static int pagecache_read(struct inode *inode, void *buf, size_t count,
+ 			  loff_t pos)
+ {
+-	const size_t orig_count = count;
+-
+ 	while (count) {
+ 		size_t n = min_t(size_t, count,
+ 				 PAGE_SIZE - offset_in_page(pos));
+@@ -55,7 +62,7 @@ static int pagecache_read(struct inode *inode, void *buf, size_t count,
+ 		pos += n;
+ 		count -= n;
+ 	}
+-	return orig_count;
++	return 0;
  }
-@@ -3379,7 +3378,7 @@ ext4_readpages(struct file *file, struct address_space *mapping,
- 	if (ext4_has_inline_data(inode))
- 		return 0;
  
--	return ext4_mpage_readpages(mapping, pages, NULL, nr_pages, true);
-+	return mpage_readpages(mapping, pages, nr_pages, ext4_get_block);
+ /*
+@@ -96,22 +103,10 @@ static int pagecache_write(struct inode *inode, const void *buf, size_t count,
+ 	return 0;
  }
  
- static void ext4_invalidatepage(struct page *page, unsigned int offset,
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-deleted file mode 100644
-index 652796b95545..000000000000
---- a/fs/ext4/readpage.c
-+++ /dev/null
-@@ -1,286 +0,0 @@
--// SPDX-License-Identifier: GPL-2.0
 -/*
-- * linux/fs/ext4/readpage.c
-- *
-- * Copyright (C) 2002, Linus Torvalds.
-- * Copyright (C) 2015, Google, Inc.
-- *
-- * This was originally taken from fs/mpage.c
-- *
-- * The intent is the ext4_mpage_readpages() function here is intended
-- * to replace mpage_readpages() in the general case, not just for
-- * encrypted files.  It has some limitations (see below), where it
-- * will fall back to read_block_full_page(), but these limitations
-- * should only be hit when page_size != block_size.
-- *
-- * This will allow us to attach a callback function to support ext4
-- * encryption.
-- *
-- * If anything unusual happens, such as:
-- *
-- * - encountering a page which has buffers
-- * - encountering a page which has a non-hole after a hole
-- * - encountering a page with non-contiguous blocks
-- *
-- * then this code just gives up and calls the buffer_head-based read function.
-- * It does handle a page which has holes at the end - that is a common case:
-- * the end-of-file on blocksize < PAGE_SIZE setups.
-- *
+- * Format of ext4 verity xattr.  This points to the location of the verity
+- * descriptor within the file data rather than containing it directly because
+- * the verity descriptor *must* be encrypted when ext4 encryption is used.  But,
+- * ext4 encryption does not encrypt xattrs.
 - */
+-struct fsverity_descriptor_location {
+-	__le32 version;
+-	__le32 size;
+-	__le64 pos;
+-};
 -
--#include <linux/kernel.h>
--#include <linux/export.h>
--#include <linux/mm.h>
--#include <linux/kdev_t.h>
--#include <linux/gfp.h>
--#include <linux/bio.h>
--#include <linux/fs.h>
--#include <linux/buffer_head.h>
--#include <linux/blkdev.h>
--#include <linux/highmem.h>
--#include <linux/prefetch.h>
--#include <linux/mpage.h>
--#include <linux/writeback.h>
--#include <linux/backing-dev.h>
--#include <linux/pagevec.h>
--#include <linux/cleancache.h>
--#include <linux/read_callbacks.h>
+ static int ext4_begin_enable_verity(struct file *filp)
+ {
+ 	struct inode *inode = file_inode(filp);
+-	int credits = 2; /* superblock and inode for ext4_orphan_add() */
++	const int credits = 2; /* superblock and inode for ext4_orphan_add() */
+ 	handle_t *handle;
+ 	int err;
+ 
+@@ -119,10 +114,24 @@ static int ext4_begin_enable_verity(struct file *filp)
+ 	if (err)
+ 		return err;
+ 
++	if (!ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
++		ext4_warning_inode(inode,
++				   "verity is only allowed on extent-based files");
++		return -EINVAL;
++	}
++
+ 	err = ext4_inode_attach_jinode(inode);
+ 	if (err)
+ 		return err;
+ 
++	/*
++	 * ext4 uses the last allocated block to find the verity descriptor, so
++	 * we must remove any other blocks which might confuse things.
++	 */
++	err = ext4_truncate(inode);
++	if (err)
++		return err;
++
+ 	err = dquot_initialize(inode);
+ 	if (err)
+ 		return err;
+@@ -139,32 +148,55 @@ static int ext4_begin_enable_verity(struct file *filp)
+ 	return err;
+ }
+ 
++/*
++ * ext4 stores the verity descriptor beginning on the next filesystem block
++ * boundary after the Merkle tree.  Then, the descriptor size is stored in the
++ * last 4 bytes of the last allocated filesystem block --- which is either the
++ * block in which the descriptor ends, or the next block after that if there
++ * weren't at least 4 bytes remaining.
++ *
++ * We can't simply store the descriptor in an xattr because it *must* be
++ * encrypted when ext4 encryption is used, but ext4 encryption doesn't encrypt
++ * xattrs.  Also, if the descriptor includes a large signature blob it may be
++ * too large to store in an xattr without the EA_INODE feature.
++ */
++static int ext4_write_verity_descriptor(struct inode *inode, const void *desc,
++					size_t desc_size, u64 merkle_tree_size)
++{
++	const u64 desc_pos = round_up(ext4_verity_metadata_pos(inode) +
++				      merkle_tree_size, i_blocksize(inode));
++	const u64 desc_end = desc_pos + desc_size;
++	const __le32 desc_size_disk = cpu_to_le32(desc_size);
++	const u64 desc_size_pos = round_up(desc_end + sizeof(desc_size_disk),
++					   i_blocksize(inode)) -
++				  sizeof(desc_size_disk);
++	int err;
++
++	err = pagecache_write(inode, desc, desc_size, desc_pos);
++	if (err)
++		return err;
++
++	return pagecache_write(inode, &desc_size_disk, sizeof(desc_size_disk),
++			       desc_size_pos);
++}
++
+ static int ext4_end_enable_verity(struct file *filp, const void *desc,
+ 				  size_t desc_size, u64 merkle_tree_size)
+ {
+ 	struct inode *inode = file_inode(filp);
+-	u64 desc_pos = round_up(inode->i_size, PAGE_SIZE) + merkle_tree_size;
+-	struct fsverity_descriptor_location dloc = {
+-		.version = cpu_to_le32(1),
+-		.size = cpu_to_le32(desc_size),
+-		.pos = cpu_to_le64(desc_pos),
+-	};
+-	int credits = 0;
++	const int credits = 2; /* superblock and inode for ext4_orphan_add() */
+ 	handle_t *handle;
+ 	int err1 = 0;
+ 	int err;
+ 
+ 	if (desc != NULL) {
+ 		/* Succeeded; write the verity descriptor. */
+-		err1 = pagecache_write(inode, desc, desc_size, desc_pos);
++		err1 = ext4_write_verity_descriptor(inode, desc, desc_size,
++						    merkle_tree_size);
+ 
+ 		/* Write all pages before clearing VERITY_IN_PROGRESS. */
+ 		if (!err1)
+ 			err1 = filemap_write_and_wait(inode->i_mapping);
 -
--#include "ext4.h"
+-		if (!err1)
+-			err1 = ext4_xattr_set_credits(inode, sizeof(dloc), true,
+-						      &credits);
+ 	} else {
+ 		/* Failed; truncate anything we wrote past i_size. */
+ 		ext4_truncate(inode);
+@@ -173,14 +205,12 @@ static int ext4_end_enable_verity(struct file *filp, const void *desc,
+ 	/*
+ 	 * We must always clean up by clearing EXT4_STATE_VERITY_IN_PROGRESS and
+ 	 * deleting the inode from the orphan list, even if something failed.
+-	 * If everything succeeded, we'll also set the verity bit and descriptor
+-	 * location xattr in the same transaction.
++	 * If everything succeeded, we'll also set the verity bit in the same
++	 * transaction.
+ 	 */
+ 
+ 	ext4_clear_inode_state(inode, EXT4_STATE_VERITY_IN_PROGRESS);
+ 
+-	credits += 2; /* superblock and inode for ext4_orphan_del() */
 -
--static inline bool ext4_bio_encrypted(struct bio *bio)
--{
--#ifdef CONFIG_FS_ENCRYPTION
--	return unlikely(bio->bi_private != NULL);
--#else
--	return false;
--#endif
--}
+ 	handle = ext4_journal_start(inode, EXT4_HT_INODE, credits);
+ 	if (IS_ERR(handle)) {
+ 		ext4_orphan_del(NULL, inode);
+@@ -194,13 +224,6 @@ static int ext4_end_enable_verity(struct file *filp, const void *desc,
+ 	if (desc != NULL && !err1) {
+ 		struct ext4_iloc iloc;
+ 
+-		err = ext4_xattr_set_handle(handle, inode,
+-					    EXT4_XATTR_INDEX_VERITY,
+-					    EXT4_XATTR_NAME_VERITY,
+-					    &dloc, sizeof(dloc), XATTR_CREATE);
+-		if (err)
+-			goto out_stop;
 -
--/*
-- * I/O completion handler for multipage BIOs.
-- *
-- * The mpage code never puts partial pages into a BIO (except for end-of-file).
-- * If a page does not map to a contiguous run of blocks then it simply falls
-- * back to block_read_full_page().
-- *
-- * Why is this?  If a page's completion depends on a number of different BIOs
-- * which can complete in any order (or at the same time) then determining the
-- * status of that page is hard.  See end_buffer_async_read() for the details.
-- * There is no point in duplicating all that complexity.
-- */
--static void mpage_end_io(struct bio *bio)
--{
--	struct bio_vec *bv;
--	struct bvec_iter_all iter_all;
+ 		err = ext4_reserve_inode_write(handle, inode, &iloc);
+ 		if (err)
+ 			goto out_stop;
+@@ -213,43 +236,103 @@ static int ext4_end_enable_verity(struct file *filp, const void *desc,
+ 	return err ?: err1;
+ }
+ 
+-static int ext4_get_verity_descriptor(struct inode *inode, void *buf,
+-				      size_t buf_size)
++static int ext4_get_verity_descriptor_location(struct inode *inode,
++					       size_t *desc_size_ret,
++					       u64 *desc_pos_ret)
+ {
+-	struct fsverity_descriptor_location dloc;
+-	int res;
+-	u32 size;
+-	u64 pos;
 -
--	if (read_callbacks_end_bio(bio))
--		return;
--
--	bio_for_each_segment_all(bv, bio, iter_all) {
--		struct page *page = bv->bv_page;
--
--		if (!bio->bi_status) {
--			SetPageUptodate(page);
--		} else {
--			ClearPageUptodate(page);
--			SetPageError(page);
--		}
--		unlock_page(page);
--	}
--
--	bio_put(bio);
--}
--
--int ext4_mpage_readpages(struct address_space *mapping,
--			 struct list_head *pages, struct page *page,
--			 unsigned nr_pages, bool is_readahead)
--{
--	struct bio *bio = NULL;
--	sector_t last_block_in_bio = 0;
--
--	struct inode *inode = mapping->host;
--	const unsigned blkbits = inode->i_blkbits;
--	const unsigned blocks_per_page = PAGE_SIZE >> blkbits;
--	const unsigned blocksize = 1 << blkbits;
--	sector_t block_in_file;
--	sector_t last_block;
--	sector_t last_block_in_file;
--	sector_t blocks[MAX_BUF_PER_PAGE];
--	unsigned page_block;
--	struct block_device *bdev = inode->i_sb->s_bdev;
--	int length;
--	unsigned relative_block = 0;
--	struct ext4_map_blocks map;
--
--	map.m_pblk = 0;
--	map.m_lblk = 0;
--	map.m_len = 0;
--	map.m_flags = 0;
--
--	for (; nr_pages; nr_pages--) {
--		int fully_mapped = 1;
--		unsigned first_hole = blocks_per_page;
--
--		if (pages) {
--			page = lru_to_page(pages);
--
--			prefetchw(&page->flags);
--			list_del(&page->lru);
--			if (add_to_page_cache_lru(page, mapping, page->index,
--				  readahead_gfp_mask(mapping)))
--				goto next_page;
--		}
--
--		if (page_has_buffers(page))
--			goto confused;
--
--		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
--		last_block = block_in_file + nr_pages * blocks_per_page;
--		last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
--		if (last_block > last_block_in_file)
--			last_block = last_block_in_file;
--		page_block = 0;
--
--		/*
--		 * Map blocks using the previous result first.
--		 */
--		if ((map.m_flags & EXT4_MAP_MAPPED) &&
--		    block_in_file > map.m_lblk &&
--		    block_in_file < (map.m_lblk + map.m_len)) {
--			unsigned map_offset = block_in_file - map.m_lblk;
--			unsigned last = map.m_len - map_offset;
--
--			for (relative_block = 0; ; relative_block++) {
--				if (relative_block == last) {
--					/* needed? */
--					map.m_flags &= ~EXT4_MAP_MAPPED;
--					break;
--				}
--				if (page_block == blocks_per_page)
--					break;
--				blocks[page_block] = map.m_pblk + map_offset +
--					relative_block;
--				page_block++;
--				block_in_file++;
--			}
--		}
--
--		/*
--		 * Then do more ext4_map_blocks() calls until we are
--		 * done with this page.
--		 */
--		while (page_block < blocks_per_page) {
--			if (block_in_file < last_block) {
--				map.m_lblk = block_in_file;
--				map.m_len = last_block - block_in_file;
--
--				if (ext4_map_blocks(NULL, inode, &map, 0) < 0) {
--				set_error_page:
--					SetPageError(page);
--					zero_user_segment(page, 0,
--							  PAGE_SIZE);
--					unlock_page(page);
--					goto next_page;
--				}
--			}
--			if ((map.m_flags & EXT4_MAP_MAPPED) == 0) {
--				fully_mapped = 0;
--				if (first_hole == blocks_per_page)
--					first_hole = page_block;
--				page_block++;
--				block_in_file++;
--				continue;
--			}
--			if (first_hole != blocks_per_page)
--				goto confused;		/* hole -> non-hole */
--
--			/* Contiguous blocks? */
--			if (page_block && blocks[page_block-1] != map.m_pblk-1)
--				goto confused;
--			for (relative_block = 0; ; relative_block++) {
--				if (relative_block == map.m_len) {
--					/* needed? */
--					map.m_flags &= ~EXT4_MAP_MAPPED;
--					break;
--				} else if (page_block == blocks_per_page)
--					break;
--				blocks[page_block] = map.m_pblk+relative_block;
--				page_block++;
--				block_in_file++;
--			}
--		}
--		if (first_hole != blocks_per_page) {
--			zero_user_segment(page, first_hole << blkbits,
--					  PAGE_SIZE);
--			if (first_hole == 0) {
--				SetPageUptodate(page);
--				unlock_page(page);
--				goto next_page;
--			}
--		} else if (fully_mapped) {
--			SetPageMappedToDisk(page);
--		}
--		if (fully_mapped && blocks_per_page == 1 &&
--		    !PageUptodate(page) && cleancache_get_page(page) == 0) {
--			SetPageUptodate(page);
--			goto confused;
--		}
--
--		/*
--		 * This page will go to BIO.  Do we need to send this
--		 * BIO off first?
--		 */
--		if (bio && (last_block_in_bio != blocks[0] - 1)) {
--		submit_and_realloc:
--			submit_bio(bio);
--			bio = NULL;
--		}
--		if (bio == NULL) {
--			bio = bio_alloc(GFP_KERNEL,
--				min_t(int, nr_pages, BIO_MAX_PAGES));
--			if (!bio)
--				goto set_error_page;
--
--			if (read_callbacks_setup(inode, bio, NULL)) {
--				bio_put(bio);
--				goto set_error_page;
--			}
--
--			bio_set_dev(bio, bdev);
--			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
--			bio->bi_end_io = mpage_end_io;
--			bio_set_op_attrs(bio, REQ_OP_READ,
--						is_readahead ? REQ_RAHEAD : 0);
--		}
--
--		length = first_hole << blkbits;
--		if (bio_add_page(bio, page, length, 0) < length)
--			goto submit_and_realloc;
--
--		if (((map.m_flags & EXT4_MAP_BOUNDARY) &&
--		     (relative_block == map.m_len)) ||
--		    (first_hole != blocks_per_page)) {
--			submit_bio(bio);
--			bio = NULL;
--		} else
--			last_block_in_bio = blocks[blocks_per_page - 1];
--		goto next_page;
--	confused:
--		if (bio) {
--			submit_bio(bio);
--			bio = NULL;
--		}
--		if (!PageUptodate(page))
--			block_read_full_page(page, ext4_get_block);
--		else
--			unlock_page(page);
--	next_page:
--		if (pages)
--			put_page(page);
--	}
--	BUG_ON(pages && !list_empty(pages));
--	if (bio)
--		submit_bio(bio);
--	return 0;
--}
--- 
-2.19.1
+-	/* Get the descriptor location */
+-	res = ext4_xattr_get(inode, EXT4_XATTR_INDEX_VERITY,
+-			     EXT4_XATTR_NAME_VERITY, &dloc, sizeof(dloc));
+-	if (res < 0 && res != -ERANGE)
+-		return res;
+-	if (res != sizeof(dloc) || dloc.version != cpu_to_le32(1)) {
+-		ext4_warning_inode(inode, "unknown verity xattr format");
+-		return -EINVAL;
++	struct ext4_ext_path *path;
++	struct ext4_extent *last_extent;
++	u32 end_lblk;
++	u64 desc_size_pos;
++	__le32 desc_size_disk;
++	u32 desc_size;
++	u64 desc_pos;
++	int err;
++
++	/*
++	 * Descriptor size is in last 4 bytes of last allocated block.
++	 * See ext4_write_verity_descriptor().
++	 */
++
++	if (!ext4_test_inode_flag(inode, EXT4_INODE_EXTENTS)) {
++		EXT4_ERROR_INODE(inode, "verity file doesn't use extents");
++		return -EFSCORRUPTED;
+ 	}
+-	size = le32_to_cpu(dloc.size);
+-	pos = le64_to_cpu(dloc.pos);
+ 
+-	/* Get the descriptor */
+-	if (pos + size < pos || pos + size > inode->i_sb->s_maxbytes ||
+-	    pos < round_up(inode->i_size, PAGE_SIZE) || size > INT_MAX) {
+-		ext4_warning_inode(inode, "invalid verity xattr");
++	path = ext4_find_extent(inode, EXT_MAX_BLOCKS - 1, NULL, 0);
++	if (IS_ERR(path))
++		return PTR_ERR(path);
++
++	last_extent = path[path->p_depth].p_ext;
++	if (!last_extent) {
++		EXT4_ERROR_INODE(inode, "verity file has no extents");
++		ext4_ext_drop_refs(path);
++		kfree(path);
+ 		return -EFSCORRUPTED;
+ 	}
+-	if (buf_size == 0)
+-		return size;
+-	if (size > buf_size)
+-		return -ERANGE;
+-	return pagecache_read(inode, buf, size, pos);
++
++	end_lblk = le32_to_cpu(last_extent->ee_block) +
++		   ext4_ext_get_actual_len(last_extent);
++	desc_size_pos = (u64)end_lblk << inode->i_blkbits;
++	ext4_ext_drop_refs(path);
++	kfree(path);
++
++	if (desc_size_pos < sizeof(desc_size_disk))
++		goto bad;
++	desc_size_pos -= sizeof(desc_size_disk);
++
++	err = pagecache_read(inode, &desc_size_disk, sizeof(desc_size_disk),
++			     desc_size_pos);
++	if (err)
++		return err;
++	desc_size = le32_to_cpu(desc_size_disk);
++
++	/*
++	 * The descriptor is stored just before the desc_size_disk, but starting
++	 * on a filesystem block boundary.
++	 */
++
++	if (desc_size > INT_MAX || desc_size > desc_size_pos)
++		goto bad;
++
++	desc_pos = round_down(desc_size_pos - desc_size, i_blocksize(inode));
++	if (desc_pos < ext4_verity_metadata_pos(inode))
++		goto bad;
++
++	*desc_size_ret = desc_size;
++	*desc_pos_ret = desc_pos;
++	return 0;
++
++bad:
++	EXT4_ERROR_INODE(inode, "verity file corrupted; can't find descriptor");
++	return -EFSCORRUPTED;
++}
++
++static int ext4_get_verity_descriptor(struct inode *inode, void *buf,
++				      size_t buf_size)
++{
++	size_t desc_size = 0;
++	u64 desc_pos = 0;
++	int err;
++
++	err = ext4_get_verity_descriptor_location(inode, &desc_size, &desc_pos);
++	if (err)
++		return err;
++
++	if (buf_size) {
++		if (desc_size > buf_size)
++			return -ERANGE;
++		err = pagecache_read(inode, buf, desc_size, desc_pos);
++		if (err)
++			return err;
++	}
++	return desc_size;
+ }
+ 
+ static struct page *ext4_read_merkle_tree_page(struct inode *inode,
+ 					       pgoff_t index)
+ {
+-	index += DIV_ROUND_UP(inode->i_size, PAGE_SIZE);
++	index += ext4_verity_metadata_pos(inode) >> PAGE_SHIFT;
+ 
+ 	return read_mapping_page(inode->i_mapping, index, NULL);
+ }
+@@ -257,8 +340,7 @@ static struct page *ext4_read_merkle_tree_page(struct inode *inode,
+ static int ext4_write_merkle_tree_block(struct inode *inode, const void *buf,
+ 					u64 index, int log_blocksize)
+ {
+-	loff_t pos = round_up(inode->i_size, PAGE_SIZE) +
+-		     (index << log_blocksize);
++	loff_t pos = ext4_verity_metadata_pos(inode) + (index << log_blocksize);
+ 
+ 	return pagecache_write(inode, buf, 1 << log_blocksize, pos);
+ }
