@@ -1,71 +1,54 @@
-Return-Path: <SRS0=dWk4=UF=vger.kernel.org=linux-integrity-owner@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:49844 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726251AbfFSWpx (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 19 Jun 2019 18:45:53 -0400
+Date: Wed, 19 Jun 2019 15:45:51 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v4 12/16] fs-verity: add SHA-512 support
-Date: Thu,  6 Jun 2019 08:52:01 -0700
-Message-Id: <20190606155205.2872-13-ebiggers@kernel.org>
-In-Reply-To: <20190606155205.2872-1-ebiggers@kernel.org>
-References: <20190606155205.2872-1-ebiggers@kernel.org>
+Subject: Re: [PATCH v3 2/6] fs: crypto: invoke crypto API for ESSIV handling
+Message-ID: <20190619224550.GD33328@gmail.com>
+References: <20190619162921.12509-1-ard.biesheuvel@linaro.org>
+ <20190619162921.12509-3-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190619162921.12509-3-ard.biesheuvel@linaro.org>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Jun 19, 2019 at 06:29:17PM +0200, Ard Biesheuvel wrote:
+> Instead of open coding the calculations for ESSIV handling, use a
+> ESSIV skcipher which does all of this under the hood.
+> 
+> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> ---
+>  fs/crypto/Kconfig           |  1 +
+>  fs/crypto/crypto.c          |  5 --
+>  fs/crypto/fscrypt_private.h |  9 --
+>  fs/crypto/keyinfo.c         | 88 +-------------------
+>  4 files changed, 3 insertions(+), 100 deletions(-)
+> 
+> diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
+> index 24ed99e2eca0..b0292da8613c 100644
+> --- a/fs/crypto/Kconfig
+> +++ b/fs/crypto/Kconfig
+> @@ -5,6 +5,7 @@ config FS_ENCRYPTION
+>  	select CRYPTO_AES
+>  	select CRYPTO_CBC
+>  	select CRYPTO_ECB
+> +	select CRYPTO_ESSIV
+>  	select CRYPTO_XTS
+>  	select CRYPTO_CTS
+>  	select CRYPTO_SHA256
 
-Add SHA-512 support to fs-verity.  This is primarily a demonstration of
-the trivial changes needed to support a new hash algorithm in fs-verity;
-most users will still use SHA-256, due to the smaller space required to
-store the hashes.  But some users may prefer SHA-512.
+Selecting CRYPTO_ESSIV is fine for now, but I'd really like to de-bloat the
+dependencies of FS_ENCRYPTION (probably in a separate patch) by removing
+CRYPTO_ESSIV and CRYPTO_SHA256 and documenting in the encryption modes section
+of Documentation/filesystems/fscrypt.rst that people need to select them
+themselves if they want to use AES-128-CBC.  I already took that approach when I
+added Adiantum support, so we don't force all fscrypt users to build Adiantum,
+ChaCha, Poly1305, etc. into their kernels.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/verity/fsverity_private.h  | 2 +-
- fs/verity/hash_algs.c         | 5 +++++
- include/uapi/linux/fsverity.h | 1 +
- 3 files changed, 7 insertions(+), 1 deletion(-)
-
-diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
-index d61ad740027d..693ef030adbe 100644
---- a/fs/verity/fsverity_private.h
-+++ b/fs/verity/fsverity_private.h
-@@ -31,7 +31,7 @@ struct ahash_request;
-  * Largest digest size among all hash algorithms supported by fs-verity.
-  * Currently assumed to be <= size of fsverity_descriptor::root_hash.
-  */
--#define FS_VERITY_MAX_DIGEST_SIZE	SHA256_DIGEST_SIZE
-+#define FS_VERITY_MAX_DIGEST_SIZE	SHA512_DIGEST_SIZE
- 
- /* A hash algorithm supported by fs-verity */
- struct fsverity_hash_alg {
-diff --git a/fs/verity/hash_algs.c b/fs/verity/hash_algs.c
-index 46df17094fc2..e0462a010cab 100644
---- a/fs/verity/hash_algs.c
-+++ b/fs/verity/hash_algs.c
-@@ -17,6 +17,11 @@ struct fsverity_hash_alg fsverity_hash_algs[] = {
- 		.digest_size = SHA256_DIGEST_SIZE,
- 		.block_size = SHA256_BLOCK_SIZE,
- 	},
-+	[FS_VERITY_HASH_ALG_SHA512] = {
-+		.name = "sha512",
-+		.digest_size = SHA512_DIGEST_SIZE,
-+		.block_size = SHA512_BLOCK_SIZE,
-+	},
- };
- 
- /**
-diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
-index 57d1d7fc0c34..da0daf6c193b 100644
---- a/include/uapi/linux/fsverity.h
-+++ b/include/uapi/linux/fsverity.h
-@@ -14,6 +14,7 @@
- #include <linux/types.h>
- 
- #define FS_VERITY_HASH_ALG_SHA256	1
-+#define FS_VERITY_HASH_ALG_SHA512	2
- 
- struct fsverity_enable_arg {
- 	__u32 version;
--- 
-2.21.0
+- Eric
