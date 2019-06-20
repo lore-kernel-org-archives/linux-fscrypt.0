@@ -1,69 +1,252 @@
-Return-Path: <SRS0=94sN=UP=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V3 4/7] fs/mpage.c: Integrate read callbacks
-Date: Sun, 16 Jun 2019 21:38:10 +0530
-In-Reply-To: <20190616160813.24464-1-chandan@linux.ibm.com>
-References: <20190616160813.24464-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:47154 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726032AbfFTVij (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 20 Jun 2019 17:38:39 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH v2 2/8] common/verity: add common functions for testing fs-verity
+Date: Thu, 20 Jun 2019 14:36:08 -0700
+Message-Id: <20190620213614.113685-3-ebiggers@kernel.org>
+In-Reply-To: <20190620213614.113685-1-ebiggers@kernel.org>
+References: <20190620213614.113685-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190616160813.24464-5-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit adds code to make do_mpage_readpage() to be "read callbacks"
-aware i.e. for files requiring decryption, do_mpage_readpage() now
-sets up the read callbacks state machine when allocating a bio and later
-starts execution of the state machine after file data is read from the
-underlying disk.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Add common functions for setting up and testing fs-verity, a new feature
+for read-only file-based authenticity protection.  fs-verity will be
+supported by ext4 and f2fs, and perhaps by other filesystems later.
+Running the fs-verity tests requires:
+
+- A kernel with the fs-verity patches from
+  https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+  branch "fsverity" and configured with CONFIG_FS_VERITY.
+- The fsverity utility program from
+  https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git
+- e2fsprogs v1.45.2 or later for ext4 tests, or f2fs-tools v1.11.0 or
+  later for f2fs tests.
+
+See the file Documentation/filesystems/fsverity.rst in the kernel tree
+for more information about fs-verity.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/mpage.c | 11 ++++++++++-
- 1 file changed, 10 insertions(+), 1 deletion(-)
+ common/config |   1 +
+ common/verity | 189 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 190 insertions(+)
+ create mode 100644 common/verity
 
-diff --git a/fs/mpage.c b/fs/mpage.c
-index 436a85260394..611ad122fc92 100644
---- a/fs/mpage.c
-+++ b/fs/mpage.c
-@@ -30,6 +30,7 @@
- #include <linux/backing-dev.h>
- #include <linux/pagevec.h>
- #include <linux/cleancache.h>
-+#include <linux/read_callbacks.h>
- #include "internal.h"
+diff --git a/common/config b/common/config
+index bd64be62..001ddc45 100644
+--- a/common/config
++++ b/common/config
+@@ -212,6 +212,7 @@ export CHECKBASHISMS_PROG="$(type -P checkbashisms)"
+ export XFS_INFO_PROG="$(type -P xfs_info)"
+ export DUPEREMOVE_PROG="$(type -P duperemove)"
+ export CC_PROG="$(type -P cc)"
++export FSVERITY_PROG="$(type -P fsverity)"
  
- /*
-@@ -49,6 +50,8 @@ static void mpage_end_io(struct bio *bio)
- 	struct bio_vec *bv;
- 	struct bvec_iter_all iter_all;
- 
-+	if (read_callbacks_end_bio(bio))
-+		return;
- 	bio_for_each_segment_all(bv, bio, iter_all) {
- 		struct page *page = bv->bv_page;
- 		page_endio(page, bio_op(bio),
-@@ -309,6 +312,12 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
- 					gfp);
- 		if (args->bio == NULL)
- 			goto confused;
+ # use 'udevadm settle' or 'udevsettle' to wait for lv to be settled.
+ # newer systems have udevadm command but older systems like RHEL5 don't.
+diff --git a/common/verity b/common/verity
+new file mode 100644
+index 00000000..86fb6585
+--- /dev/null
++++ b/common/verity
+@@ -0,0 +1,189 @@
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2018 Google LLC
++#
++# Functions for setting up and testing fs-verity
 +
-+		if (read_callbacks_setup(inode, args->bio, NULL)) {
-+			bio_put(args->bio);
-+			args->bio = NULL;
-+			goto confused;
-+		}
- 	}
- 
- 	length = first_hole << blkbits;
-@@ -330,7 +339,7 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
- confused:
- 	if (args->bio)
- 		args->bio = mpage_bio_submit(REQ_OP_READ, op_flags, args->bio);
--	if (!PageUptodate(page))
-+	if (!PageUptodate(page) && !PageError(page))
- 		block_read_full_page(page, args->get_block);
- 	else
- 		unlock_page(page);
++_require_scratch_verity()
++{
++	_require_scratch
++	_require_command "$FSVERITY_PROG" fsverity
++
++	if ! _scratch_mkfs_verity &>>$seqres.full; then
++		# ext4: need e2fsprogs v1.44.5 or later (but actually v1.45.2+
++		#       is needed for some tests to pass, due to an e2fsck bug)
++		# f2fs: need f2fs-tools v1.11.0 or later
++		_notrun "$FSTYP userspace tools don't support fs-verity"
++	fi
++
++	# Try to mount the filesystem.  If this fails then either the kernel
++	# isn't aware of fs-verity, or the mkfs options were not compatible with
++	# verity (e.g. ext4 with block size != PAGE_SIZE).
++	if ! _try_scratch_mount &>>$seqres.full; then
++		_notrun "kernel is unaware of $FSTYP verity feature," \
++			"or mkfs options are not compatible with verity"
++	fi
++	_scratch_unmount
++
++	# The filesystem may be aware of fs-verity but have it disabled by
++	# CONFIG_FS_VERITY=n.  Detect support via sysfs.
++	if [ ! -e /sys/fs/$FSTYP/features/verity ]; then
++		_notrun "kernel $FSTYP isn't configured with verity support"
++	fi
++
++	# Merkle tree block size.  Currently all filesystems only support
++	# PAGE_SIZE for this.  This is also the default for 'fsverity enable'.
++	FSV_BLOCK_SIZE=$(get_page_size)
++}
++
++_scratch_mkfs_verity()
++{
++	case $FSTYP in
++	ext4|f2fs)
++		_scratch_mkfs -O verity
++		;;
++	*)
++		_notrun "No verity support for $FSTYP"
++		;;
++	esac
++}
++
++_scratch_mkfs_encrypted_verity()
++{
++	case $FSTYP in
++	ext4)
++		_scratch_mkfs -O encrypt,verity
++		;;
++	f2fs)
++		# f2fs-tools as of v1.11.0 doesn't allow comma-separated
++		# features with -O.  Instead -O must be supplied multiple times.
++		_scratch_mkfs -O encrypt -O verity
++		;;
++	*)
++		_notrun "$FSTYP not supported in _scratch_mkfs_encrypted_verity"
++		;;
++	esac
++}
++
++_fsv_scratch_begin_subtest()
++{
++	local msg=$1
++
++	rm -rf "${SCRATCH_MNT:?}"/*
++	echo -e "\n# $msg"
++}
++
++_fsv_enable()
++{
++	$FSVERITY_PROG enable "$@"
++}
++
++_fsv_measure()
++{
++        $FSVERITY_PROG measure "$@" | awk '{print $1}'
++}
++
++# Generate a file, then enable verity on it.
++_fsv_create_enable_file()
++{
++	local file=$1
++	shift
++
++	head -c $((FSV_BLOCK_SIZE * 2)) /dev/zero > "$file"
++	_fsv_enable "$file" "$@"
++}
++
++_fsv_have_hash_algorithm()
++{
++	local hash_alg=$1
++	local test_file=$2
++
++	rm -f $test_file
++	head -c 4096 /dev/zero > $test_file
++	if ! _fsv_enable --hash-alg=$hash_alg $test_file &>> $seqres.full; then
++		# no kernel support
++		return 1
++	fi
++	rm -f $test_file
++	return 0
++}
++
++#
++# _fsv_scratch_corrupt_bytes - Write some bytes to a file, bypassing the filesystem
++#
++# Write the bytes sent on stdin to the given offset in the given file, but do so
++# by writing directly to the extents on the block device, with the filesystem
++# unmounted.  This can be used to corrupt a verity file for testing purposes,
++# bypassing the restrictions imposed by the filesystem.
++#
++# The file is assumed to be located on $SCRATCH_DEV.
++#
++_fsv_scratch_corrupt_bytes()
++{
++	local file=$1
++	local offset=$2
++	local lstart lend pstart pend
++	local dd_cmds=()
++	local cmd
++
++	sync	# Sync to avoid unwritten extents
++
++	cat > $tmp.bytes
++	local end=$(( offset + $(stat -c %s $tmp.bytes ) ))
++
++	# For each extent that intersects the requested range in order, add a
++	# command that writes the next part of the data to that extent.
++	while read -r lstart lend pstart pend; do
++		lstart=$((lstart * 512))
++		lend=$(((lend + 1) * 512))
++		pstart=$((pstart * 512))
++		pend=$(((pend + 1) * 512))
++
++		if (( lend - lstart != pend - pstart )); then
++			_fail "Logical and physical extent lengths differ for file '$file'"
++		elif (( offset < lstart )); then
++			_fail "Hole in file '$file' at byte $offset.  Next extent begins at byte $lstart"
++		elif (( offset < lend )); then
++			local len=$((lend - offset))
++			local seek=$((pstart + (offset - lstart)))
++			dd_cmds+=("head -c $len | dd of=$SCRATCH_DEV oflag=seek_bytes seek=$seek status=none")
++			(( offset += len ))
++		fi
++	done < <($XFS_IO_PROG -r -c "fiemap $offset $((end - offset))" "$file" \
++		 | _filter_xfs_io_fiemap)
++
++	if (( offset < end )); then
++		_fail "Extents of file '$file' ended at byte $offset, but needed until $end"
++	fi
++
++	# Execute the commands to write the data
++	_scratch_unmount
++	for cmd in "${dd_cmds[@]}"; do
++		eval "$cmd"
++	done < $tmp.bytes
++	sync	# Sync to flush the block device's pagecache
++	_scratch_mount
++}
++
++#
++# _fsv_scratch_corrupt_merkle_tree - Corrupt a file's Merkle tree
++#
++# Like _fsv_scratch_corrupt_bytes(), but this corrupts the file's fs-verity
++# Merkle tree.  The offset is given as a byte offset into the Merkle tree.
++#
++_fsv_scratch_corrupt_merkle_tree()
++{
++	local file=$1
++	local offset=$2
++
++	case $FSTYP in
++	ext4|f2fs)
++		# ext4 and f2fs store the Merkle tree after the file contents
++		# itself, starting at the next 65536-byte aligned boundary.
++		(( offset += ($(stat -c %s $file) + 65535) & ~65535 ))
++		_fsv_scratch_corrupt_bytes $file $offset
++		;;
++	*)
++		_fail "_fsv_scratch_corrupt_merkle_tree() unimplemented on $FSTYP"
++		;;
++	esac
++}
 -- 
-2.19.1
+2.22.0.410.gd8fdbe21b5-goog
