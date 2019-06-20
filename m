@@ -1,49 +1,44 @@
-Return-Path: <jaegeuk@kernel.org>
-Date: Sat, 22 Jun 2019 15:11:51 -0700
-From: Jaegeuk Kim <jaegeuk@kernel.org>
-Subject: Re: [PATCH v5 04/16] fs: uapi: define verity bit for FS_IOC_GETFLAGS
-Message-ID: <20190622221151.GD19686@jaegeuk-macbookpro.roam.corp.google.com>
+Return-Path: <SRS0=l2T0=UT=vger.kernel.org=linux-integrity-owner@kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v5 04/16] fs: uapi: define verity bit for FS_IOC_GETFLAGS
+Date: Thu, 20 Jun 2019 13:50:31 -0700
+Message-Id: <20190620205043.64350-5-ebiggers@kernel.org>
+In-Reply-To: <20190620205043.64350-1-ebiggers@kernel.org>
 References: <20190620205043.64350-1-ebiggers@kernel.org>
- <20190620205043.64350-5-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190620205043.64350-5-ebiggers@kernel.org>
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On 06/20, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> Add FS_VERITY_FL to the flags for FS_IOC_GETFLAGS, so that applications
-> can easily determine whether a file is a verity file at the same time as
-> they're checking other file flags.  This flag will be gettable only;
-> FS_IOC_SETFLAGS won't allow setting it, since an ioctl must be used
-> instead to provide more parameters.
-> 
-> This flag matches the on-disk bit that was already allocated for ext4.
-> 
-> Reviewed-by: Theodore Ts'o <tytso@mit.edu>
+From: Eric Biggers <ebiggers@google.com>
 
-Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
+Add FS_VERITY_FL to the flags for FS_IOC_GETFLAGS, so that applications
+can easily determine whether a file is a verity file at the same time as
+they're checking other file flags.  This flag will be gettable only;
+FS_IOC_SETFLAGS won't allow setting it, since an ioctl must be used
+instead to provide more parameters.
 
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> ---
->  include/uapi/linux/fs.h | 1 +
->  1 file changed, 1 insertion(+)
-> 
-> diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-> index 59c71fa8c553a3..df261b7e0587ed 100644
-> --- a/include/uapi/linux/fs.h
-> +++ b/include/uapi/linux/fs.h
-> @@ -306,6 +306,7 @@ struct fscrypt_key {
->  #define FS_TOPDIR_FL			0x00020000 /* Top of directory hierarchies*/
->  #define FS_HUGE_FILE_FL			0x00040000 /* Reserved for ext4 */
->  #define FS_EXTENT_FL			0x00080000 /* Extents */
-> +#define FS_VERITY_FL			0x00100000 /* Verity protected inode */
->  #define FS_EA_INODE_FL			0x00200000 /* Inode used for large EA */
->  #define FS_EOFBLOCKS_FL			0x00400000 /* Reserved for ext4 */
->  #define FS_NOCOW_FL			0x00800000 /* Do not cow file */
-> -- 
-> 2.22.0.410.gd8fdbe21b5-goog
+This flag matches the on-disk bit that was already allocated for ext4.
+
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ include/uapi/linux/fs.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
+index 59c71fa8c553a3..df261b7e0587ed 100644
+--- a/include/uapi/linux/fs.h
++++ b/include/uapi/linux/fs.h
+@@ -306,6 +306,7 @@ struct fscrypt_key {
+ #define FS_TOPDIR_FL			0x00020000 /* Top of directory hierarchies*/
+ #define FS_HUGE_FILE_FL			0x00040000 /* Reserved for ext4 */
+ #define FS_EXTENT_FL			0x00080000 /* Extents */
++#define FS_VERITY_FL			0x00100000 /* Verity protected inode */
+ #define FS_EA_INODE_FL			0x00200000 /* Inode used for large EA */
+ #define FS_EOFBLOCKS_FL			0x00400000 /* Reserved for ext4 */
+ #define FS_NOCOW_FL			0x00800000 /* Do not cow file */
+-- 
+2.22.0.410.gd8fdbe21b5-goog
