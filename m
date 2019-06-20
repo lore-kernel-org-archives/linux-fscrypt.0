@@ -1,59 +1,142 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:47170 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1725815AbfFTVij (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 20 Jun 2019 17:38:39 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Thu,  6 Jun 2019 08:51:53 -0700
-Message-Id: <20190606155205.2872-5-ebiggers@kernel.org>
-In-Reply-To: <20190606155205.2872-1-ebiggers@kernel.org>
-References: <20190606155205.2872-1-ebiggers@kernel.org>
+Subject: [RFC PATCH v2 4/8] generic: test access controls on the fs-verity ioctls
+Date: Thu, 20 Jun 2019 14:36:10 -0700
+Message-Id: <20190620213614.113685-5-ebiggers@kernel.org>
+In-Reply-To: <20190620213614.113685-1-ebiggers@kernel.org>
+References: <20190620213614.113685-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v4 04/16] fs: uapi: define verity bit for
- FS_IOC_GETFLAGS
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, "Darrick J . Wong" <darrick.wong@oracle.com>, linux-api@vger.kernel.org, Dave Chinner <david@fromorbit.com>, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Christoph Hellwig <hch@lst.de>, Victor Hsieh <victorhsieh@google.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add FS_VERITY_FL to the flags for FS_IOC_GETFLAGS, so that applications
-can easily determine whether a file is a verity file at the same time as
-they're checking other file flags.  This flag will be gettable only;
-FS_IOC_SETFLAGS won't allow setting it, since an ioctl must be used
-instead to provide more parameters.
-
-This flag matches the on-disk bit that was already allocated for ext4.
+Test access controls on the fs-verity ioctls.  FS_IOC_MEASURE_VERITY is
+allowed on any file, whereas FS_IOC_ENABLE_VERITY requires write access.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- include/uapi/linux/fs.h | 1 +
- 1 file changed, 1 insertion(+)
+ tests/generic/901     | 73 +++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/901.out | 14 +++++++++
+ tests/generic/group   |  1 +
+ 3 files changed, 88 insertions(+)
+ create mode 100755 tests/generic/901
+ create mode 100644 tests/generic/901.out
 
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index 59c71fa8c553..df261b7e0587 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -306,6 +306,7 @@ struct fscrypt_key {
- #define FS_TOPDIR_FL			0x00020000 /* Top of directory hierarchies*/
- #define FS_HUGE_FILE_FL			0x00040000 /* Reserved for ext4 */
- #define FS_EXTENT_FL			0x00080000 /* Extents */
-+#define FS_VERITY_FL			0x00100000 /* Verity protected inode */
- #define FS_EA_INODE_FL			0x00200000 /* Inode used for large EA */
- #define FS_EOFBLOCKS_FL			0x00400000 /* Reserved for ext4 */
- #define FS_NOCOW_FL			0x00800000 /* Do not cow file */
+diff --git a/tests/generic/901 b/tests/generic/901
+new file mode 100755
+index 00000000..56dab587
+--- /dev/null
++++ b/tests/generic/901
+@@ -0,0 +1,73 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2018 Google LLC
++#
++# FS QA Test generic/901
++#
++# Test access controls on the fs-verity ioctls.  FS_IOC_MEASURE_VERITY is
++# allowed on any file, whereas FS_IOC_ENABLE_VERITY requires write access.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/verity
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_scratch_verity
++_require_user
++_require_chattr ia
++
++_scratch_mkfs_verity &>> $seqres.full
++_scratch_mount
++fsv_file=$SCRATCH_MNT/file.fsv
++
++_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY doesn't require root"
++echo foo > $fsv_file
++chmod 666 $fsv_file
++_user_do "$FSVERITY_PROG enable $fsv_file"
++
++_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires write access"
++echo foo > $fsv_file >> $seqres.full
++chmod 444 $fsv_file
++_user_do "$FSVERITY_PROG enable $fsv_file" |& _filter_scratch
++
++_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires !append-only"
++echo foo > $fsv_file >> $seqres.full
++$CHATTR_PROG +a $fsv_file
++$FSVERITY_PROG enable $fsv_file |& _filter_scratch
++$CHATTR_PROG -a $fsv_file
++
++_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires !immutable"
++echo foo > $fsv_file >> $seqres.full
++$CHATTR_PROG +i $fsv_file
++$FSVERITY_PROG enable $fsv_file |& _filter_scratch
++$CHATTR_PROG -i $fsv_file
++
++_fsv_scratch_begin_subtest "FS_IOC_MEASURE_VERITY doesn't require root"
++_fsv_create_enable_file $fsv_file >> $seqres.full
++chmod 444 $fsv_file
++su $qa_user -c "$FSVERITY_PROG measure $fsv_file" >> $seqres.full
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/901.out b/tests/generic/901.out
+new file mode 100644
+index 00000000..a9e4c364
+--- /dev/null
++++ b/tests/generic/901.out
+@@ -0,0 +1,14 @@
++QA output created by 901
++
++# FS_IOC_ENABLE_VERITY doesn't require root
++
++# FS_IOC_ENABLE_VERITY requires write access
++Permission denied
++
++# FS_IOC_ENABLE_VERITY requires !append-only
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Operation not permitted
++
++# FS_IOC_ENABLE_VERITY requires !immutable
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Operation not permitted
++
++# FS_IOC_MEASURE_VERITY doesn't require root
+diff --git a/tests/generic/group b/tests/generic/group
+index ed6839a9..003fbff4 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -560,3 +560,4 @@
+ 555 auto quick cap
+ 556 auto quick casefold
+ 900 auto quick verity
++901 auto quick verity
 -- 
-2.21.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.22.0.410.gd8fdbe21b5-goog
