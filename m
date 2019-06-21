@@ -1,54 +1,219 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-MIME-Version: 1.0
-References: <20190621080918.22809-1-ard.biesheuvel@arm.com>
-In-Reply-To: <20190621080918.22809-1-ard.biesheuvel@arm.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sun, 23 Jun 2019 11:30:41 +0200
-Message-ID: <CAKv+Gu-ZO9Fnfx06XYJ-tp+6nrk0D8TBGa2chmxFW-kjPMmLCw@mail.gmail.com>
-Subject: Re: [dm-devel] [PATCH v4 0/6] crypto: switch to crypto API for
-	ESSIV generation
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, device-mapper development <dm-devel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Milan Broz <gmazyland@gmail.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from foss.arm.com ([217.140.110.172]:49712 "EHLO foss.arm.com"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726030AbfFUIJd (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 21 Jun 2019 04:09:33 -0400
+From: Ard Biesheuvel <ard.biesheuvel@arm.com>
+Subject: [PATCH v4 0/6] crypto: switch to crypto API for ESSIV generation
+Date: Fri, 21 Jun 2019 10:09:12 +0200
+Message-Id: <20190621080918.22809-1-ard.biesheuvel@arm.com>
+Reply-To: ard.biesheuvel@linaro.org
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Fri, 21 Jun 2019 at 10:09, Ard Biesheuvel <ard.biesheuvel@arm.com> wrote:
->
-> From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
->
-...
->
-> - given that hardware already exists that can perform en/decryption including
->   ESSIV generation of a range of blocks, it would be useful to encapsulate
->   this in the ESSIV template, and teach at least dm-crypt how to use it
->   (given that it often processes 8 512-byte sectors at a time)
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-I thought about this a bit more, and it occurred to me that the
-capability of issuing several sectors at a time and letting the lower
-layers increment the IV between sectors is orthogonal to whether ESSIV
-is being used or not, and so it probably belongs in another wrapper.
+This series creates an ESSIV template that produces a skcipher or AEAD
+transform based on a tuple of the form '<skcipher>,<cipher>,<shash>'
+(or '<aead>,<cipher>,<shash>' for the AEAD case). It exposes the
+encapsulated sync or async skcipher/aead by passing through all operations,
+while using the cipher/shash pair to transform the input IV into an ESSIV
+output IV.
 
-I.e., if we define a skcipher template like dmplain64le(), which is
-defined as taking a sector size as part of the key, and which
-increments a 64 LE counter between sectors if multiple are passed, it
-can be used not only for ESSIV but also for XTS, which I assume can be
-h/w accelerated in the same way.
+This matches what both users of ESSIV in the kernel do, and so it is proposed
+as a replacement for those, in patches #2 and #4.
 
-So with that in mind, I think we should decouple the multi-sector
-discussion and leave it for a followup series, preferably proposed by
-someone who also has access to some hardware to prototype it on.
+This code has been tested using the fscrypt test suggested by Eric
+(generic/549), as well as the mode-test script suggested by Milan for
+the dm-crypt case. I also tested the aead case in a virtual machine,
+but it definitely needs some wider testing from the dm-crypt experts.
 
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+Open issues (more discussion needed):
+- given that hardware already exists that can perform en/decryption including
+  ESSIV generation of a range of blocks, it would be useful to encapsulate
+  this in the ESSIV template, and teach at least dm-crypt how to use it
+  (given that it often processes 8 512-byte sectors at a time)
+- given the above, it may or may not make sense to keep the accelerated
+  implementation in patch #6 (and teach it to increment the LE counter after
+  each sector)
+
+Changes since v3:
+- address various review comments from Eric on patch #1
+- use Kconfig's 'imply' instead of 'select' to permit CRYPTO_ESSIV to be
+  enabled as a module or disabled entirely even if fscrypt is compiled in (#2)
+- fix an issue in the AEAD encrypt path caused by the IV being clobbered by
+  the inner skcipher before the hmac was being calculated
+
+Changes since v2:
+- fixed a couple of bugs that snuck in after I'd done the bulk of my
+  testing
+- some cosmetic tweaks to the ESSIV template skcipher setkey function
+  to align it with the aead one
+- add a test case for essiv(cbc(aes),aes,sha256)
+- add an accelerated implementation for arm64 that combines the IV
+  derivation and the actual en/decryption in a single asm routine
+
+Scroll down for tcrypt speed test result comparing the essiv template
+with the asm implementation. Bare cbc(aes) tests included for reference
+as well. Taken on a 2GHz Cortex-A57 (AMD Seattle)
+
+Code can be found here
+https://git.kernel.org/pub/scm/linux/kernel/git/ardb/linux.git/log/?h=essiv-v4
+
+Cc: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: Eric Biggers <ebiggers@google.com>
+Cc: dm-devel@redhat.com
+Cc: linux-fscrypt@vger.kernel.org
+Cc: Gilad Ben-Yossef <gilad@benyossef.com>
+Cc: Milan Broz <gmazyland@gmail.com>
+
+Ard Biesheuvel (6):
+  crypto: essiv - create wrapper template for ESSIV generation
+  fs: crypto: invoke crypto API for ESSIV handling
+  md: dm-crypt: infer ESSIV block cipher from cipher string directly
+  md: dm-crypt: switch to ESSIV crypto API template
+  crypto: essiv - add test vector for essiv(cbc(aes),aes,sha256)
+  crypto: arm64/aes - implement accelerated ESSIV/CBC mode
+
+ arch/arm64/crypto/aes-glue.c  | 129 ++++
+ arch/arm64/crypto/aes-modes.S |  99 +++
+ crypto/Kconfig                |   4 +
+ crypto/Makefile               |   1 +
+ crypto/essiv.c                | 639 ++++++++++++++++++++
+ crypto/tcrypt.c               |   9 +
+ crypto/testmgr.c              |   6 +
+ crypto/testmgr.h              | 208 +++++++
+ drivers/md/Kconfig            |   1 +
+ drivers/md/dm-crypt.c         | 237 ++------
+ fs/crypto/Kconfig             |   1 +
+ fs/crypto/crypto.c            |   5 -
+ fs/crypto/fscrypt_private.h   |   9 -
+ fs/crypto/keyinfo.c           |  88 +--
+ 14 files changed, 1141 insertions(+), 295 deletions(-)
+ create mode 100644 crypto/essiv.c
+
+-- 
+2.17.1
+
+testing speed of async essiv(cbc(aes),aes,sha256) (essiv(cbc-aes-ce,aes-ce,sha256-ce)) encryption
+tcrypt: test  0 (128 bit key,   16 byte blocks): 3140785 ops/s ( 50252560 bytes)
+tcrypt: test  1 (128 bit key,   64 byte blocks): 2672908 ops/s (171066112 bytes)
+tcrypt: test  2 (128 bit key,  256 byte blocks): 1632811 ops/s (417999616 bytes)
+tcrypt: test  3 (128 bit key, 1024 byte blocks):  665980 ops/s (681963520 bytes)
+tcrypt: test  4 (128 bit key, 1472 byte blocks):  495180 ops/s (728904960 bytes)
+tcrypt: test  5 (128 bit key, 8192 byte blocks):   99329 ops/s (813703168 bytes)
+tcrypt: test  6 (192 bit key,   16 byte blocks): 3106888 ops/s ( 49710208 bytes)
+tcrypt: test  7 (192 bit key,   64 byte blocks): 2582682 ops/s (165291648 bytes)
+tcrypt: test  8 (192 bit key,  256 byte blocks): 1511160 ops/s (386856960 bytes)
+tcrypt: test  9 (192 bit key, 1024 byte blocks):  589841 ops/s (603997184 bytes)
+tcrypt: test 10 (192 bit key, 1472 byte blocks):  435094 ops/s (640458368 bytes)
+tcrypt: test 11 (192 bit key, 8192 byte blocks):   82997 ops/s (679911424 bytes)
+tcrypt: test 12 (256 bit key,   16 byte blocks): 3058592 ops/s ( 48937472 bytes)
+tcrypt: test 13 (256 bit key,   64 byte blocks): 2496988 ops/s (159807232 bytes)
+tcrypt: test 14 (256 bit key,  256 byte blocks): 1438355 ops/s (368218880 bytes)
+tcrypt: test 15 (256 bit key, 1024 byte blocks):  528902 ops/s (541595648 bytes)
+tcrypt: test 16 (256 bit key, 1472 byte blocks):  387861 ops/s (570931392 bytes)
+tcrypt: test 17 (256 bit key, 8192 byte blocks):   75444 ops/s (618037248 bytes)
+
+testing speed of async essiv(cbc(aes),aes,sha256) (essiv(cbc-aes-ce,aes-ce,sha256-ce)) decryption
+tcrypt: test  0 (128 bit key,   16 byte blocks): 3164752 ops/s (  50636032 bytes)
+tcrypt: test  1 (128 bit key,   64 byte blocks): 2975874 ops/s ( 190455936 bytes)
+tcrypt: test  2 (128 bit key,  256 byte blocks): 2393123 ops/s ( 612639488 bytes)
+tcrypt: test  3 (128 bit key, 1024 byte blocks): 1314745 ops/s (1346298880 bytes)
+tcrypt: test  4 (128 bit key, 1472 byte blocks): 1050717 ops/s (1546655424 bytes)
+tcrypt: test  5 (128 bit key, 8192 byte blocks):  246457 ops/s (2018975744 bytes)
+tcrypt: test  6 (192 bit key,   16 byte blocks): 3117489 ops/s (  49879824 bytes)
+tcrypt: test  7 (192 bit key,   64 byte blocks): 2922089 ops/s ( 187013696 bytes)
+tcrypt: test  8 (192 bit key,  256 byte blocks): 2292023 ops/s ( 586757888 bytes)
+tcrypt: test  9 (192 bit key, 1024 byte blocks): 1207942 ops/s (1236932608 bytes)
+tcrypt: test 10 (192 bit key, 1472 byte blocks):  955598 ops/s (1406640256 bytes)
+tcrypt: test 11 (192 bit key, 8192 byte blocks):  195198 ops/s (1599062016 bytes)
+tcrypt: test 12 (256 bit key,   16 byte blocks): 3081935 ops/s (  49310960 bytes)
+tcrypt: test 13 (256 bit key,   64 byte blocks): 2883181 ops/s ( 184523584 bytes)
+tcrypt: test 14 (256 bit key,  256 byte blocks): 2205147 ops/s ( 564517632 bytes)
+tcrypt: test 15 (256 bit key, 1024 byte blocks): 1119468 ops/s (1146335232 bytes)
+tcrypt: test 16 (256 bit key, 1472 byte blocks):  877017 ops/s (1290969024 bytes)
+tcrypt: test 17 (256 bit key, 8192 byte blocks):  195255 ops/s (1599528960 bytes)
+
+
+testing speed of async essiv(cbc(aes),aes,sha256) (essiv-cbc-aes-sha256-ce) encryption
+tcrypt: test  0 (128 bit key,   16 byte blocks): 5037539 ops/s ( 80600624 bytes)
+tcrypt: test  1 (128 bit key,   64 byte blocks): 3884302 ops/s (248595328 bytes)
+tcrypt: test  2 (128 bit key,  256 byte blocks): 2014999 ops/s (515839744 bytes)
+tcrypt: test  3 (128 bit key, 1024 byte blocks):  721147 ops/s (738454528 bytes)
+tcrypt: test  4 (128 bit key, 1472 byte blocks):  525262 ops/s (773185664 bytes)
+tcrypt: test  5 (128 bit key, 8192 byte blocks):  100453 ops/s (822910976 bytes)
+tcrypt: test  6 (192 bit key,   16 byte blocks): 4972667 ops/s ( 79562672 bytes)
+tcrypt: test  7 (192 bit key,   64 byte blocks): 3721788 ops/s (238194432 bytes)
+tcrypt: test  8 (192 bit key,  256 byte blocks): 1835967 ops/s (470007552 bytes)
+tcrypt: test  9 (192 bit key, 1024 byte blocks):  633524 ops/s (648728576 bytes)
+tcrypt: test 10 (192 bit key, 1472 byte blocks):  458306 ops/s (674626432 bytes)
+tcrypt: test 11 (192 bit key, 8192 byte blocks):   83595 ops/s (684810240 bytes)
+tcrypt: test 12 (256 bit key,   16 byte blocks): 4975101 ops/s ( 79601616 bytes)
+tcrypt: test 13 (256 bit key,   64 byte blocks): 3581137 ops/s (229192768 bytes)
+tcrypt: test 14 (256 bit key,  256 byte blocks): 1741799 ops/s (445900544 bytes)
+tcrypt: test 15 (256 bit key, 1024 byte blocks):  565340 ops/s (578908160 bytes)
+tcrypt: test 16 (256 bit key, 1472 byte blocks):  407040 ops/s (599162880 bytes)
+tcrypt: test 17 (256 bit key, 8192 byte blocks):   76092 ops/s (623345664 bytes)
+
+testing speed of async essiv(cbc(aes),aes,sha256) (essiv-cbc-aes-sha256-ce) decryption
+tcrypt: test  0 (128 bit key,   16 byte blocks): 5122947 ops/s (  81967152 bytes)
+tcrypt: test  1 (128 bit key,   64 byte blocks): 4546576 ops/s ( 290980864 bytes)
+tcrypt: test  2 (128 bit key,  256 byte blocks): 3314744 ops/s ( 848574464 bytes)
+tcrypt: test  3 (128 bit key, 1024 byte blocks): 1550823 ops/s (1588042752 bytes)
+tcrypt: test  4 (128 bit key, 1472 byte blocks): 1197388 ops/s (1762555136 bytes)
+tcrypt: test  5 (128 bit key, 8192 byte blocks):  253661 ops/s (2077990912 bytes)
+tcrypt: test  6 (192 bit key,   16 byte blocks): 5040644 ops/s (  80650304 bytes)
+tcrypt: test  7 (192 bit key,   64 byte blocks): 4442490 ops/s ( 284319360 bytes)
+tcrypt: test  8 (192 bit key,  256 byte blocks): 3138199 ops/s ( 803378944 bytes)
+tcrypt: test  9 (192 bit key, 1024 byte blocks): 1406038 ops/s (1439782912 bytes)
+tcrypt: test 10 (192 bit key, 1472 byte blocks): 1075658 ops/s (1583368576 bytes)
+tcrypt: test 11 (192 bit key, 8192 byte blocks):  199652 ops/s (1635549184 bytes)
+tcrypt: test 12 (256 bit key,   16 byte blocks): 4979432 ops/s (  79670912 bytes)
+tcrypt: test 13 (256 bit key,   64 byte blocks): 4394406 ops/s ( 281241984 bytes)
+tcrypt: test 14 (256 bit key,  256 byte blocks): 2999511 ops/s ( 767874816 bytes)
+tcrypt: test 15 (256 bit key, 1024 byte blocks): 1294498 ops/s (1325565952 bytes)
+tcrypt: test 16 (256 bit key, 1472 byte blocks):  981009 ops/s (1444045248 bytes)
+tcrypt: test 17 (256 bit key, 8192 byte blocks):  200463 ops/s (1642192896 bytes)
+
+testing speed of async cbc(aes) (cbc-aes-ce) encryption
+tcrypt: test  0 (128 bit key,   16 byte blocks): 5895884 ops/s ( 94334144 bytes)
+tcrypt: test  1 (128 bit key,   64 byte blocks): 4347437 ops/s (278235968 bytes)
+tcrypt: test  2 (128 bit key,  256 byte blocks): 2135454 ops/s (546676224 bytes)
+tcrypt: test  3 (128 bit key, 1024 byte blocks):  736839 ops/s (754523136 bytes)
+tcrypt: test  4 (128 bit key, 1472 byte blocks):  533261 ops/s (784960192 bytes)
+tcrypt: test  5 (128 bit key, 8192 byte blocks):  100850 ops/s (826163200 bytes)
+tcrypt: test  6 (192 bit key,   16 byte blocks): 5745691 ops/s ( 91931056 bytes)
+tcrypt: test  7 (192 bit key,   64 byte blocks): 4113271 ops/s (263249344 bytes)
+tcrypt: test  8 (192 bit key,  256 byte blocks): 1932208 ops/s (494645248 bytes)
+tcrypt: test  9 (192 bit key, 1024 byte blocks):  644555 ops/s (660024320 bytes)
+tcrypt: test 10 (192 bit key, 1472 byte blocks):  464237 ops/s (683356864 bytes)
+tcrypt: test 11 (192 bit key, 8192 byte blocks):   84019 ops/s (688283648 bytes)
+tcrypt: test 12 (256 bit key,   16 byte blocks): 5620065 ops/s ( 89921040 bytes)
+tcrypt: test 13 (256 bit key,   64 byte blocks): 3982991 ops/s (254911424 bytes)
+tcrypt: test 14 (256 bit key,  256 byte blocks): 1830587 ops/s (468630272 bytes)
+tcrypt: test 15 (256 bit key, 1024 byte blocks):  576151 ops/s (589978624 bytes)
+tcrypt: test 16 (256 bit key, 1472 byte blocks):  412487 ops/s (607180864 bytes)
+tcrypt: test 17 (256 bit key, 8192 byte blocks):   76378 ops/s (625688576 bytes)
+
+testing speed of async cbc(aes) (cbc-aes-ce) decryption
+tcrypt: test  0 (128 bit key,   16 byte blocks): 5821314 ops/s (  93141024 bytes)
+tcrypt: test  1 (128 bit key,   64 byte blocks): 5248040 ops/s ( 335874560 bytes)
+tcrypt: test  2 (128 bit key,  256 byte blocks): 3677701 ops/s ( 941491456 bytes)
+tcrypt: test  3 (128 bit key, 1024 byte blocks): 1650808 ops/s (1690427392 bytes)
+tcrypt: test  4 (128 bit key, 1472 byte blocks): 1256545 ops/s (1849634240 bytes)
+tcrypt: test  5 (128 bit key, 8192 byte blocks):  257922 ops/s (2112897024 bytes)
+tcrypt: test  6 (192 bit key,   16 byte blocks): 5690108 ops/s (  91041728 bytes)
+tcrypt: test  7 (192 bit key,   64 byte blocks): 5086441 ops/s ( 325532224 bytes)
+tcrypt: test  8 (192 bit key,  256 byte blocks): 3447562 ops/s ( 882575872 bytes)
+tcrypt: test  9 (192 bit key, 1024 byte blocks): 1490136 ops/s (1525899264 bytes)
+tcrypt: test 10 (192 bit key, 1472 byte blocks): 1124620 ops/s (1655440640 bytes)
+tcrypt: test 11 (192 bit key, 8192 byte blocks):  201222 ops/s (1648410624 bytes)
+tcrypt: test 12 (256 bit key,   16 byte blocks): 5567247 ops/s (  89075952 bytes)
+tcrypt: test 13 (256 bit key,   64 byte blocks): 5050010 ops/s ( 323200640 bytes)
+tcrypt: test 14 (256 bit key,  256 byte blocks): 3290422 ops/s ( 842348032 bytes)
+tcrypt: test 15 (256 bit key, 1024 byte blocks): 1359439 ops/s (1392065536 bytes)
+tcrypt: test 16 (256 bit key, 1472 byte blocks): 1017751 ops/s (1498129472 bytes)
+tcrypt: test 17 (256 bit key, 8192 byte blocks):  201492 ops/s (1650622464 bytes)
