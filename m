@@ -1,308 +1,330 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 20 May 2019 10:25:45 -0700
-Message-Id: <20190520172552.217253-10-ebiggers@kernel.org>
-In-Reply-To: <20190520172552.217253-1-ebiggers@kernel.org>
-References: <20190520172552.217253-1-ebiggers@kernel.org>
-MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v6 09/16] fscrypt: add an HKDF-SHA512
- implementation
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from foss.arm.com ([217.140.110.172]:49804 "EHLO foss.arm.com"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726030AbfFUIJp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 21 Jun 2019 04:09:45 -0400
+From: Ard Biesheuvel <ard.biesheuvel@arm.com>
+Subject: [PATCH v4 6/6] crypto: arm64/aes - implement accelerated ESSIV/CBC mode
+Date: Fri, 21 Jun 2019 10:09:18 +0200
+Message-Id: <20190621080918.22809-7-ard.biesheuvel@arm.com>
+In-Reply-To: <20190621080918.22809-1-ard.biesheuvel@arm.com>
+References: <20190621080918.22809-1-ard.biesheuvel@arm.com>
+Reply-To: ard.biesheuvel@linaro.org
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 
-Add an implementation of HKDF (RFC 5869) to fscrypt, for the purpose of
-deriving additional key material from the fscrypt master keys for v2
-encryption policies.  HKDF is a key derivation function built on top of
-HMAC.  We choose SHA-512 for the underlying unkeyed hash, and use an
-"hmac(sha512)" transform allocated from the crypto API.
+Add an accelerated version of the 'essiv(cbc(aes),aes,sha256'
+skcipher, which is used by fscrypt, and in some cases, by dm-crypt.
+This avoids a separate call into the AES cipher for every invocation.
 
-We'll be using this to replace the AES-ECB based KDF currently used to
-derive the per-file encryption keys.  While the AES-ECB based KDF is
-believed to meet the original security requirements, it is nonstandard
-and has problems that don't exist in modern KDFs such as HKDF:
-
-1. It's reversible.  Given a derived key and nonce, an attacker can
-   easily compute the master key.  This is okay if the master key and
-   derived keys are equally hard to compromise, but now we'd like to be
-   more robust against threats such as a derived key being compromised
-   through a timing attack, or a derived key for an in-use file being
-   compromised after the master key has already been removed.
-
-2. It doesn't evenly distribute the entropy from the master key; each 16
-   input bytes only affects the corresponding 16 output bytes.
-
-3. It isn't easily extensible to deriving other values or keys, such as
-   a public hash for securely identifying the key, or per-mode keys.
-   Per-mode keys will be immediately useful for Adiantum encryption, for
-   which fscrypt currently uses the master key directly, introducing
-   unnecessary usage constraints.  Per-mode keys will also be useful for
-   hardware inline encryption, which is currently being worked on.
-
-HKDF solves all the above problems.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- fs/crypto/Kconfig           |   2 +
- fs/crypto/Makefile          |   1 +
- fs/crypto/fscrypt_private.h |  15 +++
- fs/crypto/hkdf.c            | 178 ++++++++++++++++++++++++++++++++++++
- 4 files changed, 196 insertions(+)
- create mode 100644 fs/crypto/hkdf.c
+ arch/arm64/crypto/aes-glue.c  | 129 ++++++++++++++++++++
+ arch/arm64/crypto/aes-modes.S |  99 +++++++++++++++
+ 2 files changed, 228 insertions(+)
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index f0de238000c02..c160598a9fe2c 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -7,6 +7,8 @@ config FS_ENCRYPTION
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select CRYPTO_SHA256
-+	select CRYPTO_SHA512
-+	select CRYPTO_HMAC
- 	select KEYS
- 	help
- 	  Enable encryption of files and directories.  This
-diff --git a/fs/crypto/Makefile b/fs/crypto/Makefile
-index accdd622c9083..4977b43479289 100644
---- a/fs/crypto/Makefile
-+++ b/fs/crypto/Makefile
-@@ -2,6 +2,7 @@ obj-$(CONFIG_FS_ENCRYPTION)	+= fscrypto.o
+diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
+index f0ceb545bd1e..6dab2f062cea 100644
+--- a/arch/arm64/crypto/aes-glue.c
++++ b/arch/arm64/crypto/aes-glue.c
+@@ -12,6 +12,7 @@
+ #include <asm/hwcap.h>
+ #include <asm/simd.h>
+ #include <crypto/aes.h>
++#include <crypto/sha.h>
+ #include <crypto/internal/hash.h>
+ #include <crypto/internal/simd.h>
+ #include <crypto/internal/skcipher.h>
+@@ -34,6 +35,8 @@
+ #define aes_cbc_decrypt		ce_aes_cbc_decrypt
+ #define aes_cbc_cts_encrypt	ce_aes_cbc_cts_encrypt
+ #define aes_cbc_cts_decrypt	ce_aes_cbc_cts_decrypt
++#define aes_essiv_cbc_encrypt	ce_aes_essiv_cbc_encrypt
++#define aes_essiv_cbc_decrypt	ce_aes_essiv_cbc_decrypt
+ #define aes_ctr_encrypt		ce_aes_ctr_encrypt
+ #define aes_xts_encrypt		ce_aes_xts_encrypt
+ #define aes_xts_decrypt		ce_aes_xts_decrypt
+@@ -50,6 +53,8 @@ MODULE_DESCRIPTION("AES-ECB/CBC/CTR/XTS using ARMv8 Crypto Extensions");
+ #define aes_cbc_decrypt		neon_aes_cbc_decrypt
+ #define aes_cbc_cts_encrypt	neon_aes_cbc_cts_encrypt
+ #define aes_cbc_cts_decrypt	neon_aes_cbc_cts_decrypt
++#define aes_essiv_cbc_encrypt	neon_aes_essiv_cbc_encrypt
++#define aes_essiv_cbc_decrypt	neon_aes_essiv_cbc_decrypt
+ #define aes_ctr_encrypt		neon_aes_ctr_encrypt
+ #define aes_xts_encrypt		neon_aes_xts_encrypt
+ #define aes_xts_decrypt		neon_aes_xts_decrypt
+@@ -93,6 +98,13 @@ asmlinkage void aes_xts_decrypt(u8 out[], u8 const in[], u32 const rk1[],
+ 				int rounds, int blocks, u32 const rk2[], u8 iv[],
+ 				int first);
  
- fscrypto-y := crypto.o \
- 	      fname.o \
-+	      hkdf.o \
- 	      hooks.o \
- 	      keyring.o \
- 	      keysetup.o \
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index cc1862c9baa1d..e2a65189eb578 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -175,6 +175,21 @@ extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
- 					 u32 orig_len, u32 max_len,
- 					 u32 *encrypted_len_ret);
- 
-+/* hkdf.c */
++asmlinkage void aes_essiv_cbc_encrypt(u8 out[], u8 const in[], u32 const rk1[],
++				      int rounds, int blocks, u32 const rk2[],
++				      u8 iv[], int first);
++asmlinkage void aes_essiv_cbc_decrypt(u8 out[], u8 const in[], u32 const rk1[],
++				      int rounds, int blocks, u32 const rk2[],
++				      u8 iv[], int first);
 +
-+struct fscrypt_hkdf {
-+	struct crypto_shash *hmac_tfm;
+ asmlinkage void aes_mac_update(u8 const in[], u32 const rk[], int rounds,
+ 			       int blocks, u8 dg[], int enc_before,
+ 			       int enc_after);
+@@ -108,6 +120,12 @@ struct crypto_aes_xts_ctx {
+ 	struct crypto_aes_ctx __aligned(8) key2;
+ };
+ 
++struct crypto_aes_essiv_cbc_ctx {
++	struct crypto_aes_ctx key1;
++	struct crypto_aes_ctx __aligned(8) key2;
++	struct crypto_shash *hash;
 +};
 +
-+extern int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
-+			     unsigned int master_key_size);
-+
-+extern int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
-+			       const u8 *info, unsigned int infolen,
-+			       u8 *okm, unsigned int okmlen);
-+
-+extern void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf);
-+
- /* keyring.c */
+ struct mac_tfm_ctx {
+ 	struct crypto_aes_ctx key;
+ 	u8 __aligned(8) consts[];
+@@ -145,6 +163,31 @@ static int xts_set_key(struct crypto_skcipher *tfm, const u8 *in_key,
+ 	return -EINVAL;
+ }
  
- /*
-diff --git a/fs/crypto/hkdf.c b/fs/crypto/hkdf.c
-new file mode 100644
-index 0000000000000..00178567be086
---- /dev/null
-+++ b/fs/crypto/hkdf.c
-@@ -0,0 +1,178 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Implementation of HKDF ("HMAC-based Extract-and-Expand Key Derivation
-+ * Function"), aka RFC 5869.  See also the original paper (Krawczyk 2010):
-+ * "Cryptographic Extraction and Key Derivation: The HKDF Scheme".
-+ *
-+ * This is used to derive keys from the fscrypt master keys.
-+ *
-+ * Copyright 2019 Google LLC
-+ */
-+
-+#include <crypto/hash.h>
-+#include <crypto/sha.h>
-+
-+#include "fscrypt_private.h"
-+
-+/*
-+ * HKDF supports any unkeyed cryptographic hash algorithm, but fscrypt uses
-+ * SHA-512 because it is reasonably secure and efficient; and since it produces
-+ * a 64-byte digest, deriving an AES-256-XTS key preserves all 64 bytes of
-+ * entropy from the master key and requires only one iteration of HKDF-Expand.
-+ */
-+#define HKDF_HMAC_ALG		"hmac(sha512)"
-+#define HKDF_HASHLEN		SHA512_DIGEST_SIZE
-+
-+/*
-+ * HKDF consists of two steps:
-+ *
-+ * 1. HKDF-Extract: extract a pseudorandom key of length HKDF_HASHLEN bytes from
-+ *    the input keying material and optional salt.
-+ * 2. HKDF-Expand: expand the pseudorandom key into output keying material of
-+ *    any length, parameterized by an application-specific info string.
-+ *
-+ * HKDF-Extract can be skipped if the input is already a pseudorandom key of
-+ * length HKDF_HASHLEN bytes.  However, cipher modes other than AES-256-XTS take
-+ * shorter keys, and we don't want to force users of those modes to provide
-+ * unnecessarily long master keys.  Thus fscrypt still does HKDF-Extract.  No
-+ * salt is used, since fscrypt master keys should already be pseudorandom and
-+ * there's no way to persist a random salt per master key from kernel mode.
-+ */
-+
-+/* HKDF-Extract (RFC 5869 section 2.2), unsalted */
-+static int hkdf_extract(struct crypto_shash *hmac_tfm, const u8 *ikm,
-+			unsigned int ikmlen, u8 prk[HKDF_HASHLEN])
++static int essiv_cbc_set_key(struct crypto_skcipher *tfm, const u8 *in_key,
++			     unsigned int key_len)
 +{
-+	static const u8 default_salt[HKDF_HASHLEN];
-+	SHASH_DESC_ON_STACK(desc, hmac_tfm);
-+	int err;
++	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
++	SHASH_DESC_ON_STACK(desc, ctx->hash);
++	u8 digest[SHA256_DIGEST_SIZE];
++	int ret;
 +
-+	err = crypto_shash_setkey(hmac_tfm, default_salt, HKDF_HASHLEN);
-+	if (err)
-+		return err;
++	ret = aes_expandkey(&ctx->key1, in_key, key_len);
++	if (ret)
++		goto out;
 +
-+	desc->tfm = hmac_tfm;
-+	err = crypto_shash_digest(desc, ikm, ikmlen, prk);
-+	shash_desc_zero(desc);
-+	return err;
++	desc->tfm = ctx->hash;
++	crypto_shash_digest(desc, in_key, key_len, digest);
++
++	ret = aes_expandkey(&ctx->key2, digest, sizeof(digest));
++	if (ret)
++		goto out;
++
++	return 0;
++out:
++	crypto_skcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
++	return -EINVAL;
 +}
 +
-+/*
-+ * Compute HKDF-Extract using the given master key as the input keying material,
-+ * and prepare an HMAC transform object keyed by the resulting pseudorandom key.
-+ *
-+ * Afterwards, the keyed HMAC transform object can be used for HKDF-Expand many
-+ * times without having to recompute HKDF-Extract each time.
-+ */
-+int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
-+		      unsigned int master_key_size)
+ static int ecb_encrypt(struct skcipher_request *req)
+ {
+ 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+@@ -361,6 +404,74 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
+ 	return skcipher_walk_done(&walk, 0);
+ }
+ 
++static int essiv_cbc_init_tfm(struct crypto_skcipher *tfm)
 +{
-+	struct crypto_shash *hmac_tfm;
-+	u8 prk[HKDF_HASHLEN];
-+	int err;
++	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
 +
-+	hmac_tfm = crypto_alloc_shash(HKDF_HMAC_ALG, 0, 0);
-+	if (IS_ERR(hmac_tfm)) {
-+		fscrypt_warn(NULL, "error allocating " HKDF_HMAC_ALG ": %ld",
-+			     PTR_ERR(hmac_tfm));
-+		return PTR_ERR(hmac_tfm);
++	ctx->hash = crypto_alloc_shash("sha256", 0, 0);
++	if (IS_ERR(ctx->hash))
++		return PTR_ERR(ctx->hash);
++
++	return 0;
++}
++
++static void essiv_cbc_exit_tfm(struct crypto_skcipher *tfm)
++{
++	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
++
++	crypto_free_shash(ctx->hash);
++}
++
++static int essiv_cbc_encrypt(struct skcipher_request *req)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
++	int err, first, rounds = 6 + ctx->key1.key_length / 4;
++	struct skcipher_walk walk;
++	u8 iv[AES_BLOCK_SIZE];
++	unsigned int blocks;
++
++	memcpy(iv, req->iv, crypto_skcipher_ivsize(tfm));
++
++	err = skcipher_walk_virt(&walk, req, false);
++
++	for (first = 1; (blocks = (walk.nbytes / AES_BLOCK_SIZE)); first = 0) {
++		kernel_neon_begin();
++		aes_essiv_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
++				      ctx->key1.key_enc, rounds, blocks,
++				      ctx->key2.key_enc, iv, first);
++		kernel_neon_end();
++		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
 +	}
 +
-+	BUG_ON(crypto_shash_digestsize(hmac_tfm) != sizeof(prk));
-+
-+	err = hkdf_extract(hmac_tfm, master_key, master_key_size, prk);
-+	if (err)
-+		goto err_free_tfm;
-+
-+	err = crypto_shash_setkey(hmac_tfm, prk, sizeof(prk));
-+	if (err)
-+		goto err_free_tfm;
-+
-+	hkdf->hmac_tfm = hmac_tfm;
-+	goto out;
-+
-+err_free_tfm:
-+	crypto_free_shash(hmac_tfm);
-+out:
-+	memzero_explicit(prk, sizeof(prk));
 +	return err;
 +}
 +
-+/*
-+ * HKDF-Expand (RFC 5869 section 2.3).  This expands the pseudorandom key, which
-+ * was already keyed into 'hkdf->hmac_tfm' by fscrypt_init_hkdf(), into 'okmlen'
-+ * bytes of output keying material parameterized by the application-specific
-+ * 'info' of length 'infolen' bytes, prefixed by "fscrypt" and the 'context'
-+ * byte.  This is thread-safe and may be called by multiple threads in parallel.
-+ *
-+ * ('context' isn't part of the HKDF specification; it's just a prefix fscrypt
-+ * adds to its application-specific info strings to guarantee that it doesn't
-+ * accidentally repeat an info string when using HKDF for different purposes.)
-+ */
-+int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
-+			const u8 *info, unsigned int infolen,
-+			u8 *okm, unsigned int okmlen)
++static int essiv_cbc_decrypt(struct skcipher_request *req)
 +{
-+	SHASH_DESC_ON_STACK(desc, hkdf->hmac_tfm);
-+	u8 prefix[9];
-+	unsigned int i;
-+	int err;
-+	const u8 *prev = NULL;
-+	u8 counter = 1;
-+	u8 tmp[HKDF_HASHLEN];
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
++	int err, first, rounds = 6 + ctx->key1.key_length / 4;
++	struct skcipher_walk walk;
++	u8 iv[AES_BLOCK_SIZE];
++	unsigned int blocks;
 +
-+	if (WARN_ON(okmlen > 255 * HKDF_HASHLEN))
-+		return -EINVAL;
++	memcpy(iv, req->iv, crypto_skcipher_ivsize(tfm));
 +
-+	desc->tfm = hkdf->hmac_tfm;
++	err = skcipher_walk_virt(&walk, req, false);
 +
-+	memcpy(prefix, "fscrypt\0", 8);
-+	prefix[8] = context;
-+
-+	for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
-+
-+		err = crypto_shash_init(desc);
-+		if (err)
-+			goto out;
-+
-+		if (prev) {
-+			err = crypto_shash_update(desc, prev, HKDF_HASHLEN);
-+			if (err)
-+				goto out;
-+		}
-+
-+		err = crypto_shash_update(desc, prefix, sizeof(prefix));
-+		if (err)
-+			goto out;
-+
-+		err = crypto_shash_update(desc, info, infolen);
-+		if (err)
-+			goto out;
-+
-+		BUILD_BUG_ON(sizeof(counter) != 1);
-+		if (okmlen - i < HKDF_HASHLEN) {
-+			err = crypto_shash_finup(desc, &counter, 1, tmp);
-+			if (err)
-+				goto out;
-+			memcpy(&okm[i], tmp, okmlen - i);
-+			memzero_explicit(tmp, sizeof(tmp));
-+		} else {
-+			err = crypto_shash_finup(desc, &counter, 1, &okm[i]);
-+			if (err)
-+				goto out;
-+		}
-+		counter++;
-+		prev = &okm[i];
++	for (first = 1; (blocks = (walk.nbytes / AES_BLOCK_SIZE)); first = 0) {
++		kernel_neon_begin();
++		aes_essiv_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
++				      ctx->key1.key_dec, rounds, blocks,
++				      ctx->key2.key_enc, iv, first);
++		kernel_neon_end();
++		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
 +	}
-+	err = 0;
-+out:
-+	if (unlikely(err))
-+		memzero_explicit(okm, okmlen); /* so caller doesn't need to */
-+	shash_desc_zero(desc);
++
 +	return err;
 +}
 +
-+void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf)
-+{
-+	crypto_free_shash(hkdf->hmac_tfm);
-+}
+ static int ctr_encrypt(struct skcipher_request *req)
+ {
+ 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+@@ -504,6 +615,24 @@ static struct skcipher_alg aes_algs[] = { {
+ 	.encrypt	= cts_cbc_encrypt,
+ 	.decrypt	= cts_cbc_decrypt,
+ 	.init		= cts_cbc_init_tfm,
++}, {
++	.base = {
++		.cra_name		= "__essiv(cbc(aes),aes,sha256)",
++		.cra_driver_name	= "__essiv-cbc-aes-sha256-" MODE,
++		.cra_priority		= PRIO + 1,
++		.cra_flags		= CRYPTO_ALG_INTERNAL,
++		.cra_blocksize		= AES_BLOCK_SIZE,
++		.cra_ctxsize		= sizeof(struct crypto_aes_essiv_cbc_ctx),
++		.cra_module		= THIS_MODULE,
++	},
++	.min_keysize	= AES_MIN_KEY_SIZE,
++	.max_keysize	= AES_MAX_KEY_SIZE,
++	.ivsize		= sizeof(u64),
++	.setkey		= essiv_cbc_set_key,
++	.encrypt	= essiv_cbc_encrypt,
++	.decrypt	= essiv_cbc_decrypt,
++	.init		= essiv_cbc_init_tfm,
++	.exit		= essiv_cbc_exit_tfm,
+ }, {
+ 	.base = {
+ 		.cra_name		= "__ctr(aes)",
+diff --git a/arch/arm64/crypto/aes-modes.S b/arch/arm64/crypto/aes-modes.S
+index 4c7ce231963c..4ebc61375aa6 100644
+--- a/arch/arm64/crypto/aes-modes.S
++++ b/arch/arm64/crypto/aes-modes.S
+@@ -247,6 +247,105 @@ AES_ENDPROC(aes_cbc_cts_decrypt)
+ 	.byte		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+ 	.previous
+ 
++	/*
++	 * aes_essiv_cbc_encrypt(u8 out[], u8 const in[], u32 const rk1[],
++	 *			 int rounds, int blocks, u32 const rk2[],
++	 *			 u8 iv[], int first);
++	 * aes_essiv_cbc_decrypt(u8 out[], u8 const in[], u32 const rk1[],
++	 *			 int rounds, int blocks, u32 const rk2[],
++	 *			 u8 iv[], int first);
++	 */
++
++AES_ENTRY(aes_essiv_cbc_encrypt)
++	ld1		{v4.16b}, [x6]			/* get iv */
++	cbz		x7, .Lessivcbcencnotfirst
++
++	mov		w8, #14				/* AES-256: 14 rounds */
++	enc_prepare	w8, x5, x7
++	mov		v4.8b, v4.8b
++	encrypt_block	v4, w8, x5, x7, w9
++
++.Lessivcbcencnotfirst:
++	enc_prepare	w3, x2, x7
++.Lessivcbcencloop4x:
++	subs		w4, w4, #4
++	bmi		.Lessivcbcenc1x
++	ld1		{v0.16b-v3.16b}, [x1], #64	/* get 4 pt blocks */
++	eor		v0.16b, v0.16b, v4.16b		/* ..and xor with iv */
++	encrypt_block	v0, w3, x2, x7, w8
++	eor		v1.16b, v1.16b, v0.16b
++	encrypt_block	v1, w3, x2, x7, w8
++	eor		v2.16b, v2.16b, v1.16b
++	encrypt_block	v2, w3, x2, x7, w8
++	eor		v3.16b, v3.16b, v2.16b
++	encrypt_block	v3, w3, x2, x7, w8
++	st1		{v0.16b-v3.16b}, [x0], #64
++	mov		v4.16b, v3.16b
++	b		.Lessivcbcencloop4x
++.Lessivcbcenc1x:
++	adds		w4, w4, #4
++	beq		.Lessivcbcencout
++.Lessivcbcencloop:
++	ld1		{v0.16b}, [x1], #16		/* get next pt block */
++	eor		v4.16b, v4.16b, v0.16b		/* ..and xor with iv */
++	encrypt_block	v4, w3, x2, x6, w7
++	st1		{v4.16b}, [x0], #16
++	subs		w4, w4, #1
++	bne		.Lessivcbcencloop
++.Lessivcbcencout:
++	st1		{v4.16b}, [x6]			/* return iv */
++	ret
++AES_ENDPROC(aes_essiv_cbc_encrypt)
++
++
++AES_ENTRY(aes_essiv_cbc_decrypt)
++	stp		x29, x30, [sp, #-16]!
++	mov		x29, sp
++
++	ld1		{v7.16b}, [x6]			/* get iv */
++	cbz		x7, .Lessivcbcdecnotfirst
++
++	mov		w8, #14				/* AES-256: 14 rounds */
++	enc_prepare	w8, x5, x7
++	mov		v7.8b, v7.8b
++	encrypt_block	v7, w8, x5, x7, w9
++
++.Lessivcbcdecnotfirst:
++	dec_prepare	w3, x2, x7
++.LessivcbcdecloopNx:
++	subs		w4, w4, #4
++	bmi		.Lessivcbcdec1x
++	ld1		{v0.16b-v3.16b}, [x1], #64	/* get 4 ct blocks */
++	mov		v4.16b, v0.16b
++	mov		v5.16b, v1.16b
++	mov		v6.16b, v2.16b
++	bl		aes_decrypt_block4x
++	sub		x1, x1, #16
++	eor		v0.16b, v0.16b, v7.16b
++	eor		v1.16b, v1.16b, v4.16b
++	ld1		{v7.16b}, [x1], #16		/* reload 1 ct block */
++	eor		v2.16b, v2.16b, v5.16b
++	eor		v3.16b, v3.16b, v6.16b
++	st1		{v0.16b-v3.16b}, [x0], #64
++	b		.LessivcbcdecloopNx
++.Lessivcbcdec1x:
++	adds		w4, w4, #4
++	beq		.Lessivcbcdecout
++.Lessivcbcdecloop:
++	ld1		{v1.16b}, [x1], #16		/* get next ct block */
++	mov		v0.16b, v1.16b			/* ...and copy to v0 */
++	decrypt_block	v0, w3, x2, x7, w8
++	eor		v0.16b, v0.16b, v7.16b		/* xor with iv => pt */
++	mov		v7.16b, v1.16b			/* ct is next iv */
++	st1		{v0.16b}, [x0], #16
++	subs		w4, w4, #1
++	bne		.Lessivcbcdecloop
++.Lessivcbcdecout:
++	st1		{v7.16b}, [x6]			/* return iv */
++	ldp		x29, x30, [sp], #16
++	ret
++AES_ENDPROC(aes_essiv_cbc_decrypt)
++
+ 
+ 	/*
+ 	 * aes_ctr_encrypt(u8 out[], u8 const in[], u8 const rk[], int rounds,
 -- 
-2.21.0.1020.gf2820cf01a-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.17.1
