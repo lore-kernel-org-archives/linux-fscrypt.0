@@ -1,252 +1,144 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:47154 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726032AbfFTVij (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 20 Jun 2019 17:38:39 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v2 2/8] common/verity: add common functions for testing fs-verity
-Date: Thu, 20 Jun 2019 14:36:08 -0700
-Message-Id: <20190620213614.113685-3-ebiggers@kernel.org>
-In-Reply-To: <20190620213614.113685-1-ebiggers@kernel.org>
-References: <20190620213614.113685-1-ebiggers@kernel.org>
+Return-Path: <jaegeuk@kernel.org>
+Date: Sat, 22 Jun 2019 15:43:41 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH v5 11/16] fs-verity: implement FS_IOC_MEASURE_VERITY ioctl
+Message-ID: <20190622224341.GK19686@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20190620205043.64350-1-ebiggers@kernel.org>
+ <20190620205043.64350-12-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190620205043.64350-12-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On 06/20, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Add a function for filesystems to call to implement the
+> FS_IOC_MEASURE_VERITY ioctl.  This ioctl retrieves the file measurement
+> that fs-verity calculated for the given file and is enforcing for reads;
+> i.e., reads that don't match this hash will fail.  This ioctl can be
+> used for authentication or logging of file measurements in userspace.
+> 
+> See the "FS_IOC_MEASURE_VERITY" section of
+> Documentation/filesystems/fsverity.rst for the documentation.
+> 
+> Reviewed-by: Theodore Ts'o <tytso@mit.edu>
 
-Add common functions for setting up and testing fs-verity, a new feature
-for read-only file-based authenticity protection.  fs-verity will be
-supported by ext4 and f2fs, and perhaps by other filesystems later.
-Running the fs-verity tests requires:
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 
-- A kernel with the fs-verity patches from
-  https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
-  branch "fsverity" and configured with CONFIG_FS_VERITY.
-- The fsverity utility program from
-  https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git
-- e2fsprogs v1.45.2 or later for ext4 tests, or f2fs-tools v1.11.0 or
-  later for f2fs tests.
-
-See the file Documentation/filesystems/fsverity.rst in the kernel tree
-for more information about fs-verity.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- common/config |   1 +
- common/verity | 189 ++++++++++++++++++++++++++++++++++++++++++++++++++
- 2 files changed, 190 insertions(+)
- create mode 100644 common/verity
-
-diff --git a/common/config b/common/config
-index bd64be62..001ddc45 100644
---- a/common/config
-+++ b/common/config
-@@ -212,6 +212,7 @@ export CHECKBASHISMS_PROG="$(type -P checkbashisms)"
- export XFS_INFO_PROG="$(type -P xfs_info)"
- export DUPEREMOVE_PROG="$(type -P duperemove)"
- export CC_PROG="$(type -P cc)"
-+export FSVERITY_PROG="$(type -P fsverity)"
- 
- # use 'udevadm settle' or 'udevsettle' to wait for lv to be settled.
- # newer systems have udevadm command but older systems like RHEL5 don't.
-diff --git a/common/verity b/common/verity
-new file mode 100644
-index 00000000..86fb6585
---- /dev/null
-+++ b/common/verity
-@@ -0,0 +1,189 @@
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2018 Google LLC
-+#
-+# Functions for setting up and testing fs-verity
-+
-+_require_scratch_verity()
-+{
-+	_require_scratch
-+	_require_command "$FSVERITY_PROG" fsverity
-+
-+	if ! _scratch_mkfs_verity &>>$seqres.full; then
-+		# ext4: need e2fsprogs v1.44.5 or later (but actually v1.45.2+
-+		#       is needed for some tests to pass, due to an e2fsck bug)
-+		# f2fs: need f2fs-tools v1.11.0 or later
-+		_notrun "$FSTYP userspace tools don't support fs-verity"
-+	fi
-+
-+	# Try to mount the filesystem.  If this fails then either the kernel
-+	# isn't aware of fs-verity, or the mkfs options were not compatible with
-+	# verity (e.g. ext4 with block size != PAGE_SIZE).
-+	if ! _try_scratch_mount &>>$seqres.full; then
-+		_notrun "kernel is unaware of $FSTYP verity feature," \
-+			"or mkfs options are not compatible with verity"
-+	fi
-+	_scratch_unmount
-+
-+	# The filesystem may be aware of fs-verity but have it disabled by
-+	# CONFIG_FS_VERITY=n.  Detect support via sysfs.
-+	if [ ! -e /sys/fs/$FSTYP/features/verity ]; then
-+		_notrun "kernel $FSTYP isn't configured with verity support"
-+	fi
-+
-+	# Merkle tree block size.  Currently all filesystems only support
-+	# PAGE_SIZE for this.  This is also the default for 'fsverity enable'.
-+	FSV_BLOCK_SIZE=$(get_page_size)
-+}
-+
-+_scratch_mkfs_verity()
-+{
-+	case $FSTYP in
-+	ext4|f2fs)
-+		_scratch_mkfs -O verity
-+		;;
-+	*)
-+		_notrun "No verity support for $FSTYP"
-+		;;
-+	esac
-+}
-+
-+_scratch_mkfs_encrypted_verity()
-+{
-+	case $FSTYP in
-+	ext4)
-+		_scratch_mkfs -O encrypt,verity
-+		;;
-+	f2fs)
-+		# f2fs-tools as of v1.11.0 doesn't allow comma-separated
-+		# features with -O.  Instead -O must be supplied multiple times.
-+		_scratch_mkfs -O encrypt -O verity
-+		;;
-+	*)
-+		_notrun "$FSTYP not supported in _scratch_mkfs_encrypted_verity"
-+		;;
-+	esac
-+}
-+
-+_fsv_scratch_begin_subtest()
-+{
-+	local msg=$1
-+
-+	rm -rf "${SCRATCH_MNT:?}"/*
-+	echo -e "\n# $msg"
-+}
-+
-+_fsv_enable()
-+{
-+	$FSVERITY_PROG enable "$@"
-+}
-+
-+_fsv_measure()
-+{
-+        $FSVERITY_PROG measure "$@" | awk '{print $1}'
-+}
-+
-+# Generate a file, then enable verity on it.
-+_fsv_create_enable_file()
-+{
-+	local file=$1
-+	shift
-+
-+	head -c $((FSV_BLOCK_SIZE * 2)) /dev/zero > "$file"
-+	_fsv_enable "$file" "$@"
-+}
-+
-+_fsv_have_hash_algorithm()
-+{
-+	local hash_alg=$1
-+	local test_file=$2
-+
-+	rm -f $test_file
-+	head -c 4096 /dev/zero > $test_file
-+	if ! _fsv_enable --hash-alg=$hash_alg $test_file &>> $seqres.full; then
-+		# no kernel support
-+		return 1
-+	fi
-+	rm -f $test_file
-+	return 0
-+}
-+
-+#
-+# _fsv_scratch_corrupt_bytes - Write some bytes to a file, bypassing the filesystem
-+#
-+# Write the bytes sent on stdin to the given offset in the given file, but do so
-+# by writing directly to the extents on the block device, with the filesystem
-+# unmounted.  This can be used to corrupt a verity file for testing purposes,
-+# bypassing the restrictions imposed by the filesystem.
-+#
-+# The file is assumed to be located on $SCRATCH_DEV.
-+#
-+_fsv_scratch_corrupt_bytes()
-+{
-+	local file=$1
-+	local offset=$2
-+	local lstart lend pstart pend
-+	local dd_cmds=()
-+	local cmd
-+
-+	sync	# Sync to avoid unwritten extents
-+
-+	cat > $tmp.bytes
-+	local end=$(( offset + $(stat -c %s $tmp.bytes ) ))
-+
-+	# For each extent that intersects the requested range in order, add a
-+	# command that writes the next part of the data to that extent.
-+	while read -r lstart lend pstart pend; do
-+		lstart=$((lstart * 512))
-+		lend=$(((lend + 1) * 512))
-+		pstart=$((pstart * 512))
-+		pend=$(((pend + 1) * 512))
-+
-+		if (( lend - lstart != pend - pstart )); then
-+			_fail "Logical and physical extent lengths differ for file '$file'"
-+		elif (( offset < lstart )); then
-+			_fail "Hole in file '$file' at byte $offset.  Next extent begins at byte $lstart"
-+		elif (( offset < lend )); then
-+			local len=$((lend - offset))
-+			local seek=$((pstart + (offset - lstart)))
-+			dd_cmds+=("head -c $len | dd of=$SCRATCH_DEV oflag=seek_bytes seek=$seek status=none")
-+			(( offset += len ))
-+		fi
-+	done < <($XFS_IO_PROG -r -c "fiemap $offset $((end - offset))" "$file" \
-+		 | _filter_xfs_io_fiemap)
-+
-+	if (( offset < end )); then
-+		_fail "Extents of file '$file' ended at byte $offset, but needed until $end"
-+	fi
-+
-+	# Execute the commands to write the data
-+	_scratch_unmount
-+	for cmd in "${dd_cmds[@]}"; do
-+		eval "$cmd"
-+	done < $tmp.bytes
-+	sync	# Sync to flush the block device's pagecache
-+	_scratch_mount
-+}
-+
-+#
-+# _fsv_scratch_corrupt_merkle_tree - Corrupt a file's Merkle tree
-+#
-+# Like _fsv_scratch_corrupt_bytes(), but this corrupts the file's fs-verity
-+# Merkle tree.  The offset is given as a byte offset into the Merkle tree.
-+#
-+_fsv_scratch_corrupt_merkle_tree()
-+{
-+	local file=$1
-+	local offset=$2
-+
-+	case $FSTYP in
-+	ext4|f2fs)
-+		# ext4 and f2fs store the Merkle tree after the file contents
-+		# itself, starting at the next 65536-byte aligned boundary.
-+		(( offset += ($(stat -c %s $file) + 65535) & ~65535 ))
-+		_fsv_scratch_corrupt_bytes $file $offset
-+		;;
-+	*)
-+		_fail "_fsv_scratch_corrupt_merkle_tree() unimplemented on $FSTYP"
-+		;;
-+	esac
-+}
--- 
-2.22.0.410.gd8fdbe21b5-goog
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/verity/Makefile       |  1 +
+>  fs/verity/measure.c      | 57 ++++++++++++++++++++++++++++++++++++++++
+>  include/linux/fsverity.h | 11 ++++++++
+>  3 files changed, 69 insertions(+)
+>  create mode 100644 fs/verity/measure.c
+> 
+> diff --git a/fs/verity/Makefile b/fs/verity/Makefile
+> index 04b37475fd280a..6f7675ae0a3110 100644
+> --- a/fs/verity/Makefile
+> +++ b/fs/verity/Makefile
+> @@ -3,5 +3,6 @@
+>  obj-$(CONFIG_FS_VERITY) += enable.o \
+>  			   hash_algs.o \
+>  			   init.o \
+> +			   measure.o \
+>  			   open.o \
+>  			   verify.o
+> diff --git a/fs/verity/measure.c b/fs/verity/measure.c
+> new file mode 100644
+> index 00000000000000..05049b68c74553
+> --- /dev/null
+> +++ b/fs/verity/measure.c
+> @@ -0,0 +1,57 @@
+> +// SPDX-License-Identifier: GPL-2.0
+> +/*
+> + * fs/verity/measure.c: ioctl to get a verity file's measurement
+> + *
+> + * Copyright 2019 Google LLC
+> + */
+> +
+> +#include "fsverity_private.h"
+> +
+> +#include <linux/uaccess.h>
+> +
+> +/**
+> + * fsverity_ioctl_measure() - get a verity file's measurement
+> + *
+> + * Retrieve the file measurement that the kernel is enforcing for reads from a
+> + * verity file.  See the "FS_IOC_MEASURE_VERITY" section of
+> + * Documentation/filesystems/fsverity.rst for the documentation.
+> + *
+> + * Return: 0 on success, -errno on failure
+> + */
+> +int fsverity_ioctl_measure(struct file *filp, void __user *_uarg)
+> +{
+> +	const struct inode *inode = file_inode(filp);
+> +	struct fsverity_digest __user *uarg = _uarg;
+> +	const struct fsverity_info *vi;
+> +	const struct fsverity_hash_alg *hash_alg;
+> +	struct fsverity_digest arg;
+> +
+> +	vi = fsverity_get_info(inode);
+> +	if (!vi)
+> +		return -ENODATA; /* not a verity file */
+> +	hash_alg = vi->tree_params.hash_alg;
+> +
+> +	/*
+> +	 * The user specifies the digest_size their buffer has space for; we can
+> +	 * return the digest if it fits in the available space.  We write back
+> +	 * the actual size, which may be shorter than the user-specified size.
+> +	 */
+> +
+> +	if (get_user(arg.digest_size, &uarg->digest_size))
+> +		return -EFAULT;
+> +	if (arg.digest_size < hash_alg->digest_size)
+> +		return -EOVERFLOW;
+> +
+> +	memset(&arg, 0, sizeof(arg));
+> +	arg.digest_algorithm = hash_alg - fsverity_hash_algs;
+> +	arg.digest_size = hash_alg->digest_size;
+> +
+> +	if (copy_to_user(uarg, &arg, sizeof(arg)))
+> +		return -EFAULT;
+> +
+> +	if (copy_to_user(uarg->digest, vi->measurement, hash_alg->digest_size))
+> +		return -EFAULT;
+> +
+> +	return 0;
+> +}
+> +EXPORT_SYMBOL_GPL(fsverity_ioctl_measure);
+> diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+> index 7ef2ef82653409..247359c86b72e0 100644
+> --- a/include/linux/fsverity.h
+> +++ b/include/linux/fsverity.h
+> @@ -116,6 +116,10 @@ static inline struct fsverity_info *fsverity_get_info(const struct inode *inode)
+>  
+>  extern int fsverity_ioctl_enable(struct file *filp, const void __user *arg);
+>  
+> +/* measure.c */
+> +
+> +extern int fsverity_ioctl_measure(struct file *filp, void __user *arg);
+> +
+>  /* open.c */
+>  
+>  extern int fsverity_file_open(struct inode *inode, struct file *filp);
+> @@ -143,6 +147,13 @@ static inline int fsverity_ioctl_enable(struct file *filp,
+>  	return -EOPNOTSUPP;
+>  }
+>  
+> +/* measure.c */
+> +
+> +static inline int fsverity_ioctl_measure(struct file *filp, void __user *arg)
+> +{
+> +	return -EOPNOTSUPP;
+> +}
+> +
+>  /* open.c */
+>  
+>  static inline int fsverity_file_open(struct inode *inode, struct file *filp)
+> -- 
+> 2.22.0.410.gd8fdbe21b5-goog
