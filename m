@@ -1,170 +1,77 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wr1-f66.google.com ([209.85.221.66]:46176 "EHLO
-        mail-wr1-f66.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726441AbfFZUlB (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 26 Jun 2019 16:41:01 -0400
-Received: by mail-wr1-f66.google.com with SMTP id n4so4229817wrw.13
-        for <linux-fscrypt@vger.kernel.org>; Wed, 26 Jun 2019 13:40:59 -0700 (PDT)
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v5 6/7] crypto: arm64/aes-cts-cbc - factor out CBC en/decryption of a walk
-Date: Wed, 26 Jun 2019 22:40:46 +0200
-Message-Id: <20190626204047.32131-7-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190626204047.32131-1-ard.biesheuvel@linaro.org>
-References: <20190626204047.32131-1-ard.biesheuvel@linaro.org>
+Return-Path: <jaegeuk@kernel.org>
+Date: Sat, 22 Jun 2019 15:44:00 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH v5 12/16] fs-verity: add SHA-512 support
+Message-ID: <20190622224400.GL19686@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20190620205043.64350-1-ebiggers@kernel.org>
+ <20190620205043.64350-13-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190620205043.64350-13-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The plain CBC driver and the CTS one share some code that iterates over
-a scatterwalk and invokes the CBC asm code to do the processing. The
-upcoming ESSIV/CBC mode will clone that pattern for the third time, so
-let's factor it out first.
+On 06/20, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Add SHA-512 support to fs-verity.  This is primarily a demonstration of
+> the trivial changes needed to support a new hash algorithm in fs-verity;
+> most users will still use SHA-256, due to the smaller space required to
+> store the hashes.  But some users may prefer SHA-512.
+> 
+> Reviewed-by: Theodore Ts'o <tytso@mit.edu>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm64/crypto/aes-glue.c | 82 ++++++++++----------
- 1 file changed, 40 insertions(+), 42 deletions(-)
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 
-diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
-index f0ceb545bd1e..11b85ce02d7a 100644
---- a/arch/arm64/crypto/aes-glue.c
-+++ b/arch/arm64/crypto/aes-glue.c
-@@ -185,46 +185,64 @@ static int ecb_decrypt(struct skcipher_request *req)
- 	return err;
- }
- 
--static int cbc_encrypt(struct skcipher_request *req)
-+static int cbc_encrypt_walk(struct skcipher_request *req,
-+			    struct skcipher_walk *walk)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
- 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
--	int err, rounds = 6 + ctx->key_length / 4;
--	struct skcipher_walk walk;
-+	int err = 0, rounds = 6 + ctx->key_length / 4;
- 	unsigned int blocks;
- 
--	err = skcipher_walk_virt(&walk, req, false);
--
--	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
-+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
- 		kernel_neon_begin();
--		aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
--				ctx->key_enc, rounds, blocks, walk.iv);
-+		aes_cbc_encrypt(walk->dst.virt.addr, walk->src.virt.addr,
-+				ctx->key_enc, rounds, blocks, walk->iv);
- 		kernel_neon_end();
--		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
- 	}
- 	return err;
- }
- 
--static int cbc_decrypt(struct skcipher_request *req)
-+static int cbc_encrypt(struct skcipher_request *req)
- {
--	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
--	int err, rounds = 6 + ctx->key_length / 4;
- 	struct skcipher_walk walk;
--	unsigned int blocks;
-+	int err;
- 
- 	err = skcipher_walk_virt(&walk, req, false);
-+	if (err)
-+		return err;
-+	return cbc_encrypt_walk(req, &walk);
-+}
- 
--	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
-+static int cbc_decrypt_walk(struct skcipher_request *req,
-+			    struct skcipher_walk *walk)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err = 0, rounds = 6 + ctx->key_length / 4;
-+	unsigned int blocks;
-+
-+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
- 		kernel_neon_begin();
--		aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
--				ctx->key_dec, rounds, blocks, walk.iv);
-+		aes_cbc_decrypt(walk->dst.virt.addr, walk->src.virt.addr,
-+				ctx->key_dec, rounds, blocks, walk->iv);
- 		kernel_neon_end();
--		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
- 	}
- 	return err;
- }
- 
-+static int cbc_decrypt(struct skcipher_request *req)
-+{
-+	struct skcipher_walk walk;
-+	int err;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+	if (err)
-+		return err;
-+	return cbc_decrypt_walk(req, &walk);
-+}
-+
- static int cts_cbc_init_tfm(struct crypto_skcipher *tfm)
- {
- 	crypto_skcipher_set_reqsize(tfm, sizeof(struct cts_cbc_req_ctx));
-@@ -250,22 +268,12 @@ static int cts_cbc_encrypt(struct skcipher_request *req)
- 	}
- 
- 	if (cbc_blocks > 0) {
--		unsigned int blocks;
--
- 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
- 					   cbc_blocks * AES_BLOCK_SIZE,
- 					   req->iv);
- 
--		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
--
--		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
--			kernel_neon_begin();
--			aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
--					ctx->key_enc, rounds, blocks, walk.iv);
--			kernel_neon_end();
--			err = skcipher_walk_done(&walk,
--						 walk.nbytes % AES_BLOCK_SIZE);
--		}
-+		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
-+		      cbc_encrypt_walk(&rctx->subreq, &walk);
- 		if (err)
- 			return err;
- 
-@@ -315,22 +323,12 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
- 	}
- 
- 	if (cbc_blocks > 0) {
--		unsigned int blocks;
--
- 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
- 					   cbc_blocks * AES_BLOCK_SIZE,
- 					   req->iv);
- 
--		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
--
--		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
--			kernel_neon_begin();
--			aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
--					ctx->key_dec, rounds, blocks, walk.iv);
--			kernel_neon_end();
--			err = skcipher_walk_done(&walk,
--						 walk.nbytes % AES_BLOCK_SIZE);
--		}
-+		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
-+		      cbc_decrypt_walk(&rctx->subreq, &walk);
- 		if (err)
- 			return err;
- 
--- 
-2.20.1
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/verity/fsverity_private.h  | 2 +-
+>  fs/verity/hash_algs.c         | 5 +++++
+>  include/uapi/linux/fsverity.h | 1 +
+>  3 files changed, 7 insertions(+), 1 deletion(-)
+> 
+> diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
+> index eaa2b3b93bbf6b..02a547f0667c13 100644
+> --- a/fs/verity/fsverity_private.h
+> +++ b/fs/verity/fsverity_private.h
+> @@ -29,7 +29,7 @@ struct ahash_request;
+>   * Largest digest size among all hash algorithms supported by fs-verity.
+>   * Currently assumed to be <= size of fsverity_descriptor::root_hash.
+>   */
+> -#define FS_VERITY_MAX_DIGEST_SIZE	SHA256_DIGEST_SIZE
+> +#define FS_VERITY_MAX_DIGEST_SIZE	SHA512_DIGEST_SIZE
+>  
+>  /* A hash algorithm supported by fs-verity */
+>  struct fsverity_hash_alg {
+> diff --git a/fs/verity/hash_algs.c b/fs/verity/hash_algs.c
+> index 46df17094fc252..e0462a010cabfb 100644
+> --- a/fs/verity/hash_algs.c
+> +++ b/fs/verity/hash_algs.c
+> @@ -17,6 +17,11 @@ struct fsverity_hash_alg fsverity_hash_algs[] = {
+>  		.digest_size = SHA256_DIGEST_SIZE,
+>  		.block_size = SHA256_BLOCK_SIZE,
+>  	},
+> +	[FS_VERITY_HASH_ALG_SHA512] = {
+> +		.name = "sha512",
+> +		.digest_size = SHA512_DIGEST_SIZE,
+> +		.block_size = SHA512_BLOCK_SIZE,
+> +	},
+>  };
+>  
+>  /**
+> diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
+> index 57d1d7fc0c345a..da0daf6c193b4b 100644
+> --- a/include/uapi/linux/fsverity.h
+> +++ b/include/uapi/linux/fsverity.h
+> @@ -14,6 +14,7 @@
+>  #include <linux/types.h>
+>  
+>  #define FS_VERITY_HASH_ALG_SHA256	1
+> +#define FS_VERITY_HASH_ALG_SHA512	2
+>  
+>  struct fsverity_enable_arg {
+>  	__u32 version;
+> -- 
+> 2.22.0.410.gd8fdbe21b5-goog
