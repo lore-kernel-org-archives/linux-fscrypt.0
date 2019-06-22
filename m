@@ -1,108 +1,49 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from foss.arm.com ([217.140.110.172]:49760 "EHLO foss.arm.com"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726030AbfFUIJi (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 21 Jun 2019 04:09:38 -0400
-From: Ard Biesheuvel <ard.biesheuvel@arm.com>
-Subject: [PATCH v4 3/6] md: dm-crypt: infer ESSIV block cipher from cipher string directly
-Date: Fri, 21 Jun 2019 10:09:15 +0200
-Message-Id: <20190621080918.22809-4-ard.biesheuvel@arm.com>
-In-Reply-To: <20190621080918.22809-1-ard.biesheuvel@arm.com>
-References: <20190621080918.22809-1-ard.biesheuvel@arm.com>
-Reply-To: ard.biesheuvel@linaro.org
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+Return-Path: <jaegeuk@kernel.org>
+Date: Sat, 22 Jun 2019 15:11:51 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH v5 04/16] fs: uapi: define verity bit for FS_IOC_GETFLAGS
+Message-ID: <20190622221151.GD19686@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20190620205043.64350-1-ebiggers@kernel.org>
+ <20190620205043.64350-5-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190620205043.64350-5-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+On 06/20, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Add FS_VERITY_FL to the flags for FS_IOC_GETFLAGS, so that applications
+> can easily determine whether a file is a verity file at the same time as
+> they're checking other file flags.  This flag will be gettable only;
+> FS_IOC_SETFLAGS won't allow setting it, since an ioctl must be used
+> instead to provide more parameters.
+> 
+> This flag matches the on-disk bit that was already allocated for ext4.
+> 
+> Reviewed-by: Theodore Ts'o <tytso@mit.edu>
 
-Instead of allocating a crypto skcipher tfm 'foo' and attempting to
-infer the encapsulated block cipher from the driver's 'name' field,
-directly parse the string that we used to allocated the tfm. These
-are always identical (unless the allocation failed, in which case
-we bail anyway), but using the string allows us to use it in the
-allocation, which is something we will need when switching to the
-'essiv' crypto API template.
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- drivers/md/dm-crypt.c | 35 +++++++++-----------
- 1 file changed, 15 insertions(+), 20 deletions(-)
-
-diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index 1b16d34bb785..f001f1104cb5 100644
---- a/drivers/md/dm-crypt.c
-+++ b/drivers/md/dm-crypt.c
-@@ -2321,25 +2321,17 @@ static int crypt_ctr_ivmode(struct dm_target *ti, const char *ivmode)
-  * The cc->cipher is currently used only in ESSIV.
-  * This should be probably done by crypto-api calls (once available...)
-  */
--static int crypt_ctr_blkdev_cipher(struct crypt_config *cc)
-+static int crypt_ctr_blkdev_cipher(struct crypt_config *cc, char *alg_name)
- {
--	const char *alg_name = NULL;
- 	char *start, *end;
- 
- 	if (crypt_integrity_aead(cc)) {
--		alg_name = crypto_tfm_alg_name(crypto_aead_tfm(any_tfm_aead(cc)));
--		if (!alg_name)
--			return -EINVAL;
- 		if (crypt_integrity_hmac(cc)) {
- 			alg_name = strchr(alg_name, ',');
- 			if (!alg_name)
- 				return -EINVAL;
- 		}
- 		alg_name++;
--	} else {
--		alg_name = crypto_tfm_alg_name(crypto_skcipher_tfm(any_tfm(cc)));
--		if (!alg_name)
--			return -EINVAL;
- 	}
- 
- 	start = strchr(alg_name, '(');
-@@ -2434,6 +2426,20 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 	if (*ivmode && !strcmp(*ivmode, "lmk"))
- 		cc->tfms_count = 64;
- 
-+	if (crypt_integrity_aead(cc)) {
-+		ret = crypt_ctr_auth_cipher(cc, cipher_api);
-+		if (ret < 0) {
-+			ti->error = "Invalid AEAD cipher spec";
-+			return -ENOMEM;
-+	       }
-+	}
-+
-+	ret = crypt_ctr_blkdev_cipher(cc, cipher_api);
-+	if (ret < 0) {
-+		ti->error = "Cannot allocate cipher string";
-+		return -ENOMEM;
-+	}
-+
- 	cc->key_parts = cc->tfms_count;
- 
- 	/* Allocate cipher */
-@@ -2445,21 +2451,10 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 
- 	/* Alloc AEAD, can be used only in new format. */
- 	if (crypt_integrity_aead(cc)) {
--		ret = crypt_ctr_auth_cipher(cc, cipher_api);
--		if (ret < 0) {
--			ti->error = "Invalid AEAD cipher spec";
--			return -ENOMEM;
--		}
- 		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
- 	} else
- 		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
- 
--	ret = crypt_ctr_blkdev_cipher(cc);
--	if (ret < 0) {
--		ti->error = "Cannot allocate cipher string";
--		return -ENOMEM;
--	}
--
- 	return 0;
- }
- 
--- 
-2.17.1
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  include/uapi/linux/fs.h | 1 +
+>  1 file changed, 1 insertion(+)
+> 
+> diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
+> index 59c71fa8c553a3..df261b7e0587ed 100644
+> --- a/include/uapi/linux/fs.h
+> +++ b/include/uapi/linux/fs.h
+> @@ -306,6 +306,7 @@ struct fscrypt_key {
+>  #define FS_TOPDIR_FL			0x00020000 /* Top of directory hierarchies*/
+>  #define FS_HUGE_FILE_FL			0x00040000 /* Reserved for ext4 */
+>  #define FS_EXTENT_FL			0x00080000 /* Extents */
+> +#define FS_VERITY_FL			0x00100000 /* Verity protected inode */
+>  #define FS_EA_INODE_FL			0x00200000 /* Inode used for large EA */
+>  #define FS_EOFBLOCKS_FL			0x00400000 /* Reserved for ext4 */
+>  #define FS_NOCOW_FL			0x00800000 /* Do not cow file */
+> -- 
+> 2.22.0.410.gd8fdbe21b5-goog
