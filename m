@@ -1,224 +1,468 @@
-Return-Path: <linux-crypto-owner@vger.kernel.org>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v3 2/6] fs: crypto: invoke crypto API for ESSIV handling
-Date: Wed, 19 Jun 2019 18:29:17 +0200
-Message-Id: <20190619162921.12509-3-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190619162921.12509-1-ard.biesheuvel@linaro.org>
-References: <20190619162921.12509-1-ard.biesheuvel@linaro.org>
+Return-Path: <jaegeuk@kernel.org>
+Date: Sat, 22 Jun 2019 15:32:33 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH v5 09/16] fs-verity: add data verification hooks for
+ ->readpages()
+Message-ID: <20190622223233.GI19686@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20190620205043.64350-1-ebiggers@kernel.org>
+ <20190620205043.64350-10-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-crypto-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190620205043.64350-10-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Instead of open coding the calculations for ESSIV handling, use a
-ESSIV skcipher which does all of this under the hood.
+On 06/20, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Add functions that verify data pages that have been read from a
+> fs-verity file, against that file's Merkle tree.  These will be called
+> from filesystems' ->readpage() and ->readpages() methods.
+> 
+> Since data verification can block, a workqueue is provided for these
+> methods to enqueue verification work from their bio completion callback.
+> 
+> See the "Verifying data" section of
+> Documentation/filesystems/fsverity.rst for more information.
+> 
+> Reviewed-by: Theodore Ts'o <tytso@mit.edu>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- fs/crypto/Kconfig           |  1 +
- fs/crypto/crypto.c          |  5 --
- fs/crypto/fscrypt_private.h |  9 --
- fs/crypto/keyinfo.c         | 88 +-------------------
- 4 files changed, 3 insertions(+), 100 deletions(-)
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 24ed99e2eca0..b0292da8613c 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -5,6 +5,7 @@ config FS_ENCRYPTION
- 	select CRYPTO_AES
- 	select CRYPTO_CBC
- 	select CRYPTO_ECB
-+	select CRYPTO_ESSIV
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select CRYPTO_SHA256
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 335a362ee446..c53ce262a06c 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -136,9 +136,6 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY)
- 		memcpy(iv->nonce, ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE);
--
--	if (ci->ci_essiv_tfm != NULL)
--		crypto_cipher_encrypt_one(ci->ci_essiv_tfm, iv->raw, iv->raw);
- }
- 
- int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
-@@ -492,8 +489,6 @@ static void __exit fscrypt_exit(void)
- 		destroy_workqueue(fscrypt_read_workqueue);
- 	kmem_cache_destroy(fscrypt_ctx_cachep);
- 	kmem_cache_destroy(fscrypt_info_cachep);
--
--	fscrypt_essiv_cleanup();
- }
- module_exit(fscrypt_exit);
- 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 7da276159593..59d0cba9cfb9 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -61,12 +61,6 @@ struct fscrypt_info {
- 	/* The actual crypto transform used for encryption and decryption */
- 	struct crypto_skcipher *ci_ctfm;
- 
--	/*
--	 * Cipher for ESSIV IV generation.  Only set for CBC contents
--	 * encryption, otherwise is NULL.
--	 */
--	struct crypto_cipher *ci_essiv_tfm;
--
- 	/*
- 	 * Encryption mode used for this inode.  It corresponds to either
- 	 * ci_data_mode or ci_filename_mode, depending on the inode type.
-@@ -166,9 +160,6 @@ struct fscrypt_mode {
- 	int keysize;
- 	int ivsize;
- 	bool logged_impl_name;
--	bool needs_essiv;
- };
- 
--extern void __exit fscrypt_essiv_cleanup(void);
--
- #endif /* _FSCRYPT_PRIVATE_H */
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index dcd91a3fbe49..82c7eb86ca00 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -19,8 +19,6 @@
- #include <crypto/skcipher.h>
- #include "fscrypt_private.h"
- 
--static struct crypto_shash *essiv_hash_tfm;
--
- /* Table of keys referenced by FS_POLICY_FLAG_DIRECT_KEY policies */
- static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
- static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
-@@ -144,10 +142,9 @@ static struct fscrypt_mode available_modes[] = {
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CBC] = {
- 		.friendly_name = "AES-128-CBC",
--		.cipher_str = "cbc(aes)",
-+		.cipher_str = "essiv(cbc(aes),aes,sha256)",
- 		.keysize = 16,
--		.ivsize = 16,
--		.needs_essiv = true,
-+		.ivsize = 8,
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
- 		.friendly_name = "AES-128-CTS-CBC",
-@@ -377,72 +374,6 @@ fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
- 	return ERR_PTR(err);
- }
- 
--static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
--{
--	struct crypto_shash *tfm = READ_ONCE(essiv_hash_tfm);
--
--	/* init hash transform on demand */
--	if (unlikely(!tfm)) {
--		struct crypto_shash *prev_tfm;
--
--		tfm = crypto_alloc_shash("sha256", 0, 0);
--		if (IS_ERR(tfm)) {
--			fscrypt_warn(NULL,
--				     "error allocating SHA-256 transform: %ld",
--				     PTR_ERR(tfm));
--			return PTR_ERR(tfm);
--		}
--		prev_tfm = cmpxchg(&essiv_hash_tfm, NULL, tfm);
--		if (prev_tfm) {
--			crypto_free_shash(tfm);
--			tfm = prev_tfm;
--		}
--	}
--
--	{
--		SHASH_DESC_ON_STACK(desc, tfm);
--		desc->tfm = tfm;
--
--		return crypto_shash_digest(desc, key, keysize, salt);
--	}
--}
--
--static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
--				int keysize)
--{
--	int err;
--	struct crypto_cipher *essiv_tfm;
--	u8 salt[SHA256_DIGEST_SIZE];
--
--	essiv_tfm = crypto_alloc_cipher("aes", 0, 0);
--	if (IS_ERR(essiv_tfm))
--		return PTR_ERR(essiv_tfm);
--
--	ci->ci_essiv_tfm = essiv_tfm;
--
--	err = derive_essiv_salt(raw_key, keysize, salt);
--	if (err)
--		goto out;
--
--	/*
--	 * Using SHA256 to derive the salt/key will result in AES-256 being
--	 * used for IV generation. File contents encryption will still use the
--	 * configured keysize (AES-128) nevertheless.
--	 */
--	err = crypto_cipher_setkey(essiv_tfm, salt, sizeof(salt));
--	if (err)
--		goto out;
--
--out:
--	memzero_explicit(salt, sizeof(salt));
--	return err;
--}
--
--void __exit fscrypt_essiv_cleanup(void)
--{
--	crypto_free_shash(essiv_hash_tfm);
--}
--
- /*
-  * Given the encryption mode and key (normally the derived key, but for
-  * FS_POLICY_FLAG_DIRECT_KEY mode it's the master key), set up the inode's
-@@ -454,7 +385,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- {
- 	struct fscrypt_master_key *mk;
- 	struct crypto_skcipher *ctfm;
--	int err;
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY) {
- 		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
-@@ -470,19 +400,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- 	ci->ci_master_key = mk;
- 	ci->ci_ctfm = ctfm;
- 
--	if (mode->needs_essiv) {
--		/* ESSIV implies 16-byte IVs which implies !DIRECT_KEY */
--		WARN_ON(mode->ivsize != AES_BLOCK_SIZE);
--		WARN_ON(ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY);
--
--		err = init_essiv_generator(ci, raw_key, mode->keysize);
--		if (err) {
--			fscrypt_warn(inode->i_sb,
--				     "error initializing ESSIV generator for inode %lu: %d",
--				     inode->i_ino, err);
--			return err;
--		}
--	}
- 	return 0;
- }
- 
-@@ -495,7 +412,6 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 		put_master_key(ci->ci_master_key);
- 	} else {
- 		crypto_free_skcipher(ci->ci_ctfm);
--		crypto_free_cipher(ci->ci_essiv_tfm);
- 	}
- 	kmem_cache_free(fscrypt_info_cachep, ci);
- }
--- 
-2.20.1
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/verity/Makefile           |   3 +-
+>  fs/verity/fsverity_private.h |   5 +
+>  fs/verity/init.c             |   8 +
+>  fs/verity/open.c             |   6 +
+>  fs/verity/verify.c           | 275 +++++++++++++++++++++++++++++++++++
+>  include/linux/fsverity.h     |  56 +++++++
+>  6 files changed, 352 insertions(+), 1 deletion(-)
+>  create mode 100644 fs/verity/verify.c
+> 
+> diff --git a/fs/verity/Makefile b/fs/verity/Makefile
+> index e6a8951c493a5e..7fa628cd5eba24 100644
+> --- a/fs/verity/Makefile
+> +++ b/fs/verity/Makefile
+> @@ -2,4 +2,5 @@
+>  
+>  obj-$(CONFIG_FS_VERITY) += hash_algs.o \
+>  			   init.o \
+> -			   open.o
+> +			   open.o \
+> +			   verify.o
+> diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
+> index c79746ff335e14..eaa2b3b93bbf6b 100644
+> --- a/fs/verity/fsverity_private.h
+> +++ b/fs/verity/fsverity_private.h
+> @@ -134,5 +134,10 @@ void fsverity_set_info(struct inode *inode, struct fsverity_info *vi);
+>  void fsverity_free_info(struct fsverity_info *vi);
+>  
+>  int __init fsverity_init_info_cache(void);
+> +void __init fsverity_exit_info_cache(void);
+> +
+> +/* verify.c */
+> +
+> +int __init fsverity_init_workqueue(void);
+>  
+>  #endif /* _FSVERITY_PRIVATE_H */
+> diff --git a/fs/verity/init.c b/fs/verity/init.c
+> index fff1fd6343357d..b593805aafcc89 100644
+> --- a/fs/verity/init.c
+> +++ b/fs/verity/init.c
+> @@ -41,7 +41,15 @@ static int __init fsverity_init(void)
+>  	if (err)
+>  		return err;
+>  
+> +	err = fsverity_init_workqueue();
+> +	if (err)
+> +		goto err_exit_info_cache;
+> +
+>  	pr_debug("Initialized fs-verity\n");
+>  	return 0;
+> +
+> +err_exit_info_cache:
+> +	fsverity_exit_info_cache();
+> +	return err;
+>  }
+>  late_initcall(fsverity_init)
+> diff --git a/fs/verity/open.c b/fs/verity/open.c
+> index 21ae0ef254a695..7a2cd000dc4f06 100644
+> --- a/fs/verity/open.c
+> +++ b/fs/verity/open.c
+> @@ -338,3 +338,9 @@ int __init fsverity_init_info_cache(void)
+>  		return -ENOMEM;
+>  	return 0;
+>  }
+> +
+> +void __init fsverity_exit_info_cache(void)
+> +{
+> +	kmem_cache_destroy(fsverity_info_cachep);
+> +	fsverity_info_cachep = NULL;
+> +}
+> diff --git a/fs/verity/verify.c b/fs/verity/verify.c
+> new file mode 100644
+> index 00000000000000..2a0f9e2ebc9f16
+> --- /dev/null
+> +++ b/fs/verity/verify.c
+> @@ -0,0 +1,275 @@
+> +// SPDX-License-Identifier: GPL-2.0
+> +/*
+> + * fs/verity/verify.c: data verification functions, i.e. hooks for ->readpages()
+> + *
+> + * Copyright 2019 Google LLC
+> + */
+> +
+> +#include "fsverity_private.h"
+> +
+> +#include <crypto/hash.h>
+> +#include <linux/bio.h>
+> +#include <linux/ratelimit.h>
+> +
+> +static struct workqueue_struct *fsverity_read_workqueue;
+> +
+> +/**
+> + * hash_at_level() - compute the location of the block's hash at the given level
+> + *
+> + * @params:	(in) the Merkle tree parameters
+> + * @dindex:	(in) the index of the data block being verified
+> + * @level:	(in) the level of hash we want (0 is leaf level)
+> + * @hindex:	(out) the index of the hash block containing the wanted hash
+> + * @hoffset:	(out) the byte offset to the wanted hash within the hash block
+> + */
+> +static void hash_at_level(const struct merkle_tree_params *params,
+> +			  pgoff_t dindex, unsigned int level, pgoff_t *hindex,
+> +			  unsigned int *hoffset)
+> +{
+> +	pgoff_t position;
+> +
+> +	/* Offset of the hash within the level's region, in hashes */
+> +	position = dindex >> (level * params->log_arity);
+> +
+> +	/* Index of the hash block in the tree overall */
+> +	*hindex = params->level_start[level] + (position >> params->log_arity);
+> +
+> +	/* Offset of the wanted hash (in bytes) within the hash block */
+> +	*hoffset = (position & ((1 << params->log_arity) - 1)) <<
+> +		   (params->log_blocksize - params->log_arity);
+> +}
+> +
+> +/* Extract a hash from a hash page */
+> +static void extract_hash(struct page *hpage, unsigned int hoffset,
+> +			 unsigned int hsize, u8 *out)
+> +{
+> +	void *virt = kmap_atomic(hpage);
+> +
+> +	memcpy(out, virt + hoffset, hsize);
+> +	kunmap_atomic(virt);
+> +}
+> +
+> +static inline int cmp_hashes(const struct fsverity_info *vi,
+> +			     const u8 *want_hash, const u8 *real_hash,
+> +			     pgoff_t index, int level)
+> +{
+> +	const unsigned int hsize = vi->tree_params.digest_size;
+> +
+> +	if (memcmp(want_hash, real_hash, hsize) == 0)
+> +		return 0;
+> +
+> +	fsverity_err(vi->inode,
+> +		     "FILE CORRUPTED! index=%lu, level=%d, want_hash=%s:%*phN, real_hash=%s:%*phN",
+> +		     index, level,
+> +		     vi->tree_params.hash_alg->name, hsize, want_hash,
+> +		     vi->tree_params.hash_alg->name, hsize, real_hash);
+> +	return -EBADMSG;
+> +}
+> +
+> +/*
+> + * Verify a single data page against the file's Merkle tree.
+> + *
+> + * In principle, we need to verify the entire path to the root node.  However,
+> + * for efficiency the filesystem may cache the hash pages.  Therefore we need
+> + * only ascend the tree until an already-verified page is seen, as indicated by
+> + * the PageChecked bit being set; then verify the path to that page.
+> + *
+> + * This code currently only supports the case where the verity block size is
+> + * equal to PAGE_SIZE.  Doing otherwise would be possible but tricky, since we
+> + * wouldn't be able to use the PageChecked bit.
+> + *
+> + * Note that multiple processes may race to verify a hash page and mark it
+> + * Checked, but it doesn't matter; the result will be the same either way.
+> + *
+> + * Return: true if the page is valid, else false.
+> + */
+> +static bool verify_page(struct inode *inode, const struct fsverity_info *vi,
+> +			struct ahash_request *req, struct page *data_page)
+> +{
+> +	const struct merkle_tree_params *params = &vi->tree_params;
+> +	const unsigned int hsize = params->digest_size;
+> +	const pgoff_t index = data_page->index;
+> +	int level;
+> +	u8 _want_hash[FS_VERITY_MAX_DIGEST_SIZE];
+> +	const u8 *want_hash;
+> +	u8 real_hash[FS_VERITY_MAX_DIGEST_SIZE];
+> +	struct page *hpages[FS_VERITY_MAX_LEVELS];
+> +	unsigned int hoffsets[FS_VERITY_MAX_LEVELS];
+> +	int err;
+> +
+> +	if (WARN_ON_ONCE(!PageLocked(data_page) || PageUptodate(data_page)))
+> +		return false;
+> +
+> +	pr_debug_ratelimited("Verifying data page %lu...\n", index);
+> +
+> +	/*
+> +	 * Starting at the leaf level, ascend the tree saving hash pages along
+> +	 * the way until we find a verified hash page, indicated by PageChecked;
+> +	 * or until we reach the root.
+> +	 */
+> +	for (level = 0; level < params->num_levels; level++) {
+> +		pgoff_t hindex;
+> +		unsigned int hoffset;
+> +		struct page *hpage;
+> +
+> +		hash_at_level(params, index, level, &hindex, &hoffset);
+> +
+> +		pr_debug_ratelimited("Level %d: hindex=%lu, hoffset=%u\n",
+> +				     level, hindex, hoffset);
+> +
+> +		hpage = inode->i_sb->s_vop->read_merkle_tree_page(inode,
+> +								  hindex);
+> +		if (IS_ERR(hpage)) {
+> +			err = PTR_ERR(hpage);
+> +			fsverity_err(inode,
+> +				     "Error %d reading Merkle tree page %lu",
+> +				     err, hindex);
+> +			goto out;
+> +		}
+> +
+> +		if (PageChecked(hpage)) {
+> +			extract_hash(hpage, hoffset, hsize, _want_hash);
+> +			want_hash = _want_hash;
+> +			put_page(hpage);
+> +			pr_debug_ratelimited("Hash page already checked, want %s:%*phN\n",
+> +					     params->hash_alg->name,
+> +					     hsize, want_hash);
+> +			goto descend;
+> +		}
+> +		pr_debug_ratelimited("Hash page not yet checked\n");
+> +		hpages[level] = hpage;
+> +		hoffsets[level] = hoffset;
+> +	}
+> +
+> +	want_hash = vi->root_hash;
+> +	pr_debug("Want root hash: %s:%*phN\n",
+> +		 params->hash_alg->name, hsize, want_hash);
+> +descend:
+> +	/* Descend the tree verifying hash pages */
+> +	for (; level > 0; level--) {
+> +		struct page *hpage = hpages[level - 1];
+> +		unsigned int hoffset = hoffsets[level - 1];
+> +
+> +		err = fsverity_hash_page(params, inode, req, hpage, real_hash);
+> +		if (err)
+> +			goto out;
+> +		err = cmp_hashes(vi, want_hash, real_hash, index, level - 1);
+> +		if (err)
+> +			goto out;
+> +		SetPageChecked(hpage);
+> +		extract_hash(hpage, hoffset, hsize, _want_hash);
+> +		want_hash = _want_hash;
+> +		put_page(hpage);
+> +		pr_debug("Verified hash page at level %d, now want %s:%*phN\n",
+> +			 level - 1, params->hash_alg->name, hsize, want_hash);
+> +	}
+> +
+> +	/* Finally, verify the data page */
+> +	err = fsverity_hash_page(params, inode, req, data_page, real_hash);
+> +	if (err)
+> +		goto out;
+> +	err = cmp_hashes(vi, want_hash, real_hash, index, -1);
+> +out:
+> +	for (; level > 0; level--)
+> +		put_page(hpages[level - 1]);
+> +
+> +	return err == 0;
+> +}
+> +
+> +/**
+> + * fsverity_verify_page - verify a data page
+> + *
+> + * Verify a page that has just been read from a verity file.  The page must be a
+> + * pagecache page that is still locked and not yet uptodate.
+> + *
+> + * Return: true if the page is valid, else false.
+> + */
+> +bool fsverity_verify_page(struct page *page)
+> +{
+> +	struct inode *inode = page->mapping->host;
+> +	const struct fsverity_info *vi = inode->i_verity_info;
+> +	struct ahash_request *req;
+> +	bool valid;
+> +
+> +	req = ahash_request_alloc(vi->tree_params.hash_alg->tfm, GFP_NOFS);
+> +	if (unlikely(!req))
+> +		return false;
+> +
+> +	valid = verify_page(inode, vi, req, page);
+> +
+> +	ahash_request_free(req);
+> +
+> +	return valid;
+> +}
+> +EXPORT_SYMBOL_GPL(fsverity_verify_page);
+> +
+> +#ifdef CONFIG_BLOCK
+> +/**
+> + * fsverity_verify_bio - verify a 'read' bio that has just completed
+> + *
+> + * Verify a set of pages that have just been read from a verity file.  The pages
+> + * must be pagecache pages that are still locked and not yet uptodate.  Pages
+> + * that fail verification are set to the Error state.  Verification is skipped
+> + * for pages already in the Error state, e.g. due to fscrypt decryption failure.
+> + *
+> + * This is a helper function for use by the ->readpages() method of filesystems
+> + * that issue bios to read data directly into the page cache.  Filesystems that
+> + * populate the page cache without issuing bios (e.g. non block-based
+> + * filesystems) must instead call fsverity_verify_page() directly on each page.
+> + * All filesystems must also call fsverity_verify_page() on holes.
+> + */
+> +void fsverity_verify_bio(struct bio *bio)
+> +{
+> +	struct inode *inode = bio_first_page_all(bio)->mapping->host;
+> +	const struct fsverity_info *vi = inode->i_verity_info;
+> +	struct ahash_request *req;
+> +	struct bio_vec *bv;
+> +	struct bvec_iter_all iter_all;
+> +
+> +	req = ahash_request_alloc(vi->tree_params.hash_alg->tfm, GFP_NOFS);
+> +	if (unlikely(!req)) {
+> +		bio_for_each_segment_all(bv, bio, iter_all)
+> +			SetPageError(bv->bv_page);
+> +		return;
+> +	}
+> +
+> +	bio_for_each_segment_all(bv, bio, iter_all) {
+> +		struct page *page = bv->bv_page;
+> +
+> +		if (!PageError(page) && !verify_page(inode, vi, req, page))
+> +			SetPageError(page);
+> +	}
+> +
+> +	ahash_request_free(req);
+> +}
+> +EXPORT_SYMBOL_GPL(fsverity_verify_bio);
+> +#endif /* CONFIG_BLOCK */
+> +
+> +/**
+> + * fsverity_enqueue_verify_work - enqueue work on the fs-verity workqueue
+> + *
+> + * Enqueue verification work for asynchronous processing.
+> + */
+> +void fsverity_enqueue_verify_work(struct work_struct *work)
+> +{
+> +	queue_work(fsverity_read_workqueue, work);
+> +}
+> +EXPORT_SYMBOL_GPL(fsverity_enqueue_verify_work);
+> +
+> +int __init fsverity_init_workqueue(void)
+> +{
+> +	/*
+> +	 * Use an unbound workqueue to allow bios to be verified in parallel
+> +	 * even when they happen to complete on the same CPU.  This sacrifices
+> +	 * locality, but it's worthwhile since hashing is CPU-intensive.
+> +	 *
+> +	 * Also use a high-priority workqueue to prioritize verification work,
+> +	 * which blocks reads from completing, over regular application tasks.
+> +	 */
+> +	fsverity_read_workqueue = alloc_workqueue("fsverity_read_queue",
+> +						  WQ_UNBOUND | WQ_HIGHPRI,
+> +						  num_online_cpus());
+> +	if (!fsverity_read_workqueue)
+> +		return -ENOMEM;
+> +	return 0;
+> +}
+> diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+> index cbcc358d073652..ecd47e748c7f64 100644
+> --- a/include/linux/fsverity.h
+> +++ b/include/linux/fsverity.h
+> @@ -33,6 +33,23 @@ struct fsverity_operations {
+>  	 */
+>  	int (*get_verity_descriptor)(struct inode *inode, void *buf,
+>  				     size_t bufsize);
+> +
+> +	/**
+> +	 * Read a Merkle tree page of the given inode.
+> +	 *
+> +	 * @inode: the inode
+> +	 * @index: 0-based index of the page within the Merkle tree
+> +	 *
+> +	 * This can be called at any time on an open verity file, as well as
+> +	 * between ->begin_enable_verity() and ->end_enable_verity().  It may be
+> +	 * called by multiple processes concurrently, even with the same page.
+> +	 *
+> +	 * Note that this must retrieve a *page*, not necessarily a *block*.
+> +	 *
+> +	 * Return: the page on success, ERR_PTR() on failure
+> +	 */
+> +	struct page *(*read_merkle_tree_page)(struct inode *inode,
+> +					      pgoff_t index);
+>  };
+>  
+>  #ifdef CONFIG_FS_VERITY
+> @@ -49,6 +66,12 @@ extern int fsverity_file_open(struct inode *inode, struct file *filp);
+>  extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
+>  extern void fsverity_cleanup_inode(struct inode *inode);
+>  
+> +/* verify.c */
+> +
+> +extern bool fsverity_verify_page(struct page *page);
+> +extern void fsverity_verify_bio(struct bio *bio);
+> +extern void fsverity_enqueue_verify_work(struct work_struct *work);
+> +
+>  #else /* !CONFIG_FS_VERITY */
+>  
+>  static inline struct fsverity_info *fsverity_get_info(const struct inode *inode)
+> @@ -73,6 +96,39 @@ static inline void fsverity_cleanup_inode(struct inode *inode)
+>  {
+>  }
+>  
+> +/* verify.c */
+> +
+> +static inline bool fsverity_verify_page(struct page *page)
+> +{
+> +	WARN_ON(1);
+> +	return false;
+> +}
+> +
+> +static inline void fsverity_verify_bio(struct bio *bio)
+> +{
+> +	WARN_ON(1);
+> +}
+> +
+> +static inline void fsverity_enqueue_verify_work(struct work_struct *work)
+> +{
+> +	WARN_ON(1);
+> +}
+> +
+>  #endif	/* !CONFIG_FS_VERITY */
+>  
+> +/**
+> + * fsverity_active() - do reads from the inode need to go through fs-verity?
+> + *
+> + * This checks whether ->i_verity_info has been set.
+> + *
+> + * Filesystems call this from ->readpages() to check whether the pages need to
+> + * be verified or not.  Don't use IS_VERITY() for this purpose; it's subject to
+> + * a race condition where the file is being read concurrently with
+> + * FS_IOC_ENABLE_VERITY completing.  (S_VERITY is set before ->i_verity_info.)
+> + */
+> +static inline bool fsverity_active(const struct inode *inode)
+> +{
+> +	return fsverity_get_info(inode) != NULL;
+> +}
+> +
+>  #endif	/* _LINUX_FSVERITY_H */
+> -- 
+> 2.22.0.410.gd8fdbe21b5-goog
