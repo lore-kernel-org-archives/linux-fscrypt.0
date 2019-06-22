@@ -1,111 +1,90 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Thu,  6 Jun 2019 08:51:52 -0700
-Message-Id: <20190606155205.2872-4-ebiggers@kernel.org>
-In-Reply-To: <20190606155205.2872-1-ebiggers@kernel.org>
-References: <20190606155205.2872-1-ebiggers@kernel.org>
+Return-Path: <jaegeuk@kernel.org>
+Date: Sat, 22 Jun 2019 15:28:58 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH v5 08/16] fs-verity: add the hook for file ->setattr()
+Message-ID: <20190622222858.GH19686@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20190620205043.64350-1-ebiggers@kernel.org>
+ <20190620205043.64350-9-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v4 03/16] fs-verity: add UAPI header
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, "Darrick J . Wong" <darrick.wong@oracle.com>, linux-api@vger.kernel.org, Dave Chinner <david@fromorbit.com>, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Christoph Hellwig <hch@lst.de>, Victor Hsieh <victorhsieh@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190620205043.64350-9-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On 06/20, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Add a function fsverity_prepare_setattr() which filesystems that support
+> fs-verity must call to deny truncates of verity files.
+> 
+> Reviewed-by: Theodore Ts'o <tytso@mit.edu>
 
-Add the UAPI header for fs-verity, including two ioctls:
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 
-- FS_IOC_ENABLE_VERITY
-- FS_IOC_MEASURE_VERITY
-
-These ioctls are documented in the "User API" section of
-Documentation/filesystems/fsverity.rst.
-
-Examples of using these ioctls can be found in fsverity-utils
-(https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git).
-
-I've also written xfstests that test these ioctls
-(https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git/log/?h=fsverity).
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/ioctl/ioctl-number.txt |  1 +
- include/uapi/linux/fsverity.h        | 39 ++++++++++++++++++++++++++++
- 2 files changed, 40 insertions(+)
- create mode 100644 include/uapi/linux/fsverity.h
-
-diff --git a/Documentation/ioctl/ioctl-number.txt b/Documentation/ioctl/ioctl-number.txt
-index c9558146ac58..21767c81e86d 100644
---- a/Documentation/ioctl/ioctl-number.txt
-+++ b/Documentation/ioctl/ioctl-number.txt
-@@ -225,6 +225,7 @@ Code  Seq#(hex)	Include File		Comments
- 'f'	00-0F	fs/ext4/ext4.h		conflict!
- 'f'	00-0F	linux/fs.h		conflict!
- 'f'	00-0F	fs/ocfs2/ocfs2_fs.h	conflict!
-+'f'	81-8F	linux/fsverity.h
- 'g'	00-0F	linux/usb/gadgetfs.h
- 'g'	20-2F	linux/usb/g_printer.h
- 'h'	00-7F				conflict! Charon filesystem
-diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
-new file mode 100644
-index 000000000000..57d1d7fc0c34
---- /dev/null
-+++ b/include/uapi/linux/fsverity.h
-@@ -0,0 +1,39 @@
-+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-+/*
-+ * fs-verity user API
-+ *
-+ * These ioctls can be used on filesystems that support fs-verity.  See the
-+ * "User API" section of Documentation/filesystems/fsverity.rst.
-+ *
-+ * Copyright 2019 Google LLC
-+ */
-+#ifndef _UAPI_LINUX_FSVERITY_H
-+#define _UAPI_LINUX_FSVERITY_H
-+
-+#include <linux/ioctl.h>
-+#include <linux/types.h>
-+
-+#define FS_VERITY_HASH_ALG_SHA256	1
-+
-+struct fsverity_enable_arg {
-+	__u32 version;
-+	__u32 hash_algorithm;
-+	__u32 block_size;
-+	__u32 salt_size;
-+	__u64 salt_ptr;
-+	__u32 sig_size;
-+	__u32 __reserved1;
-+	__u64 sig_ptr;
-+	__u64 __reserved2[11];
-+};
-+
-+struct fsverity_digest {
-+	__u16 digest_algorithm;
-+	__u16 digest_size; /* input/output */
-+	__u8 digest[];
-+};
-+
-+#define FS_IOC_ENABLE_VERITY	_IOW('f', 133, struct fsverity_enable_arg)
-+#define FS_IOC_MEASURE_VERITY	_IOWR('f', 134, struct fsverity_digest)
-+
-+#endif /* _UAPI_LINUX_FSVERITY_H */
--- 
-2.21.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/verity/open.c         | 21 +++++++++++++++++++++
+>  include/linux/fsverity.h |  7 +++++++
+>  2 files changed, 28 insertions(+)
+> 
+> diff --git a/fs/verity/open.c b/fs/verity/open.c
+> index 3a3bb27e23f5e3..21ae0ef254a695 100644
+> --- a/fs/verity/open.c
+> +++ b/fs/verity/open.c
+> @@ -296,6 +296,27 @@ int fsverity_file_open(struct inode *inode, struct file *filp)
+>  }
+>  EXPORT_SYMBOL_GPL(fsverity_file_open);
+>  
+> +/**
+> + * fsverity_prepare_setattr - prepare to change a verity inode's attributes
+> + * @dentry: dentry through which the inode is being changed
+> + * @attr: attributes to change
+> + *
+> + * Verity files are immutable, so deny truncates.  This isn't covered by the
+> + * open-time check because sys_truncate() takes a path, not a file descriptor.
+> + *
+> + * Return: 0 on success, -errno on failure
+> + */
+> +int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
+> +{
+> +	if (IS_VERITY(d_inode(dentry)) && (attr->ia_valid & ATTR_SIZE)) {
+> +		pr_debug("Denying truncate of verity file (ino %lu)\n",
+> +			 d_inode(dentry)->i_ino);
+> +		return -EPERM;
+> +	}
+> +	return 0;
+> +}
+> +EXPORT_SYMBOL_GPL(fsverity_prepare_setattr);
+> +
+>  /**
+>   * fsverity_cleanup_inode - free the inode's verity info, if present
+>   *
+> diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+> index 1372c236c8770c..cbcc358d073652 100644
+> --- a/include/linux/fsverity.h
+> +++ b/include/linux/fsverity.h
+> @@ -46,6 +46,7 @@ static inline struct fsverity_info *fsverity_get_info(const struct inode *inode)
+>  /* open.c */
+>  
+>  extern int fsverity_file_open(struct inode *inode, struct file *filp);
+> +extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
+>  extern void fsverity_cleanup_inode(struct inode *inode);
+>  
+>  #else /* !CONFIG_FS_VERITY */
+> @@ -62,6 +63,12 @@ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
+>  	return IS_VERITY(inode) ? -EOPNOTSUPP : 0;
+>  }
+>  
+> +static inline int fsverity_prepare_setattr(struct dentry *dentry,
+> +					   struct iattr *attr)
+> +{
+> +	return IS_VERITY(d_inode(dentry)) ? -EOPNOTSUPP : 0;
+> +}
+> +
+>  static inline void fsverity_cleanup_inode(struct inode *inode)
+>  {
+>  }
+> -- 
+> 2.22.0.410.gd8fdbe21b5-goog
