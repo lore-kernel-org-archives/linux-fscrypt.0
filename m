@@ -1,12 +1,10 @@
 Return-Path: <dm-devel-bounces@redhat.com>
-Date: Sun, 23 Jun 2019 18:12:41 +0800
-From: Herbert Xu <herbert@gondor.apana.org.au>
-Message-ID: <20190623101241.6cr4sbxyviigu3sz@gondor.apana.org.au>
-References: <20190621080918.22809-1-ard.biesheuvel@arm.com>
-	<CAKv+Gu-ZO9Fnfx06XYJ-tp+6nrk0D8TBGa2chmxFW-kjPMmLCw@mail.gmail.com>
 MIME-Version: 1.0
-Content-Disposition: inline
-In-Reply-To: <CAKv+Gu-ZO9Fnfx06XYJ-tp+6nrk0D8TBGa2chmxFW-kjPMmLCw@mail.gmail.com>
+References: <20190621080918.22809-1-ard.biesheuvel@arm.com>
+In-Reply-To: <20190621080918.22809-1-ard.biesheuvel@arm.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Sun, 23 Jun 2019 11:30:41 +0200
+Message-ID: <CAKv+Gu-ZO9Fnfx06XYJ-tp+6nrk0D8TBGa2chmxFW-kjPMmLCw@mail.gmail.com>
 Subject: Re: [dm-devel] [PATCH v4 0/6] crypto: switch to crypto API for
 	ESSIV generation
 List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
@@ -21,22 +19,34 @@ Content-Transfer-Encoding: 7bit
 Sender: dm-devel-bounces@redhat.com
 Errors-To: dm-devel-bounces@redhat.com
 To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, device-mapper development <dm-devel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Milan Broz <gmazyland@gmail.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, device-mapper development <dm-devel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Sun, Jun 23, 2019 at 11:30:41AM +0200, Ard Biesheuvel wrote:
+On Fri, 21 Jun 2019 at 10:09, Ard Biesheuvel <ard.biesheuvel@arm.com> wrote:
 >
-> So with that in mind, I think we should decouple the multi-sector
-> discussion and leave it for a followup series, preferably proposed by
-> someone who also has access to some hardware to prototype it on.
+> From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+>
+...
+>
+> - given that hardware already exists that can perform en/decryption including
+>   ESSIV generation of a range of blocks, it would be useful to encapsulate
+>   this in the ESSIV template, and teach at least dm-crypt how to use it
+>   (given that it often processes 8 512-byte sectors at a time)
 
-Yes that makes sense.
+I thought about this a bit more, and it occurred to me that the
+capability of issuing several sectors at a time and letting the lower
+layers increment the IV between sectors is orthogonal to whether ESSIV
+is being used or not, and so it probably belongs in another wrapper.
 
-Thanks,
--- 
-Email: Herbert Xu <herbert@gondor.apana.org.au>
-Home Page: http://gondor.apana.org.au/~herbert/
-PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
+I.e., if we define a skcipher template like dmplain64le(), which is
+defined as taking a sector size as part of the key, and which
+increments a 64 LE counter between sectors if multiple are passed, it
+can be used not only for ESSIV but also for XTS, which I assume can be
+h/w accelerated in the same way.
+
+So with that in mind, I think we should decouple the multi-sector
+discussion and leave it for a followup series, preferably proposed by
+someone who also has access to some hardware to prototype it on.
 
 --
 dm-devel mailing list
