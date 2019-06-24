@@ -1,166 +1,58 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:43686 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725308AbfFZEtp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 26 Jun 2019 00:49:45 -0400
-Date: Tue, 25 Jun 2019 21:49:42 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: Re: [dm-devel] [PATCH v4 0/6] crypto: switch to crypto API for ESSIV
- generation
-Message-ID: <20190626044942.GB23471@sol.localdomain>
+Return-Path: <dm-devel-bounces@redhat.com>
 References: <20190621080918.22809-1-ard.biesheuvel@arm.com>
- <CAKv+Gu-ZO9Fnfx06XYJ-tp+6nrk0D8TBGa2chmxFW-kjPMmLCw@mail.gmail.com>
+	<CAKv+Gu-ZO9Fnfx06XYJ-tp+6nrk0D8TBGa2chmxFW-kjPMmLCw@mail.gmail.com>
+	<20190623101241.6cr4sbxyviigu3sz@gondor.apana.org.au>
+From: Milan Broz <gmazyland@gmail.com>
+Message-ID: <5ebd992b-cb01-6dcc-f571-55afbb05c03b@gmail.com>
+Date: Mon, 24 Jun 2019 08:52:11 +0200
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAKv+Gu-ZO9Fnfx06XYJ-tp+6nrk0D8TBGa2chmxFW-kjPMmLCw@mail.gmail.com>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, device-mapper development <dm-devel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Milan Broz <gmazyland@gmail.com>
+In-Reply-To: <20190623101241.6cr4sbxyviigu3sz@gondor.apana.org.au>
+Content-Language: en-US
+Subject: Re: [dm-devel] [PATCH v4 0/6] crypto: switch to crypto API for
+	ESSIV generation
+List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
+List-Archive: <https://www.redhat.com/archives/dm-devel>
+List-Post: <mailto:dm-devel@redhat.com>
+List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
+List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Sender: dm-devel-bounces@redhat.com
+Errors-To: dm-devel-bounces@redhat.com
+To: Herbert Xu <herbert@gondor.apana.org.au>, Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Cc: Gilad Ben-Yossef <gilad@benyossef.com>, device-mapper development <dm-devel@redhat.com>, linux-fscrypt@vger.kernel.org, linux-crypto@vger.kernel.org, Eric Biggers <ebiggers@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Sun, Jun 23, 2019 at 11:30:41AM +0200, Ard Biesheuvel wrote:
-> On Fri, 21 Jun 2019 at 10:09, Ard Biesheuvel <ard.biesheuvel@arm.com> wrote:
-> >
-> > From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-> >
-> ...
-> >
-> > - given that hardware already exists that can perform en/decryption including
-> >   ESSIV generation of a range of blocks, it would be useful to encapsulate
-> >   this in the ESSIV template, and teach at least dm-crypt how to use it
-> >   (given that it often processes 8 512-byte sectors at a time)
+On 23/06/2019 12:12, Herbert Xu wrote:
+> On Sun, Jun 23, 2019 at 11:30:41AM +0200, Ard Biesheuvel wrote:
+>>
+>> So with that in mind, I think we should decouple the multi-sector
+>> discussion and leave it for a followup series, preferably proposed by
+>> someone who also has access to some hardware to prototype it on.
 > 
-> I thought about this a bit more, and it occurred to me that the
-> capability of issuing several sectors at a time and letting the lower
-> layers increment the IV between sectors is orthogonal to whether ESSIV
-> is being used or not, and so it probably belongs in another wrapper.
-> 
-> I.e., if we define a skcipher template like dmplain64le(), which is
-> defined as taking a sector size as part of the key, and which
-> increments a 64 LE counter between sectors if multiple are passed, it
-> can be used not only for ESSIV but also for XTS, which I assume can be
-> h/w accelerated in the same way.
-> 
-> So with that in mind, I think we should decouple the multi-sector
-> discussion and leave it for a followup series, preferably proposed by
-> someone who also has access to some hardware to prototype it on.
-> 
+> Yes that makes sense.
 
-This makes sense, but if we're going to leave that functionality out of the
-essiv template, I think we should revisit whether the essiv template takes a
-__le64 sector number vs. just an IV matching the cipher block size.  To me,
-defining the IV to be a __le64 seems like a layering violation.  Also, dm-crypt
-and fscrypt already know how to zero-pad the sector number to form the full 16
-byte IV, and your patch just duplicates that logic in the essiv template too,
-which makes it more complicated than necessary.
+Yes.
 
-E.g., the following incremental patch for the skcipher case would simplify it:
+And TBH, the most important optimization for dm-crypt in this case
+is processing 8 512-bytes sectors in 4k encryption block (because page
+cache will generate page-sized bios) and with XTS mode and linear IV (plain64),
+not ESSIV.
 
-(You'd have to do it for the AEAD case too.)
+Dm-crypt can use 4k sectors directly, there are only two
+blockers - you need LUKS2 to support it, and many devices
+just do not advertise physical 4k sectors (many SSDs).
+So switching to 4k could cause some problems with partial 4k writes
+(after a crash or power-fail).
 
-diff --git a/crypto/essiv.c b/crypto/essiv.c
-index 8e80814ec7d6..737e92ebcbd8 100644
---- a/crypto/essiv.c
-+++ b/crypto/essiv.c
-@@ -57,11 +57,6 @@ struct essiv_tfm_ctx {
- 	struct crypto_shash		*hash;
- };
- 
--struct essiv_skcipher_request_ctx {
--	u8				iv[MAX_INNER_IV_SIZE];
--	struct skcipher_request		skcipher_req;
--};
--
- struct essiv_aead_request_ctx {
- 	u8				iv[2][MAX_INNER_IV_SIZE];
- 	struct scatterlist		src[4], dst[4];
-@@ -161,39 +156,32 @@ static void essiv_skcipher_done(struct crypto_async_request *areq, int err)
- 	skcipher_request_complete(req, err);
- }
- 
--static void essiv_skcipher_prepare_subreq(struct skcipher_request *req)
-+static int essiv_skcipher_crypt(struct skcipher_request *req, bool enc)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
- 	const struct essiv_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
--	struct essiv_skcipher_request_ctx *rctx = skcipher_request_ctx(req);
--	struct skcipher_request *subreq = &rctx->skcipher_req;
--
--	memset(rctx->iv, 0, crypto_cipher_blocksize(tctx->essiv_cipher));
--	memcpy(rctx->iv, req->iv, crypto_skcipher_ivsize(tfm));
-+	struct skcipher_request *subreq = skcipher_request_ctx(req);
- 
--	crypto_cipher_encrypt_one(tctx->essiv_cipher, rctx->iv, rctx->iv);
-+	crypto_cipher_encrypt_one(tctx->essiv_cipher, req->iv, req->iv);
- 
- 	skcipher_request_set_tfm(subreq, tctx->u.skcipher);
- 	skcipher_request_set_crypt(subreq, req->src, req->dst, req->cryptlen,
--				   rctx->iv);
-+				   req->iv);
- 	skcipher_request_set_callback(subreq, skcipher_request_flags(req),
- 				      essiv_skcipher_done, req);
-+
-+	return enc ? crypto_skcipher_encrypt(subreq) :
-+		     crypto_skcipher_decrypt(subreq);
- }
- 
- static int essiv_skcipher_encrypt(struct skcipher_request *req)
- {
--	struct essiv_skcipher_request_ctx *rctx = skcipher_request_ctx(req);
--
--	essiv_skcipher_prepare_subreq(req);
--	return crypto_skcipher_encrypt(&rctx->skcipher_req);
-+	return essiv_skcipher_crypt(req, true);
- }
- 
- static int essiv_skcipher_decrypt(struct skcipher_request *req)
- {
--	struct essiv_skcipher_request_ctx *rctx = skcipher_request_ctx(req);
--
--	essiv_skcipher_prepare_subreq(req);
--	return crypto_skcipher_decrypt(&rctx->skcipher_req);
-+	return essiv_skcipher_crypt(req, false);
- }
- 
- static void essiv_aead_done(struct crypto_async_request *areq, int err)
-@@ -300,24 +288,14 @@ static int essiv_skcipher_init_tfm(struct crypto_skcipher *tfm)
- 	struct essiv_instance_ctx *ictx = skcipher_instance_ctx(inst);
- 	struct essiv_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
- 	struct crypto_skcipher *skcipher;
--	unsigned int subreq_size;
- 	int err;
- 
--	BUILD_BUG_ON(offsetofend(struct essiv_skcipher_request_ctx,
--				 skcipher_req) !=
--		     sizeof(struct essiv_skcipher_request_ctx));
--
- 	skcipher = crypto_spawn_skcipher(&ictx->u.skcipher_spawn);
- 	if (IS_ERR(skcipher))
- 		return PTR_ERR(skcipher);
- 
--	subreq_size = FIELD_SIZEOF(struct essiv_skcipher_request_ctx,
--				   skcipher_req) +
--		      crypto_skcipher_reqsize(skcipher);
--
--	crypto_skcipher_set_reqsize(tfm,
--				    offsetof(struct essiv_skcipher_request_ctx,
--					     skcipher_req) + subreq_size);
-+	crypto_skcipher_set_reqsize(tfm, sizeof(struct skcipher_request) +
-+				    crypto_skcipher_reqsize(skcipher));
- 
- 	err = essiv_init_tfm(ictx, tctx);
- 	if (err) {
-@@ -567,9 +545,9 @@ static int essiv_create(struct crypto_template *tmpl, struct rtattr **tb)
- 
- 		skcipher_inst->alg.min_keysize	= crypto_skcipher_alg_min_keysize(skcipher_alg);
- 		skcipher_inst->alg.max_keysize	= crypto_skcipher_alg_max_keysize(skcipher_alg);
--		skcipher_inst->alg.ivsize	= ESSIV_IV_SIZE;
--		skcipher_inst->alg.chunksize	= skcipher_alg->chunksize;
--		skcipher_inst->alg.walksize	= skcipher_alg->walksize;
-+		skcipher_inst->alg.ivsize	= crypto_skcipher_alg_ivsize(skcipher_alg);
-+		skcipher_inst->alg.chunksize	= crypto_skcipher_alg_chunksize(skcipher_alg);
-+		skcipher_inst->alg.walksize	= crypto_skcipher_alg_walksize(skcipher_alg);
- 
- 		skcipher_inst->free		= essiv_skcipher_free_instance;
- 
+The plan for the dm-crypt side is more to focus on using 4k native
+sectors than this micro-optimization in HW.
+
+Milan
+
+--
+dm-devel mailing list
+dm-devel@redhat.com
+https://www.redhat.com/mailman/listinfo/dm-devel
