@@ -1,351 +1,58 @@
-Return-Path: <SRS0=94sN=UP=linux.ibm.com=chandan@kernel.org>
+Return-Path: <SRS0=SM74=UY=linux.ibm.com=chandan@kernel.org>
 From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V3 1/7] FS: Introduce read callbacks
-Date: Sun, 16 Jun 2019 21:38:07 +0530
-Message-Id: <20190616160813.24464-2-chandan@linux.ibm.com>
-In-Reply-To: <20190616160813.24464-1-chandan@linux.ibm.com>
-References: <20190616160813.24464-1-chandan@linux.ibm.com>
+Subject: Re: [PATCH V3 6/7] Add decryption support for sub-pagesized blocks
+Date: Tue, 25 Jun 2019 11:52:43 +0530
+In-Reply-To: <20190621212916.GD167064@gmail.com>
+References: <20190616160813.24464-1-chandan@linux.ibm.com> <20190616160813.24464-7-chandan@linux.ibm.com> <20190621212916.GD167064@gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Message-Id: <3201150.UV5xBNPoiD@localhost.localdomain>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, tytso@mit.edu, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Read callbacks implements a state machine to be executed after a
-buffered read I/O is completed. They help in further processing the file
-data read from the backing store. Currently, decryption is the only post
-processing step to be supported.
+On Saturday, June 22, 2019 2:59:17 AM IST Eric Biggers wrote:
+> On Sun, Jun 16, 2019 at 09:38:12PM +0530, Chandan Rajendra wrote:
+> > To support decryption of sub-pagesized blocks this commit adds code to,
+> > 1. Track buffer head in "struct read_callbacks_ctx".
+> > 2. Pass buffer head argument to all read callbacks.
+> > 3. Add new fscrypt helper to decrypt the file data referred to by a
+> >    buffer head.
+> > 
+> > Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+> > ---
+> >  fs/buffer.c                    |  55 +++++++++------
+> >  fs/crypto/bio.c                |  21 +++++-
+> >  fs/f2fs/data.c                 |   2 +-
+> >  fs/mpage.c                     |   2 +-
+> >  fs/read_callbacks.c            | 118 +++++++++++++++++++++++++--------
+> >  include/linux/buffer_head.h    |   1 +
+> >  include/linux/read_callbacks.h |  13 +++-
+> >  7 files changed, 158 insertions(+), 54 deletions(-)
+> > 
+> 
+> This is another patch that unnecessarily changes way too many components at
+> once.  My suggestions elsewhere would resolve this, though:
+> 
+> - This patch changes fs/f2fs/data.c and fs/mpage.c only to pass a NULL
+>   buffer_head to read_callbacks_setup().  But as per my comments on patch 1,
+>   read_callbacks_setup() should be split into read_callbacks_setup_bio() and
+>   read_callbacks_end_bh().
+> 
+> - This patch changes fs/crypto/ only to add support for the buffer_head
+>   decryption work.  But as per my comments on patch 1, that should be in
+>   read_callbacks.c instead.
+> 
+> And adding buffer_head support to fs/read_callbacks.c should be its own patch,
+> *or* should simply be folded into the patch that adds fs/read_callbacks.c.
+> 
+> Then the only thing remaining in this patch would be updating fs/buffer.c to
+> make it use the read_callbacks, which should be retitled to something like
+> "fs/buffer.c: add decryption support via read_callbacks".
+> 
 
-The execution of the state machine is to be initiated by the endio
-function associated with the read operation.
+I agree.
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- fs/Kconfig                     |   3 +
- fs/Makefile                    |   2 +
- fs/crypto/Kconfig              |   1 +
- fs/crypto/bio.c                |  11 +++
- fs/read_callbacks.c            | 174 +++++++++++++++++++++++++++++++++
- include/linux/fscrypt.h        |   5 +
- include/linux/read_callbacks.h |  38 +++++++
- 7 files changed, 234 insertions(+)
- create mode 100644 fs/read_callbacks.c
- create mode 100644 include/linux/read_callbacks.h
-
-diff --git a/fs/Kconfig b/fs/Kconfig
-index f1046cf6ad85..d869859c88da 100644
---- a/fs/Kconfig
-+++ b/fs/Kconfig
-@@ -21,6 +21,9 @@ if BLOCK
- config FS_IOMAP
- 	bool
- 
-+config FS_READ_CALLBACKS
-+       bool
-+
- source "fs/ext2/Kconfig"
- source "fs/ext4/Kconfig"
- source "fs/jbd2/Kconfig"
-diff --git a/fs/Makefile b/fs/Makefile
-index c9aea23aba56..a1a06f0db5c1 100644
---- a/fs/Makefile
-+++ b/fs/Makefile
-@@ -21,6 +21,8 @@ else
- obj-y +=	no-block.o
- endif
- 
-+obj-$(CONFIG_FS_READ_CALLBACKS) += read_callbacks.o
-+
- obj-$(CONFIG_PROC_FS) += proc_namespace.o
- 
- obj-y				+= notify/
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 24ed99e2eca0..7752f9964280 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -9,6 +9,7 @@ config FS_ENCRYPTION
- 	select CRYPTO_CTS
- 	select CRYPTO_SHA256
- 	select KEYS
-+	select FS_READ_CALLBACKS if BLOCK
- 	help
- 	  Enable encryption of files and directories.  This
- 	  feature is similar to ecryptfs, but it is more memory
-diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
-index 82da2510721f..f677ff93d464 100644
---- a/fs/crypto/bio.c
-+++ b/fs/crypto/bio.c
-@@ -24,6 +24,7 @@
- #include <linux/module.h>
- #include <linux/bio.h>
- #include <linux/namei.h>
-+#include <linux/read_callbacks.h>
- #include "fscrypt_private.h"
- 
- static void __fscrypt_decrypt_bio(struct bio *bio, bool done)
-@@ -68,6 +69,16 @@ void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx, struct bio *bio)
- }
- EXPORT_SYMBOL(fscrypt_enqueue_decrypt_bio);
- 
-+void fscrypt_decrypt_work(struct work_struct *work)
-+{
-+	struct read_callbacks_ctx *ctx =
-+		container_of(work, struct read_callbacks_ctx, work);
-+
-+	fscrypt_decrypt_bio(ctx->bio);
-+
-+	read_callbacks(ctx);
-+}
-+
- int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 				sector_t pblk, unsigned int len)
- {
-diff --git a/fs/read_callbacks.c b/fs/read_callbacks.c
-new file mode 100644
-index 000000000000..a4196e3de05f
---- /dev/null
-+++ b/fs/read_callbacks.c
-@@ -0,0 +1,174 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * This file tracks the state machine that needs to be executed after reading
-+ * data from files that are encrypted and/or have verity metadata associated
-+ * with them.
-+ */
-+#include <linux/module.h>
-+#include <linux/mm.h>
-+#include <linux/pagemap.h>
-+#include <linux/bio.h>
-+#include <linux/fscrypt.h>
-+#include <linux/read_callbacks.h>
-+
-+#define NUM_PREALLOC_READ_CALLBACK_CTXS	128
-+
-+static struct kmem_cache *read_callbacks_ctx_cache;
-+static mempool_t *read_callbacks_ctx_pool;
-+
-+/* Read callback state machine steps */
-+enum read_callbacks_step {
-+	STEP_INITIAL = 0,
-+	STEP_DECRYPT,
-+};
-+
-+static void put_read_callbacks_ctx(struct read_callbacks_ctx *ctx)
-+{
-+	mempool_free(ctx, read_callbacks_ctx_pool);
-+}
-+
-+static void end_read_callbacks_bio(struct bio *bio)
-+{
-+	struct read_callbacks_ctx *ctx;
-+	struct page *page;
-+	struct bio_vec *bv;
-+	struct bvec_iter_all iter_all;
-+
-+	ctx = bio->bi_private;
-+
-+	bio_for_each_segment_all(bv, bio, iter_all) {
-+		page = bv->bv_page;
-+
-+		if (bio->bi_status || PageError(page)) {
-+			ClearPageUptodate(page);
-+			SetPageError(page);
-+		} else {
-+			SetPageUptodate(page);
-+		}
-+
-+		if (ctx->page_op)
-+			ctx->page_op(bio, page);
-+
-+		unlock_page(page);
-+	}
-+
-+	put_read_callbacks_ctx(ctx);
-+
-+	bio_put(bio);
-+}
-+
-+/**
-+ * read_callbacks() - Execute the read callbacks state machine.
-+ * @ctx: The context structure tracking the current state.
-+ *
-+ * For each state, this function enqueues a work into appropriate subsystem's
-+ * work queue. After performing further processing of the data in the bio's
-+ * pages, the subsystem should invoke read_calbacks() to continue with the next
-+ * state in the state machine.
-+ */
-+void read_callbacks(struct read_callbacks_ctx *ctx)
-+{
-+	/*
-+	 * We use different work queues for decryption and for verity because
-+	 * verity may require reading metadata pages that need decryption, and
-+	 * we shouldn't recurse to the same workqueue.
-+	 */
-+	switch (++ctx->cur_step) {
-+	case STEP_DECRYPT:
-+		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
-+			INIT_WORK(&ctx->work, fscrypt_decrypt_work);
-+			fscrypt_enqueue_decrypt_work(&ctx->work);
-+			return;
-+		}
-+		ctx->cur_step++;
-+		/* fall-through */
-+	default:
-+		end_read_callbacks_bio(ctx->bio);
-+	}
-+}
-+EXPORT_SYMBOL(read_callbacks);
-+
-+/**
-+ * read_callbacks_end_bio() - Initiate the read callbacks state machine.
-+ * @bio: bio on which read I/O operation has just been completed.
-+ *
-+ * Initiates the execution of the read callbacks state machine when the read
-+ * operation has been completed successfully. If there was an error associated
-+ * with the bio, this function frees the read callbacks context structure stored
-+ * in bio->bi_private (if any).
-+ *
-+ * Return: 1 to indicate that the bio has been handled (including unlocking the
-+ * pages); 0 otherwise.
-+ */
-+int read_callbacks_end_bio(struct bio *bio)
-+{
-+	if (!bio->bi_status && bio->bi_private) {
-+		read_callbacks((struct read_callbacks_ctx *)(bio->bi_private));
-+		return 1;
-+	}
-+
-+	if (bio->bi_private)
-+		put_read_callbacks_ctx((struct read_callbacks_ctx *)(bio->bi_private));
-+
-+	return 0;
-+}
-+EXPORT_SYMBOL(read_callbacks_end_bio);
-+
-+/**
-+ * read_callbacks_setup() - Initialize the read callbacks state machine
-+ * @inode: The file on which read I/O is performed.
-+ * @bio: bio holding page cache pages on which read I/O is performed.
-+ * @page_op: Function to perform filesystem specific operations on a page.
-+ *
-+ * Based on the nature of the file's data (e.g. encrypted), this function
-+ * computes the steps that need to be performed after data is read of the
-+ * backing disk. This information is saved in a context structure. A pointer
-+ * to the context structure is then stored in bio->bi_private for later
-+ * usage.
-+ *
-+ * Return: 0 on success; An error code on failure.
-+ */
-+int read_callbacks_setup(struct inode *inode, struct bio *bio,
-+			end_page_op_t page_op)
-+{
-+	struct read_callbacks_ctx *ctx = NULL;
-+	unsigned int enabled_steps = 0;
-+
-+	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
-+		enabled_steps |= 1 << STEP_DECRYPT;
-+
-+	if (enabled_steps) {
-+		ctx = mempool_alloc(read_callbacks_ctx_pool, GFP_NOFS);
-+		if (!ctx)
-+			return -ENOMEM;
-+		ctx->bio = bio;
-+		ctx->inode = inode;
-+		ctx->enabled_steps = enabled_steps;
-+		ctx->cur_step = STEP_INITIAL;
-+		ctx->page_op = page_op;
-+		bio->bi_private = ctx;
-+	}
-+
-+	return 0;
-+}
-+EXPORT_SYMBOL(read_callbacks_setup);
-+
-+static int __init init_read_callbacks(void)
-+{
-+	read_callbacks_ctx_cache = KMEM_CACHE(read_callbacks_ctx, 0);
-+	if (!read_callbacks_ctx_cache)
-+		goto fail;
-+	read_callbacks_ctx_pool =
-+		mempool_create_slab_pool(NUM_PREALLOC_READ_CALLBACK_CTXS,
-+					 read_callbacks_ctx_cache);
-+	if (!read_callbacks_ctx_pool)
-+		goto fail_free_cache;
-+	return 0;
-+
-+fail_free_cache:
-+	kmem_cache_destroy(read_callbacks_ctx_cache);
-+fail:
-+	return -ENOMEM;
-+}
-+
-+fs_initcall(init_read_callbacks);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index bd8f207a2fb6..159b8ddcd670 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -235,6 +235,7 @@ static inline bool fscrypt_match_name(const struct fscrypt_name *fname,
- extern void fscrypt_decrypt_bio(struct bio *);
- extern void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
- 					struct bio *bio);
-+extern void fscrypt_decrypt_work(struct work_struct *work);
- extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
- 				 unsigned int);
- 
-@@ -440,6 +441,10 @@ static inline void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
- {
- }
- 
-+static inline void fscrypt_decrypt_work(struct work_struct *work)
-+{
-+}
-+
- static inline int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 					sector_t pblk, unsigned int len)
- {
-diff --git a/include/linux/read_callbacks.h b/include/linux/read_callbacks.h
-new file mode 100644
-index 000000000000..aa1ec8ed7a6a
---- /dev/null
-+++ b/include/linux/read_callbacks.h
-@@ -0,0 +1,38 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+#ifndef _READ_CALLBACKS_H
-+#define _READ_CALLBACKS_H
-+
-+typedef void (*end_page_op_t)(struct bio *bio, struct page *page);
-+
-+struct read_callbacks_ctx {
-+	struct bio *bio;
-+	struct inode *inode;
-+	struct work_struct work;
-+	unsigned int cur_step;
-+	unsigned int enabled_steps;
-+	end_page_op_t page_op;
-+};
-+
-+#ifdef CONFIG_FS_READ_CALLBACKS
-+void read_callbacks(struct read_callbacks_ctx *ctx);
-+int read_callbacks_end_bio(struct bio *bio);
-+int read_callbacks_setup(struct inode *inode, struct bio *bio,
-+			end_page_op_t page_op);
-+#else
-+static inline void read_callbacks(struct read_callbacks_ctx *ctx)
-+{
-+}
-+
-+static inline int read_callbacks_end_bio(struct bio *bio)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
-+static inline int read_callbacks_setup(struct inode *inode,
-+				struct bio *bio, end_page_op_t page_op)
-+{
-+	return -EOPNOTSUPP;
-+}
-+#endif
-+
-+#endif	/* _READ_CALLBACKS_H */
 -- 
-2.19.1
+chandan
