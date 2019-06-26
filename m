@@ -1,317 +1,106 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wm1-f67.google.com ([209.85.128.67]:50283 "EHLO
-        mail-wm1-f67.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726711AbfF1PV3 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 28 Jun 2019 11:21:29 -0400
-Received: by mail-wm1-f67.google.com with SMTP id c66so9502924wmf.0
-        for <linux-fscrypt@vger.kernel.org>; Fri, 28 Jun 2019 08:21:27 -0700 (PDT)
+Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v6 4/7] md: dm-crypt: switch to ESSIV crypto API template
-Date: Fri, 28 Jun 2019 17:21:09 +0200
-Message-Id: <20190628152112.914-5-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190628152112.914-1-ard.biesheuvel@linaro.org>
-References: <20190628152112.914-1-ard.biesheuvel@linaro.org>
+Subject: [PATCH v5 0/7] crypto: switch to crypto API for ESSIV generation
+Date: Wed, 26 Jun 2019 22:40:40 +0200
+Message-Id: <20190626204047.32131-1-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
+Sender: linux-crypto-owner@vger.kernel.org
 To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+Cc: linux-arm-kernel@lists.infradead.org, Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Replace the explicit ESSIV handling in the dm-crypt driver with calls
-into the crypto API, which now possesses the capability to perform
-this processing within the crypto subsystem.
+This series creates an ESSIV template that produces a skcipher or AEAD
+transform based on a tuple of the form '<skcipher>,<cipher>,<shash>'
+(or '<aead>,<cipher>,<shash>' for the AEAD case). It exposes the
+encapsulated sync or async skcipher/aead by passing through all operations,
+while using the cipher/shash pair to transform the input IV into an ESSIV
+output IV.
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- drivers/md/Kconfig    |   1 +
- drivers/md/dm-crypt.c | 200 ++++----------------
- 2 files changed, 36 insertions(+), 165 deletions(-)
+This matches what both users of ESSIV in the kernel do, and so it is proposed
+as a replacement for those, in patches #2 and #4.
 
-diff --git a/drivers/md/Kconfig b/drivers/md/Kconfig
-index 45254b3ef715..30ca87cf25db 100644
---- a/drivers/md/Kconfig
-+++ b/drivers/md/Kconfig
-@@ -271,6 +271,7 @@ config DM_CRYPT
- 	depends on BLK_DEV_DM
- 	select CRYPTO
- 	select CRYPTO_CBC
-+	select CRYPTO_ESSIV
- 	---help---
- 	  This device-mapper target allows you to create a device that
- 	  transparently encrypts the data on it. You'll need to activate
-diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index f001f1104cb5..e26a09c2d1a6 100644
---- a/drivers/md/dm-crypt.c
-+++ b/drivers/md/dm-crypt.c
-@@ -98,11 +98,6 @@ struct crypt_iv_operations {
- 		    struct dm_crypt_request *dmreq);
- };
- 
--struct iv_essiv_private {
--	struct crypto_shash *hash_tfm;
--	u8 *salt;
--};
--
- struct iv_benbi_private {
- 	int shift;
- };
-@@ -155,7 +150,6 @@ struct crypt_config {
- 
- 	const struct crypt_iv_operations *iv_gen_ops;
- 	union {
--		struct iv_essiv_private essiv;
- 		struct iv_benbi_private benbi;
- 		struct iv_lmk_private lmk;
- 		struct iv_tcw_private tcw;
-@@ -165,8 +159,6 @@ struct crypt_config {
- 	unsigned short int sector_size;
- 	unsigned char sector_shift;
- 
--	/* ESSIV: struct crypto_cipher *essiv_tfm */
--	void *iv_private;
- 	union {
- 		struct crypto_skcipher **tfms;
- 		struct crypto_aead **tfms_aead;
-@@ -323,157 +315,15 @@ static int crypt_iv_plain64be_gen(struct crypt_config *cc, u8 *iv,
- 	return 0;
- }
- 
--/* Initialise ESSIV - compute salt but no local memory allocations */
--static int crypt_iv_essiv_init(struct crypt_config *cc)
--{
--	struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
--	SHASH_DESC_ON_STACK(desc, essiv->hash_tfm);
--	struct crypto_cipher *essiv_tfm;
--	int err;
--
--	desc->tfm = essiv->hash_tfm;
--
--	err = crypto_shash_digest(desc, cc->key, cc->key_size, essiv->salt);
--	shash_desc_zero(desc);
--	if (err)
--		return err;
--
--	essiv_tfm = cc->iv_private;
--
--	err = crypto_cipher_setkey(essiv_tfm, essiv->salt,
--			    crypto_shash_digestsize(essiv->hash_tfm));
--	if (err)
--		return err;
--
--	return 0;
--}
--
--/* Wipe salt and reset key derived from volume key */
--static int crypt_iv_essiv_wipe(struct crypt_config *cc)
--{
--	struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
--	unsigned salt_size = crypto_shash_digestsize(essiv->hash_tfm);
--	struct crypto_cipher *essiv_tfm;
--	int r, err = 0;
--
--	memset(essiv->salt, 0, salt_size);
--
--	essiv_tfm = cc->iv_private;
--	r = crypto_cipher_setkey(essiv_tfm, essiv->salt, salt_size);
--	if (r)
--		err = r;
--
--	return err;
--}
--
--/* Allocate the cipher for ESSIV */
--static struct crypto_cipher *alloc_essiv_cipher(struct crypt_config *cc,
--						struct dm_target *ti,
--						const u8 *salt,
--						unsigned int saltsize)
--{
--	struct crypto_cipher *essiv_tfm;
--	int err;
--
--	/* Setup the essiv_tfm with the given salt */
--	essiv_tfm = crypto_alloc_cipher(cc->cipher, 0, 0);
--	if (IS_ERR(essiv_tfm)) {
--		ti->error = "Error allocating crypto tfm for ESSIV";
--		return essiv_tfm;
--	}
--
--	if (crypto_cipher_blocksize(essiv_tfm) != cc->iv_size) {
--		ti->error = "Block size of ESSIV cipher does "
--			    "not match IV size of block cipher";
--		crypto_free_cipher(essiv_tfm);
--		return ERR_PTR(-EINVAL);
--	}
--
--	err = crypto_cipher_setkey(essiv_tfm, salt, saltsize);
--	if (err) {
--		ti->error = "Failed to set key for ESSIV cipher";
--		crypto_free_cipher(essiv_tfm);
--		return ERR_PTR(err);
--	}
--
--	return essiv_tfm;
--}
--
--static void crypt_iv_essiv_dtr(struct crypt_config *cc)
--{
--	struct crypto_cipher *essiv_tfm;
--	struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
--
--	crypto_free_shash(essiv->hash_tfm);
--	essiv->hash_tfm = NULL;
--
--	kzfree(essiv->salt);
--	essiv->salt = NULL;
--
--	essiv_tfm = cc->iv_private;
--
--	if (essiv_tfm)
--		crypto_free_cipher(essiv_tfm);
--
--	cc->iv_private = NULL;
--}
--
--static int crypt_iv_essiv_ctr(struct crypt_config *cc, struct dm_target *ti,
--			      const char *opts)
--{
--	struct crypto_cipher *essiv_tfm = NULL;
--	struct crypto_shash *hash_tfm = NULL;
--	u8 *salt = NULL;
--	int err;
--
--	if (!opts) {
--		ti->error = "Digest algorithm missing for ESSIV mode";
--		return -EINVAL;
--	}
--
--	/* Allocate hash algorithm */
--	hash_tfm = crypto_alloc_shash(opts, 0, 0);
--	if (IS_ERR(hash_tfm)) {
--		ti->error = "Error initializing ESSIV hash";
--		err = PTR_ERR(hash_tfm);
--		goto bad;
--	}
--
--	salt = kzalloc(crypto_shash_digestsize(hash_tfm), GFP_KERNEL);
--	if (!salt) {
--		ti->error = "Error kmallocing salt storage in ESSIV";
--		err = -ENOMEM;
--		goto bad;
--	}
--
--	cc->iv_gen_private.essiv.salt = salt;
--	cc->iv_gen_private.essiv.hash_tfm = hash_tfm;
--
--	essiv_tfm = alloc_essiv_cipher(cc, ti, salt,
--				       crypto_shash_digestsize(hash_tfm));
--	if (IS_ERR(essiv_tfm)) {
--		crypt_iv_essiv_dtr(cc);
--		return PTR_ERR(essiv_tfm);
--	}
--	cc->iv_private = essiv_tfm;
--
--	return 0;
--
--bad:
--	if (hash_tfm && !IS_ERR(hash_tfm))
--		crypto_free_shash(hash_tfm);
--	kfree(salt);
--	return err;
--}
--
- static int crypt_iv_essiv_gen(struct crypt_config *cc, u8 *iv,
- 			      struct dm_crypt_request *dmreq)
- {
--	struct crypto_cipher *essiv_tfm = cc->iv_private;
--
-+	/*
-+	 * ESSIV encryption of the IV is now handled by the crypto API,
-+	 * so just pass the plain sector number here.
-+	 */
- 	memset(iv, 0, cc->iv_size);
- 	*(__le64 *)iv = cpu_to_le64(dmreq->iv_sector);
--	crypto_cipher_encrypt_one(essiv_tfm, iv, iv);
- 
- 	return 0;
- }
-@@ -854,10 +704,6 @@ static const struct crypt_iv_operations crypt_iv_plain64be_ops = {
- };
- 
- static const struct crypt_iv_operations crypt_iv_essiv_ops = {
--	.ctr       = crypt_iv_essiv_ctr,
--	.dtr       = crypt_iv_essiv_dtr,
--	.init      = crypt_iv_essiv_init,
--	.wipe      = crypt_iv_essiv_wipe,
- 	.generator = crypt_iv_essiv_gen
- };
- 
-@@ -2397,7 +2243,7 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 				char **ivmode, char **ivopts)
- {
- 	struct crypt_config *cc = ti->private;
--	char *tmp, *cipher_api;
-+	char *tmp, *cipher_api, buf[CRYPTO_MAX_ALG_NAME];
- 	int ret = -EINVAL;
- 
- 	cc->tfms_count = 1;
-@@ -2435,9 +2281,19 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 	}
- 
- 	ret = crypt_ctr_blkdev_cipher(cc, cipher_api);
--	if (ret < 0) {
--		ti->error = "Cannot allocate cipher string";
--		return -ENOMEM;
-+	if (ret < 0)
-+		goto bad_mem;
-+
-+	if (*ivmode && !strcmp(*ivmode, "essiv")) {
-+		if (!*ivopts) {
-+			ti->error = "Digest algorithm missing for ESSIV mode";
-+			return -EINVAL;
-+		}
-+		ret = snprintf(buf, CRYPTO_MAX_ALG_NAME, "essiv(%s,%s,%s)",
-+			       cipher_api, cc->cipher, *ivopts);
-+		if (ret < 0 || ret >= CRYPTO_MAX_ALG_NAME)
-+			goto bad_mem;
-+		cipher_api = buf;
- 	}
- 
- 	cc->key_parts = cc->tfms_count;
-@@ -2456,6 +2312,9 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
- 
- 	return 0;
-+bad_mem:
-+	ti->error = "Cannot allocate cipher string";
-+	return -ENOMEM;
- }
- 
- static int crypt_ctr_cipher_old(struct dm_target *ti, char *cipher_in, char *key,
-@@ -2515,9 +2374,20 @@ static int crypt_ctr_cipher_old(struct dm_target *ti, char *cipher_in, char *key
- 	if (!cipher_api)
- 		goto bad_mem;
- 
--	ret = snprintf(cipher_api, CRYPTO_MAX_ALG_NAME,
--		       "%s(%s)", chainmode, cipher);
--	if (ret < 0) {
-+	if (*ivmode && !strcmp(*ivmode, "essiv")) {
-+		if (!*ivopts) {
-+			ti->error = "Digest algorithm missing for ESSIV mode";
-+			kfree(cipher_api);
-+			return -EINVAL;
-+		}
-+		ret = snprintf(cipher_api, CRYPTO_MAX_ALG_NAME,
-+			       "essiv(%s(%s),%s,%s)", chainmode, cipher,
-+			       cipher, *ivopts);
-+	} else {
-+		ret = snprintf(cipher_api, CRYPTO_MAX_ALG_NAME,
-+			       "%s(%s)", chainmode, cipher);
-+	}
-+	if (ret < 0 || ret >= CRYPTO_MAX_ALG_NAME) {
- 		kfree(cipher_api);
- 		goto bad_mem;
- 	}
+This code has been tested using the fscrypt test suggested by Eric
+(generic/549), as well as the mode-test script suggested by Milan for
+the dm-crypt case. I also tested the aead case in a virtual machine,
+but it definitely needs some wider testing from the dm-crypt experts.
+
+The consensus appears to be that it would be useful if the crypto API
+encapsulates the handling of multiple subsequent blocks that are
+encrypted using a 64-bit LE counter as IV, and makes it the duty of
+the algo to increment the counter between blocks. However, this is
+equally suitable for non-ESSIV transforms (or even more so), and so
+this is left as a future enhancement to  be applied on top.
+
+Changes since v4:
+- make the ESSIV template IV size equal the IV size of the encapsulated
+  cipher - defining it as 8 bytes was needlessly restrictive, and also
+  complicated the code for no reason
+- add a missing kfree() spotted by Smatch
+- add additional algo length name checks when constructing the essiv()
+  cipher name
+- reinstate the 'essiv' IV generation implementation in dm-crypt, but
+  make its generation function identical to plain64le (and drop the other
+  methods)
+- fix a bug in the arm64 CE/NEON code
+- simplify the arm64 code by reusing more of the existing CBC implementation
+  (patch #6 is new to this series and was added for this reason)
+
+Changes since v3:
+- address various review comments from Eric on patch #1
+- use Kconfig's 'imply' instead of 'select' to permit CRYPTO_ESSIV to be
+  enabled as a module or disabled entirely even if fscrypt is compiled in (#2)
+- fix an issue in the AEAD encrypt path caused by the IV being clobbered by
+  the inner skcipher before the hmac was being calculated
+
+Changes since v2:
+- fixed a couple of bugs that snuck in after I'd done the bulk of my
+  testing
+- some cosmetic tweaks to the ESSIV template skcipher setkey function
+  to align it with the aead one
+- add a test case for essiv(cbc(aes),aes,sha256)
+- add an accelerated implementation for arm64 that combines the IV
+  derivation and the actual en/decryption in a single asm routine
+
+Scroll down for tcrypt speed test result comparing the essiv template
+with the asm implementation. Bare cbc(aes) tests included for reference
+as well. Taken on a 2GHz Cortex-A57 (AMD Seattle)
+
+Code can be found here
+https://git.kernel.org/pub/scm/linux/kernel/git/ardb/linux.git/log/?h=essiv-v5
+
+Cc: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: Eric Biggers <ebiggers@google.com>
+Cc: dm-devel@redhat.com
+Cc: linux-fscrypt@vger.kernel.org
+Cc: Gilad Ben-Yossef <gilad@benyossef.com>
+Cc: Milan Broz <gmazyland@gmail.com>
+
+Ard Biesheuvel (7):
+  crypto: essiv - create wrapper template for ESSIV generation
+  fs: crypto: invoke crypto API for ESSIV handling
+  md: dm-crypt: infer ESSIV block cipher from cipher string directly
+  md: dm-crypt: switch to ESSIV crypto API template
+  crypto: essiv - add test vector for essiv(cbc(aes),aes,sha256)
+  crypto: arm64/aes-cts-cbc - factor out CBC en/decryption of a walk
+  crypto: arm64/aes - implement accelerated ESSIV/CBC mode
+
+ arch/arm64/crypto/aes-glue.c  | 205 +++++--
+ arch/arm64/crypto/aes-modes.S |  29 +-
+ crypto/Kconfig                |   4 +
+ crypto/Makefile               |   1 +
+ crypto/essiv.c                | 636 ++++++++++++++++++++
+ crypto/tcrypt.c               |   9 +
+ crypto/testmgr.c              |   6 +
+ crypto/testmgr.h              | 213 +++++++
+ drivers/md/Kconfig            |   1 +
+ drivers/md/dm-crypt.c         | 229 ++-----
+ fs/crypto/Kconfig             |   1 +
+ fs/crypto/crypto.c            |   5 -
+ fs/crypto/fscrypt_private.h   |   9 -
+ fs/crypto/keyinfo.c           |  88 +--
+ 14 files changed, 1111 insertions(+), 325 deletions(-)
+ create mode 100644 crypto/essiv.c
+
 -- 
 2.20.1
