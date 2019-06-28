@@ -1,99 +1,170 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:47120 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725815AbfFTVii (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 20 Jun 2019 17:38:38 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v2 0/8] xfstests: add fs-verity tests
-Date: Thu, 20 Jun 2019 14:36:06 -0700
-Message-Id: <20190620213614.113685-1-ebiggers@kernel.org>
+Received: from mail-wm1-f67.google.com ([209.85.128.67]:54672 "EHLO
+        mail-wm1-f67.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726801AbfF1PVb (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 28 Jun 2019 11:21:31 -0400
+Received: by mail-wm1-f67.google.com with SMTP id g135so9490951wme.4
+        for <linux-fscrypt@vger.kernel.org>; Fri, 28 Jun 2019 08:21:29 -0700 (PDT)
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Subject: [PATCH v6 6/7] crypto: arm64/aes-cts-cbc - factor out CBC en/decryption of a walk
+Date: Fri, 28 Jun 2019 17:21:11 +0200
+Message-Id: <20190628152112.914-7-ard.biesheuvel@linaro.org>
+In-Reply-To: <20190628152112.914-1-ard.biesheuvel@linaro.org>
+References: <20190628152112.914-1-ard.biesheuvel@linaro.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
+To: linux-crypto@vger.kernel.org
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Add tests for fs-verity, a new feature for read-only file-based
-authenticity protection.  fs-verity will be supported by ext4 and f2fs,
-and perhaps by other filesystems later.  Running these tests requires:
+The plain CBC driver and the CTS one share some code that iterates over
+a scatterwalk and invokes the CBC asm code to do the processing. The
+upcoming ESSIV/CBC mode will clone that pattern for the third time, so
+let's factor it out first.
 
-- A kernel with the fs-verity patches applied and configured with
-  CONFIG_FS_VERITY.  Specifically, this version of the xfstests patchset
-  is compatible with version 5 of the kernel patchset, which can be
-  retrieved from tag "fsverity_2019-06-20" of
-  https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+---
+ arch/arm64/crypto/aes-glue.c | 82 ++++++++++----------
+ 1 file changed, 40 insertions(+), 42 deletions(-)
 
-- The fsverity utility program from
-  https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git
-
-- e2fsprogs v1.45.2 or later for ext4 tests, or f2fs-tools v1.11.0 or
-  later for f2fs tests.
-
-Example with kvm-xfstests:
-
-	$ kvm-xfstests -c ext4,f2fs -g verity
-
-For more information about fs-verity, see the file
-Documentation/filesystems/fsverity.rst from the kernel patchset.
-
-This version of the xfstests patchset can also be retrieved from tag
-"fsverity_2019-06-20" of
-https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
-
-Changed since v1 (Dec. 2018):
-
-  - Updated all tests to use the new fs-verity kernel API.
-
-  - Many cleanups, additional checks in the tests, and other improvements.
-
-  - Addressed review comments from Eryu Guan.
-
-  - Added a test for the built-in signature verification feature.
-
-  - Removed the fs-verity descriptor validation test, since the on-disk
-    format of this part was greatly simplified and made fs-specific.
-
-Eric Biggers (8):
-  common/filter: add _filter_xfs_io_fiemap()
-  common/verity: add common functions for testing fs-verity
-  generic: test general behavior of verity files
-  generic: test access controls on the fs-verity ioctls
-  generic: test corrupting verity files
-  generic: test that fs-verity is using the correct measurement values
-  generic: test using fs-verity and fscrypt simultaneously
-  generic: test the fs-verity built-in signature verification support
-
- common/config         |   2 +
- common/filter         |  24 +++++
- common/verity         | 200 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/900     | 190 +++++++++++++++++++++++++++++++++++++++
- tests/generic/900.out |  71 +++++++++++++++
- tests/generic/901     |  73 +++++++++++++++
- tests/generic/901.out |  14 +++
- tests/generic/902     | 154 ++++++++++++++++++++++++++++++++
- tests/generic/902.out |  91 +++++++++++++++++++
- tests/generic/903     | 112 +++++++++++++++++++++++
- tests/generic/903.out |   5 ++
- tests/generic/904     |  80 +++++++++++++++++
- tests/generic/904.out |  12 +++
- tests/generic/905     | 141 +++++++++++++++++++++++++++++
- tests/generic/905.out |  34 +++++++
- tests/generic/group   |   6 ++
- 16 files changed, 1209 insertions(+)
- create mode 100644 common/verity
- create mode 100755 tests/generic/900
- create mode 100644 tests/generic/900.out
- create mode 100755 tests/generic/901
- create mode 100644 tests/generic/901.out
- create mode 100755 tests/generic/902
- create mode 100644 tests/generic/902.out
- create mode 100755 tests/generic/903
- create mode 100644 tests/generic/903.out
- create mode 100755 tests/generic/904
- create mode 100644 tests/generic/904.out
- create mode 100755 tests/generic/905
- create mode 100644 tests/generic/905.out
-
+diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
+index f0ceb545bd1e..11b85ce02d7a 100644
+--- a/arch/arm64/crypto/aes-glue.c
++++ b/arch/arm64/crypto/aes-glue.c
+@@ -185,46 +185,64 @@ static int ecb_decrypt(struct skcipher_request *req)
+ 	return err;
+ }
+ 
+-static int cbc_encrypt(struct skcipher_request *req)
++static int cbc_encrypt_walk(struct skcipher_request *req,
++			    struct skcipher_walk *walk)
+ {
+ 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+ 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
+-	int err, rounds = 6 + ctx->key_length / 4;
+-	struct skcipher_walk walk;
++	int err = 0, rounds = 6 + ctx->key_length / 4;
+ 	unsigned int blocks;
+ 
+-	err = skcipher_walk_virt(&walk, req, false);
+-
+-	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
++	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+ 		kernel_neon_begin();
+-		aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-				ctx->key_enc, rounds, blocks, walk.iv);
++		aes_cbc_encrypt(walk->dst.virt.addr, walk->src.virt.addr,
++				ctx->key_enc, rounds, blocks, walk->iv);
+ 		kernel_neon_end();
+-		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
++		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+ 	}
+ 	return err;
+ }
+ 
+-static int cbc_decrypt(struct skcipher_request *req)
++static int cbc_encrypt(struct skcipher_request *req)
+ {
+-	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+-	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
+-	int err, rounds = 6 + ctx->key_length / 4;
+ 	struct skcipher_walk walk;
+-	unsigned int blocks;
++	int err;
+ 
+ 	err = skcipher_walk_virt(&walk, req, false);
++	if (err)
++		return err;
++	return cbc_encrypt_walk(req, &walk);
++}
+ 
+-	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
++static int cbc_decrypt_walk(struct skcipher_request *req,
++			    struct skcipher_walk *walk)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
++	int err = 0, rounds = 6 + ctx->key_length / 4;
++	unsigned int blocks;
++
++	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+ 		kernel_neon_begin();
+-		aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-				ctx->key_dec, rounds, blocks, walk.iv);
++		aes_cbc_decrypt(walk->dst.virt.addr, walk->src.virt.addr,
++				ctx->key_dec, rounds, blocks, walk->iv);
+ 		kernel_neon_end();
+-		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
++		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+ 	}
+ 	return err;
+ }
+ 
++static int cbc_decrypt(struct skcipher_request *req)
++{
++	struct skcipher_walk walk;
++	int err;
++
++	err = skcipher_walk_virt(&walk, req, false);
++	if (err)
++		return err;
++	return cbc_decrypt_walk(req, &walk);
++}
++
+ static int cts_cbc_init_tfm(struct crypto_skcipher *tfm)
+ {
+ 	crypto_skcipher_set_reqsize(tfm, sizeof(struct cts_cbc_req_ctx));
+@@ -250,22 +268,12 @@ static int cts_cbc_encrypt(struct skcipher_request *req)
+ 	}
+ 
+ 	if (cbc_blocks > 0) {
+-		unsigned int blocks;
+-
+ 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
+ 					   cbc_blocks * AES_BLOCK_SIZE,
+ 					   req->iv);
+ 
+-		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
+-
+-		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
+-			kernel_neon_begin();
+-			aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-					ctx->key_enc, rounds, blocks, walk.iv);
+-			kernel_neon_end();
+-			err = skcipher_walk_done(&walk,
+-						 walk.nbytes % AES_BLOCK_SIZE);
+-		}
++		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
++		      cbc_encrypt_walk(&rctx->subreq, &walk);
+ 		if (err)
+ 			return err;
+ 
+@@ -315,22 +323,12 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
+ 	}
+ 
+ 	if (cbc_blocks > 0) {
+-		unsigned int blocks;
+-
+ 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
+ 					   cbc_blocks * AES_BLOCK_SIZE,
+ 					   req->iv);
+ 
+-		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
+-
+-		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
+-			kernel_neon_begin();
+-			aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-					ctx->key_dec, rounds, blocks, walk.iv);
+-			kernel_neon_end();
+-			err = skcipher_walk_done(&walk,
+-						 walk.nbytes % AES_BLOCK_SIZE);
+-		}
++		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
++		      cbc_decrypt_walk(&rctx->subreq, &walk);
+ 		if (err)
+ 			return err;
+ 
 -- 
-2.22.0.410.gd8fdbe21b5-goog
+2.20.1
