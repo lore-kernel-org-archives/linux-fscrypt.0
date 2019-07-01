@@ -1,124 +1,184 @@
-Return-Path: <SRS0=KvCx=U6=vger.kernel.org=linux-integrity-owner@kernel.org>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v6 16/17] ext4: update on-disk format documentation for fs-verity
-Date: Mon,  1 Jul 2019 08:32:36 -0700
-Message-Id: <20190701153237.1777-17-ebiggers@kernel.org>
-In-Reply-To: <20190701153237.1777-1-ebiggers@kernel.org>
-References: <20190701153237.1777-1-ebiggers@kernel.org>
+Date: Mon,  1 Jul 2019 11:25:45 -0700
+Message-Id: <20190701182547.165856-7-ebiggers@kernel.org>
+In-Reply-To: <20190701182547.165856-1-ebiggers@kernel.org>
+References: <20190701182547.165856-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Subject: [f2fs-dev] [RFC PATCH v3 6/8] generic: test that fs-verity is using
+ the correct measurement values
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: fstests@vger.kernel.org
+Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Document the format of verity files on ext4, and the corresponding inode
-and superblock flags.
+This test verifies that fs-verity is doing its Merkle tree-based hashing
+correctly, i.e. that it hasn't been broken by a change.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- Documentation/filesystems/ext4/inodes.rst   |  6 ++-
- Documentation/filesystems/ext4/overview.rst |  1 +
- Documentation/filesystems/ext4/super.rst    |  2 +
- Documentation/filesystems/ext4/verity.rst   | 41 +++++++++++++++++++++
- 4 files changed, 48 insertions(+), 2 deletions(-)
- create mode 100644 Documentation/filesystems/ext4/verity.rst
+ tests/generic/903     | 112 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/903.out |   5 ++
+ tests/generic/group   |   1 +
+ 3 files changed, 118 insertions(+)
+ create mode 100755 tests/generic/903
+ create mode 100644 tests/generic/903.out
 
-diff --git a/Documentation/filesystems/ext4/inodes.rst b/Documentation/filesystems/ext4/inodes.rst
-index 6bd35e506b6f..e851e6ca31fa 100644
---- a/Documentation/filesystems/ext4/inodes.rst
-+++ b/Documentation/filesystems/ext4/inodes.rst
-@@ -277,6 +277,8 @@ The ``i_flags`` field is a combination of these values:
-      - This is a huge file (EXT4\_HUGE\_FILE\_FL).
-    * - 0x80000
-      - Inode uses extents (EXT4\_EXTENTS\_FL).
-+   * - 0x100000
-+     - Verity protected file (EXT4\_VERITY\_FL).
-    * - 0x200000
-      - Inode stores a large extended attribute value in its data blocks
-        (EXT4\_EA\_INODE\_FL).
-@@ -299,9 +301,9 @@ The ``i_flags`` field is a combination of these values:
-      - Reserved for ext4 library (EXT4\_RESERVED\_FL).
-    * -
-      - Aggregate flags:
--   * - 0x4BDFFF
-+   * - 0x705BDFFF
-      - User-visible flags.
--   * - 0x4B80FF
-+   * - 0x604BC0FF
-      - User-modifiable flags. Note that while EXT4\_JOURNAL\_DATA\_FL and
-        EXT4\_EXTENTS\_FL can be set with setattr, they are not in the kernel's
-        EXT4\_FL\_USER\_MODIFIABLE mask, since it needs to handle the setting of
-diff --git a/Documentation/filesystems/ext4/overview.rst b/Documentation/filesystems/ext4/overview.rst
-index cbab18baba12..123ebfde47ee 100644
---- a/Documentation/filesystems/ext4/overview.rst
-+++ b/Documentation/filesystems/ext4/overview.rst
-@@ -24,3 +24,4 @@ order.
- .. include:: bigalloc.rst
- .. include:: inlinedata.rst
- .. include:: eainode.rst
-+.. include:: verity.rst
-diff --git a/Documentation/filesystems/ext4/super.rst b/Documentation/filesystems/ext4/super.rst
-index 04ff079a2acf..6eae92054827 100644
---- a/Documentation/filesystems/ext4/super.rst
-+++ b/Documentation/filesystems/ext4/super.rst
-@@ -696,6 +696,8 @@ the following:
-        (RO\_COMPAT\_READONLY)
-    * - 0x2000
-      - Filesystem tracks project quotas. (RO\_COMPAT\_PROJECT)
-+   * - 0x8000
-+     - Verity inodes may be present on the filesystem. (RO\_COMPAT\_VERITY)
- 
- .. _super_def_hash:
- 
-diff --git a/Documentation/filesystems/ext4/verity.rst b/Documentation/filesystems/ext4/verity.rst
-new file mode 100644
-index 000000000000..3e4c0ee0e068
+diff --git a/tests/generic/903 b/tests/generic/903
+new file mode 100755
+index 00000000..55f4a3ba
 --- /dev/null
-+++ b/Documentation/filesystems/ext4/verity.rst
-@@ -0,0 +1,41 @@
-+.. SPDX-License-Identifier: GPL-2.0
++++ b/tests/generic/903
+@@ -0,0 +1,112 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2018 Google LLC
++#
++# FS QA Test generic/903
++#
++# Test that fs-verity is using the correct measurement values.  This test
++# verifies that fs-verity is doing its Merkle tree-based hashing correctly,
++# i.e. that it hasn't been broken by a change.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
 +
-+Verity files
-+------------
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
 +
-+ext4 supports fs-verity, which is a filesystem feature that provides
-+Merkle tree based hashing for individual readonly files.  Most of
-+fs-verity is common to all filesystems that support it; see
-+:ref:`Documentation/filesystems/fsverity.rst <fsverity>` for the
-+fs-verity documentation.  However, the on-disk layout of the verity
-+metadata is filesystem-specific.  On ext4, the verity metadata is
-+stored after the end of the file data itself, in the following format:
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
 +
-+- Zero-padding to the next 65536-byte boundary.  This padding need not
-+  actually be allocated on-disk, i.e. it may be a hole.
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/verity
 +
-+- The Merkle tree, as documented in
-+  :ref:`Documentation/filesystems/fsverity.rst
-+  <fsverity_merkle_tree>`, with the tree levels stored in order from
-+  root to leaf, and the tree blocks within each level stored in their
-+  natural order.
++# remove previous $seqres.full before test
++rm -f $seqres.full
 +
-+- Zero-padding to the next filesystem block boundary.
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_scratch_verity
++if [ $FSV_BLOCK_SIZE != 4096 ]; then
++	_notrun "4096-byte verity block size not supported on this platform"
++fi
 +
-+- The verity descriptor, as documented in
-+  :ref:`Documentation/filesystems/fsverity.rst <fsverity_descriptor>`,
-+  with optionally appended signature blob.
++_scratch_mkfs_verity &>> $seqres.full
++_scratch_mount
++fsv_orig_file=$SCRATCH_MNT/file
++fsv_file=$SCRATCH_MNT/file.fsv
 +
-+- Zero-padding to the next offset that is 4 bytes before a filesystem
-+  block boundary.
++algs=(sha256 sha512)
 +
-+- The size of the verity descriptor in bytes, as a 4-byte little
-+  endian integer.
++# Try files with 0, 1, and multiple Merkle tree levels.
++file_sizes=(0 4096 65536 65536 100000000)
 +
-+Verity inodes have EXT4_VERITY_FL set, and they must use extents, i.e.
-+EXT4_EXTENTS_FL must be set and EXT4_INLINE_DATA_FL must be clear.
-+They can have EXT4_ENCRYPT_FL set, in which case the verity metadata
-+is encrypted as well as the data itself.
++# Try both unsalted and salted, and check that empty salt is the same as no salt
++salts=('' '' '' '--salt=' '--salt=f3c93fa6fb828c0e1587e5714ecf6f56')
 +
-+Verity files cannot have blocks allocated past the end of the verity
-+metadata.
++# The expected file measurements are here rather than in the expected output
++# file because not all hash algorithms may be available.
++sha256_vals=(
++sha256:3d248ca542a24fc62d1c43b916eae5016878e2533c88238480b26128a1f1af95
++sha256:babc284ee4ffe7f449377fbf6692715b43aec7bc39c094a95878904d34bac97e
++sha256:011e3f2b1dc89b75d78cddcc2a1b85cd8a64b2883e5f20f277ae4c0617e0404f
++sha256:011e3f2b1dc89b75d78cddcc2a1b85cd8a64b2883e5f20f277ae4c0617e0404f
++sha256:9d33cab743468fcbe4edab91a275b30dd543c12dd5e6ce6f2f737f66a1558f06
++)
++sha512_vals=(
++sha512:ccf9e5aea1c2a64efa2f2354a6024b90dffde6bbc017825045dce374474e13d10adb9dadcc6ca8e17a3c075fbd31336e8f266ae6fa93a6c3bed66f9e784e5abf
++sha512:928922686c4caf32175f5236a7f964e9925d10a74dc6d8344a8bd08b23c228ff5792573987d7895f628f39c4f4ebe39a7367d7aeb16aaa0cd324ac1d53664e61
++sha512:eab7224ce374a0a4babcb2db25e24836247f38b87806ad9be9e5ba4daac2f5b814fc0cbdfd9f1f8499b3c9a6c1b38fe08974cce49883ab4ccd04462fd2f9507f
++sha512:eab7224ce374a0a4babcb2db25e24836247f38b87806ad9be9e5ba4daac2f5b814fc0cbdfd9f1f8499b3c9a6c1b38fe08974cce49883ab4ccd04462fd2f9507f
++sha512:f7083a38644880d25539488313e9e5b41a4d431a0e383945129ad2c36e3c1d0f28928a424641bb1363c12b6e770578102566acea73baf1ce8ee15336f5ba2446
++)
++
++test_alg()
++{
++	local alg=$1
++	local -n vals=${alg}_vals
++	local i
++	local file_size
++	local expected actual salt_arg
++
++	_fsv_scratch_begin_subtest "Check for expected measurement values ($alg)"
++
++	if ! _fsv_have_hash_algorithm $alg $fsv_file; then
++		if [ "$alg" = sha256 ]; then
++			_fail "Something is wrong - sha256 hash should always be available"
++		fi
++		return 0
++	fi
++
++	for i in ${!file_sizes[@]}; do
++		file_size=${file_sizes[$i]}
++		expected=${vals[$i]}
++		salt_arg=${salts[$i]}
++
++		head -c $file_size /dev/zero > $fsv_orig_file
++		cp $fsv_orig_file $fsv_file
++		_fsv_enable --hash-alg=$alg $salt_arg $fsv_file
++		actual=$(_fsv_measure $fsv_file)
++		if [ "$actual" != "$expected" ]; then
++			echo "Mismatch: expected $expected, kernel calculated $actual (file_size=$file_size)"
++		fi
++		cmp $fsv_orig_file $fsv_file
++		rm -f $fsv_file
++	done
++}
++
++for alg in ${algs[@]}; do
++	test_alg $alg
++done
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/903.out b/tests/generic/903.out
+new file mode 100644
+index 00000000..02508828
+--- /dev/null
++++ b/tests/generic/903.out
+@@ -0,0 +1,5 @@
++QA output created by 903
++
++# Check for expected measurement values (sha256)
++
++# Check for expected measurement values (sha512)
+diff --git a/tests/generic/group b/tests/generic/group
+index 62fc73fa..97fd5a32 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -563,3 +563,4 @@
+ 900 auto quick verity
+ 901 auto quick verity
+ 902 auto quick verity
++903 auto quick verity
 -- 
-2.22.0
+2.22.0.410.gd8fdbe21b5-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
