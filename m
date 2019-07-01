@@ -1,251 +1,294 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu,  4 Jul 2019 20:30:12 +0200
-Message-Id: <20190704183017.31570-3-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
-References: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v8 2/7] fs: crypto: invoke crypto API for ESSIV
-	handling
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Return-Path: <SRS0=KvCx=U6=vger.kernel.org=linux-integrity-owner@kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v6 00/17] fs-verity: read-only file-based authenticity protection
+Date: Mon,  1 Jul 2019 08:32:20 -0700
+Message-Id: <20190701153237.1777-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Instead of open coding the calculations for ESSIV handling, use a
-ESSIV skcipher which does all of this under the hood.
+Hello,
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- fs/crypto/Kconfig           |  1 +
- fs/crypto/crypto.c          |  5 --
- fs/crypto/fscrypt_private.h |  9 --
- fs/crypto/keyinfo.c         | 93 +-------------------
- 4 files changed, 4 insertions(+), 104 deletions(-)
+This is a redesigned version of the fs-verity patchset, implementing
+Ted's suggestion to build the Merkle tree in the kernel
+(https://lore.kernel.org/linux-fsdevel/20190207031101.GA7387@mit.edu/).
+This greatly simplifies the UAPI, since the verity metadata no longer
+needs to be transferred to the kernel.  Now to enable fs-verity on a
+file, one simply calls FS_IOC_ENABLE_VERITY, passing it this structure:
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index f0de238000c0..848c064e8370 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -4,6 +4,7 @@ config FS_ENCRYPTION
- 	select CRYPTO_AES
- 	select CRYPTO_CBC
- 	select CRYPTO_ECB
-+	select CRYPTO_ESSIV
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select CRYPTO_SHA256
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 68e2ca4c4af6..6015c275590e 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -135,9 +135,6 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY)
- 		memcpy(iv->nonce, ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE);
--
--	if (ci->ci_essiv_tfm != NULL)
--		crypto_cipher_encrypt_one(ci->ci_essiv_tfm, iv->raw, iv->raw);
- }
- 
- int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
-@@ -491,8 +488,6 @@ static void __exit fscrypt_exit(void)
- 		destroy_workqueue(fscrypt_read_workqueue);
- 	kmem_cache_destroy(fscrypt_ctx_cachep);
- 	kmem_cache_destroy(fscrypt_info_cachep);
--
--	fscrypt_essiv_cleanup();
- }
- module_exit(fscrypt_exit);
- 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 7da276159593..59d0cba9cfb9 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -61,12 +61,6 @@ struct fscrypt_info {
- 	/* The actual crypto transform used for encryption and decryption */
- 	struct crypto_skcipher *ci_ctfm;
- 
--	/*
--	 * Cipher for ESSIV IV generation.  Only set for CBC contents
--	 * encryption, otherwise is NULL.
--	 */
--	struct crypto_cipher *ci_essiv_tfm;
--
- 	/*
- 	 * Encryption mode used for this inode.  It corresponds to either
- 	 * ci_data_mode or ci_filename_mode, depending on the inode type.
-@@ -166,9 +160,6 @@ struct fscrypt_mode {
- 	int keysize;
- 	int ivsize;
- 	bool logged_impl_name;
--	bool needs_essiv;
- };
- 
--extern void __exit fscrypt_essiv_cleanup(void);
--
- #endif /* _FSCRYPT_PRIVATE_H */
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index dcd91a3fbe49..109ec3e5e215 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -13,14 +13,10 @@
- #include <linux/hashtable.h>
- #include <linux/scatterlist.h>
- #include <linux/ratelimit.h>
--#include <crypto/aes.h>
- #include <crypto/algapi.h>
--#include <crypto/sha.h>
- #include <crypto/skcipher.h>
- #include "fscrypt_private.h"
- 
--static struct crypto_shash *essiv_hash_tfm;
--
- /* Table of keys referenced by FS_POLICY_FLAG_DIRECT_KEY policies */
- static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
- static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
-@@ -144,10 +140,9 @@ static struct fscrypt_mode available_modes[] = {
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CBC] = {
- 		.friendly_name = "AES-128-CBC",
--		.cipher_str = "cbc(aes)",
-+		.cipher_str = "essiv(cbc(aes),aes,sha256)",
- 		.keysize = 16,
- 		.ivsize = 16,
--		.needs_essiv = true,
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
- 		.friendly_name = "AES-128-CTS-CBC",
-@@ -377,72 +372,6 @@ fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
- 	return ERR_PTR(err);
- }
- 
--static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
--{
--	struct crypto_shash *tfm = READ_ONCE(essiv_hash_tfm);
--
--	/* init hash transform on demand */
--	if (unlikely(!tfm)) {
--		struct crypto_shash *prev_tfm;
--
--		tfm = crypto_alloc_shash("sha256", 0, 0);
--		if (IS_ERR(tfm)) {
--			fscrypt_warn(NULL,
--				     "error allocating SHA-256 transform: %ld",
--				     PTR_ERR(tfm));
--			return PTR_ERR(tfm);
--		}
--		prev_tfm = cmpxchg(&essiv_hash_tfm, NULL, tfm);
--		if (prev_tfm) {
--			crypto_free_shash(tfm);
--			tfm = prev_tfm;
--		}
--	}
--
--	{
--		SHASH_DESC_ON_STACK(desc, tfm);
--		desc->tfm = tfm;
--
--		return crypto_shash_digest(desc, key, keysize, salt);
--	}
--}
--
--static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
--				int keysize)
--{
--	int err;
--	struct crypto_cipher *essiv_tfm;
--	u8 salt[SHA256_DIGEST_SIZE];
--
--	essiv_tfm = crypto_alloc_cipher("aes", 0, 0);
--	if (IS_ERR(essiv_tfm))
--		return PTR_ERR(essiv_tfm);
--
--	ci->ci_essiv_tfm = essiv_tfm;
--
--	err = derive_essiv_salt(raw_key, keysize, salt);
--	if (err)
--		goto out;
--
--	/*
--	 * Using SHA256 to derive the salt/key will result in AES-256 being
--	 * used for IV generation. File contents encryption will still use the
--	 * configured keysize (AES-128) nevertheless.
--	 */
--	err = crypto_cipher_setkey(essiv_tfm, salt, sizeof(salt));
--	if (err)
--		goto out;
--
--out:
--	memzero_explicit(salt, sizeof(salt));
--	return err;
--}
--
--void __exit fscrypt_essiv_cleanup(void)
--{
--	crypto_free_shash(essiv_hash_tfm);
--}
--
- /*
-  * Given the encryption mode and key (normally the derived key, but for
-  * FS_POLICY_FLAG_DIRECT_KEY mode it's the master key), set up the inode's
-@@ -454,7 +383,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- {
- 	struct fscrypt_master_key *mk;
- 	struct crypto_skcipher *ctfm;
--	int err;
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY) {
- 		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
-@@ -470,19 +398,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- 	ci->ci_master_key = mk;
- 	ci->ci_ctfm = ctfm;
- 
--	if (mode->needs_essiv) {
--		/* ESSIV implies 16-byte IVs which implies !DIRECT_KEY */
--		WARN_ON(mode->ivsize != AES_BLOCK_SIZE);
--		WARN_ON(ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY);
--
--		err = init_essiv_generator(ci, raw_key, mode->keysize);
--		if (err) {
--			fscrypt_warn(inode->i_sb,
--				     "error initializing ESSIV generator for inode %lu: %d",
--				     inode->i_ino, err);
--			return err;
--		}
--	}
- 	return 0;
- }
- 
-@@ -491,12 +406,10 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 	if (!ci)
- 		return;
- 
--	if (ci->ci_master_key) {
-+	if (ci->ci_master_key)
- 		put_master_key(ci->ci_master_key);
--	} else {
-+	else
- 		crypto_free_skcipher(ci->ci_ctfm);
--		crypto_free_cipher(ci->ci_essiv_tfm);
--	}
- 	kmem_cache_free(fscrypt_info_cachep, ci);
- }
- 
+	struct fsverity_enable_arg {
+		__u32 version;
+		__u32 hash_algorithm;
+		__u32 block_size;
+		__u32 salt_size;
+		__u64 salt_ptr;
+		__u32 sig_size;
+		__u32 __reserved1;
+		__u64 sig_ptr;
+		__u64 __reserved2[11];
+	};
+
+The filesystem then builds the file's Merkle tree and stores it in a
+filesystem-specific location associated with the file.  Afterwards,
+FS_IOC_MEASURE_VERITY can be used to retrieve the file measurement
+("root hash").  The way the file measurement is computed is also
+effectively part of the API (it has to be), but it's logically
+independent of where/how the filesystem stores the Merkle tree.
+
+The API is fully documented in Documentation/filesystems/fsverity.rst,
+along with other aspects of fs-verity.  I also added an FAQ section that
+answers frequently asked questions about fs-verity, e.g. why isn't it
+all at the VFS level, why isn't it part of IMA, why does the Merkle tree
+need to be stored on-disk, etc.
+
+Overview
+--------
+
+This patchset implements fs-verity for ext4 and f2fs.  fs-verity is
+similar to dm-verity, but implemented on a per-file basis: a Merkle tree
+is used to measure (hash) a read-only file's data as it is paged in.
+ext4 and f2fs hide this Merkle tree beyond the end of the file, but
+other filesystems can implement it differently if desired.
+
+In general, fs-verity is intended for use on writable filesystems;
+dm-verity is still recommended on read-only ones.
+
+Similar to fscrypt, most of the code is in fs/verity/, and not too many
+filesystem-specific changes are needed.  The Merkle tree is built by the
+filesystem when the FS_IOC_ENABLE_VERITY ioctl is executed.
+
+fs-verity provides a file measurement (hash) in constant time and
+verifies data on-demand.  Thus, it is useful for efficiently verifying
+the authenticity of large files of which only a small portion may be
+accessed, such as Android application package (APK) files.  It may also
+be useful in "audit" use cases where file hashes are logged.
+
+fs-verity can also provide better protection against malicious disks
+than an ahead-of-time hash, since fs-verity re-verifies data each time
+it's paged in.  Note, however, that any authenticity guarantee is still
+dependent on verification of the file measurement and other relevant
+metadata in a way that makes sense for the overall system; fs-verity is
+only a tool to help with this.
+
+This patchset doesn't include IMA support for fs-verity file
+measurements.  This is planned and we'd like to collaborate with the IMA
+maintainers.  Although fs-verity can be used on its own without IMA,
+fs-verity is primarily a lower level feature (think of it as a way of
+hashing a file), so some users may still need IMA's policy mechanism.
+However, an optional in-kernel signature verification mechanism within
+fs-verity itself is also included.
+
+This patchset is based on v5.2-rc3.  It can also be found in git at tag
+fsverity_2019-07-01 of:
+
+	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+
+fs-verity has a userspace utility:
+
+	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git
+
+xfstests for fs-verity can be found at branch "fsverity" of:
+
+	https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
+
+fs-verity is supported by f2fs-tools v1.11.0+ and e2fsprogs v1.45.2+.
+
+Examples of setting up fs-verity protected files can be found in the
+README.md file of fsverity-utils.
+
+Other useful references include:
+
+  - Documentation/filesystems/fsverity.rst, added by the first patch.
+
+  - LWN coverage of v3 patchset: https://lwn.net/Articles/790185/
+
+  - LWN coverage of v2 patchset: https://lwn.net/Articles/775872/
+
+  - LWN coverage of v1 patchset: https://lwn.net/Articles/763729/
+
+  - Presentation at Linux Security Summit North America 2018:
+      - Slides: https://schd.ws/hosted_files/lssna18/af/fs-verity%20slide%20deck.pdf
+      - Video: https://www.youtube.com/watch?v=Aw5h6aBhu6M
+      (This corresponded to the v1 patchset; changes have been made since then.)
+
+  - LWN coverage of LSFMM 2018 discussion: https://lwn.net/Articles/752614/
+
+Changed since v5:
+
+  - Switched to using detached signatures.  This simplifies the
+    signature verification code considerably.
+
+  - On f2fs, forbid enabling verity on files that have atomic or
+    volatile writes pending.
+
+  - Initialize quotas before evicting inline data.
+
+  - Prevent writing verity metadata beyond s_maxbytes.
+
+  - Switched from truncate_inode_pages() to invalidate_inode_pages2()
+    (fixes FS_IOC_ENABLE_VERITY on ext4 with data=journal)
+
+  - Always truncate the verity metadata if there's an error writing it,
+    even if the error doesn't occur until ->end_enable_verity().
+
+  - Updated the ext4 on-disk format documentation.
+
+  - A few minor cleanups.
+
+Changed since v4:
+
+  - Made ext4 and f2fs store the verity metadata beginning at a 64K
+    aligned boundary, to be ready for architectures with 64K pages.
+
+  - Made ext4 store the verity descriptor size in the file data stream,
+    so that no xattr is needed.
+
+  - Added support for empty files.
+
+  - A few minor cleanups.
+
+Changed since v3:
+
+  - The FS_IOC_GETFLAGS ioctl now returns the verity flag.
+
+  - Fixed setting i_verity_info too early.
+
+  - Restored pagecache invalidation in FS_IOC_ENABLE_VERITY.
+
+  - Fixed truncation of fsverity_enable_arg::hash_algorithm.
+
+  - Reject empty files for both open and enable, not just enable.
+
+  - Added a couple more FAQ entries to the documentation.
+
+  - A few minor cleanups.
+
+  - Rebased onto v5.2-rc3.
+
+Changed since v2:
+
+  - Large redesign: the Merkle tree is now built by
+    FS_IOC_ENABLE_VERITY, rather than being provided by userspace.  The
+    fsverity_operations provide an interface for filesystems to read and
+    write the Merkle tree from/to a filesystem-specific location.
+
+  - Lot of refactoring, cleanups, and documentation improvements.
+
+  - Many simplifications, such as simplifying the fsverity_descriptor
+    format, dropping CRC-32 support, and limiting the salt size.
+
+  - ext4 and f2fs now store an xattr that gives the location of the
+    fsverity_descriptor, so loading it is more straightforward.
+
+  - f2fs no longer counts the verity metadata in the on-disk i_size,
+    making it consistent with ext4.
+
+  - Replaced the filesystem-specific fs-verity kconfig options with
+    CONFIG_FS_VERITY.
+
+  - Replaced the filesystem-specific verity bit checks with IS_VERITY().
+
+Changed since v1:
+
+  - Added documentation file.
+
+  - Require write permission for FS_IOC_ENABLE_VERITY, rather than
+    CAP_SYS_ADMIN.
+
+  - Eliminated dependency on CONFIG_BLOCK and clarified that filesystems
+    can verify a page at a time rather than a bio at a time.
+
+  - Fixed conditions for verifying holes.
+
+  - ext4 now only allows fs-verity on extent-based files.
+
+  - Eliminated most of the assumptions that the verity metadata is
+    stored beyond EOF, in case filesystems want to do things
+    differently.
+
+  - Other cleanups.
+
+Eric Biggers (17):
+  fs-verity: add a documentation file
+  fs-verity: add MAINTAINERS file entry
+  fs-verity: add UAPI header
+  fs: uapi: define verity bit for FS_IOC_GETFLAGS
+  fs-verity: add Kconfig and the helper functions for hashing
+  fs-verity: add inode and superblock fields
+  fs-verity: add the hook for file ->open()
+  fs-verity: add the hook for file ->setattr()
+  fs-verity: add data verification hooks for ->readpages()
+  fs-verity: implement FS_IOC_ENABLE_VERITY ioctl
+  fs-verity: implement FS_IOC_MEASURE_VERITY ioctl
+  fs-verity: add SHA-512 support
+  fs-verity: support builtin file signatures
+  ext4: add basic fs-verity support
+  ext4: add fs-verity read support
+  ext4: update on-disk format documentation for fs-verity
+  f2fs: add fs-verity support
+
+ Documentation/filesystems/ext4/inodes.rst   |   6 +-
+ Documentation/filesystems/ext4/overview.rst |   1 +
+ Documentation/filesystems/ext4/super.rst    |   2 +
+ Documentation/filesystems/ext4/verity.rst   |  41 ++
+ Documentation/filesystems/fsverity.rst      | 725 ++++++++++++++++++++
+ Documentation/filesystems/index.rst         |   1 +
+ Documentation/ioctl/ioctl-number.txt        |   1 +
+ MAINTAINERS                                 |  12 +
+ fs/Kconfig                                  |   2 +
+ fs/Makefile                                 |   1 +
+ fs/ext4/Makefile                            |   1 +
+ fs/ext4/ext4.h                              |  23 +-
+ fs/ext4/file.c                              |   4 +
+ fs/ext4/inode.c                             |  48 +-
+ fs/ext4/ioctl.c                             |  12 +
+ fs/ext4/readpage.c                          | 207 +++++-
+ fs/ext4/super.c                             |  18 +-
+ fs/ext4/sysfs.c                             |   6 +
+ fs/ext4/verity.c                            | 364 ++++++++++
+ fs/f2fs/Makefile                            |   1 +
+ fs/f2fs/data.c                              |  72 +-
+ fs/f2fs/f2fs.h                              |  23 +-
+ fs/f2fs/file.c                              |  40 ++
+ fs/f2fs/inode.c                             |   5 +-
+ fs/f2fs/super.c                             |   3 +
+ fs/f2fs/sysfs.c                             |  11 +
+ fs/f2fs/verity.c                            | 245 +++++++
+ fs/f2fs/xattr.h                             |   2 +
+ fs/verity/Kconfig                           |  55 ++
+ fs/verity/Makefile                          |  10 +
+ fs/verity/enable.c                          | 355 ++++++++++
+ fs/verity/fsverity_private.h                | 185 +++++
+ fs/verity/hash_algs.c                       | 279 ++++++++
+ fs/verity/init.c                            |  61 ++
+ fs/verity/measure.c                         |  57 ++
+ fs/verity/open.c                            | 356 ++++++++++
+ fs/verity/signature.c                       | 159 +++++
+ fs/verity/verify.c                          | 281 ++++++++
+ include/linux/fs.h                          |  11 +
+ include/linux/fsverity.h                    | 209 ++++++
+ include/uapi/linux/fs.h                     |   1 +
+ include/uapi/linux/fsverity.h               |  40 ++
+ 42 files changed, 3875 insertions(+), 61 deletions(-)
+ create mode 100644 Documentation/filesystems/ext4/verity.rst
+ create mode 100644 Documentation/filesystems/fsverity.rst
+ create mode 100644 fs/ext4/verity.c
+ create mode 100644 fs/f2fs/verity.c
+ create mode 100644 fs/verity/Kconfig
+ create mode 100644 fs/verity/Makefile
+ create mode 100644 fs/verity/enable.c
+ create mode 100644 fs/verity/fsverity_private.h
+ create mode 100644 fs/verity/hash_algs.c
+ create mode 100644 fs/verity/init.c
+ create mode 100644 fs/verity/measure.c
+ create mode 100644 fs/verity/open.c
+ create mode 100644 fs/verity/signature.c
+ create mode 100644 fs/verity/verify.c
+ create mode 100644 include/linux/fsverity.h
+ create mode 100644 include/uapi/linux/fsverity.h
+
 -- 
-2.17.1
-
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+2.22.0
