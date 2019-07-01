@@ -1,742 +1,463 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu,  4 Jul 2019 20:30:11 +0200
-Message-Id: <20190704183017.31570-2-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
-References: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v8 1/7] crypto: essiv - create wrapper template
-	for ESSIV generation
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Return-Path: <SRS0=KvCx=U6=vger.kernel.org=linux-integrity-owner@kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v6 09/17] fs-verity: add data verification hooks for ->readpages()
+Date: Mon,  1 Jul 2019 08:32:29 -0700
+Message-Id: <20190701153237.1777-10-ebiggers@kernel.org>
+In-Reply-To: <20190701153237.1777-1-ebiggers@kernel.org>
+References: <20190701153237.1777-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Implement a template that wraps a (skcipher,cipher,shash) or
-(aead,cipher,shash) tuple so that we can consolidate the ESSIV handling
-in fscrypt and dm-crypt and move it into the crypto API. This will result
-in better test coverage, and will allow future changes to make the bare
-cipher interface internal to the crypto subsystem, in order to increase
-robustness of the API against misuse.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Add functions that verify data pages that have been read from a
+fs-verity file, against that file's Merkle tree.  These will be called
+from filesystems' ->readpage() and ->readpages() methods.
+
+Since data verification can block, a workqueue is provided for these
+methods to enqueue verification work from their bio completion callback.
+
+See the "Verifying data" section of
+Documentation/filesystems/fsverity.rst for more information.
+
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- crypto/Kconfig  |  28 +
- crypto/Makefile |   1 +
- crypto/essiv.c  | 640 ++++++++++++++++++++
- 3 files changed, 669 insertions(+)
+ fs/verity/Makefile           |   3 +-
+ fs/verity/fsverity_private.h |   5 +
+ fs/verity/init.c             |   8 +
+ fs/verity/open.c             |   6 +
+ fs/verity/verify.c           | 275 +++++++++++++++++++++++++++++++++++
+ include/linux/fsverity.h     |  56 +++++++
+ 6 files changed, 352 insertions(+), 1 deletion(-)
+ create mode 100644 fs/verity/verify.c
 
-diff --git a/crypto/Kconfig b/crypto/Kconfig
-index e801450bcb1c..1e8390d32b6d 100644
---- a/crypto/Kconfig
-+++ b/crypto/Kconfig
-@@ -568,6 +568,34 @@ config CRYPTO_ADIANTUM
+diff --git a/fs/verity/Makefile b/fs/verity/Makefile
+index e6a8951c493a..7fa628cd5eba 100644
+--- a/fs/verity/Makefile
++++ b/fs/verity/Makefile
+@@ -2,4 +2,5 @@
  
- 	  If unsure, say N.
+ obj-$(CONFIG_FS_VERITY) += hash_algs.o \
+ 			   init.o \
+-			   open.o
++			   open.o \
++			   verify.o
+diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
+index c79746ff335e..eaa2b3b93bbf 100644
+--- a/fs/verity/fsverity_private.h
++++ b/fs/verity/fsverity_private.h
+@@ -134,5 +134,10 @@ void fsverity_set_info(struct inode *inode, struct fsverity_info *vi);
+ void fsverity_free_info(struct fsverity_info *vi);
  
-+config CRYPTO_ESSIV
-+	tristate "ESSIV support for block encryption"
-+	select CRYPTO_AUTHENC
-+	help
-+	  Encrypted salt-sector initialization vector (ESSIV) is an IV
-+	  generation method that is used in some cases by fscrypt and/or
-+	  dm-crypt. It uses the hash of the block encryption key as the
-+	  symmetric key for a block encryption pass applied to the input
-+	  IV, making low entropy IV sources more suitable for block
-+	  encryption.
+ int __init fsverity_init_info_cache(void);
++void __init fsverity_exit_info_cache(void);
 +
-+	  This driver implements a crypto API template that can be
-+	  instantiated either as a skcipher or as a aead (depending on the
-+	  type of the first template argument), and which defers encryption
-+	  and decryption requests to the encapsulated cipher after applying
-+	  ESSIV to the input IV. Note that in the aead case, it is assumed
-+	  that the keys are presented in the same format used by the authenc
-+	  template, and that the IV appears at the end of the authenticated
-+	  associated data (AAD) region (which is how dm-crypt uses it.)
++/* verify.c */
 +
-+	  Note that the use of ESSIV is not recommended for new deployments,
-+	  and so this only needs to be enabled when interoperability with
-+	  existing encrypted volumes of filesystems is required, or when
-+	  building for a particular system that requires it (e.g., when
-+	  the SoC in question has accelerated CBC but not XTS, making CBC
-+	  combined with ESSIV the only feasible mode for h/w accelerated
-+	  block encryption)
++int __init fsverity_init_workqueue(void);
+ 
+ #endif /* _FSVERITY_PRIVATE_H */
+diff --git a/fs/verity/init.c b/fs/verity/init.c
+index fff1fd634335..b593805aafcc 100644
+--- a/fs/verity/init.c
++++ b/fs/verity/init.c
+@@ -41,7 +41,15 @@ static int __init fsverity_init(void)
+ 	if (err)
+ 		return err;
+ 
++	err = fsverity_init_workqueue();
++	if (err)
++		goto err_exit_info_cache;
 +
- comment "Hash modes"
- 
- config CRYPTO_CMAC
-diff --git a/crypto/Makefile b/crypto/Makefile
-index 9479e1a45d8c..157cb0a324df 100644
---- a/crypto/Makefile
-+++ b/crypto/Makefile
-@@ -147,6 +147,7 @@ obj-$(CONFIG_CRYPTO_USER_API_AEAD) += algif_aead.o
- obj-$(CONFIG_CRYPTO_ZSTD) += zstd.o
- obj-$(CONFIG_CRYPTO_OFB) += ofb.o
- obj-$(CONFIG_CRYPTO_ECC) += ecc.o
-+obj-$(CONFIG_CRYPTO_ESSIV) += essiv.o
- 
- ecdh_generic-y += ecdh.o
- ecdh_generic-y += ecdh_helper.o
-diff --git a/crypto/essiv.c b/crypto/essiv.c
+ 	pr_debug("Initialized fs-verity\n");
+ 	return 0;
++
++err_exit_info_cache:
++	fsverity_exit_info_cache();
++	return err;
+ }
+ late_initcall(fsverity_init)
+diff --git a/fs/verity/open.c b/fs/verity/open.c
+index 2cb2fe8082bf..3636a1ed8e2c 100644
+--- a/fs/verity/open.c
++++ b/fs/verity/open.c
+@@ -337,3 +337,9 @@ int __init fsverity_init_info_cache(void)
+ 		return -ENOMEM;
+ 	return 0;
+ }
++
++void __init fsverity_exit_info_cache(void)
++{
++	kmem_cache_destroy(fsverity_info_cachep);
++	fsverity_info_cachep = NULL;
++}
+diff --git a/fs/verity/verify.c b/fs/verity/verify.c
 new file mode 100644
-index 000000000000..417d60e593dc
+index 000000000000..62ab8f6a8ea1
 --- /dev/null
-+++ b/crypto/essiv.c
-@@ -0,0 +1,640 @@
++++ b/fs/verity/verify.c
+@@ -0,0 +1,275 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
-+ * ESSIV skcipher and aead template for block encryption
++ * fs/verity/verify.c: data verification functions, i.e. hooks for ->readpages()
 + *
-+ * This template encapsulates the ESSIV IV generation algorithm used by
-+ * dm-crypt and fscrypt, which converts the initial vector for the skcipher
-+ * used for block encryption, by encrypting it using the hash of the
-+ * skcipher key as encryption key. Usually, the input IV is a 64-bit sector
-+ * number in LE representation zero-padded to the size of the IV, but this
-+ * is not assumed by this driver.
-+ *
-+ * The typical use of this template is to instantiate the skcipher
-+ * 'essiv(cbc(aes),aes,sha256)', which is the only instantiation used by
-+ * fscrypt, and the most relevant one for dm-crypt. However, dm-crypt
-+ * also permits ESSIV to be used in combination with the authenc template,
-+ * e.g., 'essiv(authenc(hmac(sha256),cbc(aes)),aes,sha256)', in which case
-+ * we need to instantiate an aead that accepts the same special key format
-+ * as the authenc template, and deals with the way the encrypted IV is
-+ * embedded into the AAD area of the aead request. This means the AEAD
-+ * flavor produced by this template is tightly coupled to the way dm-crypt
-+ * happens to use it.
-+ *
-+ * Copyright (c) 2019 Linaro, Ltd. <ard.biesheuvel@linaro.org>
-+ *
-+ * Heavily based on:
-+ * adiantum length-preserving encryption mode
-+ *
-+ * Copyright 2018 Google LLC
++ * Copyright 2019 Google LLC
 + */
 +
-+#include <crypto/authenc.h>
-+#include <crypto/internal/aead.h>
-+#include <crypto/internal/hash.h>
-+#include <crypto/internal/skcipher.h>
-+#include <crypto/scatterwalk.h>
-+#include <linux/module.h>
++#include "fsverity_private.h"
 +
-+#include "internal.h"
++#include <crypto/hash.h>
++#include <linux/bio.h>
++#include <linux/ratelimit.h>
 +
-+struct essiv_instance_ctx {
-+	union {
-+		struct crypto_skcipher_spawn	skcipher_spawn;
-+		struct crypto_aead_spawn	aead_spawn;
-+	} u;
-+	struct crypto_spawn			essiv_cipher_spawn;
-+	struct crypto_shash_spawn		hash_spawn;
-+};
++static struct workqueue_struct *fsverity_read_workqueue;
 +
-+struct essiv_tfm_ctx {
-+	union {
-+		struct crypto_skcipher	*skcipher;
-+		struct crypto_aead	*aead;
-+	} u;
-+	struct crypto_cipher		*essiv_cipher;
-+	struct crypto_shash		*hash;
-+	int				ivoffset;
-+};
-+
-+struct essiv_aead_request_ctx {
-+	struct scatterlist		sg[4];
-+	u8				*assoc;
-+	struct aead_request		aead_req;
-+};
-+
-+static int essiv_skcipher_setkey(struct crypto_skcipher *tfm,
-+				 const u8 *key, unsigned int keylen)
++/**
++ * hash_at_level() - compute the location of the block's hash at the given level
++ *
++ * @params:	(in) the Merkle tree parameters
++ * @dindex:	(in) the index of the data block being verified
++ * @level:	(in) the level of hash we want (0 is leaf level)
++ * @hindex:	(out) the index of the hash block containing the wanted hash
++ * @hoffset:	(out) the byte offset to the wanted hash within the hash block
++ */
++static void hash_at_level(const struct merkle_tree_params *params,
++			  pgoff_t dindex, unsigned int level, pgoff_t *hindex,
++			  unsigned int *hoffset)
 +{
-+	struct essiv_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
-+	SHASH_DESC_ON_STACK(desc, tctx->hash);
-+	u8 salt[HASH_MAX_DIGESTSIZE];
++	pgoff_t position;
++
++	/* Offset of the hash within the level's region, in hashes */
++	position = dindex >> (level * params->log_arity);
++
++	/* Index of the hash block in the tree overall */
++	*hindex = params->level_start[level] + (position >> params->log_arity);
++
++	/* Offset of the wanted hash (in bytes) within the hash block */
++	*hoffset = (position & ((1 << params->log_arity) - 1)) <<
++		   (params->log_blocksize - params->log_arity);
++}
++
++/* Extract a hash from a hash page */
++static void extract_hash(struct page *hpage, unsigned int hoffset,
++			 unsigned int hsize, u8 *out)
++{
++	void *virt = kmap_atomic(hpage);
++
++	memcpy(out, virt + hoffset, hsize);
++	kunmap_atomic(virt);
++}
++
++static inline int cmp_hashes(const struct fsverity_info *vi,
++			     const u8 *want_hash, const u8 *real_hash,
++			     pgoff_t index, int level)
++{
++	const unsigned int hsize = vi->tree_params.digest_size;
++
++	if (memcmp(want_hash, real_hash, hsize) == 0)
++		return 0;
++
++	fsverity_err(vi->inode,
++		     "FILE CORRUPTED! index=%lu, level=%d, want_hash=%s:%*phN, real_hash=%s:%*phN",
++		     index, level,
++		     vi->tree_params.hash_alg->name, hsize, want_hash,
++		     vi->tree_params.hash_alg->name, hsize, real_hash);
++	return -EBADMSG;
++}
++
++/*
++ * Verify a single data page against the file's Merkle tree.
++ *
++ * In principle, we need to verify the entire path to the root node.  However,
++ * for efficiency the filesystem may cache the hash pages.  Therefore we need
++ * only ascend the tree until an already-verified page is seen, as indicated by
++ * the PageChecked bit being set; then verify the path to that page.
++ *
++ * This code currently only supports the case where the verity block size is
++ * equal to PAGE_SIZE.  Doing otherwise would be possible but tricky, since we
++ * wouldn't be able to use the PageChecked bit.
++ *
++ * Note that multiple processes may race to verify a hash page and mark it
++ * Checked, but it doesn't matter; the result will be the same either way.
++ *
++ * Return: true if the page is valid, else false.
++ */
++static bool verify_page(struct inode *inode, const struct fsverity_info *vi,
++			struct ahash_request *req, struct page *data_page)
++{
++	const struct merkle_tree_params *params = &vi->tree_params;
++	const unsigned int hsize = params->digest_size;
++	const pgoff_t index = data_page->index;
++	int level;
++	u8 _want_hash[FS_VERITY_MAX_DIGEST_SIZE];
++	const u8 *want_hash;
++	u8 real_hash[FS_VERITY_MAX_DIGEST_SIZE];
++	struct page *hpages[FS_VERITY_MAX_LEVELS];
++	unsigned int hoffsets[FS_VERITY_MAX_LEVELS];
 +	int err;
 +
-+	crypto_skcipher_clear_flags(tctx->u.skcipher, CRYPTO_TFM_REQ_MASK);
-+	crypto_skcipher_set_flags(tctx->u.skcipher,
-+				  crypto_skcipher_get_flags(tfm) &
-+				  CRYPTO_TFM_REQ_MASK);
-+	err = crypto_skcipher_setkey(tctx->u.skcipher, key, keylen);
-+	crypto_skcipher_set_flags(tfm,
-+				  crypto_skcipher_get_flags(tctx->u.skcipher) &
-+				  CRYPTO_TFM_RES_MASK);
-+	if (err)
-+		return err;
++	if (WARN_ON_ONCE(!PageLocked(data_page) || PageUptodate(data_page)))
++		return false;
 +
-+	desc->tfm = tctx->hash;
-+	err = crypto_shash_digest(desc, key, keylen, salt);
-+	if (err)
-+		return err;
-+
-+	crypto_cipher_clear_flags(tctx->essiv_cipher, CRYPTO_TFM_REQ_MASK);
-+	crypto_cipher_set_flags(tctx->essiv_cipher,
-+				crypto_skcipher_get_flags(tfm) &
-+				CRYPTO_TFM_REQ_MASK);
-+	err = crypto_cipher_setkey(tctx->essiv_cipher, salt,
-+				   crypto_shash_digestsize(tctx->hash));
-+	crypto_skcipher_set_flags(tfm,
-+				  crypto_cipher_get_flags(tctx->essiv_cipher) &
-+				  CRYPTO_TFM_RES_MASK);
-+
-+	return err;
-+}
-+
-+static int essiv_aead_setkey(struct crypto_aead *tfm, const u8 *key,
-+			     unsigned int keylen)
-+{
-+	struct essiv_tfm_ctx *tctx = crypto_aead_ctx(tfm);
-+	SHASH_DESC_ON_STACK(desc, tctx->hash);
-+	struct crypto_authenc_keys keys;
-+	u8 salt[HASH_MAX_DIGESTSIZE];
-+	int err;
-+
-+	crypto_aead_clear_flags(tctx->u.aead, CRYPTO_TFM_REQ_MASK);
-+	crypto_aead_set_flags(tctx->u.aead, crypto_aead_get_flags(tfm) &
-+					    CRYPTO_TFM_REQ_MASK);
-+	err = crypto_aead_setkey(tctx->u.aead, key, keylen);
-+	crypto_aead_set_flags(tfm, crypto_aead_get_flags(tctx->u.aead) &
-+				   CRYPTO_TFM_RES_MASK);
-+	if (err)
-+		return err;
-+
-+	if (crypto_authenc_extractkeys(&keys, key, keylen) != 0) {
-+		crypto_aead_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
-+		return -EINVAL;
-+	}
-+
-+	desc->tfm = tctx->hash;
-+	err = crypto_shash_init(desc) ?:
-+	      crypto_shash_update(desc, keys.enckey, keys.enckeylen) ?:
-+	      crypto_shash_finup(desc, keys.authkey, keys.authkeylen, salt);
-+	if (err)
-+		return err;
-+
-+	crypto_cipher_clear_flags(tctx->essiv_cipher, CRYPTO_TFM_REQ_MASK);
-+	crypto_cipher_set_flags(tctx->essiv_cipher, crypto_aead_get_flags(tfm) &
-+						    CRYPTO_TFM_REQ_MASK);
-+	err = crypto_cipher_setkey(tctx->essiv_cipher, salt,
-+				   crypto_shash_digestsize(tctx->hash));
-+	crypto_aead_set_flags(tfm, crypto_cipher_get_flags(tctx->essiv_cipher) &
-+				   CRYPTO_TFM_RES_MASK);
-+
-+	return err;
-+}
-+
-+static int essiv_aead_setauthsize(struct crypto_aead *tfm,
-+				  unsigned int authsize)
-+{
-+	struct essiv_tfm_ctx *tctx = crypto_aead_ctx(tfm);
-+
-+	return crypto_aead_setauthsize(tctx->u.aead, authsize);
-+}
-+
-+static void essiv_skcipher_done(struct crypto_async_request *areq, int err)
-+{
-+	struct skcipher_request *req = areq->data;
-+
-+	skcipher_request_complete(req, err);
-+}
-+
-+static int essiv_skcipher_crypt(struct skcipher_request *req, bool enc)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	const struct essiv_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
-+	struct skcipher_request *subreq = skcipher_request_ctx(req);
-+
-+	crypto_cipher_encrypt_one(tctx->essiv_cipher, req->iv, req->iv);
-+
-+	skcipher_request_set_tfm(subreq, tctx->u.skcipher);
-+	skcipher_request_set_crypt(subreq, req->src, req->dst, req->cryptlen,
-+				   req->iv);
-+	skcipher_request_set_callback(subreq, skcipher_request_flags(req),
-+				      essiv_skcipher_done, req);
-+
-+	return enc ? crypto_skcipher_encrypt(subreq) :
-+		     crypto_skcipher_decrypt(subreq);
-+}
-+
-+static int essiv_skcipher_encrypt(struct skcipher_request *req)
-+{
-+	return essiv_skcipher_crypt(req, true);
-+}
-+
-+static int essiv_skcipher_decrypt(struct skcipher_request *req)
-+{
-+	return essiv_skcipher_crypt(req, false);
-+}
-+
-+static void essiv_aead_done(struct crypto_async_request *areq, int err)
-+{
-+	struct aead_request *req = areq->data;
-+	struct essiv_aead_request_ctx *rctx = aead_request_ctx(req);
-+
-+	if (rctx->assoc)
-+		kfree(rctx->assoc);
-+	aead_request_complete(req, err);
-+}
-+
-+static int essiv_aead_crypt(struct aead_request *req, bool enc)
-+{
-+	struct crypto_aead *tfm = crypto_aead_reqtfm(req);
-+	const struct essiv_tfm_ctx *tctx = crypto_aead_ctx(tfm);
-+	struct essiv_aead_request_ctx *rctx = aead_request_ctx(req);
-+	struct aead_request *subreq = &rctx->aead_req;
-+	struct scatterlist *src = req->src;
-+	int err;
-+
-+	crypto_cipher_encrypt_one(tctx->essiv_cipher, req->iv, req->iv);
++	pr_debug_ratelimited("Verifying data page %lu...\n", index);
 +
 +	/*
-+	 * dm-crypt embeds the sector number and the IV in the AAD region, so
-+	 * we have to copy the converted IV into the right scatterlist before
-+	 * we pass it on.
++	 * Starting at the leaf level, ascend the tree saving hash pages along
++	 * the way until we find a verified hash page, indicated by PageChecked;
++	 * or until we reach the root.
 +	 */
-+	rctx->assoc = NULL;
-+	if (req->src == req->dst || !enc) {
-+		scatterwalk_map_and_copy(req->iv, req->dst,
-+					 req->assoclen - crypto_aead_ivsize(tfm),
-+					 crypto_aead_ivsize(tfm), 1);
-+	} else {
-+		u8 *iv = (u8 *)aead_request_ctx(req) + tctx->ivoffset;
-+		int ivsize = crypto_aead_ivsize(tfm);
-+		int ssize = req->assoclen - ivsize;
-+		struct scatterlist *sg;
-+		int nents;
++	for (level = 0; level < params->num_levels; level++) {
++		pgoff_t hindex;
++		unsigned int hoffset;
++		struct page *hpage;
 +
-+		if (ssize < 0)
-+			return -EINVAL;
++		hash_at_level(params, index, level, &hindex, &hoffset);
 +
-+		nents = sg_nents_for_len(req->src, ssize);
-+		if (nents < 0)
-+			return -EINVAL;
++		pr_debug_ratelimited("Level %d: hindex=%lu, hoffset=%u\n",
++				     level, hindex, hoffset);
 +
-+		memcpy(iv, req->iv, ivsize);
-+		sg_init_table(rctx->sg, 4);
-+
-+		if (unlikely(nents > 1)) {
-+			/*
-+			 * This is a case that rarely occurs in practice, but
-+			 * for correctness, we have to deal with it nonetheless.
-+			 */
-+			rctx->assoc = kmalloc(ssize, GFP_ATOMIC);
-+			if (!rctx->assoc)
-+				return -ENOMEM;
-+
-+			scatterwalk_map_and_copy(rctx->assoc, req->src, 0,
-+						 ssize, 0);
-+			sg_set_buf(rctx->sg, rctx->assoc, ssize);
-+		} else {
-+			sg_set_page(rctx->sg, sg_page(req->src), ssize,
-+				    req->src->offset);
++		hpage = inode->i_sb->s_vop->read_merkle_tree_page(inode,
++								  hindex);
++		if (IS_ERR(hpage)) {
++			err = PTR_ERR(hpage);
++			fsverity_err(inode,
++				     "Error %d reading Merkle tree page %lu",
++				     err, hindex);
++			goto out;
 +		}
 +
-+		sg_set_buf(rctx->sg + 1, iv, ivsize);
-+		sg = scatterwalk_ffwd(rctx->sg + 2, req->src, req->assoclen);
-+		if (sg != rctx->sg + 2)
-+			sg_chain(rctx->sg, 3, sg);
-+
-+		src = rctx->sg;
++		if (PageChecked(hpage)) {
++			extract_hash(hpage, hoffset, hsize, _want_hash);
++			want_hash = _want_hash;
++			put_page(hpage);
++			pr_debug_ratelimited("Hash page already checked, want %s:%*phN\n",
++					     params->hash_alg->name,
++					     hsize, want_hash);
++			goto descend;
++		}
++		pr_debug_ratelimited("Hash page not yet checked\n");
++		hpages[level] = hpage;
++		hoffsets[level] = hoffset;
 +	}
 +
-+	aead_request_set_tfm(subreq, tctx->u.aead);
-+	aead_request_set_ad(subreq, req->assoclen);
-+	aead_request_set_callback(subreq, aead_request_flags(req),
-+				  essiv_aead_done, req);
-+	aead_request_set_crypt(subreq, src, req->dst, req->cryptlen, req->iv);
++	want_hash = vi->root_hash;
++	pr_debug("Want root hash: %s:%*phN\n",
++		 params->hash_alg->name, hsize, want_hash);
++descend:
++	/* Descend the tree verifying hash pages */
++	for (; level > 0; level--) {
++		struct page *hpage = hpages[level - 1];
++		unsigned int hoffset = hoffsets[level - 1];
 +
-+	err = enc ? crypto_aead_encrypt(subreq) :
-+		    crypto_aead_decrypt(subreq);
-+
-+	if (rctx->assoc && err != -EINPROGRESS)
-+		kfree(rctx->assoc);
-+	return err;
-+}
-+
-+static int essiv_aead_encrypt(struct aead_request *req)
-+{
-+	return essiv_aead_crypt(req, true);
-+}
-+
-+static int essiv_aead_decrypt(struct aead_request *req)
-+{
-+	return essiv_aead_crypt(req, false);
-+}
-+
-+static int essiv_init_tfm(struct essiv_instance_ctx *ictx,
-+			  struct essiv_tfm_ctx *tctx)
-+{
-+	struct crypto_cipher *essiv_cipher;
-+	struct crypto_shash *hash;
-+	int err;
-+
-+	essiv_cipher = crypto_spawn_cipher(&ictx->essiv_cipher_spawn);
-+	if (IS_ERR(essiv_cipher))
-+		return PTR_ERR(essiv_cipher);
-+
-+	hash = crypto_spawn_shash(&ictx->hash_spawn);
-+	if (IS_ERR(hash)) {
-+		err = PTR_ERR(hash);
-+		goto err_free_essiv_cipher;
-+	}
-+
-+	tctx->essiv_cipher = essiv_cipher;
-+	tctx->hash = hash;
-+
-+	return 0;
-+
-+err_free_essiv_cipher:
-+	crypto_free_cipher(essiv_cipher);
-+	return err;
-+}
-+
-+static int essiv_skcipher_init_tfm(struct crypto_skcipher *tfm)
-+{
-+	struct skcipher_instance *inst = skcipher_alg_instance(tfm);
-+	struct essiv_instance_ctx *ictx = skcipher_instance_ctx(inst);
-+	struct essiv_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
-+	struct crypto_skcipher *skcipher;
-+	int err;
-+
-+	skcipher = crypto_spawn_skcipher(&ictx->u.skcipher_spawn);
-+	if (IS_ERR(skcipher))
-+		return PTR_ERR(skcipher);
-+
-+	crypto_skcipher_set_reqsize(tfm, sizeof(struct skcipher_request) +
-+				         crypto_skcipher_reqsize(skcipher));
-+
-+	err = essiv_init_tfm(ictx, tctx);
-+	if (err) {
-+		crypto_free_skcipher(skcipher);
-+		return err;
-+	}
-+
-+	tctx->u.skcipher = skcipher;
-+	return 0;
-+}
-+
-+static int essiv_aead_init_tfm(struct crypto_aead *tfm)
-+{
-+	struct aead_instance *inst = aead_alg_instance(tfm);
-+	struct essiv_instance_ctx *ictx = aead_instance_ctx(inst);
-+	struct essiv_tfm_ctx *tctx = crypto_aead_ctx(tfm);
-+	struct crypto_aead *aead;
-+	unsigned int subreq_size;
-+	int err;
-+
-+	BUILD_BUG_ON(offsetofend(struct essiv_aead_request_ctx, aead_req) !=
-+		     sizeof(struct essiv_aead_request_ctx));
-+
-+	aead = crypto_spawn_aead(&ictx->u.aead_spawn);
-+	if (IS_ERR(aead))
-+		return PTR_ERR(aead);
-+
-+	subreq_size = FIELD_SIZEOF(struct essiv_aead_request_ctx, aead_req) +
-+		      crypto_aead_reqsize(aead);
-+
-+	tctx->ivoffset = offsetof(struct essiv_aead_request_ctx, aead_req) +
-+			 subreq_size;
-+	crypto_aead_set_reqsize(tfm, tctx->ivoffset + crypto_aead_ivsize(aead));
-+
-+	err = essiv_init_tfm(ictx, tctx);
-+	if (err) {
-+		crypto_free_aead(aead);
-+		return err;
-+	}
-+
-+	tctx->u.aead = aead;
-+	return 0;
-+}
-+
-+static void essiv_skcipher_exit_tfm(struct crypto_skcipher *tfm)
-+{
-+	struct essiv_tfm_ctx *tctx = crypto_skcipher_ctx(tfm);
-+
-+	crypto_free_skcipher(tctx->u.skcipher);
-+	crypto_free_cipher(tctx->essiv_cipher);
-+	crypto_free_shash(tctx->hash);
-+}
-+
-+static void essiv_aead_exit_tfm(struct crypto_aead *tfm)
-+{
-+	struct essiv_tfm_ctx *tctx = crypto_aead_ctx(tfm);
-+
-+	crypto_free_aead(tctx->u.aead);
-+	crypto_free_cipher(tctx->essiv_cipher);
-+	crypto_free_shash(tctx->hash);
-+}
-+
-+static void essiv_skcipher_free_instance(struct skcipher_instance *inst)
-+{
-+	struct essiv_instance_ctx *ictx = skcipher_instance_ctx(inst);
-+
-+	crypto_drop_skcipher(&ictx->u.skcipher_spawn);
-+	crypto_drop_spawn(&ictx->essiv_cipher_spawn);
-+	crypto_drop_shash(&ictx->hash_spawn);
-+	kfree(inst);
-+}
-+
-+static void essiv_aead_free_instance(struct aead_instance *inst)
-+{
-+	struct essiv_instance_ctx *ictx = aead_instance_ctx(inst);
-+
-+	crypto_drop_aead(&ictx->u.aead_spawn);
-+	crypto_drop_spawn(&ictx->essiv_cipher_spawn);
-+	crypto_drop_shash(&ictx->hash_spawn);
-+	kfree(inst);
-+}
-+
-+static bool essiv_supported_algorithms(struct crypto_alg *essiv_cipher_alg,
-+				       struct shash_alg *hash_alg,
-+				       int ivsize)
-+{
-+	if (hash_alg->digestsize < essiv_cipher_alg->cra_cipher.cia_min_keysize ||
-+	    hash_alg->digestsize > essiv_cipher_alg->cra_cipher.cia_max_keysize)
-+		return false;
-+
-+	if (ivsize != essiv_cipher_alg->cra_blocksize)
-+		return false;
-+
-+	if (crypto_shash_alg_has_setkey(hash_alg))
-+		return false;
-+
-+	return true;
-+}
-+
-+static int essiv_create(struct crypto_template *tmpl, struct rtattr **tb)
-+{
-+	struct crypto_attr_type *algt;
-+	const char *inner_cipher_name;
-+	const char *essiv_cipher_name;
-+	const char *shash_name;
-+	struct skcipher_instance *skcipher_inst = NULL;
-+	struct aead_instance *aead_inst = NULL;
-+	struct crypto_instance *inst;
-+	struct crypto_alg *base, *block_base;
-+	struct essiv_instance_ctx *ictx;
-+	struct skcipher_alg *skcipher_alg = NULL;
-+	struct aead_alg *aead_alg = NULL;
-+	struct crypto_alg *essiv_cipher_alg;
-+	struct crypto_alg *_hash_alg;
-+	struct shash_alg *hash_alg;
-+	int ivsize;
-+	u32 type;
-+	int err;
-+
-+	algt = crypto_get_attr_type(tb);
-+	if (IS_ERR(algt))
-+		return PTR_ERR(algt);
-+
-+	inner_cipher_name = crypto_attr_alg_name(tb[1]);
-+	if (IS_ERR(inner_cipher_name))
-+		return PTR_ERR(inner_cipher_name);
-+
-+	essiv_cipher_name = crypto_attr_alg_name(tb[2]);
-+	if (IS_ERR(essiv_cipher_name))
-+		return PTR_ERR(essiv_cipher_name);
-+
-+	shash_name = crypto_attr_alg_name(tb[3]);
-+	if (IS_ERR(shash_name))
-+		return PTR_ERR(shash_name);
-+
-+	type = algt->type & algt->mask;
-+
-+	switch (type) {
-+	case CRYPTO_ALG_TYPE_BLKCIPHER:
-+		skcipher_inst = kzalloc(sizeof(*skcipher_inst) +
-+					sizeof(*ictx), GFP_KERNEL);
-+		if (!skcipher_inst)
-+			return -ENOMEM;
-+		inst = skcipher_crypto_instance(skcipher_inst);
-+		base = &skcipher_inst->alg.base;
-+		ictx = crypto_instance_ctx(inst);
-+
-+		/* Block cipher, e.g. "cbc(aes)" */
-+		crypto_set_skcipher_spawn(&ictx->u.skcipher_spawn, inst);
-+		err = crypto_grab_skcipher(&ictx->u.skcipher_spawn,
-+					   inner_cipher_name, 0,
-+					   crypto_requires_sync(algt->type,
-+								algt->mask));
++		err = fsverity_hash_page(params, inode, req, hpage, real_hash);
 +		if (err)
-+			goto out_free_inst;
-+		skcipher_alg = crypto_spawn_skcipher_alg(&ictx->u.skcipher_spawn);
-+		block_base = &skcipher_alg->base;
-+		ivsize = crypto_skcipher_alg_ivsize(skcipher_alg);
-+		break;
-+
-+	case CRYPTO_ALG_TYPE_AEAD:
-+		aead_inst = kzalloc(sizeof(*aead_inst) +
-+				    sizeof(*ictx), GFP_KERNEL);
-+		if (!aead_inst)
-+			return -ENOMEM;
-+		inst = aead_crypto_instance(aead_inst);
-+		base = &aead_inst->alg.base;
-+		ictx = crypto_instance_ctx(inst);
-+
-+		/* AEAD cipher, e.g. "authenc(hmac(sha256),cbc(aes))" */
-+		crypto_set_aead_spawn(&ictx->u.aead_spawn, inst);
-+		err = crypto_grab_aead(&ictx->u.aead_spawn,
-+				       inner_cipher_name, 0,
-+				       crypto_requires_sync(algt->type,
-+							    algt->mask));
++			goto out;
++		err = cmp_hashes(vi, want_hash, real_hash, index, level - 1);
 +		if (err)
-+			goto out_free_inst;
-+		aead_alg = crypto_spawn_aead_alg(&ictx->u.aead_spawn);
-+		block_base = &aead_alg->base;
-+		ivsize = aead_alg->ivsize;
-+		break;
-+
-+	default:
-+		return -EINVAL;
++			goto out;
++		SetPageChecked(hpage);
++		extract_hash(hpage, hoffset, hsize, _want_hash);
++		want_hash = _want_hash;
++		put_page(hpage);
++		pr_debug("Verified hash page at level %d, now want %s:%*phN\n",
++			 level - 1, params->hash_alg->name, hsize, want_hash);
 +	}
 +
-+	/* Block cipher, e.g. "aes" */
-+	crypto_set_spawn(&ictx->essiv_cipher_spawn, inst);
-+	err = crypto_grab_spawn(&ictx->essiv_cipher_spawn, essiv_cipher_name,
-+				CRYPTO_ALG_TYPE_CIPHER, CRYPTO_ALG_TYPE_MASK);
++	/* Finally, verify the data page */
++	err = fsverity_hash_page(params, inode, req, data_page, real_hash);
 +	if (err)
-+		goto out_drop_skcipher;
-+	essiv_cipher_alg = ictx->essiv_cipher_spawn.alg;
++		goto out;
++	err = cmp_hashes(vi, want_hash, real_hash, index, -1);
++out:
++	for (; level > 0; level--)
++		put_page(hpages[level - 1]);
 +
-+	/* Synchronous hash, e.g., "sha256" */
-+	_hash_alg = crypto_alg_mod_lookup(shash_name,
-+					  CRYPTO_ALG_TYPE_SHASH,
-+					  CRYPTO_ALG_TYPE_MASK);
-+	if (IS_ERR(_hash_alg)) {
-+		err = PTR_ERR(_hash_alg);
-+		goto out_drop_essiv_cipher;
-+	}
-+	hash_alg = __crypto_shash_alg(_hash_alg);
-+	err = crypto_init_shash_spawn(&ictx->hash_spawn, hash_alg, inst);
-+	if (err)
-+		goto out_put_hash;
++	return err == 0;
++}
 +
-+	/* Check the set of algorithms */
-+	if (!essiv_supported_algorithms(essiv_cipher_alg, hash_alg, ivsize)) {
-+		pr_warn("Unsupported essiv instantiation: essiv(%s,%s,%s)\n",
-+			block_base->cra_name,
-+			essiv_cipher_alg->cra_name,
-+			hash_alg->base.cra_name);
-+		err = -EINVAL;
-+		goto out_drop_hash;
-+	}
++/**
++ * fsverity_verify_page() - verify a data page
++ *
++ * Verify a page that has just been read from a verity file.  The page must be a
++ * pagecache page that is still locked and not yet uptodate.
++ *
++ * Return: true if the page is valid, else false.
++ */
++bool fsverity_verify_page(struct page *page)
++{
++	struct inode *inode = page->mapping->host;
++	const struct fsverity_info *vi = inode->i_verity_info;
++	struct ahash_request *req;
++	bool valid;
 +
-+	/* Instance fields */
++	req = ahash_request_alloc(vi->tree_params.hash_alg->tfm, GFP_NOFS);
++	if (unlikely(!req))
++		return false;
 +
-+	err = -ENAMETOOLONG;
-+	if (snprintf(base->cra_name, CRYPTO_MAX_ALG_NAME,
-+		     "essiv(%s,%s,%s)", block_base->cra_name,
-+		     essiv_cipher_alg->cra_name,
-+		     hash_alg->base.cra_name) >= CRYPTO_MAX_ALG_NAME)
-+		goto out_drop_hash;
-+	if (snprintf(base->cra_driver_name, CRYPTO_MAX_ALG_NAME,
-+		     "essiv(%s,%s,%s)",
-+		     block_base->cra_driver_name,
-+		     essiv_cipher_alg->cra_driver_name,
-+		     hash_alg->base.cra_driver_name) >= CRYPTO_MAX_ALG_NAME)
-+		goto out_drop_hash;
++	valid = verify_page(inode, vi, req, page);
 +
-+	base->cra_flags		= block_base->cra_flags & CRYPTO_ALG_ASYNC;
-+	base->cra_blocksize	= block_base->cra_blocksize;
-+	base->cra_ctxsize	= sizeof(struct essiv_tfm_ctx);
-+	base->cra_alignmask	= block_base->cra_alignmask;
-+	base->cra_priority	= block_base->cra_priority;
++	ahash_request_free(req);
 +
-+	if (type == CRYPTO_ALG_TYPE_BLKCIPHER) {
-+		skcipher_inst->alg.setkey	= essiv_skcipher_setkey;
-+		skcipher_inst->alg.encrypt	= essiv_skcipher_encrypt;
-+		skcipher_inst->alg.decrypt	= essiv_skcipher_decrypt;
-+		skcipher_inst->alg.init		= essiv_skcipher_init_tfm;
-+		skcipher_inst->alg.exit		= essiv_skcipher_exit_tfm;
++	return valid;
++}
++EXPORT_SYMBOL_GPL(fsverity_verify_page);
 +
-+		skcipher_inst->alg.min_keysize	= crypto_skcipher_alg_min_keysize(skcipher_alg);
-+		skcipher_inst->alg.max_keysize	= crypto_skcipher_alg_max_keysize(skcipher_alg);
-+		skcipher_inst->alg.ivsize	= crypto_skcipher_alg_ivsize(skcipher_alg);
-+		skcipher_inst->alg.chunksize	= crypto_skcipher_alg_chunksize(skcipher_alg);
-+		skcipher_inst->alg.walksize	= crypto_skcipher_alg_walksize(skcipher_alg);
++#ifdef CONFIG_BLOCK
++/**
++ * fsverity_verify_bio() - verify a 'read' bio that has just completed
++ *
++ * Verify a set of pages that have just been read from a verity file.  The pages
++ * must be pagecache pages that are still locked and not yet uptodate.  Pages
++ * that fail verification are set to the Error state.  Verification is skipped
++ * for pages already in the Error state, e.g. due to fscrypt decryption failure.
++ *
++ * This is a helper function for use by the ->readpages() method of filesystems
++ * that issue bios to read data directly into the page cache.  Filesystems that
++ * populate the page cache without issuing bios (e.g. non block-based
++ * filesystems) must instead call fsverity_verify_page() directly on each page.
++ * All filesystems must also call fsverity_verify_page() on holes.
++ */
++void fsverity_verify_bio(struct bio *bio)
++{
++	struct inode *inode = bio_first_page_all(bio)->mapping->host;
++	const struct fsverity_info *vi = inode->i_verity_info;
++	struct ahash_request *req;
++	struct bio_vec *bv;
++	struct bvec_iter_all iter_all;
 +
-+		skcipher_inst->free		= essiv_skcipher_free_instance;
-+
-+		err = skcipher_register_instance(tmpl, skcipher_inst);
-+	} else {
-+		aead_inst->alg.setkey		= essiv_aead_setkey;
-+		aead_inst->alg.setauthsize	= essiv_aead_setauthsize;
-+		aead_inst->alg.encrypt		= essiv_aead_encrypt;
-+		aead_inst->alg.decrypt		= essiv_aead_decrypt;
-+		aead_inst->alg.init		= essiv_aead_init_tfm;
-+		aead_inst->alg.exit		= essiv_aead_exit_tfm;
-+
-+		aead_inst->alg.ivsize		= crypto_aead_alg_ivsize(aead_alg);
-+		aead_inst->alg.maxauthsize	= crypto_aead_alg_maxauthsize(aead_alg);
-+		aead_inst->alg.chunksize	= crypto_aead_alg_chunksize(aead_alg);
-+
-+		aead_inst->free			= essiv_aead_free_instance;
-+
-+		err = aead_register_instance(tmpl, aead_inst);
++	req = ahash_request_alloc(vi->tree_params.hash_alg->tfm, GFP_NOFS);
++	if (unlikely(!req)) {
++		bio_for_each_segment_all(bv, bio, iter_all)
++			SetPageError(bv->bv_page);
++		return;
 +	}
 +
-+	if (err)
-+		goto out_drop_hash;
++	bio_for_each_segment_all(bv, bio, iter_all) {
++		struct page *page = bv->bv_page;
 +
-+	crypto_mod_put(_hash_alg);
++		if (!PageError(page) && !verify_page(inode, vi, req, page))
++			SetPageError(page);
++	}
++
++	ahash_request_free(req);
++}
++EXPORT_SYMBOL_GPL(fsverity_verify_bio);
++#endif /* CONFIG_BLOCK */
++
++/**
++ * fsverity_enqueue_verify_work() - enqueue work on the fs-verity workqueue
++ *
++ * Enqueue verification work for asynchronous processing.
++ */
++void fsverity_enqueue_verify_work(struct work_struct *work)
++{
++	queue_work(fsverity_read_workqueue, work);
++}
++EXPORT_SYMBOL_GPL(fsverity_enqueue_verify_work);
++
++int __init fsverity_init_workqueue(void)
++{
++	/*
++	 * Use an unbound workqueue to allow bios to be verified in parallel
++	 * even when they happen to complete on the same CPU.  This sacrifices
++	 * locality, but it's worthwhile since hashing is CPU-intensive.
++	 *
++	 * Also use a high-priority workqueue to prioritize verification work,
++	 * which blocks reads from completing, over regular application tasks.
++	 */
++	fsverity_read_workqueue = alloc_workqueue("fsverity_read_queue",
++						  WQ_UNBOUND | WQ_HIGHPRI,
++						  num_online_cpus());
++	if (!fsverity_read_workqueue)
++		return -ENOMEM;
 +	return 0;
-+
-+out_drop_hash:
-+	crypto_drop_shash(&ictx->hash_spawn);
-+out_put_hash:
-+	crypto_mod_put(_hash_alg);
-+out_drop_essiv_cipher:
-+	crypto_drop_spawn(&ictx->essiv_cipher_spawn);
-+out_drop_skcipher:
-+	if (type == CRYPTO_ALG_TYPE_BLKCIPHER)
-+		crypto_drop_skcipher(&ictx->u.skcipher_spawn);
-+	else
-+		crypto_drop_aead(&ictx->u.aead_spawn);
-+out_free_inst:
-+	kfree(skcipher_inst);
-+	kfree(aead_inst);
-+	return err;
 +}
+diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
+index cbd0f84e1620..95c257cd7ff0 100644
+--- a/include/linux/fsverity.h
++++ b/include/linux/fsverity.h
+@@ -33,6 +33,23 @@ struct fsverity_operations {
+ 	 */
+ 	int (*get_verity_descriptor)(struct inode *inode, void *buf,
+ 				     size_t bufsize);
 +
-+/* essiv(inner_cipher_name, essiv_cipher_name, shash_name) */
-+static struct crypto_template essiv_tmpl = {
-+	.name	= "essiv",
-+	.create	= essiv_create,
-+	.module	= THIS_MODULE,
-+};
++	/**
++	 * Read a Merkle tree page of the given inode.
++	 *
++	 * @inode: the inode
++	 * @index: 0-based index of the page within the Merkle tree
++	 *
++	 * This can be called at any time on an open verity file, as well as
++	 * between ->begin_enable_verity() and ->end_enable_verity().  It may be
++	 * called by multiple processes concurrently, even with the same page.
++	 *
++	 * Note that this must retrieve a *page*, not necessarily a *block*.
++	 *
++	 * Return: the page on success, ERR_PTR() on failure
++	 */
++	struct page *(*read_merkle_tree_page)(struct inode *inode,
++					      pgoff_t index);
+ };
+ 
+ #ifdef CONFIG_FS_VERITY
+@@ -49,6 +66,12 @@ extern int fsverity_file_open(struct inode *inode, struct file *filp);
+ extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
+ extern void fsverity_cleanup_inode(struct inode *inode);
+ 
++/* verify.c */
 +
-+static int __init essiv_module_init(void)
++extern bool fsverity_verify_page(struct page *page);
++extern void fsverity_verify_bio(struct bio *bio);
++extern void fsverity_enqueue_verify_work(struct work_struct *work);
++
+ #else /* !CONFIG_FS_VERITY */
+ 
+ static inline struct fsverity_info *fsverity_get_info(const struct inode *inode)
+@@ -73,6 +96,39 @@ static inline void fsverity_cleanup_inode(struct inode *inode)
+ {
+ }
+ 
++/* verify.c */
++
++static inline bool fsverity_verify_page(struct page *page)
 +{
-+	return crypto_register_template(&essiv_tmpl);
++	WARN_ON(1);
++	return false;
 +}
 +
-+static void __exit essiv_module_exit(void)
++static inline void fsverity_verify_bio(struct bio *bio)
 +{
-+	crypto_unregister_template(&essiv_tmpl);
++	WARN_ON(1);
 +}
 +
-+subsys_initcall(essiv_module_init);
-+module_exit(essiv_module_exit);
++static inline void fsverity_enqueue_verify_work(struct work_struct *work)
++{
++	WARN_ON(1);
++}
 +
-+MODULE_DESCRIPTION("ESSIV skcipher/aead wrapper for block encryption");
-+MODULE_LICENSE("GPL v2");
-+MODULE_ALIAS_CRYPTO("essiv");
+ #endif	/* !CONFIG_FS_VERITY */
+ 
++/**
++ * fsverity_active() - do reads from the inode need to go through fs-verity?
++ *
++ * This checks whether ->i_verity_info has been set.
++ *
++ * Filesystems call this from ->readpages() to check whether the pages need to
++ * be verified or not.  Don't use IS_VERITY() for this purpose; it's subject to
++ * a race condition where the file is being read concurrently with
++ * FS_IOC_ENABLE_VERITY completing.  (S_VERITY is set before ->i_verity_info.)
++ */
++static inline bool fsverity_active(const struct inode *inode)
++{
++	return fsverity_get_info(inode) != NULL;
++}
++
+ #endif	/* _LINUX_FSVERITY_H */
 -- 
-2.17.1
-
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+2.22.0
