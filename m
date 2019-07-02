@@ -1,87 +1,99 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:49322 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2390979AbfGXTp0 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 24 Jul 2019 15:45:26 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH] fscrypt: remove loadable module related code
-Date: Wed, 24 Jul 2019 12:44:38 -0700
-Message-Id: <20190724194438.39975-1-ebiggers@kernel.org>
+Received: from mail-wr1-f68.google.com ([209.85.221.68]:35173 "EHLO
+        mail-wr1-f68.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726605AbfGBQar (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 2 Jul 2019 12:30:47 -0400
+Received: by mail-wr1-f68.google.com with SMTP id c27so10887168wrb.2
+        for <linux-fscrypt@vger.kernel.org>; Tue, 02 Jul 2019 09:30:46 -0700 (PDT)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+References: <20190628152112.914-1-ard.biesheuvel@linaro.org>
+ <20190628152112.914-5-ard.biesheuvel@linaro.org> <f068888f-1a13-babf-0144-07939a79d9d9@gmail.com>
+In-Reply-To: <f068888f-1a13-babf-0144-07939a79d9d9@gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Tue, 2 Jul 2019 18:30:30 +0200
+Message-ID: <CAKv+Gu-hATMtNVUJ-WOr0yia0-X=M_ME6CutREy9q_ZyorpCzw@mail.gmail.com>
+Subject: Re: [PATCH v6 4/7] md: dm-crypt: switch to ESSIV crypto API template
+Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>
+To: Milan Broz <gmazyland@gmail.com>
+Cc: "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, device-mapper development <dm-devel@redhat.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, 1 Jul 2019 at 10:59, Milan Broz <gmazyland@gmail.com> wrote:
+>
+> On 28/06/2019 17:21, Ard Biesheuvel wrote:
+> > Replace the explicit ESSIV handling in the dm-crypt driver with calls
+> > into the crypto API, which now possesses the capability to perform
+> > this processing within the crypto subsystem.
+> >
+> > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+>
+> >  drivers/md/dm-crypt.c | 200 ++++----------------
+>
+> ...
+>
+> > -/* Wipe salt and reset key derived from volume key */
+> > -static int crypt_iv_essiv_wipe(struct crypt_config *cc)
+>
+> Do I understand it correctly, that this is now called inside the whole cipher
+> set key in wipe command (in crypt_wipe_key())?
+>
+> (Wipe message is meant to suspend the device and wipe all key material
+> from memory without actually destroying the device.)
+>
+> > -{
+> > -     struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
+> > -     unsigned salt_size = crypto_shash_digestsize(essiv->hash_tfm);
+> > -     struct crypto_cipher *essiv_tfm;
+> > -     int r, err = 0;
+> > -
+> > -     memset(essiv->salt, 0, salt_size);
+> > -
+> > -     essiv_tfm = cc->iv_private;
+> > -     r = crypto_cipher_setkey(essiv_tfm, essiv->salt, salt_size);
+> > -     if (r)
+> > -             err = r;
+> > -
+> > -     return err;
+> > -}
+>
+> ...
+>
+> > @@ -2435,9 +2281,19 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
+> >       }
+> >
+> >       ret = crypt_ctr_blkdev_cipher(cc, cipher_api);
+> > -     if (ret < 0) {
+> > -             ti->error = "Cannot allocate cipher string";
+> > -             return -ENOMEM;
+> > +     if (ret < 0)
+> > +             goto bad_mem;
+> > +
+> > +     if (*ivmode && !strcmp(*ivmode, "essiv")) {
+> > +             if (!*ivopts) {
+> > +                     ti->error = "Digest algorithm missing for ESSIV mode";
+> > +                     return -EINVAL;
+> > +             }
+> > +             ret = snprintf(buf, CRYPTO_MAX_ALG_NAME, "essiv(%s,%s,%s)",
+> > +                            cipher_api, cc->cipher, *ivopts);
+> > +             if (ret < 0 || ret >= CRYPTO_MAX_ALG_NAME)
+> > +                     goto bad_mem;
+>
+> Hm, nitpicking, but goto from only one place while we have another -ENOMEM above...
+>
+> Just place this here without goto?
+>
 
-Since commit 643fa9612bf1 ("fscrypt: remove filesystem specific build
-config option"), fs/crypto/ can no longer be built as a loadable module.
-Thus it no longer needs a module_exit function, nor a MODULE_LICENSE.
-So remove them, and change module_init to late_initcall.
+Actually, the bad_mem label is used 10 lines up as well.
+So I'll keep this goto in the next revision.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/crypto.c          | 20 +-------------------
- fs/crypto/fscrypt_private.h |  2 --
- fs/crypto/keyinfo.c         |  5 -----
- 3 files changed, 1 insertion(+), 26 deletions(-)
-
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 45c3d0427fb253..d52c788b723d01 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -510,22 +510,4 @@ static int __init fscrypt_init(void)
- fail:
- 	return -ENOMEM;
- }
--module_init(fscrypt_init)
--
--/**
-- * fscrypt_exit() - Shutdown the fs encryption system
-- */
--static void __exit fscrypt_exit(void)
--{
--	fscrypt_destroy();
--
--	if (fscrypt_read_workqueue)
--		destroy_workqueue(fscrypt_read_workqueue);
--	kmem_cache_destroy(fscrypt_ctx_cachep);
--	kmem_cache_destroy(fscrypt_info_cachep);
--
--	fscrypt_essiv_cleanup();
--}
--module_exit(fscrypt_exit);
--
--MODULE_LICENSE("GPL");
-+late_initcall(fscrypt_init)
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 8978eec9d766dd..224178294371a4 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -166,6 +166,4 @@ struct fscrypt_mode {
- 	bool needs_essiv;
- };
- 
--extern void __exit fscrypt_essiv_cleanup(void);
--
- #endif /* _FSCRYPT_PRIVATE_H */
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 207ebed918c159..9bcadc09e2aded 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -437,11 +437,6 @@ static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
- 	return err;
- }
- 
--void __exit fscrypt_essiv_cleanup(void)
--{
--	crypto_free_shash(essiv_hash_tfm);
--}
--
- /*
-  * Given the encryption mode and key (normally the derived key, but for
-  * FS_POLICY_FLAG_DIRECT_KEY mode it's the master key), set up the inode's
--- 
-2.22.0.657.g960e92d24f-goog
+> > +     ti->error = "Cannot allocate cipher string";
+> > +     return -ENOMEM;
+>
+> Otherwise
+>
+> Reviewed-by: Milan Broz <gmazyland@gmail.com>
+>
+> Thanks,
+> Milan
