@@ -1,23 +1,27 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wr1-f68.google.com ([209.85.221.68]:35173 "EHLO
-        mail-wr1-f68.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726605AbfGBQar (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 2 Jul 2019 12:30:47 -0400
-Received: by mail-wr1-f68.google.com with SMTP id c27so10887168wrb.2
-        for <linux-fscrypt@vger.kernel.org>; Tue, 02 Jul 2019 09:30:46 -0700 (PDT)
+Return-Path: <dm-devel-bounces@redhat.com>
 MIME-Version: 1.0
 References: <20190628152112.914-1-ard.biesheuvel@linaro.org>
- <20190628152112.914-5-ard.biesheuvel@linaro.org> <f068888f-1a13-babf-0144-07939a79d9d9@gmail.com>
+	<20190628152112.914-5-ard.biesheuvel@linaro.org>
+	<f068888f-1a13-babf-0144-07939a79d9d9@gmail.com>
 In-Reply-To: <f068888f-1a13-babf-0144-07939a79d9d9@gmail.com>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Tue, 2 Jul 2019 18:30:30 +0200
-Message-ID: <CAKv+Gu-hATMtNVUJ-WOr0yia0-X=M_ME6CutREy9q_ZyorpCzw@mail.gmail.com>
-Subject: Re: [PATCH v6 4/7] md: dm-crypt: switch to ESSIV crypto API template
-Content-Type: text/plain; charset="UTF-8"
-Sender: linux-fscrypt-owner@vger.kernel.org
+Date: Tue, 2 Jul 2019 10:07:32 +0200
+Message-ID: <CAKv+Gu-gnKk2EQ4Asq2evghhyTFYVq9SRQ8tu_p4VCA1dSJfHQ@mail.gmail.com>
+Subject: Re: [dm-devel] [PATCH v6 4/7] md: dm-crypt: switch to ESSIV crypto
+	API template
+List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
+List-Archive: <https://www.redhat.com/archives/dm-devel>
+List-Post: <mailto:dm-devel@redhat.com>
+List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
+List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Sender: dm-devel-bounces@redhat.com
+Errors-To: dm-devel-bounces@redhat.com
 To: Milan Broz <gmazyland@gmail.com>
-Cc: "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, device-mapper development <dm-devel@redhat.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, device-mapper development <dm-devel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 On Mon, 1 Jul 2019 at 10:59, Milan Broz <gmazyland@gmail.com> wrote:
@@ -42,6 +46,10 @@ On Mon, 1 Jul 2019 at 10:59, Milan Broz <gmazyland@gmail.com> wrote:
 > (Wipe message is meant to suspend the device and wipe all key material
 > from memory without actually destroying the device.)
 >
+
+Yes, setting the random key in wipe() triggers the SHA256 operation as
+normal, which is slightly wasteful but not a big deal imo.
+
 > > -{
 > > -     struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
 > > -     unsigned salt_size = crypto_shash_digestsize(essiv->hash_tfm);
@@ -85,8 +93,7 @@ On Mon, 1 Jul 2019 at 10:59, Milan Broz <gmazyland@gmail.com> wrote:
 > Just place this here without goto?
 >
 
-Actually, the bad_mem label is used 10 lines up as well.
-So I'll keep this goto in the next revision.
+OK
 
 > > +     ti->error = "Cannot allocate cipher string";
 > > +     return -ENOMEM;
@@ -97,3 +104,8 @@ So I'll keep this goto in the next revision.
 >
 > Thanks,
 > Milan
+
+--
+dm-devel mailing list
+dm-devel@redhat.com
+https://www.redhat.com/mailman/listinfo/dm-devel
