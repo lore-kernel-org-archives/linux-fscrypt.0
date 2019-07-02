@@ -1,298 +1,109 @@
-Return-Path: <dm-devel-bounces@redhat.com>
+Return-Path: <linux-crypto-owner@vger.kernel.org>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu,  4 Jul 2019 20:30:17 +0200
-Message-Id: <20190704183017.31570-8-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
-References: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v8 7/7] crypto: arm64/aes - implement accelerated
-	ESSIV/CBC mode
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
+Subject: [PATCH v7 3/7] md: dm-crypt: infer ESSIV block cipher from cipher string directly
+Date: Tue,  2 Jul 2019 18:48:11 +0200
+Message-Id: <20190702164815.6341-4-ard.biesheuvel@linaro.org>
+In-Reply-To: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
+References: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
+Sender: linux-crypto-owner@vger.kernel.org
 To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Add an accelerated version of the 'essiv(cbc(aes),aes,sha256'
-skcipher, which is used by fscrypt or dm-crypt on systems where
-CBC mode is signficantly more performant than XTS mode (e.g., when
-using a h/w accelerator which supports the former but not the latter)
-This avoids a separate call into the AES cipher for every invocation.
+Instead of allocating a crypto skcipher tfm 'foo' and attempting to
+infer the encapsulated block cipher from the driver's 'name' field,
+directly parse the string that we used to allocated the tfm. These
+are always identical (unless the allocation failed, in which case
+we bail anyway), but using the string allows us to use it in the
+allocation, which is something we will need when switching to the
+'essiv' crypto API template.
 
+Reviewed-by: Milan Broz <gmazyland@gmail.com>
 Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- arch/arm64/crypto/aes-glue.c  | 123 ++++++++++++++++++++
- arch/arm64/crypto/aes-modes.S |  29 ++++-
- 2 files changed, 151 insertions(+), 1 deletion(-)
+ drivers/md/dm-crypt.c | 41 +++++++++-----------
+ 1 file changed, 18 insertions(+), 23 deletions(-)
 
-diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
-index 11b85ce02d7a..7097739e7cd9 100644
---- a/arch/arm64/crypto/aes-glue.c
-+++ b/arch/arm64/crypto/aes-glue.c
-@@ -12,6 +12,7 @@
- #include <asm/hwcap.h>
- #include <asm/simd.h>
- #include <crypto/aes.h>
-+#include <crypto/sha.h>
- #include <crypto/internal/hash.h>
- #include <crypto/internal/simd.h>
- #include <crypto/internal/skcipher.h>
-@@ -34,6 +35,8 @@
- #define aes_cbc_decrypt		ce_aes_cbc_decrypt
- #define aes_cbc_cts_encrypt	ce_aes_cbc_cts_encrypt
- #define aes_cbc_cts_decrypt	ce_aes_cbc_cts_decrypt
-+#define aes_essiv_cbc_encrypt	ce_aes_essiv_cbc_encrypt
-+#define aes_essiv_cbc_decrypt	ce_aes_essiv_cbc_decrypt
- #define aes_ctr_encrypt		ce_aes_ctr_encrypt
- #define aes_xts_encrypt		ce_aes_xts_encrypt
- #define aes_xts_decrypt		ce_aes_xts_decrypt
-@@ -50,6 +53,8 @@ MODULE_DESCRIPTION("AES-ECB/CBC/CTR/XTS using ARMv8 Crypto Extensions");
- #define aes_cbc_decrypt		neon_aes_cbc_decrypt
- #define aes_cbc_cts_encrypt	neon_aes_cbc_cts_encrypt
- #define aes_cbc_cts_decrypt	neon_aes_cbc_cts_decrypt
-+#define aes_essiv_cbc_encrypt	neon_aes_essiv_cbc_encrypt
-+#define aes_essiv_cbc_decrypt	neon_aes_essiv_cbc_decrypt
- #define aes_ctr_encrypt		neon_aes_ctr_encrypt
- #define aes_xts_encrypt		neon_aes_xts_encrypt
- #define aes_xts_decrypt		neon_aes_xts_decrypt
-@@ -93,6 +98,13 @@ asmlinkage void aes_xts_decrypt(u8 out[], u8 const in[], u32 const rk1[],
- 				int rounds, int blocks, u32 const rk2[], u8 iv[],
- 				int first);
- 
-+asmlinkage void aes_essiv_cbc_encrypt(u8 out[], u8 const in[], u32 const rk1[],
-+				      int rounds, int blocks, u8 iv[],
-+				      u32 const rk2[]);
-+asmlinkage void aes_essiv_cbc_decrypt(u8 out[], u8 const in[], u32 const rk1[],
-+				      int rounds, int blocks, u8 iv[],
-+				      u32 const rk2[]);
-+
- asmlinkage void aes_mac_update(u8 const in[], u32 const rk[], int rounds,
- 			       int blocks, u8 dg[], int enc_before,
- 			       int enc_after);
-@@ -108,6 +120,12 @@ struct crypto_aes_xts_ctx {
- 	struct crypto_aes_ctx __aligned(8) key2;
- };
- 
-+struct crypto_aes_essiv_cbc_ctx {
-+	struct crypto_aes_ctx key1;
-+	struct crypto_aes_ctx __aligned(8) key2;
-+	struct crypto_shash *hash;
-+};
-+
- struct mac_tfm_ctx {
- 	struct crypto_aes_ctx key;
- 	u8 __aligned(8) consts[];
-@@ -145,6 +163,31 @@ static int xts_set_key(struct crypto_skcipher *tfm, const u8 *in_key,
- 	return -EINVAL;
- }
- 
-+static int essiv_cbc_set_key(struct crypto_skcipher *tfm, const u8 *in_key,
-+			     unsigned int key_len)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	SHASH_DESC_ON_STACK(desc, ctx->hash);
-+	u8 digest[SHA256_DIGEST_SIZE];
-+	int ret;
-+
-+	ret = aes_expandkey(&ctx->key1, in_key, key_len);
-+	if (ret)
-+		goto out;
-+
-+	desc->tfm = ctx->hash;
-+	crypto_shash_digest(desc, in_key, key_len, digest);
-+
-+	ret = aes_expandkey(&ctx->key2, digest, sizeof(digest));
-+	if (ret)
-+		goto out;
-+
-+	return 0;
-+out:
-+	crypto_skcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
-+	return -EINVAL;
-+}
-+
- static int ecb_encrypt(struct skcipher_request *req)
+diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
+index 1b16d34bb785..3c17d588f6db 100644
+--- a/drivers/md/dm-crypt.c
++++ b/drivers/md/dm-crypt.c
+@@ -2321,25 +2321,17 @@ static int crypt_ctr_ivmode(struct dm_target *ti, const char *ivmode)
+  * The cc->cipher is currently used only in ESSIV.
+  * This should be probably done by crypto-api calls (once available...)
+  */
+-static int crypt_ctr_blkdev_cipher(struct crypt_config *cc)
++static int crypt_ctr_blkdev_cipher(struct crypt_config *cc, char *alg_name)
  {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-@@ -359,6 +402,68 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
- 	return skcipher_walk_done(&walk, 0);
- }
+-	const char *alg_name = NULL;
+ 	char *start, *end;
  
-+static int essiv_cbc_init_tfm(struct crypto_skcipher *tfm)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+
-+	ctx->hash = crypto_alloc_shash("sha256", 0, 0);
-+	if (IS_ERR(ctx->hash))
-+		return PTR_ERR(ctx->hash);
-+
-+	return 0;
-+}
-+
-+static void essiv_cbc_exit_tfm(struct crypto_skcipher *tfm)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+
-+	crypto_free_shash(ctx->hash);
-+}
-+
-+static int essiv_cbc_encrypt(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err, rounds = 6 + ctx->key1.key_length / 4;
-+	struct skcipher_walk walk;
-+	unsigned int blocks;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+
-+	blocks = walk.nbytes / AES_BLOCK_SIZE;
-+	if (blocks) {
-+		kernel_neon_begin();
-+		aes_essiv_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
-+				      ctx->key1.key_enc, rounds, blocks,
-+				      req->iv, ctx->key2.key_enc);
-+		kernel_neon_end();
-+		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+	}
-+	return err ?: cbc_encrypt_walk(req, &walk);
-+}
-+
-+static int essiv_cbc_decrypt(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err, rounds = 6 + ctx->key1.key_length / 4;
-+	struct skcipher_walk walk;
-+	unsigned int blocks;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+
-+	blocks = walk.nbytes / AES_BLOCK_SIZE;
-+	if (blocks) {
-+		kernel_neon_begin();
-+		aes_essiv_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
-+				      ctx->key1.key_dec, rounds, blocks,
-+				      req->iv, ctx->key2.key_enc);
-+		kernel_neon_end();
-+		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+	}
-+	return err ?: cbc_decrypt_walk(req, &walk);
-+}
-+
- static int ctr_encrypt(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-@@ -502,6 +607,24 @@ static struct skcipher_alg aes_algs[] = { {
- 	.encrypt	= cts_cbc_encrypt,
- 	.decrypt	= cts_cbc_decrypt,
- 	.init		= cts_cbc_init_tfm,
-+}, {
-+	.base = {
-+		.cra_name		= "__essiv(cbc(aes),aes,sha256)",
-+		.cra_driver_name	= "__essiv-cbc-aes-sha256-" MODE,
-+		.cra_priority		= PRIO + 1,
-+		.cra_flags		= CRYPTO_ALG_INTERNAL,
-+		.cra_blocksize		= AES_BLOCK_SIZE,
-+		.cra_ctxsize		= sizeof(struct crypto_aes_essiv_cbc_ctx),
-+		.cra_module		= THIS_MODULE,
-+	},
-+	.min_keysize	= AES_MIN_KEY_SIZE,
-+	.max_keysize	= AES_MAX_KEY_SIZE,
-+	.ivsize		= AES_BLOCK_SIZE,
-+	.setkey		= essiv_cbc_set_key,
-+	.encrypt	= essiv_cbc_encrypt,
-+	.decrypt	= essiv_cbc_decrypt,
-+	.init		= essiv_cbc_init_tfm,
-+	.exit		= essiv_cbc_exit_tfm,
- }, {
- 	.base = {
- 		.cra_name		= "__ctr(aes)",
-diff --git a/arch/arm64/crypto/aes-modes.S b/arch/arm64/crypto/aes-modes.S
-index 3f60f7b152bf..c33a050c694c 100644
---- a/arch/arm64/crypto/aes-modes.S
-+++ b/arch/arm64/crypto/aes-modes.S
-@@ -121,10 +121,25 @@ AES_ENDPROC(aes_ecb_decrypt)
- 	 *		   int blocks, u8 iv[])
- 	 * aes_cbc_decrypt(u8 out[], u8 const in[], u8 const rk[], int rounds,
- 	 *		   int blocks, u8 iv[])
-+	 * aes_essiv_cbc_encrypt(u8 out[], u8 const in[], u32 const rk1[],
-+	 *			 int rounds, int blocks, u8 iv[],
-+	 *			 u32 const rk2[]);
-+	 * aes_essiv_cbc_decrypt(u8 out[], u8 const in[], u32 const rk1[],
-+	 *			 int rounds, int blocks, u8 iv[],
-+	 *			 u32 const rk2[]);
- 	 */
+ 	if (crypt_integrity_aead(cc)) {
+-		alg_name = crypto_tfm_alg_name(crypto_aead_tfm(any_tfm_aead(cc)));
+-		if (!alg_name)
+-			return -EINVAL;
+ 		if (crypt_integrity_hmac(cc)) {
+ 			alg_name = strchr(alg_name, ',');
+ 			if (!alg_name)
+ 				return -EINVAL;
+ 		}
+ 		alg_name++;
+-	} else {
+-		alg_name = crypto_tfm_alg_name(crypto_skcipher_tfm(any_tfm(cc)));
+-		if (!alg_name)
+-			return -EINVAL;
+ 	}
  
-+AES_ENTRY(aes_essiv_cbc_encrypt)
-+	ld1		{v4.16b}, [x5]			/* get iv */
-+
-+	mov		w8, #14				/* AES-256: 14 rounds */
-+	enc_prepare	w8, x6, x7
-+	encrypt_block	v4, w8, x6, x7, w9
-+	b		.Lessivcbcencstart
-+
- AES_ENTRY(aes_cbc_encrypt)
- 	ld1		{v4.16b}, [x5]			/* get iv */
-+.Lessivcbcencstart:
- 	enc_prepare	w3, x2, x6
+ 	start = strchr(alg_name, '(');
+@@ -2434,32 +2426,35 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
+ 	if (*ivmode && !strcmp(*ivmode, "lmk"))
+ 		cc->tfms_count = 64;
  
- .Lcbcencloop4x:
-@@ -156,13 +171,25 @@ AES_ENTRY(aes_cbc_encrypt)
- 	st1		{v4.16b}, [x5]			/* return iv */
- 	ret
- AES_ENDPROC(aes_cbc_encrypt)
-+AES_ENDPROC(aes_essiv_cbc_encrypt)
- 
-+AES_ENTRY(aes_essiv_cbc_decrypt)
-+	stp		x29, x30, [sp, #-16]!
-+	mov		x29, sp
-+
-+	ld1		{cbciv.16b}, [x5]		/* get iv */
-+
-+	mov		w8, #14				/* AES-256: 14 rounds */
-+	enc_prepare	w8, x6, x7
-+	encrypt_block	v7, w8, x6, x7, w9
-+	b		.Lessivcbcdecstart
- 
- AES_ENTRY(aes_cbc_decrypt)
- 	stp		x29, x30, [sp, #-16]!
- 	mov		x29, sp
- 
- 	ld1		{cbciv.16b}, [x5]		/* get iv */
-+.Lessivcbcdecstart:
- 	dec_prepare	w3, x2, x6
- 
- .LcbcdecloopNx:
-@@ -215,6 +242,7 @@ ST5(	st1		{v4.16b}, [x0], #16		)
- 	ldp		x29, x30, [sp], #16
- 	ret
- AES_ENDPROC(aes_cbc_decrypt)
-+AES_ENDPROC(aes_essiv_cbc_decrypt)
- 
- 
- 	/*
-@@ -294,7 +322,6 @@ AES_ENDPROC(aes_cbc_cts_decrypt)
- 	.byte		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
- 	.previous
- 
+-	cc->key_parts = cc->tfms_count;
 -
- 	/*
- 	 * aes_ctr_encrypt(u8 out[], u8 const in[], u8 const rk[], int rounds,
- 	 *		   int blocks, u8 ctr[])
+-	/* Allocate cipher */
+-	ret = crypt_alloc_tfms(cc, cipher_api);
+-	if (ret < 0) {
+-		ti->error = "Error allocating crypto tfm";
+-		return ret;
+-	}
+-
+ 	/* Alloc AEAD, can be used only in new format. */
+ 	if (crypt_integrity_aead(cc)) {
+ 		ret = crypt_ctr_auth_cipher(cc, cipher_api);
+ 		if (ret < 0) {
+ 			ti->error = "Invalid AEAD cipher spec";
+ 			return -ENOMEM;
+-		}
+-		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
+-	} else
+-		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
++	       }
++	}
+ 
+-	ret = crypt_ctr_blkdev_cipher(cc);
++	ret = crypt_ctr_blkdev_cipher(cc, cipher_api);
+ 	if (ret < 0) {
+ 		ti->error = "Cannot allocate cipher string";
+ 		return -ENOMEM;
+ 	}
+ 
++	cc->key_parts = cc->tfms_count;
++
++	/* Allocate cipher */
++	ret = crypt_alloc_tfms(cc, cipher_api);
++	if (ret < 0) {
++		ti->error = "Error allocating crypto tfm";
++		return ret;
++	}
++
++	if (crypt_integrity_aead(cc))
++		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
++	else
++		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
++
+ 	return 0;
+ }
+ 
 -- 
 2.17.1
-
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
