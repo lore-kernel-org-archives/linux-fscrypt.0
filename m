@@ -1,233 +1,168 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Fri, 26 Jul 2019 15:41:25 -0700
-Message-Id: <20190726224141.14044-1-ebiggers@kernel.org>
-MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v7 00/16] fscrypt: key management improvements
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-lf1-f67.google.com ([209.85.167.67]:45558 "EHLO
+        mail-lf1-f67.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726635AbfGBQsk (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 2 Jul 2019 12:48:40 -0400
+Received: by mail-lf1-f67.google.com with SMTP id u10so11860014lfm.12
+        for <linux-fscrypt@vger.kernel.org>; Tue, 02 Jul 2019 09:48:38 -0700 (PDT)
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Subject: [PATCH v7 6/7] crypto: arm64/aes-cts-cbc - factor out CBC en/decryption of a walk
+Date: Tue,  2 Jul 2019 18:48:14 +0200
+Message-Id: <20190702164815.6341-7-ard.biesheuvel@linaro.org>
+In-Reply-To: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
+References: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hello,
+The plain CBC driver and the CTS one share some code that iterates over
+a scatterwalk and invokes the CBC asm code to do the processing. The
+upcoming ESSIV/CBC mode will clone that pattern for the third time, so
+let's factor it out first.
 
-[Note: I'd like to apply this for v5.4.  Additional review is greatly
- appreciated, especially of the API before it's set in stone.  Thanks!]
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+---
+ arch/arm64/crypto/aes-glue.c | 82 ++++++++++----------
+ 1 file changed, 40 insertions(+), 42 deletions(-)
 
-This patchset makes major improvements to how keys are added, removed,
-and derived in fscrypt, aka ext4/f2fs/ubifs encryption.  It does this by
-adding new ioctls that add and remove encryption keys directly to/from
-the filesystem, and by adding a new encryption policy version ("v2")
-where the user-provided keys are only used as input to HKDF-SHA512 and
-are identified by their cryptographic hash.
-
-All new APIs and all cryptosystem changes are documented in
-Documentation/filesystems/fscrypt.rst.  Userspace can use the new key
-management ioctls with existing encrypted directories, but migrating to
-v2 encryption policies is needed for the full benefits.
-
-These changes solve four interrelated problems:
-
-(1) Providing fscrypt keys via process-subscribed keyrings is abusing
-    encryption as an OS-level access control mechanism, causing many
-    bugs where processes don't get access to the keys they need -- e.g.,
-    when a 'sudo' command or a system service needs to access encrypted
-    files.  It's also inconsistent with the filesystem/VFS "view" of
-    encrypted files which is global, so sometimes things randomly happen
-    to work anyway due to caching.  Regardless, currently almost all
-    fscrypt users actually do need global keys, so they're having to use
-    workarounds that heavily abuse the session or user keyrings, e.g.
-    Android and Chromium OS both use a systemwide "session keyring" and
-    the 'fscrypt' tool links all user keyrings into root's user keyring.
-
-(2) Currently there's no way to securely and efficiently remove a
-    fscrypt key such that not only is the original key wiped, but also
-    all files and directories protected by that key are "locked" and
-    their per-file keys wiped.  Many users want this and are using
-    'echo 2 > /proc/sys/vm/drop_caches' as a workaround, but this is
-    root-only, and also is overkill so can be a performance disaster.
-
-(3) The key derivation function (KDF) that fscrypt uses to derive
-    per-file keys is nonstandard, inflexible, and has some weaknesses
-    such as being reversible and not evenly distributing the entropy
-    from the user-provided keys.
-
-(4) fscrypt doesn't check that the correct key was supplied.  This can
-    be a security vulnerability, since it allows malicious local users
-    to associate the wrong key with files to which they have read-only
-    access, causing other users' processes to read/write the wrong data.
-
-Ultimately, the solutions to these problems all tie into each other.  By
-adding a filesystem-level encryption keyring with ioctls to add/remove
-keys to/from it, the keys are made usable filesystem-wide (solves
-problem #1).  It also becomes easy to track the inodes that were
-"unlocked" with each key, so they can be evicted when the key is removed
-(solves problem #2).  Moreover, the filesystem-level keyring is a
-natural place to store an HMAC transform keyed by each key, thus making
-it easy and efficient to switch the KDF to HKDF (solves problem #3).
-
-Finally, to check that the correct key was supplied, I use HKDF to
-derive a cryptographically secure key_identifier for each key (solves
-problem #4).  This in combination with key quotas and other careful
-precautions also makes it safe to allow non-root users to add and remove
-keys to/from the filesystem-level keyring.  Thus, all problems are
-solved without having to restrict the fscrypt API to root only.
-
-The patchset is organized as follows:
-
-- Patches 1-8 add new ioctls FS_IOC_ADD_ENCRYPTION_KEY,
-  FS_IOC_REMOVE_ENCRYPTION_KEY, and FS_IOC_GET_ENCRYPTION_KEY_STATUS.
-  Adding a key logically "unlocks" all files on the filesystem that are
-  protected by that key; removing a key "locks" them again.
-
-- Patches 9-12 add support for v2 encryption policies.
-
-- Patches 13-15 wire up the new ioctls to ext4, f2fs, and ubifs.
-
-- Patch 16 updates the fscrypt documentation for all the changes.
-
-This patchset applies to v5.3-rc1 with the pending fscrypt cleanup
-patches applied (https://patchwork.kernel.org/patch/11057589/ and
-https://patchwork.kernel.org/cover/11057583/).
-You can also get it from git at:
-
-	Repository:   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
-	Branch:       fscrypt-key-mgmt-improvements-v7
-
-I've written xfstests for the new APIs.  They test the APIs themselves
-as well as verify the correctness of the ciphertext stored on-disk for
-v2 encryption policies.  The tests can be found at:
-
-	Repository:   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
-	Branch:       fscrypt-key-mgmt-improvements
-
-The xfstests depend on new xfs_io commands which can be found at:
-
-	Repository:   https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfsprogs-dev.git
-	Branch:       fscrypt-key-mgmt-improvements
-
-I've also made proof-of-concept changes to the 'fscrypt' userspace
-program (https://github.com/google/fscrypt) to make it support v2
-encryption policies.  You can find these changes in git at:
-
-	Repository:   https://github.com/ebiggers/fscrypt.git
-	Branch:       fscrypt-key-mgmt-improvements
-
-To make the 'fscrypt' userspace program experimentally use v2 encryption
-policies on new encrypted directories, add the following to
-/etc/fscrypt.conf within the "options" section:
-
-	"policy_version": "2"
-
-Finally, it's also planned for Android and Chromium OS to switch to the
-new ioctls and eventually to v2 encryption policies.  Work-in-progress,
-proof-of-concept changes by Satya Tangirala for AOSP can be found at
-https://android-review.googlesource.com/q/topic:fscrypt-key-mgmt-improvements
-
-Changes v6 => v7:
-    - Rebase onto v5.3-rc1 and the pending fscrypt cleanups.
-    - Work around false positive compile-time buffer overflow check in
-      copy_from_user() in fscrypt_ioctl_set_policy() when building an
-      i386 kernel in a specific config with an old gcc version.
-    - A few very minor cleanups.
-
-Changes v5 => v6:
-    - Change HKDF to use the specification-defined default salt rather
-      than a custom fixed salt, and prepend the string "fscrypt" to
-      'info' instead.  This is arguably needed to match how RFC 5869 and
-      SP 800-56C are worded.  Both ways are secure in this context, so
-      prefer the "boring" way that clearly matches the standards.
-    - Rebase onto v5.2-rc1.
-    - A few small cleanups.
-
-Changes v4 => v5:
-    - Simplify shrink_dcache_inode(), as suggested by Al Viro;
-      also move it into fs/crypto/.
-    - Fix a build error on some architectures by calling
-      copy_from_user() rather than get_user() with a __u64 pointer.
-
-Changes v3 => v4:
-    - Introduce fscrypt_sb_free() to avoid an extra #ifdef.
-    - Fix UBIFS's ->drop_inode().
-    - Add 'version' to union fscrypt_policy and union fscrypt_context.
-
-Changes v2 => v3:
-    - Use ->drop_inode() to trigger the inode eviction during/after
-      FS_IOC_REMOVE_ENCRYPTION_KEY, as suggested by Dave Chinner.
-    - A few small cleanups.
-
-v1 of this patchset was sent in October 2017 with title "fscrypt:
-filesystem-level keyring and v2 policy support".  This revived version
-follows the same basic design but incorporates numerous improvements,
-such as splitting keyinfo.c into multiple files for much better
-understandability, and introducing "per-mode" encryption keys to
-implement the semantics of the DIRECT_KEY encryption policy flag.
-
-Eric Biggers (16):
-  fs, fscrypt: move uapi definitions to new header <linux/fscrypt.h>
-  fscrypt: use FSCRYPT_ prefix for uapi constants
-  fscrypt: use FSCRYPT_* definitions, not FS_*
-  fscrypt: add ->ci_inode to fscrypt_info
-  fscrypt: refactor v1 policy key setup into keysetup_legacy.c
-  fscrypt: add FS_IOC_ADD_ENCRYPTION_KEY ioctl
-  fscrypt: add FS_IOC_REMOVE_ENCRYPTION_KEY ioctl
-  fscrypt: add FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
-  fscrypt: add an HKDF-SHA512 implementation
-  fscrypt: v2 encryption policy support
-  fscrypt: allow unprivileged users to add/remove keys for v2 policies
-  fscrypt: require that key be added when setting a v2 encryption policy
-  ext4: wire up new fscrypt ioctls
-  f2fs: wire up new fscrypt ioctls
-  ubifs: wire up new fscrypt ioctls
-  fscrypt: document the new ioctls and policy version
-
- Documentation/filesystems/fscrypt.rst | 670 ++++++++++++++----
- MAINTAINERS                           |   1 +
- fs/crypto/Kconfig                     |   2 +
- fs/crypto/Makefile                    |  10 +-
- fs/crypto/crypto.c                    |  12 +-
- fs/crypto/fname.c                     |   5 +-
- fs/crypto/fscrypt_private.h           | 366 +++++++++-
- fs/crypto/hkdf.c                      | 181 +++++
- fs/crypto/keyinfo.c                   | 627 -----------------
- fs/crypto/keyring.c                   | 957 ++++++++++++++++++++++++++
- fs/crypto/keysetup.c                  | 569 +++++++++++++++
- fs/crypto/keysetup_legacy.c           | 340 +++++++++
- fs/crypto/policy.c                    | 428 +++++++++---
- fs/ext4/ioctl.c                       |  24 +
- fs/ext4/super.c                       |   3 +
- fs/f2fs/file.c                        |  46 ++
- fs/f2fs/super.c                       |   2 +
- fs/super.c                            |   2 +
- fs/ubifs/ioctl.c                      |  16 +
- fs/ubifs/super.c                      |  11 +
- include/linux/fs.h                    |   1 +
- include/linux/fscrypt.h               |  48 +-
- include/uapi/linux/fs.h               |  54 +-
- include/uapi/linux/fscrypt.h          | 164 +++++
- 24 files changed, 3583 insertions(+), 956 deletions(-)
- create mode 100644 fs/crypto/hkdf.c
- delete mode 100644 fs/crypto/keyinfo.c
- create mode 100644 fs/crypto/keyring.c
- create mode 100644 fs/crypto/keysetup.c
- create mode 100644 fs/crypto/keysetup_legacy.c
- create mode 100644 include/uapi/linux/fscrypt.h
-
+diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
+index f0ceb545bd1e..11b85ce02d7a 100644
+--- a/arch/arm64/crypto/aes-glue.c
++++ b/arch/arm64/crypto/aes-glue.c
+@@ -185,46 +185,64 @@ static int ecb_decrypt(struct skcipher_request *req)
+ 	return err;
+ }
+ 
+-static int cbc_encrypt(struct skcipher_request *req)
++static int cbc_encrypt_walk(struct skcipher_request *req,
++			    struct skcipher_walk *walk)
+ {
+ 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+ 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
+-	int err, rounds = 6 + ctx->key_length / 4;
+-	struct skcipher_walk walk;
++	int err = 0, rounds = 6 + ctx->key_length / 4;
+ 	unsigned int blocks;
+ 
+-	err = skcipher_walk_virt(&walk, req, false);
+-
+-	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
++	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+ 		kernel_neon_begin();
+-		aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-				ctx->key_enc, rounds, blocks, walk.iv);
++		aes_cbc_encrypt(walk->dst.virt.addr, walk->src.virt.addr,
++				ctx->key_enc, rounds, blocks, walk->iv);
+ 		kernel_neon_end();
+-		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
++		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+ 	}
+ 	return err;
+ }
+ 
+-static int cbc_decrypt(struct skcipher_request *req)
++static int cbc_encrypt(struct skcipher_request *req)
+ {
+-	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+-	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
+-	int err, rounds = 6 + ctx->key_length / 4;
+ 	struct skcipher_walk walk;
+-	unsigned int blocks;
++	int err;
+ 
+ 	err = skcipher_walk_virt(&walk, req, false);
++	if (err)
++		return err;
++	return cbc_encrypt_walk(req, &walk);
++}
+ 
+-	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
++static int cbc_decrypt_walk(struct skcipher_request *req,
++			    struct skcipher_walk *walk)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
++	int err = 0, rounds = 6 + ctx->key_length / 4;
++	unsigned int blocks;
++
++	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+ 		kernel_neon_begin();
+-		aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-				ctx->key_dec, rounds, blocks, walk.iv);
++		aes_cbc_decrypt(walk->dst.virt.addr, walk->src.virt.addr,
++				ctx->key_dec, rounds, blocks, walk->iv);
+ 		kernel_neon_end();
+-		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
++		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+ 	}
+ 	return err;
+ }
+ 
++static int cbc_decrypt(struct skcipher_request *req)
++{
++	struct skcipher_walk walk;
++	int err;
++
++	err = skcipher_walk_virt(&walk, req, false);
++	if (err)
++		return err;
++	return cbc_decrypt_walk(req, &walk);
++}
++
+ static int cts_cbc_init_tfm(struct crypto_skcipher *tfm)
+ {
+ 	crypto_skcipher_set_reqsize(tfm, sizeof(struct cts_cbc_req_ctx));
+@@ -250,22 +268,12 @@ static int cts_cbc_encrypt(struct skcipher_request *req)
+ 	}
+ 
+ 	if (cbc_blocks > 0) {
+-		unsigned int blocks;
+-
+ 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
+ 					   cbc_blocks * AES_BLOCK_SIZE,
+ 					   req->iv);
+ 
+-		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
+-
+-		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
+-			kernel_neon_begin();
+-			aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-					ctx->key_enc, rounds, blocks, walk.iv);
+-			kernel_neon_end();
+-			err = skcipher_walk_done(&walk,
+-						 walk.nbytes % AES_BLOCK_SIZE);
+-		}
++		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
++		      cbc_encrypt_walk(&rctx->subreq, &walk);
+ 		if (err)
+ 			return err;
+ 
+@@ -315,22 +323,12 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
+ 	}
+ 
+ 	if (cbc_blocks > 0) {
+-		unsigned int blocks;
+-
+ 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
+ 					   cbc_blocks * AES_BLOCK_SIZE,
+ 					   req->iv);
+ 
+-		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
+-
+-		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
+-			kernel_neon_begin();
+-			aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-					ctx->key_dec, rounds, blocks, walk.iv);
+-			kernel_neon_end();
+-			err = skcipher_walk_done(&walk,
+-						 walk.nbytes % AES_BLOCK_SIZE);
+-		}
++		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
++		      cbc_decrypt_walk(&rctx->subreq, &walk);
+ 		if (err)
+ 			return err;
+ 
 -- 
-2.22.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.17.1
