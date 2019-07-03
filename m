@@ -1,366 +1,152 @@
-Return-Path: <SRS0=3Y7b=VT=vger.kernel.org=linux-integrity-owner@kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v7 15/17] ext4: add fs-verity read support
-Date: Mon, 22 Jul 2019 09:50:59 -0700
-Message-Id: <20190722165101.12840-16-ebiggers@kernel.org>
-In-Reply-To: <20190722165101.12840-1-ebiggers@kernel.org>
-References: <20190722165101.12840-1-ebiggers@kernel.org>
+Return-Path: <SRS0=FBtJ=VA=linaro.org=ard.biesheuvel@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+References: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
+ <20190702164815.6341-3-ard.biesheuvel@linaro.org> <20190702215517.GA69157@gmail.com>
+ <CAKv+Gu9qPPBpm7aocHCsid6yyL7HyX9Dk2M72A5W9OeHG58MZw@mail.gmail.com>
+In-Reply-To: <CAKv+Gu9qPPBpm7aocHCsid6yyL7HyX9Dk2M72A5W9OeHG58MZw@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Wed, 3 Jul 2019 20:23:31 +0200
+Message-ID: <CAKv+Gu9gcbYrU3EjCuYudoT-vrAp3Q2y7ExpcqgHBLQFPXQsWw@mail.gmail.com>
+Subject: Re: [PATCH v7 2/7] fs: crypto: invoke crypto API for ESSIV handling
+Content-Type: text/plain; charset="UTF-8"
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, device-mapper development <dm-devel@redhat.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, 3 Jul 2019 at 00:06, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+>
+> On Tue, 2 Jul 2019 at 23:55, Eric Biggers <ebiggers@kernel.org> wrote:
+> >
+> > Hi Ard,
+> >
+> > On Tue, Jul 02, 2019 at 06:48:10PM +0200, Ard Biesheuvel wrote:
+> > > Instead of open coding the calculations for ESSIV handling, use a
+> > > ESSIV skcipher which does all of this under the hood.
+> > >
+> > > Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> > > ---
+> > >  fs/crypto/Kconfig           |  1 +
+> > >  fs/crypto/crypto.c          |  5 --
+> > >  fs/crypto/fscrypt_private.h |  9 --
+> > >  fs/crypto/keyinfo.c         | 95 +-------------------
+> > >  4 files changed, 5 insertions(+), 105 deletions(-)
+> > >
+> > > diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
+> > > index 24ed99e2eca0..b0292da8613c 100644
+> > > --- a/fs/crypto/Kconfig
+> > > +++ b/fs/crypto/Kconfig
+> > > @@ -5,6 +5,7 @@ config FS_ENCRYPTION
+> > >       select CRYPTO_AES
+> > >       select CRYPTO_CBC
+> > >       select CRYPTO_ECB
+> > > +     select CRYPTO_ESSIV
+> > >       select CRYPTO_XTS
+> > >       select CRYPTO_CTS
+> > >       select CRYPTO_SHA256
+> > > diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+> > > index 335a362ee446..c53ce262a06c 100644
+> > > --- a/fs/crypto/crypto.c
+> > > +++ b/fs/crypto/crypto.c
+> > > @@ -136,9 +136,6 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
+> > >
+> > >       if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY)
+> > >               memcpy(iv->nonce, ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE);
+> > > -
+> > > -     if (ci->ci_essiv_tfm != NULL)
+> > > -             crypto_cipher_encrypt_one(ci->ci_essiv_tfm, iv->raw, iv->raw);
+> > >  }
+> > >
+> > >  int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
+> > > @@ -492,8 +489,6 @@ static void __exit fscrypt_exit(void)
+> > >               destroy_workqueue(fscrypt_read_workqueue);
+> > >       kmem_cache_destroy(fscrypt_ctx_cachep);
+> > >       kmem_cache_destroy(fscrypt_info_cachep);
+> > > -
+> > > -     fscrypt_essiv_cleanup();
+> > >  }
+> > >  module_exit(fscrypt_exit);
+> > >
+> > > diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+> > > index 7da276159593..59d0cba9cfb9 100644
+> > > --- a/fs/crypto/fscrypt_private.h
+> > > +++ b/fs/crypto/fscrypt_private.h
+> > > @@ -61,12 +61,6 @@ struct fscrypt_info {
+> > >       /* The actual crypto transform used for encryption and decryption */
+> > >       struct crypto_skcipher *ci_ctfm;
+> > >
+> > > -     /*
+> > > -      * Cipher for ESSIV IV generation.  Only set for CBC contents
+> > > -      * encryption, otherwise is NULL.
+> > > -      */
+> > > -     struct crypto_cipher *ci_essiv_tfm;
+> > > -
+> > >       /*
+> > >        * Encryption mode used for this inode.  It corresponds to either
+> > >        * ci_data_mode or ci_filename_mode, depending on the inode type.
+> > > @@ -166,9 +160,6 @@ struct fscrypt_mode {
+> > >       int keysize;
+> > >       int ivsize;
+> > >       bool logged_impl_name;
+> > > -     bool needs_essiv;
+> > >  };
+> > >
+> > > -extern void __exit fscrypt_essiv_cleanup(void);
+> > > -
+> > >  #endif /* _FSCRYPT_PRIVATE_H */
+> > > diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+> > > index dcd91a3fbe49..f39667d4316a 100644
+> > > --- a/fs/crypto/keyinfo.c
+> > > +++ b/fs/crypto/keyinfo.c
+> > > @@ -13,14 +13,10 @@
+> > >  #include <linux/hashtable.h>
+> > >  #include <linux/scatterlist.h>
+> > >  #include <linux/ratelimit.h>
+> > > -#include <crypto/aes.h>
+> > >  #include <crypto/algapi.h>
+> > > -#include <crypto/sha.h>
+> > >  #include <crypto/skcipher.h>
+> > >  #include "fscrypt_private.h"
+> > >
+> > > -static struct crypto_shash *essiv_hash_tfm;
+> > > -
+> > >  /* Table of keys referenced by FS_POLICY_FLAG_DIRECT_KEY policies */
+> > >  static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
+> > >  static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
+> > > @@ -144,10 +140,9 @@ static struct fscrypt_mode available_modes[] = {
+> > >       },
+> > >       [FS_ENCRYPTION_MODE_AES_128_CBC] = {
+> > >               .friendly_name = "AES-128-CBC",
+> > > -             .cipher_str = "cbc(aes)",
+> > > +             .cipher_str = "essiv(cbc(aes),aes,sha256)",
+> > >               .keysize = 16,
+> > > -             .ivsize = 16,
+> > > -             .needs_essiv = true,
+> > > +             .ivsize = 8,
+> >
+> > As I said before, this needs to be kept as .ivsize = 16.
+> >
+> > This bug actually causes the generic/549 test to fail.
+> >
+>
+> Ugh, yes, I intended to fix that. Apologies for the sloppiness, I have
+> been trying to wrap this up in time for my holidays, but the end
+> result is quite the opposite :-)
+>
+> > Otherwise this patch looks good.  FYI: to avoid conflicts with planned fscrypt
+> > work I'd prefer to take this patch through the fscrypt.git tree after the ESSIV
+> > template is merged, rather than have Herbert take it through cryptodev.  (Unless
+> > he's going to apply this whole series for v5.3, in which case I'm fine with him
+> > taking the fscrypt patch too, though it seems too late for that.)
+> >
+>
+> I agree that the fscrypt and dm-crypt changes should not be merged for v5.3
+>
+> I know that Herbert typically prefers not to take any new code without
+> any of its users, but perhaps we can make an exception in this case,
+> and merge patches #1, #5, #6 and #7 now (which is mostly risk free
+> since no code uses essiv yet, and patch #5 is a straight-forward
+> refactor) and take the fscrypt and dm-crypt patches through their
+> respective trees for the next cycle.
 
-Make ext4_mpage_readpages() verify data as it is read from fs-verity
-files, using the helper functions from fs/verity/.
-
-To support both encryption and verity simultaneously, this required
-refactoring the decryption workflow into a generic "post-read
-processing" workflow which can do decryption, verification, or both.
-
-The case where the ext4 block size is not equal to the PAGE_SIZE is not
-supported yet, since in that case ext4_mpage_readpages() sometimes falls
-back to block_read_full_page(), which does not support fs-verity yet.
-
-Co-developed-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/ext4.h     |   2 +
- fs/ext4/inode.c    |   2 +
- fs/ext4/readpage.c | 208 ++++++++++++++++++++++++++++++++++++++-------
- fs/ext4/super.c    |   9 +-
- 4 files changed, 191 insertions(+), 30 deletions(-)
-
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index 736972f46ea69..9c7f4036021b4 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -3191,6 +3191,8 @@ static inline void ext4_set_de_type(struct super_block *sb,
- extern int ext4_mpage_readpages(struct address_space *mapping,
- 				struct list_head *pages, struct page *page,
- 				unsigned nr_pages, bool is_readahead);
-+extern int __init ext4_init_post_read_processing(void);
-+extern void ext4_exit_post_read_processing(void);
- 
- /* symlink.c */
- extern const struct inode_operations ext4_encrypted_symlink_inode_operations;
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 515b9ea4c78e9..b2c8d09acf652 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3909,6 +3909,8 @@ static ssize_t ext4_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
- 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
- 		return 0;
- #endif
-+	if (fsverity_active(inode))
-+		return 0;
- 
- 	/*
- 	 * If we are doing data journalling we don't support O_DIRECT
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-index c916017db3344..ec8aeab3af65a 100644
---- a/fs/ext4/readpage.c
-+++ b/fs/ext4/readpage.c
-@@ -47,6 +47,11 @@
- 
- #include "ext4.h"
- 
-+#define NUM_PREALLOC_POST_READ_CTXS	128
-+
-+static struct kmem_cache *bio_post_read_ctx_cache;
-+static mempool_t *bio_post_read_ctx_pool;
-+
- static inline bool ext4_bio_encrypted(struct bio *bio)
- {
- #ifdef CONFIG_FS_ENCRYPTION
-@@ -56,6 +61,100 @@ static inline bool ext4_bio_encrypted(struct bio *bio)
- #endif
- }
- 
-+/* postprocessing steps for read bios */
-+enum bio_post_read_step {
-+	STEP_INITIAL = 0,
-+	STEP_DECRYPT,
-+	STEP_VERITY,
-+};
-+
-+struct bio_post_read_ctx {
-+	struct bio *bio;
-+	struct work_struct work;
-+	unsigned int cur_step;
-+	unsigned int enabled_steps;
-+};
-+
-+static void __read_end_io(struct bio *bio)
-+{
-+	struct page *page;
-+	struct bio_vec *bv;
-+	struct bvec_iter_all iter_all;
-+
-+	bio_for_each_segment_all(bv, bio, iter_all) {
-+		page = bv->bv_page;
-+
-+		/* PG_error was set if any post_read step failed */
-+		if (bio->bi_status || PageError(page)) {
-+			ClearPageUptodate(page);
-+			/* will re-read again later */
-+			ClearPageError(page);
-+		} else {
-+			SetPageUptodate(page);
-+		}
-+		unlock_page(page);
-+	}
-+	if (bio->bi_private)
-+		mempool_free(bio->bi_private, bio_post_read_ctx_pool);
-+	bio_put(bio);
-+}
-+
-+static void bio_post_read_processing(struct bio_post_read_ctx *ctx);
-+
-+static void decrypt_work(struct work_struct *work)
-+{
-+	struct bio_post_read_ctx *ctx =
-+		container_of(work, struct bio_post_read_ctx, work);
-+
-+	fscrypt_decrypt_bio(ctx->bio);
-+
-+	bio_post_read_processing(ctx);
-+}
-+
-+static void verity_work(struct work_struct *work)
-+{
-+	struct bio_post_read_ctx *ctx =
-+		container_of(work, struct bio_post_read_ctx, work);
-+
-+	fsverity_verify_bio(ctx->bio);
-+
-+	bio_post_read_processing(ctx);
-+}
-+
-+static void bio_post_read_processing(struct bio_post_read_ctx *ctx)
-+{
-+	/*
-+	 * We use different work queues for decryption and for verity because
-+	 * verity may require reading metadata pages that need decryption, and
-+	 * we shouldn't recurse to the same workqueue.
-+	 */
-+	switch (++ctx->cur_step) {
-+	case STEP_DECRYPT:
-+		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
-+			INIT_WORK(&ctx->work, decrypt_work);
-+			fscrypt_enqueue_decrypt_work(&ctx->work);
-+			return;
-+		}
-+		ctx->cur_step++;
-+		/* fall-through */
-+	case STEP_VERITY:
-+		if (ctx->enabled_steps & (1 << STEP_VERITY)) {
-+			INIT_WORK(&ctx->work, verity_work);
-+			fsverity_enqueue_verify_work(&ctx->work);
-+			return;
-+		}
-+		ctx->cur_step++;
-+		/* fall-through */
-+	default:
-+		__read_end_io(ctx->bio);
-+	}
-+}
-+
-+static bool bio_post_read_required(struct bio *bio)
-+{
-+	return bio->bi_private && !bio->bi_status;
-+}
-+
- /*
-  * I/O completion handler for multipage BIOs.
-  *
-@@ -70,30 +169,53 @@ static inline bool ext4_bio_encrypted(struct bio *bio)
-  */
- static void mpage_end_io(struct bio *bio)
- {
--	struct bio_vec *bv;
--	struct bvec_iter_all iter_all;
-+	if (bio_post_read_required(bio)) {
-+		struct bio_post_read_ctx *ctx = bio->bi_private;
- 
--	if (ext4_bio_encrypted(bio)) {
--		if (bio->bi_status) {
--			fscrypt_release_ctx(bio->bi_private);
--		} else {
--			fscrypt_enqueue_decrypt_bio(bio->bi_private, bio);
--			return;
--		}
-+		ctx->cur_step = STEP_INITIAL;
-+		bio_post_read_processing(ctx);
-+		return;
- 	}
--	bio_for_each_segment_all(bv, bio, iter_all) {
--		struct page *page = bv->bv_page;
-+	__read_end_io(bio);
-+}
- 
--		if (!bio->bi_status) {
--			SetPageUptodate(page);
--		} else {
--			ClearPageUptodate(page);
--			SetPageError(page);
--		}
--		unlock_page(page);
-+static inline bool ext4_need_verity(const struct inode *inode, pgoff_t idx)
-+{
-+	return fsverity_active(inode) &&
-+	       idx < DIV_ROUND_UP(inode->i_size, PAGE_SIZE);
-+}
-+
-+static struct bio_post_read_ctx *get_bio_post_read_ctx(struct inode *inode,
-+						       struct bio *bio,
-+						       pgoff_t first_idx)
-+{
-+	unsigned int post_read_steps = 0;
-+	struct bio_post_read_ctx *ctx = NULL;
-+
-+	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
-+		post_read_steps |= 1 << STEP_DECRYPT;
-+
-+	if (ext4_need_verity(inode, first_idx))
-+		post_read_steps |= 1 << STEP_VERITY;
-+
-+	if (post_read_steps) {
-+		ctx = mempool_alloc(bio_post_read_ctx_pool, GFP_NOFS);
-+		if (!ctx)
-+			return ERR_PTR(-ENOMEM);
-+		ctx->bio = bio;
-+		ctx->enabled_steps = post_read_steps;
-+		bio->bi_private = ctx;
- 	}
-+	return ctx;
-+}
- 
--	bio_put(bio);
-+static inline loff_t ext4_readpage_limit(struct inode *inode)
-+{
-+	if (IS_ENABLED(CONFIG_FS_VERITY) &&
-+	    (IS_VERITY(inode) || ext4_verity_in_progress(inode)))
-+		return inode->i_sb->s_maxbytes;
-+
-+	return i_size_read(inode);
- }
- 
- int ext4_mpage_readpages(struct address_space *mapping,
-@@ -141,7 +263,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
- 
- 		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
- 		last_block = block_in_file + nr_pages * blocks_per_page;
--		last_block_in_file = (i_size_read(inode) + blocksize - 1) >> blkbits;
-+		last_block_in_file = (ext4_readpage_limit(inode) +
-+				      blocksize - 1) >> blkbits;
- 		if (last_block > last_block_in_file)
- 			last_block = last_block_in_file;
- 		page_block = 0;
-@@ -218,6 +341,9 @@ int ext4_mpage_readpages(struct address_space *mapping,
- 			zero_user_segment(page, first_hole << blkbits,
- 					  PAGE_SIZE);
- 			if (first_hole == 0) {
-+				if (ext4_need_verity(inode, page->index) &&
-+				    !fsverity_verify_page(page))
-+					goto set_error_page;
- 				SetPageUptodate(page);
- 				unlock_page(page);
- 				goto next_page;
-@@ -241,18 +367,16 @@ int ext4_mpage_readpages(struct address_space *mapping,
- 			bio = NULL;
- 		}
- 		if (bio == NULL) {
--			struct fscrypt_ctx *ctx = NULL;
-+			struct bio_post_read_ctx *ctx;
- 
--			if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode)) {
--				ctx = fscrypt_get_ctx(GFP_NOFS);
--				if (IS_ERR(ctx))
--					goto set_error_page;
--			}
- 			bio = bio_alloc(GFP_KERNEL,
- 				min_t(int, nr_pages, BIO_MAX_PAGES));
--			if (!bio) {
--				if (ctx)
--					fscrypt_release_ctx(ctx);
-+			if (!bio)
-+				goto set_error_page;
-+			ctx = get_bio_post_read_ctx(inode, bio, page->index);
-+			if (IS_ERR(ctx)) {
-+				bio_put(bio);
-+				bio = NULL;
- 				goto set_error_page;
- 			}
- 			bio_set_dev(bio, bdev);
-@@ -293,3 +417,29 @@ int ext4_mpage_readpages(struct address_space *mapping,
- 		submit_bio(bio);
- 	return 0;
- }
-+
-+int __init ext4_init_post_read_processing(void)
-+{
-+	bio_post_read_ctx_cache =
-+		kmem_cache_create("ext4_bio_post_read_ctx",
-+				  sizeof(struct bio_post_read_ctx), 0, 0, NULL);
-+	if (!bio_post_read_ctx_cache)
-+		goto fail;
-+	bio_post_read_ctx_pool =
-+		mempool_create_slab_pool(NUM_PREALLOC_POST_READ_CTXS,
-+					 bio_post_read_ctx_cache);
-+	if (!bio_post_read_ctx_pool)
-+		goto fail_free_cache;
-+	return 0;
-+
-+fail_free_cache:
-+	kmem_cache_destroy(bio_post_read_ctx_cache);
-+fail:
-+	return -ENOMEM;
-+}
-+
-+void ext4_exit_post_read_processing(void)
-+{
-+	mempool_destroy(bio_post_read_ctx_pool);
-+	kmem_cache_destroy(bio_post_read_ctx_cache);
-+}
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 05a9874687c36..23e7acd43e4ee 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -6103,6 +6103,10 @@ static int __init ext4_init_fs(void)
- 		return err;
- 
- 	err = ext4_init_pending();
-+	if (err)
-+		goto out7;
-+
-+	err = ext4_init_post_read_processing();
- 	if (err)
- 		goto out6;
- 
-@@ -6144,8 +6148,10 @@ static int __init ext4_init_fs(void)
- out4:
- 	ext4_exit_pageio();
- out5:
--	ext4_exit_pending();
-+	ext4_exit_post_read_processing();
- out6:
-+	ext4_exit_pending();
-+out7:
- 	ext4_exit_es();
- 
- 	return err;
-@@ -6162,6 +6168,7 @@ static void __exit ext4_exit_fs(void)
- 	ext4_exit_sysfs();
- 	ext4_exit_system_zone();
- 	ext4_exit_pageio();
-+	ext4_exit_post_read_processing();
- 	ext4_exit_es();
- 	ext4_exit_pending();
- }
--- 
-2.22.0
+Actually, #7 no longer applies cleanly to cryptodev, so I am going to
+respin in any case, and finally fix the ivsize change.
