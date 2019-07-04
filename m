@@ -1,20 +1,25 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-lf1-f65.google.com ([209.85.167.65]:35520 "EHLO
-        mail-lf1-f65.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726635AbfGBQsh (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 2 Jul 2019 12:48:37 -0400
-Received: by mail-lf1-f65.google.com with SMTP id p197so1524143lfa.2
-        for <linux-fscrypt@vger.kernel.org>; Tue, 02 Jul 2019 09:48:35 -0700 (PDT)
+Return-Path: <dm-devel-bounces@redhat.com>
 From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v7 4/7] md: dm-crypt: switch to ESSIV crypto API template
-Date: Tue,  2 Jul 2019 18:48:12 +0200
-Message-Id: <20190702164815.6341-5-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
-References: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
-Sender: linux-fscrypt-owner@vger.kernel.org
+Date: Thu,  4 Jul 2019 20:30:14 +0200
+Message-Id: <20190704183017.31570-5-ard.biesheuvel@linaro.org>
+In-Reply-To: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
+References: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
+Subject: [dm-devel] [PATCH v8 4/7] md: dm-crypt: switch to ESSIV crypto API
+	template
+List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
+List-Archive: <https://www.redhat.com/archives/dm-devel>
+List-Post: <mailto:dm-devel@redhat.com>
+List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
+List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Sender: dm-devel-bounces@redhat.com
+Errors-To: dm-devel-bounces@redhat.com
 To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 Replace the explicit ESSIV handling in the dm-crypt driver with calls
@@ -29,10 +34,10 @@ Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
  2 files changed, 36 insertions(+), 165 deletions(-)
 
 diff --git a/drivers/md/Kconfig b/drivers/md/Kconfig
-index 45254b3ef715..30ca87cf25db 100644
+index db269a348b20..3c57e76969fa 100644
 --- a/drivers/md/Kconfig
 +++ b/drivers/md/Kconfig
-@@ -271,6 +271,7 @@ config DM_CRYPT
+@@ -270,6 +270,7 @@ config DM_CRYPT
  	depends on BLK_DEV_DM
  	select CRYPTO
  	select CRYPTO_CBC
@@ -314,3 +319,8 @@ index 3c17d588f6db..e6b49b323543 100644
  	}
 -- 
 2.17.1
+
+--
+dm-devel mailing list
+dm-devel@redhat.com
+https://www.redhat.com/mailman/listinfo/dm-devel
