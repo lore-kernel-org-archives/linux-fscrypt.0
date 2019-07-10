@@ -1,126 +1,179 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu,  4 Jul 2019 20:30:13 +0200
-Message-Id: <20190704183017.31570-4-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
-References: <20190704183017.31570-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v8 3/7] md: dm-crypt: infer ESSIV block cipher
-	from cipher string directly
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-qt1-f202.google.com ([209.85.160.202]:33861 "EHLO
+        mail-qt1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727743AbfGJW4b (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 10 Jul 2019 18:56:31 -0400
+Received: by mail-qt1-f202.google.com with SMTP id p34so3805122qtp.1
+        for <linux-fscrypt@vger.kernel.org>; Wed, 10 Jul 2019 15:56:30 -0700 (PDT)
+Date: Wed, 10 Jul 2019 15:56:05 -0700
+In-Reply-To: <20190710225609.192252-1-satyat@google.com>
+Message-Id: <20190710225609.192252-5-satyat@google.com>
+Mime-Version: 1.0
+References: <20190710225609.192252-1-satyat@google.com>
+Subject: [PATCH 4/8] scsi: ufs: UFS driver v2.1 spec crypto additions
+From: Satya Tangirala <satyat@google.com>
+Content-Type: text/plain; charset="UTF-8"
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Cc: Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Instead of allocating a crypto skcipher tfm 'foo' and attempting to
-infer the encapsulated block cipher from the driver's 'name' field,
-directly parse the string that we used to allocated the tfm. These
-are always identical (unless the allocation failed, in which case
-we bail anyway), but using the string allows us to use it in the
-allocation, which is something we will need when switching to the
-'essiv' crypto API template.
+Add the crypto registers and structs defined in v2.1 of the JEDEC UFSHCI
+specification in preparation to add support for inline encryption to
+UFS.
 
-Reviewed-by: Milan Broz <gmazyland@gmail.com>
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Signed-off-by: Satya Tangirala <satyat@google.com>
 ---
- drivers/md/dm-crypt.c | 41 +++++++++-----------
- 1 file changed, 18 insertions(+), 23 deletions(-)
+ drivers/scsi/ufs/ufshcd.c |  2 ++
+ drivers/scsi/ufs/ufshcd.h |  5 +++
+ drivers/scsi/ufs/ufshci.h | 67 +++++++++++++++++++++++++++++++++++++--
+ 3 files changed, 72 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index 1b16d34bb785..3c17d588f6db 100644
---- a/drivers/md/dm-crypt.c
-+++ b/drivers/md/dm-crypt.c
-@@ -2321,25 +2321,17 @@ static int crypt_ctr_ivmode(struct dm_target *ti, const char *ivmode)
-  * The cc->cipher is currently used only in ESSIV.
-  * This should be probably done by crypto-api calls (once available...)
+diff --git a/drivers/scsi/ufs/ufshcd.c b/drivers/scsi/ufs/ufshcd.c
+index 3fe3029617a8..36413f97074d 100644
+--- a/drivers/scsi/ufs/ufshcd.c
++++ b/drivers/scsi/ufs/ufshcd.c
+@@ -4724,6 +4724,8 @@ ufshcd_transfer_rsp_status(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
+ 	case OCS_MISMATCH_RESP_UPIU_SIZE:
+ 	case OCS_PEER_COMM_FAILURE:
+ 	case OCS_FATAL_ERROR:
++	case OCS_INVALID_CRYPTO_CONFIG:
++	case OCS_GENERAL_CRYPTO_ERROR:
+ 	default:
+ 		result |= DID_ERROR << 16;
+ 		dev_err(hba->dev,
+diff --git a/drivers/scsi/ufs/ufshcd.h b/drivers/scsi/ufs/ufshcd.h
+index ecfa898b9ccc..d3b6a6b57a37 100644
+--- a/drivers/scsi/ufs/ufshcd.h
++++ b/drivers/scsi/ufs/ufshcd.h
+@@ -692,6 +692,11 @@ struct ufs_hba {
+ 	 * the performance of ongoing read/write operations.
+ 	 */
+ #define UFSHCD_CAP_KEEP_AUTO_BKOPS_ENABLED_EXCEPT_SUSPEND (1 << 5)
++	/*
++	 * This capability allows the host controller driver to use the
++	 * inline crypto engine, if it is present
++	 */
++#define UFSHCD_CAP_CRYPTO (1 << 6)
+ 
+ 	struct devfreq *devfreq;
+ 	struct ufs_clk_scaling clk_scaling;
+diff --git a/drivers/scsi/ufs/ufshci.h b/drivers/scsi/ufs/ufshci.h
+index 6fa889de5ee5..a757eaf99a19 100644
+--- a/drivers/scsi/ufs/ufshci.h
++++ b/drivers/scsi/ufs/ufshci.h
+@@ -90,6 +90,7 @@ enum {
+ 	MASK_64_ADDRESSING_SUPPORT		= 0x01000000,
+ 	MASK_OUT_OF_ORDER_DATA_DELIVERY_SUPPORT	= 0x02000000,
+ 	MASK_UIC_DME_TEST_MODE_SUPPORT		= 0x04000000,
++	MASK_CRYPTO_SUPPORT			= 0x10000000,
+ };
+ 
+ #define UFS_MASK(mask, offset)		((mask) << (offset))
+@@ -143,6 +144,7 @@ enum {
+ #define DEVICE_FATAL_ERROR			0x800
+ #define CONTROLLER_FATAL_ERROR			0x10000
+ #define SYSTEM_BUS_FATAL_ERROR			0x20000
++#define CRYPTO_ENGINE_FATAL_ERROR		0x40000
+ 
+ #define UFSHCD_UIC_PWR_MASK	(UIC_HIBERNATE_ENTER |\
+ 				UIC_HIBERNATE_EXIT |\
+@@ -153,11 +155,13 @@ enum {
+ #define UFSHCD_ERROR_MASK	(UIC_ERROR |\
+ 				DEVICE_FATAL_ERROR |\
+ 				CONTROLLER_FATAL_ERROR |\
+-				SYSTEM_BUS_FATAL_ERROR)
++				SYSTEM_BUS_FATAL_ERROR |\
++				CRYPTO_ENGINE_FATAL_ERROR)
+ 
+ #define INT_FATAL_ERRORS	(DEVICE_FATAL_ERROR |\
+ 				CONTROLLER_FATAL_ERROR |\
+-				SYSTEM_BUS_FATAL_ERROR)
++				SYSTEM_BUS_FATAL_ERROR |\
++				CRYPTO_ENGINE_FATAL_ERROR)
+ 
+ /* HCS - Host Controller Status 30h */
+ #define DEVICE_PRESENT				0x1
+@@ -316,6 +320,61 @@ enum {
+ 	INTERRUPT_MASK_ALL_VER_21	= 0x71FFF,
+ };
+ 
++/* CCAP - Crypto Capability 100h */
++union ufs_crypto_capabilities {
++	__le32 reg_val;
++	struct {
++		u8 num_crypto_cap;
++		u8 config_count;
++		u8 reserved;
++		u8 config_array_ptr;
++	};
++};
++
++enum ufs_crypto_key_size {
++	UFS_CRYPTO_KEY_SIZE_INVALID	= 0x0,
++	UFS_CRYPTO_KEY_SIZE_128		= 0x1,
++	UFS_CRYPTO_KEY_SIZE_192		= 0x2,
++	UFS_CRYPTO_KEY_SIZE_256		= 0x3,
++	UFS_CRYPTO_KEY_SIZE_512		= 0x4,
++};
++
++enum ufs_crypto_alg {
++	UFS_CRYPTO_ALG_AES_XTS			= 0x0,
++	UFS_CRYPTO_ALG_BITLOCKER_AES_CBC	= 0x1,
++	UFS_CRYPTO_ALG_AES_ECB			= 0x2,
++	UFS_CRYPTO_ALG_ESSIV_AES_CBC		= 0x3,
++};
++
++/* x-CRYPTOCAP - Crypto Capability X */
++union ufs_crypto_cap_entry {
++	__le32 reg_val;
++	struct {
++		u8 algorithm_id;
++		u8 sdus_mask; /* Supported data unit size mask */
++		u8 key_size;
++		u8 reserved;
++	};
++};
++
++#define UFS_CRYPTO_CONFIGURATION_ENABLE (1 << 7)
++#define UFS_CRYPTO_KEY_MAX_SIZE 64
++/* x-CRYPTOCFG - Crypto Configuration X */
++union ufs_crypto_cfg_entry {
++	__le32 reg_val[32];
++	struct {
++		u8 crypto_key[UFS_CRYPTO_KEY_MAX_SIZE];
++		u8 data_unit_size;
++		u8 crypto_cap_idx;
++		u8 reserved_1;
++		u8 config_enable;
++		u8 reserved_multi_host;
++		u8 reserved_2;
++		u8 vsb[2];
++		u8 reserved_3[56];
++	};
++};
++
+ /*
+  * Request Descriptor Definitions
   */
--static int crypt_ctr_blkdev_cipher(struct crypt_config *cc)
-+static int crypt_ctr_blkdev_cipher(struct crypt_config *cc, char *alg_name)
- {
--	const char *alg_name = NULL;
- 	char *start, *end;
+@@ -337,6 +396,7 @@ enum {
+ 	UTP_NATIVE_UFS_COMMAND		= 0x10000000,
+ 	UTP_DEVICE_MANAGEMENT_FUNCTION	= 0x20000000,
+ 	UTP_REQ_DESC_INT_CMD		= 0x01000000,
++	UTP_REQ_DESC_CRYPTO_ENABLE_CMD	= 0x00800000,
+ };
  
- 	if (crypt_integrity_aead(cc)) {
--		alg_name = crypto_tfm_alg_name(crypto_aead_tfm(any_tfm_aead(cc)));
--		if (!alg_name)
--			return -EINVAL;
- 		if (crypt_integrity_hmac(cc)) {
- 			alg_name = strchr(alg_name, ',');
- 			if (!alg_name)
- 				return -EINVAL;
- 		}
- 		alg_name++;
--	} else {
--		alg_name = crypto_tfm_alg_name(crypto_skcipher_tfm(any_tfm(cc)));
--		if (!alg_name)
--			return -EINVAL;
- 	}
- 
- 	start = strchr(alg_name, '(');
-@@ -2434,32 +2426,35 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 	if (*ivmode && !strcmp(*ivmode, "lmk"))
- 		cc->tfms_count = 64;
- 
--	cc->key_parts = cc->tfms_count;
--
--	/* Allocate cipher */
--	ret = crypt_alloc_tfms(cc, cipher_api);
--	if (ret < 0) {
--		ti->error = "Error allocating crypto tfm";
--		return ret;
--	}
--
- 	/* Alloc AEAD, can be used only in new format. */
- 	if (crypt_integrity_aead(cc)) {
- 		ret = crypt_ctr_auth_cipher(cc, cipher_api);
- 		if (ret < 0) {
- 			ti->error = "Invalid AEAD cipher spec";
- 			return -ENOMEM;
--		}
--		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
--	} else
--		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
-+	       }
-+	}
- 
--	ret = crypt_ctr_blkdev_cipher(cc);
-+	ret = crypt_ctr_blkdev_cipher(cc, cipher_api);
- 	if (ret < 0) {
- 		ti->error = "Cannot allocate cipher string";
- 		return -ENOMEM;
- 	}
- 
-+	cc->key_parts = cc->tfms_count;
-+
-+	/* Allocate cipher */
-+	ret = crypt_alloc_tfms(cc, cipher_api);
-+	if (ret < 0) {
-+		ti->error = "Error allocating crypto tfm";
-+		return ret;
-+	}
-+
-+	if (crypt_integrity_aead(cc))
-+		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
-+	else
-+		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
-+
- 	return 0;
- }
- 
+ /* UTP Transfer Request Data Direction (DD) */
+@@ -356,6 +416,9 @@ enum {
+ 	OCS_PEER_COMM_FAILURE		= 0x5,
+ 	OCS_ABORTED			= 0x6,
+ 	OCS_FATAL_ERROR			= 0x7,
++	OCS_DEVICE_FATAL_ERROR		= 0x8,
++	OCS_INVALID_CRYPTO_CONFIG	= 0x9,
++	OCS_GENERAL_CRYPTO_ERROR	= 0xA,
+ 	OCS_INVALID_COMMAND_STATUS	= 0x0F,
+ 	MASK_OCS			= 0x0F,
+ };
 -- 
-2.17.1
-
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+2.22.0.410.gd8fdbe21b5-goog
