@@ -1,478 +1,634 @@
-Return-Path: <SRS0=3Y7b=VT=vger.kernel.org=linux-integrity-owner@kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v7 13/17] fs-verity: support builtin file signatures
-Date: Mon, 22 Jul 2019 09:50:57 -0700
-Message-Id: <20190722165101.12840-14-ebiggers@kernel.org>
-In-Reply-To: <20190722165101.12840-1-ebiggers@kernel.org>
-References: <20190722165101.12840-1-ebiggers@kernel.org>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-yb1-f202.google.com ([209.85.219.202]:38205 "EHLO
+        mail-yb1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727803AbfGJW4f (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 10 Jul 2019 18:56:35 -0400
+Received: by mail-yb1-f202.google.com with SMTP id i70so2806992ybg.5
+        for <linux-fscrypt@vger.kernel.org>; Wed, 10 Jul 2019 15:56:34 -0700 (PDT)
+Date: Wed, 10 Jul 2019 15:56:06 -0700
+In-Reply-To: <20190710225609.192252-1-satyat@google.com>
+Message-Id: <20190710225609.192252-6-satyat@google.com>
+Mime-Version: 1.0
+References: <20190710225609.192252-1-satyat@google.com>
+Subject: [PATCH 5/8] scsi: ufs: UFS crypto API
+From: Satya Tangirala <satyat@google.com>
+Content-Type: text/plain; charset="UTF-8"
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Cc: Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Introduce functions to manipulate UFS inline encryption hardware
+in line with the JEDEC UFSHCI v2.1 specification and to work with the
+block keyslot manager.
 
-To meet some users' needs, add optional support for having fs-verity
-handle a portion of the authentication policy in the kernel.  An
-".fs-verity" keyring is created to which X.509 certificates can be
-added; then a sysctl 'fs.verity.require_signatures' can be set to cause
-the kernel to enforce that all fs-verity files contain a signature of
-their file measurement by a key in this keyring.
-
-See the "Built-in signature verification" section of
-Documentation/filesystems/fsverity.rst for the full documentation.
-
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Satya Tangirala <satyat@google.com>
 ---
- fs/verity/Kconfig            |  17 ++++
- fs/verity/Makefile           |   2 +
- fs/verity/enable.c           |  20 ++++-
- fs/verity/fsverity_private.h |  48 ++++++++++-
- fs/verity/init.c             |   6 ++
- fs/verity/open.c             |  27 ++++--
- fs/verity/signature.c        | 157 +++++++++++++++++++++++++++++++++++
- fs/verity/verify.c           |   6 ++
- 8 files changed, 269 insertions(+), 14 deletions(-)
- create mode 100644 fs/verity/signature.c
+ drivers/scsi/ufs/Kconfig         |  10 +
+ drivers/scsi/ufs/Makefile        |   1 +
+ drivers/scsi/ufs/ufshcd-crypto.c | 435 +++++++++++++++++++++++++++++++
+ drivers/scsi/ufs/ufshcd-crypto.h |  86 ++++++
+ drivers/scsi/ufs/ufshcd.h        |  18 ++
+ 5 files changed, 550 insertions(+)
+ create mode 100644 drivers/scsi/ufs/ufshcd-crypto.c
+ create mode 100644 drivers/scsi/ufs/ufshcd-crypto.h
 
-diff --git a/fs/verity/Kconfig b/fs/verity/Kconfig
-index c2bca0b01ecfa..88fb25119899d 100644
---- a/fs/verity/Kconfig
-+++ b/fs/verity/Kconfig
-@@ -36,3 +36,20 @@ config FS_VERITY_DEBUG
- 	  Enable debugging messages related to fs-verity by default.
+diff --git a/drivers/scsi/ufs/Kconfig b/drivers/scsi/ufs/Kconfig
+index 0b845ab7c3bf..861aabfe791b 100644
+--- a/drivers/scsi/ufs/Kconfig
++++ b/drivers/scsi/ufs/Kconfig
+@@ -150,3 +150,13 @@ config SCSI_UFS_BSG
  
- 	  Say N unless you are an fs-verity developer.
+ 	  Select this if you need a bsg device node for your UFS controller.
+ 	  If unsure, say N.
 +
-+config FS_VERITY_BUILTIN_SIGNATURES
-+	bool "FS Verity builtin signature support"
-+	depends on FS_VERITY
-+	select SYSTEM_DATA_VERIFICATION
++config SCSI_UFS_CRYPTO
++	bool "UFS Crypto Engine Support"
++	depends on SCSI_UFSHCD && BLK_INLINE_ENCRYPTION
 +	help
-+	  Support verifying signatures of verity files against the X.509
-+	  certificates that have been loaded into the ".fs-verity"
-+	  kernel keyring.
++	  Enable Crypto Engine Support in UFS.
++	  Enabling this makes it possible for the kernel to use the crypto
++	  capabilities of the UFS device (if present) to perform crypto
++	  operations on data being transferred to/from the device.
 +
-+	  This is meant as a relatively simple mechanism that can be
-+	  used to provide an authenticity guarantee for verity files, as
-+	  an alternative to IMA appraisal.  Userspace programs still
-+	  need to check that the verity bit is set in order to get an
-+	  authenticity guarantee.
-+
-+	  If unsure, say N.
-diff --git a/fs/verity/Makefile b/fs/verity/Makefile
-index 6f7675ae0a311..570e9136334d4 100644
---- a/fs/verity/Makefile
-+++ b/fs/verity/Makefile
-@@ -6,3 +6,5 @@ obj-$(CONFIG_FS_VERITY) += enable.o \
- 			   measure.o \
- 			   open.o \
- 			   verify.o
-+
-+obj-$(CONFIG_FS_VERITY_BUILTIN_SIGNATURES) += signature.o
-diff --git a/fs/verity/enable.c b/fs/verity/enable.c
-index ae66e0a50f05e..3371d51563962 100644
---- a/fs/verity/enable.c
-+++ b/fs/verity/enable.c
-@@ -153,7 +153,7 @@ static int enable_verity(struct file *filp,
- 	const struct fsverity_operations *vops = inode->i_sb->s_vop;
- 	struct merkle_tree_params params = { };
- 	struct fsverity_descriptor *desc;
--	size_t desc_size = sizeof(*desc);
-+	size_t desc_size = sizeof(*desc) + arg->sig_size;
- 	struct fsverity_info *vi;
- 	int err;
- 
-@@ -175,6 +175,16 @@ static int enable_verity(struct file *filp,
- 	}
- 	desc->salt_size = arg->salt_size;
- 
-+	/* Get the signature if the user provided one */
-+	if (arg->sig_size &&
-+	    copy_from_user(desc->signature,
-+			   (const u8 __user *)(uintptr_t)arg->sig_ptr,
-+			   arg->sig_size)) {
-+		err = -EFAULT;
-+		goto out;
-+	}
-+	desc->sig_size = cpu_to_le32(arg->sig_size);
-+
- 	desc->data_size = cpu_to_le64(inode->i_size);
- 
- 	/* Prepare the Merkle tree parameters */
-@@ -230,6 +240,10 @@ static int enable_verity(struct file *filp,
- 		goto rollback;
- 	}
- 
-+	if (arg->sig_size)
-+		pr_debug("Storing a %u-byte PKCS#7 signature alongside the file\n",
-+			 arg->sig_size);
-+
- 	/*
- 	 * Tell the filesystem to finish enabling verity on the file.
- 	 * Serialized with ->begin_enable_verity() by the inode lock.
-@@ -296,8 +310,8 @@ int fsverity_ioctl_enable(struct file *filp, const void __user *uarg)
- 	if (arg.salt_size > FIELD_SIZEOF(struct fsverity_descriptor, salt))
- 		return -EMSGSIZE;
- 
--	if (arg.sig_size)
--		return -EINVAL;
-+	if (arg.sig_size > FS_VERITY_MAX_SIGNATURE_SIZE)
-+		return -EMSGSIZE;
- 
- 	/*
- 	 * Require a regular file with write access.  But the actual fd must
-diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
-index 02a547f0667c1..e74c79b64d889 100644
---- a/fs/verity/fsverity_private.h
-+++ b/fs/verity/fsverity_private.h
-@@ -75,23 +75,41 @@ struct fsverity_info {
- };
- 
- /*
-- * Merkle tree properties.  The file measurement is the hash of this structure.
-+ * Merkle tree properties.  The file measurement is the hash of this structure
-+ * excluding the signature and with the sig_size field set to 0.
-  */
- struct fsverity_descriptor {
- 	__u8 version;		/* must be 1 */
- 	__u8 hash_algorithm;	/* Merkle tree hash algorithm */
- 	__u8 log_blocksize;	/* log2 of size of data and tree blocks */
- 	__u8 salt_size;		/* size of salt in bytes; 0 if none */
--	__le32 sig_size;	/* reserved, must be 0 */
-+	__le32 sig_size;	/* size of signature in bytes; 0 if none */
- 	__le64 data_size;	/* size of file the Merkle tree is built over */
- 	__u8 root_hash[64];	/* Merkle tree root hash */
- 	__u8 salt[32];		/* salt prepended to each hashed block */
- 	__u8 __reserved[144];	/* must be 0's */
-+	__u8 signature[];	/* optional PKCS#7 signature */
- };
- 
- /* Arbitrary limit to bound the kmalloc() size.  Can be changed. */
- #define FS_VERITY_MAX_DESCRIPTOR_SIZE	16384
- 
-+#define FS_VERITY_MAX_SIGNATURE_SIZE	(FS_VERITY_MAX_DESCRIPTOR_SIZE - \
-+					 sizeof(struct fsverity_descriptor))
-+
-+/*
-+ * Format in which verity file measurements are signed.  This is the same as
-+ * 'struct fsverity_digest', except here some magic bytes are prepended to
-+ * provide some context about what is being signed in case the same key is used
-+ * for non-fsverity purposes, and here the fields have fixed endianness.
-+ */
-+struct fsverity_signed_digest {
-+	char magic[8];			/* must be "FSVerity" */
-+	__le16 digest_algorithm;
-+	__le16 digest_size;
-+	__u8 digest[];
-+};
-+
- /* hash_algs.c */
- 
- extern struct fsverity_hash_alg fsverity_hash_algs[];
-@@ -127,7 +145,7 @@ int fsverity_init_merkle_tree_params(struct merkle_tree_params *params,
- 				     const u8 *salt, size_t salt_size);
- 
- struct fsverity_info *fsverity_create_info(const struct inode *inode,
--					   const void *desc, size_t desc_size);
-+					   void *desc, size_t desc_size);
- 
- void fsverity_set_info(struct inode *inode, struct fsverity_info *vi);
- 
-@@ -136,8 +154,32 @@ void fsverity_free_info(struct fsverity_info *vi);
- int __init fsverity_init_info_cache(void);
- void __init fsverity_exit_info_cache(void);
- 
-+/* signature.c */
-+
-+#ifdef CONFIG_FS_VERITY_BUILTIN_SIGNATURES
-+int fsverity_verify_signature(const struct fsverity_info *vi,
-+			      const struct fsverity_descriptor *desc,
-+			      size_t desc_size);
-+
-+int __init fsverity_init_signature(void);
-+#else /* !CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
-+static inline int
-+fsverity_verify_signature(const struct fsverity_info *vi,
-+			  const struct fsverity_descriptor *desc,
-+			  size_t desc_size)
-+{
-+	return 0;
-+}
-+
-+static inline int fsverity_init_signature(void)
-+{
-+	return 0;
-+}
-+#endif /* !CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
-+
- /* verify.c */
- 
- int __init fsverity_init_workqueue(void);
-+void __init fsverity_exit_workqueue(void);
- 
- #endif /* _FSVERITY_PRIVATE_H */
-diff --git a/fs/verity/init.c b/fs/verity/init.c
-index b593805aafcc8..94c104e00861d 100644
---- a/fs/verity/init.c
-+++ b/fs/verity/init.c
-@@ -45,9 +45,15 @@ static int __init fsverity_init(void)
- 	if (err)
- 		goto err_exit_info_cache;
- 
-+	err = fsverity_init_signature();
-+	if (err)
-+		goto err_exit_workqueue;
-+
- 	pr_debug("Initialized fs-verity\n");
- 	return 0;
- 
-+err_exit_workqueue:
-+	fsverity_exit_workqueue();
- err_exit_info_cache:
- 	fsverity_exit_info_cache();
- 	return err;
-diff --git a/fs/verity/open.c b/fs/verity/open.c
-index 3636a1ed8e2c4..63d1004b688cb 100644
---- a/fs/verity/open.c
-+++ b/fs/verity/open.c
-@@ -122,22 +122,32 @@ int fsverity_init_merkle_tree_params(struct merkle_tree_params *params,
- 	return err;
- }
- 
--/* Compute the file measurement by hashing the fsverity_descriptor. */
-+/*
-+ * Compute the file measurement by hashing the fsverity_descriptor excluding the
-+ * signature and with the sig_size field set to 0.
-+ */
- static int compute_file_measurement(const struct fsverity_hash_alg *hash_alg,
--				    const struct fsverity_descriptor *desc,
-+				    struct fsverity_descriptor *desc,
- 				    u8 *measurement)
- {
--	return fsverity_hash_buffer(hash_alg, desc, sizeof(*desc), measurement);
-+	__le32 sig_size = desc->sig_size;
-+	int err;
-+
-+	desc->sig_size = 0;
-+	err = fsverity_hash_buffer(hash_alg, desc, sizeof(*desc), measurement);
-+	desc->sig_size = sig_size;
-+
-+	return err;
- }
- 
- /*
-  * Validate the given fsverity_descriptor and create a new fsverity_info from
-- * it.
-+ * it.  The signature (if present) is also checked.
-  */
- struct fsverity_info *fsverity_create_info(const struct inode *inode,
--					   const void *_desc, size_t desc_size)
-+					   void *_desc, size_t desc_size)
- {
--	const struct fsverity_descriptor *desc = _desc;
-+	struct fsverity_descriptor *desc = _desc;
- 	struct fsverity_info *vi;
- 	int err;
- 
-@@ -153,8 +163,7 @@ struct fsverity_info *fsverity_create_info(const struct inode *inode,
- 		return ERR_PTR(-EINVAL);
- 	}
- 
--	if (desc->sig_size ||
--	    memchr_inv(desc->__reserved, 0, sizeof(desc->__reserved))) {
-+	if (memchr_inv(desc->__reserved, 0, sizeof(desc->__reserved))) {
- 		fsverity_err(inode, "Reserved bits set in descriptor");
- 		return ERR_PTR(-EINVAL);
- 	}
-@@ -198,6 +207,8 @@ struct fsverity_info *fsverity_create_info(const struct inode *inode,
- 	pr_debug("Computed file measurement: %s:%*phN\n",
- 		 vi->tree_params.hash_alg->name,
- 		 vi->tree_params.digest_size, vi->measurement);
-+
-+	err = fsverity_verify_signature(vi, desc, desc_size);
- out:
- 	if (err) {
- 		fsverity_free_info(vi);
-diff --git a/fs/verity/signature.c b/fs/verity/signature.c
+diff --git a/drivers/scsi/ufs/Makefile b/drivers/scsi/ufs/Makefile
+index 2a9097939bcb..094c39989a37 100644
+--- a/drivers/scsi/ufs/Makefile
++++ b/drivers/scsi/ufs/Makefile
+@@ -11,3 +11,4 @@ obj-$(CONFIG_SCSI_UFSHCD_PCI) += ufshcd-pci.o
+ obj-$(CONFIG_SCSI_UFSHCD_PLATFORM) += ufshcd-pltfrm.o
+ obj-$(CONFIG_SCSI_UFS_HISI) += ufs-hisi.o
+ obj-$(CONFIG_SCSI_UFS_MEDIATEK) += ufs-mediatek.o
++ufshcd-core-$(CONFIG_SCSI_UFS_CRYPTO) += ufshcd-crypto.o
+diff --git a/drivers/scsi/ufs/ufshcd-crypto.c b/drivers/scsi/ufs/ufshcd-crypto.c
 new file mode 100644
-index 0000000000000..c8b255232de54
+index 000000000000..834c57ca912a
 --- /dev/null
-+++ b/fs/verity/signature.c
-@@ -0,0 +1,157 @@
++++ b/drivers/scsi/ufs/ufshcd-crypto.c
+@@ -0,0 +1,435 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
-+ * fs/verity/signature.c: verification of builtin signatures
-+ *
 + * Copyright 2019 Google LLC
 + */
 +
-+#include "fsverity_private.h"
++#include <crypto/algapi.h>
 +
-+#include <linux/cred.h>
-+#include <linux/key.h>
-+#include <linux/slab.h>
-+#include <linux/verification.h>
++#include "ufshcd.h"
++#include "ufshcd-crypto.h"
 +
-+/*
-+ * /proc/sys/fs/verity/require_signatures
-+ * If 1, all verity files must have a valid builtin signature.
-+ */
-+static int fsverity_require_signatures;
++static bool ufshcd_cap_idx_valid(struct ufs_hba *hba, unsigned int cap_idx)
++{
++	return cap_idx < hba->crypto_capabilities.num_crypto_cap;
++}
 +
-+/*
-+ * Keyring that contains the trusted X.509 certificates.
-+ *
-+ * Only root (kuid=0) can modify this.  Also, root may use
-+ * keyctl_restrict_keyring() to prevent any more additions.
-+ */
-+static struct key *fsverity_keyring;
++static u8 get_data_unit_size_mask(unsigned int data_unit_size)
++{
++	if (data_unit_size < 512 || data_unit_size > 65536 ||
++	    !is_power_of_2(data_unit_size))
++		return 0;
++
++	return data_unit_size / 512;
++}
++
++static size_t get_keysize_bytes(enum ufs_crypto_key_size size)
++{
++	switch (size) {
++	case UFS_CRYPTO_KEY_SIZE_128: return 16;
++	case UFS_CRYPTO_KEY_SIZE_192: return 24;
++	case UFS_CRYPTO_KEY_SIZE_256: return 32;
++	case UFS_CRYPTO_KEY_SIZE_512: return 64;
++	default: return 0;
++	}
++}
++
++static int ufshcd_crypto_cap_find(void *hba_p,
++			   enum blk_crypt_mode_num crypt_mode,
++			   unsigned int data_unit_size)
++{
++	struct ufs_hba *hba = hba_p;
++	enum ufs_crypto_alg ufs_alg;
++	u8 data_unit_mask;
++	int cap_idx;
++	enum ufs_crypto_key_size ufs_key_size;
++	union ufs_crypto_cap_entry *ccap_array = hba->crypto_cap_array;
++
++	if (!ufshcd_hba_is_crypto_supported(hba))
++		return -EINVAL;
++
++	switch (crypt_mode) {
++	case BLK_ENCRYPTION_MODE_AES_256_XTS:
++		ufs_alg = UFS_CRYPTO_ALG_AES_XTS;
++		ufs_key_size = UFS_CRYPTO_KEY_SIZE_256;
++		break;
++	/*
++	 * case BLK_CRYPTO_ALG_BITLOCKER_AES_CBC:
++	 *	ufs_alg = UFS_CRYPTO_ALG_BITLOCKER_AES_CBC;
++	 *	break;
++	 * case INLINECRYPT_ALG_AES_ECB:
++	 *	ufs_alg = UFS_CRYPTO_ALG_AES_ECB;
++	 *	break;
++	 * case INLINECRYPT_ALG_ESSIV_AES_CBC:
++	 *	ufs_alg = UFS_CRYPTO_ALG_ESSIV_AES_CBC;
++	 *	break;
++	 */
++	default: return -EINVAL;
++	}
++
++	data_unit_mask = get_data_unit_size_mask(data_unit_size);
++
++	/*
++	 * TODO: We can replace this for loop entirely by constructing
++	 * a table on init that translates blk_crypt_mode to
++	 * ufs crypt alg numbers. (By assuming that each alg/keysize combo
++	 * appears only once in the ufs crypto caps array.)
++	 */
++	for (cap_idx = 0; cap_idx < hba->crypto_capabilities.num_crypto_cap;
++	     cap_idx++) {
++		if (ccap_array[cap_idx].algorithm_id == ufs_alg &&
++		    (ccap_array[cap_idx].sdus_mask & data_unit_mask) &&
++		    ccap_array[cap_idx].key_size == ufs_key_size)
++			return cap_idx;
++	}
++
++	return -EINVAL;
++}
 +
 +/**
-+ * fsverity_verify_signature() - check a verity file's signature
++ * ufshcd_crypto_cfg_entry_write_key - Write a key into a crypto_cfg_entry
 + *
-+ * If the file's fs-verity descriptor includes a signature of the file
-+ * measurement, verify it against the certificates in the fs-verity keyring.
++ *	Writes the key with the appropriate format - for AES_XTS,
++ *	the first half of the key is copied as is, the second half is
++ *	copied with an offset halfway into the cfg->crypto_key array.
++ *	For the other supported crypto algs, the key is just copied.
 + *
-+ * Return: 0 on success (signature valid or not required); -errno on failure
++ * @cfg: The crypto config to write to
++ * @key: The key to write
++ * @cap: The crypto capability (which specifies the crypto alg and key size)
++ *
++ * Returns 0 on success, or -EINVAL
 + */
-+int fsverity_verify_signature(const struct fsverity_info *vi,
-+			      const struct fsverity_descriptor *desc,
-+			      size_t desc_size)
++static int ufshcd_crypto_cfg_entry_write_key(union ufs_crypto_cfg_entry *cfg,
++					     const u8 *key,
++					     union ufs_crypto_cap_entry cap)
 +{
-+	const struct inode *inode = vi->inode;
-+	const struct fsverity_hash_alg *hash_alg = vi->tree_params.hash_alg;
-+	const u32 sig_size = le32_to_cpu(desc->sig_size);
-+	struct fsverity_signed_digest *d;
-+	int err;
++	size_t key_size_bytes = get_keysize_bytes(cap.key_size);
 +
-+	if (sig_size == 0) {
-+		if (fsverity_require_signatures) {
-+			fsverity_err(inode,
-+				     "require_signatures=1, rejecting unsigned file!");
-+			return -EPERM;
-+		}
++	if (key_size_bytes == 0)
++		return -EINVAL;
++
++	switch (cap.algorithm_id) {
++	case UFS_CRYPTO_ALG_AES_XTS:
++		key_size_bytes *= 2;
++		if (key_size_bytes > UFS_CRYPTO_KEY_MAX_SIZE)
++			return -EINVAL;
++
++		memcpy(cfg->crypto_key, key, key_size_bytes/2);
++		memcpy(cfg->crypto_key + UFS_CRYPTO_KEY_MAX_SIZE/2,
++		       key + key_size_bytes/2, key_size_bytes/2);
++		return 0;
++	case UFS_CRYPTO_ALG_BITLOCKER_AES_CBC: // fallthrough
++	case UFS_CRYPTO_ALG_AES_ECB: // fallthrough
++	case UFS_CRYPTO_ALG_ESSIV_AES_CBC:
++		memcpy(cfg->crypto_key, key, key_size_bytes);
 +		return 0;
 +	}
 +
-+	if (sig_size > desc_size - sizeof(*desc)) {
-+		fsverity_err(inode, "Signature overflows verity descriptor");
-+		return -EBADMSG;
-+	}
-+
-+	d = kzalloc(sizeof(*d) + hash_alg->digest_size, GFP_KERNEL);
-+	if (!d)
-+		return -ENOMEM;
-+	memcpy(d->magic, "FSVerity", 8);
-+	d->digest_algorithm = cpu_to_le16(hash_alg - fsverity_hash_algs);
-+	d->digest_size = cpu_to_le16(hash_alg->digest_size);
-+	memcpy(d->digest, vi->measurement, hash_alg->digest_size);
-+
-+	err = verify_pkcs7_signature(d, sizeof(*d) + hash_alg->digest_size,
-+				     desc->signature, sig_size,
-+				     fsverity_keyring,
-+				     VERIFYING_UNSPECIFIED_SIGNATURE,
-+				     NULL, NULL);
-+	kfree(d);
-+
-+	if (err) {
-+		if (err == -ENOKEY)
-+			fsverity_err(inode,
-+				     "File's signing cert isn't in the fs-verity keyring");
-+		else if (err == -EKEYREJECTED)
-+			fsverity_err(inode, "Incorrect file signature");
-+		else if (err == -EBADMSG)
-+			fsverity_err(inode, "Malformed file signature");
-+		else
-+			fsverity_err(inode, "Error %d verifying file signature",
-+				     err);
-+		return err;
-+	}
-+
-+	pr_debug("Valid signature for file measurement %s:%*phN\n",
-+		 hash_alg->name, hash_alg->digest_size, vi->measurement);
-+	return 0;
++	return -EINVAL;
 +}
 +
-+#ifdef CONFIG_SYSCTL
-+static struct ctl_table_header *fsverity_sysctl_header;
-+
-+static const struct ctl_path fsverity_sysctl_path[] = {
-+	{ .procname = "fs", },
-+	{ .procname = "verity", },
-+	{ }
-+};
-+
-+static struct ctl_table fsverity_sysctl_table[] = {
-+	{
-+		.procname       = "require_signatures",
-+		.data           = &fsverity_require_signatures,
-+		.maxlen         = sizeof(int),
-+		.mode           = 0644,
-+		.proc_handler   = proc_dointvec_minmax,
-+		.extra1         = SYSCTL_ZERO,
-+		.extra2         = SYSCTL_ONE,
-+	},
-+	{ }
-+};
-+
-+static int __init fsverity_sysctl_init(void)
++static void program_key(struct ufs_hba *hba,
++			const union ufs_crypto_cfg_entry *cfg,
++			int slot)
 +{
-+	fsverity_sysctl_header = register_sysctl_paths(fsverity_sysctl_path,
-+						       fsverity_sysctl_table);
-+	if (!fsverity_sysctl_header) {
-+		pr_err("sysctl registration failed!\n");
-+		return -ENOMEM;
++	int i;
++	u32 slot_offset = hba->crypto_cfg_register + slot * sizeof(*cfg);
++
++	/* Clear the dword 16 */
++	ufshcd_writel(hba, 0, slot_offset + 16 * sizeof(cfg->reg_val[0]));
++	/* Ensure that CFGE is cleared before programming the key */
++	wmb();
++	for (i = 0; i < 16; i++) {
++		ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[i]),
++			      slot_offset + i * sizeof(cfg->reg_val[0]));
++		/* Spec says each dword in key must be written sequentially */
++		wmb();
 +	}
-+	return 0;
++	/* Write dword 17 */
++	ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[17]),
++		      slot_offset + 17 * sizeof(cfg->reg_val[0]));
++	/* Dword 16 must be written last */
++	wmb();
++	/* Write dword 16 */
++	ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[16]),
++		      slot_offset + 16 * sizeof(cfg->reg_val[0]));
++	wmb();
 +}
-+#else /* !CONFIG_SYSCTL */
-+static inline int __init fsverity_sysctl_init(void)
++
++static int ufshcd_crypto_keyslot_program(void *hba_p, const u8 *key,
++					 enum blk_crypt_mode_num crypt_mode,
++					 unsigned int data_unit_size,
++					 unsigned int slot)
 +{
-+	return 0;
-+}
-+#endif /* !CONFIG_SYSCTL */
++	struct ufs_hba *hba = hba_p;
++	int err = 0;
++	u8 data_unit_mask;
++	union ufs_crypto_cfg_entry cfg;
++	union ufs_crypto_cfg_entry *cfg_arr = hba->crypto_cfgs;
++	int cap_idx;
 +
-+int __init fsverity_init_signature(void)
-+{
-+	struct key *ring;
-+	int err;
++	cap_idx = ufshcd_crypto_cap_find(hba_p, crypt_mode,
++					       data_unit_size);
 +
-+	ring = keyring_alloc(".fs-verity", KUIDT_INIT(0), KGIDT_INIT(0),
-+			     current_cred(), KEY_POS_SEARCH |
-+				KEY_USR_VIEW | KEY_USR_READ | KEY_USR_WRITE |
-+				KEY_USR_SEARCH | KEY_USR_SETATTR,
-+			     KEY_ALLOC_NOT_IN_QUOTA, NULL, NULL);
-+	if (IS_ERR(ring))
-+		return PTR_ERR(ring);
++	if (!ufshcd_is_crypto_enabled(hba) ||
++	    !ufshcd_keyslot_valid(hba, slot) ||
++	    !ufshcd_cap_idx_valid(hba, cap_idx))
++		return -EINVAL;
 +
-+	err = fsverity_sysctl_init();
++	data_unit_mask = get_data_unit_size_mask(data_unit_size);
++
++	if (!(data_unit_mask & hba->crypto_cap_array[cap_idx].sdus_mask))
++		return -EINVAL;
++
++	memset(&cfg, 0, sizeof(cfg));
++	cfg.data_unit_size = data_unit_mask;
++	cfg.crypto_cap_idx = cap_idx;
++	cfg.config_enable |= UFS_CRYPTO_CONFIGURATION_ENABLE;
++
++	err = ufshcd_crypto_cfg_entry_write_key(&cfg, key,
++				hba->crypto_cap_array[cap_idx]);
 +	if (err)
-+		goto err_put_ring;
++		return err;
 +
-+	fsverity_keyring = ring;
++	program_key(hba, &cfg, slot);
++
++	memcpy(&cfg_arr[slot], &cfg, sizeof(cfg));
++	memzero_explicit(&cfg, sizeof(cfg));
++
 +	return 0;
++}
 +
-+err_put_ring:
-+	key_put(ring);
++static int ufshcd_crypto_keyslot_find(void *hba_p,
++				      const u8 *key,
++				      enum blk_crypt_mode_num crypt_mode,
++				      unsigned int data_unit_size)
++{
++	struct ufs_hba *hba = hba_p;
++	int err = 0;
++	int slot;
++	u8 data_unit_mask;
++	union ufs_crypto_cfg_entry cfg;
++	union ufs_crypto_cfg_entry *cfg_arr = hba->crypto_cfgs;
++	int cap_idx;
++
++	cap_idx = ufshcd_crypto_cap_find(hba_p, crypt_mode,
++					       data_unit_size);
++
++	if (!ufshcd_is_crypto_enabled(hba) ||
++	    !ufshcd_cap_idx_valid(hba, cap_idx))
++		return -EINVAL;
++
++	data_unit_mask = get_data_unit_size_mask(data_unit_size);
++
++	if (!(data_unit_mask & hba->crypto_cap_array[cap_idx].sdus_mask))
++		return -EINVAL;
++
++	memset(&cfg, 0, sizeof(cfg));
++	err = ufshcd_crypto_cfg_entry_write_key(&cfg, key,
++					hba->crypto_cap_array[cap_idx]);
++
++	if (err)
++		return -EINVAL;
++
++	for (slot = 0; slot < NUM_KEYSLOTS(hba); slot++) {
++		if ((cfg_arr[slot].config_enable &
++		     UFS_CRYPTO_CONFIGURATION_ENABLE) &&
++		    data_unit_mask == cfg_arr[slot].data_unit_size &&
++		    cap_idx == cfg_arr[slot].crypto_cap_idx &&
++		    !crypto_memneq(&cfg.crypto_key, cfg_arr[slot].crypto_key,
++				  UFS_CRYPTO_KEY_MAX_SIZE)) {
++			memzero_explicit(&cfg, sizeof(cfg));
++			return slot;
++		}
++	}
++
++	memzero_explicit(&cfg, sizeof(cfg));
++	return -ENOKEY;
++}
++
++static int ufshcd_crypto_keyslot_evict(void *hba_p, const u8 *key,
++				       enum blk_crypt_mode_num crypt_mode,
++				       unsigned int data_unit_size,
++				       unsigned int slot)
++{
++	struct ufs_hba *hba = hba_p;
++	int i = 0;
++	u32 reg_base;
++	union ufs_crypto_cfg_entry *cfg_arr = hba->crypto_cfgs;
++
++	if (!ufshcd_is_crypto_enabled(hba) ||
++	    !ufshcd_keyslot_valid(hba, slot))
++		return -EINVAL;
++
++	memset(&cfg_arr[slot], 0, sizeof(cfg_arr[slot]));
++	reg_base = hba->crypto_cfg_register + slot * sizeof(cfg_arr[0]);
++
++	/*
++	 * Clear the crypto cfg on the device. Clearing CFGE
++	 * might not be sufficient, so just clear the entire cfg.
++	 */
++	for (i = 0; i < sizeof(cfg_arr[0]); i += sizeof(__le32))
++		ufshcd_writel(hba, 0, reg_base + i);
++	wmb();
++
++	return 0;
++}
++
++static bool ufshcd_crypt_mode_supported(void *hba_p,
++					 enum blk_crypt_mode_num crypt_mode,
++					 unsigned int data_unit_size)
++{
++	return ufshcd_crypto_cap_find(hba_p, crypt_mode, data_unit_size) >= 0;
++}
++
++void ufshcd_crypto_enable(struct ufs_hba *hba)
++{
++	union ufs_crypto_cfg_entry *cfg_arr = hba->crypto_cfgs;
++	int slot;
++
++	if (!ufshcd_hba_is_crypto_supported(hba))
++		return;
++
++	hba->caps |= UFSHCD_CAP_CRYPTO;
++	/*
++	 * Reset might clear all keys, so reprogram all the keys.
++	 * Also serves to clear keys on driver init.
++	 */
++	for (slot = 0; slot < NUM_KEYSLOTS(hba); slot++)
++		program_key(hba, &cfg_arr[slot], slot);
++}
++
++void ufshcd_crypto_disable(struct ufs_hba *hba)
++{
++	hba->caps &= ~UFSHCD_CAP_CRYPTO;
++}
++
++
++/**
++ * ufshcd_hba_init_crypto - Read crypto capabilities, init crypto fields in hba
++ * @hba: Per adapter instance
++ *
++ * Returns 0 on success. Returns -ENODEV if such capabilties don't exist, and
++ * -ENOMEM upon OOM.
++ */
++int ufshcd_hba_init_crypto(struct ufs_hba *hba)
++{
++	int cap_idx = 0;
++	int err = 0;
++
++	/* Default to disabling crypto */
++	hba->caps &= ~UFSHCD_CAP_CRYPTO;
++
++	if (!(hba->capabilities & MASK_CRYPTO_SUPPORT)) {
++		err = -ENODEV;
++		goto out;
++	}
++
++	/*
++	 * Crypto Capabilities should never be 0, because the
++	 * config_array_ptr > 04h. So we use a 0 value to indicate that
++	 * crypto init failed, and can't be enabled.
++	 */
++	hba->crypto_capabilities.reg_val =
++			cpu_to_le32(ufshcd_readl(hba, REG_UFS_CCAP));
++	hba->crypto_cfg_register =
++		(u32)hba->crypto_capabilities.config_array_ptr * 0x100;
++	hba->crypto_cap_array =
++		devm_kcalloc(hba->dev,
++			     hba->crypto_capabilities.num_crypto_cap,
++			     sizeof(hba->crypto_cap_array[0]),
++			     GFP_KERNEL);
++	if (!hba->crypto_cap_array) {
++		err = -ENOMEM;
++		goto out;
++	}
++
++	hba->crypto_cfgs =
++		devm_kcalloc(hba->dev,
++			     hba->crypto_capabilities.config_count + 1,
++			     sizeof(hba->crypto_cfgs[0]),
++			     GFP_KERNEL);
++	if (!hba->crypto_cfgs) {
++		err = -ENOMEM;
++		goto out_cfg_mem;
++	}
++
++	/*
++	 * Store all the capabilities now so that we don't need to repeatedly
++	 * access the device each time we want to know its capabilities
++	 */
++	for (cap_idx = 0; cap_idx < hba->crypto_capabilities.num_crypto_cap;
++	     cap_idx++) {
++		hba->crypto_cap_array[cap_idx].reg_val =
++			cpu_to_le32(ufshcd_readl(hba,
++						 REG_UFS_CRYPTOCAP +
++						 cap_idx * sizeof(__le32)));
++	}
++
++	hba->ksm = NULL;
++	mutex_init(&hba->ksm_lock);
++	hba->ksm_num_refs = 0;
++
++	return 0;
++out_cfg_mem:
++	devm_kfree(hba->dev, hba->crypto_cap_array);
++out:
++	// TODO: print error?
++	/* Indicate that init failed by setting crypto_capabilities to 0 */
++	hba->crypto_capabilities.reg_val = 0;
 +	return err;
 +}
-diff --git a/fs/verity/verify.c b/fs/verity/verify.c
-index 62ab8f6a8ea11..3e8f2de44667f 100644
---- a/fs/verity/verify.c
-+++ b/fs/verity/verify.c
-@@ -273,3 +273,9 @@ int __init fsverity_init_workqueue(void)
- 		return -ENOMEM;
- 	return 0;
- }
 +
-+void __init fsverity_exit_workqueue(void)
++static const struct keyslot_mgmt_ll_ops ufshcd_ksm_ops = {
++	.keyslot_program	= ufshcd_crypto_keyslot_program,
++	.keyslot_evict		= ufshcd_crypto_keyslot_evict,
++	.keyslot_find		= ufshcd_crypto_keyslot_find,
++	.crypt_mode_supported	= ufshcd_crypt_mode_supported,
++};
++
++void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
++					    struct request_queue *q)
 +{
-+	destroy_workqueue(fsverity_read_workqueue);
-+	fsverity_read_workqueue = NULL;
++	if (!ufshcd_hba_is_crypto_supported(hba))
++		return;
++
++	if (q) {
++		mutex_lock(&hba->ksm_lock);
++		if (!hba->ksm) {
++			hba->ksm = keyslot_manager_create(
++				hba->crypto_capabilities.config_count + 1,
++				&ufshcd_ksm_ops, hba);
++			hba->ksm_num_refs = 0;
++		}
++		hba->ksm_num_refs++;
++		mutex_unlock(&hba->ksm_lock);
++		q->ksm = hba->ksm;
++	}
++	/*
++	 * If we fail we make it look like
++	 * crypto is not supported, which will avoid issues
++	 * with reset
++	 */
++	if (!q || !q->ksm) {
++		ufshcd_crypto_disable(hba);
++		hba->crypto_capabilities.reg_val = 0;
++		devm_kfree(hba->dev, hba->crypto_cap_array);
++		devm_kfree(hba->dev, hba->crypto_cfgs);
++	}
 +}
++
++void ufshcd_crypto_destroy_rq_keyslot_manager(struct ufs_hba *hba,
++					      struct request_queue *q)
++{
++	if (q && q->ksm) {
++		q->ksm = NULL;
++		mutex_lock(&hba->ksm_lock);
++		hba->ksm_num_refs--;
++		if (hba->ksm_num_refs == 0) {
++			keyslot_manager_destroy(hba->ksm);
++			hba->ksm = NULL;
++		}
++		mutex_unlock(&hba->ksm_lock);
++	}
++}
++
+diff --git a/drivers/scsi/ufs/ufshcd-crypto.h b/drivers/scsi/ufs/ufshcd-crypto.h
+new file mode 100644
+index 000000000000..73ddc8e493fb
+--- /dev/null
++++ b/drivers/scsi/ufs/ufshcd-crypto.h
+@@ -0,0 +1,86 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright 2019 Google LLC
++ */
++
++#ifndef _UFSHCD_CRYPTO_H
++#define _UFSHCD_CRYPTO_H
++
++struct ufs_hba;
++
++#ifdef CONFIG_SCSI_UFS_CRYPTO
++#include <linux/keyslot-manager.h>
++
++#include "ufshci.h"
++
++#define NUM_KEYSLOTS(hba) (hba->crypto_capabilities.config_count + 1)
++
++static inline bool ufshcd_keyslot_valid(struct ufs_hba *hba, unsigned int slot)
++{
++	/*
++	 * The actual number of configurations supported is (CFGC+1), so slot
++	 * numbers range from 0 to config_count inclusive.
++	 */
++	return slot < NUM_KEYSLOTS(hba);
++}
++
++static inline bool ufshcd_hba_is_crypto_supported(struct ufs_hba *hba)
++{
++	return hba->crypto_capabilities.reg_val != 0;
++}
++
++static inline bool ufshcd_is_crypto_enabled(struct ufs_hba *hba)
++{
++	return hba->caps & UFSHCD_CAP_CRYPTO;
++}
++
++void ufshcd_crypto_enable(struct ufs_hba *hba);
++
++void ufshcd_crypto_disable(struct ufs_hba *hba);
++
++int ufshcd_hba_init_crypto(struct ufs_hba *hba);
++
++void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
++					    struct request_queue *q);
++
++void ufshcd_crypto_destroy_rq_keyslot_manager(struct ufs_hba *hba,
++					      struct request_queue *q);
++
++#else /* CONFIG_SCSI_UFS_CRYPTO */
++
++static inline bool ufshcd_keyslot_valid(struct ufs_hba *hba,
++					unsigned int slot)
++{
++	return false;
++}
++
++static inline bool ufshcd_hba_is_crypto_supported(struct ufs_hba *hba)
++{
++	return false;
++}
++
++static inline bool ufshcd_is_crypto_enabled(struct ufs_hba *hba)
++{
++	return false;
++}
++
++static inline void ufshcd_crypto_enable(struct ufs_hba *hba) { }
++
++static inline void ufshcd_crypto_disable(struct ufs_hba *hba) { }
++
++static inline int ufshcd_hba_init_crypto(struct ufs_hba *hba)
++{
++	return 0;
++}
++
++static inline void ufshcd_crypto_setup_rq_keyslot_manager(
++					struct ufs_hba *hba,
++					struct request_queue *q) { }
++
++static inline void ufshcd_crypto_destroy_rq_keyslot_manager(
++				struct ufs_hba *hba,
++				struct request_queue *q) { }
++
++#endif /* CONFIG_SCSI_UFS_CRYPTO */
++
++#endif /* _UFSHCD_CRYPTO_H */
+diff --git a/drivers/scsi/ufs/ufshcd.h b/drivers/scsi/ufs/ufshcd.h
+index d3b6a6b57a37..ef62b3ba03fd 100644
+--- a/drivers/scsi/ufs/ufshcd.h
++++ b/drivers/scsi/ufs/ufshcd.h
+@@ -501,6 +501,13 @@ struct ufs_stats {
+  * @is_urgent_bkops_lvl_checked: keeps track if the urgent bkops level for
+  *  device is known or not.
+  * @scsi_block_reqs_cnt: reference counting for scsi block requests
++ * @crypto_capabilities: Content of crypto capabilities register (0x100)
++ * @crypto_cap_array: Array of crypto capabilities
++ * @crypto_cfg_register: Start of the crypto cfg array
++ * @crypto_cfgs: Array of crypto configurations (i.e. config for each slot)
++ * @ksm: the keyslot manager tied to this hba
++ * @ksm_lock: lock to protect initialization and refcount of ksm
++ * @ksm_num_refs: refcount for ksm
+  */
+ struct ufs_hba {
+ 	void __iomem *mmio_base;
+@@ -711,6 +718,17 @@ struct ufs_hba {
+ 
+ 	struct device		bsg_dev;
+ 	struct request_queue	*bsg_queue;
++
++#ifdef CONFIG_SCSI_UFS_CRYPTO
++	/* crypto */
++	union ufs_crypto_capabilities crypto_capabilities;
++	union ufs_crypto_cap_entry *crypto_cap_array;
++	u32 crypto_cfg_register;
++	union ufs_crypto_cfg_entry *crypto_cfgs;
++	struct keyslot_manager *ksm;
++	struct mutex ksm_lock;
++	unsigned int ksm_num_refs;
++#endif /* CONFIG_SCSI_UFS_CRYPTO */
+ };
+ 
+ /* Returns true if clocks can be gated. Otherwise false */
 -- 
-2.22.0
+2.22.0.410.gd8fdbe21b5-goog
