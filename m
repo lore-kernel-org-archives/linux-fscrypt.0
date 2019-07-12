@@ -1,540 +1,162 @@
-Return-Path: <SRS0=KvCx=U6=vger.kernel.org=linux-integrity-owner@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:58242 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1727226AbfGLT1q (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 12 Jul 2019 15:27:46 -0400
+Date: Fri, 12 Jul 2019 12:27:42 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v6 05/17] fs-verity: add Kconfig and the helper functions for hashing
-Date: Mon,  1 Jul 2019 08:32:25 -0700
-Message-Id: <20190701153237.1777-6-ebiggers@kernel.org>
-In-Reply-To: <20190701153237.1777-1-ebiggers@kernel.org>
-References: <20190701153237.1777-1-ebiggers@kernel.org>
+Subject: Re: [PATCH 7/8] fscrypt: wire up fscrypt to use blk-crypto
+Message-ID: <20190712192742.GB701@sol.localdomain>
+References: <20190710225609.192252-1-satyat@google.com>
+ <20190710225609.192252-8-satyat@google.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190710225609.192252-8-satyat@google.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Satya Tangirala <satyat@google.com>
+Cc: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Parshuram Raju Thombare <pthombar@cadence.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Satya,
 
-Add the beginnings of the fs/verity/ support layer, including the
-Kconfig option and various helper functions for hashing.  To start, only
-SHA-256 is supported, but other hash algorithms can easily be added.
+On Wed, Jul 10, 2019 at 03:56:08PM -0700, Satya Tangirala wrote:
+> Introduce fscrypt_set_bio_crypt_ctx for filesystems to call to set up
+> encryption contexts in bios, and fscrypt_evict_crypt_key to evict
+> the encryption context associated with an inode.
+> 
+> Inline encryption is controlled by a policy flag in the fscrypt_info
+> in the inode, and filesystems may check if an inode should use inline
+> encryption by calling fscrypt_inode_is_inline_crypted. Files can be marked
+> as inline encrypted from userspace by appropriately modifying the flags
+> (OR-ing FS_POLICY_FLAGS_INLINE_ENCRYPTION to it) in the fscrypt_policy
+> passed to fscrypt_ioctl_set_policy.
+> 
+> To test inline encryption with the fscrypt dummy context, add
+> ctx.flags |= FS_POLICY_FLAGS_INLINE_ENCRYPTION
+> when setting up the dummy context in fs/crypto/keyinfo.c.
+> 
+> Note that blk-crypto will fall back to software en/decryption in the
+> absence of inline crypto hardware, so setting up the ctx.flags in the
+> dummy context without inline crypto hardware serves as a test for
+> the software fallback in blk-crypto.
+> 
+> Signed-off-by: Satya Tangirala <satyat@google.com>
 
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/Kconfig                   |   2 +
- fs/Makefile                  |   1 +
- fs/verity/Kconfig            |  38 +++++
- fs/verity/Makefile           |   4 +
- fs/verity/fsverity_private.h |  88 +++++++++++
- fs/verity/hash_algs.c        | 274 +++++++++++++++++++++++++++++++++++
- fs/verity/init.c             |  41 ++++++
- 7 files changed, 448 insertions(+)
- create mode 100644 fs/verity/Kconfig
- create mode 100644 fs/verity/Makefile
- create mode 100644 fs/verity/fsverity_private.h
- create mode 100644 fs/verity/hash_algs.c
- create mode 100644 fs/verity/init.c
+Thanks for the new patches.  I implemented a ciphertext verification test for
+this new encryption policy flag, using the framework for ciphertext verification
+tests I added to xfstests a few months ago.  You can get it from here:
+https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git/log/?h=inline-encryption
+If you build a kvm-xfstests test appliance from that branch, the test can be run
+with 'kvm-xfstests -c f2fs generic/700'.
 
-diff --git a/fs/Kconfig b/fs/Kconfig
-index f1046cf6ad85..4b66dafbdc7b 100644
---- a/fs/Kconfig
-+++ b/fs/Kconfig
-@@ -113,6 +113,8 @@ config MANDATORY_FILE_LOCKING
- 
- source "fs/crypto/Kconfig"
- 
-+source "fs/verity/Kconfig"
-+
- source "fs/notify/Kconfig"
- 
- source "fs/quota/Kconfig"
-diff --git a/fs/Makefile b/fs/Makefile
-index c9aea23aba56..fe7f2c07f482 100644
---- a/fs/Makefile
-+++ b/fs/Makefile
-@@ -34,6 +34,7 @@ obj-$(CONFIG_AIO)               += aio.o
- obj-$(CONFIG_IO_URING)		+= io_uring.o
- obj-$(CONFIG_FS_DAX)		+= dax.o
- obj-$(CONFIG_FS_ENCRYPTION)	+= crypto/
-+obj-$(CONFIG_FS_VERITY)		+= verity/
- obj-$(CONFIG_FILE_LOCKING)      += locks.o
- obj-$(CONFIG_COMPAT)		+= compat.o compat_ioctl.o
- obj-$(CONFIG_BINFMT_AOUT)	+= binfmt_aout.o
-diff --git a/fs/verity/Kconfig b/fs/verity/Kconfig
-new file mode 100644
-index 000000000000..c2bca0b01ecf
---- /dev/null
-+++ b/fs/verity/Kconfig
-@@ -0,0 +1,38 @@
-+# SPDX-License-Identifier: GPL-2.0
-+
-+config FS_VERITY
-+	bool "FS Verity (read-only file-based authenticity protection)"
-+	select CRYPTO
-+	# SHA-256 is selected as it's intended to be the default hash algorithm.
-+	# To avoid bloat, other wanted algorithms must be selected explicitly.
-+	select CRYPTO_SHA256
-+	help
-+	  This option enables fs-verity.  fs-verity is the dm-verity
-+	  mechanism implemented at the file level.  On supported
-+	  filesystems (currently EXT4 and F2FS), userspace can use an
-+	  ioctl to enable verity for a file, which causes the filesystem
-+	  to build a Merkle tree for the file.  The filesystem will then
-+	  transparently verify any data read from the file against the
-+	  Merkle tree.  The file is also made read-only.
-+
-+	  This serves as an integrity check, but the availability of the
-+	  Merkle tree root hash also allows efficiently supporting
-+	  various use cases where normally the whole file would need to
-+	  be hashed at once, such as: (a) auditing (logging the file's
-+	  hash), or (b) authenticity verification (comparing the hash
-+	  against a known good value, e.g. from a digital signature).
-+
-+	  fs-verity is especially useful on large files where not all
-+	  the contents may actually be needed.  Also, fs-verity verifies
-+	  data each time it is paged back in, which provides better
-+	  protection against malicious disks vs. an ahead-of-time hash.
-+
-+	  If unsure, say N.
-+
-+config FS_VERITY_DEBUG
-+	bool "FS Verity debugging"
-+	depends on FS_VERITY
-+	help
-+	  Enable debugging messages related to fs-verity by default.
-+
-+	  Say N unless you are an fs-verity developer.
-diff --git a/fs/verity/Makefile b/fs/verity/Makefile
-new file mode 100644
-index 000000000000..398f3f85fa18
---- /dev/null
-+++ b/fs/verity/Makefile
-@@ -0,0 +1,4 @@
-+# SPDX-License-Identifier: GPL-2.0
-+
-+obj-$(CONFIG_FS_VERITY) += hash_algs.o \
-+			   init.o
-diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
-new file mode 100644
-index 000000000000..9697aaebb5dc
---- /dev/null
-+++ b/fs/verity/fsverity_private.h
-@@ -0,0 +1,88 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+/*
-+ * fs-verity: read-only file-based authenticity protection
-+ *
-+ * Copyright 2019 Google LLC
-+ */
-+
-+#ifndef _FSVERITY_PRIVATE_H
-+#define _FSVERITY_PRIVATE_H
-+
-+#ifdef CONFIG_FS_VERITY_DEBUG
-+#define DEBUG
-+#endif
-+
-+#define pr_fmt(fmt) "fs-verity: " fmt
-+
-+#include <crypto/sha.h>
-+#include <linux/fs.h>
-+#include <uapi/linux/fsverity.h>
-+
-+struct ahash_request;
-+
-+/*
-+ * Implementation limit: maximum depth of the Merkle tree.  For now 8 is plenty;
-+ * it's enough for over U64_MAX bytes of data using SHA-256 and 4K blocks.
-+ */
-+#define FS_VERITY_MAX_LEVELS		8
-+
-+/*
-+ * Largest digest size among all hash algorithms supported by fs-verity.
-+ * Currently assumed to be <= size of fsverity_descriptor::root_hash.
-+ */
-+#define FS_VERITY_MAX_DIGEST_SIZE	SHA256_DIGEST_SIZE
-+
-+/* A hash algorithm supported by fs-verity */
-+struct fsverity_hash_alg {
-+	struct crypto_ahash *tfm; /* hash tfm, allocated on demand */
-+	const char *name;	  /* crypto API name, e.g. sha256 */
-+	unsigned int digest_size; /* digest size in bytes, e.g. 32 for SHA-256 */
-+	unsigned int block_size;  /* block size in bytes, e.g. 64 for SHA-256 */
-+};
-+
-+/* Merkle tree parameters: hash algorithm, initial hash state, and topology */
-+struct merkle_tree_params {
-+	const struct fsverity_hash_alg *hash_alg; /* the hash algorithm */
-+	const u8 *hashstate;		/* initial hash state or NULL */
-+	unsigned int digest_size;	/* same as hash_alg->digest_size */
-+	unsigned int block_size;	/* size of data and tree blocks */
-+	unsigned int hashes_per_block;	/* number of hashes per tree block */
-+	unsigned int log_blocksize;	/* log2(block_size) */
-+	unsigned int log_arity;		/* log2(hashes_per_block) */
-+	unsigned int num_levels;	/* number of levels in Merkle tree */
-+	u64 tree_size;			/* Merkle tree size in bytes */
-+
-+	/*
-+	 * Starting block index for each tree level, ordered from leaf level (0)
-+	 * to root level ('num_levels - 1')
-+	 */
-+	u64 level_start[FS_VERITY_MAX_LEVELS];
-+};
-+
-+/* hash_algs.c */
-+
-+extern struct fsverity_hash_alg fsverity_hash_algs[];
-+
-+const struct fsverity_hash_alg *fsverity_get_hash_alg(const struct inode *inode,
-+						      unsigned int num);
-+const u8 *fsverity_prepare_hash_state(const struct fsverity_hash_alg *alg,
-+				      const u8 *salt, size_t salt_size);
-+int fsverity_hash_page(const struct merkle_tree_params *params,
-+		       const struct inode *inode,
-+		       struct ahash_request *req, struct page *page, u8 *out);
-+int fsverity_hash_buffer(const struct fsverity_hash_alg *alg,
-+			 const void *data, size_t size, u8 *out);
-+void __init fsverity_check_hash_algs(void);
-+
-+/* init.c */
-+
-+extern void __printf(3, 4) __cold
-+fsverity_msg(const struct inode *inode, const char *level,
-+	     const char *fmt, ...);
-+
-+#define fsverity_warn(inode, fmt, ...)		\
-+	fsverity_msg((inode), KERN_WARNING, fmt, ##__VA_ARGS__)
-+#define fsverity_err(inode, fmt, ...)		\
-+	fsverity_msg((inode), KERN_ERR, fmt, ##__VA_ARGS__)
-+
-+#endif /* _FSVERITY_PRIVATE_H */
-diff --git a/fs/verity/hash_algs.c b/fs/verity/hash_algs.c
-new file mode 100644
-index 000000000000..c0457915ca10
---- /dev/null
-+++ b/fs/verity/hash_algs.c
-@@ -0,0 +1,274 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * fs/verity/hash_algs.c: fs-verity hash algorithms
-+ *
-+ * Copyright 2019 Google LLC
-+ */
-+
-+#include "fsverity_private.h"
-+
-+#include <crypto/hash.h>
-+#include <linux/scatterlist.h>
-+
-+/* The hash algorithms supported by fs-verity */
-+struct fsverity_hash_alg fsverity_hash_algs[] = {
-+	[FS_VERITY_HASH_ALG_SHA256] = {
-+		.name = "sha256",
-+		.digest_size = SHA256_DIGEST_SIZE,
-+		.block_size = SHA256_BLOCK_SIZE,
-+	},
-+};
-+
-+/**
-+ * fsverity_get_hash_alg() - validate and prepare a hash algorithm
-+ * @inode: optional inode for logging purposes
-+ * @num: the hash algorithm number
-+ *
-+ * Get the struct fsverity_hash_alg for the given hash algorithm number, and
-+ * ensure it has a hash transform ready to go.  The hash transforms are
-+ * allocated on-demand so that we don't waste resources unnecessarily, and
-+ * because the crypto modules may be initialized later than fs/verity/.
-+ *
-+ * Return: pointer to the hash alg on success, else an ERR_PTR()
-+ */
-+const struct fsverity_hash_alg *fsverity_get_hash_alg(const struct inode *inode,
-+						      unsigned int num)
-+{
-+	struct fsverity_hash_alg *alg;
-+	struct crypto_ahash *tfm;
-+	int err;
-+
-+	if (num >= ARRAY_SIZE(fsverity_hash_algs) ||
-+	    !fsverity_hash_algs[num].name) {
-+		fsverity_warn(inode, "Unknown hash algorithm number: %u", num);
-+		return ERR_PTR(-EINVAL);
-+	}
-+	alg = &fsverity_hash_algs[num];
-+
-+	/* pairs with cmpxchg() below */
-+	tfm = READ_ONCE(alg->tfm);
-+	if (likely(tfm != NULL))
-+		return alg;
-+	/*
-+	 * Using the shash API would make things a bit simpler, but the ahash
-+	 * API is preferable as it allows the use of crypto accelerators.
-+	 */
-+	tfm = crypto_alloc_ahash(alg->name, 0, 0);
-+	if (IS_ERR(tfm)) {
-+		if (PTR_ERR(tfm) == -ENOENT)
-+			fsverity_warn(inode,
-+				      "Missing crypto API support for hash algorithm \"%s\"",
-+				      alg->name);
-+		else
-+			fsverity_err(inode,
-+				     "Error allocating hash algorithm \"%s\": %ld",
-+				     alg->name, PTR_ERR(tfm));
-+		return ERR_CAST(tfm);
-+	}
-+
-+	err = -EINVAL;
-+	if (WARN_ON(alg->digest_size != crypto_ahash_digestsize(tfm)))
-+		goto err_free_tfm;
-+	if (WARN_ON(alg->block_size != crypto_ahash_blocksize(tfm)))
-+		goto err_free_tfm;
-+
-+	pr_info("%s using implementation \"%s\"\n",
-+		alg->name, crypto_ahash_driver_name(tfm));
-+
-+	/* pairs with READ_ONCE() above */
-+	if (cmpxchg(&alg->tfm, NULL, tfm) != NULL)
-+		crypto_free_ahash(tfm);
-+
-+	return alg;
-+
-+err_free_tfm:
-+	crypto_free_ahash(tfm);
-+	return ERR_PTR(err);
-+}
-+
-+/**
-+ * fsverity_prepare_hash_state() - precompute the initial hash state
-+ * @alg: hash algorithm
-+ * @salt: a salt which is to be prepended to all data to be hashed
-+ * @salt_size: salt size in bytes, possibly 0
-+ *
-+ * Return: NULL if the salt is empty, otherwise the kmalloc()'ed precomputed
-+ *	   initial hash state on success or an ERR_PTR() on failure.
-+ */
-+const u8 *fsverity_prepare_hash_state(const struct fsverity_hash_alg *alg,
-+				      const u8 *salt, size_t salt_size)
-+{
-+	u8 *hashstate = NULL;
-+	struct ahash_request *req = NULL;
-+	u8 *padded_salt = NULL;
-+	size_t padded_salt_size;
-+	struct scatterlist sg;
-+	DECLARE_CRYPTO_WAIT(wait);
-+	int err;
-+
-+	if (salt_size == 0)
-+		return NULL;
-+
-+	hashstate = kmalloc(crypto_ahash_statesize(alg->tfm), GFP_KERNEL);
-+	if (!hashstate)
-+		return ERR_PTR(-ENOMEM);
-+
-+	req = ahash_request_alloc(alg->tfm, GFP_KERNEL);
-+	if (!req) {
-+		err = -ENOMEM;
-+		goto err_free;
-+	}
-+
-+	/*
-+	 * Zero-pad the salt to the next multiple of the input size of the hash
-+	 * algorithm's compression function, e.g. 64 bytes for SHA-256 or 128
-+	 * bytes for SHA-512.  This ensures that the hash algorithm won't have
-+	 * any bytes buffered internally after processing the salt, thus making
-+	 * salted hashing just as fast as unsalted hashing.
-+	 */
-+	padded_salt_size = round_up(salt_size, alg->block_size);
-+	padded_salt = kzalloc(padded_salt_size, GFP_KERNEL);
-+	if (!padded_salt) {
-+		err = -ENOMEM;
-+		goto err_free;
-+	}
-+	memcpy(padded_salt, salt, salt_size);
-+
-+	sg_init_one(&sg, padded_salt, padded_salt_size);
-+	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_SLEEP |
-+					CRYPTO_TFM_REQ_MAY_BACKLOG,
-+				   crypto_req_done, &wait);
-+	ahash_request_set_crypt(req, &sg, NULL, padded_salt_size);
-+
-+	err = crypto_wait_req(crypto_ahash_init(req), &wait);
-+	if (err)
-+		goto err_free;
-+
-+	err = crypto_wait_req(crypto_ahash_update(req), &wait);
-+	if (err)
-+		goto err_free;
-+
-+	err = crypto_ahash_export(req, hashstate);
-+	if (err)
-+		goto err_free;
-+out:
-+	ahash_request_free(req);
-+	kfree(padded_salt);
-+	return hashstate;
-+
-+err_free:
-+	kfree(hashstate);
-+	hashstate = ERR_PTR(err);
-+	goto out;
-+}
-+
-+/**
-+ * fsverity_hash_page() - hash a single data or hash page
-+ * @params: the Merkle tree's parameters
-+ * @inode: inode for which the hashing is being done
-+ * @req: preallocated hash request
-+ * @page: the page to hash
-+ * @out: output digest, size 'params->digest_size' bytes
-+ *
-+ * Hash a single data or hash block, assuming block_size == PAGE_SIZE.
-+ * The hash is salted if a salt is specified in the Merkle tree parameters.
-+ *
-+ * Return: 0 on success, -errno on failure
-+ */
-+int fsverity_hash_page(const struct merkle_tree_params *params,
-+		       const struct inode *inode,
-+		       struct ahash_request *req, struct page *page, u8 *out)
-+{
-+	struct scatterlist sg;
-+	DECLARE_CRYPTO_WAIT(wait);
-+	int err;
-+
-+	if (WARN_ON(params->block_size != PAGE_SIZE))
-+		return -EINVAL;
-+
-+	sg_init_table(&sg, 1);
-+	sg_set_page(&sg, page, PAGE_SIZE, 0);
-+	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_SLEEP |
-+					CRYPTO_TFM_REQ_MAY_BACKLOG,
-+				   crypto_req_done, &wait);
-+	ahash_request_set_crypt(req, &sg, out, PAGE_SIZE);
-+
-+	if (params->hashstate) {
-+		err = crypto_ahash_import(req, params->hashstate);
-+		if (err) {
-+			fsverity_err(inode,
-+				     "Error %d importing hash state", err);
-+			return err;
-+		}
-+		err = crypto_ahash_finup(req);
-+	} else {
-+		err = crypto_ahash_digest(req);
-+	}
-+
-+	err = crypto_wait_req(err, &wait);
-+	if (err)
-+		fsverity_err(inode, "Error %d computing page hash", err);
-+	return err;
-+}
-+
-+/**
-+ * fsverity_hash_buffer() - hash some data
-+ * @alg: the hash algorithm to use
-+ * @data: the data to hash
-+ * @size: size of data to hash, in bytes
-+ * @out: output digest, size 'alg->digest_size' bytes
-+ *
-+ * Hash some data which is located in physically contiguous memory (i.e. memory
-+ * allocated by kmalloc(), not by vmalloc()).  No salt is used.
-+ *
-+ * Return: 0 on success, -errno on failure
-+ */
-+int fsverity_hash_buffer(const struct fsverity_hash_alg *alg,
-+			 const void *data, size_t size, u8 *out)
-+{
-+	struct ahash_request *req;
-+	struct scatterlist sg;
-+	DECLARE_CRYPTO_WAIT(wait);
-+	int err;
-+
-+	req = ahash_request_alloc(alg->tfm, GFP_KERNEL);
-+	if (!req)
-+		return -ENOMEM;
-+
-+	sg_init_one(&sg, data, size);
-+	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_SLEEP |
-+					CRYPTO_TFM_REQ_MAY_BACKLOG,
-+				   crypto_req_done, &wait);
-+	ahash_request_set_crypt(req, &sg, out, size);
-+
-+	err = crypto_wait_req(crypto_ahash_digest(req), &wait);
-+
-+	ahash_request_free(req);
-+	return err;
-+}
-+
-+void __init fsverity_check_hash_algs(void)
-+{
-+	size_t i;
-+
-+	/*
-+	 * Sanity check the hash algorithms (could be a build-time check, but
-+	 * they're in an array)
-+	 */
-+	for (i = 0; i < ARRAY_SIZE(fsverity_hash_algs); i++) {
-+		const struct fsverity_hash_alg *alg = &fsverity_hash_algs[i];
-+
-+		if (!alg->name)
-+			continue;
-+
-+		BUG_ON(alg->digest_size > FS_VERITY_MAX_DIGEST_SIZE);
-+
-+		/*
-+		 * For efficiency, the implementation currently assumes the
-+		 * digest and block sizes are powers of 2.  This limitation can
-+		 * be lifted if the code is updated to handle other values.
-+		 */
-+		BUG_ON(!is_power_of_2(alg->digest_size));
-+		BUG_ON(!is_power_of_2(alg->block_size));
-+	}
-+}
-diff --git a/fs/verity/init.c b/fs/verity/init.c
-new file mode 100644
-index 000000000000..40076bbe452a
---- /dev/null
-+++ b/fs/verity/init.c
-@@ -0,0 +1,41 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * fs/verity/init.c: fs-verity module initialization and logging
-+ *
-+ * Copyright 2019 Google LLC
-+ */
-+
-+#include "fsverity_private.h"
-+
-+#include <linux/ratelimit.h>
-+
-+void fsverity_msg(const struct inode *inode, const char *level,
-+		  const char *fmt, ...)
-+{
-+	static DEFINE_RATELIMIT_STATE(rs, DEFAULT_RATELIMIT_INTERVAL,
-+				      DEFAULT_RATELIMIT_BURST);
-+	struct va_format vaf;
-+	va_list args;
-+
-+	if (!__ratelimit(&rs))
-+		return;
-+
-+	va_start(args, fmt);
-+	vaf.fmt = fmt;
-+	vaf.va = &args;
-+	if (inode)
-+		printk("%sfs-verity (%s, inode %lu): %pV\n",
-+		       level, inode->i_sb->s_id, inode->i_ino, &vaf);
-+	else
-+		printk("%sfs-verity: %pV\n", level, &vaf);
-+	va_end(args);
-+}
-+
-+static int __init fsverity_init(void)
-+{
-+	fsverity_check_hash_algs();
-+
-+	pr_debug("Initialized fs-verity\n");
-+	return 0;
-+}
-+late_initcall(fsverity_init)
--- 
-2.22.0
+Or better: run 'kvm-xfstests -c ext4,f2fs -g encrypt' to run all fscrypt tests
+on ext4 and f2fs, including that one.  I recommend adding that to the testing
+you do, if you haven't already.  Note that this is separate from running
+xfstests with the "fscrypt dummy context" as you mention in the commit message;
+see the new documentation at
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/filesystems/fscrypt.rst#n653
+
+I found a bug.  The test passes when CONFIG_FS_ENCRYPTION_INLINE_CRYPT=y, but
+fails when CONFIG_FS_ENCRYPTION_INLINE_CRYPT=n, rather than being skipped.  This
+is because the kernel incorrectly ignores the policy flag in the latter case and
+produces the wrong ciphertext, rather than rejecting it in
+FS_IOC_SET_ENCRYPTION_POLICY.  So that needs to be fixed.
+
+> diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+> index 335a362ee446..58a01889fac7 100644
+> --- a/fs/crypto/crypto.c
+> +++ b/fs/crypto/crypto.c
+> @@ -302,6 +302,10 @@ int fscrypt_decrypt_page(const struct inode *inode, struct page *page,
+>  	if (!(inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES))
+>  		BUG_ON(!PageLocked(page));
+>  
+> +	/* If we have HW encryption, then this page is already decrypted */
+> +	if (fscrypt_inode_is_inline_crypted(inode))
+> +		return 0;
+> +
+>  	return fscrypt_do_page_crypto(inode, FS_DECRYPT, lblk_num, page, page,
+>  				      len, offs, GFP_NOFS);
+>  }
+
+As I mentioned on v2, the purpose of this function is to decrypt the page.  The
+filesystem also has to allocate a decryption context and schedule a workqueue
+item specifically to call this -- only for it to be a no-op in this new case
+this patch adds.  I think the more logical approach would be for the filesystem
+to not call this at all if the inode is using inline encryption instead.
+
+> +#ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
+> +bool fscrypt_inode_is_inline_crypted(const struct inode *inode)
+> +{
+> +	struct fscrypt_info *ci;
+> +
+> +	if (!inode)
+> +		return false;
+> +	ci = inode->i_crypt_info;
+> +
+> +	return ci && flags_inline_crypted(ci->ci_flags, inode);
+> +}
+> +EXPORT_SYMBOL(fscrypt_inode_is_inline_crypted);
+
+What does it mean for the inode to be NULL here?
+
+This also returns false whenever the inode's encryption key hasn't been set up,
+even though the inode may use an encryption policy with the inline encryption
+optimized flag set.  Why?  Also, because ->i_crypt_info is set locklessly, if
+it's being dereferenced conditionally it needs to be loaded with READ_ONCE().
+
+So I'm confused about exactly what this is trying to do, and the lack of a
+kerneldoc comment doesn't help :-(
+
+But AFAICS, this is only called if the encryption key is available.
+So I think the following would be better:
+
+bool fscrypt_inode_is_inline_crypted(const struct inode *inode)
+{
+	return flags_inline_crypted(inode->i_crypt_info->ci_flags, inode);
+}
+
+... or if it's also expected to handle unencrypted inodes,
+
+bool fscrypt_inode_is_inline_crypted(const struct inode *inode)
+{
+	return IS_ENCRYPTED(inode) &&
+	       flags_inline_crypted(inode->i_crypt_info->ci_flags, inode);
+}
+
+The problem with trying to be "safe" and check for NULL ->i_crypt_info is that
+the fallback behavior this patch implements is to silently do the encryption
+incorrectly.  I don't think that's a good idea.  If someone is incorrectly
+calling this on an inode that hasn't had its key loaded yet, I'd much rather be
+notified of the bug immediately and fix it.
+
+> +
+> +bool fscrypt_needs_fs_layer_crypto(const struct inode *inode)
+> +{
+> +	return IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) &&
+> +	       !fscrypt_inode_is_inline_crypted(inode);
+> +}
+> +EXPORT_SYMBOL(fscrypt_needs_fs_layer_crypto);
+
+Can you please add a kerneldoc comment for all new functions in fs/crypto/ that
+are exported to filesystems?
+
+> +	/*
+> +	 * TODO: expose inline encryption via some toggleable knob
+> +	 * instead of as a policy?
+> +	 */
+> +	if (!inode->i_sb->s_cop->inline_crypt_supp &&
+> +	    (policy->flags & FS_POLICY_FLAGS_INLINE_CRYPT))
+> +		return -EINVAL;
+> +
+
+This TODO doesn't make sense; the policy flag is fine.
+
+I think the name of the flag is still confusing things.  It's not enabling
+inline encryption per se (that's an implementation detail), but rather an
+on-disk format that's better suited for inline encryption.
+
+How about renaming the flag to FS_POLICY_FLAG_INLINECRYPT_OPTIMIZED, like I
+suggested on v2?
+
+- Eric
