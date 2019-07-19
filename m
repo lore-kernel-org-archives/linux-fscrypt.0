@@ -1,242 +1,168 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-lf1-f65.google.com ([209.85.167.65]:33359 "EHLO
-        mail-lf1-f65.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726046AbfGBQse (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 2 Jul 2019 12:48:34 -0400
-Received: by mail-lf1-f65.google.com with SMTP id y17so11921884lfe.0
-        for <linux-fscrypt@vger.kernel.org>; Tue, 02 Jul 2019 09:48:32 -0700 (PDT)
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v7 2/7] fs: crypto: invoke crypto API for ESSIV handling
-Date: Tue,  2 Jul 2019 18:48:10 +0200
-Message-Id: <20190702164815.6341-3-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
-References: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+Return-Path: <linux-ext4-owner@vger.kernel.org>
+Date: Fri, 19 Jul 2019 16:58:53 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Re: [PATCH] e2fsck: check for consistent encryption policies
+Message-ID: <20190719235852.GI1422@gmail.com>
+References: <20190718011325.19516-1-ebiggers@kernel.org>
+ <D9B442DB-51C2-4AAC-8113-AE462E7DA637@dilger.ca>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <D9B442DB-51C2-4AAC-8113-AE462E7DA637@dilger.ca>
+Sender: linux-ext4-owner@vger.kernel.org
+To: Andreas Dilger <adilger@dilger.ca>
+Cc: Ext4 Developers List <linux-ext4@vger.kernel.org>, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Instead of open coding the calculations for ESSIV handling, use a
-ESSIV skcipher which does all of this under the hood.
+On Thu, Jul 18, 2019 at 12:25:42AM -0600, Andreas Dilger wrote:
+> On Jul 17, 2019, at 7:13 PM, Eric Biggers <ebiggers@kernel.org> wrote:
+> > 
+> > From: Eric Biggers <ebiggers@google.com>
+> > 
+> > By design, the kernel enforces that all files in an encrypted directory
+> > use the same encryption policy as the directory.  It's not possible to
+> > violate this constraint using syscalls.  Lookups of files that violate
+> > this constraint also fail, in case the disk was manipulated.
+> > 
+> > But this constraint can also be violated by accidental filesystem
+> > corruption.  E.g., a power cut when using ext4 without a journal might
+> > leave new files without the encryption bit and/or xattr.  Thus, it's
+> > important that e2fsck correct this condition.
+> > 
+> > Therefore, this patch makes the following changes to e2fsck:
+> > 
+> > - During pass 1 (inode table scan), create a map from inode number to
+> >  encryption xattr for all encrypted inodes.  If an encrypted inode has
+> >  a missing or clearly invalid xattr, offer to clear the inode.
+> > 
+> > - During pass 2 (directory structure check), verify that all regular
+> >  files, directories, and symlinks in encrypted directories use the
+> >  directory's encryption policy.  Offer to clear any directory entries
+> >  for which this isn't the case.
+> > 
+> > Add a new test "f_bad_encryption" to test the new behavior.
+> > 
+> > Due to the new checks, it was also necessary to update the existing test
+> > "f_short_encrypted_dirent" to add an encryption xattr to the test file,
+> > since it was missing one before, which is now considered invalid.
+> > 
+> > Google-Bug-Id: 135138675
+> > Signed-off-by: Eric Biggers <ebiggers@google.com>
+> > ---
+> > diff --git a/e2fsck/e2fsck.h b/e2fsck/e2fsck.h
+> > index 2d359b38..10dcb582 100644
+> > --- a/e2fsck/e2fsck.h
+> > +++ b/e2fsck/e2fsck.h
+> > @@ -135,6 +135,22 @@ struct dx_dirblock_info {
+> > #define DX_FLAG_FIRST		4
+> > #define DX_FLAG_LAST		8
+> > 
+> > +/*
+> > + * The encrypted file information structure; stores information for files which
+> > + * are encrypted.
+> > + */
+> > +struct encrypted_file {
+> > +	ext2_ino_t ino;
+> > +	void *xattr_value;
+> > +	size_t xattr_size;
+> > +};
+> 
+> This structure is pretty memory inefficient.  4 byte ino, 8 bytes pointer, then a
+> 8 byte size. I don't think that we need a full size_t to store a valid xattr size,
+> given that is limited to 64KB currently, while size_t is an unsigned long.
+> 
+> It would save 8 bytes per inode to rearrange these,
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- fs/crypto/Kconfig           |  1 +
- fs/crypto/crypto.c          |  5 --
- fs/crypto/fscrypt_private.h |  9 --
- fs/crypto/keyinfo.c         | 95 +-------------------
- 4 files changed, 5 insertions(+), 105 deletions(-)
+Yes, it can be reduced to 16 bytes.  Probably we should go with the 8 bytes
+(ino, id) as you suggested elsewhere, though.
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 24ed99e2eca0..b0292da8613c 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -5,6 +5,7 @@ config FS_ENCRYPTION
- 	select CRYPTO_AES
- 	select CRYPTO_CBC
- 	select CRYPTO_ECB
-+	select CRYPTO_ESSIV
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select CRYPTO_SHA256
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 335a362ee446..c53ce262a06c 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -136,9 +136,6 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY)
- 		memcpy(iv->nonce, ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE);
--
--	if (ci->ci_essiv_tfm != NULL)
--		crypto_cipher_encrypt_one(ci->ci_essiv_tfm, iv->raw, iv->raw);
- }
- 
- int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
-@@ -492,8 +489,6 @@ static void __exit fscrypt_exit(void)
- 		destroy_workqueue(fscrypt_read_workqueue);
- 	kmem_cache_destroy(fscrypt_ctx_cachep);
- 	kmem_cache_destroy(fscrypt_info_cachep);
--
--	fscrypt_essiv_cleanup();
- }
- module_exit(fscrypt_exit);
- 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 7da276159593..59d0cba9cfb9 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -61,12 +61,6 @@ struct fscrypt_info {
- 	/* The actual crypto transform used for encryption and decryption */
- 	struct crypto_skcipher *ci_ctfm;
- 
--	/*
--	 * Cipher for ESSIV IV generation.  Only set for CBC contents
--	 * encryption, otherwise is NULL.
--	 */
--	struct crypto_cipher *ci_essiv_tfm;
--
- 	/*
- 	 * Encryption mode used for this inode.  It corresponds to either
- 	 * ci_data_mode or ci_filename_mode, depending on the inode type.
-@@ -166,9 +160,6 @@ struct fscrypt_mode {
- 	int keysize;
- 	int ivsize;
- 	bool logged_impl_name;
--	bool needs_essiv;
- };
- 
--extern void __exit fscrypt_essiv_cleanup(void);
--
- #endif /* _FSCRYPT_PRIVATE_H */
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index dcd91a3fbe49..f39667d4316a 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -13,14 +13,10 @@
- #include <linux/hashtable.h>
- #include <linux/scatterlist.h>
- #include <linux/ratelimit.h>
--#include <crypto/aes.h>
- #include <crypto/algapi.h>
--#include <crypto/sha.h>
- #include <crypto/skcipher.h>
- #include "fscrypt_private.h"
- 
--static struct crypto_shash *essiv_hash_tfm;
--
- /* Table of keys referenced by FS_POLICY_FLAG_DIRECT_KEY policies */
- static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
- static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
-@@ -144,10 +140,9 @@ static struct fscrypt_mode available_modes[] = {
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CBC] = {
- 		.friendly_name = "AES-128-CBC",
--		.cipher_str = "cbc(aes)",
-+		.cipher_str = "essiv(cbc(aes),aes,sha256)",
- 		.keysize = 16,
--		.ivsize = 16,
--		.needs_essiv = true,
-+		.ivsize = 8,
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
- 		.friendly_name = "AES-128-CTS-CBC",
-@@ -377,72 +372,6 @@ fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
- 	return ERR_PTR(err);
- }
- 
--static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
--{
--	struct crypto_shash *tfm = READ_ONCE(essiv_hash_tfm);
--
--	/* init hash transform on demand */
--	if (unlikely(!tfm)) {
--		struct crypto_shash *prev_tfm;
--
--		tfm = crypto_alloc_shash("sha256", 0, 0);
--		if (IS_ERR(tfm)) {
--			fscrypt_warn(NULL,
--				     "error allocating SHA-256 transform: %ld",
--				     PTR_ERR(tfm));
--			return PTR_ERR(tfm);
--		}
--		prev_tfm = cmpxchg(&essiv_hash_tfm, NULL, tfm);
--		if (prev_tfm) {
--			crypto_free_shash(tfm);
--			tfm = prev_tfm;
--		}
--	}
--
--	{
--		SHASH_DESC_ON_STACK(desc, tfm);
--		desc->tfm = tfm;
--
--		return crypto_shash_digest(desc, key, keysize, salt);
--	}
--}
--
--static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
--				int keysize)
--{
--	int err;
--	struct crypto_cipher *essiv_tfm;
--	u8 salt[SHA256_DIGEST_SIZE];
--
--	essiv_tfm = crypto_alloc_cipher("aes", 0, 0);
--	if (IS_ERR(essiv_tfm))
--		return PTR_ERR(essiv_tfm);
--
--	ci->ci_essiv_tfm = essiv_tfm;
--
--	err = derive_essiv_salt(raw_key, keysize, salt);
--	if (err)
--		goto out;
--
--	/*
--	 * Using SHA256 to derive the salt/key will result in AES-256 being
--	 * used for IV generation. File contents encryption will still use the
--	 * configured keysize (AES-128) nevertheless.
--	 */
--	err = crypto_cipher_setkey(essiv_tfm, salt, sizeof(salt));
--	if (err)
--		goto out;
--
--out:
--	memzero_explicit(salt, sizeof(salt));
--	return err;
--}
--
--void __exit fscrypt_essiv_cleanup(void)
--{
--	crypto_free_shash(essiv_hash_tfm);
--}
--
- /*
-  * Given the encryption mode and key (normally the derived key, but for
-  * FS_POLICY_FLAG_DIRECT_KEY mode it's the master key), set up the inode's
-@@ -454,7 +383,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- {
- 	struct fscrypt_master_key *mk;
- 	struct crypto_skcipher *ctfm;
--	int err;
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY) {
- 		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
-@@ -470,19 +398,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- 	ci->ci_master_key = mk;
- 	ci->ci_ctfm = ctfm;
- 
--	if (mode->needs_essiv) {
--		/* ESSIV implies 16-byte IVs which implies !DIRECT_KEY */
--		WARN_ON(mode->ivsize != AES_BLOCK_SIZE);
--		WARN_ON(ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY);
--
--		err = init_essiv_generator(ci, raw_key, mode->keysize);
--		if (err) {
--			fscrypt_warn(inode->i_sb,
--				     "error initializing ESSIV generator for inode %lu: %d",
--				     inode->i_ino, err);
--			return err;
--		}
--	}
- 	return 0;
- }
- 
-@@ -491,12 +406,10 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 	if (!ci)
- 		return;
- 
--	if (ci->ci_master_key) {
-+	if (ci->ci_master_key)
- 		put_master_key(ci->ci_master_key);
--	} else {
-+	else
- 		crypto_free_skcipher(ci->ci_ctfm);
--		crypto_free_cipher(ci->ci_essiv_tfm);
--	}
- 	kmem_cache_free(fscrypt_info_cachep, ci);
- }
- 
--- 
-2.17.1
+> and add a unique prefix to make
+> the fields easier to find:
+> 
+> struct e2fsck_encrypted_file {
+> 	ext2_ino_t   eef_ino;
+> 	unsigned int eef_xattr_size;
+> 	void        *eef_xattr_value;
+> };
+> 
+> > +struct encrypted_files {
+> > +	size_t count;
+> > +	size_t capacity;
+> > +	struct encrypted_file *files;
+> > +};
+> 
+> Searching for "encrypted_file" vs. "encrypted_files" is not great.  Maybe
+> "e2fsck_encrypted_(file_)list" or "e2fsck_encrypted_(file_)array"?  As above,
+> better to have a prefix for these structure fields, like "eel_" or "eea_".
+
+I can change it to *_file_list.  However, did you see that all the other structs
+in e2fsck/e2fsck.h besides e2fsck_struct already have names like:
+
+	struct dir_info
+	struct dx_dir_info
+	struct dx_dirblock_info
+	struct resource_track
+	struct ea_refcount
+	struct extent_tree_level
+	struct extent_tree_info
+
+So for consistency, I'm not sure the "e2fsck_" prefix is warranted.
+
+> 
+> > +int add_encrypted_file(e2fsck_t ctx, struct problem_context *pctx)
+> > +{
+> > +	pctx->errcode = get_encryption_xattr(ctx, ino, &file->xattr_value,
+> > +					     &file->xattr_size);
+> > +	if (pctx->errcode) {
+> > +		if (fix_problem(ctx, PR_1_MISSING_ENCRYPTION_XATTR, pctx))
+> > +			return -1;
+> 
+> At this point, you don't really know if the inode _should_ be encrypted,
+> or if it is a stray bit flip in the EXT4_ENCRYPT_STATE that resulted in
+> add_encrypted_file being called.  This results in the inode being deleted,
+> even though it is possible that it was never encrypted.  This determination
+> should be made later when the inode's parent directory is known.  Either
+> the parent also has an encryption flag+xattr and it _should_ have been
+> encrypted and should be cleared, or the parent doesn't have an encryption
+> flag+xattr and only the child inode flag should be cleared...
+
+How about simply clearing the encrypt flag instead in this case?
+
+That does the right thing in the bit flip case.  It also does the right thing
+when the file is in an encrypted directory (so it's supposed to be encrypted),
+as then the file will be deleted during the encryption policy check in pass 2
+due to PR_2_UNENCRYPTED_FILE.
+
+It wouldn't properly handle the rare case where a new encryption policy was just
+set on a top level directory, and encrypted entries were already created in it
+before the encryption xattr was persisted.  The directory would be marked as
+unencrypted, not deleted as expected.  Though this should be a really rare case,
+and hard to distinguish from a bitflip anyway, so probably not worth worrying
+about...  (And it could also go the other way: xattr was persisted but not the
+encrypt flag, which would be inconvenient to check for.)
+
+> 
+> > +	} else if (!possibly_valid_encryption_xattr(file->xattr_value,
+> > +						    file->xattr_size)) {
+> > +		ext2fs_free_mem(&file->xattr_value);
+> > +		file->xattr_size = 0;
+> > +		if (fix_problem(ctx, PR_1_CORRUPT_ENCRYPTION_XATTR, pctx))
+> > +			return -1;
+> > +	}
+> 
+> 
+> I can see in this case, where the inode is flagged and the encryption xattr
+> exists (named "c" if I read correctly?), but is corrupt, then there isn't
+> much to do for the file.
+> 
+> > @@ -1415,18 +1478,21 @@ skip_checksum:
+> > 			}
+> > 
+> > -		if (encrypted && (dot_state) > 1 &&
+> > -		    encrypted_check_name(ctx, dirent, &cd->pctx)) {
+> 
+> No need for () around "dot_state".
+
+This patch actually removes those unnecessary ().
+
+- Eric
