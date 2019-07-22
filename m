@@ -1,71 +1,73 @@
-Return-Path: <SRS0=ppIH=V3=canb.auug.org.au=sfr@kernel.org>
-Date: Tue, 30 Jul 2019 13:52:16 +1000
-From: Stephen Rothwell <sfr@canb.auug.org.au>
-Subject: Re: linux-next: build warnings after merge of the keys tree
-Message-ID: <20190730135216.377a16d5@canb.auug.org.au>
-In-Reply-To: <20190730034704.GA1966@sol.localdomain>
-References: <20190730123042.1f17cdd4@canb.auug.org.au>
-	<20190730034704.GA1966@sol.localdomain>
+Return-Path: <SRS0=3Y7b=VT=vger.kernel.org=linux-integrity-owner@kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v7 12/17] fs-verity: add SHA-512 support
+Date: Mon, 22 Jul 2019 09:50:56 -0700
+Message-Id: <20190722165101.12840-13-ebiggers@kernel.org>
+In-Reply-To: <20190722165101.12840-1-ebiggers@kernel.org>
+References: <20190722165101.12840-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: multipart/signed; boundary="Sig_/pz/0EQPg5Bro5FDVtffXc5m";
- protocol="application/pgp-signature"; micalg=pgp-sha256
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: David Howells <dhowells@redhat.com>, "Theodore Y. Ts'o" <tytso@mit.edu>, Linux Next Mailing List <linux-next@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
---Sig_/pz/0EQPg5Bro5FDVtffXc5m
-Content-Type: text/plain; charset=US-ASCII
-Content-Transfer-Encoding: quoted-printable
+From: Eric Biggers <ebiggers@google.com>
 
-Hi Eric,
+Add SHA-512 support to fs-verity.  This is primarily a demonstration of
+the trivial changes needed to support a new hash algorithm in fs-verity;
+most users will still use SHA-256, due to the smaller space required to
+store the hashes.  But some users may prefer SHA-512.
 
-On Mon, 29 Jul 2019 20:47:04 -0700 Eric Biggers <ebiggers@kernel.org> wrote:
->
-> On Tue, Jul 30, 2019 at 12:30:42PM +1000, Stephen Rothwell wrote:
-> > +static struct key_acl fsverity_acl =3D {
-> > +	.usage	=3D REFCOUNT_INIT(1),
-> > +	.possessor_viewable =3D true, =20
->=20
-> I don't think .possessor_viewable should be set here, since there's no
-> KEY_POSSESSOR_ACE(KEY_ACE_VIEW) in the ACL.  David, this bool is supposed=
- to
-> mean such an entry is present, right?  Is it really necessary, since it's
-> redundant with the ACL itself?
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/verity/fsverity_private.h  | 2 +-
+ fs/verity/hash_algs.c         | 5 +++++
+ include/uapi/linux/fsverity.h | 1 +
+ 3 files changed, 7 insertions(+), 1 deletion(-)
 
-OK, I can take that out of the patch for tomorrow.
-
-> Otherwise this looks good, thanks Stephen.  I'll want to remove a few of =
-these
-> permissions in a separate patch later, but for now we can just keep it
-> equivalent to the original code as you've done.
-
-Thanks for the review.
-
-> We'll have the same problem in fs/crypto/ in a week or two if/when I apply
-> another patch series.  For that one I'll send you a merge resolution so y=
-ou
-> don't have to do it yourself...
-
-That will be great, thanks.
-
---=20
-Cheers,
-Stephen Rothwell
-
---Sig_/pz/0EQPg5Bro5FDVtffXc5m
-Content-Type: application/pgp-signature
-Content-Description: OpenPGP digital signature
-
------BEGIN PGP SIGNATURE-----
-
-iQEzBAEBCAAdFiEENIC96giZ81tWdLgKAVBC80lX0GwFAl0/vvAACgkQAVBC80lX
-0Gxv3wf+OkCUtz8STSIUcFmQ7bpkopnYRpQOOUQfrUv48mAsFvT1y18ykC1U/dRh
-Ukfl0lLZvqQgwWKBTSOjPj1KSgemYTqa54L7I41N6M1FAd7QVex3R0aAu89FLByp
-jY69OpZjtiEFjst2zO/FO0jIAbt5bWrINwLJ75J/pwFLqN4ZifDwkBm4Z3kNntKc
-7LgyWXZ9EnoUapU1j+eP/TlpZSp7E63itvOrXdvmpKzVDOwgt8HjYPJQqVIGx7iF
-4xr/pJYJo8rskEByhC9SQk8mJRGJmGnnSM4NN/Bvv55w7oJKLxXTfK9XMj+hGvNn
-o1e8IX8TWHJGL4xYkacHch5Qys7JgA==
-=lCUr
------END PGP SIGNATURE-----
-
---Sig_/pz/0EQPg5Bro5FDVtffXc5m--
+diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
+index eaa2b3b93bbf6..02a547f0667c1 100644
+--- a/fs/verity/fsverity_private.h
++++ b/fs/verity/fsverity_private.h
+@@ -29,7 +29,7 @@ struct ahash_request;
+  * Largest digest size among all hash algorithms supported by fs-verity.
+  * Currently assumed to be <= size of fsverity_descriptor::root_hash.
+  */
+-#define FS_VERITY_MAX_DIGEST_SIZE	SHA256_DIGEST_SIZE
++#define FS_VERITY_MAX_DIGEST_SIZE	SHA512_DIGEST_SIZE
+ 
+ /* A hash algorithm supported by fs-verity */
+ struct fsverity_hash_alg {
+diff --git a/fs/verity/hash_algs.c b/fs/verity/hash_algs.c
+index 7df1d67742b84..31e6d7d2389ab 100644
+--- a/fs/verity/hash_algs.c
++++ b/fs/verity/hash_algs.c
+@@ -17,6 +17,11 @@ struct fsverity_hash_alg fsverity_hash_algs[] = {
+ 		.digest_size = SHA256_DIGEST_SIZE,
+ 		.block_size = SHA256_BLOCK_SIZE,
+ 	},
++	[FS_VERITY_HASH_ALG_SHA512] = {
++		.name = "sha512",
++		.digest_size = SHA512_DIGEST_SIZE,
++		.block_size = SHA512_BLOCK_SIZE,
++	},
+ };
+ 
+ /**
+diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
+index 57d1d7fc0c345..da0daf6c193b4 100644
+--- a/include/uapi/linux/fsverity.h
++++ b/include/uapi/linux/fsverity.h
+@@ -14,6 +14,7 @@
+ #include <linux/types.h>
+ 
+ #define FS_VERITY_HASH_ALG_SHA256	1
++#define FS_VERITY_HASH_ALG_SHA512	2
+ 
+ struct fsverity_enable_arg {
+ 	__u32 version;
+-- 
+2.22.0
