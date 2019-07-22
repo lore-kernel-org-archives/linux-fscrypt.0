@@ -1,104 +1,87 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <SRS0=3Y7b=VT=vger.kernel.org=linux-integrity-owner@kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Fri, 26 Jul 2019 15:41:38 -0700
-Message-Id: <20190726224141.14044-14-ebiggers@kernel.org>
-In-Reply-To: <20190726224141.14044-1-ebiggers@kernel.org>
-References: <20190726224141.14044-1-ebiggers@kernel.org>
+Subject: [PATCH v7 06/17] fs-verity: add inode and superblock fields
+Date: Mon, 22 Jul 2019 09:50:50 -0700
+Message-Id: <20190722165101.12840-7-ebiggers@kernel.org>
+In-Reply-To: <20190722165101.12840-1-ebiggers@kernel.org>
+References: <20190722165101.12840-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v7 13/16] ext4: wire up new fscrypt ioctls
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+Content-Transfer-Encoding: 8bit
+Sender: linux-integrity-owner@vger.kernel.org
 To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Wire up the new ioctls for adding and removing fscrypt keys to/from the
-filesystem, and the new ioctl for retrieving v2 encryption policies.
+Analogous to fs/crypto/, add fields to the VFS inode and superblock for
+use by the fs/verity/ support layer:
 
-FS_IOC_REMOVE_ENCRYPTION_KEY also required making ext4_drop_inode() call
-fscrypt_drop_inode().
+- ->s_vop: points to the fsverity_operations if the filesystem supports
+  fs-verity, otherwise is NULL.
 
-For more details see Documentation/filesystems/fscrypt.rst and the
-fscrypt patches that added the implementation of these ioctls.
+- ->i_verity_info: points to cached fs-verity information for the inode
+  after someone opens it, otherwise is NULL.
 
+- S_VERITY: bit in ->i_flags that identifies verity inodes, even when
+  they haven't been opened yet and thus still have NULL ->i_verity_info.
+
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/ioctl.c | 24 ++++++++++++++++++++++++
- fs/ext4/super.c |  3 +++
- 2 files changed, 27 insertions(+)
+ include/linux/fs.h | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
 
-diff --git a/fs/ext4/ioctl.c b/fs/ext4/ioctl.c
-index 442f7ef873fc3..616fcf9eb52ec 100644
---- a/fs/ext4/ioctl.c
-+++ b/fs/ext4/ioctl.c
-@@ -1115,6 +1115,26 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
- 	case EXT4_IOC_GET_ENCRYPTION_POLICY:
- 		return fscrypt_ioctl_get_policy(filp, (void __user *)arg);
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 56b8e358af5c1..b3a0f5bfb06d7 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -64,6 +64,8 @@ struct workqueue_struct;
+ struct iov_iter;
+ struct fscrypt_info;
+ struct fscrypt_operations;
++struct fsverity_info;
++struct fsverity_operations;
+ struct fs_context;
+ struct fs_parameter_description;
  
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+		if (!ext4_has_feature_encrypt(sb))
-+			return -EOPNOTSUPP;
-+		return fscrypt_ioctl_get_policy_ex(filp, (void __user *)arg);
-+
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+		if (!ext4_has_feature_encrypt(sb))
-+			return -EOPNOTSUPP;
-+		return fscrypt_ioctl_add_key(filp, (void __user *)arg);
-+
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+		if (!ext4_has_feature_encrypt(sb))
-+			return -EOPNOTSUPP;
-+		return fscrypt_ioctl_remove_key(filp, (const void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-+		if (!ext4_has_feature_encrypt(sb))
-+			return -EOPNOTSUPP;
-+		return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
-+
- 	case EXT4_IOC_FSGETXATTR:
- 	{
- 		struct fsxattr fa;
-@@ -1231,6 +1251,10 @@ long ext4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- 	case EXT4_IOC_SET_ENCRYPTION_POLICY:
- 	case EXT4_IOC_GET_ENCRYPTION_PWSALT:
- 	case EXT4_IOC_GET_ENCRYPTION_POLICY:
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
- 	case EXT4_IOC_SHUTDOWN:
- 	case FS_IOC_GETFSMAP:
- 		break;
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 4079605d437ae..757819139b8f7 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1107,6 +1107,9 @@ static int ext4_drop_inode(struct inode *inode)
- {
- 	int drop = generic_drop_inode(inode);
+@@ -723,6 +725,10 @@ struct inode {
+ 	struct fscrypt_info	*i_crypt_info;
+ #endif
  
-+	if (!drop)
-+		drop = fscrypt_drop_inode(inode);
++#ifdef CONFIG_FS_VERITY
++	struct fsverity_info	*i_verity_info;
++#endif
 +
- 	trace_ext4_drop_inode(inode, drop);
- 	return drop;
- }
+ 	void			*i_private; /* fs or device private pointer */
+ } __randomize_layout;
+ 
+@@ -1427,6 +1433,9 @@ struct super_block {
+ 	const struct xattr_handler **s_xattr;
+ #ifdef CONFIG_FS_ENCRYPTION
+ 	const struct fscrypt_operations	*s_cop;
++#endif
++#ifdef CONFIG_FS_VERITY
++	const struct fsverity_operations *s_vop;
+ #endif
+ 	struct hlist_bl_head	s_roots;	/* alternate root dentries for NFS */
+ 	struct list_head	s_mounts;	/* list of mounts; _not_ for fs use */
+@@ -1965,6 +1974,7 @@ struct super_operations {
+ #endif
+ #define S_ENCRYPTED	16384	/* Encrypted file (using fs/crypto/) */
+ #define S_CASEFOLD	32768	/* Casefolded file */
++#define S_VERITY	65536	/* Verity file (using fs/verity/) */
+ 
+ /*
+  * Note that nosuid etc flags are inode-specific: setting some file-system
+@@ -2006,6 +2016,7 @@ static inline bool sb_rdonly(const struct super_block *sb) { return sb->s_flags
+ #define IS_DAX(inode)		((inode)->i_flags & S_DAX)
+ #define IS_ENCRYPTED(inode)	((inode)->i_flags & S_ENCRYPTED)
+ #define IS_CASEFOLDED(inode)	((inode)->i_flags & S_CASEFOLD)
++#define IS_VERITY(inode)	((inode)->i_flags & S_VERITY)
+ 
+ #define IS_WHITEOUT(inode)	(S_ISCHR(inode->i_mode) && \
+ 				 (inode)->i_rdev == WHITEOUT_DEV)
 -- 
 2.22.0
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
