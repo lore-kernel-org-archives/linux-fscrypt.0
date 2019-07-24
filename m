@@ -1,50 +1,43 @@
-Return-Path: <SRS0=3Y7b=VT=vger.kernel.org=linux-integrity-owner@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:37434 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S2404347AbfGXTy2 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 24 Jul 2019 15:54:28 -0400
+Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 407C920665
+        for <linux-fscrypt@vger.kernel.org>; Wed, 24 Jul 2019 19:54:28 +0000 (UTC)
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v7 02/17] fs-verity: add MAINTAINERS file entry
-Date: Mon, 22 Jul 2019 09:50:46 -0700
-Message-Id: <20190722165101.12840-3-ebiggers@kernel.org>
-In-Reply-To: <20190722165101.12840-1-ebiggers@kernel.org>
-References: <20190722165101.12840-1-ebiggers@kernel.org>
+Subject: [PATCH 0/4] fscrypt: logging improvements, and use ENOPKG
+Date: Wed, 24 Jul 2019 12:54:18 -0700
+Message-Id: <20190724195422.42495-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Patches 1-3 make some small improvements to warning and error messages
+in fs/crypto/, including logging all types of unsupported encryption
+contexts rather than just ones where the encryption modes are invalid.
 
-fs-verity will be jointly maintained by Eric Biggers and Theodore Ts'o.
+Patch 4 changes the error code for "missing crypto API support" from
+ENOENT to ENOPKG, to avoid an ambiguity.  This is a logically separate
+change, but it's in this series to avoid conflicts.
 
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- MAINTAINERS | 12 ++++++++++++
- 1 file changed, 12 insertions(+)
+Eric Biggers (4):
+  fscrypt: make fscrypt_msg() take inode instead of super_block
+  fscrypt: improve warning messages for unsupported encryption contexts
+  fscrypt: improve warnings for missing crypto API support
+  fscrypt: use ENOPKG when crypto API support missing
 
-diff --git a/MAINTAINERS b/MAINTAINERS
-index 783569e3c4b48..2b2af4d411652 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -6629,6 +6629,18 @@ S:	Maintained
- F:	fs/notify/
- F:	include/linux/fsnotify*.h
- 
-+FSVERITY: READ-ONLY FILE-BASED AUTHENTICITY PROTECTION
-+M:	Eric Biggers <ebiggers@kernel.org>
-+M:	Theodore Y. Ts'o <tytso@mit.edu>
-+L:	linux-fscrypt@vger.kernel.org
-+Q:	https://patchwork.kernel.org/project/linux-fscrypt/list/
-+T:	git git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git fsverity
-+S:	Supported
-+F:	fs/verity/
-+F:	include/linux/fsverity.h
-+F:	include/uapi/linux/fsverity.h
-+F:	Documentation/filesystems/fsverity.rst
-+
- FUJITSU LAPTOP EXTRAS
- M:	Jonathan Woithe <jwoithe@just42.net>
- L:	platform-driver-x86@vger.kernel.org
+ fs/crypto/crypto.c          | 13 ++++----
+ fs/crypto/fname.c           |  8 ++---
+ fs/crypto/fscrypt_private.h | 10 +++---
+ fs/crypto/hooks.c           |  6 ++--
+ fs/crypto/keyinfo.c         | 61 +++++++++++++++++++++++++------------
+ 5 files changed, 57 insertions(+), 41 deletions(-)
+
 -- 
-2.22.0
+2.22.0.657.g960e92d24f-goog
