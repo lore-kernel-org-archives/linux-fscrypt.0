@@ -1,17 +1,19 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:51296 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:37490 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2390683AbfGXTqN (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 24 Jul 2019 15:46:13 -0400
+        id S2404354AbfGXTya (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 24 Jul 2019 15:54:30 -0400
 Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 6C35022BE8
-        for <linux-fscrypt@vger.kernel.org>; Wed, 24 Jul 2019 19:46:12 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 003E922BED
+        for <linux-fscrypt@vger.kernel.org>; Wed, 24 Jul 2019 19:54:28 +0000 (UTC)
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH] fscrypt: clean up base64 encoding/decoding
-Date: Wed, 24 Jul 2019 12:46:06 -0700
-Message-Id: <20190724194606.40483-1-ebiggers@kernel.org>
+Subject: [PATCH 4/4] fscrypt: use ENOPKG when crypto API support missing
+Date: Wed, 24 Jul 2019 12:54:22 -0700
+Message-Id: <20190724195422.42495-5-ebiggers@kernel.org>
+In-Reply-To: <20190724195422.42495-1-ebiggers@kernel.org>
+References: <20190724195422.42495-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -20,121 +22,61 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Some minor cleanups for the code that base64 encodes and decodes
-encrypted filenames and long name digests:
+Return ENOPKG rather than ENOENT when trying to open a file that's
+encrypted using algorithms not available in the kernel's crypto API.
 
-- Rename "digest_{encode,decode}()" => "base64_{encode,decode}()" since
-  they are used for filenames too, not just for long name digests.
-- Replace 'while' loops with more conventional 'for' loops.
-- Use 'u8' for binary data.  Keep 'char' for string data.
-- Fully constify the lookup table (pointer was not const).
-- Improve comment.
+This avoids an ambiguity, since ENOENT is also returned when the file
+doesn't exist.
 
-No actual change in behavior.
+Note: this is the same approach I'm taking for fs-verity.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fname.c | 34 +++++++++++++++++-----------------
- 1 file changed, 17 insertions(+), 17 deletions(-)
+ fs/crypto/keyinfo.c | 20 +++++++++++---------
+ 1 file changed, 11 insertions(+), 9 deletions(-)
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 00d150ff30332b..6f9daba991684e 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -127,44 +127,45 @@ static int fname_decrypt(struct inode *inode,
- 	return 0;
- }
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index b75678587c3a85..2129943002335c 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -237,13 +237,14 @@ allocate_skcipher_for_mode(struct fscrypt_mode *mode, const u8 *raw_key,
  
--static const char *lookup_table =
-+static const char lookup_table[65] =
- 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+,";
- 
- #define BASE64_CHARS(nbytes)	DIV_ROUND_UP((nbytes) * 4, 3)
- 
- /**
-- * digest_encode() -
-+ * base64_encode() -
-  *
-- * Encodes the input digest using characters from the set [a-zA-Z0-9_+].
-+ * Encodes the input string using characters from the set [A-Za-z0-9+,].
-  * The encoded string is roughly 4/3 times the size of the input string.
-+ *
-+ * Return: length of the encoded string
-  */
--static int digest_encode(const char *src, int len, char *dst)
-+static int base64_encode(const u8 *src, int len, char *dst)
- {
--	int i = 0, bits = 0, ac = 0;
-+	int i, bits = 0, ac = 0;
- 	char *cp = dst;
- 
--	while (i < len) {
--		ac += (((unsigned char) src[i]) << bits);
-+	for (i = 0; i < len; i++) {
-+		ac += src[i] << bits;
- 		bits += 8;
- 		do {
- 			*cp++ = lookup_table[ac & 0x3f];
- 			ac >>= 6;
- 			bits -= 6;
- 		} while (bits >= 6);
--		i++;
+ 	tfm = crypto_alloc_skcipher(mode->cipher_str, 0, 0);
+ 	if (IS_ERR(tfm)) {
+-		if (PTR_ERR(tfm) == -ENOENT)
++		if (PTR_ERR(tfm) == -ENOENT) {
+ 			fscrypt_warn(inode,
+ 				     "Missing crypto API support for %s (API name: \"%s\")",
+ 				     mode->friendly_name, mode->cipher_str);
+-		else
+-			fscrypt_err(inode, "Error allocating '%s' transform: %ld",
+-				    mode->cipher_str, PTR_ERR(tfm));
++			return ERR_PTR(-ENOPKG);
++		}
++		fscrypt_err(inode, "Error allocating '%s' transform: %ld",
++			    mode->cipher_str, PTR_ERR(tfm));
+ 		return tfm;
  	}
- 	if (bits)
- 		*cp++ = lookup_table[ac & 0x3f];
- 	return cp - dst;
- }
+ 	if (unlikely(!mode->logged_impl_name)) {
+@@ -389,13 +390,14 @@ static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
  
--static int digest_decode(const char *src, int len, char *dst)
-+static int base64_decode(const char *src, int len, u8 *dst)
- {
--	int i = 0, bits = 0, ac = 0;
-+	int i, bits = 0, ac = 0;
- 	const char *p;
--	char *cp = dst;
-+	u8 *cp = dst;
- 
--	while (i < len) {
-+	for (i = 0; i < len; i++) {
- 		p = strchr(lookup_table, src[i]);
- 		if (p == NULL || src[i] == 0)
- 			return -2;
-@@ -175,7 +176,6 @@ static int digest_decode(const char *src, int len, char *dst)
- 			ac >>= 8;
- 			bits -= 8;
+ 		tfm = crypto_alloc_shash("sha256", 0, 0);
+ 		if (IS_ERR(tfm)) {
+-			if (PTR_ERR(tfm) == -ENOENT)
++			if (PTR_ERR(tfm) == -ENOENT) {
+ 				fscrypt_warn(NULL,
+ 					     "Missing crypto API support for SHA-256");
+-			else
+-				fscrypt_err(NULL,
+-					    "Error allocating SHA-256 transform: %ld",
+-					    PTR_ERR(tfm));
++				return -ENOPKG;
++			}
++			fscrypt_err(NULL,
++				    "Error allocating SHA-256 transform: %ld",
++				    PTR_ERR(tfm));
+ 			return PTR_ERR(tfm);
  		}
--		i++;
- 	}
- 	if (ac)
- 		return -1;
-@@ -272,7 +272,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
- 		return fname_decrypt(inode, iname, oname);
- 
- 	if (iname->len <= FSCRYPT_FNAME_MAX_UNDIGESTED_SIZE) {
--		oname->len = digest_encode(iname->name, iname->len,
-+		oname->len = base64_encode(iname->name, iname->len,
- 					   oname->name);
- 		return 0;
- 	}
-@@ -287,7 +287,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
- 	       FSCRYPT_FNAME_DIGEST(iname->name, iname->len),
- 	       FSCRYPT_FNAME_DIGEST_SIZE);
- 	oname->name[0] = '_';
--	oname->len = 1 + digest_encode((const char *)&digested_name,
-+	oname->len = 1 + base64_encode((const u8 *)&digested_name,
- 				       sizeof(digested_name), oname->name + 1);
- 	return 0;
- }
-@@ -380,8 +380,8 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	if (fname->crypto_buf.name == NULL)
- 		return -ENOMEM;
- 
--	ret = digest_decode(iname->name + digested, iname->len - digested,
--				fname->crypto_buf.name);
-+	ret = base64_decode(iname->name + digested, iname->len - digested,
-+			    fname->crypto_buf.name);
- 	if (ret < 0) {
- 		ret = -ENOENT;
- 		goto errout;
+ 		prev_tfm = cmpxchg(&essiv_hash_tfm, NULL, tfm);
 -- 
 2.22.0.657.g960e92d24f-goog
