@@ -1,168 +1,87 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-lf1-f67.google.com ([209.85.167.67]:45558 "EHLO
-        mail-lf1-f67.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726635AbfGBQsk (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 2 Jul 2019 12:48:40 -0400
-Received: by mail-lf1-f67.google.com with SMTP id u10so11860014lfm.12
-        for <linux-fscrypt@vger.kernel.org>; Tue, 02 Jul 2019 09:48:38 -0700 (PDT)
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v7 6/7] crypto: arm64/aes-cts-cbc - factor out CBC en/decryption of a walk
-Date: Tue,  2 Jul 2019 18:48:14 +0200
-Message-Id: <20190702164815.6341-7-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
-References: <20190702164815.6341-1-ard.biesheuvel@linaro.org>
+Received: from mail.kernel.org ([198.145.29.99]:49322 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S2390979AbfGXTp0 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 24 Jul 2019 15:45:26 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH] fscrypt: remove loadable module related code
+Date: Wed, 24 Jul 2019 12:44:38 -0700
+Message-Id: <20190724194438.39975-1-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The plain CBC driver and the CTS one share some code that iterates over
-a scatterwalk and invokes the CBC asm code to do the processing. The
-upcoming ESSIV/CBC mode will clone that pattern for the third time, so
-let's factor it out first.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Since commit 643fa9612bf1 ("fscrypt: remove filesystem specific build
+config option"), fs/crypto/ can no longer be built as a loadable module.
+Thus it no longer needs a module_exit function, nor a MODULE_LICENSE.
+So remove them, and change module_init to late_initcall.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- arch/arm64/crypto/aes-glue.c | 82 ++++++++++----------
- 1 file changed, 40 insertions(+), 42 deletions(-)
+ fs/crypto/crypto.c          | 20 +-------------------
+ fs/crypto/fscrypt_private.h |  2 --
+ fs/crypto/keyinfo.c         |  5 -----
+ 3 files changed, 1 insertion(+), 26 deletions(-)
 
-diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
-index f0ceb545bd1e..11b85ce02d7a 100644
---- a/arch/arm64/crypto/aes-glue.c
-+++ b/arch/arm64/crypto/aes-glue.c
-@@ -185,46 +185,64 @@ static int ecb_decrypt(struct skcipher_request *req)
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 45c3d0427fb253..d52c788b723d01 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -510,22 +510,4 @@ static int __init fscrypt_init(void)
+ fail:
+ 	return -ENOMEM;
+ }
+-module_init(fscrypt_init)
+-
+-/**
+- * fscrypt_exit() - Shutdown the fs encryption system
+- */
+-static void __exit fscrypt_exit(void)
+-{
+-	fscrypt_destroy();
+-
+-	if (fscrypt_read_workqueue)
+-		destroy_workqueue(fscrypt_read_workqueue);
+-	kmem_cache_destroy(fscrypt_ctx_cachep);
+-	kmem_cache_destroy(fscrypt_info_cachep);
+-
+-	fscrypt_essiv_cleanup();
+-}
+-module_exit(fscrypt_exit);
+-
+-MODULE_LICENSE("GPL");
++late_initcall(fscrypt_init)
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 8978eec9d766dd..224178294371a4 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -166,6 +166,4 @@ struct fscrypt_mode {
+ 	bool needs_essiv;
+ };
+ 
+-extern void __exit fscrypt_essiv_cleanup(void);
+-
+ #endif /* _FSCRYPT_PRIVATE_H */
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 207ebed918c159..9bcadc09e2aded 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -437,11 +437,6 @@ static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
  	return err;
  }
  
--static int cbc_encrypt(struct skcipher_request *req)
-+static int cbc_encrypt_walk(struct skcipher_request *req,
-+			    struct skcipher_walk *walk)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
- 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
--	int err, rounds = 6 + ctx->key_length / 4;
--	struct skcipher_walk walk;
-+	int err = 0, rounds = 6 + ctx->key_length / 4;
- 	unsigned int blocks;
- 
--	err = skcipher_walk_virt(&walk, req, false);
+-void __exit fscrypt_essiv_cleanup(void)
+-{
+-	crypto_free_shash(essiv_hash_tfm);
+-}
 -
--	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
-+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
- 		kernel_neon_begin();
--		aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
--				ctx->key_enc, rounds, blocks, walk.iv);
-+		aes_cbc_encrypt(walk->dst.virt.addr, walk->src.virt.addr,
-+				ctx->key_enc, rounds, blocks, walk->iv);
- 		kernel_neon_end();
--		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
- 	}
- 	return err;
- }
- 
--static int cbc_decrypt(struct skcipher_request *req)
-+static int cbc_encrypt(struct skcipher_request *req)
- {
--	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
--	int err, rounds = 6 + ctx->key_length / 4;
- 	struct skcipher_walk walk;
--	unsigned int blocks;
-+	int err;
- 
- 	err = skcipher_walk_virt(&walk, req, false);
-+	if (err)
-+		return err;
-+	return cbc_encrypt_walk(req, &walk);
-+}
- 
--	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
-+static int cbc_decrypt_walk(struct skcipher_request *req,
-+			    struct skcipher_walk *walk)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err = 0, rounds = 6 + ctx->key_length / 4;
-+	unsigned int blocks;
-+
-+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
- 		kernel_neon_begin();
--		aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
--				ctx->key_dec, rounds, blocks, walk.iv);
-+		aes_cbc_decrypt(walk->dst.virt.addr, walk->src.virt.addr,
-+				ctx->key_dec, rounds, blocks, walk->iv);
- 		kernel_neon_end();
--		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
- 	}
- 	return err;
- }
- 
-+static int cbc_decrypt(struct skcipher_request *req)
-+{
-+	struct skcipher_walk walk;
-+	int err;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+	if (err)
-+		return err;
-+	return cbc_decrypt_walk(req, &walk);
-+}
-+
- static int cts_cbc_init_tfm(struct crypto_skcipher *tfm)
- {
- 	crypto_skcipher_set_reqsize(tfm, sizeof(struct cts_cbc_req_ctx));
-@@ -250,22 +268,12 @@ static int cts_cbc_encrypt(struct skcipher_request *req)
- 	}
- 
- 	if (cbc_blocks > 0) {
--		unsigned int blocks;
--
- 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
- 					   cbc_blocks * AES_BLOCK_SIZE,
- 					   req->iv);
- 
--		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
--
--		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
--			kernel_neon_begin();
--			aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
--					ctx->key_enc, rounds, blocks, walk.iv);
--			kernel_neon_end();
--			err = skcipher_walk_done(&walk,
--						 walk.nbytes % AES_BLOCK_SIZE);
--		}
-+		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
-+		      cbc_encrypt_walk(&rctx->subreq, &walk);
- 		if (err)
- 			return err;
- 
-@@ -315,22 +323,12 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
- 	}
- 
- 	if (cbc_blocks > 0) {
--		unsigned int blocks;
--
- 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
- 					   cbc_blocks * AES_BLOCK_SIZE,
- 					   req->iv);
- 
--		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
--
--		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
--			kernel_neon_begin();
--			aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
--					ctx->key_dec, rounds, blocks, walk.iv);
--			kernel_neon_end();
--			err = skcipher_walk_done(&walk,
--						 walk.nbytes % AES_BLOCK_SIZE);
--		}
-+		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
-+		      cbc_decrypt_walk(&rctx->subreq, &walk);
- 		if (err)
- 			return err;
- 
+ /*
+  * Given the encryption mode and key (normally the derived key, but for
+  * FS_POLICY_FLAG_DIRECT_KEY mode it's the master key), set up the inode's
 -- 
-2.17.1
+2.22.0.657.g960e92d24f-goog
