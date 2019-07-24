@@ -1,98 +1,80 @@
-Return-Path: <SRS0=3Y7b=VT=vger.kernel.org=linux-integrity-owner@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:37462 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S2404351AbfGXTy3 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 24 Jul 2019 15:54:29 -0400
+Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 9A83F217D4
+        for <linux-fscrypt@vger.kernel.org>; Wed, 24 Jul 2019 19:54:28 +0000 (UTC)
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v7 03/17] fs-verity: add UAPI header
-Date: Mon, 22 Jul 2019 09:50:47 -0700
-Message-Id: <20190722165101.12840-4-ebiggers@kernel.org>
-In-Reply-To: <20190722165101.12840-1-ebiggers@kernel.org>
-References: <20190722165101.12840-1-ebiggers@kernel.org>
+Subject: [PATCH 2/4] fscrypt: improve warning messages for unsupported encryption contexts
+Date: Wed, 24 Jul 2019 12:54:20 -0700
+Message-Id: <20190724195422.42495-3-ebiggers@kernel.org>
+In-Reply-To: <20190724195422.42495-1-ebiggers@kernel.org>
+References: <20190724195422.42495-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
+Sender: linux-fscrypt-owner@vger.kernel.org
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add the UAPI header for fs-verity, including two ioctls:
+When fs/crypto/ encounters an inode with an invalid encryption context,
+currently it prints a warning if the pair of encryption modes are
+unrecognized, but it's silent if there are other problems such as
+unsupported context size, format, or flags.  To help people debug such
+situations, add more warning messages.
 
-- FS_IOC_ENABLE_VERITY
-- FS_IOC_MEASURE_VERITY
-
-These ioctls are documented in the "User API" section of
-Documentation/filesystems/fsverity.rst.
-
-Examples of using these ioctls can be found in fsverity-utils
-(https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git).
-
-I've also written xfstests that test these ioctls
-(https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git/log/?h=fsverity).
-
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- Documentation/ioctl/ioctl-number.rst |  1 +
- include/uapi/linux/fsverity.h        | 39 ++++++++++++++++++++++++++++
- 2 files changed, 40 insertions(+)
- create mode 100644 include/uapi/linux/fsverity.h
+ fs/crypto/keyinfo.c | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
 
-diff --git a/Documentation/ioctl/ioctl-number.rst b/Documentation/ioctl/ioctl-number.rst
-index 7f8dcae7a2308..bef79cd4c6b4d 100644
---- a/Documentation/ioctl/ioctl-number.rst
-+++ b/Documentation/ioctl/ioctl-number.rst
-@@ -233,6 +233,7 @@ Code  Seq#    Include File                                           Comments
- 'f'   00-0F  fs/ext4/ext4.h                                          conflict!
- 'f'   00-0F  linux/fs.h                                              conflict!
- 'f'   00-0F  fs/ocfs2/ocfs2_fs.h                                     conflict!
-+'f'   81-8F  linux/fsverity.h
- 'g'   00-0F  linux/usb/gadgetfs.h
- 'g'   20-2F  linux/usb/g_printer.h
- 'h'   00-7F                                                          conflict! Charon filesystem
-diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
-new file mode 100644
-index 0000000000000..57d1d7fc0c345
---- /dev/null
-+++ b/include/uapi/linux/fsverity.h
-@@ -0,0 +1,39 @@
-+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-+/*
-+ * fs-verity user API
-+ *
-+ * These ioctls can be used on filesystems that support fs-verity.  See the
-+ * "User API" section of Documentation/filesystems/fsverity.rst.
-+ *
-+ * Copyright 2019 Google LLC
-+ */
-+#ifndef _UAPI_LINUX_FSVERITY_H
-+#define _UAPI_LINUX_FSVERITY_H
-+
-+#include <linux/ioctl.h>
-+#include <linux/types.h>
-+
-+#define FS_VERITY_HASH_ALG_SHA256	1
-+
-+struct fsverity_enable_arg {
-+	__u32 version;
-+	__u32 hash_algorithm;
-+	__u32 block_size;
-+	__u32 salt_size;
-+	__u64 salt_ptr;
-+	__u32 sig_size;
-+	__u32 __reserved1;
-+	__u64 sig_ptr;
-+	__u64 __reserved2[11];
-+};
-+
-+struct fsverity_digest {
-+	__u16 digest_algorithm;
-+	__u16 digest_size; /* input/output */
-+	__u8 digest[];
-+};
-+
-+#define FS_IOC_ENABLE_VERITY	_IOW('f', 133, struct fsverity_enable_arg)
-+#define FS_IOC_MEASURE_VERITY	_IOWR('f', 134, struct fsverity_digest)
-+
-+#endif /* _UAPI_LINUX_FSVERITY_H */
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index d0eb901a6d1a9f..e5ab18d98f32a3 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -510,8 +510,12 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	res = inode->i_sb->s_cop->get_context(inode, &ctx, sizeof(ctx));
+ 	if (res < 0) {
+ 		if (!fscrypt_dummy_context_enabled(inode) ||
+-		    IS_ENCRYPTED(inode))
++		    IS_ENCRYPTED(inode)) {
++			fscrypt_warn(inode,
++				     "Error %d getting encryption context",
++				     res);
+ 			return res;
++		}
+ 		/* Fake up a context for an unencrypted directory */
+ 		memset(&ctx, 0, sizeof(ctx));
+ 		ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
+@@ -519,14 +523,22 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 		ctx.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
+ 		memset(ctx.master_key_descriptor, 0x42, FS_KEY_DESCRIPTOR_SIZE);
+ 	} else if (res != sizeof(ctx)) {
++		fscrypt_warn(inode,
++			     "Unknown encryption context size (%d bytes)", res);
+ 		return -EINVAL;
+ 	}
+ 
+-	if (ctx.format != FS_ENCRYPTION_CONTEXT_FORMAT_V1)
++	if (ctx.format != FS_ENCRYPTION_CONTEXT_FORMAT_V1) {
++		fscrypt_warn(inode, "Unknown encryption context version (%d)",
++			     ctx.format);
+ 		return -EINVAL;
++	}
+ 
+-	if (ctx.flags & ~FS_POLICY_FLAGS_VALID)
++	if (ctx.flags & ~FS_POLICY_FLAGS_VALID) {
++		fscrypt_warn(inode, "Unknown encryption context flags (0x%02x)",
++			     ctx.flags);
+ 		return -EINVAL;
++	}
+ 
+ 	crypt_info = kmem_cache_zalloc(fscrypt_info_cachep, GFP_NOFS);
+ 	if (!crypt_info)
 -- 
-2.22.0
+2.22.0.657.g960e92d24f-goog
