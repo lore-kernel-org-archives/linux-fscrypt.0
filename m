@@ -1,58 +1,37 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wr1-f67.google.com ([209.85.221.67]:44807 "EHLO
-        mail-wr1-f67.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1728190AbfGAI6v (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 1 Jul 2019 04:58:51 -0400
-Subject: Re: [PATCH v6 3/7] md: dm-crypt: infer ESSIV block cipher from cipher
- string directly
-References: <20190628152112.914-1-ard.biesheuvel@linaro.org>
- <20190628152112.914-4-ard.biesheuvel@linaro.org>
-From: Milan Broz <gmazyland@gmail.com>
-Message-ID: <767ec609-d805-9bc2-1a73-d5000ce7f109@gmail.com>
-Date: Mon, 1 Jul 2019 10:58:47 +0200
+Return-Path: <SRS0=TTB/=VZ=mit.edu=tytso@kernel.org>
+Date: Sun, 28 Jul 2019 11:09:27 -0400
+From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Subject: Re: [PATCH v7 04/16] fscrypt: add ->ci_inode to fscrypt_info
+Message-ID: <20190728150927.GD6088@mit.edu>
+References: <20190726224141.14044-1-ebiggers@kernel.org>
+ <20190726224141.14044-5-ebiggers@kernel.org>
 MIME-Version: 1.0
-In-Reply-To: <20190628152112.914-4-ard.biesheuvel@linaro.org>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190726224141.14044-5-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On 28/06/2019 17:21, Ard Biesheuvel wrote:
-> Instead of allocating a crypto skcipher tfm 'foo' and attempting to
-> infer the encapsulated block cipher from the driver's 'name' field,
-> directly parse the string that we used to allocated the tfm. These
-> are always identical (unless the allocation failed, in which case
-> we bail anyway), but using the string allows us to use it in the
-> allocation, which is something we will need when switching to the
-> 'essiv' crypto API template.
+On Fri, Jul 26, 2019 at 03:41:29PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
 > 
-> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> Add an inode back-pointer to 'struct fscrypt_info', such that
+> inode->i_crypt_info->ci_inode == inode.
+> 
+> This will be useful for:
+> 
+> 1. Evicting the inodes when a fscrypt key is removed, since we'll track
+>    the inodes using a given key by linking their fscrypt_infos together,
+>    rather than the inodes directly.  This avoids bloating 'struct inode'
+>    with a new list_head.
+> 
+> 2. Simplifying the per-file key setup, since the inode pointer won't
+>    have to be passed around everywhere just in case something goes wrong
+>    and it's needed for fscrypt_warn().
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
->  drivers/md/dm-crypt.c | 35 +++++++++-----------
+Looks good, feel free to add:
 
-> @@ -2445,21 +2451,10 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
->  
->  	/* Alloc AEAD, can be used only in new format. */
-
-^^ This comment is now obsolete, please move it with the code or remove it.
-
->  	if (crypt_integrity_aead(cc)) {
-> -		ret = crypt_ctr_auth_cipher(cc, cipher_api);
-> -		if (ret < 0) {
-> -			ti->error = "Invalid AEAD cipher spec";
-> -			return -ENOMEM;
-> -		}
->  		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
->  	} else
->  		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
-
-Otherwise
-
-Reviewed-by: Milan Broz <gmazyland@gmail.com>
-
-Thanks,
-Milan
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
