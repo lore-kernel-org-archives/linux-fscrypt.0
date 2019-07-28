@@ -1,142 +1,36 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:42084 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726329AbfGAS1a (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 1 Jul 2019 14:27:30 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v3 4/8] generic: test access controls on the fs-verity ioctls
-Date: Mon,  1 Jul 2019 11:25:43 -0700
-Message-Id: <20190701182547.165856-5-ebiggers@kernel.org>
-In-Reply-To: <20190701182547.165856-1-ebiggers@kernel.org>
-References: <20190701182547.165856-1-ebiggers@kernel.org>
+Return-Path: <SRS0=TTB/=VZ=mit.edu=tytso@kernel.org>
+Date: Sun, 28 Jul 2019 17:22:26 -0400
+From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Subject: Re: [PATCH v7 11/16] fscrypt: allow unprivileged users to add/remove
+ keys for v2 policies
+Message-ID: <20190728212226.GL6088@mit.edu>
+References: <20190726224141.14044-1-ebiggers@kernel.org>
+ <20190726224141.14044-12-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190726224141.14044-12-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Jul 26, 2019 at 03:41:36PM -0700, Eric Biggers wrote:
+> diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+> index 56e085c2ed8c6..307533d4d7c51 100644
+> --- a/fs/crypto/keyring.c
+> +++ b/fs/crypto/keyring.c
+> +		if (mk->mk_users->keys.nr_leaves_on_tree != 0) {
+> +			/*
+> +			 * Other users have still added the key too.  We removed
+> +			 * the current user's usage of the key if there was one,
+> +			 * but we still can't remove the key itself.
+> +			 */
+> +			err = -EUSERS;
+> +			up_write(&key->sem);
+> +			goto out_put_key;
 
-Test access controls on the fs-verity ioctls.  FS_IOC_MEASURE_VERITY is
-allowed on any file, whereas FS_IOC_ENABLE_VERITY requires write access.
+I commented about this on an earlier patch, but I'm not convinced we
+should be returning EUSERS here.  Returning success might be a better
+choice.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/901     | 73 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/901.out | 14 +++++++++
- tests/generic/group   |  1 +
- 3 files changed, 88 insertions(+)
- create mode 100755 tests/generic/901
- create mode 100644 tests/generic/901.out
-
-diff --git a/tests/generic/901 b/tests/generic/901
-new file mode 100755
-index 00000000..56dab587
---- /dev/null
-+++ b/tests/generic/901
-@@ -0,0 +1,73 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2018 Google LLC
-+#
-+# FS QA Test generic/901
-+#
-+# Test access controls on the fs-verity ioctls.  FS_IOC_MEASURE_VERITY is
-+# allowed on any file, whereas FS_IOC_ENABLE_VERITY requires write access.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/verity
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+_require_scratch_verity
-+_require_user
-+_require_chattr ia
-+
-+_scratch_mkfs_verity &>> $seqres.full
-+_scratch_mount
-+fsv_file=$SCRATCH_MNT/file.fsv
-+
-+_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY doesn't require root"
-+echo foo > $fsv_file
-+chmod 666 $fsv_file
-+_user_do "$FSVERITY_PROG enable $fsv_file"
-+
-+_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires write access"
-+echo foo > $fsv_file >> $seqres.full
-+chmod 444 $fsv_file
-+_user_do "$FSVERITY_PROG enable $fsv_file" |& _filter_scratch
-+
-+_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires !append-only"
-+echo foo > $fsv_file >> $seqres.full
-+$CHATTR_PROG +a $fsv_file
-+$FSVERITY_PROG enable $fsv_file |& _filter_scratch
-+$CHATTR_PROG -a $fsv_file
-+
-+_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires !immutable"
-+echo foo > $fsv_file >> $seqres.full
-+$CHATTR_PROG +i $fsv_file
-+$FSVERITY_PROG enable $fsv_file |& _filter_scratch
-+$CHATTR_PROG -i $fsv_file
-+
-+_fsv_scratch_begin_subtest "FS_IOC_MEASURE_VERITY doesn't require root"
-+_fsv_create_enable_file $fsv_file >> $seqres.full
-+chmod 444 $fsv_file
-+su $qa_user -c "$FSVERITY_PROG measure $fsv_file" >> $seqres.full
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/901.out b/tests/generic/901.out
-new file mode 100644
-index 00000000..a9e4c364
---- /dev/null
-+++ b/tests/generic/901.out
-@@ -0,0 +1,14 @@
-+QA output created by 901
-+
-+# FS_IOC_ENABLE_VERITY doesn't require root
-+
-+# FS_IOC_ENABLE_VERITY requires write access
-+Permission denied
-+
-+# FS_IOC_ENABLE_VERITY requires !append-only
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Operation not permitted
-+
-+# FS_IOC_ENABLE_VERITY requires !immutable
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Operation not permitted
-+
-+# FS_IOC_MEASURE_VERITY doesn't require root
-diff --git a/tests/generic/group b/tests/generic/group
-index 7f72b304..df074d86 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -561,3 +561,4 @@
- 556 auto quick casefold
- 557 auto quick log
- 900 auto quick verity
-+901 auto quick verity
--- 
-2.22.0.410.gd8fdbe21b5-goog
+					- Ted
