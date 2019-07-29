@@ -1,86 +1,77 @@
-Return-Path: <SRS0=3Y7b=VT=vger.kernel.org=linux-integrity-owner@kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v7 08/17] fs-verity: add the hook for file ->setattr()
-Date: Mon, 22 Jul 2019 09:50:52 -0700
-Message-Id: <20190722165101.12840-9-ebiggers@kernel.org>
-In-Reply-To: <20190722165101.12840-1-ebiggers@kernel.org>
-References: <20190722165101.12840-1-ebiggers@kernel.org>
+Return-Path: <SRS0=rIno=V2=canb.auug.org.au=sfr@kernel.org>
+Date: Mon, 29 Jul 2019 15:45:03 +1000
+From: Stephen Rothwell <sfr@canb.auug.org.au>
+Subject: Re: Add fsverity tree to linux-next
+Message-ID: <20190729154503.13aed678@canb.auug.org.au>
+In-Reply-To: <20190729031226.GA2252@sol.localdomain>
+References: <20190729031226.GA2252@sol.localdomain>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Type: multipart/signed; boundary="Sig_/o/A/oFcwBKxzLJmh1WMQYp.";
+ protocol="application/pgp-signature"; micalg=pgp-sha256
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-next@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, "Theodore Y. Ts'o" <tytso@mit.edu>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+--Sig_/o/A/oFcwBKxzLJmh1WMQYp.
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: quoted-printable
 
-Add a function fsverity_prepare_setattr() which filesystems that support
-fs-verity must call to deny truncates of verity files.
+Hi Eric,
 
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/verity/open.c         | 21 +++++++++++++++++++++
- include/linux/fsverity.h |  7 +++++++
- 2 files changed, 28 insertions(+)
+On Sun, 28 Jul 2019 20:12:26 -0700 Eric Biggers <ebiggers@kernel.org> wrote:
+>
+> Can you please add the fsverity tree to linux-next?
+>=20
+>         https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git#fsverity
+>=20
+> This branch contains the latest fs-verity patches
+> (https://lore.kernel.org/linux-fsdevel/20190722165101.12840-1-ebiggers@ke=
+rnel.org/T/#u).
+> We are planning a pull request for 5.4.
+>=20
+> Please use as contacts:
+>=20
+>         Eric Biggers <ebiggers@kernel.org>
+>         Theodore Y. Ts'o <tytso@mit.edu>
 
-diff --git a/fs/verity/open.c b/fs/verity/open.c
-index 8013f77f907eb..2cb2fe8082bff 100644
---- a/fs/verity/open.c
-+++ b/fs/verity/open.c
-@@ -295,6 +295,27 @@ int fsverity_file_open(struct inode *inode, struct file *filp)
- }
- EXPORT_SYMBOL_GPL(fsverity_file_open);
- 
-+/**
-+ * fsverity_prepare_setattr() - prepare to change a verity inode's attributes
-+ * @dentry: dentry through which the inode is being changed
-+ * @attr: attributes to change
-+ *
-+ * Verity files are immutable, so deny truncates.  This isn't covered by the
-+ * open-time check because sys_truncate() takes a path, not a file descriptor.
-+ *
-+ * Return: 0 on success, -errno on failure
-+ */
-+int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr)
-+{
-+	if (IS_VERITY(d_inode(dentry)) && (attr->ia_valid & ATTR_SIZE)) {
-+		pr_debug("Denying truncate of verity file (ino %lu)\n",
-+			 d_inode(dentry)->i_ino);
-+		return -EPERM;
-+	}
-+	return 0;
-+}
-+EXPORT_SYMBOL_GPL(fsverity_prepare_setattr);
-+
- /**
-  * fsverity_cleanup_inode() - free the inode's verity info, if present
-  *
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index 09b04dab64520..cbd0f84e1620f 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -46,6 +46,7 @@ static inline struct fsverity_info *fsverity_get_info(const struct inode *inode)
- /* open.c */
- 
- extern int fsverity_file_open(struct inode *inode, struct file *filp);
-+extern int fsverity_prepare_setattr(struct dentry *dentry, struct iattr *attr);
- extern void fsverity_cleanup_inode(struct inode *inode);
- 
- #else /* !CONFIG_FS_VERITY */
-@@ -62,6 +63,12 @@ static inline int fsverity_file_open(struct inode *inode, struct file *filp)
- 	return IS_VERITY(inode) ? -EOPNOTSUPP : 0;
- }
- 
-+static inline int fsverity_prepare_setattr(struct dentry *dentry,
-+					   struct iattr *attr)
-+{
-+	return IS_VERITY(d_inode(dentry)) ? -EOPNOTSUPP : 0;
-+}
-+
- static inline void fsverity_cleanup_inode(struct inode *inode)
- {
- }
--- 
-2.22.0
+Added from tomorrow.
+
+Thanks for adding your subsystem tree as a participant of linux-next.  As
+you may know, this is not a judgement of your code.  The purpose of
+linux-next is for integration testing and to lower the impact of
+conflicts between subsystems in the next merge window.=20
+
+You will need to ensure that the patches/commits in your tree/series have
+been:
+     * submitted under GPL v2 (or later) and include the Contributor's
+        Signed-off-by,
+     * posted to the relevant mailing list,
+     * reviewed by you (or another maintainer of your subsystem tree),
+     * successfully unit tested, and=20
+     * destined for the current or next Linux merge window.
+
+Basically, this should be just what you would send to Linus (or ask him
+to fetch).  It is allowed to be rebased if you deem it necessary.
+
+--=20
+Cheers,
+Stephen Rothwell=20
+sfr@canb.auug.org.au
+
+--Sig_/o/A/oFcwBKxzLJmh1WMQYp.
+Content-Type: application/pgp-signature
+Content-Description: OpenPGP digital signature
+
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCAAdFiEENIC96giZ81tWdLgKAVBC80lX0GwFAl0+h98ACgkQAVBC80lX
+0GzVDgf/d55c2rZLDeEKeui7XemWo7U4YCJZVQsO2Ye1k4OURh8KuPB4OHFAxnrm
+FXjilOcrXCqrXaNyoo4xaRfy2oZesdGslLLxjZL8Jnf6DLm5sxbA/JbxR+95wMkH
+O4MxF5R7r5SbzzTt7j1DGlfn5SGW7xkNHmOPhurdtyyqq0J5ag6rk+U/nNn2TpAM
+eZ9C+mJrmjIage8ogA2P8XGWZOU6nNJs+4nQ1pB79MiJyK9IkPJBH+dpC+TG9Rpy
+Z6Z49aJa1DSBlM+FX2kRCpRlkBwsVg5yBDzYjyk6J5ODYInzCpdHsCXTjM2nvmST
++qr2gMk47+PWDhcI9yomBWndRIdLwg==
+=p76q
+-----END PGP SIGNATURE-----
+
+--Sig_/o/A/oFcwBKxzLJmh1WMQYp.--
