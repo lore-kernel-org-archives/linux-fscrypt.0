@@ -1,479 +1,92 @@
-Return-Path: <SRS0=KvCx=U6=vger.kernel.org=linux-integrity-owner@kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v6 13/17] fs-verity: support builtin file signatures
-Date: Mon,  1 Jul 2019 08:32:33 -0700
-Message-Id: <20190701153237.1777-14-ebiggers@kernel.org>
-In-Reply-To: <20190701153237.1777-1-ebiggers@kernel.org>
-References: <20190701153237.1777-1-ebiggers@kernel.org>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Return-Path: <SRS0=dC2B=V2=HansenPartnership.com=James.Bottomley@kernel.org>
+Message-ID: <1564436554.12726.38.camel@HansenPartnership.com>
+Subject: Re: [PATCH v7 09/16] fscrypt: add an HKDF-SHA512 implementation
+From: James Bottomley <James.Bottomley@HansenPartnership.com>
+Date: Mon, 29 Jul 2019 14:42:34 -0700
+In-Reply-To: <20190729202951.GG169027@gmail.com>
+References: <20190726224141.14044-1-ebiggers@kernel.org>
+	 <20190726224141.14044-10-ebiggers@kernel.org>
+	 <20190728193949.GI6088@mit.edu> <20190729202951.GG169027@gmail.com>
+Content-Type: text/plain; charset="UTF-8"
+Mime-Version: 1.0
+Content-Transfer-Encoding: 7bit
+To: Eric Biggers <ebiggers@kernel.org>, "Theodore Y. Ts'o" <tytso@mit.edu>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, 2019-07-29 at 13:29 -0700, Eric Biggers wrote:
+> On Sun, Jul 28, 2019 at 03:39:49PM -0400, Theodore Y. Ts'o wrote:
+> > On Fri, Jul 26, 2019 at 03:41:34PM -0700, Eric Biggers wrote:
+> > > From: Eric Biggers <ebiggers@google.com>
+[...]
+> > > HKDF solves all the above problems.
+> > > 
+> > > Signed-off-by: Eric Biggers <ebiggers@google.com>
+> > 
+> > Unless I missed something there's nothing here which is fscrypt
+> > specific.  Granted that it's somewhat unlikely that someone would
+> > want to implement (the very bloated) IKE from IPSEC in the kernel,
+> > I wonder if there might be other users of HKDF, and whether this
+> > would be better placed in lib/ or crypto/ instead of fs/crypto?
+> 
+> This is standard HKDF-SHA512; only the choice of parameters is
+> fscrypt-specific. So it could indeed use a common implementation of
+> HKDF if one were available.
+> 
+> However, I don't think there are any other HKDF users in the kernel
+> currently.
 
-To meet some users' needs, add optional support for having fs-verity
-handle a portion of the authentication policy in the kernel.  An
-".fs-verity" keyring is created to which X.509 certificates can be
-added; then a sysctl 'fs.verity.require_signatures' can be set to cause
-the kernel to enforce that all fs-verity files contain a signature of
-their file measurement by a key in this keyring.
+Well, I'm still trying to add the TPM ones, but they're based on SP800-
+108 for arbitrary keys and SP800-56A for elliptic curve ones.  These
+are similar to the RFC5869 except that they do extract/expand in a
+single operation.  Plus, of course, the TPM mandates we use the name
+algorithm (usually sha256, which is what I hardcoded) as the hash.
 
-See the "Built-in signature verification" section of
-Documentation/filesystems/fsverity.rst for the full documentation.
+Note: since you don't use the extract step either in your
+implementation, effectively you're equivalent to SP800-108 as well. 
+This is effectively the same reason as the TPM: we need deterministic
+keys, so we've nowhere to get the salt from that would persist.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/verity/Kconfig            |  17 ++++
- fs/verity/Makefile           |   2 +
- fs/verity/enable.c           |  20 ++++-
- fs/verity/fsverity_private.h |  48 ++++++++++-
- fs/verity/init.c             |   6 ++
- fs/verity/open.c             |  27 ++++--
- fs/verity/signature.c        | 159 +++++++++++++++++++++++++++++++++++
- fs/verity/verify.c           |   6 ++
- 8 files changed, 271 insertions(+), 14 deletions(-)
- create mode 100644 fs/verity/signature.c
+> Also, while there was a patch to support HKDF via the crypto_rng API,
+> there was no consensus about whether this was actually the best way
+> to add KDF support:
+> https://lore.kernel.org/linux-crypto/2423373.Zd5ThvQH5g@positron.chro
+> nox.de
+> 
+> So for now, to avoid unnecessarily blocking this patchset I think we
+> should just go with this implementation in fs/crypto/.  It can always
+> be changed later, once we decide on the best way to add KDFs to the
+> crypto API.
+> 
+> [To be clear: this patch already uses "hmac(sha512)" from the crypto
+> API.  It's only the actual HKDF part that we're talking about here.
 
-diff --git a/fs/verity/Kconfig b/fs/verity/Kconfig
-index c2bca0b01ecf..88fb25119899 100644
---- a/fs/verity/Kconfig
-+++ b/fs/verity/Kconfig
-@@ -36,3 +36,20 @@ config FS_VERITY_DEBUG
- 	  Enable debugging messages related to fs-verity by default.
- 
- 	  Say N unless you are an fs-verity developer.
-+
-+config FS_VERITY_BUILTIN_SIGNATURES
-+	bool "FS Verity builtin signature support"
-+	depends on FS_VERITY
-+	select SYSTEM_DATA_VERIFICATION
-+	help
-+	  Support verifying signatures of verity files against the X.509
-+	  certificates that have been loaded into the ".fs-verity"
-+	  kernel keyring.
-+
-+	  This is meant as a relatively simple mechanism that can be
-+	  used to provide an authenticity guarantee for verity files, as
-+	  an alternative to IMA appraisal.  Userspace programs still
-+	  need to check that the verity bit is set in order to get an
-+	  authenticity guarantee.
-+
-+	  If unsure, say N.
-diff --git a/fs/verity/Makefile b/fs/verity/Makefile
-index 6f7675ae0a31..570e9136334d 100644
---- a/fs/verity/Makefile
-+++ b/fs/verity/Makefile
-@@ -6,3 +6,5 @@ obj-$(CONFIG_FS_VERITY) += enable.o \
- 			   measure.o \
- 			   open.o \
- 			   verify.o
-+
-+obj-$(CONFIG_FS_VERITY_BUILTIN_SIGNATURES) += signature.o
-diff --git a/fs/verity/enable.c b/fs/verity/enable.c
-index 782b2911463e..e9dca76fe510 100644
---- a/fs/verity/enable.c
-+++ b/fs/verity/enable.c
-@@ -153,7 +153,7 @@ static int enable_verity(struct file *filp,
- 	const struct fsverity_operations *vops = inode->i_sb->s_vop;
- 	struct merkle_tree_params params = { };
- 	struct fsverity_descriptor *desc;
--	size_t desc_size = sizeof(*desc);
-+	size_t desc_size = sizeof(*desc) + arg->sig_size;
- 	struct fsverity_info *vi;
- 	int err;
- 
-@@ -175,6 +175,16 @@ static int enable_verity(struct file *filp,
- 	}
- 	desc->salt_size = arg->salt_size;
- 
-+	/* Get the signature if the user provided one */
-+	if (arg->sig_size &&
-+	    copy_from_user(desc->signature,
-+			   (const u8 __user *)(uintptr_t)arg->sig_ptr,
-+			   arg->sig_size)) {
-+		err = -EFAULT;
-+		goto out;
-+	}
-+	desc->sig_size = cpu_to_le32(arg->sig_size);
-+
- 	desc->data_size = cpu_to_le64(inode->i_size);
- 
- 	pr_debug("Building Merkle tree...\n");
-@@ -215,6 +225,10 @@ static int enable_verity(struct file *filp,
- 		goto rollback;
- 	}
- 
-+	if (arg->sig_size)
-+		pr_debug("Storing a %u-byte PKCS#7 signature alongside the file\n",
-+			 arg->sig_size);
-+
- 	/* Tell the filesystem to finish enabling verity on the file */
- 	err = vops->end_enable_verity(filp, desc, desc_size, params.tree_size);
- 	if (err) {
-@@ -274,8 +288,8 @@ int fsverity_ioctl_enable(struct file *filp, const void __user *uarg)
- 	if (arg.salt_size > FIELD_SIZEOF(struct fsverity_descriptor, salt))
- 		return -EMSGSIZE;
- 
--	if (arg.sig_size)
--		return -EINVAL;
-+	if (arg.sig_size > FS_VERITY_MAX_SIGNATURE_SIZE)
-+		return -EMSGSIZE;
- 
- 	/*
- 	 * Require a regular file with write access.  But the actual fd must
-diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
-index 02a547f0667c..e74c79b64d88 100644
---- a/fs/verity/fsverity_private.h
-+++ b/fs/verity/fsverity_private.h
-@@ -75,23 +75,41 @@ struct fsverity_info {
- };
- 
- /*
-- * Merkle tree properties.  The file measurement is the hash of this structure.
-+ * Merkle tree properties.  The file measurement is the hash of this structure
-+ * excluding the signature and with the sig_size field set to 0.
-  */
- struct fsverity_descriptor {
- 	__u8 version;		/* must be 1 */
- 	__u8 hash_algorithm;	/* Merkle tree hash algorithm */
- 	__u8 log_blocksize;	/* log2 of size of data and tree blocks */
- 	__u8 salt_size;		/* size of salt in bytes; 0 if none */
--	__le32 sig_size;	/* reserved, must be 0 */
-+	__le32 sig_size;	/* size of signature in bytes; 0 if none */
- 	__le64 data_size;	/* size of file the Merkle tree is built over */
- 	__u8 root_hash[64];	/* Merkle tree root hash */
- 	__u8 salt[32];		/* salt prepended to each hashed block */
- 	__u8 __reserved[144];	/* must be 0's */
-+	__u8 signature[];	/* optional PKCS#7 signature */
- };
- 
- /* Arbitrary limit to bound the kmalloc() size.  Can be changed. */
- #define FS_VERITY_MAX_DESCRIPTOR_SIZE	16384
- 
-+#define FS_VERITY_MAX_SIGNATURE_SIZE	(FS_VERITY_MAX_DESCRIPTOR_SIZE - \
-+					 sizeof(struct fsverity_descriptor))
-+
-+/*
-+ * Format in which verity file measurements are signed.  This is the same as
-+ * 'struct fsverity_digest', except here some magic bytes are prepended to
-+ * provide some context about what is being signed in case the same key is used
-+ * for non-fsverity purposes, and here the fields have fixed endianness.
-+ */
-+struct fsverity_signed_digest {
-+	char magic[8];			/* must be "FSVerity" */
-+	__le16 digest_algorithm;
-+	__le16 digest_size;
-+	__u8 digest[];
-+};
-+
- /* hash_algs.c */
- 
- extern struct fsverity_hash_alg fsverity_hash_algs[];
-@@ -127,7 +145,7 @@ int fsverity_init_merkle_tree_params(struct merkle_tree_params *params,
- 				     const u8 *salt, size_t salt_size);
- 
- struct fsverity_info *fsverity_create_info(const struct inode *inode,
--					   const void *desc, size_t desc_size);
-+					   void *desc, size_t desc_size);
- 
- void fsverity_set_info(struct inode *inode, struct fsverity_info *vi);
- 
-@@ -136,8 +154,32 @@ void fsverity_free_info(struct fsverity_info *vi);
- int __init fsverity_init_info_cache(void);
- void __init fsverity_exit_info_cache(void);
- 
-+/* signature.c */
-+
-+#ifdef CONFIG_FS_VERITY_BUILTIN_SIGNATURES
-+int fsverity_verify_signature(const struct fsverity_info *vi,
-+			      const struct fsverity_descriptor *desc,
-+			      size_t desc_size);
-+
-+int __init fsverity_init_signature(void);
-+#else /* !CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
-+static inline int
-+fsverity_verify_signature(const struct fsverity_info *vi,
-+			  const struct fsverity_descriptor *desc,
-+			  size_t desc_size)
-+{
-+	return 0;
-+}
-+
-+static inline int fsverity_init_signature(void)
-+{
-+	return 0;
-+}
-+#endif /* !CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
-+
- /* verify.c */
- 
- int __init fsverity_init_workqueue(void);
-+void __init fsverity_exit_workqueue(void);
- 
- #endif /* _FSVERITY_PRIVATE_H */
-diff --git a/fs/verity/init.c b/fs/verity/init.c
-index b593805aafcc..94c104e00861 100644
---- a/fs/verity/init.c
-+++ b/fs/verity/init.c
-@@ -45,9 +45,15 @@ static int __init fsverity_init(void)
- 	if (err)
- 		goto err_exit_info_cache;
- 
-+	err = fsverity_init_signature();
-+	if (err)
-+		goto err_exit_workqueue;
-+
- 	pr_debug("Initialized fs-verity\n");
- 	return 0;
- 
-+err_exit_workqueue:
-+	fsverity_exit_workqueue();
- err_exit_info_cache:
- 	fsverity_exit_info_cache();
- 	return err;
-diff --git a/fs/verity/open.c b/fs/verity/open.c
-index 3636a1ed8e2c..63d1004b688c 100644
---- a/fs/verity/open.c
-+++ b/fs/verity/open.c
-@@ -122,22 +122,32 @@ int fsverity_init_merkle_tree_params(struct merkle_tree_params *params,
- 	return err;
- }
- 
--/* Compute the file measurement by hashing the fsverity_descriptor. */
-+/*
-+ * Compute the file measurement by hashing the fsverity_descriptor excluding the
-+ * signature and with the sig_size field set to 0.
-+ */
- static int compute_file_measurement(const struct fsverity_hash_alg *hash_alg,
--				    const struct fsverity_descriptor *desc,
-+				    struct fsverity_descriptor *desc,
- 				    u8 *measurement)
- {
--	return fsverity_hash_buffer(hash_alg, desc, sizeof(*desc), measurement);
-+	__le32 sig_size = desc->sig_size;
-+	int err;
-+
-+	desc->sig_size = 0;
-+	err = fsverity_hash_buffer(hash_alg, desc, sizeof(*desc), measurement);
-+	desc->sig_size = sig_size;
-+
-+	return err;
- }
- 
- /*
-  * Validate the given fsverity_descriptor and create a new fsverity_info from
-- * it.
-+ * it.  The signature (if present) is also checked.
-  */
- struct fsverity_info *fsverity_create_info(const struct inode *inode,
--					   const void *_desc, size_t desc_size)
-+					   void *_desc, size_t desc_size)
- {
--	const struct fsverity_descriptor *desc = _desc;
-+	struct fsverity_descriptor *desc = _desc;
- 	struct fsverity_info *vi;
- 	int err;
- 
-@@ -153,8 +163,7 @@ struct fsverity_info *fsverity_create_info(const struct inode *inode,
- 		return ERR_PTR(-EINVAL);
- 	}
- 
--	if (desc->sig_size ||
--	    memchr_inv(desc->__reserved, 0, sizeof(desc->__reserved))) {
-+	if (memchr_inv(desc->__reserved, 0, sizeof(desc->__reserved))) {
- 		fsverity_err(inode, "Reserved bits set in descriptor");
- 		return ERR_PTR(-EINVAL);
- 	}
-@@ -198,6 +207,8 @@ struct fsverity_info *fsverity_create_info(const struct inode *inode,
- 	pr_debug("Computed file measurement: %s:%*phN\n",
- 		 vi->tree_params.hash_alg->name,
- 		 vi->tree_params.digest_size, vi->measurement);
-+
-+	err = fsverity_verify_signature(vi, desc, desc_size);
- out:
- 	if (err) {
- 		fsverity_free_info(vi);
-diff --git a/fs/verity/signature.c b/fs/verity/signature.c
-new file mode 100644
-index 000000000000..e8299eff08c7
---- /dev/null
-+++ b/fs/verity/signature.c
-@@ -0,0 +1,159 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * fs/verity/signature.c: verification of builtin signatures
-+ *
-+ * Copyright 2019 Google LLC
-+ */
-+
-+#include "fsverity_private.h"
-+
-+#include <linux/cred.h>
-+#include <linux/key.h>
-+#include <linux/slab.h>
-+#include <linux/verification.h>
-+
-+/*
-+ * /proc/sys/fs/verity/require_signatures
-+ * If 1, all verity files must have a valid builtin signature.
-+ */
-+static int fsverity_require_signatures;
-+
-+/*
-+ * Keyring that contains the trusted X.509 certificates.
-+ *
-+ * Only root (kuid=0) can modify this.  Also, root may use
-+ * keyctl_restrict_keyring() to prevent any more additions.
-+ */
-+static struct key *fsverity_keyring;
-+
-+/**
-+ * fsverity_verify_signature() - check a verity file's signature
-+ *
-+ * If the file's fs-verity descriptor includes a signature of the file
-+ * measurement, verify it against the certificates in the fs-verity keyring.
-+ *
-+ * Return: 0 on success (signature valid or not required); -errno on failure
-+ */
-+int fsverity_verify_signature(const struct fsverity_info *vi,
-+			      const struct fsverity_descriptor *desc,
-+			      size_t desc_size)
-+{
-+	const struct inode *inode = vi->inode;
-+	const struct fsverity_hash_alg *hash_alg = vi->tree_params.hash_alg;
-+	const u32 sig_size = le32_to_cpu(desc->sig_size);
-+	struct fsverity_signed_digest *d;
-+	int err;
-+
-+	if (sig_size == 0) {
-+		if (fsverity_require_signatures) {
-+			fsverity_err(inode,
-+				     "require_signatures=1, rejecting unsigned file!");
-+			return -EPERM;
-+		}
-+		return 0;
-+	}
-+
-+	if (sig_size > desc_size - sizeof(*desc)) {
-+		fsverity_err(inode, "Signature overflows verity descriptor");
-+		return -EBADMSG;
-+	}
-+
-+	d = kzalloc(sizeof(*d) + hash_alg->digest_size, GFP_KERNEL);
-+	if (!d)
-+		return -ENOMEM;
-+	memcpy(d->magic, "FSVerity", 8);
-+	d->digest_algorithm = cpu_to_le16(hash_alg - fsverity_hash_algs);
-+	d->digest_size = cpu_to_le16(hash_alg->digest_size);
-+	memcpy(d->digest, vi->measurement, hash_alg->digest_size);
-+
-+	err = verify_pkcs7_signature(d, sizeof(*d) + hash_alg->digest_size,
-+				     desc->signature, sig_size,
-+				     fsverity_keyring,
-+				     VERIFYING_UNSPECIFIED_SIGNATURE,
-+				     NULL, NULL);
-+	kfree(d);
-+
-+	if (err) {
-+		if (err == -ENOKEY)
-+			fsverity_err(inode,
-+				     "File's signing cert isn't in the fs-verity keyring");
-+		else if (err == -EKEYREJECTED)
-+			fsverity_err(inode, "Incorrect file signature");
-+		else if (err == -EBADMSG)
-+			fsverity_err(inode, "Malformed file signature");
-+		else
-+			fsverity_err(inode, "Error %d verifying file signature",
-+				     err);
-+		return err;
-+	}
-+
-+	pr_debug("Valid signature for file measurement %s:%*phN\n",
-+		 hash_alg->name, hash_alg->digest_size, vi->measurement);
-+	return 0;
-+}
-+
-+#ifdef CONFIG_SYSCTL
-+static int zero;
-+static int one = 1;
-+static struct ctl_table_header *fsverity_sysctl_header;
-+
-+static const struct ctl_path fsverity_sysctl_path[] = {
-+	{ .procname = "fs", },
-+	{ .procname = "verity", },
-+	{ }
-+};
-+
-+static struct ctl_table fsverity_sysctl_table[] = {
-+	{
-+		.procname       = "require_signatures",
-+		.data           = &fsverity_require_signatures,
-+		.maxlen         = sizeof(int),
-+		.mode           = 0644,
-+		.proc_handler   = proc_dointvec_minmax,
-+		.extra1         = &zero,
-+		.extra2         = &one,
-+	},
-+	{ }
-+};
-+
-+static int __init fsverity_sysctl_init(void)
-+{
-+	fsverity_sysctl_header = register_sysctl_paths(fsverity_sysctl_path,
-+						       fsverity_sysctl_table);
-+	if (!fsverity_sysctl_header) {
-+		pr_err("sysctl registration failed!\n");
-+		return -ENOMEM;
-+	}
-+	return 0;
-+}
-+#else /* !CONFIG_SYSCTL */
-+static inline int __init fsverity_sysctl_init(void)
-+{
-+	return 0;
-+}
-+#endif /* !CONFIG_SYSCTL */
-+
-+int __init fsverity_init_signature(void)
-+{
-+	struct key *ring;
-+	int err;
-+
-+	ring = keyring_alloc(".fs-verity", KUIDT_INIT(0), KGIDT_INIT(0),
-+			     current_cred(), KEY_POS_SEARCH |
-+				KEY_USR_VIEW | KEY_USR_READ | KEY_USR_WRITE |
-+				KEY_USR_SEARCH | KEY_USR_SETATTR,
-+			     KEY_ALLOC_NOT_IN_QUOTA, NULL, NULL);
-+	if (IS_ERR(ring))
-+		return PTR_ERR(ring);
-+
-+	err = fsverity_sysctl_init();
-+	if (err)
-+		goto err_put_ring;
-+
-+	fsverity_keyring = ring;
-+	return 0;
-+
-+err_put_ring:
-+	key_put(ring);
-+	return err;
-+}
-diff --git a/fs/verity/verify.c b/fs/verity/verify.c
-index 62ab8f6a8ea1..3e8f2de44667 100644
---- a/fs/verity/verify.c
-+++ b/fs/verity/verify.c
-@@ -273,3 +273,9 @@ int __init fsverity_init_workqueue(void)
- 		return -ENOMEM;
- 	return 0;
- }
-+
-+void __init fsverity_exit_workqueue(void)
-+{
-+	destroy_workqueue(fsverity_read_workqueue);
-+	fsverity_read_workqueue = NULL;
-+}
--- 
-2.22.0
+Right, once you have the hmac + hash available, the rest is easy, so
+this is what we have for the TPM KDFa:
+
+static void KDFa(u8 *key, int keylen, const char *label, u8 *u,
+		 u8 *v, int bytes, u8 *out)
+{
+	u32 counter;
+	const __be32 bits = cpu_to_be32(bytes * 8);
+
+	for (counter = 1; bytes > 0; bytes -= SHA256_DIGEST_SIZE, counter++,
+		     out += SHA256_DIGEST_SIZE) {
+		SHASH_DESC_ON_STACK(desc, sha256_hash);
+		__be32 c = cpu_to_be32(counter);
+
+		hmac_init(desc, key, keylen);
+		crypto_shash_update(desc, (u8 *)&c, sizeof(c));
+		crypto_shash_update(desc, label, strlen(label)+1);
+		crypto_shash_update(desc, u, SHA256_DIGEST_SIZE);
+		crypto_shash_update(desc, v, SHA256_DIGEST_SIZE);
+		crypto_shash_update(desc, (u8 *)&bits, sizeof(bits));
+		hmac_final(desc, key, keylen, out);
+	}
+}
+
+I honestly think these things are so simplistic with the correct hmac
+that it would make it more confusing to try to produce a general KDF
+than it would simply to hard code them where we need them.
+
+James
