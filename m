@@ -1,293 +1,90 @@
-Return-Path: <fstests-owner@vger.kernel.org>
+Return-Path: <keyrings-owner@vger.kernel.org>
+Date: Mon, 29 Jul 2019 13:46:28 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH v3 8/8] generic: test the fs-verity built-in signature verification support
-Date: Mon,  1 Jul 2019 11:25:47 -0700
-Message-Id: <20190701182547.165856-9-ebiggers@kernel.org>
-In-Reply-To: <20190701182547.165856-1-ebiggers@kernel.org>
-References: <20190701182547.165856-1-ebiggers@kernel.org>
+Subject: Re: [PATCH v7 10/16] fscrypt: v2 encryption policy support
+Message-ID: <20190729204627.GH169027@gmail.com>
+References: <20190726224141.14044-1-ebiggers@kernel.org>
+ <20190726224141.14044-11-ebiggers@kernel.org>
+ <20190728211730.GK6088@mit.edu>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: fstests-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190728211730.GK6088@mit.edu>
+Sender: keyrings-owner@vger.kernel.org
+To: "Theodore Y. Ts'o" <tytso@mit.edu>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Sun, Jul 28, 2019 at 05:17:30PM -0400, Theodore Y. Ts'o wrote:
+> On Fri, Jul 26, 2019 at 03:41:35PM -0700, Eric Biggers wrote:
+> > @@ -319,6 +329,31 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
+> >  	if (!capable(CAP_SYS_ADMIN))
+> >  		goto out_wipe_secret;
+> >  
+> > +	if (arg.key_spec.type != FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR) {
+> 
+> This should be "== FSCRYPT_KEY_SPEC_TYPE_INDENTIFIER" instead.  That's
+> because you use the identifier part of the union:
+> 
+> > +		/* Calculate the key identifier and return it to userspace. */
+> > +		err = fscrypt_hkdf_expand(&secret.hkdf,
+> > +					  HKDF_CONTEXT_KEY_IDENTIFIER,
+> > +					  NULL, 0, arg.key_spec.u.identifier,
+> 
+> If we ever add a new key specifier type, and alternative in the union,
+> this is going to come back to bite us.
 
-Add a basic test for the fs-verity built-in signature verification
-support, which is an optional feature where the kernel can be configured
-to enforce that all verity files are accompanied with a valid signature
-by a key that has been loaded into the fs-verity keyring.
+Well, I did it this way because the next patch changes the code to:
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- common/config         |   1 +
- common/verity         |  16 +++++
- tests/generic/905     | 150 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/905.out |  42 ++++++++++++
- tests/generic/group   |   1 +
- 5 files changed, 210 insertions(+)
- create mode 100755 tests/generic/905
- create mode 100644 tests/generic/905.out
+	if (arg.key_spec.type == FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR) {
+		...
+	} else {
+		...
+	}
 
-diff --git a/common/config b/common/config
-index 001ddc45..1aaf0a75 100644
---- a/common/config
-+++ b/common/config
-@@ -213,6 +213,7 @@ export XFS_INFO_PROG="$(type -P xfs_info)"
- export DUPEREMOVE_PROG="$(type -P duperemove)"
- export CC_PROG="$(type -P cc)"
- export FSVERITY_PROG="$(type -P fsverity)"
-+export OPENSSL_PROG="$(type -P openssl)"
- 
- # use 'udevadm settle' or 'udevsettle' to wait for lv to be settled.
- # newer systems have udevadm command but older systems like RHEL5 don't.
-diff --git a/common/verity b/common/verity
-index a8aae51e..bcb5670d 100644
---- a/common/verity
-+++ b/common/verity
-@@ -45,6 +45,17 @@ _require_scratch_verity()
- 	FSV_BLOCK_SIZE=$(get_page_size)
- }
- 
-+# Check for CONFIG_FS_VERITY_BUILTIN_SIGNATURES=y.
-+_require_fsverity_builtin_signatures()
-+{
-+	if [ ! -e /proc/keys ]; then
-+		_notrun "kernel doesn't support keyrings"
-+	fi
-+	if ! awk '{print $9}' /proc/keys | grep -q '^\.fs-verity:$'; then
-+		_notrun "kernel doesn't support fs-verity builtin signatures"
-+	fi
-+}
-+
- _scratch_mkfs_verity()
- {
- 	case $FSTYP in
-@@ -92,6 +103,11 @@ _fsv_measure()
-         $FSVERITY_PROG measure "$@" | awk '{print $1}'
- }
- 
-+_fsv_sign()
-+{
-+	$FSVERITY_PROG sign "$@"
-+}
-+
- # Generate a file, then enable verity on it.
- _fsv_create_enable_file()
- {
-diff --git a/tests/generic/905 b/tests/generic/905
-new file mode 100755
-index 00000000..e42b012d
---- /dev/null
-+++ b/tests/generic/905
-@@ -0,0 +1,150 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
-+#
-+# FS QA Test generic/905
-+#
-+# Test the fs-verity built-in signature verification support.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
-+{
-+	sysctl -w fs.verity.require_signatures=0 &>/dev/null
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/verity
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+_require_scratch_verity
-+_require_fsverity_builtin_signatures
-+_require_command "$OPENSSL_PROG" openssl
-+_require_command "$KEYCTL_PROG" keyctl
-+
-+_scratch_mkfs_verity &>> $seqres.full
-+_scratch_mount
-+
-+fsv_file=$SCRATCH_MNT/file.fsv
-+fsv_orig_file=$SCRATCH_MNT/file
-+keyfile=$tmp.key.pem
-+certfile=$tmp.cert.pem
-+certfileder=$tmp.cert.der
-+sigfile=$tmp.sig
-+otherfile=$SCRATCH_MNT/otherfile
-+othersigfile=$tmp.othersig
-+
-+# Setup
-+
-+echo -e "\n# Generating certificates and private keys"
-+for suffix in '' '.2'; do
-+	if ! $OPENSSL_PROG req -newkey rsa:4096 -nodes -batch -x509 \
-+			-keyout $keyfile$suffix -out $certfile$suffix \
-+			&>> $seqres.full; then
-+		_fail "Failed to generate certificate and private key (see $seqres.full)"
-+	fi
-+	$OPENSSL_PROG x509 -in $certfile$suffix -out $certfileder$suffix \
-+		-outform der
-+done
-+
-+echo -e "\n# Clearing fs-verity keyring"
-+$KEYCTL_PROG clear %keyring:.fs-verity
-+
-+echo -e "\n# Loading first certificate into fs-verity keyring"
-+$KEYCTL_PROG padd asymmetric '' %keyring:.fs-verity \
-+	< $certfileder >> $seqres.full
-+
-+echo -e "\n# Enabling fs.verity.require_signatures"
-+sysctl -w fs.verity.require_signatures=1
-+
-+echo -e "\n# Generating file and signing it for fs-verity"
-+head -c 100000 /dev/zero > $fsv_orig_file
-+for suffix in '' '.2'; do
-+	_fsv_sign $fsv_orig_file $sigfile$suffix --key=$keyfile$suffix \
-+		--cert=$certfile$suffix | _filter_scratch
-+done
-+
-+echo -e "\n# Signing a different file for fs-verity"
-+head -c 100000 /dev/zero | tr '\0' 'X' > $otherfile
-+_fsv_sign $otherfile $othersigfile --key=$keyfile --cert=$certfile \
-+	| _filter_scratch
-+
-+# Actual tests
-+
-+reset_fsv_file()
-+{
-+	rm -f $fsv_file
-+	cp $fsv_orig_file $fsv_file
-+}
-+
-+echo -e "\n# Enabling verity with valid signature (should succeed)"
-+reset_fsv_file
-+_fsv_enable $fsv_file --signature=$sigfile
-+cmp $fsv_file $fsv_orig_file
-+
-+echo -e "\n# Enabling verity without signature (should fail)"
-+reset_fsv_file
-+_fsv_enable $fsv_file |& _filter_scratch
-+
-+echo -e "\n# Opening verity file without signature (should fail)"
-+reset_fsv_file
-+sysctl -w fs.verity.require_signatures=0 &>> $seqres.full
-+_fsv_enable $fsv_file
-+sysctl -w fs.verity.require_signatures=1 &>> $seqres.full
-+_scratch_cycle_mount
-+md5sum $fsv_file |& _filter_scratch
-+
-+echo -e "\n# Enabling verity with untrusted signature (should fail)"
-+reset_fsv_file
-+_fsv_enable $fsv_file --signature=$sigfile.2 |& _filter_scratch
-+
-+echo -e "\n# Enabling verity with wrong file's signature (should fail)"
-+reset_fsv_file
-+_fsv_enable $fsv_file --signature=$othersigfile |& _filter_scratch
-+
-+echo -e "\n# Enabling verity with malformed signature (should fail)"
-+echo foobarbaz > $tmp.malformed_sig
-+reset_fsv_file
-+_fsv_enable $fsv_file --signature=$tmp.malformed_sig |& _filter_scratch
-+
-+echo -e "\n# Testing salt"
-+reset_fsv_file
-+_fsv_sign $fsv_orig_file $sigfile.salted --key=$keyfile --cert=$certfile \
-+	--salt=abcd | _filter_scratch
-+_fsv_enable $fsv_file --signature=$sigfile.salted --salt=abcd
-+cmp $fsv_file $fsv_orig_file
-+
-+echo -e "\n# Testing non-default hash algorithm"
-+if _fsv_have_hash_algorithm sha512 $fsv_file; then
-+	reset_fsv_file
-+	_fsv_sign $fsv_orig_file $sigfile.sha512 --key=$keyfile \
-+		--cert=$certfile --hash-alg=sha512 > /dev/null
-+	_fsv_enable $fsv_file --signature=$sigfile.sha512 --hash-alg=sha512
-+	cmp $fsv_file $fsv_orig_file
-+fi
-+
-+echo -e "\n# Testing empty file"
-+echo -n > $fsv_file
-+_fsv_sign $fsv_file $sigfile.emptyfile --key=$keyfile --cert=$certfile | \
-+		_filter_scratch
-+_fsv_enable $fsv_file --signature=$sigfile.emptyfile
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/905.out b/tests/generic/905.out
-new file mode 100644
-index 00000000..4b28757a
---- /dev/null
-+++ b/tests/generic/905.out
-@@ -0,0 +1,42 @@
-+QA output created by 905
-+
-+# Generating certificates and private keys
-+
-+# Clearing fs-verity keyring
-+
-+# Loading first certificate into fs-verity keyring
-+
-+# Enabling fs.verity.require_signatures
-+fs.verity.require_signatures = 1
-+
-+# Generating file and signing it for fs-verity
-+Signed file 'SCRATCH_MNT/file' (sha256:ecabbfca4efd69a721be824965da10d27900b109549f96687b35a4d91d810dac)
-+Signed file 'SCRATCH_MNT/file' (sha256:ecabbfca4efd69a721be824965da10d27900b109549f96687b35a4d91d810dac)
-+
-+# Signing a different file for fs-verity
-+Signed file 'SCRATCH_MNT/otherfile' (sha256:b2a419c5a8c767a78c6275d6729794bf51e52ddf8713e31d12a93d61d961f49f)
-+
-+# Enabling verity with valid signature (should succeed)
-+
-+# Enabling verity without signature (should fail)
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Operation not permitted
-+
-+# Opening verity file without signature (should fail)
-+md5sum: SCRATCH_MNT/file.fsv: Operation not permitted
-+
-+# Enabling verity with untrusted signature (should fail)
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Required key not available
-+
-+# Enabling verity with wrong file's signature (should fail)
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Key was rejected by service
-+
-+# Enabling verity with malformed signature (should fail)
-+ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Bad message
-+
-+# Testing salt
-+Signed file 'SCRATCH_MNT/file' (sha256:1cb173bcd199133eb80e9ea4f0f741001b9e73227aa8812685156f2bc8ff45f5)
-+
-+# Testing non-default hash algorithm
-+
-+# Testing empty file
-+Signed file 'SCRATCH_MNT/file.fsv' (sha256:3d248ca542a24fc62d1c43b916eae5016878e2533c88238480b26128a1f1af95)
-diff --git a/tests/generic/group b/tests/generic/group
-index cc30a30b..a24fc997 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -565,3 +565,4 @@
- 902 auto quick verity
- 903 auto quick verity
- 904 auto quick verity encrypt
-+905 auto quick verity
--- 
-2.22.0.410.gd8fdbe21b5-goog
+We already validated that it's either TYPE_DESCRIPTOR or TYPE_IDENTIFIER.
+
+But I guess to be more clear I'll just make it handle the default case again.
+
+	switch (arg.key_spec.type) {
+	case FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR:
+		...
+		break;
+	case FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER:
+		...
+		break;
+	default:
+		err = -EINVAL;
+		break;
+	}
+
+> 
+> > +	if (policy->version == FSCRYPT_POLICY_V1) {
+> > +		/*
+> > +		 * The original encryption policy version provided no way of
+> > +		 * verifying that the correct master key was supplied, which was
+> > +		 * insecure in scenarios where multiple users have access to the
+> > +		 * same encrypted files (even just read-only access).
+> 
+> Which scenario do you have in mind?  With read-only access, Alice can
+> fetch the encryption policy for a directory, and introduce a key with
+> the same descriptor, but the "wrong" key, but that's only going to
+> affect Alice's use of the key.  It won't affect what key is used by
+> Bob, since Alice doesn't have write access to Bob's keyrings.
+> 
+> If what you mean is the risk when there is a single global
+> filesystem-specific keyring, where Alice could introduce a "wrong" key
+> identified with a specific descriptor, then sure, Alice could trick
+> Bob into encrypting his data with the wrong key (one known to Alice).
+> But we don't allow keys usable by V1 policies to be used in the
+> filesystem-specific keyring, do we?
+> 
+
+The scenario is that Alice lists the directory with the wrong key, then Bob
+lists the directory too and gets the wrong filenames.  This happens because the
+inode, fscrypt_info, dentry cache, page cache, etc. are the same for everyone.
+Bob's key is never looked up because the inode already has a key cached.
+
+This also applies to regular files and symlinks.
+
+- Eric
