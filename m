@@ -1,83 +1,124 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:32838 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1730996AbfGONtS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 15 Jul 2019 09:49:18 -0400
-From: Sasha Levin <sashal@kernel.org>
-Subject: [PATCH AUTOSEL 5.2 044/249] fscrypt: clean up some BUG_ON()s in block encryption/decryption
-Date: Mon, 15 Jul 2019 09:43:29 -0400
-Message-Id: <20190715134655.4076-44-sashal@kernel.org>
-In-Reply-To: <20190715134655.4076-1-sashal@kernel.org>
-References: <20190715134655.4076-1-sashal@kernel.org>
+Return-Path: <jaegeuk@kernel.org>
+Date: Mon, 29 Jul 2019 17:36:24 -0700
+From: Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH v7 14/16] f2fs: wire up new fscrypt ioctls
+Message-ID: <20190730003624.GA47389@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20190726224141.14044-1-ebiggers@kernel.org>
+ <20190726224141.14044-15-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc: Eric Biggers <ebiggers@google.com>, Chandan Rajendra <chandan@linux.ibm.com>, Sasha Levin <sashal@kernel.org>, linux-fscrypt@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190726224141.14044-15-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On 07/26, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Wire up the new ioctls for adding and removing fscrypt keys to/from the
+> filesystem, and the new ioctl for retrieving v2 encryption policies.
+> 
+> FS_IOC_REMOVE_ENCRYPTION_KEY also required making f2fs_drop_inode() call
+> fscrypt_drop_inode().
+> 
+> For more details see Documentation/filesystems/fscrypt.rst and the
+> fscrypt patches that added the implementation of these ioctls.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-[ Upstream commit eeacfdc68a104967162dfcba60f53f6f5b62a334 ]
+Acked-by: Jaegeuk Kim <jaegeuk@kernel.org>
 
-Replace some BUG_ON()s with WARN_ON_ONCE() and returning an error code,
-and move the check for len divisible by FS_CRYPTO_BLOCK_SIZE into
-fscrypt_crypt_block() so that it's done for both encryption and
-decryption, not just encryption.
+Thanks,
 
-Reviewed-by: Chandan Rajendra <chandan@linux.ibm.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
-Signed-off-by: Sasha Levin <sashal@kernel.org>
----
- fs/crypto/crypto.c | 15 +++++++++------
- 1 file changed, 9 insertions(+), 6 deletions(-)
-
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 335a362ee446..6f753198eeef 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -154,7 +154,10 @@ int fscrypt_do_page_crypto(const struct inode *inode, fscrypt_direction_t rw,
- 	struct crypto_skcipher *tfm = ci->ci_ctfm;
- 	int res = 0;
- 
--	BUG_ON(len == 0);
-+	if (WARN_ON_ONCE(len <= 0))
-+		return -EINVAL;
-+	if (WARN_ON_ONCE(len % FS_CRYPTO_BLOCK_SIZE != 0))
-+		return -EINVAL;
- 
- 	fscrypt_generate_iv(&iv, lblk_num, ci);
- 
-@@ -238,8 +241,6 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- 	struct page *ciphertext_page = page;
- 	int err;
- 
--	BUG_ON(len % FS_CRYPTO_BLOCK_SIZE != 0);
--
- 	if (inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES) {
- 		/* with inplace-encryption we just encrypt the page */
- 		err = fscrypt_do_page_crypto(inode, FS_ENCRYPT, lblk_num, page,
-@@ -251,7 +252,8 @@ struct page *fscrypt_encrypt_page(const struct inode *inode,
- 		return ciphertext_page;
- 	}
- 
--	BUG_ON(!PageLocked(page));
-+	if (WARN_ON_ONCE(!PageLocked(page)))
-+		return ERR_PTR(-EINVAL);
- 
- 	ctx = fscrypt_get_ctx(gfp_flags);
- 	if (IS_ERR(ctx))
-@@ -299,8 +301,9 @@ EXPORT_SYMBOL(fscrypt_encrypt_page);
- int fscrypt_decrypt_page(const struct inode *inode, struct page *page,
- 			unsigned int len, unsigned int offs, u64 lblk_num)
- {
--	if (!(inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES))
--		BUG_ON(!PageLocked(page));
-+	if (WARN_ON_ONCE(!PageLocked(page) &&
-+			 !(inode->i_sb->s_cop->flags & FS_CFLG_OWN_PAGES)))
-+		return -EINVAL;
- 
- 	return fscrypt_do_page_crypto(inode, FS_DECRYPT, lblk_num, page, page,
- 				      len, offs, GFP_NOFS);
--- 
-2.20.1
+> ---
+>  fs/f2fs/file.c  | 46 ++++++++++++++++++++++++++++++++++++++++++++++
+>  fs/f2fs/super.c |  2 ++
+>  2 files changed, 48 insertions(+)
+> 
+> diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+> index f8d46df8fa9ee..d81dda290b829 100644
+> --- a/fs/f2fs/file.c
+> +++ b/fs/f2fs/file.c
+> @@ -2184,6 +2184,40 @@ static int f2fs_ioc_get_encryption_pwsalt(struct file *filp, unsigned long arg)
+>  	return err;
+>  }
+>  
+> +static int f2fs_ioc_get_encryption_policy_ex(struct file *filp,
+> +					     unsigned long arg)
+> +{
+> +	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
+> +		return -EOPNOTSUPP;
+> +
+> +	return fscrypt_ioctl_get_policy_ex(filp, (void __user *)arg);
+> +}
+> +
+> +static int f2fs_ioc_add_encryption_key(struct file *filp, unsigned long arg)
+> +{
+> +	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
+> +		return -EOPNOTSUPP;
+> +
+> +	return fscrypt_ioctl_add_key(filp, (void __user *)arg);
+> +}
+> +
+> +static int f2fs_ioc_remove_encryption_key(struct file *filp, unsigned long arg)
+> +{
+> +	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
+> +		return -EOPNOTSUPP;
+> +
+> +	return fscrypt_ioctl_remove_key(filp, (const void __user *)arg);
+> +}
+> +
+> +static int f2fs_ioc_get_encryption_key_status(struct file *filp,
+> +					      unsigned long arg)
+> +{
+> +	if (!f2fs_sb_has_encrypt(F2FS_I_SB(file_inode(filp))))
+> +		return -EOPNOTSUPP;
+> +
+> +	return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
+> +}
+> +
+>  static int f2fs_ioc_gc(struct file *filp, unsigned long arg)
+>  {
+>  	struct inode *inode = file_inode(filp);
+> @@ -3109,6 +3143,14 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+>  		return f2fs_ioc_get_encryption_policy(filp, arg);
+>  	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
+>  		return f2fs_ioc_get_encryption_pwsalt(filp, arg);
+> +	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
+> +		return f2fs_ioc_get_encryption_policy_ex(filp, arg);
+> +	case FS_IOC_ADD_ENCRYPTION_KEY:
+> +		return f2fs_ioc_add_encryption_key(filp, arg);
+> +	case FS_IOC_REMOVE_ENCRYPTION_KEY:
+> +		return f2fs_ioc_remove_encryption_key(filp, arg);
+> +	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+> +		return f2fs_ioc_get_encryption_key_status(filp, arg);
+>  	case F2FS_IOC_GARBAGE_COLLECT:
+>  		return f2fs_ioc_gc(filp, arg);
+>  	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
+> @@ -3236,6 +3278,10 @@ long f2fs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+>  	case F2FS_IOC_SET_ENCRYPTION_POLICY:
+>  	case F2FS_IOC_GET_ENCRYPTION_PWSALT:
+>  	case F2FS_IOC_GET_ENCRYPTION_POLICY:
+> +	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
+> +	case FS_IOC_ADD_ENCRYPTION_KEY:
+> +	case FS_IOC_REMOVE_ENCRYPTION_KEY:
+> +	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+>  	case F2FS_IOC_GARBAGE_COLLECT:
+>  	case F2FS_IOC_GARBAGE_COLLECT_RANGE:
+>  	case F2FS_IOC_WRITE_CHECKPOINT:
+> diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+> index 6de6cda440315..f5fae8d511a20 100644
+> --- a/fs/f2fs/super.c
+> +++ b/fs/f2fs/super.c
+> @@ -913,6 +913,8 @@ static int f2fs_drop_inode(struct inode *inode)
+>  		return 0;
+>  	}
+>  	ret = generic_drop_inode(inode);
+> +	if (!ret)
+> +		ret = fscrypt_drop_inode(inode);
+>  	trace_f2fs_drop_inode(inode, ret);
+>  	return ret;
+>  }
+> -- 
+> 2.22.0
