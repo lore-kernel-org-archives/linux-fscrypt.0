@@ -1,61 +1,67 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:53832 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1725209AbfGaBkg (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 30 Jul 2019 21:40:36 -0400
+Date: Tue, 30 Jul 2019 18:40:34 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 22 Jul 2019 09:50:48 -0700
-Message-Id: <20190722165101.12840-5-ebiggers@kernel.org>
-In-Reply-To: <20190722165101.12840-1-ebiggers@kernel.org>
-References: <20190722165101.12840-1-ebiggers@kernel.org>
+Subject: Re: linux-next: build warnings after merge of the keys tree
+Message-ID: <20190731014034.GB687@sol.localdomain>
+References: <20190730123042.1f17cdd4@canb.auug.org.au>
+ <20190730034704.GA1966@sol.localdomain>
+ <20190730135216.377a16d5@canb.auug.org.au>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v7 04/17] fs: uapi: define verity bit for
- FS_IOC_GETFLAGS
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, "Darrick J . Wong" <darrick.wong@oracle.com>, linux-api@vger.kernel.org, Dave Chinner <david@fromorbit.com>, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-integrity@vger.kernel.org, linux-ext4@vger.kernel.org, Linus Torvalds <torvalds@linux-foundation.org>, Christoph Hellwig <hch@lst.de>, Victor Hsieh <victorhsieh@google.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190730135216.377a16d5@canb.auug.org.au>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Stephen Rothwell <sfr@canb.auug.org.au>
+Cc: David Howells <dhowells@redhat.com>, "Theodore Y. Ts'o" <tytso@mit.edu>, Linux Next Mailing List <linux-next@vger.kernel.org>, Linux Kernel Mailing List <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Tue, Jul 30, 2019 at 01:52:16PM +1000, Stephen Rothwell wrote:
+> Hi Eric,
+> 
+> On Mon, 29 Jul 2019 20:47:04 -0700 Eric Biggers <ebiggers@kernel.org> wrote:
+> >
+> > On Tue, Jul 30, 2019 at 12:30:42PM +1000, Stephen Rothwell wrote:
+> > > +static struct key_acl fsverity_acl = {
+> > > +	.usage	= REFCOUNT_INIT(1),
+> > > +	.possessor_viewable = true,  
+> > 
+> > I don't think .possessor_viewable should be set here, since there's no
+> > KEY_POSSESSOR_ACE(KEY_ACE_VIEW) in the ACL.  David, this bool is supposed to
+> > mean such an entry is present, right?  Is it really necessary, since it's
+> > redundant with the ACL itself?
+> 
+> OK, I can take that out of the patch for tomorrow.
+> 
+> > Otherwise this looks good, thanks Stephen.  I'll want to remove a few of these
+> > permissions in a separate patch later, but for now we can just keep it
+> > equivalent to the original code as you've done.
+> 
+> Thanks for the review.
+> 
 
-Add FS_VERITY_FL to the flags for FS_IOC_GETFLAGS, so that applications
-can easily determine whether a file is a verity file at the same time as
-they're checking other file flags.  This flag will be gettable only;
-FS_IOC_SETFLAGS won't allow setting it, since an ioctl must be used
-instead to provide more parameters.
+Hmm, apparently it's not *exactly* equivalent, since the ACL is missing INVAL
+and JOIN permission for the owner, while those were originally granted by SEARCH
+permission.  We don't need those, but just to keep the merge resolution itself
+as boring as possible, can you please use the following to make it equivalent:
 
-This flag matches the on-disk bit that was already allocated for ext4.
-
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- include/uapi/linux/fs.h | 1 +
- 1 file changed, 1 insertion(+)
-
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index 59c71fa8c553a..df261b7e0587e 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -306,6 +306,7 @@ struct fscrypt_key {
- #define FS_TOPDIR_FL			0x00020000 /* Top of directory hierarchies*/
- #define FS_HUGE_FILE_FL			0x00040000 /* Reserved for ext4 */
- #define FS_EXTENT_FL			0x00080000 /* Extents */
-+#define FS_VERITY_FL			0x00100000 /* Verity protected inode */
- #define FS_EA_INODE_FL			0x00200000 /* Inode used for large EA */
- #define FS_EOFBLOCKS_FL			0x00400000 /* Reserved for ext4 */
- #define FS_NOCOW_FL			0x00800000 /* Do not cow file */
--- 
-2.22.0
+static struct key_acl fsverity_acl = {
+	.usage	= REFCOUNT_INIT(1),
+	.nr_ace	= 2,
+	.aces = {
+		KEY_POSSESSOR_ACE(KEY_ACE_SEARCH | KEY_ACE_JOIN |
+				  KEY_ACE_INVAL),
+		KEY_OWNER_ACE(KEY_ACE_VIEW | KEY_ACE_READ | KEY_ACE_WRITE |
+			      KEY_ACE_SEARCH | KEY_ACE_SET_SECURITY |
+			      KEY_ACE_INVAL | KEY_ACE_REVOKE | KEY_ACE_JOIN |
+			      KEY_ACE_CLEAR),
+	}
+};
 
 
+Thanks!
 
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+- Eric
