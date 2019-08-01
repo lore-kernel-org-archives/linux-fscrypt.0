@@ -1,45 +1,124 @@
-Return-Path: <SRS0=KvCx=U6=vger.kernel.org=linux-integrity-owner@kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v6 04/17] fs: uapi: define verity bit for FS_IOC_GETFLAGS
-Date: Mon,  1 Jul 2019 08:32:24 -0700
-Message-Id: <20190701153237.1777-5-ebiggers@kernel.org>
-In-Reply-To: <20190701153237.1777-1-ebiggers@kernel.org>
-References: <20190701153237.1777-1-ebiggers@kernel.org>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Date: Thu, 1 Aug 2019 01:31:08 -0400
+From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Message-ID: <20190801053108.GD2769@mit.edu>
+References: <20190726224141.14044-1-ebiggers@kernel.org>
+ <20190726224141.14044-8-ebiggers@kernel.org>
+ <20190728192417.GG6088@mit.edu> <20190729195827.GF169027@gmail.com>
+ <20190731183802.GA687@sol.localdomain>
+ <20190731233843.GA2769@mit.edu>
+ <20190801011140.GB687@sol.localdomain>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-integrity-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org, linux-api@vger.kernel.org, linux-integrity@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, "Theodore Y . Ts'o" <tytso@mit.edu>, Victor Hsieh <victorhsieh@google.com>, Chandan Rajendra <chandan@linux.vnet.ibm.com>, Dave Chinner <david@fromorbit.com>, Christoph Hellwig <hch@lst.de>, "Darrick J . Wong" <darrick.wong@oracle.com>, Linus Torvalds <torvalds@linux-foundation.org>
+Content-Disposition: inline
+In-Reply-To: <20190801011140.GB687@sol.localdomain>
+Subject: Re: [f2fs-dev] [PATCH v7 07/16] fscrypt: add
+ FS_IOC_REMOVE_ENCRYPTION_KEY ioctl
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Jul 31, 2019 at 06:11:40PM -0700, Eric Biggers wrote:
+> 
+> Well, it's either
+> 
+> 1a. Remove the user's handle.
+> 	OR 
+> 1b. Remove all users' handles.  (FSCRYPT_REMOVE_KEY_FLAG_ALL_USERS)
+> 
+> Then
+> 
+> 2. If no handles remain, try to evict all inodes that use the key.
+> 
+> By "purge all keys" do you mean step (2)?  Note that it doesn't require root by
+> itself; root is only required to remove other users' handles (1b).
 
-Add FS_VERITY_FL to the flags for FS_IOC_GETFLAGS, so that applications
-can easily determine whether a file is a verity file at the same time as
-they're checking other file flags.  This flag will be gettable only;
-FS_IOC_SETFLAGS won't allow setting it, since an ioctl must be used
-instead to provide more parameters.
+No, I was talking about 1b.  I'd argue that 1a and 1b should be
+different ioctl.  1b requires root, and 1a doesn't.
 
-This flag matches the on-disk bit that was already allocated for ext4.
+And 1a should just mean, "I don't need to use the encrypted files any
+more".  In the PAM passphrase case, when you are just logging out, 1a
+is what's needed, and success is just fine.  pam_session won't *care*
+whether or not there are other users keeping the key in use.
 
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- include/uapi/linux/fs.h | 1 +
- 1 file changed, 1 insertion(+)
+The problem with "fscrypt lock" is that the non-privileged user sort
+of wants to do REMOVE_FLAG_KEY_FLAG_FOR_ALL_USERS, but they doesn't
+have the privileges to do it, and they are hoping that removing their
+own key removes it the key from the system.  That to me seems to be
+the fundamental disconnect.  The "fscrypt unlock" and "fscrypt lock"
+commands comes from the v1 key management, and requires root.  It's
+the translation to unprivileged mode where "fscrypt lock" seems to
+have problems.
 
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index 59c71fa8c553..df261b7e0587 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -306,6 +306,7 @@ struct fscrypt_key {
- #define FS_TOPDIR_FL			0x00020000 /* Top of directory hierarchies*/
- #define FS_HUGE_FILE_FL			0x00040000 /* Reserved for ext4 */
- #define FS_EXTENT_FL			0x00080000 /* Extents */
-+#define FS_VERITY_FL			0x00100000 /* Verity protected inode */
- #define FS_EA_INODE_FL			0x00200000 /* Inode used for large EA */
- #define FS_EOFBLOCKS_FL			0x00400000 /* Reserved for ext4 */
- #define FS_NOCOW_FL			0x00800000 /* Do not cow file */
--- 
-2.22.0
+> > What about having "fscrypt lock" call FS_IOC_GET_ENCRYPTION_KEY_STATUS
+> > and print a warning message saying, "we can't lock it because N other
+> > users who have registered a key".  I'd argue fscrypt should do this
+> > regardless of whether or not FS_IOC_REMOVE_ENCRYPTION_KEY returns
+> > EUSERS or not.
+> 
+> Shouldn't "fscrypt lock" still remove the user's handle, as opposed to refuse to
+> do anything, though?  So it would still need to callh
+> FS_IOC_REMOVE_ENCRYPTION_KEY, and could get the status from it rather than also
+> needing to call FS_IOC_GET_ENCRYPTION_KEY_STATUS.
+> 
+> Though, FS_IOC_GET_ENCRYPTION_KEY_STATUS would be needed if we wanted to show
+> the specific count of other users.
+ 
+So my perspective is that the ioctl's should have very clean
+semantics, and errors should be consistent with how the Unix system
+calls and error reporting.
+
+If we need to make "fscrypt lock" and "fscrypt unlock" have semantics
+that are more consistent with previous user interface choices, then
+fscrypt can use FS_IOC_GET_ENCRYPTION_KEY_STATUS to print the warning
+before it calls FS_IOC_REMOVE_ENCRYPTION_KEY --- with "fscrypt purge_keys"
+calling something like FS_IOC_REMOVE_ALL_USER_ENCRYPTION_KEYS.
+
+> > It seems to me that the EBUSY and EUSERS errors should be status bits
+> > which gets returned to the user in a bitfield --- and if the key has
+> > been removed, or the user's claim on the key's existence has been
+> > removed, the ioctl returns success.
+> > 
+> > That way we don't have to deal with the semantic disconnect where some
+> > errors don't actually change system state, and other errors that *do*
+> > change system state (as in, the key gets removed, or the user's claim
+> > on the key gets removed), but still returns than error.
+> > 
+> 
+> Do you mean use a positive return value, or do you mean add an output field to
+> the struct passed to the ioctl?
+
+I meant adding an output field.  I see EBUSY and EUSERS as status bits
+which *some* use cases might find useful.  Other use cases, such as in
+the pam_keys session logout code, we won't care at *all* about those
+status reporting (or error codes).  So if EBUSY and EUSERS are
+returned as errors, then it adds to complexity of those programs
+whichd don't care.  (And even for those that do, it's still a bit more
+complex since they has to distinguish between EBUSY, EUSERS, or other
+errors --- in fact, *all* programs which use
+FS_IOC_REMOVE_ENCRYPTION_KEY will *have* to check for EBUSY and
+ESUSERS whether they care or not.)
+
+> Either way note that it doesn't really need to be a bitfield, since you can't
+> have both statuses at the same time.  I.e. if there are still other users, we
+> couldn't have even gotten to checking for in-use files.
+
+That's actually an implementation detail, though, right?  In theory,
+we could check to see if there are any in-use files, independently of
+whether there are any users or not.
+
+					- Ted
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
