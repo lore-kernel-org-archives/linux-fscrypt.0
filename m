@@ -1,296 +1,211 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 14 Aug 2019 19:37:46 +0300
-Message-Id: <20190814163746.3525-5-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190814163746.3525-1-ard.biesheuvel@linaro.org>
-References: <20190814163746.3525-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v11 4/4] crypto: arm64/aes - implement
-	accelerated ESSIV/CBC mode
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+References: <20190710225609.192252-1-satyat@google.com>
+ <20190710225609.192252-3-satyat@google.com>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <7856ad79-6224-532d-ff9f-50ffc00f7203@kernel.dk>
+Date: Fri, 2 Aug 2019 13:46:45 -0700
 MIME-Version: 1.0
+In-Reply-To: <20190710225609.192252-3-satyat@google.com>
+Content-Language: en-US
+Subject: Re: [f2fs-dev] [PATCH 2/8] block: Add encryption context to struct
+ bio
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: Satya Tangirala <satyat@google.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Cc: Kuohong Wang <kuohong.wang@mediatek.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Parshuram Raju Thombare <pthombar@cadence.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Add an accelerated version of the 'essiv(cbc(aes),sha256)' skcipher,
-which is used by fscrypt or dm-crypt on systems where CBC mode is
-signficantly more performant than XTS mode (e.g., when using a h/w
-accelerator which supports the former but not the latter) This avoids
-a separate call into the AES cipher for every invocation.
+On 7/10/19 4:56 PM, Satya Tangirala wrote:
+> We must have some way of letting a storage device driver know what
+> encryption context it should use for en/decrypting a request. However,
+> it's the filesystem/fscrypt that knows about and manages encryption
+> contexts. As such, when the filesystem layer submits a bio to the block
+> layer, and this bio eventually reaches a device driver with support for
+> inline encryption, the device driver will need to have been told the
+> encryption context for that bio.
+> 
+> We want to communicate the encryption context from the filesystem layer
+> to the storage device along with the bio, when the bio is submitted to the
+> block layer. To do this, we add a struct bio_crypt_ctx to struct bio, which
+> can represent an encryption context (note that we can't use the bi_private
+> field in struct bio to do this because that field does not function to pass
+> information across layers in the storage stack). We also introduce various
+> functions to manipulate the bio_crypt_ctx and make the bio/request merging
+> logic aware of the bio_crypt_ctx.
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm64/crypto/aes-glue.c  | 124 ++++++++++++++++++++
- arch/arm64/crypto/aes-modes.S |  28 +++++
- 2 files changed, 152 insertions(+)
+A few minor comments below. Don't see something totally horrible with
+your approach.
 
-diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
-index 23abf335f1ee..ca0c84d56cba 100644
---- a/arch/arm64/crypto/aes-glue.c
-+++ b/arch/arm64/crypto/aes-glue.c
-@@ -10,6 +10,7 @@
- #include <asm/simd.h>
- #include <crypto/aes.h>
- #include <crypto/ctr.h>
-+#include <crypto/sha.h>
- #include <crypto/internal/hash.h>
- #include <crypto/internal/simd.h>
- #include <crypto/internal/skcipher.h>
-@@ -30,6 +31,8 @@
- #define aes_cbc_decrypt		ce_aes_cbc_decrypt
- #define aes_cbc_cts_encrypt	ce_aes_cbc_cts_encrypt
- #define aes_cbc_cts_decrypt	ce_aes_cbc_cts_decrypt
-+#define aes_essiv_cbc_encrypt	ce_aes_essiv_cbc_encrypt
-+#define aes_essiv_cbc_decrypt	ce_aes_essiv_cbc_decrypt
- #define aes_ctr_encrypt		ce_aes_ctr_encrypt
- #define aes_xts_encrypt		ce_aes_xts_encrypt
- #define aes_xts_decrypt		ce_aes_xts_decrypt
-@@ -44,6 +47,8 @@ MODULE_DESCRIPTION("AES-ECB/CBC/CTR/XTS using ARMv8 Crypto Extensions");
- #define aes_cbc_decrypt		neon_aes_cbc_decrypt
- #define aes_cbc_cts_encrypt	neon_aes_cbc_cts_encrypt
- #define aes_cbc_cts_decrypt	neon_aes_cbc_cts_decrypt
-+#define aes_essiv_cbc_encrypt	neon_aes_essiv_cbc_encrypt
-+#define aes_essiv_cbc_decrypt	neon_aes_essiv_cbc_decrypt
- #define aes_ctr_encrypt		neon_aes_ctr_encrypt
- #define aes_xts_encrypt		neon_aes_xts_encrypt
- #define aes_xts_decrypt		neon_aes_xts_decrypt
-@@ -51,6 +56,7 @@ MODULE_DESCRIPTION("AES-ECB/CBC/CTR/XTS using ARMv8 Crypto Extensions");
- MODULE_DESCRIPTION("AES-ECB/CBC/CTR/XTS using ARMv8 NEON");
- MODULE_ALIAS_CRYPTO("ecb(aes)");
- MODULE_ALIAS_CRYPTO("cbc(aes)");
-+MODULE_ALIAS_CRYPTO("essiv(cbc(aes),sha256)");
- MODULE_ALIAS_CRYPTO("ctr(aes)");
- MODULE_ALIAS_CRYPTO("xts(aes)");
- MODULE_ALIAS_CRYPTO("cmac(aes)");
-@@ -87,6 +93,13 @@ asmlinkage void aes_xts_decrypt(u8 out[], u8 const in[], u32 const rk1[],
- 				int rounds, int blocks, u32 const rk2[], u8 iv[],
- 				int first);
- 
-+asmlinkage void aes_essiv_cbc_encrypt(u8 out[], u8 const in[], u32 const rk1[],
-+				      int rounds, int blocks, u8 iv[],
-+				      u32 const rk2[]);
-+asmlinkage void aes_essiv_cbc_decrypt(u8 out[], u8 const in[], u32 const rk1[],
-+				      int rounds, int blocks, u8 iv[],
-+				      u32 const rk2[]);
-+
- asmlinkage void aes_mac_update(u8 const in[], u32 const rk[], int rounds,
- 			       int blocks, u8 dg[], int enc_before,
- 			       int enc_after);
-@@ -102,6 +115,12 @@ struct crypto_aes_xts_ctx {
- 	struct crypto_aes_ctx __aligned(8) key2;
- };
- 
-+struct crypto_aes_essiv_cbc_ctx {
-+	struct crypto_aes_ctx key1;
-+	struct crypto_aes_ctx __aligned(8) key2;
-+	struct crypto_shash *hash;
-+};
-+
- struct mac_tfm_ctx {
- 	struct crypto_aes_ctx key;
- 	u8 __aligned(8) consts[];
-@@ -146,6 +165,31 @@ static int xts_set_key(struct crypto_skcipher *tfm, const u8 *in_key,
- 	return -EINVAL;
- }
- 
-+static int essiv_cbc_set_key(struct crypto_skcipher *tfm, const u8 *in_key,
-+			     unsigned int key_len)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	SHASH_DESC_ON_STACK(desc, ctx->hash);
-+	u8 digest[SHA256_DIGEST_SIZE];
-+	int ret;
-+
-+	ret = aes_expandkey(&ctx->key1, in_key, key_len);
-+	if (ret)
-+		goto out;
-+
-+	desc->tfm = ctx->hash;
-+	crypto_shash_digest(desc, in_key, key_len, digest);
-+
-+	ret = aes_expandkey(&ctx->key2, digest, sizeof(digest));
-+	if (ret)
-+		goto out;
-+
-+	return 0;
-+out:
-+	crypto_skcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
-+	return -EINVAL;
-+}
-+
- static int ecb_encrypt(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-@@ -360,6 +404,68 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
- 	return skcipher_walk_done(&walk, 0);
- }
- 
-+static int essiv_cbc_init_tfm(struct crypto_skcipher *tfm)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+
-+	ctx->hash = crypto_alloc_shash("sha256", 0, 0);
-+	if (IS_ERR(ctx->hash))
-+		return PTR_ERR(ctx->hash);
-+
-+	return 0;
-+}
-+
-+static void essiv_cbc_exit_tfm(struct crypto_skcipher *tfm)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+
-+	crypto_free_shash(ctx->hash);
-+}
-+
-+static int essiv_cbc_encrypt(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err, rounds = 6 + ctx->key1.key_length / 4;
-+	struct skcipher_walk walk;
-+	unsigned int blocks;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+
-+	blocks = walk.nbytes / AES_BLOCK_SIZE;
-+	if (blocks) {
-+		kernel_neon_begin();
-+		aes_essiv_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
-+				      ctx->key1.key_enc, rounds, blocks,
-+				      req->iv, ctx->key2.key_enc);
-+		kernel_neon_end();
-+		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+	}
-+	return err ?: cbc_encrypt_walk(req, &walk);
-+}
-+
-+static int essiv_cbc_decrypt(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err, rounds = 6 + ctx->key1.key_length / 4;
-+	struct skcipher_walk walk;
-+	unsigned int blocks;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+
-+	blocks = walk.nbytes / AES_BLOCK_SIZE;
-+	if (blocks) {
-+		kernel_neon_begin();
-+		aes_essiv_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
-+				      ctx->key1.key_dec, rounds, blocks,
-+				      req->iv, ctx->key2.key_enc);
-+		kernel_neon_end();
-+		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+	}
-+	return err ?: cbc_decrypt_walk(req, &walk);
-+}
-+
- static int ctr_encrypt(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-@@ -515,6 +621,24 @@ static struct skcipher_alg aes_algs[] = { {
- 	.encrypt	= cts_cbc_encrypt,
- 	.decrypt	= cts_cbc_decrypt,
- 	.init		= cts_cbc_init_tfm,
-+}, {
-+	.base = {
-+		.cra_name		= "__essiv(cbc(aes),sha256)",
-+		.cra_driver_name	= "__essiv-cbc-aes-sha256-" MODE,
-+		.cra_priority		= PRIO + 1,
-+		.cra_flags		= CRYPTO_ALG_INTERNAL,
-+		.cra_blocksize		= AES_BLOCK_SIZE,
-+		.cra_ctxsize		= sizeof(struct crypto_aes_essiv_cbc_ctx),
-+		.cra_module		= THIS_MODULE,
-+	},
-+	.min_keysize	= AES_MIN_KEY_SIZE,
-+	.max_keysize	= AES_MAX_KEY_SIZE,
-+	.ivsize		= AES_BLOCK_SIZE,
-+	.setkey		= essiv_cbc_set_key,
-+	.encrypt	= essiv_cbc_encrypt,
-+	.decrypt	= essiv_cbc_decrypt,
-+	.init		= essiv_cbc_init_tfm,
-+	.exit		= essiv_cbc_exit_tfm,
- }, {
- 	.base = {
- 		.cra_name		= "__ctr(aes)",
-diff --git a/arch/arm64/crypto/aes-modes.S b/arch/arm64/crypto/aes-modes.S
-index 324039b72094..2879f030a749 100644
---- a/arch/arm64/crypto/aes-modes.S
-+++ b/arch/arm64/crypto/aes-modes.S
-@@ -118,8 +118,23 @@ AES_ENDPROC(aes_ecb_decrypt)
- 	 *		   int blocks, u8 iv[])
- 	 * aes_cbc_decrypt(u8 out[], u8 const in[], u8 const rk[], int rounds,
- 	 *		   int blocks, u8 iv[])
-+	 * aes_essiv_cbc_encrypt(u8 out[], u8 const in[], u32 const rk1[],
-+	 *			 int rounds, int blocks, u8 iv[],
-+	 *			 u32 const rk2[]);
-+	 * aes_essiv_cbc_decrypt(u8 out[], u8 const in[], u32 const rk1[],
-+	 *			 int rounds, int blocks, u8 iv[],
-+	 *			 u32 const rk2[]);
- 	 */
- 
-+AES_ENTRY(aes_essiv_cbc_encrypt)
-+	ld1		{v4.16b}, [x5]			/* get iv */
-+
-+	mov		w8, #14				/* AES-256: 14 rounds */
-+	enc_prepare	w8, x6, x7
-+	encrypt_block	v4, w8, x6, x7, w9
-+	enc_switch_key	w3, x2, x6
-+	b		.Lcbcencloop4x
-+
- AES_ENTRY(aes_cbc_encrypt)
- 	ld1		{v4.16b}, [x5]			/* get iv */
- 	enc_prepare	w3, x2, x6
-@@ -153,13 +168,25 @@ AES_ENTRY(aes_cbc_encrypt)
- 	st1		{v4.16b}, [x5]			/* return iv */
- 	ret
- AES_ENDPROC(aes_cbc_encrypt)
-+AES_ENDPROC(aes_essiv_cbc_encrypt)
-+
-+AES_ENTRY(aes_essiv_cbc_decrypt)
-+	stp		x29, x30, [sp, #-16]!
-+	mov		x29, sp
-+
-+	ld1		{cbciv.16b}, [x5]		/* get iv */
- 
-+	mov		w8, #14				/* AES-256: 14 rounds */
-+	enc_prepare	w8, x6, x7
-+	encrypt_block	cbciv, w8, x6, x7, w9
-+	b		.Lessivcbcdecstart
- 
- AES_ENTRY(aes_cbc_decrypt)
- 	stp		x29, x30, [sp, #-16]!
- 	mov		x29, sp
- 
- 	ld1		{cbciv.16b}, [x5]		/* get iv */
-+.Lessivcbcdecstart:
- 	dec_prepare	w3, x2, x6
- 
- .LcbcdecloopNx:
-@@ -212,6 +239,7 @@ ST5(	st1		{v4.16b}, [x0], #16		)
- 	ldp		x29, x30, [sp], #16
- 	ret
- AES_ENDPROC(aes_cbc_decrypt)
-+AES_ENDPROC(aes_essiv_cbc_decrypt)
- 
- 
- 	/*
+
+> diff --git a/block/bio-crypt-ctx.c b/block/bio-crypt-ctx.c
+> new file mode 100644
+> index 000000000000..8b884ef32007
+> --- /dev/null
+> +++ b/block/bio-crypt-ctx.c
+> @@ -0,0 +1,117 @@
+> +// SPDX-License-Identifier: GPL-2.0
+> +/*
+> + * Copyright 2019 Google LLC
+> + */
+> +
+> +#include <linux/bio.h>
+> +#include <linux/blkdev.h>
+> +#include <linux/slab.h>
+> +#include <linux/keyslot-manager.h>
+> +
+> +struct bio_crypt_ctx *bio_crypt_alloc_ctx(gfp_t gfp_mask)
+> +{
+> +	return kzalloc(sizeof(struct bio_crypt_ctx), gfp_mask);
+> +}
+
+I think you'll want this to be mempool backed.
+
+> +EXPORT_SYMBOL(bio_crypt_alloc_ctx);
+> +
+> +void bio_crypt_free_ctx(struct bio *bio)
+> +{
+> +	kzfree(bio->bi_crypt_context);
+> +	bio->bi_crypt_context = NULL;
+> +}
+> +EXPORT_SYMBOL(bio_crypt_free_ctx);
+> +
+> +int bio_crypt_clone(struct bio *dst, struct bio *src, gfp_t gfp_mask)
+> +{
+> +	if (!bio_is_encrypted(src))
+> +		return 0;
+
+Was going to suggest dumping this helper, but that won't work for the
+case where inline encryption isn't enabled. How about renaming it so it
+is easier to grok what it tests, bio_has_crypt_ctx() or something like
+that.
+
+> +	dst->bi_crypt_context = bio_crypt_alloc_ctx(gfp_mask);
+> +	if (!dst->bi_crypt_context)
+> +		return -ENOMEM;
+
+That's why you need the mempool...
+
+> diff --git a/block/blk-merge.c b/block/blk-merge.c
+> index 17713d7d98d5..f416e7f38270 100644
+> --- a/block/blk-merge.c
+> +++ b/block/blk-merge.c
+> @@ -531,6 +531,9 @@ static inline int ll_new_hw_segment(struct request_queue *q,
+>   	if (blk_integrity_merge_bio(q, req, bio) == false)
+>   		goto no_merge;
+>   
+> +	if (WARN_ON(!bio_crypt_ctx_compatible(bio, req->bio)))
+> +		goto no_merge;
+
+This is really a debug check, as that shouldn't happen unless you have a
+bug in your merge helpers. I think we can do one of two things here:
+
+1) Rely on this check only for merging, similarly to what the integrity
+   code does. This means the WARN() goes away and (most of) the  other
+   merge checks can go away.
+
+2) Keep it, but change it to a WARN_ON_ONCE().
+
+> @@ -696,8 +699,13 @@ static enum elv_merge blk_try_req_merge(struct request *req,
+>   {
+>   	if (blk_discard_mergable(req))
+>   		return ELEVATOR_DISCARD_MERGE;
+> -	else if (blk_rq_pos(req) + blk_rq_sectors(req) == blk_rq_pos(next))
+> +	else if (blk_rq_pos(req) + blk_rq_sectors(req) == blk_rq_pos(next)) {
+> +		if (!bio_crypt_ctx_back_mergeable(
+> +			req->bio, blk_rq_sectors(req), next->bio)) {
+> +			return ELEVATOR_NO_MERGE;
+> +		}
+>   		return ELEVATOR_BACK_MERGE;
+> +	}
+
+Weird line breaks aside, see above comment. More in this file.
+
+> diff --git a/include/linux/bio.h b/include/linux/bio.h
+> index ef9c6e2e92bc..4e664d6441d5 100644
+> --- a/include/linux/bio.h
+> +++ b/include/linux/bio.h
+> @@ -572,6 +572,196 @@ enum blk_crypt_mode_num {
+>   	 */
+>   };
+>   
+> +#ifdef CONFIG_BLK_INLINE_ENCRYPTION
+> +struct bio_crypt_ctx {
+> +	int keyslot;
+> +	u8 *raw_key;
+> +	enum blk_crypt_mode_num crypt_mode;
+> +	u64 data_unit_num;
+> +	unsigned int data_unit_size_bits;
+> +
+> +	/*
+> +	 * The keyslot manager where the key has been programmed
+> +	 * with keyslot.
+> +	 */
+> +	struct keyslot_manager *processing_ksm;
+> +
+> +	/*
+> +	 * Copy of the bvec_iter when this bio was submitted.
+> +	 * We only want to en/decrypt the part of the bio
+> +	 * as described by the bvec_iter upon submission because
+> +	 * bio might be split before being resubmitted
+> +	 */
+> +	struct bvec_iter crypt_iter;
+> +	u64 sw_data_unit_num;
+> +};
+
+[snip]
+
+Let's move that to a separate file, with the other crypt specific bits.
+Just include it from bio.h.
+
+
+> +static inline u64 bio_crypt_data_unit_num(struct bio *bio)
+> +{
+> +	WARN_ON(!bio_is_encrypted(bio));
+> +	return bio->bi_crypt_context->data_unit_num;
+> +}
+> +
+> +static inline u64 bio_crypt_sw_data_unit_num(struct bio *bio)
+> +{
+> +	WARN_ON(!bio_is_encrypted(bio));
+> +	return bio->bi_crypt_context->sw_data_unit_num;
+> +}
+
+These WARN()'s are a bit weird.
+
+> +static inline u64 bio_crypt_data_unit_num(struct bio *bio)
+> +{
+> +	WARN_ON(1);
+> +	return 0;
+> +}
+
+And this one definitely needs to go.
+
+> diff --git a/include/linux/blk_types.h b/include/linux/blk_types.h
+> index 95202f80676c..0b794fe3530a 100644
+> --- a/include/linux/blk_types.h
+> +++ b/include/linux/blk_types.h
+> @@ -137,6 +137,8 @@ static inline void bio_issue_init(struct bio_issue *issue,
+>   			((u64)size << BIO_ISSUE_SIZE_SHIFT));
+>   }
+>   
+> +struct bio_crypt_ctx;
+
+Place this with the other forward declarations.
+
 -- 
-2.17.1
+Jens Axboe
 
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
