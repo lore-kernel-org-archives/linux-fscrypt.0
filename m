@@ -1,198 +1,67 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:53500 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726838AbfHLR5P (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 12 Aug 2019 13:57:15 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 6/8] xfs_io/encrypt: add 'add_enckey' command
-Date: Mon, 12 Aug 2019 10:56:32 -0700
-Message-Id: <20190812175635.34186-7-ebiggers@kernel.org>
-In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
-References: <20190812175635.34186-1-ebiggers@kernel.org>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+References: <20190710225609.192252-1-satyat@google.com>
+ <20190710225609.192252-4-satyat@google.com>
+From: Jens Axboe <axboe@kernel.dk>
+Message-ID: <c5bffc1e-ce6a-0060-cf55-e3dc446d7049@kernel.dk>
+Date: Fri, 2 Aug 2019 13:51:42 -0700
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-xfs@vger.kernel.org
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+In-Reply-To: <20190710225609.192252-4-satyat@google.com>
+Content-Language: en-US
+Subject: Re: [f2fs-dev] [PATCH 3/8] block: blk-crypto for Inline Encryption
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: Satya Tangirala <satyat@google.com>, linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Cc: Kuohong Wang <kuohong.wang@mediatek.com>, Ladvine D Almeida <ladvine.dalmeida@synopsys.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Greg Kroah-Hartman <gregkh@linuxfoundation.org>, Parshuram Raju Thombare <pthombar@cadence.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On 7/10/19 4:56 PM, Satya Tangirala wrote:
+> We introduce blk-crypto, which manages programming keyslots for struct
+> bios. With blk-crypto, filesystems only need to call bio_crypt_set_ctx with
+> the encryption key, algorithm and data_unit_num; they don't have to worry
+> about getting a keyslot for each encryption context, as blk-crypto handles
+> that. Blk-crypto also makes it possible for layered devices like device
+> mapper to make use of inline encryption hardware.
+> 
+> Blk-crypto delegates crypto operations to inline encryption hardware when
+> available, and also contains a software fallback to the kernel crypto API.
+> For more details, refer to Documentation/block/blk-crypto.txt.
+> 
+> Known issues:
+> 1) We're allocating crypto_skcipher in blk_crypto_keyslot_program, which
+> uses GFP_KERNEL to allocate memory, but this function is on the write
+> path for IO - we need to add support for specifying a different flags
+> to the crypto API.
 
-Add an 'add_enckey' command to xfs_io, to provide a command-line
-interface to the FS_IOC_ADD_ENCRYPTION_KEY ioctl.
+That's a must-fix before merging, btw.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- io/encrypt.c      | 109 ++++++++++++++++++++++++++++++++++++++++++++++
- man/man8/xfs_io.8 |  15 +++++++
- 2 files changed, 124 insertions(+)
+> @@ -1018,7 +1019,9 @@ blk_qc_t generic_make_request(struct bio *bio)
+>   			/* Create a fresh bio_list for all subordinate requests */
+>   			bio_list_on_stack[1] = bio_list_on_stack[0];
+>   			bio_list_init(&bio_list_on_stack[0]);
+> -			ret = q->make_request_fn(q, bio);
+> +
+> +			if (!blk_crypto_submit_bio(&bio))
+> +				ret = q->make_request_fn(q, bio);
+>   
+>   			blk_queue_exit(q);
 
-diff --git a/io/encrypt.c b/io/encrypt.c
-index f982cd17..038c4cce 100644
---- a/io/encrypt.c
-+++ b/io/encrypt.c
-@@ -138,6 +138,7 @@ struct fscrypt_get_key_status_arg {
- 
- static cmdinfo_t get_encpolicy_cmd;
- static cmdinfo_t set_encpolicy_cmd;
-+static cmdinfo_t add_enckey_cmd;
- 
- static void
- get_encpolicy_help(void)
-@@ -183,6 +184,22 @@ set_encpolicy_help(void)
- "\n"));
- }
- 
-+static void
-+add_enckey_help(void)
-+{
-+	printf(_(
-+"\n"
-+" add an encryption key to the filesystem\n"
-+"\n"
-+" Examples:\n"
-+" 'add_enckey' - add key for v2 policies\n"
-+" 'add_enckey -d 0000111122223333' - add key for v1 policies w/ given descriptor\n"
-+"\n"
-+"The key in binary is read from standard input.\n"
-+" -d DESCRIPTOR -- master_key_descriptor\n"
-+"\n"));
-+}
-+
- static const struct {
- 	__u8 mode;
- 	const char *name;
-@@ -594,6 +611,88 @@ set_encpolicy_f(int argc, char **argv)
- 	return 0;
- }
- 
-+static ssize_t
-+read_until_limit_or_eof(int fd, void *buf, size_t limit)
-+{
-+	size_t bytes_read = 0;
-+	ssize_t res;
-+
-+	while (limit) {
-+		res = read(fd, buf, limit);
-+		if (res < 0)
-+			return res;
-+		if (res == 0)
-+			break;
-+		buf += res;
-+		bytes_read += res;
-+		limit -= res;
-+	}
-+	return bytes_read;
-+}
-+
-+static int
-+add_enckey_f(int argc, char **argv)
-+{
-+	int c;
-+	struct fscrypt_add_key_arg *arg;
-+	ssize_t raw_size;
-+
-+	arg = calloc(1, sizeof(*arg) + FSCRYPT_MAX_KEY_SIZE + 1);
-+	if (!arg) {
-+		fprintf(stderr, "calloc failed\n");
-+		exitcode = 1;
-+		return 0;
-+	}
-+
-+	arg->key_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
-+
-+	while ((c = getopt(argc, argv, "d:")) != EOF) {
-+		switch (c) {
-+		case 'd':
-+			arg->key_spec.type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
-+			if (!str2keydesc(optarg, arg->key_spec.u.descriptor))
-+				goto out;
-+			break;
-+		default:
-+			return command_usage(&add_enckey_cmd);
-+		}
-+	}
-+	argc -= optind;
-+	argv += optind;
-+
-+	if (argc != 0)
-+		return command_usage(&add_enckey_cmd);
-+
-+	raw_size = read_until_limit_or_eof(STDIN_FILENO, arg->raw,
-+					   FSCRYPT_MAX_KEY_SIZE + 1);
-+	if (raw_size < 0) {
-+		fprintf(stderr, "Error reading key from stdin: %s\n",
-+			strerror(errno));
-+		exitcode = 1;
-+		goto out;
-+	}
-+	if (raw_size > FSCRYPT_MAX_KEY_SIZE) {
-+		fprintf(stderr,
-+			"Invalid key; got > FSCRYPT_MAX_KEY_SIZE (%d) bytes on stdin!\n",
-+			FSCRYPT_MAX_KEY_SIZE);
-+		goto out;
-+	}
-+	arg->raw_size = raw_size;
-+
-+	if (ioctl(file->fd, FS_IOC_ADD_ENCRYPTION_KEY, arg) != 0) {
-+		fprintf(stderr, "Error adding encryption key: %s\n",
-+			strerror(errno));
-+		exitcode = 1;
-+		goto out;
-+	}
-+	printf("Added encryption key with %s %s\n",
-+	       keyspectype(&arg->key_spec), keyspec2str(&arg->key_spec));
-+out:
-+	memset(arg->raw, 0, FSCRYPT_MAX_KEY_SIZE + 1);
-+	free(arg);
-+	return 0;
-+}
-+
- void
- encrypt_init(void)
- {
-@@ -618,6 +717,16 @@ encrypt_init(void)
- 		_("assign an encryption policy to the current file");
- 	set_encpolicy_cmd.help = set_encpolicy_help;
- 
-+	add_enckey_cmd.name = "add_enckey";
-+	add_enckey_cmd.cfunc = add_enckey_f;
-+	add_enckey_cmd.args = _("[-d descriptor]");
-+	add_enckey_cmd.argmin = 0;
-+	add_enckey_cmd.argmax = -1;
-+	add_enckey_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
-+	add_enckey_cmd.oneline = _("add an encryption key to the filesystem");
-+	add_enckey_cmd.help = add_enckey_help;
-+
- 	add_command(&get_encpolicy_cmd);
- 	add_command(&set_encpolicy_cmd);
-+	add_command(&add_enckey_cmd);
- }
-diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
-index 18fcde0f..7d6a23fe 100644
---- a/man/man8/xfs_io.8
-+++ b/man/man8/xfs_io.8
-@@ -749,6 +749,21 @@ Test whether v2 encryption policies are supported.  Prints "supported",
- .RE
- .PD
- .TP
-+.BI "add_enckey [ \-d " descriptor " ]"
-+On filesystems that support encryption, add an encryption key to the filesystem
-+containing the currently open file.  The key in binary (typically 64 bytes long)
-+is read from standard input.
-+.RS 1.0i
-+.PD 0
-+.TP 0.4i
-+.BI \-d " descriptor"
-+key descriptor, as a 16-character hex string (8 bytes).  If given, the key will
-+be available for use by v1 encryption policies that use this descriptor.
-+Otherwise, the key is added as a v2 policy key, and on success the resulting
-+"key identifier" will be printed.
-+.RE
-+.PD
-+.TP
- .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
- List extended inode flags on the currently open file. If the
- .B \-R
+Why isn't this just stacking the ->make_request_fn() instead? Then we
+could get this out of the hot path.
+
 -- 
-2.23.0.rc1.153.gdeed80330f-goog
+Jens Axboe
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
