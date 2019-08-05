@@ -1,108 +1,214 @@
-Return-Path: <fstests-owner@vger.kernel.org>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 3/9] common/encrypt: support checking for v2 encryption policy support
-Date: Mon, 12 Aug 2019 10:58:03 -0700
-Message-Id: <20190812175809.34810-4-ebiggers@kernel.org>
-In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
-References: <20190812175809.34810-1-ebiggers@kernel.org>
+Date: Mon,  5 Aug 2019 09:25:02 -0700
+Message-Id: <20190805162521.90882-2-ebiggers@kernel.org>
+In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
+References: <20190805162521.90882-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: fstests-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+Subject: [f2fs-dev] [PATCH v8 01/20] fs,
+ fscrypt: move uapi definitions to new header <linux/fscrypt.h>
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Allow passing '-v 2' to _require_scratch_encryption() to check for v2
-encryption policy support on the scratch device, and for xfs_io support
-for setting and getting v2 encryption policies.
+More fscrypt definitions are being added, and we shouldn't use a
+disproportionate amount of space in <linux/fs.h> for fscrypt stuff.
+So move the fscrypt definitions to a new header <linux/fscrypt.h>.
 
+For source compatibility with existing userspace programs, <linux/fs.h>
+still includes the new header.
+
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- common/encrypt | 41 +++++++++++++++++++++++++++++++----------
- 1 file changed, 31 insertions(+), 10 deletions(-)
+ MAINTAINERS                  |  1 +
+ include/linux/fscrypt.h      |  1 +
+ include/uapi/linux/fs.h      | 54 ++-----------------------------
+ include/uapi/linux/fscrypt.h | 61 ++++++++++++++++++++++++++++++++++++
+ 4 files changed, 66 insertions(+), 51 deletions(-)
+ create mode 100644 include/uapi/linux/fscrypt.h
 
-diff --git a/common/encrypt b/common/encrypt
-index a086e80f..fa6e2672 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -6,12 +6,13 @@
+diff --git a/MAINTAINERS b/MAINTAINERS
+index a2c343ee3b2ca1..714ffdaaa9204f 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -6603,6 +6603,7 @@ T:	git git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git
+ S:	Supported
+ F:	fs/crypto/
+ F:	include/linux/fscrypt*.h
++F:	include/uapi/linux/fscrypt.h
+ F:	Documentation/filesystems/fscrypt.rst
  
- #
- # _require_scratch_encryption [-c CONTENTS_MODE] [-n FILENAMES_MODE]
-+#			      [-v POLICY_VERSION]
- #
- # Require encryption support on the scratch device.
- #
--# This checks for support for the default type of encryption policy (AES-256-XTS
--# and AES-256-CTS).  Options can be specified to also require support for a
--# different type of encryption policy.
-+# This checks for support for the default type of encryption policy (v1 with
-+# AES-256-XTS and AES-256-CTS).  Options can be specified to also require
-+# support for a different type of encryption policy.
- #
- _require_scratch_encryption()
- {
-@@ -68,13 +69,15 @@ _require_encryption_policy_support()
- 	local mnt=$1
- 	local dir=$mnt/tmpdir
- 	local set_encpolicy_args=""
-+	local policy_version=1
- 	local c
+ FSI SUBSYSTEM
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index bd8f207a2fb68b..81c0c754f8b21b 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -16,6 +16,7 @@
+ #include <linux/fs.h>
+ #include <linux/mm.h>
+ #include <linux/slab.h>
++#include <uapi/linux/fscrypt.h>
  
- 	OPTIND=2
--	while getopts "c:n:" c; do
-+	while getopts "c:n:v:" c; do
- 		case $c in
--		c|n)
-+		c|n|v)
- 			set_encpolicy_args+=" -$c $OPTARG"
-+			[ $c = v ] && policy_version=$OPTARG
- 			;;
- 		*)
- 			_fail "Unrecognized option '$c'"
-@@ -87,10 +90,26 @@ _require_encryption_policy_support()
- 		>> $seqres.full
+ #define FS_CRYPTO_BLOCK_SIZE		16
  
- 	mkdir $dir
--	_require_command "$KEYCTL_PROG" keyctl
--	_new_session_keyring
--	local keydesc=$(_generate_session_encryption_key)
--	if _set_encpolicy $dir $keydesc $set_encpolicy_args \
-+	if (( policy_version > 1 )); then
-+		_require_xfs_io_command "get_encpolicy" "-t"
-+		local output=$(_get_encpolicy $dir -t)
-+		if [ "$output" != "supported" ]; then
-+			if [ "$output" = "unsupported" ]; then
-+				_notrun "kernel does not support $FSTYP encryption v2 API"
-+			fi
-+			_fail "Unexpected output from 'get_encpolicy -t'"
-+		fi
-+		# Both the kernel and xfs_io support v2 encryption policies, and
-+		# therefore also filesystem-level keys -- since that's the only
-+		# way to provide keys for v2 policies.
-+		local raw_key=$(_generate_raw_encryption_key)
-+		local keyspec=$(_add_enckey $mnt "$raw_key" | awk '{print $NF}')
-+	else
-+		_require_command "$KEYCTL_PROG" keyctl
-+		_new_session_keyring
-+		local keyspec=$(_generate_session_encryption_key)
-+	fi
-+	if _set_encpolicy $dir $keyspec $set_encpolicy_args \
- 		2>&1 >>$seqres.full | egrep -q 'Invalid argument'; then
- 		_notrun "kernel does not support encryption policy: '$set_encpolicy_args'"
- 	fi
-@@ -103,7 +122,9 @@ _require_encryption_policy_support()
- 	if ! echo foo > $dir/file; then
- 		_notrun "encryption policy '$set_encpolicy_args' is unusable; probably missing kernel crypto API support"
- 	fi
--	$KEYCTL_PROG clear @s
-+	if (( policy_version <= 1 )); then
-+		$KEYCTL_PROG clear @s
-+	fi
- 	rm -r $dir
- }
+diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
+index 59c71fa8c553a3..41bd84d25a9807 100644
+--- a/include/uapi/linux/fs.h
++++ b/include/uapi/linux/fs.h
+@@ -13,6 +13,9 @@
+ #include <linux/limits.h>
+ #include <linux/ioctl.h>
+ #include <linux/types.h>
++#ifndef __KERNEL__
++#include <linux/fscrypt.h>
++#endif
  
+ /* Use of MS_* flags within the kernel is restricted to core mount(2) code. */
+ #if !defined(__KERNEL__)
+@@ -212,57 +215,6 @@ struct fsxattr {
+ #define FS_IOC_GETFSLABEL		_IOR(0x94, 49, char[FSLABEL_MAX])
+ #define FS_IOC_SETFSLABEL		_IOW(0x94, 50, char[FSLABEL_MAX])
+ 
+-/*
+- * File system encryption support
+- */
+-/* Policy provided via an ioctl on the topmost directory */
+-#define FS_KEY_DESCRIPTOR_SIZE	8
+-
+-#define FS_POLICY_FLAGS_PAD_4		0x00
+-#define FS_POLICY_FLAGS_PAD_8		0x01
+-#define FS_POLICY_FLAGS_PAD_16		0x02
+-#define FS_POLICY_FLAGS_PAD_32		0x03
+-#define FS_POLICY_FLAGS_PAD_MASK	0x03
+-#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
+-#define FS_POLICY_FLAGS_VALID		0x07
+-
+-/* Encryption algorithms */
+-#define FS_ENCRYPTION_MODE_INVALID		0
+-#define FS_ENCRYPTION_MODE_AES_256_XTS		1
+-#define FS_ENCRYPTION_MODE_AES_256_GCM		2
+-#define FS_ENCRYPTION_MODE_AES_256_CBC		3
+-#define FS_ENCRYPTION_MODE_AES_256_CTS		4
+-#define FS_ENCRYPTION_MODE_AES_128_CBC		5
+-#define FS_ENCRYPTION_MODE_AES_128_CTS		6
+-#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
+-#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
+-#define FS_ENCRYPTION_MODE_ADIANTUM		9
+-
+-struct fscrypt_policy {
+-	__u8 version;
+-	__u8 contents_encryption_mode;
+-	__u8 filenames_encryption_mode;
+-	__u8 flags;
+-	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
+-};
+-
+-#define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
+-#define FS_IOC_GET_ENCRYPTION_PWSALT	_IOW('f', 20, __u8[16])
+-#define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
+-
+-/* Parameters for passing an encryption key into the kernel keyring */
+-#define FS_KEY_DESC_PREFIX		"fscrypt:"
+-#define FS_KEY_DESC_PREFIX_SIZE		8
+-
+-/* Structure that userspace passes to the kernel keyring */
+-#define FS_MAX_KEY_SIZE			64
+-
+-struct fscrypt_key {
+-	__u32 mode;
+-	__u8 raw[FS_MAX_KEY_SIZE];
+-	__u32 size;
+-};
+-
+ /*
+  * Inode flags (FS_IOC_GETFLAGS / FS_IOC_SETFLAGS)
+  *
+diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+new file mode 100644
+index 00000000000000..26f6d2c19afd3f
+--- /dev/null
++++ b/include/uapi/linux/fscrypt.h
+@@ -0,0 +1,61 @@
++/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
++/*
++ * fscrypt user API
++ *
++ * These ioctls can be used on filesystems that support fscrypt.  See the
++ * "User API" section of Documentation/filesystems/fscrypt.rst.
++ */
++#ifndef _UAPI_LINUX_FSCRYPT_H
++#define _UAPI_LINUX_FSCRYPT_H
++
++#include <linux/types.h>
++
++#define FS_KEY_DESCRIPTOR_SIZE	8
++
++/* Encryption policy flags */
++#define FS_POLICY_FLAGS_PAD_4		0x00
++#define FS_POLICY_FLAGS_PAD_8		0x01
++#define FS_POLICY_FLAGS_PAD_16		0x02
++#define FS_POLICY_FLAGS_PAD_32		0x03
++#define FS_POLICY_FLAGS_PAD_MASK	0x03
++#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
++#define FS_POLICY_FLAGS_VALID		0x07
++
++/* Encryption algorithms */
++#define FS_ENCRYPTION_MODE_INVALID		0
++#define FS_ENCRYPTION_MODE_AES_256_XTS		1
++#define FS_ENCRYPTION_MODE_AES_256_GCM		2
++#define FS_ENCRYPTION_MODE_AES_256_CBC		3
++#define FS_ENCRYPTION_MODE_AES_256_CTS		4
++#define FS_ENCRYPTION_MODE_AES_128_CBC		5
++#define FS_ENCRYPTION_MODE_AES_128_CTS		6
++#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
++#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
++#define FS_ENCRYPTION_MODE_ADIANTUM		9
++
++struct fscrypt_policy {
++	__u8 version;
++	__u8 contents_encryption_mode;
++	__u8 filenames_encryption_mode;
++	__u8 flags;
++	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
++};
++
++#define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
++#define FS_IOC_GET_ENCRYPTION_PWSALT	_IOW('f', 20, __u8[16])
++#define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
++
++/* Parameters for passing an encryption key into the kernel keyring */
++#define FS_KEY_DESC_PREFIX		"fscrypt:"
++#define FS_KEY_DESC_PREFIX_SIZE		8
++
++/* Structure that userspace passes to the kernel keyring */
++#define FS_MAX_KEY_SIZE			64
++
++struct fscrypt_key {
++	__u32 mode;
++	__u8 raw[FS_MAX_KEY_SIZE];
++	__u32 size;
++};
++
++#endif /* _UAPI_LINUX_FSCRYPT_H */
 -- 
-2.23.0.rc1.153.gdeed80330f-goog
+2.22.0.770.g0f2c4a37fd-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
