@@ -1,104 +1,81 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:53826 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726798AbfHLR6s (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 12 Aug 2019 13:58:48 -0400
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 8/9] generic: verify ciphertext of v2 encryption policies with AES-128
-Date: Mon, 12 Aug 2019 10:58:08 -0700
-Message-Id: <20190812175809.34810-9-ebiggers@kernel.org>
-In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
-References: <20190812175809.34810-1-ebiggers@kernel.org>
+Date: Mon,  5 Aug 2019 09:25:05 -0700
+Message-Id: <20190805162521.90882-5-ebiggers@kernel.org>
+In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
+References: <20190805162521.90882-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+Subject: [f2fs-dev] [PATCH v8 04/20] fscrypt: add ->ci_inode to fscrypt_info
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Verify ciphertext for v2 encryption policies that use AES-128-CBC-ESSIV
-to encrypt file contents and AES-128-CTS-CBC to encrypt file names.
+Add an inode back-pointer to 'struct fscrypt_info', such that
+inode->i_crypt_info->ci_inode == inode.
 
+This will be useful for:
+
+1. Evicting the inodes when a fscrypt key is removed, since we'll track
+   the inodes using a given key by linking their fscrypt_infos together,
+   rather than the inodes directly.  This avoids bloating 'struct inode'
+   with a new list_head.
+
+2. Simplifying the per-file key setup, since the inode pointer won't
+   have to be passed around everywhere just in case something goes wrong
+   and it's needed for fscrypt_warn().
+
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- tests/generic/803     | 43 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/803.out |  6 ++++++
- tests/generic/group   |  1 +
- 3 files changed, 50 insertions(+)
- create mode 100755 tests/generic/803
- create mode 100644 tests/generic/803.out
+ fs/crypto/fscrypt_private.h | 3 +++
+ fs/crypto/keyinfo.c         | 2 ++
+ 2 files changed, 5 insertions(+)
 
-diff --git a/tests/generic/803 b/tests/generic/803
-new file mode 100755
-index 00000000..c12daeff
---- /dev/null
-+++ b/tests/generic/803
-@@ -0,0 +1,43 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
-+#
-+# FS QA Test generic/803
-+#
-+# Verify ciphertext for v2 encryption policies that use AES-128-CBC-ESSIV to
-+# encrypt file contents and AES-128-CTS-CBC to encrypt file names.
-+#
-+# This is the same as generic/549, except using v2 policies.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index fae411b2f78dcb..d345a7d28df8c2 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -73,6 +73,9 @@ struct fscrypt_info {
+ 	 */
+ 	struct fscrypt_mode *ci_mode;
+ 
++	/* Back-pointer to the inode */
++	struct inode *ci_inode;
 +
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
+ 	/*
+ 	 * If non-NULL, then this inode uses a master key directly rather than a
+ 	 * derived key, and ci_ctfm will equal ci_master_key->mk_ctfm.
+diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
+index 22345ddede1199..2d45a86f09db25 100644
+--- a/fs/crypto/keyinfo.c
++++ b/fs/crypto/keyinfo.c
+@@ -556,6 +556,8 @@ int fscrypt_get_encryption_info(struct inode *inode)
+ 	if (!crypt_info)
+ 		return -ENOMEM;
+ 
++	crypt_info->ci_inode = inode;
 +
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/encrypt
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+
-+_verify_ciphertext_for_encryption_policy AES-128-CBC-ESSIV AES-128-CTS-CBC v2
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/803.out b/tests/generic/803.out
-new file mode 100644
-index 00000000..f4051d27
---- /dev/null
-+++ b/tests/generic/803.out
-@@ -0,0 +1,6 @@
-+QA output created by 803
-+
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: AES-128-CBC-ESSIV
-+	filenames_encryption_mode: AES-128-CTS-CBC
-+	options: v2
-diff --git a/tests/generic/group b/tests/generic/group
-index 29c9af30..6deae98f 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -571,3 +571,4 @@
- 800 auto quick encrypt
- 801 auto quick encrypt
- 802 auto quick encrypt
-+803 auto quick encrypt
+ 	crypt_info->ci_flags = ctx.flags;
+ 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
+ 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
 -- 
-2.23.0.rc1.153.gdeed80330f-goog
+2.22.0.770.g0f2c4a37fd-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
