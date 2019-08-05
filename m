@@ -1,186 +1,111 @@
-Return-Path: <SRS0=A8Az=WR=samsung.com=boojin.kim@kernel.org>
-From: "boojin.kim" <boojin.kim@samsung.com>
-Subject: [PATCH 8/9] fs: ext4: support diskcipher
-Date: Wed, 21 Aug 2019 15:42:41 +0900
-Message-ID: <004401d557eb$a1989480$e4c9bd80$@samsung.com>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Eric Biggers <ebiggers@kernel.org>
+Date: Mon,  5 Aug 2019 09:25:18 -0700
+Message-Id: <20190805162521.90882-18-ebiggers@kernel.org>
+In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
+References: <20190805162521.90882-1-ebiggers@kernel.org>
 MIME-Version: 1.0
+Subject: [f2fs-dev] [PATCH v8 17/20] ext4: wire up new fscrypt ioctls
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Content-Language: ko
-Content-Type: text/plain; charset="utf-8"
-References: <CGME20190821064241epcas2p2bf71ad8055188f8b47870b06480c8368@epcas2p2.samsung.com>
-To: 'Theodore Ts'o' <tytso@mit.edu>, 'Andreas Dilger' <adilger.kernel@dilger.ca>, linux-ext4@vger.kernel.org, linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org
-Cc: 'Herbert Xu' <herbert@gondor.apana.org.au>, "'David S. Miller'" <davem@davemloft.net>, 'Eric Biggers' <ebiggers@kernel.org>, "'Theodore Y. Ts'o'  <tytso@mit.edu>,  'Chao Yu'  <chao@kernel.org>,  'Jaegeuk Kim' " <jaegeuk@kernel.org>, dm-devel@redhat.com, 'Mike Snitzer' <snitzer@redhat.com>, 'Alasdair Kergon' <agk@redhat.com>, 'Jens Axboe' <axboe@kernel.dk>, 'Krzysztof Kozlowski' <krzk@kernel.org>, 'Kukjin Kim' <kgene@kernel.org>, 'Jaehoon Chung' <jh80.chung@samsung.com>, linux-fscrypt@vger.kernel.org, linux-mmc@vger.kernel.org, linux-samsung-soc@vger.kernel.org, linux-block@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.netlinux-samsung-soc, linux-arm-kernel@lists.infradead.org
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Ext4 checks the crypto properties of the inode,
-and if it is a diskcipher, sets it to BIO before submitting the BIO.
-When using diskcipher, Ext4 does not encrypt the data before submitting
-the BIO and decrypt the data on complete of the BIO.
+From: Eric Biggers <ebiggers@google.com>
 
-Cc: Theodore Ts'o <tytso@mit.edu>
-Cc: Andreas Dilger <adilger.kernel@dilger.ca>
-Signed-off-by: Boojin Kim <boojin.kim@samsung.com>
+Wire up the new ioctls for adding and removing fscrypt keys to/from the
+filesystem, and the new ioctl for retrieving v2 encryption policies.
+
+The key removal ioctls also required making ext4_drop_inode() call
+fscrypt_drop_inode().
+
+For more details see Documentation/filesystems/fscrypt.rst and the
+fscrypt patches that added the implementation of these ioctls.
+
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/inode.c    | 39 +++++++++++++++++++++++++++++++++------
- fs/ext4/page-io.c  |  8 +++++++-
- fs/ext4/readpage.c |  7 +++++++
- 3 files changed, 47 insertions(+), 7 deletions(-)
+ fs/ext4/ioctl.c | 30 ++++++++++++++++++++++++++++++
+ fs/ext4/super.c |  3 +++
+ 2 files changed, 33 insertions(+)
 
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index 5bcc96f..7f9e1fa 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -1223,7 +1223,14 @@ static int ext4_block_write_begin(struct page *page,
-loff_t pos, unsigned len,
- 		if (!buffer_uptodate(bh) && !buffer_delay(bh) &&
- 		    !buffer_unwritten(bh) &&
- 		    (block_start < from || block_end > to)) {
--			ll_rw_block(REQ_OP_READ, 0, 1, &bh);
-+			if (S_ISREG(inode->i_mode) && IS_ENCRYPTED(inode)
-+					&&
-fscrypt_has_encryption_key(inode)) {
-+				bh->b_private =
-fscrypt_get_diskcipher(inode);
-+				ll_rw_block(REQ_OP_READ,
-+					bh->b_private ? REQ_CRYPT : 0, 1,
-&bh);
-+			} else {
-+				ll_rw_block(REQ_OP_READ, 0, 1, &bh);
-+			}
- 			wait[nr_wait++] = bh;
- 		}
- 	}
-@@ -1237,7 +1244,8 @@ static int ext4_block_write_begin(struct page *page,
-loff_t pos, unsigned len,
- 	}
- 	if (unlikely(err)) {
- 		page_zero_new_buffers(page, from, to);
--	} else if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode)) {
-+	} else if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) &&
-+			!bh->b_private) {
- 		for (i = 0; i < nr_wait; i++) {
- 			int err2;
+diff --git a/fs/ext4/ioctl.c b/fs/ext4/ioctl.c
+index 442f7ef873fc36..fe5a4b13f939a2 100644
+--- a/fs/ext4/ioctl.c
++++ b/fs/ext4/ioctl.c
+@@ -1115,6 +1115,31 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 	case EXT4_IOC_GET_ENCRYPTION_POLICY:
+ 		return fscrypt_ioctl_get_policy(filp, (void __user *)arg);
  
-@@ -3670,6 +3678,13 @@ const struct iomap_ops ext4_iomap_ops = {
- 	.iomap_end		= ext4_iomap_end,
- };
- 
-+static void ext4_submit_dio(struct bio *bio, struct inode *inode,
-+							loff_t file_offset)
-+{
-+	fscrypt_set_bio(inode, bio, 0);
-+	submit_bio(bio);
-+}
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		if (!ext4_has_feature_encrypt(sb))
++			return -EOPNOTSUPP;
++		return fscrypt_ioctl_get_policy_ex(filp, (void __user *)arg);
 +
- static int ext4_end_io_dio(struct kiocb *iocb, loff_t offset,
- 			    ssize_t size, void *private)
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		if (!ext4_has_feature_encrypt(sb))
++			return -EOPNOTSUPP;
++		return fscrypt_ioctl_add_key(filp, (void __user *)arg);
++
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		if (!ext4_has_feature_encrypt(sb))
++			return -EOPNOTSUPP;
++		return fscrypt_ioctl_remove_key(filp, (void __user *)arg);
++
++	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
++		if (!ext4_has_feature_encrypt(sb))
++			return -EOPNOTSUPP;
++		return fscrypt_ioctl_remove_key_all_users(filp,
++							  (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		if (!ext4_has_feature_encrypt(sb))
++			return -EOPNOTSUPP;
++		return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
++
+ 	case EXT4_IOC_FSGETXATTR:
+ 	{
+ 		struct fsxattr fa;
+@@ -1231,6 +1256,11 @@ long ext4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 	case EXT4_IOC_SET_ENCRYPTION_POLICY:
+ 	case EXT4_IOC_GET_ENCRYPTION_PWSALT:
+ 	case EXT4_IOC_GET_ENCRYPTION_POLICY:
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+ 	case EXT4_IOC_SHUTDOWN:
+ 	case FS_IOC_GETFSMAP:
+ 		break;
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 4079605d437ae7..757819139b8f70 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1107,6 +1107,9 @@ static int ext4_drop_inode(struct inode *inode)
  {
-@@ -3801,7 +3816,9 @@ static ssize_t ext4_direct_IO_write(struct kiocb
-*iocb, struct iov_iter *iter)
- 		dio_flags = DIO_LOCKING;
- 	}
- 	ret = __blockdev_direct_IO(iocb, inode, inode->i_sb->s_bdev, iter,
--				   get_block_func, ext4_end_io_dio, NULL,
-+				   get_block_func, ext4_end_io_dio,
-+				   !fscrypt_disk_encrypted(inode) ?
-+				   NULL : ext4_submit_dio,
- 				   dio_flags);
+ 	int drop = generic_drop_inode(inode);
  
- 	if (ret > 0 && !overwrite && ext4_test_inode_state(inode,
-@@ -3909,7 +3926,8 @@ static ssize_t ext4_direct_IO(struct kiocb *iocb,
-struct iov_iter *iter)
- 	ssize_t ret;
- 
- #ifdef CONFIG_FS_ENCRYPTION
--	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
-+	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode)
-+		&& !fscrypt_disk_encrypted(inode))
- 		return 0;
- #endif
- 	if (fsverity_active(inode))
-@@ -4090,7 +4108,15 @@ static int __ext4_block_zero_page_range(handle_t
-*handle,
- 
- 	if (!buffer_uptodate(bh)) {
- 		err = -EIO;
--		ll_rw_block(REQ_OP_READ, 0, 1, &bh);
-+		if (S_ISREG(inode->i_mode) && IS_ENCRYPTED(inode)
-+				&& fscrypt_has_encryption_key(inode)) {
-+			bh->b_private = fscrypt_get_diskcipher(inode);
-+			ll_rw_block(REQ_OP_READ, bh->b_private ? REQ_CRYPT :
-0,
-+					1, &bh);
-+		} else {
-+			ll_rw_block(REQ_OP_READ, 0, 1, &bh);
-+		}
++	if (!drop)
++		drop = fscrypt_drop_inode(inode);
 +
- 		wait_on_buffer(bh);
- 		/* Uhhuh. Read error. Complain and punt. */
- 		if (!buffer_uptodate(bh))
-@@ -4098,7 +4124,8 @@ static int __ext4_block_zero_page_range(handle_t
-*handle,
- 		if (S_ISREG(inode->i_mode) && IS_ENCRYPTED(inode)) {
- 			/* We expect the key to be set. */
- 			BUG_ON(!fscrypt_has_encryption_key(inode));
--			WARN_ON_ONCE(fscrypt_decrypt_pagecache_blocks(
-+			if (!bh->b_private)
-+
-WARN_ON_ONCE(fscrypt_decrypt_pagecache_blocks(
- 					page, blocksize, bh_offset(bh)));
- 		}
- 	}
-diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-index 12ceadef..3e41788 100644
---- a/fs/ext4/page-io.c
-+++ b/fs/ext4/page-io.c
-@@ -345,6 +345,11 @@ void ext4_io_submit(struct ext4_io_submit *io)
- 				  REQ_SYNC : 0;
- 		io->io_bio->bi_write_hint = io->io_end->inode->i_write_hint;
- 		bio_set_op_attrs(io->io_bio, REQ_OP_WRITE, io_op_flags);
-+#if defined(CONFIG_FS_ENCRYPTION) && defined(CONFIG_CRYPTO_DISKCIPHER)
-+		if (IS_ENCRYPTED(io->io_end->inode) &&
-+				S_ISREG(io->io_end->inode->i_mode))
-+			fscrypt_set_bio(io->io_end->inode, io->io_bio, 0);
-+#endif
- 		submit_bio(io->io_bio);
- 	}
- 	io->io_bio = NULL;
-@@ -474,7 +479,8 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
- 	 * (e.g. holes) to be unnecessarily encrypted, but this is rare and
- 	 * can't happen in the common case of blocksize == PAGE_SIZE.
- 	 */
--	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit) {
-+	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit &&
-+			!fscrypt_disk_encrypted(inode)) {
- 		gfp_t gfp_flags = GFP_NOFS;
- 		unsigned int enc_bytes = round_up(len, i_blocksize(inode));
- 
-diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
-index a30b203..aab2cf7c 100644
---- a/fs/ext4/readpage.c
-+++ b/fs/ext4/readpage.c
-@@ -183,6 +183,9 @@ static struct bio_post_read_ctx
-*get_bio_post_read_ctx(struct inode *inode,
- 	unsigned int post_read_steps = 0;
- 	struct bio_post_read_ctx *ctx = NULL;
- 
-+	if (fscrypt_disk_encrypted(inode))
-+		return NULL;
-+
- 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
- 		post_read_steps |= 1 << STEP_DECRYPT;
- 
-@@ -376,6 +379,10 @@ int ext4_mpage_readpages(struct address_space *mapping,
- 			bio->bi_private = ctx;
- 			bio_set_op_attrs(bio, REQ_OP_READ,
- 						is_readahead ? REQ_RAHEAD :
-0);
-+#if defined(CONFIG_FS_ENCRYPTION) && defined(CONFIG_CRYPTO_DISKCIPHER)
-+			if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
-+				fscrypt_set_bio(inode, bio, 0);
-+#endif
- 		}
- 
- 		length = first_hole << blkbits;
+ 	trace_ext4_drop_inode(inode, drop);
+ 	return drop;
+ }
 -- 
-2.7.4
+2.22.0.770.g0f2c4a37fd-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
