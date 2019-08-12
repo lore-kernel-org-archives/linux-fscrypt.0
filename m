@@ -1,239 +1,153 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wr1-f65.google.com ([209.85.221.65]:45632 "EHLO
-        mail-wr1-f65.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727007AbfHLOxr (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 12 Aug 2019 10:53:47 -0400
-Received: by mail-wr1-f65.google.com with SMTP id q12so14561025wrj.12
-        for <linux-fscrypt@vger.kernel.org>; Mon, 12 Aug 2019 07:53:45 -0700 (PDT)
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v10 2/7] fs: crypto: invoke crypto API for ESSIV handling
-Date: Mon, 12 Aug 2019 17:53:19 +0300
-Message-Id: <20190812145324.27090-3-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
-References: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
+Received: from mail.kernel.org ([198.145.29.99]:53518 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726424AbfHLR5Q (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 12 Aug 2019 13:57:16 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 8/8] xfs_io/encrypt: add 'enckey_status' command
+Date: Mon, 12 Aug 2019 10:56:34 -0700
+Message-Id: <20190812175635.34186-9-ebiggers@kernel.org>
+In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
+References: <20190812175635.34186-1-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Instead of open coding the calculations for ESSIV handling, use a
-ESSIV skcipher which does all of this under the hood.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Add an 'enckey_status' command to xfs_io, to provide a command-line
+interface to the FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/Kconfig           |  1 +
- fs/crypto/crypto.c          |  5 --
- fs/crypto/fscrypt_private.h |  9 --
- fs/crypto/keyinfo.c         | 92 +-------------------
- 4 files changed, 4 insertions(+), 103 deletions(-)
+ io/encrypt.c      | 71 +++++++++++++++++++++++++++++++++++++++++++++++
+ man/man8/xfs_io.8 |  6 ++++
+ 2 files changed, 77 insertions(+)
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 5fdf24877c17..6f3d59b880b7 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -5,6 +5,7 @@ config FS_ENCRYPTION
- 	select CRYPTO_AES
- 	select CRYPTO_CBC
- 	select CRYPTO_ECB
-+	select CRYPTO_ESSIV
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
- 	select KEYS
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 45c3d0427fb2..fd13231c5ff6 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -143,9 +143,6 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
+diff --git a/io/encrypt.c b/io/encrypt.c
+index 213c9c53..19c74983 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -140,6 +140,7 @@ static cmdinfo_t get_encpolicy_cmd;
+ static cmdinfo_t set_encpolicy_cmd;
+ static cmdinfo_t add_enckey_cmd;
+ static cmdinfo_t rm_enckey_cmd;
++static cmdinfo_t enckey_status_cmd;
  
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY)
- 		memcpy(iv->nonce, ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE);
--
--	if (ci->ci_essiv_tfm != NULL)
--		crypto_cipher_encrypt_one(ci->ci_essiv_tfm, iv->raw, iv->raw);
+ static void
+ get_encpolicy_help(void)
+@@ -216,6 +217,19 @@ rm_enckey_help(void)
+ "\n"));
  }
  
- /* Encrypt or decrypt a single filesystem block of file contents */
-@@ -523,8 +520,6 @@ static void __exit fscrypt_exit(void)
- 		destroy_workqueue(fscrypt_read_workqueue);
- 	kmem_cache_destroy(fscrypt_ctx_cachep);
- 	kmem_cache_destroy(fscrypt_info_cachep);
--
--	fscrypt_essiv_cleanup();
- }
- module_exit(fscrypt_exit);
- 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 8978eec9d766..2fc6f0bd2d13 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -61,12 +61,6 @@ struct fscrypt_info {
- 	/* The actual crypto transform used for encryption and decryption */
- 	struct crypto_skcipher *ci_ctfm;
- 
--	/*
--	 * Cipher for ESSIV IV generation.  Only set for CBC contents
--	 * encryption, otherwise is NULL.
--	 */
--	struct crypto_cipher *ci_essiv_tfm;
--
- 	/*
- 	 * Encryption mode used for this inode.  It corresponds to either
- 	 * ci_data_mode or ci_filename_mode, depending on the inode type.
-@@ -163,9 +157,6 @@ struct fscrypt_mode {
- 	int keysize;
- 	int ivsize;
- 	bool logged_impl_name;
--	bool needs_essiv;
- };
- 
--extern void __exit fscrypt_essiv_cleanup(void);
--
- #endif /* _FSCRYPT_PRIVATE_H */
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 207ebed918c1..80924a0f72ca 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -14,12 +14,9 @@
- #include <linux/scatterlist.h>
- #include <crypto/aes.h>
- #include <crypto/algapi.h>
--#include <crypto/sha.h>
- #include <crypto/skcipher.h>
- #include "fscrypt_private.h"
- 
--static struct crypto_shash *essiv_hash_tfm;
--
- /* Table of keys referenced by FS_POLICY_FLAG_DIRECT_KEY policies */
- static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
- static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
-@@ -143,10 +140,9 @@ static struct fscrypt_mode available_modes[] = {
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CBC] = {
- 		.friendly_name = "AES-128-CBC",
--		.cipher_str = "cbc(aes)",
-+		.cipher_str = "essiv(cbc(aes),sha256)",
- 		.keysize = 16,
- 		.ivsize = 16,
--		.needs_essiv = true,
- 	},
- 	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
- 		.friendly_name = "AES-128-CTS-CBC",
-@@ -376,72 +372,6 @@ fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
- 	return ERR_PTR(err);
- }
- 
--static int derive_essiv_salt(const u8 *key, int keysize, u8 *salt)
--{
--	struct crypto_shash *tfm = READ_ONCE(essiv_hash_tfm);
--
--	/* init hash transform on demand */
--	if (unlikely(!tfm)) {
--		struct crypto_shash *prev_tfm;
--
--		tfm = crypto_alloc_shash("sha256", 0, 0);
--		if (IS_ERR(tfm)) {
--			fscrypt_warn(NULL,
--				     "error allocating SHA-256 transform: %ld",
--				     PTR_ERR(tfm));
--			return PTR_ERR(tfm);
--		}
--		prev_tfm = cmpxchg(&essiv_hash_tfm, NULL, tfm);
--		if (prev_tfm) {
--			crypto_free_shash(tfm);
--			tfm = prev_tfm;
--		}
--	}
--
--	{
--		SHASH_DESC_ON_STACK(desc, tfm);
--		desc->tfm = tfm;
--
--		return crypto_shash_digest(desc, key, keysize, salt);
--	}
--}
--
--static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
--				int keysize)
--{
--	int err;
--	struct crypto_cipher *essiv_tfm;
--	u8 salt[SHA256_DIGEST_SIZE];
--
--	essiv_tfm = crypto_alloc_cipher("aes", 0, 0);
--	if (IS_ERR(essiv_tfm))
--		return PTR_ERR(essiv_tfm);
--
--	ci->ci_essiv_tfm = essiv_tfm;
--
--	err = derive_essiv_salt(raw_key, keysize, salt);
--	if (err)
--		goto out;
--
--	/*
--	 * Using SHA256 to derive the salt/key will result in AES-256 being
--	 * used for IV generation. File contents encryption will still use the
--	 * configured keysize (AES-128) nevertheless.
--	 */
--	err = crypto_cipher_setkey(essiv_tfm, salt, sizeof(salt));
--	if (err)
--		goto out;
--
--out:
--	memzero_explicit(salt, sizeof(salt));
--	return err;
--}
--
--void __exit fscrypt_essiv_cleanup(void)
--{
--	crypto_free_shash(essiv_hash_tfm);
--}
--
- /*
-  * Given the encryption mode and key (normally the derived key, but for
-  * FS_POLICY_FLAG_DIRECT_KEY mode it's the master key), set up the inode's
-@@ -453,7 +383,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- {
- 	struct fscrypt_master_key *mk;
- 	struct crypto_skcipher *ctfm;
--	int err;
- 
- 	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY) {
- 		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
-@@ -469,19 +398,6 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- 	ci->ci_master_key = mk;
- 	ci->ci_ctfm = ctfm;
- 
--	if (mode->needs_essiv) {
--		/* ESSIV implies 16-byte IVs which implies !DIRECT_KEY */
--		WARN_ON(mode->ivsize != AES_BLOCK_SIZE);
--		WARN_ON(ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY);
--
--		err = init_essiv_generator(ci, raw_key, mode->keysize);
--		if (err) {
--			fscrypt_warn(inode->i_sb,
--				     "error initializing ESSIV generator for inode %lu: %d",
--				     inode->i_ino, err);
--			return err;
--		}
--	}
++static void
++enckey_status_help(void)
++{
++	printf(_(
++"\n"
++" get the status of a filesystem encryption key\n"
++"\n"
++" Examples:\n"
++" 'enckey_status 0000111122223333' - get status of v1 policy key\n"
++" 'enckey_status 00001111222233334444555566667777' - get status of v2 policy key\n"
++"\n"));
++}
++
+ static const struct {
+ 	__u8 mode;
+ 	const char *name;
+@@ -757,6 +771,52 @@ rm_enckey_f(int argc, char **argv)
  	return 0;
  }
  
-@@ -490,12 +406,10 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 	if (!ci)
- 		return;
++static int
++enckey_status_f(int argc, char **argv)
++{
++	struct fscrypt_get_key_status_arg arg;
++
++	memset(&arg, 0, sizeof(arg));
++
++	if (str2keyspec(argv[1], -1, &arg.key_spec) < 0)
++		return 0;
++
++	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_KEY_STATUS, &arg) != 0) {
++		fprintf(stderr, "Error getting encryption key status: %s\n",
++			strerror(errno));
++		exitcode = 1;
++		return 0;
++	}
++
++	switch (arg.status) {
++	case FSCRYPT_KEY_STATUS_PRESENT:
++		printf("Present");
++		if (arg.user_count || arg.status_flags) {
++			printf(" (user_count=%u", arg.user_count);
++			if (arg.status_flags &
++			    FSCRYPT_KEY_STATUS_FLAG_ADDED_BY_SELF)
++				printf(", added_by_self");
++			arg.status_flags &=
++				~FSCRYPT_KEY_STATUS_FLAG_ADDED_BY_SELF;
++			if (arg.status_flags)
++				printf(", unknown_flags=0x%08x",
++				       arg.status_flags);
++			printf(")");
++		}
++		printf("\n");
++		return 0;
++	case FSCRYPT_KEY_STATUS_ABSENT:
++		printf("Absent\n");
++		return 0;
++	case FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED:
++		printf("Incompletely removed\n");
++		return 0;
++	default:
++		printf("Unknown status (%u)\n", arg.status);
++		return 0;
++	}
++}
++
+ void
+ encrypt_init(void)
+ {
+@@ -800,8 +860,19 @@ encrypt_init(void)
+ 		_("remove an encryption key from the filesystem");
+ 	rm_enckey_cmd.help = rm_enckey_help;
  
--	if (ci->ci_master_key) {
-+	if (ci->ci_master_key)
- 		put_master_key(ci->ci_master_key);
--	} else {
-+	else
- 		crypto_free_skcipher(ci->ci_ctfm);
--		crypto_free_cipher(ci->ci_essiv_tfm);
--	}
- 	kmem_cache_free(fscrypt_info_cachep, ci);
++	enckey_status_cmd.name = "enckey_status";
++	enckey_status_cmd.cfunc = enckey_status_f;
++	enckey_status_cmd.args = _("keyspec");
++	enckey_status_cmd.argmin = 1;
++	enckey_status_cmd.argmax = 1;
++	enckey_status_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
++	enckey_status_cmd.oneline =
++		_("get the status of a filesystem encryption key");
++	enckey_status_cmd.help = enckey_status_help;
++
+ 	add_command(&get_encpolicy_cmd);
+ 	add_command(&set_encpolicy_cmd);
+ 	add_command(&add_enckey_cmd);
+ 	add_command(&rm_enckey_cmd);
++	add_command(&enckey_status_cmd);
  }
- 
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index a6894778..9af6e542 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -779,6 +779,12 @@ is a privileged operation.
+ .RE
+ .PD
+ .TP
++.BI "enckey_status " keyspec
++On filesystems that support encryption, display the status of an encryption key.
++.I keyspec
++is a hex string specifying the key for which to display the status, as a
++16-character "key descriptor" or a 32-character "key identifier".
++.TP
+ .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
+ List extended inode flags on the currently open file. If the
+ .B \-R
 -- 
-2.17.1
+2.23.0.rc1.153.gdeed80330f-goog
