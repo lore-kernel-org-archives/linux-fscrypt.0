@@ -1,147 +1,273 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu, 15 Aug 2019 22:28:54 +0300
-Message-Id: <20190815192858.28125-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v12 0/4] crypto: switch to crypto API for ESSIV
-	generation
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:53814 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726522AbfHLR6s (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 12 Aug 2019 13:58:48 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 5/9] generic: add basic test for fscrypt API additions
+Date: Mon, 12 Aug 2019 10:58:05 -0700
+Message-Id: <20190812175809.34810-6-ebiggers@kernel.org>
+In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
+References: <20190812175809.34810-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This series creates an ESSIV template that produces a skcipher or AEAD
-transform based on a tuple of the form '<skcipher>,<shash>' (or '<aead>,<shash>'
-for the AEAD case). It exposes the encapsulated sync or async skcipher/aead by
-passing through all operations, while using the cipher/shash pair to transform
-the input IV into an ESSIV output IV.
+From: Eric Biggers <ebiggers@google.com>
 
-Changes since v11:
-- Avoid spawns for the ESSIV shash and cipher algos. Instead, the shash TFM is
-  allocated per-instance (which is appropriate since it is unkeyed and thus
-  stateless), and the cipher is allocated explicitly based on the parsed
-  skcipher/aead cra_name.
+Add a basic test of fscrypt filesystem-level encryption keyring and v2
+encryption policies.
 
-Changes since v10:
-- Drop patches against fscrypt and dm-crypt - these will be routed via the
-  respective maintainer trees during the next cycle
-- Fix error handling when parsing the cipher name from the skcipher cra_name
-- Use existing ivsize temporary instead of retrieving it again
-- Expose cra_name via module alias (#4)
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ tests/generic/800     | 127 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/800.out |  91 ++++++++++++++++++++++++++++++
+ tests/generic/group   |   1 +
+ 3 files changed, 219 insertions(+)
+ create mode 100755 tests/generic/800
+ create mode 100644 tests/generic/800.out
 
-Changes since v9:
-- Fix cipher_api parsing bug that was introduced by dropping the cipher name
-  parsing patch in v9 (#3). Thanks to Milan for finding it.
-- Fix a couple of instances where the old essiv(x,y,z) format was used in
-  comments instead of the essiv(x,z) format we adopted in v9
-
-Changes since v8:
-- Remove 'cipher' argument from essiv() template, and instead, parse the
-  cra_name of the skcipher to obtain the cipher. This is slightly cleaner
-  than what dm-crypt currently does, since we can get the cra_name from the
-  spawn, and we don't have to actually allocate the TFM. Since this implies
-  that dm-crypt does not need to provide the cipher, we can drop the parsing
-  code from it entirely (assuming the eboiv patch I sent out recently is
-  applied first) (patch #7)
-- Restrict the essiv() AEAD instantiation to AEADs whose cra_name starts with
-  'authenc('
-- Rebase onto cryptodev/master
-- Drop dm-crypt to reorder/refactor cipher name parsing, since it was wrong
-  and it is no longer needed.
-- Drop Milan's R-b since the code has changed
-- Fix bug in accelerated arm64 implementation.
-
-Changes since v7:
-- rebase onto cryptodev/master
-- drop change to ivsize in #2
-- add Milan's R-b's
-
-Changes since v6:
-- make CRYPTO_ESSIV user selectable so we can opt out of selecting it even
-  if FS_ENCRYPTION (which cannot be built as a module) is enabled
-- move a comment along with the code it referred to (#3), not that this change
-  and removing some redundant braces makes the diff look totally different
-- add Milan's R-b to #3 and #4
-
-Changes since v5:
-- drop redundant #includes and drop some unneeded braces (#2)
-- add test case for essiv(authenc(hmac(sha256),cbc(aes)),aes,sha256)
-- make ESSIV driver deal with assoc data that is described by more than two
-  scatterlist entries - this only happens when the extended tests are being
-  performed, so don't optimize for it
-- clarify that both fscrypt and dm-crypt only use ESSIV in special cases (#7)
-
-Changes since v4:
-- make the ESSIV template IV size equal the IV size of the encapsulated
-  cipher - defining it as 8 bytes was needlessly restrictive, and also
-  complicated the code for no reason
-- add a missing kfree() spotted by Smatch
-- add additional algo length name checks when constructing the essiv()
-  cipher name
-- reinstate the 'essiv' IV generation implementation in dm-crypt, but
-  make its generation function identical to plain64le (and drop the other
-  methods)
-- fix a bug in the arm64 CE/NEON code
-- simplify the arm64 code by reusing more of the existing CBC implementation
-  (patch #6 is new to this series and was added for this reason)
-
-Changes since v3:
-- address various review comments from Eric on patch #1
-- use Kconfig's 'imply' instead of 'select' to permit CRYPTO_ESSIV to be
-  enabled as a module or disabled entirely even if fscrypt is compiled in (#2)
-- fix an issue in the AEAD encrypt path caused by the IV being clobbered by
-  the inner skcipher before the hmac was being calculated
-
-Changes since v2:
-- fixed a couple of bugs that snuck in after I'd done the bulk of my
-  testing
-- some cosmetic tweaks to the ESSIV template skcipher setkey function
-  to align it with the aead one
-- add a test case for essiv(cbc(aes),aes,sha256)
-- add an accelerated implementation for arm64 that combines the IV
-  derivation and the actual en/decryption in a single asm routine
-
-Code can be found here
-https://git.kernel.org/pub/scm/linux/kernel/git/ardb/linux.git/log/?h=essiv-v11
-
-Cc: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: Eric Biggers <ebiggers@google.com>
-Cc: dm-devel@redhat.com
-Cc: linux-fscrypt@vger.kernel.org
-Cc: Gilad Ben-Yossef <gilad@benyossef.com>
-Cc: Milan Broz <gmazyland@gmail.com>
-
-Ard Biesheuvel (4):
-  crypto: essiv - create wrapper template for ESSIV generation
-  crypto: essiv - add tests for essiv in cbc(aes)+sha256 mode
-  crypto: arm64/aes-cts-cbc - factor out CBC en/decryption of a walk
-  crypto: arm64/aes - implement accelerated ESSIV/CBC mode
-
- arch/arm64/crypto/aes-glue.c  | 206 +++++--
- arch/arm64/crypto/aes-modes.S |  28 +
- crypto/Kconfig                |  28 +
- crypto/Makefile               |   1 +
- crypto/essiv.c                | 645 ++++++++++++++++++++
- crypto/tcrypt.c               |   9 +
- crypto/testmgr.c              |  14 +
- crypto/testmgr.h              | 497 +++++++++++++++
- 8 files changed, 1386 insertions(+), 42 deletions(-)
- create mode 100644 crypto/essiv.c
-
+diff --git a/tests/generic/800 b/tests/generic/800
+new file mode 100755
+index 00000000..de71b7ff
+--- /dev/null
++++ b/tests/generic/800
+@@ -0,0 +1,127 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/800
++#
++# Basic test of fscrypt filesystem-level encryption keyring
++# and v2 encryption policies.
++#
++
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++echo
++
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_scratch_encryption -v 2
++
++_scratch_mkfs_encrypted &>> $seqres.full
++_scratch_mount
++
++test_with_policy_version()
++{
++	local vers=$1
++	local raw_key=""
++	local i
++
++	for i in {1..64}; do
++		raw_key+="\\x$(printf "%02x" $i)"
++	done
++
++	if (( vers == 1 )); then
++		# Key descriptor: arbitrary value
++		local keyspec="0000111122223333"
++		local add_enckey_args="-d $keyspec"
++	else
++		# Key identifier:
++		# HKDF-SHA512(key=raw_key, salt="", info="fscrypt\0\x01")
++		local keyspec="69b2f6edeee720cce0577937eb8a6751"
++		local add_enckey_args=""
++	fi
++
++	mkdir $dir
++	echo "# Setting v$vers encryption policy"
++	_set_encpolicy $dir $keyspec
++	echo "# Getting v$vers encryption policy"
++	_get_encpolicy $dir | _filter_scratch
++	if (( vers == 1 )); then
++		echo "# Getting v1 encryption policy using old ioctl"
++		_get_encpolicy $dir -1 | _filter_scratch
++	fi
++	echo "# Trying to create file without key added yet"
++	$XFS_IO_PROG -f $dir/file |& _filter_scratch
++	echo "# Getting encryption key status"
++	_enckey_status $SCRATCH_MNT $keyspec
++	echo "# Adding encryption key"
++	_add_enckey $SCRATCH_MNT "$raw_key" $add_enckey_args
++	echo "# Creating encrypted file"
++	echo contents > $dir/file
++	echo "# Getting encryption key status"
++	_enckey_status $SCRATCH_MNT $keyspec
++	echo "# Removing encryption key"
++	_rm_enckey $SCRATCH_MNT $keyspec
++	echo "# Getting encryption key status"
++	_enckey_status $SCRATCH_MNT $keyspec
++	echo "# Verifying that the encrypted directory was \"locked\""
++	cat $dir/file |& _filter_scratch
++	cat "$(find $dir -type f)" |& _filter_scratch | cut -d ' ' -f3-
++
++	# Test removing key with a file open.
++	echo "# Re-adding encryption key"
++	_add_enckey $SCRATCH_MNT "$raw_key" $add_enckey_args
++	echo "# Creating another encrypted file"
++	echo foo > $dir/file2
++	echo "# Removing key while an encrypted file is open"
++	exec 3< $dir/file
++	_rm_enckey $SCRATCH_MNT $keyspec
++	echo "# Non-open file should have been evicted"
++	cat $dir/file2 |& _filter_scratch
++	echo "# Open file shouldn't have been evicted"
++	cat $dir/file
++	echo "# Key should be in \"incompletely removed\" state"
++	_enckey_status $SCRATCH_MNT $keyspec
++	echo "# Closing file and removing key for real now"
++	exec 3<&-
++	_rm_enckey $SCRATCH_MNT $keyspec
++	cat $dir/file |& _filter_scratch
++
++	echo "# Cleaning up"
++	rm -r $dir
++	_scratch_cycle_mount	# Clear all keys
++	echo
++}
++
++dir=$SCRATCH_MNT/dir
++
++test_with_policy_version 1
++
++test_with_policy_version 2
++
++echo "# Trying to remove absent key"
++_rm_enckey $SCRATCH_MNT abcdabcdabcdabcd
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/800.out b/tests/generic/800.out
+new file mode 100644
+index 00000000..a4027e2a
+--- /dev/null
++++ b/tests/generic/800.out
+@@ -0,0 +1,91 @@
++QA output created by 800
++
++# Setting v1 encryption policy
++# Getting v1 encryption policy
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 0
++	Master key descriptor: 0000111122223333
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Getting v1 encryption policy using old ioctl
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 0
++	Master key descriptor: 0000111122223333
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Trying to create file without key added yet
++SCRATCH_MNT/dir/file: Required key not available
++# Getting encryption key status
++Absent
++# Adding encryption key
++Added encryption key with descriptor 0000111122223333
++# Creating encrypted file
++# Getting encryption key status
++Present
++# Removing encryption key
++Removed encryption key with descriptor 0000111122223333
++# Getting encryption key status
++Absent
++# Verifying that the encrypted directory was "locked"
++cat: SCRATCH_MNT/dir/file: No such file or directory
++Required key not available
++# Re-adding encryption key
++Added encryption key with descriptor 0000111122223333
++# Creating another encrypted file
++# Removing key while an encrypted file is open
++Removed encryption key with descriptor 0000111122223333, but files still busy
++# Non-open file should have been evicted
++cat: SCRATCH_MNT/dir/file2: Required key not available
++# Open file shouldn't have been evicted
++contents
++# Key should be in "incompletely removed" state
++Incompletely removed
++# Closing file and removing key for real now
++Removed encryption key with descriptor 0000111122223333
++cat: SCRATCH_MNT/dir/file: No such file or directory
++# Cleaning up
++
++# Setting v2 encryption policy
++# Getting v2 encryption policy
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 2
++	Master key identifier: 69b2f6edeee720cce0577937eb8a6751
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Trying to create file without key added yet
++SCRATCH_MNT/dir/file: Required key not available
++# Getting encryption key status
++Absent
++# Adding encryption key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Creating encrypted file
++# Getting encryption key status
++Present (user_count=1, added_by_self)
++# Removing encryption key
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting encryption key status
++Absent
++# Verifying that the encrypted directory was "locked"
++cat: SCRATCH_MNT/dir/file: No such file or directory
++Required key not available
++# Re-adding encryption key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Creating another encrypted file
++# Removing key while an encrypted file is open
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751, but files still busy
++# Non-open file should have been evicted
++cat: SCRATCH_MNT/dir/file2: Required key not available
++# Open file shouldn't have been evicted
++contents
++# Key should be in "incompletely removed" state
++Incompletely removed
++# Closing file and removing key for real now
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++cat: SCRATCH_MNT/dir/file: No such file or directory
++# Cleaning up
++
++# Trying to remove absent key
++Error removing encryption key: Required key not available
+diff --git a/tests/generic/group b/tests/generic/group
+index 2e4a6f79..5be46357 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -568,3 +568,4 @@
+ 563 auto quick
+ 564 auto quick copy_range
+ 565 auto quick copy_range
++800 auto quick encrypt
 -- 
-2.17.1
-
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+2.23.0.rc1.153.gdeed80330f-goog
