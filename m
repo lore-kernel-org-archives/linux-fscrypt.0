@@ -1,103 +1,198 @@
-Return-Path: <SRS0=LT3F=WT=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V5 4/7] fs/buffer.c: add decryption support via read_callbacks
-Date: Fri, 23 Aug 2019 18:55:39 +0530
-Message-Id: <20190823132542.13434-5-chandan@linux.ibm.com>
-In-Reply-To: <20190823132542.13434-1-chandan@linux.ibm.com>
-References: <20190823132542.13434-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:53500 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726838AbfHLR5P (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 12 Aug 2019 13:57:15 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 6/8] xfs_io/encrypt: add 'add_enckey' command
+Date: Mon, 12 Aug 2019 10:56:32 -0700
+Message-Id: <20190812175635.34186-7-ebiggers@kernel.org>
+In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
+References: <20190812175635.34186-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit sets up read_callbacks context for buffer heads whose
-contents need to be decrypted on endio.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Add an 'add_enckey' command to xfs_io, to provide a command-line
+interface to the FS_IOC_ADD_ENCRYPTION_KEY ioctl.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/buffer.c | 33 ++++++++++++++++++++++-----------
- 1 file changed, 22 insertions(+), 11 deletions(-)
+ io/encrypt.c      | 109 ++++++++++++++++++++++++++++++++++++++++++++++
+ man/man8/xfs_io.8 |  15 +++++++
+ 2 files changed, 124 insertions(+)
 
-diff --git a/fs/buffer.c b/fs/buffer.c
-index ce357602f471..96c4c9840746 100644
---- a/fs/buffer.c
-+++ b/fs/buffer.c
-@@ -45,6 +45,7 @@
- #include <linux/bit_spinlock.h>
- #include <linux/pagevec.h>
- #include <linux/sched/mm.h>
-+#include <linux/read_callbacks.h>
- #include <trace/events/block.h>
+diff --git a/io/encrypt.c b/io/encrypt.c
+index f982cd17..038c4cce 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -138,6 +138,7 @@ struct fscrypt_get_key_status_arg {
  
- static int fsync_buffers_list(spinlock_t *lock, struct list_head *list);
-@@ -245,11 +246,7 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
- 	return ret;
+ static cmdinfo_t get_encpolicy_cmd;
+ static cmdinfo_t set_encpolicy_cmd;
++static cmdinfo_t add_enckey_cmd;
+ 
+ static void
+ get_encpolicy_help(void)
+@@ -183,6 +184,22 @@ set_encpolicy_help(void)
+ "\n"));
  }
  
--/*
-- * I/O completion handler for block_read_full_page() - pages
-- * which come unlocked at the end of I/O.
-- */
--static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
-+void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- {
- 	unsigned long flags;
- 	struct buffer_head *first;
-@@ -257,8 +254,6 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- 	struct page *page;
- 	int page_uptodate = 1;
- 
--	BUG_ON(!buffer_async_read(bh));
--
- 	page = bh->b_page;
- 	if (uptodate) {
- 		set_buffer_uptodate(bh);
-@@ -306,6 +301,17 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- 	return;
- }
- 
-+/*
-+ * I/O completion handler for block_read_full_page().  Pages are unlocked
-+ * after the I/O completes and the read callbacks (if any) have executed.
-+ */
-+static void __end_buffer_async_read(struct buffer_head *bh, int uptodate)
++static void
++add_enckey_help(void)
 +{
-+	BUG_ON(!buffer_async_read(bh));
-+
-+	read_callbacks_endio_bh(bh, uptodate, end_buffer_async_read);
++	printf(_(
++"\n"
++" add an encryption key to the filesystem\n"
++"\n"
++" Examples:\n"
++" 'add_enckey' - add key for v2 policies\n"
++" 'add_enckey -d 0000111122223333' - add key for v1 policies w/ given descriptor\n"
++"\n"
++"The key in binary is read from standard input.\n"
++" -d DESCRIPTOR -- master_key_descriptor\n"
++"\n"));
 +}
 +
- /*
-  * Completion handler for block_write_full_page() - pages which are unlocked
-  * during I/O, and which have PageWriteback cleared upon I/O completion.
-@@ -378,7 +384,7 @@ EXPORT_SYMBOL(end_buffer_async_write);
-  */
- static void mark_buffer_async_read(struct buffer_head *bh)
- {
--	bh->b_end_io = end_buffer_async_read;
-+	bh->b_end_io = __end_buffer_async_read;
- 	set_buffer_async_read(bh);
- }
- 
-@@ -2293,10 +2299,15 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
- 	 */
- 	for (i = 0; i < nr; i++) {
- 		bh = arr[i];
--		if (buffer_uptodate(bh))
--			end_buffer_async_read(bh, 1);
--		else
-+		if (buffer_uptodate(bh)) {
-+			__end_buffer_async_read(bh, 1);
-+		} else {
-+			if (WARN_ON(read_callbacks_setup_bh(inode, bh))) {
-+				__end_buffer_async_read(bh, 0);
-+				continue;
-+			}
- 			submit_bh(REQ_OP_READ, 0, bh);
-+		}
- 	}
+ static const struct {
+ 	__u8 mode;
+ 	const char *name;
+@@ -594,6 +611,88 @@ set_encpolicy_f(int argc, char **argv)
  	return 0;
  }
+ 
++static ssize_t
++read_until_limit_or_eof(int fd, void *buf, size_t limit)
++{
++	size_t bytes_read = 0;
++	ssize_t res;
++
++	while (limit) {
++		res = read(fd, buf, limit);
++		if (res < 0)
++			return res;
++		if (res == 0)
++			break;
++		buf += res;
++		bytes_read += res;
++		limit -= res;
++	}
++	return bytes_read;
++}
++
++static int
++add_enckey_f(int argc, char **argv)
++{
++	int c;
++	struct fscrypt_add_key_arg *arg;
++	ssize_t raw_size;
++
++	arg = calloc(1, sizeof(*arg) + FSCRYPT_MAX_KEY_SIZE + 1);
++	if (!arg) {
++		fprintf(stderr, "calloc failed\n");
++		exitcode = 1;
++		return 0;
++	}
++
++	arg->key_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
++
++	while ((c = getopt(argc, argv, "d:")) != EOF) {
++		switch (c) {
++		case 'd':
++			arg->key_spec.type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
++			if (!str2keydesc(optarg, arg->key_spec.u.descriptor))
++				goto out;
++			break;
++		default:
++			return command_usage(&add_enckey_cmd);
++		}
++	}
++	argc -= optind;
++	argv += optind;
++
++	if (argc != 0)
++		return command_usage(&add_enckey_cmd);
++
++	raw_size = read_until_limit_or_eof(STDIN_FILENO, arg->raw,
++					   FSCRYPT_MAX_KEY_SIZE + 1);
++	if (raw_size < 0) {
++		fprintf(stderr, "Error reading key from stdin: %s\n",
++			strerror(errno));
++		exitcode = 1;
++		goto out;
++	}
++	if (raw_size > FSCRYPT_MAX_KEY_SIZE) {
++		fprintf(stderr,
++			"Invalid key; got > FSCRYPT_MAX_KEY_SIZE (%d) bytes on stdin!\n",
++			FSCRYPT_MAX_KEY_SIZE);
++		goto out;
++	}
++	arg->raw_size = raw_size;
++
++	if (ioctl(file->fd, FS_IOC_ADD_ENCRYPTION_KEY, arg) != 0) {
++		fprintf(stderr, "Error adding encryption key: %s\n",
++			strerror(errno));
++		exitcode = 1;
++		goto out;
++	}
++	printf("Added encryption key with %s %s\n",
++	       keyspectype(&arg->key_spec), keyspec2str(&arg->key_spec));
++out:
++	memset(arg->raw, 0, FSCRYPT_MAX_KEY_SIZE + 1);
++	free(arg);
++	return 0;
++}
++
+ void
+ encrypt_init(void)
+ {
+@@ -618,6 +717,16 @@ encrypt_init(void)
+ 		_("assign an encryption policy to the current file");
+ 	set_encpolicy_cmd.help = set_encpolicy_help;
+ 
++	add_enckey_cmd.name = "add_enckey";
++	add_enckey_cmd.cfunc = add_enckey_f;
++	add_enckey_cmd.args = _("[-d descriptor]");
++	add_enckey_cmd.argmin = 0;
++	add_enckey_cmd.argmax = -1;
++	add_enckey_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
++	add_enckey_cmd.oneline = _("add an encryption key to the filesystem");
++	add_enckey_cmd.help = add_enckey_help;
++
+ 	add_command(&get_encpolicy_cmd);
+ 	add_command(&set_encpolicy_cmd);
++	add_command(&add_enckey_cmd);
+ }
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index 18fcde0f..7d6a23fe 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -749,6 +749,21 @@ Test whether v2 encryption policies are supported.  Prints "supported",
+ .RE
+ .PD
+ .TP
++.BI "add_enckey [ \-d " descriptor " ]"
++On filesystems that support encryption, add an encryption key to the filesystem
++containing the currently open file.  The key in binary (typically 64 bytes long)
++is read from standard input.
++.RS 1.0i
++.PD 0
++.TP 0.4i
++.BI \-d " descriptor"
++key descriptor, as a 16-character hex string (8 bytes).  If given, the key will
++be available for use by v1 encryption policies that use this descriptor.
++Otherwise, the key is added as a v2 policy key, and on success the resulting
++"key identifier" will be printed.
++.RE
++.PD
++.TP
+ .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
+ List extended inode flags on the currently open file. If the
+ .B \-R
 -- 
-2.19.1
+2.23.0.rc1.153.gdeed80330f-goog
