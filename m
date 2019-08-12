@@ -1,346 +1,109 @@
-Return-Path: <linux-block-owner@vger.kernel.org>
-Date: Wed, 21 Aug 2019 00:57:14 -0700
-In-Reply-To: <20190821075714.65140-1-satyat@google.com>
-Message-Id: <20190821075714.65140-9-satyat@google.com>
-Mime-Version: 1.0
-References: <20190821075714.65140-1-satyat@google.com>
-Subject: [PATCH v4 8/8] f2fs: Wire up f2fs to use inline encryption via fscrypt
-From: Satya Tangirala <satyat@google.com>
-Content-Type: text/plain; charset="UTF-8"
-Sender: linux-block-owner@vger.kernel.org
-To: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
-Cc: Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Kim Boojin <boojin.kim@samsung.com>, Satya Tangirala <satyat@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:53802 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726522AbfHLR6q (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 12 Aug 2019 13:58:46 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 2/9] common/encrypt: add helper functions that wrap new xfs_io commands
+Date: Mon, 12 Aug 2019 10:58:02 -0700
+Message-Id: <20190812175809.34810-3-ebiggers@kernel.org>
+In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
+References: <20190812175809.34810-1-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Signed-off-by: Satya Tangirala <satyat@google.com>
----
- fs/f2fs/data.c  | 127 ++++++++++++++++++++++++++++++++++++++++++++----
- fs/f2fs/super.c |  15 +++---
- 2 files changed, 126 insertions(+), 16 deletions(-)
+From: Eric Biggers <ebiggers@google.com>
 
-diff --git a/fs/f2fs/data.c b/fs/f2fs/data.c
-index abbf14e9bd72..a7294edce173 100644
---- a/fs/f2fs/data.c
-+++ b/fs/f2fs/data.c
-@@ -143,6 +143,8 @@ static bool f2fs_bio_post_read_required(struct bio *bio)
- 
- static void f2fs_read_end_io(struct bio *bio)
- {
-+	fscrypt_unset_bio_crypt_ctx(bio);
-+
- 	if (time_to_inject(F2FS_P_SB(bio_first_page_all(bio)),
- 						FAULT_READ_IO)) {
- 		f2fs_show_injection_info(FAULT_READ_IO);
-@@ -166,6 +168,8 @@ static void f2fs_write_end_io(struct bio *bio)
- 	struct bio_vec *bvec;
- 	struct bvec_iter_all iter_all;
- 
-+	fscrypt_unset_bio_crypt_ctx(bio);
-+
- 	if (time_to_inject(sbi, FAULT_WRITE_IO)) {
- 		f2fs_show_injection_info(FAULT_WRITE_IO);
- 		bio->bi_status = BLK_STS_IOERR;
-@@ -283,6 +287,53 @@ static struct bio *__bio_alloc(struct f2fs_sb_info *sbi, block_t blk_addr,
- 	return bio;
+Wrap the new xfs_io commands 'add_enckey', 'rm_enckey', and
+'enckey_status' with helper functions.
+
+Also add _user_do_get_encpolicy(), so that all encryption xfs_io
+commands have a _user_do() version.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ common/encrypt | 65 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 65 insertions(+)
+
+diff --git a/common/encrypt b/common/encrypt
+index 7bbe1936..a086e80f 100644
+--- a/common/encrypt
++++ b/common/encrypt
+@@ -261,6 +261,71 @@ _get_encpolicy()
+ 	$XFS_IO_PROG -c "get_encpolicy $*" "$file"
  }
  
-+static int f2fs_init_bio_crypt_ctx(struct bio *bio, struct inode *inode,
-+				   struct f2fs_io_info *fio, bool no_fail)
++_user_do_get_encpolicy()
 +{
-+	gfp_t gfp_mask = GFP_NOIO;
-+	/*
-+	 * This function should be called with NULL inode iff the pages
-+	 * being added to the bio are to be handled without inline
-+	 * en/decryption.
-+	 */
-+	if (!inode)
-+		return 0;
++	local file=$1
++	shift
 +
-+	/*
-+	 * If the fio has an encrypted page, that means we want to read/write
-+	 * it without inline encryption (for e.g. when moving blocks)
-+	 */
-+	if (fio && fio->encrypted_page)
-+		return 0;
-+
-+	if (no_fail)
-+		gfp_mask |= __GFP_NOFAIL;
-+
-+	return fscrypt_set_bio_crypt_ctx(bio, inode, 0, gfp_mask);
++	_user_do "$XFS_IO_PROG -c \"get_encpolicy $*\" \"$file\""
 +}
 +
-+static inline u64 inline_crypt_dun(struct inode *inode, pgoff_t offset)
++# Add an encryption key to the given filesystem.
++_add_enckey()
 +{
-+	return (((u64)inode->i_ino) << 32) | lower_32_bits(offset);
++	local mnt=$1
++	local raw_key=$2
++	shift 2
++
++	echo -ne "$raw_key" | $XFS_IO_PROG -c "add_enckey $*" "$mnt"
 +}
 +
-+bool f2fs_page_crypt_back_mergeable(const struct bio *bio,
-+				    const struct page *page)
++_user_do_add_enckey()
 +{
-+	struct inode *bio_inode = bio && bio_page(bio)->mapping ?
-+				    bio_page(bio)->mapping->host : NULL;
-+	struct inode *page_inode = page && page->mapping ? page->mapping->host
-+							 : NULL;
++	local mnt=$1
++	local raw_key=$2
++	shift 2
 +
-+	if (!fscrypt_inode_crypt_mergeable(page_inode, bio_inode))
-+		return false;
-+	if (!bio_inode || !fscrypt_inode_is_inline_crypted(bio_inode))
-+		return true;
-+	return inline_crypt_dun(bio_inode, bio_page(bio)->index) +
-+	       (bio->bi_iter.bi_size >> PAGE_SHIFT) ==
-+	       inline_crypt_dun(page_inode, page->index);
++	_user_do "echo -ne \"$raw_key\" | $XFS_IO_PROG -c \"add_enckey $*\" \"$mnt\""
 +}
 +
- static inline void __submit_bio(struct f2fs_sb_info *sbi,
- 				struct bio *bio, enum page_type type)
- {
-@@ -327,6 +378,14 @@ static inline void __submit_bio(struct f2fs_sb_info *sbi,
- 		trace_f2fs_submit_read_bio(sbi->sb, type, bio);
- 	else
- 		trace_f2fs_submit_write_bio(sbi->sb, type, bio);
++# Remove the given encryption key from the given filesystem.
++_rm_enckey()
++{
++	local mnt=$1
++	local keyspec=$2
++	shift 2
 +
-+	if (bio_has_data(bio) && bio_has_crypt_ctx(bio)) {
-+		struct page *page = bio_page(bio);
++	$XFS_IO_PROG -c "rm_enckey $* $keyspec" "$mnt"
++}
 +
-+		bio_set_data_unit_num(bio, inline_crypt_dun(page->mapping->host,
-+							    page->index));
-+	}
++_user_do_rm_enckey()
++{
++	local mnt=$1
++	local keyspec=$2
++	shift 2
 +
- 	submit_bio(bio);
- }
- 
-@@ -451,6 +510,7 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
- 	struct bio *bio;
- 	struct page *page = fio->encrypted_page ?
- 			fio->encrypted_page : fio->page;
-+	int err;
- 
- 	if (!f2fs_is_valid_blkaddr(fio->sbi, fio->new_blkaddr,
- 			fio->is_por ? META_POR : (__is_meta_io(fio) ?
-@@ -464,9 +524,15 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
- 	bio = __bio_alloc(fio->sbi, fio->new_blkaddr, fio->io_wbc,
- 				1, is_read_io(fio->op), fio->type, fio->temp);
- 
--	if (bio_add_page(bio, page, PAGE_SIZE, 0) < PAGE_SIZE) {
-+	err = f2fs_init_bio_crypt_ctx(bio, fio->page->mapping->host, fio,
-+				      false);
++	_user_do "$XFS_IO_PROG -c \"rm_enckey $* $keyspec\" \"$mnt\""
++}
 +
-+	if (!err && bio_add_page(bio, page, PAGE_SIZE, 0) < PAGE_SIZE)
-+		err = -EFAULT;
++# Get the status of the given encryption key on the given filesystem.
++_enckey_status()
++{
++	local mnt=$1
++	local keyspec=$2
++	shift 2
 +
-+	if (err) {
- 		bio_put(bio);
--		return -EFAULT;
-+		return err;
- 	}
- 
- 	if (fio->io_wbc && !is_read_io(fio->op))
-@@ -486,6 +552,7 @@ int f2fs_merge_page_bio(struct f2fs_io_info *fio)
- 	struct bio *bio = *fio->bio;
- 	struct page *page = fio->encrypted_page ?
- 			fio->encrypted_page : fio->page;
-+	int err;
- 
- 	if (!f2fs_is_valid_blkaddr(fio->sbi, fio->new_blkaddr,
- 			__is_meta_io(fio) ? META_GENERIC : DATA_GENERIC))
-@@ -495,7 +562,8 @@ int f2fs_merge_page_bio(struct f2fs_io_info *fio)
- 	f2fs_trace_ios(fio, 0);
- 
- 	if (bio && (*fio->last_block + 1 != fio->new_blkaddr ||
--			!__same_bdev(fio->sbi, fio->new_blkaddr, bio))) {
-+			!__same_bdev(fio->sbi, fio->new_blkaddr, bio) ||
-+			!f2fs_page_crypt_back_mergeable(bio, page))) {
- 		__submit_bio(fio->sbi, bio, fio->type);
- 		bio = NULL;
- 	}
-@@ -503,6 +571,12 @@ int f2fs_merge_page_bio(struct f2fs_io_info *fio)
- 	if (!bio) {
- 		bio = __bio_alloc(fio->sbi, fio->new_blkaddr, fio->io_wbc,
- 				BIO_MAX_PAGES, false, fio->type, fio->temp);
-+		err = f2fs_init_bio_crypt_ctx(bio, fio->page->mapping->host,
-+					      fio, false);
-+		if (err) {
-+			bio_put(bio);
-+			return err;
-+		}
- 		bio_set_op_attrs(bio, fio->op, fio->op_flags);
- 	}
- 
-@@ -570,8 +644,10 @@ void f2fs_submit_page_write(struct f2fs_io_info *fio)
- 
- 	if (io->bio && (io->last_block_in_bio != fio->new_blkaddr - 1 ||
- 	    (io->fio.op != fio->op || io->fio.op_flags != fio->op_flags) ||
--			!__same_bdev(sbi, fio->new_blkaddr, io->bio)))
-+			!__same_bdev(sbi, fio->new_blkaddr, io->bio) ||
-+			!f2fs_page_crypt_back_mergeable(io->bio, bio_page)))
- 		__submit_merged_bio(io);
++	$XFS_IO_PROG -c "enckey_status $* $keyspec" "$mnt"
++}
 +
- alloc_new:
- 	if (io->bio == NULL) {
- 		if ((fio->type == DATA || fio->type == NODE) &&
-@@ -583,6 +659,8 @@ void f2fs_submit_page_write(struct f2fs_io_info *fio)
- 		io->bio = __bio_alloc(sbi, fio->new_blkaddr, fio->io_wbc,
- 						BIO_MAX_PAGES, false,
- 						fio->type, fio->temp);
-+		f2fs_init_bio_crypt_ctx(io->bio, fio->page->mapping->host,
-+					fio, true);
- 		io->fio = *fio;
- 	}
- 
-@@ -615,16 +693,24 @@ static struct bio *f2fs_grab_read_bio(struct inode *inode, block_t blkaddr,
- 	struct bio *bio;
- 	struct bio_post_read_ctx *ctx;
- 	unsigned int post_read_steps = 0;
-+	int err;
- 
- 	bio = f2fs_bio_alloc(sbi, min_t(int, nr_pages, BIO_MAX_PAGES), false);
- 	if (!bio)
- 		return ERR_PTR(-ENOMEM);
-+	err = f2fs_init_bio_crypt_ctx(bio, inode, NULL, false);
-+	if (err) {
-+		bio_put(bio);
-+		return ERR_PTR(err);
-+	}
++_user_do_enckey_status()
++{
++	local mnt=$1
++	local keyspec=$2
++	shift 2
 +
- 	f2fs_target_device(sbi, blkaddr, bio);
- 	bio->bi_end_io = f2fs_read_end_io;
- 	bio_set_op_attrs(bio, REQ_OP_READ, op_flag);
- 
--	if (f2fs_encrypted_file(inode))
-+	if (fscrypt_needs_fs_layer_crypto(inode))
- 		post_read_steps |= 1 << STEP_DECRYPT;
++	_user_do "$XFS_IO_PROG -c \"enckey_status $* $keyspec\" \"$mnt\""
++}
 +
- 	if (post_read_steps) {
- 		ctx = mempool_alloc(bio_post_read_ctx_pool, GFP_NOFS);
- 		if (!ctx) {
-@@ -1574,6 +1660,7 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
- 					struct f2fs_map_blocks *map,
- 					struct bio **bio_ret,
- 					sector_t *last_block_in_bio,
-+					u64 *next_dun,
- 					bool is_readahead)
- {
- 	struct bio *bio = *bio_ret;
-@@ -1648,6 +1735,13 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
- 		__submit_bio(F2FS_I_SB(inode), bio, DATA);
- 		bio = NULL;
- 	}
-+
-+	if (bio && fscrypt_inode_is_inline_crypted(inode) &&
-+	    *next_dun != inline_crypt_dun(inode, page->index)) {
-+		__submit_bio(F2FS_I_SB(inode), bio, DATA);
-+		bio = NULL;
-+	}
-+
- 	if (bio == NULL) {
- 		bio = f2fs_grab_read_bio(inode, block_nr, nr_pages,
- 				is_readahead ? REQ_RAHEAD : 0);
-@@ -1667,6 +1761,9 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
- 	if (bio_add_page(bio, page, blocksize, 0) < blocksize)
- 		goto submit_and_realloc;
- 
-+	if (fscrypt_inode_is_inline_crypted(inode))
-+		*next_dun = inline_crypt_dun(inode, page->index) + 1;
-+
- 	inc_page_count(F2FS_I_SB(inode), F2FS_RD_DATA);
- 	ClearPageError(page);
- 	*last_block_in_bio = block_nr;
-@@ -1700,6 +1797,7 @@ static int f2fs_mpage_readpages(struct address_space *mapping,
- 	struct inode *inode = mapping->host;
- 	struct f2fs_map_blocks map;
- 	int ret = 0;
-+	u64 next_dun = 0;
- 
- 	map.m_pblk = 0;
- 	map.m_lblk = 0;
-@@ -1723,7 +1821,8 @@ static int f2fs_mpage_readpages(struct address_space *mapping,
- 		}
- 
- 		ret = f2fs_read_single_page(inode, page, nr_pages, &map, &bio,
--					&last_block_in_bio, is_readahead);
-+					&last_block_in_bio, &next_dun,
-+					is_readahead);
- 		if (ret) {
- 			SetPageError(page);
- 			zero_user_segment(page, 0, PAGE_SIZE);
-@@ -1777,12 +1876,12 @@ static int encrypt_one_page(struct f2fs_io_info *fio)
- 	struct page *mpage;
- 	gfp_t gfp_flags = GFP_NOFS;
- 
--	if (!f2fs_encrypted_file(inode))
--		return 0;
--
- 	/* wait for GCed page writeback via META_MAPPING */
- 	f2fs_wait_on_block_writeback(inode, fio->old_blkaddr);
- 
-+	if (!fscrypt_needs_fs_layer_crypto(inode))
-+		return 0;
-+
- retry_encrypt:
- 	fio->encrypted_page = fscrypt_encrypt_pagecache_blocks(fio->page,
- 							       PAGE_SIZE, 0,
-@@ -1957,7 +2056,7 @@ int f2fs_do_write_data_page(struct f2fs_io_info *fio)
- 			f2fs_unlock_op(fio->sbi);
- 		err = f2fs_inplace_write_data(fio);
- 		if (err) {
--			if (f2fs_encrypted_file(inode))
-+			if (fscrypt_needs_fs_layer_crypto(inode))
- 				fscrypt_finalize_bounce_page(&fio->encrypted_page);
- 			if (PageWriteback(page))
- 				end_page_writeback(page);
-@@ -2692,6 +2791,8 @@ static void f2fs_dio_end_io(struct bio *bio)
- {
- 	struct f2fs_private_dio *dio = bio->bi_private;
- 
-+	fscrypt_unset_bio_crypt_ctx(bio);
-+
- 	dec_page_count(F2FS_I_SB(dio->inode),
- 			dio->write ? F2FS_DIO_WRITE : F2FS_DIO_READ);
- 
-@@ -2708,12 +2809,18 @@ static void f2fs_dio_submit_bio(struct bio *bio, struct inode *inode,
- {
- 	struct f2fs_private_dio *dio;
- 	bool write = (bio_op(bio) == REQ_OP_WRITE);
-+	u64 data_unit_num = inline_crypt_dun(inode, file_offset >> PAGE_SHIFT);
- 
- 	dio = f2fs_kzalloc(F2FS_I_SB(inode),
- 			sizeof(struct f2fs_private_dio), GFP_NOFS);
- 	if (!dio)
- 		goto out;
- 
-+	if (fscrypt_set_bio_crypt_ctx(bio, inode, data_unit_num, GFP_NOIO)) {
-+		kvfree(dio);
-+		goto out;
-+	}
-+
- 	dio->inode = inode;
- 	dio->orig_end_io = bio->bi_end_io;
- 	dio->orig_private = bio->bi_private;
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 78a1b873e48a..196145cb42f9 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -2223,12 +2223,15 @@ static bool f2fs_dummy_context(struct inode *inode)
- }
- 
- static const struct fscrypt_operations f2fs_cryptops = {
--	.key_prefix	= "f2fs:",
--	.get_context	= f2fs_get_context,
--	.set_context	= f2fs_set_context,
--	.dummy_context	= f2fs_dummy_context,
--	.empty_dir	= f2fs_empty_dir,
--	.max_namelen	= F2FS_NAME_LEN,
-+	.key_prefix		= "f2fs:",
-+	.get_context		= f2fs_get_context,
-+	.set_context		= f2fs_set_context,
-+	.dummy_context		= f2fs_dummy_context,
-+	.empty_dir		= f2fs_empty_dir,
-+	.max_namelen		= F2FS_NAME_LEN,
-+#ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
-+	.inline_crypt_supp	= true,
-+#endif
- };
- #endif
- 
+ # Retrieve the encryption nonce of the given inode as a hex string.  The nonce
+ # was randomly generated by the filesystem and isn't exposed directly to
+ # userspace.  But it can be read using the filesystem's debugging tools.
 -- 
 2.23.0.rc1.153.gdeed80330f-goog
