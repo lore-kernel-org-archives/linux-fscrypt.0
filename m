@@ -1,138 +1,381 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Mon, 12 Aug 2019 17:53:24 +0300
-Message-Id: <20190812145324.27090-8-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
-References: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v10 7/7] md: dm-crypt: omit parsing of the
-	encapsulated cipher
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Return-Path: <fstests-owner@vger.kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 5/8] xfs_io/encrypt: extend 'set_encpolicy' to support v2 policies
+Date: Mon, 12 Aug 2019 10:56:31 -0700
+Message-Id: <20190812175635.34186-6-ebiggers@kernel.org>
+In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
+References: <20190812175635.34186-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Content-Transfer-Encoding: 8bit
+Sender: fstests-owner@vger.kernel.org
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Only the ESSIV IV generation mode used to use cc->cipher so it could
-instantiate the bare cipher used to encrypt the IV. However, this is
-now taken care of by the ESSIV template, and so no users of cc->cipher
-remain. So remove it altogether.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Extend the 'set_encpolicy' xfs_io command to support setting v2
+encryption policies, in addition to v1 encryption policies which it
+currently supports.  This uses the same ioctl, where the 'version' field
+at the beginning of the struct is used to determine whether the struct
+is fscrypt_policy_v1 or fscrypt_policy_v2.
+
+The command sets a v2 policy when the user either gave the longer key
+specification used in such policies (a 16-byte master_key_identifier
+rather than an 8-byte master_key_descriptor), or passed '-v 2'.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- drivers/md/dm-crypt.c | 58 --------------------
- 1 file changed, 58 deletions(-)
+ io/encrypt.c      | 228 ++++++++++++++++++++++++++++++++++++----------
+ man/man8/xfs_io.8 |  19 +++-
+ 2 files changed, 194 insertions(+), 53 deletions(-)
 
-diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index d44d24853aee..f87f6495652f 100644
---- a/drivers/md/dm-crypt.c
-+++ b/drivers/md/dm-crypt.c
-@@ -143,7 +143,6 @@ struct crypt_config {
- 	struct task_struct *write_thread;
- 	struct rb_root write_tree;
- 
--	char *cipher;
- 	char *cipher_string;
- 	char *cipher_auth;
- 	char *key_string;
-@@ -2140,7 +2139,6 @@ static void crypt_dtr(struct dm_target *ti)
- 	if (cc->dev)
- 		dm_put_device(ti, cc->dev);
- 
--	kzfree(cc->cipher);
- 	kzfree(cc->cipher_string);
- 	kzfree(cc->key_string);
- 	kzfree(cc->cipher_auth);
-@@ -2221,52 +2219,6 @@ static int crypt_ctr_ivmode(struct dm_target *ti, const char *ivmode)
- 	return 0;
+diff --git a/io/encrypt.c b/io/encrypt.c
+index 5b92cfae..f982cd17 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -161,13 +161,18 @@ set_encpolicy_help(void)
+ " assign an encryption policy to the currently open file\n"
+ "\n"
+ " Examples:\n"
+-" 'set_encpolicy' - assign policy with default key [0000000000000000]\n"
+-" 'set_encpolicy 0000111122223333' - assign policy with specified key\n"
++" 'set_encpolicy' - assign v1 policy with default key descriptor\n"
++"                   (0000000000000000)\n"
++" 'set_encpolicy -v 2' - assign v2 policy with default key identifier\n"
++"                        (00000000000000000000000000000000)\n"
++" 'set_encpolicy 0000111122223333' - assign v1 policy with given key descriptor\n"
++" 'set_encpolicy 00001111222233334444555566667777' - assign v2 policy with given\n"
++"                                                    key identifier\n"
+ "\n"
+ " -c MODE -- contents encryption mode\n"
+ " -n MODE -- filenames encryption mode\n"
+ " -f FLAGS -- policy flags\n"
+-" -v VERSION -- version of policy structure\n"
++" -v VERSION -- policy version\n"
+ "\n"
+ " MODE can be numeric or one of the following predefined values:\n"
+ "    AES-256-XTS, AES-256-CTS, AES-128-CBC, AES-128-CTS, Adiantum\n"
+@@ -231,6 +236,35 @@ mode2str(__u8 mode)
+ 	return buf;
  }
  
--/*
-- * Workaround to parse cipher algorithm from crypto API spec.
-- * The cc->cipher is currently used only in ESSIV.
-- * This should be probably done by crypto-api calls (once available...)
-- */
--static int crypt_ctr_blkdev_cipher(struct crypt_config *cc)
--{
--	const char *alg_name = NULL;
--	char *start, *end;
++static int
++hexchar2bin(char c)
++{
++	if (c >= '0' && c <= '9')
++		return c - '0';
++	if (c >= 'a' && c <= 'f')
++		return 10 + (c - 'a');
++	if (c >= 'A' && c <= 'F')
++		return 10 + (c - 'A');
++	return -1;
++}
++
++static bool
++hex2bin(const char *hex, __u8 *bin, size_t bin_len)
++{
++	if (strlen(hex) != 2 * bin_len)
++		return false;
++
++	while (bin_len--) {
++		int hi = hexchar2bin(*hex++);
++		int lo = hexchar2bin(*hex++);
++
++		if (hi < 0 || lo < 0)
++			return false;
++		*bin++ = (hi << 4) | lo;
++	}
++	return true;
++}
++
+ static const char *
+ keydesc2str(const __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
+ {
+@@ -255,6 +289,92 @@ keyid2str(const __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
+ 	return buf;
+ }
+ 
++static const char *
++keyspectype(const struct fscrypt_key_specifier *key_spec)
++{
++	switch (key_spec->type) {
++	case FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR:
++		return "descriptor";
++	case FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER:
++		return "identifier";
++	}
++	return "[unknown]";
++}
++
++static const char *
++keyspec2str(const struct fscrypt_key_specifier *key_spec)
++{
++	switch (key_spec->type) {
++	case FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR:
++		return keydesc2str(key_spec->u.descriptor);
++	case FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER:
++		return keyid2str(key_spec->u.identifier);
++	}
++	return "[unknown]";
++}
++
++static bool
++str2keydesc(const char *str,
++	    __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
++{
++	if (!hex2bin(str, master_key_descriptor, FSCRYPT_KEY_DESCRIPTOR_SIZE)) {
++		fprintf(stderr, "invalid key descriptor: %s\n", str);
++		return false;
++	}
++	return true;
++}
++
++static bool
++str2keyid(const char *str,
++	  __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
++{
++	if (!hex2bin(str, master_key_identifier, FSCRYPT_KEY_IDENTIFIER_SIZE)) {
++		fprintf(stderr, "invalid key identifier: %s\n", str);
++		return false;
++	}
++	return true;
++}
++
++/*
++ * Parse a key specifier (descriptor or identifier) given as a hex string.
++ *
++ *  8 bytes (16 hex chars) == key descriptor == v1 encryption policy.
++ * 16 bytes (32 hex chars) == key identifier == v2 encryption policy.
++ *
++ * If a policy_version is given (>= 0), then the corresponding type of key
++ * specifier is required.  Otherwise the specifier type and policy_version are
++ * determined based on the length of the given hex string.
++ *
++ * Returns the policy version, or -1 on error.
++ */
++static int
++str2keyspec(const char *str, int policy_version,
++	    struct fscrypt_key_specifier *key_spec)
++{
++	if (policy_version < 0) { /* version unspecified? */
++		size_t len = strlen(str);
++
++		if (len == 2 * FSCRYPT_KEY_DESCRIPTOR_SIZE) {
++			policy_version = FSCRYPT_POLICY_V1;
++		} else if (len == 2 * FSCRYPT_KEY_IDENTIFIER_SIZE) {
++			policy_version = FSCRYPT_POLICY_V2;
++		} else {
++			fprintf(stderr, "invalid key specifier: %s\n", str);
++			return -1;
++		}
++	}
++	if (policy_version == FSCRYPT_POLICY_V2) {
++		if (!str2keyid(str, key_spec->u.identifier))
++			return -1;
++		key_spec->type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
++	} else {
++		if (!str2keydesc(str, key_spec->u.descriptor))
++			return -1;
++		key_spec->type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
++	}
++	return policy_version;
++}
++
+ static void
+ test_for_v2_policy_support(void)
+ {
+@@ -375,46 +495,54 @@ static int
+ set_encpolicy_f(int argc, char **argv)
+ {
+ 	int c;
+-	struct fscrypt_policy policy;
 -
--	if (crypt_integrity_aead(cc)) {
--		alg_name = crypto_tfm_alg_name(crypto_aead_tfm(any_tfm_aead(cc)));
--		if (!alg_name)
--			return -EINVAL;
--		if (crypt_integrity_hmac(cc)) {
--			alg_name = strchr(alg_name, ',');
--			if (!alg_name)
--				return -EINVAL;
+-	/* Initialize the policy structure with default values */
+-	memset(&policy, 0, sizeof(policy));
+-	policy.contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
+-	policy.filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
+-	policy.flags = FSCRYPT_POLICY_FLAGS_PAD_16;
++	__u8 contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
++	__u8 filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
++	__u8 flags = FSCRYPT_POLICY_FLAGS_PAD_16;
++	int version = -1; /* unspecified */
++	struct fscrypt_key_specifier key_spec;
++	union {
++		__u8 version;
++		struct fscrypt_policy_v1 v1;
++		struct fscrypt_policy_v2 v2;
++	} policy;
+ 
+-	/* Parse options */
+ 	while ((c = getopt(argc, argv, "c:n:f:v:")) != EOF) {
+ 		switch (c) {
+ 		case 'c':
+-			if (!parse_mode(optarg,
+-					&policy.contents_encryption_mode)) {
+-				fprintf(stderr, "invalid contents encryption "
+-					"mode: %s\n", optarg);
++			if (!parse_mode(optarg, &contents_encryption_mode)) {
++				fprintf(stderr,
++					"invalid contents encryption mode: %s\n",
++					optarg);
+ 				return 0;
+ 			}
+ 			break;
+ 		case 'n':
+-			if (!parse_mode(optarg,
+-					&policy.filenames_encryption_mode)) {
+-				fprintf(stderr, "invalid filenames encryption "
+-					"mode: %s\n", optarg);
++			if (!parse_mode(optarg, &filenames_encryption_mode)) {
++				fprintf(stderr,
++					"invalid filenames encryption mode: %s\n",
++					optarg);
+ 				return 0;
+ 			}
+ 			break;
+ 		case 'f':
+-			if (!parse_byte_value(optarg, &policy.flags)) {
++			if (!parse_byte_value(optarg, &flags)) {
+ 				fprintf(stderr, "invalid flags: %s\n", optarg);
+ 				return 0;
+ 			}
+ 			break;
+-		case 'v':
+-			if (!parse_byte_value(optarg, &policy.version)) {
++		case 'v': {
++			__u8 val;
++
++			if (!parse_byte_value(optarg, &val)) {
+ 				fprintf(stderr, "invalid policy version: %s\n",
+ 					optarg);
+ 				return 0;
+ 			}
++			if (val == 1) /* Just to avoid annoying people... */
++				val = FSCRYPT_POLICY_V1;
++			version = val;
+ 			break;
++		}
+ 		default:
+ 			return command_usage(&set_encpolicy_cmd);
+ 		}
+@@ -425,40 +553,44 @@ set_encpolicy_f(int argc, char **argv)
+ 	if (argc > 1)
+ 		return command_usage(&set_encpolicy_cmd);
+ 
+-	/* Parse key descriptor if specified */
++	/*
++	 * If unspecified, the key descriptor or identifier defaults to all 0's.
++	 * If the policy version is additionally unspecified, it defaults to v1.
++	 */
++	memset(&key_spec, 0, sizeof(key_spec));
+ 	if (argc > 0) {
+-		const char *keydesc = argv[0];
+-		char *tmp;
+-		unsigned long long x;
+-		int i;
+-
+-		if (strlen(keydesc) != FSCRYPT_KEY_DESCRIPTOR_SIZE * 2) {
+-			fprintf(stderr, "invalid key descriptor: %s\n",
+-				keydesc);
++		version = str2keyspec(argv[0], version, &key_spec);
++		if (version < 0)
+ 			return 0;
 -		}
--		alg_name++;
--	} else {
--		alg_name = crypto_tfm_alg_name(crypto_skcipher_tfm(any_tfm(cc)));
--		if (!alg_name)
--			return -EINVAL;
--	}
 -
--	start = strchr(alg_name, '(');
--	end = strchr(alg_name, ')');
--
--	if (!start && !end) {
--		cc->cipher = kstrdup(alg_name, GFP_KERNEL);
--		return cc->cipher ? 0 : -ENOMEM;
--	}
--
--	if (!start || !end || ++start >= end)
--		return -EINVAL;
--
--	cc->cipher = kzalloc(end - start + 1, GFP_KERNEL);
--	if (!cc->cipher)
--		return -ENOMEM;
--
--	strncpy(cc->cipher, start, end - start);
--
--	return 0;
--}
--
- /*
-  * Workaround to parse HMAC algorithm from AEAD crypto API spec.
-  * The HMAC is needed to calculate tag size (HMAC digest size).
-@@ -2376,12 +2328,6 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 	else
- 		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
+-		x = strtoull(keydesc, &tmp, 16);
+-		if (tmp == keydesc || *tmp != '\0') {
+-			fprintf(stderr, "invalid key descriptor: %s\n",
+-				keydesc);
+-			return 0;
+-		}
++	}
++	if (version < 0) /* version unspecified? */
++		version = FSCRYPT_POLICY_V1;
  
--	ret = crypt_ctr_blkdev_cipher(cc);
--	if (ret < 0) {
--		ti->error = "Cannot allocate cipher string";
--		return -ENOMEM;
--	}
+-		for (i = 0; i < FSCRYPT_KEY_DESCRIPTOR_SIZE; i++) {
+-			policy.master_key_descriptor[i] = x >> 56;
+-			x <<= 8;
+-		}
++	memset(&policy, 0, sizeof(policy));
++	policy.version = version;
++	if (version == FSCRYPT_POLICY_V2) {
++		policy.v2.contents_encryption_mode = contents_encryption_mode;
++		policy.v2.filenames_encryption_mode = filenames_encryption_mode;
++		policy.v2.flags = flags;
++		memcpy(policy.v2.master_key_identifier, key_spec.u.identifier,
++		       FSCRYPT_KEY_IDENTIFIER_SIZE);
++	} else {
++		/*
++		 * xfstests passes .version = 255 for testing.  Just use
++		 * 'struct fscrypt_policy_v1' for both v1 and unknown versions.
++		 */
++		policy.v1.contents_encryption_mode = contents_encryption_mode;
++		policy.v1.filenames_encryption_mode = filenames_encryption_mode;
++		policy.v1.flags = flags;
++		memcpy(policy.v1.master_key_descriptor, key_spec.u.descriptor,
++		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
+ 	}
+ 
+-	/* Set the encryption policy */
+-	if (ioctl(file->fd, FS_IOC_SET_ENCRYPTION_POLICY, &policy) < 0) {
++	if (ioctl(file->fd, FS_IOC_SET_ENCRYPTION_POLICY, &policy) != 0) {
+ 		fprintf(stderr, "%s: failed to set encryption policy: %s\n",
+ 			file->name, strerror(errno));
+ 		exitcode = 1;
+-		return 0;
+ 	}
 -
  	return 0;
  }
  
-@@ -2416,10 +2362,6 @@ static int crypt_ctr_cipher_old(struct dm_target *ti, char *cipher_in, char *key
- 	}
- 	cc->key_parts = cc->tfms_count;
- 
--	cc->cipher = kstrdup(cipher, GFP_KERNEL);
--	if (!cc->cipher)
--		goto bad_mem;
--
- 	chainmode = strsep(&tmp, "-");
- 	*ivmode = strsep(&tmp, ":");
- 	*ivopts = tmp;
+@@ -478,7 +610,7 @@ encrypt_init(void)
+ 	set_encpolicy_cmd.name = "set_encpolicy";
+ 	set_encpolicy_cmd.cfunc = set_encpolicy_f;
+ 	set_encpolicy_cmd.args =
+-		_("[-c mode] [-n mode] [-f flags] [-v version] [keydesc]");
++		_("[-c mode] [-n mode] [-f flags] [-v version] [keyspec]");
+ 	set_encpolicy_cmd.argmin = 0;
+ 	set_encpolicy_cmd.argmax = -1;
+ 	set_encpolicy_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index 3dd34a0c..18fcde0f 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -701,12 +701,17 @@ Swaps extent forks between files. The current open file is the target. The donor
+ file is specified by path. Note that file data is not copied (file content moves
+ with the fork(s)).
+ .TP
+-.BI "set_encpolicy [ \-c " mode " ] [ \-n " mode " ] [ \-f " flags " ] [ \-v " version " ] [ " keydesc " ]"
++.BI "set_encpolicy [ \-c " mode " ] [ \-n " mode " ] [ \-f " flags " ] [ \-v " version " ] [ " keyspec " ]"
+ On filesystems that support encryption, assign an encryption policy to the
+ current file.
+-.I keydesc
+-is a 16-byte hex string which identifies the encryption key to use.
+-If not specified, a "default" key descriptor of all 0's will be used.
++.I keyspec
++is a hex string which specifies the encryption key to use.  For v1 encryption
++policies,
++.I keyspec
++must be a 16-character hex string (8 bytes).  For v2 policies,
++.I keyspec
++must be a 32-character hex string (16 bytes).  If unspecified, an all-zeroes
++value is used.
+ .RS 1.0i
+ .PD 0
+ .TP 0.4i
+@@ -720,7 +725,11 @@ filenames encryption mode (e.g. AES-256-CTS)
+ policy flags (numeric)
+ .TP
+ .BI \-v " version"
+-version of policy structure (numeric)
++policy version.  Defaults to 1 or 2 depending on the length of
++.IR keyspec ;
++or to 1 if
++.I keyspec
++is unspecified.
+ .RE
+ .PD
+ .TP
 -- 
-2.17.1
-
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+2.23.0.rc1.153.gdeed80330f-goog
