@@ -1,257 +1,106 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon,  5 Aug 2019 09:25:03 -0700
-Message-Id: <20190805162521.90882-3-ebiggers@kernel.org>
-In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
-References: <20190805162521.90882-1-ebiggers@kernel.org>
+Return-Path: <dm-devel-bounces@redhat.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v8 02/20] fscrypt: use FSCRYPT_ prefix for uapi
- constants
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+References: <20190810094053.7423-1-ard.biesheuvel@linaro.org>
+	<20190810094053.7423-4-ard.biesheuvel@linaro.org>
+	<8679d2f5-b005-cd89-957e-d79440b78086@gmail.com>
+	<CAKv+Gu-ZPPR5xQSR6T4o+8yJvsHY2a3xXZ5zsM_aGS3frVChgQ@mail.gmail.com>
+	<82a87cae-8eb7-828c-35c3-fb39a9abe692@gmail.com>
+	<CAKv+Gu_d+3NsTKFZbS+xeuxf5uCz=ENmPX-a=s-2kgLrW4d7cQ@mail.gmail.com>
+	<7b3365a9-42ca-5426-660f-e87898bb9f7a@gmail.com>
+In-Reply-To: <7b3365a9-42ca-5426-660f-e87898bb9f7a@gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Mon, 12 Aug 2019 17:19:29 +0300
+Message-ID: <CAKv+Gu_V+i=j9u-vZABN_ArWtwVbXPVjG=xOdj-RDWWHs2w08Q@mail.gmail.com>
+Subject: Re: [dm-devel] [PATCH v9 3/7] md: dm-crypt: switch to ESSIV crypto
+	API template
+List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
+List-Archive: <https://www.redhat.com/archives/dm-devel>
+List-Post: <mailto:dm-devel@redhat.com>
+List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
+List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=subscribe>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Sender: dm-devel-bounces@redhat.com
+Errors-To: dm-devel-bounces@redhat.com
+To: Milan Broz <gmazyland@gmail.com>
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, device-mapper development <dm-devel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, 12 Aug 2019 at 16:51, Milan Broz <gmazyland@gmail.com> wrote:
+>
+> On 12/08/2019 09:50, Ard Biesheuvel wrote:
+> > On Mon, 12 Aug 2019 at 10:44, Milan Broz <gmazyland@gmail.com> wrote:
+> >>
+> >> On 12/08/2019 08:54, Ard Biesheuvel wrote:
+> >>> On Mon, 12 Aug 2019 at 09:33, Milan Broz <gmazyland@gmail.com> wrote:
+> >>>> Try for example
+> >>>> # cryptsetup luksFormat /dev/sdc -c aes-cbc-essiv:sha256 --integrity hmac-sha256 -q -i1
+> >>>>
+> >>>> It should produce Crypto API string
+> >>>>   authenc(hmac(sha256),essiv(cbc(aes),sha256))
+> >>>> while it produces
+> >>>>   essiv(authenc(hmac(sha256),cbc(aes)),sha256)
+> >>>> (and fails).
+> >>>>
+> >>>
+> >>> No. I don't know why it fails, but the latter is actually the correct
+> >>> string. The essiv template is instantiated either as a skcipher or as
+> >>> an aead, and it encapsulates the entire transformation. (This is
+> >>> necessary considering that the IV is passed via the AAD and so the
+> >>> ESSIV handling needs to touch that as well)
+> >>
+> >> Hm. Constructing these strings seems to be more confusing than dmcrypt mode combinations :-)
+> >>
+> >> But you are right, I actually tried the former string (authenc(hmac(sha256),essiv(cbc(aes),sha256)))
+> >> and it worked, but I guess the authenticated IV (AAD) was actually the input to IV (plain sector number)
+> >> not the output of ESSIV? Do I understand it correctly now?
+> >>
+> >
+> > Indeed. The former string instantiates the skcipher version of the
+> > ESSIV template, and so the AAD handling is omitted, and we end up
+> > using the plain IV in the authentication rather than the encrypted IV.
+> >
+> > So when using the latter string, does it produce any error messages
+> > when it fails?
+>
+> The error is
+> table: 253:1: crypt: Error decoding and setting key
+>
+> and it is failing in crypt_setkey() int this  crypto_aead_setkey();
+>
+> And it is because it now wrongly calculates MAC key length.
+> (We have two keys here - one for length-preserving CBC-ESSIV encryption
+> and one for HMAC.)
+>
+> This super-ugly hotfix helps here... I guess it can be done better :-)
+>
 
-Prefix all filesystem encryption UAPI constants except the ioctl numbers
-with "FSCRYPT_" rather than with "FS_".  This namespaces the constants
-more appropriately and makes it clear that they are related specifically
-to the filesystem encryption feature, and to the 'fscrypt_*' structures.
-With some of the old names like "FS_POLICY_FLAGS_VALID", it was not
-immediately clear that the constant had anything to do with encryption.
+Weird. It did work fine before, but now that I have dropped the 'md:
+dm-crypt: infer ESSIV block cipher from cipher string directly' patch,
+we are probably taking a different code path and hitting this error.
 
-This is also useful because we'll be adding more encryption-related
-constants, e.g. for the policy version, and we'd otherwise have to
-choose whether to use unclear names like FS_POLICY_V1 or inconsistent
-names like FS_ENCRYPTION_POLICY_V1.
-
-For source compatibility with existing userspace programs, keep the old
-names defined as aliases to the new names.
-
-Finally, as long as new names are being defined anyway, I skipped
-defining new names for the fscrypt mode numbers that aren't actually
-used: INVALID (0), AES_256_GCM (2), AES_256_CBC (3), SPECK128_256_XTS
-(7), and SPECK128_256_CTS (8).
-
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/filesystems/fscrypt.rst | 40 ++++++++---------
- include/uapi/linux/fscrypt.h          | 65 +++++++++++++++++----------
- 2 files changed, 62 insertions(+), 43 deletions(-)
-
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 82efa41b0e6c02..d60b885c402401 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -225,9 +225,10 @@ a little endian number, except that:
-   is encrypted with AES-256 where the AES-256 key is the SHA-256 hash
-   of the file's data encryption key.
- 
--- In the "direct key" configuration (FS_POLICY_FLAG_DIRECT_KEY set in
--  the fscrypt_policy), the file's nonce is also appended to the IV.
--  Currently this is only allowed with the Adiantum encryption mode.
-+- In the "direct key" configuration (FSCRYPT_POLICY_FLAG_DIRECT_KEY
-+  set in the fscrypt_policy), the file's nonce is also appended to the
-+  IV.  Currently this is only allowed with the Adiantum encryption
-+  mode.
- 
- Filenames encryption
- --------------------
-@@ -274,14 +275,14 @@ empty directory or verifies that a directory or regular file already
- has the specified encryption policy.  It takes in a pointer to a
- :c:type:`struct fscrypt_policy`, defined as follows::
- 
--    #define FS_KEY_DESCRIPTOR_SIZE  8
-+    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
- 
-     struct fscrypt_policy {
-             __u8 version;
-             __u8 contents_encryption_mode;
-             __u8 filenames_encryption_mode;
-             __u8 flags;
--            __u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+            __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-     };
- 
- This structure must be initialized as follows:
-@@ -289,19 +290,18 @@ This structure must be initialized as follows:
- - ``version`` must be 0.
- 
- - ``contents_encryption_mode`` and ``filenames_encryption_mode`` must
--  be set to constants from ``<linux/fs.h>`` which identify the
--  encryption modes to use.  If unsure, use
--  FS_ENCRYPTION_MODE_AES_256_XTS (1) for ``contents_encryption_mode``
--  and FS_ENCRYPTION_MODE_AES_256_CTS (4) for
--  ``filenames_encryption_mode``.
-+  be set to constants from ``<linux/fscrypt.h>`` which identify the
-+  encryption modes to use.  If unsure, use FSCRYPT_MODE_AES_256_XTS
-+  (1) for ``contents_encryption_mode`` and FSCRYPT_MODE_AES_256_CTS
-+  (4) for ``filenames_encryption_mode``.
- 
--- ``flags`` must contain a value from ``<linux/fs.h>`` which
-+- ``flags`` must contain a value from ``<linux/fscrypt.h>`` which
-   identifies the amount of NUL-padding to use when encrypting
--  filenames.  If unsure, use FS_POLICY_FLAGS_PAD_32 (0x3).
--  In addition, if the chosen encryption modes are both
--  FS_ENCRYPTION_MODE_ADIANTUM, this can contain
--  FS_POLICY_FLAG_DIRECT_KEY to specify that the master key should be
--  used directly, without key derivation.
-+  filenames.  If unsure, use FSCRYPT_POLICY_FLAGS_PAD_32 (0x3).  In
-+  addition, if the chosen encryption modes are both
-+  FSCRYPT_MODE_ADIANTUM, this can contain
-+  FSCRYPT_POLICY_FLAG_DIRECT_KEY to specify that the master key should
-+  be used directly, without key derivation.
- 
- - ``master_key_descriptor`` specifies how to find the master key in
-   the keyring; see `Adding keys`_.  It is up to userspace to choose a
-@@ -401,11 +401,11 @@ followed by the 16-character lower case hex representation of the
- ``master_key_descriptor`` that was set in the encryption policy.  The
- key payload must conform to the following structure::
- 
--    #define FS_MAX_KEY_SIZE 64
-+    #define FSCRYPT_MAX_KEY_SIZE 64
- 
-     struct fscrypt_key {
-             u32 mode;
--            u8 raw[FS_MAX_KEY_SIZE];
-+            u8 raw[FSCRYPT_MAX_KEY_SIZE];
-             u32 size;
-     };
- 
-@@ -574,7 +574,7 @@ much confusion if an encryption policy were to be added to or removed
- from anything other than an empty directory.)  The struct is defined
- as follows::
- 
--    #define FS_KEY_DESCRIPTOR_SIZE  8
-+    #define FSCRYPT_KEY_DESCRIPTOR_SIZE  8
-     #define FS_KEY_DERIVATION_NONCE_SIZE 16
- 
-     struct fscrypt_context {
-@@ -582,7 +582,7 @@ as follows::
-             u8 contents_encryption_mode;
-             u8 filenames_encryption_mode;
-             u8 flags;
--            u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+            u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-             u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
-     };
- 
-diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-index 26f6d2c19afd3f..674b0452ef5759 100644
---- a/include/uapi/linux/fscrypt.h
-+++ b/include/uapi/linux/fscrypt.h
-@@ -10,35 +10,30 @@
- 
- #include <linux/types.h>
- 
--#define FS_KEY_DESCRIPTOR_SIZE	8
-+#define FSCRYPT_KEY_DESCRIPTOR_SIZE	8
- 
- /* Encryption policy flags */
--#define FS_POLICY_FLAGS_PAD_4		0x00
--#define FS_POLICY_FLAGS_PAD_8		0x01
--#define FS_POLICY_FLAGS_PAD_16		0x02
--#define FS_POLICY_FLAGS_PAD_32		0x03
--#define FS_POLICY_FLAGS_PAD_MASK	0x03
--#define FS_POLICY_FLAG_DIRECT_KEY	0x04	/* use master key directly */
--#define FS_POLICY_FLAGS_VALID		0x07
-+#define FSCRYPT_POLICY_FLAGS_PAD_4		0x00
-+#define FSCRYPT_POLICY_FLAGS_PAD_8		0x01
-+#define FSCRYPT_POLICY_FLAGS_PAD_16		0x02
-+#define FSCRYPT_POLICY_FLAGS_PAD_32		0x03
-+#define FSCRYPT_POLICY_FLAGS_PAD_MASK		0x03
-+#define FSCRYPT_POLICY_FLAG_DIRECT_KEY		0x04	/* use master key directly */
-+#define FSCRYPT_POLICY_FLAGS_VALID		0x07
- 
- /* Encryption algorithms */
--#define FS_ENCRYPTION_MODE_INVALID		0
--#define FS_ENCRYPTION_MODE_AES_256_XTS		1
--#define FS_ENCRYPTION_MODE_AES_256_GCM		2
--#define FS_ENCRYPTION_MODE_AES_256_CBC		3
--#define FS_ENCRYPTION_MODE_AES_256_CTS		4
--#define FS_ENCRYPTION_MODE_AES_128_CBC		5
--#define FS_ENCRYPTION_MODE_AES_128_CTS		6
--#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7 /* Removed, do not use. */
--#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8 /* Removed, do not use. */
--#define FS_ENCRYPTION_MODE_ADIANTUM		9
-+#define FSCRYPT_MODE_AES_256_XTS		1
-+#define FSCRYPT_MODE_AES_256_CTS		4
-+#define FSCRYPT_MODE_AES_128_CBC		5
-+#define FSCRYPT_MODE_AES_128_CTS		6
-+#define FSCRYPT_MODE_ADIANTUM			9
- 
- struct fscrypt_policy {
- 	__u8 version;
- 	__u8 contents_encryption_mode;
- 	__u8 filenames_encryption_mode;
- 	__u8 flags;
--	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
- };
- 
- #define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
-@@ -46,16 +41,40 @@ struct fscrypt_policy {
- #define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
- 
- /* Parameters for passing an encryption key into the kernel keyring */
--#define FS_KEY_DESC_PREFIX		"fscrypt:"
--#define FS_KEY_DESC_PREFIX_SIZE		8
-+#define FSCRYPT_KEY_DESC_PREFIX		"fscrypt:"
-+#define FSCRYPT_KEY_DESC_PREFIX_SIZE		8
- 
- /* Structure that userspace passes to the kernel keyring */
--#define FS_MAX_KEY_SIZE			64
-+#define FSCRYPT_MAX_KEY_SIZE			64
- 
- struct fscrypt_key {
- 	__u32 mode;
--	__u8 raw[FS_MAX_KEY_SIZE];
-+	__u8 raw[FSCRYPT_MAX_KEY_SIZE];
- 	__u32 size;
- };
-+/**********************************************************************/
-+
-+/* old names; don't add anything new here! */
-+#define FS_KEY_DESCRIPTOR_SIZE		FSCRYPT_KEY_DESCRIPTOR_SIZE
-+#define FS_POLICY_FLAGS_PAD_4		FSCRYPT_POLICY_FLAGS_PAD_4
-+#define FS_POLICY_FLAGS_PAD_8		FSCRYPT_POLICY_FLAGS_PAD_8
-+#define FS_POLICY_FLAGS_PAD_16		FSCRYPT_POLICY_FLAGS_PAD_16
-+#define FS_POLICY_FLAGS_PAD_32		FSCRYPT_POLICY_FLAGS_PAD_32
-+#define FS_POLICY_FLAGS_PAD_MASK	FSCRYPT_POLICY_FLAGS_PAD_MASK
-+#define FS_POLICY_FLAG_DIRECT_KEY	FSCRYPT_POLICY_FLAG_DIRECT_KEY
-+#define FS_POLICY_FLAGS_VALID		FSCRYPT_POLICY_FLAGS_VALID
-+#define FS_ENCRYPTION_MODE_INVALID	0	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_XTS	FSCRYPT_MODE_AES_256_XTS
-+#define FS_ENCRYPTION_MODE_AES_256_GCM	2	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_CBC	3	/* never used */
-+#define FS_ENCRYPTION_MODE_AES_256_CTS	FSCRYPT_MODE_AES_256_CTS
-+#define FS_ENCRYPTION_MODE_AES_128_CBC	FSCRYPT_MODE_AES_128_CBC
-+#define FS_ENCRYPTION_MODE_AES_128_CTS	FSCRYPT_MODE_AES_128_CTS
-+#define FS_ENCRYPTION_MODE_SPECK128_256_XTS	7	/* removed */
-+#define FS_ENCRYPTION_MODE_SPECK128_256_CTS	8	/* removed */
-+#define FS_ENCRYPTION_MODE_ADIANTUM	FSCRYPT_MODE_ADIANTUM
-+#define FS_KEY_DESC_PREFIX		FSCRYPT_KEY_DESC_PREFIX
-+#define FS_KEY_DESC_PREFIX_SIZE		FSCRYPT_KEY_DESC_PREFIX_SIZE
-+#define FS_MAX_KEY_SIZE			FSCRYPT_MAX_KEY_SIZE
- 
- #endif /* _UAPI_LINUX_FSCRYPT_H */
--- 
-2.22.0.770.g0f2c4a37fd-goog
+I'll try to fix this cleanly. Thanks for doing the diagnosis.
 
 
+> diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
+> index e9a0093c88ee..7b06d975a2e1 100644
+> --- a/drivers/md/dm-crypt.c
+> +++ b/drivers/md/dm-crypt.c
+> @@ -2342,6 +2342,9 @@ static int crypt_ctr_auth_cipher(struct crypt_config *cc, char *cipher_api)
+>         char *start, *end, *mac_alg = NULL;
+>         struct crypto_ahash *mac;
+>
+> +       if (strstarts(cipher_api, "essiv(authenc("))
+> +               cipher_api += strlen("essiv(");
+> +
+>         if (!strstarts(cipher_api, "authenc("))
+>                 return 0;
+>
+> Milan
 
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+--
+dm-devel mailing list
+dm-devel@redhat.com
+https://www.redhat.com/mailman/listinfo/dm-devel
