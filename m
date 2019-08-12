@@ -1,312 +1,253 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:53816 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726090AbfHLR6s (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 12 Aug 2019 13:58:48 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon,  5 Aug 2019 09:25:13 -0700
-Message-Id: <20190805162521.90882-13-ebiggers@kernel.org>
-In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
-References: <20190805162521.90882-1-ebiggers@kernel.org>
+Subject: [RFC PATCH 6/9] generic: add test for non-root use of fscrypt API additions
+Date: Mon, 12 Aug 2019 10:58:06 -0700
+Message-Id: <20190812175809.34810-7-ebiggers@kernel.org>
+In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
+References: <20190812175809.34810-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v8 12/20] fscrypt: add an HKDF-SHA512
- implementation
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add an implementation of HKDF (RFC 5869) to fscrypt, for the purpose of
-deriving additional key material from the fscrypt master keys for v2
-encryption policies.  HKDF is a key derivation function built on top of
-HMAC.  We choose SHA-512 for the underlying unkeyed hash, and use an
-"hmac(sha512)" transform allocated from the crypto API.
+Test non-root use of thte fscrypt filesystem-level encryption keyring
+and v2 encryption policies.
 
-We'll be using this to replace the AES-ECB based KDF currently used to
-derive the per-file encryption keys.  While the AES-ECB based KDF is
-believed to meet the original security requirements, it is nonstandard
-and has problems that don't exist in modern KDFs such as HKDF:
-
-1. It's reversible.  Given a derived key and nonce, an attacker can
-   easily compute the master key.  This is okay if the master key and
-   derived keys are equally hard to compromise, but now we'd like to be
-   more robust against threats such as a derived key being compromised
-   through a timing attack, or a derived key for an in-use file being
-   compromised after the master key has already been removed.
-
-2. It doesn't evenly distribute the entropy from the master key; each 16
-   input bytes only affects the corresponding 16 output bytes.
-
-3. It isn't easily extensible to deriving other values or keys, such as
-   a public hash for securely identifying the key, or per-mode keys.
-   Per-mode keys will be immediately useful for Adiantum encryption, for
-   which fscrypt currently uses the master key directly, introducing
-   unnecessary usage constraints.  Per-mode keys will also be useful for
-   hardware inline encryption, which is currently being worked on.
-
-HKDF solves all the above problems.
-
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/Kconfig           |   2 +
- fs/crypto/Makefile          |   1 +
- fs/crypto/fscrypt_private.h |  15 +++
- fs/crypto/hkdf.c            | 181 ++++++++++++++++++++++++++++++++++++
- 4 files changed, 199 insertions(+)
- create mode 100644 fs/crypto/hkdf.c
+ tests/generic/801     | 136 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/801.out |  62 +++++++++++++++++++
+ tests/generic/group   |   1 +
+ 3 files changed, 199 insertions(+)
+ create mode 100755 tests/generic/801
+ create mode 100644 tests/generic/801.out
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index 5fdf24877c1785..ff5a1746cbae4c 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -7,6 +7,8 @@ config FS_ENCRYPTION
- 	select CRYPTO_ECB
- 	select CRYPTO_XTS
- 	select CRYPTO_CTS
-+	select CRYPTO_SHA512
-+	select CRYPTO_HMAC
- 	select KEYS
- 	help
- 	  Enable encryption of files and directories.  This
-diff --git a/fs/crypto/Makefile b/fs/crypto/Makefile
-index 6b2485b4139335..232e2bb5a337b2 100644
---- a/fs/crypto/Makefile
-+++ b/fs/crypto/Makefile
-@@ -3,6 +3,7 @@ obj-$(CONFIG_FS_ENCRYPTION)	+= fscrypto.o
- 
- fscrypto-y := crypto.o \
- 	      fname.o \
-+	      hkdf.o \
- 	      hooks.o \
- 	      keyring.o \
- 	      keysetup.o \
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index fc804f4a03fc92..9556e9499dc59c 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -172,6 +172,21 @@ extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
- 					 u32 orig_len, u32 max_len,
- 					 u32 *encrypted_len_ret);
- 
-+/* hkdf.c */
-+
-+struct fscrypt_hkdf {
-+	struct crypto_shash *hmac_tfm;
-+};
-+
-+extern int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
-+			     unsigned int master_key_size);
-+
-+extern int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
-+			       const u8 *info, unsigned int infolen,
-+			       u8 *okm, unsigned int okmlen);
-+
-+extern void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf);
-+
- /* keyring.c */
- 
- /*
-diff --git a/fs/crypto/hkdf.c b/fs/crypto/hkdf.c
-new file mode 100644
-index 00000000000000..f21873e1b46749
+diff --git a/tests/generic/801 b/tests/generic/801
+new file mode 100755
+index 00000000..dc306315
 --- /dev/null
-+++ b/fs/crypto/hkdf.c
-@@ -0,0 +1,181 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Implementation of HKDF ("HMAC-based Extract-and-Expand Key Derivation
-+ * Function"), aka RFC 5869.  See also the original paper (Krawczyk 2010):
-+ * "Cryptographic Extraction and Key Derivation: The HKDF Scheme".
-+ *
-+ * This is used to derive keys from the fscrypt master keys.
-+ *
-+ * Copyright 2019 Google LLC
-+ */
++++ b/tests/generic/801
+@@ -0,0 +1,136 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/801
++#
++# Test non-root use of fscrypt filesystem-level encryption keyring
++# and v2 encryption policies.
++#
 +
-+#include <crypto/hash.h>
-+#include <crypto/sha.h>
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++echo
 +
-+#include "fscrypt_private.h"
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++orig_maxkeys=$(</proc/sys/kernel/keys/maxkeys)
++maxkeys=5
++echo $maxkeys > /proc/sys/kernel/keys/maxkeys
 +
-+/*
-+ * HKDF supports any unkeyed cryptographic hash algorithm, but fscrypt uses
-+ * SHA-512 because it is reasonably secure and efficient; and since it produces
-+ * a 64-byte digest, deriving an AES-256-XTS key preserves all 64 bytes of
-+ * entropy from the master key and requires only one iteration of HKDF-Expand.
-+ */
-+#define HKDF_HMAC_ALG		"hmac(sha512)"
-+#define HKDF_HASHLEN		SHA512_DIGEST_SIZE
-+
-+/*
-+ * HKDF consists of two steps:
-+ *
-+ * 1. HKDF-Extract: extract a pseudorandom key of length HKDF_HASHLEN bytes from
-+ *    the input keying material and optional salt.
-+ * 2. HKDF-Expand: expand the pseudorandom key into output keying material of
-+ *    any length, parameterized by an application-specific info string.
-+ *
-+ * HKDF-Extract can be skipped if the input is already a pseudorandom key of
-+ * length HKDF_HASHLEN bytes.  However, cipher modes other than AES-256-XTS take
-+ * shorter keys, and we don't want to force users of those modes to provide
-+ * unnecessarily long master keys.  Thus fscrypt still does HKDF-Extract.  No
-+ * salt is used, since fscrypt master keys should already be pseudorandom and
-+ * there's no way to persist a random salt per master key from kernel mode.
-+ */
-+
-+/* HKDF-Extract (RFC 5869 section 2.2), unsalted */
-+static int hkdf_extract(struct crypto_shash *hmac_tfm, const u8 *ikm,
-+			unsigned int ikmlen, u8 prk[HKDF_HASHLEN])
++_cleanup()
 +{
-+	static const u8 default_salt[HKDF_HASHLEN];
-+	SHASH_DESC_ON_STACK(desc, hmac_tfm);
-+	int err;
-+
-+	err = crypto_shash_setkey(hmac_tfm, default_salt, HKDF_HASHLEN);
-+	if (err)
-+		return err;
-+
-+	desc->tfm = hmac_tfm;
-+	err = crypto_shash_digest(desc, ikm, ikmlen, prk);
-+	shash_desc_zero(desc);
-+	return err;
++	cd /
++	rm -f $tmp.*
++	echo $orig_maxkeys > /proc/sys/kernel/keys/maxkeys
 +}
 +
-+/*
-+ * Compute HKDF-Extract using the given master key as the input keying material,
-+ * and prepare an HMAC transform object keyed by the resulting pseudorandom key.
-+ *
-+ * Afterwards, the keyed HMAC transform object can be used for HKDF-Expand many
-+ * times without having to recompute HKDF-Extract each time.
-+ */
-+int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
-+		      unsigned int master_key_size)
-+{
-+	struct crypto_shash *hmac_tfm;
-+	u8 prk[HKDF_HASHLEN];
-+	int err;
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
 +
-+	hmac_tfm = crypto_alloc_shash(HKDF_HMAC_ALG, 0, 0);
-+	if (IS_ERR(hmac_tfm)) {
-+		fscrypt_err(NULL, "Error allocating " HKDF_HMAC_ALG ": %ld",
-+			    PTR_ERR(hmac_tfm));
-+		return PTR_ERR(hmac_tfm);
-+	}
++# remove previous $seqres.full before test
++rm -f $seqres.full
 +
-+	if (WARN_ON(crypto_shash_digestsize(hmac_tfm) != sizeof(prk))) {
-+		err = -EINVAL;
-+		goto err_free_tfm;
-+	}
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_user
++_require_scratch_encryption -v 2
 +
-+	err = hkdf_extract(hmac_tfm, master_key, master_key_size, prk);
-+	if (err)
-+		goto err_free_tfm;
++_scratch_mkfs_encrypted &>> $seqres.full
++_scratch_mount
 +
-+	err = crypto_shash_setkey(hmac_tfm, prk, sizeof(prk));
-+	if (err)
-+		goto err_free_tfm;
++dir=$SCRATCH_MNT/dir
 +
-+	hkdf->hmac_tfm = hmac_tfm;
-+	goto out;
++raw_key=""
++for i in `seq 64`; do
++	raw_key+="\\x$(printf "%02x" $i)"
++done
++keydesc="0000111122223333"
++keyid="69b2f6edeee720cce0577937eb8a6751"
++chmod 777 $SCRATCH_MNT
 +
-+err_free_tfm:
-+	crypto_free_shash(hmac_tfm);
-+out:
-+	memzero_explicit(prk, sizeof(prk));
-+	return err;
-+}
++_user_do "mkdir $dir"
 +
-+/*
-+ * HKDF-Expand (RFC 5869 section 2.3).  This expands the pseudorandom key, which
-+ * was already keyed into 'hkdf->hmac_tfm' by fscrypt_init_hkdf(), into 'okmlen'
-+ * bytes of output keying material parameterized by the application-specific
-+ * 'info' of length 'infolen' bytes, prefixed by "fscrypt\0" and the 'context'
-+ * byte.  This is thread-safe and may be called by multiple threads in parallel.
-+ *
-+ * ('context' isn't part of the HKDF specification; it's just a prefix fscrypt
-+ * adds to its application-specific info strings to guarantee that it doesn't
-+ * accidentally repeat an info string when using HKDF for different purposes.)
-+ */
-+int fscrypt_hkdf_expand(struct fscrypt_hkdf *hkdf, u8 context,
-+			const u8 *info, unsigned int infolen,
-+			u8 *okm, unsigned int okmlen)
-+{
-+	SHASH_DESC_ON_STACK(desc, hkdf->hmac_tfm);
-+	u8 prefix[9];
-+	unsigned int i;
-+	int err;
-+	const u8 *prev = NULL;
-+	u8 counter = 1;
-+	u8 tmp[HKDF_HASHLEN];
++echo "# Setting v1 policy as regular user (should succeed)"
++_user_do_set_encpolicy $dir $keydesc
 +
-+	if (WARN_ON(okmlen > 255 * HKDF_HASHLEN))
-+		return -EINVAL;
++echo "# Getting v1 policy as regular user (should succeed)"
++_user_do_get_encpolicy $dir | _filter_scratch
 +
-+	desc->tfm = hkdf->hmac_tfm;
++echo "# Adding v1 policy key as regular user (should fail with EACCES)"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key" -d $keydesc
 +
-+	memcpy(prefix, "fscrypt\0", 8);
-+	prefix[8] = context;
++rm -rf $dir
++echo
++_user_do "mkdir $dir"
 +
-+	for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
++echo "# Setting v2 policy as regular user without key already added (should fail with ENOKEY)"
++_user_do_set_encpolicy $dir $keyid |& _filter_scratch
 +
-+		err = crypto_shash_init(desc);
-+		if (err)
-+			goto out;
++echo "# Adding v2 policy key as regular user (should succeed)"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
 +
-+		if (prev) {
-+			err = crypto_shash_update(desc, prev, HKDF_HASHLEN);
-+			if (err)
-+				goto out;
-+		}
++echo "# Setting v2 policy as regular user with key added (should succeed)"
++_user_do_set_encpolicy $dir $keyid
 +
-+		err = crypto_shash_update(desc, prefix, sizeof(prefix));
-+		if (err)
-+			goto out;
++echo "# Getting v2 policy as regular user (should succeed)"
++_user_do_get_encpolicy $dir | _filter_scratch
 +
-+		err = crypto_shash_update(desc, info, infolen);
-+		if (err)
-+			goto out;
++echo "# Creating encrypted file as regular user (should succeed)"
++_user_do "echo contents > $dir/file"
 +
-+		BUILD_BUG_ON(sizeof(counter) != 1);
-+		if (okmlen - i < HKDF_HASHLEN) {
-+			err = crypto_shash_finup(desc, &counter, 1, tmp);
-+			if (err)
-+				goto out;
-+			memcpy(&okm[i], tmp, okmlen - i);
-+			memzero_explicit(tmp, sizeof(tmp));
-+		} else {
-+			err = crypto_shash_finup(desc, &counter, 1, &okm[i]);
-+			if (err)
-+				goto out;
-+		}
-+		counter++;
-+		prev = &okm[i];
-+	}
-+	err = 0;
-+out:
-+	if (unlikely(err))
-+		memzero_explicit(okm, okmlen); /* so caller doesn't need to */
-+	shash_desc_zero(desc);
-+	return err;
-+}
++echo "# Removing v2 policy key as regular user (should succeed)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
 +
-+void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf)
-+{
-+	crypto_free_shash(hkdf->hmac_tfm);
-+}
++_scratch_cycle_mount	# Clear all keys
++
++echo
++echo "# Testing user key quota"
++for i in `seq $((maxkeys + 1))`; do
++	rand_raw_key=$(_generate_raw_encryption_key)
++	_user_do_add_enckey $SCRATCH_MNT "$rand_raw_key" \
++	    | sed 's/ with identifier .*$//'
++done
++
++rm -rf $dir
++echo
++_user_do "mkdir $dir"
++_scratch_cycle_mount	# Clear all keys
++
++# Test multiple users adding the same key.
++echo "# Adding key as root"
++_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Removing key only added by another user (should fail with ENOKEY)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
++echo "# Setting v2 encryption policy with key only added by another user (should fail with ENOKEY)"
++_user_do_set_encpolicy $dir $keyid |& _filter_scratch
++echo "# Adding second user of key"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Setting v2 encryption policy as regular user"
++_user_do_set_encpolicy $dir $keyid
++echo "# Removing this user's claim to the key"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Adding back second user of key"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Remove key for \"all users\", as regular user (should fail with EACCES)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid -a |& _filter_scratch
++_enckey_status $SCRATCH_MNT $keyid
++echo "# Remove key for \"all users\", as root"
++_rm_enckey $SCRATCH_MNT $keyid -a
++_enckey_status $SCRATCH_MNT $keyid
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/801.out b/tests/generic/801.out
+new file mode 100644
+index 00000000..b5b6cec8
+--- /dev/null
++++ b/tests/generic/801.out
+@@ -0,0 +1,62 @@
++QA output created by 801
++
++# Setting v1 policy as regular user (should succeed)
++# Getting v1 policy as regular user (should succeed)
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 0
++	Master key descriptor: 0000111122223333
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Adding v1 policy key as regular user (should fail with EACCES)
++Permission denied
++
++# Setting v2 policy as regular user without key already added (should fail with ENOKEY)
++SCRATCH_MNT/dir: failed to set encryption policy: Required key not available
++# Adding v2 policy key as regular user (should succeed)
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Setting v2 policy as regular user with key added (should succeed)
++# Getting v2 policy as regular user (should succeed)
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 2
++	Master key identifier: 69b2f6edeee720cce0577937eb8a6751
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Creating encrypted file as regular user (should succeed)
++# Removing v2 policy key as regular user (should succeed)
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++
++# Testing user key quota
++Added encryption key
++Added encryption key
++Added encryption key
++Added encryption key
++Added encryption key
++Error adding encryption key: Disk quota exceeded
++
++# Adding key as root
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=1)
++# Removing key only added by another user (should fail with ENOKEY)
++Error removing encryption key: Required key not available
++# Setting v2 encryption policy with key only added by another user (should fail with ENOKEY)
++SCRATCH_MNT/dir: failed to set encryption policy: Required key not available
++# Adding second user of key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=2, added_by_self)
++# Setting v2 encryption policy as regular user
++# Removing this user's claim to the key
++Removed user's claim to encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=1)
++# Adding back second user of key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Remove key for "all users", as regular user (should fail with EACCES)
++Permission denied
++Present (user_count=2, added_by_self)
++# Remove key for "all users", as root
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++Absent
+diff --git a/tests/generic/group b/tests/generic/group
+index 5be46357..4bc4772a 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -569,3 +569,4 @@
+ 564 auto quick copy_range
+ 565 auto quick copy_range
+ 800 auto quick encrypt
++801 auto quick encrypt
 -- 
-2.22.0.770.g0f2c4a37fd-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.23.0.rc1.153.gdeed80330f-goog
