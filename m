@@ -1,132 +1,276 @@
-Return-Path: <SRS0=LT3F=WT=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V5 0/7] Consolidate FS read I/O callbacks code
-Date: Fri, 23 Aug 2019 18:55:35 +0530
-Message-Id: <20190823132542.13434-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:53492 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726811AbfHLR5P (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 12 Aug 2019 13:57:15 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 4/8] xfs_io/encrypt: extend 'get_encpolicy' to support v2 policies
+Date: Mon, 12 Aug 2019 10:56:30 -0700
+Message-Id: <20190812175635.34186-5-ebiggers@kernel.org>
+In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
+References: <20190812175635.34186-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This patchset moves the "FS read I/O callbacks" code into a file of its
-own (i.e. fs/read_callbacks.c) and modifies the generic
-do_mpage_readpge() to make use of the functionality provided.
+From: Eric Biggers <ebiggers@google.com>
 
-"FS read I/O callbacks" code implements the state machine that needs
-to be executed after reading data from files that are encrypted and/or
-have verity metadata associated with them.
+get_encpolicy uses the FS_IOC_GET_ENCRYPTION_POLICY ioctl to retrieve
+the file's encryption policy, then displays it.  But that only works for
+v1 encryption policies.  A new ioctl, FS_IOC_GET_ENCRYPTION_POLICY_EX,
+has been introduced which is more flexible and can retrieve both v1 and
+v2 encryption policies.
 
-With these changes in place, the patchset changes Ext4 to use
-mpage_readpage[s] instead of its own custom ext4_readpage[s]()
-functions. This is done to reduce duplication of code across
-filesystems. Also, "FS read I/O callbacks" source files will be built
-only if CONFIG_FS_ENCRYPTION is enabled.
+Make get_encpolicy use the new ioctl if the kernel supports it and
+display the resulting the v1 or v2 encryption policy.  Otherwise, fall
+back to the old ioctl and display the v1 policy.
 
-The patchset also modifies fs/buffer.c to get file
-encryption/decryption to work with subpage-sized blocks.
+Also add new options:
 
-The patches can also be obtained from
-https://github.com/chandanr/linux.git at branch subpage-encryption-v5.
+  -1: Use the old ioctl only.  This will be used to test the old ioctl
+      even when the kernel supports the new one.
 
-Changelog:
-V4 -> V5:
-   1. Since F2FS uses its own workqueue and also since its
-      decompression logic isn't an fs independent entity like fscrypt or
-      fsverity, this patchset drops support for F2FS.
-      The patchset still helps in removing a copy of
-      do_mpage_readpage() from Ext4 (i.e. ext4_readpage()) and also
-      prevents a copy of block_read_full_page() from being added into
-      Ext4 by adding support to "read callbacks" API invocations into
-      block_read_full_page().
+  -t: Test whether the new ioctl is supported.  This will be useful to
+      determine whether v2 policies should be tested or not.
 
-V3 -> V4:
-   1. A new buffer_head flag (i.e. BH_Read_Cb) is introduced to reliably
-      check if a buffer head's content has to be decrypted.
-   2. Fix layering violation. Now the code flow for decryption happens as shown below,
-      FS => read callbacks => fscrypt
-   3. Select FS_READ_CALLBACKS from FS specific kconfig file if FS_ENCRYPTION
-      is enabled.
-   4. Make 'struct read_callbacks_ctx' an opaque structure.
-   5. Make use of FS' endio function rather than implementing one in read
-      callbacks.
-   6. Make read_callbacks.h self-contained.
-   7. Split patchset to separate out ext4 and f2fs changes.
-   
-V2 -> V3:
-1. Split the V2 patch "Consolidate 'read callbacks' into a new file" into
-   three patches,
-   - Introduce the read_callbacks functionality.
-   - Convert encryption to use read_callbacks.
-   - Remove union from struct fscrypt_context.
-2. fs/Kconfig
-   Do not explicitly set the default value of 'n' for FS_READ_CALLBACKS.
-3. fs/crypto/Kconfig
-   Select CONFIG_FS_READ_CALLBACKS only if CONFIG_BLOCK is selected.
-4. Remove verity associated code in read_callbacks code.
-5. Introduce a callback argument to read_callbacks_setup() function
-   which gets invoked for each page for bio. F2FS uses this to perform
-   custom operations like decrementing the value of f2fs_sb_info->nr_pages[].
-6. Encapsulate the details of "read callbacks" (e.g. Usage of "struct
-   read_callbacks *ctx") within its own functions. When CONFIG_FS_READ_CALLBACKS
-   is set to 'n', the corresponding stub functions return approriate error
-   values.
-7. Split fscrypt_decrypt() function into fscrypt_decrypt_bio() and
-   fscrypt_decrypt_bh().
-8. Split end_read_callbacks() function into end_read_callbacks_bio() and
-   end_read_callbacks_bh().
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ io/encrypt.c      | 150 +++++++++++++++++++++++++++++++++++++++++-----
+ man/man8/xfs_io.8 |  15 ++++-
+ 2 files changed, 147 insertions(+), 18 deletions(-)
 
-V1 -> V2:
-1. Removed the phrase "post_read_process" from file names and
-   functions. Instead we now use the phrase "read_callbacks" in its
-   place.
-2. When performing changes associated with (1), the changes made by
-   the patch "Remove the term 'bio' from post read processing" are
-   made in the earlier patch "Consolidate 'read callbacks' into a new
-   file". Hence the patch "Remove the term 'bio' from post read
-   processing" is removed from the patchset.
-
-RFC V2 -> V1:
-1. Test and verify FS_CFLG_OWN_PAGES subset of fscrypt_encrypt_page()
-   code by executing fstests on UBIFS.
-2. Implement F2fs function call back to check if the contents of a
-   page holding a verity file's data needs to be verified.
-
-RFC V1 -> RFC V2:
-1. Describe the purpose of "Post processing code" in the cover letter.
-2. Fix build errors when CONFIG_FS_VERITY is enabled.
-
-Chandan Rajendra (7):
-  buffer_head: Introduce BH_Read_Cb flag
-  FS: Introduce read callbacks
-  fs/mpage.c: Integrate read callbacks
-  fs/buffer.c: add decryption support via read_callbacks
-  ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
-  ext4: Enable encryption for subpage-sized blocks
-  fscrypt: remove struct fscrypt_ctx
-
- Documentation/filesystems/fscrypt.rst |   4 +-
- fs/Kconfig                            |   3 +
- fs/Makefile                           |   1 +
- fs/buffer.c                           |  33 ++-
- fs/crypto/bio.c                       |  18 --
- fs/crypto/crypto.c                    |  89 +-------
- fs/crypto/fscrypt_private.h           |   3 -
- fs/ext4/Kconfig                       |   1 +
- fs/ext4/Makefile                      |   2 +-
- fs/ext4/inode.c                       |   5 +-
- fs/ext4/readpage.c                    | 295 --------------------------
- fs/ext4/super.c                       |   7 -
- fs/f2fs/Kconfig                       |   1 +
- fs/mpage.c                            |  24 ++-
- fs/read_callbacks.c                   | 285 +++++++++++++++++++++++++
- include/linux/buffer_head.h           |   2 +
- include/linux/fscrypt.h               |  32 ---
- include/linux/read_callbacks.h        |  48 +++++
- 18 files changed, 391 insertions(+), 462 deletions(-)
- delete mode 100644 fs/ext4/readpage.c
- create mode 100644 fs/read_callbacks.c
- create mode 100644 include/linux/read_callbacks.h
-
+diff --git a/io/encrypt.c b/io/encrypt.c
+index 11eb4a3e..5b92cfae 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -1,6 +1,6 @@
+ // SPDX-License-Identifier: GPL-2.0
+ /*
+- * Copyright (c) 2016 Google, Inc.  All Rights Reserved.
++ * Copyright 2016, 2019 Google LLC
+  * Author: Eric Biggers <ebiggers@google.com>
+  */
+ 
+@@ -139,6 +139,20 @@ struct fscrypt_get_key_status_arg {
+ static cmdinfo_t get_encpolicy_cmd;
+ static cmdinfo_t set_encpolicy_cmd;
+ 
++static void
++get_encpolicy_help(void)
++{
++	printf(_(
++"\n"
++" display the encryption policy of the current file\n"
++"\n"
++" -1 -- Use only the old ioctl to get the encryption policy.\n"
++"       This only works if the file has a v1 encryption policy.\n"
++" -t -- Test whether v2 encryption policies are supported.\n"
++"       Prints \"supported\", \"unsupported\", or an error message.\n"
++"\n"));
++}
++
+ static void
+ set_encpolicy_help(void)
+ {
+@@ -218,7 +232,7 @@ mode2str(__u8 mode)
+ }
+ 
+ static const char *
+-keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
++keydesc2str(const __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
+ {
+ 	static char buf[2 * FSCRYPT_KEY_DESCRIPTOR_SIZE + 1];
+ 	int i;
+@@ -229,29 +243,131 @@ keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
+ 	return buf;
+ }
+ 
++static const char *
++keyid2str(const __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
++{
++	static char buf[2 * FSCRYPT_KEY_IDENTIFIER_SIZE + 1];
++	int i;
++
++	for (i = 0; i < FSCRYPT_KEY_IDENTIFIER_SIZE; i++)
++		sprintf(&buf[2 * i], "%02x", master_key_identifier[i]);
++
++	return buf;
++}
++
++static void
++test_for_v2_policy_support(void)
++{
++	struct fscrypt_get_policy_ex_arg arg;
++
++	arg.policy_size = sizeof(arg.policy);
++
++	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg) == 0 ||
++	    errno == ENODATA /* file unencrypted */) {
++		printf("supported\n");
++		return;
++	}
++	if (errno == ENOTTY) {
++		printf("unsupported\n");
++		return;
++	}
++	fprintf(stderr,
++		"%s: unexpected error checking for FS_IOC_GET_ENCRYPTION_POLICY_EX support: %s\n",
++		file->name, strerror(errno));
++	exitcode = 1;
++}
++
++static void
++show_v1_encryption_policy(const struct fscrypt_policy_v1 *policy)
++{
++	printf("Encryption policy for %s:\n", file->name);
++	printf("\tPolicy version: %u\n", policy->version);
++	printf("\tMaster key descriptor: %s\n",
++	       keydesc2str(policy->master_key_descriptor));
++	printf("\tContents encryption mode: %u (%s)\n",
++	       policy->contents_encryption_mode,
++	       mode2str(policy->contents_encryption_mode));
++	printf("\tFilenames encryption mode: %u (%s)\n",
++	       policy->filenames_encryption_mode,
++	       mode2str(policy->filenames_encryption_mode));
++	printf("\tFlags: 0x%02x\n", policy->flags);
++}
++
++static void
++show_v2_encryption_policy(const struct fscrypt_policy_v2 *policy)
++{
++	printf("Encryption policy for %s:\n", file->name);
++	printf("\tPolicy version: %u\n", policy->version);
++	printf("\tMaster key identifier: %s\n",
++	       keyid2str(policy->master_key_identifier));
++	printf("\tContents encryption mode: %u (%s)\n",
++	       policy->contents_encryption_mode,
++	       mode2str(policy->contents_encryption_mode));
++	printf("\tFilenames encryption mode: %u (%s)\n",
++	       policy->filenames_encryption_mode,
++	       mode2str(policy->filenames_encryption_mode));
++	printf("\tFlags: 0x%02x\n", policy->flags);
++}
++
+ static int
+ get_encpolicy_f(int argc, char **argv)
+ {
+-	struct fscrypt_policy policy;
++	int c;
++	struct fscrypt_get_policy_ex_arg arg;
++	bool only_use_v1_ioctl = false;
++	int res;
+ 
+-	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY, &policy) < 0) {
++	while ((c = getopt(argc, argv, "1t")) != EOF) {
++		switch (c) {
++		case '1':
++			only_use_v1_ioctl = true;
++			break;
++		case 't':
++			test_for_v2_policy_support();
++			return 0;
++		default:
++			return command_usage(&get_encpolicy_cmd);
++		}
++	}
++	argc -= optind;
++	argv += optind;
++
++	if (argc != 0)
++		return command_usage(&get_encpolicy_cmd);
++
++	/* first try the new ioctl */
++	if (only_use_v1_ioctl) {
++		res = -1;
++		errno = ENOTTY;
++	} else {
++		arg.policy_size = sizeof(arg.policy);
++		res = ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg);
++	}
++
++	/* fall back to the old ioctl */
++	if (res != 0 && errno == ENOTTY)
++		res = ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY,
++			    &arg.policy.v1);
++
++	if (res != 0) {
+ 		fprintf(stderr, "%s: failed to get encryption policy: %s\n",
+ 			file->name, strerror(errno));
+ 		exitcode = 1;
+ 		return 0;
+ 	}
+ 
+-	printf("Encryption policy for %s:\n", file->name);
+-	printf("\tPolicy version: %u\n", policy.version);
+-	printf("\tMaster key descriptor: %s\n",
+-	       keydesc2str(policy.master_key_descriptor));
+-	printf("\tContents encryption mode: %u (%s)\n",
+-	       policy.contents_encryption_mode,
+-	       mode2str(policy.contents_encryption_mode));
+-	printf("\tFilenames encryption mode: %u (%s)\n",
+-	       policy.filenames_encryption_mode,
+-	       mode2str(policy.filenames_encryption_mode));
+-	printf("\tFlags: 0x%02x\n", policy.flags);
++	switch (arg.policy.version) {
++	case FSCRYPT_POLICY_V1:
++		show_v1_encryption_policy(&arg.policy.v1);
++		break;
++	case FSCRYPT_POLICY_V2:
++		show_v2_encryption_policy(&arg.policy.v2);
++		break;
++	default:
++		printf("Encryption policy for %s:\n", file->name);
++		printf("\tPolicy version: %u (unknown)\n", arg.policy.version);
++		break;
++	}
+ 	return 0;
+ }
+ 
+@@ -351,11 +467,13 @@ encrypt_init(void)
+ {
+ 	get_encpolicy_cmd.name = "get_encpolicy";
+ 	get_encpolicy_cmd.cfunc = get_encpolicy_f;
++	get_encpolicy_cmd.args = _("[-1] [-t]");
+ 	get_encpolicy_cmd.argmin = 0;
+-	get_encpolicy_cmd.argmax = 0;
++	get_encpolicy_cmd.argmax = -1;
+ 	get_encpolicy_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
+ 	get_encpolicy_cmd.oneline =
+ 		_("display the encryption policy of the current file");
++	get_encpolicy_cmd.help = get_encpolicy_help;
+ 
+ 	set_encpolicy_cmd.name = "set_encpolicy";
+ 	set_encpolicy_cmd.cfunc = set_encpolicy_f;
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index 6e064bdd..3dd34a0c 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -724,10 +724,21 @@ version of policy structure (numeric)
+ .RE
+ .PD
+ .TP
+-.BR get_encpolicy
++.BI "get_encpolicy [ \-1 ] [ \-t ]"
+ On filesystems that support encryption, display the encryption policy of the
+ current file.
+-
++.RS 1.0i
++.PD 0
++.TP 0.4i
++.BI \-1
++Use only the old ioctl to get the encryption policy.  This only works if the
++file has a v1 encryption policy.
++.TP
++.BI \-t
++Test whether v2 encryption policies are supported.  Prints "supported",
++"unsupported", or an error message.
++.RE
++.PD
+ .TP
+ .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
+ List extended inode flags on the currently open file. If the
 -- 
-2.19.1
+2.23.0.rc1.153.gdeed80330f-goog
