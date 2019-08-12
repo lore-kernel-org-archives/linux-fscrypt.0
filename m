@@ -1,307 +1,138 @@
-Return-Path: <SRS0=LT3F=WT=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V5 7/7] fscrypt: remove struct fscrypt_ctx
-Date: Fri, 23 Aug 2019 18:55:42 +0530
-Message-Id: <20190823132542.13434-8-chandan@linux.ibm.com>
-In-Reply-To: <20190823132542.13434-1-chandan@linux.ibm.com>
-References: <20190823132542.13434-1-chandan@linux.ibm.com>
+Return-Path: <dm-devel-bounces@redhat.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Mon, 12 Aug 2019 17:53:24 +0300
+Message-Id: <20190812145324.27090-8-ard.biesheuvel@linaro.org>
+In-Reply-To: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
+References: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
+Subject: [dm-devel] [PATCH v10 7/7] md: dm-crypt: omit parsing of the
+	encapsulated cipher
+List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
+List-Archive: <https://www.redhat.com/archives/dm-devel>
+List-Post: <mailto:dm-devel@redhat.com>
+List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
+List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=subscribe>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Sender: dm-devel-bounces@redhat.com
+Errors-To: dm-devel-bounces@redhat.com
+To: linux-crypto@vger.kernel.org
+Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Commit "fscrypt: remove the 'write' part of struct fscrypt_ctx" reduced
-"struct fscrypt_ctx" to be used only for decryption. With "read
-callbacks" being integrated into Ext4, we don't use "struct fscrypt_ctx"
-anymore. Hence this commit removes the structure and the associated
-code.
+Only the ESSIV IV generation mode used to use cc->cipher so it could
+instantiate the bare cipher used to encrypt the IV. However, this is
+now taken care of by the ESSIV template, and so no users of cc->cipher
+remain. So remove it altogether.
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- fs/crypto/bio.c             | 18 --------
- fs/crypto/crypto.c          | 89 +------------------------------------
- fs/crypto/fscrypt_private.h |  3 --
- include/linux/fscrypt.h     | 32 -------------
- 4 files changed, 2 insertions(+), 140 deletions(-)
+ drivers/md/dm-crypt.c | 58 --------------------
+ 1 file changed, 58 deletions(-)
 
-diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
-index b4f47b98ee6d..c01f068bf19b 100644
---- a/fs/crypto/bio.c
-+++ b/fs/crypto/bio.c
-@@ -51,24 +51,6 @@ void fscrypt_decrypt_bio(struct bio *bio)
- }
- EXPORT_SYMBOL(fscrypt_decrypt_bio);
+diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
+index d44d24853aee..f87f6495652f 100644
+--- a/drivers/md/dm-crypt.c
++++ b/drivers/md/dm-crypt.c
+@@ -143,7 +143,6 @@ struct crypt_config {
+ 	struct task_struct *write_thread;
+ 	struct rb_root write_tree;
  
--static void completion_pages(struct work_struct *work)
--{
--	struct fscrypt_ctx *ctx = container_of(work, struct fscrypt_ctx, work);
--	struct bio *bio = ctx->bio;
--
--	__fscrypt_decrypt_bio(bio, true);
--	fscrypt_release_ctx(ctx);
--	bio_put(bio);
--}
--
--void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx, struct bio *bio)
--{
--	INIT_WORK(&ctx->work, completion_pages);
--	ctx->bio = bio;
--	fscrypt_enqueue_decrypt_work(&ctx->work);
--}
--EXPORT_SYMBOL(fscrypt_enqueue_decrypt_bio);
--
- int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 				sector_t pblk, unsigned int len)
- {
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index dcf630d7e446..2e5245f5639f 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -31,24 +31,16 @@
- #include "fscrypt_private.h"
+-	char *cipher;
+ 	char *cipher_string;
+ 	char *cipher_auth;
+ 	char *key_string;
+@@ -2140,7 +2139,6 @@ static void crypt_dtr(struct dm_target *ti)
+ 	if (cc->dev)
+ 		dm_put_device(ti, cc->dev);
  
- static unsigned int num_prealloc_crypto_pages = 32;
--static unsigned int num_prealloc_crypto_ctxs = 128;
- 
- module_param(num_prealloc_crypto_pages, uint, 0444);
- MODULE_PARM_DESC(num_prealloc_crypto_pages,
- 		"Number of crypto pages to preallocate");
--module_param(num_prealloc_crypto_ctxs, uint, 0444);
--MODULE_PARM_DESC(num_prealloc_crypto_ctxs,
--		"Number of crypto contexts to preallocate");
- 
- static mempool_t *fscrypt_bounce_page_pool = NULL;
- 
--static LIST_HEAD(fscrypt_free_ctxs);
--static DEFINE_SPINLOCK(fscrypt_ctx_lock);
--
- static struct workqueue_struct *fscrypt_read_workqueue;
- static DEFINE_MUTEX(fscrypt_init_mutex);
- 
--static struct kmem_cache *fscrypt_ctx_cachep;
- struct kmem_cache *fscrypt_info_cachep;
- 
- void fscrypt_enqueue_decrypt_work(struct work_struct *work)
-@@ -57,62 +49,6 @@ void fscrypt_enqueue_decrypt_work(struct work_struct *work)
- }
- EXPORT_SYMBOL(fscrypt_enqueue_decrypt_work);
- 
--/**
-- * fscrypt_release_ctx() - Release a decryption context
-- * @ctx: The decryption context to release.
-- *
-- * If the decryption context was allocated from the pre-allocated pool, return
-- * it to that pool.  Else, free it.
-- */
--void fscrypt_release_ctx(struct fscrypt_ctx *ctx)
--{
--	unsigned long flags;
--
--	if (ctx->flags & FS_CTX_REQUIRES_FREE_ENCRYPT_FL) {
--		kmem_cache_free(fscrypt_ctx_cachep, ctx);
--	} else {
--		spin_lock_irqsave(&fscrypt_ctx_lock, flags);
--		list_add(&ctx->free_list, &fscrypt_free_ctxs);
--		spin_unlock_irqrestore(&fscrypt_ctx_lock, flags);
--	}
--}
--EXPORT_SYMBOL(fscrypt_release_ctx);
--
--/**
-- * fscrypt_get_ctx() - Get a decryption context
-- * @gfp_flags:   The gfp flag for memory allocation
-- *
-- * Allocate and initialize a decryption context.
-- *
-- * Return: A new decryption context on success; an ERR_PTR() otherwise.
-- */
--struct fscrypt_ctx *fscrypt_get_ctx(gfp_t gfp_flags)
--{
--	struct fscrypt_ctx *ctx;
--	unsigned long flags;
--
--	/*
--	 * First try getting a ctx from the free list so that we don't have to
--	 * call into the slab allocator.
--	 */
--	spin_lock_irqsave(&fscrypt_ctx_lock, flags);
--	ctx = list_first_entry_or_null(&fscrypt_free_ctxs,
--					struct fscrypt_ctx, free_list);
--	if (ctx)
--		list_del(&ctx->free_list);
--	spin_unlock_irqrestore(&fscrypt_ctx_lock, flags);
--	if (!ctx) {
--		ctx = kmem_cache_zalloc(fscrypt_ctx_cachep, gfp_flags);
--		if (!ctx)
--			return ERR_PTR(-ENOMEM);
--		ctx->flags |= FS_CTX_REQUIRES_FREE_ENCRYPT_FL;
--	} else {
--		ctx->flags &= ~FS_CTX_REQUIRES_FREE_ENCRYPT_FL;
--	}
--	return ctx;
--}
--EXPORT_SYMBOL(fscrypt_get_ctx);
--
- struct page *fscrypt_alloc_bounce_page(gfp_t gfp_flags)
- {
- 	return mempool_alloc(fscrypt_bounce_page_pool, gfp_flags);
-@@ -399,11 +335,6 @@ const struct dentry_operations fscrypt_d_ops = {
- 
- static void fscrypt_destroy(void)
- {
--	struct fscrypt_ctx *pos, *n;
--
--	list_for_each_entry_safe(pos, n, &fscrypt_free_ctxs, free_list)
--		kmem_cache_free(fscrypt_ctx_cachep, pos);
--	INIT_LIST_HEAD(&fscrypt_free_ctxs);
- 	mempool_destroy(fscrypt_bounce_page_pool);
- 	fscrypt_bounce_page_pool = NULL;
- }
-@@ -419,7 +350,7 @@ static void fscrypt_destroy(void)
-  */
- int fscrypt_initialize(unsigned int cop_flags)
- {
--	int i, res = -ENOMEM;
-+	int res = -ENOMEM;
- 
- 	/* No need to allocate a bounce page pool if this FS won't use it. */
- 	if (cop_flags & FS_CFLG_OWN_PAGES)
-@@ -429,15 +360,6 @@ int fscrypt_initialize(unsigned int cop_flags)
- 	if (fscrypt_bounce_page_pool)
- 		goto already_initialized;
- 
--	for (i = 0; i < num_prealloc_crypto_ctxs; i++) {
--		struct fscrypt_ctx *ctx;
--
--		ctx = kmem_cache_zalloc(fscrypt_ctx_cachep, GFP_NOFS);
--		if (!ctx)
--			goto fail;
--		list_add(&ctx->free_list, &fscrypt_free_ctxs);
--	}
--
- 	fscrypt_bounce_page_pool =
- 		mempool_create_page_pool(num_prealloc_crypto_pages, 0);
- 	if (!fscrypt_bounce_page_pool)
-@@ -492,18 +414,12 @@ static int __init fscrypt_init(void)
- 	if (!fscrypt_read_workqueue)
- 		goto fail;
- 
--	fscrypt_ctx_cachep = KMEM_CACHE(fscrypt_ctx, SLAB_RECLAIM_ACCOUNT);
--	if (!fscrypt_ctx_cachep)
--		goto fail_free_queue;
--
- 	fscrypt_info_cachep = KMEM_CACHE(fscrypt_info, SLAB_RECLAIM_ACCOUNT);
- 	if (!fscrypt_info_cachep)
--		goto fail_free_ctx;
-+		goto fail_free_queue;
- 
+-	kzfree(cc->cipher);
+ 	kzfree(cc->cipher_string);
+ 	kzfree(cc->key_string);
+ 	kzfree(cc->cipher_auth);
+@@ -2221,52 +2219,6 @@ static int crypt_ctr_ivmode(struct dm_target *ti, const char *ivmode)
  	return 0;
- 
--fail_free_ctx:
--	kmem_cache_destroy(fscrypt_ctx_cachep);
- fail_free_queue:
- 	destroy_workqueue(fscrypt_read_workqueue);
- fail:
-@@ -520,7 +436,6 @@ static void __exit fscrypt_exit(void)
- 
- 	if (fscrypt_read_workqueue)
- 		destroy_workqueue(fscrypt_read_workqueue);
--	kmem_cache_destroy(fscrypt_ctx_cachep);
- 	kmem_cache_destroy(fscrypt_info_cachep);
- 
- 	fscrypt_essiv_cleanup();
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 8565536feb2b..702403dc7614 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -93,9 +93,6 @@ typedef enum {
- 	FS_ENCRYPT,
- } fscrypt_direction_t;
- 
--#define FS_CTX_REQUIRES_FREE_ENCRYPT_FL		0x00000001
--#define FS_CTX_HAS_BOUNCE_BUFFER_FL		0x00000002
--
- static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
- 					   u32 filenames_mode)
- {
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 4d6528351f25..2e61f75feab8 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -19,7 +19,6 @@
- 
- #define FS_CRYPTO_BLOCK_SIZE		16
- 
--struct fscrypt_ctx;
- struct fscrypt_info;
- 
- struct fscrypt_str {
-@@ -63,18 +62,6 @@ struct fscrypt_operations {
- 	unsigned int max_namelen;
- };
- 
--/* Decryption work */
--struct fscrypt_ctx {
--	union {
--		struct {
--			struct bio *bio;
--			struct work_struct work;
--		};
--		struct list_head free_list;	/* Free list */
--	};
--	u8 flags;				/* Flags */
--};
--
- static inline bool fscrypt_has_encryption_key(const struct inode *inode)
- {
- 	/* pairs with cmpxchg_release() in fscrypt_get_encryption_info() */
-@@ -101,8 +88,6 @@ static inline void fscrypt_handle_d_move(struct dentry *dentry)
- 
- /* crypto.c */
- extern void fscrypt_enqueue_decrypt_work(struct work_struct *);
--extern struct fscrypt_ctx *fscrypt_get_ctx(gfp_t);
--extern void fscrypt_release_ctx(struct fscrypt_ctx *);
- 
- extern struct page *fscrypt_encrypt_pagecache_blocks(struct page *page,
- 						     unsigned int len,
-@@ -233,8 +218,6 @@ static inline bool fscrypt_match_name(const struct fscrypt_name *fname,
- 
- /* bio.c */
- extern void fscrypt_decrypt_bio(struct bio *);
--extern void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
--					struct bio *bio);
- extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
- 				 unsigned int);
- 
-@@ -279,16 +262,6 @@ static inline void fscrypt_enqueue_decrypt_work(struct work_struct *work)
- {
  }
  
--static inline struct fscrypt_ctx *fscrypt_get_ctx(gfp_t gfp_flags)
+-/*
+- * Workaround to parse cipher algorithm from crypto API spec.
+- * The cc->cipher is currently used only in ESSIV.
+- * This should be probably done by crypto-api calls (once available...)
+- */
+-static int crypt_ctr_blkdev_cipher(struct crypt_config *cc)
 -{
--	return ERR_PTR(-EOPNOTSUPP);
+-	const char *alg_name = NULL;
+-	char *start, *end;
+-
+-	if (crypt_integrity_aead(cc)) {
+-		alg_name = crypto_tfm_alg_name(crypto_aead_tfm(any_tfm_aead(cc)));
+-		if (!alg_name)
+-			return -EINVAL;
+-		if (crypt_integrity_hmac(cc)) {
+-			alg_name = strchr(alg_name, ',');
+-			if (!alg_name)
+-				return -EINVAL;
+-		}
+-		alg_name++;
+-	} else {
+-		alg_name = crypto_tfm_alg_name(crypto_skcipher_tfm(any_tfm(cc)));
+-		if (!alg_name)
+-			return -EINVAL;
+-	}
+-
+-	start = strchr(alg_name, '(');
+-	end = strchr(alg_name, ')');
+-
+-	if (!start && !end) {
+-		cc->cipher = kstrdup(alg_name, GFP_KERNEL);
+-		return cc->cipher ? 0 : -ENOMEM;
+-	}
+-
+-	if (!start || !end || ++start >= end)
+-		return -EINVAL;
+-
+-	cc->cipher = kzalloc(end - start + 1, GFP_KERNEL);
+-	if (!cc->cipher)
+-		return -ENOMEM;
+-
+-	strncpy(cc->cipher, start, end - start);
+-
+-	return 0;
 -}
 -
--static inline void fscrypt_release_ctx(struct fscrypt_ctx *ctx)
--{
--	return;
--}
+ /*
+  * Workaround to parse HMAC algorithm from AEAD crypto API spec.
+  * The HMAC is needed to calculate tag size (HMAC digest size).
+@@ -2376,12 +2328,6 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
+ 	else
+ 		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
+ 
+-	ret = crypt_ctr_blkdev_cipher(cc);
+-	if (ret < 0) {
+-		ti->error = "Cannot allocate cipher string";
+-		return -ENOMEM;
+-	}
 -
- static inline struct page *fscrypt_encrypt_pagecache_blocks(struct page *page,
- 							    unsigned int len,
- 							    unsigned int offs,
-@@ -430,11 +403,6 @@ static inline void fscrypt_decrypt_bio(struct bio *bio)
- {
+ 	return 0;
  }
  
--static inline void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
--					       struct bio *bio)
--{
--}
+@@ -2416,10 +2362,6 @@ static int crypt_ctr_cipher_old(struct dm_target *ti, char *cipher_in, char *key
+ 	}
+ 	cc->key_parts = cc->tfms_count;
+ 
+-	cc->cipher = kstrdup(cipher, GFP_KERNEL);
+-	if (!cc->cipher)
+-		goto bad_mem;
 -
- static inline int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 					sector_t pblk, unsigned int len)
- {
+ 	chainmode = strsep(&tmp, "-");
+ 	*ivmode = strsep(&tmp, ":");
+ 	*ivopts = tmp;
 -- 
-2.19.1
+2.17.1
+
+--
+dm-devel mailing list
+dm-devel@redhat.com
+https://www.redhat.com/mailman/listinfo/dm-devel
