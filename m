@@ -1,42 +1,88 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:33520 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:53798 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726055AbfHKVhO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 11 Aug 2019 17:37:14 -0400
+        id S1726090AbfHLR6r (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 12 Aug 2019 13:58:47 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 6/6] f2fs: use EFSCORRUPTED in f2fs_get_verity_descriptor()
-Date: Sun, 11 Aug 2019 14:35:57 -0700
-Message-Id: <20190811213557.1970-7-ebiggers@kernel.org>
-In-Reply-To: <20190811213557.1970-1-ebiggers@kernel.org>
-References: <20190811213557.1970-1-ebiggers@kernel.org>
+Subject: [RFC PATCH 0/9] xfstests: add tests for fscrypt key management improvements
+Date: Mon, 12 Aug 2019 10:58:00 -0700
+Message-Id: <20190812175809.34810-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hello,
 
-EFSCORRUPTED is now defined in f2fs.h, so use it instead of EUCLEAN.
+This patchset adds xfstests for the kernel patchset
+"[PATCH v8 00/20] fscrypt: key management improvements"
+https://lkml.kernel.org/linux-fsdevel/20190805162521.90882-1-ebiggers@kernel.org/T/#u
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/f2fs/verity.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+These tests test the new ioctls for managing filesystem encryption keys,
+and they test the new encryption policy version.
 
-diff --git a/fs/f2fs/verity.c b/fs/f2fs/verity.c
-index 6bc3470d99d00..a401ef72bc821 100644
---- a/fs/f2fs/verity.c
-+++ b/fs/f2fs/verity.c
-@@ -210,7 +210,7 @@ static int f2fs_get_verity_descriptor(struct inode *inode, void *buf,
- 	if (pos + size < pos || pos + size > inode->i_sb->s_maxbytes ||
- 	    pos < f2fs_verity_metadata_pos(inode) || size > INT_MAX) {
- 		f2fs_warn(F2FS_I_SB(inode), "invalid verity xattr");
--		return -EUCLEAN; /* EFSCORRUPTED */
-+		return -EFSCORRUPTED;
- 	}
- 	if (buf_size) {
- 		if (size > buf_size)
+These tests depend on new xfs_io commands, for which I've sent a
+separate patchset for xfsprogs.
+
+Note: currently only ext4, f2fs, and ubifs support encryption.  But I
+was told previously that since the fscrypt API is generic and may be
+supported by XFS in the future, the command-line wrappers for the
+fscrypt ioctls should be in xfs_io rather than in fstests directly
+(https://marc.info/?l=fstests&m=147976255831951&w=2).
+
+We'll want to wait for the kernel patches to be mainlined before merging
+this, but I'm making it available now for any early feedback.
+
+This version of the xfstests patchset can also be retrieved from tag
+"fscrypt-key-mgmt-improvements_2019-08-12" of
+https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
+
+Eric Biggers (9):
+  common/encrypt: disambiguate session encryption keys
+  common/encrypt: add helper functions that wrap new xfs_io commands
+  common/encrypt: support checking for v2 encryption policy support
+  common/encrypt: support verifying ciphertext of v2 encryption policies
+  generic: add basic test for fscrypt API additions
+  generic: add test for non-root use of fscrypt API additions
+  generic: verify ciphertext of v2 encryption policies with AES-256
+  generic: verify ciphertext of v2 encryption policies with AES-128
+  generic: verify ciphertext of v2 encryption policies with Adiantum
+
+ common/encrypt           | 180 +++++++++++++++++++----
+ src/fscrypt-crypt-util.c | 304 ++++++++++++++++++++++++++++++++++-----
+ tests/ext4/024           |   2 +-
+ tests/generic/397        |   4 +-
+ tests/generic/398        |   8 +-
+ tests/generic/399        |   4 +-
+ tests/generic/419        |   4 +-
+ tests/generic/421        |   4 +-
+ tests/generic/429        |   8 +-
+ tests/generic/435        |   4 +-
+ tests/generic/440        |   8 +-
+ tests/generic/800        | 127 ++++++++++++++++
+ tests/generic/800.out    |  91 ++++++++++++
+ tests/generic/801        | 136 ++++++++++++++++++
+ tests/generic/801.out    |  62 ++++++++
+ tests/generic/802        |  43 ++++++
+ tests/generic/802.out    |   6 +
+ tests/generic/803        |  43 ++++++
+ tests/generic/803.out    |   6 +
+ tests/generic/804        |  45 ++++++
+ tests/generic/804.out    |  11 ++
+ tests/generic/group      |   5 +
+ 22 files changed, 1018 insertions(+), 87 deletions(-)
+ create mode 100755 tests/generic/800
+ create mode 100644 tests/generic/800.out
+ create mode 100755 tests/generic/801
+ create mode 100644 tests/generic/801.out
+ create mode 100755 tests/generic/802
+ create mode 100644 tests/generic/802.out
+ create mode 100755 tests/generic/803
+ create mode 100644 tests/generic/803.out
+ create mode 100755 tests/generic/804
+ create mode 100644 tests/generic/804.out
+
 -- 
-2.22.0
+2.23.0.rc1.153.gdeed80330f-goog
