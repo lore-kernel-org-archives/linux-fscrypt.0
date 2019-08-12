@@ -1,287 +1,108 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <fstests-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon,  5 Aug 2019 09:25:06 -0700
-Message-Id: <20190805162521.90882-6-ebiggers@kernel.org>
-In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
-References: <20190805162521.90882-1-ebiggers@kernel.org>
+Subject: [RFC PATCH 3/9] common/encrypt: support checking for v2 encryption policy support
+Date: Mon, 12 Aug 2019 10:58:03 -0700
+Message-Id: <20190812175809.34810-4-ebiggers@kernel.org>
+In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
+References: <20190812175809.34810-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v8 05/20] fscrypt: rename fscrypt_master_key to
- fscrypt_direct_key
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 8bit
+Sender: fstests-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-In preparation for introducing a filesystem-level keyring which will
-contain fscrypt master keys, rename the existing 'struct
-fscrypt_master_key' to 'struct fscrypt_direct_key'.  This is the
-structure in the existing table of master keys that's maintained to
-deduplicate the crypto transforms for v1 DIRECT_KEY policies.
-
-I've chosen to keep this table as-is rather than make it automagically
-add/remove the keys to/from the filesystem-level keyring, since that
-would add a lot of extra complexity to the filesystem-level keyring.
+Allow passing '-v 2' to _require_scratch_encryption() to check for v2
+encryption policy support on the scratch device, and for xfs_io support
+for setting and getting v2 encryption policies.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fscrypt_private.h |   7 +-
- fs/crypto/keyinfo.c         | 130 ++++++++++++++++++------------------
- 2 files changed, 68 insertions(+), 69 deletions(-)
+ common/encrypt | 41 +++++++++++++++++++++++++++++++----------
+ 1 file changed, 31 insertions(+), 10 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index d345a7d28df8c2..80d15a1bf60685 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -77,11 +77,10 @@ struct fscrypt_info {
- 	struct inode *ci_inode;
+diff --git a/common/encrypt b/common/encrypt
+index a086e80f..fa6e2672 100644
+--- a/common/encrypt
++++ b/common/encrypt
+@@ -6,12 +6,13 @@
  
- 	/*
--	 * If non-NULL, then this inode uses a master key directly rather than a
--	 * derived key, and ci_ctfm will equal ci_master_key->mk_ctfm.
--	 * Otherwise, this inode uses a derived key.
-+	 * If non-NULL, then encryption is done using the master key directly
-+	 * and ci_ctfm will equal ci_direct_key->dk_ctfm.
- 	 */
--	struct fscrypt_master_key *ci_master_key;
-+	struct fscrypt_direct_key *ci_direct_key;
+ #
+ # _require_scratch_encryption [-c CONTENTS_MODE] [-n FILENAMES_MODE]
++#			      [-v POLICY_VERSION]
+ #
+ # Require encryption support on the scratch device.
+ #
+-# This checks for support for the default type of encryption policy (AES-256-XTS
+-# and AES-256-CTS).  Options can be specified to also require support for a
+-# different type of encryption policy.
++# This checks for support for the default type of encryption policy (v1 with
++# AES-256-XTS and AES-256-CTS).  Options can be specified to also require
++# support for a different type of encryption policy.
+ #
+ _require_scratch_encryption()
+ {
+@@ -68,13 +69,15 @@ _require_encryption_policy_support()
+ 	local mnt=$1
+ 	local dir=$mnt/tmpdir
+ 	local set_encpolicy_args=""
++	local policy_version=1
+ 	local c
  
- 	/* fields from the fscrypt_context */
- 	u8 ci_data_mode;
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 2d45a86f09db25..c4650071df2772 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -21,8 +21,8 @@
- static struct crypto_shash *essiv_hash_tfm;
+ 	OPTIND=2
+-	while getopts "c:n:" c; do
++	while getopts "c:n:v:" c; do
+ 		case $c in
+-		c|n)
++		c|n|v)
+ 			set_encpolicy_args+=" -$c $OPTARG"
++			[ $c = v ] && policy_version=$OPTARG
+ 			;;
+ 		*)
+ 			_fail "Unrecognized option '$c'"
+@@ -87,10 +90,26 @@ _require_encryption_policy_support()
+ 		>> $seqres.full
  
- /* Table of keys referenced by DIRECT_KEY policies */
--static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
--static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
-+static DEFINE_HASHTABLE(fscrypt_direct_keys, 6); /* 6 bits = 64 buckets */
-+static DEFINE_SPINLOCK(fscrypt_direct_keys_lock);
- 
- /*
-  * Key derivation function.  This generates the derived key by encrypting the
-@@ -273,46 +273,46 @@ allocate_skcipher_for_mode(struct fscrypt_mode *mode, const u8 *raw_key,
+ 	mkdir $dir
+-	_require_command "$KEYCTL_PROG" keyctl
+-	_new_session_keyring
+-	local keydesc=$(_generate_session_encryption_key)
+-	if _set_encpolicy $dir $keydesc $set_encpolicy_args \
++	if (( policy_version > 1 )); then
++		_require_xfs_io_command "get_encpolicy" "-t"
++		local output=$(_get_encpolicy $dir -t)
++		if [ "$output" != "supported" ]; then
++			if [ "$output" = "unsupported" ]; then
++				_notrun "kernel does not support $FSTYP encryption v2 API"
++			fi
++			_fail "Unexpected output from 'get_encpolicy -t'"
++		fi
++		# Both the kernel and xfs_io support v2 encryption policies, and
++		# therefore also filesystem-level keys -- since that's the only
++		# way to provide keys for v2 policies.
++		local raw_key=$(_generate_raw_encryption_key)
++		local keyspec=$(_add_enckey $mnt "$raw_key" | awk '{print $NF}')
++	else
++		_require_command "$KEYCTL_PROG" keyctl
++		_new_session_keyring
++		local keyspec=$(_generate_session_encryption_key)
++	fi
++	if _set_encpolicy $dir $keyspec $set_encpolicy_args \
+ 		2>&1 >>$seqres.full | egrep -q 'Invalid argument'; then
+ 		_notrun "kernel does not support encryption policy: '$set_encpolicy_args'"
+ 	fi
+@@ -103,7 +122,9 @@ _require_encryption_policy_support()
+ 	if ! echo foo > $dir/file; then
+ 		_notrun "encryption policy '$set_encpolicy_args' is unusable; probably missing kernel crypto API support"
+ 	fi
+-	$KEYCTL_PROG clear @s
++	if (( policy_version <= 1 )); then
++		$KEYCTL_PROG clear @s
++	fi
+ 	rm -r $dir
  }
  
- /* Master key referenced by DIRECT_KEY policy */
--struct fscrypt_master_key {
--	struct hlist_node mk_node;
--	refcount_t mk_refcount;
--	const struct fscrypt_mode *mk_mode;
--	struct crypto_skcipher *mk_ctfm;
--	u8 mk_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
--	u8 mk_raw[FSCRYPT_MAX_KEY_SIZE];
-+struct fscrypt_direct_key {
-+	struct hlist_node		dk_node;
-+	refcount_t			dk_refcount;
-+	const struct fscrypt_mode	*dk_mode;
-+	struct crypto_skcipher		*dk_ctfm;
-+	u8				dk_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-+	u8				dk_raw[FSCRYPT_MAX_KEY_SIZE];
- };
- 
--static void free_master_key(struct fscrypt_master_key *mk)
-+static void free_direct_key(struct fscrypt_direct_key *dk)
- {
--	if (mk) {
--		crypto_free_skcipher(mk->mk_ctfm);
--		kzfree(mk);
-+	if (dk) {
-+		crypto_free_skcipher(dk->dk_ctfm);
-+		kzfree(dk);
- 	}
- }
- 
--static void put_master_key(struct fscrypt_master_key *mk)
-+static void put_direct_key(struct fscrypt_direct_key *dk)
- {
--	if (!refcount_dec_and_lock(&mk->mk_refcount, &fscrypt_master_keys_lock))
-+	if (!refcount_dec_and_lock(&dk->dk_refcount, &fscrypt_direct_keys_lock))
- 		return;
--	hash_del(&mk->mk_node);
--	spin_unlock(&fscrypt_master_keys_lock);
-+	hash_del(&dk->dk_node);
-+	spin_unlock(&fscrypt_direct_keys_lock);
- 
--	free_master_key(mk);
-+	free_direct_key(dk);
- }
- 
- /*
-- * Find/insert the given master key into the fscrypt_master_keys table.  If
-- * found, it is returned with elevated refcount, and 'to_insert' is freed if
-- * non-NULL.  If not found, 'to_insert' is inserted and returned if it's
-- * non-NULL; otherwise NULL is returned.
-+ * Find/insert the given key into the fscrypt_direct_keys table.  If found, it
-+ * is returned with elevated refcount, and 'to_insert' is freed if non-NULL.  If
-+ * not found, 'to_insert' is inserted and returned if it's non-NULL; otherwise
-+ * NULL is returned.
-  */
--static struct fscrypt_master_key *
--find_or_insert_master_key(struct fscrypt_master_key *to_insert,
-+static struct fscrypt_direct_key *
-+find_or_insert_direct_key(struct fscrypt_direct_key *to_insert,
- 			  const u8 *raw_key, const struct fscrypt_mode *mode,
- 			  const struct fscrypt_info *ci)
- {
- 	unsigned long hash_key;
--	struct fscrypt_master_key *mk;
-+	struct fscrypt_direct_key *dk;
- 
- 	/*
- 	 * Careful: to avoid potentially leaking secret key bytes via timing
-@@ -323,60 +323,60 @@ find_or_insert_master_key(struct fscrypt_master_key *to_insert,
- 	BUILD_BUG_ON(sizeof(hash_key) > FSCRYPT_KEY_DESCRIPTOR_SIZE);
- 	memcpy(&hash_key, ci->ci_master_key_descriptor, sizeof(hash_key));
- 
--	spin_lock(&fscrypt_master_keys_lock);
--	hash_for_each_possible(fscrypt_master_keys, mk, mk_node, hash_key) {
--		if (memcmp(ci->ci_master_key_descriptor, mk->mk_descriptor,
-+	spin_lock(&fscrypt_direct_keys_lock);
-+	hash_for_each_possible(fscrypt_direct_keys, dk, dk_node, hash_key) {
-+		if (memcmp(ci->ci_master_key_descriptor, dk->dk_descriptor,
- 			   FSCRYPT_KEY_DESCRIPTOR_SIZE) != 0)
- 			continue;
--		if (mode != mk->mk_mode)
-+		if (mode != dk->dk_mode)
- 			continue;
--		if (crypto_memneq(raw_key, mk->mk_raw, mode->keysize))
-+		if (crypto_memneq(raw_key, dk->dk_raw, mode->keysize))
- 			continue;
- 		/* using existing tfm with same (descriptor, mode, raw_key) */
--		refcount_inc(&mk->mk_refcount);
--		spin_unlock(&fscrypt_master_keys_lock);
--		free_master_key(to_insert);
--		return mk;
-+		refcount_inc(&dk->dk_refcount);
-+		spin_unlock(&fscrypt_direct_keys_lock);
-+		free_direct_key(to_insert);
-+		return dk;
- 	}
- 	if (to_insert)
--		hash_add(fscrypt_master_keys, &to_insert->mk_node, hash_key);
--	spin_unlock(&fscrypt_master_keys_lock);
-+		hash_add(fscrypt_direct_keys, &to_insert->dk_node, hash_key);
-+	spin_unlock(&fscrypt_direct_keys_lock);
- 	return to_insert;
- }
- 
- /* Prepare to encrypt directly using the master key in the given mode */
--static struct fscrypt_master_key *
--fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
-+static struct fscrypt_direct_key *
-+fscrypt_get_direct_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
- 		       const u8 *raw_key, const struct inode *inode)
- {
--	struct fscrypt_master_key *mk;
-+	struct fscrypt_direct_key *dk;
- 	int err;
- 
- 	/* Is there already a tfm for this key? */
--	mk = find_or_insert_master_key(NULL, raw_key, mode, ci);
--	if (mk)
--		return mk;
-+	dk = find_or_insert_direct_key(NULL, raw_key, mode, ci);
-+	if (dk)
-+		return dk;
- 
- 	/* Nope, allocate one. */
--	mk = kzalloc(sizeof(*mk), GFP_NOFS);
--	if (!mk)
-+	dk = kzalloc(sizeof(*dk), GFP_NOFS);
-+	if (!dk)
- 		return ERR_PTR(-ENOMEM);
--	refcount_set(&mk->mk_refcount, 1);
--	mk->mk_mode = mode;
--	mk->mk_ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
--	if (IS_ERR(mk->mk_ctfm)) {
--		err = PTR_ERR(mk->mk_ctfm);
--		mk->mk_ctfm = NULL;
--		goto err_free_mk;
-+	refcount_set(&dk->dk_refcount, 1);
-+	dk->dk_mode = mode;
-+	dk->dk_ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
-+	if (IS_ERR(dk->dk_ctfm)) {
-+		err = PTR_ERR(dk->dk_ctfm);
-+		dk->dk_ctfm = NULL;
-+		goto err_free_dk;
- 	}
--	memcpy(mk->mk_descriptor, ci->ci_master_key_descriptor,
-+	memcpy(dk->dk_descriptor, ci->ci_master_key_descriptor,
- 	       FSCRYPT_KEY_DESCRIPTOR_SIZE);
--	memcpy(mk->mk_raw, raw_key, mode->keysize);
-+	memcpy(dk->dk_raw, raw_key, mode->keysize);
- 
--	return find_or_insert_master_key(mk, raw_key, mode, ci);
-+	return find_or_insert_direct_key(dk, raw_key, mode, ci);
- 
--err_free_mk:
--	free_master_key(mk);
-+err_free_dk:
-+	free_direct_key(dk);
- 	return ERR_PTR(err);
- }
- 
-@@ -455,22 +455,22 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- 				  struct fscrypt_mode *mode,
- 				  const u8 *raw_key, const struct inode *inode)
- {
--	struct fscrypt_master_key *mk;
-+	struct fscrypt_direct_key *dk;
- 	struct crypto_skcipher *ctfm;
- 	int err;
- 
- 	if (ci->ci_flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY) {
--		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
--		if (IS_ERR(mk))
--			return PTR_ERR(mk);
--		ctfm = mk->mk_ctfm;
-+		dk = fscrypt_get_direct_key(ci, mode, raw_key, inode);
-+		if (IS_ERR(dk))
-+			return PTR_ERR(dk);
-+		ctfm = dk->dk_ctfm;
- 	} else {
--		mk = NULL;
-+		dk = NULL;
- 		ctfm = allocate_skcipher_for_mode(mode, raw_key, inode);
- 		if (IS_ERR(ctfm))
- 			return PTR_ERR(ctfm);
- 	}
--	ci->ci_master_key = mk;
-+	ci->ci_direct_key = dk;
- 	ci->ci_ctfm = ctfm;
- 
- 	if (mode->needs_essiv) {
-@@ -494,8 +494,8 @@ static void put_crypt_info(struct fscrypt_info *ci)
- 	if (!ci)
- 		return;
- 
--	if (ci->ci_master_key) {
--		put_master_key(ci->ci_master_key);
-+	if (ci->ci_direct_key) {
-+		put_direct_key(ci->ci_direct_key);
- 	} else {
- 		crypto_free_skcipher(ci->ci_ctfm);
- 		crypto_free_cipher(ci->ci_essiv_tfm);
 -- 
-2.22.0.770.g0f2c4a37fd-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.23.0.rc1.153.gdeed80330f-goog
