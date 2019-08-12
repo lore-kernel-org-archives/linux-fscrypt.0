@@ -1,87 +1,69 @@
-Return-Path: <SRS0=I4Qa=WM=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V4 3/8] fs/mpage.c: Integrate read callbacks
-Date: Fri, 16 Aug 2019 11:47:59 +0530
-In-Reply-To: <20190816061804.14840-1-chandan@linux.ibm.com>
-References: <20190816061804.14840-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:53486 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726424AbfHLR5P (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 12 Aug 2019 13:57:15 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [RFC PATCH 1/8] xfs_io/encrypt: remove unimplemented encryption modes
+Date: Mon, 12 Aug 2019 10:56:27 -0700
+Message-Id: <20190812175635.34186-2-ebiggers@kernel.org>
+In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
+References: <20190812175635.34186-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Message-Id: <20190816061804.14840-4-chandan@linux.ibm.com>
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, chandanrmail@gmail.com, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit adds code to make do_mpage_readpage() to be "read callbacks"
-aware i.e. for files requiring decryption, do_mpage_readpage() now
-sets up the read callbacks state machine when allocating a bio and later
-starts execution of the state machine after file data is read from the
-underlying disk.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Although mode numbers were originally reserved for AES-256-GCM and
+AES-256-CBC, these were never implemented in the kernel, and there are
+no plans to do so anymore.  These mode numbers may be used for something
+else in the future.  Also, xfstests (the only known user of the xfs_io
+encryption commands) doesn't try to use them.  Finally, most of the
+fscrypt constants have been given new names in the UAPI header, but the
+unused constants have not been given new names since userspace should
+just stop referencing them instead.
+
+So remove them from xfs_io.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/mpage.c | 24 +++++++++++++++++++++---
- 1 file changed, 21 insertions(+), 3 deletions(-)
+ io/encrypt.c | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
 
-diff --git a/fs/mpage.c b/fs/mpage.c
-index 3f19da75178b..65e7165644e2 100644
---- a/fs/mpage.c
-+++ b/fs/mpage.c
-@@ -30,6 +30,7 @@
- #include <linux/backing-dev.h>
- #include <linux/pagevec.h>
- #include <linux/cleancache.h>
-+#include <linux/read_callbacks.h>
- #include "internal.h"
+diff --git a/io/encrypt.c b/io/encrypt.c
+index 8db35259..e8766dc1 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -49,8 +49,6 @@ struct fscrypt_policy {
  
- /*
-@@ -44,7 +45,7 @@
-  * status of that page is hard.  See end_buffer_async_read() for the details.
-  * There is no point in duplicating all that complexity.
-  */
--static void mpage_end_io(struct bio *bio)
-+static void end_bio(struct bio *bio)
- {
- 	struct bio_vec *bv;
- 	int i;
-@@ -52,13 +53,24 @@ static void mpage_end_io(struct bio *bio)
+ #define FS_ENCRYPTION_MODE_INVALID	0
+ #define FS_ENCRYPTION_MODE_AES_256_XTS	1
+-#define FS_ENCRYPTION_MODE_AES_256_GCM	2
+-#define FS_ENCRYPTION_MODE_AES_256_CBC	3
+ #define FS_ENCRYPTION_MODE_AES_256_CTS	4
+ #endif /* FS_ENCRYPTION_MODE_AES_256_XTS */
  
- 	bio_for_each_segment_all(bv, bio, i, iter_all) {
- 		struct page *page = bv->bv_page;
--		page_endio(page, bio_op(bio),
--			   blk_status_to_errno(bio->bi_status));
-+		int err;
-+
-+		err = blk_status_to_errno(bio->bi_status);
-+
-+		if (!err && read_callbacks_failed(page))
-+			err = -EIO;
-+
-+		page_endio(page, bio_op(bio), err);
- 	}
+@@ -74,7 +72,7 @@ set_encpolicy_help(void)
+ " -v VERSION -- version of policy structure\n"
+ "\n"
+ " MODE can be numeric or one of the following predefined values:\n"
+-"    AES-256-XTS, AES-256-CTS, AES-256-GCM, AES-256-CBC\n"
++"    AES-256-XTS, AES-256-CTS\n"
+ " FLAGS and VERSION must be numeric.\n"
+ "\n"
+ " Note that it's only possible to set an encryption policy on an empty\n"
+@@ -88,8 +86,6 @@ static const struct {
+ } available_modes[] = {
+ 	{FS_ENCRYPTION_MODE_AES_256_XTS, "AES-256-XTS"},
+ 	{FS_ENCRYPTION_MODE_AES_256_CTS, "AES-256-CTS"},
+-	{FS_ENCRYPTION_MODE_AES_256_GCM, "AES-256-GCM"},
+-	{FS_ENCRYPTION_MODE_AES_256_CBC, "AES-256-CBC"},
+ };
  
- 	bio_put(bio);
- }
- 
-+static void mpage_end_io(struct bio *bio)
-+{
-+	read_callbacks_endio_bio(bio, end_bio);
-+}
-+
- static struct bio *mpage_bio_submit(int op, int op_flags, struct bio *bio)
- {
- 	bio->bi_end_io = mpage_end_io;
-@@ -310,6 +322,12 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
- 					gfp);
- 		if (args->bio == NULL)
- 			goto confused;
-+
-+		if (read_callbacks_setup_bio(inode, args->bio)) {
-+			bio_put(args->bio);
-+			args->bio = NULL;
-+			goto confused;
-+		}
- 	}
- 
- 	length = first_hole << blkbits;
+ static bool
 -- 
-2.19.1
+2.23.0.rc1.153.gdeed80330f-goog
