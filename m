@@ -1,57 +1,162 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:53484 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726219AbfHLR5O (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 12 Aug 2019 13:57:14 -0400
+Return-Path: <fstests-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 0/8] xfsprogs: support fscrypt API additions in xfs_io
-Date: Mon, 12 Aug 2019 10:56:26 -0700
-Message-Id: <20190812175635.34186-1-ebiggers@kernel.org>
+Subject: [RFC PATCH 7/8] xfs_io/encrypt: add 'rm_enckey' command
+Date: Mon, 12 Aug 2019 10:56:33 -0700
+Message-Id: <20190812175635.34186-8-ebiggers@kernel.org>
+In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
+References: <20190812175635.34186-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
+Sender: fstests-owner@vger.kernel.org
 To: linux-xfs@vger.kernel.org
 Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hello,
+From: Eric Biggers <ebiggers@google.com>
 
-This patchset updates xfs_io to support the API additions from the
-kernel patchset "[PATCH v8 00/20] fscrypt: key management improvements"
-https://lkml.kernel.org/linux-fsdevel/20190805162521.90882-1-ebiggers@kernel.org/T/#u
+Add a 'rm_enckey' command to xfs_io, to provide a command-line interface
+to the FS_IOC_REMOVE_ENCRYPTION_KEY and
+FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS ioctls.
 
-Commands are added to wrap the new ioctls for managing filesystem
-encryption keys.  Also, the existing 'get_encpolicy' and 'set_encpolicy'
-commands are updated to support v2 encryption policies.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ io/encrypt.c      | 75 +++++++++++++++++++++++++++++++++++++++++++++++
+ man/man8/xfs_io.8 | 15 ++++++++++
+ 2 files changed, 90 insertions(+)
 
-The purpose of all this is to allow xfstests to test the new APIs.
-
-Note: currently only ext4, f2fs, and ubifs support encryption.  But I
-was told previously that since the fscrypt API is generic and may be
-supported by XFS in the future, the command-line wrappers for the
-fscrypt ioctls should be in xfs_io rather than in fstests directly
-(https://marc.info/?l=fstests&m=147976255831951&w=2).
-
-We'll want to wait for the kernel patches to be mainlined before merging
-this, but I'm making it available now for any early feedback.
-
-This patchset applies to xfsprogs v5.2.0.  It can also be retrieved from tag
-"fscrypt-key-mgmt-improvements_2019-08-12" of
-https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfsprogs-dev.git
-
-Eric Biggers (8):
-  xfs_io/encrypt: remove unimplemented encryption modes
-  xfs_io/encrypt: update to UAPI definitions from Linux v5.4
-  xfs_io/encrypt: add new encryption modes
-  xfs_io/encrypt: extend 'get_encpolicy' to support v2 policies
-  xfs_io/encrypt: extend 'set_encpolicy' to support v2 policies
-  xfs_io/encrypt: add 'add_enckey' command
-  xfs_io/encrypt: add 'rm_enckey' command
-  xfs_io/encrypt: add 'enckey_status' command
-
- io/encrypt.c      | 786 ++++++++++++++++++++++++++++++++++++++++------
- man/man8/xfs_io.8 |  70 ++++-
- 2 files changed, 750 insertions(+), 106 deletions(-)
-
+diff --git a/io/encrypt.c b/io/encrypt.c
+index 038c4cce..213c9c53 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -139,6 +139,7 @@ struct fscrypt_get_key_status_arg {
+ static cmdinfo_t get_encpolicy_cmd;
+ static cmdinfo_t set_encpolicy_cmd;
+ static cmdinfo_t add_enckey_cmd;
++static cmdinfo_t rm_enckey_cmd;
+ 
+ static void
+ get_encpolicy_help(void)
+@@ -200,6 +201,21 @@ add_enckey_help(void)
+ "\n"));
+ }
+ 
++static void
++rm_enckey_help(void)
++{
++	printf(_(
++"\n"
++" remove an encryption key from the filesystem\n"
++"\n"
++" Examples:\n"
++" 'rm_enckey 0000111122223333' - remove key for v1 policies w/ given descriptor\n"
++" 'rm_enckey 00001111222233334444555566667777' - remove key for v2 policies w/ given identifier\n"
++"\n"
++" -a -- remove key for all users who have added it (privileged operation)\n"
++"\n"));
++}
++
+ static const struct {
+ 	__u8 mode;
+ 	const char *name;
+@@ -693,6 +709,54 @@ out:
+ 	return 0;
+ }
+ 
++static int
++rm_enckey_f(int argc, char **argv)
++{
++	int c;
++	struct fscrypt_remove_key_arg arg;
++	int ioc = FS_IOC_REMOVE_ENCRYPTION_KEY;
++
++	memset(&arg, 0, sizeof(arg));
++
++	while ((c = getopt(argc, argv, "a")) != EOF) {
++		switch (c) {
++		case 'a':
++			ioc = FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS;
++			break;
++		default:
++			return command_usage(&rm_enckey_cmd);
++		}
++	}
++	argc -= optind;
++	argv += optind;
++
++	if (argc != 1)
++		return command_usage(&rm_enckey_cmd);
++
++	if (str2keyspec(argv[0], -1, &arg.key_spec) < 0)
++		return 0;
++
++	if (ioctl(file->fd, ioc, &arg) != 0) {
++		fprintf(stderr, "Error removing encryption key: %s\n",
++			strerror(errno));
++		exitcode = 1;
++		return 0;
++	}
++	if (arg.removal_status_flags &
++	    FSCRYPT_KEY_REMOVAL_STATUS_FLAG_OTHER_USERS) {
++		printf("Removed user's claim to encryption key with %s %s\n",
++		       keyspectype(&arg.key_spec), keyspec2str(&arg.key_spec));
++	} else if (arg.removal_status_flags &
++		   FSCRYPT_KEY_REMOVAL_STATUS_FLAG_FILES_BUSY) {
++		printf("Removed encryption key with %s %s, but files still busy\n",
++		       keyspectype(&arg.key_spec), keyspec2str(&arg.key_spec));
++	} else {
++		printf("Removed encryption key with %s %s\n",
++		       keyspectype(&arg.key_spec), keyspec2str(&arg.key_spec));
++	}
++	return 0;
++}
++
+ void
+ encrypt_init(void)
+ {
+@@ -726,7 +790,18 @@ encrypt_init(void)
+ 	add_enckey_cmd.oneline = _("add an encryption key to the filesystem");
+ 	add_enckey_cmd.help = add_enckey_help;
+ 
++	rm_enckey_cmd.name = "rm_enckey";
++	rm_enckey_cmd.cfunc = rm_enckey_f;
++	rm_enckey_cmd.args = _("keyspec");
++	rm_enckey_cmd.argmin = 0;
++	rm_enckey_cmd.argmax = -1;
++	rm_enckey_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
++	rm_enckey_cmd.oneline =
++		_("remove an encryption key from the filesystem");
++	rm_enckey_cmd.help = rm_enckey_help;
++
+ 	add_command(&get_encpolicy_cmd);
+ 	add_command(&set_encpolicy_cmd);
+ 	add_command(&add_enckey_cmd);
++	add_command(&rm_enckey_cmd);
+ }
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index 7d6a23fe..a6894778 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -764,6 +764,21 @@ Otherwise, the key is added as a v2 policy key, and on success the resulting
+ .RE
+ .PD
+ .TP
++.BI "rm_enckey " keyspec
++On filesystems that support encryption, remove an encryption key from the
++filesystem containing the currently open file.
++.I keyspec
++is a hex string specifying the key to remove, as a 16-character "key descriptor"
++or a 32-character "key identifier".
++.RS 1.0i
++.PD 0
++.TP 0.4i
++.BI \-a
++Remove the key for all users who have added it, not just the current user.  This
++is a privileged operation.
++.RE
++.PD
++.TP
+ .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
+ List extended inode flags on the currently open file. If the
+ .B \-R
 -- 
 2.23.0.rc1.153.gdeed80330f-goog
