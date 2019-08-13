@@ -1,49 +1,34 @@
-Return-Path: <SRS0=nTNb=WY=samsung.com=boojin.kim@kernel.org>
-From: "boojin.kim" <boojin.kim@samsung.com>
-Subject: Re: [PATCH 5/9] block: support diskcipher
-Date: Wed, 28 Aug 2019 11:20:53 +0900
-Message-ID: <009301d55d47$38606400$a9212c00$@samsung.com>
+Return-Path: <SRS0=mLUp=WJ=mit.edu=tytso@kernel.org>
+Date: Mon, 12 Aug 2019 20:15:55 -0400
+From: "Theodore Y. Ts'o" <tytso@mit.edu>
+Subject: Re: [PATCH v8 15/20] fscrypt: add
+ FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS ioctl
+Message-ID: <20190813001555.GJ28705@mit.edu>
+References: <20190805162521.90882-1-ebiggers@kernel.org>
+ <20190805162521.90882-16-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Language: ko
-Content-Type: text/plain; charset="utf-8"
-References: <CGME20190828022055epcas2p25525077d0a5a3fa5a2027bac06a10bc1@epcas2p2.samsung.com>
-To: "'Theodore Y. Ts'o'" <tytso@mit.edu>
-Cc: 'Herbert Xu' <herbert@gondor.apana.org.au>, "'David S. Miller'" <davem@davemloft.net>, 'Eric Biggers' <ebiggers@kernel.org>, "'Theodore Y. Ts'o'  <tytso@mit.edu>,  'Chao Yu'  <chao@kernel.org>,  'Jaegeuk Kim' " <jaegeuk@kernel.org>, 'Andreas Dilger' <adilger.kernel@dilger.ca>, dm-devel@redhat.com, 'Mike Snitzer' <snitzer@redhat.com>, 'Alasdair Kergon' <agk@redhat.com>, 'Jens Axboe' <axboe@kernel.dk>, 'Krzysztof Kozlowski' <krzk@kernel.org>, 'Kukjin Kim' <kgene@kernel.org>, 'Jaehoon Chung' <jh80.chung@samsung.com>, "'Ulf Hansson'  <ulf.hansson@linaro.org>, <linux-crypto@vger.kernel.org>," <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-mmc@vger.kernel.org, linux-samsung-soc@vger.kernel.org, linux-block@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.netlinux-samsung-soc@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190805162521.90882-16-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, linux-api@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>, Jaegeuk Kim <jaegeuk@kernel.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Aug 27, 2019 at 05:33:33PM +0900, boojin.kim wrote:
->
-> Hi Boojin,
->
-> I think the important thing to realize here is that there are a large
-> number of hardware devices for which the keyslot manager *is* needed.
-> And from the upstream kernel's perspective, supporting two different
-> schemes for supporting the inline encryption feature is more
-> complexity than just supporting one which is general enough to support
-> a wider variety of hardware devices.
->
-> If you want somethig which is only good for the hardware platform you
-> are charged to support, that's fine if it's only going to be in a
-> Samsung-specific kernel.  But if your goal is to get something that
-> works upstream, especially if it requires changes in core layers of
-> the kernel, it's important that it's general enough to support most,
-> if not all, if the hardware devices in the industry.
->
-> Regards,
+On Mon, Aug 05, 2019 at 09:25:16AM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Add a root-only variant of the FS_IOC_REMOVE_ENCRYPTION_KEY ioctl which
+> removes all users' claims of the key, not just the current user's claim.
+> I.e., it always removes the key itself, no matter how many users have
+> added it.
+> 
+> This is useful for forcing a directory to be locked, without having to
+> figure out which user ID(s) the key was added under.  This is planned to
+> be used by a command like 'sudo fscrypt lock DIR --all-users' in the
+> fscrypt userspace tool (http://github.com/google/fscrypt).
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-I understood your reply.
-But, Please consider the diskcipher isn't just for FMP. 
-The UFS in Samsung SoC also has UFS ICE. This UFS ICE can be registered 
-as an algorithm of diskcipher like FMP.
+Looks good, thanks.   Feel free to add:
 
-Following is my opinion to introduce diskcipher.
-I think the common feature of ICE like FMP and UFS ICE, 
-is 'exposing cipher text to storage".
-And, Crypto test is also important for ICE.  Diskcipher supports
-the common feature of ICE. 
-I think specific functions for each ICE such as the key control of UFS ICE
-and the writing crypto table of FMP can be processed at algorithm level.
-
-Thanks for your reply.
-Boojin Kim.
+Reviewed-by: Theodore Ts'o <tytso@mit.edu>
