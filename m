@@ -1,107 +1,97 @@
-Return-Path: <fstests-owner@vger.kernel.org>
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 9/9] generic: verify ciphertext of v2 encryption policies with Adiantum
-Date: Mon, 12 Aug 2019 10:58:09 -0700
-Message-Id: <20190812175809.34810-10-ebiggers@kernel.org>
-In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
-References: <20190812175809.34810-1-ebiggers@kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-wr1-f68.google.com ([209.85.221.68]:36625 "EHLO
+        mail-wr1-f68.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1725781AbfHMFSK (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 13 Aug 2019 01:18:10 -0400
+Received: by mail-wr1-f68.google.com with SMTP id r3so12787805wrt.3
+        for <linux-fscrypt@vger.kernel.org>; Mon, 12 Aug 2019 22:18:08 -0700 (PDT)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: fstests-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+References: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
+ <20190812145324.27090-2-ard.biesheuvel@linaro.org> <20190812193849.GA131059@gmail.com>
+In-Reply-To: <20190812193849.GA131059@gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Tue, 13 Aug 2019 08:17:56 +0300
+Message-ID: <CAKv+Gu-Nk0tMST32d3cwuiwGmZmXgKRDd2h9BuW-iPeoqSN5tA@mail.gmail.com>
+Subject: Re: [PATCH v10 1/7] crypto: essiv - create wrapper template for ESSIV generation
+Content-Type: text/plain; charset="UTF-8"
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Ard Biesheuvel <ard.biesheuvel@linaro.org>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Herbert Xu <herbert@gondor.apana.org.au>, device-mapper development <dm-devel@redhat.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, 12 Aug 2019 at 22:38, Eric Biggers <ebiggers@kernel.org> wrote:
+>
+> On Mon, Aug 12, 2019 at 05:53:18PM +0300, Ard Biesheuvel wrote:
+> > +     switch (type) {
+> > +     case CRYPTO_ALG_TYPE_BLKCIPHER:
+> > +             skcipher_inst = kzalloc(sizeof(*skcipher_inst) +
+> > +                                     sizeof(*ictx), GFP_KERNEL);
+> > +             if (!skcipher_inst)
+> > +                     return -ENOMEM;
+> > +             inst = skcipher_crypto_instance(skcipher_inst);
+> > +             base = &skcipher_inst->alg.base;
+> > +             ictx = crypto_instance_ctx(inst);
+> > +
+> > +             /* Block cipher, e.g. "cbc(aes)" */
+> > +             crypto_set_skcipher_spawn(&ictx->u.skcipher_spawn, inst);
+> > +             err = crypto_grab_skcipher(&ictx->u.skcipher_spawn,
+> > +                                        inner_cipher_name, 0,
+> > +                                        crypto_requires_sync(algt->type,
+> > +                                                             algt->mask));
+> > +             if (err)
+> > +                     goto out_free_inst;
+>
+> This should say "Symmetric cipher", not "Block cipher".
+>
+> > +
+> > +     if (!parse_cipher_name(essiv_cipher_name, block_base->cra_name)) {
+> > +             pr_warn("Failed to parse ESSIV cipher name from skcipher cra_name\n");
+> > +             goto out_drop_skcipher;
+> > +     }
+>
+> This is missing:
+>
+>                 err = -EINVAL;
+>
+> > +     if (type == CRYPTO_ALG_TYPE_BLKCIPHER) {
+> > +             skcipher_inst->alg.setkey       = essiv_skcipher_setkey;
+> > +             skcipher_inst->alg.encrypt      = essiv_skcipher_encrypt;
+> > +             skcipher_inst->alg.decrypt      = essiv_skcipher_decrypt;
+> > +             skcipher_inst->alg.init         = essiv_skcipher_init_tfm;
+> > +             skcipher_inst->alg.exit         = essiv_skcipher_exit_tfm;
+> > +
+> > +             skcipher_inst->alg.min_keysize  = crypto_skcipher_alg_min_keysize(skcipher_alg);
+> > +             skcipher_inst->alg.max_keysize  = crypto_skcipher_alg_max_keysize(skcipher_alg);
+> > +             skcipher_inst->alg.ivsize       = crypto_skcipher_alg_ivsize(skcipher_alg);
+> > +             skcipher_inst->alg.chunksize    = crypto_skcipher_alg_chunksize(skcipher_alg);
+> > +             skcipher_inst->alg.walksize     = crypto_skcipher_alg_walksize(skcipher_alg);
+> > +
+> > +             skcipher_inst->free             = essiv_skcipher_free_instance;
+> > +
+> > +             err = skcipher_register_instance(tmpl, skcipher_inst);
+> > +     } else {
+> > +             aead_inst->alg.setkey           = essiv_aead_setkey;
+> > +             aead_inst->alg.setauthsize      = essiv_aead_setauthsize;
+> > +             aead_inst->alg.encrypt          = essiv_aead_encrypt;
+> > +             aead_inst->alg.decrypt          = essiv_aead_decrypt;
+> > +             aead_inst->alg.init             = essiv_aead_init_tfm;
+> > +             aead_inst->alg.exit             = essiv_aead_exit_tfm;
+> > +
+> > +             aead_inst->alg.ivsize           = crypto_aead_alg_ivsize(aead_alg);
+> > +             aead_inst->alg.maxauthsize      = crypto_aead_alg_maxauthsize(aead_alg);
+> > +             aead_inst->alg.chunksize        = crypto_aead_alg_chunksize(aead_alg);
+> > +
+> > +             aead_inst->free                 = essiv_aead_free_instance;
+> > +
+> > +             err = aead_register_instance(tmpl, aead_inst);
+> > +     }
+>
+> 'ivsize' is already in a variable, so could use
+>
+>                 skcipher_inst->alg.ivsize       = ivsize;
+>
+>         and
+>                 aead_inst->alg.ivsize           = ivsize;
+>
 
-Verify ciphertext for v2 encryption policies that use Adiantum to
-encrypt file contents and file names.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/804     | 45 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/804.out | 11 +++++++++++
- tests/generic/group   |  1 +
- 3 files changed, 57 insertions(+)
- create mode 100755 tests/generic/804
- create mode 100644 tests/generic/804.out
-
-diff --git a/tests/generic/804 b/tests/generic/804
-new file mode 100755
-index 00000000..72e7b025
---- /dev/null
-+++ b/tests/generic/804
-@@ -0,0 +1,45 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
-+#
-+# FS QA Test generic/804
-+#
-+# Verify ciphertext for v2 encryption policies that use Adiantum to encrypt file
-+# contents and file names.
-+#
-+# This is the same as generic/550, except using v2 policies.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/encrypt
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+
-+# Test both with and without the DIRECT_KEY flag.
-+_verify_ciphertext_for_encryption_policy Adiantum Adiantum v2
-+_verify_ciphertext_for_encryption_policy Adiantum Adiantum v2 direct
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/804.out b/tests/generic/804.out
-new file mode 100644
-index 00000000..726376b2
---- /dev/null
-+++ b/tests/generic/804.out
-@@ -0,0 +1,11 @@
-+QA output created by 804
-+
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: Adiantum
-+	filenames_encryption_mode: Adiantum
-+	options: v2
-+
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: Adiantum
-+	filenames_encryption_mode: Adiantum
-+	options: v2 direct
-diff --git a/tests/generic/group b/tests/generic/group
-index 6deae98f..c73ad0d9 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -572,3 +572,4 @@
- 801 auto quick encrypt
- 802 auto quick encrypt
- 803 auto quick encrypt
-+804 auto quick encrypt
--- 
-2.23.0.rc1.153.gdeed80330f-goog
+Thanks Eric. These will all be fixed in the next respin.
