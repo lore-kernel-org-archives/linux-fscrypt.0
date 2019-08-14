@@ -1,124 +1,131 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-Date: Thu, 1 Aug 2019 01:31:08 -0400
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
-Message-ID: <20190801053108.GD2769@mit.edu>
-References: <20190726224141.14044-1-ebiggers@kernel.org>
- <20190726224141.14044-8-ebiggers@kernel.org>
- <20190728192417.GG6088@mit.edu> <20190729195827.GF169027@gmail.com>
- <20190731183802.GA687@sol.localdomain>
- <20190731233843.GA2769@mit.edu>
- <20190801011140.GB687@sol.localdomain>
-MIME-Version: 1.0
-Content-Disposition: inline
-In-Reply-To: <20190801011140.GB687@sol.localdomain>
-Subject: Re: [f2fs-dev] [PATCH v7 07/16] fscrypt: add
- FS_IOC_REMOVE_ENCRYPTION_KEY ioctl
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org, linux-api@vger.kernel.org, linux-crypto@vger.kernel.org, keyrings@vger.kernel.org, Paul Crowley <paulcrowley@google.com>, Satya Tangirala <satyat@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-wr1-f67.google.com ([209.85.221.67]:37707 "EHLO
+        mail-wr1-f67.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726126AbfHNQhy (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 14 Aug 2019 12:37:54 -0400
+Received: by mail-wr1-f67.google.com with SMTP id z11so9781511wrt.4
+        for <linux-fscrypt@vger.kernel.org>; Wed, 14 Aug 2019 09:37:52 -0700 (PDT)
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Subject: [PATCH v11 0/4] crypto: switch to crypto API for ESSIV generation
+Date: Wed, 14 Aug 2019 19:37:42 +0300
+Message-Id: <20190814163746.3525-1-ard.biesheuvel@linaro.org>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Wed, Jul 31, 2019 at 06:11:40PM -0700, Eric Biggers wrote:
-> 
-> Well, it's either
-> 
-> 1a. Remove the user's handle.
-> 	OR 
-> 1b. Remove all users' handles.  (FSCRYPT_REMOVE_KEY_FLAG_ALL_USERS)
-> 
-> Then
-> 
-> 2. If no handles remain, try to evict all inodes that use the key.
-> 
-> By "purge all keys" do you mean step (2)?  Note that it doesn't require root by
-> itself; root is only required to remove other users' handles (1b).
+This series creates an ESSIV template that produces a skcipher or AEAD
+transform based on a tuple of the form '<skcipher>,<shash>' (or '<aead>,<shash>'
+for the AEAD case). It exposes the encapsulated sync or async skcipher/aead by
+passing through all operations, while using the cipher/shash pair to transform
+the input IV into an ESSIV output IV.
 
-No, I was talking about 1b.  I'd argue that 1a and 1b should be
-different ioctl.  1b requires root, and 1a doesn't.
+Changes since v10:
+- Drop patches against fscrypt and dm-crypt - these will be routed via the
+  respective maintainer trees during the next cycle
+- Fix error handling when parsing the cipher name from the skcipher cra_name
+- Use existing ivsize temporary instead of retrieving it again
+- Expose cra_name via module alias (#4)
 
-And 1a should just mean, "I don't need to use the encrypted files any
-more".  In the PAM passphrase case, when you are just logging out, 1a
-is what's needed, and success is just fine.  pam_session won't *care*
-whether or not there are other users keeping the key in use.
+Changes since v9:
+- Fix cipher_api parsing bug that was introduced by dropping the cipher name
+  parsing patch in v9 (#3). Thanks to Milan for finding it.
+- Fix a couple of instances where the old essiv(x,y,z) format was used in
+  comments instead of the essiv(x,z) format we adopted in v9
 
-The problem with "fscrypt lock" is that the non-privileged user sort
-of wants to do REMOVE_FLAG_KEY_FLAG_FOR_ALL_USERS, but they doesn't
-have the privileges to do it, and they are hoping that removing their
-own key removes it the key from the system.  That to me seems to be
-the fundamental disconnect.  The "fscrypt unlock" and "fscrypt lock"
-commands comes from the v1 key management, and requires root.  It's
-the translation to unprivileged mode where "fscrypt lock" seems to
-have problems.
+Changes since v8:
+- Remove 'cipher' argument from essiv() template, and instead, parse the
+  cra_name of the skcipher to obtain the cipher. This is slightly cleaner
+  than what dm-crypt currently does, since we can get the cra_name from the
+  spawn, and we don't have to actually allocate the TFM. Since this implies
+  that dm-crypt does not need to provide the cipher, we can drop the parsing
+  code from it entirely (assuming the eboiv patch I sent out recently is
+  applied first) (patch #7)
+- Restrict the essiv() AEAD instantiation to AEADs whose cra_name starts with
+  'authenc('
+- Rebase onto cryptodev/master
+- Drop dm-crypt to reorder/refactor cipher name parsing, since it was wrong
+  and it is no longer needed.
+- Drop Milan's R-b since the code has changed
+- Fix bug in accelerated arm64 implementation.
 
-> > What about having "fscrypt lock" call FS_IOC_GET_ENCRYPTION_KEY_STATUS
-> > and print a warning message saying, "we can't lock it because N other
-> > users who have registered a key".  I'd argue fscrypt should do this
-> > regardless of whether or not FS_IOC_REMOVE_ENCRYPTION_KEY returns
-> > EUSERS or not.
-> 
-> Shouldn't "fscrypt lock" still remove the user's handle, as opposed to refuse to
-> do anything, though?  So it would still need to callh
-> FS_IOC_REMOVE_ENCRYPTION_KEY, and could get the status from it rather than also
-> needing to call FS_IOC_GET_ENCRYPTION_KEY_STATUS.
-> 
-> Though, FS_IOC_GET_ENCRYPTION_KEY_STATUS would be needed if we wanted to show
-> the specific count of other users.
- 
-So my perspective is that the ioctl's should have very clean
-semantics, and errors should be consistent with how the Unix system
-calls and error reporting.
+Changes since v7:
+- rebase onto cryptodev/master
+- drop change to ivsize in #2
+- add Milan's R-b's
 
-If we need to make "fscrypt lock" and "fscrypt unlock" have semantics
-that are more consistent with previous user interface choices, then
-fscrypt can use FS_IOC_GET_ENCRYPTION_KEY_STATUS to print the warning
-before it calls FS_IOC_REMOVE_ENCRYPTION_KEY --- with "fscrypt purge_keys"
-calling something like FS_IOC_REMOVE_ALL_USER_ENCRYPTION_KEYS.
+Changes since v6:
+- make CRYPTO_ESSIV user selectable so we can opt out of selecting it even
+  if FS_ENCRYPTION (which cannot be built as a module) is enabled
+- move a comment along with the code it referred to (#3), not that this change
+  and removing some redundant braces makes the diff look totally different
+- add Milan's R-b to #3 and #4
 
-> > It seems to me that the EBUSY and EUSERS errors should be status bits
-> > which gets returned to the user in a bitfield --- and if the key has
-> > been removed, or the user's claim on the key's existence has been
-> > removed, the ioctl returns success.
-> > 
-> > That way we don't have to deal with the semantic disconnect where some
-> > errors don't actually change system state, and other errors that *do*
-> > change system state (as in, the key gets removed, or the user's claim
-> > on the key gets removed), but still returns than error.
-> > 
-> 
-> Do you mean use a positive return value, or do you mean add an output field to
-> the struct passed to the ioctl?
+Changes since v5:
+- drop redundant #includes and drop some unneeded braces (#2)
+- add test case for essiv(authenc(hmac(sha256),cbc(aes)),aes,sha256)
+- make ESSIV driver deal with assoc data that is described by more than two
+  scatterlist entries - this only happens when the extended tests are being
+  performed, so don't optimize for it
+- clarify that both fscrypt and dm-crypt only use ESSIV in special cases (#7)
 
-I meant adding an output field.  I see EBUSY and EUSERS as status bits
-which *some* use cases might find useful.  Other use cases, such as in
-the pam_keys session logout code, we won't care at *all* about those
-status reporting (or error codes).  So if EBUSY and EUSERS are
-returned as errors, then it adds to complexity of those programs
-whichd don't care.  (And even for those that do, it's still a bit more
-complex since they has to distinguish between EBUSY, EUSERS, or other
-errors --- in fact, *all* programs which use
-FS_IOC_REMOVE_ENCRYPTION_KEY will *have* to check for EBUSY and
-ESUSERS whether they care or not.)
+Changes since v4:
+- make the ESSIV template IV size equal the IV size of the encapsulated
+  cipher - defining it as 8 bytes was needlessly restrictive, and also
+  complicated the code for no reason
+- add a missing kfree() spotted by Smatch
+- add additional algo length name checks when constructing the essiv()
+  cipher name
+- reinstate the 'essiv' IV generation implementation in dm-crypt, but
+  make its generation function identical to plain64le (and drop the other
+  methods)
+- fix a bug in the arm64 CE/NEON code
+- simplify the arm64 code by reusing more of the existing CBC implementation
+  (patch #6 is new to this series and was added for this reason)
 
-> Either way note that it doesn't really need to be a bitfield, since you can't
-> have both statuses at the same time.  I.e. if there are still other users, we
-> couldn't have even gotten to checking for in-use files.
+Changes since v3:
+- address various review comments from Eric on patch #1
+- use Kconfig's 'imply' instead of 'select' to permit CRYPTO_ESSIV to be
+  enabled as a module or disabled entirely even if fscrypt is compiled in (#2)
+- fix an issue in the AEAD encrypt path caused by the IV being clobbered by
+  the inner skcipher before the hmac was being calculated
 
-That's actually an implementation detail, though, right?  In theory,
-we could check to see if there are any in-use files, independently of
-whether there are any users or not.
+Changes since v2:
+- fixed a couple of bugs that snuck in after I'd done the bulk of my
+  testing
+- some cosmetic tweaks to the ESSIV template skcipher setkey function
+  to align it with the aead one
+- add a test case for essiv(cbc(aes),aes,sha256)
+- add an accelerated implementation for arm64 that combines the IV
+  derivation and the actual en/decryption in a single asm routine
 
-					- Ted
+Code can be found here
+https://git.kernel.org/pub/scm/linux/kernel/git/ardb/linux.git/log/?h=essiv-v11
 
+Cc: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: Eric Biggers <ebiggers@google.com>
+Cc: dm-devel@redhat.com
+Cc: linux-fscrypt@vger.kernel.org
+Cc: Gilad Ben-Yossef <gilad@benyossef.com>
+Cc: Milan Broz <gmazyland@gmail.com>
 
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+Ard Biesheuvel (4):
+  crypto: essiv - create wrapper template for ESSIV generation
+  crypto: essiv - add tests for essiv in cbc(aes)+sha256 mode
+  crypto: arm64/aes-cts-cbc - factor out CBC en/decryption of a walk
+  crypto: arm64/aes - implement accelerated ESSIV/CBC mode
+
+ arch/arm64/crypto/aes-glue.c  | 206 ++++--
+ arch/arm64/crypto/aes-modes.S |  28 +
+ crypto/Kconfig                |  28 +
+ crypto/Makefile               |   1 +
+ crypto/essiv.c                | 667 ++++++++++++++++++++
+ crypto/tcrypt.c               |   9 +
+ crypto/testmgr.c              |  14 +
+ crypto/testmgr.h              | 497 +++++++++++++++
+ 8 files changed, 1408 insertions(+), 42 deletions(-)
+ create mode 100644 crypto/essiv.c
+
+-- 
+2.17.1
