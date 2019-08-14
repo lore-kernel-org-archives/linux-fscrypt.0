@@ -1,62 +1,32 @@
-Return-Path: <SRS0=LT3F=WT=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V5 6/7] ext4: Enable encryption for subpage-sized blocks
-Date: Fri, 23 Aug 2019 18:55:41 +0530
-Message-Id: <20190823132542.13434-7-chandan@linux.ibm.com>
-In-Reply-To: <20190823132542.13434-1-chandan@linux.ibm.com>
-References: <20190823132542.13434-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:32930 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1728262AbfHNW3s (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 14 Aug 2019 18:29:48 -0400
+Date: Wed, 14 Aug 2019 15:29:46 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Re: [PATCH] fscrypt: remove loadable module related code
+Message-ID: <20190814222945.GB101319@gmail.com>
+References: <20190724194438.39975-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190724194438.39975-1-ebiggers@kernel.org>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Now that we have the code to support encryption for subpage-sized
-blocks, this commit removes the conditional check in filesystem mount
-code.
+On Wed, Jul 24, 2019 at 12:44:38PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Since commit 643fa9612bf1 ("fscrypt: remove filesystem specific build
+> config option"), fs/crypto/ can no longer be built as a loadable module.
+> Thus it no longer needs a module_exit function, nor a MODULE_LICENSE.
+> So remove them, and change module_init to late_initcall.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-The commit also changes the support statement in
-Documentation/filesystems/fscrypt.rst to reflect the fact that
-encryption of filesystems with blocksize less than page size now works.
+Applied to fscrypt tree for 5.4.
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- Documentation/filesystems/fscrypt.rst | 4 ++--
- fs/ext4/super.c                       | 7 -------
- 2 files changed, 2 insertions(+), 9 deletions(-)
-
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 08c23b60e016..c3efe86bf2b2 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -213,8 +213,8 @@ Contents encryption
- -------------------
- 
- For file contents, each filesystem block is encrypted independently.
--Currently, only the case where the filesystem block size is equal to
--the system's page size (usually 4096 bytes) is supported.
-+Starting from Linux kernel 5.4, encryption of filesystems with block
-+size less than system's page size is supported.
- 
- Each block's IV is set to the logical block number within the file as
- a little endian number, except that:
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 5b92054bf8ea..d580e71ad9c7 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -4322,13 +4322,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
- 		}
- 	}
- 
--	if ((DUMMY_ENCRYPTION_ENABLED(sbi) || ext4_has_feature_encrypt(sb)) &&
--	    (blocksize != PAGE_SIZE)) {
--		ext4_msg(sb, KERN_ERR,
--			 "Unsupported blocksize for fs encryption");
--		goto failed_mount_wq;
--	}
--
- 	if (DUMMY_ENCRYPTION_ENABLED(sbi) && !sb_rdonly(sb) &&
- 	    !ext4_has_feature_encrypt(sb)) {
- 		ext4_set_feature_encrypt(sb);
--- 
-2.19.1
+- Eric
