@@ -1,161 +1,89 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon,  5 Aug 2019 09:25:17 -0700
-Message-Id: <20190805162521.90882-17-ebiggers@kernel.org>
-In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
-References: <20190805162521.90882-1-ebiggers@kernel.org>
+Return-Path: <dm-devel-bounces@redhat.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v8 16/20] fscrypt: require that key be added when
- setting a v2 encryption policy
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+References: <20190814163746.3525-1-ard.biesheuvel@linaro.org>
+	<20190814163746.3525-2-ard.biesheuvel@linaro.org>
+	<20190815023734.GB23782@gondor.apana.org.au>
+	<CAKv+Gu_maif=kZk-HRMx7pP=ths1vuTgcu4kFpzz0tCkO2+DFA@mail.gmail.com>
+	<20190815051320.GA24982@gondor.apana.org.au>
+	<CAKv+Gu_OVUfXW6t+j1RHA4_Uc43o50Sspke2KkVw9djbFDd04g@mail.gmail.com>
+	<20190815113548.GA27723@gondor.apana.org.au>
+	<CAKv+Gu9Yx3Jk_ikZC1GrR8rR1zV_5CzkXv5NntXnLYim2n+R9g@mail.gmail.com>
+In-Reply-To: <CAKv+Gu9Yx3Jk_ikZC1GrR8rR1zV_5CzkXv5NntXnLYim2n+R9g@mail.gmail.com>
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Date: Thu, 15 Aug 2019 20:59:21 +0300
+Message-ID: <CAKv+Gu9wK_8RxOer5x5UuMu4rTZOWP+6xaCu+LpSDff2o_ukOg@mail.gmail.com>
+Subject: Re: [dm-devel] [PATCH v11 1/4] crypto: essiv - create wrapper
+	template for ESSIV generation
+List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
+List-Archive: <https://www.redhat.com/archives/dm-devel>
+List-Post: <mailto:dm-devel@redhat.com>
+List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
+List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=subscribe>
 Content-Type: text/plain; charset="us-ascii"
 Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Sender: dm-devel-bounces@redhat.com
+Errors-To: dm-devel-bounces@redhat.com
+To: Herbert Xu <herbert@gondor.apana.org.au>
+Cc: Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, device-mapper development <dm-devel@redhat.com>, "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" <linux-crypto@vger.kernel.org>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Thu, 15 Aug 2019 at 20:46, Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+>
+> On Thu, 15 Aug 2019 at 14:35, Herbert Xu <herbert@gondor.apana.org.au> wrote:
+> >
+> > On Thu, Aug 15, 2019 at 08:15:29AM +0300, Ard Biesheuvel wrote:
+> > >
+> > > So what about checking that the cipher key size matches the shash
+> > > digest size, or that the cipher block size matches the skcipher IV
+> > > size? This all moves to the TFM init function?
+> >
+> > I don't think you need to check those things.  If the shash produces
+> > an incorrect key size the setkey will just fail naturally.  As to
+> > the block size matching the IV size, in the kernel it's not actually
+> > possible to get an underlying cipher with different block size
+> > than the cbc mode that you used to derive it.
+> >
+>
+> dm-crypt permits any skcipher to be used with ESSIV, so the template
+> does not enforce CBC to be used.
+>
+> > The size checks that we have in general are to stop people from
+> > making crazy combinations such as lrw(des3_ede), it's not there
+> > to test the correctness of a given implementation.  That is,
+> > we assume that whoever provides "aes" will give it the correct
+> > geometry for it.
+> >
+> > Sure we haven't made it explicit (which we should at some point)
+> > but as it stands, it can only occur if we have a bug or someone
+> > loads a malicious kernel module in which case none of this matters.
+> >
+>
+> OK.
+>
+> > > Are there any existing templates that use this approach?
+> >
+> > I'm not sure of templates doing this but this is similar to fallbacks.
+> > In fact we don't check any gemoetry on the fallbacks at all.
+> >
+>
+> OK, so one other thing: how should I populate the cra_name template
+> field if someone instantiates essiv(cbc(aes),sha256-ce)? We won't know
+> until TFM init time what cra_name allocating the sha256-ce shash
+> actually produces, so the only way to populate those names is to use
+> the bare string supplied by the caller, which could be bogus.
+>
+> To me, it seems like retaining the spawn for the shash is more
+> idiomatic, and avoids strange issues like the one above. Dropping the
+> spawn for the encapsulated cipher (which is tightly coupled to the
+> skcipher/aead being encapsulated) does seem feasible, so I'll go with
+> that.
 
-By looking up the master keys in a filesystem-level keyring rather than
-in the calling processes' key hierarchy, it becomes possible for a user
-to set an encryption policy which refers to some key they don't actually
-know, then encrypt their files using that key.  Cryptographically this
-isn't much of a problem, but the semantics of this would be a bit weird.
-Thus, enforce that a v2 encryption policy can only be set if the user
-has previously added the key, or has capable(CAP_FOWNER).
+Actually, I should be able to lookup the alg without using it to
+create a spawn. Let me try that instead.
 
-We tolerate that this problem will continue to exist for v1 encryption
-policies, however; there is no way around that.
-
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/fscrypt_private.h |  3 +++
- fs/crypto/keyring.c         | 47 +++++++++++++++++++++++++++++++++++++
- fs/crypto/policy.c          | 14 ++++++++++-
- 3 files changed, 63 insertions(+), 1 deletion(-)
-
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index d0e23823423416..e84efc01512e4e 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -431,6 +431,9 @@ extern struct key *
- fscrypt_find_master_key(struct super_block *sb,
- 			const struct fscrypt_key_specifier *mk_spec);
- 
-+extern int fscrypt_verify_key_added(struct super_block *sb,
-+				    const u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE]);
-+
- extern int __init fscrypt_init_keyring(void);
- 
- /* keysetup.c */
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 86bfcc02b31fcf..6ea71c2e18f0e7 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -562,6 +562,53 @@ int fscrypt_ioctl_add_key(struct file *filp, void __user *_uarg)
- }
- EXPORT_SYMBOL_GPL(fscrypt_ioctl_add_key);
- 
-+/*
-+ * Verify that the current user has added a master key with the given identifier
-+ * (returns -ENOKEY if not).  This is needed to prevent a user from encrypting
-+ * their files using some other user's key which they don't actually know.
-+ * Cryptographically this isn't much of a problem, but the semantics of this
-+ * would be a bit weird, so it's best to just forbid it.
-+ *
-+ * The system administrator (CAP_FOWNER) can override this, which should be
-+ * enough for any use cases where encryption policies are being set using keys
-+ * that were chosen ahead of time but aren't available at the moment.
-+ *
-+ * Note that the key may have already removed by the time this returns, but
-+ * that's okay; we just care whether the key was there at some point.
-+ *
-+ * Return: 0 if the key is added, -ENOKEY if it isn't, or another -errno code
-+ */
-+int fscrypt_verify_key_added(struct super_block *sb,
-+			     const u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
-+{
-+	struct fscrypt_key_specifier mk_spec;
-+	struct key *key, *mk_user;
-+	struct fscrypt_master_key *mk;
-+	int err;
-+
-+	mk_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
-+	memcpy(mk_spec.u.identifier, identifier, FSCRYPT_KEY_IDENTIFIER_SIZE);
-+
-+	key = fscrypt_find_master_key(sb, &mk_spec);
-+	if (IS_ERR(key)) {
-+		err = PTR_ERR(key);
-+		goto out;
-+	}
-+	mk = key->payload.data[0];
-+	mk_user = find_master_key_user(mk);
-+	if (IS_ERR(mk_user)) {
-+		err = PTR_ERR(mk_user);
-+	} else {
-+		key_put(mk_user);
-+		err = 0;
-+	}
-+	key_put(key);
-+out:
-+	if (err == -ENOKEY && capable(CAP_FOWNER))
-+		err = 0;
-+	return err;
-+}
-+
- /*
-  * Try to evict the inode's dentries from the dentry cache.  If the inode is a
-  * directory, then it can have at most one dentry; however, that dentry may be
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 0141d338c1fdb2..4072ba644595b9 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -233,11 +233,13 @@ static int set_encryption_policy(struct inode *inode,
- {
- 	union fscrypt_context ctx;
- 	int ctxsize;
-+	int err;
- 
- 	if (!fscrypt_supported_policy(policy, inode))
- 		return -EINVAL;
- 
--	if (policy->version == FSCRYPT_POLICY_V1) {
-+	switch (policy->version) {
-+	case FSCRYPT_POLICY_V1:
- 		/*
- 		 * The original encryption policy version provided no way of
- 		 * verifying that the correct master key was supplied, which was
-@@ -251,6 +253,16 @@ static int set_encryption_policy(struct inode *inode,
- 		 */
- 		pr_warn_once("%s (pid %d) is setting deprecated v1 encryption policy; recommend upgrading to v2.\n",
- 			     current->comm, current->pid);
-+		break;
-+	case FSCRYPT_POLICY_V2:
-+		err = fscrypt_verify_key_added(inode->i_sb,
-+					       policy->v2.master_key_identifier);
-+		if (err)
-+			return err;
-+		break;
-+	default:
-+		WARN_ON(1);
-+		return -EINVAL;
- 	}
- 
- 	ctxsize = fscrypt_new_context_from_policy(&ctx, policy);
--- 
-2.22.0.770.g0f2c4a37fd-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+--
+dm-devel mailing list
+dm-devel@redhat.com
+https://www.redhat.com/mailman/listinfo/dm-devel
