@@ -1,40 +1,103 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:33516 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726527AbfHKVhO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 11 Aug 2019 17:37:14 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 5/6] ext4: fix comment in ext4_end_enable_verity()
-Date: Sun, 11 Aug 2019 14:35:56 -0700
-Message-Id: <20190811213557.1970-6-ebiggers@kernel.org>
-In-Reply-To: <20190811213557.1970-1-ebiggers@kernel.org>
-References: <20190811213557.1970-1-ebiggers@kernel.org>
+Return-Path: <SRS0=I4Qa=WM=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH V4 4/8] fs/buffer.c: add decryption support via read_callbacks
+Date: Fri, 16 Aug 2019 11:48:00 +0530
+Message-Id: <20190816061804.14840-5-chandan@linux.ibm.com>
+In-Reply-To: <20190816061804.14840-1-chandan@linux.ibm.com>
+References: <20190816061804.14840-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, chandanrmail@gmail.com, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+This commit sets up read_callbacks context for buffer heads whose
+contents need to be decrypted on endio.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/ext4/verity.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ fs/buffer.c | 33 ++++++++++++++++++++++-----------
+ 1 file changed, 22 insertions(+), 11 deletions(-)
 
-diff --git a/fs/ext4/verity.c b/fs/ext4/verity.c
-index bb0a3b8e6ea71..d0d8a9795dd62 100644
---- a/fs/ext4/verity.c
-+++ b/fs/ext4/verity.c
-@@ -196,7 +196,7 @@ static int ext4_end_enable_verity(struct file *filp, const void *desc,
- 				  size_t desc_size, u64 merkle_tree_size)
+diff --git a/fs/buffer.c b/fs/buffer.c
+index ce357602f471..96c4c9840746 100644
+--- a/fs/buffer.c
++++ b/fs/buffer.c
+@@ -45,6 +45,7 @@
+ #include <linux/bit_spinlock.h>
+ #include <linux/pagevec.h>
+ #include <linux/sched/mm.h>
++#include <linux/read_callbacks.h>
+ #include <trace/events/block.h>
+ 
+ static int fsync_buffers_list(spinlock_t *lock, struct list_head *list);
+@@ -245,11 +246,7 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
+ 	return ret;
+ }
+ 
+-/*
+- * I/O completion handler for block_read_full_page() - pages
+- * which come unlocked at the end of I/O.
+- */
+-static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
++void end_buffer_async_read(struct buffer_head *bh, int uptodate)
  {
- 	struct inode *inode = file_inode(filp);
--	const int credits = 2; /* superblock and inode for ext4_orphan_add() */
-+	const int credits = 2; /* superblock and inode for ext4_orphan_del() */
- 	handle_t *handle;
- 	int err = 0;
- 	int err2;
+ 	unsigned long flags;
+ 	struct buffer_head *first;
+@@ -257,8 +254,6 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+ 	struct page *page;
+ 	int page_uptodate = 1;
+ 
+-	BUG_ON(!buffer_async_read(bh));
+-
+ 	page = bh->b_page;
+ 	if (uptodate) {
+ 		set_buffer_uptodate(bh);
+@@ -306,6 +301,17 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+ 	return;
+ }
+ 
++/*
++ * I/O completion handler for block_read_full_page().  Pages are unlocked
++ * after the I/O completes and the read callbacks (if any) have executed.
++ */
++static void __end_buffer_async_read(struct buffer_head *bh, int uptodate)
++{
++	BUG_ON(!buffer_async_read(bh));
++
++	read_callbacks_endio_bh(bh, uptodate, end_buffer_async_read);
++}
++
+ /*
+  * Completion handler for block_write_full_page() - pages which are unlocked
+  * during I/O, and which have PageWriteback cleared upon I/O completion.
+@@ -378,7 +384,7 @@ EXPORT_SYMBOL(end_buffer_async_write);
+  */
+ static void mark_buffer_async_read(struct buffer_head *bh)
+ {
+-	bh->b_end_io = end_buffer_async_read;
++	bh->b_end_io = __end_buffer_async_read;
+ 	set_buffer_async_read(bh);
+ }
+ 
+@@ -2293,10 +2299,15 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
+ 	 */
+ 	for (i = 0; i < nr; i++) {
+ 		bh = arr[i];
+-		if (buffer_uptodate(bh))
+-			end_buffer_async_read(bh, 1);
+-		else
++		if (buffer_uptodate(bh)) {
++			__end_buffer_async_read(bh, 1);
++		} else {
++			if (WARN_ON(read_callbacks_setup_bh(inode, bh))) {
++				__end_buffer_async_read(bh, 0);
++				continue;
++			}
+ 			submit_bh(REQ_OP_READ, 0, bh);
++		}
+ 	}
+ 	return 0;
+ }
 -- 
-2.22.0
+2.19.1
