@@ -1,273 +1,57 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:53814 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726522AbfHLR6s (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 12 Aug 2019 13:58:48 -0400
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Date: Sun, 18 Aug 2019 13:23:24 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 5/9] generic: add basic test for fscrypt API additions
-Date: Mon, 12 Aug 2019 10:58:05 -0700
-Message-Id: <20190812175809.34810-6-ebiggers@kernel.org>
-In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
-References: <20190812175809.34810-1-ebiggers@kernel.org>
+Message-ID: <20190818202324.GA1824@zzz.localdomain>
+References: <20190811213557.1970-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+Content-Disposition: inline
+In-Reply-To: <20190811213557.1970-1-ebiggers@kernel.org>
+Subject: Re: [f2fs-dev] [PATCH 0/6] fs-verity fixups
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Sun, Aug 11, 2019 at 02:35:51PM -0700, Eric Biggers wrote:
+> A few fixes and cleanups for fs-verity.
+> 
+> If there are no objections, I'll fold these into the original patches.
+> 
+> Eric Biggers (6):
+>   fs-verity: fix crash on read error in build_merkle_tree_level()
+>   ext4: skip truncate when verity in progress in ->write_begin()
+>   f2fs: skip truncate when verity in progress in ->write_begin()
+>   ext4: remove ext4_bio_encrypted()
+>   ext4: fix comment in ext4_end_enable_verity()
+>   f2fs: use EFSCORRUPTED in f2fs_get_verity_descriptor()
+> 
+>  fs/ext4/inode.c    |  7 +++++--
+>  fs/ext4/readpage.c |  9 ---------
+>  fs/ext4/verity.c   |  2 +-
+>  fs/f2fs/data.c     |  2 +-
+>  fs/f2fs/verity.c   |  2 +-
+>  fs/verity/enable.c | 24 ++++++++++++++++--------
+>  6 files changed, 24 insertions(+), 22 deletions(-)
+> 
+> -- 
+> 2.22.0
+> 
 
-Add a basic test of fscrypt filesystem-level encryption keyring and v2
-encryption policies.
+I've gone ahead and folded in these fixes.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/800     | 127 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/800.out |  91 ++++++++++++++++++++++++++++++
- tests/generic/group   |   1 +
- 3 files changed, 219 insertions(+)
- create mode 100755 tests/generic/800
- create mode 100644 tests/generic/800.out
+- Eric
 
-diff --git a/tests/generic/800 b/tests/generic/800
-new file mode 100755
-index 00000000..de71b7ff
---- /dev/null
-+++ b/tests/generic/800
-@@ -0,0 +1,127 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
-+#
-+# FS QA Test generic/800
-+#
-+# Basic test of fscrypt filesystem-level encryption keyring
-+# and v2 encryption policies.
-+#
-+
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+echo
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/encrypt
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+_require_scratch_encryption -v 2
-+
-+_scratch_mkfs_encrypted &>> $seqres.full
-+_scratch_mount
-+
-+test_with_policy_version()
-+{
-+	local vers=$1
-+	local raw_key=""
-+	local i
-+
-+	for i in {1..64}; do
-+		raw_key+="\\x$(printf "%02x" $i)"
-+	done
-+
-+	if (( vers == 1 )); then
-+		# Key descriptor: arbitrary value
-+		local keyspec="0000111122223333"
-+		local add_enckey_args="-d $keyspec"
-+	else
-+		# Key identifier:
-+		# HKDF-SHA512(key=raw_key, salt="", info="fscrypt\0\x01")
-+		local keyspec="69b2f6edeee720cce0577937eb8a6751"
-+		local add_enckey_args=""
-+	fi
-+
-+	mkdir $dir
-+	echo "# Setting v$vers encryption policy"
-+	_set_encpolicy $dir $keyspec
-+	echo "# Getting v$vers encryption policy"
-+	_get_encpolicy $dir | _filter_scratch
-+	if (( vers == 1 )); then
-+		echo "# Getting v1 encryption policy using old ioctl"
-+		_get_encpolicy $dir -1 | _filter_scratch
-+	fi
-+	echo "# Trying to create file without key added yet"
-+	$XFS_IO_PROG -f $dir/file |& _filter_scratch
-+	echo "# Getting encryption key status"
-+	_enckey_status $SCRATCH_MNT $keyspec
-+	echo "# Adding encryption key"
-+	_add_enckey $SCRATCH_MNT "$raw_key" $add_enckey_args
-+	echo "# Creating encrypted file"
-+	echo contents > $dir/file
-+	echo "# Getting encryption key status"
-+	_enckey_status $SCRATCH_MNT $keyspec
-+	echo "# Removing encryption key"
-+	_rm_enckey $SCRATCH_MNT $keyspec
-+	echo "# Getting encryption key status"
-+	_enckey_status $SCRATCH_MNT $keyspec
-+	echo "# Verifying that the encrypted directory was \"locked\""
-+	cat $dir/file |& _filter_scratch
-+	cat "$(find $dir -type f)" |& _filter_scratch | cut -d ' ' -f3-
-+
-+	# Test removing key with a file open.
-+	echo "# Re-adding encryption key"
-+	_add_enckey $SCRATCH_MNT "$raw_key" $add_enckey_args
-+	echo "# Creating another encrypted file"
-+	echo foo > $dir/file2
-+	echo "# Removing key while an encrypted file is open"
-+	exec 3< $dir/file
-+	_rm_enckey $SCRATCH_MNT $keyspec
-+	echo "# Non-open file should have been evicted"
-+	cat $dir/file2 |& _filter_scratch
-+	echo "# Open file shouldn't have been evicted"
-+	cat $dir/file
-+	echo "# Key should be in \"incompletely removed\" state"
-+	_enckey_status $SCRATCH_MNT $keyspec
-+	echo "# Closing file and removing key for real now"
-+	exec 3<&-
-+	_rm_enckey $SCRATCH_MNT $keyspec
-+	cat $dir/file |& _filter_scratch
-+
-+	echo "# Cleaning up"
-+	rm -r $dir
-+	_scratch_cycle_mount	# Clear all keys
-+	echo
-+}
-+
-+dir=$SCRATCH_MNT/dir
-+
-+test_with_policy_version 1
-+
-+test_with_policy_version 2
-+
-+echo "# Trying to remove absent key"
-+_rm_enckey $SCRATCH_MNT abcdabcdabcdabcd
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/800.out b/tests/generic/800.out
-new file mode 100644
-index 00000000..a4027e2a
---- /dev/null
-+++ b/tests/generic/800.out
-@@ -0,0 +1,91 @@
-+QA output created by 800
-+
-+# Setting v1 encryption policy
-+# Getting v1 encryption policy
-+Encryption policy for SCRATCH_MNT/dir:
-+	Policy version: 0
-+	Master key descriptor: 0000111122223333
-+	Contents encryption mode: 1 (AES-256-XTS)
-+	Filenames encryption mode: 4 (AES-256-CTS)
-+	Flags: 0x02
-+# Getting v1 encryption policy using old ioctl
-+Encryption policy for SCRATCH_MNT/dir:
-+	Policy version: 0
-+	Master key descriptor: 0000111122223333
-+	Contents encryption mode: 1 (AES-256-XTS)
-+	Filenames encryption mode: 4 (AES-256-CTS)
-+	Flags: 0x02
-+# Trying to create file without key added yet
-+SCRATCH_MNT/dir/file: Required key not available
-+# Getting encryption key status
-+Absent
-+# Adding encryption key
-+Added encryption key with descriptor 0000111122223333
-+# Creating encrypted file
-+# Getting encryption key status
-+Present
-+# Removing encryption key
-+Removed encryption key with descriptor 0000111122223333
-+# Getting encryption key status
-+Absent
-+# Verifying that the encrypted directory was "locked"
-+cat: SCRATCH_MNT/dir/file: No such file or directory
-+Required key not available
-+# Re-adding encryption key
-+Added encryption key with descriptor 0000111122223333
-+# Creating another encrypted file
-+# Removing key while an encrypted file is open
-+Removed encryption key with descriptor 0000111122223333, but files still busy
-+# Non-open file should have been evicted
-+cat: SCRATCH_MNT/dir/file2: Required key not available
-+# Open file shouldn't have been evicted
-+contents
-+# Key should be in "incompletely removed" state
-+Incompletely removed
-+# Closing file and removing key for real now
-+Removed encryption key with descriptor 0000111122223333
-+cat: SCRATCH_MNT/dir/file: No such file or directory
-+# Cleaning up
-+
-+# Setting v2 encryption policy
-+# Getting v2 encryption policy
-+Encryption policy for SCRATCH_MNT/dir:
-+	Policy version: 2
-+	Master key identifier: 69b2f6edeee720cce0577937eb8a6751
-+	Contents encryption mode: 1 (AES-256-XTS)
-+	Filenames encryption mode: 4 (AES-256-CTS)
-+	Flags: 0x02
-+# Trying to create file without key added yet
-+SCRATCH_MNT/dir/file: Required key not available
-+# Getting encryption key status
-+Absent
-+# Adding encryption key
-+Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
-+# Creating encrypted file
-+# Getting encryption key status
-+Present (user_count=1, added_by_self)
-+# Removing encryption key
-+Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
-+# Getting encryption key status
-+Absent
-+# Verifying that the encrypted directory was "locked"
-+cat: SCRATCH_MNT/dir/file: No such file or directory
-+Required key not available
-+# Re-adding encryption key
-+Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
-+# Creating another encrypted file
-+# Removing key while an encrypted file is open
-+Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751, but files still busy
-+# Non-open file should have been evicted
-+cat: SCRATCH_MNT/dir/file2: Required key not available
-+# Open file shouldn't have been evicted
-+contents
-+# Key should be in "incompletely removed" state
-+Incompletely removed
-+# Closing file and removing key for real now
-+Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
-+cat: SCRATCH_MNT/dir/file: No such file or directory
-+# Cleaning up
-+
-+# Trying to remove absent key
-+Error removing encryption key: Required key not available
-diff --git a/tests/generic/group b/tests/generic/group
-index 2e4a6f79..5be46357 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -568,3 +568,4 @@
- 563 auto quick
- 564 auto quick copy_range
- 565 auto quick copy_range
-+800 auto quick encrypt
--- 
-2.23.0.rc1.153.gdeed80330f-goog
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
