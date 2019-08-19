@@ -1,97 +1,168 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon,  5 Aug 2019 09:25:09 -0700
-Message-Id: <20190805162521.90882-9-ebiggers@kernel.org>
-In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
-References: <20190805162521.90882-1-ebiggers@kernel.org>
-MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v8 08/20] fscrypt: rename keyinfo.c to keysetup.c
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-wr1-f66.google.com ([209.85.221.66]:46535 "EHLO
+        mail-wr1-f66.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726751AbfHSOSB (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 19 Aug 2019 10:18:01 -0400
+Received: by mail-wr1-f66.google.com with SMTP id z1so8898001wru.13
+        for <linux-fscrypt@vger.kernel.org>; Mon, 19 Aug 2019 07:17:59 -0700 (PDT)
+From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Subject: [PATCH v13 3/6] crypto: arm64/aes-cts-cbc - factor out CBC en/decryption of a walk
+Date: Mon, 19 Aug 2019 17:17:35 +0300
+Message-Id: <20190819141738.1231-4-ard.biesheuvel@linaro.org>
+In-Reply-To: <20190819141738.1231-1-ard.biesheuvel@linaro.org>
+References: <20190819141738.1231-1-ard.biesheuvel@linaro.org>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-crypto@vger.kernel.org
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+The plain CBC driver and the CTS one share some code that iterates over
+a scatterwalk and invokes the CBC asm code to do the processing. The
+upcoming ESSIV/CBC mode will clone that pattern for the third time, so
+let's factor it out first.
 
-Rename keyinfo.c to keysetup.c since this better describes what the file
-does (sets up the key), and it matches the new file keysetup_v1.c.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
 ---
- fs/crypto/Makefile                  | 2 +-
- fs/crypto/fscrypt_private.h         | 2 +-
- fs/crypto/{keyinfo.c => keysetup.c} | 0
- include/linux/fscrypt.h             | 4 ++--
- 4 files changed, 4 insertions(+), 4 deletions(-)
- rename fs/crypto/{keyinfo.c => keysetup.c} (100%)
+ arch/arm64/crypto/aes-glue.c | 82 ++++++++++----------
+ 1 file changed, 40 insertions(+), 42 deletions(-)
 
-diff --git a/fs/crypto/Makefile b/fs/crypto/Makefile
-index 1fba255c34ca56..ad14d4c29784a6 100644
---- a/fs/crypto/Makefile
-+++ b/fs/crypto/Makefile
-@@ -4,7 +4,7 @@ obj-$(CONFIG_FS_ENCRYPTION)	+= fscrypto.o
- fscrypto-y := crypto.o \
- 	      fname.o \
- 	      hooks.o \
--	      keyinfo.o \
-+	      keysetup.o \
- 	      keysetup_v1.o \
- 	      policy.o
- 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 387b44b255f6ab..794dcba25ca826 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -156,7 +156,7 @@ extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
- 					 u32 orig_len, u32 max_len,
- 					 u32 *encrypted_len_ret);
- 
--/* keyinfo.c */
-+/* keysetup.c */
- 
- struct fscrypt_mode {
- 	const char *friendly_name;
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keysetup.c
-similarity index 100%
-rename from fs/crypto/keyinfo.c
-rename to fs/crypto/keysetup.c
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 81c0c754f8b21b..583802cb2e35d0 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -138,7 +138,7 @@ extern int fscrypt_ioctl_get_policy(struct file *, void __user *);
- extern int fscrypt_has_permitted_context(struct inode *, struct inode *);
- extern int fscrypt_inherit_context(struct inode *, struct inode *,
- 					void *, bool);
--/* keyinfo.c */
-+/* keysetup.c */
- extern int fscrypt_get_encryption_info(struct inode *);
- extern void fscrypt_put_encryption_info(struct inode *);
- extern void fscrypt_free_inode(struct inode *);
-@@ -367,7 +367,7 @@ static inline int fscrypt_inherit_context(struct inode *parent,
- 	return -EOPNOTSUPP;
+diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
+index 55d6d4838708..23abf335f1ee 100644
+--- a/arch/arm64/crypto/aes-glue.c
++++ b/arch/arm64/crypto/aes-glue.c
+@@ -186,46 +186,64 @@ static int ecb_decrypt(struct skcipher_request *req)
+ 	return err;
  }
  
--/* keyinfo.c */
-+/* keysetup.c */
- static inline int fscrypt_get_encryption_info(struct inode *inode)
+-static int cbc_encrypt(struct skcipher_request *req)
++static int cbc_encrypt_walk(struct skcipher_request *req,
++			    struct skcipher_walk *walk)
  {
- 	return -EOPNOTSUPP;
+ 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+ 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
+-	int err, rounds = 6 + ctx->key_length / 4;
+-	struct skcipher_walk walk;
++	int err = 0, rounds = 6 + ctx->key_length / 4;
+ 	unsigned int blocks;
+ 
+-	err = skcipher_walk_virt(&walk, req, false);
+-
+-	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
++	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+ 		kernel_neon_begin();
+-		aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-				ctx->key_enc, rounds, blocks, walk.iv);
++		aes_cbc_encrypt(walk->dst.virt.addr, walk->src.virt.addr,
++				ctx->key_enc, rounds, blocks, walk->iv);
+ 		kernel_neon_end();
+-		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
++		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+ 	}
+ 	return err;
+ }
+ 
+-static int cbc_decrypt(struct skcipher_request *req)
++static int cbc_encrypt(struct skcipher_request *req)
+ {
+-	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+-	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
+-	int err, rounds = 6 + ctx->key_length / 4;
+ 	struct skcipher_walk walk;
+-	unsigned int blocks;
++	int err;
+ 
+ 	err = skcipher_walk_virt(&walk, req, false);
++	if (err)
++		return err;
++	return cbc_encrypt_walk(req, &walk);
++}
+ 
+-	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
++static int cbc_decrypt_walk(struct skcipher_request *req,
++			    struct skcipher_walk *walk)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
++	int err = 0, rounds = 6 + ctx->key_length / 4;
++	unsigned int blocks;
++
++	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+ 		kernel_neon_begin();
+-		aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-				ctx->key_dec, rounds, blocks, walk.iv);
++		aes_cbc_decrypt(walk->dst.virt.addr, walk->src.virt.addr,
++				ctx->key_dec, rounds, blocks, walk->iv);
+ 		kernel_neon_end();
+-		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
++		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+ 	}
+ 	return err;
+ }
+ 
++static int cbc_decrypt(struct skcipher_request *req)
++{
++	struct skcipher_walk walk;
++	int err;
++
++	err = skcipher_walk_virt(&walk, req, false);
++	if (err)
++		return err;
++	return cbc_decrypt_walk(req, &walk);
++}
++
+ static int cts_cbc_init_tfm(struct crypto_skcipher *tfm)
+ {
+ 	crypto_skcipher_set_reqsize(tfm, sizeof(struct cts_cbc_req_ctx));
+@@ -251,22 +269,12 @@ static int cts_cbc_encrypt(struct skcipher_request *req)
+ 	}
+ 
+ 	if (cbc_blocks > 0) {
+-		unsigned int blocks;
+-
+ 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
+ 					   cbc_blocks * AES_BLOCK_SIZE,
+ 					   req->iv);
+ 
+-		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
+-
+-		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
+-			kernel_neon_begin();
+-			aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-					ctx->key_enc, rounds, blocks, walk.iv);
+-			kernel_neon_end();
+-			err = skcipher_walk_done(&walk,
+-						 walk.nbytes % AES_BLOCK_SIZE);
+-		}
++		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
++		      cbc_encrypt_walk(&rctx->subreq, &walk);
+ 		if (err)
+ 			return err;
+ 
+@@ -316,22 +324,12 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
+ 	}
+ 
+ 	if (cbc_blocks > 0) {
+-		unsigned int blocks;
+-
+ 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
+ 					   cbc_blocks * AES_BLOCK_SIZE,
+ 					   req->iv);
+ 
+-		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
+-
+-		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
+-			kernel_neon_begin();
+-			aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
+-					ctx->key_dec, rounds, blocks, walk.iv);
+-			kernel_neon_end();
+-			err = skcipher_walk_done(&walk,
+-						 walk.nbytes % AES_BLOCK_SIZE);
+-		}
++		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
++		      cbc_decrypt_walk(&rctx->subreq, &walk);
+ 		if (err)
+ 			return err;
+ 
 -- 
-2.22.0.770.g0f2c4a37fd-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.17.1
