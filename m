@@ -1,52 +1,98 @@
-Return-Path: <SRS0=skfi=WQ=mit.edu=tytso@kernel.org>
-Date: Tue, 20 Aug 2019 12:25:10 -0400
-From: "Theodore Y. Ts'o" <tytso@mit.edu>
-Subject: Re: [PATCH V4 5/8] f2fs: Use read_callbacks for decrypting file data
-Message-ID: <20190820162510.GC10232@mit.edu>
+Return-Path: <SRS0=9E8J=WQ=huawei.com=yuchao0@kernel.org>
+Subject: Re: [f2fs-dev] [PATCH V4 5/8] f2fs: Use read_callbacks for decrypting
+ file data
 References: <20190816061804.14840-1-chandan@linux.ibm.com>
  <20190816061804.14840-6-chandan@linux.ibm.com>
- <1652707.8YmLLlegLt@localhost.localdomain>
- <20190820051236.GE159846@architecture4>
+ <bb3dc624-1249-2418-f9da-93da8c11e7f5@kernel.org>
+ <20104514.oSSJcvNEEM@localhost.localdomain>
+From: Chao Yu <yuchao0@huawei.com>
+Message-ID: <c4a16ead-bb85-b7db-948e-5ebe7bc4431d@huawei.com>
+Date: Tue, 20 Aug 2019 15:43:14 +0800
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20190820051236.GE159846@architecture4>
-To: Gao Xiang <gaoxiang25@huawei.com>
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, ebiggers@kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, chandanrmail@gmail.com, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+In-Reply-To: <20104514.oSSJcvNEEM@localhost.localdomain>
+Content-Type: text/plain; charset="windows-1252"
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+To: Chandan Rajendra <chandan@linux.ibm.com>, Chao Yu <chao@kernel.org>
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, hch@infradead.org, tytso@mit.edu, ebiggers@kernel.org, adilger.kernel@dilger.ca, chandanrmail@gmail.com, jaegeuk@kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Aug 20, 2019 at 01:12:36PM +0800, Gao Xiang wrote:
-> Add a word, I have some little concern about post read procession order
-> a bit as I mentioned before, because I'd like to move common EROFS
-> decompression code out in the future as well for other fses to use
-> after we think it's mature enough.
+On 2019/8/19 21:33, Chandan Rajendra wrote:
+> On Sunday, August 18, 2019 7:15:42 PM IST Chao Yu wrote:
+>> Hi Chandan,
+>>
+>> On 2019-8-16 14:18, Chandan Rajendra wrote:
+>>> F2FS has a copy of "post read processing" code using which encrypted
+>>> file data is decrypted. This commit replaces it to make use of the
+>>> generic read_callbacks facility.
+>>
+>> I remember that previously Jaegeuk had mentioned f2fs will support compression
+>> later, and it needs to reuse 'post read processing' fwk.
+>>
+>> There is very initial version of compression feature in below link:
+>>
+>> https://git.kernel.org/pub/scm/linux/kernel/git/chao/linux.git/log/?h=compression
+>>
+>> So my concern is how can we uplift the most common parts of this fwk into vfs,
+>> and meanwhile keeping the ability and flexibility when introducing private
+>> feature/step in specified filesytem(now f2fs)?
+>>
+>> According to current f2fs compression's requirement, maybe we can expand to
+>>
+>> - support callback to let filesystem set the function for the flow in
+>> decompression/verity/decryption step.
+>> - support to use individual/common workqueue according the parameter.
+>>
+>> Any thoughts?
+>>
 > 
-> It seems the current code mainly addresses eliminating duplicated code,
-> therefore I have no idea about that...
+> Hi,
+> 
+> F2FS can be made to use fscrypt's queue for decryption and hence can reuse
+> "read callbacks" code for decrypting data.
+> 
+> For decompression, we could have a STEP_MISC where we invoke a FS provided
+> callback function for FS specific post read processing? 
+> 
+> Something like the following can be implemented in read_callbacks(),
+> 	  case STEP_MISC:
+> 		  if (ctx->enabled_steps & (1 << STEP_MISC)) {
+> 			  /*
+> 			    ctx->fs_misc() must process bio in a workqueue
+> 			    and later invoke read_callbacks() with
+> 			    bio->bi_private's value as an argument.
+> 			  */
+> 			  ctx->fs_misc(ctx->bio);
+> 			  return;
+> 		  }
+> 		  ctx->cur_step++;
+> 
+> The fs_misc() callback can be passed in by the filesystem when invoking
+> read_callbacks_setup_bio().
 
-Actually, we should chat.  I was actually thinking about "borrowing"
-code from erofs to provide ext4-specific compression.  I was really
-impressed with the efficiency goals in the erofs design[1] when I
-reviewed the Usenix ATC paper, and as the saying goes, the best
-artists know how to steal from the best.  :-)
+Hi,
 
-[1] https://www.usenix.org/conference/atc19/presentation/gao
+Yes, something like this, can we just use STEP_DECOMPRESS and fs_decompress(),
+not sure, I doubt this interface may has potential user which has compression
+feature.
 
-My original specific thinking was to do code reuse by copy and paste,
-simply because it was simpler, and I have limited time to work on it.
-But if you are interested in making the erofs pipeline reusable by
-other file systems, and have the time to do the necessary code
-refactoring, I'd love to work with you on that.
+One more concern is that to avoid more context switch, maybe we can merge all
+background works into one workqueue if there is no conflict when call wants to.
 
-It should be noted that the f2fs developers have been working on their
-own compression scheme that was going to be f2fs-specific, unlike the
-file system generic approach used with fsverity and fscrypt.
+static void bio_post_read_processing(struct bio_post_read_ctx *ctx)
+ {
+	switch (++ctx->cur_step) {
+	case STEP_DECRYPT:
+		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
+...
+			if (ctx->separated_wq)
+				return;
+		}
+		ctx->cur_step++;
+		/* fall-through */
+	case STEP_DECOMPRESS:
+...
+	default:
+		__read_end_io(ctx->bio);
 
-My expectation is that we will need to modify the read pipeling code
-to support compression.  That's true whether we are looking at the
-existing file system-specific code used by ext4 and f2fs or in some
-combined work such as what Chandan has proposed.
-
-Cheers,
-
-					- Ted
+> 
