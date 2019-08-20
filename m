@@ -1,55 +1,51 @@
 Return-Path: <SRS0=skfi=WQ=mit.edu=tytso@kernel.org>
-Date: Tue, 20 Aug 2019 12:38:37 -0400
+Date: Tue, 20 Aug 2019 12:25:10 -0400
 From: "Theodore Y. Ts'o" <tytso@mit.edu>
 Subject: Re: [PATCH V4 5/8] f2fs: Use read_callbacks for decrypting file data
-Message-ID: <20190820163837.GD10232@mit.edu>
+Message-ID: <20190820162510.GC10232@mit.edu>
 References: <20190816061804.14840-1-chandan@linux.ibm.com>
  <20190816061804.14840-6-chandan@linux.ibm.com>
  <1652707.8YmLLlegLt@localhost.localdomain>
+ <20190820051236.GE159846@architecture4>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1652707.8YmLLlegLt@localhost.localdomain>
-To: Chandan Rajendra <chandan@linux.ibm.com>
-Cc: ebiggers@kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, chandanrmail@gmail.com, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+In-Reply-To: <20190820051236.GE159846@architecture4>
+To: Gao Xiang <gaoxiang25@huawei.com>
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, ebiggers@kernel.org, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org, chandanrmail@gmail.com, adilger.kernel@dilger.ca, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Tue, Aug 20, 2019 at 10:35:29AM +0530, Chandan Rajendra wrote:
-> Looks like F2FS requires a lot more flexiblity than what can be offered by
-> read callbacks i.e.
+On Tue, Aug 20, 2019 at 01:12:36PM +0800, Gao Xiang wrote:
+> Add a word, I have some little concern about post read procession order
+> a bit as I mentioned before, because I'd like to move common EROFS
+> decompression code out in the future as well for other fses to use
+> after we think it's mature enough.
 > 
-> 1. F2FS wants to make use of its own workqueue for decryption, verity and
->    decompression.
-> 2. F2FS' decompression code is not an FS independent entity like fscrypt and
->    fsverity. Hence they would need Filesystem specific callback functions to
->    be invoked from "read callbacks". 
-> 
-> Hence I would suggest that we should drop F2FS changes made in this
-> patchset. Please let me know your thoughts on this.
+> It seems the current code mainly addresses eliminating duplicated code,
+> therefore I have no idea about that...
 
-That's probably the best way to go for now.  My one concern is that it
-means that only ext4 will be using your framework.  I could imagine
-that some people might argue that should just move the callback scheme
-into ext4 code as opposed to leaving it in fscrypt --- at least until
-we can find other file systems where we can show that it will be
-useful for those other file systems.
+Actually, we should chat.  I was actually thinking about "borrowing"
+code from erofs to provide ext4-specific compression.  I was really
+impressed with the efficiency goals in the erofs design[1] when I
+reviewed the Usenix ATC paper, and as the saying goes, the best
+artists know how to steal from the best.  :-)
 
-(Perhaps a useful experiment would be to have someone implement patches
-to support fscrypt and fsverity in ext2 --- the patch might or might
-not be accepted for upstream inclusion, but it would be useful to
-demonstrate how easy it is to add fscrypt and fsverity.)
+[1] https://www.usenix.org/conference/atc19/presentation/gao
 
-The other thing to consider is that there has been some discussion
-about adding generalized support for I/O submission to the iomap
-library.  It might be that if that work is accepted, support for
-fscrypt and fsverity would be a requirement for ext4 to use that
-portion of iomap's functionality.  So in that eventuality, it might be
-that we'll want to move your read callbacks code into iomap, or we'll
-need to rework the read callbacks code so it can work with iomap.
+My original specific thinking was to do code reuse by copy and paste,
+simply because it was simpler, and I have limited time to work on it.
+But if you are interested in making the erofs pipeline reusable by
+other file systems, and have the time to do the necessary code
+refactoring, I'd love to work with you on that.
 
-But this is all work for the future.  I'm a firm believe that the
-perfect should not be the enemy of the good, and that none of this
-should be a fundamental obstacle in having your code upstream.
+It should be noted that the f2fs developers have been working on their
+own compression scheme that was going to be f2fs-specific, unlike the
+file system generic approach used with fsverity and fscrypt.
+
+My expectation is that we will need to modify the read pipeling code
+to support compression.  That's true whether we are looking at the
+existing file system-specific code used by ext4 and f2fs or in some
+combined work such as what Chandan has proposed.
 
 Cheers,
 
