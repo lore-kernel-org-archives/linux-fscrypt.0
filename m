@@ -1,178 +1,27 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Thu, 15 Aug 2019 22:28:57 +0300
-Message-Id: <20190815192858.28125-4-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190815192858.28125-1-ard.biesheuvel@linaro.org>
-References: <20190815192858.28125-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v12 3/4] crypto: arm64/aes-cts-cbc - factor out
-	CBC en/decryption of a walk
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Return-Path: <SRS0=BUBk=WR=gondor.apana.org.au=herbert@kernel.org>
+Date: Wed, 21 Aug 2019 18:17:00 +1000
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Subject: Re: [PATCH 6/9] dm crypt: support diskcipher
+Message-ID: <20190821081700.GA23138@gondor.apana.org.au>
+References: <CGME20190821075742epcas2p4b9104e8249067c048d4050f2888da0a9@epcas2p4.samsung.com>
+ <001b01d557f6$1c49fd40$54ddf7c0$@samsung.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <001b01d557f6$1c49fd40$54ddf7c0$@samsung.com>
+To: "boojin.kim" <boojin.kim@samsung.com>
+Cc: "'David S. Miller'" <davem@davemloft.net>, 'Eric Biggers' <ebiggers@kernel.org>, "'Theodore Y. Ts'o'" <tytso@mit.edu>, 'Chao Yu' <chao@kernel.org>, 'Jaegeuk Kim' <jaegeuk@kernel.org>, 'Andreas Dilger' <adilger.kernel@dilger.ca>, dm-devel@redhat.com, 'Mike Snitzer' <snitzer@redhat.com>, 'Alasdair Kergon' <agk@redhat.com>, 'Jens Axboe' <axboe@kernel.dk>, 'Krzysztof Kozlowski' <krzk@kernel.org>, 'Kukjin Kim' <kgene@kernel.org>, 'Jaehoon Chung' <jh80.chung@samsung.com>, 'Ulf Hansson' <ulf.hansson@linaro.org>, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-mmc@vger.kernel.org, linux-samsung-soc@vger.kernel.org, linux-block@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The plain CBC driver and the CTS one share some code that iterates over
-a scatterwalk and invokes the CBC asm code to do the processing. The
-upcoming ESSIV/CBC mode will clone that pattern for the third time, so
-let's factor it out first.
+On Wed, Aug 21, 2019 at 04:57:41PM +0900, boojin.kim wrote:
+>
+> Can you tell me which patch you mentioned? Is this?
+> https://patches.linaro.org/project/linux-crypto/list/?series=22762
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm64/crypto/aes-glue.c | 82 ++++++++++----------
- 1 file changed, 40 insertions(+), 42 deletions(-)
+Yes this is the one.
 
-diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
-index 55d6d4838708..23abf335f1ee 100644
---- a/arch/arm64/crypto/aes-glue.c
-+++ b/arch/arm64/crypto/aes-glue.c
-@@ -186,46 +186,64 @@ static int ecb_decrypt(struct skcipher_request *req)
- 	return err;
- }
- 
--static int cbc_encrypt(struct skcipher_request *req)
-+static int cbc_encrypt_walk(struct skcipher_request *req,
-+			    struct skcipher_walk *walk)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
- 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
--	int err, rounds = 6 + ctx->key_length / 4;
--	struct skcipher_walk walk;
-+	int err = 0, rounds = 6 + ctx->key_length / 4;
- 	unsigned int blocks;
- 
--	err = skcipher_walk_virt(&walk, req, false);
--
--	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
-+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
- 		kernel_neon_begin();
--		aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
--				ctx->key_enc, rounds, blocks, walk.iv);
-+		aes_cbc_encrypt(walk->dst.virt.addr, walk->src.virt.addr,
-+				ctx->key_enc, rounds, blocks, walk->iv);
- 		kernel_neon_end();
--		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
- 	}
- 	return err;
- }
- 
--static int cbc_decrypt(struct skcipher_request *req)
-+static int cbc_encrypt(struct skcipher_request *req)
- {
--	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
--	int err, rounds = 6 + ctx->key_length / 4;
- 	struct skcipher_walk walk;
--	unsigned int blocks;
-+	int err;
- 
- 	err = skcipher_walk_virt(&walk, req, false);
-+	if (err)
-+		return err;
-+	return cbc_encrypt_walk(req, &walk);
-+}
- 
--	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
-+static int cbc_decrypt_walk(struct skcipher_request *req,
-+			    struct skcipher_walk *walk)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err = 0, rounds = 6 + ctx->key_length / 4;
-+	unsigned int blocks;
-+
-+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
- 		kernel_neon_begin();
--		aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
--				ctx->key_dec, rounds, blocks, walk.iv);
-+		aes_cbc_decrypt(walk->dst.virt.addr, walk->src.virt.addr,
-+				ctx->key_dec, rounds, blocks, walk->iv);
- 		kernel_neon_end();
--		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
- 	}
- 	return err;
- }
- 
-+static int cbc_decrypt(struct skcipher_request *req)
-+{
-+	struct skcipher_walk walk;
-+	int err;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+	if (err)
-+		return err;
-+	return cbc_decrypt_walk(req, &walk);
-+}
-+
- static int cts_cbc_init_tfm(struct crypto_skcipher *tfm)
- {
- 	crypto_skcipher_set_reqsize(tfm, sizeof(struct cts_cbc_req_ctx));
-@@ -251,22 +269,12 @@ static int cts_cbc_encrypt(struct skcipher_request *req)
- 	}
- 
- 	if (cbc_blocks > 0) {
--		unsigned int blocks;
--
- 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
- 					   cbc_blocks * AES_BLOCK_SIZE,
- 					   req->iv);
- 
--		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
--
--		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
--			kernel_neon_begin();
--			aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
--					ctx->key_enc, rounds, blocks, walk.iv);
--			kernel_neon_end();
--			err = skcipher_walk_done(&walk,
--						 walk.nbytes % AES_BLOCK_SIZE);
--		}
-+		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
-+		      cbc_encrypt_walk(&rctx->subreq, &walk);
- 		if (err)
- 			return err;
- 
-@@ -316,22 +324,12 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
- 	}
- 
- 	if (cbc_blocks > 0) {
--		unsigned int blocks;
--
- 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
- 					   cbc_blocks * AES_BLOCK_SIZE,
- 					   req->iv);
- 
--		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
--
--		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
--			kernel_neon_begin();
--			aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
--					ctx->key_dec, rounds, blocks, walk.iv);
--			kernel_neon_end();
--			err = skcipher_walk_done(&walk,
--						 walk.nbytes % AES_BLOCK_SIZE);
--		}
-+		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
-+		      cbc_decrypt_walk(&rctx->subreq, &walk);
- 		if (err)
- 			return err;
- 
+Cheers,
 -- 
-2.17.1
-
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
