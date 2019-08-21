@@ -1,1664 +1,692 @@
-Return-Path: <SRS0=A8Az=WR=samsung.com=boojin.kim@kernel.org>
-From: "boojin.kim" <boojin.kim@samsung.com>
-Subject: [PATCH 2/9] crypto: fmp: add Flash Memory Protector driver
-Date: Wed, 21 Aug 2019 15:42:15 +0900
-Message-ID: <003e01d557eb$921d4320$b657c960$@samsung.com>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-Content-Language: ko
-Content-Type: text/plain; charset="utf-8"
-References: <CGME20190821064216epcas2p37df63284df4be04ba2f51b7f7b4b270b@epcas2p3.samsung.com>
-To: 'Herbert Xu' <herbert@gondor.apana.org.au>, "'David S. Miller'" <davem@davemloft.net>, linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org
-Cc: 'Eric Biggers' <ebiggers@kernel.org>, "'Theodore Y. Ts'o'  <tytso@mit.edu>,  'Chao Yu'  <chao@kernel.org>,  'Jaegeuk Kim' " <jaegeuk@kernel.org>, 'Andreas Dilger' <adilger.kernel@dilger.ca>'Theodore Ts'o' <tytso@mit.edu>, dm-devel@redhat.com, 'Mike Snitzer' <snitzer@redhat.com>, 'Alasdair Kergon' <agk@redhat.com>, 'Jens Axboe' <axboe@kernel.dk>, 'Krzysztof Kozlowski' <krzk@kernel.org>, 'Kukjin Kim' <kgene@kernel.org>, 'Jaehoon Chung' <jh80.chung@samsung.com>, linux-fscrypt@vger.kernel.org, linux-mmc@vger.kernel.org, linux-samsung-soc@vger.kernel.org, linux-block@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.netlinux-samsung-soc, linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail-qk1-f201.google.com ([209.85.222.201]:39395 "EHLO
+        mail-qk1-f201.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726990AbfHUH5Z (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 21 Aug 2019 03:57:25 -0400
+Received: by mail-qk1-f201.google.com with SMTP id x1so1278460qkn.6
+        for <linux-fscrypt@vger.kernel.org>; Wed, 21 Aug 2019 00:57:24 -0700 (PDT)
+Date: Wed, 21 Aug 2019 00:57:08 -0700
+In-Reply-To: <20190821075714.65140-1-satyat@google.com>
+Message-Id: <20190821075714.65140-3-satyat@google.com>
+Mime-Version: 1.0
+References: <20190821075714.65140-1-satyat@google.com>
+Subject: [PATCH v4 2/8] block: Add encryption context to struct bio
+From: Satya Tangirala <satyat@google.com>
+Content-Type: text/plain; charset="UTF-8"
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Cc: Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Kim Boojin <boojin.kim@samsung.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Exynos has FMP(Flash Memory Protector) H/W to protect data stored
-on storage device.
-FMP interworks with the storage controller to encrypt a data before writing
-to the storage device and decrypt the data after reading from storage
-device.
+We must have some way of letting a storage device driver know what
+encryption context it should use for en/decrypting a request. However,
+it's the filesystem/fscrypt that knows about and manages encryption
+contexts. As such, when the filesystem layer submits a bio to the block
+layer, and this bio eventually reaches a device driver with support for
+inline encryption, the device driver will need to have been told the
+encryption context for that bio.
 
-FMP driver is registered with a cipher algorithm of diskcipher.
-FMP driver writes crypto information in the descriptor of the storage
-controller.
-And then, FMP H/W encrypts plan-text with every write I/O
-and decrypts cipher-text with every read I/O.
+We want to communicate the encryption context from the filesystem layer
+to the storage device along with the bio, when the bio is submitted to the
+block layer. To do this, we add a struct bio_crypt_ctx to struct bio, which
+can represent an encryption context (note that we can't use the bi_private
+field in struct bio to do this because that field does not function to pass
+information across layers in the storage stack). We also introduce various
+functions to manipulate the bio_crypt_ctx and make the bio/request merging
+logic aware of the bio_crypt_ctx.
 
-FMP is divided into three blocks.
-The first is fmp driver to control FMP H/W.
-The second is the fmp-crypt that is responsible for the interface with
-the diskcipher and storage driver.
-The third is the fmp-test to test the fmp driver through testmgr of
-crypto API.
-
-Cc: Herbert Xu <herbert@gondor.apana.org.au>
-Cc: "David S. Miller" <davem@davemloft.net>
-Signed-off-by: Boojin Kim <boojin.kim@samsung.com>
+Signed-off-by: Satya Tangirala <satyat@google.com>
 ---
- drivers/crypto/Kconfig         |   2 +
- drivers/crypto/Makefile        |   1 +
- drivers/crypto/fmp/Kconfig     |  13 +
- drivers/crypto/fmp/Makefile    |   1 +
- drivers/crypto/fmp/fmp.c       | 595
-+++++++++++++++++++++++++++++++++++++++++
- drivers/crypto/fmp/fmp_crypt.c | 243 +++++++++++++++++
- drivers/crypto/fmp/fmp_test.c  | 310 +++++++++++++++++++++
- drivers/crypto/fmp/fmp_test.h  |  30 +++
- include/crypto/fmp.h           | 324 ++++++++++++++++++++++
- 9 files changed, 1519 insertions(+)
- create mode 100644 drivers/crypto/fmp/Kconfig
- create mode 100644 drivers/crypto/fmp/Makefile
- create mode 100644 drivers/crypto/fmp/fmp.c
- create mode 100644 drivers/crypto/fmp/fmp_crypt.c
- create mode 100644 drivers/crypto/fmp/fmp_test.c
- create mode 100644 drivers/crypto/fmp/fmp_test.h
- create mode 100644 include/crypto/fmp.h
+ block/Makefile                |   2 +-
+ block/bio-crypt-ctx.c         | 137 +++++++++++++++++++++
+ block/bio.c                   |  18 +--
+ block/blk-core.c              |   3 +
+ block/blk-merge.c             |  35 +++++-
+ block/bounce.c                |  15 +--
+ drivers/md/dm.c               |  15 ++-
+ include/linux/bio-crypt-ctx.h | 226 ++++++++++++++++++++++++++++++++++
+ include/linux/bio.h           |  13 +-
+ include/linux/blk_types.h     |   6 +
+ 10 files changed, 433 insertions(+), 37 deletions(-)
+ create mode 100644 block/bio-crypt-ctx.c
+ create mode 100644 include/linux/bio-crypt-ctx.h
 
-diff --git a/drivers/crypto/Kconfig b/drivers/crypto/Kconfig
-index b8c5087..43b8cc4 100644
---- a/drivers/crypto/Kconfig
-+++ b/drivers/crypto/Kconfig
-@@ -785,4 +785,6 @@ config CRYPTO_DEV_CCREE
- 
- source "drivers/crypto/hisilicon/Kconfig"
- 
-+source "drivers/crypto/fmp/Kconfig"
-+
- endif # CRYPTO_HW
-diff --git a/drivers/crypto/Makefile b/drivers/crypto/Makefile
-index afc4753..d43cf7a 100644
---- a/drivers/crypto/Makefile
-+++ b/drivers/crypto/Makefile
-@@ -48,3 +48,4 @@ obj-$(CONFIG_CRYPTO_DEV_BCM_SPU) += bcm/
- obj-$(CONFIG_CRYPTO_DEV_SAFEXCEL) += inside-secure/
- obj-$(CONFIG_CRYPTO_DEV_ARTPEC6) += axis/
- obj-y += hisilicon/
-+obj-$(CONFIG_EXYNOS_FMP) += fmp/
-diff --git a/drivers/crypto/fmp/Kconfig b/drivers/crypto/fmp/Kconfig
+diff --git a/block/Makefile b/block/Makefile
+index a72abd61b220..4147ffa63631 100644
+--- a/block/Makefile
++++ b/block/Makefile
+@@ -35,4 +35,4 @@ obj-$(CONFIG_BLK_DEBUG_FS)	+= blk-mq-debugfs.o
+ obj-$(CONFIG_BLK_DEBUG_FS_ZONED)+= blk-mq-debugfs-zoned.o
+ obj-$(CONFIG_BLK_SED_OPAL)	+= sed-opal.o
+ obj-$(CONFIG_BLK_PM)		+= blk-pm.o
+-obj-$(CONFIG_BLK_INLINE_ENCRYPTION)	+= keyslot-manager.o
++obj-$(CONFIG_BLK_INLINE_ENCRYPTION)	+= keyslot-manager.o bio-crypt-ctx.o
+diff --git a/block/bio-crypt-ctx.c b/block/bio-crypt-ctx.c
 new file mode 100644
-index 0000000..69cdb53
+index 000000000000..aa3571f72ee7
 --- /dev/null
-+++ b/drivers/crypto/fmp/Kconfig
-@@ -0,0 +1,13 @@
-+#
-+# SMU/FMP controller drivers
-+#
-+
-+config EXYNOS_FMP
-+	tristate "Samsung EXYNOS FMP driver"
-+	depends on CRYPTO_DISKCIPHER && MMC_DW_EXYNOS_FMP
-+	help
-+	  Say yes here to build support for FMP (Flash Memory Protector)
-+	  to encrypt and decrypt userdata using inline H/W crypto module.
-+	  If unsure, say N.
-+
-+	  To compile this driver as a module, choose M here
-diff --git a/drivers/crypto/fmp/Makefile b/drivers/crypto/fmp/Makefile
-new file mode 100644
-index 0000000..5328947
---- /dev/null
-+++ b/drivers/crypto/fmp/Makefile
-@@ -0,0 +1 @@
-+obj-$(CONFIG_EXYNOS_FMP) += fmp_crypt.o fmp.o fmp_test.o
-diff --git a/drivers/crypto/fmp/fmp.c b/drivers/crypto/fmp/fmp.c
-new file mode 100644
-index 0000000..475d471
---- /dev/null
-+++ b/drivers/crypto/fmp/fmp.c
-@@ -0,0 +1,595 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
++++ b/block/bio-crypt-ctx.c
+@@ -0,0 +1,137 @@
++// SPDX-License-Identifier: GPL-2.0
 +/*
-+ * Exynos FMP driver
-+ *
-+ * Copyright (C) 2015 Samsung Electronics Co., Ltd.
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License as published by
-+ * the Free Software Foundation; either version 2 of the License, or
-+ * (at your option) any later version.
++ * Copyright 2019 Google LLC
 + */
 +
-+#include <linux/module.h>
-+#include <linux/platform_device.h>
-+#include <linux/of.h>
-+#include <linux/of_device.h>
-+#include <linux/fs.h>
-+#include <linux/slab.h>
-+#include <linux/smc.h>
-+#include <asm/cacheflush.h>
-+#include <linux/crypto.h>
-+#include <linux/scatterlist.h>
-+#include <crypto/fmp.h>
-+
-+#include "fmp_test.h"
-+
-+#define WORD_SIZE 4
-+#define FMP_IV_MAX_IDX (FMP_IV_SIZE_16 / WORD_SIZE)
-+
-+#ifndef __SMC_H__
-+#define exynos_smc(a, b, c, d) (-EINVAL)
-+#endif
-+
-+#define byte2word(b0, b1, b2, b3)       \
-+			(((unsigned int)(b0) << 24) | \
-+			((unsigned int)(b1) << 16) | \
-+			((unsigned int)(b2) << 8) | (b3))
-+#define get_word(x, c)  byte2word(((unsigned char *)(x) + 4 * (c))[0], \
-+				((unsigned char *)(x) + 4 * (c))[1], \
-+				((unsigned char *)(x) + 4 * (c))[2], \
-+				((unsigned char *)(x) + 4 * (c))[3])
-+
-+static inline void dump_ci(struct fmp_crypto_info *c)
-+{
-+	if (c) {
-+		pr_info
-+		    ("%s: crypto:%p algo:%d enc:%d key_size:%d key:%p\n",
-+		     __func__, c, c->algo_mode, c->enc_mode,
-+		     c->key_size, c->key);
-+		if (c->enc_mode == EXYNOS_FMP_FILE_ENC)
-+			print_hex_dump(KERN_CONT, "key:",
-+				       DUMP_PREFIX_OFFSET, 16, 1, c->key,
-+				       sizeof(c->key), false);
-+	}
-+}
-+
-+static inline void dump_table(struct fmp_table_setting *table)
-+{
-+	print_hex_dump(KERN_CONT, "dump:", DUMP_PREFIX_OFFSET, 16, 1,
-+		       table, sizeof(struct fmp_table_setting), false);
-+}
-+
-+static inline int is_set_fmp_disk_key(struct exynos_fmp *fmp)
-+{
-+	return (fmp->status_disk_key == KEY_SET) ? TRUE : FALSE;
-+}
-+
-+static inline int is_stored_fmp_disk_key(struct exynos_fmp *fmp)
-+{
-+	return (fmp->status_disk_key == KEY_STORED) ? TRUE : FALSE;
-+}
-+
-+static inline int is_supported_ivsize(u32 ivlen)
-+{
-+	if (ivlen && (ivlen <= FMP_IV_SIZE_16))
-+		return TRUE;
-+	else
-+		return FALSE;
-+}
-+
-+static inline int check_aes_xts_size(struct fmp_table_setting *table,
-+				     bool cmdq_enabled)
-+{
-+	int size;
-+
-+	if (cmdq_enabled)
-+		size = GET_CMDQ_LENGTH(table);
-+	else
-+		size = GET_LENGTH(table);
-+	return (size > MAX_AES_XTS_TRANSFER_SIZE) ? size : 0;
-+}
-+
-+static inline int check_aes_xts_key(char *key,
-+				    enum fmp_crypto_key_size key_size)
-+{
-+	char *enckey, *twkey;
-+
-+	enckey = key;
-+	twkey = key + key_size;
-+	return (memcmp(enckey, twkey, key_size)) ? 0 : -1;
-+}
-+
-+int fmplib_set_algo_mode(struct fmp_table_setting *table,
-+			 struct fmp_crypto_info *crypto, bool cmdq_enabled)
-+{
-+	int ret;
-+	enum fmp_crypto_algo_mode algo_mode = crypto->algo_mode;
-+
-+	if (algo_mode == EXYNOS_FMP_ALGO_MODE_AES_XTS) {
-+		ret = check_aes_xts_size(table, cmdq_enabled);
-+		if (ret) {
-+			pr_err("%s: Fail FMP XTS due to invalid size(%d)\n",
-+			       __func__, ret);
-+			return -EINVAL;
-+		}
-+	}
-+
-+	switch (crypto->enc_mode) {
-+	case EXYNOS_FMP_FILE_ENC:
-+		if (cmdq_enabled)
-+			SET_CMDQ_FAS(table, algo_mode);
-+		else
-+			SET_FAS(table, algo_mode);
-+		break;
-+	case EXYNOS_FMP_DISK_ENC:
-+		if (cmdq_enabled)
-+			SET_CMDQ_DAS(table, algo_mode);
-+		else
-+			SET_DAS(table, algo_mode);
-+		break;
-+	default:
-+		pr_err("%s: Invalid fmp enc mode %d\n", __func__,
-+		       crypto->enc_mode);
-+		return -EINVAL;
-+	}
-+	return 0;
-+}
-+
-+static int fmplib_set_file_key(struct fmp_table_setting *table,
-+			struct fmp_crypto_info *crypto)
-+{
-+	enum fmp_crypto_algo_mode algo_mode = crypto->algo_mode;
-+	enum fmp_crypto_key_size key_size = crypto->fmp_key_size;
-+	char *key = crypto->key;
-+	int idx, max;
-+
-+	if (!key || (crypto->enc_mode != EXYNOS_FMP_FILE_ENC) ||
-+		((key_size != EXYNOS_FMP_KEY_SIZE_16) &&
-+		 (key_size != EXYNOS_FMP_KEY_SIZE_32))) {
-+		pr_err("%s: Invalid crypto:%p key:%p key_size:%d
-enc_mode:%d\n",
-+		       __func__, crypto, key, key_size, crypto->enc_mode);
-+		return -EINVAL;
-+	}
-+
-+	if ((algo_mode == EXYNOS_FMP_ALGO_MODE_AES_XTS)
-+	    && check_aes_xts_key(key, key_size)) {
-+		pr_err("%s: Fail FMP XTS due to the same enc and twkey\n",
-+		       __func__);
-+		return -EINVAL;
-+	}
-+
-+	if (algo_mode == EXYNOS_FMP_ALGO_MODE_AES_CBC) {
-+		max = key_size / WORD_SIZE;
-+		for (idx = 0; idx < max; idx++)
-+			*(&table->file_enckey0 + idx) =
-+			    get_word(key, max - (idx + 1));
-+	} else if (algo_mode == EXYNOS_FMP_ALGO_MODE_AES_XTS) {
-+		key_size *= 2;
-+		max = key_size / WORD_SIZE;
-+		for (idx = 0; idx < (max / 2); idx++)
-+			*(&table->file_enckey0 + idx) =
-+			    get_word(key, (max / 2) - (idx + 1));
-+		for (idx = 0; idx < (max / 2); idx++)
-+			*(&table->file_twkey0 + idx) =
-+			    get_word(key, max - (idx + 1));
-+	}
-+	return 0;
-+}
-+
-+static int fmplib_set_key_size(struct fmp_table_setting *table,
-+			struct fmp_crypto_info *crypto, bool cmdq_enabled)
-+{
-+	enum fmp_crypto_key_size key_size;
-+
-+	key_size = crypto->fmp_key_size;
-+
-+	if ((key_size != EXYNOS_FMP_KEY_SIZE_16) &&
-+		(key_size != EXYNOS_FMP_KEY_SIZE_32)) {
-+		pr_err("%s: Invalid keysize %d\n", __func__, key_size);
-+		return -EINVAL;
-+	}
-+
-+	switch (crypto->enc_mode) {
-+	case EXYNOS_FMP_FILE_ENC:
-+		if (cmdq_enabled)
-+			SET_CMDQ_KEYLEN(table,
-+					(key_size ==
-+					 FMP_KEY_SIZE_32) ? FKL_CMDQ : 0);
-+		else
-+			SET_KEYLEN(table,
-+				   (key_size == FMP_KEY_SIZE_32) ? FKL : 0);
-+		break;
-+	case EXYNOS_FMP_DISK_ENC:
-+		if (cmdq_enabled)
-+			SET_CMDQ_KEYLEN(table,
-+					(key_size ==
-+					 FMP_KEY_SIZE_32) ? DKL_CMDQ : 0);
-+		else
-+			SET_KEYLEN(table,
-+				   (key_size == FMP_KEY_SIZE_32) ? DKL : 0);
-+		break;
-+	default:
-+		pr_err("%s: Invalid fmp enc mode %d\n", __func__,
-+		       crypto->enc_mode);
-+		return -EINVAL;
-+	}
-+	return 0;
-+}
-+
-+static int fmplib_set_disk_key(struct exynos_fmp *fmp, u8 *key, u32
-key_size)
-+{
-+	int ret;
-+
-+	/* TODO: only set for host0 */
-+	__flush_dcache_area(key, (size_t) FMP_MAX_KEY_SIZE);
-+	ret =
-+	    exynos_smc(SMC_CMD_FMP_DISK_KEY_STORED, 0, virt_to_phys(key),
-+		       key_size);
-+	if (ret) {
-+		pr_err("%s: Fail to set FMP disk key. ret = %d\n", __func__,
-+		       ret);
-+		fmp->status_disk_key = KEY_ERROR;
-+		return -EINVAL;
-+	}
-+	fmp->status_disk_key = KEY_STORED;
-+	return 0;
-+}
-+
-+static int fmplib_clear_disk_key(struct exynos_fmp *fmp)
-+{
-+	int ret;
-+
-+	ret = exynos_smc(SMC_CMD_FMP_DISK_KEY_CLEAR, 0, 0, 0);
-+	if (ret) {
-+		pr_err("%s: Fail to clear FMP disk key. ret = %d\n",
-+		       __func__, ret);
-+		fmp->status_disk_key = KEY_ERROR;
-+		return -EPERM;
-+	}
-+
-+	fmp->status_disk_key = KEY_CLEAR;
-+	return 0;
-+}
-+
-+static int fmplib_set_iv(struct fmp_table_setting *table,
-+		  struct fmp_crypto_info *crypto, u8 *iv)
-+{
-+	int idx;
-+
-+	switch (crypto->enc_mode) {
-+	case EXYNOS_FMP_FILE_ENC:
-+		for (idx = 0; idx < FMP_IV_MAX_IDX; idx++)
-+			*(&table->file_iv0 + idx) =
-+			    get_word(iv, FMP_IV_MAX_IDX - (idx + 1));
-+		break;
-+	case EXYNOS_FMP_DISK_ENC:
-+		for (idx = 0; idx < FMP_IV_MAX_IDX; idx++)
-+			*(&table->disk_iv0 + idx) =
-+			    get_word(iv, FMP_IV_MAX_IDX - (idx + 1));
-+		break;
-+	default:
-+		pr_err("%s: Invalid fmp enc mode %d\n", __func__,
-+		       crypto->enc_mode);
-+		return -EINVAL;
-+	}
-+	return 0;
-+}
-+
-+int exynos_fmp_crypt(struct fmp_crypto_info *ci, void *priv)
-+{
-+	struct exynos_fmp *fmp = ci->ctx;
-+	struct fmp_request *r = priv;
-+	int ret = 0;
-+	u8 iv[FMP_IV_SIZE_16];
-+
-+	if (!r || !fmp) {
-+		pr_err("%s: invalid req:%p, fmp:%p\n", __func__, r, fmp);
-+		return -EINVAL;
-+	}
-+
-+	/* check test mode */
-+	if (ci->algo_mode & EXYNOS_FMP_ALGO_MODE_TEST) {
-+		ci->algo_mode &= EXYNOS_FMP_ALGO_MODE_MASK;
-+		if (!ci->algo_mode)
-+			return 0;
-+
-+		if (!fmp->test_data) {
-+			pr_err("%s: no test_data for test mode\n",
-__func__);
-+			goto out;
-+		}
-+		/* use test manager's iv instead of host driver's iv */
-+		r->iv = fmp->test_data->iv;
-+		r->ivsize = sizeof(fmp->test_data->iv);
-+	}
-+
-+	/* check crypto info & input param */
-+	if (!ci->algo_mode || !is_supported_ivsize(r->ivsize) ||
-+			!r->table || !r->iv) {
-+		dev_err(fmp->dev,
-+			"%s: invalid mode:%d iv:%p ivsize:%d table:%p\n",
-+			__func__, ci->algo_mode, r->iv, r->ivsize,
-r->table);
-+		ret = -EINVAL;
-+		goto out;
-+	}
-+
-+	/* set algo & enc mode into table */
-+	ret = fmplib_set_algo_mode(r->table, ci, r->cmdq_enabled);
-+	if (ret) {
-+		dev_err(fmp->dev, "%s: Fail to set FMP encryption mode\n",
-+			__func__);
-+		ret = -EINVAL;
-+		goto out;
-+	}
-+
-+	/* set key size into table */
-+	switch (ci->enc_mode) {
-+	case EXYNOS_FMP_FILE_ENC:
-+		ret = fmplib_set_file_key(r->table, ci);
-+		if (ret) {
-+			dev_err(fmp->dev, "%s: Fail to set FMP key\n",
-+				__func__);
-+			ret = -EINVAL;
-+			goto out;
-+		}
-+		break;
-+	case EXYNOS_FMP_DISK_ENC:
-+		if (is_stored_fmp_disk_key(fmp)) {
-+			ret = exynos_smc(SMC_CMD_FMP_DISK_KEY_SET, 0, 0, 0);
-+			if (ret) {
-+				dev_err(fmp->dev,
-+					"%s: Fail to set disk key\n",
-__func__);
-+				goto out;
-+			}
-+			fmp->status_disk_key = KEY_SET;
-+		} else if (!is_set_fmp_disk_key(fmp)) {
-+			dev_err(fmp->dev,
-+				"%s: Fail because disk key is clear\n",
-+				__func__);
-+			ret = -EINVAL;
-+			goto out;
-+		}
-+		break;
-+	default:
-+		dev_err(fmp->dev, "%s: Invalid fmp enc mode %d\n", __func__,
-+			ci->enc_mode);
-+		ret = -EINVAL;
-+		goto out;
-+	}
-+
-+	/* set key size into table */
-+	ret = fmplib_set_key_size(r->table, ci, r->cmdq_enabled);
-+	if (ret) {
-+		dev_err(fmp->dev, "%s: Fail to set FMP key size\n",
-__func__);
-+		ret = -EINVAL;
-+		goto out;
-+	}
-+
-+	/* set iv */
-+	memset(iv, 0, FMP_IV_SIZE_16);
-+	memcpy(iv, r->iv, r->ivsize);
-+	ret = fmplib_set_iv(r->table, ci, iv);
-+	if (ret) {
-+		dev_err(fmp->dev, "%s: Fail to set FMP IV\n", __func__);
-+		ret = -EINVAL;
-+		goto out;
-+	}
-+out:
-+	if (ret) {
-+		dump_ci(ci);
-+		if (r && r->table)
-+			dump_table(r->table);
-+	}
-+	return ret;
-+}
-+
-+static inline void fmplib_clear_file_key(struct fmp_table_setting *table)
-+{
-+	memset(&table->file_iv0, 0, sizeof(__le32) * 24);
-+}
-+
-+int exynos_fmp_clear(struct fmp_crypto_info *ci, void *priv)
-+{
-+	struct fmp_request *r = priv;
-+
-+	if (!r) {
-+		pr_err("%s: Invalid input\n", __func__);
-+		return -EINVAL;
-+	}
-+
-+	if (!r->table) {
-+		pr_err("%s: Invalid input table\n", __func__);
-+		return -EINVAL;
-+	}
-+
-+	fmplib_clear_file_key(r->table);
-+	return 0;
-+}
-+
-+int exynos_fmp_setkey(struct fmp_crypto_info *ci, u8 *in_key, u32 keylen,
-+		      bool persistent)
-+{
-+	struct exynos_fmp *fmp = ci->ctx;
-+	int ret = 0;
-+	int keylen_org = keylen;
-+
-+	if (!fmp || !in_key) {
-+		pr_err("%s: invalid input param\n", __func__);
-+		return -EINVAL;
-+	}
-+
-+	/* set key_size & fmp_key_size */
-+	if (ci->algo_mode == EXYNOS_FMP_ALGO_MODE_AES_XTS)
-+		keylen = keylen >> 1;
-+	switch (keylen) {
-+	case FMP_KEY_SIZE_16:
-+		ci->fmp_key_size = EXYNOS_FMP_KEY_SIZE_16;
-+		break;
-+	case FMP_KEY_SIZE_32:
-+		ci->fmp_key_size = EXYNOS_FMP_KEY_SIZE_32;
-+		break;
-+	default:
-+		pr_err("%s: FMP doesn't support key size %d\n", __func__,
-+		       keylen);
-+		return -ENOKEY;
-+	}
-+	ci->key_size = keylen_org;
-+
-+	/* set key */
-+	if (persistent) {
-+		ci->enc_mode = EXYNOS_FMP_DISK_ENC;
-+		ret = fmplib_set_disk_key(fmp, in_key, ci->key_size);
-+		if (ret)
-+			pr_err("%s: Fail to set FMP disk key\n", __func__);
-+	} else {
-+		ci->enc_mode = EXYNOS_FMP_FILE_ENC;
-+		memset(ci->key, 0, sizeof(ci->key));
-+		memcpy(ci->key, in_key, ci->key_size);
-+	}
-+	return ret;
-+}
-+
-+int exynos_fmp_clearkey(struct fmp_crypto_info *ci)
-+{
-+	struct exynos_fmp *fmp = ci->ctx;
-+	int ret = 0;
-+
-+	if (!fmp) {
-+		pr_err("%s: invalid input param\n", __func__);
-+		ret = -EINVAL;
-+		goto out;
-+	}
-+
-+	if (ci->enc_mode == EXYNOS_FMP_DISK_ENC) {
-+		ret = fmplib_clear_disk_key(fmp);
-+		if (ret)
-+			pr_err("%s: fail to clear FMP disk key\n",
-__func__);
-+	} else if (ci->enc_mode == EXYNOS_FMP_FILE_ENC) {
-+		memset(ci->key, 0, sizeof(ci->key));
-+		ci->key_size = 0;
-+	} else {
-+		pr_err("%s: invalid algo mode:%d\n", __func__,
-ci->enc_mode);
-+		ret = -EINVAL;
-+	}
-+out:
-+	return ret;
-+}
-+
-+int exynos_fmp_test_crypt(struct fmp_crypto_info *ci,
-+			const uint8_t *iv, uint32_t ivlen, uint8_t *src,
-+			uint8_t *dst, uint32_t len, bool enc, void *priv)
-+{
-+	struct exynos_fmp *fmp = ci->ctx;
-+	int ret = 0;
-+
-+	if (!fmp || !iv || !src || !dst) {
-+		pr_err("%s: invalid input: fmp:%p, iv:%p, s:%p, d:%p\n",
-+			__func__, fmp, iv, src, dst);
-+		return -EINVAL;
-+	}
-+
-+	/* init fmp test to get test block */
-+	fmp->test_data = fmp_test_init(fmp);
-+	if (!fmp->test_data) {
-+		dev_err(fmp->dev, "%s: fail to initialize fmp test.",
-+			__func__);
-+		goto err;
-+	}
-+
-+	/* setiv */
-+	if (iv && (ivlen <= FMP_IV_SIZE_16)) {
-+		memset(fmp->test_data->iv, 0, FMP_IV_SIZE_16);
-+		memcpy(fmp->test_data->iv, iv, ivlen);
-+	} else {
-+		dev_err(fmp->dev, "%s: fail to set fmp iv. ret(%d)",
-+			__func__, ret);
-+		goto err;
-+	}
-+
-+	/* do crypt: priv: struct crypto_diskcipher */
-+	ret = fmp_test_crypt(fmp, fmp->test_data,
-+		src, dst, len, enc ? ENCRYPT : DECRYPT, priv, ci);
-+	if (ret)
-+		dev_err(fmp->dev, "%s: fail to run fmp test. ret(%d)",
-+			__func__, ret);
-+
-+err:
-+	if (fmp->test_data)
-+		fmp_test_exit(fmp->test_data);
-+	return ret;
-+}
-+
-+int exynos_fmp_smu_abort(int id)
-+{
-+	int ret = 0;
-+
-+	if (id == SMU_ID_MAX)
-+		return 0;
-+
-+	ret = exynos_smc(SMC_CMD_SMU, SMU_ABORT, id, 0);
-+	if (ret)
-+		pr_err("%s: Fail smc call. ret(%d)\n", __func__, ret);
-+
-+	return ret;
-+}
-+
-+#define CFG_DESCTYPE_3 0x3
-+int exynos_fmp_sec_cfg(int fmp_id, int smu_id, bool init)
-+{
-+	int ret = 0;
-+
-+	if (fmp_id != SMU_ID_MAX) {
-+		ret = exynos_smc(SMC_CMD_FMP_SECURITY, 0,
-+				fmp_id, CFG_DESCTYPE_3);
-+		if (ret)
-+			pr_err("%s: Fail smc call for FMP_SECURITY.
-ret(%d)\n",
-+					__func__, ret);
-+	}
-+
-+	if (smu_id != SMU_ID_MAX) {
-+		if (init)
-+			ret = exynos_smc(SMC_CMD_SMU, SMU_INIT, smu_id, 0);
-+		else
-+			ret = exynos_smc(SMC_CMD_FMP_SMU_RESUME, 0, smu_id,
-0);
-+		if (ret)
-+			pr_err("%s: Fail smc call cmd:%d. ret(%d)\n",
-+					__func__, init, ret);
-+	}
-+
-+	return ret;
-+}
-+
-+void *exynos_fmp_init(struct platform_device *pdev)
-+{
-+	struct exynos_fmp *fmp;
-+
-+	if (!pdev) {
-+		pr_err("%s: Invalid platform_device.\n", __func__);
-+		return NULL;
-+	}
-+
-+	fmp = devm_kzalloc(&pdev->dev, sizeof(struct exynos_fmp),
-GFP_KERNEL);
-+	if (!fmp)
-+		return NULL;
-+
-+	fmp->dev = &pdev->dev;
-+	if (!fmp->dev) {
-+		pr_err("%s: Invalid device.\n", __func__);
-+		goto err_dev;
-+	}
-+
-+	/* init disk key status */
-+	fmp->status_disk_key = KEY_CLEAR;
-+
-+	dev_info(fmp->dev, "Exynos FMP Version: %s\n", FMP_DRV_VERSION);
-+	return fmp;
-+
-+err_dev:
-+	kzfree(fmp);
-+	return NULL;
-+}
-+
-+void exynos_fmp_exit(struct exynos_fmp *fmp)
-+{
-+	kzfree(fmp);
-+}
-diff --git a/drivers/crypto/fmp/fmp_crypt.c b/drivers/crypto/fmp/fmp_crypt.c
-new file mode 100644
-index 0000000..78becb5
---- /dev/null
-+++ b/drivers/crypto/fmp/fmp_crypt.c
-@@ -0,0 +1,243 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
-+/*
-+ * Exynos FMP crypt interface
-+ *
-+ * Copyright (C) 2018 Samsung Electronics Co., Ltd.
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License as published by
-+ * the Free Software Foundation; either version 2 of the License, or
-+ * (at your option) any later version.
-+ */
-+
-+#include <linux/module.h>
-+#include <linux/platform_device.h>
-+#include <linux/of.h>
-+#include <linux/of_device.h>
-+#include <linux/slab.h>
 +#include <linux/bio.h>
-+#include <linux/crypto.h>
-+#include <linux/scatterlist.h>
-+#include <crypto/fmp.h>
-+#include <crypto/diskcipher.h>
++#include <linux/blkdev.h>
++#include <linux/slab.h>
++#include <linux/keyslot-manager.h>
 +
-+int exynos_fmp_crypt_clear(struct bio *bio, void *table_addr)
++static int num_prealloc_crypt_ctxs = 128;
++static struct kmem_cache *bio_crypt_ctx_cache;
++static mempool_t *bio_crypt_ctx_pool;
++
++int bio_crypt_ctx_init(void)
 +{
-+	struct crypto_diskcipher *dtfm = crypto_diskcipher_get(bio);
-+	struct fmp_crypto_info *ci;
-+	struct fmp_request req;
-+	int ret = 0;
++	bio_crypt_ctx_cache = KMEM_CACHE(bio_crypt_ctx, 0);
++	if (!bio_crypt_ctx_cache)
++		return -ENOMEM;
 +
-+	if (unlikely(IS_ERR(dtfm))) {
-+		pr_warn("%s: fails to get crypt\n", __func__);
-+		return -EINVAL;
-+	} else if (dtfm) {
-+		ci = crypto_tfm_ctx(crypto_diskcipher_tfm(dtfm));
-+		if (ci)
-+			if (ci->enc_mode == EXYNOS_FMP_FILE_ENC) {
-+				req.table = table_addr;
-+				ret = crypto_diskcipher_clear_crypt(dtfm,
-&req);
-+			}
-+	}
-+	if (ret)
-+		pr_err("%s: fail to config desc (bio:%p, tfm:%p, ci:%p
-ret:%d)\n",
-+				__func__, bio, dtfm, ci, ret);
-+	return ret;
-+}
++	bio_crypt_ctx_pool = mempool_create_slab_pool(
++					num_prealloc_crypt_ctxs,
++					bio_crypt_ctx_cache);
 +
-+int exynos_fmp_crypt_cfg(struct bio *bio, void *table_addr,
-+			u32 page_idx, u32 sector_unit)
-+{
-+	struct crypto_diskcipher *dtfm = crypto_diskcipher_get(bio);
-+	u64 iv;
-+	struct fmp_request req;
-+	int ret = 0;
++	if (!bio_crypt_ctx_pool)
++		return -ENOMEM;
 +
-+	if (unlikely(IS_ERR(dtfm))) {
-+		pr_warn("%s: fails to get crypt\n", __func__);
-+		return -EINVAL;
-+	} else if (dtfm) {
-+		req.table = table_addr;
-+		req.cmdq_enabled = 0;
-+		req.iv = &iv;
-+		req.ivsize = sizeof(iv);
-+		iv = (dtfm->ivmode == IV_MODE_DUN) ? (bio_dun(bio) +
-page_idx) :
-+			(bio->bi_iter.bi_sector + (sector_t)sector_unit);
-+		ret = crypto_diskcipher_set_crypt(dtfm, &req);
-+		if (ret)
-+			pr_err("%s: fail to config desc (bio:%p, tfm:%p,
-ret:%d)\n",
-+					__func__, bio, dtfm, ret);
-+		return ret;
-+	}
-+
-+	exynos_fmp_bypass(table_addr, 0);
 +	return 0;
 +}
 +
-+static int fmp_crypt(struct crypto_diskcipher *tfm, void *priv)
++struct bio_crypt_ctx *bio_crypt_alloc_ctx(gfp_t gfp_mask)
 +{
-+	struct fmp_crypto_info *ci =
-crypto_tfm_ctx(crypto_diskcipher_tfm(tfm));
-+
-+	return exynos_fmp_crypt(ci, priv);
++	return mempool_alloc(bio_crypt_ctx_pool, gfp_mask);
 +}
++EXPORT_SYMBOL(bio_crypt_alloc_ctx);
 +
-+static int fmp_clear(struct crypto_diskcipher *tfm, void *priv)
++void bio_crypt_free_ctx(struct bio *bio)
 +{
-+	struct fmp_crypto_info *ci =
-crypto_tfm_ctx(crypto_diskcipher_tfm(tfm));
-+
-+	return exynos_fmp_clear(ci, priv);
++	mempool_free(bio->bi_crypt_context, bio_crypt_ctx_pool);
++	bio->bi_crypt_context = NULL;
 +}
++EXPORT_SYMBOL(bio_crypt_free_ctx);
 +
-+static int fmp_setkey(struct crypto_diskcipher *tfm, const char *in_key,
-+			u32 keylen, bool persistent)
++int bio_crypt_clone(struct bio *dst, struct bio *src, gfp_t gfp_mask)
 +{
-+	struct fmp_crypto_info *ci =
-crypto_tfm_ctx(crypto_diskcipher_tfm(tfm));
-+
-+	return exynos_fmp_setkey(ci, (char *)in_key, keylen, persistent);
-+}
-+
-+static int fmp_clearkey(struct crypto_diskcipher *tfm)
-+{
-+	struct fmp_crypto_info *ci =
-crypto_tfm_ctx(crypto_diskcipher_tfm(tfm));
-+
-+	return exynos_fmp_clearkey(ci);
-+}
-+
-+/* support crypto manager test without CRYPTO_MANAGER_DISABLE_TESTS */
-+static int fmp_do_test_crypt(struct crypto_diskcipher *tfm,
-+			  struct diskcipher_test_request *req)
-+{
-+	if (!req) {
-+		pr_err("%s: invalid parameter\n", __func__);
-+		return -EINVAL;
-+	}
-+
-+	return
-exynos_fmp_test_crypt(crypto_tfm_ctx(crypto_diskcipher_tfm(tfm)),
-+		    req->iv, tfm->ivsize,
-+		    sg_virt(req->src), sg_virt(req->dst),
-+		    req->cryptlen, req->enc ? 1 : 0, tfm);
-+}
-+
-+
-+static inline void fmp_algo_init(struct crypto_tfm *tfm,
-+				 enum fmp_crypto_algo_mode algo)
-+{
-+	struct fmp_crypto_info *ci = crypto_tfm_ctx(tfm);
-+	struct crypto_diskcipher *diskc = __crypto_diskcipher_cast(tfm);
-+	struct diskcipher_alg *alg = crypto_diskcipher_alg(diskc);
-+
-+	/* This field's stongly aligned 'fmp_crypto_info->use_diskc' */
-+	diskc->algo = (u32)algo;
-+	diskc->ivsize = FMP_IV_SIZE_16;
-+	ci->ctx = dev_get_drvdata(alg->dev);
-+	ci->algo_mode = algo;
-+}
-+
-+static int fmp_aes_xts_init(struct crypto_tfm *tfm)
-+{
-+	fmp_algo_init(tfm, EXYNOS_FMP_ALGO_MODE_AES_XTS);
-+	return 0;
-+}
-+
-+static int fmp_cbc_aes_init(struct crypto_tfm *tfm)
-+{
-+	fmp_algo_init(tfm, EXYNOS_FMP_ALGO_MODE_AES_CBC);
-+	return 0;
-+}
-+
-+static struct diskcipher_alg fmp_algs[] = {{
-+	.base = {
-+		.cra_name = "xts(aes)-disk",
-+		.cra_driver_name = "xts(aes)-disk(fmp)",
-+		.cra_priority = 200,
-+		.cra_module = THIS_MODULE,
-+		.cra_ctxsize = sizeof(struct fmp_crypto_info),
-+		.cra_init = fmp_aes_xts_init,
-+	}
-+}, {
-+	.base = {
-+		.cra_name = "cbc(aes)-disk",
-+		.cra_driver_name = "cbc(aes)-disk(fmp)",
-+		.cra_priority = 200,
-+		.cra_module = THIS_MODULE,
-+		.cra_ctxsize = sizeof(struct fmp_crypto_info),
-+		.cra_init = fmp_cbc_aes_init,
-+	}
-+} };
-+
-+static int exynos_fmp_probe(struct platform_device *pdev)
-+{
-+	struct diskcipher_alg *alg;
-+	void *fmp_ctx = exynos_fmp_init(pdev);
-+	int ret;
-+	int i;
-+
-+	if (!fmp_ctx) {
-+		dev_err(&pdev->dev,
-+			"%s: Fail to register diskciphero\n", __func__);
-+		return -EINVAL;
-+	}
-+	dev_set_drvdata(&pdev->dev, fmp_ctx);
-+
-+	for (i = 0; i < ARRAY_SIZE(fmp_algs); i++) {
-+		alg = &fmp_algs[i];
-+		alg->dev = &pdev->dev;
-+		alg->init = NULL;
-+		alg->setkey = fmp_setkey;
-+		alg->clearkey = fmp_clearkey;
-+		alg->crypt = fmp_crypt;
-+		alg->clear = fmp_clear;
-+		alg->do_crypt = fmp_do_test_crypt;
-+	}
-+	ret = crypto_register_diskciphers(fmp_algs, ARRAY_SIZE(fmp_algs));
-+	if (ret) {
-+		dev_err(&pdev->dev,
-+			"%s: Fail to register diskciphero. ret = %d\n",
-+			__func__, ret);
-+		return -EINVAL;
-+	}
-+	dev_info(&pdev->dev, "Exynos FMP driver is registered to
-diskcipher\n");
-+	return 0;
-+}
-+
-+static int exynos_fmp_remove(struct platform_device *pdev)
-+{
-+	void *drv_data = dev_get_drvdata(&pdev->dev);
-+
-+	if (!drv_data) {
-+		pr_err("%s: Fail to get drvdata\n", __func__);
++	if (!bio_has_crypt_ctx(src))
 +		return 0;
-+	}
-+	crypto_unregister_diskciphers(fmp_algs, ARRAY_SIZE(fmp_algs));
-+	exynos_fmp_exit(drv_data);
++
++	dst->bi_crypt_context = bio_crypt_alloc_ctx(gfp_mask);
++	if (!dst->bi_crypt_context)
++		return -ENOMEM;
++
++	*dst->bi_crypt_context = *src->bi_crypt_context;
++
++	if (bio_crypt_has_keyslot(src))
++		keyslot_manager_get_slot(src->bi_crypt_context->processing_ksm,
++					 src->bi_crypt_context->keyslot);
++
 +	return 0;
 +}
++EXPORT_SYMBOL(bio_crypt_clone);
 +
-+static const struct of_device_id exynos_fmp_match[] = {
-+	{ .compatible = "samsung,exynos-fmp" },
-+	{},
-+};
-+
-+static struct platform_driver exynos_fmp_driver = {
-+	.driver = {
-+		   .name = "exynos-fmp",
-+		   .owner = THIS_MODULE,
-+		   .pm = NULL,
-+		   .of_match_table = exynos_fmp_match,
-+		   },
-+	.probe = exynos_fmp_probe,
-+	.remove = exynos_fmp_remove,
-+};
-+
-+static int __init fmp_init(void)
++bool bio_crypt_should_process(struct bio *bio, struct request_queue *q)
 +{
-+	return platform_driver_register(&exynos_fmp_driver);
-+}
-+late_initcall(fmp_init);
++	if (!bio_has_crypt_ctx(bio))
++		return false;
 +
-+static void __exit fmp_exit(void)
-+{
-+	platform_driver_unregister(&exynos_fmp_driver);
++	WARN_ON(!bio_crypt_has_keyslot(bio));
++	return q->ksm == bio->bi_crypt_context->processing_ksm;
 +}
-+module_exit(fmp_exit);
-+MODULE_DESCRIPTION("Exynos Spedific crypto algo driver");
-diff --git a/drivers/crypto/fmp/fmp_test.c b/drivers/crypto/fmp/fmp_test.c
-new file mode 100644
-index 0000000..fb47bbd
---- /dev/null
-+++ b/drivers/crypto/fmp/fmp_test.c
-@@ -0,0 +1,310 @@
-+// SPDX-License-Identifier: GPL-2.0-or-later
++EXPORT_SYMBOL(bio_crypt_should_process);
++
 +/*
-+ * Exynos FMP cipher driver
-+ *
-+ * Copyright (C) 2016 Samsung Electronics Co., Ltd.
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License as published by
-+ * the Free Software Foundation; either version 2 of the License, or
-+ * (at your option) any later version.
++ * Checks that two bio crypt contexts are compatible - i.e. that
++ * they are mergeable except for data_unit_num continuity.
 + */
-+
-+#include <linux/of.h>
-+#include <linux/of_platform.h>
-+#include <linux/crypto.h>
-+#include <linux/buffer_head.h>
-+#include <linux/genhd.h>
-+#include <linux/delay.h>
-+#include <linux/fs.h>
-+#include <linux/blk_types.h>
-+#include <crypto/fmp.h>
-+
-+#include "fmp_test.h"
-+
-+#define MAX_SCAN_PART	(50)
-+#define MAX_RETRY_COUNT (0x100000)
-+
-+static dev_t find_devt_for_test(struct exynos_fmp *fmp,
-+				struct fmp_test_data *data)
++bool bio_crypt_ctx_compatible(struct bio *b_1, struct bio *b_2)
 +{
-+	int i, idx = 0;
-+	uint32_t count = 0;
-+	uint64_t size;
-+	uint64_t size_list[MAX_SCAN_PART];
-+	dev_t devt_list[MAX_SCAN_PART];
-+	dev_t devt_scan = 0;
-+	dev_t devt = 0;
-+	struct block_device *bdev = NULL;
-+	struct device *dev = fmp->dev;
-+	fmode_t fmode = FMODE_WRITE | FMODE_READ;
++	struct bio_crypt_ctx *bc1 = b_1->bi_crypt_context;
++	struct bio_crypt_ctx *bc2 = b_2->bi_crypt_context;
 +
-+	memset(size_list, 0, sizeof(size_list));
-+	memset(devt_list, 0, sizeof(devt_list));
-+	do {
-+		for (i = 1; i < MAX_SCAN_PART; i++) {
-+			devt_scan = blk_lookup_devt(data->block_type, i);
-+			bdev = blkdev_get_by_dev(devt_scan, fmode, NULL);
-+			if (IS_ERR(bdev))
-+				continue;
-+			else {
-+				size_list[idx] =
-+				    (uint64_t) i_size_read(bdev->bd_inode);
-+				devt_list[idx++] = devt_scan;
-+				blkdev_put(bdev, fmode);
-+			}
-+		}
-+		if (!idx) {
-+			mdelay(100);
-+			count++;
-+			continue;
-+		}
-+		for (i = 0; i < idx; i++) {
-+			if (i == 0) {
-+				size = size_list[i];
-+				devt = devt_list[i];
-+			} else {
-+				if (size < size_list[i])
-+					devt = devt_list[i];
-+			}
-+		}
-+		bdev = blkdev_get_by_dev(devt, fmode, NULL);
-+		dev_dbg(dev, "Found partno %d for FMP test\n",
-+			bdev->bd_part->partno);
-+		blkdev_put(bdev, fmode);
-+		return devt;
-+	} while (count < MAX_RETRY_COUNT);
-+	dev_err(dev, "Block device isn't initialized yet for FMP test\n");
-+	return (dev_t) 0;
++	if (bio_has_crypt_ctx(b_1) != bio_has_crypt_ctx(b_2))
++		return false;
++
++	if (!bio_has_crypt_ctx(b_1))
++		return true;
++
++	return bc1->keyslot == bc2->keyslot &&
++	       bc1->data_unit_size_bits == bc2->data_unit_size_bits;
 +}
 +
-+static int get_fmp_host_type(struct device *dev,
-+				    struct fmp_test_data *data)
++/*
++ * Checks that two bio crypt contexts are compatible, and also
++ * that their data_unit_nums are continuous (and can hence be merged)
++ */
++bool bio_crypt_ctx_back_mergeable(struct bio *b_1,
++				  unsigned int b1_sectors,
++				  struct bio *b_2)
 +{
-+	int ret;
-+	struct device_node *node = dev->of_node;
-+	const char *type;
++	struct bio_crypt_ctx *bc1 = b_1->bi_crypt_context;
++	struct bio_crypt_ctx *bc2 = b_2->bi_crypt_context;
 +
-+	ret =
-+	    of_property_read_string_index(node, "exynos,block-type", 0,
-&type);
-+	if (ret) {
-+		pr_err("%s: Could not get block type\n", __func__);
-+		return ret;
++	if (!bio_crypt_ctx_compatible(b_1, b_2))
++		return false;
++
++	return !bio_has_crypt_ctx(b_1) ||
++		(bc1->data_unit_num +
++		(b1_sectors >> (bc1->data_unit_size_bits - 9)) ==
++		bc2->data_unit_num);
++}
++
++void bio_crypt_ctx_release_keyslot(struct bio *bio)
++{
++	struct bio_crypt_ctx *crypt_ctx = bio->bi_crypt_context;
++
++	keyslot_manager_put_slot(crypt_ctx->processing_ksm, crypt_ctx->keyslot);
++	bio->bi_crypt_context->processing_ksm = NULL;
++	bio->bi_crypt_context->keyslot = -1;
++}
++
++int bio_crypt_ctx_acquire_keyslot(struct bio *bio, struct keyslot_manager *ksm)
++{
++	int slot;
++	enum blk_crypto_mode_num crypto_mode = bio_crypto_mode(bio);
++
++	if (!ksm)
++		return -ENOMEM;
++
++	slot = keyslot_manager_get_slot_for_key(ksm,
++			bio_crypt_raw_key(bio), crypto_mode,
++			1 << bio->bi_crypt_context->data_unit_size_bits);
++	if (slot < 0)
++		return slot;
++
++	bio_crypt_set_keyslot(bio, slot, ksm);
++	return 0;
++}
+diff --git a/block/bio.c b/block/bio.c
+index 299a0e7651ec..ada9850c90dc 100644
+--- a/block/bio.c
++++ b/block/bio.c
+@@ -241,6 +241,7 @@ static void bio_free(struct bio *bio)
+ 	struct bio_set *bs = bio->bi_pool;
+ 	void *p;
+ 
++	bio_crypt_free_ctx(bio);
+ 	bio_uninit(bio);
+ 
+ 	if (bs) {
+@@ -612,15 +613,15 @@ struct bio *bio_clone_fast(struct bio *bio, gfp_t gfp_mask, struct bio_set *bs)
+ 
+ 	__bio_clone_fast(b, bio);
+ 
+-	if (bio_integrity(bio)) {
+-		int ret;
+-
+-		ret = bio_integrity_clone(b, bio, gfp_mask);
++	if (bio_crypt_clone(b, bio, gfp_mask) < 0) {
++		bio_put(b);
++		return NULL;
 +	}
-+	strscpy(data->block_type, type, FMP_BLOCK_TYPE_NAME_LEN);
+ 
+-		if (ret < 0) {
+-			bio_put(b);
+-			return NULL;
+-		}
++	if (bio_integrity(bio) &&
++	    bio_integrity_clone(b, bio, gfp_mask) < 0) {
++		bio_put(b);
++		return NULL;
+ 	}
+ 
+ 	return b;
+@@ -1007,6 +1008,7 @@ void bio_advance(struct bio *bio, unsigned bytes)
+ 	if (bio_integrity(bio))
+ 		bio_integrity_advance(bio, bytes);
+ 
++	bio_crypt_advance(bio, bytes);
+ 	bio_advance_iter(bio, &bio->bi_iter, bytes);
+ }
+ EXPORT_SYMBOL(bio_advance);
+diff --git a/block/blk-core.c b/block/blk-core.c
+index d0cc6e14d2f0..35027e80e27d 100644
+--- a/block/blk-core.c
++++ b/block/blk-core.c
+@@ -1769,5 +1769,8 @@ int __init blk_dev_init(void)
+ 	blk_debugfs_root = debugfs_create_dir("block", NULL);
+ #endif
+ 
++	if (bio_crypt_ctx_init() < 0)
++		panic("Failed to allocate mem for bio crypt ctxs\n");
++
+ 	return 0;
+ }
+diff --git a/block/blk-merge.c b/block/blk-merge.c
+index 57f7990b342d..ebfb26b536d2 100644
+--- a/block/blk-merge.c
++++ b/block/blk-merge.c
+@@ -504,6 +504,9 @@ static inline int ll_new_hw_segment(struct request *req, struct bio *bio,
+ 	if (blk_integrity_merge_bio(req->q, req, bio) == false)
+ 		goto no_merge;
+ 
++	if (WARN_ON_ONCE(!bio_crypt_ctx_compatible(bio, req->bio)))
++		goto no_merge;
++
+ 	/*
+ 	 * This will form the start of a new hw segment.  Bump both
+ 	 * counters.
+@@ -658,8 +661,14 @@ static enum elv_merge blk_try_req_merge(struct request *req,
+ {
+ 	if (blk_discard_mergable(req))
+ 		return ELEVATOR_DISCARD_MERGE;
+-	else if (blk_rq_pos(req) + blk_rq_sectors(req) == blk_rq_pos(next))
++	else if (blk_rq_pos(req) + blk_rq_sectors(req) == blk_rq_pos(next)) {
++		if (!bio_crypt_ctx_back_mergeable(req->bio,
++						  blk_rq_sectors(req),
++						  next->bio)) {
++			return ELEVATOR_NO_MERGE;
++		}
+ 		return ELEVATOR_BACK_MERGE;
++	}
+ 
+ 	return ELEVATOR_NO_MERGE;
+ }
+@@ -695,6 +704,9 @@ static struct request *attempt_merge(struct request_queue *q,
+ 	if (req->ioprio != next->ioprio)
+ 		return NULL;
+ 
++	if (!bio_crypt_ctx_compatible(req->bio, next->bio))
++		return NULL;
++
+ 	/*
+ 	 * If we are allowed to merge, then append bio list
+ 	 * from next to rq and release next. merge_requests_fn
+@@ -827,16 +839,31 @@ bool blk_rq_merge_ok(struct request *rq, struct bio *bio)
+ 	if (rq->ioprio != bio_prio(bio))
+ 		return false;
+ 
++	/* Only merge if the crypt contexts are compatible */
++	if (!bio_crypt_ctx_compatible(bio, rq->bio))
++		return false;
++
+ 	return true;
+ }
+ 
+ enum elv_merge blk_try_merge(struct request *rq, struct bio *bio)
+ {
+-	if (blk_discard_mergable(rq))
++	if (blk_discard_mergable(rq)) {
+ 		return ELEVATOR_DISCARD_MERGE;
+-	else if (blk_rq_pos(rq) + blk_rq_sectors(rq) == bio->bi_iter.bi_sector)
++	} else if (blk_rq_pos(rq) + blk_rq_sectors(rq) ==
++		   bio->bi_iter.bi_sector) {
++		if (!bio_crypt_ctx_back_mergeable(rq->bio,
++						  blk_rq_sectors(rq), bio)) {
++			return ELEVATOR_NO_MERGE;
++		}
+ 		return ELEVATOR_BACK_MERGE;
+-	else if (blk_rq_pos(rq) - bio_sectors(bio) == bio->bi_iter.bi_sector)
++	} else if (blk_rq_pos(rq) - bio_sectors(bio) ==
++		   bio->bi_iter.bi_sector) {
++		if (!bio_crypt_ctx_back_mergeable(bio,
++						  bio_sectors(bio), rq->bio)) {
++			return ELEVATOR_NO_MERGE;
++		}
+ 		return ELEVATOR_FRONT_MERGE;
++	}
+ 	return ELEVATOR_NO_MERGE;
+ }
+diff --git a/block/bounce.c b/block/bounce.c
+index f8ed677a1bf7..6f9a2359b22a 100644
+--- a/block/bounce.c
++++ b/block/bounce.c
+@@ -267,14 +267,15 @@ static struct bio *bounce_clone_bio(struct bio *bio_src, gfp_t gfp_mask,
+ 		break;
+ 	}
+ 
+-	if (bio_integrity(bio_src)) {
+-		int ret;
++	if (bio_crypt_clone(bio, bio_src, gfp_mask) < 0) {
++		bio_put(bio);
++		return NULL;
++	}
+ 
+-		ret = bio_integrity_clone(bio, bio_src, gfp_mask);
+-		if (ret < 0) {
+-			bio_put(bio);
+-			return NULL;
+-		}
++	if (bio_integrity(bio_src) &&
++	    bio_integrity_clone(bio, bio_src, gfp_mask) < 0) {
++		bio_put(bio);
++		return NULL;
+ 	}
+ 
+ 	bio_clone_blkg_association(bio, bio_src);
+diff --git a/drivers/md/dm.c b/drivers/md/dm.c
+index d0beef033e2f..ce378c0b9ebd 100644
+--- a/drivers/md/dm.c
++++ b/drivers/md/dm.c
+@@ -1322,12 +1322,15 @@ static int clone_bio(struct dm_target_io *tio, struct bio *bio,
+ 		     sector_t sector, unsigned len)
+ {
+ 	struct bio *clone = &tio->clone;
++	int ret;
+ 
+ 	__bio_clone_fast(clone, bio);
+ 
+-	if (bio_integrity(bio)) {
+-		int r;
++	ret = bio_crypt_clone(clone, bio, GFP_NOIO);
++	if (ret < 0)
++		return ret;
+ 
++	if (bio_integrity(bio)) {
+ 		if (unlikely(!dm_target_has_integrity(tio->ti->type) &&
+ 			     !dm_target_passes_integrity(tio->ti->type))) {
+ 			DMWARN("%s: the target %s doesn't support integrity data.",
+@@ -1336,9 +1339,11 @@ static int clone_bio(struct dm_target_io *tio, struct bio *bio,
+ 			return -EIO;
+ 		}
+ 
+-		r = bio_integrity_clone(clone, bio, GFP_NOIO);
+-		if (r < 0)
+-			return r;
++		ret = bio_integrity_clone(clone, bio, GFP_NOIO);
++		if (ret < 0) {
++			bio_crypt_free_ctx(clone);
++			return ret;
++		}
+ 	}
+ 
+ 	bio_advance(clone, to_bytes(sector - clone->bi_iter.bi_sector));
+diff --git a/include/linux/bio-crypt-ctx.h b/include/linux/bio-crypt-ctx.h
+new file mode 100644
+index 000000000000..ebe456289338
+--- /dev/null
++++ b/include/linux/bio-crypt-ctx.h
+@@ -0,0 +1,226 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright 2019 Google LLC
++ */
++#ifndef __LINUX_BIO_CRYPT_CTX_H
++#define __LINUX_BIO_CRYPT_CTX_H
++
++#ifdef CONFIG_BLOCK
++#include <linux/blk_types.h>
++
++enum blk_crypto_mode_num {
++	BLK_ENCRYPTION_MODE_INVALID	= -1,
++	BLK_ENCRYPTION_MODE_AES_256_XTS	= 0,
++	/*
++	 * TODO: Support these too
++	 * BLK_ENCRYPTION_MODE_AES_256_CTS	= 1,
++	 * BLK_ENCRYPTION_MODE_AES_128_CBC	= 2,
++	 * BLK_ENCRYPTION_MODE_AES_128_CTS	= 3,
++	 * BLK_ENCRYPTION_MODE_ADIANTUM		= 4,
++	 */
++};
++
++#ifdef CONFIG_BLK_INLINE_ENCRYPTION
++struct bio_crypt_ctx {
++	int keyslot;
++	u8 *raw_key;
++	enum blk_crypto_mode_num crypto_mode;
++	u64 data_unit_num;
++	unsigned int data_unit_size_bits;
++
++	/*
++	 * The keyslot manager where the key has been programmed
++	 * with keyslot.
++	 */
++	struct keyslot_manager *processing_ksm;
++
++	/*
++	 * Copy of the bvec_iter when this bio was submitted.
++	 * We only want to en/decrypt the part of the bio
++	 * as described by the bvec_iter upon submission because
++	 * bio might be split before being resubmitted
++	 */
++	struct bvec_iter crypt_iter;
++	u64 sw_data_unit_num;
++};
++
++extern int bio_crypt_clone(struct bio *dst, struct bio *src,
++			   gfp_t gfp_mask);
++
++static inline bool bio_has_crypt_ctx(struct bio *bio)
++{
++	return bio->bi_crypt_context;
++}
++
++static inline void bio_crypt_advance(struct bio *bio, unsigned int bytes)
++{
++	if (bio_has_crypt_ctx(bio)) {
++		bio->bi_crypt_context->data_unit_num +=
++			bytes >> bio->bi_crypt_context->data_unit_size_bits;
++	}
++}
++
++static inline bool bio_crypt_has_keyslot(struct bio *bio)
++{
++	return bio->bi_crypt_context->keyslot >= 0;
++}
++
++extern int bio_crypt_ctx_init(void);
++
++extern struct bio_crypt_ctx *bio_crypt_alloc_ctx(gfp_t gfp_mask);
++
++extern void bio_crypt_free_ctx(struct bio *bio);
++
++static inline int bio_crypt_set_ctx(struct bio *bio,
++				    u8 *raw_key,
++				    enum blk_crypto_mode_num crypto_mode,
++				    u64 dun,
++				    unsigned int dun_bits,
++				    gfp_t gfp_mask)
++{
++	struct bio_crypt_ctx *crypt_ctx;
++
++	crypt_ctx = bio_crypt_alloc_ctx(gfp_mask);
++	if (!crypt_ctx)
++		return -ENOMEM;
++
++	crypt_ctx->raw_key = raw_key;
++	crypt_ctx->data_unit_num = dun;
++	crypt_ctx->data_unit_size_bits = dun_bits;
++	crypt_ctx->crypto_mode = crypto_mode;
++	crypt_ctx->processing_ksm = NULL;
++	crypt_ctx->keyslot = -1;
++	bio->bi_crypt_context = crypt_ctx;
++
 +	return 0;
 +}
 +
-+static int get_fmp_test_block_offset(struct device *dev,
-+				      struct fmp_test_data *data)
++static inline void bio_set_data_unit_num(struct bio *bio, u64 dun)
 +{
-+	int ret = 0;
-+	struct device_node *node = dev->of_node;
-+	uint32_t offset;
-+
-+	ret = of_property_read_u32(node, "exynos,fips-block_offset",
-&offset);
-+	if (ret) {
-+		pr_err("%s: Could not get fips test block offset\n",
-__func__);
-+		ret = -EINVAL;
-+		goto err;
-+	}
-+	data->test_block_offset = offset;
-+err:
-+	return ret;
++	bio->bi_crypt_context->data_unit_num = dun;
 +}
 +
-+/* test block device init for fmp test */
-+struct fmp_test_data *fmp_test_init(struct exynos_fmp *fmp)
++static inline int bio_crypt_get_keyslot(struct bio *bio)
 +{
-+	int ret = 0;
-+	struct fmp_test_data *data;
-+	struct device *dev;
-+	struct inode *inode;
-+	struct super_block *sb;
-+	unsigned long blocksize;
-+	unsigned char blocksize_bits;
-+	fmode_t fmode = FMODE_WRITE | FMODE_READ;
++	return bio->bi_crypt_context->keyslot;
++}
 +
-+	if (!fmp) {
-+		pr_err("%s: Invalid exynos fmp struct\n", __func__);
-+		return NULL;
-+	}
++static inline void bio_crypt_set_keyslot(struct bio *bio,
++					 unsigned int keyslot,
++					 struct keyslot_manager *ksm)
++{
++	bio->bi_crypt_context->keyslot = keyslot;
++	bio->bi_crypt_context->processing_ksm = ksm;
++}
 +
-+	dev = fmp->dev;
-+	data = kmalloc(sizeof(struct fmp_test_data), GFP_KERNEL);
-+	if (!data)
-+		return NULL;
++extern void bio_crypt_ctx_release_keyslot(struct bio *bio);
 +
-+	ret = get_fmp_host_type(dev, data);
-+	if (ret) {
-+		dev_err(dev, "%s: Fail to get host type. ret(%d)", __func__,
-+			ret);
-+		goto err;
-+	}
-+	data->devt = find_devt_for_test(fmp, data);
-+	if (!data->devt) {
-+		dev_err(dev, "%s: Fail to find devt for self test\n",
-__func__);
-+		goto err;
-+	}
-+	data->bdev = blkdev_get_by_dev(data->devt, fmode, NULL);
-+	if (IS_ERR(data->bdev)) {
-+		dev_err(dev, "%s: Fail to open block device\n", __func__);
-+		goto err;
-+	}
-+	ret = get_fmp_test_block_offset(dev, data);
-+	if (ret) {
-+		dev_err(dev, "%s: Fail to get fips offset. ret(%d)\n",
-+			__func__, ret);
-+		goto err;
-+	}
-+	inode = data->bdev->bd_inode;
-+	sb = inode->i_sb;
-+	blocksize = sb->s_blocksize;
-+	blocksize_bits = sb->s_blocksize_bits;
-+	data->sector =
-+	    (i_size_read(inode) -
-+	     (blocksize * data->test_block_offset)) >> blocksize_bits;
++extern int bio_crypt_ctx_acquire_keyslot(struct bio *bio,
++					 struct keyslot_manager *ksm);
 +
-+	return data;
-+err:
-+	kzfree(data);
++static inline u8 *bio_crypt_raw_key(struct bio *bio)
++{
++	return bio->bi_crypt_context->raw_key;
++}
++
++static inline enum blk_crypto_mode_num bio_crypto_mode(struct bio *bio)
++{
++	return bio->bi_crypt_context->crypto_mode;
++}
++
++static inline u64 bio_crypt_data_unit_num(struct bio *bio)
++{
++	return bio->bi_crypt_context->data_unit_num;
++}
++
++static inline u64 bio_crypt_sw_data_unit_num(struct bio *bio)
++{
++	return bio->bi_crypt_context->sw_data_unit_num;
++}
++
++extern bool bio_crypt_should_process(struct bio *bio, struct request_queue *q);
++
++extern bool bio_crypt_ctx_compatible(struct bio *b_1, struct bio *b_2);
++
++extern bool bio_crypt_ctx_back_mergeable(struct bio *b_1,
++					 unsigned int b1_sectors,
++					 struct bio *b_2);
++
++#else /* CONFIG_BLK_INLINE_ENCRYPTION */
++struct keyslot_manager;
++
++static inline int bio_crypt_ctx_init(void)
++{
++	return 0;
++}
++
++static inline int bio_crypt_clone(struct bio *dst, struct bio *src,
++				  gfp_t gfp_mask)
++{
++	return 0;
++}
++
++static inline void bio_crypt_advance(struct bio *bio,
++				     unsigned int bytes) { }
++
++static inline bool bio_has_crypt_ctx(struct bio *bio)
++{
++	return false;
++}
++
++static inline void bio_crypt_free_ctx(struct bio *bio) { }
++
++static inline void bio_crypt_set_ctx(struct bio *bio,
++				     u8 *raw_key,
++				     enum blk_crypto_mode_num crypto_mode,
++				     u64 dun,
++				     unsigned int dun_bits,
++				     gfp_t gfp_mask) { }
++
++static inline void bio_set_data_unit_num(struct bio *bio, u64 dun) { }
++
++static inline bool bio_crypt_has_keyslot(struct bio *bio)
++{
++	return false;
++}
++
++static inline void bio_crypt_set_keyslot(struct bio *bio,
++					 unsigned int keyslot,
++					 struct keyslot_manager *ksm) { }
++
++static inline int bio_crypt_get_keyslot(struct bio *bio)
++{
++	return -1;
++}
++
++static inline u8 *bio_crypt_raw_key(struct bio *bio)
++{
 +	return NULL;
 +}
 +
-+int fmp_cipher_run(struct exynos_fmp *fmp, struct fmp_test_data *fdata,
-+		uint8_t *data, uint32_t len, bool bypass, uint32_t write,
-+		void *priv, struct fmp_crypto_info *ci)
-+{
-+	int ret = 0;
-+	struct device *dev;
-+	static struct buffer_head *bh;
-+	u32 org_algo_mode;
-+	int op_flags;
-+
-+	if (!fmp || !fdata || !ci) {
-+		pr_err("%s: Invalid fmp struct: %p, %p, %p\n",
-+			__func__, fmp, fdata, ci);
-+		return -EINVAL;
-+	}
-+	dev = fmp->dev;
-+
-+	bh = __getblk(fdata->bdev, fdata->sector, FMP_BLK_SIZE);
-+	if (!bh) {
-+		dev_err(dev, "%s: Fail to get block from bdev\n", __func__);
-+		return -ENODEV;
-+	}
-+
-+	/* set algo_mode for test */
-+	org_algo_mode = ci->algo_mode;
-+	if (bypass)
-+		ci->algo_mode = EXYNOS_FMP_BYPASS_MODE;
-+	ci->algo_mode |= EXYNOS_FMP_ALGO_MODE_TEST;
-+
-+	get_bh(bh);
-+	/* priv is diskc for crypto test. */
-+	if (!priv) {
-+		/* ci is fmp_test_data->ci */
-+		fmp->test_data = fdata;
-+		ci->ctx = fmp;
-+		ci->use_diskc = 0;
-+		ci->enc_mode = EXYNOS_FMP_FILE_ENC;
-+		bh->b_private = ci;
-+	} else {
-+		/* ci is crypto_tfm_ctx(tfm) */
-+		bh->b_private = priv;
-+	}
-+	op_flags = REQ_CRYPT;
-+
-+	if (write == WRITE_MODE) {
-+		memcpy(bh->b_data, data, len);
-+		set_buffer_dirty(bh);
-+		ret = __sync_dirty_buffer(bh, op_flags | REQ_SYNC);
-+		if (ret) {
-+			dev_err(dev, "%s: IO error syncing for write
-mode\n",
-+				__func__);
-+			ret = -EIO;
-+			goto out;
-+		}
-+		memset(bh->b_data, 0, FMP_BLK_SIZE);
-+	} else {
-+		lock_buffer(bh);
-+		bh->b_end_io = end_buffer_read_sync;
-+		submit_bh(REQ_OP_READ, REQ_SYNC | REQ_PRIO | op_flags, bh);
-+		wait_on_buffer(bh);
-+		if (unlikely(!buffer_uptodate(bh))) {
-+			ret = -EIO;
-+			goto out;
-+		}
-+		memcpy(data, bh->b_data, len);
-+	}
-+out:
-+	if (ci)
-+		ci->algo_mode = org_algo_mode;
-+	put_bh(bh);
-+	return ret;
-+}
-+
-+int fmp_test_crypt(struct exynos_fmp *fmp, struct fmp_test_data *fdata,
-+		uint8_t *src, uint8_t *dst, uint32_t len, uint32_t enc,
-+		void *priv, struct fmp_crypto_info *ci)
-+{
-+	int ret = 0;
-+
-+	if (!fdata) {
-+		pr_err("%s: Invalid exynos fmp struct\n", __func__);
-+		return -1;
-+	}
-+
-+	if (enc == ENCRYPT) {
-+		ret = fmp_cipher_run(fmp, fdata, src, len, 0,
-+				WRITE_MODE, priv, ci);
-+		if (ret) {
-+			pr_err("Fail to run fmp cipher ret(%d)\n",
-+				ret);
-+			goto err;
-+		}
-+		ret = fmp_cipher_run(fmp, fdata, dst, len, 1,
-+				READ_MODE, priv, ci);
-+		if (ret) {
-+			pr_err("Fail to run fmp cipher ret(%d)\n",
-+				ret);
-+			goto err;
-+		}
-+	} else if (enc == DECRYPT) {
-+		ret = fmp_cipher_run(fmp, fdata, src, len, 1,
-+				WRITE_MODE, priv, ci);
-+		if (ret) {
-+			pr_err("Fail to run fmp cipher ret(%d)\n",
-+				ret);
-+			goto err;
-+		}
-+		ret = fmp_cipher_run(fmp, fdata, dst, len, 0,
-+				READ_MODE, priv, ci);
-+		if (ret) {
-+			pr_err("Fail to run fmp cipher ret(%d)\n",
-+				ret);
-+			goto err;
-+		}
-+	} else {
-+		pr_err("%s: Invalid enc %d mode\n", __func__, enc);
-+		goto err;
-+	}
-+
-+	return 0;
-+err:
-+	return -EINVAL;
-+}
-+
-+/* test block device release for fmp test */
-+void fmp_test_exit(struct fmp_test_data *fdata)
-+{
-+	fmode_t fmode = FMODE_WRITE | FMODE_READ;
-+
-+	if (!fdata) {
-+		pr_err("%s: Invalid exynos fmp struct\n", __func__);
-+		return;
-+	}
-+	if (fdata->bdev)
-+		blkdev_put(fdata->bdev, fmode);
-+	kzfree(fdata);
-+}
-diff --git a/drivers/crypto/fmp/fmp_test.h b/drivers/crypto/fmp/fmp_test.h
-new file mode 100644
-index 0000000..42af22a
---- /dev/null
-+++ b/drivers/crypto/fmp/fmp_test.h
-@@ -0,0 +1,30 @@
-+/* SPDX-License-Identifier: GPL-2.0-or-later */
-+/*
-+ * Copyright (C) 2016 Samsung Electronics Co., Ltd.
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License as published by
-+ * the Free Software Foundation; either version 2 of the License, or
-+ * (at your option) any later version.
-+ */
-+
-+#ifndef _FMP_TEST_H_
-+#define _FMP_TEST_H_
-+
-+#define FMP_BLK_SIZE	(4096)
-+
-+#define WRITE_MODE	1
-+#define READ_MODE	2
-+
-+#define ENCRYPT		1
-+#define DECRYPT		2
-+
-+struct fmp_test_data *fmp_test_init(struct exynos_fmp *fmp);
-+int fmp_cipher_run(struct exynos_fmp *fmp, struct fmp_test_data *fdata,
-+		uint8_t *data, uint32_t len, bool bypass, uint32_t write,
-+		void *priv, struct fmp_crypto_info *ci);
-+int fmp_test_crypt(struct exynos_fmp *fmp, struct fmp_test_data *fdata,
-+		uint8_t *src, uint8_t *dst, uint32_t len, uint32_t enc,
-+		void *priv, struct fmp_crypto_info *ci);
-+void fmp_test_exit(struct fmp_test_data *fdata);
-+#endif /* _FMP_TEST_H_ */
-diff --git a/include/crypto/fmp.h b/include/crypto/fmp.h
-new file mode 100644
-index 0000000..b0ac483
---- /dev/null
-+++ b/include/crypto/fmp.h
-@@ -0,0 +1,324 @@
-+/* SPDX-License-Identifier: GPL-2.0-or-later */
-+/*
-+ * Copyright (C) 2016 Samsung Electronics Co., Ltd.
-+ *
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License as published by
-+ * the Free Software Foundation; either version 2 of the License, or
-+ * (at your option) any later version.
-+ */
-+
-+#ifndef _EXYNOS_FMP_H_
-+#define _EXYNOS_FMP_H_
-+
-+#include <linux/platform_device.h>
-+#include <linux/miscdevice.h>
-+
-+#define FMP_DRV_VERSION "1.5.0"
-+
-+#define FMP_KEY_SIZE_16		16
-+#define FMP_KEY_SIZE_32		32
-+#define FMP_IV_SIZE_16		16
-+
-+#define FMP_CBC_MAX_KEY_SIZE	FMP_KEY_SIZE_16
-+#define FMP_XTS_MAX_KEY_SIZE	((FMP_KEY_SIZE_32) * (2))
-+#define FMP_MAX_KEY_SIZE	FMP_XTS_MAX_KEY_SIZE
-+
-+#define FMP_HOST_TYPE_NAME_LEN	8
-+#define FMP_BLOCK_TYPE_NAME_LEN	8
-+
-+#define FMP_SECTOR_SIZE	0x1000
-+#define FMP_MIN_SECTOR_SIZE	0x200
-+#define NUM_SECTOR_UNIT	((FMP_SECTOR_SIZE)/(FMP_MIN_SECTOR_SIZE))
-+
-+#define MAX_AES_XTS_TRANSFER_SIZE	0x1000
-+
-+#ifndef TRUE
-+#define TRUE 1
-+#endif
-+
-+#ifndef FALSE
-+#define FALSE 0
-+#endif
-+
-+enum fmp_crypto_algo_mode {
-+	EXYNOS_FMP_BYPASS_MODE = 0,
-+	EXYNOS_FMP_ALGO_MODE_AES_CBC = 1,
-+	EXYNOS_FMP_ALGO_MODE_AES_XTS = 2,
-+};
-+
-+enum fmp_crypto_key_size {
-+	EXYNOS_FMP_KEY_SIZE_16 = 16,
-+	EXYNOS_FMP_KEY_SIZE_32 = 32,
-+};
-+
-+enum fmp_crypto_enc_mode {
-+	EXYNOS_FMP_FILE_ENC = 0,
-+	EXYNOS_FMP_DISK_ENC = 1,	/* use persistent key */
-+	EXYNOS_FMP_ENC_MAX
-+};
-+
-+enum fmp_disk_key_status {
-+	KEY_STORED = 0,
-+	KEY_SET = 1,
-+	KEY_CLEAR = 2,
-+	KEY_ERROR = -1,
-+};
-+
-+struct fmp_crypto_info {
-+	/* This field's stongly aligned 'crypto_diskcipher->algo' */
-+	u32 use_diskc;
-+	u8 key[FMP_MAX_KEY_SIZE];
-+	u32 key_size;
-+	enum fmp_crypto_key_size fmp_key_size;
-+	enum fmp_crypto_enc_mode enc_mode;
-+	enum fmp_crypto_algo_mode algo_mode;
-+	void *ctx;
-+};
-+
-+#if defined(CONFIG_MMC_DW_EXYNOS_FMP) &&
-defined(CONFIG_SCSI_UFS_EXYNOS_FMP)
-+#error "FMP doesn't support muti-host"
-+#elif defined(CONFIG_MMC_DW_EXYNOS_FMP)
-+struct fmp_table_setting {
-+	__le32 des0;		/* des0 */
-+#define GET_CMDQ_LENGTH(d) \
-+	(((d)->des0 & 0xffff0000) >> 16)
-+	__le32 des1;		/* des1 */
-+	__le32 des2;		/* des2 */
-+#define FKL BIT(26)
-+#define DKL BIT(27)
-+#define SET_KEYLEN(d, v) ((d)->des2 |= (uint32_t)v)
-+#define SET_FAS(d, v) \
-+			((d)->des2 = ((d)->des2 & 0xcfffffff) | v << 28)
-+#define SET_DAS(d, v) \
-+			((d)->des2 = ((d)->des2 & 0x3fffffff) | v << 30)
-+#define GET_FAS(d)      ((d)->des2 & 0x30000000)
-+#define GET_DAS(d)      ((d)->des2 & 0xc0000000)
-+#define GET_LENGTH(d) \
-+			((d)->des2 & 0x3ffffff)
-+	__le32 des3;		/* des3 */
-+	/* CMDQ Operation */
-+#define FKL_CMDQ BIT(0)
-+#define DKL_CMDQ BIT(1)
-+#define SET_CMDQ_KEYLEN(d, v) ((d)->des2 |= (uint32_t)v)
-+#define SET_CMDQ_FAS(d, v) \
-+			((d)->des3 = ((d)->des3 & 0xfffffff3) | v << 2)
-+#define SET_CMDQ_DAS(d, v) \
-+			((d)->des3 = ((d)->des3 & 0xffffffcf) | v << 4)
-+#define GET_CMDQ_FAS(d) ((d)->des3 & 0x0000000c)
-+#define GET_CMDQ_DAS(d) ((d)->des3 & 0x00000030)
-+	__le32 reserved0;	/* des4 */
-+	__le32 reserved1;
-+	__le32 reserved2;
-+	__le32 reserved3;
-+	__le32 file_iv0;	/* des8 */
-+	__le32 file_iv1;
-+	__le32 file_iv2;
-+	__le32 file_iv3;
-+	__le32 file_enckey0;	/* des12 */
-+	__le32 file_enckey1;
-+	__le32 file_enckey2;
-+	__le32 file_enckey3;
-+	__le32 file_enckey4;
-+	__le32 file_enckey5;
-+	__le32 file_enckey6;
-+	__le32 file_enckey7;
-+	__le32 file_twkey0;	/* des20 */
-+	__le32 file_twkey1;
-+	__le32 file_twkey2;
-+	__le32 file_twkey3;
-+	__le32 file_twkey4;
-+	__le32 file_twkey5;
-+	__le32 file_twkey6;
-+	__le32 file_twkey7;
-+	__le32 disk_iv0;	/* des28 */
-+	__le32 disk_iv1;
-+	__le32 disk_iv2;
-+	__le32 disk_iv3;
-+};
-+#elif defined(CONFIG_SCSI_UFS_EXYNOS_FMP)
-+struct fmp_table_setting {
-+	__le32 des0;		/* des0 */
-+#define GET_CMDQ_LENGTH(d) \
-+	(((d)->des0 & 0xffff0000) >> 16)
-+	__le32 des1;		/* des1 */
-+	__le32 des2;		/* des2 */
-+	__le32 des3;		/* des3 */
-+/* Legacy Operation */
-+#define FKL BIT(26)
-+#define DKL BIT(27)
-+#define SET_KEYLEN(d, v) ((d)->des3 |= (uint32_t)v)
-+#define SET_FAS(d, v) \
-+	((d)->des3 = ((d)->des3 & 0xcfffffff) | v << 28)
-+#define SET_DAS(d, v) \
-+	((d)->des3 = ((d)->des3 & 0x3fffffff) | v << 30)
-+#define GET_FAS(d)	((d)->des3 & 0x30000000)
-+#define GET_DAS(d)	((d)->des3 & 0xc0000000)
-+#define GET_LENGTH(d) \
-+	((d)->des3 & 0x3ffffff)
-+/* CMDQ Operation */
-+#define FKL_CMDQ BIT(0)
-+#define DKL_CMDQ BIT(1)
-+#define SET_CMDQ_KEYLEN(d, v) ((d)->des3 |= (uint32_t)v)
-+#define SET_CMDQ_FAS(d, v) \
-+	((d)->des3 = ((d)->des3 & 0xfffffff3) | v << 2)
-+#define SET_CMDQ_DAS(d, v) \
-+	((d)->des3 = ((d)->des3 & 0xffffffcf) | v << 4)
-+#define GET_CMDQ_FAS(d)	((d)->des3 & 0x0000000c)
-+#define GET_CMDQ_DAS(d)	((d)->des3 & 0x00000030)
-+	__le32 file_iv0;	/* des4 */
-+	__le32 file_iv1;	/* des5 */
-+	__le32 file_iv2;	/* des6 */
-+	__le32 file_iv3;	/* des7 */
-+	__le32 file_enckey0;	/* des8 */
-+	__le32 file_enckey1;	/* des9 */
-+	__le32 file_enckey2;	/* des10 */
-+	__le32 file_enckey3;	/* des11 */
-+	__le32 file_enckey4;	/* des12 */
-+	__le32 file_enckey5;	/* des13 */
-+	__le32 file_enckey6;	/* des14 */
-+	__le32 file_enckey7;	/* des15 */
-+	__le32 file_twkey0;	/* des16 */
-+	__le32 file_twkey1;	/* des17 */
-+	__le32 file_twkey2;	/* des18 */
-+	__le32 file_twkey3;	/* des19 */
-+	__le32 file_twkey4;	/* des20 */
-+	__le32 file_twkey5;	/* des21 */
-+	__le32 file_twkey6;	/* des22 */
-+	__le32 file_twkey7;	/* des23 */
-+	__le32 disk_iv0;	/* des24 */
-+	__le32 disk_iv1;	/* des25 */
-+	__le32 disk_iv2;	/* des26 */
-+	__le32 disk_iv3;	/* des27 */
-+	__le32 reserved0;	/* des28 */
-+	__le32 reserved1;	/* des29 */
-+	__le32 reserved2;	/* des30 */
-+	__le32 reserved3;	/* des31 */
-+};
-+#endif
-+
-+struct fmp_data_setting {
-+	struct fmp_crypto_info crypt[EXYNOS_FMP_ENC_MAX];
-+	struct fmp_table_setting *table;
-+	bool cmdq_enabled;
-+};
-+
-+#define EXYNOS_FMP_ALGO_MODE_MASK (0x3)
-+#define EXYNOS_FMP_ALGO_MODE_TEST_OFFSET (0xf)
-+#define EXYNOS_FMP_ALGO_MODE_TEST (1 << EXYNOS_FMP_ALGO_MODE_TEST_OFFSET)
-+
-+struct fmp_test_data {
-+	char block_type[FMP_BLOCK_TYPE_NAME_LEN];
-+	struct block_device *bdev;
-+	sector_t sector;
-+	dev_t devt;
-+	uint32_t test_block_offset;
-+	/* iv to submitted */
-+	u8 iv[FMP_IV_SIZE_16];
-+	/* diskcipher for test */
-+	struct fmp_crypto_info ci;
-+};
-+
-+struct exynos_fmp {
-+	struct device *dev;
-+	enum fmp_disk_key_status status_disk_key;
-+	struct fmp_test_data *test_data;
-+};
-+
-+struct fmp_request {
-+	void *table;
-+	bool cmdq_enabled;
-+	void *iv;
-+	u32 ivsize;
-+};
-+
-+static inline void exynos_fmp_bypass(void *desc, bool cmdq_enabled)
-+{
-+#if defined(CONFIG_MMC_DW_EXYNOS_FMP) ||
-defined(CONFIG_SCSI_UFS_EXYNOS_FMP)
-+	if (cmdq_enabled) {
-+		SET_CMDQ_FAS((struct fmp_table_setting *)desc, 0);
-+		SET_CMDQ_DAS((struct fmp_table_setting *)desc, 0);
-+	} else {
-+		SET_FAS((struct fmp_table_setting *)desc, 0);
-+		SET_DAS((struct fmp_table_setting *)desc, 0);
-+	}
-+#endif
-+}
-+
-+#define ACCESS_CONTROL_ABORT	0x14
-+
-+#ifndef SMC_CMD_FMP_SECURITY
-+/* For FMP/SMU Ctrl */
-+#define SMC_CMD_FMP_SECURITY		(0xC2001810)
-+#define SMC_CMD_FMP_DISK_KEY_STORED	(0xC2001820)
-+#define SMC_CMD_FMP_DISK_KEY_SET	(0xC2001830)
-+#define SMC_CMD_FMP_DISK_KEY_CLEAR	(0xC2001840)
-+#define SMC_CMD_SMU			(0xC2001850)
-+#define SMC_CMD_FMP_SMU_RESUME		(0xC2001860)
-+#define SMC_CMD_FMP_SMU_DUMP		(0xC2001870)
-+#define SMC_CMD_UFS_LOG			(0xC2001880)
-+
-+/* For FMP/SMU Ctrl */
-+#define SMC_CMD_FMP_SECURITY		(0xC2001810)
-+#define SMC_CMD_FMP_DISK_KEY_STORED	(0xC2001820)
-+#define SMC_CMD_FMP_DISK_KEY_SET	(0xC2001830)
-+#define SMC_CMD_FMP_DISK_KEY_CLEAR	(0xC2001840)
-+#define SMC_CMD_SMU			(0xC2001850)
-+#define SMC_CMD_FMP_SMU_RESUME		(0xC2001860)
-+#define SMC_CMD_FMP_SMU_DUMP		(0xC2001870)
-+#define SMC_CMD_UFS_LOG			(0xC2001880)
-+#endif
-+
-+enum smu_id {
-+	SMU_EMBEDDED = 0,
-+	SMU_UFSCARD = 1,
-+	SMU_SDCARD = 2,
-+	SMU_ID_MAX,
-+};
-+
-+enum smu_command {
-+	SMU_INIT = 0,
-+	SMU_SET = 1,
-+	SMU_ABORT = 2,
-+};
-+
-+/* fmp functions */
-+#ifdef CONFIG_EXYNOS_FMP
-+int exynos_fmp_sec_cfg(int fmp_id, int smu_id, bool init);
-+int exynos_fmp_smu_abort(int id);
-+int exynos_fmp_crypt_cfg(struct bio *bio, void *table_base,
-+		u32 page_idx, u32 sector_unit);
-+int exynos_fmp_crypt_clear(struct bio *bio, void *table_addr);
-+#else
-+int exynos_fmp_sec_cfg(int fmp_id, int smu_id, bool init)
++static inline u64 bio_crypt_data_unit_num(struct bio *bio)
 +{
 +	return 0;
 +}
 +
-+int exynos_fmp_smu_abort(int id)
++static inline bool bio_crypt_should_process(struct bio *bio,
++					    struct request_queue *q)
 +{
-+	return 0;
++	return false;
 +}
 +
-+int exynos_fmp_crypt_cfg(struct bio *bio, void *table_base,
-+		u32 page_idx, u32 sector_unit)
++static inline bool bio_crypt_ctx_compatible(struct bio *b_1, struct bio *b_2)
 +{
-+	return 0;
++	return true;
 +}
 +
-+int exynos_fmp_crypt_clear(struct bio *bio, void *table_addr)
++static inline bool bio_crypt_ctx_back_mergeable(struct bio *b_1,
++						unsigned int b1_sectors,
++						struct bio *b_2)
 +{
-+	return 0;
++	return true;
 +}
++
++#endif /* CONFIG_BLK_INLINE_ENCRYPTION */
++#endif /* CONFIG_BLOCK */
++#endif /* __LINUX_BIO_CRYPT_CTX_H */
+diff --git a/include/linux/bio.h b/include/linux/bio.h
+index 6c9228dd3156..9dddcd2af3e9 100644
+--- a/include/linux/bio.h
++++ b/include/linux/bio.h
+@@ -12,6 +12,7 @@
+ #ifdef CONFIG_BLOCK
+ /* struct bio, bio_vec and BIO_* flags are defined in blk_types.h */
+ #include <linux/blk_types.h>
++#include <linux/bio-crypt-ctx.h>
+ 
+ #define BIO_DEBUG
+ 
+@@ -564,18 +565,6 @@ static inline void bvec_kunmap_irq(char *buffer, unsigned long *flags)
+ }
+ #endif
+ 
+-enum blk_crypto_mode_num {
+-	BLK_ENCRYPTION_MODE_INVALID	= -1,
+-	BLK_ENCRYPTION_MODE_AES_256_XTS	= 0,
+-	/*
+-	 * TODO: Support these too
+-	 * BLK_ENCRYPTION_MODE_AES_256_CTS	= 1,
+-	 * BLK_ENCRYPTION_MODE_AES_128_CBC	= 2,
+-	 * BLK_ENCRYPTION_MODE_AES_128_CTS	= 3,
+-	 * BLK_ENCRYPTION_MODE_ADIANTUM		= 4,
+-	 */
+-};
+-
+ /*
+  * BIO list management for use by remapping drivers (e.g. DM or MD) and loop.
+  *
+diff --git a/include/linux/blk_types.h b/include/linux/blk_types.h
+index feff3fe4467e..e59ab0186441 100644
+--- a/include/linux/blk_types.h
++++ b/include/linux/blk_types.h
+@@ -18,6 +18,7 @@ struct block_device;
+ struct io_context;
+ struct cgroup_subsys_state;
+ typedef void (bio_end_io_t) (struct bio *);
++struct bio_crypt_ctx;
+ 
+ /*
+  * Block error status values.  See block/blk-core:blk_errors for the details.
+@@ -170,6 +171,11 @@ struct bio {
+ 	struct blkcg_gq		*bi_blkg;
+ 	struct bio_issue	bi_issue;
+ #endif
++
++#ifdef CONFIG_BLK_INLINE_ENCRYPTION
++	struct bio_crypt_ctx	*bi_crypt_context;
 +#endif
-+int exynos_fmp_crypt(struct fmp_crypto_info *ci, void *priv);
-+int exynos_fmp_clear(struct fmp_crypto_info *ci, void *priv);
-+int exynos_fmp_setkey(struct fmp_crypto_info *ci,
-+		u8 *in_key, u32 keylen, bool persistent);
-+int exynos_fmp_clearkey(struct fmp_crypto_info *ci);
-+void *exynos_fmp_init(struct platform_device *pdev);
-+void exynos_fmp_exit(struct exynos_fmp *fmp);
-+int exynos_fmp_test_crypt(struct fmp_crypto_info *ci,
-+		const uint8_t *iv, uint32_t ivlen, uint8_t *src,
-+		uint8_t *dst, uint32_t len, bool enc, void *priv);
-+#endif	/* _EXYNOS_FMP_H_ */
++
+ 	union {
+ #if defined(CONFIG_BLK_DEV_INTEGRITY)
+ 		struct bio_integrity_payload *bi_integrity; /* data integrity */
 -- 
-2.7.4
+2.23.0.rc1.153.gdeed80330f-goog
