@@ -1,336 +1,230 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail-wm1-f67.google.com ([209.85.128.67]:38113 "EHLO
-        mail-wm1-f67.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727026AbfHLOxt (ORCPT
+Received: from mail-yb1-f202.google.com ([209.85.219.202]:39411 "EHLO
+        mail-yb1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726974AbfHUH5e (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 12 Aug 2019 10:53:49 -0400
-Received: by mail-wm1-f67.google.com with SMTP id m125so7988963wmm.3
-        for <linux-fscrypt@vger.kernel.org>; Mon, 12 Aug 2019 07:53:46 -0700 (PDT)
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Subject: [PATCH v10 3/7] md: dm-crypt: switch to ESSIV crypto API template
-Date: Mon, 12 Aug 2019 17:53:20 +0300
-Message-Id: <20190812145324.27090-4-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
-References: <20190812145324.27090-1-ard.biesheuvel@linaro.org>
+        Wed, 21 Aug 2019 03:57:34 -0400
+Received: by mail-yb1-f202.google.com with SMTP id f71so935109ybg.6
+        for <linux-fscrypt@vger.kernel.org>; Wed, 21 Aug 2019 00:57:34 -0700 (PDT)
+Date: Wed, 21 Aug 2019 00:57:12 -0700
+In-Reply-To: <20190821075714.65140-1-satyat@google.com>
+Message-Id: <20190821075714.65140-7-satyat@google.com>
+Mime-Version: 1.0
+References: <20190821075714.65140-1-satyat@google.com>
+Subject: [PATCH v4 6/8] scsi: ufs: Add inline encryption support to UFS
+From: Satya Tangirala <satyat@google.com>
+Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-crypto@vger.kernel.org
-Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, dm-devel@redhat.com, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, Milan Broz <gmazyland@gmail.com>
+To: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
+Cc: Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Kim Boojin <boojin.kim@samsung.com>, Satya Tangirala <satyat@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Replace the explicit ESSIV handling in the dm-crypt driver with calls
-into the crypto API, which now possesses the capability to perform
-this processing within the crypto subsystem.
+Wire up ufshcd.c with the UFS Crypto API, the block layer inline
+encryption additions and the keyslot manager.
 
-Note that we reorder the AEAD cipher_api string parsing with the TFM
-instantiation: this is needed because cipher_api is mangled by the
-ESSIV handling, and throws off the parsing of "authenc(" otherwise.
-
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Signed-off-by: Satya Tangirala <satyat@google.com>
 ---
- drivers/md/Kconfig    |   1 +
- drivers/md/dm-crypt.c | 213 ++++----------------
- 2 files changed, 44 insertions(+), 170 deletions(-)
+ drivers/scsi/ufs/ufshcd.c | 83 ++++++++++++++++++++++++++++++++++++---
+ drivers/scsi/ufs/ufshcd.h |  6 +++
+ 2 files changed, 84 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/md/Kconfig b/drivers/md/Kconfig
-index 3834332f4963..b727e8f15264 100644
---- a/drivers/md/Kconfig
-+++ b/drivers/md/Kconfig
-@@ -271,6 +271,7 @@ config DM_CRYPT
- 	depends on BLK_DEV_DM
- 	select CRYPTO
- 	select CRYPTO_CBC
-+	select CRYPTO_ESSIV
- 	---help---
- 	  This device-mapper target allows you to create a device that
- 	  transparently encrypts the data on it. You'll need to activate
-diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
-index 48cd76c88d77..d44d24853aee 100644
---- a/drivers/md/dm-crypt.c
-+++ b/drivers/md/dm-crypt.c
-@@ -98,11 +98,6 @@ struct crypt_iv_operations {
- 		    struct dm_crypt_request *dmreq);
- };
+diff --git a/drivers/scsi/ufs/ufshcd.c b/drivers/scsi/ufs/ufshcd.c
+index 212f7653c4c5..dcb841c6be7e 100644
+--- a/drivers/scsi/ufs/ufshcd.c
++++ b/drivers/scsi/ufs/ufshcd.c
+@@ -47,6 +47,7 @@
+ #include "unipro.h"
+ #include "ufs-sysfs.h"
+ #include "ufs_bsg.h"
++#include "ufshcd-crypto.h"
  
--struct iv_essiv_private {
--	struct crypto_shash *hash_tfm;
--	u8 *salt;
--};
--
- struct iv_benbi_private {
- 	int shift;
- };
-@@ -155,7 +150,6 @@ struct crypt_config {
- 
- 	const struct crypt_iv_operations *iv_gen_ops;
- 	union {
--		struct iv_essiv_private essiv;
- 		struct iv_benbi_private benbi;
- 		struct iv_lmk_private lmk;
- 		struct iv_tcw_private tcw;
-@@ -165,8 +159,6 @@ struct crypt_config {
- 	unsigned short int sector_size;
- 	unsigned char sector_shift;
- 
--	/* ESSIV: struct crypto_cipher *essiv_tfm */
--	void *iv_private;
- 	union {
- 		struct crypto_skcipher **tfms;
- 		struct crypto_aead **tfms_aead;
-@@ -324,157 +316,15 @@ static int crypt_iv_plain64be_gen(struct crypt_config *cc, u8 *iv,
- 	return 0;
- }
- 
--/* Initialise ESSIV - compute salt but no local memory allocations */
--static int crypt_iv_essiv_init(struct crypt_config *cc)
--{
--	struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
--	SHASH_DESC_ON_STACK(desc, essiv->hash_tfm);
--	struct crypto_cipher *essiv_tfm;
--	int err;
--
--	desc->tfm = essiv->hash_tfm;
--
--	err = crypto_shash_digest(desc, cc->key, cc->key_size, essiv->salt);
--	shash_desc_zero(desc);
--	if (err)
--		return err;
--
--	essiv_tfm = cc->iv_private;
--
--	err = crypto_cipher_setkey(essiv_tfm, essiv->salt,
--			    crypto_shash_digestsize(essiv->hash_tfm));
--	if (err)
--		return err;
--
--	return 0;
--}
--
--/* Wipe salt and reset key derived from volume key */
--static int crypt_iv_essiv_wipe(struct crypt_config *cc)
--{
--	struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
--	unsigned salt_size = crypto_shash_digestsize(essiv->hash_tfm);
--	struct crypto_cipher *essiv_tfm;
--	int r, err = 0;
--
--	memset(essiv->salt, 0, salt_size);
--
--	essiv_tfm = cc->iv_private;
--	r = crypto_cipher_setkey(essiv_tfm, essiv->salt, salt_size);
--	if (r)
--		err = r;
--
--	return err;
--}
--
--/* Allocate the cipher for ESSIV */
--static struct crypto_cipher *alloc_essiv_cipher(struct crypt_config *cc,
--						struct dm_target *ti,
--						const u8 *salt,
--						unsigned int saltsize)
--{
--	struct crypto_cipher *essiv_tfm;
--	int err;
--
--	/* Setup the essiv_tfm with the given salt */
--	essiv_tfm = crypto_alloc_cipher(cc->cipher, 0, 0);
--	if (IS_ERR(essiv_tfm)) {
--		ti->error = "Error allocating crypto tfm for ESSIV";
--		return essiv_tfm;
--	}
--
--	if (crypto_cipher_blocksize(essiv_tfm) != cc->iv_size) {
--		ti->error = "Block size of ESSIV cipher does "
--			    "not match IV size of block cipher";
--		crypto_free_cipher(essiv_tfm);
--		return ERR_PTR(-EINVAL);
--	}
--
--	err = crypto_cipher_setkey(essiv_tfm, salt, saltsize);
--	if (err) {
--		ti->error = "Failed to set key for ESSIV cipher";
--		crypto_free_cipher(essiv_tfm);
--		return ERR_PTR(err);
--	}
--
--	return essiv_tfm;
--}
--
--static void crypt_iv_essiv_dtr(struct crypt_config *cc)
--{
--	struct crypto_cipher *essiv_tfm;
--	struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
--
--	crypto_free_shash(essiv->hash_tfm);
--	essiv->hash_tfm = NULL;
--
--	kzfree(essiv->salt);
--	essiv->salt = NULL;
--
--	essiv_tfm = cc->iv_private;
--
--	if (essiv_tfm)
--		crypto_free_cipher(essiv_tfm);
--
--	cc->iv_private = NULL;
--}
--
--static int crypt_iv_essiv_ctr(struct crypt_config *cc, struct dm_target *ti,
--			      const char *opts)
--{
--	struct crypto_cipher *essiv_tfm = NULL;
--	struct crypto_shash *hash_tfm = NULL;
--	u8 *salt = NULL;
--	int err;
--
--	if (!opts) {
--		ti->error = "Digest algorithm missing for ESSIV mode";
--		return -EINVAL;
--	}
--
--	/* Allocate hash algorithm */
--	hash_tfm = crypto_alloc_shash(opts, 0, 0);
--	if (IS_ERR(hash_tfm)) {
--		ti->error = "Error initializing ESSIV hash";
--		err = PTR_ERR(hash_tfm);
--		goto bad;
--	}
--
--	salt = kzalloc(crypto_shash_digestsize(hash_tfm), GFP_KERNEL);
--	if (!salt) {
--		ti->error = "Error kmallocing salt storage in ESSIV";
--		err = -ENOMEM;
--		goto bad;
--	}
--
--	cc->iv_gen_private.essiv.salt = salt;
--	cc->iv_gen_private.essiv.hash_tfm = hash_tfm;
--
--	essiv_tfm = alloc_essiv_cipher(cc, ti, salt,
--				       crypto_shash_digestsize(hash_tfm));
--	if (IS_ERR(essiv_tfm)) {
--		crypt_iv_essiv_dtr(cc);
--		return PTR_ERR(essiv_tfm);
--	}
--	cc->iv_private = essiv_tfm;
--
--	return 0;
--
--bad:
--	if (hash_tfm && !IS_ERR(hash_tfm))
--		crypto_free_shash(hash_tfm);
--	kfree(salt);
--	return err;
--}
--
- static int crypt_iv_essiv_gen(struct crypt_config *cc, u8 *iv,
- 			      struct dm_crypt_request *dmreq)
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/ufs.h>
+@@ -855,7 +856,14 @@ static void ufshcd_enable_run_stop_reg(struct ufs_hba *hba)
+  */
+ static inline void ufshcd_hba_start(struct ufs_hba *hba)
  {
--	struct crypto_cipher *essiv_tfm = cc->iv_private;
--
-+	/*
-+	 * ESSIV encryption of the IV is now handled by the crypto API,
-+	 * so just pass the plain sector number here.
-+	 */
- 	memset(iv, 0, cc->iv_size);
- 	*(__le64 *)iv = cpu_to_le64(dmreq->iv_sector);
--	crypto_cipher_encrypt_one(essiv_tfm, iv, iv);
- 
- 	return 0;
- }
-@@ -898,10 +748,6 @@ static const struct crypt_iv_operations crypt_iv_plain64be_ops = {
- };
- 
- static const struct crypt_iv_operations crypt_iv_essiv_ops = {
--	.ctr       = crypt_iv_essiv_ctr,
--	.dtr       = crypt_iv_essiv_dtr,
--	.init      = crypt_iv_essiv_init,
--	.wipe      = crypt_iv_essiv_wipe,
- 	.generator = crypt_iv_essiv_gen
- };
- 
-@@ -2464,7 +2310,7 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 				char **ivmode, char **ivopts)
- {
- 	struct crypt_config *cc = ti->private;
--	char *tmp, *cipher_api;
-+	char *tmp, *cipher_api, buf[CRYPTO_MAX_ALG_NAME];
- 	int ret = -EINVAL;
- 
- 	cc->tfms_count = 1;
-@@ -2490,9 +2336,32 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 	/* The rest is crypto API spec */
- 	cipher_api = tmp;
- 
-+	/* Alloc AEAD, can be used only in new format. */
-+	if (crypt_integrity_aead(cc)) {
-+		ret = crypt_ctr_auth_cipher(cc, cipher_api);
-+		if (ret < 0) {
-+			ti->error = "Invalid AEAD cipher spec";
-+			return -ENOMEM;
-+		}
+-	ufshcd_writel(hba, CONTROLLER_ENABLE, REG_CONTROLLER_ENABLE);
++	u32 val = CONTROLLER_ENABLE;
++
++	if (ufshcd_hba_is_crypto_supported(hba)) {
++		ufshcd_crypto_enable(hba);
++		val |= CRYPTO_GENERAL_ENABLE;
 +	}
 +
- 	if (*ivmode && !strcmp(*ivmode, "lmk"))
- 		cc->tfms_count = 64;
++	ufshcd_writel(hba, val, REG_CONTROLLER_ENABLE);
+ }
  
-+	if (*ivmode && !strcmp(*ivmode, "essiv")) {
-+		if (!*ivopts) {
-+			ti->error = "Digest algorithm missing for ESSIV mode";
-+			return -EINVAL;
-+		}
-+		ret = snprintf(buf, CRYPTO_MAX_ALG_NAME, "essiv(%s,%s)",
-+			       cipher_api, *ivopts);
-+		if (ret < 0 || ret >= CRYPTO_MAX_ALG_NAME) {
-+			ti->error = "Cannot allocate cipher string";
-+			return -ENOMEM;
-+		}
-+		cipher_api = buf;
-+	}
-+
- 	cc->key_parts = cc->tfms_count;
+ /**
+@@ -2209,9 +2217,21 @@ static void ufshcd_prepare_req_desc_hdr(struct ufshcd_lrb *lrbp,
+ 		dword_0 |= UTP_REQ_DESC_INT_CMD;
  
- 	/* Allocate cipher */
-@@ -2502,15 +2371,9 @@ static int crypt_ctr_cipher_new(struct dm_target *ti, char *cipher_in, char *key
- 		return ret;
- 	}
- 
--	/* Alloc AEAD, can be used only in new format. */
--	if (crypt_integrity_aead(cc)) {
--		ret = crypt_ctr_auth_cipher(cc, cipher_api);
--		if (ret < 0) {
--			ti->error = "Invalid AEAD cipher spec";
--			return -ENOMEM;
--		}
-+	if (crypt_integrity_aead(cc))
- 		cc->iv_size = crypto_aead_ivsize(any_tfm_aead(cc));
--	} else
-+	else
- 		cc->iv_size = crypto_skcipher_ivsize(any_tfm(cc));
- 
- 	ret = crypt_ctr_blkdev_cipher(cc);
-@@ -2579,9 +2442,19 @@ static int crypt_ctr_cipher_old(struct dm_target *ti, char *cipher_in, char *key
- 	if (!cipher_api)
- 		goto bad_mem;
- 
--	ret = snprintf(cipher_api, CRYPTO_MAX_ALG_NAME,
--		       "%s(%s)", chainmode, cipher);
--	if (ret < 0) {
-+	if (*ivmode && !strcmp(*ivmode, "essiv")) {
-+		if (!*ivopts) {
-+			ti->error = "Digest algorithm missing for ESSIV mode";
-+			kfree(cipher_api);
-+			return -EINVAL;
-+		}
-+		ret = snprintf(cipher_api, CRYPTO_MAX_ALG_NAME,
-+			       "essiv(%s(%s),%s)", chainmode, cipher, *ivopts);
+ 	/* Transfer request descriptor header fields */
++	if (lrbp->crypto_enable) {
++		dword_0 |= UTP_REQ_DESC_CRYPTO_ENABLE_CMD;
++		dword_0 |= lrbp->crypto_key_slot;
++		req_desc->header.dword_1 =
++			cpu_to_le32((u32)lrbp->data_unit_num);
++		req_desc->header.dword_3 =
++			cpu_to_le32((u32)(lrbp->data_unit_num >> 32));
 +	} else {
-+		ret = snprintf(cipher_api, CRYPTO_MAX_ALG_NAME,
-+			       "%s(%s)", chainmode, cipher);
++		/* dword_1 and dword_3 are reserved, hence they are set to 0 */
++		req_desc->header.dword_1 = 0;
++		req_desc->header.dword_3 = 0;
 +	}
-+	if (ret < 0 || ret >= CRYPTO_MAX_ALG_NAME) {
- 		kfree(cipher_api);
- 		goto bad_mem;
++
+ 	req_desc->header.dword_0 = cpu_to_le32(dword_0);
+-	/* dword_1 is reserved, hence it is set to 0 */
+-	req_desc->header.dword_1 = 0;
++
+ 	/*
+ 	 * assigning invalid value for command status. Controller
+ 	 * updates OCS on command completion, with the command
+@@ -2219,8 +2239,6 @@ static void ufshcd_prepare_req_desc_hdr(struct ufshcd_lrb *lrbp,
+ 	 */
+ 	req_desc->header.dword_2 =
+ 		cpu_to_le32(OCS_INVALID_COMMAND_STATUS);
+-	/* dword_3 is reserved, hence it is set to 0 */
+-	req_desc->header.dword_3 = 0;
+ 
+ 	req_desc->prd_table_length = 0;
+ }
+@@ -2380,6 +2398,37 @@ static inline u16 ufshcd_upiu_wlun_to_scsi_wlun(u8 upiu_wlun_id)
+ 	return (upiu_wlun_id & ~UFS_UPIU_WLUN_ID) | SCSI_W_LUN_BASE;
+ }
+ 
++static inline int ufshcd_prepare_lrbp_crypto(struct ufs_hba *hba,
++					     struct scsi_cmnd *cmd,
++					     struct ufshcd_lrb *lrbp)
++{
++	int key_slot;
++
++	if (!cmd->request->bio ||
++	    !bio_crypt_should_process(cmd->request->bio, cmd->request->q)) {
++		lrbp->crypto_enable = false;
++		return 0;
++	}
++
++	if (WARN_ON(!ufshcd_is_crypto_enabled(hba))) {
++		/*
++		 * Upper layer asked us to do inline encryption
++		 * but that isn't enabled, so we fail this request.
++		 */
++		return -EINVAL;
++	}
++	key_slot = bio_crypt_get_keyslot(cmd->request->bio);
++	if (!ufshcd_keyslot_valid(hba, key_slot))
++		return -EINVAL;
++
++	lrbp->crypto_enable = true;
++	lrbp->crypto_key_slot = key_slot;
++	lrbp->data_unit_num = bio_crypt_data_unit_num(cmd->request->bio);
++
++	return 0;
++}
++
++
+ /**
+  * ufshcd_queuecommand - main entry point for SCSI requests
+  * @host: SCSI host pointer
+@@ -2467,6 +2516,13 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
+ 	lrbp->task_tag = tag;
+ 	lrbp->lun = ufshcd_scsi_to_upiu_lun(cmd->device->lun);
+ 	lrbp->intr_cmd = !ufshcd_is_intr_aggr_allowed(hba) ? true : false;
++
++	err = ufshcd_prepare_lrbp_crypto(hba, cmd, lrbp);
++	if (err) {
++		lrbp->cmd = NULL;
++		clear_bit_unlock(tag, &hba->lrb_in_use);
++		goto out;
++	}
+ 	lrbp->req_abort_skip = false;
+ 
+ 	ufshcd_comp_scsi_upiu(hba, lrbp);
+@@ -2500,6 +2556,7 @@ static int ufshcd_compose_dev_cmd(struct ufs_hba *hba,
+ 	lrbp->task_tag = tag;
+ 	lrbp->lun = 0; /* device management cmd is not specific to any LUN */
+ 	lrbp->intr_cmd = true; /* No interrupt aggregation */
++	lrbp->crypto_enable = false; /* No crypto operations */
+ 	hba->dev_cmd.type = cmd_type;
+ 
+ 	return ufshcd_comp_devman_upiu(hba, lrbp);
+@@ -4192,6 +4249,8 @@ static inline void ufshcd_hba_stop(struct ufs_hba *hba, bool can_sleep)
+ {
+ 	int err;
+ 
++	ufshcd_crypto_disable(hba);
++
+ 	ufshcd_writel(hba, CONTROLLER_DISABLE,  REG_CONTROLLER_ENABLE);
+ 	err = ufshcd_wait_for_register(hba, REG_CONTROLLER_ENABLE,
+ 					CONTROLLER_ENABLE, CONTROLLER_DISABLE,
+@@ -4585,8 +4644,12 @@ static int ufshcd_change_queue_depth(struct scsi_device *sdev, int depth)
+ static int ufshcd_slave_configure(struct scsi_device *sdev)
+ {
+ 	struct request_queue *q = sdev->request_queue;
++	struct ufs_hba *hba = shost_priv(sdev->host);
+ 
+ 	blk_queue_update_dma_pad(q, PRDT_DATA_BYTE_COUNT_PAD - 1);
++
++	ufshcd_crypto_setup_rq_keyslot_manager(hba, q);
++
+ 	return 0;
+ }
+ 
+@@ -4597,6 +4660,7 @@ static int ufshcd_slave_configure(struct scsi_device *sdev)
+ static void ufshcd_slave_destroy(struct scsi_device *sdev)
+ {
+ 	struct ufs_hba *hba;
++	struct request_queue *q = sdev->request_queue;
+ 
+ 	hba = shost_priv(sdev->host);
+ 	/* Drop the reference as it won't be needed anymore */
+@@ -4607,6 +4671,8 @@ static void ufshcd_slave_destroy(struct scsi_device *sdev)
+ 		hba->sdev_ufs_device = NULL;
+ 		spin_unlock_irqrestore(hba->host->host_lock, flags);
  	}
++
++	ufshcd_crypto_destroy_rq_keyslot_manager(hba, q);
+ }
+ 
+ /**
+@@ -8323,6 +8389,13 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
+ 		goto exit_gating;
+ 	}
+ 
++	/* Init crypto */
++	err = ufshcd_hba_init_crypto(hba);
++	if (err) {
++		dev_err(hba->dev, "crypto setup failed\n");
++		goto out_remove_scsi_host;
++	}
++
+ 	/* Host controller enable */
+ 	err = ufshcd_hba_enable(hba);
+ 	if (err) {
+diff --git a/drivers/scsi/ufs/ufshcd.h b/drivers/scsi/ufs/ufshcd.h
+index 34e9849f00f0..c3e1f409e63d 100644
+--- a/drivers/scsi/ufs/ufshcd.h
++++ b/drivers/scsi/ufs/ufshcd.h
+@@ -167,6 +167,9 @@ struct ufs_pm_lvl_states {
+  * @intr_cmd: Interrupt command (doesn't participate in interrupt aggregation)
+  * @issue_time_stamp: time stamp for debug purposes
+  * @compl_time_stamp: time stamp for statistics
++ * @crypto_enable: whether or not the request needs inline crypto operations
++ * @crypto_key_slot: the key slot to use for inline crypto
++ * @data_unit_num: the data unit number for the first block for inline crypto
+  * @req_abort_skip: skip request abort task flag
+  */
+ struct ufshcd_lrb {
+@@ -191,6 +194,9 @@ struct ufshcd_lrb {
+ 	bool intr_cmd;
+ 	ktime_t issue_time_stamp;
+ 	ktime_t compl_time_stamp;
++	bool crypto_enable;
++	u8 crypto_key_slot;
++	u64 data_unit_num;
+ 
+ 	bool req_abort_skip;
+ };
 -- 
-2.17.1
+2.23.0.rc1.153.gdeed80330f-goog
