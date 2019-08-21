@@ -1,276 +1,57 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:53492 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726811AbfHLR5P (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 12 Aug 2019 13:57:15 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 4/8] xfs_io/encrypt: extend 'get_encpolicy' to support v2 policies
-Date: Mon, 12 Aug 2019 10:56:30 -0700
-Message-Id: <20190812175635.34186-5-ebiggers@kernel.org>
-In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
-References: <20190812175635.34186-1-ebiggers@kernel.org>
+Return-Path: <dm-devel-bounces@redhat.com>
+Date: Wed, 21 Aug 2019 17:21:09 +1000
+From: Herbert Xu <herbert@gondor.apana.org.au>
+Message-ID: <20190821072109.GA22686@gondor.apana.org.au>
+References: <CGME20190821064230epcas2p1ad7301f2b1331bcab3126e6e37c0e272@epcas2p1.samsung.com>
+	<004201d557eb$9b0a4410$d11ecc30$@samsung.com>
+	<cc484ef6-aacc-7864-0e6d-313b2e1c5d92@gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-xfs@vger.kernel.org
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Content-Disposition: inline
+In-Reply-To: <cc484ef6-aacc-7864-0e6d-313b2e1c5d92@gmail.com>
+Subject: Re: [dm-devel] [PATCH 6/9] dm crypt: support diskcipher
+List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
+List-Archive: <https://www.redhat.com/archives/dm-devel>
+List-Post: <mailto:dm-devel@redhat.com>
+List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
+List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
+	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Sender: dm-devel-bounces@redhat.com
+Errors-To: dm-devel-bounces@redhat.com
+To: Milan Broz <gmazyland@gmail.com>
+Cc: 'Jens Axboe' <axboe@kernel.dk>, 'Jaehoon Chung' <jh80.chung@samsung.com>, 'Ulf Hansson' <ulf.hansson@linaro.org>, "'Theodore Y. Ts'o'" <tytso@mit.edu>, 'Mike Snitzer' <snitzer@redhat.com>, "boojin.kim" <boojin.kim@samsung.com>, 'Chao Yu' <chao@kernel.org>, linux-mmc@vger.kernel.org, linux-kernel@vger.kernel.org, 'Krzysztof Kozlowski' <krzk@kernel.org>, 'Eric Biggers' <ebiggers@kernel.org>, dm-devel@redhat.com, 'Kukjin Kim' <kgene@kernel.org>, 'Andreas Dilger' <adilger.kernel@dilger.ca>, linux-crypto@vger.kernel.org, 'Jaegeuk Kim' <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, "'David S. Miller'" <davem@davemloft.net>, 'Alasdair Kergon' <agk@redhat.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Aug 21, 2019 at 09:13:36AM +0200, Milan Broz wrote:
+>
+> NACK.
+> 
+> The whole principle of dm-crypt target is that it NEVER EVER submits
+> plaintext data down the stack in bio.
+> 
+> If you want to do some lower/higher layer encryption, use key management
+> on a different layer.
+> So here, just setup encryption for fs, do not stack it with dm-crypt.
+> 
+> Also, dm-crypt is software-independent solution
+> (software-based full disk encryption), it must not depend on
+> any underlying hardware.
+> Hardware can be of course used used for acceleration, but then
+> just implement proper crypto API module that accelerates particular cipher.
 
-get_encpolicy uses the FS_IOC_GET_ENCRYPTION_POLICY ioctl to retrieve
-the file's encryption policy, then displays it.  But that only works for
-v1 encryption policies.  A new ioctl, FS_IOC_GET_ENCRYPTION_POLICY_EX,
-has been introduced which is more flexible and can retrieve both v1 and
-v2 encryption policies.
+I agree.  Please take a look at the recent ESSIV patches on
+linux-crypto and build multi-block operations on top of them
+which can then be implemented by the hardware.
 
-Make get_encpolicy use the new ioctl if the kernel supports it and
-display the resulting the v1 or v2 encryption policy.  Otherwise, fall
-back to the old ioctl and display the v1 policy.
-
-Also add new options:
-
-  -1: Use the old ioctl only.  This will be used to test the old ioctl
-      even when the kernel supports the new one.
-
-  -t: Test whether the new ioctl is supported.  This will be useful to
-      determine whether v2 policies should be tested or not.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- io/encrypt.c      | 150 +++++++++++++++++++++++++++++++++++++++++-----
- man/man8/xfs_io.8 |  15 ++++-
- 2 files changed, 147 insertions(+), 18 deletions(-)
-
-diff --git a/io/encrypt.c b/io/encrypt.c
-index 11eb4a3e..5b92cfae 100644
---- a/io/encrypt.c
-+++ b/io/encrypt.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * Copyright (c) 2016 Google, Inc.  All Rights Reserved.
-+ * Copyright 2016, 2019 Google LLC
-  * Author: Eric Biggers <ebiggers@google.com>
-  */
- 
-@@ -139,6 +139,20 @@ struct fscrypt_get_key_status_arg {
- static cmdinfo_t get_encpolicy_cmd;
- static cmdinfo_t set_encpolicy_cmd;
- 
-+static void
-+get_encpolicy_help(void)
-+{
-+	printf(_(
-+"\n"
-+" display the encryption policy of the current file\n"
-+"\n"
-+" -1 -- Use only the old ioctl to get the encryption policy.\n"
-+"       This only works if the file has a v1 encryption policy.\n"
-+" -t -- Test whether v2 encryption policies are supported.\n"
-+"       Prints \"supported\", \"unsupported\", or an error message.\n"
-+"\n"));
-+}
-+
- static void
- set_encpolicy_help(void)
- {
-@@ -218,7 +232,7 @@ mode2str(__u8 mode)
- }
- 
- static const char *
--keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
-+keydesc2str(const __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
- {
- 	static char buf[2 * FSCRYPT_KEY_DESCRIPTOR_SIZE + 1];
- 	int i;
-@@ -229,29 +243,131 @@ keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
- 	return buf;
- }
- 
-+static const char *
-+keyid2str(const __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
-+{
-+	static char buf[2 * FSCRYPT_KEY_IDENTIFIER_SIZE + 1];
-+	int i;
-+
-+	for (i = 0; i < FSCRYPT_KEY_IDENTIFIER_SIZE; i++)
-+		sprintf(&buf[2 * i], "%02x", master_key_identifier[i]);
-+
-+	return buf;
-+}
-+
-+static void
-+test_for_v2_policy_support(void)
-+{
-+	struct fscrypt_get_policy_ex_arg arg;
-+
-+	arg.policy_size = sizeof(arg.policy);
-+
-+	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg) == 0 ||
-+	    errno == ENODATA /* file unencrypted */) {
-+		printf("supported\n");
-+		return;
-+	}
-+	if (errno == ENOTTY) {
-+		printf("unsupported\n");
-+		return;
-+	}
-+	fprintf(stderr,
-+		"%s: unexpected error checking for FS_IOC_GET_ENCRYPTION_POLICY_EX support: %s\n",
-+		file->name, strerror(errno));
-+	exitcode = 1;
-+}
-+
-+static void
-+show_v1_encryption_policy(const struct fscrypt_policy_v1 *policy)
-+{
-+	printf("Encryption policy for %s:\n", file->name);
-+	printf("\tPolicy version: %u\n", policy->version);
-+	printf("\tMaster key descriptor: %s\n",
-+	       keydesc2str(policy->master_key_descriptor));
-+	printf("\tContents encryption mode: %u (%s)\n",
-+	       policy->contents_encryption_mode,
-+	       mode2str(policy->contents_encryption_mode));
-+	printf("\tFilenames encryption mode: %u (%s)\n",
-+	       policy->filenames_encryption_mode,
-+	       mode2str(policy->filenames_encryption_mode));
-+	printf("\tFlags: 0x%02x\n", policy->flags);
-+}
-+
-+static void
-+show_v2_encryption_policy(const struct fscrypt_policy_v2 *policy)
-+{
-+	printf("Encryption policy for %s:\n", file->name);
-+	printf("\tPolicy version: %u\n", policy->version);
-+	printf("\tMaster key identifier: %s\n",
-+	       keyid2str(policy->master_key_identifier));
-+	printf("\tContents encryption mode: %u (%s)\n",
-+	       policy->contents_encryption_mode,
-+	       mode2str(policy->contents_encryption_mode));
-+	printf("\tFilenames encryption mode: %u (%s)\n",
-+	       policy->filenames_encryption_mode,
-+	       mode2str(policy->filenames_encryption_mode));
-+	printf("\tFlags: 0x%02x\n", policy->flags);
-+}
-+
- static int
- get_encpolicy_f(int argc, char **argv)
- {
--	struct fscrypt_policy policy;
-+	int c;
-+	struct fscrypt_get_policy_ex_arg arg;
-+	bool only_use_v1_ioctl = false;
-+	int res;
- 
--	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY, &policy) < 0) {
-+	while ((c = getopt(argc, argv, "1t")) != EOF) {
-+		switch (c) {
-+		case '1':
-+			only_use_v1_ioctl = true;
-+			break;
-+		case 't':
-+			test_for_v2_policy_support();
-+			return 0;
-+		default:
-+			return command_usage(&get_encpolicy_cmd);
-+		}
-+	}
-+	argc -= optind;
-+	argv += optind;
-+
-+	if (argc != 0)
-+		return command_usage(&get_encpolicy_cmd);
-+
-+	/* first try the new ioctl */
-+	if (only_use_v1_ioctl) {
-+		res = -1;
-+		errno = ENOTTY;
-+	} else {
-+		arg.policy_size = sizeof(arg.policy);
-+		res = ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg);
-+	}
-+
-+	/* fall back to the old ioctl */
-+	if (res != 0 && errno == ENOTTY)
-+		res = ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY,
-+			    &arg.policy.v1);
-+
-+	if (res != 0) {
- 		fprintf(stderr, "%s: failed to get encryption policy: %s\n",
- 			file->name, strerror(errno));
- 		exitcode = 1;
- 		return 0;
- 	}
- 
--	printf("Encryption policy for %s:\n", file->name);
--	printf("\tPolicy version: %u\n", policy.version);
--	printf("\tMaster key descriptor: %s\n",
--	       keydesc2str(policy.master_key_descriptor));
--	printf("\tContents encryption mode: %u (%s)\n",
--	       policy.contents_encryption_mode,
--	       mode2str(policy.contents_encryption_mode));
--	printf("\tFilenames encryption mode: %u (%s)\n",
--	       policy.filenames_encryption_mode,
--	       mode2str(policy.filenames_encryption_mode));
--	printf("\tFlags: 0x%02x\n", policy.flags);
-+	switch (arg.policy.version) {
-+	case FSCRYPT_POLICY_V1:
-+		show_v1_encryption_policy(&arg.policy.v1);
-+		break;
-+	case FSCRYPT_POLICY_V2:
-+		show_v2_encryption_policy(&arg.policy.v2);
-+		break;
-+	default:
-+		printf("Encryption policy for %s:\n", file->name);
-+		printf("\tPolicy version: %u (unknown)\n", arg.policy.version);
-+		break;
-+	}
- 	return 0;
- }
- 
-@@ -351,11 +467,13 @@ encrypt_init(void)
- {
- 	get_encpolicy_cmd.name = "get_encpolicy";
- 	get_encpolicy_cmd.cfunc = get_encpolicy_f;
-+	get_encpolicy_cmd.args = _("[-1] [-t]");
- 	get_encpolicy_cmd.argmin = 0;
--	get_encpolicy_cmd.argmax = 0;
-+	get_encpolicy_cmd.argmax = -1;
- 	get_encpolicy_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
- 	get_encpolicy_cmd.oneline =
- 		_("display the encryption policy of the current file");
-+	get_encpolicy_cmd.help = get_encpolicy_help;
- 
- 	set_encpolicy_cmd.name = "set_encpolicy";
- 	set_encpolicy_cmd.cfunc = set_encpolicy_f;
-diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
-index 6e064bdd..3dd34a0c 100644
---- a/man/man8/xfs_io.8
-+++ b/man/man8/xfs_io.8
-@@ -724,10 +724,21 @@ version of policy structure (numeric)
- .RE
- .PD
- .TP
--.BR get_encpolicy
-+.BI "get_encpolicy [ \-1 ] [ \-t ]"
- On filesystems that support encryption, display the encryption policy of the
- current file.
--
-+.RS 1.0i
-+.PD 0
-+.TP 0.4i
-+.BI \-1
-+Use only the old ioctl to get the encryption policy.  This only works if the
-+file has a v1 encryption policy.
-+.TP
-+.BI \-t
-+Test whether v2 encryption policies are supported.  Prints "supported",
-+"unsupported", or an error message.
-+.RE
-+.PD
- .TP
- .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
- List extended inode flags on the currently open file. If the
+Cheers,
 -- 
-2.23.0.rc1.153.gdeed80330f-goog
+Email: Herbert Xu <herbert@gondor.apana.org.au>
+Home Page: http://gondor.apana.org.au/~herbert/
+PGP Key: http://gondor.apana.org.au/~herbert/pubkey.txt
+
+--
+dm-devel mailing list
+dm-devel@redhat.com
+https://www.redhat.com/mailman/listinfo/dm-devel
