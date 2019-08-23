@@ -1,63 +1,29 @@
-Return-Path: <linux-ext4-owner@vger.kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V4 7/8] ext4: Enable encryption for subpage-sized blocks
-Date: Fri, 16 Aug 2019 11:48:03 +0530
-In-Reply-To: <20190816061804.14840-1-chandan@linux.ibm.com>
-References: <20190816061804.14840-1-chandan@linux.ibm.com>
+Return-Path: <SRS0=tO/G=WT=samsung.com=boojin.kim@kernel.org>
+From: "boojin.kim" <boojin.kim@samsung.com>
+Subject: Re: [PATCH 1/9] crypt: Add diskcipher
+Date: Fri, 23 Aug 2019 09:50:41 +0900
+Message-ID: <00da01d5594c$c9d87390$5d895ab0$@samsung.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Message-Id: <20190816061804.14840-8-chandan@linux.ibm.com>
-Sender: linux-ext4-owner@vger.kernel.org
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, chandanrmail@gmail.com, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, jaegeuk@kernel.org, yuchao0@huawei.com, hch@infradead.org
+Content-Transfer-Encoding: 7bit
+Content-Language: ko
+Content-Type: text/plain; charset="utf-8"
+References: <CGME20190823005041epcas2p3c8550c3fabbd6a6db6429cb06dbbf3a6@epcas2p3.samsung.com>
+To: 'Krzysztof Kozlowski' <krzk@kernel.org>
+Cc: 'Herbert Xu' <herbert@gondor.apana.org.au>, "'David S. Miller'" <davem@davemloft.net>, 'Eric Biggers' <ebiggers@kernel.org>, "'Theodore Y. Ts'o'  <tytso@mit.edu>,  'Chao Yu'  <chao@kernel.org>,  'Jaegeuk Kim' " <jaegeuk@kernel.org>, 'Andreas Dilger' <adilger.kernel@dilger.ca>'Theodore Ts'o' <tytso@mit.edu>, dm-devel@redhat.com, 'Mike Snitzer' <snitzer@redhat.com>, 'Alasdair Kergon' <agk@redhat.com>, 'Jens Axboe' <axboe@kernel.dk>, 'Kukjin Kim' <kgene@kernel.org>, 'Jaehoon Chung' <jh80.chung@samsung.com>, "'Ulf Hansson'  <ulf.hansson@linaro.org>, <linux-crypto@vger.kernel.org>," <linux-kernel@vger.kernel.org>, linux-fscrypt@vger.kernel.org, linux-mmc@vger.kernel.org, linux-samsung-soc@vger.kernel.org, linux-block@vger.kernel.org, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.netlinux-samsung-soc@vger.kernel.org, linux-arm-kernel@lists.infradead.org, linux-fsdevel@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Now that we have the code to support encryption for subpage-sized
-blocks, this commit removes the conditional check in filesystem mount
-code.
+On Wed, 22 Aug 2019 at 17:37, Krzysztof Kozlowski <krzk@kernel.org> wrote:
+>
+> Your patch looks corrupted - wrapped by mailer. The easiest way
+> usually is to use git format-patch and git send-email - then you do
+> not have to worry about formatting etc.
+>
+> Best regards,
+> Krzysztof
 
-The commit also changes the support statement in
-Documentation/filesystems/fscrypt.rst to reflect the fact that
-encryption of filesystems with blocksize less than page size now works.
+I'm using outlook instead of 'git send-email' because of workplace policy.
+It's probably broken when I copied the code.
+Thanks for your notice. I will be more careful.
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- Documentation/filesystems/fscrypt.rst | 4 ++--
- fs/ext4/super.c                       | 7 -------
- 2 files changed, 2 insertions(+), 9 deletions(-)
-
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 08c23b60e016..c3efe86bf2b2 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -213,8 +213,8 @@ Contents encryption
- -------------------
- 
- For file contents, each filesystem block is encrypted independently.
--Currently, only the case where the filesystem block size is equal to
--the system's page size (usually 4096 bytes) is supported.
-+Starting from Linux kernel 5.4, encryption of filesystems with block
-+size less than system's page size is supported.
- 
- Each block's IV is set to the logical block number within the file as
- a little endian number, except that:
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 5b92054bf8ea..d580e71ad9c7 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -4322,13 +4322,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
- 		}
- 	}
- 
--	if ((DUMMY_ENCRYPTION_ENABLED(sbi) || ext4_has_feature_encrypt(sb)) &&
--	    (blocksize != PAGE_SIZE)) {
--		ext4_msg(sb, KERN_ERR,
--			 "Unsupported blocksize for fs encryption");
--		goto failed_mount_wq;
--	}
--
- 	if (DUMMY_ENCRYPTION_ENABLED(sbi) && !sb_rdonly(sb) &&
- 	    !ext4_has_feature_encrypt(sb)) {
- 		ext4_set_feature_encrypt(sb);
--- 
-2.19.1
+Thanks for your reply
+Boojin Kim.
