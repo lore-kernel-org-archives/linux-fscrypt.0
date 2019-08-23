@@ -1,178 +1,103 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Wed, 14 Aug 2019 19:37:45 +0300
-Message-Id: <20190814163746.3525-4-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190814163746.3525-1-ard.biesheuvel@linaro.org>
-References: <20190814163746.3525-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v11 3/4] crypto: arm64/aes-cts-cbc - factor out
-	CBC en/decryption of a walk
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Return-Path: <SRS0=LT3F=WT=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH V5 4/7] fs/buffer.c: add decryption support via read_callbacks
+Date: Fri, 23 Aug 2019 18:55:39 +0530
+Message-Id: <20190823132542.13434-5-chandan@linux.ibm.com>
+In-Reply-To: <20190823132542.13434-1-chandan@linux.ibm.com>
+References: <20190823132542.13434-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Content-Transfer-Encoding: 8bit
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The plain CBC driver and the CTS one share some code that iterates over
-a scatterwalk and invokes the CBC asm code to do the processing. The
-upcoming ESSIV/CBC mode will clone that pattern for the third time, so
-let's factor it out first.
+This commit sets up read_callbacks context for buffer heads whose
+contents need to be decrypted on endio.
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- arch/arm64/crypto/aes-glue.c | 82 ++++++++++----------
- 1 file changed, 40 insertions(+), 42 deletions(-)
+ fs/buffer.c | 33 ++++++++++++++++++++++-----------
+ 1 file changed, 22 insertions(+), 11 deletions(-)
 
-diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
-index 55d6d4838708..23abf335f1ee 100644
---- a/arch/arm64/crypto/aes-glue.c
-+++ b/arch/arm64/crypto/aes-glue.c
-@@ -186,46 +186,64 @@ static int ecb_decrypt(struct skcipher_request *req)
- 	return err;
+diff --git a/fs/buffer.c b/fs/buffer.c
+index ce357602f471..96c4c9840746 100644
+--- a/fs/buffer.c
++++ b/fs/buffer.c
+@@ -45,6 +45,7 @@
+ #include <linux/bit_spinlock.h>
+ #include <linux/pagevec.h>
+ #include <linux/sched/mm.h>
++#include <linux/read_callbacks.h>
+ #include <trace/events/block.h>
+ 
+ static int fsync_buffers_list(spinlock_t *lock, struct list_head *list);
+@@ -245,11 +246,7 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
+ 	return ret;
  }
  
--static int cbc_encrypt(struct skcipher_request *req)
-+static int cbc_encrypt_walk(struct skcipher_request *req,
-+			    struct skcipher_walk *walk)
+-/*
+- * I/O completion handler for block_read_full_page() - pages
+- * which come unlocked at the end of I/O.
+- */
+-static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
++void end_buffer_async_read(struct buffer_head *bh, int uptodate)
  {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
- 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
--	int err, rounds = 6 + ctx->key_length / 4;
--	struct skcipher_walk walk;
-+	int err = 0, rounds = 6 + ctx->key_length / 4;
- 	unsigned int blocks;
+ 	unsigned long flags;
+ 	struct buffer_head *first;
+@@ -257,8 +254,6 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+ 	struct page *page;
+ 	int page_uptodate = 1;
  
--	err = skcipher_walk_virt(&walk, req, false);
+-	BUG_ON(!buffer_async_read(bh));
 -
--	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
-+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
- 		kernel_neon_begin();
--		aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
--				ctx->key_enc, rounds, blocks, walk.iv);
-+		aes_cbc_encrypt(walk->dst.virt.addr, walk->src.virt.addr,
-+				ctx->key_enc, rounds, blocks, walk->iv);
- 		kernel_neon_end();
--		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
- 	}
- 	return err;
+ 	page = bh->b_page;
+ 	if (uptodate) {
+ 		set_buffer_uptodate(bh);
+@@ -306,6 +301,17 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+ 	return;
  }
  
--static int cbc_decrypt(struct skcipher_request *req)
-+static int cbc_encrypt(struct skcipher_request *req)
- {
--	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
--	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
--	int err, rounds = 6 + ctx->key_length / 4;
- 	struct skcipher_walk walk;
--	unsigned int blocks;
-+	int err;
- 
- 	err = skcipher_walk_virt(&walk, req, false);
-+	if (err)
-+		return err;
-+	return cbc_encrypt_walk(req, &walk);
-+}
- 
--	while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
-+static int cbc_decrypt_walk(struct skcipher_request *req,
-+			    struct skcipher_walk *walk)
++/*
++ * I/O completion handler for block_read_full_page().  Pages are unlocked
++ * after the I/O completes and the read callbacks (if any) have executed.
++ */
++static void __end_buffer_async_read(struct buffer_head *bh, int uptodate)
 +{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err = 0, rounds = 6 + ctx->key_length / 4;
-+	unsigned int blocks;
++	BUG_ON(!buffer_async_read(bh));
 +
-+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
- 		kernel_neon_begin();
--		aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
--				ctx->key_dec, rounds, blocks, walk.iv);
-+		aes_cbc_decrypt(walk->dst.virt.addr, walk->src.virt.addr,
-+				ctx->key_dec, rounds, blocks, walk->iv);
- 		kernel_neon_end();
--		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
- 	}
- 	return err;
- }
- 
-+static int cbc_decrypt(struct skcipher_request *req)
-+{
-+	struct skcipher_walk walk;
-+	int err;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+	if (err)
-+		return err;
-+	return cbc_decrypt_walk(req, &walk);
++	read_callbacks_endio_bh(bh, uptodate, end_buffer_async_read);
 +}
 +
- static int cts_cbc_init_tfm(struct crypto_skcipher *tfm)
+ /*
+  * Completion handler for block_write_full_page() - pages which are unlocked
+  * during I/O, and which have PageWriteback cleared upon I/O completion.
+@@ -378,7 +384,7 @@ EXPORT_SYMBOL(end_buffer_async_write);
+  */
+ static void mark_buffer_async_read(struct buffer_head *bh)
  {
- 	crypto_skcipher_set_reqsize(tfm, sizeof(struct cts_cbc_req_ctx));
-@@ -251,22 +269,12 @@ static int cts_cbc_encrypt(struct skcipher_request *req)
+-	bh->b_end_io = end_buffer_async_read;
++	bh->b_end_io = __end_buffer_async_read;
+ 	set_buffer_async_read(bh);
+ }
+ 
+@@ -2293,10 +2299,15 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
+ 	 */
+ 	for (i = 0; i < nr; i++) {
+ 		bh = arr[i];
+-		if (buffer_uptodate(bh))
+-			end_buffer_async_read(bh, 1);
+-		else
++		if (buffer_uptodate(bh)) {
++			__end_buffer_async_read(bh, 1);
++		} else {
++			if (WARN_ON(read_callbacks_setup_bh(inode, bh))) {
++				__end_buffer_async_read(bh, 0);
++				continue;
++			}
+ 			submit_bh(REQ_OP_READ, 0, bh);
++		}
  	}
- 
- 	if (cbc_blocks > 0) {
--		unsigned int blocks;
--
- 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
- 					   cbc_blocks * AES_BLOCK_SIZE,
- 					   req->iv);
- 
--		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
--
--		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
--			kernel_neon_begin();
--			aes_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
--					ctx->key_enc, rounds, blocks, walk.iv);
--			kernel_neon_end();
--			err = skcipher_walk_done(&walk,
--						 walk.nbytes % AES_BLOCK_SIZE);
--		}
-+		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
-+		      cbc_encrypt_walk(&rctx->subreq, &walk);
- 		if (err)
- 			return err;
- 
-@@ -316,22 +324,12 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
- 	}
- 
- 	if (cbc_blocks > 0) {
--		unsigned int blocks;
--
- 		skcipher_request_set_crypt(&rctx->subreq, req->src, req->dst,
- 					   cbc_blocks * AES_BLOCK_SIZE,
- 					   req->iv);
- 
--		err = skcipher_walk_virt(&walk, &rctx->subreq, false);
--
--		while ((blocks = (walk.nbytes / AES_BLOCK_SIZE))) {
--			kernel_neon_begin();
--			aes_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
--					ctx->key_dec, rounds, blocks, walk.iv);
--			kernel_neon_end();
--			err = skcipher_walk_done(&walk,
--						 walk.nbytes % AES_BLOCK_SIZE);
--		}
-+		err = skcipher_walk_virt(&walk, &rctx->subreq, false) ?:
-+		      cbc_decrypt_walk(&rctx->subreq, &walk);
- 		if (err)
- 			return err;
- 
+ 	return 0;
+ }
 -- 
-2.17.1
-
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+2.19.1
