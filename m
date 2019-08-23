@@ -1,404 +1,430 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon,  5 Aug 2019 09:25:04 -0700
-Message-Id: <20190805162521.90882-4-ebiggers@kernel.org>
-In-Reply-To: <20190805162521.90882-1-ebiggers@kernel.org>
-References: <20190805162521.90882-1-ebiggers@kernel.org>
+Return-Path: <SRS0=LT3F=WT=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH V5 2/7] FS: Introduce read callbacks
+Date: Fri, 23 Aug 2019 18:55:37 +0530
+Message-Id: <20190823132542.13434-3-chandan@linux.ibm.com>
+In-Reply-To: <20190823132542.13434-1-chandan@linux.ibm.com>
+References: <20190823132542.13434-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v8 03/20] fscrypt: use FSCRYPT_* definitions,
- not FS_*
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: linux-fscrypt@vger.kernel.org
-Cc: Satya Tangirala <satyat@google.com>, Theodore Ts'o <tytso@mit.edu>, linux-api@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, keyrings@vger.kernel.org, linux-mtd@lists.infradead.org, linux-crypto@vger.kernel.org, linux-fsdevel@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, Paul Crowley <paulcrowley@google.com>
+Content-Transfer-Encoding: 8bit
+To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Read callbacks implements a state machine to be executed after a
+buffered read I/O is completed. They help in further processing the file
+data read from the backing store. Currently, decryption is the only post
+processing step to be supported.
 
-Update fs/crypto/ to use the new names for the UAPI constants rather
-than the old names, then make the old definitions conditional on
-!__KERNEL__.
+The execution of the state machine is to be initiated by the endio
+function associated with the read operation.
 
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- fs/crypto/crypto.c           |  2 +-
- fs/crypto/fname.c            |  2 +-
- fs/crypto/fscrypt_private.h  | 16 +++++------
- fs/crypto/keyinfo.c          | 53 ++++++++++++++++++------------------
- fs/crypto/policy.c           | 14 +++++-----
- include/uapi/linux/fscrypt.h |  2 ++
- 6 files changed, 46 insertions(+), 43 deletions(-)
+ fs/Kconfig                     |   3 +
+ fs/Makefile                    |   1 +
+ fs/ext4/Kconfig                |   1 +
+ fs/f2fs/Kconfig                |   1 +
+ fs/read_callbacks.c            | 285 +++++++++++++++++++++++++++++++++
+ include/linux/read_callbacks.h |  48 ++++++
+ 6 files changed, 339 insertions(+)
+ create mode 100644 fs/read_callbacks.c
+ create mode 100644 include/linux/read_callbacks.h
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 3e4624cfe4b54d..7502c1f0ede9e9 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -141,7 +141,7 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
- 	memset(iv, 0, ci->ci_mode->ivsize);
- 	iv->lblk_num = cpu_to_le64(lblk_num);
+diff --git a/fs/Kconfig b/fs/Kconfig
+index 3e6d3101f3ff..2d96a58d7418 100644
+--- a/fs/Kconfig
++++ b/fs/Kconfig
+@@ -20,6 +20,9 @@ if BLOCK
+ config FS_IOMAP
+ 	bool
  
--	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY)
-+	if (ci->ci_flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY)
- 		memcpy(iv->nonce, ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE);
++config FS_READ_CALLBACKS
++	bool
++
+ source "fs/ext2/Kconfig"
+ source "fs/ext4/Kconfig"
+ source "fs/jbd2/Kconfig"
+diff --git a/fs/Makefile b/fs/Makefile
+index 427fec226fae..942808f83472 100644
+--- a/fs/Makefile
++++ b/fs/Makefile
+@@ -53,6 +53,7 @@ obj-$(CONFIG_SYSCTL)		+= drop_caches.o
  
- 	if (ci->ci_essiv_tfm != NULL)
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 5cab3bb2d1fc00..f4977d44d69b81 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -182,7 +182,7 @@ bool fscrypt_fname_encrypted_size(const struct inode *inode, u32 orig_len,
- 				  u32 max_len, u32 *encrypted_len_ret)
- {
- 	int padding = 4 << (inode->i_crypt_info->ci_flags &
--			    FS_POLICY_FLAGS_PAD_MASK);
-+			    FSCRYPT_POLICY_FLAGS_PAD_MASK);
- 	u32 encrypted_len;
+ obj-$(CONFIG_FHANDLE)		+= fhandle.o
+ obj-$(CONFIG_FS_IOMAP)		+= iomap.o
++obj-$(CONFIG_FS_READ_CALLBACKS) += read_callbacks.o
  
- 	if (orig_len > max_len)
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 4d715708c6e1f7..fae411b2f78dcb 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -34,7 +34,7 @@ struct fscrypt_context {
- 	u8 contents_encryption_mode;
- 	u8 filenames_encryption_mode;
- 	u8 flags;
--	u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+	u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
- 	u8 nonce[FS_KEY_DERIVATION_NONCE_SIZE];
- } __packed;
+ obj-y				+= quota/
  
-@@ -84,7 +84,7 @@ struct fscrypt_info {
- 	u8 ci_data_mode;
- 	u8 ci_filename_mode;
- 	u8 ci_flags;
--	u8 ci_master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-+	u8 ci_master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
- 	u8 ci_nonce[FS_KEY_DERIVATION_NONCE_SIZE];
- };
+diff --git a/fs/ext4/Kconfig b/fs/ext4/Kconfig
+index 06f77ca7f36e..2e24df67f085 100644
+--- a/fs/ext4/Kconfig
++++ b/fs/ext4/Kconfig
+@@ -38,6 +38,7 @@ config EXT4_FS
+ 	select CRYPTO
+ 	select CRYPTO_CRC32C
+ 	select FS_IOMAP
++	select FS_READ_CALLBACKS if FS_ENCRYPTION
+ 	help
+ 	  This is the next generation of the ext3 filesystem.
  
-@@ -98,16 +98,16 @@ typedef enum {
- static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
- 					   u32 filenames_mode)
- {
--	if (contents_mode == FS_ENCRYPTION_MODE_AES_128_CBC &&
--	    filenames_mode == FS_ENCRYPTION_MODE_AES_128_CTS)
-+	if (contents_mode == FSCRYPT_MODE_AES_128_CBC &&
-+	    filenames_mode == FSCRYPT_MODE_AES_128_CTS)
- 		return true;
- 
--	if (contents_mode == FS_ENCRYPTION_MODE_AES_256_XTS &&
--	    filenames_mode == FS_ENCRYPTION_MODE_AES_256_CTS)
-+	if (contents_mode == FSCRYPT_MODE_AES_256_XTS &&
-+	    filenames_mode == FSCRYPT_MODE_AES_256_CTS)
- 		return true;
- 
--	if (contents_mode == FS_ENCRYPTION_MODE_ADIANTUM &&
--	    filenames_mode == FS_ENCRYPTION_MODE_ADIANTUM)
-+	if (contents_mode == FSCRYPT_MODE_ADIANTUM &&
-+	    filenames_mode == FSCRYPT_MODE_ADIANTUM)
- 		return true;
- 
- 	return false;
-diff --git a/fs/crypto/keyinfo.c b/fs/crypto/keyinfo.c
-index 2129943002335c..22345ddede1199 100644
---- a/fs/crypto/keyinfo.c
-+++ b/fs/crypto/keyinfo.c
-@@ -20,7 +20,7 @@
- 
- static struct crypto_shash *essiv_hash_tfm;
- 
--/* Table of keys referenced by FS_POLICY_FLAG_DIRECT_KEY policies */
-+/* Table of keys referenced by DIRECT_KEY policies */
- static DEFINE_HASHTABLE(fscrypt_master_keys, 6); /* 6 bits = 64 buckets */
- static DEFINE_SPINLOCK(fscrypt_master_keys_lock);
- 
-@@ -77,7 +77,7 @@ static int derive_key_aes(const u8 *master_key,
-  */
- static struct key *
- find_and_lock_process_key(const char *prefix,
--			  const u8 descriptor[FS_KEY_DESCRIPTOR_SIZE],
-+			  const u8 descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE],
- 			  unsigned int min_keysize,
- 			  const struct fscrypt_key **payload_ret)
- {
-@@ -87,7 +87,7 @@ find_and_lock_process_key(const char *prefix,
- 	const struct fscrypt_key *payload;
- 
- 	description = kasprintf(GFP_NOFS, "%s%*phN", prefix,
--				FS_KEY_DESCRIPTOR_SIZE, descriptor);
-+				FSCRYPT_KEY_DESCRIPTOR_SIZE, descriptor);
- 	if (!description)
- 		return ERR_PTR(-ENOMEM);
- 
-@@ -105,7 +105,7 @@ find_and_lock_process_key(const char *prefix,
- 	payload = (const struct fscrypt_key *)ukp->data;
- 
- 	if (ukp->datalen != sizeof(struct fscrypt_key) ||
--	    payload->size < 1 || payload->size > FS_MAX_KEY_SIZE) {
-+	    payload->size < 1 || payload->size > FSCRYPT_MAX_KEY_SIZE) {
- 		fscrypt_warn(NULL,
- 			     "key with description '%s' has invalid payload",
- 			     key->description);
-@@ -129,32 +129,32 @@ find_and_lock_process_key(const char *prefix,
- }
- 
- static struct fscrypt_mode available_modes[] = {
--	[FS_ENCRYPTION_MODE_AES_256_XTS] = {
-+	[FSCRYPT_MODE_AES_256_XTS] = {
- 		.friendly_name = "AES-256-XTS",
- 		.cipher_str = "xts(aes)",
- 		.keysize = 64,
- 		.ivsize = 16,
- 	},
--	[FS_ENCRYPTION_MODE_AES_256_CTS] = {
-+	[FSCRYPT_MODE_AES_256_CTS] = {
- 		.friendly_name = "AES-256-CTS-CBC",
- 		.cipher_str = "cts(cbc(aes))",
- 		.keysize = 32,
- 		.ivsize = 16,
- 	},
--	[FS_ENCRYPTION_MODE_AES_128_CBC] = {
-+	[FSCRYPT_MODE_AES_128_CBC] = {
- 		.friendly_name = "AES-128-CBC",
- 		.cipher_str = "cbc(aes)",
- 		.keysize = 16,
- 		.ivsize = 16,
- 		.needs_essiv = true,
- 	},
--	[FS_ENCRYPTION_MODE_AES_128_CTS] = {
-+	[FSCRYPT_MODE_AES_128_CTS] = {
- 		.friendly_name = "AES-128-CTS-CBC",
- 		.cipher_str = "cts(cbc(aes))",
- 		.keysize = 16,
- 		.ivsize = 16,
- 	},
--	[FS_ENCRYPTION_MODE_ADIANTUM] = {
-+	[FSCRYPT_MODE_ADIANTUM] = {
- 		.friendly_name = "Adiantum",
- 		.cipher_str = "adiantum(xchacha12,aes)",
- 		.keysize = 32,
-@@ -192,7 +192,7 @@ static int find_and_derive_key(const struct inode *inode,
- 	const struct fscrypt_key *payload;
- 	int err;
- 
--	key = find_and_lock_process_key(FS_KEY_DESC_PREFIX,
-+	key = find_and_lock_process_key(FSCRYPT_KEY_DESC_PREFIX,
- 					ctx->master_key_descriptor,
- 					mode->keysize, &payload);
- 	if (key == ERR_PTR(-ENOKEY) && inode->i_sb->s_cop->key_prefix) {
-@@ -203,7 +203,7 @@ static int find_and_derive_key(const struct inode *inode,
- 	if (IS_ERR(key))
- 		return PTR_ERR(key);
- 
--	if (ctx->flags & FS_POLICY_FLAG_DIRECT_KEY) {
-+	if (ctx->flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY) {
- 		if (mode->ivsize < offsetofend(union fscrypt_iv, nonce)) {
- 			fscrypt_warn(inode,
- 				     "Direct key mode not allowed with %s",
-@@ -272,14 +272,14 @@ allocate_skcipher_for_mode(struct fscrypt_mode *mode, const u8 *raw_key,
- 	return ERR_PTR(err);
- }
- 
--/* Master key referenced by FS_POLICY_FLAG_DIRECT_KEY policy */
-+/* Master key referenced by DIRECT_KEY policy */
- struct fscrypt_master_key {
- 	struct hlist_node mk_node;
- 	refcount_t mk_refcount;
- 	const struct fscrypt_mode *mk_mode;
- 	struct crypto_skcipher *mk_ctfm;
--	u8 mk_descriptor[FS_KEY_DESCRIPTOR_SIZE];
--	u8 mk_raw[FS_MAX_KEY_SIZE];
-+	u8 mk_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-+	u8 mk_raw[FSCRYPT_MAX_KEY_SIZE];
- };
- 
- static void free_master_key(struct fscrypt_master_key *mk)
-@@ -320,13 +320,13 @@ find_or_insert_master_key(struct fscrypt_master_key *to_insert,
- 	 * raw key, and use crypto_memneq() when comparing raw keys.
- 	 */
- 
--	BUILD_BUG_ON(sizeof(hash_key) > FS_KEY_DESCRIPTOR_SIZE);
-+	BUILD_BUG_ON(sizeof(hash_key) > FSCRYPT_KEY_DESCRIPTOR_SIZE);
- 	memcpy(&hash_key, ci->ci_master_key_descriptor, sizeof(hash_key));
- 
- 	spin_lock(&fscrypt_master_keys_lock);
- 	hash_for_each_possible(fscrypt_master_keys, mk, mk_node, hash_key) {
- 		if (memcmp(ci->ci_master_key_descriptor, mk->mk_descriptor,
--			   FS_KEY_DESCRIPTOR_SIZE) != 0)
-+			   FSCRYPT_KEY_DESCRIPTOR_SIZE) != 0)
- 			continue;
- 		if (mode != mk->mk_mode)
- 			continue;
-@@ -370,7 +370,7 @@ fscrypt_get_master_key(const struct fscrypt_info *ci, struct fscrypt_mode *mode,
- 		goto err_free_mk;
- 	}
- 	memcpy(mk->mk_descriptor, ci->ci_master_key_descriptor,
--	       FS_KEY_DESCRIPTOR_SIZE);
-+	       FSCRYPT_KEY_DESCRIPTOR_SIZE);
- 	memcpy(mk->mk_raw, raw_key, mode->keysize);
- 
- 	return find_or_insert_master_key(mk, raw_key, mode, ci);
-@@ -448,8 +448,8 @@ static int init_essiv_generator(struct fscrypt_info *ci, const u8 *raw_key,
- 
- /*
-  * Given the encryption mode and key (normally the derived key, but for
-- * FS_POLICY_FLAG_DIRECT_KEY mode it's the master key), set up the inode's
-- * symmetric cipher transform object(s).
-+ * DIRECT_KEY mode it's the master key), set up the inode's symmetric cipher
-+ * transform object(s).
-  */
- static int setup_crypto_transform(struct fscrypt_info *ci,
- 				  struct fscrypt_mode *mode,
-@@ -459,7 +459,7 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- 	struct crypto_skcipher *ctfm;
- 	int err;
- 
--	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY) {
-+	if (ci->ci_flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY) {
- 		mk = fscrypt_get_master_key(ci, mode, raw_key, inode);
- 		if (IS_ERR(mk))
- 			return PTR_ERR(mk);
-@@ -476,7 +476,7 @@ static int setup_crypto_transform(struct fscrypt_info *ci,
- 	if (mode->needs_essiv) {
- 		/* ESSIV implies 16-byte IVs which implies !DIRECT_KEY */
- 		WARN_ON(mode->ivsize != AES_BLOCK_SIZE);
--		WARN_ON(ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY);
-+		WARN_ON(ci->ci_flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY);
- 
- 		err = init_essiv_generator(ci, raw_key, mode->keysize);
- 		if (err) {
-@@ -530,9 +530,10 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 		/* Fake up a context for an unencrypted directory */
- 		memset(&ctx, 0, sizeof(ctx));
- 		ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
--		ctx.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
--		ctx.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
--		memset(ctx.master_key_descriptor, 0x42, FS_KEY_DESCRIPTOR_SIZE);
-+		ctx.contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
-+		ctx.filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
-+		memset(ctx.master_key_descriptor, 0x42,
-+		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
- 	} else if (res != sizeof(ctx)) {
- 		fscrypt_warn(inode,
- 			     "Unknown encryption context size (%d bytes)", res);
-@@ -545,7 +546,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 		return -EINVAL;
- 	}
- 
--	if (ctx.flags & ~FS_POLICY_FLAGS_VALID) {
-+	if (ctx.flags & ~FSCRYPT_POLICY_FLAGS_VALID) {
- 		fscrypt_warn(inode, "Unknown encryption context flags (0x%02x)",
- 			     ctx.flags);
- 		return -EINVAL;
-@@ -559,7 +560,7 @@ int fscrypt_get_encryption_info(struct inode *inode)
- 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
- 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
- 	memcpy(crypt_info->ci_master_key_descriptor, ctx.master_key_descriptor,
--	       FS_KEY_DESCRIPTOR_SIZE);
-+	       FSCRYPT_KEY_DESCRIPTOR_SIZE);
- 	memcpy(crypt_info->ci_nonce, ctx.nonce, FS_KEY_DERIVATION_NONCE_SIZE);
- 
- 	mode = select_encryption_mode(crypt_info, inode);
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 4941fe8471ceff..da7ae9c8b4ad0b 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -22,7 +22,7 @@ static bool is_encryption_context_consistent_with_policy(
- 				const struct fscrypt_policy *policy)
- {
- 	return memcmp(ctx->master_key_descriptor, policy->master_key_descriptor,
--		      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
-+		      FSCRYPT_KEY_DESCRIPTOR_SIZE) == 0 &&
- 		(ctx->flags == policy->flags) &&
- 		(ctx->contents_encryption_mode ==
- 		 policy->contents_encryption_mode) &&
-@@ -37,13 +37,13 @@ static int create_encryption_context_from_policy(struct inode *inode,
- 
- 	ctx.format = FS_ENCRYPTION_CONTEXT_FORMAT_V1;
- 	memcpy(ctx.master_key_descriptor, policy->master_key_descriptor,
--					FS_KEY_DESCRIPTOR_SIZE);
-+					FSCRYPT_KEY_DESCRIPTOR_SIZE);
- 
- 	if (!fscrypt_valid_enc_modes(policy->contents_encryption_mode,
- 				     policy->filenames_encryption_mode))
- 		return -EINVAL;
- 
--	if (policy->flags & ~FS_POLICY_FLAGS_VALID)
-+	if (policy->flags & ~FSCRYPT_POLICY_FLAGS_VALID)
- 		return -EINVAL;
- 
- 	ctx.contents_encryption_mode = policy->contents_encryption_mode;
-@@ -128,7 +128,7 @@ int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg)
- 	policy.filenames_encryption_mode = ctx.filenames_encryption_mode;
- 	policy.flags = ctx.flags;
- 	memcpy(policy.master_key_descriptor, ctx.master_key_descriptor,
--				FS_KEY_DESCRIPTOR_SIZE);
-+				FSCRYPT_KEY_DESCRIPTOR_SIZE);
- 
- 	if (copy_to_user(arg, &policy, sizeof(policy)))
- 		return -EFAULT;
-@@ -202,7 +202,7 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- 	if (parent_ci && child_ci) {
- 		return memcmp(parent_ci->ci_master_key_descriptor,
- 			      child_ci->ci_master_key_descriptor,
--			      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
-+			      FSCRYPT_KEY_DESCRIPTOR_SIZE) == 0 &&
- 			(parent_ci->ci_data_mode == child_ci->ci_data_mode) &&
- 			(parent_ci->ci_filename_mode ==
- 			 child_ci->ci_filename_mode) &&
-@@ -219,7 +219,7 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- 
- 	return memcmp(parent_ctx.master_key_descriptor,
- 		      child_ctx.master_key_descriptor,
--		      FS_KEY_DESCRIPTOR_SIZE) == 0 &&
-+		      FSCRYPT_KEY_DESCRIPTOR_SIZE) == 0 &&
- 		(parent_ctx.contents_encryption_mode ==
- 		 child_ctx.contents_encryption_mode) &&
- 		(parent_ctx.filenames_encryption_mode ==
-@@ -257,7 +257,7 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
- 	ctx.filenames_encryption_mode = ci->ci_filename_mode;
- 	ctx.flags = ci->ci_flags;
- 	memcpy(ctx.master_key_descriptor, ci->ci_master_key_descriptor,
--	       FS_KEY_DESCRIPTOR_SIZE);
-+	       FSCRYPT_KEY_DESCRIPTOR_SIZE);
- 	get_random_bytes(ctx.nonce, FS_KEY_DERIVATION_NONCE_SIZE);
- 	BUILD_BUG_ON(sizeof(ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
- 	res = parent->i_sb->s_cop->set_context(child, &ctx,
-diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-index 674b0452ef5759..29a945d165def3 100644
---- a/include/uapi/linux/fscrypt.h
-+++ b/include/uapi/linux/fscrypt.h
-@@ -55,6 +55,7 @@ struct fscrypt_key {
- /**********************************************************************/
- 
- /* old names; don't add anything new here! */
-+#ifndef __KERNEL__
- #define FS_KEY_DESCRIPTOR_SIZE		FSCRYPT_KEY_DESCRIPTOR_SIZE
- #define FS_POLICY_FLAGS_PAD_4		FSCRYPT_POLICY_FLAGS_PAD_4
- #define FS_POLICY_FLAGS_PAD_8		FSCRYPT_POLICY_FLAGS_PAD_8
-@@ -76,5 +77,6 @@ struct fscrypt_key {
- #define FS_KEY_DESC_PREFIX		FSCRYPT_KEY_DESC_PREFIX
- #define FS_KEY_DESC_PREFIX_SIZE		FSCRYPT_KEY_DESC_PREFIX_SIZE
- #define FS_MAX_KEY_SIZE			FSCRYPT_MAX_KEY_SIZE
-+#endif /* !__KERNEL__ */
- 
- #endif /* _UAPI_LINUX_FSCRYPT_H */
+diff --git a/fs/f2fs/Kconfig b/fs/f2fs/Kconfig
+index e57cc754d543..1e1424940d1b 100644
+--- a/fs/f2fs/Kconfig
++++ b/fs/f2fs/Kconfig
+@@ -4,6 +4,7 @@ config F2FS_FS
+ 	select CRYPTO
+ 	select CRYPTO_CRC32
+ 	select F2FS_FS_XATTR if FS_ENCRYPTION
++	select FS_READ_CALLBACKS if FS_ENCRYPTION
+ 	help
+ 	  F2FS is based on Log-structured File System (LFS), which supports
+ 	  versatile "flash-friendly" features. The design has been focused on
+diff --git a/fs/read_callbacks.c b/fs/read_callbacks.c
+new file mode 100644
+index 000000000000..32d9b8d17964
+--- /dev/null
++++ b/fs/read_callbacks.c
+@@ -0,0 +1,285 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * This file tracks the state machine that needs to be executed after reading
++ * data from files that are encrypted and/or have verity metadata associated
++ * with them.
++ */
++#include <linux/module.h>
++#include <linux/mm.h>
++#include <linux/pagemap.h>
++#include <linux/bio.h>
++#include <linux/buffer_head.h>
++#include <linux/fscrypt.h>
++#include <linux/read_callbacks.h>
++#include <linux/blk_types.h>
++
++#define NUM_PREALLOC_READ_CALLBACK_CTXS	128
++
++static struct kmem_cache *read_callbacks_ctx_cache;
++static mempool_t *read_callbacks_ctx_pool;
++
++/* Read callback state machine steps */
++enum read_callbacks_step {
++	STEP_INITIAL = 0,
++	STEP_DECRYPT,
++};
++
++struct read_callbacks_ctx {
++	struct inode *inode;
++	struct bio *bio;
++	struct buffer_head *bh;
++	union {
++		end_bio_func_t end_bio;
++
++		struct {
++			end_bh_func_t end_bh;
++			int bh_uptodate;
++		};
++	};
++	struct work_struct work;
++	unsigned int enabled_steps;
++	enum read_callbacks_step cur_step;
++};
++
++static void read_callbacks(struct read_callbacks_ctx *ctx);
++
++static void free_read_callbacks_ctx(struct read_callbacks_ctx *ctx)
++{
++	mempool_free(ctx, read_callbacks_ctx_pool);
++}
++
++static struct read_callbacks_ctx *get_read_callbacks_ctx(struct inode *inode)
++{
++	struct read_callbacks_ctx *ctx = NULL;
++	unsigned int enabled_steps = 0;
++
++	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
++		enabled_steps |= 1 << STEP_DECRYPT;
++
++	if (enabled_steps) {
++		ctx = mempool_alloc(read_callbacks_ctx_pool, GFP_NOFS);
++		if (!ctx)
++			return ERR_PTR(-ENOMEM);
++
++		ctx->inode = inode;
++		ctx->enabled_steps = enabled_steps;
++		ctx->cur_step = STEP_INITIAL;
++	}
++
++	return ctx;
++}
++
++static void decrypt_bio(struct bio *bio)
++{
++	struct bio_vec *bv;
++	int i;
++	struct bvec_iter_all iter_all;
++
++	bio_for_each_segment_all(bv, bio, i, iter_all) {
++		struct page *page = bv->bv_page;
++		int ret = fscrypt_decrypt_pagecache_blocks(page, bv->bv_len,
++							   bv->bv_offset);
++		if (ret)
++			SetPageError(page);
++	}
++}
++
++static void decrypt_bh(struct buffer_head *bh)
++{
++	struct page *page;
++	int ret;
++
++	page = bh->b_page;
++
++	ret = fscrypt_decrypt_pagecache_blocks(page, bh->b_size,
++					bh_offset(bh));
++	if (ret)
++		SetPageError(page);
++}
++
++static void decrypt_work(struct work_struct *work)
++{
++	struct read_callbacks_ctx *ctx =
++		container_of(work, struct read_callbacks_ctx, work);
++
++	if (ctx->bio)
++		decrypt_bio(ctx->bio);
++	else
++		decrypt_bh(ctx->bh);
++
++	read_callbacks(ctx);
++}
++
++static void read_callbacks(struct read_callbacks_ctx *ctx)
++{
++	/*
++	 * We use different work queues for decryption and for verity because
++	 * verity may require reading metadata pages that need decryption, and
++	 * we shouldn't recurse to the same workqueue.
++	 */
++	switch (++ctx->cur_step) {
++	case STEP_DECRYPT:
++		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
++			INIT_WORK(&ctx->work, decrypt_work);
++			fscrypt_enqueue_decrypt_work(&ctx->work);
++			return;
++		}
++		ctx->cur_step++;
++		/* fall-through */
++	default:
++		if (ctx->bio)
++			ctx->end_bio(ctx->bio);
++		else
++			ctx->end_bh(ctx->bh, ctx->bh_uptodate);
++
++		mempool_free(ctx, read_callbacks_ctx_pool);
++	}
++}
++
++/**
++ * read_callbacks_setup_bio() - Initialize the read callbacks state machine
++ * @inode: The file on which read I/O is performed.
++ * @bio: bio holding page cache pages on which read I/O is performed.
++ * @bh: Buffer head on which read I/O is performed.
++ * @page_op: Function to perform filesystem specific operations on a page.
++ *
++ * Based on the nature of the file's data (e.g. encrypted), this function
++ * computes the steps that need to be performed after data is read of the
++ * backing disk. This information is saved in a context structure. A pointer
++ * to the context structure is then stored in bio->bi_private for later
++ * usage.
++ *
++ * Return: 0 on success; An error code on failure.
++ */
++int read_callbacks_setup_bio(struct inode *inode, struct bio *bio)
++{
++	struct read_callbacks_ctx *ctx = get_read_callbacks_ctx(inode);
++
++	if (ctx) {
++		if (IS_ERR(ctx))
++			return PTR_ERR(ctx);
++		ctx->bio = bio;
++		ctx->bh = NULL;
++		bio->bi_private = ctx;
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL(read_callbacks_setup_bio);
++
++/**
++ * read_callbacks_setup_bh() - Initialize the read callbacks state machine
++ * @inode: The file on which read I/O is performed.
++ * @bio: bio holding page cache pages on which read I/O is performed.
++ * @bh: Buffer head on which read I/O is performed.
++ * @page_op: Function to perform filesystem specific operations on a page.
++ *
++ * Based on the nature of the file's data (e.g. encrypted), this function
++ * computes the steps that need to be performed after data is read of the
++ * backing disk. This information is saved in a context structure. A pointer
++ * to the context structure is then stored in bio->bi_private for later
++ * usage.
++ *
++ * Return: 0 on success; An error code on failure.
++ */
++int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh)
++{
++	struct read_callbacks_ctx *ctx = get_read_callbacks_ctx(inode);
++
++	if (ctx) {
++		if (IS_ERR(ctx))
++			return PTR_ERR(ctx);
++		ctx->bio = NULL;
++		ctx->bh = bh;
++		bh->b_private = ctx;
++		set_buffer_read_cb(bh);
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL(read_callbacks_setup_bh);
++
++/**
++ * read_callbacks_endio_bio() - Initiate the read callbacks state machine.
++ * @bio: bio on which read I/O operation has just been completed.
++ * @end_bio: Callback to invoke on @bio after state machine completion.
++ *
++ * Initiates the execution of the read callbacks state machine when the read
++ * operation has been completed sucessfully. If there was an error associated
++ * with the bio, this function frees the read callbacks context structure stored
++ * in bio->bi_private (if any).
++ *
++ * If read callbacks state machine isn't executed, we end up invoking the
++ * @end_bio function passed in as an argument.
++ */
++void read_callbacks_endio_bio(struct bio *bio, end_bio_func_t end_bio)
++{
++	struct read_callbacks_ctx *ctx = bio->bi_private;
++
++	if (ctx) {
++		if (!bio->bi_status) {
++			ctx->end_bio = end_bio;
++			read_callbacks(ctx);
++			return;
++		}
++
++		free_read_callbacks_ctx(ctx);
++	}
++
++	end_bio(bio);
++}
++EXPORT_SYMBOL(read_callbacks_endio_bio);
++
++/**
++ * read_callbacks_endio_bh() - Initiate the read callbacks state machine.
++ * @bh: buffer head on which read I/O operation has just been completed.
++ * @uptodate: Buffer head's I/O status.
++ * @end_bh: Callback to invoke on on @bh after state machine completion.
++ *
++ * Initiates the execution of the read callbacks state machine when the read
++ * operation has been completed sucessfully. If there was an error associated
++ * with the buffer head, this function frees the read callbacks context
++ * structure stored in bh->b_private (if any).
++ *
++ * If read callbacks state machine isn't executed, we end up invoking the
++ * @end_bh function passed in as an argument.
++ */
++void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh)
++{
++	struct read_callbacks_ctx *ctx = bh->b_private;
++
++	if (buffer_read_cb(bh)) {
++		clear_buffer_read_cb(bh);
++		if (uptodate) {
++			ctx->end_bh = end_bh;
++			ctx->bh_uptodate = uptodate;
++			read_callbacks(ctx);
++			return;
++		}
++
++		free_read_callbacks_ctx(ctx);
++	}
++
++	end_bh(bh, uptodate);
++}
++EXPORT_SYMBOL(read_callbacks_endio_bh);
++
++static int __init init_read_callbacks(void)
++{
++	read_callbacks_ctx_cache = KMEM_CACHE(read_callbacks_ctx, 0);
++	if (!read_callbacks_ctx_cache)
++		goto fail;
++	read_callbacks_ctx_pool =
++		mempool_create_slab_pool(NUM_PREALLOC_READ_CALLBACK_CTXS,
++					 read_callbacks_ctx_cache);
++	if (!read_callbacks_ctx_pool)
++		goto fail_free_cache;
++	return 0;
++
++fail_free_cache:
++	kmem_cache_destroy(read_callbacks_ctx_cache);
++fail:
++	return -ENOMEM;
++}
++
++fs_initcall(init_read_callbacks);
+diff --git a/include/linux/read_callbacks.h b/include/linux/read_callbacks.h
+new file mode 100644
+index 000000000000..0d709dd81b4e
+--- /dev/null
++++ b/include/linux/read_callbacks.h
+@@ -0,0 +1,48 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef _READ_CALLBACKS_H
++#define _READ_CALLBACKS_H
++
++#include <linux/blk_types.h>
++
++typedef void (*end_bio_func_t)(struct bio *bio);
++typedef void (*end_bh_func_t)(struct buffer_head *bh, int uptodate);
++
++#ifdef CONFIG_FS_READ_CALLBACKS
++int read_callbacks_setup_bio(struct inode *inode, struct bio *bio);
++int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh);
++void read_callbacks_endio_bio(struct bio *bio, end_bio_func_t end_bio);
++void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh);
++
++static inline bool read_callbacks_failed(struct page *page)
++{
++	return PageError(page);
++}
++#else
++static inline int read_callbacks_setup_bio(struct inode *inode, struct bio *bio)
++{
++	return 0;
++}
++
++static inline int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh)
++{
++	return 0;
++}
++
++static inline void read_callbacks_endio_bio(struct bio *bio,
++					end_bio_func_t end_bio)
++{
++	end_bio(bio);
++}
++
++static inline void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh)
++{
++	end_bh(bh, uptodate);
++}
++
++static inline bool read_callbacks_failed(struct page *page)
++{
++	return false;
++}
++#endif
++
++#endif	/* _READ_CALLBACKS_H */
 -- 
-2.22.0.770.g0f2c4a37fd-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.19.1
