@@ -1,26 +1,15 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
-Date: Tue, 27 Aug 2019 14:15:17 -0700
+Date: Tue, 27 Aug 2019 13:49:17 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Message-ID: <20190827211515.GB27166@gmail.com>
+Subject: Re: [PATCH v4 1/8] block: Keyslot Manager for Inline Encryption
+Message-ID: <20190827204917.GA27166@gmail.com>
 References: <20190821075714.65140-1-satyat@google.com>
  <20190821075714.65140-2-satyat@google.com>
 MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20190821075714.65140-2-satyat@google.com>
-Subject: Re: [f2fs-dev] [PATCH v4 1/8] block: Keyslot Manager for Inline
- Encryption
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
 To: Satya Tangirala <satyat@google.com>
-Cc: linux-scsi@vger.kernel.org, Kim Boojin <boojin.kim@samsung.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, linux-f2fs-devel@lists.sourceforge.net, linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
+Cc: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Kim Boojin <boojin.kim@samsung.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 Hi Satya, a few more minor comments:
@@ -297,9 +286,3 @@ I suggest just removing this comment for now, to avoid these considerations.
 The word "for" in "so that for e.g. dm layers" shouldn't be there.
 
 - Eric
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
