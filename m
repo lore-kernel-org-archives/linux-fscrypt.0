@@ -1,69 +1,117 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:53486 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:45404 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726424AbfHLR5P (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 12 Aug 2019 13:57:15 -0400
+        id S1725992AbfH0XZz (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 27 Aug 2019 19:25:55 -0400
+Date: Tue, 27 Aug 2019 16:25:52 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [RFC PATCH 1/8] xfs_io/encrypt: remove unimplemented encryption modes
-Date: Mon, 12 Aug 2019 10:56:27 -0700
-Message-Id: <20190812175635.34186-2-ebiggers@kernel.org>
-In-Reply-To: <20190812175635.34186-1-ebiggers@kernel.org>
-References: <20190812175635.34186-1-ebiggers@kernel.org>
+Subject: Re: [PATCH v4 5/8] scsi: ufs: UFS crypto API
+Message-ID: <20190827232550.GA92220@gmail.com>
+References: <20190821075714.65140-1-satyat@google.com>
+ <20190821075714.65140-6-satyat@google.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190821075714.65140-6-satyat@google.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-xfs@vger.kernel.org
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+To: Satya Tangirala <satyat@google.com>
+Cc: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Kim Boojin <boojin.kim@samsung.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Aug 21, 2019 at 12:57:11AM -0700, Satya Tangirala wrote:
+> +static int ufshcd_crypto_cap_find(void *hba_p,
+> +			   enum blk_crypto_mode_num crypto_mode,
+> +			   unsigned int data_unit_size)
+> +{
+> +	struct ufs_hba *hba = hba_p;
+> +	enum ufs_crypto_alg ufs_alg;
+> +	u8 data_unit_mask;
+> +	int cap_idx;
+> +	enum ufs_crypto_key_size ufs_key_size;
+> +	union ufs_crypto_cap_entry *ccap_array = hba->crypto_cap_array;
+> +
+> +	if (!ufshcd_hba_is_crypto_supported(hba))
+> +		return -EINVAL;
+> +
+> +	switch (crypto_mode) {
+> +	case BLK_ENCRYPTION_MODE_AES_256_XTS:
+> +		ufs_alg = UFS_CRYPTO_ALG_AES_XTS;
+> +		ufs_key_size = UFS_CRYPTO_KEY_SIZE_256;
+> +		break;
+> +	/*
+> +	 * case BLK_CRYPTO_ALG_BITLOCKER_AES_CBC:
+> +	 *	ufs_alg = UFS_CRYPTO_ALG_BITLOCKER_AES_CBC;
+> +	 *	break;
+> +	 * case BLK_CRYPTO_ALG_AES_ECB:
+> +	 *	ufs_alg = UFS_CRYPTO_ALG_AES_ECB;
+> +	 *	break;
+> +	 * case BLK_CRYPTO_ALG_ESSIV_AES_CBC:
+> +	 *	ufs_alg = UFS_CRYPTO_ALG_ESSIV_AES_CBC;
+> +	 *	break;
+> +	 */
 
-Although mode numbers were originally reserved for AES-256-GCM and
-AES-256-CBC, these were never implemented in the kernel, and there are
-no plans to do so anymore.  These mode numbers may be used for something
-else in the future.  Also, xfstests (the only known user of the xfs_io
-encryption commands) doesn't try to use them.  Finally, most of the
-fscrypt constants have been given new names in the UAPI header, but the
-unused constants have not been given new names since userspace should
-just stop referencing them instead.
+Perhaps just delete this comment... the constants are already outdated.
 
-So remove them from xfs_io.
+> +	hba->crypto_cfgs =
+> +		devm_kcalloc(hba->dev,
+> +			     hba->crypto_capabilities.config_count + 1,
+> +			     sizeof(hba->crypto_cfgs[0]),
+> +			     GFP_KERNEL);
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- io/encrypt.c | 6 +-----
- 1 file changed, 1 insertion(+), 5 deletions(-)
+Can use NUM_KEYSLOTS(hba) here, to avoid hardcoding the awkward '+ 1' again.
 
-diff --git a/io/encrypt.c b/io/encrypt.c
-index 8db35259..e8766dc1 100644
---- a/io/encrypt.c
-+++ b/io/encrypt.c
-@@ -49,8 +49,6 @@ struct fscrypt_policy {
- 
- #define FS_ENCRYPTION_MODE_INVALID	0
- #define FS_ENCRYPTION_MODE_AES_256_XTS	1
--#define FS_ENCRYPTION_MODE_AES_256_GCM	2
--#define FS_ENCRYPTION_MODE_AES_256_CBC	3
- #define FS_ENCRYPTION_MODE_AES_256_CTS	4
- #endif /* FS_ENCRYPTION_MODE_AES_256_XTS */
- 
-@@ -74,7 +72,7 @@ set_encpolicy_help(void)
- " -v VERSION -- version of policy structure\n"
- "\n"
- " MODE can be numeric or one of the following predefined values:\n"
--"    AES-256-XTS, AES-256-CTS, AES-256-GCM, AES-256-CBC\n"
-+"    AES-256-XTS, AES-256-CTS\n"
- " FLAGS and VERSION must be numeric.\n"
- "\n"
- " Note that it's only possible to set an encryption policy on an empty\n"
-@@ -88,8 +86,6 @@ static const struct {
- } available_modes[] = {
- 	{FS_ENCRYPTION_MODE_AES_256_XTS, "AES-256-XTS"},
- 	{FS_ENCRYPTION_MODE_AES_256_CTS, "AES-256-CTS"},
--	{FS_ENCRYPTION_MODE_AES_256_GCM, "AES-256-GCM"},
--	{FS_ENCRYPTION_MODE_AES_256_CBC, "AES-256-CBC"},
- };
- 
- static bool
--- 
-2.23.0.rc1.153.gdeed80330f-goog
+> +void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
+> +					    struct request_queue *q)
+> +{
+> +	if (!ufshcd_hba_is_crypto_supported(hba))
+> +		return;
+> +
+> +	if (q) {
+> +		mutex_lock(&hba->ksm_lock);
+> +		if (!hba->ksm) {
+> +			hba->ksm = keyslot_manager_create(
+> +				hba->crypto_capabilities.config_count + 1,
+> +				&ufshcd_ksm_ops, hba);
+> +			hba->ksm_num_refs = 0;
+
+Same here.
+
+> +		}
+> +		hba->ksm_num_refs++;
+> +		mutex_unlock(&hba->ksm_lock);
+> +		q->ksm = hba->ksm;
+> +	}
+> +	/*
+> +	 * If we fail we make it look like
+> +	 * crypto is not supported, which will avoid issues
+> +	 * with reset
+> +	 */
+> +	if (!q || !q->ksm) {
+> +		ufshcd_crypto_disable(hba);
+> +		hba->crypto_capabilities.reg_val = 0;
+> +		devm_kfree(hba->dev, hba->crypto_cap_array);
+> +		devm_kfree(hba->dev, hba->crypto_cfgs);
+> +	}
+> +}
+> +
+> +void ufshcd_crypto_destroy_rq_keyslot_manager(struct ufs_hba *hba,
+> +					      struct request_queue *q)
+> +{
+> +	if (q && q->ksm) {
+> +		q->ksm = NULL;
+> +		mutex_lock(&hba->ksm_lock);
+> +		hba->ksm_num_refs--;
+> +		if (hba->ksm_num_refs == 0) {
+> +			keyslot_manager_destroy(hba->ksm);
+> +			hba->ksm = NULL;
+> +		}
+> +		mutex_unlock(&hba->ksm_lock);
+> +	}
+> +}
+
+Why is the keyslot_manager reference counted?  Doesn't it live as long as the
+individual devices do?  So, can't we just create the keyslot manager when the
+ufs_hba is created, and destroy it when the ufs_hba is destroyed?  Then for each
+device we'd just set 'q->ksm = hba->ksm;', with no refcounting needed.
+
+- Eric
