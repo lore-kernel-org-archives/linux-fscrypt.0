@@ -1,288 +1,275 @@
-Return-Path: <dm-devel-bounces@redhat.com>
-From: Ard Biesheuvel <ard.biesheuvel@linaro.org>
-Date: Sat, 10 Aug 2019 12:40:52 +0300
-Message-Id: <20190810094053.7423-7-ard.biesheuvel@linaro.org>
-In-Reply-To: <20190810094053.7423-1-ard.biesheuvel@linaro.org>
-References: <20190810094053.7423-1-ard.biesheuvel@linaro.org>
-Subject: [dm-devel] [PATCH v9 6/7] crypto: arm64/aes - implement accelerated
-	ESSIV/CBC mode
-List-Unsubscribe: <https://www.redhat.com/mailman/options/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=unsubscribe>
-List-Archive: <https://www.redhat.com/archives/dm-devel>
-List-Post: <mailto:dm-devel@redhat.com>
-List-Help: <mailto:dm-devel-request@redhat.com?subject=help>
-List-Subscribe: <https://www.redhat.com/mailman/listinfo/dm-devel>,
-	<mailto:dm-devel-request@redhat.com?subject=subscribe>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:60552 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1725989AbfH0WeV (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 27 Aug 2019 18:34:21 -0400
+Date: Tue, 27 Aug 2019 15:34:17 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: Re: [PATCH v4 3/8] block: blk-crypto for Inline Encryption
+Message-ID: <20190827223415.GC27166@gmail.com>
+References: <20190821075714.65140-1-satyat@google.com>
+ <20190821075714.65140-4-satyat@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Sender: dm-devel-bounces@redhat.com
-Errors-To: dm-devel-bounces@redhat.com
-To: linux-crypto@vger.kernel.org
-Cc: Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com, Milan Broz <gmazyland@gmail.com>
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190821075714.65140-4-satyat@google.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Satya Tangirala <satyat@google.com>
+Cc: linux-block@vger.kernel.org, linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, Barani Muthukumaran <bmuthuku@qti.qualcomm.com>, Kuohong Wang <kuohong.wang@mediatek.com>, Kim Boojin <boojin.kim@samsung.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Add an accelerated version of the 'essiv(cbc(aes),aes,sha256'
-skcipher, which is used by fscrypt or dm-crypt on systems where
-CBC mode is signficantly more performant than XTS mode (e.g., when
-using a h/w accelerator which supports the former but not the latter)
-This avoids a separate call into the AES cipher for every invocation.
+On Wed, Aug 21, 2019 at 12:57:09AM -0700, Satya Tangirala wrote:
+> diff --git a/block/blk-crypto.c b/block/blk-crypto.c
+> new file mode 100644
+> index 000000000000..c8f06264a0f5
+> --- /dev/null
+> +++ b/block/blk-crypto.c
+> @@ -0,0 +1,737 @@
+> +// SPDX-License-Identifier: GPL-2.0
+> +/*
+> + * Copyright 2019 Google LLC
+> + */
+> +
+> +/*
+> + * Refer to Documentation/block/inline-encryption.txt for detailed explanation.
+> + */
+> +
+> +#ifdef pr_fmt
+> +#undef pr_fmt
+> +#endif
 
-Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
----
- arch/arm64/crypto/aes-glue.c  | 123 ++++++++++++++++++++
- arch/arm64/crypto/aes-modes.S |  28 +++++
- 2 files changed, 151 insertions(+)
+This is the beginning of the file, so the
 
-diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
-index 23abf335f1ee..45fca7f8cd75 100644
---- a/arch/arm64/crypto/aes-glue.c
-+++ b/arch/arm64/crypto/aes-glue.c
-@@ -10,6 +10,7 @@
- #include <asm/simd.h>
- #include <crypto/aes.h>
- #include <crypto/ctr.h>
-+#include <crypto/sha.h>
- #include <crypto/internal/hash.h>
- #include <crypto/internal/simd.h>
- #include <crypto/internal/skcipher.h>
-@@ -30,6 +31,8 @@
- #define aes_cbc_decrypt		ce_aes_cbc_decrypt
- #define aes_cbc_cts_encrypt	ce_aes_cbc_cts_encrypt
- #define aes_cbc_cts_decrypt	ce_aes_cbc_cts_decrypt
-+#define aes_essiv_cbc_encrypt	ce_aes_essiv_cbc_encrypt
-+#define aes_essiv_cbc_decrypt	ce_aes_essiv_cbc_decrypt
- #define aes_ctr_encrypt		ce_aes_ctr_encrypt
- #define aes_xts_encrypt		ce_aes_xts_encrypt
- #define aes_xts_decrypt		ce_aes_xts_decrypt
-@@ -44,6 +47,8 @@ MODULE_DESCRIPTION("AES-ECB/CBC/CTR/XTS using ARMv8 Crypto Extensions");
- #define aes_cbc_decrypt		neon_aes_cbc_decrypt
- #define aes_cbc_cts_encrypt	neon_aes_cbc_cts_encrypt
- #define aes_cbc_cts_decrypt	neon_aes_cbc_cts_decrypt
-+#define aes_essiv_cbc_encrypt	neon_aes_essiv_cbc_encrypt
-+#define aes_essiv_cbc_decrypt	neon_aes_essiv_cbc_decrypt
- #define aes_ctr_encrypt		neon_aes_ctr_encrypt
- #define aes_xts_encrypt		neon_aes_xts_encrypt
- #define aes_xts_decrypt		neon_aes_xts_decrypt
-@@ -87,6 +92,13 @@ asmlinkage void aes_xts_decrypt(u8 out[], u8 const in[], u32 const rk1[],
- 				int rounds, int blocks, u32 const rk2[], u8 iv[],
- 				int first);
- 
-+asmlinkage void aes_essiv_cbc_encrypt(u8 out[], u8 const in[], u32 const rk1[],
-+				      int rounds, int blocks, u8 iv[],
-+				      u32 const rk2[]);
-+asmlinkage void aes_essiv_cbc_decrypt(u8 out[], u8 const in[], u32 const rk1[],
-+				      int rounds, int blocks, u8 iv[],
-+				      u32 const rk2[]);
-+
- asmlinkage void aes_mac_update(u8 const in[], u32 const rk[], int rounds,
- 			       int blocks, u8 dg[], int enc_before,
- 			       int enc_after);
-@@ -102,6 +114,12 @@ struct crypto_aes_xts_ctx {
- 	struct crypto_aes_ctx __aligned(8) key2;
- };
- 
-+struct crypto_aes_essiv_cbc_ctx {
-+	struct crypto_aes_ctx key1;
-+	struct crypto_aes_ctx __aligned(8) key2;
-+	struct crypto_shash *hash;
-+};
-+
- struct mac_tfm_ctx {
- 	struct crypto_aes_ctx key;
- 	u8 __aligned(8) consts[];
-@@ -146,6 +164,31 @@ static int xts_set_key(struct crypto_skcipher *tfm, const u8 *in_key,
- 	return -EINVAL;
- }
- 
-+static int essiv_cbc_set_key(struct crypto_skcipher *tfm, const u8 *in_key,
-+			     unsigned int key_len)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	SHASH_DESC_ON_STACK(desc, ctx->hash);
-+	u8 digest[SHA256_DIGEST_SIZE];
-+	int ret;
-+
-+	ret = aes_expandkey(&ctx->key1, in_key, key_len);
-+	if (ret)
-+		goto out;
-+
-+	desc->tfm = ctx->hash;
-+	crypto_shash_digest(desc, in_key, key_len, digest);
-+
-+	ret = aes_expandkey(&ctx->key2, digest, sizeof(digest));
-+	if (ret)
-+		goto out;
-+
-+	return 0;
-+out:
-+	crypto_skcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
-+	return -EINVAL;
-+}
-+
- static int ecb_encrypt(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-@@ -360,6 +403,68 @@ static int cts_cbc_decrypt(struct skcipher_request *req)
- 	return skcipher_walk_done(&walk, 0);
- }
- 
-+static int essiv_cbc_init_tfm(struct crypto_skcipher *tfm)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+
-+	ctx->hash = crypto_alloc_shash("sha256", 0, 0);
-+	if (IS_ERR(ctx->hash))
-+		return PTR_ERR(ctx->hash);
-+
-+	return 0;
-+}
-+
-+static void essiv_cbc_exit_tfm(struct crypto_skcipher *tfm)
-+{
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+
-+	crypto_free_shash(ctx->hash);
-+}
-+
-+static int essiv_cbc_encrypt(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err, rounds = 6 + ctx->key1.key_length / 4;
-+	struct skcipher_walk walk;
-+	unsigned int blocks;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+
-+	blocks = walk.nbytes / AES_BLOCK_SIZE;
-+	if (blocks) {
-+		kernel_neon_begin();
-+		aes_essiv_cbc_encrypt(walk.dst.virt.addr, walk.src.virt.addr,
-+				      ctx->key1.key_enc, rounds, blocks,
-+				      req->iv, ctx->key2.key_enc);
-+		kernel_neon_end();
-+		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+	}
-+	return err ?: cbc_encrypt_walk(req, &walk);
-+}
-+
-+static int essiv_cbc_decrypt(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_essiv_cbc_ctx *ctx = crypto_skcipher_ctx(tfm);
-+	int err, rounds = 6 + ctx->key1.key_length / 4;
-+	struct skcipher_walk walk;
-+	unsigned int blocks;
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+
-+	blocks = walk.nbytes / AES_BLOCK_SIZE;
-+	if (blocks) {
-+		kernel_neon_begin();
-+		aes_essiv_cbc_decrypt(walk.dst.virt.addr, walk.src.virt.addr,
-+				      ctx->key1.key_dec, rounds, blocks,
-+				      req->iv, ctx->key2.key_enc);
-+		kernel_neon_end();
-+		err = skcipher_walk_done(&walk, walk.nbytes % AES_BLOCK_SIZE);
-+	}
-+	return err ?: cbc_decrypt_walk(req, &walk);
-+}
-+
- static int ctr_encrypt(struct skcipher_request *req)
- {
- 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-@@ -515,6 +620,24 @@ static struct skcipher_alg aes_algs[] = { {
- 	.encrypt	= cts_cbc_encrypt,
- 	.decrypt	= cts_cbc_decrypt,
- 	.init		= cts_cbc_init_tfm,
-+}, {
-+	.base = {
-+		.cra_name		= "__essiv(cbc(aes),sha256)",
-+		.cra_driver_name	= "__essiv-cbc-aes-sha256-" MODE,
-+		.cra_priority		= PRIO + 1,
-+		.cra_flags		= CRYPTO_ALG_INTERNAL,
-+		.cra_blocksize		= AES_BLOCK_SIZE,
-+		.cra_ctxsize		= sizeof(struct crypto_aes_essiv_cbc_ctx),
-+		.cra_module		= THIS_MODULE,
-+	},
-+	.min_keysize	= AES_MIN_KEY_SIZE,
-+	.max_keysize	= AES_MAX_KEY_SIZE,
-+	.ivsize		= AES_BLOCK_SIZE,
-+	.setkey		= essiv_cbc_set_key,
-+	.encrypt	= essiv_cbc_encrypt,
-+	.decrypt	= essiv_cbc_decrypt,
-+	.init		= essiv_cbc_init_tfm,
-+	.exit		= essiv_cbc_exit_tfm,
- }, {
- 	.base = {
- 		.cra_name		= "__ctr(aes)",
-diff --git a/arch/arm64/crypto/aes-modes.S b/arch/arm64/crypto/aes-modes.S
-index 324039b72094..2879f030a749 100644
---- a/arch/arm64/crypto/aes-modes.S
-+++ b/arch/arm64/crypto/aes-modes.S
-@@ -118,8 +118,23 @@ AES_ENDPROC(aes_ecb_decrypt)
- 	 *		   int blocks, u8 iv[])
- 	 * aes_cbc_decrypt(u8 out[], u8 const in[], u8 const rk[], int rounds,
- 	 *		   int blocks, u8 iv[])
-+	 * aes_essiv_cbc_encrypt(u8 out[], u8 const in[], u32 const rk1[],
-+	 *			 int rounds, int blocks, u8 iv[],
-+	 *			 u32 const rk2[]);
-+	 * aes_essiv_cbc_decrypt(u8 out[], u8 const in[], u32 const rk1[],
-+	 *			 int rounds, int blocks, u8 iv[],
-+	 *			 u32 const rk2[]);
- 	 */
- 
-+AES_ENTRY(aes_essiv_cbc_encrypt)
-+	ld1		{v4.16b}, [x5]			/* get iv */
-+
-+	mov		w8, #14				/* AES-256: 14 rounds */
-+	enc_prepare	w8, x6, x7
-+	encrypt_block	v4, w8, x6, x7, w9
-+	enc_switch_key	w3, x2, x6
-+	b		.Lcbcencloop4x
-+
- AES_ENTRY(aes_cbc_encrypt)
- 	ld1		{v4.16b}, [x5]			/* get iv */
- 	enc_prepare	w3, x2, x6
-@@ -153,13 +168,25 @@ AES_ENTRY(aes_cbc_encrypt)
- 	st1		{v4.16b}, [x5]			/* return iv */
- 	ret
- AES_ENDPROC(aes_cbc_encrypt)
-+AES_ENDPROC(aes_essiv_cbc_encrypt)
-+
-+AES_ENTRY(aes_essiv_cbc_decrypt)
-+	stp		x29, x30, [sp, #-16]!
-+	mov		x29, sp
-+
-+	ld1		{cbciv.16b}, [x5]		/* get iv */
- 
-+	mov		w8, #14				/* AES-256: 14 rounds */
-+	enc_prepare	w8, x6, x7
-+	encrypt_block	cbciv, w8, x6, x7, w9
-+	b		.Lessivcbcdecstart
- 
- AES_ENTRY(aes_cbc_decrypt)
- 	stp		x29, x30, [sp, #-16]!
- 	mov		x29, sp
- 
- 	ld1		{cbciv.16b}, [x5]		/* get iv */
-+.Lessivcbcdecstart:
- 	dec_prepare	w3, x2, x6
- 
- .LcbcdecloopNx:
-@@ -212,6 +239,7 @@ ST5(	st1		{v4.16b}, [x0], #16		)
- 	ldp		x29, x30, [sp], #16
- 	ret
- AES_ENDPROC(aes_cbc_decrypt)
-+AES_ENDPROC(aes_essiv_cbc_decrypt)
- 
- 
- 	/*
--- 
-2.17.1
+#ifdef pr_fmt
+#undef pr_fmt
+#endif
 
---
-dm-devel mailing list
-dm-devel@redhat.com
-https://www.redhat.com/mailman/listinfo/dm-devel
+is unnecessary.
+
+> +static struct blk_crypto_keyslot {
+> +	struct crypto_skcipher *tfm;
+> +	enum blk_crypto_mode_num crypto_mode;
+> +	u8 key[BLK_CRYPTO_MAX_KEY_SIZE];
+> +	struct crypto_skcipher *tfms[ARRAY_SIZE(blk_crypto_modes)];
+> +} *blk_crypto_keyslots;
+
+It would be helpful if there was a comment somewhere explaining what's going on
+with the crypto tfms now, like:
+
+/*
+ * Allocating a crypto tfm during I/O can deadlock, so we have to preallocate
+ * all a mode's tfms when that mode starts being used.  Since each mode may need
+ * all the keyslots at some point, each mode needs its own tfm for each keyslot;
+ * thus, a keyslot may contain tfms for multiple modes.  However, to match the
+ * behavior of real inline encryption hardware (which only supports a single
+ * encryption context per keyslot), we only allow one tfm per keyslot to be used
+ * at a time.  Unused tfms have their keys cleared.
+ */
+
+Otherwise it's not at all obvious what's going on.
+
+> +
+> +static struct mutex tfms_lock[ARRAY_SIZE(blk_crypto_modes)];
+> +static bool tfms_inited[ARRAY_SIZE(blk_crypto_modes)];
+> +
+> +struct work_mem {
+> +	struct work_struct crypto_work;
+> +	struct bio *bio;
+> +};
+> +
+> +/* The following few vars are only used during the crypto API fallback */
+> +static struct keyslot_manager *blk_crypto_ksm;
+> +static struct workqueue_struct *blk_crypto_wq;
+> +static mempool_t *blk_crypto_page_pool;
+> +static struct kmem_cache *blk_crypto_work_mem_cache;
+> +
+> +bool bio_crypt_swhandled(struct bio *bio)
+> +{
+> +	return bio_has_crypt_ctx(bio) &&
+> +	       bio->bi_crypt_context->processing_ksm == blk_crypto_ksm;
+> +}
+> +
+> +static const u8 zeroes[BLK_CRYPTO_MAX_KEY_SIZE];
+> +static void evict_keyslot(unsigned int slot)
+> +{
+> +	struct blk_crypto_keyslot *slotp = &blk_crypto_keyslots[slot];
+> +	enum blk_crypto_mode_num crypto_mode = slotp->crypto_mode;
+> +
+> +	/* Clear the key in the skcipher */
+> +	crypto_skcipher_setkey(slotp->tfms[crypto_mode], zeroes,
+> +			       blk_crypto_modes[crypto_mode].keysize);
+> +	memzero_explicit(slotp->key, BLK_CRYPTO_MAX_KEY_SIZE);
+> +}
+
+Unfortunately setting the all-zeroes key won't work, because the all-zeroes key
+fails the "weak key" check for XTS, as its two halves are the same.
+
+Presumably this wasn't noticed during testing because the return value of
+crypto_skcipher_setkey() is ignored.  So I suggest adding a WARN_ON():
+
+	err = crypto_skcipher_setkey(slotp->tfms[crypto_mode], blank_key,
+				     blk_crypto_modes[crypto_mode].keysize);
+	WARN_ON(err);
+
+Then for the actual fix, maybe set a random key instead of an all-zeroes one?
+
+> +
+> +static int blk_crypto_keyslot_program(void *priv, const u8 *key,
+> +				      enum blk_crypto_mode_num crypto_mode,
+> +				      unsigned int data_unit_size,
+> +				      unsigned int slot)
+> +{
+> +	struct blk_crypto_keyslot *slotp = &blk_crypto_keyslots[slot];
+> +	const struct blk_crypto_mode *mode = &blk_crypto_modes[crypto_mode];
+> +	size_t keysize = mode->keysize;
+> +	int err;
+> +
+> +	if (crypto_mode != slotp->crypto_mode) {
+> +		evict_keyslot(slot);
+> +		slotp->crypto_mode = crypto_mode;
+> +	}
+
+Currently the crypto_mode of every blk_crypto_keyslot starts out as AES_256_XTS
+(0).  So if the user starts by choosing some other mode, this will immediately
+call evict_keyslot() and crash dereferencing a NULL pointer.
+
+To fix this, how about initializing all the modes to
+BLK_ENCRYPTION_MODE_INVALID?
+
+Then here the code would need to be:
+
+	if (crypto_mode != slotp->crypto_mode &&
+	    slotp->crypto_mode != BLK_ENCRYPTION_MODE_INVALID)
+		evict_keyslot(slot);
+
+And evict_keyslot() should invalidate the crypto_mode:
+
+static void evict_keyslot(unsigned int slot)
+{
+	...
+
+	slotp->crypto_mode = BLK_ENCRYPTION_MODE_INVALID;
+}
+
+> +
+> +static int blk_crypto_keyslot_evict(void *priv, const u8 *key,
+> +				    enum blk_crypto_mode_num crypto_mode,
+> +				    unsigned int data_unit_size,
+> +				    unsigned int slot)
+> +{
+> +	evict_keyslot(slot);
+> +	return 0;
+> +}
+
+It might be useful to have a WARN_ON() here if the keyslot isn't in use
+(i.e., if slotp->crypto_mode == BLK_ENCRYPTION_MODE_INVALID).
+
+> +int blk_crypto_submit_bio(struct bio **bio_ptr)
+> +{
+> +	struct bio *bio = *bio_ptr;
+> +	struct request_queue *q;
+> +	int err;
+> +	struct bio_crypt_ctx *crypt_ctx;
+> +
+> +	if (!bio_has_crypt_ctx(bio) || !bio_has_data(bio))
+> +		return 0;
+> +
+> +	/*
+> +	 * When a read bio is marked for sw decryption, its bi_iter is saved
+> +	 * so that when we decrypt the bio later, we know what part of it was
+> +	 * marked for sw decryption (when the bio is passed down after
+> +	 * blk_crypto_submit bio, it may be split or advanced so we cannot rely
+> +	 * on the bi_iter while decrypting in blk_crypto_endio)
+> +	 */
+> +	if (bio_crypt_swhandled(bio))
+> +		return 0;
+> +
+> +	err = bio_crypt_check_alignment(bio);
+> +	if (err)
+> +		goto out;
+
+Need to set ->bi_status if bio_crypt_check_alignment() fails.
+
+> +bool blk_crypto_endio(struct bio *bio)
+> +{
+> +	if (!bio_has_crypt_ctx(bio))
+> +		return true;
+> +
+> +	if (bio_crypt_swhandled(bio)) {
+> +		/*
+> +		 * The only bios that are swhandled when they reach here
+> +		 * are those with bio_data_dir(bio) == READ, since WRITE
+> +		 * bios that are encrypted by the crypto API fallback are
+> +		 * handled by blk_crypto_encrypt_endio.
+> +		 */
+> +
+> +		/* If there was an IO error, don't decrypt. */
+> +		if (bio->bi_status)
+> +			return true;
+> +
+> +		blk_crypto_queue_decrypt_bio(bio);
+> +		return false;
+> +	}
+> +
+> +	if (bio_has_crypt_ctx(bio) && bio_crypt_has_keyslot(bio))
+> +		bio_crypt_ctx_release_keyslot(bio);
+
+No need to check bio_has_crypt_ctx(bio) here, as it was already checked above.
+
+> +int blk_crypto_mode_alloc_ciphers(enum blk_crypto_mode_num mode_num)
+> +{
+> +	struct blk_crypto_keyslot *slotp;
+> +	int err = 0;
+> +	int i;
+> +
+> +	/* Fast path */
+> +	if (likely(READ_ONCE(tfms_inited[mode_num]))) {
+> +		/*
+> +		 * Ensure that updates to blk_crypto_keyslots[i].tfms[mode_num]
+> +		 * for each i are visible before we try to access them.
+> +		 */
+> +		smp_rmb();
+> +		return 0;
+> +	}
+
+I think we want smp_load_acquire() here.
+
+	/* pairs with smp_store_release() below */
+	if (smp_load_acquire(&tfms_inited[mode_num]))
+		return 0;
+
+> +
+> +	mutex_lock(&tfms_lock[mode_num]);
+> +	if (likely(tfms_inited[mode_num]))
+> +		goto out;
+> +
+> +	for (i = 0; i < blk_crypto_num_keyslots; i++) {
+> +		slotp = &blk_crypto_keyslots[i];
+> +		slotp->tfms[mode_num] = crypto_alloc_skcipher(
+> +					blk_crypto_modes[mode_num].cipher_str,
+> +					0, 0);
+> +		if (IS_ERR(slotp->tfms[mode_num])) {
+> +			err = PTR_ERR(slotp->tfms[mode_num]);
+> +			slotp->tfms[mode_num] = NULL;
+> +			goto out_free_tfms;
+> +		}
+> +
+> +		crypto_skcipher_set_flags(slotp->tfms[mode_num],
+> +					  CRYPTO_TFM_REQ_FORBID_WEAK_KEYS);
+> +	}
+> +
+> +	/*
+> +	 * Ensure that updates to blk_crypto_keyslots[i].tfms[mode_num]
+> +	 * for each i are visible before we set tfms_inited[mode_num].
+> +	 */
+> +	smp_wmb();
+> +	WRITE_ONCE(tfms_inited[mode_num], true);
+> +	goto out;
+
+... and smp_store_release() here.
+
+	/* pairs with smp_load_acquire() above */
+	smp_store_release(&tfms_inited[mode_num], true);
+	goto out;
+
+- Eric
