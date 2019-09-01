@@ -1,104 +1,100 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:41828 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2394394AbfITAiF (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 19 Sep 2019 20:38:05 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 8/9] generic: verify ciphertext of v2 encryption policies with AES-128
-Date: Thu, 19 Sep 2019 17:37:52 -0700
-Message-Id: <20190920003753.40281-9-ebiggers@kernel.org>
-In-Reply-To: <20190920003753.40281-1-ebiggers@kernel.org>
-References: <20190920003753.40281-1-ebiggers@kernel.org>
+Return-Path: <SRS0=jwQZ=W4=gmail.com=guaneryu@kernel.org>
+Date: Sun, 1 Sep 2019 20:29:29 +0800
+From: Eryu Guan <guaneryu@gmail.com>
+Subject: Re: [RFC PATCH 0/9] xfstests: add tests for fscrypt key management
+ improvements
+Message-ID: <20190901122926.GF2622@desktop>
+References: <20190812175809.34810-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20190812175809.34810-1-ebiggers@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, Aug 12, 2019 at 10:58:00AM -0700, Eric Biggers wrote:
+> Hello,
+> 
+> This patchset adds xfstests for the kernel patchset
+> "[PATCH v8 00/20] fscrypt: key management improvements"
+> https://lkml.kernel.org/linux-fsdevel/20190805162521.90882-1-ebiggers@kernel.org/T/#u
+> 
+> These tests test the new ioctls for managing filesystem encryption keys,
+> and they test the new encryption policy version.
+> 
+> These tests depend on new xfs_io commands, for which I've sent a
+> separate patchset for xfsprogs.
+> 
+> Note: currently only ext4, f2fs, and ubifs support encryption.  But I
+> was told previously that since the fscrypt API is generic and may be
+> supported by XFS in the future, the command-line wrappers for the
+> fscrypt ioctls should be in xfs_io rather than in fstests directly
+> (https://marc.info/?l=fstests&m=147976255831951&w=2).
+> 
+> We'll want to wait for the kernel patches to be mainlined before merging
+> this, but I'm making it available now for any early feedback.
+> 
+> This version of the xfstests patchset can also be retrieved from tag
+> "fscrypt-key-mgmt-improvements_2019-08-12" of
+> https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
 
-Verify ciphertext for v2 encryption policies that use AES-128-CBC-ESSIV
-to encrypt file contents and AES-128-CTS-CBC to encrypt file names.
+Sorry for getting so long to review this patchset. The patches all look
+in a good shape to me, thanks a lot! Please see the reply to patch "3/9"
+for the only minor issues I noticed.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/803     | 43 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/803.out |  6 ++++++
- tests/generic/group   |  1 +
- 3 files changed, 50 insertions(+)
- create mode 100755 tests/generic/803
- create mode 100644 tests/generic/803.out
+But it'd be really helpful if other fscrypt folks could help review the
+new tests!
 
-diff --git a/tests/generic/803 b/tests/generic/803
-new file mode 100755
-index 00000000..c12daeff
---- /dev/null
-+++ b/tests/generic/803
-@@ -0,0 +1,43 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
-+#
-+# FS QA Test generic/803
-+#
-+# Verify ciphertext for v2 encryption policies that use AES-128-CBC-ESSIV to
-+# encrypt file contents and AES-128-CTS-CBC to encrypt file names.
-+#
-+# This is the same as generic/549, except using v2 policies.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/encrypt
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+
-+_verify_ciphertext_for_encryption_policy AES-128-CBC-ESSIV AES-128-CTS-CBC v2
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/803.out b/tests/generic/803.out
-new file mode 100644
-index 00000000..f4051d27
---- /dev/null
-+++ b/tests/generic/803.out
-@@ -0,0 +1,6 @@
-+QA output created by 803
-+
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: AES-128-CBC-ESSIV
-+	filenames_encryption_mode: AES-128-CTS-CBC
-+	options: v2
-diff --git a/tests/generic/group b/tests/generic/group
-index 6a528225..08a79b21 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -573,3 +573,4 @@
- 800 auto quick encrypt
- 801 auto quick encrypt
- 802 auto quick encrypt
-+803 auto quick encrypt
--- 
-2.23.0.351.gc4317032e6-goog
+Thanks,
+Eryu
+
+> 
+> Eric Biggers (9):
+>   common/encrypt: disambiguate session encryption keys
+>   common/encrypt: add helper functions that wrap new xfs_io commands
+>   common/encrypt: support checking for v2 encryption policy support
+>   common/encrypt: support verifying ciphertext of v2 encryption policies
+>   generic: add basic test for fscrypt API additions
+>   generic: add test for non-root use of fscrypt API additions
+>   generic: verify ciphertext of v2 encryption policies with AES-256
+>   generic: verify ciphertext of v2 encryption policies with AES-128
+>   generic: verify ciphertext of v2 encryption policies with Adiantum
+> 
+>  common/encrypt           | 180 +++++++++++++++++++----
+>  src/fscrypt-crypt-util.c | 304 ++++++++++++++++++++++++++++++++++-----
+>  tests/ext4/024           |   2 +-
+>  tests/generic/397        |   4 +-
+>  tests/generic/398        |   8 +-
+>  tests/generic/399        |   4 +-
+>  tests/generic/419        |   4 +-
+>  tests/generic/421        |   4 +-
+>  tests/generic/429        |   8 +-
+>  tests/generic/435        |   4 +-
+>  tests/generic/440        |   8 +-
+>  tests/generic/800        | 127 ++++++++++++++++
+>  tests/generic/800.out    |  91 ++++++++++++
+>  tests/generic/801        | 136 ++++++++++++++++++
+>  tests/generic/801.out    |  62 ++++++++
+>  tests/generic/802        |  43 ++++++
+>  tests/generic/802.out    |   6 +
+>  tests/generic/803        |  43 ++++++
+>  tests/generic/803.out    |   6 +
+>  tests/generic/804        |  45 ++++++
+>  tests/generic/804.out    |  11 ++
+>  tests/generic/group      |   5 +
+>  22 files changed, 1018 insertions(+), 87 deletions(-)
+>  create mode 100755 tests/generic/800
+>  create mode 100644 tests/generic/800.out
+>  create mode 100755 tests/generic/801
+>  create mode 100644 tests/generic/801.out
+>  create mode 100755 tests/generic/802
+>  create mode 100644 tests/generic/802.out
+>  create mode 100755 tests/generic/803
+>  create mode 100644 tests/generic/803.out
+>  create mode 100755 tests/generic/804
+>  create mode 100644 tests/generic/804.out
+> 
+> -- 
+> 2.23.0.rc1.153.gdeed80330f-goog
+> 
