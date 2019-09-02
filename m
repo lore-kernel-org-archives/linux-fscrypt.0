@@ -1,153 +1,144 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:35316 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2394379AbfITAUM (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 19 Sep 2019 20:20:12 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 8/8] xfs_io/encrypt: add 'enckey_status' command
-Date: Thu, 19 Sep 2019 17:18:22 -0700
-Message-Id: <20190920001822.257411-9-ebiggers@kernel.org>
-In-Reply-To: <20190920001822.257411-1-ebiggers@kernel.org>
-References: <20190920001822.257411-1-ebiggers@kernel.org>
+Return-Path: <SRS0=3xEP=W5=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: Re: [PATCH V5 0/7] Consolidate FS read I/O callbacks code
+Date: Mon, 02 Sep 2019 10:08:13 +0530
+In-Reply-To: <20190823132542.13434-1-chandan@linux.ibm.com>
+References: <20190823132542.13434-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-xfs@vger.kernel.org
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
+Message-Id: <10742618.thX4IPaW4o@localhost.localdomain>
+To: tytso@mit.edu, viro@zeniv.linux.org.uk
+Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+On Friday, August 23, 2019 6:55 PM Chandan Rajendra wrote: 
+> This patchset moves the "FS read I/O callbacks" code into a file of its
+> own (i.e. fs/read_callbacks.c) and modifies the generic
+> do_mpage_readpge() to make use of the functionality provided.
+> 
+> "FS read I/O callbacks" code implements the state machine that needs
+> to be executed after reading data from files that are encrypted and/or
+> have verity metadata associated with them.
+> 
+> With these changes in place, the patchset changes Ext4 to use
+> mpage_readpage[s] instead of its own custom ext4_readpage[s]()
+> functions. This is done to reduce duplication of code across
+> filesystems. Also, "FS read I/O callbacks" source files will be built
+> only if CONFIG_FS_ENCRYPTION is enabled.
+> 
+> The patchset also modifies fs/buffer.c to get file
+> encryption/decryption to work with subpage-sized blocks.
+> 
+> The patches can also be obtained from
+> https://github.com/chandanr/linux.git at branch subpage-encryption-v5.
 
-Add an 'enckey_status' command to xfs_io, to provide a command-line
-interface to the FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl.
+Ted and Al,
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- io/encrypt.c      | 71 +++++++++++++++++++++++++++++++++++++++++++++++
- man/man8/xfs_io.8 |  6 ++++
- 2 files changed, 77 insertions(+)
+Do you have any comments on the patchset?
 
-diff --git a/io/encrypt.c b/io/encrypt.c
-index 7531c4ad..426040e9 100644
---- a/io/encrypt.c
-+++ b/io/encrypt.c
-@@ -140,6 +140,7 @@ static cmdinfo_t get_encpolicy_cmd;
- static cmdinfo_t set_encpolicy_cmd;
- static cmdinfo_t add_enckey_cmd;
- static cmdinfo_t rm_enckey_cmd;
-+static cmdinfo_t enckey_status_cmd;
- 
- static void
- get_encpolicy_help(void)
-@@ -216,6 +217,19 @@ rm_enckey_help(void)
- "\n"));
- }
- 
-+static void
-+enckey_status_help(void)
-+{
-+	printf(_(
-+"\n"
-+" get the status of a filesystem encryption key\n"
-+"\n"
-+" Examples:\n"
-+" 'enckey_status 0000111122223333' - get status of v1 policy key\n"
-+" 'enckey_status 00001111222233334444555566667777' - get status of v2 policy key\n"
-+"\n"));
-+}
-+
- static const struct {
- 	__u8 mode;
- 	const char *name;
-@@ -757,6 +771,52 @@ rm_enckey_f(int argc, char **argv)
- 	return 0;
- }
- 
-+static int
-+enckey_status_f(int argc, char **argv)
-+{
-+	struct fscrypt_get_key_status_arg arg;
-+
-+	memset(&arg, 0, sizeof(arg));
-+
-+	if (str2keyspec(argv[1], -1, &arg.key_spec) < 0)
-+		return 0;
-+
-+	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_KEY_STATUS, &arg) != 0) {
-+		fprintf(stderr, "Error getting encryption key status: %s\n",
-+			strerror(errno));
-+		exitcode = 1;
-+		return 0;
-+	}
-+
-+	switch (arg.status) {
-+	case FSCRYPT_KEY_STATUS_PRESENT:
-+		printf("Present");
-+		if (arg.user_count || arg.status_flags) {
-+			printf(" (user_count=%u", arg.user_count);
-+			if (arg.status_flags &
-+			    FSCRYPT_KEY_STATUS_FLAG_ADDED_BY_SELF)
-+				printf(", added_by_self");
-+			arg.status_flags &=
-+				~FSCRYPT_KEY_STATUS_FLAG_ADDED_BY_SELF;
-+			if (arg.status_flags)
-+				printf(", unknown_flags=0x%08x",
-+				       arg.status_flags);
-+			printf(")");
-+		}
-+		printf("\n");
-+		return 0;
-+	case FSCRYPT_KEY_STATUS_ABSENT:
-+		printf("Absent\n");
-+		return 0;
-+	case FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED:
-+		printf("Incompletely removed\n");
-+		return 0;
-+	default:
-+		printf("Unknown status (%u)\n", arg.status);
-+		return 0;
-+	}
-+}
-+
- void
- encrypt_init(void)
- {
-@@ -800,8 +860,19 @@ encrypt_init(void)
- 		_("remove an encryption key from the filesystem");
- 	rm_enckey_cmd.help = rm_enckey_help;
- 
-+	enckey_status_cmd.name = "enckey_status";
-+	enckey_status_cmd.cfunc = enckey_status_f;
-+	enckey_status_cmd.args = _("keyspec");
-+	enckey_status_cmd.argmin = 1;
-+	enckey_status_cmd.argmax = 1;
-+	enckey_status_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
-+	enckey_status_cmd.oneline =
-+		_("get the status of a filesystem encryption key");
-+	enckey_status_cmd.help = enckey_status_help;
-+
- 	add_command(&get_encpolicy_cmd);
- 	add_command(&set_encpolicy_cmd);
- 	add_command(&add_enckey_cmd);
- 	add_command(&rm_enckey_cmd);
-+	add_command(&enckey_status_cmd);
- }
-diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
-index a6894778..9af6e542 100644
---- a/man/man8/xfs_io.8
-+++ b/man/man8/xfs_io.8
-@@ -779,6 +779,12 @@ is a privileged operation.
- .RE
- .PD
- .TP
-+.BI "enckey_status " keyspec
-+On filesystems that support encryption, display the status of an encryption key.
-+.I keyspec
-+is a hex string specifying the key for which to display the status, as a
-+16-character "key descriptor" or a 32-character "key identifier".
-+.TP
- .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
- List extended inode flags on the currently open file. If the
- .B \-R
+> 
+> Changelog:
+> V4 -> V5:
+>    1. Since F2FS uses its own workqueue and also since its
+>       decompression logic isn't an fs independent entity like fscrypt or
+>       fsverity, this patchset drops support for F2FS.
+>       The patchset still helps in removing a copy of
+>       do_mpage_readpage() from Ext4 (i.e. ext4_readpage()) and also
+>       prevents a copy of block_read_full_page() from being added into
+>       Ext4 by adding support to "read callbacks" API invocations into
+>       block_read_full_page().
+> 
+> V3 -> V4:
+>    1. A new buffer_head flag (i.e. BH_Read_Cb) is introduced to reliably
+>       check if a buffer head's content has to be decrypted.
+>    2. Fix layering violation. Now the code flow for decryption happens as shown below,
+>       FS => read callbacks => fscrypt
+>    3. Select FS_READ_CALLBACKS from FS specific kconfig file if FS_ENCRYPTION
+>       is enabled.
+>    4. Make 'struct read_callbacks_ctx' an opaque structure.
+>    5. Make use of FS' endio function rather than implementing one in read
+>       callbacks.
+>    6. Make read_callbacks.h self-contained.
+>    7. Split patchset to separate out ext4 and f2fs changes.
+>    
+> V2 -> V3:
+> 1. Split the V2 patch "Consolidate 'read callbacks' into a new file" into
+>    three patches,
+>    - Introduce the read_callbacks functionality.
+>    - Convert encryption to use read_callbacks.
+>    - Remove union from struct fscrypt_context.
+> 2. fs/Kconfig
+>    Do not explicitly set the default value of 'n' for FS_READ_CALLBACKS.
+> 3. fs/crypto/Kconfig
+>    Select CONFIG_FS_READ_CALLBACKS only if CONFIG_BLOCK is selected.
+> 4. Remove verity associated code in read_callbacks code.
+> 5. Introduce a callback argument to read_callbacks_setup() function
+>    which gets invoked for each page for bio. F2FS uses this to perform
+>    custom operations like decrementing the value of f2fs_sb_info->nr_pages[].
+> 6. Encapsulate the details of "read callbacks" (e.g. Usage of "struct
+>    read_callbacks *ctx") within its own functions. When CONFIG_FS_READ_CALLBACKS
+>    is set to 'n', the corresponding stub functions return approriate error
+>    values.
+> 7. Split fscrypt_decrypt() function into fscrypt_decrypt_bio() and
+>    fscrypt_decrypt_bh().
+> 8. Split end_read_callbacks() function into end_read_callbacks_bio() and
+>    end_read_callbacks_bh().
+> 
+> V1 -> V2:
+> 1. Removed the phrase "post_read_process" from file names and
+>    functions. Instead we now use the phrase "read_callbacks" in its
+>    place.
+> 2. When performing changes associated with (1), the changes made by
+>    the patch "Remove the term 'bio' from post read processing" are
+>    made in the earlier patch "Consolidate 'read callbacks' into a new
+>    file". Hence the patch "Remove the term 'bio' from post read
+>    processing" is removed from the patchset.
+> 
+> RFC V2 -> V1:
+> 1. Test and verify FS_CFLG_OWN_PAGES subset of fscrypt_encrypt_page()
+>    code by executing fstests on UBIFS.
+> 2. Implement F2fs function call back to check if the contents of a
+>    page holding a verity file's data needs to be verified.
+> 
+> RFC V1 -> RFC V2:
+> 1. Describe the purpose of "Post processing code" in the cover letter.
+> 2. Fix build errors when CONFIG_FS_VERITY is enabled.
+> 
+> Chandan Rajendra (7):
+>   buffer_head: Introduce BH_Read_Cb flag
+>   FS: Introduce read callbacks
+>   fs/mpage.c: Integrate read callbacks
+>   fs/buffer.c: add decryption support via read_callbacks
+>   ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
+>   ext4: Enable encryption for subpage-sized blocks
+>   fscrypt: remove struct fscrypt_ctx
+> 
+>  Documentation/filesystems/fscrypt.rst |   4 +-
+>  fs/Kconfig                            |   3 +
+>  fs/Makefile                           |   1 +
+>  fs/buffer.c                           |  33 ++-
+>  fs/crypto/bio.c                       |  18 --
+>  fs/crypto/crypto.c                    |  89 +-------
+>  fs/crypto/fscrypt_private.h           |   3 -
+>  fs/ext4/Kconfig                       |   1 +
+>  fs/ext4/Makefile                      |   2 +-
+>  fs/ext4/inode.c                       |   5 +-
+>  fs/ext4/readpage.c                    | 295 --------------------------
+>  fs/ext4/super.c                       |   7 -
+>  fs/f2fs/Kconfig                       |   1 +
+>  fs/mpage.c                            |  24 ++-
+>  fs/read_callbacks.c                   | 285 +++++++++++++++++++++++++
+>  include/linux/buffer_head.h           |   2 +
+>  include/linux/fscrypt.h               |  32 ---
+>  include/linux/read_callbacks.h        |  48 +++++
+>  18 files changed, 391 insertions(+), 462 deletions(-)
+>  delete mode 100644 fs/ext4/readpage.c
+>  create mode 100644 fs/read_callbacks.c
+>  create mode 100644 include/linux/read_callbacks.h
+> 
+> 
+
+
 -- 
-2.23.0.351.gc4317032e6-goog
+chandan
