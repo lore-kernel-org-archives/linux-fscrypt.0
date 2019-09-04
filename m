@@ -1,87 +1,54 @@
-Return-Path: <SRS0=mAtp=XF=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH RESEND V5 3/7] fs/mpage.c: Integrate read callbacks
-Date: Tue, 10 Sep 2019 21:21:11 +0530
-Message-Id: <20190910155115.28550-4-chandan@linux.ibm.com>
-In-Reply-To: <20190910155115.28550-1-chandan@linux.ibm.com>
-References: <20190910155115.28550-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mx1.redhat.com ([209.132.183.28]:41984 "EHLO mx1.redhat.com"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1730145AbfIDNim (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 4 Sep 2019 09:38:42 -0400
+Date: Wed, 4 Sep 2019 09:38:36 -0400
+From: Mike Snitzer <snitzer@redhat.com>
+Subject: Re: [PATCH v13 6/6] md: dm-crypt: omit parsing of the encapsulated
+ cipher
+Message-ID: <20190904133836.GA17836@redhat.com>
+References: <20190819141738.1231-1-ard.biesheuvel@linaro.org>
+ <20190819141738.1231-7-ard.biesheuvel@linaro.org>
+ <20190903185827.GD13472@redhat.com>
+ <403192f0-d1c4-0c60-5af1-7dee8516d629@gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: viro@zeniv.linux.org.uk, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <403192f0-d1c4-0c60-5af1-7dee8516d629@gmail.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: Milan Broz <gmazyland@gmail.com>
+Cc: Ard Biesheuvel <ard.biesheuvel@linaro.org>, linux-crypto@vger.kernel.org, Herbert Xu <herbert@gondor.apana.org.au>, Eric Biggers <ebiggers@google.com>, linux-fscrypt@vger.kernel.org, Gilad Ben-Yossef <gilad@benyossef.com>, dm-devel@redhat.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit adds code to make do_mpage_readpage() to be "read callbacks"
-aware i.e. for files requiring decryption, do_mpage_readpage() now
-sets up the read callbacks state machine when allocating a bio and later
-starts execution of the state machine after file data is read from the
-underlying disk.
+On Wed, Sep 04 2019 at  7:01am -0400,
+Milan Broz <gmazyland@gmail.com> wrote:
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
----
- fs/mpage.c | 24 +++++++++++++++++++++---
- 1 file changed, 21 insertions(+), 3 deletions(-)
+> On 03/09/2019 20:58, Mike Snitzer wrote:
+> > On Mon, Aug 19 2019 at 10:17am -0400,
+> > Ard Biesheuvel <ard.biesheuvel@linaro.org> wrote:
+> > 
+> >> Only the ESSIV IV generation mode used to use cc->cipher so it could
+> >> instantiate the bare cipher used to encrypt the IV. However, this is
+> >> now taken care of by the ESSIV template, and so no users of cc->cipher
+> >> remain. So remove it altogether.
+> >>
+> >> Signed-off-by: Ard Biesheuvel <ard.biesheuvel@linaro.org>
+> > 
+> > Acked-by: Mike Snitzer <snitzer@redhat.com>
+> > 
+> > Might be wise to bump the dm-crypt target's version number (from
+> > {1, 19, 0} to {1, 20, 0}) at the end of this patch too though...
+> 
+> The function should be exactly the same, dependencies on needed modules are set.
+> 
+> In cryptsetup we always report dm target + kernel version,
+> so we know that since version 5.4 it uses crypto API for ESSIV.
+> I think version bump here is really not so important.
+> 
+> Just my two cents :)
 
-diff --git a/fs/mpage.c b/fs/mpage.c
-index 3f19da75178b..65e7165644e2 100644
---- a/fs/mpage.c
-+++ b/fs/mpage.c
-@@ -30,6 +30,7 @@
- #include <linux/backing-dev.h>
- #include <linux/pagevec.h>
- #include <linux/cleancache.h>
-+#include <linux/read_callbacks.h>
- #include "internal.h"
- 
- /*
-@@ -44,7 +45,7 @@
-  * status of that page is hard.  See end_buffer_async_read() for the details.
-  * There is no point in duplicating all that complexity.
-  */
--static void mpage_end_io(struct bio *bio)
-+static void end_bio(struct bio *bio)
- {
- 	struct bio_vec *bv;
- 	int i;
-@@ -52,13 +53,24 @@ static void mpage_end_io(struct bio *bio)
- 
- 	bio_for_each_segment_all(bv, bio, i, iter_all) {
- 		struct page *page = bv->bv_page;
--		page_endio(page, bio_op(bio),
--			   blk_status_to_errno(bio->bi_status));
-+		int err;
-+
-+		err = blk_status_to_errno(bio->bi_status);
-+
-+		if (!err && read_callbacks_failed(page))
-+			err = -EIO;
-+
-+		page_endio(page, bio_op(bio), err);
- 	}
- 
- 	bio_put(bio);
- }
- 
-+static void mpage_end_io(struct bio *bio)
-+{
-+	read_callbacks_endio_bio(bio, end_bio);
-+}
-+
- static struct bio *mpage_bio_submit(int op, int op_flags, struct bio *bio)
- {
- 	bio->bi_end_io = mpage_end_io;
-@@ -310,6 +322,12 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
- 					gfp);
- 		if (args->bio == NULL)
- 			goto confused;
-+
-+		if (read_callbacks_setup_bio(inode, args->bio)) {
-+			bio_put(args->bio);
-+			args->bio = NULL;
-+			goto confused;
-+		}
- 	}
- 
- 	length = first_hole << blkbits;
--- 
-2.19.1
+Yes, that's fine.. I staged it for 5.4 yesterday without the version bump.
+
+Thanks,
+Mike
