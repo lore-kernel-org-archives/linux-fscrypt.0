@@ -1,278 +1,430 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:49236 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726033AbfI1ADq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 27 Sep 2019 20:03:46 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v3 5/9] xfs_io/encrypt: extend 'get_encpolicy' to support v2 policies
-Date: Fri, 27 Sep 2019 17:02:39 -0700
-Message-Id: <20190928000243.77634-6-ebiggers@kernel.org>
-In-Reply-To: <20190928000243.77634-1-ebiggers@kernel.org>
-References: <20190928000243.77634-1-ebiggers@kernel.org>
+Return-Path: <SRS0=mAtp=XF=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH RESEND V5 2/7] FS: Introduce read callbacks
+Date: Tue, 10 Sep 2019 21:21:10 +0530
+Message-Id: <20190910155115.28550-3-chandan@linux.ibm.com>
+In-Reply-To: <20190910155115.28550-1-chandan@linux.ibm.com>
+References: <20190910155115.28550-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-xfs@vger.kernel.org
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+To: viro@zeniv.linux.org.uk, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Read callbacks implements a state machine to be executed after a
+buffered read I/O is completed. They help in further processing the file
+data read from the backing store. Currently, decryption is the only post
+processing step to be supported.
 
-get_encpolicy uses the FS_IOC_GET_ENCRYPTION_POLICY ioctl to retrieve
-the file's encryption policy, then displays it.  But that only works for
-v1 encryption policies.  A new ioctl, FS_IOC_GET_ENCRYPTION_POLICY_EX,
-has been introduced which is more flexible and can retrieve both v1 and
-v2 encryption policies.
+The execution of the state machine is to be initiated by the endio
+function associated with the read operation.
 
-Make get_encpolicy use the new ioctl if the kernel supports it and
-display the resulting the v1 or v2 encryption policy.  Otherwise, fall
-back to the old ioctl and display the v1 policy.
-
-Also add new options:
-
-  -1: Use the old ioctl only.  This will be used to test the old ioctl
-      even when the kernel supports the new one.
-
-  -t: Test whether the new ioctl is supported.  This will be useful to
-      determine whether v2 policies should be tested or not.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
 ---
- io/encrypt.c      | 153 ++++++++++++++++++++++++++++++++++++++++------
- man/man8/xfs_io.8 |  15 ++++-
- 2 files changed, 149 insertions(+), 19 deletions(-)
+ fs/Kconfig                     |   3 +
+ fs/Makefile                    |   1 +
+ fs/ext4/Kconfig                |   1 +
+ fs/f2fs/Kconfig                |   1 +
+ fs/read_callbacks.c            | 285 +++++++++++++++++++++++++++++++++
+ include/linux/read_callbacks.h |  48 ++++++
+ 6 files changed, 339 insertions(+)
+ create mode 100644 fs/read_callbacks.c
+ create mode 100644 include/linux/read_callbacks.h
 
-diff --git a/io/encrypt.c b/io/encrypt.c
-index 8a511379..0b45e93f 100644
---- a/io/encrypt.c
-+++ b/io/encrypt.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * Copyright (c) 2016 Google, Inc.  All Rights Reserved.
-+ * Copyright 2016, 2019 Google LLC
-  * Author: Eric Biggers <ebiggers@google.com>
-  */
+diff --git a/fs/Kconfig b/fs/Kconfig
+index 3e6d3101f3ff..2d96a58d7418 100644
+--- a/fs/Kconfig
++++ b/fs/Kconfig
+@@ -20,6 +20,9 @@ if BLOCK
+ config FS_IOMAP
+ 	bool
  
-@@ -150,6 +150,20 @@ static const struct {
- static cmdinfo_t get_encpolicy_cmd;
- static cmdinfo_t set_encpolicy_cmd;
++config FS_READ_CALLBACKS
++	bool
++
+ source "fs/ext2/Kconfig"
+ source "fs/ext4/Kconfig"
+ source "fs/jbd2/Kconfig"
+diff --git a/fs/Makefile b/fs/Makefile
+index 427fec226fae..942808f83472 100644
+--- a/fs/Makefile
++++ b/fs/Makefile
+@@ -53,6 +53,7 @@ obj-$(CONFIG_SYSCTL)		+= drop_caches.o
  
-+static void
-+get_encpolicy_help(void)
+ obj-$(CONFIG_FHANDLE)		+= fhandle.o
+ obj-$(CONFIG_FS_IOMAP)		+= iomap.o
++obj-$(CONFIG_FS_READ_CALLBACKS) += read_callbacks.o
+ 
+ obj-y				+= quota/
+ 
+diff --git a/fs/ext4/Kconfig b/fs/ext4/Kconfig
+index 06f77ca7f36e..2e24df67f085 100644
+--- a/fs/ext4/Kconfig
++++ b/fs/ext4/Kconfig
+@@ -38,6 +38,7 @@ config EXT4_FS
+ 	select CRYPTO
+ 	select CRYPTO_CRC32C
+ 	select FS_IOMAP
++	select FS_READ_CALLBACKS if FS_ENCRYPTION
+ 	help
+ 	  This is the next generation of the ext3 filesystem.
+ 
+diff --git a/fs/f2fs/Kconfig b/fs/f2fs/Kconfig
+index e57cc754d543..1e1424940d1b 100644
+--- a/fs/f2fs/Kconfig
++++ b/fs/f2fs/Kconfig
+@@ -4,6 +4,7 @@ config F2FS_FS
+ 	select CRYPTO
+ 	select CRYPTO_CRC32
+ 	select F2FS_FS_XATTR if FS_ENCRYPTION
++	select FS_READ_CALLBACKS if FS_ENCRYPTION
+ 	help
+ 	  F2FS is based on Log-structured File System (LFS), which supports
+ 	  versatile "flash-friendly" features. The design has been focused on
+diff --git a/fs/read_callbacks.c b/fs/read_callbacks.c
+new file mode 100644
+index 000000000000..32d9b8d17964
+--- /dev/null
++++ b/fs/read_callbacks.c
+@@ -0,0 +1,285 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * This file tracks the state machine that needs to be executed after reading
++ * data from files that are encrypted and/or have verity metadata associated
++ * with them.
++ */
++#include <linux/module.h>
++#include <linux/mm.h>
++#include <linux/pagemap.h>
++#include <linux/bio.h>
++#include <linux/buffer_head.h>
++#include <linux/fscrypt.h>
++#include <linux/read_callbacks.h>
++#include <linux/blk_types.h>
++
++#define NUM_PREALLOC_READ_CALLBACK_CTXS	128
++
++static struct kmem_cache *read_callbacks_ctx_cache;
++static mempool_t *read_callbacks_ctx_pool;
++
++/* Read callback state machine steps */
++enum read_callbacks_step {
++	STEP_INITIAL = 0,
++	STEP_DECRYPT,
++};
++
++struct read_callbacks_ctx {
++	struct inode *inode;
++	struct bio *bio;
++	struct buffer_head *bh;
++	union {
++		end_bio_func_t end_bio;
++
++		struct {
++			end_bh_func_t end_bh;
++			int bh_uptodate;
++		};
++	};
++	struct work_struct work;
++	unsigned int enabled_steps;
++	enum read_callbacks_step cur_step;
++};
++
++static void read_callbacks(struct read_callbacks_ctx *ctx);
++
++static void free_read_callbacks_ctx(struct read_callbacks_ctx *ctx)
 +{
-+	printf(_(
-+"\n"
-+" display the encryption policy of the current file\n"
-+"\n"
-+" -1 -- Use only the old ioctl to get the encryption policy.\n"
-+"       This only works if the file has a v1 encryption policy.\n"
-+" -t -- Test whether v2 encryption policies are supported.\n"
-+"       Prints \"supported\", \"unsupported\", or an error message.\n"
-+"\n"));
++	mempool_free(ctx, read_callbacks_ctx_pool);
 +}
 +
- static void
- set_encpolicy_help(void)
- {
-@@ -227,7 +241,7 @@ mode2str(__u8 mode)
- }
- 
- static const char *
--keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
-+keydesc2str(const __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
- {
- 	static char buf[2 * FSCRYPT_KEY_DESCRIPTOR_SIZE + 1];
- 	int i;
-@@ -238,29 +252,132 @@ keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
- 	return buf;
- }
- 
-+static const char *
-+keyid2str(const __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
++static struct read_callbacks_ctx *get_read_callbacks_ctx(struct inode *inode)
 +{
-+	static char buf[2 * FSCRYPT_KEY_IDENTIFIER_SIZE + 1];
++	struct read_callbacks_ctx *ctx = NULL;
++	unsigned int enabled_steps = 0;
++
++	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
++		enabled_steps |= 1 << STEP_DECRYPT;
++
++	if (enabled_steps) {
++		ctx = mempool_alloc(read_callbacks_ctx_pool, GFP_NOFS);
++		if (!ctx)
++			return ERR_PTR(-ENOMEM);
++
++		ctx->inode = inode;
++		ctx->enabled_steps = enabled_steps;
++		ctx->cur_step = STEP_INITIAL;
++	}
++
++	return ctx;
++}
++
++static void decrypt_bio(struct bio *bio)
++{
++	struct bio_vec *bv;
 +	int i;
++	struct bvec_iter_all iter_all;
 +
-+	for (i = 0; i < FSCRYPT_KEY_IDENTIFIER_SIZE; i++)
-+		sprintf(&buf[2 * i], "%02x", master_key_identifier[i]);
-+
-+	return buf;
-+}
-+
-+static void
-+test_for_v2_policy_support(void)
-+{
-+	struct fscrypt_get_policy_ex_arg arg;
-+
-+	arg.policy_size = sizeof(arg.policy);
-+
-+	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg) == 0 ||
-+	    errno == ENODATA /* file unencrypted */) {
-+		printf(_("supported\n"));
-+		return;
++	bio_for_each_segment_all(bv, bio, i, iter_all) {
++		struct page *page = bv->bv_page;
++		int ret = fscrypt_decrypt_pagecache_blocks(page, bv->bv_len,
++							   bv->bv_offset);
++		if (ret)
++			SetPageError(page);
 +	}
-+	if (errno == ENOTTY) {
-+		printf(_("unsupported\n"));
-+		return;
-+	}
-+	fprintf(stderr,
-+		_("%s: unexpected error checking for FS_IOC_GET_ENCRYPTION_POLICY_EX support: %s\n"),
-+		file->name, strerror(errno));
-+	exitcode = 1;
 +}
 +
-+static void
-+show_v1_encryption_policy(const struct fscrypt_policy_v1 *policy)
++static void decrypt_bh(struct buffer_head *bh)
 +{
-+	printf(_("Encryption policy for %s:\n"), file->name);
-+	printf(_("\tPolicy version: %u\n"), policy->version);
-+	printf(_("\tMaster key descriptor: %s\n"),
-+	       keydesc2str(policy->master_key_descriptor));
-+	printf(_("\tContents encryption mode: %u (%s)\n"),
-+	       policy->contents_encryption_mode,
-+	       mode2str(policy->contents_encryption_mode));
-+	printf(_("\tFilenames encryption mode: %u (%s)\n"),
-+	       policy->filenames_encryption_mode,
-+	       mode2str(policy->filenames_encryption_mode));
-+	printf(_("\tFlags: 0x%02x\n"), policy->flags);
++	struct page *page;
++	int ret;
++
++	page = bh->b_page;
++
++	ret = fscrypt_decrypt_pagecache_blocks(page, bh->b_size,
++					bh_offset(bh));
++	if (ret)
++		SetPageError(page);
 +}
 +
-+static void
-+show_v2_encryption_policy(const struct fscrypt_policy_v2 *policy)
++static void decrypt_work(struct work_struct *work)
 +{
-+	printf(_("Encryption policy for %s:\n"), file->name);
-+	printf(_("\tPolicy version: %u\n"), policy->version);
-+	printf(_("\tMaster key identifier: %s\n"),
-+	       keyid2str(policy->master_key_identifier));
-+	printf(_("\tContents encryption mode: %u (%s)\n"),
-+	       policy->contents_encryption_mode,
-+	       mode2str(policy->contents_encryption_mode));
-+	printf(_("\tFilenames encryption mode: %u (%s)\n"),
-+	       policy->filenames_encryption_mode,
-+	       mode2str(policy->filenames_encryption_mode));
-+	printf(_("\tFlags: 0x%02x\n"), policy->flags);
++	struct read_callbacks_ctx *ctx =
++		container_of(work, struct read_callbacks_ctx, work);
++
++	if (ctx->bio)
++		decrypt_bio(ctx->bio);
++	else
++		decrypt_bh(ctx->bh);
++
++	read_callbacks(ctx);
 +}
 +
- static int
- get_encpolicy_f(int argc, char **argv)
- {
--	struct fscrypt_policy policy;
-+	int c;
-+	struct fscrypt_get_policy_ex_arg arg;
-+	bool only_use_v1_ioctl = false;
-+	int res;
-+
-+	while ((c = getopt(argc, argv, "1t")) != EOF) {
-+		switch (c) {
-+		case '1':
-+			only_use_v1_ioctl = true;
-+			break;
-+		case 't':
-+			test_for_v2_policy_support();
-+			return 0;
-+		default:
-+			return command_usage(&get_encpolicy_cmd);
++static void read_callbacks(struct read_callbacks_ctx *ctx)
++{
++	/*
++	 * We use different work queues for decryption and for verity because
++	 * verity may require reading metadata pages that need decryption, and
++	 * we shouldn't recurse to the same workqueue.
++	 */
++	switch (++ctx->cur_step) {
++	case STEP_DECRYPT:
++		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
++			INIT_WORK(&ctx->work, decrypt_work);
++			fscrypt_enqueue_decrypt_work(&ctx->work);
++			return;
 +		}
-+	}
-+	argc -= optind;
-+	argv += optind;
-+
-+	if (argc != 0)
-+		return command_usage(&get_encpolicy_cmd);
-+
-+	/* first try the new ioctl */
-+	if (only_use_v1_ioctl) {
-+		res = -1;
-+		errno = ENOTTY;
-+	} else {
-+		arg.policy_size = sizeof(arg.policy);
-+		res = ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg);
-+	}
-+
-+	/* fall back to the old ioctl */
-+	if (res != 0 && errno == ENOTTY)
-+		res = ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY,
-+			    &arg.policy.v1);
- 
--	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY, &policy) < 0) {
--		fprintf(stderr, "%s: failed to get encryption policy: %s\n",
-+	if (res != 0) {
-+		fprintf(stderr, _("%s: failed to get encryption policy: %s\n"),
- 			file->name, strerror(errno));
- 		exitcode = 1;
- 		return 0;
- 	}
- 
--	printf("Encryption policy for %s:\n", file->name);
--	printf("\tPolicy version: %u\n", policy.version);
--	printf("\tMaster key descriptor: %s\n",
--	       keydesc2str(policy.master_key_descriptor));
--	printf("\tContents encryption mode: %u (%s)\n",
--	       policy.contents_encryption_mode,
--	       mode2str(policy.contents_encryption_mode));
--	printf("\tFilenames encryption mode: %u (%s)\n",
--	       policy.filenames_encryption_mode,
--	       mode2str(policy.filenames_encryption_mode));
--	printf("\tFlags: 0x%02x\n", policy.flags);
-+	switch (arg.policy.version) {
-+	case FSCRYPT_POLICY_V1:
-+		show_v1_encryption_policy(&arg.policy.v1);
-+		break;
-+	case FSCRYPT_POLICY_V2:
-+		show_v2_encryption_policy(&arg.policy.v2);
-+		break;
++		ctx->cur_step++;
++		/* fall-through */
 +	default:
-+		printf(_("Encryption policy for %s:\n"), file->name);
-+		printf(_("\tPolicy version: %u (unknown)\n"),
-+		       arg.policy.version);
-+		break;
++		if (ctx->bio)
++			ctx->end_bio(ctx->bio);
++		else
++			ctx->end_bh(ctx->bh, ctx->bh_uptodate);
++
++		mempool_free(ctx, read_callbacks_ctx_pool);
 +	}
- 	return 0;
- }
- 
-@@ -360,11 +477,13 @@ encrypt_init(void)
- {
- 	get_encpolicy_cmd.name = "get_encpolicy";
- 	get_encpolicy_cmd.cfunc = get_encpolicy_f;
-+	get_encpolicy_cmd.args = _("[-1] [-t]");
- 	get_encpolicy_cmd.argmin = 0;
--	get_encpolicy_cmd.argmax = 0;
-+	get_encpolicy_cmd.argmax = -1;
- 	get_encpolicy_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
- 	get_encpolicy_cmd.oneline =
- 		_("display the encryption policy of the current file");
-+	get_encpolicy_cmd.help = get_encpolicy_help;
- 
- 	set_encpolicy_cmd.name = "set_encpolicy";
- 	set_encpolicy_cmd.cfunc = set_encpolicy_f;
-diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
-index 6e064bdd..3dd34a0c 100644
---- a/man/man8/xfs_io.8
-+++ b/man/man8/xfs_io.8
-@@ -724,10 +724,21 @@ version of policy structure (numeric)
- .RE
- .PD
- .TP
--.BR get_encpolicy
-+.BI "get_encpolicy [ \-1 ] [ \-t ]"
- On filesystems that support encryption, display the encryption policy of the
- current file.
--
-+.RS 1.0i
-+.PD 0
-+.TP 0.4i
-+.BI \-1
-+Use only the old ioctl to get the encryption policy.  This only works if the
-+file has a v1 encryption policy.
-+.TP
-+.BI \-t
-+Test whether v2 encryption policies are supported.  Prints "supported",
-+"unsupported", or an error message.
-+.RE
-+.PD
- .TP
- .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
- List extended inode flags on the currently open file. If the
++}
++
++/**
++ * read_callbacks_setup_bio() - Initialize the read callbacks state machine
++ * @inode: The file on which read I/O is performed.
++ * @bio: bio holding page cache pages on which read I/O is performed.
++ * @bh: Buffer head on which read I/O is performed.
++ * @page_op: Function to perform filesystem specific operations on a page.
++ *
++ * Based on the nature of the file's data (e.g. encrypted), this function
++ * computes the steps that need to be performed after data is read of the
++ * backing disk. This information is saved in a context structure. A pointer
++ * to the context structure is then stored in bio->bi_private for later
++ * usage.
++ *
++ * Return: 0 on success; An error code on failure.
++ */
++int read_callbacks_setup_bio(struct inode *inode, struct bio *bio)
++{
++	struct read_callbacks_ctx *ctx = get_read_callbacks_ctx(inode);
++
++	if (ctx) {
++		if (IS_ERR(ctx))
++			return PTR_ERR(ctx);
++		ctx->bio = bio;
++		ctx->bh = NULL;
++		bio->bi_private = ctx;
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL(read_callbacks_setup_bio);
++
++/**
++ * read_callbacks_setup_bh() - Initialize the read callbacks state machine
++ * @inode: The file on which read I/O is performed.
++ * @bio: bio holding page cache pages on which read I/O is performed.
++ * @bh: Buffer head on which read I/O is performed.
++ * @page_op: Function to perform filesystem specific operations on a page.
++ *
++ * Based on the nature of the file's data (e.g. encrypted), this function
++ * computes the steps that need to be performed after data is read of the
++ * backing disk. This information is saved in a context structure. A pointer
++ * to the context structure is then stored in bio->bi_private for later
++ * usage.
++ *
++ * Return: 0 on success; An error code on failure.
++ */
++int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh)
++{
++	struct read_callbacks_ctx *ctx = get_read_callbacks_ctx(inode);
++
++	if (ctx) {
++		if (IS_ERR(ctx))
++			return PTR_ERR(ctx);
++		ctx->bio = NULL;
++		ctx->bh = bh;
++		bh->b_private = ctx;
++		set_buffer_read_cb(bh);
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL(read_callbacks_setup_bh);
++
++/**
++ * read_callbacks_endio_bio() - Initiate the read callbacks state machine.
++ * @bio: bio on which read I/O operation has just been completed.
++ * @end_bio: Callback to invoke on @bio after state machine completion.
++ *
++ * Initiates the execution of the read callbacks state machine when the read
++ * operation has been completed sucessfully. If there was an error associated
++ * with the bio, this function frees the read callbacks context structure stored
++ * in bio->bi_private (if any).
++ *
++ * If read callbacks state machine isn't executed, we end up invoking the
++ * @end_bio function passed in as an argument.
++ */
++void read_callbacks_endio_bio(struct bio *bio, end_bio_func_t end_bio)
++{
++	struct read_callbacks_ctx *ctx = bio->bi_private;
++
++	if (ctx) {
++		if (!bio->bi_status) {
++			ctx->end_bio = end_bio;
++			read_callbacks(ctx);
++			return;
++		}
++
++		free_read_callbacks_ctx(ctx);
++	}
++
++	end_bio(bio);
++}
++EXPORT_SYMBOL(read_callbacks_endio_bio);
++
++/**
++ * read_callbacks_endio_bh() - Initiate the read callbacks state machine.
++ * @bh: buffer head on which read I/O operation has just been completed.
++ * @uptodate: Buffer head's I/O status.
++ * @end_bh: Callback to invoke on on @bh after state machine completion.
++ *
++ * Initiates the execution of the read callbacks state machine when the read
++ * operation has been completed sucessfully. If there was an error associated
++ * with the buffer head, this function frees the read callbacks context
++ * structure stored in bh->b_private (if any).
++ *
++ * If read callbacks state machine isn't executed, we end up invoking the
++ * @end_bh function passed in as an argument.
++ */
++void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh)
++{
++	struct read_callbacks_ctx *ctx = bh->b_private;
++
++	if (buffer_read_cb(bh)) {
++		clear_buffer_read_cb(bh);
++		if (uptodate) {
++			ctx->end_bh = end_bh;
++			ctx->bh_uptodate = uptodate;
++			read_callbacks(ctx);
++			return;
++		}
++
++		free_read_callbacks_ctx(ctx);
++	}
++
++	end_bh(bh, uptodate);
++}
++EXPORT_SYMBOL(read_callbacks_endio_bh);
++
++static int __init init_read_callbacks(void)
++{
++	read_callbacks_ctx_cache = KMEM_CACHE(read_callbacks_ctx, 0);
++	if (!read_callbacks_ctx_cache)
++		goto fail;
++	read_callbacks_ctx_pool =
++		mempool_create_slab_pool(NUM_PREALLOC_READ_CALLBACK_CTXS,
++					 read_callbacks_ctx_cache);
++	if (!read_callbacks_ctx_pool)
++		goto fail_free_cache;
++	return 0;
++
++fail_free_cache:
++	kmem_cache_destroy(read_callbacks_ctx_cache);
++fail:
++	return -ENOMEM;
++}
++
++fs_initcall(init_read_callbacks);
+diff --git a/include/linux/read_callbacks.h b/include/linux/read_callbacks.h
+new file mode 100644
+index 000000000000..0d709dd81b4e
+--- /dev/null
++++ b/include/linux/read_callbacks.h
+@@ -0,0 +1,48 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef _READ_CALLBACKS_H
++#define _READ_CALLBACKS_H
++
++#include <linux/blk_types.h>
++
++typedef void (*end_bio_func_t)(struct bio *bio);
++typedef void (*end_bh_func_t)(struct buffer_head *bh, int uptodate);
++
++#ifdef CONFIG_FS_READ_CALLBACKS
++int read_callbacks_setup_bio(struct inode *inode, struct bio *bio);
++int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh);
++void read_callbacks_endio_bio(struct bio *bio, end_bio_func_t end_bio);
++void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh);
++
++static inline bool read_callbacks_failed(struct page *page)
++{
++	return PageError(page);
++}
++#else
++static inline int read_callbacks_setup_bio(struct inode *inode, struct bio *bio)
++{
++	return 0;
++}
++
++static inline int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh)
++{
++	return 0;
++}
++
++static inline void read_callbacks_endio_bio(struct bio *bio,
++					end_bio_func_t end_bio)
++{
++	end_bio(bio);
++}
++
++static inline void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh)
++{
++	end_bh(bh, uptodate);
++}
++
++static inline bool read_callbacks_failed(struct page *page)
++{
++	return false;
++}
++#endif
++
++#endif	/* _READ_CALLBACKS_H */
 -- 
-2.23.0.444.g18eeb5a265-goog
+2.19.1
