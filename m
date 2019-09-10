@@ -1,137 +1,87 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:38750 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726128AbfIPEnB (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 16 Sep 2019 00:43:01 -0400
-Date: Sun, 15 Sep 2019 21:42:58 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [GIT PULL] fscrypt updates for 5.4
-Message-ID: <20190916044258.GA8269@sol.localdomain>
+Return-Path: <SRS0=mAtp=XF=linux.ibm.com=chandan@kernel.org>
+From: Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH RESEND V5 3/7] fs/mpage.c: Integrate read callbacks
+Date: Tue, 10 Sep 2019 21:21:11 +0530
+Message-Id: <20190910155115.28550-4-chandan@linux.ibm.com>
+In-Reply-To: <20190910155115.28550-1-chandan@linux.ibm.com>
+References: <20190910155115.28550-1-chandan@linux.ibm.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
+Content-Transfer-Encoding: 8bit
+To: viro@zeniv.linux.org.uk, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-The following changes since commit e21a712a9685488f5ce80495b37b9fdbe96c230d:
+This commit adds code to make do_mpage_readpage() to be "read callbacks"
+aware i.e. for files requiring decryption, do_mpage_readpage() now
+sets up the read callbacks state machine when allocating a bio and later
+starts execution of the state machine after file data is read from the
+underlying disk.
 
-  Linux 5.3-rc3 (2019-08-04 18:40:12 -0700)
+Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+---
+ fs/mpage.c | 24 +++++++++++++++++++++---
+ 1 file changed, 21 insertions(+), 3 deletions(-)
 
-are available in the Git repository at:
-
-  git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fscrypt-for-linus
-
-for you to fetch changes up to 0642ea2409f3bfa105570e12854b8e2628db6835:
-
-  ext4 crypto: fix to check feature status before get policy (2019-08-31 10:00:29 -0500)
-
-----------------------------------------------------------------
-
-Hi Linus,
-
-This is a large update to fs/crypto/ which includes:
-
-- Add ioctls that add/remove encryption keys to/from a filesystem-level
-  keyring.  These fix user-reported issues where e.g. an encrypted home
-  directory can break NetworkManager, sshd, Docker, etc. because they
-  don't get access to the needed keyring.  These ioctls also provide a
-  way to lock encrypted directories that doesn't use the vm.drop_caches
-  sysctl, so is faster, more reliable, and doesn't always need root.
-
-- Add a new encryption policy version ("v2") which switches to a more
-  standard, secure, and flexible key derivation function, and starts
-  verifying that the correct key was supplied before using it.  The key
-  derivation improvement is needed for its own sake as well as for
-  ongoing feature work for which the current way is too inflexible.
-
-Work is in progress to update both Android and the 'fscrypt' userspace
-tool to use both these features.  (Working patches are available and
-just need to be reviewed+merged.)  Chrome OS will likely use them too.
-
-This has also been tested on ext4, f2fs, and ubifs with xfstests -- both
-the existing encryption tests, and the new tests for this.  This has
-also been in linux-next since Aug 16 with no reported issues.  I'm also
-using an fscrypt v2-encrypted home directory on my personal desktop.
-
-
-There will be a trivial merge conflict with the ext4 tree, due to both
-branches adding new ioctls.  Please keep the fscrypt ioctls grouped
-together in the list (see linux-next).
-
-There's also a conflict with the key ACLs patchset.  If you merge that
-patchset again, the resolution is to:
-
-1. Add NULL argument to request_key() in fs/crypto/keysetup_v1.c,
-   instead of in the deleted file fs/crypto/keyinfo.c.
-
-2. Translate the key permissions to ACLs in fs/crypto/keyring.c.
-   See linux-next for my recommended resolution, which avoids making any
-   behavior changes (note that some of the old permissions map to
-   multiple new permissions).
-
-----------------------------------------------------------------
-Chao Yu (1):
-      ext4 crypto: fix to check feature status before get policy
-
-Eric Biggers (26):
-      fscrypt: remove loadable module related code
-      fscrypt: clean up base64 encoding/decoding
-      fscrypt: make fscrypt_msg() take inode instead of super_block
-      fscrypt: improve warning messages for unsupported encryption contexts
-      fscrypt: improve warnings for missing crypto API support
-      fscrypt: use ENOPKG when crypto API support missing
-      fs, fscrypt: move uapi definitions to new header <linux/fscrypt.h>
-      fscrypt: use FSCRYPT_ prefix for uapi constants
-      fscrypt: use FSCRYPT_* definitions, not FS_*
-      fscrypt: add ->ci_inode to fscrypt_info
-      fscrypt: rename fscrypt_master_key to fscrypt_direct_key
-      fscrypt: refactor key setup code in preparation for v2 policies
-      fscrypt: move v1 policy key setup to keysetup_v1.c
-      fscrypt: rename keyinfo.c to keysetup.c
-      fscrypt: add FS_IOC_ADD_ENCRYPTION_KEY ioctl
-      fscrypt: add FS_IOC_REMOVE_ENCRYPTION_KEY ioctl
-      fscrypt: add FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl
-      fscrypt: add an HKDF-SHA512 implementation
-      fscrypt: v2 encryption policy support
-      fscrypt: allow unprivileged users to add/remove keys for v2 policies
-      fscrypt: add FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS ioctl
-      fscrypt: require that key be added when setting a v2 encryption policy
-      ext4: wire up new fscrypt ioctls
-      f2fs: wire up new fscrypt ioctls
-      ubifs: wire up new fscrypt ioctls
-      fscrypt: document the new ioctls and policy version
-
- Documentation/filesystems/fscrypt.rst | 758 +++++++++++++++++++++-----
- MAINTAINERS                           |   1 +
- fs/crypto/Kconfig                     |   2 +
- fs/crypto/Makefile                    |  10 +-
- fs/crypto/crypto.c                    |  45 +-
- fs/crypto/fname.c                     |  47 +-
- fs/crypto/fscrypt_private.h           | 399 ++++++++++++--
- fs/crypto/hkdf.c                      | 181 +++++++
- fs/crypto/hooks.c                     |   6 +-
- fs/crypto/keyinfo.c                   | 611 ---------------------
- fs/crypto/keyring.c                   | 984 ++++++++++++++++++++++++++++++++++
- fs/crypto/keysetup.c                  | 591 ++++++++++++++++++++
- fs/crypto/keysetup_v1.c               | 340 ++++++++++++
- fs/crypto/policy.c                    | 434 +++++++++++----
- fs/ext4/ioctl.c                       |  32 ++
- fs/ext4/super.c                       |   3 +
- fs/f2fs/file.c                        |  58 ++
- fs/f2fs/super.c                       |   2 +
- fs/super.c                            |   2 +
- fs/ubifs/ioctl.c                      |  20 +
- fs/ubifs/super.c                      |  11 +
- include/linux/fs.h                    |   1 +
- include/linux/fscrypt.h               |  55 +-
- include/uapi/linux/fs.h               |  54 +-
- include/uapi/linux/fscrypt.h          | 181 +++++++
- 25 files changed, 3827 insertions(+), 1001 deletions(-)
- create mode 100644 fs/crypto/hkdf.c
- delete mode 100644 fs/crypto/keyinfo.c
- create mode 100644 fs/crypto/keyring.c
- create mode 100644 fs/crypto/keysetup.c
- create mode 100644 fs/crypto/keysetup_v1.c
- create mode 100644 include/uapi/linux/fscrypt.h
+diff --git a/fs/mpage.c b/fs/mpage.c
+index 3f19da75178b..65e7165644e2 100644
+--- a/fs/mpage.c
++++ b/fs/mpage.c
+@@ -30,6 +30,7 @@
+ #include <linux/backing-dev.h>
+ #include <linux/pagevec.h>
+ #include <linux/cleancache.h>
++#include <linux/read_callbacks.h>
+ #include "internal.h"
+ 
+ /*
+@@ -44,7 +45,7 @@
+  * status of that page is hard.  See end_buffer_async_read() for the details.
+  * There is no point in duplicating all that complexity.
+  */
+-static void mpage_end_io(struct bio *bio)
++static void end_bio(struct bio *bio)
+ {
+ 	struct bio_vec *bv;
+ 	int i;
+@@ -52,13 +53,24 @@ static void mpage_end_io(struct bio *bio)
+ 
+ 	bio_for_each_segment_all(bv, bio, i, iter_all) {
+ 		struct page *page = bv->bv_page;
+-		page_endio(page, bio_op(bio),
+-			   blk_status_to_errno(bio->bi_status));
++		int err;
++
++		err = blk_status_to_errno(bio->bi_status);
++
++		if (!err && read_callbacks_failed(page))
++			err = -EIO;
++
++		page_endio(page, bio_op(bio), err);
+ 	}
+ 
+ 	bio_put(bio);
+ }
+ 
++static void mpage_end_io(struct bio *bio)
++{
++	read_callbacks_endio_bio(bio, end_bio);
++}
++
+ static struct bio *mpage_bio_submit(int op, int op_flags, struct bio *bio)
+ {
+ 	bio->bi_end_io = mpage_end_io;
+@@ -310,6 +322,12 @@ static struct bio *do_mpage_readpage(struct mpage_readpage_args *args)
+ 					gfp);
+ 		if (args->bio == NULL)
+ 			goto confused;
++
++		if (read_callbacks_setup_bio(inode, args->bio)) {
++			bio_put(args->bio);
++			args->bio = NULL;
++			goto confused;
++		}
+ 	}
+ 
+ 	length = first_hole << blkbits;
+-- 
+2.19.1
