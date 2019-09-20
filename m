@@ -1,430 +1,257 @@
-Return-Path: <SRS0=LT3F=WT=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH V5 2/7] FS: Introduce read callbacks
-Date: Fri, 23 Aug 2019 18:55:37 +0530
-Message-Id: <20190823132542.13434-3-chandan@linux.ibm.com>
-In-Reply-To: <20190823132542.13434-1-chandan@linux.ibm.com>
-References: <20190823132542.13434-1-chandan@linux.ibm.com>
+Return-Path: <fstests-owner@vger.kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v2 6/9] generic: add test for non-root use of fscrypt API additions
+Date: Thu, 19 Sep 2019 17:37:50 -0700
+Message-Id: <20190920003753.40281-7-ebiggers@kernel.org>
+In-Reply-To: <20190920003753.40281-1-ebiggers@kernel.org>
+References: <20190920003753.40281-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-To: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Sender: fstests-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Read callbacks implements a state machine to be executed after a
-buffered read I/O is completed. They help in further processing the file
-data read from the backing store. Currently, decryption is the only post
-processing step to be supported.
+From: Eric Biggers <ebiggers@google.com>
 
-The execution of the state machine is to be initiated by the endio
-function associated with the read operation.
+Test non-root use of the fscrypt filesystem-level encryption keyring and
+v2 encryption policies.
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/Kconfig                     |   3 +
- fs/Makefile                    |   1 +
- fs/ext4/Kconfig                |   1 +
- fs/f2fs/Kconfig                |   1 +
- fs/read_callbacks.c            | 285 +++++++++++++++++++++++++++++++++
- include/linux/read_callbacks.h |  48 ++++++
- 6 files changed, 339 insertions(+)
- create mode 100644 fs/read_callbacks.c
- create mode 100644 include/linux/read_callbacks.h
+ tests/generic/801     | 144 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/801.out |  62 ++++++++++++++++++
+ tests/generic/group   |   1 +
+ 3 files changed, 207 insertions(+)
+ create mode 100755 tests/generic/801
+ create mode 100644 tests/generic/801.out
 
-diff --git a/fs/Kconfig b/fs/Kconfig
-index 3e6d3101f3ff..2d96a58d7418 100644
---- a/fs/Kconfig
-+++ b/fs/Kconfig
-@@ -20,6 +20,9 @@ if BLOCK
- config FS_IOMAP
- 	bool
- 
-+config FS_READ_CALLBACKS
-+	bool
-+
- source "fs/ext2/Kconfig"
- source "fs/ext4/Kconfig"
- source "fs/jbd2/Kconfig"
-diff --git a/fs/Makefile b/fs/Makefile
-index 427fec226fae..942808f83472 100644
---- a/fs/Makefile
-+++ b/fs/Makefile
-@@ -53,6 +53,7 @@ obj-$(CONFIG_SYSCTL)		+= drop_caches.o
- 
- obj-$(CONFIG_FHANDLE)		+= fhandle.o
- obj-$(CONFIG_FS_IOMAP)		+= iomap.o
-+obj-$(CONFIG_FS_READ_CALLBACKS) += read_callbacks.o
- 
- obj-y				+= quota/
- 
-diff --git a/fs/ext4/Kconfig b/fs/ext4/Kconfig
-index 06f77ca7f36e..2e24df67f085 100644
---- a/fs/ext4/Kconfig
-+++ b/fs/ext4/Kconfig
-@@ -38,6 +38,7 @@ config EXT4_FS
- 	select CRYPTO
- 	select CRYPTO_CRC32C
- 	select FS_IOMAP
-+	select FS_READ_CALLBACKS if FS_ENCRYPTION
- 	help
- 	  This is the next generation of the ext3 filesystem.
- 
-diff --git a/fs/f2fs/Kconfig b/fs/f2fs/Kconfig
-index e57cc754d543..1e1424940d1b 100644
---- a/fs/f2fs/Kconfig
-+++ b/fs/f2fs/Kconfig
-@@ -4,6 +4,7 @@ config F2FS_FS
- 	select CRYPTO
- 	select CRYPTO_CRC32
- 	select F2FS_FS_XATTR if FS_ENCRYPTION
-+	select FS_READ_CALLBACKS if FS_ENCRYPTION
- 	help
- 	  F2FS is based on Log-structured File System (LFS), which supports
- 	  versatile "flash-friendly" features. The design has been focused on
-diff --git a/fs/read_callbacks.c b/fs/read_callbacks.c
-new file mode 100644
-index 000000000000..32d9b8d17964
+diff --git a/tests/generic/801 b/tests/generic/801
+new file mode 100755
+index 00000000..c759ec94
 --- /dev/null
-+++ b/fs/read_callbacks.c
-@@ -0,0 +1,285 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * This file tracks the state machine that needs to be executed after reading
-+ * data from files that are encrypted and/or have verity metadata associated
-+ * with them.
-+ */
-+#include <linux/module.h>
-+#include <linux/mm.h>
-+#include <linux/pagemap.h>
-+#include <linux/bio.h>
-+#include <linux/buffer_head.h>
-+#include <linux/fscrypt.h>
-+#include <linux/read_callbacks.h>
-+#include <linux/blk_types.h>
++++ b/tests/generic/801
+@@ -0,0 +1,144 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/801
++#
++# Test non-root use of the fscrypt filesystem-level encryption keyring
++# and v2 encryption policies.
++#
 +
-+#define NUM_PREALLOC_READ_CALLBACK_CTXS	128
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++echo
 +
-+static struct kmem_cache *read_callbacks_ctx_cache;
-+static mempool_t *read_callbacks_ctx_pool;
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++orig_maxkeys=
 +
-+/* Read callback state machine steps */
-+enum read_callbacks_step {
-+	STEP_INITIAL = 0,
-+	STEP_DECRYPT,
-+};
-+
-+struct read_callbacks_ctx {
-+	struct inode *inode;
-+	struct bio *bio;
-+	struct buffer_head *bh;
-+	union {
-+		end_bio_func_t end_bio;
-+
-+		struct {
-+			end_bh_func_t end_bh;
-+			int bh_uptodate;
-+		};
-+	};
-+	struct work_struct work;
-+	unsigned int enabled_steps;
-+	enum read_callbacks_step cur_step;
-+};
-+
-+static void read_callbacks(struct read_callbacks_ctx *ctx);
-+
-+static void free_read_callbacks_ctx(struct read_callbacks_ctx *ctx)
++_cleanup()
 +{
-+	mempool_free(ctx, read_callbacks_ctx_pool);
++	cd /
++	rm -f $tmp.*
++	if [ -n "$orig_maxkeys" ]; then
++		echo "$orig_maxkeys" > /proc/sys/kernel/keys/maxkeys
++	fi
 +}
 +
-+static struct read_callbacks_ctx *get_read_callbacks_ctx(struct inode *inode)
-+{
-+	struct read_callbacks_ctx *ctx = NULL;
-+	unsigned int enabled_steps = 0;
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
 +
-+	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
-+		enabled_steps |= 1 << STEP_DECRYPT;
++# remove previous $seqres.full before test
++rm -f $seqres.full
 +
-+	if (enabled_steps) {
-+		ctx = mempool_alloc(read_callbacks_ctx_pool, GFP_NOFS);
-+		if (!ctx)
-+			return ERR_PTR(-ENOMEM);
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_user
++_require_scratch_encryption -v 2
 +
-+		ctx->inode = inode;
-+		ctx->enabled_steps = enabled_steps;
-+		ctx->cur_step = STEP_INITIAL;
-+	}
++_scratch_mkfs_encrypted &>> $seqres.full
++_scratch_mount
 +
-+	return ctx;
-+}
++# Set the fsgqa user's key quota to their current number of keys plus 5.
++orig_keys=$(_user_do "awk '/^[[:space:]]*$(id -u fsgqa):/{print \$4}' /proc/key-users | cut -d/ -f1")
++: ${orig_keys:=0}
++echo "orig_keys=$orig_keys" >> $seqres.full
++orig_maxkeys=$(</proc/sys/kernel/keys/maxkeys)
++keys_to_add=5
++echo $((orig_keys + keys_to_add)) > /proc/sys/kernel/keys/maxkeys
 +
-+static void decrypt_bio(struct bio *bio)
-+{
-+	struct bio_vec *bv;
-+	int i;
-+	struct bvec_iter_all iter_all;
++dir=$SCRATCH_MNT/dir
 +
-+	bio_for_each_segment_all(bv, bio, i, iter_all) {
-+		struct page *page = bv->bv_page;
-+		int ret = fscrypt_decrypt_pagecache_blocks(page, bv->bv_len,
-+							   bv->bv_offset);
-+		if (ret)
-+			SetPageError(page);
-+	}
-+}
++raw_key=""
++for i in `seq 64`; do
++	raw_key+="\\x$(printf "%02x" $i)"
++done
++keydesc="0000111122223333"
++keyid="69b2f6edeee720cce0577937eb8a6751"
++chmod 777 $SCRATCH_MNT
 +
-+static void decrypt_bh(struct buffer_head *bh)
-+{
-+	struct page *page;
-+	int ret;
++_user_do "mkdir $dir"
 +
-+	page = bh->b_page;
++echo "# Setting v1 policy as regular user (should succeed)"
++_user_do_set_encpolicy $dir $keydesc
 +
-+	ret = fscrypt_decrypt_pagecache_blocks(page, bh->b_size,
-+					bh_offset(bh));
-+	if (ret)
-+		SetPageError(page);
-+}
++echo "# Getting v1 policy as regular user (should succeed)"
++_user_do_get_encpolicy $dir | _filter_scratch
 +
-+static void decrypt_work(struct work_struct *work)
-+{
-+	struct read_callbacks_ctx *ctx =
-+		container_of(work, struct read_callbacks_ctx, work);
++echo "# Adding v1 policy key as regular user (should fail with EACCES)"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key" -d $keydesc
 +
-+	if (ctx->bio)
-+		decrypt_bio(ctx->bio);
-+	else
-+		decrypt_bh(ctx->bh);
++rm -rf $dir
++echo
++_user_do "mkdir $dir"
 +
-+	read_callbacks(ctx);
-+}
++echo "# Setting v2 policy as regular user without key already added (should fail with ENOKEY)"
++_user_do_set_encpolicy $dir $keyid |& _filter_scratch
 +
-+static void read_callbacks(struct read_callbacks_ctx *ctx)
-+{
-+	/*
-+	 * We use different work queues for decryption and for verity because
-+	 * verity may require reading metadata pages that need decryption, and
-+	 * we shouldn't recurse to the same workqueue.
-+	 */
-+	switch (++ctx->cur_step) {
-+	case STEP_DECRYPT:
-+		if (ctx->enabled_steps & (1 << STEP_DECRYPT)) {
-+			INIT_WORK(&ctx->work, decrypt_work);
-+			fscrypt_enqueue_decrypt_work(&ctx->work);
-+			return;
-+		}
-+		ctx->cur_step++;
-+		/* fall-through */
-+	default:
-+		if (ctx->bio)
-+			ctx->end_bio(ctx->bio);
-+		else
-+			ctx->end_bh(ctx->bh, ctx->bh_uptodate);
++echo "# Adding v2 policy key as regular user (should succeed)"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
 +
-+		mempool_free(ctx, read_callbacks_ctx_pool);
-+	}
-+}
++echo "# Setting v2 policy as regular user with key added (should succeed)"
++_user_do_set_encpolicy $dir $keyid
 +
-+/**
-+ * read_callbacks_setup_bio() - Initialize the read callbacks state machine
-+ * @inode: The file on which read I/O is performed.
-+ * @bio: bio holding page cache pages on which read I/O is performed.
-+ * @bh: Buffer head on which read I/O is performed.
-+ * @page_op: Function to perform filesystem specific operations on a page.
-+ *
-+ * Based on the nature of the file's data (e.g. encrypted), this function
-+ * computes the steps that need to be performed after data is read of the
-+ * backing disk. This information is saved in a context structure. A pointer
-+ * to the context structure is then stored in bio->bi_private for later
-+ * usage.
-+ *
-+ * Return: 0 on success; An error code on failure.
-+ */
-+int read_callbacks_setup_bio(struct inode *inode, struct bio *bio)
-+{
-+	struct read_callbacks_ctx *ctx = get_read_callbacks_ctx(inode);
++echo "# Getting v2 policy as regular user (should succeed)"
++_user_do_get_encpolicy $dir | _filter_scratch
 +
-+	if (ctx) {
-+		if (IS_ERR(ctx))
-+			return PTR_ERR(ctx);
-+		ctx->bio = bio;
-+		ctx->bh = NULL;
-+		bio->bi_private = ctx;
-+	}
++echo "# Creating encrypted file as regular user (should succeed)"
++_user_do "echo contents > $dir/file"
 +
-+	return 0;
-+}
-+EXPORT_SYMBOL(read_callbacks_setup_bio);
++echo "# Removing v2 policy key as regular user (should succeed)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
 +
-+/**
-+ * read_callbacks_setup_bh() - Initialize the read callbacks state machine
-+ * @inode: The file on which read I/O is performed.
-+ * @bio: bio holding page cache pages on which read I/O is performed.
-+ * @bh: Buffer head on which read I/O is performed.
-+ * @page_op: Function to perform filesystem specific operations on a page.
-+ *
-+ * Based on the nature of the file's data (e.g. encrypted), this function
-+ * computes the steps that need to be performed after data is read of the
-+ * backing disk. This information is saved in a context structure. A pointer
-+ * to the context structure is then stored in bio->bi_private for later
-+ * usage.
-+ *
-+ * Return: 0 on success; An error code on failure.
-+ */
-+int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh)
-+{
-+	struct read_callbacks_ctx *ctx = get_read_callbacks_ctx(inode);
++_scratch_cycle_mount	# Clear all keys
 +
-+	if (ctx) {
-+		if (IS_ERR(ctx))
-+			return PTR_ERR(ctx);
-+		ctx->bio = NULL;
-+		ctx->bh = bh;
-+		bh->b_private = ctx;
-+		set_buffer_read_cb(bh);
-+	}
++echo
++echo "# Testing user key quota"
++for i in `seq $((keys_to_add + 1))`; do
++	rand_raw_key=$(_generate_raw_encryption_key)
++	_user_do_add_enckey $SCRATCH_MNT "$rand_raw_key" \
++	    | sed 's/ with identifier .*$//'
++done
 +
-+	return 0;
-+}
-+EXPORT_SYMBOL(read_callbacks_setup_bh);
++rm -rf $dir
++echo
++_user_do "mkdir $dir"
++_scratch_cycle_mount	# Clear all keys
 +
-+/**
-+ * read_callbacks_endio_bio() - Initiate the read callbacks state machine.
-+ * @bio: bio on which read I/O operation has just been completed.
-+ * @end_bio: Callback to invoke on @bio after state machine completion.
-+ *
-+ * Initiates the execution of the read callbacks state machine when the read
-+ * operation has been completed sucessfully. If there was an error associated
-+ * with the bio, this function frees the read callbacks context structure stored
-+ * in bio->bi_private (if any).
-+ *
-+ * If read callbacks state machine isn't executed, we end up invoking the
-+ * @end_bio function passed in as an argument.
-+ */
-+void read_callbacks_endio_bio(struct bio *bio, end_bio_func_t end_bio)
-+{
-+	struct read_callbacks_ctx *ctx = bio->bi_private;
++# Test multiple users adding the same key.
++echo "# Adding key as root"
++_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Removing key only added by another user (should fail with ENOKEY)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
++echo "# Setting v2 encryption policy with key only added by another user (should fail with ENOKEY)"
++_user_do_set_encpolicy $dir $keyid |& _filter_scratch
++echo "# Adding second user of key"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Setting v2 encryption policy as regular user"
++_user_do_set_encpolicy $dir $keyid
++echo "# Removing this user's claim to the key"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Adding back second user of key"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Remove key for \"all users\", as regular user (should fail with EACCES)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid -a |& _filter_scratch
++_enckey_status $SCRATCH_MNT $keyid
++echo "# Remove key for \"all users\", as root"
++_rm_enckey $SCRATCH_MNT $keyid -a
++_enckey_status $SCRATCH_MNT $keyid
 +
-+	if (ctx) {
-+		if (!bio->bi_status) {
-+			ctx->end_bio = end_bio;
-+			read_callbacks(ctx);
-+			return;
-+		}
-+
-+		free_read_callbacks_ctx(ctx);
-+	}
-+
-+	end_bio(bio);
-+}
-+EXPORT_SYMBOL(read_callbacks_endio_bio);
-+
-+/**
-+ * read_callbacks_endio_bh() - Initiate the read callbacks state machine.
-+ * @bh: buffer head on which read I/O operation has just been completed.
-+ * @uptodate: Buffer head's I/O status.
-+ * @end_bh: Callback to invoke on on @bh after state machine completion.
-+ *
-+ * Initiates the execution of the read callbacks state machine when the read
-+ * operation has been completed sucessfully. If there was an error associated
-+ * with the buffer head, this function frees the read callbacks context
-+ * structure stored in bh->b_private (if any).
-+ *
-+ * If read callbacks state machine isn't executed, we end up invoking the
-+ * @end_bh function passed in as an argument.
-+ */
-+void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh)
-+{
-+	struct read_callbacks_ctx *ctx = bh->b_private;
-+
-+	if (buffer_read_cb(bh)) {
-+		clear_buffer_read_cb(bh);
-+		if (uptodate) {
-+			ctx->end_bh = end_bh;
-+			ctx->bh_uptodate = uptodate;
-+			read_callbacks(ctx);
-+			return;
-+		}
-+
-+		free_read_callbacks_ctx(ctx);
-+	}
-+
-+	end_bh(bh, uptodate);
-+}
-+EXPORT_SYMBOL(read_callbacks_endio_bh);
-+
-+static int __init init_read_callbacks(void)
-+{
-+	read_callbacks_ctx_cache = KMEM_CACHE(read_callbacks_ctx, 0);
-+	if (!read_callbacks_ctx_cache)
-+		goto fail;
-+	read_callbacks_ctx_pool =
-+		mempool_create_slab_pool(NUM_PREALLOC_READ_CALLBACK_CTXS,
-+					 read_callbacks_ctx_cache);
-+	if (!read_callbacks_ctx_pool)
-+		goto fail_free_cache;
-+	return 0;
-+
-+fail_free_cache:
-+	kmem_cache_destroy(read_callbacks_ctx_cache);
-+fail:
-+	return -ENOMEM;
-+}
-+
-+fs_initcall(init_read_callbacks);
-diff --git a/include/linux/read_callbacks.h b/include/linux/read_callbacks.h
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/801.out b/tests/generic/801.out
 new file mode 100644
-index 000000000000..0d709dd81b4e
+index 00000000..b5b6cec8
 --- /dev/null
-+++ b/include/linux/read_callbacks.h
-@@ -0,0 +1,48 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+#ifndef _READ_CALLBACKS_H
-+#define _READ_CALLBACKS_H
++++ b/tests/generic/801.out
+@@ -0,0 +1,62 @@
++QA output created by 801
 +
-+#include <linux/blk_types.h>
++# Setting v1 policy as regular user (should succeed)
++# Getting v1 policy as regular user (should succeed)
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 0
++	Master key descriptor: 0000111122223333
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Adding v1 policy key as regular user (should fail with EACCES)
++Permission denied
 +
-+typedef void (*end_bio_func_t)(struct bio *bio);
-+typedef void (*end_bh_func_t)(struct buffer_head *bh, int uptodate);
++# Setting v2 policy as regular user without key already added (should fail with ENOKEY)
++SCRATCH_MNT/dir: failed to set encryption policy: Required key not available
++# Adding v2 policy key as regular user (should succeed)
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Setting v2 policy as regular user with key added (should succeed)
++# Getting v2 policy as regular user (should succeed)
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 2
++	Master key identifier: 69b2f6edeee720cce0577937eb8a6751
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Creating encrypted file as regular user (should succeed)
++# Removing v2 policy key as regular user (should succeed)
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
 +
-+#ifdef CONFIG_FS_READ_CALLBACKS
-+int read_callbacks_setup_bio(struct inode *inode, struct bio *bio);
-+int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh);
-+void read_callbacks_endio_bio(struct bio *bio, end_bio_func_t end_bio);
-+void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh);
++# Testing user key quota
++Added encryption key
++Added encryption key
++Added encryption key
++Added encryption key
++Added encryption key
++Error adding encryption key: Disk quota exceeded
 +
-+static inline bool read_callbacks_failed(struct page *page)
-+{
-+	return PageError(page);
-+}
-+#else
-+static inline int read_callbacks_setup_bio(struct inode *inode, struct bio *bio)
-+{
-+	return 0;
-+}
-+
-+static inline int read_callbacks_setup_bh(struct inode *inode, struct buffer_head *bh)
-+{
-+	return 0;
-+}
-+
-+static inline void read_callbacks_endio_bio(struct bio *bio,
-+					end_bio_func_t end_bio)
-+{
-+	end_bio(bio);
-+}
-+
-+static inline void read_callbacks_endio_bh(struct buffer_head *bh, int uptodate, end_bh_func_t end_bh)
-+{
-+	end_bh(bh, uptodate);
-+}
-+
-+static inline bool read_callbacks_failed(struct page *page)
-+{
-+	return false;
-+}
-+#endif
-+
-+#endif	/* _READ_CALLBACKS_H */
++# Adding key as root
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=1)
++# Removing key only added by another user (should fail with ENOKEY)
++Error removing encryption key: Required key not available
++# Setting v2 encryption policy with key only added by another user (should fail with ENOKEY)
++SCRATCH_MNT/dir: failed to set encryption policy: Required key not available
++# Adding second user of key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=2, added_by_self)
++# Setting v2 encryption policy as regular user
++# Removing this user's claim to the key
++Removed user's claim to encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=1)
++# Adding back second user of key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Remove key for "all users", as regular user (should fail with EACCES)
++Permission denied
++Present (user_count=2, added_by_self)
++# Remove key for "all users", as root
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++Absent
+diff --git a/tests/generic/group b/tests/generic/group
+index b3dc9ad1..83fccffa 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -571,3 +571,4 @@
+ 566 auto quick quota metadata
+ 567 auto quick rw punch
+ 800 auto quick encrypt
++801 auto quick encrypt
 -- 
-2.19.1
+2.23.0.351.gc4317032e6-goog
