@@ -1,313 +1,381 @@
-Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+Return-Path: <fstests-owner@vger.kernel.org>
 From: Eric Biggers <ebiggers@kernel.org>
-Date: Mon, 30 Sep 2019 14:15:50 -0700
-Message-Id: <20190930211553.64208-6-ebiggers@kernel.org>
-In-Reply-To: <20190930211553.64208-1-ebiggers@kernel.org>
-References: <20190930211553.64208-1-ebiggers@kernel.org>
+Subject: [PATCH v2 5/8] xfs_io/encrypt: extend 'set_encpolicy' to support v2 policies
+Date: Thu, 19 Sep 2019 17:18:19 -0700
+Message-Id: <20190920001822.257411-6-ebiggers@kernel.org>
+In-Reply-To: <20190920001822.257411-1-ebiggers@kernel.org>
+References: <20190920001822.257411-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Subject: [f2fs-dev] [PATCH v4 5/8] generic: test corrupting verity files
-List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
-List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
-List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
-List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
-List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
- <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: 7bit
-Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
-To: fstests@vger.kernel.org
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, linux-f2fs-devel@lists.sourceforge.net
+Content-Transfer-Encoding: 8bit
+Sender: fstests-owner@vger.kernel.org
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-This test corrupts various parts of the contents of a verity file, or
-parts of its Merkle tree, by writing directly to the block device.  It
-verifies that this causes I/O errors when the relevant part of the
-contents is later read by any means.
+Extend the 'set_encpolicy' xfs_io command to support setting v2
+encryption policies, in addition to v1 encryption policies which it
+currently supports.  This uses the same ioctl, where the 'version' field
+at the beginning of the struct is used to determine whether the struct
+is fscrypt_policy_v1 or fscrypt_policy_v2.
+
+The command sets a v2 policy when the user either gave the longer key
+specification used in such policies (a 16-byte master_key_identifier
+rather than an 8-byte master_key_descriptor), or passed '-v 2'.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- tests/generic/902     | 154 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/902.out |  91 +++++++++++++++++++++++++
- tests/generic/group   |   1 +
- 3 files changed, 246 insertions(+)
- create mode 100755 tests/generic/902
- create mode 100644 tests/generic/902.out
+ io/encrypt.c      | 228 ++++++++++++++++++++++++++++++++++++----------
+ man/man8/xfs_io.8 |  19 +++-
+ 2 files changed, 194 insertions(+), 53 deletions(-)
 
-diff --git a/tests/generic/902 b/tests/generic/902
-new file mode 100755
-index 00000000..5ef2cca1
---- /dev/null
-+++ b/tests/generic/902
-@@ -0,0 +1,154 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2018 Google LLC
-+#
-+# FS QA Test generic/902
-+#
-+# Test corrupting verity files.  This test corrupts various parts of the
-+# contents of a verity file, or parts of its Merkle tree, by writing directly to
-+# the block device.  It verifies that this causes I/O errors when the relevant
-+# part of the contents is later read by any means.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
-+
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
-+
-+_cleanup()
+diff --git a/io/encrypt.c b/io/encrypt.c
+index b8141d96..7d061c51 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -161,13 +161,18 @@ set_encpolicy_help(void)
+ " assign an encryption policy to the currently open file\n"
+ "\n"
+ " Examples:\n"
+-" 'set_encpolicy' - assign policy with default key [0000000000000000]\n"
+-" 'set_encpolicy 0000111122223333' - assign policy with specified key\n"
++" 'set_encpolicy' - assign v1 policy with default key descriptor\n"
++"                   (0000000000000000)\n"
++" 'set_encpolicy -v 2' - assign v2 policy with default key identifier\n"
++"                        (00000000000000000000000000000000)\n"
++" 'set_encpolicy 0000111122223333' - assign v1 policy with given key descriptor\n"
++" 'set_encpolicy 00001111222233334444555566667777' - assign v2 policy with given\n"
++"                                                    key identifier\n"
+ "\n"
+ " -c MODE -- contents encryption mode\n"
+ " -n MODE -- filenames encryption mode\n"
+ " -f FLAGS -- policy flags\n"
+-" -v VERSION -- version of policy structure\n"
++" -v VERSION -- policy version\n"
+ "\n"
+ " MODE can be numeric or one of the following predefined values:\n"
+ "    AES-256-XTS, AES-256-CTS, AES-128-CBC, AES-128-CTS, Adiantum\n"
+@@ -231,6 +236,35 @@ mode2str(__u8 mode)
+ 	return buf;
+ }
+ 
++static int
++hexchar2bin(char c)
 +{
-+	cd /
-+	rm -f $tmp.*
++	if (c >= '0' && c <= '9')
++		return c - '0';
++	if (c >= 'a' && c <= 'f')
++		return 10 + (c - 'a');
++	if (c >= 'A' && c <= 'F')
++		return 10 + (c - 'A');
++	return -1;
 +}
 +
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/verity
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+_require_scratch_verity
-+
-+_scratch_mkfs_verity &>> $seqres.full
-+_scratch_mount
-+fsv_orig_file=$SCRATCH_MNT/file
-+fsv_file=$SCRATCH_MNT/file.fsv
-+
-+setup_zeroed_file()
++static bool
++hex2bin(const char *hex, __u8 *bin, size_t bin_len)
 +{
-+	local len=$1
-+	local sparse=$2
++	if (strlen(hex) != 2 * bin_len)
++		return false;
 +
-+	if $sparse; then
-+		dd if=/dev/zero of=$fsv_orig_file bs=1 count=0 seek=$len \
-+			status=none
-+	else
-+		head -c $len /dev/zero > $fsv_orig_file
-+	fi
-+	cp $fsv_orig_file $fsv_file
-+	_fsv_enable $fsv_file
-+	md5sum $fsv_file |& _filter_scratch
++	while (bin_len--) {
++		int hi = hexchar2bin(*hex++);
++		int lo = hexchar2bin(*hex++);
++
++		if (hi < 0 || lo < 0)
++			return false;
++		*bin++ = (hi << 4) | lo;
++	}
++	return true;
 +}
 +
-+filter_sigbus()
+ static const char *
+ keydesc2str(const __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
+ {
+@@ -255,6 +289,92 @@ keyid2str(const __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
+ 	return buf;
+ }
+ 
++static const char *
++keyspectype(const struct fscrypt_key_specifier *key_spec)
 +{
-+	sed -e 's/.*Bus error.*/Bus error/'
++	switch (key_spec->type) {
++	case FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR:
++		return "descriptor";
++	case FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER:
++		return "identifier";
++	}
++	return "[unknown]";
 +}
 +
-+round_up_to_page_boundary()
++static const char *
++keyspec2str(const struct fscrypt_key_specifier *key_spec)
 +{
-+	local n=$1
-+	local page_size=$(get_page_size)
-+
-+	echo $(( (n + page_size - 1) & ~(page_size - 1) ))
++	switch (key_spec->type) {
++	case FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR:
++		return keydesc2str(key_spec->u.descriptor);
++	case FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER:
++		return keyid2str(key_spec->u.identifier);
++	}
++	return "[unknown]";
 +}
 +
-+corruption_test()
++static bool
++str2keydesc(const char *str,
++	    __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
 +{
-+	local file_len=$1
-+	local zap_offset=$2
-+	local zap_len=$3
-+	local is_merkle_tree=${4:-false} # if true, zap tree instead of data
-+	local use_sparse_file=${5:-false}
-+	local page_aligned_eof=$(round_up_to_page_boundary $file_len)
-+	local measurement
-+
-+	if $is_merkle_tree; then
-+		local corrupt_func=_fsv_scratch_corrupt_merkle_tree
-+	else
-+		local corrupt_func=_fsv_scratch_corrupt_bytes
-+	fi
-+
-+	local msg="Corruption test:"
-+	msg+=" file_len=$file_len"
-+	if $use_sparse_file; then
-+		msg+=" (sparse)"
-+	fi
-+	msg+=" zap_offset=$zap_offset"
-+	if $is_merkle_tree; then
-+		msg+=" (in Merkle tree)"
-+	fi
-+	msg+=" zap_len=$zap_len"
-+
-+	_fsv_scratch_begin_subtest "$msg"
-+	setup_zeroed_file $file_len $use_sparse_file
-+	cmp $fsv_file $fsv_orig_file
-+	echo "Corrupting bytes..."
-+	head -c $zap_len /dev/zero | tr '\0' X \
-+		| $corrupt_func $fsv_file $zap_offset
-+
-+	echo "Validating corruption (reading full file)..."
-+	_scratch_cycle_mount
-+	md5sum $fsv_file |& _filter_scratch
-+
-+	echo "Validating corruption (direct I/O)..."
-+	_scratch_cycle_mount
-+	dd if=$fsv_file bs=$FSV_BLOCK_SIZE iflag=direct status=none \
-+		of=/dev/null |& _filter_scratch
-+
-+	if ! $is_merkle_tree; then
-+		echo "Validating corruption (reading just corrupted part)..."
-+		dd if=$fsv_file bs=1 skip=$zap_offset count=$zap_len \
-+			of=/dev/null status=none |& _filter_scratch
-+	fi
-+
-+	echo "Validating corruption (reading full file via mmap)..."
-+	bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
-+		-c 'mmap -r 0 $page_aligned_eof' \
-+		-c 'mread 0 $file_len'" |& filter_sigbus
-+
-+	if ! $is_merkle_tree; then
-+		echo "Validating corruption (reading just corrupted part via mmap)..."
-+		bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
-+			-c 'mmap -r 0 $page_aligned_eof' \
-+			-c 'mread $zap_offset $zap_len'" |& filter_sigbus
-+	fi
++	if (!hex2bin(str, master_key_descriptor, FSCRYPT_KEY_DESCRIPTOR_SIZE)) {
++		fprintf(stderr, "invalid key descriptor: %s\n", str);
++		return false;
++	}
++	return true;
 +}
 +
-+corruption_test 131072 0 1
-+corruption_test 131072 4095 1
-+corruption_test 131072 65536 65536
-+corruption_test 131072 131071 1
++static bool
++str2keyid(const char *str,
++	  __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
++{
++	if (!hex2bin(str, master_key_identifier, FSCRYPT_KEY_IDENTIFIER_SIZE)) {
++		fprintf(stderr, "invalid key identifier: %s\n", str);
++		return false;
++	}
++	return true;
++}
 +
-+# Non-zeroed bytes in the final partial block beyond EOF should cause reads to
-+# fail too.  Such bytes would be visible via mmap().
-+corruption_test 130999 131000 72
++/*
++ * Parse a key specifier (descriptor or identifier) given as a hex string.
++ *
++ *  8 bytes (16 hex chars) == key descriptor == v1 encryption policy.
++ * 16 bytes (32 hex chars) == key identifier == v2 encryption policy.
++ *
++ * If a policy_version is given (>= 0), then the corresponding type of key
++ * specifier is required.  Otherwise the specifier type and policy_version are
++ * determined based on the length of the given hex string.
++ *
++ * Returns the policy version, or -1 on error.
++ */
++static int
++str2keyspec(const char *str, int policy_version,
++	    struct fscrypt_key_specifier *key_spec)
++{
++	if (policy_version < 0) { /* version unspecified? */
++		size_t len = strlen(str);
 +
-+# Merkle tree corruption.
-+corruption_test 200000 100 10 true
++		if (len == 2 * FSCRYPT_KEY_DESCRIPTOR_SIZE) {
++			policy_version = FSCRYPT_POLICY_V1;
++		} else if (len == 2 * FSCRYPT_KEY_IDENTIFIER_SIZE) {
++			policy_version = FSCRYPT_POLICY_V2;
++		} else {
++			fprintf(stderr, "invalid key specifier: %s\n", str);
++			return -1;
++		}
++	}
++	if (policy_version == FSCRYPT_POLICY_V2) {
++		if (!str2keyid(str, key_spec->u.identifier))
++			return -1;
++		key_spec->type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
++	} else {
++		if (!str2keydesc(str, key_spec->u.descriptor))
++			return -1;
++		key_spec->type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
++	}
++	return policy_version;
++}
 +
-+# Sparse file.  Corrupting the Merkle tree should still cause reads to fail,
-+# i.e. the filesystem must verify holes.
-+corruption_test 200000 100 10 true true
+ static void
+ test_for_v2_policy_support(void)
+ {
+@@ -375,46 +495,54 @@ static int
+ set_encpolicy_f(int argc, char **argv)
+ {
+ 	int c;
+-	struct fscrypt_policy policy;
+-
+-	/* Initialize the policy structure with default values */
+-	memset(&policy, 0, sizeof(policy));
+-	policy.contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
+-	policy.filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
+-	policy.flags = FSCRYPT_POLICY_FLAGS_PAD_16;
++	__u8 contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
++	__u8 filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
++	__u8 flags = FSCRYPT_POLICY_FLAGS_PAD_16;
++	int version = -1; /* unspecified */
++	struct fscrypt_key_specifier key_spec;
++	union {
++		__u8 version;
++		struct fscrypt_policy_v1 v1;
++		struct fscrypt_policy_v2 v2;
++	} policy;
+ 
+-	/* Parse options */
+ 	while ((c = getopt(argc, argv, "c:n:f:v:")) != EOF) {
+ 		switch (c) {
+ 		case 'c':
+-			if (!parse_mode(optarg,
+-					&policy.contents_encryption_mode)) {
+-				fprintf(stderr, "invalid contents encryption "
+-					"mode: %s\n", optarg);
++			if (!parse_mode(optarg, &contents_encryption_mode)) {
++				fprintf(stderr,
++					"invalid contents encryption mode: %s\n",
++					optarg);
+ 				return 0;
+ 			}
+ 			break;
+ 		case 'n':
+-			if (!parse_mode(optarg,
+-					&policy.filenames_encryption_mode)) {
+-				fprintf(stderr, "invalid filenames encryption "
+-					"mode: %s\n", optarg);
++			if (!parse_mode(optarg, &filenames_encryption_mode)) {
++				fprintf(stderr,
++					"invalid filenames encryption mode: %s\n",
++					optarg);
+ 				return 0;
+ 			}
+ 			break;
+ 		case 'f':
+-			if (!parse_byte_value(optarg, &policy.flags)) {
++			if (!parse_byte_value(optarg, &flags)) {
+ 				fprintf(stderr, "invalid flags: %s\n", optarg);
+ 				return 0;
+ 			}
+ 			break;
+-		case 'v':
+-			if (!parse_byte_value(optarg, &policy.version)) {
++		case 'v': {
++			__u8 val;
 +
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/902.out b/tests/generic/902.out
-new file mode 100644
-index 00000000..15fe691e
---- /dev/null
-+++ b/tests/generic/902.out
-@@ -0,0 +1,91 @@
-+QA output created by 902
-+
-+# Corruption test: file_len=131072 zap_offset=0 zap_len=1
-+0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
-+Corrupting bytes...
-+Validating corruption (reading full file)...
-+md5sum: SCRATCH_MNT/file.fsv: Input/output error
-+Validating corruption (direct I/O)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading just corrupted part)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading full file via mmap)...
-+Bus error
-+Validating corruption (reading just corrupted part via mmap)...
-+Bus error
-+
-+# Corruption test: file_len=131072 zap_offset=4095 zap_len=1
-+0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
-+Corrupting bytes...
-+Validating corruption (reading full file)...
-+md5sum: SCRATCH_MNT/file.fsv: Input/output error
-+Validating corruption (direct I/O)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading just corrupted part)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading full file via mmap)...
-+Bus error
-+Validating corruption (reading just corrupted part via mmap)...
-+Bus error
-+
-+# Corruption test: file_len=131072 zap_offset=65536 zap_len=65536
-+0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
-+Corrupting bytes...
-+Validating corruption (reading full file)...
-+md5sum: SCRATCH_MNT/file.fsv: Input/output error
-+Validating corruption (direct I/O)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading just corrupted part)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading full file via mmap)...
-+Bus error
-+Validating corruption (reading just corrupted part via mmap)...
-+Bus error
-+
-+# Corruption test: file_len=131072 zap_offset=131071 zap_len=1
-+0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
-+Corrupting bytes...
-+Validating corruption (reading full file)...
-+md5sum: SCRATCH_MNT/file.fsv: Input/output error
-+Validating corruption (direct I/O)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading just corrupted part)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading full file via mmap)...
-+Bus error
-+Validating corruption (reading just corrupted part via mmap)...
-+Bus error
-+
-+# Corruption test: file_len=130999 zap_offset=131000 zap_len=72
-+f5cca0d7fbb8b02bc6118a9954d5d306  SCRATCH_MNT/file.fsv
-+Corrupting bytes...
-+Validating corruption (reading full file)...
-+md5sum: SCRATCH_MNT/file.fsv: Input/output error
-+Validating corruption (direct I/O)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading just corrupted part)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading full file via mmap)...
-+Bus error
-+Validating corruption (reading just corrupted part via mmap)...
-+Bus error
-+
-+# Corruption test: file_len=200000 zap_offset=100 (in Merkle tree) zap_len=10
-+4a1e4325031b13f933ac4f1db9ecb63f  SCRATCH_MNT/file.fsv
-+Corrupting bytes...
-+Validating corruption (reading full file)...
-+md5sum: SCRATCH_MNT/file.fsv: Input/output error
-+Validating corruption (direct I/O)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading full file via mmap)...
-+Bus error
-+
-+# Corruption test: file_len=200000 (sparse) zap_offset=100 (in Merkle tree) zap_len=10
-+4a1e4325031b13f933ac4f1db9ecb63f  SCRATCH_MNT/file.fsv
-+Corrupting bytes...
-+Validating corruption (reading full file)...
-+md5sum: SCRATCH_MNT/file.fsv: Input/output error
-+Validating corruption (direct I/O)...
-+dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
-+Validating corruption (reading full file via mmap)...
-+Bus error
-diff --git a/tests/generic/group b/tests/generic/group
-index a0450d42..22df626f 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -572,3 +572,4 @@
- 567 auto quick rw punch
- 900 auto quick verity
- 901 auto quick verity
-+902 auto quick verity
++			if (!parse_byte_value(optarg, &val)) {
+ 				fprintf(stderr, "invalid policy version: %s\n",
+ 					optarg);
+ 				return 0;
+ 			}
++			if (val == 1) /* Just to avoid annoying people... */
++				val = FSCRYPT_POLICY_V1;
++			version = val;
+ 			break;
++		}
+ 		default:
+ 			return command_usage(&set_encpolicy_cmd);
+ 		}
+@@ -425,40 +553,44 @@ set_encpolicy_f(int argc, char **argv)
+ 	if (argc > 1)
+ 		return command_usage(&set_encpolicy_cmd);
+ 
+-	/* Parse key descriptor if specified */
++	/*
++	 * If unspecified, the key descriptor or identifier defaults to all 0's.
++	 * If the policy version is additionally unspecified, it defaults to v1.
++	 */
++	memset(&key_spec, 0, sizeof(key_spec));
+ 	if (argc > 0) {
+-		const char *keydesc = argv[0];
+-		char *tmp;
+-		unsigned long long x;
+-		int i;
+-
+-		if (strlen(keydesc) != FSCRYPT_KEY_DESCRIPTOR_SIZE * 2) {
+-			fprintf(stderr, "invalid key descriptor: %s\n",
+-				keydesc);
++		version = str2keyspec(argv[0], version, &key_spec);
++		if (version < 0)
+ 			return 0;
+-		}
+-
+-		x = strtoull(keydesc, &tmp, 16);
+-		if (tmp == keydesc || *tmp != '\0') {
+-			fprintf(stderr, "invalid key descriptor: %s\n",
+-				keydesc);
+-			return 0;
+-		}
++	}
++	if (version < 0) /* version unspecified? */
++		version = FSCRYPT_POLICY_V1;
+ 
+-		for (i = 0; i < FSCRYPT_KEY_DESCRIPTOR_SIZE; i++) {
+-			policy.master_key_descriptor[i] = x >> 56;
+-			x <<= 8;
+-		}
++	memset(&policy, 0, sizeof(policy));
++	policy.version = version;
++	if (version == FSCRYPT_POLICY_V2) {
++		policy.v2.contents_encryption_mode = contents_encryption_mode;
++		policy.v2.filenames_encryption_mode = filenames_encryption_mode;
++		policy.v2.flags = flags;
++		memcpy(policy.v2.master_key_identifier, key_spec.u.identifier,
++		       FSCRYPT_KEY_IDENTIFIER_SIZE);
++	} else {
++		/*
++		 * xfstests passes .version = 255 for testing.  Just use
++		 * 'struct fscrypt_policy_v1' for both v1 and unknown versions.
++		 */
++		policy.v1.contents_encryption_mode = contents_encryption_mode;
++		policy.v1.filenames_encryption_mode = filenames_encryption_mode;
++		policy.v1.flags = flags;
++		memcpy(policy.v1.master_key_descriptor, key_spec.u.descriptor,
++		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
+ 	}
+ 
+-	/* Set the encryption policy */
+-	if (ioctl(file->fd, FS_IOC_SET_ENCRYPTION_POLICY, &policy) < 0) {
++	if (ioctl(file->fd, FS_IOC_SET_ENCRYPTION_POLICY, &policy) != 0) {
+ 		fprintf(stderr, "%s: failed to set encryption policy: %s\n",
+ 			file->name, strerror(errno));
+ 		exitcode = 1;
+-		return 0;
+ 	}
+-
+ 	return 0;
+ }
+ 
+@@ -478,7 +610,7 @@ encrypt_init(void)
+ 	set_encpolicy_cmd.name = "set_encpolicy";
+ 	set_encpolicy_cmd.cfunc = set_encpolicy_f;
+ 	set_encpolicy_cmd.args =
+-		_("[-c mode] [-n mode] [-f flags] [-v version] [keydesc]");
++		_("[-c mode] [-n mode] [-f flags] [-v version] [keyspec]");
+ 	set_encpolicy_cmd.argmin = 0;
+ 	set_encpolicy_cmd.argmax = -1;
+ 	set_encpolicy_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index 3dd34a0c..18fcde0f 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -701,12 +701,17 @@ Swaps extent forks between files. The current open file is the target. The donor
+ file is specified by path. Note that file data is not copied (file content moves
+ with the fork(s)).
+ .TP
+-.BI "set_encpolicy [ \-c " mode " ] [ \-n " mode " ] [ \-f " flags " ] [ \-v " version " ] [ " keydesc " ]"
++.BI "set_encpolicy [ \-c " mode " ] [ \-n " mode " ] [ \-f " flags " ] [ \-v " version " ] [ " keyspec " ]"
+ On filesystems that support encryption, assign an encryption policy to the
+ current file.
+-.I keydesc
+-is a 16-byte hex string which identifies the encryption key to use.
+-If not specified, a "default" key descriptor of all 0's will be used.
++.I keyspec
++is a hex string which specifies the encryption key to use.  For v1 encryption
++policies,
++.I keyspec
++must be a 16-character hex string (8 bytes).  For v2 policies,
++.I keyspec
++must be a 32-character hex string (16 bytes).  If unspecified, an all-zeroes
++value is used.
+ .RS 1.0i
+ .PD 0
+ .TP 0.4i
+@@ -720,7 +725,11 @@ filenames encryption mode (e.g. AES-256-CTS)
+ policy flags (numeric)
+ .TP
+ .BI \-v " version"
+-version of policy structure (numeric)
++policy version.  Defaults to 1 or 2 depending on the length of
++.IR keyspec ;
++or to 1 if
++.I keyspec
++is unspecified.
+ .RE
+ .PD
+ .TP
 -- 
-2.23.0.444.g18eeb5a265-goog
-
-
-
-_______________________________________________
-Linux-f2fs-devel mailing list
-Linux-f2fs-devel@lists.sourceforge.net
-https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+2.23.0.351.gc4317032e6-goog
