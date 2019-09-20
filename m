@@ -1,307 +1,269 @@
-Return-Path: <SRS0=mAtp=XF=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH RESEND V5 7/7] fscrypt: remove struct fscrypt_ctx
-Date: Tue, 10 Sep 2019 21:21:15 +0530
-Message-Id: <20190910155115.28550-8-chandan@linux.ibm.com>
-In-Reply-To: <20190910155115.28550-1-chandan@linux.ibm.com>
-References: <20190910155115.28550-1-chandan@linux.ibm.com>
+Return-Path: <fstests-owner@vger.kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v2 5/9] generic: add basic test for fscrypt API additions
+Date: Thu, 19 Sep 2019 17:37:49 -0700
+Message-Id: <20190920003753.40281-6-ebiggers@kernel.org>
+In-Reply-To: <20190920003753.40281-1-ebiggers@kernel.org>
+References: <20190920003753.40281-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-To: viro@zeniv.linux.org.uk, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Sender: fstests-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Commit "fscrypt: remove the 'write' part of struct fscrypt_ctx" reduced
-"struct fscrypt_ctx" to be used only for decryption. With "read
-callbacks" being integrated into Ext4, we don't use "struct fscrypt_ctx"
-anymore. Hence this commit removes the structure and the associated
-code.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Add a basic test of the fscrypt filesystem-level encryption keyring and
+v2 encryption policies.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/bio.c             | 18 --------
- fs/crypto/crypto.c          | 89 +------------------------------------
- fs/crypto/fscrypt_private.h |  3 --
- include/linux/fscrypt.h     | 32 -------------
- 4 files changed, 2 insertions(+), 140 deletions(-)
+ tests/generic/800     | 127 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/800.out |  91 ++++++++++++++++++++++++++++++
+ tests/generic/group   |   1 +
+ 3 files changed, 219 insertions(+)
+ create mode 100755 tests/generic/800
+ create mode 100644 tests/generic/800.out
 
-diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
-index b4f47b98ee6d..c01f068bf19b 100644
---- a/fs/crypto/bio.c
-+++ b/fs/crypto/bio.c
-@@ -51,24 +51,6 @@ void fscrypt_decrypt_bio(struct bio *bio)
- }
- EXPORT_SYMBOL(fscrypt_decrypt_bio);
- 
--static void completion_pages(struct work_struct *work)
--{
--	struct fscrypt_ctx *ctx = container_of(work, struct fscrypt_ctx, work);
--	struct bio *bio = ctx->bio;
--
--	__fscrypt_decrypt_bio(bio, true);
--	fscrypt_release_ctx(ctx);
--	bio_put(bio);
--}
--
--void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx, struct bio *bio)
--{
--	INIT_WORK(&ctx->work, completion_pages);
--	ctx->bio = bio;
--	fscrypt_enqueue_decrypt_work(&ctx->work);
--}
--EXPORT_SYMBOL(fscrypt_enqueue_decrypt_bio);
--
- int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 				sector_t pblk, unsigned int len)
- {
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index dcf630d7e446..2e5245f5639f 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -31,24 +31,16 @@
- #include "fscrypt_private.h"
- 
- static unsigned int num_prealloc_crypto_pages = 32;
--static unsigned int num_prealloc_crypto_ctxs = 128;
- 
- module_param(num_prealloc_crypto_pages, uint, 0444);
- MODULE_PARM_DESC(num_prealloc_crypto_pages,
- 		"Number of crypto pages to preallocate");
--module_param(num_prealloc_crypto_ctxs, uint, 0444);
--MODULE_PARM_DESC(num_prealloc_crypto_ctxs,
--		"Number of crypto contexts to preallocate");
- 
- static mempool_t *fscrypt_bounce_page_pool = NULL;
- 
--static LIST_HEAD(fscrypt_free_ctxs);
--static DEFINE_SPINLOCK(fscrypt_ctx_lock);
--
- static struct workqueue_struct *fscrypt_read_workqueue;
- static DEFINE_MUTEX(fscrypt_init_mutex);
- 
--static struct kmem_cache *fscrypt_ctx_cachep;
- struct kmem_cache *fscrypt_info_cachep;
- 
- void fscrypt_enqueue_decrypt_work(struct work_struct *work)
-@@ -57,62 +49,6 @@ void fscrypt_enqueue_decrypt_work(struct work_struct *work)
- }
- EXPORT_SYMBOL(fscrypt_enqueue_decrypt_work);
- 
--/**
-- * fscrypt_release_ctx() - Release a decryption context
-- * @ctx: The decryption context to release.
-- *
-- * If the decryption context was allocated from the pre-allocated pool, return
-- * it to that pool.  Else, free it.
-- */
--void fscrypt_release_ctx(struct fscrypt_ctx *ctx)
--{
--	unsigned long flags;
--
--	if (ctx->flags & FS_CTX_REQUIRES_FREE_ENCRYPT_FL) {
--		kmem_cache_free(fscrypt_ctx_cachep, ctx);
--	} else {
--		spin_lock_irqsave(&fscrypt_ctx_lock, flags);
--		list_add(&ctx->free_list, &fscrypt_free_ctxs);
--		spin_unlock_irqrestore(&fscrypt_ctx_lock, flags);
--	}
--}
--EXPORT_SYMBOL(fscrypt_release_ctx);
--
--/**
-- * fscrypt_get_ctx() - Get a decryption context
-- * @gfp_flags:   The gfp flag for memory allocation
-- *
-- * Allocate and initialize a decryption context.
-- *
-- * Return: A new decryption context on success; an ERR_PTR() otherwise.
-- */
--struct fscrypt_ctx *fscrypt_get_ctx(gfp_t gfp_flags)
--{
--	struct fscrypt_ctx *ctx;
--	unsigned long flags;
--
--	/*
--	 * First try getting a ctx from the free list so that we don't have to
--	 * call into the slab allocator.
--	 */
--	spin_lock_irqsave(&fscrypt_ctx_lock, flags);
--	ctx = list_first_entry_or_null(&fscrypt_free_ctxs,
--					struct fscrypt_ctx, free_list);
--	if (ctx)
--		list_del(&ctx->free_list);
--	spin_unlock_irqrestore(&fscrypt_ctx_lock, flags);
--	if (!ctx) {
--		ctx = kmem_cache_zalloc(fscrypt_ctx_cachep, gfp_flags);
--		if (!ctx)
--			return ERR_PTR(-ENOMEM);
--		ctx->flags |= FS_CTX_REQUIRES_FREE_ENCRYPT_FL;
--	} else {
--		ctx->flags &= ~FS_CTX_REQUIRES_FREE_ENCRYPT_FL;
--	}
--	return ctx;
--}
--EXPORT_SYMBOL(fscrypt_get_ctx);
--
- struct page *fscrypt_alloc_bounce_page(gfp_t gfp_flags)
- {
- 	return mempool_alloc(fscrypt_bounce_page_pool, gfp_flags);
-@@ -399,11 +335,6 @@ const struct dentry_operations fscrypt_d_ops = {
- 
- static void fscrypt_destroy(void)
- {
--	struct fscrypt_ctx *pos, *n;
--
--	list_for_each_entry_safe(pos, n, &fscrypt_free_ctxs, free_list)
--		kmem_cache_free(fscrypt_ctx_cachep, pos);
--	INIT_LIST_HEAD(&fscrypt_free_ctxs);
- 	mempool_destroy(fscrypt_bounce_page_pool);
- 	fscrypt_bounce_page_pool = NULL;
- }
-@@ -419,7 +350,7 @@ static void fscrypt_destroy(void)
-  */
- int fscrypt_initialize(unsigned int cop_flags)
- {
--	int i, res = -ENOMEM;
-+	int res = -ENOMEM;
- 
- 	/* No need to allocate a bounce page pool if this FS won't use it. */
- 	if (cop_flags & FS_CFLG_OWN_PAGES)
-@@ -429,15 +360,6 @@ int fscrypt_initialize(unsigned int cop_flags)
- 	if (fscrypt_bounce_page_pool)
- 		goto already_initialized;
- 
--	for (i = 0; i < num_prealloc_crypto_ctxs; i++) {
--		struct fscrypt_ctx *ctx;
--
--		ctx = kmem_cache_zalloc(fscrypt_ctx_cachep, GFP_NOFS);
--		if (!ctx)
--			goto fail;
--		list_add(&ctx->free_list, &fscrypt_free_ctxs);
--	}
--
- 	fscrypt_bounce_page_pool =
- 		mempool_create_page_pool(num_prealloc_crypto_pages, 0);
- 	if (!fscrypt_bounce_page_pool)
-@@ -492,18 +414,12 @@ static int __init fscrypt_init(void)
- 	if (!fscrypt_read_workqueue)
- 		goto fail;
- 
--	fscrypt_ctx_cachep = KMEM_CACHE(fscrypt_ctx, SLAB_RECLAIM_ACCOUNT);
--	if (!fscrypt_ctx_cachep)
--		goto fail_free_queue;
--
- 	fscrypt_info_cachep = KMEM_CACHE(fscrypt_info, SLAB_RECLAIM_ACCOUNT);
- 	if (!fscrypt_info_cachep)
--		goto fail_free_ctx;
-+		goto fail_free_queue;
- 
- 	return 0;
- 
--fail_free_ctx:
--	kmem_cache_destroy(fscrypt_ctx_cachep);
- fail_free_queue:
- 	destroy_workqueue(fscrypt_read_workqueue);
- fail:
-@@ -520,7 +436,6 @@ static void __exit fscrypt_exit(void)
- 
- 	if (fscrypt_read_workqueue)
- 		destroy_workqueue(fscrypt_read_workqueue);
--	kmem_cache_destroy(fscrypt_ctx_cachep);
- 	kmem_cache_destroy(fscrypt_info_cachep);
- 
- 	fscrypt_essiv_cleanup();
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 8565536feb2b..702403dc7614 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -93,9 +93,6 @@ typedef enum {
- 	FS_ENCRYPT,
- } fscrypt_direction_t;
- 
--#define FS_CTX_REQUIRES_FREE_ENCRYPT_FL		0x00000001
--#define FS_CTX_HAS_BOUNCE_BUFFER_FL		0x00000002
--
- static inline bool fscrypt_valid_enc_modes(u32 contents_mode,
- 					   u32 filenames_mode)
- {
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 4d6528351f25..2e61f75feab8 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -19,7 +19,6 @@
- 
- #define FS_CRYPTO_BLOCK_SIZE		16
- 
--struct fscrypt_ctx;
- struct fscrypt_info;
- 
- struct fscrypt_str {
-@@ -63,18 +62,6 @@ struct fscrypt_operations {
- 	unsigned int max_namelen;
- };
- 
--/* Decryption work */
--struct fscrypt_ctx {
--	union {
--		struct {
--			struct bio *bio;
--			struct work_struct work;
--		};
--		struct list_head free_list;	/* Free list */
--	};
--	u8 flags;				/* Flags */
--};
--
- static inline bool fscrypt_has_encryption_key(const struct inode *inode)
- {
- 	/* pairs with cmpxchg_release() in fscrypt_get_encryption_info() */
-@@ -101,8 +88,6 @@ static inline void fscrypt_handle_d_move(struct dentry *dentry)
- 
- /* crypto.c */
- extern void fscrypt_enqueue_decrypt_work(struct work_struct *);
--extern struct fscrypt_ctx *fscrypt_get_ctx(gfp_t);
--extern void fscrypt_release_ctx(struct fscrypt_ctx *);
- 
- extern struct page *fscrypt_encrypt_pagecache_blocks(struct page *page,
- 						     unsigned int len,
-@@ -233,8 +218,6 @@ static inline bool fscrypt_match_name(const struct fscrypt_name *fname,
- 
- /* bio.c */
- extern void fscrypt_decrypt_bio(struct bio *);
--extern void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
--					struct bio *bio);
- extern int fscrypt_zeroout_range(const struct inode *, pgoff_t, sector_t,
- 				 unsigned int);
- 
-@@ -279,16 +262,6 @@ static inline void fscrypt_enqueue_decrypt_work(struct work_struct *work)
- {
- }
- 
--static inline struct fscrypt_ctx *fscrypt_get_ctx(gfp_t gfp_flags)
--{
--	return ERR_PTR(-EOPNOTSUPP);
--}
--
--static inline void fscrypt_release_ctx(struct fscrypt_ctx *ctx)
--{
--	return;
--}
--
- static inline struct page *fscrypt_encrypt_pagecache_blocks(struct page *page,
- 							    unsigned int len,
- 							    unsigned int offs,
-@@ -430,11 +403,6 @@ static inline void fscrypt_decrypt_bio(struct bio *bio)
- {
- }
- 
--static inline void fscrypt_enqueue_decrypt_bio(struct fscrypt_ctx *ctx,
--					       struct bio *bio)
--{
--}
--
- static inline int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
- 					sector_t pblk, unsigned int len)
- {
+diff --git a/tests/generic/800 b/tests/generic/800
+new file mode 100755
+index 00000000..79a101f6
+--- /dev/null
++++ b/tests/generic/800
+@@ -0,0 +1,127 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/800
++#
++# Basic test of the fscrypt filesystem-level encryption keyring
++# and v2 encryption policies.
++#
++
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++echo
++
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_scratch_encryption -v 2
++
++_scratch_mkfs_encrypted &>> $seqres.full
++_scratch_mount
++
++test_with_policy_version()
++{
++	local vers=$1
++	local raw_key=""
++	local i
++
++	for i in {1..64}; do
++		raw_key+="\\x$(printf "%02x" $i)"
++	done
++
++	if (( vers == 1 )); then
++		# Key descriptor: arbitrary value
++		local keyspec="0000111122223333"
++		local add_enckey_args="-d $keyspec"
++	else
++		# Key identifier:
++		# HKDF-SHA512(key=raw_key, salt="", info="fscrypt\0\x01")
++		local keyspec="69b2f6edeee720cce0577937eb8a6751"
++		local add_enckey_args=""
++	fi
++
++	mkdir $dir
++	echo "# Setting v$vers encryption policy"
++	_set_encpolicy $dir $keyspec
++	echo "# Getting v$vers encryption policy"
++	_get_encpolicy $dir | _filter_scratch
++	if (( vers == 1 )); then
++		echo "# Getting v1 encryption policy using old ioctl"
++		_get_encpolicy $dir -1 | _filter_scratch
++	fi
++	echo "# Trying to create file without key added yet"
++	$XFS_IO_PROG -f $dir/file |& _filter_scratch
++	echo "# Getting encryption key status"
++	_enckey_status $SCRATCH_MNT $keyspec
++	echo "# Adding encryption key"
++	_add_enckey $SCRATCH_MNT "$raw_key" $add_enckey_args
++	echo "# Creating encrypted file"
++	echo contents > $dir/file
++	echo "# Getting encryption key status"
++	_enckey_status $SCRATCH_MNT $keyspec
++	echo "# Removing encryption key"
++	_rm_enckey $SCRATCH_MNT $keyspec
++	echo "# Getting encryption key status"
++	_enckey_status $SCRATCH_MNT $keyspec
++	echo "# Verifying that the encrypted directory was \"locked\""
++	cat $dir/file |& _filter_scratch
++	cat "$(find $dir -type f)" |& _filter_scratch | cut -d ' ' -f3-
++
++	# Test removing key with a file open.
++	echo "# Re-adding encryption key"
++	_add_enckey $SCRATCH_MNT "$raw_key" $add_enckey_args
++	echo "# Creating another encrypted file"
++	echo foo > $dir/file2
++	echo "# Removing key while an encrypted file is open"
++	exec 3< $dir/file
++	_rm_enckey $SCRATCH_MNT $keyspec
++	echo "# Non-open file should have been evicted"
++	cat $dir/file2 |& _filter_scratch
++	echo "# Open file shouldn't have been evicted"
++	cat $dir/file
++	echo "# Key should be in \"incompletely removed\" state"
++	_enckey_status $SCRATCH_MNT $keyspec
++	echo "# Closing file and removing key for real now"
++	exec 3<&-
++	_rm_enckey $SCRATCH_MNT $keyspec
++	cat $dir/file |& _filter_scratch
++
++	echo "# Cleaning up"
++	rm -r $dir
++	_scratch_cycle_mount	# Clear all keys
++	echo
++}
++
++dir=$SCRATCH_MNT/dir
++
++test_with_policy_version 1
++
++test_with_policy_version 2
++
++echo "# Trying to remove absent key"
++_rm_enckey $SCRATCH_MNT abcdabcdabcdabcd
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/800.out b/tests/generic/800.out
+new file mode 100644
+index 00000000..a4027e2a
+--- /dev/null
++++ b/tests/generic/800.out
+@@ -0,0 +1,91 @@
++QA output created by 800
++
++# Setting v1 encryption policy
++# Getting v1 encryption policy
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 0
++	Master key descriptor: 0000111122223333
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Getting v1 encryption policy using old ioctl
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 0
++	Master key descriptor: 0000111122223333
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Trying to create file without key added yet
++SCRATCH_MNT/dir/file: Required key not available
++# Getting encryption key status
++Absent
++# Adding encryption key
++Added encryption key with descriptor 0000111122223333
++# Creating encrypted file
++# Getting encryption key status
++Present
++# Removing encryption key
++Removed encryption key with descriptor 0000111122223333
++# Getting encryption key status
++Absent
++# Verifying that the encrypted directory was "locked"
++cat: SCRATCH_MNT/dir/file: No such file or directory
++Required key not available
++# Re-adding encryption key
++Added encryption key with descriptor 0000111122223333
++# Creating another encrypted file
++# Removing key while an encrypted file is open
++Removed encryption key with descriptor 0000111122223333, but files still busy
++# Non-open file should have been evicted
++cat: SCRATCH_MNT/dir/file2: Required key not available
++# Open file shouldn't have been evicted
++contents
++# Key should be in "incompletely removed" state
++Incompletely removed
++# Closing file and removing key for real now
++Removed encryption key with descriptor 0000111122223333
++cat: SCRATCH_MNT/dir/file: No such file or directory
++# Cleaning up
++
++# Setting v2 encryption policy
++# Getting v2 encryption policy
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 2
++	Master key identifier: 69b2f6edeee720cce0577937eb8a6751
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Trying to create file without key added yet
++SCRATCH_MNT/dir/file: Required key not available
++# Getting encryption key status
++Absent
++# Adding encryption key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Creating encrypted file
++# Getting encryption key status
++Present (user_count=1, added_by_self)
++# Removing encryption key
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting encryption key status
++Absent
++# Verifying that the encrypted directory was "locked"
++cat: SCRATCH_MNT/dir/file: No such file or directory
++Required key not available
++# Re-adding encryption key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Creating another encrypted file
++# Removing key while an encrypted file is open
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751, but files still busy
++# Non-open file should have been evicted
++cat: SCRATCH_MNT/dir/file2: Required key not available
++# Open file shouldn't have been evicted
++contents
++# Key should be in "incompletely removed" state
++Incompletely removed
++# Closing file and removing key for real now
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++cat: SCRATCH_MNT/dir/file: No such file or directory
++# Cleaning up
++
++# Trying to remove absent key
++Error removing encryption key: Required key not available
+diff --git a/tests/generic/group b/tests/generic/group
+index 7cf4f6c4..b3dc9ad1 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -570,3 +570,4 @@
+ 565 auto quick copy_range
+ 566 auto quick quota metadata
+ 567 auto quick rw punch
++800 auto quick encrypt
 -- 
-2.19.1
+2.23.0.351.gc4317032e6-goog
