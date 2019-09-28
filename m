@@ -1,91 +1,278 @@
-Return-Path: <fstests-owner@vger.kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:49236 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726033AbfI1ADq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 27 Sep 2019 20:03:46 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 0/9] xfstests: add tests for fscrypt key management improvements
-Date: Thu, 19 Sep 2019 17:37:44 -0700
-Message-Id: <20190920003753.40281-1-ebiggers@kernel.org>
+Subject: [PATCH v3 5/9] xfs_io/encrypt: extend 'get_encpolicy' to support v2 policies
+Date: Fri, 27 Sep 2019 17:02:39 -0700
+Message-Id: <20190928000243.77634-6-ebiggers@kernel.org>
+In-Reply-To: <20190928000243.77634-1-ebiggers@kernel.org>
+References: <20190928000243.77634-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: fstests-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hello,
+From: Eric Biggers <ebiggers@google.com>
 
-This patchset adds xfstests for the new fscrypt ioctls that were merged
-for 5.4 (https://git.kernel.org/torvalds/c/734d1ed83e1f9b7b), namely the
-new ioctls for managing filesystem encryption keys and the new/updated
-ioctls for v2 encryption policy support.  It also includes ciphertext
-verification tests for v2 encryption policies.
+get_encpolicy uses the FS_IOC_GET_ENCRYPTION_POLICY ioctl to retrieve
+the file's encryption policy, then displays it.  But that only works for
+v1 encryption policies.  A new ioctl, FS_IOC_GET_ENCRYPTION_POLICY_EX,
+has been introduced which is more flexible and can retrieve both v1 and
+v2 encryption policies.
 
-These tests depend on new xfs_io commands, for which I've sent a
-separate patchset for xfsprogs.  They also need a kernel built from the
-very latest mainline.  As is usual for xfstests, the tests will skip
-themselves if the needed prerequisites aren't met.
+Make get_encpolicy use the new ioctl if the kernel supports it and
+display the resulting the v1 or v2 encryption policy.  Otherwise, fall
+back to the old ioctl and display the v1 policy.
 
-Note: currently only ext4, f2fs, and ubifs support encryption.  But I
-was told previously that since the fscrypt API is generic and may be
-supported by XFS in the future, the command-line wrappers for the
-fscrypt ioctls should be in xfs_io rather than in xfstests directly
-(https://marc.info/?l=fstests&m=147976255831951&w=2).
+Also add new options:
 
-This version of the xfstests patchset can also be retrieved from tag
-"fscrypt-key-mgmt-improvements_2019-09-19" of
-https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
+  -1: Use the old ioctl only.  This will be used to test the old ioctl
+      even when the kernel supports the new one.
 
-Changes since v1:
+  -t: Test whether the new ioctl is supported.  This will be useful to
+      determine whether v2 policies should be tested or not.
 
-- Addressed comments from Eryu Guan regarding
-  _require_encryption_policy_support().
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ io/encrypt.c      | 153 ++++++++++++++++++++++++++++++++++++++++------
+ man/man8/xfs_io.8 |  15 ++++-
+ 2 files changed, 149 insertions(+), 19 deletions(-)
 
-- In generic/801, handle the fsgqa user having part of their key quota
-  already consumed before beginning the test, in order to avoid a false
-  test failure on some systems.
-
-Eric Biggers (9):
-  common/encrypt: disambiguate session encryption keys
-  common/encrypt: add helper functions that wrap new xfs_io commands
-  common/encrypt: support checking for v2 encryption policy support
-  common/encrypt: support verifying ciphertext of v2 encryption policies
-  generic: add basic test for fscrypt API additions
-  generic: add test for non-root use of fscrypt API additions
-  generic: verify ciphertext of v2 encryption policies with AES-256
-  generic: verify ciphertext of v2 encryption policies with AES-128
-  generic: verify ciphertext of v2 encryption policies with Adiantum
-
- common/encrypt           | 181 +++++++++++++++++++----
- src/fscrypt-crypt-util.c | 304 ++++++++++++++++++++++++++++++++++-----
- tests/ext4/024           |   2 +-
- tests/generic/397        |   4 +-
- tests/generic/398        |   8 +-
- tests/generic/399        |   4 +-
- tests/generic/419        |   4 +-
- tests/generic/421        |   4 +-
- tests/generic/429        |   8 +-
- tests/generic/435        |   4 +-
- tests/generic/440        |   8 +-
- tests/generic/800        | 127 ++++++++++++++++
- tests/generic/800.out    |  91 ++++++++++++
- tests/generic/801        | 144 +++++++++++++++++++
- tests/generic/801.out    |  62 ++++++++
- tests/generic/802        |  43 ++++++
- tests/generic/802.out    |   6 +
- tests/generic/803        |  43 ++++++
- tests/generic/803.out    |   6 +
- tests/generic/804        |  45 ++++++
- tests/generic/804.out    |  11 ++
- tests/generic/group      |   5 +
- 22 files changed, 1028 insertions(+), 86 deletions(-)
- create mode 100755 tests/generic/800
- create mode 100644 tests/generic/800.out
- create mode 100755 tests/generic/801
- create mode 100644 tests/generic/801.out
- create mode 100755 tests/generic/802
- create mode 100644 tests/generic/802.out
- create mode 100755 tests/generic/803
- create mode 100644 tests/generic/803.out
- create mode 100755 tests/generic/804
- create mode 100644 tests/generic/804.out
-
+diff --git a/io/encrypt.c b/io/encrypt.c
+index 8a511379..0b45e93f 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -1,6 +1,6 @@
+ // SPDX-License-Identifier: GPL-2.0
+ /*
+- * Copyright (c) 2016 Google, Inc.  All Rights Reserved.
++ * Copyright 2016, 2019 Google LLC
+  * Author: Eric Biggers <ebiggers@google.com>
+  */
+ 
+@@ -150,6 +150,20 @@ static const struct {
+ static cmdinfo_t get_encpolicy_cmd;
+ static cmdinfo_t set_encpolicy_cmd;
+ 
++static void
++get_encpolicy_help(void)
++{
++	printf(_(
++"\n"
++" display the encryption policy of the current file\n"
++"\n"
++" -1 -- Use only the old ioctl to get the encryption policy.\n"
++"       This only works if the file has a v1 encryption policy.\n"
++" -t -- Test whether v2 encryption policies are supported.\n"
++"       Prints \"supported\", \"unsupported\", or an error message.\n"
++"\n"));
++}
++
+ static void
+ set_encpolicy_help(void)
+ {
+@@ -227,7 +241,7 @@ mode2str(__u8 mode)
+ }
+ 
+ static const char *
+-keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
++keydesc2str(const __u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
+ {
+ 	static char buf[2 * FSCRYPT_KEY_DESCRIPTOR_SIZE + 1];
+ 	int i;
+@@ -238,29 +252,132 @@ keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
+ 	return buf;
+ }
+ 
++static const char *
++keyid2str(const __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE])
++{
++	static char buf[2 * FSCRYPT_KEY_IDENTIFIER_SIZE + 1];
++	int i;
++
++	for (i = 0; i < FSCRYPT_KEY_IDENTIFIER_SIZE; i++)
++		sprintf(&buf[2 * i], "%02x", master_key_identifier[i]);
++
++	return buf;
++}
++
++static void
++test_for_v2_policy_support(void)
++{
++	struct fscrypt_get_policy_ex_arg arg;
++
++	arg.policy_size = sizeof(arg.policy);
++
++	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg) == 0 ||
++	    errno == ENODATA /* file unencrypted */) {
++		printf(_("supported\n"));
++		return;
++	}
++	if (errno == ENOTTY) {
++		printf(_("unsupported\n"));
++		return;
++	}
++	fprintf(stderr,
++		_("%s: unexpected error checking for FS_IOC_GET_ENCRYPTION_POLICY_EX support: %s\n"),
++		file->name, strerror(errno));
++	exitcode = 1;
++}
++
++static void
++show_v1_encryption_policy(const struct fscrypt_policy_v1 *policy)
++{
++	printf(_("Encryption policy for %s:\n"), file->name);
++	printf(_("\tPolicy version: %u\n"), policy->version);
++	printf(_("\tMaster key descriptor: %s\n"),
++	       keydesc2str(policy->master_key_descriptor));
++	printf(_("\tContents encryption mode: %u (%s)\n"),
++	       policy->contents_encryption_mode,
++	       mode2str(policy->contents_encryption_mode));
++	printf(_("\tFilenames encryption mode: %u (%s)\n"),
++	       policy->filenames_encryption_mode,
++	       mode2str(policy->filenames_encryption_mode));
++	printf(_("\tFlags: 0x%02x\n"), policy->flags);
++}
++
++static void
++show_v2_encryption_policy(const struct fscrypt_policy_v2 *policy)
++{
++	printf(_("Encryption policy for %s:\n"), file->name);
++	printf(_("\tPolicy version: %u\n"), policy->version);
++	printf(_("\tMaster key identifier: %s\n"),
++	       keyid2str(policy->master_key_identifier));
++	printf(_("\tContents encryption mode: %u (%s)\n"),
++	       policy->contents_encryption_mode,
++	       mode2str(policy->contents_encryption_mode));
++	printf(_("\tFilenames encryption mode: %u (%s)\n"),
++	       policy->filenames_encryption_mode,
++	       mode2str(policy->filenames_encryption_mode));
++	printf(_("\tFlags: 0x%02x\n"), policy->flags);
++}
++
+ static int
+ get_encpolicy_f(int argc, char **argv)
+ {
+-	struct fscrypt_policy policy;
++	int c;
++	struct fscrypt_get_policy_ex_arg arg;
++	bool only_use_v1_ioctl = false;
++	int res;
++
++	while ((c = getopt(argc, argv, "1t")) != EOF) {
++		switch (c) {
++		case '1':
++			only_use_v1_ioctl = true;
++			break;
++		case 't':
++			test_for_v2_policy_support();
++			return 0;
++		default:
++			return command_usage(&get_encpolicy_cmd);
++		}
++	}
++	argc -= optind;
++	argv += optind;
++
++	if (argc != 0)
++		return command_usage(&get_encpolicy_cmd);
++
++	/* first try the new ioctl */
++	if (only_use_v1_ioctl) {
++		res = -1;
++		errno = ENOTTY;
++	} else {
++		arg.policy_size = sizeof(arg.policy);
++		res = ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg);
++	}
++
++	/* fall back to the old ioctl */
++	if (res != 0 && errno == ENOTTY)
++		res = ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY,
++			    &arg.policy.v1);
+ 
+-	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_POLICY, &policy) < 0) {
+-		fprintf(stderr, "%s: failed to get encryption policy: %s\n",
++	if (res != 0) {
++		fprintf(stderr, _("%s: failed to get encryption policy: %s\n"),
+ 			file->name, strerror(errno));
+ 		exitcode = 1;
+ 		return 0;
+ 	}
+ 
+-	printf("Encryption policy for %s:\n", file->name);
+-	printf("\tPolicy version: %u\n", policy.version);
+-	printf("\tMaster key descriptor: %s\n",
+-	       keydesc2str(policy.master_key_descriptor));
+-	printf("\tContents encryption mode: %u (%s)\n",
+-	       policy.contents_encryption_mode,
+-	       mode2str(policy.contents_encryption_mode));
+-	printf("\tFilenames encryption mode: %u (%s)\n",
+-	       policy.filenames_encryption_mode,
+-	       mode2str(policy.filenames_encryption_mode));
+-	printf("\tFlags: 0x%02x\n", policy.flags);
++	switch (arg.policy.version) {
++	case FSCRYPT_POLICY_V1:
++		show_v1_encryption_policy(&arg.policy.v1);
++		break;
++	case FSCRYPT_POLICY_V2:
++		show_v2_encryption_policy(&arg.policy.v2);
++		break;
++	default:
++		printf(_("Encryption policy for %s:\n"), file->name);
++		printf(_("\tPolicy version: %u (unknown)\n"),
++		       arg.policy.version);
++		break;
++	}
+ 	return 0;
+ }
+ 
+@@ -360,11 +477,13 @@ encrypt_init(void)
+ {
+ 	get_encpolicy_cmd.name = "get_encpolicy";
+ 	get_encpolicy_cmd.cfunc = get_encpolicy_f;
++	get_encpolicy_cmd.args = _("[-1] [-t]");
+ 	get_encpolicy_cmd.argmin = 0;
+-	get_encpolicy_cmd.argmax = 0;
++	get_encpolicy_cmd.argmax = -1;
+ 	get_encpolicy_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
+ 	get_encpolicy_cmd.oneline =
+ 		_("display the encryption policy of the current file");
++	get_encpolicy_cmd.help = get_encpolicy_help;
+ 
+ 	set_encpolicy_cmd.name = "set_encpolicy";
+ 	set_encpolicy_cmd.cfunc = set_encpolicy_f;
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index 6e064bdd..3dd34a0c 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -724,10 +724,21 @@ version of policy structure (numeric)
+ .RE
+ .PD
+ .TP
+-.BR get_encpolicy
++.BI "get_encpolicy [ \-1 ] [ \-t ]"
+ On filesystems that support encryption, display the encryption policy of the
+ current file.
+-
++.RS 1.0i
++.PD 0
++.TP 0.4i
++.BI \-1
++Use only the old ioctl to get the encryption policy.  This only works if the
++file has a v1 encryption policy.
++.TP
++.BI \-t
++Test whether v2 encryption policies are supported.  Prints "supported",
++"unsupported", or an error message.
++.RE
++.PD
+ .TP
+ .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
+ List extended inode flags on the currently open file. If the
 -- 
-2.23.0.351.gc4317032e6-goog
+2.23.0.444.g18eeb5a265-goog
