@@ -1,144 +1,198 @@
-Return-Path: <SRS0=3xEP=W5=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: Re: [PATCH V5 0/7] Consolidate FS read I/O callbacks code
-Date: Mon, 02 Sep 2019 10:08:13 +0530
-In-Reply-To: <20190823132542.13434-1-chandan@linux.ibm.com>
-References: <20190823132542.13434-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:49276 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1728336AbfI1ADq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 27 Sep 2019 20:03:46 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v3 7/9] xfs_io/encrypt: add 'add_enckey' command
+Date: Fri, 27 Sep 2019 17:02:41 -0700
+Message-Id: <20190928000243.77634-8-ebiggers@kernel.org>
+In-Reply-To: <20190928000243.77634-1-ebiggers@kernel.org>
+References: <20190928000243.77634-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Message-Id: <10742618.thX4IPaW4o@localhost.localdomain>
-To: tytso@mit.edu, viro@zeniv.linux.org.uk
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Friday, August 23, 2019 6:55 PM Chandan Rajendra wrote: 
-> This patchset moves the "FS read I/O callbacks" code into a file of its
-> own (i.e. fs/read_callbacks.c) and modifies the generic
-> do_mpage_readpge() to make use of the functionality provided.
-> 
-> "FS read I/O callbacks" code implements the state machine that needs
-> to be executed after reading data from files that are encrypted and/or
-> have verity metadata associated with them.
-> 
-> With these changes in place, the patchset changes Ext4 to use
-> mpage_readpage[s] instead of its own custom ext4_readpage[s]()
-> functions. This is done to reduce duplication of code across
-> filesystems. Also, "FS read I/O callbacks" source files will be built
-> only if CONFIG_FS_ENCRYPTION is enabled.
-> 
-> The patchset also modifies fs/buffer.c to get file
-> encryption/decryption to work with subpage-sized blocks.
-> 
-> The patches can also be obtained from
-> https://github.com/chandanr/linux.git at branch subpage-encryption-v5.
+From: Eric Biggers <ebiggers@google.com>
 
-Ted and Al,
+Add an 'add_enckey' command to xfs_io, to provide a command-line
+interface to the FS_IOC_ADD_ENCRYPTION_KEY ioctl.
 
-Do you have any comments on the patchset?
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ io/encrypt.c      | 109 ++++++++++++++++++++++++++++++++++++++++++++++
+ man/man8/xfs_io.8 |  15 +++++++
+ 2 files changed, 124 insertions(+)
 
-> 
-> Changelog:
-> V4 -> V5:
->    1. Since F2FS uses its own workqueue and also since its
->       decompression logic isn't an fs independent entity like fscrypt or
->       fsverity, this patchset drops support for F2FS.
->       The patchset still helps in removing a copy of
->       do_mpage_readpage() from Ext4 (i.e. ext4_readpage()) and also
->       prevents a copy of block_read_full_page() from being added into
->       Ext4 by adding support to "read callbacks" API invocations into
->       block_read_full_page().
-> 
-> V3 -> V4:
->    1. A new buffer_head flag (i.e. BH_Read_Cb) is introduced to reliably
->       check if a buffer head's content has to be decrypted.
->    2. Fix layering violation. Now the code flow for decryption happens as shown below,
->       FS => read callbacks => fscrypt
->    3. Select FS_READ_CALLBACKS from FS specific kconfig file if FS_ENCRYPTION
->       is enabled.
->    4. Make 'struct read_callbacks_ctx' an opaque structure.
->    5. Make use of FS' endio function rather than implementing one in read
->       callbacks.
->    6. Make read_callbacks.h self-contained.
->    7. Split patchset to separate out ext4 and f2fs changes.
->    
-> V2 -> V3:
-> 1. Split the V2 patch "Consolidate 'read callbacks' into a new file" into
->    three patches,
->    - Introduce the read_callbacks functionality.
->    - Convert encryption to use read_callbacks.
->    - Remove union from struct fscrypt_context.
-> 2. fs/Kconfig
->    Do not explicitly set the default value of 'n' for FS_READ_CALLBACKS.
-> 3. fs/crypto/Kconfig
->    Select CONFIG_FS_READ_CALLBACKS only if CONFIG_BLOCK is selected.
-> 4. Remove verity associated code in read_callbacks code.
-> 5. Introduce a callback argument to read_callbacks_setup() function
->    which gets invoked for each page for bio. F2FS uses this to perform
->    custom operations like decrementing the value of f2fs_sb_info->nr_pages[].
-> 6. Encapsulate the details of "read callbacks" (e.g. Usage of "struct
->    read_callbacks *ctx") within its own functions. When CONFIG_FS_READ_CALLBACKS
->    is set to 'n', the corresponding stub functions return approriate error
->    values.
-> 7. Split fscrypt_decrypt() function into fscrypt_decrypt_bio() and
->    fscrypt_decrypt_bh().
-> 8. Split end_read_callbacks() function into end_read_callbacks_bio() and
->    end_read_callbacks_bh().
-> 
-> V1 -> V2:
-> 1. Removed the phrase "post_read_process" from file names and
->    functions. Instead we now use the phrase "read_callbacks" in its
->    place.
-> 2. When performing changes associated with (1), the changes made by
->    the patch "Remove the term 'bio' from post read processing" are
->    made in the earlier patch "Consolidate 'read callbacks' into a new
->    file". Hence the patch "Remove the term 'bio' from post read
->    processing" is removed from the patchset.
-> 
-> RFC V2 -> V1:
-> 1. Test and verify FS_CFLG_OWN_PAGES subset of fscrypt_encrypt_page()
->    code by executing fstests on UBIFS.
-> 2. Implement F2fs function call back to check if the contents of a
->    page holding a verity file's data needs to be verified.
-> 
-> RFC V1 -> RFC V2:
-> 1. Describe the purpose of "Post processing code" in the cover letter.
-> 2. Fix build errors when CONFIG_FS_VERITY is enabled.
-> 
-> Chandan Rajendra (7):
->   buffer_head: Introduce BH_Read_Cb flag
->   FS: Introduce read callbacks
->   fs/mpage.c: Integrate read callbacks
->   fs/buffer.c: add decryption support via read_callbacks
->   ext4: Wire up ext4_readpage[s] to use mpage_readpage[s]
->   ext4: Enable encryption for subpage-sized blocks
->   fscrypt: remove struct fscrypt_ctx
-> 
->  Documentation/filesystems/fscrypt.rst |   4 +-
->  fs/Kconfig                            |   3 +
->  fs/Makefile                           |   1 +
->  fs/buffer.c                           |  33 ++-
->  fs/crypto/bio.c                       |  18 --
->  fs/crypto/crypto.c                    |  89 +-------
->  fs/crypto/fscrypt_private.h           |   3 -
->  fs/ext4/Kconfig                       |   1 +
->  fs/ext4/Makefile                      |   2 +-
->  fs/ext4/inode.c                       |   5 +-
->  fs/ext4/readpage.c                    | 295 --------------------------
->  fs/ext4/super.c                       |   7 -
->  fs/f2fs/Kconfig                       |   1 +
->  fs/mpage.c                            |  24 ++-
->  fs/read_callbacks.c                   | 285 +++++++++++++++++++++++++
->  include/linux/buffer_head.h           |   2 +
->  include/linux/fscrypt.h               |  32 ---
->  include/linux/read_callbacks.h        |  48 +++++
->  18 files changed, 391 insertions(+), 462 deletions(-)
->  delete mode 100644 fs/ext4/readpage.c
->  create mode 100644 fs/read_callbacks.c
->  create mode 100644 include/linux/read_callbacks.h
-> 
-> 
-
-
+diff --git a/io/encrypt.c b/io/encrypt.c
+index 603d569b..056f15bc 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -149,6 +149,7 @@ static const struct {
+ 
+ static cmdinfo_t get_encpolicy_cmd;
+ static cmdinfo_t set_encpolicy_cmd;
++static cmdinfo_t add_enckey_cmd;
+ 
+ static void
+ get_encpolicy_help(void)
+@@ -203,6 +204,22 @@ set_encpolicy_help(void)
+ "\n"));
+ }
+ 
++static void
++add_enckey_help(void)
++{
++	printf(_(
++"\n"
++" add an encryption key to the filesystem\n"
++"\n"
++" Examples:\n"
++" 'add_enckey' - add key for v2 policies\n"
++" 'add_enckey -d 0000111122223333' - add key for v1 policies w/ given descriptor\n"
++"\n"
++"The key in binary is read from standard input.\n"
++" -d DESCRIPTOR -- master_key_descriptor\n"
++"\n"));
++}
++
+ static bool
+ parse_byte_value(const char *arg, __u8 *value_ret)
+ {
+@@ -606,6 +623,88 @@ set_encpolicy_f(int argc, char **argv)
+ 	return 0;
+ }
+ 
++static ssize_t
++read_until_limit_or_eof(int fd, void *buf, size_t limit)
++{
++	size_t bytes_read = 0;
++	ssize_t res;
++
++	while (limit) {
++		res = read(fd, buf, limit);
++		if (res < 0)
++			return res;
++		if (res == 0)
++			break;
++		buf += res;
++		bytes_read += res;
++		limit -= res;
++	}
++	return bytes_read;
++}
++
++static int
++add_enckey_f(int argc, char **argv)
++{
++	int c;
++	struct fscrypt_add_key_arg *arg;
++	ssize_t raw_size;
++
++	arg = calloc(1, sizeof(*arg) + FSCRYPT_MAX_KEY_SIZE + 1);
++	if (!arg) {
++		perror("calloc");
++		exitcode = 1;
++		return 0;
++	}
++
++	arg->key_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
++
++	while ((c = getopt(argc, argv, "d:")) != EOF) {
++		switch (c) {
++		case 'd':
++			arg->key_spec.type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
++			if (!str2keydesc(optarg, arg->key_spec.u.descriptor))
++				goto out;
++			break;
++		default:
++			return command_usage(&add_enckey_cmd);
++		}
++	}
++	argc -= optind;
++	argv += optind;
++
++	if (argc != 0)
++		return command_usage(&add_enckey_cmd);
++
++	raw_size = read_until_limit_or_eof(STDIN_FILENO, arg->raw,
++					   FSCRYPT_MAX_KEY_SIZE + 1);
++	if (raw_size < 0) {
++		fprintf(stderr, _("Error reading key from stdin: %s\n"),
++			strerror(errno));
++		exitcode = 1;
++		goto out;
++	}
++	if (raw_size > FSCRYPT_MAX_KEY_SIZE) {
++		fprintf(stderr,
++			_("Invalid key; got > FSCRYPT_MAX_KEY_SIZE (%d) bytes on stdin!\n"),
++			FSCRYPT_MAX_KEY_SIZE);
++		goto out;
++	}
++	arg->raw_size = raw_size;
++
++	if (ioctl(file->fd, FS_IOC_ADD_ENCRYPTION_KEY, arg) != 0) {
++		fprintf(stderr, _("Error adding encryption key: %s\n"),
++			strerror(errno));
++		exitcode = 1;
++		goto out;
++	}
++	printf(_("Added encryption key with %s %s\n"),
++	       keyspectype(&arg->key_spec), keyspec2str(&arg->key_spec));
++out:
++	memset(arg->raw, 0, FSCRYPT_MAX_KEY_SIZE + 1);
++	free(arg);
++	return 0;
++}
++
+ void
+ encrypt_init(void)
+ {
+@@ -630,6 +729,16 @@ encrypt_init(void)
+ 		_("assign an encryption policy to the current file");
+ 	set_encpolicy_cmd.help = set_encpolicy_help;
+ 
++	add_enckey_cmd.name = "add_enckey";
++	add_enckey_cmd.cfunc = add_enckey_f;
++	add_enckey_cmd.args = _("[-d descriptor]");
++	add_enckey_cmd.argmin = 0;
++	add_enckey_cmd.argmax = -1;
++	add_enckey_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
++	add_enckey_cmd.oneline = _("add an encryption key to the filesystem");
++	add_enckey_cmd.help = add_enckey_help;
++
+ 	add_command(&get_encpolicy_cmd);
+ 	add_command(&set_encpolicy_cmd);
++	add_command(&add_enckey_cmd);
+ }
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index 18fcde0f..7d6a23fe 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -749,6 +749,21 @@ Test whether v2 encryption policies are supported.  Prints "supported",
+ .RE
+ .PD
+ .TP
++.BI "add_enckey [ \-d " descriptor " ]"
++On filesystems that support encryption, add an encryption key to the filesystem
++containing the currently open file.  The key in binary (typically 64 bytes long)
++is read from standard input.
++.RS 1.0i
++.PD 0
++.TP 0.4i
++.BI \-d " descriptor"
++key descriptor, as a 16-character hex string (8 bytes).  If given, the key will
++be available for use by v1 encryption policies that use this descriptor.
++Otherwise, the key is added as a v2 policy key, and on success the resulting
++"key identifier" will be printed.
++.RE
++.PD
++.TP
+ .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
+ List extended inode flags on the currently open file. If the
+ .B \-R
 -- 
-chandan
+2.23.0.444.g18eeb5a265-goog
