@@ -1,103 +1,153 @@
-Return-Path: <SRS0=mAtp=XF=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH RESEND V5 4/7] fs/buffer.c: add decryption support via read_callbacks
-Date: Tue, 10 Sep 2019 21:21:12 +0530
-Message-Id: <20190910155115.28550-5-chandan@linux.ibm.com>
-In-Reply-To: <20190910155115.28550-1-chandan@linux.ibm.com>
-References: <20190910155115.28550-1-chandan@linux.ibm.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:49304 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726762AbfI1ADr (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 27 Sep 2019 20:03:47 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v3 9/9] xfs_io/encrypt: add 'enckey_status' command
+Date: Fri, 27 Sep 2019 17:02:43 -0700
+Message-Id: <20190928000243.77634-10-ebiggers@kernel.org>
+In-Reply-To: <20190928000243.77634-1-ebiggers@kernel.org>
+References: <20190928000243.77634-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-To: viro@zeniv.linux.org.uk, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: linux-xfs@vger.kernel.org
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-This commit sets up read_callbacks context for buffer heads whose
-contents need to be decrypted on endio.
+From: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+Add an 'enckey_status' command to xfs_io, to provide a command-line
+interface to the FS_IOC_GET_ENCRYPTION_KEY_STATUS ioctl.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/buffer.c | 33 ++++++++++++++++++++++-----------
- 1 file changed, 22 insertions(+), 11 deletions(-)
+ io/encrypt.c      | 71 +++++++++++++++++++++++++++++++++++++++++++++++
+ man/man8/xfs_io.8 |  6 ++++
+ 2 files changed, 77 insertions(+)
 
-diff --git a/fs/buffer.c b/fs/buffer.c
-index ce357602f471..96c4c9840746 100644
---- a/fs/buffer.c
-+++ b/fs/buffer.c
-@@ -45,6 +45,7 @@
- #include <linux/bit_spinlock.h>
- #include <linux/pagevec.h>
- #include <linux/sched/mm.h>
-+#include <linux/read_callbacks.h>
- #include <trace/events/block.h>
+diff --git a/io/encrypt.c b/io/encrypt.c
+index e87ac393..17d61cfb 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -151,6 +151,7 @@ static cmdinfo_t get_encpolicy_cmd;
+ static cmdinfo_t set_encpolicy_cmd;
+ static cmdinfo_t add_enckey_cmd;
+ static cmdinfo_t rm_enckey_cmd;
++static cmdinfo_t enckey_status_cmd;
  
- static int fsync_buffers_list(spinlock_t *lock, struct list_head *list);
-@@ -245,11 +246,7 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
- 	return ret;
+ static void
+ get_encpolicy_help(void)
+@@ -236,6 +237,19 @@ rm_enckey_help(void)
+ "\n"));
  }
  
--/*
-- * I/O completion handler for block_read_full_page() - pages
-- * which come unlocked at the end of I/O.
-- */
--static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
-+void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- {
- 	unsigned long flags;
- 	struct buffer_head *first;
-@@ -257,8 +254,6 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- 	struct page *page;
- 	int page_uptodate = 1;
- 
--	BUG_ON(!buffer_async_read(bh));
--
- 	page = bh->b_page;
- 	if (uptodate) {
- 		set_buffer_uptodate(bh);
-@@ -306,6 +301,17 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- 	return;
- }
- 
-+/*
-+ * I/O completion handler for block_read_full_page().  Pages are unlocked
-+ * after the I/O completes and the read callbacks (if any) have executed.
-+ */
-+static void __end_buffer_async_read(struct buffer_head *bh, int uptodate)
++static void
++enckey_status_help(void)
 +{
-+	BUG_ON(!buffer_async_read(bh));
-+
-+	read_callbacks_endio_bh(bh, uptodate, end_buffer_async_read);
++	printf(_(
++"\n"
++" get the status of a filesystem encryption key\n"
++"\n"
++" Examples:\n"
++" 'enckey_status 0000111122223333' - get status of v1 policy key\n"
++" 'enckey_status 00001111222233334444555566667777' - get status of v2 policy key\n"
++"\n"));
 +}
 +
- /*
-  * Completion handler for block_write_full_page() - pages which are unlocked
-  * during I/O, and which have PageWriteback cleared upon I/O completion.
-@@ -378,7 +384,7 @@ EXPORT_SYMBOL(end_buffer_async_write);
-  */
- static void mark_buffer_async_read(struct buffer_head *bh)
+ static bool
+ parse_byte_value(const char *arg, __u8 *value_ret)
  {
--	bh->b_end_io = end_buffer_async_read;
-+	bh->b_end_io = __end_buffer_async_read;
- 	set_buffer_async_read(bh);
- }
- 
-@@ -2293,10 +2299,15 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
- 	 */
- 	for (i = 0; i < nr; i++) {
- 		bh = arr[i];
--		if (buffer_uptodate(bh))
--			end_buffer_async_read(bh, 1);
--		else
-+		if (buffer_uptodate(bh)) {
-+			__end_buffer_async_read(bh, 1);
-+		} else {
-+			if (WARN_ON(read_callbacks_setup_bh(inode, bh))) {
-+				__end_buffer_async_read(bh, 0);
-+				continue;
-+			}
- 			submit_bh(REQ_OP_READ, 0, bh);
-+		}
- 	}
+@@ -769,6 +783,52 @@ rm_enckey_f(int argc, char **argv)
  	return 0;
  }
+ 
++static int
++enckey_status_f(int argc, char **argv)
++{
++	struct fscrypt_get_key_status_arg arg;
++
++	memset(&arg, 0, sizeof(arg));
++
++	if (str2keyspec(argv[1], -1, &arg.key_spec) < 0)
++		return 0;
++
++	if (ioctl(file->fd, FS_IOC_GET_ENCRYPTION_KEY_STATUS, &arg) != 0) {
++		fprintf(stderr, _("Error getting encryption key status: %s\n"),
++			strerror(errno));
++		exitcode = 1;
++		return 0;
++	}
++
++	switch (arg.status) {
++	case FSCRYPT_KEY_STATUS_PRESENT:
++		printf(_("Present"));
++		if (arg.user_count || arg.status_flags) {
++			printf(" (user_count=%u", arg.user_count);
++			if (arg.status_flags &
++			    FSCRYPT_KEY_STATUS_FLAG_ADDED_BY_SELF)
++				printf(", added_by_self");
++			arg.status_flags &=
++				~FSCRYPT_KEY_STATUS_FLAG_ADDED_BY_SELF;
++			if (arg.status_flags)
++				printf(", unknown_flags=0x%08x",
++				       arg.status_flags);
++			printf(")");
++		}
++		printf("\n");
++		return 0;
++	case FSCRYPT_KEY_STATUS_ABSENT:
++		printf(_("Absent\n"));
++		return 0;
++	case FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED:
++		printf(_("Incompletely removed\n"));
++		return 0;
++	default:
++		printf(_("Unknown status (%u)\n"), arg.status);
++		return 0;
++	}
++}
++
+ void
+ encrypt_init(void)
+ {
+@@ -812,8 +872,19 @@ encrypt_init(void)
+ 		_("remove an encryption key from the filesystem");
+ 	rm_enckey_cmd.help = rm_enckey_help;
+ 
++	enckey_status_cmd.name = "enckey_status";
++	enckey_status_cmd.cfunc = enckey_status_f;
++	enckey_status_cmd.args = _("keyspec");
++	enckey_status_cmd.argmin = 1;
++	enckey_status_cmd.argmax = 1;
++	enckey_status_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
++	enckey_status_cmd.oneline =
++		_("get the status of a filesystem encryption key");
++	enckey_status_cmd.help = enckey_status_help;
++
+ 	add_command(&get_encpolicy_cmd);
+ 	add_command(&set_encpolicy_cmd);
+ 	add_command(&add_enckey_cmd);
+ 	add_command(&rm_enckey_cmd);
++	add_command(&enckey_status_cmd);
+ }
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index be90905a..2db071e9 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -779,6 +779,12 @@ is a privileged operation.
+ .RE
+ .PD
+ .TP
++.BI "enckey_status " keyspec
++On filesystems that support encryption, display the status of an encryption key.
++.I keyspec
++is a hex string specifying the key for which to display the status, as a
++16-character "key descriptor" or a 32-character "key identifier".
++.TP
+ .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
+ List extended inode flags on the currently open file. If the
+ .B \-R
 -- 
-2.19.1
+2.23.0.444.g18eeb5a265-goog
