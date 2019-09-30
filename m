@@ -1,166 +1,154 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:49290 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1728346AbfI1ADr (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 27 Sep 2019 20:03:47 -0400
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v3 8/9] xfs_io/encrypt: add 'rm_enckey' command
-Date: Fri, 27 Sep 2019 17:02:42 -0700
-Message-Id: <20190928000243.77634-9-ebiggers@kernel.org>
-In-Reply-To: <20190928000243.77634-1-ebiggers@kernel.org>
-References: <20190928000243.77634-1-ebiggers@kernel.org>
+Date: Mon, 30 Sep 2019 14:15:49 -0700
+Message-Id: <20190930211553.64208-5-ebiggers@kernel.org>
+In-Reply-To: <20190930211553.64208-1-ebiggers@kernel.org>
+References: <20190930211553.64208-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-xfs@vger.kernel.org
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Subject: [f2fs-dev] [PATCH v4 4/8] generic: test access controls on the
+ fs-verity ioctls
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: fstests@vger.kernel.org
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add a 'rm_enckey' command to xfs_io, to provide a command-line interface
-to the FS_IOC_REMOVE_ENCRYPTION_KEY and
-FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS ioctls.
+Test access controls on the fs-verity ioctls.  FS_IOC_MEASURE_VERITY is
+allowed on any file, whereas FS_IOC_ENABLE_VERITY requires write access.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- io/encrypt.c      | 75 +++++++++++++++++++++++++++++++++++++++++++++++
- man/man8/xfs_io.8 | 15 ++++++++++
- 2 files changed, 90 insertions(+)
+ tests/generic/901     | 73 +++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/901.out | 14 +++++++++
+ tests/generic/group   |  1 +
+ 3 files changed, 88 insertions(+)
+ create mode 100755 tests/generic/901
+ create mode 100644 tests/generic/901.out
 
-diff --git a/io/encrypt.c b/io/encrypt.c
-index 056f15bc..e87ac393 100644
---- a/io/encrypt.c
-+++ b/io/encrypt.c
-@@ -150,6 +150,7 @@ static const struct {
- static cmdinfo_t get_encpolicy_cmd;
- static cmdinfo_t set_encpolicy_cmd;
- static cmdinfo_t add_enckey_cmd;
-+static cmdinfo_t rm_enckey_cmd;
- 
- static void
- get_encpolicy_help(void)
-@@ -220,6 +221,21 @@ add_enckey_help(void)
- "\n"));
- }
- 
-+static void
-+rm_enckey_help(void)
+diff --git a/tests/generic/901 b/tests/generic/901
+new file mode 100755
+index 00000000..56dab587
+--- /dev/null
++++ b/tests/generic/901
+@@ -0,0 +1,73 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2018 Google LLC
++#
++# FS QA Test generic/901
++#
++# Test access controls on the fs-verity ioctls.  FS_IOC_MEASURE_VERITY is
++# allowed on any file, whereas FS_IOC_ENABLE_VERITY requires write access.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
 +{
-+	printf(_(
-+"\n"
-+" remove an encryption key from the filesystem\n"
-+"\n"
-+" Examples:\n"
-+" 'rm_enckey 0000111122223333' - remove key for v1 policies w/ given descriptor\n"
-+" 'rm_enckey 00001111222233334444555566667777' - remove key for v2 policies w/ given identifier\n"
-+"\n"
-+" -a -- remove key for all users who have added it (privileged operation)\n"
-+"\n"));
++	cd /
++	rm -f $tmp.*
 +}
 +
- static bool
- parse_byte_value(const char *arg, __u8 *value_ret)
- {
-@@ -705,6 +721,54 @@ out:
- 	return 0;
- }
- 
-+static int
-+rm_enckey_f(int argc, char **argv)
-+{
-+	int c;
-+	struct fscrypt_remove_key_arg arg;
-+	int ioc = FS_IOC_REMOVE_ENCRYPTION_KEY;
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/verity
 +
-+	memset(&arg, 0, sizeof(arg));
++# remove previous $seqres.full before test
++rm -f $seqres.full
 +
-+	while ((c = getopt(argc, argv, "a")) != EOF) {
-+		switch (c) {
-+		case 'a':
-+			ioc = FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS;
-+			break;
-+		default:
-+			return command_usage(&rm_enckey_cmd);
-+		}
-+	}
-+	argc -= optind;
-+	argv += optind;
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_scratch_verity
++_require_user
++_require_chattr ia
 +
-+	if (argc != 1)
-+		return command_usage(&rm_enckey_cmd);
++_scratch_mkfs_verity &>> $seqres.full
++_scratch_mount
++fsv_file=$SCRATCH_MNT/file.fsv
 +
-+	if (str2keyspec(argv[0], -1, &arg.key_spec) < 0)
-+		return 0;
++_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY doesn't require root"
++echo foo > $fsv_file
++chmod 666 $fsv_file
++_user_do "$FSVERITY_PROG enable $fsv_file"
 +
-+	if (ioctl(file->fd, ioc, &arg) != 0) {
-+		fprintf(stderr, _("Error removing encryption key: %s\n"),
-+			strerror(errno));
-+		exitcode = 1;
-+		return 0;
-+	}
-+	if (arg.removal_status_flags &
-+	    FSCRYPT_KEY_REMOVAL_STATUS_FLAG_OTHER_USERS) {
-+		printf(_("Removed user's claim to encryption key with %s %s\n"),
-+		       keyspectype(&arg.key_spec), keyspec2str(&arg.key_spec));
-+	} else if (arg.removal_status_flags &
-+		   FSCRYPT_KEY_REMOVAL_STATUS_FLAG_FILES_BUSY) {
-+		printf(_("Removed encryption key with %s %s, but files still busy\n"),
-+		       keyspectype(&arg.key_spec), keyspec2str(&arg.key_spec));
-+	} else {
-+		printf(_("Removed encryption key with %s %s\n"),
-+		       keyspectype(&arg.key_spec), keyspec2str(&arg.key_spec));
-+	}
-+	return 0;
-+}
++_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires write access"
++echo foo > $fsv_file >> $seqres.full
++chmod 444 $fsv_file
++_user_do "$FSVERITY_PROG enable $fsv_file" |& _filter_scratch
 +
- void
- encrypt_init(void)
- {
-@@ -738,7 +802,18 @@ encrypt_init(void)
- 	add_enckey_cmd.oneline = _("add an encryption key to the filesystem");
- 	add_enckey_cmd.help = add_enckey_help;
- 
-+	rm_enckey_cmd.name = "rm_enckey";
-+	rm_enckey_cmd.cfunc = rm_enckey_f;
-+	rm_enckey_cmd.args = _("[-a] keyspec");
-+	rm_enckey_cmd.argmin = 0;
-+	rm_enckey_cmd.argmax = -1;
-+	rm_enckey_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
-+	rm_enckey_cmd.oneline =
-+		_("remove an encryption key from the filesystem");
-+	rm_enckey_cmd.help = rm_enckey_help;
++_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires !append-only"
++echo foo > $fsv_file >> $seqres.full
++$CHATTR_PROG +a $fsv_file
++$FSVERITY_PROG enable $fsv_file |& _filter_scratch
++$CHATTR_PROG -a $fsv_file
 +
- 	add_command(&get_encpolicy_cmd);
- 	add_command(&set_encpolicy_cmd);
- 	add_command(&add_enckey_cmd);
-+	add_command(&rm_enckey_cmd);
- }
-diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
-index 7d6a23fe..be90905a 100644
---- a/man/man8/xfs_io.8
-+++ b/man/man8/xfs_io.8
-@@ -764,6 +764,21 @@ Otherwise, the key is added as a v2 policy key, and on success the resulting
- .RE
- .PD
- .TP
-+.BI "rm_enckey [ -a ] " keyspec
-+On filesystems that support encryption, remove an encryption key from the
-+filesystem containing the currently open file.
-+.I keyspec
-+is a hex string specifying the key to remove, as a 16-character "key descriptor"
-+or a 32-character "key identifier".
-+.RS 1.0i
-+.PD 0
-+.TP 0.4i
-+.BI \-a
-+Remove the key for all users who have added it, not just the current user.  This
-+is a privileged operation.
-+.RE
-+.PD
-+.TP
- .BR lsattr " [ " \-R " | " \-D " | " \-a " | " \-v " ]"
- List extended inode flags on the currently open file. If the
- .B \-R
++_fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires !immutable"
++echo foo > $fsv_file >> $seqres.full
++$CHATTR_PROG +i $fsv_file
++$FSVERITY_PROG enable $fsv_file |& _filter_scratch
++$CHATTR_PROG -i $fsv_file
++
++_fsv_scratch_begin_subtest "FS_IOC_MEASURE_VERITY doesn't require root"
++_fsv_create_enable_file $fsv_file >> $seqres.full
++chmod 444 $fsv_file
++su $qa_user -c "$FSVERITY_PROG measure $fsv_file" >> $seqres.full
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/901.out b/tests/generic/901.out
+new file mode 100644
+index 00000000..a9e4c364
+--- /dev/null
++++ b/tests/generic/901.out
+@@ -0,0 +1,14 @@
++QA output created by 901
++
++# FS_IOC_ENABLE_VERITY doesn't require root
++
++# FS_IOC_ENABLE_VERITY requires write access
++Permission denied
++
++# FS_IOC_ENABLE_VERITY requires !append-only
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Operation not permitted
++
++# FS_IOC_ENABLE_VERITY requires !immutable
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Operation not permitted
++
++# FS_IOC_MEASURE_VERITY doesn't require root
+diff --git a/tests/generic/group b/tests/generic/group
+index 8c5212a1..a0450d42 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -571,3 +571,4 @@
+ 566 auto quick quota metadata
+ 567 auto quick rw punch
+ 900 auto quick verity
++901 auto quick verity
 -- 
 2.23.0.444.g18eeb5a265-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
