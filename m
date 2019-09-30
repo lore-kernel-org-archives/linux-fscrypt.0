@@ -1,73 +1,279 @@
-Return-Path: <SRS0=mAtp=XF=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH RESEND V5 1/7] buffer_head: Introduce BH_Read_Cb flag
-Date: Tue, 10 Sep 2019 21:21:09 +0530
-Message-Id: <20190910155115.28550-2-chandan@linux.ibm.com>
-In-Reply-To: <20190910155115.28550-1-chandan@linux.ibm.com>
-References: <20190910155115.28550-1-chandan@linux.ibm.com>
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
+From: Eric Biggers <ebiggers@kernel.org>
+Date: Mon, 30 Sep 2019 14:15:47 -0700
+Message-Id: <20190930211553.64208-3-ebiggers@kernel.org>
+In-Reply-To: <20190930211553.64208-1-ebiggers@kernel.org>
+References: <20190930211553.64208-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-To: viro@zeniv.linux.org.uk, linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc: Chandan Rajendra <chandan@linux.ibm.com>, tytso@mit.edu, adilger.kernel@dilger.ca, ebiggers@kernel.org, hch@infradead.org, chandanrlinux@gmail.com
+Subject: [f2fs-dev] [PATCH v4 2/8] common/verity: add common functions for
+ testing fs-verity
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: fstests@vger.kernel.org
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Decryption of file content encrypted using fscrypt relies on
-bio->bi_private holding a pointer to an encryption context
-i.e. Decryption operation is not performed for bios having a NULL value
-at bio->bi_private.
+From: Eric Biggers <ebiggers@google.com>
 
-The same logic cannot be used on buffer heads because,
-1. In Btrfs, write_dev_supers() sets bh->b_private to 'struct
-   btrfs_device' pointer and submits the buffer head for a write
-   operation.
-   1. In btrfs/146 test, the write operation fails and hence the
-      endio function clears the BH_Uptodate flag.
-   2. A read operation initiated later will submit the buffer head to
-      the block layer. During endio processing, bh_>b_private would have a
-      non-NULL value.
+Add common functions for setting up and testing fs-verity.  fs-verity is
+an ext4 and f2fs filesystem feature which provides Merkle tree based
+hashing (similar to dm-verity) for individual read-only files, mainly
+for the purpose of efficient authenticity verification.  Other
+filesystems may add fs-verity support later, using the same API.
 
-2. Another instance is when an Ext4 metadata block with BH_Uptodate set and
-   also part of the in-memory JBD list undergoes the following,
-   1. A sync() syscall is invoked by the userspace and the write
-      operation on the metadata block is initiated.
-   2. Due to an I/O failure, the BH_Uptodate flag is cleared by
-      end_buffer_async_write(). The bh->b_private member would be
-      pointing to a journal head structure.
-   3. In such a case, a read operation invoked on the block mapped by the
-      buffer head will initiate a read from the disk since the buffer head is
-      missing the BH_Uptodate flag.
-   4. After the read I/O request is submitted, end_buffer_async_read()
-      will find a non-NULL value at bh->b_private.
-   This scenario was observed when executing generic/475 test case.
+Running the fs-verity tests will require:
 
-Hence this commit introduces a new buffer head flag to reliably check for
-decryption of a buffer head's contents after the block has been read
-from the disk.
+- Kernel v5.4-rc1 or later configured with CONFIG_FS_VERITY=y
 
-Signed-off-by: Chandan Rajendra <chandan@linux.ibm.com>
+- The 'fsverity' utility program from
+  https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/fsverity-utils.git
+
+- e2fsprogs v1.45.2 or later for ext4 tests, or f2fs-tools v1.11.0 or
+  later for f2fs tests
+
+Some individual tests will have additional requirements.
+
+For more information about fs-verity, see
+https://www.kernel.org/doc/html/latest/filesystems/fsverity.html
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- include/linux/buffer_head.h | 2 ++
- 1 file changed, 2 insertions(+)
+ common/config |   1 +
+ common/verity | 199 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 200 insertions(+)
+ create mode 100644 common/verity
 
-diff --git a/include/linux/buffer_head.h b/include/linux/buffer_head.h
-index 7b73ef7f902d..08f217ba8114 100644
---- a/include/linux/buffer_head.h
-+++ b/include/linux/buffer_head.h
-@@ -38,6 +38,7 @@ enum bh_state_bits {
- 	BH_Meta,	/* Buffer contains metadata */
- 	BH_Prio,	/* Buffer should be submitted with REQ_PRIO */
- 	BH_Defer_Completion, /* Defer AIO completion to workqueue */
-+	BH_Read_Cb,	     /* Block's contents needs to be decrypted */
+diff --git a/common/config b/common/config
+index 4c86a492..fb4097b8 100644
+--- a/common/config
++++ b/common/config
+@@ -213,6 +213,7 @@ export CHECKBASHISMS_PROG="$(type -P checkbashisms)"
+ export XFS_INFO_PROG="$(type -P xfs_info)"
+ export DUPEREMOVE_PROG="$(type -P duperemove)"
+ export CC_PROG="$(type -P cc)"
++export FSVERITY_PROG="$(type -P fsverity)"
  
- 	BH_PrivateStart,/* not a state bit, but the first bit available
- 			 * for private allocation by other entities
-@@ -134,6 +135,7 @@ BUFFER_FNS(Unwritten, unwritten)
- BUFFER_FNS(Meta, meta)
- BUFFER_FNS(Prio, prio)
- BUFFER_FNS(Defer_Completion, defer_completion)
-+BUFFER_FNS(Read_Cb, read_cb)
- 
- #define bh_offset(bh)		((unsigned long)(bh)->b_data & ~PAGE_MASK)
- 
+ # use 'udevadm settle' or 'udevsettle' to wait for lv to be settled.
+ # newer systems have udevadm command but older systems like RHEL5 don't.
+diff --git a/common/verity b/common/verity
+new file mode 100644
+index 00000000..a8aae51e
+--- /dev/null
++++ b/common/verity
+@@ -0,0 +1,199 @@
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2018 Google LLC
++#
++# Functions for setting up and testing fs-verity
++
++_require_scratch_verity()
++{
++	_require_scratch
++	_require_command "$FSVERITY_PROG" fsverity
++
++	if ! _scratch_mkfs_verity &>>$seqres.full; then
++		# ext4: need e2fsprogs v1.44.5 or later (but actually v1.45.2+
++		#       is needed for some tests to pass, due to an e2fsck bug)
++		# f2fs: need f2fs-tools v1.11.0 or later
++		_notrun "$FSTYP userspace tools don't support fs-verity"
++	fi
++
++	# Try to mount the filesystem.  If this fails then either the kernel
++	# isn't aware of fs-verity, or the mkfs options were not compatible with
++	# verity (e.g. ext4 with block size != PAGE_SIZE).
++	if ! _try_scratch_mount &>>$seqres.full; then
++		_notrun "kernel is unaware of $FSTYP verity feature," \
++			"or mkfs options are not compatible with verity"
++	fi
++
++	# The filesystem may be aware of fs-verity but have it disabled by
++	# CONFIG_FS_VERITY=n.  Detect support via sysfs.
++	if [ ! -e /sys/fs/$FSTYP/features/verity ]; then
++		_notrun "kernel $FSTYP isn't configured with verity support"
++	fi
++
++	# The filesystem may have fs-verity enabled but not actually usable by
++	# default.  E.g., ext4 only supports verity on extent-based files, so it
++	# doesn't work on ext3-style filesystems.  So, try actually using it.
++	echo foo > $SCRATCH_MNT/tmpfile
++	if ! _fsv_enable $SCRATCH_MNT/tmpfile; then
++		_notrun "$FSTYP verity isn't usable by default with these mkfs options"
++	fi
++	rm -f $SCRATCH_MNT/tmpfile
++
++	_scratch_unmount
++
++	# Merkle tree block size.  Currently all filesystems only support
++	# PAGE_SIZE for this.  This is also the default for 'fsverity enable'.
++	FSV_BLOCK_SIZE=$(get_page_size)
++}
++
++_scratch_mkfs_verity()
++{
++	case $FSTYP in
++	ext4|f2fs)
++		_scratch_mkfs -O verity
++		;;
++	*)
++		_notrun "No verity support for $FSTYP"
++		;;
++	esac
++}
++
++_scratch_mkfs_encrypted_verity()
++{
++	case $FSTYP in
++	ext4)
++		_scratch_mkfs -O encrypt,verity
++		;;
++	f2fs)
++		# f2fs-tools as of v1.11.0 doesn't allow comma-separated
++		# features with -O.  Instead -O must be supplied multiple times.
++		_scratch_mkfs -O encrypt -O verity
++		;;
++	*)
++		_notrun "$FSTYP not supported in _scratch_mkfs_encrypted_verity"
++		;;
++	esac
++}
++
++_fsv_scratch_begin_subtest()
++{
++	local msg=$1
++
++	rm -rf "${SCRATCH_MNT:?}"/*
++	echo -e "\n# $msg"
++}
++
++_fsv_enable()
++{
++	$FSVERITY_PROG enable "$@"
++}
++
++_fsv_measure()
++{
++        $FSVERITY_PROG measure "$@" | awk '{print $1}'
++}
++
++# Generate a file, then enable verity on it.
++_fsv_create_enable_file()
++{
++	local file=$1
++	shift
++
++	head -c $((FSV_BLOCK_SIZE * 2)) /dev/zero > "$file"
++	_fsv_enable "$file" "$@"
++}
++
++_fsv_have_hash_algorithm()
++{
++	local hash_alg=$1
++	local test_file=$2
++
++	rm -f $test_file
++	head -c 4096 /dev/zero > $test_file
++	if ! _fsv_enable --hash-alg=$hash_alg $test_file &>> $seqres.full; then
++		# no kernel support
++		return 1
++	fi
++	rm -f $test_file
++	return 0
++}
++
++#
++# _fsv_scratch_corrupt_bytes - Write some bytes to a file, bypassing the filesystem
++#
++# Write the bytes sent on stdin to the given offset in the given file, but do so
++# by writing directly to the extents on the block device, with the filesystem
++# unmounted.  This can be used to corrupt a verity file for testing purposes,
++# bypassing the restrictions imposed by the filesystem.
++#
++# The file is assumed to be located on $SCRATCH_DEV.
++#
++_fsv_scratch_corrupt_bytes()
++{
++	local file=$1
++	local offset=$2
++	local lstart lend pstart pend
++	local dd_cmds=()
++	local cmd
++
++	sync	# Sync to avoid unwritten extents
++
++	cat > $tmp.bytes
++	local end=$(( offset + $(stat -c %s $tmp.bytes ) ))
++
++	# For each extent that intersects the requested range in order, add a
++	# command that writes the next part of the data to that extent.
++	while read -r lstart lend pstart pend; do
++		lstart=$((lstart * 512))
++		lend=$(((lend + 1) * 512))
++		pstart=$((pstart * 512))
++		pend=$(((pend + 1) * 512))
++
++		if (( lend - lstart != pend - pstart )); then
++			_fail "Logical and physical extent lengths differ for file '$file'"
++		elif (( offset < lstart )); then
++			_fail "Hole in file '$file' at byte $offset.  Next extent begins at byte $lstart"
++		elif (( offset < lend )); then
++			local len=$((lend - offset))
++			local seek=$((pstart + (offset - lstart)))
++			dd_cmds+=("head -c $len | dd of=$SCRATCH_DEV oflag=seek_bytes seek=$seek status=none")
++			(( offset += len ))
++		fi
++	done < <($XFS_IO_PROG -r -c "fiemap $offset $((end - offset))" "$file" \
++		 | _filter_xfs_io_fiemap)
++
++	if (( offset < end )); then
++		_fail "Extents of file '$file' ended at byte $offset, but needed until $end"
++	fi
++
++	# Execute the commands to write the data
++	_scratch_unmount
++	for cmd in "${dd_cmds[@]}"; do
++		eval "$cmd"
++	done < $tmp.bytes
++	sync	# Sync to flush the block device's pagecache
++	_scratch_mount
++}
++
++#
++# _fsv_scratch_corrupt_merkle_tree - Corrupt a file's Merkle tree
++#
++# Like _fsv_scratch_corrupt_bytes(), but this corrupts the file's fs-verity
++# Merkle tree.  The offset is given as a byte offset into the Merkle tree.
++#
++_fsv_scratch_corrupt_merkle_tree()
++{
++	local file=$1
++	local offset=$2
++
++	case $FSTYP in
++	ext4|f2fs)
++		# ext4 and f2fs store the Merkle tree after the file contents
++		# itself, starting at the next 65536-byte aligned boundary.
++		(( offset += ($(stat -c %s $file) + 65535) & ~65535 ))
++		_fsv_scratch_corrupt_bytes $file $offset
++		;;
++	*)
++		_fail "_fsv_scratch_corrupt_merkle_tree() unimplemented on $FSTYP"
++		;;
++	esac
++}
 -- 
-2.19.1
+2.23.0.444.g18eeb5a265-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
