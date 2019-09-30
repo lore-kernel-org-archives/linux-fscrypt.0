@@ -1,252 +1,344 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:49218 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726762AbfI1ADp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 27 Sep 2019 20:03:45 -0400
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v3 2/9] xfs_io/encrypt: update to UAPI definitions from Linux v5.4
-Date: Fri, 27 Sep 2019 17:02:36 -0700
-Message-Id: <20190928000243.77634-3-ebiggers@kernel.org>
-In-Reply-To: <20190928000243.77634-1-ebiggers@kernel.org>
-References: <20190928000243.77634-1-ebiggers@kernel.org>
+Date: Mon, 30 Sep 2019 14:15:48 -0700
+Message-Id: <20190930211553.64208-4-ebiggers@kernel.org>
+In-Reply-To: <20190930211553.64208-1-ebiggers@kernel.org>
+References: <20190930211553.64208-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-xfs@vger.kernel.org
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Subject: [f2fs-dev] [PATCH v4 3/8] generic: test general behavior of verity
+ files
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
+To: fstests@vger.kernel.org
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Update to the latest fscrypt UAPI definitions, including:
+This is a basic fs-verity test which verifies:
 
-- New names for some existing definitions (FSCRYPT_ instead of FS_).
-- New ioctls.
-- New encryption mode numbers and flags.
-
-This patch doesn't make any change to the program logic itself.
+- conditions for enabling verity
+- verity files have expected contents and size
+- can't change contents of verity files, but can change metadata
+- can retrieve a verity file's measurement via FS_IOC_MEASURE_VERITY
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- io/encrypt.c | 160 +++++++++++++++++++++++++++++++++++++++------------
- 1 file changed, 122 insertions(+), 38 deletions(-)
+ tests/generic/900     | 199 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/900.out |  74 ++++++++++++++++
+ tests/generic/group   |   1 +
+ 3 files changed, 274 insertions(+)
+ create mode 100755 tests/generic/900
+ create mode 100644 tests/generic/900.out
 
-diff --git a/io/encrypt.c b/io/encrypt.c
-index 70c9e5eb..011a6410 100644
---- a/io/encrypt.c
-+++ b/io/encrypt.c
-@@ -15,42 +15,126 @@
- #endif
- 
- /*
-- * We may have to declare the fscrypt ioctls ourselves because someone may be
-- * compiling xfsprogs with old kernel headers.  And since some old versions of
-- * <linux/fs.h> declared the policy struct and ioctl numbers but not the flags
-- * and modes, our declarations must be split into two conditional blocks.
-+ * Declare the fscrypt ioctls if needed, since someone may be compiling xfsprogs
-+ * with old kernel headers.  But <linux/fs.h> has already been included, so be
-+ * careful not to declare things twice.
-  */
- 
--/* Policy struct and ioctl numbers */
-+/* first batch of ioctls (Linux headers v4.6+) */
- #ifndef FS_IOC_SET_ENCRYPTION_POLICY
--#define FS_KEY_DESCRIPTOR_SIZE  8
-+#define fscrypt_policy fscrypt_policy_v1
-+#define FS_IOC_SET_ENCRYPTION_POLICY		_IOR('f', 19, struct fscrypt_policy)
-+#define FS_IOC_GET_ENCRYPTION_PWSALT		_IOW('f', 20, __u8[16])
-+#define FS_IOC_GET_ENCRYPTION_POLICY		_IOW('f', 21, struct fscrypt_policy)
-+#endif
+diff --git a/tests/generic/900 b/tests/generic/900
+new file mode 100755
+index 00000000..04cbcfdf
+--- /dev/null
++++ b/tests/generic/900
+@@ -0,0 +1,199 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2018 Google LLC
++#
++# FS QA Test generic/900
++#
++# This is a basic fs-verity test which verifies:
++#
++# - conditions for enabling verity
++# - verity files have correct contents and size
++# - can't change contents of verity files, but can change metadata
++# - can retrieve a verity file's measurement via FS_IOC_MEASURE_VERITY
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
 +
-+/*
-+ * Second batch of ioctls (Linux headers v5.4+), plus some renamings from FS_ to
-+ * FSCRYPT_.  We don't bother defining the old names here.
-+ */
-+#ifndef FS_IOC_GET_ENCRYPTION_POLICY_EX
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
 +
-+#define FSCRYPT_POLICY_FLAGS_PAD_4		0x00
-+#define FSCRYPT_POLICY_FLAGS_PAD_8		0x01
-+#define FSCRYPT_POLICY_FLAGS_PAD_16		0x02
-+#define FSCRYPT_POLICY_FLAGS_PAD_32		0x03
-+#define FSCRYPT_POLICY_FLAGS_PAD_MASK		0x03
-+#define FSCRYPT_POLICY_FLAG_DIRECT_KEY		0x04
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
 +
-+#define FSCRYPT_MODE_AES_256_XTS		1
-+#define FSCRYPT_MODE_AES_256_CTS		4
-+#define FSCRYPT_MODE_AES_128_CBC		5
-+#define FSCRYPT_MODE_AES_128_CTS		6
-+#define FSCRYPT_MODE_ADIANTUM			9
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/verity
 +
-+/*
-+ * In the headers for Linux v4.6 through v5.3, 'struct fscrypt_policy_v1' is
-+ * already defined under its old name, 'struct fscrypt_policy'.  But it's fine
-+ * to define it under its new name too.
-+ *
-+ * Note: "v1" policies really are version "0" in the API.
-+ */
-+#define FSCRYPT_POLICY_V1		0
-+#define FSCRYPT_KEY_DESCRIPTOR_SIZE	8
-+struct fscrypt_policy_v1 {
-+	__u8 version;
-+	__u8 contents_encryption_mode;
-+	__u8 filenames_encryption_mode;
-+	__u8 flags;
-+	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-+};
- 
--struct fscrypt_policy {
-+#define FSCRYPT_POLICY_V2		2
-+#define FSCRYPT_KEY_IDENTIFIER_SIZE	16
-+struct fscrypt_policy_v2 {
- 	__u8 version;
- 	__u8 contents_encryption_mode;
- 	__u8 filenames_encryption_mode;
- 	__u8 flags;
--	__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
--} __attribute__((packed));
--
--#define FS_IOC_SET_ENCRYPTION_POLICY	_IOR('f', 19, struct fscrypt_policy)
--#define FS_IOC_GET_ENCRYPTION_PWSALT	_IOW('f', 20, __u8[16])
--#define FS_IOC_GET_ENCRYPTION_POLICY	_IOW('f', 21, struct fscrypt_policy)
--#endif /* FS_IOC_SET_ENCRYPTION_POLICY */
--
--/* Policy flags and encryption modes */
--#ifndef FS_ENCRYPTION_MODE_AES_256_XTS
--#define FS_POLICY_FLAGS_PAD_4		0x00
--#define FS_POLICY_FLAGS_PAD_8		0x01
--#define FS_POLICY_FLAGS_PAD_16		0x02
--#define FS_POLICY_FLAGS_PAD_32		0x03
--#define FS_POLICY_FLAGS_PAD_MASK	0x03
--#define FS_POLICY_FLAGS_VALID		0x03
--
--#define FS_ENCRYPTION_MODE_INVALID	0
--#define FS_ENCRYPTION_MODE_AES_256_XTS	1
--#define FS_ENCRYPTION_MODE_AES_256_CTS	4
--#endif /* FS_ENCRYPTION_MODE_AES_256_XTS */
-+	__u8 __reserved[4];
-+	__u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
-+};
++# remove previous $seqres.full before test
++rm -f $seqres.full
 +
-+#define FSCRYPT_MAX_KEY_SIZE		64
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_scratch_verity
 +
-+#define FS_IOC_GET_ENCRYPTION_POLICY_EX		_IOWR('f', 22, __u8[9]) /* size + version */
-+struct fscrypt_get_policy_ex_arg {
-+	__u64 policy_size; /* input/output */
-+	union {
-+		__u8 version;
-+		struct fscrypt_policy_v1 v1;
-+		struct fscrypt_policy_v2 v2;
-+	} policy; /* output */
-+};
++_scratch_mkfs_verity &>> $seqres.full
++_scratch_mount
++fsv_orig_file=$SCRATCH_MNT/file
++fsv_file=$SCRATCH_MNT/file.fsv
 +
-+#define FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR	1
-+#define FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER	2
-+struct fscrypt_key_specifier {
-+	__u32 type;	/* one of FSCRYPT_KEY_SPEC_TYPE_* */
-+	__u32 __reserved;
-+	union {
-+		__u8 __reserved[32]; /* reserve some extra space */
-+		__u8 descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
-+		__u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
-+	} u;
-+};
++verify_data_readable()
++{
++	local file=$1
 +
-+#define FS_IOC_ADD_ENCRYPTION_KEY		_IOWR('f', 23, struct fscrypt_add_key_arg)
-+struct fscrypt_add_key_arg {
-+	struct fscrypt_key_specifier key_spec;
-+	__u32 raw_size;
-+	__u32 __reserved[9];
-+	__u8 raw[];
-+};
++	md5sum $file > /dev/null
++}
 +
-+#define FS_IOC_REMOVE_ENCRYPTION_KEY		_IOWR('f', 24, struct fscrypt_remove_key_arg)
-+#define FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS	_IOWR('f', 25, struct fscrypt_remove_key_arg)
-+struct fscrypt_remove_key_arg {
-+	struct fscrypt_key_specifier key_spec;
-+#define FSCRYPT_KEY_REMOVAL_STATUS_FLAG_FILES_BUSY	0x00000001
-+#define FSCRYPT_KEY_REMOVAL_STATUS_FLAG_OTHER_USERS	0x00000002
-+	__u32 removal_status_flags;	/* output */
-+	__u32 __reserved[5];
-+};
++verify_data_unreadable()
++{
++	local file=$1
 +
-+#define FS_IOC_GET_ENCRYPTION_KEY_STATUS	_IOWR('f', 26, struct fscrypt_get_key_status_arg)
-+struct fscrypt_get_key_status_arg {
-+	/* input */
-+	struct fscrypt_key_specifier key_spec;
-+	__u32 __reserved[6];
++	# try both reading just the first data block, and reading until EOF
++	head -c $FSV_BLOCK_SIZE $file 2>&1 >/dev/null | _filter_scratch
++	md5sum $file |& _filter_scratch
++}
 +
-+	/* output */
-+#define FSCRYPT_KEY_STATUS_ABSENT		1
-+#define FSCRYPT_KEY_STATUS_PRESENT		2
-+#define FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED	3
-+	__u32 status;
-+#define FSCRYPT_KEY_STATUS_FLAG_ADDED_BY_SELF   0x00000001
-+	__u32 status_flags;
-+	__u32 user_count;
-+	__u32 __out_reserved[13];
-+};
++_fsv_scratch_begin_subtest "Enabling verity on file with verity already enabled fails with EEXIST"
++_fsv_create_enable_file $fsv_file
++echo "(trying again)"
++_fsv_enable $fsv_file |& _filter_scratch
 +
-+#endif /* !FS_IOC_GET_ENCRYPTION_POLICY_EX */
- 
- static cmdinfo_t get_encpolicy_cmd;
- static cmdinfo_t set_encpolicy_cmd;
-@@ -84,8 +168,8 @@ static const struct {
- 	__u8 mode;
- 	const char *name;
- } available_modes[] = {
--	{FS_ENCRYPTION_MODE_AES_256_XTS, "AES-256-XTS"},
--	{FS_ENCRYPTION_MODE_AES_256_CTS, "AES-256-CTS"},
-+	{FSCRYPT_MODE_AES_256_XTS, "AES-256-XTS"},
-+	{FSCRYPT_MODE_AES_256_CTS, "AES-256-CTS"},
- };
- 
- static bool
-@@ -131,12 +215,12 @@ mode2str(__u8 mode)
- }
- 
- static const char *
--keydesc2str(__u8 master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE])
-+keydesc2str(__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE])
- {
--	static char buf[2 * FS_KEY_DESCRIPTOR_SIZE + 1];
-+	static char buf[2 * FSCRYPT_KEY_DESCRIPTOR_SIZE + 1];
- 	int i;
- 
--	for (i = 0; i < FS_KEY_DESCRIPTOR_SIZE; i++)
-+	for (i = 0; i < FSCRYPT_KEY_DESCRIPTOR_SIZE; i++)
- 		sprintf(&buf[2 * i], "%02x", master_key_descriptor[i]);
- 
- 	return buf;
-@@ -176,9 +260,9 @@ set_encpolicy_f(int argc, char **argv)
- 
- 	/* Initialize the policy structure with default values */
- 	memset(&policy, 0, sizeof(policy));
--	policy.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
--	policy.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
--	policy.flags = FS_POLICY_FLAGS_PAD_16;
-+	policy.contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
-+	policy.filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
-+	policy.flags = FSCRYPT_POLICY_FLAGS_PAD_16;
- 
- 	/* Parse options */
- 	while ((c = getopt(argc, argv, "c:n:f:v:")) != EOF) {
-@@ -229,7 +313,7 @@ set_encpolicy_f(int argc, char **argv)
- 		unsigned long long x;
- 		int i;
- 
--		if (strlen(keydesc) != FS_KEY_DESCRIPTOR_SIZE * 2) {
-+		if (strlen(keydesc) != FSCRYPT_KEY_DESCRIPTOR_SIZE * 2) {
- 			fprintf(stderr, "invalid key descriptor: %s\n",
- 				keydesc);
- 			return 0;
-@@ -242,7 +326,7 @@ set_encpolicy_f(int argc, char **argv)
- 			return 0;
- 		}
- 
--		for (i = 0; i < FS_KEY_DESCRIPTOR_SIZE; i++) {
-+		for (i = 0; i < FSCRYPT_KEY_DESCRIPTOR_SIZE; i++) {
- 			policy.master_key_descriptor[i] = x >> 56;
- 			x <<= 8;
- 		}
++_fsv_scratch_begin_subtest "Enabling verity with invalid hash algorithm fails with EINVAL"
++_fsv_create_enable_file $fsv_file --hash-alg=257 |& _filter_scratch
++verify_data_readable $fsv_file
++
++_fsv_scratch_begin_subtest "Enabling verity with invalid block size fails with EINVAL"
++_fsv_create_enable_file $fsv_file --block-size=1 |& _filter_scratch
++verify_data_readable $fsv_file
++
++_fsv_scratch_begin_subtest "Enabling verity on directory fails with EISDIR"
++mkdir $SCRATCH_MNT/dir
++_fsv_enable $SCRATCH_MNT/dir |& _filter_scratch
++
++_fsv_scratch_begin_subtest "Enabling verity with too-long salt fails with EMSGSIZE"
++_fsv_create_enable_file $fsv_file --salt=$(perl -e 'print "A" x 1000') |& _filter_scratch
++verify_data_readable $fsv_file
++
++_fsv_scratch_begin_subtest "Enabling verity on file on read-only filesystem fails with EROFS"
++echo foo > $fsv_file
++_scratch_remount ro
++_fsv_enable $fsv_file |& _filter_scratch
++_scratch_remount rw
++
++_fsv_scratch_begin_subtest "Enabling verity on file open for writing fails with ETXTBSY"
++echo foo > $fsv_file
++exec 3<> $fsv_file
++_fsv_enable $fsv_file |& _filter_scratch
++exec 3<&-
++verify_data_readable $fsv_file
++
++_fsv_scratch_begin_subtest "Enabling verity can be interrupted"
++dd if=/dev/zero of=$fsv_file bs=1 count=0 seek=$((1 << 34)) status=none
++start_time=$(date +%s)
++$FSVERITY_PROG enable $fsv_file &
++sleep 0.5
++kill %1
++wait
++elapsed=$(( $(date +%s) - start_time ))
++if (( elapsed > 5 )); then
++	echo "Failed to interrupt FS_IOC_ENABLE_VERITY ($elapsed seconds elapsed)"
++fi
++
++_fsv_scratch_begin_subtest "Enabling verity on file with verity already being enabled fails with EBUSY"
++dd if=/dev/zero of=$fsv_file bs=1 count=0 seek=$((1 << 34)) status=none
++start_time=$(date +%s)
++$FSVERITY_PROG enable $fsv_file &
++sleep 0.5
++_fsv_enable $fsv_file |& _filter_scratch
++kill %1
++wait
++
++_fsv_scratch_begin_subtest "verity file can't be opened for writing"
++_fsv_create_enable_file $fsv_file >> $seqres.full
++echo "* reading"
++$XFS_IO_PROG -r $fsv_file -c ''
++echo "* xfs_io writing, should be O_RDWR"
++$XFS_IO_PROG $fsv_file -c '' |& _filter_scratch
++echo "* bash >>, should be O_APPEND"
++bash -c "echo >> $fsv_file" |& _filter_scratch
++echo "* bash >, should be O_WRONLY|O_CREAT|O_TRUNC"
++bash -c "echo > $fsv_file" |& _filter_scratch
++
++_fsv_scratch_begin_subtest "verity file can be read"
++_fsv_create_enable_file $fsv_file >> $seqres.full
++verify_data_readable $fsv_file
++
++_fsv_scratch_begin_subtest "verity file can be measured"
++_fsv_create_enable_file $fsv_file >> $seqres.full
++_fsv_measure $fsv_file
++
++_fsv_scratch_begin_subtest "verity file can be renamed"
++_fsv_create_enable_file $fsv_file
++mv $fsv_file $fsv_file.newname
++
++_fsv_scratch_begin_subtest "verity file can be unlinked"
++_fsv_create_enable_file $fsv_file
++rm $fsv_file
++
++_fsv_scratch_begin_subtest "verity file can be linked to"
++_fsv_create_enable_file $fsv_file
++ln $fsv_file $fsv_file.newname
++
++_fsv_scratch_begin_subtest "verity file can be chmodded"
++_fsv_create_enable_file $fsv_file
++chmod 777 $fsv_file
++chmod 444 $fsv_file
++
++_fsv_scratch_begin_subtest "verity file can be chowned"
++_fsv_create_enable_file $fsv_file
++chown 1:1 $fsv_file
++chown 0:0 $fsv_file
++
++_fsv_scratch_begin_subtest "verity file has correct contents and size"
++head -c 100000 /dev/urandom > $fsv_orig_file
++cp $fsv_orig_file $fsv_file
++_fsv_enable $fsv_file >> $seqres.full
++cmp $fsv_file $fsv_orig_file
++stat -c %s $fsv_file
++_scratch_cycle_mount
++cmp $fsv_file $fsv_orig_file
++stat -c %s $fsv_file
++
++_fsv_scratch_begin_subtest "Trying to measure non-verity file fails with ENODATA"
++echo foo > $fsv_file
++_fsv_measure $fsv_file |& _filter_scratch
++verify_data_readable $fsv_file
++
++# Test files <= 1 block in size.  These are a bit of a special case since there
++# are no hash blocks; the root hash is calculated directly over the data block.
++for size in 1 $((FSV_BLOCK_SIZE - 1)) $FSV_BLOCK_SIZE; do
++	_fsv_scratch_begin_subtest "verity on $size-byte file"
++	head -c $size /dev/urandom > $fsv_orig_file
++	cp $fsv_orig_file $fsv_file
++	_fsv_enable $fsv_file
++	cmp $fsv_orig_file $fsv_file && echo "Files matched"
++	rm -f $fsv_file
++done
++
++_fsv_scratch_begin_subtest "verity on 100M file (multiple levels in hash tree)"
++head -c 100000000 /dev/urandom > $fsv_orig_file
++cp $fsv_orig_file $fsv_file
++_fsv_enable $fsv_file
++cmp $fsv_orig_file $fsv_file && echo "Files matched"
++
++_fsv_scratch_begin_subtest "verity on sparse file"
++dd if=/dev/zero of=$fsv_orig_file bs=1 count=1 seek=1000000 status=none
++cp $fsv_orig_file $fsv_file
++_fsv_enable $fsv_file
++cmp $fsv_orig_file $fsv_file && echo "Files matched"
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/900.out b/tests/generic/900.out
+new file mode 100644
+index 00000000..93f91f27
+--- /dev/null
++++ b/tests/generic/900.out
+@@ -0,0 +1,74 @@
++QA output created by 900
++
++# Enabling verity on file with verity already enabled fails with EEXIST
++(trying again)
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': File exists
++
++# Enabling verity with invalid hash algorithm fails with EINVAL
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Invalid argument
++
++# Enabling verity with invalid block size fails with EINVAL
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Invalid argument
++
++# Enabling verity on directory fails with EISDIR
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/dir': Is a directory
++
++# Enabling verity with too-long salt fails with EMSGSIZE
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Message too long
++
++# Enabling verity on file on read-only filesystem fails with EROFS
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Read-only file system
++
++# Enabling verity on file open for writing fails with ETXTBSY
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Text file busy
++
++# Enabling verity can be interrupted
++
++# Enabling verity on file with verity already being enabled fails with EBUSY
++ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Device or resource busy
++
++# verity file can't be opened for writing
++* reading
++* xfs_io writing, should be O_RDWR
++SCRATCH_MNT/file.fsv: Operation not permitted
++* bash >>, should be O_APPEND
++bash: SCRATCH_MNT/file.fsv: Operation not permitted
++* bash >, should be O_WRONLY|O_CREAT|O_TRUNC
++bash: SCRATCH_MNT/file.fsv: Operation not permitted
++
++# verity file can be read
++
++# verity file can be measured
++sha256:be54121da3877f8852c65136d731784f134c4dd9d95071502e80d7be9f99b263
++
++# verity file can be renamed
++
++# verity file can be unlinked
++
++# verity file can be linked to
++
++# verity file can be chmodded
++
++# verity file can be chowned
++
++# verity file has correct contents and size
++100000
++100000
++
++# Trying to measure non-verity file fails with ENODATA
++ERROR: FS_IOC_MEASURE_VERITY failed on 'SCRATCH_MNT/file.fsv': No data available
++
++# verity on 1-byte file
++Files matched
++
++# verity on 4095-byte file
++Files matched
++
++# verity on 4096-byte file
++Files matched
++
++# verity on 100M file (multiple levels in hash tree)
++Files matched
++
++# verity on sparse file
++Files matched
+diff --git a/tests/generic/group b/tests/generic/group
+index 7cf4f6c4..8c5212a1 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -570,3 +570,4 @@
+ 565 auto quick copy_range
+ 566 auto quick quota metadata
+ 567 auto quick rw punch
++900 auto quick verity
 -- 
 2.23.0.444.g18eeb5a265-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
