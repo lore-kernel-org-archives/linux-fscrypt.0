@@ -1,51 +1,55 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:41826 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2393239AbfITAiF (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 19 Sep 2019 20:38:05 -0400
+Return-Path: <linux-f2fs-devel-bounces@lists.sourceforge.net>
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 9/9] generic: verify ciphertext of v2 encryption policies with Adiantum
-Date: Thu, 19 Sep 2019 17:37:53 -0700
-Message-Id: <20190920003753.40281-10-ebiggers@kernel.org>
-In-Reply-To: <20190920003753.40281-1-ebiggers@kernel.org>
-References: <20190920003753.40281-1-ebiggers@kernel.org>
+Date: Mon, 30 Sep 2019 14:15:51 -0700
+Message-Id: <20190930211553.64208-7-ebiggers@kernel.org>
+In-Reply-To: <20190930211553.64208-1-ebiggers@kernel.org>
+References: <20190930211553.64208-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
+Subject: [f2fs-dev] [PATCH v4 6/8] generic: test that fs-verity is using the
+ correct measurement values
+List-Unsubscribe: <https://lists.sourceforge.net/lists/options/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=unsubscribe>
+List-Archive: <http://sourceforge.net/mailarchive/forum.php?forum_name=linux-f2fs-devel>
+List-Post: <mailto:linux-f2fs-devel@lists.sourceforge.net>
+List-Help: <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=help>
+List-Subscribe: <https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel>,
+ <mailto:linux-f2fs-devel-request@lists.sourceforge.net?subject=subscribe>
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-f2fs-devel-bounces@lists.sourceforge.net
 To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org, "Theodore Y . Ts'o" <tytso@mit.edu>, linux-f2fs-devel@lists.sourceforge.net
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Verify ciphertext for v2 encryption policies that use Adiantum to
-encrypt file contents and file names.
+This test verifies that fs-verity is doing its Merkle tree-based hashing
+correctly, i.e. that it hasn't been broken by a change.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- tests/generic/804     | 45 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/804.out | 11 +++++++++++
- tests/generic/group   |  1 +
- 3 files changed, 57 insertions(+)
- create mode 100755 tests/generic/804
- create mode 100644 tests/generic/804.out
+ tests/generic/903     | 112 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/903.out |   5 ++
+ tests/generic/group   |   1 +
+ 3 files changed, 118 insertions(+)
+ create mode 100755 tests/generic/903
+ create mode 100644 tests/generic/903.out
 
-diff --git a/tests/generic/804 b/tests/generic/804
+diff --git a/tests/generic/903 b/tests/generic/903
 new file mode 100755
-index 00000000..72e7b025
+index 00000000..55f4a3ba
 --- /dev/null
-+++ b/tests/generic/804
-@@ -0,0 +1,45 @@
++++ b/tests/generic/903
+@@ -0,0 +1,112 @@
 +#! /bin/bash
 +# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
++# Copyright 2018 Google LLC
 +#
-+# FS QA Test generic/804
++# FS QA Test generic/903
 +#
-+# Verify ciphertext for v2 encryption policies that use Adiantum to encrypt file
-+# contents and file names.
-+#
-+# This is the same as generic/550, except using v2 policies.
++# Test that fs-verity is using the correct measurement values.  This test
++# verifies that fs-verity is doing its Merkle tree-based hashing correctly,
++# i.e. that it hasn't been broken by a change.
 +#
 +seq=`basename $0`
 +seqres=$RESULT_DIR/$seq
@@ -65,7 +69,7 @@ index 00000000..72e7b025
 +# get standard environment, filters and checks
 +. ./common/rc
 +. ./common/filter
-+. ./common/encrypt
++. ./common/verity
 +
 +# remove previous $seqres.full before test
 +rm -f $seqres.full
@@ -73,39 +77,108 @@ index 00000000..72e7b025
 +# real QA test starts here
 +_supported_fs generic
 +_supported_os Linux
++_require_scratch_verity
++if [ $FSV_BLOCK_SIZE != 4096 ]; then
++	_notrun "4096-byte verity block size not supported on this platform"
++fi
 +
-+# Test both with and without the DIRECT_KEY flag.
-+_verify_ciphertext_for_encryption_policy Adiantum Adiantum v2
-+_verify_ciphertext_for_encryption_policy Adiantum Adiantum v2 direct
++_scratch_mkfs_verity &>> $seqres.full
++_scratch_mount
++fsv_orig_file=$SCRATCH_MNT/file
++fsv_file=$SCRATCH_MNT/file.fsv
++
++algs=(sha256 sha512)
++
++# Try files with 0, 1, and multiple Merkle tree levels.
++file_sizes=(0 4096 65536 65536 100000000)
++
++# Try both unsalted and salted, and check that empty salt is the same as no salt
++salts=('' '' '' '--salt=' '--salt=f3c93fa6fb828c0e1587e5714ecf6f56')
++
++# The expected file measurements are here rather than in the expected output
++# file because not all hash algorithms may be available.
++sha256_vals=(
++sha256:3d248ca542a24fc62d1c43b916eae5016878e2533c88238480b26128a1f1af95
++sha256:babc284ee4ffe7f449377fbf6692715b43aec7bc39c094a95878904d34bac97e
++sha256:011e3f2b1dc89b75d78cddcc2a1b85cd8a64b2883e5f20f277ae4c0617e0404f
++sha256:011e3f2b1dc89b75d78cddcc2a1b85cd8a64b2883e5f20f277ae4c0617e0404f
++sha256:9d33cab743468fcbe4edab91a275b30dd543c12dd5e6ce6f2f737f66a1558f06
++)
++sha512_vals=(
++sha512:ccf9e5aea1c2a64efa2f2354a6024b90dffde6bbc017825045dce374474e13d10adb9dadcc6ca8e17a3c075fbd31336e8f266ae6fa93a6c3bed66f9e784e5abf
++sha512:928922686c4caf32175f5236a7f964e9925d10a74dc6d8344a8bd08b23c228ff5792573987d7895f628f39c4f4ebe39a7367d7aeb16aaa0cd324ac1d53664e61
++sha512:eab7224ce374a0a4babcb2db25e24836247f38b87806ad9be9e5ba4daac2f5b814fc0cbdfd9f1f8499b3c9a6c1b38fe08974cce49883ab4ccd04462fd2f9507f
++sha512:eab7224ce374a0a4babcb2db25e24836247f38b87806ad9be9e5ba4daac2f5b814fc0cbdfd9f1f8499b3c9a6c1b38fe08974cce49883ab4ccd04462fd2f9507f
++sha512:f7083a38644880d25539488313e9e5b41a4d431a0e383945129ad2c36e3c1d0f28928a424641bb1363c12b6e770578102566acea73baf1ce8ee15336f5ba2446
++)
++
++test_alg()
++{
++	local alg=$1
++	local -n vals=${alg}_vals
++	local i
++	local file_size
++	local expected actual salt_arg
++
++	_fsv_scratch_begin_subtest "Check for expected measurement values ($alg)"
++
++	if ! _fsv_have_hash_algorithm $alg $fsv_file; then
++		if [ "$alg" = sha256 ]; then
++			_fail "Something is wrong - sha256 hash should always be available"
++		fi
++		return 0
++	fi
++
++	for i in ${!file_sizes[@]}; do
++		file_size=${file_sizes[$i]}
++		expected=${vals[$i]}
++		salt_arg=${salts[$i]}
++
++		head -c $file_size /dev/zero > $fsv_orig_file
++		cp $fsv_orig_file $fsv_file
++		_fsv_enable --hash-alg=$alg $salt_arg $fsv_file
++		actual=$(_fsv_measure $fsv_file)
++		if [ "$actual" != "$expected" ]; then
++			echo "Mismatch: expected $expected, kernel calculated $actual (file_size=$file_size)"
++		fi
++		cmp $fsv_orig_file $fsv_file
++		rm -f $fsv_file
++	done
++}
++
++for alg in ${algs[@]}; do
++	test_alg $alg
++done
 +
 +# success, all done
 +status=0
 +exit
-diff --git a/tests/generic/804.out b/tests/generic/804.out
+diff --git a/tests/generic/903.out b/tests/generic/903.out
 new file mode 100644
-index 00000000..726376b2
+index 00000000..02508828
 --- /dev/null
-+++ b/tests/generic/804.out
-@@ -0,0 +1,11 @@
-+QA output created by 804
++++ b/tests/generic/903.out
+@@ -0,0 +1,5 @@
++QA output created by 903
 +
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: Adiantum
-+	filenames_encryption_mode: Adiantum
-+	options: v2
++# Check for expected measurement values (sha256)
 +
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: Adiantum
-+	filenames_encryption_mode: Adiantum
-+	options: v2 direct
++# Check for expected measurement values (sha512)
 diff --git a/tests/generic/group b/tests/generic/group
-index 08a79b21..94838ab5 100644
+index 22df626f..864bab46 100644
 --- a/tests/generic/group
 +++ b/tests/generic/group
-@@ -574,3 +574,4 @@
- 801 auto quick encrypt
- 802 auto quick encrypt
- 803 auto quick encrypt
-+804 auto quick encrypt
+@@ -573,3 +573,4 @@
+ 900 auto quick verity
+ 901 auto quick verity
+ 902 auto quick verity
++903 auto quick verity
 -- 
-2.23.0.351.gc4317032e6-goog
+2.23.0.444.g18eeb5a265-goog
+
+
+
+_______________________________________________
+Linux-f2fs-devel mailing list
+Linux-f2fs-devel@lists.sourceforge.net
+https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
