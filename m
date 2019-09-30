@@ -1,53 +1,51 @@
-Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:35306 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2391401AbfITAUH (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 19 Sep 2019 20:20:07 -0400
-From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 3/8] xfs_io/encrypt: add new encryption modes
-Date: Thu, 19 Sep 2019 17:18:17 -0700
-Message-Id: <20190920001822.257411-4-ebiggers@kernel.org>
-In-Reply-To: <20190920001822.257411-1-ebiggers@kernel.org>
-References: <20190920001822.257411-1-ebiggers@kernel.org>
+Return-Path: <SRS0=XJak=XZ=sandeen.net=sandeen@kernel.org>
+Subject: Re: [PATCH v3 0/9] xfsprogs: support fscrypt API additions in xfs_io
+References: <20190928000243.77634-1-ebiggers@kernel.org>
+From: Eric Sandeen <sandeen@sandeen.net>
+Message-ID: <70b5c936-7dfc-9296-63f2-47d31b32815e@sandeen.net>
+Date: Mon, 30 Sep 2019 14:29:28 -0500
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-xfs@vger.kernel.org
+In-Reply-To: <20190928000243.77634-1-ebiggers@kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+To: Eric Biggers <ebiggers@kernel.org>, linux-xfs@vger.kernel.org
 Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
 
-Add new encryption modes: AES-128-CBC and AES-128-CTS (supported since
-Linux v4.11), and Adiantum (supported since Linux v5.0).
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- io/encrypt.c | 5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+On 9/27/19 7:02 PM, Eric Biggers wrote:
+> Hello,
+> 
+> This patchset updates xfs_io to support the new fscrypt ioctls that were
+> merged for 5.4 (https://git.kernel.org/torvalds/c/734d1ed83e1f9b7b).
+> 
+> New commands are added to wrap the new ioctls to manage filesystem
+> encryption keys: 'add_enckey', 'rm_enckey', and 'enckey_status'.  Also,
+> the existing 'get_encpolicy' and 'set_encpolicy' commands are updated to
+> support getting/setting v2 encryption policies.
+> 
+> The purpose of all this is to allow xfstests to test these new APIs.
+> 
+> Note: currently only ext4, f2fs, and ubifs support encryption.  But I
+> was told previously that since the fscrypt API is generic and may be
+> supported by XFS in the future, the command-line wrappers for the
+> fscrypt ioctls should be in xfs_io rather than in xfstests directly
+> (https://marc.info/?l=fstests&m=147976255831951&w=2).
+> 
+> This patchset applies to the latest "for-next" branch of xfsprogs
+> (commit ac8b6c380865).  It can also be retrieved from tag
+> "fscrypt-key-mgmt-improvements_2019-09-27" of
+> https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfsprogs-dev.git
+> 
+> Changes v2 => v3:
+> - Generate the encryption modes for 'help set_encpolicy'.
+> - Mention '-a' in all relevant places in the help for rm_enckey.
+> - Mark strings for translation.
 
-diff --git a/io/encrypt.c b/io/encrypt.c
-index 011a6410..f5046e5b 100644
---- a/io/encrypt.c
-+++ b/io/encrypt.c
-@@ -156,7 +156,7 @@ set_encpolicy_help(void)
- " -v VERSION -- version of policy structure\n"
- "\n"
- " MODE can be numeric or one of the following predefined values:\n"
--"    AES-256-XTS, AES-256-CTS\n"
-+"    AES-256-XTS, AES-256-CTS, AES-128-CBC, AES-128-CTS, Adiantum\n"
- " FLAGS and VERSION must be numeric.\n"
- "\n"
- " Note that it's only possible to set an encryption policy on an empty\n"
-@@ -170,6 +170,9 @@ static const struct {
- } available_modes[] = {
- 	{FSCRYPT_MODE_AES_256_XTS, "AES-256-XTS"},
- 	{FSCRYPT_MODE_AES_256_CTS, "AES-256-CTS"},
-+	{FSCRYPT_MODE_AES_128_CBC, "AES-128-CBC"},
-+	{FSCRYPT_MODE_AES_128_CTS, "AES-128-CTS"},
-+	{FSCRYPT_MODE_ADIANTUM, "Adiantum"},
- };
- 
- static bool
--- 
-2.23.0.351.gc4317032e6-goog
+Thanks for the updates.
+
+For the whole series,
+
+Reviewed-by: Eric Sandeen <sandeen@redhat.com>
