@@ -1,71 +1,174 @@
-Return-Path: <linux-ext4-owner@vger.kernel.org>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:38458 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1730859AbfJNWGl (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 14 Oct 2019 18:06:41 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [xfstests-bld PATCH] test-appliance: add ext4/encrypt_1k test config
-Date: Wed, 16 Oct 2019 15:15:52 -0700
-Message-Id: <20191016221552.299566-1-ebiggers@kernel.org>
+Subject: [PATCH] generic: add an fs-verity stress test
+Date: Mon, 14 Oct 2019 15:05:21 -0700
+Message-Id: <20191014220521.15458-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-Sender: linux-ext4-owner@vger.kernel.org
-To: linux-ext4@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org, Chandan Rajendra <chandan@linux.ibm.com>
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Victor Hsieh <victorhsieh@google.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add a test configuration to allow testing ext4 encryption with 1k
-blocks, which kernel patches have been proposed to support.
+Add a stress test for fs-verity.  This tests enabling fs-verity on
+multiple files concurrently with concurrent readers on those files (with
+reads occurring before, during, and after the fs-verity enablement),
+while fsstress is also running on the same filesystem.
+
+I haven't seen any failures from running this on ext4 and f2fs.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- .../files/root/fs/ext4/cfg/encrypt_1k         |  5 ++++
- .../files/root/fs/ext4/cfg/encrypt_1k.exclude | 27 +++++++++++++++++++
- 2 files changed, 32 insertions(+)
- create mode 100644 kvm-xfstests/test-appliance/files/root/fs/ext4/cfg/encrypt_1k
- create mode 100644 kvm-xfstests/test-appliance/files/root/fs/ext4/cfg/encrypt_1k.exclude
+ tests/generic/906     | 115 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/906.out |   2 +
+ tests/generic/group   |   1 +
+ 3 files changed, 118 insertions(+)
+ create mode 100755 tests/generic/906
+ create mode 100644 tests/generic/906.out
 
-diff --git a/kvm-xfstests/test-appliance/files/root/fs/ext4/cfg/encrypt_1k b/kvm-xfstests/test-appliance/files/root/fs/ext4/cfg/encrypt_1k
-new file mode 100644
-index 0000000..5e97cc0
+diff --git a/tests/generic/906 b/tests/generic/906
+new file mode 100755
+index 00000000..78796487
 --- /dev/null
-+++ b/kvm-xfstests/test-appliance/files/root/fs/ext4/cfg/encrypt_1k
-@@ -0,0 +1,5 @@
-+SIZE=small
-+export EXT_MKFS_OPTIONS="-O encrypt -b 1024"
-+export EXT_MOUNT_OPTIONS="test_dummy_encryption"
-+REQUIRE_FEATURE=encryption
-+TESTNAME="Ext4 encryption 1k block"
-diff --git a/kvm-xfstests/test-appliance/files/root/fs/ext4/cfg/encrypt_1k.exclude b/kvm-xfstests/test-appliance/files/root/fs/ext4/cfg/encrypt_1k.exclude
++++ b/tests/generic/906
+@@ -0,0 +1,115 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/906
++#
++# Stress test for fs-verity.  This tests enabling fs-verity on multiple files
++# concurrently with concurrent readers on those files (with reads occurring
++# before, during, and after the fs-verity enablement), while fsstress is also
++# running on the same filesystem.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
++{
++	# Stop all subprocesses.
++	$KILLALL_PROG -q $FSSTRESS_PROG
++	touch $tmp.done
++	wait
++
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/verity
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++_require_scratch_verity
++_require_command "$KILLALL_PROG" killall
++
++_scratch_mkfs_verity &>> $seqres.full
++_scratch_mount
++
++fsv_file_size=10000000
++nproc_enabler=$((4 * LOAD_FACTOR))
++nproc_reader=$((6 * LOAD_FACTOR))
++nproc_stress=$((3 * LOAD_FACTOR))
++runtime=$((20 * TIME_FACTOR))
++
++# Create the test files and start the fs-verity enabler processes.
++for ((proc = 0; proc < nproc_enabler; proc++)); do
++	orig_file=$SCRATCH_MNT/orig$proc
++	fsv_file=$SCRATCH_MNT/fsv$proc
++	head -c $fsv_file_size /dev/urandom > $orig_file
++	(
++		while [ ! -e $tmp.done ]; do
++			rm -f $fsv_file
++			cp $orig_file $fsv_file
++			_fsv_enable $fsv_file
++			# Give the readers some time to read from the file.
++			sleep 0.$((RANDOM % 100))
++		done
++	) &
++done
++
++# Start the reader processes.
++for ((proc = 0; proc < nproc_reader; proc++)); do
++	(
++		while [ ! -e $tmp.done ]; do
++			# Choose a random file for each iteration, so that
++			# sometimes multiple processes read from the same file.
++			i=$((RANDOM % nproc_enabler))
++			orig_file=$SCRATCH_MNT/orig$i
++			fsv_file=$SCRATCH_MNT/fsv$i
++
++			# After the copy from $orig_file to $fsv_file has
++			# completed, the contents of these two files should
++			# match, regardless of whether verity has been enabled
++			# or not yet (or is currently being enabled).
++			cmp $orig_file $fsv_file |& _filter_scratch | \
++				grep -v "SCRATCH_MNT/fsv$i: No such file or directory" | \
++				grep -v "EOF on SCRATCH_MNT/fsv$i"
++
++			_fsv_measure $fsv_file 2>&1 >/dev/null | \
++				grep -v "No such file or directory" | \
++				grep -v "No data available"
++		done
++	) &
++done
++
++# Start a process that occasionally runs 'sync && drop_caches'.  This makes more
++# reads go through fs-verity for real, rather than just returning pagecache.
++(
++	while [ ! -e $tmp.done ]; do
++		sleep 2.$((RANDOM % 100))
++		sync && echo 3 > /proc/sys/vm/drop_caches
++	done
++) &
++
++# Start the fsstress processes.
++$FSSTRESS_PROG $FSSTRESS_AVOID -p $nproc_stress -l 0 -d $SCRATCH_MNT/stressdir \
++	>> $seqres.full 2>&1 &
++
++# Run for a while.
++sleep $runtime
++
++echo "Silence is golden"
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/906.out b/tests/generic/906.out
 new file mode 100644
-index 0000000..e31c371
+index 00000000..94ee4185
 --- /dev/null
-+++ b/kvm-xfstests/test-appliance/files/root/fs/ext4/cfg/encrypt_1k.exclude
-@@ -0,0 +1,27 @@
-+# These tests are also excluded in encrypt.exclude.
-+# See there for the reasons.
-+ext4/004
-+ext4/022
-+ext4/026
-+generic/082
-+generic/219
-+generic/230
-+generic/231
-+generic/232
-+generic/233
-+generic/235
-+generic/270
-+generic/382
-+generic/204
-+
-+# These tests are also excluded in 1k.exclude.
-+# See there for the reasons.
-+ext4/034
-+generic/273
-+generic/454
-+
-+# These tests use _scratch_populate_cached() which tries to create a 1023-byte
-+# symlink, which fails with encrypt_1k because encrypted symlinks are limited to
-+# blocksize-3 bytes, not blocksize-1 as is the case for no encryption.
-+ext4/023
-+ext4/028
++++ b/tests/generic/906.out
+@@ -0,0 +1,2 @@
++QA output created by 906
++Silence is golden
+diff --git a/tests/generic/group b/tests/generic/group
+index 6f9c4e12..d55d0eea 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -581,3 +581,4 @@
+ 576 auto quick verity encrypt
+ 577 auto quick verity
+ 578 auto quick rw clone
++906 auto stress verity
 -- 
-2.23.0
+2.23.0.700.g56cf767bdb-goog
