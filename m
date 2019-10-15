@@ -1,75 +1,104 @@
-Return-Path: <SRS0=svGF=YP=sifive.com=paul.walmsley@kernel.org>
-Date: Mon, 21 Oct 2019 18:23:11 -0700 (PDT)
-From: Paul Walmsley <paul.walmsley@sifive.com>
-Subject: Re: arch/riscv doesn't support xchg() on bool
-In-Reply-To: <20191021204026.GE122863@gmail.com>
-Message-ID: <alpine.DEB.2.21.9999.1910211744450.28831@viisi.sifive.com>
-References: <20191021204026.GE122863@gmail.com>
+Return-Path: <linux-fscrypt-owner@vger.kernel.org>
+Received: from mail.kernel.org ([198.145.29.99]:44090 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726144AbfJOSZ5 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 15 Oct 2019 14:25:57 -0400
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v3 8/9] generic: verify ciphertext of v2 encryption policies with AES-128
+Date: Tue, 15 Oct 2019 11:16:42 -0700
+Message-Id: <20191015181643.6519-9-ebiggers@kernel.org>
+In-Reply-To: <20191015181643.6519-1-ebiggers@kernel.org>
+References: <20191015181643.6519-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=US-ASCII
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-riscv@lists.infradead.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Content-Transfer-Encoding: 8bit
+Sender: linux-fscrypt-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-Hi Eric,
+From: Eric Biggers <ebiggers@google.com>
 
-On Mon, 21 Oct 2019, Eric Biggers wrote:
+Verify ciphertext for v2 encryption policies that use AES-128-CBC-ESSIV
+to encrypt file contents and AES-128-CTS-CBC to encrypt file names.
 
-> The kbuild test robot reported a build error on RISC-V in this patch:
-> 
-> 	https://patchwork.kernel.org/patch/11182389/
-> 
-> ... because of the line:
-> 
-> 	if (!xchg(&mode->logged_impl_name, true)) {
-> 
-> where logged_impl_name is a 'bool'.  The problem is that unlike most (or 
-> all?) other kernel architectures, arch/riscv/ doesn't support xchg() on 
-> bytes.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ tests/generic/803     | 43 +++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/803.out |  6 ++++++
+ tests/generic/group   |  1 +
+ 3 files changed, 50 insertions(+)
+ create mode 100755 tests/generic/803
+ create mode 100644 tests/generic/803.out
 
-When I looked at this in August, it looked like several Linux other 
-architectures - SPARC, Microblaze, C-SKY, and Hexagon - also didn't 
-support xchg() on anything other than 32-bit types:
-
-https://lore.kernel.org/lkml/alpine.DEB.2.21.9999.1908161931110.32497@viisi.sifive.com/
-
-Examples:
-
-https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/sparc/include/asm/cmpxchg_32.h#n18
-
-https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/sparc/include/asm/cmpxchg_32.h#n41
-
-> Is there any chance this could be implemented, to avoid this
-> architecture-specific quirk?
-
-It is certainly possible.  I wonder whether it is wise.  Several of the 
-other architectures implement a software workaround for this operation, 
-and I guess you're advocating that we do the same.  We could copy one 
-these implementations.  However, the workarounds balloon into quite a lot 
-of code.  Here is an example from MIPS:
-
-https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/mips/kernel/cmpxchg.c#n10
-
-I could be wrong, but I think this expansion would be pretty surprising 
-for most users of xchg().  I suspect most xchg() users are looking for 
-something performant, and would be better served by simply using a 
-variable with a 32-bit type.
-
-In the case of your patch, it appears that struct 
-fscrypt_mode.logged_impl_name is only used in the patched function.  It 
-looks like it could be promoted into a u32 without much difficulty.  
-Would you be willing to consider that approach of solving the problem?  
-Then the code would be able to take advantage of the fast hardware 
-implementation that's available on many architectures (including RISC-V).
-
-> Note, there's at least one other place in the kernel that also uses 
-> xchg() on a bool.
-
-Given the nasty compatibility code, I wonder if we'd be better served by 
-removing most of this compatibility code across the kernel, and just 
-requiring callers to use a 32-bit type?  For most callers that I've seen, 
-this doesn't seem to be much of an issue; and it would avoid the nasty 
-code involved in software emulations of xchg().
-
-
-- Paul
+diff --git a/tests/generic/803 b/tests/generic/803
+new file mode 100755
+index 00000000..c12daeff
+--- /dev/null
++++ b/tests/generic/803
+@@ -0,0 +1,43 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/803
++#
++# Verify ciphertext for v2 encryption policies that use AES-128-CBC-ESSIV to
++# encrypt file contents and AES-128-CTS-CBC to encrypt file names.
++#
++# This is the same as generic/549, except using v2 policies.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++
++_verify_ciphertext_for_encryption_policy AES-128-CBC-ESSIV AES-128-CTS-CBC v2
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/803.out b/tests/generic/803.out
+new file mode 100644
+index 00000000..f4051d27
+--- /dev/null
++++ b/tests/generic/803.out
+@@ -0,0 +1,6 @@
++QA output created by 803
++
++Verifying ciphertext with parameters:
++	contents_encryption_mode: AES-128-CBC-ESSIV
++	filenames_encryption_mode: AES-128-CTS-CBC
++	options: v2
+diff --git a/tests/generic/group b/tests/generic/group
+index 6b6002e1..6f5c15b2 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -584,3 +584,4 @@
+ 800 auto quick encrypt
+ 801 auto quick encrypt
+ 802 auto quick encrypt
++803 auto quick encrypt
+-- 
+2.23.0.700.g56cf767bdb-goog
