@@ -1,56 +1,100 @@
-Return-Path: <SRS0=Ff6O=YK=linux.ibm.com=chandan@kernel.org>
-From: Chandan Rajendra <chandan@linux.ibm.com>
-Subject: Re: [PATCH 0/2] ext4: support encryption with blocksize != PAGE_SIZE
-Date: Thu, 17 Oct 2019 11:44:58 +0530
-In-Reply-To: <20191016221142.298754-1-ebiggers@kernel.org>
-References: <20191016221142.298754-1-ebiggers@kernel.org>
+Return-Path: <fstests-owner@vger.kernel.org>
+From: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH v3 7/9] generic: verify ciphertext of v2 encryption policies with AES-256
+Date: Tue, 15 Oct 2019 11:16:41 -0700
+Message-Id: <20191015181643.6519-8-ebiggers@kernel.org>
+In-Reply-To: <20191015181643.6519-1-ebiggers@kernel.org>
+References: <20191015181643.6519-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7Bit
-Content-Type: text/plain; charset="us-ascii"
-Message-Id: <2830996.s4omRzobaj@localhost.localdomain>
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
+Content-Transfer-Encoding: 8bit
+Sender: fstests-owner@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-On Thursday, October 17, 2019 3:41 AM Eric Biggers wrote: 
-> Hello,
-> 
-> This patchset makes ext4 support encryption on filesystems where the
-> filesystem block size is not equal to PAGE_SIZE.  This allows e.g.
-> PowerPC systems to use ext4 encryption.
-> 
-> Most of the work for this was already done in prior kernel releases; now
-> the only part missing is decryption support in block_read_full_page().
-> Chandan Rajendra has proposed a patchset "Consolidate FS read I/O
-> callbacks code" [1] to address this and do various other things like
-> make ext4 use mpage_readpages() again, and make ext4 and f2fs share more
-> code.  But it doesn't seem to be going anywhere.
-> 
-> Therefore, I propose we simply add decryption support to
-> block_read_full_page() for now.  This is a fairly small change, and it
-> gets ext4 encryption with subpage-sized blocks working.
-> 
-> Note: to keep things simple I'm just allocating the work object from the
-> bi_end_io function with GFP_ATOMIC.  But if people think it's necessary,
-> it could be changed to use preallocation like the page-based read path.
-> 
-> Tested with 'gce-xfstests -c ext4/encrypt_1k -g auto', using the new
-> "encrypt_1k" config I created.  All tests pass except for those that
-> already fail or are excluded with the encrypt or 1k configs, and 2 tests
-> that try to create 1023-byte symlinks which fails since encrypted
-> symlinks are limited to blocksize-3 bytes.  Also ran the dedicated
-> encryption tests using 'kvm-xfstests -c ext4/1k -g encrypt'; all pass,
-> including the on-disk ciphertext verification tests.
-> 
-> [1] https://lkml.kernel.org/linux-fsdevel/20190910155115.28550-1-chandan@linux.ibm.com/T/#u
->
+From: Eric Biggers <ebiggers@google.com>
 
-Hi Eric,
+Verify ciphertext for v2 encryption policies that use AES-256-XTS to
+encrypt file contents and AES-256-CTS-CBC to encrypt file names.
 
-Thanks a lot for doing this.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ tests/generic/802     | 43 +++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/802.out |  6 ++++++
+ tests/generic/group   |  1 +
+ 3 files changed, 50 insertions(+)
+ create mode 100755 tests/generic/802
+ create mode 100644 tests/generic/802.out
 
-The changes seem to be good. I have started test runs on my ppc64le guest and
-I will reply with the test results once they complete.
-
+diff --git a/tests/generic/802 b/tests/generic/802
+new file mode 100755
+index 00000000..457260b2
+--- /dev/null
++++ b/tests/generic/802
+@@ -0,0 +1,43 @@
++#! /bin/bash
++# SPDX-License-Identifier: GPL-2.0
++# Copyright 2019 Google LLC
++#
++# FS QA Test generic/802
++#
++# Verify ciphertext for v2 encryption policies that use AES-256-XTS to encrypt
++# file contents and AES-256-CTS-CBC to encrypt file names.
++#
++# This is the same as generic/548, except using v2 policies.
++#
++seq=`basename $0`
++seqres=$RESULT_DIR/$seq
++echo "QA output created by $seq"
++
++here=`pwd`
++tmp=/tmp/$$
++status=1	# failure is the default!
++trap "_cleanup; exit \$status" 0 1 2 3 15
++
++_cleanup()
++{
++	cd /
++	rm -f $tmp.*
++}
++
++# get standard environment, filters and checks
++. ./common/rc
++. ./common/filter
++. ./common/encrypt
++
++# remove previous $seqres.full before test
++rm -f $seqres.full
++
++# real QA test starts here
++_supported_fs generic
++_supported_os Linux
++
++_verify_ciphertext_for_encryption_policy AES-256-XTS AES-256-CTS-CBC v2
++
++# success, all done
++status=0
++exit
+diff --git a/tests/generic/802.out b/tests/generic/802.out
+new file mode 100644
+index 00000000..c0930809
+--- /dev/null
++++ b/tests/generic/802.out
+@@ -0,0 +1,6 @@
++QA output created by 802
++
++Verifying ciphertext with parameters:
++	contents_encryption_mode: AES-256-XTS
++	filenames_encryption_mode: AES-256-CTS-CBC
++	options: v2
+diff --git a/tests/generic/group b/tests/generic/group
+index 6d1ecf5a..6b6002e1 100644
+--- a/tests/generic/group
++++ b/tests/generic/group
+@@ -583,3 +583,4 @@
+ 578 auto quick rw clone
+ 800 auto quick encrypt
+ 801 auto quick encrypt
++802 auto quick encrypt
 -- 
-chandan
+2.23.0.700.g56cf767bdb-goog
