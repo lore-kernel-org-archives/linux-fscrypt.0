@@ -1,12 +1,12 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:44090 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:44086 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726144AbfJOSZ5 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1731313AbfJOSZ5 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Tue, 15 Oct 2019 14:25:57 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v3 8/9] generic: verify ciphertext of v2 encryption policies with AES-128
-Date: Tue, 15 Oct 2019 11:16:42 -0700
-Message-Id: <20191015181643.6519-9-ebiggers@kernel.org>
+Subject: [PATCH v3 6/9] generic: add test for non-root use of fscrypt API additions
+Date: Tue, 15 Oct 2019 11:16:40 -0700
+Message-Id: <20191015181643.6519-7-ebiggers@kernel.org>
 In-Reply-To: <20191015181643.6519-1-ebiggers@kernel.org>
 References: <20191015181643.6519-1-ebiggers@kernel.org>
 MIME-Version: 1.0
@@ -18,48 +18,52 @@ List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Verify ciphertext for v2 encryption policies that use AES-128-CBC-ESSIV
-to encrypt file contents and AES-128-CTS-CBC to encrypt file names.
+Test non-root use of the fscrypt filesystem-level encryption keyring and
+v2 encryption policies.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- tests/generic/803     | 43 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/803.out |  6 ++++++
- tests/generic/group   |  1 +
- 3 files changed, 50 insertions(+)
- create mode 100755 tests/generic/803
- create mode 100644 tests/generic/803.out
+ tests/generic/801     | 144 ++++++++++++++++++++++++++++++++++++++++++
+ tests/generic/801.out |  62 ++++++++++++++++++
+ tests/generic/group   |   1 +
+ 3 files changed, 207 insertions(+)
+ create mode 100755 tests/generic/801
+ create mode 100644 tests/generic/801.out
 
-diff --git a/tests/generic/803 b/tests/generic/803
+diff --git a/tests/generic/801 b/tests/generic/801
 new file mode 100755
-index 00000000..c12daeff
+index 00000000..c759ec94
 --- /dev/null
-+++ b/tests/generic/803
-@@ -0,0 +1,43 @@
++++ b/tests/generic/801
+@@ -0,0 +1,144 @@
 +#! /bin/bash
 +# SPDX-License-Identifier: GPL-2.0
 +# Copyright 2019 Google LLC
 +#
-+# FS QA Test generic/803
++# FS QA Test generic/801
 +#
-+# Verify ciphertext for v2 encryption policies that use AES-128-CBC-ESSIV to
-+# encrypt file contents and AES-128-CTS-CBC to encrypt file names.
++# Test non-root use of the fscrypt filesystem-level encryption keyring
++# and v2 encryption policies.
 +#
-+# This is the same as generic/549, except using v2 policies.
-+#
++
 +seq=`basename $0`
 +seqres=$RESULT_DIR/$seq
 +echo "QA output created by $seq"
++echo
 +
 +here=`pwd`
 +tmp=/tmp/$$
 +status=1	# failure is the default!
 +trap "_cleanup; exit \$status" 0 1 2 3 15
++orig_maxkeys=
 +
 +_cleanup()
 +{
 +	cd /
 +	rm -f $tmp.*
++	if [ -n "$orig_maxkeys" ]; then
++		echo "$orig_maxkeys" > /proc/sys/kernel/keys/maxkeys
++	fi
 +}
 +
 +# get standard environment, filters and checks
@@ -73,32 +77,185 @@ index 00000000..c12daeff
 +# real QA test starts here
 +_supported_fs generic
 +_supported_os Linux
++_require_user
++_require_scratch_encryption -v 2
 +
-+_verify_ciphertext_for_encryption_policy AES-128-CBC-ESSIV AES-128-CTS-CBC v2
++_scratch_mkfs_encrypted &>> $seqres.full
++_scratch_mount
++
++# Set the fsgqa user's key quota to their current number of keys plus 5.
++orig_keys=$(_user_do "awk '/^[[:space:]]*$(id -u fsgqa):/{print \$4}' /proc/key-users | cut -d/ -f1")
++: ${orig_keys:=0}
++echo "orig_keys=$orig_keys" >> $seqres.full
++orig_maxkeys=$(</proc/sys/kernel/keys/maxkeys)
++keys_to_add=5
++echo $((orig_keys + keys_to_add)) > /proc/sys/kernel/keys/maxkeys
++
++dir=$SCRATCH_MNT/dir
++
++raw_key=""
++for i in `seq 64`; do
++	raw_key+="\\x$(printf "%02x" $i)"
++done
++keydesc="0000111122223333"
++keyid="69b2f6edeee720cce0577937eb8a6751"
++chmod 777 $SCRATCH_MNT
++
++_user_do "mkdir $dir"
++
++echo "# Setting v1 policy as regular user (should succeed)"
++_user_do_set_encpolicy $dir $keydesc
++
++echo "# Getting v1 policy as regular user (should succeed)"
++_user_do_get_encpolicy $dir | _filter_scratch
++
++echo "# Adding v1 policy key as regular user (should fail with EACCES)"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key" -d $keydesc
++
++rm -rf $dir
++echo
++_user_do "mkdir $dir"
++
++echo "# Setting v2 policy as regular user without key already added (should fail with ENOKEY)"
++_user_do_set_encpolicy $dir $keyid |& _filter_scratch
++
++echo "# Adding v2 policy key as regular user (should succeed)"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
++
++echo "# Setting v2 policy as regular user with key added (should succeed)"
++_user_do_set_encpolicy $dir $keyid
++
++echo "# Getting v2 policy as regular user (should succeed)"
++_user_do_get_encpolicy $dir | _filter_scratch
++
++echo "# Creating encrypted file as regular user (should succeed)"
++_user_do "echo contents > $dir/file"
++
++echo "# Removing v2 policy key as regular user (should succeed)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
++
++_scratch_cycle_mount	# Clear all keys
++
++echo
++echo "# Testing user key quota"
++for i in `seq $((keys_to_add + 1))`; do
++	rand_raw_key=$(_generate_raw_encryption_key)
++	_user_do_add_enckey $SCRATCH_MNT "$rand_raw_key" \
++	    | sed 's/ with identifier .*$//'
++done
++
++rm -rf $dir
++echo
++_user_do "mkdir $dir"
++_scratch_cycle_mount	# Clear all keys
++
++# Test multiple users adding the same key.
++echo "# Adding key as root"
++_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Removing key only added by another user (should fail with ENOKEY)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
++echo "# Setting v2 encryption policy with key only added by another user (should fail with ENOKEY)"
++_user_do_set_encpolicy $dir $keyid |& _filter_scratch
++echo "# Adding second user of key"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Setting v2 encryption policy as regular user"
++_user_do_set_encpolicy $dir $keyid
++echo "# Removing this user's claim to the key"
++_user_do_rm_enckey $SCRATCH_MNT $keyid
++echo "# Getting key status as regular user"
++_user_do_enckey_status $SCRATCH_MNT $keyid
++echo "# Adding back second user of key"
++_user_do_add_enckey $SCRATCH_MNT "$raw_key"
++echo "# Remove key for \"all users\", as regular user (should fail with EACCES)"
++_user_do_rm_enckey $SCRATCH_MNT $keyid -a |& _filter_scratch
++_enckey_status $SCRATCH_MNT $keyid
++echo "# Remove key for \"all users\", as root"
++_rm_enckey $SCRATCH_MNT $keyid -a
++_enckey_status $SCRATCH_MNT $keyid
 +
 +# success, all done
 +status=0
 +exit
-diff --git a/tests/generic/803.out b/tests/generic/803.out
+diff --git a/tests/generic/801.out b/tests/generic/801.out
 new file mode 100644
-index 00000000..f4051d27
+index 00000000..b5b6cec8
 --- /dev/null
-+++ b/tests/generic/803.out
-@@ -0,0 +1,6 @@
-+QA output created by 803
++++ b/tests/generic/801.out
+@@ -0,0 +1,62 @@
++QA output created by 801
 +
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: AES-128-CBC-ESSIV
-+	filenames_encryption_mode: AES-128-CTS-CBC
-+	options: v2
++# Setting v1 policy as regular user (should succeed)
++# Getting v1 policy as regular user (should succeed)
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 0
++	Master key descriptor: 0000111122223333
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Adding v1 policy key as regular user (should fail with EACCES)
++Permission denied
++
++# Setting v2 policy as regular user without key already added (should fail with ENOKEY)
++SCRATCH_MNT/dir: failed to set encryption policy: Required key not available
++# Adding v2 policy key as regular user (should succeed)
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Setting v2 policy as regular user with key added (should succeed)
++# Getting v2 policy as regular user (should succeed)
++Encryption policy for SCRATCH_MNT/dir:
++	Policy version: 2
++	Master key identifier: 69b2f6edeee720cce0577937eb8a6751
++	Contents encryption mode: 1 (AES-256-XTS)
++	Filenames encryption mode: 4 (AES-256-CTS)
++	Flags: 0x02
++# Creating encrypted file as regular user (should succeed)
++# Removing v2 policy key as regular user (should succeed)
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++
++# Testing user key quota
++Added encryption key
++Added encryption key
++Added encryption key
++Added encryption key
++Added encryption key
++Error adding encryption key: Disk quota exceeded
++
++# Adding key as root
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=1)
++# Removing key only added by another user (should fail with ENOKEY)
++Error removing encryption key: Required key not available
++# Setting v2 encryption policy with key only added by another user (should fail with ENOKEY)
++SCRATCH_MNT/dir: failed to set encryption policy: Required key not available
++# Adding second user of key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=2, added_by_self)
++# Setting v2 encryption policy as regular user
++# Removing this user's claim to the key
++Removed user's claim to encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Getting key status as regular user
++Present (user_count=1)
++# Adding back second user of key
++Added encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++# Remove key for "all users", as regular user (should fail with EACCES)
++Permission denied
++Present (user_count=2, added_by_self)
++# Remove key for "all users", as root
++Removed encryption key with identifier 69b2f6edeee720cce0577937eb8a6751
++Absent
 diff --git a/tests/generic/group b/tests/generic/group
-index 6b6002e1..6f5c15b2 100644
+index cf2240ec..6d1ecf5a 100644
 --- a/tests/generic/group
 +++ b/tests/generic/group
-@@ -584,3 +584,4 @@
+@@ -582,3 +582,4 @@
+ 577 auto quick verity
+ 578 auto quick rw clone
  800 auto quick encrypt
- 801 auto quick encrypt
- 802 auto quick encrypt
-+803 auto quick encrypt
++801 auto quick encrypt
 -- 
 2.23.0.700.g56cf767bdb-goog
