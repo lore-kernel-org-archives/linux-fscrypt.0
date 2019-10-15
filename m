@@ -1,54 +1,115 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:42190 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:44082 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1730815AbfJIXoO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 9 Oct 2019 19:44:14 -0400
+        id S1730002AbfJOSZ4 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 15 Oct 2019 14:25:56 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH] fscrypt: avoid data race on fscrypt_mode::logged_impl_name
-Date: Wed,  9 Oct 2019 16:43:37 -0700
-Message-Id: <20191009234337.225469-1-ebiggers@kernel.org>
+Subject: [PATCH v3 3/9] common/encrypt: support checking for v2 encryption policy support
+Date: Tue, 15 Oct 2019 11:16:37 -0700
+Message-Id: <20191015181643.6519-4-ebiggers@kernel.org>
+In-Reply-To: <20191015181643.6519-1-ebiggers@kernel.org>
+References: <20191015181643.6519-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-kernel@vger.kernel.org
+To: fstests@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-The access to logged_impl_name is technically a data race, which tools
-like KCSAN could complain about in the future.  See:
-https://github.com/google/ktsan/wiki/READ_ONCE-and-WRITE_ONCE
-
-Fix by using xchg(), which also ensures that only one thread does the
-logging.
+Allow passing '-v 2' to _require_scratch_encryption() to check for v2
+encryption policy support on the scratch device, and for xfs_io support
+for setting and getting v2 encryption policies.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/keysetup.c | 6 ++----
- 1 file changed, 2 insertions(+), 4 deletions(-)
+ common/encrypt | 42 +++++++++++++++++++++++++++++++++---------
+ 1 file changed, 33 insertions(+), 9 deletions(-)
 
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index 8eb5a0e762ec6..df3e1c8653884 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -81,15 +81,13 @@ struct crypto_skcipher *fscrypt_allocate_skcipher(struct fscrypt_mode *mode,
- 			    mode->cipher_str, PTR_ERR(tfm));
- 		return tfm;
- 	}
--	if (unlikely(!mode->logged_impl_name)) {
-+	if (!xchg(&mode->logged_impl_name, true)) {
- 		/*
- 		 * fscrypt performance can vary greatly depending on which
- 		 * crypto algorithm implementation is used.  Help people debug
- 		 * performance problems by logging the ->cra_driver_name the
--		 * first time a mode is used.  Note that multiple threads can
--		 * race here, but it doesn't really matter.
-+		 * first time a mode is used.
- 		 */
--		mode->logged_impl_name = true;
- 		pr_info("fscrypt: %s using implementation \"%s\"\n",
- 			mode->friendly_name,
- 			crypto_skcipher_alg(tfm)->base.cra_driver_name);
+diff --git a/common/encrypt b/common/encrypt
+index a086e80f..eec585a0 100644
+--- a/common/encrypt
++++ b/common/encrypt
+@@ -6,12 +6,13 @@
+ 
+ #
+ # _require_scratch_encryption [-c CONTENTS_MODE] [-n FILENAMES_MODE]
++#			      [-v POLICY_VERSION]
+ #
+ # Require encryption support on the scratch device.
+ #
+-# This checks for support for the default type of encryption policy (AES-256-XTS
+-# and AES-256-CTS).  Options can be specified to also require support for a
+-# different type of encryption policy.
++# This checks for support for the default type of encryption policy (v1 with
++# AES-256-XTS and AES-256-CTS).  Options can be specified to also require
++# support for a different type of encryption policy.
+ #
+ _require_scratch_encryption()
+ {
+@@ -68,14 +69,19 @@ _require_encryption_policy_support()
+ 	local mnt=$1
+ 	local dir=$mnt/tmpdir
+ 	local set_encpolicy_args=""
++	local policy_version=1
+ 	local c
+ 
+ 	OPTIND=2
+-	while getopts "c:n:" c; do
++	while getopts "c:n:v:" c; do
+ 		case $c in
+ 		c|n)
+ 			set_encpolicy_args+=" -$c $OPTARG"
+ 			;;
++		v)
++			set_encpolicy_args+=" -$c $OPTARG"
++			policy_version=$OPTARG
++			;;
+ 		*)
+ 			_fail "Unrecognized option '$c'"
+ 			;;
+@@ -87,10 +93,26 @@ _require_encryption_policy_support()
+ 		>> $seqres.full
+ 
+ 	mkdir $dir
+-	_require_command "$KEYCTL_PROG" keyctl
+-	_new_session_keyring
+-	local keydesc=$(_generate_session_encryption_key)
+-	if _set_encpolicy $dir $keydesc $set_encpolicy_args \
++	if (( policy_version > 1 )); then
++		_require_xfs_io_command "get_encpolicy" "-t"
++		local output=$(_get_encpolicy $dir -t)
++		if [ "$output" != "supported" ]; then
++			if [ "$output" = "unsupported" ]; then
++				_notrun "kernel does not support $FSTYP encryption v2 API"
++			fi
++			_fail "Unexpected output from 'get_encpolicy -t': $output"
++		fi
++		# Both the kernel and xfs_io support v2 encryption policies, and
++		# therefore also filesystem-level keys -- since that's the only
++		# way to provide keys for v2 policies.
++		local raw_key=$(_generate_raw_encryption_key)
++		local keyspec=$(_add_enckey $mnt "$raw_key" | awk '{print $NF}')
++	else
++		_require_command "$KEYCTL_PROG" keyctl
++		_new_session_keyring
++		local keyspec=$(_generate_session_encryption_key)
++	fi
++	if _set_encpolicy $dir $keyspec $set_encpolicy_args \
+ 		2>&1 >>$seqres.full | egrep -q 'Invalid argument'; then
+ 		_notrun "kernel does not support encryption policy: '$set_encpolicy_args'"
+ 	fi
+@@ -103,7 +125,9 @@ _require_encryption_policy_support()
+ 	if ! echo foo > $dir/file; then
+ 		_notrun "encryption policy '$set_encpolicy_args' is unusable; probably missing kernel crypto API support"
+ 	fi
+-	$KEYCTL_PROG clear @s
++	if (( policy_version <= 1 )); then
++		$KEYCTL_PROG clear @s
++	fi
+ 	rm -r $dir
+ }
+ 
 -- 
-2.23.0.581.g78d2f28ef7-goog
+2.23.0.700.g56cf767bdb-goog
