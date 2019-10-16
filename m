@@ -1,44 +1,60 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:42694 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:38046 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1731103AbfJIXrZ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 9 Oct 2019 19:47:25 -0400
+        id S2389800AbfJPWOp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 16 Oct 2019 18:14:45 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH] docs: ioctl-number: document fscrypt ioctl numbers
-Date: Wed,  9 Oct 2019 16:45:55 -0700
-Message-Id: <20191009234555.226282-1-ebiggers@kernel.org>
+Subject: [PATCH 0/2] ext4: support encryption with blocksize != PAGE_SIZE
+Date: Wed, 16 Oct 2019 15:11:40 -0700
+Message-Id: <20191016221142.298754-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: linux-fscrypt@vger.kernel.org
-Cc: "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net, linux-fsdevel@vger.kernel.org
+To: linux-ext4@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, Chandan Rajendra <chandan@linux.ibm.com>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hello,
 
-The 'f' ioctls with numbers 19-26 decimal are currently used for fscrypt
-(a.k.a. ext4/f2fs/ubifs encryption), and up to 39 decimal is reserved
-for future fscrypt use, as per the comment in fs/ext4/ext4.h.  So the
-reserved range is 13-27 hex.
+This patchset makes ext4 support encryption on filesystems where the
+filesystem block size is not equal to PAGE_SIZE.  This allows e.g.
+PowerPC systems to use ext4 encryption.
 
-Document this in ioctl-number.rst.
+Most of the work for this was already done in prior kernel releases; now
+the only part missing is decryption support in block_read_full_page().
+Chandan Rajendra has proposed a patchset "Consolidate FS read I/O
+callbacks code" [1] to address this and do various other things like
+make ext4 use mpage_readpages() again, and make ext4 and f2fs share more
+code.  But it doesn't seem to be going anywhere.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/ioctl/ioctl-number.rst | 1 +
- 1 file changed, 1 insertion(+)
+Therefore, I propose we simply add decryption support to
+block_read_full_page() for now.  This is a fairly small change, and it
+gets ext4 encryption with subpage-sized blocks working.
 
-diff --git a/Documentation/ioctl/ioctl-number.rst b/Documentation/ioctl/ioctl-number.rst
-index bef79cd4c6b4d..4ef86433bd677 100644
---- a/Documentation/ioctl/ioctl-number.rst
-+++ b/Documentation/ioctl/ioctl-number.rst
-@@ -233,6 +233,7 @@ Code  Seq#    Include File                                           Comments
- 'f'   00-0F  fs/ext4/ext4.h                                          conflict!
- 'f'   00-0F  linux/fs.h                                              conflict!
- 'f'   00-0F  fs/ocfs2/ocfs2_fs.h                                     conflict!
-+'f'   13-27  linux/fscrypt.h
- 'f'   81-8F  linux/fsverity.h
- 'g'   00-0F  linux/usb/gadgetfs.h
- 'g'   20-2F  linux/usb/g_printer.h
+Note: to keep things simple I'm just allocating the work object from the
+bi_end_io function with GFP_ATOMIC.  But if people think it's necessary,
+it could be changed to use preallocation like the page-based read path.
+
+Tested with 'gce-xfstests -c ext4/encrypt_1k -g auto', using the new
+"encrypt_1k" config I created.  All tests pass except for those that
+already fail or are excluded with the encrypt or 1k configs, and 2 tests
+that try to create 1023-byte symlinks which fails since encrypted
+symlinks are limited to blocksize-3 bytes.  Also ran the dedicated
+encryption tests using 'kvm-xfstests -c ext4/1k -g encrypt'; all pass,
+including the on-disk ciphertext verification tests.
+
+[1] https://lkml.kernel.org/linux-fsdevel/20190910155115.28550-1-chandan@linux.ibm.com/T/#u
+
+Chandan Rajendra (1):
+  ext4: Enable encryption for subpage-sized blocks
+
+Eric Biggers (1):
+  fs/buffer.c: support fscrypt in block_read_full_page()
+
+ Documentation/filesystems/fscrypt.rst |  4 +--
+ fs/buffer.c                           | 47 ++++++++++++++++++++++++---
+ fs/ext4/super.c                       |  7 ----
+ 3 files changed, 44 insertions(+), 14 deletions(-)
+
 -- 
-2.23.0.581.g78d2f28ef7-goog
+2.23.0
