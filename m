@@ -1,115 +1,143 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:44082 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:42132 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1730002AbfJOSZ4 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 15 Oct 2019 14:25:56 -0400
+        id S1727264AbfJUXcs (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 21 Oct 2019 19:32:48 -0400
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v3 3/9] common/encrypt: support checking for v2 encryption policy support
-Date: Tue, 15 Oct 2019 11:16:37 -0700
-Message-Id: <20191015181643.6519-4-ebiggers@kernel.org>
-In-Reply-To: <20191015181643.6519-1-ebiggers@kernel.org>
-References: <20191015181643.6519-1-ebiggers@kernel.org>
+Subject: [e2fsprogs PATCH] Support the stable_inodes feature
+Date: Mon, 21 Oct 2019 16:30:43 -0700
+Message-Id: <20191021233043.36225-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+To: linux-ext4@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>, Paul Crowley <paulcrowley@google.com>, Paul Lawrence <paullawrence@google.com>, "Theodore Y . Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
 List-ID: <linux-fscrypt@vger.kernel.org>
 
 From: Eric Biggers <ebiggers@google.com>
 
-Allow passing '-v 2' to _require_scratch_encryption() to check for v2
-encryption policy support on the scratch device, and for xfs_io support
-for setting and getting v2 encryption policies.
+Reserve the codepoint for EXT4_FEATURE_COMPAT_STABLE_INODES, allow it to
+be set and cleared, and teach resize2fs to forbid shrinking the
+filesystem if it is set.
+
+This feature will allow the use of encryption policies where the inode
+number is included in the IVs (initialization vectors) for encryption,
+so data would be corrupted if the inodes were to be renumbered.
+
+For more details, see the kernel patchset:
+https://lkml.kernel.org/linux-fsdevel/20191021230355.23136-1-ebiggers@kernel.org/T/#u
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- common/encrypt | 42 +++++++++++++++++++++++++++++++++---------
- 1 file changed, 33 insertions(+), 9 deletions(-)
+ lib/e2p/feature.c    | 2 ++
+ lib/ext2fs/ext2_fs.h | 2 ++
+ lib/ext2fs/ext2fs.h  | 3 ++-
+ misc/mke2fs.c        | 3 ++-
+ misc/tune2fs.c       | 6 ++++--
+ resize/main.c        | 6 ++++++
+ 6 files changed, 18 insertions(+), 4 deletions(-)
 
-diff --git a/common/encrypt b/common/encrypt
-index a086e80f..eec585a0 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -6,12 +6,13 @@
+diff --git a/lib/e2p/feature.c b/lib/e2p/feature.c
+index ae7f7f0a..ad0d7f82 100644
+--- a/lib/e2p/feature.c
++++ b/lib/e2p/feature.c
+@@ -47,6 +47,8 @@ static struct feature feature_list[] = {
+ 			"sparse_super2" },
+ 	{	E2P_FEATURE_COMPAT, EXT4_FEATURE_COMPAT_FAST_COMMIT,
+ 			"fast_commit" },
++	{	E2P_FEATURE_COMPAT, EXT4_FEATURE_COMPAT_STABLE_INODES,
++			"stable_inodes" },
  
- #
- # _require_scratch_encryption [-c CONTENTS_MODE] [-n FILENAMES_MODE]
-+#			      [-v POLICY_VERSION]
- #
- # Require encryption support on the scratch device.
- #
--# This checks for support for the default type of encryption policy (AES-256-XTS
--# and AES-256-CTS).  Options can be specified to also require support for a
--# different type of encryption policy.
-+# This checks for support for the default type of encryption policy (v1 with
-+# AES-256-XTS and AES-256-CTS).  Options can be specified to also require
-+# support for a different type of encryption policy.
- #
- _require_scratch_encryption()
- {
-@@ -68,14 +69,19 @@ _require_encryption_policy_support()
- 	local mnt=$1
- 	local dir=$mnt/tmpdir
- 	local set_encpolicy_args=""
-+	local policy_version=1
- 	local c
+ 	{	E2P_FEATURE_RO_INCOMPAT, EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER,
+ 			"sparse_super" },
+diff --git a/lib/ext2fs/ext2_fs.h b/lib/ext2fs/ext2_fs.h
+index febcb476..3165b389 100644
+--- a/lib/ext2fs/ext2_fs.h
++++ b/lib/ext2fs/ext2_fs.h
+@@ -811,6 +811,7 @@ struct ext2_super_block {
+ #define EXT2_FEATURE_COMPAT_EXCLUDE_BITMAP	0x0100
+ #define EXT4_FEATURE_COMPAT_SPARSE_SUPER2	0x0200
+ #define EXT4_FEATURE_COMPAT_FAST_COMMIT		0x0400
++#define EXT4_FEATURE_COMPAT_STABLE_INODES	0x0800
  
- 	OPTIND=2
--	while getopts "c:n:" c; do
-+	while getopts "c:n:v:" c; do
- 		case $c in
- 		c|n)
- 			set_encpolicy_args+=" -$c $OPTARG"
- 			;;
-+		v)
-+			set_encpolicy_args+=" -$c $OPTARG"
-+			policy_version=$OPTARG
-+			;;
- 		*)
- 			_fail "Unrecognized option '$c'"
- 			;;
-@@ -87,10 +93,26 @@ _require_encryption_policy_support()
- 		>> $seqres.full
  
- 	mkdir $dir
--	_require_command "$KEYCTL_PROG" keyctl
--	_new_session_keyring
--	local keydesc=$(_generate_session_encryption_key)
--	if _set_encpolicy $dir $keydesc $set_encpolicy_args \
-+	if (( policy_version > 1 )); then
-+		_require_xfs_io_command "get_encpolicy" "-t"
-+		local output=$(_get_encpolicy $dir -t)
-+		if [ "$output" != "supported" ]; then
-+			if [ "$output" = "unsupported" ]; then
-+				_notrun "kernel does not support $FSTYP encryption v2 API"
-+			fi
-+			_fail "Unexpected output from 'get_encpolicy -t': $output"
-+		fi
-+		# Both the kernel and xfs_io support v2 encryption policies, and
-+		# therefore also filesystem-level keys -- since that's the only
-+		# way to provide keys for v2 policies.
-+		local raw_key=$(_generate_raw_encryption_key)
-+		local keyspec=$(_add_enckey $mnt "$raw_key" | awk '{print $NF}')
-+	else
-+		_require_command "$KEYCTL_PROG" keyctl
-+		_new_session_keyring
-+		local keyspec=$(_generate_session_encryption_key)
-+	fi
-+	if _set_encpolicy $dir $keyspec $set_encpolicy_args \
- 		2>&1 >>$seqres.full | egrep -q 'Invalid argument'; then
- 		_notrun "kernel does not support encryption policy: '$set_encpolicy_args'"
- 	fi
-@@ -103,7 +125,9 @@ _require_encryption_policy_support()
- 	if ! echo foo > $dir/file; then
- 		_notrun "encryption policy '$set_encpolicy_args' is unusable; probably missing kernel crypto API support"
- 	fi
--	$KEYCTL_PROG clear @s
-+	if (( policy_version <= 1 )); then
-+		$KEYCTL_PROG clear @s
-+	fi
- 	rm -r $dir
- }
+ #define EXT2_FEATURE_RO_COMPAT_SPARSE_SUPER	0x0001
+@@ -913,6 +914,7 @@ EXT4_FEATURE_COMPAT_FUNCS(lazy_bg,		2, LAZY_BG)
+ EXT4_FEATURE_COMPAT_FUNCS(exclude_bitmap,	2, EXCLUDE_BITMAP)
+ EXT4_FEATURE_COMPAT_FUNCS(sparse_super2,	4, SPARSE_SUPER2)
+ EXT4_FEATURE_COMPAT_FUNCS(fast_commit,		4, FAST_COMMIT)
++EXT4_FEATURE_COMPAT_FUNCS(stable_inodes,	4, STABLE_INODES)
  
+ EXT4_FEATURE_RO_COMPAT_FUNCS(sparse_super,	2, SPARSE_SUPER)
+ EXT4_FEATURE_RO_COMPAT_FUNCS(large_file,	2, LARGE_FILE)
+diff --git a/lib/ext2fs/ext2fs.h b/lib/ext2fs/ext2fs.h
+index 334944d9..a5ed10fc 100644
+--- a/lib/ext2fs/ext2fs.h
++++ b/lib/ext2fs/ext2fs.h
+@@ -612,7 +612,8 @@ typedef struct ext2_icount *ext2_icount_t;
+ 					 EXT2_FEATURE_COMPAT_DIR_INDEX|\
+ 					 EXT2_FEATURE_COMPAT_EXT_ATTR|\
+ 					 EXT4_FEATURE_COMPAT_SPARSE_SUPER2|\
+-					 EXT4_FEATURE_COMPAT_FAST_COMMIT)
++					 EXT4_FEATURE_COMPAT_FAST_COMMIT|\
++					 EXT4_FEATURE_COMPAT_STABLE_INODES)
+ 
+ #ifdef CONFIG_MMP
+ #define EXT4_LIB_INCOMPAT_MMP		EXT4_FEATURE_INCOMPAT_MMP
+diff --git a/misc/mke2fs.c b/misc/mke2fs.c
+index fe495844..ffea8233 100644
+--- a/misc/mke2fs.c
++++ b/misc/mke2fs.c
+@@ -1144,7 +1144,8 @@ static __u32 ok_features[3] = {
+ 		EXT2_FEATURE_COMPAT_DIR_INDEX |
+ 		EXT2_FEATURE_COMPAT_EXT_ATTR |
+ 		EXT4_FEATURE_COMPAT_SPARSE_SUPER2 |
+-		EXT4_FEATURE_COMPAT_FAST_COMMIT,
++		EXT4_FEATURE_COMPAT_FAST_COMMIT |
++		EXT4_FEATURE_COMPAT_STABLE_INODES,
+ 	/* Incompat */
+ 	EXT2_FEATURE_INCOMPAT_FILETYPE|
+ 		EXT3_FEATURE_INCOMPAT_EXTENTS|
+diff --git a/misc/tune2fs.c b/misc/tune2fs.c
+index 39fce4a9..c11e7452 100644
+--- a/misc/tune2fs.c
++++ b/misc/tune2fs.c
+@@ -150,7 +150,8 @@ static __u32 ok_features[3] = {
+ 	/* Compat */
+ 	EXT3_FEATURE_COMPAT_HAS_JOURNAL |
+ 		EXT2_FEATURE_COMPAT_DIR_INDEX |
+-		EXT4_FEATURE_COMPAT_FAST_COMMIT,
++		EXT4_FEATURE_COMPAT_FAST_COMMIT |
++		EXT4_FEATURE_COMPAT_STABLE_INODES,
+ 	/* Incompat */
+ 	EXT2_FEATURE_INCOMPAT_FILETYPE |
+ 		EXT3_FEATURE_INCOMPAT_EXTENTS |
+@@ -180,7 +181,8 @@ static __u32 clear_ok_features[3] = {
+ 	EXT3_FEATURE_COMPAT_HAS_JOURNAL |
+ 		EXT2_FEATURE_COMPAT_RESIZE_INODE |
+ 		EXT2_FEATURE_COMPAT_DIR_INDEX |
+-		EXT4_FEATURE_COMPAT_FAST_COMMIT,
++		EXT4_FEATURE_COMPAT_FAST_COMMIT |
++		EXT4_FEATURE_COMPAT_STABLE_INODES,
+ 	/* Incompat */
+ 	EXT2_FEATURE_INCOMPAT_FILETYPE |
+ 		EXT4_FEATURE_INCOMPAT_FLEX_BG |
+diff --git a/resize/main.c b/resize/main.c
+index a0c31c06..cb0bf6a0 100644
+--- a/resize/main.c
++++ b/resize/main.c
+@@ -605,6 +605,12 @@ int main (int argc, char ** argv)
+ 		fprintf(stderr, _("The filesystem is already 32-bit.\n"));
+ 		exit(0);
+ 	}
++	if (new_size < ext2fs_blocks_count(fs->super) &&
++	    ext2fs_has_feature_stable_inodes(fs->super)) {
++		fprintf(stderr, _("Cannot shrink this filesystem "
++			"because it has the stable_inodes feature flag.\n"));
++		exit(1);
++	}
+ 	if (mount_flags & EXT2_MF_MOUNTED) {
+ 		retval = online_resize_fs(fs, mtpt, &new_size, flags);
+ 	} else {
 -- 
-2.23.0.700.g56cf767bdb-goog
+2.23.0.866.gb869b98d4c-goog
