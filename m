@@ -1,359 +1,95 @@
 Return-Path: <linux-fscrypt-owner@vger.kernel.org>
-Received: from mail.kernel.org ([198.145.29.99]:44096 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:59076 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2389038AbfJOSZ5 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 15 Oct 2019 14:25:57 -0400
+        id S1727264AbfJVBpG (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 21 Oct 2019 21:45:06 -0400
+Date: Mon, 21 Oct 2019 18:45:03 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v3 1/9] common/encrypt: disambiguate session encryption keys
-Date: Tue, 15 Oct 2019 11:16:35 -0700
-Message-Id: <20191015181643.6519-2-ebiggers@kernel.org>
-In-Reply-To: <20191015181643.6519-1-ebiggers@kernel.org>
-References: <20191015181643.6519-1-ebiggers@kernel.org>
+Subject: Re: arch/riscv doesn't support xchg() on bool
+Message-ID: <20191022014503.GA938@sol.localdomain>
+References: <20191021204026.GE122863@gmail.com>
+ <alpine.DEB.2.21.9999.1910211744450.28831@viisi.sifive.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <alpine.DEB.2.21.9999.1910211744450.28831@viisi.sifive.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
-To: fstests@vger.kernel.org
-Cc: linux-fscrypt@vger.kernel.org
+To: Paul Walmsley <paul.walmsley@sifive.com>
+Cc: linux-riscv@lists.infradead.org, linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 List-ID: <linux-fscrypt@vger.kernel.org>
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Paul,
 
-Rename the helper functions that add/remove keys from the session
-keyring, in order to distinguish them from the helper functions I'll be
-adding to add/remove keys from the new filesystem-level keyring.
+On Mon, Oct 21, 2019 at 06:23:11PM -0700, Paul Walmsley wrote:
+> Hi Eric,
+> 
+> On Mon, 21 Oct 2019, Eric Biggers wrote:
+> 
+> > The kbuild test robot reported a build error on RISC-V in this patch:
+> > 
+> > 	https://patchwork.kernel.org/patch/11182389/
+> > 
+> > ... because of the line:
+> > 
+> > 	if (!xchg(&mode->logged_impl_name, true)) {
+> > 
+> > where logged_impl_name is a 'bool'.  The problem is that unlike most (or 
+> > all?) other kernel architectures, arch/riscv/ doesn't support xchg() on 
+> > bytes.
+> 
+> When I looked at this in August, it looked like several Linux other 
+> architectures - SPARC, Microblaze, C-SKY, and Hexagon - also didn't 
+> support xchg() on anything other than 32-bit types:
+> 
+> https://lore.kernel.org/lkml/alpine.DEB.2.21.9999.1908161931110.32497@viisi.sifive.com/
+> 
+> Examples:
+> 
+> https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/sparc/include/asm/cmpxchg_32.h#n18
+> 
+> https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/sparc/include/asm/cmpxchg_32.h#n41
+> 
+> > Is there any chance this could be implemented, to avoid this
+> > architecture-specific quirk?
+> 
+> It is certainly possible.  I wonder whether it is wise.  Several of the 
+> other architectures implement a software workaround for this operation, 
+> and I guess you're advocating that we do the same.  We could copy one 
+> these implementations.  However, the workarounds balloon into quite a lot 
+> of code.  Here is an example from MIPS:
+> 
+> https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/mips/kernel/cmpxchg.c#n10
+> 
+> I could be wrong, but I think this expansion would be pretty surprising 
+> for most users of xchg().  I suspect most xchg() users are looking for 
+> something performant, and would be better served by simply using a 
+> variable with a 32-bit type.
+> 
+> In the case of your patch, it appears that struct 
+> fscrypt_mode.logged_impl_name is only used in the patched function.  It 
+> looks like it could be promoted into a u32 without much difficulty.  
+> Would you be willing to consider that approach of solving the problem?  
+> Then the code would be able to take advantage of the fast hardware 
+> implementation that's available on many architectures (including RISC-V).
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- common/encrypt    | 20 ++++++++++----------
- tests/ext4/024    |  2 +-
- tests/generic/397 |  4 ++--
- tests/generic/398 |  8 ++++----
- tests/generic/399 |  4 ++--
- tests/generic/419 |  4 ++--
- tests/generic/421 |  4 ++--
- tests/generic/429 |  8 ++++----
- tests/generic/435 |  4 ++--
- tests/generic/440 |  8 ++++----
- tests/generic/576 |  2 +-
- 11 files changed, 34 insertions(+), 34 deletions(-)
+Yes, I already sent a new version of the patch, which changes the variable to an
+int: https://patchwork.kernel.org/patch/11203003/.  I was wondering more about
+how to stop other people from running into this.
 
-diff --git a/common/encrypt b/common/encrypt
-index 06a56ed9..7bbe1936 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -89,7 +89,7 @@ _require_encryption_policy_support()
- 	mkdir $dir
- 	_require_command "$KEYCTL_PROG" keyctl
- 	_new_session_keyring
--	local keydesc=$(_generate_encryption_key)
-+	local keydesc=$(_generate_session_encryption_key)
- 	if _set_encpolicy $dir $keydesc $set_encpolicy_args \
- 		2>&1 >>$seqres.full | egrep -q 'Invalid argument'; then
- 		_notrun "kernel does not support encryption policy: '$set_encpolicy_args'"
-@@ -153,7 +153,7 @@ _generate_key_descriptor()
- 	echo $keydesc
- }
- 
--# Generate a raw encryption key, but don't add it to the keyring yet.
-+# Generate a raw encryption key, but don't add it to any keyring yet.
- _generate_raw_encryption_key()
- {
- 	local raw=""
-@@ -166,7 +166,7 @@ _generate_raw_encryption_key()
- 
- # Add the specified raw encryption key to the session keyring, using the
- # specified key descriptor.
--_add_encryption_key()
-+_add_session_encryption_key()
- {
- 	local keydesc=$1
- 	local raw=$2
-@@ -209,26 +209,26 @@ _add_encryption_key()
- # keyctl program.  It's assumed the caller has already set up a test-scoped
- # session keyring using _new_session_keyring.
- #
--_generate_encryption_key()
-+_generate_session_encryption_key()
- {
- 	local keydesc=$(_generate_key_descriptor)
- 	local raw=$(_generate_raw_encryption_key)
- 
--	_add_encryption_key $keydesc $raw
-+	_add_session_encryption_key $keydesc $raw
- 
- 	echo $keydesc
- }
- 
- # Unlink an encryption key from the session keyring, given its key descriptor.
--_unlink_encryption_key()
-+_unlink_session_encryption_key()
- {
- 	local keydesc=$1
- 	local keyid=$($KEYCTL_PROG search @s logon $FSTYP:$keydesc)
- 	$KEYCTL_PROG unlink $keyid >>$seqres.full
- }
- 
--# Revoke an encryption key from the keyring, given its key descriptor.
--_revoke_encryption_key()
-+# Revoke an encryption key from the session keyring, given its key descriptor.
-+_revoke_session_encryption_key()
- {
- 	local keydesc=$1
- 	local keyid=$($KEYCTL_PROG search @s logon $FSTYP:$keydesc)
-@@ -412,7 +412,7 @@ _require_get_ciphertext_filename_support()
- 		_scratch_mount
- 		_new_session_keyring
- 
--		local keydesc=$(_generate_encryption_key)
-+		local keydesc=$(_generate_session_encryption_key)
- 		local dir=$SCRATCH_MNT/test.${FUNCNAME[0]}
- 		local file=$dir/$(perl -e 'print "A" x 255')
- 		mkdir $dir
-@@ -634,7 +634,7 @@ _verify_ciphertext_for_encryption_policy()
- 	local raw_key=$(_generate_raw_encryption_key)
- 	local keydesc=$(_generate_key_descriptor)
- 	_new_session_keyring
--	_add_encryption_key $keydesc $raw_key
-+	_add_session_encryption_key $keydesc $raw_key
- 	local raw_key_hex=$(echo "$raw_key" | tr -d '\\x')
- 
- 	echo
-diff --git a/tests/ext4/024 b/tests/ext4/024
-index a86cc417..95243b70 100755
---- a/tests/ext4/024
-+++ b/tests/ext4/024
-@@ -53,7 +53,7 @@ _new_session_keyring
- _scratch_mkfs_encrypted &>>$seqres.full
- _scratch_mount
- mkdir $SCRATCH_MNT/edir
--keydesc=$(_generate_encryption_key)
-+keydesc=$(_generate_session_encryption_key)
- _set_encpolicy $SCRATCH_MNT/edir $keydesc
- echo foo > $SCRATCH_MNT/edir/file
- inum=$(stat -c '%i' $SCRATCH_MNT/edir/file)
-diff --git a/tests/generic/397 b/tests/generic/397
-index a97e866b..f2e22950 100755
---- a/tests/generic/397
-+++ b/tests/generic/397
-@@ -45,7 +45,7 @@ _scratch_mkfs_encrypted &>> $seqres.full
- _scratch_mount
- 
- mkdir $SCRATCH_MNT/edir $SCRATCH_MNT/ref_dir
--keydesc=$(_generate_encryption_key)
-+keydesc=$(_generate_session_encryption_key)
- _set_encpolicy $SCRATCH_MNT/edir $keydesc
- for dir in $SCRATCH_MNT/edir $SCRATCH_MNT/ref_dir; do
- 	touch $dir/empty > /dev/null
-@@ -92,7 +92,7 @@ filter_create_errors()
- 	    -e 's/Operation not permitted/Required key not available/'
- }
- 
--_unlink_encryption_key $keydesc
-+_unlink_session_encryption_key $keydesc
- _scratch_cycle_mount
- 
- # Check that unencrypted names aren't there
-diff --git a/tests/generic/398 b/tests/generic/398
-index d224e021..9727b2de 100755
---- a/tests/generic/398
-+++ b/tests/generic/398
-@@ -68,8 +68,8 @@ edir1=$SCRATCH_MNT/edir1
- edir2=$SCRATCH_MNT/edir2
- udir=$SCRATCH_MNT/udir
- mkdir $edir1 $edir2 $udir
--keydesc1=$(_generate_encryption_key)
--keydesc2=$(_generate_encryption_key)
-+keydesc1=$(_generate_session_encryption_key)
-+keydesc2=$(_generate_session_encryption_key)
- _set_encpolicy $edir1 $keydesc1
- _set_encpolicy $edir2 $keydesc2
- touch $edir1/efile1
-@@ -141,8 +141,8 @@ rm $edir1/fifo $edir2/fifo $udir/fifo
- # Now test that *without* access to the encrypted key, we cannot use an exchange
- # (cross rename) operation to move a forbidden file into an encrypted directory.
- 
--_unlink_encryption_key $keydesc1
--_unlink_encryption_key $keydesc2
-+_unlink_session_encryption_key $keydesc1
-+_unlink_session_encryption_key $keydesc2
- _scratch_cycle_mount
- efile1=$(find $edir1 -type f)
- efile2=$(find $edir2 -type f)
-diff --git a/tests/generic/399 b/tests/generic/399
-index dfd8d3c2..b2aaac13 100755
---- a/tests/generic/399
-+++ b/tests/generic/399
-@@ -61,7 +61,7 @@ dd if=/dev/zero of=$SCRATCH_DEV bs=$((1024 * 1024)) \
- _scratch_mkfs_sized_encrypted $fs_size &>> $seqres.full
- _scratch_mount
- 
--keydesc=$(_generate_encryption_key)
-+keydesc=$(_generate_session_encryption_key)
- mkdir $SCRATCH_MNT/encrypted_dir
- _set_encpolicy $SCRATCH_MNT/encrypted_dir $keydesc
- 
-@@ -127,7 +127,7 @@ done
- # memory than the '-9' preset.  The memory needed with our settings will be
- # 64 * 6.5 = 416 MB; see xz(1).
- #
--_unlink_encryption_key $keydesc
-+_unlink_session_encryption_key $keydesc
- _scratch_unmount
- fs_compressed_size=$(head -c $fs_size $SCRATCH_DEV | \
- 	xz --lzma2=dict=64M,mf=hc4,mode=fast,nice=16 | \
-diff --git a/tests/generic/419 b/tests/generic/419
-index 0abbac90..d07aec05 100755
---- a/tests/generic/419
-+++ b/tests/generic/419
-@@ -47,11 +47,11 @@ _scratch_mkfs_encrypted &>> $seqres.full
- _scratch_mount
- 
- mkdir $SCRATCH_MNT/edir
--keydesc=$(_generate_encryption_key)
-+keydesc=$(_generate_session_encryption_key)
- _set_encpolicy $SCRATCH_MNT/edir $keydesc
- echo a > $SCRATCH_MNT/edir/a
- echo b > $SCRATCH_MNT/edir/b
--_unlink_encryption_key $keydesc
-+_unlink_session_encryption_key $keydesc
- _scratch_cycle_mount
- 
- # Note that because encrypted filenames are unpredictable, this needs to be
-diff --git a/tests/generic/421 b/tests/generic/421
-index c8cc2dcc..f634a431 100755
---- a/tests/generic/421
-+++ b/tests/generic/421
-@@ -51,7 +51,7 @@ slice=2
- # Create an encrypted file and sync its data to disk.
- rm -rf $dir
- mkdir $dir
--keydesc=$(_generate_encryption_key)
-+keydesc=$(_generate_session_encryption_key)
- _set_encpolicy $dir $keydesc
- $XFS_IO_PROG -f $file -c "pwrite 0 $((nproc*slice))M" -c "fsync" > /dev/null
- 
-@@ -71,7 +71,7 @@ done
- sleep 1
- 
- # Revoke the encryption key.
--keyid=$(_revoke_encryption_key $keydesc)
-+keyid=$(_revoke_session_encryption_key $keydesc)
- 
- # Now try to open the file again.  In buggy kernels this caused concurrent
- # readers to crash with a NULL pointer dereference during decryption.
-diff --git a/tests/generic/429 b/tests/generic/429
-index 472fdbd9..6c18c543 100755
---- a/tests/generic/429
-+++ b/tests/generic/429
-@@ -56,7 +56,7 @@ _new_session_keyring
- keydesc=$(_generate_key_descriptor)
- raw_key=$(_generate_raw_encryption_key)
- mkdir $SCRATCH_MNT/edir
--_add_encryption_key $keydesc $raw_key
-+_add_session_encryption_key $keydesc $raw_key
- _set_encpolicy $SCRATCH_MNT/edir $keydesc
- 
- # Create two files in the directory: one whose name is valid in the base64
-@@ -96,7 +96,7 @@ show_directory_with_key()
- # the correct number of them are listed by readdir, and save them for later.
- echo
- echo "***** Without encryption key *****"
--_unlink_encryption_key $keydesc
-+_unlink_session_encryption_key $keydesc
- _scratch_cycle_mount
- echo "--- Directory listing:"
- ciphertext_names=( $(find $SCRATCH_MNT/edir -mindepth 1 | sort) )
-@@ -109,7 +109,7 @@ show_file_contents
- # stale dentries.
- echo
- echo "***** With encryption key *****"
--_add_encryption_key $keydesc $raw_key
-+_add_session_encryption_key $keydesc $raw_key
- show_directory_with_key
- 
- # Test for ->d_revalidate() race conditions.
-@@ -127,7 +127,7 @@ echo "***** After key revocation *****"
- 	exec 3<$SCRATCH_MNT/edir
- 	exec 4<$SCRATCH_MNT/edir/@@@
- 	exec 5<$SCRATCH_MNT/edir/abcd
--	_revoke_encryption_key $keydesc
-+	_revoke_session_encryption_key $keydesc
- 	show_directory_with_key
- )
- 
-diff --git a/tests/generic/435 b/tests/generic/435
-index 073596f3..f12d2be8 100755
---- a/tests/generic/435
-+++ b/tests/generic/435
-@@ -50,7 +50,7 @@ _new_session_keyring
- _scratch_mkfs_encrypted &>> $seqres.full
- _scratch_mount
- mkdir $SCRATCH_MNT/edir
--keydesc=$(_generate_encryption_key)
-+keydesc=$(_generate_session_encryption_key)
- # -f 0x2: zero-pad to 16-byte boundary (i.e. encryption block boundary)
- _set_encpolicy $SCRATCH_MNT/edir $keydesc -f 0x2
- 
-@@ -66,7 +66,7 @@ _set_encpolicy $SCRATCH_MNT/edir $keydesc -f 0x2
- seq -f "$SCRATCH_MNT/edir/abcdefghijklmnopqrstuvwxyz012345%.0f" 100000 | xargs touch
- find $SCRATCH_MNT/edir/ -type f | xargs stat -c %i | sort | uniq | wc -l
- 
--_unlink_encryption_key $keydesc
-+_unlink_session_encryption_key $keydesc
- _scratch_cycle_mount
- 
- # Verify that every file has a unique inode number and can be removed without
-diff --git a/tests/generic/440 b/tests/generic/440
-index 434286f4..1ec1ed48 100755
---- a/tests/generic/440
-+++ b/tests/generic/440
-@@ -46,7 +46,7 @@ _scratch_mkfs_encrypted &>> $seqres.full
- _scratch_mount
- keydesc=$(_generate_key_descriptor)
- raw_key=$(_generate_raw_encryption_key)
--_add_encryption_key $keydesc $raw_key
-+_add_session_encryption_key $keydesc $raw_key
- 
- # Set up an encrypted directory containing a regular file, a subdirectory, and a
- # symlink.
-@@ -65,7 +65,7 @@ echo
- echo "***** Parent has key, but child doesn't *****"
- exec 3< $SCRATCH_MNT/edir # pin inode with cached key in memory
- ls $SCRATCH_MNT/edir | sort
--_unlink_encryption_key $keydesc
-+_unlink_session_encryption_key $keydesc
- cat $SCRATCH_MNT/edir/file |& _filter_scratch
- ls $SCRATCH_MNT/edir/subdir
- cat $SCRATCH_MNT/edir/symlink |& _filter_scratch
-@@ -79,14 +79,14 @@ exec 3>&-
- # plaintext contents, even though its filename is shown in ciphertext!
- echo
- echo "***** Child has key, but parent doesn't *****"
--_add_encryption_key $keydesc $raw_key
-+_add_session_encryption_key $keydesc $raw_key
- mkdir $SCRATCH_MNT/edir2
- _set_encpolicy $SCRATCH_MNT/edir2 $keydesc
- ln $SCRATCH_MNT/edir/file $SCRATCH_MNT/edir2/link
- _scratch_cycle_mount
- cat $SCRATCH_MNT/edir2/link
- exec 3< $SCRATCH_MNT/edir2/link # pin inode with cached key in memory
--_unlink_encryption_key $keydesc
-+_unlink_session_encryption_key $keydesc
- stat $SCRATCH_MNT/edir/file |& _filter_scratch
- cat "$(find $SCRATCH_MNT/edir/ -type f)"
- exec 3>&-
-diff --git a/tests/generic/576 b/tests/generic/576
-index 254199ca..58525295 100755
---- a/tests/generic/576
-+++ b/tests/generic/576
-@@ -47,7 +47,7 @@ fsv_file=$edir/file.fsv
- 
- # Set up an encrypted directory.
- _new_session_keyring
--keydesc=$(_generate_encryption_key)
-+keydesc=$(_generate_session_encryption_key)
- mkdir $edir
- _set_encpolicy $edir $keydesc
- 
--- 
-2.23.0.700.g56cf767bdb-goog
+> 
+> > Note, there's at least one other place in the kernel that also uses 
+> > xchg() on a bool.
+> 
+> Given the nasty compatibility code, I wonder if we'd be better served by 
+> removing most of this compatibility code across the kernel, and just 
+> requiring callers to use a 32-bit type?  For most callers that I've seen, 
+> this doesn't seem to be much of an issue; and it would avoid the nasty 
+> code involved in software emulations of xchg().
+> 
+
+It's possible that's the better approach; someone would need to go through all
+the xchg() users and check whether any truly need the 8 or 16-bit support.  My
+main concern was just the annoyance of code that only fails to compile on
+certain architectures.  It should either be one way or the other everywhere.
+
+- Eric
