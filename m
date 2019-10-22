@@ -1,99 +1,139 @@
-Return-Path: <SRS0=xftb=YO=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=StmZ=YP=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D1637CA9EAF
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 21 Oct 2019 20:29:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7524FCA9EAF
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Oct 2019 01:23:17 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id A6A522086D
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 21 Oct 2019 20:29:03 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1571689743;
-	bh=CDmrDmHjELBAUrBY8WbscTUpVT2+8e+2NK3PWI6nzro=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=h93bKdOITy7waSphMTzFxhc639LAr/E40ySkc7nQ1GoXBmiRuZafzi8s9U8NcFi5z
-	 sOh4HqwuPCDVesXOghz7IkakZUUJZsGTanURTQ3vr1fD2kuc2S+y6w/wquPrn+I+UO
-	 VLLqiHQIdKQDusmsXWD+WzpQOJF5iMT0mAClCXys=
+	by mail.kernel.org (Postfix) with ESMTP id 458C7214B2
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Oct 2019 01:23:17 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=sifive.com header.i=@sifive.com header.b="EJecjF3+"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2387401AbfJUU3D (ORCPT
+        id S1727953AbfJVBXQ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 21 Oct 2019 16:29:03 -0400
-Received: from mail.kernel.org ([198.145.29.99]:40836 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1729388AbfJUU3D (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 21 Oct 2019 16:29:03 -0400
-Received: from gmail.com (unknown [104.132.1.77])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 208302067B;
-        Mon, 21 Oct 2019 20:29:02 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1571689742;
-        bh=CDmrDmHjELBAUrBY8WbscTUpVT2+8e+2NK3PWI6nzro=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=S5qbRv4LpeWBtE1dFXuPvLGMU43VkUsF413qTJMikb0SUYiAKqsBz8H+B4RxsiHTy
-         K1ecBLlwg21XreJQkSZGAvy327GVxorLtA7PpSuihTbnVPMp+Ke40BFo+vIQtlH4Ir
-         VL3jCpymD+r32LxMYYDdh+LA+19mI3hv9+hkOtOU=
-Date:   Mon, 21 Oct 2019 13:29:00 -0700
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     "Theodore Y . Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-fsdevel@vger.kernel.org
-Subject: Re: [PATCH] docs: ioctl-number: document fscrypt ioctl numbers
-Message-ID: <20191021202859.GD122863@gmail.com>
-Mail-Followup-To: linux-fscrypt@vger.kernel.org,
-        "Theodore Y . Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-fsdevel@vger.kernel.org
-References: <20191009234555.226282-1-ebiggers@kernel.org>
+        Mon, 21 Oct 2019 21:23:16 -0400
+Received: from mail-il1-f195.google.com ([209.85.166.195]:33876 "EHLO
+        mail-il1-f195.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727264AbfJVBXO (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 21 Oct 2019 21:23:14 -0400
+Received: by mail-il1-f195.google.com with SMTP id c12so13897705ilm.1
+        for <linux-fscrypt@vger.kernel.org>; Mon, 21 Oct 2019 18:23:13 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=sifive.com; s=google;
+        h=date:from:to:cc:subject:in-reply-to:message-id:references
+         :user-agent:mime-version;
+        bh=HxSTurX1jmsAhOfpsGghsXLIvTQPCzV7aaceHn58k98=;
+        b=EJecjF3+nEd1bVBO0x2r9May2yxPiA5i56nJtsaPHWNOunlSAVJaQ72R714XCXmt5g
+         qE7uHOx26GVMiQ3tcxzHITeZ4z8sVJgAbNiZ98i/6py1pkF7Ngndur9vlJSB0Eefa83m
+         jsoHwwRG7dWcdt6lwh8uauXOTh6Eh1P7i+tN9NmM3rzKNaj8Hwv6aDf8v/87QCWwpVVh
+         3h5viIHtwHM9X4krDKGy56i+0gPNpeM8HLwmYJcZgbhiHdoklanfbeSAVJ2pg7vfXZp9
+         bV6tuKUFo5++0D/tFiZoTbVksgQTOnOdi4ScAp2G4HxODcbbVAq3wVbTINg0UbSmzB8l
+         L10g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:in-reply-to:message-id
+         :references:user-agent:mime-version;
+        bh=HxSTurX1jmsAhOfpsGghsXLIvTQPCzV7aaceHn58k98=;
+        b=OS3qy0TEjWqZWwy19n1INrrykPMxUkZ91P+8h9Trpw6NN2uTVqQdW8Mnwik0S/ROzK
+         6GuCSBqmLn/zj4aowIJPj90NKz+Qxa3DieD6Omgr5i99baH3wCOgWen7HFeG13PH99n6
+         whA3W80PPsaygOuxht/8knGmmCVwmF07duZvrBz4TW38jzhvNjMR2EV3CxHOFr2MuXqx
+         ibZBzxv5ZXJNIVbsYBHkapKsNfWzMdDlfAQ2geF5Cq7f/TTs+IvAwvA1beU1HafAe4Cu
+         CTVt4qyBw23Y7fcPELu8iPpEMYMAbF03cOOU+yToC7Ln1ZWUjjHslPzggpO2phV4SWB5
+         wggg==
+X-Gm-Message-State: APjAAAUSERAJIevRkv83tS76rv5vZ8+dhqZTD/COPCCaxL61NaPp3BLA
+        f4H1cAsnBEo9QbltMgcMIvtt5A==
+X-Google-Smtp-Source: APXvYqwDxSFEQy2XdZlfsF/YxbIAJJAlAeHn1v5sEQT7bVF2SswsEb++F6PWyZ24fGTNgL+h7v0irA==
+X-Received: by 2002:a92:d784:: with SMTP id d4mr30026867iln.1.1571707393182;
+        Mon, 21 Oct 2019 18:23:13 -0700 (PDT)
+Received: from localhost (67-0-11-246.albq.qwest.net. [67.0.11.246])
+        by smtp.gmail.com with ESMTPSA id v17sm5902825ilg.1.2019.10.21.18.23.12
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 21 Oct 2019 18:23:12 -0700 (PDT)
+Date:   Mon, 21 Oct 2019 18:23:11 -0700 (PDT)
+From:   Paul Walmsley <paul.walmsley@sifive.com>
+X-X-Sender: paulw@viisi.sifive.com
+To:     Eric Biggers <ebiggers@kernel.org>
+cc:     linux-riscv@lists.infradead.org, linux-kernel@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org
+Subject: Re: arch/riscv doesn't support xchg() on bool
+In-Reply-To: <20191021204026.GE122863@gmail.com>
+Message-ID: <alpine.DEB.2.21.9999.1910211744450.28831@viisi.sifive.com>
+References: <20191021204026.GE122863@gmail.com>
+User-Agent: Alpine 2.21.9999 (DEB 301 2018-08-15)
 MIME-Version: 1.0
 Content-Type: text/plain; charset="UTF-8"
-Content-Disposition: inline
-In-Reply-To: <20191009234555.226282-1-ebiggers@kernel.org>
-User-Agent: Mutt/1.10.1 (2018-07-13)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
-Message-ID: <20191021202900.Nu_svqyV3gm-qtOS3ZS5BEodh3hjHTTAUJTHltRjGt0@z>
+Message-ID: <20191022012311.BWTqHX8j3TeDwGbRRir5rvW7F7XDk5kjJAQLuKMjTLI@z>
 
-On Wed, Oct 09, 2019 at 04:45:55PM -0700, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> The 'f' ioctls with numbers 19-26 decimal are currently used for fscrypt
-> (a.k.a. ext4/f2fs/ubifs encryption), and up to 39 decimal is reserved
-> for future fscrypt use, as per the comment in fs/ext4/ext4.h.  So the
-> reserved range is 13-27 hex.
-> 
-> Document this in ioctl-number.rst.
-> 
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> ---
->  Documentation/ioctl/ioctl-number.rst | 1 +
->  1 file changed, 1 insertion(+)
-> 
-> diff --git a/Documentation/ioctl/ioctl-number.rst b/Documentation/ioctl/ioctl-number.rst
-> index bef79cd4c6b4d..4ef86433bd677 100644
-> --- a/Documentation/ioctl/ioctl-number.rst
-> +++ b/Documentation/ioctl/ioctl-number.rst
-> @@ -233,6 +233,7 @@ Code  Seq#    Include File                                           Comments
->  'f'   00-0F  fs/ext4/ext4.h                                          conflict!
->  'f'   00-0F  linux/fs.h                                              conflict!
->  'f'   00-0F  fs/ocfs2/ocfs2_fs.h                                     conflict!
-> +'f'   13-27  linux/fscrypt.h
->  'f'   81-8F  linux/fsverity.h
->  'g'   00-0F  linux/usb/gadgetfs.h
->  'g'   20-2F  linux/usb/g_printer.h
-> -- 
+Hi Eric,
 
-Applied to fscrypt.git for 5.5.
+On Mon, 21 Oct 2019, Eric Biggers wrote:
 
-- Eric
+> The kbuild test robot reported a build error on RISC-V in this patch:
+> 
+> 	https://patchwork.kernel.org/patch/11182389/
+> 
+> ... because of the line:
+> 
+> 	if (!xchg(&mode->logged_impl_name, true)) {
+> 
+> where logged_impl_name is a 'bool'.  The problem is that unlike most (or 
+> all?) other kernel architectures, arch/riscv/ doesn't support xchg() on 
+> bytes.
+
+When I looked at this in August, it looked like several Linux other 
+architectures - SPARC, Microblaze, C-SKY, and Hexagon - also didn't 
+support xchg() on anything other than 32-bit types:
+
+https://lore.kernel.org/lkml/alpine.DEB.2.21.9999.1908161931110.32497@viisi.sifive.com/
+
+Examples:
+
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/sparc/include/asm/cmpxchg_32.h#n18
+
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/sparc/include/asm/cmpxchg_32.h#n41
+
+> Is there any chance this could be implemented, to avoid this
+> architecture-specific quirk?
+
+It is certainly possible.  I wonder whether it is wise.  Several of the 
+other architectures implement a software workaround for this operation, 
+and I guess you're advocating that we do the same.  We could copy one 
+these implementations.  However, the workarounds balloon into quite a lot 
+of code.  Here is an example from MIPS:
+
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/mips/kernel/cmpxchg.c#n10
+
+I could be wrong, but I think this expansion would be pretty surprising 
+for most users of xchg().  I suspect most xchg() users are looking for 
+something performant, and would be better served by simply using a 
+variable with a 32-bit type.
+
+In the case of your patch, it appears that struct 
+fscrypt_mode.logged_impl_name is only used in the patched function.  It 
+looks like it could be promoted into a u32 without much difficulty.  
+Would you be willing to consider that approach of solving the problem?  
+Then the code would be able to take advantage of the fast hardware 
+implementation that's available on many architectures (including RISC-V).
+
+> Note, there's at least one other place in the kernel that also uses 
+> xchg() on a bool.
+
+Given the nasty compatibility code, I wonder if we'd be better served by 
+removing most of this compatibility code across the kernel, and just 
+requiring callers to use a 32-bit type?  For most callers that I've seen, 
+this doesn't seem to be much of an issue; and it would avoid the nasty 
+code involved in software emulations of xchg().
+
+
+- Paul
