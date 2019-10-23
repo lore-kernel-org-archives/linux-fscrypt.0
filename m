@@ -1,121 +1,104 @@
-Return-Path: <SRS0=StmZ=YP=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=lfSI=YQ=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 29B3CCA9EA0
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Oct 2019 16:43:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9BA81CA9EAE
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Oct 2019 03:34:00 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id EDC5820684
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Oct 2019 16:43:18 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 60F1A218AE
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Oct 2019 03:34:00 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1571762599;
-	bh=Zj5wr74CxqX0/V/io5KPMu9t2gOvJAzJbqNGWFeTg7M=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=b0PJ+LGbxCuCej9BDKeosJFU0r4ry+nwrtLFGUFJ5njnAO6OZDIQj6NrT3zy31TYG
-	 hW2RiBIHt/5sZhaPEIRbJPGMPzEli842AouxnWNq2AfzLo2lyjAqHl2G/AHWQPwaad
-	 CW+inxGwPVlMFzr+fE9756pYMQaGW7j9BjDZ9FUs=
+	s=default; t=1571801640;
+	bh=y9FaMVUv4Jv0rf2VWZjSHgqxab4WZTGBH8pG0NEsKOQ=;
+	h=From:To:Cc:Subject:Date:List-ID:From;
+	b=0P6NsdEsWnbuJBglXueXESAnWT5p+EUJM6zHXS7+ipxyLcnDA8/cewdRYRBLjGNjc
+	 /yd5B6yFFbHVD/ke5EfJyvFWot9CBp8q/tzCkIV4VLvql+9TphLIZdag0yZthmhxwo
+	 CqgCfmsUnOlrZUPxs7aIYv3l46AucufrONihUsx8=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1731982AbfJVQnS (ORCPT
+        id S1730556AbfJWDeA (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 22 Oct 2019 12:43:18 -0400
-Received: from mail.kernel.org ([198.145.29.99]:37312 "EHLO mail.kernel.org"
+        Tue, 22 Oct 2019 23:34:00 -0400
+Received: from mail.kernel.org ([198.145.29.99]:50624 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1731320AbfJVQnS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 22 Oct 2019 12:43:18 -0400
-Received: from localhost (unknown [104.132.0.81])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        id S1727194AbfJWDeA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 22 Oct 2019 23:34:00 -0400
+Received: from sol.localdomain (c-24-5-143-220.hsd1.ca.comcast.net [24.5.143.220])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 9B1F520679;
-        Tue, 22 Oct 2019 16:43:17 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id F2D772086D;
+        Wed, 23 Oct 2019 03:33:58 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1571762597;
-        bh=Zj5wr74CxqX0/V/io5KPMu9t2gOvJAzJbqNGWFeTg7M=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=l2aoOrGYyK6nfJbMVQHHmqrtySzqsH3ke+c8RolvKfiJSPa7PULq6dsJxo92f4318
-         auMhhPorvk0IKXhDoHIsC1u+C+T3ROdAwoxER+76dtjVXvihmcSlAsb8u+z4Esy6ms
-         N/r764ctPaMgZaUY6XvhBSqta5ccsS3Ry81QUyd8=
-Date:   Tue, 22 Oct 2019 09:43:16 -0700
-From:   Jaegeuk Kim <jaegeuk@kernel.org>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-fsdevel@vger.kernel.org, Satya Tangirala <satyat@google.com>,
-        Paul Crowley <paulcrowley@google.com>,
-        Paul Lawrence <paullawrence@google.com>,
-        "Theodore Y . Ts'o" <tytso@mit.edu>
-Subject: Re: [PATCH 3/3] f2fs: add support for INLINE_CRYPT_OPTIMIZED
- encryption policies
-Message-ID: <20191022164316.GA88771@jaegeuk-macbookpro.roam.corp.google.com>
-References: <20191021230355.23136-1-ebiggers@kernel.org>
- <20191021230355.23136-4-ebiggers@kernel.org>
+        s=default; t=1571801639;
+        bh=y9FaMVUv4Jv0rf2VWZjSHgqxab4WZTGBH8pG0NEsKOQ=;
+        h=From:To:Cc:Subject:Date:From;
+        b=17HrWhJkFB7DQKPcqr4BIxgLh1dSa1kXZGdFwAXB8Mlg0Mc/uejCJt8ZL0BBpmC2u
+         EyZ/H/g36b0keJqoqxBvOv5BJrz3F60PA6I+LX94NBXGqNC+mboTd7Os8cmzvK4CEk
+         GZKXDsXB3GWcjLt6NbMxs9gnovfMT3TR4KoFfnmw=
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-ext4@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        Chandan Rajendra <chandan@linux.ibm.com>
+Subject: [PATCH v2 0/2] ext4: support encryption with blocksize != PAGE_SIZE
+Date:   Tue, 22 Oct 2019 20:33:10 -0700
+Message-Id: <20191023033312.361355-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.23.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20191021230355.23136-4-ebiggers@kernel.org>
-User-Agent: Mutt/1.8.2 (2017-04-18)
+Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On 10/21, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> f2fs inode numbers are stable across filesystem resizing, and f2fs inode
-> and file logical block numbers are always 32-bit.  So f2fs can always
-> support INLINE_CRYPT_OPTIMIZED encryption policies.  Wire up the needed
-> fscrypt_operations to declare support.
-> 
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
+Hello,
 
-Acked-by: Jaegeuk Kim <jaegeuk@kernel.org>
+This patchset makes ext4 support encryption on filesystems where the
+filesystem block size is not equal to PAGE_SIZE.  This allows e.g.
+PowerPC systems to use ext4 encryption.
 
-> ---
->  fs/f2fs/super.c | 26 ++++++++++++++++++++------
->  1 file changed, 20 insertions(+), 6 deletions(-)
-> 
-> diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-> index 1443cee158633..851ac95229263 100644
-> --- a/fs/f2fs/super.c
-> +++ b/fs/f2fs/super.c
-> @@ -2308,13 +2308,27 @@ static bool f2fs_dummy_context(struct inode *inode)
->  	return DUMMY_ENCRYPTION_ENABLED(F2FS_I_SB(inode));
->  }
->  
-> +static bool f2fs_has_stable_inodes(struct super_block *sb)
-> +{
-> +	return true;
-> +}
-> +
-> +static void f2fs_get_ino_and_lblk_bits(struct super_block *sb,
-> +				       int *ino_bits_ret, int *lblk_bits_ret)
-> +{
-> +	*ino_bits_ret = 8 * sizeof(nid_t);
-> +	*lblk_bits_ret = 8 * sizeof(block_t);
-> +}
-> +
->  static const struct fscrypt_operations f2fs_cryptops = {
-> -	.key_prefix	= "f2fs:",
-> -	.get_context	= f2fs_get_context,
-> -	.set_context	= f2fs_set_context,
-> -	.dummy_context	= f2fs_dummy_context,
-> -	.empty_dir	= f2fs_empty_dir,
-> -	.max_namelen	= F2FS_NAME_LEN,
-> +	.key_prefix		= "f2fs:",
-> +	.get_context		= f2fs_get_context,
-> +	.set_context		= f2fs_set_context,
-> +	.dummy_context		= f2fs_dummy_context,
-> +	.empty_dir		= f2fs_empty_dir,
-> +	.max_namelen		= F2FS_NAME_LEN,
-> +	.has_stable_inodes	= f2fs_has_stable_inodes,
-> +	.get_ino_and_lblk_bits	= f2fs_get_ino_and_lblk_bits,
->  };
->  #endif
->  
-> -- 
-> 2.23.0.866.gb869b98d4c-goog
+Most of the work for this was already done in prior kernel releases; now
+the only part missing is decryption support in block_read_full_page().
+Chandan Rajendra has proposed a patchset "Consolidate FS read I/O
+callbacks code" [1] to address this and do various other things like
+make ext4 use mpage_readpages() again, and make ext4 and f2fs share more
+code.  But it doesn't seem to be going anywhere.
+
+Therefore, I propose we simply add decryption support to
+block_read_full_page() for now.  This is a fairly small change, and it
+gets ext4 encryption with subpage-sized blocks working.
+
+Note: to keep things simple I'm just allocating the work object from the
+bi_end_io function with GFP_ATOMIC.  But if people think it's necessary,
+it could be changed to use preallocation like the page-based read path.
+
+Tested with 'gce-xfstests -c ext4/encrypt_1k -g auto', using the new
+"encrypt_1k" config I created.  All tests pass except for those that
+already fail or are excluded with the encrypt or 1k configs, and 2 tests
+that try to create 1023-byte symlinks which fails since encrypted
+symlinks are limited to blocksize-3 bytes.  Also ran the dedicated
+encryption tests using 'kvm-xfstests -c ext4/1k -g encrypt'; all pass,
+including the on-disk ciphertext verification tests.
+
+[1] https://lkml.kernel.org/linux-fsdevel/20190910155115.28550-1-chandan@linux.ibm.com/T/#u
+
+Changed v1 => v2:
+  - Added check for S_ISREG() which technically should be there, though
+    it happens not to matter currently.
+
+Chandan Rajendra (1):
+  ext4: Enable encryption for subpage-sized blocks
+
+Eric Biggers (1):
+  fs/buffer.c: support fscrypt in block_read_full_page()
+
+ Documentation/filesystems/fscrypt.rst |  4 +--
+ fs/buffer.c                           | 48 ++++++++++++++++++++++++---
+ fs/ext4/super.c                       |  7 ----
+ 3 files changed, 45 insertions(+), 14 deletions(-)
+
+-- 
+2.23.0
+
