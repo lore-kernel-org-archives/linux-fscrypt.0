@@ -2,53 +2,48 @@ Return-Path: <SRS0=lfSI=YQ=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1BDA6CA9EBA
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Oct 2019 03:34:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1ADF7CA9EB6
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Oct 2019 07:37:43 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id E54F02086D
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Oct 2019 03:34:02 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1571801643;
-	bh=ov7QJSp0r4rJzD1FJNkGgfl4svt3RP0z8aSuOGd5cp4=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=ME9YmYmJh2Yf/ldDuXqX0voA7MHucHupdsbSoS90SlZICBGymcyyDosMQ2UyPPNbT
-	 CD/cHEel/8XOiz2sONvSL/y0UzjbT319sT8m5v6OzcryeCmidhieQ18RIeTKuViA1c
-	 0ffCoLrb40HygcuHMaw0/w9LYXheSdlQLX7aMdRI=
+	by mail.kernel.org (Postfix) with ESMTP id DC150214B2
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Oct 2019 07:37:42 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1732244AbfJWDeB (ORCPT
+        id S2389484AbfJWHhm (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 22 Oct 2019 23:34:01 -0400
-Received: from mail.kernel.org ([198.145.29.99]:50628 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1730032AbfJWDeA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 22 Oct 2019 23:34:00 -0400
-Received: from sol.localdomain (c-24-5-143-220.hsd1.ca.comcast.net [24.5.143.220])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 457C12173B;
-        Wed, 23 Oct 2019 03:33:59 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1571801639;
-        bh=ov7QJSp0r4rJzD1FJNkGgfl4svt3RP0z8aSuOGd5cp4=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=GAj3pPw9S4Q7SGp+Yr+8HXsMcUuif/PHsqEBhkNhTuUK8imsdK35Ns3yMHThpSu2o
-         jY1mLuGI7kSAwdWCoKWzqLnxxlhFoAbv7EEnGLETq4PKYagyka8VgOc/xmnHG4WpUQ
-         z5BncMhrKWIsSR/48WkEhmd2e2HRaLJRkG1pA5LY=
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-ext4@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        Chandan Rajendra <chandan@linux.ibm.com>
-Subject: [PATCH v2 1/2] fs/buffer.c: support fscrypt in block_read_full_page()
-Date:   Tue, 22 Oct 2019 20:33:11 -0700
-Message-Id: <20191023033312.361355-2-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.23.0
-In-Reply-To: <20191023033312.361355-1-ebiggers@kernel.org>
-References: <20191023033312.361355-1-ebiggers@kernel.org>
+        Wed, 23 Oct 2019 03:37:42 -0400
+Received: from smtp1.linuxfoundation.org ([140.211.169.13]:35326 "EHLO
+        smtp1.linuxfoundation.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S2389351AbfJWHhm (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 23 Oct 2019 03:37:42 -0400
+Received: from rt.cvo.linuxfoundation.org (rt.cvo.linuxfoundation.org [172.17.192.131])
+        by smtp1.linuxfoundation.org (Postfix) with ESMTPS id C99E7896;
+        Wed, 23 Oct 2019 07:37:41 +0000 (UTC)
+Received: by rt.cvo.linuxfoundation.org (Postfix, from userid 48)
+        id B98301075; Wed, 23 Oct 2019 07:37:41 +0000 (UTC)
+Subject: [Kernel.org Helpdesk #80522] Please add linux-fscrypt@vger.kernel.org to lore.kernel.org
+From:   "Chris Hoy Poy via RT" <kernel-helpdesk@rt.linuxfoundation.org>
+Reply-To: kernel-helpdesk@rt.linuxfoundation.org
+In-Reply-To: <rt-4.4.0-17361-1571711745-65.80522-6-0@linuxfoundation>
+References: <RT-Ticket-80522@linuxfoundation>
+ <20191016010815.GB726@sol.localdomain>
+ <rt-4.4.0-17357-1571634901-827.80522-6-0@linuxfoundation>
+ <20191022023537.GB938@sol.localdomain>
+ <rt-4.4.0-17361-1571711745-65.80522-6-0@linuxfoundation>
+Message-ID: <rt-4.4.0-17358-1571816261-967.80522-6-0@linuxfoundation>
+X-RT-Loop-Prevention: linuxfoundation.org
+X-RT-Ticket: linuxfoundation.org #80522
+X-Managed-BY: RT 4.4.0 (http://www.bestpractical.com/rt/)
+X-RT-Originator: choypoy@linuxfoundation.org
+To:     ebiggers@kernel.org
+CC:     linux-fscrypt@vger.kernel.org
+Content-Type: text/plain; charset="utf-8"
+X-RT-Original-Encoding: utf-8
+Date:   Wed, 23 Oct 2019 03:37:41 -0400
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -56,108 +51,49 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+Hi Eric, 
 
-After each filesystem block (as represented by a buffer_head) has been
-read from disk by block_read_full_page(), decrypt it if needed.  The
-decryption is done on the fscrypt_read_workqueue.
+cheers - this is complete and accessible at
 
-This is the final change needed to support ext4 encryption with
-blocksize != PAGE_SIZE, and it's a fairly small change now that
-CONFIG_FS_ENCRYPTION is a bool and fs/crypto/ exposes functions to
-decrypt individual blocks and to enqueue work on the fscrypt workqueue.
+https://lore.kernel.org/linux-fscrypt/
 
-Don't try to add fs-verity support yet, as the fs/verity/ support layer
-isn't ready for sub-page blocks yet.  Just add fscrypt support for now.
+Let me know if you have any issues
 
-Almost all the new code is compiled away when CONFIG_FS_ENCRYPTION=n.
+cheers
+/Chris
 
-Cc: Chandan Rajendra <chandan@linux.ibm.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/buffer.c | 48 +++++++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 43 insertions(+), 5 deletions(-)
+On Tue Oct 22 10:35:45 2019, ebiggers@kernel.org wrote:
+> On Mon, Oct 21, 2019 at 01:15:01AM -0400, Chris Hoy Poy via RT wrote:
+> > Hi Eric,
+> >
+> > I've subscribed lore for new emails to linux-fscrypt - if you can
+> > provide an archive (there are no obvious ones I can find), I can
+> > import that for history.
+> >
+> > cheers
+> > /Chris
+> >
+> > On Wed Oct 16 09:08:18 2019, ebiggers@kernel.org wrote:
+> > > Hi, could you please start archiving the linux-fscrypt mailing list
+> > > at
+> > > lore.kernel.org?
+> > >
+> > > I can provide an archive which should be complete --- I've been
+> > > subscribed to
+> > > the list from the beginning.
+> > >
+> > > Thanks!
+> > >
+> > > - Eric
+> >
+> >
+> 
+> I've attached my archive.
+> 
+> - Eric
 
-diff --git a/fs/buffer.c b/fs/buffer.c
-index 86a38b979323..d39838090b22 100644
---- a/fs/buffer.c
-+++ b/fs/buffer.c
-@@ -47,6 +47,7 @@
- #include <linux/pagevec.h>
- #include <linux/sched/mm.h>
- #include <trace/events/block.h>
-+#include <linux/fscrypt.h>
- 
- static int fsync_buffers_list(spinlock_t *lock, struct list_head *list);
- static int submit_bh_wbc(int op, int op_flags, struct buffer_head *bh,
-@@ -246,10 +247,6 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
- 	return ret;
- }
- 
--/*
-- * I/O completion handler for block_read_full_page() - pages
-- * which come unlocked at the end of I/O.
-- */
- static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- {
- 	unsigned long flags;
-@@ -307,6 +304,47 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- 	return;
- }
- 
-+struct decrypt_bh_ctx {
-+	struct work_struct work;
-+	struct buffer_head *bh;
-+};
-+
-+static void decrypt_bh(struct work_struct *work)
-+{
-+	struct decrypt_bh_ctx *ctx =
-+		container_of(work, struct decrypt_bh_ctx, work);
-+	struct buffer_head *bh = ctx->bh;
-+	int err;
-+
-+	err = fscrypt_decrypt_pagecache_blocks(bh->b_page, bh->b_size,
-+					       bh_offset(bh));
-+	end_buffer_async_read(bh, err == 0);
-+	kfree(ctx);
-+}
-+
-+/*
-+ * I/O completion handler for block_read_full_page() - pages
-+ * which come unlocked at the end of I/O.
-+ */
-+static void end_buffer_async_read_io(struct buffer_head *bh, int uptodate)
-+{
-+	/* Decrypt if needed */
-+	if (uptodate && IS_ENABLED(CONFIG_FS_ENCRYPTION) &&
-+	    IS_ENCRYPTED(bh->b_page->mapping->host) &&
-+	    S_ISREG(bh->b_page->mapping->host->i_mode)) {
-+		struct decrypt_bh_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
-+
-+		if (ctx) {
-+			INIT_WORK(&ctx->work, decrypt_bh);
-+			ctx->bh = bh;
-+			fscrypt_enqueue_decrypt_work(&ctx->work);
-+			return;
-+		}
-+		uptodate = 0;
-+	}
-+	end_buffer_async_read(bh, uptodate);
-+}
-+
- /*
-  * Completion handler for block_write_full_page() - pages which are unlocked
-  * during I/O, and which have PageWriteback cleared upon I/O completion.
-@@ -379,7 +417,7 @@ EXPORT_SYMBOL(end_buffer_async_write);
-  */
- static void mark_buffer_async_read(struct buffer_head *bh)
- {
--	bh->b_end_io = end_buffer_async_read;
-+	bh->b_end_io = end_buffer_async_read_io;
- 	set_buffer_async_read(bh);
- }
- 
+
 -- 
-2.23.0
-
+Chris Hoy Poy
+Collaborative Projects IT
+The Linux Foundation
