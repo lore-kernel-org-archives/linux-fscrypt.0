@@ -1,90 +1,78 @@
-Return-Path: <SRS0=B4uA=YX=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=+n3t=YY=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 10714CA9EC7
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 30 Oct 2019 22:20:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6B756CA9ECF
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 31 Oct 2019 16:46:15 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id C616320874
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 30 Oct 2019 22:20:14 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1572474014;
-	bh=39tlinMi/mwa6K8bh+AvUrEqnvDUmchorz6iz1Vb2MI=;
-	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=A/+kEyOsUNr0AtSZdOztb6+NWCIkue2BZtMDpafzk7+Qpa3mAmmJBGt/UepwE8rE+
-	 J0dtPHSxZMgcMuuqJScyWQhL/PWBLX4y/9JmpBDbJq9pqzxLck+wmGM8pX0vX0cSOP
-	 8rC21H7UAG9iM6zQFoLdNqRzOdgKEixDjShmaxi4=
+	by mail.kernel.org (Postfix) with ESMTP id 4D26C20873
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 31 Oct 2019 16:46:15 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726596AbfJ3WUO (ORCPT
+        id S1728718AbfJaQqO (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 30 Oct 2019 18:20:14 -0400
-Received: from mail.kernel.org ([198.145.29.99]:47242 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726538AbfJ3WUO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 30 Oct 2019 18:20:14 -0400
-Received: from sol.localdomain (c-24-5-143-220.hsd1.ca.comcast.net [24.5.143.220])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id CDC0420873;
-        Wed, 30 Oct 2019 22:20:13 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1572474013;
-        bh=39tlinMi/mwa6K8bh+AvUrEqnvDUmchorz6iz1Vb2MI=;
-        h=From:To:Cc:Subject:Date:From;
-        b=dsqYm+NoUlZpxlsre8/ninHtAsLPpuA5GeG76ceKYSruhHR62LS0vHKwBN0Fvt84W
-         qrMaQU64T9FsPIpaBXxnIAX/h1IFURq5gGBcOcZ6HOKl5zTKAebB/mlyH2hRJQ2vYP
-         2zR6VBycETR8KzV2WlJR6qHxF7CCiOXHDBdNFllo=
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
-Subject: [PATCH] docs: fs-verity: document first supported kernel version
-Date:   Wed, 30 Oct 2019 15:19:15 -0700
-Message-Id: <20191030221915.229858-1-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.23.0
+        Thu, 31 Oct 2019 12:46:14 -0400
+Received: from outgoing-auth-1.mit.edu ([18.9.28.11]:35407 "EHLO
+        outgoing.mit.edu" rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org
+        with ESMTP id S1728714AbfJaQqO (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 31 Oct 2019 12:46:14 -0400
+Received: from callcc.thunk.org (guestnat-104-133-0-98.corp.google.com [104.133.0.98] (may be forged))
+        (authenticated bits=0)
+        (User authenticated as tytso@ATHENA.MIT.EDU)
+        by outgoing.mit.edu (8.14.7/8.12.4) with ESMTP id x9VGjo7m016231
+        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+        Thu, 31 Oct 2019 12:45:51 -0400
+Received: by callcc.thunk.org (Postfix, from userid 15806)
+        id 6335E420456; Thu, 31 Oct 2019 12:45:50 -0400 (EDT)
+Date:   Thu, 31 Oct 2019 12:45:50 -0400
+From:   "Theodore Y. Ts'o" <tytso@mit.edu>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net,
+        Douglas Anderson <dianders@chromium.org>,
+        Gwendal Grignou <gwendal@chromium.org>,
+        Ryo Hashimoto <hashimoto@chromium.org>, groeck@chromium.org,
+        apronin@chromium.org, sukhomlinov@google.com,
+        Chao Yu <chao@kernel.org>
+Subject: Re: [PATCH v2] Revert "ext4 crypto: fix to check feature status
+ before get policy"
+Message-ID: <20191031164550.GF16197@mit.edu>
+References: <20191030215138.224671-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20191030215138.224671-1-ebiggers@kernel.org>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Oct 30, 2019 at 02:51:38PM -0700, Eric Biggers wrote:
+> From: Douglas Anderson <dianders@chromium.org>
+> 
+> This reverts commit 0642ea2409f3 ("ext4 crypto: fix to check feature
+> status before get policy").
+> 
+> The commit made a clear and documented ABI change that is not backward
+> compatible.  There exists userspace code [1][2] that relied on the old
+> behavior and is now broken.
+> 
+> While we could entertain the idea of updating the userspace code to
+> handle the ABI change, it's my understanding that in general ABI
+> changes that break userspace are frowned upon (to put it nicely).
 
-I had meant to replace these TODOs with the actual version when applying
-the patches, but forgot to do so.  Do it now.
+The rule is that if someone complains, we have to revert.  Douglas's
+email counts as a complaint, so we should revert.  That being said, if
+ChromeOS (userspace) changes to using /sys/fs/ext4/features/encryption
+to determine whether or not the kernel supports encryption, then we
+can in the future change the error code to make things consistent with
+f2fs.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/filesystems/fsverity.rst | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+This looks good, I'll pull it into ext4 git tree.
 
-diff --git a/Documentation/filesystems/fsverity.rst b/Documentation/filesystems/fsverity.rst
-index 3355377a2439..a95536b6443c 100644
---- a/Documentation/filesystems/fsverity.rst
-+++ b/Documentation/filesystems/fsverity.rst
-@@ -406,7 +406,7 @@ pages have been read into the pagecache.  (See `Verifying data`_.)
- ext4
- ----
- 
--ext4 supports fs-verity since Linux TODO and e2fsprogs v1.45.2.
-+ext4 supports fs-verity since Linux v5.4 and e2fsprogs v1.45.2.
- 
- To create verity files on an ext4 filesystem, the filesystem must have
- been formatted with ``-O verity`` or had ``tune2fs -O verity`` run on
-@@ -442,7 +442,7 @@ also only supports extent-based files.
- f2fs
- ----
- 
--f2fs supports fs-verity since Linux TODO and f2fs-tools v1.11.0.
-+f2fs supports fs-verity since Linux v5.4 and f2fs-tools v1.11.0.
- 
- To create verity files on an f2fs filesystem, the filesystem must have
- been formatted with ``-O verity``.
--- 
-2.23.0
-
+						- Ted
