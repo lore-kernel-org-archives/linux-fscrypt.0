@@ -2,91 +2,133 @@ Return-Path: <SRS0=wfcM=Y7=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-5.3 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 30E38C43331
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Nov 2019 22:05:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8D1C0C5DF61
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Nov 2019 22:13:00 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id E578C2075C
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Nov 2019 22:05:39 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5DEC22166E
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Nov 2019 22:13:00 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1573164340;
-	bh=cygUg6uzZhrE0QtmMOaogM8YgrVMvUUpNVFQTtn+FhQ=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=T6HIzQrRy2EfDRQ5mo5Y2KoXpL/g6I0X0j5JA+qfUHPR/6D8L1kQtTdQqCgVt1xSa
-	 IxjtKLgZ8UruaEGQWoW0EMuXiqu6w+Tv8289gJiW9A80PzqfAbxNUdddJVggQYS3+K
-	 gzxK/sQvapfErTAy3HCt21xVmIqhS6KiyELN6y0g=
+	s=default; t=1573164780;
+	bh=sumKTTMSu0TjJWnjdn6qQq4QblYrYnTbD5OwaLmnW5s=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=eMqShnHVVivuyHiD/LpjB9kL93PP7vYmysmPl4nkVkkYT9EDmmpwjBV5MmuoUd7lT
+	 e7fe1zaLp9tmP0f/TOVXpn/rLkzAqOoPHXotIS/BB8IGnr4rxzocq+vahAByiZzg3r
+	 QMLaHW2cjQR92cywTBt6gBpVArG5hkL1n/o7v6ZA=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1725906AbfKGWFj (ORCPT
+        id S1726281AbfKGWM7 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 7 Nov 2019 17:05:39 -0500
-Received: from mail.kernel.org ([198.145.29.99]:36220 "EHLO mail.kernel.org"
+        Thu, 7 Nov 2019 17:12:59 -0500
+Received: from mail.kernel.org ([198.145.29.99]:37474 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725882AbfKGWFj (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 7 Nov 2019 17:05:39 -0500
-Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        id S1725906AbfKGWM7 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 7 Nov 2019 17:12:59 -0500
+Received: from gmail.com (unknown [104.132.1.77])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 75F1820679;
-        Thu,  7 Nov 2019 22:05:38 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id D96BA2075C;
+        Thu,  7 Nov 2019 22:12:57 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1573164338;
-        bh=cygUg6uzZhrE0QtmMOaogM8YgrVMvUUpNVFQTtn+FhQ=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=U2ahxXJfpD62ZZyL2kWYVQCil+YiEuYvGM8qrEkDSjEVJjfGgM3GEvh0BPqaKZlR2
-         3AK1LyQIj/blgbUFME6KpJ1OgdutTDdk902RgybzDOjQPJjSSRYVTaCtNIbbKUWQO7
-         BxkzKA5F71d6dLX4jWeEJPrEmQnD9ad5nJk92Dt0=
+        s=default; t=1573164778;
+        bh=sumKTTMSu0TjJWnjdn6qQq4QblYrYnTbD5OwaLmnW5s=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=JeN+ChtHQHJOrgWAnW3PkTwaUugMas6qp/lkjPGpxmLky0BCWxxrj/L4Hw2tOllRq
+         eUybTaY70haNLirl0N5ZQwGMGqohpHOdSNfxRNLs7tRlGtGPrjH7XY9Ybj6lkmA1PJ
+         mA9rv2v0pQvvx0U19R4VgA8fkiHdVMcAoaLF6gsE=
+Date:   Thu, 7 Nov 2019 14:12:56 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-man@vger.kernel.org
-Cc:     darrick.wong@oracle.com, dhowells@redhat.com, jaegeuk@kernel.org,
-        linux-api@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
+To:     "Darrick J. Wong" <darrick.wong@oracle.com>
+Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-api@vger.kernel.org, David Howells <dhowells@redhat.com>,
+        Theodore Ts'o <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Victor Hsieh <victorhsieh@google.com>
+Subject: Re: [PATCH 1/4] statx: define STATX_ATTR_VERITY
+Message-ID: <20191107221255.GB1160@gmail.com>
+Mail-Followup-To: "Darrick J. Wong" <darrick.wong@oracle.com>,
         linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        tytso@mit.edu, victorhsieh@google.com
-Subject: [man-pages RFC PATCH] statx.2: document STATX_ATTR_VERITY
-Date:   Thu,  7 Nov 2019 14:02:48 -0800
-Message-Id: <20191107220248.32025-1-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.24.0.rc1.363.gb1bccd3e3d-goog
-In-Reply-To: <20191107014420.GD15212@magnolia>
-References: <20191107014420.GD15212@magnolia>
+        linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-api@vger.kernel.org, David Howells <dhowells@redhat.com>,
+        Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>,
+        Victor Hsieh <victorhsieh@google.com>
+References: <20191029204141.145309-1-ebiggers@kernel.org>
+ <20191029204141.145309-2-ebiggers@kernel.org>
+ <20191107014420.GD15212@magnolia>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20191107014420.GD15212@magnolia>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Nov 06, 2019 at 05:44:20PM -0800, Darrick J. Wong wrote:
+> On Tue, Oct 29, 2019 at 01:41:38PM -0700, Eric Biggers wrote:
+> > From: Eric Biggers <ebiggers@google.com>
+> > 
+> > Add a statx attribute bit STATX_ATTR_VERITY which will be set if the
+> > file has fs-verity enabled.  This is the statx() equivalent of
+> > FS_VERITY_FL which is returned by FS_IOC_GETFLAGS.
+> > 
+> > This is useful because it allows applications to check whether a file is
+> > a verity file without opening it.  Opening a verity file can be
+> > expensive because the fsverity_info is set up on open, which involves
+> > parsing metadata and optionally verifying a cryptographic signature.
+> > 
+> > This is analogous to how various other bits are exposed through both
+> > FS_IOC_GETFLAGS and statx(), e.g. the encrypt bit.
+> > 
+> > Signed-off-by: Eric Biggers <ebiggers@google.com>
+> > ---
+> >  include/linux/stat.h      | 3 ++-
+> >  include/uapi/linux/stat.h | 2 +-
+> >  2 files changed, 3 insertions(+), 2 deletions(-)
+> > 
+> > diff --git a/include/linux/stat.h b/include/linux/stat.h
+> > index 765573dc17d659..528c4baad09146 100644
+> > --- a/include/linux/stat.h
+> > +++ b/include/linux/stat.h
+> > @@ -33,7 +33,8 @@ struct kstat {
+> >  	 STATX_ATTR_IMMUTABLE |				\
+> >  	 STATX_ATTR_APPEND |				\
+> >  	 STATX_ATTR_NODUMP |				\
+> > -	 STATX_ATTR_ENCRYPTED				\
+> > +	 STATX_ATTR_ENCRYPTED |				\
+> > +	 STATX_ATTR_VERITY				\
+> >  	 )/* Attrs corresponding to FS_*_FL flags */
+> >  	u64		ino;
+> >  	dev_t		dev;
+> > diff --git a/include/uapi/linux/stat.h b/include/uapi/linux/stat.h
+> > index 7b35e98d3c58b1..ad80a5c885d598 100644
+> > --- a/include/uapi/linux/stat.h
+> > +++ b/include/uapi/linux/stat.h
+> > @@ -167,8 +167,8 @@ struct statx {
+> >  #define STATX_ATTR_APPEND		0x00000020 /* [I] File is append-only */
+> >  #define STATX_ATTR_NODUMP		0x00000040 /* [I] File is not to be dumped */
+> >  #define STATX_ATTR_ENCRYPTED		0x00000800 /* [I] File requires key to decrypt in fs */
+> > -
+> >  #define STATX_ATTR_AUTOMOUNT		0x00001000 /* Dir: Automount trigger */
+> > +#define STATX_ATTR_VERITY		0x00100000 /* [I] Verity protected file */
+> 
+> Any reason why this wasn't 0x2000?
 
-Document the verity attribute for statx().
+Yes, as Andreas pointed out, the value is chosen to match the corresponding
+FS_IOC_GETFLAGS bit, like the other bits above marked [I].
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- man2/statx.2 | 4 ++++
- 1 file changed, 4 insertions(+)
+> 
+> If there's a manpage update that goes with this, then...
+> Acked-by: Darrick J. Wong <darrick.wong@oracle.com>
+> 
 
-RFC since the kernel patches are currently under review.
-The kernel patches can be found here:
-https://lkml.kernel.org/linux-fscrypt/20191029204141.145309-1-ebiggers@kernel.org/T/#u
+It's pretty trivial to add it to the statx(2) man page.
+I've sent out a patch for comment:
+https://lkml.kernel.org/linux-fscrypt/20191107220248.32025-1-ebiggers@kernel.org/
 
-diff --git a/man2/statx.2 b/man2/statx.2
-index d2f1b07b8..713bd1260 100644
---- a/man2/statx.2
-+++ b/man2/statx.2
-@@ -461,6 +461,10 @@ See
- .TP
- .B STATX_ATTR_ENCRYPTED
- A key is required for the file to be encrypted by the filesystem.
-+.TP
-+.B STATX_ATTR_VERITY
-+The file has fs-verity enabled.  It cannot be written to, and all reads from it
-+will be verified against a Merkle tree.
- .SH RETURN VALUE
- On success, zero is returned.
- On error, \-1 is returned, and
--- 
-2.24.0.rc1.363.gb1bccd3e3d-goog
-
+- Eric
