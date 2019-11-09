@@ -1,120 +1,98 @@
-Return-Path: <SRS0=HhOB=ZA=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=cg7v=ZB=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.3 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 83FC3C5DF60
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  8 Nov 2019 19:36:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5F48AC43331
+	for <linux-fscrypt@archiver.kernel.org>; Sat,  9 Nov 2019 03:41:54 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 598902085B
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  8 Nov 2019 19:36:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 2B839214E0
+	for <linux-fscrypt@archiver.kernel.org>; Sat,  9 Nov 2019 03:41:54 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1573241761;
-	bh=98CTD1etW9H20E3cCNEDvFQ8V8zeVFrjcPnYMXN0TNs=;
+	s=default; t=1573270914;
+	bh=nM7gdcItKIGEBk0xEwwAqP80Fel3Rlr173boiqOMR8I=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=o6jANCEzJKlQoQ1VV6WgGeN3XZp5PwbntVmY63SQ5JtnmsKpyM1SGoCOXsMNTg3nA
-	 1XlaNXjaTIOC+b8YN+XC5FSwr4KMwvw9O6mk1ZShiH4xoG9jsD6mv516f3vl8nlqD1
-	 pWSgOVIgt+ws9rziv4v1J3WkvZ4u8KcWrB/HO5bo=
+	b=Q8fZ6ZI+lQRFqk0Cgq7PpRRF9vq8gNXuQKRuxzSKwRUvstaic3br1skZzo6atJPwX
+	 x2LcStbeEpKooTqJ6VkMtDP0MZF/tjwbClfoeBO2O7WwuXgodScUwzn1XCXUwZSRXh
+	 1Z20QovPx0eZTMH2N/Kem07NuVWW0JRweeKgI1w0=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1731878AbfKHTgA (ORCPT
+        id S1726019AbfKIDlx (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 8 Nov 2019 14:36:00 -0500
-Received: from mail.kernel.org ([198.145.29.99]:57468 "EHLO mail.kernel.org"
+        Fri, 8 Nov 2019 22:41:53 -0500
+Received: from mail.kernel.org ([198.145.29.99]:46032 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727233AbfKHTgA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 8 Nov 2019 14:36:00 -0500
-Received: from gmail.com (unknown [104.132.1.77])
+        id S1725895AbfKIDlx (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 8 Nov 2019 22:41:53 -0500
+Received: from sol.localdomain (c-24-5-143-220.hsd1.ca.comcast.net [24.5.143.220])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 87FDD206A3;
-        Fri,  8 Nov 2019 19:35:59 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 1C41E21019;
+        Sat,  9 Nov 2019 03:41:52 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1573241759;
-        bh=98CTD1etW9H20E3cCNEDvFQ8V8zeVFrjcPnYMXN0TNs=;
+        s=default; t=1573270912;
+        bh=nM7gdcItKIGEBk0xEwwAqP80Fel3Rlr173boiqOMR8I=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=YL8EudJ2mTqL3pUp/TSoID2WBaJpPHg+ADaqLXn1jqLGmHvlaLYR3UnW2P6DQsqDy
-         hV8LrIuDKB+LHVoJFh1iFtkiQLVDIi+oDuT9s4TmmuxU74xjAfDqCvjqIb+aPmQQuO
-         imgrJJhWQe+dSiyRjbRkA+rBs9WhRvt9xvMGvGas=
-Date:   Fri, 8 Nov 2019 11:35:58 -0800
+        b=I643OoiRvnVlCe9L18octupHW4bqtDJH/GNba+l5qYsYWILut8wlYaNbMFXqSDbQR
+         jp9wQoJV2pQdBHeCBTxCzUjlyCbb592osUTSMM3NeCMiXUk1iUtdC/qE+GpvwteA/4
+         DF0KwhB8WmUXiO3l+45bTPxYctPb0ZgFTwf3eatk=
+Date:   Fri, 8 Nov 2019 19:41:50 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     walter harms <wharms@bfs.de>
-Cc:     linux-man@vger.kernel.org, darrick.wong@oracle.com,
-        dhowells@redhat.com, jaegeuk@kernel.org, linux-api@vger.kernel.org,
-        linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        tytso@mit.edu, victorhsieh@google.com
-Subject: Re: [man-pages RFC PATCH] statx.2: document STATX_ATTR_VERITY
-Message-ID: <20191108193557.GA12997@gmail.com>
-Mail-Followup-To: walter harms <wharms@bfs.de>, linux-man@vger.kernel.org,
-        darrick.wong@oracle.com, dhowells@redhat.com, jaegeuk@kernel.org,
-        linux-api@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        tytso@mit.edu, victorhsieh@google.com
-References: <20191107014420.GD15212@magnolia>
- <20191107220248.32025-1-ebiggers@kernel.org>
- <5DC525E8.4060705@bfs.de>
+To:     Colin Walters <walters@verbum.org>
+Cc:     linux-fscrypt@vger.kernel.org
+Subject: Re: Some questions/thoughts on fs-verity
+Message-ID: <20191109034150.GC9739@sol.localdomain>
+Mail-Followup-To: Colin Walters <walters@verbum.org>,
+        linux-fscrypt@vger.kernel.org
+References: <696354c2-5d7a-4f37-93d2-9a58845ad22d@www.fastmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <5DC525E8.4060705@bfs.de>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+In-Reply-To: <696354c2-5d7a-4f37-93d2-9a58845ad22d@www.fastmail.com>
+User-Agent: Mutt/1.12.2 (2019-09-21)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Nov 08, 2019 at 09:23:04AM +0100, walter harms wrote:
+Hi Colin,
+
+On Fri, Nov 08, 2019 at 02:18:32PM -0500, Colin Walters wrote:
+> It's clear that the Linux kernel is widely deployed with things like dm-verity devices where the user of the device isn't root.  There are great security properties from this in ensuring malicious code (compromised apps/OS) can't persist, and what Google is doing with ChromeOS/Android is a good example.
 > 
+> However, for cases where the user *is* root (or, like me as an OS vendor trying to support an OS where the user can be root), dm-verity comes with a whole host of restrictions and issues.  This was noted in the earlier fs-verity discussions.  Among other ones, simply trying to commit to a partition size beyond which the trusted OS cannot grow is seriously ugly.  Another example here is with ostree (or other filesystem-level tools) it's easy to have *three* images (or really N) so that while you're downloading updates you don't lose your rollback, etc.
 > 
-> Am 07.11.2019 23:02, schrieb Eric Biggers:
-> > From: Eric Biggers <ebiggers@google.com>
-> > 
-> > Document the verity attribute for statx().
-> > 
-> > Signed-off-by: Eric Biggers <ebiggers@google.com>
-> > ---
-> >  man2/statx.2 | 4 ++++
-> >  1 file changed, 4 insertions(+)
-> > 
-> > RFC since the kernel patches are currently under review.
-> > The kernel patches can be found here:
-> > https://lkml.kernel.org/linux-fscrypt/20191029204141.145309-1-ebiggers@kernel.org/T/#u
-> > 
-> > diff --git a/man2/statx.2 b/man2/statx.2
-> > index d2f1b07b8..713bd1260 100644
-> > --- a/man2/statx.2
-> > +++ b/man2/statx.2
-> > @@ -461,6 +461,10 @@ See
-> >  .TP
-> >  .B STATX_ATTR_ENCRYPTED
-> >  A key is required for the file to be encrypted by the filesystem.
-> > +.TP
-> > +.B STATX_ATTR_VERITY
-> > +The file has fs-verity enabled.  It cannot be written to, and all reads from it
-> > +will be verified against a Merkle tree.
+> I'm excited about the potential of fs-verity because it's so much more *flexible* - leaving aside the base OS case for a second - for example fs-verity is even available to unprivileged users by default, so if the admin has at least enabled the `verity` flag, if a user wanted to they could enable fs-verity for e.g. their `~/.bashrc`.  That's neat!
 > 
-> Using "Merkle tree" opens a can of worm and what will happen when the methode will change ?
-> Does it matter at all ? i would suggest "filesystem" here.
+> However, this gets into some questions I have around the security properties of fs-verity because - it only covers file contents.  There are many problems from this:
+> 
+>  - Verifying directories and symlinks is really desirable too; take e.g. /etc/systemd/system - I want to verify not just that the unit files there are valid, but also that there's no malicious ones.  
+>  - Being able to e.g. `chown root:root` `chmod u+s` a fs-verity protected binary is...not desired.
+>  - Finally, taking the scenario of a malicious code that has gained CAP_SYS_ADMIN and the ability to write to raw block devices, it seems to me that the discussions around "untrusted filesystems" (https://lwn.net/Articles/755593/) come to the fore.
 > 
 
-Fundamentally, fs-verity guarantees that all data read is verified against a
-cryptographic hash that covers the entire file.  I think it will be helpful to
-convey that here, e.g. to avoid confusion with non-cryptographic, individual
-block checksums supported by filesystems like btrfs and zfs.
+Can you take a step back and consider what security properties you're actually
+trying to achieve?  In particular, be aware that if you just enable fs-verity on
+a file but never actually compare the hash to anything, it provides integrity
+only (detection of accidental corruption), not any authenticity protection.
 
-Now, the only sane way to implement this model is with a Merkle tree, and this
-is part of the fs-verity UAPI (via the file hash), so that's where I'm coming
-from here.  Perhaps the phrase "Merkle tree" could be interpreted too strictly,
-though, so it would be better to emphasize the more abstract model.  How about
-the following?:
+In your pull request to OSTree (https://github.com/ostreedev/ostree/pull/1959),
+I see a call to FS_IOC_ENABLE_VERITY.  But there's no corresponding call to
+FS_IOC_MEASURE_VERITY to actually authenticate the file(s), nor is fs-verity's
+built-in signature verification feature being used.  So this is integrity-only;
+there's no protection against malicious modifications to the data on-disk.
 
-	The file has fs-verity enabled.  It cannot be written to, and all reads
-	from it will be verified against a cryptographic hash that covers the
-	entire file, e.g. via a Merkle tree.
+I.e., fs-verity is really meant to be used as part of a userspace-driven
+authentication policy.  It's not something that magically increases security by
+itself.  That's partly why the scope of fs-verity is limited to file contents:
+userspace can still authenticate other metadata if needed.
+
+As for an attacker exploiting a filesystem bug, yes that is a big problem
+currently in Linux.  However, gaining code execution via such a bug is a *bug*
+and is patchable and mitigable, whereas gaining code execution by modifying
+unauthenticated code stored on-disk is simply working as intended.
 
 - Eric
