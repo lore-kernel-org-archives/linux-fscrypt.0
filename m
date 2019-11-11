@@ -7,44 +7,44 @@ X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6C64EC17448
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0A474C1744B
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:44 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 3E3FE222C1
+	by mail.kernel.org (Postfix) with ESMTP id 944532196E
 	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:43 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
 	s=default; t=1573506343;
-	bh=uHsK7UuOsKShxsIA2IFPJosQ74sx59uTyVzrH9KsT08=;
+	bh=MziDcmLAsFwDMi1wWD8oh+S/pvvFzRuDQW5nfujUi1w=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=q7llleZH8Bt9lbVs/USXm2Ub8eo+AIJy8nnhZ4sIbC041Mx+ffSwHxXpCrwinPO8l
-	 IVXRPQeM8QNagWHt0BHf3QpL8PtPwFjBqTzJV4slAJpmFrUUHg7s5nChB+CH03AUy5
-	 TEQ8xQUBmOzgYkhCR1WOPsvtG4qfWzOwLMH5qPVg=
+	b=lC2CUHxg2ey+b8g+fGTs8fNsDkyMgfKkTjrJQqOtR9MPz/OS81bOdlkW7+rpxiV0X
+	 0P5hl9ZPxXFmyxChVJxgR6xVc+3gg7N3gZHE1BJQ9Y1KHaTlbpkgQRjgppPpJkFJpj
+	 zjS81ATwVoQBYxTwKny4e7l4Ei7c3kekT3kVQQMQ=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726957AbfKKVFm (ORCPT
+        id S1726964AbfKKVFm (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Mon, 11 Nov 2019 16:05:42 -0500
-Received: from mail.kernel.org ([198.145.29.99]:44344 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:44348 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726950AbfKKVFm (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1726916AbfKKVFm (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 11 Nov 2019 16:05:42 -0500
 Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id CAB42214E0;
-        Mon, 11 Nov 2019 21:05:41 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 13D6A21655;
+        Mon, 11 Nov 2019 21:05:42 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1573506341;
-        bh=uHsK7UuOsKShxsIA2IFPJosQ74sx59uTyVzrH9KsT08=;
+        s=default; t=1573506342;
+        bh=MziDcmLAsFwDMi1wWD8oh+S/pvvFzRuDQW5nfujUi1w=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=KpQGq/f9OdLjDUiyB7kuks1kuLsS9NDkd91ygnSTejG5yXVqM9PI6Xk/r2Ua6a3H9
-         cs8AI+VJupaSPtHmkHt+JdrXNCT1vCSF2CvEDsmyHMfOlzyXigj0KjC0YbpLieKD6d
-         GAq9K2+/d81rWT51EhJ3Us1lvwESU6oCa6FbF6Qw=
+        b=jr8Gil2pd1mSeLa5eV/f5e1JmaUt1I77nxNaN1QmTRDzMADU0/T61/X2+HeeMCXBt
+         3dkTEprDFL9MCQiF4FYyQDpxlbGoYy4njU4Y11Upcouk0muG6/9mylcfoXotFEQ4F1
+         Q1UXzE7MZBcW9D4Ml8BteQ52gNGNGtEFuFdfr4OE=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>
-Subject: [RFC PATCH 2/5] fscrypt-crypt-util: add HKDF context constants
-Date:   Mon, 11 Nov 2019 13:04:24 -0800
-Message-Id: <20191111210427.137256-3-ebiggers@kernel.org>
+Subject: [RFC PATCH 3/5] common/encrypt: create named variables for UAPI constants
+Date:   Mon, 11 Nov 2019 13:04:25 -0800
+Message-Id: <20191111210427.137256-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.24.0.rc1.363.gb1bccd3e3d-goog
 In-Reply-To: <20191111210427.137256-1-ebiggers@kernel.org>
 References: <20191111210427.137256-1-ebiggers@kernel.org>
@@ -57,42 +57,72 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Use #defines rather than hard-coded numbers + comments.
+Use named variables rather than hard-coded numbers + comments.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- src/fscrypt-crypt-util.c | 8 ++++++--
- 1 file changed, 6 insertions(+), 2 deletions(-)
+ common/encrypt | 26 ++++++++++++++++++--------
+ 1 file changed, 18 insertions(+), 8 deletions(-)
 
-diff --git a/src/fscrypt-crypt-util.c b/src/fscrypt-crypt-util.c
-index bafc15e0..30f5e585 100644
---- a/src/fscrypt-crypt-util.c
-+++ b/src/fscrypt-crypt-util.c
-@@ -1703,6 +1703,10 @@ struct key_and_iv_params {
- 	bool file_nonce_specified;
- };
+diff --git a/common/encrypt b/common/encrypt
+index 90f931fc..b967c65a 100644
+--- a/common/encrypt
++++ b/common/encrypt
+@@ -664,16 +664,26 @@ _do_verify_ciphertext_for_encryption_policy()
+ 	done
+ }
  
-+#define HKDF_CONTEXT_KEY_IDENTIFIER	1
-+#define HKDF_CONTEXT_PER_FILE_KEY	2
-+#define HKDF_CONTEXT_PER_MODE_KEY	3
++# fscrypt UAPI constants (see <linux/fscrypt.h>)
 +
- /*
-  * Get the key and starting IV with which the encryption will actually be done.
-  * If a KDF was specified, a subkey is derived from the master key and the mode
-@@ -1743,11 +1747,11 @@ static void get_key_and_iv(const struct key_and_iv_params *params,
- 		break;
- 	case KDF_HKDF_SHA512:
- 		if (params->mode_num != 0) {
--			info[infolen++] = 3; /* HKDF_CONTEXT_PER_MODE_KEY */
-+			info[infolen++] = HKDF_CONTEXT_PER_MODE_KEY;
- 			info[infolen++] = params->mode_num;
- 			file_nonce_in_iv = true;
- 		} else if (params->file_nonce_specified) {
--			info[infolen++] = 2; /* HKDF_CONTEXT_PER_FILE_KEY */
-+			info[infolen++] = HKDF_CONTEXT_PER_FILE_KEY;
- 			memcpy(&info[infolen], params->file_nonce,
- 			       FILE_NONCE_SIZE);
- 			infolen += FILE_NONCE_SIZE;
++FSCRYPT_MODE_AES_256_XTS=1
++FSCRYPT_MODE_AES_256_CTS=4
++FSCRYPT_MODE_AES_128_CBC=5
++FSCRYPT_MODE_AES_128_CTS=6
++FSCRYPT_MODE_ADIANTUM=9
++
++FSCRYPT_POLICY_FLAG_DIRECT_KEY=0x04
++
+ _fscrypt_mode_name_to_num()
+ {
+ 	local name=$1
+ 
+ 	case "$name" in
+-	AES-256-XTS)		echo 1 ;; # FS_ENCRYPTION_MODE_AES_256_XTS
+-	AES-256-CTS-CBC)	echo 4 ;; # FS_ENCRYPTION_MODE_AES_256_CTS
+-	AES-128-CBC-ESSIV)	echo 5 ;; # FS_ENCRYPTION_MODE_AES_128_CBC
+-	AES-128-CTS-CBC)	echo 6 ;; # FS_ENCRYPTION_MODE_AES_128_CTS
+-	Adiantum)		echo 9 ;; # FS_ENCRYPTION_MODE_ADIANTUM
++	AES-256-XTS)		echo $FSCRYPT_MODE_AES_256_XTS ;;
++	AES-256-CTS-CBC)	echo $FSCRYPT_MODE_AES_256_CTS ;;
++	AES-128-CBC-ESSIV)	echo $FSCRYPT_MODE_AES_128_CBC ;;
++	AES-128-CTS-CBC)	echo $FSCRYPT_MODE_AES_128_CTS ;;
++	Adiantum)		echo $FSCRYPT_MODE_ADIANTUM ;;
+ 	*)			_fail "Unknown fscrypt mode: $name" ;;
+ 	esac
+ }
+@@ -705,7 +715,7 @@ _verify_ciphertext_for_encryption_policy()
+ 			     $filenames_encryption_mode ]; then
+ 				_fail "For direct key mode, contents and filenames modes must match"
+ 			fi
+-			(( policy_flags |= 0x04 )) # FS_POLICY_FLAG_DIRECT_KEY
++			(( policy_flags |= FSCRYPT_POLICY_FLAG_DIRECT_KEY ))
+ 			;;
+ 		*)
+ 			_fail "Unknown option '$opt' passed to ${FUNCNAME[0]}"
+@@ -721,11 +731,11 @@ _verify_ciphertext_for_encryption_policy()
+ 	if (( policy_version > 1 )); then
+ 		set_encpolicy_args+=" -v 2"
+ 		crypt_util_args+=" --kdf=HKDF-SHA512"
+-		if (( policy_flags & 0x04 )); then
++		if (( policy_flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY )); then
+ 			crypt_util_args+=" --mode-num=$contents_mode_num"
+ 		fi
+ 	else
+-		if (( policy_flags & 0x04 )); then
++		if (( policy_flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY )); then
+ 			crypt_util_args+=" --kdf=none"
+ 		else
+ 			crypt_util_args+=" --kdf=AES-128-ECB"
 -- 
 2.24.0.rc1.363.gb1bccd3e3d-goog
 
