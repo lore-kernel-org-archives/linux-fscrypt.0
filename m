@@ -4,47 +4,47 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6B729C1744C
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 96714C1744A
 	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:44 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 35038217F9
+	by mail.kernel.org (Postfix) with ESMTP id 69CBE21872
 	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:44 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
 	s=default; t=1573506344;
-	bh=6h3PwKp+QN2wQyScuCsfGMThDSu+zjqg25jEKX7f+BA=;
+	bh=mQ23u/zdJd3leI9q2lQdwIUg1EDV0QRUTyeImF/Bo1A=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=KylZr/FtDG+byjEAY8wbz66xEdCaNfTuMoFfYaVlk4jrVndEbjaCeTOKINAa2hrp7
-	 P2nLifl9SAlmnJxaeYKH8zzF6cVcsbc82H963o8GeMwY8EtO601HutBXHlWwGlNYex
-	 dSz7JEHJZeWR9ivv45Ep5OqJMQCM1Qxs6FN6hxhI=
+	b=gZYnTr0NRfmR0ogqr7O9+O1m50L1Jix4fLlRSKnsXSKXwIJFj/eO3bgNlBPKf7Xib
+	 J/2KAaiR+fBq48+INMP2An6sbeSudyvDBunli4TWm47gIJoHuh9Dups1r62IqYY4A1
+	 yqx82iJ7h+3iVpyc60KzgIg1WSwsAQhh05Eqppf4=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726916AbfKKVFn (ORCPT
+        id S1726988AbfKKVFn (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Mon, 11 Nov 2019 16:05:43 -0500
-Received: from mail.kernel.org ([198.145.29.99]:44348 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:44340 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726983AbfKKVFn (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1726927AbfKKVFn (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 11 Nov 2019 16:05:43 -0500
 Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 96F572184C;
-        Mon, 11 Nov 2019 21:05:42 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 8EA252084F;
+        Mon, 11 Nov 2019 21:05:41 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1573506342;
-        bh=6h3PwKp+QN2wQyScuCsfGMThDSu+zjqg25jEKX7f+BA=;
+        s=default; t=1573506341;
+        bh=mQ23u/zdJd3leI9q2lQdwIUg1EDV0QRUTyeImF/Bo1A=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Cs4z1kk1mFAfCh/XtGeh1wfXMB2Wzdo+93q9iSQfB+8EtDVNsvB3EosBxTFBNtopQ
-         PWpgEWxke0EzB+Gp+a7Bhol9lEjPa3Or9WxYXmzng3wXqP6/LdtD4OLaXdhyDgvx+n
-         BeYNbOM2Qa98/z41/lkDoSfIy2PLRAfI1E/V5K/U=
+        b=YNYxR9QFXOIZzu7Ki88n6kL57x2hb+s4YuVDLAscGljkOKpC8ZvnbJ/cXfYI2AD/y
+         D7YwRRlxVxxDiJDpEO5FIquNquMxRSgtp8EJj9VAapAH17L873/Yn9vUCeIUCIVM2K
+         PSAUB7KkFEsBVSevszMkmKJpEJDpQ328TmW94edw=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>
-Subject: [RFC PATCH 5/5] generic: verify ciphertext of IV_INO_LBLK_64 encryption policies
-Date:   Mon, 11 Nov 2019 13:04:27 -0800
-Message-Id: <20191111210427.137256-6-ebiggers@kernel.org>
+Subject: [RFC PATCH 1/5] fscrypt-crypt-util: create key_and_iv_params structure
+Date:   Mon, 11 Nov 2019 13:04:23 -0800
+Message-Id: <20191111210427.137256-2-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.24.0.rc1.363.gb1bccd3e3d-goog
 In-Reply-To: <20191111210427.137256-1-ebiggers@kernel.org>
 References: <20191111210427.137256-1-ebiggers@kernel.org>
@@ -57,89 +57,185 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Verify ciphertext for v2 encryption policies that use the IV_INO_LBLK_64
-flag and use AES-256-XTS to encrypt file contents and AES-256-CTS-CBC to
-encrypt file names.
+In preparation for adding 3 more input parameters to get_key_and_iv(),
+create a structure to hold the input parameters so that the code doesn't
+get too unwieldy.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- tests/generic/805     | 43 +++++++++++++++++++++++++++++++++++++++++++
- tests/generic/805.out |  6 ++++++
- tests/generic/group   |  1 +
- 3 files changed, 50 insertions(+)
- create mode 100644 tests/generic/805
- create mode 100644 tests/generic/805.out
+ src/fscrypt-crypt-util.c | 82 +++++++++++++++++++++-------------------
+ 1 file changed, 44 insertions(+), 38 deletions(-)
 
-diff --git a/tests/generic/805 b/tests/generic/805
-new file mode 100644
-index 00000000..d07b620b
---- /dev/null
-+++ b/tests/generic/805
-@@ -0,0 +1,43 @@
-+#! /bin/bash
-+# SPDX-License-Identifier: GPL-2.0
-+# Copyright 2019 Google LLC
-+#
-+# FS QA Test generic/805
-+#
-+# Verify ciphertext for v2 encryption policies that use the IV_INO_LBLK_64 flag
-+# and use AES-256-XTS to encrypt file contents and AES-256-CTS-CBC to encrypt
-+# file names.
-+#
-+seq=`basename $0`
-+seqres=$RESULT_DIR/$seq
-+echo "QA output created by $seq"
+diff --git a/src/fscrypt-crypt-util.c b/src/fscrypt-crypt-util.c
+index f5fd8386..bafc15e0 100644
+--- a/src/fscrypt-crypt-util.c
++++ b/src/fscrypt-crypt-util.c
+@@ -1694,66 +1694,75 @@ static u8 parse_mode_number(const char *arg)
+ 	return num;
+ }
+ 
++struct key_and_iv_params {
++	u8 master_key[MAX_KEY_SIZE];
++	int master_key_size;
++	enum kdf_algorithm kdf;
++	u8 mode_num;
++	u8 file_nonce[FILE_NONCE_SIZE];
++	bool file_nonce_specified;
++};
 +
-+here=`pwd`
-+tmp=/tmp/$$
-+status=1	# failure is the default!
-+trap "_cleanup; exit \$status" 0 1 2 3 15
+ /*
+  * Get the key and starting IV with which the encryption will actually be done.
+  * If a KDF was specified, a subkey is derived from the master key and the mode
+  * number or file nonce.  Otherwise, the master key is used directly.
+  */
+-static void get_key_and_iv(const u8 *master_key, size_t master_key_size,
+-			   enum kdf_algorithm kdf,
+-			   u8 mode_num, const u8 nonce[FILE_NONCE_SIZE],
++static void get_key_and_iv(const struct key_and_iv_params *params,
+ 			   u8 *real_key, size_t real_key_size,
+ 			   struct fscrypt_iv *iv)
+ {
+-	bool nonce_in_iv = false;
++	bool file_nonce_in_iv = false;
+ 	struct aes_key aes_key;
+ 	u8 info[8 + 1 + FILE_NONCE_SIZE] = "fscrypt";
+ 	size_t infolen = 8;
+ 	size_t i;
+ 
+-	ASSERT(real_key_size <= master_key_size);
++	ASSERT(real_key_size <= params->master_key_size);
+ 
+ 	memset(iv, 0, sizeof(*iv));
+ 
+-	switch (kdf) {
++	switch (params->kdf) {
+ 	case KDF_NONE:
+-		if (mode_num != 0)
++		if (params->mode_num != 0)
+ 			die("--mode-num isn't supported with --kdf=none");
+-		memcpy(real_key, master_key, real_key_size);
+-		nonce_in_iv = true;
++		memcpy(real_key, params->master_key, real_key_size);
++		file_nonce_in_iv = true;
+ 		break;
+ 	case KDF_AES_128_ECB:
+-		if (nonce == NULL)
++		if (!params->file_nonce_specified)
+ 			die("--file-nonce is required with --kdf=AES-128-ECB");
+-		if (mode_num != 0)
++		if (params->mode_num != 0)
+ 			die("--mode-num isn't supported with --kdf=AES-128-ECB");
+ 		STATIC_ASSERT(FILE_NONCE_SIZE == AES_128_KEY_SIZE);
+ 		ASSERT(real_key_size % AES_BLOCK_SIZE == 0);
+-		aes_setkey(&aes_key, nonce, AES_128_KEY_SIZE);
++		aes_setkey(&aes_key, params->file_nonce, AES_128_KEY_SIZE);
+ 		for (i = 0; i < real_key_size; i += AES_BLOCK_SIZE)
+-			aes_encrypt(&aes_key, &master_key[i], &real_key[i]);
++			aes_encrypt(&aes_key, &params->master_key[i],
++				    &real_key[i]);
+ 		break;
+ 	case KDF_HKDF_SHA512:
+-		if (mode_num != 0) {
++		if (params->mode_num != 0) {
+ 			info[infolen++] = 3; /* HKDF_CONTEXT_PER_MODE_KEY */
+-			info[infolen++] = mode_num;
+-			nonce_in_iv = true;
+-		} else if (nonce != NULL) {
++			info[infolen++] = params->mode_num;
++			file_nonce_in_iv = true;
++		} else if (params->file_nonce_specified) {
+ 			info[infolen++] = 2; /* HKDF_CONTEXT_PER_FILE_KEY */
+-			memcpy(&info[infolen], nonce, FILE_NONCE_SIZE);
++			memcpy(&info[infolen], params->file_nonce,
++			       FILE_NONCE_SIZE);
+ 			infolen += FILE_NONCE_SIZE;
+ 		} else {
+ 			die("With --kdf=HKDF-SHA512, at least one of --file-nonce and --mode-num must be specified");
+ 		}
+-		hkdf_sha512(master_key, master_key_size, NULL, 0,
+-			    info, infolen, real_key, real_key_size);
++		hkdf_sha512(params->master_key, params->master_key_size,
++			    NULL, 0, info, infolen, real_key, real_key_size);
+ 		break;
+ 	default:
+ 		ASSERT(0);
+ 	}
+ 
+-	if (nonce_in_iv && nonce != NULL)
+-		memcpy(&iv->bytes[8], nonce, FILE_NONCE_SIZE);
++	if (file_nonce_in_iv && params->file_nonce_specified)
++		memcpy(&iv->bytes[8], params->file_nonce, FILE_NONCE_SIZE);
+ }
+ 
+ enum {
+@@ -1781,19 +1790,16 @@ int main(int argc, char *argv[])
+ {
+ 	size_t block_size = 4096;
+ 	bool decrypting = false;
+-	u8 _file_nonce[FILE_NONCE_SIZE];
+-	u8 *file_nonce = NULL;
+-	enum kdf_algorithm kdf = KDF_NONE;
+-	u8 mode_num = 0;
++	struct key_and_iv_params params;
+ 	size_t padding = 0;
+ 	const struct fscrypt_cipher *cipher;
+-	u8 master_key[MAX_KEY_SIZE];
+-	int master_key_size;
+ 	u8 real_key[MAX_KEY_SIZE];
+ 	struct fscrypt_iv iv;
+ 	char *tmp;
+ 	int c;
+ 
++	memset(&params, 0, sizeof(params));
 +
-+_cleanup()
-+{
-+	cd /
-+	rm -f $tmp.*
-+}
-+
-+# get standard environment, filters and checks
-+. ./common/rc
-+. ./common/filter
-+. ./common/encrypt
-+
-+# remove previous $seqres.full before test
-+rm -f $seqres.full
-+
-+# real QA test starts here
-+_supported_fs generic
-+_supported_os Linux
-+
-+_verify_ciphertext_for_encryption_policy AES-256-XTS AES-256-CTS-CBC \
-+	v2 iv_ino_lblk_64
-+
-+# success, all done
-+status=0
-+exit
-diff --git a/tests/generic/805.out b/tests/generic/805.out
-new file mode 100644
-index 00000000..84ec773f
---- /dev/null
-+++ b/tests/generic/805.out
-@@ -0,0 +1,6 @@
-+QA output created by 805
-+
-+Verifying ciphertext with parameters:
-+	contents_encryption_mode: AES-256-XTS
-+	filenames_encryption_mode: AES-256-CTS-CBC
-+	options: v2 iv_ino_lblk_64
-diff --git a/tests/generic/group b/tests/generic/group
-index e5d0c1da..02e4cc45 100644
---- a/tests/generic/group
-+++ b/tests/generic/group
-@@ -588,3 +588,4 @@
- 583 auto quick encrypt
- 584 auto quick encrypt
- 585 auto rename
-+805 auto quick encrypt
+ 	aes_init();
+ 
+ #ifdef ENABLE_ALG_TESTS
+@@ -1816,19 +1822,19 @@ int main(int argc, char *argv[])
+ 			decrypting = true;
+ 			break;
+ 		case OPT_FILE_NONCE:
+-			if (hex2bin(optarg, _file_nonce, FILE_NONCE_SIZE) !=
+-			    FILE_NONCE_SIZE)
++			if (hex2bin(optarg, params.file_nonce, FILE_NONCE_SIZE)
++			    != FILE_NONCE_SIZE)
+ 				die("Invalid file nonce: %s", optarg);
+-			file_nonce = _file_nonce;
++			params.file_nonce_specified = true;
+ 			break;
+ 		case OPT_HELP:
+ 			usage(stdout);
+ 			return 0;
+ 		case OPT_KDF:
+-			kdf = parse_kdf_algorithm(optarg);
++			params.kdf = parse_kdf_algorithm(optarg);
+ 			break;
+ 		case OPT_MODE_NUM:
+-			mode_num = parse_mode_number(optarg);
++			params.mode_num = parse_mode_number(optarg);
+ 			break;
+ 		case OPT_PADDING:
+ 			padding = strtoul(optarg, &tmp, 10);
+@@ -1857,14 +1863,14 @@ int main(int argc, char *argv[])
+ 		die("Block size of %zu bytes is too small for cipher %s",
+ 		    block_size, cipher->name);
+ 
+-	master_key_size = hex2bin(argv[1], master_key, MAX_KEY_SIZE);
+-	if (master_key_size < 0)
++	params.master_key_size = hex2bin(argv[1], params.master_key,
++					 MAX_KEY_SIZE);
++	if (params.master_key_size < 0)
+ 		die("Invalid master_key: %s", argv[1]);
+-	if (master_key_size < cipher->keysize)
++	if (params.master_key_size < cipher->keysize)
+ 		die("Master key is too short for cipher %s", cipher->name);
+ 
+-	get_key_and_iv(master_key, master_key_size, kdf, mode_num, file_nonce,
+-		       real_key, cipher->keysize, &iv);
++	get_key_and_iv(&params, real_key, cipher->keysize, &iv);
+ 
+ 	crypt_loop(cipher, real_key, &iv, decrypting, block_size, padding);
+ 	return 0;
 -- 
 2.24.0.rc1.363.gb1bccd3e3d-goog
 
