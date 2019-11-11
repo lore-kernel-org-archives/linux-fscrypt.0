@@ -2,49 +2,52 @@ Return-Path: <SRS0=IHSl=ZD=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 98B0BC43331
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6C64EC17448
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:43 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 622AD21783
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:42 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 3E3FE222C1
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 11 Nov 2019 21:05:43 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1573506342;
-	bh=8LGZlQ9PjzhCJsXqUDgAmcCdBPdgGqN761KBPA+4UOs=;
-	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=gNCur9tXs5RyMA3G3DpVoKK5kCYExB6T6WfTvC2BepfR5e403VpAooO7iE4xE/wF9
-	 eNlMV1DRXe8j45A1nWmOZKxGHyR0y1a3KOHsT/6o/2dtomi970bQ9PgNF2aqWiMzr/
-	 DWEDUkO4WGbt85034GrS9nAY//dwRYCWaNmDTr6I=
+	s=default; t=1573506343;
+	bh=uHsK7UuOsKShxsIA2IFPJosQ74sx59uTyVzrH9KsT08=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=q7llleZH8Bt9lbVs/USXm2Ub8eo+AIJy8nnhZ4sIbC041Mx+ffSwHxXpCrwinPO8l
+	 IVXRPQeM8QNagWHt0BHf3QpL8PtPwFjBqTzJV4slAJpmFrUUHg7s5nChB+CH03AUy5
+	 TEQ8xQUBmOzgYkhCR1WOPsvtG4qfWzOwLMH5qPVg=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726952AbfKKVFm (ORCPT
+        id S1726957AbfKKVFm (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Mon, 11 Nov 2019 16:05:42 -0500
-Received: from mail.kernel.org ([198.145.29.99]:44334 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:44344 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726916AbfKKVFm (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1726950AbfKKVFm (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 11 Nov 2019 16:05:42 -0500
 Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 512B0206BB;
+        by mail.kernel.org (Postfix) with ESMTPSA id CAB42214E0;
         Mon, 11 Nov 2019 21:05:41 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
         s=default; t=1573506341;
-        bh=8LGZlQ9PjzhCJsXqUDgAmcCdBPdgGqN761KBPA+4UOs=;
-        h=From:To:Cc:Subject:Date:From;
-        b=bivwWQiB7QbNInWItFThfZloqxdcKLLAINjOVaFwh5ed+L5RJKzfVRT9pywiw1ebR
-         Mawl4c5WbTQEMYCA6ZBv2rACB+jZQlBglczMjlHpz++AiQMU0e0rbrvMdJoeh/NeQQ
-         k2Rc6PSdMnSYmdKD2L/UYPGhAprKqbojjB8M/Dbk=
+        bh=uHsK7UuOsKShxsIA2IFPJosQ74sx59uTyVzrH9KsT08=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=KpQGq/f9OdLjDUiyB7kuks1kuLsS9NDkd91ygnSTejG5yXVqM9PI6Xk/r2Ua6a3H9
+         cs8AI+VJupaSPtHmkHt+JdrXNCT1vCSF2CvEDsmyHMfOlzyXigj0KjC0YbpLieKD6d
+         GAq9K2+/d81rWT51EhJ3Us1lvwESU6oCa6FbF6Qw=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>
-Subject: [RFC PATCH 0/5] xfstests: verify ciphertext of IV_INO_LBLK_64 encryption policies
-Date:   Mon, 11 Nov 2019 13:04:22 -0800
-Message-Id: <20191111210427.137256-1-ebiggers@kernel.org>
+Subject: [RFC PATCH 2/5] fscrypt-crypt-util: add HKDF context constants
+Date:   Mon, 11 Nov 2019 13:04:24 -0800
+Message-Id: <20191111210427.137256-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.24.0.rc1.363.gb1bccd3e3d-goog
+In-Reply-To: <20191111210427.137256-1-ebiggers@kernel.org>
+References: <20191111210427.137256-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -52,40 +55,44 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Hello,
+From: Eric Biggers <ebiggers@google.com>
 
-This series adds an xfstest which tests that the encryption for
-IV_INO_LBLK_64 encryption policies is being done correctly.
+Use #defines rather than hard-coded numbers + comments.
 
-IV_INO_LBLK_64 is a new fscrypt policy flag which modifies the
-encryption to be optimized for inline encryption hardware compliant with
-the UFS v2.1 standard or the upcoming version of the eMMC standard.  For
-more information, see the kernel patchset:
-https://lore.kernel.org/linux-fscrypt/20191024215438.138489-1-ebiggers@kernel.org/T/#u
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ src/fscrypt-crypt-util.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
 
-This is RFC for now since the kernel patches aren't in mainline yet
-(they're queued for 5.5).
-
-To run on ext4 this test also needs a version of e2fsprogs built from
-the master branch, for support for the stable_inodes filesystem feature.
-
-Eric Biggers (5):
-  fscrypt-crypt-util: create key_and_iv_params structure
-  fscrypt-crypt-util: add HKDF context constants
-  common/encrypt: create named variables for UAPI constants
-  common/encrypt: support verifying ciphertext of IV_INO_LBLK_64
-    policies
-  generic: verify ciphertext of IV_INO_LBLK_64 encryption policies
-
- common/encrypt           | 126 +++++++++++++++++++++++++-------
- src/fscrypt-crypt-util.c | 151 ++++++++++++++++++++++++++++-----------
- tests/generic/805        |  43 +++++++++++
- tests/generic/805.out    |   6 ++
- tests/generic/group      |   1 +
- 5 files changed, 259 insertions(+), 68 deletions(-)
- create mode 100644 tests/generic/805
- create mode 100644 tests/generic/805.out
-
+diff --git a/src/fscrypt-crypt-util.c b/src/fscrypt-crypt-util.c
+index bafc15e0..30f5e585 100644
+--- a/src/fscrypt-crypt-util.c
++++ b/src/fscrypt-crypt-util.c
+@@ -1703,6 +1703,10 @@ struct key_and_iv_params {
+ 	bool file_nonce_specified;
+ };
+ 
++#define HKDF_CONTEXT_KEY_IDENTIFIER	1
++#define HKDF_CONTEXT_PER_FILE_KEY	2
++#define HKDF_CONTEXT_PER_MODE_KEY	3
++
+ /*
+  * Get the key and starting IV with which the encryption will actually be done.
+  * If a KDF was specified, a subkey is derived from the master key and the mode
+@@ -1743,11 +1747,11 @@ static void get_key_and_iv(const struct key_and_iv_params *params,
+ 		break;
+ 	case KDF_HKDF_SHA512:
+ 		if (params->mode_num != 0) {
+-			info[infolen++] = 3; /* HKDF_CONTEXT_PER_MODE_KEY */
++			info[infolen++] = HKDF_CONTEXT_PER_MODE_KEY;
+ 			info[infolen++] = params->mode_num;
+ 			file_nonce_in_iv = true;
+ 		} else if (params->file_nonce_specified) {
+-			info[infolen++] = 2; /* HKDF_CONTEXT_PER_FILE_KEY */
++			info[infolen++] = HKDF_CONTEXT_PER_FILE_KEY;
+ 			memcpy(&info[infolen], params->file_nonce,
+ 			       FILE_NONCE_SIZE);
+ 			infolen += FILE_NONCE_SIZE;
 -- 
 2.24.0.rc1.363.gb1bccd3e3d-goog
 
