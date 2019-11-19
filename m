@@ -2,51 +2,53 @@ Return-Path: <SRS0=J/yO=ZL=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 199FDC43215
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EC253C33CA1
 	for <linux-fscrypt@archiver.kernel.org>; Tue, 19 Nov 2019 22:32:37 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id D8FF522460
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 19 Nov 2019 22:32:36 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id C14342245B
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 19 Nov 2019 22:32:37 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
 	s=default; t=1574202757;
-	bh=94/JMC3Z7dDoSfyF7dKHew9Qbo73AFzIdrdAOiJOQDE=;
-	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=edNgPnZYYb0NOhS1bLARbIEFfWcNxsmimqcdoox1IOXBZPlWh1ihQ802BUj9ZDkNZ
-	 QnNPv/MMdNN9/GbjSHGMXCBNXgiybcvHr+3wt4iHXKajvW6hT+Xep9LVFFg5NVYpJf
-	 GgJpcM7dAft7hZTlTO9BkMENIo+cH1l/NtrepQJ4=
+	bh=NcvtOdidX5kcQWTaIje71KC/ZZ636GyfcNysOyqAjI4=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=m0sZTxRuny9+jgn2pZygcR2Rb6tsmA8S+Bfro2dKgZMsw8zVJjfd+dg2VcdjDGQDW
+	 s+bwWtW68bPp99NmIaIf69J8Z4j/EmI/qM+UBExzbeBk57fqVTkJSyyHF1Ipz6DmfJ
+	 FNle5CiEPJjybzMjPO09ynur3BsFzrD1g5kDE4I4=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727417AbfKSWcg (ORCPT
+        id S1727431AbfKSWch (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 19 Nov 2019 17:32:36 -0500
-Received: from mail.kernel.org ([198.145.29.99]:42674 "EHLO mail.kernel.org"
+        Tue, 19 Nov 2019 17:32:37 -0500
+Received: from mail.kernel.org ([198.145.29.99]:42684 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726196AbfKSWcg (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 19 Nov 2019 17:32:36 -0500
+        id S1726874AbfKSWch (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 19 Nov 2019 17:32:37 -0500
 Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 3357922449;
+        by mail.kernel.org (Postfix) with ESMTPSA id BED322245B;
         Tue, 19 Nov 2019 22:32:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
         s=default; t=1574202755;
-        bh=94/JMC3Z7dDoSfyF7dKHew9Qbo73AFzIdrdAOiJOQDE=;
-        h=From:To:Cc:Subject:Date:From;
-        b=NeTIeKLRbR7FRameC06vRfS0N11QiB4hGdrkTVooc6GJfiDdaD5plsEzFchgoVYti
-         u6ZqXX23zTEJppHrHvKxfqiSLiTCRFQZPjWK+bVI7AjdE8P+jk1FZmeMbETWq8mlRb
-         7aDHCQIktUIO9YWh3Om1xIwItxv491WrBi/KdWik=
+        bh=NcvtOdidX5kcQWTaIje71KC/ZZ636GyfcNysOyqAjI4=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=BJtcEs1qgDTO51WS5ZUMO4UlsF9pZqd7G7/QIgciIxDQG/hygzPjhuq3rJVQ36IeQ
+         zT4Pk1ITCZv5j2LvyGNbwLWSy+N88USbP8xzfJFAPE/7lMEOX4n1I8WQ7f82xDjWNr
+         eWIhQI7en4RAoeoL+Upuf+vRiI369GfEpsFClVBY=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, keyrings@vger.kernel.org,
         Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Subject: [RFC PATCH 0/3] xfstests: test adding filesystem-level fscrypt key via key_id
-Date:   Tue, 19 Nov 2019 14:31:27 -0800
-Message-Id: <20191119223130.228341-1-ebiggers@kernel.org>
+Subject: [RFC PATCH 2/3] common/encrypt: move constant test key to common code
+Date:   Tue, 19 Nov 2019 14:31:29 -0800
+Message-Id: <20191119223130.228341-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.24.0.432.g9d3f5f5b63-goog
+In-Reply-To: <20191119223130.228341-1-ebiggers@kernel.org>
+References: <20191119223130.228341-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -54,47 +56,88 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This series adds a test which tests adding a key to a filesystem's
-fscrypt keyring via an "fscrypt-provisioning" keyring key.  This is an
-alternative to the normal method where the raw key is given directly.
+From: Eric Biggers <ebiggers@google.com>
 
-I'm sending this out for comment, but it shouldn't be merged until the
-corresponding kernel patch has reached mainline.  For more details, see
-the kernel patch:
-https://lkml.kernel.org/linux-fscrypt/20191119222447.226853-1-ebiggers@kernel.org/T/#u
+For some encryption tests it's helpful to always use the same key so
+that the test's output is always the same.
 
-This test depends on an xfs_io patch which adds the '-k' option to the
-'add_enckey' command, e.g.:
+generic/580 already defines such a key, so move it into common/encrypt
+so that other tests can use it too.
 
-	xfs_io -c "add_enckey -k KEY_ID" MOUNTPOINT
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ common/encrypt    | 11 +++++++++++
+ tests/generic/580 | 17 ++++-------------
+ 2 files changed, 15 insertions(+), 13 deletions(-)
 
-This test is skipped if the needed kernel or xfs_io support is absent.
-
-This has been tested on ext4, f2fs, and ubifs.
-
-To apply cleanly, my other xfstests patch series
-"[RFC PATCH 0/5] xfstests: verify ciphertext of IV_INO_LBLK_64 encryption policies"
-must be applied first.
-
-This series can also be retrieved from
-https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
-tag "fscrypt-provisioning_2019-11-19".
-
-Eric Biggers (3):
-  common/rc: handle option with argument in _require_xfs_io_command()
-  common/encrypt: move constant test key to common code
-  generic: test adding filesystem-level fscrypt key via key_id
-
- common/encrypt        |  95 +++++++++++++++++++++----
- common/rc             |   2 +-
- tests/generic/580     |  17 ++---
- tests/generic/806     | 156 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/806.out |  73 ++++++++++++++++++++
- tests/generic/group   |   1 +
- 6 files changed, 316 insertions(+), 28 deletions(-)
- create mode 100644 tests/generic/806
- create mode 100644 tests/generic/806.out
-
+diff --git a/common/encrypt b/common/encrypt
+index 2e9908ad..98a407ce 100644
+--- a/common/encrypt
++++ b/common/encrypt
+@@ -187,6 +187,17 @@ _scratch_mkfs_stable_inodes_encrypted()
+ 	esac
+ }
+ 
++# For some tests it's helpful to always use the same key so that the test's
++# output is always the same.  For this purpose the following key can be used:
++TEST_RAW_KEY=
++for i in {1..64}; do
++	TEST_RAW_KEY+="\\x$(printf "%02x" $i)"
++done
++# Key descriptor: arbitrary value
++TEST_KEY_DESCRIPTOR="0000111122223333"
++# Key identifier: HKDF-SHA512(key=$TEST_RAW_KEY, salt="", info="fscrypt\0\x01")
++TEST_KEY_IDENTIFIER="69b2f6edeee720cce0577937eb8a6751"
++
+ # Give the invoking shell a new session keyring.  This makes any keys we add to
+ # the session keyring scoped to the lifetime of the test script.
+ _new_session_keyring()
+diff --git a/tests/generic/580 b/tests/generic/580
+index d0b0e9b3..283d6efa 100755
+--- a/tests/generic/580
++++ b/tests/generic/580
+@@ -43,21 +43,12 @@ _scratch_mount
+ test_with_policy_version()
+ {
+ 	local vers=$1
+-	local raw_key=""
+-	local i
+-
+-	for i in {1..64}; do
+-		raw_key+="\\x$(printf "%02x" $i)"
+-	done
+ 
+ 	if (( vers == 1 )); then
+-		# Key descriptor: arbitrary value
+-		local keyspec="0000111122223333"
++		local keyspec=$TEST_KEY_DESCRIPTOR
+ 		local add_enckey_args="-d $keyspec"
+ 	else
+-		# Key identifier:
+-		# HKDF-SHA512(key=raw_key, salt="", info="fscrypt\0\x01")
+-		local keyspec="69b2f6edeee720cce0577937eb8a6751"
++		local keyspec=$TEST_KEY_IDENTIFIER
+ 		local add_enckey_args=""
+ 	fi
+ 
+@@ -75,7 +66,7 @@ test_with_policy_version()
+ 	echo "# Getting encryption key status"
+ 	_enckey_status $SCRATCH_MNT $keyspec
+ 	echo "# Adding encryption key"
+-	_add_enckey $SCRATCH_MNT "$raw_key" $add_enckey_args
++	_add_enckey $SCRATCH_MNT "$TEST_RAW_KEY" $add_enckey_args
+ 	echo "# Creating encrypted file"
+ 	echo contents > $dir/file
+ 	echo "# Getting encryption key status"
+@@ -90,7 +81,7 @@ test_with_policy_version()
+ 
+ 	# Test removing key with a file open.
+ 	echo "# Re-adding encryption key"
+-	_add_enckey $SCRATCH_MNT "$raw_key" $add_enckey_args
++	_add_enckey $SCRATCH_MNT "$TEST_RAW_KEY" $add_enckey_args
+ 	echo "# Creating another encrypted file"
+ 	echo foo > $dir/file2
+ 	echo "# Removing key while an encrypted file is open"
 -- 
 2.24.0.432.g9d3f5f5b63-goog
 
