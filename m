@@ -2,88 +2,71 @@ Return-Path: <SRS0=Vh94=ZR=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PULL_REQUEST,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 74E3AC432C0
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 25 Nov 2019 04:45:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ECABDC432C0
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 25 Nov 2019 22:45:33 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 3B721207FD
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 25 Nov 2019 04:45:06 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id C52B2207FD
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 25 Nov 2019 22:45:33 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1574657106;
-	bh=aSroA1tJkkhrawkEnz+x1J5uQ7dP73E3kkFNwgxCrjc=;
-	h=Date:From:To:Cc:Subject:List-ID:From;
-	b=pXN1MKkU4Fwl8YTWXYXZ7gphVPJEXxWYxy+2cM8sOtvO4tib3nG+NhDcm2LVIjSRS
-	 iW7ZYPkFwMcSWhh83NBpWoeemQjCiOdiXnxOkJMvWrGTtfT7MaNQHnOFmPmCxFNQ20
-	 Te5Dfx1loEh/D13ZWPcKy+AuXPYkj6Zu36ql+Rkw=
+	s=default; t=1574721933;
+	bh=iBG0BodDs0Gwe2XN+3tSn6/CzKDz6Y3Hq1qD3RP8fVM=;
+	h=Subject:From:In-Reply-To:References:Date:To:Cc:List-ID:From;
+	b=xt53+6z2R3etUgY8sz/pDC30P/w+ThxCWiFsBrovmnjzDbF+PlIgFO/GxdZVam3Xa
+	 h7XXoMuPpUNK58VRZiMcFjtce8IQGkxfmGrqUZ/Tiy7A8+/Kl5lKUTDnfKDar21F3E
+	 sjInQZbfRSMjKcXUR4/f1oYUhHA7XOBR7Fg8DGBA=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727031AbfKYEpG (ORCPT
+        id S1727232AbfKYWpW (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 24 Nov 2019 23:45:06 -0500
-Received: from mail.kernel.org ([198.145.29.99]:43524 "EHLO mail.kernel.org"
+        Mon, 25 Nov 2019 17:45:22 -0500
+Received: from mail.kernel.org ([198.145.29.99]:39656 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726998AbfKYEpF (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 24 Nov 2019 23:45:05 -0500
-Received: from sol.localdomain (c-24-5-143-220.hsd1.ca.comcast.net [24.5.143.220])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 0E2C42071A;
-        Mon, 25 Nov 2019 04:45:05 +0000 (UTC)
+        id S1725946AbfKYWpD (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 25 Nov 2019 17:45:03 -0500
+Subject: Re: [GIT PULL] fsverity updates for 5.5
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1574657105;
-        bh=aSroA1tJkkhrawkEnz+x1J5uQ7dP73E3kkFNwgxCrjc=;
-        h=Date:From:To:Cc:Subject:From;
-        b=xd6oamJw8cdBpyxa6Dqk9inUzve8hNxbG1AIZD2wMpTNYQ1rW/HtPYBrWv94WluWI
-         phH34pvHnUTvLA9VsvUg3VpCVG/FBlpadA5cPHbsWRlRkw1/f/CZzBrvMjxlsTJzBm
-         nJhcjw7jyYFZqyAiwy5RVmbNPr8nELP2Cg2b24iY=
-Date:   Sun, 24 Nov 2019 20:45:03 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Linus Torvalds <torvalds@linux-foundation.org>
-Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        s=default; t=1574721902;
+        bh=iBG0BodDs0Gwe2XN+3tSn6/CzKDz6Y3Hq1qD3RP8fVM=;
+        h=From:In-Reply-To:References:Date:To:Cc:From;
+        b=DtDsSrUSnwwRHJAs7q+wn7NCy+oJCewmy6M4mKnDLa+fekgv+KY8iLupXJKXPmKtA
+         fIp/hp484Qs8GDHFCzdKv6pW4DBnmxFSwhFsgb1CnOsQhgThquEGZWqucgX1gUkZvS
+         Omu3s1Fbv+nmbK84xJ+WeEVZMb7Lip6E4uFdlcyI=
+From:   pr-tracker-bot@kernel.org
+In-Reply-To: <20191125044503.GB9817@sol.localdomain>
+References: <20191125044503.GB9817@sol.localdomain>
+X-PR-Tracked-List-Id: <linux-fsdevel.vger.kernel.org>
+X-PR-Tracked-Message-Id: <20191125044503.GB9817@sol.localdomain>
+X-PR-Tracked-Remote: https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git
+ tags/fsverity-for-linus
+X-PR-Tracked-Commit-Id: 73f0ec02d670a61afcef49bc0a74d42e324276ea
+X-PR-Merge-Tree: torvalds/linux.git
+X-PR-Merge-Refname: refs/heads/master
+X-PR-Merge-Commit-Id: 1c1ff4836fdab94c7c15b23be57bf64c1e56a36f
+Message-Id: <157472190253.22729.6647142236304424052.pr-tracker-bot@kernel.org>
+Date:   Mon, 25 Nov 2019 22:45:02 +0000
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     Linus Torvalds <torvalds@linux-foundation.org>,
+        linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
         Theodore Ts'o <tytso@mit.edu>
-Subject: [GIT PULL] fsverity updates for 5.5
-Message-ID: <20191125044503.GB9817@sol.localdomain>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-User-Agent: Mutt/1.12.2 (2019-09-21)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-The following changes since commit 31f4f5b495a62c9a8b15b1c3581acd5efeb9af8c:
+The pull request you sent on Sun, 24 Nov 2019 20:45:03 -0800:
 
-  Linux 5.4-rc7 (2019-11-10 16:17:15 -0800)
+> https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fsverity-for-linus
 
-are available in the Git repository at:
+has been merged into torvalds/linux.git:
+https://git.kernel.org/torvalds/c/1c1ff4836fdab94c7c15b23be57bf64c1e56a36f
 
-  https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fsverity-for-linus
+Thank you!
 
-for you to fetch changes up to 73f0ec02d670a61afcef49bc0a74d42e324276ea:
-
-  docs: fs-verity: mention statx() support (2019-11-13 12:15:34 -0800)
-
-----------------------------------------------------------------
-
-Expose the fs-verity bit through statx().
-
-----------------------------------------------------------------
-Eric Biggers (5):
-      docs: fs-verity: document first supported kernel version
-      statx: define STATX_ATTR_VERITY
-      ext4: support STATX_ATTR_VERITY
-      f2fs: support STATX_ATTR_VERITY
-      docs: fs-verity: mention statx() support
-
- Documentation/filesystems/fsverity.rst | 12 ++++++++++--
- fs/ext4/inode.c                        |  5 ++++-
- fs/f2fs/file.c                         |  5 ++++-
- include/linux/stat.h                   |  3 ++-
- include/uapi/linux/stat.h              |  2 +-
- 5 files changed, 21 insertions(+), 6 deletions(-)
+-- 
+Deet-doot-dot, I am a bot.
+https://korg.wiki.kernel.org/userdoc/prtracker
