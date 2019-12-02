@@ -1,165 +1,225 @@
-Return-Path: <SRS0=soFO=ZT=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=WgXM=ZY=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=ham
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-9.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A3794C432C0
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 27 Nov 2019 22:58:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AC297C432C0
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  2 Dec 2019 10:10:40 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 77CBA2158A
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 27 Nov 2019 22:58:03 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1574895483;
-	bh=t3udkCyJ2+MbQy+Z9Qp0o57cXv0Q9HyyU13vVE5dUQc=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=I4/ayIA4RRCTk1bUMsrJ1wLyzodhZXMVwYE5/CItvq3tePaYo7CTK3ND/mMPnsQTi
-	 ZQmWnGO+eTbLY3xs7ZKWFFKC/O6sv4y5mPVJ81cNKAMI5K+v3Us7kemSFBpyjc3Y0S
-	 IiptIFepPrzeQ8sfROcNaU5m+FHWab/YVFDpCx1U=
+	by mail.kernel.org (Postfix) with ESMTP id 87A75217D9
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  2 Dec 2019 10:10:40 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727621AbfK0W6C (ORCPT
+        id S1727356AbfLBKKk (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 27 Nov 2019 17:58:02 -0500
-Received: from mail.kernel.org ([198.145.29.99]:52892 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727614AbfK0W6C (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 27 Nov 2019 17:58:02 -0500
-Received: from sol.localdomain (c-24-5-143-220.hsd1.ca.comcast.net [24.5.143.220])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 4CFF02158A;
-        Wed, 27 Nov 2019 22:58:01 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1574895481;
-        bh=t3udkCyJ2+MbQy+Z9Qp0o57cXv0Q9HyyU13vVE5dUQc=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=Deo/NFja3Ec/iEpHsMVqKdwZVOB5gZqTJi2hjqlmoJsTFDWmlOLbvzV3X7LPyDphP
-         Ms8zbsvj56T1mZ6OnHtT+QRnj9cJ4EFpVyogpcxAZIhdHecHMkTEFlIa4JBQRSHK3i
-         SzMH3cM0I2ptzWcMNEyqaxez08YhmzctQ8rnC2Eg=
-Date:   Wed, 27 Nov 2019 14:57:59 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>
-Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        keyrings@vger.kernel.org
-Subject: Re: [RFC PATCH 0/3] xfstests: test adding filesystem-level fscrypt
- key via key_id
-Message-ID: <20191127225759.GA303989@sol.localdomain>
-References: <20191119223130.228341-1-ebiggers@kernel.org>
- <20191127204536.GA12520@linux.intel.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20191127204536.GA12520@linux.intel.com>
-User-Agent: Mutt/1.12.2 (2019-09-21)
+        Mon, 2 Dec 2019 05:10:40 -0500
+Received: from mail.loongson.cn ([114.242.206.163]:58674 "EHLO loongson.cn"
+        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
+        id S1726276AbfLBKKk (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 2 Dec 2019 05:10:40 -0500
+Received: from linux.localdomain (unknown [123.138.236.242])
+        by mail.loongson.cn (Coremail) with SMTP id AQAAf9DxbxUP4+RdcvAFAA--.28S2;
+        Mon, 02 Dec 2019 18:10:25 +0800 (CST)
+From:   Tiezhu Yang <yangtiezhu@loongson.cn>
+To:     Alexander Viro <viro@zeniv.linux.org.uk>,
+        "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <yuchao0@huawei.com>,
+        Eric Biggers <ebiggers@kernel.org>,
+        Tyler Hicks <tyhicks@canonical.com>
+Cc:     linux-fsdevel@vger.kernel.org, ecryptfs@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net,
+        linux-kernel@vger.kernel.org
+Subject: [PATCH] fs: introduce is_dot_dotdot helper for cleanup
+Date:   Mon,  2 Dec 2019 18:10:13 +0800
+Message-Id: <1575281413-6753-1-git-send-email-yangtiezhu@loongson.cn>
+X-Mailer: git-send-email 2.1.0
+X-CM-TRANSID: AQAAf9DxbxUP4+RdcvAFAA--.28S2
+X-Coremail-Antispam: 1UD129KBjvJXoW3GF1xZFWrCrykGryfWFyUJrb_yoW7GFWDpF
+        43JF97Jrn7JFyY9rn5tF1rZ34av34xGr17GrZ7Ga4Iyr12qr1Fqr4IyFy093Z3JFZ8Wan0
+        gFs5G34rCa43taDanT9S1TB71UUUUUDqnTZGkaVYY2UrUUUUjbIjqfuFe4nvWSU5nxnvy2
+        9KBjDU0xBIdaVrnRJUUUkKb7Iv0xC_Kw4lb4IE77IF4wAFF20E14v26r4j6ryUM7CY07I2
+        0VC2zVCF04k26cxKx2IYs7xG6rWj6s0DM7CIcVAFz4kK6r1j6r18M28lY4IEw2IIxxk0rw
+        A2F7IY1VAKz4vEj48ve4kI8wA2z4x0Y4vE2Ix0cI8IcVAFwI0_JFI_Gr1l84ACjcxK6xII
+        jxv20xvEc7CjxVAFwI0_Gr0_Cr1l84ACjcxK6I8E87Iv67AKxVW8Jr0_Cr1UM28EF7xvwV
+        C2z280aVCY1x0267AKxVW0oVCq3wAS0I0E0xvYzxvE52x082IY62kv0487Mc02F40EFcxC
+        0VAKzVAqx4xG6I80ewAv7VC0I7IYx2IY67AKxVWUJVWUGwAv7VC2z280aVAFwI0_Jr0_Gr
+        1lOx8S6xCaFVCjc4AY6r1j6r4UM4x0Y48IcxkI7VAKI48JM4IIrI8v6xkF7I0E8cxan2IY
+        04v7MxAIw28IcxkI7VAKI48JMxC20s026xCaFVCjc4AY6r1j6r4UMI8I3I0E5I8CrVAFwI
+        0_Jr0_Jr4lx2IqxVCjr7xvwVAFwI0_JrI_JrWlx4CE17CEb7AF67AKxVWUtVW8ZwCIc40Y
+        0x0EwIxGrwCI42IY6xIIjxv20xvE14v26r1j6r1xMIIF0xvE2Ix0cI8IcVCY1x0267AKxV
+        W8JVWxJwCI42IY6xAIw20EY4v20xvaj40_Wr1j6rW3Jr1lIxAIcVC2z280aVAFwI0_Jr0_
+        Gr1lIxAIcVC2z280aVCY1x0267AKxVW8JVW8JrUvcSsGvfC2KfnxnUUI43ZEXa7IU56c_D
+        UUUUU==
+X-CM-SenderInfo: p1dqw3xlh2x3gn0dqz5rrqw2lrqou0/
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Nov 27, 2019 at 10:45:36PM +0200, Jarkko Sakkinen wrote:
-> On Tue, Nov 19, 2019 at 02:31:27PM -0800, Eric Biggers wrote:
-> > This series adds a test which tests adding a key to a filesystem's
-> > fscrypt keyring via an "fscrypt-provisioning" keyring key.  This is an
-> > alternative to the normal method where the raw key is given directly.
-> > 
-> > I'm sending this out for comment, but it shouldn't be merged until the
-> > corresponding kernel patch has reached mainline.  For more details, see
-> > the kernel patch:
-> > https://lkml.kernel.org/linux-fscrypt/20191119222447.226853-1-ebiggers@kernel.org/T/#u
-> > 
-> > This test depends on an xfs_io patch which adds the '-k' option to the
-> > 'add_enckey' command, e.g.:
-> > 
-> > 	xfs_io -c "add_enckey -k KEY_ID" MOUNTPOINT
-> > 
-> > This test is skipped if the needed kernel or xfs_io support is absent.
-> > 
-> > This has been tested on ext4, f2fs, and ubifs.
-> > 
-> > To apply cleanly, my other xfstests patch series
-> > "[RFC PATCH 0/5] xfstests: verify ciphertext of IV_INO_LBLK_64 encryption policies"
-> > must be applied first.
-> > 
-> > This series can also be retrieved from
-> > https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
-> > tag "fscrypt-provisioning_2019-11-19".
-> > 
-> > Eric Biggers (3):
-> >   common/rc: handle option with argument in _require_xfs_io_command()
-> >   common/encrypt: move constant test key to common code
-> >   generic: test adding filesystem-level fscrypt key via key_id
-> > 
-> >  common/encrypt        |  95 +++++++++++++++++++++----
-> >  common/rc             |   2 +-
-> >  tests/generic/580     |  17 ++---
-> >  tests/generic/806     | 156 ++++++++++++++++++++++++++++++++++++++++++
-> >  tests/generic/806.out |  73 ++++++++++++++++++++
-> >  tests/generic/group   |   1 +
-> >  6 files changed, 316 insertions(+), 28 deletions(-)
-> >  create mode 100644 tests/generic/806
-> >  create mode 100644 tests/generic/806.out
-> > 
-> > -- 
-> > 2.24.0.432.g9d3f5f5b63-goog
-> > 
-> 
-> I'm newbie with fscrypt so I started by encrypting a directory without
-> the new feature
-> 
-> sudo tune2fs -O encrypt /dev/sda2
-> sudo fscrypt setup /
-> fscrypt encrypt foo
-> 
-> Worked.
-> 
-> Generally speaking I'd appreciate a usage example like here to the
-> commit message:
-> 
-> https://lwn.net/Articles/692514/
-> 
-> Is this doable?
-> 
-> I might consider trying out the XFS test suite some day but right now it
-> would be first nice to smoke test the feature quickly.
-> 
-> I think for this patch that would actually be mostly sufficient testing.
-> 
+There exists many similar and duplicate codes to check "." and "..",
+so introduce is_dot_dotdot helper to make the code more clean.
 
-You could manually do what the xfstest does, which is more or less the following
-(requires xfs_io patched with https://patchwork.kernel.org/patch/11252795/):
+Signed-off-by: Tiezhu Yang <yangtiezhu@loongson.cn>
+---
+ fs/crypto/fname.c    | 15 ++-------------
+ fs/ecryptfs/crypto.c | 13 ++-----------
+ fs/f2fs/f2fs.h       | 11 -----------
+ fs/libfs.c           | 12 ++++++++++++
+ fs/namei.c           |  6 ++----
+ include/linux/fs.h   |  2 ++
+ 6 files changed, 20 insertions(+), 39 deletions(-)
 
-	mkfs.ext4 -O encrypt /dev/vdc
-	mount /dev/vdc /vdc
-	keyctl new_session
-	payload='\x02\x00\x00\x00\x00\x00\x00\x00'
-	for i in {1..64}; do
-		payload+="\\x$(printf "%02x" $i)"
-	done
-	keyid=$(echo -ne "$payload" | keyctl padd fscrypt-provisioning desc @s)
-	keyspec=$(xfs_io -c "add_enckey -k $keyid" /vdc | awk '{print $NF}')
-	mkdir /vdc/edir
-	xfs_io -c "set_encpolicy $keyspec" /vdc/edir
-	echo contents > /vdc/edir/file
+diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+index 3da3707..36be864 100644
+--- a/fs/crypto/fname.c
++++ b/fs/crypto/fname.c
+@@ -15,17 +15,6 @@
+ #include <crypto/skcipher.h>
+ #include "fscrypt_private.h"
+ 
+-static inline bool fscrypt_is_dot_dotdot(const struct qstr *str)
+-{
+-	if (str->len == 1 && str->name[0] == '.')
+-		return true;
+-
+-	if (str->len == 2 && str->name[0] == '.' && str->name[1] == '.')
+-		return true;
+-
+-	return false;
+-}
+-
+ /**
+  * fname_encrypt() - encrypt a filename
+  *
+@@ -255,7 +244,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
+ 	const struct qstr qname = FSTR_TO_QSTR(iname);
+ 	struct fscrypt_digested_name digested_name;
+ 
+-	if (fscrypt_is_dot_dotdot(&qname)) {
++	if (is_dot_dotdot(&qname)) {
+ 		oname->name[0] = '.';
+ 		oname->name[iname->len - 1] = '.';
+ 		oname->len = iname->len;
+@@ -323,7 +312,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
+ 	memset(fname, 0, sizeof(struct fscrypt_name));
+ 	fname->usr_fname = iname;
+ 
+-	if (!IS_ENCRYPTED(dir) || fscrypt_is_dot_dotdot(iname)) {
++	if (!IS_ENCRYPTED(dir) || is_dot_dotdot(iname)) {
+ 		fname->disk_name.name = (unsigned char *)iname->name;
+ 		fname->disk_name.len = iname->len;
+ 		return 0;
+diff --git a/fs/ecryptfs/crypto.c b/fs/ecryptfs/crypto.c
+index f91db24..6f4db74 100644
+--- a/fs/ecryptfs/crypto.c
++++ b/fs/ecryptfs/crypto.c
+@@ -1991,16 +1991,6 @@ int ecryptfs_encrypt_and_encode_filename(
+ 	return rc;
+ }
+ 
+-static bool is_dot_dotdot(const char *name, size_t name_size)
+-{
+-	if (name_size == 1 && name[0] == '.')
+-		return true;
+-	else if (name_size == 2 && name[0] == '.' && name[1] == '.')
+-		return true;
+-
+-	return false;
+-}
+-
+ /**
+  * ecryptfs_decode_and_decrypt_filename - converts the encoded cipher text name to decoded plaintext
+  * @plaintext_name: The plaintext name
+@@ -2020,6 +2010,7 @@ int ecryptfs_decode_and_decrypt_filename(char **plaintext_name,
+ {
+ 	struct ecryptfs_mount_crypt_stat *mount_crypt_stat =
+ 		&ecryptfs_superblock_to_private(sb)->mount_crypt_stat;
++	const struct qstr file_name = {.name = name, .len = name_size};
+ 	char *decoded_name;
+ 	size_t decoded_name_size;
+ 	size_t packet_size;
+@@ -2027,7 +2018,7 @@ int ecryptfs_decode_and_decrypt_filename(char **plaintext_name,
+ 
+ 	if ((mount_crypt_stat->flags & ECRYPTFS_GLOBAL_ENCRYPT_FILENAMES) &&
+ 	    !(mount_crypt_stat->flags & ECRYPTFS_ENCRYPTED_VIEW_ENABLED)) {
+-		if (is_dot_dotdot(name, name_size)) {
++		if (is_dot_dotdot(&file_name)) {
+ 			rc = ecryptfs_copy_filename(plaintext_name,
+ 						    plaintext_name_size,
+ 						    name, name_size);
+diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+index 5a888a0..3d5e684 100644
+--- a/fs/f2fs/f2fs.h
++++ b/fs/f2fs/f2fs.h
+@@ -2767,17 +2767,6 @@ static inline bool f2fs_cp_error(struct f2fs_sb_info *sbi)
+ 	return is_set_ckpt_flags(sbi, CP_ERROR_FLAG);
+ }
+ 
+-static inline bool is_dot_dotdot(const struct qstr *str)
+-{
+-	if (str->len == 1 && str->name[0] == '.')
+-		return true;
+-
+-	if (str->len == 2 && str->name[0] == '.' && str->name[1] == '.')
+-		return true;
+-
+-	return false;
+-}
+-
+ static inline bool f2fs_may_extent_tree(struct inode *inode)
+ {
+ 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+diff --git a/fs/libfs.c b/fs/libfs.c
+index 1463b03..876b1b6 100644
+--- a/fs/libfs.c
++++ b/fs/libfs.c
+@@ -1291,3 +1291,15 @@ bool is_empty_dir_inode(struct inode *inode)
+ 	return (inode->i_fop == &empty_dir_operations) &&
+ 		(inode->i_op == &empty_dir_inode_operations);
+ }
++
++bool is_dot_dotdot(const struct qstr *str)
++{
++	if (str->len == 1 && str->name[0] == '.')
++		return true;
++
++	if (str->len == 2 && str->name[0] == '.' && str->name[1] == '.')
++		return true;
++
++	return false;
++}
++EXPORT_SYMBOL(is_dot_dotdot);
+diff --git a/fs/namei.c b/fs/namei.c
+index 2dda552..7730a3b 100644
+--- a/fs/namei.c
++++ b/fs/namei.c
+@@ -2458,10 +2458,8 @@ static int lookup_one_len_common(const char *name, struct dentry *base,
+ 	if (!len)
+ 		return -EACCES;
+ 
+-	if (unlikely(name[0] == '.')) {
+-		if (len < 2 || (len == 2 && name[1] == '.'))
+-			return -EACCES;
+-	}
++	if (unlikely(is_dot_dotdot(this)))
++		return -EACCES;
+ 
+ 	while (len--) {
+ 		unsigned int c = *(const unsigned char *)name++;
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index c159a8b..e999826 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -3627,4 +3627,6 @@ static inline int inode_drain_writes(struct inode *inode)
+ 	return filemap_write_and_wait(inode->i_mapping);
+ }
+ 
++extern bool is_dot_dotdot(const struct qstr *str);
++
+ #endif /* _LINUX_FS_H */
+-- 
+2.1.0
 
-I'm not yet planning to use this feature in the 'fscrypt' userspace tool
-https://github.com/google/fscrypt.  The user who actually wants this feature
-(Android) isn't using the 'fscrypt' tool, but rather is using custom code.
-
-Also, the 'fscrypt' tool isn't meant for testing or exposing every corner of the
-fscrypt kernel API.  Rather, it's meant to be a user-friendly tool for creating
-encrypted directories on "regular" Linux distros, supporting lots of higher
-level userspace features like passphrase hashing with Argon2, multiple
-protectors, and auto-unlocking directories with PAM.
-
-So for now, the important thing is to have an xfstest that fully tests this new
-API.  For that, like the other fscrypt tests, I'm using keyctl and xfs_io to
-access the kernel API directly.
-
-Later, if people really need the 'fscrypt' tool to do something that requires
-this feature, we can add it.  This would likely take the form of a user-friendly
-option to 'fscrypt unlock' rather than a direct translation of the kernel API.
-
-- Eric
