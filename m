@@ -7,58 +7,58 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
 	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 98E93C47410
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Dec 2019 05:11:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 10D83C33CB5
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Dec 2019 05:12:01 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 712562073C
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Dec 2019 05:11:59 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id DCFF62073C
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Dec 2019 05:12:00 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="mdyqPGow"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Vi7RSXxG"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727050AbfLCFL6 (ORCPT
+        id S1726917AbfLCFLY (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 3 Dec 2019 00:11:58 -0500
-Received: from mail-pj1-f73.google.com ([209.85.216.73]:52342 "EHLO
-        mail-pj1-f73.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727015AbfLCFL2 (ORCPT
+        Tue, 3 Dec 2019 00:11:24 -0500
+Received: from mail-pl1-f202.google.com ([209.85.214.202]:36297 "EHLO
+        mail-pl1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726845AbfLCFLX (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 3 Dec 2019 00:11:28 -0500
-Received: by mail-pj1-f73.google.com with SMTP id z24so1250725pjt.19
-        for <linux-fscrypt@vger.kernel.org>; Mon, 02 Dec 2019 21:11:28 -0800 (PST)
+        Tue, 3 Dec 2019 00:11:23 -0500
+Received: by mail-pl1-f202.google.com with SMTP id s7so1149113plp.3
+        for <linux-fscrypt@vger.kernel.org>; Mon, 02 Dec 2019 21:11:23 -0800 (PST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=s9Z9LjD9ymkQQUZ+VH0GlQne8IEw1wiPyT49On1Az6o=;
-        b=mdyqPGowQAy57ke3pYs7WyHpLTx6DoPtf9TfYQjz/Wk+gjXPr/XwnFzpjLq1XJAKqG
-         8m7yKkkZyQCRvikIWLKWiJWZZ8l+6pxhzmbcNvJpzaMlCXhj3rSFjcbTILSy6YQY+/KO
-         RS8sSTcxK2ZxwMHN0CzjpfBjQ3UxxQ+dIN9EdvRVCjVvok8k3J1TtYBTNAcQEx7hKcjs
-         bSiyKlUYClbhnsNkTXpmB2dvoNA+CnskMavt1ePN4tih7Hv4me1ERZ9j2B4TbRAC5M42
-         2rSl/cLdZzgns+5G12aLkOv8bx67rCXuk95KPGZvnZR6e55nK4gM1UhZ1PK78G9DV48O
-         g1Lw==
+        bh=zioOGuJqnVPXe7Qe2SnSM0LE+ZxE0SKC1ZdBPwMzHHM=;
+        b=Vi7RSXxGowYOEm1R7PqAvvobd49Ow6l4LUuP+EyQ8x3TZm7tmSuo7w72xlUfos80tZ
+         E/5xpFoQ2wLEqy3sJx6GTasTyPD8TUZAvrKp4r5T0yV1jwHmX+TJe1LWpY208PzxANGu
+         ut5I1Zdm3X6yUrK3XUXnrofTbSEcTJfH5v7UnTEBqOPCK7VLMb4+XLPA7r9Qjv9XMHVe
+         bWves33Lu3GThFsqT1xtk/MGO/+WzHg4eXBqx/6CVZSf9UYCyUHFwBkAdhuz0Y7U38+n
+         Z0AY+6+IDGq3SiysmR0NHMCVZsgVSj58gcf1kCj0taMnx+Y5pxB4I/Abvbm2KLXatHqP
+         Kz5Q==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=s9Z9LjD9ymkQQUZ+VH0GlQne8IEw1wiPyT49On1Az6o=;
-        b=q+SArwwZEiX41mU6CuRUnWLxhA7X+zcXBCIrg1aThixUruwwD9IPQPwtTRN7n9j6Zj
-         Jp3TJj3sjSyIVBrGNTktAC9xsXDbI1gDk3RMdEcso676f8uuAAiSBQAMmVuzDD2AP7Q2
-         IX20YPG9ux3kUm0xh1Rbtx3I5GLt0tLDhDBjR053/GQ6wstbDV8fzs5jIYBmQ6DEgE35
-         SQ/zn7NYQWprKd4MZ58VR1s594bbMaS3A/7JXGwMY7Q33+TG1dsSXklb1aCLTCagUVJ8
-         EmO9b1zCiiEtjN/PP4jOVQadBBzwRXZRekNtC+wFOQNP0r/yPXT7un7VIS7n4lKbvEvx
-         fv/g==
-X-Gm-Message-State: APjAAAV1VY/M86Eidj8IpNA7WvvzDlAxacwjV2e9utbu1QSrtyE6pM4D
-        2wCFupVkd+dEvcwYolIDUqF6ztHoOfg=
-X-Google-Smtp-Source: APXvYqwC9P8HaWM223eOEegLFhN5JV0hs/CGnhSkDLW2WnMpfDSnC18x/rIf914nZTxS1PdDesEi4SVAvns=
-X-Received: by 2002:a63:480f:: with SMTP id v15mr3361962pga.201.1575349888187;
- Mon, 02 Dec 2019 21:11:28 -0800 (PST)
-Date:   Mon,  2 Dec 2019 21:10:45 -0800
+        bh=zioOGuJqnVPXe7Qe2SnSM0LE+ZxE0SKC1ZdBPwMzHHM=;
+        b=UU95hNn5JxsxQDeQZaltwxBprCQkXyYVbNw4dIiT5pVdP0M6ZNY30nAe1EGix9fzXJ
+         2I6P9E495kVNB4crccaq0CtqCDTSakuuvlcGDABpnlkfuLG9mrLXnoGS0SACCsNglk5n
+         dYe6zeL1uITQiUckAjIaEVAFEGfPNNv3LG3D+gsA7367l6JaQX9OFopqDvucnCbnOM6x
+         KIhi0lWPtdxiHf8vMqKrSOLl7Hx4uFIvIjnFPA/W+fa/lA+ZZUl2RiEjTcNu+CzAw/LG
+         gIamzhS+u6iMHSPPhsNYP8MAferuvDqZMNiuMukqq9ZR2vpakXzOjdSPe5PLIDUWjHId
+         0p2A==
+X-Gm-Message-State: APjAAAUw+IBPiwdvhRSeKdIq2k/p3Sqy94yHmZvO0gpb6dX/vILf4D1p
+        x/kJDBLP5W3OKRgwYZj9l5uiukcMg30=
+X-Google-Smtp-Source: APXvYqwLhVT0aPs7pDtnMOWvm8ceiekoDOnf+r3AdcXHnYtS4fRpDhrmnGvkSNzLuI9YnCQKTgC4a5Cp4Jk=
+X-Received: by 2002:a63:6507:: with SMTP id z7mr3034832pgb.322.1575349882981;
+ Mon, 02 Dec 2019 21:11:22 -0800 (PST)
+Date:   Mon,  2 Dec 2019 21:10:43 -0800
 In-Reply-To: <20191203051049.44573-1-drosen@google.com>
-Message-Id: <20191203051049.44573-5-drosen@google.com>
+Message-Id: <20191203051049.44573-3-drosen@google.com>
 Mime-Version: 1.0
 References: <20191203051049.44573-1-drosen@google.com>
 X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
-Subject: [PATCH 4/8] vfs: Fold casefolding into vfs
+Subject: [PATCH 2/8] fscrypt: Don't allow v1 policies with casefolding
 From:   Daniel Rosenberg <drosen@google.com>
 To:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
         Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
@@ -77,208 +77,115 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Ext4 and F2fs are both using casefolding, and they, along with any other
-filesystem that adds the feature, will be using identical dentry_ops.
-Additionally, those dentry ops interfere with the dentry_ops required
-for fscrypt once we add support for casefolding and encryption.
-Moving this into the vfs removes code duplication as well as the
-complication with encryption.
-
-Currently this is pretty close to just moving the existing f2fs/ext4
-code up a level into the vfs, although there is a lot of room for
-improvement now.
+Casefolding requires a derived key for computing the siphash.
+This is available for v2 policies, but not v1, so we disallow it for v1.
 
 Signed-off-by: Daniel Rosenberg <drosen@google.com>
 ---
- fs/dcache.c        | 35 +++++++++++++++++++++++++++++++++++
- fs/namei.c         | 43 ++++++++++++++++++++++++++++++++++++++++---
- include/linux/fs.h | 12 ++++++++++++
- 3 files changed, 87 insertions(+), 3 deletions(-)
+ fs/crypto/policy.c      | 26 +++++++++++++++++++++++---
+ fs/inode.c              |  8 ++++++++
+ include/linux/fscrypt.h |  7 +++++++
+ 3 files changed, 38 insertions(+), 3 deletions(-)
 
-diff --git a/fs/dcache.c b/fs/dcache.c
-index f7931b682a0d..575f3c2c3f77 100644
---- a/fs/dcache.c
-+++ b/fs/dcache.c
-@@ -32,6 +32,7 @@
- #include <linux/bit_spinlock.h>
- #include <linux/rculist_bl.h>
- #include <linux/list_lru.h>
-+#include <linux/unicode.h>
- #include "internal.h"
- #include "mount.h"
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index 96f528071bed..94d96d3212d6 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -67,9 +67,9 @@ static bool supported_iv_ino_lblk_64_policy(
+  * fscrypt_supported_policy - check whether an encryption policy is supported
+  *
+  * Given an encryption policy, check whether all its encryption modes and other
+- * settings are supported by this kernel.  (But we don't currently don't check
+- * for crypto API support here, so attempting to use an algorithm not configured
+- * into the crypto API will still fail later.)
++ * settings are supported by this kernel on the given inode.  (But we don't
++ * currently don't check for crypto API support here, so attempting to use an
++ * algorithm not configured into the crypto API will still fail later.)
+  *
+  * Return: %true if supported, else %false
+  */
+@@ -97,6 +97,12 @@ bool fscrypt_supported_policy(const union fscrypt_policy *policy_u,
+ 			return false;
+ 		}
  
-@@ -228,6 +229,13 @@ static inline int dentry_string_cmp(const unsigned char *cs, const unsigned char
- 
- #endif
- 
-+bool needs_casefold(const struct inode *dir)
++		if (IS_CASEFOLDED(inode)) {
++			fscrypt_warn(inode,
++				     "v1 policy does not support casefolded directories");
++			return false;
++		}
++
+ 		return true;
+ 	}
+ 	case FSCRYPT_POLICY_V2: {
+@@ -530,3 +536,17 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
+ 	return preload ? fscrypt_get_encryption_info(child): 0;
+ }
+ EXPORT_SYMBOL(fscrypt_inherit_context);
++
++int fscrypt_set_casefolding_allowed(struct inode *inode)
 +{
-+	return IS_CASEFOLDED(dir) &&
-+			(!IS_ENCRYPTED(dir) || fscrypt_has_encryption_key(dir));
++	union fscrypt_policy policy;
++	int ret = fscrypt_get_policy(inode, &policy);
++
++	if (ret < 0)
++		return ret;
++
++	if (policy.version == FSCRYPT_POLICY_V2)
++		return 0;
++	else
++		return -EINVAL;
 +}
-+EXPORT_SYMBOL(needs_casefold);
-+
- static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *ct, unsigned tcount)
- {
- 	/*
-@@ -247,7 +255,19 @@ static inline int dentry_cmp(const struct dentry *dentry, const unsigned char *c
- 	 * be no NUL in the ct/tcount data)
- 	 */
- 	const unsigned char *cs = READ_ONCE(dentry->d_name.name);
-+#ifdef CONFIG_UNICODE
-+	struct inode *parent = dentry->d_parent->d_inode;
+diff --git a/fs/inode.c b/fs/inode.c
+index fef457a42882..b615ec272a1e 100644
+--- a/fs/inode.c
++++ b/fs/inode.c
+@@ -20,6 +20,7 @@
+ #include <linux/ratelimit.h>
+ #include <linux/list_lru.h>
+ #include <linux/iversion.h>
++#include <linux/fscrypt.h>
+ #include <trace/events/writeback.h>
+ #include "internal.h"
  
-+	if (unlikely(needs_casefold(parent))) {
-+		const struct qstr n1 = QSTR_INIT(cs, tcount);
-+		const struct qstr n2 = QSTR_INIT(ct, tcount);
-+		int result = utf8_strncasecmp(dentry->d_sb->s_encoding,
-+						&n1, &n2);
+@@ -2245,6 +2246,13 @@ int vfs_ioc_setflags_prepare(struct inode *inode, unsigned int oldflags,
+ 	    !capable(CAP_LINUX_IMMUTABLE))
+ 		return -EPERM;
+ 
++	/*
++	 * When a directory is encrypted, the CASEFOLD flag can only be turned
++	 * on if the fscrypt policy supports it.
++	 */
++	if (IS_ENCRYPTED(inode) && (flags & ~oldflags & FS_CASEFOLD_FL))
++		return fscrypt_set_casefolding_allowed(inode);
 +
-+		if (result >= 0 || sb_has_enc_strict_mode(dentry->d_sb))
-+			return result;
-+	}
-+#endif
- 	return dentry_string_cmp(cs, ct, tcount);
+ 	return 0;
+ }
+ EXPORT_SYMBOL(vfs_ioc_setflags_prepare);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index e13ff68a99f0..028aed925e51 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -127,6 +127,8 @@ extern int fscrypt_ioctl_get_policy_ex(struct file *, void __user *);
+ extern int fscrypt_has_permitted_context(struct inode *, struct inode *);
+ extern int fscrypt_inherit_context(struct inode *, struct inode *,
+ 					void *, bool);
++extern int fscrypt_set_casefolding_allowed(struct inode *inode);
++
+ /* keyring.c */
+ extern void fscrypt_sb_free(struct super_block *sb);
+ extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
+@@ -361,6 +363,11 @@ static inline int fscrypt_inherit_context(struct inode *parent,
+ 	return -EOPNOTSUPP;
  }
  
-@@ -2404,7 +2424,22 @@ struct dentry *d_hash_and_lookup(struct dentry *dir, struct qstr *name)
- 	 * calculate the standard hash first, as the d_op->d_hash()
- 	 * routine may choose to leave the hash value unchanged.
- 	 */
-+#ifdef CONFIG_UNICODE
-+	unsigned char *hname = NULL;
-+	int hlen = name->len;
++static inline int fscrypt_set_casefolding_allowed(struct inode *inode)
++{
++	return 0;
++}
 +
-+	if (IS_CASEFOLDED(dir->d_inode)) {
-+		hname = kmalloc(PATH_MAX, GFP_ATOMIC);
-+		if (!hname)
-+			return ERR_PTR(-ENOMEM);
-+		hlen = utf8_casefold(dir->d_sb->s_encoding,
-+					name, hname, PATH_MAX);
-+	}
-+	name->hash = full_name_hash(dir, hname ?: name->name, hlen);
-+	kfree(hname);
-+#else
- 	name->hash = full_name_hash(dir, name->name, name->len);
-+#endif
- 	if (dir->d_flags & DCACHE_OP_HASH) {
- 		int err = dir->d_op->d_hash(dir, name);
- 		if (unlikely(err < 0))
-diff --git a/fs/namei.c b/fs/namei.c
-index 2dda552bcf7a..b8d5cb0994ec 100644
---- a/fs/namei.c
-+++ b/fs/namei.c
-@@ -39,6 +39,7 @@
- #include <linux/bitops.h>
- #include <linux/init_task.h>
- #include <linux/uaccess.h>
-+#include <linux/unicode.h>
- 
- #include "internal.h"
- #include "mount.h"
-@@ -2062,6 +2063,10 @@ static inline u64 hash_name(const void *salt, const char *name)
- static int link_path_walk(const char *name, struct nameidata *nd)
+ /* keyring.c */
+ static inline void fscrypt_sb_free(struct super_block *sb)
  {
- 	int err;
-+#ifdef CONFIG_UNICODE
-+	char *hname = NULL;
-+	int hlen = 0;
-+#endif
- 
- 	if (IS_ERR(name))
- 		return PTR_ERR(name);
-@@ -2078,9 +2083,21 @@ static int link_path_walk(const char *name, struct nameidata *nd)
- 		err = may_lookup(nd);
- 		if (err)
- 			return err;
--
-+#ifdef CONFIG_UNICODE
-+		if (needs_casefold(nd->path.dentry->d_inode)) {
-+			struct qstr str = QSTR_INIT(name, PATH_MAX);
-+
-+			hname = kmalloc(PATH_MAX, GFP_ATOMIC);
-+			if (!hname)
-+				return -ENOMEM;
-+			hlen = utf8_casefold(nd->path.dentry->d_sb->s_encoding,
-+						&str, hname, PATH_MAX);
-+		}
-+		hash_len = hash_name(nd->path.dentry, hname ?: name);
-+		kfree(hname);
-+#else
- 		hash_len = hash_name(nd->path.dentry, name);
--
-+#endif
- 		type = LAST_NORM;
- 		if (name[0] == '.') switch (hashlen_len(hash_len)) {
- 			case 2:
-@@ -2452,9 +2469,29 @@ EXPORT_SYMBOL(vfs_path_lookup);
- static int lookup_one_len_common(const char *name, struct dentry *base,
- 				 int len, struct qstr *this)
- {
-+#ifdef CONFIG_UNICODE
-+	char *hname = NULL;
-+	int hlen = len;
-+
-+	if (needs_casefold(base->d_inode)) {
-+		struct qstr str = QSTR_INIT(name, len);
-+
-+		hname = kmalloc(PATH_MAX, GFP_ATOMIC);
-+		if (!hname)
-+			return -ENOMEM;
-+		hlen = utf8_casefold(base->d_sb->s_encoding,
-+					&str, hname, PATH_MAX);
-+	}
-+	this->hash = full_name_hash(base, hname ?: name, hlen);
-+	kvfree(hname);
-+#else
-+	this->hash = full_name_hash(base, name, len);
-+#endif
- 	this->name = name;
- 	this->len = len;
--	this->hash = full_name_hash(base, name, len);
-+#ifdef CONFIG_UNICODE
-+	kfree(hname);
-+#endif
- 	if (!len)
- 		return -EACCES;
- 
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index c159a8bdee8b..38d1c20f3e6f 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -1382,6 +1382,12 @@ extern int send_sigurg(struct fown_struct *fown);
- #define SB_ACTIVE	(1<<30)
- #define SB_NOUSER	(1<<31)
- 
-+/* These flags relate to encoding and casefolding */
-+#define SB_ENC_STRICT_MODE_FL	(1 << 0)
-+
-+#define sb_has_enc_strict_mode(sb) \
-+	(sb->s_encoding_flags & SB_ENC_STRICT_MODE_FL)
-+
- /*
-  *	Umount options
-  */
-@@ -1449,6 +1455,10 @@ struct super_block {
- #endif
- #ifdef CONFIG_FS_VERITY
- 	const struct fsverity_operations *s_vop;
-+#endif
-+#ifdef CONFIG_UNICODE
-+	struct unicode_map *s_encoding;
-+	__u16 s_encoding_flags;
- #endif
- 	struct hlist_bl_head	s_roots;	/* alternate root dentries for NFS */
- 	struct list_head	s_mounts;	/* list of mounts; _not_ for fs use */
-@@ -2044,6 +2054,8 @@ static inline bool sb_rdonly(const struct super_block *sb) { return sb->s_flags
- #define IS_WHITEOUT(inode)	(S_ISCHR(inode->i_mode) && \
- 				 (inode)->i_rdev == WHITEOUT_DEV)
- 
-+extern bool needs_casefold(const struct inode *dir);
-+
- static inline bool HAS_UNMAPPED_ID(struct inode *inode)
- {
- 	return !uid_valid(inode->i_uid) || !gid_valid(inode->i_gid);
 -- 
 2.24.0.393.g34dc348eaf-goog
 
