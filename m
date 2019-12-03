@@ -2,190 +2,89 @@ Return-Path: <SRS0=z5Dv=ZZ=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
-	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 10D83C33CB5
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Dec 2019 05:12:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 94900C432C0
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Dec 2019 07:36:44 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id DCFF62073C
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Dec 2019 05:12:00 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Vi7RSXxG"
+	by mail.kernel.org (Postfix) with ESMTP id 67D0D20661
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Dec 2019 07:36:44 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726917AbfLCFLY (ORCPT
+        id S1727589AbfLCHgk (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 3 Dec 2019 00:11:24 -0500
-Received: from mail-pl1-f202.google.com ([209.85.214.202]:36297 "EHLO
-        mail-pl1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726845AbfLCFLX (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 3 Dec 2019 00:11:23 -0500
-Received: by mail-pl1-f202.google.com with SMTP id s7so1149113plp.3
-        for <linux-fscrypt@vger.kernel.org>; Mon, 02 Dec 2019 21:11:23 -0800 (PST)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
-         :cc;
-        bh=zioOGuJqnVPXe7Qe2SnSM0LE+ZxE0SKC1ZdBPwMzHHM=;
-        b=Vi7RSXxGowYOEm1R7PqAvvobd49Ow6l4LUuP+EyQ8x3TZm7tmSuo7w72xlUfos80tZ
-         E/5xpFoQ2wLEqy3sJx6GTasTyPD8TUZAvrKp4r5T0yV1jwHmX+TJe1LWpY208PzxANGu
-         ut5I1Zdm3X6yUrK3XUXnrofTbSEcTJfH5v7UnTEBqOPCK7VLMb4+XLPA7r9Qjv9XMHVe
-         bWves33Lu3GThFsqT1xtk/MGO/+WzHg4eXBqx/6CVZSf9UYCyUHFwBkAdhuz0Y7U38+n
-         Z0AY+6+IDGq3SiysmR0NHMCVZsgVSj58gcf1kCj0taMnx+Y5pxB4I/Abvbm2KLXatHqP
-         Kz5Q==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
-         :references:subject:from:to:cc;
-        bh=zioOGuJqnVPXe7Qe2SnSM0LE+ZxE0SKC1ZdBPwMzHHM=;
-        b=UU95hNn5JxsxQDeQZaltwxBprCQkXyYVbNw4dIiT5pVdP0M6ZNY30nAe1EGix9fzXJ
-         2I6P9E495kVNB4crccaq0CtqCDTSakuuvlcGDABpnlkfuLG9mrLXnoGS0SACCsNglk5n
-         dYe6zeL1uITQiUckAjIaEVAFEGfPNNv3LG3D+gsA7367l6JaQX9OFopqDvucnCbnOM6x
-         KIhi0lWPtdxiHf8vMqKrSOLl7Hx4uFIvIjnFPA/W+fa/lA+ZZUl2RiEjTcNu+CzAw/LG
-         gIamzhS+u6iMHSPPhsNYP8MAferuvDqZMNiuMukqq9ZR2vpakXzOjdSPe5PLIDUWjHId
-         0p2A==
-X-Gm-Message-State: APjAAAUw+IBPiwdvhRSeKdIq2k/p3Sqy94yHmZvO0gpb6dX/vILf4D1p
-        x/kJDBLP5W3OKRgwYZj9l5uiukcMg30=
-X-Google-Smtp-Source: APXvYqwLhVT0aPs7pDtnMOWvm8ceiekoDOnf+r3AdcXHnYtS4fRpDhrmnGvkSNzLuI9YnCQKTgC4a5Cp4Jk=
-X-Received: by 2002:a63:6507:: with SMTP id z7mr3034832pgb.322.1575349882981;
- Mon, 02 Dec 2019 21:11:22 -0800 (PST)
-Date:   Mon,  2 Dec 2019 21:10:43 -0800
-In-Reply-To: <20191203051049.44573-1-drosen@google.com>
-Message-Id: <20191203051049.44573-3-drosen@google.com>
-Mime-Version: 1.0
-References: <20191203051049.44573-1-drosen@google.com>
-X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
-Subject: [PATCH 2/8] fscrypt: Don't allow v1 policies with casefolding
-From:   Daniel Rosenberg <drosen@google.com>
-To:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
+        Tue, 3 Dec 2019 02:36:40 -0500
+Received: from szxga02-in.huawei.com ([45.249.212.188]:2525 "EHLO huawei.com"
+        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
+        id S1727444AbfLCHgj (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 3 Dec 2019 02:36:39 -0500
+Received: from DGGEMM406-HUB.china.huawei.com (unknown [172.30.72.56])
+        by Forcepoint Email with ESMTP id 7819FD447DA005F45EFD;
+        Tue,  3 Dec 2019 15:36:36 +0800 (CST)
+Received: from dggeme762-chm.china.huawei.com (10.3.19.108) by
+ DGGEMM406-HUB.china.huawei.com (10.3.20.214) with Microsoft SMTP Server (TLS)
+ id 14.3.439.0; Tue, 3 Dec 2019 15:36:36 +0800
+Received: from architecture4 (10.160.196.180) by
+ dggeme762-chm.china.huawei.com (10.3.19.108) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256_P256) id
+ 15.1.1713.5; Tue, 3 Dec 2019 15:36:35 +0800
+Date:   Tue, 3 Dec 2019 15:41:54 +0800
+From:   Gao Xiang <gaoxiang25@huawei.com>
+To:     Daniel Rosenberg <drosen@google.com>
+CC:     Theodore Ts'o <tytso@mit.edu>, <linux-ext4@vger.kernel.org>,
         Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
-        linux-f2fs-devel@lists.sourceforge.net,
+        <linux-f2fs-devel@lists.sourceforge.net>,
         Eric Biggers <ebiggers@kernel.org>,
-        linux-fscrypt@vger.kernel.org,
-        Alexander Viro <viro@zeniv.linux.org.uk>
-Cc:     Andreas Dilger <adilger.kernel@dilger.ca>,
-        Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org,
-        linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        <linux-fscrypt@vger.kernel.org>,
+        Alexander Viro <viro@zeniv.linux.org.uk>,
+        Andreas Dilger <adilger.kernel@dilger.ca>,
+        Jonathan Corbet <corbet@lwn.net>, <linux-doc@vger.kernel.org>,
+        <linux-kernel@vger.kernel.org>, <linux-fsdevel@vger.kernel.org>,
         Gabriel Krisman Bertazi <krisman@collabora.com>,
-        kernel-team@android.com, Daniel Rosenberg <drosen@google.com>
-Content-Type: text/plain; charset="UTF-8"
+        <kernel-team@android.com>
+Subject: Re: [PATCH 4/8] vfs: Fold casefolding into vfs
+Message-ID: <20191203074154.GA216261@architecture4>
+References: <20191203051049.44573-1-drosen@google.com>
+ <20191203051049.44573-5-drosen@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Disposition: inline
+In-Reply-To: <20191203051049.44573-5-drosen@google.com>
+User-Agent: Mutt/1.9.4 (2018-02-28)
+X-Originating-IP: [10.160.196.180]
+X-ClientProxiedBy: dggeme719-chm.china.huawei.com (10.1.199.115) To
+ dggeme762-chm.china.huawei.com (10.3.19.108)
+X-CFilter-Loop: Reflected
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Casefolding requires a derived key for computing the siphash.
-This is available for v2 policies, but not v1, so we disallow it for v1.
+On Mon, Dec 02, 2019 at 09:10:45PM -0800, Daniel Rosenberg wrote:
+> Ext4 and F2fs are both using casefolding, and they, along with any other
+> filesystem that adds the feature, will be using identical dentry_ops.
+> Additionally, those dentry ops interfere with the dentry_ops required
+> for fscrypt once we add support for casefolding and encryption.
+> Moving this into the vfs removes code duplication as well as the
+> complication with encryption.
+> 
+> Currently this is pretty close to just moving the existing f2fs/ext4
+> code up a level into the vfs, although there is a lot of room for
+> improvement now.
+> 
+> Signed-off-by: Daniel Rosenberg <drosen@google.com>
 
-Signed-off-by: Daniel Rosenberg <drosen@google.com>
----
- fs/crypto/policy.c      | 26 +++++++++++++++++++++++---
- fs/inode.c              |  8 ++++++++
- include/linux/fscrypt.h |  7 +++++++
- 3 files changed, 38 insertions(+), 3 deletions(-)
+I'm afraid that such vfs modification is unneeded.
 
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 96f528071bed..94d96d3212d6 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -67,9 +67,9 @@ static bool supported_iv_ino_lblk_64_policy(
-  * fscrypt_supported_policy - check whether an encryption policy is supported
-  *
-  * Given an encryption policy, check whether all its encryption modes and other
-- * settings are supported by this kernel.  (But we don't currently don't check
-- * for crypto API support here, so attempting to use an algorithm not configured
-- * into the crypto API will still fail later.)
-+ * settings are supported by this kernel on the given inode.  (But we don't
-+ * currently don't check for crypto API support here, so attempting to use an
-+ * algorithm not configured into the crypto API will still fail later.)
-  *
-  * Return: %true if supported, else %false
-  */
-@@ -97,6 +97,12 @@ bool fscrypt_supported_policy(const union fscrypt_policy *policy_u,
- 			return false;
- 		}
- 
-+		if (IS_CASEFOLDED(inode)) {
-+			fscrypt_warn(inode,
-+				     "v1 policy does not support casefolded directories");
-+			return false;
-+		}
-+
- 		return true;
- 	}
- 	case FSCRYPT_POLICY_V2: {
-@@ -530,3 +536,17 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
- 	return preload ? fscrypt_get_encryption_info(child): 0;
- }
- EXPORT_SYMBOL(fscrypt_inherit_context);
-+
-+int fscrypt_set_casefolding_allowed(struct inode *inode)
-+{
-+	union fscrypt_policy policy;
-+	int ret = fscrypt_get_policy(inode, &policy);
-+
-+	if (ret < 0)
-+		return ret;
-+
-+	if (policy.version == FSCRYPT_POLICY_V2)
-+		return 0;
-+	else
-+		return -EINVAL;
-+}
-diff --git a/fs/inode.c b/fs/inode.c
-index fef457a42882..b615ec272a1e 100644
---- a/fs/inode.c
-+++ b/fs/inode.c
-@@ -20,6 +20,7 @@
- #include <linux/ratelimit.h>
- #include <linux/list_lru.h>
- #include <linux/iversion.h>
-+#include <linux/fscrypt.h>
- #include <trace/events/writeback.h>
- #include "internal.h"
- 
-@@ -2245,6 +2246,13 @@ int vfs_ioc_setflags_prepare(struct inode *inode, unsigned int oldflags,
- 	    !capable(CAP_LINUX_IMMUTABLE))
- 		return -EPERM;
- 
-+	/*
-+	 * When a directory is encrypted, the CASEFOLD flag can only be turned
-+	 * on if the fscrypt policy supports it.
-+	 */
-+	if (IS_ENCRYPTED(inode) && (flags & ~oldflags & FS_CASEFOLD_FL))
-+		return fscrypt_set_casefolding_allowed(inode);
-+
- 	return 0;
- }
- EXPORT_SYMBOL(vfs_ioc_setflags_prepare);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index e13ff68a99f0..028aed925e51 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -127,6 +127,8 @@ extern int fscrypt_ioctl_get_policy_ex(struct file *, void __user *);
- extern int fscrypt_has_permitted_context(struct inode *, struct inode *);
- extern int fscrypt_inherit_context(struct inode *, struct inode *,
- 					void *, bool);
-+extern int fscrypt_set_casefolding_allowed(struct inode *inode);
-+
- /* keyring.c */
- extern void fscrypt_sb_free(struct super_block *sb);
- extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
-@@ -361,6 +363,11 @@ static inline int fscrypt_inherit_context(struct inode *parent,
- 	return -EOPNOTSUPP;
- }
- 
-+static inline int fscrypt_set_casefolding_allowed(struct inode *inode)
-+{
-+	return 0;
-+}
-+
- /* keyring.c */
- static inline void fscrypt_sb_free(struct super_block *sb)
- {
--- 
-2.24.0.393.g34dc348eaf-goog
+Just a quick glance it seems just can be replaced by introducing some
+.d_cmp, .d_hash helpers (or with little modification) and most non-Android
+emulated storage files are not casefolded (even in Android).
+
+"those dentry ops interfere with the dentry_ops required for fscrypt",
+I don't think it's a real diffculty and it could be done with some
+better approach instead.
+
+Thanks,
+Gao Xiang
 
