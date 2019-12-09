@@ -2,49 +2,52 @@ Return-Path: <SRS0=4aov=Z7=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DDE06C43603
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 22:24:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3245BC2BD09
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 22:24:22 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id B266A2077B
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 22:24:20 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 0538C24655
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 22:24:22 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1575930260;
-	bh=NFF6oeKHFTNzJKOukLVQn69hTShkEDvr4AVzVzeQaDU=;
-	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=pAYuyFCMuqcrARl88Q5HLLxzzqB2GgFvx77kVVHTEAEi1spIqnHPe3jUOc3lrbkXU
-	 YU8D6a+EJvdHbPDAKOH9oAkomJpuI2Hs8PrzNIG8O9gmytm8+TJMf9+YrFR8U5LxOR
-	 9AQ/2YBPvcQ8qfldmQDTrDvM25oIVmLrjIZ9fFZ8=
+	s=default; t=1575930262;
+	bh=Txysl0+3YMuRnATdL1j/J6K16t6mLbaFJChqfy90MwU=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=m0g+09MCogn7Oueka9+5a4yuQteK1q+TeVEbg7UwiCGL4BFxppWoKe2MIuuR4KwNj
+	 tgOcXHOT8/kqw0dyoHR5NFZLP7jTgeHOE2g0ZwqDn7uMx5ewbYFnYKjR8zAd4kTesF
+	 kc/c3/DVghva3Y5VAJtUVOuvJq5LClCnIGOUFlU0=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727059AbfLIWYU (ORCPT
+        id S1726913AbfLIWYV (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 9 Dec 2019 17:24:20 -0500
-Received: from mail.kernel.org ([198.145.29.99]:40904 "EHLO mail.kernel.org"
+        Mon, 9 Dec 2019 17:24:21 -0500
+Received: from mail.kernel.org ([198.145.29.99]:40912 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726522AbfLIWYU (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 9 Dec 2019 17:24:20 -0500
+        id S1726522AbfLIWYV (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 9 Dec 2019 17:24:21 -0500
 Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 7E02020637;
-        Mon,  9 Dec 2019 22:24:19 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 232362073D;
+        Mon,  9 Dec 2019 22:24:20 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1575930259;
-        bh=NFF6oeKHFTNzJKOukLVQn69hTShkEDvr4AVzVzeQaDU=;
-        h=From:To:Cc:Subject:Date:From;
-        b=Zox1hieAUcZrvzfyYghZIP0Z6K4YjW1mC+/7n6hFnQr9bvWvnGUI/3jVvDjuOrQ8g
-         Hb48ODsQ23EzxSNrsmmJ3rpOWyhKN6N9qFPAlBBQq95tLDUNQUFRyg+3S6Xy8h1IYc
-         5wswW23CKtooqMNUHX18kpdImxEMoAGUAUcmN9DM=
+        s=default; t=1575930260;
+        bh=Txysl0+3YMuRnATdL1j/J6K16t6mLbaFJChqfy90MwU=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=tYWBRWpv36hPtz6Evnmhu1djMMLvR26BcTJAwTXhIiyYmTwvY7PA9gSwJ6hHA3Yuk
+         AnWbw5RR2NCZSMNAvpCFfu546W9qlnKss1wScPWsDu0uJrTpWDF/2diIOVGbs04YRp
+         v9DjBbCglO5H6B1ugc/9D3QyPBKN/PXTQIeXLE/k=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
 Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
-Subject: [PATCH 0/2] ubifs: fixes for FS_IOC_GETFLAGS and FS_IOC_SETFLAGS
-Date:   Mon,  9 Dec 2019 14:23:23 -0800
-Message-Id: <20191209222325.95656-1-ebiggers@kernel.org>
+Subject: [PATCH 2/2] ubifs: add support for FS_ENCRYPT_FL
+Date:   Mon,  9 Dec 2019 14:23:25 -0800
+Message-Id: <20191209222325.95656-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
+In-Reply-To: <20191209222325.95656-1-ebiggers@kernel.org>
+References: <20191209222325.95656-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -52,16 +55,68 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On ubifs, fix FS_IOC_SETFLAGS to not clear the encrypt flag, and update
-FS_IOC_GETFLAGS to return the encrypt flag like ext4 and f2fs do.
+From: Eric Biggers <ebiggers@google.com>
 
-Eric Biggers (2):
-  ubifs: fix FS_IOC_SETFLAGS unexpectedly clearing encrypt flag
-  ubifs: add support for FS_ENCRYPT_FL
+Make the FS_IOC_GETFLAGS ioctl on ubifs return the FS_ENCRYPT_FL flag on
+encrypted files, like ext4 and f2fs do.
 
- fs/ubifs/ioctl.c | 14 +++++++++++---
- 1 file changed, 11 insertions(+), 3 deletions(-)
+Also make this flag be ignored by FS_IOC_SETFLAGS, like ext4 and f2fs
+do, since it's a recognized flag but is not directly settable.
 
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ubifs/ioctl.c | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
+index eeb1be2598881..d49fc04f2d7d4 100644
+--- a/fs/ubifs/ioctl.c
++++ b/fs/ubifs/ioctl.c
+@@ -17,10 +17,14 @@
+ #include "ubifs.h"
+ 
+ /* Need to be kept consistent with checked flags in ioctl2ubifs() */
+-#define UBIFS_SUPPORTED_IOCTL_FLAGS \
++#define UBIFS_SETTABLE_IOCTL_FLAGS \
+ 	(FS_COMPR_FL | FS_SYNC_FL | FS_APPEND_FL | \
+ 	 FS_IMMUTABLE_FL | FS_DIRSYNC_FL)
+ 
++/* Need to be kept consistent with checked flags in ubifs2ioctl() */
++#define UBIFS_GETTABLE_IOCTL_FLAGS \
++	(UBIFS_SETTABLE_IOCTL_FLAGS | FS_ENCRYPT_FL)
++
+ /**
+  * ubifs_set_inode_flags - set VFS inode flags.
+  * @inode: VFS inode to set flags for
+@@ -91,6 +95,8 @@ static int ubifs2ioctl(int ubifs_flags)
+ 		ioctl_flags |= FS_IMMUTABLE_FL;
+ 	if (ubifs_flags & UBIFS_DIRSYNC_FL)
+ 		ioctl_flags |= FS_DIRSYNC_FL;
++	if (ubifs_flags & UBIFS_CRYPT_FL)
++		ioctl_flags |= FS_ENCRYPT_FL;
+ 
+ 	return ioctl_flags;
+ }
+@@ -113,7 +119,7 @@ static int setflags(struct inode *inode, int flags)
+ 	if (err)
+ 		goto out_unlock;
+ 
+-	ui->flags &= ~ioctl2ubifs(UBIFS_SUPPORTED_IOCTL_FLAGS);
++	ui->flags &= ~ioctl2ubifs(UBIFS_SETTABLE_IOCTL_FLAGS);
+ 	ui->flags |= ioctl2ubifs(flags);
+ 	ubifs_set_inode_flags(inode);
+ 	inode->i_ctime = current_time(inode);
+@@ -156,8 +162,9 @@ long ubifs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 		if (get_user(flags, (int __user *) arg))
+ 			return -EFAULT;
+ 
+-		if (flags & ~UBIFS_SUPPORTED_IOCTL_FLAGS)
++		if (flags & ~UBIFS_GETTABLE_IOCTL_FLAGS)
+ 			return -EOPNOTSUPP;
++		flags &= UBIFS_SETTABLE_IOCTL_FLAGS;
+ 
+ 		if (!S_ISDIR(inode->i_mode))
+ 			flags &= ~FS_DIRSYNC_FL;
 -- 
 2.24.0.393.g34dc348eaf-goog
 
