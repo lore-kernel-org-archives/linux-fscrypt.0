@@ -2,109 +2,95 @@ Return-Path: <SRS0=4aov=Z7=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2E070C43603
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 22:24:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0053FC43603
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 22:28:29 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id EF2B82077B
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 22:24:22 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id BD6222071E
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 22:28:29 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1575930263;
-	bh=J8Nz3aIsqb9BFur9UNzQ73PoePbe7oFoO4UFcU1gi4Y=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=c+PGDBj3kJA1tGX7FN8JH4mvzVylud0DrmQX82nG2ULB+QDQ4lczFC9YT/fg4aBT/
-	 KIUl0zeTBImJCUjtlQr0qRDXciMy6QJfx/reTNV9hXybfq3QDmHSuCttO+pIsha0L2
-	 AGHdanyT0IJyZKwmwrpEP7ZsDyhVwQ6+CtbWZtyM=
+	s=default; t=1575930509;
+	bh=P0iEsLxI1uweiGSusdApFJh0pwecHJrFeTNlNQl9mUk=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=Iod8K+PfG3PjbHV69CO6/3Z+ISBW+DDrT+Mv7giSMLezW/iR5qUdzQzaomrBFJ3NK
+	 M3XmcwY8Y2dLyY/0Ml/bYXYHk+FLR+UH0zcL8tj7yV2GB+uDOy+gRupX1F8pZBkr6d
+	 w7eP0uagoZVX+cHiymABqB6x2t//ctLiTtOZmVG4=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727064AbfLIWYV (ORCPT
+        id S1726169AbfLIW23 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 9 Dec 2019 17:24:21 -0500
-Received: from mail.kernel.org ([198.145.29.99]:40908 "EHLO mail.kernel.org"
+        Mon, 9 Dec 2019 17:28:29 -0500
+Received: from mail.kernel.org ([198.145.29.99]:42110 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726913AbfLIWYU (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 9 Dec 2019 17:24:20 -0500
-Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        id S1726156AbfLIW23 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 9 Dec 2019 17:28:29 -0500
+Received: from localhost (unknown [104.132.0.81])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id CC3AF20721;
-        Mon,  9 Dec 2019 22:24:19 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id C887220637;
+        Mon,  9 Dec 2019 22:28:28 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1575930260;
-        bh=J8Nz3aIsqb9BFur9UNzQ73PoePbe7oFoO4UFcU1gi4Y=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=IyOLd8j4Bio2cZmfbFWTozGwBtN67GJNpGYItPOZ+yHp+bdhJr/9mESep/Luw53p7
-         5JlfmHIUCsPs5GJi/BcUcYknBCcmMOxTXRcuhSPavmu3Lcg5G94T2CxOwEVc7qyIqU
-         IFgHA85XKvinMqatq+oeU2kgDG+97kDpl5vdwtD4=
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
-Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        stable@vger.kernel.org
-Subject: [PATCH 1/2] ubifs: fix FS_IOC_SETFLAGS unexpectedly clearing encrypt flag
-Date:   Mon,  9 Dec 2019 14:23:24 -0800
-Message-Id: <20191209222325.95656-2-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
-In-Reply-To: <20191209222325.95656-1-ebiggers@kernel.org>
-References: <20191209222325.95656-1-ebiggers@kernel.org>
+        s=default; t=1575930508;
+        bh=P0iEsLxI1uweiGSusdApFJh0pwecHJrFeTNlNQl9mUk=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=VFfW2H5I8LgDzPwwvAI+t7g4kiU8Q7z47aLRBiKlqqwtyluFQJyMx+DobL4WxYQAz
+         GFxqp+VcU5MPg/ApgL9Uq+ZPnWymht9ZQLhvTHJ7XpGgw0XtFIgDbSll6zQcbWX9Jr
+         mTe5gEVXG5YzLSQarjOE7x4FDdE5CyvD2rqK39UM=
+Date:   Mon, 9 Dec 2019 14:28:28 -0800
+From:   Jaegeuk Kim <jaegeuk@kernel.org>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     linux-f2fs-devel@lists.sourceforge.net,
+        linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH] f2fs: don't keep META_MAPPING pages used for moving
+ verity file blocks
+Message-ID: <20191209222828.GA798@jaegeuk-macbookpro.roam.corp.google.com>
+References: <20191209200055.204040-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20191209200055.204040-1-ebiggers@kernel.org>
+User-Agent: Mutt/1.8.2 (2017-04-18)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On 12/09, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> META_MAPPING is used to move blocks for both encrypted and verity files.
+> So the META_MAPPING invalidation condition in do_checkpoint() should
+> consider verity too, not just encrypt.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/f2fs/checkpoint.c | 6 +++---
+>  1 file changed, 3 insertions(+), 3 deletions(-)
+> 
+> diff --git a/fs/f2fs/checkpoint.c b/fs/f2fs/checkpoint.c
+> index ffdaba0c55d29..44e84ac5c9411 100644
+> --- a/fs/f2fs/checkpoint.c
+> +++ b/fs/f2fs/checkpoint.c
+> @@ -1509,10 +1509,10 @@ static int do_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
+>  	f2fs_wait_on_all_pages_writeback(sbi);
+>  
+>  	/*
+> -	 * invalidate intermediate page cache borrowed from meta inode
+> -	 * which are used for migration of encrypted inode's blocks.
+> +	 * invalidate intermediate page cache borrowed from meta inode which are
+> +	 * used for migration of encrypted or verity inode's blocks.
+>  	 */
+> -	if (f2fs_sb_has_encrypt(sbi))
+> +	if (f2fs_sb_has_encrypt(sbi) || f2fs_sb_has_verity(sbi))
 
-UBIFS's implementation of FS_IOC_SETFLAGS fails to preserve existing
-inode flags that aren't settable by FS_IOC_SETFLAGS, namely the encrypt
-flag.  This causes the encrypt flag to be unexpectedly cleared.
+Do we need f2fs_post_read_required() aligned to the condition of
+move_data_block()?
 
-Fix it by preserving existing unsettable flags, like ext4 and f2fs do.
-
-Test case with kvm-xfstests shell:
-
-    FSTYP=ubifs KEYCTL_PROG=keyctl
-    . fs/ubifs/config
-    . ~/xfstests/common/encrypt
-    dev=$(__blkdev_to_ubi_volume /dev/vdc)
-    ubiupdatevol -t $dev
-    mount $dev /mnt -t ubifs
-    k=$(_generate_session_encryption_key)
-    mkdir /mnt/edir
-    xfs_io -c "set_encpolicy $k" /mnt/edir
-    echo contents > /mnt/edir/file
-    chattr +i /mnt/edir/file
-    chattr -i /mnt/edir/file
-
-With the bug, the following errors occur on the last command:
-
-    [   18.081559] fscrypt (ubifs, inode 67): Inconsistent encryption context (parent directory: 65)
-    chattr: Operation not permitted while reading flags on /mnt/edir/file
-
-Fixes: d475a507457b ("ubifs: Add skeleton for fscrypto")
-Cc: <stable@vger.kernel.org> # v4.10+
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ubifs/ioctl.c | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
-
-diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
-index 5dc5abca11c70..eeb1be2598881 100644
---- a/fs/ubifs/ioctl.c
-+++ b/fs/ubifs/ioctl.c
-@@ -113,7 +113,8 @@ static int setflags(struct inode *inode, int flags)
- 	if (err)
- 		goto out_unlock;
- 
--	ui->flags = ioctl2ubifs(flags);
-+	ui->flags &= ~ioctl2ubifs(UBIFS_SUPPORTED_IOCTL_FLAGS);
-+	ui->flags |= ioctl2ubifs(flags);
- 	ubifs_set_inode_flags(inode);
- 	inode->i_ctime = current_time(inode);
- 	release = ui->dirty;
--- 
-2.24.0.393.g34dc348eaf-goog
-
+>  		invalidate_mapping_pages(META_MAPPING(sbi),
+>  				MAIN_BLKADDR(sbi), MAX_BLKADDR(sbi) - 1);
+>  
+> -- 
+> 2.24.0.393.g34dc348eaf-goog
