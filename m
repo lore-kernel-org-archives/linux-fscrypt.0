@@ -7,44 +7,44 @@ X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E97C4C3F68F
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B3033C2BD09
 	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 21:19:24 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id B0F0E207FF
+	by mail.kernel.org (Postfix) with ESMTP id 858512073D
 	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Dec 2019 21:19:24 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
 	s=default; t=1575926364;
-	bh=6FVkRlG5KKy/tpIJ9gSiELJuRX721e3LnTCgXc1GdLE=;
+	bh=UfqzD+esPBfPHwDjjLqkJ5E3YqVZyAA71Nq92++d4bI=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=0rAmrc1wNDppD7yZWSNJQbYrk4xVNrO4cGt9BS/2ID+A87Jna5CPChX7dX2yJv1us
-	 LrBDGa5ET7ZnPHM43UN51QTpj8/ZJ/ZH6J8uJvvMzjVEoJ0uU1hqP55msjxQKsYnp9
-	 BldmjpkuVs55LiHUTuQhdUpp1MvQQ9/BC0igqOKY=
+	b=SCAc3WmaYuWg4P7SA02AcUmlmUu/m4zs84DoumXHdWzFkoQpzNIQZHonuC/ZPYJte
+	 jin7KaspJuTKNP3tX5hSm8LzNjFDt3IHEeIXQHF24dcvaFxkMJBJtCoaKKjVBdeGsL
+	 /foI0H3e6gkqHHO6hmbP7OMmq73PehGpqTC3Td40=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726538AbfLIVTY (ORCPT
+        id S1726780AbfLIVTY (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Mon, 9 Dec 2019 16:19:24 -0500
-Received: from mail.kernel.org ([198.145.29.99]:53428 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:53394 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726968AbfLIVTY (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1726538AbfLIVTY (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 9 Dec 2019 16:19:24 -0500
 Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 995622077B;
-        Mon,  9 Dec 2019 21:19:23 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id EC0CE2071E;
+        Mon,  9 Dec 2019 21:19:22 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
         s=default; t=1575926363;
-        bh=6FVkRlG5KKy/tpIJ9gSiELJuRX721e3LnTCgXc1GdLE=;
+        bh=UfqzD+esPBfPHwDjjLqkJ5E3YqVZyAA71Nq92++d4bI=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=yKEId9lsGHiN+vn2h3RzDh15xpn4kSvDmGyu/1pTr2/lJvkb/E8K0ddDF8ZPQ7bke
-         pkaEYo4j0GxCKjl5Z48EavOgLnafmZ0q3vZjqG0MDv+kFQKYx3CR39cNSA47C0y7ow
-         YDhG2vKi81iS2dkIwBDFAHmUmy2aNnDjbX/QFxCk=
+        b=H2nvwJ4ZsYA0a2z1vNDWrcRMpdfYwXEp9l8KyzUt1aYyS/0PGK7M6nP4rQz98wUBG
+         jd9IxO/r462z75LQa1vzkts5qq19ld1y3kilWIqQ8B/lQ5d5hl5rvAccvOWK3yOBwK
+         v5FBTQiF27FWny7IoVa8xzQUs9IXZS7iuuXAiPQs=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     Daniel Rosenberg <drosen@google.com>
-Subject: [PATCH 4/4] fscrypt: remove fscrypt_is_direct_key_policy()
-Date:   Mon,  9 Dec 2019 13:18:29 -0800
-Message-Id: <20191209211829.239800-5-ebiggers@kernel.org>
+Subject: [PATCH 1/4] fscrypt: split up fscrypt_supported_policy() by policy version
+Date:   Mon,  9 Dec 2019 13:18:26 -0800
+Message-Id: <20191209211829.239800-2-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.24.0.393.g34dc348eaf-goog
 In-Reply-To: <20191209211829.239800-1-ebiggers@kernel.org>
 References: <20191209211829.239800-1-ebiggers@kernel.org>
@@ -57,30 +57,158 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-fscrypt_is_direct_key_policy() is no longer used, so remove it.
+Make fscrypt_supported_policy() call new functions
+fscrypt_supported_v1_policy() and fscrypt_supported_v2_policy(), to
+reduce the indentation level and make the code easier to read.
+
+Also adjust the function comment to mention that whether the encryption
+policy is supported can also depend on the inode.
+
+No change in behavior.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fscrypt_private.h | 6 ------
- 1 file changed, 6 deletions(-)
+ fs/crypto/policy.c | 116 +++++++++++++++++++++++----------------------
+ 1 file changed, 59 insertions(+), 57 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 71f496fe71732..b22e8decebedd 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -136,12 +136,6 @@ fscrypt_policy_flags(const union fscrypt_policy *policy)
- 	BUG();
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index 96f528071bed3..fdb13ce69cd28 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -63,13 +63,65 @@ static bool supported_iv_ino_lblk_64_policy(
+ 	return true;
  }
  
--static inline bool
--fscrypt_is_direct_key_policy(const union fscrypt_policy *policy)
--{
--	return fscrypt_policy_flags(policy) & FSCRYPT_POLICY_FLAG_DIRECT_KEY;
--}
--
++static bool fscrypt_supported_v1_policy(const struct fscrypt_policy_v1 *policy,
++					const struct inode *inode)
++{
++	if (!fscrypt_valid_enc_modes(policy->contents_encryption_mode,
++				     policy->filenames_encryption_mode)) {
++		fscrypt_warn(inode,
++			     "Unsupported encryption modes (contents %d, filenames %d)",
++			     policy->contents_encryption_mode,
++			     policy->filenames_encryption_mode);
++		return false;
++	}
++
++	if (policy->flags & ~(FSCRYPT_POLICY_FLAGS_PAD_MASK |
++			      FSCRYPT_POLICY_FLAG_DIRECT_KEY)) {
++		fscrypt_warn(inode, "Unsupported encryption flags (0x%02x)",
++			     policy->flags);
++		return false;
++	}
++
++	return true;
++}
++
++static bool fscrypt_supported_v2_policy(const struct fscrypt_policy_v2 *policy,
++					const struct inode *inode)
++{
++	if (!fscrypt_valid_enc_modes(policy->contents_encryption_mode,
++				     policy->filenames_encryption_mode)) {
++		fscrypt_warn(inode,
++			     "Unsupported encryption modes (contents %d, filenames %d)",
++			     policy->contents_encryption_mode,
++			     policy->filenames_encryption_mode);
++		return false;
++	}
++
++	if (policy->flags & ~FSCRYPT_POLICY_FLAGS_VALID) {
++		fscrypt_warn(inode, "Unsupported encryption flags (0x%02x)",
++			     policy->flags);
++		return false;
++	}
++
++	if ((policy->flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) &&
++	    !supported_iv_ino_lblk_64_policy(policy, inode))
++		return false;
++
++	if (memchr_inv(policy->__reserved, 0, sizeof(policy->__reserved))) {
++		fscrypt_warn(inode, "Reserved bits set in encryption policy");
++		return false;
++	}
++
++	return true;
++}
++
  /**
-  * For encrypted symlinks, the ciphertext length is stored at the beginning
-  * of the string in little-endian format.
+  * fscrypt_supported_policy - check whether an encryption policy is supported
+  *
+  * Given an encryption policy, check whether all its encryption modes and other
+- * settings are supported by this kernel.  (But we don't currently don't check
+- * for crypto API support here, so attempting to use an algorithm not configured
+- * into the crypto API will still fail later.)
++ * settings are supported by this kernel on the given inode.  (But we don't
++ * currently don't check for crypto API support here, so attempting to use an
++ * algorithm not configured into the crypto API will still fail later.)
+  *
+  * Return: %true if supported, else %false
+  */
+@@ -77,60 +129,10 @@ bool fscrypt_supported_policy(const union fscrypt_policy *policy_u,
+ 			      const struct inode *inode)
+ {
+ 	switch (policy_u->version) {
+-	case FSCRYPT_POLICY_V1: {
+-		const struct fscrypt_policy_v1 *policy = &policy_u->v1;
+-
+-		if (!fscrypt_valid_enc_modes(policy->contents_encryption_mode,
+-					     policy->filenames_encryption_mode)) {
+-			fscrypt_warn(inode,
+-				     "Unsupported encryption modes (contents %d, filenames %d)",
+-				     policy->contents_encryption_mode,
+-				     policy->filenames_encryption_mode);
+-			return false;
+-		}
+-
+-		if (policy->flags & ~(FSCRYPT_POLICY_FLAGS_PAD_MASK |
+-				      FSCRYPT_POLICY_FLAG_DIRECT_KEY)) {
+-			fscrypt_warn(inode,
+-				     "Unsupported encryption flags (0x%02x)",
+-				     policy->flags);
+-			return false;
+-		}
+-
+-		return true;
+-	}
+-	case FSCRYPT_POLICY_V2: {
+-		const struct fscrypt_policy_v2 *policy = &policy_u->v2;
+-
+-		if (!fscrypt_valid_enc_modes(policy->contents_encryption_mode,
+-					     policy->filenames_encryption_mode)) {
+-			fscrypt_warn(inode,
+-				     "Unsupported encryption modes (contents %d, filenames %d)",
+-				     policy->contents_encryption_mode,
+-				     policy->filenames_encryption_mode);
+-			return false;
+-		}
+-
+-		if (policy->flags & ~FSCRYPT_POLICY_FLAGS_VALID) {
+-			fscrypt_warn(inode,
+-				     "Unsupported encryption flags (0x%02x)",
+-				     policy->flags);
+-			return false;
+-		}
+-
+-		if ((policy->flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) &&
+-		    !supported_iv_ino_lblk_64_policy(policy, inode))
+-			return false;
+-
+-		if (memchr_inv(policy->__reserved, 0,
+-			       sizeof(policy->__reserved))) {
+-			fscrypt_warn(inode,
+-				     "Reserved bits set in encryption policy");
+-			return false;
+-		}
+-
+-		return true;
+-	}
++	case FSCRYPT_POLICY_V1:
++		return fscrypt_supported_v1_policy(&policy_u->v1, inode);
++	case FSCRYPT_POLICY_V2:
++		return fscrypt_supported_v2_policy(&policy_u->v2, inode);
+ 	}
+ 	return false;
+ }
 -- 
 2.24.0.393.g34dc348eaf-goog
 
