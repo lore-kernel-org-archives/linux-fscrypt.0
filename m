@@ -2,47 +2,30 @@ Return-Path: <SRS0=KzJn=2A=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 72F2AC2D0BF
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Dec 2019 19:19:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7BF59C43603
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Dec 2019 23:10:25 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 488EB21556
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Dec 2019 19:19:20 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1576005560;
-	bh=v/zlr/k417wcCWHHCL31Rqwau5okPBjp1POLwjKxDYE=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=uEsYFe/BlZ4cp1uuhIHmMnyot7mCTbBpPV+fQLHr0GGFtT2ZD291V8cH+iVbcSGqN
-	 WKc+53nl0knlav5W23ii6o/1oLrXW6FBHSF2SC3WHrXAbxG+SjT+cFYijpwnX+DLnR
-	 aEyQwG75cb1/e3XBg9hE26Zx6tOL9Hvo118MOR2Q=
+	by mail.kernel.org (Postfix) with ESMTP id 57B33207FF
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Dec 2019 23:10:25 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726568AbfLJTTQ (ORCPT
+        id S1727170AbfLJXKZ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 10 Dec 2019 14:19:16 -0500
-Received: from mail.kernel.org ([198.145.29.99]:53092 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726018AbfLJTTP (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 10 Dec 2019 14:19:15 -0500
-Received: from gmail.com (unknown [104.132.1.77])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id D42E02077B;
-        Tue, 10 Dec 2019 19:19:14 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1576005555;
-        bh=v/zlr/k417wcCWHHCL31Rqwau5okPBjp1POLwjKxDYE=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=FzLzsGotMfuCA9yyO2/HDt1XmRzGg33023JGprHtkq/N9sJZBqyk9HAiW9R+lNtbo
-         1PiVZLTd3dVYranyQaIjPmw22oV4+WshIGF1KQEkAGGNhxiA3fMh/CcB3TF3aBpFQF
-         8HlA6I9QpUq/ALD7kyWxTil4u7/f5YRZKDjgzUro=
-Date:   Tue, 10 Dec 2019 11:19:13 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Tiezhu Yang <yangtiezhu@loongson.cn>
-Cc:     Alexander Viro <viro@zeniv.linux.org.uk>,
+        Tue, 10 Dec 2019 18:10:25 -0500
+Received: from zeniv.linux.org.uk ([195.92.253.2]:48608 "EHLO
+        ZenIV.linux.org.uk" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726631AbfLJXKY (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 10 Dec 2019 18:10:24 -0500
+Received: from viro by ZenIV.linux.org.uk with local (Exim 4.92.3 #3 (Red Hat Linux))
+        id 1ieodt-00083G-9G; Tue, 10 Dec 2019 23:10:09 +0000
+Date:   Tue, 10 Dec 2019 23:10:09 +0000
+From:   Al Viro <viro@zeniv.linux.org.uk>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     Tiezhu Yang <yangtiezhu@loongson.cn>,
         "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <yuchao0@huawei.com>,
         Tyler Hicks <tyhicks@canonical.com>,
@@ -51,82 +34,47 @@ Cc:     Alexander Viro <viro@zeniv.linux.org.uk>,
         linux-f2fs-devel@lists.sourceforge.net,
         linux-kernel@vger.kernel.org
 Subject: Re: [PATCH v4] fs: introduce is_dot_or_dotdot helper for cleanup
-Message-ID: <20191210191912.GA99557@gmail.com>
+Message-ID: <20191210231009.GB4203@ZenIV.linux.org.uk>
 References: <1575979801-32569-1-git-send-email-yangtiezhu@loongson.cn>
+ <20191210191912.GA99557@gmail.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <1575979801-32569-1-git-send-email-yangtiezhu@loongson.cn>
-User-Agent: Mutt/1.10.1 (2018-07-13)
+In-Reply-To: <20191210191912.GA99557@gmail.com>
+User-Agent: Mutt/1.12.1 (2019-06-15)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, Dec 10, 2019 at 08:10:01PM +0800, Tiezhu Yang wrote:
-> diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-> index 3da3707..ef7eba8 100644
-> --- a/fs/crypto/fname.c
-> +++ b/fs/crypto/fname.c
-> @@ -11,21 +11,11 @@
->   * This has not yet undergone a rigorous security audit.
->   */
->  
-> +#include <linux/namei.h>
->  #include <linux/scatterlist.h>
->  #include <crypto/skcipher.h>
->  #include "fscrypt_private.h"
->  
-> -static inline bool fscrypt_is_dot_dotdot(const struct qstr *str)
-> -{
-> -	if (str->len == 1 && str->name[0] == '.')
-> -		return true;
-> -
-> -	if (str->len == 2 && str->name[0] == '.' && str->name[1] == '.')
-> -		return true;
-> -
-> -	return false;
-> -}
-> -
->  /**
->   * fname_encrypt() - encrypt a filename
->   *
-> @@ -255,7 +245,7 @@ int fscrypt_fname_disk_to_usr(struct inode *inode,
->  	const struct qstr qname = FSTR_TO_QSTR(iname);
->  	struct fscrypt_digested_name digested_name;
->  
-> -	if (fscrypt_is_dot_dotdot(&qname)) {
-> +	if (is_dot_or_dotdot(qname.name, qname.len)) {
+On Tue, Dec 10, 2019 at 11:19:13AM -0800, Eric Biggers wrote:
 
-There's no need for the 'qname' variable anymore.  Can you please remove it and
-do:
+> > +static inline bool is_dot_or_dotdot(const unsigned char *name, size_t len)
+> > +{
+> > +	if (unlikely(name[0] == '.')) {
+> > +		if (len < 2 || (len == 2 && name[1] == '.'))
+> > +			return true;
+> > +	}
+> > +
+> > +	return false;
+> > +}
+> 
+> This doesn't handle the len=0 case.  Did you check that none of the users pass
+> in zero-length names?  It looks like fscrypt_fname_disk_to_usr() can, if the
+> directory entry on-disk has a zero-length name.  Currently it will return
+> -EUCLEAN in that case, but with this patch it may think it's the name ".".
+> 
+> So I think there needs to either be a len >= 1 check added, *or* you need to
+> make an argument for why it's okay to not care about the empty name case.
 
-	if (is_dot_or_dotdot(iname->name, iname->len)) {
+Frankly, the only caller that matters in practice is link_path_walk(); _that_
+is by far the hottest path that might make use of that thing.
 
-> diff --git a/include/linux/namei.h b/include/linux/namei.h
-> index 7fe7b87..aba114a 100644
-> --- a/include/linux/namei.h
-> +++ b/include/linux/namei.h
-> @@ -92,4 +92,14 @@ retry_estale(const long error, const unsigned int flags)
->  	return error == -ESTALE && !(flags & LOOKUP_REVAL);
->  }
->  
-> +static inline bool is_dot_or_dotdot(const unsigned char *name, size_t len)
-> +{
-> +	if (unlikely(name[0] == '.')) {
-> +		if (len < 2 || (len == 2 && name[1] == '.'))
-> +			return true;
-> +	}
-> +
-> +	return false;
-> +}
-
-This doesn't handle the len=0 case.  Did you check that none of the users pass
-in zero-length names?  It looks like fscrypt_fname_disk_to_usr() can, if the
-directory entry on-disk has a zero-length name.  Currently it will return
--EUCLEAN in that case, but with this patch it may think it's the name ".".
-
-So I think there needs to either be a len >= 1 check added, *or* you need to
-make an argument for why it's okay to not care about the empty name case.
-
-- Eric
+BTW, the callers that might end up passing 0 for len really ought to take
+a good look at another thing - that name[0] is, in fact, mapped.  Something
+along the lines of
+	if (name + len > end_of_buffer)
+		sod off
+	if (<that function>(name, len))
+		....
+is not enough, for obvious reasons.
