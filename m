@@ -2,45 +2,31 @@ Return-Path: <SRS0=XTu7=2B=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B259CC2D0C4
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 11 Dec 2019 02:49:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0C124C43603
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 11 Dec 2019 04:00:29 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 5C2C72077B
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 11 Dec 2019 02:49:01 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1576032541;
-	bh=yqkl8TN0O59NwfZP2OD2c0ghY0r4F9Diq35NeQInRfE=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=eIZ0ISdp9+1nHlZ8HZGonYnEvS2sAehPIy6fewdmzlQ2mTBBCYclNtH41tU7rAYjC
-	 ijHK8uMXhQX9FFdYKTqdCmpp2ZTXlYegt0asOID2Flxwdzs/r9u61Y7/R5C26i/DC0
-	 67jfki5IStmlnMaQceZ7kZXJbSwPu6rvEVc//rXQ=
+	by mail.kernel.org (Postfix) with ESMTP id D7E982073B
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 11 Dec 2019 04:00:28 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727317AbfLKCtB (ORCPT
+        id S1726718AbfLKEA2 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 10 Dec 2019 21:49:01 -0500
-Received: from mail.kernel.org ([198.145.29.99]:34736 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726619AbfLKCtA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 10 Dec 2019 21:49:00 -0500
-Received: from sol.localdomain (c-24-5-143-220.hsd1.ca.comcast.net [24.5.143.220])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id B0DF7205ED;
-        Wed, 11 Dec 2019 02:48:59 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1576032540;
-        bh=yqkl8TN0O59NwfZP2OD2c0ghY0r4F9Diq35NeQInRfE=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=N6Mbhyj+zaSmcMmFEcvuAbn1RXZr+9mfbi1gq5t+KWhaDMkXHPd4QmJPAy6aAUcrj
-         2rSpBj0soqrTUIN01JzV7gVd2iu0r43RuzzHf62jss0Iw3umpotijYsugx3sPQ+ltC
-         4KFA6yIXyUlcDslwsYyBzYXbhBt4f/wF3+Zd9F6U=
-Date:   Tue, 10 Dec 2019 18:48:58 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Tiezhu Yang <yangtiezhu@loongson.cn>
+        Tue, 10 Dec 2019 23:00:28 -0500
+Received: from mail.loongson.cn ([114.242.206.163]:47994 "EHLO loongson.cn"
+        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
+        id S1726642AbfLKEA2 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 10 Dec 2019 23:00:28 -0500
+Received: from [10.130.0.36] (unknown [123.138.236.242])
+        by mail.loongson.cn (Coremail) with SMTP id AQAAf9DxDxe3afBd0nEJAA--.6S3;
+        Wed, 11 Dec 2019 12:00:08 +0800 (CST)
+Subject: Re: [PATCH v5] fs: introduce is_dot_or_dotdot helper for cleanup
+To:     Eric Biggers <ebiggers@kernel.org>,
+        Matthew Wilcox <willy@infradead.org>
+References: <1576030801-8609-1-git-send-email-yangtiezhu@loongson.cn>
+ <20191211024858.GB732@sol.localdomain>
 Cc:     Alexander Viro <viro@zeniv.linux.org.uk>,
         "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <yuchao0@huawei.com>,
@@ -49,59 +35,106 @@ Cc:     Alexander Viro <viro@zeniv.linux.org.uk>,
         linux-fscrypt@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v5] fs: introduce is_dot_or_dotdot helper for cleanup
-Message-ID: <20191211024858.GB732@sol.localdomain>
-References: <1576030801-8609-1-git-send-email-yangtiezhu@loongson.cn>
+From:   Tiezhu Yang <yangtiezhu@loongson.cn>
+Message-ID: <febbd7eb-5e53-6e7c-582d-5b224e441e37@loongson.cn>
+Date:   Wed, 11 Dec 2019 11:59:40 +0800
+User-Agent: Mozilla/5.0 (X11; Linux mips64; rv:45.0) Gecko/20100101
+ Thunderbird/45.4.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <1576030801-8609-1-git-send-email-yangtiezhu@loongson.cn>
+In-Reply-To: <20191211024858.GB732@sol.localdomain>
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 7bit
+X-CM-TRANSID: AQAAf9DxDxe3afBd0nEJAA--.6S3
+X-Coremail-Antispam: 1UD129KBjvJXoW7Aw4rXryxJFW5WFyDWF4DArb_yoW8Zr1UpF
+        y5CFZYyF1IgFyUZF4vyw4fZF4Yvrs3XFyjy347K3s8AF1aqFnaqrW5Kr1093Z3JrZ5ZF1S
+        gay3WFyYk398AaDanT9S1TB71UUUUUUqnTZGkaVYY2UrUUUUjbIjqfuFe4nvWSU5nxnvy2
+        9KBjDU0xBIdaVrnRJUUUvEb7Iv0xC_tr1lb4IE77IF4wAFF20E14v26r4j6ryUM7CY07I2
+        0VC2zVCF04k26cxKx2IYs7xG6rWj6s0DM7CIcVAFz4kK6r1j6r18M28lY4IEw2IIxxk0rw
+        A2F7IY1VAKz4vEj48ve4kI8wA2z4x0Y4vE2Ix0cI8IcVAFwI0_Gr0_Xr1l84ACjcxK6xII
+        jxv20xvEc7CjxVAFwI0_Gr0_Cr1l84ACjcxK6I8E87Iv67AKxVW8Jr0_Cr1UM28EF7xvwV
+        C2z280aVCY1x0267AKxVWxJr0_GcWle2I262IYc4CY6c8Ij28IcVAaY2xG8wAqx4xG64xv
+        F2IEw4CE5I8CrVC2j2WlYx0E2Ix0cI8IcVAFwI0_Jr0_Jr4lYx0Ex4A2jsIE14v26r1j6r
+        4UMcvjeVCFs4IE7xkEbVWUJVW8JwACjcxG0xvEwIxGrwACI402YVCY1x02628vn2kIc2xK
+        xwCYjI0SjxkI62AI1cAE67vIY487MxAIw28IcxkI7VAKI48JMxC20s026xCaFVCjc4AY6r
+        1j6r4UMI8I3I0E5I8CrVAFwI0_Jr0_Jr4lx2IqxVCjr7xvwVAFwI0_JrI_JrWlx4CE17CE
+        b7AF67AKxVWUtVW8ZwCIc40Y0x0EwIxGrwCI42IY6xIIjxv20xvE14v26r1j6r1xMIIF0x
+        vE2Ix0cI8IcVCY1x0267AKxVW8JVWxJwCI42IY6xAIw20EY4v20xvaj40_WFyUJVCq3wCI
+        42IY6I8E87Iv67AKxVWUJVW8JwCI42IY6I8E87Iv6xkF7I0E14v26r4j6r4UJbIYCTnIWI
+        evJa73UjIFyTuYvjxU2rcTDUUUU
+X-CM-SenderInfo: p1dqw3xlh2x3gn0dqz5rrqw2lrqou0/
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Dec 11, 2019 at 10:20:01AM +0800, Tiezhu Yang wrote:
-> diff --git a/include/linux/namei.h b/include/linux/namei.h
-> index 7fe7b87..0fd9315 100644
-> --- a/include/linux/namei.h
-> +++ b/include/linux/namei.h
-> @@ -92,4 +92,14 @@ retry_estale(const long error, const unsigned int flags)
->  	return error == -ESTALE && !(flags & LOOKUP_REVAL);
->  }
->  
-> +static inline bool is_dot_or_dotdot(const unsigned char *name, size_t len)
-> +{
-> +	if (unlikely(name[0] == '.')) {
-> +		if (len == 1 || (len == 2 && name[1] == '.'))
-> +			return true;
-> +	}
-> +
-> +	return false;
-> +}
-> +
->  #endif /* _LINUX_NAMEI_H */
+On 12/11/2019 10:48 AM, Eric Biggers wrote:
+> On Wed, Dec 11, 2019 at 10:20:01AM +0800, Tiezhu Yang wrote:
+>> diff --git a/include/linux/namei.h b/include/linux/namei.h
+>> index 7fe7b87..0fd9315 100644
+>> --- a/include/linux/namei.h
+>> +++ b/include/linux/namei.h
+>> @@ -92,4 +92,14 @@ retry_estale(const long error, const unsigned int flags)
+>>   	return error == -ESTALE && !(flags & LOOKUP_REVAL);
+>>   }
+>>   
+>> +static inline bool is_dot_or_dotdot(const unsigned char *name, size_t len)
+>> +{
+>> +	if (unlikely(name[0] == '.')) {
+>> +		if (len == 1 || (len == 2 && name[1] == '.'))
+>> +			return true;
+>> +	}
+>> +
+>> +	return false;
+>> +}
+>> +
+>>   #endif /* _LINUX_NAMEI_H */
+> I had suggested adding a len >= 1 check to handle the empty name case correctly.
+> What I had in mind was
+>
+> static inline bool is_dot_or_dotdot(const unsigned char *name, size_t len)
+> {
+> 	if (len >= 1 && unlikely(name[0] == '.')) {
+> 		if (len < 2 || (len == 2 && name[1] == '.'))
+> 			return true;
+> 	}
+>
+> 	return false;
+> }
+>
+> As is, you're proposing that it always dereference the first byte even when
+> len=0, which seems like a bad idea for a shared helper function.  Did you check
+> whether it's okay for all the existing callers?  fscrypt_fname_disk_to_usr() is
+> called from 6 places, did you check all of them?
+>
+> How about keeping the existing optimized code for the hot path in fs/namei.c
+> (i.e. not using the helper function), while having the helper function do the
+> extra check to handle len=0 correctly?
 
-I had suggested adding a len >= 1 check to handle the empty name case correctly.
-What I had in mind was
+Hi Eric,
+
+Thank you for reminding me.  How about using the following helper for
+all callers?
 
 static inline bool is_dot_or_dotdot(const unsigned char *name, size_t len)
 {
-	if (len >= 1 && unlikely(name[0] == '.')) {
-		if (len < 2 || (len == 2 && name[1] == '.'))
-			return true;
-	}
+         if (len == 1 && name[0] == '.')
+                 return true;
 
-	return false;
+         if (len == 2 && name[0] == '.' && name[1] == '.')
+                 return true;
+
+         return false;
 }
 
-As is, you're proposing that it always dereference the first byte even when
-len=0, which seems like a bad idea for a shared helper function.  Did you check
-whether it's okay for all the existing callers?  fscrypt_fname_disk_to_usr() is
-called from 6 places, did you check all of them?
+Hi Matthew,
 
-How about keeping the existing optimized code for the hot path in fs/namei.c
-(i.e. not using the helper function), while having the helper function do the
-extra check to handle len=0 correctly?
+How do you think? I think the performance influence is very small
+due to is_dot_or_dotdot() is a such short static inline function.
 
-- Eric
+Thanks,
+
+Tiezhu Yang
+
+>
+> - Eric
+
