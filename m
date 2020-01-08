@@ -1,144 +1,75 @@
-Return-Path: <SRS0=fZiz=24=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=cMR6=25=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1AA08C33CA4
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  7 Jan 2020 05:17:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B0229C33CA1
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jan 2020 14:05:58 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id E68FA2080A
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  7 Jan 2020 05:17:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 7C43C2075D
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jan 2020 14:05:58 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Q40BGR+M"
+	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="ZeMiKnCP"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1725601AbgAGFQr (ORCPT
+        id S1728689AbgAHOF5 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 7 Jan 2020 00:16:47 -0500
-Received: from mail-ua1-f74.google.com ([209.85.222.74]:33668 "EHLO
-        mail-ua1-f74.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1725987AbgAGFQr (ORCPT
+        Wed, 8 Jan 2020 09:05:57 -0500
+Received: from bombadil.infradead.org ([198.137.202.133]:56102 "EHLO
+        bombadil.infradead.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727127AbgAHOF4 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 7 Jan 2020 00:16:47 -0500
-Received: by mail-ua1-f74.google.com with SMTP id z7so7995531uai.0
-        for <linux-fscrypt@vger.kernel.org>; Mon, 06 Jan 2020 21:16:46 -0800 (PST)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=date:message-id:mime-version:subject:from:to:cc;
-        bh=cfX1tvKpjBFaGwVknnvW2VBwxewGwbcoGgPS02CBSEM=;
-        b=Q40BGR+McgMbCgqtKK+XRsRmJJBj/BH4LjOY1inQamlLz1Onc25gJfKSbGCbLp3BV6
-         kKbmIcg1Qs8OlNWNQNQVhlpP5eQeWpb8bdcg/T1uA1M21Nwy3AmiDfyWJt0tvnczfV4l
-         F5+GHxcTVIFp5EjxqoKHbB5BR5AscstZMpWufBT8/BJSWPsoka2tUFUerrjyIkmcUjjK
-         wZ3VxyoNX/QvFD5IuLtoVSHr99qrCNN1Y+s01aUz0lsnsY4sqo6j8cw1VnQNt7bNfDGH
-         /9+qGi2HEFX3SqvMkNy9rSPpAhx5BvUPP3MMTK/c1L92gGjvYGn+U5QaEIouLcVwROXe
-         FVsQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
-        bh=cfX1tvKpjBFaGwVknnvW2VBwxewGwbcoGgPS02CBSEM=;
-        b=M6HOBRO1IiCpae+XmvHVF0L8quBtZKY+awWvaZzAA3xPD3C7xvKZbnYkRODrxWg76F
-         75bxxUlr5fwyv/+XgZw8o4r2RyFpoqtdbUKdbGoo1jyeOspauFRjbXOOR2iNaDhTZpVB
-         nuzoUrKd6jKNom6a9JavdI8Iuzg/tF/5izXHyBxN9GmfiWPNxc8T5AWolGwVtM/wYEAw
-         hj2vIXTlkS0zO61N7dWJf4ss3UWxfOVVCpJJ2Nt146OhAxMpm4d+GTUyYMYSmfRqkj4L
-         dA8RQESLQJWcoXUzu04FvegPUrqBWIHKDMdc4wTpMCuV7zkcgy9bI5BlEexD5G7jQ068
-         UFnw==
-X-Gm-Message-State: APjAAAUZD8j2lrcP7O5YHQOZJFSz41EtpMg/opJY1wVsh8nOIT3lQ0B+
-        wVNUgBCvCCVSIHEv6PpaYPl7OrN0bik=
-X-Google-Smtp-Source: APXvYqzc67czlLj1xc/BSkQkduLdtiKKbLVUdrPq7hUPjUVp5UmYvrkDtchUfmBzIECNLQOquU+7Qzeor7M=
-X-Received: by 2002:a1f:8d57:: with SMTP id p84mr56402733vkd.65.1578374205529;
- Mon, 06 Jan 2020 21:16:45 -0800 (PST)
-Date:   Mon,  6 Jan 2020 21:16:32 -0800
-Message-Id: <20200107051638.40893-1-drosen@google.com>
-Mime-Version: 1.0
-X-Mailer: git-send-email 2.24.1.735.g03f4e72817-goog
-Subject: [PATCH v2 0/6] Support for Casefolding and Encryption
-From:   Daniel Rosenberg <drosen@google.com>
-To:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
-        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
+        Wed, 8 Jan 2020 09:05:56 -0500
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+        d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
+        :References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+        Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:
+        Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:List-Id:
+        List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive;
+         bh=Y5Zp5DraPm2b4G9FdcZzJFZL/5Lu3ash5oRZzFlJrrQ=; b=ZeMiKnCPJGvzDo+O/UfvlAu/N
+        sZUrBeXq9/DJgejEzJDxzf/u0MHMTCjzgqOmsbdOmsplpjSF+MkuW0DiAqEdNsTqfoUraHxNwAXbk
+        i+aGIqK/w63kPTUn31L2QobgAZ2sdtvimXrYJLJ3R3ImQW6+o9UhbZ9Nz8dc9tG5TrZO/DXYVaW8/
+        BDhX8Dsq/AtEbptlxAGgQ/JUdjA1Ym9PIeV+/4fkGukWoSaaYPAK+crtDFdUWjqOcbtQtFkZAQ4Ep
+        oC76mAnRDykgejw3xuIYmk2Ev4MAzNf5BYpNLIfQTElSy/Orqb2coN+t9D2vtyZkweJH/95p4VxeN
+        pMzqMtnIA==;
+Received: from hch by bombadil.infradead.org with local (Exim 4.92.3 #3 (Red Hat Linux))
+        id 1ipBy8-0008I6-HI; Wed, 08 Jan 2020 14:05:56 +0000
+Date:   Wed, 8 Jan 2020 06:05:56 -0800
+From:   Christoph Hellwig <hch@infradead.org>
+To:     Satya Tangirala <satyat@google.com>
+Cc:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
-        Eric Biggers <ebiggers@kernel.org>,
-        linux-fscrypt@vger.kernel.org,
-        Alexander Viro <viro@zeniv.linux.org.uk>
-Cc:     Andreas Dilger <adilger.kernel@dilger.ca>,
-        Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org,
-        linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        Gabriel Krisman Bertazi <krisman@collabora.com>,
-        kernel-team@android.com, Daniel Rosenberg <drosen@google.com>
-Content-Type: text/plain; charset="UTF-8"
+        Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
+        Kuohong Wang <kuohong.wang@mediatek.com>,
+        Kim Boojin <boojin.kim@samsung.com>
+Subject: Re: [PATCH v6 0/9] Inline Encryption Support
+Message-ID: <20200108140556.GB2896@infradead.org>
+References: <20191218145136.172774-1-satyat@google.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20191218145136.172774-1-satyat@google.com>
+X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Ext4 and F2FS currently both support casefolding and encryption, but not at
-the same time. These patches aim to rectify that.
+I haven't been able to deep dive into the details, but the structure
+of this still makes me very unhappy.
 
-Since directory names are stored case preserved, we cannot just take the hash
-of the ciphertext. Instead we use the siphash of the casefolded name. With this
-we no longer have a direct path from an encrypted name to the hash without the
-key. To deal with this, fscrypt now always includes the hash in the name it
-presents when the key is not present. There is a pre-existing bug where you can
-change parts of the hash and still match the name so long as the disruption to
-the hash does not happen to affect lookup on that filesystem. I'm not sure how
-to fix that without making ext4 lookups slower in the more common case.
+Most of it is related to the software fallback again.  Please split the
+fallback into a separate file, and also into a separate data structure.
+There is abslutely no need to have the overhead of the software only
+fields for the hardware case.
 
-I moved the identical dcache operations for ext4 and f2fs into the VFS, as any
-filesystem that uses casefolding will need the same code. This will also allow
-further optimizations to that path, although my current changes don't take
-advantage of that yet.
+On the counter side I think all the core block layer code added should
+go into a single file instead of split into three with some odd
+layering.
 
-For Ext4, this also means that we need to store the hash on disk. We only do so
-for encrypted and casefolded directories to avoid on disk format changes.
-Previously encryption and casefolding could not live on the same filesystem,
-and we're relaxing that requirement. F2fs is a bit more straightforward since
-it already stores hashes on disk.
-
-I've updated the related tools with just enough to enable the feature. I still
-need to adjust their respective fsck's, although without access to the keys,
-they won't be able to verify the hashes of casefolded and encrypted names.
-
-changes:
-fscrypt moved to separate thread to rebase on fscrypt dev branch
-addressed feedback, plus some minor fixes
-
-Daniel Rosenberg (6):
-  TMP: fscrypt: Add support for casefolding with encryption
-  vfs: Fold casefolding into vfs
-  f2fs: Handle casefolding with Encryption
-  ext4: Use struct super_blocks' casefold data
-  ext4: Hande casefolding with encryption
-  ext4: Optimize match for casefolded encrypted dirs
-
- Documentation/filesystems/ext4/directory.rst |  27 ++
- fs/crypto/Kconfig                            |   1 +
- fs/crypto/fname.c                            | 234 ++++++++++---
- fs/crypto/fscrypt_private.h                  |   9 +
- fs/crypto/keysetup.c                         |  32 +-
- fs/crypto/policy.c                           |  45 ++-
- fs/dcache.c                                  |  28 ++
- fs/ext4/dir.c                                |  75 +----
- fs/ext4/ext4.h                               |  87 +++--
- fs/ext4/hash.c                               |  26 +-
- fs/ext4/ialloc.c                             |   5 +-
- fs/ext4/inline.c                             |  41 ++-
- fs/ext4/namei.c                              | 326 ++++++++++++-------
- fs/ext4/super.c                              |  21 +-
- fs/f2fs/dir.c                                | 114 +++----
- fs/f2fs/f2fs.h                               |  14 +-
- fs/f2fs/hash.c                               |  25 +-
- fs/f2fs/inline.c                             |   9 +-
- fs/f2fs/super.c                              |  17 +-
- fs/f2fs/sysfs.c                              |   8 +-
- fs/inode.c                                   |   7 +
- fs/namei.c                                   |  41 ++-
- include/linux/fs.h                           |  10 +
- include/linux/fscrypt.h                      |  96 ++----
- include/linux/unicode.h                      |  14 +
- 25 files changed, 835 insertions(+), 477 deletions(-)
-
--- 
-2.24.1.735.g03f4e72817-goog
-
+Also what I don't understand is why this managed key-slots on a per-bio
+basis.  Wou;dn't it make a whole lot more sense to manage them on a
+struct request basis once most of the merging has been performed?
