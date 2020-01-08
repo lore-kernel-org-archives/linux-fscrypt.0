@@ -2,44 +2,46 @@ Return-Path: <SRS0=cMR6=25=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 13CB7C33CA2
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jan 2020 14:07:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 64EBFC33CA1
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jan 2020 17:26:34 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id D31DD2073A
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jan 2020 14:07:34 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="Q9k5DfWV"
+	by mail.kernel.org (Postfix) with ESMTP id 3E3E5206F0
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jan 2020 17:26:34 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1578504394;
+	bh=ij94aMQ07BTirE2iQNs+dEg6zAm/wuo0VueM7DAIze4=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=QG6FAHmmKjdS25PK7vI2dwkOCjJoNe+HtpkUeYm46BoPEj/+mAaeIlV3dA97vBH0L
+	 8sXE0NAKNjDq2xoi0bnBOveRnLL0orJJnzQdSVsQ1U4LDYfBK1N5G/XiteVP+PJbbM
+	 YJiMTC/pRgbkVi3Rdol+oGjBcKmuY6ULJYOVDWXg=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727183AbgAHOHe (ORCPT
+        id S1729682AbgAHR0d (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 8 Jan 2020 09:07:34 -0500
-Received: from bombadil.infradead.org ([198.137.202.133]:56220 "EHLO
-        bombadil.infradead.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726708AbgAHOHd (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 8 Jan 2020 09:07:33 -0500
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
-        d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
-        :References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
-        Content-Transfer-Encoding:Content-ID:Content-Description:Resent-Date:
-        Resent-From:Resent-Sender:Resent-To:Resent-Cc:Resent-Message-ID:List-Id:
-        List-Help:List-Unsubscribe:List-Subscribe:List-Post:List-Owner:List-Archive;
-         bh=xn98h6aGpP7VX3AhP8VR25fODRZwIrLZDwToIQ0C3fk=; b=Q9k5DfWVhLXiQOF+5vf8sD0+w
-        DCK56TOfdJ2AMFqXuQda+Ojc3wG26J3z2+4u6C15S2rMGjVhtz1Y0bbwO3v3zQAtO/B9kVOtGDqfP
-        dxXUSTB62Vd2co5wpnhXy1OHmIGTPZWG+xdZOGWmvZC2NZoBztIC6HX9djljxzDeKmngl2roN/RLh
-        Z9qqeyj+2gEGU8wx0JKcthyUKQCV7MX6Jyg1y0cUxmqgBIsqNxkGzDtItdvs5WjeVR57I2y9oHeRz
-        Jl0pG86B9CEW8fusSwBfdbD2rfaccSuz7S9euWVD6o8EH/xD4DBsbhf1gon9q88AkbO1VMyq5ZP20
-        yTiMtpXKw==;
-Received: from hch by bombadil.infradead.org with local (Exim 4.92.3 #3 (Red Hat Linux))
-        id 1ipBze-0008Ol-UU; Wed, 08 Jan 2020 14:07:30 +0000
-Date:   Wed, 8 Jan 2020 06:07:30 -0800
-From:   Christoph Hellwig <hch@infradead.org>
-To:     "Martin K. Petersen" <martin.petersen@oracle.com>
-Cc:     Eric Biggers <ebiggers@kernel.org>,
+        Wed, 8 Jan 2020 12:26:33 -0500
+Received: from mail.kernel.org ([198.145.29.99]:48734 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1729544AbgAHR0c (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 8 Jan 2020 12:26:32 -0500
+Received: from sol.localdomain (c-24-5-143-220.hsd1.ca.comcast.net [24.5.143.220])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 12EE220705;
+        Wed,  8 Jan 2020 17:26:31 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1578504391;
+        bh=ij94aMQ07BTirE2iQNs+dEg6zAm/wuo0VueM7DAIze4=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=oHEjZcS3fZyHeprMzzff0S4Qy7ZcDSwpql0QpUi80QfppmiZQy/P4oJ803uYuwA5v
+         x1z5xr+45sSoD3DV04KiQ0p1hjw++k6Xwnn+gSKBhtW5tfWhW2/9kVKkkQ88eIbzQA
+         xNgFPef3+sqSoWBVJZJ9OaQn9qe8KNklyQnyAd9c=
+Date:   Wed, 8 Jan 2020 09:26:29 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Christoph Hellwig <hch@infradead.org>
+Cc:     "Martin K. Petersen" <martin.petersen@oracle.com>,
         "Darrick J. Wong" <darrick.wong@oracle.com>,
         Satya Tangirala <satyat@google.com>,
         linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
@@ -49,28 +51,69 @@ Cc:     Eric Biggers <ebiggers@kernel.org>,
         Kuohong Wang <kuohong.wang@mediatek.com>,
         Kim Boojin <boojin.kim@samsung.com>
 Subject: Re: [PATCH v6 2/9] block: Add encryption context to struct bio
-Message-ID: <20200108140730.GC2896@infradead.org>
+Message-ID: <20200108172629.GA232722@sol.localdomain>
 References: <20191218145136.172774-1-satyat@google.com>
  <20191218145136.172774-3-satyat@google.com>
  <20191218212116.GA7476@magnolia>
  <yq1y2v9e37b.fsf@oracle.com>
  <20191218222726.GC47399@gmail.com>
  <yq1fthhdttv.fsf@oracle.com>
+ <20200108140730.GC2896@infradead.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <yq1fthhdttv.fsf@oracle.com>
-X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
+In-Reply-To: <20200108140730.GC2896@infradead.org>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Dec 18, 2019 at 07:47:56PM -0500, Martin K. Petersen wrote:
-> Absolutely. That's why it's a union. Putting your stuff there is a
-> prerequisite as far as I'm concerned. No need to grow the bio when the
-> two features are unlikely to coexist. We can revisit that later should
-> the need arise.
+On Wed, Jan 08, 2020 at 06:07:30AM -0800, Christoph Hellwig wrote:
+> On Wed, Dec 18, 2019 at 07:47:56PM -0500, Martin K. Petersen wrote:
+> > Absolutely. That's why it's a union. Putting your stuff there is a
+> > prerequisite as far as I'm concerned. No need to grow the bio when the
+> > two features are unlikely to coexist. We can revisit that later should
+> > the need arise.
+> 
+> With NVMe key per I/O support some form of inline encryption and PI are
+> very likely to be used together in the not too far future.
 
-With NVMe key per I/O support some form of inline encryption and PI are
-very likely to be used together in the not too far future.
+The NVMe "key per I/O" draft is heavily flawed, and I don't think it will be
+useful at all in the Linux kernel context.  The problem is that, as far as I can
+tell, it doesn't allow the encryption algorithm and IVs to be selected, or even
+standardized or made discoverable in any way.  It does say that AES-256 must be
+supported, but it doesn't say which mode of operation (i.e. it could be
+something inappropriate for disk encryption, like ECB), nor does it say whether
+AES-256 has to be the default or not, and if it's not the default how to
+discover that and select AES-256.  IV generation is also unspecified, so it
+could be something insecure like always using the same IV.
+
+So effectively the NVMe encryption will be unspecified, untestable, and
+unverifiable.  That means that vendors are likely to implement it insecurely,
+similar to how they're implementing self-encrypting drives insecurely [1].
+(Granted, there are some reasons to think that vendors are less likely to screw
+up key per I/O.  But inevitably some will still get it wrong.)
+
+[1] https://www.ieee-security.org/TC/SP2019/papers/310.pdf
+
+Also, since "key per I/O" won't allow selecting IVs, all the encrypted data will
+be tied to its physical location on-disk.  That will make "key per I/O" unusable
+in any case where encrypted blocks are moved without the key, e.g.
+filesystem-level encryption on many filesystems.
+
+And since the way that dm-crypt and fscrypt work is that you select which
+algorithm and IV generator you want to use, to even use NVMe "key per I/O" with
+them we'd have to add magic settings that say to use some unspecified
+hardware-specific encryption format, which could be completely insecure.  As one
+of the fscrypt maintainers I'd be really hesistant to accept any such patch, and
+I think the dm-crypt people would feel the same way.
+
+I've already raised these concerns in the NVMe and TCG Storage working groups,
+and the people working on it refused to make any changes, as they consider "key
+per I/O" to be more akin to the TCG Opal self-encrypting drive specification,
+and not actually intended to be "inline encryption".
+
+So let's not over-engineer this kernel patchset to support some broken
+vaporware, please.
+
+- Eric
