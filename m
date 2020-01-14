@@ -2,82 +2,96 @@ Return-Path: <SRS0=WnaO=3D=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E4D58C33C9E
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 14 Jan 2020 21:32:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 391F1C3F68F
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 14 Jan 2020 21:33:16 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id B4B8D24670
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 14 Jan 2020 21:32:41 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 0E11224656
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 14 Jan 2020 21:33:16 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1579037561;
-	bh=dozMZNZbwXQXYTYPrlUelgfZm/+WwDTPJ1CePGDuCLQ=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=SX9wZXOgsUxRZP4NRzu/ho9BTNocKXVuOt1xM5XOseIlLdH70rXkBF7wtPHyWrndz
-	 jL/yIcwqqwr4khf7uAn97dHQHTL0sserSU958mdOJxatsW1bJeEH+b3EOvhUKIqg4W
-	 SgjOVobXMw+XbnoilEkbbUv8vEIC2Yr1EeKW5Ajk=
+	s=default; t=1579037596;
+	bh=o+XsSGUnLsqrxWstmvWYMEPb2ta3cAkVawxg26TlZa4=;
+	h=Date:From:To:Subject:References:In-Reply-To:List-ID:From;
+	b=n6RgZ8VXI+0wVYjAx6jTx+1X8USQgdwc6euX0QIJPMbB0mIMswKffT1mM/v87/kNY
+	 mm9RCP56O+nFTLwEcyyWHpilj9VTKbPI/ZDyS+uwRbXVvhn3fnsG9mid5jbER9M9nb
+	 ovMAwqPFJb8b8cOCXKbPOAkRgbO9goz2eQVlHQ78=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727102AbgANVcl (ORCPT
+        id S1728656AbgANVdP (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 14 Jan 2020 16:32:41 -0500
-Received: from mail.kernel.org ([198.145.29.99]:43346 "EHLO mail.kernel.org"
+        Tue, 14 Jan 2020 16:33:15 -0500
+Received: from mail.kernel.org ([198.145.29.99]:43932 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726491AbgANVcl (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 14 Jan 2020 16:32:41 -0500
+        id S1726491AbgANVdO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 14 Jan 2020 16:33:14 -0500
 Received: from gmail.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id B43F324656;
-        Tue, 14 Jan 2020 21:32:40 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 0FF4724656
+        for <linux-fscrypt@vger.kernel.org>; Tue, 14 Jan 2020 21:33:14 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1579037560;
-        bh=dozMZNZbwXQXYTYPrlUelgfZm/+WwDTPJ1CePGDuCLQ=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=tgTXs4Z4uC5Ug2qyrWa7r3M9ydC41IjJUg9yRfyWTP/ou74LzDuWMdSplppsecIW/
-         Hw1b0cCk+aM8F/+EMk182zPEoSlJ5ZTI4BVX+6MCrJl1m0XX7m0hlibGuBUr/ki7fx
-         bTZkvkfKhcpchpyHoBwPtUcVtKtY7JDfT0KJzTjU=
-Date:   Tue, 14 Jan 2020 13:32:39 -0800
+        s=default; t=1579037594;
+        bh=o+XsSGUnLsqrxWstmvWYMEPb2ta3cAkVawxg26TlZa4=;
+        h=Date:From:To:Subject:References:In-Reply-To:From;
+        b=y7dij+DF//CZGZhdP3UrtYWfURPmIV3DUYghQfDEq87eIBgXKGIGJch069wOJp6/S
+         HuWutwfiQL1waSp0wkNwMT3tMUMG/3hO8wLdhQI3bdXOCgB0AeVNpOcicAK6RyXR++
+         ksIo34wNz1Ulv+zwjAlpt7g8cGURn6InCRe1eJAo=
+Date:   Tue, 14 Jan 2020 13:33:12 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net
-Subject: Re: [PATCH] fs-verity: use mempool for hash requests
-Message-ID: <20200114213239.GI41220@gmail.com>
-References: <20191231175545.20709-1-ebiggers@kernel.org>
+Subject: Re: [PATCH] fs-verity: use u64_to_user_ptr()
+Message-ID: <20200114213312.GJ41220@gmail.com>
+References: <20191231175408.20524-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20191231175545.20709-1-ebiggers@kernel.org>
+In-Reply-To: <20191231175408.20524-1-ebiggers@kernel.org>
 User-Agent: Mutt/1.10.1 (2018-07-13)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, Dec 31, 2019 at 11:55:45AM -0600, Eric Biggers wrote:
+On Tue, Dec 31, 2019 at 11:54:08AM -0600, Eric Biggers wrote:
 > From: Eric Biggers <ebiggers@google.com>
 > 
-> When initializing an fs-verity hash algorithm, also initialize a mempool
-> that contains a single preallocated hash request object.  Then replace
-> the direct calls to ahash_request_alloc() and ahash_request_free() with
-> allocating and freeing from this mempool.
+> <linux/kernel.h> already provides a macro u64_to_user_ptr().
+> Use it instead of open-coding the two casts.
 > 
-> This eliminates the possibility of the allocation failing, which is
-> desirable for the I/O path.
-> 
-> This doesn't cause deadlocks because there's no case where multiple hash
-> requests are needed at a time to make forward progress.
+> No change in behavior.
 > 
 > Signed-off-by: Eric Biggers <ebiggers@google.com>
 > ---
->  fs/verity/enable.c           |  8 +--
->  fs/verity/fsverity_private.h | 16 ++++--
->  fs/verity/hash_algs.c        | 98 +++++++++++++++++++++++++++---------
->  fs/verity/open.c             |  4 +-
->  fs/verity/verify.c           | 17 +++----
->  5 files changed, 97 insertions(+), 46 deletions(-)
+>  fs/verity/enable.c | 6 ++----
+>  1 file changed, 2 insertions(+), 4 deletions(-)
 > 
+> diff --git a/fs/verity/enable.c b/fs/verity/enable.c
+> index 1645d6326e32..520db12e2945 100644
+> --- a/fs/verity/enable.c
+> +++ b/fs/verity/enable.c
+> @@ -216,8 +216,7 @@ static int enable_verity(struct file *filp,
+>  
+>  	/* Get the salt if the user provided one */
+>  	if (arg->salt_size &&
+> -	    copy_from_user(desc->salt,
+> -			   (const u8 __user *)(uintptr_t)arg->salt_ptr,
+> +	    copy_from_user(desc->salt, u64_to_user_ptr(arg->salt_ptr),
+>  			   arg->salt_size)) {
+>  		err = -EFAULT;
+>  		goto out;
+> @@ -226,8 +225,7 @@ static int enable_verity(struct file *filp,
+>  
+>  	/* Get the signature if the user provided one */
+>  	if (arg->sig_size &&
+> -	    copy_from_user(desc->signature,
+> -			   (const u8 __user *)(uintptr_t)arg->sig_ptr,
+> +	    copy_from_user(desc->signature, u64_to_user_ptr(arg->sig_ptr),
+>  			   arg->sig_size)) {
+>  		err = -EFAULT;
+>  		goto out;
 
 Applied to fscrypt.git#fsverity for 5.6.
 
