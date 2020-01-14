@@ -2,84 +2,76 @@ Return-Path: <SRS0=WnaO=3D=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.8 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.6 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BCABAC3F68F
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 14 Jan 2020 00:41:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E476AC33C9E
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 14 Jan 2020 20:53:05 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 943A22084D
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 14 Jan 2020 00:41:57 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id B4B9624670
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 14 Jan 2020 20:53:05 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1579035185;
+	bh=dWFV1rQEEHUES8wogtbPNvElhFB6O8ae0mbTSi6jKOs=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=cPb95wp8YFziwHl9/loYE1iNEkmx6E3S4DJziJf/xo5YL0Jh91t0c+2ftdyrRgsvm
+	 YkRbwOiCb+eCgj1Z3l7KtHkIhe4iZqXJW6/LvvEdDLmxesfL2zNRQ0qQP/57IWYwYW
+	 oLlZYXt+JdsAYEaIJgvMYDQxBUIrG+Gj19+ZUsG0=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1729174AbgANAl4 (ORCPT
+        id S1728748AbgANUxF (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 13 Jan 2020 19:41:56 -0500
-Received: from outgoing-auth-1.mit.edu ([18.9.28.11]:49084 "EHLO
-        outgoing.mit.edu" rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org
-        with ESMTP id S1728641AbgANAlz (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 13 Jan 2020 19:41:55 -0500
-Received: from callcc.thunk.org (guestnat-104-133-0-111.corp.google.com [104.133.0.111] (may be forged))
-        (authenticated bits=0)
-        (User authenticated as tytso@ATHENA.MIT.EDU)
-        by outgoing.mit.edu (8.14.7/8.12.4) with ESMTP id 00E0fbEI006931
-        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Mon, 13 Jan 2020 19:41:38 -0500
-Received: by callcc.thunk.org (Postfix, from userid 15806)
-        id 5C3A54207DF; Mon, 13 Jan 2020 19:41:37 -0500 (EST)
-Date:   Mon, 13 Jan 2020 19:41:37 -0500
-From:   "Theodore Y. Ts'o" <tytso@mit.edu>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        linux-ext4@vger.kernel.org, Victor Hsieh <victorhsieh@google.com>,
-        linux-f2fs-devel@lists.sourceforge.net
-Subject: Re: [PATCH v3] fs-verity: implement readahead for
- FS_IOC_ENABLE_VERITY
-Message-ID: <20200114004137.GQ76141@mit.edu>
-References: <20200106205410.136707-1-ebiggers@kernel.org>
+        Tue, 14 Jan 2020 15:53:05 -0500
+Received: from mail.kernel.org ([198.145.29.99]:36728 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1727556AbgANUxF (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 14 Jan 2020 15:53:05 -0500
+Received: from gmail.com (unknown [104.132.1.77])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id CE40424658;
+        Tue, 14 Jan 2020 20:53:04 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1579035184;
+        bh=dWFV1rQEEHUES8wogtbPNvElhFB6O8ae0mbTSi6jKOs=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=y/FSVY25SMw7PXx3BqqMjdQ0+5cROkvI/j2QcjGMitiT4AC+nJrghZ/prHqJUkrQe
+         JBKMRFB0A5r5OAAL+JzG9VxnMvJ+KNLobmXqFS4V+lGnzfIPF9hXz3eNfuFVl8Ienn
+         XrIel7kvaE1cuqzWWzHPOLV9673viHmNArLCx5Lc=
+Date:   Tue, 14 Jan 2020 12:53:03 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     linux-ext4@vger.kernel.org
+Subject: Re: [PATCH] fscrypt: optimize fscrypt_zeroout_range()
+Message-ID: <20200114205302.GA41220@gmail.com>
+References: <20191226160813.53182-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200106205410.136707-1-ebiggers@kernel.org>
+In-Reply-To: <20191226160813.53182-1-ebiggers@kernel.org>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, Jan 06, 2020 at 12:54:10PM -0800, Eric Biggers wrote:
+On Thu, Dec 26, 2019 at 10:08:13AM -0600, Eric Biggers wrote:
 > From: Eric Biggers <ebiggers@google.com>
 > 
-> When it builds the first level of the Merkle tree, FS_IOC_ENABLE_VERITY
-> sequentially reads each page of the file using read_mapping_page().
-> This works fine if the file's data is already in pagecache, which should
-> normally be the case, since this ioctl is normally used immediately
-> after writing out the file.
+> Currently fscrypt_zeroout_range() issues and waits on a bio for each
+> block it writes, which makes it very slow.
 > 
-> But in any other case this implementation performs very poorly, since
-> only one page is read at a time.
+> Optimize it to write up to 16 pages at a time instead.
 > 
-> Fix this by implementing readahead using the functions from
-> mm/readahead.c.
-> 
-> This improves performance in the uncached case by about 20x, as seen in
-> the following benchmarks done on a 250MB file (on x86_64 with SHA-NI):
-> 
->     FS_IOC_ENABLE_VERITY uncached (before) 3.299s
->     FS_IOC_ENABLE_VERITY uncached (after)  0.160s
->     FS_IOC_ENABLE_VERITY cached            0.147s
->     sha256sum uncached                     0.191s
->     sha256sum cached                       0.145s
-> 
-> Note: we could instead switch to kernel_read().  But that would mean
-> we'd no longer be hashing the data directly from the pagecache, which is
-> a nice optimization of its own.  And using kernel_read() would require
-> allocating another temporary buffer, hashing the data and tree pages
-> separately, and explicitly zero-padding the last page -- so it wouldn't
-> really be any simpler than direct pagecache access, at least for now.
+> Also add a function comment, and improve reliability by allowing the
+> allocations of the bio and the first ciphertext page to wait on the
+> corresponding mempools.
 > 
 > Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  fs/crypto/bio.c | 112 ++++++++++++++++++++++++++++++++++--------------
+>  1 file changed, 81 insertions(+), 31 deletions(-)
 
-Looks good, feel free to add:
+Applied to fscrypt.git#master for 5.6.
 
-Reviewed-by: Theodore Ts'o <tytso@mit.edu>
+- Eric
