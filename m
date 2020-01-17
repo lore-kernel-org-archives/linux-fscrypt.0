@@ -2,63 +2,59 @@ Return-Path: <SRS0=h5+H=3G=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
-	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 48D88C33CB3
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 17 Jan 2020 21:43:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 32781C33CB8
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 17 Jan 2020 21:43:43 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 1F39E2082F
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 17 Jan 2020 21:43:42 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 04423214AF
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 17 Jan 2020 21:43:43 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="WHQxC8Nh"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="hrp+gp+g"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1729342AbgAQVnl (ORCPT
+        id S1730035AbgAQVnm (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 17 Jan 2020 16:43:41 -0500
-Received: from mail-pg1-f202.google.com ([209.85.215.202]:39488 "EHLO
-        mail-pg1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1729064AbgAQVnA (ORCPT
+        Fri, 17 Jan 2020 16:43:42 -0500
+Received: from mail-pl1-f201.google.com ([209.85.214.201]:56392 "EHLO
+        mail-pl1-f201.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1728765AbgAQVmz (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 17 Jan 2020 16:43:00 -0500
-Received: by mail-pg1-f202.google.com with SMTP id v2so15161798pgv.6
-        for <linux-fscrypt@vger.kernel.org>; Fri, 17 Jan 2020 13:43:00 -0800 (PST)
+        Fri, 17 Jan 2020 16:42:55 -0500
+Received: by mail-pl1-f201.google.com with SMTP id 30so11396643plc.23
+        for <linux-fscrypt@vger.kernel.org>; Fri, 17 Jan 2020 13:42:55 -0800 (PST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
-         :cc;
-        bh=ijaPqYX9QMZlgJNEqLIabbahqNoro6V7G/0uSLsc++o=;
-        b=WHQxC8Nh4cFd+mKz0Z5y8hCNfaRWaIIItg6rAD4vRRKh08n1rF1ROJp9bdNhKHjJEe
-         dB+QzSzQk+37KIA3xLEYSV5jYc4LXnUAkScu6uDLEfQxiLJhWSUqLkSk9o/lj3OGUOFv
-         x7d1El6VyYGxobDvLS1U1KrD73lJ1hHS4/+7B8qljX4+5zRjTKVAcKRaD+DQJ+DOSszS
-         Quz0IYsmfSMa9Ytm8SlgE4uCUjy38oOsimu9gdN9/5CWb0bp8uDvRUzsZv7KYdIVZQFk
-         3LnqAgjGyE/d2ro52ABbHg/HE7dIctRYBIsBeLkMsAqgNdPO0t9LQXQxfHUAMHwqtmvi
-         0wNw==
+        h=date:message-id:mime-version:subject:from:to:cc;
+        bh=yBEf4c2Y/V+ZNwnYQzLFCcZKpZySQQ5dJ9X0QGzY9eo=;
+        b=hrp+gp+g8aB/jpumGkpuc5F5wkzC/eegSUgKsuaP5vuBUKLF33qoqqM2MafIuVh9s1
+         jI2A1GYFMvU+zXn/tCLnmGXTqm3p0Gd4ZJGvWkGqgwBJx9K3w5rosKRTKFkLyeVpf7r7
+         WFGq/cvvGa0UIt89Z8qEnh4tUigSQ7k5T7oowlnUjWNYSj1q2cLitkSLMyMd0jkKCkAD
+         anxNB8ZROhRvpyrX/Yj82zl81n9GScBR9YTXGVMqHu3OoPibEEExYkK8+hQXWp7bAWgy
+         5hmPB7B0i/vXCHN1gPjV6lJhuK5oImOVpW8qPq4w+BW8SnU9RkZI5NRwJt35MaEoucrI
+         kOSg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
-         :references:subject:from:to:cc;
-        bh=ijaPqYX9QMZlgJNEqLIabbahqNoro6V7G/0uSLsc++o=;
-        b=AVPYDvmjtiw5XcczYUAA/yKmv4SgrrEihwYaA1bMKHmiHliFVawlxEPkpEpIn5ZjLf
-         zcv54ejrmQYylSyJhrMnouEp82vTSNx32td9TLDPLVAN9umTH+go8oKlB1ayIhKLCO4H
-         s9jFWvChbsFX2zKOE0CYzIT8UIRa+kR0mdOwrL5FrCp+TbbnFKzy1/9FfPl3/hk1JFsT
-         4se5YMy+OCTWyrdkAojem7KWnH8q9orGhG+167Gt3trFPJ3vg78fUYmloe5x4toqHrc0
-         +SDnazNNtYboSmxHaJMCIKaBnuaGby5ALQ9FOcvQ1yKPEX6dFcjvqxf6gLgaCLzNmQ50
-         pyqQ==
-X-Gm-Message-State: APjAAAXO2449ekxlAo9xmfFKwH2Ksjp4sMEm5ibeD401vYKlJYt339T8
-        vCX3KzIM/xpx2f0b5RkGiZcqRPF363s=
-X-Google-Smtp-Source: APXvYqzKuQnOCxtPcdxY/PuMxbANDvGzPhycQ/4MRG+yecKcHD6KYxDk5xX57ii8X1oM1NolqUYQnxR+7ug=
-X-Received: by 2002:a63:3756:: with SMTP id g22mr47225338pgn.375.1579297379818;
- Fri, 17 Jan 2020 13:42:59 -0800 (PST)
-Date:   Fri, 17 Jan 2020 13:42:39 -0800
-In-Reply-To: <20200117214246.235591-1-drosen@google.com>
-Message-Id: <20200117214246.235591-3-drosen@google.com>
+        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
+        bh=yBEf4c2Y/V+ZNwnYQzLFCcZKpZySQQ5dJ9X0QGzY9eo=;
+        b=RpY5vO1mHF5EF8NpnxYXHl49R6bRmWunugk5BKvazQw/dHfQ3t8Y1iRKfCWX0HwA2Z
+         GKDxuHlJ8gmkbFZFEYHfAcEcu3X8I2nBONzQuxjDe2zHnw8VmUVz6MA8GZVVEdCCbAcb
+         nxR3qxTEIvsW75Jk8x81d7r8KcGpuh2P3OrQxqowkrPAGkcYymzUMyerg8vsjdfAs4t7
+         AlCE+7N27BxBtuJYJffBZ6DobPPsU6yDLHMZftzG0IiFplgkZSOGZHB5SB3i+Ag3/HWq
+         fpN+QH9T1lwXbAiolnWJUERq/m0sHWebuhLvKsnk1XvFpVQFRO3e4MvDMOwdYvaA5MNM
+         gfsA==
+X-Gm-Message-State: APjAAAX/eGnwt0ouOFR2VFMk/h5cuBekppC5Adr5HwJfkDDfXQrJch8h
+        MjukHFJGWVRsg0et4MyCH9nEPAxMqxM=
+X-Google-Smtp-Source: APXvYqx/thRfotMiEcNYQU3muvCEizuxjwfQx4bfJuDJBpTmZngE9VJym447R2DaU34FJTWJBfRydBLRlJY=
+X-Received: by 2002:a63:ff20:: with SMTP id k32mr45963088pgi.448.1579297374588;
+ Fri, 17 Jan 2020 13:42:54 -0800 (PST)
+Date:   Fri, 17 Jan 2020 13:42:37 -0800
+Message-Id: <20200117214246.235591-1-drosen@google.com>
 Mime-Version: 1.0
-References: <20200117214246.235591-1-drosen@google.com>
 X-Mailer: git-send-email 2.25.0.341.g760bfbb309-goog
-Subject: [PATCH v3 2/9] fscrypt: Don't allow v1 policies with casefolding
+Subject: [PATCH v3 0/9] Support for Casefolding and Encryption
 From:   Daniel Rosenberg <drosen@google.com>
 To:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
         Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
@@ -77,109 +73,82 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Casefolding currently requires a derived key for computing the siphash.
-This is available for v2 policies, but not v1, so we disallow it for v1.
+These patches are all on top of fscrypt's developement branch
 
-Signed-off-by: Daniel Rosenberg <drosen@google.com>
----
- fs/crypto/policy.c      | 28 ++++++++++++++++++++++++++++
- fs/inode.c              |  3 ++-
- include/linux/fscrypt.h | 11 +++++++++++
- 3 files changed, 41 insertions(+), 1 deletion(-)
+Ext4 and F2FS currently both support casefolding and encryption, but not at
+the same time. These patches aim to rectify that.
 
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index f1cff83c151ac..2cd9a940d8f46 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -124,6 +124,12 @@ static bool fscrypt_supported_v1_policy(const struct fscrypt_policy_v1 *policy,
- 					policy->filenames_encryption_mode))
- 		return false;
- 
-+	if (IS_CASEFOLDED(inode)) {
-+		fscrypt_warn(inode,
-+			     "v1 policy does not support casefolded directories");
-+		return false;
-+	}
-+
- 	return true;
- }
- 
-@@ -579,3 +585,25 @@ int fscrypt_inherit_context(struct inode *parent, struct inode *child,
- 	return preload ? fscrypt_get_encryption_info(child): 0;
- }
- EXPORT_SYMBOL(fscrypt_inherit_context);
-+
-+int fscrypt_ioc_setflags_prepare(struct inode *inode,
-+				 unsigned int oldflags,
-+				 unsigned int flags)
-+{
-+	union fscrypt_policy policy;
-+	int err;
-+
-+	/*
-+	 * When a directory is encrypted, the CASEFOLD flag can only be turned
-+	 * on if the fscrypt policy supports it.
-+	 */
-+	if (IS_ENCRYPTED(inode) && (flags & ~oldflags & FS_CASEFOLD_FL)) {
-+		err = fscrypt_get_policy(inode, &policy);
-+		if (err)
-+			return err;
-+		if (policy.version != FSCRYPT_POLICY_V2)
-+			return -EINVAL;
-+	}
-+
-+	return 0;
-+}
-diff --git a/fs/inode.c b/fs/inode.c
-index 96d62d97694ef..8f6267858d0c1 100644
---- a/fs/inode.c
-+++ b/fs/inode.c
-@@ -20,6 +20,7 @@
- #include <linux/ratelimit.h>
- #include <linux/list_lru.h>
- #include <linux/iversion.h>
-+#include <linux/fscrypt.h>
- #include <trace/events/writeback.h>
- #include "internal.h"
- 
-@@ -2252,7 +2253,7 @@ int vfs_ioc_setflags_prepare(struct inode *inode, unsigned int oldflags,
- 	    !capable(CAP_LINUX_IMMUTABLE))
- 		return -EPERM;
- 
--	return 0;
-+	return fscrypt_ioc_setflags_prepare(inode, oldflags, flags);
- }
- EXPORT_SYMBOL(vfs_ioc_setflags_prepare);
- 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 1dfbed855beeb..2c292f19c6b94 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -142,6 +142,10 @@ extern int fscrypt_ioctl_get_policy_ex(struct file *, void __user *);
- extern int fscrypt_has_permitted_context(struct inode *, struct inode *);
- extern int fscrypt_inherit_context(struct inode *, struct inode *,
- 					void *, bool);
-+extern int fscrypt_ioc_setflags_prepare(struct inode *inode,
-+					unsigned int oldflags,
-+					unsigned int flags);
-+
- /* keyring.c */
- extern void fscrypt_sb_free(struct super_block *sb);
- extern int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
-@@ -383,6 +387,13 @@ static inline int fscrypt_inherit_context(struct inode *parent,
- 	return -EOPNOTSUPP;
- }
- 
-+static inline int fscrypt_ioc_setflags_prepare(struct inode *inode,
-+					       unsigned int oldflags,
-+					       unsigned int flags)
-+{
-+	return 0;
-+}
-+
- /* keyring.c */
- static inline void fscrypt_sb_free(struct super_block *sb)
- {
+Since directory names are stored case preserved, we cannot just take the hash
+of the ciphertext. Instead we use the siphash of the casefolded name. With this
+we no longer have a direct path from an encrypted name to the hash without the
+key. To deal with this, fscrypt now always includes the hash in the name it
+presents when the key is not present. There is a pre-existing bug where you can
+change parts of the hash and still match the name so long as the disruption to
+the hash does not happen to affect lookup on that filesystem. I'm not sure how
+to fix that without making ext4 lookups slower in the more common case.
+
+I moved the identical dcache operations for ext4 and f2fs into the VFS, as any
+filesystem that uses casefolding will need the same code. This will also allow
+further optimizations to that path, although my current changes don't take
+advantage of that yet.
+
+For Ext4, this also means that we need to store the hash on disk. We only do so
+for encrypted and casefolded directories to avoid on disk format changes.
+Previously encryption and casefolding could not live on the same filesystem,
+and we're relaxing that requirement. F2fs is a bit more straightforward since
+it already stores hashes on disk.
+
+I've updated the related tools with just enough to enable the feature. I still
+need to adjust ext4's fsck's, although without access to the keys,
+neither fsck will be able to verify the hashes of casefolded and encrypted names.
+
+v3 changes:
+fscrypt patch only creates hash key if it will be needed.
+Rebased on top of fscrypt branch, reconstified match functions in ext4/f2fs
+
+v2 changes:
+fscrypt moved to separate thread to rebase on fscrypt dev branch
+addressed feedback, plus some minor fixes
+
+
+Daniel Rosenberg (9):
+  fscrypt: Add siphash and hash key for policy v2
+  fscrypt: Don't allow v1 policies with casefolding
+  fscrypt: Change format of no-key token
+  fscrypt: Only create hash key when needed
+  vfs: Fold casefolding into vfs
+  f2fs: Handle casefolding with Encryption
+  ext4: Use struct super_blocks' casefold data
+  ext4: Hande casefolding with encryption
+  ext4: Optimize match for casefolded encrypted dirs
+
+ Documentation/filesystems/ext4/directory.rst |  27 ++
+ fs/crypto/Kconfig                            |   1 +
+ fs/crypto/fname.c                            | 232 ++++++++++---
+ fs/crypto/fscrypt_private.h                  |   9 +
+ fs/crypto/keysetup.c                         |  35 +-
+ fs/crypto/policy.c                           |  53 +++
+ fs/dcache.c                                  |  28 ++
+ fs/ext4/dir.c                                |  75 +----
+ fs/ext4/ext4.h                               |  85 +++--
+ fs/ext4/hash.c                               |  26 +-
+ fs/ext4/ialloc.c                             |   5 +-
+ fs/ext4/inline.c                             |  41 +--
+ fs/ext4/namei.c                              | 324 ++++++++++++-------
+ fs/ext4/super.c                              |  21 +-
+ fs/f2fs/dir.c                                | 112 +++----
+ fs/f2fs/f2fs.h                               |  12 +-
+ fs/f2fs/hash.c                               |  25 +-
+ fs/f2fs/inline.c                             |   9 +-
+ fs/f2fs/super.c                              |  17 +-
+ fs/f2fs/sysfs.c                              |   8 +-
+ fs/inode.c                                   |   3 +-
+ fs/namei.c                                   |  41 ++-
+ include/linux/fs.h                           |  10 +
+ include/linux/fscrypt.h                      |  95 ++----
+ include/linux/unicode.h                      |  14 +
+ 25 files changed, 835 insertions(+), 473 deletions(-)
+
 -- 
 2.25.0.341.g760bfbb309-goog
 
