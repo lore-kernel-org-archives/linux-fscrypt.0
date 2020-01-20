@@ -7,38 +7,38 @@ X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 666E3C33CB8
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 22:34:39 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1CC10C35241
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 22:34:40 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 396CF2253D
+	by mail.kernel.org (Postfix) with ESMTP id E26E92253D
 	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 22:34:39 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1579559679;
-	bh=a6AglMzuzSADbIykjFsh6WiXfUA9a8BSXSse5YpowJc=;
+	s=default; t=1579559680;
+	bh=Hb/QuSYZO3F6/aJuTKJcPg+na6zUZaRnZu4mlrV3pSk=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=NerL2li+LaOU/eHm1Km9GqQOmub87vpa8we550tsTj9/uuWJ9OsyXCybEm8JuRruo
-	 xoEoSGb2GpX9G+8eyELzpIlC5vMnIWHGgOy350LEu6gSB7owKxmGVzn4m4m8eO0lf2
-	 od3rVs+vf9SFUFW5ocPf3o/zBmPZUyj+AH38A2Xk=
+	b=lbposmtYKfBgBa+x/3yaNfNPoBcppIMnBgBZ015uckknmeFzy9YotH+XtGpV6zcTO
+	 n/Kbk62NETDiUVtOfI24Uxv/RUxxdnIzsdLd45AfS0EW4UWNxn6U70B/KpBuMm4JlA
+	 hHdoDZ7fXTEnnNlcpQ1XN0uL+ZBCl5LHddGVCaGY=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727829AbgATWed (ORCPT
+        id S1728899AbgATWeT (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 20 Jan 2020 17:34:33 -0500
+        Mon, 20 Jan 2020 17:34:19 -0500
 Received: from mail.kernel.org ([198.145.29.99]:37932 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1728894AbgATWeU (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 20 Jan 2020 17:34:20 -0500
+        id S1726607AbgATWeS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 20 Jan 2020 17:34:18 -0500
 Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id EE59C24654;
-        Mon, 20 Jan 2020 22:34:18 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 8C1882253D;
+        Mon, 20 Jan 2020 22:34:17 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1579559659;
-        bh=a6AglMzuzSADbIykjFsh6WiXfUA9a8BSXSse5YpowJc=;
+        s=default; t=1579559657;
+        bh=Hb/QuSYZO3F6/aJuTKJcPg+na6zUZaRnZu4mlrV3pSk=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=CxGsA6XSOH79/Ez1YYKFPwXEuecFLee2D4d34j5HPAbu0KJ494XC9qdVSW62bCxh/
-         gg3un57dpwbCJT0BoaNxddQ6mXy41R5m3H+nmpvn5XDzbEb64fyS8RSpBsVTkZZBTi
-         etgWdPATptkXqIamnw2Ms4bOtO2E8kcWZ4mwWCDc=
+        b=kms85eKMX6E2BHPPTytngYqS6DbX40h2c1l39BXDKSpejNcWiFl1b212h0ggPvaXj
+         teMXa0UPQ2QoT1TvsbOjkKFz6HuWQO2HQYzdzcTmDQBXWsJn6EUtrkNShRatgscDby
+         BrfLwRqgi9zKz/bVNqn60YKWYBHyPmUR5fWRVp3Q=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     Daniel Rosenberg <drosen@google.com>, kernel-team@android.com,
@@ -47,9 +47,9 @@ Cc:     Daniel Rosenberg <drosen@google.com>, kernel-team@android.com,
         linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
         Gabriel Krisman Bertazi <krisman@collabora.com>,
         linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
-Subject: [PATCH v5 5/6] ubifs: allow both hash and disk name to be provided in no-key names
-Date:   Mon, 20 Jan 2020 14:32:00 -0800
-Message-Id: <20200120223201.241390-6-ebiggers@kernel.org>
+Subject: [PATCH v5 2/6] fscrypt: derive dirhash key for casefolded directories
+Date:   Mon, 20 Jan 2020 14:31:57 -0800
+Message-Id: <20200120223201.241390-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.25.0
 In-Reply-To: <20200120223201.241390-1-ebiggers@kernel.org>
 References: <20200120223201.241390-1-ebiggers@kernel.org>
@@ -60,75 +60,295 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+From: Daniel Rosenberg <drosen@google.com>
 
-In order to support a new dirhash method that is a secret-keyed hash
-over the plaintext filenames (which will be used by encrypted+casefolded
-directories on ext4 and f2fs), fscrypt will be switching to a new no-key
-name format that always encodes the dirhash in the name.
+When we allow indexed directories to use both encryption and
+casefolding, for the dirhash we can't just hash the ciphertext filenames
+that are stored on-disk (as is done currently) because the dirhash must
+be case insensitive, but the stored names are case-preserving.  Nor can
+we hash the plaintext names with an unkeyed hash (or a hash keyed with a
+value stored on-disk like ext4's s_hash_seed), since that would leak
+information about the names that encryption is meant to protect.
 
-UBIFS isn't happy with this because it has assertions that verify that
-either the hash or the disk name is provided, not both.
+Instead, if we can accept a dirhash that's only computable when the
+fscrypt key is available, we can hash the plaintext names with a keyed
+hash using a secret key derived from the directory's fscrypt master key.
+We'll use SipHash-2-4 for this purpose.
 
-Change it to use the disk name if one is provided, even if a hash is
-available too; else use the hash.
+Prepare for this by deriving a SipHash key for each casefolded encrypted
+directory.  Make sure to handle deriving the key not only when setting
+up the directory's fscrypt_info, but also in the case where the casefold
+flag is enabled after the fscrypt_info was already set up.  (We could
+just always derive the key regardless of casefolding, but that would
+introduce unnecessary overhead for people not using casefolding.)
 
+Signed-off-by: Daniel Rosenberg <drosen@google.com>
+[EB: improved commit message, updated fscrypt.rst, squashed with change
+ that avoids unnecessarily deriving the key, and many other cleanups]
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ubifs/dir.c     | 4 +---
- fs/ubifs/journal.c | 4 ++--
- fs/ubifs/key.h     | 1 -
- 3 files changed, 3 insertions(+), 6 deletions(-)
+ Documentation/filesystems/fscrypt.rst | 10 +++++
+ fs/crypto/fname.c                     | 21 +++++++++++
+ fs/crypto/fscrypt_private.h           | 13 +++++++
+ fs/crypto/hooks.c                     | 16 ++++++++
+ fs/crypto/keysetup.c                  | 54 ++++++++++++++++++++-------
+ include/linux/fscrypt.h               |  9 +++++
+ 6 files changed, 109 insertions(+), 14 deletions(-)
 
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index 5f937226976a6..ef85ec167a843 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -225,9 +225,7 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
- 		goto done;
- 	}
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 380a1be9550e1..c45f5bcc13e17 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -302,6 +302,16 @@ For master keys used for v2 encryption policies, a unique 16-byte "key
+ identifier" is also derived using the KDF.  This value is stored in
+ the clear, since it is needed to reliably identify the key itself.
  
--	if (nm.hash) {
--		ubifs_assert(c, fname_len(&nm) == 0);
--		ubifs_assert(c, fname_name(&nm) == NULL);
-+	if (fname_name(&nm) == NULL) {
- 		if (nm.hash & ~UBIFS_S_KEY_HASH_MASK)
- 			goto done; /* ENOENT */
- 		dent_key_init_hash(c, &key, dir->i_ino, nm.hash);
-diff --git a/fs/ubifs/journal.c b/fs/ubifs/journal.c
-index a38e18d3ef1d7..3bf8b1fda9d74 100644
---- a/fs/ubifs/journal.c
-+++ b/fs/ubifs/journal.c
-@@ -588,7 +588,7 @@ int ubifs_jnl_update(struct ubifs_info *c, const struct inode *dir,
++Dirhash keys
++------------
++
++For directories that are indexed using a secret-keyed dirhash over the
++plaintext filenames, the KDF is also used to derive a 128-bit
++SipHash-2-4 key per directory in order to hash filenames.  This works
++just like deriving a per-file encryption key, except that a different
++KDF context is used.  Currently, only casefolded ("case-insensitive")
++encrypted directories use this style of hashing.
++
+ Encryption modes and usage
+ ==========================
  
- 	if (!xent) {
- 		dent->ch.node_type = UBIFS_DENT_NODE;
--		if (nm->hash)
-+		if (fname_name(nm) == NULL)
- 			dent_key_init_hash(c, &dent_key, dir->i_ino, nm->hash);
- 		else
- 			dent_key_init(c, &dent_key, dir->i_ino, nm);
-@@ -646,7 +646,7 @@ int ubifs_jnl_update(struct ubifs_info *c, const struct inode *dir,
- 	ubifs_add_auth_dirt(c, lnum);
- 
- 	if (deletion) {
--		if (nm->hash)
-+		if (fname_name(nm) == NULL)
- 			err = ubifs_tnc_remove_dh(c, &dent_key, nm->minor_hash);
- 		else
- 			err = ubifs_tnc_remove_nm(c, &dent_key, nm);
-diff --git a/fs/ubifs/key.h b/fs/ubifs/key.h
-index afa704ff5ca08..8142d9d6fe5da 100644
---- a/fs/ubifs/key.h
-+++ b/fs/ubifs/key.h
-@@ -150,7 +150,6 @@ static inline void dent_key_init(const struct ubifs_info *c,
- 	uint32_t hash = c->key_hash(fname_name(nm), fname_len(nm));
- 
- 	ubifs_assert(c, !(hash & ~UBIFS_S_KEY_HASH_MASK));
--	ubifs_assert(c, !nm->hash && !nm->minor_hash);
- 	key->u32[0] = inum;
- 	key->u32[1] = hash | (UBIFS_DENT_KEY << UBIFS_S_KEY_HASH_BITS);
+diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+index 3fd27e14ebdd6..2d0d5a934e170 100644
+--- a/fs/crypto/fname.c
++++ b/fs/crypto/fname.c
+@@ -402,6 +402,27 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
  }
+ EXPORT_SYMBOL(fscrypt_setup_filename);
+ 
++/**
++ * fscrypt_fname_siphash() - calculate the SipHash of a filename
++ * @dir: the parent directory
++ * @name: the filename to calculate the SipHash of
++ *
++ * Given a plaintext filename @name and a directory @dir which uses SipHash as
++ * its dirhash method and has had its fscrypt key set up, this function
++ * calculates the SipHash of that name using the directory's secret dirhash key.
++ *
++ * Return: the SipHash of @name using the hash key of @dir
++ */
++u64 fscrypt_fname_siphash(const struct inode *dir, const struct qstr *name)
++{
++	const struct fscrypt_info *ci = dir->i_crypt_info;
++
++	WARN_ON(!ci->ci_dirhash_key_initialized);
++
++	return siphash(name->name, name->len, &ci->ci_dirhash_key);
++}
++EXPORT_SYMBOL_GPL(fscrypt_fname_siphash);
++
+ /*
+  * Validate dentries in encrypted directories to make sure we aren't potentially
+  * caching stale dentries after a key has been added.
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index b22e8decebedd..e79d5fd6236a8 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -12,6 +12,7 @@
+ #define _FSCRYPT_PRIVATE_H
+ 
+ #include <linux/fscrypt.h>
++#include <linux/siphash.h>
+ #include <crypto/hash.h>
+ 
+ #define CONST_STRLEN(str)	(sizeof(str) - 1)
+@@ -188,6 +189,14 @@ struct fscrypt_info {
+ 	 */
+ 	struct fscrypt_direct_key *ci_direct_key;
+ 
++	/*
++	 * This inode's hash key for filenames.  This is a 128-bit SipHash-2-4
++	 * key.  This is only set for directories that use a keyed dirhash over
++	 * the plaintext filenames -- currently just casefolded directories.
++	 */
++	siphash_key_t ci_dirhash_key;
++	bool ci_dirhash_key_initialized;
++
+ 	/* The encryption policy used by this inode */
+ 	union fscrypt_policy ci_policy;
+ 
+@@ -262,6 +271,7 @@ extern int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+ #define HKDF_CONTEXT_PER_FILE_KEY	2
+ #define HKDF_CONTEXT_DIRECT_KEY		3
+ #define HKDF_CONTEXT_IV_INO_LBLK_64_KEY	4
++#define HKDF_CONTEXT_DIRHASH_KEY	5
+ 
+ extern int fscrypt_hkdf_expand(const struct fscrypt_hkdf *hkdf, u8 context,
+ 			       const u8 *info, unsigned int infolen,
+@@ -433,6 +443,9 @@ fscrypt_allocate_skcipher(struct fscrypt_mode *mode, const u8 *raw_key,
+ extern int fscrypt_set_derived_key(struct fscrypt_info *ci,
+ 				   const u8 *derived_key);
+ 
++extern int fscrypt_derive_dirhash_key(struct fscrypt_info *ci,
++				      const struct fscrypt_master_key *mk);
++
+ /* keysetup_v1.c */
+ 
+ extern void fscrypt_put_direct_key(struct fscrypt_direct_key *dk);
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index d96a58f11d2b0..cb2eb91bcfde7 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -5,6 +5,8 @@
+  * Encryption hooks for higher-level filesystem operations.
+  */
+ 
++#include <linux/key.h>
++
+ #include "fscrypt_private.h"
+ 
+ /**
+@@ -137,8 +139,14 @@ int fscrypt_prepare_setflags(struct inode *inode,
+ 			     unsigned int oldflags, unsigned int flags)
+ {
+ 	struct fscrypt_info *ci;
++	struct fscrypt_master_key *mk;
+ 	int err;
+ 
++	/*
++	 * When the CASEFOLD flag is set on an encrypted directory, we must
++	 * derive the secret key needed for the dirhash.  This is only possible
++	 * if the directory uses a v2 encryption policy.
++	 */
+ 	if (IS_ENCRYPTED(inode) && (flags & ~oldflags & FS_CASEFOLD_FL)) {
+ 		err = fscrypt_require_key(inode);
+ 		if (err)
+@@ -146,6 +154,14 @@ int fscrypt_prepare_setflags(struct inode *inode,
+ 		ci = inode->i_crypt_info;
+ 		if (ci->ci_policy.version != FSCRYPT_POLICY_V2)
+ 			return -EINVAL;
++		mk = ci->ci_master_key->payload.data[0];
++		down_read(&mk->mk_secret_sem);
++		if (is_master_key_secret_present(&mk->mk_secret))
++			err = fscrypt_derive_dirhash_key(ci, mk);
++		else
++			err = -ENOKEY;
++		up_read(&mk->mk_secret_sem);
++		return err;
+ 	}
+ 	return 0;
+ }
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index 96074054bdbc8..74d61d827d913 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -174,10 +174,24 @@ static int setup_per_mode_key(struct fscrypt_info *ci,
+ 	return 0;
+ }
+ 
++int fscrypt_derive_dirhash_key(struct fscrypt_info *ci,
++			       const struct fscrypt_master_key *mk)
++{
++	int err;
++
++	err = fscrypt_hkdf_expand(&mk->mk_secret.hkdf, HKDF_CONTEXT_DIRHASH_KEY,
++				  ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE,
++				  (u8 *)&ci->ci_dirhash_key,
++				  sizeof(ci->ci_dirhash_key));
++	if (err)
++		return err;
++	ci->ci_dirhash_key_initialized = true;
++	return 0;
++}
++
+ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 				     struct fscrypt_master_key *mk)
+ {
+-	u8 derived_key[FSCRYPT_MAX_KEY_SIZE];
+ 	int err;
+ 
+ 	if (ci->ci_policy.v2.flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY) {
+@@ -189,8 +203,8 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 		 * This ensures that the master key is consistently used only
+ 		 * for HKDF, avoiding key reuse issues.
+ 		 */
+-		return setup_per_mode_key(ci, mk, mk->mk_direct_tfms,
+-					  HKDF_CONTEXT_DIRECT_KEY, false);
++		err = setup_per_mode_key(ci, mk, mk->mk_direct_tfms,
++					 HKDF_CONTEXT_DIRECT_KEY, false);
+ 	} else if (ci->ci_policy.v2.flags &
+ 		   FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
+ 		/*
+@@ -199,21 +213,33 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 		 * the IVs.  This format is optimized for use with inline
+ 		 * encryption hardware compliant with the UFS or eMMC standards.
+ 		 */
+-		return setup_per_mode_key(ci, mk, mk->mk_iv_ino_lblk_64_tfms,
+-					  HKDF_CONTEXT_IV_INO_LBLK_64_KEY,
+-					  true);
++		err = setup_per_mode_key(ci, mk, mk->mk_iv_ino_lblk_64_tfms,
++					 HKDF_CONTEXT_IV_INO_LBLK_64_KEY, true);
++	} else {
++		u8 derived_key[FSCRYPT_MAX_KEY_SIZE];
++
++		err = fscrypt_hkdf_expand(&mk->mk_secret.hkdf,
++					  HKDF_CONTEXT_PER_FILE_KEY,
++					  ci->ci_nonce,
++					  FS_KEY_DERIVATION_NONCE_SIZE,
++					  derived_key, ci->ci_mode->keysize);
++		if (err)
++			return err;
++
++		err = fscrypt_set_derived_key(ci, derived_key);
++		memzero_explicit(derived_key, ci->ci_mode->keysize);
+ 	}
+-
+-	err = fscrypt_hkdf_expand(&mk->mk_secret.hkdf,
+-				  HKDF_CONTEXT_PER_FILE_KEY,
+-				  ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE,
+-				  derived_key, ci->ci_mode->keysize);
+ 	if (err)
+ 		return err;
+ 
+-	err = fscrypt_set_derived_key(ci, derived_key);
+-	memzero_explicit(derived_key, ci->ci_mode->keysize);
+-	return err;
++	/* Derive a secret dirhash key for directories that need it. */
++	if (S_ISDIR(ci->ci_inode->i_mode) && IS_CASEFOLDED(ci->ci_inode)) {
++		err = fscrypt_derive_dirhash_key(ci, mk);
++		if (err)
++			return err;
++	}
++
++	return 0;
+ }
+ 
+ /*
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 3984eadd7023f..2bb43a772f361 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -172,6 +172,8 @@ extern int fscrypt_fname_disk_to_usr(const struct inode *inode,
+ 				     u32 hash, u32 minor_hash,
+ 				     const struct fscrypt_str *iname,
+ 				     struct fscrypt_str *oname);
++extern u64 fscrypt_fname_siphash(const struct inode *dir,
++				 const struct qstr *name);
+ 
+ #define FSCRYPT_FNAME_MAX_UNDIGESTED_SIZE	32
+ 
+@@ -479,6 +481,13 @@ static inline bool fscrypt_match_name(const struct fscrypt_name *fname,
+ 	return !memcmp(de_name, fname->disk_name.name, fname->disk_name.len);
+ }
+ 
++static inline u64 fscrypt_fname_siphash(const struct inode *dir,
++					const struct qstr *name)
++{
++	WARN_ON_ONCE(1);
++	return 0;
++}
++
+ /* bio.c */
+ static inline void fscrypt_decrypt_bio(struct bio *bio)
+ {
 -- 
 2.25.0
 
