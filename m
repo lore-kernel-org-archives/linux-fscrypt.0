@@ -2,114 +2,264 @@ Return-Path: <SRS0=poyl=3J=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C23B9C33CAF
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 02:21:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 068A6C3F68F
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 04:49:12 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 9048A20684
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 02:21:04 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="RCwrjdEV"
+	by mail.kernel.org (Postfix) with ESMTP id CD88120684
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 04:49:11 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1579495751;
+	bh=/tZkepdt0z5ydFBChDAqKoWxqgVLNRhxwnP8hUQrzpQ=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=iseEvY4FR+fDJj/kxkZQSwbSSSWgzLwUgNB7nVnoTY/6qQkwnoroiAt9xqawa7Kob
+	 qKnZaFC/6cf27gIgt/j3tnaAaX2Z++FOSi36YW/UgzIo1FLmgAFRd8T3yIhcJMBuLZ
+	 UmgNl1krYaqsK8ChCeATOC1kksOdPrDXPu9Mm1oY=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728931AbgATCVE (ORCPT
+        id S1729225AbgATEtA (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 19 Jan 2020 21:21:04 -0500
-Received: from us-smtp-1.mimecast.com ([205.139.110.61]:56163 "EHLO
-        us-smtp-delivery-1.mimecast.com" rhost-flags-OK-OK-OK-FAIL)
-        by vger.kernel.org with ESMTP id S1728874AbgATCVD (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 19 Jan 2020 21:21:03 -0500
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-        s=mimecast20190719; t=1579486862;
-        h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-         to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-         in-reply-to:in-reply-to:references:references;
-        bh=qVu9q986LuNyNKwrEDimdMNGWStikF2Ba4yVaUees/8=;
-        b=RCwrjdEVbLLoAlzR2zzPpslsnrQis5vY9G78x4c6tWx2lYKjlIU/KXZJdEnGIC1iFwWDp6
-        hjMgY6BM9yEjefQPYxyz6px7172T3D6C1b18cKXjsghvsCK+WqMllvTItxztbgOzkk6qXE
-        Y40sy3+KiRI1WLKmzMAvKW6kBX+CbLU=
-Received: from mimecast-mx01.redhat.com (mimecast-mx01.redhat.com
- [209.132.183.4]) (Using TLS) by relay.mimecast.com with ESMTP id
- us-mta-392-McSD059pORCmIFLezXmLLg-1; Sun, 19 Jan 2020 21:21:00 -0500
-X-MC-Unique: McSD059pORCmIFLezXmLLg-1
-Received: from smtp.corp.redhat.com (int-mx08.intmail.prod.int.phx2.redhat.com [10.5.11.23])
-        (using TLSv1.2 with cipher AECDH-AES256-SHA (256/256 bits))
+        Sun, 19 Jan 2020 23:49:00 -0500
+Received: from mail.kernel.org ([198.145.29.99]:60070 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1729043AbgATEs7 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 19 Jan 2020 23:48:59 -0500
+Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mimecast-mx01.redhat.com (Postfix) with ESMTPS id C81E3185432C;
-        Mon, 20 Jan 2020 02:20:59 +0000 (UTC)
-Received: from localhost (dhcp-12-196.nay.redhat.com [10.66.12.196])
-        by smtp.corp.redhat.com (Postfix) with ESMTP id 4599D1A7E4;
-        Mon, 20 Jan 2020 02:20:59 +0000 (UTC)
-Date:   Mon, 20 Jan 2020 10:20:57 +0800
-From:   Murphy Zhou <xzhou@redhat.com>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     Murphy Zhou <xzhou@redhat.com>, fstests@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH v3 6/9] generic: add test for non-root use of fscrypt API
- additions
-Message-ID: <20200120022057.6bgrpd5iu34455ty@xzhoux.usersys.redhat.com>
-References: <20191015181643.6519-1-ebiggers@kernel.org>
- <20191015181643.6519-7-ebiggers@kernel.org>
- <20200119054515.3mxrpky7fiegnj5s@xzhoux.usersys.redhat.com>
- <20200119182542.GA913@sol.localdomain>
+        by mail.kernel.org (Postfix) with ESMTPSA id DF39C207E0;
+        Mon, 20 Jan 2020 04:48:57 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1579495738;
+        bh=/tZkepdt0z5ydFBChDAqKoWxqgVLNRhxwnP8hUQrzpQ=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=hlWC/Z+if47Sp+uyr/jHOBF8zCavLRvf5O+oJiyHBNEp2NIWRGMhmJfBC8YnfOhi2
+         RnY6J07xxmiAs24c1jlBAhoA4NSL7X0bET+4GS5uqLm+cE20uow2rDTns6zVNU/VT5
+         1OoTvWv/okNvAPVRmUpzrIx3musUM241X+lnj8cg=
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
+        kernel-team@android.com,
+        Gabriel Krisman Bertazi <krisman@collabora.com>,
+        Daniel Rosenberg <drosen@google.com>
+Subject: [PATCH v4 3/4] fscrypt: clarify what is meant by a per-file key
+Date:   Sun, 19 Jan 2020 20:44:00 -0800
+Message-Id: <20200120044401.325453-4-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.25.0
+In-Reply-To: <20200120044401.325453-1-ebiggers@kernel.org>
+References: <20200120044401.325453-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200119182542.GA913@sol.localdomain>
-X-Scanned-By: MIMEDefang 2.84 on 10.5.11.23
+Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Sun, Jan 19, 2020 at 10:25:42AM -0800, Eric Biggers wrote:
-> On Sun, Jan 19, 2020 at 01:45:15PM +0800, Murphy Zhou wrote:
-> > Hi Eric,
-> > 
-> > On Tue, Oct 15, 2019 at 11:16:40AM -0700, Eric Biggers wrote:
-> > > From: Eric Biggers <ebiggers@google.com>
-> > > 
-> > > Test non-root use of the fscrypt filesystem-level encryption keyring and
-> > > v2 encryption policies.
-> > 
-> > This testcase now fails on latest Linus tree with latest e2fsprogs
-> > on ext4:
-> > 
-> > FSTYP         -- ext4
-> > PLATFORM      -- Linux/x86_64 dell-pesc430-01 5.4.0+ #1 SMP Mon Nov 25 16:40:55 EST 2019
-> > MKFS_OPTIONS  -- /dev/sda3
-> > MOUNT_OPTIONS -- -o acl,user_xattr -o context=system_u:object_r:nfs_t:s0 /dev/sda3 /mnt/xfstests/mnt2
-> > generic/581	- output mismatch (see /var/lib/xfstests/results//generic/581.out.bad)
-> >     --- tests/generic/581.out	2019-11-25 20:30:04.536051638 -0500
-> >     +++ /var/lib/xfstests/results//generic/581.out.bad	2019-11-26 01:04:17.318332220 -0500
-> >     @@ -33,7 +33,7 @@
-> >      Added encryption key
-> >      Added encryption key
-> >      Added encryption key
-> >     -Error adding encryption key: Disk quota exceeded
-> >     +Added encryption key
-> >      
-> >      # Adding key as root
-> > ...
-> > 
-> > A rough looking back shows that this probably started since your fscrypt
-> > update for 5.5, added support for IV_INO_LBLK_64 encryption policies.
-> > 
-> > I guess you are aware of this :-)
-> > 
-> 
-> Nope, this has been passing for me.  I don't see how this can have anything to
-> do with the fscrypt update for 5.5.  I'm guessing this is a race condition in
-> the test caused by the kernel's keyrings subsystem reclaiming the keys quota
-> asynchronously.  I'll see if I can find a way to reproduce it and make the test
-> more reliable.
+From: Eric Biggers <ebiggers@google.com>
 
-OK, Thanks for the info. I'll try to bisect.
+Now that there's sometimes a second type of per-file key (the dirhash
+key), clarify some function names, macros, and documentation that
+specifically deal with per-file *encryption* keys.
 
-> 
-> - Eric
-> 
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ Documentation/filesystems/fscrypt.rst | 24 ++++++++---------
+ fs/crypto/fscrypt_private.h           |  6 ++---
+ fs/crypto/keysetup.c                  | 39 ++++++++++++++-------------
+ fs/crypto/keysetup_v1.c               |  4 +--
+ 4 files changed, 37 insertions(+), 36 deletions(-)
+
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index c45f5bcc13e17..d5b1b49c3d002 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -234,8 +234,8 @@ HKDF is more flexible, is nonreversible, and evenly distributes
+ entropy from the master key.  HKDF is also standardized and widely
+ used by other software, whereas the AES-128-ECB based KDF is ad-hoc.
+ 
+-Per-file keys
+--------------
++Per-file encryption keys
++------------------------
+ 
+ Since each master key can protect many files, it is necessary to
+ "tweak" the encryption of each file so that the same plaintext in two
+@@ -268,9 +268,9 @@ is greater than that of an AES-256-XTS key.
+ Therefore, to improve performance and save memory, for Adiantum a
+ "direct key" configuration is supported.  When the user has enabled
+ this by setting FSCRYPT_POLICY_FLAG_DIRECT_KEY in the fscrypt policy,
+-per-file keys are not used.  Instead, whenever any data (contents or
+-filenames) is encrypted, the file's 16-byte nonce is included in the
+-IV.  Moreover:
++per-file encryption keys are not used.  Instead, whenever any data
++(contents or filenames) is encrypted, the file's 16-byte nonce is
++included in the IV.  Moreover:
+ 
+ - For v1 encryption policies, the encryption is done directly with the
+   master key.  Because of this, users **must not** use the same master
+@@ -335,11 +335,11 @@ used.
+ Adiantum is a (primarily) stream cipher-based mode that is fast even
+ on CPUs without dedicated crypto instructions.  It's also a true
+ wide-block mode, unlike XTS.  It can also eliminate the need to derive
+-per-file keys.  However, it depends on the security of two primitives,
+-XChaCha12 and AES-256, rather than just one.  See the paper
+-"Adiantum: length-preserving encryption for entry-level processors"
+-(https://eprint.iacr.org/2018/720.pdf) for more details.  To use
+-Adiantum, CONFIG_CRYPTO_ADIANTUM must be enabled.  Also, fast
++per-file encryption keys.  However, it depends on the security of two
++primitives, XChaCha12 and AES-256, rather than just one.  See the
++paper "Adiantum: length-preserving encryption for entry-level
++processors" (https://eprint.iacr.org/2018/720.pdf) for more details.
++To use Adiantum, CONFIG_CRYPTO_ADIANTUM must be enabled.  Also, fast
+ implementations of ChaCha and NHPoly1305 should be enabled, e.g.
+ CONFIG_CRYPTO_CHACHA20_NEON and CONFIG_CRYPTO_NHPOLY1305_NEON for ARM.
+ 
+@@ -1149,8 +1149,8 @@ The context structs contain the same information as the corresponding
+ policy structs (see `Setting an encryption policy`_), except that the
+ context structs also contain a nonce.  The nonce is randomly generated
+ by the kernel and is used as KDF input or as a tweak to cause
+-different files to be encrypted differently; see `Per-file keys`_ and
+-`DIRECT_KEY policies`_.
++different files to be encrypted differently; see `Per-file encryption
++keys`_ and `DIRECT_KEY policies`_.
+ 
+ Data path changes
+ -----------------
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index d4e650086edc6..5546e28ec5690 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -268,7 +268,7 @@ extern int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+  * output doesn't reveal another.
+  */
+ #define HKDF_CONTEXT_KEY_IDENTIFIER	1
+-#define HKDF_CONTEXT_PER_FILE_KEY	2
++#define HKDF_CONTEXT_PER_FILE_ENC_KEY	2
+ #define HKDF_CONTEXT_DIRECT_KEY		3
+ #define HKDF_CONTEXT_IV_INO_LBLK_64_KEY	4
+ #define HKDF_CONTEXT_DIRHASH_KEY	5
+@@ -440,8 +440,8 @@ extern struct crypto_skcipher *
+ fscrypt_allocate_skcipher(struct fscrypt_mode *mode, const u8 *raw_key,
+ 			  const struct inode *inode);
+ 
+-extern int fscrypt_set_derived_key(struct fscrypt_info *ci,
+-				   const u8 *derived_key);
++extern int fscrypt_set_per_file_enc_key(struct fscrypt_info *ci,
++					const u8 *raw_key);
+ 
+ extern int fscrypt_derive_dirhash_key(const struct fscrypt_master_key *mk,
+ 				      struct fscrypt_info *ci);
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index 31c26ca75f43c..57e8aac428440 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -107,12 +107,12 @@ struct crypto_skcipher *fscrypt_allocate_skcipher(struct fscrypt_mode *mode,
+ 	return ERR_PTR(err);
+ }
+ 
+-/* Given the per-file key, set up the file's crypto transform object */
+-int fscrypt_set_derived_key(struct fscrypt_info *ci, const u8 *derived_key)
++/* Given a per-file encryption key, set up the file's crypto transform object */
++int fscrypt_set_per_file_enc_key(struct fscrypt_info *ci, const u8 *raw_key)
+ {
+ 	struct crypto_skcipher *tfm;
+ 
+-	tfm = fscrypt_allocate_skcipher(ci->ci_mode, derived_key, ci->ci_inode);
++	tfm = fscrypt_allocate_skcipher(ci->ci_mode, raw_key, ci->ci_inode);
+ 	if (IS_ERR(tfm))
+ 		return PTR_ERR(tfm);
+ 
+@@ -121,10 +121,10 @@ int fscrypt_set_derived_key(struct fscrypt_info *ci, const u8 *derived_key)
+ 	return 0;
+ }
+ 
+-static int setup_per_mode_key(struct fscrypt_info *ci,
+-			      struct fscrypt_master_key *mk,
+-			      struct crypto_skcipher **tfms,
+-			      u8 hkdf_context, bool include_fs_uuid)
++static int setup_per_mode_enc_key(struct fscrypt_info *ci,
++				  struct fscrypt_master_key *mk,
++				  struct crypto_skcipher **tfms,
++				  u8 hkdf_context, bool include_fs_uuid)
+ {
+ 	const struct inode *inode = ci->ci_inode;
+ 	const struct super_block *sb = inode->i_sb;
+@@ -196,15 +196,15 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 
+ 	if (ci->ci_policy.v2.flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY) {
+ 		/*
+-		 * DIRECT_KEY: instead of deriving per-file keys, the per-file
+-		 * nonce will be included in all the IVs.  But unlike v1
+-		 * policies, for v2 policies in this case we don't encrypt with
+-		 * the master key directly but rather derive a per-mode key.
+-		 * This ensures that the master key is consistently used only
+-		 * for HKDF, avoiding key reuse issues.
++		 * DIRECT_KEY: instead of deriving per-file encryption keys, the
++		 * per-file nonce will be included in all the IVs.  But unlike
++		 * v1 policies, for v2 policies in this case we don't encrypt
++		 * with the master key directly but rather derive a per-mode
++		 * encryption key.  This ensures that the master key is
++		 * consistently used only for HKDF, avoiding key reuse issues.
+ 		 */
+-		err = setup_per_mode_key(ci, mk, mk->mk_direct_tfms,
+-					 HKDF_CONTEXT_DIRECT_KEY, false);
++		err = setup_per_mode_enc_key(ci, mk, mk->mk_direct_tfms,
++					     HKDF_CONTEXT_DIRECT_KEY, false);
+ 	} else if (ci->ci_policy.v2.flags &
+ 		   FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
+ 		/*
+@@ -213,20 +213,21 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 		 * the IVs.  This format is optimized for use with inline
+ 		 * encryption hardware compliant with the UFS or eMMC standards.
+ 		 */
+-		err = setup_per_mode_key(ci, mk, mk->mk_iv_ino_lblk_64_tfms,
+-					 HKDF_CONTEXT_IV_INO_LBLK_64_KEY, true);
++		err = setup_per_mode_enc_key(ci, mk, mk->mk_iv_ino_lblk_64_tfms,
++					     HKDF_CONTEXT_IV_INO_LBLK_64_KEY,
++					     true);
+ 	} else {
+ 		u8 derived_key[FSCRYPT_MAX_KEY_SIZE];
+ 
+ 		err = fscrypt_hkdf_expand(&mk->mk_secret.hkdf,
+-					  HKDF_CONTEXT_PER_FILE_KEY,
++					  HKDF_CONTEXT_PER_FILE_ENC_KEY,
+ 					  ci->ci_nonce,
+ 					  FS_KEY_DERIVATION_NONCE_SIZE,
+ 					  derived_key, ci->ci_mode->keysize);
+ 		if (err)
+ 			return err;
+ 
+-		err = fscrypt_set_derived_key(ci, derived_key);
++		err = fscrypt_set_per_file_enc_key(ci, derived_key);
+ 		memzero_explicit(derived_key, ci->ci_mode->keysize);
+ 	}
+ 	if (err)
+diff --git a/fs/crypto/keysetup_v1.c b/fs/crypto/keysetup_v1.c
+index 3578c1c607c51..801b48c0cd7f3 100644
+--- a/fs/crypto/keysetup_v1.c
++++ b/fs/crypto/keysetup_v1.c
+@@ -9,7 +9,7 @@
+  * This file implements compatibility functions for the original encryption
+  * policy version ("v1"), including:
+  *
+- * - Deriving per-file keys using the AES-128-ECB based KDF
++ * - Deriving per-file encryption keys using the AES-128-ECB based KDF
+  *   (rather than the new method of using HKDF-SHA512)
+  *
+  * - Retrieving fscrypt master keys from process-subscribed keyrings
+@@ -283,7 +283,7 @@ static int setup_v1_file_key_derived(struct fscrypt_info *ci,
+ 	if (err)
+ 		goto out;
+ 
+-	err = fscrypt_set_derived_key(ci, derived_key);
++	err = fscrypt_set_per_file_enc_key(ci, derived_key);
+ out:
+ 	kzfree(derived_key);
+ 	return err;
+-- 
+2.25.0
 
