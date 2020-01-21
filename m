@@ -1,211 +1,217 @@
-Return-Path: <SRS0=poyl=3J=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=xzB1=3K=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.1 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1,
+	USER_IN_DEF_DKIM_WL autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B2B9C33CA1
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 22:34:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 62577C33CAA
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 21 Jan 2020 22:05:30 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 0088124653
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jan 2020 22:34:48 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1579559688;
-	bh=tpX3Z5aTfQYbdolCOLoHxFujgPfupohBTNGUTgTN6rY=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=2Tsf8mbsy9jGbnMvfqJaISGATZ5A7fqdZ3s9hQtk1kn4OmJZi19wzWZR6Q+C4ClBk
-	 89yBDLEhXjtK4NY86ahtmJoovQCMdEtpQnHOYfKqYoDl6mQVrK6x9Dim23e9SvEvj8
-	 jcZ+5lgc87tIdNcnYCdOy2NKbHWnSzbcMZ9uJ1XE=
+	by mail.kernel.org (Postfix) with ESMTP id 37ED52465A
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 21 Jan 2020 22:05:30 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="b+DkuJVK"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728803AbgATWeS (ORCPT
+        id S1728853AbgAUWF3 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 20 Jan 2020 17:34:18 -0500
-Received: from mail.kernel.org ([198.145.29.99]:37912 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727005AbgATWeS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 20 Jan 2020 17:34:18 -0500
-Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 1FAAE22522;
-        Mon, 20 Jan 2020 22:34:17 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1579559657;
-        bh=tpX3Z5aTfQYbdolCOLoHxFujgPfupohBTNGUTgTN6rY=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=qrVjUaSHOVqRokRfV2YwiPbgKmKm7JGX3kotJjBEwQd/vIvpskRgf7I/gVifaFEoB
-         UVrcRwntKuUnqMvv4V0WOegwQodT38tGXS3JBuZ5Zj/T4VclxoiMemD5IXroUP2gGb
-         AsP39GViKWmYbxmtHnd8+jmldMlGpu1xv6dnvD9M=
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     Daniel Rosenberg <drosen@google.com>, kernel-team@android.com,
-        linux-kernel@vger.kernel.org,
+        Tue, 21 Jan 2020 17:05:29 -0500
+Received: from mail-pf1-f195.google.com ([209.85.210.195]:37565 "EHLO
+        mail-pf1-f195.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1729008AbgAUWF3 (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 21 Jan 2020 17:05:29 -0500
+Received: by mail-pf1-f195.google.com with SMTP id p14so2205570pfn.4
+        for <linux-fscrypt@vger.kernel.org>; Tue, 21 Jan 2020 14:05:28 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:in-reply-to:user-agent;
+        bh=MHL1t/EyEsW/kDCQVsvBnpYeqWiiNR3Qofvm72VP2xo=;
+        b=b+DkuJVKIKETrJ5dpTxidfDLzDLkavoiNLhArG3sMhvs1V6c3puRQUI9pG9KRYRWPd
+         8fRSkviBHz+tFzxp4t+VfIOdI/jgi3sJ8Vewc009gojBVO6V1BECgJK5222fsEzQXJQm
+         wbAnTgKeIHbOU4Tr5RKZqicWx20WuZ71yUO7sN1kR4zsn3mD7Zznv4+GsRhRluFNXZeS
+         DWYSw9vYZzXEm7IIrBEuVWdlXIRxeFhGVZcjpgT2fJKpY4FFj1SMuLJIJkxJTe5YPqoE
+         FIMd1Y6nmyaf6ERoXAdUmhkH+AVj9CIIhltvG0/65sNQMh+6F+GSHDHh8Fzlp3CXn/CF
+         WCHQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:in-reply-to:user-agent;
+        bh=MHL1t/EyEsW/kDCQVsvBnpYeqWiiNR3Qofvm72VP2xo=;
+        b=c7Y3I8JD/tAeVXGFYqW7Jjz9Ca8So+0pzmNo/LFKAhID9G4uxurfXcFUGZP2LRX4Cb
+         zOk1ovfRmTpKDJBuL22MqyeMCGlSPsBI8UtlmVRmb5uOggOk7P8nM4Ui1QQAtE4B/iD+
+         BlC6WcZXS0/2rxviJ5oIl1fdvf8lQCZIBQaKDRGiHDo7F7Y8p6ehE2wBkn0bP6D29Lha
+         599RjcbAZbbd3pMguANQW8qdoiVPNgLc3kF+0Zz6SnRDVb5Yt3TcVDF19mJjNYIwGRdJ
+         FnwNAsN2gpsKW26KCT6xzHnS6MIoI6UhOJgk+i8wE82tVVd9/WOU4Djq05UewtYzxZx3
+         T5dg==
+X-Gm-Message-State: APjAAAWiMulEIIwQqddM86x3JXy+J31N+EiwXQjS3NfgCGKK/darw2Dj
+        fjizPtgvXRipPDA4QfGeEXZljA==
+X-Google-Smtp-Source: APXvYqwh8OnW+eP9V0DrV7fz7N0b2aotldt8ipMvaida+/kr2JuRziMzbgGUGDkawpb/E1PWbTxPyg==
+X-Received: by 2002:a63:6d8d:: with SMTP id i135mr7771059pgc.90.1579644327592;
+        Tue, 21 Jan 2020 14:05:27 -0800 (PST)
+Received: from google.com ([2620:15c:201:0:7f8c:9d6e:20b8:e324])
+        by smtp.gmail.com with ESMTPSA id a16sm41620400pgb.5.2020.01.21.14.05.26
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Tue, 21 Jan 2020 14:05:27 -0800 (PST)
+Date:   Tue, 21 Jan 2020 14:05:22 -0800
+From:   Satya Tangirala <satyat@google.com>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     Christoph Hellwig <hch@infradead.org>,
+        "Martin K. Petersen" <martin.petersen@oracle.com>,
+        "Darrick J. Wong" <darrick.wong@oracle.com>,
+        linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
-        linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
-        Gabriel Krisman Bertazi <krisman@collabora.com>,
-        linux-mtd@lists.infradead.org, Richard Weinberger <richard@nod.at>
-Subject: [PATCH v5 1/6] fscrypt: don't allow v1 policies with casefolding
-Date:   Mon, 20 Jan 2020 14:31:56 -0800
-Message-Id: <20200120223201.241390-2-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.25.0
-In-Reply-To: <20200120223201.241390-1-ebiggers@kernel.org>
-References: <20200120223201.241390-1-ebiggers@kernel.org>
+        Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
+        Kuohong Wang <kuohong.wang@mediatek.com>,
+        Kim Boojin <boojin.kim@samsung.com>
+Subject: Re: [PATCH v6 2/9] block: Add encryption context to struct bio
+Message-ID: <20200121220522.GA243816@google.com>
+References: <20191218145136.172774-1-satyat@google.com>
+ <20191218145136.172774-3-satyat@google.com>
+ <20191218212116.GA7476@magnolia>
+ <yq1y2v9e37b.fsf@oracle.com>
+ <20191218222726.GC47399@gmail.com>
+ <yq1fthhdttv.fsf@oracle.com>
+ <20200108140730.GC2896@infradead.org>
+ <20200108172629.GA232722@sol.localdomain>
+ <20200117083221.GA324@infradead.org>
+ <20200118051132.GC3290@sol.localdomain>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200118051132.GC3290@sol.localdomain>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Daniel Rosenberg <drosen@google.com>
+On Fri, Jan 17, 2020 at 09:11:32PM -0800, Eric Biggers wrote:
+> On Fri, Jan 17, 2020 at 12:32:21AM -0800, Christoph Hellwig wrote:
+> > 
+> > File systems don't move data around all that often (saying that with my
+> > fs developer hat on).  In traditional file systems only defragmentation
+> > will move data around, with extent refcounting it can also happen for
+> > dedup, and for file systems that write out of place data gets moved
+> > when parts of a block are rewritten, but in that case a read modify
+> > write cycle is perfomed in the Linux code anyway, so it will go through
+> > the inline encryption engined on the way and the way out.
+> > 
+> > So in other words - specifying an IV would be useful for some use cases,
+> > but I don't think it is a deal blocker. Even without that is is useful
+> > for block device level encryption, and could have some usefulness for
+> > file system encryption usage.
+> > 
+> > I think that adding an IV would eventually be useful, but fitting that
+> > into NVMe won't be easy, as you'd need to find a way to specify the IV
+> > for each submission queue entry, which requires growing it, or finding
+> > some way to extend it out of band.
+> 
+> Sure, people have even done inline crypto on ext4 before (downstream), using the
+> LBA for the IV.  But log-structured filesystems like f2fs move data blocks
+> around *without the encryption key*; and at least for fscrypt, f2fs support is
+> essential.  In any case it's also awkward having the physical on-disk location
+> determine the ciphertext on-disk, as then the result isn't fully controlled by
+> the encryption settings you set, but also based on where your filesystem is
+> located on-disk (with extra fun occurring if there's any sort of remapping layer
+> in between).  But sure, it's not *useless* to not be able to specify the IV,
+> it's just annoying and less useful.
+> 
+> [I was also a bit surprised to see that NVMe won't actually allow specify the
+> IV, as I thought you had objected to the naming of the INLINE_CRYPT_OPTIMIZED
+> fscrypt policy flag partly on the grounds that NVMe would support IVs longer
+> than the 64 bits that UFS is limited to.  Perhaps I misunderstood though.]
+> 
+> > > So let's not over-engineer this kernel patchset to support some broken
+> > > vaporware, please.
+> > 
+> > Not sharing bio fields for integrity and encryption actually keeps
+> > the patchset simpler (although uses more memory if both options are
+> > enabled).  So my main point here is to not over engineer it for broken
+> > premise that won't be true soon.
+> 
+> Well there are 3 options:
+> 
+> (a) Separate fields for bi_crypt_context and bi_integrity
+> (b) bi_crypt_context and bi_integrity in union
+> (c) One pointer that can support both features,
+>     e.g. linked list of tagged structs.
+> 
+> It sounds like you're advocating for (a), but I had misunderstood and thought
+> you're advocating for (c).  We'd of course be fine with (a) as it's the
+> simplest, but other people are saying they prefer (b).
+> 
+> Satya, to resolve this I think you should check how hard (b) is to implement --
+> i.e. is it easy, or is it really tricky to ensure the features are never used
+> together?  (Considering that it's probably not just a matter of whether any
+> hardware supports both features, as dm-integrity supports blk-integrity in
+> software and blk-crypto-fallback supports blk-crypto in software.)
+> 
+> - Eric
 
-Casefolded encrypted directories will use a new dirhash method that
-requires a secret key.  If the directory uses a v2 encryption policy,
-it's easy to derive this key from the master key using HKDF.  However,
-v1 encryption policies don't provide a way to derive additional keys.
+What I have right now for v7 of the patch series was my attempt at (b) (since
+some were saying they prefer it) - it may still be incomplete though because I
+missed something, but here's what I think it involved:
 
-Therefore, don't allow casefolding on directories that use a v1 policy.
-Specifically, make it so that trying to enable casefolding on a
-directory that has a v1 policy fails, trying to set a v1 policy on a
-casefolded directory fails, and trying to open a casefolded directory
-that has a v1 policy (if one somehow exists on-disk) fails.
+1) bi_crypt_context is never set after bi_integrity, so I don't check if
+   bi_integrity is set or not when setting bi_crypt_context - this keeps the
+   code cleaner when setting the bi_crypt_context.
 
-Signed-off-by: Daniel Rosenberg <drosen@google.com>
-[EB: improved commit message, updated fscrypt.rst, and other cleanups]
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/filesystems/fscrypt.rst |  4 +++-
- fs/crypto/hooks.c                     | 28 +++++++++++++++++++++++++++
- fs/crypto/policy.c                    |  7 +++++++
- fs/inode.c                            |  3 ++-
- include/linux/fscrypt.h               |  9 +++++++++
- 5 files changed, 49 insertions(+), 2 deletions(-)
+2) I made it error whenever we try to set bi_integrity on a bio with
+   REQ_BLK_CRYPTO.
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 9c53336d06a43..380a1be9550e1 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -513,7 +513,9 @@ FS_IOC_SET_ENCRYPTION_POLICY can fail with the following errors:
- - ``EEXIST``: the file is already encrypted with an encryption policy
-   different from the one specified
- - ``EINVAL``: an invalid encryption policy was specified (invalid
--  version, mode(s), or flags; or reserved bits were set)
-+  version, mode(s), or flags; or reserved bits were set); or a v1
-+  encryption policy was specified but the directory has the casefold
-+  flag enabled (casefolding is incompatible with v1 policies).
- - ``ENOKEY``: a v2 encryption policy was specified, but the key with
-   the specified ``master_key_identifier`` has not been added, nor does
-   the process have the CAP_FOWNER capability in the initial user
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index bb3b7fcfdd48a..d96a58f11d2b0 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -122,6 +122,34 @@ int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
- }
- EXPORT_SYMBOL_GPL(__fscrypt_prepare_lookup);
- 
-+/**
-+ * fscrypt_prepare_setflags() - prepare to change flags with FS_IOC_SETFLAGS
-+ * @inode: the inode on which flags are being changed
-+ * @oldflags: the old flags
-+ * @flags: the new flags
-+ *
-+ * The caller should be holding i_rwsem for write.
-+ *
-+ * Return: 0 on success; -errno if the flags change isn't allowed or if
-+ *	   another error occurs.
-+ */
-+int fscrypt_prepare_setflags(struct inode *inode,
-+			     unsigned int oldflags, unsigned int flags)
-+{
-+	struct fscrypt_info *ci;
-+	int err;
-+
-+	if (IS_ENCRYPTED(inode) && (flags & ~oldflags & FS_CASEFOLD_FL)) {
-+		err = fscrypt_require_key(inode);
-+		if (err)
-+			return err;
-+		ci = inode->i_crypt_info;
-+		if (ci->ci_policy.version != FSCRYPT_POLICY_V2)
-+			return -EINVAL;
-+	}
-+	return 0;
-+}
-+
- int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
- 			      unsigned int max_len,
- 			      struct fscrypt_str *disk_link)
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index f1cff83c151ac..cf2a9d26ef7da 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -124,6 +124,13 @@ static bool fscrypt_supported_v1_policy(const struct fscrypt_policy_v1 *policy,
- 					policy->filenames_encryption_mode))
- 		return false;
- 
-+	if (IS_CASEFOLDED(inode)) {
-+		/* With v1, there's no way to derive dirhash keys. */
-+		fscrypt_warn(inode,
-+			     "v1 policies can't be used on casefolded directories");
-+		return false;
-+	}
-+
- 	return true;
- }
- 
-diff --git a/fs/inode.c b/fs/inode.c
-index 96d62d97694ef..ea15c6d9f2742 100644
---- a/fs/inode.c
-+++ b/fs/inode.c
-@@ -12,6 +12,7 @@
- #include <linux/security.h>
- #include <linux/cdev.h>
- #include <linux/memblock.h>
-+#include <linux/fscrypt.h>
- #include <linux/fsnotify.h>
- #include <linux/mount.h>
- #include <linux/posix_acl.h>
-@@ -2252,7 +2253,7 @@ int vfs_ioc_setflags_prepare(struct inode *inode, unsigned int oldflags,
- 	    !capable(CAP_LINUX_IMMUTABLE))
- 		return -EPERM;
- 
--	return 0;
-+	return fscrypt_prepare_setflags(inode, oldflags, flags);
- }
- EXPORT_SYMBOL(vfs_ioc_setflags_prepare);
- 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 6fe8d0f96a4ac..3984eadd7023f 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -263,6 +263,8 @@ extern int __fscrypt_prepare_rename(struct inode *old_dir,
- 				    unsigned int flags);
- extern int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
- 				    struct fscrypt_name *fname);
-+extern int fscrypt_prepare_setflags(struct inode *inode,
-+				    unsigned int oldflags, unsigned int flags);
- extern int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
- 				     unsigned int max_len,
- 				     struct fscrypt_str *disk_link);
-@@ -519,6 +521,13 @@ static inline int __fscrypt_prepare_lookup(struct inode *dir,
- 	return -EOPNOTSUPP;
- }
- 
-+static inline int fscrypt_prepare_setflags(struct inode *inode,
-+					   unsigned int oldflags,
-+					   unsigned int flags)
-+{
-+	return 0;
-+}
-+
- static inline int __fscrypt_prepare_symlink(struct inode *dir,
- 					    unsigned int len,
- 					    unsigned int max_len,
+3) There is an issue with the way the blk-crypto-fallback interacts with bio
+   integrity. One of the goals of the fallback is to make it inline encryption
+   transparent to the upper layers (i.e. as far as the upper layers are
+   concerned there should be no difference whether there is actual hardware
+   inline encryption support or whether the fallback is used instead).
 
-base-commit: 50d9fad73a45a78f8b974b46307712556c9a42d3
--- 
-2.25.0
+   The issue is, when the fallback encrypts a bio, it clones the bio and
+   encrypts the pages in the clone, but the clone won't have a bi_crypt_context
+   (since otherwise, when the clone is resubmitted, blk-crypto would incorrectly
+   assume that the clone needs to be encrypted once again). When bi_integrity is
+   set on the clone, there won't be any error detected since REQ_BLK_CRYPTO
+   won't be set on the clone. However, if hardware inline encryption support had
+   been present, and the blk-crypto had not used the fallback, the same bio
+   would have bi_crypt_context set when we try to set bi_integrity, which would
+   then fail.
 
+   To fix this issue, I introduced another flag REQ_NO_SPECIAL (subject to being
+   renamed when I think of/someone suggests a better name), which when set on
+   the bio, indicates that bi_integrity (and in future whatever other fields
+   share the same union, shouldn't be set on that bio. I can probably do away
+   with the new flag and just set REQ_BLK_CRYPTO and also set
+   bi_crypt_context = NULL to signify the same thing, but either way, it doesn't
+   seem like a very clean solution to me.
+
+4) I don't think there's actually an issue with dm-integrity as long as when we
+   add support for inline encryption to dm, we ensure that if any of the child
+   targets is dm-integrity, then the dm device says it doesn't support any
+   crypto mode. This way, encryption is always consistently done before
+   integrity calculation, which is always consistently done before decryption
+   (and when dm-integrity is not using the internal hash, then the bio will fail
+   because of (2), but this is still consistent whether or not hardware inline
+   encryption support is present.
+
+However, even if we decide to do (a), I'll still need to ensure that when bio
+integrity and blk-crypto are used together, the results are consistent
+regardless of whether hardware inline crypto support is present. So I either
+disallow bio integrity to be used with blk-crypto, in which case I'll need to
+do something similar to what I had to do in (3) like introduce REQ_NO_SPECIAL
+and we also lose the advantage of not having the two fields shared in a union,
+or I allow them to be used together while ensuring consistent results by
+maybe doing something like forcing blk-crypto to fallback to the crypto API
+whenever the target device for a bio has a bio integrity profile (and whatever
+checks are done in bio_integrity_prep).
+
+So I'm not sure if (a) is a lot easier or cleaner. But unlike (b), (a)
+does give us the option of using the two features together....if it seems
+likely that we'll want to use both these features together at some point,
+then maybe I should switch back to (a), and for now just disallow the two
+features from being used together since that's still easier than trying to get
+them both to work together, and once we know for sure that we want to use both
+together, we can make the necessary additions then?
