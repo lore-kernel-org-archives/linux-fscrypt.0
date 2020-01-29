@@ -2,146 +2,113 @@ Return-Path: <SRS0=Ej76=3S=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 33C06C33C9E
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 29 Jan 2020 00:43:55 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F28E8C33C9E
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 29 Jan 2020 00:45:46 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 0333A2467E
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 29 Jan 2020 00:43:54 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id C2B43206D4
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 29 Jan 2020 00:45:46 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1580258635;
-	bh=Sz/j53Dlf4MmHfKEkkCGhQTLBEmti0a764YSF89K/1Q=;
-	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=bPHxZLvjxU/CAHfV4UKpInAkCDoen+QzWVha8v7E8jVI9hJuAR5XdZBXl/0GD56x7
-	 XgcQKt/cFvxp+2cRpHI1Nkku9FH7uRBmkdHl7QMVBeJTUi/U37jdBejG7jplbSGNrw
-	 iUwe8abNDqsa82ptuoH8UiRg0MZSCNhkwiv+0Mi8=
+	s=default; t=1580258746;
+	bh=CjLApc0NvFYZVZkSpwTwdDV2rpmlmy+MjXIUnYqAFDs=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=FDVHlZEJiM0p9v9uBvr5mJnO29BurvBJQQtemE68NTe4cVRAfQNJCaywi/lsACRRn
+	 W164EIYl7TWVGox1PFz34sK0yyARuBfqLNFyMO2nQroxC9DOHOskS5FCS0kNi3rhFB
+	 xmyaFhCCKmxs0fbQiu0Vqulpd1W+hQnKr6M1DunY=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726948AbgA2Any (ORCPT
+        id S1726735AbgA2Apq (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 28 Jan 2020 19:43:54 -0500
-Received: from mail.kernel.org ([198.145.29.99]:45820 "EHLO mail.kernel.org"
+        Tue, 28 Jan 2020 19:45:46 -0500
+Received: from mail.kernel.org ([198.145.29.99]:56204 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726427AbgA2Any (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 28 Jan 2020 19:43:54 -0500
-Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        id S1726583AbgA2Apq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 28 Jan 2020 19:45:46 -0500
+Received: from gmail.com (unknown [104.132.1.77])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 6B6B720663;
-        Wed, 29 Jan 2020 00:43:53 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 926DF20663;
+        Wed, 29 Jan 2020 00:45:45 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1580258633;
-        bh=Sz/j53Dlf4MmHfKEkkCGhQTLBEmti0a764YSF89K/1Q=;
-        h=From:To:Cc:Subject:Date:From;
-        b=y23wHW0qmOq8PGEu1lrBgUSk6oKEaoLyUulGN26+Q6zAdCat0F2mM3V5dXWP3Q+KE
-         t0AY5BXS+uB+rznVrnEU7ltxPbUHSfDqUCOYQ+LDw8Sr12HBX17mprB2kXysw4xCCS
-         tPbC7UhAAXsMQXkYa5cI2Q+2nIYSXcBVMe+6xrR4=
+        s=default; t=1580258745;
+        bh=CjLApc0NvFYZVZkSpwTwdDV2rpmlmy+MjXIUnYqAFDs=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=jOwETRWmOMUtfzMhYA0lgB95xE4/0MZhQ20ZDCh5gR/Uiz2JlrW8cl0pXI2KcKljB
+         +w2DtrZd3GF1ik+lsKQcSOs+fXAEpgatQddiKVDvv+sEaiCWhsHcmvX0qWuzsCsJ+B
+         xeMHWTc66mZjCgK7YU5Hpq1U3E/Z4xkUb2KaEUx0=
+Date:   Tue, 28 Jan 2020 16:45:44 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     fstests@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org, keyrings@vger.kernel.org,
-        Murphy Zhou <xzhou@redhat.com>
-Subject: [PATCH] generic/581: try to avoid flakiness in keys quota test
-Date:   Tue, 28 Jan 2020 16:42:51 -0800
-Message-Id: <20200129004251.133747-1-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.25.0.341.g760bfbb309-goog
+To:     Murphy Zhou <xzhou@redhat.com>
+Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH v3 6/9] generic: add test for non-root use of fscrypt API
+ additions
+Message-ID: <20200129004543.GB224488@gmail.com>
+References: <20191015181643.6519-1-ebiggers@kernel.org>
+ <20191015181643.6519-7-ebiggers@kernel.org>
+ <20200119054515.3mxrpky7fiegnj5s@xzhoux.usersys.redhat.com>
+ <20200119182542.GA913@sol.localdomain>
+ <20200120022057.6bgrpd5iu34455ty@xzhoux.usersys.redhat.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200120022057.6bgrpd5iu34455ty@xzhoux.usersys.redhat.com>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Mon, Jan 20, 2020 at 10:20:57AM +0800, Murphy Zhou wrote:
+> On Sun, Jan 19, 2020 at 10:25:42AM -0800, Eric Biggers wrote:
+> > On Sun, Jan 19, 2020 at 01:45:15PM +0800, Murphy Zhou wrote:
+> > > Hi Eric,
+> > > 
+> > > On Tue, Oct 15, 2019 at 11:16:40AM -0700, Eric Biggers wrote:
+> > > > From: Eric Biggers <ebiggers@google.com>
+> > > > 
+> > > > Test non-root use of the fscrypt filesystem-level encryption keyring and
+> > > > v2 encryption policies.
+> > > 
+> > > This testcase now fails on latest Linus tree with latest e2fsprogs
+> > > on ext4:
+> > > 
+> > > FSTYP         -- ext4
+> > > PLATFORM      -- Linux/x86_64 dell-pesc430-01 5.4.0+ #1 SMP Mon Nov 25 16:40:55 EST 2019
+> > > MKFS_OPTIONS  -- /dev/sda3
+> > > MOUNT_OPTIONS -- -o acl,user_xattr -o context=system_u:object_r:nfs_t:s0 /dev/sda3 /mnt/xfstests/mnt2
+> > > generic/581	- output mismatch (see /var/lib/xfstests/results//generic/581.out.bad)
+> > >     --- tests/generic/581.out	2019-11-25 20:30:04.536051638 -0500
+> > >     +++ /var/lib/xfstests/results//generic/581.out.bad	2019-11-26 01:04:17.318332220 -0500
+> > >     @@ -33,7 +33,7 @@
+> > >      Added encryption key
+> > >      Added encryption key
+> > >      Added encryption key
+> > >     -Error adding encryption key: Disk quota exceeded
+> > >     +Added encryption key
+> > >      
+> > >      # Adding key as root
+> > > ...
+> > > 
+> > > A rough looking back shows that this probably started since your fscrypt
+> > > update for 5.5, added support for IV_INO_LBLK_64 encryption policies.
+> > > 
+> > > I guess you are aware of this :-)
+> > > 
+> > 
+> > Nope, this has been passing for me.  I don't see how this can have anything to
+> > do with the fscrypt update for 5.5.  I'm guessing this is a race condition in
+> > the test caused by the kernel's keyrings subsystem reclaiming the keys quota
+> > asynchronously.  I'll see if I can find a way to reproduce it and make the test
+> > more reliable.
+> 
+> OK, Thanks for the info. I'll try to bisect.
+> 
 
-generic/581 passes for me, but Murphy Zhou reported that it started
-failing for him.  The part that failed is the part that sets the key
-quota to the fsgqa user's current number of keys plus 5, then tries to
-add 6 filesystem encryption keys as the fsgqa user.  Adding the 6th key
-unexpectedly succeeded.
+Can you check whether the test passes reliably for you if you apply
+https://lkml.kernel.org/fstests/20200129004251.133747-1-ebiggers@kernel.org/?
 
-What I think is happening is that because the kernel's keys subsystem
-garbage-collects keys asynchronously, the quota may be freed up later
-than expected after removing fscrypt keys.  Thus the test is flaky.
+Thanks,
 
-It would be nice to fix this in the kernel, but unfortunately there
-doesn't seem to be an easy fix, and the keys subsystem has always worked
-this way.  And it seems unlikely to cause real-world problems, as the
-keys quota really just exists to prevent denial-of-service attacks.
-
-So, for now just try to make the test more reliable by:
-
-(1) Reduce the scope of the modified keys quota to just the part of the
-    test that needs it.
-(2) Before getting the current number of keys for the purpose of setting
-    the quota, wait for any invalidated keys to be garbage-collected.
-
-Tested with a kernel that has a 1 second sleep hacked into the beginning
-of key_garbage_collector().  With that, this test fails before this
-patch and passes afterwards.
-
-Reported-by: Murphy Zhou <xzhou@redhat.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/581 | 29 +++++++++++++++++++++--------
- 1 file changed, 21 insertions(+), 8 deletions(-)
-
-diff --git a/tests/generic/581 b/tests/generic/581
-index 89aa03c2..bc49eadc 100755
---- a/tests/generic/581
-+++ b/tests/generic/581
-@@ -45,14 +45,6 @@ _require_scratch_encryption -v 2
- _scratch_mkfs_encrypted &>> $seqres.full
- _scratch_mount
- 
--# Set the fsgqa user's key quota to their current number of keys plus 5.
--orig_keys=$(_user_do "awk '/^[[:space:]]*$(id -u fsgqa):/{print \$4}' /proc/key-users | cut -d/ -f1")
--: ${orig_keys:=0}
--echo "orig_keys=$orig_keys" >> $seqres.full
--orig_maxkeys=$(</proc/sys/kernel/keys/maxkeys)
--keys_to_add=5
--echo $((orig_keys + keys_to_add)) > /proc/sys/kernel/keys/maxkeys
--
- dir=$SCRATCH_MNT/dir
- 
- raw_key=""
-@@ -98,6 +90,24 @@ _user_do_rm_enckey $SCRATCH_MNT $keyid
- 
- _scratch_cycle_mount	# Clear all keys
- 
-+# Wait for any invalidated keys to be garbage-collected.
-+i=0
-+while grep -E -q '^[0-9a-f]+ [^ ]*i[^ ]*' /proc/keys; do
-+	if ((++i >= 20)); then
-+		echo "Timed out waiting for invalidated keys to be GC'ed" >> $seqres.full
-+		break
-+	fi
-+	sleep 0.5
-+done
-+
-+# Set the user key quota to the fsgqa user's current number of keys plus 5.
-+orig_keys=$(_user_do "awk '/^[[:space:]]*$(id -u fsgqa):/{print \$4}' /proc/key-users | cut -d/ -f1")
-+: ${orig_keys:=0}
-+echo "orig_keys=$orig_keys" >> $seqres.full
-+orig_maxkeys=$(</proc/sys/kernel/keys/maxkeys)
-+keys_to_add=5
-+echo $((orig_keys + keys_to_add)) > /proc/sys/kernel/keys/maxkeys
-+
- echo
- echo "# Testing user key quota"
- for i in `seq $((keys_to_add + 1))`; do
-@@ -106,6 +116,9 @@ for i in `seq $((keys_to_add + 1))`; do
- 	    | sed 's/ with identifier .*$//'
- done
- 
-+# Restore the original key quota.
-+echo "$orig_maxkeys" > /proc/sys/kernel/keys/maxkeys
-+
- rm -rf $dir
- echo
- _user_do "mkdir $dir"
--- 
-2.25.0.341.g760bfbb309-goog
-
+- Eric
