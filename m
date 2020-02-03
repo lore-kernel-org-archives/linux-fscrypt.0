@@ -2,50 +2,52 @@ Return-Path: <SRS0=8pqD=3X=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C5319C3524D
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Feb 2020 18:19:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 053EAC35249
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Feb 2020 18:19:14 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 97EB621582
+	by mail.kernel.org (Postfix) with ESMTP id CBFF520CC7
 	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Feb 2020 18:19:13 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
 	s=default; t=1580753953;
-	bh=PRpA5nojw0LgQoNjUD6Ljs3ht9OPRMhDWbwEkI/W0gQ=;
-	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=prbNfrOziLB4XS1yQtiLrvzaHc9ShNu1bTzJ7MWnDKqhQvjuHckYP2FPcdxdinHi8
-	 UZow3yY6//+8oHUadbws+3dfo0pgUClEQr3sEsh/2YwgX23dhTu/0EIr4MZvog15k3
-	 f7KF6+vdaeDpHub7iVt9ghfQdkD4Y0kTbUooXMRU=
+	bh=WU7BsIvYhoveOrZ4wNAlFXzim8ittcmhupEoatpr+No=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=xFDe/qf/xKyYjG9TaDXRjugqEcPCMhVDERo3w8DLa+5UmGHH7kTV6iUvyuKu+8nZ4
+	 p9o82sKQC0gJ6DdJcu9jTzNCDhis6pejtAKh5Lq+OB45vvKAhmQMmvERcCijUcyrLR
+	 NXqSPpXdAxxXjEiM81SJr0FC6D1fXK221XTIbSlQ=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728900AbgBCSTN (ORCPT
+        id S1729594AbgBCSTN (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Mon, 3 Feb 2020 13:19:13 -0500
-Received: from mail.kernel.org ([198.145.29.99]:33396 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:33398 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727936AbgBCSTM (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 3 Feb 2020 13:19:12 -0500
+        id S1728419AbgBCSTN (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 3 Feb 2020 13:19:13 -0500
 Received: from ebiggers-linuxstation.mtv.corp.google.com (unknown [104.132.1.77])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 50DED20838;
+        by mail.kernel.org (Postfix) with ESMTPSA id 8E8332086A;
         Mon,  3 Feb 2020 18:19:12 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
         s=default; t=1580753952;
-        bh=PRpA5nojw0LgQoNjUD6Ljs3ht9OPRMhDWbwEkI/W0gQ=;
-        h=From:To:Cc:Subject:Date:From;
-        b=D4pm7jG2h3mfu5kDYwCenB/eTHrFUrthPWKvl8Tw+feXHZ2klVB3k5g4pmg/pTdAh
-         WOKUcMBP1Tu0q8RuoOuynQadz+nc85NvhwoJJx//un1rd6BfRh/BnscyXY2Z8doBJY
-         WioOVC+ajbXcUL0TqlhYWEPdObS/o7UKEOBOF+70=
+        bh=WU7BsIvYhoveOrZ4wNAlFXzim8ittcmhupEoatpr+No=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=x+50PF8SM+1VXw8cU2ohpVfjODhnlPAdHFzanHMvXTG13QO1Xai0rUzyIEv0xk2Sf
+         1DxpRqwYGmnbM64mEr68kcy86GS0ZmRmgh/xfcSBgkGQsWOeONhQGUTlIzH2kKIeP2
+         rtY7E9UlR2clxsJCMJo1dxCIR8HDOvTaXNOGIQH4=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, keyrings@vger.kernel.org
-Subject: [PATCH v2 0/3] xfstests: test adding filesystem-level fscrypt key via key_id
-Date:   Mon,  3 Feb 2020 10:18:52 -0800
-Message-Id: <20200203181855.42987-1-ebiggers@kernel.org>
+Subject: [PATCH v2 1/3] common/rc: handle option with argument in _require_xfs_io_command()
+Date:   Mon,  3 Feb 2020 10:18:53 -0800
+Message-Id: <20200203181855.42987-2-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.25.0.341.g760bfbb309-goog
+In-Reply-To: <20200203181855.42987-1-ebiggers@kernel.org>
+References: <20200203181855.42987-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -53,44 +55,37 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This series adds a test which tests adding a key to a filesystem's
-fscrypt keyring via an "fscrypt-provisioning" keyring key.  This is an
-alternative to the normal method where the raw key is given directly.
+From: Eric Biggers <ebiggers@google.com>
 
-The needed kernel support was merged in 5.6, so currently this test
-needs the latest mainline kernel to run.
+Fix _require_xfs_io_command() to handle options that take arguments when
+the argument is shown in the help text.  E.g., it didn't work to run:
 
-This test also depends on an xfs_io patch which adds the '-k' option to
-the 'add_enckey' command, e.g.:
+	_require_xfs_io_command "add_enckey" "-k"
 
-        xfs_io -c "add_enckey -k KEY_ID" MOUNTPOINT
+because the relevant line of the help text is:
 
-This test is skipped if the needed kernel or xfs_io support is absent.
+	-k KEY_ID -- ID of fscrypt-provisioning key containing the raw key
 
-This has been tested on ext4, f2fs, and ubifs.
+... but the grep command only matched "-k --", not "-k KEY_ID --".
 
-This series can also be retrieved from
-https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git
-tag "fscrypt-provisioning_2020-02-03".
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ common/rc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-Changed since v1:
-  - Fixed incorrect detection of kernel support.
-
-Eric Biggers (3):
-  common/rc: handle option with argument in _require_xfs_io_command()
-  common/encrypt: move constant test key to common code
-  generic: test adding filesystem-level fscrypt key via key_id
-
- common/encrypt        |  95 ++++++++++++++++++++++----
- common/rc             |   2 +-
- tests/generic/580     |  17 ++---
- tests/generic/806     | 155 ++++++++++++++++++++++++++++++++++++++++++
- tests/generic/806.out |  73 ++++++++++++++++++++
- tests/generic/group   |   1 +
- 6 files changed, 315 insertions(+), 28 deletions(-)
- create mode 100644 tests/generic/806
- create mode 100644 tests/generic/806.out
-
+diff --git a/common/rc b/common/rc
+index b4a77a21..0306e93c 100644
+--- a/common/rc
++++ b/common/rc
+@@ -2248,7 +2248,7 @@ _require_xfs_io_command()
+ 	[ -n "$param" ] || return
+ 
+ 	if [ -z "$param_checked" ]; then
+-		$XFS_IO_PROG -c "help $command" | grep -q "^ $param --" || \
++		$XFS_IO_PROG -c "help $command" | grep -E -q "^ $param ([a-zA-Z_]+ )?--" || \
+ 			_notrun "xfs_io $command doesn't support $param"
+ 	else
+ 		# xfs_io could result in "command %c not supported" if it was
 -- 
 2.25.0.341.g760bfbb309-goog
 
