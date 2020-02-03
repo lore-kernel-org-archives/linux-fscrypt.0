@@ -2,91 +2,79 @@ Return-Path: <SRS0=8pqD=3X=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-3.7 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,UNPARSEABLE_RELAY
+X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
 	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 40643C3F68F
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Feb 2020 01:46:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AD54BC3524F
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Feb 2020 09:16:01 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 17439205F4
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Feb 2020 01:46:09 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 737DD2080D
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Feb 2020 09:16:01 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="Ij6N7tAj"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727160AbgBCBqI (ORCPT
+        id S1727802AbgBCJQA (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 2 Feb 2020 20:46:08 -0500
-Received: from bhuna.collabora.co.uk ([46.235.227.227]:46746 "EHLO
-        bhuna.collabora.co.uk" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726971AbgBCBqI (ORCPT
+        Mon, 3 Feb 2020 04:16:00 -0500
+Received: from bombadil.infradead.org ([198.137.202.133]:56466 "EHLO
+        bombadil.infradead.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726244AbgBCJP7 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 2 Feb 2020 20:46:08 -0500
-Received: from [127.0.0.1] (localhost [127.0.0.1])
-        (Authenticated sender: krisman)
-        with ESMTPSA id 085A328BEFA
-From:   Gabriel Krisman Bertazi <krisman@collabora.com>
-To:     Daniel Rosenberg <drosen@google.com>
-Cc:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
-        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
+        Mon, 3 Feb 2020 04:15:59 -0500
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+        d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
+        :References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+        Content-Transfer-Encoding:Content-ID:Content-Description;
+        bh=2WbZ053ra9RftP4cOTLZDHvYMDipdLzrXoaF3acCxEw=; b=Ij6N7tAj9PNAsgWcYPONFwkGZF
+        6/rsne7c76sZHSwBndrw6DFgF3uBY46PqcDbd+uKJmjLT9wDAVNDx8sRlDLgx5DhezaRIdS/dBRjB
+        9giP2kzRCHbCjI8Mj06U8v5KNWqPCF3dEGOTL5qpFe721cYEOYoxEs3V4wOKHUJiLSlyBWdQc2GkB
+        n80ACVEhQIaFwxrD6aoy8L6rbIihA+yFTg2OsA74L0ZLb/l1C5ZX0ILlQYpxyIj4lha7cqGPC4gKC
+        d8Dd6GHgEQozCR0p+BobWCl6EVFm1aPrqM+NnSgBu/8CwEkE5hWgeXljriobRDRdgJwsCvR09tpa9
+        vZpgFz5A==;
+Received: from hch by bombadil.infradead.org with local (Exim 4.92.3 #3 (Red Hat Linux))
+        id 1iyXpm-0000Mh-HM; Mon, 03 Feb 2020 09:15:58 +0000
+Date:   Mon, 3 Feb 2020 01:15:58 -0800
+From:   Christoph Hellwig <hch@infradead.org>
+To:     Satya Tangirala <satyat@google.com>
+Cc:     Christoph Hellwig <hch@infradead.org>, linux-block@vger.kernel.org,
+        linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-fsdevel@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
-        Eric Biggers <ebiggers@kernel.org>,
-        linux-fscrypt@vger.kernel.org,
-        Alexander Viro <viro@zeniv.linux.org.uk>,
-        Richard Weinberger <richard@nod.at>,
-        linux-mtd@lists.infradead.org,
-        Andreas Dilger <adilger.kernel@dilger.ca>,
-        Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org,
-        linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        kernel-team@android.com
-Subject: Re: [PATCH v6 1/5] unicode: Add standard casefolded d_ops
-Organization: Collabora
-References: <20200128230328.183524-1-drosen@google.com>
-        <20200128230328.183524-2-drosen@google.com>
-Date:   Sun, 02 Feb 2020 20:45:59 -0500
-In-Reply-To: <20200128230328.183524-2-drosen@google.com> (Daniel Rosenberg's
-        message of "Tue, 28 Jan 2020 15:03:24 -0800")
-Message-ID: <85sgjsxx2g.fsf@collabora.com>
-User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.1 (gnu/linux)
+        Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
+        Kuohong Wang <kuohong.wang@mediatek.com>,
+        Kim Boojin <boojin.kim@samsung.com>
+Subject: Re: [PATCH v6 0/9] Inline Encryption Support
+Message-ID: <20200203091558.GA28527@infradead.org>
+References: <20191218145136.172774-1-satyat@google.com>
+ <20200108140556.GB2896@infradead.org>
+ <20200108184305.GA173657@google.com>
+ <20200117085210.GA5473@infradead.org>
+ <20200201005341.GA134917@google.com>
 MIME-Version: 1.0
-Content-Type: text/plain
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200201005341.GA134917@google.com>
+X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Daniel Rosenberg <drosen@google.com> writes:
+On Fri, Jan 31, 2020 at 04:53:41PM -0800, Satya Tangirala wrote:
+> So I tried reading through more of blk-mq and the IO schedulers to figure
+> out how to do this. As far as I can tell, requests may be merged with
+> each other until they're taken off the scheduler. So ideally, we'd
+> program a keyslot for a request when it's taken off the scheduler, but
+> this happens from within an atomic context. Otoh, programming a keyslot
+> might cause the thread to sleep (in the event that all keyslots are in use
+> by other in-flight requests). Unless I'm missing something, or you had some
+> other different idea in mind, I think it's a lot easier to stick to letting
+> blk-crypto program keyslots and manage them per-bio...
 
-> diff --git a/include/linux/unicode.h b/include/linux/unicode.h
-> index 990aa97d80496..5de313abeaf98 100644
-> --- a/include/linux/unicode.h
-> +++ b/include/linux/unicode.h
-> @@ -4,6 +4,8 @@
->  
->  #include <linux/init.h>
->  #include <linux/dcache.h>
-> +#include <linux/fscrypt.h>
-> +#include <linux/fs.h>
->  
->  struct unicode_map {
->  	const char *charset;
-> @@ -30,4 +32,19 @@ int utf8_casefold(const struct unicode_map *um, const struct qstr *str,
->  struct unicode_map *utf8_load(const char *version);
->  void utf8_unload(struct unicode_map *um);
->  
-> +int utf8_ci_d_hash(const struct dentry *dentry, struct qstr *str);
-> +int utf8_ci_d_compare(const struct dentry *dentry, unsigned int len,
-> +			  const char *str, const struct qstr *name);
-
-
-I don't think fs/unicode is the right place for these very specific
-filesystem functions, just because they happen to use unicode.  It is an
-encoding library, it doesn't care about dentries, nor should know how to
-handle them.  It exposes a simple api to manipulate and convert utf8 strings.
-
-I saw change was after the desire to not have these functions polluting
-the VFS hot path, but that has nothing to do with placing them here.
-
-Would libfs be better?  or a casefolding library in fs/casefold.c?
-
-
--- 
-Gabriel Krisman Bertazi
+But as far as I understand from reading the code it only sleeps because
+it waits for another key slot to be released.  Which is exactly like
+any other resource constraint in the storage device.  In that case
+->queue_rq returns BLK_STS_RESOURCE (or you do the equivalent in the
+blk-mq code) and the queue gets woken again once the resource is
+available.
