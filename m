@@ -2,84 +2,78 @@ Return-Path: <SRS0=edTE=3Z=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.8 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B4557C352A2
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  5 Feb 2020 18:07:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9492AC3F68F
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  5 Feb 2020 20:47:15 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 83066218AC
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  5 Feb 2020 18:07:18 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="K5B5B1Wr"
+	by mail.kernel.org (Postfix) with ESMTP id 618502082E
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  5 Feb 2020 20:47:15 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1580935635;
+	bh=+ZS+NN3+LYtwsrpUFYDvOFcmW2Zu5fsUZcqSPkhg4lU=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=E5tSLS74GDLmbK4ljOw9Hs0x3vTKkrqmKJkxxUrYqV8k37xmL6pNG4mR8NjPGNG8K
+	 aOYzLerCysxrZNhNMlOuvgEWZVtCI3uWmNJsi90k7F3V77EGiagoZcQvM30GIKMzCR
+	 vlaqFo5UXeymbKqV/nCnS/4P1b0cKsjrsKMUupkg=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727129AbgBESHR (ORCPT
+        id S1727305AbgBEUrO (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 5 Feb 2020 13:07:17 -0500
-Received: from bombadil.infradead.org ([198.137.202.133]:39506 "EHLO
-        bombadil.infradead.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727079AbgBESHR (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 5 Feb 2020 13:07:17 -0500
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
-        d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
-        :References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
-        Content-Transfer-Encoding:Content-ID:Content-Description;
-        bh=gs10jRZHLwjIOjYVjU5UoDYIxulcXGovME2eBvzaEu0=; b=K5B5B1Wr2NgBnfmyO9DXR16gbP
-        UWtIGk1NOt9+nnJLa9z8Hx9aSHXAN28QVk1+j81UZ4ps+KIX9PiL9RpepFY/llR8vFYM+VjxtlFKS
-        RDOAmrCz0xLwUfEcXOpE2w90vsqxK/HjozjZTrvXiNdfa3RLhAyBfl4ZvQeuUtR45EfyP1J4NEb91
-        ZQqGP8cVqKIEOApdbh+sWw7rj5D3LQJcioXoE1HLIt3g3pw4KsToRoLAKhhQafKmFFHfG7FQhSrxz
-        jPx50gFpHpM6INp9TKyjx7BSF1JuGgUr03bW8xgOuoy7ti96pTjdN62goLKbranqk9g+U3q97w5jc
-        i5/J1IIA==;
-Received: from hch by bombadil.infradead.org with local (Exim 4.92.3 #3 (Red Hat Linux))
-        id 1izP52-0001RS-L0; Wed, 05 Feb 2020 18:07:16 +0000
-Date:   Wed, 5 Feb 2020 10:07:16 -0800
-From:   Christoph Hellwig <hch@infradead.org>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     Christoph Hellwig <hch@infradead.org>,
-        Satya Tangirala <satyat@google.com>,
-        linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
+        Wed, 5 Feb 2020 15:47:14 -0500
+Received: from mail.kernel.org ([198.145.29.99]:57546 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726534AbgBEUrO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 5 Feb 2020 15:47:14 -0500
+Received: from gmail.com (unknown [104.132.1.77])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 294D02072B;
+        Wed,  5 Feb 2020 20:47:13 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1580935633;
+        bh=+ZS+NN3+LYtwsrpUFYDvOFcmW2Zu5fsUZcqSPkhg4lU=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=gjvMPyIRhoMGBaCI7MUINX99uO8A+WSahEkQxe0NwqVase8Kt3OdsPyTgQdAddwpe
+         sPqnpxP6yhP0i05boyaZUGSbzavu3uTCqEKyTBI1gAUbygv8J4fhmq4I+NrO1bIdbO
+         3fvVcT2HL0T8TSI8+QzmXbu1arwf2m7l9btJBDKA=
+Date:   Wed, 5 Feb 2020 12:47:11 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Satya Tangirala <satyat@google.com>
+Cc:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
         Kuohong Wang <kuohong.wang@mediatek.com>,
         Kim Boojin <boojin.kim@samsung.com>
 Subject: Re: [PATCH v6 6/9] scsi: ufs: Add inline encryption support to UFS
-Message-ID: <20200205180716.GB32041@infradead.org>
+Message-ID: <20200205204711.GA112437@gmail.com>
 References: <20191218145136.172774-1-satyat@google.com>
  <20191218145136.172774-7-satyat@google.com>
- <20200117135808.GB5670@infradead.org>
- <20200118052720.GD3290@sol.localdomain>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200118052720.GD3290@sol.localdomain>
-X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
+In-Reply-To: <20191218145136.172774-7-satyat@google.com>
+User-Agent: Mutt/1.10.1 (2018-07-13)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Jan 17, 2020 at 09:27:20PM -0800, Eric Biggers wrote:
-> On Fri, Jan 17, 2020 at 05:58:08AM -0800, Christoph Hellwig wrote:
-> > On Wed, Dec 18, 2019 at 06:51:33AM -0800, Satya Tangirala wrote:
-> > > Wire up ufshcd.c with the UFS Crypto API, the block layer inline
-> > > encryption additions and the keyslot manager.
-> > 
-> > I think this patch should be merged into the previous patch, as the
-> > previous one isn't useful without wiring it up.
-> > 
-> 
-> Satya actually did this originally but then one of the UFS maintainers requested
-> the separate patches for (1) new registers, (2) ufshcd-crypto, and (3) ufshcd.c:
-> https://lore.kernel.org/linux-block/SN6PR04MB49259F70346E2055C9E0F401FC310@SN6PR04MB4925.namprd04.prod.outlook.com/
-> 
-> So, he's not going to be able to make everyone happy :-)
-> 
-> I personally would be fine with either way.
+On Wed, Dec 18, 2019 at 06:51:33AM -0800, Satya Tangirala wrote:
+> @@ -2472,6 +2492,13 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
+>  	lrbp->task_tag = tag;
+>  	lrbp->lun = ufshcd_scsi_to_upiu_lun(cmd->device->lun);
+>  	lrbp->intr_cmd = !ufshcd_is_intr_aggr_allowed(hba) ? true : false;
+> +
+> +	err = ufshcd_prepare_lrbp_crypto(hba, cmd, lrbp);
+> +	if (err) {
+> +		lrbp->cmd = NULL;
+> +		clear_bit_unlock(tag, &hba->lrb_in_use);
+> +		goto out;
+> +	}
 
-Oh well, the split between adding functions and callers is highly
-unusual for Linux development.  Adding the defines I can see,
-especially if they are large (which these aren't).  But you'll need
-to get this accepted by the UFS folks, so I'll shut up now.
+The error path here is missing a call to ufshcd_release().
+
+- Eric
