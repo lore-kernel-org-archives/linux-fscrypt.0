@@ -1,101 +1,167 @@
-Return-Path: <SRS0=edTE=3Z=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=Mq6R=34=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=no
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 94FD4C352A1
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  5 Feb 2020 23:40:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 89381C3F68F
+	for <linux-fscrypt@archiver.kernel.org>; Sat,  8 Feb 2020 01:34:46 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 69085217BA
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  5 Feb 2020 23:40:27 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5F45D21741
+	for <linux-fscrypt@archiver.kernel.org>; Sat,  8 Feb 2020 01:34:46 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Eucncfy0"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ZzptqxUs"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727492AbgBEXk1 (ORCPT
+        id S1727144AbgBHBeq (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 5 Feb 2020 18:40:27 -0500
-Received: from mail-lf1-f66.google.com ([209.85.167.66]:46253 "EHLO
-        mail-lf1-f66.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727474AbgBEXk0 (ORCPT
+        Fri, 7 Feb 2020 20:34:46 -0500
+Received: from mail-pj1-f73.google.com ([209.85.216.73]:38626 "EHLO
+        mail-pj1-f73.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727113AbgBHBep (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 5 Feb 2020 18:40:26 -0500
-Received: by mail-lf1-f66.google.com with SMTP id z26so2734159lfg.13
-        for <linux-fscrypt@vger.kernel.org>; Wed, 05 Feb 2020 15:40:25 -0800 (PST)
+        Fri, 7 Feb 2020 20:34:45 -0500
+Received: by mail-pj1-f73.google.com with SMTP id 14so2347255pjo.3
+        for <linux-fscrypt@vger.kernel.org>; Fri, 07 Feb 2020 17:34:45 -0800 (PST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
-         :cc;
-        bh=eImnorc+E72Ebn4XEF1SUg6cxpdpF8frzXw7k6RoRcE=;
-        b=Eucncfy0bfw2XSNvy3spLaCcbAJQXGXLfKwBFip2IDIQLXmUo0Oshd2FbgLS3FZnZK
-         9niWI9xMAjS7AulP2kZjWHny2XgDM4S//hdCeWXKGIFCEUzBUo9M1OOddK2Eg26bMsyB
-         DveOA8IJDdhnBk9uzpiAv8bDzUzDwCELfF16cn3TKe90OqY8nddNTeRzv5gtlrc0uFPh
-         ptbM+AfLEnnLiVD9BHUxlxFOKknvZ/WKsce5pwcjNl6ABhJJ2svy6h+x4B1RvPJIsTC1
-         B661E2LWjz74WjBpodNkt6YPeBFT46XbVetSnJ+7xHdI0sIyKm27coJnchHIyhuRidtM
-         TUgA==
+        h=date:message-id:mime-version:subject:from:to:cc;
+        bh=GmdJt27134kNRYXiKp4wrB+O4TXMZQXM52BZBGOfEtM=;
+        b=ZzptqxUsermKYJMyiUDjvBiGxUIdwqTzJfy+wNJraQ/fqxPgGbS6BGRKrTpYZT99NP
+         LQVDbxgl6rqVunRCW0ICPGiKpNThIj+TdvQ5TjjeSLkpDlJtuWqpEnxBlBrS2HEtG+RW
+         9z2HN6g50wLJeFY9fmYqHHVVeKmyWOB0q7ii4xnMViegdwpFM70+FfqSZe7YAxDz9qPz
+         rQI68XvesZcSELHJhYuD8Anx5KlcByOodivzB6VfODhyuo8qsoR7iOlqkI0zS2IW8J1A
+         G74nrd0ARErEc3uP+liYKFfxifqkv4AUuLVaYmPTGE7ECQxADA+maD2kLEzIxEDZMkLy
+         HKfQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
-         :message-id:subject:to:cc;
-        bh=eImnorc+E72Ebn4XEF1SUg6cxpdpF8frzXw7k6RoRcE=;
-        b=udkm2Obhcj9yFpGaWeQQWxa1NHf6AlNa7jIXTPz/PNw3txIG2VUPUalWYSrZMap0xv
-         ovyaSQzlyVaHP4t0rnZL952Ra3vI0dtqfgZ17JqRalOiytSXSh4aRPQERmKrg60Qge0E
-         EEGHIBVWOj+hSakfeglbj+j21+Xfg1j3PtXBVb2LXfh+J2HoYiYzNl7dgQK2VCEZoCT2
-         j7/C120ld5xnNAcBBshlmJL3Y/RuB2j2XPJ8evm80ZTkPjBND1cXW/DOO4dgAIWXtWqx
-         3jONUoqo2zePsPEnpU5yM7iPg/f5jxmiTLmcVusNcuwQhBd/DRWK1f5vhGt8gznHY+ug
-         HYug==
-X-Gm-Message-State: APjAAAXZl05Cw9td8EdLn8yfNyriJYUeLncl6bo2T/CNnIO+LEDhnUCN
-        9tJ6ZX/hK4HnyqB5vypqMH20JmfBge4Prv1Voqb+rQ==
-X-Google-Smtp-Source: APXvYqzzEBWngyKstrRaijt7X7I5bXY9Val+Hxs5gu/BwpxZpiBbhMGiFic8G5pM6rS0i/mpmGgwfAohfvUcJsRyKVQ=
-X-Received: by 2002:ac2:5979:: with SMTP id h25mr122207lfp.203.1580946023798;
- Wed, 05 Feb 2020 15:40:23 -0800 (PST)
-MIME-Version: 1.0
-References: <20200128230328.183524-1-drosen@google.com> <20200128230328.183524-2-drosen@google.com>
- <85sgjsxx2g.fsf@collabora.com> <CA+PiJmS3kbK8220QaccP5jJ7dSf4xv3UrStQvLskAtCN+=vG_A@mail.gmail.com>
- <85h8051x6a.fsf@collabora.com>
-In-Reply-To: <85h8051x6a.fsf@collabora.com>
+        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
+        bh=GmdJt27134kNRYXiKp4wrB+O4TXMZQXM52BZBGOfEtM=;
+        b=o4RJ+NHrgm4+M5vZ5D9JTWas8yT53aufWKpLN0YUrtcNmwCVkNxS3eC6+cFCvNvZlY
+         En7Qgua2IDO4CvtyxIo6Y77pZn0uW075T+HcQvgtP1AKaqV05ZjZlpPycu9MGYQBiXwi
+         ZMoTE/IB3ISKi0tWofpnBd0LDQHZFf1wVfzQPbqUHXm0Ys6apmHvHYX89Dpp1+qUerht
+         2tNX4yb94qPAGOg6FmJ01jWe9tAupBKWk1UAfgD+eLP0MyR/06tKpVKTiESwsXBwbEDu
+         APB5Lgj3l6AsC/KNdb11fbTLs3TgalZv5QonQC114D89iCwIy7RNmVZZzNN8BEVlFdO4
+         g9+g==
+X-Gm-Message-State: APjAAAUuK31nQ6/wRo/npQRRfGb1gkm9Ezbl5EiUiB/OcxWyovaLzW6e
+        CIbKxtmGMZJ35m/Wga639gNJYwYYn5Q=
+X-Google-Smtp-Source: APXvYqxT2SICJR0/scVLMtmD7Drj2JGcZpB0cicjSWB5iCPIziOWFDKhaM/J3laVncF61b47rtO91OtcfaA=
+X-Received: by 2002:a63:1c1d:: with SMTP id c29mr2121466pgc.14.1581125684457;
+ Fri, 07 Feb 2020 17:34:44 -0800 (PST)
+Date:   Fri,  7 Feb 2020 17:34:30 -0800
+Message-Id: <20200208013438.240137-1-drosen@google.com>
+Mime-Version: 1.0
+X-Mailer: git-send-email 2.25.0.341.g760bfbb309-goog
+Subject: [PATCH v7 0/8] Support fof Casefolding and Encryption
 From:   Daniel Rosenberg <drosen@google.com>
-Date:   Wed, 5 Feb 2020 15:40:11 -0800
-Message-ID: <CA+PiJmQgFNLYoRu7fSWgz_He8Z8ceq1G2yUDcy0OCn1iD2rkzA@mail.gmail.com>
-Subject: Re: [PATCH v6 1/5] unicode: Add standard casefolded d_ops
-To:     Gabriel Krisman Bertazi <krisman@collabora.com>
-Cc:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
+To:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
         Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
         linux-f2fs-devel@lists.sourceforge.net,
         Eric Biggers <ebiggers@kernel.org>,
         linux-fscrypt@vger.kernel.org,
         Alexander Viro <viro@zeniv.linux.org.uk>,
-        Richard Weinberger <richard@nod.at>,
-        linux-mtd@lists.infradead.org,
+        Richard Weinberger <richard@nod.at>
+Cc:     linux-mtd@lists.infradead.org,
         Andreas Dilger <adilger.kernel@dilger.ca>,
         Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org,
         linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        kernel-team@android.com
+        Gabriel Krisman Bertazi <krisman@collabora.com>,
+        kernel-team@android.com, Daniel Rosenberg <drosen@google.com>
 Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, Feb 4, 2020 at 8:21 PM Gabriel Krisman Bertazi
-<krisman@collabora.com> wrote:
->
-> Daniel Rosenberg <drosen@google.com> writes:
->
-> Hi,
->
-> It was designed to be an internal thing, but I'm ok with exposing it.
->
-> --
-> Gabriel Krisman Bertazi
+These patches are all on top of torvalds/master
 
-We could also avoid exposing it by creating an iterator function that
-accepts a context struct with some actor function pointer, similar to
-iterate_dir. I'm currently reworking around that and moving the fs
-specific functions to libfs. I can move the generic op_set code there
-as well.
+Ext4 and F2FS currently both support casefolding and encryption, but not at
+the same time. These patches aim to rectify that.
 
--Daniel Rosenberg
+I moved the identical casefolding dcache operations for ext4 and f2fs into
+fs/libfs.c, as all filesystems using casefolded names will want them.
+
+I've also adjust fscrypt to not set it's d_revalidate operation during it's
+prepare lookup, instead having the calling filesystem set it up. This is
+done to that the filesystem may have it's own dentry_operations. Also added
+a helper function in libfs.c that will work for filesystems supporting both
+casefolding and fscrypt.
+
+For Ext4, since the hash for encrypted casefolded directory names cannot be
+computed without the key, we need to store the hash on disk. We only do so
+for encrypted and casefolded directories to avoid on disk format changes.
+Previously encryption and casefolding could not be on the same filesystem,
+and we're relaxing that requirement. F2fs is a bit more straightforward
+since it already stores hashes on disk.
+
+I've updated the related tools with just enough to enable the feature. I
+still need to adjust ext4's fsck's, although without access to the keys,
+neither fsck will be able to verify the hashes of casefolded and encrypted
+names.
+
+v7 chances:
+Moved dentry operations from unicode to libfs, added new iterator function
+to unicode to allow this.
+Added libfs function for setting dentries to remove code duplication between
+ext4 and f2fs.
+
+v6 changes:
+Went back to using dentry_operations for casefolding. Provided standard
+implementations in fs/unicode, avoiding extra allocation in d_hash op.
+Moved fscrypt d_ops setting to be filesystem's responsibility to maintain
+compatibility with casefolding and overlayfs if casefolding is not used
+fixes some f2fs error handling
+
+v4-5: patches submitted on fscrypt
+
+v3 changes:
+fscrypt patch only creates hash key if it will be needed.
+Rebased on top of fscrypt branch, reconstified match functions in ext4/f2fs
+
+v2 changes:
+fscrypt moved to separate thread to rebase on fscrypt dev branch
+addressed feedback, plus some minor fixes
+
+
+Daniel Rosenberg (8):
+  unicode: Add utf8_casefold_iter
+  fs: Add standard casefolding support
+  f2fs: Use generic casefolding support
+  ext4: Use generic casefolding support
+  fscrypt: Have filesystems handle their d_ops
+  f2fs: Handle casefolding with Encryption
+  ext4: Hande casefolding with encryption
+  ext4: Optimize match for casefolded encrypted dirs
+
+ Documentation/filesystems/ext4/directory.rst |  27 ++
+ fs/crypto/fname.c                            |   7 +-
+ fs/crypto/fscrypt_private.h                  |   1 -
+ fs/crypto/hooks.c                            |   1 -
+ fs/ext4/dir.c                                |  78 +----
+ fs/ext4/ext4.h                               |  93 ++++--
+ fs/ext4/hash.c                               |  26 +-
+ fs/ext4/ialloc.c                             |   5 +-
+ fs/ext4/inline.c                             |  41 ++-
+ fs/ext4/namei.c                              | 325 ++++++++++++-------
+ fs/ext4/super.c                              |  21 +-
+ fs/f2fs/dir.c                                | 127 +++-----
+ fs/f2fs/f2fs.h                               |  15 +-
+ fs/f2fs/hash.c                               |  25 +-
+ fs/f2fs/inline.c                             |   9 +-
+ fs/f2fs/namei.c                              |   1 +
+ fs/f2fs/super.c                              |  17 +-
+ fs/f2fs/sysfs.c                              |  10 +-
+ fs/libfs.c                                   | 127 ++++++++
+ fs/ubifs/dir.c                               |  18 +
+ fs/unicode/utf8-core.c                       |  25 +-
+ include/linux/f2fs_fs.h                      |   3 -
+ include/linux/fs.h                           |  24 ++
+ include/linux/fscrypt.h                      |   6 +-
+ include/linux/unicode.h                      |  10 +
+ 25 files changed, 671 insertions(+), 371 deletions(-)
+
+-- 
+2.25.0.341.g760bfbb309-goog
+
