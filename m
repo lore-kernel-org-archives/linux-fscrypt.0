@@ -2,220 +2,106 @@ Return-Path: <SRS0=SB1v=37=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6A429C352A4
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Feb 2020 00:01:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A08E3C35242
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Feb 2020 19:22:12 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 868422072C
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Feb 2020 00:01:15 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="YNN8LD5b"
+	by mail.kernel.org (Postfix) with ESMTP id 7FC9420873
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Feb 2020 19:22:12 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1581448932;
+	bh=WzUwKnGn5n0Q+3tuucRPgAJqJjTBQCGNMXNs0Zg5DH0=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=lB9yv+Y3fR3Lg1dQgCN+570ai1Q1vxwMbmK3iE1MOsLJKjmtuxp4BPxR5EV3lNb2Y
+	 WNQO+eFX4nrjyhgT6hK1kt08c5EXgWn+S2kRhQtuuiaAaM7k/sZz0w18f1LyW1nWGX
+	 tv43z6k1x1ZEuBYG0qmaFSrA1TYJ238/LLwox+nU=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727584AbgBKABP (ORCPT
+        id S1730150AbgBKTWM (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 10 Feb 2020 19:01:15 -0500
-Received: from mail-pl1-f196.google.com ([209.85.214.196]:44255 "EHLO
-        mail-pl1-f196.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727549AbgBKABP (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 10 Feb 2020 19:01:15 -0500
-Received: by mail-pl1-f196.google.com with SMTP id d9so3467916plo.11
-        for <linux-fscrypt@vger.kernel.org>; Mon, 10 Feb 2020 16:01:14 -0800 (PST)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references
-         :mime-version:content-transfer-encoding;
-        bh=9u2/hYYLGoO8El+py7ZmKj3n0T2jkISIzfeNreQh7Jg=;
-        b=YNN8LD5bWbrsZh0CvgSzUsWM3sQsPSPpPW+jIxETDNcGAehbWznLtNP8LigrZiO0Cs
-         xqCCew+E051S7lua1AjMItMrYfr9EAdldB3RLdVE+9YIhPbqzkhzxCVAIuYNADggDOBH
-         h4O2vpM3oTp+f+VwZbqIghg1JvAG0ULybFtNIJWp7oVtZegki0fbOz2gN3YtYVO7kOLr
-         2i/G+N4AmF6OqUVoebyvVIQe2tg+bG0Us8eda8hNJjzzjXQ5UaTfo86pah2dTB1WAZlO
-         zvdecd8CSPNRK+hLKZIoWXw2tOzh0V7uyV1WFetOxMtxYjNdmbySPXK6/+Mss77cteuc
-         3mjA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=9u2/hYYLGoO8El+py7ZmKj3n0T2jkISIzfeNreQh7Jg=;
-        b=aLliO2Lawwc4lOFg8s2v4uLZWoae+B0Qt+ZQyLpr9usQYrTTY+x3t04VHZlWLLn36R
-         Xr/9MAgqHx9QJwr1zfOlsRMN2WPgRJCSEWXphMEbuw22Xuyv5SossaTDzEA/uZty+l0P
-         CiTPMDmdl0yi02QfgjjaxXI0Y/bqf+sjLeVnBvJJxGi3J+G7bcihDMRz6AJww7FgAKIY
-         RTqsVsYpJbT5w9q56HzxLig62yMNfVIxsJYgbRRxw5U1FwWSfdkS7dQmWI5ItBLROvuF
-         mCzozwo65udOKkOGpK3eQJwt645fOkBffWakaCjN+GZEqjL2jLyEDdpEGgUJaomN7NE+
-         A6Ug==
-X-Gm-Message-State: APjAAAU2g/n7Nl0Ifo2EPmmyXQglO5Zuc5sdwZWlV0Ve0XyY4tbwk6Yx
-        U9epo/xGZBeaP1C7Kgor/uQv08ze5T0=
-X-Google-Smtp-Source: APXvYqzf8X2g4iAZ1GR6M/H5NMkqvmGuH11TF68qb1xF3LaXEsnJxFRREyRT3nD1VVfQtFZR9umhJA==
-X-Received: by 2002:a17:90a:8806:: with SMTP id s6mr359191pjn.141.1581379273949;
-        Mon, 10 Feb 2020 16:01:13 -0800 (PST)
-Received: from localhost ([2620:10d:c090:200::6168])
-        by smtp.gmail.com with ESMTPSA id r11sm1280782pgi.9.2020.02.10.16.01.11
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Mon, 10 Feb 2020 16:01:13 -0800 (PST)
-From:   Jes Sorensen <jes.sorensen@gmail.com>
-X-Google-Original-From: Jes Sorensen <Jes.Sorensen@gmail.com>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     kernel-team@fb.com, Jes Sorensen <jsorensen@fb.com>
-Subject: [PATCH 6/7] Move cmdline helper functions to fsverity.c
-Date:   Mon, 10 Feb 2020 19:00:36 -0500
-Message-Id: <20200211000037.189180-7-Jes.Sorensen@gmail.com>
-X-Mailer: git-send-email 2.24.1
-In-Reply-To: <20200211000037.189180-1-Jes.Sorensen@gmail.com>
+        Tue, 11 Feb 2020 14:22:12 -0500
+Received: from mail.kernel.org ([198.145.29.99]:37572 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1729800AbgBKTWM (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 11 Feb 2020 14:22:12 -0500
+Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 6FC4720842;
+        Tue, 11 Feb 2020 19:22:11 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1581448931;
+        bh=WzUwKnGn5n0Q+3tuucRPgAJqJjTBQCGNMXNs0Zg5DH0=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=BLW8nfwuIZfwnQFggGhfG2VTU0eqiywJSQZsMERxSDD2LdIcOSa3jv5fWONPIZU5e
+         Zz1JbAQONuXrPe2Ezz6kZLzC1qxSYNYJ3TkhhkuPv+IdTSricahoSSw50IdRXxeV7i
+         q5433LH/1ceTACKH5kv4osiFdIXUJSSz2/I+oKd4=
+Date:   Tue, 11 Feb 2020 11:22:09 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Jes Sorensen <jes.sorensen@gmail.com>
+Cc:     linux-fscrypt@vger.kernel.org, kernel-team@fb.com,
+        Jes Sorensen <jsorensen@fb.com>
+Subject: Re: [PATCH 0/7] Split fsverity-utils into a shared library
+Message-ID: <20200211192209.GA870@sol.localdomain>
 References: <20200211000037.189180-1-Jes.Sorensen@gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200211000037.189180-1-Jes.Sorensen@gmail.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Jes Sorensen <jsorensen@fb.com>
+Hi Jes,
 
-There is no need for these to live in the shared library. In addition
-move get_default_block_size() to the library and rename it appropriately.
+On Mon, Feb 10, 2020 at 07:00:30PM -0500, Jes Sorensen wrote:
+> From: Jes Sorensen <jsorensen@fb.com>
+> 
+> Hi,
+> 
+> I am looking at what it will take to add support for fsverity
+> signatures to rpm, similar to how rpm supports IMA signatures.
+> 
+> In order to do so, it makes sense to split the fsverity util into a
+> shared library and the command line tool, so the core functions can be
+> used from other applciations. Alternatively I will have to copy over a
+> good chunk of the code into rpm, which makes it nasty to support long
+> term.
+> 
+> This is a first stab at doing that, and I'd like to get some feedback
+> on the approach.
+> 
+> I basically split it into four functions:
+> 
+> fsverity_cmd_gen_digest(): Build the digest, but do not sign it
+> fsverity_cmd_sign():       Sign the digest structure
+> fsverity_cmd_measure():    Measure a file, basically 'fsverity measure'
+> fsverity_cmd_enable():     Enable verity on a file, basically 'fsverity enable'
+> 
+> If we can agree on the approach, then I am happy to deal with the full
+> libtoolification etc.
+> 
 
-Signed-off-by: Jes Sorensen <jsorensen@fb.com>
----
- cmd_sign.c |  2 +-
- fsverity.c | 25 +++++++++----------------
- fsverity.h |  8 +-------
- util.c     | 13 +++++++++++++
- 4 files changed, 24 insertions(+), 24 deletions(-)
+Before we do all this work, can you take a step back and explain the use case so
+that we can be sure it's really worthwhile?
 
-diff --git a/cmd_sign.c b/cmd_sign.c
-index 42779f2..a0bd168 100644
---- a/cmd_sign.c
-+++ b/cmd_sign.c
-@@ -497,7 +497,7 @@ int fsverity_cmd_sign(char *filename, const struct fsverity_hash_alg *hash_alg,
- 	}
- 
- 	if (block_size == 0)
--		block_size = get_default_block_size();
-+		block_size = fsverity_get_default_block_size();
- 
- 	if (keyfile == NULL) {
- 		status = -EINVAL;
-diff --git a/fsverity.c b/fsverity.c
-index f0e94bf..45bf0cc 100644
---- a/fsverity.c
-+++ b/fsverity.c
-@@ -18,6 +18,12 @@
- #include "fsverity.h"
- #include "hash_algs.h"
- 
-+struct fsverity_command;
-+
-+static bool parse_block_size_option(const char *arg, u32 *size_ptr);
-+static bool parse_salt_option(const char *arg, u8 **salt_ptr, u32 *salt_size_ptr);
-+static void usage(const struct fsverity_command *cmd, FILE *fp);
-+
- enum {
- 	OPT_HASH_ALG,
- 	OPT_BLOCK_SIZE,
-@@ -310,7 +316,7 @@ int wrap_cmd_enable(const struct fsverity_command *cmd,
- 		arg.hash_algorithm = FS_VERITY_HASH_ALG_DEFAULT;
- 
- 	if (arg.block_size == 0)
--		arg.block_size = get_default_block_size();
-+		arg.block_size = fsverity_get_default_block_size();
- 
- 	status = fsverity_cmd_enable(argv[0], &arg);
- 
-@@ -437,7 +443,7 @@ static const struct fsverity_command *find_command(const char *name)
- 	return NULL;
- }
- 
--bool parse_block_size_option(const char *arg, u32 *size_ptr)
-+static bool parse_block_size_option(const char *arg, u32 *size_ptr)
- {
- 	char *end;
- 	unsigned long n = strtoul(arg, &end, 10);
-@@ -455,7 +461,7 @@ bool parse_block_size_option(const char *arg, u32 *size_ptr)
- 	return true;
- }
- 
--bool parse_salt_option(const char *arg, u8 **salt_ptr, u32 *salt_size_ptr)
-+static bool parse_salt_option(const char *arg, u8 **salt_ptr, u32 *salt_size_ptr)
- {
- 	if (*salt_ptr != NULL) {
- 		error_msg("--salt can only be specified once");
-@@ -470,19 +476,6 @@ bool parse_salt_option(const char *arg, u8 **salt_ptr, u32 *salt_size_ptr)
- 	return true;
- }
- 
--u32 get_default_block_size(void)
--{
--	long n = sysconf(_SC_PAGESIZE);
--
--	if (n <= 0 || n >= INT_MAX || !is_power_of_2(n)) {
--		fprintf(stderr,
--			"Warning: invalid _SC_PAGESIZE (%ld).  Assuming 4K blocks.\n",
--			n);
--		return 4096;
--	}
--	return n;
--}
--
- int main(int argc, char *argv[])
- {
- 	const struct fsverity_command *cmd;
-diff --git a/fsverity.h b/fsverity.h
-index e490c25..bb2f337 100644
---- a/fsverity.h
-+++ b/fsverity.h
-@@ -8,8 +8,6 @@
- #include "hash_algs.h"
- #include "fsverity_uapi.h"
- 
--struct fsverity_command;
--
- /*
-  * Format in which verity file measurements are signed.  This is the same as
-  * 'struct fsverity_digest', except here some magic bytes are prepended to
-@@ -24,7 +22,7 @@ struct fsverity_signed_digest {
- };
- 
- 
--void usage(const struct fsverity_command *cmd, FILE *fp);
-+u32 fsverity_get_default_block_size(void);
- 
- int fsverity_cmd_enable(char *filename, struct fsverity_enable_arg *arg);
- int fsverity_cmd_measure(char *filename, struct fsverity_digest *d);
-@@ -34,8 +32,4 @@ int fsverity_cmd_sign(char *filename, const struct fsverity_hash_alg *hash_alg,
- 		      struct fsverity_signed_digest **retdigest,
- 		      u8 **sig, u32 *sig_size);
- 
--bool parse_block_size_option(const char *arg, u32 *size_ptr);
--u32 get_default_block_size(void);
--bool parse_salt_option(const char *arg, u8 **salt_ptr, u32 *salt_size_ptr);
--
- #endif /* COMMANDS_H */
-diff --git a/util.c b/util.c
-index 2218f2e..e4ccd2a 100644
---- a/util.c
-+++ b/util.c
-@@ -213,3 +213,16 @@ void bin2hex(const u8 *bin, size_t bin_len, char *hex)
- 	}
- 	*hex = '\0';
- }
-+
-+u32 fsverity_get_default_block_size(void)
-+{
-+	long n = sysconf(_SC_PAGESIZE);
-+
-+	if (n <= 0 || n >= INT_MAX || !is_power_of_2(n)) {
-+		fprintf(stderr,
-+			"Warning: invalid _SC_PAGESIZE (%ld).  Assuming 4K blocks.\n",
-+			n);
-+		return 4096;
-+	}
-+	return n;
-+}
--- 
-2.24.1
+fsverity_cmd_enable() and fsverity_cmd_measure() would just be trivial wrappers
+around the FS_IOC_ENABLE_VERITY and FS_IOC_MEASURE_VERITY ioctls, so they don't
+need a library.  [Aside: I'd suggest calling these fsverity_enable() and
+fsverity_measure(), and leaving "cmd" for the command-line wrappers.] 
 
+That leaves signing as the only real point of the library.  But do you actually
+need to be able to *sign* the files via the rpm binary, or do you just need to
+be able to install already-created signatures?  I.e., can the signatures instead
+just be created with 'fsverity sign' when building the RPMs?
+
+Separately, before you start building something around fs-verity's builtin
+signature verification support, have you also considered adding support for
+fs-verity to IMA?  I.e., using the fs-verity hashing mechanism with the IMA
+signature mechanism.  The IMA maintainer has been expressed interested in that.
+If rpm already supports IMA signatures, maybe that way would be a better fit?
+
+- Eric
