@@ -2,43 +2,43 @@ Return-Path: <SRS0=um9U=4A=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BC686C3B188
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 12 Feb 2020 03:38:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8B585C3F68F
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 12 Feb 2020 03:55:50 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 9433820842
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 12 Feb 2020 03:38:08 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5967621569
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 12 Feb 2020 03:55:50 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1581478688;
-	bh=QFEFG/81Rfdx+DhaJa330Iy0plXtvuXYAYlLrbnAw4s=;
+	s=default; t=1581479750;
+	bh=QRHIt8kBfhFwG/eebDuW7D9CmPyDjyjrXyg9CDC5NUw=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=LKBV0jH/pnB2iKm2GrxYBxx4DxSS7ryondtUQ9DjvOGw3E+wXFdfCUtFn0JZTWXj2
-	 DlfaRUHOyoLhn0m2CNoNg4vG/3qrSkNhHPEIimCdB4jCpPogS9M39F0ajJhxDh84Bz
-	 VM6Q+hes0s0qnaBe/ECP9RV7+xtoACMlu5Txx9GY=
+	b=hAMbrHz28BCTgjjc6qb9QDA3VwPM+0aH/JgCUIc1ed/4O6g5IRq6HE5aJtFFC9Enu
+	 yTb0dqRpkqX9CveFaH1QtVRdUMwleF5eXDJhT8+C6QWI46aa/AvMNKcLzHdPrf91M5
+	 zohY7nR6G8FyX+ydgtjB/wHFpaPzCFHvZ6UwdDJ0=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727883AbgBLDiF (ORCPT
+        id S1727912AbgBLDzq (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 11 Feb 2020 22:38:05 -0500
-Received: from mail.kernel.org ([198.145.29.99]:38648 "EHLO mail.kernel.org"
+        Tue, 11 Feb 2020 22:55:46 -0500
+Received: from mail.kernel.org ([198.145.29.99]:40298 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727695AbgBLDiF (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Feb 2020 22:38:05 -0500
+        id S1726755AbgBLDzq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 11 Feb 2020 22:55:46 -0500
 Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id D8E112073C;
-        Wed, 12 Feb 2020 03:38:03 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 5566B206D7;
+        Wed, 12 Feb 2020 03:55:45 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1581478684;
-        bh=QFEFG/81Rfdx+DhaJa330Iy0plXtvuXYAYlLrbnAw4s=;
+        s=default; t=1581479745;
+        bh=QRHIt8kBfhFwG/eebDuW7D9CmPyDjyjrXyg9CDC5NUw=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=kgLuYeSFpKxnDdxa83uM8r7H8S2iSSVhydJQbgl1WskDbn0S35JXuXY6oYMb6AFqU
-         HxO5QSmEbAmJQYLuF8FimrMwI0rN+5dYv0mjVwfxsOCEj+bKApbx/sRGflnZL6TTxF
-         hsjxh+dI86q2CbBRmKMiAXqhZqvYy14nr51t/CqE=
-Date:   Tue, 11 Feb 2020 19:38:00 -0800
+        b=QDjwA1UUCb18CDvTZAWN3AWxXhe8SylkHRngDpUO6Eo0l9UqmK2TbcwHSvmdzSIdq
+         8lpBsW3LIAzLnS9/lpjvbuepoMDAj1jRGvX2twIB172UT2z1b0FdwMXW2zw4q/ykCV
+         QH0qbBpDSO+kDk6Nfy2KrHxMmTeVcqviduLNqrp8=
+Date:   Tue, 11 Feb 2020 19:55:43 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     Daniel Rosenberg <drosen@google.com>
 Cc:     Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org,
@@ -53,73 +53,117 @@ Cc:     Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org,
         linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         Gabriel Krisman Bertazi <krisman@collabora.com>,
         kernel-team@android.com
-Subject: Re: [PATCH v7 1/8] unicode: Add utf8_casefold_iter
-Message-ID: <20200212033800.GC870@sol.localdomain>
+Subject: Re: [PATCH v7 2/8] fs: Add standard casefolding support
+Message-ID: <20200212035543.GD870@sol.localdomain>
 References: <20200208013552.241832-1-drosen@google.com>
- <20200208013552.241832-2-drosen@google.com>
+ <20200208013552.241832-3-drosen@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200208013552.241832-2-drosen@google.com>
+In-Reply-To: <20200208013552.241832-3-drosen@google.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Feb 07, 2020 at 05:35:45PM -0800, Daniel Rosenberg wrote:
-> This function will allow other uses of unicode to act upon a casefolded
-> string without needing to allocate their own copy of one.
+On Fri, Feb 07, 2020 at 05:35:46PM -0800, Daniel Rosenberg wrote:
+> This adds general supporting functions for filesystems that use
+> utf8 casefolding. It provides standard dentry_operations and adds the
+> necessary structures in struct super_block to allow this standardization.
 > 
-> The actor function can return an nonzero value to exit early.
-> 
-> Signed-off-by: Daniel Rosenberg <drosen@google.com>
-> ---
->  fs/unicode/utf8-core.c  | 25 ++++++++++++++++++++++++-
->  include/linux/unicode.h | 10 ++++++++++
->  2 files changed, 34 insertions(+), 1 deletion(-)
-> 
-> diff --git a/fs/unicode/utf8-core.c b/fs/unicode/utf8-core.c
-> index 2a878b739115d..db050bf59a32b 100644
-> --- a/fs/unicode/utf8-core.c
-> +++ b/fs/unicode/utf8-core.c
-> @@ -122,9 +122,32 @@ int utf8_casefold(const struct unicode_map *um, const struct qstr *str,
->  	}
->  	return -EINVAL;
->  }
-> -
->  EXPORT_SYMBOL(utf8_casefold);
->  
-> +int utf8_casefold_iter(const struct unicode_map *um, const struct qstr *str,
-> +		    struct utf8_itr_context *ctx)
+> Ext4 and F2fs are switch to these implementations.
+
+I think you mean that ext4 and f2fs *will be switched* to these implementations?
+It's later in the series, not in this patch.
+
+> +#ifdef CONFIG_UNICODE
+> +bool needs_casefold(const struct inode *dir)
 > +{
-> +	const struct utf8data *data = utf8nfdicf(um->version);
-> +	struct utf8cursor cur;
-> +	int c;
-> +	int res = 0;
-> +	int pos = 0;
-> +
-> +	if (utf8ncursor(&cur, data, str->name, str->len) < 0)
-> +		return -EINVAL;
-> +
-> +	while ((c = utf8byte(&cur))) {
-> +		if (c < 0)
-> +			return c;
-> +		res = ctx->actor(ctx, c, pos);
-> +		pos++;
-> +		if (res)
-> +			return res;
-> +	}
-> +	return res;
+> +	return IS_CASEFOLDED(dir) && dir->i_sb->s_encoding &&
+> +			(!IS_ENCRYPTED(dir) || fscrypt_has_encryption_key(dir));
 > +}
-> +EXPORT_SYMBOL(utf8_casefold_iter);
+> +EXPORT_SYMBOL(needs_casefold);
 
-Indirect function calls are expensive these days for various reasons, including
-Spectre mitigations and CFI.  Are you sure it's okay from a performance
-perspective to make an indirect call for every byte of the pathname?
+Can you add kerneldoc comments to all the new functions that are exported to
+modules?
 
-> +typedef int (*utf8_itr_actor_t)(struct utf8_itr_context *, int byte, int pos);
+> +struct hash_ctx {
+> +	struct utf8_itr_context ctx;
+> +	unsigned long hash;
+> +};
+> +
+> +static int do_generic_ci_hash(struct utf8_itr_context *ctx, int byte, int pos)
+> +{
+> +	struct hash_ctx *hctx = container_of(ctx, struct hash_ctx, ctx);
+> +
+> +	hctx->hash = partial_name_hash((unsigned char)byte, hctx->hash);
+> +	return 0;
+> +}
+> +
+> +int generic_ci_d_hash(const struct dentry *dentry, struct qstr *str)
+> +{
+> +	const struct inode *inode = READ_ONCE(dentry->d_inode);
+> +	struct super_block *sb = dentry->d_sb;
+> +	const struct unicode_map *um = sb->s_encoding;
+> +	int ret = 0;
+> +	struct hash_ctx hctx;
+> +
+> +	if (!inode || !needs_casefold(inode))
+> +		return 0;
+> +
+> +	hctx.hash = init_name_hash(dentry);
+> +	hctx.ctx.actor = do_generic_ci_hash;
+> +	ret = utf8_casefold_iter(um, str, &hctx.ctx);
+> +	if (ret < 0)
+> +		goto err;
+> +	str->hash = end_name_hash(hctx.hash);
+> +
+> +	return 0;
+> +err:
+> +	if (sb_has_enc_strict_mode(sb))
+> +		ret = -EINVAL;
+> +	return ret;
+> +}
+> +EXPORT_SYMBOL(generic_ci_d_hash);
+> +#endif
 
-The byte argument probably should be 'u8', to avoid confusion about whether it's
-a byte or a Unicode codepoint.
+This breaks the !strict_mode case by starting to fail lookups of names that
+aren't valid Unicode, instead of falling back to the standard case-sensitive
+behavior.
+
+There is an xfstest for casefolding; is this bug not caught by it (in which case
+the test needs to be improved)?  Or did you just not run it?
+
+> diff --git a/include/linux/fs.h b/include/linux/fs.h
+> index 6eae91c0668f9..a260afbc06d22 100644
+> --- a/include/linux/fs.h
+> +++ b/include/linux/fs.h
+> @@ -1382,6 +1382,12 @@ extern int send_sigurg(struct fown_struct *fown);
+>  #define SB_ACTIVE	(1<<30)
+>  #define SB_NOUSER	(1<<31)
+>  
+> +/* These flags relate to encoding and casefolding */
+> +#define SB_ENC_STRICT_MODE_FL	(1 << 0)
+
+It would be helpful if the comment mentioned that these flags are stored on-disk
+(and therefore can't be re-numbered, unlike the other flags defined nearby).
+
+> +#ifdef CONFIG_UNICODE
+> +	struct unicode_map *s_encoding;
+> +	__u16 s_encoding_flags;
+>  #endif
+
+This isn't a UAPI header, so 's_encoding_flags' should use u16, not __u16.
+
+And for that matter, 's_encoding_flags' will be pointer-sized due to padding
+anyway, so maybe just make it 'unsigned int'?
+
+> +static inline bool needs_casefold(const struct inode *dir)
+> +{
+> +	return 0;
+> +}
+> +#endif
+
+Use false instead of 0 for 'bool'.
 
 - Eric
