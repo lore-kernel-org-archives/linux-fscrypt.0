@@ -5,60 +5,60 @@ X-Spam-Level:
 X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
-	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
+	USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E197FC3565B
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 21 Feb 2020 11:51:14 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5B2D2C35646
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 21 Feb 2020 11:51:18 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id AFE9F24670
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 21 Feb 2020 11:51:14 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 25F1124684
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 21 Feb 2020 11:51:18 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="Y2nDJclB"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="K+x340K+"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728199AbgBULvM (ORCPT
+        id S1728091AbgBULvQ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 21 Feb 2020 06:51:12 -0500
-Received: from mail-pg1-f202.google.com ([209.85.215.202]:51066 "EHLO
-        mail-pg1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1728169AbgBULvK (ORCPT
+        Fri, 21 Feb 2020 06:51:16 -0500
+Received: from mail-pl1-f202.google.com ([209.85.214.202]:55323 "EHLO
+        mail-pl1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727794AbgBULvP (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 21 Feb 2020 06:51:10 -0500
-Received: by mail-pg1-f202.google.com with SMTP id q4so1042460pgr.17
-        for <linux-fscrypt@vger.kernel.org>; Fri, 21 Feb 2020 03:51:08 -0800 (PST)
+        Fri, 21 Feb 2020 06:51:15 -0500
+Received: by mail-pl1-f202.google.com with SMTP id w11so983571plp.22
+        for <linux-fscrypt@vger.kernel.org>; Fri, 21 Feb 2020 03:51:13 -0800 (PST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=zGFRHM2c3FMuYKtI8mCqoxL4vIGTf9Kkgjs1D5tFBw8=;
-        b=Y2nDJclB4ews/y0QjPTQbcly2x7g8i4CGAbF2Tpr42W7rsJyGIFWNAqIfLB82yo7Hc
-         QFf+/Dbwg3jPoHpjIsSOFmKryfzCRALiUyZ4KQbYBhH31B0f3BkidfF3PooslscQGoEj
-         cW2P0sGa+O0rKGH+IOZJa6ytq3QC4hZWOaWjeBuU2QPpPKpbxVnbFGfAF76UYfPKGpIm
-         4CklJYAhfhbS7vumTrMzLgxrLOhnIVxaoQjPpxAQhjBA+VyS7XUl0GxsLNDQzsF/4sG2
-         QalilXJXvo5Pr4+PqvwZFQrsgBI4xTmwfiTvjM1/a7CIX3NxZAAnqAZFbzYxeKUIa5Th
-         vekA==
+        bh=hlTekD0lbPk0TIDYnujJFRmzcwaIaeKN4ilcnosjaP0=;
+        b=K+x340K+LkNhtMBeXN8ca1XXLOcCbohm/EfVnbb9GrIT+UFHgVU0IYNEtwyN8dzKd0
+         L5owUV+vWFV91qxKOnE3gXFX9USpGAcqhaxGBhccm0YnzylGs3wnWCUApiiJX1TGWBoJ
+         H231G8y6juVxKs2N/CeH0vPXGdIqi6ty33e+gq+ngPEdMZ/2mYj92i+op0ojonwQZKI/
+         MflddAOk4oDs96PSuI1tJhfo1UZ+s2NIL/GfsDtXJoTFWcZiS3vxrcdTNqgleUHPneAw
+         hXxX6dtP/VAgeFWiKFjuTFwBvHJhYpMzzGjYU6CQLLvlBGI5YpLgtrL5E1H13/+own5B
+         Bjfg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=zGFRHM2c3FMuYKtI8mCqoxL4vIGTf9Kkgjs1D5tFBw8=;
-        b=cK5Kp6IcH9b8GVyUS42ziKZ8yMIyRyv2F26T8mTSQeiEJHqJUmEnwC7+4U3AGjbzVI
-         gWgOaiyJuAaTMeYr1YitMffqYH4Es74m+Eq44+/HnQmiGaw2JX0VwMhUM1e5LcdkJlGF
-         wwPlLPN4X910ifhjZbBsnO4yr/vD635GNXq0kkoNgxl7BrB+ABBmJJh0YACq648YmxbO
-         OAmgeFsG7pMhBFdX5fwqhC9n187AfNeRXvE7pwgnEQvvvmkQWr+sk05CrGUp8NaqY4cY
-         56uCmbbvdcgSdQ4v8PqPptvq7NV0PzI4sC30tHUpjxRTJtosqRvOXRbZ/bVHCHb3yo6l
-         Whhw==
-X-Gm-Message-State: APjAAAVETju+0lioyH0Ho5u+HPtnBUo667ZET6YNGSkP9GZxbb086J5F
-        Asq2BAlDwj+aUC0k/1XsLx064ZRQRIU=
-X-Google-Smtp-Source: APXvYqyOb8fv6giHMSPc76c9dEvmECzEBiHH2wCb2wNK9m8cQ2xtkRG4jW1ci+T1Nm+IyL/uRbcy+HT8aUc=
-X-Received: by 2002:a63:3f4f:: with SMTP id m76mr36813096pga.353.1582285867804;
- Fri, 21 Feb 2020 03:51:07 -0800 (PST)
-Date:   Fri, 21 Feb 2020 03:50:44 -0800
+        bh=hlTekD0lbPk0TIDYnujJFRmzcwaIaeKN4ilcnosjaP0=;
+        b=Y3UJkBN9vCAqe0En6ZkLHpbKgqPbP0ShkGANGTXGVtcA6phXvGHUY0LMlVbY5X4ikb
+         vmClYcBQ6nAhibdPq07kQnxxQSvGF8J3w9YpCrOJ2Y48ohfye5Lqgcf5i80yzruPcKPt
+         cLm6BVThkHdflyUtbV+eI7p6trkFjXwimH59sLb9sXlKq1xtcDGEP+FN7h/M32slcGg2
+         vGYb2GNxEhBwAJMGhOpTX4l+ZVElFYeOFwSif4vFdQQQKI8HPT91oGwaeYPL3XYlfB7R
+         PvyGwVma63syFguiV2FVhv5q03e3FLtgkqVa08vMr09T7mnA6aiU7IvQd+igVYh5jiWJ
+         w5xA==
+X-Gm-Message-State: APjAAAU/4saLNUS2sbM1WsPud2DESdmSLUB6aEz3FKCiYUYXEHUOArvn
+        izrup6dpiHkxCr5iqDoY2SRrOjnyh0o=
+X-Google-Smtp-Source: APXvYqy7fP0PMxTqRe5Txj7oWdyZshKbh4DRX5CEQp4LRxYvKTbrSyNZJnszC5hL+6l8ZLl/KdL0OR7qT7E=
+X-Received: by 2002:a63:be48:: with SMTP id g8mr39328456pgo.23.1582285872856;
+ Fri, 21 Feb 2020 03:51:12 -0800 (PST)
+Date:   Fri, 21 Feb 2020 03:50:46 -0800
 In-Reply-To: <20200221115050.238976-1-satyat@google.com>
-Message-Id: <20200221115050.238976-4-satyat@google.com>
+Message-Id: <20200221115050.238976-6-satyat@google.com>
 Mime-Version: 1.0
 References: <20200221115050.238976-1-satyat@google.com>
 X-Mailer: git-send-email 2.25.0.265.gbab2e86ba0-goog
-Subject: [PATCH v7 3/9] block: blk-crypto-fallback for Inline Encryption
+Subject: [PATCH v7 5/9] scsi: ufs: UFS crypto API
 From:   Satya Tangirala <satyat@google.com>
 To:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
@@ -73,1138 +73,535 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Blk-crypto delegates crypto operations to inline encryption hardware when
-available. The separately configurable blk-crypto-fallback contains a
-software fallback to the kernel crypto API - when enabled, blk-crypto
-will use this fallback for en/decryption when inline encryption hardware is
-not available. This lets upper layers not have to worry about whether or
-not the underlying device has support for inline encryption before
-deciding to specify an encryption context for a bio, and also allows for
-testing without actual inline encryption hardware. For more details, refer
-to Documentation/block/inline-encryption.rst.
+Introduce functions to manipulate UFS inline encryption hardware
+in line with the JEDEC UFSHCI v2.1 specification and to work with the
+block keyslot manager.
 
 Signed-off-by: Satya Tangirala <satyat@google.com>
 ---
- Documentation/block/index.rst             |   1 +
- Documentation/block/inline-encryption.rst | 162 ++++++
- block/Kconfig                             |  10 +
- block/Makefile                            |   1 +
- block/bio-integrity.c                     |   2 +-
- block/blk-crypto-fallback.c               | 673 ++++++++++++++++++++++
- block/blk-crypto-internal.h               |  32 +
- block/blk-crypto.c                        |  43 +-
- include/linux/blk-crypto.h                |  17 +-
- include/linux/blk_types.h                 |   6 +
- 10 files changed, 938 insertions(+), 9 deletions(-)
- create mode 100644 Documentation/block/inline-encryption.rst
- create mode 100644 block/blk-crypto-fallback.c
+ drivers/scsi/ufs/Kconfig         |   9 +
+ drivers/scsi/ufs/Makefile        |   1 +
+ drivers/scsi/ufs/ufshcd-crypto.c | 367 +++++++++++++++++++++++++++++++
+ drivers/scsi/ufs/ufshcd-crypto.h |  54 +++++
+ drivers/scsi/ufs/ufshcd.h        |  20 ++
+ 5 files changed, 451 insertions(+)
+ create mode 100644 drivers/scsi/ufs/ufshcd-crypto.c
+ create mode 100644 drivers/scsi/ufs/ufshcd-crypto.h
 
-diff --git a/Documentation/block/index.rst b/Documentation/block/index.rst
-index 3fa7a52fafa4..026addfc69bc 100644
---- a/Documentation/block/index.rst
-+++ b/Documentation/block/index.rst
-@@ -14,6 +14,7 @@ Block
-    cmdline-partition
-    data-integrity
-    deadline-iosched
-+   inline-encryption
-    ioprio
-    kyber-iosched
-    null_blk
-diff --git a/Documentation/block/inline-encryption.rst b/Documentation/block/inline-encryption.rst
-new file mode 100644
-index 000000000000..02abea993975
---- /dev/null
-+++ b/Documentation/block/inline-encryption.rst
-@@ -0,0 +1,162 @@
-+.. SPDX-License-Identifier: GPL-2.0
-+
-+=================
-+Inline Encryption
-+=================
-+
-+Background
-+==========
-+
-+Inline encryption hardware sit logically between memory and the disk, and can
-+en/decrypt data as it goes in/out of the disk. Inline encryption hardware have a
-+fixed number of "keyslots" - slots into which encryption contexts (i.e. the
-+encryption key, encryption algorithm, data unit size) can be programmed by the
-+kernel at any time. Each request sent to the disk can be tagged with the index
-+of a keyslot (and also a data unit number to act as an encryption tweak), and
-+the inline encryption hardware will en/decrypt the data in the request with the
-+encryption context programmed into that keyslot. This is very different from
-+full disk encryption solutions like self encrypting drives/TCG OPAL/ATA
-+Security standards, since with inline encryption, any block on disk could be
-+encrypted with any encryption context the kernel chooses.
-+
-+
-+Objective
-+=========
-+
-+We want to support inline encryption (IE) in the kernel.
-+To allow for testing, we also want a crypto API fallback when actual
-+IE hardware is absent. We also want IE to work with layered devices
-+like dm and loopback (i.e. we want to be able to use the IE hardware
-+of the underlying devices if present, or else fall back to crypto API
-+en/decryption).
-+
-+
-+Constraints and notes
-+=====================
-+
-+- IE hardware have a limited number of "keyslots" that can be programmed
-+  with an encryption context (key, algorithm, data unit size, etc.) at any time.
-+  One can specify a keyslot in a data request made to the device, and the
-+  device will en/decrypt the data using the encryption context programmed into
-+  that specified keyslot. When possible, we want to make multiple requests with
-+  the same encryption context share the same keyslot.
-+
-+- We need a way for upper layers like filesystems to specify an encryption
-+  context to use for en/decrypting a struct bio, and a device driver (like UFS)
-+  needs to be able to use that encryption context when it processes the bio.
-+
-+- We need a way for device drivers to expose their capabilities in a unified
-+  way to the upper layers.
-+
-+
-+Design
-+======
-+
-+We add a :c:type:`struct bio_crypt_ctx` to :c:type:`struct bio` that can
-+represent an encryption context, because we need to be able to pass this
-+encryption context from the FS layer to the device driver to act upon.
-+
-+While IE hardware works on the notion of keyslots, the FS layer has no
-+knowledge of keyslots - it simply wants to specify an encryption context to
-+use while en/decrypting a bio.
-+
-+We introduce a keyslot manager (KSM) that handles the translation from
-+encryption contexts specified by the FS to keyslots on the IE hardware.
-+This KSM also serves as the way IE hardware can expose their capabilities to
-+upper layers. The generic mode of operation is: each device driver that wants
-+to support IE will construct a KSM and set it up in its struct request_queue.
-+Upper layers that want to use IE on this device can then use this KSM in
-+the device's struct request_queue to translate an encryption context into
-+a keyslot. The presence of the KSM in the request queue shall be used to mean
-+that the device supports IE.
-+
-+On the device driver end of the interface, the device driver needs to tell the
-+KSM how to actually manipulate the IE hardware in the device to do things like
-+programming the crypto key into the IE hardware into a particular keyslot. All
-+this is achieved through the :c:type:`struct keyslot_mgmt_ll_ops` that the
-+device driver passes to the KSM when creating it.
-+
-+It uses refcounts to track which keyslots are idle (either they have no
-+encryption context programmed, or there are no in-flight struct bios
-+referencing that keyslot). When a new encryption context needs a keyslot, it
-+tries to find a keyslot that has already been programmed with the same
-+encryption context, and if there is no such keyslot, it evicts the least
-+recently used idle keyslot and programs the new encryption context into that
-+one. If no idle keyslots are available, then the caller will sleep until there
-+is at least one.
-+
-+
-+blk-mq changes and blk-crypto-fallback
-+======================================
-+
-+We add a :c:type:`struct rq_crypt_ctx` to :c:type:`struct request`. This field
-+holds a pointer to a ``bi_crypt_context`` and a keyslot that this
-+``bi_crypt_context`` has been programmed into in the keyslot manager of the
-+``request_queue`` that this request is being sent to.
-+
-+We introduce ``block/blk-crypto-fallback.c``, which allows upper layers to remain
-+blissfully unaware of whether or not real inline encryption hardware is present
-+underneath.
-+
-+When a bio is submitted to blk-mq with a target ``request_queue``
-+that doesn't support the encryption context specified with the bio, blk-mq
-+will en/decrypt the bio with the blk-crypto-fallback.
-+
-+If the bio is a ``WRITE`` bio, a bounce bio is allocated, and the data in the bio
-+is encrypted stored in the bounce bio - blk-mq will then proceed to process the
-+bounce bio as if it were not encrypted at all (except when blk-integrity is
-+concerned). ``blk-crypto-fallback`` sets the bounce bio's ``bi_end_io`` to an
-+internal function that cleans up the bounce bio and ends the original bio.
-+
-+If the bio is a ``READ`` bio, the bio's ``bi_end_io`` (and also ``bi_private``)
-+is saved and overwritten by ``blk-crypto-fallback`` to
-+``bio_crypto_fallback_decrypt_bio``.  The bio's ``bi_crypt_context`` is also
-+overwritten with ``NULL``, so that to the rest of the stack, the bio looks
-+as if it was a regular bio that never had an encryption context specified.
-+``bio_crypto_fallback_decrypt_bio`` will decrypt the bio, restore the original
-+``bi_end_io`` (and also ``bi_private``) and end the bio again.
-+
-+If we reach a point when a :c:type:`struct request` needs to be allocated for a
-+bio that still has an encryption context, that means that the bio was not
-+handled by the ``blk-crypto-fallback``, which means that the underlying inline
-+encryption hardware claimed to support the encryption. So in this situation,
-+blk-mq tries to program the encryption context into the ``request_queue``'s
-+keyslot_manager, and obtain a keyslot, which it stores in its ``rq_crypt_ctx``.
-+This keyslot is released when the request is completed.
-+
-+When a bio is added to a request, the request takes over ownership of the
-+``bi_crypt_context`` of the bio - in particular, the request keeps the
-+``bi_crypt_context`` of the first bio in its bio-list, and frees the rest
-+(blk-mq needs to be careful to maintain this invariant during bio and request
-+merges).
-+
-+To make it possible for inline encryption to work with request queue based
-+layered devices, when a request is cloned, its ``rq_crypt_ctx`` is cloned as
-+well. When the cloned request is submitted, blk-mq programs the
-+``bi_crypt_context`` of the request into the clone's request_queue's keyslot
-+manager, and stores the returned keyslot in the clone's ``rq_crypt_ctx``.
-+
-+
-+Layered Devices
-+===============
-+
-+Request queue based layered devices like dm-rq that wish to support IE need to
-+create their own keyslot manager for their request queue, and expose whatever
-+functionality they choose. When a layered device wants to pass a clone of that
-+request to another ``request_queue``, blk-crypto will initialize and prepare the
-+clone as necessary - see ``blk_crypto_rq_prep_clone`` and
-+``blk_crypto_insert_cloned_request`` in ``blk-crypto.c``.
-+
-+
-+Future Optimizations for layered devices
-+========================================
-+
-+Creating a keyslot manager for a layered device uses up memory for each
-+keyslot, and in general, a layered device merely passes the request on to a
-+"child" device, so the keyslots in the layered device itself are completely
-+unused, and don't need any refcounting or keyslot programming. We can instead
-+define a new type of KSM; the "passthrough KSM", that layered devices can use
-+to advertise an unlimited number of keyslots, and support for any encryption
-+algorithms they choose, while not actually using any memory for each keyslot.
-+Another use case for the "passthrough KSM" is for IE devices that do not have a
-+limited number of keyslots.
-diff --git a/block/Kconfig b/block/Kconfig
-index c04a1d500842..0af387623774 100644
---- a/block/Kconfig
-+++ b/block/Kconfig
-@@ -192,6 +192,16 @@ config BLK_INLINE_ENCRYPTION
- 	  block layer handle encryption, so users can take
- 	  advantage of inline encryption hardware if present.
+diff --git a/drivers/scsi/ufs/Kconfig b/drivers/scsi/ufs/Kconfig
+index d14c2243e02a..c69f1b49167b 100644
+--- a/drivers/scsi/ufs/Kconfig
++++ b/drivers/scsi/ufs/Kconfig
+@@ -160,3 +160,12 @@ config SCSI_UFS_BSG
  
-+config BLK_INLINE_ENCRYPTION_FALLBACK
-+	bool "Enable crypto API fallback for blk-crypto"
-+	depends on BLK_INLINE_ENCRYPTION
-+	select CRYPTO
-+	select CRYPTO_SKCIPHER
+ 	  Select this if you need a bsg device node for your UFS controller.
+ 	  If unsure, say N.
++
++config SCSI_UFS_CRYPTO
++	bool "UFS Crypto Engine Support"
++	depends on SCSI_UFSHCD && BLK_INLINE_ENCRYPTION
 +	help
-+	  Enabling this lets the block layer handle inline encryption
-+	  by falling back to the kernel crypto API when inline
-+	  encryption hardware is not present.
-+
- menu "Partition Types"
- 
- source "block/partitions/Kconfig"
-diff --git a/block/Makefile b/block/Makefile
-index 82f42ca3f769..9464fb6ae423 100644
---- a/block/Makefile
-+++ b/block/Makefile
-@@ -38,3 +38,4 @@ obj-$(CONFIG_BLK_DEBUG_FS_ZONED)+= blk-mq-debugfs-zoned.o
- obj-$(CONFIG_BLK_SED_OPAL)	+= sed-opal.o
- obj-$(CONFIG_BLK_PM)		+= blk-pm.o
- obj-$(CONFIG_BLK_INLINE_ENCRYPTION)	+= keyslot-manager.o blk-crypto.o
-+obj-$(CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK)	+= blk-crypto-fallback.o
-diff --git a/block/bio-integrity.c b/block/bio-integrity.c
-index bce563031e7c..6f6da02b10ef 100644
---- a/block/bio-integrity.c
-+++ b/block/bio-integrity.c
-@@ -42,7 +42,7 @@ struct bio_integrity_payload *bio_integrity_alloc(struct bio *bio,
- 	struct bio_set *bs = bio->bi_pool;
- 	unsigned inline_vecs;
- 
--	if (bio_has_crypt_ctx(bio)) {
-+	if (bio_has_crypt_ctx(bio) || (bio->bi_opf & REQ_NO_SPECIAL)) {
- 		pr_warn("blk-integrity can't be used together with blk-crypto en/decryption.");
- 		return ERR_PTR(-EOPNOTSUPP);
- 	}
-diff --git a/block/blk-crypto-fallback.c b/block/blk-crypto-fallback.c
++	  Enable Crypto Engine Support in UFS.
++	  Enabling this makes it possible for the kernel to use the crypto
++	  capabilities of the UFS device (if present) to perform crypto
++	  operations on data being transferred to/from the device.
+diff --git a/drivers/scsi/ufs/Makefile b/drivers/scsi/ufs/Makefile
+index 94c6c5d7334b..197e178f44bc 100644
+--- a/drivers/scsi/ufs/Makefile
++++ b/drivers/scsi/ufs/Makefile
+@@ -7,6 +7,7 @@ obj-$(CONFIG_SCSI_UFS_QCOM) += ufs-qcom.o
+ obj-$(CONFIG_SCSI_UFSHCD) += ufshcd-core.o
+ ufshcd-core-y				+= ufshcd.o ufs-sysfs.o
+ ufshcd-core-$(CONFIG_SCSI_UFS_BSG)	+= ufs_bsg.o
++ufshcd-core-$(CONFIG_SCSI_UFS_CRYPTO) += ufshcd-crypto.o
+ obj-$(CONFIG_SCSI_UFSHCD_PCI) += ufshcd-pci.o
+ obj-$(CONFIG_SCSI_UFSHCD_PLATFORM) += ufshcd-pltfrm.o
+ obj-$(CONFIG_SCSI_UFS_HISI) += ufs-hisi.o
+diff --git a/drivers/scsi/ufs/ufshcd-crypto.c b/drivers/scsi/ufs/ufshcd-crypto.c
 new file mode 100644
-index 000000000000..964855b3b29e
+index 000000000000..1b8e14d30c04
 --- /dev/null
-+++ b/block/blk-crypto-fallback.c
-@@ -0,0 +1,673 @@
++++ b/drivers/scsi/ufs/ufshcd-crypto.c
+@@ -0,0 +1,367 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Copyright 2019 Google LLC
 + */
 +
-+/*
-+ * Refer to Documentation/block/inline-encryption.rst for detailed explanation.
-+ */
-+
-+#define pr_fmt(fmt) "blk-crypto-fallback: " fmt
-+
-+#include <crypto/skcipher.h>
-+#include <linux/blk-cgroup.h>
-+#include <linux/blk-crypto.h>
-+#include <linux/crypto.h>
 +#include <linux/keyslot-manager.h>
-+#include <linux/mempool.h>
-+#include <linux/module.h>
-+#include <linux/random.h>
++#include "ufshcd.h"
++#include "ufshcd-crypto.h"
 +
-+#include "blk-crypto-internal.h"
++static inline int ufshcd_num_keyslots(struct ufs_hba *hba)
++{
++	return hba->crypto_capabilities.config_count + 1;
++}
 +
-+static unsigned int num_prealloc_bounce_pg = 32;
-+module_param(num_prealloc_bounce_pg, uint, 0);
-+MODULE_PARM_DESC(num_prealloc_bounce_pg,
-+		 "Number of preallocated bounce pages for the blk-crypto crypto API fallback");
-+
-+static unsigned int blk_crypto_num_keyslots = 100;
-+module_param_named(num_keyslots, blk_crypto_num_keyslots, uint, 0);
-+MODULE_PARM_DESC(num_keyslots,
-+		 "Number of keyslots for the blk-crypto crypto API fallback");
-+
-+static unsigned int num_prealloc_fallback_crypt_ctxs = 128;
-+module_param(num_prealloc_fallback_crypt_ctxs, uint, 0);
-+MODULE_PARM_DESC(num_prealloc_crypt_fallback_ctxs,
-+		 "Number of preallocated bio fallback crypto contexts for blk-crypto to use during crypto API fallback");
-+
-+struct bio_fallback_crypt_ctx {
-+	struct bio_crypt_ctx crypt_ctx;
++static inline bool ufshcd_keyslot_valid(struct ufs_hba *hba, unsigned int slot)
++{
 +	/*
-+	 * Copy of the bvec_iter when this bio was submitted.
-+	 * We only want to en/decrypt the part of the bio as described by the
-+	 * bvec_iter upon submission because bio might be split before being
-+	 * resubmitted
++	 * The actual number of configurations supported is (CFGC+1), so slot
++	 * numbers range from 0 to config_count inclusive.
 +	 */
-+	struct bvec_iter crypt_iter;
-+	u64 fallback_dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
-+	union {
-+		struct {
-+			struct work_struct work;
-+			struct bio *bio;
-+		};
-+		struct {
-+			void *bi_private_orig;
-+			bio_end_io_t *bi_end_io_orig;
-+		};
-+	};
-+};
-+
-+static struct kmem_cache *bio_fallback_crypt_ctx_cache;
-+static mempool_t *bio_fallback_crypt_ctx_pool;
-+
-+/*
-+ * Allocating a crypto tfm during I/O can deadlock, so we have to preallocate
-+ * all of a mode's tfms when that mode starts being used. Since each mode may
-+ * need all the keyslots at some point, each mode needs its own tfm for each
-+ * keyslot; thus, a keyslot may contain tfms for multiple modes.  However, to
-+ * match the behavior of real inline encryption hardware (which only supports a
-+ * single encryption context per keyslot), we only allow one tfm per keyslot to
-+ * be used at a time - the rest of the unused tfms have their keys cleared.
-+ */
-+static DEFINE_MUTEX(tfms_init_lock);
-+static bool tfms_inited[BLK_ENCRYPTION_MODE_MAX];
-+
-+static struct blk_crypto_keyslot {
-+	enum blk_crypto_mode_num crypto_mode;
-+	struct crypto_skcipher *tfms[BLK_ENCRYPTION_MODE_MAX];
-+} *blk_crypto_keyslots;
-+
-+static struct keyslot_manager blk_crypto_ksm;
-+static struct workqueue_struct *blk_crypto_wq;
-+static mempool_t *blk_crypto_bounce_page_pool;
-+
-+/*
-+ * This is the key we set when evicting a keyslot. This *should* be the all 0's
-+ * key, but AES-XTS rejects that key, so we use some random bytes instead.
-+ */
-+static u8 blank_key[BLK_CRYPTO_MAX_KEY_SIZE];
-+
-+static void blk_crypto_evict_keyslot(unsigned int slot)
-+{
-+	struct blk_crypto_keyslot *slotp = &blk_crypto_keyslots[slot];
-+	enum blk_crypto_mode_num crypto_mode = slotp->crypto_mode;
-+	int err;
-+
-+	WARN_ON(slotp->crypto_mode == BLK_ENCRYPTION_MODE_INVALID);
-+
-+	/* Clear the key in the skcipher */
-+	err = crypto_skcipher_setkey(slotp->tfms[crypto_mode], blank_key,
-+				     blk_crypto_modes[crypto_mode].keysize);
-+	WARN_ON(err);
-+	slotp->crypto_mode = BLK_ENCRYPTION_MODE_INVALID;
++	return slot < ufshcd_num_keyslots(hba);
 +}
 +
-+static int blk_crypto_keyslot_program(struct keyslot_manager *ksm,
-+				      const struct blk_crypto_key *key,
-+				      unsigned int slot)
++static bool ufshcd_cap_idx_valid(struct ufs_hba *hba, unsigned int cap_idx)
 +{
-+	struct blk_crypto_keyslot *slotp = &blk_crypto_keyslots[slot];
-+	const enum blk_crypto_mode_num crypto_mode = key->crypto_mode;
-+	int err;
-+
-+	if (crypto_mode != slotp->crypto_mode &&
-+	    slotp->crypto_mode != BLK_ENCRYPTION_MODE_INVALID)
-+		blk_crypto_evict_keyslot(slot);
-+
-+	slotp->crypto_mode = crypto_mode;
-+	err = crypto_skcipher_setkey(slotp->tfms[crypto_mode], key->raw,
-+				     key->size);
-+	if (err) {
-+		blk_crypto_evict_keyslot(slot);
-+		return err;
-+	}
-+	return 0;
++	return cap_idx < hba->crypto_capabilities.num_crypto_cap;
 +}
 +
-+static int blk_crypto_keyslot_evict(struct keyslot_manager *ksm,
-+				    const struct blk_crypto_key *key,
-+				    unsigned int slot)
++static u8 ufshcd_get_data_unit_size_mask(unsigned int data_unit_size)
 +{
-+	blk_crypto_evict_keyslot(slot);
-+	return 0;
++	if (data_unit_size < 512 || data_unit_size > 65536 ||
++	    !is_power_of_2(data_unit_size))
++		return 0;
++
++	return data_unit_size / 512;
 +}
 +
-+/*
-+ * The crypto API fallback KSM ops - only used for a bio when it specifies a
-+ * blk_crypto_key that was not supported by the device's inline encryption
-+ * hardware.
-+ */
-+static const struct keyslot_mgmt_ll_ops blk_crypto_ksm_ll_ops = {
-+	.keyslot_program	= blk_crypto_keyslot_program,
-+	.keyslot_evict		= blk_crypto_keyslot_evict,
-+};
-+
-+static void blk_crypto_fallback_encrypt_endio(struct bio *enc_bio)
++static size_t ufshcd_get_keysize_bytes(enum ufs_crypto_key_size size)
 +{
-+	struct bio *src_bio = enc_bio->bi_private;
-+	int i;
-+
-+	for (i = 0; i < enc_bio->bi_vcnt; i++)
-+		mempool_free(enc_bio->bi_io_vec[i].bv_page,
-+			     blk_crypto_bounce_page_pool);
-+
-+	src_bio->bi_status = enc_bio->bi_status;
-+
-+	bio_put(enc_bio);
-+	bio_endio(src_bio);
++	switch (size) {
++	case UFS_CRYPTO_KEY_SIZE_128:
++		return 16;
++	case UFS_CRYPTO_KEY_SIZE_192:
++		return 24;
++	case UFS_CRYPTO_KEY_SIZE_256:
++		return 32;
++	case UFS_CRYPTO_KEY_SIZE_512:
++		return 64;
++	default:
++		return 0;
++	}
 +}
 +
-+static struct bio *blk_crypto_clone_bio(struct bio *bio_src)
++static int ufshcd_crypto_cap_find(struct ufs_hba *hba,
++				  enum blk_crypto_mode_num crypto_mode,
++				  unsigned int data_unit_size)
 +{
-+	struct bvec_iter iter;
-+	struct bio_vec bv;
-+	struct bio *bio;
++	enum ufs_crypto_alg ufs_alg;
++	u8 data_unit_mask;
++	int cap_idx;
++	enum ufs_crypto_key_size ufs_key_size;
++	union ufs_crypto_cap_entry *ccap_array = hba->crypto_cap_array;
 +
-+	BUG_ON(bio_integrity(bio_src));
++	if (!ufshcd_hba_is_crypto_supported(hba))
++		return -EINVAL;
 +
-+	bio = bio_alloc_bioset(GFP_NOIO, bio_segments(bio_src), NULL);
-+	if (!bio)
-+		return NULL;
-+	bio->bi_disk		= bio_src->bi_disk;
-+	bio->bi_opf		= bio_src->bi_opf;
-+	bio->bi_ioprio		= bio_src->bi_ioprio;
-+	bio->bi_write_hint	= bio_src->bi_write_hint;
-+	bio->bi_iter.bi_sector	= bio_src->bi_iter.bi_sector;
-+	bio->bi_iter.bi_size	= bio_src->bi_iter.bi_size;
-+
-+	bio_for_each_segment(bv, bio_src, iter)
-+		bio->bi_io_vec[bio->bi_vcnt++] = bv;
-+
-+	bio->bi_opf |= REQ_NO_SPECIAL;
-+
-+	bio_clone_blkg_association(bio, bio_src);
-+	blkcg_bio_issue_init(bio);
-+
-+	return bio;
-+}
-+
-+static int blk_crypto_alloc_cipher_req(struct bio *src_bio,
-+				       struct rq_crypt_ctx *rc,
-+				       struct skcipher_request **ciph_req_ret,
-+				       struct crypto_wait *wait)
-+{
-+	struct skcipher_request *ciph_req;
-+	const struct blk_crypto_keyslot *slotp;
-+
-+	slotp = &blk_crypto_keyslots[rc->keyslot];
-+	ciph_req = skcipher_request_alloc(slotp->tfms[slotp->crypto_mode],
-+					  GFP_NOIO);
-+	if (!ciph_req) {
-+		src_bio->bi_status = BLK_STS_RESOURCE;
-+		return -ENOMEM;
++	switch (crypto_mode) {
++	case BLK_ENCRYPTION_MODE_AES_256_XTS:
++		ufs_alg = UFS_CRYPTO_ALG_AES_XTS;
++		ufs_key_size = UFS_CRYPTO_KEY_SIZE_256;
++		break;
++	default:
++		return -EINVAL;
 +	}
 +
-+	skcipher_request_set_callback(ciph_req,
-+				      CRYPTO_TFM_REQ_MAY_BACKLOG |
-+				      CRYPTO_TFM_REQ_MAY_SLEEP,
-+				      crypto_req_done, wait);
-+	*ciph_req_ret = ciph_req;
-+	return 0;
-+}
++	data_unit_mask = ufshcd_get_data_unit_size_mask(data_unit_size);
 +
-+static int blk_crypto_split_bio_if_needed(struct bio **bio_ptr)
-+{
-+	struct bio *bio = *bio_ptr;
-+	unsigned int i = 0;
-+	unsigned int num_sectors = 0;
-+	struct bio_vec bv;
-+	struct bvec_iter iter;
-+
-+	bio_for_each_segment(bv, bio, iter) {
-+		num_sectors += bv.bv_len >> SECTOR_SHIFT;
-+		if (++i == BIO_MAX_PAGES)
-+			break;
-+	}
-+	if (num_sectors < bio_sectors(bio)) {
-+		struct bio *split_bio;
-+
-+		split_bio = bio_split(bio, num_sectors, GFP_NOIO, NULL);
-+		if (!split_bio) {
-+			bio->bi_status = BLK_STS_RESOURCE;
-+			return -ENOMEM;
-+		}
-+		bio_chain(split_bio, bio);
-+		generic_make_request(bio);
-+		*bio_ptr = split_bio;
-+	}
-+	return 0;
-+}
-+
-+union blk_crypto_iv {
-+	__le64 dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
-+	u8 bytes[BLK_CRYPTO_MAX_IV_SIZE];
-+};
-+
-+static void blk_crypto_dun_to_iv(const u64 dun[BLK_CRYPTO_DUN_ARRAY_SIZE],
-+				 union blk_crypto_iv *iv)
-+{
-+	int i;
-+
-+	for (i = 0; i < BLK_CRYPTO_DUN_ARRAY_SIZE; i++)
-+		iv->dun[i] = cpu_to_le64(dun[i]);
-+}
-+
-+/*
-+ * The crypto API fallback's encryption routine.
-+ * Allocate a bounce bio for encryption, encrypt the input bio using crypto API,
-+ * and replace *bio_ptr with the bounce bio. May split input bio if it's too
-+ * large.
-+ */
-+static int blk_crypto_fallback_encrypt_bio(struct bio **bio_ptr)
-+{
-+	struct bio *src_bio, *enc_bio;
-+	struct bio_crypt_ctx *bc;
-+	struct rq_crypt_ctx rc;
-+	int data_unit_size;
-+	struct skcipher_request *ciph_req = NULL;
-+	DECLARE_CRYPTO_WAIT(wait);
-+	u64 curr_dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
-+	struct scatterlist src, dst;
-+	union blk_crypto_iv iv;
-+	unsigned int i, j;
-+	int err = 0;
-+
-+	/* Split the bio if it's too big for single page bvec */
-+	err = blk_crypto_split_bio_if_needed(bio_ptr);
-+	if (err)
-+		return err;
-+
-+	src_bio = *bio_ptr;
-+	bc = src_bio->bi_crypt_context;
-+	data_unit_size = bc->bc_key->data_unit_size;
-+
-+	/* Allocate bounce bio for encryption */
-+	enc_bio = blk_crypto_clone_bio(src_bio);
-+	if (!enc_bio) {
-+		src_bio->bi_status = BLK_STS_RESOURCE;
-+		return -ENOMEM;
++	for (cap_idx = 0; cap_idx < hba->crypto_capabilities.num_crypto_cap;
++	     cap_idx++) {
++		if (ccap_array[cap_idx].algorithm_id == ufs_alg &&
++		    (ccap_array[cap_idx].sdus_mask & data_unit_mask) &&
++		    ccap_array[cap_idx].key_size == ufs_key_size)
++			return cap_idx;
 +	}
 +
-+	/*
-+	 * Use the crypto API fallback keyslot manager to get a crypto_skcipher
-+	 * for the algorithm and key specified for this bio.
-+	 */
-+	err = rq_crypt_ctx_acquire_keyslot(bc, &blk_crypto_ksm, &rc);
-+	if (err) {
-+		src_bio->bi_status = BLK_STS_IOERR;
-+		goto out_put_enc_bio;
-+	}
-+
-+	/* and then allocate an skcipher_request for it */
-+	err = blk_crypto_alloc_cipher_req(src_bio, &rc, &ciph_req, &wait);
-+	if (err)
-+		goto out_release_keyslot;
-+
-+	memcpy(curr_dun, bc->bc_dun, sizeof(curr_dun));
-+	sg_init_table(&src, 1);
-+	sg_init_table(&dst, 1);
-+
-+	skcipher_request_set_crypt(ciph_req, &src, &dst, data_unit_size,
-+				   iv.bytes);
-+
-+	/* Encrypt each page in the bounce bio */
-+	for (i = 0; i < enc_bio->bi_vcnt; i++) {
-+		struct bio_vec *enc_bvec = &enc_bio->bi_io_vec[i];
-+		struct page *plaintext_page = enc_bvec->bv_page;
-+		struct page *ciphertext_page =
-+			mempool_alloc(blk_crypto_bounce_page_pool, GFP_NOIO);
-+
-+		enc_bvec->bv_page = ciphertext_page;
-+
-+		if (!ciphertext_page) {
-+			src_bio->bi_status = BLK_STS_RESOURCE;
-+			err = -ENOMEM;
-+			goto out_free_bounce_pages;
-+		}
-+
-+		sg_set_page(&src, plaintext_page, data_unit_size,
-+			    enc_bvec->bv_offset);
-+		sg_set_page(&dst, ciphertext_page, data_unit_size,
-+			    enc_bvec->bv_offset);
-+
-+		/* Encrypt each data unit in this page */
-+		for (j = 0; j < enc_bvec->bv_len; j += data_unit_size) {
-+			blk_crypto_dun_to_iv(curr_dun, &iv);
-+			err = crypto_wait_req(crypto_skcipher_encrypt(ciph_req),
-+					      &wait);
-+			if (err) {
-+				i++;
-+				src_bio->bi_status = BLK_STS_IOERR;
-+				goto out_free_bounce_pages;
-+			}
-+			bio_crypt_dun_increment(curr_dun, 1);
-+			src.offset += data_unit_size;
-+			dst.offset += data_unit_size;
-+		}
-+	}
-+
-+	enc_bio->bi_private = src_bio;
-+	enc_bio->bi_end_io = blk_crypto_fallback_encrypt_endio;
-+	*bio_ptr = enc_bio;
-+
-+	enc_bio = NULL;
-+	err = 0;
-+	goto out_free_ciph_req;
-+
-+out_free_bounce_pages:
-+	while (i > 0)
-+		mempool_free(enc_bio->bi_io_vec[--i].bv_page,
-+			     blk_crypto_bounce_page_pool);
-+out_free_ciph_req:
-+	skcipher_request_free(ciph_req);
-+out_release_keyslot:
-+	rq_crypt_ctx_release_keyslot(&blk_crypto_ksm, &rc);
-+out_put_enc_bio:
-+	if (enc_bio)
-+		bio_put(enc_bio);
-+
-+	return err;
-+}
-+
-+/*
-+ * The crypto API fallback's main decryption routine.
-+ * Decrypts input bio in place, and calls bio_endio on the bio.
-+ */
-+static void blk_crypto_fallback_decrypt_bio(struct work_struct *work)
-+{
-+	struct bio_fallback_crypt_ctx *f_ctx =
-+		container_of(work, struct bio_fallback_crypt_ctx, work);
-+	struct bio *bio = f_ctx->bio;
-+	struct bio_crypt_ctx *bc = &f_ctx->crypt_ctx;
-+	struct rq_crypt_ctx rc;
-+	struct skcipher_request *ciph_req = NULL;
-+	DECLARE_CRYPTO_WAIT(wait);
-+	u64 curr_dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
-+	union blk_crypto_iv iv;
-+	struct scatterlist sg;
-+	struct bio_vec bv;
-+	struct bvec_iter iter;
-+	const int data_unit_size = bc->bc_key->data_unit_size;
-+	unsigned int i;
-+	int err;
-+
-+	/*
-+	 * Use the crypto API fallback keyslot manager to get a crypto_skcipher
-+	 * for the algorithm and key specified for this bio.
-+	 */
-+	if (rq_crypt_ctx_acquire_keyslot(bc, &blk_crypto_ksm, &rc)) {
-+		bio->bi_status = BLK_STS_RESOURCE;
-+		goto out_no_keyslot;
-+	}
-+
-+	/* and then allocate an skcipher_request for it */
-+	err = blk_crypto_alloc_cipher_req(bio, &rc, &ciph_req, &wait);
-+	if (err)
-+		goto out;
-+
-+	memcpy(curr_dun, f_ctx->fallback_dun, sizeof(curr_dun));
-+	sg_init_table(&sg, 1);
-+	skcipher_request_set_crypt(ciph_req, &sg, &sg, data_unit_size,
-+				   iv.bytes);
-+
-+	/* Decrypt each segment in the bio */
-+	__bio_for_each_segment(bv, bio, iter, f_ctx->crypt_iter) {
-+		struct page *page = bv.bv_page;
-+
-+		sg_set_page(&sg, page, data_unit_size, bv.bv_offset);
-+
-+		/* Decrypt each data unit in the segment */
-+		for (i = 0; i < bv.bv_len; i += data_unit_size) {
-+			blk_crypto_dun_to_iv(curr_dun, &iv);
-+			if (crypto_wait_req(crypto_skcipher_decrypt(ciph_req),
-+					    &wait)) {
-+				bio->bi_status = BLK_STS_IOERR;
-+				goto out;
-+			}
-+			bio_crypt_dun_increment(curr_dun, 1);
-+			sg.offset += data_unit_size;
-+		}
-+	}
-+
-+out:
-+	skcipher_request_free(ciph_req);
-+	rq_crypt_ctx_release_keyslot(&blk_crypto_ksm, &rc);
-+out_no_keyslot:
-+	mempool_free(f_ctx, bio_fallback_crypt_ctx_pool);
-+	bio_endio(bio);
++	return -EINVAL;
 +}
 +
 +/**
-+ * blk_crypto_fallback_decrypt_endio - clean up bio w.r.t fallback decryption
++ * ufshcd_crypto_cfg_entry_write_key - Write a key into a crypto_cfg_entry
 + *
-+ * @bio: the bio to clean up.
++ *	Writes the key with the appropriate format - for AES_XTS,
++ *	the first half of the key is copied as is, the second half is
++ *	copied with an offset halfway into the cfg->crypto_key array.
++ *	For the other supported crypto algs, the key is just copied.
 + *
-+ * Restore bi_private and bi_end_io, and queue the bio for decryption into a
-+ * workqueue, since this function will be called from an atomic context.
++ * @cfg: The crypto config to write to
++ * @key: The key to write
++ * @cap: The crypto capability (which specifies the crypto alg and key size)
++ *
++ * Returns 0 on success, or -EINVAL
 + */
-+static void blk_crypto_fallback_decrypt_endio(struct bio *bio)
++static int ufshcd_crypto_cfg_entry_write_key(union ufs_crypto_cfg_entry *cfg,
++					     const u8 *key,
++					     union ufs_crypto_cap_entry cap)
 +{
-+	struct bio_fallback_crypt_ctx *f_ctx = bio->bi_private;
++	size_t key_size_bytes = ufshcd_get_keysize_bytes(cap.key_size);
 +
-+	bio->bi_private = f_ctx->bi_private_orig;
-+	bio->bi_end_io = f_ctx->bi_end_io_orig;
++	if (key_size_bytes == 0)
++		return -EINVAL;
 +
-+	/* If there was an IO error, don't queue for decrypt. */
-+	if (bio->bi_status) {
-+		mempool_free(f_ctx, bio_fallback_crypt_ctx_pool);
-+		bio_endio(bio);
++	switch (cap.algorithm_id) {
++	case UFS_CRYPTO_ALG_AES_XTS:
++		key_size_bytes *= 2;
++		if (key_size_bytes > UFS_CRYPTO_KEY_MAX_SIZE)
++			return -EINVAL;
++
++		memcpy(cfg->crypto_key, key, key_size_bytes/2);
++		memcpy(cfg->crypto_key + UFS_CRYPTO_KEY_MAX_SIZE/2,
++		       key + key_size_bytes/2, key_size_bytes/2);
++		return 0;
++	case UFS_CRYPTO_ALG_BITLOCKER_AES_CBC:
++		/* fall through */
++	case UFS_CRYPTO_ALG_AES_ECB:
++		/* fall through */
++	case UFS_CRYPTO_ALG_ESSIV_AES_CBC:
++		memcpy(cfg->crypto_key, key, key_size_bytes);
++		return 0;
++	}
++
++	return -EINVAL;
++}
++
++static void ufshcd_program_key(struct ufs_hba *hba,
++			       const union ufs_crypto_cfg_entry *cfg,
++			       int slot)
++{
++	int i;
++	u32 slot_offset = hba->crypto_cfg_register + slot * sizeof(*cfg);
++
++	ufshcd_hold(hba, false);
++	/* Ensure that CFGE is cleared before programming the key */
++	ufshcd_writel(hba, 0, slot_offset + 16 * sizeof(cfg->reg_val[0]));
++	for (i = 0; i < 16; i++) {
++		ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[i]),
++			      slot_offset + i * sizeof(cfg->reg_val[0]));
++	}
++	/* Write dword 17 */
++	ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[17]),
++		      slot_offset + 17 * sizeof(cfg->reg_val[0]));
++	/* Dword 16 must be written last */
++	ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[16]),
++		      slot_offset + 16 * sizeof(cfg->reg_val[0]));
++	ufshcd_release(hba);
++}
++
++static void ufshcd_clear_keyslot(struct ufs_hba *hba, int slot)
++{
++	union ufs_crypto_cfg_entry cfg = { 0 };
++
++	ufshcd_program_key(hba, &cfg, slot);
++}
++
++/* Clear all keyslots at driver init time */
++static void ufshcd_clear_all_keyslots(struct ufs_hba *hba)
++{
++	int slot;
++
++	for (slot = 0; slot < ufshcd_num_keyslots(hba); slot++)
++		ufshcd_clear_keyslot(hba, slot);
++}
++
++static int ufshcd_crypto_keyslot_program(struct keyslot_manager *ksm,
++					 const struct blk_crypto_key *key,
++					 unsigned int slot)
++{
++	struct ufs_hba *hba = container_of(ksm, struct ufs_hba, ksm);
++	int err = 0;
++	u8 data_unit_mask;
++	union ufs_crypto_cfg_entry cfg;
++	int cap_idx;
++
++	cap_idx = ufshcd_crypto_cap_find(hba, key->crypto_mode,
++					 key->data_unit_size);
++
++	if (!(hba->caps & UFSHCD_CAP_CRYPTO) ||
++	    !ufshcd_keyslot_valid(hba, slot) ||
++	    !ufshcd_cap_idx_valid(hba, cap_idx))
++		return -EINVAL;
++
++	data_unit_mask = ufshcd_get_data_unit_size_mask(key->data_unit_size);
++
++	if (!(data_unit_mask & hba->crypto_cap_array[cap_idx].sdus_mask))
++		return -EINVAL;
++
++	memset(&cfg, 0, sizeof(cfg));
++	cfg.data_unit_size = data_unit_mask;
++	cfg.crypto_cap_idx = cap_idx;
++	cfg.config_enable |= UFS_CRYPTO_CONFIGURATION_ENABLE;
++
++	err = ufshcd_crypto_cfg_entry_write_key(&cfg, key->raw,
++						hba->crypto_cap_array[cap_idx]);
++	if (err)
++		return err;
++
++	ufshcd_program_key(hba, &cfg, slot);
++
++	memzero_explicit(&cfg, sizeof(cfg));
++	return 0;
++}
++
++static int ufshcd_crypto_keyslot_evict(struct keyslot_manager *ksm,
++				       const struct blk_crypto_key *key,
++				       unsigned int slot)
++{
++	struct ufs_hba *hba = container_of(ksm, struct ufs_hba, ksm);
++
++	if (!(hba->caps & UFSHCD_CAP_CRYPTO) ||
++	    !ufshcd_keyslot_valid(hba, slot))
++		return -EINVAL;
++
++	/*
++	 * Clear the crypto cfg on the device. Clearing CFGE
++	 * might not be sufficient, so just clear the entire cfg.
++	 */
++	ufshcd_clear_keyslot(hba, slot);
++
++	return 0;
++}
++
++void ufshcd_crypto_enable(struct ufs_hba *hba)
++{
++	if (!ufshcd_hba_is_crypto_supported(hba))
 +		return;
-+	}
 +
-+	INIT_WORK(&f_ctx->work, blk_crypto_fallback_decrypt_bio);
-+	f_ctx->bio = bio;
-+	queue_work(blk_crypto_wq, &f_ctx->work);
++	hba->caps |= UFSHCD_CAP_CRYPTO;
++
++	/* Reset might clear all keys, so reprogram all the keys. */
++	blk_ksm_reprogram_all_keys(&hba->ksm);
 +}
 +
-+/**
-+ * blk_crypto_fallback_bio_prep - Prepare a bio to use fallback en/decryption
-+ *
-+ * @bio_ptr: pointer to the bio to prepare
-+ *
-+ * If bio is doing a WRITE operation, we split the bio into two parts, resubmit
-+ * the second part. Allocates a bounce bio for the first part, encrypts it, and
-+ * update bio_ptr to point to the bounce bio.
-+ *
-+ * For a READ operation, we mark the bio for decryption by using bi_private and
-+ * bi_end_io.
-+ *
-+ * In either case, this function will make the bio look like a regular bio (i.e.
-+ * as if no encryption context was ever specified) for the purposes of the rest
-+ * of the stack except for blk-integrity (blk-integrity and blk-crypto are not
-+ * currently supported together).
-+ */
-+int blk_crypto_fallback_bio_prep(struct bio **bio_ptr)
++void ufshcd_crypto_disable(struct ufs_hba *hba)
 +{
-+	struct bio *bio = *bio_ptr;
-+	struct bio_crypt_ctx *bc = bio->bi_crypt_context;
-+	struct bio_fallback_crypt_ctx *f_ctx;
++	hba->caps &= ~UFSHCD_CAP_CRYPTO;
++}
 +
-+	if (!tfms_inited[bc->bc_key->crypto_mode]) {
-+		bio->bi_status = BLK_STS_IOERR;
-+		return -EIO;
-+	}
++static const struct keyslot_mgmt_ll_ops ufshcd_ksm_ops = {
++	.keyslot_program	= ufshcd_crypto_keyslot_program,
++	.keyslot_evict		= ufshcd_crypto_keyslot_evict,
++};
 +
-+	if (!blk_ksm_crypto_mode_supported(&blk_crypto_ksm, bc->bc_key)) {
-+		bio->bi_status = BLK_STS_NOTSUPP;
-+		return -EOPNOTSUPP;
-+	}
-+
-+	if (bio_data_dir(bio) == WRITE)
-+		return blk_crypto_fallback_encrypt_bio(bio_ptr);
-+
++bool ufshcd_blk_crypto_mode_num_for_alg_dusize(
++					enum ufs_crypto_alg ufs_crypto_alg,
++					enum ufs_crypto_key_size key_size,
++					enum blk_crypto_mode_num *blk_mode_num,
++					unsigned int *max_dun_bytes_supported)
++{
 +	/*
-+	 * bio READ case: Set up a f_ctx in the bio's bi_private and set the
-+	 * bi_end_io appropriately to trigger decryption when the bio is ended.
-+	 * Also set REQ_NO_SPECIAL in bi_opf to trigger error if blk-integrity
-+	 * tries to process this bio.
++	 * This is currently the only mode that UFS and blk-crypto both support.
 +	 */
-+	f_ctx = mempool_alloc(bio_fallback_crypt_ctx_pool, GFP_NOIO);
-+	f_ctx->crypt_ctx = *bc;
-+	memcpy(f_ctx->fallback_dun, bc->bc_dun, sizeof(f_ctx->fallback_dun));
-+	f_ctx->crypt_iter = bio->bi_iter;
-+	f_ctx->bi_private_orig = bio->bi_private;
-+	f_ctx->bi_end_io_orig = bio->bi_end_io;
-+	bio->bi_private = (void *)f_ctx;
-+	bio->bi_end_io = blk_crypto_fallback_decrypt_endio;
-+	bio_crypt_free_ctx(bio);
-+
-+	bio->bi_opf |= REQ_NO_SPECIAL;
-+
-+	return 0;
-+}
-+
-+int blk_crypto_fallback_evict_key(const struct blk_crypto_key *key)
-+{
-+	return blk_ksm_evict_key(&blk_crypto_ksm, key);
-+}
-+
-+static bool blk_crypto_fallback_inited;
-+static int blk_crypto_fallback_init(void)
-+{
-+	int i;
-+	int err = -ENOMEM;
-+
-+	if (blk_crypto_fallback_inited)
-+		return 0;
-+
-+	prandom_bytes(blank_key, BLK_CRYPTO_MAX_KEY_SIZE);
-+
-+	err = blk_ksm_init(&blk_crypto_ksm, NULL, blk_crypto_num_keyslots);
-+	if (err)
-+		goto out;
-+	err = -ENOMEM;
-+
-+	blk_crypto_ksm.ksm_ll_ops = blk_crypto_ksm_ll_ops;
-+
-+	/* All blk-crypto modes have a crypto API fallback. */
-+	for (i = 0; i < BLK_ENCRYPTION_MODE_MAX; i++) {
-+		blk_crypto_ksm.crypto_modes_supported[i] = 0xFFFFFFFF;
-+		blk_crypto_ksm.max_dun_bytes_supported[i] =
-+						blk_crypto_modes[i].ivsize;
-+	}
-+	blk_crypto_ksm.crypto_modes_supported[BLK_ENCRYPTION_MODE_INVALID] = 0;
-+	blk_crypto_ksm.max_dun_bytes_supported[BLK_ENCRYPTION_MODE_INVALID] = 0;
-+
-+	blk_crypto_wq = alloc_workqueue("blk_crypto_wq",
-+					WQ_UNBOUND | WQ_HIGHPRI |
-+					WQ_MEM_RECLAIM, num_online_cpus());
-+	if (!blk_crypto_wq)
-+		goto fail_free_ksm;
-+
-+	blk_crypto_keyslots = kcalloc(blk_crypto_num_keyslots,
-+				      sizeof(blk_crypto_keyslots[0]),
-+				      GFP_KERNEL);
-+	if (!blk_crypto_keyslots)
-+		goto fail_free_wq;
-+
-+	blk_crypto_bounce_page_pool =
-+		mempool_create_page_pool(num_prealloc_bounce_pg, 0);
-+	if (!blk_crypto_bounce_page_pool)
-+		goto fail_free_keyslots;
-+
-+	bio_fallback_crypt_ctx_cache = KMEM_CACHE(bio_fallback_crypt_ctx, 0);
-+	if (!bio_fallback_crypt_ctx_cache)
-+		goto fail_free_bounce_page_pool;
-+
-+	bio_fallback_crypt_ctx_pool =
-+		mempool_create_slab_pool(num_prealloc_fallback_crypt_ctxs,
-+					 bio_fallback_crypt_ctx_cache);
-+	if (!bio_fallback_crypt_ctx_pool)
-+		goto fail_free_crypt_ctx_cache;
-+
-+	blk_crypto_fallback_inited = true;
-+
-+	return 0;
-+fail_free_crypt_ctx_cache:
-+	kmem_cache_destroy(bio_fallback_crypt_ctx_cache);
-+fail_free_bounce_page_pool:
-+	mempool_destroy(blk_crypto_bounce_page_pool);
-+fail_free_keyslots:
-+	kfree(blk_crypto_keyslots);
-+fail_free_wq:
-+	destroy_workqueue(blk_crypto_wq);
-+fail_free_ksm:
-+	blk_ksm_destroy(&blk_crypto_ksm);
-+out:
-+	return err;
-+}
-+
-+/**
-+ * blk_crypto_start_using_key() - Start using a blk_crypto_key on a device
-+ * @key: A key to use on the device
-+ * @q: the request queue for the device
-+ *
-+ * Upper layers must call this function to ensure that the crypto API fallback
-+ * has transforms for the algorithm/data_unit_size/dun_bytes combo specified by
-+ * the key, if it becomes necessary.
-+ *
-+ * Return: 0 on success and -err on error.
-+ */
-+int blk_crypto_start_using_key(struct blk_crypto_key *key,
-+			       struct request_queue *q)
-+{
-+	enum blk_crypto_mode_num mode_num = key->crypto_mode;
-+	struct blk_crypto_keyslot *slotp;
-+	unsigned int i;
-+	int err = 0;
-+
-+	/*
-+	 * Fast path
-+	 * Ensure that updates to blk_crypto_keyslots[i].tfms[mode_num]
-+	 * for each i are visible before we try to access them.
-+	 */
-+	if (likely(smp_load_acquire(&tfms_inited[mode_num])))
-+		return 0;
-+
-+	/*
-+	 * If the keyslot manager of the request queue supports this
-+	 * crypto mode, then we don't need to allocate this mode.
-+	 */
-+	if (blk_ksm_crypto_mode_supported(q->ksm, key))
-+		return 0;
-+
-+	mutex_lock(&tfms_init_lock);
-+	err = blk_crypto_fallback_init();
-+	if (err)
-+		goto out;
-+
-+	if (tfms_inited[mode_num])
-+		goto out;
-+
-+	for (i = 0; i < blk_crypto_num_keyslots; i++) {
-+		slotp = &blk_crypto_keyslots[i];
-+		slotp->tfms[mode_num] = crypto_alloc_skcipher(
-+					blk_crypto_modes[mode_num].cipher_str,
-+					0, 0);
-+		if (IS_ERR(slotp->tfms[mode_num])) {
-+			err = PTR_ERR(slotp->tfms[mode_num]);
-+			slotp->tfms[mode_num] = NULL;
-+			goto out_free_tfms;
-+		}
-+
-+		crypto_skcipher_set_flags(slotp->tfms[mode_num],
-+					  CRYPTO_TFM_REQ_FORBID_WEAK_KEYS);
++	if (ufs_crypto_alg == UFS_CRYPTO_ALG_AES_XTS &&
++	    key_size == UFS_CRYPTO_KEY_SIZE_256) {
++		*blk_mode_num = BLK_ENCRYPTION_MODE_AES_256_XTS;
++		*max_dun_bytes_supported = 8;
++		return true;
 +	}
 +
-+	/*
-+	 * Ensure that updates to blk_crypto_keyslots[i].tfms[mode_num]
-+	 * for each i are visible before we set tfms_inited[mode_num].
-+	 */
-+	smp_store_release(&tfms_inited[mode_num], true);
-+	goto out;
-+
-+out_free_tfms:
-+	for (i = 0; i < blk_crypto_num_keyslots; i++) {
-+		slotp = &blk_crypto_keyslots[i];
-+		crypto_free_skcipher(slotp->tfms[mode_num]);
-+		slotp->tfms[mode_num] = NULL;
-+	}
-+out:
-+	mutex_unlock(&tfms_init_lock);
-+	return err;
-+}
-diff --git a/block/blk-crypto-internal.h b/block/blk-crypto-internal.h
-index 2452b5dee140..4cccaa9b81ef 100644
---- a/block/blk-crypto-internal.h
-+++ b/block/blk-crypto-internal.h
-@@ -16,4 +16,36 @@ struct blk_crypto_mode {
- 	unsigned int ivsize; /* iv size in bytes */
- };
- 
-+extern const struct blk_crypto_mode blk_crypto_modes[];
-+
-+void rq_crypt_ctx_release_keyslot(struct keyslot_manager *ksm,
-+				  struct rq_crypt_ctx *rc);
-+
-+int rq_crypt_ctx_acquire_keyslot(struct bio_crypt_ctx *bc,
-+				 struct keyslot_manager *ksm,
-+				 struct rq_crypt_ctx *rc);
-+
-+#ifdef CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK
-+
-+int blk_crypto_fallback_bio_prep(struct bio **bio_ptr);
-+
-+int blk_crypto_fallback_evict_key(const struct blk_crypto_key *key);
-+
-+#else /* CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK */
-+
-+static inline int blk_crypto_fallback_bio_prep(struct bio **bio_ptr)
-+{
-+	pr_warn_once("crypto API fallback disabled; failing request.\n");
-+	(*bio_ptr)->bi_status = BLK_STS_NOTSUPP;
 +	return false;
 +}
 +
-+static inline int
-+blk_crypto_fallback_evict_key(const struct blk_crypto_key *key)
++/**
++ * ufshcd_hba_init_crypto - Read crypto capabilities, init crypto fields in hba
++ * @hba: Per adapter instance
++ *
++ * Return: 0 if crypto was initialized or is not supported, else a -errno value.
++ */
++int ufshcd_hba_init_crypto(struct ufs_hba *hba)
 +{
++	int cap_idx = 0;
++	int err = 0;
++	enum blk_crypto_mode_num blk_mode_num;
++	unsigned int max_dun_bytes;
++
++	/* Default to disabling crypto */
++	hba->caps &= ~UFSHCD_CAP_CRYPTO;
++
++	/* Return 0 if crypto support isn't present */
++	if (!(hba->capabilities & MASK_CRYPTO_SUPPORT) ||
++	    (hba->quirks & UFSHCD_QUIRK_BROKEN_CRYPTO))
++		goto out;
++
++	/*
++	 * Crypto Capabilities should never be 0, because the
++	 * config_array_ptr > 04h. So we use a 0 value to indicate that
++	 * crypto init failed, and can't be enabled.
++	 */
++	hba->crypto_capabilities.reg_val =
++			cpu_to_le32(ufshcd_readl(hba, REG_UFS_CCAP));
++	hba->crypto_cfg_register =
++		(u32)hba->crypto_capabilities.config_array_ptr * 0x100;
++	hba->crypto_cap_array =
++		devm_kcalloc(hba->dev,
++			     hba->crypto_capabilities.num_crypto_cap,
++			     sizeof(hba->crypto_cap_array[0]),
++			     GFP_KERNEL);
++	if (!hba->crypto_cap_array) {
++		err = -ENOMEM;
++		goto out;
++	}
++
++	err = blk_ksm_init(&hba->ksm, hba->dev, ufshcd_num_keyslots(hba));
++	if (err)
++		goto out_free_caps;
++
++	hba->ksm.ksm_ll_ops = ufshcd_ksm_ops;
++	hba->ksm.ll_priv_data = hba;
++
++	memset(hba->ksm.crypto_modes_supported, 0,
++	       sizeof(hba->ksm.crypto_modes_supported));
++	memset(hba->ksm.max_dun_bytes_supported, 0,
++	       sizeof(hba->ksm.max_dun_bytes_supported));
++	/*
++	 * Store all the capabilities now so that we don't need to repeatedly
++	 * access the device each time we want to know its capabilities
++	 */
++	for (cap_idx = 0; cap_idx < hba->crypto_capabilities.num_crypto_cap;
++	     cap_idx++) {
++		hba->crypto_cap_array[cap_idx].reg_val =
++			cpu_to_le32(ufshcd_readl(hba,
++						 REG_UFS_CRYPTOCAP +
++						 cap_idx * sizeof(__le32)));
++		if (!ufshcd_blk_crypto_mode_num_for_alg_dusize(
++				hba->crypto_cap_array[cap_idx].algorithm_id,
++				hba->crypto_cap_array[cap_idx].key_size,
++				&blk_mode_num,
++				&max_dun_bytes))
++			continue;
++		hba->ksm.crypto_modes_supported[blk_mode_num] |=
++			hba->crypto_cap_array[cap_idx].sdus_mask * 512;
++		hba->ksm.max_dun_bytes_supported[blk_mode_num] = max_dun_bytes;
++	}
++
++	ufshcd_clear_all_keyslots(hba);
++
 +	return 0;
++
++out_free_caps:
++	devm_kfree(hba->dev, hba->crypto_cap_array);
++out:
++	/* Indicate that init failed by setting crypto_capabilities to 0 */
++	hba->crypto_capabilities.reg_val = 0;
++	return err;
 +}
 +
-+#endif /* CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK */
++void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
++					    struct request_queue *q)
++{
++	if (!ufshcd_hba_is_crypto_supported(hba) || !q)
++		return;
 +
- #endif /* __LINUX_BLK_CRYPTO_INTERNAL_H */
-diff --git a/block/blk-crypto.c b/block/blk-crypto.c
-index b10b01c83907..d1280fc78239 100644
---- a/block/blk-crypto.c
-+++ b/block/blk-crypto.c
-@@ -3,6 +3,10 @@
-  * Copyright 2019 Google LLC
-  */
- 
++	q->ksm = &hba->ksm;
++}
++
++void ufshcd_crypto_destroy_keyslot_manager(struct ufs_hba *hba)
++{
++	blk_ksm_destroy(&hba->ksm);
++}
+diff --git a/drivers/scsi/ufs/ufshcd-crypto.h b/drivers/scsi/ufs/ufshcd-crypto.h
+new file mode 100644
+index 000000000000..8270c0c5081a
+--- /dev/null
++++ b/drivers/scsi/ufs/ufshcd-crypto.h
+@@ -0,0 +1,54 @@
++/* SPDX-License-Identifier: GPL-2.0 */
 +/*
-+ * Refer to Documentation/block/inline-encryption.rst for detailed explanation.
++ * Copyright 2019 Google LLC
 + */
 +
- #define pr_fmt(fmt) "blk-crypto: " fmt
- 
- #include <linux/bio.h>
-@@ -178,7 +182,8 @@ void rq_crypt_ctx_release_keyslot(struct keyslot_manager *ksm,
- /**
-  * blk_crypto_init_request - Initializes the request's rq_crypt_ctx based on the
-  *			     bio to be added to the request, and prepares it for
-- *			     hardware inline encryption.
-+ *			     hardware inline encryption (as opposed to using the
-+ *			     crypto API fallback).
-  *
-  * @rq: The request to init
-  * @q: The request queue this request will be submitted to
-@@ -208,6 +213,10 @@ int blk_crypto_init_request(struct request *rq, struct request_queue *q,
- 	if (!bc)
- 		return 0;
- 
-+	/*
-+	 * If we have a bio crypt context here, that means we didn't fallback
-+	 * to crypto API, so try to program a keyslot now.
-+	 */
- 	err = rq_crypt_ctx_acquire_keyslot(bc, q->ksm, rc);
- 	if (err)
- 		pr_warn_once("Failed to acquire keyslot for %s (err=%d).\n",
-@@ -238,9 +247,17 @@ void blk_crypto_free_request(struct request *rq)
-  *
-  * @bio_ptr: pointer to original bio pointer
-  *
-- * Succeeds if the bio doesn't have inline encryption enabled or if the bio
-- * crypt context provided for the bio is supported by the underlying device's
-- * inline encryption hardware. Ends the bio with error otherwise.
-+ * If the bio doesn't have inline encryption enabled, or if the bio crypt
-+ * context provided for the bio is supported by the underlying device's inline
-+ * encryption hardware, do nothing.
-+ *
-+ * Otherwise, try to perform en/decryption for this bio by falling back to the
-+ * kernel crypto API. When the crypto API fallback is used for encryption,
-+ * blk-crypto may choose to split the bio into 2 - the first one that will
-+ * continue to be processed and the second one that will be resubmitted via
-+ * generic_make_request. A bounce bio will be allocated to encrypt the contents
-+ * of the aforementioned "first one", and *bio_ptr will be updated to this
-+ * bounce bio.
-  *
-  * Return: 0 on success; nonzero on error (and bio_endio() will have been called
-  *	   so bio submission should abort).
-@@ -267,10 +284,17 @@ int blk_crypto_bio_prep(struct bio **bio_ptr)
- 	if (err)
- 		goto fail;
- 
--	/* Success if device supports the encryption context */
-+	/*
-+	 * Success if device supports the encryption context, or we succeeded
-+	 * in falling back to the crypto API.
-+	 */
- 	if (blk_ksm_crypto_mode_supported(bio->bi_disk->queue->ksm, bc->bc_key))
- 		return 0;
- 
-+	err = blk_crypto_fallback_bio_prep(bio_ptr);
-+	if (!err)
-+		return 0;
++#ifndef _UFSHCD_CRYPTO_H
++#define _UFSHCD_CRYPTO_H
 +
- fail:
- 	bio->bi_status = BLK_STS_IOERR;
- 	bio_endio(*bio_ptr);
-@@ -299,7 +323,11 @@ void blk_crypto_rq_prep_clone(struct request *dst, struct request *src)
- 	dst->rq_crypt_ctx.keyslot = -EINVAL;
- 
- 	if (src->rq_crypt_ctx.keyslot < 0) {
--		/* src doesn't have any crypto info, so nothing to do */
-+		/*
-+		 * Either src doesn't have any crypto info, or it was marked
-+		 * for fallback en/decryption. In either case, the clone should
-+		 * not have any crypto info.
-+		 */
- 		return;
- 	}
- 
-@@ -399,6 +427,7 @@ int blk_crypto_init_key(struct blk_crypto_key *blk_key, const u8 *raw_key,
-  * is evicted from hardware that it might have been programmed into. This
-  * will call blk_ksm_evict_key on the queue's keyslot manager, if one
-  * exists, and supports the crypto algorithm with the specified data unit size.
-+ * Otherwise, it will evict the key from the blk-crypto-fallback's ksm.
-  *
-  * Return: 0 on success or if key is not present in the q's ksm, -err on error.
-  */
-@@ -408,5 +437,5 @@ int blk_crypto_evict_key(struct request_queue *q,
- 	if (q->ksm && blk_ksm_crypto_mode_supported(q->ksm, key))
- 		return blk_ksm_evict_key(q->ksm, key);
- 
--	return 0;
-+	return blk_crypto_fallback_evict_key(key);
- }
-diff --git a/include/linux/blk-crypto.h b/include/linux/blk-crypto.h
-index f855895770f6..bde2e08879b6 100644
---- a/include/linux/blk-crypto.h
-+++ b/include/linux/blk-crypto.h
-@@ -58,7 +58,7 @@ struct blk_crypto_key {
-  *
-  * A bio_crypt_ctx specifies that the contents of the bio will be encrypted (for
-  * write requests) or decrypted (for read requests) inline by the storage device
-- * or controller.
-+ * or controller, or by the crypto API fallback.
-  */
- struct bio_crypt_ctx {
- 	const struct blk_crypto_key	*bc_key;
-@@ -251,6 +251,21 @@ static inline int blk_crypto_insert_cloned_request(struct request_queue *q,
- 
- #endif /* CONFIG_BLK_INLINE_ENCRYPTION */
- 
-+#ifdef CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK
++#ifdef CONFIG_SCSI_UFS_CRYPTO
++#include <linux/keyslot-manager.h>
++#include "ufshcd.h"
++#include "ufshci.h"
 +
-+int blk_crypto_start_using_key(struct blk_crypto_key *key,
-+			       struct request_queue *q);
++static inline bool ufshcd_hba_is_crypto_supported(struct ufs_hba *hba)
++{
++	return hba->crypto_capabilities.reg_val != 0;
++}
 +
-+#else /* CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK */
++void ufshcd_crypto_enable(struct ufs_hba *hba);
 +
-+static inline int blk_crypto_start_using_key(struct blk_crypto_key *key,
-+					     struct request_queue *q)
++void ufshcd_crypto_disable(struct ufs_hba *hba);
++
++int ufshcd_hba_init_crypto(struct ufs_hba *hba);
++
++void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
++					    struct request_queue *q);
++
++void ufshcd_crypto_destroy_keyslot_manager(struct ufs_hba *hba);
++
++#else /* CONFIG_SCSI_UFS_CRYPTO */
++
++static inline bool ufshcd_hba_is_crypto_supported(struct ufs_hba *hba)
++{
++	return false;
++}
++
++static inline void ufshcd_crypto_enable(struct ufs_hba *hba) { }
++
++static inline void ufshcd_crypto_disable(struct ufs_hba *hba) { }
++
++static inline int ufshcd_hba_init_crypto(struct ufs_hba *hba)
 +{
 +	return 0;
 +}
 +
-+#endif /* CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK */
++static inline void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
++						struct request_queue *q) { }
 +
- #endif /* CONFIG_BLOCK */
++static inline void ufshcd_crypto_destroy_keyslot_manager(struct ufs_hba *hba)
++{ }
++
++#endif /* CONFIG_SCSI_UFS_CRYPTO */
++
++#endif /* _UFSHCD_CRYPTO_H */
+diff --git a/drivers/scsi/ufs/ufshcd.h b/drivers/scsi/ufs/ufshcd.h
+index 978781c538c4..7b8a87418f0c 100644
+--- a/drivers/scsi/ufs/ufshcd.h
++++ b/drivers/scsi/ufs/ufshcd.h
+@@ -55,6 +55,7 @@
+ #include <linux/clk.h>
+ #include <linux/completion.h>
+ #include <linux/regulator/consumer.h>
++#include <linux/keyslot-manager.h>
+ #include "unipro.h"
  
- #endif /* __LINUX_BLK_CRYPTO_H */
-diff --git a/include/linux/blk_types.h b/include/linux/blk_types.h
-index 1996689c51d3..520254f92a81 100644
---- a/include/linux/blk_types.h
-+++ b/include/linux/blk_types.h
-@@ -324,6 +324,11 @@ enum req_flag_bits {
- 	__REQ_NOMERGE,		/* don't touch this for merging */
- 	__REQ_IDLE,		/* anticipate more IO after this one */
- 	__REQ_INTEGRITY,	/* I/O includes block integrity payload */
+ #include <asm/irq.h>
+@@ -521,6 +522,10 @@ struct ufs_stats {
+  * @is_urgent_bkops_lvl_checked: keeps track if the urgent bkops level for
+  *  device is known or not.
+  * @scsi_block_reqs_cnt: reference counting for scsi block requests
++ * @crypto_capabilities: Content of crypto capabilities register (0x100)
++ * @crypto_cap_array: Array of crypto capabilities
++ * @crypto_cfg_register: Start of the crypto cfg array
++ * @ksm: the keyslot manager tied to this hba
+  */
+ struct ufs_hba {
+ 	void __iomem *mmio_base;
+@@ -634,6 +639,13 @@ struct ufs_hba {
+ 	 * enabled via HCE register.
+ 	 */
+ 	#define UFSHCI_QUIRK_BROKEN_HCE				0x400
++
 +	/*
-+	 * I/O cannot include any special tags like block integrity or
-+	 * bi_crypt_context
++	 * This quirk needs to be enabled if the host controller advertises
++	 * inline encryption support but it doesn't work correctly.
 +	 */
-+	__REQ_NO_SPECIAL,
- 	__REQ_FUA,		/* forced unit access */
- 	__REQ_PREFLUSH,		/* request for cache flush */
- 	__REQ_RAHEAD,		/* read ahead, can fail anytime */
-@@ -359,6 +364,7 @@ enum req_flag_bits {
- #define REQ_NOMERGE		(1ULL << __REQ_NOMERGE)
- #define REQ_IDLE		(1ULL << __REQ_IDLE)
- #define REQ_INTEGRITY		(1ULL << __REQ_INTEGRITY)
-+#define REQ_NO_SPECIAL		(1ULL << __REQ_NO_SPECIAL)
- #define REQ_FUA			(1ULL << __REQ_FUA)
- #define REQ_PREFLUSH		(1ULL << __REQ_PREFLUSH)
- #define REQ_RAHEAD		(1ULL << __REQ_RAHEAD)
++	#define UFSHCD_QUIRK_BROKEN_CRYPTO			0x800
++
+ 	unsigned int quirks;	/* Deviations from standard UFSHCI spec. */
+ 
+ 	/* Device deviations from standard UFS device spec. */
+@@ -735,6 +747,14 @@ struct ufs_hba {
+ 
+ 	struct device		bsg_dev;
+ 	struct request_queue	*bsg_queue;
++
++#ifdef CONFIG_SCSI_UFS_CRYPTO
++	/* crypto */
++	union ufs_crypto_capabilities crypto_capabilities;
++	union ufs_crypto_cap_entry *crypto_cap_array;
++	u32 crypto_cfg_register;
++	struct keyslot_manager ksm;
++#endif /* CONFIG_SCSI_UFS_CRYPTO */
+ };
+ 
+ /* Returns true if clocks can be gated. Otherwise false */
 -- 
 2.25.0.265.gbab2e86ba0-goog
 
