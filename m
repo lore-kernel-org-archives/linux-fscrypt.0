@@ -7,58 +7,58 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
 	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 04E38C3F2D6
-	for <linux-fscrypt@archiver.kernel.org>; Sat,  7 Mar 2020 02:37:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3FE3CC10F27
+	for <linux-fscrypt@archiver.kernel.org>; Sat,  7 Mar 2020 02:37:08 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id C7F47206E6
-	for <linux-fscrypt@archiver.kernel.org>; Sat,  7 Mar 2020 02:37:06 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 156752070A
+	for <linux-fscrypt@archiver.kernel.org>; Sat,  7 Mar 2020 02:37:08 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="X9NA3RR8"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ZUjBrxbf"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726928AbgCGCgw (ORCPT
+        id S1727083AbgCGCgu (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 6 Mar 2020 21:36:52 -0500
-Received: from mail-pj1-f73.google.com ([209.85.216.73]:59460 "EHLO
-        mail-pj1-f73.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727123AbgCGCgv (ORCPT
+        Fri, 6 Mar 2020 21:36:50 -0500
+Received: from mail-pg1-f202.google.com ([209.85.215.202]:40653 "EHLO
+        mail-pg1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727065AbgCGCgr (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 6 Mar 2020 21:36:51 -0500
-Received: by mail-pj1-f73.google.com with SMTP id z5so2332493pjq.9
-        for <linux-fscrypt@vger.kernel.org>; Fri, 06 Mar 2020 18:36:51 -0800 (PST)
+        Fri, 6 Mar 2020 21:36:47 -0500
+Received: by mail-pg1-f202.google.com with SMTP id n16so2511905pgl.7
+        for <linux-fscrypt@vger.kernel.org>; Fri, 06 Mar 2020 18:36:46 -0800 (PST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=XT08hOejbbga3cs0gkN59AERTnxd/bHRXMd8cI0IuPo=;
-        b=X9NA3RR8wEBA5qw3Z5n1vBh1erNR8U2uvYLrlG2Pz4W19nCSzrOmNxjUUsD9cjN7l8
-         WVDRp8V5+W/y6BfyKPxpDOBYKMrwy57Z6x/kfQ3/7OzaGJO7o86cUr7mnsj+aBUE+zqR
-         XnLXdb9mf8IgEMgWYNfXpFZDoQ273FVQsWRmiYAqSVLT6fMgg3k+3M/VYHcV222zXKKL
-         zDnCw2pnIPZkhIq+ALc95xvx6jtcQGuO2uurK8wTXNceWzGYEuvNZ8xjd5FtSHNl9f1M
-         QuA+j8TIf1yzySx/jJZ4PwLRMs6mmpVXIcEEMHgNF+CV543Hj19siwpH4wXy62/3XclN
-         ON7g==
+        bh=voLmfNHCEAsUj1t7nCxgSA9Y75G0q2ard7Ul69iPgyE=;
+        b=ZUjBrxbfMPRhNcKXsujkMfTBsDi7260b6iA1v68ODA6TQ/zTU2NXDbEy5j2fpf2qKL
+         fzlr30xIQkO7sFofoDb4XryOVTaSKoEdS2CTxOm3HC7bUwueB8pBc4P/aR24dCLInM3k
+         ZX7c0iRim3aAYDsNxcgnSOr1U6vatlMLFlDh3gx6/nF0X6rj90nSenuRGG+m78B3jf9R
+         Ep8sLbldqAxEvV+N4ZYRfRSQujF9+jWkPkc7EQDvmfuQkRlRwrTNAz3C5qMhYbCl9M4F
+         vl8/SXOqD08TjRAub9L/5GhPse1lBiv4AzzaibZkva36DNVabBsTXOvtaYmQz8ehjIDv
+         /bTw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=XT08hOejbbga3cs0gkN59AERTnxd/bHRXMd8cI0IuPo=;
-        b=YLZFexERFnOcIU/zUGkD8SkyepO6Hbavl5yShMRS2p5ktVwh4/LpwCwOEbMKiSTpKT
-         3TxgN8B8iAsF5MtgLtBAbIcmjqJjcJxuZB3UVa7pCXb/TAy6DStEVd+xe3vqZkQgNgQy
-         WhDS4jznZdiDEAHyPysd7yNUyYy3NV3TcMzY1tRgOEOFr4608c0Mo7Np0a1IBgvrdjti
-         mDUSeuAvGKuszyfCGmmgrB/VV238ynm87DjVEr4qqz4ohhGpQWQ9Bq3wdFbDdnCUOIuQ
-         s3s2rx/B1GDpu20gvogGr2c7HUHZf37cObThHnILpBChcnFrWk/VtEWHSqaxiCss8KAK
-         oPXA==
-X-Gm-Message-State: ANhLgQ0ZjpykQZtkfo7DbBSaLW5DTeCPLsX+RQerz+zn/4ZJHfvHffzy
-        cBR2uD/n6ueDTFi262SGeXhniFJ19R4=
-X-Google-Smtp-Source: ADFU+vvFHEuePYm3BfnwmUcH0p75fWTfx4vDetIDszFNYcIBXq3YN4hujAFnXJHbSX9RXfIfUgFsbgd7Q7k=
-X-Received: by 2002:a17:90a:33b0:: with SMTP id n45mr968921pjb.186.1583548610546;
- Fri, 06 Mar 2020 18:36:50 -0800 (PST)
-Date:   Fri,  6 Mar 2020 18:36:10 -0800
+        bh=voLmfNHCEAsUj1t7nCxgSA9Y75G0q2ard7Ul69iPgyE=;
+        b=M5MI48vY3YMu1iMPBVD9+mV90xJjU84VgyrBjYx30xK3IQG6Lu0+XIAsOFOkTcdJos
+         MWrWppoVGLp9EuRamvAxLg7E6+Fl4Pi6t2yMYQziXUjStAYIF2RSLFUt3QsPWwEmuORH
+         9XJykeblHE4GwiFx/jYJ5R2qGBIq0hAC18XjrX2LEHpqzIEeWIOTIPanI0sq4FGhl+2g
+         lyPHKaKFidM5/hQ4chlPjXL8hqAzFykO0AsITuSeSiWRwp8iypBU59OS2iiZo5n5WFiE
+         aVkwyMMREiT52pqQ38AiTAsw7x9rEZnRjOADdWsuUkv7bAR2FGJRLfb1IPYRWxyWNQn0
+         5c6w==
+X-Gm-Message-State: ANhLgQ3dMV3KJI4f9vn2j3Q7OCaXptsZYbMWiMWREtxUHOqt27Y3KDBi
+        /cnQhnzkAQBfAnhxoUS2QH05uLbQqpo=
+X-Google-Smtp-Source: ADFU+vuqkVmleIVLhKPiL1OxVdIlhECjzIJTvPSZbDI75NgCC2aoisXFaecuThUwcuon+CY2/vgKdX0I5lQ=
+X-Received: by 2002:a17:90a:37d0:: with SMTP id v74mr6656285pjb.0.1583548605689;
+ Fri, 06 Mar 2020 18:36:45 -0800 (PST)
+Date:   Fri,  6 Mar 2020 18:36:08 -0800
 In-Reply-To: <20200307023611.204708-1-drosen@google.com>
-Message-Id: <20200307023611.204708-8-drosen@google.com>
+Message-Id: <20200307023611.204708-6-drosen@google.com>
 Mime-Version: 1.0
 References: <20200307023611.204708-1-drosen@google.com>
 X-Mailer: git-send-email 2.25.1.481.gfbce0eb801-goog
-Subject: [PATCH v8 7/8] fscrypt: Have filesystems handle their d_ops
+Subject: [PATCH v8 5/8] fscrypt: Export fscrypt_d_revalidate
 From:   Daniel Rosenberg <drosen@google.com>
 To:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
         Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
@@ -79,211 +79,46 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This shifts the responsibility of setting up dentry operations from
-fscrypt to the individual filesystems, allowing them to have their own
-operations while still setting fscrypt's d_revalidate as appropriate.
-
-Most filesystems can just use generic_set_encrypted_ci_d_ops, unless
-they have their own specific dentry operations as well. That operation
-will set the minimal d_ops required under the circumstances.
-
-Since the fscrypt d_ops are set later on, we must set all d_ops there,
-since we cannot adjust those later on. This should not result in any
-change in behavior.
+This is in preparation for shifting the responsibility of setting the
+dentry_operations to the filesystem, allowing it to maintain its own
+operations.
 
 Signed-off-by: Daniel Rosenberg <drosen@google.com>
 ---
- fs/crypto/fname.c           | 4 ----
- fs/crypto/fscrypt_private.h | 1 -
- fs/crypto/hooks.c           | 1 -
- fs/ext4/dir.c               | 7 -------
- fs/ext4/ext4.h              | 4 ----
- fs/ext4/namei.c             | 1 +
- fs/ext4/super.c             | 5 -----
- fs/f2fs/dir.c               | 7 -------
- fs/f2fs/f2fs.h              | 3 ---
- fs/f2fs/namei.c             | 1 +
- fs/f2fs/super.c             | 1 -
- fs/ubifs/dir.c              | 1 +
- include/linux/fscrypt.h     | 5 +++--
- 13 files changed, 6 insertions(+), 35 deletions(-)
+ fs/crypto/fname.c       | 3 ++-
+ include/linux/fscrypt.h | 1 +
+ 2 files changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 73adbbb9d78c7..14c585f66f8da 100644
+index 4c212442a8f7f..73adbbb9d78c7 100644
 --- a/fs/crypto/fname.c
 +++ b/fs/crypto/fname.c
-@@ -582,8 +582,4 @@ int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
- 
- 	return valid;
- }
--
--const struct dentry_operations fscrypt_d_ops = {
--	.d_revalidate = fscrypt_d_revalidate,
--};
- EXPORT_SYMBOL(fscrypt_d_revalidate);
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 9aae851409e55..238075fcabb3e 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -250,7 +250,6 @@ extern int fscrypt_fname_encrypt(const struct inode *inode,
- extern bool fscrypt_fname_encrypted_size(const struct inode *inode,
- 					 u32 orig_len, u32 max_len,
- 					 u32 *encrypted_len_ret);
--extern const struct dentry_operations fscrypt_d_ops;
- 
- /* hkdf.c */
- 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 5ef861742921c..604a028dee25a 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -118,7 +118,6 @@ int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
- 		spin_lock(&dentry->d_lock);
- 		dentry->d_flags |= DCACHE_ENCRYPTED_NAME;
- 		spin_unlock(&dentry->d_lock);
--		d_set_d_op(dentry, &fscrypt_d_ops);
- 	}
- 	return err;
- }
-diff --git a/fs/ext4/dir.c b/fs/ext4/dir.c
-index 04fd68c4adc5f..b31780cae9c1f 100644
---- a/fs/ext4/dir.c
-+++ b/fs/ext4/dir.c
-@@ -667,10 +667,3 @@ const struct file_operations ext4_dir_operations = {
- 	.open		= ext4_dir_open,
- 	.release	= ext4_release_dir,
+@@ -543,7 +543,7 @@ EXPORT_SYMBOL_GPL(fscrypt_fname_siphash);
+  * Validate dentries in encrypted directories to make sure we aren't potentially
+  * caching stale dentries after a key has been added.
+  */
+-static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
++int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
+ {
+ 	struct dentry *dir;
+ 	int err;
+@@ -586,3 +586,4 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
+ const struct dentry_operations fscrypt_d_ops = {
+ 	.d_revalidate = fscrypt_d_revalidate,
  };
--
--#ifdef CONFIG_UNICODE
--const struct dentry_operations ext4_dentry_ops = {
--	.d_hash = generic_ci_d_hash,
--	.d_compare = generic_ci_d_compare,
--};
--#endif
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index b912c5611ddad..a01a507731d41 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -3169,10 +3169,6 @@ static inline void ext4_unlock_group(struct super_block *sb,
- /* dir.c */
- extern const struct file_operations ext4_dir_operations;
- 
--#ifdef CONFIG_UNICODE
--extern const struct dentry_operations ext4_dentry_ops;
--#endif
--
- /* file.c */
- extern const struct inode_operations ext4_file_inode_operations;
- extern const struct file_operations ext4_file_operations;
-diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-index 1a1c4fdcfd3ee..001fdb0da477e 100644
---- a/fs/ext4/namei.c
-+++ b/fs/ext4/namei.c
-@@ -1615,6 +1615,7 @@ static struct buffer_head *ext4_lookup_entry(struct inode *dir,
- 	struct buffer_head *bh;
- 
- 	err = ext4_fname_prepare_lookup(dir, dentry, &fname);
-+	generic_set_encrypted_ci_d_ops(dir, dentry);
- 	if (err == -ENOENT)
- 		return NULL;
- 	if (err)
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 11a7af11d8aee..c732122b25739 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -4570,11 +4570,6 @@ static int ext4_fill_super(struct super_block *sb, void *data, int silent)
- 		goto failed_mount4;
- 	}
- 
--#ifdef CONFIG_UNICODE
--	if (sb->s_encoding)
--		sb->s_d_op = &ext4_dentry_ops;
--#endif
--
- 	sb->s_root = d_make_root(root);
- 	if (!sb->s_root) {
- 		ext4_msg(sb, KERN_ERR, "get root dentry failed");
-diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
-index d822c0d5eb182..38c0e6d589be4 100644
---- a/fs/f2fs/dir.c
-+++ b/fs/f2fs/dir.c
-@@ -1077,10 +1077,3 @@ const struct file_operations f2fs_dir_operations = {
- 	.compat_ioctl   = f2fs_compat_ioctl,
- #endif
- };
--
--#ifdef CONFIG_UNICODE
--const struct dentry_operations f2fs_dentry_ops = {
--	.d_hash = generic_ci_d_hash,
--	.d_compare = generic_ci_d_compare,
--};
--#endif
-diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-index e73b8752f9c8d..0fc153b5a5c09 100644
---- a/fs/f2fs/f2fs.h
-+++ b/fs/f2fs/f2fs.h
-@@ -3626,9 +3626,6 @@ static inline void update_sit_info(struct f2fs_sb_info *sbi) {}
- #endif
- 
- extern const struct file_operations f2fs_dir_operations;
--#ifdef CONFIG_UNICODE
--extern const struct dentry_operations f2fs_dentry_ops;
--#endif
- extern const struct file_operations f2fs_file_operations;
- extern const struct inode_operations f2fs_file_inode_operations;
- extern const struct address_space_operations f2fs_dblock_aops;
-diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
-index 2aa035422c0fa..24d68eafffa40 100644
---- a/fs/f2fs/namei.c
-+++ b/fs/f2fs/namei.c
-@@ -494,6 +494,7 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
- 	}
- 
- 	err = fscrypt_prepare_lookup(dir, dentry, &fname);
-+	generic_set_encrypted_ci_d_ops(dir, dentry);
- 	if (err == -ENOENT)
- 		goto out_splice;
- 	if (err)
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 89b52629bd437..7520a9c04c75e 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -3256,7 +3256,6 @@ static int f2fs_setup_casefold(struct f2fs_sb_info *sbi)
- 
- 		sbi->sb->s_encoding = encoding;
- 		sbi->sb->s_encoding_flags = encoding_flags;
--		sbi->sb->s_d_op = &f2fs_dentry_ops;
- 	}
- #else
- 	if (f2fs_sb_has_casefold(sbi)) {
-diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
-index ef85ec167a843..dc3af703db30d 100644
---- a/fs/ubifs/dir.c
-+++ b/fs/ubifs/dir.c
-@@ -209,6 +209,7 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
- 	dbg_gen("'%pd' in dir ino %lu", dentry, dir->i_ino);
- 
- 	err = fscrypt_prepare_lookup(dir, dentry, &nm);
-+	generic_set_encrypted_ci_d_ops(dir, dentry);
- 	if (err == -ENOENT)
- 		return d_splice_alias(NULL, dentry);
- 	if (err)
++EXPORT_SYMBOL(fscrypt_d_revalidate);
 diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index b199b6e976ce3..f99e402abb540 100644
+index 556f4adf5dc58..b199b6e976ce3 100644
 --- a/include/linux/fscrypt.h
 +++ b/include/linux/fscrypt.h
-@@ -596,8 +596,9 @@ static inline int fscrypt_prepare_rename(struct inode *old_dir,
-  * filenames are presented in encrypted form.  Therefore, we'll try to set up
-  * the directory's encryption key, but even without it the lookup can continue.
-  *
-- * This also installs a custom ->d_revalidate() method which will invalidate the
-- * dentry if it was created without the key and the key is later added.
-+ * After calling this function, a filesystem should ensure that its dentry
-+ * operations contain fscrypt_d_revalidate if DCACHE_ENCRYPTED_NAME was set,
-+ * so that the dentry can be invalidated if the key is later added.
-  *
-  * Return: 0 on success; -ENOENT if key is unavailable but the filename isn't a
-  * correctly formed encoded ciphertext name, so a negative dentry should be
+@@ -176,6 +176,7 @@ extern bool fscrypt_match_name(const struct fscrypt_name *fname,
+ 			       const u8 *de_name, u32 de_name_len);
+ extern u64 fscrypt_fname_siphash(const struct inode *dir,
+ 				 const struct qstr *name);
++extern int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags);
+ 
+ /* bio.c */
+ extern void fscrypt_decrypt_bio(struct bio *);
 -- 
 2.25.1.481.gfbce0eb801-goog
 
