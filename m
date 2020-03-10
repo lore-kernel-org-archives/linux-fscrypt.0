@@ -1,150 +1,93 @@
-Return-Path: <SRS0=Js7+=4Y=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=kexK=43=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_SANE_1
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 715D2C10F26
-	for <linux-fscrypt@archiver.kernel.org>; Sat,  7 Mar 2020 05:41:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 60A5DC10DCE
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Mar 2020 20:47:25 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 4B0772073D
-	for <linux-fscrypt@archiver.kernel.org>; Sat,  7 Mar 2020 05:41:22 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1583559682;
-	bh=Z5bTJVp50KuWeymYhYAdxIiTXYzyTVmZsP2BigxcerM=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=AqQERtkiwxdMg+uiqfzxmwKGV5ilJkqcREJfQmZF6gh+kJX9DT634tuSAvr2RnOqu
-	 XRIDiHim4PcQHDK7rIMVkzaOYLWfj0Z5HuAWCbcEC+q0AUVy7WNFgwgZv5vkngnuWU
-	 hvvyAB1N7vo+RQa8I3Wdw/1sMnLHFwRaGqpKXw1k=
+	by mail.kernel.org (Postfix) with ESMTP id 2741521655
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Mar 2020 20:47:25 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726293AbgCGFlS (ORCPT
+        id S1726273AbgCJUrY (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 7 Mar 2020 00:41:18 -0500
-Received: from mail.kernel.org ([198.145.29.99]:59294 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726283AbgCGFlS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 7 Mar 2020 00:41:18 -0500
-Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id A95492070A;
-        Sat,  7 Mar 2020 05:41:16 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1583559677;
-        bh=Z5bTJVp50KuWeymYhYAdxIiTXYzyTVmZsP2BigxcerM=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=wI3oLIQFFHIL5ICoqkDZhrwLR+OMO+a4KW9PZo0HtYoZzUNdytbzjj1R7kofMI0br
-         YhDNzK3xcG6s3VWGMLkjJzhFlcnB4XxIl9N4MXpPOM/wD3zWgocEAg5wVV81E/VRTI
-         7AlRaoulsSD655PjM30iHYYdYN0zupK+ODogkYjw=
-Date:   Fri, 6 Mar 2020 21:41:15 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Daniel Rosenberg <drosen@google.com>
-Cc:     Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org,
-        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-fscrypt@vger.kernel.org,
-        Alexander Viro <viro@zeniv.linux.org.uk>,
-        Richard Weinberger <richard@nod.at>,
-        linux-mtd@lists.infradead.org,
-        Andreas Dilger <adilger.kernel@dilger.ca>,
-        Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org,
-        linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        Gabriel Krisman Bertazi <krisman@collabora.com>,
-        kernel-team@android.com
-Subject: Re: [PATCH v8 6/8] libfs: Add generic function for setting dentry_ops
-Message-ID: <20200307054115.GC1069@sol.localdomain>
-References: <20200307023611.204708-1-drosen@google.com>
- <20200307023611.204708-7-drosen@google.com>
+        Tue, 10 Mar 2020 16:47:24 -0400
+Received: from sender11-of-f72.zoho.eu ([31.186.226.244]:17324 "EHLO
+        sender11-of-f72.zoho.eu" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726268AbgCJUrY (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 10 Mar 2020 16:47:24 -0400
+X-Greylist: delayed 903 seconds by postgrey-1.27 at vger.kernel.org; Tue, 10 Mar 2020 16:47:24 EDT
+Received: from [100.109.64.191] (163.114.130.4 [163.114.130.4]) by mx.zoho.eu
+        with SMTPS id 1583872333505296.61674064941235; Tue, 10 Mar 2020 21:32:13 +0100 (CET)
+Subject: Re: [PATCH v2 0/6] Split fsverity-utils into a shared library
+To:     linux-fscrypt@vger.kernel.org
+Cc:     kernel-team@fb.com, ebiggers@kernel.org,
+        Jes Sorensen <jsorensen@fb.com>
+References: <20200228212814.105897-1-Jes.Sorensen@gmail.com>
+From:   Jes Sorensen <jes@trained-monkey.org>
+Message-ID: <6486476e-2109-cbd5-07d0-4c310d2c9f06@trained-monkey.org>
+Date:   Tue, 10 Mar 2020 16:32:12 -0400
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.5.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200307023611.204708-7-drosen@google.com>
+In-Reply-To: <20200228212814.105897-1-Jes.Sorensen@gmail.com>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-ZohoMailClient: External
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Mar 06, 2020 at 06:36:09PM -0800, Daniel Rosenberg wrote:
-> This adds a function to set dentry operations at lookup time that will
-> work for both encrypted files and casefolded filenames.
+On 2/28/20 4:28 PM, Jes Sorensen wrote:
+> From: Jes Sorensen <jsorensen@fb.com>
 > 
-> A filesystem that supports both features simultaneously can use this
-> function during lookup preperations to set up its dentry operations once
-> fscrypt no longer does that itself.
+> Hi,
 > 
-> Signed-off-by: Daniel Rosenberg <drosen@google.com>
-> ---
->  fs/libfs.c         | 50 ++++++++++++++++++++++++++++++++++++++++++++++
->  include/linux/fs.h |  2 ++
->  2 files changed, 52 insertions(+)
+> Here is a reworked version of the patches to split fsverity-utils into
+> a shared library, based on the feedback for the original version. Note
+> this doesn't yet address setting the soname, and doesn't have the
+> client (rpm) changes yet, so there is more work to do.
 > 
-> diff --git a/fs/libfs.c b/fs/libfs.c
-> index 0eaa63a9ae037..bdda03c8ece9e 100644
-> --- a/fs/libfs.c
-> +++ b/fs/libfs.c
-> @@ -1474,4 +1474,54 @@ int generic_ci_d_hash(const struct dentry *dentry, struct qstr *str)
->  	return ret;
->  }
->  EXPORT_SYMBOL(generic_ci_d_hash);
-> +
-> +static const struct dentry_operations generic_ci_dentry_ops = {
-> +	.d_hash = generic_ci_d_hash,
-> +	.d_compare = generic_ci_d_compare,
-> +};
-> +#endif
-> +
-> +#ifdef CONFIG_FS_ENCRYPTION
-> +static const struct dentry_operations generic_encrypted_dentry_ops = {
-> +	.d_revalidate = fscrypt_d_revalidate,
-> +};
-> +#endif
-> +
-> +#if IS_ENABLED(CONFIG_UNICODE) && IS_ENABLED(CONFIG_FS_ENCRYPTION)
-> +static const struct dentry_operations generic_encrypted_ci_dentry_ops = {
-> +	.d_hash = generic_ci_d_hash,
-> +	.d_compare = generic_ci_d_compare,
-> +	.d_revalidate = fscrypt_d_revalidate,
-> +};
-> +#endif
-> +
-> +/**
-> + * generic_set_encrypted_ci_d_ops - helper for setting d_ops for given dentry
-> + * @dir:	parent of dentry whose ops to set
-> + * @dentry:	dentry to set ops on
-> + *
-> + * This function sets the dentry ops for the given dentry to handle both
-> + * casefolding and encryption of the dentry name.
-> + */
-> +void generic_set_encrypted_ci_d_ops(struct inode *dir, struct dentry *dentry)
-> +{
-> +#ifdef CONFIG_FS_ENCRYPTION
-> +	if (dentry->d_flags & DCACHE_ENCRYPTED_NAME) {
-> +#ifdef CONFIG_UNICODE
-> +		if (dir->i_sb->s_encoding) {
-> +			d_set_d_op(dentry, &generic_encrypted_ci_dentry_ops);
-> +			return;
-> +		}
->  #endif
-> +		d_set_d_op(dentry, &generic_encrypted_dentry_ops);
-> +		return;
-> +	}
-> +#endif
-> +#ifdef CONFIG_UNICODE
-> +	if (dir->i_sb->s_encoding) {
-> +		d_set_d_op(dentry, &generic_ci_dentry_ops);
-> +		return;
-> +	}
-> +#endif
-> +}
-> +EXPORT_SYMBOL(generic_set_encrypted_ci_d_ops);
+> Comments appreciated.
 
-What's wrong with using dentry->d_sb?  Then the 'dir' parameter wouldn't be
-needed.
+Hi,
 
-Also, can you please document why the dentry_operations for casefolding are set
-per-filesystem while the dentry_operations for encryption are set per-dentry,
-despite both features actually being per-directory things?
+Any thoughts on this patchset?
 
-- Eric
+Thanks,
+Jes
+
+
+> Cheers,
+> Jes
+> 
+> Jes Sorensen (6):
+>   Build basic shared library framework
+>   Change compute_file_measurement() to take a file descriptor as
+>     argument
+>   Move fsverity_descriptor definition to libfsverity.h
+>   Move hash algorithm code to shared library
+>   Create libfsverity_compute_digest() and adapt cmd_sign to use it
+>   Introduce libfsverity_sign_digest()
+> 
+>  Makefile      |  18 +-
+>  cmd_enable.c  |  11 +-
+>  cmd_measure.c |   4 +-
+>  cmd_sign.c    | 526 ++++----------------------------------------------
+>  fsverity.c    |  15 ++
+>  hash_algs.c   |  26 +--
+>  hash_algs.h   |  27 ---
+>  libfsverity.h |  99 ++++++++++
+>  libverity.c   | 526 ++++++++++++++++++++++++++++++++++++++++++++++++++
+>  util.h        |   2 +
+>  10 files changed, 707 insertions(+), 547 deletions(-)
+>  create mode 100644 libfsverity.h
+>  create mode 100644 libverity.c
+> 
+
