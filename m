@@ -2,112 +2,89 @@ Return-Path: <SRS0=qK0N=44=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.7 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PULL_REQUEST,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E6FF1C10DCE
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 11 Mar 2020 02:50:16 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CBEC1C4CECE
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 11 Mar 2020 19:48:43 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id A980921927
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 11 Mar 2020 02:50:16 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id C40C220739
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 11 Mar 2020 19:48:44 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1583895016;
-	bh=WtFMlLzPcU5BhKbuP+2KrYUwWQYx4yq+ffF9gx1TB4c=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=Hm+UZA85F7mkv7z7Ojh/wlVXRp8PNMwKK23frYz8pFFa7KPa/56LIaRnFgOmPR+y1
-	 H9XmYPJj1GRZq/5t/ZKOSEUs3NmQ6O8jR4NxOih8ZUXqlz9YuR0zfi6ltapCCA36H7
-	 5PXv6rc86mp8hcH7U5O9tSx+JJMChk359U+iZ+LM=
+	s=default; t=1583956124;
+	bh=NTCCQBA/qngUM9vruihaGQpLvV8cowQXBnlryjh7duc=;
+	h=Date:From:To:Cc:Subject:List-ID:From;
+	b=NuRnbUgJDKsRZW7DEpc5tFk/WnlalEuxs/7ZLjLT4wLNJWPui4ed8fR+N6UufkWAQ
+	 CQGnQx5AOkhylKMOZEM6CFOghB+iljw4rXWSIHQLFQdghFt/yAHQ3Pcivbo3Y3rpjb
+	 +q7lHsAZDUnZPgtWTHrVrcLI3e2n75LfLlf57YI0=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727588AbgCKCuQ (ORCPT
+        id S1731030AbgCKTsm (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 10 Mar 2020 22:50:16 -0400
-Received: from mail.kernel.org ([198.145.29.99]:42924 "EHLO mail.kernel.org"
+        Wed, 11 Mar 2020 15:48:42 -0400
+Received: from mail.kernel.org ([198.145.29.99]:50060 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727506AbgCKCuQ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 10 Mar 2020 22:50:16 -0400
-Received: from gmail.com (unknown [104.132.1.77])
+        id S2387394AbgCKTsm (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 11 Mar 2020 15:48:42 -0400
+Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id EEDF220637;
-        Wed, 11 Mar 2020 02:50:14 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 5F6A020691;
+        Wed, 11 Mar 2020 19:48:42 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1583895015;
-        bh=WtFMlLzPcU5BhKbuP+2KrYUwWQYx4yq+ffF9gx1TB4c=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=q1ystG146lhrdx1ECKnmJ+Gnq00mbVBlMiA9vl3KTF2QmR+GOfMmrR5MUFTybatwD
-         ThRVdbuIcu+qHCl2Wz2aEBWCuC4NftqLMjxqT/L71EMNo6OcqflzJzuhbLoePIfyuA
-         VrMxS7K+quWwG8SXU9sNgRZ+IAiV6J6SxXax9fNI=
-Date:   Tue, 10 Mar 2020 19:50:13 -0700
+        s=default; t=1583956122;
+        bh=NTCCQBA/qngUM9vruihaGQpLvV8cowQXBnlryjh7duc=;
+        h=Date:From:To:Cc:Subject:From;
+        b=v/jab1Mtz7GdBG9uHSDV6k2H9A5ugStqAz7qXsT5oSvLW0R8a6a71HOmgfCea5clU
+         G66Us11UI+4tNO3Dj0FH7tIcAgD6G5vzcw6dOTDobm5SYL6M1oFXxg7KIYICRZtMGR
+         9CaWX6LC7nIdux3wMMCMyiTs0f5kOJR5zRFuyh0M=
+Date:   Wed, 11 Mar 2020 12:48:39 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org
-Subject: Re: [PATCH] fscrypt: don't evict dirty inodes after removing key
-Message-ID: <20200311025013.GB46757@gmail.com>
-References: <20200305084138.653498-1-ebiggers@kernel.org>
+To:     Linus Torvalds <torvalds@linux-foundation.org>
+Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net,
+        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org,
+        linux-kernel@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: [GIT PULL] fscrypt fix for v5.6-rc6
+Message-ID: <20200311194839.GB41227@sol.localdomain>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200305084138.653498-1-ebiggers@kernel.org>
-User-Agent: Mutt/1.12.2 (2019-09-21)
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Mar 05, 2020 at 12:41:38AM -0800, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> After FS_IOC_REMOVE_ENCRYPTION_KEY removes a key, it syncs the
-> filesystem and tries to get and put all inodes that were unlocked by the
-> key so that unused inodes get evicted via fscrypt_drop_inode().
-> Normally, the inodes are all clean due to the sync.
-> 
-> However, after the filesystem is sync'ed, userspace can modify and close
-> one of the files.  (Userspace is *supposed* to close the files before
-> removing the key.  But it doesn't always happen, and the kernel can't
-> assume it.)  This causes the inode to be dirtied and have i_count == 0.
-> Then, fscrypt_drop_inode() failed to consider this case and indicated
-> that the inode can be dropped, causing the write to be lost.
-> 
-> On f2fs, other problems such as a filesystem freeze could occur due to
-> the inode being freed while still on f2fs's dirty inode list.
-> 
-> Fix this bug by making fscrypt_drop_inode() only drop clean inodes.
-> 
-> I've written an xfstest which detects this bug on ext4, f2fs, and ubifs.
-> 
-> Fixes: b1c0ec3599f4 ("fscrypt: add FS_IOC_REMOVE_ENCRYPTION_KEY ioctl")
-> Cc: <stable@vger.kernel.org> # v5.4+
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> ---
->  fs/crypto/keysetup.c | 9 +++++++++
->  1 file changed, 9 insertions(+)
-> 
-> diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-> index 65cb09fa6ead..08c9f216a54d 100644
-> --- a/fs/crypto/keysetup.c
-> +++ b/fs/crypto/keysetup.c
-> @@ -538,6 +538,15 @@ int fscrypt_drop_inode(struct inode *inode)
->  		return 0;
->  	mk = ci->ci_master_key->payload.data[0];
->  
-> +	/*
-> +	 * With proper, non-racy use of FS_IOC_REMOVE_ENCRYPTION_KEY, all inodes
-> +	 * protected by the key were cleaned by sync_filesystem().  But if
-> +	 * userspace is still using the files, inodes can be dirtied between
-> +	 * then and now.  We mustn't lose any writes, so skip dirty inodes here.
-> +	 */
-> +	if (inode->i_state & I_DIRTY_ALL)
-> +		return 0;
-> +
->  	/*
->  	 * Note: since we aren't holding ->mk_secret_sem, the result here can
->  	 * immediately become outdated.  But there's no correctness problem with
-> -- 
+The following changes since commit 98d54f81e36ba3bf92172791eba5ca5bd813989b:
 
-Applied to fscrypt.git#for-stable for 5.6.
+  Linux 5.6-rc4 (2020-03-01 16:38:46 -0600)
 
-- Eric
+are available in the Git repository at:
+
+  https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fscrypt-for-linus
+
+for you to fetch changes up to 2b4eae95c7361e0a147b838715c8baa1380a428f:
+
+  fscrypt: don't evict dirty inodes after removing key (2020-03-07 18:43:07 -0800)
+
+----------------------------------------------------------------
+
+Fix a bug where if userspace is writing to encrypted files while the
+FS_IOC_REMOVE_ENCRYPTION_KEY ioctl (introduced in v5.4) is running,
+dirty inodes could be evicted, causing writes could be lost or the
+filesystem to hang due to a use-after-free.  This was encountered during
+real-world use, not just theoretical.
+
+Tested with the existing fscrypt xfstests, and with a new xfstest I
+wrote to reproduce this bug.  This fix does expose an existing bug with
+'-o lazytime' that Ted is working on fixing, but this fscrypt fix is
+more critical and is needed anyway regardless of the lazytime fix.
+
+----------------------------------------------------------------
+Eric Biggers (1):
+      fscrypt: don't evict dirty inodes after removing key
+
+ fs/crypto/keysetup.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
