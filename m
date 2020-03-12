@@ -2,64 +2,63 @@ Return-Path: <SRS0=v/VS=45=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	UNWANTED_LANGUAGE_BODY,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
+	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BD8BEC5B545
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Mar 2020 08:03:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 156B0C5B541
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Mar 2020 08:03:34 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 8A96C2072F
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Mar 2020 08:03:28 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id DE5E720650
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Mar 2020 08:03:33 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="KzIl0HFR"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="StHyEHEt"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2388248AbgCLIDZ (ORCPT
+        id S2388043AbgCLIDc (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 12 Mar 2020 04:03:25 -0400
-Received: from mail-pg1-f202.google.com ([209.85.215.202]:45973 "EHLO
-        mail-pg1-f202.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S2388164AbgCLIDV (ORCPT
+        Thu, 12 Mar 2020 04:03:32 -0400
+Received: from mail-vk1-f201.google.com ([209.85.221.201]:44970 "EHLO
+        mail-vk1-f201.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S2388262AbgCLID1 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 12 Mar 2020 04:03:21 -0400
-Received: by mail-pg1-f202.google.com with SMTP id 8so2979343pgd.12
-        for <linux-fscrypt@vger.kernel.org>; Thu, 12 Mar 2020 01:03:19 -0700 (PDT)
+        Thu, 12 Mar 2020 04:03:27 -0400
+Received: by mail-vk1-f201.google.com with SMTP id x124so2002259vkf.11
+        for <linux-fscrypt@vger.kernel.org>; Thu, 12 Mar 2020 01:03:27 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=Y1s6MQhHqkVnqFsukeC5Awzp5ivr6jiv6hUkDCpLIsA=;
-        b=KzIl0HFRPFDpD4RamPtkjTfVB+xlCCtT2LraTA/0B61n8m3pmGmHCmX//ov5FQWva1
-         iYJlQp482tSC5I2bo99tpHHJ83S7G8ADGOz7zWIcbKo61d/pzYzpgAtx/XF3B40tTB2L
-         08Buyphz0C7bGnN/8BNgIoGFuzOzPNTT1lNpCXWLEaTeYsLCr5NkvsomPH32QHvETm2e
-         cbx2fvY1WsWGae2mbukMCmTFpDWExMCaGZs+GkpgZdHEHCGohcjNdY8UPWueJDnqYTOq
-         YPmE8xd4qMF2HvQ8st4aUTOgFO8ZFisWbqW0TuVW8QMV51Kx78cclESONoHGqC55LBtz
-         gTYQ==
+        bh=RSBkI/EPlnNt5oa7kkejjydOPdtV3rOv9iUVG3sZop4=;
+        b=StHyEHEt8idJTdRs+fqpsUvr8fJYKcho0w7MMisDi8eWkY2nJ1jc0Y8onkW3teyYkG
+         3pS3iz3XYGI9xgBE7AWLfyG6Xe7HqQQTKcz1ONJWW6udgqvxtx9IbK6E+w9gK0TQipi2
+         kyPPCS9TzmpXEzfdwliZoFB1tWwUDE8FLmEYOKMR3f3hu6Xh79Gyt17ncxeuiCNrEMMO
+         OSwBZPsaTYf+drmm8bfhWnDgC+PN0+4C4IK+TkfNd78P76IBEb3G/yXPP6UKBWQO/b+B
+         3xKM4t4Ob9mLiVS/jMMFKiYvCwNH8BG1uW3zKnNuH+pFXOTQkuQoM9Pd8zwpJYdEYwmC
+         h3Tw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=Y1s6MQhHqkVnqFsukeC5Awzp5ivr6jiv6hUkDCpLIsA=;
-        b=olrpmranDmS1XxZ+ZYcmt0TN1UVUIKsBHzhLRrXUwP3zExaKA5VD4orDpV7r0TwGsU
-         JfuFm0b5kp29FjHpbOQ+AZcvd9mRJmWqNEDI8jRK22QSK7IRCkZANQmuy3EzgGaQfDxS
-         n1lfjswetMpiyoXsJBYNK1nDJTec2Ae6qEV5Ivo5DrvJYTu++tMrXe7axATflX+lV6OT
-         bxkGN0Fj0VNes5/z/OX4CR4l16y4g4WV0AcgoWcE2pVYr0FkVRGyhKo0NAk4yzoJRUJp
-         kn8wagMz+1pbR/UYBr2znzmnHrsE1uSiVBeIIFB+HwueuuUdwzuPYyI14wBCh1GiDQEm
-         PMGQ==
-X-Gm-Message-State: ANhLgQ0zFtRqOG3qrNPWVTYy2WKfr+j58kxIeOVA74eQxM80w06DpmIB
-        CPAj91TQhzpYDSDyG10KOqKWBUjkcpk=
-X-Google-Smtp-Source: ADFU+vuXOMA8mZEN+vMh9qFbvN0gW4bbscIe10bvEJpl4bpEIDzYzV5f0sZE06RcCDamrRg4MYFMPmlFhx0=
-X-Received: by 2002:a17:90a:c687:: with SMTP id n7mr2803267pjt.159.1584000198723;
- Thu, 12 Mar 2020 01:03:18 -0700 (PDT)
-Date:   Thu, 12 Mar 2020 01:02:50 -0700
+        bh=RSBkI/EPlnNt5oa7kkejjydOPdtV3rOv9iUVG3sZop4=;
+        b=Q+BatPgAApczUtjVinSnP4PDXfiyFfJCmyZYWf3A6Eiox5JvN/7RZatg3tGNxIMSwW
+         azn/g7mGuhuauR0dllVTCrwJ6J+63Xkzy3yoSKBM6CaaSNfxzZEdQNMWt5Y75E3UGBoV
+         7GQGTbqNxE6l9pTpErJNZd3NhsXcuYDS/FCgDxq422r0gVY0LbrXogDk9D3N3c+VvU4+
+         fUA0hdp+EpyIE+8phNXQa3ZFcTdTCS7qcJLf2Ku3puDNGvkbF/DPTmM4saEU4x4i12jh
+         o+js/g0Licg9qDIXvSwjh3DPVtKG4CHhd2RjovR/3DqqrZRIIJyjrfWygQt+0R7T4DM3
+         jnSw==
+X-Gm-Message-State: ANhLgQ2BvaBCWipko4JfDxAETrltoG83dGu4OyCeq07huadleyDrMXRH
+        O9NpqhemSIMAo8hyVnoPIlDd41e0awg=
+X-Google-Smtp-Source: ADFU+vtYXC8Xde87VeW0EbwzvOixD0q+s7hXhdmIkOZLSbLoQa/bUS97PJeOzA05+0mPfPCbj0+afQXKbUc=
+X-Received: by 2002:ab0:48cf:: with SMTP id y15mr3991760uac.26.1584000206677;
+ Thu, 12 Mar 2020 01:03:26 -0700 (PDT)
+Date:   Thu, 12 Mar 2020 01:02:53 -0700
 In-Reply-To: <20200312080253.3667-1-satyat@google.com>
-Message-Id: <20200312080253.3667-9-satyat@google.com>
+Message-Id: <20200312080253.3667-12-satyat@google.com>
 Mime-Version: 1.0
 References: <20200312080253.3667-1-satyat@google.com>
 X-Mailer: git-send-email 2.25.1.481.gfbce0eb801-goog
-Subject: [PATCH v8 08/11] fs: introduce SB_INLINECRYPT
+Subject: [PATCH v8 11/11] ext4: add inline encryption support
 From:   Satya Tangirala <satyat@google.com>
 To:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
@@ -67,6 +66,7 @@ To:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
 Cc:     Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
         Kuohong Wang <kuohong.wang@mediatek.com>,
         Kim Boojin <boojin.kim@samsung.com>,
+        Eric Biggers <ebiggers@google.com>,
         Satya Tangirala <satyat@google.com>
 Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -74,39 +74,216 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Introduce SB_INLINECRYPT, which is set by filesystems that wish to use
-blk-crypto for file content en/decryption.
+From: Eric Biggers <ebiggers@google.com>
 
+Wire up ext4 to support inline encryption via the helper functions which
+fs/crypto/ now provides.  This includes:
+
+- Adding a mount option 'inlinecrypt' which enables inline encryption
+  on encrypted files where it can be used.
+
+- Setting the bio_crypt_ctx on bios that will be submitted to an
+  inline-encrypted file.
+
+  Note: submit_bh_wbc() in fs/buffer.c also needed to be patched for
+  this part, since ext4 sometimes uses ll_rw_block() on file data.
+
+- Not adding logically discontiguous data to bios that will be submitted
+  to an inline-encrypted file.
+
+- Not doing filesystem-layer crypto on inline-encrypted files.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+Co-developed-by: Satya Tangirala <satyat@google.com>
 Signed-off-by: Satya Tangirala <satyat@google.com>
 ---
- fs/proc_namespace.c | 1 +
- include/linux/fs.h  | 1 +
- 2 files changed, 2 insertions(+)
+ Documentation/admin-guide/ext4.rst |  6 ++++++
+ fs/buffer.c                        |  7 ++++---
+ fs/ext4/inode.c                    |  4 ++--
+ fs/ext4/page-io.c                  |  6 ++++--
+ fs/ext4/readpage.c                 | 11 ++++++++---
+ fs/ext4/super.c                    |  9 +++++++++
+ 6 files changed, 33 insertions(+), 10 deletions(-)
 
-diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
-index 273ee82d8aa9..8bf195d3bda6 100644
---- a/fs/proc_namespace.c
-+++ b/fs/proc_namespace.c
-@@ -49,6 +49,7 @@ static int show_sb_opts(struct seq_file *m, struct super_block *sb)
- 		{ SB_DIRSYNC, ",dirsync" },
- 		{ SB_MANDLOCK, ",mand" },
- 		{ SB_LAZYTIME, ",lazytime" },
-+		{ SB_INLINECRYPT, ",inlinecrypt" },
- 		{ 0, NULL }
- 	};
- 	const struct proc_fs_info *fs_infop;
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 3cd4fe6b845e..08a0395674dd 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -1370,6 +1370,7 @@ extern int send_sigurg(struct fown_struct *fown);
- #define SB_NODIRATIME	2048	/* Do not update directory access times */
- #define SB_SILENT	32768
- #define SB_POSIXACL	(1<<16)	/* VFS does not apply the umask */
-+#define SB_INLINECRYPT	(1<<17)	/* inodes in SB use blk-crypto */
- #define SB_KERNMOUNT	(1<<22) /* this is a kern_mount call */
- #define SB_I_VERSION	(1<<23) /* Update inode I_version field */
- #define SB_LAZYTIME	(1<<25) /* Update the on-disk [acm]times lazily */
+diff --git a/Documentation/admin-guide/ext4.rst b/Documentation/admin-guide/ext4.rst
+index 9443fcef1876..ed997e376678 100644
+--- a/Documentation/admin-guide/ext4.rst
++++ b/Documentation/admin-guide/ext4.rst
+@@ -395,6 +395,12 @@ When mounting an ext4 filesystem, the following option are accepted:
+         Documentation/filesystems/dax.txt.  Note that this option is
+         incompatible with data=journal.
+ 
++  inlinecrypt
++        Encrypt/decrypt the contents of encrypted files using the blk-crypto
++        framework rather than filesystem-layer encryption. This allows the use
++        of inline encryption hardware. The on-disk format is unaffected. For
++        more details, see Documentation/block/inline-encryption.rst.
++
+ Data Mode
+ =========
+ There are 3 different data modes:
+diff --git a/fs/buffer.c b/fs/buffer.c
+index b8d28370cfd7..226f1784eda7 100644
+--- a/fs/buffer.c
++++ b/fs/buffer.c
+@@ -331,9 +331,8 @@ static void decrypt_bh(struct work_struct *work)
+ static void end_buffer_async_read_io(struct buffer_head *bh, int uptodate)
+ {
+ 	/* Decrypt if needed */
+-	if (uptodate && IS_ENABLED(CONFIG_FS_ENCRYPTION) &&
+-	    IS_ENCRYPTED(bh->b_page->mapping->host) &&
+-	    S_ISREG(bh->b_page->mapping->host->i_mode)) {
++	if (uptodate &&
++	    fscrypt_inode_uses_fs_layer_crypto(bh->b_page->mapping->host)) {
+ 		struct decrypt_bh_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
+ 
+ 		if (ctx) {
+@@ -3085,6 +3084,8 @@ static int submit_bh_wbc(int op, int op_flags, struct buffer_head *bh,
+ 	 */
+ 	bio = bio_alloc(GFP_NOIO, 1);
+ 
++	fscrypt_set_bio_crypt_ctx_bh(bio, bh, GFP_NOIO);
++
+ 	bio->bi_iter.bi_sector = bh->b_blocknr * (bh->b_size >> 9);
+ 	bio_set_dev(bio, bh->b_bdev);
+ 	bio->bi_write_hint = write_hint;
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index fa0ff78dc033..5714ff6395a1 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -1089,7 +1089,7 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+ 	}
+ 	if (unlikely(err)) {
+ 		page_zero_new_buffers(page, from, to);
+-	} else if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode)) {
++	} else if (fscrypt_inode_uses_fs_layer_crypto(inode)) {
+ 		for (i = 0; i < nr_wait; i++) {
+ 			int err2;
+ 
+@@ -3720,7 +3720,7 @@ static int __ext4_block_zero_page_range(handle_t *handle,
+ 		/* Uhhuh. Read error. Complain and punt. */
+ 		if (!buffer_uptodate(bh))
+ 			goto unlock;
+-		if (S_ISREG(inode->i_mode) && IS_ENCRYPTED(inode)) {
++		if (fscrypt_inode_uses_fs_layer_crypto(inode)) {
+ 			/* We expect the key to be set. */
+ 			BUG_ON(!fscrypt_has_encryption_key(inode));
+ 			err = fscrypt_decrypt_pagecache_blocks(page, blocksize,
+diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
+index 68b39e75446a..0757145a31b2 100644
+--- a/fs/ext4/page-io.c
++++ b/fs/ext4/page-io.c
+@@ -404,6 +404,7 @@ static void io_submit_init_bio(struct ext4_io_submit *io,
+ 	 * __GFP_DIRECT_RECLAIM is set, see comments for bio_alloc_bioset().
+ 	 */
+ 	bio = bio_alloc(GFP_NOIO, BIO_MAX_PAGES);
++	fscrypt_set_bio_crypt_ctx_bh(bio, bh, GFP_NOIO);
+ 	bio->bi_iter.bi_sector = bh->b_blocknr * (bh->b_size >> 9);
+ 	bio_set_dev(bio, bh->b_bdev);
+ 	bio->bi_end_io = ext4_end_bio;
+@@ -420,7 +421,8 @@ static void io_submit_add_bh(struct ext4_io_submit *io,
+ {
+ 	int ret;
+ 
+-	if (io->io_bio && bh->b_blocknr != io->io_next_block) {
++	if (io->io_bio && (bh->b_blocknr != io->io_next_block ||
++			   !fscrypt_mergeable_bio_bh(io->io_bio, bh))) {
+ submit_and_retry:
+ 		ext4_io_submit(io);
+ 	}
+@@ -508,7 +510,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
+ 	 * (e.g. holes) to be unnecessarily encrypted, but this is rare and
+ 	 * can't happen in the common case of blocksize == PAGE_SIZE.
+ 	 */
+-	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit) {
++	if (fscrypt_inode_uses_fs_layer_crypto(inode) && nr_to_submit) {
+ 		gfp_t gfp_flags = GFP_NOFS;
+ 		unsigned int enc_bytes = round_up(len, i_blocksize(inode));
+ 
+diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
+index c1769afbf799..68eac0aeffad 100644
+--- a/fs/ext4/readpage.c
++++ b/fs/ext4/readpage.c
+@@ -195,7 +195,7 @@ static void ext4_set_bio_post_read_ctx(struct bio *bio,
+ {
+ 	unsigned int post_read_steps = 0;
+ 
+-	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
++	if (fscrypt_inode_uses_fs_layer_crypto(inode))
+ 		post_read_steps |= 1 << STEP_DECRYPT;
+ 
+ 	if (ext4_need_verity(inode, first_idx))
+@@ -232,6 +232,7 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 	const unsigned blkbits = inode->i_blkbits;
+ 	const unsigned blocks_per_page = PAGE_SIZE >> blkbits;
+ 	const unsigned blocksize = 1 << blkbits;
++	sector_t next_block;
+ 	sector_t block_in_file;
+ 	sector_t last_block;
+ 	sector_t last_block_in_file;
+@@ -264,7 +265,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 		if (page_has_buffers(page))
+ 			goto confused;
+ 
+-		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
++		block_in_file = next_block =
++			(sector_t)page->index << (PAGE_SHIFT - blkbits);
+ 		last_block = block_in_file + nr_pages * blocks_per_page;
+ 		last_block_in_file = (ext4_readpage_limit(inode) +
+ 				      blocksize - 1) >> blkbits;
+@@ -364,7 +366,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 		 * This page will go to BIO.  Do we need to send this
+ 		 * BIO off first?
+ 		 */
+-		if (bio && (last_block_in_bio != blocks[0] - 1)) {
++		if (bio && (last_block_in_bio != blocks[0] - 1 ||
++			    !fscrypt_mergeable_bio(bio, inode, next_block))) {
+ 		submit_and_realloc:
+ 			submit_bio(bio);
+ 			bio = NULL;
+@@ -376,6 +379,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 			 */
+ 			bio = bio_alloc(GFP_KERNEL,
+ 				min_t(int, nr_pages, BIO_MAX_PAGES));
++			fscrypt_set_bio_crypt_ctx(bio, inode, next_block,
++						  GFP_KERNEL);
+ 			ext4_set_bio_post_read_ctx(bio, inode, page->index);
+ 			bio_set_dev(bio, bdev);
+ 			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 0c7c4adb664e..2054da2ddde4 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1514,6 +1514,7 @@ enum {
+ 	Opt_journal_path, Opt_journal_checksum, Opt_journal_async_commit,
+ 	Opt_abort, Opt_data_journal, Opt_data_ordered, Opt_data_writeback,
+ 	Opt_data_err_abort, Opt_data_err_ignore, Opt_test_dummy_encryption,
++	Opt_inlinecrypt,
+ 	Opt_usrjquota, Opt_grpjquota, Opt_offusrjquota, Opt_offgrpjquota,
+ 	Opt_jqfmt_vfsold, Opt_jqfmt_vfsv0, Opt_jqfmt_vfsv1, Opt_quota,
+ 	Opt_noquota, Opt_barrier, Opt_nobarrier, Opt_err,
+@@ -1611,6 +1612,7 @@ static const match_table_t tokens = {
+ 	{Opt_noinit_itable, "noinit_itable"},
+ 	{Opt_max_dir_size_kb, "max_dir_size_kb=%u"},
+ 	{Opt_test_dummy_encryption, "test_dummy_encryption"},
++	{Opt_inlinecrypt, "inlinecrypt"},
+ 	{Opt_nombcache, "nombcache"},
+ 	{Opt_nombcache, "no_mbcache"},	/* for backward compatibility */
+ 	{Opt_removed, "check=none"},	/* mount option from ext2/3 */
+@@ -1898,6 +1900,13 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
+ 	case Opt_nolazytime:
+ 		sb->s_flags &= ~SB_LAZYTIME;
+ 		return 1;
++	case Opt_inlinecrypt:
++#ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
++		sb->s_flags |= SB_INLINECRYPT;
++#else
++		ext4_msg(sb, KERN_ERR, "inline encryption not supported");
++#endif
++		return 1;
+ 	}
+ 
+ 	for (m = ext4_mount_opts; m->token != Opt_err; m++)
 -- 
 2.25.1.481.gfbce0eb801-goog
 
