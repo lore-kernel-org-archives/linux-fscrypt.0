@@ -1,113 +1,94 @@
-Return-Path: <SRS0=L+e5=46=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=Zu8k=5A=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-0.9 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 72FDAC10DCE
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 Mar 2020 17:37:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E5E28C4CECE
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 15 Mar 2020 01:39:13 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 459B4206E9
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 Mar 2020 17:37:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id B3F1E2076D
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 15 Mar 2020 01:39:13 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1584121067;
-	bh=AHmdZYCCPLvPulAFzp7ZsIrC78Len1/3kZ2BmQWRnyg=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=Vd4O4ff7sU2jz7hjVgvsZ0eVQWswX7scMRLeFRf5R5L0x5DvUohTHFhL6AoipGbDu
-	 /6J4uXAqk+qq8izU3qZPu9pojJJY8m9OLV4HSJVts9OAwGfPWcq/k2Gy20yo7env3B
-	 HjwBVfxBkWQNTa5iukXUC0Rz7VMUeznKtP4AkTNU=
+	s=default; t=1584236353;
+	bh=BekzoYGRaAG7hdnMIHYnXydLgmN0afGG/lRCyAbxsow=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=sQMyMWNUZCp1pG3CpZD80/lqKvlA+4LdQq1LCAn2+kP/v1wg+LSDh+ePqdW9EHtEY
+	 +x/yPgDrdvH63iE8rb1Hi1GLZDddjNLye0kWgnvpAXdaUjr2z2diuBgjR5qoq6NWtR
+	 zRxu19VL85ur03y7XHkjqRF2FfuwA8jxKRBR5d+o=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726676AbgCMRhq (ORCPT
+        id S1726757AbgCOBjN (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 13 Mar 2020 13:37:46 -0400
-Received: from mail.kernel.org ([198.145.29.99]:60534 "EHLO mail.kernel.org"
+        Sat, 14 Mar 2020 21:39:13 -0400
+Received: from mail.kernel.org ([198.145.29.99]:55078 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726461AbgCMRhq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 13 Mar 2020 13:37:46 -0400
-Received: from gmail.com (unknown [104.132.1.76])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        id S1726689AbgCOBjM (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sat, 14 Mar 2020 21:39:12 -0400
+Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 77F53206B7;
-        Fri, 13 Mar 2020 17:37:45 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 4A39620792;
+        Sat, 14 Mar 2020 20:53:14 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1584121065;
-        bh=AHmdZYCCPLvPulAFzp7ZsIrC78Len1/3kZ2BmQWRnyg=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=Urpp+NQh338DeUMNJUNtv7W+P0mxs4E0vLtoV0nX905bFFCOGQCvjetcazLhYmoEU
-         9YUoSImbN1OPeRuonDkwtIbkRYn/8g1JvQS+zeZDm59sqBqi1LbQkbN8cqeHq9SKRv
-         dEPQ3LTmOhiWpehbW49SFsKiuVTuxMvVW0Uz2MpQ=
-Date:   Fri, 13 Mar 2020 10:37:44 -0700
+        s=default; t=1584219194;
+        bh=BekzoYGRaAG7hdnMIHYnXydLgmN0afGG/lRCyAbxsow=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=DxtA5FndvEQrWYJ1lLT38U6RoCkJTTKARYiBRkYMxyhpzJqs9rlw1ebJKhqeONoVc
+         PrGI+9cNJaMxe/l32l3G3sElzfnTGKgS9d3i70orWJl/g5fzCmYnfWgQhCRW8GsDd3
+         AUxOd5Pk7uahYWHoTpKyZYZRStA9y4nu6SuMdczo=
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     Barani Muthukumaran <bmuthuku@qti.qualcomm.com>
-Cc:     "linux-scsi@vger.kernel.org" <linux-scsi@vger.kernel.org>,
-        "linux-arm-msm@vger.kernel.org" <linux-arm-msm@vger.kernel.org>,
-        "linux-block@vger.kernel.org" <linux-block@vger.kernel.org>,
-        "linux-fscrypt@vger.kernel.org" <linux-fscrypt@vger.kernel.org>,
-        Alim Akhtar <alim.akhtar@samsung.com>,
-        Andy Gross <agross@kernel.org>,
-        Avri Altman <avri.altman@wdc.com>,
-        "bjorn.andersson@linaro.org" <bjorn.andersson@linaro.org>,
-        Can Guo <cang@codeaurora.org>,
-        Elliot Berman <eberman@codeaurora.org>,
-        Jaegeuk Kim <jaegeuk@kernel.org>,
-        John Stultz <john.stultz@linaro.org>,
-        Satya Tangirala <satyat@google.com>
-Subject: Re: [RFC PATCH v3 4/4] scsi: ufs-qcom: add Inline Crypto Engine
- support
-Message-ID: <20200313173744.GA55327@gmail.com>
-References: <20200312171259.151442-1-ebiggers@kernel.org>
- <20200312171259.151442-5-ebiggers@kernel.org>
- <BY5PR02MB65778B0D07AA92F6AB5E39E8FFFD0@BY5PR02MB6577.namprd02.prod.outlook.com>
- <20200312190541.GB6470@sol.localdomain>
- <BY5PR02MB6577DA7FD4425C8D7F318E2BFFFA0@BY5PR02MB6577.namprd02.prod.outlook.com>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org,
+        linux-api@vger.kernel.org
+Subject: [PATCH 4/4] ubifs: wire up FS_IOC_GET_ENCRYPTION_NONCE
+Date:   Sat, 14 Mar 2020 13:50:52 -0700
+Message-Id: <20200314205052.93294-5-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.25.1
+In-Reply-To: <20200314205052.93294-1-ebiggers@kernel.org>
+References: <20200314205052.93294-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <BY5PR02MB6577DA7FD4425C8D7F318E2BFFFA0@BY5PR02MB6577.namprd02.prod.outlook.com>
-User-Agent: Mutt/1.12.2 (2019-09-21)
+Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Mar 13, 2020 at 05:05:35PM +0000, Barani Muthukumaran wrote:
-> Hi Eric,
-> 
-> The crypto_variant_ops exposed were not a guess, we had worked with Satya to
-> add the functionality that is required.
+From: Eric Biggers <ebiggers@google.com>
 
-As far as I can tell, my patch works fine with just the new ->program_key()
-variant op.
+This new ioctl retrieves a file's encryption nonce, which is useful for
+testing.  See the corresponding fs/crypto/ patch for more details.
 
-Note that I'm also taking advantage of some of the existing, non-crypto-specific
-variant ops.  For example, I didn't need to add a ->crypto_resume() operation
-because there's already ufs_hba_variant_ops::resume().
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ubifs/ioctl.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
-I understand that the old downstream ICE code defined and used a lot of crypto
-variant ops, which did give the impression that a lot more would be needed.  But
-ultimately I found that most of them were unnecessary or could be replaced with
-the existing non-crypto-specific variant ops.
+diff --git a/fs/ubifs/ioctl.c b/fs/ubifs/ioctl.c
+index d49fc04f2d7d4..3df9be2c684c3 100644
+--- a/fs/ubifs/ioctl.c
++++ b/fs/ubifs/ioctl.c
+@@ -208,6 +208,9 @@ long ubifs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
+ 		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
+ 
++	case FS_IOC_GET_ENCRYPTION_NONCE:
++		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
++
+ 	default:
+ 		return -ENOTTY;
+ 	}
+@@ -230,6 +233,7 @@ long ubifs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 	case FS_IOC_REMOVE_ENCRYPTION_KEY:
+ 	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
+ 	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++	case FS_IOC_GET_ENCRYPTION_NONCE:
+ 		break;
+ 	default:
+ 		return -ENOIOCTLCMD;
+-- 
+2.25.1
 
-> Can we define the below crypto_variant_ops that exposes the same functionality
-> you have added, this allows us to extend this in the future in a seamless
-> manner. As an example QC implementation uses 'debug', 'suspend' and we can add
-> that when we upstream the implementation in the next few weeks once our
-> validation is complete. Thanks.
-> 
-> struct ufs_hba_crypto_variant_ops {
-> int (*hba_init_crypto)(struct ufs_hba *hba,
->        const struct keyslot_mgmt_ll_ops *ksm_ops);
-> void (*enable)(struct ufs_hba *hba);
-> int (*resume)(struct ufs_hba *hba);
-> int (*program_key(struct ufs_hba *hba,
->       const union ufs_crypto_cfg_entry *cfg, int slot);
-> };
-
-To re-iterate, upstream doesn't add hooks with no in-tree users.
-
-It's great to hear that you'll be sending out a patchset soon.  Just send out
-the hooks you need along with them, so that they can all be properly reviewed.
-
-- Eric
