@@ -2,95 +2,91 @@ Return-Path: <SRS0=Zu8k=5A=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A1F36C5ACD8
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 15 Mar 2020 01:39:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8EB09C10DCE
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 15 Mar 2020 17:16:55 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 6C8192071B
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 15 Mar 2020 01:39:18 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5B2CB20722
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 15 Mar 2020 17:16:55 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1584236358;
-	bh=CmnZSp1cD9W7GBGuNrZlONVYibn7gCqqoj6gfIP9vA4=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=Munx5YQuiVT5VVQsKNWw5AMV/bzwsKKP8z3P0bcedh4ltMnWRU/ACxZ4yjNlmp3OH
-	 hz6ryinEV/lffYqLaFkD0cs7/0F5CsDCsiFW6eUtZgLZ79pMcP1pZylQ9c2HKzL0aC
-	 01MJXqfeFMtC6QX5nGgc/nHxDfgLuhNKgomsD8ug=
+	s=default; t=1584292615;
+	bh=+lmpvdxUBRgyrzSD7k7JSLFEM42g3oWA97s0+PhrLF8=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=pWKBI3YbYf5qPEzAsB2V5MVF0gsII16e7iRmCJieWdjY6PBNRPfdnwul8EqYf0MsC
+	 fWj1SaXt1N1MuJSxTVtMgEuiPrZ2gXFnpW1mIyiBgqAo6sJSv8eTZnw2ldkEYkm5M+
+	 9DbmDBvqhFcWsTewN9SSs+mZGZqY4Tsbkei2H1OE=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727067AbgCOBjR (ORCPT
+        id S1728954AbgCORQz (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 14 Mar 2020 21:39:17 -0400
-Received: from mail.kernel.org ([198.145.29.99]:55076 "EHLO mail.kernel.org"
+        Sun, 15 Mar 2020 13:16:55 -0400
+Received: from mail.kernel.org ([198.145.29.99]:42240 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726579AbgCOBjN (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 14 Mar 2020 21:39:13 -0400
-Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        id S1728947AbgCORQy (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 15 Mar 2020 13:16:54 -0400
+Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 9A95620790;
-        Sat, 14 Mar 2020 20:53:13 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id BC567206E9;
+        Sun, 15 Mar 2020 17:16:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1584219193;
-        bh=CmnZSp1cD9W7GBGuNrZlONVYibn7gCqqoj6gfIP9vA4=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=gZfFkIOMgxmssruP+ea9EmjgNTu0xB1lPyOJtKrZoCw0s+W9sImhe8b8XapQ7wupz
-         k50I7OFwE0y6DZSyUAaqAE1YEnztPP4sMCFh4vnyxj01ht3I67/QjbWDkGypsH3cxy
-         winlpMSIqpy6GLkVeR2z71N6lCVDH7b4zg7GOjn8=
+        s=default; t=1584292614;
+        bh=+lmpvdxUBRgyrzSD7k7JSLFEM42g3oWA97s0+PhrLF8=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=fz8xheLuuQR+wB/DfIa8fMDHBJ96eTBl6qoUQEPumGFkmN+p2eeRitOsIvPQcwEWX
+         sRdvJhFc0FfCr/6CNrztD5Ta/DRrUiu5/aYHe+U70wAB9I8f7fFCSoPsWq5PyGQl0F
+         bbS551kFvD0b5ZrLw8+8RdX4rlEDR7PjNypkYRrs=
+Date:   Sun, 15 Mar 2020 10:16:52 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org,
-        linux-api@vger.kernel.org
-Subject: [PATCH 2/4] ext4: wire up FS_IOC_GET_ENCRYPTION_NONCE
-Date:   Sat, 14 Mar 2020 13:50:50 -0700
-Message-Id: <20200314205052.93294-3-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.25.1
-In-Reply-To: <20200314205052.93294-1-ebiggers@kernel.org>
-References: <20200314205052.93294-1-ebiggers@kernel.org>
+To:     Satya Tangirala <satyat@google.com>
+Cc:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org,
+        Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
+        Kuohong Wang <kuohong.wang@mediatek.com>,
+        Kim Boojin <boojin.kim@samsung.com>
+Subject: Re: [PATCH v8 10/11] f2fs: add inline encryption support
+Message-ID: <20200315171652.GA1055@sol.localdomain>
+References: <20200312080253.3667-1-satyat@google.com>
+ <20200312080253.3667-11-satyat@google.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200312080253.3667-11-satyat@google.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Thu, Mar 12, 2020 at 01:02:52AM -0700, Satya Tangirala wrote:
+> diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+> index 5355be6b6755..75817f0dc6f8 100644
+> --- a/fs/f2fs/f2fs.h
+> +++ b/fs/f2fs/f2fs.h
+> @@ -139,6 +139,9 @@ struct f2fs_mount_info {
+>  	int alloc_mode;			/* segment allocation policy */
+>  	int fsync_mode;			/* fsync policy */
+>  	bool test_dummy_encryption;	/* test dummy encryption */
+> +#ifdef CONFIG_FS_ENCRYPTION
+> +	bool inlinecrypt;		/* inline encryption enabled */
+> +#endif
+>  	block_t unusable_cap;		/* Amount of space allowed to be
+>  					 * unusable when disabling checkpoint
+>  					 */
 
-This new ioctl retrieves a file's encryption nonce, which is useful for
-testing.  See the corresponding fs/crypto/ patch for more details.
+This bool is unused now.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/ioctl.c | 6 ++++++
- 1 file changed, 6 insertions(+)
+> @@ -1568,6 +1577,9 @@ static void default_options(struct f2fs_sb_info *sbi)
+>  	F2FS_OPTION(sbi).alloc_mode = ALLOC_MODE_DEFAULT;
+>  	F2FS_OPTION(sbi).fsync_mode = FSYNC_MODE_POSIX;
+>  	F2FS_OPTION(sbi).test_dummy_encryption = false;
+> +#ifdef CONFIG_FS_ENCRYPTION
+> +	sbi->sb->s_flags &= ~SB_INLINECRYPT;
+> +#endif
 
-diff --git a/fs/ext4/ioctl.c b/fs/ext4/ioctl.c
-index a0ec750018dd3..0c1d1720cf1ae 100644
---- a/fs/ext4/ioctl.c
-+++ b/fs/ext4/ioctl.c
-@@ -1210,6 +1210,11 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
- 			return -EOPNOTSUPP;
- 		return fscrypt_ioctl_get_key_status(filp, (void __user *)arg);
- 
-+	case FS_IOC_GET_ENCRYPTION_NONCE:
-+		if (!ext4_has_feature_encrypt(sb))
-+			return -EOPNOTSUPP;
-+		return fscrypt_ioctl_get_nonce(filp, (void __user *)arg);
-+
- 	case EXT4_IOC_CLEAR_ES_CACHE:
- 	{
- 		if (!inode_owner_or_capable(inode))
-@@ -1370,6 +1375,7 @@ long ext4_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- 	case FS_IOC_REMOVE_ENCRYPTION_KEY:
- 	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
- 	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-+	case FS_IOC_GET_ENCRYPTION_NONCE:
- 	case EXT4_IOC_SHUTDOWN:
- 	case FS_IOC_GETFSMAP:
- 	case FS_IOC_ENABLE_VERITY:
--- 
-2.25.1
+This really should be CONFIG_FS_ENCRYPTION_INLINE_CRYPT, but actually there's no
+need for the #ifdef at all.  Just clear the flag unconditionally.
 
+- Eric
