@@ -2,43 +2,43 @@ Return-Path: <SRS0=PxyJ=5L=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 32014C2D0ED
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 26 Mar 2020 03:32:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D488DC2D0E7
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 26 Mar 2020 05:07:21 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [209.132.180.67])
-	by mail.kernel.org (Postfix) with ESMTP id 050CE2078A
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 26 Mar 2020 03:32:18 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id A510320772
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 26 Mar 2020 05:07:21 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1585193538;
-	bh=H8MDjdXMw4UeC+MDo5AJWCDIbLhr8JiIlIAwI10Z+3g=;
+	s=default; t=1585199241;
+	bh=L93EhN0UlFtJqX/gYR0aa3wk+7m7DwlPwFZinjcu45g=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=as+bgEccv53BG5MtRCyJP0B7LDYs+wBouQlclOMmj2+5V9qDAIHa6WpDQQA0AghJa
-	 iU0RrZDI/mJlph4Yxy8RwbpdlLgP5TyQS4x5NWFdXF1WpbmejaF6VtJ/cIbrQYMQIJ
-	 ePzC7UCiaHORksOEm+xK5jCoqxHSMTMg/wwdabOQ=
+	b=Izho5rws9U8NiMqWfo+w7wnUodyehAWcuLOLm4s4Ykp18071UTV4Y9sDPOE8sv+1z
+	 3v0Fl59ybW5fpbBd48FoyG514In25z1bHSm0nHMHk5oBkXa1eYuJkKQoxtH5jwxhE3
+	 8Bn/GaOXhlgs9NSLzwf++qBDNJStp/0xYdjLQAOQ=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727612AbgCZDcQ (ORCPT
+        id S1725842AbgCZFHU (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 25 Mar 2020 23:32:16 -0400
-Received: from mail.kernel.org ([198.145.29.99]:46174 "EHLO mail.kernel.org"
+        Thu, 26 Mar 2020 01:07:20 -0400
+Received: from mail.kernel.org ([198.145.29.99]:51218 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727575AbgCZDcQ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 25 Mar 2020 23:32:16 -0400
+        id S1725775AbgCZFHU (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 26 Mar 2020 01:07:20 -0400
 Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 9A16420714;
-        Thu, 26 Mar 2020 03:32:15 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 326E62070A;
+        Thu, 26 Mar 2020 05:07:19 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1585193535;
-        bh=H8MDjdXMw4UeC+MDo5AJWCDIbLhr8JiIlIAwI10Z+3g=;
+        s=default; t=1585199239;
+        bh=L93EhN0UlFtJqX/gYR0aa3wk+7m7DwlPwFZinjcu45g=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=qdxCTCnYYLrmrKMHD7/C7aC7RtVoeokIKBRmSJcTFqfSg9L9He24K/ah36MPQA3J8
-         hNdqhPOPnhM8LjHvJeo+1gCJB8VLyKZxaHrhIfFzALZHKEGtdbRmyD29DexWUDhKHI
-         7oPVsvCKfts7FBULpKTEy/kFk+tw/RlESgcqi/y0=
-Date:   Wed, 25 Mar 2020 20:32:14 -0700
+        b=P/05KEELLY9eRnCZ52KBkPmIRjwf+w3dHjNT7/NUOuZFrdqZf0gHvuUN/cHWOysBs
+         gG3gj6U+cMZEqWlgzpNJBKMArfqL0F2qBFDorlUP2jUGpN1iU8Rx1kySNW1RJLAXC5
+         AOubGRlzbwKQfv+KB+KhM9+L5/+vsIcyFOOXoxOM=
+Date:   Wed, 25 Mar 2020 22:07:17 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     Satya Tangirala <satyat@google.com>
 Cc:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
@@ -47,35 +47,68 @@ Cc:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
         Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
         Kuohong Wang <kuohong.wang@mediatek.com>,
         Kim Boojin <boojin.kim@samsung.com>
-Subject: Re: [PATCH v9 00/11] Inline Encryption Support
-Message-ID: <20200326033214.GA858@sol.localdomain>
+Subject: Re: [PATCH v9 06/11] scsi: ufs: UFS crypto API
+Message-ID: <20200326050717.GB858@sol.localdomain>
 References: <20200326030702.223233-1-satyat@google.com>
+ <20200326030702.223233-7-satyat@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200326030702.223233-1-satyat@google.com>
+In-Reply-To: <20200326030702.223233-7-satyat@google.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Mar 25, 2020 at 08:06:51PM -0700, Satya Tangirala wrote:
-> This patch series adds support for Inline Encryption to the block layer,
-> UFS, fscrypt, f2fs and ext4.
+On Wed, Mar 25, 2020 at 08:06:57PM -0700, Satya Tangirala wrote:
+> Introduce functions to manipulate UFS inline encryption hardware
+> in line with the JEDEC UFSHCI v2.1 specification and to work with the
+> block keyslot manager.
+> 
+> The UFS crypto API will assume by default that a vendor driver doesn't
+> support UFS crypto, even if the hardware advertises the capability, because
+> a lot of hardware requires some special handling that's not specified in
+> the aforementioned JEDEC spec. Each vendor driver must explicity set
+> hba->caps |= UFSHCD_CAP_CRYPTO before ufshcd_hba_init_crypto is called to
+> opt-in to UFS crypto support.
 > 
 
-This patch series can also be retrieved from
+Thanks, this looks much better now!
 
-        Repo: https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git
-        Tag: inline-encryption-v9
+A couple minor nits I noticed while reading this latest version:
 
-I based it on v5.6-rc2 (same base commit as v7 and v8) since it still applies
-cleanly to it.  You can see what changed from v8 by:
+> +void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
+> +					    struct request_queue *q)
+> +{
+> +	if ((hba->caps & UFSHCD_CAP_CRYPTO))
+> +		blk_ksm_register(&hba->ksm, q);
+> +}
 
-        git diff inline-encryption-v8..inline-encryption-v9
+There's an extra pair of parentheses in the 'if'.
 
-or from v7 by:
+> diff --git a/drivers/scsi/ufs/ufshcd-crypto.h b/drivers/scsi/ufs/ufshcd-crypto.h
+> new file mode 100644
+> index 0000000000000..1e98f1fc99965
+> --- /dev/null
+> +++ b/drivers/scsi/ufs/ufshcd-crypto.h
+> @@ -0,0 +1,44 @@
+> +/* SPDX-License-Identifier: GPL-2.0 */
+> +/*
+> + * Copyright 2019 Google LLC
+> + */
+> +
+> +#ifndef _UFSHCD_CRYPTO_H
+> +#define _UFSHCD_CRYPTO_H
+> +
+> +#ifdef CONFIG_SCSI_UFS_CRYPTO
+> +#include "ufshcd.h"
+> +#include "ufshci.h"
+> +
+> +bool ufshcd_crypto_enable(struct ufs_hba *hba);
+> +
+> +void ufshcd_crypto_disable(struct ufs_hba *hba);
 
-        git diff inline-encryption-v7..inline-encryption-v9
+ufshcd_crypto_disable() has been removed, so its declaration should be removed
+too.
 
 - Eric
