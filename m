@@ -8,65 +8,65 @@ X-Spam-Status: No, score=-9.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DABD8C54FCB
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Apr 2020 20:55:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DADFEC54FD0
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Apr 2020 20:55:30 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id B4D6521556
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Apr 2020 20:55:27 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id B9E6D21556
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Apr 2020 20:55:30 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="dFYnwBq8"
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="VfXBHyha"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726179AbgDXUz1 (ORCPT
+        id S1726181AbgDXUza (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 24 Apr 2020 16:55:27 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47682 "EHLO
+        Fri, 24 Apr 2020 16:55:30 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47692 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726027AbgDXUz1 (ORCPT
+        with ESMTP id S1726027AbgDXUza (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 24 Apr 2020 16:55:27 -0400
+        Fri, 24 Apr 2020 16:55:30 -0400
 Received: from mail-qt1-x841.google.com (mail-qt1-x841.google.com [IPv6:2607:f8b0:4864:20::841])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EA261C09B048
-        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Apr 2020 13:55:26 -0700 (PDT)
-Received: by mail-qt1-x841.google.com with SMTP id o10so9140275qtr.6
-        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Apr 2020 13:55:26 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 17C73C09B048
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Apr 2020 13:55:30 -0700 (PDT)
+Received: by mail-qt1-x841.google.com with SMTP id c23so8595527qtp.11
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Apr 2020 13:55:30 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=ehd7i3b6TRXl3v1Uwu/y1/w+QTwDrwBpkxzr6hgr8Fc=;
-        b=dFYnwBq8rtr5e0BflqdeKWKWEwktVoBx0MssR95x6AO+ql+yotL1fRwoiCuL7PWrsg
-         oJ0gvxUL953/xzfo8GFjZCSSU7Mtrv2EIKaY8PEdXvaltm/BXy2DCk2v2WxgdKqdJdWI
-         EWdXTAmV8C4UygFjmv+36LTCf3GJeDFNejgw1GcKFMOLmDM1DNGn6z4+V5hI0RvXuYUK
-         ifjsztIVrbngg8REO6kRaFpKO/74phU6I3YYF9g3UAlLgg0NYdPPQiQiBr+T8fp5LBm5
-         RJ2RuPj7OE43Us+NgOhW06geEwWbQUj1TB6xF4ZW8tRF1275CdU6U34Ir+tEPT+JKjda
-         Tfmg==
+        bh=vCJTIc8oPmMK3Dc93E89ACICAHMFSfRiodHF41XPX6c=;
+        b=VfXBHyha9QtG5FMboV3rtbieUzVuyXszJsqtZD5TwmA4ahtpIV/rTrwpgzRXrwHc37
+         es+GG+7Hi9m133lYszfwozIzo8lrI9eslkEuxrFWkM9DqS2ds8hrbOW/+9fbNQHcJQfl
+         zzj/Ogs0BbEeSaJySTrkIfFqVfaMWcRS8ozLiiDCn6n9Lh7uO5UIuB/CxuilMcYAqiHF
+         KIUog2tofga4m3HYCfDK6jPdybQKin3h7I+EBuAzXyJtyB9gnG1w2SkeUJonGnD5UkNk
+         Ih6gBcen4axcm2DkHx1viNpgBWScz6UK19zUqXC1oUgh5r/KH2dA4xlqMUyJmbVqS/yJ
+         Xpow==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=ehd7i3b6TRXl3v1Uwu/y1/w+QTwDrwBpkxzr6hgr8Fc=;
-        b=NguJbOG0oFAGOQidYMWQtFOgatGsRU6/GJOGwN8xZUvURIXJWUAxu1q4zRLuqh/m+z
-         UPwIUf0X7+AGRBW9T9HtZG3sdY64gUlS6NmxF5anmQ9Lk4DHTxyH4OLuprePrbKiwuBN
-         NchEqnXHhR99JBTkVyNGZLsbciaONztreXd+M8PcZ7PFE3oLb/HHoqfkdNYQR/qzxB0T
-         L/Zs1rrhcvVDCphV+s0hacAr0E6hyEcdCMSmge+RZD6xDrVC9xwDVmDLhJ81z8mA7CfW
-         0W4gkabYzxa4Nqoat/Q2vDg4o3lLhf1szVezvTLk4+fz2qHUE1lA06tZp/evTX1cFZQQ
-         ps4A==
-X-Gm-Message-State: AGi0PuZf0zcfjeUOLwaLgWYyWwfQ2hPpzCKZOp5y960bYa/0DmK1x/1m
-        6SQ3Wd6f6g57DQSimyRyALFXp1x4pHk=
-X-Google-Smtp-Source: APiQypJwfC89NOrTHtSZFjq7QLDFqNeVpzTMRwUjVyIrPvppDxMlmIePAoW1VRAyKxCtkXqt2L/L3w==
-X-Received: by 2002:ac8:bca:: with SMTP id p10mr11539698qti.243.1587761725634;
-        Fri, 24 Apr 2020 13:55:25 -0700 (PDT)
+        bh=vCJTIc8oPmMK3Dc93E89ACICAHMFSfRiodHF41XPX6c=;
+        b=gA2EhpXN6EOJjaWBGjT+7AG6Ct07laS94uRZRnT3i/Lqq/dhtM3d19fkxWGhebr+bj
+         9ZY0ICwN0jLPFWzwLhq/7zuG/Uxpgz8P4FPNNoC7huH07fkbZNTKq1iTlLGz8OAnVmiB
+         H7etoaM9GhcaFO2VpORcK6IWSC6KVpHV+7N+Gp5unGKh2pbw9RQFMdkdFVGIOd0Ia22z
+         CGINcgZhLYYRQjBklIZqFQ0FwDWTQnpTTx/Yz+Vl7z4ykBbLDditkfpeDmxY5AkJuk42
+         MNEDciy/lg8bxdfbW5WZTMljz0C0I/4btDwk/Wr/A//P1Hss8n5xMYPKC5W4fQGGo5Eo
+         96rg==
+X-Gm-Message-State: AGi0PuaMOJ5VTv/+vbNf2HBK5kdsoj8n5zlZW5+yITLPr/7BIQP6cTPA
+        UEyjYmSFZYXFBMId2UxqwwCisGINq64=
+X-Google-Smtp-Source: APiQypJayRlFgBhaOHzKpzqKJxiQ8XG4qE5kigldH4wi5ayaZb4zPNBFD6Ub78c7PpUux6GJKtRriA==
+X-Received: by 2002:ac8:32f4:: with SMTP id a49mr9973685qtb.293.1587761728931;
+        Fri, 24 Apr 2020 13:55:28 -0700 (PDT)
 Received: from localhost ([2620:10d:c091:480::62b])
-        by smtp.gmail.com with ESMTPSA id g25sm4385111qkl.50.2020.04.24.13.55.24
+        by smtp.gmail.com with ESMTPSA id m187sm4463700qkc.30.2020.04.24.13.55.28
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Fri, 24 Apr 2020 13:55:24 -0700 (PDT)
+        Fri, 24 Apr 2020 13:55:28 -0700 (PDT)
 From:   Jes Sorensen <jes.sorensen@gmail.com>
 X-Google-Original-From: Jes Sorensen <Jes.Sorensen@gmail.com>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     ebiggers@google.com, kernel-team@fb.com, jsorensen@fb.com
-Subject: [PATCH 11/20] Make full_{read,write}() return proper error codes instead of bool
-Date:   Fri, 24 Apr 2020 16:54:55 -0400
-Message-Id: <20200424205504.2586682-12-Jes.Sorensen@gmail.com>
+Subject: [PATCH 13/20] Update Makefile to install libfsverity and fsverity.h
+Date:   Fri, 24 Apr 2020 16:54:57 -0400
+Message-Id: <20200424205504.2586682-14-Jes.Sorensen@gmail.com>
 X-Mailer: git-send-email 2.25.3
 In-Reply-To: <20200424205504.2586682-1-Jes.Sorensen@gmail.com>
 References: <20200424205504.2586682-1-Jes.Sorensen@gmail.com>
@@ -79,146 +79,81 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Jes Sorensen <jsorensen@fb.com>
 
-This allows for better error reporting, and simplifies the read callback
-handler.
+In addition this adds a 'static' build target, which links in libfsverity
+statically rather than relying on the shared library.
+
+This also honors PREFIX for installation location.
 
 Signed-off-by: Jes Sorensen <jsorensen@fb.com>
 ---
- cmd_enable.c |  4 +++-
- cmd_sign.c   | 13 +++++--------
- util.c       | 14 +++++++-------
- util.h       |  4 ++--
- 4 files changed, 17 insertions(+), 18 deletions(-)
+ Makefile | 34 ++++++++++++++++++++++++++--------
+ 1 file changed, 26 insertions(+), 8 deletions(-)
 
-diff --git a/cmd_enable.c b/cmd_enable.c
-index 1bed3ef..9612778 100644
---- a/cmd_enable.c
-+++ b/cmd_enable.c
-@@ -56,6 +56,7 @@ static bool read_signature(const char *filename, u8 **sig_ret,
- 	u64 file_size;
- 	u8 *sig = NULL;
- 	bool ok = false;
-+	int status;
+diff --git a/Makefile b/Makefile
+index 966afa0..5bbcd87 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,34 +1,52 @@
+ EXE := fsverity
++STATIC := fsverity-static
+ LIB := libfsverity.so
++INC := libfsverity.h
+ CFLAGS := -O2 -Wall
+ CPPFLAGS := -D_FILE_OFFSET_BITS=64
+ LDLIBS := -lcrypto
+-DESTDIR := /usr/local
+-LIBDIR := /usr/lib64
++PREFIX = /usr
++BINDIR := $(PREFIX)/bin
++LIBDIR := $(PREFIX)/lib64
++INCDIR := $(PREFIX)/include
+ SRC := $(wildcard *.c)
+ OBJ := fsverity.o cmd_enable.o cmd_measure.o cmd_sign.o util.o
+ SSRC := libverity.c hash_algs.c
+-SOBJ := libverity.so hash_algs.so
++SHOBJ := libverity.so hash_algs.so
++STOBJ := libverity.o hash_algs.o
+ HDRS := $(wildcard *.h)
  
- 	if (!open_file(&file, filename, O_RDONLY, 0))
- 		goto out;
-@@ -70,7 +71,8 @@ static bool read_signature(const char *filename, u8 **sig_ret,
- 		goto out;
- 	}
- 	sig = xmalloc(file_size);
--	if (!full_read(&file, sig, file_size))
-+	status = full_read(&file, sig, file_size);
-+	if (status < 0)
- 		goto out;
- 	*sig_ret = sig;
- 	*sig_size_ret = file_size;
-diff --git a/cmd_sign.c b/cmd_sign.c
-index 15d0937..959e6d9 100644
---- a/cmd_sign.c
-+++ b/cmd_sign.c
-@@ -13,6 +13,7 @@
- #include <stdlib.h>
- #include <string.h>
- #include <errno.h>
-+#include <unistd.h>
+ all:$(EXE)
  
- #include "commands.h"
- #include "libfsverity.h"
-@@ -20,12 +21,13 @@
- static bool write_signature(const char *filename, const u8 *sig, u32 sig_size)
- {
- 	struct filedes file;
-+	int status;
- 	bool ok;
++static:$(STATIC)
++
+ $(EXE):$(OBJ) $(LIB)
+ 	$(CC) -o $@ $(OBJ) $(LDLIBS) -L . -l fsverity
  
- 	if (!open_file(&file, filename, O_WRONLY|O_CREAT|O_TRUNC, 0644))
- 		return false;
--	ok = full_write(&file, sig, sig_size);
--	ok &= filedes_close(&file);
-+	status = full_write(&file, sig, sig_size);
-+	ok = (!status && filedes_close(&file));
- 	return ok;
- }
++$(STATIC):$(OBJ) $(STOBJ)
++	$(CC) -o $@ $(OBJ) $(STOBJ) $(LDLIBS)
++
+ $(OBJ): %.o: %.c $(HDRS)
+ 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
  
-@@ -48,12 +50,7 @@ static const struct option longopts[] = {
+-$(SOBJ): %.so: %.c $(HDRS)
++$(STOBJ): %.o: %.c $(HDRS)
++	$(CC) -c $(CFLAGS) $(CPPFLAGS) $< -o $@
++
++$(SHOBJ): %.so: %.c $(HDRS)
+ 	$(CC) -c -fPIC $(CFLAGS) $(CPPFLAGS) $< -o $@
  
- static int read_callback(void *opague, void *buf, size_t count)
- {
--	int retval = -EBADF;
--
--	if (full_read(opague, buf, count))
--		retval = 0;
--
--	return retval;
-+	return full_read(opague, buf, count);
- }
+-libfsverity.so: $(SOBJ)
+-	$(CC) $(LDLIBS) -shared -o libfsverity.so $(SOBJ)
++libfsverity.so: $(SHOBJ)
++	$(CC) $(LDLIBS) -shared -o $@ $(SHOBJ)
  
- /* Sign a file for fs-verity by computing its measurement, then signing it. */
-diff --git a/util.c b/util.c
-index 2218f2e..586d2b0 100644
---- a/util.c
-+++ b/util.c
-@@ -117,38 +117,38 @@ bool get_file_size(struct filedes *file, u64 *size_ret)
- 	return true;
- }
+ clean:
+-	rm -f $(EXE) $(OBJ) $(SOBJ) $(LIB)
++	rm -f $(EXE) $(OBJ) $(SHOBJ) $(LIB) $(STOBJ) $(STATIC)
  
--bool full_read(struct filedes *file, void *buf, size_t count)
-+int full_read(struct filedes *file, void *buf, size_t count)
- {
- 	while (count) {
- 		int n = read(file->fd, buf, min(count, INT_MAX));
+ install:all
+-	install -Dm755 -t $(DESTDIR)/bin $(EXE)
++	install -Dm755 -t $(BINDIR) $(EXE)
++	install -Dm755 -t $(LIBDIR) $(LIB)
++	install -Dm644 -t $(INCDIR) $(INC)
++
++install-static:static
++	install -Dm755 -t $(BINDIR) $(STATIC)
  
- 		if (n < 0) {
- 			error_msg_errno("reading from '%s'", file->name);
--			return false;
-+			return n;
- 		}
- 		if (n == 0) {
- 			error_msg("unexpected end-of-file on '%s'", file->name);
--			return false;
-+			return -EBADFD;
- 		}
- 		buf += n;
- 		count -= n;
- 	}
--	return true;
-+	return 0;
- }
- 
--bool full_write(struct filedes *file, const void *buf, size_t count)
-+int full_write(struct filedes *file, const void *buf, size_t count)
- {
- 	while (count) {
- 		int n = write(file->fd, buf, min(count, INT_MAX));
- 
- 		if (n < 0) {
- 			error_msg_errno("writing to '%s'", file->name);
--			return false;
-+			return n;
- 		}
- 		buf += n;
- 		count -= n;
- 	}
--	return true;
-+	return 0;
- }
- 
- bool filedes_close(struct filedes *file)
-diff --git a/util.h b/util.h
-index dd9b803..c4dc066 100644
---- a/util.h
-+++ b/util.h
-@@ -113,8 +113,8 @@ struct filedes {
- 
- bool open_file(struct filedes *file, const char *filename, int flags, int mode);
- bool get_file_size(struct filedes *file, u64 *size_ret);
--bool full_read(struct filedes *file, void *buf, size_t count);
--bool full_write(struct filedes *file, const void *buf, size_t count);
-+int full_read(struct filedes *file, void *buf, size_t count);
-+int full_write(struct filedes *file, const void *buf, size_t count);
- bool filedes_close(struct filedes *file);
- 
- /* ========== String utilities ========== */
+ .PHONY: all clean install
 -- 
 2.25.3
 
