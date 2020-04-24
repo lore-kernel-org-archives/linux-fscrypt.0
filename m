@@ -8,65 +8,65 @@ X-Spam-Status: No, score=-9.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0B225C54FCB
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Apr 2020 20:55:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0C77BC55186
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Apr 2020 20:55:33 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id D285E21556
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Apr 2020 20:55:29 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id D544221556
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Apr 2020 20:55:32 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="nOOlwtpR"
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="G75R4Fvw"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726094AbgDXUz3 (ORCPT
+        id S1726062AbgDXUzc (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 24 Apr 2020 16:55:29 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47690 "EHLO
+        Fri, 24 Apr 2020 16:55:32 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47700 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726027AbgDXUz3 (ORCPT
+        with ESMTP id S1726027AbgDXUzc (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 24 Apr 2020 16:55:29 -0400
-Received: from mail-qt1-x82b.google.com (mail-qt1-x82b.google.com [IPv6:2607:f8b0:4864:20::82b])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 09E29C09B048
-        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Apr 2020 13:55:29 -0700 (PDT)
-Received: by mail-qt1-x82b.google.com with SMTP id c23so8595487qtp.11
-        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Apr 2020 13:55:29 -0700 (PDT)
+        Fri, 24 Apr 2020 16:55:32 -0400
+Received: from mail-qt1-x841.google.com (mail-qt1-x841.google.com [IPv6:2607:f8b0:4864:20::841])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 17B94C09B048
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Apr 2020 13:55:32 -0700 (PDT)
+Received: by mail-qt1-x841.google.com with SMTP id 71so9111675qtc.12
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Apr 2020 13:55:32 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=from:to:cc:subject:date:message-id:in-reply-to:references
          :mime-version:content-transfer-encoding;
-        bh=vCscx6wPKburaGs6JzY5/THwL2ZHuiVAAqG0FRCUyyA=;
-        b=nOOlwtpRXXI6KJTXakhDnqefpJdmRGHkmeB0cIzlYdEOjRQnoEKXyGM2m7R+sViNDR
-         5rDdoHOVoi8w6RFJoZHXw8phQd3RUEn0vJRTiqFNZJtAFnmDJvRF0WOwPA+SvjE/0atv
-         gxKURWpEhLe2wmwfs5XG2zOglIMdHlH59RrpBPRT8yraE3jOINzrhZBR3zoXlB+x8pKY
-         mWeOlpCxGDiiBD1LRSOihYlKfr08+NYsQE8rW7gIyNY1ZUjTCWlg+e5I58E828v/89U1
-         O23jrPFG3V/MvnxgDA537QWwjTo4JAVTK4126SnRDNfz3KSDh/Qttm+uCB+qH2PCBgI9
-         d16g==
+        bh=DrbAVWu4qCkcBZ8zvuLQ6tYHAf4DmA7axJJr6fBOg9Q=;
+        b=G75R4FvwdRBLKdgFnZxKzd0d2fDkHQ0pKpiivNyuLUb0T+2YraSS/7Jv31q8rLQ4ca
+         qSyD4VYi7R7sIihLBkG2gt/7vY6bq/Ae8FhvfJ47+abAK7kDSoRIOi4/vtS75gH8KzYd
+         CmXDAaYK6FzOej1IpdaGim9d+FoiofSySA86tjSZ4oYOGOaqluhmX5T5w6TIJhOfSCil
+         KvtrhWnjwQzMiIQpDXI0Xgp4FStmfvgH2jlLNCZhKtAo9XB+0L9ZBYjYSUet/7QIvQfY
+         JIvCIz/sUkjFntG0TRixYEVN8GabJnCPlMwfTU2PFKP3XdXqrxR1rdhEOwwMX+w/R04t
+         AfpA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
          :references:mime-version:content-transfer-encoding;
-        bh=vCscx6wPKburaGs6JzY5/THwL2ZHuiVAAqG0FRCUyyA=;
-        b=SPkoBfhrG08hNGSn3S7oPwSvr1rvjBChyhjL4u9CuLWOqzQ+eZEf/CGvK7CSg2Z9C4
-         ITzKZAv/x993C4rVpX+WR1h9Z3uxp+XtO8+eDIzcPphDPeGgfFt/fHyQcm1fsXFsxBlW
-         J8DSCirgJFdMEp13ocot3PATXepIgaE/gacg6wo1eylxFl6/TNL/0NEP9oQuFTyVhiKi
-         M/Q34lnzREwLnkcU29TWWfyvCcRdQgAG1O+SkF+Omcsruu6Ke6Vs5233blsoIfb+NDyf
-         1uE+X7WMVcD1zbRS8YpHbps6+owV9i/Izg9awNyElfFFSGIRB8lGj0Z+7fcXf2eZ6XY/
-         INZQ==
-X-Gm-Message-State: AGi0PuYP0Mk/R/V2gQvdNQ51UPgPj2x3ZJ5/dxmvOyd0vAmuROcFxN9R
-        btOo1S/li4/1KkC6xoMBPun+qXM3Sus=
-X-Google-Smtp-Source: APiQypLHGACvCpZK5bOlZt7S2a7/JHn327O5t6S3v6OrOA3q5Fk//YVXN6xBxSYfja0SL6fxnQjOcg==
-X-Received: by 2002:ac8:7413:: with SMTP id p19mr11456160qtq.28.1587761727305;
-        Fri, 24 Apr 2020 13:55:27 -0700 (PDT)
+        bh=DrbAVWu4qCkcBZ8zvuLQ6tYHAf4DmA7axJJr6fBOg9Q=;
+        b=EFJ/wuCNdn3hP1nlINdyXPq2vS9NfyBBuME9eKTjOGhLdNzI+9HfjUsqiaaznu+ZNL
+         ZDKjY3yuUXVZwmBwPunbj0/Tks5dYEnlFkbUTcmBg/ahyX3/cL/Odp/JqUhu+PlKTQc5
+         leoFX1aVOgB+ksDWdDszvtzbpfC8vO/IjSRBTBQmjaDVB3wrDLEprelVw7AT9+najqqL
+         2DDY8ZybUDdOqpJfqJxuvzHbnUsBDQOsg1L25Kplcf3r7o5u0AEHmRomg0xaObT+0icC
+         9S32BmyOokOmGiOja5/IvLRUOyljr1EGsFZaGsvFYPZreDLVQteV8LFtxfAHR1ZskMA/
+         vTsA==
+X-Gm-Message-State: AGi0Pub5i+pdT4buVERdglImBxZZBVkuPPvQyDNZdyz64aIHUIZCZaYw
+        2aD8L7Ij+ca10rUdYGqHleXF735GNwA=
+X-Google-Smtp-Source: APiQypL5ATtEOApjVZDwyl0c7nTc+sCFNwJkL+qm3f08IBeHVy9Fo/7IhAxi4ojcwQdp1rxjw7WmYw==
+X-Received: by 2002:ac8:7683:: with SMTP id g3mr11771149qtr.166.1587761730754;
+        Fri, 24 Apr 2020 13:55:30 -0700 (PDT)
 Received: from localhost ([2620:10d:c091:480::62b])
-        by smtp.gmail.com with ESMTPSA id o13sm4431774qke.77.2020.04.24.13.55.26
+        by smtp.gmail.com with ESMTPSA id u5sm4428174qkm.116.2020.04.24.13.55.29
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Fri, 24 Apr 2020 13:55:26 -0700 (PDT)
+        Fri, 24 Apr 2020 13:55:30 -0700 (PDT)
 From:   Jes Sorensen <jes.sorensen@gmail.com>
 X-Google-Original-From: Jes Sorensen <Jes.Sorensen@gmail.com>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     ebiggers@google.com, kernel-team@fb.com, jsorensen@fb.com
-Subject: [PATCH 12/20] libfsverity: Remove dependencies on util.c
-Date:   Fri, 24 Apr 2020 16:54:56 -0400
-Message-Id: <20200424205504.2586682-13-Jes.Sorensen@gmail.com>
+Subject: [PATCH 14/20] Change libfsverity_find_hash_alg_by_name() to return the alg number
+Date:   Fri, 24 Apr 2020 16:54:58 -0400
+Message-Id: <20200424205504.2586682-15-Jes.Sorensen@gmail.com>
 X-Mailer: git-send-email 2.25.3
 In-Reply-To: <20200424205504.2586682-1-Jes.Sorensen@gmail.com>
 References: <20200424205504.2586682-1-Jes.Sorensen@gmail.com>
@@ -79,672 +79,238 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Jes Sorensen <jsorensen@fb.com>
 
-There were a ton of cross dependencies to util.c. This gets rid of all
-the use of string function wrappers, u<x> data types, and various debug
-functions. Useful independent macros and inline functions are moved to
-helpers.h which may be included by both libfsverity and the fsverity
-application.
+This elimnates the need for struct fsverity_hash_alg in the use case
+of libfsverity_find_hash_alg_by_name(). In addition this introduces a
+libfsverity_digest_size() which returns the size of the digest for the
+given algorithm, and libfsverity_hash_name() which returns a string
+with the name of the algorithm. Note the returned string must be
+freed by the caller.
 
 Signed-off-by: Jes Sorensen <jsorensen@fb.com>
 ---
- fsverity.c  |   1 +
- hash_algs.c |  47 ++++++++++-----
- hash_algs.h |   9 ++-
- helpers.h   |  43 ++++++++++++++
- libverity.c | 165 ++++++++++++++++++++++++++++++++--------------------
- util.c      |   1 +
- util.h      |  56 ------------------
- 7 files changed, 184 insertions(+), 138 deletions(-)
- create mode 100644 helpers.h
+ cmd_enable.c  |  6 +++---
+ cmd_sign.c    | 25 +++++++++++++++----------
+ hash_algs.c   | 35 ++++++++++++++++++++++++++++++-----
+ libfsverity.h | 28 +++++++++++++++++++++++-----
+ 4 files changed, 71 insertions(+), 23 deletions(-)
 
-diff --git a/fsverity.c b/fsverity.c
-index f9df72e..a176ead 100644
---- a/fsverity.c
-+++ b/fsverity.c
-@@ -13,6 +13,7 @@
- #include <unistd.h>
+diff --git a/cmd_enable.c b/cmd_enable.c
+index 9612778..ac977e7 100644
+--- a/cmd_enable.c
++++ b/cmd_enable.c
+@@ -22,7 +22,7 @@ static bool parse_hash_alg_option(const char *arg, u32 *alg_ptr)
+ {
+ 	char *end;
+ 	unsigned long n = strtoul(arg, &end, 10);
+-	const struct fsverity_hash_alg *alg;
++	uint16_t alg;
  
- #include "commands.h"
-+#include "helpers.h"
- #include "libfsverity.h"
+ 	if (*alg_ptr != 0) {
+ 		error_msg("--hash-alg can only be specified once");
+@@ -37,8 +37,8 @@ static bool parse_hash_alg_option(const char *arg, u32 *alg_ptr)
  
- static const struct fsverity_command {
+ 	/* Specified by name? */
+ 	alg = libfsverity_find_hash_alg_by_name(arg);
+-	if (alg != NULL) {
+-		*alg_ptr = alg->hash_num;
++	if (alg) {
++		*alg_ptr = alg;
+ 		return true;
+ 	}
+ 	error_msg("unknown hash algorithm: '%s'", arg);
+diff --git a/cmd_sign.c b/cmd_sign.c
+index 959e6d9..80e62d5 100644
+--- a/cmd_sign.c
++++ b/cmd_sign.c
+@@ -57,7 +57,6 @@ static int read_callback(void *opague, void *buf, size_t count)
+ int fsverity_cmd_sign(const struct fsverity_command *cmd,
+ 		      int argc, char *argv[])
+ {
+-	const struct fsverity_hash_alg *hash_alg = NULL;
+ 	struct filedes file = { .fd = -1 };
+ 	u32 block_size = 0;
+ 	u8 *salt = NULL;
+@@ -69,7 +68,10 @@ int fsverity_cmd_sign(const struct fsverity_command *cmd,
+ 	struct libfsverity_signature_params sig_params;
+ 	u64 file_size;
+ 	char digest_hex[FS_VERITY_MAX_DIGEST_SIZE * 2 + 1];
++	char *hash_name = NULL;
+ 	u8 *sig = NULL;
++	u16 alg_nr = 0;
++	int digest_size;
+ 	size_t sig_size;
+ 	int status;
+ 	int c;
+@@ -77,12 +79,12 @@ int fsverity_cmd_sign(const struct fsverity_command *cmd,
+ 	while ((c = getopt_long(argc, argv, "", longopts, NULL)) != -1) {
+ 		switch (c) {
+ 		case OPT_HASH_ALG:
+-			if (hash_alg != NULL) {
++			if (alg_nr) {
+ 				error_msg("--hash-alg can only be specified once");
+ 				goto out_usage;
+ 			}
+-			hash_alg = libfsverity_find_hash_alg_by_name(optarg);
+-			if (hash_alg == NULL) {
++			alg_nr = libfsverity_find_hash_alg_by_name(optarg);
++			if (!alg_nr) {
+ 				error_msg("unknown hash algorithm: '%s'",
+ 					  optarg);
+ 				fputs("Available hash algorithms: ", stderr);
+@@ -124,8 +126,8 @@ int fsverity_cmd_sign(const struct fsverity_command *cmd,
+ 	if (argc != 2)
+ 		goto out_usage;
+ 
+-	if (hash_alg == NULL)
+-		hash_alg = libfsverity_find_hash_alg_by_num(FS_VERITY_HASH_ALG_DEFAULT);
++	if (!alg_nr)
++		alg_nr = FS_VERITY_HASH_ALG_DEFAULT;
+ 
+ 	if (block_size == 0)
+ 		block_size = get_default_block_size();
+@@ -147,7 +149,7 @@ int fsverity_cmd_sign(const struct fsverity_command *cmd,
+ 
+ 	memset(&params, 0, sizeof(struct libfsverity_merkle_tree_params));
+ 	params.version = 1;
+-	params.hash_algorithm = hash_alg->hash_num;
++	params.hash_algorithm = alg_nr;
+ 	params.block_size = block_size;
+ 	params.salt_size = salt_size;
+ 	params.salt = salt;
+@@ -158,6 +160,8 @@ int fsverity_cmd_sign(const struct fsverity_command *cmd,
+ 
+ 	filedes_close(&file);
+ 
++	digest_size = libfsverity_digest_size(alg_nr);
++
+ 	memset(&sig_params, 0, sizeof(struct libfsverity_signature_params));
+ 	sig_params.keyfile = keyfile;
+ 	sig_params.certfile = certfile;
+@@ -169,9 +173,10 @@ int fsverity_cmd_sign(const struct fsverity_command *cmd,
+ 	if (!write_signature(argv[1], sig, sig_size))
+ 		goto out_err;
+ 
+-	bin2hex(digest->digest, hash_alg->digest_size, digest_hex);
+-	printf("Signed file '%s' (%s:%s)\n", argv[0], hash_alg->name,
+-	       digest_hex);
++	hash_name = libfsverity_hash_name(alg_nr);
++	bin2hex(digest->digest, digest_size, digest_hex);
++	printf("Signed file '%s' (%s:%s)\n", argv[0], hash_name, digest_hex);
++	free(hash_name);
+ 	status = 0;
+ out:
+ 	free(salt);
 diff --git a/hash_algs.c b/hash_algs.c
-index d9f70b4..3066d87 100644
+index 3066d87..120d1be 100644
 --- a/hash_algs.c
 +++ b/hash_algs.c
-@@ -10,7 +10,9 @@
- #include <openssl/evp.h>
- #include <stdlib.h>
- #include <string.h>
-+#include <assert.h>
+@@ -137,17 +137,17 @@ const struct fsverity_hash_alg fsverity_hash_algs[] = {
+ 	},
+ };
  
-+#include "helpers.h"
- #include "fsverity_uapi.h"
- #include "libfsverity.h"
- #include "hash_algs.h"
-@@ -27,9 +29,12 @@ static void openssl_digest_init(struct hash_ctx *_ctx)
+-const struct fsverity_hash_alg *
+-libfsverity_find_hash_alg_by_name(const char *name)
++uint16_t libfsverity_find_hash_alg_by_name(const char *name)
  {
- 	struct openssl_hash_ctx *ctx = (void *)_ctx;
+ 	int i;
  
--	if (EVP_DigestInit_ex(ctx->md_ctx, ctx->md, NULL) != 1)
--		fatal_error("EVP_DigestInit_ex() failed for algorithm '%s'",
--			    ctx->base.alg->name);
-+	if (EVP_DigestInit_ex(ctx->md_ctx, ctx->md, NULL) != 1) {
-+		fprintf(stderr,
-+			"%s: EVP_DigestInit_ex() failed for algorithm '%s'",
-+			__func__, ctx->base.alg->name);
-+		abort();
-+	}
+ 	for (i = 0; i < ARRAY_SIZE(fsverity_hash_algs); i++) {
+ 		if (fsverity_hash_algs[i].name &&
+-		    !strcmp(name, fsverity_hash_algs[i].name))
+-			return &fsverity_hash_algs[i];
++		    !strcmp(name, fsverity_hash_algs[i].name)) {
++			return fsverity_hash_algs[i].hash_num;
++		}
+ 	}
+-	return NULL;
++	return 0;
  }
  
- static void openssl_digest_update(struct hash_ctx *_ctx,
-@@ -37,18 +42,24 @@ static void openssl_digest_update(struct hash_ctx *_ctx,
- {
- 	struct openssl_hash_ctx *ctx = (void *)_ctx;
- 
--	if (EVP_DigestUpdate(ctx->md_ctx, data, size) != 1)
--		fatal_error("EVP_DigestUpdate() failed for algorithm '%s'",
--			    ctx->base.alg->name);
-+	if (EVP_DigestUpdate(ctx->md_ctx, data, size) != 1) {
-+		fprintf(stderr,
-+			"%s: EVP_DigestUpdate() failed for algorithm '%s'",
-+			__func__, ctx->base.alg->name);
-+		abort();
-+	}
+ const struct fsverity_hash_alg *
+@@ -160,6 +160,31 @@ libfsverity_find_hash_alg_by_num(unsigned int num)
+ 	return NULL;
  }
  
--static void openssl_digest_final(struct hash_ctx *_ctx, u8 *digest)
-+static void openssl_digest_final(struct hash_ctx *_ctx, uint8_t *digest)
- {
- 	struct openssl_hash_ctx *ctx = (void *)_ctx;
- 
--	if (EVP_DigestFinal_ex(ctx->md_ctx, digest, NULL) != 1)
--		fatal_error("EVP_DigestFinal_ex() failed for algorithm '%s'",
--			    ctx->base.alg->name);
-+	if (EVP_DigestFinal_ex(ctx->md_ctx, digest, NULL) != 1) {
-+		fprintf(stderr,
-+			"%s: EVP_DigestFinal_ex() failed for algorithm '%s'",
-+			__func__, ctx->base.alg->name);
-+		abort();
-+	}
- }
- 
- static void openssl_digest_ctx_free(struct hash_ctx *_ctx)
-@@ -69,7 +80,10 @@ openssl_digest_ctx_create(const struct fsverity_hash_alg *alg, const EVP_MD *md)
- {
- 	struct openssl_hash_ctx *ctx;
- 
--	ctx = xzalloc(sizeof(*ctx));
-+	ctx = malloc(sizeof(*ctx));
-+	if (!ctx)
-+		goto out_of_memory;
-+	memset(ctx, 0, sizeof(*ctx));
- 	ctx->base.alg = alg;
- 	ctx->base.init = openssl_digest_init;
- 	ctx->base.update = openssl_digest_update;
-@@ -82,12 +96,16 @@ openssl_digest_ctx_create(const struct fsverity_hash_alg *alg, const EVP_MD *md)
- 	 */
- 	ctx->md_ctx = EVP_MD_CTX_create();
- 	if (!ctx->md_ctx)
--		fatal_error("out of memory");
-+		goto out_of_memory;
- 
- 	ctx->md = md;
--	ASSERT(EVP_MD_size(md) == alg->digest_size);
-+	assert(EVP_MD_size(md) == alg->digest_size);
- 
- 	return &ctx->base;
++int libfsverity_digest_size(uint16_t alg_nr)
++{
++	if (alg_nr < ARRAY_SIZE(fsverity_hash_algs) &&
++	    fsverity_hash_algs[alg_nr].name)
++		return fsverity_hash_algs[alg_nr].digest_size;
 +
-+ out_of_memory:
-+	fprintf(stderr, "%s: out of memory", __func__);
-+	abort();
- }
- 
- static struct hash_ctx *create_sha256_ctx(const struct fsverity_hash_alg *alg)
-@@ -143,7 +161,8 @@ libfsverity_find_hash_alg_by_num(unsigned int num)
- }
- 
++	return -1;
++}
++
++char *libfsverity_hash_name(uint16_t alg_nr)
++{
++	int namelen;
++	char *hash_name = NULL;
++
++	if (alg_nr < ARRAY_SIZE(fsverity_hash_algs) &&
++	    fsverity_hash_algs[alg_nr].name) {
++		namelen = strlen(fsverity_hash_algs[alg_nr].name);
++		hash_name = malloc(namelen + 1);
++		if (hash_name)
++			strcpy(hash_name, fsverity_hash_algs[alg_nr].name);
++	}
++
++	return hash_name;
++}
++
  /* ->init(), ->update(), and ->final() all in one step */
--void hash_full(struct hash_ctx *ctx, const void *data, size_t size, u8 *digest)
-+void hash_full(struct hash_ctx *ctx, const void *data, size_t size,
-+	       uint8_t *digest)
- {
- 	hash_init(ctx);
- 	hash_update(ctx, data, size);
-diff --git a/hash_algs.h b/hash_algs.h
-index 2c7269a..546a601 100644
---- a/hash_algs.h
-+++ b/hash_algs.h
-@@ -4,13 +4,11 @@
+ void hash_full(struct hash_ctx *ctx, const void *data, size_t size,
+ 	       uint8_t *digest)
+diff --git a/libfsverity.h b/libfsverity.h
+index ea36b8e..a505cbe 100644
+--- a/libfsverity.h
++++ b/libfsverity.h
+@@ -58,7 +58,7 @@ struct libfsverity_signature_params {
  
- #include <stdio.h>
- 
--#include "util.h"
--
- struct hash_ctx {
- 	const struct fsverity_hash_alg *alg;
- 	void (*init)(struct hash_ctx *ctx);
- 	void (*update)(struct hash_ctx *ctx, const void *data, size_t size);
--	void (*final)(struct hash_ctx *ctx, u8 *out);
-+	void (*final)(struct hash_ctx *ctx, uint8_t *out);
- 	void (*free)(struct hash_ctx *ctx);
- };
- 
-@@ -25,7 +23,7 @@ static inline void hash_update(struct hash_ctx *ctx,
- 	ctx->update(ctx, data, size);
- }
- 
--static inline void hash_final(struct hash_ctx *ctx, u8 *digest)
-+static inline void hash_final(struct hash_ctx *ctx, uint8_t *digest)
- {
- 	ctx->final(ctx, digest);
- }
-@@ -36,6 +34,7 @@ static inline void hash_free(struct hash_ctx *ctx)
- 		ctx->free(ctx);
- }
- 
--void hash_full(struct hash_ctx *ctx, const void *data, size_t size, u8 *digest);
-+void hash_full(struct hash_ctx *ctx, const void *data, size_t size,
-+	       uint8_t *digest);
- 
- #endif /* HASH_ALGS_H */
-diff --git a/helpers.h b/helpers.h
-new file mode 100644
-index 0000000..35ce626
---- /dev/null
-+++ b/helpers.h
-@@ -0,0 +1,43 @@
-+/* SPDX-License-Identifier: GPL-2.0+ */
-+/*
-+ * Helper macros and inline functions for fsverity and libfsverity
-+ *
-+ * Copyright (C) 2018 Google LLC
-+ * Copyright (C) 2020 Facebook
-+ */
-+#ifndef HELPERS_H
-+#define HELPERS_H
-+
-+#include <stdbool.h>
-+
-+#define ARRAY_SIZE(A)		(sizeof(A) / sizeof((A)[0]))
-+
-+#define min(a, b) ({			\
-+	__typeof__(a) _a = (a);		\
-+	__typeof__(b) _b = (b);		\
-+	_a < _b ? _a : _b;		\
-+})
-+#define max(a, b) ({			\
-+	__typeof__(a) _a = (a);		\
-+	__typeof__(b) _b = (b);		\
-+	_a > _b ? _a : _b;		\
-+})
-+
-+static inline bool is_power_of_2(unsigned long n)
-+{
-+	return n != 0 && ((n & (n - 1)) == 0);
-+}
-+
-+static inline int ilog2(unsigned long n)
-+{
-+	return (8 * sizeof(n) - 1) - __builtin_clzl(n);
-+}
-+
-+#define roundup(x, y) ({		\
-+	__typeof__(y) _y = (y);		\
-+	(((x) + _y - 1) / _y) * _y;	\
-+})
-+
-+#define DIV_ROUND_UP(n, d)	(((n) + (d) - 1) / (d))
-+
-+#endif
-diff --git a/libverity.c b/libverity.c
-index f82f2d6..975d86e 100644
---- a/libverity.c
-+++ b/libverity.c
-@@ -14,17 +14,47 @@
- #include <openssl/pkcs7.h>
- #include <string.h>
- #include <sys/stat.h>
--#include <unistd.h>
-+#include <inttypes.h>
-+#include <stdio.h>
-+#include <stdbool.h>
-+#include <assert.h>
- 
- #include "libfsverity.h"
- #include "libfsverity_private.h"
- #include "hash_algs.h"
-+#include "helpers.h"
- 
- #define FS_VERITY_MAX_LEVELS	64
- 
-+#ifndef __force
-+#  ifdef __CHECKER__
-+#    define __force	__attribute__((force))
-+#  else
-+#    define __force
-+#  endif
-+#endif
-+
-+/* ========== Endianness conversion ========== */
-+
-+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-+#  define cpu_to_le16(v)	((__force __le16)(uint16_t)(v))
-+#  define le16_to_cpu(v)	((__force uint16_t)(__le16)(v))
-+#  define cpu_to_le32(v)	((__force __le32)(uint32_t)(v))
-+#  define le32_to_cpu(v)	((__force uint32_t)(__le32)(v))
-+#  define cpu_to_le64(v)	((__force __le64)(uint64_t)(v))
-+#  define le64_to_cpu(v)	((__force uint64_t)(__le64)(v))
-+#else
-+#  define cpu_to_le16(v)	((__force __le16)__builtin_bswap16(v))
-+#  define le16_to_cpu(v)	(__builtin_bswap16((__force uint16_t)(v)))
-+#  define cpu_to_le32(v)	((__force __le32)__builtin_bswap32(v))
-+#  define le32_to_cpu(v)	(__builtin_bswap32((__force uint32_t)(v)))
-+#  define cpu_to_le64(v)	((__force __le64)__builtin_bswap64(v))
-+#  define le64_to_cpu(v)	(__builtin_bswap64((__force uint64_t)(v)))
-+#endif
-+
- struct block_buffer {
--	u32 filled;
--	u8 *data;
-+	uint32_t filled;
-+	uint8_t *data;
- };
+ struct fsverity_hash_alg {
+ 	const char *name;
+-	unsigned int digest_size;
++	int digest_size;
+ 	unsigned int block_size;
+ 	uint16_t hash_num;
+ 	struct hash_ctx *(*create_ctx)(const struct fsverity_hash_alg *alg);
+@@ -108,11 +108,9 @@ libfsverity_sign_digest(const struct libfsverity_digest *digest,
+  * @name: Pointer to name of hash algorithm
+  *
+  * Returns:
+- * struct fsverity_hash_alg success
+- * NULL on error
++ * uint16_t containing hash algorithm number, zero on error.
+  */
+-const struct fsverity_hash_alg *
+-libfsverity_find_hash_alg_by_name(const char *name);
++uint16_t libfsverity_find_hash_alg_by_name(const char *name);
  
  /*
-@@ -32,7 +62,8 @@ struct block_buffer {
-  * Returns true if the next level's block became full, else false.
-  */
- static bool hash_one_block(struct hash_ctx *hash, struct block_buffer *cur,
--			   u32 block_size, const u8 *salt, u32 salt_size)
-+			   uint32_t block_size, const uint8_t *salt,
-+			   uint32_t salt_size)
- {
- 	struct block_buffer *next = cur + 1;
+  * libfsverity_find_hash_alg_by_num - Find hash algorithm by number
+@@ -125,4 +123,24 @@ libfsverity_find_hash_alg_by_name(const char *name);
+ const struct fsverity_hash_alg *
+ libfsverity_find_hash_alg_by_num(unsigned int num);
  
-@@ -56,28 +87,33 @@ static bool hash_one_block(struct hash_ctx *hash, struct block_buffer *cur,
-  */
- static bool compute_root_hash(void *fd,
- 			      int (*read_fn)(void *, void *buf, size_t count),
--			      u64 file_size,
--			      struct hash_ctx *hash, u32 block_size,
--			      const u8 *salt, u32 salt_size, u8 *root_hash)
-+			      uint64_t file_size, struct hash_ctx *hash,
-+			      uint32_t block_size, const uint8_t *salt,
-+			      uint32_t salt_size, uint8_t *root_hash)
- {
--	const u32 hashes_per_block = block_size / hash->alg->digest_size;
--	const u32 padded_salt_size = roundup(salt_size, hash->alg->block_size);
--	u8 *padded_salt = xzalloc(padded_salt_size);
--	u64 blocks;
-+	const uint32_t hashes_per_block = block_size / hash->alg->digest_size;
-+	const uint32_t padded_salt_size = roundup(salt_size, hash->alg->block_size);
-+	uint8_t *padded_salt = NULL;
-+	uint64_t blocks;
- 	int num_levels = 0;
- 	int level;
- 	struct block_buffer _buffers[1 + FS_VERITY_MAX_LEVELS + 1] = {};
- 	struct block_buffer *buffers = &_buffers[1];
--	u64 offset;
-+	uint64_t offset;
- 	bool ok = false;
- 
--	if (salt_size != 0)
-+	if (salt_size != 0) {
-+		padded_salt = malloc(padded_salt_size);
-+		assert(padded_salt);
-+		memset(padded_salt, 0, padded_salt_size);
++/*
++ * libfsverity_digest_size - Return size of digest for a given algorithm
++ * @alg_nr: Valid hash algorithm number
++ *
++ * Returns:
++ * int containing size of digest, -1 on error.
++ */
++int libfsverity_digest_size(uint16_t alg_nr);
 +
- 		memcpy(padded_salt, salt, salt_size);
-+	}
- 
- 	/* Compute number of levels */
- 	for (blocks = DIV_ROUND_UP(file_size, block_size); blocks > 1;
- 	     blocks = DIV_ROUND_UP(blocks, hashes_per_block)) {
--		ASSERT(num_levels < FS_VERITY_MAX_LEVELS);
-+		assert(num_levels < FS_VERITY_MAX_LEVELS);
- 		num_levels++;
- 	}
- 
-@@ -86,8 +122,10 @@ static bool compute_root_hash(void *fd,
- 	 * Buffers 0 <= level < num_levels are for the actual tree levels.
- 	 * Buffer 'num_levels' is for the root hash.
- 	 */
--	for (level = -1; level < num_levels; level++)
--		buffers[level].data = xmalloc(block_size);
-+	for (level = -1; level < num_levels; level++) {
-+		buffers[level].data = malloc(block_size);
-+		assert (buffers[level].data);
-+	}
- 	buffers[num_levels].data = root_hash;
- 
- 	/* Hash each data block, also hashing the tree blocks as they fill up */
-@@ -101,7 +139,7 @@ static bool compute_root_hash(void *fd,
- 		while (hash_one_block(hash, &buffers[level], block_size,
- 				      padded_salt, padded_salt_size)) {
- 			level++;
--			ASSERT(level < num_levels);
-+			assert(level < num_levels);
- 		}
- 	}
- 	/* Finish all nonempty pending tree blocks */
-@@ -112,7 +150,7 @@ static bool compute_root_hash(void *fd,
- 	}
- 
- 	/* Root hash was filled by the last call to hash_one_block() */
--	ASSERT(buffers[num_levels].filled == hash->alg->digest_size);
-+	assert(buffers[num_levels].filled == hash->alg->digest_size);
- 	ok = true;
- out:
- 	for (level = -1; level < num_levels; level++)
-@@ -146,8 +184,9 @@ libfsverity_compute_digest(void *fd, size_t file_size,
- 	if (!is_power_of_2(params->block_size))
- 		return -EINVAL;
- 	if (params->salt_size > sizeof(desc.salt)) {
--		error_msg("Salt too long (got %u bytes; max is %zu bytes)",
--			  params->salt_size, sizeof(desc.salt));
-+		fprintf(stderr,
-+			"%s: Salt too long (got %u bytes; max is %zu bytes)",
-+			__func__, params->salt_size, sizeof(desc.salt));
- 		return -EINVAL;
- 	}
- 	if (params->salt_size && !params->salt)
-@@ -206,22 +245,6 @@ libfsverity_compute_digest(void *fd, size_t file_size,
- 	return retval;
- }
- 
--static void __printf(1, 2) __cold
--error_msg_openssl(const char *format, ...)
--{
--	va_list va;
--
--	va_start(va, format);
--	do_error_msg(format, va, 0);
--	va_end(va);
--
--	if (ERR_peek_error() == 0)
--		return;
--
--	fprintf(stderr, "OpenSSL library errors:\n");
--	ERR_print_errors_fp(stderr);
--}
--
- /* Read a PEM PKCS#8 formatted private key */
- static EVP_PKEY *read_private_key(const char *keyfile)
- {
-@@ -230,15 +253,16 @@ static EVP_PKEY *read_private_key(const char *keyfile)
- 
- 	bio = BIO_new_file(keyfile, "r");
- 	if (!bio) {
--		error_msg_openssl("can't open '%s' for reading", keyfile);
-+		fprintf(stderr, "%s: can't open '%s' for reading",
-+			__func__, keyfile);
- 		return NULL;
- 	}
- 
- 	pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
- 	if (!pkey) {
--		error_msg_openssl("Failed to parse private key file '%s'.\n"
--				  "       Note: it must be in PEM PKCS#8 format.",
--				  keyfile);
-+		fprintf(stderr, "%s: Failed to parse private key file '%s'.\n"
-+			"       Note: it must be in PEM PKCS#8 format.",
-+			__func__, keyfile);
- 	}
- 	BIO_free(bio);
- 	return pkey;
-@@ -252,14 +276,16 @@ static X509 *read_certificate(const char *certfile)
- 
- 	bio = BIO_new_file(certfile, "r");
- 	if (!bio) {
--		error_msg_openssl("can't open '%s' for reading", certfile);
-+		fprintf(stderr, "%s: can't open '%s' for reading",
-+			__func__, certfile);
- 		return NULL;
- 	}
- 	cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);
- 	if (!cert) {
--		error_msg_openssl("Failed to parse X.509 certificate file '%s'.\n"
--				  "       Note: it must be in PEM format.",
--				  certfile);
-+		fprintf(stderr,
-+			"%s: Failed to parse X.509 certificate file '%s'.\n"
-+			"       Note: it must be in PEM format.",
-+			__func__, certfile);
- 	}
- 	BIO_free(bio);
- 	return cert;
-@@ -269,13 +295,13 @@ static X509 *read_certificate(const char *certfile)
- 
- static bool sign_pkcs7(const void *data_to_sign, size_t data_size,
- 		       EVP_PKEY *pkey, X509 *cert, const EVP_MD *md,
--		       u8 **sig_ret, size_t *sig_size_ret)
-+		       uint8_t **sig_ret, size_t *sig_size_ret)
- {
- 	CBB out, outer_seq, wrapped_seq, seq, digest_algos_set, digest_algo,
- 		null, content_info, issuer_and_serial, signer_infos,
- 		signer_info, sign_algo, signature;
- 	EVP_MD_CTX md_ctx;
--	u8 *name_der = NULL, *sig = NULL, *pkcs7_data = NULL;
-+	uint8_t *name_der = NULL, *sig = NULL, *pkcs7_data = NULL;
- 	size_t pkcs7_data_len, sig_len;
- 	int name_der_len, sig_nid;
- 	bool ok = false;
-@@ -290,19 +316,20 @@ static bool sign_pkcs7(const void *data_to_sign, size_t data_size,
- 
- 	name_der_len = i2d_X509_NAME(X509_get_subject_name(cert), &name_der);
- 	if (name_der_len < 0) {
--		error_msg_openssl("i2d_X509_NAME failed");
-+		fprintf(stderr, "%s: i2d_X509_NAME failed", __func__);
- 		goto out;
- 	}
- 
- 	if (!EVP_DigestSignInit(&md_ctx, NULL, md, NULL, pkey)) {
--		error_msg_openssl("EVP_DigestSignInit failed");
-+		fprintf(stderr, "%s: EVP_DigestSignInit failed", __func__);
- 		goto out;
- 	}
- 
- 	sig_len = EVP_PKEY_size(pkey);
--	sig = xmalloc(sig_len);
-+	sig = malloc(sig_len);
-+	assert(sig);
- 	if (!EVP_DigestSign(&md_ctx, sig, &sig_len, data_to_sign, data_size)) {
--		error_msg_openssl("EVP_DigestSign failed");
-+		fprintf(stderr, "%s: EVP_DigestSign failed", __func__);
- 		goto out;
- 	}
- 
-@@ -344,11 +371,14 @@ static bool sign_pkcs7(const void *data_to_sign, size_t data_size,
- 	    !CBB_add_asn1(&signer_info, &signature, CBS_ASN1_OCTETSTRING) ||
- 	    !CBB_add_bytes(&signature, sig, sig_len) ||
- 	    !CBB_finish(&out, &pkcs7_data, &pkcs7_data_len)) {
--		error_msg_openssl("failed to construct PKCS#7 data");
-+		fprintf(stderr, "%s: failed to construct PKCS#7 data",
-+			__func__);
- 		goto out;
- 	}
- 
--	*sig_ret = xmemdup(pkcs7_data, pkcs7_data_len);
-+	*sig_ret = malloc(pkcs7_data_len);
-+	assert(*sig_ret);
-+	memcpy(*sig_ret, pkcs7_data, pkcs7_data_len);
- 	*sig_size_ret = pkcs7_data_len;
- 	ok = true;
- out:
-@@ -367,7 +397,7 @@ static BIO *new_mem_buf(const void *buf, size_t size)
- {
- 	BIO *bio;
- 
--	ASSERT(size <= INT_MAX);
-+	assert(size <= INT_MAX);
- 	/*
- 	 * Prior to OpenSSL 1.1.0, BIO_new_mem_buf() took a non-const pointer,
- 	 * despite still marking the resulting bio as read-only.  So cast away
-@@ -375,13 +405,13 @@ static BIO *new_mem_buf(const void *buf, size_t size)
- 	 */
- 	bio = BIO_new_mem_buf((void *)buf, size);
- 	if (!bio)
--		error_msg_openssl("out of memory");
-+		fprintf(stderr, "%s: out of memory", __func__);
- 	return bio;
- }
- 
- static bool sign_pkcs7(const void *data_to_sign, size_t data_size,
- 		       EVP_PKEY *pkey, X509 *cert, const EVP_MD *md,
--		       u8 **sig_ret, size_t *sig_size_ret)
-+		       uint8_t **sig_ret, size_t *sig_size_ret)
- {
- 	/*
- 	 * PKCS#7 signing flags:
-@@ -403,8 +433,8 @@ static bool sign_pkcs7(const void *data_to_sign, size_t data_size,
- 	 */
- 	int pkcs7_flags = PKCS7_BINARY | PKCS7_DETACHED | PKCS7_NOATTR |
- 			  PKCS7_NOCERTS | PKCS7_PARTIAL;
--	u8 *sig;
--	u32 sig_size;
-+	uint8_t *sig;
-+	uint32_t sig_size;
- 	BIO *bio = NULL;
- 	PKCS7 *p7 = NULL;
- 	bool ok = false;
-@@ -415,34 +445,43 @@ static bool sign_pkcs7(const void *data_to_sign, size_t data_size,
- 
- 	p7 = PKCS7_sign(NULL, NULL, NULL, bio, pkcs7_flags);
- 	if (!p7) {
--		error_msg_openssl("failed to initialize PKCS#7 signature object");
-+		fprintf(stderr,
-+			"%s: failed to initialize PKCS#7 signature object",
-+			__func__);
- 		goto out;
- 	}
- 
- 	if (!PKCS7_sign_add_signer(p7, cert, pkey, md, pkcs7_flags)) {
--		error_msg_openssl("failed to add signer to PKCS#7 signature object");
-+		fprintf(stderr,
-+			"%s: failed to add signer to PKCS#7 signature object",
-+			__func__);
- 		goto out;
- 	}
- 
- 	if (PKCS7_final(p7, bio, pkcs7_flags) != 1) {
--		error_msg_openssl("failed to finalize PKCS#7 signature");
-+		fprintf(stderr, "%s: failed to finalize PKCS#7 signature",
-+			__func__);
- 		goto out;
- 	}
- 
- 	BIO_free(bio);
- 	bio = BIO_new(BIO_s_mem());
- 	if (!bio) {
--		error_msg_openssl("out of memory");
-+		fprintf(stderr, "%s: out of memory", __func__);
- 		goto out;
- 	}
- 
- 	if (i2d_PKCS7_bio(bio, p7) != 1) {
--		error_msg_openssl("failed to DER-encode PKCS#7 signature object");
-+		fprintf(stderr,
-+			"%s: failed to DER-encode PKCS#7 signature object",
-+			__func__);
- 		goto out;
- 	}
- 
- 	sig_size = BIO_get_mem_data(bio, &sig);
--	*sig_ret = xmemdup(sig, sig_size);
-+	*sig_ret = malloc(sig_size);
-+	assert(*sig_ret);
-+	memcpy(*sig_ret, sig, sig_size);
- 	*sig_size_ret = sig_size;
- 	ok = true;
- out:
-diff --git a/util.c b/util.c
-index 586d2b0..0c4bf79 100644
---- a/util.c
-+++ b/util.c
-@@ -18,6 +18,7 @@
- #include <unistd.h>
- 
- #include "util.h"
-+#include "helpers.h"
- 
- /* ========== Memory allocation ========== */
- 
-diff --git a/util.h b/util.h
-index c4dc066..bd7ab9c 100644
---- a/util.h
-+++ b/util.h
-@@ -17,14 +17,6 @@ typedef uint16_t u16;
- typedef uint32_t u32;
- typedef uint64_t u64;
- 
--#ifndef __force
--#  ifdef __CHECKER__
--#    define __force	__attribute__((force))
--#  else
--#    define __force
--#  endif
--#endif
--
- #ifndef __printf
- #  define __printf(fmt_idx, vargs_idx) \
- 	__attribute__((format(printf, fmt_idx, vargs_idx)))
-@@ -38,54 +30,6 @@ typedef uint64_t u64;
- #  define __cold	__attribute__((cold))
++/*
++ * libfsverity_find_hash_name - Find name of hash algorithm by number
++ * @name: Number of hash algorithm
++ *
++ * Returns:
++ *  New allocated string containing name of algorithm.
++ *  String must be freed by caller.
++ * NULL on error
++ */
++char *libfsverity_hash_name(uint16_t num);
++
  #endif
- 
--#define min(a, b) ({			\
--	__typeof__(a) _a = (a);		\
--	__typeof__(b) _b = (b);		\
--	_a < _b ? _a : _b;		\
--})
--#define max(a, b) ({			\
--	__typeof__(a) _a = (a);		\
--	__typeof__(b) _b = (b);		\
--	_a > _b ? _a : _b;		\
--})
--
--#define roundup(x, y) ({		\
--	__typeof__(y) _y = (y);		\
--	(((x) + _y - 1) / _y) * _y;	\
--})
--
--#define ARRAY_SIZE(A)		(sizeof(A) / sizeof((A)[0]))
--
--#define DIV_ROUND_UP(n, d)	(((n) + (d) - 1) / (d))
--
--static inline bool is_power_of_2(unsigned long n)
--{
--	return n != 0 && ((n & (n - 1)) == 0);
--}
--
--static inline int ilog2(unsigned long n)
--{
--	return (8 * sizeof(n) - 1) - __builtin_clzl(n);
--}
--
--/* ========== Endianness conversion ========== */
--
--#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
--#  define cpu_to_le16(v)	((__force __le16)(u16)(v))
--#  define le16_to_cpu(v)	((__force u16)(__le16)(v))
--#  define cpu_to_le32(v)	((__force __le32)(u32)(v))
--#  define le32_to_cpu(v)	((__force u32)(__le32)(v))
--#  define cpu_to_le64(v)	((__force __le64)(u64)(v))
--#  define le64_to_cpu(v)	((__force u64)(__le64)(v))
--#else
--#  define cpu_to_le16(v)	((__force __le16)__builtin_bswap16(v))
--#  define le16_to_cpu(v)	(__builtin_bswap16((__force u16)(v)))
--#  define cpu_to_le32(v)	((__force __le32)__builtin_bswap32(v))
--#  define le32_to_cpu(v)	(__builtin_bswap32((__force u32)(v)))
--#  define cpu_to_le64(v)	((__force __le64)__builtin_bswap64(v))
--#  define le64_to_cpu(v)	(__builtin_bswap64((__force u64)(v)))
--#endif
--
- /* ========== Memory allocation ========== */
- 
- void *xmalloc(size_t size);
 -- 
 2.25.3
 
