@@ -2,1166 +2,418 @@ Return-Path: <SRS0=R3+V=6V=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham
+X-Spam-Status: No, score=-8.3 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
+	DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F017CC38A24
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 May 2020 08:02:09 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C34E2C38A2A
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 May 2020 12:37:03 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id C0749208E4
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 May 2020 08:02:09 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1588838529;
-	bh=3/Fe8PbPjhNoEtpcLRo6GkSRcE/rxZGDpOZoykNTL5k=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=Ne3Z/gIBj3O8jSgQit+dFLjRlQLV0sA6QAOu6QevzvxZ/9e8TeSQPKAtwiNAV5gmG
-	 32RQQ3ultCOmlbR942q4ywCW94RNWl7Tgla0gPHikWPuHX1brwpq/OjS9Dvx1gyxFO
-	 whVIN4Ua9fRgrMUwk1DsbyHBqFzMZ+73mu1AMHbk=
+	by mail.kernel.org (Postfix) with ESMTP id 91EC920CC7
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 May 2020 12:37:03 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=linaro.org header.i=@linaro.org header.b="Dgt2tIER"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726218AbgEGICJ (ORCPT
+        id S1727789AbgEGMhD (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 7 May 2020 04:02:09 -0400
-Received: from mail.kernel.org ([198.145.29.99]:46846 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725802AbgEGICJ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 7 May 2020 04:02:09 -0400
-Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 21AA5208CA;
-        Thu,  7 May 2020 08:02:06 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1588838526;
-        bh=3/Fe8PbPjhNoEtpcLRo6GkSRcE/rxZGDpOZoykNTL5k=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=KTUOgKOvNnrwkjQQvKTgcU5buNCGa+2xOzYn9XZ22CPLoltuBGuIx3sFi9TF+kBZ0
-         h68qO3K502bUCuUiL+GI67NlnjyJQU6SGN6whJtLbY1dfKcIKJHeuJK/JiM8364r9G
-         3bUa1xlt9cobxc/X/yp6YqznKFHqocX0fyeQxCCI=
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-f2fs-devel@lists.sourceforge.net
-Cc:     linux-fscrypt@vger.kernel.org,
-        Daniel Rosenberg <drosen@google.com>,
-        Gabriel Krisman Bertazi <krisman@collabora.com>
-Subject: [PATCH 3/4] f2fs: rework filename handling
-Date:   Thu,  7 May 2020 00:59:04 -0700
-Message-Id: <20200507075905.953777-4-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.26.2
-In-Reply-To: <20200507075905.953777-1-ebiggers@kernel.org>
-References: <20200507075905.953777-1-ebiggers@kernel.org>
+        Thu, 7 May 2020 08:37:03 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:59840 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-FAIL-OK-FAIL)
+        by vger.kernel.org with ESMTP id S1726930AbgEGMhC (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 7 May 2020 08:37:02 -0400
+Received: from mail-qt1-x841.google.com (mail-qt1-x841.google.com [IPv6:2607:f8b0:4864:20::841])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3507DC05BD0A
+        for <linux-fscrypt@vger.kernel.org>; Thu,  7 May 2020 05:37:02 -0700 (PDT)
+Received: by mail-qt1-x841.google.com with SMTP id b1so257586qtt.1
+        for <linux-fscrypt@vger.kernel.org>; Thu, 07 May 2020 05:37:02 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=linaro.org; s=google;
+        h=subject:to:cc:references:from:message-id:date:user-agent
+         :mime-version:in-reply-to:content-language:content-transfer-encoding;
+        bh=la/m9IDgYiDQ/q3IBApyXuSC1pAhYEOZPWk5FvFdljA=;
+        b=Dgt2tIERZoI1Yds/292I9qQtO/9G5DUvnRc6x9O4xaF5YozIqDZv4+evdDYhnutMvn
+         NMhpYfh+VJz2oNTUrh0hsriZjuqa6m+XfnsEziZHcp0mIEz0Y8dkBzpjWHMaU3UpdOBA
+         Az8Y92UXCANst8aAiUwpT8v427Lq5XXvxRGi4KXzjURCoiiCa8S9j3AemzaNZtjhHxub
+         JM7VGL6CiZelHlg9Xa52wvUxuHFp5hvFjbaui0eHCJK0lJ0JtcAcDqYpNJagaFG3RVv5
+         UwhuBoHRp3E1nyiQEPkDxrVySxUq0uWdbrdwOSjoKzO5U9Hnc6tgOI7eYmdT6Yo9Mxqj
+         4oww==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-language
+         :content-transfer-encoding;
+        bh=la/m9IDgYiDQ/q3IBApyXuSC1pAhYEOZPWk5FvFdljA=;
+        b=RisMPL2IHj5o08yy7GciQJB0ulWTb6kQXyR82fN4ffYU80Ew508O+iuY+CnjFfhA+p
+         4Ljf7Vns/GlUxCB4qJ6yatggycbvM9je9QqNVozfMn0m6Y/hJmmtp4SeNTLe6L5JAnJ4
+         8WY4OOTXRS9hXnbf/C/nZiZBsGQ1VsHTcGaN4N13KlVXhA2+Cnu757NBQZAt+leuYWix
+         F0kCMGejajPTf7W8bY35LwgZyUOdhUEtS/0bkeX6c+RuXXt388lSqYLQorijwDagzcTU
+         EIvnvOsadT/+Yb1poNJrRIR/5nEkkhLEjTh7c0dJqWMdgjEhW6tg6+ObvmF6h5xEwNLg
+         V5eA==
+X-Gm-Message-State: AGi0PuaSlaqBSYuStGa3whDYBfB5lHINkfR1DDaSjpv2oIrytUV7GEOJ
+        P4SFISjj0/NucdEFJ0bY7ruxFw==
+X-Google-Smtp-Source: APiQypIOeHqxv/9Yfdkc5Vb7c69B0TdEVdHzI/dWGsqZejx7ebM5N/fGufHln/5YR0jdsHH+rsuRJw==
+X-Received: by 2002:ac8:776f:: with SMTP id h15mr13768458qtu.36.1588855021165;
+        Thu, 07 May 2020 05:37:01 -0700 (PDT)
+Received: from [192.168.1.92] (pool-71-255-246-27.washdc.fios.verizon.net. [71.255.246.27])
+        by smtp.gmail.com with ESMTPSA id g127sm4119173qkb.6.2020.05.07.05.36.59
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Thu, 07 May 2020 05:37:00 -0700 (PDT)
+Subject: Re: [RFC PATCH v4 4/4] scsi: ufs-qcom: add Inline Crypto Engine
+ support
+To:     Eric Biggers <ebiggers@kernel.org>, linux-scsi@vger.kernel.org,
+        linux-arm-msm@vger.kernel.org
+Cc:     linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        Alim Akhtar <alim.akhtar@samsung.com>,
+        Andy Gross <agross@kernel.org>,
+        Avri Altman <avri.altman@wdc.com>,
+        Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
+        Bjorn Andersson <bjorn.andersson@linaro.org>,
+        Can Guo <cang@codeaurora.org>,
+        Elliot Berman <eberman@codeaurora.org>,
+        John Stultz <john.stultz@linaro.org>,
+        Satya Tangirala <satyat@google.com>
+References: <20200501045111.665881-1-ebiggers@kernel.org>
+ <20200501045111.665881-5-ebiggers@kernel.org>
+From:   Thara Gopinath <thara.gopinath@linaro.org>
+Message-ID: <31fa95e5-7757-96ae-2e86-1f54959e3a6c@linaro.org>
+Date:   Thu, 7 May 2020 08:36:58 -0400
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.7.0
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <20200501045111.665881-5-ebiggers@kernel.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
 
-Rework f2fs's handling of filenames to use a new 'struct f2fs_filename'.
-Similar to 'struct ext4_filename', this stores the usr_fname, disk_name,
-dirhash, crypto_buf, and casefolded name.  Some of these names can be
-NULL in some cases.  'struct f2fs_filename' differs from
-'struct fscrypt_name' mainly in that the casefolded name is included.
 
-For user-initiated directory operations like lookup() and create(),
-initialize the f2fs_filename by translating the corresponding
-fscrypt_name, then computing the dirhash and casefolded name if needed.
+On 5/1/20 12:51 AM, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Add support for Qualcomm Inline Crypto Engine (ICE) to ufs-qcom.
+> 
+> The standards-compliant parts, such as querying the crypto capabilities
+> and enabling crypto for individual UFS requests, are already handled by
+> ufshcd-crypto.c, which itself is wired into the blk-crypto framework.
+> However, ICE requires vendor-specific init, enable, and resume logic,
+> and it requires that keys be programmed and evicted by vendor-specific
+> SMC calls.  Make the ufs-qcom driver handle these details.
+> 
+> I tested this on Dragonboard 845c, which is a publicly available
+> development board that uses the Snapdragon 845 SoC and runs the upstream
+> Linux kernel.  This is the same SoC used in the Pixel 3 and Pixel 3 XL
+> phones.  This testing included (among other things) verifying that the
+> expected ciphertext was produced, both manually using ext4 encryption
+> and automatically using a block layer self-test I've written.
+Hello Eric,
 
-This makes the dirhash and casefolded name be cached for each syscall,
-so we don't have to recompute them repeatedly.  (Previously, f2fs
-computed the dirhash once per directory level, and the casefolded name
-once per directory block.)  This improves performance.
+I am interested in testing out this series on 845, 855 and if possile on 
+865 platforms. Can you give me some more details about your testing please.
 
-This rework also makes it much easier to correctly handle all
-combinations of normal, encrypted, casefolded, and encrypted+casefolded
-directories.  (The fourth isn't supported yet but is being worked on.)
+> 
+> This driver also works nearly as-is on Snapdragon 765 and Snapdragon
+> 865, which are very recent SoCs, having just been announced in Dec 2019
+> (though these newer SoCs currently lack upstream kernel support).
+> 
+> This is based very loosely on the vendor-provided driver in the kernel
+> source code for the Pixel 3, but I've greatly simplified it.  Also, for
+> now I've only included support for major version 3 of ICE, since that's
+> all I have the hardware to test with the mainline kernel.  Plus it
+> appears that version 3 is easier to use than older versions of ICE.
+> 
+> For now, only allow using AES-256-XTS.  The hardware also declares
+> support for AES-128-XTS, AES-{128,256}-ECB, and AES-{128,256}-CBC
+> (BitLocker variant).  But none of these others are really useful, and
+> they'd need to be individually tested to be sure they worked properly.
+> 
+> This commit also changes the name of the loadable module from "ufs-qcom"
+> to "ufs_qcom", as this is necessary to compile it from multiple source
+> files (unless we were to rename ufs-qcom.c).
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>   MAINTAINERS                     |   2 +-
+>   drivers/scsi/ufs/Kconfig        |   1 +
+>   drivers/scsi/ufs/Makefile       |   4 +-
+>   drivers/scsi/ufs/ufs-qcom-ice.c | 245 ++++++++++++++++++++++++++++++++
+>   drivers/scsi/ufs/ufs-qcom.c     |  12 +-
+>   drivers/scsi/ufs/ufs-qcom.h     |  27 ++++
+>   6 files changed, 288 insertions(+), 3 deletions(-)
+>   create mode 100644 drivers/scsi/ufs/ufs-qcom-ice.c
+> 
+> diff --git a/MAINTAINERS b/MAINTAINERS
+> index 26f281d9f32a4a..cab5fe76784592 100644
+> --- a/MAINTAINERS
+> +++ b/MAINTAINERS
+> @@ -2236,7 +2236,7 @@ F:	drivers/pci/controller/dwc/pcie-qcom.c
+>   F:	drivers/phy/qualcomm/
+>   F:	drivers/power/*/msm*
+>   F:	drivers/reset/reset-qcom-*
+> -F:	drivers/scsi/ufs/ufs-qcom.*
+> +F:	drivers/scsi/ufs/ufs-qcom*
+>   F:	drivers/spi/spi-geni-qcom.c
+>   F:	drivers/spi/spi-qcom-qspi.c
+>   F:	drivers/spi/spi-qup.c
+> diff --git a/drivers/scsi/ufs/Kconfig b/drivers/scsi/ufs/Kconfig
+> index 5ed3f209f88100..c1a94d99e161ee 100644
+> --- a/drivers/scsi/ufs/Kconfig
+> +++ b/drivers/scsi/ufs/Kconfig
+> @@ -99,6 +99,7 @@ config SCSI_UFS_DWC_TC_PLATFORM
+>   config SCSI_UFS_QCOM
+>   	tristate "QCOM specific hooks to UFS controller platform driver"
+>   	depends on SCSI_UFSHCD_PLATFORM && ARCH_QCOM
+> +	select QCOM_SCM
+>   	select RESET_CONTROLLER
+>   	help
+>   	  This selects the QCOM specific additions to UFSHCD platform driver.
+> diff --git a/drivers/scsi/ufs/Makefile b/drivers/scsi/ufs/Makefile
+> index 197e178f44bce3..13fda1b697b2a2 100644
+> --- a/drivers/scsi/ufs/Makefile
+> +++ b/drivers/scsi/ufs/Makefile
+> @@ -3,7 +3,9 @@
+>   obj-$(CONFIG_SCSI_UFS_DWC_TC_PCI) += tc-dwc-g210-pci.o ufshcd-dwc.o tc-dwc-g210.o
+>   obj-$(CONFIG_SCSI_UFS_DWC_TC_PLATFORM) += tc-dwc-g210-pltfrm.o ufshcd-dwc.o tc-dwc-g210.o
+>   obj-$(CONFIG_SCSI_UFS_CDNS_PLATFORM) += cdns-pltfrm.o
+> -obj-$(CONFIG_SCSI_UFS_QCOM) += ufs-qcom.o
+> +obj-$(CONFIG_SCSI_UFS_QCOM) += ufs_qcom.o
+> +ufs_qcom-y += ufs-qcom.o
+> +ufs_qcom-$(CONFIG_SCSI_UFS_CRYPTO) += ufs-qcom-ice.o
+>   obj-$(CONFIG_SCSI_UFSHCD) += ufshcd-core.o
+>   ufshcd-core-y				+= ufshcd.o ufs-sysfs.o
+>   ufshcd-core-$(CONFIG_SCSI_UFS_BSG)	+= ufs_bsg.o
+> diff --git a/drivers/scsi/ufs/ufs-qcom-ice.c b/drivers/scsi/ufs/ufs-qcom-ice.c
+> new file mode 100644
+> index 00000000000000..9e837fdcb0ac2b
+> --- /dev/null
+> +++ b/drivers/scsi/ufs/ufs-qcom-ice.c
+> @@ -0,0 +1,245 @@
+> +// SPDX-License-Identifier: GPL-2.0-only
+> +/*
+> + * Qualcomm ICE (Inline Crypto Engine) support.
+> + *
+> + * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+> + * Copyright (c) 2019 Google LLC
+> + */
+> +
+> +#include <linux/platform_device.h>
+> +#include <linux/qcom_scm.h>
+> +
+> +#include "ufshcd-crypto.h"
+> +#include "ufs-qcom.h"
+> +
+> +#define AES_256_XTS_KEY_SIZE			64
+> +
+> +/* QCOM ICE registers */
+> +
+> +#define QCOM_ICE_REG_CONTROL			0x0000
+> +#define QCOM_ICE_REG_RESET			0x0004
+> +#define QCOM_ICE_REG_VERSION			0x0008
+> +#define QCOM_ICE_REG_FUSE_SETTING		0x0010
+> +#define QCOM_ICE_REG_PARAMETERS_1		0x0014
+> +#define QCOM_ICE_REG_PARAMETERS_2		0x0018
+> +#define QCOM_ICE_REG_PARAMETERS_3		0x001C
+> +#define QCOM_ICE_REG_PARAMETERS_4		0x0020
+> +#define QCOM_ICE_REG_PARAMETERS_5		0x0024
+> +
+> +/* QCOM ICE v3.X only */
+> +#define QCOM_ICE_GENERAL_ERR_STTS		0x0040
+> +#define QCOM_ICE_INVALID_CCFG_ERR_STTS		0x0030
+> +#define QCOM_ICE_GENERAL_ERR_MASK		0x0044
+> +
+> +/* QCOM ICE v2.X only */
+> +#define QCOM_ICE_REG_NON_SEC_IRQ_STTS		0x0040
+> +#define QCOM_ICE_REG_NON_SEC_IRQ_MASK		0x0044
+> +
+> +#define QCOM_ICE_REG_NON_SEC_IRQ_CLR		0x0048
+> +#define QCOM_ICE_REG_STREAM1_ERROR_SYNDROME1	0x0050
+> +#define QCOM_ICE_REG_STREAM1_ERROR_SYNDROME2	0x0054
+> +#define QCOM_ICE_REG_STREAM2_ERROR_SYNDROME1	0x0058
+> +#define QCOM_ICE_REG_STREAM2_ERROR_SYNDROME2	0x005C
+> +#define QCOM_ICE_REG_STREAM1_BIST_ERROR_VEC	0x0060
+> +#define QCOM_ICE_REG_STREAM2_BIST_ERROR_VEC	0x0064
+> +#define QCOM_ICE_REG_STREAM1_BIST_FINISH_VEC	0x0068
+> +#define QCOM_ICE_REG_STREAM2_BIST_FINISH_VEC	0x006C
+> +#define QCOM_ICE_REG_BIST_STATUS		0x0070
+> +#define QCOM_ICE_REG_BYPASS_STATUS		0x0074
+> +#define QCOM_ICE_REG_ADVANCED_CONTROL		0x1000
+> +#define QCOM_ICE_REG_ENDIAN_SWAP		0x1004
+> +#define QCOM_ICE_REG_TEST_BUS_CONTROL		0x1010
+> +#define QCOM_ICE_REG_TEST_BUS_REG		0x1014
+> +
+> +/* BIST ("built-in self-test"?) status flags */
+> +#define QCOM_ICE_BIST_STATUS_MASK		0xF0000000
+> +
+> +#define QCOM_ICE_FUSE_SETTING_MASK		0x1
+> +#define QCOM_ICE_FORCE_HW_KEY0_SETTING_MASK	0x2
+> +#define QCOM_ICE_FORCE_HW_KEY1_SETTING_MASK	0x4
+> +
+> +#define qcom_ice_writel(host, val, reg)	\
+> +	writel((val), (host)->ice_mmio + (reg))
+> +#define qcom_ice_readl(host, reg)	\
+> +	readl((host)->ice_mmio + (reg))
+> +
+> +static bool qcom_ice_supported(struct ufs_qcom_host *host)
+> +{
+> +	struct device *dev = host->hba->dev;
+> +	u32 regval = qcom_ice_readl(host, QCOM_ICE_REG_VERSION);
+> +	int major = regval >> 24;
+> +	int minor = (regval >> 16) & 0xFF;
+> +	int step = regval & 0xFFFF;
+> +
+> +	/* For now this driver only supports ICE version 3. */
+> +	if (major != 3) {
+> +		dev_warn(dev, "Unsupported ICE version: v%d.%d.%d\n",
+> +			 major, minor, step);
+> +		return false;
+> +	}
+> +
+> +	dev_info(dev, "Found QC Inline Crypto Engine (ICE) v%d.%d.%d\n",
+> +		 major, minor, step);
+> +
+> +	/* If fuses are blown, ICE might not work in the standard way. */
+> +	regval = qcom_ice_readl(host, QCOM_ICE_REG_FUSE_SETTING);
+> +	if (regval & (QCOM_ICE_FUSE_SETTING_MASK |
+> +		      QCOM_ICE_FORCE_HW_KEY0_SETTING_MASK |
+> +		      QCOM_ICE_FORCE_HW_KEY1_SETTING_MASK)) {
+> +		dev_warn(dev, "Fuses are blown; ICE is unusable!\n");
+> +		return false;
+> +	}
+> +	return true;
+> +}
+> +
+> +int ufs_qcom_ice_init(struct ufs_qcom_host *host)
+> +{
+> +	struct ufs_hba *hba = host->hba;
+> +	struct device *dev = hba->dev;
+> +	struct platform_device *pdev = to_platform_device(dev);
+> +	struct resource *res;
+> +	int err;
+> +
+> +	if (!(ufshcd_readl(hba, REG_CONTROLLER_CAPABILITIES) &
+> +	      MASK_CRYPTO_SUPPORT))
+> +		return 0;
+> +
+> +	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+> +	if (!res) {
+> +		dev_warn(dev, "ICE registers not found\n");
+> +		goto disable;
+> +	}
+> +
+> +	if (!qcom_scm_ice_available()) {
+> +		dev_warn(dev, "ICE SCM interface not found\n");
+> +		goto disable;
+> +	}
+> +
+> +	host->ice_mmio = devm_ioremap_resource(dev, res);
+> +	if (IS_ERR(host->ice_mmio)) {
+> +		err = PTR_ERR(host->ice_mmio);
+> +		dev_err(dev, "Failed to map ICE registers; err=%d\n", err);
+> +		return err;
+> +	}
+> +
+> +	if (!qcom_ice_supported(host))
+> +		goto disable;
+> +
+> +	return 0;
+> +
+> +disable:
+> +	dev_warn(dev, "Disabling inline encryption support\n");
+> +	hba->caps &= ~UFSHCD_CAP_CRYPTO;
+> +	return 0;
+> +}
+> +
+> +static void qcom_ice_low_power_mode_enable(struct ufs_qcom_host *host)
+> +{
+> +	u32 regval;
+> +
+> +	regval = qcom_ice_readl(host, QCOM_ICE_REG_ADVANCED_CONTROL);
+> +	/*
+> +	 * Enable low power mode sequence
+> +	 * [0]-0, [1]-0, [2]-0, [3]-E, [4]-0, [5]-0, [6]-0, [7]-0
+> +	 */
+> +	regval |= 0x7000;
+> +	qcom_ice_writel(host, regval, QCOM_ICE_REG_ADVANCED_CONTROL);
+> +}
+> +
+> +static void qcom_ice_optimization_enable(struct ufs_qcom_host *host)
+> +{
+> +	u32 regval;
+> +
+> +	/* ICE Optimizations Enable Sequence */
+> +	regval = qcom_ice_readl(host, QCOM_ICE_REG_ADVANCED_CONTROL);
+> +	regval |= 0xD807100;
+> +	/* ICE HPG requires delay before writing */
+> +	udelay(5);
+> +	qcom_ice_writel(host, regval, QCOM_ICE_REG_ADVANCED_CONTROL);
+> +	udelay(5);
+> +}
+> +
+> +int ufs_qcom_ice_enable(struct ufs_qcom_host *host)
+> +{
+> +	if (!(host->hba->caps & UFSHCD_CAP_CRYPTO))
+> +		return 0;
+> +	qcom_ice_low_power_mode_enable(host);
+> +	qcom_ice_optimization_enable(host);
+> +	return ufs_qcom_ice_resume(host);
+> +}
+> +
+> +/* Poll until all BIST bits are reset */
+> +static int qcom_ice_wait_bist_status(struct ufs_qcom_host *host)
+> +{
+> +	int count;
+> +	u32 reg;
+> +
+> +	for (count = 0; count < 100; count++) {
+> +		reg = qcom_ice_readl(host, QCOM_ICE_REG_BIST_STATUS);
+> +		if (!(reg & QCOM_ICE_BIST_STATUS_MASK))
+> +			break;
+> +		udelay(50);
+> +	}
+> +	if (reg)
+> +		return -ETIMEDOUT;
+> +	return 0;
+> +}
+> +
+> +int ufs_qcom_ice_resume(struct ufs_qcom_host *host)
+> +{
+> +	int err;
+> +
+> +	if (!(host->hba->caps & UFSHCD_CAP_CRYPTO))
+> +		return 0;
+> +
+> +	err = qcom_ice_wait_bist_status(host);
+> +	if (err) {
+> +		dev_err(host->hba->dev, "BIST status error (%d)\n", err);
+> +		return err;
+> +	}
+> +	return 0;
+> +}
+> +
+> +/*
+> + * Program a key into a QC ICE keyslot, or evict a keyslot.  QC ICE requires
+> + * vendor-specific SCM calls for this; it doesn't support the standard way.
+> + */
+> +int ufs_qcom_ice_program_key(struct ufs_hba *hba,
+> +			     const union ufs_crypto_cfg_entry *cfg, int slot)
+> +{
+> +	union ufs_crypto_cap_entry cap;
+> +	union {
+> +		u8 bytes[AES_256_XTS_KEY_SIZE];
+> +		u32 words[AES_256_XTS_KEY_SIZE / sizeof(u32)];
+> +	} key;
+> +	int i;
+> +	int err;
+Should there not be a check for here ?
+	if (!(host->hba->caps & UFSHCD_CAP_CRYPTO))
+		return 0;
 
-The only other cases where an f2fs_filename gets initialized are for two
-filesystem-internal operations: (1) when converting an inline directory
-to a regular one, we grab the needed disk_name and hash from an existing
-f2fs_dir_entry; and (2) when roll-forward recovering a new dentry, we
-grab the needed disk_name from f2fs_inode::i_name and compute the hash.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/f2fs/dir.c      | 310 +++++++++++++++++++++++++--------------------
- fs/f2fs/f2fs.h     |  78 +++++++++---
- fs/f2fs/hash.c     |  76 +++++------
- fs/f2fs/inline.c   |  45 ++++---
- fs/f2fs/namei.c    |   6 +-
- fs/f2fs/recovery.c |  51 ++++++--
- 6 files changed, 331 insertions(+), 235 deletions(-)
-
-diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
-index 44eb12a00cd0ed..29f70f2295cce8 100644
---- a/fs/f2fs/dir.c
-+++ b/fs/f2fs/dir.c
-@@ -70,6 +70,111 @@ unsigned char f2fs_get_de_type(struct f2fs_dir_entry *de)
- 	return DT_UNKNOWN;
- }
- 
-+/* If @dir is casefolded, initialize @fname->cf_name from @fname->usr_fname. */
-+int f2fs_init_casefolded_name(const struct inode *dir,
-+			      struct f2fs_filename *fname)
-+{
-+#ifdef CONFIG_UNICODE
-+	struct f2fs_sb_info *sbi = F2FS_SB(dir->i_sb);
-+
-+	if (IS_CASEFOLDED(dir)) {
-+		fname->cf_name.name = f2fs_kmalloc(sbi, F2FS_NAME_LEN,
-+						   GFP_NOFS);
-+		if (!fname->cf_name.name)
-+			return -ENOMEM;
-+		fname->cf_name.len = utf8_casefold(sbi->s_encoding,
-+						   fname->usr_fname,
-+						   fname->cf_name.name,
-+						   F2FS_NAME_LEN);
-+		if ((int)fname->cf_name.len <= 0) {
-+			kfree(fname->cf_name.name);
-+			fname->cf_name.name = NULL;
-+			if (f2fs_has_strict_mode(sbi))
-+				return -EINVAL;
-+			/* fall back to treating name as opaque byte sequence */
-+		}
-+	}
-+#endif
-+	return 0;
-+}
-+
-+static int __f2fs_setup_filename(const struct inode *dir,
-+				 const struct fscrypt_name *crypt_name,
-+				 struct f2fs_filename *fname)
-+{
-+	int err;
-+
-+	memset(fname, 0, sizeof(*fname));
-+
-+	fname->usr_fname = crypt_name->usr_fname;
-+	fname->disk_name = crypt_name->disk_name;
-+#ifdef CONFIG_FS_ENCRYPTION
-+	fname->crypto_buf = crypt_name->crypto_buf;
-+#endif
-+	if (crypt_name->is_ciphertext_name) {
-+		/* hash was decoded from the no-key name */
-+		fname->hash = cpu_to_le32(crypt_name->hash);
-+	} else {
-+		err = f2fs_init_casefolded_name(dir, fname);
-+		if (err) {
-+			f2fs_free_filename(fname);
-+			return err;
-+		}
-+		f2fs_hash_filename(dir, fname);
-+	}
-+	return 0;
-+}
-+
-+/*
-+ * Prepare to search for @iname in @dir.  This is similar to
-+ * fscrypt_setup_filename(), but this also handles computing the casefolded name
-+ * and the f2fs dirhash if needed, then packing all the information about this
-+ * filename up into a 'struct f2fs_filename'.
-+ */
-+int f2fs_setup_filename(struct inode *dir, const struct qstr *iname,
-+			int lookup, struct f2fs_filename *fname)
-+{
-+	struct fscrypt_name crypt_name;
-+	int err;
-+
-+	err = fscrypt_setup_filename(dir, iname, lookup, &crypt_name);
-+	if (err)
-+		return err;
-+
-+	return __f2fs_setup_filename(dir, &crypt_name, fname);
-+}
-+
-+/*
-+ * Prepare to look up @dentry in @dir.  This is similar to
-+ * fscrypt_prepare_lookup(), but this also handles computing the casefolded name
-+ * and the f2fs dirhash if needed, then packing all the information about this
-+ * filename up into a 'struct f2fs_filename'.
-+ */
-+int f2fs_prepare_lookup(struct inode *dir, struct dentry *dentry,
-+			struct f2fs_filename *fname)
-+{
-+	struct fscrypt_name crypt_name;
-+	int err;
-+
-+	err = fscrypt_prepare_lookup(dir, dentry, &crypt_name);
-+	if (err)
-+		return err;
-+
-+	return __f2fs_setup_filename(dir, &crypt_name, fname);
-+}
-+
-+void f2fs_free_filename(struct f2fs_filename *fname)
-+{
-+#ifdef CONFIG_FS_ENCRYPTION
-+	kfree(fname->crypto_buf.name);
-+	fname->crypto_buf.name = NULL;
-+#endif
-+#ifdef CONFIG_UNICODE
-+	kfree(fname->cf_name.name);
-+	fname->cf_name.name = NULL;
-+#endif
-+}
-+
- static unsigned long dir_block_index(unsigned int level,
- 				int dir_level, unsigned int idx)
- {
-@@ -84,8 +189,7 @@ static unsigned long dir_block_index(unsigned int level,
- 
- static struct f2fs_dir_entry *find_in_block(struct inode *dir,
- 				struct page *dentry_page,
--				struct fscrypt_name *fname,
--				f2fs_hash_t namehash,
-+				const struct f2fs_filename *fname,
- 				int *max_slots,
- 				struct page **res_page)
- {
-@@ -96,7 +200,7 @@ static struct f2fs_dir_entry *find_in_block(struct inode *dir,
- 	dentry_blk = (struct f2fs_dentry_block *)page_address(dentry_page);
- 
- 	make_dentry_ptr_block(dir, &d, dentry_blk);
--	de = f2fs_find_target_dentry(fname, namehash, max_slots, &d);
-+	de = f2fs_find_target_dentry(&d, fname, max_slots);
- 	if (de)
- 		*res_page = dentry_page;
- 
-@@ -109,102 +213,55 @@ static struct f2fs_dir_entry *find_in_block(struct inode *dir,
-  * being searched for.
-  */
- static bool f2fs_match_ci_name(const struct inode *dir, const struct qstr *name,
--			       const struct qstr *entry, bool quick)
-+			       const u8 *de_name, u32 de_name_len)
- {
- 	const struct f2fs_sb_info *sbi = F2FS_SB(dir->i_sb);
- 	const struct unicode_map *um = sbi->s_encoding;
-+	struct qstr entry = QSTR_INIT(de_name, de_name_len);
- 	int res;
- 
--	if (quick)
--		res = utf8_strncasecmp_folded(um, name, entry);
--	else
--		res = utf8_strncasecmp(um, name, entry);
-+	res = utf8_strncasecmp_folded(um, name, &entry);
- 	if (res < 0) {
- 		/*
- 		 * In strict mode, ignore invalid names.  In non-strict mode,
- 		 * fall back to treating them as opaque byte sequences.
- 		 */
--		if (f2fs_has_strict_mode(sbi) || name->len != entry->len)
-+		if (f2fs_has_strict_mode(sbi) || name->len != entry.len)
- 			return false;
--		return !memcmp(name->name, entry->name, name->len);
-+		return !memcmp(name->name, entry.name, name->len);
- 	}
- 	return res == 0;
- }
-+#endif /* CONFIG_UNICODE */
- 
--static void f2fs_fname_setup_ci_filename(struct inode *dir,
--					const struct qstr *iname,
--					struct fscrypt_str *cf_name)
-+static inline bool f2fs_match_name(const struct inode *dir,
-+				   const struct f2fs_filename *fname,
-+				   const u8 *de_name, u32 de_name_len)
- {
--	struct f2fs_sb_info *sbi = F2FS_I_SB(dir);
-+	struct fscrypt_name f;
- 
--	if (!IS_CASEFOLDED(dir)) {
--		cf_name->name = NULL;
--		return;
--	}
--
--	cf_name->name = f2fs_kmalloc(sbi, F2FS_NAME_LEN, GFP_NOFS);
--	if (!cf_name->name)
--		return;
--
--	cf_name->len = utf8_casefold(sbi->s_encoding,
--					iname, cf_name->name,
--					F2FS_NAME_LEN);
--	if ((int)cf_name->len <= 0) {
--		kvfree(cf_name->name);
--		cf_name->name = NULL;
--	}
--}
--#endif
--
--static inline bool f2fs_match_name(struct f2fs_dentry_ptr *d,
--					struct f2fs_dir_entry *de,
--					struct fscrypt_name *fname,
--					struct fscrypt_str *cf_str,
--					unsigned long bit_pos,
--					f2fs_hash_t namehash)
--{
- #ifdef CONFIG_UNICODE
--	struct inode *parent = d->inode;
--	struct f2fs_sb_info *sbi = F2FS_I_SB(parent);
--	struct qstr entry;
--#endif
-+	if (fname->cf_name.name) {
-+		struct qstr cf = FSTR_TO_QSTR(&fname->cf_name);
- 
--	if (de->hash_code != namehash)
--		return false;
--
--#ifdef CONFIG_UNICODE
--	entry.name = d->filename[bit_pos];
--	entry.len = de->name_len;
--
--	if (sbi->s_encoding && IS_CASEFOLDED(parent)) {
--		if (cf_str->name) {
--			struct qstr cf = {.name = cf_str->name,
--					  .len = cf_str->len};
--			return f2fs_match_ci_name(parent, &cf, &entry, true);
--		}
--		return f2fs_match_ci_name(parent, fname->usr_fname, &entry,
--					  false);
-+		return f2fs_match_ci_name(dir, &cf, de_name, de_name_len);
- 	}
- #endif
--	if (fscrypt_match_name(fname, d->filename[bit_pos],
--				le16_to_cpu(de->name_len)))
--		return true;
--	return false;
-+	f.usr_fname = fname->usr_fname;
-+	f.disk_name = fname->disk_name;
-+#ifdef CONFIG_FS_ENCRYPTION
-+	f.crypto_buf = fname->crypto_buf;
-+#endif
-+	return fscrypt_match_name(&f, de_name, de_name_len);
- }
- 
--struct f2fs_dir_entry *f2fs_find_target_dentry(struct fscrypt_name *fname,
--			f2fs_hash_t namehash, int *max_slots,
--			struct f2fs_dentry_ptr *d)
-+struct f2fs_dir_entry *f2fs_find_target_dentry(const struct f2fs_dentry_ptr *d,
-+			const struct f2fs_filename *fname, int *max_slots)
- {
- 	struct f2fs_dir_entry *de;
--	struct fscrypt_str cf_str = { .name = NULL, .len = 0 };
- 	unsigned long bit_pos = 0;
- 	int max_len = 0;
- 
--#ifdef CONFIG_UNICODE
--	f2fs_fname_setup_ci_filename(d->inode, fname->usr_fname, &cf_str);
--#endif
--
- 	if (max_slots)
- 		*max_slots = 0;
- 	while (bit_pos < d->max) {
-@@ -221,7 +278,9 @@ struct f2fs_dir_entry *f2fs_find_target_dentry(struct fscrypt_name *fname,
- 			continue;
- 		}
- 
--		if (f2fs_match_name(d, de, fname, &cf_str, bit_pos, namehash))
-+		if (de->hash_code == fname->hash &&
-+		    f2fs_match_name(d->inode, fname, d->filename[bit_pos],
-+				    le16_to_cpu(de->name_len)))
- 			goto found;
- 
- 		if (max_slots && max_len > *max_slots)
-@@ -235,33 +294,27 @@ struct f2fs_dir_entry *f2fs_find_target_dentry(struct fscrypt_name *fname,
- found:
- 	if (max_slots && max_len > *max_slots)
- 		*max_slots = max_len;
--
--#ifdef CONFIG_UNICODE
--	kvfree(cf_str.name);
--#endif
- 	return de;
- }
- 
- static struct f2fs_dir_entry *find_in_level(struct inode *dir,
- 					unsigned int level,
--					struct fscrypt_name *fname,
-+					const struct f2fs_filename *fname,
- 					struct page **res_page)
- {
--	struct qstr name = FSTR_TO_QSTR(&fname->disk_name);
--	int s = GET_DENTRY_SLOTS(name.len);
-+	int s = GET_DENTRY_SLOTS(fname->disk_name.len);
- 	unsigned int nbucket, nblock;
- 	unsigned int bidx, end_block;
- 	struct page *dentry_page;
- 	struct f2fs_dir_entry *de = NULL;
- 	bool room = false;
- 	int max_slots;
--	f2fs_hash_t namehash = f2fs_dentry_hash(dir, &name, fname);
- 
- 	nbucket = dir_buckets(level, F2FS_I(dir)->i_dir_level);
- 	nblock = bucket_blocks(level);
- 
- 	bidx = dir_block_index(level, F2FS_I(dir)->i_dir_level,
--					le32_to_cpu(namehash) % nbucket);
-+			       le32_to_cpu(fname->hash) % nbucket);
- 	end_block = bidx + nblock;
- 
- 	for (; bidx < end_block; bidx++) {
-@@ -277,8 +330,8 @@ static struct f2fs_dir_entry *find_in_level(struct inode *dir,
- 			}
- 		}
- 
--		de = find_in_block(dir, dentry_page, fname, namehash,
--							&max_slots, res_page);
-+		de = find_in_block(dir, dentry_page, fname, &max_slots,
-+				   res_page);
- 		if (de)
- 			break;
- 
-@@ -287,8 +340,8 @@ static struct f2fs_dir_entry *find_in_level(struct inode *dir,
- 		f2fs_put_page(dentry_page, 0);
- 	}
- 
--	if (!de && room && F2FS_I(dir)->chash != namehash) {
--		F2FS_I(dir)->chash = namehash;
-+	if (!de && room && F2FS_I(dir)->chash != fname->hash) {
-+		F2FS_I(dir)->chash = fname->hash;
- 		F2FS_I(dir)->clevel = level;
- 	}
- 
-@@ -296,7 +349,8 @@ static struct f2fs_dir_entry *find_in_level(struct inode *dir,
- }
- 
- struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
--			struct fscrypt_name *fname, struct page **res_page)
-+					 const struct f2fs_filename *fname,
-+					 struct page **res_page)
- {
- 	unsigned long npages = dir_blocks(dir);
- 	struct f2fs_dir_entry *de = NULL;
-@@ -345,18 +399,10 @@ struct f2fs_dir_entry *f2fs_find_entry(struct inode *dir,
- 			const struct qstr *child, struct page **res_page)
- {
- 	struct f2fs_dir_entry *de = NULL;
--	struct fscrypt_name fname;
-+	struct f2fs_filename fname;
- 	int err;
- 
--#ifdef CONFIG_UNICODE
--	if (f2fs_has_strict_mode(F2FS_I_SB(dir)) && IS_CASEFOLDED(dir) &&
--			utf8_validate(F2FS_I_SB(dir)->s_encoding, child)) {
--		*res_page = ERR_PTR(-EINVAL);
--		return NULL;
--	}
--#endif
--
--	err = fscrypt_setup_filename(dir, child, 1, &fname);
-+	err = f2fs_setup_filename(dir, child, 1, &fname);
- 	if (err) {
- 		if (err == -ENOENT)
- 			*res_page = NULL;
-@@ -367,7 +413,7 @@ struct f2fs_dir_entry *f2fs_find_entry(struct inode *dir,
- 
- 	de = __f2fs_find_entry(dir, &fname, res_page);
- 
--	fscrypt_free_filename(&fname);
-+	f2fs_free_filename(&fname);
- 	return de;
- }
- 
-@@ -408,7 +454,8 @@ void f2fs_set_link(struct inode *dir, struct f2fs_dir_entry *de,
- 	f2fs_put_page(page, 1);
- }
- 
--static void init_dent_inode(const struct qstr *name, struct page *ipage)
-+static void init_dent_inode(const struct f2fs_filename *fname,
-+			    struct page *ipage)
- {
- 	struct f2fs_inode *ri;
- 
-@@ -416,16 +463,16 @@ static void init_dent_inode(const struct qstr *name, struct page *ipage)
- 
- 	/* copy name info. to this inode page */
- 	ri = F2FS_INODE(ipage);
--	ri->i_namelen = cpu_to_le32(name->len);
--	memcpy(ri->i_name, name->name, name->len);
-+	ri->i_namelen = cpu_to_le32(fname->disk_name.len);
-+	memcpy(ri->i_name, fname->disk_name.name, fname->disk_name.len);
- 	set_page_dirty(ipage);
- }
- 
- void f2fs_do_make_empty_dir(struct inode *inode, struct inode *parent,
- 					struct f2fs_dentry_ptr *d)
- {
--	struct qstr dot = QSTR_INIT(".", 1);
--	struct qstr dotdot = QSTR_INIT("..", 2);
-+	struct fscrypt_str dot = FSTR_INIT(".", 1);
-+	struct fscrypt_str dotdot = FSTR_INIT("..", 2);
- 
- 	/* update dirent of "." */
- 	f2fs_update_dentry(inode->i_ino, inode->i_mode, d, &dot, 0, 0);
-@@ -459,8 +506,7 @@ static int make_empty_dir(struct inode *inode,
- }
- 
- struct page *f2fs_init_inode_metadata(struct inode *inode, struct inode *dir,
--			const struct qstr *new_name, const struct qstr *orig_name,
--			struct page *dpage)
-+			const struct f2fs_filename *fname, struct page *dpage)
- {
- 	struct page *page;
- 	int err;
-@@ -485,7 +531,8 @@ struct page *f2fs_init_inode_metadata(struct inode *inode, struct inode *dir,
- 		if (err)
- 			goto put_error;
- 
--		err = f2fs_init_security(inode, dir, orig_name, page);
-+		err = f2fs_init_security(inode, dir,
-+					 fname ? fname->usr_fname : NULL, page);
- 		if (err)
- 			goto put_error;
- 
-@@ -500,8 +547,8 @@ struct page *f2fs_init_inode_metadata(struct inode *inode, struct inode *dir,
- 			return page;
- 	}
- 
--	if (new_name) {
--		init_dent_inode(new_name, page);
-+	if (fname) {
-+		init_dent_inode(fname, page);
- 		if (IS_ENCRYPTED(dir))
- 			file_set_enc_name(inode);
- 	}
-@@ -569,11 +616,11 @@ int f2fs_room_for_filename(const void *bitmap, int slots, int max_slots)
- }
- 
- bool f2fs_has_enough_room(struct inode *dir, struct page *ipage,
--					struct fscrypt_name *fname)
-+			  const struct f2fs_filename *fname)
- {
- 	struct f2fs_dentry_ptr d;
- 	unsigned int bit_pos;
--	int slots = GET_DENTRY_SLOTS(fname_len(fname));
-+	int slots = GET_DENTRY_SLOTS(fname->disk_name.len);
- 
- 	make_dentry_ptr_inline(dir, &d, inline_data_addr(dir, ipage));
- 
-@@ -583,8 +630,8 @@ bool f2fs_has_enough_room(struct inode *dir, struct page *ipage,
- }
- 
- void f2fs_update_dentry(nid_t ino, umode_t mode, struct f2fs_dentry_ptr *d,
--				const struct qstr *name, f2fs_hash_t name_hash,
--				unsigned int bit_pos)
-+			const struct fscrypt_str *name, f2fs_hash_t name_hash,
-+			unsigned int bit_pos)
- {
- 	struct f2fs_dir_entry *de;
- 	int slots = GET_DENTRY_SLOTS(name->len);
-@@ -604,15 +651,13 @@ void f2fs_update_dentry(nid_t ino, umode_t mode, struct f2fs_dentry_ptr *d,
- 	}
- }
- 
--int f2fs_add_regular_entry(struct inode *dir, const struct qstr *new_name,
--				const struct qstr *orig_name,
--				struct inode *inode, nid_t ino, umode_t mode)
-+int f2fs_add_regular_entry(struct inode *dir, const struct f2fs_filename *fname,
-+			   struct inode *inode, nid_t ino, umode_t mode)
- {
- 	unsigned int bit_pos;
- 	unsigned int level;
- 	unsigned int current_depth;
- 	unsigned long bidx, block;
--	f2fs_hash_t dentry_hash;
- 	unsigned int nbucket, nblock;
- 	struct page *dentry_page = NULL;
- 	struct f2fs_dentry_block *dentry_blk = NULL;
-@@ -621,11 +666,10 @@ int f2fs_add_regular_entry(struct inode *dir, const struct qstr *new_name,
- 	int slots, err = 0;
- 
- 	level = 0;
--	slots = GET_DENTRY_SLOTS(new_name->len);
--	dentry_hash = f2fs_dentry_hash(dir, new_name, NULL);
-+	slots = GET_DENTRY_SLOTS(fname->disk_name.len);
- 
- 	current_depth = F2FS_I(dir)->i_current_depth;
--	if (F2FS_I(dir)->chash == dentry_hash) {
-+	if (F2FS_I(dir)->chash == fname->hash) {
- 		level = F2FS_I(dir)->clevel;
- 		F2FS_I(dir)->chash = 0;
- 	}
-@@ -647,7 +691,7 @@ int f2fs_add_regular_entry(struct inode *dir, const struct qstr *new_name,
- 	nblock = bucket_blocks(level);
- 
- 	bidx = dir_block_index(level, F2FS_I(dir)->i_dir_level,
--				(le32_to_cpu(dentry_hash) % nbucket));
-+				(le32_to_cpu(fname->hash) % nbucket));
- 
- 	for (block = bidx; block <= (bidx + nblock - 1); block++) {
- 		dentry_page = f2fs_get_new_data_page(dir, NULL, block, true);
-@@ -671,8 +715,7 @@ int f2fs_add_regular_entry(struct inode *dir, const struct qstr *new_name,
- 
- 	if (inode) {
- 		down_write(&F2FS_I(inode)->i_sem);
--		page = f2fs_init_inode_metadata(inode, dir, new_name,
--						orig_name, NULL);
-+		page = f2fs_init_inode_metadata(inode, dir, fname, NULL);
- 		if (IS_ERR(page)) {
- 			err = PTR_ERR(page);
- 			goto fail;
-@@ -680,7 +723,8 @@ int f2fs_add_regular_entry(struct inode *dir, const struct qstr *new_name,
- 	}
- 
- 	make_dentry_ptr_block(NULL, &d, dentry_blk);
--	f2fs_update_dentry(ino, mode, &d, new_name, dentry_hash, bit_pos);
-+	f2fs_update_dentry(ino, mode, &d, &fname->disk_name, fname->hash,
-+			   bit_pos);
- 
- 	set_page_dirty(dentry_page);
- 
-@@ -704,21 +748,15 @@ int f2fs_add_regular_entry(struct inode *dir, const struct qstr *new_name,
- 	return err;
- }
- 
--int f2fs_add_dentry(struct inode *dir, struct fscrypt_name *fname,
--				struct inode *inode, nid_t ino, umode_t mode)
-+int f2fs_add_dentry(struct inode *dir, const struct f2fs_filename *fname,
-+		    struct inode *inode, nid_t ino, umode_t mode)
- {
--	struct qstr new_name;
- 	int err = -EAGAIN;
- 
--	new_name.name = fname_name(fname);
--	new_name.len = fname_len(fname);
--
- 	if (f2fs_has_inline_dentry(dir))
--		err = f2fs_add_inline_entry(dir, &new_name, fname->usr_fname,
--							inode, ino, mode);
-+		err = f2fs_add_inline_entry(dir, fname, inode, ino, mode);
- 	if (err == -EAGAIN)
--		err = f2fs_add_regular_entry(dir, &new_name, fname->usr_fname,
--							inode, ino, mode);
-+		err = f2fs_add_regular_entry(dir, fname, inode, ino, mode);
- 
- 	f2fs_update_time(F2FS_I_SB(dir), REQ_TIME);
- 	return err;
-@@ -731,12 +769,12 @@ int f2fs_add_dentry(struct inode *dir, struct fscrypt_name *fname,
- int f2fs_do_add_link(struct inode *dir, const struct qstr *name,
- 				struct inode *inode, nid_t ino, umode_t mode)
- {
--	struct fscrypt_name fname;
-+	struct f2fs_filename fname;
- 	struct page *page = NULL;
- 	struct f2fs_dir_entry *de = NULL;
- 	int err;
- 
--	err = fscrypt_setup_filename(dir, name, 0, &fname);
-+	err = f2fs_setup_filename(dir, name, 0, &fname);
- 	if (err)
- 		return err;
- 
-@@ -759,7 +797,7 @@ int f2fs_do_add_link(struct inode *dir, const struct qstr *name,
- 	} else {
- 		err = f2fs_add_dentry(dir, &fname, inode, ino, mode);
- 	}
--	fscrypt_free_filename(&fname);
-+	f2fs_free_filename(&fname);
- 	return err;
- }
- 
-@@ -769,7 +807,7 @@ int f2fs_do_tmpfile(struct inode *inode, struct inode *dir)
- 	int err = 0;
- 
- 	down_write(&F2FS_I(inode)->i_sem);
--	page = f2fs_init_inode_metadata(inode, dir, NULL, NULL, NULL);
-+	page = f2fs_init_inode_metadata(inode, dir, NULL, NULL);
- 	if (IS_ERR(page)) {
- 		err = PTR_ERR(page);
- 		goto fail;
-diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-index a953a622f260e3..1df50d9224bb71 100644
---- a/fs/f2fs/f2fs.h
-+++ b/fs/f2fs/f2fs.h
-@@ -506,6 +506,42 @@ static inline int get_inline_xattr_addrs(struct inode *inode);
-  * For INODE and NODE manager
-  */
- /* for directory operations */
-+
-+struct f2fs_filename {
-+	/*
-+	 * The filename the user specified.  This is NULL for some
-+	 * filesystem-internal operations, e.g. converting an inline directory
-+	 * to a non-inline one, or roll-forward recovering an encrypted dentry.
-+	 */
-+	const struct qstr *usr_fname;
-+
-+	/*
-+	 * The on-disk filename.  For encrypted directories, this is encrypted.
-+	 * This may be NULL for lookups in an encrypted dir without the key.
-+	 */
-+	struct fscrypt_str disk_name;
-+
-+	/* The dirhash of this filename */
-+	f2fs_hash_t hash;
-+
-+#ifdef CONFIG_FS_ENCRYPTION
-+	/*
-+	 * For lookups in encrypted directories: either the buffer backing
-+	 * disk_name, or a buffer that holds the decoded no-key name.
-+	 */
-+	struct fscrypt_str crypto_buf;
-+#endif
-+#ifdef CONFIG_UNICODE
-+	/*
-+	 * For casefolded directories: the casefolded name, but it's left NULL
-+	 * if the original name is not valid Unicode or if the filesystem is
-+	 * doing an internal operation where usr_fname is also NULL.  In these
-+	 * cases we fall back to treating the name as an opaque byte sequence.
-+	 */
-+	struct fscrypt_str cf_name;
-+#endif
-+};
-+
- struct f2fs_dentry_ptr {
- 	struct inode *inode;
- 	void *bitmap;
-@@ -2920,12 +2956,12 @@ static inline bool f2fs_cp_error(struct f2fs_sb_info *sbi)
- 	return is_set_ckpt_flags(sbi, CP_ERROR_FLAG);
- }
- 
--static inline bool is_dot_dotdot(const struct qstr *str)
-+static inline bool is_dot_dotdot(const u8 *name, size_t len)
- {
--	if (str->len == 1 && str->name[0] == '.')
-+	if (len == 1 && name[0] == '.')
- 		return true;
- 
--	if (str->len == 2 && str->name[0] == '.' && str->name[1] == '.')
-+	if (len == 2 && name[0] == '.' && name[1] == '.')
- 		return true;
- 
- 	return false;
-@@ -3138,22 +3174,28 @@ struct dentry *f2fs_get_parent(struct dentry *child);
-  * dir.c
-  */
- unsigned char f2fs_get_de_type(struct f2fs_dir_entry *de);
--struct f2fs_dir_entry *f2fs_find_target_dentry(struct fscrypt_name *fname,
--			f2fs_hash_t namehash, int *max_slots,
--			struct f2fs_dentry_ptr *d);
-+int f2fs_init_casefolded_name(const struct inode *dir,
-+			      struct f2fs_filename *fname);
-+int f2fs_setup_filename(struct inode *dir, const struct qstr *iname,
-+			int lookup, struct f2fs_filename *fname);
-+int f2fs_prepare_lookup(struct inode *dir, struct dentry *dentry,
-+			struct f2fs_filename *fname);
-+void f2fs_free_filename(struct f2fs_filename *fname);
-+struct f2fs_dir_entry *f2fs_find_target_dentry(const struct f2fs_dentry_ptr *d,
-+			const struct f2fs_filename *fname, int *max_slots);
- int f2fs_fill_dentries(struct dir_context *ctx, struct f2fs_dentry_ptr *d,
- 			unsigned int start_pos, struct fscrypt_str *fstr);
- void f2fs_do_make_empty_dir(struct inode *inode, struct inode *parent,
- 			struct f2fs_dentry_ptr *d);
- struct page *f2fs_init_inode_metadata(struct inode *inode, struct inode *dir,
--			const struct qstr *new_name,
--			const struct qstr *orig_name, struct page *dpage);
-+			const struct f2fs_filename *fname, struct page *dpage);
- void f2fs_update_parent_metadata(struct inode *dir, struct inode *inode,
- 			unsigned int current_depth);
- int f2fs_room_for_filename(const void *bitmap, int slots, int max_slots);
- void f2fs_drop_nlink(struct inode *dir, struct inode *inode);
- struct f2fs_dir_entry *__f2fs_find_entry(struct inode *dir,
--			struct fscrypt_name *fname, struct page **res_page);
-+					 const struct f2fs_filename *fname,
-+					 struct page **res_page);
- struct f2fs_dir_entry *f2fs_find_entry(struct inode *dir,
- 			const struct qstr *child, struct page **res_page);
- struct f2fs_dir_entry *f2fs_parent_dir(struct inode *dir, struct page **p);
-@@ -3162,14 +3204,13 @@ ino_t f2fs_inode_by_name(struct inode *dir, const struct qstr *qstr,
- void f2fs_set_link(struct inode *dir, struct f2fs_dir_entry *de,
- 			struct page *page, struct inode *inode);
- bool f2fs_has_enough_room(struct inode *dir, struct page *ipage,
--			struct fscrypt_name *fname);
-+			  const struct f2fs_filename *fname);
- void f2fs_update_dentry(nid_t ino, umode_t mode, struct f2fs_dentry_ptr *d,
--			const struct qstr *name, f2fs_hash_t name_hash,
-+			const struct fscrypt_str *name, f2fs_hash_t name_hash,
- 			unsigned int bit_pos);
--int f2fs_add_regular_entry(struct inode *dir, const struct qstr *new_name,
--			const struct qstr *orig_name,
-+int f2fs_add_regular_entry(struct inode *dir, const struct f2fs_filename *fname,
- 			struct inode *inode, nid_t ino, umode_t mode);
--int f2fs_add_dentry(struct inode *dir, struct fscrypt_name *fname,
-+int f2fs_add_dentry(struct inode *dir, const struct f2fs_filename *fname,
- 			struct inode *inode, nid_t ino, umode_t mode);
- int f2fs_do_add_link(struct inode *dir, const struct qstr *name,
- 			struct inode *inode, nid_t ino, umode_t mode);
-@@ -3199,8 +3240,7 @@ int f2fs_sanity_check_ckpt(struct f2fs_sb_info *sbi);
- /*
-  * hash.c
-  */
--f2fs_hash_t f2fs_dentry_hash(const struct inode *dir,
--		const struct qstr *name_info, struct fscrypt_name *fname);
-+void f2fs_hash_filename(const struct inode *dir, struct f2fs_filename *fname);
- 
- /*
-  * node.c
-@@ -3711,11 +3751,11 @@ int f2fs_try_convert_inline_dir(struct inode *dir, struct dentry *dentry);
- int f2fs_write_inline_data(struct inode *inode, struct page *page);
- bool f2fs_recover_inline_data(struct inode *inode, struct page *npage);
- struct f2fs_dir_entry *f2fs_find_in_inline_dir(struct inode *dir,
--			struct fscrypt_name *fname, struct page **res_page);
-+					const struct f2fs_filename *fname,
-+					struct page **res_page);
- int f2fs_make_empty_inline_dir(struct inode *inode, struct inode *parent,
- 			struct page *ipage);
--int f2fs_add_inline_entry(struct inode *dir, const struct qstr *new_name,
--			const struct qstr *orig_name,
-+int f2fs_add_inline_entry(struct inode *dir, const struct f2fs_filename *fname,
- 			struct inode *inode, nid_t ino, umode_t mode);
- void f2fs_delete_inline_entry(struct f2fs_dir_entry *dentry,
- 				struct page *page, struct inode *dir,
-diff --git a/fs/f2fs/hash.c b/fs/f2fs/hash.c
-index 5bc4dcd8fc03fb..e5997919472d4f 100644
---- a/fs/f2fs/hash.c
-+++ b/fs/f2fs/hash.c
-@@ -68,22 +68,9 @@ static void str2hashbuf(const unsigned char *msg, size_t len,
- 		*buf++ = pad;
- }
- 
--static f2fs_hash_t __f2fs_dentry_hash(const struct qstr *name_info,
--				struct fscrypt_name *fname)
-+static u32 TEA_hash_name(const u8 *p, size_t len)
- {
--	__u32 hash;
--	f2fs_hash_t f2fs_hash;
--	const unsigned char *p;
- 	__u32 in[8], buf[4];
--	const unsigned char *name = name_info->name;
--	size_t len = name_info->len;
--
--	/* encrypted bigname case */
--	if (fname && !fname->disk_name.name)
--		return cpu_to_le32(fname->hash);
--
--	if (is_dot_dotdot(name_info))
--		return 0;
- 
- 	/* Initialize the default seed for the hash checksum functions */
- 	buf[0] = 0x67452301;
-@@ -91,7 +78,6 @@ static f2fs_hash_t __f2fs_dentry_hash(const struct qstr *name_info,
- 	buf[2] = 0x98badcfe;
- 	buf[3] = 0x10325476;
- 
--	p = name;
- 	while (1) {
- 		str2hashbuf(p, len, in, 4);
- 		TEA_transform(buf, in);
-@@ -100,41 +86,43 @@ static f2fs_hash_t __f2fs_dentry_hash(const struct qstr *name_info,
- 			break;
- 		len -= 16;
- 	}
--	hash = buf[0];
--	f2fs_hash = cpu_to_le32(hash & ~F2FS_HASH_COL_BIT);
--	return f2fs_hash;
-+	return buf[0] & ~F2FS_HASH_COL_BIT;
- }
- 
--f2fs_hash_t f2fs_dentry_hash(const struct inode *dir,
--		const struct qstr *name_info, struct fscrypt_name *fname)
-+/*
-+ * Compute @fname->hash.  For all directories, @fname->disk_name must be set.
-+ * For casefolded directories, @fname->usr_fname must be set, and also
-+ * @fname->cf_name if the filename is valid Unicode.
-+ */
-+void f2fs_hash_filename(const struct inode *dir, struct f2fs_filename *fname)
- {
--#ifdef CONFIG_UNICODE
--	struct f2fs_sb_info *sbi = F2FS_SB(dir->i_sb);
--	const struct unicode_map *um = sbi->s_encoding;
--	int r, dlen;
--	unsigned char *buff;
--	struct qstr folded;
-+	const u8 *name = fname->disk_name.name;
-+	size_t len = fname->disk_name.len;
- 
--	if (!name_info->len || !IS_CASEFOLDED(dir))
--		goto opaque_seq;
-+	WARN_ON_ONCE(!name);
- 
--	buff = f2fs_kzalloc(sbi, sizeof(char) * PATH_MAX, GFP_KERNEL);
--	if (!buff)
--		return -ENOMEM;
--
--	dlen = utf8_casefold(um, name_info, buff, PATH_MAX);
--	if (dlen < 0) {
--		kvfree(buff);
--		goto opaque_seq;
-+	if (is_dot_dotdot(name, len)) {
-+		fname->hash = 0;
-+		return;
- 	}
--	folded.name = buff;
--	folded.len = dlen;
--	r = __f2fs_dentry_hash(&folded, fname);
--
--	kvfree(buff);
--	return r;
- 
--opaque_seq:
-+#ifdef CONFIG_UNICODE
-+	if (IS_CASEFOLDED(dir)) {
-+		/*
-+		 * If the casefolded name is provided, hash it instead of the
-+		 * on-disk name.  If the casefolded name is *not* provided, that
-+		 * should only be because the name wasn't valid Unicode, so fall
-+		 * back to treating the name as an opaque byte sequence.
-+		 */
-+		WARN_ON_ONCE(!fname->usr_fname->name);
-+		if (fname->cf_name.name) {
-+			name = fname->cf_name.name;
-+			len = fname->cf_name.len;
-+		} else {
-+			name = fname->usr_fname->name;
-+			len = fname->usr_fname->len;
-+		}
-+	}
- #endif
--	return __f2fs_dentry_hash(name_info, fname);
-+	fname->hash = cpu_to_le32(TEA_hash_name(name, len));
- }
-diff --git a/fs/f2fs/inline.c b/fs/f2fs/inline.c
-index 59a4b7ff11e17a..751a012ff8404f 100644
---- a/fs/f2fs/inline.c
-+++ b/fs/f2fs/inline.c
-@@ -305,15 +305,14 @@ bool f2fs_recover_inline_data(struct inode *inode, struct page *npage)
- }
- 
- struct f2fs_dir_entry *f2fs_find_in_inline_dir(struct inode *dir,
--			struct fscrypt_name *fname, struct page **res_page)
-+					const struct f2fs_filename *fname,
-+					struct page **res_page)
- {
- 	struct f2fs_sb_info *sbi = F2FS_SB(dir->i_sb);
--	struct qstr name = FSTR_TO_QSTR(&fname->disk_name);
- 	struct f2fs_dir_entry *de;
- 	struct f2fs_dentry_ptr d;
- 	struct page *ipage;
- 	void *inline_dentry;
--	f2fs_hash_t namehash;
- 
- 	ipage = f2fs_get_node_page(sbi, dir->i_ino);
- 	if (IS_ERR(ipage)) {
-@@ -321,12 +320,10 @@ struct f2fs_dir_entry *f2fs_find_in_inline_dir(struct inode *dir,
- 		return NULL;
- 	}
- 
--	namehash = f2fs_dentry_hash(dir, &name, fname);
--
- 	inline_dentry = inline_data_addr(dir, ipage);
- 
- 	make_dentry_ptr_inline(dir, &d, inline_dentry);
--	de = f2fs_find_target_dentry(fname, namehash, NULL, &d);
-+	de = f2fs_find_target_dentry(&d, fname, NULL);
- 	unlock_page(ipage);
- 	if (de)
- 		*res_page = ipage;
-@@ -443,7 +440,7 @@ static int f2fs_add_inline_entries(struct inode *dir, void *inline_dentry)
- 
- 	while (bit_pos < d.max) {
- 		struct f2fs_dir_entry *de;
--		struct qstr new_name;
-+		struct f2fs_filename fname;
- 		nid_t ino;
- 		umode_t fake_mode;
- 
-@@ -459,14 +456,19 @@ static int f2fs_add_inline_entries(struct inode *dir, void *inline_dentry)
- 			continue;
- 		}
- 
--		new_name.name = d.filename[bit_pos];
--		new_name.len = le16_to_cpu(de->name_len);
-+		/*
-+		 * We only need the disk_name and hash to move the dentry.
-+		 * We don't need the original or casefolded filenames.
-+		 */
-+		memset(&fname, 0, sizeof(fname));
-+		fname.disk_name.name = d.filename[bit_pos];
-+		fname.disk_name.len = le16_to_cpu(de->name_len);
-+		fname.hash = de->hash_code;
- 
- 		ino = le32_to_cpu(de->ino);
- 		fake_mode = f2fs_get_de_type(de) << S_SHIFT;
- 
--		err = f2fs_add_regular_entry(dir, &new_name, NULL, NULL,
--							ino, fake_mode);
-+		err = f2fs_add_regular_entry(dir, &fname, NULL, ino, fake_mode);
- 		if (err)
- 			goto punch_dentry_pages;
- 
-@@ -543,7 +545,7 @@ int f2fs_try_convert_inline_dir(struct inode *dir, struct dentry *dentry)
- {
- 	struct f2fs_sb_info *sbi = F2FS_I_SB(dir);
- 	struct page *ipage;
--	struct fscrypt_name fname;
-+	struct f2fs_filename fname;
- 	void *inline_dentry = NULL;
- 	int err = 0;
- 
-@@ -552,7 +554,7 @@ int f2fs_try_convert_inline_dir(struct inode *dir, struct dentry *dentry)
- 
- 	f2fs_lock_op(sbi);
- 
--	err = fscrypt_setup_filename(dir, &dentry->d_name, 0, &fname);
-+	err = f2fs_setup_filename(dir, &dentry->d_name, 0, &fname);
- 	if (err)
- 		goto out;
- 
-@@ -573,23 +575,21 @@ int f2fs_try_convert_inline_dir(struct inode *dir, struct dentry *dentry)
- 	if (!err)
- 		f2fs_put_page(ipage, 1);
- out_fname:
--	fscrypt_free_filename(&fname);
-+	f2fs_free_filename(&fname);
- out:
- 	f2fs_unlock_op(sbi);
- 	return err;
- }
- 
--int f2fs_add_inline_entry(struct inode *dir, const struct qstr *new_name,
--				const struct qstr *orig_name,
--				struct inode *inode, nid_t ino, umode_t mode)
-+int f2fs_add_inline_entry(struct inode *dir, const struct f2fs_filename *fname,
-+			  struct inode *inode, nid_t ino, umode_t mode)
- {
- 	struct f2fs_sb_info *sbi = F2FS_I_SB(dir);
- 	struct page *ipage;
- 	unsigned int bit_pos;
--	f2fs_hash_t name_hash;
- 	void *inline_dentry = NULL;
- 	struct f2fs_dentry_ptr d;
--	int slots = GET_DENTRY_SLOTS(new_name->len);
-+	int slots = GET_DENTRY_SLOTS(fname->disk_name.len);
- 	struct page *page = NULL;
- 	int err = 0;
- 
-@@ -611,8 +611,7 @@ int f2fs_add_inline_entry(struct inode *dir, const struct qstr *new_name,
- 
- 	if (inode) {
- 		down_write(&F2FS_I(inode)->i_sem);
--		page = f2fs_init_inode_metadata(inode, dir, new_name,
--						orig_name, ipage);
-+		page = f2fs_init_inode_metadata(inode, dir, fname, ipage);
- 		if (IS_ERR(page)) {
- 			err = PTR_ERR(page);
- 			goto fail;
-@@ -621,8 +620,8 @@ int f2fs_add_inline_entry(struct inode *dir, const struct qstr *new_name,
- 
- 	f2fs_wait_on_page_writeback(ipage, NODE, true, true);
- 
--	name_hash = f2fs_dentry_hash(dir, new_name, NULL);
--	f2fs_update_dentry(ino, mode, &d, new_name, name_hash, bit_pos);
-+	f2fs_update_dentry(ino, mode, &d, &fname->disk_name, fname->hash,
-+			   bit_pos);
- 
- 	set_page_dirty(ipage);
- 
-diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
-index f54119da2217ff..58db1de7ca9476 100644
---- a/fs/f2fs/namei.c
-+++ b/fs/f2fs/namei.c
-@@ -482,7 +482,7 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
- 	nid_t ino = -1;
- 	int err = 0;
- 	unsigned int root_ino = F2FS_ROOT_INO(F2FS_I_SB(dir));
--	struct fscrypt_name fname;
-+	struct f2fs_filename fname;
- 
- 	trace_f2fs_lookup_start(dir, dentry, flags);
- 
-@@ -491,13 +491,13 @@ static struct dentry *f2fs_lookup(struct inode *dir, struct dentry *dentry,
- 		goto out;
- 	}
- 
--	err = fscrypt_prepare_lookup(dir, dentry, &fname);
-+	err = f2fs_prepare_lookup(dir, dentry, &fname);
- 	if (err == -ENOENT)
- 		goto out_splice;
- 	if (err)
- 		goto out;
- 	de = __f2fs_find_entry(dir, &fname, &page);
--	fscrypt_free_filename(&fname);
-+	f2fs_free_filename(&fname);
- 
- 	if (!de) {
- 		if (IS_ERR(page)) {
-diff --git a/fs/f2fs/recovery.c b/fs/f2fs/recovery.c
-index dd804c07eeb059..ae5310f02e7ff1 100644
---- a/fs/f2fs/recovery.c
-+++ b/fs/f2fs/recovery.c
-@@ -107,13 +107,51 @@ static void del_fsync_inode(struct fsync_inode_entry *entry, int drop)
- 	kmem_cache_free(fsync_entry_slab, entry);
- }
- 
-+static int init_recovered_filename(const struct inode *dir,
-+				   struct f2fs_inode *raw_inode,
-+				   struct f2fs_filename *fname,
-+				   struct qstr *usr_fname)
-+{
-+	int err;
-+
-+	memset(fname, 0, sizeof(*fname));
-+	fname->disk_name.len = le32_to_cpu(raw_inode->i_namelen);
-+	fname->disk_name.name = raw_inode->i_name;
-+
-+	if (WARN_ON(fname->disk_name.len > F2FS_NAME_LEN))
-+		return -ENAMETOOLONG;
-+
-+	if (!IS_ENCRYPTED(dir)) {
-+		usr_fname->name = fname->disk_name.name;
-+		usr_fname->len = fname->disk_name.len;
-+		fname->usr_fname = usr_fname;
-+	}
-+
-+	/* Compute the hash of the filename */
-+	if (IS_CASEFOLDED(dir)) {
-+		err = f2fs_init_casefolded_name(dir, fname);
-+		if (err)
-+			return err;
-+		f2fs_hash_filename(dir, fname);
-+#ifdef CONFIG_UNICODE
-+		/* Case-sensitive match is fine for recovery */
-+		kfree(fname->cf_name.name);
-+		fname->cf_name.name = NULL;
-+#endif
-+	} else {
-+		f2fs_hash_filename(dir, fname);
-+	}
-+	return 0;
-+}
-+
- static int recover_dentry(struct inode *inode, struct page *ipage,
- 						struct list_head *dir_list)
- {
- 	struct f2fs_inode *raw_inode = F2FS_INODE(ipage);
- 	nid_t pino = le32_to_cpu(raw_inode->i_pino);
- 	struct f2fs_dir_entry *de;
--	struct fscrypt_name fname;
-+	struct f2fs_filename fname;
-+	struct qstr usr_fname;
- 	struct page *page;
- 	struct inode *dir, *einode;
- 	struct fsync_inode_entry *entry;
-@@ -132,16 +170,9 @@ static int recover_dentry(struct inode *inode, struct page *ipage,
- 	}
- 
- 	dir = entry->inode;
--
--	memset(&fname, 0, sizeof(struct fscrypt_name));
--	fname.disk_name.len = le32_to_cpu(raw_inode->i_namelen);
--	fname.disk_name.name = raw_inode->i_name;
--
--	if (unlikely(fname.disk_name.len > F2FS_NAME_LEN)) {
--		WARN_ON(1);
--		err = -ENAMETOOLONG;
-+	err = init_recovered_filename(dir, raw_inode, &fname, &usr_fname);
-+	if (err)
- 		goto out;
--	}
- retry:
- 	de = __f2fs_find_entry(dir, &fname, &page);
- 	if (de && inode->i_ino == le32_to_cpu(de->ino))
 -- 
-2.26.2
-
+Warm Regards
+Thara
