@@ -2,94 +2,69 @@ Return-Path: <SRS0=O/uW=6W=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_SANE_1 autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E0079C35280
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  8 May 2020 02:55:45 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3BFBFC38A2A
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  8 May 2020 08:26:00 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id BA847208E4
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  8 May 2020 02:55:45 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1588906545;
-	bh=xZL6GABrc5V8zEN+WNgdg5AUydrKLRFO8szbem4wjEk=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=K/96eC5wNzOrXQHWQcLBRKWD4+U4Wcgj06UKAskUL8hDvndBqwz0X1nTXhUWpSok2
-	 gXcLzfHubM44ZNvr2twMUOTr2ZxSg/j9D0a56n5bAd8JmeHekraOHlrXErDpNW6hHk
-	 zY/lATvu2NvhW2ZfPGxvC/XERlvfLHD7w9zgKiqE=
+	by mail.kernel.org (Postfix) with ESMTP id 2622C208CA
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  8 May 2020 08:26:00 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726770AbgEHCzp (ORCPT
+        id S1726618AbgEHIZ7 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 7 May 2020 22:55:45 -0400
-Received: from mail.kernel.org ([198.145.29.99]:41262 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726701AbgEHCzp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 7 May 2020 22:55:45 -0400
-Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id E329520731;
-        Fri,  8 May 2020 02:55:44 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1588906545;
-        bh=xZL6GABrc5V8zEN+WNgdg5AUydrKLRFO8szbem4wjEk=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=YzgJmsRpYUp92OBc8zIyiikyOWIf9biXSi+7O9rdRZskko9YnlEa+BbnHrggIb4eB
-         YG2+OQSPa2znUdsigdgsWMvC2sHrVsKj7+DpRhHCYJwA2Um3cNfJUx6mCawYmBZo3X
-         Vc/5HHm/xaYQkfhs63iNsG7f0KMRxiFS7kmNV0hU=
-Date:   Thu, 7 May 2020 19:55:43 -0700
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-f2fs-devel@lists.sourceforge.net
-Cc:     linux-fscrypt@vger.kernel.org,
+        Fri, 8 May 2020 04:25:59 -0400
+Received: from szxga05-in.huawei.com ([45.249.212.191]:4295 "EHLO huawei.com"
+        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
+        id S1726598AbgEHIZ7 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 8 May 2020 04:25:59 -0400
+Received: from DGGEMS410-HUB.china.huawei.com (unknown [172.30.72.59])
+        by Forcepoint Email with ESMTP id 164BAB348E0F5B7116A3;
+        Fri,  8 May 2020 16:25:57 +0800 (CST)
+Received: from [10.134.22.195] (10.134.22.195) by smtp.huawei.com
+ (10.3.19.210) with Microsoft SMTP Server (TLS) id 14.3.487.0; Fri, 8 May 2020
+ 16:25:55 +0800
+Subject: Re: [PATCH 1/4] f2fs: don't leak filename in
+ f2fs_try_convert_inline_dir()
+To:     Eric Biggers <ebiggers@kernel.org>,
+        <linux-f2fs-devel@lists.sourceforge.net>
+CC:     <linux-fscrypt@vger.kernel.org>,
         Daniel Rosenberg <drosen@google.com>,
-        Gabriel Krisman Bertazi <krisman@collabora.com>
-Subject: Re: [RFC PATCH 4/4] f2fs: Handle casefolding with Encryption
- (INCOMPLETE)
-Message-ID: <20200508025543.GA63151@sol.localdomain>
+        Gabriel Krisman Bertazi <krisman@collabora.com>,
+        <stable@vger.kernel.org>
 References: <20200507075905.953777-1-ebiggers@kernel.org>
- <20200507075905.953777-5-ebiggers@kernel.org>
+ <20200507075905.953777-2-ebiggers@kernel.org>
+From:   Chao Yu <yuchao0@huawei.com>
+Message-ID: <be078d08-010e-ad47-b693-8eeacc54b198@huawei.com>
+Date:   Fri, 8 May 2020 16:25:54 +0800
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:52.0) Gecko/20100101
+ Thunderbird/52.9.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200507075905.953777-5-ebiggers@kernel.org>
+In-Reply-To: <20200507075905.953777-2-ebiggers@kernel.org>
+Content-Type: text/plain; charset="windows-1252"
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-Originating-IP: [10.134.22.195]
+X-CFilter-Loop: Reflected
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, May 07, 2020 at 12:59:05AM -0700, Eric Biggers wrote:
-> -static void init_dent_inode(const struct f2fs_filename *fname,
-> +static void init_dent_inode(struct inode *dir, struct inode *inode,
-> +			    const struct f2fs_filename *fname,
->  			    struct page *ipage)
->  {
->  	struct f2fs_inode *ri;
->  
-> +	if (!fname) /* tmpfile case? */
-> +		return;
-> +
->  	f2fs_wait_on_page_writeback(ipage, NODE, true, true);
->  
->  	/* copy name info. to this inode page */
->  	ri = F2FS_INODE(ipage);
->  	ri->i_namelen = cpu_to_le32(fname->disk_name.len);
->  	memcpy(ri->i_name, fname->disk_name.name, fname->disk_name.len);
-> +	if (IS_ENCRYPTED(dir)) {
-> +		file_set_enc_name(inode);
-> +		/*
-> +		 * Roll-forward recovery doesn't have encryption keys available,
-> +		 * so it can't compute the dirhash for encrypted+casefolded
-> +		 * filenames.  Append it to i_name if possible.  Else, disable
-> +		 * roll-forward recovery of the dentry (i.e., make fsync'ing the
-> +		 * file force a checkpoint) by setting LOST_PINO.
-> +		 */
-> +		if (IS_CASEFOLDED(dir)) {
-> +			if (fname->disk_name.len + sizeof(f2fs_hash_t) <=
-> +			    F2FS_NAME_LEN)
-> +				put_unaligned(fname->hash,
-> +					&ri->i_name[fname->disk_name.len]);
+On 2020/5/7 15:59, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> We need to call fscrypt_free_filename() to free the memory allocated by
+> fscrypt_setup_filename().
+> 
+> Fixes: b06af2aff28b ("f2fs: convert inline_dir early before starting rename")
 
-Jaegeuk pointed out that we need a cast to 'f2fs_hash_t *' here.
+Thanks for fixing this.
 
-- Eric
+> Cc: <stable@vger.kernel.org> # v5.6+
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+
+Reviewed-by: Chao Yu <yuchao0@huawei.com>
+
+Thanks,
