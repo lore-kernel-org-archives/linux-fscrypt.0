@@ -2,62 +2,66 @@ Return-Path: <SRS0=lD/4=64=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
+	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AAA30C433E1
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 14 May 2020 00:37:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C6D62C433E8
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 14 May 2020 00:37:49 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id C2F88207CB
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 14 May 2020 00:37:40 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id DB5CC20659
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 14 May 2020 00:37:49 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ZAIRPf+o"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="X1UBPJRv"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1733188AbgENAhj (ORCPT
+        id S1733261AbgENAhr (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 13 May 2020 20:37:39 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46932 "EHLO
+        Wed, 13 May 2020 20:37:47 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46948 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-FAIL-OK-FAIL)
-        by vger.kernel.org with ESMTP id S1730289AbgENAhh (ORCPT
+        by vger.kernel.org with ESMTP id S1733087AbgENAhq (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 13 May 2020 20:37:37 -0400
+        Wed, 13 May 2020 20:37:46 -0400
 Received: from mail-qt1-x849.google.com (mail-qt1-x849.google.com [IPv6:2607:f8b0:4864:20::849])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id AC8E9C061A0F
-        for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2020 17:37:35 -0700 (PDT)
-Received: by mail-qt1-x849.google.com with SMTP id n33so1688963qtd.10
-        for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2020 17:37:35 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 93D2AC061A0C
+        for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2020 17:37:46 -0700 (PDT)
+Received: by mail-qt1-x849.google.com with SMTP id j21so1696555qtq.8
+        for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2020 17:37:46 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=date:message-id:mime-version:subject:from:to:cc;
-        bh=Y1TvKp65tsQMJNgm9HMaRO/OTRlalkrsXwsa1JM97tc=;
-        b=ZAIRPf+oXWmjCxrysa3jnmus5IGwb5XwIiHrVByRxAvpfIiYD0ItqjkDiHZYWDO672
-         N6ekiRkc2g/Uwy6OxSuTPl/jJsC3yfHMTGqr+kXgxIM1GV4xoOast3Baq4FyVQY8wkck
-         XuUHl2oyXL+nBJJo71j5Aw3SQgmWnew7yHCKmU3YiBWlXl00JzZ7JHNUGPeMEmpLh2hL
-         k5HCo+shfd2274Q38Cxm9cTV2VSSR22B+2IDwM8W2ULznysB/DsfvvHt30N6+uqW/5Kq
-         DHJuckiUowmfqdW0OuXvIhO0M/9ZkJlk4A3Z2NAoQ6ct8QBRjvaWH5N735j7QujKWzkR
-         7gaQ==
+        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
+         :cc;
+        bh=wnTw0NbTNb5A1wXd4SIANRDygHsN57CzknUpl0CljXo=;
+        b=X1UBPJRvoBN3G1pOYehqmFIMV9XcyOjsGYICAz5JOcPVk1cR+/5+T5iShdYxg1V628
+         gYsxyGRDGl9BCX6TrD188OTJbTJaKWL1ovJkDy5CONwi5FueRqeMP0h9Pqkj2ipBPPSP
+         5nsGCtggNwameXOoWL8ds/zLJURB3K87H1Apvw0ku1A7S5KPW6KfJ9+3n82qsCAtc7Q8
+         CVL1jqlc9qx7rS/QeucCupSL0f2+Jg9l2Tm1MH90YZw8vV2TAYsf6nHZoTrF19rxjmP3
+         B5Lj8nj3/6D6N83ygfKSD+i/F2Xlt45IZ7BkSlzfC7MWD0F+Go1aHMgLJbryrG/ETduN
+         4fJA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
-        bh=Y1TvKp65tsQMJNgm9HMaRO/OTRlalkrsXwsa1JM97tc=;
-        b=Pkb7haBc6Sb3MfGXurv+2cNrjulNCLiwXxrZ8e8VIOTwQtxMumyiGRt8F1mrlLtYrg
-         IKhHc+0RmMStLFZVZSNgzPaUw/pv5lAeFC/79nlHe0oFkXwv98YAcCEJ358eXtfqa6NS
-         Rh3WzEn+nDeSIj6nvRiW8eiy5zwzbuOln/3TbMi2wug9yc2ZZiOHwDVu8Dg2x+CYVRR3
-         qVhaLW18RywgrU1eOs/XiDjO57dy0OW4Hb61B+YuQ3mWJ08JI+W8Xvjq1IaIl9wcOV3F
-         5gTnFQHAMvM+FfDQZM5lcInxni4SFvs8QOv9TqkLqubjss7Lbf0MZC+BDIM4wNtQ8gAi
-         XTcQ==
-X-Gm-Message-State: AOAM532sUihRWB22gxEafNT8Yi3ELDg929PbPtThaDKm+l+1Y32145bm
-        gTSa5p+0UxV62PFktgxPIvFoDGk2GEw=
-X-Google-Smtp-Source: ABdhPJzXq3gY922W8GvJYKDCvdvkhTLMen1AnugqOEU+vcfl/4sIauHvla7GSVA5QizCia3rzhtcSzDwKjE=
-X-Received: by 2002:a05:6214:1262:: with SMTP id r2mr2374687qvv.126.1589416654581;
- Wed, 13 May 2020 17:37:34 -0700 (PDT)
-Date:   Thu, 14 May 2020 00:37:15 +0000
-Message-Id: <20200514003727.69001-1-satyat@google.com>
+        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=wnTw0NbTNb5A1wXd4SIANRDygHsN57CzknUpl0CljXo=;
+        b=eFg+JIRzQbuOJC7+oDUpJLH7SfNWNndlh/ZhOsTvWp56NFrGASPNUnFncW7Sru7fLI
+         VIAmuUBr0wjH/ZkNLuGm/Ty/c3d+czdn/pwTBjJF8IwP3Mr6V3JPproHAvv5k7eXWEm8
+         sKiE81fmzpSZed8ClQxnlH2MqMK6cQMD6HaoG5GvA7W7n829FBr0kenflamn4sXpprZW
+         aXRoLnxfSKDlCCxccOl47QLfIUNEKomRDm7RlabN/KolR9QdhtUVScq90zr+ESX1pKRK
+         OWOPqGetTSHCBeqQW/r/+jQ3Qum+s9g/nSA3tXfUZiIpWDIvF3g4SzI1CU1LbfbuToaH
+         H+XA==
+X-Gm-Message-State: AOAM533tU6MHRHyFhV44YtNXiIB3eYMsLuRyiF841HRTczuzzmCRFBiR
+        xJCE6O0iIpt+RuOwNPVABBCedU10XjE=
+X-Google-Smtp-Source: ABdhPJzOJC0oaf0sZEuk5NSzFhk+j/jqAWKIxZyp9VnDu8EIRNTdkBZpi9yxjcBQiOES5kaCxy4G7XJcA7o=
+X-Received: by 2002:a05:6214:18f3:: with SMTP id ep19mr2358034qvb.45.1589416665791;
+ Wed, 13 May 2020 17:37:45 -0700 (PDT)
+Date:   Thu, 14 May 2020 00:37:22 +0000
+In-Reply-To: <20200514003727.69001-1-satyat@google.com>
+Message-Id: <20200514003727.69001-8-satyat@google.com>
 Mime-Version: 1.0
+References: <20200514003727.69001-1-satyat@google.com>
 X-Mailer: git-send-email 2.26.2.645.ge9eca65c58-goog
-Subject: [PATCH v13 00/12] Inline Encryption Support
+Subject: [PATCH v13 07/12] scsi: ufs: UFS crypto API
 From:   Satya Tangirala <satyat@google.com>
 To:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
@@ -65,308 +69,383 @@ To:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
 Cc:     Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
         Kuohong Wang <kuohong.wang@mediatek.com>,
         Kim Boojin <boojin.kim@samsung.com>,
-        Satya Tangirala <satyat@google.com>
+        Satya Tangirala <satyat@google.com>,
+        Eric Biggers <ebiggers@google.com>
 Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This patch series adds support for Inline Encryption to the block layer,
-UFS, fscrypt, f2fs and ext4. It has been rebased onto linux-block/for-next.
+Introduce functions to manipulate UFS inline encryption hardware
+in line with the JEDEC UFSHCI v2.1 specification and to work with the
+block keyslot manager.
 
-Note that the patches in this series for the block layer (i.e. patches 1,
-2, 3, 4 and 5) can be applied independently of the subsequent patches in
-this series.
+The UFS crypto API will assume by default that a vendor driver doesn't
+support UFS crypto, even if the hardware advertises the capability, because
+a lot of hardware requires some special handling that's not specified in
+the aforementioned JEDEC spec. Each vendor driver must explicity set
+hba->caps |= UFSHCD_CAP_CRYPTO before ufshcd_hba_init_crypto is called to
+opt-in to UFS crypto support.
 
-Inline Encryption hardware allows software to specify an encryption context
-(an encryption key, crypto algorithm, data unit num, data unit size, etc.)
-along with a data transfer request to a storage device, and the inline
-encryption hardware will use that context to en/decrypt the data. The
-inline encryption hardware is part of the storage device, and it
-conceptually sits on the data path between system memory and the storage
-device. Inline Encryption hardware has become increasingly common, and we
-want to support it in the kernel.
-
-Inline Encryption hardware implementations often function around the
-concept of a limited number of "keyslots", which can hold an encryption
-context each. The storage device can be directed to en/decrypt any
-particular request with the encryption context stored in any particular
-keyslot.
-
-Patch 1 documents the whole series.
-
-Patch 2 introduces a Keyslot Manager to efficiently manage keyslots.
-The keyslot manager also functions as the interface that blk-crypto
-(introduced in Patch 3), will use to program keys into inline encryption
-hardware. For more information on the Keyslot Manager, refer to
-documentation found in block/keyslot-manager.c and linux/keyslot-manager.h.
-
-Patch 3 adds the block layer changes for inline encryption support. It
-introduces struct bio_crypt_ctx, and a ptr to one in struct bio, which
-allows struct bio to represent an encryption context that can be passed
-down the storage stack from the filesystem layer to the storage driver.
-
-Patch 4 precludes inline encryption support in a device whenever it
-supports blk-integrity, because there is currently no known hardware that
-supports both features, and it is not completely straightfoward to support
-both of them properly, and doing it improperly might result in leaks of
-information about the plaintext.
-
-Patch 5 introduces blk-crypto-fallback - a kernel crypto API fallback for
-blk-crypto to use when inline encryption hardware isn't present. This
-allows filesystems to specify encryption contexts for bios without
-having to worry about whether the underlying hardware has inline
-encryption support, and allows for testing without real hardware inline
-encryption support. This fallback is separately configurable from
-blk-crypto, and can be disabled if desired while keeping inline
-encryption support. It may also be possible to remove file content
-en/decryption from fscrypt and simply use blk-crypto-fallback in a future
-patch. For more details on blk-crypto and the fallback, refer to
-Documentation/block/inline-encryption.rst.
-
-Patches 6-8 add support for inline encryption into the UFS driver according
-to the JEDEC UFS HCI v2.1 specification. Inline encryption support for
-other drivers (like eMMC) may be added in the same way - the device driver
-should set up a Keyslot Manager in the device's request_queue (refer to
-the UFS crypto additions in ufshcd-crypto.c and ufshcd.c for an example).
-
-Patch 9 adds the SB_INLINECRYPT mount flag to the fs layer, which
-filesystems must set to indicate that they want to use blk-crypto for
-en/decryption of file contents.
-
-Patch 10 adds support to fscrypt - to use inline encryption with fscrypt,
-the filesystem must be mounted with '-o inlinecrypt' - when this option is
-specified, the contents of any AES-256-XTS encrypted file will be
-encrypted using blk-crypto.
-
-Patches 11 and 12 add support to f2fs and ext4 respectively, so that we
-have a complete stack that can make use of inline encryption.
-
-The patches were tested running kvm-xfstests, by specifying the introduced
-"inlinecrypt" mount option, so that en/decryption happens with the
-blk-crypto fallback. The patches were also tested on a Pixel 4 with UFS
-hardware that has support for inline encryption.
-
-There have been a few patch sets addressing Inline Encryption Support in
-the past. Briefly, this patch set differs from those as follows:
-
-1) "crypto: qce: ice: Add support for Inline Crypto Engine"
-is specific to certain hardware, while our patch set's Inline
-Encryption support for UFS is implemented according to the JEDEC UFS
-specification.
-
-2) "scsi: ufs: UFS Host Controller crypto changes" registers inline
-encryption support as a kernel crypto algorithm. Our patch views inline
-encryption as being fundamentally different from a generic crypto
-provider (in that inline encryption is tied to a device), and so does
-not use the kernel crypto API to represent inline encryption hardware.
-
-3) "scsi: ufs: add real time/inline crypto support to UFS HCD" requires
-the device mapper to work - our patch does not.
-
-Changes v12 => v13:
- - Updated docs
- - Minor cleanups
- - rebased onto linux-block/for-next
-
-Changes v11 => v12:
- - Inlined some fscrypt functions
- - Minor cleanups and improved comments
-
-Changes v10 => v11:
- - We now allocate a new bio_crypt_ctx for each request instead of
-   pulling and reusing the one in the bio inserted into the request. The
-   bio_crypt_ctx of a bio is freed after the bio is ended.
- - Make each blk_ksm_keyslot store a pointer to the blk_crypto_key
-   instead of a copy of the blk_crypto_key, so that each blk_crypto_key
-   will have its own keyslot. We also won't need to compute the siphash
-   for a blk_crypto_key anymore.
- - Minor cleanups
-
-Changes v9 => v10:
- - Incorporate Eric's fix for allowing en/decryption to happen as usual via
-   fscrypt in the case that hardware doesn't support the desired crypto
-   configuration, but blk-crypto-fallback is disabled. (Introduce
-   struct blk_crypto_config and blk_crypto_config_supported for fscrypt
-   to call, to check that either blk-crypto-fallback is enabled or the
-   device supports the crypto configuration).
- - Update docs
- - Lots of cleanups
-
-Changes v8 => v9:
- - Don't open code bio_has_crypt_ctx into callers of blk-crypto functions.
- - Lots of cleanups
-
-Changes v7 => v8:
- - Pass a struct blk_ksm_keyslot * around instead of slot numbers which
-   simplifies some functions and passes around arguments with better types
- - Make bios with no encryption context avoid making calls into blk-crypto
-   by checking for the presence of bi_crypt_context before making the call
- - Make blk-integrity preclude inline encryption support at probe time
- - Many many cleanups
-
-Changes v6 => v7:
- - Keyslot management is now done on a per-request basis rather than a
-   per-bio basis.
- - Storage drivers can now specify the maximum number of bytes they
-   can accept for the data unit number (DUN) for each crypto algorithm,
-   and upper layers can specify the minimum number of bytes of DUN they
-   want with the blk_crypto_key they send with the bio - a driver is
-   only considered to support a blk_crypto_key if the driver supports at
-   least as many DUN bytes as the upper layer wants. This is necessary
-   because storage drivers may not support as many bytes as the
-   algorithm specification dictates (for e.g. UFS only supports 8 byte
-   DUNs for AES-256-XTS, even though the algorithm specification
-   says DUNs are 16 bytes long).
- - Introduce SB_INLINECRYPT to keep track of whether inline encryption
-   is enabled for a filesystem (instead of using an fscrypt_operation).
- - Expose keyslot manager declaration and embed it within ufs_hba to
-   clean up code.
- - Make blk-crypto preclude blk-integrity.
- - Some bug fixes
- - Introduce UFSHCD_QUIRK_BROKEN_CRYPTO for UFS drivers that don't
-   support inline encryption (yet)
-
-Changes v5 => v6:
- - Blk-crypto's kernel crypto API fallback is no longer restricted to
-   8-byte DUNs. It's also now separately configurable from blk-crypto, and
-   can be disabled entirely, while still allowing the kernel to use inline
-   encryption hardware. Further, struct bio_crypt_ctx takes up less space,
-   and no longer contains the information needed by the crypto API
-   fallback - the fallback allocates the required memory when necessary.
- - Blk-crypto now supports all file content encryption modes supported by
-   fscrypt.
- - Fixed bio merging logic in blk-merge.c
- - Fscrypt now supports inline encryption with the direct key policy, since
-   blk-crypto now has support for larger DUNs.
- - Keyslot manager now uses a hashtable to lookup which keyslot contains
-   any particular key (thanks Eric!)
- - Fscrypt support for inline encryption now handles filesystems with
-   multiple underlying block devices (thanks Eric!)
- - Numerous cleanups
-
-Changes v4 => v5:
- - The fscrypt patch has been separated into 2. The first adds support
-   for the IV_INO_LBLK_64 policy (which was called INLINE_CRYPT_OPTIMIZED
-   in past versions of this series). This policy is now purely an on disk
-   format, and doesn't dictate whether blk-crypto is used for file content
-   encryption or not. Instead, this is now decided based on the
-   "inlinecrypt" mount option.
- - Inline crypto key eviction is now handled by blk-crypto instead of
-   fscrypt.
- - More refactoring.
-
-Changes v3 => v4:
- - Fixed the issue with allocating crypto_skcipher in
-   blk_crypto_keyslot_program.
- - bio_crypto_alloc_ctx is now mempool backed.
- - In f2fs, a bio's bi_crypt_context is now set up when the
-   bio is allocated, rather than just before the bio is
-   submitted - this fixes bugs in certain cases, like when an
-   encrypted block is being moved without decryption.
- - Lots of refactoring and cleanup of blk-crypto - thanks Eric!
-
-Changes v2 => v3:
- - Overhauled keyslot manager's get keyslot logic and optimized LRU.
- - Block crypto en/decryption fallback now supports data unit sizes
-   that divide the bvec length (instead of requiring each bvec's length
-   to be the same as the data unit size).
- - fscrypt master key is now keyed additionally by super_block and
-   ci_ctfm != NULL.
- - all references of "hw encryption" are replaced by inline encryption.
- - address various other review comments from Eric.
-
-Changes v1 => v2:
- - Block layer and UFS changes are split into 3 patches each.
- - We now only have a ptr to a struct bio_crypt_ctx in struct bio, instead
-   of the struct itself.
- - struct bio_crypt_ctx no longer has flags.
- - blk-crypto now correctly handles the case when it fails to init
-   (because of insufficient memory), but kernel continues to boot.
- - ufshcd-crypto now works on big endian cpus.
- - Many cleanups.
-
-Eric Biggers (1):
-  ext4: add inline encryption support
-
-Satya Tangirala (11):
-  Documentation: Document the blk-crypto framework
-  block: Keyslot Manager for Inline Encryption
-  block: Inline encryption support for blk-mq
-  block: Make blk-integrity preclude hardware inline encryption
-  block: blk-crypto-fallback for Inline Encryption
-  scsi: ufs: UFS driver v2.1 spec crypto additions
-  scsi: ufs: UFS crypto API
-  scsi: ufs: Add inline encryption support to UFS
-  fs: introduce SB_INLINECRYPT
-  fscrypt: add inline encryption support
-  f2fs: add inline encryption support
-
- Documentation/admin-guide/ext4.rst        |   6 +
- Documentation/block/index.rst             |   1 +
- Documentation/block/inline-encryption.rst | 263 +++++++++
- Documentation/filesystems/f2fs.rst        |   7 +-
- block/Kconfig                             |  17 +
- block/Makefile                            |   2 +
- block/bio-integrity.c                     |   3 +
- block/bio.c                               |   6 +
- block/blk-core.c                          |  27 +-
- block/blk-crypto-fallback.c               | 657 ++++++++++++++++++++++
- block/blk-crypto-internal.h               | 201 +++++++
- block/blk-crypto.c                        | 404 +++++++++++++
- block/blk-integrity.c                     |   7 +
- block/blk-map.c                           |   1 +
- block/blk-merge.c                         |  11 +
- block/blk-mq.c                            |  13 +
- block/blk.h                               |   2 +
- block/bounce.c                            |   2 +
- block/keyslot-manager.c                   | 397 +++++++++++++
- drivers/md/dm.c                           |   3 +
- drivers/scsi/ufs/Kconfig                  |   9 +
- drivers/scsi/ufs/Makefile                 |   1 +
- drivers/scsi/ufs/ufshcd-crypto.c          | 226 ++++++++
- drivers/scsi/ufs/ufshcd-crypto.h          |  60 ++
- drivers/scsi/ufs/ufshcd.c                 |  46 +-
- drivers/scsi/ufs/ufshcd.h                 |  24 +
- drivers/scsi/ufs/ufshci.h                 |  67 ++-
- fs/buffer.c                               |   7 +-
- fs/crypto/Kconfig                         |   6 +
- fs/crypto/Makefile                        |   1 +
- fs/crypto/bio.c                           |  50 ++
- fs/crypto/crypto.c                        |   2 +-
- fs/crypto/fname.c                         |   4 +-
- fs/crypto/fscrypt_private.h               | 120 +++-
- fs/crypto/inline_crypt.c                  | 339 +++++++++++
- fs/crypto/keyring.c                       |   4 +-
- fs/crypto/keysetup.c                      |  92 ++-
- fs/crypto/keysetup_v1.c                   |  16 +-
- fs/ext4/inode.c                           |   4 +-
- fs/ext4/page-io.c                         |   6 +-
- fs/ext4/readpage.c                        |  11 +-
- fs/ext4/super.c                           |   9 +
- fs/f2fs/compress.c                        |   2 +-
- fs/f2fs/data.c                            |  68 ++-
- fs/f2fs/super.c                           |  32 ++
- fs/proc_namespace.c                       |   1 +
- include/linux/blk-crypto.h                | 123 ++++
- include/linux/blk_types.h                 |   6 +
- include/linux/blkdev.h                    |  41 ++
- include/linux/fs.h                        |   1 +
- include/linux/fscrypt.h                   |  82 +++
- include/linux/keyslot-manager.h           | 106 ++++
- 52 files changed, 3504 insertions(+), 92 deletions(-)
- create mode 100644 Documentation/block/inline-encryption.rst
- create mode 100644 block/blk-crypto-fallback.c
- create mode 100644 block/blk-crypto-internal.h
- create mode 100644 block/blk-crypto.c
- create mode 100644 block/keyslot-manager.c
+Signed-off-by: Satya Tangirala <satyat@google.com>
+Reviewed-by: Eric Biggers <ebiggers@google.com>
+---
+ drivers/scsi/ufs/Kconfig         |   9 ++
+ drivers/scsi/ufs/Makefile        |   1 +
+ drivers/scsi/ufs/ufshcd-crypto.c | 226 +++++++++++++++++++++++++++++++
+ drivers/scsi/ufs/ufshcd-crypto.h |  42 ++++++
+ drivers/scsi/ufs/ufshcd.h        |  12 ++
+ 5 files changed, 290 insertions(+)
  create mode 100644 drivers/scsi/ufs/ufshcd-crypto.c
  create mode 100644 drivers/scsi/ufs/ufshcd-crypto.h
- create mode 100644 fs/crypto/inline_crypt.c
- create mode 100644 include/linux/blk-crypto.h
- create mode 100644 include/linux/keyslot-manager.h
 
+diff --git a/drivers/scsi/ufs/Kconfig b/drivers/scsi/ufs/Kconfig
+index e2005aeddc2db..5ed3f209f8810 100644
+--- a/drivers/scsi/ufs/Kconfig
++++ b/drivers/scsi/ufs/Kconfig
+@@ -160,3 +160,12 @@ config SCSI_UFS_BSG
+ 
+ 	  Select this if you need a bsg device node for your UFS controller.
+ 	  If unsure, say N.
++
++config SCSI_UFS_CRYPTO
++	bool "UFS Crypto Engine Support"
++	depends on SCSI_UFSHCD && BLK_INLINE_ENCRYPTION
++	help
++	  Enable Crypto Engine Support in UFS.
++	  Enabling this makes it possible for the kernel to use the crypto
++	  capabilities of the UFS device (if present) to perform crypto
++	  operations on data being transferred to/from the device.
+diff --git a/drivers/scsi/ufs/Makefile b/drivers/scsi/ufs/Makefile
+index 94c6c5d7334b6..197e178f44bce 100644
+--- a/drivers/scsi/ufs/Makefile
++++ b/drivers/scsi/ufs/Makefile
+@@ -7,6 +7,7 @@ obj-$(CONFIG_SCSI_UFS_QCOM) += ufs-qcom.o
+ obj-$(CONFIG_SCSI_UFSHCD) += ufshcd-core.o
+ ufshcd-core-y				+= ufshcd.o ufs-sysfs.o
+ ufshcd-core-$(CONFIG_SCSI_UFS_BSG)	+= ufs_bsg.o
++ufshcd-core-$(CONFIG_SCSI_UFS_CRYPTO) += ufshcd-crypto.o
+ obj-$(CONFIG_SCSI_UFSHCD_PCI) += ufshcd-pci.o
+ obj-$(CONFIG_SCSI_UFSHCD_PLATFORM) += ufshcd-pltfrm.o
+ obj-$(CONFIG_SCSI_UFS_HISI) += ufs-hisi.o
+diff --git a/drivers/scsi/ufs/ufshcd-crypto.c b/drivers/scsi/ufs/ufshcd-crypto.c
+new file mode 100644
+index 0000000000000..65a3115d2a2d4
+--- /dev/null
++++ b/drivers/scsi/ufs/ufshcd-crypto.c
+@@ -0,0 +1,226 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright 2019 Google LLC
++ */
++
++#include "ufshcd.h"
++#include "ufshcd-crypto.h"
++
++/* Blk-crypto modes supported by UFS crypto */
++static const struct ufs_crypto_alg_entry {
++	enum ufs_crypto_alg ufs_alg;
++	enum ufs_crypto_key_size ufs_key_size;
++} ufs_crypto_algs[BLK_ENCRYPTION_MODE_MAX] = {
++	[BLK_ENCRYPTION_MODE_AES_256_XTS] = {
++		.ufs_alg = UFS_CRYPTO_ALG_AES_XTS,
++		.ufs_key_size = UFS_CRYPTO_KEY_SIZE_256,
++	},
++};
++
++static void ufshcd_program_key(struct ufs_hba *hba,
++			       const union ufs_crypto_cfg_entry *cfg,
++			       int slot)
++{
++	int i;
++	u32 slot_offset = hba->crypto_cfg_register + slot * sizeof(*cfg);
++
++	ufshcd_hold(hba, false);
++	/* Ensure that CFGE is cleared before programming the key */
++	ufshcd_writel(hba, 0, slot_offset + 16 * sizeof(cfg->reg_val[0]));
++	for (i = 0; i < 16; i++) {
++		ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[i]),
++			      slot_offset + i * sizeof(cfg->reg_val[0]));
++	}
++	/* Write dword 17 */
++	ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[17]),
++		      slot_offset + 17 * sizeof(cfg->reg_val[0]));
++	/* Dword 16 must be written last */
++	ufshcd_writel(hba, le32_to_cpu(cfg->reg_val[16]),
++		      slot_offset + 16 * sizeof(cfg->reg_val[0]));
++	ufshcd_release(hba);
++}
++
++static int ufshcd_crypto_keyslot_program(struct blk_keyslot_manager *ksm,
++					 const struct blk_crypto_key *key,
++					 unsigned int slot)
++{
++	struct ufs_hba *hba = container_of(ksm, struct ufs_hba, ksm);
++	const union ufs_crypto_cap_entry *ccap_array = hba->crypto_cap_array;
++	const struct ufs_crypto_alg_entry *alg =
++			&ufs_crypto_algs[key->crypto_cfg.crypto_mode];
++	u8 data_unit_mask = key->crypto_cfg.data_unit_size / 512;
++	int i;
++	int cap_idx = -1;
++	union ufs_crypto_cfg_entry cfg = { 0 };
++
++	BUILD_BUG_ON(UFS_CRYPTO_KEY_SIZE_INVALID != 0);
++	for (i = 0; i < hba->crypto_capabilities.num_crypto_cap; i++) {
++		if (ccap_array[i].algorithm_id == alg->ufs_alg &&
++		    ccap_array[i].key_size == alg->ufs_key_size &&
++		    (ccap_array[i].sdus_mask & data_unit_mask)) {
++			cap_idx = i;
++			break;
++		}
++	}
++
++	if (WARN_ON(cap_idx < 0))
++		return -EOPNOTSUPP;
++
++	cfg.data_unit_size = data_unit_mask;
++	cfg.crypto_cap_idx = cap_idx;
++	cfg.config_enable = UFS_CRYPTO_CONFIGURATION_ENABLE;
++
++	if (ccap_array[cap_idx].algorithm_id == UFS_CRYPTO_ALG_AES_XTS) {
++		/* In XTS mode, the blk_crypto_key's size is already doubled */
++		memcpy(cfg.crypto_key, key->raw, key->size/2);
++		memcpy(cfg.crypto_key + UFS_CRYPTO_KEY_MAX_SIZE/2,
++		       key->raw + key->size/2, key->size/2);
++	} else {
++		memcpy(cfg.crypto_key, key->raw, key->size);
++	}
++
++	ufshcd_program_key(hba, &cfg, slot);
++
++	memzero_explicit(&cfg, sizeof(cfg));
++	return 0;
++}
++
++static void ufshcd_clear_keyslot(struct ufs_hba *hba, int slot)
++{
++	/*
++	 * Clear the crypto cfg on the device. Clearing CFGE
++	 * might not be sufficient, so just clear the entire cfg.
++	 */
++	union ufs_crypto_cfg_entry cfg = { 0 };
++
++	ufshcd_program_key(hba, &cfg, slot);
++}
++
++static int ufshcd_crypto_keyslot_evict(struct blk_keyslot_manager *ksm,
++				       const struct blk_crypto_key *key,
++				       unsigned int slot)
++{
++	struct ufs_hba *hba = container_of(ksm, struct ufs_hba, ksm);
++
++	ufshcd_clear_keyslot(hba, slot);
++
++	return 0;
++}
++
++bool ufshcd_crypto_enable(struct ufs_hba *hba)
++{
++	if (!(hba->caps & UFSHCD_CAP_CRYPTO))
++		return false;
++
++	/* Reset might clear all keys, so reprogram all the keys. */
++	blk_ksm_reprogram_all_keys(&hba->ksm);
++	return true;
++}
++
++static const struct blk_ksm_ll_ops ufshcd_ksm_ops = {
++	.keyslot_program	= ufshcd_crypto_keyslot_program,
++	.keyslot_evict		= ufshcd_crypto_keyslot_evict,
++};
++
++static enum blk_crypto_mode_num
++ufshcd_find_blk_crypto_mode(union ufs_crypto_cap_entry cap)
++{
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(ufs_crypto_algs); i++) {
++		BUILD_BUG_ON(UFS_CRYPTO_KEY_SIZE_INVALID != 0);
++		if (ufs_crypto_algs[i].ufs_alg == cap.algorithm_id &&
++		    ufs_crypto_algs[i].ufs_key_size == cap.key_size) {
++			return i;
++		}
++	}
++	return BLK_ENCRYPTION_MODE_INVALID;
++}
++
++/**
++ * ufshcd_hba_init_crypto - Read crypto capabilities, init crypto fields in hba
++ * @hba: Per adapter instance
++ *
++ * Return: 0 if crypto was initialized or is not supported, else a -errno value.
++ */
++int ufshcd_hba_init_crypto(struct ufs_hba *hba)
++{
++	int cap_idx = 0;
++	int err = 0;
++	enum blk_crypto_mode_num blk_mode_num;
++	int slot = 0;
++	int num_keyslots;
++
++	/*
++	 * Don't use crypto if either the hardware doesn't advertise the
++	 * standard crypto capability bit *or* if the vendor specific driver
++	 * hasn't advertised that crypto is supported.
++	 */
++	if (!(hba->capabilities & MASK_CRYPTO_SUPPORT) ||
++	    !(hba->caps & UFSHCD_CAP_CRYPTO))
++		goto out;
++
++	hba->crypto_capabilities.reg_val =
++			cpu_to_le32(ufshcd_readl(hba, REG_UFS_CCAP));
++	hba->crypto_cfg_register =
++		(u32)hba->crypto_capabilities.config_array_ptr * 0x100;
++	hba->crypto_cap_array =
++		devm_kcalloc(hba->dev, hba->crypto_capabilities.num_crypto_cap,
++			     sizeof(hba->crypto_cap_array[0]), GFP_KERNEL);
++	if (!hba->crypto_cap_array) {
++		err = -ENOMEM;
++		goto out;
++	}
++
++	/* The actual number of configurations supported is (CFGC+1) */
++	num_keyslots = hba->crypto_capabilities.config_count + 1;
++	err = blk_ksm_init(&hba->ksm, num_keyslots);
++	if (err)
++		goto out_free_caps;
++
++	hba->ksm.ksm_ll_ops = ufshcd_ksm_ops;
++	/* UFS only supports 8 bytes for any DUN */
++	hba->ksm.max_dun_bytes_supported = 8;
++	hba->ksm.dev = hba->dev;
++
++	/*
++	 * Cache all the UFS crypto capabilities and advertise the supported
++	 * crypto modes and data unit sizes to the block layer.
++	 */
++	for (cap_idx = 0; cap_idx < hba->crypto_capabilities.num_crypto_cap;
++	     cap_idx++) {
++		hba->crypto_cap_array[cap_idx].reg_val =
++			cpu_to_le32(ufshcd_readl(hba,
++						 REG_UFS_CRYPTOCAP +
++						 cap_idx * sizeof(__le32)));
++		blk_mode_num = ufshcd_find_blk_crypto_mode(
++						hba->crypto_cap_array[cap_idx]);
++		if (blk_mode_num != BLK_ENCRYPTION_MODE_INVALID)
++			hba->ksm.crypto_modes_supported[blk_mode_num] |=
++				hba->crypto_cap_array[cap_idx].sdus_mask * 512;
++	}
++
++	for (slot = 0; slot < num_keyslots; slot++)
++		ufshcd_clear_keyslot(hba, slot);
++
++	return 0;
++
++out_free_caps:
++	devm_kfree(hba->dev, hba->crypto_cap_array);
++out:
++	/* Indicate that init failed by clearing UFSHCD_CAP_CRYPTO */
++	hba->caps &= ~UFSHCD_CAP_CRYPTO;
++	return err;
++}
++
++void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
++					    struct request_queue *q)
++{
++	if (hba->caps & UFSHCD_CAP_CRYPTO)
++		blk_ksm_register(&hba->ksm, q);
++}
++
++void ufshcd_crypto_destroy_keyslot_manager(struct ufs_hba *hba)
++{
++	blk_ksm_destroy(&hba->ksm);
++}
+diff --git a/drivers/scsi/ufs/ufshcd-crypto.h b/drivers/scsi/ufs/ufshcd-crypto.h
+new file mode 100644
+index 0000000000000..22677619de595
+--- /dev/null
++++ b/drivers/scsi/ufs/ufshcd-crypto.h
+@@ -0,0 +1,42 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright 2019 Google LLC
++ */
++
++#ifndef _UFSHCD_CRYPTO_H
++#define _UFSHCD_CRYPTO_H
++
++#ifdef CONFIG_SCSI_UFS_CRYPTO
++#include "ufshcd.h"
++#include "ufshci.h"
++
++bool ufshcd_crypto_enable(struct ufs_hba *hba);
++
++int ufshcd_hba_init_crypto(struct ufs_hba *hba);
++
++void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
++					    struct request_queue *q);
++
++void ufshcd_crypto_destroy_keyslot_manager(struct ufs_hba *hba);
++
++#else /* CONFIG_SCSI_UFS_CRYPTO */
++
++static inline bool ufshcd_crypto_enable(struct ufs_hba *hba)
++{
++	return false;
++}
++
++static inline int ufshcd_hba_init_crypto(struct ufs_hba *hba)
++{
++	return 0;
++}
++
++static inline void ufshcd_crypto_setup_rq_keyslot_manager(struct ufs_hba *hba,
++						struct request_queue *q) { }
++
++static inline void ufshcd_crypto_destroy_keyslot_manager(struct ufs_hba *hba)
++{ }
++
++#endif /* CONFIG_SCSI_UFS_CRYPTO */
++
++#endif /* _UFSHCD_CRYPTO_H */
+diff --git a/drivers/scsi/ufs/ufshcd.h b/drivers/scsi/ufs/ufshcd.h
+index 835b9a844aa21..c935ebb16cba3 100644
+--- a/drivers/scsi/ufs/ufshcd.h
++++ b/drivers/scsi/ufs/ufshcd.h
+@@ -57,6 +57,7 @@
+ #include <linux/regulator/consumer.h>
+ #include <linux/bitfield.h>
+ #include <linux/devfreq.h>
++#include <linux/keyslot-manager.h>
+ #include "unipro.h"
+ 
+ #include <asm/irq.h>
+@@ -614,6 +615,10 @@ enum ufshcd_caps {
+  * @is_urgent_bkops_lvl_checked: keeps track if the urgent bkops level for
+  *  device is known or not.
+  * @scsi_block_reqs_cnt: reference counting for scsi block requests
++ * @crypto_capabilities: Content of crypto capabilities register (0x100)
++ * @crypto_cap_array: Array of crypto capabilities
++ * @crypto_cfg_register: Start of the crypto cfg array
++ * @ksm: the keyslot manager tied to this hba
+  */
+ struct ufs_hba {
+ 	void __iomem *mmio_base;
+@@ -733,6 +738,13 @@ struct ufs_hba {
+ 
+ 	struct device		bsg_dev;
+ 	struct request_queue	*bsg_queue;
++
++#ifdef CONFIG_SCSI_UFS_CRYPTO
++	union ufs_crypto_capabilities crypto_capabilities;
++	union ufs_crypto_cap_entry *crypto_cap_array;
++	u32 crypto_cfg_register;
++	struct blk_keyslot_manager ksm;
++#endif
+ };
+ 
+ /* Returns true if clocks can be gated. Otherwise false */
 -- 
 2.26.2.645.ge9eca65c58-goog
 
