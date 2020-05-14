@@ -7,61 +7,61 @@ X-Spam-Status: No, score=-17.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
 	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9F9F9C433E2
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 14 May 2020 00:37:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A0BE8C433DF
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 14 May 2020 00:38:05 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id B0D2720675
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 14 May 2020 00:37:56 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id B70D120693
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 14 May 2020 00:38:05 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="RbY7xaY2"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="CorCHbEF"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1733299AbgENAhy (ORCPT
+        id S1733179AbgENAiF (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 13 May 2020 20:37:54 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47004 "EHLO
+        Wed, 13 May 2020 20:38:05 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47060 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-FAIL-OK-FAIL)
-        by vger.kernel.org with ESMTP id S1733256AbgENAhs (ORCPT
+        by vger.kernel.org with ESMTP id S1733304AbgENAh5 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 13 May 2020 20:37:48 -0400
-Received: from mail-yb1-xb49.google.com (mail-yb1-xb49.google.com [IPv6:2607:f8b0:4864:20::b49])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 44058C061A0E
-        for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2020 17:37:48 -0700 (PDT)
-Received: by mail-yb1-xb49.google.com with SMTP id k186so1688271ybc.19
-        for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2020 17:37:48 -0700 (PDT)
+        Wed, 13 May 2020 20:37:57 -0400
+Received: from mail-qt1-x849.google.com (mail-qt1-x849.google.com [IPv6:2607:f8b0:4864:20::849])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A08D0C05BD17
+        for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2020 17:37:54 -0700 (PDT)
+Received: by mail-qt1-x849.google.com with SMTP id n33so1689577qtd.10
+        for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2020 17:37:54 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=YxoSL61UxbuGWd2Bh/T5HPoscTp7W3by3/2EPDBli74=;
-        b=RbY7xaY2MznKdEgcBF811T5K/V2tyI7BktAOp03yr1F3ZvWf4OPJvLg77rtlkDuAKg
-         hVaCgb9PoOmfLmA4DFs5P08CXdXEHjNXIBk6rGfyb/i+QNXPXPMHTAJJ85zFBILN13Wp
-         Yy3klw91X7x2WHzz9u+mr/IuVll5pIP+hNuq10brUq2XMgutjtCfgV5lfH2SwEdVprz4
-         ckaihRUBiX1g8+7LaNVjEqgs7/tbu/3P3WsZD6MX4ZasYThjE+UQ2Qx7ivpaS+JgU9Nu
-         TUhVTTZOSuRrogSxoI3rSQvYB8482svdeAzldCGgBIH8Pwf/nkfBnJ8b/a+IlHZzf6Db
-         t2Gg==
+        bh=jSH7/AmnzXrjgmk8lWSfcMe95UKbUVGwx5FdmlnTcp0=;
+        b=CorCHbEFaLqJG2qA/D/PokRtWRhWo+coWB8NaWQJ1bAWjoLm06zA7m0y8Cp1XLhRc0
+         NVeVqomTQam+/sFarFFPZPG+qA16/UD2UGQKxxEQEdEOp0ErWKBYBVHIwZNDIwfwuqyG
+         HCEcc82IWPZbfHFjRPiknYcPI3MYB8q7DmdmFRwtjZHS/yI7WZ2z5lH0lvGLqHuqnWmN
+         PYTQXyDIlNRLyHQylhNGvgbUwfJ/MamBjWALFb16uCgHjaHcs/GFWnN3PHHhkSinzjfy
+         fPqqnrCrpG3t612wNzZQCRasSBR79DD1Chv/QGZLXTfs8NjGl4rbcyNj1qJyQv6t/BJD
+         Gm9w==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=YxoSL61UxbuGWd2Bh/T5HPoscTp7W3by3/2EPDBli74=;
-        b=GJlxBrUiuIlAPgt/25Px8vy7U89Ld4AlgWlNKMMnVcfvSw2ulX3WRMJKfUnnexM/GN
-         p+OwTvFt/FgAPKIkxQ0mPnLZrsXn+L5AWM7k6bUgdqFTguYbfLPE0+pPDdaXQ2SdER80
-         fWSg/GoJK6l/CirZdTBeQNoGCDNKPHZRng1m2eiWMKNWEdlVHFZ8iTIO+mj5jJOwMw4d
-         kQZCvYSPnNtNUUSQzj4b/6BoFOZdaJ/fbnT6eoqEgevndjeY8/EdS4A+TAeiyEoHtAh5
-         u+rXA5TdW3711oumJdzW0+JphNOYMnyUZTfnTXbivv255na3yjRjNxQRigTgu/fA7m0b
-         Pt9Q==
-X-Gm-Message-State: AOAM531XEmBWxTQnK4Yk9RHGRV52+dXZuv3M7wxC+iPujvjrSpFuaAdk
-        Do2FzhwUfcgBbSQrl7GMJgJj9toTF7M=
-X-Google-Smtp-Source: ABdhPJxtmfCexpOxpdE7bUZ0NwLazkz46J6Z7cCihPdFyG5nB3T3UZgP2l4G8/6dtUiUTSaM5pmRdIJaxO0=
-X-Received: by 2002:a25:7801:: with SMTP id t1mr2934027ybc.410.1589416667463;
- Wed, 13 May 2020 17:37:47 -0700 (PDT)
-Date:   Thu, 14 May 2020 00:37:23 +0000
+        bh=jSH7/AmnzXrjgmk8lWSfcMe95UKbUVGwx5FdmlnTcp0=;
+        b=iohTLuY+FOT7D0+3cNFeQrFOHlLBtS8XdpM6xxLFoMjRcNuymrC/X1C7DndCIE2VCR
+         EID2Y6QYctDXOs8eDMd4Da4mRlW+z1k62Fx0C1SDQ1H6QT8dfGLVOa3Wx6OdDFjhy3b3
+         rbnzIATsSAOm6rUWyeaEenPI/X+ZvH5XQUvMoU01tKRaEjj9m0JQwaRp1NvKKW3L89Ex
+         BqqVwZYjbFJPMOCDF0H17ff9tw0eYovHRYWuBrE/LHaqPIP3xZ5+bd4rzI2b25VD1ZuM
+         xymbcSua90bfe84WS4s4vQ2eVuCCQ3MvUzl1Fv4V2QsmBdnbavxSJFRZnrQ40vond5To
+         RY2g==
+X-Gm-Message-State: AOAM532w+2oqXOUPMSlx+Y5Cw9Cr0d2E/DCHjdUkysR6NE29Wqd+ZCuj
+        Z+A+RN2fIb5MvyE+5MN6sUPO7p9T18Y=
+X-Google-Smtp-Source: ABdhPJwBh/wsrSWYEhc6NNS3EHG+XSrYPjs2uFKQe/vehOe++1uwzxxsIf9e+FGuRNVP5YpF4CANHGHKo0g=
+X-Received: by 2002:ad4:4b6b:: with SMTP id m11mr2296448qvx.130.1589416673786;
+ Wed, 13 May 2020 17:37:53 -0700 (PDT)
+Date:   Thu, 14 May 2020 00:37:27 +0000
 In-Reply-To: <20200514003727.69001-1-satyat@google.com>
-Message-Id: <20200514003727.69001-9-satyat@google.com>
+Message-Id: <20200514003727.69001-13-satyat@google.com>
 Mime-Version: 1.0
 References: <20200514003727.69001-1-satyat@google.com>
 X-Mailer: git-send-email 2.26.2.645.ge9eca65c58-goog
-Subject: [PATCH v13 08/12] scsi: ufs: Add inline encryption support to UFS
+Subject: [PATCH v13 12/12] ext4: add inline encryption support
 From:   Satya Tangirala <satyat@google.com>
 To:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
@@ -69,6 +69,7 @@ To:     linux-block@vger.kernel.org, linux-scsi@vger.kernel.org,
 Cc:     Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
         Kuohong Wang <kuohong.wang@mediatek.com>,
         Kim Boojin <boojin.kim@samsung.com>,
+        Eric Biggers <ebiggers@google.com>,
         Satya Tangirala <satyat@google.com>
 Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -76,202 +77,216 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Wire up ufshcd.c with the UFS Crypto API, the block layer inline
-encryption additions and the keyslot manager.
+From: Eric Biggers <ebiggers@google.com>
 
+Wire up ext4 to support inline encryption via the helper functions which
+fs/crypto/ now provides.  This includes:
+
+- Adding a mount option 'inlinecrypt' which enables inline encryption
+  on encrypted files where it can be used.
+
+- Setting the bio_crypt_ctx on bios that will be submitted to an
+  inline-encrypted file.
+
+  Note: submit_bh_wbc() in fs/buffer.c also needed to be patched for
+  this part, since ext4 sometimes uses ll_rw_block() on file data.
+
+- Not adding logically discontiguous data to bios that will be submitted
+  to an inline-encrypted file.
+
+- Not doing filesystem-layer crypto on inline-encrypted files.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+Co-developed-by: Satya Tangirala <satyat@google.com>
 Signed-off-by: Satya Tangirala <satyat@google.com>
 ---
- drivers/scsi/ufs/ufshcd-crypto.h | 18 +++++++++++++
- drivers/scsi/ufs/ufshcd.c        | 44 ++++++++++++++++++++++++++++----
- drivers/scsi/ufs/ufshcd.h        |  6 +++++
- 3 files changed, 63 insertions(+), 5 deletions(-)
+ Documentation/admin-guide/ext4.rst |  6 ++++++
+ fs/buffer.c                        |  7 ++++---
+ fs/ext4/inode.c                    |  4 ++--
+ fs/ext4/page-io.c                  |  6 ++++--
+ fs/ext4/readpage.c                 | 11 ++++++++---
+ fs/ext4/super.c                    |  9 +++++++++
+ 6 files changed, 33 insertions(+), 10 deletions(-)
 
-diff --git a/drivers/scsi/ufs/ufshcd-crypto.h b/drivers/scsi/ufs/ufshcd-crypto.h
-index 22677619de595..9578edb63e7b4 100644
---- a/drivers/scsi/ufs/ufshcd-crypto.h
-+++ b/drivers/scsi/ufs/ufshcd-crypto.h
-@@ -10,6 +10,20 @@
- #include "ufshcd.h"
- #include "ufshci.h"
+diff --git a/Documentation/admin-guide/ext4.rst b/Documentation/admin-guide/ext4.rst
+index 9443fcef18760..ed997e3766781 100644
+--- a/Documentation/admin-guide/ext4.rst
++++ b/Documentation/admin-guide/ext4.rst
+@@ -395,6 +395,12 @@ When mounting an ext4 filesystem, the following option are accepted:
+         Documentation/filesystems/dax.txt.  Note that this option is
+         incompatible with data=journal.
  
-+static inline void ufshcd_prepare_lrbp_crypto(struct ufs_hba *hba,
-+					      struct scsi_cmnd *cmd,
-+					      struct ufshcd_lrb *lrbp)
-+{
-+	struct request *rq = cmd->request;
++  inlinecrypt
++        Encrypt/decrypt the contents of encrypted files using the blk-crypto
++        framework rather than filesystem-layer encryption. This allows the use
++        of inline encryption hardware. The on-disk format is unaffected. For
++        more details, see Documentation/block/inline-encryption.rst.
 +
-+	if (rq->crypt_keyslot) {
-+		lrbp->crypto_key_slot = blk_ksm_get_slot_idx(rq->crypt_keyslot);
-+		lrbp->data_unit_num = rq->crypt_ctx->bc_dun[0];
-+	} else {
-+		lrbp->crypto_key_slot = -1;
-+	}
-+}
-+
- bool ufshcd_crypto_enable(struct ufs_hba *hba);
- 
- int ufshcd_hba_init_crypto(struct ufs_hba *hba);
-@@ -21,6 +35,10 @@ void ufshcd_crypto_destroy_keyslot_manager(struct ufs_hba *hba);
- 
- #else /* CONFIG_SCSI_UFS_CRYPTO */
- 
-+static inline void ufshcd_prepare_lrbp_crypto(struct ufs_hba *hba,
-+					      struct scsi_cmnd *cmd,
-+					      struct ufshcd_lrb *lrbp) { }
-+
- static inline bool ufshcd_crypto_enable(struct ufs_hba *hba)
+ Data Mode
+ =========
+ There are 3 different data modes:
+diff --git a/fs/buffer.c b/fs/buffer.c
+index a60f60396cfa0..33827a55b5952 100644
+--- a/fs/buffer.c
++++ b/fs/buffer.c
+@@ -328,9 +328,8 @@ static void decrypt_bh(struct work_struct *work)
+ static void end_buffer_async_read_io(struct buffer_head *bh, int uptodate)
  {
- 	return false;
-diff --git a/drivers/scsi/ufs/ufshcd.c b/drivers/scsi/ufs/ufshcd.c
-index 2435c600cb2d9..f087270165e96 100644
---- a/drivers/scsi/ufs/ufshcd.c
-+++ b/drivers/scsi/ufs/ufshcd.c
-@@ -48,6 +48,7 @@
- #include "unipro.h"
- #include "ufs-sysfs.h"
- #include "ufs_bsg.h"
-+#include "ufshcd-crypto.h"
+ 	/* Decrypt if needed */
+-	if (uptodate && IS_ENABLED(CONFIG_FS_ENCRYPTION) &&
+-	    IS_ENCRYPTED(bh->b_page->mapping->host) &&
+-	    S_ISREG(bh->b_page->mapping->host->i_mode)) {
++	if (uptodate &&
++	    fscrypt_inode_uses_fs_layer_crypto(bh->b_page->mapping->host)) {
+ 		struct decrypt_bh_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
  
- #define CREATE_TRACE_POINTS
- #include <trace/events/ufs.h>
-@@ -812,7 +813,12 @@ static void ufshcd_enable_run_stop_reg(struct ufs_hba *hba)
-  */
- static inline void ufshcd_hba_start(struct ufs_hba *hba)
- {
--	ufshcd_writel(hba, CONTROLLER_ENABLE, REG_CONTROLLER_ENABLE);
-+	u32 val = CONTROLLER_ENABLE;
-+
-+	if (ufshcd_crypto_enable(hba))
-+		val |= CRYPTO_GENERAL_ENABLE;
-+
-+	ufshcd_writel(hba, val, REG_CONTROLLER_ENABLE);
- }
- 
- /**
-@@ -2220,6 +2226,8 @@ static void ufshcd_prepare_req_desc_hdr(struct ufshcd_lrb *lrbp,
- 	struct utp_transfer_req_desc *req_desc = lrbp->utr_descriptor_ptr;
- 	u32 data_direction;
- 	u32 dword_0;
-+	u32 dword_1 = 0;
-+	u32 dword_3 = 0;
- 
- 	if (cmd_dir == DMA_FROM_DEVICE) {
- 		data_direction = UTP_DEVICE_TO_HOST;
-@@ -2238,9 +2246,17 @@ static void ufshcd_prepare_req_desc_hdr(struct ufshcd_lrb *lrbp,
- 		dword_0 |= UTP_REQ_DESC_INT_CMD;
- 
- 	/* Transfer request descriptor header fields */
-+#ifdef CONFIG_SCSI_UFS_CRYPTO
-+	if (lrbp->crypto_key_slot >= 0) {
-+		dword_0 |= UTP_REQ_DESC_CRYPTO_ENABLE_CMD;
-+		dword_0 |= lrbp->crypto_key_slot;
-+		dword_1 = lower_32_bits(lrbp->data_unit_num);
-+		dword_3 = upper_32_bits(lrbp->data_unit_num);
-+	}
-+#endif /* CONFIG_SCSI_UFS_CRYPTO */
-+
- 	req_desc->header.dword_0 = cpu_to_le32(dword_0);
--	/* dword_1 is reserved, hence it is set to 0 */
--	req_desc->header.dword_1 = 0;
-+	req_desc->header.dword_1 = cpu_to_le32(dword_1);
- 	/*
- 	 * assigning invalid value for command status. Controller
- 	 * updates OCS on command completion, with the command
-@@ -2248,8 +2264,7 @@ static void ufshcd_prepare_req_desc_hdr(struct ufshcd_lrb *lrbp,
+ 		if (ctx) {
+@@ -3047,6 +3046,8 @@ static int submit_bh_wbc(int op, int op_flags, struct buffer_head *bh,
  	 */
- 	req_desc->header.dword_2 =
- 		cpu_to_le32(OCS_INVALID_COMMAND_STATUS);
--	/* dword_3 is reserved, hence it is set to 0 */
--	req_desc->header.dword_3 = 0;
-+	req_desc->header.dword_3 = cpu_to_le32(dword_3);
+ 	bio = bio_alloc(GFP_NOIO, 1);
  
- 	req_desc->prd_table_length = 0;
- }
-@@ -2504,6 +2519,9 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
- 	lrbp->task_tag = tag;
- 	lrbp->lun = ufshcd_scsi_to_upiu_lun(cmd->device->lun);
- 	lrbp->intr_cmd = !ufshcd_is_intr_aggr_allowed(hba) ? true : false;
++	fscrypt_set_bio_crypt_ctx_bh(bio, bh, GFP_NOIO);
 +
-+	ufshcd_prepare_lrbp_crypto(hba, cmd, lrbp);
-+
- 	lrbp->req_abort_skip = false;
+ 	bio->bi_iter.bi_sector = bh->b_blocknr * (bh->b_size >> 9);
+ 	bio_set_dev(bio, bh->b_bdev);
+ 	bio->bi_write_hint = write_hint;
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 2a4aae6acdcb9..ac20b65766ece 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -1088,7 +1088,7 @@ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+ 	}
+ 	if (unlikely(err)) {
+ 		page_zero_new_buffers(page, from, to);
+-	} else if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode)) {
++	} else if (fscrypt_inode_uses_fs_layer_crypto(inode)) {
+ 		for (i = 0; i < nr_wait; i++) {
+ 			int err2;
  
- 	ufshcd_comp_scsi_upiu(hba, lrbp);
-@@ -2537,6 +2555,9 @@ static int ufshcd_compose_dev_cmd(struct ufs_hba *hba,
- 	lrbp->task_tag = tag;
- 	lrbp->lun = 0; /* device management cmd is not specific to any LUN */
- 	lrbp->intr_cmd = true; /* No interrupt aggregation */
-+#ifdef CONFIG_SCSI_UFS_CRYPTO
-+	lrbp->crypto_key_slot = -1; /* No crypto operations */
-+#endif
- 	hba->dev_cmd.type = cmd_type;
- 
- 	return ufshcd_comp_devman_upiu(hba, lrbp);
-@@ -4625,6 +4646,8 @@ static int ufshcd_slave_configure(struct scsi_device *sdev)
- 	if (ufshcd_is_rpm_autosuspend_allowed(hba))
- 		sdev->rpm_autosuspend = 1;
- 
-+	ufshcd_crypto_setup_rq_keyslot_manager(hba, q);
-+
- 	return 0;
- }
- 
-@@ -5905,6 +5928,9 @@ static int ufshcd_issue_devman_upiu_cmd(struct ufs_hba *hba,
- 	lrbp->task_tag = tag;
- 	lrbp->lun = 0;
- 	lrbp->intr_cmd = true;
-+#ifdef CONFIG_SCSI_UFS_CRYPTO
-+	lrbp->crypto_key_slot = -1; /* No crypto operations */
-+#endif
- 	hba->dev_cmd.type = cmd_type;
- 
- 	switch (hba->ufs_version) {
-@@ -8331,6 +8357,7 @@ EXPORT_SYMBOL_GPL(ufshcd_remove);
-  */
- void ufshcd_dealloc_host(struct ufs_hba *hba)
+@@ -3738,7 +3738,7 @@ static int __ext4_block_zero_page_range(handle_t *handle,
+ 		/* Uhhuh. Read error. Complain and punt. */
+ 		if (!buffer_uptodate(bh))
+ 			goto unlock;
+-		if (S_ISREG(inode->i_mode) && IS_ENCRYPTED(inode)) {
++		if (fscrypt_inode_uses_fs_layer_crypto(inode)) {
+ 			/* We expect the key to be set. */
+ 			BUG_ON(!fscrypt_has_encryption_key(inode));
+ 			err = fscrypt_decrypt_pagecache_blocks(page, blocksize,
+diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
+index de6fe969f7737..defd2e10dfd10 100644
+--- a/fs/ext4/page-io.c
++++ b/fs/ext4/page-io.c
+@@ -402,6 +402,7 @@ static void io_submit_init_bio(struct ext4_io_submit *io,
+ 	 * __GFP_DIRECT_RECLAIM is set, see comments for bio_alloc_bioset().
+ 	 */
+ 	bio = bio_alloc(GFP_NOIO, BIO_MAX_PAGES);
++	fscrypt_set_bio_crypt_ctx_bh(bio, bh, GFP_NOIO);
+ 	bio->bi_iter.bi_sector = bh->b_blocknr * (bh->b_size >> 9);
+ 	bio_set_dev(bio, bh->b_bdev);
+ 	bio->bi_end_io = ext4_end_bio;
+@@ -418,7 +419,8 @@ static void io_submit_add_bh(struct ext4_io_submit *io,
  {
-+	ufshcd_crypto_destroy_keyslot_manager(hba);
- 	scsi_host_put(hba->host);
- }
- EXPORT_SYMBOL_GPL(ufshcd_dealloc_host);
-@@ -8541,6 +8568,13 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
- 	/* Reset the attached device */
- 	ufshcd_vops_device_reset(hba);
+ 	int ret;
  
-+	/* Init crypto */
-+	err = ufshcd_hba_init_crypto(hba);
-+	if (err) {
-+		dev_err(hba->dev, "crypto setup failed\n");
-+		goto free_tmf_queue;
-+	}
-+
- 	/* Host controller enable */
- 	err = ufshcd_hba_enable(hba);
- 	if (err) {
-diff --git a/drivers/scsi/ufs/ufshcd.h b/drivers/scsi/ufs/ufshcd.h
-index c935ebb16cba3..bc2f945d3f5f5 100644
---- a/drivers/scsi/ufs/ufshcd.h
-+++ b/drivers/scsi/ufs/ufshcd.h
-@@ -183,6 +183,8 @@ struct ufs_pm_lvl_states {
-  * @intr_cmd: Interrupt command (doesn't participate in interrupt aggregation)
-  * @issue_time_stamp: time stamp for debug purposes
-  * @compl_time_stamp: time stamp for statistics
-+ * @crypto_key_slot: the key slot to use for inline crypto (-1 if none)
-+ * @data_unit_num: the data unit number for the first block for inline crypto
-  * @req_abort_skip: skip request abort task flag
-  */
- struct ufshcd_lrb {
-@@ -207,6 +209,10 @@ struct ufshcd_lrb {
- 	bool intr_cmd;
- 	ktime_t issue_time_stamp;
- 	ktime_t compl_time_stamp;
-+#ifdef CONFIG_SCSI_UFS_CRYPTO
-+	int crypto_key_slot;
-+	u64 data_unit_num;
+-	if (io->io_bio && bh->b_blocknr != io->io_next_block) {
++	if (io->io_bio && (bh->b_blocknr != io->io_next_block ||
++			   !fscrypt_mergeable_bio_bh(io->io_bio, bh))) {
+ submit_and_retry:
+ 		ext4_io_submit(io);
+ 	}
+@@ -506,7 +508,7 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
+ 	 * (e.g. holes) to be unnecessarily encrypted, but this is rare and
+ 	 * can't happen in the common case of blocksize == PAGE_SIZE.
+ 	 */
+-	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) && nr_to_submit) {
++	if (fscrypt_inode_uses_fs_layer_crypto(inode) && nr_to_submit) {
+ 		gfp_t gfp_flags = GFP_NOFS;
+ 		unsigned int enc_bytes = round_up(len, i_blocksize(inode));
+ 
+diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
+index c1769afbf7995..68eac0aeffad3 100644
+--- a/fs/ext4/readpage.c
++++ b/fs/ext4/readpage.c
+@@ -195,7 +195,7 @@ static void ext4_set_bio_post_read_ctx(struct bio *bio,
+ {
+ 	unsigned int post_read_steps = 0;
+ 
+-	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
++	if (fscrypt_inode_uses_fs_layer_crypto(inode))
+ 		post_read_steps |= 1 << STEP_DECRYPT;
+ 
+ 	if (ext4_need_verity(inode, first_idx))
+@@ -232,6 +232,7 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 	const unsigned blkbits = inode->i_blkbits;
+ 	const unsigned blocks_per_page = PAGE_SIZE >> blkbits;
+ 	const unsigned blocksize = 1 << blkbits;
++	sector_t next_block;
+ 	sector_t block_in_file;
+ 	sector_t last_block;
+ 	sector_t last_block_in_file;
+@@ -264,7 +265,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 		if (page_has_buffers(page))
+ 			goto confused;
+ 
+-		block_in_file = (sector_t)page->index << (PAGE_SHIFT - blkbits);
++		block_in_file = next_block =
++			(sector_t)page->index << (PAGE_SHIFT - blkbits);
+ 		last_block = block_in_file + nr_pages * blocks_per_page;
+ 		last_block_in_file = (ext4_readpage_limit(inode) +
+ 				      blocksize - 1) >> blkbits;
+@@ -364,7 +366,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 		 * This page will go to BIO.  Do we need to send this
+ 		 * BIO off first?
+ 		 */
+-		if (bio && (last_block_in_bio != blocks[0] - 1)) {
++		if (bio && (last_block_in_bio != blocks[0] - 1 ||
++			    !fscrypt_mergeable_bio(bio, inode, next_block))) {
+ 		submit_and_realloc:
+ 			submit_bio(bio);
+ 			bio = NULL;
+@@ -376,6 +379,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
+ 			 */
+ 			bio = bio_alloc(GFP_KERNEL,
+ 				min_t(int, nr_pages, BIO_MAX_PAGES));
++			fscrypt_set_bio_crypt_ctx(bio, inode, next_block,
++						  GFP_KERNEL);
+ 			ext4_set_bio_post_read_ctx(bio, inode, page->index);
+ 			bio_set_dev(bio, bdev);
+ 			bio->bi_iter.bi_sector = blocks[0] << (blkbits - 9);
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index bf5fcb477f667..fb4a293cac0c3 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1509,6 +1509,7 @@ enum {
+ 	Opt_journal_path, Opt_journal_checksum, Opt_journal_async_commit,
+ 	Opt_abort, Opt_data_journal, Opt_data_ordered, Opt_data_writeback,
+ 	Opt_data_err_abort, Opt_data_err_ignore, Opt_test_dummy_encryption,
++	Opt_inlinecrypt,
+ 	Opt_usrjquota, Opt_grpjquota, Opt_offusrjquota, Opt_offgrpjquota,
+ 	Opt_jqfmt_vfsold, Opt_jqfmt_vfsv0, Opt_jqfmt_vfsv1, Opt_quota,
+ 	Opt_noquota, Opt_barrier, Opt_nobarrier, Opt_err,
+@@ -1606,6 +1607,7 @@ static const match_table_t tokens = {
+ 	{Opt_noinit_itable, "noinit_itable"},
+ 	{Opt_max_dir_size_kb, "max_dir_size_kb=%u"},
+ 	{Opt_test_dummy_encryption, "test_dummy_encryption"},
++	{Opt_inlinecrypt, "inlinecrypt"},
+ 	{Opt_nombcache, "nombcache"},
+ 	{Opt_nombcache, "no_mbcache"},	/* for backward compatibility */
+ 	{Opt_removed, "check=none"},	/* mount option from ext2/3 */
+@@ -1893,6 +1895,13 @@ static int handle_mount_opt(struct super_block *sb, char *opt, int token,
+ 	case Opt_nolazytime:
+ 		sb->s_flags &= ~SB_LAZYTIME;
+ 		return 1;
++	case Opt_inlinecrypt:
++#ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
++		sb->s_flags |= SB_INLINECRYPT;
++#else
++		ext4_msg(sb, KERN_ERR, "inline encryption not supported");
 +#endif
++		return 1;
+ 	}
  
- 	bool req_abort_skip;
- };
+ 	for (m = ext4_mount_opts; m->token != Opt_err; m++)
 -- 
 2.26.2.645.ge9eca65c58-goog
 
