@@ -2,114 +2,88 @@ Return-Path: <SRS0=c6Ij=65=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.6 required=3.0 tests=DKIM_SIGNED,DKIM_VALID,
-	DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=ham
+X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F171FC433E0
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 15 May 2020 20:57:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5DA1BC433DF
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 15 May 2020 21:06:06 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id CEBE8205CB
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 15 May 2020 20:57:03 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="GltVYFnc"
+	by mail.kernel.org (Postfix) with ESMTP id 3ED6020756
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 15 May 2020 21:06:06 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727051AbgEOU5D (ORCPT
+        id S1726247AbgEOVGG (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 15 May 2020 16:57:03 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:39078 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727001AbgEOU5C (ORCPT
+        Fri, 15 May 2020 17:06:06 -0400
+Received: from sender11-op-o11.zoho.eu ([31.186.226.225]:17155 "EHLO
+        sender11-op-o11.zoho.eu" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726179AbgEOVGF (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 15 May 2020 16:57:02 -0400
-Received: from mail-qt1-x841.google.com (mail-qt1-x841.google.com [IPv6:2607:f8b0:4864:20::841])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id AF097C061A0C
-        for <linux-fscrypt@vger.kernel.org>; Fri, 15 May 2020 13:57:02 -0700 (PDT)
-Received: by mail-qt1-x841.google.com with SMTP id p12so3166377qtn.13
-        for <linux-fscrypt@vger.kernel.org>; Fri, 15 May 2020 13:57:02 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=from:to:cc:subject:date:message-id:in-reply-to:references
-         :mime-version:content-transfer-encoding;
-        bh=0RuNRJWNwA74uNUnzUcv/eXSAijrPS6rK3ng2jdkstk=;
-        b=GltVYFncGE9IT7NoqT/J4F3NxYr13hmfF81L36wLW1MGCQea8XqHUylEsd0aRlrZo3
-         a1/8/S7fqRFB7oAgZeZhDn7J9NVB7GlSVrEWa4bOVEI5oROzX6Jju5+2dte+fKIwfDfn
-         rNMtgwlAq14droKVpX8nv7jMtAiprnwBM6f/YCD4jRQddWnDe4Z/9iCC+U0Zr+VZIxF4
-         fVlZe9EeD9TA5pa7n/peF8ZdSth1IOumsZjg0+rgbq43LqSsbozsdjDzFe8OGYRES54y
-         zLLPSYe9rDA9oHrPEJ+pJQJ3+sKyRkG97r97h97W4QzZk10vgTHfEhtLCFDK3/+sd0fi
-         HNNw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
-         :references:mime-version:content-transfer-encoding;
-        bh=0RuNRJWNwA74uNUnzUcv/eXSAijrPS6rK3ng2jdkstk=;
-        b=WWfSfDLCkUk9GRYFi3c6+eWUIyf0uqLrHcFjXynhaROwnhaPQiD6xecJz83JJ4Km0T
-         6ujkmjOWEVtQ0oG968WWrkANwi00E+UHu2OjTq+vz7KFqs4Vy5eAwyMJvQsW5cG9/1rh
-         0lLanXRqQ/heSIrn21Re6zT8OT8lRyuyCEDtSOL0qnQ1u1TT1R1rOxfE+gEMXOif9p1u
-         22Vipj+l6xfzR00LIFQ29TzH/joIiWRYhPilV4CunTJQULxN2uklDE765UcnQUSIg3T5
-         7zywWwUB8gt4RW0/u0KTA3THWzb1AOW56xovY4m+N829wzFlbh7Y7jiUiJGuw7NMQ2TO
-         z1Yw==
-X-Gm-Message-State: AOAM531pfbh6VFntOhFAGRpJnWZ4Ld6TRtRJ1Bb0NZTgEjHHtw2SuLqV
-        5Dy3jyiZdlLP7n9+eEnoQp8=
-X-Google-Smtp-Source: ABdhPJyoKYkeM72u2Vb8nPIdsfD2IkSrvVhf4YnqBKJgQO7xKUgT8op7AzLi+rhyeIrem0R9AK+nAw==
-X-Received: by 2002:ac8:4e44:: with SMTP id e4mr5536433qtw.326.1589576221852;
-        Fri, 15 May 2020 13:57:01 -0700 (PDT)
-Received: from localhost ([2620:10d:c091:480::1:1b31])
-        by smtp.gmail.com with ESMTPSA id r18sm2850467qtn.1.2020.05.15.13.57.00
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Fri, 15 May 2020 13:57:01 -0700 (PDT)
-From:   Jes Sorensen <jes.sorensen@gmail.com>
-X-Google-Original-From: Jes Sorensen <Jes.Sorensen@gmail.com>
-To:     ebiggers@kernel.org
-Cc:     linux-fscrypt@vger.kernel.org, kernel-team@fb.com,
-        Jes Sorensen <jsorensen@fb.com>
-Subject: [PATCH 2/2] Let package manager override CFLAGS and CPPFLAGS
-Date:   Fri, 15 May 2020 16:56:49 -0400
-Message-Id: <20200515205649.1670512-3-Jes.Sorensen@gmail.com>
-X-Mailer: git-send-email 2.26.2
-In-Reply-To: <20200515205649.1670512-1-Jes.Sorensen@gmail.com>
-References: <20200515205649.1670512-1-Jes.Sorensen@gmail.com>
+        Fri, 15 May 2020 17:06:05 -0400
+X-Greylist: delayed 904 seconds by postgrey-1.27 at vger.kernel.org; Fri, 15 May 2020 17:06:04 EDT
+ARC-Seal: i=1; a=rsa-sha256; t=1589575853; cv=none; 
+        d=zohomail.eu; s=zohoarc; 
+        b=KbsTO1QnXyP8AirHuZ24LqciMXjBICV8K0UBqFmWMt89qqPRpw4IRFDbcaLaFQs/Gkcx7VemFKXIbDQxqpxztV4TiwAMunpis8GMjJ1D7YGQBX41lVfp8JuslQKxJcCtFMx7P8z6NdB/80vKlpE52sgcp7XJ0EeWmNBfD3yodlI=
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=zohomail.eu; s=zohoarc; 
+        t=1589575853; h=Content-Type:Content-Transfer-Encoding:Cc:Date:From:In-Reply-To:MIME-Version:Message-ID:References:Subject:To; 
+        bh=62g6JwVWEMzRWu3ZYkO8dV9Ce5Ih7CsFyMdKYPybmdU=; 
+        b=iwA6hH5iqfReKpvEukZGydJX3Yqg/wLYvY3Rxv5wUX9JV8IaDfeb6AHIhjEaz2bPohUNz6fJte99XtSzsfE7ycBaPI+2i8qPgyt/I4j+e3FV/0mrxLT9Ywya0vL+JeIopw5DiS6xDPZxp6fl5YV6cC7UbtKN+RD6tHU2bh6gjnI=
+ARC-Authentication-Results: i=1; mx.zohomail.eu;
+        spf=pass  smtp.mailfrom=jes@trained-monkey.org;
+        dmarc=pass header.from=<jes@trained-monkey.org> header.from=<jes@trained-monkey.org>
+Received: from [100.109.129.242] (163.114.130.1 [163.114.130.1]) by mx.zoho.eu
+        with SMTPS id 1589575851412664.0614176836336; Fri, 15 May 2020 22:50:51 +0200 (CEST)
+Subject: Re: [PATCH 0/3] fsverity-utils: introduce libfsverity
+To:     Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org,
+        Jes Sorensen <jes.sorensen@gmail.com>
+Cc:     jsorensen@fb.com, kernel-team@fb.com
+References: <20200515041042.267966-1-ebiggers@kernel.org>
+From:   Jes Sorensen <jes@trained-monkey.org>
+Message-ID: <6fd1ea1f-d6e6-c423-4a52-c987f172bb50@trained-monkey.org>
+Date:   Fri, 15 May 2020 16:50:49 -0400
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+ Thunderbird/68.7.0
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <20200515041042.267966-1-ebiggers@kernel.org>
+Content-Type: text/plain; charset=utf-8
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-ZohoMailClient: External
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Jes Sorensen <jsorensen@fb.com>
+On 5/15/20 12:10 AM, Eric Biggers wrote:
+> From the 'fsverity' program, split out a library 'libfsverity'.
+> Currently it supports computing file measurements ("digests"), and
+> signing those file measurements for use with the fs-verity builtin
+> signature verification feature.
+> 
+> Rewritten from patches by Jes Sorensen <jsorensen@fb.com>.
+> I made a lot of improvements; see patch 2 for details.
+> 
+> Jes, can you let me know whether this works for you?  Especially take a
+> close look at the API in libfsverity.h.
 
-Package managers such as RPM wants to build everything with their
-preferred flags, and we shouldn't hard override flags.
+Hi Eric,
 
-Signed-off-by: Jes Sorensen <jsorensen@fb.com>
----
- Makefile | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+Thanks for looking at this. I have gone through this and managed to get
+my RPM code to work with it. I will push the updated code to my rpm
+github repo shortly. I have two fixes for the Makefile I will send to
+you in a separate email.
 
-diff --git a/Makefile b/Makefile
-index c5f46f4..0c2a621 100644
---- a/Makefile
-+++ b/Makefile
-@@ -32,7 +32,7 @@ cc-option = $(shell if $(CC) $(1) -c -x c /dev/null -o /dev/null &>/dev/null; \
- #### Common compiler flags.  You can add additional flags by defining CFLAGS
- #### and/or CPPFLAGS in the environment or on the 'make' command line.
- 
--override CFLAGS := -O2 -Wall -Wundef				\
-+CFLAGS := -O2 -Wall -Wundef				\
- 	$(call cc-option,-Wdeclaration-after-statement)		\
- 	$(call cc-option,-Wmissing-prototypes)			\
- 	$(call cc-option,-Wstrict-prototypes)			\
-@@ -40,7 +40,7 @@ override CFLAGS := -O2 -Wall -Wundef				\
- 	$(call cc-option,-Wimplicit-fallthrough)		\
- 	$(CFLAGS)
- 
--override CPPFLAGS := -D_FILE_OFFSET_BITS=64 $(CPPFLAGS)
-+CPPFLAGS := -D_FILE_OFFSET_BITS=64 $(CPPFLAGS)
- 
- #### Other user settings
- 
--- 
-2.26.2
+One comment I have is that you changed the size of version and
+hash_algorithm to 32 bit in struct libfsverity_merkle_tree_params, but
+the kernel API only takes 8 bit values anyway. I had them at 16 bit to
+handle the struct padding, but if anything it seems to make more sense
+to make them 8 bit and pad the struct?
 
+struct libfsverity_merkle_tree_params {
+        uint32_t version;
+        uint32_t hash_algorithm;
+
+That said, not a big deal.
+
+Cheers,
+Jes
