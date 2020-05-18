@@ -1,89 +1,94 @@
-Return-Path: <SRS0=c6Ij=65=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=M0vi=7A=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.3 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-0.6 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5DA1BC433DF
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 15 May 2020 21:06:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4E81AC433E1
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 18 May 2020 16:50:46 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 3ED6020756
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 15 May 2020 21:06:06 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 2F5C0207D8
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 18 May 2020 16:50:46 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="j3ozo5YH"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726247AbgEOVGG (ORCPT
+        id S1728043AbgERQuq (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 15 May 2020 17:06:06 -0400
-Received: from sender11-op-o11.zoho.eu ([31.186.226.225]:17155 "EHLO
-        sender11-op-o11.zoho.eu" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726179AbgEOVGF (ORCPT
+        Mon, 18 May 2020 12:50:46 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51780 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726958AbgERQup (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 15 May 2020 17:06:05 -0400
-X-Greylist: delayed 904 seconds by postgrey-1.27 at vger.kernel.org; Fri, 15 May 2020 17:06:04 EDT
-ARC-Seal: i=1; a=rsa-sha256; t=1589575853; cv=none; 
-        d=zohomail.eu; s=zohoarc; 
-        b=KbsTO1QnXyP8AirHuZ24LqciMXjBICV8K0UBqFmWMt89qqPRpw4IRFDbcaLaFQs/Gkcx7VemFKXIbDQxqpxztV4TiwAMunpis8GMjJ1D7YGQBX41lVfp8JuslQKxJcCtFMx7P8z6NdB/80vKlpE52sgcp7XJ0EeWmNBfD3yodlI=
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=zohomail.eu; s=zohoarc; 
-        t=1589575853; h=Content-Type:Content-Transfer-Encoding:Cc:Date:From:In-Reply-To:MIME-Version:Message-ID:References:Subject:To; 
-        bh=62g6JwVWEMzRWu3ZYkO8dV9Ce5Ih7CsFyMdKYPybmdU=; 
-        b=iwA6hH5iqfReKpvEukZGydJX3Yqg/wLYvY3Rxv5wUX9JV8IaDfeb6AHIhjEaz2bPohUNz6fJte99XtSzsfE7ycBaPI+2i8qPgyt/I4j+e3FV/0mrxLT9Ywya0vL+JeIopw5DiS6xDPZxp6fl5YV6cC7UbtKN+RD6tHU2bh6gjnI=
-ARC-Authentication-Results: i=1; mx.zohomail.eu;
-        spf=pass  smtp.mailfrom=jes@trained-monkey.org;
-        dmarc=pass header.from=<jes@trained-monkey.org> header.from=<jes@trained-monkey.org>
-Received: from [100.109.129.242] (163.114.130.1 [163.114.130.1]) by mx.zoho.eu
-        with SMTPS id 1589575851412664.0614176836336; Fri, 15 May 2020 22:50:51 +0200 (CEST)
-Subject: Re: [PATCH 0/3] fsverity-utils: introduce libfsverity
-To:     Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org,
-        Jes Sorensen <jes.sorensen@gmail.com>
-Cc:     jsorensen@fb.com, kernel-team@fb.com
-References: <20200515041042.267966-1-ebiggers@kernel.org>
-From:   Jes Sorensen <jes@trained-monkey.org>
-Message-ID: <6fd1ea1f-d6e6-c423-4a52-c987f172bb50@trained-monkey.org>
-Date:   Fri, 15 May 2020 16:50:49 -0400
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.7.0
+        Mon, 18 May 2020 12:50:45 -0400
+Received: from bombadil.infradead.org (bombadil.infradead.org [IPv6:2607:7c80:54:e::133])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B7874C061A0C;
+        Mon, 18 May 2020 09:50:45 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+        d=infradead.org; s=bombadil.20170209; h=In-Reply-To:Content-Type:MIME-Version
+        :References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
+        Content-Transfer-Encoding:Content-ID:Content-Description;
+        bh=kZ1kt/vvSWLV22qkWN7aKlxZz7wcX+WgFj2oUslFSoQ=; b=j3ozo5YHhZD8k6To6Kx6JYBtFf
+        3ro7WFhgIcFxk9sM8YyXJMP1ljUysW3CEYKqKWLP2qaP1VCDz6hG1+RO2o48RMHX57B2pgMWsTRHm
+        6qBznsPTqj9W41MCa36Vj34K2scnpByyAH9hk4n4QgEXgqPsfPMqKctkdvqZ7CGVT9Kiu7m2eG0Xg
+        Z2S552l1JSMN6/ihF5mjDfESDw9j42b5Dk/ljZbE4GQkDocvWkFANRe792+jf+a62b7+a2MOwkY6h
+        9rT/3ag8Svxuei5DS+/8LTm1jF4aabP4NRraZDwyB4/0lNAIu6kjG/Hr6ujWcERiWB5IZCd5yGJ4J
+        yiJHceqg==;
+Received: from hch by bombadil.infradead.org with local (Exim 4.92.3 #3 (Red Hat Linux))
+        id 1jaiyS-0000NI-EH; Mon, 18 May 2020 16:50:44 +0000
+Date:   Mon, 18 May 2020 09:50:44 -0700
+From:   Christoph Hellwig <hch@infradead.org>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     Christoph Hellwig <hch@infradead.org>,
+        Satya Tangirala <satyat@google.com>,
+        Jens Axboe <axboe@kernel.dk>, linux-block@vger.kernel.org,
+        linux-scsi@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-fsdevel@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org,
+        Barani Muthukumaran <bmuthuku@qti.qualcomm.com>,
+        Kuohong Wang <kuohong.wang@mediatek.com>,
+        Kim Boojin <boojin.kim@samsung.com>
+Subject: Re: [PATCH v13 00/12] Inline Encryption Support
+Message-ID: <20200518165044.GA23230@infradead.org>
+References: <20200514003727.69001-1-satyat@google.com>
+ <20200514051053.GA14829@sol.localdomain>
+ <8fa1aafe-1725-e586-ede3-a3273e674470@kernel.dk>
+ <20200515074127.GA13926@infradead.org>
+ <20200515122540.GA143740@google.com>
+ <20200515144224.GA12040@infradead.org>
+ <20200515170059.GA1009@sol.localdomain>
 MIME-Version: 1.0
-In-Reply-To: <20200515041042.267966-1-ebiggers@kernel.org>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-X-ZohoMailClient: External
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200515170059.GA1009@sol.localdomain>
+X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On 5/15/20 12:10 AM, Eric Biggers wrote:
-> From the 'fsverity' program, split out a library 'libfsverity'.
-> Currently it supports computing file measurements ("digests"), and
-> signing those file measurements for use with the fs-verity builtin
-> signature verification feature.
+On Fri, May 15, 2020 at 10:00:59AM -0700, Eric Biggers wrote:
+> The fallback is actually really useful.  First, for testing: it allows all the
+> filesystem code that uses inline crypto to be tested using gce-xfstests and
+> kvm-xfstests, so that it's covered by the usual ext4 and f2fs regression testing
+> and it's much easier to develop patches for.  It also allowed us to enable the
+> inlinecrypt mount option in Cuttlefish, which is the virtual Android device used
+> to test the Android common kernels.  So, it gets the kernel test platform as
+> similar to a real Android device as possible.
 > 
-> Rewritten from patches by Jes Sorensen <jsorensen@fb.com>.
-> I made a lot of improvements; see patch 2 for details.
-> 
-> Jes, can you let me know whether this works for you?  Especially take a
-> close look at the API in libfsverity.h.
+> Ideally we'd implement virtualized inline encryption as you suggested.  But
+> these platforms use a mix of VMM's (QEMU, GCE, and crosvm) and storage types
+> (virtio-blk, virtio-scsi, and maybe others; none of these even have an inline
+> encryption standard defined yet).  So it's not currently feasible.
 
-Hi Eric,
+Not that you don't need to implement it in the hypervisor.  You can
+also trivially wire up for things like null_blk.
 
-Thanks for looking at this. I have gone through this and managed to get
-my RPM code to work with it. I will push the updated code to my rpm
-github repo shortly. I have two fixes for the Makefile I will send to
-you in a separate email.
+> Second, it creates a clean design where users can just use blk-crypto, and not
+> have to implement a second encryption implementation.
 
-One comment I have is that you changed the size of version and
-hash_algorithm to 32 bit in struct libfsverity_merkle_tree_params, but
-the kernel API only takes 8 bit values anyway. I had them at 16 bit to
-handle the struct padding, but if anything it seems to make more sense
-to make them 8 bit and pad the struct?
-
-struct libfsverity_merkle_tree_params {
-        uint32_t version;
-        uint32_t hash_algorithm;
-
-That said, not a big deal.
-
-Cheers,
-Jes
+And I very much disagree about that being a clean implementation.  It is
+fine if the user doesn't care, but you should catch this before hitting
+the block stack and do the encryption there without hardware blk-crypt
+support.
