@@ -2,130 +2,123 @@ Return-Path: <SRS0=MU9e=76=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.4 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0F346C433E1
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 17 Jun 2020 07:12:21 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2E862C433E0
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 17 Jun 2020 07:57:39 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id DE3BA206F1
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 17 Jun 2020 07:12:20 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1592377940;
-	bh=R+eM1qGvKUN1HiDySxCpFv8ACpnCrS/luvzLeM7dI8o=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=Pa9YWcF0E+Hhi4wClMlyTnD0gRJLtRkoZ39MVxAJPqeJUDaBRmlnsgbl/OXrToT8Z
-	 sRMCMZ2bdNEhEPyb4AHHNbfObL3C2fQI+FYI6vMtbhMj2Re2OyQjk/yDPDa7ufE/Lp
-	 dNHb93attMRb0uR8Y9UvZm9B2ICqoWqThf3bVZKY=
+	by mail.kernel.org (Postfix) with ESMTP id 10A9D21508
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 17 Jun 2020 07:57:39 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="iFNqldV2"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726303AbgFQHMU (ORCPT
+        id S1726491AbgFQH5i (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 17 Jun 2020 03:12:20 -0400
-Received: from mail-ej1-f65.google.com ([209.85.218.65]:34229 "EHLO
-        mail-ej1-f65.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1725860AbgFQHMT (ORCPT
+        Wed, 17 Jun 2020 03:57:38 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54824 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726495AbgFQH5i (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 17 Jun 2020 03:12:19 -0400
-Received: by mail-ej1-f65.google.com with SMTP id l27so1176601ejc.1;
-        Wed, 17 Jun 2020 00:12:15 -0700 (PDT)
+        Wed, 17 Jun 2020 03:57:38 -0400
+Received: from mail-yb1-xb4a.google.com (mail-yb1-xb4a.google.com [IPv6:2607:f8b0:4864:20::b4a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E1093C061755
+        for <linux-fscrypt@vger.kernel.org>; Wed, 17 Jun 2020 00:57:37 -0700 (PDT)
+Received: by mail-yb1-xb4a.google.com with SMTP id j3so1629301yba.14
+        for <linux-fscrypt@vger.kernel.org>; Wed, 17 Jun 2020 00:57:37 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=date:message-id:mime-version:subject:from:to:cc;
+        bh=YrGLoue5k9cA5koD7/PO4iQoD6IjWXOUupBIS3VbDWk=;
+        b=iFNqldV2E0w+7bBQ385IjyHcqfjU9mHdgYgoOylqrDwynqv0FkaVUtzHYnx9jORWBx
+         nqLhO71PXhAxR/dettLy3H8elFoRNQ1xrwhbvwSjSMpTnH6Z3jQ1IJTsOZv7+sTTeATu
+         ewCeVTcWVzetIlVH5/jaGuMBKUpHxMpGioqjOhAzRFBPHmVm36fnLoOaHDgjrTe4Vq5W
+         WkrYAx7DiBNschMNjM2VxKdeL1pAKB/MwZJao3YSAovK798PHpRlhrY11GWKavUHDcr7
+         aypJl1ncfu6qAqOj9ec3P89dwmhW89iV6fJz4PAYy3IWXtr9brGu8umUFOvmmF5C0398
+         MWGA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=E5EcWVbc+7tsS+GAmjqiwsU8zuC9ZQ4KDsXaJSfWulo=;
-        b=hpp62K4a8CwZm2UreL6e+o7U64jJN0cGZO64x4/KaxFcj3JVTRwtGgvvphlWOGIwmB
-         mKDjFk36BUKL84X0A9sBPYLln2swyjTrxBpOKfntaidgraTsEqWSInVYjR+f229KLn86
-         JQgPgDrHQKjlcGt4G5FRUs/LnXp6LNLqNd3mRfMJQtEv721UDpyA2floMIWMSRRU63gC
-         qmC2URd5guep9hGNbmRJS4tl3WdSME9dwc9fVWomUGjNxDBIdLQAdimTtHyDG+qL4Z/x
-         N3yZtL4KoRdctI+kyJccwtPMuNdYqp+mPDxIX3roHMzcx6zoabwiEq+N3FeX8asH5wbJ
-         BPbw==
-X-Gm-Message-State: AOAM532QhxsCV6VV0nmw55nyn7fUqk+2MaOyho+lUa6ubnTkcAd2T2f0
-        jAq+dwgSw/eEUQy0iHHJ2nc=
-X-Google-Smtp-Source: ABdhPJzxXEZ/32Vk1uutSgWgDm/2Kml+FRFv6q/oUOzaHXvM3d9a7wcEm5DrSyb0iZ8v3ZPtZ+pKKg==
-X-Received: by 2002:a17:906:2581:: with SMTP id m1mr6681797ejb.89.1592377934427;
-        Wed, 17 Jun 2020 00:12:14 -0700 (PDT)
-Received: from localhost (ip-37-188-158-19.eurotel.cz. [37.188.158.19])
-        by smtp.gmail.com with ESMTPSA id g22sm12516138ejo.1.2020.06.17.00.12.13
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Wed, 17 Jun 2020 00:12:13 -0700 (PDT)
-Date:   Wed, 17 Jun 2020 09:12:12 +0200
-From:   Michal Hocko <mhocko@kernel.org>
-To:     Matthew Wilcox <willy@infradead.org>
-Cc:     dsterba@suse.cz, Joe Perches <joe@perches.com>,
-        Waiman Long <longman@redhat.com>,
-        Andrew Morton <akpm@linux-foundation.org>,
-        David Howells <dhowells@redhat.com>,
-        Jarkko Sakkinen <jarkko.sakkinen@linux.intel.com>,
-        James Morris <jmorris@namei.org>,
-        "Serge E. Hallyn" <serge@hallyn.com>,
-        Linus Torvalds <torvalds@linux-foundation.org>,
-        David Rientjes <rientjes@google.com>,
-        Johannes Weiner <hannes@cmpxchg.org>,
-        Dan Carpenter <dan.carpenter@oracle.com>,
-        "Jason A . Donenfeld" <Jason@zx2c4.com>, linux-mm@kvack.org,
-        keyrings@vger.kernel.org, linux-kernel@vger.kernel.org,
-        linux-crypto@vger.kernel.org, linux-pm@vger.kernel.org,
-        linux-stm32@st-md-mailman.stormreply.com,
-        linux-amlogic@lists.infradead.org,
-        linux-mediatek@lists.infradead.org, linuxppc-dev@lists.ozlabs.org,
-        virtualization@lists.linux-foundation.org, netdev@vger.kernel.org,
-        linux-ppp@vger.kernel.org, wireguard@lists.zx2c4.com,
-        linux-wireless@vger.kernel.org, devel@driverdev.osuosl.org,
-        linux-scsi@vger.kernel.org, target-devel@vger.kernel.org,
-        linux-btrfs@vger.kernel.org, linux-cifs@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, ecryptfs@vger.kernel.org,
-        kasan-dev@googlegroups.com, linux-bluetooth@vger.kernel.org,
-        linux-wpan@vger.kernel.org, linux-sctp@vger.kernel.org,
-        linux-nfs@vger.kernel.org, tipc-discussion@lists.sourceforge.net,
-        linux-security-module@vger.kernel.org,
-        linux-integrity@vger.kernel.org
-Subject: Re: [PATCH v4 0/3] mm, treewide: Rename kzfree() to kfree_sensitive()
-Message-ID: <20200617071212.GJ9499@dhcp22.suse.cz>
-References: <20200616015718.7812-1-longman@redhat.com>
- <fe3b9a437be4aeab3bac68f04193cb6daaa5bee4.camel@perches.com>
- <20200616230130.GJ27795@twin.jikos.cz>
- <20200617003711.GD8681@bombadil.infradead.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200617003711.GD8681@bombadil.infradead.org>
+        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
+        bh=YrGLoue5k9cA5koD7/PO4iQoD6IjWXOUupBIS3VbDWk=;
+        b=RBWOtMrZqD7M1nN5o6qV9SzO6e/zgwYvp7HICFLZMewfq/1WBXVU/cuEsFYsG+S/Tf
+         NsLnt6GvMhKX9rXLzNLAtMsFuUJHsMQVZ13C9KW3fWbbfcUVJQbAlvzndgNWk2FI2pz+
+         6wqINk6HsKvi8gg65cwz4BJg7TYELEaCyYozEpjMVXFWjbAoYbqbEzkhKX52seYAP7ck
+         wzcmsgIso7bVVuGJ0eGOZp/kYjW3FFtcLjhk2dOmlMxYVUwzpf76x0H75LSPZ3n+47c5
+         2oZAOBgf7gzaCjbVIa6DYH11ZrjG5i2sid/II5MapY6tpciub1YbReAw4PioZoHEpcMq
+         vpcQ==
+X-Gm-Message-State: AOAM531LhqfyZo1IWrWm5CVAj0x7zF8vgaDfGu0P2aGtALpMJsFxq5SV
+        FjOGF23W3TwgF5ppG5Ki0RokstUh+t+pIsFRWcTbvIA4/8HqTGivP3GzqrJyAuB5CoRWhBSV5ye
+        9GGPpbydYzlL00+SzTkCWlHGsDR8NOlS5a6H083/EDm5aOr4TVpo4yT1KKbAnBs0wAGLthlc=
+X-Google-Smtp-Source: ABdhPJyi+r7Mo3g9hSD3snev85cZk7qSVEtvV2RBZ+GdzakmAaT064tsDCrF7yalJdTdipPDsMh0KpvnBYc=
+X-Received: by 2002:a25:cbcc:: with SMTP id b195mr10932034ybg.91.1592380656942;
+ Wed, 17 Jun 2020 00:57:36 -0700 (PDT)
+Date:   Wed, 17 Jun 2020 07:57:28 +0000
+Message-Id: <20200617075732.213198-1-satyat@google.com>
+Mime-Version: 1.0
+X-Mailer: git-send-email 2.27.0.290.gba653c62da-goog
+Subject: [PATCH 0/4] Inline Encryption Support for fscrypt
+From:   Satya Tangirala <satyat@google.com>
+To:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org
+Cc:     Satya Tangirala <satyat@google.com>
+Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue 16-06-20 17:37:11, Matthew Wilcox wrote:
-> On Wed, Jun 17, 2020 at 01:01:30AM +0200, David Sterba wrote:
-> > On Tue, Jun 16, 2020 at 11:53:50AM -0700, Joe Perches wrote:
-> > > On Mon, 2020-06-15 at 21:57 -0400, Waiman Long wrote:
-> > > >  v4:
-> > > >   - Break out the memzero_explicit() change as suggested by Dan Carpenter
-> > > >     so that it can be backported to stable.
-> > > >   - Drop the "crypto: Remove unnecessary memzero_explicit()" patch for
-> > > >     now as there can be a bit more discussion on what is best. It will be
-> > > >     introduced as a separate patch later on after this one is merged.
-> > > 
-> > > To this larger audience and last week without reply:
-> > > https://lore.kernel.org/lkml/573b3fbd5927c643920e1364230c296b23e7584d.camel@perches.com/
-> > > 
-> > > Are there _any_ fastpath uses of kfree or vfree?
-> > 
-> > I'd consider kfree performance critical for cases where it is called
-> > under locks. If possible the kfree is moved outside of the critical
-> > section, but we have rbtrees or lists that get deleted under locks and
-> > restructuring the code to do eg. splice and free it outside of the lock
-> > is not always possible.
-> 
-> Not just performance critical, but correctness critical.  Since kvfree()
-> may allocate from the vmalloc allocator, I really think that kvfree()
-> should assert that it's !in_atomic().  Otherwise we can get into trouble
-> if we end up calling vfree() and have to take the mutex.
+This patch series adds support for Inline Encryption to fscrypt, f2fs
+and ext4. It builds on the inline encryption support now present in
+the block layer, and has been rebased on v5.8-rc1.
 
-FWIW __vfree already checks for atomic context and put the work into a
-deferred context. So this should be safe. It should be used as a last
-resort, though.
+Patch 1 introduces the SB_INLINECRYPT sb options, which filesystems
+should set if they want to use blk-crypto for file content en/decryption.
+
+Patch 2 adds inline encryption support to fscrypt. To use inline
+encryption with fscrypt, the filesystem must set the above mentioned
+SB_INLINECRYPT sb option. When this option is set, the contents of
+encrypted files will be en/decrypted using blk-crypto.
+
+Patches 3 and 4 wire up f2fs and ext4 respectively to fscrypt support for
+inline encryption, and e.g ensure that bios are submitted with blocks
+that not only are contiguous, but also have contiguous DUNs.
+
+Eric Biggers (1):
+  ext4: add inline encryption support
+
+Satya Tangirala (3):
+  fs: introduce SB_INLINECRYPT
+  fscrypt: add inline encryption support
+  f2fs: add inline encryption support
+
+ Documentation/admin-guide/ext4.rst |   6 +
+ Documentation/filesystems/f2fs.rst |   7 +-
+ fs/buffer.c                        |   7 +-
+ fs/crypto/Kconfig                  |   6 +
+ fs/crypto/Makefile                 |   1 +
+ fs/crypto/bio.c                    |  50 +++++
+ fs/crypto/crypto.c                 |   2 +-
+ fs/crypto/fname.c                  |   4 +-
+ fs/crypto/fscrypt_private.h        | 118 +++++++++-
+ fs/crypto/inline_crypt.c           | 349 +++++++++++++++++++++++++++++
+ fs/crypto/keyring.c                |   6 +-
+ fs/crypto/keysetup.c               |  68 ++++--
+ fs/crypto/keysetup_v1.c            |  16 +-
+ fs/ext4/inode.c                    |   4 +-
+ fs/ext4/page-io.c                  |   6 +-
+ fs/ext4/readpage.c                 |  11 +-
+ fs/ext4/super.c                    |   9 +
+ fs/f2fs/compress.c                 |   2 +-
+ fs/f2fs/data.c                     |  81 +++++--
+ fs/f2fs/super.c                    |  32 +++
+ fs/proc_namespace.c                |   1 +
+ include/linux/fs.h                 |   1 +
+ include/linux/fscrypt.h            |  82 +++++++
+ 23 files changed, 794 insertions(+), 75 deletions(-)
+ create mode 100644 fs/crypto/inline_crypt.c
 
 -- 
-Michal Hocko
-SUSE Labs
+2.27.0.290.gba653c62da-goog
+
