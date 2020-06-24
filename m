@@ -2,109 +2,132 @@ Return-Path: <SRS0=C0Ka=AF=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.0 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	UNPARSEABLE_RELAY autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B2ECCC433E3
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 24 Jun 2020 04:34:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6D01DC433E0
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 24 Jun 2020 05:13:23 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 9089F2084D
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 24 Jun 2020 04:34:35 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="ATg4ot7i"
+	by mail.kernel.org (Postfix) with ESMTP id 49246206E2
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 24 Jun 2020 05:13:23 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2388393AbgFXEd7 (ORCPT
+        id S2388808AbgFXFNX (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 24 Jun 2020 00:33:59 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:43584 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1728793AbgFXEd6 (ORCPT
+        Wed, 24 Jun 2020 01:13:23 -0400
+Received: from bhuna.collabora.co.uk ([46.235.227.227]:47028 "EHLO
+        bhuna.collabora.co.uk" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727957AbgFXFNW (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 24 Jun 2020 00:33:58 -0400
-Received: from mail-yb1-xb49.google.com (mail-yb1-xb49.google.com [IPv6:2607:f8b0:4864:20::b49])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 9E388C061573
-        for <linux-fscrypt@vger.kernel.org>; Tue, 23 Jun 2020 21:33:56 -0700 (PDT)
-Received: by mail-yb1-xb49.google.com with SMTP id n11so997720ybg.15
-        for <linux-fscrypt@vger.kernel.org>; Tue, 23 Jun 2020 21:33:56 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=date:message-id:mime-version:subject:from:to:cc;
-        bh=VIhRPUc686EfpzyL1ZkpMu0h/tTzQnqLcgbnZ2tSukA=;
-        b=ATg4ot7iQfZhD7VJCToYCJEq0+HHgex7Fu5otS5NIVKN8IP1NunyBFhinY6vJQmpWp
-         4Ij36w/kSxOzIDs1lg4m4ranBcUkYgjgGqDBqZtXEgUF/A6viuow4yzNYWkxxGRvlpWC
-         mmIuA8xMCysfmJgO6z/8XuIDppG81o+uGO/b1g0+chDgAnIrr/7wD3ZVV8Vz040+E4+Z
-         OdVyjEqMLwNTcMPpg5aX3GyMmWgYDsyC79JWjtqgCg9JBAfM0b3dFkEJ4zIsj8DZBgV0
-         XSQbXGyBLB4NyxkGBW2KMLsu3Za4MN22eTnqS9Z/oFfinJGodSjpc65NAWPD+W0KoXtQ
-         L6Pg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
-        bh=VIhRPUc686EfpzyL1ZkpMu0h/tTzQnqLcgbnZ2tSukA=;
-        b=XQ+5/zitSw0x4HUB35LsroC2ziJxONHxDZx86gKFtxQlf2glT4eIyJF+zaa68cDNJl
-         CSWwBv8KNhEHCphQ1qDtdaylNnN6jUznMR6vo70Cxd3o7FDCjGPYX55WKDxXx4sY7Uga
-         XXekMYKoxEp1GNBl39w32eO6+vSljGzq2dVsrLVmp1UyMSadyXRjzqEaU56+ecnBM+Hn
-         pI6NDTklFkKtA05dOdfwNCxYFI4utvFTQTSiLyRv3ncifNzFd7dkGvu2XqOmOP/kiK12
-         UPcoyFr54mgPmm6EsXmH3x6uGbTsyvC1h7FKb53TzJNjxvbPTnAA3M+tx5wSbgqb5s7t
-         vnGQ==
-X-Gm-Message-State: AOAM531aYCw42rHCPgqRAbBBPZNKoAhg+Ml2euyeZg57WUMI+Ch69AKb
-        1iNKQQnHOky6UnqBDMwPCAxbxF50c9A=
-X-Google-Smtp-Source: ABdhPJzqZudoyjfwmOnuXUVebSWSY1PkS5+3B30QL46yfijJWtmCuoeOhxK7BwlRH7FbBAlVw+Pj75yPbZ4=
-X-Received: by 2002:a25:b8b:: with SMTP id 133mr42829755ybl.373.1592973235828;
- Tue, 23 Jun 2020 21:33:55 -0700 (PDT)
-Date:   Tue, 23 Jun 2020 21:33:37 -0700
-Message-Id: <20200624043341.33364-1-drosen@google.com>
-Mime-Version: 1.0
-X-Mailer: git-send-email 2.27.0.111.gc72c7da667-goog
-Subject: [PATCH v9 0/4] Prepare for upcoming Casefolding/Encryption patches
-From:   Daniel Rosenberg <drosen@google.com>
-To:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
+        Wed, 24 Jun 2020 01:13:22 -0400
+Received: from [127.0.0.1] (localhost [127.0.0.1])
+        (Authenticated sender: krisman)
+        with ESMTPSA id B1D7D2A3349
+From:   Gabriel Krisman Bertazi <krisman@collabora.com>
+To:     Daniel Rosenberg <drosen@google.com>
+Cc:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
         Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
         linux-f2fs-devel@lists.sourceforge.net,
         Eric Biggers <ebiggers@kernel.org>,
         linux-fscrypt@vger.kernel.org,
         Alexander Viro <viro@zeniv.linux.org.uk>,
-        Richard Weinberger <richard@nod.at>
-Cc:     linux-mtd@lists.infradead.org,
+        Richard Weinberger <richard@nod.at>,
+        linux-mtd@lists.infradead.org,
         Andreas Dilger <adilger.kernel@dilger.ca>,
         Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org,
         linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        Gabriel Krisman Bertazi <krisman@collabora.com>,
-        kernel-team@android.com, Daniel Rosenberg <drosen@google.com>
-Content-Type: text/plain; charset="UTF-8"
+        kernel-team@android.com
+Subject: Re: [PATCH v9 1/4] unicode: Add utf8_casefold_hash
+Organization: Collabora
+References: <20200624043341.33364-1-drosen@google.com>
+        <20200624043341.33364-2-drosen@google.com>
+Date:   Wed, 24 Jun 2020 01:13:17 -0400
+In-Reply-To: <20200624043341.33364-2-drosen@google.com> (Daniel Rosenberg's
+        message of "Tue, 23 Jun 2020 21:33:38 -0700")
+Message-ID: <87h7v1gi6q.fsf@collabora.com>
+User-Agent: Gnus/5.13 (Gnus v5.13) Emacs/26.3 (gnu/linux)
+MIME-Version: 1.0
+Content-Type: text/plain
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This lays the ground work for enabling casefolding and encryption at the
-same time for ext4 and f2fs. A future set of patches will enable that
-functionality. These unify the highly similar dentry_operations that ext4
-and f2fs both use for casefolding.
+Daniel Rosenberg <drosen@google.com> writes:
 
-Daniel Rosenberg (4):
-  unicode: Add utf8_casefold_hash
-  fs: Add standard casefolding support
-  f2fs: Use generic casefolding support
-  ext4: Use generic casefolding support
+> This adds a case insensitive hash function to allow taking the hash
+> without needing to allocate a casefolded copy of the string.
+>
+> Signed-off-by: Daniel Rosenberg <drosen@google.com>
+> ---
+>  fs/unicode/utf8-core.c  | 23 ++++++++++++++++++++++-
+>  include/linux/unicode.h |  3 +++
+>  2 files changed, 25 insertions(+), 1 deletion(-)
+>
+> diff --git a/fs/unicode/utf8-core.c b/fs/unicode/utf8-core.c
+> index 2a878b739115d..90656b9980720 100644
+> --- a/fs/unicode/utf8-core.c
+> +++ b/fs/unicode/utf8-core.c
+> @@ -6,6 +6,7 @@
+>  #include <linux/parser.h>
+>  #include <linux/errno.h>
+>  #include <linux/unicode.h>
+> +#include <linux/stringhash.h>
+>  
+>  #include "utf8n.h"
+>  
+> @@ -122,9 +123,29 @@ int utf8_casefold(const struct unicode_map *um, const struct qstr *str,
+>  	}
+>  	return -EINVAL;
+>  }
+> -
+>  EXPORT_SYMBOL(utf8_casefold);
+>  
+> +int utf8_casefold_hash(const struct unicode_map *um, const void *salt,
+> +		       struct qstr *str)
+> +{
+> +	const struct utf8data *data = utf8nfdicf(um->version);
+> +	struct utf8cursor cur;
+> +	int c;
+> +	unsigned long hash = init_name_hash(salt);
+> +
+> +	if (utf8ncursor(&cur, data, str->name, str->len) < 0)
+> +		return -EINVAL;
+> +
+> +	while ((c = utf8byte(&cur))) {
+> +		if (c < 0)
+> +			return c;
 
- fs/ext4/dir.c           |  64 +------------------------
- fs/ext4/ext4.h          |  12 -----
- fs/ext4/hash.c          |   2 +-
- fs/ext4/namei.c         |  20 ++++----
- fs/ext4/super.c         |  12 ++---
- fs/f2fs/dir.c           |  84 ++++-----------------------------
- fs/f2fs/f2fs.h          |   4 --
- fs/f2fs/super.c         |  10 ++--
- fs/f2fs/sysfs.c         |  10 ++--
- fs/libfs.c              | 101 ++++++++++++++++++++++++++++++++++++++++
- fs/unicode/utf8-core.c  |  23 ++++++++-
- include/linux/f2fs_fs.h |   3 --
- include/linux/fs.h      |  22 +++++++++
- include/linux/unicode.h |   3 ++
- 14 files changed, 186 insertions(+), 184 deletions(-)
+Return -EINVAL here to match other unicode functions, since utf8byte
+will return -1 on a binary blob, which doesn't make sense for this.
+
+Other than that, looks good to me.
+
+Reviewed-by: Gabriel Krisman Bertazi <krisman@collabora.com>
+
+> +		hash = partial_name_hash((unsigned char)c, hash);
+> +	}
+> +	str->hash = end_name_hash(hash);
+> +	return 0;
+> +}
+> +EXPORT_SYMBOL(utf8_casefold_hash);
+> +
+>  int utf8_normalize(const struct unicode_map *um, const struct qstr *str,
+>  		   unsigned char *dest, size_t dlen)
+>  {
+> diff --git a/include/linux/unicode.h b/include/linux/unicode.h
+> index 990aa97d80496..74484d44c7554 100644
+> --- a/include/linux/unicode.h
+> +++ b/include/linux/unicode.h
+> @@ -27,6 +27,9 @@ int utf8_normalize(const struct unicode_map *um, const struct qstr *str,
+>  int utf8_casefold(const struct unicode_map *um, const struct qstr *str,
+>  		  unsigned char *dest, size_t dlen);
+>  
+> +int utf8_casefold_hash(const struct unicode_map *um, const void *salt,
+> +		       struct qstr *str);
+> +
+>  struct unicode_map *utf8_load(const char *version);
+>  void utf8_unload(struct unicode_map *um);
 
 -- 
-2.27.0.111.gc72c7da667-goog
-
+Gabriel Krisman Bertazi
