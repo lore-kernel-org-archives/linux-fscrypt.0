@@ -2,134 +2,152 @@ Return-Path: <SRS0=C0Ka=AF=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.5 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-17.6 required=3.0 tests=DKIMWL_WL_MED,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
+	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7C68BC433DF
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 24 Jun 2020 00:55:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7E66CC433E2
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 24 Jun 2020 04:34:12 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 61E5B20738
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 24 Jun 2020 00:55:15 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 579E92078E
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 24 Jun 2020 04:34:12 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="tZlQ1+jy"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2387784AbgFXAzO (ORCPT
+        id S2388550AbgFXEeG (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 23 Jun 2020 20:55:14 -0400
-Received: from mail109.syd.optusnet.com.au ([211.29.132.80]:43045 "EHLO
-        mail109.syd.optusnet.com.au" rhost-flags-OK-OK-OK-OK)
-        by vger.kernel.org with ESMTP id S2387764AbgFXAzO (ORCPT
+        Wed, 24 Jun 2020 00:34:06 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:43606 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S2388714AbgFXEeA (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 23 Jun 2020 20:55:14 -0400
-Received: from dread.disaster.area (pa49-180-124-177.pa.nsw.optusnet.com.au [49.180.124.177])
-        by mail109.syd.optusnet.com.au (Postfix) with ESMTPS id 3A00CD7B989;
-        Wed, 24 Jun 2020 10:55:10 +1000 (AEST)
-Received: from dave by dread.disaster.area with local (Exim 4.92.3)
-        (envelope-from <david@fromorbit.com>)
-        id 1jntgz-0001dO-9M; Wed, 24 Jun 2020 10:55:09 +1000
-Date:   Wed, 24 Jun 2020 10:55:09 +1000
-From:   Dave Chinner <david@fromorbit.com>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        Satya Tangirala <satyat@google.com>
-Subject: Re: [f2fs-dev] [PATCH 1/4] fs: introduce SB_INLINECRYPT
-Message-ID: <20200624005509.GA5369@dread.disaster.area>
-References: <20200617075732.213198-1-satyat@google.com>
- <20200617075732.213198-2-satyat@google.com>
- <20200618011912.GA2040@dread.disaster.area>
- <20200618031935.GE1138@sol.localdomain>
- <20200623004636.GE2040@dread.disaster.area>
- <20200623015017.GA844@sol.localdomain>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200623015017.GA844@sol.localdomain>
-User-Agent: Mutt/1.10.1 (2018-07-13)
-X-Optus-CM-Score: 0
-X-Optus-CM-Analysis: v=2.3 cv=QIgWuTDL c=1 sm=1 tr=0
-        a=k3aV/LVJup6ZGWgigO6cSA==:117 a=k3aV/LVJup6ZGWgigO6cSA==:17
-        a=kj9zAlcOel0A:10 a=nTHF0DUjJn0A:10 a=VwQbUJbxAAAA:8 a=JfrnYn6hAAAA:8
-        a=7-415B0cAAAA:8 a=_JHsV_7MbDpF1hl6ON4A:9 a=CjuIK1q_8ugA:10
-        a=AjGcO6oz07-iQ99wixmX:22 a=1CNFftbPRP8L7MoqJWF3:22
-        a=biEYGPWJfzWAr4FL6Ov7:22
+        Wed, 24 Jun 2020 00:34:00 -0400
+Received: from mail-qk1-x74a.google.com (mail-qk1-x74a.google.com [IPv6:2607:f8b0:4864:20::74a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id DAEC2C061755
+        for <linux-fscrypt@vger.kernel.org>; Tue, 23 Jun 2020 21:33:58 -0700 (PDT)
+Received: by mail-qk1-x74a.google.com with SMTP id i82so762529qke.10
+        for <linux-fscrypt@vger.kernel.org>; Tue, 23 Jun 2020 21:33:58 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
+         :cc;
+        bh=wjYzq7dNm+b/15M65eILIbgPJ/utRyDEBt1j+IyIFNc=;
+        b=tZlQ1+jyfoR+7clXo6vrzd7pzgmnVS1pNwJ0UpJnMv8xv9+lzT5abGBMINYUNEUfgy
+         wdW429okaRdglWfYGu7Ufv0UtQ5ZeFFeGzVjbeo0Xr8kg504XwZmBSE6aggZ+/vpQUXr
+         jf/RyvipjXVfAL3RKcKQ3/zZm23wd9GYDVLGifCgvkc9Nu3e3J5/r9Fbt9l4vnko05Lw
+         3KLoYb78+1YFNX3aWw3/90HzD3sa+Per824hrr4K1hxgUMUJe5rxLQdxiTtq4A22HSw6
+         tZDO7K5LI3nuAlIbk0UEgIYk7QPJ35tPLzqslI5XJF8EJLq4Utbmj6YYPnRXMwnzxzf2
+         GSzQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=wjYzq7dNm+b/15M65eILIbgPJ/utRyDEBt1j+IyIFNc=;
+        b=KaYeDPkmahCTZ8aLqPDPkmgZM3jVL4OXjQ6xNWxc3OO8qZvP5jhY436m/BDsL58Gp/
+         +TazSVVaKNO6jT7UUqyhA4vcwkbBtW25eyP2AuaYqpbhkDiEdaXMiwZiH/SLBfb6KImy
+         WA14hmy7DWbqKDB7/HZGgbLDyaDdJVc3BCw/ccTnudGTn8nzWFL9UJPBz1jCmbU9lCps
+         pZY85WyAnNgqynx0Do+NqVrfy7D83IGWGbTjVGugcJo9nWugWjcToXhkZWgwcCFV/xer
+         6C75KfNXUBKgZA/6B0zqRx9IDaX+Qbt9VcvXLBQzZcWRtebyUMWSx/yemgV5mNsuKvcH
+         xhzg==
+X-Gm-Message-State: AOAM5339TExvSzHyqiztzALpHZChHOoJ1X6NBvdki7ojUlRrJBB/Nwml
+        wg/9fWAv7R3Cu41sBwfZoxtOVEnKRtM=
+X-Google-Smtp-Source: ABdhPJwQv3r1LvOO9FWS3NA1m0vFrLjIyQEAcgvFUZrYFA3esKkj7HG6enTwbe1RS/YIKDoAxkLiThK0vyo=
+X-Received: by 2002:ad4:49aa:: with SMTP id u10mr30687919qvx.162.1592973237877;
+ Tue, 23 Jun 2020 21:33:57 -0700 (PDT)
+Date:   Tue, 23 Jun 2020 21:33:38 -0700
+In-Reply-To: <20200624043341.33364-1-drosen@google.com>
+Message-Id: <20200624043341.33364-2-drosen@google.com>
+Mime-Version: 1.0
+References: <20200624043341.33364-1-drosen@google.com>
+X-Mailer: git-send-email 2.27.0.111.gc72c7da667-goog
+Subject: [PATCH v9 1/4] unicode: Add utf8_casefold_hash
+From:   Daniel Rosenberg <drosen@google.com>
+To:     "Theodore Ts'o" <tytso@mit.edu>, linux-ext4@vger.kernel.org,
+        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
+        linux-f2fs-devel@lists.sourceforge.net,
+        Eric Biggers <ebiggers@kernel.org>,
+        linux-fscrypt@vger.kernel.org,
+        Alexander Viro <viro@zeniv.linux.org.uk>,
+        Richard Weinberger <richard@nod.at>
+Cc:     linux-mtd@lists.infradead.org,
+        Andreas Dilger <adilger.kernel@dilger.ca>,
+        Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org,
+        linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        Gabriel Krisman Bertazi <krisman@collabora.com>,
+        kernel-team@android.com, Daniel Rosenberg <drosen@google.com>
+Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, Jun 22, 2020 at 06:50:17PM -0700, Eric Biggers wrote:
-> On Tue, Jun 23, 2020 at 10:46:36AM +1000, Dave Chinner wrote:
-> > On Wed, Jun 17, 2020 at 08:19:35PM -0700, Eric Biggers wrote:
-> > > Are you objecting to the use of a SB_* flag, or just to showing the flag in
-> > > show_sb_opts() instead of in the individual filesystems?  Note that the SB_*
-> > > flag was requested by Christoph
-> > > (https://lkml.kernel.org/r/20191031183217.GF23601@infradead.org/,
-> > > https://lkml.kernel.org/r/20191031212103.GA6244@infradead.org/).  We originally
-> > > used a function fscrypt_operations::inline_crypt_enabled() instead.
-> > 
-> > I'm objecting to the layering violations of having the filesystem
-> > control the mount option parsing and superblock feature flags, but
-> > then having no control over whether features that the filesystem has
-> > indicated to the VFS it is using get emitted as a mount option or
-> > not, and then having the VFS code unconditionally override the
-> > functionality that the filesystem uses because it thinks it's a
-> > mount option the filesystem supports....
-> > 
-> > For example, the current mess that has just come to light:
-> > filesystems like btrfs and XFS v5 which set SB_IVERSION
-> > unconditionally (i.e. it's not a mount option!) end up having that
-> > functionality turned off on remount because the VFS conflates
-> > MS_IVERSION with SB_IVERSION and so unconditionally clears
-> > SB_IVERSION because MS_IVERSION is not set on remount by userspace.
-> > Which userspace will never set be because the filesystems don't put
-> > "iversion" in their mount option strings because -its not a mount
-> > option- for those filesystems.
-> > 
-> > See the problem?  MS_IVERSION should be passed to the filesystem to
-> > deal with as a mount option, not treated as a flag to directly
-> > change SB_IVERSION in the superblock.
-> > 
-> > We really need to stop with the "global mount options for everyone
-> > at the VFS" and instead pass everything down to the filesystems to
-> > parse appropriately. Yes, provide generic helper functions to deal
-> > with the common flags that everything supports, but the filesystems
-> > should be masking off mount options they doesn't support changing
-> > before changing their superblock feature support mask....
-> 
-> I think the MS_* flags are best saved for mount options that are applicable to
-> many/most filesystems and are mostly/entirely implementable at the VFS level.
+This adds a case insensitive hash function to allow taking the hash
+without needing to allocate a casefolded copy of the string.
 
-That's the theory, but so far it's caused nothing but pain.
+Signed-off-by: Daniel Rosenberg <drosen@google.com>
+---
+ fs/unicode/utf8-core.c  | 23 ++++++++++++++++++++++-
+ include/linux/unicode.h |  3 +++
+ 2 files changed, 25 insertions(+), 1 deletion(-)
 
-In reality, I think ithe only sane way forward if to stop mount
-option parsing in userspace (i.e. no new MS_* flags) for any new
-functionality as it only leads to future pain. i.e. all new mount
-options should be parsed entirely in the kernel by the filesystem
-parsing code....
-
-> I don't think "inlinecrypt" qualifies, since while it will be shared by the
-> block device-based filesystems that support fscrypt, that is only 2 filesystems
-> currently; and while some of the code needed to implement it is shared in
-> fs/crypto/, there are still substantial filesystem-specific hooks needed.
-
-Right. I wasn't suggesting this patchset should use an MS_ flag -
-it was pointing out the problem with the VFS code using SB_ flags to
-indicate enabled filesystem functionality unconditionally as a mount
-option that can be changed by userspace.
-
-> Hence this patchset intentionally does *not* allocate an MS_INLINECRYPT flag.
-> 
-> I believe that already addresses half of your concern, as it means
-> SB_INLINECRYPT can only be set/cleared by the filesystem itself, not by the VFS.
-> (But the commit message could use an explanation of this.)
-> 
-> The other half would be addressed by the following change, right?
-
-Yes, it does. Thanks, Eric!
-
-Cheers,
-
-Dave.
+diff --git a/fs/unicode/utf8-core.c b/fs/unicode/utf8-core.c
+index 2a878b739115d..90656b9980720 100644
+--- a/fs/unicode/utf8-core.c
++++ b/fs/unicode/utf8-core.c
+@@ -6,6 +6,7 @@
+ #include <linux/parser.h>
+ #include <linux/errno.h>
+ #include <linux/unicode.h>
++#include <linux/stringhash.h>
+ 
+ #include "utf8n.h"
+ 
+@@ -122,9 +123,29 @@ int utf8_casefold(const struct unicode_map *um, const struct qstr *str,
+ 	}
+ 	return -EINVAL;
+ }
+-
+ EXPORT_SYMBOL(utf8_casefold);
+ 
++int utf8_casefold_hash(const struct unicode_map *um, const void *salt,
++		       struct qstr *str)
++{
++	const struct utf8data *data = utf8nfdicf(um->version);
++	struct utf8cursor cur;
++	int c;
++	unsigned long hash = init_name_hash(salt);
++
++	if (utf8ncursor(&cur, data, str->name, str->len) < 0)
++		return -EINVAL;
++
++	while ((c = utf8byte(&cur))) {
++		if (c < 0)
++			return c;
++		hash = partial_name_hash((unsigned char)c, hash);
++	}
++	str->hash = end_name_hash(hash);
++	return 0;
++}
++EXPORT_SYMBOL(utf8_casefold_hash);
++
+ int utf8_normalize(const struct unicode_map *um, const struct qstr *str,
+ 		   unsigned char *dest, size_t dlen)
+ {
+diff --git a/include/linux/unicode.h b/include/linux/unicode.h
+index 990aa97d80496..74484d44c7554 100644
+--- a/include/linux/unicode.h
++++ b/include/linux/unicode.h
+@@ -27,6 +27,9 @@ int utf8_normalize(const struct unicode_map *um, const struct qstr *str,
+ int utf8_casefold(const struct unicode_map *um, const struct qstr *str,
+ 		  unsigned char *dest, size_t dlen);
+ 
++int utf8_casefold_hash(const struct unicode_map *um, const void *salt,
++		       struct qstr *str);
++
+ struct unicode_map *utf8_load(const char *version);
+ void utf8_unload(struct unicode_map *um);
+ 
 -- 
-Dave Chinner
-david@fromorbit.com
+2.27.0.111.gc72c7da667-goog
+
