@@ -2,106 +2,88 @@ Return-Path: <SRS0=XqBm=AO=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-1.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
-	autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.8 required=3.0 tests=DKIM_INVALID,DKIM_SIGNED,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
+	SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 92B1FC433E1
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  3 Jul 2020 19:21:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 31DE0C433E2
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  3 Jul 2020 21:43:51 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 72F0320899
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  3 Jul 2020 19:21:01 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1593804061;
-	bh=PEmsm7KiYhEynj7JM9OkcWwJJEMC5FTZ1MgB7GC3/kw=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=MNmQqQi0SQMzipx5EGIhc8Vczukc520rzslqu9JOc617KOItuC8Mo6d22vCTGztj/
-	 kVR3Nl9Bppt15RXH7WFkp4mMEzqkaCfqbqx66JHWPMMnPlK0L2kn/FnNMCLp7jcywX
-	 wL40HA5UWfXcUBGoDtGcJ7u/5zfP3CCKlAPLqNUk=
+	by mail.kernel.org (Postfix) with ESMTP id 023A1208C7
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  3 Jul 2020 21:43:51 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=fail reason="signature verification failed" (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="vRPA0RBJ"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726707AbgGCTU6 (ORCPT
+        id S1727078AbgGCVnq (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 3 Jul 2020 15:20:58 -0400
-Received: from mail.kernel.org ([198.145.29.99]:49142 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726147AbgGCTU5 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 3 Jul 2020 15:20:57 -0400
-Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id EB37F207FF;
-        Fri,  3 Jul 2020 19:20:56 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1593804057;
-        bh=PEmsm7KiYhEynj7JM9OkcWwJJEMC5FTZ1MgB7GC3/kw=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=cZz3+cYtChLGxVGtGhI0iqF8NG4vRe7SyHyKP6rwlrniscYuLOgqOM9tC5bBvh6V9
-         rCNuVMRKKdD1/I05cjOph+0nERO2OeeH/Y1QSjn/3szq+YCjsBxWz49TxA/V8HiT6F
-         N6pBBTbIdf7MhFFMTY1BRtmYQCvTyvOSvJ4M/pzg=
-Date:   Fri, 3 Jul 2020 12:20:55 -0700
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Daniel Rosenberg <drosen@google.com>
-Cc:     Theodore Ts'o <tytso@mit.edu>, linux-ext4@vger.kernel.org,
-        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-fscrypt@vger.kernel.org,
-        Alexander Viro <viro@zeniv.linux.org.uk>,
-        Richard Weinberger <richard@nod.at>,
-        linux-mtd@lists.infradead.org,
-        Andreas Dilger <adilger.kernel@dilger.ca>,
+        Fri, 3 Jul 2020 17:43:46 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53324 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727028AbgGCVnp (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 3 Jul 2020 17:43:45 -0400
+Received: from merlin.infradead.org (merlin.infradead.org [IPv6:2001:8b0:10b:1231::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 6FFC6C061794;
+        Fri,  3 Jul 2020 14:43:45 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+        d=infradead.org; s=merlin.20170209; h=Content-Transfer-Encoding:MIME-Version:
+        References:In-Reply-To:Message-Id:Date:Subject:Cc:To:From:Sender:Reply-To:
+        Content-Type:Content-ID:Content-Description;
+        bh=hofn6sBAbTd2HcWy0kbqF2KoGz2MeYQfT0WYKeLl/94=; b=vRPA0RBJSRNx+4xaR47L24tptq
+        BHkA0Mtx/7VoSGsa2aKDwsNNkntcBodFVXfxh5dJJvRlQE+jRFL2ORa3+bIcmDh+E6uwyxVOWm3y9
+        ooWTTRczp4CV8td/BUYUXa7mM42iTMzMqy+kEVaquBG6AvDKZ+Ue7rZwJX4WwXnqUVjlT432L2rpX
+        iK51avkugZjnvNH3Kb8HguBYcJxI89tP93mCk8UxTYHgQpTqYNk4DAX53SrAAHU/314cKFrPT4R8V
+        /KZxnYzBfEJn6cHi1djB5wJgCvUfiLjVOrsjspLfw3SEKPc335KgqwST6NuRlCNwuarPkZ6TEuAmf
+        m1L97n4A==;
+Received: from [2601:1c0:6280:3f0::19c2] (helo=smtpauth.infradead.org)
+        by merlin.infradead.org with esmtpsa (Exim 4.92.3 #3 (Red Hat Linux))
+        id 1jrTTD-0006uZ-1T; Fri, 03 Jul 2020 21:43:43 +0000
+From:   Randy Dunlap <rdunlap@infradead.org>
+To:     linux-kernel@vger.kernel.org
+Cc:     Randy Dunlap <rdunlap@infradead.org>,
         Jonathan Corbet <corbet@lwn.net>, linux-doc@vger.kernel.org,
-        linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        Gabriel Krisman Bertazi <krisman@collabora.com>,
-        kernel-team@android.com
-Subject: Re: [PATCH v9 2/4] fs: Add standard casefolding support
-Message-ID: <20200703192055.GA2825@sol.localdomain>
-References: <20200624043341.33364-1-drosen@google.com>
- <20200624043341.33364-3-drosen@google.com>
- <20200624055707.GG844@sol.localdomain>
- <CA+PiJmTDXTKnccJdADX=ir+PtqsDD72xHGbzObpntkjkVmKHxQ@mail.gmail.com>
+        Ian Kent <raven@themaw.net>, autofs@vger.kernel.org,
+        David Howells <dhowells@redhat.com>, linux-cachefs@redhat.com,
+        Joel Becker <jlbec@evilplan.org>,
+        Christoph Hellwig <hch@lst.de>,
+        Alexander Viro <viro@zeniv.linux.org.uk>,
+        linux-fsdevel@vger.kernel.org, Eric Biggers <ebiggers@kernel.org>,
+        "Theodore Y . Ts'o" <tytso@mit.edu>, linux-fscrypt@vger.kernel.org,
+        Miklos Szeredi <miklos@szeredi.hu>,
+        linux-unionfs@vger.kernel.org
+Subject: [PATCH 02/10] Documentation: filesystems: caching/operations: drop doubled word
+Date:   Fri,  3 Jul 2020 14:43:17 -0700
+Message-Id: <20200703214325.31036-3-rdunlap@infradead.org>
+X-Mailer: git-send-email 2.26.2
+In-Reply-To: <20200703214325.31036-1-rdunlap@infradead.org>
+References: <20200703214325.31036-1-rdunlap@infradead.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CA+PiJmTDXTKnccJdADX=ir+PtqsDD72xHGbzObpntkjkVmKHxQ@mail.gmail.com>
+Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Jul 02, 2020 at 06:01:37PM -0700, Daniel Rosenberg wrote:
-> On Tue, Jun 23, 2020 at 10:57 PM Eric Biggers <ebiggers@kernel.org> wrote:
-> >
-> > Note that the '!IS_ENCRYPTED(dir) || fscrypt_has_encryption_key(dir)' check can
-> > be racy, because a process can be looking up a no-key token in a directory while
-> > concurrently another process initializes the directory's ->i_crypt_info, causing
-> > fscrypt_has_encryption_key(dir) to suddenly start returning true.
-> >
-> > In my rework of filename handling in f2fs, I actually ended up removing all
-> > calls to needs_casefold(), thus avoiding this race.  f2fs now decides whether
-> > the name is going to need casefolding early on, in __f2fs_setup_filename(),
-> > where it knows in a race-free way whether the filename is a no-key token or not.
-> >
-> > Perhaps ext4 should work the same way?  It did look like there would be some
-> > extra complexity due to how the ext4 directory hashing works in comparison to
-> > f2fs's, but I haven't had a chance to properly investigate it.
-> >
-> > - Eric
-> 
-> Hm. I think I should be able to just check for DCACHE_ENCRYPTED_NAME
-> in the dentry here, right? I'm just trying to avoid casefolding the
-> no-key token, and that flag should indicate that.
+Drop the doubled word "be".
 
-Ideally yes, but currently the 'struct dentry' isn't always available.  See how
-fscrypt_setup_filename(), f2fs_setup_filename(), f2fs_find_entry(),
-ext4_find_entry(), etc. take a 'struct qstr', not a 'struct dentry'.
+Signed-off-by: Randy Dunlap <rdunlap@infradead.org>
+Cc: Jonathan Corbet <corbet@lwn.net>
+Cc: linux-doc@vger.kernel.org
+Cc: David Howells <dhowells@redhat.com>
+Cc: linux-cachefs@redhat.com
+---
+ Documentation/filesystems/caching/operations.rst |    2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-At some point we should fix that by passing down the dentry whenever it's
-available, so that we reliably know whether the name is a no-key name or not.
-
-So even my new f2fs code is still racy.  But it at least handles each filename
-in a consistent way within each directory operation.  In comparison, your
-proposed ext4 code can treat a filename as a no-key name while matching one
-dir_entry and then as a regular filename while matching the next.  I think the
-f2fs way is more on the right track, both correctness-wise and efficiency-wise.
-
-- Eric
+--- linux-next-20200701.orig/Documentation/filesystems/caching/operations.rst
++++ linux-next-20200701/Documentation/filesystems/caching/operations.rst
+@@ -27,7 +27,7 @@ data storage and retrieval routines.  It
+ fscache_operation structs, though these are usually embedded into some other
+ structure.
+ 
+-This facility is available to and expected to be be used by the cache backends,
++This facility is available to and expected to be used by the cache backends,
+ and FS-Cache will create operations and pass them off to the appropriate cache
+ backend for completion.
+ 
