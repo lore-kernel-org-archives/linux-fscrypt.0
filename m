@@ -2,90 +2,92 @@ Return-Path: <SRS0=lSh/=AT=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 27C0DC433E2
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jul 2020 17:34:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0EF2AC433E2
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jul 2020 21:56:19 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id F405F207D0
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jul 2020 17:34:55 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id D747120775
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jul 2020 21:56:18 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1594229696;
-	bh=n09ugl6WfqWNGruKtsGDgvdM0O8WqlobftThyJ0oyVo=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=0YMT6f9a2Ys4S1oMm1ijYkTmdyYvmS4WNWpWDSoJQSoU3BykcZvZMMZbmbWz3xT6C
-	 xjUVBO+j8LEYhTTqs5Xr5ZQv5d5ksyty/RegdmHh4niQ2y8bWWQpJKyyHk5zdgs21U
-	 9jdTTu2eQVwGL3GZPBjlpWjLMIPzgT7XRLSf8K/k=
+	s=default; t=1594245378;
+	bh=p/CH4nsNT9ydV+9pFJipS4F+E2CrjTkanGrU5mFFnMQ=;
+	h=From:To:Subject:Date:List-ID:From;
+	b=fvzGuh25/iHI3tuho1p7gglgHewFQKQwrRRrSyYgfL/tpmpF68eLRGOhF0+242IlC
+	 +O6ujban2f5BKf5A3AXMwH3oWmnUCetS1qv3icSc9KNjCQPD8rmHSD2Pjeq3AEdqk1
+	 OMKkDG7Zyb99TeiZR1qdKij1y0WRG38VnoR62sRQ=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726759AbgGHRey (ORCPT
+        id S1725446AbgGHV4S (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 8 Jul 2020 13:34:54 -0400
-Received: from mail.kernel.org ([198.145.29.99]:45946 "EHLO mail.kernel.org"
+        Wed, 8 Jul 2020 17:56:18 -0400
+Received: from mail.kernel.org ([198.145.29.99]:38686 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725810AbgGHRey (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 8 Jul 2020 13:34:54 -0400
-Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        id S1726116AbgGHV4Q (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 8 Jul 2020 17:56:16 -0400
+Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id EE22B206F6;
-        Wed,  8 Jul 2020 17:34:53 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 86A1220775
+        for <linux-fscrypt@vger.kernel.org>; Wed,  8 Jul 2020 21:56:16 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1594229694;
-        bh=n09ugl6WfqWNGruKtsGDgvdM0O8WqlobftThyJ0oyVo=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=tjBbRT/biosB1x+FYkug66Yhj2kJWisFl+iImfCbRhGlPgbns+b6Uh4j/OzMF/AKW
-         VcfyCcgyvEWJ2cCIBonSl2YoUxIRw/2lRpkpreN+9TTP/QpLNM15VBmodOee2mP43J
-         hW7JXhguxafrj1Ttet7Lj2FtiQQXTEqFd/WGYrGc=
-Date:   Wed, 8 Jul 2020 10:34:52 -0700
+        s=default; t=1594245376;
+        bh=p/CH4nsNT9ydV+9pFJipS4F+E2CrjTkanGrU5mFFnMQ=;
+        h=From:To:Subject:Date:From;
+        b=t/wkfh3qi7Ja+Q9IlzWnu65xM5dIZ4m4XuIXBanzoJp1iL96UP6EKAepTHzymEJOa
+         tOppd9U1uAcaOVi7Q2XD/bxfQj8ltl/6NWQzR0BoDo8M5/fFolNIhKXM3HVruivcEh
+         xDxd3BFYgRzMzvIaFSuBpoRgCxv1b1nQHs/RsXR4=
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     tytso@mit.edu
-Cc:     Satya Tangirala <satyat@google.com>, linux-fsdevel@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net
-Subject: Re: [PATCH v4 4/4] ext4: add inline encryption support
-Message-ID: <20200708173452.GA32199@sol.localdomain>
-References: <20200702015607.1215430-1-satyat@google.com>
- <20200702015607.1215430-5-satyat@google.com>
- <20200708171812.GF1627842@mit.edu>
+To:     linux-fscrypt@vger.kernel.org
+Subject: [PATCH] fscrypt: add comments that describe the HKDF info strings
+Date:   Wed,  8 Jul 2020 14:55:29 -0700
+Message-Id: <20200708215529.146890-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.27.0
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200708171812.GF1627842@mit.edu>
+Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Jul 08, 2020 at 01:18:12PM -0400, tytso@mit.edu wrote:
-> On Thu, Jul 02, 2020 at 01:56:07AM +0000, Satya Tangirala wrote:
-> > From: Eric Biggers <ebiggers@google.com>
-> > 
-> > Wire up ext4 to support inline encryption via the helper functions which
-> > fs/crypto/ now provides.  This includes:
-> > 
-> > - Adding a mount option 'inlinecrypt' which enables inline encryption
-> >   on encrypted files where it can be used.
-> > 
-> > - Setting the bio_crypt_ctx on bios that will be submitted to an
-> >   inline-encrypted file.
-> > 
-> >   Note: submit_bh_wbc() in fs/buffer.c also needed to be patched for
-> >   this part, since ext4 sometimes uses ll_rw_block() on file data.
-> > 
-> > - Not adding logically discontiguous data to bios that will be submitted
-> >   to an inline-encrypted file.
-> > 
-> > - Not doing filesystem-layer crypto on inline-encrypted files.
-> > 
-> > Signed-off-by: Eric Biggers <ebiggers@google.com>
-> > Co-developed-by: Satya Tangirala <satyat@google.com>
-> > Signed-off-by: Satya Tangirala <satyat@google.com>
-> 
-> Reviewed-by: Theodore Ts'o <tytso@mit.edu>
-> 
+From: Eric Biggers <ebiggers@google.com>
 
-Thanks Ted.  I've applied this patch to fscrypt.git#master for 5.9.
+Each HKDF context byte is associated with a specific format of the
+remaining part of the application-specific info string.  Add comments so
+that it's easier to keep track of what these all are.
 
-- Eric
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/fscrypt_private.h | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 5bb40d0109c8..0f154bdbc14b 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -312,13 +312,13 @@ int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+  * outputs are unique and cryptographically isolated, i.e. knowledge of one
+  * output doesn't reveal another.
+  */
+-#define HKDF_CONTEXT_KEY_IDENTIFIER	1
+-#define HKDF_CONTEXT_PER_FILE_ENC_KEY	2
+-#define HKDF_CONTEXT_DIRECT_KEY		3
+-#define HKDF_CONTEXT_IV_INO_LBLK_64_KEY	4
+-#define HKDF_CONTEXT_DIRHASH_KEY	5
+-#define HKDF_CONTEXT_IV_INO_LBLK_32_KEY	6
+-#define HKDF_CONTEXT_INODE_HASH_KEY	7
++#define HKDF_CONTEXT_KEY_IDENTIFIER	1 /* info=<empty>		*/
++#define HKDF_CONTEXT_PER_FILE_ENC_KEY	2 /* info=file_nonce		*/
++#define HKDF_CONTEXT_DIRECT_KEY		3 /* info=mode_num		*/
++#define HKDF_CONTEXT_IV_INO_LBLK_64_KEY	4 /* info=mode_num||fs_uuid	*/
++#define HKDF_CONTEXT_DIRHASH_KEY	5 /* info=file_nonce		*/
++#define HKDF_CONTEXT_IV_INO_LBLK_32_KEY	6 /* info=mode_num||fs_uuid	*/
++#define HKDF_CONTEXT_INODE_HASH_KEY	7 /* info=<empty>		*/
+ 
+ int fscrypt_hkdf_expand(const struct fscrypt_hkdf *hkdf, u8 context,
+ 			const u8 *info, unsigned int infolen,
+-- 
+2.27.0
+
