@@ -7,38 +7,38 @@ X-Spam-Status: No, score=-10.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
 	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 01E09C433E1
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 99A5FC433E2
 	for <linux-fscrypt@archiver.kernel.org>; Fri, 10 Jul 2020 07:21:53 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id CC03A2078D
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 10 Jul 2020 07:21:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 792CA2078D
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 10 Jul 2020 07:21:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1594365712;
-	bh=DpdZuYaBF1BQMfln7LmSIl8AzkzjHHKWXXI1D6rQFWE=;
+	s=default; t=1594365713;
+	bh=WsyJyBNgAK+/q3X9pfdsH+ESp5Db6pybnB0CneUKOyk=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=1kZUjNXhwW+gVl+F+Ct6+JUDHmtOzWZubysBTySiNGvtAVZeMeFcCEGU63T+8q/+U
-	 OfVPg7YThNcOgNDQy+5C+VDjqYuKjPrp92dD/iaG/AX5EicCQ4M0etswwKfn/0YzIv
-	 FldR3ufwQQdKpiiT/TfUkztw4l8KosKqmIJcMMeo=
+	b=TD8LllYt7jrrXw60mAPeXrk+ojWXfMie3JjMaPLxmf9XvjY5GKGF+dWOxe8RmMlbk
+	 ++CkZrTyCarka1ogM2UCNEpQT9D5vBgGdM3FIHKMRaHonn+9eZo5gf2nsPPga/M0St
+	 9Uoh3cNJXp1ml2j7tOKK/npZcvxK8WvZvpZdYZD4=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727853AbgGJHVw (ORCPT
+        id S1727861AbgGJHVw (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Fri, 10 Jul 2020 03:21:52 -0400
-Received: from mail.kernel.org ([198.145.29.99]:57782 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:57850 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727099AbgGJHVt (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1727777AbgGJHVt (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Fri, 10 Jul 2020 03:21:49 -0400
 Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 8E055207F9;
-        Fri, 10 Jul 2020 07:21:47 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id B98C22080D;
+        Fri, 10 Jul 2020 07:21:48 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1594365708;
-        bh=DpdZuYaBF1BQMfln7LmSIl8AzkzjHHKWXXI1D6rQFWE=;
+        s=default; t=1594365709;
+        bh=WsyJyBNgAK+/q3X9pfdsH+ESp5Db6pybnB0CneUKOyk=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=0eyObxIzLlCt7Rxl84fJBRB6J0Ny5vXybhlKgNc89XyQ7FpBT4C1vRnLo7iZX5s4X
-         KtqTjSFaXKgVB7H1QGppJ8hsKRDX4YDcCpcF4iB9pWrbyAx4jdiVyNJLqZDMtfDK82
-         9Z0efAva3bMExu2GCwVf2ZukY52PttOWwDO8u9aE=
+        b=CoXdovp2Qz/fppxtctJ6KCZTc8FAANIsBnL9DWD/9uO3iYS1ZZOZiLNJn0J6Bv8Ec
+         wpLtw9w0g/N5N+PUwEej2qAI16Cm4YLpBaeb5CeoDEudSgpyK08DctPKIj5SAwei3Y
+         k1UBPDtVB1tjs0fkqkv05oiazqen6SEcEni1tM8Y=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-scsi@vger.kernel.org
 Cc:     linux-arm-msm@vger.kernel.org, linux-fscrypt@vger.kernel.org,
@@ -53,9 +53,9 @@ Cc:     linux-arm-msm@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         Satya Tangirala <satyat@google.com>,
         Steev Klimaszewski <steev@kali.org>,
         Thara Gopinath <thara.gopinath@linaro.org>
-Subject: [PATCH v6 1/5] firmware: qcom_scm: Add support for programming inline crypto keys
-Date:   Fri, 10 Jul 2020 00:20:08 -0700
-Message-Id: <20200710072013.177481-2-ebiggers@kernel.org>
+Subject: [PATCH v6 3/5] arm64: dts: sdm845: add Inline Crypto Engine registers and clock
+Date:   Fri, 10 Jul 2020 00:20:10 -0700
+Message-Id: <20200710072013.177481-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.27.0
 In-Reply-To: <20200710072013.177481-1-ebiggers@kernel.org>
 References: <20200710072013.177481-1-ebiggers@kernel.org>
@@ -68,194 +68,66 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Add support for the Inline Crypto Engine (ICE) key programming interface
-that's needed for the ufs-qcom driver to use inline encryption on
-Snapdragon SoCs.  This interface consists of two SCM calls: one to
-program a key into a keyslot, and one to invalidate a keyslot.
+Add the vendor-specific registers and clock for Qualcomm ICE (Inline
+Crypto Engine) to the device tree node for the UFS host controller on
+sdm845, so that the ufs-qcom driver will be able to use inline crypto.
 
-Although the UFS specification defines a standard way to do this, on
-these SoCs the Linux kernel isn't permitted to access the needed crypto
-configuration registers directly; these SCM calls must be used instead.
+Use a separate register range rather than extending the main UFS range
+because there's a gap between the two, and the ICE registers are
+vendor-specific.  (Actually, the hardware claims that the ICE range also
+includes the array of standard crypto configuration registers; however,
+on this SoC the Linux kernel isn't permitted to access them directly.)
 
-Acked-by: Bjorn Andersson <bjorn.andersson@linaro.org>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- drivers/firmware/qcom_scm.c | 101 ++++++++++++++++++++++++++++++++++++
- drivers/firmware/qcom_scm.h |   4 ++
- include/linux/qcom_scm.h    |  19 +++++++
- 3 files changed, 124 insertions(+)
+ arch/arm64/boot/dts/qcom/sdm845.dtsi | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/firmware/qcom_scm.c b/drivers/firmware/qcom_scm.c
-index 0e7233a20f34..1a8eb1b42b1e 100644
---- a/drivers/firmware/qcom_scm.c
-+++ b/drivers/firmware/qcom_scm.c
-@@ -923,6 +923,107 @@ int qcom_scm_ocmem_unlock(enum qcom_scm_ocmem_client id, u32 offset, u32 size)
- }
- EXPORT_SYMBOL(qcom_scm_ocmem_unlock);
+diff --git a/arch/arm64/boot/dts/qcom/sdm845.dtsi b/arch/arm64/boot/dts/qcom/sdm845.dtsi
+index 8eb5a31346d2..0affb0041724 100644
+--- a/arch/arm64/boot/dts/qcom/sdm845.dtsi
++++ b/arch/arm64/boot/dts/qcom/sdm845.dtsi
+@@ -1692,7 +1692,9 @@ mmss_noc: interconnect@1740000 {
+ 		ufs_mem_hc: ufshc@1d84000 {
+ 			compatible = "qcom,sdm845-ufshc", "qcom,ufshc",
+ 				     "jedec,ufs-2.0";
+-			reg = <0 0x01d84000 0 0x2500>;
++			reg = <0 0x01d84000 0 0x2500>,
++			      <0 0x01d90000 0 0x8000>;
++			reg-names = "std", "ice";
+ 			interrupts = <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH>;
+ 			phys = <&ufs_mem_phy_lanes>;
+ 			phy-names = "ufsphy";
+@@ -1712,7 +1714,8 @@ ufs_mem_hc: ufshc@1d84000 {
+ 				"ref_clk",
+ 				"tx_lane0_sync_clk",
+ 				"rx_lane0_sync_clk",
+-				"rx_lane1_sync_clk";
++				"rx_lane1_sync_clk",
++				"ice_core_clk";
+ 			clocks =
+ 				<&gcc GCC_UFS_PHY_AXI_CLK>,
+ 				<&gcc GCC_AGGRE_UFS_PHY_AXI_CLK>,
+@@ -1721,7 +1724,8 @@ ufs_mem_hc: ufshc@1d84000 {
+ 				<&rpmhcc RPMH_CXO_CLK>,
+ 				<&gcc GCC_UFS_PHY_TX_SYMBOL_0_CLK>,
+ 				<&gcc GCC_UFS_PHY_RX_SYMBOL_0_CLK>,
+-				<&gcc GCC_UFS_PHY_RX_SYMBOL_1_CLK>;
++				<&gcc GCC_UFS_PHY_RX_SYMBOL_1_CLK>,
++				<&gcc GCC_UFS_PHY_ICE_CORE_CLK>;
+ 			freq-table-hz =
+ 				<50000000 200000000>,
+ 				<0 0>,
+@@ -1730,7 +1734,8 @@ ufs_mem_hc: ufshc@1d84000 {
+ 				<0 0>,
+ 				<0 0>,
+ 				<0 0>,
+-				<0 0>;
++				<0 0>,
++				<0 300000000>;
  
-+/**
-+ * qcom_scm_ice_available() - Is the ICE key programming interface available?
-+ *
-+ * Return: true iff the SCM calls wrapped by qcom_scm_ice_invalidate_key() and
-+ *	   qcom_scm_ice_set_key() are available.
-+ */
-+bool qcom_scm_ice_available(void)
-+{
-+	return __qcom_scm_is_call_available(__scm->dev, QCOM_SCM_SVC_ES,
-+					    QCOM_SCM_ES_INVALIDATE_ICE_KEY) &&
-+		__qcom_scm_is_call_available(__scm->dev, QCOM_SCM_SVC_ES,
-+					     QCOM_SCM_ES_CONFIG_SET_ICE_KEY);
-+}
-+EXPORT_SYMBOL(qcom_scm_ice_available);
-+
-+/**
-+ * qcom_scm_ice_invalidate_key() - Invalidate an inline encryption key
-+ * @index: the keyslot to invalidate
-+ *
-+ * The UFSHCI standard defines a standard way to do this, but it doesn't work on
-+ * these SoCs; only this SCM call does.
-+ *
-+ * Return: 0 on success; -errno on failure.
-+ */
-+int qcom_scm_ice_invalidate_key(u32 index)
-+{
-+	struct qcom_scm_desc desc = {
-+		.svc = QCOM_SCM_SVC_ES,
-+		.cmd = QCOM_SCM_ES_INVALIDATE_ICE_KEY,
-+		.arginfo = QCOM_SCM_ARGS(1),
-+		.args[0] = index,
-+		.owner = ARM_SMCCC_OWNER_SIP,
-+	};
-+
-+	return qcom_scm_call(__scm->dev, &desc, NULL);
-+}
-+EXPORT_SYMBOL(qcom_scm_ice_invalidate_key);
-+
-+/**
-+ * qcom_scm_ice_set_key() - Set an inline encryption key
-+ * @index: the keyslot into which to set the key
-+ * @key: the key to program
-+ * @key_size: the size of the key in bytes
-+ * @cipher: the encryption algorithm the key is for
-+ * @data_unit_size: the encryption data unit size, i.e. the size of each
-+ *		    individual plaintext and ciphertext.  Given in 512-byte
-+ *		    units, e.g. 1 = 512 bytes, 8 = 4096 bytes, etc.
-+ *
-+ * Program a key into a keyslot of Qualcomm ICE (Inline Crypto Engine), where it
-+ * can then be used to encrypt/decrypt UFS I/O requests inline.
-+ *
-+ * The UFSHCI standard defines a standard way to do this, but it doesn't work on
-+ * these SoCs; only this SCM call does.
-+ *
-+ * Return: 0 on success; -errno on failure.
-+ */
-+int qcom_scm_ice_set_key(u32 index, const u8 *key, u32 key_size,
-+			 enum qcom_scm_ice_cipher cipher, u32 data_unit_size)
-+{
-+	struct qcom_scm_desc desc = {
-+		.svc = QCOM_SCM_SVC_ES,
-+		.cmd = QCOM_SCM_ES_CONFIG_SET_ICE_KEY,
-+		.arginfo = QCOM_SCM_ARGS(5, QCOM_SCM_VAL, QCOM_SCM_RW,
-+					 QCOM_SCM_VAL, QCOM_SCM_VAL,
-+					 QCOM_SCM_VAL),
-+		.args[0] = index,
-+		.args[2] = key_size,
-+		.args[3] = cipher,
-+		.args[4] = data_unit_size,
-+		.owner = ARM_SMCCC_OWNER_SIP,
-+	};
-+	void *keybuf;
-+	dma_addr_t key_phys;
-+	int ret;
-+
-+	/*
-+	 * 'key' may point to vmalloc()'ed memory, but we need to pass a
-+	 * physical address that's been properly flushed.  The sanctioned way to
-+	 * do this is by using the DMA API.  But as is best practice for crypto
-+	 * keys, we also must wipe the key after use.  This makes kmemdup() +
-+	 * dma_map_single() not clearly correct, since the DMA API can use
-+	 * bounce buffers.  Instead, just use dma_alloc_coherent().  Programming
-+	 * keys is normally rare and thus not performance-critical.
-+	 */
-+
-+	keybuf = dma_alloc_coherent(__scm->dev, key_size, &key_phys,
-+				    GFP_KERNEL);
-+	if (!keybuf)
-+		return -ENOMEM;
-+	memcpy(keybuf, key, key_size);
-+	desc.args[1] = key_phys;
-+
-+	ret = qcom_scm_call(__scm->dev, &desc, NULL);
-+
-+	memzero_explicit(keybuf, key_size);
-+
-+	dma_free_coherent(__scm->dev, key_size, keybuf, key_phys);
-+	return ret;
-+}
-+EXPORT_SYMBOL(qcom_scm_ice_set_key);
-+
- /**
-  * qcom_scm_hdcp_available() - Check if secure environment supports HDCP.
-  *
-diff --git a/drivers/firmware/qcom_scm.h b/drivers/firmware/qcom_scm.h
-index d9ed670da222..38ea614d29fe 100644
---- a/drivers/firmware/qcom_scm.h
-+++ b/drivers/firmware/qcom_scm.h
-@@ -103,6 +103,10 @@ extern int scm_legacy_call(struct device *dev, const struct qcom_scm_desc *desc,
- #define QCOM_SCM_OCMEM_LOCK_CMD		0x01
- #define QCOM_SCM_OCMEM_UNLOCK_CMD	0x02
- 
-+#define QCOM_SCM_SVC_ES			0x10	/* Enterprise Security */
-+#define QCOM_SCM_ES_INVALIDATE_ICE_KEY	0x03
-+#define QCOM_SCM_ES_CONFIG_SET_ICE_KEY	0x04
-+
- #define QCOM_SCM_SVC_HDCP		0x11
- #define QCOM_SCM_HDCP_INVOKE		0x01
- 
-diff --git a/include/linux/qcom_scm.h b/include/linux/qcom_scm.h
-index 3d6a24697761..2e1193a3fb5f 100644
---- a/include/linux/qcom_scm.h
-+++ b/include/linux/qcom_scm.h
-@@ -44,6 +44,13 @@ enum qcom_scm_sec_dev_id {
- 	QCOM_SCM_ICE_DEV_ID     = 20,
- };
- 
-+enum qcom_scm_ice_cipher {
-+	QCOM_SCM_ICE_CIPHER_AES_128_XTS = 0,
-+	QCOM_SCM_ICE_CIPHER_AES_128_CBC = 1,
-+	QCOM_SCM_ICE_CIPHER_AES_256_XTS = 3,
-+	QCOM_SCM_ICE_CIPHER_AES_256_CBC = 4,
-+};
-+
- #define QCOM_SCM_VMID_HLOS       0x3
- #define QCOM_SCM_VMID_MSS_MSA    0xF
- #define QCOM_SCM_VMID_WLAN       0x18
-@@ -88,6 +95,12 @@ extern int qcom_scm_ocmem_lock(enum qcom_scm_ocmem_client id, u32 offset,
- extern int qcom_scm_ocmem_unlock(enum qcom_scm_ocmem_client id, u32 offset,
- 				 u32 size);
- 
-+extern bool qcom_scm_ice_available(void);
-+extern int qcom_scm_ice_invalidate_key(u32 index);
-+extern int qcom_scm_ice_set_key(u32 index, const u8 *key, u32 key_size,
-+				enum qcom_scm_ice_cipher cipher,
-+				u32 data_unit_size);
-+
- extern bool qcom_scm_hdcp_available(void);
- extern int qcom_scm_hdcp_req(struct qcom_scm_hdcp_req *req, u32 req_cnt,
- 			     u32 *resp);
-@@ -138,6 +151,12 @@ static inline int qcom_scm_ocmem_lock(enum qcom_scm_ocmem_client id, u32 offset,
- static inline int qcom_scm_ocmem_unlock(enum qcom_scm_ocmem_client id,
- 		u32 offset, u32 size) { return -ENODEV; }
- 
-+static inline bool qcom_scm_ice_available(void) { return false; }
-+static inline int qcom_scm_ice_invalidate_key(u32 index) { return -ENODEV; }
-+static inline int qcom_scm_ice_set_key(u32 index, const u8 *key, u32 key_size,
-+				       enum qcom_scm_ice_cipher cipher,
-+				       u32 data_unit_size) { return -ENODEV; }
-+
- static inline bool qcom_scm_hdcp_available(void) { return false; }
- static inline int qcom_scm_hdcp_req(struct qcom_scm_hdcp_req *req, u32 req_cnt,
- 		u32 *resp) { return -ENODEV; }
+ 			status = "disabled";
+ 		};
 -- 
 2.27.0
 
