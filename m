@@ -2,88 +2,99 @@ Return-Path: <SRS0=2wBi=AV=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.2 required=3.0 tests=HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_SANE_1 autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.1 required=3.0 tests=DKIMWL_WL_HIGH,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 74F26C433DF
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 10 Jul 2020 01:05:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4A99CC433DF
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 10 Jul 2020 01:15:16 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 54BC32073A
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 10 Jul 2020 01:05:32 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 1BFE02073A
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 10 Jul 2020 01:15:16 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1594343716;
+	bh=C8cT75MIlGM04Tub/VRAl3jRDWJvMsg87Gf2nf6feWo=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=n0YR8UwQcwTvUkVfSxuCajSf8ZOJ6FonNFf4CvxS6O4k300KmoeMCwT+BiLlxjDou
+	 SfR/RKCJzep8sVLbg3kTSRPJ2aZSBCwfRaRINjmeCjUquM7cu7qsDq27G8k0oqqG3q
+	 qErSYTm3zCw9XpXuC2iN5M65ZTB6J6704cHnZbns=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726323AbgGJBFb (ORCPT
+        id S1726615AbgGJBPP (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 9 Jul 2020 21:05:31 -0400
-Received: from szxga05-in.huawei.com ([45.249.212.191]:7284 "EHLO huawei.com"
-        rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org with ESMTP
-        id S1726265AbgGJBFb (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 9 Jul 2020 21:05:31 -0400
-Received: from DGGEMS409-HUB.china.huawei.com (unknown [172.30.72.59])
-        by Forcepoint Email with ESMTP id CEECEF12BB245A9D0CA7;
-        Fri, 10 Jul 2020 09:05:28 +0800 (CST)
-Received: from [10.134.22.195] (10.134.22.195) by smtp.huawei.com
- (10.3.19.209) with Microsoft SMTP Server (TLS) id 14.3.487.0; Fri, 10 Jul
- 2020 09:05:24 +0800
+        Thu, 9 Jul 2020 21:15:15 -0400
+Received: from mail.kernel.org ([198.145.29.99]:43530 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726311AbgGJBPP (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 9 Jul 2020 21:15:15 -0400
+Received: from gmail.com (unknown [104.132.1.76])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 3A79B20708;
+        Fri, 10 Jul 2020 01:15:15 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1594343715;
+        bh=C8cT75MIlGM04Tub/VRAl3jRDWJvMsg87Gf2nf6feWo=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=Y5dVuYqU9lL7VJJavhFYRgeK1C7CXj9pDwiZxDeHvV6G5lJMyfNbRV7FNeAsTH8Vn
+         yPWTht3cItkkWnhW3hh+gNE4zGFsfZRqBBLm1cgWtwCbA9xUnA8V/s735zsk1pZQ6e
+         7DPyUEVeX1bPi8+BJ9PP9hJuiki1L5HrnlZcVVxU=
+Date:   Thu, 9 Jul 2020 18:15:13 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Chao Yu <yuchao0@huawei.com>
+Cc:     Satya Tangirala <satyat@google.com>, linux-fscrypt@vger.kernel.org,
+        linux-fsdevel@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org
 Subject: Re: [PATCH 5/5] f2fs: support direct I/O with fscrypt using
  blk-crypto
-To:     Satya Tangirala <satyat@google.com>,
-        <linux-fscrypt@vger.kernel.org>, <linux-fsdevel@vger.kernel.org>,
-        <linux-f2fs-devel@lists.sourceforge.net>,
-        <linux-ext4@vger.kernel.org>
-CC:     Eric Biggers <ebiggers@google.com>
+Message-ID: <20200710011513.GA4037751@gmail.com>
 References: <20200709194751.2579207-1-satyat@google.com>
  <20200709194751.2579207-6-satyat@google.com>
-From:   Chao Yu <yuchao0@huawei.com>
-Message-ID: <560266ca-0164-c02e-18ea-55564683d13e@huawei.com>
-Date:   Fri, 10 Jul 2020 09:05:23 +0800
-User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:52.0) Gecko/20100101
- Thunderbird/52.9.1
+ <560266ca-0164-c02e-18ea-55564683d13e@huawei.com>
 MIME-Version: 1.0
-In-Reply-To: <20200709194751.2579207-6-satyat@google.com>
-Content-Type: text/plain; charset="utf-8"
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
-X-Originating-IP: [10.134.22.195]
-X-CFilter-Loop: Reflected
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <560266ca-0164-c02e-18ea-55564683d13e@huawei.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On 2020/7/10 3:47, Satya Tangirala wrote:
-> From: Eric Biggers <ebiggers@google.com>
+On Fri, Jul 10, 2020 at 09:05:23AM +0800, Chao Yu wrote:
+> On 2020/7/10 3:47, Satya Tangirala wrote:
+> > From: Eric Biggers <ebiggers@google.com>
+> > 
+> > Wire up f2fs with fscrypt direct I/O support.
+> > 
+> > Signed-off-by: Eric Biggers <ebiggers@google.com>
+> > Signed-off-by: Satya Tangirala <satyat@google.com>
+> > ---
+> >  fs/f2fs/f2fs.h | 4 +++-
+> >  1 file changed, 3 insertions(+), 1 deletion(-)
+> > 
+> > diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+> > index b35a50f4953c..6d662a37b445 100644
+> > --- a/fs/f2fs/f2fs.h
+> > +++ b/fs/f2fs/f2fs.h
+> > @@ -4082,7 +4082,9 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
+> >  	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+> >  	int rw = iov_iter_rw(iter);
+> >  
+> > -	if (f2fs_post_read_required(inode))
+> > +	if (!fscrypt_dio_supported(iocb, iter))
+> > +		return true;
+> > +	if (fsverity_active(inode))
 > 
-> Wire up f2fs with fscrypt direct I/O support.
+> static inline bool f2fs_post_read_required(struct inode *inode)
+> {
+> 	return f2fs_encrypted_file(inode) || fsverity_active(inode) ||
+> 		f2fs_compressed_file(inode);
+> }
 > 
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> Signed-off-by: Satya Tangirala <satyat@google.com>
-> ---
->  fs/f2fs/f2fs.h | 4 +++-
->  1 file changed, 3 insertions(+), 1 deletion(-)
+> That's not correct, missed to check compression condition.
 > 
-> diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-> index b35a50f4953c..6d662a37b445 100644
-> --- a/fs/f2fs/f2fs.h
-> +++ b/fs/f2fs/f2fs.h
-> @@ -4082,7 +4082,9 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
->  	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
->  	int rw = iov_iter_rw(iter);
->  
-> -	if (f2fs_post_read_required(inode))
-> +	if (!fscrypt_dio_supported(iocb, iter))
-> +		return true;
-> +	if (fsverity_active(inode))
 
-static inline bool f2fs_post_read_required(struct inode *inode)
-{
-	return f2fs_encrypted_file(inode) || fsverity_active(inode) ||
-		f2fs_compressed_file(inode);
-}
+Thanks Chao, great catch.  This used to be correct, but we missed that the
+second f2fs_compressed_file() check got removed by commit b5f4684b5f5f
+("f2fs: remove redundant compress inode check").
 
-That's not correct, missed to check compression condition.
-
->  		return true;
->  	if (f2fs_is_multi_device(sbi))
->  		return true;
-> 
+- Eric
