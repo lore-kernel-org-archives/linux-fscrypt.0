@@ -1,115 +1,65 @@
-Return-Path: <SRS0=Kunw=A7=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=R2Bm=BA=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-20.6 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8B580C43466
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jul 2020 23:38:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 55460C433E0
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 21 Jul 2020 00:32:25 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 6104D22CAE
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 20 Jul 2020 23:38:02 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="lw5TetxA"
+	by mail.kernel.org (Postfix) with ESMTP id 313EA207FC
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 21 Jul 2020 00:32:25 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1595291545;
+	bh=xWhYH850+Dy/XXhslyjfk8C0ENR4CMAVpP1c8JCWOrM=;
+	h=Date:From:To:Subject:References:In-Reply-To:List-ID:From;
+	b=L0HGD44uF6LV5/7BK7W+OLY5WK2xQWK1oWNymFrGYOhEAy9U3CKrYFrBgWOHDJVgc
+	 5ChCbLK5lW1JC3rmCNTGMKbA2g1D/QEbLebChrJcgIvQdt+fn/a/VNPLyPk2EeQrM/
+	 WSJOdHIO8qF6sy2R8orRYJ8QLHAZXGVjvKrpO+NI=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728160AbgGTXiA (ORCPT
+        id S1726647AbgGUAcZ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 20 Jul 2020 19:38:00 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56034 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1728108AbgGTXhv (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 20 Jul 2020 19:37:51 -0400
-Received: from mail-pl1-x64a.google.com (mail-pl1-x64a.google.com [IPv6:2607:f8b0:4864:20::64a])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3240FC0619D9
-        for <linux-fscrypt@vger.kernel.org>; Mon, 20 Jul 2020 16:37:51 -0700 (PDT)
-Received: by mail-pl1-x64a.google.com with SMTP id t18so11375051plo.13
-        for <linux-fscrypt@vger.kernel.org>; Mon, 20 Jul 2020 16:37:51 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
-         :cc;
-        bh=ORAQciKgJGVxLPMl88O8FRaS7Y2vfgBBYDIN8L834Cw=;
-        b=lw5TetxAIlCI7U6av5shkKyjO6ThYv7yDbySa3SgWcGSwSgPPaWjP++XkjFPG4OI6Z
-         zWsLpvD626keD3tI0jFOivGvaW9+0l5eZ4l7hYSrpPYOPlwsi9MGB5ODpbI/7AA04Zb6
-         tCC6woja7XRBkrAJHy6DcRwqP6vgX9nv2QZPhmI0hiNoTeqEbeuJdvn+TgYDZ0U60y3g
-         wohrCT9NyZKibcZkl+RWiaSOHqiofv/sVgqViMF4tlhAtCQWBZ6HI7L1fDpq7bbcky5t
-         iAtFFwrxXVO/FU54Nfq5i3XKHkcF5DMzbZKLz73/s51/PlZliyzBh0FjxR+L3S2QGwsQ
-         HjDw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
-         :references:subject:from:to:cc;
-        bh=ORAQciKgJGVxLPMl88O8FRaS7Y2vfgBBYDIN8L834Cw=;
-        b=XotFTW+h77Yr3YpHgrdYcWL+Nds8liq7UViTV67oismWx8DzUTzLnT2QZpl93TgTpa
-         0pMWEy3luUwRLEWIvTTUbETF/paoccrZFVrBUaFx22JXm8eRE+8TYPPJtIEMoRmkMQIF
-         +RtkFJXoGdwYINzU+5Yi/uV+/+1kM1HAaR0vuiFZpbHel6+1ydx+0WGjm/yJ25vxM8so
-         5X4ZdpP6ZYfXUrGZ6d2M2s910bMyteNUEALj44365hNuNFS98zE11PYZqDAJmwpj7XK3
-         Hj+5VyMn35rk1IST7oon+KTsyus2p8JsfAj6NBiCbZtpxaeOm+tqmLQXLI26/jAHJOwJ
-         shyg==
-X-Gm-Message-State: AOAM533TCZthSQhcreLy4RelbmBy9KNqMqjuMFqP2JSMi/+xKADM9dC1
-        2WN7BbArPPgs9vsfym7sOPM0m3RlQj8dxbwx8ax3DeTCHrClUB2Jedwbz6dVlIU0KXcJuofiYEU
-        jDNjUAFC1nwbGZBSJ168IiTYgpz4VbGg8G8U+Dy5nu5AzUTKW4didVfkVnF6t6oK6DrK4QnA=
-X-Google-Smtp-Source: ABdhPJzbpOkXCUZlTjezDtyNTQJ78cDjswr6o9ZRsmmCMJPX/pJ7vOwFhl9AcEfTreNpJVDB8ZhoYLeMtXM=
-X-Received: by 2002:a17:90b:358e:: with SMTP id mm14mr1889035pjb.54.1595288270643;
- Mon, 20 Jul 2020 16:37:50 -0700 (PDT)
-Date:   Mon, 20 Jul 2020 23:37:37 +0000
-In-Reply-To: <20200720233739.824943-1-satyat@google.com>
-Message-Id: <20200720233739.824943-6-satyat@google.com>
-Mime-Version: 1.0
-References: <20200720233739.824943-1-satyat@google.com>
-X-Mailer: git-send-email 2.28.0.rc0.105.gf9edc3c819-goog
-Subject: [PATCH v4 5/7] f2fs: support direct I/O with fscrypt using blk-crypto
-From:   Satya Tangirala <satyat@google.com>
-To:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org
-Cc:     linux-xfs@vger.kernel.org, Eric Biggers <ebiggers@google.com>,
-        Satya Tangirala <satyat@google.com>
-Content-Type: text/plain; charset="UTF-8"
+        Mon, 20 Jul 2020 20:32:25 -0400
+Received: from mail.kernel.org ([198.145.29.99]:33166 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726546AbgGUAcY (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 20 Jul 2020 20:32:24 -0400
+Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 3AFC4207FC
+        for <linux-fscrypt@vger.kernel.org>; Tue, 21 Jul 2020 00:32:24 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1595291544;
+        bh=xWhYH850+Dy/XXhslyjfk8C0ENR4CMAVpP1c8JCWOrM=;
+        h=Date:From:To:Subject:References:In-Reply-To:From;
+        b=WhdvXJf1dR3OBzK+3gAb6/EQujerctpvM/gMBh96TJf+SWH6sFZhPEventMoUJbV/
+         cPsYPpK3M8U6fee+35+Lu9ZdpVMp9aNN6U5RC+ylQwZ1BXwG7ZY+WgrskCKteaRMiG
+         HF3H1e8aVCxv9/YLpKHg1YF6ybKaXrrwbwomO2aA=
+Date:   Mon, 20 Jul 2020 17:32:22 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH] fscrypt: add comments that describe the HKDF info strings
+Message-ID: <20200721003222.GA7464@sol.localdomain>
+References: <20200708215529.146890-1-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200708215529.146890-1-ebiggers@kernel.org>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Jul 08, 2020 at 02:55:29PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Each HKDF context byte is associated with a specific format of the
+> remaining part of the application-specific info string.  Add comments so
+> that it's easier to keep track of what these all are.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-Wire up f2fs with fscrypt direct I/O support. direct I/O with fscrypt is
-only supported through blk-crypto (i.e. CONFIG_BLK_INLINE_ENCRYPTION must
-have been enabled, the 'inlinecrypt' mount option must have been specified,
-and either hardware inline encryption support must be present or
-CONFIG_BLK_INLINE_ENCYRPTION_FALLBACK must have been enabled). Further,
-direct I/O on encrypted files is only supported when I/O is aligned
-to the filesystem block size (which is *not* necessarily the same as the
-block device's block size).
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
-Co-developed-by: Satya Tangirala <satyat@google.com>
-Signed-off-by: Satya Tangirala <satyat@google.com>
----
- fs/f2fs/f2fs.h | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
-
-diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-index b35a50f4953c..978130b5a195 100644
---- a/fs/f2fs/f2fs.h
-+++ b/fs/f2fs/f2fs.h
-@@ -4082,7 +4082,11 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
- 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
- 	int rw = iov_iter_rw(iter);
- 
--	if (f2fs_post_read_required(inode))
-+	if (!fscrypt_dio_supported(iocb, iter))
-+		return true;
-+	if (fsverity_active(inode))
-+		return true;
-+	if (f2fs_compressed_file(inode))
- 		return true;
- 	if (f2fs_is_multi_device(sbi))
- 		return true;
--- 
-2.28.0.rc0.105.gf9edc3c819-goog
-
+Applied to fscrypt.git#master for 5.9.
