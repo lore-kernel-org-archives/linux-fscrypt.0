@@ -7,45 +7,46 @@ X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A5CB1C433FB
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 21 Jul 2020 23:01:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2DD9BC433F8
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 21 Jul 2020 23:01:08 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 82E3A20720
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 21 Jul 2020 23:01:07 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 0BFF120720
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 21 Jul 2020 23:01:08 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1595372467;
-	bh=bm/93v1WSvC6J93NR1nVeFT9ERB8Qnq16lzUB1BPqPE=;
+	s=default; t=1595372468;
+	bh=+JzszfrnukA7rp34K4rJ987oveUxD8x6PQPTeTcR6H0=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=d7wR836eemU1+ckHjsFSjm2TViL2lr2Y6OczHnOwi/S/AwWbOK05LIKfryFwLf1Vz
-	 dgWqVfT0b7BDlYy7KK4v2aRh6WbVCSMi4rTmOM0ZW5vcING90ORH4Ra/PvGbRSIU5W
-	 Rly2aYQQnj7Sr7wyIU8Iz5mjLMmGbRbzy/dRhzxc=
+	b=sg6BQ2rKHmc2b/kH8/T0GFpOWITgUN1t4vQQWr8XAPVtjP0acb/oDh+J1umKS4iGA
+	 MXuDUSZ1eahl1o7AyaLfMLNnkhYw3mUK65kcHwQEw2vBGe9Ym3pMNh/2k9As7D+EpZ
+	 nV2pb66S2wI5J+yOF6WBsQ26tZeSaapf1KKCSKBM=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1731398AbgGUXBD (ORCPT
+        id S1731330AbgGUXBA (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 21 Jul 2020 19:01:03 -0400
+        Tue, 21 Jul 2020 19:01:00 -0400
 Received: from mail.kernel.org ([198.145.29.99]:48984 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1731334AbgGUXBA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1731305AbgGUXBA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Tue, 21 Jul 2020 19:01:00 -0400
 Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 359C42080D;
-        Tue, 21 Jul 2020 23:01:00 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 47D762077D;
+        Tue, 21 Jul 2020 23:00:59 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1595372460;
-        bh=bm/93v1WSvC6J93NR1nVeFT9ERB8Qnq16lzUB1BPqPE=;
+        s=default; t=1595372459;
+        bh=+JzszfrnukA7rp34K4rJ987oveUxD8x6PQPTeTcR6H0=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=yTeekrEWE34bWmgyoc8iAznT5bvWxJDueciA3ij6RH6rLKNuOnEk0MOy7iokq1aFB
-         RuBNvzBsxiqhd7gPu+ZphlSWCK0lXcg6Pxg9KqXbYpGT8njiwXoXfX+quheoo8oXmE
-         bhMmzYGK06j+1a+jUGVTDO7CMxfvYQHgh4nIFytI=
+        b=UD7wGV6o8j/007/nURLRwUgh3FtROGYfwXlRmz2E+hWc/ErhCaZg7QhEk0J6rE/0G
+         BJHPNkKnY4vns9lZKCHYAn0AyRVj/MdMod0spy99kT4HspV3dOEXWcfNm82loSvY4+
+         Kl/7BHiom0gFkPFuluRnlrqwmYTBIXRPyd2QkAtk=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net
-Subject: [PATCH 5/5] fs-verity: use smp_load_acquire() for ->i_verity_info
-Date:   Tue, 21 Jul 2020 15:59:20 -0700
-Message-Id: <20200721225920.114347-6-ebiggers@kernel.org>
+        linux-f2fs-devel@lists.sourceforge.net,
+        Satya Tangirala <satyat@google.com>
+Subject: [PATCH 2/5] fscrypt: use smp_load_acquire() for fscrypt_prepared_key
+Date:   Tue, 21 Jul 2020 15:59:17 -0700
+Message-Id: <20200721225920.114347-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.27.0
 In-Reply-To: <20200721225920.114347-1-ebiggers@kernel.org>
 References: <20200721225920.114347-1-ebiggers@kernel.org>
@@ -65,75 +66,94 @@ published memory must only be accessed in a way that involves the
 pointer itself.  This may not be the case if allocating the object also
 involves initializing a static or global variable, for example.
 
-fsverity_info::tree_params.hash_alg->tfm is a crypto_ahash object that's
-internal to and is allocated by the crypto subsystem.  So by using
-READ_ONCE() for ->i_verity_info, we're relying on internal
-implementation details of the crypto subsystem.
+fscrypt_prepared_key includes a pointer to a crypto_skcipher object,
+which is internal to and is allocated by the crypto subsystem.  By using
+READ_ONCE() for it, we're relying on internal implementation details of
+the crypto subsystem.
 
 Remove this fragile assumption by using smp_load_acquire() instead.
-
-Also fix the cmpxchg logic to correctly execute an ACQUIRE barrier when
-losing the cmpxchg race, since cmpxchg doesn't guarantee a memory
-barrier on failure.
 
 (Note: I haven't seen any real-world problems here.  This change is just
 fixing the code to be guaranteed correct and less fragile.)
 
-Fixes: fd2d1acfcadf ("fs-verity: add the hook for file ->open()")
+Fixes: 5fee36095cda ("fscrypt: add inline encryption support")
+Cc: Satya Tangirala <satyat@google.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/verity/open.c         | 15 ++++++++++++---
- include/linux/fsverity.h |  9 +++++++--
- 2 files changed, 19 insertions(+), 5 deletions(-)
+ fs/crypto/fscrypt_private.h | 15 +++++++++------
+ fs/crypto/inline_crypt.c    |  6 ++++--
+ fs/crypto/keysetup.c        |  6 ++++--
+ 3 files changed, 17 insertions(+), 10 deletions(-)
 
-diff --git a/fs/verity/open.c b/fs/verity/open.c
-index d007db0c9304..bfe0280c14e4 100644
---- a/fs/verity/open.c
-+++ b/fs/verity/open.c
-@@ -221,11 +221,20 @@ struct fsverity_info *fsverity_create_info(const struct inode *inode,
- void fsverity_set_info(struct inode *inode, struct fsverity_info *vi)
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index bc1a3fcd45ed..8117a61b6f55 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -351,13 +351,16 @@ fscrypt_is_key_prepared(struct fscrypt_prepared_key *prep_key,
+ 			const struct fscrypt_info *ci)
  {
  	/*
--	 * Multiple processes may race to set ->i_verity_info, so use cmpxchg.
--	 * This pairs with the READ_ONCE() in fsverity_get_info().
-+	 * Multiple tasks may race to set ->i_verity_info, so use
-+	 * cmpxchg_release().  This pairs with the smp_load_acquire() in
-+	 * fsverity_get_info().  I.e., here we publish ->i_verity_info with a
-+	 * RELEASE barrier so that other tasks can ACQUIRE it.
- 	 */
--	if (cmpxchg(&inode->i_verity_info, NULL, vi) != NULL)
-+	if (cmpxchg_release(&inode->i_verity_info, NULL, vi) != NULL) {
-+		/* Lost the race, so free the fsverity_info we allocated. */
- 		fsverity_free_info(vi);
-+		/*
-+		 * Afterwards, the caller may access ->i_verity_info directly,
-+		 * so make sure to ACQUIRE the winning fsverity_info.
-+		 */
-+		(void)fsverity_get_info(inode);
-+	}
- }
- 
- void fsverity_free_info(struct fsverity_info *vi)
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index 78201a6d35f6..c1144a450392 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -115,8 +115,13 @@ struct fsverity_operations {
- 
- static inline struct fsverity_info *fsverity_get_info(const struct inode *inode)
- {
--	/* pairs with the cmpxchg() in fsverity_set_info() */
--	return READ_ONCE(inode->i_verity_info);
-+	/*
-+	 * Pairs with the cmpxchg_release() in fsverity_set_info().
-+	 * I.e., another task may publish ->i_verity_info concurrently,
+-	 * The READ_ONCE() here pairs with the smp_store_release() in
+-	 * fscrypt_prepare_key().  (This only matters for the per-mode keys,
+-	 * which are shared by multiple inodes.)
++	 * The two smp_load_acquire()'s here pair with the smp_store_release()'s
++	 * in fscrypt_prepare_inline_crypt_key() and fscrypt_prepare_key().
++	 * I.e., in some cases (namely, if this prep_key is a per-mode
++	 * encryption key) another task can publish blk_key or tfm concurrently,
 +	 * executing a RELEASE barrier.  We need to use smp_load_acquire() here
 +	 * to safely ACQUIRE the memory the other task published.
-+	 */
-+	return smp_load_acquire(&inode->i_verity_info);
+ 	 */
+ 	if (fscrypt_using_inline_encryption(ci))
+-		return READ_ONCE(prep_key->blk_key) != NULL;
+-	return READ_ONCE(prep_key->tfm) != NULL;
++		return smp_load_acquire(&prep_key->blk_key) != NULL;
++	return smp_load_acquire(&prep_key->tfm) != NULL;
  }
  
- /* enable.c */
+ #else /* CONFIG_FS_ENCRYPTION_INLINE_CRYPT */
+@@ -391,7 +394,7 @@ static inline bool
+ fscrypt_is_key_prepared(struct fscrypt_prepared_key *prep_key,
+ 			const struct fscrypt_info *ci)
+ {
+-	return READ_ONCE(prep_key->tfm) != NULL;
++	return smp_load_acquire(&prep_key->tfm) != NULL;
+ }
+ #endif /* !CONFIG_FS_ENCRYPTION_INLINE_CRYPT */
+ 
+diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
+index d7aecadf33c1..dfb06375099a 100644
+--- a/fs/crypto/inline_crypt.c
++++ b/fs/crypto/inline_crypt.c
+@@ -176,8 +176,10 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
+ 		}
+ 	}
+ 	/*
+-	 * Pairs with READ_ONCE() in fscrypt_is_key_prepared().  (Only matters
+-	 * for the per-mode keys, which are shared by multiple inodes.)
++	 * Pairs with the smp_load_acquire() in fscrypt_is_key_prepared().
++	 * I.e., here we publish ->blk_key with a RELEASE barrier so that
++	 * concurrent tasks can ACQUIRE it.  Note that this concurrency is only
++	 * possible for per-mode keys, not for per-file keys.
+ 	 */
+ 	smp_store_release(&prep_key->blk_key, blk_key);
+ 	return 0;
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index 22a94b18fe70..7f85fc645602 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -129,8 +129,10 @@ int fscrypt_prepare_key(struct fscrypt_prepared_key *prep_key,
+ 	if (IS_ERR(tfm))
+ 		return PTR_ERR(tfm);
+ 	/*
+-	 * Pairs with READ_ONCE() in fscrypt_is_key_prepared().  (Only matters
+-	 * for the per-mode keys, which are shared by multiple inodes.)
++	 * Pairs with the smp_load_acquire() in fscrypt_is_key_prepared().
++	 * I.e., here we publish ->tfm with a RELEASE barrier so that
++	 * concurrent tasks can ACQUIRE it.  Note that this concurrency is only
++	 * possible for per-mode keys, not for per-file keys.
+ 	 */
+ 	smp_store_release(&prep_key->tfm, tfm);
+ 	return 0;
 -- 
 2.27.0
 
