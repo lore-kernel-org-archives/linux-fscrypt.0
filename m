@@ -2,159 +2,116 @@ Return-Path: <SRS0=XFfu=BD=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-5.5 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	URIBL_BLOCKED,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-20.6 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7AD84C433E1
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 05:31:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 930BEC433EC
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 12:12:11 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 5556B20714
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 05:31:38 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 732622065E
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 12:12:11 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="slmTUkhi"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726020AbgGXFbh (ORCPT
+        id S1726975AbgGXMMK (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 24 Jul 2020 01:31:37 -0400
-Received: from mail109.syd.optusnet.com.au ([211.29.132.80]:46979 "EHLO
-        mail109.syd.optusnet.com.au" rhost-flags-OK-OK-OK-OK)
-        by vger.kernel.org with ESMTP id S1725860AbgGXFbh (ORCPT
+        Fri, 24 Jul 2020 08:12:10 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53702 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726971AbgGXMMB (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 24 Jul 2020 01:31:37 -0400
-Received: from dread.disaster.area (pa49-180-53-24.pa.nsw.optusnet.com.au [49.180.53.24])
-        by mail109.syd.optusnet.com.au (Postfix) with ESMTPS id 3E0F1D7ADE7;
-        Fri, 24 Jul 2020 15:31:32 +1000 (AEST)
-Received: from dave by dread.disaster.area with local (Exim 4.92.3)
-        (envelope-from <david@fromorbit.com>)
-        id 1jyqIs-0003Xl-Rk; Fri, 24 Jul 2020 15:31:30 +1000
-Date:   Fri, 24 Jul 2020 15:31:30 +1000
-From:   Dave Chinner <david@fromorbit.com>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     Satya Tangirala <satyat@google.com>, linux-fscrypt@vger.kernel.org,
-        linux-fsdevel@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org,
-        linux-xfs@vger.kernel.org
-Subject: Re: [PATCH v4 3/7] iomap: support direct I/O with fscrypt using
- blk-crypto
-Message-ID: <20200724053130.GO2005@dread.disaster.area>
-References: <20200720233739.824943-1-satyat@google.com>
- <20200720233739.824943-4-satyat@google.com>
- <20200722211629.GE2005@dread.disaster.area>
- <20200722223404.GA76479@sol.localdomain>
- <20200723220752.GF2005@dread.disaster.area>
- <20200723230345.GB870@sol.localdomain>
- <20200724013910.GH2005@dread.disaster.area>
- <20200724034628.GC870@sol.localdomain>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20200724034628.GC870@sol.localdomain>
-User-Agent: Mutt/1.10.1 (2018-07-13)
-X-Optus-CM-Score: 0
-X-Optus-CM-Analysis: v=2.3 cv=QKgWuTDL c=1 sm=1 tr=0
-        a=moVtWZxmCkf3aAMJKIb/8g==:117 a=moVtWZxmCkf3aAMJKIb/8g==:17
-        a=kj9zAlcOel0A:10 a=_RQrkK6FrEwA:10 a=7-415B0cAAAA:8
-        a=qgdjzU_bvmtCALAiQDgA:9 a=abFM6lBaT0MdK4Jk:21 a=bpKwr00CVUWniEzF:21
-        a=CjuIK1q_8ugA:10 a=biEYGPWJfzWAr4FL6Ov7:22
+        Fri, 24 Jul 2020 08:12:01 -0400
+Received: from mail-yb1-xb4a.google.com (mail-yb1-xb4a.google.com [IPv6:2607:f8b0:4864:20::b4a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E1987C08C5E0
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 05:11:58 -0700 (PDT)
+Received: by mail-yb1-xb4a.google.com with SMTP id a185so8121892ybg.8
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 05:11:58 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
+         :cc;
+        bh=oZN8SnIpsU7aOjS5+8MoI/0a82Ym0e3d0O/7K4J6ac4=;
+        b=slmTUkhiIwbSQEjfkgmbeV4KCF4u08msiGK6SabnKAiv3CvAYVrGboynyzzbTajxKw
+         dZH2xvPQR8jXzK/qntUI9lKlDPtetaRmLCjNT5omgxxhrMizgoRnSC0roIaFgwopHXTv
+         IXhLjv+xSOfUUk6gqkYmieytlR1L9nV3xvpbFcQbtEdY9WsWZGStH0uxtSTg0ybo+Yxm
+         vNqm/3J1IWd3IHGexMF628lSrVQrvqvd4tFPYBV1UKFjQMZxtGxh9xzY6EDBXANOm8ma
+         khmwfHYWnDUYIZDYcO3J3ycu2JUI8GPQwMez8LsY1EOnHkqtMh2j3Mt5z7kSMvf3UCRW
+         rFgQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=oZN8SnIpsU7aOjS5+8MoI/0a82Ym0e3d0O/7K4J6ac4=;
+        b=Z24W4kkHKYvTZeR9OohJRnDCICx0k262KtraBumACUd9EyjO1foKpqLwO8FwUdtrl5
+         6xDbibHGNsuU5DARtWWNMZGlP7q2rMlCmMsP297lEI0Bgn9Gz06HlxjPSfKkaka544JJ
+         K5V8b5vgSG9JZuW9WVTU6eBlTq3xpjP3IdBQi5Ntu2U8wdGcl++V53DIiA0h2kYU8db6
+         B5UuSymfAtjI6sUVJP3SibEwUlAAkr5F9M0sB99LEOQH90KYtnTn87MFyK5ICKaeyQdA
+         sGxX3SdYAHrnUQeSmhMFMHQuil4eDvyWRcZdNOCEhpKJdIfA2yQO3lWai2hjfeFLexwc
+         Jozg==
+X-Gm-Message-State: AOAM532KO5ub5qc5PDwfaGrQCKgoiQQCJSPXwmsBFbTNPN/02vtvQqKI
+        dUorwJzrVDqXtrcOwoy2aspx14OAGbkXHf+Ty8tlBqgEzAV5A8RCDch2QlQphLWirzsUs7RuXaw
+        GQkAtxDjoGQzdJcsdPmTprc+dVWaofzqiTqZ4w196vUbQb7zhS0zkc3cMNL0eAg0OO0tOiRk=
+X-Google-Smtp-Source: ABdhPJyouJ1E2gRcgMN/M3G2tNtXRlKvJhp7ZjedMaUfi7bBr8eQzy4Glr/QlcgRyBhW5mboqWuW4qtyaT8=
+X-Received: by 2002:a25:bb07:: with SMTP id z7mr13476612ybg.343.1595592718109;
+ Fri, 24 Jul 2020 05:11:58 -0700 (PDT)
+Date:   Fri, 24 Jul 2020 12:11:41 +0000
+In-Reply-To: <20200724121143.1589121-1-satyat@google.com>
+Message-Id: <20200724121143.1589121-6-satyat@google.com>
+Mime-Version: 1.0
+References: <20200724121143.1589121-1-satyat@google.com>
+X-Mailer: git-send-email 2.28.0.rc0.142.g3c755180ce-goog
+Subject: [PATCH v5 5/7] f2fs: support direct I/O with fscrypt using blk-crypto
+From:   Satya Tangirala <satyat@google.com>
+To:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org
+Cc:     linux-xfs@vger.kernel.org, Eric Biggers <ebiggers@google.com>,
+        Satya Tangirala <satyat@google.com>,
+        Jaegeuk Kim <jaegeuk@kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Jul 23, 2020 at 08:46:28PM -0700, Eric Biggers wrote:
-> On Fri, Jul 24, 2020 at 11:39:10AM +1000, Dave Chinner wrote:
-> > fscrypt_inode_uses_inline_crypto() ends up being:
-> > 
-> > 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode) &&
-> > 	    inode->i_crypt_info->ci_inlinecrypt)
-> > 
-> > I note there are no checks for inode->i_crypt_info being non-null,
-> > and I note that S_ENCRYPTED is set on the inode when the on-disk
-> > encrypted flag is encountered, not when inode->i_crypt_info is set.
-> > 
-> 
-> ->i_crypt_info is set when the file is opened, so it's guaranteed to be set for
-> any I/O.  So the case you're concerned about just doesn't happen.
+From: Eric Biggers <ebiggers@google.com>
 
-Ok. The connection is not obvious to someone who doesn't know the
-fscrypt code inside out.
+Wire up f2fs with fscrypt direct I/O support. direct I/O with fscrypt is
+only supported through blk-crypto (i.e. CONFIG_BLK_INLINE_ENCRYPTION must
+have been enabled, the 'inlinecrypt' mount option must have been specified,
+and either hardware inline encryption support must be present or
+CONFIG_BLK_INLINE_ENCYRPTION_FALLBACK must have been enabled). Further,
+direct I/O on encrypted files is only supported when I/O is aligned
+to the filesystem block size (which is *not* necessarily the same as the
+block device's block size).
 
-> > > Note that currently, I don't think iomap_dio_bio_actor() would handle an
-> > > encrypted file with blocksize > PAGE_SIZE correctly, as the I/O could be split
-> > > in the middle of a filesystem block (even after the filesystem ensures that
-> > > direct I/O on encrypted files is fully filesystem-block-aligned, which we do ---
-> > > see the rest of this patchset), which isn't allowed on encrypted files.
-> > 
-> > That can already happen unless you've specifically restricted DIO
-> > alignments in the filesystem code. i.e. Direct IO already supports
-> > sub-block ranges and alignment, and we can already do user DIO on
-> > sub-block, sector aligned ranges just fine. And the filesystem can
-> > already split the iomap on sub-block alignments and ranges if it
-> > needs to because the iomap uses byte range addressing, not sector or
-> > block based addressing.
-> > 
-> > So either you already have a situation where the 2^32 offset can
-> > land *inside* a filesystem block, or the offset is guaranteed to be
-> > filesystem block aligned and so you'll never get this "break an IO
-> > on sub-block alignment" problem regardless of the filesystem block
-> > size...
-> > 
-> > Either way, it's not an iomap problem - it's a filesystem mapping
-> > problem...
-> > 
-> 
-> I think you're missing the point here.  Currently, the granularity of encryption
-> (a.k.a. "data unit size") is always filesystem blocks, so that's the minimum we
-> can directly read or write to an encrypted file.  This has nothing to do with
-> the IV wraparound case also being discussed.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+Co-developed-by: Satya Tangirala <satyat@google.com>
+Signed-off-by: Satya Tangirala <satyat@google.com>
+Acked-by: Jaegeuk Kim <jaegeuk@kernel.org>
+---
+ fs/f2fs/f2fs.h | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
 
-So when you change the subject, please make it *really obvious* so
-that people don't think you are still talking about the same issue.
-
-> For example, changing a single bit in the plaintext of a filesystem block may
-> result in the entire block's ciphertext changing.  (The exact behavior depends
-> on the cryptographic algorithm that is used.)
-> 
-> That's why this patchset makes ext4 only allow direct I/O on encrypted files if
-> the I/O is fully filesystem-block-aligned.  Note that this might be a more
-> strict alignment requirement than the bdev_logical_block_size().
-> 
-> As long as the iomap code only issues filesystem-block-aligned bios, *given
-> fully filesystem-block-aligned inputs*, we're fine.  That appears to be the case
-> currently.
-
-The actual size and shape of the bios issued by direct IO (both old
-code and newer iomap code) is determined by the user supplied iov,
-the size of the biovec array allocated in the bio, and the IO
-constraints of the underlying hardware.  Hence direct IO does not
-guarantee alignment to anything larger than the underlying block
-device logical sector size because there's no guarantee when or
-where a bio will fill up.
-
-To guarantee alignment of what ends up at the hardware, you have to
-set the block device parameters (e.g. logical sector size)
-appropriately all the way down the stack. You also need to ensure
-that the filesystem is correctly aligned on the block device so that
-filesystem blocks don't overlap things like RAID stripe boundaires,
-linear concat boundaries, etc.
-
-IOWs, to constrain alignment in the IO path, you need to configure
-you system correct so that the information provided to iomap for IO
-alignment matches your requirements. This is not somethign iomap can
-do itself; everything from above needs to be constrained by the
-filesystem using iomap, everything sent below by iomap is
-constrained by the block device config.
-
-> (It's possible that in the future we'll support other encryption data unit
-> sizes, perhaps powers of 2 from 512 to filesystem block size.  But for now the
-> filesystem block size has been good enough for everyone,
-
-Not the case. fscrypt use in enterprise environments needs support
-for block size < page size so that it can be deployed on 64kB page
-size machines without requiring 64kB filesystem block sizes.
-
-Cheers,
-
-Dave.
+diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+index b35a50f4953c..978130b5a195 100644
+--- a/fs/f2fs/f2fs.h
++++ b/fs/f2fs/f2fs.h
+@@ -4082,7 +4082,11 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
+ 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+ 	int rw = iov_iter_rw(iter);
+ 
+-	if (f2fs_post_read_required(inode))
++	if (!fscrypt_dio_supported(iocb, iter))
++		return true;
++	if (fsverity_active(inode))
++		return true;
++	if (f2fs_compressed_file(inode))
+ 		return true;
+ 	if (f2fs_is_multi_device(sbi))
+ 		return true;
 -- 
-Dave Chinner
-david@fromorbit.com
+2.28.0.rc0.142.g3c755180ce-goog
+
