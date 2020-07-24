@@ -8,67 +8,67 @@ X-Spam-Status: No, score=-20.6 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 85A9DC433FB
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 18:45:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 37787C4345A
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 18:45:22 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 6798F20737
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 18:45:17 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 1C4002070B
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 18:45:22 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="maAmxJ7N"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="mBULbubn"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726826AbgGXSpQ (ORCPT
+        id S1726593AbgGXSpU (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 24 Jul 2020 14:45:16 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:59020 "EHLO
+        Fri, 24 Jul 2020 14:45:20 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:59060 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726689AbgGXSpK (ORCPT
+        with ESMTP id S1726877AbgGXSpT (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 24 Jul 2020 14:45:10 -0400
-Received: from mail-pf1-x44a.google.com (mail-pf1-x44a.google.com [IPv6:2607:f8b0:4864:20::44a])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 07DADC0698C4
-        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 11:45:10 -0700 (PDT)
-Received: by mail-pf1-x44a.google.com with SMTP id w2so6949713pfn.0
-        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 11:45:10 -0700 (PDT)
+        Fri, 24 Jul 2020 14:45:19 -0400
+Received: from mail-pg1-x54a.google.com (mail-pg1-x54a.google.com [IPv6:2607:f8b0:4864:20::54a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 0388DC0619D3
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 11:45:19 -0700 (PDT)
+Received: by mail-pg1-x54a.google.com with SMTP id p8so6949833pgj.14
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 11:45:18 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=VSwfu85pneIFmS24X/ynlOi1yjIof1V3mRCitL8rAYY=;
-        b=maAmxJ7NYpOeYwEieVBxCvRDZINBI5z01Z7yoA6Kvl2IYqByL1XVGCthlTgPirzHTR
-         5nXxBJvJ9Wt7KA1zuGzaQDvSG5JBu4jne2azUTlVKbGojdVvR/GsCiiOGhYZfls55xX+
-         vb7IqBleMcL/eF/RiTCPxqdypPn2KKzoMLJ6OlgoiFw2wmrMpqEd0oGoa/cAUN16dbVJ
-         mbvl5Pjm/9rEEPXF1iygFadnE/pcA3dJdwaWGdx4RU8aeSSpToh7gK1ay2iYWIqrnIqQ
-         wGwk93dF3mWAgl2urxtmiGQyZwx8qsrDPbHwP4m2RhCl25zv7XND4Kaft04Xv2XS6LU/
-         rOrQ==
+        bh=xyIxbqTzEFkSiRwtwQaLWA16wfxvhvC5m78qlSH1ff0=;
+        b=mBULbubnOs99wcWvCkuB8DaDJihSO0xMIW84PX5bW6WTDj309RqVaJPHsyAy2kaKCY
+         sOD/egWqVHLZ7OUz7656r6qh6CE0O+9+ekoTB8ggySlZKOVBPFRyQhOpz3iP8O3KzA66
+         TlNycAcYS2Bt5YOOhe3NHBNfRzmIluIfVqVEZaOTBNsFH2DN2tFUJgfwzvHk+Cfu4ktE
+         Ux2qbNoUcHcJSGpYoyJrtPpZVCLD/G+F6TaLMtwwue8ZozjlRyZ5Pqd2SCUqaAjZRuwa
+         2twdFk1AzPx/nwa4i8eqkv4wxZlZ4QpFLnVvKFEWArFlrDNn6OdFdOF+0n5c6jitoG4w
+         V/dg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=VSwfu85pneIFmS24X/ynlOi1yjIof1V3mRCitL8rAYY=;
-        b=n4Z1h9TcVTRgOEsr0JXpts9zd50hA2X4miK+1TAq7MAezk0U5yOn9Q6F7r+mcMOs89
-         edf4JmBRISgMEXy29+IKlo+lPdeF2UCRypi/GMh6y/KwnC77GwiUBoASQpp6jwUbojlv
-         bI+7C3fkqEBrMM0H8pZg6ttSCMU08mjtPoZ8llp3Xse2Wb0mZLBz5AcCEugdejU/13AD
-         LB8QAsiZUvoATAMb7Ih2BjhHziasE2c3pG3MiskrjCG25WRegcm5SC3iF+TKW/57oPIg
-         zliy15ryItu3sYP1kTWxY+zlCVsxrkcAUaQeIHJDy+OE4BbKvih8U8eOqsbOmXOO/BBj
-         GeKQ==
-X-Gm-Message-State: AOAM532RZ1pKWETw2nC8K3ep7tRII41sBNLXevfsxnMwz7v/7K+41fwT
-        hxPyf0ziYHxLV9Yq0InfAwVQtVy9fTs50LQobga8XcSrOy8QSwd3hBeZvUmBJQXdlTQW6KmyUXG
-        ePMsihXFUQv1ZBXTp4ttz5CCaicbxR0Ubf9Aehz/pAtMSp9OiLWND/MOtVdsLTMGTWqaCpr8=
-X-Google-Smtp-Source: ABdhPJyT41z7Bo2DJVXrD2yfQgUGfnGWGnRtL9zK9eYdoIYIP8wyrLRC6/JqsXYyBn0KLNCSTVI1XabDyNk=
-X-Received: by 2002:a17:90b:1296:: with SMTP id fw22mr6730717pjb.20.1595616309435;
- Fri, 24 Jul 2020 11:45:09 -0700 (PDT)
-Date:   Fri, 24 Jul 2020 18:44:56 +0000
+        bh=xyIxbqTzEFkSiRwtwQaLWA16wfxvhvC5m78qlSH1ff0=;
+        b=CcJrcXzxPertdsRh0sb8g/WnxGAkoegKuPw5WlIq44L51CPWx7a33THx4aC3R4p7uW
+         3Mq3aS/4AtgBll2TPrSU9p3Jh/Rg/rKkqA+vKJpUh3nxNrd7ACvsZxH83uk/hLTFB3Za
+         uU3VCrwt1NuqE0edet5AqZJOTXqa7F8fs4tCaGTcFzzImQ3A5/0BO/PEFmPosHluNbs7
+         M/scRtoHfH949F3ob63Wn2oeAx+uqgUWzgC48yoMFlcL6nqbfMx4xDPWAcfdKJO/zRsu
+         T8QG+S+O+5zMggdHO8Ww9teghg12UaZqhDVJiyQ10Cnpe1SvdtjQ8IVK3Lz+HYMOpFgL
+         ikeA==
+X-Gm-Message-State: AOAM5313Udd0tdBpZhDyP1V9AqHu1D/TI+qOGOhEB2pu+F7vKbhjiLrW
+        icW5VHtfSwDBRtmMYyYwEAr9/PIN5C9PMz0fzSgWD/4QdOAUwlLF8eo84P6FCpa7xehC/gHUZIC
+        DElIdZX8zZg4zGHq2I5I16x4gOW5/6eoTf6r+uhnGlKbwipGsBFE1XFebWjjxO7IESzqJPoM=
+X-Google-Smtp-Source: ABdhPJzkqIhgfmuH4Tw2HNitGStx6+I2VoJ2h2ZcDf2nCz9kSOHpDDkKAQY+0hH0A++BUEd5FyALMx/aU4Y=
+X-Received: by 2002:a17:90a:1fcb:: with SMTP id z11mr1970016pjz.1.1595616317802;
+ Fri, 24 Jul 2020 11:45:17 -0700 (PDT)
+Date:   Fri, 24 Jul 2020 18:45:01 +0000
 In-Reply-To: <20200724184501.1651378-1-satyat@google.com>
-Message-Id: <20200724184501.1651378-3-satyat@google.com>
+Message-Id: <20200724184501.1651378-8-satyat@google.com>
 Mime-Version: 1.0
 References: <20200724184501.1651378-1-satyat@google.com>
 X-Mailer: git-send-email 2.28.0.rc0.142.g3c755180ce-goog
-Subject: [PATCH v6 2/7] direct-io: add support for fscrypt using blk-crypto
+Subject: [PATCH v6 7/7] fscrypt: update documentation for direct I/O support
 From:   Satya Tangirala <satyat@google.com>
 To:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org
-Cc:     linux-xfs@vger.kernel.org, Eric Biggers <ebiggers@google.com>,
-        Satya Tangirala <satyat@google.com>,
+Cc:     linux-xfs@vger.kernel.org, Satya Tangirala <satyat@google.com>,
+        Eric Biggers <ebiggers@google.com>,
         Jaegeuk Kim <jaegeuk@kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -76,70 +76,53 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+Update fscrypt documentation to reflect the addition of direct I/O support
+and document the necessary conditions for direct I/O on encrypted files.
 
-Set bio crypt contexts on bios by calling into fscrypt when required,
-and explicitly check for DUN continuity when adding pages to the bio.
-(While DUN continuity is usually implied by logical block contiguity,
-this is not the case when using certain fscrypt IV generation methods
-like IV_INO_LBLK_32).
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
-Co-developed-by: Satya Tangirala <satyat@google.com>
 Signed-off-by: Satya Tangirala <satyat@google.com>
+Reviewed-by: Eric Biggers <ebiggers@google.com>
 Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 ---
- fs/direct-io.c | 15 ++++++++++++++-
- 1 file changed, 14 insertions(+), 1 deletion(-)
+ Documentation/filesystems/fscrypt.rst | 20 ++++++++++++++++++--
+ 1 file changed, 18 insertions(+), 2 deletions(-)
 
-diff --git a/fs/direct-io.c b/fs/direct-io.c
-index 6d5370eac2a8..f27f7e3780ee 100644
---- a/fs/direct-io.c
-+++ b/fs/direct-io.c
-@@ -24,6 +24,7 @@
- #include <linux/module.h>
- #include <linux/types.h>
- #include <linux/fs.h>
-+#include <linux/fscrypt.h>
- #include <linux/mm.h>
- #include <linux/slab.h>
- #include <linux/highmem.h>
-@@ -411,6 +412,7 @@ dio_bio_alloc(struct dio *dio, struct dio_submit *sdio,
- 	      sector_t first_sector, int nr_vecs)
- {
- 	struct bio *bio;
-+	struct inode *inode = dio->inode;
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 423c5a0daf45..b9bbd6c612ff 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -1049,8 +1049,10 @@ astute users may notice some differences in behavior:
+   may be used to overwrite the source files but isn't guaranteed to be
+   effective on all filesystems and storage devices.
  
- 	/*
- 	 * bio_alloc() is guaranteed to return a bio when allowed to sleep and
-@@ -418,6 +420,9 @@ dio_bio_alloc(struct dio *dio, struct dio_submit *sdio,
- 	 */
- 	bio = bio_alloc(GFP_KERNEL, nr_vecs);
+-- Direct I/O is not supported on encrypted files.  Attempts to use
+-  direct I/O on such files will fall back to buffered I/O.
++- Direct I/O is supported on encrypted files only under some
++  circumstances (see `Direct I/O support`_ for details). When these
++  circumstances are not met, attempts to use direct I/O on encrypted
++  files will fall back to buffered I/O.
  
-+	fscrypt_set_bio_crypt_ctx(bio, inode,
-+				  sdio->cur_page_fs_offset >> inode->i_blkbits,
-+				  GFP_KERNEL);
- 	bio_set_dev(bio, bdev);
- 	bio->bi_iter.bi_sector = first_sector;
- 	bio_set_op_attrs(bio, dio->op, dio->op_flags);
-@@ -782,9 +787,17 @@ static inline int dio_send_cur_page(struct dio *dio, struct dio_submit *sdio,
- 		 * current logical offset in the file does not equal what would
- 		 * be the next logical offset in the bio, submit the bio we
- 		 * have.
-+		 *
-+		 * When fscrypt inline encryption is used, data unit number
-+		 * (DUN) contiguity is also required.  Normally that's implied
-+		 * by logical contiguity.  However, certain IV generation
-+		 * methods (e.g. IV_INO_LBLK_32) don't guarantee it.  So, we
-+		 * must explicitly check fscrypt_mergeable_bio() too.
- 		 */
- 		if (sdio->final_block_in_bio != sdio->cur_page_block ||
--		    cur_offset != bio_next_offset)
-+		    cur_offset != bio_next_offset ||
-+		    !fscrypt_mergeable_bio(sdio->bio, dio->inode,
-+					   cur_offset >> dio->inode->i_blkbits))
- 			dio_bio_submit(dio, sdio);
- 	}
+ - The fallocate operations FALLOC_FL_COLLAPSE_RANGE and
+   FALLOC_FL_INSERT_RANGE are not supported on encrypted files and will
+@@ -1123,6 +1125,20 @@ It is not currently possible to backup and restore encrypted files
+ without the encryption key.  This would require special APIs which
+ have not yet been implemented.
+ 
++Direct I/O support
++==================
++
++Direct I/O on encrypted files is supported through blk-crypto. In
++particular, this means the kernel must have CONFIG_BLK_INLINE_ENCRYPTION
++enabled, the filesystem must have had the 'inlinecrypt' mount option
++specified, and either hardware inline encryption must be present, or
++CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK must have been enabled. Further,
++any I/O must be aligned to the filesystem block size (*not* necessarily
++the same as the block device's block size) - in particular, any userspace
++buffer into which data is read/written from must also be aligned to the
++filesystem block size. If any of these conditions isn't met, attempts to do
++direct I/O on an encrypted file will fall back to buffered I/O.
++
+ Encryption policy enforcement
+ =============================
  
 -- 
 2.28.0.rc0.142.g3c755180ce-goog
