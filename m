@@ -2,154 +2,160 @@ Return-Path: <SRS0=XFfu=BD=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.6 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-20.6 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
-	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
+	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B4A90C43458
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 12:12:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 03839C4345E
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 12:12:34 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 8A81D2073E
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 12:12:22 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id D40362065E
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 24 Jul 2020 12:12:33 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="LU3Hl6Xb"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="CIOYCqTm"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726953AbgGXML7 (ORCPT
+        id S1726696AbgGXMMW (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 24 Jul 2020 08:11:59 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53682 "EHLO
+        Fri, 24 Jul 2020 08:12:22 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53734 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726326AbgGXMLu (ORCPT
+        with ESMTP id S1726895AbgGXML7 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 24 Jul 2020 08:11:50 -0400
-Received: from mail-pg1-x549.google.com (mail-pg1-x549.google.com [IPv6:2607:f8b0:4864:20::549])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id AD8D2C0619E5
-        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 05:11:50 -0700 (PDT)
-Received: by mail-pg1-x549.google.com with SMTP id x184so6185419pgb.7
-        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 05:11:50 -0700 (PDT)
+        Fri, 24 Jul 2020 08:11:59 -0400
+Received: from mail-yb1-xb4a.google.com (mail-yb1-xb4a.google.com [IPv6:2607:f8b0:4864:20::b4a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 33002C08C5DC
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 05:11:57 -0700 (PDT)
+Received: by mail-yb1-xb4a.google.com with SMTP id p22so10199007ybg.21
+        for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2020 05:11:57 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=date:message-id:mime-version:subject:from:to:cc;
-        bh=iD4FUEMenVr5lbrZY3MfjlLwUfP0+0if0gfZ+EqYyLI=;
-        b=LU3Hl6Xb+kMb570dums3X91bS1lNWjAd6VAivVVwirnidnc44D39+JcML+BJHAGiYb
-         /hLd0zQi1FE3LxsnU7ZCOiHAwNYFdEQm0Bw4lVG08rIUvLsp792e/7XMSZZKpfCuj9Wi
-         Mc8RxN2om8nGrDd3CaWoXZVr6lkr8/IILg3NAUhby99DW4FbyIdip+AGS2zLfcAtbz/F
-         O9L2jZzffcKwr1Nl0ZHrIcY6HnWsZBa3k0OuPKOQb9xFpTMvj12C/tW6+hn7DR9DEsn4
-         VKLlFLHhKUhRXgHCiOcqBzkEP20Hlp9PqlgiscGHlUoNdDb1QOOHybUTJiChgSWV7ZW+
-         1eeg==
+        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
+         :cc;
+        bh=r8Pg6JmNaFN8fVBskJ954zlZvlkSSoV1f+xmIU4eJ8Y=;
+        b=CIOYCqTme+TnWuKD+xZRysHr8oJo78rie88iaMhNzTS0t45MoVE4RsI/vEVkYotMFZ
+         JtjeVNk6dL7xq1AR4PQA6w+exLdpvxRctrNJ2l6hVGYJMGeMH8HU4Izlxs39K4/L9Csg
+         iaeQxhWNQr4udHFUBEXYDh0it42hv4TuuYRMH3NvOqxfOT5YQZZhuwdUvMZocLeHtm1+
+         wWhBEQsXnDrUzdith9nAVMQtoO0aXYKyWzoqdOJxpf17R/DHVuV6ojo2ym2rZkevTwWN
+         dbBmJIWEZR4a7YLOBF2DNCau1fKoD6S7dcgLT2jQsSAOFbzYgqxPmojFzvDL5GEfdwZp
+         Xzbg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
-        bh=iD4FUEMenVr5lbrZY3MfjlLwUfP0+0if0gfZ+EqYyLI=;
-        b=bQ3W0RPV6+ZFd/rXvPflwS87lVc8BqYPg3coG0w73JpVirSznqoKdW5d2jwtzlMW3T
-         GCLQiWWFUTcx1nPMts+o8zTyIa58sdPKkY5LeHAMgvAjqVNLDQ4pGMeu0b9gkfCVNIEA
-         pS8QMnT8Wg7B2AF7lsAY/tnLwodkVajQwMmfL60AsdW3ADKnxdjNncjhqaReVsymyiPs
-         ZxJBvHgN9afCki0nwxqoNLgkFP0q00PBDXVlwGCmtPEbacPmPz9xNCHtdCc6B6u4gwB3
-         RHmFzmSFskITUf2Uk2fa9E2DZmWn7CGgRD/Gn3YUbYF2+v2wRQ7tcrWG/xQwynSPglvR
-         2DPg==
-X-Gm-Message-State: AOAM5314QqxzdotbUQlKMX+VI82ybuC+TQJyOXuun5bq4PabUaHBAEdL
-        I5siN5lvll/TzB48ZB7IWgz6dM+fF/acLbthJ0UI4PwdCk83VTd3XOf2lk94BSE/41at2Ls39nX
-        3hlgRwQShrXM39N114z//UwASvkmRB1rA1NpU80jApHfq1d3WfTflEwb92cRdM90v/HdPA3Q=
-X-Google-Smtp-Source: ABdhPJyWpT2NfcWEy4aLcDx08oXPKDl45eq2YPnQvm8sfH2moUaX/HTt1lJWyIEHpqxaEqJ3QKBmMRx778Y=
-X-Received: by 2002:a63:4b44:: with SMTP id k4mr2076411pgl.305.1595592709047;
- Fri, 24 Jul 2020 05:11:49 -0700 (PDT)
-Date:   Fri, 24 Jul 2020 12:11:36 +0000
-Message-Id: <20200724121143.1589121-1-satyat@google.com>
+        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
+         :references:subject:from:to:cc;
+        bh=r8Pg6JmNaFN8fVBskJ954zlZvlkSSoV1f+xmIU4eJ8Y=;
+        b=SpPfyqs9fwUC3PwLWeAZ1+zH3lo2OKYGBg39SeTGkrUE/IJggCrZELE1tlmDeeF+ZD
+         gkrp8cKK5lJMOMs2NOmR1wGGIJgdQfwZqwYePgEUFpfzkN2aRNSVr96CbV2XqTqmqIDF
+         Z/7SpAad6xTKl/W1rXLqZ9lsr2ycyEz+veMhI6BPAvQ76NHVe1ApwT3vKfIm+N95iIDE
+         9P7gKE1J7dIuZ3zDGBhZcJ9kcrjT102yREB+CQhj7TUZ4sqg5z3552vEssVMv9E5Fnxl
+         zrJDVBBemE/EYcPVLdOxa/Czhcp0tHyY4oDhRumzuBNcRrjDMq4kvmsKJE4opWbdBLBA
+         fCTQ==
+X-Gm-Message-State: AOAM530Z7U24EYF1EVXMn6LqO11l6nEY7tNZCBhCDAVHM2apY3r47T2s
+        HK9KLvjizP+Z/ep1MYBPf4HVVSENUPxiBcol3uQzfifzhlvY7dTE6rAcCsuCXYPh+stqb4cOsM8
+        utnOthHFVBJEF3hJFmjVbZ8dWUr319JL07YSnwVKrDozLJFWC3Y/G5XmkvWw1ofvioy/mJSI=
+X-Google-Smtp-Source: ABdhPJx/KO6QnXMM0Pc1pM0nRqEcHHdAJJmtmE+sSNw66/LnMCl7LqpQ2/7JJlu071k/LdTupwpYQ4l/YFY=
+X-Received: by 2002:a5b:74a:: with SMTP id s10mr15292910ybq.101.1595592716305;
+ Fri, 24 Jul 2020 05:11:56 -0700 (PDT)
+Date:   Fri, 24 Jul 2020 12:11:40 +0000
+In-Reply-To: <20200724121143.1589121-1-satyat@google.com>
+Message-Id: <20200724121143.1589121-5-satyat@google.com>
 Mime-Version: 1.0
+References: <20200724121143.1589121-1-satyat@google.com>
 X-Mailer: git-send-email 2.28.0.rc0.142.g3c755180ce-goog
-Subject: [PATCH v5 0/7] add support for direct I/O with fscrypt using blk-crypto
+Subject: [PATCH v5 4/7] ext4: support direct I/O with fscrypt using blk-crypto
 From:   Satya Tangirala <satyat@google.com>
 To:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org
-Cc:     linux-xfs@vger.kernel.org, Satya Tangirala <satyat@google.com>
+Cc:     linux-xfs@vger.kernel.org, Eric Biggers <ebiggers@google.com>,
+        Satya Tangirala <satyat@google.com>,
+        Jaegeuk Kim <jaegeuk@kernel.org>
 Content-Type: text/plain; charset="UTF-8"
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This patch series adds support for direct I/O with fscrypt using
-blk-crypto. It has been rebased on fscrypt/master (i.e. the "master"
-branch of the fscrypt tree at
-https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git)
+From: Eric Biggers <ebiggers@google.com>
 
-Patch 1 adds two functions to fscrypt that need to be called to determine
-if direct I/O is supported for a request.
+Wire up ext4 with fscrypt direct I/O support. Direct I/O with fscrypt is
+only supported through blk-crypto (i.e. CONFIG_BLK_INLINE_ENCRYPTION must
+have been enabled, the 'inlinecrypt' mount option must have been specified,
+and either hardware inline encryption support must be present or
+CONFIG_BLK_INLINE_ENCYRPTION_FALLBACK must have been enabled). Further,
+direct I/O on encrypted files is only supported when I/O is aligned
+to the filesystem block size (which is *not* necessarily the same as the
+block device's block size).
 
-Patches 2 and 3 modify direct-io and iomap respectively to set bio crypt
-contexts on bios when appropriate by calling into fscrypt.
+fscrypt_limit_io_blocks() is called before setting up the iomap to ensure
+that the blocks of each bio that iomap will submit will have contiguous
+DUNs. Note that fscrypt_limit_io_blocks() is normally a no-op, as normally
+the DUNs simply increment along with the logical blocks. But it's needed
+to handle an edge case in one of the fscrypt IV generation methods.
 
-Patches 4 and 5 allow ext4 and f2fs direct I/O to support fscrypt without
-falling back to buffered I/O.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+Co-developed-by: Satya Tangirala <satyat@google.com>
+Signed-off-by: Satya Tangirala <satyat@google.com>
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
+---
+ fs/ext4/file.c  | 10 ++++++----
+ fs/ext4/inode.c |  7 +++++++
+ 2 files changed, 13 insertions(+), 4 deletions(-)
 
-Patches 6 and 7 update the fscrypt documentation for inline encryption
-support and direct I/O. The documentation now notes the required conditions
-for inline encryption and direct I/O on encrypted files.
-
-This patch series was tested by running xfstests with test_dummy_encryption
-with and without the 'inlinecrypt' mount option, and there were no
-meaningful regressions. One regression was for generic/587 on ext4,
-but that test isn't compatible with test_dummy_encryption in the first
-place, and the test "incorrectly" passes without the 'inlinecrypt' mount
-option - a patch will be sent out to exclude that test when
-test_dummy_encryption is turned on with ext4 (like the other quota related
-tests that use user visible quota files). The other regression was for
-generic/252 on ext4, which does direct I/O with a buffer aligned to the
-block device's blocksize, but not necessarily aligned to the filesystem's
-block size, which direct I/O with fscrypt requires.
-
-Changes v4 => v5:
- - replace fscrypt_limit_io_pages() with fscrypt_limit_io_block(), which
-   is now called by individual filesystems (currently only ext4) instead
-   of the iomap code. This new function serves the same end purpose as
-   the one it replaces (ensuring that DUNs within a bio are contiguous)
-   but operates purely with blocks instead of with pages.
- - make iomap_dio_zero() set bio_crypt_ctx's again, instead of just a
-   WARN_ON() since some folks prefer that instead.
- - add Reviewed-by's
-
-Changes v3 => v4:
- - Fix bug in iomap_dio_bio_actor() where fscrypt_limit_io_pages() was
-   being called too early (thanks Eric!)
- - Improve comments and fix formatting in documentation
- - iomap_dio_zero() is only called to zero out partial blocks, but
-   direct I/O is only supported on encrypted files when I/O is
-   blocksize aligned, so it doesn't need to set encryption contexts on
-   bios. Replace setting the encryption context with a WARN_ON(). (Eric)
-
-Changes v2 => v3:
- - add changelog to coverletter
-
-Changes v1 => v2:
- - Fix bug in f2fs caused by replacing f2fs_post_read_required() with
-   !fscrypt_dio_supported() since the latter doesn't check for
-   compressed inodes unlike the former.
- - Add patches 6 and 7 for fscrypt documentation
- - cleanups and comments
-
-Eric Biggers (5):
-  fscrypt: Add functions for direct I/O support
-  direct-io: add support for fscrypt using blk-crypto
-  iomap: support direct I/O with fscrypt using blk-crypto
-  ext4: support direct I/O with fscrypt using blk-crypto
-  f2fs: support direct I/O with fscrypt using blk-crypto
-
-Satya Tangirala (2):
-  fscrypt: document inline encryption support
-  fscrypt: update documentation for direct I/O support
-
- Documentation/filesystems/fscrypt.rst | 36 +++++++++++--
- fs/crypto/crypto.c                    |  8 +++
- fs/crypto/inline_crypt.c              | 75 +++++++++++++++++++++++++++
- fs/direct-io.c                        | 15 +++++-
- fs/ext4/file.c                        | 10 ++--
- fs/ext4/inode.c                       |  7 +++
- fs/f2fs/f2fs.h                        |  6 ++-
- fs/iomap/direct-io.c                  |  6 +++
- include/linux/fscrypt.h               | 19 +++++++
- 9 files changed, 173 insertions(+), 9 deletions(-)
-
+diff --git a/fs/ext4/file.c b/fs/ext4/file.c
+index 2a01e31a032c..d534f72675d9 100644
+--- a/fs/ext4/file.c
++++ b/fs/ext4/file.c
+@@ -36,9 +36,11 @@
+ #include "acl.h"
+ #include "truncate.h"
+ 
+-static bool ext4_dio_supported(struct inode *inode)
++static bool ext4_dio_supported(struct kiocb *iocb, struct iov_iter *iter)
+ {
+-	if (IS_ENABLED(CONFIG_FS_ENCRYPTION) && IS_ENCRYPTED(inode))
++	struct inode *inode = file_inode(iocb->ki_filp);
++
++	if (!fscrypt_dio_supported(iocb, iter))
+ 		return false;
+ 	if (fsverity_active(inode))
+ 		return false;
+@@ -61,7 +63,7 @@ static ssize_t ext4_dio_read_iter(struct kiocb *iocb, struct iov_iter *to)
+ 		inode_lock_shared(inode);
+ 	}
+ 
+-	if (!ext4_dio_supported(inode)) {
++	if (!ext4_dio_supported(iocb, to)) {
+ 		inode_unlock_shared(inode);
+ 		/*
+ 		 * Fallback to buffered I/O if the operation being performed on
+@@ -490,7 +492,7 @@ static ssize_t ext4_dio_write_iter(struct kiocb *iocb, struct iov_iter *from)
+ 	}
+ 
+ 	/* Fallback to buffered I/O if the inode does not support direct I/O. */
+-	if (!ext4_dio_supported(inode)) {
++	if (!ext4_dio_supported(iocb, from)) {
+ 		if (ilock_shared)
+ 			inode_unlock_shared(inode);
+ 		else
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 44bad4bb8831..6725116ea348 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -3445,6 +3445,13 @@ static int ext4_iomap_begin(struct inode *inode, loff_t offset, loff_t length,
+ 	if (ret < 0)
+ 		return ret;
+ 
++	/*
++	 * When inline encryption is enabled, sometimes I/O to an encrypted file
++	 * has to be broken up to guarantee DUN contiguity. Handle this by
++	 * limiting the length of the mapping returned.
++	 */
++	map.m_len = fscrypt_limit_io_blocks(inode, map.m_lblk, map.m_len);
++
+ 	ext4_set_iomap(inode, iomap, &map, offset, length);
+ 
+ 	return 0;
 -- 
 2.28.0.rc0.142.g3c755180ce-goog
 
