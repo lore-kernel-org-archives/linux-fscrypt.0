@@ -2,111 +2,107 @@ Return-Path: <SRS0=4TbV=BG=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-15.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6B6D6C433E3
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 27 Jul 2020 16:35:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CBFF8C433EB
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 27 Jul 2020 16:43:14 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 3EBFB2074F
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 27 Jul 2020 16:35:22 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id A38FB2074F
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 27 Jul 2020 16:43:14 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1595867722;
-	bh=Najnwn6ct2tS23uzjWWO8aAe31i35Vpz52OO8sKRDZM=;
+	s=default; t=1595868194;
+	bh=WCH9zfyg8tmZ1CDKwMEvUMAMGGTDY/5uLOBdgMEDeOU=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=SlNowhn7DrPPFaw4i8BdDa949uYCK48HfIsF8hxS8gfbOSYLI+tF/BFO9uyQgvud9
-	 1z2i0uK1iFpiUCHj/R+DI4WxvSbfKe4TYLl+swjCPUOlyPgsAvYXS2mK/t8QZ8jfSR
-	 MRfjXOGc5O1snZeIsorxJOWcZcXRcF1vaM+ZlTNM=
+	b=1IUtskonvOgBVA02CFlF5rIRji7X/LpzQpxoU8v0cxcW0tZUgEdXl2kN6FlC4fyim
+	 5IBA9z+Dv3TtcBWk1UwHUdbcaitqOec0Lkgqmj/Oh0JWdvXgfEe+EO/fY6qY4NnyET
+	 qgHQ1PrZWJuXKh0WdnyCJ6ordD+YXMg8O3u5/tm0=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1732375AbgG0QfW (ORCPT
+        id S1729004AbgG0QnN (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 27 Jul 2020 12:35:22 -0400
-Received: from mail.kernel.org ([198.145.29.99]:33874 "EHLO mail.kernel.org"
+        Mon, 27 Jul 2020 12:43:13 -0400
+Received: from mail.kernel.org ([198.145.29.99]:37804 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1729315AbgG0QfV (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 27 Jul 2020 12:35:21 -0400
+        id S1726139AbgG0QnN (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 27 Jul 2020 12:43:13 -0400
 Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 1886C20729;
-        Mon, 27 Jul 2020 16:35:21 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 584542073E;
+        Mon, 27 Jul 2020 16:43:12 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1595867721;
-        bh=Najnwn6ct2tS23uzjWWO8aAe31i35Vpz52OO8sKRDZM=;
+        s=default; t=1595868192;
+        bh=WCH9zfyg8tmZ1CDKwMEvUMAMGGTDY/5uLOBdgMEDeOU=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=sqfNr5jE3Q7DGAj+IYToNrMuvjqaJg4KuB2rk+RFFpAP619xIZIVo/IX2AgfYRtM4
-         kDT90jODcRriTGURbrxNmJqDJgz+f0UZW2l2hhzEEhOYmz24f7ML6RDyfgrzsrRyll
-         3XYnn3SR8g5gboxlByBVl86Y9Q622I7sE2y9BDPg=
-Date:   Mon, 27 Jul 2020 09:35:19 -0700
+        b=R6aKlvnwdyjHmrcM++1cTpF4QI1KZKk6ArDU/w7++2I/AKBbnfSS5KX619WzGAKPJ
+         1paTP8Uy6DubwHcQksRt0Gm1lV+Kxy/VPtRRHVXW7BOvi5gEiU7/sR5eJG40Vn/7UR
+         YHh0Memr/gx3lWSCnXiYRCsI8iA/F9AQYM0APa5A=
+Date:   Mon, 27 Jul 2020 09:43:10 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        Paul Crowley <paulcrowley@google.com>,
-        Satya Tangirala <satyat@google.com>
-Subject: Re: [PATCH] fscrypt: restrict IV_INO_LBLK_* to AES-256-XTS
-Message-ID: <20200727163519.GB1138@sol.localdomain>
-References: <20200721181012.39308-1-ebiggers@kernel.org>
+To:     Satya Tangirala <satyat@google.com>
+Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net, linux-ext4@vger.kernel.org,
+        linux-xfs@vger.kernel.org, Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH v6 6/7] fscrypt: document inline encryption support
+Message-ID: <20200727164310.GD1138@sol.localdomain>
+References: <20200724184501.1651378-1-satyat@google.com>
+ <20200724184501.1651378-7-satyat@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200721181012.39308-1-ebiggers@kernel.org>
+In-Reply-To: <20200724184501.1651378-7-satyat@google.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, Jul 21, 2020 at 11:10:12AM -0700, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
+On Fri, Jul 24, 2020 at 06:45:00PM +0000, Satya Tangirala wrote:
+> Update the fscrypt documentation file for inline encryption support.
 > 
-> IV_INO_LBLK_* exist only because of hardware limitations, and currently
-> the only known use case for them involves AES-256-XTS.  Therefore, for
-> now only allow them in combination with AES-256-XTS.  This way we don't
-> have to worry about them being combined with other encryption modes.
-> 
-> (To be clear, combining IV_INO_LBLK_* with other encryption modes
-> *should* work just fine.  It's just not being tested, so we can't be
-> 100% sure it works.  So with no known use case, it's best to disallow it
-> for now, just like we don't allow other weird combinations like
-> AES-256-XTS contents encryption with Adiantum filenames encryption.)
-> 
-> This can be relaxed later if a use case for other combinations arises.
-> 
-> Fixes: b103fb7653ff ("fscrypt: add support for IV_INO_LBLK_64 policies")
-> Fixes: e3b1078bedd3 ("fscrypt: add support for IV_INO_LBLK_32 policies")
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> Signed-off-by: Satya Tangirala <satyat@google.com>
+> Reviewed-by: Eric Biggers <ebiggers@google.com>
+> Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 > ---
->  fs/crypto/policy.c | 14 ++++++++++++++
->  1 file changed, 14 insertions(+)
+>  Documentation/filesystems/fscrypt.rst | 16 +++++++++++++++-
+>  1 file changed, 15 insertions(+), 1 deletion(-)
 > 
-> diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-> index 8a8ad0e44bb8..8e667aadf271 100644
-> --- a/fs/crypto/policy.c
-> +++ b/fs/crypto/policy.c
-> @@ -77,6 +77,20 @@ static bool supported_iv_ino_lblk_policy(const struct fscrypt_policy_v2 *policy,
->  	struct super_block *sb = inode->i_sb;
->  	int ino_bits = 64, lblk_bits = 64;
+> diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+> index 1a6ad6f736b5..423c5a0daf45 100644
+> --- a/Documentation/filesystems/fscrypt.rst
+> +++ b/Documentation/filesystems/fscrypt.rst
+> @@ -1204,6 +1204,18 @@ buffer.  Some filesystems, such as UBIFS, already use temporary
+>  buffers regardless of encryption.  Other filesystems, such as ext4 and
+>  F2FS, have to allocate bounce pages specially for encryption.
 >  
-> +	/*
-> +	 * IV_INO_LBLK_* exist only because of hardware limitations, and
-> +	 * currently the only known use case for them involves AES-256-XTS.
-> +	 * That's also all we test currently.  For these reasons, for now only
-> +	 * allow AES-256-XTS here.  This can be relaxed later if a use case for
-> +	 * IV_INO_LBLK_* with other encryption modes arises.
-> +	 */
-> +	if (policy->contents_encryption_mode != FSCRYPT_MODE_AES_256_XTS) {
-> +		fscrypt_warn(inode,
-> +			     "Can't use %s policy with contents mode other than AES-256-XTS",
-> +			     type);
-> +		return false;
-> +	}
+> +Fscrypt is also able to use inline encryption hardware instead of the
+> +kernel crypto API for en/decryption of file contents.  When possible,
+> +and if directed to do so (by specifying the 'inlinecrypt' mount option
+> +for an ext4/F2FS filesystem), it adds encryption contexts to bios and
+> +uses blk-crypto to perform the en/decryption instead of making use of
+> +the above read/write path changes.  Of course, even if directed to
+> +make use of inline encryption, fscrypt will only be able to do so if
+> +either hardware inline encryption support is available for the
+> +selected encryption algorithm or CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK
+> +is selected.  If neither is the case, fscrypt will fall back to using
+> +the above mentioned read/write path changes for en/decryption.
 > +
->  	/*
->  	 * It's unsafe to include inode numbers in the IVs if the filesystem can
->  	 * potentially renumber inodes, e.g. via filesystem shrinking.
-> -- 
+>  Filename hashing and encoding
+>  -----------------------------
+>  
+> @@ -1250,7 +1262,9 @@ Tests
+>  
+>  To test fscrypt, use xfstests, which is Linux's de facto standard
+>  filesystem test suite.  First, run all the tests in the "encrypt"
+> -group on the relevant filesystem(s).  For example, to test ext4 and
+> +group on the relevant filesystem(s).  One can also run the tests
+> +with the 'inlinecrypt' mount option to test the implementation for
+> +inline encryption support.  For example, to test ext4 and
+>  f2fs encryption using `kvm-xfstests
+>  <https://github.com/tytso/xfstests-bld/blob/master/Documentation/kvm-quickstart.md>`_::
 
-Applied to fscrypt.git#master for 5.9.
+Since this patch is separate from the direct I/O support, I've applied it to
+fscrypt.git#master for 5.9.  I'm not applying the direct I/O patches yet.
 
 - Eric
