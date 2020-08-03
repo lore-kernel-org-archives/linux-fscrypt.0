@@ -2,81 +2,92 @@ Return-Path: <SRS0=t9HX=BN=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PULL_REQUEST,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 71F23C433DF
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Aug 2020 07:07:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D1E49C433DF
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Aug 2020 16:34:35 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 4ED64206F6
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Aug 2020 07:07:33 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id A468120792
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  3 Aug 2020 16:34:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1596438453;
-	bh=aStiuzKTnTOpXn5Co7qVE8vcvrnMgBKSnzbqQOzxF20=;
-	h=Date:From:To:Cc:Subject:List-ID:From;
-	b=h9aliEXVrHpsV/9aZ9o4L0bXc/rovsmFAcuOWNl4HlcWm3tv0B5MWTUPk4lk9ni0P
-	 K+QlhV4zDuHHnGoV6gI56jJ+mxyqVLOntT1pFrEmansRAorYeole3C27RAWEx1fY7D
-	 lFZU/LYYRj2w8/KbTfq5Rn/CwGdbOo11g2Dkt00E=
+	s=default; t=1596472475;
+	bh=Kvx8RkrT/KT5zfWfiLUGRKA45SPhUNBLpZiIFidTslA=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=zTzGR9w1n/cydu40v1+XX89XBXEWAQ6gvrKNgnQ29cv45bxtFTNQrxNueAdrulJBE
+	 OJO5p5tVAQqNFLDoPiE06l8NMYPcuENIU20kSltPDSXrgyxpe9OgYMD9ujTBz7k7+O
+	 o+PxaMJsmIr15pzyq7UyXDoff87HH4kaYjzSvN18=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1725924AbgHCHHd (ORCPT
+        id S1726358AbgHCQeg (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 3 Aug 2020 03:07:33 -0400
-Received: from mail.kernel.org ([198.145.29.99]:34658 "EHLO mail.kernel.org"
+        Mon, 3 Aug 2020 12:34:36 -0400
+Received: from mail.kernel.org ([198.145.29.99]:54558 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725270AbgHCHHc (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 3 Aug 2020 03:07:32 -0400
+        id S1726189AbgHCQeg (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 3 Aug 2020 12:34:36 -0400
 Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 5EFF3206D7;
-        Mon,  3 Aug 2020 07:07:31 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id EB75820775;
+        Mon,  3 Aug 2020 16:34:34 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1596438451;
-        bh=aStiuzKTnTOpXn5Co7qVE8vcvrnMgBKSnzbqQOzxF20=;
-        h=Date:From:To:Cc:Subject:From;
-        b=BcCsL8zea7GPg2m/ieqZwlovtsHdky30BYHF1wuu7BqV4ZLnuN4Y6xM4zgUDhKE9m
-         zuomvzHyJEr0qY7zJIYNH3OXXfF9GfCSC8/wPWAcNNDKZBmx9V1Mzki1ejys2l52/t
-         j5CBsAf22nHPs7w0TDYpAHMQttavHk+Fy3DViY5g=
-Date:   Mon, 3 Aug 2020 00:07:30 -0700
+        s=default; t=1596472475;
+        bh=Kvx8RkrT/KT5zfWfiLUGRKA45SPhUNBLpZiIFidTslA=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=e/l6S3IeOlkWf9OgBGFaLOCp2L7ZUFERAcv5MmY0bBC5tPqUO6z+S3KRZ/dDJ+EW5
+         S3GAg86UcW3BxJmMzaYy6gg1CPzkiw2k1jAW3DmlUscnhQdzYHRXTh0x1zOanvffR6
+         KSvEM5rXdu2nlXqvwqHrD8bdAxNp5aKJdPlnAJlY=
+Date:   Mon, 3 Aug 2020 09:34:34 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     Linus Torvalds <torvalds@linux-foundation.org>
-Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
-        Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
-Subject: [GIT PULL] fsverity updates for 5.9
-Message-ID: <20200803070730.GB24480@sol.localdomain>
+To:     Po-Hsu Lin <po-hsu.lin@canonical.com>
+Cc:     linux-fscrypt@vger.kernel.org
+Subject: Re: [fsverity-utils PATCHv2] Makefile: improve the cc-option
+ compatibility
+Message-ID: <20200803163434.GA1057@sol.localdomain>
+References: <20200803030736.6364-1-po-hsu.lin@canonical.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20200803030736.6364-1-po-hsu.lin@canonical.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-The following changes since commit ba47d845d715a010f7b51f6f89bae32845e6acb7:
+On Mon, Aug 03, 2020 at 11:07:36AM +0800, Po-Hsu Lin wrote:
+> The build on Ubuntu Xenial with GCC 5.4.0 will fail with:
+>     cc: error: unrecognized command line option ‘-Wimplicit-fallthrough’
+> 
+> This unsupported flag is not skipped as expected.
+> 
+> It is because of the /bin/sh shell on Ubuntu, DASH, which does not
+> support this &> redirection. Use 2>&1 to solve this problem.
+> 
+> Signed-off-by: Po-Hsu Lin <po-hsu.lin@canonical.com>
+> ---
+>  Makefile | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
+> 
+> diff --git a/Makefile b/Makefile
+> index e0a3938..ec23ed6 100644
+> --- a/Makefile
+> +++ b/Makefile
+> @@ -32,7 +32,7 @@
+>  #
+>  ##############################################################################
+>  
+> -cc-option = $(shell if $(CC) $(1) -c -x c /dev/null -o /dev/null &>/dev/null; \
+> +cc-option = $(shell if $(CC) $(1) -c -x c /dev/null -o /dev/null > /dev/null 2>&1; \
+>  	      then echo $(1); fi)
+>  
+>  CFLAGS ?= -O2 -Wall -Wundef					\
+> -- 
+> 2.17.1
+> 
 
-  Linux 5.8-rc6 (2020-07-19 15:41:18 -0700)
+Thanks, applied.
 
-are available in the Git repository at:
-
-  https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fsverity-for-linus
-
-for you to fetch changes up to f3db0bed458314a835ccef5ccb130270c5b2cf04:
-
-  fs-verity: use smp_load_acquire() for ->i_verity_info (2020-07-21 16:02:41 -0700)
-
-----------------------------------------------------------------
-
-One fix for fs/verity/ to strengthen a memory barrier which might be too
-weak.  This mirrors a similar fix in fs/crypto/.
-
-----------------------------------------------------------------
-Eric Biggers (1):
-      fs-verity: use smp_load_acquire() for ->i_verity_info
-
- fs/verity/open.c         | 15 ++++++++++++---
- include/linux/fsverity.h |  9 +++++++--
- 2 files changed, 19 insertions(+), 5 deletions(-)
+- Eric
