@@ -2,122 +2,150 @@ Return-Path: <SRS0=zF2K=CA=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 417B4C433DF
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 22 Aug 2020 01:12:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D807BC433E1
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 22 Aug 2020 02:34:43 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 154A9207DA
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 22 Aug 2020 01:12:24 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id A8E302075E
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 22 Aug 2020 02:34:43 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1598058744;
-	bh=ihzrjc8bGJkk2AguH/PqiRQxtjVUEhGH7jkvdSLGlWo=;
-	h=Subject:From:To:Cc:Date:In-Reply-To:References:List-ID:From;
-	b=cwQ1d9MnJgs9zq0kIKFTUOIAgQm+oFSQiL7ggToLuBJ/3qQYf0O6XQLQXotQUlSHu
-	 i+nmQ5PztJZkU/HCwd0/VSbxO7TB9FY8V85Wg7ecKidw5Hm+igLOCw8iQMIBggSFnM
-	 zH27cm6g4lbi9nYj7fuIKeEU31JHzQDNEx/jMdQ8=
+	s=default; t=1598063683;
+	bh=VdTEnShx+GV6E9gjj9TupPVHBN8F/ejyaL4g7GX/E7k=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=PVW25ekUslNDeOg5cywd7Bo1k9lvh9po6HCNviwGApotC7yk4Y8y85mcwDTRkHhBA
+	 L+xsDUaWHKXHBjhtAC+5scWsjejRo3yWe8M4CnAY6k2oepdR5MVtypxju27oH9IUhf
+	 FSjrmV+j+fLatFwQ99PA12SXqYSBYx4FTCWgIJGQ=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726817AbgHVBMX (ORCPT
+        id S1726588AbgHVCen (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 21 Aug 2020 21:12:23 -0400
-Received: from mail.kernel.org ([198.145.29.99]:59440 "EHLO mail.kernel.org"
+        Fri, 21 Aug 2020 22:34:43 -0400
+Received: from mail.kernel.org ([198.145.29.99]:54210 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726663AbgHVBMX (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 21 Aug 2020 21:12:23 -0400
-Received: from vulkan.poochiereds.net (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
+        id S1725991AbgHVCen (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 21 Aug 2020 22:34:43 -0400
+Received: from sol.localdomain (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 14847207CD;
-        Sat, 22 Aug 2020 01:12:21 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 083FF20735;
+        Sat, 22 Aug 2020 02:34:41 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1598058742;
-        bh=ihzrjc8bGJkk2AguH/PqiRQxtjVUEhGH7jkvdSLGlWo=;
-        h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
-        b=D6qEyh4YYYdoJBACIe/Cnl4MkQfsA7eFfaP6TkzHSip7JehdNMyyHsnujPljV1wBv
-         oVneWQuvNAL3tYeQQ3rM0ckhbCY7ChLkwM5e2oYatNVRqdiQAynudlgrWyCjdEWXtH
-         II7FVoIBOR4UjjkOANjOvb5Fk3jEf0dqzjDbNaXA=
-Message-ID: <676a9f666fe622fe1c0b7b6cb44f38012b3089c9.camel@kernel.org>
-Subject: Re: [RFC PATCH 06/14] ceph: add fscrypt ioctls
-From:   Jeff Layton <jlayton@kernel.org>
-To:     Eric Biggers <ebiggers@kernel.org>
+        s=default; t=1598063682;
+        bh=VdTEnShx+GV6E9gjj9TupPVHBN8F/ejyaL4g7GX/E7k=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=PczGZOibddHQvDlsc7SPxjPTfBJtknhVnmJq7jnaIAl1IgU6l1FRU/jocXT8m3slc
+         Tu5VQ2ABESJHHd1yC9SzFjmEQXqc5tsQ0iAVdyc+c3b4xso4UMOdRPfnfcHYr7XxD9
+         L/auklVd9DIbixmV/3NTbaLEjDKYwPJoKr8I+Oa8=
+Date:   Fri, 21 Aug 2020 19:34:40 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Jeff Layton <jlayton@kernel.org>
 Cc:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Date:   Fri, 21 Aug 2020 21:12:21 -0400
-In-Reply-To: <20200822003920.GC834@sol.localdomain>
+Subject: Re: [RFC PATCH 00/14] ceph+fscrypt: together at last (contexts and
+ filenames)
+Message-ID: <20200822023440.GD834@sol.localdomain>
 References: <20200821182813.52570-1-jlayton@kernel.org>
-         <20200821182813.52570-7-jlayton@kernel.org>
-         <20200822003920.GC834@sol.localdomain>
-Content-Type: text/plain; charset="UTF-8"
-User-Agent: Evolution 3.36.5 (3.36.5-1.fc32) 
+ <20200822002301.GA834@sol.localdomain>
+ <2a6b92f25325fa95164f418c669883f73a291b77.camel@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <2a6b92f25325fa95164f418c669883f73a291b77.camel@kernel.org>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, 2020-08-21 at 17:39 -0700, Eric Biggers wrote:
-> On Fri, Aug 21, 2020 at 02:28:05PM -0400, Jeff Layton wrote:
-> > Boilerplate ioctls for controlling encryption.
+On Fri, Aug 21, 2020 at 08:58:35PM -0400, Jeff Layton wrote:
+> > > Ceph (and most other netfs') will need to pre-create a crypto context
+> > > when creating a new inode as we'll need to encrypt some things before we
+> > > have an inode. This patchset stores contexts in an xattr, but that's
+> > > probably not ideal for the final implementation [1].
 > > 
-> > Signed-off-by: Jeff Layton <jlayton@kernel.org>
-> > ---
-> >  fs/ceph/ioctl.c | 26 ++++++++++++++++++++++++++
-> >  1 file changed, 26 insertions(+)
+> > Coincidentally, I've currently working on solving a similar problem.  On ext4,
+> > the inode number can't be assigned, and the encryption xattr can't be set, until
+> > the jbd2 transaction which creates the inode.  Also, if the new inode is a
+> > symlink, then fscrypt_encrypt_symlink() has to be called during the transaction.
+> > Together, these imply that fscrypt_get_encryption_info() has to be called during
+> > the transaction.
 > > 
-> > diff --git a/fs/ceph/ioctl.c b/fs/ceph/ioctl.c
-> > index 6e061bf62ad4..4400b170eca9 100644
-> > --- a/fs/ceph/ioctl.c
-> > +++ b/fs/ceph/ioctl.c
-> > @@ -6,6 +6,7 @@
-> >  #include "mds_client.h"
-> >  #include "ioctl.h"
-> >  #include <linux/ceph/striper.h>
-> > +#include <linux/fscrypt.h>
-> >  
-> >  /*
-> >   * ioctls
-> > @@ -289,6 +290,31 @@ long ceph_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-> >  
-> >  	case CEPH_IOC_SYNCIO:
-> >  		return ceph_ioctl_syncio(file);
-> > +#ifdef CONFIG_FS_ENCRYPTION
-> > +	case FS_IOC_SET_ENCRYPTION_POLICY:
-> > +		return fscrypt_ioctl_set_policy(file, (const void __user *)arg);
-> > +
-> > +	case FS_IOC_GET_ENCRYPTION_POLICY:
-> > +		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
-> > +
-> > +	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-> > +		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
-> > +
-> > +	case FS_IOC_ADD_ENCRYPTION_KEY:
-> > +		return fscrypt_ioctl_add_key(file, (void __user *)arg);
-> > +
-> > +	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-> > +		return fscrypt_ioctl_remove_key(file, (void __user *)arg);
-> > +
-> > +	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
-> > +		return fscrypt_ioctl_remove_key_all_users(file, (void __user *)arg);
-> > +
-> > +	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-> > +		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
-> > +
-> > +	case FS_IOC_GET_ENCRYPTION_NONCE:
-> > +		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
-> > +#endif /* CONFIG_FS_ENCRYPTION */
-> >  	}
 > 
-> The '#ifdef CONFIG_FS_ENCRYPTION' isn't needed here, since all the
-> fscrypt_ioctl_*() functions are stubbed out when !CONFIG_FS_ENCRYPTION.
+> Yes, similar problem. I started looking at symlinks today, and got a
+> little ways into a patchset to refactor some fscrypt code to handle
+> them, but I don't think it's quite right yet. A more general solution
+> would be nice.
 > 
-> - Eric
+> > That's what we do, currently.  However, it's technically wrong and can deadlock,
+> > since fscrypt_get_encryption_info() isn't GFP_NOFS-safe (and it can't be).
+> > 
+> > f2fs appears to have a similar problem, though I'm still investigating.
+> > 
+> > To fix this, I'm planning to add new functions:
+> > 
+> >    - fscrypt_prepare_new_inode() will set up the fscrypt_info for a new
+> >      'struct inode' which hasn't necessarily had an inode number assigned yet.
+> >      It won't set the encryption xattr yet.
+> > 
+> 
+> I more or less have that in 02/14, I think, but if you have something
+> else in mind, I'm happy to follow suit.
+[...]
+> > > Symlink handling in fscrypt will also need to be refactored a bit, as we
+> > > won't have an inode before we'll need to encrypt its contents.
+> > 
+> > Will there be an in-memory inode allocated yet (a 'struct inode'), just with no
+> > inode number assigned yet?  If so, my work-in-progress patchset I mentioned
+> > earlier should be sufficient to address this.  The order would be:
+> > 
+> > 	1. fscrypt_prepare_new_inode()
+> > 	2. fscrypt_encrypt_symlink()
+> > 	3. Assign inode number
+> > 
+> > 
+> > Or does ceph not have a 'struct inode' at all until step (3)?
+> 
+> No, generally ceph doesn't create an inode until the reply comes in. I
+> think we'll need to be able to create a context and encrypt the symlink
+> before we issue the call to the server. I started hacking at the fscrypt
+> code for this today, but I didn't get very far.
+> 
+> FWIW, ceph is a bit of an odd netfs protocol in that there is a standard
+> "trace" that holds info about dentries and inodes that are created or
+> modified as a result of an operation. Most of the dentry/inode cache
+> manipulation is done at that point, which is done as part of the reply
+> processing.
 
+Your patch "fscrypt: add fscrypt_new_context_from_parent" takes in a directory
+and generates an fscrypt_context (a.k.a. an encryption xattr) for a new file
+that will be created in that directory.
 
-Ahh, thanks. Will fix.
+fscrypt_prepare_new_inode() from my work-in-progress patches would do a bit more
+than that.  It would actually set up a "struct fscrypt_info" for a new inode.
+That includes the encryption key and all information needed to build the
+fscrypt_context.  So, afterwards it will be possible to call
+fscrypt_encrypt_symlink() before the fscrypt_context is "saved to disk".
+IIUC, that's part of what ceph will need.
 
--- 
-Jeff Layton <jlayton@kernel.org>
+The catch is that there will still have to be a 'struct inode' to associate the
+'struct fscrypt_info' with.  It won't have to have ->i_ino set yet, but some
+other fields (at least ->i_mode and ->i_sb) will have to be set, since lots of
+code in fs/crypto/ uses those fields.
 
+I think it would be possible to refactor things to make 'struct fscrypt_info'
+more separate from 'struct inode', so that filesystems could create a
+'struct fscrypt_info' that isn't associated with an inode yet, then encrypt a
+symlink target using it (not caching it in ->i_link as we currently do).
+
+However, it would require a lot of changes.
+
+So I'm wondering if it would be easier to instead change ceph to create and
+start initializing the 'struct inode' earlier.  It doesn't have to have an inode
+number assigned or be added to the inode cache yet; it just needs to be
+allocated in memory and some basic fields need to be initialized.  In theory
+it's possible, right?  I'd expect that local filesystems aren't even that much
+different, in principle; they start initializing a new 'struct inode' in memory
+first, and only later do they *really* create the inode by allocating an inode
+number and saving the changes to disk.
+
+- Eric
