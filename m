@@ -2,54 +2,51 @@ Return-Path: <SRS0=eEUB=CC=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-8.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4CBF4C433FC
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3C6B3C433F4
 	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 06:35:27 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 5FF3A22CBB
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 06:18:45 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 2B4E0208E4
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 06:18:19 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1598249925;
-	bh=FMdqhGKiPJuHGox4c9HjS2vaN3+8vR0i3HMKgJxF+vQ=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=OJZjg33DOlkOm60U9YRZ3/MVKjHIakTw0Kr6LNl7bTodM0hb/iTsBfxKh7YWxMB0o
-	 i/GwlWM2p0sECcjeKqj8nUtgQuTn5TEMB2vK4gkedjynmZnO/sHY5AZ28t92MKOr/s
-	 AkhNQbCyd/3hl+nZk1N9tO8dhu0/pRjQ4DUvU+bM=
+	s=default; t=1598249899;
+	bh=5Cg/F/P1MsSIqNAEKm5EcA85tMzmQDFgxtq+BwsOiXY=;
+	h=From:To:Cc:Subject:Date:List-ID:From;
+	b=hK8yrvEOAYTvR6bATXWuSPrYNA8KXk1MLdhIgZV0b0rI1jUY4jfV/tJ24jgnWS1Uq
+	 hW9RZ0l7Tw8gCDguXPyuPIHnhQPyd0T6cO4zXM8QQYE6F0DC5pK1hn+IOtJn70nlOT
+	 6uxjady8SxdkxaA5kllbdTI5bZ51ONSl+5FbWeSk=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726026AbgHXGSf (ORCPT
+        id S1725999AbgHXGSS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 24 Aug 2020 02:18:35 -0400
-Received: from mail.kernel.org ([198.145.29.99]:49984 "EHLO mail.kernel.org"
+        Mon, 24 Aug 2020 02:18:18 -0400
+Received: from mail.kernel.org ([198.145.29.99]:49688 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726086AbgHXGS3 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 24 Aug 2020 02:18:29 -0400
+        id S1725770AbgHXGSS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 24 Aug 2020 02:18:18 -0400
 Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 446D122B43;
-        Mon, 24 Aug 2020 06:18:20 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id CD6CF206B5;
+        Mon, 24 Aug 2020 06:18:17 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1598249900;
-        bh=FMdqhGKiPJuHGox4c9HjS2vaN3+8vR0i3HMKgJxF+vQ=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=SQyQZQJniVjChBFXxR3bF0x16R3eYZIA7rLFQeyDxK8kI1KwERQ2Wj5lm2hjVxMmg
-         3Nxe/eWfi8Gq+7jcCSMCpgVFWl4M/qnEc4H3H+EjikdTyTQ7njVV+jR+9X8cw/bdtG
-         QW0t7i1axoHJILN6yvBCn6ZUt3hNXnc1AUNSCwU0=
+        s=default; t=1598249898;
+        bh=5Cg/F/P1MsSIqNAEKm5EcA85tMzmQDFgxtq+BwsOiXY=;
+        h=From:To:Cc:Subject:Date:From;
+        b=f893nZOHOk74YywNd+s2c7KM7U+ApkFK+G5wAxPqs247sQ2FcptH0qP9EtwzvEYBf
+         LROjPrF6b7H17wnj5KGsZaPkgvTF6yctFlLpC0zde7Uvt1Qfhq8ilvE8jBprCzObNr
+         jbaGalIhOAIFifcUwA2qyoWoyI0iCcGdq4CofU6w=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org,
         Jeff Layton <jlayton@kernel.org>
-Subject: [RFC PATCH 7/8] fscrypt: remove fscrypt_inherit_context()
-Date:   Sun, 23 Aug 2020 23:17:11 -0700
-Message-Id: <20200824061712.195654-8-ebiggers@kernel.org>
+Subject: [RFC PATCH 0/8] fscrypt: avoid GFP_NOFS-unsafe key setup during transaction
+Date:   Sun, 23 Aug 2020 23:17:04 -0700
+Message-Id: <20200824061712.195654-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.28.0
-In-Reply-To: <20200824061712.195654-1-ebiggers@kernel.org>
-References: <20200824061712.195654-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -57,119 +54,51 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+This series fixes some deadlocks which are theoretically possible due to
+fscrypt_get_encryption_info() being GFP_NOFS-unsafe, and thus not safe
+to be called from within an ext4 transaction or under f2fs_lock_op().
 
-Now that all filesystems have been converted to use
-fscrypt_prepare_new_inode() and fscrypt_set_context(),
-fscrypt_inherit_context() is no longer used.  So remove it.
+The problem is solved by new helper functions which allow setting up the
+key for new inodes earlier.  Patch 1 adds these helper functions.  Also
+see that patch for a more detailed description of this problem.
 
-Also change __fscrypt_encrypt_symlink() to no longer set up the inode's
-key, since it's guaranteed to be set up already now that all filesystems
-have been converted to fscrypt_prepare_new_inode().
+Patches 2-6 then convert ext4, f2fs, and ubifs to use these new helpers.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/hooks.c       | 10 +++++++---
- fs/crypto/policy.c      | 37 -------------------------------------
- include/linux/fscrypt.h |  9 ---------
- 3 files changed, 7 insertions(+), 49 deletions(-)
+Patch 7-8 then clean up a few things afterwards.
 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 09fb8aa0f2e93..b69cd29a01a2f 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -217,9 +217,13 @@ int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
- 	struct fscrypt_symlink_data *sd;
- 	unsigned int ciphertext_len;
- 
--	err = fscrypt_require_key(inode);
--	if (err)
--		return err;
-+	/*
-+	 * fscrypt_prepare_new_inode() should have already set up the inode's
-+	 * encryption key.  We don't wait until now to do it, since we may be in
-+	 * a filesystem transaction now.
-+	 */
-+	if (WARN_ON_ONCE(!fscrypt_has_encryption_key(inode)))
-+		return -ENOKEY;
- 
- 	if (disk_link->name) {
- 		/* filesystem-provided buffer */
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index fbe4933206469..2220ef48d5846 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -625,43 +625,6 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
- }
- EXPORT_SYMBOL(fscrypt_has_permitted_context);
- 
--/**
-- * fscrypt_inherit_context() - Sets a child context from its parent
-- * @parent: Parent inode from which the context is inherited.
-- * @child:  Child inode that inherits the context from @parent.
-- * @fs_data:  private data given by FS.
-- * @preload:  preload child i_crypt_info if true
-- *
-- * Return: 0 on success, -errno on failure
-- */
--int fscrypt_inherit_context(struct inode *parent, struct inode *child,
--						void *fs_data, bool preload)
--{
--	u8 nonce[FSCRYPT_FILE_NONCE_SIZE];
--	union fscrypt_context ctx;
--	int ctxsize;
--	struct fscrypt_info *ci;
--	int res;
--
--	res = fscrypt_get_encryption_info(parent);
--	if (res < 0)
--		return res;
--
--	ci = fscrypt_get_info(parent);
--	if (ci == NULL)
--		return -ENOKEY;
--
--	get_random_bytes(nonce, FSCRYPT_FILE_NONCE_SIZE);
--	ctxsize = fscrypt_new_context_from_policy(&ctx, &ci->ci_policy, nonce);
--
--	BUILD_BUG_ON(sizeof(ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
--	res = parent->i_sb->s_cop->set_context(child, &ctx, ctxsize, fs_data);
--	if (res)
--		return res;
--	return preload ? fscrypt_get_encryption_info(child): 0;
--}
--EXPORT_SYMBOL(fscrypt_inherit_context);
--
- /**
-  * fscrypt_set_context() - Set the fscrypt context of a new inode
-  * @inode: A new inode
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 726131dfa0a9b..4ee636e9e1fca 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -156,8 +156,6 @@ int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg);
- int fscrypt_ioctl_get_policy_ex(struct file *filp, void __user *arg);
- int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
- int fscrypt_has_permitted_context(struct inode *parent, struct inode *child);
--int fscrypt_inherit_context(struct inode *parent, struct inode *child,
--			    void *fs_data, bool preload);
- int fscrypt_set_context(struct inode *inode, void *fs_data);
- 
- struct fscrypt_dummy_context {
-@@ -343,13 +341,6 @@ static inline int fscrypt_has_permitted_context(struct inode *parent,
- 	return 0;
- }
- 
--static inline int fscrypt_inherit_context(struct inode *parent,
--					  struct inode *child,
--					  void *fs_data, bool preload)
--{
--	return -EOPNOTSUPP;
--}
--
- static inline int fscrypt_set_context(struct inode *inode, void *fs_data)
- {
- 	return -EOPNOTSUPP;
+Coincidentally, this also solves some of the ordering problems that
+ceph fscrypt support will have.  For more details about this, see the
+discussion on Jeff Layton's RFC patchset for ceph fscrypt support
+(https://lkml.kernel.org/linux-fscrypt/20200821182813.52570-1-jlayton@kernel.org/T/#u)
+However, fscrypt_prepare_new_inode() still requires that the new
+'struct inode' exist already, so it might not be enough for ceph yet.
+
+This patchset applies to v5.9-rc2.
+
+Eric Biggers (8):
+  fscrypt: add fscrypt_prepare_new_inode() and fscrypt_set_context()
+  ext4: factor out ext4_xattr_credits_for_new_inode()
+  ext4: remove some #ifdefs in ext4_xattr_credits_for_new_inode()
+  ext4: use fscrypt_prepare_new_inode() and fscrypt_set_context()
+  f2fs: use fscrypt_prepare_new_inode() and fscrypt_set_context()
+  ubifs: use fscrypt_prepare_new_inode() and fscrypt_set_context()
+  fscrypt: remove fscrypt_inherit_context()
+  fscrypt: stop pretending that key setup is nofs-safe
+
+ fs/crypto/fscrypt_private.h |   3 +
+ fs/crypto/hooks.c           |  10 +-
+ fs/crypto/inline_crypt.c    |   7 +-
+ fs/crypto/keysetup.c        | 190 ++++++++++++++++++++++++++++--------
+ fs/crypto/keysetup_v1.c     |   8 +-
+ fs/crypto/policy.c          |  64 +++++++-----
+ fs/ext4/ialloc.c            | 118 +++++++++++-----------
+ fs/f2fs/dir.c               |   2 +-
+ fs/f2fs/f2fs.h              |  16 ---
+ fs/f2fs/namei.c             |   7 +-
+ fs/ubifs/dir.c              |  26 ++---
+ include/linux/fscrypt.h     |  18 +++-
+ 12 files changed, 293 insertions(+), 176 deletions(-)
+
 -- 
 2.28.0
 
