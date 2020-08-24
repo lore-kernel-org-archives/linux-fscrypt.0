@@ -7,46 +7,46 @@ X-Spam-Status: No, score=-14.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7C123C43617
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 962B8C43618
 	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 06:35:27 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 5D93F22CAF
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 06:18:44 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 30DCE22B47
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 06:18:34 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1598249924;
-	bh=FIdPAQ4uVgqepfVvwpPtlAMJGJ/BCwZf2dDwk5M0shA=;
+	s=default; t=1598249914;
+	bh=QdONhA25GuQQJmapNTQIWWWGH7achN6FFOfpot5lMGg=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=sh9Ow374LZUc7kgIxmod7MpIhLJWEaeSFsgxRCQGrLVaX/0320W4Wnf3oOc9Wph4e
-	 p7KkdvJENd65nGn2cZD2KbZNBbJf5tuSCUhKVEfV2pqq7yGYNlKDeu9jJQRuAgOhZ6
-	 P61QhSersBmMwodKw9I9/ZlxiQ8TTHQ2BxpIo6ZM=
+	b=cmq3ugYc206YKSb8jjFSf4eufwAPfpoMEX10D5LbwVh7SEwjulWSNeJXyNrXmihP3
+	 mlkx7Y6ffcnCotMvDUVckwyRVloJlQ925ilNUer5d0L1eR5DGvQVNOJtxXVThjbPLQ
+	 ymjXq/AU4DUOIC06AiKHWm84uo126xisvmREm2Ls=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726347AbgHXGSf (ORCPT
+        id S1726181AbgHXGSa (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 24 Aug 2020 02:18:35 -0400
-Received: from mail.kernel.org ([198.145.29.99]:49986 "EHLO mail.kernel.org"
+        Mon, 24 Aug 2020 02:18:30 -0400
+Received: from mail.kernel.org ([198.145.29.99]:49716 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726075AbgHXGS2 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 24 Aug 2020 02:18:28 -0400
+        id S1726027AbgHXGST (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 24 Aug 2020 02:18:19 -0400
 Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 9733422BEA;
-        Mon, 24 Aug 2020 06:18:20 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 90CA6207D3;
+        Mon, 24 Aug 2020 06:18:18 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1598249900;
-        bh=FIdPAQ4uVgqepfVvwpPtlAMJGJ/BCwZf2dDwk5M0shA=;
+        s=default; t=1598249898;
+        bh=QdONhA25GuQQJmapNTQIWWWGH7achN6FFOfpot5lMGg=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=aOFOzAVN6aex+LS5Y2deYUb9Qjxp+H46wBD4Q4HDvUhaKg92JKU/CLVURb4LyzBUw
-         2+WvbtU7sO6GQxDGsaEnuYSknW0lS3fpbkqF4Evz/SyGisvOuCd6oEkWg/7aYH/ioI
-         8+eqiG/nQFxpH2RSz/7EstoUxgliPnfNi17KeKtQ=
+        b=e2050mad+4BMjzCtGT254bX32Y57ZVPtbWQMoQ32OT3m9nxLEs1AyyyqNgsRbiXRZ
+         QT/l38bY56Ows6Dz77k+6jZZieKpGieGImYQ2x0upL1GsY64XNmbcCCuQTqD6nxcy5
+         EOd44g73ySC7xMwhc5Xioy2YrWtVXRk3pKMU+uk4=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org,
         Jeff Layton <jlayton@kernel.org>
-Subject: [RFC PATCH 8/8] fscrypt: stop pretending that key setup is nofs-safe
-Date:   Sun, 23 Aug 2020 23:17:12 -0700
-Message-Id: <20200824061712.195654-9-ebiggers@kernel.org>
+Subject: [RFC PATCH 2/8] ext4: factor out ext4_xattr_credits_for_new_inode()
+Date:   Sun, 23 Aug 2020 23:17:06 -0700
+Message-Id: <20200824061712.195654-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.28.0
 In-Reply-To: <20200824061712.195654-1-ebiggers@kernel.org>
 References: <20200824061712.195654-1-ebiggers@kernel.org>
@@ -59,117 +59,128 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-fscrypt_get_encryption_info() has never actually been safe to call in a
-context that needs GFP_NOFS, since it calls crypto_alloc_skcipher().
+To compute a new inode's xattr credits, we need to know whether the
+inode will be encrypted or not.  When we switch to use the new helper
+function fscrypt_prepare_new_inode(), we won't find out whether the
+inode will be encrypted until slightly later than is currently the case,
+which requires moving the code block that computes the xattr credits.
 
-crypto_alloc_skcipher() isn't GFP_NOFS-safe, even if called under
-memalloc_nofs_save().  This is because it may load kernel modules, and
-also because it internally takes crypto_alg_sem.  Other tasks can do
-GFP_KERNEL allocations while holding crypto_alg_sem for write.
-
-The use of fscrypt_init_mutex isn't GFP_NOFS-safe either.
-
-So, stop pretending that fscrypt_get_encryption_info() is nofs-safe.
-I.e., when it allocates memory, just use GFP_KERNEL instead of GFP_NOFS.
-
-Note, another reason to do this is that GFP_NOFS is deprecated in favor
-of using memalloc_nofs_save() in the proper places.
+To make this easier and reduce the length of __ext4_new_inode(), move
+this code block into a new function ext4_xattr_credits_for_new_inode().
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/inline_crypt.c | 7 ++-----
- fs/crypto/keysetup.c     | 2 +-
- fs/crypto/keysetup_v1.c  | 8 ++++----
- 3 files changed, 7 insertions(+), 10 deletions(-)
+ fs/ext4/ialloc.c | 90 +++++++++++++++++++++++++++---------------------
+ 1 file changed, 51 insertions(+), 39 deletions(-)
 
-diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index faa25541ccb68..89bffa82ed74a 100644
---- a/fs/crypto/inline_crypt.c
-+++ b/fs/crypto/inline_crypt.c
-@@ -106,7 +106,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci)
- 	crypto_cfg.data_unit_size = sb->s_blocksize;
- 	crypto_cfg.dun_bytes = fscrypt_get_dun_bytes(ci);
- 	num_devs = fscrypt_get_num_devices(sb);
--	devs = kmalloc_array(num_devs, sizeof(*devs), GFP_NOFS);
-+	devs = kmalloc_array(num_devs, sizeof(*devs), GFP_KERNEL);
- 	if (!devs)
- 		return -ENOMEM;
- 	fscrypt_get_devices(sb, num_devs, devs);
-@@ -135,9 +135,8 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
- 	struct fscrypt_blk_crypto_key *blk_key;
- 	int err;
- 	int i;
--	unsigned int flags;
+diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
+index df25d38d65393..0cc576005a923 100644
+--- a/fs/ext4/ialloc.c
++++ b/fs/ext4/ialloc.c
+@@ -742,6 +742,53 @@ static int find_inode_bit(struct super_block *sb, ext4_group_t group,
+ 	return 1;
+ }
  
--	blk_key = kzalloc(struct_size(blk_key, devs, num_devs), GFP_NOFS);
-+	blk_key = kzalloc(struct_size(blk_key, devs, num_devs), GFP_KERNEL);
- 	if (!blk_key)
- 		return -ENOMEM;
- 
-@@ -166,10 +165,8 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
- 		}
- 		queue_refs++;
- 
--		flags = memalloc_nofs_save();
- 		err = blk_crypto_start_using_key(&blk_key->base,
- 						 blk_key->devs[i]);
--		memalloc_nofs_restore(flags);
- 		if (err) {
- 			fscrypt_err(inode,
- 				    "error %d starting to use blk-crypto", err);
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index 6ac816d3e8478..ad64525ec6800 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -477,7 +477,7 @@ fscrypt_setup_encryption_info(struct inode *inode,
- 	struct key *master_key = NULL;
- 	int res;
- 
--	crypt_info = kmem_cache_zalloc(fscrypt_info_cachep, GFP_NOFS);
-+	crypt_info = kmem_cache_zalloc(fscrypt_info_cachep, GFP_KERNEL);
- 	if (!crypt_info)
- 		return -ENOMEM;
- 
-diff --git a/fs/crypto/keysetup_v1.c b/fs/crypto/keysetup_v1.c
-index a3cb52572b05c..2762c53504323 100644
---- a/fs/crypto/keysetup_v1.c
-+++ b/fs/crypto/keysetup_v1.c
-@@ -60,7 +60,7 @@ static int derive_key_aes(const u8 *master_key,
- 		goto out;
++static int ext4_xattr_credits_for_new_inode(struct inode *dir, mode_t mode,
++					    bool encrypt)
++{
++	struct super_block *sb = dir->i_sb;
++	int nblocks = 0;
++#ifdef CONFIG_EXT4_FS_POSIX_ACL
++	struct posix_acl *p = get_acl(dir, ACL_TYPE_DEFAULT);
++
++	if (IS_ERR(p))
++		return PTR_ERR(p);
++	if (p) {
++		int acl_size = p->a_count * sizeof(ext4_acl_entry);
++
++		nblocks += (S_ISDIR(mode) ? 2 : 1) *
++			__ext4_xattr_set_credits(sb, NULL /* inode */,
++						 NULL /* block_bh */, acl_size,
++						 true /* is_create */);
++		posix_acl_release(p);
++	}
++#endif
++
++#ifdef CONFIG_SECURITY
++	{
++		int num_security_xattrs = 1;
++
++#ifdef CONFIG_INTEGRITY
++		num_security_xattrs++;
++#endif
++		/*
++		 * We assume that security xattrs are never more than 1k.
++		 * In practice they are under 128 bytes.
++		 */
++		nblocks += num_security_xattrs *
++			__ext4_xattr_set_credits(sb, NULL /* inode */,
++						 NULL /* block_bh */, 1024,
++						 true /* is_create */);
++	}
++#endif
++	if (encrypt)
++		nblocks += __ext4_xattr_set_credits(sb,
++						    NULL /* inode */,
++						    NULL /* block_bh */,
++						    FSCRYPT_SET_CONTEXT_MAX_SIZE,
++						    true /* is_create */);
++	return nblocks;
++}
++
+ /*
+  * There are two policies for allocating an inode.  If the new inode is
+  * a directory, then a forward search is made for a block group with both
+@@ -796,45 +843,10 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
  	}
- 	crypto_skcipher_set_flags(tfm, CRYPTO_TFM_REQ_FORBID_WEAK_KEYS);
--	req = skcipher_request_alloc(tfm, GFP_NOFS);
-+	req = skcipher_request_alloc(tfm, GFP_KERNEL);
- 	if (!req) {
- 		res = -ENOMEM;
- 		goto out;
-@@ -99,7 +99,7 @@ find_and_lock_process_key(const char *prefix,
- 	const struct user_key_payload *ukp;
- 	const struct fscrypt_key *payload;
  
--	description = kasprintf(GFP_NOFS, "%s%*phN", prefix,
-+	description = kasprintf(GFP_KERNEL, "%s%*phN", prefix,
- 				FSCRYPT_KEY_DESCRIPTOR_SIZE, descriptor);
- 	if (!description)
- 		return ERR_PTR(-ENOMEM);
-@@ -228,7 +228,7 @@ fscrypt_get_direct_key(const struct fscrypt_info *ci, const u8 *raw_key)
- 		return dk;
+ 	if (!handle && sbi->s_journal && !(i_flags & EXT4_EA_INODE_FL)) {
+-#ifdef CONFIG_EXT4_FS_POSIX_ACL
+-		struct posix_acl *p = get_acl(dir, ACL_TYPE_DEFAULT);
+-
+-		if (IS_ERR(p))
+-			return ERR_CAST(p);
+-		if (p) {
+-			int acl_size = p->a_count * sizeof(ext4_acl_entry);
+-
+-			nblocks += (S_ISDIR(mode) ? 2 : 1) *
+-				__ext4_xattr_set_credits(sb, NULL /* inode */,
+-					NULL /* block_bh */, acl_size,
+-					true /* is_create */);
+-			posix_acl_release(p);
+-		}
+-#endif
+-
+-#ifdef CONFIG_SECURITY
+-		{
+-			int num_security_xattrs = 1;
+-
+-#ifdef CONFIG_INTEGRITY
+-			num_security_xattrs++;
+-#endif
+-			/*
+-			 * We assume that security xattrs are never
+-			 * more than 1k.  In practice they are under
+-			 * 128 bytes.
+-			 */
+-			nblocks += num_security_xattrs *
+-				__ext4_xattr_set_credits(sb, NULL /* inode */,
+-					NULL /* block_bh */, 1024,
+-					true /* is_create */);
+-		}
+-#endif
+-		if (encrypt)
+-			nblocks += __ext4_xattr_set_credits(sb,
+-					NULL /* inode */, NULL /* block_bh */,
+-					FSCRYPT_SET_CONTEXT_MAX_SIZE,
+-					true /* is_create */);
++		ret2 = ext4_xattr_credits_for_new_inode(dir, mode, encrypt);
++		if (ret2 < 0)
++			return ERR_PTR(ret2);
++		nblocks += ret2;
+ 	}
  
- 	/* Nope, allocate one. */
--	dk = kzalloc(sizeof(*dk), GFP_NOFS);
-+	dk = kzalloc(sizeof(*dk), GFP_KERNEL);
- 	if (!dk)
- 		return ERR_PTR(-ENOMEM);
- 	refcount_set(&dk->dk_refcount, 1);
-@@ -272,7 +272,7 @@ static int setup_v1_file_key_derived(struct fscrypt_info *ci,
- 	 * This cannot be a stack buffer because it will be passed to the
- 	 * scatterlist crypto API during derive_key_aes().
- 	 */
--	derived_key = kmalloc(ci->ci_mode->keysize, GFP_NOFS);
-+	derived_key = kmalloc(ci->ci_mode->keysize, GFP_KERNEL);
- 	if (!derived_key)
- 		return -ENOMEM;
- 
+ 	ngroups = ext4_get_groups_count(sb);
 -- 
 2.28.0
 
