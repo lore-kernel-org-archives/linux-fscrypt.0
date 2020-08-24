@@ -2,185 +2,161 @@ Return-Path: <SRS0=eEUB=CC=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-5.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 962B8C43618
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 06:35:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9C314C433DF
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 12:03:38 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 30DCE22B47
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 06:18:34 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 794102078A
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 24 Aug 2020 12:03:38 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1598249914;
-	bh=QdONhA25GuQQJmapNTQIWWWGH7achN6FFOfpot5lMGg=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=cmq3ugYc206YKSb8jjFSf4eufwAPfpoMEX10D5LbwVh7SEwjulWSNeJXyNrXmihP3
-	 mlkx7Y6ffcnCotMvDUVckwyRVloJlQ925ilNUer5d0L1eR5DGvQVNOJtxXVThjbPLQ
-	 ymjXq/AU4DUOIC06AiKHWm84uo126xisvmREm2Ls=
+	s=default; t=1598270618;
+	bh=/Tb+ArrQHcS4vh1LkPsPPiAjq3j5hYjlAjQCAJ7xVTo=;
+	h=Subject:From:To:Cc:Date:In-Reply-To:References:List-ID:From;
+	b=k4+RKBF6BZ9sSLb6QMgSmSdwbDFVf4ePI2vlS+wjmKT5RxqXHX3gQTkWb8w3XmioS
+	 qOyVIxFLHMfrGr3mBTGm4HoQwvR6RNdtmHHz1pEUoXgRsz7zGTePMocUVxEBA7hUky
+	 rudXmh7GdjqS2FNW2IRhPttIiTLMiikn0U8qXrS4=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726181AbgHXGSa (ORCPT
+        id S1726075AbgHXMDi (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 24 Aug 2020 02:18:30 -0400
-Received: from mail.kernel.org ([198.145.29.99]:49716 "EHLO mail.kernel.org"
+        Mon, 24 Aug 2020 08:03:38 -0400
+Received: from mail.kernel.org ([198.145.29.99]:43260 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726027AbgHXGST (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 24 Aug 2020 02:18:19 -0400
-Received: from sol.hsd1.ca.comcast.net (c-107-3-166-239.hsd1.ca.comcast.net [107.3.166.239])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        id S1726466AbgHXMDh (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 24 Aug 2020 08:03:37 -0400
+Received: from tleilax.poochiereds.net (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 90CA6207D3;
-        Mon, 24 Aug 2020 06:18:18 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 7E2802078A;
+        Mon, 24 Aug 2020 12:03:36 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1598249898;
-        bh=QdONhA25GuQQJmapNTQIWWWGH7achN6FFOfpot5lMGg=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=e2050mad+4BMjzCtGT254bX32Y57ZVPtbWQMoQ32OT3m9nxLEs1AyyyqNgsRbiXRZ
-         QT/l38bY56Ows6Dz77k+6jZZieKpGieGImYQ2x0upL1GsY64XNmbcCCuQTqD6nxcy5
-         EOd44g73ySC7xMwhc5Xioy2YrWtVXRk3pKMU+uk4=
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org,
-        Jeff Layton <jlayton@kernel.org>
-Subject: [RFC PATCH 2/8] ext4: factor out ext4_xattr_credits_for_new_inode()
-Date:   Sun, 23 Aug 2020 23:17:06 -0700
-Message-Id: <20200824061712.195654-3-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.28.0
-In-Reply-To: <20200824061712.195654-1-ebiggers@kernel.org>
-References: <20200824061712.195654-1-ebiggers@kernel.org>
+        s=default; t=1598270616;
+        bh=/Tb+ArrQHcS4vh1LkPsPPiAjq3j5hYjlAjQCAJ7xVTo=;
+        h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
+        b=PcBEhZplynFwwXd8pPOEgQbs7NZuzEJYhwyqxwnc3MxGrYjZPIZsZCWEjE/UndXvV
+         3melJugZCQAzPGy2ybyiRP8h7O+s5xT6KubHlZHC8TKaosYy8WrDDcB/7KwOKFrZwv
+         /eNw1kbP/szRo3PUSZl8eUc6yN5C6iJuIN5nbuk0=
+Message-ID: <a33884434b772ad6d4393a591ff80bf0beb863d8.camel@kernel.org>
+Subject: Re: [RFC PATCH 00/14] ceph+fscrypt: together at last (contexts and
+ filenames)
+From:   Jeff Layton <jlayton@kernel.org>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Date:   Mon, 24 Aug 2020 08:03:35 -0400
+In-Reply-To: <20200822023440.GD834@sol.localdomain>
+References: <20200821182813.52570-1-jlayton@kernel.org>
+         <20200822002301.GA834@sol.localdomain>
+         <2a6b92f25325fa95164f418c669883f73a291b77.camel@kernel.org>
+         <20200822023440.GD834@sol.localdomain>
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.36.5 (3.36.5-1.fc32) 
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Transfer-Encoding: 7bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, 2020-08-21 at 19:34 -0700, Eric Biggers wrote:
+> On Fri, Aug 21, 2020 at 08:58:35PM -0400, Jeff Layton wrote:
+> > > > Ceph (and most other netfs') will need to pre-create a crypto context
+> > > > when creating a new inode as we'll need to encrypt some things before we
+> > > > have an inode. This patchset stores contexts in an xattr, but that's
+> > > > probably not ideal for the final implementation [1].
+> > > 
+> > > Coincidentally, I've currently working on solving a similar problem.  On ext4,
+> > > the inode number can't be assigned, and the encryption xattr can't be set, until
+> > > the jbd2 transaction which creates the inode.  Also, if the new inode is a
+> > > symlink, then fscrypt_encrypt_symlink() has to be called during the transaction.
+> > > Together, these imply that fscrypt_get_encryption_info() has to be called during
+> > > the transaction.
+> > > 
+> > 
+> > Yes, similar problem. I started looking at symlinks today, and got a
+> > little ways into a patchset to refactor some fscrypt code to handle
+> > them, but I don't think it's quite right yet. A more general solution
+> > would be nice.
+> > 
+> > > That's what we do, currently.  However, it's technically wrong and can deadlock,
+> > > since fscrypt_get_encryption_info() isn't GFP_NOFS-safe (and it can't be).
+> > > 
+> > > f2fs appears to have a similar problem, though I'm still investigating.
+> > > 
+> > > To fix this, I'm planning to add new functions:
+> > > 
+> > >    - fscrypt_prepare_new_inode() will set up the fscrypt_info for a new
+> > >      'struct inode' which hasn't necessarily had an inode number assigned yet.
+> > >      It won't set the encryption xattr yet.
+> > > 
+> > 
+> > I more or less have that in 02/14, I think, but if you have something
+> > else in mind, I'm happy to follow suit.
+> [...]
+> > > > Symlink handling in fscrypt will also need to be refactored a bit, as we
+> > > > won't have an inode before we'll need to encrypt its contents.
+> > > 
+> > > Will there be an in-memory inode allocated yet (a 'struct inode'), just with no
+> > > inode number assigned yet?  If so, my work-in-progress patchset I mentioned
+> > > earlier should be sufficient to address this.  The order would be:
+> > > 
+> > > 	1. fscrypt_prepare_new_inode()
+> > > 	2. fscrypt_encrypt_symlink()
+> > > 	3. Assign inode number
+> > > 
+> > > 
+> > > Or does ceph not have a 'struct inode' at all until step (3)?
+> > 
+> > No, generally ceph doesn't create an inode until the reply comes in. I
+> > think we'll need to be able to create a context and encrypt the symlink
+> > before we issue the call to the server. I started hacking at the fscrypt
+> > code for this today, but I didn't get very far.
+> > 
+> > FWIW, ceph is a bit of an odd netfs protocol in that there is a standard
+> > "trace" that holds info about dentries and inodes that are created or
+> > modified as a result of an operation. Most of the dentry/inode cache
+> > manipulation is done at that point, which is done as part of the reply
+> > processing.
+> 
+> Your patch "fscrypt: add fscrypt_new_context_from_parent" takes in a directory
+> and generates an fscrypt_context (a.k.a. an encryption xattr) for a new file
+> that will be created in that directory.
+> 
+> fscrypt_prepare_new_inode() from my work-in-progress patches would do a bit more
+> than that.  It would actually set up a "struct fscrypt_info" for a new inode.
+> That includes the encryption key and all information needed to build the
+> fscrypt_context.  So, afterwards it will be possible to call
+> fscrypt_encrypt_symlink() before the fscrypt_context is "saved to disk".
+> IIUC, that's part of what ceph will need.
+> 
+> The catch is that there will still have to be a 'struct inode' to associate the
+> 'struct fscrypt_info' with.  It won't have to have ->i_ino set yet, but some
+> other fields (at least ->i_mode and ->i_sb) will have to be set, since lots of
+> code in fs/crypto/ uses those fields.
+> 
+> I think it would be possible to refactor things to make 'struct fscrypt_info'
+> more separate from 'struct inode', so that filesystems could create a
+> 'struct fscrypt_info' that isn't associated with an inode yet, then encrypt a
+> symlink target using it (not caching it in ->i_link as we currently do).
+> 
+> However, it would require a lot of changes.
+> 
+> So I'm wondering if it would be easier to instead change ceph to create and
+> start initializing the 'struct inode' earlier.  It doesn't have to have an inode
+> number assigned or be added to the inode cache yet; it just needs to be
+> allocated in memory and some basic fields need to be initialized.  In theory
+> it's possible, right?  I'd expect that local filesystems aren't even that much
+> different, in principle; they start initializing a new 'struct inode' in memory
+> first, and only later do they *really* create the inode by allocating an inode
+> number and saving the changes to disk.
+> 
 
-To compute a new inode's xattr credits, we need to know whether the
-inode will be encrypted or not.  When we switch to use the new helper
-function fscrypt_prepare_new_inode(), we won't find out whether the
-inode will be encrypted until slightly later than is currently the case,
-which requires moving the code block that computes the xattr credits.
+It's probably possible. I think we'd just need to attach the nascent
+inode to the MDS request tracking structure, and convert that from using
+iget5_locked to inode_insert5.
 
-To make this easier and reduce the length of __ext4_new_inode(), move
-this code block into a new function ext4_xattr_credits_for_new_inode().
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/ialloc.c | 90 +++++++++++++++++++++++++++---------------------
- 1 file changed, 51 insertions(+), 39 deletions(-)
-
-diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-index df25d38d65393..0cc576005a923 100644
---- a/fs/ext4/ialloc.c
-+++ b/fs/ext4/ialloc.c
-@@ -742,6 +742,53 @@ static int find_inode_bit(struct super_block *sb, ext4_group_t group,
- 	return 1;
- }
- 
-+static int ext4_xattr_credits_for_new_inode(struct inode *dir, mode_t mode,
-+					    bool encrypt)
-+{
-+	struct super_block *sb = dir->i_sb;
-+	int nblocks = 0;
-+#ifdef CONFIG_EXT4_FS_POSIX_ACL
-+	struct posix_acl *p = get_acl(dir, ACL_TYPE_DEFAULT);
-+
-+	if (IS_ERR(p))
-+		return PTR_ERR(p);
-+	if (p) {
-+		int acl_size = p->a_count * sizeof(ext4_acl_entry);
-+
-+		nblocks += (S_ISDIR(mode) ? 2 : 1) *
-+			__ext4_xattr_set_credits(sb, NULL /* inode */,
-+						 NULL /* block_bh */, acl_size,
-+						 true /* is_create */);
-+		posix_acl_release(p);
-+	}
-+#endif
-+
-+#ifdef CONFIG_SECURITY
-+	{
-+		int num_security_xattrs = 1;
-+
-+#ifdef CONFIG_INTEGRITY
-+		num_security_xattrs++;
-+#endif
-+		/*
-+		 * We assume that security xattrs are never more than 1k.
-+		 * In practice they are under 128 bytes.
-+		 */
-+		nblocks += num_security_xattrs *
-+			__ext4_xattr_set_credits(sb, NULL /* inode */,
-+						 NULL /* block_bh */, 1024,
-+						 true /* is_create */);
-+	}
-+#endif
-+	if (encrypt)
-+		nblocks += __ext4_xattr_set_credits(sb,
-+						    NULL /* inode */,
-+						    NULL /* block_bh */,
-+						    FSCRYPT_SET_CONTEXT_MAX_SIZE,
-+						    true /* is_create */);
-+	return nblocks;
-+}
-+
- /*
-  * There are two policies for allocating an inode.  If the new inode is
-  * a directory, then a forward search is made for a block group with both
-@@ -796,45 +843,10 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
- 	}
- 
- 	if (!handle && sbi->s_journal && !(i_flags & EXT4_EA_INODE_FL)) {
--#ifdef CONFIG_EXT4_FS_POSIX_ACL
--		struct posix_acl *p = get_acl(dir, ACL_TYPE_DEFAULT);
--
--		if (IS_ERR(p))
--			return ERR_CAST(p);
--		if (p) {
--			int acl_size = p->a_count * sizeof(ext4_acl_entry);
--
--			nblocks += (S_ISDIR(mode) ? 2 : 1) *
--				__ext4_xattr_set_credits(sb, NULL /* inode */,
--					NULL /* block_bh */, acl_size,
--					true /* is_create */);
--			posix_acl_release(p);
--		}
--#endif
--
--#ifdef CONFIG_SECURITY
--		{
--			int num_security_xattrs = 1;
--
--#ifdef CONFIG_INTEGRITY
--			num_security_xattrs++;
--#endif
--			/*
--			 * We assume that security xattrs are never
--			 * more than 1k.  In practice they are under
--			 * 128 bytes.
--			 */
--			nblocks += num_security_xattrs *
--				__ext4_xattr_set_credits(sb, NULL /* inode */,
--					NULL /* block_bh */, 1024,
--					true /* is_create */);
--		}
--#endif
--		if (encrypt)
--			nblocks += __ext4_xattr_set_credits(sb,
--					NULL /* inode */, NULL /* block_bh */,
--					FSCRYPT_SET_CONTEXT_MAX_SIZE,
--					true /* is_create */);
-+		ret2 = ext4_xattr_credits_for_new_inode(dir, mode, encrypt);
-+		if (ret2 < 0)
-+			return ERR_PTR(ret2);
-+		nblocks += ret2;
- 	}
- 
- 	ngroups = ext4_get_groups_count(sb);
+Would we need to do this for all inode types or just symlinks?
 -- 
-2.28.0
+Jeff Layton <jlayton@kernel.org>
 
