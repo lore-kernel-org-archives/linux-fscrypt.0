@@ -2,50 +2,53 @@ Return-Path: <SRS0=XUw6=CN=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 32750C2D0E1
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:33 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 37552C2BB84
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:35 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 0BA7F2074D
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:33 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 04DB720829
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599235653;
-	bh=6KszTCYTryzCZ4YNK73zckrQJTBvMnGBEebLXoJ1vZ0=;
-	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=s+r3Dxa29NFt0TTHziNAVVYkysv3Rq2vJ/91eFshycvmwyogkUAE65NGl9QZzk/dh
-	 jPy5xp5VYHXFTR+ID5IdwHXb5RVpL4It9w+GiDQrxARV15XXua2jITmOq164aKgU9d
-	 z1PfLTkQGldA5AFCtPXrmeGBopnYEFBZ//Y/H2gE=
+	s=default; t=1599235655;
+	bh=maObR0k26i6l3VCpSdPMc8EVkXArEVCA/NN/0sCTNA0=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=dX9KgD1CjOO/G38FoxZ5VCO2n5o/5d7C5xqcE1uvKFYWY2xuGI4+SgsJAbOymLkVa
+	 by9jU0tUwf0sKV/vOsDyW8vpaAwGxyeR//3NxTvwCqgnuzq4YzehK5aiXoX6qL/meP
+	 REqAec79IwTuooI4X3NNb77tZdkdJxmarJZRaWRA=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726927AbgIDQFn (ORCPT
+        id S1727970AbgIDQH3 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 4 Sep 2020 12:05:43 -0400
-Received: from mail.kernel.org ([198.145.29.99]:51262 "EHLO mail.kernel.org"
+        Fri, 4 Sep 2020 12:07:29 -0400
+Received: from mail.kernel.org ([198.145.29.99]:51296 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726220AbgIDQFm (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 4 Sep 2020 12:05:42 -0400
+        id S1727847AbgIDQFo (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 4 Sep 2020 12:05:44 -0400
 Received: from tleilax.com (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 951282074D;
-        Fri,  4 Sep 2020 16:05:40 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 92E512083B;
+        Fri,  4 Sep 2020 16:05:43 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599235541;
-        bh=6KszTCYTryzCZ4YNK73zckrQJTBvMnGBEebLXoJ1vZ0=;
-        h=From:To:Cc:Subject:Date:From;
-        b=m81eW4FHYAREaHjv4JHfVRnaw6xmPPfIC03H2kUReq4sdKya8JRkg44Xgeii3kbKd
-         RU6COwZvdA+gTshOUcQjRLwjqBF62Huy459ojjHXnCb/ohSlDNk6AaLXuQmflCYLWy
-         ZLNQfkidNlHjPyTe55YMc/Aciz5ON6cvZBNS+WEs=
+        s=default; t=1599235544;
+        bh=maObR0k26i6l3VCpSdPMc8EVkXArEVCA/NN/0sCTNA0=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=pg9ij8vOQRPizxmWVnptpV6RM0q4rhKsZ+wnI/bN/C9Zh/oLjAjBRCsBA6Ipq1VKr
+         fw7x7feDUr4vsdgZJJHr1q0kuUNdf/4JsgTGXl7/na1HMHhErgSyCH1Zmrb1B9L7qr
+         9cuwfWAW1HE56YHPlmMY3qT35TsvIIHZmIxLOwIo=
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         ebiggers@kernel.org
-Subject: [RFC PATCH v2 00/18] ceph+fscrypt: context, filename and symlink support
-Date:   Fri,  4 Sep 2020 12:05:19 -0400
-Message-Id: <20200904160537.76663-1-jlayton@kernel.org>
+Subject: [RFC PATCH v2 04/18] fscrypt: add fscrypt_new_context_from_inode
+Date:   Fri,  4 Sep 2020 12:05:23 -0400
+Message-Id: <20200904160537.76663-5-jlayton@kernel.org>
 X-Mailer: git-send-email 2.26.2
+In-Reply-To: <20200904160537.76663-1-jlayton@kernel.org>
+References: <20200904160537.76663-1-jlayton@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -53,74 +56,59 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This is a second posting of the ceph+fscrypt integration work that I've
-been experimenting with. The main change with this patch is that I've
-based this on top of Eric's fscrypt-pending set. That necessitated a
-change to allocate inodes much earlier than we have traditionally, prior
-to sending an RPC instead of waiting on the reply.
+CephFS will need to be able to generate a context for a new "prepared"
+inode. Add a new routine for getting the context out of an in-core
+inode.
 
-Note that this just covers the crypto contexts and filenames. I've also
-added a patch to encrypt symlink contents as well, but it doesn't seem to
-be working correctly.
+Signed-off-by: Jeff Layton <jlayton@kernel.org>
+---
+ fs/crypto/policy.c      | 20 ++++++++++++++++++++
+ include/linux/fscrypt.h |  1 +
+ 2 files changed, 21 insertions(+)
 
-The file contents work is next, but I'm sort of waiting until some work
-to the fscache infrastructure is settled. It would be nice if fscache
-also stored encrypted file contents when we plumb this in.
-
-Jeff Layton (18):
-  vfs: export new_inode_pseudo
-  fscrypt: drop unused inode argument from fscrypt_fname_alloc_buffer
-  fscrypt: export fscrypt_d_revalidate
-  fscrypt: add fscrypt_new_context_from_inode
-  fscrypt: don't balk when inode is already marked encrypted
-  fscrypt: move nokey_name conversion to separate function and export it
-  lib: lift fscrypt base64 conversion into lib/
-  ceph: add fscrypt ioctls
-  ceph: crypto context handling for ceph
-  ceph: preallocate inode for ops that may create one
-  ceph: add routine to create context prior to RPC
-  ceph: set S_ENCRYPTED bit if new inode has encryption.ctx xattr
-  ceph: make ceph_msdc_build_path use ref-walk
-  ceph: add encrypted fname handling to ceph_mdsc_build_path
-  ceph: make d_revalidate call fscrypt revalidator for encrypted
-    dentries
-  ceph: add support to readdir for encrypted filenames
-  ceph: add fscrypt support to ceph_fill_trace
-  ceph: create symlinks with encrypted and base64-encoded targets
-
- fs/ceph/Makefile             |   1 +
- fs/ceph/crypto.c             | 179 +++++++++++++++++++++++++++++
- fs/ceph/crypto.h             |  83 ++++++++++++++
- fs/ceph/dir.c                | 162 ++++++++++++++++++++------
- fs/ceph/file.c               |  56 +++++----
- fs/ceph/inode.c              | 213 ++++++++++++++++++++++++++++++-----
- fs/ceph/ioctl.c              |  25 ++++
- fs/ceph/mds_client.c         |  75 ++++++++----
- fs/ceph/mds_client.h         |   1 +
- fs/ceph/super.c              |  37 ++++++
- fs/ceph/super.h              |  19 +++-
- fs/ceph/xattr.c              |  32 ++++++
- fs/crypto/Kconfig            |   1 +
- fs/crypto/fname.c            | 139 ++++++++---------------
- fs/crypto/hooks.c            |   2 +-
- fs/crypto/keysetup.c         |   2 +-
- fs/crypto/policy.c           |  20 ++++
- fs/ext4/dir.c                |   2 +-
- fs/ext4/namei.c              |   7 +-
- fs/f2fs/dir.c                |   2 +-
- fs/inode.c                   |   1 +
- fs/ubifs/dir.c               |   2 +-
- include/linux/base64_fname.h |  11 ++
- include/linux/fscrypt.h      |  10 +-
- lib/Kconfig                  |   3 +
- lib/Makefile                 |   1 +
- lib/base64_fname.c           |  71 ++++++++++++
- 27 files changed, 943 insertions(+), 214 deletions(-)
- create mode 100644 fs/ceph/crypto.c
- create mode 100644 fs/ceph/crypto.h
- create mode 100644 include/linux/base64_fname.h
- create mode 100644 lib/base64_fname.c
-
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index c56ad886f7d7..10eddd113a21 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -670,6 +670,26 @@ int fscrypt_set_context(struct inode *inode, void *fs_data)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_set_context);
+ 
++/**
++ * fscrypt_context_from_inode() - fetch the encryption context out of in-core inode
++ * @ctx: where context should be written
++ * @inode: inode from which to fetch context
++ *
++ * Given an in-core prepared, but not-necessarily fully-instantiated inode,
++ * generate an encryption context from its policy and write it to ctx.
++ *
++ * Returns size of the context.
++ */
++int fscrypt_new_context_from_inode(union fscrypt_context *ctx, struct inode *inode)
++{
++	struct fscrypt_info *ci = inode->i_crypt_info;
++
++	BUILD_BUG_ON(sizeof(*ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
++
++	return fscrypt_new_context_from_policy(ctx, &ci->ci_policy, ci->ci_nonce);
++}
++EXPORT_SYMBOL_GPL(fscrypt_new_context_from_inode);
++
+ /**
+  * fscrypt_set_test_dummy_encryption() - handle '-o test_dummy_encryption'
+  * @sb: the filesystem on which test_dummy_encryption is being specified
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 16d673c50448..0ddbd27a2e58 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -157,6 +157,7 @@ int fscrypt_ioctl_get_policy_ex(struct file *filp, void __user *arg);
+ int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
+ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child);
+ int fscrypt_set_context(struct inode *inode, void *fs_data);
++int fscrypt_new_context_from_inode(union fscrypt_context *ctx, struct inode *inode);
+ 
+ struct fscrypt_dummy_context {
+ 	const union fscrypt_context *ctx;
 -- 
 2.26.2
 
