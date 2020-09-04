@@ -7,45 +7,45 @@ X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4C722C2D0A7
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7C589C2D0E0
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:15 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 2254E20797
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:13 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 4F98320772
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:15 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599235633;
-	bh=HgVwdbGtocve/7WmBJzWMhD1oA0sq+cEIsf3lamsiHw=;
+	s=default; t=1599235635;
+	bh=ZTnazhwuQ6F6mHuDpjBCDbj+U4yMMgAvqag/Baj5oKc=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=AayWgfAiNBtcs6G9UX41cPG2JS2g20Wtt0UStpWVTZOOOWVDBzyQPzSa1a4PzP142
-	 T93o4rkuMnnRrxRzQZmFwy3RBwsFttRGg4zMsXpaKSNATecSlvXLTqK7U3pik+icu0
-	 zKAfvike+e0+P6wZIQpB2ntw92PfsM0OWfoedZz8=
+	b=obYrFwsDuYCiRkKrMfBt153ez4gm+GOuamgNa/cYZOS/iWXbf1vBRCVSYUYLiCm+S
+	 XviTMr5QdFW+8cnTaMDNLbPtcKUtO7JGBQW0BiXMTElIvOwM/IocnRBzLWmcjqU4Xn
+	 CSOg5xbtRehJ4bTHu8jdC+FGIBcQc6JNKvURoBHk=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728073AbgIDQHI (ORCPT
+        id S1727921AbgIDQHL (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 4 Sep 2020 12:07:08 -0400
-Received: from mail.kernel.org ([198.145.29.99]:51308 "EHLO mail.kernel.org"
+        Fri, 4 Sep 2020 12:07:11 -0400
+Received: from mail.kernel.org ([198.145.29.99]:51326 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726127AbgIDQFr (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 4 Sep 2020 12:05:47 -0400
+        id S1727882AbgIDQFq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 4 Sep 2020 12:05:46 -0400
 Received: from tleilax.com (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 4D57420797;
-        Fri,  4 Sep 2020 16:05:46 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 023322084D;
+        Fri,  4 Sep 2020 16:05:44 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599235546;
-        bh=HgVwdbGtocve/7WmBJzWMhD1oA0sq+cEIsf3lamsiHw=;
+        s=default; t=1599235545;
+        bh=ZTnazhwuQ6F6mHuDpjBCDbj+U4yMMgAvqag/Baj5oKc=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=O6fJKTHsrwNKb5+QC8621pYbgaBxisNBx6lngM15ooDKc9OxnwNKHabtJuZT41fBZ
-         uOM1S96nuj4hJ6KFsooP6hOHrzuBsYHO3XqlugFzDD+F7un5OUltUlIY9giQWROqRe
-         OkMlarE+vbzAT6BXXydfAR8EKGSErXUWt+Svh9zw=
+        b=X9YSwrXUlbS+Q61pt4LAMX6HD1nhdQg5ecG9KUYBo/pRSXnNM+vmscfek+5znQTyY
+         2QBZgCxcLPZWpkeJH0P7vzIsYPx82WTtNrkmzHnrbjY89bmRuVWWauzG+NPreFRAvR
+         g31pMM/oFb0K96YXFo+nAJZUMEtNoGzBLrBgjqTI=
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         ebiggers@kernel.org
-Subject: [RFC PATCH v2 08/18] ceph: add fscrypt ioctls
-Date:   Fri,  4 Sep 2020 12:05:27 -0400
-Message-Id: <20200904160537.76663-9-jlayton@kernel.org>
+Subject: [RFC PATCH v2 06/18] fscrypt: move nokey_name conversion to separate function and export it
+Date:   Fri,  4 Sep 2020 12:05:25 -0400
+Message-Id: <20200904160537.76663-7-jlayton@kernel.org>
 X-Mailer: git-send-email 2.26.2
 In-Reply-To: <20200904160537.76663-1-jlayton@kernel.org>
 References: <20200904160537.76663-1-jlayton@kernel.org>
@@ -56,56 +56,122 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Boilerplate ioctls for controlling encryption.
-
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/ioctl.c | 25 +++++++++++++++++++++++++
- 1 file changed, 25 insertions(+)
+ fs/crypto/fname.c       | 71 +++++++++++++++++++++++------------------
+ include/linux/fscrypt.h |  3 ++
+ 2 files changed, 43 insertions(+), 31 deletions(-)
 
-diff --git a/fs/ceph/ioctl.c b/fs/ceph/ioctl.c
-index 6e061bf62ad4..381e44b2d60a 100644
---- a/fs/ceph/ioctl.c
-+++ b/fs/ceph/ioctl.c
-@@ -6,6 +6,7 @@
- #include "mds_client.h"
- #include "ioctl.h"
- #include <linux/ceph/striper.h>
-+#include <linux/fscrypt.h>
+diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+index 9440a44e24ac..09f09def87fc 100644
+--- a/fs/crypto/fname.c
++++ b/fs/crypto/fname.c
+@@ -300,6 +300,45 @@ void fscrypt_fname_free_buffer(struct fscrypt_str *crypto_str)
+ }
+ EXPORT_SYMBOL(fscrypt_fname_free_buffer);
  
- /*
-  * ioctls
-@@ -289,6 +290,30 @@ long ceph_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
++void fscrypt_encode_nokey_name(u32 hash, u32 minor_hash,
++			     const struct fscrypt_str *iname,
++			     struct fscrypt_str *oname)
++{
++	struct fscrypt_nokey_name nokey_name;
++	u32 size; /* size of the unencoded no-key name */
++
++	/*
++	 * Sanity check that struct fscrypt_nokey_name doesn't have padding
++	 * between fields and that its encoded size never exceeds NAME_MAX.
++	 */
++	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, dirhash) !=
++		     offsetof(struct fscrypt_nokey_name, bytes));
++	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, bytes) !=
++		     offsetof(struct fscrypt_nokey_name, sha256));
++	BUILD_BUG_ON(BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
++
++	if (hash) {
++		nokey_name.dirhash[0] = hash;
++		nokey_name.dirhash[1] = minor_hash;
++	} else {
++		nokey_name.dirhash[0] = 0;
++		nokey_name.dirhash[1] = 0;
++	}
++	if (iname->len <= sizeof(nokey_name.bytes)) {
++		memcpy(nokey_name.bytes, iname->name, iname->len);
++		size = offsetof(struct fscrypt_nokey_name, bytes[iname->len]);
++	} else {
++		memcpy(nokey_name.bytes, iname->name, sizeof(nokey_name.bytes));
++		/* Compute strong hash of remaining part of name. */
++		fscrypt_do_sha256(&iname->name[sizeof(nokey_name.bytes)],
++				  iname->len - sizeof(nokey_name.bytes),
++				  nokey_name.sha256);
++		size = FSCRYPT_NOKEY_NAME_MAX;
++	}
++	oname->len = base64_encode((const u8 *)&nokey_name, size, oname->name);
++}
++EXPORT_SYMBOL(fscrypt_encode_nokey_name);
++
+ /**
+  * fscrypt_fname_disk_to_usr() - convert an encrypted filename to
+  *				 user-presentable form
+@@ -327,8 +366,6 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
+ 			      struct fscrypt_str *oname)
+ {
+ 	const struct qstr qname = FSTR_TO_QSTR(iname);
+-	struct fscrypt_nokey_name nokey_name;
+-	u32 size; /* size of the unencoded no-key name */
  
- 	case CEPH_IOC_SYNCIO:
- 		return ceph_ioctl_syncio(file);
-+
-+	case FS_IOC_SET_ENCRYPTION_POLICY:
-+		return fscrypt_ioctl_set_policy(file, (const void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_POLICY:
-+		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
-+
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_add_key(file, (void __user *)arg);
-+
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_remove_key(file, (void __user *)arg);
-+
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
-+		return fscrypt_ioctl_remove_key_all_users(file, (void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-+		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_NONCE:
-+		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
- 	}
+ 	if (fscrypt_is_dot_dotdot(&qname)) {
+ 		oname->name[0] = '.';
+@@ -343,35 +380,7 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
+ 	if (fscrypt_has_encryption_key(inode))
+ 		return fname_decrypt(inode, iname, oname);
  
- 	return -ENOTTY;
+-	/*
+-	 * Sanity check that struct fscrypt_nokey_name doesn't have padding
+-	 * between fields and that its encoded size never exceeds NAME_MAX.
+-	 */
+-	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, dirhash) !=
+-		     offsetof(struct fscrypt_nokey_name, bytes));
+-	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, bytes) !=
+-		     offsetof(struct fscrypt_nokey_name, sha256));
+-	BUILD_BUG_ON(BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
+-
+-	if (hash) {
+-		nokey_name.dirhash[0] = hash;
+-		nokey_name.dirhash[1] = minor_hash;
+-	} else {
+-		nokey_name.dirhash[0] = 0;
+-		nokey_name.dirhash[1] = 0;
+-	}
+-	if (iname->len <= sizeof(nokey_name.bytes)) {
+-		memcpy(nokey_name.bytes, iname->name, iname->len);
+-		size = offsetof(struct fscrypt_nokey_name, bytes[iname->len]);
+-	} else {
+-		memcpy(nokey_name.bytes, iname->name, sizeof(nokey_name.bytes));
+-		/* Compute strong hash of remaining part of name. */
+-		fscrypt_do_sha256(&iname->name[sizeof(nokey_name.bytes)],
+-				  iname->len - sizeof(nokey_name.bytes),
+-				  nokey_name.sha256);
+-		size = FSCRYPT_NOKEY_NAME_MAX;
+-	}
+-	oname->len = base64_encode((const u8 *)&nokey_name, size, oname->name);
++	fscrypt_encode_nokey_name(hash, minor_hash, iname, oname);
+ 	return 0;
+ }
+ EXPORT_SYMBOL(fscrypt_fname_disk_to_usr);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 0ddbd27a2e58..57146f9f70e7 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -202,6 +202,9 @@ static inline void fscrypt_free_filename(struct fscrypt_name *fname)
+ int fscrypt_fname_alloc_buffer(u32 max_encrypted_len,
+ 			       struct fscrypt_str *crypto_str);
+ void fscrypt_fname_free_buffer(struct fscrypt_str *crypto_str);
++void fscrypt_encode_nokey_name(u32 hash, u32 minor_hash,
++			     const struct fscrypt_str *iname,
++			     struct fscrypt_str *oname);
+ int fscrypt_fname_disk_to_usr(const struct inode *inode,
+ 			      u32 hash, u32 minor_hash,
+ 			      const struct fscrypt_str *iname,
 -- 
 2.26.2
 
