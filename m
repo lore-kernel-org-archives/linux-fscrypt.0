@@ -2,113 +2,320 @@ Return-Path: <SRS0=XUw6=CN=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 37552C2BB84
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 87E46C2D0A7
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:11:50 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 04DB720829
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:07:35 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5E6EF2074D
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Sep 2020 16:11:50 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599235655;
-	bh=maObR0k26i6l3VCpSdPMc8EVkXArEVCA/NN/0sCTNA0=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=dX9KgD1CjOO/G38FoxZ5VCO2n5o/5d7C5xqcE1uvKFYWY2xuGI4+SgsJAbOymLkVa
-	 by9jU0tUwf0sKV/vOsDyW8vpaAwGxyeR//3NxTvwCqgnuzq4YzehK5aiXoX6qL/meP
-	 REqAec79IwTuooI4X3NNb77tZdkdJxmarJZRaWRA=
+	s=default; t=1599235910;
+	bh=mgry/NktsytdXRN9P+Q+oEqhPHhLFNDtownbGrWvgPI=;
+	h=Subject:From:To:Cc:Date:In-Reply-To:References:List-ID:From;
+	b=gOxELZdZaM1+AQ9AfVZ4xglurNchZytfJDFC7Dt+6U9ciM5zue5lPyxzNBNxkQQWW
+	 rGPoL5UeoHSuBVSjiKLhhXE2lM0dsgzN8atwDqPKBkc+k6QFMGFsn5PHXlxkmipK8D
+	 tq4BEPULFHaWqANsJkE9ERVnUQUdIo1s7EQW022A=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727970AbgIDQH3 (ORCPT
+        id S1726369AbgIDQLt (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 4 Sep 2020 12:07:29 -0400
-Received: from mail.kernel.org ([198.145.29.99]:51296 "EHLO mail.kernel.org"
+        Fri, 4 Sep 2020 12:11:49 -0400
+Received: from mail.kernel.org ([198.145.29.99]:56082 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727847AbgIDQFo (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 4 Sep 2020 12:05:44 -0400
-Received: from tleilax.com (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
+        id S1725966AbgIDQLr (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 4 Sep 2020 12:11:47 -0400
+Received: from tleilax.poochiereds.net (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 92E512083B;
-        Fri,  4 Sep 2020 16:05:43 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 103772074D;
+        Fri,  4 Sep 2020 16:11:45 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599235544;
-        bh=maObR0k26i6l3VCpSdPMc8EVkXArEVCA/NN/0sCTNA0=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=pg9ij8vOQRPizxmWVnptpV6RM0q4rhKsZ+wnI/bN/C9Zh/oLjAjBRCsBA6Ipq1VKr
-         fw7x7feDUr4vsdgZJJHr1q0kuUNdf/4JsgTGXl7/na1HMHhErgSyCH1Zmrb1B9L7qr
-         9cuwfWAW1HE56YHPlmMY3qT35TsvIIHZmIxLOwIo=
+        s=default; t=1599235906;
+        bh=mgry/NktsytdXRN9P+Q+oEqhPHhLFNDtownbGrWvgPI=;
+        h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
+        b=pTkTLFuDc6lhNrRKQMlkKhGOy1SZgt8WVXqVHIaWY88eZNkitbC8qSLMdMBjlVoxs
+         8v+CVj8bA92fAgL74VeyatwcciYaS0ZICZJZ+JWslaQCo4vOa2+sTi/JzyM0SVPGZC
+         Z91bjD5jSraLrNo/Vek+ge5JwbhXYXPtlm0eScSk=
+Message-ID: <baca6ac9ed6ae9ba0700595f7aaa6f4fe8cf058d.camel@kernel.org>
+Subject: Re: [RFC PATCH v2 18/18] ceph: create symlinks with encrypted and
+ base64-encoded targets
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         ebiggers@kernel.org
-Subject: [RFC PATCH v2 04/18] fscrypt: add fscrypt_new_context_from_inode
-Date:   Fri,  4 Sep 2020 12:05:23 -0400
-Message-Id: <20200904160537.76663-5-jlayton@kernel.org>
-X-Mailer: git-send-email 2.26.2
-In-Reply-To: <20200904160537.76663-1-jlayton@kernel.org>
+Date:   Fri, 04 Sep 2020 12:11:45 -0400
+In-Reply-To: <20200904160537.76663-19-jlayton@kernel.org>
 References: <20200904160537.76663-1-jlayton@kernel.org>
+         <20200904160537.76663-19-jlayton@kernel.org>
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.36.5 (3.36.5-1.fc32) 
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Transfer-Encoding: 7bit
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-CephFS will need to be able to generate a context for a new "prepared"
-inode. Add a new routine for getting the context out of an in-core
-inode.
+On Fri, 2020-09-04 at 12:05 -0400, Jeff Layton wrote:
+> When creating symlinks in encrypted directories, encrypt and
+> base64-encode the target with the new inode's key before sending to the
+> MDS.
+> 
+> When filling a symlinked inode, base64-decode it into a buffer that
+> we'll keep in ci->i_symlink. When get_link is called, decrypt the buffer
+> into a new one that will hang off i_link.
+> 
+> Signed-off-by: Jeff Layton <jlayton@kernel.org>
+> ---
+>  fs/ceph/dir.c   | 32 ++++++++++++++++---
+>  fs/ceph/inode.c | 82 +++++++++++++++++++++++++++++++++++++++----------
+>  fs/ceph/super.h |  3 ++
+>  3 files changed, 96 insertions(+), 21 deletions(-)
+> 
 
-Signed-off-by: Jeff Layton <jlayton@kernel.org>
----
- fs/crypto/policy.c      | 20 ++++++++++++++++++++
- include/linux/fscrypt.h |  1 +
- 2 files changed, 21 insertions(+)
+FWIW, this patch is not working right, and I'm not sure why.
 
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index c56ad886f7d7..10eddd113a21 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -670,6 +670,26 @@ int fscrypt_set_context(struct inode *inode, void *fs_data)
- }
- EXPORT_SYMBOL_GPL(fscrypt_set_context);
- 
-+/**
-+ * fscrypt_context_from_inode() - fetch the encryption context out of in-core inode
-+ * @ctx: where context should be written
-+ * @inode: inode from which to fetch context
-+ *
-+ * Given an in-core prepared, but not-necessarily fully-instantiated inode,
-+ * generate an encryption context from its policy and write it to ctx.
-+ *
-+ * Returns size of the context.
-+ */
-+int fscrypt_new_context_from_inode(union fscrypt_context *ctx, struct inode *inode)
-+{
-+	struct fscrypt_info *ci = inode->i_crypt_info;
-+
-+	BUILD_BUG_ON(sizeof(*ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
-+
-+	return fscrypt_new_context_from_policy(ctx, &ci->ci_policy, ci->ci_nonce);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_new_context_from_inode);
-+
- /**
-  * fscrypt_set_test_dummy_encryption() - handle '-o test_dummy_encryption'
-  * @sb: the filesystem on which test_dummy_encryption is being specified
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 16d673c50448..0ddbd27a2e58 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -157,6 +157,7 @@ int fscrypt_ioctl_get_policy_ex(struct file *filp, void __user *arg);
- int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
- int fscrypt_has_permitted_context(struct inode *parent, struct inode *child);
- int fscrypt_set_context(struct inode *inode, void *fs_data);
-+int fscrypt_new_context_from_inode(union fscrypt_context *ctx, struct inode *inode);
- 
- struct fscrypt_dummy_context {
- 	const union fscrypt_context *ctx;
+I've validated that I'm getting the same crypttext out
+of fscrypt_encrypt_symlink that I'm feeding into fscrypt_get_symlink,
+but the contents always look like gibberish in a readlink.
+
+Did I make an obvious mistake somewhere?
+
+
+> diff --git a/fs/ceph/dir.c b/fs/ceph/dir.c
+> index 0ba17c592fe1..7ff8921dd3a7 100644
+> --- a/fs/ceph/dir.c
+> +++ b/fs/ceph/dir.c
+> @@ -948,6 +948,7 @@ static int ceph_symlink(struct inode *dir, struct dentry *dentry,
+>  	struct ceph_mds_client *mdsc = fsc->mdsc;
+>  	struct ceph_mds_request *req;
+>  	struct ceph_acl_sec_ctx as_ctx = {};
+> +	struct fscrypt_str osd_link = FSTR_INIT(NULL, 0);
+>  	umode_t mode = S_IFLNK | 0777;
+>  	int err;
+>  
+> @@ -973,11 +974,33 @@ static int ceph_symlink(struct inode *dir, struct dentry *dentry,
+>  		goto out_req;
+>  	}
+>  
+> -	req->r_path2 = kstrdup(dest, GFP_KERNEL);
+> -	if (!req->r_path2) {
+> -		err = -ENOMEM;
+> -		goto out_req;
+> +	if (IS_ENCRYPTED(req->r_new_inode)) {
+> +		int len = strlen(dest);
+> +
+> +		err = fscrypt_prepare_symlink(dir, dest, len, PATH_MAX, &osd_link);
+> +		if (err)
+> +			goto out_req;
+> +
+> +		err = fscrypt_encrypt_symlink(req->r_new_inode, dest, len, &osd_link);
+> +		if (err)
+> +			goto out_req;
+> +
+> +		req->r_path2 = kmalloc(BASE64_CHARS(osd_link.len) + 1, GFP_KERNEL);
+> +		if (!req->r_path2) {
+> +			err = -ENOMEM;
+> +			goto out_req;
+> +		}
+> +
+> +		len = base64_encode_fname(osd_link.name, osd_link.len, req->r_path2);
+> +		req->r_path2[len] = '\0';
+> +	} else {
+> +		req->r_path2 = kstrdup(dest, GFP_KERNEL);
+> +		if (!req->r_path2) {
+> +			err = -ENOMEM;
+> +			goto out_req;
+> +		}
+>  	}
+> +
+>  	req->r_parent = dir;
+>  	set_bit(CEPH_MDS_R_PARENT_LOCKED, &req->r_req_flags);
+>  	req->r_dentry = dget(dentry);
+> @@ -997,6 +1020,7 @@ static int ceph_symlink(struct inode *dir, struct dentry *dentry,
+>  	if (err)
+>  		d_drop(dentry);
+>  	ceph_release_acl_sec_ctx(&as_ctx);
+> +	fscrypt_fname_free_buffer(&osd_link);
+>  	return err;
+>  }
+>  
+> diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
+> index e578e4cdcf30..dd39f886b03c 100644
+> --- a/fs/ceph/inode.c
+> +++ b/fs/ceph/inode.c
+> @@ -14,6 +14,7 @@
+>  #include <linux/random.h>
+>  #include <linux/sort.h>
+>  #include <linux/iversion.h>
+> +#include <linux/base64_fname.h>
+>  
+>  #include "super.h"
+>  #include "mds_client.h"
+> @@ -33,8 +34,6 @@
+>   * (typically because they are in the message handler path).
+>   */
+>  
+> -static const struct inode_operations ceph_symlink_iops;
+> -
+>  static void ceph_inode_work(struct work_struct *work);
+>  
+>  /*
+> @@ -503,6 +502,7 @@ struct inode *ceph_alloc_inode(struct super_block *sb)
+>  	atomic64_set(&ci->i_complete_seq[0], 0);
+>  	atomic64_set(&ci->i_complete_seq[1], 0);
+>  	ci->i_symlink = NULL;
+> +	ci->i_symlink_len = 0;
+>  
+>  	ci->i_max_bytes = 0;
+>  	ci->i_max_files = 0;
+> @@ -590,6 +590,7 @@ void ceph_free_inode(struct inode *inode)
+>  	struct ceph_inode_info *ci = ceph_inode(inode);
+>  
+>  	kfree(ci->i_symlink);
+> +	fscrypt_free_inode(inode);
+>  	kmem_cache_free(ceph_inode_cachep, ci);
+>  }
+>  
+> @@ -991,34 +992,60 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
+>  		inode->i_fop = &ceph_file_fops;
+>  		break;
+>  	case S_IFLNK:
+> -		inode->i_op = &ceph_symlink_iops;
+>  		if (!ci->i_symlink) {
+>  			u32 symlen = iinfo->symlink_len;
+>  			char *sym;
+>  
+>  			spin_unlock(&ci->i_ceph_lock);
+>  
+> -			if (symlen != i_size_read(inode)) {
+> -				pr_err("%s %llx.%llx BAD symlink "
+> -					"size %lld\n", __func__,
+> -					ceph_vinop(inode),
+> -					i_size_read(inode));
+> +			if (IS_ENCRYPTED(inode)) {
+> +				/* Do base64 decode so that we get the right size (maybe?) */
+> +				err = -ENOMEM;
+> +				sym = kmalloc(symlen + 1, GFP_NOFS);
+> +				if (!sym)
+> +					goto out;
+> +
+> +				symlen = base64_decode_fname(iinfo->symlink, symlen, sym);
+> +				/*
+> +				 * i_size as reported by the MDS may be wrong, due to base64
+> +				 * inflation and padding. Fix it up here.
+> +				 */
+>  				i_size_write(inode, symlen);
+>  				inode->i_blocks = calc_inode_blocks(symlen);
+> -			}
+> +			} else {
+> +				if (symlen != i_size_read(inode)) {
+> +					pr_err("%s %llx.%llx BAD symlink size %lld\n",
+> +						__func__, ceph_vinop(inode), i_size_read(inode));
+> +					i_size_write(inode, symlen);
+> +					inode->i_blocks = calc_inode_blocks(symlen);
+> +				}
+>  
+> -			err = -ENOMEM;
+> -			sym = kstrndup(iinfo->symlink, symlen, GFP_NOFS);
+> -			if (!sym)
+> -				goto out;
+> +				err = -ENOMEM;
+> +				sym = kstrndup(iinfo->symlink, symlen, GFP_NOFS);
+> +				if (!sym)
+> +					goto out;
+> +			}
+>  
+>  			spin_lock(&ci->i_ceph_lock);
+> -			if (!ci->i_symlink)
+> +			if (!ci->i_symlink) {
+>  				ci->i_symlink = sym;
+> -			else
+> +				ci->i_symlink_len = symlen;
+> +			} else {
+>  				kfree(sym); /* lost a race */
+> +			}
+> +		}
+> +
+> +		if (IS_ENCRYPTED(inode)) {
+> +			/*
+> +			 * Encrypted symlinks need to be decrypted before we can
+> +			 * cache their targets in i_link. Leave it blank for now.
+> +			 */
+> +			inode->i_link = NULL;
+> +			inode->i_op = &ceph_encrypted_symlink_iops;
+> +		} else {
+> +			inode->i_link = ci->i_symlink;
+> +			inode->i_op = &ceph_symlink_iops;
+>  		}
+> -		inode->i_link = ci->i_symlink;
+>  		break;
+>  	case S_IFDIR:
+>  		inode->i_op = &ceph_dir_iops;
+> @@ -2123,16 +2150,37 @@ static void ceph_inode_work(struct work_struct *work)
+>  	iput(inode);
+>  }
+>  
+> +static const char *ceph_encrypted_get_link(struct dentry *dentry, struct inode *inode,
+> +					   struct delayed_call *done)
+> +{
+> +	struct ceph_inode_info *ci = ceph_inode(inode);
+> +
+> +	if (inode->i_link)
+> +		return inode->i_link;
+> +
+> +	if (!dentry)
+> +		return ERR_PTR(-ECHILD);
+> +
+> +	return fscrypt_get_symlink(inode, ci->i_symlink, ci->i_symlink_len, done);
+> +}
+> +
+>  /*
+>   * symlinks
+>   */
+> -static const struct inode_operations ceph_symlink_iops = {
+> +const struct inode_operations ceph_symlink_iops = {
+>  	.get_link = simple_get_link,
+>  	.setattr = ceph_setattr,
+>  	.getattr = ceph_getattr,
+>  	.listxattr = ceph_listxattr,
+>  };
+>  
+> +const struct inode_operations ceph_encrypted_symlink_iops = {
+> +	.get_link = ceph_encrypted_get_link,
+> +	.setattr = ceph_setattr,
+> +	.getattr = ceph_getattr,
+> +	.listxattr = ceph_listxattr,
+> +};
+> +
+>  int __ceph_setattr(struct inode *inode, struct iattr *attr)
+>  {
+>  	struct ceph_inode_info *ci = ceph_inode(inode);
+> diff --git a/fs/ceph/super.h b/fs/ceph/super.h
+> index 7c859824f64c..eea0ee17b747 100644
+> --- a/fs/ceph/super.h
+> +++ b/fs/ceph/super.h
+> @@ -344,6 +344,7 @@ struct ceph_inode_info {
+>  	u64 i_max_bytes, i_max_files;
+>  
+>  	s32 i_dir_pin;
+> +	u32 i_symlink_len;
+>  
+>  	struct rb_root i_fragtree;
+>  	int i_fragtree_nsplits;
+> @@ -932,6 +933,8 @@ struct ceph_mds_reply_dirfrag;
+>  struct ceph_acl_sec_ctx;
+>  
+>  extern const struct inode_operations ceph_file_iops;
+> +extern const struct inode_operations ceph_symlink_iops;
+> +extern const struct inode_operations ceph_encrypted_symlink_iops;
+>  
+>  extern struct inode *ceph_alloc_inode(struct super_block *sb);
+>  extern void ceph_evict_inode(struct inode *inode);
+
 -- 
-2.26.2
+Jeff Layton <jlayton@kernel.org>
 
