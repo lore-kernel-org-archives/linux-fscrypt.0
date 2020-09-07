@@ -1,176 +1,188 @@
-Return-Path: <SRS0=ChYh=CO=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=ZpEn=CQ=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.0 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
+X-Spam-Status: No, score=-7.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C400DC433E2
-	for <linux-fscrypt@archiver.kernel.org>; Sat,  5 Sep 2020 04:38:30 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9690BC43461
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  7 Sep 2020 22:23:42 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 896D220E65
-	for <linux-fscrypt@archiver.kernel.org>; Sat,  5 Sep 2020 04:38:30 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 47C332177B
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  7 Sep 2020 22:23:42 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1599517422;
+	bh=Pao4NsJGj158+INc442LutV3UkAUffpThetfSRwJlm8=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=TlOo5uCYipmg9JY5raZMMsuppkWZVxup+RQGyItMzmb1l2x1LSEaxkMxuifysFb1Y
+	 zkomWSP7M8++0BjOxx5LSdgIZIvB77xz8Ol/Xy+qvtK6NXMhifzj5tYIY/8S+WoX5A
+	 5/ok79S/4WpSdpm0zGn0VtBDR85xSdBWBAERWSzs=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726366AbgIEEi3 (ORCPT
+        id S1727773AbgIGWXm (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 5 Sep 2020 00:38:29 -0400
-Received: from smtprelay0056.hostedemail.com ([216.40.44.56]:49606 "EHLO
-        smtprelay.hostedemail.com" rhost-flags-OK-OK-OK-FAIL)
-        by vger.kernel.org with ESMTP id S1725554AbgIEEi3 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 5 Sep 2020 00:38:29 -0400
-Received: from filter.hostedemail.com (clb03-v110.bra.tucows.net [216.40.38.60])
-        by smtprelay02.hostedemail.com (Postfix) with ESMTP id 730342478;
-        Sat,  5 Sep 2020 04:38:26 +0000 (UTC)
-X-Session-Marker: 6A6F6540706572636865732E636F6D
-X-HE-Tag: cart87_5d0b864270b8
-X-Filterd-Recvd-Size: 6212
-Received: from XPS-9350 (cpe-23-242-83-182.socal.res.rr.com [23.242.83.182])
-        (Authenticated sender: joe@perches.com)
-        by omf19.hostedemail.com (Postfix) with ESMTPA;
-        Sat,  5 Sep 2020 04:38:25 +0000 (UTC)
-Message-ID: <ec1347522c95c89425b3189b071b35f9d912e3e0.camel@perches.com>
-Subject: Re: [PATCH] fscrypt: Reduce object size of logging messages
-From:   Joe Perches <joe@perches.com>
-To:     Eric Biggers <ebiggers@kernel.org>
+        Mon, 7 Sep 2020 18:23:42 -0400
+Received: from mail.kernel.org ([198.145.29.99]:51702 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1727103AbgIGWXl (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 7 Sep 2020 18:23:41 -0400
+Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 5C2F4215A4;
+        Mon,  7 Sep 2020 22:23:40 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1599517420;
+        bh=Pao4NsJGj158+INc442LutV3UkAUffpThetfSRwJlm8=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=GOjvICHaaE1GyrJlCxMfbMuPlPP46n6ugcwDfu/sCesso3O2kYDTCKLE5GjgAG1K1
+         G205SVk3bVh1QKiQRi3yOTrBuyAuzbdBHvcj7xqbCbFYWg5PTqxGTwQ4aRbQV2YfuP
+         0qhk2GV32r+L3xdL/iEYhrUXiUB6acvpVr/gYVSQ=
+Date:   Mon, 7 Sep 2020 15:23:38 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Joe Perches <joe@perches.com>
 Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
         linux-fscrypt@vger.kernel.org, LKML <linux-kernel@vger.kernel.org>
-Date:   Fri, 04 Sep 2020 21:38:23 -0700
-In-Reply-To: <20200904230341.GA6172@sol.localdomain>
+Subject: Re: [PATCH] fscrypt: Reduce object size of logging messages
+Message-ID: <20200907222338.GA68127@sol.localdomain>
 References: <d9e2693cc157bbc09df92a91a9ecad8dcc8438ce.camel@perches.com>
-         <20200904230341.GA6172@sol.localdomain>
-Content-Type: text/plain; charset="ISO-8859-1"
-User-Agent: Evolution 3.36.4-0ubuntu1 
+ <20200904230341.GA6172@sol.localdomain>
+ <ec1347522c95c89425b3189b071b35f9d912e3e0.camel@perches.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <ec1347522c95c89425b3189b071b35f9d912e3e0.camel@perches.com>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, 2020-09-04 at 16:03 -0700, Eric Biggers wrote:
-> On Fri, Sep 04, 2020 at 03:10:15PM -0700, Joe Perches wrote:
-> > Reduce the object size of logging messages by removing the
-> > separate KERN_LEVEL argument and adding it to the format.
+On Fri, Sep 04, 2020 at 09:38:23PM -0700, Joe Perches wrote:
+> > > diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+> > > index 9212325763b0..c82cc3907e43 100644
+> > > --- a/fs/crypto/crypto.c
+> > > +++ b/fs/crypto/crypto.c
+> > > @@ -329,25 +329,27 @@ int fscrypt_initialize(unsigned int cop_flags)
+> > >  	return err;
+> > >  }
+> > >  
+> > > -void fscrypt_msg(const struct inode *inode, const char *level,
+> > > -		 const char *fmt, ...)
+> > > +void fscrypt_printk(const struct inode *inode, const char *fmt, ...)
+> > >  {
+> > >  	static DEFINE_RATELIMIT_STATE(rs, DEFAULT_RATELIMIT_INTERVAL,
+> > >  				      DEFAULT_RATELIMIT_BURST);
+> > >  	struct va_format vaf;
+> > >  	va_list args;
+> > > +	int level;
+> > >  
+> > >  	if (!__ratelimit(&rs))
+> > >  		return;
+> > >  
+> > >  	va_start(args, fmt);
+> > > -	vaf.fmt = fmt;
+> > > +	level = printk_get_level(fmt);
+> > > +	vaf.fmt = printk_skip_level(fmt);
+> > >  	vaf.va = &args;
+> > >  	if (inode)
+> > > -		printk("%sfscrypt (%s, inode %lu): %pV\n",
+> > > -		       level, inode->i_sb->s_id, inode->i_ino, &vaf);
+> > > +		printk("%c%cfscrypt (%s, inode %lu): %pV\n",
+> > > +		       KERN_SOH_ASCII, level, inode->i_sb->s_id, inode->i_ino,
+> > > +		       &vaf);
+> > >  	else
+> > > -		printk("%sfscrypt: %pV\n", level, &vaf);
+> > > +		printk("%c%cfscrypt: %pV\n", KERN_SOH_ASCII, level, &vaf);
+> > >  	va_end(args);
 > > 
-> > Miscellanea:
-> > 
-> > o Rename fscypt_msg to fscrypt_printk
-> > 
-> > x86-64 defconfig with fscrypto:
-> > 
-> > Original sizes:
-> > $ size fs/crypto/built-in.a -t
-> >    text	   data	    bss	    dec	    hex	filename
-> >    3815	    300	     24	   4139	   102b	fs/crypto/crypto.o (ex fs/crypto/built-in.a)
-> >    4354	     84	      0	   4438	   1156	fs/crypto/fname.o (ex fs/crypto/built-in.a)
-> >    1484	     24	      0	   1508	    5e4	fs/crypto/hkdf.o (ex fs/crypto/built-in.a)
-> >    2910	     68	      0	   2978	    ba2	fs/crypto/hooks.o (ex fs/crypto/built-in.a)
-> >    7797	    664	     65	   8526	   214e	fs/crypto/keyring.o (ex fs/crypto/built-in.a)
-> >    5005	    493	      0	   5498	   157a	fs/crypto/keysetup.o (ex fs/crypto/built-in.a)
-> >    2805	      0	    544	   3349	    d15	fs/crypto/keysetup_v1.o (ex fs/crypto/built-in.a)
-> >    6391	     90	      0	   6481	   1951	fs/crypto/policy.o (ex fs/crypto/built-in.a)
-> >    1369	     40	      0	   1409	    581	fs/crypto/bio.o (ex fs/crypto/built-in.a)
-> >   35930	   1763	    633	  38326	   95b6	(TOTALS)
-> > 
-> > New sizes:
-> > $ size fs/crypto/built-in.a -t
-> >    text	   data	    bss	    dec	    hex	filename
-> >    3874	    300	     24	   4198	   1066	fs/crypto/crypto.o (ex fs/crypto/built-in.a)
-> >    4347	     84	      0	   4431	   114f	fs/crypto/fname.o (ex fs/crypto/built-in.a)
-> >    1476	     24	      0	   1500	    5dc	fs/crypto/hkdf.o (ex fs/crypto/built-in.a)
-> >    2902	     68	      0	   2970	    b9a	fs/crypto/hooks.o (ex fs/crypto/built-in.a)
-> >    7781	    664	     65	   8510	   213e	fs/crypto/keyring.o (ex fs/crypto/built-in.a)
-> >    4961	    493	      0	   5454	   154e	fs/crypto/keysetup.o (ex fs/crypto/built-in.a)
-> >    2790	      0	    544	   3334	    d06	fs/crypto/keysetup_v1.o (ex fs/crypto/built-in.a)
-> >    6306	     90	      0	   6396	   18fc	fs/crypto/policy.o (ex fs/crypto/built-in.a)
-> >    1369	     40	      0	   1409	    581	fs/crypto/bio.o (ex fs/crypto/built-in.a)
-> >   35806	   1763	    633	  38202	   953a	(TOTALS)
-> > 
-> > Signed-off-by: Joe Perches <joe@perches.com>
-> > ---
-> >  fs/crypto/crypto.c          | 14 ++++++++------
-> >  fs/crypto/fscrypt_private.h | 12 ++++++------
-> >  2 files changed, 14 insertions(+), 12 deletions(-)
-> > 
-> > diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-> > index 9212325763b0..c82cc3907e43 100644
-> > --- a/fs/crypto/crypto.c
-> > +++ b/fs/crypto/crypto.c
-> > @@ -329,25 +329,27 @@ int fscrypt_initialize(unsigned int cop_flags)
-> >  	return err;
-> >  }
-> >  
-> > -void fscrypt_msg(const struct inode *inode, const char *level,
-> > -		 const char *fmt, ...)
-> > +void fscrypt_printk(const struct inode *inode, const char *fmt, ...)
-> >  {
-> >  	static DEFINE_RATELIMIT_STATE(rs, DEFAULT_RATELIMIT_INTERVAL,
-> >  				      DEFAULT_RATELIMIT_BURST);
-> >  	struct va_format vaf;
-> >  	va_list args;
-> > +	int level;
-> >  
-> >  	if (!__ratelimit(&rs))
-> >  		return;
-> >  
-> >  	va_start(args, fmt);
-> > -	vaf.fmt = fmt;
-> > +	level = printk_get_level(fmt);
-> > +	vaf.fmt = printk_skip_level(fmt);
-> >  	vaf.va = &args;
-> >  	if (inode)
-> > -		printk("%sfscrypt (%s, inode %lu): %pV\n",
-> > -		       level, inode->i_sb->s_id, inode->i_ino, &vaf);
-> > +		printk("%c%cfscrypt (%s, inode %lu): %pV\n",
-> > +		       KERN_SOH_ASCII, level, inode->i_sb->s_id, inode->i_ino,
-> > +		       &vaf);
-> >  	else
-> > -		printk("%sfscrypt: %pV\n", level, &vaf);
-> > +		printk("%c%cfscrypt: %pV\n", KERN_SOH_ASCII, level, &vaf);
-> >  	va_end(args);
+> > The problem with this approach is that if fscrypt_printk() is called without
+> > providing a log level in the format string (which one would assume would work,
+> > since printk() allows it), then the real format string will be truncated to just
+> > KERN_SOH because 'level' will be 0.
+> > Can you find a way to avoid that?
 > 
-> The problem with this approach is that if fscrypt_printk() is called without
-> providing a log level in the format string (which one would assume would work,
-> since printk() allows it), then the real format string will be truncated to just
-> KERN_SOH because 'level' will be 0.
-> Can you find a way to avoid that?
+> While I don't think this is a problem in that all the fscrypt_<level>
+> calls will always prefix a KERN_<LEVEL>,
 
-While I don't think this is a problem in that all the fscrypt_<level>
-calls will always prefix a KERN_<LEVEL>, another approach is to use
-what btrfs uses:
+It's still a pitfall that people could run into later.  It would be better to
+make fscrypt_printk() work in the expected way.
 
-	char lvl[PRINTK_MAX_SINGLE_HEADER_LEN + 1] = "\0";
-...
-	while ((kern_level = printk_get_level(fmt)) != 0) {
-		size_t size = printk_skip_level(fmt) - fmt;
-
-		if (kern_level >= '0' && kern_level <= '7') {
-			memcpy(lvl, fmt,  size);
-			lvl[size] = '\0';
-		}
-		fmt += size;
-	}
-
-and use "%s...", lvl, ...
-
-
-> > -#define fscrypt_warn(inode, fmt, ...)		\
-> > -	fscrypt_msg((inode), KERN_WARNING, fmt, ##__VA_ARGS__)
-> > -#define fscrypt_err(inode, fmt, ...)		\
-> > -	fscrypt_msg((inode), KERN_ERR, fmt, ##__VA_ARGS__)
-> > +#define fscrypt_err(inode, fmt, ...)					\
-> > +	fscrypt_printk(inode, KERN_ERR fmt, ##__VA_ARGS__)
-> > +#define fscrypt_warn(inode, fmt, ...)					\
-> > +	fscrypt_printk(inode, KERN_WARNING fmt, ##__VA_ARGS__)
+> what btrfs uses:
 > 
-> It's probably best to keep the parentheses around 'inode'.
+> 	char lvl[PRINTK_MAX_SINGLE_HEADER_LEN + 1] = "\0";
+> ...
+> 	while ((kern_level = printk_get_level(fmt)) != 0) {
+> 		size_t size = printk_skip_level(fmt) - fmt;
+> 
+> 		if (kern_level >= '0' && kern_level <= '7') {
+> 			memcpy(lvl, fmt,  size);
+> 			lvl[size] = '\0';
+> 		}
+> 		fmt += size;
+> 	}
+> 
+> and use "%s...", lvl, ...
+> 
 
-Not really as it's an independent argument that can't
-effectively have any other purpose but to be an argument
-to the fsrypt_printk function.
+Is the loop really needed?  How about just:
 
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 9212325763b0f..c5a87c2fe1020 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -329,11 +329,12 @@ int fscrypt_initialize(unsigned int cop_flags)
+ 	return err;
+ }
+ 
+-void fscrypt_msg(const struct inode *inode, const char *level,
+-		 const char *fmt, ...)
++void fscrypt_printk(const struct inode *inode, const char *fmt, ...)
+ {
+ 	static DEFINE_RATELIMIT_STATE(rs, DEFAULT_RATELIMIT_INTERVAL,
+ 				      DEFAULT_RATELIMIT_BURST);
++	const char *raw_fmt = printk_skip_level(fmt);
++	int hdr_len = raw_fmt - fmt;
+ 	struct va_format vaf;
+ 	va_list args;
+ 
+@@ -341,13 +342,13 @@ void fscrypt_msg(const struct inode *inode, const char *level,
+ 		return;
+ 
+ 	va_start(args, fmt);
+-	vaf.fmt = fmt;
++	vaf.fmt = raw_fmt;
+ 	vaf.va = &args;
+ 	if (inode)
+-		printk("%sfscrypt (%s, inode %lu): %pV\n",
+-		       level, inode->i_sb->s_id, inode->i_ino, &vaf);
++		printk("%.*sfscrypt (%s, inode %lu): %pV\n",
++		       hdr_len, fmt, inode->i_sb->s_id, inode->i_ino, &vaf);
+ 	else
+-		printk("%sfscrypt: %pV\n", level, &vaf);
++		printk("%.*sfscrypt: %pV\n", hdr_len, fmt, &vaf);
+ 	va_end(args);
+ }
 
+> 
+> > > -#define fscrypt_warn(inode, fmt, ...)		\
+> > > -	fscrypt_msg((inode), KERN_WARNING, fmt, ##__VA_ARGS__)
+> > > -#define fscrypt_err(inode, fmt, ...)		\
+> > > -	fscrypt_msg((inode), KERN_ERR, fmt, ##__VA_ARGS__)
+> > > +#define fscrypt_err(inode, fmt, ...)					\
+> > > +	fscrypt_printk(inode, KERN_ERR fmt, ##__VA_ARGS__)
+> > > +#define fscrypt_warn(inode, fmt, ...)					\
+> > > +	fscrypt_printk(inode, KERN_WARNING fmt, ##__VA_ARGS__)
+> > 
+> > It's probably best to keep the parentheses around 'inode'.
+> 
+> Not really as it's an independent argument that can't
+> effectively have any other purpose but to be an argument
+> to the fsrypt_printk function.
+
+True, but since forgetting to include parentheses around macro arguments is such
+a common mistake, IMO they should just always be included so that people don't
+have to think about whether the omission is correct or not.
+
+- Eric
