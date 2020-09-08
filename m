@@ -2,53 +2,55 @@ Return-Path: <SRS0=cslw=CR=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 915A7C43461
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:42:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1A3A4C43461
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:46:20 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 4753C206E7
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:42:22 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id D92EB207DE
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:46:19 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599583342;
-	bh=zqEJfVUqeIO7gcyXpU/RQrWv768uPLWmdl436rYkjNc=;
+	s=default; t=1599583579;
+	bh=Lq/m2LPdqnwOctTs+nOjofy+rsfGEQCpMl8dlnIOh4c=;
 	h=Subject:From:To:Cc:Date:In-Reply-To:References:List-ID:From;
-	b=QWQe6e+lmfgNX0cc84krpkI372esvqiSRrHxq7Ye0EKTSkSjbFRH/87E3xtdOvi92
-	 WlBmYyXKt4TcytKREdscq42KSJ9LlqBP0jf6sldUCzemVc42aph6LjlMFCWCBhuD1i
-	 PgdZQw57Aev8M8KhwCMUQoYqpwzn14fVXR5OtkiY=
+	b=JB2CEMnXV1BRzwD2v52ZKhL8xgj4EiPVvIefy9GKTMKfuAMYpzhoJOAoMHvkhou+f
+	 mHH2iPZok3uEPA0G3ndGcwVC5E8ASb8Wh5RuPFGlYVA7Gow2XLiSIaWDC93zhJECFD
+	 L982yJ9uaXYOyRYQHRGjVNub6m1XSQ2cyyk5Ti3s=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1731983AbgIHQgp (ORCPT
+        id S1731900AbgIHQqR (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Sep 2020 12:36:45 -0400
-Received: from mail.kernel.org ([198.145.29.99]:33930 "EHLO mail.kernel.org"
+        Tue, 8 Sep 2020 12:46:17 -0400
+Received: from mail.kernel.org ([198.145.29.99]:33922 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1732020AbgIHQbi (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 8 Sep 2020 12:31:38 -0400
+        id S1731993AbgIHQad (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 8 Sep 2020 12:30:33 -0400
 Received: from tleilax.poochiereds.net (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 2522821532;
-        Tue,  8 Sep 2020 12:09:15 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id A7C60221F1;
+        Tue,  8 Sep 2020 12:51:24 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599566955;
-        bh=zqEJfVUqeIO7gcyXpU/RQrWv768uPLWmdl436rYkjNc=;
+        s=default; t=1599569485;
+        bh=Lq/m2LPdqnwOctTs+nOjofy+rsfGEQCpMl8dlnIOh4c=;
         h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
-        b=r9MkgzRhGCgNzfrsZE+kpQFUDyFuFOrz2OR0FWyHBwTO4LxMOkcSNzC3d7+5tPFiJ
-         1dy/zgm27I9gPVSxdDLb5x7mtq0x55XpOtkZQkWfXLkyILImR/J06QW8FDa4VegxBc
-         G9G5UKPR47OUmugugGbU3Y9WaSyowIwN9Wb6Dh+4=
-Message-ID: <b71271c9573032c74eca352fdf4a9db2d2fbec3e.camel@kernel.org>
-Subject: Re: [RFC PATCH v2 00/18] ceph+fscrypt: context, filename and
- symlink support
+        b=yZdpr/ddGJxxizY9JVsTKHxaWDmuANe0cl9Rjj+BRzUSiRf0fO8mtvGikccKpJX4q
+         36QLsG5rZXH+BdXQq1sElgt6bxjxwtjq/WFETHMOb4ng3fwzK4LZy1havGANOEINQe
+         yvxaYF0RFa9gIV5+ZIUFAjI5ZQ9g6lW3JJvOfs9w=
+Message-ID: <e176e6263a0da72bfbef5f373bff18e46be173ae.camel@kernel.org>
+Subject: Re: [RFC PATCH v2 07/18] lib: lift fscrypt base64 conversion into
+ lib/
 From:   Jeff Layton <jlayton@kernel.org>
 To:     Eric Biggers <ebiggers@kernel.org>
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org
-Date:   Tue, 08 Sep 2020 08:09:14 -0400
-In-Reply-To: <20200908055446.GP68127@sol.localdomain>
+Date:   Tue, 08 Sep 2020 08:51:23 -0400
+In-Reply-To: <20200908035956.GH68127@sol.localdomain>
 References: <20200904160537.76663-1-jlayton@kernel.org>
-         <20200908055446.GP68127@sol.localdomain>
+         <20200904160537.76663-8-jlayton@kernel.org>
+         <20200908035956.GH68127@sol.localdomain>
 Content-Type: text/plain; charset="UTF-8"
 User-Agent: Evolution 3.36.5 (3.36.5-1.fc32) 
 MIME-Version: 1.0
@@ -58,44 +60,61 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, 2020-09-07 at 22:54 -0700, Eric Biggers wrote:
-> On Fri, Sep 04, 2020 at 12:05:19PM -0400, Jeff Layton wrote:
-> > This is a second posting of the ceph+fscrypt integration work that I've
-> > been experimenting with. The main change with this patch is that I've
-> > based this on top of Eric's fscrypt-pending set. That necessitated a
-> > change to allocate inodes much earlier than we have traditionally, prior
-> > to sending an RPC instead of waiting on the reply.
+On Mon, 2020-09-07 at 20:59 -0700, Eric Biggers wrote:
+> On Fri, Sep 04, 2020 at 12:05:26PM -0400, Jeff Layton wrote:
+> > Once we allow encrypted filenames on ceph we'll end up with names that
+> > may have illegal characters in them (embedded '\0' or '/'), or
+> > characters that aren't printable.
+> > 
+> > It will be safer to use strings that are printable. It turns out that the
+> > MDS doesn't really care about the length of filenames, so we can just
+> > base64 encode and decode filenames before writing and reading them.
+> > 
+> > Lift the base64 implementation that's in fscrypt into lib/. Make fscrypt
+> > select it when it's enabled.
+> > 
+> > Signed-off-by: Jeff Layton <jlayton@kernel.org>
+> > ---
+> >  fs/crypto/Kconfig            |  1 +
+> >  fs/crypto/fname.c            | 64 ++------------------------------
+> >  include/linux/base64_fname.h | 11 ++++++
+> >  lib/Kconfig                  |  3 ++
+> >  lib/Makefile                 |  1 +
+> >  lib/base64_fname.c           | 71 ++++++++++++++++++++++++++++++++++++
+> >  6 files changed, 90 insertions(+), 61 deletions(-)
+> >  create mode 100644 include/linux/base64_fname.h
+> >  create mode 100644 lib/base64_fname.c
+> > 
 > 
-> FWIW, if possible you should create a git tag or branch for your patchset.
-> While just the mailed patches work fine for *me* for this particular patchset,
-> other people may not be able to figure out what the patchset applies to.
-> (In particular, it depends on another patchset:
-> https://lkml.kernel.org/r/20200824061712.195654-1-ebiggers@kernel.org)
+> I'm still concerned that this functionality is too specific to belong in lib/ at
+> the moment, given that it's not the most commonly used variant of base64.  How
+> about keeping these functions in fs/crypto/ for now?  You can call them
+> fscrypt_base64_encode() and fscrypt_base64_decode() and export them for ceph to
+> use.
 > 
 
-I've tagged this out as 'ceph-fscrypt-rfc.2' in my kernel.org tree (the
-first posting is ceph-fscrypt-rfc.1).
+Ok, will do.
 
-Note that this also is layered on top of David Howell's fscache rework,
-and the work I've done to adapt cephfs to that.
-
-> > Note that this just covers the crypto contexts and filenames. I've also
-> > added a patch to encrypt symlink contents as well, but it doesn't seem to
-> > be working correctly.
+> > diff --git a/lib/base64_fname.c b/lib/base64_fname.c
+> > new file mode 100644
+> > index 000000000000..7638c45e4035
+> > --- /dev/null
+> > +++ b/lib/base64_fname.c
+> > @@ -0,0 +1,71 @@
+> > +// SPDX-License-Identifier: GPL-2.0
+> > +/*
+> > + * Modified base64 encode/decode functions, suitable for use as filename components.
+> > + *
+> > + * Originally lifted from fs/crypto/fname.c
+> > + *
+> > + * Copyright (C) 2015, Jaegeuk Kim
+> > + * Copyright (C) 2015, Eric Biggers
+> > + */
 > 
-> What about symlink encryption isn't working correctly?
-
-What I was seeing is that after unmounting and mounting, the symlink
-contents would be gibberish when read by readlink(). I confirmed that
-the same crypttext that came out of fscrypt_encrypt_symlink() was being
-fed into fscrypt_get_symlink(), but the result from that came back as
-gibberish.
-
-I need to do a bit more troubleshooting, but I now wonder if it's due to
-the context handling being wrong when dummy encryption is enabled. I'll
-have a look at that soon.
-
-Thanks for the review so far!
+> Please don't change the copyright statements.  The original file had:
+> 
+>  * Copyright (C) 2015, Google, Inc.
+>  * Copyright (C) 2015, Motorola Mobility
 -- 
 Jeff Layton <jlayton@kernel.org>
 
