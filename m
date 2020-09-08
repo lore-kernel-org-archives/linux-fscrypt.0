@@ -2,53 +2,55 @@ Return-Path: <SRS0=cslw=CR=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EBBDFC43461
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:59:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B342C43461
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:59:36 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id A2F0C2098B
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:59:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id EB7322080C
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:59:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599584371;
-	bh=buqTl7K/5yMlXLYCwbAvqNzPVouLw+rbce6yKGxpIXc=;
+	s=default; t=1599584376;
+	bh=L/1KcuNfBToc/6pbLQgWvbQ3+WTJIAuKpXxm0KYE5ic=;
 	h=Subject:From:To:Cc:Date:In-Reply-To:References:List-ID:From;
-	b=WxHHFKIJv+eVuPUVojKC6zS+Gv0OHOaJ+ZZ9Xoeb63kK92FFlmxVyvs2+JM7C2dv7
-	 xudZZX2L9KDaCJ1iyr37By9VwZFQZcpiV6tDjTlac0BMvAn1kY5o4wZW7cWRV700Ye
-	 P5USiL2XVejB8GSKw3zp49ntjSI+XD6QXL8CvLZk=
+	b=nmiLG8i4ARqAD16Phw3XIL5b7k6Y+qbL3UOUQ5djfsXp8IcpYbZg11KbQ9wP8bvIY
+	 Han2bMkgJLR/Tp1LofVPWmd9RvLnfro5LFNrIBlCoR5uXwb0JMoUzX3JZw5Vd9HtSE
+	 gNgRH1S5JA5mLtRZx1BGQC7yxXy2eShmy7nznOwc=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1731866AbgIHQ6r (ORCPT
+        id S1731840AbgIHQ6p (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Sep 2020 12:58:47 -0400
-Received: from mail.kernel.org ([198.145.29.99]:58438 "EHLO mail.kernel.org"
+        Tue, 8 Sep 2020 12:58:45 -0400
+Received: from mail.kernel.org ([198.145.29.99]:58190 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1731844AbgIHQUH (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1731848AbgIHQUH (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Tue, 8 Sep 2020 12:20:07 -0400
 Received: from tleilax.poochiereds.net (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id CE113206E7;
-        Tue,  8 Sep 2020 16:15:00 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id D1FDB22224;
+        Tue,  8 Sep 2020 12:50:05 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599581701;
-        bh=buqTl7K/5yMlXLYCwbAvqNzPVouLw+rbce6yKGxpIXc=;
+        s=default; t=1599569406;
+        bh=L/1KcuNfBToc/6pbLQgWvbQ3+WTJIAuKpXxm0KYE5ic=;
         h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
-        b=gQvEoTOIY+aAoPVBkju8UV3zX0NFkPuEs7SJIoBUAJJAz1e4yz531RIarr3LZvs3Q
-         56Pq2gZL4U5BRqGAFXy+11xsBpmejOcXideKB44S9BFRHP3Iglk3MG3BDKhTfWxslj
-         Ol7ZTWZHknmOryOxVylg6OBrVuyTxVDpVTXJSdVk=
-Message-ID: <f3b006d348545e83b8ae7d2eaef210627fd38a6b.camel@kernel.org>
-Subject: Re: [RFC PATCH v2 09/18] ceph: crypto context handling for ceph
+        b=ZsHws3d2EiPSU5glotZhjtf3IoGWZ/7BRPyABfOV6JC2S3ocal4h/m/oX5PNNE6bp
+         h49jIh+rPmqDZC/vwUPNNZ6vIva/mBzwNnoFJIh1D7+RCRszRfxZ4KpAabIX/hyClY
+         VyT/Vc9H9ZLIl+MSZKp9/5OeBPT4WtFtmbr8MX0E=
+Message-ID: <a4b61098eaacca55e5f455b7c7df05dbc4839d3d.camel@kernel.org>
+Subject: Re: [RFC PATCH v2 06/18] fscrypt: move nokey_name conversion to
+ separate function and export it
 From:   Jeff Layton <jlayton@kernel.org>
 To:     Eric Biggers <ebiggers@kernel.org>
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org
-Date:   Tue, 08 Sep 2020 12:14:59 -0400
-In-Reply-To: <20200908042925.GI68127@sol.localdomain>
+Date:   Tue, 08 Sep 2020 08:50:04 -0400
+In-Reply-To: <20200908035522.GG68127@sol.localdomain>
 References: <20200904160537.76663-1-jlayton@kernel.org>
-         <20200904160537.76663-10-jlayton@kernel.org>
-         <20200908042925.GI68127@sol.localdomain>
+         <20200904160537.76663-7-jlayton@kernel.org>
+         <20200908035522.GG68127@sol.localdomain>
 Content-Type: text/plain; charset="UTF-8"
 User-Agent: Evolution 3.36.5 (3.36.5-1.fc32) 
 MIME-Version: 1.0
@@ -58,95 +60,85 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, 2020-09-07 at 21:29 -0700, Eric Biggers wrote:
-> On Fri, Sep 04, 2020 at 12:05:28PM -0400, Jeff Layton wrote:
-> > Store the fscrypt context for an inode as an encryption.ctx xattr.
+On Mon, 2020-09-07 at 20:55 -0700, Eric Biggers wrote:
+> On Fri, Sep 04, 2020 at 12:05:25PM -0400, Jeff Layton wrote:
+> > Signed-off-by: Jeff Layton <jlayton@kernel.org>
+> > ---
+> >  fs/crypto/fname.c       | 71 +++++++++++++++++++++++------------------
+> >  include/linux/fscrypt.h |  3 ++
+> >  2 files changed, 43 insertions(+), 31 deletions(-)
 > > 
-> > Also add support for "dummy" encryption (useful for testing with
-> > automated test harnesses like xfstests).
-> 
-> Can you put the test_dummy_encryption support in a separate patch?
-> 
-> > +static int ceph_crypt_get_context(struct inode *inode, void *ctx, size_t len)
+> > diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+> > index 9440a44e24ac..09f09def87fc 100644
+> > --- a/fs/crypto/fname.c
+> > +++ b/fs/crypto/fname.c
+> > @@ -300,6 +300,45 @@ void fscrypt_fname_free_buffer(struct fscrypt_str *crypto_str)
+> >  }
+> >  EXPORT_SYMBOL(fscrypt_fname_free_buffer);
+> >  
+> > +void fscrypt_encode_nokey_name(u32 hash, u32 minor_hash,
+> > +			     const struct fscrypt_str *iname,
+> > +			     struct fscrypt_str *oname)
 > > +{
-> > +	int ret = __ceph_getxattr(inode, CEPH_XATTR_NAME_ENCRYPTION_CONTEXT, ctx, len);
+> > +	struct fscrypt_nokey_name nokey_name;
+> > +	u32 size; /* size of the unencoded no-key name */
 > > +
-> > +	if (ret > 0)
-> > +		inode_set_flags(inode, S_ENCRYPTED, S_ENCRYPTED);
-> > +	return ret;
-> > +}
+> > +	/*
+> > +	 * Sanity check that struct fscrypt_nokey_name doesn't have padding
+> > +	 * between fields and that its encoded size never exceeds NAME_MAX.
+> > +	 */
+> > +	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, dirhash) !=
+> > +		     offsetof(struct fscrypt_nokey_name, bytes));
+> > +	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, bytes) !=
+> > +		     offsetof(struct fscrypt_nokey_name, sha256));
+> > +	BUILD_BUG_ON(BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
 > > +
-> > +static int ceph_crypt_set_context(struct inode *inode, const void *ctx, size_t len, void *fs_data)
-> > +{
-> > +	int ret;
-> > +
-> > +	WARN_ON_ONCE(fs_data);
-> > +	ret = __ceph_setxattr(inode, CEPH_XATTR_NAME_ENCRYPTION_CONTEXT, ctx, len, XATTR_CREATE);
-> > +	if (ret == 0)
-> > +		inode_set_flags(inode, S_ENCRYPTED, S_ENCRYPTED);
-> > +	return ret;
-> > +}
-> 
-> get_context() shouldn't be setting the S_ENCRYPTED inode flag.
-> Only set_context() should be doing that.
-> 
-> > +
-> > +static bool ceph_crypt_empty_dir(struct inode *inode)
-> > +{
-> > +	struct ceph_inode_info *ci = ceph_inode(inode);
-> > +
-> > +	return ci->i_rsubdirs + ci->i_rfiles == 1;
-> > +}
-> > +
-> > +static const union fscrypt_context *
-> > +ceph_get_dummy_context(struct super_block *sb)
-> > +{
-> > +	return ceph_sb_to_client(sb)->dummy_enc_ctx.ctx;
-> > +}
-> > +
-> > +static struct fscrypt_operations ceph_fscrypt_ops = {
-> > +	.key_prefix		= "ceph:",
-> 
-> IMO you shouldn't set .key_prefix here, since it's deprecated.
-> Just leave it unset so that ceph will only support the generic prefix "fscrypt:"
-> as well as FS_IOC_ADD_ENCRYPTION_KEY.
-> 
-> >  enum ceph_recover_session_mode {
-> > @@ -197,6 +200,8 @@ static const struct fs_parameter_spec ceph_mount_parameters[] = {
-> >  	fsparam_u32	("rsize",			Opt_rsize),
-> >  	fsparam_string	("snapdirname",			Opt_snapdirname),
-> >  	fsparam_string	("source",			Opt_source),
-> > +	fsparam_flag_no ("test_dummy_encryption",	Opt_test_dummy_encryption),
-> > +	fsparam_string	("test_dummy_encryption",	Opt_test_dummy_encryption),
-> 
-> I think you should use fsparam_flag instead of fsparam_flag_no, since otherwise
-> "notest_dummy_encryption" will be recognized.  There's not a problem with it
-> per se, but none of the other filesystems that support "test_dummy_encryption"
-> allow "notest_dummy_encryption".  It's nice to keep things consistent.
-> 
-> I.e. if "notest_dummy_encryption" is really something that would be useful
-> (presumably only for remount, since it's a test-only option that will never be
-> on by default), then we should add it to ext4, f2fs, and ceph -- not just ceph.
-> 
-> > +	/* Don't allow test_dummy_encryption to change on remount */
-> > +	if (fsopt->flags & CEPH_MOUNT_OPT_TEST_DUMMY_ENC) {
-> > +		if (!ceph_test_mount_opt(fsc, TEST_DUMMY_ENC))
-> > +			return -EEXIST;
+> > +	if (hash) {
+> > +		nokey_name.dirhash[0] = hash;
+> > +		nokey_name.dirhash[1] = minor_hash;
 > > +	} else {
-> > +		if (ceph_test_mount_opt(fsc, TEST_DUMMY_ENC))
-> > +			return -EEXIST;
+> > +		nokey_name.dirhash[0] = 0;
+> > +		nokey_name.dirhash[1] = 0;
 > > +	}
-> > +
+> > +	if (iname->len <= sizeof(nokey_name.bytes)) {
+> > +		memcpy(nokey_name.bytes, iname->name, iname->len);
+> > +		size = offsetof(struct fscrypt_nokey_name, bytes[iname->len]);
+> > +	} else {
+> > +		memcpy(nokey_name.bytes, iname->name, sizeof(nokey_name.bytes));
+> > +		/* Compute strong hash of remaining part of name. */
+> > +		fscrypt_do_sha256(&iname->name[sizeof(nokey_name.bytes)],
+> > +				  iname->len - sizeof(nokey_name.bytes),
+> > +				  nokey_name.sha256);
+> > +		size = FSCRYPT_NOKEY_NAME_MAX;
+> > +	}
+> > +	oname->len = base64_encode((const u8 *)&nokey_name, size, oname->name);
+> > +}
+> > +EXPORT_SYMBOL(fscrypt_encode_nokey_name);
 > 
-> Can you check what ext4 and f2fs do for this?  test_dummy_encryption isn't just
-> a boolean flag anymore, so this logic isn't sufficient to prevent it from
-> changing during remount.  For example someone could mount with
-> test_dummy_encryption=v1, then try to remount with test_dummy_encryption=v2.
-> On ext4 and f2fs, that intentionally fails.
+> Why does this need to be exported?
+> 
+> There's no user of this function introduced in this patchset.
+> 
+> - Eric
 
-Ok, I'll see what I can do. Note that those fs' all use the old mount
-API (so far) and ceph has been converted to the new one. We may need to
-rework a bit of the fscrypt infrastructure to handle the new mount API.
+Yeah, I probably should have dropped this from the series for now as
+nothing uses it yet, but eventually we may need this. I did a fairly
+detailed writeup of the problem here:
+
+    https://tracker.ceph.com/issues/47162
+
+Basically, we still need to allow clients to look up dentries in the MDS
+even when they don't have the key.
+
+There are a couple of different approaches, but the simplest is to just
+have the client always store long dentry names using the nokey_name, and
+then keep the full name in a new field in the dentry representation that
+is sent across the wire.
+
+This requires some changes to the Ceph MDS (which is what that tracker
+bug is about), and will mean enshrining the nokey name in perpetuity.
+We're still looking at this for now though, and we're open to other
+approaches if you've got any to suggest.
 
 -- 
 Jeff Layton <jlayton@kernel.org>
