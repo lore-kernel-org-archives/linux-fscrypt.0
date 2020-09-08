@@ -4,53 +4,52 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B342C43461
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:59:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 764AEC2D0E0
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 17:01:56 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id EB7322080C
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 16:59:35 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 2D2F0208FE
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Sep 2020 17:01:56 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599584376;
-	bh=L/1KcuNfBToc/6pbLQgWvbQ3+WTJIAuKpXxm0KYE5ic=;
+	s=default; t=1599584516;
+	bh=k2WCSGzu9o0YL2Fumrmv/f8wnwWybYCP9fQIMb0Uz6U=;
 	h=Subject:From:To:Cc:Date:In-Reply-To:References:List-ID:From;
-	b=nmiLG8i4ARqAD16Phw3XIL5b7k6Y+qbL3UOUQ5djfsXp8IcpYbZg11KbQ9wP8bvIY
-	 Han2bMkgJLR/Tp1LofVPWmd9RvLnfro5LFNrIBlCoR5uXwb0JMoUzX3JZw5Vd9HtSE
-	 gNgRH1S5JA5mLtRZx1BGQC7yxXy2eShmy7nznOwc=
+	b=mpBzD5BTs87hspsim3I9rjKjulkZyvEgHoFx2Z8px6BADRlgam1mUW0hweReXzDPA
+	 8Kq2u8bux+OJsM+E2H98oInjBadaylU0XjyiAjfMqSwL0mKBgwS4uNDfzV8zniTkAy
+	 Rc9btBaSHXlebDbT25+Yk87YcJJCAV/pdI1jLGAU=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1731840AbgIHQ6p (ORCPT
+        id S1731934AbgIHRAR (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Sep 2020 12:58:45 -0400
-Received: from mail.kernel.org ([198.145.29.99]:58190 "EHLO mail.kernel.org"
+        Tue, 8 Sep 2020 13:00:17 -0400
+Received: from mail.kernel.org ([198.145.29.99]:59098 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1731848AbgIHQUH (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1731846AbgIHQUH (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Tue, 8 Sep 2020 12:20:07 -0400
 Received: from tleilax.poochiereds.net (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id D1FDB22224;
-        Tue,  8 Sep 2020 12:50:05 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 698D221D47;
+        Tue,  8 Sep 2020 12:29:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599569406;
-        bh=L/1KcuNfBToc/6pbLQgWvbQ3+WTJIAuKpXxm0KYE5ic=;
+        s=default; t=1599568193;
+        bh=k2WCSGzu9o0YL2Fumrmv/f8wnwWybYCP9fQIMb0Uz6U=;
         h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
-        b=ZsHws3d2EiPSU5glotZhjtf3IoGWZ/7BRPyABfOV6JC2S3ocal4h/m/oX5PNNE6bp
-         h49jIh+rPmqDZC/vwUPNNZ6vIva/mBzwNnoFJIh1D7+RCRszRfxZ4KpAabIX/hyClY
-         VyT/Vc9H9ZLIl+MSZKp9/5OeBPT4WtFtmbr8MX0E=
-Message-ID: <a4b61098eaacca55e5f455b7c7df05dbc4839d3d.camel@kernel.org>
-Subject: Re: [RFC PATCH v2 06/18] fscrypt: move nokey_name conversion to
- separate function and export it
+        b=QtKYy7zaUFECccYNwXAXtOplQfSZjq8NB3pKfFKe47z/lTKzHxufee827EKNLCRz3
+         HWf9I5CStm0T3yCIFzStBaZn+5l1jCH5POAStn7QV681O8BYX8ZE43lgQByZ0FBMf6
+         jyflmYxfBEqi1ymlPqBOI+F1VvzkiyCZMbTkmKNs=
+Message-ID: <0e850768fe5e6cbf985dce5943dbccb1c8c777a8.camel@kernel.org>
+Subject: Re: [RFC PATCH v2 04/18] fscrypt: add fscrypt_new_context_from_inode
 From:   Jeff Layton <jlayton@kernel.org>
 To:     Eric Biggers <ebiggers@kernel.org>
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org
-Date:   Tue, 08 Sep 2020 08:50:04 -0400
-In-Reply-To: <20200908035522.GG68127@sol.localdomain>
+Date:   Tue, 08 Sep 2020 08:29:52 -0400
+In-Reply-To: <20200908034830.GE68127@sol.localdomain>
 References: <20200904160537.76663-1-jlayton@kernel.org>
-         <20200904160537.76663-7-jlayton@kernel.org>
-         <20200908035522.GG68127@sol.localdomain>
+         <20200904160537.76663-5-jlayton@kernel.org>
+         <20200908034830.GE68127@sol.localdomain>
 Content-Type: text/plain; charset="UTF-8"
 User-Agent: Evolution 3.36.5 (3.36.5-1.fc32) 
 MIME-Version: 1.0
@@ -60,85 +59,69 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, 2020-09-07 at 20:55 -0700, Eric Biggers wrote:
-> On Fri, Sep 04, 2020 at 12:05:25PM -0400, Jeff Layton wrote:
+On Mon, 2020-09-07 at 20:48 -0700, Eric Biggers wrote:
+> On Fri, Sep 04, 2020 at 12:05:23PM -0400, Jeff Layton wrote:
+> > CephFS will need to be able to generate a context for a new "prepared"
+> > inode. Add a new routine for getting the context out of an in-core
+> > inode.
+> > 
 > > Signed-off-by: Jeff Layton <jlayton@kernel.org>
 > > ---
-> >  fs/crypto/fname.c       | 71 +++++++++++++++++++++++------------------
-> >  include/linux/fscrypt.h |  3 ++
-> >  2 files changed, 43 insertions(+), 31 deletions(-)
+> >  fs/crypto/policy.c      | 20 ++++++++++++++++++++
+> >  include/linux/fscrypt.h |  1 +
+> >  2 files changed, 21 insertions(+)
 > > 
-> > diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-> > index 9440a44e24ac..09f09def87fc 100644
-> > --- a/fs/crypto/fname.c
-> > +++ b/fs/crypto/fname.c
-> > @@ -300,6 +300,45 @@ void fscrypt_fname_free_buffer(struct fscrypt_str *crypto_str)
+> > diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+> > index c56ad886f7d7..10eddd113a21 100644
+> > --- a/fs/crypto/policy.c
+> > +++ b/fs/crypto/policy.c
+> > @@ -670,6 +670,26 @@ int fscrypt_set_context(struct inode *inode, void *fs_data)
 > >  }
-> >  EXPORT_SYMBOL(fscrypt_fname_free_buffer);
+> >  EXPORT_SYMBOL_GPL(fscrypt_set_context);
 > >  
-> > +void fscrypt_encode_nokey_name(u32 hash, u32 minor_hash,
-> > +			     const struct fscrypt_str *iname,
-> > +			     struct fscrypt_str *oname)
+> > +/**
+> > + * fscrypt_context_from_inode() - fetch the encryption context out of in-core inode
+> 
+> Comment doesn't match the function name.
+> 
+> Also, the name isn't very clear.  How about calling this
+> fscrypt_context_for_new_inode()?
+> 
+> BTW, I might rename fscrypt_new_context_from_policy() to
+> fscrypt_context_from_policy() in my patchset.  Since it now makes the caller
+> provide the nonce, technically it's no longer limited to "new" contexts.
+> 
+> > + * @ctx: where context should be written
+> > + * @inode: inode from which to fetch context
+> > + *
+> > + * Given an in-core prepared, but not-necessarily fully-instantiated inode,
+> > + * generate an encryption context from its policy and write it to ctx.
+> 
+> Clarify what is meant by "prepared" (fscrypt_prepare_new_inode() was called)
+> vs. "instantiated".
+> 
+> > + *
+> > + * Returns size of the context.
+> > + */
+> > +int fscrypt_new_context_from_inode(union fscrypt_context *ctx, struct inode *inode)
 > > +{
-> > +	struct fscrypt_nokey_name nokey_name;
-> > +	u32 size; /* size of the unencoded no-key name */
+> > +	struct fscrypt_info *ci = inode->i_crypt_info;
 > > +
-> > +	/*
-> > +	 * Sanity check that struct fscrypt_nokey_name doesn't have padding
-> > +	 * between fields and that its encoded size never exceeds NAME_MAX.
-> > +	 */
-> > +	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, dirhash) !=
-> > +		     offsetof(struct fscrypt_nokey_name, bytes));
-> > +	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, bytes) !=
-> > +		     offsetof(struct fscrypt_nokey_name, sha256));
-> > +	BUILD_BUG_ON(BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
+> > +	BUILD_BUG_ON(sizeof(*ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
 > > +
-> > +	if (hash) {
-> > +		nokey_name.dirhash[0] = hash;
-> > +		nokey_name.dirhash[1] = minor_hash;
-> > +	} else {
-> > +		nokey_name.dirhash[0] = 0;
-> > +		nokey_name.dirhash[1] = 0;
-> > +	}
-> > +	if (iname->len <= sizeof(nokey_name.bytes)) {
-> > +		memcpy(nokey_name.bytes, iname->name, iname->len);
-> > +		size = offsetof(struct fscrypt_nokey_name, bytes[iname->len]);
-> > +	} else {
-> > +		memcpy(nokey_name.bytes, iname->name, sizeof(nokey_name.bytes));
-> > +		/* Compute strong hash of remaining part of name. */
-> > +		fscrypt_do_sha256(&iname->name[sizeof(nokey_name.bytes)],
-> > +				  iname->len - sizeof(nokey_name.bytes),
-> > +				  nokey_name.sha256);
-> > +		size = FSCRYPT_NOKEY_NAME_MAX;
-> > +	}
-> > +	oname->len = base64_encode((const u8 *)&nokey_name, size, oname->name);
+> > +	return fscrypt_new_context_from_policy(ctx, &ci->ci_policy, ci->ci_nonce);
 > > +}
-> > +EXPORT_SYMBOL(fscrypt_encode_nokey_name);
+> > +EXPORT_SYMBOL_GPL(fscrypt_new_context_from_inode);
 > 
-> Why does this need to be exported?
+> fscrypt_set_context() should be changed to call this, instead of duplicating the
+> same logic.  As part of that, the WARN_ON_ONCE(!ci) that's currently in
+> fscrypt_set_context() should go in here instead.
 > 
-> There's no user of this function introduced in this patchset.
-> 
-> - Eric
 
-Yeah, I probably should have dropped this from the series for now as
-nothing uses it yet, but eventually we may need this. I did a fairly
-detailed writeup of the problem here:
-
-    https://tracker.ceph.com/issues/47162
-
-Basically, we still need to allow clients to look up dentries in the MDS
-even when they don't have the key.
-
-There are a couple of different approaches, but the simplest is to just
-have the client always store long dentry names using the nokey_name, and
-then keep the full name in a new field in the dentry representation that
-is sent across the wire.
-
-This requires some changes to the Ceph MDS (which is what that tracker
-bug is about), and will mean enshrining the nokey name in perpetuity.
-We're still looking at this for now though, and we're open to other
-approaches if you've got any to suggest.
+Note that we can't just move that WARN_ON_ONCE. If we do that, then
+fscrypt_set_context will dereference ci before that check can occur, so
+we'd be trading a warning and -ENOKEY for a NULL pointer dereference. I
+think we'll have to duplicate that in both functions.
 
 -- 
 Jeff Layton <jlayton@kernel.org>
