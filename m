@@ -2,56 +2,56 @@ Return-Path: <SRS0=NypB=CS=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CD6FCC43461
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  9 Sep 2020 16:54:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F0DB4C433E2
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  9 Sep 2020 17:19:42 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 942FB2166E
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  9 Sep 2020 16:54:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 9A3282166E
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  9 Sep 2020 17:19:42 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599670471;
-	bh=seCU8tczToRVtjlghBPadKiY1ANUJARi5MpBwKtkOrs=;
+	s=default; t=1599671982;
+	bh=pHgbv20ycv59bJxqyA+U6rPfrqeKv2GN7dRnJhn0ljo=;
 	h=Subject:From:To:Cc:Date:In-Reply-To:References:List-ID:From;
-	b=AsIN2MnHmEGr9a4n77B75WYJmxFP476yc28HRGu3sUIOxJuPWNG3wlySm4QZdAJM/
-	 THrbCEFdsZP+A9fJ8r7U/DIemp9SSncjpN2HX8PG97WjmdUbVo7gFt9ZT4Cu9PvDoh
-	 7NAAIGRaz4fsC3gZiPa200ptz9ZM7GEs/xEQYcl4=
+	b=pR4LIac+Mw+2t8pjrJsitnYJljA/pdMbqDzyQWpeDEocljcdlvlieVM51qadxlYoQ
+	 vXh7OyxjQDnZHVA+DmSIdsEs6aVlJV2Ne1CyJNhOwEqX3ydWwehsl1nv+uhC1fXuch
+	 dkoR4AYdoBuX0dhLIlctqWkK9okeqZpfGjKLBEyI=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1730572AbgIIQCu (ORCPT
+        id S1730551AbgIIRTe (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 9 Sep 2020 12:02:50 -0400
-Received: from mail.kernel.org ([198.145.29.99]:60162 "EHLO mail.kernel.org"
+        Wed, 9 Sep 2020 13:19:34 -0400
+Received: from mail.kernel.org ([198.145.29.99]:44548 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1730128AbgIIQCo (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 9 Sep 2020 12:02:44 -0400
+        id S1730157AbgIIRT3 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 9 Sep 2020 13:19:29 -0400
 Received: from tleilax.poochiereds.net (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id C1DF220639;
-        Wed,  9 Sep 2020 16:02:42 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 9C117206D4;
+        Wed,  9 Sep 2020 17:19:28 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599667363;
-        bh=seCU8tczToRVtjlghBPadKiY1ANUJARi5MpBwKtkOrs=;
+        s=default; t=1599671969;
+        bh=pHgbv20ycv59bJxqyA+U6rPfrqeKv2GN7dRnJhn0ljo=;
         h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
-        b=l3dJJng1IEbc/4R0jO8SpNnv5bTxSWbD9EMbz9OE3Sv6xkSNAURk2+Ztweg21mQ+G
-         Fskr3JUJgxmEHUdO65S3PUmb8TYmMjIjiwEFLNkt7xQxXrufpcaB0ZHXYjjbeUGeLs
-         pJNBbpa0bt1BT+BYSgHWE0M59mlgBdFqv0wczeLA=
-Message-ID: <f83c73a44627da462928eb8ebd69e7425cddba26.camel@kernel.org>
-Subject: Re: [RFC PATCH v2 06/18] fscrypt: move nokey_name conversion to
- separate function and export it
+        b=MDnax6gU6Si9NOHpgs7J+70cygHHgY4F/fMGO/w7q5zAOd90Dawc9hb6vSK1Um1GO
+         h2kPLisicOh7c7vWcRlP4enJ0CF+2zzHWuM8MhNyydhPku9BjCWx/XSJ8m2a9ASGN0
+         86YRUm3xEAeWYOa4dmwMT+fg1/LSUfT8SH0m9JL8=
+Message-ID: <3e56484187b739cfdfbfbc699ecc82800cbaa92c.camel@kernel.org>
+Subject: Re: [RFC PATCH v2 12/18] ceph: set S_ENCRYPTED bit if new inode has
+ encryption.ctx xattr
 From:   Jeff Layton <jlayton@kernel.org>
 To:     Eric Biggers <ebiggers@kernel.org>
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, Xiubo Li <xiubli@redhat.com>
-Date:   Wed, 09 Sep 2020 12:02:41 -0400
-In-Reply-To: <20200908225303.GC3760467@gmail.com>
+        linux-fscrypt@vger.kernel.org
+Date:   Wed, 09 Sep 2020 13:19:27 -0400
+In-Reply-To: <20200909163352.GC828@sol.localdomain>
 References: <20200904160537.76663-1-jlayton@kernel.org>
-         <20200904160537.76663-7-jlayton@kernel.org>
-         <20200908035522.GG68127@sol.localdomain>
-         <a4b61098eaacca55e5f455b7c7df05dbc4839d3d.camel@kernel.org>
-         <20200908225303.GC3760467@gmail.com>
+         <20200904160537.76663-13-jlayton@kernel.org>
+         <20200908045737.GK68127@sol.localdomain>
+         <c4fd5093a5996840e6fe23dc4507760a5ad70624.camel@kernel.org>
+         <20200909163352.GC828@sol.localdomain>
 Content-Type: text/plain; charset="UTF-8"
 User-Agent: Evolution 3.36.5 (3.36.5-1.fc32) 
 MIME-Version: 1.0
@@ -61,67 +61,70 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, 2020-09-08 at 15:53 -0700, Eric Biggers wrote:
-> On Tue, Sep 08, 2020 at 08:50:04AM -0400, Jeff Layton wrote:
-> > > > +EXPORT_SYMBOL(fscrypt_encode_nokey_name);
+On Wed, 2020-09-09 at 09:33 -0700, Eric Biggers wrote:
+> On Wed, Sep 09, 2020 at 11:53:35AM -0400, Jeff Layton wrote:
+> > > > diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
+> > > > index 651148194316..c1c1fe2547f9 100644
+> > > > --- a/fs/ceph/inode.c
+> > > > +++ b/fs/ceph/inode.c
+> > > > @@ -964,6 +964,10 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
+> > > >  		ceph_forget_all_cached_acls(inode);
+> > > >  		ceph_security_invalidate_secctx(inode);
+> > > >  		xattr_blob = NULL;
+> > > > +		if ((inode->i_state & I_NEW) &&
+> > > > +		    (DUMMY_ENCRYPTION_ENABLED(mdsc->fsc) ||
+> > > > +		     ceph_inode_has_xattr(ci, CEPH_XATTR_NAME_ENCRYPTION_CONTEXT)))
+> > > > +			inode_set_flags(inode, S_ENCRYPTED, S_ENCRYPTED);
 > > > 
-> > > Why does this need to be exported?
+> > > The check for DUMMY_ENCRYPTION_ENABLED() here is wrong and should be removed.
+> > > When the filesystem is mounted with test_dummy_encryption, there may be
+> > > unencrypted inodes already on-disk.  Those shouldn't get S_ENCRYPTED set.
+> > > test_dummy_encryption does add some special handling for unencrypted
+> > > directories, but that doesn't require S_ENCRYPTED to be set on them.
 > > > 
-> > > There's no user of this function introduced in this patchset.
-> > > 
-> > > - Eric
 > > 
-> > Yeah, I probably should have dropped this from the series for now as
-> > nothing uses it yet, but eventually we may need this. I did a fairly
-> > detailed writeup of the problem here:
+> > I've been working through your comments. Symlinks work now, as long as I
+> > use the fscrypt utility instead of test_dummy_encryption.
 > > 
-> >     https://tracker.ceph.com/issues/47162
+> > When I remove that condition above, then test_dummy_encryption no longer
+> > works.  I think I must be missing some context in how
+> > test_dummy_encryption is supposed to be used.
 > > 
-> > Basically, we still need to allow clients to look up dentries in the MDS
-> > even when they don't have the key.
+> > Suppose I mount a ceph filesystem with -o test_dummy_encryption. The
+> > root inode of the fs is instantiated by going through here, but it's not
+> > marked with S_ENCRYPTED because the root has no context.
 > > 
-> > There are a couple of different approaches, but the simplest is to just
-> > have the client always store long dentry names using the nokey_name, and
-> > then keep the full name in a new field in the dentry representation that
-> > is sent across the wire.
-> > 
-> > This requires some changes to the Ceph MDS (which is what that tracker
-> > bug is about), and will mean enshrining the nokey name in perpetuity.
-> > We're still looking at this for now though, and we're open to other
-> > approaches if you've got any to suggest.
+> > How will descendant dentries end up encrypted if this one is not marked
+> > as such?
 > 
-> The (persistent) directory entries have to include the full ciphertext
-> filenames.  If they only included the no-key names, then it wouldn't always be
-> possible to translate them back into the original plaintext filenames.
+> See fscrypt_prepare_new_inode() (or in current mainline, the logic in
+> __ext4_new_inode() and f2fs_may_encrypt()).  Encryption gets inherited if:
 > 
-> It's also required that the filesystem can find a specific directory entry given
-> its corresponding no-key name.  For a network filesystem, that can be done
-> either on the client (request all filenames in the directory, then check all of
-> them...), or on the server (give it the no-key name and have it do the matching;
-> it would need to know the specifics of how the no-key names work).
+> 	IS_ENCRYPTED(dir) || fscrypt_get_dummy_context(dir->i_sb) != NULL
 > 
-> The no-key names aren't currently stable, and it would be nice to keep them that
-> way since we might want to improve how they work later.  But if you need to
-> stabilize a version of the no-key name format for use in the ceph protocol so
-> that the server can do the matching, it would be possible to do that.  It
-> wouldn't even necessarily have to be what fscrypt currently uses; e.g. if it
-> were to simplify things a lot for you to simply use SHA-256(ciphertext_name)
-> instead of the current 'struct fscrypt_nokey_name', you could do that.
+> instead of just:
+> 
+> 	IS_ENCRYPTED(dir)
+> 
+> Note that this specifically refers to encryption being *inherited*.
+> If !IS_ENCRYPTED(dir), then the directory itself remains unencrypted ---
+> that means that the filenames are in the directory aren't encrypted, even if
+> they name encrypted files/directories/symlinks.
 > 
 
-(cc'ing Xiubo since he's working on the MDS part)
+Ok, I think I get it, but it is a little weird. I would have thought
+that test_dummy_encryption would just replace the usage of whatever's in
+the xattr with the per-sb one (or maybe only when one doesn't exist).
 
-We probably will need to make a stable representation. I think the nokey
-name scheme as it stands would be fine for this purpose, particularly as
-the representation is only different for really long filenames. We'd
-only need to carry an alternate name for dentries with names longer than
-~150 chars, and those are somewhat rare.
+This is a bit different though, in that the dummy context only comes
+into play with newly created inodes. So, if I mount an empty
+subdirectory using test_dummy_encryption, you can't encrypt the names at
+the root.
 
-Much of this depends on the MDS though, and I'm a lot less familiar with
-that part. So for now, no need to do anything. We'll reach out once we
-have a more solid plan of how we want to handle this.
+I guess that's sort of like how it works with "regular" contexts too,
+and that prevents someone clobbering old data mistakenly.
 
-Thanks!
+Thanks for the explanation!
 -- 
 Jeff Layton <jlayton@kernel.org>
 
