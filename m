@@ -2,55 +2,53 @@ Return-Path: <SRS0=fwe6=CW=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+X-Spam-Status: No, score=-13.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 354A0C2D0E1
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Sep 2020 08:38:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3EA52C43461
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Sep 2020 08:38:41 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id F303B2158C
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Sep 2020 08:38:36 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 04D5C207C3
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Sep 2020 08:38:41 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599986317;
-	bh=SHrYUdtm1g7ntgYtdzixMrvNEz6L5/D07nXI8RMvuM4=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=Rjb8ZHpwnO/9MtZVeUtqoVOJASpS9ZPk8SsnCwzNLKN8rAoNfa+b3JUIwGyFL+Gq7
-	 /T4iwB37lKYKU7qVWgO7Xq64z08RF7Nq7OhAXRU/v5NuFgDxz8XBAvLxoH8icK1cen
-	 CJA0dUa/0ZJoOW5uDY7MlEVC2lDK5o4/VyL6+2+4=
+	s=default; t=1599986321;
+	bh=1dWd0eaN+m2UtgMk0cP4qKXLdHH/WAl+lzlyqYHMukk=;
+	h=From:To:Cc:Subject:Date:List-ID:From;
+	b=P22Ne7LxI56ElFXfL3f3f7n6lZdLz0JzOxNBhMgJhWuqJAM5eN8PcvNxBZcchFsy9
+	 d4NqUk3ei9plO7kimcQLUJgy8bH9w+CXDQZV3Smjr0gNXXYkth6B8wG5zUPBve8E/1
+	 y2MaeHizmAEvuf8upzs3IhW+LvET/tMhLpCtp81s=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1725937AbgIMIi1 (ORCPT
+        id S1725971AbgIMIiE (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 13 Sep 2020 04:38:27 -0400
-Received: from mail.kernel.org ([198.145.29.99]:60912 "EHLO mail.kernel.org"
+        Sun, 13 Sep 2020 04:38:04 -0400
+Received: from mail.kernel.org ([198.145.29.99]:60726 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725973AbgIMIiF (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 13 Sep 2020 04:38:05 -0400
+        id S1725944AbgIMIiA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 13 Sep 2020 04:38:00 -0400
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 8F613221E8;
-        Sun, 13 Sep 2020 08:38:00 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 9F603207C3;
+        Sun, 13 Sep 2020 08:37:57 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599986280;
-        bh=SHrYUdtm1g7ntgYtdzixMrvNEz6L5/D07nXI8RMvuM4=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=veKboLnYaZiOTtz2C8eTq+4ZzLtMFia4/2LmiMxvTMRGrBr7KkSQff6AbozrpZCjI
-         r7KZJPqL7OLkVIJp0K7kUKARQmFdsbBKV25xdjuZcfTY+pIznei/mrRSnKdbJUGBoU
-         ODgwD4kGxAx2Jksu0dMPri89adQ4x8OCkHTNGDEE=
+        s=default; t=1599986277;
+        bh=1dWd0eaN+m2UtgMk0cP4qKXLdHH/WAl+lzlyqYHMukk=;
+        h=From:To:Cc:Subject:Date:From;
+        b=ipJmfRdPkFyhu56cjRGr0ZeqiutvWztlif5XXFufzYsh3cnphGpzhFj2St50YuRzV
+         UEc86raNPAcu7mQKxuK5RikeZDuMTvQ05Qd714yLvl9T7hh+qV9FTm54tRi7DnLjpa
+         b5bXy5JjPybx7ZRKtencxAsn2Ls25CJ+ro5fI+7A=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org,
         Jeff Layton <jlayton@kernel.org>,
         Daniel Rosenberg <drosen@google.com>
-Subject: [PATCH v2 10/11] fscrypt: move fscrypt_prepare_symlink() out-of-line
-Date:   Sun, 13 Sep 2020 01:36:19 -0700
-Message-Id: <20200913083620.170627-11-ebiggers@kernel.org>
+Subject: [PATCH v2 00/11] fscrypt: improve file creation flow
+Date:   Sun, 13 Sep 2020 01:36:09 -0700
+Message-Id: <20200913083620.170627-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.28.0
-In-Reply-To: <20200913083620.170627-1-ebiggers@kernel.org>
-References: <20200913083620.170627-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Sender: linux-fscrypt-owner@vger.kernel.org
@@ -58,173 +56,78 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+Hello,
 
-In preparation for moving the logic for "get the encryption policy
-inherited by new files in this directory" to a single place, make
-fscrypt_prepare_symlink() a regular function rather than an inline
-function that wraps __fscrypt_prepare_symlink().
+This series reworks the implementation of creating new encrypted files
+by introducing new helper functions that allow filesystems to set up the
+inodes' keys earlier, prior to taking too many filesystem locks.
 
-This way, the new function fscrypt_policy_to_inherit() won't need to be
-exported to filesystems.
+This fixes deadlocks that are possible during memory reclaim because
+fscrypt_get_encryption_info() isn't GFP_NOFS-safe, yet it's called
+during an ext4 transaction or under f2fs_lock_op().  It also fixes a
+similar deadlock where f2fs can try to recursively lock a page when the
+test_dummy_encryption mount option is in use.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/crypto/hooks.c       | 39 ++++++++++++++++++++++---
- include/linux/fscrypt.h | 63 ++++++++++-------------------------------
- 2 files changed, 50 insertions(+), 52 deletions(-)
+It also solves an ordering problem that the ceph support for fscrypt
+will have.  For more details about this ordering problem, see the
+discussion on Jeff Layton's RFC patchsets for ceph fscrypt support
+(v1: https://lkml.kernel.org/linux-fscrypt/20200821182813.52570-1-jlayton@kernel.org/T/#u
+ v2: https://lkml.kernel.org/linux-fscrypt/20200904160537.76663-1-jlayton@kernel.org/T/#u).
+Note that v2 of the ceph patchset is based on v1 of this patchset.
 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 7748db5092409..a399c54947f28 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -166,12 +166,43 @@ int fscrypt_prepare_setflags(struct inode *inode,
- 	return 0;
- }
- 
--int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
--			      unsigned int max_len,
--			      struct fscrypt_str *disk_link)
-+/**
-+ * fscrypt_prepare_symlink() - prepare to create a possibly-encrypted symlink
-+ * @dir: directory in which the symlink is being created
-+ * @target: plaintext symlink target
-+ * @len: length of @target excluding null terminator
-+ * @max_len: space the filesystem has available to store the symlink target
-+ * @disk_link: (out) the on-disk symlink target being prepared
-+ *
-+ * This function computes the size the symlink target will require on-disk,
-+ * stores it in @disk_link->len, and validates it against @max_len.  An
-+ * encrypted symlink may be longer than the original.
-+ *
-+ * Additionally, @disk_link->name is set to @target if the symlink will be
-+ * unencrypted, but left NULL if the symlink will be encrypted.  For encrypted
-+ * symlinks, the filesystem must call fscrypt_encrypt_symlink() to create the
-+ * on-disk target later.  (The reason for the two-step process is that some
-+ * filesystems need to know the size of the symlink target before creating the
-+ * inode, e.g. to determine whether it will be a "fast" or "slow" symlink.)
-+ *
-+ * Return: 0 on success, -ENAMETOOLONG if the symlink target is too long,
-+ * -ENOKEY if the encryption key is missing, or another -errno code if a problem
-+ * occurred while setting up the encryption key.
-+ */
-+int fscrypt_prepare_symlink(struct inode *dir, const char *target,
-+			    unsigned int len, unsigned int max_len,
-+			    struct fscrypt_str *disk_link)
- {
- 	int err;
- 
-+	if (!IS_ENCRYPTED(dir) && !fscrypt_get_dummy_context(dir->i_sb)) {
-+		disk_link->name = (unsigned char *)target;
-+		disk_link->len = len + 1;
-+		if (disk_link->len > max_len)
-+			return -ENAMETOOLONG;
-+		return 0;
-+	}
-+
- 	/*
- 	 * To calculate the size of the encrypted symlink target we need to know
- 	 * the amount of NUL padding, which is determined by the flags set in
-@@ -207,7 +238,7 @@ int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
- 	disk_link->name = NULL;
- 	return 0;
- }
--EXPORT_SYMBOL_GPL(__fscrypt_prepare_symlink);
-+EXPORT_SYMBOL_GPL(fscrypt_prepare_symlink);
- 
- int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
- 			      unsigned int len, struct fscrypt_str *disk_link)
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 81d6ded243288..39e7397a3f103 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -225,9 +225,9 @@ int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
- 			     struct fscrypt_name *fname);
- int fscrypt_prepare_setflags(struct inode *inode,
- 			     unsigned int oldflags, unsigned int flags);
--int __fscrypt_prepare_symlink(struct inode *dir, unsigned int len,
--			      unsigned int max_len,
--			      struct fscrypt_str *disk_link);
-+int fscrypt_prepare_symlink(struct inode *dir, const char *target,
-+			    unsigned int len, unsigned int max_len,
-+			    struct fscrypt_str *disk_link);
- int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
- 			      unsigned int len, struct fscrypt_str *disk_link);
- const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
-@@ -520,15 +520,21 @@ static inline int fscrypt_prepare_setflags(struct inode *inode,
- 	return 0;
- }
- 
--static inline int __fscrypt_prepare_symlink(struct inode *dir,
--					    unsigned int len,
--					    unsigned int max_len,
--					    struct fscrypt_str *disk_link)
-+static inline int fscrypt_prepare_symlink(struct inode *dir,
-+					  const char *target,
-+					  unsigned int len,
-+					  unsigned int max_len,
-+					  struct fscrypt_str *disk_link)
- {
--	return -EOPNOTSUPP;
-+	if (IS_ENCRYPTED(dir))
-+		return -EOPNOTSUPP;
-+	disk_link->name = (unsigned char *)target;
-+	disk_link->len = len + 1;
-+	if (disk_link->len > max_len)
-+		return -ENAMETOOLONG;
-+	return 0;
- }
- 
--
- static inline int __fscrypt_encrypt_symlink(struct inode *inode,
- 					    const char *target,
- 					    unsigned int len,
-@@ -793,45 +799,6 @@ static inline int fscrypt_prepare_setattr(struct dentry *dentry,
- 	return 0;
- }
- 
--/**
-- * fscrypt_prepare_symlink() - prepare to create a possibly-encrypted symlink
-- * @dir: directory in which the symlink is being created
-- * @target: plaintext symlink target
-- * @len: length of @target excluding null terminator
-- * @max_len: space the filesystem has available to store the symlink target
-- * @disk_link: (out) the on-disk symlink target being prepared
-- *
-- * This function computes the size the symlink target will require on-disk,
-- * stores it in @disk_link->len, and validates it against @max_len.  An
-- * encrypted symlink may be longer than the original.
-- *
-- * Additionally, @disk_link->name is set to @target if the symlink will be
-- * unencrypted, but left NULL if the symlink will be encrypted.  For encrypted
-- * symlinks, the filesystem must call fscrypt_encrypt_symlink() to create the
-- * on-disk target later.  (The reason for the two-step process is that some
-- * filesystems need to know the size of the symlink target before creating the
-- * inode, e.g. to determine whether it will be a "fast" or "slow" symlink.)
-- *
-- * Return: 0 on success, -ENAMETOOLONG if the symlink target is too long,
-- * -ENOKEY if the encryption key is missing, or another -errno code if a problem
-- * occurred while setting up the encryption key.
-- */
--static inline int fscrypt_prepare_symlink(struct inode *dir,
--					  const char *target,
--					  unsigned int len,
--					  unsigned int max_len,
--					  struct fscrypt_str *disk_link)
--{
--	if (IS_ENCRYPTED(dir) || fscrypt_get_dummy_context(dir->i_sb) != NULL)
--		return __fscrypt_prepare_symlink(dir, len, max_len, disk_link);
--
--	disk_link->name = (unsigned char *)target;
--	disk_link->len = len + 1;
--	if (disk_link->len > max_len)
--		return -ENAMETOOLONG;
--	return 0;
--}
--
- /**
-  * fscrypt_encrypt_symlink() - encrypt the symlink target if needed
-  * @inode: symlink inode
+Patch 1 adds the above-mentioned new helper functions.  Patches 2-5
+convert ext4, f2fs, and ubifs to use them, and patches 6-8 clean up a
+few things afterwards.
+
+Finally, patches 9-11 change the implementation of test_dummy_encryption
+to no longer set up an encryption key for unencrypted directories, which
+was confusing and was causing problems.
+
+This patchset applies to the master branch of
+https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git.
+It can also be retrieved from tag "fscrypt-file-creation-v2" of
+https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git.
+
+I'm looking to apply this for 5.10; reviews are greatly appreciated!
+
+Changed v1 => v2:
+  - Added mention of another deadlock this fixes.
+  - Added patches to improve the test_dummy_encryption implementation.
+  - Dropped an ext4 cleanup patch that can be done separately later.
+  - Lots of small cleanups, and a couple small fixes.
+
+Eric Biggers (11):
+  fscrypt: add fscrypt_prepare_new_inode() and fscrypt_set_context()
+  ext4: factor out ext4_xattr_credits_for_new_inode()
+  ext4: use fscrypt_prepare_new_inode() and fscrypt_set_context()
+  f2fs: use fscrypt_prepare_new_inode() and fscrypt_set_context()
+  ubifs: use fscrypt_prepare_new_inode() and fscrypt_set_context()
+  fscrypt: remove fscrypt_inherit_context()
+  fscrypt: require that fscrypt_encrypt_symlink() already has key
+  fscrypt: stop pretending that key setup is nofs-safe
+  fscrypt: make "#define fscrypt_policy" user-only
+  fscrypt: move fscrypt_prepare_symlink() out-of-line
+  fscrypt: handle test_dummy_encryption in more logical way
+
+ fs/crypto/fname.c            |  11 ++-
+ fs/crypto/fscrypt_private.h  |  10 +-
+ fs/crypto/hooks.c            |  65 +++++++++----
+ fs/crypto/inline_crypt.c     |   7 +-
+ fs/crypto/keysetup.c         | 163 +++++++++++++++++++++++--------
+ fs/crypto/keysetup_v1.c      |   8 +-
+ fs/crypto/policy.c           | 180 +++++++++++++++++++++--------------
+ fs/ext4/ext4.h               |   6 +-
+ fs/ext4/ialloc.c             | 119 ++++++++++++-----------
+ fs/ext4/super.c              |  17 ++--
+ fs/f2fs/dir.c                |   2 +-
+ fs/f2fs/f2fs.h               |  25 +----
+ fs/f2fs/namei.c              |   7 +-
+ fs/f2fs/super.c              |  16 ++--
+ fs/ubifs/dir.c               |  38 ++++----
+ include/linux/fscrypt.h      | 121 ++++++++---------------
+ include/uapi/linux/fscrypt.h |   6 +-
+ 17 files changed, 446 insertions(+), 355 deletions(-)
+
 -- 
 2.28.0
 
