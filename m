@@ -4,47 +4,47 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-14.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
-	autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5D592C433E2
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:17:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ECDBFC433E2
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:17:53 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 09C8C217BA
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:17:41 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id B6B4021974
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:17:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1600111061;
-	bh=HgVwdbGtocve/7WmBJzWMhD1oA0sq+cEIsf3lamsiHw=;
+	s=default; t=1600111073;
+	bh=ctqcwP3ioEky4uhXdhIOKc7o4iFce41kFOkOTcCjx44=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=nhNGBnSGOYVXlBv0dGfgQz2C82TpvA3LqHuQ0f5cjJnHJIVyYSx7A8w9qiLmaBMbW
-	 PhX8aCzr+tFl99kT3OH4Z68f4JtTfUKNeQst00o41HZ7y19DfQtav8CEVyqhKSOoTn
-	 BOEwX1wQPAMS9oO1e8XuXUSzKHaMcPdpRGTSceSk=
+	b=i4t2KyqG5noeQanTaGi7LQUQT2E762jFqdifnojdc744EMA8H/aNFCdafzSJtMbKr
+	 ikk1Dtz0KRUWiXgmUtk0jBQc/bxFpokerqV5ggoAduPyWjLXim+Oyr6SGPE64bB/Xd
+	 +X2TmD+jwhB54rVpKQNaoJtWGP3N0h4UirQc0h64=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726043AbgINTRh (ORCPT
+        id S1726035AbgINTRX (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 14 Sep 2020 15:17:37 -0400
-Received: from mail.kernel.org ([198.145.29.99]:38984 "EHLO mail.kernel.org"
+        Mon, 14 Sep 2020 15:17:23 -0400
+Received: from mail.kernel.org ([198.145.29.99]:38946 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725987AbgINTRS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 14 Sep 2020 15:17:18 -0400
+        id S1725953AbgINTRL (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 14 Sep 2020 15:17:11 -0400
 Received: from tleilax.com (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id DC69F21D41;
-        Mon, 14 Sep 2020 19:17:13 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 026B5217BA;
+        Mon, 14 Sep 2020 19:17:10 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1600111034;
-        bh=HgVwdbGtocve/7WmBJzWMhD1oA0sq+cEIsf3lamsiHw=;
+        s=default; t=1600111031;
+        bh=ctqcwP3ioEky4uhXdhIOKc7o4iFce41kFOkOTcCjx44=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=iShMjHq/m2XVFCwRgXul5Vl6QG6cRqqdt4BM6WFFwuNJtqByPZomO7pY3EnZo3UYU
-         Al9a+TPl/zF5/69EkNdBwmD4e2ZwoyWPBaVtGmoJdhT8bBlHIhe2VSxBIBBABytpIS
-         4cAdVjlarlvtiejHhBFOvC3/dNSF1aKNqPh2ZXB4=
+        b=ii+vO0PvfXW5MLyv9hHOjNg7fgOxZyCatcjvL6iQ/ZAti5W1JeWRh96TX4YDTaP8Y
+         wN5oABh9T/USFtGrAuaxs1CZKXN9sbRllH8cTm2pPzN4+LcCtRvgdI+kAZLWfJcCXk
+         aHB7/UG9zMUr0s24QaRpg/+ejKRMdTatAimo5jBQ=
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org
-Subject: [RFC PATCH v3 06/16] ceph: add fscrypt ioctls
-Date:   Mon, 14 Sep 2020 15:16:57 -0400
-Message-Id: <20200914191707.380444-7-jlayton@kernel.org>
+Subject: [RFC PATCH v3 01/16] vfs: export new_inode_pseudo
+Date:   Mon, 14 Sep 2020 15:16:52 -0400
+Message-Id: <20200914191707.380444-2-jlayton@kernel.org>
 X-Mailer: git-send-email 2.26.2
 In-Reply-To: <20200914191707.380444-1-jlayton@kernel.org>
 References: <20200914191707.380444-1-jlayton@kernel.org>
@@ -55,56 +55,34 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Boilerplate ioctls for controlling encryption.
+Ceph needs to be able to allocate inodes ahead of a create that might
+involve a fscrypt-encrypted inode. new_inode() almost fits the bill,
+but it puts the inode on the sb->s_inodes list and when we go to hash
+it, that might be done again.
 
+We could work around that by setting I_CREATING on the new inode, but
+that causes ilookup5 to return -ESTALE if something tries to find it
+before I_NEW is cleared. To work around all of this, just use
+new_inode_pseudo which doesn't add it to the list.
+
+Cc: Al Viro <viro@zeniv.linux.org.uk>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/ioctl.c | 25 +++++++++++++++++++++++++
- 1 file changed, 25 insertions(+)
+ fs/inode.c | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/fs/ceph/ioctl.c b/fs/ceph/ioctl.c
-index 6e061bf62ad4..381e44b2d60a 100644
---- a/fs/ceph/ioctl.c
-+++ b/fs/ceph/ioctl.c
-@@ -6,6 +6,7 @@
- #include "mds_client.h"
- #include "ioctl.h"
- #include <linux/ceph/striper.h>
-+#include <linux/fscrypt.h>
- 
- /*
-  * ioctls
-@@ -289,6 +290,30 @@ long ceph_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
- 
- 	case CEPH_IOC_SYNCIO:
- 		return ceph_ioctl_syncio(file);
-+
-+	case FS_IOC_SET_ENCRYPTION_POLICY:
-+		return fscrypt_ioctl_set_policy(file, (const void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_POLICY:
-+		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
-+		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
-+
-+	case FS_IOC_ADD_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_add_key(file, (void __user *)arg);
-+
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY:
-+		return fscrypt_ioctl_remove_key(file, (void __user *)arg);
-+
-+	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
-+		return fscrypt_ioctl_remove_key_all_users(file, (void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
-+		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
-+
-+	case FS_IOC_GET_ENCRYPTION_NONCE:
-+		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
+diff --git a/fs/inode.c b/fs/inode.c
+index 72c4c347afb7..61554c2477ab 100644
+--- a/fs/inode.c
++++ b/fs/inode.c
+@@ -935,6 +935,7 @@ struct inode *new_inode_pseudo(struct super_block *sb)
  	}
+ 	return inode;
+ }
++EXPORT_SYMBOL(new_inode_pseudo);
  
- 	return -ENOTTY;
+ /**
+  *	new_inode 	- obtain an inode
 -- 
 2.26.2
 
