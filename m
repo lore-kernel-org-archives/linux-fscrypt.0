@@ -4,47 +4,47 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-14.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2D189C43461
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:18:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CB939C43461
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:18:48 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id E7B41217BA
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:18:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 9C1A221974
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:18:48 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1600111106;
-	bh=Ig8VXWhiog+eXavJCKy3du5dAJFxdM/C0Usi65hbcj4=;
+	s=default; t=1600111128;
+	bh=xpVBrva7sRk+AFgfdr5dXav+n0Np8UjCF1m/n4gOajU=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=rNoBlNv2yttb/lDC5Pb+sYT0KrPc/+m2gZf5AoWgm3gBOAikL475ZJSeG/qq7EZcy
-	 bD7vK8CXYrH+pMRu0uCy8mZmZ2Y/8nxX8kBwC75Tz7MEGbVyCNhb1lh252E0Rnvgec
-	 CtBOWltkXTCzxO9KQ9mIpL67NYyTfO24k0G90Ljg=
+	b=RdSmO5rTrPu+S6gAD+TM8ZUrEkbBR9VMwI7R2lRlo9CLmCY8KTgJZFLiylAdzeL+y
+	 PslU6qD0zqNCgeD8gqzVW46LQi5ib/Bk2QHaA5sTS4QbJXNCAsnekcatimmviycfBO
+	 OpZ0/UM9D5ORqnCdBkAiH8kvXIMH+8ecye86SGOQ=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726028AbgINTR4 (ORCPT
+        id S1726043AbgINTSe (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 14 Sep 2020 15:17:56 -0400
-Received: from mail.kernel.org ([198.145.29.99]:39010 "EHLO mail.kernel.org"
+        Mon, 14 Sep 2020 15:18:34 -0400
+Received: from mail.kernel.org ([198.145.29.99]:38984 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726009AbgINTRW (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1726022AbgINTRW (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 14 Sep 2020 15:17:22 -0400
 Received: from tleilax.com (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 9B70D21D80;
-        Mon, 14 Sep 2020 19:17:15 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 0FFB6221E7;
+        Mon, 14 Sep 2020 19:17:18 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1600111036;
-        bh=Ig8VXWhiog+eXavJCKy3du5dAJFxdM/C0Usi65hbcj4=;
+        s=default; t=1600111039;
+        bh=xpVBrva7sRk+AFgfdr5dXav+n0Np8UjCF1m/n4gOajU=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=UBHx4mFmDQYw6ISsSdu6EKrkR9didg46MeOfrZhxlRBxYbP6tj/QhnO8OzzuFIzJD
-         Hl3ltuvOqvaaIuKQ0DaxQKrj3PEfj+skVwXz4ZsxT5W+SKGnRdVoM/PKF0YdzIkJ8s
-         +zpROE+v1F8YRUcBgmwDQGLH/YyZCPsvdDAFhZoA=
+        b=pbv2ey8AyBXtMjz8nIgwnxwVK+1lWIHLaklJf3eqxWgzHaGne8oXJPBMasleJ4nL9
+         2nmjR+WlzJccwhNC/eoiUkQrutGK+WdC1PPeFdhp/KEbLreafSARm09ABr2XeUVIzv
+         ifX2tR9ggCGUSJNAjR+R/OVvDL7qJycxkKNcIBXY=
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org
-Subject: [RFC PATCH v3 09/16] ceph: preallocate inode for ops that may create one
-Date:   Mon, 14 Sep 2020 15:17:00 -0400
-Message-Id: <20200914191707.380444-10-jlayton@kernel.org>
+Subject: [RFC PATCH v3 15/16] ceph: add fscrypt support to ceph_fill_trace
+Date:   Mon, 14 Sep 2020 15:17:06 -0400
+Message-Id: <20200914191707.380444-16-jlayton@kernel.org>
 X-Mailer: git-send-email 2.26.2
 In-Reply-To: <20200914191707.380444-1-jlayton@kernel.org>
 References: <20200914191707.380444-1-jlayton@kernel.org>
@@ -55,460 +55,77 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-When creating a new inode, we need to determine the crypto context
-before we can transmit the RPC. The fscrypt API has a routine for getting
-a crypto context before a create occurs, but it requires an inode.
-
-Change the ceph code to preallocate an inode in advance of a create of
-any sort (open(), mknod(), symlink(), etc). Move the existing code that
-generates the ACL and SELinux blobs into this routine since that's
-mostly common across all the different codepaths.
-
-In most cases, we just want to allow ceph_fill_trace to use that inode
-after the reply comes in, so add a new field to the MDS request for it
-(r_new_inode).
-
-The async create codepath is a bit different though. In that case, we
-want to hash the inode in advance of the RPC so that it can be used
-before the reply comes in. If the call subsequently fails with
--EJUKEBOX, then just put the references and clean up the as_ctx. Note
-that with this change, we now need to regenerate the as_ctx when this
-occurs, but it's quite rare for it to happen.
+When we get a dentry in a trace, decrypt the name so we can properly
+instantiate the dentry.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/dir.c        | 49 ++++++++++++++++++--------------
- fs/ceph/file.c       | 56 +++++++++++++++++++++++--------------
- fs/ceph/inode.c      | 66 +++++++++++++++++++++++++++++++++++++++-----
- fs/ceph/mds_client.c |  1 +
- fs/ceph/mds_client.h |  1 +
- fs/ceph/super.h      |  5 +++-
- 6 files changed, 130 insertions(+), 48 deletions(-)
+ fs/ceph/inode.c | 26 ++++++++++++++++++++++++--
+ 1 file changed, 24 insertions(+), 2 deletions(-)
 
-diff --git a/fs/ceph/dir.c b/fs/ceph/dir.c
-index a4d48370b2b3..b1e04d7d4b68 100644
---- a/fs/ceph/dir.c
-+++ b/fs/ceph/dir.c
-@@ -839,13 +839,6 @@ static int ceph_mknod(struct inode *dir, struct dentry *dentry,
- 		goto out;
- 	}
- 
--	err = ceph_pre_init_acls(dir, &mode, &as_ctx);
--	if (err < 0)
--		goto out;
--	err = ceph_security_init_secctx(dentry, mode, &as_ctx);
--	if (err < 0)
--		goto out;
--
- 	dout("mknod in dir %p dentry %p mode 0%ho rdev %d\n",
- 	     dir, dentry, mode, rdev);
- 	req = ceph_mdsc_create_request(mdsc, CEPH_MDS_OP_MKNOD, USE_AUTH_MDS);
-@@ -853,6 +846,14 @@ static int ceph_mknod(struct inode *dir, struct dentry *dentry,
- 		err = PTR_ERR(req);
- 		goto out;
- 	}
-+
-+	req->r_new_inode = ceph_new_inode(dir, dentry, &mode, &as_ctx);
-+	if (IS_ERR(req->r_new_inode)) {
-+		err = PTR_ERR(req->r_new_inode);
-+		req->r_new_inode = NULL;
-+		goto out_req;
-+	}
-+
- 	req->r_dentry = dget(dentry);
- 	req->r_num_caps = 2;
- 	req->r_parent = dir;
-@@ -868,6 +869,7 @@ static int ceph_mknod(struct inode *dir, struct dentry *dentry,
- 	err = ceph_mdsc_do_request(mdsc, dir, req);
- 	if (!err && !req->r_reply_info.head->is_dentry)
- 		err = ceph_handle_notrace_create(dir, dentry);
-+out_req:
- 	ceph_mdsc_put_request(req);
- out:
- 	if (!err)
-@@ -890,6 +892,7 @@ static int ceph_symlink(struct inode *dir, struct dentry *dentry,
- 	struct ceph_mds_client *mdsc = ceph_sb_to_mdsc(dir->i_sb);
- 	struct ceph_mds_request *req;
- 	struct ceph_acl_sec_ctx as_ctx = {};
-+	umode_t mode = S_IFLNK | 0777;
- 	int err;
- 
- 	if (ceph_snap(dir) != CEPH_NOSNAP)
-@@ -900,21 +903,24 @@ static int ceph_symlink(struct inode *dir, struct dentry *dentry,
- 		goto out;
- 	}
- 
--	err = ceph_security_init_secctx(dentry, S_IFLNK | 0777, &as_ctx);
--	if (err < 0)
--		goto out;
--
- 	dout("symlink in dir %p dentry %p to '%s'\n", dir, dentry, dest);
- 	req = ceph_mdsc_create_request(mdsc, CEPH_MDS_OP_SYMLINK, USE_AUTH_MDS);
- 	if (IS_ERR(req)) {
- 		err = PTR_ERR(req);
- 		goto out;
- 	}
-+
-+	req->r_new_inode = ceph_new_inode(dir, dentry, &mode, &as_ctx);
-+	if (IS_ERR(req->r_new_inode)) {
-+		err = PTR_ERR(req->r_new_inode);
-+		req->r_new_inode = NULL;
-+		goto out_req;
-+	}
-+
- 	req->r_path2 = kstrdup(dest, GFP_KERNEL);
- 	if (!req->r_path2) {
- 		err = -ENOMEM;
--		ceph_mdsc_put_request(req);
--		goto out;
-+		goto out_req;
- 	}
- 	req->r_parent = dir;
- 	set_bit(CEPH_MDS_R_PARENT_LOCKED, &req->r_req_flags);
-@@ -929,6 +935,7 @@ static int ceph_symlink(struct inode *dir, struct dentry *dentry,
- 	err = ceph_mdsc_do_request(mdsc, dir, req);
- 	if (!err && !req->r_reply_info.head->is_dentry)
- 		err = ceph_handle_notrace_create(dir, dentry);
-+out_req:
- 	ceph_mdsc_put_request(req);
- out:
- 	if (err)
-@@ -963,13 +970,6 @@ static int ceph_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
- 		goto out;
- 	}
- 
--	mode |= S_IFDIR;
--	err = ceph_pre_init_acls(dir, &mode, &as_ctx);
--	if (err < 0)
--		goto out;
--	err = ceph_security_init_secctx(dentry, mode, &as_ctx);
--	if (err < 0)
--		goto out;
- 
- 	req = ceph_mdsc_create_request(mdsc, op, USE_AUTH_MDS);
- 	if (IS_ERR(req)) {
-@@ -977,6 +977,14 @@ static int ceph_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
- 		goto out;
- 	}
- 
-+	mode |= S_IFDIR;
-+	req->r_new_inode = ceph_new_inode(dir, dentry, &mode, &as_ctx);
-+	if (IS_ERR(req->r_new_inode)) {
-+		err = PTR_ERR(req->r_new_inode);
-+		req->r_new_inode = NULL;
-+		goto out_req;
-+	}
-+
- 	req->r_dentry = dget(dentry);
- 	req->r_num_caps = 2;
- 	req->r_parent = dir;
-@@ -993,6 +1001,7 @@ static int ceph_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
- 	    !req->r_reply_info.head->is_target &&
- 	    !req->r_reply_info.head->is_dentry)
- 		err = ceph_handle_notrace_create(dir, dentry);
-+out_req:
- 	ceph_mdsc_put_request(req);
- out:
- 	if (!err)
-diff --git a/fs/ceph/file.c b/fs/ceph/file.c
-index 762a280b7037..eee21c286d66 100644
---- a/fs/ceph/file.c
-+++ b/fs/ceph/file.c
-@@ -565,7 +565,8 @@ static void ceph_async_create_cb(struct ceph_mds_client *mdsc,
- 	ceph_mdsc_release_dir_caps(req);
- }
- 
--static int ceph_finish_async_create(struct inode *dir, struct dentry *dentry,
-+static int ceph_finish_async_create(struct inode *dir, struct inode *inode,
-+				    struct dentry *dentry,
- 				    struct file *file, umode_t mode,
- 				    struct ceph_mds_request *req,
- 				    struct ceph_acl_sec_ctx *as_ctx,
-@@ -576,17 +577,12 @@ static int ceph_finish_async_create(struct inode *dir, struct dentry *dentry,
- 	struct ceph_mds_reply_inode in = { };
- 	struct ceph_mds_reply_info_in iinfo = { .in = &in };
- 	struct ceph_inode_info *ci = ceph_inode(dir);
--	struct inode *inode;
- 	struct timespec64 now;
- 	struct ceph_vino vino = { .ino = req->r_deleg_ino,
- 				  .snap = CEPH_NOSNAP };
- 
- 	ktime_get_real_ts64(&now);
- 
--	inode = ceph_get_inode(dentry->d_sb, vino);
--	if (IS_ERR(inode))
--		return PTR_ERR(inode);
--
- 	iinfo.inline_version = CEPH_INLINE_NONE;
- 	iinfo.change_attr = 1;
- 	ceph_encode_timespec64(&iinfo.btime, &now);
-@@ -622,8 +618,7 @@ static int ceph_finish_async_create(struct inode *dir, struct dentry *dentry,
- 		ceph_dir_clear_complete(dir);
- 		if (!d_unhashed(dentry))
- 			d_drop(dentry);
--		if (inode->i_state & I_NEW)
--			discard_new_inode(inode);
-+		discard_new_inode(inode);
- 	} else {
- 		struct dentry *dn;
- 
-@@ -663,6 +658,7 @@ int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
- 	struct ceph_fs_client *fsc = ceph_sb_to_client(dir->i_sb);
- 	struct ceph_mds_client *mdsc = fsc->mdsc;
- 	struct ceph_mds_request *req;
-+	struct inode *new_inode = NULL;
- 	struct dentry *dn;
- 	struct ceph_acl_sec_ctx as_ctx = {};
- 	bool try_async = ceph_test_mount_opt(fsc, ASYNC_DIROPS);
-@@ -675,21 +671,21 @@ int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
- 
- 	if (dentry->d_name.len > NAME_MAX)
- 		return -ENAMETOOLONG;
--
-+retry:
- 	if (flags & O_CREAT) {
- 		if (ceph_quota_is_max_files_exceeded(dir))
- 			return -EDQUOT;
--		err = ceph_pre_init_acls(dir, &mode, &as_ctx);
--		if (err < 0)
--			return err;
--		err = ceph_security_init_secctx(dentry, mode, &as_ctx);
--		if (err < 0)
-+
-+		new_inode = ceph_new_inode(dir, dentry, &mode, &as_ctx);
-+		if (IS_ERR(new_inode)) {
-+			err = PTR_ERR(new_inode);
- 			goto out_ctx;
-+		}
- 	} else if (!d_in_lookup(dentry)) {
- 		/* If it's not being looked up, it's negative */
- 		return -ENOENT;
- 	}
--retry:
-+
- 	/* do the open */
- 	req = prepare_open_request(dir->i_sb, flags, mode);
- 	if (IS_ERR(req)) {
-@@ -713,21 +709,38 @@ int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
- 			req->r_pagelist = as_ctx.pagelist;
- 			as_ctx.pagelist = NULL;
- 		}
--		if (try_async &&
--		    (req->r_dir_caps =
--		      try_prep_async_create(dir, dentry, &lo,
--					    &req->r_deleg_ino))) {
-+
-+		if (try_async && (req->r_dir_caps =
-+				  try_prep_async_create(dir, dentry, &lo, &req->r_deleg_ino))) {
-+			struct ceph_vino vino = { .ino = req->r_deleg_ino,
-+						  .snap = CEPH_NOSNAP };
-+
- 			set_bit(CEPH_MDS_R_ASYNC, &req->r_req_flags);
- 			req->r_args.open.flags |= cpu_to_le32(CEPH_O_EXCL);
- 			req->r_callback = ceph_async_create_cb;
-+
-+			/* Hash inode before RPC */
-+			new_inode = ceph_get_inode(dir->i_sb, vino, new_inode);
-+			if (IS_ERR(new_inode)) {
-+				err = PTR_ERR(new_inode);
-+				new_inode = NULL;
-+				goto out_req;
-+			}
-+			WARN_ON_ONCE(!(new_inode->i_state & I_NEW));
-+
- 			err = ceph_mdsc_submit_request(mdsc, dir, req);
- 			if (!err) {
--				err = ceph_finish_async_create(dir, dentry,
-+				err = ceph_finish_async_create(dir, new_inode, dentry,
- 							file, mode, req,
- 							&as_ctx, &lo);
-+				new_inode = NULL;
- 			} else if (err == -EJUKEBOX) {
- 				restore_deleg_ino(dir, req->r_deleg_ino);
- 				ceph_mdsc_put_request(req);
-+				discard_new_inode(new_inode);
-+				ceph_release_acl_sec_ctx(&as_ctx);
-+				memset(&as_ctx, 0, sizeof(as_ctx));
-+				new_inode = NULL;
- 				try_async = false;
- 				goto retry;
- 			}
-@@ -736,6 +749,8 @@ int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
- 	}
- 
- 	set_bit(CEPH_MDS_R_PARENT_LOCKED, &req->r_req_flags);
-+	req->r_new_inode = new_inode;
-+	new_inode = NULL;
- 	err = ceph_mdsc_do_request(mdsc,
- 				   (flags & (O_CREAT|O_TRUNC)) ? dir : NULL,
- 				   req);
-@@ -773,6 +788,7 @@ int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
- 	}
- out_req:
- 	ceph_mdsc_put_request(req);
-+	iput(new_inode);
- out_ctx:
- 	ceph_release_acl_sec_ctx(&as_ctx);
- 	dout("atomic_open result=%d\n", err);
 diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
-index daae18267fd8..f50e7873bf6e 100644
+index c3a7a9f5603d..8e9fb1311bb8 100644
 --- a/fs/ceph/inode.c
 +++ b/fs/ceph/inode.c
-@@ -52,15 +52,67 @@ static int ceph_set_ino_cb(struct inode *inode, void *data)
- 	return 0;
- }
+@@ -1331,8 +1331,10 @@ int ceph_fill_trace(struct super_block *sb, struct ceph_mds_request *req)
+ 		if (dir && req->r_op == CEPH_MDS_OP_LOOKUPNAME &&
+ 		    test_bit(CEPH_MDS_R_PARENT_LOCKED, &req->r_req_flags) &&
+ 		    !test_bit(CEPH_MDS_R_ABORTED, &req->r_req_flags)) {
++			bool is_nokey = false;
+ 			struct qstr dname;
+ 			struct dentry *dn, *parent;
++			struct fscrypt_str oname = FSTR_INIT(NULL, 0);
  
--struct inode *ceph_get_inode(struct super_block *sb, struct ceph_vino vino)
-+/**
-+ * ceph_new_inode - allocate a new inode in advance of an expected create
-+ * @dir: parent directory for new inode
-+ * @mode: mode of new inode
-+ */
-+struct inode *ceph_new_inode(struct inode *dir, struct dentry *dentry,
-+			     umode_t *mode, struct ceph_acl_sec_ctx *as_ctx)
- {
-+	int err;
- 	struct inode *inode;
+ 			BUG_ON(!rinfo->head->is_target);
+ 			BUG_ON(req->r_dentry);
+@@ -1340,8 +1342,21 @@ int ceph_fill_trace(struct super_block *sb, struct ceph_mds_request *req)
+ 			parent = d_find_any_alias(dir);
+ 			BUG_ON(!parent);
  
--	inode = iget5_locked(sb, (unsigned long)vino.ino, ceph_ino_compare,
--			     ceph_set_ino_cb, &vino);
-+	inode = new_inode_pseudo(dir->i_sb);
- 	if (!inode)
- 		return ERR_PTR(-ENOMEM);
- 
-+	if (!S_ISLNK(*mode)) {
-+		err = ceph_pre_init_acls(dir, mode, as_ctx);
-+		if (err < 0)
-+			goto out_err;
-+	}
+-			dname.name = rinfo->dname;
+-			dname.len = rinfo->dname_len;
++			err = ceph_fname_alloc_buffer(dir, &oname);
++			if (err < 0) {
++				dput(parent);
++				goto done;
++			}
 +
-+	err = ceph_security_init_secctx(dentry, *mode, as_ctx);
-+	if (err < 0)
-+		goto out_err;
-+
-+	inode->i_state = 0;
-+	inode->i_mode = *mode;
-+	return inode;
-+out_err:
-+	iput(inode);
-+	return ERR_PTR(err);
-+}
-+
-+/**
-+ * ceph_get_inode - find or create/hash a new inode
-+ * @sb: superblock to search and allocate in
-+ * @vino: vino to search for
-+ * @new: optional new inode to insert if one isn't found (may be NULL)
-+ *
-+ * Search for or insert a new inode into the hash for the given vino, and return a
-+ * reference to it. If new is non-NULL, its reference is consumed.
-+ */
-+struct inode *ceph_get_inode(struct super_block *sb, struct ceph_vino vino, struct inode *new)
-+{
-+	struct inode *inode;
-+
-+	if (new) {
-+		inode = inode_insert5(new, (unsigned long)vino.ino, ceph_ino_compare,
-+					ceph_set_ino_cb, &vino);
-+		if (inode != new)
-+			iput(new);
-+	} else {
-+		inode = iget5_locked(sb, (unsigned long)vino.ino, ceph_ino_compare,
-+				     ceph_set_ino_cb, &vino);
-+	}
-+
-+	if (!inode) {
-+		dout("No inode found for %llx.%llx\n", vino.ino, vino.snap);
-+		return ERR_PTR(-ENOMEM);
-+	}
-+
- 	dout("get_inode on %llu=%llx.%llx got %p new %d\n", ceph_present_inode(inode),
- 	     ceph_vinop(inode), inode, !!(inode->i_state & I_NEW));
- 	return inode;
-@@ -75,7 +127,7 @@ struct inode *ceph_get_snapdir(struct inode *parent)
- 		.ino = ceph_ino(parent),
- 		.snap = CEPH_SNAPDIR,
- 	};
--	struct inode *inode = ceph_get_inode(parent->i_sb, vino);
-+	struct inode *inode = ceph_get_inode(parent->i_sb, vino, NULL);
- 	struct ceph_inode_info *ci = ceph_inode(inode);
++			err = ceph_fname_to_usr(dir, rinfo->dname, rinfo->dname_len, NULL,
++						&oname, &is_nokey);
++			if (err < 0) {
++				dput(parent);
++				ceph_fname_free_buffer(dir, &oname);
++				goto done;
++			}
++			dname.name = oname.name;
++			dname.len = oname.len;
+ 			dname.hash = full_name_hash(parent, dname.name, dname.len);
+ 			tvino.ino = le64_to_cpu(rinfo->targeti.in->ino);
+ 			tvino.snap = le64_to_cpu(rinfo->targeti.in->snapid);
+@@ -1356,9 +1371,15 @@ int ceph_fill_trace(struct super_block *sb, struct ceph_mds_request *req)
+ 				     dname.len, dname.name, dn);
+ 				if (!dn) {
+ 					dput(parent);
++					ceph_fname_free_buffer(dir, &oname);
+ 					err = -ENOMEM;
+ 					goto done;
+ 				}
++				if (is_nokey) {
++					spin_lock(&dn->d_lock);
++					dn->d_flags |= DCACHE_ENCRYPTED_NAME;
++					spin_unlock(&dn->d_lock);
++				}
+ 				err = 0;
+ 			} else if (d_really_is_positive(dn) &&
+ 				   (ceph_ino(d_inode(dn)) != tvino.ino ||
+@@ -1370,6 +1391,7 @@ int ceph_fill_trace(struct super_block *sb, struct ceph_mds_request *req)
+ 				dput(dn);
+ 				goto retry_lookup;
+ 			}
++			ceph_fname_free_buffer(dir, &oname);
  
- 	BUG_ON(!S_ISDIR(parent->i_mode));
-@@ -1322,7 +1374,7 @@ int ceph_fill_trace(struct super_block *sb, struct ceph_mds_request *req)
- 		tvino.ino = le64_to_cpu(rinfo->targeti.in->ino);
- 		tvino.snap = le64_to_cpu(rinfo->targeti.in->snapid);
- 
--		in = ceph_get_inode(sb, tvino);
-+		in = ceph_get_inode(sb, tvino, xchg(&req->r_new_inode, NULL));
- 		if (IS_ERR(in)) {
- 			err = PTR_ERR(in);
- 			goto done;
-@@ -1516,7 +1568,7 @@ static int readdir_prepopulate_inodes_only(struct ceph_mds_request *req,
- 		vino.ino = le64_to_cpu(rde->inode.in->ino);
- 		vino.snap = le64_to_cpu(rde->inode.in->snapid);
- 
--		in = ceph_get_inode(req->r_dentry->d_sb, vino);
-+		in = ceph_get_inode(req->r_dentry->d_sb, vino, NULL);
- 		if (IS_ERR(in)) {
- 			err = PTR_ERR(in);
- 			dout("new_inode badness got %d\n", err);
-@@ -1720,7 +1772,7 @@ int ceph_readdir_prepopulate(struct ceph_mds_request *req,
- 		if (d_really_is_positive(dn)) {
- 			in = d_inode(dn);
- 		} else {
--			in = ceph_get_inode(parent->d_sb, tvino);
-+			in = ceph_get_inode(parent->d_sb, tvino, NULL);
- 			if (IS_ERR(in)) {
- 				dout("new_inode badness\n");
- 				d_drop(dn);
-diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
-index 76d8d9495d1d..4107dc64cc8c 100644
---- a/fs/ceph/mds_client.c
-+++ b/fs/ceph/mds_client.c
-@@ -820,6 +820,7 @@ void ceph_mdsc_release_request(struct kref *kref)
- 		ceph_async_iput(req->r_parent);
- 	}
- 	ceph_async_iput(req->r_target_inode);
-+	ceph_async_iput(req->r_new_inode);
- 	if (req->r_dentry)
- 		dput(req->r_dentry);
- 	if (req->r_old_dentry)
-diff --git a/fs/ceph/mds_client.h b/fs/ceph/mds_client.h
-index 658800605bfb..63999f7db014 100644
---- a/fs/ceph/mds_client.h
-+++ b/fs/ceph/mds_client.h
-@@ -260,6 +260,7 @@ struct ceph_mds_request {
- 
- 	struct inode *r_parent;		    /* parent dir inode */
- 	struct inode *r_target_inode;       /* resulting inode */
-+	struct inode *r_new_inode;	    /* new inode (for creates) */
- 
- #define CEPH_MDS_R_DIRECT_IS_HASH	(1) /* r_direct_hash is valid */
- #define CEPH_MDS_R_ABORTED		(2) /* call was aborted */
-diff --git a/fs/ceph/super.h b/fs/ceph/super.h
-index 11032b30a14f..c05ed00035ec 100644
---- a/fs/ceph/super.h
-+++ b/fs/ceph/super.h
-@@ -936,6 +936,7 @@ static inline bool __ceph_have_pending_cap_snap(struct ceph_inode_info *ci)
- /* inode.c */
- struct ceph_mds_reply_info_in;
- struct ceph_mds_reply_dirfrag;
-+struct ceph_acl_sec_ctx;
- 
- extern const struct inode_operations ceph_file_iops;
- 
-@@ -943,8 +944,10 @@ extern struct inode *ceph_alloc_inode(struct super_block *sb);
- extern void ceph_evict_inode(struct inode *inode);
- extern void ceph_free_inode(struct inode *inode);
- 
-+struct inode *ceph_new_inode(struct inode *dir, struct dentry *dentry,
-+			     umode_t *mode, struct ceph_acl_sec_ctx *as_ctx);
- extern struct inode *ceph_get_inode(struct super_block *sb,
--				    struct ceph_vino vino);
-+				    struct ceph_vino vino, struct inode *new);
- extern struct inode *ceph_get_snapdir(struct inode *parent);
- extern int ceph_fill_file_size(struct inode *inode, int issued,
- 			       u32 truncate_seq, u64 truncate_size, u64 size);
+ 			req->r_dentry = dn;
+ 			dput(parent);
 -- 
 2.26.2
 
