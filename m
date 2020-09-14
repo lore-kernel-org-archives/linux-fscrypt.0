@@ -4,47 +4,47 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-14.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 734D6C433E2
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:19:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EED27C2BC11
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:19:20 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 3CB0F208E4
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:19:17 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id BA48B21D41
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 19:19:20 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1600111157;
-	bh=RRG5jWfcXLR0NrlKhOgSI036PP3peERr9S0AbL7B7c4=;
+	s=default; t=1600111160;
+	bh=rDemq33XJt6lQnTdk4QFnDjQ60aCNi5fWYRrwbTyZjY=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=xEA7JoRAOezcJm6VlcHuRFnsytMkiPXGDDGhoNpKxAvYK9Xju3USis324GE+yBUfG
-	 2P+Xxu0g2bxy0IYIu5+TLCv//eT2J0/RWS5TObyZu9zXrACzqjLdX3GrCN2MBWazzb
-	 hPyULXynfWgllqbTLJpjBQSn5X9lXnHQuOiNLzdQ=
+	b=zZCFFc7tpxasL3drAXcdaCkMYgb5bsoicEwY8pxiWkJ93EVDKgpV59ye1yVf39Dxm
+	 ND1gBhSvNRK3vbI0Gk/A7RNgPV3qcEDEBG2Dw3qfZgq0bwElHTxXF7bamzwSBM2A0o
+	 HEUaFnaRMNF4idr1lkL3+Y+evNb//5z58sVUdIVU=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726119AbgINTTI (ORCPT
+        id S1726112AbgINTTD (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 14 Sep 2020 15:19:08 -0400
-Received: from mail.kernel.org ([198.145.29.99]:38948 "EHLO mail.kernel.org"
+        Mon, 14 Sep 2020 15:19:03 -0400
+Received: from mail.kernel.org ([198.145.29.99]:38982 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725961AbgINTRM (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 14 Sep 2020 15:17:12 -0400
+        id S1726020AbgINTRW (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 14 Sep 2020 15:17:22 -0400
 Received: from tleilax.com (68-20-15-154.lightspeed.rlghnc.sbcglobal.net [68.20.15.154])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 8EAC12193E;
-        Mon, 14 Sep 2020 19:17:11 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id E0F36221E5;
+        Mon, 14 Sep 2020 19:17:17 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1600111031;
-        bh=RRG5jWfcXLR0NrlKhOgSI036PP3peERr9S0AbL7B7c4=;
+        s=default; t=1600111038;
+        bh=rDemq33XJt6lQnTdk4QFnDjQ60aCNi5fWYRrwbTyZjY=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=gfY9GNwSlmqnef92uhj28oEPQT0aAN6HWWIf5STBosQlxJE9JNmnPoRdsrcRc1/gB
-         3r2EAjNKV1SDJqCMCtWuEdp85ppiL9hxV9NH+GvVsUw3325okehKEeUckY9NMSNofY
-         5DPf1HESkux37u8oDV/KgFkfRHYNAkNNYhLiw/2o=
+        b=igc/6RaTnba1YFRrooWazQEdvgr9QLoDr6e8jHVGKPwMx2h4DzCngUOUJVzBRwwMg
+         B5/gtroU39YQOZDW7/xWjIBshYwa+PuZ7BkDEHvKeeISwUlreAF043k3XbJ3r2lVh/
+         d8aJ6Qz2Mj5dC/kN24dWmpcgl5oqPEG64YlCr2F8=
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org
-Subject: [RFC PATCH v3 02/16] fscrypt: export fscrypt_base64_encode and fscrypt_base64_decode
-Date:   Mon, 14 Sep 2020 15:16:53 -0400
-Message-Id: <20200914191707.380444-3-jlayton@kernel.org>
+Subject: [RFC PATCH v3 13/16] ceph: make d_revalidate call fscrypt revalidator for encrypted dentries
+Date:   Mon, 14 Sep 2020 15:17:04 -0400
+Message-Id: <20200914191707.380444-14-jlayton@kernel.org>
 X-Mailer: git-send-email 2.26.2
 In-Reply-To: <20200914191707.380444-1-jlayton@kernel.org>
 References: <20200914191707.380444-1-jlayton@kernel.org>
@@ -55,164 +55,30 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Ceph will need to base64-encode some encrypted inode names, so make
-these routines, and FSCRYPT_BASE64_CHARS available to modules.
+If we have a dentry which represents a no-key name, then we need to test
+whether the parent directory's encryption key has since been added.  Do
+that before we test anything else about the dentry.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/crypto/fname.c       | 59 ++++++++++++++++++++++++++++++++++-------
- include/linux/fscrypt.h |  4 +++
- 2 files changed, 53 insertions(+), 10 deletions(-)
+ fs/ceph/dir.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index eb13408b50a7..a1cb6c2c50c4 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -187,10 +187,8 @@ static int fname_decrypt(const struct inode *inode,
- static const char lookup_table[65] =
- 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+,";
+diff --git a/fs/ceph/dir.c b/fs/ceph/dir.c
+index b1e04d7d4b68..b6e5d751024d 100644
+--- a/fs/ceph/dir.c
++++ b/fs/ceph/dir.c
+@@ -1689,6 +1689,10 @@ static int ceph_d_revalidate(struct dentry *dentry, unsigned int flags)
+ 	dout("d_revalidate %p '%pd' inode %p offset 0x%llx\n", dentry,
+ 	     dentry, inode, ceph_dentry(dentry)->offset);
  
--#define BASE64_CHARS(nbytes)	DIV_ROUND_UP((nbytes) * 4, 3)
--
- /**
-- * base64_encode() - base64-encode some bytes
-+ * fscrypt_base64_encode() - base64-encode some bytes
-  * @src: the bytes to encode
-  * @len: number of bytes to encode
-  * @dst: (output) the base64-encoded string.  Not NUL-terminated.
-@@ -200,7 +198,7 @@ static const char lookup_table[65] =
-  *
-  * Return: length of the encoded string
-  */
--static int base64_encode(const u8 *src, int len, char *dst)
-+int fscrypt_base64_encode(const u8 *src, int len, char *dst)
- {
- 	int i, bits = 0, ac = 0;
- 	char *cp = dst;
-@@ -218,8 +216,9 @@ static int base64_encode(const u8 *src, int len, char *dst)
- 		*cp++ = lookup_table[ac & 0x3f];
- 	return cp - dst;
- }
-+EXPORT_SYMBOL(fscrypt_base64_encode);
- 
--static int base64_decode(const char *src, int len, u8 *dst)
-+int fscrypt_base64_decode(const char *src, int len, u8 *dst)
- {
- 	int i, bits = 0, ac = 0;
- 	const char *p;
-@@ -241,6 +240,7 @@ static int base64_decode(const char *src, int len, u8 *dst)
- 		return -1;
- 	return cp - dst;
- }
-+EXPORT_SYMBOL(fscrypt_base64_decode);
- 
- bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
- 				  u32 orig_len, u32 max_len,
-@@ -272,7 +272,7 @@ bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
- int fscrypt_fname_alloc_buffer(u32 max_encrypted_len,
- 			       struct fscrypt_str *crypto_str)
- {
--	const u32 max_encoded_len = BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX);
-+	const u32 max_encoded_len = FSCRYPT_BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX);
- 	u32 max_presented_len;
- 
- 	max_presented_len = max(max_encoded_len, max_encrypted_len);
-@@ -300,6 +300,45 @@ void fscrypt_fname_free_buffer(struct fscrypt_str *crypto_str)
- }
- EXPORT_SYMBOL(fscrypt_fname_free_buffer);
- 
-+void fscrypt_encode_nokey_name(u32 hash, u32 minor_hash,
-+			     const struct fscrypt_str *iname,
-+			     struct fscrypt_str *oname)
-+{
-+	struct fscrypt_nokey_name nokey_name;
-+	u32 size; /* size of the unencoded no-key name */
++	valid = fscrypt_d_revalidate(dentry, flags);
++	if (valid <= 0)
++		return valid;
 +
-+	/*
-+	 * Sanity check that struct fscrypt_nokey_name doesn't have padding
-+	 * between fields and that its encoded size never exceeds NAME_MAX.
-+	 */
-+	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, dirhash) !=
-+		     offsetof(struct fscrypt_nokey_name, bytes));
-+	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, bytes) !=
-+		     offsetof(struct fscrypt_nokey_name, sha256));
-+	BUILD_BUG_ON(FSCRYPT_BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
-+
-+	if (hash) {
-+		nokey_name.dirhash[0] = hash;
-+		nokey_name.dirhash[1] = minor_hash;
-+	} else {
-+		nokey_name.dirhash[0] = 0;
-+		nokey_name.dirhash[1] = 0;
-+	}
-+	if (iname->len <= sizeof(nokey_name.bytes)) {
-+		memcpy(nokey_name.bytes, iname->name, iname->len);
-+		size = offsetof(struct fscrypt_nokey_name, bytes[iname->len]);
-+	} else {
-+		memcpy(nokey_name.bytes, iname->name, sizeof(nokey_name.bytes));
-+		/* Compute strong hash of remaining part of name. */
-+		fscrypt_do_sha256(&iname->name[sizeof(nokey_name.bytes)],
-+				  iname->len - sizeof(nokey_name.bytes),
-+				  nokey_name.sha256);
-+		size = FSCRYPT_NOKEY_NAME_MAX;
-+	}
-+	oname->len = fscrypt_base64_encode((const u8 *)&nokey_name, size, oname->name);
-+}
-+EXPORT_SYMBOL(fscrypt_encode_nokey_name);
-+
- /**
-  * fscrypt_fname_disk_to_usr() - convert an encrypted filename to
-  *				 user-presentable form
-@@ -351,7 +390,7 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
- 		     offsetof(struct fscrypt_nokey_name, bytes));
- 	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, bytes) !=
- 		     offsetof(struct fscrypt_nokey_name, sha256));
--	BUILD_BUG_ON(BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
-+	BUILD_BUG_ON(FSCRYPT_BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
+ 	mdsc = ceph_sb_to_client(dir->i_sb)->mdsc;
  
- 	if (hash) {
- 		nokey_name.dirhash[0] = hash;
-@@ -371,7 +410,7 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
- 				  nokey_name.sha256);
- 		size = FSCRYPT_NOKEY_NAME_MAX;
- 	}
--	oname->len = base64_encode((const u8 *)&nokey_name, size, oname->name);
-+	oname->len = fscrypt_base64_encode((const u8 *)&nokey_name, size, oname->name);
- 	return 0;
- }
- EXPORT_SYMBOL(fscrypt_fname_disk_to_usr);
-@@ -445,14 +484,14 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	 * user-supplied name
- 	 */
- 
--	if (iname->len > BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX))
-+	if (iname->len > FSCRYPT_BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX))
- 		return -ENOENT;
- 
- 	fname->crypto_buf.name = kmalloc(FSCRYPT_NOKEY_NAME_MAX, GFP_KERNEL);
- 	if (fname->crypto_buf.name == NULL)
- 		return -ENOMEM;
- 
--	ret = base64_decode(iname->name, iname->len, fname->crypto_buf.name);
-+	ret = fscrypt_base64_decode(iname->name, iname->len, fname->crypto_buf.name);
- 	if (ret < (int)offsetof(struct fscrypt_nokey_name, bytes[1]) ||
- 	    (ret > offsetof(struct fscrypt_nokey_name, sha256) &&
- 	     ret != FSCRYPT_NOKEY_NAME_MAX)) {
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index b3b0c5675c6b..95dddba3ed00 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -182,6 +182,10 @@ void fscrypt_free_inode(struct inode *inode);
- int fscrypt_drop_inode(struct inode *inode);
- 
- /* fname.c */
-+#define FSCRYPT_BASE64_CHARS(nbytes)	DIV_ROUND_UP((nbytes) * 4, 3)
-+
-+int fscrypt_base64_encode(const u8 *src, int len, char *dst);
-+int fscrypt_base64_decode(const char *src, int len, u8 *dst);
- int fscrypt_setup_filename(struct inode *inode, const struct qstr *iname,
- 			   int lookup, struct fscrypt_name *fname);
- 
+ 	/* always trust cached snapped dentries, snapdir dentry */
 -- 
 2.26.2
 
