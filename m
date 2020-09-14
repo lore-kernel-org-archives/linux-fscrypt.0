@@ -1,187 +1,233 @@
-Return-Path: <SRS0=fwe6=CW=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=4qF/=CX=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-11.9 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
-	autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C6C58C2D0E1
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Sep 2020 08:39:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9A5C5C43461
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 17:27:43 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 940A72098B
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Sep 2020 08:39:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5EBA020E65
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Sep 2020 17:27:43 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1599986387;
-	bh=nVSMprpeSosbO3HIVvYvcbOcUNBMzSOQM0td1dFGCwI=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=Pd0wjb6iNhhdKmmICS8vT3nn1L3wIYjRNt5rfuyj02Vi5sYpfAcNnMSgLVEdJYVnQ
-	 KO6BoxioKOOyBxrxzITI/ArVOkXTHe65hbD69ETU+XDHPorJ9glSRIe2ITqpc62SQs
-	 a40yO1K1yZvEv8VVQOGeKwqSXP+Yzab3N8onZeIE=
+	s=default; t=1600104463;
+	bh=YUeqH1XV4uJ6fcDfV4Ef0fs7JAcffDRAHHBbtRYjkUo=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=YaQr401BbD9T86g6eXTqBeBJe0/iGL5+ZotjbUx+57Q3WsAsgJXzQrh7bFGpaGPe6
+	 oiv3Arn+Np82soOifMCrOLfZpTxydB4Xa8NaqlQdSRkb301mPPNF8W0RIkUjD5OjoR
+	 QYdBa9k5RyoOJIE67B0X5VRyh+BOA/+YW6Vjyl9Q=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726053AbgIMIji (ORCPT
+        id S1726125AbgINR1Q (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 13 Sep 2020 04:39:38 -0400
-Received: from mail.kernel.org ([198.145.29.99]:60746 "EHLO mail.kernel.org"
+        Mon, 14 Sep 2020 13:27:16 -0400
+Received: from mail.kernel.org ([198.145.29.99]:44326 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725957AbgIMIiA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 13 Sep 2020 04:38:00 -0400
-Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        id S1726349AbgINR0f (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 14 Sep 2020 13:26:35 -0400
+Received: from localhost (unknown [104.132.1.66])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 3FAA52168B;
-        Sun, 13 Sep 2020 08:37:58 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 5A76720771;
+        Mon, 14 Sep 2020 17:26:32 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1599986278;
-        bh=nVSMprpeSosbO3HIVvYvcbOcUNBMzSOQM0td1dFGCwI=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=V00kf5XLm9lY1xt1ty/xgqrsenfsXZ6pzt+SXbnRKQ3e9fVR6We4G0EY8hjqo9Ald
-         7n09iIpMN42vGdntBunQgRVEPLY2cfh/w6QreksAz+rvIEV8FQLnt7JmweobGQXsxw
-         p7XoXPrRGWn4KIukK34qwLiwqe0gAihlc1Aj3XQs=
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org,
+        s=default; t=1600104392;
+        bh=YUeqH1XV4uJ6fcDfV4Ef0fs7JAcffDRAHHBbtRYjkUo=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=zWEX0pMpAA8elGd0n7N77i+c2xaSJEQf610j8WGNnOUtqCU83gjZvcmIbJQ4Pu0q6
+         ZOgBKc1nLgQT2h5G/a81dG6ajjukvp6peLcfOQHdlHlFQ+CSBfNAZ338ontu5yt0lu
+         XxF9EcorDt9Yjg4DyeGUumDrixK1yZQlIhTAGiWs=
+Date:   Mon, 14 Sep 2020 10:26:31 -0700
+From:   Jaegeuk Kim <jaegeuk@kernel.org>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     linux-fscrypt@vger.kernel.org,
+        Daniel Rosenberg <drosen@google.com>,
         Jeff Layton <jlayton@kernel.org>,
-        Daniel Rosenberg <drosen@google.com>
-Subject: [PATCH v2 02/11] ext4: factor out ext4_xattr_credits_for_new_inode()
-Date:   Sun, 13 Sep 2020 01:36:11 -0700
-Message-Id: <20200913083620.170627-3-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.28.0
-In-Reply-To: <20200913083620.170627-1-ebiggers@kernel.org>
+        linux-f2fs-devel@lists.sourceforge.net,
+        linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org,
+        linux-ext4@vger.kernel.org
+Subject: Re: [f2fs-dev] [PATCH v2 04/11] f2fs: use
+ fscrypt_prepare_new_inode() and fscrypt_set_context()
+Message-ID: <20200914172631.GA2580525@google.com>
 References: <20200913083620.170627-1-ebiggers@kernel.org>
+ <20200913083620.170627-5-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20200913083620.170627-5-ebiggers@kernel.org>
 Sender: linux-fscrypt-owner@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On 09/13, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Convert f2fs to use the new functions fscrypt_prepare_new_inode() and
+> fscrypt_set_context().  This avoids calling
+> fscrypt_get_encryption_info() from under f2fs_lock_op(), which can
+> deadlock because fscrypt_get_encryption_info() isn't GFP_NOFS-safe.
+> 
+> For more details about this problem, see the earlier patch
+> "fscrypt: add fscrypt_prepare_new_inode() and fscrypt_set_context()".
+> 
+> This also fixes a f2fs-specific deadlock when the filesystem is mounted
+> with '-o test_dummy_encryption' and a file is created in an unencrypted
+> directory other than the root directory:
+> 
+>     INFO: task touch:207 blocked for more than 30 seconds.
+>           Not tainted 5.9.0-rc4-00099-g729e3d0919844 #2
+>     "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
+>     task:touch           state:D stack:    0 pid:  207 ppid:   167 flags:0x00000000
+>     Call Trace:
+>      [...]
+>      lock_page include/linux/pagemap.h:548 [inline]
+>      pagecache_get_page+0x25e/0x310 mm/filemap.c:1682
+>      find_or_create_page include/linux/pagemap.h:348 [inline]
+>      grab_cache_page include/linux/pagemap.h:424 [inline]
+>      f2fs_grab_cache_page fs/f2fs/f2fs.h:2395 [inline]
+>      f2fs_grab_cache_page fs/f2fs/f2fs.h:2373 [inline]
+>      __get_node_page.part.0+0x39/0x2d0 fs/f2fs/node.c:1350
+>      __get_node_page fs/f2fs/node.c:35 [inline]
+>      f2fs_get_node_page+0x2e/0x60 fs/f2fs/node.c:1399
+>      read_inline_xattr+0x88/0x140 fs/f2fs/xattr.c:288
+>      lookup_all_xattrs+0x1f9/0x2c0 fs/f2fs/xattr.c:344
+>      f2fs_getxattr+0x9b/0x160 fs/f2fs/xattr.c:532
+>      f2fs_get_context+0x1e/0x20 fs/f2fs/super.c:2460
+>      fscrypt_get_encryption_info+0x9b/0x450 fs/crypto/keysetup.c:472
+>      fscrypt_inherit_context+0x2f/0xb0 fs/crypto/policy.c:640
+>      f2fs_init_inode_metadata+0xab/0x340 fs/f2fs/dir.c:540
+>      f2fs_add_inline_entry+0x145/0x390 fs/f2fs/inline.c:621
+>      f2fs_add_dentry+0x31/0x80 fs/f2fs/dir.c:757
+>      f2fs_do_add_link+0xcd/0x130 fs/f2fs/dir.c:798
+>      f2fs_add_link fs/f2fs/f2fs.h:3234 [inline]
+>      f2fs_create+0x104/0x290 fs/f2fs/namei.c:344
+>      lookup_open.isra.0+0x2de/0x500 fs/namei.c:3103
+>      open_last_lookups+0xa9/0x340 fs/namei.c:3177
+>      path_openat+0x8f/0x1b0 fs/namei.c:3365
+>      do_filp_open+0x87/0x130 fs/namei.c:3395
+>      do_sys_openat2+0x96/0x150 fs/open.c:1168
+>      [...]
+> 
+> That happened because f2fs_add_inline_entry() locks the directory
+> inode's page in order to add the dentry, then f2fs_get_context() tries
+> to lock it recursively in order to read the encryption xattr.  This
+> problem is specific to "test_dummy_encryption" because normally the
+> directory's fscrypt_info would be set up prior to
+> f2fs_add_inline_entry() in order to encrypt the new filename.
+> 
+> Regardless, the new design fixes this test_dummy_encryption deadlock as
+> well as potential deadlocks with fs reclaim, by setting up any needed
+> fscrypt_info structs prior to taking so many locks.
+> 
+> The test_dummy_encryption deadlock was reported by Daniel Rosenberg.
+> 
+> Reported-by: Daniel Rosenberg <drosen@google.com>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-To compute a new inode's xattr credits, we need to know whether the
-inode will be encrypted or not.  When we switch to use the new helper
-function fscrypt_prepare_new_inode(), we won't find out whether the
-inode will be encrypted until slightly later than is currently the case.
-That will require moving the code block that computes the xattr credits.
+Thanks.
 
-To make this easier and reduce the length of __ext4_new_inode(), move
-this code block into a new function ext4_xattr_credits_for_new_inode().
+Acked-by: Jaegeuk Kim <jaegeuk@kernel.org>
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/ext4/ialloc.c | 90 +++++++++++++++++++++++++++---------------------
- 1 file changed, 51 insertions(+), 39 deletions(-)
-
-diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-index df25d38d65393..0cc576005a923 100644
---- a/fs/ext4/ialloc.c
-+++ b/fs/ext4/ialloc.c
-@@ -742,6 +742,53 @@ static int find_inode_bit(struct super_block *sb, ext4_group_t group,
- 	return 1;
- }
- 
-+static int ext4_xattr_credits_for_new_inode(struct inode *dir, mode_t mode,
-+					    bool encrypt)
-+{
-+	struct super_block *sb = dir->i_sb;
-+	int nblocks = 0;
-+#ifdef CONFIG_EXT4_FS_POSIX_ACL
-+	struct posix_acl *p = get_acl(dir, ACL_TYPE_DEFAULT);
-+
-+	if (IS_ERR(p))
-+		return PTR_ERR(p);
-+	if (p) {
-+		int acl_size = p->a_count * sizeof(ext4_acl_entry);
-+
-+		nblocks += (S_ISDIR(mode) ? 2 : 1) *
-+			__ext4_xattr_set_credits(sb, NULL /* inode */,
-+						 NULL /* block_bh */, acl_size,
-+						 true /* is_create */);
-+		posix_acl_release(p);
-+	}
-+#endif
-+
-+#ifdef CONFIG_SECURITY
-+	{
-+		int num_security_xattrs = 1;
-+
-+#ifdef CONFIG_INTEGRITY
-+		num_security_xattrs++;
-+#endif
-+		/*
-+		 * We assume that security xattrs are never more than 1k.
-+		 * In practice they are under 128 bytes.
-+		 */
-+		nblocks += num_security_xattrs *
-+			__ext4_xattr_set_credits(sb, NULL /* inode */,
-+						 NULL /* block_bh */, 1024,
-+						 true /* is_create */);
-+	}
-+#endif
-+	if (encrypt)
-+		nblocks += __ext4_xattr_set_credits(sb,
-+						    NULL /* inode */,
-+						    NULL /* block_bh */,
-+						    FSCRYPT_SET_CONTEXT_MAX_SIZE,
-+						    true /* is_create */);
-+	return nblocks;
-+}
-+
- /*
-  * There are two policies for allocating an inode.  If the new inode is
-  * a directory, then a forward search is made for a block group with both
-@@ -796,45 +843,10 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
- 	}
- 
- 	if (!handle && sbi->s_journal && !(i_flags & EXT4_EA_INODE_FL)) {
--#ifdef CONFIG_EXT4_FS_POSIX_ACL
--		struct posix_acl *p = get_acl(dir, ACL_TYPE_DEFAULT);
--
--		if (IS_ERR(p))
--			return ERR_CAST(p);
--		if (p) {
--			int acl_size = p->a_count * sizeof(ext4_acl_entry);
--
--			nblocks += (S_ISDIR(mode) ? 2 : 1) *
--				__ext4_xattr_set_credits(sb, NULL /* inode */,
--					NULL /* block_bh */, acl_size,
--					true /* is_create */);
--			posix_acl_release(p);
--		}
--#endif
--
--#ifdef CONFIG_SECURITY
--		{
--			int num_security_xattrs = 1;
--
--#ifdef CONFIG_INTEGRITY
--			num_security_xattrs++;
--#endif
--			/*
--			 * We assume that security xattrs are never
--			 * more than 1k.  In practice they are under
--			 * 128 bytes.
--			 */
--			nblocks += num_security_xattrs *
--				__ext4_xattr_set_credits(sb, NULL /* inode */,
--					NULL /* block_bh */, 1024,
--					true /* is_create */);
--		}
--#endif
--		if (encrypt)
--			nblocks += __ext4_xattr_set_credits(sb,
--					NULL /* inode */, NULL /* block_bh */,
--					FSCRYPT_SET_CONTEXT_MAX_SIZE,
--					true /* is_create */);
-+		ret2 = ext4_xattr_credits_for_new_inode(dir, mode, encrypt);
-+		if (ret2 < 0)
-+			return ERR_PTR(ret2);
-+		nblocks += ret2;
- 	}
- 
- 	ngroups = ext4_get_groups_count(sb);
--- 
-2.28.0
-
+> ---
+>  fs/f2fs/dir.c   |  2 +-
+>  fs/f2fs/f2fs.h  | 23 -----------------------
+>  fs/f2fs/namei.c |  7 ++++++-
+>  3 files changed, 7 insertions(+), 25 deletions(-)
+> 
+> diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
+> index b2530b9507bd9..414bc94fbd546 100644
+> --- a/fs/f2fs/dir.c
+> +++ b/fs/f2fs/dir.c
+> @@ -537,7 +537,7 @@ struct page *f2fs_init_inode_metadata(struct inode *inode, struct inode *dir,
+>  			goto put_error;
+>  
+>  		if (IS_ENCRYPTED(inode)) {
+> -			err = fscrypt_inherit_context(dir, inode, page, false);
+> +			err = fscrypt_set_context(inode, page);
+>  			if (err)
+>  				goto put_error;
+>  		}
+> diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+> index d9e52a7f3702f..0503371f88ed4 100644
+> --- a/fs/f2fs/f2fs.h
+> +++ b/fs/f2fs/f2fs.h
+> @@ -1315,13 +1315,6 @@ enum fsync_mode {
+>  #define IS_IO_TRACED_PAGE(page) (0)
+>  #endif
+>  
+> -#ifdef CONFIG_FS_ENCRYPTION
+> -#define DUMMY_ENCRYPTION_ENABLED(sbi) \
+> -	(unlikely(F2FS_OPTION(sbi).dummy_enc_ctx.ctx != NULL))
+> -#else
+> -#define DUMMY_ENCRYPTION_ENABLED(sbi) (0)
+> -#endif
+> -
+>  /* For compression */
+>  enum compress_algorithm_type {
+>  	COMPRESS_LZO,
+> @@ -4022,22 +4015,6 @@ static inline bool f2fs_lfs_mode(struct f2fs_sb_info *sbi)
+>  	return F2FS_OPTION(sbi).fs_mode == FS_MODE_LFS;
+>  }
+>  
+> -static inline bool f2fs_may_encrypt(struct inode *dir, struct inode *inode)
+> -{
+> -#ifdef CONFIG_FS_ENCRYPTION
+> -	struct f2fs_sb_info *sbi = F2FS_I_SB(dir);
+> -	umode_t mode = inode->i_mode;
+> -
+> -	/*
+> -	 * If the directory encrypted or dummy encryption enabled,
+> -	 * then we should encrypt the inode.
+> -	 */
+> -	if (IS_ENCRYPTED(dir) || DUMMY_ENCRYPTION_ENABLED(sbi))
+> -		return (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode));
+> -#endif
+> -	return false;
+> -}
+> -
+>  static inline bool f2fs_may_compress(struct inode *inode)
+>  {
+>  	if (IS_SWAPFILE(inode) || f2fs_is_pinned_file(inode) ||
+> diff --git a/fs/f2fs/namei.c b/fs/f2fs/namei.c
+> index 84e4bbc1a64de..45f324511a19e 100644
+> --- a/fs/f2fs/namei.c
+> +++ b/fs/f2fs/namei.c
+> @@ -28,6 +28,7 @@ static struct inode *f2fs_new_inode(struct inode *dir, umode_t mode)
+>  	nid_t ino;
+>  	struct inode *inode;
+>  	bool nid_free = false;
+> +	bool encrypt = false;
+>  	int xattr_size = 0;
+>  	int err;
+>  
+> @@ -69,13 +70,17 @@ static struct inode *f2fs_new_inode(struct inode *dir, umode_t mode)
+>  		F2FS_I(inode)->i_projid = make_kprojid(&init_user_ns,
+>  							F2FS_DEF_PROJID);
+>  
+> +	err = fscrypt_prepare_new_inode(dir, inode, &encrypt);
+> +	if (err)
+> +		goto fail_drop;
+> +
+>  	err = dquot_initialize(inode);
+>  	if (err)
+>  		goto fail_drop;
+>  
+>  	set_inode_flag(inode, FI_NEW_INODE);
+>  
+> -	if (f2fs_may_encrypt(dir, inode))
+> +	if (encrypt)
+>  		f2fs_set_encrypted_inode(inode);
+>  
+>  	if (f2fs_sb_has_extra_attr(sbi)) {
+> -- 
+> 2.28.0
+> 
+> 
+> 
+> _______________________________________________
+> Linux-f2fs-devel mailing list
+> Linux-f2fs-devel@lists.sourceforge.net
+> https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
