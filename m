@@ -7,47 +7,47 @@ X-Spam-Status: No, score=-16.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1F0A2C3526A
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D70F6C3526B
 	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Sep 2020 04:21:14 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id D2E092075E
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Sep 2020 04:21:13 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 93C632074B
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Sep 2020 04:21:14 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1600316473;
-	bh=7wQf9Y1Ge/SR2fWtRDGBHBDQ9VcJIvgAiZJHiDlXVEw=;
+	s=default; t=1600316474;
+	bh=b+br3C3cbfnBLBIC6l48f9MznNCXZDVFxP9oBuV6fkI=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=1/bzqPMPVtAHeIBcOv5FvAD4l2DUo8BwQe7Npoiqdg/kVjCKe7FW3bieQf5vLtwMg
-	 stc1RE76E9Z/okdaga3yEJ1QaL9jciyWdtfZF9NdFwwEJXri+cPi+qmbHGTGn9SvIu
-	 7o0hMD+1LTbMH2GFyyJrl/IJjKOTR/9/STjTF23U=
+	b=UvbBfU/4+sGyjLsPLqoQnGKcKNbi1KPbp6ggyGO2Mpcz5DmK9mvg/OIOU/7Y1NCet
+	 4emaaC1kL75555Rd+E2UZD6EhSBF0LqSyLyLVKNOgpfJcIpyyYKAUG8y2Q/MBZY52k
+	 w5g8Y/cYRKmSeLLeR4k2fbG04bZ5Ipb2arPlCq28=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726273AbgIQEUy (ORCPT
+        id S1726265AbgIQEUw (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 17 Sep 2020 00:20:54 -0400
-Received: from mail.kernel.org ([198.145.29.99]:33846 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726180AbgIQEUw (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Thu, 17 Sep 2020 00:20:52 -0400
+Received: from mail.kernel.org ([198.145.29.99]:33844 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726156AbgIQEUv (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 17 Sep 2020 00:20:51 -0400
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id AF604221E7;
-        Thu, 17 Sep 2020 04:13:10 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id BB72121973;
+        Thu, 17 Sep 2020 04:13:08 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1600315990;
-        bh=7wQf9Y1Ge/SR2fWtRDGBHBDQ9VcJIvgAiZJHiDlXVEw=;
+        s=default; t=1600315988;
+        bh=b+br3C3cbfnBLBIC6l48f9MznNCXZDVFxP9oBuV6fkI=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=KuwrpsyKR6Az33Os8au9dNORztVK5lPaO//5B4B9GGkqISAfjzCoMKvSaFMdYkK+H
-         cTfwdylHR5zS/tWU4yj+Sm4uxrUgf/O1/jB19DUFCvaoNPk/KtcTePbae7Dup7hHHg
-         AlchzaMoe4dDGfi2GfcedI9GWx9Qsvh1eLld4LG4=
+        b=ZU8LAn6Ou/W4N6ND26oun8qG5aZepZ6dTFMZDxiaRflydZRTsHZ35RWxtI5H1+IQl
+         jmabDjvBJmMyQLQLBdXsgOZF4nY7Q7UNVBsq4RqsPzZiP4praeOA9Jzs90s2IcJ8eS
+         +dfaFJXD+as/p7uWPMk6QpIGUokQ9QuvJWYc1YoM=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org,
         Jeff Layton <jlayton@kernel.org>,
         Daniel Rosenberg <drosen@google.com>
-Subject: [PATCH v3 10/13] fscrypt: make "#define fscrypt_policy" user-only
-Date:   Wed, 16 Sep 2020 21:11:33 -0700
-Message-Id: <20200917041136.178600-11-ebiggers@kernel.org>
+Subject: [PATCH v3 03/13] ext4: use fscrypt_prepare_new_inode() and fscrypt_set_context()
+Date:   Wed, 16 Sep 2020 21:11:26 -0700
+Message-Id: <20200917041136.178600-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.28.0
 In-Reply-To: <20200917041136.178600-1-ebiggers@kernel.org>
 References: <20200917041136.178600-1-ebiggers@kernel.org>
@@ -59,73 +59,92 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-The fscrypt UAPI header defines fscrypt_policy to fscrypt_policy_v1,
-for source compatibility with old userspace programs.
+Convert ext4 to use the new functions fscrypt_prepare_new_inode() and
+fscrypt_set_context().  This avoids calling
+fscrypt_get_encryption_info() from within a transaction, which can
+deadlock because fscrypt_get_encryption_info() isn't GFP_NOFS-safe.
 
-Internally, the kernel doesn't want that compatibility definition.
-Instead, fscrypt_private.h #undefs it and re-defines it to a union.
-
-That works for now.  However, in order to add
-fscrypt_operations::get_dummy_policy(), we'll need to forward declare
-'union fscrypt_policy' in include/linux/fscrypt.h.  That would cause
-build errors because "fscrypt_policy" is used in ioctl numbers.
-
-To avoid this, modify the UAPI header to make the fscrypt_policy
-compatibility definition conditional on !__KERNEL__, and make the ioctls
-use fscrypt_policy_v1 instead of fscrypt_policy.
-
-Note that this doesn't change the actual ioctl numbers.
+For more details about this problem, see the earlier patch
+"fscrypt: add fscrypt_prepare_new_inode() and fscrypt_set_context()".
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/fscrypt_private.h  | 1 -
- include/uapi/linux/fscrypt.h | 6 +++---
- 2 files changed, 3 insertions(+), 4 deletions(-)
+ fs/ext4/ialloc.c | 37 +++++++++++++++++--------------------
+ 1 file changed, 17 insertions(+), 20 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 355f6d9377517..ac3352086ee44 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -97,7 +97,6 @@ static inline const u8 *fscrypt_context_nonce(const union fscrypt_context *ctx)
- 	return NULL;
- }
+diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
+index 0cc576005a923..698ca4a4db5f7 100644
+--- a/fs/ext4/ialloc.c
++++ b/fs/ext4/ialloc.c
+@@ -819,7 +819,7 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
+ 	ext4_group_t i;
+ 	ext4_group_t flex_group;
+ 	struct ext4_group_info *grp;
+-	int encrypt = 0;
++	bool encrypt = false;
  
--#undef fscrypt_policy
- union fscrypt_policy {
- 	u8 version;
- 	struct fscrypt_policy_v1 v1;
-diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-index 7875709ccfebf..e5de603369381 100644
---- a/include/uapi/linux/fscrypt.h
-+++ b/include/uapi/linux/fscrypt.h
-@@ -45,7 +45,6 @@ struct fscrypt_policy_v1 {
- 	__u8 flags;
- 	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
- };
--#define fscrypt_policy	fscrypt_policy_v1
+ 	/* Cannot create files in a deleted directory */
+ 	if (!dir || !dir->i_nlink)
+@@ -831,24 +831,6 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
+ 	if (unlikely(ext4_forced_shutdown(sbi)))
+ 		return ERR_PTR(-EIO);
  
- /*
-  * Process-subscribed "logon" key description prefix and payload format.
-@@ -156,9 +155,9 @@ struct fscrypt_get_key_status_arg {
- 	__u32 __out_reserved[13];
- };
+-	if ((IS_ENCRYPTED(dir) || DUMMY_ENCRYPTION_ENABLED(sbi)) &&
+-	    (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode)) &&
+-	    !(i_flags & EXT4_EA_INODE_FL)) {
+-		err = fscrypt_get_encryption_info(dir);
+-		if (err)
+-			return ERR_PTR(err);
+-		if (!fscrypt_has_encryption_key(dir))
+-			return ERR_PTR(-ENOKEY);
+-		encrypt = 1;
+-	}
+-
+-	if (!handle && sbi->s_journal && !(i_flags & EXT4_EA_INODE_FL)) {
+-		ret2 = ext4_xattr_credits_for_new_inode(dir, mode, encrypt);
+-		if (ret2 < 0)
+-			return ERR_PTR(ret2);
+-		nblocks += ret2;
+-	}
+-
+ 	ngroups = ext4_get_groups_count(sb);
+ 	trace_ext4_request_inode(dir, mode);
+ 	inode = new_inode(sb);
+@@ -878,10 +860,25 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
+ 	else
+ 		ei->i_projid = make_kprojid(&init_user_ns, EXT4_DEF_PROJID);
  
--#define FS_IOC_SET_ENCRYPTION_POLICY		_IOR('f', 19, struct fscrypt_policy)
-+#define FS_IOC_SET_ENCRYPTION_POLICY		_IOR('f', 19, struct fscrypt_policy_v1)
- #define FS_IOC_GET_ENCRYPTION_PWSALT		_IOW('f', 20, __u8[16])
--#define FS_IOC_GET_ENCRYPTION_POLICY		_IOW('f', 21, struct fscrypt_policy)
-+#define FS_IOC_GET_ENCRYPTION_POLICY		_IOW('f', 21, struct fscrypt_policy_v1)
- #define FS_IOC_GET_ENCRYPTION_POLICY_EX		_IOWR('f', 22, __u8[9]) /* size + version */
- #define FS_IOC_ADD_ENCRYPTION_KEY		_IOWR('f', 23, struct fscrypt_add_key_arg)
- #define FS_IOC_REMOVE_ENCRYPTION_KEY		_IOWR('f', 24, struct fscrypt_remove_key_arg)
-@@ -170,6 +169,7 @@ struct fscrypt_get_key_status_arg {
++	if (!(i_flags & EXT4_EA_INODE_FL)) {
++		err = fscrypt_prepare_new_inode(dir, inode, &encrypt);
++		if (err)
++			goto out;
++	}
++
+ 	err = dquot_initialize(inode);
+ 	if (err)
+ 		goto out;
  
- /* old names; don't add anything new here! */
- #ifndef __KERNEL__
-+#define fscrypt_policy			fscrypt_policy_v1
- #define FS_KEY_DESCRIPTOR_SIZE		FSCRYPT_KEY_DESCRIPTOR_SIZE
- #define FS_POLICY_FLAGS_PAD_4		FSCRYPT_POLICY_FLAGS_PAD_4
- #define FS_POLICY_FLAGS_PAD_8		FSCRYPT_POLICY_FLAGS_PAD_8
++	if (!handle && sbi->s_journal && !(i_flags & EXT4_EA_INODE_FL)) {
++		ret2 = ext4_xattr_credits_for_new_inode(dir, mode, encrypt);
++		if (ret2 < 0) {
++			err = ret2;
++			goto out;
++		}
++		nblocks += ret2;
++	}
++
+ 	if (!goal)
+ 		goal = sbi->s_inode_goal;
+ 
+@@ -1174,7 +1171,7 @@ struct inode *__ext4_new_inode(handle_t *handle, struct inode *dir,
+ 	 * prevent its deduplication.
+ 	 */
+ 	if (encrypt) {
+-		err = fscrypt_inherit_context(dir, inode, handle, true);
++		err = fscrypt_set_context(inode, handle);
+ 		if (err)
+ 			goto fail_free_drop;
+ 	}
 -- 
 2.28.0
 
