@@ -7,47 +7,47 @@ X-Spam-Status: No, score=-16.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 93EFCC43461
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Sep 2020 04:21:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0BB0DC43461
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Sep 2020 04:21:35 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 428D82075E
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Sep 2020 04:21:29 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id CE9D12075E
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Sep 2020 04:21:34 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1600316489;
-	bh=MedRkQM4S6L0pv+MPP4bqqDFZVyFMtpnCXSEEWcRDY0=;
+	s=default; t=1600316494;
+	bh=QcAYVOOtDATZpIRqzv/LkDypHnDI6SB1ZfPpGvjEMKo=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=sWC7/nxLG3Y/iHPxeDp4nARS8zDk6/HGQqfKor3K1K7FVA7mrrolDIVbInXDIuwRt
-	 D/TeY+qO7Pg80kIB4WUjdYpaoJrJpra7aLnGhxqd12jXCAjM/luzRI2tPCTX2+j4Ph
-	 1Z71bo6KgTnIyLa+0hneFcK76FTBNqN2McVSQNc4=
+	b=wVcSU2SfVaj0bUVwMBe4bzGO/EMgCb9Xqm1eE/SE1ClcY+1ptJaG28JSahTl30ruV
+	 ztL8hDSG0wJTF0BwLIrVrYGvLBn2qVlw7Etey45zpv/yJ3Kak7sqw3g6E1Ort0HucJ
+	 wXMOFmdTsnZC58wDCYekDbd+fp+ylRvSWjtN9PRU=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726290AbgIQEVP (ORCPT
+        id S1726221AbgIQEUl (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 17 Sep 2020 00:21:15 -0400
-Received: from mail.kernel.org ([198.145.29.99]:33850 "EHLO mail.kernel.org"
+        Thu, 17 Sep 2020 00:20:41 -0400
+Received: from mail.kernel.org ([198.145.29.99]:33834 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726171AbgIQEUw (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 17 Sep 2020 00:20:52 -0400
+        id S1726002AbgIQEUi (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 17 Sep 2020 00:20:38 -0400
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 8E959221EE;
-        Thu, 17 Sep 2020 04:13:11 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id DAB0C20936;
+        Thu, 17 Sep 2020 04:13:09 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1600315991;
-        bh=MedRkQM4S6L0pv+MPP4bqqDFZVyFMtpnCXSEEWcRDY0=;
+        s=default; t=1600315990;
+        bh=QcAYVOOtDATZpIRqzv/LkDypHnDI6SB1ZfPpGvjEMKo=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=lr++qrX77fU11azDYwRHdjmB89MkN+vJsWsCYTA4dAjbWyUJg+qh44OEDffyMmHSK
-         Hnhok4h3gzgLNqlK3jugfTl1CZwhbMvPUQUKwjILjTUICYKTC4k6+ieMEZQOTrJsJN
-         xR//al7xCw7MtWVJ6WYy1tbCrzwXX7nbyDYv6HPg=
+        b=BfLDyBtZIA6dbS4WI8gOFoGjP4ZUYR59vTK2E7LdB1wCRtglLFegAhg13d7WrRR9o
+         8Ys5ip1c5F08U7xvb76wBxtsbzm8q3aXfewKKqaPsdQgeNXCjii7WFkUGCLInWi8HH
+         VMYEVSRCetkEfZiyGIurCKAbJjCx+uLtkhs7hREw=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org,
         Jeff Layton <jlayton@kernel.org>,
         Daniel Rosenberg <drosen@google.com>
-Subject: [PATCH v3 13/13] fscrypt: make fscrypt_set_test_dummy_encryption() take a 'const char *'
-Date:   Wed, 16 Sep 2020 21:11:36 -0700
-Message-Id: <20200917041136.178600-14-ebiggers@kernel.org>
+Subject: [PATCH v3 07/13] fscrypt: remove fscrypt_inherit_context()
+Date:   Wed, 16 Sep 2020 21:11:30 -0700
+Message-Id: <20200917041136.178600-8-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.28.0
 In-Reply-To: <20200917041136.178600-1-ebiggers@kernel.org>
 References: <20200917041136.178600-1-ebiggers@kernel.org>
@@ -59,131 +59,91 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-fscrypt_set_test_dummy_encryption() requires that the optional argument
-to the test_dummy_encryption mount option be specified as a substring_t.
-That doesn't work well with filesystems that use the new mount API,
-since the new way of parsing mount options doesn't use substring_t.
-
-Make it take the argument as a 'const char *' instead.
-
-Instead of moving the match_strdup() into the callers in ext4 and f2fs,
-make them just use arg->from directly.  Since the pattern is
-"test_dummy_encryption=%s", the argument will be null-terminated.
+Now that all filesystems have been converted to use
+fscrypt_prepare_new_inode() and fscrypt_set_context(),
+fscrypt_inherit_context() is no longer used.  Remove it.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/policy.c      | 20 ++++++--------------
- fs/ext4/super.c         |  2 +-
- fs/f2fs/super.c         |  2 +-
- include/linux/fscrypt.h |  5 +----
- 4 files changed, 9 insertions(+), 20 deletions(-)
+ fs/crypto/policy.c      | 37 -------------------------------------
+ include/linux/fscrypt.h |  9 ---------
+ 2 files changed, 46 deletions(-)
 
 diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 97cf07543651f..4441d9944b9ef 100644
+index 7e96953d385ec..4ff893f7b030a 100644
 --- a/fs/crypto/policy.c
 +++ b/fs/crypto/policy.c
-@@ -697,8 +697,7 @@ EXPORT_SYMBOL_GPL(fscrypt_set_context);
- /**
-  * fscrypt_set_test_dummy_encryption() - handle '-o test_dummy_encryption'
-  * @sb: the filesystem on which test_dummy_encryption is being specified
-- * @arg: the argument to the test_dummy_encryption option.
-- *	 If no argument was specified, then @arg->from == NULL.
-+ * @arg: the argument to the test_dummy_encryption option.  May be NULL.
-  * @dummy_policy: the filesystem's current dummy policy (input/output, see
-  *		  below)
-  *
-@@ -712,29 +711,23 @@ EXPORT_SYMBOL_GPL(fscrypt_set_context);
-  *         -EEXIST if a different dummy policy is already set;
-  *         or another -errno value.
-  */
--int fscrypt_set_test_dummy_encryption(struct super_block *sb,
--				      const substring_t *arg,
-+int fscrypt_set_test_dummy_encryption(struct super_block *sb, const char *arg,
- 				      struct fscrypt_dummy_policy *dummy_policy)
- {
--	const char *argstr = "v2";
--	const char *argstr_to_free = NULL;
- 	struct fscrypt_key_specifier key_spec = { 0 };
- 	int version;
- 	union fscrypt_policy *policy = NULL;
- 	int err;
- 
--	if (arg->from) {
--		argstr = argstr_to_free = match_strdup(arg);
--		if (!argstr)
--			return -ENOMEM;
--	}
-+	if (!arg)
-+		arg = "v2";
- 
--	if (!strcmp(argstr, "v1")) {
-+	if (!strcmp(arg, "v1")) {
- 		version = FSCRYPT_POLICY_V1;
- 		key_spec.type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
- 		memset(key_spec.u.descriptor, 0x42,
- 		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
--	} else if (!strcmp(argstr, "v2")) {
-+	} else if (!strcmp(arg, "v2")) {
- 		version = FSCRYPT_POLICY_V2;
- 		key_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
- 		/* key_spec.u.identifier gets filled in when adding the key */
-@@ -785,7 +778,6 @@ int fscrypt_set_test_dummy_encryption(struct super_block *sb,
- 	err = 0;
- out:
- 	kfree(policy);
--	kfree(argstr_to_free);
- 	return err;
+@@ -628,43 +628,6 @@ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child)
  }
- EXPORT_SYMBOL_GPL(fscrypt_set_test_dummy_encryption);
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 7e77722406e2f..ed5624285a475 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -1893,7 +1893,7 @@ static int ext4_set_test_dummy_encryption(struct super_block *sb,
- 			 "Can't set test_dummy_encryption on remount");
- 		return -1;
- 	}
--	err = fscrypt_set_test_dummy_encryption(sb, arg,
-+	err = fscrypt_set_test_dummy_encryption(sb, arg->from,
- 						&sbi->s_dummy_enc_policy);
- 	if (err) {
- 		if (err == -EEXIST)
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index f2b3d1a279fb7..c72d22c0c52e7 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -438,7 +438,7 @@ static int f2fs_set_test_dummy_encryption(struct super_block *sb,
- 		return -EINVAL;
- 	}
- 	err = fscrypt_set_test_dummy_encryption(
--		sb, arg, &F2FS_OPTION(sbi).dummy_enc_policy);
-+		sb, arg->from, &F2FS_OPTION(sbi).dummy_enc_policy);
- 	if (err) {
- 		if (err == -EEXIST)
- 			f2fs_warn(sbi,
+ EXPORT_SYMBOL(fscrypt_has_permitted_context);
+ 
+-/**
+- * fscrypt_inherit_context() - Sets a child context from its parent
+- * @parent: Parent inode from which the context is inherited.
+- * @child:  Child inode that inherits the context from @parent.
+- * @fs_data:  private data given by FS.
+- * @preload:  preload child i_crypt_info if true
+- *
+- * Return: 0 on success, -errno on failure
+- */
+-int fscrypt_inherit_context(struct inode *parent, struct inode *child,
+-						void *fs_data, bool preload)
+-{
+-	u8 nonce[FSCRYPT_FILE_NONCE_SIZE];
+-	union fscrypt_context ctx;
+-	int ctxsize;
+-	struct fscrypt_info *ci;
+-	int res;
+-
+-	res = fscrypt_get_encryption_info(parent);
+-	if (res < 0)
+-		return res;
+-
+-	ci = fscrypt_get_info(parent);
+-	if (ci == NULL)
+-		return -ENOKEY;
+-
+-	get_random_bytes(nonce, FSCRYPT_FILE_NONCE_SIZE);
+-	ctxsize = fscrypt_new_context(&ctx, &ci->ci_policy, nonce);
+-
+-	BUILD_BUG_ON(sizeof(ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
+-	res = parent->i_sb->s_cop->set_context(child, &ctx, ctxsize, fs_data);
+-	if (res)
+-		return res;
+-	return preload ? fscrypt_get_encryption_info(child): 0;
+-}
+-EXPORT_SYMBOL(fscrypt_inherit_context);
+-
+ /**
+  * fscrypt_set_context() - Set the fscrypt context of a new inode
+  * @inode: a new inode
 diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index b3b0c5675c6b1..fc67c4cbaa968 100644
+index 9cf7ca90f3abb..81d6ded243288 100644
 --- a/include/linux/fscrypt.h
 +++ b/include/linux/fscrypt.h
-@@ -15,7 +15,6 @@
+@@ -156,8 +156,6 @@ int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg);
+ int fscrypt_ioctl_get_policy_ex(struct file *filp, void __user *arg);
+ int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
+ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child);
+-int fscrypt_inherit_context(struct inode *parent, struct inode *child,
+-			    void *fs_data, bool preload);
+ int fscrypt_set_context(struct inode *inode, void *fs_data);
  
- #include <linux/fs.h>
- #include <linux/mm.h>
--#include <linux/parser.h>
- #include <linux/slab.h>
- #include <uapi/linux/fscrypt.h>
+ struct fscrypt_dummy_context {
+@@ -343,13 +341,6 @@ static inline int fscrypt_has_permitted_context(struct inode *parent,
+ 	return 0;
+ }
  
-@@ -153,9 +152,7 @@ struct fscrypt_dummy_policy {
- 	const union fscrypt_policy *policy;
- };
- 
--int fscrypt_set_test_dummy_encryption(
--				struct super_block *sb,
--				const substring_t *arg,
-+int fscrypt_set_test_dummy_encryption(struct super_block *sb, const char *arg,
- 				struct fscrypt_dummy_policy *dummy_policy);
- void fscrypt_show_test_dummy_encryption(struct seq_file *seq, char sep,
- 					struct super_block *sb);
+-static inline int fscrypt_inherit_context(struct inode *parent,
+-					  struct inode *child,
+-					  void *fs_data, bool preload)
+-{
+-	return -EOPNOTSUPP;
+-}
+-
+ static inline int fscrypt_set_context(struct inode *inode, void *fs_data)
+ {
+ 	return -EOPNOTSUPP;
 -- 
 2.28.0
 
