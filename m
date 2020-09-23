@@ -2,44 +2,43 @@ Return-Path: <SRS0=Z22n=DA=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-5.3 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3C412C4363D
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Sep 2020 05:59:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 98171C4363D
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Sep 2020 06:07:53 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id E932823600
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Sep 2020 05:59:56 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 6634A235FC
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 23 Sep 2020 06:07:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1600840797;
-	bh=I/8XzISzbBcCgYVmxLepZyG9w1CITHS3v+J9bySyNa0=;
+	s=default; t=1600841273;
+	bh=kyWQ8LYf7qzECEdXjAoNSqNNVC8G8Y8QllK22Douvts=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=rZq9Fo/6goFSCGSFFzNLjTEHUnEDm5UBzaIkcf/3+kvRa1PdQmvKW6WgHXCu9HYkd
-	 RbyzZN33CGxD93ci4jzX51dQwOPNRlf9psDri3Bry+7HRMd50irVjW4NSqiwFKnoSX
-	 VJajg0OAKlK9XGTbMjAOI4JXBMxZwTlQDAjTUvAA=
+	b=Qc37O3K08yZ26NVML7cacLSPuLTZJTJagaST/Nf0pjqAv6LTQtUL9+3QKfxEsHi85
+	 h6lZdWnqSEDoNi+raoAZdDgw6szKBQKoSOBBLAatVGG8WhSH+KX1xSP11dCN2PDr37
+	 1shoMoR8yo9JnDyg4chpX+O7A/jHLU/a6aOt+Ajc=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726672AbgIWF7x (ORCPT
+        id S1726686AbgIWGHt (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 23 Sep 2020 01:59:53 -0400
-Received: from mail.kernel.org ([198.145.29.99]:38524 "EHLO mail.kernel.org"
+        Wed, 23 Sep 2020 02:07:49 -0400
+Received: from mail.kernel.org ([198.145.29.99]:46104 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726179AbgIWF7x (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 23 Sep 2020 01:59:53 -0400
+        id S1726827AbgIWGHR (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 23 Sep 2020 02:07:17 -0400
 Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 73F0123444;
-        Wed, 23 Sep 2020 05:59:52 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 7BEC9235FC;
+        Wed, 23 Sep 2020 06:07:16 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1600840792;
-        bh=I/8XzISzbBcCgYVmxLepZyG9w1CITHS3v+J9bySyNa0=;
+        s=default; t=1600841236;
+        bh=kyWQ8LYf7qzECEdXjAoNSqNNVC8G8Y8QllK22Douvts=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=ma7PADmZA95LLBo9KrXphWNWVsOVp+R73XlXBBcLHitEY4X5VwCFJSVq7vuCYgC3V
-         HIT9jQdNXpRYH0Rkj3vSz4V7G9BGteBdDqsxV/pAjN1mmz6khsLf9uFQEZlx+JA+bt
-         9uHpKQjziJ+IY+pVDK+nuHCnTz8A3CoT7WQ/HOGU=
-Date:   Tue, 22 Sep 2020 22:59:50 -0700
+        b=lDlsAnvlLTFfh5gvzZnIhu6t8x8513xuoBHUj/FJRyY6n5ixwf7t/gfjtYU2abUJE
+         2ANdE+NbEuR3FdILpOGpbTXLaRP3o1THWDT+g2nbv/P27sYI3n3sxUEW6aIt4GnFmx
+         0qPYtcS2uf+FibkrZAMT596HZyf3H9QGvUW8bUz0=
+Date:   Tue, 22 Sep 2020 23:07:15 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     Daniel Rosenberg <drosen@google.com>
 Cc:     "Theodore Y . Ts'o" <tytso@mit.edu>,
@@ -54,66 +53,51 @@ Cc:     "Theodore Y . Ts'o" <tytso@mit.edu>,
         linux-mtd@lists.infradead.org,
         Gabriel Krisman Bertazi <krisman@collabora.com>,
         kernel-team@android.com
-Subject: Re: [PATCH 2/5] fscrypt: Export fscrypt_d_revalidate
-Message-ID: <20200923055950.GC9538@sol.localdomain>
+Subject: Re: [PATCH 3/5] libfs: Add generic function for setting dentry_ops
+Message-ID: <20200923060715.GD9538@sol.localdomain>
 References: <20200923010151.69506-1-drosen@google.com>
- <20200923010151.69506-3-drosen@google.com>
+ <20200923010151.69506-4-drosen@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200923010151.69506-3-drosen@google.com>
+In-Reply-To: <20200923010151.69506-4-drosen@google.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Sep 23, 2020 at 01:01:48AM +0000, Daniel Rosenberg wrote:
-> This is in preparation for shifting the responsibility of setting the
-> dentry_operations to the filesystem, allowing it to maintain its own
-> operations.
+On Wed, Sep 23, 2020 at 01:01:49AM +0000, Daniel Rosenberg wrote:
+> This adds a function to set dentry operations at lookup time that will
+> work for both encrypted files and casefolded filenames.
+
+"encrypted files" => "encrypted filenames"
+
 > 
-> Signed-off-by: Daniel Rosenberg <drosen@google.com>
-> ---
->  fs/crypto/fname.c       | 3 ++-
->  include/linux/fscrypt.h | 1 +
->  2 files changed, 3 insertions(+), 1 deletion(-)
+> A filesystem that supports both features simultaneously can use this
+> function during lookup preperations to set up its dentry operations once
+> fscrypt no longer does that itself.
+
+"preperations" => "preparations"
+
 > 
-> diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-> index 011830f84d8d..d45db23ff6c4 100644
-> --- a/fs/crypto/fname.c
-> +++ b/fs/crypto/fname.c
-> @@ -541,7 +541,7 @@ EXPORT_SYMBOL_GPL(fscrypt_fname_siphash);
->   * Validate dentries in encrypted directories to make sure we aren't potentially
->   * caching stale dentries after a key has been added.
->   */
-> -static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
-> +int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
->  {
->  	struct dentry *dir;
->  	int err;
-> @@ -580,6 +580,7 @@ static int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags)
->  
->  	return valid;
->  }
-> +EXPORT_SYMBOL_GPL(fscrypt_d_revalidate);
->  
->  const struct dentry_operations fscrypt_d_ops = {
->  	.d_revalidate = fscrypt_d_revalidate,
-> diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-> index 991ff8575d0e..265b1e9119dc 100644
-> --- a/include/linux/fscrypt.h
-> +++ b/include/linux/fscrypt.h
-> @@ -207,6 +207,7 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
->  bool fscrypt_match_name(const struct fscrypt_name *fname,
->  			const u8 *de_name, u32 de_name_len);
->  u64 fscrypt_fname_siphash(const struct inode *dir, const struct qstr *name);
-> +extern int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags);
+> Currently the casefolding dentry operation are always set because the
+> feature is toggleable on empty directories. Since we don't know what
+> set of functions we'll eventually need, and cannot change them later,
+> we add just add them.
 
-Please don't use 'extern' here.
+"are always set" => "are always set if the filesystem defines an encoding"
 
-Also FYI, Jeff Layton has sent this same patch as part of the ceph support for
-fscrypt: https://lkml.kernel.org/linux-fscrypt/20200914191707.380444-4-jlayton@kernel.org
+> +/**
+> + * generic_set_encrypted_ci_d_ops - helper for setting d_ops for given dentry
+> + * @dentry:	dentry to set ops on
+> + *
+> + * This function sets the dentry ops for the given dentry to handle both
+> + * casefolding and encryption of the dentry name.
+> + */
 
-I'd like to apply one of them for 5.10 to get it out of the way for both
-patchsets, but I'd like for the commit message to mention both users.
+But it also seems that some of the information in the commit message should go
+into this comment so that it isn't lost.  It's not clear to someone reading this
+code what "handling encryption of the dentry name" means (hint: it doesn't
+actually mean handling encryption...), and why setting the casefolding
+operations isn't conditional on IS_CASEFOLDED(dir).
 
 - Eric
