@@ -2,76 +2,78 @@ Return-Path: <SRS0=mQzA=DF=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SIGNED_OFF_BY,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-4.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 256D0C2D0A8
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Sep 2020 23:25:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9539CC2D0A8
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Sep 2020 23:30:32 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id DE5302076A
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Sep 2020 23:25:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5067720725
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Sep 2020 23:30:32 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1601335531;
-	bh=zTrp+AaZ5ZTVYHgi1Eia39EvvmmLN6MDy5gVqyiAGBE=;
+	s=default; t=1601335832;
+	bh=htsG7cgCjOWP+vwgIjl2Fqt34Hd6Ri+elKAS7Sa4s9I=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=pjK2U8FHDFrMb1nU97eq3doH/SPrRUpLviTcwUPcYKXYci8qG9U+4SVd1xQcYmOfC
-	 MoukQjFXRUHPmrPk0cQln+n94z1fXhmmWhUeGq1E/KPS3KVjPDMoNmRRGb1SRs6w81
-	 uvLB4PgKgqHxM+zcbE8ivRqVCcfJTBh6blJSdlZY=
+	b=iWeyTM8J15BUMLEedVBPYGAaRlCFsNBrdLIIvdukdAWlpCGJvsiesWlFeumLwF6ae
+	 /MvTIbUYl33u3jprglLW7nIFPIAo4mpyyOMCdiW19C3yZcE7BxqAqfao4mxpL8YjrE
+	 rhRr30wkZVUNdXaE/uDMru8tyXWkhlLnLDcSAXzk=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726932AbgI1XZb (ORCPT
+        id S1727078AbgI1Xac (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 28 Sep 2020 19:25:31 -0400
-Received: from mail.kernel.org ([198.145.29.99]:48104 "EHLO mail.kernel.org"
+        Mon, 28 Sep 2020 19:30:32 -0400
+Received: from mail.kernel.org ([198.145.29.99]:53592 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726891AbgI1XZb (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 28 Sep 2020 19:25:31 -0400
+        id S1726948AbgI1Xab (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 28 Sep 2020 19:30:31 -0400
 Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 94D59221EC;
-        Mon, 28 Sep 2020 22:06:24 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 77F1121775;
+        Mon, 28 Sep 2020 21:55:21 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1601330784;
-        bh=zTrp+AaZ5ZTVYHgi1Eia39EvvmmLN6MDy5gVqyiAGBE=;
+        s=default; t=1601330121;
+        bh=htsG7cgCjOWP+vwgIjl2Fqt34Hd6Ri+elKAS7Sa4s9I=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=UPyrygl93Rl8LQS4KBdAKiMrJULfPXtGHBTZ3ZmoUxwfm/LbLPpKUs8Jvx+9Zdx1c
-         QimJvhJkYN7V2SXFZrUTqhVPKl4eDKRujZoxg4kywpiatwfxt7kpwhFMIIeYvAMZg/
-         POZL1P9KDAChUM9vKYc+bCYoKYlzQkG8dMdPHKJ4=
-Date:   Mon, 28 Sep 2020 15:06:23 -0700
+        b=JeRoDOX5fGNEqD17+mt8alMS/Ia9anUvzJ/J58HMWp75rczK5TvFc7upYr25aFTI8
+         bTg4Nx/nPXozSDG5jlQS/tXr1awsFaY2y51DJRpQEEk2ieG+nhP8Ujyvy03NzcunRo
+         7kVX8u2ZU2gx42MvnDioqFMgJ0OtAzWZ2S6ug+FU=
+Date:   Mon, 28 Sep 2020 14:55:20 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     "Theodore Y. Ts'o" <tytso@mit.edu>
-Cc:     Satya Tangirala <satyat@google.com>, linux-fscrypt@vger.kernel.org,
-        linux-ext4@vger.kernel.org
-Subject: Re: [xfstests-bld PATCH v2] test-appliance: exclude generic/587 from
- the encrypt tests
-Message-ID: <20200928220623.GE1340@sol.localdomain>
-References: <20200709184145.GA3855682@gmail.com>
- <20200709185832.2568081-1-satyat@google.com>
- <20200709191031.GB3855682@gmail.com>
- <20200924172729.GI482521@mit.edu>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     linux-fsdevel@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net,
+        Daniel Rosenberg <drosen@google.com>,
+        Jeff Layton <jlayton@kernel.org>
+Subject: Re: [PATCH 0/2] fscrypt: avoid ambiguous terms for "no-key name"
+Message-ID: <20200928215520.GC1340@sol.localdomain>
+References: <20200924042624.98439-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20200924172729.GI482521@mit.edu>
+In-Reply-To: <20200924042624.98439-1-ebiggers@kernel.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Sep 24, 2020 at 01:27:29PM -0400, Theodore Y. Ts'o wrote:
-> On Thu, Jul 09, 2020 at 12:10:31PM -0700, Eric Biggers wrote:
-> > On Thu, Jul 09, 2020 at 06:58:32PM +0000, Satya Tangirala wrote:
-> > > The encryption feature doesn't play well with quota, and generic/587
-> > > tests quota functionality.
-> > > 
-> > > Signed-off-by: Satya Tangirala <satyat@google.com>
-> > 
-> > Reviewed-by: Eric Biggers <ebiggers@google.com>
+On Wed, Sep 23, 2020 at 09:26:22PM -0700, Eric Biggers wrote:
+> This series fixes overloading of the terms "ciphertext name" and
+> "encrypted name" to also sometimes mean "no-key name".
+> The overloading of these terms has caused some confusion.
 > 
-> Applied, thanks
+> No change in behavior.
 > 
+> Eric Biggers (2):
+>   fscrypt: don't call no-key names "ciphertext names"
+>   fscrypt: rename DCACHE_ENCRYPTED_NAME to DCACHE_NOKEY_NAME
+> 
+>  fs/crypto/fname.c       | 16 ++++++++--------
+>  fs/crypto/hooks.c       | 13 ++++++-------
+>  fs/f2fs/dir.c           |  2 +-
+>  include/linux/dcache.h  |  2 +-
+>  include/linux/fscrypt.h | 25 ++++++++++++-------------
+>  5 files changed, 28 insertions(+), 30 deletions(-)
 
-Thanks.  Looks like you forgot to push?  Also, the kernel.org and github
-repositories for xfstests-bld aren't in sync.
+Applied to fscrypt.git#master for 5.10.
 
 - Eric
