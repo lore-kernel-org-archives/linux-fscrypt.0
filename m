@@ -7,44 +7,44 @@ X-Spam-Status: No, score=-12.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
 	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8A416C388F9
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:22:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A3D1CC56202
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:22:58 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 3E26C24655
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:22:57 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 4E68424654
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:22:58 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="PzyBls8e"
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="j0gytLMN"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S372316AbgJVVWx (ORCPT
+        id S372254AbgJVVWd (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 22 Oct 2020 17:22:53 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40978 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S372257AbgJVVWd (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
         Thu, 22 Oct 2020 17:22:33 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40964 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S2897727AbgJVVWc (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 22 Oct 2020 17:22:32 -0400
 Received: from casper.infradead.org (casper.infradead.org [IPv6:2001:8b0:10b:1236::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D8637C0613D7;
-        Thu, 22 Oct 2020 14:22:32 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1895EC0613CE;
+        Thu, 22 Oct 2020 14:22:31 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
         d=infradead.org; s=casper.20170209; h=Content-Transfer-Encoding:MIME-Version:
         References:In-Reply-To:Message-Id:Date:Subject:Cc:To:From:Sender:Reply-To:
         Content-Type:Content-ID:Content-Description;
-        bh=XEu2EmGV2J3O+NGwABsLcV4fD3cQ9sI5rt1XPNbqumg=; b=PzyBls8es8bXMK2hYFm3qT6hv3
-        fMYeGYuuoZVO8DXIjkDUkZYHLUV93wdu1djgLmokABmSEIffsY4F9oM7jMaCnVzSZXQ518dVnq1zS
-        Iq4gSMFV3CykSEt1BAdBEpfIfZARVsma0q05RNNbIS45oJ4perCAzz4sARFopkYMo/kEiuQLr7VKD
-        zD6T9NDo/398s026g3B4hUaX96u12XaxuVhrJWCj5uP3oY1bCHXGcLZAZdoLoTU8Xl3UaIC+BUhFe
-        7xcJTXHp8G5UFxsFz7iy98ASHRF00xsozx+hfpImkVLIM66wx7Y03NHSRY7nIecytZt1gcrgxFbLf
-        z/N3brCw==;
+        bh=/Sk507X/XJRZb80wAXzDRfdLw7egwWlksVqiUNUiyjs=; b=j0gytLMNDZRI40meEo4hRH0jPx
+        MaadKOoRAPi5awBfQX5VgWUV5s2w/Vq8fLZU7MEYAZpA6hWI36nO0Yyy87RMst0MaWjYFrDwDYkmY
+        1Mmm67OCuN6KpXH2OEfhgTkkLEX2rnoG1L5KxXBqM5t6ocYmlKBJYQ/KA3fq64qupBiiNHa1+eBp3
+        kns7bcC2TbVAOpW6oKEFdQmtxu79GBBw0QBR/Xz/d9YDOUs65+/sr7Eg55SFiCgJlHLYA5qGL7xkq
+        WRRCEoB7yu1gIVj8FVkelOahlDSNLRO/ULvcB2rU3q4Haps42hFd+dyKw3WMTHvndlWFGTwarGCc0
+        DCgHAx1A==;
 Received: from willy by casper.infradead.org with local (Exim 4.92.3 #3 (Red Hat Linux))
-        id 1kVi2Z-00046j-Di; Thu, 22 Oct 2020 21:22:31 +0000
+        id 1kVi2Y-00046F-AE; Thu, 22 Oct 2020 21:22:30 +0000
 From:   "Matthew Wilcox (Oracle)" <willy@infradead.org>
 To:     linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
         linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     "Matthew Wilcox (Oracle)" <willy@infradead.org>
-Subject: [PATCH 6/6] fs: Convert block_read_full_page to be synchronous with fscrypt enabled
-Date:   Thu, 22 Oct 2020 22:22:28 +0100
-Message-Id: <20201022212228.15703-7-willy@infradead.org>
+Subject: [PATCH 1/6] block: Add blk_completion
+Date:   Thu, 22 Oct 2020 22:22:23 +0100
+Message-Id: <20201022212228.15703-2-willy@infradead.org>
 X-Mailer: git-send-email 2.21.3
 In-Reply-To: <20201022212228.15703-1-willy@infradead.org>
 References: <20201022212228.15703-1-willy@infradead.org>
@@ -54,276 +54,108 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Use the new decrypt_end_bio() instead of readpage_end_bio() if
-fscrypt needs to be used.  Remove the old end_buffer_async_read()
-now that all BHs go through readpage_end_bio().
+This new data structure allows a task to wait for N things to complete.
+Usually the submitting task will handle cleanup, but if it is killed,
+the last completer will take care of it.
 
 Signed-off-by: Matthew Wilcox (Oracle) <willy@infradead.org>
 ---
- fs/buffer.c | 198 ++++++++++++++++------------------------------------
- 1 file changed, 59 insertions(+), 139 deletions(-)
+ block/blk-core.c    | 61 +++++++++++++++++++++++++++++++++++++++++++++
+ include/linux/bio.h | 11 ++++++++
+ 2 files changed, 72 insertions(+)
 
-diff --git a/fs/buffer.c b/fs/buffer.c
-index f859e0929b7e..62c74f0102d4 100644
---- a/fs/buffer.c
-+++ b/fs/buffer.c
-@@ -241,84 +241,6 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
- 	return ret;
+diff --git a/block/blk-core.c b/block/blk-core.c
+index 10c08ac50697..2892246f2176 100644
+--- a/block/blk-core.c
++++ b/block/blk-core.c
+@@ -1900,6 +1900,67 @@ void blk_io_schedule(void)
  }
+ EXPORT_SYMBOL_GPL(blk_io_schedule);
  
--/*
-- * I/O completion handler for block_read_full_page() - pages
-- * which come unlocked at the end of I/O.
-- */
--static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
--{
--	unsigned long flags;
--	struct buffer_head *first;
--	struct buffer_head *tmp;
--	struct page *page;
--	int page_uptodate = 1;
--
--	BUG_ON(!buffer_async_read(bh));
--
--	page = bh->b_page;
--	if (uptodate) {
--		set_buffer_uptodate(bh);
--	} else {
--		clear_buffer_uptodate(bh);
--		buffer_io_error(bh, ", async page read");
--		SetPageError(page);
--	}
--
--	/*
--	 * Be _very_ careful from here on. Bad things can happen if
--	 * two buffer heads end IO at almost the same time and both
--	 * decide that the page is now completely done.
--	 */
--	first = page_buffers(page);
--	spin_lock_irqsave(&first->b_uptodate_lock, flags);
--	clear_buffer_async_read(bh);
--	unlock_buffer(bh);
--	tmp = bh;
--	do {
--		if (!buffer_uptodate(tmp))
--			page_uptodate = 0;
--		if (buffer_async_read(tmp)) {
--			BUG_ON(!buffer_locked(tmp));
--			goto still_busy;
--		}
--		tmp = tmp->b_this_page;
--	} while (tmp != bh);
--	spin_unlock_irqrestore(&first->b_uptodate_lock, flags);
--
--	/*
--	 * If none of the buffers had errors and they are all
--	 * uptodate then we can set the page uptodate.
--	 */
--	if (page_uptodate && !PageError(page))
--		SetPageUptodate(page);
--	unlock_page(page);
--	return;
--
--still_busy:
--	spin_unlock_irqrestore(&first->b_uptodate_lock, flags);
--	return;
--}
--
--struct decrypt_bio_ctx {
--	struct work_struct work;
--	struct bio *bio;
--};
--
--static void decrypt_bio(struct work_struct *work)
--{
--	struct decrypt_bio_ctx *ctx =
--		container_of(work, struct decrypt_bio_ctx, work);
--	struct bio *bio = ctx->bio;
--	struct buffer_head *bh = bio->bi_private;
--	int err;
--
--	err = fscrypt_decrypt_pagecache_blocks(bh->b_page, bh->b_size,
--					       bh_offset(bh));
--	end_buffer_async_read(bh, err == 0);
--	kfree(ctx);
--	bio_put(bio);
--}
--
- /*
-  * Completion handler for block_write_full_page() - pages which are unlocked
-  * during I/O, and which have PageWriteback cleared upon I/O completion.
-@@ -365,33 +287,6 @@ void end_buffer_async_write(struct buffer_head *bh, int uptodate)
- }
- EXPORT_SYMBOL(end_buffer_async_write);
- 
--/*
-- * If a page's buffers are under async readin (end_buffer_async_read
-- * completion) then there is a possibility that another thread of
-- * control could lock one of the buffers after it has completed
-- * but while some of the other buffers have not completed.  This
-- * locked buffer would confuse end_buffer_async_read() into not unlocking
-- * the page.  So the absence of BH_Async_Read tells end_buffer_async_read()
-- * that this buffer is not under async I/O.
-- *
-- * The page comes unlocked when it has no locked buffer_async buffers
-- * left.
-- *
-- * PageLocked prevents anyone starting new async I/O reads any of
-- * the buffers.
-- *
-- * PageWriteback is used to prevent simultaneous writeout of the same
-- * page.
-- *
-- * PageLocked prevents anyone from starting writeback of a page which is
-- * under read I/O (PageWriteback is only ever set against a locked page).
-- */
--static void mark_buffer_async_read(struct buffer_head *bh)
--{
--	bh->b_end_io = end_buffer_async_read;
--	set_buffer_async_read(bh);
--}
--
- static void mark_buffer_async_write_endio(struct buffer_head *bh,
- 					  bh_end_io_t *handler)
++void blk_completion_init(struct blk_completion *cmpl, int n)
++{
++	spin_lock_init(&cmpl->cmpl_lock);
++	cmpl->cmpl_count = n;
++	cmpl->cmpl_task = current;
++	cmpl->cmpl_status = BLK_STS_OK;
++}
++
++int blk_completion_sub(struct blk_completion *cmpl, blk_status_t status, int n)
++{
++	int ret = 0;
++
++	spin_lock_bh(&cmpl->cmpl_lock);
++	if (cmpl->cmpl_status == BLK_STS_OK && status != BLK_STS_OK)
++		cmpl->cmpl_status = status;
++	cmpl->cmpl_count -= n;
++	BUG_ON(cmpl->cmpl_count < 0);
++	if (cmpl->cmpl_count == 0) {
++		if (cmpl->cmpl_task)
++			wake_up_process(cmpl->cmpl_task);
++		else
++			ret = -EINTR;
++	}
++	spin_unlock_bh(&cmpl->cmpl_lock);
++	if (ret < 0)
++		kfree(cmpl);
++	return ret;
++}
++
++int blk_completion_wait_killable(struct blk_completion *cmpl)
++{
++	int err = 0;
++
++	for (;;) {
++		set_current_state(TASK_KILLABLE);
++		spin_lock_bh(&cmpl->cmpl_lock);
++		if (cmpl->cmpl_count == 0)
++			break;
++		spin_unlock_bh(&cmpl->cmpl_lock);
++		blk_io_schedule();
++		if (fatal_signal_pending(current)) {
++			spin_lock_bh(&cmpl->cmpl_lock);
++			cmpl->cmpl_task = NULL;
++			if (cmpl->cmpl_count != 0) {
++				spin_unlock_bh(&cmpl->cmpl_lock);
++				cmpl = NULL;
++			}
++			err = -ERESTARTSYS;
++			break;
++		}
++	}
++	set_current_state(TASK_RUNNING);
++	if (cmpl) {
++		spin_unlock_bh(&cmpl->cmpl_lock);
++		err = blk_status_to_errno(cmpl->cmpl_status);
++		kfree(cmpl);
++	}
++
++	return err;
++}
++
+ int __init blk_dev_init(void)
  {
-@@ -2268,8 +2163,54 @@ static void readpage_end_bio(struct bio *bio)
- 	bio_put(bio);
+ 	BUILD_BUG_ON(REQ_OP_LAST >= (1 << REQ_OP_BITS));
+diff --git a/include/linux/bio.h b/include/linux/bio.h
+index f254bc79bb3a..0bde05f5548c 100644
+--- a/include/linux/bio.h
++++ b/include/linux/bio.h
+@@ -814,4 +814,15 @@ static inline void bio_set_polled(struct bio *bio, struct kiocb *kiocb)
+ 		bio->bi_opf |= REQ_NOWAIT;
  }
  
-+struct decrypt_bio_ctx {
-+	struct work_struct work;
-+	struct bio *bio;
++struct blk_completion {
++	struct task_struct *cmpl_task;
++	spinlock_t cmpl_lock;
++	int cmpl_count;
++	blk_status_t cmpl_status;
 +};
 +
-+static void decrypt_bio(struct work_struct *work)
-+{
-+	struct decrypt_bio_ctx *ctx =
-+		container_of(work, struct decrypt_bio_ctx, work);
-+	struct bio *bio = ctx->bio;
-+	struct bio_vec *bvec;
-+	int i, err = 0;
++void blk_completion_init(struct blk_completion *, int n);
++int blk_completion_sub(struct blk_completion *, blk_status_t status, int n);
++int blk_completion_wait_killable(struct blk_completion *);
 +
-+	kfree(ctx);
-+	bio_for_each_bvec_all(bvec, bio, i) {
-+		err = fscrypt_decrypt_pagecache_blocks(bvec->bv_page,
-+				bvec->bv_len, bvec->bv_offset);
-+		if (err)
-+			break;
-+	}
-+
-+	/* XXX: Should report a better error here */
-+	if (err)
-+		bio->bi_status = BLK_STS_IOERR;
-+	readpage_end_bio(bio);
-+}
-+
-+static void decrypt_end_bio(struct bio *bio)
-+{
-+	struct decrypt_bio_ctx *ctx = NULL;
-+
-+	if (bio->bi_status == BLK_STS_OK) {
-+		ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
-+		if (!ctx)
-+			bio->bi_status = BLK_STS_RESOURCE;
-+	}
-+
-+	if (ctx) {
-+		INIT_WORK(&ctx->work, decrypt_bio);
-+		ctx->bio = bio;
-+		fscrypt_enqueue_decrypt_work(&ctx->work);
-+	} else {
-+		readpage_end_bio(bio);
-+	}
-+}
-+
- static int readpage_submit_bhs(struct page *page, struct blk_completion *cmpl,
--		unsigned int nr, struct buffer_head **bhs)
-+		unsigned int nr, struct buffer_head **bhs, bio_end_io_t end_bio)
- {
- 	struct bio *bio = NULL;
- 	unsigned int i;
-@@ -2283,7 +2224,8 @@ static int readpage_submit_bhs(struct page *page, struct blk_completion *cmpl,
- 		bool same_page;
- 
- 		if (buffer_uptodate(bh)) {
--			end_buffer_async_read(bh, 1);
-+			clear_buffer_async_read(bh);
-+			unlock_buffer(bh);
- 			blk_completion_sub(cmpl, BLK_STS_OK, 1);
- 			continue;
- 		}
-@@ -2298,7 +2240,7 @@ static int readpage_submit_bhs(struct page *page, struct blk_completion *cmpl,
- 		bio_set_dev(bio, bh->b_bdev);
- 		bio->bi_iter.bi_sector = sector;
- 		bio_add_page(bio, bh->b_page, bh->b_size, bh_offset(bh));
--		bio->bi_end_io = readpage_end_bio;
-+		bio->bi_end_io = end_bio;
- 		bio->bi_private = cmpl;
- 		/* Take care of bh's that straddle the end of the device */
- 		guard_bio_eod(bio);
-@@ -2314,6 +2256,13 @@ static int readpage_submit_bhs(struct page *page, struct blk_completion *cmpl,
- 	return err;
- }
- 
-+static bio_end_io_t *fscrypt_end_io(struct inode *inode)
-+{
-+	if (fscrypt_inode_uses_fs_layer_crypto(inode))
-+		return decrypt_end_bio;
-+	return readpage_end_bio;
-+}
-+
- /*
-  * Generic "read page" function for block devices that have the normal
-  * get_block functionality. This is most of the block device filesystems.
-@@ -2389,26 +2338,10 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
- 	for (i = 0; i < nr; i++) {
- 		bh = arr[i];
- 		lock_buffer(bh);
--		mark_buffer_async_read(bh);
-+		set_buffer_async_read(bh);
- 	}
- 
--	if (!fscrypt_inode_uses_fs_layer_crypto(inode))
--		return readpage_submit_bhs(page, cmpl, nr, arr);
--	kfree(cmpl);
--
--	/*
--	 * Stage 3: start the IO.  Check for uptodateness
--	 * inside the buffer lock in case another process reading
--	 * the underlying blockdev brought it uptodate (the sct fix).
--	 */
--	for (i = 0; i < nr; i++) {
--		bh = arr[i];
--		if (buffer_uptodate(bh))
--			end_buffer_async_read(bh, 1);
--		else
--			submit_bh(REQ_OP_READ, 0, bh);
--	}
--	return 0;
-+	return readpage_submit_bhs(page, cmpl, nr, arr, fscrypt_end_io(inode));
- }
- EXPORT_SYMBOL(block_read_full_page);
- 
-@@ -3092,19 +3025,6 @@ static void end_bio_bh_io_sync(struct bio *bio)
- 	if (unlikely(bio_flagged(bio, BIO_QUIET)))
- 		set_bit(BH_Quiet, &bh->b_state);
- 
--	/* Decrypt if needed */
--	if ((bio_data_dir(bio) == READ) && uptodate &&
--	    fscrypt_inode_uses_fs_layer_crypto(bh->b_page->mapping->host)) {
--		struct decrypt_bio_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
--
--		if (ctx) {
--			INIT_WORK(&ctx->work, decrypt_bio);
--			ctx->bio = bio;
--			fscrypt_enqueue_decrypt_work(&ctx->work);
--			return;
--		}
--		uptodate = 0;
--	}
- 	bh->b_end_io(bh, uptodate);
- 	bio_put(bio);
- }
+ #endif /* __LINUX_BIO_H */
 -- 
 2.28.0
 
