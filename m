@@ -7,44 +7,44 @@ X-Spam-Status: No, score=-12.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
 	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 12E46C388F9
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:22:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E6FB1C388F7
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:22:48 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id AA4C92465A
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:22:34 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 914CB24654
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:22:48 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="dRymKTfp"
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="LQlgaypn"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S372264AbgJVVWd (ORCPT
+        id S372275AbgJVVWe (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 22 Oct 2020 17:22:33 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40974 "EHLO
+        Thu, 22 Oct 2020 17:22:34 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40966 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S370489AbgJVVWc (ORCPT
+        with ESMTP id S2897384AbgJVVWc (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Thu, 22 Oct 2020 17:22:32 -0400
 Received: from casper.infradead.org (casper.infradead.org [IPv6:2001:8b0:10b:1236::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 76F27C0613D5;
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 19180C0613CF;
         Thu, 22 Oct 2020 14:22:32 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
         d=infradead.org; s=casper.20170209; h=Content-Transfer-Encoding:MIME-Version:
         References:In-Reply-To:Message-Id:Date:Subject:Cc:To:From:Sender:Reply-To:
         Content-Type:Content-ID:Content-Description;
-        bh=gL/c6EulWmWo4TRA2GCRaD9qXTLuixWc7vV5ZfmfHIc=; b=dRymKTfpPXjP0X6UMe31yGzaTt
-        +heaOvNc/Z/Kg92wigLlVB4sE4PbXVt0ZgSEF7mW+QGpO6QyZdgjtrewCc4mkeG1Ag2RKj15Co4Mz
-        n76+oCvKbkx7kMm5DVXkSwT9XkZYirElJ7/CgcOJ4elVpEmXeXaUrxfKdVSZq/WBBz6UK3R6uv/WH
-        +gAzcbWgEoMovy2kC4841N5dLQacRD2hwClEtoNGpEev4B137Vq0MUVCcr3qbu+kp5EKGsWMVUQSM
-        t3Mbaru+h6CZktUdWmG7KVfSCAe7uoOoxWy+sxMEzlci5jIoBHKU92lqrnjpSR6fUXs9g+lTLcixm
-        FbE4s6DQ==;
+        bh=RSNjd1RLqIQkhcEbGUovOOxZITaIfVGPNuDnxyQq0O0=; b=LQlgaypn3igScLoea4+gSyLtDO
+        NgxFuTmVDAvbUR6Mi/cmnLGwkbNlYBerd7Gbv68PgnB8LalSSsm5yt3lrlZBIkqoMzT/zwFGJvwPq
+        byTgnZ+leAHcuntvPibg2KNXOVolHVRb6RjhrEP7nq7uhkTxK0z9ETsIm+DLM/11LSuydqYTmNMKY
+        lt3UumJ1VjKVBpDrrNiLz49FQuFC1ZYUk4avMBZx6vUMxN66LcJB4czs4QOs5J93fgXDlBy79YLXf
+        ot5e7sFA3vU/NAb8jz5nYTdWwb36BbwVl/BI8BpL12pxOj8lEIFt18SAJMesVRRzreEY2PIfy0ngd
+        AhfcjQzA==;
 Received: from willy by casper.infradead.org with local (Exim 4.92.3 #3 (Red Hat Linux))
-        id 1kVi2Y-00046X-Ua; Thu, 22 Oct 2020 21:22:31 +0000
+        id 1kVi2Y-00046K-Gc; Thu, 22 Oct 2020 21:22:30 +0000
 From:   "Matthew Wilcox (Oracle)" <willy@infradead.org>
 To:     linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
         linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     "Matthew Wilcox (Oracle)" <willy@infradead.org>
-Subject: [PATCH 4/6] fs: Hoist fscrypt decryption to bio completion handler
-Date:   Thu, 22 Oct 2020 22:22:26 +0100
-Message-Id: <20201022212228.15703-5-willy@infradead.org>
+Subject: [PATCH 2/6] fs: Return error from block_read_full_page
+Date:   Thu, 22 Oct 2020 22:22:24 +0100
+Message-Id: <20201022212228.15703-3-willy@infradead.org>
 X-Mailer: git-send-email 2.21.3
 In-Reply-To: <20201022212228.15703-1-willy@infradead.org>
 References: <20201022212228.15703-1-willy@infradead.org>
@@ -54,95 +54,76 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This is prep work for doing decryption at the BIO level instead of
-the BH level.  It still works on one BH at a time for now.
+If the filesystem returns an error from get_block, report it
+instead of ineffectually setting PageError.  Don't bother starting
+any I/Os in this case since they won't bring the page Uptodate.
 
 Signed-off-by: Matthew Wilcox (Oracle) <willy@infradead.org>
 ---
- fs/buffer.c | 45 +++++++++++++++++++++------------------------
- 1 file changed, 21 insertions(+), 24 deletions(-)
+ fs/buffer.c | 24 ++++++++++--------------
+ 1 file changed, 10 insertions(+), 14 deletions(-)
 
 diff --git a/fs/buffer.c b/fs/buffer.c
-index ccb90081117c..627ae1d853c0 100644
+index 1d5337517dcd..1b0ba1d59966 100644
 --- a/fs/buffer.c
 +++ b/fs/buffer.c
-@@ -241,6 +241,10 @@ __find_get_block_slow(struct block_device *bdev, sector_t block)
- 	return ret;
- }
+@@ -2262,7 +2262,7 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
+ 	sector_t iblock, lblock;
+ 	struct buffer_head *bh, *head, *arr[MAX_BUF_PER_PAGE];
+ 	unsigned int blocksize, bbits;
+-	int nr, i;
++	int nr, i, err = 0;
+ 	int fully_mapped = 1;
  
-+/*
-+ * I/O completion handler for block_read_full_page() - pages
-+ * which come unlocked at the end of I/O.
-+ */
- static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- {
- 	unsigned long flags;
-@@ -313,28 +317,6 @@ static void decrypt_bh(struct work_struct *work)
- 	kfree(ctx);
- }
+ 	head = create_page_buffers(page, inode, 0);
+@@ -2280,19 +2280,16 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
+ 			continue;
  
--/*
-- * I/O completion handler for block_read_full_page() - pages
-- * which come unlocked at the end of I/O.
-- */
--static void end_buffer_async_read_io(struct buffer_head *bh, int uptodate)
--{
--	/* Decrypt if needed */
--	if (uptodate &&
--	    fscrypt_inode_uses_fs_layer_crypto(bh->b_page->mapping->host)) {
--		struct decrypt_bh_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
+ 		if (!buffer_mapped(bh)) {
+-			int err = 0;
 -
--		if (ctx) {
--			INIT_WORK(&ctx->work, decrypt_bh);
--			ctx->bh = bh;
--			fscrypt_enqueue_decrypt_work(&ctx->work);
--			return;
--		}
--		uptodate = 0;
--	}
--	end_buffer_async_read(bh, uptodate);
--}
--
- /*
-  * Completion handler for block_write_full_page() - pages which are unlocked
-  * during I/O, and which have PageWriteback cleared upon I/O completion.
-@@ -404,7 +386,7 @@ EXPORT_SYMBOL(end_buffer_async_write);
-  */
- static void mark_buffer_async_read(struct buffer_head *bh)
- {
--	bh->b_end_io = end_buffer_async_read_io;
-+	bh->b_end_io = end_buffer_async_read;
- 	set_buffer_async_read(bh);
- }
+ 			fully_mapped = 0;
+ 			if (iblock < lblock) {
+ 				WARN_ON(bh->b_size != blocksize);
+ 				err = get_block(inode, iblock, bh, 0);
+ 				if (err)
+-					SetPageError(page);
++					break;
+ 			}
+ 			if (!buffer_mapped(bh)) {
+ 				zero_user(page, i * blocksize, blocksize);
+-				if (!err)
+-					set_buffer_uptodate(bh);
++				set_buffer_uptodate(bh);
+ 				continue;
+ 			}
+ 			/*
+@@ -2305,18 +2302,17 @@ int block_read_full_page(struct page *page, get_block_t *get_block)
+ 		arr[nr++] = bh;
+ 	} while (i++, iblock++, (bh = bh->b_this_page) != head);
  
-@@ -3103,11 +3085,26 @@ EXPORT_SYMBOL(generic_block_bmap);
- static void end_bio_bh_io_sync(struct bio *bio)
- {
- 	struct buffer_head *bh = bio->bi_private;
-+	int uptodate = !bio->bi_status;
- 
- 	if (unlikely(bio_flagged(bio, BIO_QUIET)))
- 		set_bit(BH_Quiet, &bh->b_state);
- 
--	bh->b_end_io(bh, !bio->bi_status);
-+	/* Decrypt if needed */
-+	if ((bio_data_dir(bio) == READ) && uptodate &&
-+	    fscrypt_inode_uses_fs_layer_crypto(bh->b_page->mapping->host)) {
-+		struct decrypt_bh_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
-+
-+		if (ctx) {
-+			INIT_WORK(&ctx->work, decrypt_bh);
-+			ctx->bh = bh;
-+			fscrypt_enqueue_decrypt_work(&ctx->work);
-+			bio_put(bio);
-+			return;
-+		}
-+		uptodate = 0;
++	if (err) {
++		unlock_page(page);
++		return err;
 +	}
-+	bh->b_end_io(bh, uptodate);
- 	bio_put(bio);
- }
+ 	if (fully_mapped)
+ 		SetPageMappedToDisk(page);
  
+ 	if (!nr) {
+-		/*
+-		 * All buffers are uptodate - we can set the page uptodate
+-		 * as well. But not if get_block() returned an error.
+-		 */
+-		if (!PageError(page))
+-			SetPageUptodate(page);
+-		unlock_page(page);
+-		return 0;
++		/* All buffers are uptodate - we can set the page uptodate */
++		SetPageUptodate(page);
++		return AOP_UPDATED_PAGE;
+ 	}
+ 
+ 	/* Stage two: lock the buffers */
 -- 
 2.28.0
 
