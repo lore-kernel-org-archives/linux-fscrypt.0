@@ -2,118 +2,96 @@ Return-Path: <SRS0=mk+/=D5=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0DC2AC388F7
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:23:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 341B4C388F7
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 23:35:07 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id A954E21D43
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 21:23:03 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="AF9rUsfI"
+	by mail.kernel.org (Postfix) with ESMTP id E5F0D24650
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Oct 2020 23:35:06 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1603409706;
+	bh=sPm+q9fL8gFjupV6uEfDDpHTQP+mJ5kniWIFwA6zfWo=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=elf/QbRrgTXZYa2dDQYsRGrIAIYIyUiaBHs5YvetJlje/qdHG68Zc51rHFCY17ubj
+	 0een/wnlSaXG5iVMXlb6jKPVNhP/5aiDyd2cFZ3F2s03JHcv4nv6W0vnmBea17fUy6
+	 HM+07emltV37dbX6IWu7PGgiPC9lc+m2CiHto/JY=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2897907AbgJVVW6 (ORCPT
+        id S373406AbgJVXfG (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 22 Oct 2020 17:22:58 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40976 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S372232AbgJVVWc (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 22 Oct 2020 17:22:32 -0400
-Received: from casper.infradead.org (casper.infradead.org [IPv6:2001:8b0:10b:1236::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id ABCD1C0613D6;
-        Thu, 22 Oct 2020 14:22:32 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
-        d=infradead.org; s=casper.20170209; h=Content-Transfer-Encoding:MIME-Version:
-        References:In-Reply-To:Message-Id:Date:Subject:Cc:To:From:Sender:Reply-To:
-        Content-Type:Content-ID:Content-Description;
-        bh=ljAA4PGd/GSmX+kkh/i6lw2/EaP+AhT2hL7GA28WXSQ=; b=AF9rUsfI+8g5rTMEZGeaJnZ8QA
-        Rt/ef7DEtRmk8GSl6EY20t+Gf/mTE+Dc9s8MDNmXl283W3Pppo8IVftue49/Qpq/DqwQEzVWwh/YN
-        KZ8w8VrMsbjOmDE3wlx5LESl0wk84wJry96DjMVtSqP5J973VE820NPe+afNVOccPGbawER146eve
-        y0tnsnpUYZRfDdapTk8Dr5VJj46BpIVFp1bgqiHWNXUFm6OjWVS8gUIibYrP2a707LppAfsEDBnwr
-        5RLTxDg2Zpp4LgB8mxoD8Go5WKOOhx6Y5yh3kUwmOmNjztLxOdKxNbfirsrifgQz80Jz2fPq7Q/Sj
-        BQaOhQfA==;
-Received: from willy by casper.infradead.org with local (Exim 4.92.3 #3 (Red Hat Linux))
-        id 1kVi2Z-00046d-6A; Thu, 22 Oct 2020 21:22:31 +0000
-From:   "Matthew Wilcox (Oracle)" <willy@infradead.org>
-To:     linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
+        Thu, 22 Oct 2020 19:35:06 -0400
+Received: from mail.kernel.org ([198.145.29.99]:56506 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S373405AbgJVXfG (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 22 Oct 2020 19:35:06 -0400
+Received: from gmail.com (unknown [104.132.1.76])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 531C524248;
+        Thu, 22 Oct 2020 23:35:05 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1603409705;
+        bh=sPm+q9fL8gFjupV6uEfDDpHTQP+mJ5kniWIFwA6zfWo=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=Ku6TK6trtHAgrUobR95TwiHb69JYzJnkA5nbc9BAiXM06jXDQ9cvpzcgzEAEfIij8
+         XN4/Y1z3fWdfFkfNUQZZ0i6rQ/T1+hJ41zCGZmM+tPU2flYqvXkJzZqj9gNywVh7fY
+         Lf+GsnQAT3YePsQ3r/G00oWd5UDL51Sj/KLLww8o=
+Date:   Thu, 22 Oct 2020 16:35:03 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     "Matthew Wilcox (Oracle)" <willy@infradead.org>
+Cc:     linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
         linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc:     "Matthew Wilcox (Oracle)" <willy@infradead.org>
-Subject: [PATCH 5/6] fs: Turn decrypt_bh into decrypt_bio
-Date:   Thu, 22 Oct 2020 22:22:27 +0100
-Message-Id: <20201022212228.15703-6-willy@infradead.org>
-X-Mailer: git-send-email 2.21.3
-In-Reply-To: <20201022212228.15703-1-willy@infradead.org>
+Subject: Re: [PATCH 3/6] fs: Convert block_read_full_page to be synchronous
+Message-ID: <20201022233503.GC3613750@gmail.com>
 References: <20201022212228.15703-1-willy@infradead.org>
+ <20201022212228.15703-4-willy@infradead.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20201022212228.15703-4-willy@infradead.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Pass a bio to decrypt_bio instead of a buffer_head to decrypt_bh.
-Another step towards doing decryption per-BIO instead of per-BH.
+On Thu, Oct 22, 2020 at 10:22:25PM +0100, Matthew Wilcox (Oracle) wrote:
+> Use the new blk_completion infrastructure to wait for multiple I/Os.
+> Also coalesce adjacent buffer heads into a single BIO instead of
+> submitting one BIO per buffer head.  This doesn't work for fscrypt yet,
+> so keep the old code around for now.
+> 
+> Signed-off-by: Matthew Wilcox (Oracle) <willy@infradead.org>
+> ---
+>  fs/buffer.c | 90 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+>  1 file changed, 90 insertions(+)
+> 
+> diff --git a/fs/buffer.c b/fs/buffer.c
+> index 1b0ba1d59966..ccb90081117c 100644
+> --- a/fs/buffer.c
+> +++ b/fs/buffer.c
+> @@ -2249,6 +2249,87 @@ int block_is_partially_uptodate(struct page *page, unsigned long from,
+>  }
+>  EXPORT_SYMBOL(block_is_partially_uptodate);
+>  
+> +static void readpage_end_bio(struct bio *bio)
+> +{
+> +	struct bio_vec *bvec;
+> +	struct page *page;
+> +	struct buffer_head *bh;
+> +	int i, nr = 0;
+> +
+> +	bio_for_each_bvec_all(bvec, bio, i) {
 
-Signed-off-by: Matthew Wilcox (Oracle) <willy@infradead.org>
----
- fs/buffer.c | 21 +++++++++++----------
- 1 file changed, 11 insertions(+), 10 deletions(-)
+Shouldn't this technically be bio_for_each_segment_all()?  This wants to iterate
+over the pages, not the bvecs -- and in general, each bvec might contain
+multiple pages.
 
-diff --git a/fs/buffer.c b/fs/buffer.c
-index 627ae1d853c0..f859e0929b7e 100644
---- a/fs/buffer.c
-+++ b/fs/buffer.c
-@@ -299,22 +299,24 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
- 	return;
- }
- 
--struct decrypt_bh_ctx {
-+struct decrypt_bio_ctx {
- 	struct work_struct work;
--	struct buffer_head *bh;
-+	struct bio *bio;
- };
- 
--static void decrypt_bh(struct work_struct *work)
-+static void decrypt_bio(struct work_struct *work)
- {
--	struct decrypt_bh_ctx *ctx =
--		container_of(work, struct decrypt_bh_ctx, work);
--	struct buffer_head *bh = ctx->bh;
-+	struct decrypt_bio_ctx *ctx =
-+		container_of(work, struct decrypt_bio_ctx, work);
-+	struct bio *bio = ctx->bio;
-+	struct buffer_head *bh = bio->bi_private;
- 	int err;
- 
- 	err = fscrypt_decrypt_pagecache_blocks(bh->b_page, bh->b_size,
- 					       bh_offset(bh));
- 	end_buffer_async_read(bh, err == 0);
- 	kfree(ctx);
-+	bio_put(bio);
- }
- 
- /*
-@@ -3093,13 +3095,12 @@ static void end_bio_bh_io_sync(struct bio *bio)
- 	/* Decrypt if needed */
- 	if ((bio_data_dir(bio) == READ) && uptodate &&
- 	    fscrypt_inode_uses_fs_layer_crypto(bh->b_page->mapping->host)) {
--		struct decrypt_bh_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
-+		struct decrypt_bio_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
- 
- 		if (ctx) {
--			INIT_WORK(&ctx->work, decrypt_bh);
--			ctx->bh = bh;
-+			INIT_WORK(&ctx->work, decrypt_bio);
-+			ctx->bio = bio;
- 			fscrypt_enqueue_decrypt_work(&ctx->work);
--			bio_put(bio);
- 			return;
- 		}
- 		uptodate = 0;
--- 
-2.28.0
+Now, in this case, each bio has only 1 page and 1 bvec, so it doesn't really
+matter.  But if we're going to use an iterator, it seems we should use the right
+kind.
 
+Likewise in decrypt_bio() in patch 6.
+
+- Eric
