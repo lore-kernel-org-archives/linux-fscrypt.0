@@ -2,143 +2,221 @@ Return-Path: <SRS0=FAmw=ED=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.0 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,MAILING_LIST_MULTI,NICE_REPLY_A,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_SANE_1 autolearn=ham
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 88416C388F7
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 28 Oct 2020 22:00:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A3954C4363A
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 28 Oct 2020 22:08:21 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 2C62324724
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 28 Oct 2020 22:00:04 +0000 (UTC)
-Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="l/Wj1v8+"
+	by mail.kernel.org (Postfix) with ESMTP id 5233024724
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 28 Oct 2020 22:08:21 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=default; t=1603922901;
+	bh=U+YdWF3qV1nfKkG1PXMCEmJxc0W5WHZiObRaVxdbiys=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=S49xeEmVjQ7X+lXLLHMhc2h84i1yOeDIpi/cGdxZI7ZdbkH9vJRC2SfA6AJSRyyIb
+	 A+N0oKCR7zaA54Hr2MnCIgpROZDP2MfZU3i0WGAcR517A6WryOEb7aTYL6iL6tl/Ql
+	 V9Ww0mYFWarVwEYQUEUg/C1GzXxGXaKBf4dYezek=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728660AbgJ1WAD (ORCPT
+        id S1730096AbgJ1WH0 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 28 Oct 2020 18:00:03 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50414 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1729380AbgJ1V77 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 28 Oct 2020 17:59:59 -0400
-Received: from mail-vs1-xe43.google.com (mail-vs1-xe43.google.com [IPv6:2607:f8b0:4864:20::e43])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 4FE5CC0613CF
-        for <linux-fscrypt@vger.kernel.org>; Wed, 28 Oct 2020 14:59:59 -0700 (PDT)
-Received: by mail-vs1-xe43.google.com with SMTP id h5so428106vsp.3
-        for <linux-fscrypt@vger.kernel.org>; Wed, 28 Oct 2020 14:59:59 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20161025;
-        h=from:subject:to:cc:references:message-id:date:user-agent
-         :mime-version:in-reply-to:content-language:content-transfer-encoding;
-        bh=Uck2YNcuuaM9Q4ZPFVSiK7dl3B/KTjxlkFJ58vsXqX0=;
-        b=l/Wj1v8+/rolSuumRQDoW1u/m54FmFDB6jRkprXGzcdlgl/cIctml1IprWf7rVsTbA
-         jMO7D2FsB0eBEq0Edxki/NlHwET15cnLLT8/Dj4kac+dkeyywTcBHhVDvoA0X+gWS+tn
-         cvNRgCD0R/1TIRFZ648lUe+KVWl8NwUJ4KYjJNCWWYHCSTPV1svyOtLV0owlbU9Nk9jF
-         KcrVHycSXvvjIElClPKwzqU64GO3Ol18eeagJdX44m+FEdoRO4Lnr944UQrwlX5ORQeU
-         I8PEWol14TDerVXFoKYsSuDq3Obv0oGXQtRCYNA+a8wVMd+cN8uwiaRSDj73iB8eyY/q
-         Z1kw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:from:subject:to:cc:references:message-id:date
-         :user-agent:mime-version:in-reply-to:content-language
-         :content-transfer-encoding;
-        bh=Uck2YNcuuaM9Q4ZPFVSiK7dl3B/KTjxlkFJ58vsXqX0=;
-        b=Nm1bLurKhdz27NgpMw/RR1RdgJH2z2X9uPZKT2e0HPzszbJq2W9hBsW+tndQu7j8wJ
-         kq885H2RsABnSImxRqIWMldxFwSmwVKUmgV8RS4m2DMJkRNaHQMO6PNBJtWfDfUSW2l2
-         fkecS3EX9RUlxd6N0BuP3j3IvuiDRftqf0Rfa56qNMawIlePmJ/Z9Fyz0/ZcbCluXPRl
-         uht39WONcQRQficY0CVnzVLOKY9pKJxeTSVhVs7yEreTR1LLQAQUAeJQwUWOVeYOfTQc
-         1EyEzXr0vsOR++qbjRodak5f+r9tuZlIVXffhWUh/J82+sOaciIQSTop6gOM21JAQsJp
-         I9sA==
-X-Gm-Message-State: AOAM530T/j+WFzpOD9cTAkh+L++H3XB18w0EH0C1CY09pxRX4qC51gvz
-        rbKTnqUL4+u/iS/baSeqiNhIyEVqMoQ=
-X-Google-Smtp-Source: ABdhPJx60hIE6k564kcjEmaSESt+ZH66kG8ynmY6RkdwyZY6WYkSJcFqVbvKOGOR+Karm8s3Y+odMg==
-X-Received: by 2002:a05:6214:148a:: with SMTP id bn10mr157075qvb.51.1603903624988;
-        Wed, 28 Oct 2020 09:47:04 -0700 (PDT)
-Received: from ?IPv6:2620:10d:c0a8:1102::1844? ([2620:10d:c091:480::1:4133])
-        by smtp.gmail.com with ESMTPSA id n24sm3258597qtv.39.2020.10.28.09.47.03
-        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
-        Wed, 28 Oct 2020 09:47:04 -0700 (PDT)
-From:   Jes Sorensen <jes.sorensen@gmail.com>
-X-Google-Original-From: Jes Sorensen <Jes.Sorensen@gmail.com>
-Subject: Re: [fsverity-utils PATCH] override CFLAGS too
-To:     Eric Biggers <ebiggers@kernel.org>, luca.boccassi@gmail.com
-Cc:     linux-fscrypt@vger.kernel.org, malmond@fb.com
-References: <20201026204831.3337360-1-luca.boccassi@gmail.com>
- <20201026221019.GB185792@sol.localdomain>
-Message-ID: <7bfc9c61-d847-f7d2-f2fc-c0ba012136c1@gmail.com>
-Date:   Wed, 28 Oct 2020 12:47:03 -0400
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
- Thunderbird/68.11.0
+        Wed, 28 Oct 2020 18:07:26 -0400
+Received: from mail.kernel.org ([198.145.29.99]:52316 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1730087AbgJ1WHY (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 28 Oct 2020 18:07:24 -0400
+Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 94650247FF;
+        Wed, 28 Oct 2020 18:29:55 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1603909795;
+        bh=U+YdWF3qV1nfKkG1PXMCEmJxc0W5WHZiObRaVxdbiys=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=hxI91FYTNCbYzLkoC+0Kx1e8ulC5zkjm6M6PgyWR39mvIZ60QR4Fp+sbOH+6xBeEr
+         hhaeNK9I/yg8KzbMXpLBH04IHlPRgie6O2zpxSlBhl0o+2UC8Ar37bHY5hR9ovuljO
+         kw+YB28fy7Ni9rSuz41+4zExuqvOnZN6PWf6YOks=
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     Luca Boccassi <luca.boccassi@gmail.com>,
+        Jes Sorensen <Jes.Sorensen@gmail.com>
+Subject: [fsverity-utils PATCH] Makefile: adjust CFLAGS overriding
+Date:   Wed, 28 Oct 2020 11:27:16 -0700
+Message-Id: <20201028182716.154790-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.29.1
+In-Reply-To: <5339059d53b26837d1b90217ec21eb0d99e938ad.camel@gmail.com>
+References: <5339059d53b26837d1b90217ec21eb0d99e938ad.camel@gmail.com>
 MIME-Version: 1.0
-In-Reply-To: <20201026221019.GB185792@sol.localdomain>
-Content-Type: text/plain; charset=utf-8
-Content-Language: en-US
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On 10/26/20 6:10 PM, Eric Biggers wrote:
-> [+Jes Sorensen]
-> 
-> On Mon, Oct 26, 2020 at 08:48:31PM +0000, luca.boccassi@gmail.com wrote:
->> From: Romain Perier <romain.perier@gmail.com>
->>
->> Currently, CFLAGS are defined by default. It has to effect to define its
->> c-compiler options only when the variable is not defined on the cmdline
->> by the user, it is not possible to merge or mix both, while it could
->> be interesting for using the app warning cflags or the pkg-config
->> cflags, while using the distributor flags. Most distributions packages
->> use their own compilation flags, typically for hardening purpose but not
->> only. This fixes the issue by using the override keyword.
->>
->> Signed-off-by: Romain Perier <romain.perier@gmail.com>
->> ---
->> Currently used in Debian, were we want to append context-specific
->> compiler flags (eg: for compiler hardening options) without
->> removing the default flags
->>
->>  Makefile | 5 +++--
->>  1 file changed, 3 insertions(+), 2 deletions(-)
->>
->> diff --git a/Makefile b/Makefile
->> index 6c6c8c9..5020cac 100644
->> --- a/Makefile
->> +++ b/Makefile
->> @@ -35,14 +35,15 @@
->>  cc-option = $(shell if $(CC) $(1) -c -x c /dev/null -o /dev/null > /dev/null 2>&1; \
->>  	      then echo $(1); fi)
->>  
->> -CFLAGS ?= -O2 -Wall -Wundef					\
->> +override CFLAGS := -O2 -Wall -Wundef				\
->>  	$(call cc-option,-Wdeclaration-after-statement)		\
->>  	$(call cc-option,-Wimplicit-fallthrough)		\
->>  	$(call cc-option,-Wmissing-field-initializers)		\
->>  	$(call cc-option,-Wmissing-prototypes)			\
->>  	$(call cc-option,-Wstrict-prototypes)			\
->>  	$(call cc-option,-Wunused-parameter)			\
->> -	$(call cc-option,-Wvla)
->> +	$(call cc-option,-Wvla)					\
->> +	$(CFLAGS)
->>  
->>  override CPPFLAGS := -Iinclude -D_FILE_OFFSET_BITS=64 $(CPPFLAGS)
-> 
-> I had it like this originally, but Jes requested that it be changed to the
-> current way for rpm packaging.  See the thread:
-> https://lkml.kernel.org/linux-fscrypt/20200515205649.1670512-3-Jes.Sorensen@gmail.com/T/#u
-> 
-> Can we come to an agreement on one way to do it?
-> 
-> To me, the approach with 'override' makes more sense.  The only non-warning
-> option is -O2, and if someone doesn't want that, they can just specify
-> CFLAGS=-O0 and it will override -O2 (since the last option "wins").
-> 
-> Jes, can you explain why that way doesn't work with rpm?
+From: Eric Biggers <ebiggers@google.com>
 
-I don't remember all the details and I haven't looked at this in a
-while. Matthew Almond has helpfully offered to look into it.
+Make any user-specified CFLAGS only replace flags that affect the
+resulting binary.  Currently that means just "-O2".  Always add the
+warning flags, although they can still be disabled by -Wno-*.  This
+seems to be closer to what people want; see the discussion at
+https://lkml.kernel.org/linux-fscrypt/20201026204831.3337360-1-luca.boccassi@gmail.com/T/#u
 
-Jes
+Also fix up scripts/run-tests.sh to use appropriate CFLAGS.  That is,
+don't specify -Wall since the Makefile now adds it, always specify
+-Werror, and usually specify an optimization level too.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ Makefile             |  7 ++++--
+ scripts/run-tests.sh | 54 ++++++++++++++++++++++----------------------
+ 2 files changed, 32 insertions(+), 29 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 6c6c8c9..cff8d36 100644
+--- a/Makefile
++++ b/Makefile
+@@ -35,14 +35,17 @@
+ cc-option = $(shell if $(CC) $(1) -c -x c /dev/null -o /dev/null > /dev/null 2>&1; \
+ 	      then echo $(1); fi)
+ 
+-CFLAGS ?= -O2 -Wall -Wundef					\
++CFLAGS ?= -O2
++
++override CFLAGS := -Wall -Wundef				\
+ 	$(call cc-option,-Wdeclaration-after-statement)		\
+ 	$(call cc-option,-Wimplicit-fallthrough)		\
+ 	$(call cc-option,-Wmissing-field-initializers)		\
+ 	$(call cc-option,-Wmissing-prototypes)			\
+ 	$(call cc-option,-Wstrict-prototypes)			\
+ 	$(call cc-option,-Wunused-parameter)			\
+-	$(call cc-option,-Wvla)
++	$(call cc-option,-Wvla)					\
++	$(CFLAGS)
+ 
+ override CPPFLAGS := -Iinclude -D_FILE_OFFSET_BITS=64 $(CPPFLAGS)
+ 
+diff --git a/scripts/run-tests.sh b/scripts/run-tests.sh
+index 8a03968..a47cc48 100755
+--- a/scripts/run-tests.sh
++++ b/scripts/run-tests.sh
+@@ -39,7 +39,7 @@ exec 2> >(tee -ia run-tests.log 1>&2)
+ MAKE="make -j$(getconf _NPROCESSORS_ONLN)"
+ 
+ log "Build and test with statically linking"
+-$MAKE
++$MAKE CFLAGS="-Werror"
+ if ldd fsverity | grep libfsverity.so; then
+ 	fail "fsverity binary should be statically linked to libfsverity by default"
+ fi
+@@ -51,7 +51,7 @@ if nm libfsverity.a | grep ' T ' | grep -v " libfsverity_"; then
+ fi
+ 
+ log "Build and test with dynamic linking"
+-$MAKE USE_SHARED_LIB=1 check
++$MAKE CFLAGS="-Werror" USE_SHARED_LIB=1 check
+ if ! ldd fsverity | grep libfsverity.so; then
+ 	fail "fsverity binary should be dynamically linked to libfsverity when USE_SHARED_LIB=1"
+ fi
+@@ -75,7 +75,7 @@ c++ -Wall -Werror "$TMPDIR/test.cc" -Iinclude -L. -lfsverity -o "$TMPDIR/test"
+ rm "${TMPDIR:?}"/*
+ 
+ log "Check that build doesn't produce untracked files"
+-$MAKE all test_programs
++$MAKE CFLAGS="-Werror" all test_programs
+ if git status --short | grep -q '^??'; then
+ 	git status
+ 	fail "Build produced untracked files (check 'git status').  Missing gitignore entry?"
+@@ -120,64 +120,64 @@ if [ -s "$list" ]; then
+ fi
+ rm "$list"
+ 
+-log "Build and test with gcc"
+-$MAKE CC=gcc check
+-
+-log "Build and test with gcc (-Wall + -Werror)"
+-$MAKE CC=gcc CFLAGS="-Wall -Werror" check
++log "Build and test with gcc (-O2)"
++$MAKE CC=gcc CFLAGS="-O2 -Werror" check
+ 
+ log "Build and test with gcc (-O3)"
+-$MAKE CC=gcc CFLAGS="-O3 -Wall -Werror" check
++$MAKE CC=gcc CFLAGS="-O3 -Werror" check
+ 
+ log "Build and test with gcc (32-bit)"
+-$MAKE CC=gcc CFLAGS="-m32 -O2 -Wall -Werror" check
+-
+-log "Build and test with clang"
+-$MAKE CC=clang check
++$MAKE CC=gcc CFLAGS="-O2 -Werror -m32" check
+ 
+-log "Build and test with clang (-Wall + -Werror)"
+-$MAKE CC=clang CFLAGS="-Wall -Werror" check
++log "Build and test with clang (-O2)"
++$MAKE CC=clang CFLAGS="-O2 -Werror" check
+ 
+ log "Build and test with clang (-O3)"
+-$MAKE CC=clang CFLAGS="-O3 -Wall -Werror" check
++$MAKE CC=clang CFLAGS="-O3 -Werror" check
+ 
+ log "Build and test with clang + UBSAN"
+-$MAKE CC=clang CFLAGS="-fsanitize=undefined -fno-sanitize-recover=undefined" \
++$MAKE CC=clang \
++	CFLAGS="-O2 -Werror -fsanitize=undefined -fno-sanitize-recover=undefined" \
+ 	check
+ 
+ log "Build and test with clang + ASAN"
+-$MAKE CC=clang CFLAGS="-fsanitize=address -fno-sanitize-recover=address" check
++$MAKE CC=clang \
++	CFLAGS="-O2 -Werror -fsanitize=address -fno-sanitize-recover=address" \
++	check
+ 
+ log "Build and test with clang + unsigned integer overflow sanitizer"
+-$MAKE CC=clang CFLAGS="-fsanitize=unsigned-integer-overflow -fno-sanitize-recover=unsigned-integer-overflow" \
++$MAKE CC=clang \
++	CFLAGS="-O2 -Werror -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=unsigned-integer-overflow" \
+ 	check
+ 
+ log "Build and test with clang + CFI"
+-$MAKE CC=clang CFLAGS="-fsanitize=cfi -flto -fvisibility=hidden" check
++$MAKE CC=clang CFLAGS="-O2 -Werror -fsanitize=cfi -flto -fvisibility=hidden" \
++	check
+ 
+ log "Build and test with valgrind"
+ $MAKE TEST_WRAPPER_PROG="valgrind --quiet --error-exitcode=100 --leak-check=full --errors-for-leak-kinds=all" \
+-	check
++	CFLAGS="-O2 -Werror" check
+ 
+ log "Build and test using BoringSSL instead of OpenSSL"
+ BSSL=$HOME/src/boringssl
+-$MAKE LDFLAGS="-L$BSSL/build/crypto" CPPFLAGS="-I$BSSL/include" \
+-	LDLIBS="-lcrypto -lpthread" check
++$MAKE CFLAGS="-O2 -Werror" LDFLAGS="-L$BSSL/build/crypto" \
++	CPPFLAGS="-I$BSSL/include" LDLIBS="-lcrypto -lpthread" check
+ 
+ log "Build and test using -funsigned-char"
+-$MAKE CFLAGS="-funsigned-char -Wall -Werror" check
++$MAKE CFLAGS="-O2 -Werror -funsigned-char" check
+ 
+ log "Build and test using -fsigned-char"
+-$MAKE CFLAGS="-fsigned-char -Wall -Werror" check
++$MAKE CFLAGS="-O2 -Werror -fsigned-char" check
+ 
+ log "Run sparse"
+ ./scripts/run-sparse.sh
+ 
+ log "Run clang static analyzer"
+-scan-build --status-bugs make all test_programs
++scan-build --status-bugs make CFLAGS="-O2 -Werror" all test_programs
+ 
+ log "Run gcc static analyzer"
+-$MAKE CC=gcc CFLAGS="-fanalyzer -Werror" all test_programs
++# Using -O2 here produces a false positive report in fsverity_cmd_sign().
++$MAKE CC=gcc CFLAGS="-O0 -Werror -fanalyzer" all test_programs
+ 
+ log "Run shellcheck"
+ shellcheck scripts/*.sh 1>&2
+-- 
+2.29.1
+
