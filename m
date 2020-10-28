@@ -1,93 +1,93 @@
-Return-Path: <SRS0=qeLm=EC=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=FAmw=ED=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.6 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
+X-Spam-Status: No, score=-5.0 required=3.0 tests=BAYES_00,DATE_IN_PAST_03_06,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,FREEMAIL_FORGED_FROMDOMAIN,FREEMAIL_FROM,
 	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+	SPF_PASS,URIBL_BLOCKED autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 75239C4363A
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 27 Oct 2020 21:18:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E1E62C55179
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 28 Oct 2020 21:42:02 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 0D4732222C
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 27 Oct 2020 21:18:06 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 8931C246AB
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 28 Oct 2020 21:42:02 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="nDDfRW+a"
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="ZETeU5nH"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S373720AbgJ0VSF (ORCPT
+        id S1725920AbgJ1VmA (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 27 Oct 2020 17:18:05 -0400
-Received: from mail-wr1-f66.google.com ([209.85.221.66]:37813 "EHLO
-        mail-wr1-f66.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S373460AbgJ0VSE (ORCPT
+        Wed, 28 Oct 2020 17:42:00 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47256 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726051AbgJ1Vl6 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 27 Oct 2020 17:18:04 -0400
-Received: by mail-wr1-f66.google.com with SMTP id w1so3494273wrm.4
-        for <linux-fscrypt@vger.kernel.org>; Tue, 27 Oct 2020 14:18:03 -0700 (PDT)
+        Wed, 28 Oct 2020 17:41:58 -0400
+Received: from mail-wm1-x344.google.com (mail-wm1-x344.google.com [IPv6:2a00:1450:4864:20::344])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B23CEC0613CF
+        for <linux-fscrypt@vger.kernel.org>; Wed, 28 Oct 2020 14:41:57 -0700 (PDT)
+Received: by mail-wm1-x344.google.com with SMTP id c16so658244wmd.2
+        for <linux-fscrypt@vger.kernel.org>; Wed, 28 Oct 2020 14:41:57 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=gmail.com; s=20161025;
         h=mime-version:references:in-reply-to:from:date:message-id:subject:to
          :cc;
-        bh=Xowaxx4EBsMqHNfMng1D9+ESmBC5z5xQFGK0DDXXDl8=;
-        b=nDDfRW+a0o9sue4RQyz1BzvsRnRzFiEtUyNXJpMTrducFNenzs3Mw1M82avGTj+57U
-         rYqsDohlu5C+b+0hOMOvOSLTQArTCQfetQL5NxXgF+dwb5MRJGw5BfHERj4rbcSVyev+
-         eNFB0ITG80VQlXW7E8+LavTj4gXDjNHiWEbUXfpEITLdPj/a5hKlfqLSpStZpmJBLdQ0
-         1nVT/UxA7z4P5vJiltuW5g8jAEz18obe8vzFxugdIg7n0LHUSqTdij67b7a/Q0eDY9L6
-         B0sOhP90DG9Mg0GO6cZ4PAu9ColhpXgwR/ue1QmOrrgW0ZgwzHTXsr88jwoZCyjkaKHl
-         UxKQ==
+        bh=la9jtBLRXJROpZoCyLPSmSjSnPtjmvLqvY2RSdsKJR8=;
+        b=ZETeU5nH2Vdsmzjl1psRLRiSPLsbCHIg1FWWLN3MKVyZp9C8HjfOPRS7P2Q2HlWdIU
+         4dwSkNCs5FKTSx4XL/iuATQi5WnH+T4th6zSCGbaQ/csaDv/AToYayB7A+JUzCxfkYgz
+         Y9Lu/iVCKNbO9syG4AkwhqisB6vHJiyOEqKglCl3BB5muzFD3MCfZIrDgqcpkA0+MwX0
+         eLsuEsoK0JjtvW4hYTEVe2KQr8agCLMAtQTPqXw6d5W1iwvQSUohvfn5tB1ztyNpMiFN
+         2tioMFqcDXNj6AdVvOjrO5bqQsF3fEvwNEdwYSOOIuNLvnvBtU9AMZUrKEj97FAfU3OJ
+         KE4A==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:mime-version:references:in-reply-to:from:date
          :message-id:subject:to:cc;
-        bh=Xowaxx4EBsMqHNfMng1D9+ESmBC5z5xQFGK0DDXXDl8=;
-        b=pK8G7+3p7oIeeB9NRPkUCFPjGe7Sda3K/qOqSEQDNQvhFAqaHK1sM22QQMpTfxuOl4
-         0lTjwhjSyT1MVjStgr5UEvE3YEdtfGfRsWaSW1S4C7lgeLjLNbgH/NI4gjDGIuDGUBNt
-         D/bJ86oh6gJQaJSmfsNyfF719xhDuPwbkvF2wls5OirtgM2BPDb0Y93IgFuoyzzCVoQo
-         J7OaFlszijldI30/pcCYMBawd3SUUpK2EeXoeAf5cvj2S7Ym24/UJlbPzUyAVdM26A2+
-         ay4kD3s91/XrfTbZhcYbSliVEAJ6M3o09fYcyD3FEEwSBf68WEKEI0pA/vduLmC+eOYF
-         ZRww==
-X-Gm-Message-State: AOAM531PyZjG4xRKanGSKegXGQAaHpQVfe3tjQPcmo+AjYZhSlfeOh91
-        Fl9Jva7iAffcV+rrLcVUw5qTzjIpUwSwrNMKa+s=
-X-Google-Smtp-Source: ABdhPJw26wCjeyCOvKYG2WtPH18umLKf27V2hubO+XTFEArmOt9rEJkX3D4RTDknjio7DVwFZN7bDLnfYJkeNZS4YR8=
-X-Received: by 2002:adf:fd8a:: with SMTP id d10mr4776887wrr.85.1603833482893;
- Tue, 27 Oct 2020 14:18:02 -0700 (PDT)
+        bh=la9jtBLRXJROpZoCyLPSmSjSnPtjmvLqvY2RSdsKJR8=;
+        b=JwOpBwSo0mdflb07NR+Ik33FDPqPziVOY0zyJNz00JSc+Emk+HMvzXVTlGZ4qwoSqF
+         oHccE72punEfj0FS7FY08eLUlj12+vY5990eIabugWYsSE7s3ns3kMdiTRAdbKWiU9bv
+         k1UZa2aBYzOIAISBbAOfAzSJpJsTmA0HrR8LfYasm4LSf21MqOPOpVGgKsiCyP9AtlPa
+         pOv/sQHlbhYEhRVX/wxGyd0SP4pt6YRxeWKhvGEE7a8nE9WRLkkUg4NkU6u844Vanfyv
+         cE+1ql+ln135gIGn5frLRz9vV5mtJw97eGWcQwsYxc9qz+PcLjeMeRdr9/HiCxKR2RZB
+         ZaIQ==
+X-Gm-Message-State: AOAM531EyE6HcVKoam4SUQ9zcnjHMkPxioyoejnG7dyU7XJsdiYQe0Hw
+        LEoKJcACYJT5F/Gnj0Ebew6XiL2csgmfQzHpxgoYIPjfvDvZVQ==
+X-Google-Smtp-Source: ABdhPJyACiY/mk4FkhDIW9MdnMSCmjavIO9PHlkr35SIG5EU0jKEyFb6Pg2KtNeSOw6fH9WVf7as53kZ/jYY1qjh1go=
+X-Received: by 2002:a05:600c:216:: with SMTP id 22mr105809wmi.149.1603910310296;
+ Wed, 28 Oct 2020 11:38:30 -0700 (PDT)
 MIME-Version: 1.0
-References: <20201027191106.2447401-1-ebiggers@kernel.org>
-In-Reply-To: <20201027191106.2447401-1-ebiggers@kernel.org>
+References: <5339059d53b26837d1b90217ec21eb0d99e938ad.camel@gmail.com> <20201028182716.154790-1-ebiggers@kernel.org>
+In-Reply-To: <20201028182716.154790-1-ebiggers@kernel.org>
 From:   Luca Boccassi <luca.boccassi@gmail.com>
-Date:   Tue, 27 Oct 2020 21:17:51 +0000
-Message-ID: <CAMw=ZnRBN989HfGEYCp=O7xLnbeVrKq_s6DkFVfGoVNftP7cCQ@mail.gmail.com>
-Subject: Re: [PATCH] fs-verity: rename fsverity_signed_digest to fsverity_formatted_digest
+Date:   Wed, 28 Oct 2020 18:38:19 +0000
+Message-ID: <CAMw=ZnQZTrgVCu5sE0HeDBS+egw7kyQ3+U6cY56DMRxDUTkVVQ@mail.gmail.com>
+Subject: Re: [fsverity-utils PATCH] Makefile: adjust CFLAGS overriding
 To:     Eric Biggers <ebiggers@kernel.org>
 Cc:     linux-fscrypt@vger.kernel.org,
-        Victor Hsieh <victorhsieh@google.com>,
         Jes Sorensen <Jes.Sorensen@gmail.com>
 Content-Type: text/plain; charset="UTF-8"
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, 27 Oct 2020 at 19:13, Eric Biggers <ebiggers@kernel.org> wrote:
+On Wed, 28 Oct 2020 at 18:29, Eric Biggers <ebiggers@kernel.org> wrote:
 >
 > From: Eric Biggers <ebiggers@google.com>
 >
-> The name "struct fsverity_signed_digest" is causing confusion because it
-> isn't actually a signed digest, but rather it's the way that the digest
-> is formatted in order to be signed.  Rename it to
-> "struct fsverity_formatted_digest" to prevent this confusion.
+> Make any user-specified CFLAGS only replace flags that affect the
+> resulting binary.  Currently that means just "-O2".  Always add the
+> warning flags, although they can still be disabled by -Wno-*.  This
+> seems to be closer to what people want; see the discussion at
+> https://lkml.kernel.org/linux-fscrypt/20201026204831.3337360-1-luca.boccassi@gmail.com/T/#u
 >
-> Also update the struct's comment to clarify that it's specific to the
-> built-in signature verification support and isn't a requirement for all
-> fs-verity users.
->
-> I'll be renaming this struct in fsverity-utils too.
+> Also fix up scripts/run-tests.sh to use appropriate CFLAGS.  That is,
+> don't specify -Wall since the Makefile now adds it, always specify
+> -Werror, and usually specify an optimization level too.
 >
 > Signed-off-by: Eric Biggers <ebiggers@google.com>
 > ---
->  Documentation/filesystems/fsverity.rst |  2 +-
->  fs/verity/fsverity_private.h           | 17 ++++++++++++-----
->  fs/verity/signature.c                  |  2 +-
->  3 files changed, 14 insertions(+), 7 deletions(-)
+>  Makefile             |  7 ++++--
+>  scripts/run-tests.sh | 54 ++++++++++++++++++++++----------------------
+>  2 files changed, 32 insertions(+), 29 deletions(-)
 
-Acked-by: Luca Boccassi <luca.boccassi@microsoft.com>
+Acked-by: Luca Boccassi <bluca@debian.org>
