@@ -2,77 +2,93 @@ Return-Path: <SRS0=4ayL=EG=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS,USER_AGENT_GIT autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A7FD8C388F7
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 23:13:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BAE38C5517A
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 23:13:05 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 5945922202
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 23:13:04 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 77A2A221FF
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 23:13:05 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1604185984;
-	bh=7W770UmoHOq+XJfX9XCbouj37nY4hXyYEf+d83ifZVo=;
-	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=v3Z9TDfkIZhTsjuLvPX6w7+UHub7FjbrEAlL/83aWyneuamIpe9XpmK13ZIxnm7IM
-	 ItsUx3PMrWJBTiExBVcQvLgbPtYqNChrrolMcGcZqZPYqIjLMMjz+NDKBbvLuk0naW
-	 1yGs6Dt7d+Oxh1da9NMKNErUn9y9B8/6UfACJtCY=
+	s=default; t=1604185985;
+	bh=5YTncnfxoiRc+Gm3gLawwFHq1F8Nr63JtIwvhMbDln0=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
+	b=sfYDfMtR+lkoWkOrhsG2LwoWN9t2bRhM6pt2pAig6f5oFpSIZAZM7y2+7x2+68UiV
+	 W7GmqRuf2FJouDge/0ObphFoa9RLdMcdiNOl3Y2za8fb0GmGCKpQ5jKNBIrR/ZIA9o
+	 bRIDFu3SEFuhUnUnloRIVphmNoPbbPvXRHWKqFyY=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726037AbgJaXNE (ORCPT
+        id S1726064AbgJaXNE (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Sat, 31 Oct 2020 19:13:04 -0400
-Received: from mail.kernel.org ([198.145.29.99]:54160 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:54170 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725809AbgJaXND (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 31 Oct 2020 19:13:03 -0400
+        id S1725809AbgJaXNE (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sat, 31 Oct 2020 19:13:04 -0400
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 3C01A2087E;
+        by mail.kernel.org (Postfix) with ESMTPSA id CC14E208B6;
         Sat, 31 Oct 2020 23:13:03 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
         s=default; t=1604185983;
-        bh=7W770UmoHOq+XJfX9XCbouj37nY4hXyYEf+d83ifZVo=;
-        h=From:To:Cc:Subject:Date:From;
-        b=p74WX71zHj2ebwSX5Bobq8aLbGs4nvtfFwa6F/wXpnSYQ0w5fJrk2Hc07BU8UauMv
-         /xYwqR+GU6R379i3+poCFfkRDadiz3sMSlrWOG93rzrPcUNw3jknqCY+q/klkbE87B
-         EGgPJTl9m4tyZiw82YysaZwQmo4XSRkwrJdFisjY=
+        bh=5YTncnfxoiRc+Gm3gLawwFHq1F8Nr63JtIwvhMbDln0=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=ZYVLm8TGbc/oHq4jfcNvT6eqaZiEPw5eUZauowUvu6cuHnDuVPBi4FeFkNXQD1lSg
+         TToeokDPVFnlpy5cfblQBbhQlhOWRHuMpIXZJAQga5CuDxXBLmtF1829KBsVD5oQiB
+         cbbWzEuf+J82q5dY4f4BNAiWYr07arhzXdv7zhB8=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     stable@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net
-Subject: [PATCH 4.9 0/2] backport some more fscrypt fixes to 4.9
-Date:   Sat, 31 Oct 2020 16:11:22 -0700
-Message-Id: <20201031231124.1199710-1-ebiggers@kernel.org>
+        linux-f2fs-devel@lists.sourceforge.net,
+        Theodore Ts'o <tytso@mit.edu>
+Subject: [PATCH 4.9 2/2] fscrypt: use EEXIST when file already uses different policy
+Date:   Sat, 31 Oct 2020 16:11:24 -0700
+Message-Id: <20201031231124.1199710-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.1
+In-Reply-To: <20201031231124.1199710-1-ebiggers@kernel.org>
+References: <20201031231124.1199710-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Backport some fscrypt fixes from 4.10 and 4.11 to 4.9-stable.
-These will be needed for xfstest generic/395 to pass if
-https://lkml.kernel.org/fstests/20201031054018.695314-1-ebiggers@kernel.org
-is applied.
+From: Eric Biggers <ebiggers@google.com>
 
-These are clean cherry picks.
+commit 8488cd96ff88966ccb076e4f3654f59d84ba686d upstream.
 
-Tested with 'kvm-xfstests -c ext4,f2fs -g encrypt'.
+As part of an effort to clean up fscrypt-related error codes, make
+FS_IOC_SET_ENCRYPTION_POLICY fail with EEXIST when the file already uses
+a different encryption policy.  This is more descriptive than EINVAL,
+which was ambiguous with some of the other error cases.
 
-Eric Biggers (2):
-  fscrypto: move ioctl processing more fully into common code
-  fscrypt: use EEXIST when file already uses different policy
+I am not aware of any users who might be relying on the previous error
+code of EINVAL, which was never documented anywhere.
 
- fs/crypto/policy.c       | 36 ++++++++++++++++++++++--------------
- fs/ext4/ext4.h           |  4 ++--
- fs/ext4/ioctl.c          | 34 +++++-----------------------------
- fs/f2fs/f2fs.h           |  4 ++--
- fs/f2fs/file.c           | 19 ++-----------------
- include/linux/fscrypto.h | 12 ++++++------
- 6 files changed, 39 insertions(+), 70 deletions(-)
+This failure case will be exercised by an xfstest.
 
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Theodore Ts'o <tytso@mit.edu>
+---
+ fs/crypto/policy.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index a89e50331deb6..2bf6e0a2a57ca 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -131,7 +131,7 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
+ 		printk(KERN_WARNING
+ 		       "%s: Policy inconsistent with encryption context\n",
+ 		       __func__);
+-		ret = -EINVAL;
++		ret = -EEXIST;
+ 	}
+ 
+ 	inode_unlock(inode);
 -- 
 2.29.1
 
