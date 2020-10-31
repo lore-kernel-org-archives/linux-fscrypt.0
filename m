@@ -1,86 +1,116 @@
-Return-Path: <SRS0=SdO9=EE=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=4ayL=EG=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5E9FBC4363A
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Oct 2020 15:46:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 607E6C00A89
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 00:45:23 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 01D7A20838
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Oct 2020 15:46:28 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 0B2E4221EB
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 00:45:23 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1603986389;
-	bh=ZZgcwu3qoHfzyWwL++nPL6yyRKbuVveXMBJAJncmlHg=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=rs9c9ZBCgqnwr0vRc5WTGIo4ffEe8YhuaAaoTVUgIN7oZP8E1jEi/EZpmls8y5/iz
-	 JhQ5jykubwxVQdPMWmpnbnywZxUVcszbHtAUP6Pl0SII6x4kRfa4MhwZgONy5Og0B8
-	 Ogv+UyCptcO2m3e04pMRj/HQ/qg25ms+/hLpmlOU=
+	s=default; t=1604105123;
+	bh=cdd9+Pv9fufUcYB0lU28QpkU85Hlo6TrQs3OVc65FyU=;
+	h=From:To:Cc:Subject:Date:List-ID:From;
+	b=uknKLBG55NOiatGqXySsu3jq/JeqWiiOJ6NizZN3uGyv3W8IpKxdc1hjDO1UnPe+o
+	 7hY8XVsqWYV9rMup+pKIBJguYM2PsFaXV3i6Ph9sLgKXtT+mTdfbfSbjoDDRL/9adh
+	 uy493XCCR1GgwbeITPDL/rmyGcZa9NUJP18hB+bE=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728360AbgJ2Pq2 (ORCPT
+        id S1725536AbgJaApW (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 29 Oct 2020 11:46:28 -0400
-Received: from mail.kernel.org ([198.145.29.99]:53512 "EHLO mail.kernel.org"
+        Fri, 30 Oct 2020 20:45:22 -0400
+Received: from mail.kernel.org ([198.145.29.99]:50254 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727966AbgJ2Pq2 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 29 Oct 2020 11:46:28 -0400
-Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        id S1725446AbgJaApW (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 30 Oct 2020 20:45:22 -0400
+Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 053F4207DE;
-        Thu, 29 Oct 2020 15:46:27 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 2303C2076D;
+        Sat, 31 Oct 2020 00:45:22 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1603986388;
-        bh=ZZgcwu3qoHfzyWwL++nPL6yyRKbuVveXMBJAJncmlHg=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=EykLKBY9jsiGKIYIGGV9kqHbT4EsWkNuMylVoTo2dGJKrH0/uR/LBOg4PGgoISJUn
-         dNhF+n5/qnz3V66FKurZh1ZY4bdnA8TPdEdZYkFVAJ+TSvAExtgeVOaru0KEBZNspu
-         vBUjuQQ0/9XUirOMaVLB+tVTzC+qG29xNa/Ra2vk=
-Date:   Thu, 29 Oct 2020 08:46:26 -0700
+        s=default; t=1604105122;
+        bh=cdd9+Pv9fufUcYB0lU28QpkU85Hlo6TrQs3OVc65FyU=;
+        h=From:To:Cc:Subject:Date:From;
+        b=zPMgj+BWXzPuhbtqPJPbMDrfooqbpVw8ORW9pJMLfvVFtgGfhymYBWnBe50Ts5d/o
+         lMhUCQMs5tNPfxrIn/cWpoD2J+39D9HXze1PjoGjPdZMfxHbq2TIMNxvvKYCo/Mdci
+         vd+udcONf6rK9UuSVN7xB7fDM9BMSGOiiqqpsxXc=
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     luca.boccassi@gmail.com
-Cc:     linux-fscrypt@vger.kernel.org
-Subject: Re: [fsverity-utils PATCH] Restore installation of public header via
- make install
-Message-ID: <20201029154626.GA849@sol.localdomain>
-References: <20201029091828.3680106-1-luca.boccassi@gmail.com>
+To:     linux-fsdevel@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org
+Subject: [PATCH] fs/inode.c: make inode_init_always() initialize i_ino to 0
+Date:   Fri, 30 Oct 2020 17:44:20 -0700
+Message-Id: <20201031004420.87678-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.29.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20201029091828.3680106-1-luca.boccassi@gmail.com>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Oct 29, 2020 at 09:18:27AM +0000, luca.boccassi@gmail.com wrote:
-> From: Luca Boccassi <luca.boccassi@microsoft.com>
-> 
-> Fixes: 5ca4c55e3382 ("Makefile: generate libfsverity.pc during 'make install'")
-> 
-> Signed-off-by: Luca Boccassi <luca.boccassi@microsoft.com>
-> ---
-> I think this was removed by mistake? After the linked commit make install
-> does not install the header anymore
-> 
->  Makefile | 1 +
->  1 file changed, 1 insertion(+)
-> 
-> diff --git a/Makefile b/Makefile
-> index a898ed4..bfe83c4 100644
-> --- a/Makefile
-> +++ b/Makefile
-> @@ -206,6 +206,7 @@ install:all
->  	install -m644 libfsverity.a $(DESTDIR)$(LIBDIR)
->  	install -m755 libfsverity.so.$(SOVERSION) $(DESTDIR)$(LIBDIR)
->  	ln -sf libfsverity.so.$(SOVERSION) $(DESTDIR)$(LIBDIR)/libfsverity.so
-> +	install -m644 include/libfsverity.h $(DESTDIR)$(INCDIR)
->  	sed -e "s|@PREFIX@|$(PREFIX)|" \
->  		-e "s|@LIBDIR@|$(LIBDIR)|" \
->  		-e "s|@INCDIR@|$(INCDIR)|" \
+From: Eric Biggers <ebiggers@google.com>
 
-Applied, thanks.  Sorry about that.
+Currently inode_init_always() doesn't initialize i_ino to 0.  This is
+unexpected because unlike the other inode fields that aren't initialized
+by inode_init_always(), i_ino isn't guaranteed to end up back at its
+initial value after the inode is freed.  Only one filesystem (XFS)
+actually sets set i_ino back to 0 when freeing its inodes.
 
-- Eric
+So, callers of new_inode() see some random previous i_ino.  Normally
+that's fine, since normally i_ino isn't accessed before being set.
+There can be edge cases where that isn't necessarily true, though.
+
+The one I've run into is that on ext4, when creating an encrypted file,
+the new file's encryption key has to be set up prior to the jbd2
+transaction, and thus prior to i_ino being set.  If something goes
+wrong, fs/crypto/ may log warning or error messages, which normally
+include i_ino.  So it needs to know whether it is valid to include i_ino
+yet or not.  Also, on some files i_ino needs to be hashed for use in the
+crypto, so fs/crypto/ needs to know whether that can be done yet or not.
+
+There are ways this could be worked around, either in fs/crypto/ or in
+fs/ext4/.  But, it seems there's no reason not to just fix
+inode_init_always() to do the expected thing and initialize i_ino to 0.
+
+So, do that, and also remove the initialization in jfs_fill_super() that
+becomes redundant.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/inode.c     | 1 +
+ fs/jfs/super.c | 1 -
+ 2 files changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/fs/inode.c b/fs/inode.c
+index 9d78c37b00b81..eb001129f157c 100644
+--- a/fs/inode.c
++++ b/fs/inode.c
+@@ -142,6 +142,7 @@ int inode_init_always(struct super_block *sb, struct inode *inode)
+ 	atomic_set(&inode->i_count, 1);
+ 	inode->i_op = &empty_iops;
+ 	inode->i_fop = &no_open_fops;
++	inode->i_ino = 0;
+ 	inode->__i_nlink = 1;
+ 	inode->i_opflags = 0;
+ 	if (sb->s_xattr)
+diff --git a/fs/jfs/super.c b/fs/jfs/super.c
+index b2dc4d1f9dcc5..1f0ffabbde566 100644
+--- a/fs/jfs/super.c
++++ b/fs/jfs/super.c
+@@ -551,7 +551,6 @@ static int jfs_fill_super(struct super_block *sb, void *data, int silent)
+ 		ret = -ENOMEM;
+ 		goto out_unload;
+ 	}
+-	inode->i_ino = 0;
+ 	inode->i_size = i_size_read(sb->s_bdev->bd_inode);
+ 	inode->i_mapping->a_ops = &jfs_metapage_aops;
+ 	inode_fake_hash(inode);
+
+base-commit: 5fc6b075e165f641fbc366b58b578055762d5f8c
+-- 
+2.29.1
+
