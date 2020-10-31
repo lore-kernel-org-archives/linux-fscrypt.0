@@ -4,48 +4,47 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6F0ACC00A89
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 00:46:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6A9C8C388F7
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 05:41:28 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 1F5D6208B6
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 00:46:40 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id F1E5420791
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 05:41:27 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1604105200;
-	bh=ISyUlobbmPUX9wWHknornWz4uwFa5M+PTGKhUXL5ucY=;
+	s=default; t=1604122888;
+	bh=nCGTBX9tDEqmWbzaPbBBKNNXSVAAPdzmhCtdaU5JG3o=;
 	h=From:To:Cc:Subject:Date:List-ID:From;
-	b=JhVSEM33OUG0Ws2TpEAqUUIMK1Oq8iKCvtv8pYtHxyyw2HEoyJV+d28EVw0Vz50GI
-	 h04iphjJANaIBBXzBRWmuVDd4viUSHp3dgCYPdPHAd4knBsF+C+dOyL2xSNAkLSUv3
-	 YglnZMapllDBXAIc59mv9MIWvQCJymnpWeNDO57g=
+	b=VPET498OVWLDQ0iKWIM6jUwbVl6CuTvu5/7l4TC2CMeEqIqETWeMsKrx6gF4v++C+
+	 ERQpsvEU0RpiDY2t9qKDFWjWEMUjARO0Aans2UgZiO+wDuKB7CrmtT6dYXFO1B4/Za
+	 A53ZqJhx0/Rs9EVV2nnzC7ECZ0Vqz6A9UBJbkvkw=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1725960AbgJaAqj (ORCPT
+        id S1725924AbgJaFl1 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 30 Oct 2020 20:46:39 -0400
-Received: from mail.kernel.org ([198.145.29.99]:50420 "EHLO mail.kernel.org"
+        Sat, 31 Oct 2020 01:41:27 -0400
+Received: from mail.kernel.org ([198.145.29.99]:38522 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725446AbgJaAqj (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 30 Oct 2020 20:46:39 -0400
+        id S1725822AbgJaFl1 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sat, 31 Oct 2020 01:41:27 -0400
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 559C62076D;
-        Sat, 31 Oct 2020 00:46:39 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 31EF020791;
+        Sat, 31 Oct 2020 05:41:26 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1604105199;
-        bh=ISyUlobbmPUX9wWHknornWz4uwFa5M+PTGKhUXL5ucY=;
+        s=default; t=1604122886;
+        bh=nCGTBX9tDEqmWbzaPbBBKNNXSVAAPdzmhCtdaU5JG3o=;
         h=From:To:Cc:Subject:Date:From;
-        b=oN57/YPPqMXqj510wP541wnbVFTpOGLaG3EX5wWxm0UqyXXG0w3n/NILIipEUgCgT
-         vDxJNiVnA/+X0EMs4I7CsizEIRON4oI7egWUX+LY2x+rwlGIyJJyTnnzbK6cLyaUIU
-         8tLcZenphNxO8B+NIDFH7kEknRh7uJZ1WP/efxR0=
+        b=vbYpcCy1kQQaKf4LqRHnEVba/ssq8svKbX7T+GqeFwFIATHBOmYg0fJN0wubI1xi8
+         seCRpkyF1v+Vk0cK5nkD+Hhm0OT87E3IuzXzJirzq3l7ITC/KxbhxLXY4gY7Fb0zTf
+         mR9RPAn2bMi1bwsGJ967jUWx2hwlfEdlynTr/j4s=
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
-        "Theodore Y. Ts'o" <tytso@mit.edu>
-Subject: [PATCH] fscrypt: remove reachable WARN in fscrypt_setup_iv_ino_lblk_32_key()
-Date:   Fri, 30 Oct 2020 17:45:56 -0700
-Message-Id: <20201031004556.87862-1-ebiggers@kernel.org>
+To:     fstests@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org
+Subject: [PATCH] generic/395: remove workarounds for wrong error codes
+Date:   Fri, 30 Oct 2020 22:40:18 -0700
+Message-Id: <20201031054018.695314-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.1
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -55,40 +54,115 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-I_CREATING isn't actually set until the inode has been assigned an inode
-number and inserted into the inode hash table.  So the WARN_ON() in
-fscrypt_setup_iv_ino_lblk_32_key() is wrong, and it can trigger when
-creating an encrypted file on ext4.  Remove it.
+generic/395 contains workarounds to allow for some of the fscrypt ioctls
+to fail with different error codes.  However, the error codes were all
+fixed up and documented years ago:
 
-This was sometimes causing xfstest generic/602 to fail on ext4.  I
-didn't notice it before because due to a separate oversight, new inodes
-that haven't been assigned an inode number yet don't necessarily have
-i_ino == 0 as I had thought, so by chance I never saw the test fail.
+- FS_IOC_GET_ENCRYPTION_POLICY on ext4 failed with ENOENT instead of
+  ENODATA on unencrypted files.  Fixed by commit db717d8e26c2
+  ("fscrypto: move ioctl processing more fully into common code").
 
-Fixes: a992b20cd4ee ("fscrypt: add fscrypt_prepare_new_inode() and fscrypt_set_context()")
-Reported-by: Theodore Y. Ts'o <tytso@mit.edu>
+- FS_IOC_SET_ENCRYPTION_POLICY failed with EINVAL instead of EEXIST
+  on encrypted files.  Fixed by commit 8488cd96ff88 ("fscrypt: use
+  EEXIST when file already uses different policy").
+
+- FS_IOC_SET_ENCRYPTION_POLICY failed with EINVAL instead of ENOTDIR
+  on nondirectories.  Fixed by commit dffd0cfa06d4 ("fscrypt: use
+  ENOTDIR when setting encryption policy on nondirectory").
+
+It's been long enough, so update the test to expect the correct behavior
+only, so we don't accidentally reintroduce the wrong behavior.
+
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/keysetup.c | 4 +---
- 1 file changed, 1 insertion(+), 3 deletions(-)
+ tests/generic/395 | 31 ++++++++-----------------------
+ 1 file changed, 8 insertions(+), 23 deletions(-)
 
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index d3c3e5d9b41f7..d595abb8ef90d 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -269,9 +269,7 @@ static int fscrypt_setup_iv_ino_lblk_32_key(struct fscrypt_info *ci,
- 	 * New inodes may not have an inode number assigned yet.
- 	 * Hashing their inode number is delayed until later.
- 	 */
--	if (ci->ci_inode->i_ino == 0)
--		WARN_ON(!(ci->ci_inode->i_state & I_CREATING));
--	else
-+	if (ci->ci_inode->i_ino)
- 		fscrypt_hash_inode_number(ci, mk);
- 	return 0;
- }
-
-base-commit: 5fc6b075e165f641fbc366b58b578055762d5f8c
+diff --git a/tests/generic/395 b/tests/generic/395
+index 3fa2a823..34121dd9 100755
+--- a/tests/generic/395
++++ b/tests/generic/395
+@@ -38,31 +38,19 @@ _require_user
+ _scratch_mkfs_encrypted &>> $seqres.full
+ _scratch_mount
+ 
+-check_no_policy()
+-{
+-	# When a file is unencrypted, FS_IOC_GET_ENCRYPTION_POLICY currently
+-	# fails with ENOENT on ext4 but with ENODATA on f2fs.  TODO: it's
+-	# planned to consistently use ENODATA.  For now this test accepts both.
+-	_get_encpolicy $1 |&
+-		sed -e 's/No such file or directory/No data available/'
+-}
+-
+ # Should be able to set an encryption policy on an empty directory
+ empty_dir=$SCRATCH_MNT/empty_dir
+ echo -e "\n*** Setting encryption policy on empty directory ***"
+ mkdir $empty_dir
+-check_no_policy $empty_dir |& _filter_scratch
++_get_encpolicy $empty_dir |& _filter_scratch
+ _set_encpolicy $empty_dir 0000111122223333
+ _get_encpolicy $empty_dir | _filter_scratch
+ 
+ # Should be able to set the same policy again, but not a different one.
+-# TODO: the error code for "already has a different policy" is planned to switch
+-# from EINVAL to EEXIST.  For now this test accepts both.
+ echo -e "\n*** Setting encryption policy again ***"
+ _set_encpolicy $empty_dir 0000111122223333
+ _get_encpolicy $empty_dir | _filter_scratch
+-_set_encpolicy $empty_dir 4444555566667777 |& \
+-	_filter_scratch | sed -e 's/Invalid argument/File exists/'
++_set_encpolicy $empty_dir 4444555566667777 |& _filter_scratch
+ _get_encpolicy $empty_dir | _filter_scratch
+ 
+ # Should *not* be able to set an encryption policy on a nonempty directory
+@@ -71,19 +59,16 @@ echo -e "\n*** Setting encryption policy on nonempty directory ***"
+ mkdir $nonempty_dir
+ touch $nonempty_dir/file
+ _set_encpolicy $nonempty_dir |& _filter_scratch
+-check_no_policy $nonempty_dir |& _filter_scratch
++_get_encpolicy $nonempty_dir |& _filter_scratch
+ 
+ # Should *not* be able to set an encryption policy on a nondirectory file, even
+ # an empty one.  Regression test for 002ced4be642: "fscrypto: only allow setting
+ # encryption policy on directories".
+-# TODO: the error code for "not a directory" is planned to switch from EINVAL to
+-# ENOTDIR.  For now this test accepts both.
+ nondirectory=$SCRATCH_MNT/nondirectory
+ echo -e "\n*** Setting encryption policy on nondirectory ***"
+ touch $nondirectory
+-_set_encpolicy $nondirectory |& \
+-	_filter_scratch | sed -e 's/Invalid argument/Not a directory/'
+-check_no_policy $nondirectory |& _filter_scratch
++_set_encpolicy $nondirectory |& _filter_scratch
++_get_encpolicy $nondirectory |& _filter_scratch
+ 
+ # Should *not* be able to set an encryption policy on another user's directory.
+ # Regression test for 163ae1c6ad62: "fscrypto: add authorization check for
+@@ -92,7 +77,7 @@ unauthorized_dir=$SCRATCH_MNT/unauthorized_dir
+ echo -e "\n*** Setting encryption policy on another user's directory ***"
+ mkdir $unauthorized_dir
+ _user_do_set_encpolicy $unauthorized_dir |& _filter_scratch
+-check_no_policy $unauthorized_dir |& _filter_scratch
++_get_encpolicy $unauthorized_dir |& _filter_scratch
+ 
+ # Should *not* be able to set an encryption policy on a directory on a
+ # filesystem mounted readonly.  Regression test for ba63f23d69a3: "fscrypto:
+@@ -102,12 +87,12 @@ echo -e "\n*** Setting encryption policy on readonly filesystem ***"
+ mkdir $SCRATCH_MNT/ro_dir $SCRATCH_MNT/ro_bind_mnt
+ _scratch_remount ro
+ _set_encpolicy $SCRATCH_MNT/ro_dir |& _filter_scratch
+-check_no_policy $SCRATCH_MNT/ro_dir |& _filter_scratch
++_get_encpolicy $SCRATCH_MNT/ro_dir |& _filter_scratch
+ _scratch_remount rw
+ mount --bind $SCRATCH_MNT $SCRATCH_MNT/ro_bind_mnt
+ mount -o remount,ro,bind $SCRATCH_MNT/ro_bind_mnt
+ _set_encpolicy $SCRATCH_MNT/ro_bind_mnt/ro_dir |& _filter_scratch
+-check_no_policy $SCRATCH_MNT/ro_bind_mnt/ro_dir |& _filter_scratch
++_get_encpolicy $SCRATCH_MNT/ro_bind_mnt/ro_dir |& _filter_scratch
+ umount $SCRATCH_MNT/ro_bind_mnt
+ 
+ # success, all done
 -- 
 2.29.1
 
