@@ -1,321 +1,126 @@
-Return-Path: <SRS0=4ayL=EG=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=Gr32=EH=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+X-Spam-Status: No, score=-11.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A9854C56202
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 23:13:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A6B81C2D0A3
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Nov 2020 10:29:36 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 5270D221FF
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 31 Oct 2020 23:13:06 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 6E0D42071A
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Nov 2020 10:29:36 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1604185986;
-	bh=tUczJQWP28yK2try47FWDEAXS1RXB2a9k8gq9h8g4ak=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=thgcgZvzalmmC7VcA7qfLGfQNiARvaFZsBKGvamqLAhELI5Q2LySao9WVIiUSo00V
-	 cv5qIeJM6WNxzrUsquNu6QcgdmsPBT2QGuuDwZPzQRBQUALr6mGnA0tZdybCNIR5JR
-	 WXgR11ArHDIlau9znWnSlg4I64I1Qa7lKgFB7wM4=
+	s=default; t=1604226576;
+	bh=UOlXrUNgm2jyspTnQm6v1OStDWu3z6qFES7jxpfoSI0=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=gOkifUM8pZqpfUWjSAa5vMhuJ6QJXXD+gKUQwX1yx7q7EgR+VtvKoxhbmoqSqnEzV
+	 i63A2sOBFsxPMN+iQnGV0xXGU0TfqvDIilBlgd+DP4KbFX/V2BZ+UZDmiZ5vkqMWkz
+	 At3XTBaNaMfCcXPWoqO+NQ8iMYAz0bL/vsdnOw9Q=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1725809AbgJaXNF (ORCPT
+        id S1726322AbgKAK3g (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 31 Oct 2020 19:13:05 -0400
-Received: from mail.kernel.org ([198.145.29.99]:54166 "EHLO mail.kernel.org"
+        Sun, 1 Nov 2020 05:29:36 -0500
+Received: from mail.kernel.org ([198.145.29.99]:48640 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725850AbgJaXNF (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 31 Oct 2020 19:13:05 -0400
-Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        id S1726138AbgKAK3f (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 1 Nov 2020 05:29:35 -0500
+Received: from localhost (83-86-74-64.cable.dynamic.v4.ziggo.nl [83.86.74.64])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 7ABE820885;
-        Sat, 31 Oct 2020 23:13:03 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 53C9E20709;
+        Sun,  1 Nov 2020 10:29:34 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1604185983;
-        bh=tUczJQWP28yK2try47FWDEAXS1RXB2a9k8gq9h8g4ak=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=j/fNwqHSQadcbYVoMyGnPqh6/dwa61ky59FiKH8Zb/frzAiwIq5irIG4W41paykfU
-         Y611ixtTEIL5xO0/Dycm+/TT/4P5cjgdjgYN1vrTtAk28+oemJ55SVXv5CqaR8CERc
-         E1Jp/LbI0YX2j1lwA0PZme605wNWSCBEX/KwOoKM=
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     stable@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
-        Theodore Ts'o <tytso@mit.edu>
-Subject: [PATCH 4.9 1/2] fscrypto: move ioctl processing more fully into common code
-Date:   Sat, 31 Oct 2020 16:11:23 -0700
-Message-Id: <20201031231124.1199710-2-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.29.1
-In-Reply-To: <20201031231124.1199710-1-ebiggers@kernel.org>
-References: <20201031231124.1199710-1-ebiggers@kernel.org>
+        s=default; t=1604226574;
+        bh=UOlXrUNgm2jyspTnQm6v1OStDWu3z6qFES7jxpfoSI0=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=Fo6UCNlmaykNMdGjTvL48cFMlWS9RKr5f6r2XAS4Mnt9s8UeY3yho97zGgBW5ZL8K
+         xM8o+1EZ5o5v+DNthjHD7q7VLeOOcQYXzjC+uCdKmrCyVHv1wCY3TKb1xJjajgqW5Z
+         pa4G1nQ01OCZQew8ov2lQ4ZXfW0arwUJEB+47oVg=
+Date:   Sun, 1 Nov 2020 11:30:18 +0100
+From:   Greg KH <gregkh@linuxfoundation.org>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     stable@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH 4.19] fscrypt: return -EXDEV for incompatible rename or
+ link into encrypted dir
+Message-ID: <20201101103018.GA2558892@kroah.com>
+References: <20201031183551.202400-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20201031183551.202400-1-ebiggers@kernel.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Sat, Oct 31, 2020 at 11:35:51AM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> commit f5e55e777cc93eae1416f0fa4908e8846b6d7825 upstream.
+> [Please apply to 4.19-stable.  This is an important fix to have,
+> and it will be needed for xfstest generic/398 to pass if
+> https://lkml.kernel.org/r/20201031054141.695517-1-ebiggers@kernel.org
+> is applied.  This is a clean cherry-pick to 4.19, but it doesn't apply
+> to 4.14 and earlier; different backports would be needed for that.]
+> 
+> Currently, trying to rename or link a regular file, directory, or
+> symlink into an encrypted directory fails with EPERM when the source
+> file is unencrypted or is encrypted with a different encryption policy,
+> and is on the same mountpoint.  It is correct for the operation to fail,
+> but the choice of EPERM breaks tools like 'mv' that know to copy rather
+> than rename if they see EXDEV, but don't know what to do with EPERM.
+> 
+> Our original motivation for EPERM was to encourage users to securely
+> handle their data.  Encrypting files by "moving" them into an encrypted
+> directory can be insecure because the unencrypted data may remain in
+> free space on disk, where it can later be recovered by an attacker.
+> It's much better to encrypt the data from the start, or at least try to
+> securely delete the source data e.g. using the 'shred' program.
+> 
+> However, the current behavior hasn't been effective at achieving its
+> goal because users tend to be confused, hack around it, and complain;
+> see e.g. https://github.com/google/fscrypt/issues/76.  And in some cases
+> it's actually inconsistent or unnecessary.  For example, 'mv'-ing files
+> between differently encrypted directories doesn't work even in cases
+> where it can be secure, such as when in userspace the same passphrase
+> protects both directories.  Yet, you *can* already 'mv' unencrypted
+> files into an encrypted directory if the source files are on a different
+> mountpoint, even though doing so is often insecure.
+> 
+> There are probably better ways to teach users to securely handle their
+> files.  For example, the 'fscrypt' userspace tool could provide a
+> command that migrates unencrypted files into an encrypted directory,
+> acting like 'shred' on the source files and providing appropriate
+> warnings depending on the type of the source filesystem and disk.
+> 
+> Receiving errors on unimportant files might also force some users to
+> disable encryption, thus making the behavior counterproductive.  It's
+> desirable to make encryption as unobtrusive as possible.
+> 
+> Therefore, change the error code from EPERM to EXDEV so that tools
+> looking for EXDEV will fall back to a copy.
+> 
+> This, of course, doesn't prevent users from still doing the right things
+> to securely manage their files.  Note that this also matches the
+> behavior when a file is renamed between two project quota hierarchies;
+> so there's precedent for using EXDEV for things other than mountpoints.
+> 
+> xfstests generic/398 will require an update with this change.
+> 
+> [Rewritten from an earlier patch series by Michael Halcrow.]
+> 
+> Cc: Michael Halcrow <mhalcrow@google.com>
+> Cc: Joe Richey <joerichey@google.com>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  Documentation/filesystems/fscrypt.rst | 12 ++++++++++--
+>  fs/crypto/hooks.c                     |  6 +++---
+>  fs/crypto/policy.c                    |  3 +--
+>  include/linux/fscrypt.h               |  4 ++--
+>  4 files changed, 16 insertions(+), 9 deletions(-)
 
-commit db717d8e26c2d1b0dba3e08668a1e6a7f665adde upstream.
+All 4 backports now queued up, thanks!
 
-Multiple bugs were recently fixed in the "set encryption policy" ioctl.
-To make it clear that fscrypt_process_policy() and fscrypt_get_policy()
-implement ioctls and therefore their implementations must take standard
-security and correctness precautions, rename them to
-fscrypt_ioctl_set_policy() and fscrypt_ioctl_get_policy().  Make the
-latter take in a struct file * to make it consistent with the former.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
-Signed-off-by: Theodore Ts'o <tytso@mit.edu>
----
- fs/crypto/policy.c       | 34 +++++++++++++++++++++-------------
- fs/ext4/ext4.h           |  4 ++--
- fs/ext4/ioctl.c          | 34 +++++-----------------------------
- fs/f2fs/f2fs.h           |  4 ++--
- fs/f2fs/file.c           | 19 ++-----------------
- include/linux/fscrypto.h | 12 ++++++------
- 6 files changed, 38 insertions(+), 69 deletions(-)
-
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 51f4463718e84..a89e50331deb6 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -93,16 +93,19 @@ static int create_encryption_context_from_policy(struct inode *inode,
- 	return inode->i_sb->s_cop->set_context(inode, &ctx, sizeof(ctx), NULL);
- }
- 
--int fscrypt_process_policy(struct file *filp,
--				const struct fscrypt_policy *policy)
-+int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
- {
-+	struct fscrypt_policy policy;
- 	struct inode *inode = file_inode(filp);
- 	int ret;
- 
-+	if (copy_from_user(&policy, arg, sizeof(policy)))
-+		return -EFAULT;
-+
- 	if (!inode_owner_or_capable(inode))
- 		return -EACCES;
- 
--	if (policy->version != 0)
-+	if (policy.version != 0)
- 		return -EINVAL;
- 
- 	ret = mnt_want_write_file(filp);
-@@ -122,9 +125,9 @@ int fscrypt_process_policy(struct file *filp,
- 			ret = -ENOTEMPTY;
- 		else
- 			ret = create_encryption_context_from_policy(inode,
--								    policy);
-+								    &policy);
- 	} else if (!is_encryption_context_consistent_with_policy(inode,
--								 policy)) {
-+								 &policy)) {
- 		printk(KERN_WARNING
- 		       "%s: Policy inconsistent with encryption context\n",
- 		       __func__);
-@@ -136,11 +139,13 @@ int fscrypt_process_policy(struct file *filp,
- 	mnt_drop_write_file(filp);
- 	return ret;
- }
--EXPORT_SYMBOL(fscrypt_process_policy);
-+EXPORT_SYMBOL(fscrypt_ioctl_set_policy);
- 
--int fscrypt_get_policy(struct inode *inode, struct fscrypt_policy *policy)
-+int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg)
- {
-+	struct inode *inode = file_inode(filp);
- 	struct fscrypt_context ctx;
-+	struct fscrypt_policy policy;
- 	int res;
- 
- 	if (!inode->i_sb->s_cop->get_context ||
-@@ -153,15 +158,18 @@ int fscrypt_get_policy(struct inode *inode, struct fscrypt_policy *policy)
- 	if (ctx.format != FS_ENCRYPTION_CONTEXT_FORMAT_V1)
- 		return -EINVAL;
- 
--	policy->version = 0;
--	policy->contents_encryption_mode = ctx.contents_encryption_mode;
--	policy->filenames_encryption_mode = ctx.filenames_encryption_mode;
--	policy->flags = ctx.flags;
--	memcpy(&policy->master_key_descriptor, ctx.master_key_descriptor,
-+	policy.version = 0;
-+	policy.contents_encryption_mode = ctx.contents_encryption_mode;
-+	policy.filenames_encryption_mode = ctx.filenames_encryption_mode;
-+	policy.flags = ctx.flags;
-+	memcpy(policy.master_key_descriptor, ctx.master_key_descriptor,
- 				FS_KEY_DESCRIPTOR_SIZE);
-+
-+	if (copy_to_user(arg, &policy, sizeof(policy)))
-+		return -EFAULT;
- 	return 0;
- }
--EXPORT_SYMBOL(fscrypt_get_policy);
-+EXPORT_SYMBOL(fscrypt_ioctl_get_policy);
- 
- /**
-  * fscrypt_has_permitted_context() - is a file's encryption policy permitted
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index b41ac328c3964..360954196e2f3 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -2354,8 +2354,8 @@ static inline void ext4_fname_free_filename(struct ext4_filename *fname) { }
- #define fscrypt_pullback_bio_page	fscrypt_notsupp_pullback_bio_page
- #define fscrypt_restore_control_page	fscrypt_notsupp_restore_control_page
- #define fscrypt_zeroout_range		fscrypt_notsupp_zeroout_range
--#define fscrypt_process_policy		fscrypt_notsupp_process_policy
--#define fscrypt_get_policy		fscrypt_notsupp_get_policy
-+#define fscrypt_ioctl_set_policy	fscrypt_notsupp_ioctl_set_policy
-+#define fscrypt_ioctl_get_policy	fscrypt_notsupp_ioctl_get_policy
- #define fscrypt_has_permitted_context	fscrypt_notsupp_has_permitted_context
- #define fscrypt_inherit_context		fscrypt_notsupp_inherit_context
- #define fscrypt_get_encryption_info	fscrypt_notsupp_get_encryption_info
-diff --git a/fs/ext4/ioctl.c b/fs/ext4/ioctl.c
-index eada4172c4ef1..2016f5a5d3cf1 100644
---- a/fs/ext4/ioctl.c
-+++ b/fs/ext4/ioctl.c
-@@ -774,22 +774,12 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
- 	}
- 	case EXT4_IOC_PRECACHE_EXTENTS:
- 		return ext4_ext_precache(inode);
--	case EXT4_IOC_SET_ENCRYPTION_POLICY: {
--#ifdef CONFIG_EXT4_FS_ENCRYPTION
--		struct fscrypt_policy policy;
- 
-+	case EXT4_IOC_SET_ENCRYPTION_POLICY:
- 		if (!ext4_has_feature_encrypt(sb))
- 			return -EOPNOTSUPP;
-+		return fscrypt_ioctl_set_policy(filp, (const void __user *)arg);
- 
--		if (copy_from_user(&policy,
--				   (struct fscrypt_policy __user *)arg,
--				   sizeof(policy)))
--			return -EFAULT;
--		return fscrypt_process_policy(filp, &policy);
--#else
--		return -EOPNOTSUPP;
--#endif
--	}
- 	case EXT4_IOC_GET_ENCRYPTION_PWSALT: {
- 		int err, err2;
- 		struct ext4_sb_info *sbi = EXT4_SB(sb);
-@@ -826,23 +816,9 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
- 			return -EFAULT;
- 		return 0;
- 	}
--	case EXT4_IOC_GET_ENCRYPTION_POLICY: {
--#ifdef CONFIG_EXT4_FS_ENCRYPTION
--		struct fscrypt_policy policy;
--		int err = 0;
--
--		if (!ext4_encrypted_inode(inode))
--			return -ENOENT;
--		err = fscrypt_get_policy(inode, &policy);
--		if (err)
--			return err;
--		if (copy_to_user((void __user *)arg, &policy, sizeof(policy)))
--			return -EFAULT;
--		return 0;
--#else
--		return -EOPNOTSUPP;
--#endif
--	}
-+	case EXT4_IOC_GET_ENCRYPTION_POLICY:
-+		return fscrypt_ioctl_get_policy(filp, (void __user *)arg);
-+
- 	case EXT4_IOC_FSGETXATTR:
- 	{
- 		struct fsxattr fa;
-diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-index b16ab4187234d..7016a59142e3e 100644
---- a/fs/f2fs/f2fs.h
-+++ b/fs/f2fs/f2fs.h
-@@ -2513,8 +2513,8 @@ static inline bool f2fs_may_encrypt(struct inode *inode)
- #define fscrypt_pullback_bio_page	fscrypt_notsupp_pullback_bio_page
- #define fscrypt_restore_control_page	fscrypt_notsupp_restore_control_page
- #define fscrypt_zeroout_range		fscrypt_notsupp_zeroout_range
--#define fscrypt_process_policy		fscrypt_notsupp_process_policy
--#define fscrypt_get_policy		fscrypt_notsupp_get_policy
-+#define fscrypt_ioctl_set_policy	fscrypt_notsupp_ioctl_set_policy
-+#define fscrypt_ioctl_get_policy	fscrypt_notsupp_ioctl_get_policy
- #define fscrypt_has_permitted_context	fscrypt_notsupp_has_permitted_context
- #define fscrypt_inherit_context		fscrypt_notsupp_inherit_context
- #define fscrypt_get_encryption_info	fscrypt_notsupp_get_encryption_info
-diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
-index e3c438c8b8ce0..0bedcd70b51f4 100644
---- a/fs/f2fs/file.c
-+++ b/fs/f2fs/file.c
-@@ -1774,31 +1774,16 @@ static bool uuid_is_nonzero(__u8 u[16])
- 
- static int f2fs_ioc_set_encryption_policy(struct file *filp, unsigned long arg)
- {
--	struct fscrypt_policy policy;
- 	struct inode *inode = file_inode(filp);
- 
--	if (copy_from_user(&policy, (struct fscrypt_policy __user *)arg,
--							sizeof(policy)))
--		return -EFAULT;
--
- 	f2fs_update_time(F2FS_I_SB(inode), REQ_TIME);
- 
--	return fscrypt_process_policy(filp, &policy);
-+	return fscrypt_ioctl_set_policy(filp, (const void __user *)arg);
- }
- 
- static int f2fs_ioc_get_encryption_policy(struct file *filp, unsigned long arg)
- {
--	struct fscrypt_policy policy;
--	struct inode *inode = file_inode(filp);
--	int err;
--
--	err = fscrypt_get_policy(inode, &policy);
--	if (err)
--		return err;
--
--	if (copy_to_user((struct fscrypt_policy __user *)arg, &policy, sizeof(policy)))
--		return -EFAULT;
--	return 0;
-+	return fscrypt_ioctl_get_policy(filp, (void __user *)arg);
- }
- 
- static int f2fs_ioc_get_encryption_pwsalt(struct file *filp, unsigned long arg)
-diff --git a/include/linux/fscrypto.h b/include/linux/fscrypto.h
-index f6dfc2950f764..3b1f17dbf92d9 100644
---- a/include/linux/fscrypto.h
-+++ b/include/linux/fscrypto.h
-@@ -249,8 +249,8 @@ extern void fscrypt_restore_control_page(struct page *);
- extern int fscrypt_zeroout_range(struct inode *, pgoff_t, sector_t,
- 						unsigned int);
- /* policy.c */
--extern int fscrypt_process_policy(struct file *, const struct fscrypt_policy *);
--extern int fscrypt_get_policy(struct inode *, struct fscrypt_policy *);
-+extern int fscrypt_ioctl_set_policy(struct file *, const void __user *);
-+extern int fscrypt_ioctl_get_policy(struct file *, void __user *);
- extern int fscrypt_has_permitted_context(struct inode *, struct inode *);
- extern int fscrypt_inherit_context(struct inode *, struct inode *,
- 					void *, bool);
-@@ -318,14 +318,14 @@ static inline int fscrypt_notsupp_zeroout_range(struct inode *i, pgoff_t p,
- }
- 
- /* policy.c */
--static inline int fscrypt_notsupp_process_policy(struct file *f,
--				const struct fscrypt_policy *p)
-+static inline int fscrypt_notsupp_ioctl_set_policy(struct file *f,
-+				const void __user *arg)
- {
- 	return -EOPNOTSUPP;
- }
- 
--static inline int fscrypt_notsupp_get_policy(struct inode *i,
--				struct fscrypt_policy *p)
-+static inline int fscrypt_notsupp_ioctl_get_policy(struct file *f,
-+				void __user *arg)
- {
- 	return -EOPNOTSUPP;
- }
--- 
-2.29.1
-
+greg k-h
