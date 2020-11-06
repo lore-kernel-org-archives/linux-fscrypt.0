@@ -1,159 +1,77 @@
-Return-Path: <SRS0=J1Ap=EJ=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <SRS0=5/e1=EM=vger.kernel.org=linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-9.8 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SIGNED_OFF_BY,
+	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 63EA2C4742C
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Nov 2020 21:25:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 07276C55178
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  6 Nov 2020 17:51:03 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 1E55F21534
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  3 Nov 2020 21:25:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id A6A4122203
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  6 Nov 2020 17:51:02 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1604438752;
-	bh=VKbr2do/Xb70jJsR2z/OGL/3FZyisH4oRDFQUWCYkn8=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References:List-ID:From;
-	b=AEkjq9P/Q7WkB6bwkZU9P2ZRC9ui/8k+SOm8b+np0dmpJiI2UcB5GOU3d8JNwlwjB
-	 GkeFbnf9bje++7OPzYLInt75mBTuJPfJPhcH8IECNUZjvOYBI1yD7T+xKsU2YBrjW6
-	 q1tvyBg3PK2nHCd4Op6Kz0P6bZ9IacaWakNwPzaY=
+	s=default; t=1604685062;
+	bh=AoXlPZXpHyAt8nSZY7QrSbqoHAJncxCabKt0S2lrriE=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
+	b=pz8IIa84IuqY10r6NXyGhp2014/5HRn6owFMP0IelmSYcjMM9uuWsFJV/8Mqhc/JP
+	 +fUrSQTnsfyzymjB9zIeXgckorhwZL2Ia+aywhcoFDUW5bBOnWFbAYy+WYXdfboYAE
+	 40EFDIAZkrrqRCsqoEsGDaMNEz37emDEWA8tkPMk=
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2387599AbgKCVCQ (ORCPT
+        id S1727591AbgKFRvB (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 3 Nov 2020 16:02:16 -0500
-Received: from mail.kernel.org ([198.145.29.99]:39218 "EHLO mail.kernel.org"
+        Fri, 6 Nov 2020 12:51:01 -0500
+Received: from mail.kernel.org ([198.145.29.99]:55502 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2387577AbgKCVCO (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 3 Nov 2020 16:02:14 -0500
-Received: from localhost (83-86-74-64.cable.dynamic.v4.ziggo.nl [83.86.74.64])
+        id S1726408AbgKFRvB (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 6 Nov 2020 12:51:01 -0500
+Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id C7B0C206B5;
-        Tue,  3 Nov 2020 21:02:12 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id BE8FD2151B;
+        Fri,  6 Nov 2020 17:51:00 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1604437333;
-        bh=VKbr2do/Xb70jJsR2z/OGL/3FZyisH4oRDFQUWCYkn8=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Ir2GkHdFgEIx5I27Myjaaa689KDiGibqx+lzwKifYxdPwoCMFAs3hsaf9EsPfYRbb
-         0oYqQKL9CVxmoCEjpNZiS7rv9tnqMiVH17rX/efwZ8M833UALmoJL0nHAGF+r0zot/
-         oGLVQI+Ncjze0I653aCAB/qJoj6AscDC0xY+cQ9Q=
-From:   Greg Kroah-Hartman <gregkh@linuxfoundation.org>
-To:     linux-kernel@vger.kernel.org, stable@vger.kernel.org
-Cc:     Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
-        "linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net, linux-mtd@lists.infradead.org,
-        Theodore Tso" <tytso@mit.edu>, Eric Biggers <ebiggers@google.com>,
-        Theodore Ts'o <tytso@mit.edu>
-Subject: [PATCH 4.19 031/191] fscrypt: fix race allowing rename() and link() of ciphertext dentries
-Date:   Tue,  3 Nov 2020 21:35:23 +0100
-Message-Id: <20201103203236.750207039@linuxfoundation.org>
-X-Mailer: git-send-email 2.29.2
-In-Reply-To: <20201103203232.656475008@linuxfoundation.org>
-References: <20201103203232.656475008@linuxfoundation.org>
-User-Agent: quilt/0.66
+        s=default; t=1604685061;
+        bh=AoXlPZXpHyAt8nSZY7QrSbqoHAJncxCabKt0S2lrriE=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=OMFdoB+qGBJDUSXBs3zEFsHYY4+pvgORPQDZbY6oVtzoO/QYTzJjqE9u2Sy4ve+58
+         5J3MT3T8ac5TaiVKiqX4ZsW1kjIMkGzOrG+0R1OT1GvMraUsjEqiChTwvglKF7fpbh
+         JmGwNhpqXmYDjT2XwIYcrio9l02m4Msm/KyP88BM=
+Date:   Fri, 6 Nov 2020 09:50:59 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
+        "Theodore Y. Ts'o" <tytso@mit.edu>
+Subject: Re: [PATCH] fscrypt: remove reachable WARN in
+ fscrypt_setup_iv_ino_lblk_32_key()
+Message-ID: <20201106175059.GD845@sol.localdomain>
+References: <20201031004556.87862-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20201031004556.87862-1-ebiggers@kernel.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Oct 30, 2020 at 05:45:56PM -0700, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> I_CREATING isn't actually set until the inode has been assigned an inode
+> number and inserted into the inode hash table.  So the WARN_ON() in
+> fscrypt_setup_iv_ino_lblk_32_key() is wrong, and it can trigger when
+> creating an encrypted file on ext4.  Remove it.
+> 
+> This was sometimes causing xfstest generic/602 to fail on ext4.  I
+> didn't notice it before because due to a separate oversight, new inodes
+> that haven't been assigned an inode number yet don't necessarily have
+> i_ino == 0 as I had thought, so by chance I never saw the test fail.
+> 
+> Fixes: a992b20cd4ee ("fscrypt: add fscrypt_prepare_new_inode() and fscrypt_set_context()")
+> Reported-by: Theodore Y. Ts'o <tytso@mit.edu>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 
-commit 968dd6d0c6d6b6a989c6ddb9e2584a031b83e7b5 upstream.
+Applied to fscrypt.git#for-stable for 5.10.
 
-Close some race conditions where fscrypt allowed rename() and link() on
-ciphertext dentries that had been looked up just prior to the key being
-concurrently added.  It's better to return -ENOKEY in this case.
-
-This avoids doing the nonsensical thing of encrypting the names a second
-time when searching for the actual on-disk dir entries.  It also
-guarantees that DCACHE_ENCRYPTED_NAME dentries are never rename()d, so
-the dcache won't have support all possible combinations of moving
-DCACHE_ENCRYPTED_NAME around during __d_move().
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
-Signed-off-by: Theodore Ts'o <tytso@mit.edu>
-Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
----
- fs/crypto/hooks.c               |   12 +++++++++++-
- include/linux/fscrypt.h         |    2 +-
- include/linux/fscrypt_notsupp.h |    4 ++--
- include/linux/fscrypt_supp.h    |    3 ++-
- 4 files changed, 16 insertions(+), 5 deletions(-)
-
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -49,7 +49,8 @@ int fscrypt_file_open(struct inode *inod
- }
- EXPORT_SYMBOL_GPL(fscrypt_file_open);
- 
--int __fscrypt_prepare_link(struct inode *inode, struct inode *dir)
-+int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
-+			   struct dentry *dentry)
- {
- 	int err;
- 
-@@ -57,6 +58,10 @@ int __fscrypt_prepare_link(struct inode
- 	if (err)
- 		return err;
- 
-+	/* ... in case we looked up ciphertext name before key was added */
-+	if (dentry->d_flags & DCACHE_ENCRYPTED_NAME)
-+		return -ENOKEY;
-+
- 	if (!fscrypt_has_permitted_context(dir, inode))
- 		return -EXDEV;
- 
-@@ -78,6 +83,11 @@ int __fscrypt_prepare_rename(struct inod
- 	if (err)
- 		return err;
- 
-+	/* ... in case we looked up ciphertext name(s) before key was added */
-+	if ((old_dentry->d_flags | new_dentry->d_flags) &
-+	    DCACHE_ENCRYPTED_NAME)
-+		return -ENOKEY;
-+
- 	if (old_dir != new_dir) {
- 		if (IS_ENCRYPTED(new_dir) &&
- 		    !fscrypt_has_permitted_context(new_dir,
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -97,7 +97,7 @@ static inline int fscrypt_prepare_link(s
- 				       struct dentry *dentry)
- {
- 	if (IS_ENCRYPTED(dir))
--		return __fscrypt_prepare_link(d_inode(old_dentry), dir);
-+		return __fscrypt_prepare_link(d_inode(old_dentry), dir, dentry);
- 	return 0;
- }
- 
---- a/include/linux/fscrypt_notsupp.h
-+++ b/include/linux/fscrypt_notsupp.h
-@@ -183,8 +183,8 @@ static inline int fscrypt_file_open(stru
- 	return 0;
- }
- 
--static inline int __fscrypt_prepare_link(struct inode *inode,
--					 struct inode *dir)
-+static inline int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
-+					 struct dentry *dentry)
- {
- 	return -EOPNOTSUPP;
- }
---- a/include/linux/fscrypt_supp.h
-+++ b/include/linux/fscrypt_supp.h
-@@ -184,7 +184,8 @@ extern int fscrypt_zeroout_range(const s
- 
- /* hooks.c */
- extern int fscrypt_file_open(struct inode *inode, struct file *filp);
--extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir);
-+extern int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
-+				  struct dentry *dentry);
- extern int __fscrypt_prepare_rename(struct inode *old_dir,
- 				    struct dentry *old_dentry,
- 				    struct inode *new_dir,
-
-
+- Eric
