@@ -1,121 +1,91 @@
-Return-Path: <SRS0=5/e1=EM=vger.kernel.org=linux-fscrypt-owner@kernel.org>
+Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-4.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EF05FC2D0A3
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  6 Nov 2020 17:52:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 666CEC2D0A3
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Nov 2020 22:50:36 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 9D64C22203
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  6 Nov 2020 17:52:08 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=default; t=1604685128;
-	bh=+rTplTiRHCg1rSJZZILvtbrGwQkXqYXlY1s1r0lYRj8=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To:List-ID:From;
-	b=twA+Xt20kKk/3FFu3fCKNm1GQ1Y/spGJE3bK8FY4WWAcTYR1aH/LWUdleZYPaCYcR
-	 6Z5tl7VnhKLOvqpROqZAE0OBhMndusP0Xz93YsWIPCFeWw+G+NMCrZgy1c6gLtIRnj
-	 YpQaDItmPvdI9O0Lfzo1AyyLCqtVMhH0CMsgZXPY=
+	by mail.kernel.org (Postfix) with ESMTP id F02902074F
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 Nov 2020 22:50:35 +0000 (UTC)
+Authentication-Results: mail.kernel.org;
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="x/RoupRN"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727699AbgKFRwI (ORCPT
+        id S1729585AbgKIWuf (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 6 Nov 2020 12:52:08 -0500
-Received: from mail.kernel.org ([198.145.29.99]:55760 "EHLO mail.kernel.org"
+        Mon, 9 Nov 2020 17:50:35 -0500
+Received: from mail.kernel.org ([198.145.29.99]:60396 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726034AbgKFRwI (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 6 Nov 2020 12:52:08 -0500
-Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
+        id S1729451AbgKIWuf (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 9 Nov 2020 17:50:35 -0500
+Received: from gmail.com (unknown [104.132.1.84])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 2C12C206F4;
-        Fri,  6 Nov 2020 17:52:07 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 28674206C0;
+        Mon,  9 Nov 2020 22:50:34 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1604685127;
-        bh=+rTplTiRHCg1rSJZZILvtbrGwQkXqYXlY1s1r0lYRj8=;
+        s=default; t=1604962234;
+        bh=3zCrnmiSy4pI28U8wV8PlYqpeE16yEzdnAVoONyzohs=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=F+nspiyMoaHUdjgkHdvyFN7TjbEJuDH6E5/gsmZuQpTJ6Mks2/ZX4fEULddQILtyV
-         C7jt0GUYyptvY1wCY7opIUGuK05/rWJKZ2Nq2AKh4tIxtV2snaP7LPmb7Zl/GVdo80
-         PcEgKyh7Eeuuc2cdyoVGCZzROsapb3faNVR4/9Wg=
-Date:   Fri, 6 Nov 2020 09:52:05 -0800
+        b=x/RoupRNbJK1Pi4mHAwErVHXP/WENGRJgQMMxq9le7k+nzQ6OMr3Ik9Tg6nhy36C1
+         yFvZiu/Ji96oaWBRhoIDdUt+aBI3y0PNOh3QbRN0uliX4vy/xne5YwHqkCQB5XM4I4
+         qxla2lpMXWy+XbxUgITCAREeyY8g3BQp6Zc+EBOk=
+Date:   Mon, 9 Nov 2020 14:50:32 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     Alexander Viro <viro@zeniv.linux.org.uk>,
-        linux-fsdevel@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org
-Subject: Re: [PATCH] fs/inode.c: make inode_init_always() initialize i_ino to
- 0
-Message-ID: <20201106175205.GE845@sol.localdomain>
-References: <20201031004420.87678-1-ebiggers@kernel.org>
+To:     Daniel Rosenberg <drosen@google.com>
+Cc:     "Theodore Y . Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Andreas Dilger <adilger.kernel@dilger.ca>,
+        Chao Yu <chao@kernel.org>,
+        Alexander Viro <viro@zeniv.linux.org.uk>,
+        Richard Weinberger <richard@nod.at>,
+        linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net,
+        linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-mtd@lists.infradead.org,
+        Gabriel Krisman Bertazi <krisman@collabora.com>,
+        kernel-team@android.com
+Subject: Re: [PATCH 0/5] Add support for Encryption and Casefolding in F2FS
+Message-ID: <20201109225032.GA2652236@gmail.com>
+References: <20200923010151.69506-1-drosen@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20201031004420.87678-1-ebiggers@kernel.org>
+In-Reply-To: <20200923010151.69506-1-drosen@google.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Oct 30, 2020 at 05:44:20PM -0700, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
+On Wed, Sep 23, 2020 at 01:01:46AM +0000, Daniel Rosenberg wrote:
+> These patches are on top of the f2fs dev branch
 > 
-> Currently inode_init_always() doesn't initialize i_ino to 0.  This is
-> unexpected because unlike the other inode fields that aren't initialized
-> by inode_init_always(), i_ino isn't guaranteed to end up back at its
-> initial value after the inode is freed.  Only one filesystem (XFS)
-> actually sets set i_ino back to 0 when freeing its inodes.
+> F2FS currently supports casefolding and encryption, but not at
+> the same time. These patches aim to rectify that. In a later follow up,
+> this will be added for Ext4 as well. I've included one ext4 patch from
+> the previous set since it isn't in the f2fs branch, but is needed for the
+> fscrypt changes.
 > 
-> So, callers of new_inode() see some random previous i_ino.  Normally
-> that's fine, since normally i_ino isn't accessed before being set.
-> There can be edge cases where that isn't necessarily true, though.
+> The f2fs-tools changes have already been applied.
 > 
-> The one I've run into is that on ext4, when creating an encrypted file,
-> the new file's encryption key has to be set up prior to the jbd2
-> transaction, and thus prior to i_ino being set.  If something goes
-> wrong, fs/crypto/ may log warning or error messages, which normally
-> include i_ino.  So it needs to know whether it is valid to include i_ino
-> yet or not.  Also, on some files i_ino needs to be hashed for use in the
-> crypto, so fs/crypto/ needs to know whether that can be done yet or not.
+> Since both fscrypt and casefolding require their own dentry operations,
+> I've moved the responsibility of setting the dentry operations from fscrypt
+> to the filesystems and provided helper functions that should work for most
+> cases.
 > 
-> There are ways this could be worked around, either in fs/crypto/ or in
-> fs/ext4/.  But, it seems there's no reason not to just fix
-> inode_init_always() to do the expected thing and initialize i_ino to 0.
+> These are a follow-up to the previously sent patch set
+> "[PATCH v12 0/4] Prepare for upcoming Casefolding/Encryption patches"
 > 
-> So, do that, and also remove the initialization in jfs_fill_super() that
-> becomes redundant.
-> 
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> ---
->  fs/inode.c     | 1 +
->  fs/jfs/super.c | 1 -
->  2 files changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/fs/inode.c b/fs/inode.c
-> index 9d78c37b00b81..eb001129f157c 100644
-> --- a/fs/inode.c
-> +++ b/fs/inode.c
-> @@ -142,6 +142,7 @@ int inode_init_always(struct super_block *sb, struct inode *inode)
->  	atomic_set(&inode->i_count, 1);
->  	inode->i_op = &empty_iops;
->  	inode->i_fop = &no_open_fops;
-> +	inode->i_ino = 0;
->  	inode->__i_nlink = 1;
->  	inode->i_opflags = 0;
->  	if (sb->s_xattr)
-> diff --git a/fs/jfs/super.c b/fs/jfs/super.c
-> index b2dc4d1f9dcc5..1f0ffabbde566 100644
-> --- a/fs/jfs/super.c
-> +++ b/fs/jfs/super.c
-> @@ -551,7 +551,6 @@ static int jfs_fill_super(struct super_block *sb, void *data, int silent)
->  		ret = -ENOMEM;
->  		goto out_unload;
->  	}
-> -	inode->i_ino = 0;
->  	inode->i_size = i_size_read(sb->s_bdev->bd_inode);
->  	inode->i_mapping->a_ops = &jfs_metapage_aops;
->  	inode_fake_hash(inode);
-> 
+> Daniel Rosenberg (5):
+>   ext4: Use generic casefolding support
+>   fscrypt: Export fscrypt_d_revalidate
+>   libfs: Add generic function for setting dentry_ops
+>   fscrypt: Have filesystems handle their d_ops
+>   f2fs: Handle casefolding with Encryption
 
-Al, any thoughts on this?
+Daniel, can you resend this for 5.11, with all remaining comments addressed?
+The first two patches made 5.10, but the others didn't.
 
 - Eric
