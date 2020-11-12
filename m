@@ -2,120 +2,144 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,
-	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-12.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 241CAC388F7
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Nov 2020 05:39:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4682FC55ABD
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Nov 2020 19:41:16 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id BB9F32076E
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Nov 2020 05:39:07 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id D76832224D
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Nov 2020 19:41:15 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="HsIKmy2m"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="hgclmwFL"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728736AbgKLFjC (ORCPT
+        id S1726831AbgKLTlP (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 12 Nov 2020 00:39:02 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34454 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1727924AbgKLClA (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 11 Nov 2020 21:41:00 -0500
-Received: from mail-pg1-x542.google.com (mail-pg1-x542.google.com [IPv6:2607:f8b0:4864:20::542])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 20C45C0613D6
-        for <linux-fscrypt@vger.kernel.org>; Wed, 11 Nov 2020 18:41:00 -0800 (PST)
-Received: by mail-pg1-x542.google.com with SMTP id f38so2912027pgm.2
-        for <linux-fscrypt@vger.kernel.org>; Wed, 11 Nov 2020 18:41:00 -0800 (PST)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:in-reply-to;
-        bh=TPVBYTjJe0hHmPnczFzGKQ6IA34dXAh8mCwAyisyNuc=;
-        b=HsIKmy2mHTXPwQWLxT4t4wMTLWDqRF5L0W6i0qLwHTLP0BTicyOwRlVS/u3RGVkS3C
-         RJu4DtUK8Lh1VeQ0Fs8R5cbJEOb/KIkknyTWSIlbVMHhwEeu7GDekDQ/SV18yfChQ43u
-         f5vBpgZwYvIZXfftSHO6UNWQ2nO1I3Cblgwuwic4geXh3UcAEcVGpwC88AbQgivqgoih
-         5Qk4grVFGf2rvo2ZlDamtz3W2G2rSwLcQNC+AHJ4Ef7IfjYB5tNvaoZKN+2kjzfT9PFn
-         e5JMHTGUxFXQH+qS5+PJ/EIdj0wMijhOFFGs6yDsANBc0YNo66B2zmJuqpMIiwdoAcWL
-         a3wA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:in-reply-to;
-        bh=TPVBYTjJe0hHmPnczFzGKQ6IA34dXAh8mCwAyisyNuc=;
-        b=sjVImdB0IgzWjgfrTH0F0prvDyWOkFVAqUs071whPqCjdgEikbRXuHfCIP7PPXGQvg
-         XLslMwl7wmoVF6s5j2SXkBm0Afm4tq1bossxfUTe4r67OKIhocUOq6jO7CPXflFMWFvb
-         nKGVzx9/Oia0UUGPv1m8zwCVRaQqWCgUno7msNhD0FddHVfT/+3hJL8wMQol1KflxrAi
-         JiIBzE8mjCXugGXp4zYBHvW8uGWeMcCAh72+tj0HA3tzMGKQ7pFhbLKtqeX2anNryNWh
-         bt5bVCH5xt6x6kLCsopKWtjnSo9Ym0aOOhBHmeFNnJkjkOr7LcAp7A+w2c2pBjVs1TVP
-         yfBg==
-X-Gm-Message-State: AOAM533YbGZSxarT1OJnH88hTAPGYAkPe+TOldk6Y0ULRpOoVOY66c8M
-        XXWpkJX5GJSZ/YKwMQpWp3SqAw==
-X-Google-Smtp-Source: ABdhPJxyWqEnhtC2yWsqGmtNX7PfX0PEmHE0bU42jkynWKfam4h3j/TgIeVQcJC3A4TtJNl389fptg==
-X-Received: by 2002:a62:2cc1:0:b029:18c:85f5:864b with SMTP id s184-20020a622cc10000b029018c85f5864bmr502272pfs.29.1605148859471;
-        Wed, 11 Nov 2020 18:40:59 -0800 (PST)
-Received: from google.com (154.137.233.35.bc.googleusercontent.com. [35.233.137.154])
-        by smtp.gmail.com with ESMTPSA id p4sm3814925pjo.6.2020.11.11.18.40.58
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Wed, 11 Nov 2020 18:40:58 -0800 (PST)
-Date:   Thu, 12 Nov 2020 02:40:54 +0000
-From:   Satya Tangirala <satyat@google.com>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
-        Jaegeuk Kim <jaegeuk@kernel.org>
-Subject: Re: [PATCH] fscrypt: fix inline encryption not used on new files
-Message-ID: <20201112024054.GA4042272@google.com>
-References: <20201111015224.303073-1-ebiggers@kernel.org>
+        Thu, 12 Nov 2020 14:41:15 -0500
+Received: from mail.kernel.org ([198.145.29.99]:40956 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1726295AbgKLTlP (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 12 Nov 2020 14:41:15 -0500
+Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id E2C2D20B80;
+        Thu, 12 Nov 2020 19:41:12 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1605210073;
+        bh=POxMZUS5T48EAV5DntjG45pUfxQjt3f8urXPN27veH8=;
+        h=From:To:Cc:Subject:Date:From;
+        b=hgclmwFLQHe5wnHu5hYDNsm5HC87eCB2WdU3TWgRmzqfTJdxfcC0eWV3zq21eGp6S
+         DSDiMY5CK1uh0gsRqxn1Se+eT2x7BDlt2Py2hXN4aD2f61ac1vKFXVDPMVm1JSDBNi
+         +MSDib+/s3hKjI8uf4c78Sb6uayIvSMf09IWkv4g=
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-mmc@vger.kernel.org
+Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>,
+        Ulf Hansson <ulf.hansson@linaro.org>,
+        Andy Gross <agross@kernel.org>,
+        Bjorn Andersson <bjorn.andersson@linaro.org>,
+        Adrian Hunter <adrian.hunter@intel.com>,
+        Ritesh Harjani <riteshh@codeaurora.org>,
+        Asutosh Das <asutoshd@codeaurora.org>,
+        Rob Herring <robh+dt@kernel.org>,
+        Neeraj Soni <neersoni@codeaurora.org>,
+        Barani Muthukumaran <bmuthuku@codeaurora.org>,
+        Peng Zhou <peng.zhou@mediatek.com>,
+        Stanley Chu <stanley.chu@mediatek.com>,
+        Konrad Dybcio <konradybcio@gmail.com>
+Subject: [PATCH 0/8] eMMC inline encryption support
+Date:   Thu, 12 Nov 2020 11:40:03 -0800
+Message-Id: <20201112194011.103774-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.29.2
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20201111015224.303073-1-ebiggers@kernel.org>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, Nov 10, 2020 at 05:52:24PM -0800, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> The new helper function fscrypt_prepare_new_inode() runs before
-> S_ENCRYPTED has been set on the new inode.  This accidentally made
-> fscrypt_select_encryption_impl() never enable inline encryption on newly
-> created files, due to its use of fscrypt_needs_contents_encryption()
-> which only returns true when S_ENCRYPTED is set.
-> 
-> Fix this by using S_ISREG() directly instead of
-> fscrypt_needs_contents_encryption(), analogous to what
-> select_encryption_mode() does.
-> 
-> I didn't notice this earlier because by design, the user-visible
-> behavior is the same (other than performance, potentially) regardless of
-> whether inline encryption is used or not.
-> 
-> Fixes: a992b20cd4ee ("fscrypt: add fscrypt_prepare_new_inode() and fscrypt_set_context()")
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> ---
->  fs/crypto/inline_crypt.c | 2 +-
->  1 file changed, 1 insertion(+), 1 deletion(-)
-> 
-> diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-> index 89bffa82ed74a..c57bebfa48fea 100644
-> --- a/fs/crypto/inline_crypt.c
-> +++ b/fs/crypto/inline_crypt.c
-> @@ -74,7 +74,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci)
->  	int i;
->  
->  	/* The file must need contents encryption, not filenames encryption */
-> -	if (!fscrypt_needs_contents_encryption(inode))
-> +	if (!S_ISREG(inode->i_mode))
->  		return 0;
->  
->  	/* The crypto mode must have a blk-crypto counterpart */
-> 
-> base-commit: 92cfcd030e4b1de11a6b1edb0840e55c26332d31
-> -- 
-> 2.29.2
-> 
-Looks good to me. Please feel free to add
-Reviewed-by: Satya Tangirala <satyat@google.com>
+Hello,
+
+This patchset adds support for eMMC inline encryption, as specified by
+the upcoming version of the eMMC specification and as already
+implemented and used on many devices.  Building on that, it then adds
+Qualcomm ICE support and wires it up for the Snapdragon 630 SoC.
+
+Inline encryption hardware improves the performance of storage
+encryption and reduces power usage.  See
+Documentation/block/inline-encryption.rst for more information about
+inline encryption and the blk-crypto framework (upstreamed in v5.8)
+which supports it.  Most mobile devices already use UFS or eMMC inline
+encryption hardware; UFS support was already upstreamed in v5.9.
+
+Patches 1-3 add support for the standard eMMC inline encryption.
+
+However, as with UFS, host controller-specific patches are needed on top
+of the standard support.  Therefore, patches 4-8 add Qualcomm ICE
+(Inline Crypto Engine) support and wire it up on the Snapdragon 630 SoC.
+
+To test this I took advantage of the recently upstreamed support for the
+Snapdragon 630 SoC, plus work-in-progress patches from the SoMainline
+project (https://github.com/SoMainline/linux/tree/konrad/v5.10-rc3).  In
+particular, I was able to run the fscrypt xfstests for ext4 and f2fs in
+a Debian chroot.  Among other things, these tests verified that the
+correct ciphertext is written to disk (the same as software encryption).
+
+It will also be possible to add support for Mediatek eMMC inline
+encryption hardware in mtk-sd, and it should be easier than the Qualcomm
+hardware since the Mediatek hardware follows the standard more closely.
+I.e., patches 1-3 should be almost enough for the Mediatek hardware.
+However, I don't have the hardware to do this yet.
+
+This patchset is based on v5.10-rc3, and it can also be retrieved from
+tag "mmc-crypto-v1" of
+https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+
+Note: the fscrypt inline encryption support is partially broken in
+v5.10-rc3, so for testing a fscrypt fix needs to be applied too:
+https://lkml.kernel.org/r/20201111015224.303073-1-ebiggers@kernel.org
+
+Eric Biggers (8):
+  mmc: add basic support for inline encryption
+  mmc: cqhci: rename cqhci.c to cqhci-core.c
+  mmc: cqhci: add support for inline encryption
+  mmc: cqhci: add cqhci_host_ops::program_key
+  firmware: qcom_scm: update comment for ICE-related functions
+  dt-bindings: mmc: sdhci-msm: add ICE registers and clock
+  arm64: dts: qcom: sdm630: add ICE registers and clocks
+  mmc: sdhci-msm: add Inline Crypto Engine support
+
+ .../devicetree/bindings/mmc/sdhci-msm.txt     |   3 +
+ arch/arm64/boot/dts/qcom/sdm630.dtsi          |  10 +-
+ drivers/firmware/qcom_scm.c                   |  16 +-
+ drivers/mmc/core/Kconfig                      |   8 +
+ drivers/mmc/core/Makefile                     |   1 +
+ drivers/mmc/core/block.c                      |   3 +
+ drivers/mmc/core/core.c                       |   3 +
+ drivers/mmc/core/crypto.c                     |  54 ++++
+ drivers/mmc/core/crypto.h                     |  46 +++
+ drivers/mmc/core/host.c                       |   2 +
+ drivers/mmc/core/queue.c                      |   3 +
+ drivers/mmc/host/Kconfig                      |   1 +
+ drivers/mmc/host/Makefile                     |   2 +
+ drivers/mmc/host/{cqhci.c => cqhci-core.c}    |  66 ++++-
+ drivers/mmc/host/cqhci-crypto.c               | 237 +++++++++++++++
+ drivers/mmc/host/cqhci-crypto.h               |  47 +++
+ drivers/mmc/host/cqhci.h                      |  85 +++++-
+ drivers/mmc/host/sdhci-msm.c                  | 270 +++++++++++++++++-
+ include/linux/mmc/core.h                      |   6 +
+ include/linux/mmc/host.h                      |   7 +
+ 20 files changed, 845 insertions(+), 25 deletions(-)
+ create mode 100644 drivers/mmc/core/crypto.c
+ create mode 100644 drivers/mmc/core/crypto.h
+ rename drivers/mmc/host/{cqhci.c => cqhci-core.c} (94%)
+ create mode 100644 drivers/mmc/host/cqhci-crypto.c
+ create mode 100644 drivers/mmc/host/cqhci-crypto.h
+
+
+base-commit: f8394f232b1eab649ce2df5c5f15b0e528c92091
+-- 
+2.29.2
+
