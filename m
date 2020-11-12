@@ -2,38 +2,38 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-12.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4682FC55ABD
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Nov 2020 19:41:16 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0D532C63777
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Nov 2020 19:41:21 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id D76832224D
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Nov 2020 19:41:15 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 93A082224B
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 12 Nov 2020 19:41:20 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="hgclmwFL"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="a/caqjtY"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726831AbgKLTlP (ORCPT
+        id S1726929AbgKLTlT (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 12 Nov 2020 14:41:15 -0500
-Received: from mail.kernel.org ([198.145.29.99]:40956 "EHLO mail.kernel.org"
+        Thu, 12 Nov 2020 14:41:19 -0500
+Received: from mail.kernel.org ([198.145.29.99]:41090 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726295AbgKLTlP (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 12 Nov 2020 14:41:15 -0500
+        id S1726897AbgKLTlS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 12 Nov 2020 14:41:18 -0500
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id E2C2D20B80;
-        Thu, 12 Nov 2020 19:41:12 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 3BD652225D;
+        Thu, 12 Nov 2020 19:41:16 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1605210073;
-        bh=POxMZUS5T48EAV5DntjG45pUfxQjt3f8urXPN27veH8=;
-        h=From:To:Cc:Subject:Date:From;
-        b=hgclmwFLQHe5wnHu5hYDNsm5HC87eCB2WdU3TWgRmzqfTJdxfcC0eWV3zq21eGp6S
-         DSDiMY5CK1uh0gsRqxn1Se+eT2x7BDlt2Py2hXN4aD2f61ac1vKFXVDPMVm1JSDBNi
-         +MSDib+/s3hKjI8uf4c78Sb6uayIvSMf09IWkv4g=
+        s=default; t=1605210076;
+        bh=IUjOSIQZD6Z+EjSb6Dg28SrVH/30Bkh20OYYepkiFow=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=a/caqjtYVqaKdJN0n9uJSAwIO+PFlS90Srb5m3dzj63pbGN2dl6abrRrR0AQvhmG9
+         5HLpJlrhBu75/K68s/yIlNigqb+xJAlne+tHoAK36DMBuTV42KCepVufssI+qpseu8
+         hWdDtPYTRlPmRInsV0NID/i7eMcJV30GdVT1HiyU=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-mmc@vger.kernel.org
 Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
@@ -50,96 +50,129 @@ Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
         Peng Zhou <peng.zhou@mediatek.com>,
         Stanley Chu <stanley.chu@mediatek.com>,
         Konrad Dybcio <konradybcio@gmail.com>
-Subject: [PATCH 0/8] eMMC inline encryption support
-Date:   Thu, 12 Nov 2020 11:40:03 -0800
-Message-Id: <20201112194011.103774-1-ebiggers@kernel.org>
+Subject: [PATCH 4/8] mmc: cqhci: add cqhci_host_ops::program_key
+Date:   Thu, 12 Nov 2020 11:40:07 -0800
+Message-Id: <20201112194011.103774-5-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
+In-Reply-To: <20201112194011.103774-1-ebiggers@kernel.org>
+References: <20201112194011.103774-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Hello,
+From: Eric Biggers <ebiggers@google.com>
 
-This patchset adds support for eMMC inline encryption, as specified by
-the upcoming version of the eMMC specification and as already
-implemented and used on many devices.  Building on that, it then adds
-Qualcomm ICE support and wires it up for the Snapdragon 630 SoC.
+On Snapdragon SoCs, the Linux kernel isn't permitted to directly access
+the standard CQHCI crypto configuration registers.  Instead, programming
+and evicting keys must be done through vendor-specific SMC calls.
 
-Inline encryption hardware improves the performance of storage
-encryption and reduces power usage.  See
-Documentation/block/inline-encryption.rst for more information about
-inline encryption and the blk-crypto framework (upstreamed in v5.8)
-which supports it.  Most mobile devices already use UFS or eMMC inline
-encryption hardware; UFS support was already upstreamed in v5.9.
+To support this hardware, add a ->program_key() method to
+'struct cqhci_host_ops'.  This allows overriding the standard CQHCI
+crypto key programming / eviction procedure.
 
-Patches 1-3 add support for the standard eMMC inline encryption.
+This is inspired by the corresponding UFS crypto support, which uses
+these same SMC calls.  See commit 1bc726e26ef3 ("scsi: ufs: Add
+program_key() variant op").
 
-However, as with UFS, host controller-specific patches are needed on top
-of the standard support.  Therefore, patches 4-8 add Qualcomm ICE
-(Inline Crypto Engine) support and wire it up on the Snapdragon 630 SoC.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ drivers/mmc/host/cqhci-crypto.c | 22 +++++++++++++---------
+ drivers/mmc/host/cqhci.h        |  4 ++++
+ 2 files changed, 17 insertions(+), 9 deletions(-)
 
-To test this I took advantage of the recently upstreamed support for the
-Snapdragon 630 SoC, plus work-in-progress patches from the SoMainline
-project (https://github.com/SoMainline/linux/tree/konrad/v5.10-rc3).  In
-particular, I was able to run the fscrypt xfstests for ext4 and f2fs in
-a Debian chroot.  Among other things, these tests verified that the
-correct ciphertext is written to disk (the same as software encryption).
-
-It will also be possible to add support for Mediatek eMMC inline
-encryption hardware in mtk-sd, and it should be easier than the Qualcomm
-hardware since the Mediatek hardware follows the standard more closely.
-I.e., patches 1-3 should be almost enough for the Mediatek hardware.
-However, I don't have the hardware to do this yet.
-
-This patchset is based on v5.10-rc3, and it can also be retrieved from
-tag "mmc-crypto-v1" of
-https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
-
-Note: the fscrypt inline encryption support is partially broken in
-v5.10-rc3, so for testing a fscrypt fix needs to be applied too:
-https://lkml.kernel.org/r/20201111015224.303073-1-ebiggers@kernel.org
-
-Eric Biggers (8):
-  mmc: add basic support for inline encryption
-  mmc: cqhci: rename cqhci.c to cqhci-core.c
-  mmc: cqhci: add support for inline encryption
-  mmc: cqhci: add cqhci_host_ops::program_key
-  firmware: qcom_scm: update comment for ICE-related functions
-  dt-bindings: mmc: sdhci-msm: add ICE registers and clock
-  arm64: dts: qcom: sdm630: add ICE registers and clocks
-  mmc: sdhci-msm: add Inline Crypto Engine support
-
- .../devicetree/bindings/mmc/sdhci-msm.txt     |   3 +
- arch/arm64/boot/dts/qcom/sdm630.dtsi          |  10 +-
- drivers/firmware/qcom_scm.c                   |  16 +-
- drivers/mmc/core/Kconfig                      |   8 +
- drivers/mmc/core/Makefile                     |   1 +
- drivers/mmc/core/block.c                      |   3 +
- drivers/mmc/core/core.c                       |   3 +
- drivers/mmc/core/crypto.c                     |  54 ++++
- drivers/mmc/core/crypto.h                     |  46 +++
- drivers/mmc/core/host.c                       |   2 +
- drivers/mmc/core/queue.c                      |   3 +
- drivers/mmc/host/Kconfig                      |   1 +
- drivers/mmc/host/Makefile                     |   2 +
- drivers/mmc/host/{cqhci.c => cqhci-core.c}    |  66 ++++-
- drivers/mmc/host/cqhci-crypto.c               | 237 +++++++++++++++
- drivers/mmc/host/cqhci-crypto.h               |  47 +++
- drivers/mmc/host/cqhci.h                      |  85 +++++-
- drivers/mmc/host/sdhci-msm.c                  | 270 +++++++++++++++++-
- include/linux/mmc/core.h                      |   6 +
- include/linux/mmc/host.h                      |   7 +
- 20 files changed, 845 insertions(+), 25 deletions(-)
- create mode 100644 drivers/mmc/core/crypto.c
- create mode 100644 drivers/mmc/core/crypto.h
- rename drivers/mmc/host/{cqhci.c => cqhci-core.c} (94%)
- create mode 100644 drivers/mmc/host/cqhci-crypto.c
- create mode 100644 drivers/mmc/host/cqhci-crypto.h
-
-
-base-commit: f8394f232b1eab649ce2df5c5f15b0e528c92091
+diff --git a/drivers/mmc/host/cqhci-crypto.c b/drivers/mmc/host/cqhci-crypto.c
+index b14a5a15f5b52..5e3488c19f70e 100644
+--- a/drivers/mmc/host/cqhci-crypto.c
++++ b/drivers/mmc/host/cqhci-crypto.c
+@@ -30,13 +30,16 @@ cqhci_host_from_ksm(struct blk_keyslot_manager *ksm)
+ 	return mmc->cqe_private;
+ }
+ 
+-static void cqhci_crypto_program_key(struct cqhci_host *cq_host,
+-				     const union cqhci_crypto_cfg_entry *cfg,
+-				     int slot)
++static int cqhci_crypto_program_key(struct cqhci_host *cq_host,
++				    const union cqhci_crypto_cfg_entry *cfg,
++				    int slot)
+ {
+ 	u32 slot_offset = cq_host->crypto_cfg_register + slot * sizeof(*cfg);
+ 	int i;
+ 
++	if (cq_host->ops->program_key)
++		return cq_host->ops->program_key(cq_host, cfg, slot);
++
+ 	/* Clear CFGE */
+ 	cqhci_writel(cq_host, 0, slot_offset + 16 * sizeof(cfg->reg_val[0]));
+ 
+@@ -51,6 +54,7 @@ static void cqhci_crypto_program_key(struct cqhci_host *cq_host,
+ 	/* Write dword 16, which includes the new value of CFGE */
+ 	cqhci_writel(cq_host, le32_to_cpu(cfg->reg_val[16]),
+ 		     slot_offset + 16 * sizeof(cfg->reg_val[0]));
++	return 0;
+ }
+ 
+ static int cqhci_crypto_keyslot_program(struct blk_keyslot_manager *ksm,
+@@ -67,6 +71,7 @@ static int cqhci_crypto_keyslot_program(struct blk_keyslot_manager *ksm,
+ 	int i;
+ 	int cap_idx = -1;
+ 	union cqhci_crypto_cfg_entry cfg = {};
++	int err;
+ 
+ 	BUILD_BUG_ON(CQHCI_CRYPTO_KEY_SIZE_INVALID != 0);
+ 	for (i = 0; i < cq_host->crypto_capabilities.num_crypto_cap; i++) {
+@@ -93,13 +98,13 @@ static int cqhci_crypto_keyslot_program(struct blk_keyslot_manager *ksm,
+ 		memcpy(cfg.crypto_key, key->raw, key->size);
+ 	}
+ 
+-	cqhci_crypto_program_key(cq_host, &cfg, slot);
++	err = cqhci_crypto_program_key(cq_host, &cfg, slot);
+ 
+ 	memzero_explicit(&cfg, sizeof(cfg));
+-	return 0;
++	return err;
+ }
+ 
+-static void cqhci_crypto_clear_keyslot(struct cqhci_host *cq_host, int slot)
++static int cqhci_crypto_clear_keyslot(struct cqhci_host *cq_host, int slot)
+ {
+ 	/*
+ 	 * Clear the crypto cfg on the device. Clearing CFGE
+@@ -107,7 +112,7 @@ static void cqhci_crypto_clear_keyslot(struct cqhci_host *cq_host, int slot)
+ 	 */
+ 	union cqhci_crypto_cfg_entry cfg = {};
+ 
+-	cqhci_crypto_program_key(cq_host, &cfg, slot);
++	return cqhci_crypto_program_key(cq_host, &cfg, slot);
+ }
+ 
+ static int cqhci_crypto_keyslot_evict(struct blk_keyslot_manager *ksm,
+@@ -116,8 +121,7 @@ static int cqhci_crypto_keyslot_evict(struct blk_keyslot_manager *ksm,
+ {
+ 	struct cqhci_host *cq_host = cqhci_host_from_ksm(ksm);
+ 
+-	cqhci_crypto_clear_keyslot(cq_host, slot);
+-	return 0;
++	return cqhci_crypto_clear_keyslot(cq_host, slot);
+ }
+ 
+ static const struct blk_ksm_ll_ops cqhci_ksm_ops = {
+diff --git a/drivers/mmc/host/cqhci.h b/drivers/mmc/host/cqhci.h
+index 5c18734624fea..ece997dd8bcc7 100644
+--- a/drivers/mmc/host/cqhci.h
++++ b/drivers/mmc/host/cqhci.h
+@@ -287,6 +287,10 @@ struct cqhci_host_ops {
+ 				 u64 *data);
+ 	void (*pre_enable)(struct mmc_host *mmc);
+ 	void (*post_disable)(struct mmc_host *mmc);
++#ifdef CONFIG_MMC_CRYPTO
++	int (*program_key)(struct cqhci_host *cq_host,
++			   const union cqhci_crypto_cfg_entry *cfg, int slot);
++#endif
+ };
+ 
+ static inline void cqhci_writel(struct cqhci_host *host, u32 val, int reg)
 -- 
 2.29.2
 
