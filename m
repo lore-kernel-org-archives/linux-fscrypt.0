@@ -4,36 +4,36 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C2232C63699
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 Nov 2020 21:20:51 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 98B8DC55ABD
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 Nov 2020 21:20:54 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 775082225B
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 Nov 2020 21:20:51 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 49ACC22255
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 Nov 2020 21:20:54 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="ry2d6JWC"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="108beoJR"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726506AbgKMVUu (ORCPT
+        id S1726599AbgKMVUv (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 13 Nov 2020 16:20:50 -0500
-Received: from mail.kernel.org ([198.145.29.99]:40662 "EHLO mail.kernel.org"
+        Fri, 13 Nov 2020 16:20:51 -0500
+Received: from mail.kernel.org ([198.145.29.99]:40730 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726081AbgKMVUt (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 13 Nov 2020 16:20:49 -0500
+        id S1726355AbgKMVUu (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 13 Nov 2020 16:20:50 -0500
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id F225A2224F;
-        Fri, 13 Nov 2020 21:20:47 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 4CEEF22258;
+        Fri, 13 Nov 2020 21:20:49 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1605302448;
-        bh=w/nTbZglYrBVjolS7Ms76rddc3wMmSAqoGOpGR3b8Dc=;
+        s=default; t=1605302449;
+        bh=QjiQvf7g9yKcGU5m9aqGw/qrrLu6PiIemjru5rN3w4I=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=ry2d6JWCePxGm5upYC1sIfWRITct15ffVig02OjJYP+/F2aZOxuMfg7Hz1rZSkGib
-         g5o6qWgG7GxGOJnD3MhmEAaDEJah+mvLStgxAA1O3EvV+D3bfWk30ZPvZ3Ponglf74
-         BfoRsBeeLGv1YOjjyPeezPvBlD47BqVTKWTJ4XCE=
+        b=108beoJREVHxUgHoAtZEL/NOxOzAcLAMUUBsn6UpyFKMRNKc0XRIkEMuCuaSWaXGU
+         xlSrI1lShWwZca4wx9rocE2exuguVnpgoKYmYbwi7RmmHf4wjykNhwc3TsEIurbeBB
+         a+P+H1wSGEjdfunncywOSdcfDI9WBnUGJxhqSfhE=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
@@ -42,9 +42,9 @@ Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         Luca Boccassi <luca.boccassi@gmail.com>,
         Martijn Coenen <maco@android.com>,
         Paul Lawrence <paullawrence@google.com>
-Subject: [PATCH 1/4] fs-verity: remove filenames from file comments
-Date:   Fri, 13 Nov 2020 13:19:15 -0800
-Message-Id: <20201113211918.71883-2-ebiggers@kernel.org>
+Subject: [PATCH 4/4] fs-verity: move structs needed for file signing to UAPI header
+Date:   Fri, 13 Nov 2020 13:19:18 -0800
+Message-Id: <20201113211918.71883-5-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <20201113211918.71883-1-ebiggers@kernel.org>
 References: <20201113211918.71883-1-ebiggers@kernel.org>
@@ -56,105 +56,164 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Embedding the file path inside kernel source code files isn't
-particularly useful as often files are moved around and the paths become
-incorrect.  checkpatch.pl warns about this since v5.10-rc1.
+Although it isn't used directly by the ioctls,
+"struct fsverity_descriptor" is required by userspace programs that need
+to compute fs-verity file digests in a standalone way.  Therefore
+it's also needed to sign files in a standalone way.
+
+Similarly, "struct fsverity_formatted_digest" (previously called
+"struct fsverity_signed_digest" which was misleading) is also needed to
+sign files if the built-in signature verification is being used.
+
+Therefore, move these structs to the UAPI header.
+
+While doing this, try to make it clear that the signature-related fields
+in fsverity_descriptor aren't used in the file digest computation.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/verity/enable.c    | 2 +-
- fs/verity/hash_algs.c | 2 +-
- fs/verity/init.c      | 2 +-
- fs/verity/measure.c   | 2 +-
- fs/verity/open.c      | 2 +-
- fs/verity/signature.c | 2 +-
- fs/verity/verify.c    | 2 +-
- 7 files changed, 7 insertions(+), 7 deletions(-)
+ Documentation/filesystems/fsverity.rst |  6 +---
+ fs/verity/fsverity_private.h           | 37 -------------------
+ include/uapi/linux/fsverity.h          | 49 ++++++++++++++++++++++++++
+ 3 files changed, 50 insertions(+), 42 deletions(-)
 
-diff --git a/fs/verity/enable.c b/fs/verity/enable.c
-index 5ab3bbec81087..9c5b28c865226 100644
---- a/fs/verity/enable.c
-+++ b/fs/verity/enable.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * fs/verity/enable.c: ioctl to enable verity on a file
-+ * Ioctl to enable verity on a file
-  *
-  * Copyright 2019 Google LLC
-  */
-diff --git a/fs/verity/hash_algs.c b/fs/verity/hash_algs.c
-index c37e186ebeb6c..71d0fccb6d4c4 100644
---- a/fs/verity/hash_algs.c
-+++ b/fs/verity/hash_algs.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * fs/verity/hash_algs.c: fs-verity hash algorithms
-+ * fs-verity hash algorithms
-  *
-  * Copyright 2019 Google LLC
-  */
-diff --git a/fs/verity/init.c b/fs/verity/init.c
-index 94c104e00861d..c98b7016f446b 100644
---- a/fs/verity/init.c
-+++ b/fs/verity/init.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * fs/verity/init.c: fs-verity module initialization and logging
-+ * fs-verity module initialization and logging
-  *
-  * Copyright 2019 Google LLC
-  */
-diff --git a/fs/verity/measure.c b/fs/verity/measure.c
-index df409a5682edf..5300b8d385376 100644
---- a/fs/verity/measure.c
-+++ b/fs/verity/measure.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * fs/verity/measure.c: ioctl to get a verity file's measurement
-+ * Ioctl to get a verity file's measurement
-  *
-  * Copyright 2019 Google LLC
-  */
-diff --git a/fs/verity/open.c b/fs/verity/open.c
-index bfe0280c14e49..a28d5be78a09c 100644
---- a/fs/verity/open.c
-+++ b/fs/verity/open.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * fs/verity/open.c: opening fs-verity files
-+ * Opening fs-verity files
-  *
-  * Copyright 2019 Google LLC
-  */
-diff --git a/fs/verity/signature.c b/fs/verity/signature.c
-index b14ed96387ece..12794a4dd1585 100644
---- a/fs/verity/signature.c
-+++ b/fs/verity/signature.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * fs/verity/signature.c: verification of builtin signatures
-+ * Verification of builtin signatures
-  *
-  * Copyright 2019 Google LLC
-  */
-diff --git a/fs/verity/verify.c b/fs/verity/verify.c
-index a8b68c6f663d1..0adb970f4e736 100644
---- a/fs/verity/verify.c
-+++ b/fs/verity/verify.c
-@@ -1,6 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * fs/verity/verify.c: data verification functions, i.e. hooks for ->readpages()
-+ * Data verification functions, i.e. hooks for ->readpages()
-  *
-  * Copyright 2019 Google LLC
-  */
+diff --git a/Documentation/filesystems/fsverity.rst b/Documentation/filesystems/fsverity.rst
+index 2eee558b7f5ff..e0204a23e997e 100644
+--- a/Documentation/filesystems/fsverity.rst
++++ b/Documentation/filesystems/fsverity.rst
+@@ -334,17 +334,13 @@ root hash as well as other fields such as the file size::
+             __u8 hash_algorithm;    /* Merkle tree hash algorithm */
+             __u8 log_blocksize;     /* log2 of size of data and tree blocks */
+             __u8 salt_size;         /* size of salt in bytes; 0 if none */
+-            __le32 sig_size;        /* must be 0 */
++            __le32 __reserved_0x04; /* must be 0 */
+             __le64 data_size;       /* size of file the Merkle tree is built over */
+             __u8 root_hash[64];     /* Merkle tree root hash */
+             __u8 salt[32];          /* salt prepended to each hashed block */
+             __u8 __reserved[144];   /* must be 0's */
+     };
+ 
+-Note that the ``sig_size`` field must be set to 0 for the purpose of
+-computing the file measurement, even if a signature was provided (or
+-will be provided) to `FS_IOC_ENABLE_VERITY`_.
+-
+ Built-in signature verification
+ ===============================
+ 
+diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
+index 21e9930d65fbd..96f7b332f54f5 100644
+--- a/fs/verity/fsverity_private.h
++++ b/fs/verity/fsverity_private.h
+@@ -77,49 +77,12 @@ struct fsverity_info {
+ 	const struct inode *inode;
+ };
+ 
+-/*
+- * Merkle tree properties.  The fs-verity file digest is the hash of this
+- * structure excluding the signature and with the sig_size field set to 0.
+- */
+-struct fsverity_descriptor {
+-	__u8 version;		/* must be 1 */
+-	__u8 hash_algorithm;	/* Merkle tree hash algorithm */
+-	__u8 log_blocksize;	/* log2 of size of data and tree blocks */
+-	__u8 salt_size;		/* size of salt in bytes; 0 if none */
+-	__le32 sig_size;	/* size of signature in bytes; 0 if none */
+-	__le64 data_size;	/* size of file the Merkle tree is built over */
+-	__u8 root_hash[64];	/* Merkle tree root hash */
+-	__u8 salt[32];		/* salt prepended to each hashed block */
+-	__u8 __reserved[144];	/* must be 0's */
+-	__u8 signature[];	/* optional PKCS#7 signature */
+-};
+-
+ /* Arbitrary limit to bound the kmalloc() size.  Can be changed. */
+ #define FS_VERITY_MAX_DESCRIPTOR_SIZE	16384
+ 
+ #define FS_VERITY_MAX_SIGNATURE_SIZE	(FS_VERITY_MAX_DESCRIPTOR_SIZE - \
+ 					 sizeof(struct fsverity_descriptor))
+ 
+-/*
+- * Format in which fs-verity file digests are signed in built-in signatures.
+- * This is the same as 'struct fsverity_digest', except here some magic bytes
+- * are prepended to provide some context about what is being signed in case the
+- * same key is used for non-fsverity purposes, and here the fields have fixed
+- * endianness.
+- *
+- * This struct is specific to the built-in signature verification support, which
+- * is optional.  fs-verity users may also verify signatures in userspace, in
+- * which case userspace is responsible for deciding on what bytes are signed.
+- * This struct may still be used, but it doesn't have to be.  For example,
+- * userspace could instead use a string like "sha256:$digest_as_hex_string".
+- */
+-struct fsverity_formatted_digest {
+-	char magic[8];			/* must be "FSVerity" */
+-	__le16 digest_algorithm;
+-	__le16 digest_size;
+-	__u8 digest[];
+-};
+-
+ /* hash_algs.c */
+ 
+ extern struct fsverity_hash_alg fsverity_hash_algs[];
+diff --git a/include/uapi/linux/fsverity.h b/include/uapi/linux/fsverity.h
+index da0daf6c193b4..260017a4b44b3 100644
+--- a/include/uapi/linux/fsverity.h
++++ b/include/uapi/linux/fsverity.h
+@@ -34,6 +34,55 @@ struct fsverity_digest {
+ 	__u8 digest[];
+ };
+ 
++/*
++ * Struct containing a file's Merkle tree properties.  The fs-verity file digest
++ * is the hash of this struct.  A userspace program needs this struct only if it
++ * needs to compute fs-verity file digests itself, e.g. in order to sign files.
++ * It isn't needed just to enable fs-verity on a file.
++ *
++ * Note: when computing the file digest, 'sig_size' and 'signature' must be left
++ * zero and empty, respectively.  These fields are present only because some
++ * filesystems reuse this struct as part of their on-disk format.
++ */
++struct fsverity_descriptor {
++	__u8 version;		/* must be 1 */
++	__u8 hash_algorithm;	/* Merkle tree hash algorithm */
++	__u8 log_blocksize;	/* log2 of size of data and tree blocks */
++	__u8 salt_size;		/* size of salt in bytes; 0 if none */
++#ifdef __KERNEL__
++	__le32 sig_size;
++#else
++	__le32 __reserved_0x04;
++#endif
++	__le64 data_size;	/* size of file the Merkle tree is built over */
++	__u8 root_hash[64];	/* Merkle tree root hash */
++	__u8 salt[32];		/* salt prepended to each hashed block */
++	__u8 __reserved[144];	/* must be 0's */
++#ifdef __KERNEL__
++	__u8 signature[];
++#endif
++};
++
++/*
++ * Format in which fs-verity file digests are signed in built-in signatures.
++ * This is the same as 'struct fsverity_digest', except here some magic bytes
++ * are prepended to provide some context about what is being signed in case the
++ * same key is used for non-fsverity purposes, and here the fields have fixed
++ * endianness.
++ *
++ * This struct is specific to the built-in signature verification support, which
++ * is optional.  fs-verity users may also verify signatures in userspace, in
++ * which case userspace is responsible for deciding on what bytes are signed.
++ * This struct may still be used, but it doesn't have to be.  For example,
++ * userspace could instead use a string like "sha256:$digest_as_hex_string".
++ */
++struct fsverity_formatted_digest {
++	char magic[8];			/* must be "FSVerity" */
++	__le16 digest_algorithm;
++	__le16 digest_size;
++	__u8 digest[];
++};
++
+ #define FS_IOC_ENABLE_VERITY	_IOW('f', 133, struct fsverity_enable_arg)
+ #define FS_IOC_MEASURE_VERITY	_IOWR('f', 134, struct fsverity_digest)
+ 
 -- 
 2.29.2
 
