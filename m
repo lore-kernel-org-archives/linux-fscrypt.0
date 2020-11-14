@@ -2,240 +2,142 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-10.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=ham autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 041C6C55ABD
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 14 Nov 2020 00:16:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A9E2EC4742C
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 14 Nov 2020 00:21:30 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id C371E2224D
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 14 Nov 2020 00:16:33 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 6B33922258
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 14 Nov 2020 00:21:30 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="Bqmc34zK"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="L6Yun3hG"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726116AbgKNAQL (ORCPT
+        id S1725981AbgKNAVa (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 13 Nov 2020 19:16:11 -0500
-Received: from mail.kernel.org ([198.145.29.99]:59106 "EHLO mail.kernel.org"
+        Fri, 13 Nov 2020 19:21:30 -0500
+Received: from mail.kernel.org ([198.145.29.99]:33790 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726348AbgKNAQK (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 13 Nov 2020 19:16:10 -0500
-Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+        id S1725885AbgKNAVa (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 13 Nov 2020 19:21:30 -0500
+Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 873F02224D;
-        Sat, 14 Nov 2020 00:16:09 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id A30CC2224D;
+        Sat, 14 Nov 2020 00:21:29 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1605312969;
-        bh=FqtHY8qeVwH5AJlFio9v6OVzo0VZNVCHRWA7y39erv4=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Bqmc34zKwM2S4GJIxhqhiFQYhUa7zDe3miLA3Q2zUSoY/JP6iTNgyEP+YpK6k2+8M
-         dmzCX2ICpvtuMf4/NHINnchEA209fh3YeWnM6jMhIRwzWnXtR1SdCbkKVBfKUokh/K
-         MXcJiYSxopuWfPL5mgCB2DowY1OMfc+EhOYkuCPE=
+        s=default; t=1605313289;
+        bh=xarAYXBQMqM2GYKvTu1K8cNYSkYtym/+spz0l/1TGWo=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=L6Yun3hGzTMRJ7VA28LYsJQEMorz1uLYb/CtZj1N7ri6lNJI4L1almmoC1u2bYMIe
+         2obrQBCirgnnvHHaXWfKU+w6aUUP4aKIR6sT/hHKPx2ApNFPXviQ9HJ6kMqGrKk9gc
+         79ibSpt17/l9psxy5WNIIP70qG35d8KFe8Gp9uS8=
+Date:   Fri, 13 Nov 2020 16:21:28 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     Luca Boccassi <luca.boccassi@gmail.com>,
+To:     luca.boccassi@gmail.com
+Cc:     linux-fscrypt@vger.kernel.org,
         Jes Sorensen <Jes.Sorensen@gmail.com>
-Subject: [fsverity-utils PATCH 1/2] lib: add libfsverity_enable() and libfsverity_enable_with_sig()
-Date:   Fri, 13 Nov 2020 16:15:28 -0800
-Message-Id: <20201114001529.185751-2-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.29.2
-In-Reply-To: <20201114001529.185751-1-ebiggers@kernel.org>
-References: <20201114001529.185751-1-ebiggers@kernel.org>
+Subject: Re: [fsverity-utils RFC PATCH] Add libfsverity_enable() API
+Message-ID: <X68jCECcvkXs5VWf@sol.localdomain>
+References: <20201113143527.1097499-1-luca.boccassi@gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20201113143527.1097499-1-luca.boccassi@gmail.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Nov 13, 2020 at 02:35:27PM +0000, luca.boccassi@gmail.com wrote:
+> From: Luca Boccassi <luca.boccassi@microsoft.com>
+> 
+> Factor out the 'fsverity enable' implementation in the library, to
+> give users a shortcut for reading signatures and enabling a file
+> with the default parameters.
+> 
+> Signed-off-by: Luca Boccassi <luca.boccassi@microsoft.com>
+> ---
+> Marked as RFC to get guidance on how to deal with helper functions
+> duplication, that right now are part of the "programs" utility objects
+> and not usable from the "library" objects.
+> There's dozens of different ways to handle this, all equally valid, so
+> it's down to the preference of the maintainer (eg: new common helpers,
+> include helpers at build time, further splits of sources, etc).
+> Please provide a preference and I'll follow up.
+> 
+>  common/common_defs.h  |   9 ++
+>  include/libfsverity.h |  21 +++++
+>  lib/enable.c          | 191 ++++++++++++++++++++++++++++++++++++++++++
+>  programs/cmd_enable.c |  66 ++-------------
+>  programs/fsverity.h   |   9 --
+>  5 files changed, 227 insertions(+), 69 deletions(-)
+>  create mode 100644 lib/enable.c
+> 
+> diff --git a/common/common_defs.h b/common/common_defs.h
+> index 279385a..871db2c 100644
+> --- a/common/common_defs.h
+> +++ b/common/common_defs.h
+> @@ -90,4 +90,13 @@ static inline int ilog2(unsigned long n)
+>  #  define le64_to_cpu(v)	(__builtin_bswap64((__force u64)(v)))
+>  #endif
+>  
+> +/* The hash algorithm that 'fsverity' assumes when none is specified */
+> +#define FS_VERITY_HASH_ALG_DEFAULT	FS_VERITY_HASH_ALG_SHA256
+> +
+> +/*
+> + * Largest digest size among all hash algorithms supported by fs-verity.
+> + * This can be increased if needed.
+> + */
+> +#define FS_VERITY_MAX_DIGEST_SIZE	64
+> +
+>  #endif /* COMMON_COMMON_DEFS_H */
+> diff --git a/include/libfsverity.h b/include/libfsverity.h
+> index 8f78a13..8d1f93b 100644
+> --- a/include/libfsverity.h
+> +++ b/include/libfsverity.h
+> @@ -112,6 +112,27 @@ libfsverity_sign_digest(const struct libfsverity_digest *digest,
+>  			const struct libfsverity_signature_params *sig_params,
+>  			uint8_t **sig_ret, size_t *sig_size_ret);
+>  
+> +/**
+> + * libfsverity_enable() - Enable fs-verity on a file
+> + *          An fsverity_digest (also called a "file measurement") is the root of
+> + *          a file's Merkle tree.  Not to be confused with a traditional file
+> + *          digest computed over the entire file.
+> + * @file: path to the file to enable
+> + * @signature: (optional) path to signature for @file
+> + * @params: struct libfsverity_merkle_tree_params specifying the fs-verity
+> + *	    version, the hash algorithm, the block size, and
+> + *	    optionally a salt.  Reserved fields must be zero.
+> + *      All fields bar the version are optional, and defaults will be used
+> + *      if set to zero.
+> + *
+> + * Returns:
+> + * * 0 for success, -EINVAL for invalid input arguments, or a generic error
+> + *   if the FS_IOC_ENABLE_VERITY ioctl fails.
+> + */
+> +int
+> +libfsverity_enable(const char *file, const char *signature,
+> +			struct libfsverity_merkle_tree_params *params);
+> +
+>  /**
+>   * libfsverity_find_hash_alg_by_name() - Find hash algorithm by name
+>   * @name: Pointer to name of hash algorithm
 
-Add convenience functions that wrap FS_IOC_ENABLE_VERITY but take a
-'struct libfsverity_merkle_tree_params' instead of
-'struct fsverity_enable_arg'.  This is useful because it allows
-libfsverity users to deal with one common struct.
+Hi Luca, can you consider
+https://lkml.kernel.org/linux-fscrypt/20201114001529.185751-1-ebiggers@kernel.org/T/#u
+instead?
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- include/libfsverity.h | 36 ++++++++++++++++++++++++++++++++++
- lib/enable.c          | 45 +++++++++++++++++++++++++++++++++++++++++++
- programs/cmd_enable.c | 28 +++++++++++++++------------
- 3 files changed, 97 insertions(+), 12 deletions(-)
- create mode 100644 lib/enable.c
+It's somewhat useful to have a wrapper around FS_IOC_ENABLE_VERITY that takes
+'struct libfsverity_merkle_tree_params', so that library users can deal with one
+common struct.  (And I took advantage of that to simplify the code that parses
+the parameters.)
 
-diff --git a/include/libfsverity.h b/include/libfsverity.h
-index 8f78a13..a8aecaf 100644
---- a/include/libfsverity.h
-+++ b/include/libfsverity.h
-@@ -112,6 +112,42 @@ libfsverity_sign_digest(const struct libfsverity_digest *digest,
- 			const struct libfsverity_signature_params *sig_params,
- 			uint8_t **sig_ret, size_t *sig_size_ret);
- 
-+/**
-+ * libfsverity_enable() - Enable fs-verity on a file
-+ * @fd: read-only file descriptor to the file
-+ * @params: pointer to the Merkle tree parameters
-+ *
-+ * This is a simple wrapper around the FS_IOC_ENABLE_VERITY ioctl.
-+ *
-+ * Return: 0 on success, -EINVAL for invalid arguments, or a negative errno
-+ *	   value from the FS_IOC_ENABLE_VERITY ioctl.  See
-+ *	   Documentation/filesystems/fsverity.rst in the kernel source tree for
-+ *	   the possible error codes from FS_IOC_ENABLE_VERITY.
-+ */
-+int
-+libfsverity_enable(int fd, const struct libfsverity_merkle_tree_params *params);
-+
-+/**
-+ * libfsverity_enable_with_sig() - Enable fs-verity on a file, with a signature
-+ * @fd: read-only file descriptor to the file
-+ * @params: pointer to the Merkle tree parameters
-+ * @sig: pointer to the file's signature
-+ * @sig_size: size of the file's signature in bytes
-+ *
-+ * Like libfsverity_enable(), but allows specifying a built-in signature (i.e. a
-+ * singature created with libfsverity_sign_digest()) to associate with the file.
-+ * This is only needed if the in-kernel signature verification support is being
-+ * used; it is not needed if signatures are being verified in userspace.
-+ *
-+ * If @sig is NULL and @sig_size is 0, this is the same as libfsverity_enable().
-+ *
-+ * Return: See libfsverity_enable().
-+ */
-+int
-+libfsverity_enable_with_sig(int fd,
-+			    const struct libfsverity_merkle_tree_params *params,
-+			    const uint8_t *sig, size_t sig_size);
-+
- /**
-  * libfsverity_find_hash_alg_by_name() - Find hash algorithm by name
-  * @name: Pointer to name of hash algorithm
-diff --git a/lib/enable.c b/lib/enable.c
-new file mode 100644
-index 0000000..dd77292
---- /dev/null
-+++ b/lib/enable.c
-@@ -0,0 +1,45 @@
-+// SPDX-License-Identifier: MIT
-+/*
-+ * Implementation of libfsverity_enable() and libfsverity_enable_with_sig().
-+ *
-+ * Copyright 2020 Google LLC
-+ *
-+ * Use of this source code is governed by an MIT-style
-+ * license that can be found in the LICENSE file or at
-+ * https://opensource.org/licenses/MIT.
-+ */
-+
-+#include "lib_private.h"
-+
-+#include <sys/ioctl.h>
-+
-+LIBEXPORT int
-+libfsverity_enable(int fd, const struct libfsverity_merkle_tree_params *params)
-+{
-+	return libfsverity_enable_with_sig(fd, params, NULL, 0);
-+}
-+
-+LIBEXPORT int
-+libfsverity_enable_with_sig(int fd,
-+			    const struct libfsverity_merkle_tree_params *params,
-+			    const uint8_t *sig, size_t sig_size)
-+{
-+	struct fsverity_enable_arg arg = {};
-+
-+	if (!params) {
-+		libfsverity_error_msg("missing required parameters for enable");
-+		return -EINVAL;
-+	}
-+
-+	arg.version = 1;
-+	arg.hash_algorithm = params->hash_algorithm;
-+	arg.block_size = params->block_size;
-+	arg.salt_size = params->salt_size;
-+	arg.salt_ptr = (uintptr_t)params->salt;
-+	arg.sig_size = sig_size;
-+	arg.sig_ptr = (uintptr_t)sig;
-+
-+	if (ioctl(fd, FS_IOC_ENABLE_VERITY, &arg) != 0)
-+		return -errno;
-+	return 0;
-+}
-diff --git a/programs/cmd_enable.c b/programs/cmd_enable.c
-index d90d208..48d33c2 100644
---- a/programs/cmd_enable.c
-+++ b/programs/cmd_enable.c
-@@ -68,9 +68,10 @@ static const struct option longopts[] = {
- int fsverity_cmd_enable(const struct fsverity_command *cmd,
- 			int argc, char *argv[])
- {
--	struct fsverity_enable_arg arg = { .version = 1 };
-+	struct libfsverity_merkle_tree_params tree_params = { .version = 1 };
- 	u8 *salt = NULL;
- 	u8 *sig = NULL;
-+	u32 sig_size = 0;
- 	struct filedes file;
- 	int status;
- 	int c;
-@@ -78,26 +79,28 @@ int fsverity_cmd_enable(const struct fsverity_command *cmd,
- 	while ((c = getopt_long(argc, argv, "", longopts, NULL)) != -1) {
- 		switch (c) {
- 		case OPT_HASH_ALG:
--			if (!parse_hash_alg_option(optarg, &arg.hash_algorithm))
-+			if (!parse_hash_alg_option(optarg,
-+						   &tree_params.hash_algorithm))
- 				goto out_usage;
- 			break;
- 		case OPT_BLOCK_SIZE:
--			if (!parse_block_size_option(optarg, &arg.block_size))
-+			if (!parse_block_size_option(optarg,
-+						     &tree_params.block_size))
- 				goto out_usage;
- 			break;
- 		case OPT_SALT:
--			if (!parse_salt_option(optarg, &salt, &arg.salt_size))
-+			if (!parse_salt_option(optarg, &salt,
-+					       &tree_params.salt_size))
- 				goto out_usage;
--			arg.salt_ptr = (uintptr_t)salt;
-+			tree_params.salt = salt;
- 			break;
- 		case OPT_SIGNATURE:
- 			if (sig != NULL) {
- 				error_msg("--signature can only be specified once");
- 				goto out_usage;
- 			}
--			if (!read_signature(optarg, &sig, &arg.sig_size))
-+			if (!read_signature(optarg, &sig, &sig_size))
- 				goto out_err;
--			arg.sig_ptr = (uintptr_t)sig;
- 			break;
- 		default:
- 			goto out_usage;
-@@ -110,15 +113,16 @@ int fsverity_cmd_enable(const struct fsverity_command *cmd,
- 	if (argc != 1)
- 		goto out_usage;
- 
--	if (arg.hash_algorithm == 0)
--		arg.hash_algorithm = FS_VERITY_HASH_ALG_DEFAULT;
-+	if (tree_params.hash_algorithm == 0)
-+		tree_params.hash_algorithm = FS_VERITY_HASH_ALG_DEFAULT;
- 
--	if (arg.block_size == 0)
--		arg.block_size = get_default_block_size();
-+	if (tree_params.block_size == 0)
-+		tree_params.block_size = get_default_block_size();
- 
- 	if (!open_file(&file, argv[0], O_RDONLY, 0))
- 		goto out_err;
--	if (ioctl(file.fd, FS_IOC_ENABLE_VERITY, &arg) != 0) {
-+
-+	if (libfsverity_enable_with_sig(file.fd, &tree_params, sig, sig_size)) {
- 		error_msg_errno("FS_IOC_ENABLE_VERITY failed on '%s'",
- 				file.name);
- 		filedes_close(&file);
--- 
-2.29.2
+But I think we should keep it as a thin wrapper, and not have file path
+parameters or set defaults in the libfsverity_merkle_tree_params.  The library
+user is better suited to deal with those, like they already do for
+libfsverity_compute_digest().
 
+- Eric
