@@ -2,83 +2,104 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-7.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-13.1 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+	SIGNED_OFF_BY,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9434DC6369E
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 14 Nov 2020 00:40:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9144CC5519F
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 15 Nov 2020 03:16:12 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 4002922268
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 14 Nov 2020 00:40:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 3FCF7208C7
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 15 Nov 2020 03:16:12 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="Lg2LBV8u"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="nUgS+OqF"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726236AbgKNAkg (ORCPT
+        id S1726392AbgKODPv (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 13 Nov 2020 19:40:36 -0500
-Received: from mail.kernel.org ([198.145.29.99]:40628 "EHLO mail.kernel.org"
+        Sat, 14 Nov 2020 22:15:51 -0500
+Received: from mail.kernel.org ([198.145.29.99]:59278 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726042AbgKNAkg (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 13 Nov 2020 19:40:36 -0500
-Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        id S1726230AbgKODPv (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sat, 14 Nov 2020 22:15:51 -0500
+Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id C741522265;
-        Sat, 14 Nov 2020 00:40:35 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 2BE8920773;
+        Sun, 15 Nov 2020 03:15:50 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1605314436;
-        bh=D1zRQPyp66MkJgSaN2fKWLPCwy5olTbfmofE42dOHWw=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=Lg2LBV8uPC3Eg/NZ9ktGi0UCh1CwzK/kG52D/bhLaAdlReyljRksV3HPyJ9RjFkd5
-         T+76HpF6zsdko6z672HK3jiA9mrUdmZBg6z3+CwgUT52yUvbHCWM8K6FCpIt92t6p2
-         uCDeKS6QKsCrkEjDyj8kZlF7dbDz4PtKE7gYDJNU=
-Date:   Fri, 13 Nov 2020 16:40:34 -0800
+        s=default; t=1605410150;
+        bh=xLUPJemfVglpcrSPqXa8cTZsEYz0D/H4dKq7o72KZRw=;
+        h=From:To:Cc:Subject:Date:From;
+        b=nUgS+OqFttfmlbVybEV9+vrceADYBp/G7OjlU3MLJ9vVTY+oIzn3ek3UV02M3r3bO
+         /lAWJY1vrjgsjw5FtDynn4og+nlo1me6ju3/US3P86AvXY1ypo2geDFpJivFxufhD6
+         UEurLwjUKm9stgwpxxquae9gLcC9qfJpAyHEqhGs=
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-mmc@vger.kernel.org
-Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>,
-        Ulf Hansson <ulf.hansson@linaro.org>,
-        Andy Gross <agross@kernel.org>,
-        Bjorn Andersson <bjorn.andersson@linaro.org>,
-        Adrian Hunter <adrian.hunter@intel.com>,
-        Ritesh Harjani <riteshh@codeaurora.org>,
-        Asutosh Das <asutoshd@codeaurora.org>,
-        Rob Herring <robh+dt@kernel.org>,
-        Neeraj Soni <neersoni@codeaurora.org>,
-        Barani Muthukumaran <bmuthuku@codeaurora.org>,
-        Peng Zhou <peng.zhou@mediatek.com>,
-        Stanley Chu <stanley.chu@mediatek.com>,
-        Konrad Dybcio <konradybcio@gmail.com>
-Subject: Re: [PATCH 8/8] mmc: sdhci-msm: add Inline Crypto Engine support
-Message-ID: <X68ngpy5BzzqbWOM@sol.localdomain>
-References: <20201112194011.103774-1-ebiggers@kernel.org>
- <20201112194011.103774-9-ebiggers@kernel.org>
+To:     fstests@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org
+Subject: [xfstests PATCH] fscrypt-crypt-util: fix maximum IV size
+Date:   Sat, 14 Nov 2020 19:15:36 -0800
+Message-Id: <20201115031536.1469955-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.29.2
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20201112194011.103774-9-ebiggers@kernel.org>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Nov 12, 2020 at 11:40:11AM -0800, Eric Biggers wrote:
-> diff --git a/drivers/mmc/host/Kconfig b/drivers/mmc/host/Kconfig
-> index 31481c9fcc2ec..2ede2c86f173b 100644
-> --- a/drivers/mmc/host/Kconfig
-> +++ b/drivers/mmc/host/Kconfig
-> @@ -544,6 +544,7 @@ config MMC_SDHCI_MSM
->  	depends on MMC_SDHCI_PLTFM
->  	select MMC_SDHCI_IO_ACCESSORS
->  	select MMC_CQHCI
-> +	select QCOM_SCM if MMC_CRYPTO
->  	help
->  	  This selects the Secure Digital Host Controller Interface (SDHCI)
->  	  support present in Qualcomm SOCs. The controller supports
+From: Eric Biggers <ebiggers@google.com>
 
-The kernel test robot reported linkage errors caused by QCOM_SCM being selected
-without its dependency (ARM || ARM64).  I'll probably fix this by doing:
+In commit 65cd8e8a8e81 ("fscrypt-crypt-util: fix IV incrementing for
+--iv-ino-lblk-32") I mistakenly decreased the size of fscrypt_iv to 24
+bytes, which is the most that is explicitly needed by any of the IV
+generation methods.  However, Adiantum encryption takes a 32-byte IV, so
+the buffer still needs to be 32 bytes, with any extra bytes zeroed.
 
-	select QCOM_SCM if MMC_CRYPTO && ARCH_QCOM
+So restore the size to 32 bytes.
 
-- Eric
+This fixes a buffer overread that caused generic/550 and generic/584 to
+sometimes fail, depending on the build of the fscrypt-crypt-util binary.
+(Most of the time it still worked by chance.)
+
+Fixes: 65cd8e8a8e81 ("fscrypt-crypt-util: fix IV incrementing for --iv-ino-lblk-32")
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ src/fscrypt-crypt-util.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/src/fscrypt-crypt-util.c b/src/fscrypt-crypt-util.c
+index 26698d7a..03cc3c4a 100644
+--- a/src/fscrypt-crypt-util.c
++++ b/src/fscrypt-crypt-util.c
+@@ -1642,6 +1642,7 @@ static u64 siphash_1u64(const u64 key[2], u64 data)
+ #define FILE_NONCE_SIZE		16
+ #define UUID_SIZE		16
+ #define MAX_KEY_SIZE		64
++#define MAX_IV_SIZE		ADIANTUM_IV_SIZE
+ 
+ static const struct fscrypt_cipher {
+ 	const char *name;
+@@ -1715,6 +1716,8 @@ union fscrypt_iv {
+ 		/* IV_INO_LBLK_64: inode number */
+ 		__le32 inode_number;
+ 	};
++	/* Any extra bytes up to the algorithm's IV size must be zeroed */
++	u8 bytes[MAX_IV_SIZE];
+ };
+ 
+ static void crypt_loop(const struct fscrypt_cipher *cipher, const u8 *key,
+@@ -1736,9 +1739,9 @@ static void crypt_loop(const struct fscrypt_cipher *cipher, const u8 *key,
+ 		memset(&buf[res], 0, crypt_len - res);
+ 
+ 		if (decrypting)
+-			cipher->decrypt(key, (u8 *)iv, buf, buf, crypt_len);
++			cipher->decrypt(key, iv->bytes, buf, buf, crypt_len);
+ 		else
+-			cipher->encrypt(key, (u8 *)iv, buf, buf, crypt_len);
++			cipher->encrypt(key, iv->bytes, buf, buf, crypt_len);
+ 
+ 		full_write(STDOUT_FILENO, buf, crypt_len);
+ 
+-- 
+2.29.2
+
