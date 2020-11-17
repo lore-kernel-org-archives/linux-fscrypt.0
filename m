@@ -8,63 +8,63 @@ X-Spam-Status: No, score=-20.4 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E3E45C8300B
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 17 Nov 2020 14:07:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1F3CBC64E69
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 17 Nov 2020 14:08:26 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 6E40D20773
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 17 Nov 2020 14:07:20 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id B7D0E20773
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 17 Nov 2020 14:08:25 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="RftOlyar"
+	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="nFNLxAfP"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2387903AbgKQOHS (ORCPT
+        id S2387914AbgKQOH2 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 17 Nov 2020 09:07:18 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38298 "EHLO
+        Tue, 17 Nov 2020 09:07:28 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38322 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S2387527AbgKQOHR (ORCPT
+        with ESMTP id S1729706AbgKQOHX (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 17 Nov 2020 09:07:17 -0500
-Received: from mail-yb1-xb49.google.com (mail-yb1-xb49.google.com [IPv6:2607:f8b0:4864:20::b49])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 29589C061A47
-        for <linux-fscrypt@vger.kernel.org>; Tue, 17 Nov 2020 06:07:17 -0800 (PST)
-Received: by mail-yb1-xb49.google.com with SMTP id h9so25372203ybj.10
-        for <linux-fscrypt@vger.kernel.org>; Tue, 17 Nov 2020 06:07:17 -0800 (PST)
+        Tue, 17 Nov 2020 09:07:23 -0500
+Received: from mail-pg1-x54a.google.com (mail-pg1-x54a.google.com [IPv6:2607:f8b0:4864:20::54a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EDF6FC061A4A
+        for <linux-fscrypt@vger.kernel.org>; Tue, 17 Nov 2020 06:07:20 -0800 (PST)
+Received: by mail-pg1-x54a.google.com with SMTP id l7so4179188pgq.16
+        for <linux-fscrypt@vger.kernel.org>; Tue, 17 Nov 2020 06:07:20 -0800 (PST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=sender:date:in-reply-to:message-id:mime-version:references:subject
          :from:to:cc;
-        bh=gI9t9CC9GAbETMLuNAlH/ClZ/2jSqevbRrvZwCwXB2c=;
-        b=RftOlyar3vMM+UuLWWoDc+3E4txH9IyOqegNk1ZKpYqJ+64DndBUuka4yGqTGvV8HZ
-         kKKYIdA3FBdISG2pT5diEdurh7c6SenZdtfseQienr50nVwEs+lVPqoh/QQcPcHbxKTd
-         6z7tLj8QkLtfqCHUCSwGQImVKkXObQm1qs9c+uvW7zoloZat5A0FTqmA9aG/G8SXJdsa
-         XBCaiEzt4ANxyW9qoY3hqx21xVpXdpDPR+RQQfctNVrHqjmeDGIDEGd96xqHl9PF78S+
-         xVP/FSmJPwvk20i6vSzW80obRBeRa+undBkZLraZ4Zn/siWNcMZHVxphaEILVDyr4sDw
-         uynw==
+        bh=4NJdRU1Ce0aa6Hnfqmub71YUmFd4Qx8kk5Y17DesY40=;
+        b=nFNLxAfPd8e/zZTqlZUXpXuN77+dJdfeaniNFRSeDnLdmkHZ4pPlCypUrVhliOogm2
+         4Dwh4eHqmw2aUK8kmS7CCa6ww0SDvMftt2FkxmnXssuFtIw0EusEu5Tkclj14gnChFDP
+         nxiC5qrIaleDvreRVgMA2Wlvc7e6OAIU8ncMChxF9U+5y5/JiD5FTbKCl+/WuKfwvoEH
+         mCKaCC4qnI+2FSmVaNkQ7Him8OftmfrHMw8NaMSBnAohoHm15k5RFsSppzf8zmthwEic
+         mYwEOwBuIURqwBhUSgbh3+kM8mQOu63f4FrhK7OWUC5IlMyZLtGBLvhREdbtOF4tBIKo
+         hkEA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=gI9t9CC9GAbETMLuNAlH/ClZ/2jSqevbRrvZwCwXB2c=;
-        b=e6thGDiM7G7jpA4FesC9qMExX8LmESNsIe8zPkfXeN1++NrFB8Vqdnq/WD/HdjoIln
-         CaxNk9PR0r6V83CHoxcP9DTblbZtF6zZbuToqmJggGt/A5jfYEft4VwJYn5IhsRtG34Q
-         Om2Kv6S6Uu1I2GsQ8vzLboF6u5EOwhWvvC6ePamuMLKbWd+qaKIU/KGncqNvLlfRx8nH
-         E0/M0Qth2iBAsp7pIHveYaH39lQWayZvSKqfdzirXQ+FskKCtaWbKgKiOx1AD93+UjJq
-         +KCQTYDh1lCv5Bo2A/BqdagJbXlzv67rn+CqwbCS7w5ap5oWUePC1tvqMUOmuQJ/XH7T
-         x0TQ==
-X-Gm-Message-State: AOAM530hTEov97y+L+AFCAUxOxzb0+acv7wYe04twogTu0jJ7oaYxZbA
-        HnPv5ag5v4u/Q5U/tkIJy6bOBU9cpso=
-X-Google-Smtp-Source: ABdhPJz9doXCbA2XybATuEWhl6nzDUH2qic2NqkzBZezLv85f8bG7r9mJGCgGG0IMaxYIkm8TwTZJBSohjQ=
+        bh=4NJdRU1Ce0aa6Hnfqmub71YUmFd4Qx8kk5Y17DesY40=;
+        b=K65HYbir4FglLUzIFIaQ8dkMKTRT66hC31/YtEk4E0Ox7e2Lz6+Rdha37/zxGGVvN5
+         vQAVVJODPk7djuUL6Jqy9ps8SSkUnuffpoyDO+HpZZD2p9B4nrpChcYlIr6HTse+5cos
+         MY8f4vtXlSbiTzJOGhk/XmBJzDEminMhCOZ2eJT9NJF1NAEEknZbhY3+gAfF9e+80ltz
+         jIQnUuQB1YldOcsmzlcrfU+wL1xZdcnoZpiC/DH7jmHJHnss8n471oLv+8rjBGgYlPIO
+         r/mEniKC25uS0JKzZqsqz2OuIIsPtv0oaUXkG+2s0CkXj5YCISkHGfQRxZ4gHjanAOB3
+         pLbg==
+X-Gm-Message-State: AOAM5329L9hamEcXq0NVqMA5tqk5bqKAwTuu/gHjOhaKQiSZHMp8Xtl4
+        1lmbM/LDG0B06XMPq852lRmFKnjVNeA=
+X-Google-Smtp-Source: ABdhPJxfrRrknOI/BvOJaGPc6TEIdJJ1naDUKZko8kN45MeyLyMTe361mEhiYF+cx+Qes0o2OJZjXCGY5eY=
 Sender: "satyat via sendgmr" <satyat@satyaprateek.c.googlers.com>
 X-Received: from satyaprateek.c.googlers.com ([fda3:e722:ac3:10:24:72f4:c0a8:1092])
- (user=satyat job=sendgmr) by 2002:a25:d7d4:: with SMTP id o203mr23633500ybg.286.1605622036343;
- Tue, 17 Nov 2020 06:07:16 -0800 (PST)
-Date:   Tue, 17 Nov 2020 14:07:02 +0000
+ (user=satyat job=sendgmr) by 2002:a17:90a:8043:: with SMTP id
+ e3mr4901058pjw.52.1605622040427; Tue, 17 Nov 2020 06:07:20 -0800 (PST)
+Date:   Tue, 17 Nov 2020 14:07:04 +0000
 In-Reply-To: <20201117140708.1068688-1-satyat@google.com>
-Message-Id: <20201117140708.1068688-3-satyat@google.com>
+Message-Id: <20201117140708.1068688-5-satyat@google.com>
 Mime-Version: 1.0
 References: <20201117140708.1068688-1-satyat@google.com>
 X-Mailer: git-send-email 2.29.2.299.gdc1121823c-goog
-Subject: [PATCH v7 2/8] blk-crypto: don't require user buffer alignment
+Subject: [PATCH v7 4/8] direct-io: add support for fscrypt using blk-crypto
 From:   Satya Tangirala <satyat@google.com>
 To:     "Theodore Y . Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -74,358 +74,78 @@ To:     "Theodore Y . Ts'o" <tytso@mit.edu>,
 Cc:     linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
         linux-block@vger.kernel.org, linux-ext4@vger.kernel.org,
-        Satya Tangirala <satyat@google.com>,
-        Eric Biggers <ebiggers@google.com>
+        Eric Biggers <ebiggers@google.com>,
+        Satya Tangirala <satyat@google.com>
 Content-Type: text/plain; charset="UTF-8"
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Previously, blk-crypto-fallback required the offset and length of each bvec
-in a bio to be aligned to the crypto data unit size. This patch enables
-blk-crypto-fallback to work even if that's not the case - the requirement
-now is only that the total length of the data in the bio is aligned to
-the crypto data unit size.
+From: Eric Biggers <ebiggers@google.com>
 
-Now that blk-crypto-fallback can handle bvecs not aligned to crypto data
-units, and we've ensured that bios are not split in the middle of a
-crypto data unit, we can relax the alignment check done by blk-crypto.
+Set bio crypt contexts on bios by calling into fscrypt when required,
+and explicitly check for DUN continuity when adding pages to the bio.
+(While DUN continuity is usually implied by logical block contiguity,
+this is not the case when using certain fscrypt IV generation methods
+like IV_INO_LBLK_32).
 
-Co-developed-by: Eric Biggers <ebiggers@google.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
+Co-developed-by: Satya Tangirala <satyat@google.com>
 Signed-off-by: Satya Tangirala <satyat@google.com>
+Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
 ---
- block/blk-crypto-fallback.c | 202 +++++++++++++++++++++++++++---------
- block/blk-crypto.c          |  19 +---
- 2 files changed, 157 insertions(+), 64 deletions(-)
+ fs/direct-io.c | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
 
-diff --git a/block/blk-crypto-fallback.c b/block/blk-crypto-fallback.c
-index db2d2c67b308..619f0746ce02 100644
---- a/block/blk-crypto-fallback.c
-+++ b/block/blk-crypto-fallback.c
-@@ -251,6 +251,65 @@ static void blk_crypto_dun_to_iv(const u64 dun[BLK_CRYPTO_DUN_ARRAY_SIZE],
- 		iv->dun[i] = cpu_to_le64(dun[i]);
- }
- 
-+/*
-+ * If the length of any bio segment isn't a multiple of data_unit_size
-+ * (which can happen if data_unit_size > logical_block_size), then each
-+ * encryption/decryption might need to be passed multiple scatterlist elements.
-+ * If that will be the case, this function allocates and initializes src and dst
-+ * scatterlists (or a combined src/dst scatterlist) with the needed length.
-+ *
-+ * If 1 element is guaranteed to be enough (which is usually the case, and is
-+ * guaranteed when data_unit_size <= logical_block_size), then this function
-+ * just initializes the on-stack scatterlist(s).
-+ */
-+static bool blk_crypto_alloc_sglists(struct bio *bio,
-+				     const struct bvec_iter *start_iter,
-+				     unsigned int data_unit_size,
-+				     struct scatterlist **src_p,
-+				     struct scatterlist **dst_p)
-+{
-+	struct bio_vec bv;
-+	struct bvec_iter iter;
-+	bool aligned = true;
-+	unsigned int count = 0;
-+
-+	__bio_for_each_segment(bv, bio, iter, *start_iter) {
-+		count++;
-+		aligned &= IS_ALIGNED(bv.bv_len, data_unit_size);
-+	}
-+	if (aligned) {
-+		count = 1;
-+	} else {
-+		/*
-+		 * We can't need more elements than bio segments, and we can't
-+		 * need more than the number of sectors per data unit.  This may
-+		 * overestimate the required length by a bit, but that's okay.
-+		 */
-+		count = min(count, data_unit_size >> SECTOR_SHIFT);
-+	}
-+
-+	if (count > 1) {
-+		*src_p = kmalloc_array(count, sizeof(struct scatterlist),
-+				       GFP_NOIO);
-+		if (!*src_p)
-+			return false;
-+		if (dst_p) {
-+			*dst_p = kmalloc_array(count,
-+					       sizeof(struct scatterlist),
-+					       GFP_NOIO);
-+			if (!*dst_p) {
-+				kfree(*src_p);
-+				*src_p = NULL;
-+				return false;
-+			}
-+		}
-+	}
-+	sg_init_table(*src_p, count);
-+	if (dst_p)
-+		sg_init_table(*dst_p, count);
-+	return true;
-+}
-+
- /*
-  * The crypto API fallback's encryption routine.
-  * Allocate a bounce bio for encryption, encrypt the input bio using crypto API,
-@@ -267,9 +326,12 @@ static bool blk_crypto_fallback_encrypt_bio(struct bio **bio_ptr)
- 	struct skcipher_request *ciph_req = NULL;
- 	DECLARE_CRYPTO_WAIT(wait);
- 	u64 curr_dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
--	struct scatterlist src, dst;
-+	struct scatterlist _src, *src = &_src;
-+	struct scatterlist _dst, *dst = &_dst;
- 	union blk_crypto_iv iv;
--	unsigned int i, j;
-+	unsigned int i;
-+	unsigned int sg_idx = 0;
-+	unsigned int du_filled = 0;
- 	bool ret = false;
- 	blk_status_t blk_st;
- 
-@@ -281,11 +343,18 @@ static bool blk_crypto_fallback_encrypt_bio(struct bio **bio_ptr)
- 	bc = src_bio->bi_crypt_context;
- 	data_unit_size = bc->bc_key->crypto_cfg.data_unit_size;
- 
-+	/* Allocate scatterlists if needed */
-+	if (!blk_crypto_alloc_sglists(src_bio, &src_bio->bi_iter,
-+				      data_unit_size, &src, &dst)) {
-+		src_bio->bi_status = BLK_STS_RESOURCE;
-+		return false;
-+	}
-+
- 	/* Allocate bounce bio for encryption */
- 	enc_bio = blk_crypto_clone_bio(src_bio);
- 	if (!enc_bio) {
- 		src_bio->bi_status = BLK_STS_RESOURCE;
--		return false;
-+		goto out_free_sglists;
- 	}
- 
- 	/*
-@@ -305,45 +374,57 @@ static bool blk_crypto_fallback_encrypt_bio(struct bio **bio_ptr)
- 	}
- 
- 	memcpy(curr_dun, bc->bc_dun, sizeof(curr_dun));
--	sg_init_table(&src, 1);
--	sg_init_table(&dst, 1);
- 
--	skcipher_request_set_crypt(ciph_req, &src, &dst, data_unit_size,
-+	skcipher_request_set_crypt(ciph_req, src, dst, data_unit_size,
- 				   iv.bytes);
- 
--	/* Encrypt each page in the bounce bio */
-+	/*
-+	 * Encrypt each data unit in the bounce bio.
-+	 *
-+	 * Take care to handle the case where a data unit spans bio segments.
-+	 * This can happen when data_unit_size > logical_block_size.
-+	 */
- 	for (i = 0; i < enc_bio->bi_vcnt; i++) {
--		struct bio_vec *enc_bvec = &enc_bio->bi_io_vec[i];
--		struct page *plaintext_page = enc_bvec->bv_page;
-+		struct bio_vec *bv = &enc_bio->bi_io_vec[i];
-+		struct page *plaintext_page = bv->bv_page;
- 		struct page *ciphertext_page =
- 			mempool_alloc(blk_crypto_bounce_page_pool, GFP_NOIO);
-+		unsigned int offset_in_bv = 0;
- 
--		enc_bvec->bv_page = ciphertext_page;
-+		bv->bv_page = ciphertext_page;
- 
- 		if (!ciphertext_page) {
- 			src_bio->bi_status = BLK_STS_RESOURCE;
- 			goto out_free_bounce_pages;
- 		}
- 
--		sg_set_page(&src, plaintext_page, data_unit_size,
--			    enc_bvec->bv_offset);
--		sg_set_page(&dst, ciphertext_page, data_unit_size,
--			    enc_bvec->bv_offset);
--
--		/* Encrypt each data unit in this page */
--		for (j = 0; j < enc_bvec->bv_len; j += data_unit_size) {
--			blk_crypto_dun_to_iv(curr_dun, &iv);
--			if (crypto_wait_req(crypto_skcipher_encrypt(ciph_req),
--					    &wait)) {
--				i++;
--				src_bio->bi_status = BLK_STS_IOERR;
--				goto out_free_bounce_pages;
-+		while (offset_in_bv < bv->bv_len) {
-+			unsigned int n = min(bv->bv_len - offset_in_bv,
-+					     data_unit_size - du_filled);
-+			sg_set_page(&src[sg_idx], plaintext_page, n,
-+				    bv->bv_offset + offset_in_bv);
-+			sg_set_page(&dst[sg_idx], ciphertext_page, n,
-+				    bv->bv_offset + offset_in_bv);
-+			sg_idx++;
-+			offset_in_bv += n;
-+			du_filled += n;
-+			if (du_filled == data_unit_size) {
-+				blk_crypto_dun_to_iv(curr_dun, &iv);
-+				if (crypto_wait_req(crypto_skcipher_encrypt(ciph_req),
-+						    &wait)) {
-+					src_bio->bi_status = BLK_STS_IOERR;
-+					goto out_free_bounce_pages;
-+				}
-+				bio_crypt_dun_increment(curr_dun, 1);
-+				sg_idx = 0;
-+				du_filled = 0;
- 			}
--			bio_crypt_dun_increment(curr_dun, 1);
--			src.offset += data_unit_size;
--			dst.offset += data_unit_size;
- 		}
- 	}
-+	if (WARN_ON_ONCE(du_filled != 0)) {
-+		src_bio->bi_status = BLK_STS_IOERR;
-+		goto out_free_bounce_pages;
-+	}
- 
- 	enc_bio->bi_private = src_bio;
- 	enc_bio->bi_end_io = blk_crypto_fallback_encrypt_endio;
-@@ -364,7 +445,11 @@ static bool blk_crypto_fallback_encrypt_bio(struct bio **bio_ptr)
- out_put_enc_bio:
- 	if (enc_bio)
- 		bio_put(enc_bio);
--
-+out_free_sglists:
-+	if (src != &_src)
-+		kfree(src);
-+	if (dst != &_dst)
-+		kfree(dst);
- 	return ret;
- }
- 
-@@ -383,13 +468,21 @@ static void blk_crypto_fallback_decrypt_bio(struct work_struct *work)
- 	DECLARE_CRYPTO_WAIT(wait);
- 	u64 curr_dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
- 	union blk_crypto_iv iv;
--	struct scatterlist sg;
-+	struct scatterlist _sg, *sg = &_sg;
- 	struct bio_vec bv;
- 	struct bvec_iter iter;
- 	const int data_unit_size = bc->bc_key->crypto_cfg.data_unit_size;
--	unsigned int i;
-+	unsigned int sg_idx = 0;
-+	unsigned int du_filled = 0;
- 	blk_status_t blk_st;
- 
-+	/* Allocate scatterlist if needed */
-+	if (!blk_crypto_alloc_sglists(bio, &f_ctx->crypt_iter, data_unit_size,
-+				      &sg, NULL)) {
-+		bio->bi_status = BLK_STS_RESOURCE;
-+		goto out_no_sglists;
-+	}
-+
- 	/*
- 	 * Use the crypto API fallback keyslot manager to get a crypto_skcipher
- 	 * for the algorithm and key specified for this bio.
-@@ -407,33 +500,48 @@ static void blk_crypto_fallback_decrypt_bio(struct work_struct *work)
- 	}
- 
- 	memcpy(curr_dun, bc->bc_dun, sizeof(curr_dun));
--	sg_init_table(&sg, 1);
--	skcipher_request_set_crypt(ciph_req, &sg, &sg, data_unit_size,
--				   iv.bytes);
-+	skcipher_request_set_crypt(ciph_req, sg, sg, data_unit_size, iv.bytes);
- 
--	/* Decrypt each segment in the bio */
-+	/*
-+	 * Decrypt each data unit in the bio.
-+	 *
-+	 * Take care to handle the case where a data unit spans bio segments.
-+	 * This can happen when data_unit_size > logical_block_size.
-+	 */
- 	__bio_for_each_segment(bv, bio, iter, f_ctx->crypt_iter) {
--		struct page *page = bv.bv_page;
--
--		sg_set_page(&sg, page, data_unit_size, bv.bv_offset);
--
--		/* Decrypt each data unit in the segment */
--		for (i = 0; i < bv.bv_len; i += data_unit_size) {
--			blk_crypto_dun_to_iv(curr_dun, &iv);
--			if (crypto_wait_req(crypto_skcipher_decrypt(ciph_req),
--					    &wait)) {
--				bio->bi_status = BLK_STS_IOERR;
--				goto out;
-+		unsigned int offset_in_bv = 0;
-+
-+		while (offset_in_bv < bv.bv_len) {
-+			unsigned int n = min(bv.bv_len - offset_in_bv,
-+					     data_unit_size - du_filled);
-+			sg_set_page(&sg[sg_idx++], bv.bv_page, n,
-+				    bv.bv_offset + offset_in_bv);
-+			offset_in_bv += n;
-+			du_filled += n;
-+			if (du_filled == data_unit_size) {
-+				blk_crypto_dun_to_iv(curr_dun, &iv);
-+				if (crypto_wait_req(crypto_skcipher_decrypt(ciph_req),
-+						    &wait)) {
-+					bio->bi_status = BLK_STS_IOERR;
-+					goto out;
-+				}
-+				bio_crypt_dun_increment(curr_dun, 1);
-+				sg_idx = 0;
-+				du_filled = 0;
- 			}
--			bio_crypt_dun_increment(curr_dun, 1);
--			sg.offset += data_unit_size;
- 		}
- 	}
--
-+	if (WARN_ON_ONCE(du_filled != 0)) {
-+		bio->bi_status = BLK_STS_IOERR;
-+		goto out;
-+	}
- out:
- 	skcipher_request_free(ciph_req);
- 	blk_ksm_put_slot(slot);
- out_no_keyslot:
-+	if (sg != &_sg)
-+		kfree(sg);
-+out_no_sglists:
- 	mempool_free(f_ctx, bio_fallback_crypt_ctx_pool);
- 	bio_endio(bio);
- }
-diff --git a/block/blk-crypto.c b/block/blk-crypto.c
-index 5da43f0973b4..fcee0038f7e0 100644
---- a/block/blk-crypto.c
-+++ b/block/blk-crypto.c
-@@ -200,22 +200,6 @@ bool bio_crypt_ctx_mergeable(struct bio_crypt_ctx *bc1, unsigned int bc1_bytes,
- 	return !bc1 || bio_crypt_dun_is_contiguous(bc1, bc1_bytes, bc2->bc_dun);
- }
- 
--/* Check that all I/O segments are data unit aligned. */
--static bool bio_crypt_check_alignment(struct bio *bio)
--{
--	const unsigned int data_unit_size =
--		bio->bi_crypt_context->bc_key->crypto_cfg.data_unit_size;
--	struct bvec_iter iter;
--	struct bio_vec bv;
--
--	bio_for_each_segment(bv, bio, iter) {
--		if (!IS_ALIGNED(bv.bv_len | bv.bv_offset, data_unit_size))
--			return false;
--	}
--
--	return true;
--}
--
- blk_status_t __blk_crypto_init_request(struct request *rq)
+diff --git a/fs/direct-io.c b/fs/direct-io.c
+index d53fa92a1ab6..f6672c4030e3 100644
+--- a/fs/direct-io.c
++++ b/fs/direct-io.c
+@@ -24,6 +24,7 @@
+ #include <linux/module.h>
+ #include <linux/types.h>
+ #include <linux/fs.h>
++#include <linux/fscrypt.h>
+ #include <linux/mm.h>
+ #include <linux/slab.h>
+ #include <linux/highmem.h>
+@@ -392,6 +393,7 @@ dio_bio_alloc(struct dio *dio, struct dio_submit *sdio,
+ 	      sector_t first_sector, int nr_vecs)
  {
- 	return blk_ksm_get_slot_for_key(rq->q->ksm, rq->crypt_ctx->bc_key,
-@@ -271,7 +255,8 @@ bool __blk_crypto_bio_prep(struct bio **bio_ptr)
- 		goto fail;
+ 	struct bio *bio;
++	struct inode *inode = dio->inode;
+ 
+ 	/*
+ 	 * bio_alloc() is guaranteed to return a bio when allowed to sleep and
+@@ -399,6 +401,9 @@ dio_bio_alloc(struct dio *dio, struct dio_submit *sdio,
+ 	 */
+ 	bio = bio_alloc(GFP_KERNEL, nr_vecs);
+ 
++	fscrypt_set_bio_crypt_ctx(bio, inode,
++				  sdio->cur_page_fs_offset >> inode->i_blkbits,
++				  GFP_KERNEL);
+ 	bio_set_dev(bio, bdev);
+ 	bio->bi_iter.bi_sector = first_sector;
+ 	bio_set_op_attrs(bio, dio->op, dio->op_flags);
+@@ -763,9 +768,17 @@ static inline int dio_send_cur_page(struct dio *dio, struct dio_submit *sdio,
+ 		 * current logical offset in the file does not equal what would
+ 		 * be the next logical offset in the bio, submit the bio we
+ 		 * have.
++		 *
++		 * When fscrypt inline encryption is used, data unit number
++		 * (DUN) contiguity is also required.  Normally that's implied
++		 * by logical contiguity.  However, certain IV generation
++		 * methods (e.g. IV_INO_LBLK_32) don't guarantee it.  So, we
++		 * must explicitly check fscrypt_mergeable_bio() too.
+ 		 */
+ 		if (sdio->final_block_in_bio != sdio->cur_page_block ||
+-		    cur_offset != bio_next_offset)
++		    cur_offset != bio_next_offset ||
++		    !fscrypt_mergeable_bio(sdio->bio, dio->inode,
++					   cur_offset >> dio->inode->i_blkbits))
+ 			dio_bio_submit(dio, sdio);
  	}
  
--	if (!bio_crypt_check_alignment(bio)) {
-+	if (!IS_ALIGNED(bio->bi_iter.bi_size,
-+			bc_key->crypto_cfg.data_unit_size)) {
- 		bio->bi_status = BLK_STS_IOERR;
- 		goto fail;
- 	}
 -- 
 2.29.2.299.gdc1121823c-goog
 
