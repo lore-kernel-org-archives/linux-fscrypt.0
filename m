@@ -4,43 +4,44 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4EA39C64E69
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 18 Nov 2020 07:57:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 77ECBC56202
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 18 Nov 2020 07:57:49 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 0C2B7246B4
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 18 Nov 2020 07:57:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 1A616246AE
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 18 Nov 2020 07:57:49 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="ETs/fepe"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="e/HwAPAU"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727235AbgKRH5p (ORCPT
+        id S1727199AbgKRH5m (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 18 Nov 2020 02:57:45 -0500
-Received: from mail.kernel.org ([198.145.29.99]:35658 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727181AbgKRH5m (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Wed, 18 Nov 2020 02:57:42 -0500
+Received: from mail.kernel.org ([198.145.29.99]:35644 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1727175AbgKRH5l (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 18 Nov 2020 02:57:41 -0500
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 72022246B2;
-        Wed, 18 Nov 2020 07:57:41 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 8E936246AD;
+        Wed, 18 Nov 2020 07:57:40 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1605686261;
-        bh=FaJPS+4AhsPK9Hjqvyuvxb/1dnxymbnVlmZfAPn5gcU=;
+        s=default; t=1605686260;
+        bh=BEN/nXkzCxItOwaUusssDXqaGvS3fLCaGZUERnKW1Rw=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=ETs/fepezweXiR3RVvD/V08ZO2J+3w+axT1045ZXG0ySoHoOPkv8KQGhsYkhLcqGs
-         xVfQzJxdV+6XoMxfSSp/QZ/D0rjuhBJeN1gE+7S7o11NaQpjRy4O4ZLCXloc3aUcTV
-         L4jkljPJYdapxPjojPTtKPw+RVYI5VVc0BNtD4bQ=
+        b=e/HwAPAUfwWD3CYv6a/mOp2hLJpW5wozpT1BNRIXXvp/OgkMuve+wzODbU6LKp9aY
+         53AJ0gl3dNvpSGTT5HLz5hglv0eYTUKfSUTZjgT1bf7/IFM+q027VDdVfpXVB4/OgZ
+         Xhe6UjkN0HzYPb3P4upnVEXOgIwi61ADoShmv5qM=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org
-Subject: [PATCH 5/5] fscrypt: remove unnecessary calls to fscrypt_require_key()
-Date:   Tue, 17 Nov 2020 23:56:09 -0800
-Message-Id: <20201118075609.120337-6-ebiggers@kernel.org>
+        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org,
+        stable@vger.kernel.org
+Subject: [PATCH 3/5] f2fs: prevent creating duplicate encrypted filenames
+Date:   Tue, 17 Nov 2020 23:56:07 -0800
+Message-Id: <20201118075609.120337-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <20201118075609.120337-1-ebiggers@kernel.org>
 References: <20201118075609.120337-1-ebiggers@kernel.org>
@@ -52,85 +53,35 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-In an encrypted directory, a regular dentry (one that doesn't have the
-no-key name flag) can only be created if the directory's encryption key
-is available.
+As described in "fscrypt: add fscrypt_is_nokey_name()", it's possible to
+create a duplicate filename in an encrypted directory by creating a file
+concurrently with adding the directory's encryption key.
 
-Therefore the calls to fscrypt_require_key() in __fscrypt_prepare_link()
-and __fscrypt_prepare_rename() are unnecessary, as these functions
-already check that the dentries they're given aren't no-key names.
+Fix this bug on f2fs by rejecting no-key dentries in f2fs_add_link().
 
-Remove these unnecessary calls to fscrypt_require_key().
+Note that the weird check for the current task in f2fs_do_add_link()
+seems to make this bug difficult to reproduce on f2fs.
 
+Fixes: 9ea97163c6da ("f2fs crypto: add filename encryption for f2fs_add_link")
+Cc: stable@vger.kernel.org
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/hooks.c       | 26 ++++++++------------------
- include/linux/fscrypt.h |  3 +--
- 2 files changed, 9 insertions(+), 20 deletions(-)
+ fs/f2fs/f2fs.h | 2 ++
+ 1 file changed, 2 insertions(+)
 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 061418be4b08..c582e2ddb39c 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -54,15 +54,12 @@ EXPORT_SYMBOL_GPL(fscrypt_file_open);
- int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
- 			   struct dentry *dentry)
- {
--	int err;
--
--	err = fscrypt_require_key(dir);
--	if (err)
--		return err;
--
--	/* ... in case we looked up no-key name before key was added */
- 	if (fscrypt_is_nokey_name(dentry))
- 		return -ENOKEY;
-+	/*
-+	 * We don't need to separately check that the directory inode's key is
-+	 * available, as it's implied by the dentry not being a no-key name.
-+	 */
+diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+index cb700d797296..9a321c52face 100644
+--- a/fs/f2fs/f2fs.h
++++ b/fs/f2fs/f2fs.h
+@@ -3251,6 +3251,8 @@ bool f2fs_empty_dir(struct inode *dir);
  
- 	if (!fscrypt_has_permitted_context(dir, inode))
- 		return -EXDEV;
-@@ -75,20 +72,13 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
- 			     struct inode *new_dir, struct dentry *new_dentry,
- 			     unsigned int flags)
+ static inline int f2fs_add_link(struct dentry *dentry, struct inode *inode)
  {
--	int err;
--
--	err = fscrypt_require_key(old_dir);
--	if (err)
--		return err;
--
--	err = fscrypt_require_key(new_dir);
--	if (err)
--		return err;
--
--	/* ... in case we looked up no-key name(s) before key was added */
- 	if (fscrypt_is_nokey_name(old_dentry) ||
- 	    fscrypt_is_nokey_name(new_dentry))
- 		return -ENOKEY;
-+	/*
-+	 * We don't need to separately check that the directory inodes' keys are
-+	 * available, as it's implied by the dentries not being no-key names.
-+	 */
- 
- 	if (old_dir != new_dir) {
- 		if (IS_ENCRYPTED(new_dir) &&
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 8e1d31c959bf..0c9e64969b73 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -710,8 +710,7 @@ static inline int fscrypt_require_key(struct inode *inode)
-  *
-  * A new link can only be added to an encrypted directory if the directory's
-  * encryption key is available --- since otherwise we'd have no way to encrypt
-- * the filename.  Therefore, we first set up the directory's encryption key (if
-- * not already done) and return an error if it's unavailable.
-+ * the filename.
-  *
-  * We also verify that the link will not violate the constraint that all files
-  * in an encrypted directory tree use the same encryption policy.
++	if (fscrypt_is_nokey_name(dentry))
++		return -ENOKEY;
+ 	return f2fs_do_add_link(d_inode(dentry->d_parent), &dentry->d_name,
+ 				inode, inode->i_ino, inode->i_mode);
+ }
 -- 
 2.29.2
 
