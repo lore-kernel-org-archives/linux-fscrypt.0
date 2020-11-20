@@ -2,205 +2,93 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-26.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
+X-Spam-Status: No, score=-16.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B8854C64EBC
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 19 Nov 2020 06:09:55 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2E178C2D0E4
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 20 Nov 2020 18:49:56 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 5DB672469D
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 19 Nov 2020 06:09:55 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id CE0FC2242B
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 20 Nov 2020 18:49:55 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (2048-bit key) header.d=google.com header.i=@google.com header.b="UdP4FsE2"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="1VKHBBzu"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726379AbgKSGJb (ORCPT
+        id S1730350AbgKTStf (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 19 Nov 2020 01:09:31 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:43112 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1726287AbgKSGJL (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 19 Nov 2020 01:09:11 -0500
-Received: from mail-qt1-x849.google.com (mail-qt1-x849.google.com [IPv6:2607:f8b0:4864:20::849])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1D599C0613D4
-        for <linux-fscrypt@vger.kernel.org>; Wed, 18 Nov 2020 22:09:10 -0800 (PST)
-Received: by mail-qt1-x849.google.com with SMTP id i39so3997118qtb.1
-        for <linux-fscrypt@vger.kernel.org>; Wed, 18 Nov 2020 22:09:10 -0800 (PST)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=google.com; s=20161025;
-        h=sender:date:in-reply-to:message-id:mime-version:references:subject
-         :from:to:cc;
-        bh=pqAPKMbmNsV52HR4YSyUKpkLgaKSoP3ZrEZXGq4Xu/0=;
-        b=UdP4FsE2zGsI55Kgb/EznglwdoUlp7MKg1jEtYwlhVFENpfj/8/I9ohE9BAL2ok5SW
-         7LgqtKDD3wIFaZhPkypkIZridSnJI2/sFOORkqVJhHxiDVFZfQYtobc0z/NeGKeNjp7a
-         8Ywz9XEZBJpIHnJQetyCPYSVPN6b4Ue7u6CSNyVzNotQA5MaDINRMdi3n2uijg1PWolD
-         7KTinqSAcCMZE+PPmmm4zGpXuTr+BC5rbOh1izgdk3cRqU7hpK0JuOKTt0gS/3RP6t8p
-         fNXDYX0i3U/yDTdywJCCUDm6eZHZgOToG1BPc8KI7hooQ3KATbgwTbzLOVBLV1OX6kOg
-         LZYQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:sender:date:in-reply-to:message-id:mime-version
-         :references:subject:from:to:cc;
-        bh=pqAPKMbmNsV52HR4YSyUKpkLgaKSoP3ZrEZXGq4Xu/0=;
-        b=slUG+QbubxVFsGYACA9YFgpjQuxHg0DvZVodEonqi6E58rHl8f0qoIOCUju5hGUd5N
-         zF+w9wtnN9mB4Qc2EdnQD++QS+gmXExybV2Pl3BTp7SBYSjnzLxIOBXyXlCalPfNRMsz
-         naztmo0FhFfPtAyA0phNnqv4047fKmE/OXwg25mh3GAZ6wqnV6X+IoWZGFahoQ8u79e+
-         RHKxea/xul86zDx7fPmmUN4uS1Sah+8eXvt93YPLXRTyOOdc9vErvcc5bqbrvfRx71ZQ
-         IzwDhACfQPEc20HCT+ZCMqgUOMkESkuy7jjENga7tI7ESmhmAILG8Gwf8oNOTCoKnkE8
-         He6A==
-X-Gm-Message-State: AOAM530Qdx5MoxzXkkE9Ryah5iW9VBzND3bvrEE9JMWzzGtew3w/P6Wa
-        txYyYGj+rPgyAIsakrcmFqt1C4b7+aY=
-X-Google-Smtp-Source: ABdhPJwSZBXfCOhHL8thch2tn2Vt6bs0hCoBOuuaINL7+x5ApwyTNO3KvT5pdGIltwoPqZXkM0FWkysQ8RM=
-Sender: "drosen via sendgmr" <drosen@drosen.c.googlers.com>
-X-Received: from drosen.c.googlers.com ([fda3:e722:ac3:10:24:72f4:c0a8:4e6f])
- (user=drosen job=sendgmr) by 2002:a0c:a681:: with SMTP id t1mr9304343qva.16.1605766149235;
- Wed, 18 Nov 2020 22:09:09 -0800 (PST)
-Date:   Thu, 19 Nov 2020 06:09:02 +0000
-In-Reply-To: <20201119060904.463807-1-drosen@google.com>
-Message-Id: <20201119060904.463807-2-drosen@google.com>
-Mime-Version: 1.0
-References: <20201119060904.463807-1-drosen@google.com>
-X-Mailer: git-send-email 2.29.2.454.gaff20da3a2-goog
-Subject: [PATCH v4 1/3] libfs: Add generic function for setting dentry_ops
-From:   Daniel Rosenberg <drosen@google.com>
-To:     "Theodore Y . Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>,
-        Eric Biggers <ebiggers@kernel.org>,
-        Andreas Dilger <adilger.kernel@dilger.ca>,
-        Chao Yu <chao@kernel.org>,
-        Alexander Viro <viro@zeniv.linux.org.uk>,
-        Richard Weinberger <richard@nod.at>,
-        linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net
-Cc:     linux-kernel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        linux-mtd@lists.infradead.org,
-        Gabriel Krisman Bertazi <krisman@collabora.com>,
-        kernel-team@android.com, Daniel Rosenberg <drosen@google.com>,
-        Eric Biggers <ebiggers@google.com>
-Content-Type: text/plain; charset="UTF-8"
+        Fri, 20 Nov 2020 13:49:35 -0500
+Received: from mail.kernel.org ([198.145.29.99]:33578 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S1729800AbgKTStf (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 20 Nov 2020 13:49:35 -0500
+Received: from sol.localdomain (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by mail.kernel.org (Postfix) with ESMTPSA id 0A3662242B;
+        Fri, 20 Nov 2020 18:49:34 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=default; t=1605898174;
+        bh=Ol1V+awsZyShvCLrIsyrRkGBuRBH+qkCbl7XsdSlcFg=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=1VKHBBzuW4zruQo2TgG699JZYdIwW3reEUuEr6z9lVwFMgFR/Bmo6pqrZMUqPK6eN
+         hykUyyeHU6R7oTXMoUHjToBcOIDWEkgBva81y7xv5fXROyzHRfrgpQI32gcUdeMv6g
+         quXAfwYB0r6u6WMRoRCKgR0ZZk3oBoTjnjdRm7kM=
+Date:   Fri, 20 Nov 2020 10:49:31 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-block@vger.kernel.org, Jens Axboe <axboe@kernel.dk>
+Cc:     linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>
+Subject: Re: [PATCH v2] block/keyslot-manager: prevent crash when num_slots=1
+Message-ID: <X7gPu4RdTfXnxkYk@sol.localdomain>
+References: <20201111214855.428044-1-ebiggers@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20201111214855.428044-1-ebiggers@kernel.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This adds a function to set dentry operations at lookup time that will
-work for both encrypted filenames and casefolded filenames.
+On Wed, Nov 11, 2020 at 01:48:55PM -0800, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> If there is only one keyslot, then blk_ksm_init() computes
+> slot_hashtable_size=1 and log_slot_ht_size=0.  This causes
+> blk_ksm_find_keyslot() to crash later because it uses
+> hash_ptr(key, log_slot_ht_size) to find the hash bucket containing the
+> key, and hash_ptr() doesn't support the bits == 0 case.
+> 
+> Fix this by making the hash table always have at least 2 buckets.
+> 
+> Tested by running:
+> 
+>     kvm-xfstests -c ext4 -g encrypt -m inlinecrypt \
+>                  -o blk-crypto-fallback.num_keyslots=1
+> 
+> Fixes: 1b2628397058 ("block: Keyslot Manager for Inline Encryption")
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  block/keyslot-manager.c | 7 +++++++
+>  1 file changed, 7 insertions(+)
+> 
+> diff --git a/block/keyslot-manager.c b/block/keyslot-manager.c
+> index 35abcb1ec051d..86f8195d8039e 100644
+> --- a/block/keyslot-manager.c
+> +++ b/block/keyslot-manager.c
+> @@ -103,6 +103,13 @@ int blk_ksm_init(struct blk_keyslot_manager *ksm, unsigned int num_slots)
+>  	spin_lock_init(&ksm->idle_slots_lock);
+>  
+>  	slot_hashtable_size = roundup_pow_of_two(num_slots);
+> +	/*
+> +	 * hash_ptr() assumes bits != 0, so ensure the hash table has at least 2
+> +	 * buckets.  This only makes a difference when there is only 1 keyslot.
+> +	 */
+> +	if (slot_hashtable_size < 2)
+> +		slot_hashtable_size = 2;
+> +
+>  	ksm->log_slot_ht_size = ilog2(slot_hashtable_size);
+>  	ksm->slot_hashtable = kvmalloc_array(slot_hashtable_size,
+>  					     sizeof(ksm->slot_hashtable[0]),
+> 
 
-A filesystem that supports both features simultaneously can use this
-function during lookup preparations to set up its dentry operations once
-fscrypt no longer does that itself.
-
-Currently the casefolding dentry operation are always set if the
-filesystem defines an encoding because the features is toggleable on
-empty directories. Unlike in the encryption case, the dentry operations
-used come from the parent. Since we don't know what set of functions
-we'll eventually need, and cannot change them later, we enable the
-casefolding operations if the filesystem supports them at all.
-
-By splitting out the various cases, we support as few dentry operations
-as we can get away with, maximizing compatibility with overlayfs, which
-will not function if a filesystem supports certain dentry_operations.
-
-Signed-off-by: Daniel Rosenberg <drosen@google.com>
-Reviewed-by: Eric Biggers <ebiggers@google.com>
----
- fs/libfs.c         | 70 ++++++++++++++++++++++++++++++++++++++++++++++
- include/linux/fs.h |  1 +
- 2 files changed, 71 insertions(+)
-
-diff --git a/fs/libfs.c b/fs/libfs.c
-index fc34361c1489..bac918699022 100644
---- a/fs/libfs.c
-+++ b/fs/libfs.c
-@@ -1449,4 +1449,74 @@ int generic_ci_d_hash(const struct dentry *dentry, struct qstr *str)
- 	return 0;
- }
- EXPORT_SYMBOL(generic_ci_d_hash);
-+
-+static const struct dentry_operations generic_ci_dentry_ops = {
-+	.d_hash = generic_ci_d_hash,
-+	.d_compare = generic_ci_d_compare,
-+};
-+#endif
-+
-+#ifdef CONFIG_FS_ENCRYPTION
-+static const struct dentry_operations generic_encrypted_dentry_ops = {
-+	.d_revalidate = fscrypt_d_revalidate,
-+};
-+#endif
-+
-+#if defined(CONFIG_FS_ENCRYPTION) && defined(CONFIG_UNICODE)
-+static const struct dentry_operations generic_encrypted_ci_dentry_ops = {
-+	.d_hash = generic_ci_d_hash,
-+	.d_compare = generic_ci_d_compare,
-+	.d_revalidate = fscrypt_d_revalidate,
-+};
-+#endif
-+
-+/**
-+ * generic_set_encrypted_ci_d_ops - helper for setting d_ops for given dentry
-+ * @dentry:	dentry to set ops on
-+ *
-+ * Casefolded directories need d_hash and d_compare set, so that the dentries
-+ * contained in them are handled case-insensitively.  Note that these operations
-+ * are needed on the parent directory rather than on the dentries in it, and
-+ * while the casefolding flag can be toggled on and off on an empty directory,
-+ * dentry_operations can't be changed later.  As a result, if the filesystem has
-+ * casefolding support enabled at all, we have to give all dentries the
-+ * casefolding operations even if their inode doesn't have the casefolding flag
-+ * currently (and thus the casefolding ops would be no-ops for now).
-+ *
-+ * Encryption works differently in that the only dentry operation it needs is
-+ * d_revalidate, which it only needs on dentries that have the no-key name flag.
-+ * The no-key flag can't be set "later", so we don't have to worry about that.
-+ *
-+ * Finally, to maximize compatibility with overlayfs (which isn't compatible
-+ * with certain dentry operations) and to avoid taking an unnecessary
-+ * performance hit, we use custom dentry_operations for each possible
-+ * combination rather than always installing all operations.
-+ */
-+void generic_set_encrypted_ci_d_ops(struct dentry *dentry)
-+{
-+#ifdef CONFIG_FS_ENCRYPTION
-+	bool needs_encrypt_ops = dentry->d_flags & DCACHE_NOKEY_NAME;
-+#endif
-+#ifdef CONFIG_UNICODE
-+	bool needs_ci_ops = dentry->d_sb->s_encoding;
-+#endif
-+#if defined(CONFIG_FS_ENCRYPTION) && defined(CONFIG_UNICODE)
-+	if (needs_encrypt_ops && needs_ci_ops) {
-+		d_set_d_op(dentry, &generic_encrypted_ci_dentry_ops);
-+		return;
-+	}
- #endif
-+#ifdef CONFIG_FS_ENCRYPTION
-+	if (needs_encrypt_ops) {
-+		d_set_d_op(dentry, &generic_encrypted_dentry_ops);
-+		return;
-+	}
-+#endif
-+#ifdef CONFIG_UNICODE
-+	if (needs_ci_ops) {
-+		d_set_d_op(dentry, &generic_ci_dentry_ops);
-+		return;
-+	}
-+#endif
-+}
-+EXPORT_SYMBOL(generic_set_encrypted_ci_d_ops);
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 8667d0cdc71e..11345e66353b 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -3202,6 +3202,7 @@ extern int generic_ci_d_hash(const struct dentry *dentry, struct qstr *str);
- extern int generic_ci_d_compare(const struct dentry *dentry, unsigned int len,
- 				const char *str, const struct qstr *name);
- #endif
-+extern void generic_set_encrypted_ci_d_ops(struct dentry *dentry);
- 
- #ifdef CONFIG_MIGRATION
- extern int buffer_migrate_page(struct address_space *,
--- 
-2.29.2.454.gaff20da3a2-goog
-
+Ping?
