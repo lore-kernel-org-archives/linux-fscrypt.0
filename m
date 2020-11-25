@@ -4,43 +4,43 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 11D9FC64E75
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 25 Nov 2020 00:24:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 34BFAC71156
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 25 Nov 2020 00:24:54 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id BCC37217A0
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 25 Nov 2020 00:24:51 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id DE85F21D1A
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 25 Nov 2020 00:24:53 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="s3OE/tak"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="LXljaE/j"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727376AbgKYAYu (ORCPT
+        id S1727372AbgKYAYw (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 24 Nov 2020 19:24:50 -0500
-Received: from mail.kernel.org ([198.145.29.99]:35416 "EHLO mail.kernel.org"
+        Tue, 24 Nov 2020 19:24:52 -0500
+Received: from mail.kernel.org ([198.145.29.99]:35430 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1727081AbgKYAYq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 24 Nov 2020 19:24:46 -0500
+        id S1727363AbgKYAYs (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 24 Nov 2020 19:24:48 -0500
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id 3E27A21527;
-        Wed, 25 Nov 2020 00:24:46 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 8AF542173E;
+        Wed, 25 Nov 2020 00:24:47 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1606263886;
-        bh=kpsbU6nvcysiI9/MmbON23qqvHm2MWi7u1vlzska8vY=;
+        s=default; t=1606263887;
+        bh=ABvDlXMwjRq5govS1GsOlH9NgSkx2Q1+FWd/EUcY1U8=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=s3OE/takovt2yDXfnek5hfdpeePr6vwUSGTHUpP7IDS3ZkqY6FAGheOuo7Yjxb7DP
-         nN15RjbMCAvWsymNtQqS3XE6yjq8XBjtiiK8BPKivoiGjhF6bd6qLlBVjov0wyf33A
-         ldOVssWJJoNEU8DHoQc21MglO+vKlXsUcQloLo/A=
+        b=LXljaE/jMVXFHaMrkVVLTTRANdzCOz4et9MOVW8G6aVFZLsykL8yQST5y0NwuNDwP
+         8vTr++uc04ONtcJUMiq+jHlS5K4vPYzlvAEWuu0e2oRUhqlKTIXzqUas8qwdmGWZ6N
+         3m9HsnYwlQrmNxSuDRq/lS/nzCIBKAHdPUMz7s6k=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org
-Subject: [PATCH 2/9] f2fs: remove f2fs_dir_open()
-Date:   Tue, 24 Nov 2020 16:23:29 -0800
-Message-Id: <20201125002336.274045-3-ebiggers@kernel.org>
+Subject: [PATCH 7/9] fscrypt: move fscrypt_require_key() to fscrypt_private.h
+Date:   Tue, 24 Nov 2020 16:23:34 -0800
+Message-Id: <20201125002336.274045-8-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <20201125002336.274045-1-ebiggers@kernel.org>
 References: <20201125002336.274045-1-ebiggers@kernel.org>
@@ -52,43 +52,90 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Since encrypted directories can be opened without their encryption key
-being available, and each readdir tries to set up the key, trying to set
-up the key in ->open() too isn't really useful.
-
-Just remove it so that directories don't need an ->open() method
-anymore, and so that we eliminate a use of fscrypt_get_encryption_info()
-(which I'd like to stop exporting to filesystems).
+fscrypt_require_key() is now only used by files in fs/crypto/.  So
+reduce its visibility to fscrypt_private.h.  This is also a prerequsite
+for unexporting fscrypt_get_encryption_info().
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/f2fs/dir.c | 8 --------
- 1 file changed, 8 deletions(-)
+ fs/crypto/fscrypt_private.h | 26 ++++++++++++++++++++++++++
+ include/linux/fscrypt.h     | 26 --------------------------
+ 2 files changed, 26 insertions(+), 26 deletions(-)
 
-diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
-index 4b9ef8bbfa4a..47bee953fc8d 100644
---- a/fs/f2fs/dir.c
-+++ b/fs/f2fs/dir.c
-@@ -1081,19 +1081,11 @@ static int f2fs_readdir(struct file *file, struct dir_context *ctx)
- 	return err < 0 ? err : 0;
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index a61d4dbf0a0b..16dd55080127 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -571,6 +571,32 @@ int fscrypt_derive_dirhash_key(struct fscrypt_info *ci,
+ void fscrypt_hash_inode_number(struct fscrypt_info *ci,
+ 			       const struct fscrypt_master_key *mk);
+ 
++/**
++ * fscrypt_require_key() - require an inode's encryption key
++ * @inode: the inode we need the key for
++ *
++ * If the inode is encrypted, set up its encryption key if not already done.
++ * Then require that the key be present and return -ENOKEY otherwise.
++ *
++ * No locks are needed, and the key will live as long as the struct inode --- so
++ * it won't go away from under you.
++ *
++ * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
++ * if a problem occurred while setting up the encryption key.
++ */
++static inline int fscrypt_require_key(struct inode *inode)
++{
++	if (IS_ENCRYPTED(inode)) {
++		int err = fscrypt_get_encryption_info(inode);
++
++		if (err)
++			return err;
++		if (!fscrypt_has_encryption_key(inode))
++			return -ENOKEY;
++	}
++	return 0;
++}
++
+ /* keysetup_v1.c */
+ 
+ void fscrypt_put_direct_key(struct fscrypt_direct_key *dk);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index b20900bb829f..a07610f27926 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -688,32 +688,6 @@ static inline bool fscrypt_has_encryption_key(const struct inode *inode)
+ 	return fscrypt_get_info(inode) != NULL;
  }
  
--static int f2fs_dir_open(struct inode *inode, struct file *filp)
+-/**
+- * fscrypt_require_key() - require an inode's encryption key
+- * @inode: the inode we need the key for
+- *
+- * If the inode is encrypted, set up its encryption key if not already done.
+- * Then require that the key be present and return -ENOKEY otherwise.
+- *
+- * No locks are needed, and the key will live as long as the struct inode --- so
+- * it won't go away from under you.
+- *
+- * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
+- * if a problem occurred while setting up the encryption key.
+- */
+-static inline int fscrypt_require_key(struct inode *inode)
 -{
--	if (IS_ENCRYPTED(inode))
--		return fscrypt_get_encryption_info(inode) ? -EACCES : 0;
+-	if (IS_ENCRYPTED(inode)) {
+-		int err = fscrypt_get_encryption_info(inode);
+-
+-		if (err)
+-			return err;
+-		if (!fscrypt_has_encryption_key(inode))
+-			return -ENOKEY;
+-	}
 -	return 0;
 -}
 -
- const struct file_operations f2fs_dir_operations = {
- 	.llseek		= generic_file_llseek,
- 	.read		= generic_read_dir,
- 	.iterate_shared	= f2fs_readdir,
- 	.fsync		= f2fs_sync_file,
--	.open		= f2fs_dir_open,
- 	.unlocked_ioctl	= f2fs_ioctl,
- #ifdef CONFIG_COMPAT
- 	.compat_ioctl   = f2fs_compat_ioctl,
+ /**
+  * fscrypt_prepare_link() - prepare to link an inode into a possibly-encrypted
+  *			    directory
 -- 
 2.29.2
 
