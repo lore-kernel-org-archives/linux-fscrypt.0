@@ -3,99 +3,95 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7FD36C2D0E4
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 25 Nov 2020 00:24:47 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BF597C64E75
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 25 Nov 2020 00:24:48 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 16DCC2173E
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 25 Nov 2020 00:24:47 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 7C3A4217A0
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 25 Nov 2020 00:24:48 +0000 (UTC)
 Authentication-Results: mail.kernel.org;
-	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="jfKG5p5l"
+	dkim=pass (1024-bit key) header.d=kernel.org header.i=@kernel.org header.b="tNLet1ZG"
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727103AbgKYAYq (ORCPT
+        id S1727355AbgKYAYr (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 24 Nov 2020 19:24:46 -0500
-Received: from mail.kernel.org ([198.145.29.99]:35392 "EHLO mail.kernel.org"
+        Tue, 24 Nov 2020 19:24:47 -0500
+Received: from mail.kernel.org ([198.145.29.99]:35420 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726709AbgKYAYq (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 24 Nov 2020 19:24:46 -0500
+        id S1727189AbgKYAYr (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 24 Nov 2020 19:24:47 -0500
 Received: from sol.attlocal.net (172-10-235-113.lightspeed.sntcca.sbcglobal.net [172.10.235.113])
         (using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
         (No client certificate requested)
-        by mail.kernel.org (Postfix) with ESMTPSA id B3C3D206F7;
-        Wed, 25 Nov 2020 00:24:45 +0000 (UTC)
+        by mail.kernel.org (Postfix) with ESMTPSA id 7E01321534;
+        Wed, 25 Nov 2020 00:24:46 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=default; t=1606263885;
-        bh=M+jRhoaXexMV9nGYgDRJMTIlxGlDLMY+dRhqnifs5zA=;
-        h=From:To:Cc:Subject:Date:From;
-        b=jfKG5p5lCJrZohfYetsr7smx0o/PxZnPkiYY4BSgdkLRvpXBClZebe+sVZSD55SOM
-         fQtjkrtWMe5YZw93YlGoVDWhHtT1YgODfqRzxL6WxvjCd0h4i557joki7DDVrp/4Uz
-         eK40i3Jw/3iSNyICbU1tkn/IvXLj3y9CNPMG5egg=
+        s=default; t=1606263886;
+        bh=fQf+fnaZQ02pcMEuBF1tBcPKD9HF9tGTFk+IDwiZp4A=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=tNLet1ZGE/CSRBfltP6K7lEGDh8V0fPQXQop96Z8CQDltO+ttQbkZUgKcBixSINvf
+         268ymGtXK8m+tNIEqeWpmji485xYf22gcpI6X8MVK/vwxmVcLcMHogHu8lwh9N1/O3
+         dgVXB719889w/ATW8gPyfytv/NMQO/Fv+FNOUBsU=
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org
-Subject: [PATCH 0/9] Allow deleting files with unsupported encryption policy
-Date:   Tue, 24 Nov 2020 16:23:27 -0800
-Message-Id: <20201125002336.274045-1-ebiggers@kernel.org>
+Subject: [PATCH 3/9] ubifs: remove ubifs_dir_open()
+Date:   Tue, 24 Nov 2020 16:23:30 -0800
+Message-Id: <20201125002336.274045-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
+In-Reply-To: <20201125002336.274045-1-ebiggers@kernel.org>
+References: <20201125002336.274045-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Currently it's impossible to delete files that use an unsupported
-encryption policy, as the kernel will just return an error when
-performing any operation on the top-level encrypted directory, even just
-a path lookup into the directory or opening the directory for readdir.
+From: Eric Biggers <ebiggers@google.com>
 
-It's desirable to return errors for most operations on files that use an
-unsupported encryption policy, but the current behavior is too strict.
-We need to allow enough to delete files, so that people can't be stuck
-with undeletable files when downgrading kernel versions.  That includes
-allowing directories to be listed and allowing dentries to be looked up.
+Since encrypted directories can be opened without their encryption key
+being available, and each readdir tries to set up the key, trying to set
+up the key in ->open() too isn't really useful.
 
-This series fixes this (on ext4, f2fs, and ubifs) by treating an
-unsupported encryption policy in the same way as "key unavailable" in
-the cases that are required for a recursive delete to work.
+Just remove it so that directories don't need an ->open() method
+anymore, and so that we eliminate a use of fscrypt_get_encryption_info()
+(which I'd like to stop exporting to filesystems).
 
-The actual fix is in patch 9, so see that for more details.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ubifs/dir.c | 9 ---------
+ 1 file changed, 9 deletions(-)
 
-Patches 1-8 are cleanups that prepare for the actual fix by removing
-direct use of fscrypt_get_encryption_info() by filesystems.
-
-This patchset applies to branch "master" (commit 4a4b8721f1a5) of
-https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git.
-
-Eric Biggers (9):
-  ext4: remove ext4_dir_open()
-  f2fs: remove f2fs_dir_open()
-  ubifs: remove ubifs_dir_open()
-  ext4: don't call fscrypt_get_encryption_info() from dx_show_leaf()
-  fscrypt: introduce fscrypt_prepare_readdir()
-  fscrypt: move body of fscrypt_prepare_setattr() out-of-line
-  fscrypt: move fscrypt_require_key() to fscrypt_private.h
-  fscrypt: unexport fscrypt_get_encryption_info()
-  fscrypt: allow deleting files with unsupported encryption policy
-
- fs/crypto/fname.c           |  8 +++-
- fs/crypto/fscrypt_private.h | 28 ++++++++++++++
- fs/crypto/hooks.c           | 16 +++++++-
- fs/crypto/keysetup.c        | 20 ++++++++--
- fs/crypto/policy.c          | 22 +++++++----
- fs/ext4/dir.c               | 16 ++------
- fs/ext4/namei.c             | 10 +----
- fs/f2fs/dir.c               | 10 +----
- fs/ubifs/dir.c              | 11 +-----
- include/linux/fscrypt.h     | 75 +++++++++++++++++++------------------
- 10 files changed, 126 insertions(+), 90 deletions(-)
-
-
-base-commit: 4a4b8721f1a5e4b01e45b3153c68d5a1014b25de
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 08fde777c324..009fbf844d3e 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -1619,14 +1619,6 @@ int ubifs_getattr(const struct path *path, struct kstat *stat,
+ 	return 0;
+ }
+ 
+-static int ubifs_dir_open(struct inode *dir, struct file *file)
+-{
+-	if (IS_ENCRYPTED(dir))
+-		return fscrypt_get_encryption_info(dir) ? -EACCES : 0;
+-
+-	return 0;
+-}
+-
+ const struct inode_operations ubifs_dir_inode_operations = {
+ 	.lookup      = ubifs_lookup,
+ 	.create      = ubifs_create,
+@@ -1653,7 +1645,6 @@ const struct file_operations ubifs_dir_operations = {
+ 	.iterate_shared = ubifs_readdir,
+ 	.fsync          = ubifs_fsync,
+ 	.unlocked_ioctl = ubifs_ioctl,
+-	.open		= ubifs_dir_open,
+ #ifdef CONFIG_COMPAT
+ 	.compat_ioctl   = ubifs_compat_ioctl,
+ #endif
 -- 
 2.29.2
 
