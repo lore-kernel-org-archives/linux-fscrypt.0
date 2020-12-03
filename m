@@ -3,31 +3,30 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-17.0 required=3.0 tests=BAYES_00,INCLUDES_CR_TRAILER,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 289DDC83014
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Dec 2020 02:23:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 71A9DC6369E
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Dec 2020 02:23:33 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id D7A2922201
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Dec 2020 02:23:31 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 2656822201
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Dec 2020 02:23:33 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2387893AbgLCCXb (ORCPT
+        id S2387467AbgLCCXb (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Wed, 2 Dec 2020 21:23:31 -0500
-Received: from mail.kernel.org ([198.145.29.99]:48664 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:48678 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1729339AbgLCCX2 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S2387404AbgLCCX2 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Wed, 2 Dec 2020 21:23:28 -0500
 From:   Eric Biggers <ebiggers@kernel.org>
 Authentication-Results: mail.kernel.org; dkim=permerror (bad message/signature format)
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org,
-        Chao Yu <yuchao0@huawei.com>
-Subject: [PATCH v2 2/9] f2fs: remove f2fs_dir_open()
-Date:   Wed,  2 Dec 2020 18:20:34 -0800
-Message-Id: <20201203022041.230976-3-ebiggers@kernel.org>
+        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org
+Subject: [PATCH v2 3/9] ubifs: remove ubifs_dir_open()
+Date:   Wed,  2 Dec 2020 18:20:35 -0800
+Message-Id: <20201203022041.230976-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <20201203022041.230976-1-ebiggers@kernel.org>
 References: <20201203022041.230976-1-ebiggers@kernel.org>
@@ -47,36 +46,38 @@ Just remove it so that directories don't need an ->open() method
 anymore, and so that we eliminate a use of fscrypt_get_encryption_info()
 (which I'd like to stop exporting to filesystems).
 
-Reviewed-by: Chao Yu <yuchao0@huawei.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/f2fs/dir.c | 8 --------
- 1 file changed, 8 deletions(-)
+ fs/ubifs/dir.c | 9 ---------
+ 1 file changed, 9 deletions(-)
 
-diff --git a/fs/f2fs/dir.c b/fs/f2fs/dir.c
-index 4b9ef8bbfa4a9..47bee953fc8d8 100644
---- a/fs/f2fs/dir.c
-+++ b/fs/f2fs/dir.c
-@@ -1081,19 +1081,11 @@ static int f2fs_readdir(struct file *file, struct dir_context *ctx)
- 	return err < 0 ? err : 0;
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 08fde777c3247..009fbf844d3e6 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -1619,14 +1619,6 @@ int ubifs_getattr(const struct path *path, struct kstat *stat,
+ 	return 0;
  }
  
--static int f2fs_dir_open(struct inode *inode, struct file *filp)
+-static int ubifs_dir_open(struct inode *dir, struct file *file)
 -{
--	if (IS_ENCRYPTED(inode))
--		return fscrypt_get_encryption_info(inode) ? -EACCES : 0;
+-	if (IS_ENCRYPTED(dir))
+-		return fscrypt_get_encryption_info(dir) ? -EACCES : 0;
+-
 -	return 0;
 -}
 -
- const struct file_operations f2fs_dir_operations = {
- 	.llseek		= generic_file_llseek,
- 	.read		= generic_read_dir,
- 	.iterate_shared	= f2fs_readdir,
- 	.fsync		= f2fs_sync_file,
--	.open		= f2fs_dir_open,
- 	.unlocked_ioctl	= f2fs_ioctl,
+ const struct inode_operations ubifs_dir_inode_operations = {
+ 	.lookup      = ubifs_lookup,
+ 	.create      = ubifs_create,
+@@ -1653,7 +1645,6 @@ const struct file_operations ubifs_dir_operations = {
+ 	.iterate_shared = ubifs_readdir,
+ 	.fsync          = ubifs_fsync,
+ 	.unlocked_ioctl = ubifs_ioctl,
+-	.open		= ubifs_dir_open,
  #ifdef CONFIG_COMPAT
- 	.compat_ioctl   = f2fs_compat_ioctl,
+ 	.compat_ioctl   = ubifs_compat_ioctl,
+ #endif
 -- 
 2.29.2
 
