@@ -3,22 +3,22 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-17.0 required=3.0 tests=BAYES_00,INCLUDES_CR_TRAILER,
-	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CA6C0C8301D
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Dec 2020 02:09:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 32E2AC83023
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Dec 2020 02:09:43 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 98E4C22203
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Dec 2020 02:09:41 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id F15F422206
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Dec 2020 02:09:42 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2387644AbgLCCJ1 (ORCPT
+        id S2387694AbgLCCJ2 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 2 Dec 2020 21:09:27 -0500
-Received: from mail.kernel.org ([198.145.29.99]:45644 "EHLO mail.kernel.org"
+        Wed, 2 Dec 2020 21:09:28 -0500
+Received: from mail.kernel.org ([198.145.29.99]:45656 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2387535AbgLCCJZ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 2 Dec 2020 21:09:25 -0500
+        id S2387618AbgLCCJ0 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 2 Dec 2020 21:09:26 -0500
 From:   Eric Biggers <ebiggers@kernel.org>
 Authentication-Results: mail.kernel.org; dkim=permerror (bad message/signature format)
 To:     linux-mmc@vger.kernel.org
@@ -35,9 +35,9 @@ Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
         Peng Zhou <peng.zhou@mediatek.com>,
         Stanley Chu <stanley.chu@mediatek.com>,
         Konrad Dybcio <konradybcio@gmail.com>
-Subject: [PATCH v2 5/9] mmc: cqhci: add cqhci_host_ops::program_key
-Date:   Wed,  2 Dec 2020 18:05:12 -0800
-Message-Id: <20201203020516.225701-6-ebiggers@kernel.org>
+Subject: [PATCH v2 8/9] arm64: dts: qcom: sdm630: add ICE registers and clocks
+Date:   Wed,  2 Dec 2020 18:05:15 -0800
+Message-Id: <20201203020516.225701-9-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <20201203020516.225701-1-ebiggers@kernel.org>
 References: <20201203020516.225701-1-ebiggers@kernel.org>
@@ -49,116 +49,43 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-On Snapdragon SoCs, the Linux kernel isn't permitted to directly access
-the standard CQHCI crypto configuration registers.  Instead, programming
-and evicting keys must be done through vendor-specific SMC calls.
+Add the registers and clock for the Inline Crypto Engine (ICE) to the
+device tree node for the sdhci-msm host controller on sdm630.  This
+allows sdhci-msm to support inline encryption on sdm630.
 
-To support this hardware, add a ->program_key() method to
-'struct cqhci_host_ops'.  This allows overriding the standard CQHCI
-crypto key programming / eviction procedure.
-
-This is inspired by the corresponding UFS crypto support, which uses
-these same SMC calls.  See commit 1bc726e26ef3 ("scsi: ufs: Add
-program_key() variant op").
-
-Acked-by: Adrian Hunter <adrian.hunter@intel.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- drivers/mmc/host/cqhci-crypto.c | 22 +++++++++++++---------
- drivers/mmc/host/cqhci.h        |  4 ++++
- 2 files changed, 17 insertions(+), 9 deletions(-)
+ arch/arm64/boot/dts/qcom/sdm630.dtsi | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
 
-diff --git a/drivers/mmc/host/cqhci-crypto.c b/drivers/mmc/host/cqhci-crypto.c
-index 98f141c8480ce..0aaa948d240b1 100644
---- a/drivers/mmc/host/cqhci-crypto.c
-+++ b/drivers/mmc/host/cqhci-crypto.c
-@@ -30,13 +30,16 @@ cqhci_host_from_ksm(struct blk_keyslot_manager *ksm)
- 	return mmc->cqe_private;
- }
+diff --git a/arch/arm64/boot/dts/qcom/sdm630.dtsi b/arch/arm64/boot/dts/qcom/sdm630.dtsi
+index deb928d303c22..21aee33518b54 100644
+--- a/arch/arm64/boot/dts/qcom/sdm630.dtsi
++++ b/arch/arm64/boot/dts/qcom/sdm630.dtsi
+@@ -808,8 +808,9 @@ spmi_bus: spmi@800f000 {
+ 		sdhc_1: sdhci@c0c4000 {
+ 			compatible = "qcom,sdm630-sdhci", "qcom,sdhci-msm-v5";
+ 			reg = <0x0c0c4000 0x1000>,
+-				<0x0c0c5000 0x1000>;
+-			reg-names = "hc", "cqhci";
++				<0x0c0c5000 0x1000>,
++				<0x0c0c8000 0x8000>;
++			reg-names = "hc", "cqhci", "ice";
  
--static void cqhci_crypto_program_key(struct cqhci_host *cq_host,
--				     const union cqhci_crypto_cfg_entry *cfg,
--				     int slot)
-+static int cqhci_crypto_program_key(struct cqhci_host *cq_host,
-+				    const union cqhci_crypto_cfg_entry *cfg,
-+				    int slot)
- {
- 	u32 slot_offset = cq_host->crypto_cfg_register + slot * sizeof(*cfg);
- 	int i;
+ 			interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
+ 					<GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+@@ -817,8 +818,9 @@ sdhc_1: sdhci@c0c4000 {
  
-+	if (cq_host->ops->program_key)
-+		return cq_host->ops->program_key(cq_host, cfg, slot);
-+
- 	/* Clear CFGE */
- 	cqhci_writel(cq_host, 0, slot_offset + 16 * sizeof(cfg->reg_val[0]));
+ 			clocks = <&gcc GCC_SDCC1_APPS_CLK>,
+ 					<&gcc GCC_SDCC1_AHB_CLK>,
+-					<&xo_board>;
+-			clock-names = "core", "iface", "xo";
++					<&xo_board>,
++					<&gcc GCC_SDCC1_ICE_CORE_CLK>;
++			clock-names = "core", "iface", "xo", "ice";
  
-@@ -51,6 +54,7 @@ static void cqhci_crypto_program_key(struct cqhci_host *cq_host,
- 	/* Write dword 16, which includes the new value of CFGE */
- 	cqhci_writel(cq_host, le32_to_cpu(cfg->reg_val[16]),
- 		     slot_offset + 16 * sizeof(cfg->reg_val[0]));
-+	return 0;
- }
- 
- static int cqhci_crypto_keyslot_program(struct blk_keyslot_manager *ksm,
-@@ -67,6 +71,7 @@ static int cqhci_crypto_keyslot_program(struct blk_keyslot_manager *ksm,
- 	int i;
- 	int cap_idx = -1;
- 	union cqhci_crypto_cfg_entry cfg = {};
-+	int err;
- 
- 	BUILD_BUG_ON(CQHCI_CRYPTO_KEY_SIZE_INVALID != 0);
- 	for (i = 0; i < cq_host->crypto_capabilities.num_crypto_cap; i++) {
-@@ -93,13 +98,13 @@ static int cqhci_crypto_keyslot_program(struct blk_keyslot_manager *ksm,
- 		memcpy(cfg.crypto_key, key->raw, key->size);
- 	}
- 
--	cqhci_crypto_program_key(cq_host, &cfg, slot);
-+	err = cqhci_crypto_program_key(cq_host, &cfg, slot);
- 
- 	memzero_explicit(&cfg, sizeof(cfg));
--	return 0;
-+	return err;
- }
- 
--static void cqhci_crypto_clear_keyslot(struct cqhci_host *cq_host, int slot)
-+static int cqhci_crypto_clear_keyslot(struct cqhci_host *cq_host, int slot)
- {
- 	/*
- 	 * Clear the crypto cfg on the device. Clearing CFGE
-@@ -107,7 +112,7 @@ static void cqhci_crypto_clear_keyslot(struct cqhci_host *cq_host, int slot)
- 	 */
- 	union cqhci_crypto_cfg_entry cfg = {};
- 
--	cqhci_crypto_program_key(cq_host, &cfg, slot);
-+	return cqhci_crypto_program_key(cq_host, &cfg, slot);
- }
- 
- static int cqhci_crypto_keyslot_evict(struct blk_keyslot_manager *ksm,
-@@ -116,8 +121,7 @@ static int cqhci_crypto_keyslot_evict(struct blk_keyslot_manager *ksm,
- {
- 	struct cqhci_host *cq_host = cqhci_host_from_ksm(ksm);
- 
--	cqhci_crypto_clear_keyslot(cq_host, slot);
--	return 0;
-+	return cqhci_crypto_clear_keyslot(cq_host, slot);
- }
- 
- /*
-diff --git a/drivers/mmc/host/cqhci.h b/drivers/mmc/host/cqhci.h
-index 5c18734624fea..ece997dd8bcc7 100644
---- a/drivers/mmc/host/cqhci.h
-+++ b/drivers/mmc/host/cqhci.h
-@@ -287,6 +287,10 @@ struct cqhci_host_ops {
- 				 u64 *data);
- 	void (*pre_enable)(struct mmc_host *mmc);
- 	void (*post_disable)(struct mmc_host *mmc);
-+#ifdef CONFIG_MMC_CRYPTO
-+	int (*program_key)(struct cqhci_host *cq_host,
-+			   const union cqhci_crypto_cfg_entry *cfg, int slot);
-+#endif
- };
- 
- static inline void cqhci_writel(struct cqhci_host *host, u32 val, int reg)
+ 			pinctrl-names = "default", "sleep";
+ 			pinctrl-0 = <&sdc1_clk_on &sdc1_cmd_on &sdc1_data_on &sdc1_rclk_on>;
 -- 
 2.29.2
 
