@@ -2,85 +2,65 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-21.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,INCLUDES_PULL_REQUEST,
-	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
+	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EAE65C1B0D8
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Dec 2020 05:55:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4F0AEC4361B
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Dec 2020 20:57:37 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id A7F4C229EF
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Dec 2020 05:55:20 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 1645823877
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Dec 2020 20:57:37 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2404665AbgLNFyQ (ORCPT
+        id S2503502AbgLNU5Q (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 14 Dec 2020 00:54:16 -0500
-Received: from mail.kernel.org ([198.145.29.99]:36252 "EHLO mail.kernel.org"
+        Mon, 14 Dec 2020 15:57:16 -0500
+Received: from mail.kernel.org ([198.145.29.99]:37242 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726058AbgLNFyJ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 14 Dec 2020 00:54:09 -0500
-Date:   Sun, 13 Dec 2020 21:53:27 -0800
+        id S2503474AbgLNU5K (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 14 Dec 2020 15:57:10 -0500
+Subject: Re: [f2fs-dev] [GIT PULL] fsverity updates for 5.11
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1607925209;
-        bh=i16BifUJiG908ADKX33lN3E+d1H+NPST+DKFRlua0sc=;
-        h=From:To:Cc:Subject:From;
-        b=Vz742K6NGVNpmN1b2Mu7MfDQY8/MpslxDH3rDOKvNd87Tq2HQdUGp9Zb28PahoBTo
-         9KPjGVineDijLgwV+U7csBNuX0nb9QN6k83hjaxFeZNk2GTahWNQFC71XfcguogXN8
-         +trPJwx0qNFUM8+41Iv05enSTy0VwY4KkCf/G/1i8NTMKV0TNzg7yRbHKXd9MN43wh
-         po+FoQ3oHkG05hHTVnwWwtKuf+W4TvAE0FIZV7YWp16KTnzUOa8xR21rrX8gQn/3lF
-         RbpB4SoHtb7EzqCCoueVr6+UL4NR02NttEHOBGIwt2+YnC4k2oUvX7yo4kzowW8Ygr
-         wlnxN5hS3PGqg==
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Linus Torvalds <torvalds@linux-foundation.org>
-Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        s=k20201202; t=1607979389;
+        bh=SYq1bIYMrR7dKenr5O6tsqn7Cs9DoPJBsBbmjg3Pi4w=;
+        h=From:In-Reply-To:References:Date:To:Cc:From;
+        b=D5RYJr1xHimBJzu0z4RPdsPgwzc83vHfyuniQ8o8Ypw/C58SdGKFotbwWwt8kUMEC
+         aSr191iwAitghakUcscUOHJlfdEvkbLS7A1P3aAeSDVRAjUfTEw7yXy0/b6sJPs2JU
+         jJIgNFuBuhFbgR7D4f9W0IxZjGN4RIro0rwuBEfQXhB3SPvfNHLHPPTGT0+ILjjkmj
+         Z3HaPRCzQBk6RTGY4QQoe+xhv5wnXGzQFRFdp1oz56afzCMC+/YVdzpj7zoqzuBZ+s
+         ZmHvBkGQYTLYrZKijUzX9ytGRe5b0BIHN6txWgodrLePpiLCvO2opPorLSXQZlh/Rw
+         wcEDaxnFxsQKA==
+From:   pr-tracker-bot@kernel.org
+In-Reply-To: <X9b910/Ldj6kdljm@sol.localdomain>
+References: <X9b910/Ldj6kdljm@sol.localdomain>
+X-PR-Tracked-List-Id: <linux-f2fs-devel.lists.sourceforge.net>
+X-PR-Tracked-Message-Id: <X9b910/Ldj6kdljm@sol.localdomain>
+X-PR-Tracked-Remote: https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fsverity-for-linus
+X-PR-Tracked-Commit-Id: bde493349025ca0559e2fff88592935af3b8df19
+X-PR-Merge-Tree: torvalds/linux.git
+X-PR-Merge-Refname: refs/heads/master
+X-PR-Merge-Commit-Id: 51895d58c7c0c65afac21570cc14a7189942959a
+Message-Id: <160797938955.26822.4023695605419451387.pr-tracker-bot@kernel.org>
+Date:   Mon, 14 Dec 2020 20:56:29 +0000
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     Linus Torvalds <torvalds@linux-foundation.org>,
+        Theodore Ts'o <tytso@mit.edu>, linux-kernel@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
-        linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
-        Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
-Subject: [GIT PULL] fsverity updates for 5.11
-Message-ID: <X9b910/Ldj6kdljm@sol.localdomain>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
+        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        Jaegeuk Kim <jaegeuk@kernel.org>, linux-ext4@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-The following changes since commit 09162bc32c880a791c6c0668ce0745cf7958f576:
+The pull request you sent on Sun, 13 Dec 2020 21:53:27 -0800:
 
-  Linux 5.10-rc4 (2020-11-15 16:44:31 -0800)
+> https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fsverity-for-linus
 
-are available in the Git repository at:
+has been merged into torvalds/linux.git:
+https://git.kernel.org/torvalds/c/51895d58c7c0c65afac21570cc14a7189942959a
 
-  https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fsverity-for-linus
+Thank you!
 
-for you to fetch changes up to bde493349025ca0559e2fff88592935af3b8df19:
-
-  fs-verity: move structs needed for file signing to UAPI header (2020-11-23 19:30:14 -0800)
-
-----------------------------------------------------------------
-
-Some cleanups for fs-verity:
-
-- Rename some names that have been causing confusion.
-
-- Move structs needed for file signing to the UAPI header.
-
-----------------------------------------------------------------
-Eric Biggers (4):
-      fs-verity: remove filenames from file comments
-      fs-verity: rename fsverity_signed_digest to fsverity_formatted_digest
-      fs-verity: rename "file measurement" to "file digest"
-      fs-verity: move structs needed for file signing to UAPI header
-
- Documentation/filesystems/fsverity.rst | 68 ++++++++++++++++------------------
- fs/verity/enable.c                     |  8 ++--
- fs/verity/fsverity_private.h           | 36 ++----------------
- fs/verity/hash_algs.c                  |  2 +-
- fs/verity/init.c                       |  2 +-
- fs/verity/measure.c                    | 12 +++---
- fs/verity/open.c                       | 24 ++++++------
- fs/verity/signature.c                  | 14 +++----
- fs/verity/verify.c                     |  2 +-
- include/uapi/linux/fsverity.h          | 49 ++++++++++++++++++++++++
- 10 files changed, 116 insertions(+), 101 deletions(-)
+-- 
+Deet-doot-dot, I am a bot.
+https://korg.docs.kernel.org/prtracker.html
