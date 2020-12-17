@@ -2,100 +2,55 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=unavailable autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-3.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
+	autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 75650C4361B
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Dec 2020 16:24:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6E65AC3526B
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Dec 2020 18:10:28 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 32A1C23426
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Dec 2020 16:24:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 454612388E
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 17 Dec 2020 18:10:28 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727260AbgLQQYB (ORCPT
+        id S1731441AbgLQSKC (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 17 Dec 2020 11:24:01 -0500
-Received: from mail.kernel.org ([198.145.29.99]:60970 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726999AbgLQQYA (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 17 Dec 2020 11:24:00 -0500
-Date:   Thu, 17 Dec 2020 08:23:18 -0800
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1608222200;
-        bh=FMmMjljEOp+bHuNqcOl5KSSyovWSAAXnB0VcyxYZPgw=;
-        h=From:To:Cc:Subject:References:In-Reply-To:From;
-        b=LqK0/OvtFHpE9TkJ+OoRyMv/mwPGyfTqxyGRFUmS78LFm5x8LiDzl/X0FmhruF81W
-         L034jf4Pp65ZCKO7fDmUgDHh5n/dBM/5crmNlQpUBCPwRWi4W2EpgrQ1T3qxHw9bLI
-         MFKSmidrJAHQNhS/gYj0kzmRbdrc8kaabVHxjm+jHNwkNWUY7/t9NN6tjtls+RLjyK
-         0PeufVFjZIPnw0kiFjMcF9Z0NQUxligxxEofDHCougp61E+FGehJtlETIMnkR38GRK
-         uVB9c6Azmmfai7FqL1SYaT0YWTwXtUt9Wjz30uC2U0nI1/QpcDtDX7JuwwUIeJhbnm
-         mRKjEWgIkM/VQ==
-From:   Jaegeuk Kim <jaegeuk@kernel.org>
+        Thu, 17 Dec 2020 13:10:02 -0500
+Received: from outgoing-auth-1.mit.edu ([18.9.28.11]:47771 "EHLO
+        outgoing.mit.edu" rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org
+        with ESMTP id S1731143AbgLQSKC (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 17 Dec 2020 13:10:02 -0500
+Received: from callcc.thunk.org (pool-72-74-133-215.bstnma.fios.verizon.net [72.74.133.215])
+        (authenticated bits=0)
+        (User authenticated as tytso@ATHENA.MIT.EDU)
+        by outgoing.mit.edu (8.14.7/8.12.4) with ESMTP id 0BHI8n91025024
+        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+        Thu, 17 Dec 2020 13:08:50 -0500
+Received: by callcc.thunk.org (Postfix, from userid 15806)
+        id CB08C420280; Thu, 17 Dec 2020 13:08:49 -0500 (EST)
+Date:   Thu, 17 Dec 2020 13:08:49 -0500
+From:   "Theodore Y. Ts'o" <tytso@mit.edu>
 To:     Satya Tangirala <satyat@google.com>
-Cc:     Eric Biggers <ebiggers@kernel.org>,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH 0/1] userspace support for F2FS metadata encryption
-Message-ID: <X9uF9kNjWFq8KlL9@google.com>
-References: <20201005074133.1958633-1-satyat@google.com>
+Cc:     Jaegeuk Kim <jaegeuk@kernel.org>,
+        Eric Biggers <ebiggers@kernel.org>, Chao Yu <chao@kernel.org>,
+        linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net
+Subject: Re: [PATCH v2 0/3] add support for metadata encryption to F2FS
+Message-ID: <X9uesUH1oetyyoA0@mit.edu>
+References: <20201217150435.1505269-1-satyat@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20201005074133.1958633-1-satyat@google.com>
+In-Reply-To: <20201217150435.1505269-1-satyat@google.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Hi Satya,
+On Thu, Dec 17, 2020 at 03:04:32PM +0000, Satya Tangirala wrote:
+> This patch series adds support for metadata encryption to F2FS using
+> blk-crypto.
 
-Could you please consider to rebase the patches on f2fs-tools/dev branch?
-I've applied compression support which will have some conflicts with this
-series. And, could you check this works with multi-partition support?
+Is there a companion patch series needed so that f2fstools can
+check/repair a file system with metadata encryption enabled?
 
-Thanks,
-
-On 10/05, Satya Tangirala wrote:
-> The kernel patches for F2FS metadata encryption are at:
-> 
-> https://lore.kernel.org/linux-fscrypt/20201005073606.1949772-4-satyat@google.com/
-> 
-> This patch implements the userspace changes required for metadata
-> encryption support as implemented in the kernel changes above. All blocks
-> in the filesystem are encrypted with the user provided metadata encryption
-> key except for the superblock (and its redundant copy). The DUN for a block
-> is its offset from the start of the filesystem.
-> 
-> This patch introduces two new options for the userspace tools: '-A' to
-> specify the encryption algorithm, and '-M' to specify the encryption key.
-> mkfs.f2fs will store the encryption algorithm used for metadata encryption
-> in the superblock itself, so '-A' is only applicable to mkfs.f2fs. The rest
-> of the tools only take the '-M' option, and will obtain the encryption
-> algorithm from the superblock of the FS.
-> 
-> Limitations: 
-> Metadata encryption with sparse storage has not been implemented yet in
-> this patch.
-> 
-> This patch requires the metadata encryption key to be readable from
-> userspace, and does not ensure that it is zeroed before the program exits
-> for any reason.
-> 
-> Satya Tangirala (1):
->   f2fs-tools: Introduce metadata encryption support
-> 
->  fsck/main.c                   |  47 ++++++-
->  fsck/mount.c                  |  33 ++++-
->  include/f2fs_fs.h             |  10 +-
->  include/f2fs_metadata_crypt.h |  21 ++++
->  lib/Makefile.am               |   4 +-
->  lib/f2fs_metadata_crypt.c     | 226 ++++++++++++++++++++++++++++++++++
->  lib/libf2fs_io.c              |  87 +++++++++++--
->  mkfs/f2fs_format.c            |   5 +-
->  mkfs/f2fs_format_main.c       |  33 ++++-
->  9 files changed, 446 insertions(+), 20 deletions(-)
->  create mode 100644 include/f2fs_metadata_crypt.h
->  create mode 100644 lib/f2fs_metadata_crypt.c
-> 
-> -- 
-> 2.28.0.806.g8561365e88-goog
+	       	    	   	- Ted
