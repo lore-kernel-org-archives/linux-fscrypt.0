@@ -2,113 +2,88 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-16.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6D87AC433DB
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 21 Dec 2020 23:04:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D2F54C433E0
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 21 Dec 2020 23:25:37 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 1F32522B51
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 21 Dec 2020 23:04:18 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 8DCDE22BF3
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 21 Dec 2020 23:25:37 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1725782AbgLUXER (ORCPT
+        id S1726104AbgLUXZX (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 21 Dec 2020 18:04:17 -0500
-Received: from mail.kernel.org ([198.145.29.99]:45408 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725780AbgLUXER (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 21 Dec 2020 18:04:17 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id B2F90229CA;
-        Mon, 21 Dec 2020 23:03:36 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1608591816;
-        bh=E2vKh/SOOLEB2fdOfcYVkhSitH8T67gNU1vvlycn2Qg=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=L7/F8MCqAolcxiQ8OPRNDt8EJVBPFzm90m6Wk2E28jW3k8vmoB20otorntb7Ch9PQ
-         3JR/4VLT4Th+rS1578Hup0ksPXIhVCc0jCj6qYl+I3f1Sr9o5MSfN7A8rRYPSo5Njf
-         lrzGdrjeda2oRdUybnYR2g0LNcFHJV2MJgdnScWQJt7mJCgQd4SLQDFOj8x+AxPNDb
-         xkQxV7bhxlTWOgmTaiYxiVlYLKDIBApnYNmDkGYOWCs6I/cDs3jQKXMeIeDRUZ1DNN
-         J5gcwoeaRKOHE0Rc5if3F32m8l0UZ4tgEn8WD4RZjJHoMlTJrPu21go5hd772p6t+x
-         8sgh+s3ljBHIA==
-Date:   Mon, 21 Dec 2020 15:03:35 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Luca Boccassi <bluca@debian.org>
-Cc:     linux-fscrypt@vger.kernel.org,
-        Luca Boccassi <luca.boccassi@microsoft.com>
-Subject: Re: [PATCH v5] Allow to build and run sign/digest on Windows
-Message-ID: <X+Epx7K/IIp08b7L@sol.localdomain>
-References: <20201217192516.3683371-2-luca.boccassi@gmail.com>
- <20201221221953.256059-1-bluca@debian.org>
+        Mon, 21 Dec 2020 18:25:23 -0500
+Received: from mail-wm1-f49.google.com ([209.85.128.49]:36558 "EHLO
+        mail-wm1-f49.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726117AbgLUXZX (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 21 Dec 2020 18:25:23 -0500
+Received: by mail-wm1-f49.google.com with SMTP id y23so471658wmi.1
+        for <linux-fscrypt@vger.kernel.org>; Mon, 21 Dec 2020 15:25:06 -0800 (PST)
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
+         :references:mime-version:content-transfer-encoding;
+        bh=9JqkLzVJDHVxtah97HrMNSf6PBUqZHmMm+BE7w2OtR4=;
+        b=BhOJUZaL/gJyvv6y6k6T33yIaa5YeRkVOgX408Ld4A3j6wWrRu+R29Y0/nOYzqrMd+
+         wXFhZcG3PI2TPQrwazfmFPOoEJ54BA7GtTZ1TkiR2AMS3SeZa37tT3nBjHApmreDPAjF
+         I4lAj1EoaVBXww1gWAp37SOAbFpZ+4Vm4vGS2zsTlPHtu3yUqGsaaPgJDWT0KstA0zjf
+         tWPH80VyBVdS6SXN3XOr41NQL4A66Qd/AjYTPLcxWjBJ1jL372GI9z/O7lN77NZ6ESH7
+         DriZw3qvPHa34Z9HPuP1p5cgiMaco2h83u9L8ZcddqXbEI9oSAsQNCero3QyUN/us/gC
+         Do/Q==
+X-Gm-Message-State: AOAM533kErfRb6edCgZs9pVEQk0O5X1TQ7uDAQX8i7pVwmU/AzYXG5Iv
+        xqZi4K09mO/Qz+I6CrxMYrCOLhAevABZRWYk
+X-Google-Smtp-Source: ABdhPJz7sYw6L+yPFz3ReuAjDDzVqNPGRrpUEc+lzwbZPlGoStXwDq/h9CUXvQLdtVIM7eAiic4RIw==
+X-Received: by 2002:a1c:b608:: with SMTP id g8mr19028046wmf.110.1608593080650;
+        Mon, 21 Dec 2020 15:24:40 -0800 (PST)
+Received: from localhost ([2a01:4b00:f419:6f00:e2db:6a88:4676:d01b])
+        by smtp.gmail.com with ESMTPSA id h184sm24136970wmh.23.2020.12.21.15.24.39
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 21 Dec 2020 15:24:39 -0800 (PST)
+From:   Luca Boccassi <bluca@debian.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     ebiggers@google.com, Luca Boccassi <bluca@debian.org>
+Subject: [PATCH v6 2/3] Wrap ./fsverity in TEST_WRAPPER_PROG too
+Date:   Mon, 21 Dec 2020 23:24:27 +0000
+Message-Id: <20201221232428.298710-2-bluca@debian.org>
+X-Mailer: git-send-email 2.29.2
+In-Reply-To: <20201221232428.298710-1-bluca@debian.org>
+References: <20201221221953.256059-1-bluca@debian.org>
+ <20201221232428.298710-1-bluca@debian.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20201221221953.256059-1-bluca@debian.org>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, Dec 21, 2020 at 10:19:53PM +0000, Luca Boccassi wrote:
-> From: Luca Boccassi <luca.boccassi@microsoft.com>
-> 
-> stub out the enable/measure sources.
+Allows make check to run fsverity under the desired tool
 
-That's not the case anymore, right?  Now those files are just omitted.
+Signed-off-by: Luca Boccassi <bluca@debian.org>
+---
+v6: split from mingw patch
 
-> diff --git a/Makefile b/Makefile
-> index bfe83c4..d850ae3 100644
-> --- a/Makefile
-> +++ b/Makefile
-> @@ -35,6 +35,11 @@
->  cc-option = $(shell if $(CC) $(1) -c -x c /dev/null -o /dev/null > /dev/null 2>&1; \
->  	      then echo $(1); fi)
->  
-> +# Support building with MinGW for minimal Windows fsverity.exe
-> +ifneq ($(findstring -mingw,$(shell $(CC) -dumpmachine 2>/dev/null)),)
-> +MINGW = 1
-> +endif
+ Makefile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-It would be helpful if this comment mentioned that libfsverity isn't built as a
-proper Windows library.  At the moment it is not very clear.
+diff --git a/Makefile b/Makefile
+index f1ba956..583db8e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -87,9 +87,9 @@ CFLAGS          += $(shell "$(PKGCONF)" libcrypto --cflags 2>/dev/null || echo)
+ # If we are dynamically linking, when running tests we need to override
+ # LD_LIBRARY_PATH as no RPATH is set
+ ifdef USE_SHARED_LIB
+-RUN_FSVERITY    = LD_LIBRARY_PATH=./ ./fsverity
++RUN_FSVERITY    = LD_LIBRARY_PATH=./ $(TEST_WRAPPER_PROG) ./fsverity
+ else
+-RUN_FSVERITY    = ./fsverity
++RUN_FSVERITY    = $(TEST_WRAPPER_PROG) ./fsverity
+ endif
+ 
+ ##############################################################################
+-- 
+2.29.2
 
-Also, a note in the README about the Windows support would be helpful.
-
-> -override CPPFLAGS := -Iinclude -D_FILE_OFFSET_BITS=64 $(CPPFLAGS)
-> +override CPPFLAGS := -Iinclude -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE $(CPPFLAGS)
-
-The _GNU_SOURCE change should go in a separate patch.
-
->  # Rebuild if a user-specified setting that affects the build changed.
->  .build-config: FORCE
-> @@ -87,9 +97,9 @@ CFLAGS          += $(shell "$(PKGCONF)" libcrypto --cflags 2>/dev/null || echo)
->  # If we are dynamically linking, when running tests we need to override
->  # LD_LIBRARY_PATH as no RPATH is set
->  ifdef USE_SHARED_LIB
-> -RUN_FSVERITY    = LD_LIBRARY_PATH=./ ./fsverity
-> +RUN_FSVERITY    = LD_LIBRARY_PATH=./ $(TEST_WRAPPER_PROG) ./fsverity$(EXEEXT)
->  else
-> -RUN_FSVERITY    = ./fsverity
-> +RUN_FSVERITY    = $(TEST_WRAPPER_PROG) ./fsverity$(EXEEXT)
->  endif
-
-Adding $(TEST_WRAPPER_PROG) here should go in a separate patch too.  It also
-affects valgrind testing on Linux.
-
->  # Link the fsverity program
->  ifdef USE_SHARED_LIB
-> -fsverity: $(FSVERITY_PROG_OBJ) libfsverity.so
-> +fsverity$(EXEEXT): $(FSVERITY_PROG_OBJ) libfsverity.so
-
-It would be easier to read if there was a variable $(FSVERITY) that had the
-value of fsverity$(EXEEXT).
-
->  # Link the test programs
->  $(TEST_PROGRAMS): %: programs/%.o $(PROG_COMMON_OBJ) libfsverity.a
-> @@ -184,25 +200,25 @@ test_programs:$(TEST_PROGRAMS)
-
-This still doesn't actually add the .exe extension to the test programs.
-Try 'make CC=x86_64-w64-mingw32-gcc help'; the targets to build the test
-programs don't have the .exe extension.
-
-- Eric
