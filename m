@@ -2,89 +2,88 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-16.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AD25AC433E6
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Dec 2020 00:03:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3F5FFC433E6
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Dec 2020 00:11:37 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 76AEA229C6
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Dec 2020 00:03:57 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 10BCF22AED
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Dec 2020 00:11:37 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726552AbgLVAD5 (ORCPT
+        id S1727054AbgLVALW (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 21 Dec 2020 19:03:57 -0500
-Received: from mail.kernel.org ([198.145.29.99]:57174 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726487AbgLVADz (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 21 Dec 2020 19:03:55 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 28CCB22512;
-        Tue, 22 Dec 2020 00:03:15 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1608595395;
-        bh=Ei7b3vjDOcPp7t4/54ffi+aD7JNklC4g9+4fVne9tIY=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=bNHnG283+mFS/yX9mtAjvVGOQUMTWabVisIvplYupvLAXSyK3O5me4DvCSlpDAhSD
-         kyWvSiexnO9LqMkVqzL3NNFSUTFPL6oJwYgeFIe6PQNFdFJkjpCLLQVMXP9y7f7KK6
-         M8zLym6AthX4Nvsz/ngEQe08Bs2aKCtzJhq7slw7MDnaxdMlYN39bBznyGylnYmZC5
-         bFXQqYUmf381mUno6Oq/WV62Er2vV7LCEoFSOGJIR6H2/yzrkUbpnr4lR2QhE0jqPz
-         aEZ7Pi7kVxT9XDvQXVcuwDUzVq4R/ML5yrBYrIXxioOcyZgFp2PBKZArf9fk+jZjxG
-         QtPnwGtJ09d5g==
-Date:   Mon, 21 Dec 2020 16:03:13 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Luca Boccassi <bluca@debian.org>
-Cc:     linux-fscrypt@vger.kernel.org,
-        Luca Boccassi <luca.boccassi@microsoft.com>
-Subject: Re: [PATCH v6 3/3] Allow to build and run sign/digest on Windows
-Message-ID: <X+E3wa/sdzGDHf7I@sol.localdomain>
-References: <20201221221953.256059-1-bluca@debian.org>
- <20201221232428.298710-1-bluca@debian.org>
- <20201221232428.298710-3-bluca@debian.org>
- <X+E1a5jRbkZzS3j4@sol.localdomain>
- <CAMw=ZnTm7TOWg=yBeYr6tnpLux_pU7QXH3OtfPW3Rd1reuAtgA@mail.gmail.com>
+        Mon, 21 Dec 2020 19:11:22 -0500
+Received: from mail-wr1-f45.google.com ([209.85.221.45]:36259 "EHLO
+        mail-wr1-f45.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1727050AbgLVALW (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 21 Dec 2020 19:11:22 -0500
+Received: by mail-wr1-f45.google.com with SMTP id t16so12842196wra.3
+        for <linux-fscrypt@vger.kernel.org>; Mon, 21 Dec 2020 16:11:05 -0800 (PST)
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:from:to:cc:subject:date:message-id:in-reply-to
+         :references:mime-version:content-transfer-encoding;
+        bh=9JqkLzVJDHVxtah97HrMNSf6PBUqZHmMm+BE7w2OtR4=;
+        b=kGUmErj4Dc8pzz10VfzX7npVYqu0yGcaZtMfKxffJhhHS3WL8CRT6K6Ea3YpOXarb6
+         fEvNRLWHA4g7IpRsN6qrKlBeVhY5igVFmoueMxrWEG/GP/p09P70eqRjMhRiCNcRFF9R
+         L/AQA/RlDETOkqz0CMbdywLmfZwyc602eSJVNoSdgRIKqs7t6Tv2PqMaipcxTzo8GoK9
+         QeAAQhMosUTYaSSgqndV9VMFtJanxzfzPvvclZH62jUzF4ClReR4Es5Qq5yzVviiuege
+         VH0xRIvMz1P+9wnhxHcl85wF5BSZPcwzGtznhImXTfKBKGWMyIElzkUWLXJIuC/lg3t3
+         +b8A==
+X-Gm-Message-State: AOAM530uIEdN1E2VIztjA3F0snvDeo/egftRxMNrl1qilwBFISK7l+Sj
+        N1F5Y2mm3YG1iVdbZPv5YFrjFbSI1x80SaEI
+X-Google-Smtp-Source: ABdhPJzafNHZtw7bKsndB4Y0LCsA4g2Nhb15j6nBHbrFde9I/T8MgNsDcV/SQJ9XqX8EPfLWSOKeSQ==
+X-Received: by 2002:adf:9b98:: with SMTP id d24mr21451174wrc.240.1608595839958;
+        Mon, 21 Dec 2020 16:10:39 -0800 (PST)
+Received: from localhost ([2a01:4b00:f419:6f00:e2db:6a88:4676:d01b])
+        by smtp.gmail.com with ESMTPSA id y7sm25344367wmb.37.2020.12.21.16.10.38
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 21 Dec 2020 16:10:39 -0800 (PST)
+From:   Luca Boccassi <bluca@debian.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     ebiggers@google.com
+Subject: [PATCH v7 2/3] Wrap ./fsverity in TEST_WRAPPER_PROG too
+Date:   Tue, 22 Dec 2020 00:10:32 +0000
+Message-Id: <20201222001033.302274-2-bluca@debian.org>
+X-Mailer: git-send-email 2.29.2
+In-Reply-To: <20201222001033.302274-1-bluca@debian.org>
+References: <20201221232428.298710-1-bluca@debian.org>
+ <20201222001033.302274-1-bluca@debian.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAMw=ZnTm7TOWg=yBeYr6tnpLux_pU7QXH3OtfPW3Rd1reuAtgA@mail.gmail.com>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, Dec 21, 2020 at 11:57:41PM +0000, Luca Boccassi wrote:
-> On Mon, 21 Dec 2020 at 23:53, Eric Biggers <ebiggers@kernel.org> wrote:
-> >
-> > On Mon, Dec 21, 2020 at 11:24:28PM +0000, Luca Boccassi wrote:
-> > > +### Building on Windows
-> > > +
-> > > +There is minimal support for building Windows executables using MinGW.
-> > > +```bash
-> > > +    make CC=x86_64-w64-mingw32-gcc-win32
-> > > +```
-> > > +
-> > > +`fsverity.exe` will be built, and it supports the `digest` and `sign` commands.
-> > > +
-> > > +A Windows build of OpenSSL/libcrypto needs to be available.
-> >
-> > For me "CC=x86_64-w64-mingw32-gcc-win32" doesn't work; I need
-> > "x86_64-w64-mingw32-gcc" instead.  Is this difference intentional?
-> >
-> > - Eric
-> 
-> It's a distro setup difference I think, on Debian
-> x86_64-w64-mingw32-gcc is a symlink to x86_64-w64-mingw32-gcc-win32:
-> 
-> $ ls -l /usr/bin/x86_64-w64-mingw32-gcc-win32
-> -rwxr-xr-x 2 root root 1160320 Nov 27 05:57
-> /usr/bin/x86_64-w64-mingw32-gcc-win32
-> $ ls -l /usr/bin/x86_64-w64-mingw32-gcc
-> lrwxrwxrwx 1 root root 40 Sep 27 18:41 /usr/bin/x86_64-w64-mingw32-gcc
-> -> /etc/alternatives/x86_64-w64-mingw32-gcc
-> $ ls -l /etc/alternatives/x86_64-w64-mingw32-gcc
-> lrwxrwxrwx 1 root root 37 Sep 27 18:44
-> /etc/alternatives/x86_64-w64-mingw32-gcc ->
-> /usr/bin/x86_64-w64-mingw32-gcc-win32
+Allows make check to run fsverity under the desired tool
 
-Okay, it would be better to document the one that works on all distros.
+Signed-off-by: Luca Boccassi <bluca@debian.org>
+---
+v6: split from mingw patch
 
-- Eric
+ Makefile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index f1ba956..583db8e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -87,9 +87,9 @@ CFLAGS          += $(shell "$(PKGCONF)" libcrypto --cflags 2>/dev/null || echo)
+ # If we are dynamically linking, when running tests we need to override
+ # LD_LIBRARY_PATH as no RPATH is set
+ ifdef USE_SHARED_LIB
+-RUN_FSVERITY    = LD_LIBRARY_PATH=./ ./fsverity
++RUN_FSVERITY    = LD_LIBRARY_PATH=./ $(TEST_WRAPPER_PROG) ./fsverity
+ else
+-RUN_FSVERITY    = ./fsverity
++RUN_FSVERITY    = $(TEST_WRAPPER_PROG) ./fsverity
+ endif
+ 
+ ##############################################################################
+-- 
+2.29.2
+
