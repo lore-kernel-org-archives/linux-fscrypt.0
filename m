@@ -4,42 +4,42 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-19.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 286A1C433E9
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Dec 2020 18:56:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 47B87C43381
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Dec 2020 18:56:14 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id DC97D221F8
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Dec 2020 18:56:12 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 173F1221F8
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Dec 2020 18:56:14 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1728883AbgL1S4M (ORCPT
+        id S1728894AbgL1S4M (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Mon, 28 Dec 2020 13:56:12 -0500
-Received: from mail.kernel.org ([198.145.29.99]:39502 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:39480 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1728860AbgL1S4J (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S1728862AbgL1S4J (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 28 Dec 2020 13:56:09 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 2F5EB22AEC;
-        Mon, 28 Dec 2020 18:55:29 +0000 (UTC)
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 82A2A229EF;
+        Mon, 28 Dec 2020 18:55:28 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1609181729;
-        bh=JPIVqHrwI805Fv5QGEULkWZfbaFWNrc2Kf/PlJACkgs=;
+        s=k20201202; t=1609181728;
+        bh=3QtK26oljYaFaN7x1voE+S5ExJ3xhJwHdd8ZnwQ1urc=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=cddWmyMiZ4aPntME6wgF00kFSRnc4Boim1a/D5McIpUMOPhDHlUNixCFYwj7SccGs
-         aA6jl1htDWjzpUBq8+iLhI9LRtasDJzn7z1Lh4yF9gxwdbhh23EL4YVmsJ1qbFqH3W
-         l7lPIodxkWeCG+5xgjBKnaC/wMS40gDPqZGoNPfjWX9R0sgE2jBlszZkGW92ImTnqK
-         N7tDK81f6dUSxh5yOK/pqgrFUCL6rzpYa14C9xm9nQ4n3tKR0BhBvrqCIQCDhREY5G
-         e9/qXmxcsKLxkzR3Ms5unhxmJVjhQ84aFRHiJdkk1ZPDkTrsbYpuDJhSmmHsCY2HQR
-         NescGr006WjoQ==
+        b=Qgn6NBoEXuOmDSwjgKIqSR2zWDHnr75C88qo0hEPcxZ0CwpcQRLEjnE/4wQycoIrc
+         JtvC+X5w0W9HtrdqrMrrsUQiTrHqDqq5rF+cic32/wAY6Baoyo+s4MHpN54x6uwNl8
+         GsFNRtvvvG7S1D/QioTbuXD0YlbNAnBGaodfOY6bq+pSHZoMoYFztqpFoCe/yQ/qpg
+         YSj/2ih13maPL8KoXVL69ClpsfT/Ew9jTbsVnCawwl7603geqJv09RQzlhIy2+vvpK
+         FNfqBuIzTu/hJdE6GxODk4gLTnIe6tR6ksNw/uwJBZrS5f4Cv5Ge/tHMq1kOTagjta
+         LeibZv519dxgQ==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     stable@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org
-Subject: [PATCH 5.4 3/4] f2fs: prevent creating duplicate encrypted filenames
-Date:   Mon, 28 Dec 2020 10:54:32 -0800
-Message-Id: <20201228185433.61129-4-ebiggers@kernel.org>
+Subject: [PATCH 5.4 1/4] fscrypt: add fscrypt_is_nokey_name()
+Date:   Mon, 28 Dec 2020 10:54:30 -0800
+Message-Id: <20201228185433.61129-2-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <20201228185433.61129-1-ebiggers@kernel.org>
 References: <20201228185433.61129-1-ebiggers@kernel.org>
@@ -51,38 +51,120 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-commit bfc2b7e8518999003a61f91c1deb5e88ed77b07d upstream.
+commit 159e1de201b6fca10bfec50405a3b53a561096a8 upstream.
 
-As described in "fscrypt: add fscrypt_is_nokey_name()", it's possible to
-create a duplicate filename in an encrypted directory by creating a file
-concurrently with adding the directory's encryption key.
+It's possible to create a duplicate filename in an encrypted directory
+by creating a file concurrently with adding the encryption key.
 
-Fix this bug on f2fs by rejecting no-key dentries in f2fs_add_link().
+Specifically, sys_open(O_CREAT) (or sys_mkdir(), sys_mknod(), or
+sys_symlink()) can lookup the target filename while the directory's
+encryption key hasn't been added yet, resulting in a negative no-key
+dentry.  The VFS then calls ->create() (or ->mkdir(), ->mknod(), or
+->symlink()) because the dentry is negative.  Normally, ->create() would
+return -ENOKEY due to the directory's key being unavailable.  However,
+if the key was added between the dentry lookup and ->create(), then the
+filesystem will go ahead and try to create the file.
 
-Note that the weird check for the current task in f2fs_do_add_link()
-seems to make this bug difficult to reproduce on f2fs.
+If the target filename happens to already exist as a normal name (not a
+no-key name), a duplicate filename may be added to the directory.
 
-Fixes: 9ea97163c6da ("f2fs crypto: add filename encryption for f2fs_add_link")
+In order to fix this, we need to fix the filesystems to prevent
+->create(), ->mkdir(), ->mknod(), and ->symlink() on no-key names.
+(->rename() and ->link() need it too, but those are already handled
+correctly by fscrypt_prepare_rename() and fscrypt_prepare_link().)
+
+In preparation for this, add a helper function fscrypt_is_nokey_name()
+that filesystems can use to do this check.  Use this helper function for
+the existing checks that fs/crypto/ does for rename and link.
+
 Cc: stable@vger.kernel.org
-Link: https://lore.kernel.org/r/20201118075609.120337-4-ebiggers@kernel.org
+Link: https://lore.kernel.org/r/20201118075609.120337-2-ebiggers@kernel.org
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/f2fs/f2fs.h | 2 ++
- 1 file changed, 2 insertions(+)
+ fs/crypto/hooks.c       | 10 +++++-----
+ include/linux/fscrypt.h | 34 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 39 insertions(+), 5 deletions(-)
 
-diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-index 63440abe58c42..0ddc4a74b9d43 100644
---- a/fs/f2fs/f2fs.h
-+++ b/fs/f2fs/f2fs.h
-@@ -2998,6 +2998,8 @@ bool f2fs_empty_dir(struct inode *dir);
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index bb3b7fcfdd48a..a5a40a76b8ed7 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -58,8 +58,8 @@ int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
+ 	if (err)
+ 		return err;
  
- static inline int f2fs_add_link(struct dentry *dentry, struct inode *inode)
- {
+-	/* ... in case we looked up ciphertext name before key was added */
+-	if (dentry->d_flags & DCACHE_ENCRYPTED_NAME)
++	/* ... in case we looked up no-key name before key was added */
 +	if (fscrypt_is_nokey_name(dentry))
-+		return -ENOKEY;
- 	return f2fs_do_add_link(d_inode(dentry->d_parent), &dentry->d_name,
- 				inode, inode->i_ino, inode->i_mode);
+ 		return -ENOKEY;
+ 
+ 	if (!fscrypt_has_permitted_context(dir, inode))
+@@ -83,9 +83,9 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
+ 	if (err)
+ 		return err;
+ 
+-	/* ... in case we looked up ciphertext name(s) before key was added */
+-	if ((old_dentry->d_flags | new_dentry->d_flags) &
+-	    DCACHE_ENCRYPTED_NAME)
++	/* ... in case we looked up no-key name(s) before key was added */
++	if (fscrypt_is_nokey_name(old_dentry) ||
++	    fscrypt_is_nokey_name(new_dentry))
+ 		return -ENOKEY;
+ 
+ 	if (old_dir != new_dir) {
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index f622f7460ed8c..032e5bcf97012 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -100,6 +100,35 @@ static inline void fscrypt_handle_d_move(struct dentry *dentry)
+ 	dentry->d_flags &= ~DCACHE_ENCRYPTED_NAME;
  }
+ 
++/**
++ * fscrypt_is_nokey_name() - test whether a dentry is a no-key name
++ * @dentry: the dentry to check
++ *
++ * This returns true if the dentry is a no-key dentry.  A no-key dentry is a
++ * dentry that was created in an encrypted directory that hasn't had its
++ * encryption key added yet.  Such dentries may be either positive or negative.
++ *
++ * When a filesystem is asked to create a new filename in an encrypted directory
++ * and the new filename's dentry is a no-key dentry, it must fail the operation
++ * with ENOKEY.  This includes ->create(), ->mkdir(), ->mknod(), ->symlink(),
++ * ->rename(), and ->link().  (However, ->rename() and ->link() are already
++ * handled by fscrypt_prepare_rename() and fscrypt_prepare_link().)
++ *
++ * This is necessary because creating a filename requires the directory's
++ * encryption key, but just checking for the key on the directory inode during
++ * the final filesystem operation doesn't guarantee that the key was available
++ * during the preceding dentry lookup.  And the key must have already been
++ * available during the dentry lookup in order for it to have been checked
++ * whether the filename already exists in the directory and for the new file's
++ * dentry not to be invalidated due to it incorrectly having the no-key flag.
++ *
++ * Return: %true if the dentry is a no-key name
++ */
++static inline bool fscrypt_is_nokey_name(const struct dentry *dentry)
++{
++	return dentry->d_flags & DCACHE_ENCRYPTED_NAME;
++}
++
+ /* crypto.c */
+ extern void fscrypt_enqueue_decrypt_work(struct work_struct *);
+ extern struct fscrypt_ctx *fscrypt_get_ctx(gfp_t);
+@@ -290,6 +319,11 @@ static inline void fscrypt_handle_d_move(struct dentry *dentry)
+ {
+ }
+ 
++static inline bool fscrypt_is_nokey_name(const struct dentry *dentry)
++{
++	return false;
++}
++
+ /* crypto.c */
+ static inline void fscrypt_enqueue_decrypt_work(struct work_struct *work)
+ {
 -- 
 2.29.2
 
