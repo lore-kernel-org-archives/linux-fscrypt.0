@@ -4,42 +4,42 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-19.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AC7E1C43381
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Dec 2020 19:13:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 64F36C4332B
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Dec 2020 19:13:59 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 7A93E22AEC
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Dec 2020 19:13:58 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 4049A22AEC
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Dec 2020 19:13:59 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1729054AbgL1TN6 (ORCPT
+        id S1729001AbgL1TN6 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Mon, 28 Dec 2020 14:13:58 -0500
-Received: from mail.kernel.org ([198.145.29.99]:41794 "EHLO mail.kernel.org"
+Received: from mail.kernel.org ([198.145.29.99]:41806 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1729051AbgL1TN5 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 28 Dec 2020 14:13:57 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id DC1C322B2A;
-        Mon, 28 Dec 2020 19:13:16 +0000 (UTC)
+        id S1729052AbgL1TN6 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 28 Dec 2020 14:13:58 -0500
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 8A0C322B2E;
+        Mon, 28 Dec 2020 19:13:17 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
         s=k20201202; t=1609182797;
-        bh=wcDIzfW0TdVWW8ZUcFxkhA+O3mFdLmRyWJlQxT4S1QI=;
+        bh=N+qYfVz4+Uj+NMYmjSwsWei2HRkcFTZan8zSaxyBzEo=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=bAQNUpGKbUC6XgijBxKuQ6fLblzIjwttUoUazHLtwrmvyRAc/Hp21PThkFceo2oND
-         +20rouDAMTnb8+gPYw32tirqHwpl3Trft2e5ZG0gVJkOImuAdAkPKdMuxaKEVvzoQm
-         8od/01VOrXkJqs3NmQuHziqvc8o5IVveuM//bYZRclslEfElrjsTe7NX/6K9O2R9ud
-         RPjixOFxq4uHlp3ZDFYPaEDRV2f5+gzHb5j82nO0p0ezNlQYr40a86s5ZeVk9oIWxi
-         Pbj7E9prte/MgEp1mkzEDRYpcjCnfd6/Wc287+/VJezxQ6sKGj3VcSH8uHMtx3G5LU
-         WYCR6iIAZSi3A==
+        b=opmjsRbYE6tq3PJ0ZVqNR1Me6EtnsPdOhHQBE3tQ/5BYPQt/JXVMMOh9HyZ9NACSr
+         05scxldZBG8Y563bBDRoFij0Ve13XlQBmf1bBsRUKPrtbodJ2A2YKW5lF+LKKHlME3
+         VSVn7v2zY2L3pQeIAUEWozbV26EymQjS5vW+CZOlpjsFBvs/CDBfiFrFy9TsF8VwAs
+         c8XcBoxeTW9wp1YIq7ALA1/c77g3YOef8WqkAv/AErVJWcDEKMPdqFoizBJUu29jY1
+         eQyKNqLVYeHNsT3LfRUtC90EkByqYVb+Tvv87n0wN2fVksz1nyPq/ZQUyp0x8I8dx7
+         tMUC4pLUEeYIA==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     stable@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         linux-mtd@lists.infradead.org
-Subject: [PATCH 4.19 2/4] ext4: prevent creating duplicate encrypted filenames
-Date:   Mon, 28 Dec 2020 11:12:09 -0800
-Message-Id: <20201228191211.138300-3-ebiggers@kernel.org>
+Subject: [PATCH 4.19 4/4] ubifs: prevent creating duplicate encrypted filenames
+Date:   Mon, 28 Dec 2020 11:12:11 -0800
+Message-Id: <20201228191211.138300-5-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <20201228191211.138300-1-ebiggers@kernel.org>
 References: <20201228191211.138300-1-ebiggers@kernel.org>
@@ -51,40 +51,86 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-commit 75d18cd1868c2aee43553723872c35d7908f240f upstream.
+commit 76786a0f083473de31678bdb259a3d4167cf756d upstream.
 
 As described in "fscrypt: add fscrypt_is_nokey_name()", it's possible to
 create a duplicate filename in an encrypted directory by creating a file
 concurrently with adding the directory's encryption key.
 
-Fix this bug on ext4 by rejecting no-key dentries in ext4_add_entry().
+Fix this bug on ubifs by rejecting no-key dentries in ubifs_create(),
+ubifs_mkdir(), ubifs_mknod(), and ubifs_symlink().
 
-Note that the duplicate check in ext4_find_dest_de() sometimes prevented
-this bug.  However in many cases it didn't, since ext4_find_dest_de()
-doesn't examine every dentry.
+Note that ubifs doesn't actually report the duplicate filenames from
+readdir, but rather it seems to replace the original dentry with a new
+one (which is still wrong, just a different effect from ext4).
 
-Fixes: 4461471107b7 ("ext4 crypto: enable filename encryption")
+On ubifs, this fixes xfstest generic/595 as well as the new xfstest I
+wrote specifically for this bug.
+
+Fixes: f4f61d2cc6d8 ("ubifs: Implement encrypted filenames")
 Cc: stable@vger.kernel.org
-Link: https://lore.kernel.org/r/20201118075609.120337-3-ebiggers@kernel.org
+Link: https://lore.kernel.org/r/20201118075609.120337-5-ebiggers@kernel.org
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/namei.c | 3 +++
- 1 file changed, 3 insertions(+)
+ fs/ubifs/dir.c | 17 +++++++++++++----
+ 1 file changed, 13 insertions(+), 4 deletions(-)
 
-diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
-index 4191552880bd7..3c238006870d3 100644
---- a/fs/ext4/namei.c
-+++ b/fs/ext4/namei.c
-@@ -2106,6 +2106,9 @@ static int ext4_add_entry(handle_t *handle, struct dentry *dentry,
- 	if (!dentry->d_name.len)
- 		return -EINVAL;
+diff --git a/fs/ubifs/dir.c b/fs/ubifs/dir.c
+index 10aab5dccaee4..8fe2ee5462a0b 100644
+--- a/fs/ubifs/dir.c
++++ b/fs/ubifs/dir.c
+@@ -290,6 +290,15 @@ static struct dentry *ubifs_lookup(struct inode *dir, struct dentry *dentry,
+ 	return d_splice_alias(inode, dentry);
+ }
  
++static int ubifs_prepare_create(struct inode *dir, struct dentry *dentry,
++				struct fscrypt_name *nm)
++{
 +	if (fscrypt_is_nokey_name(dentry))
 +		return -ENOKEY;
 +
- 	retval = ext4_fname_setup_filename(dir, &dentry->d_name, 0, &fname);
- 	if (retval)
- 		return retval;
++	return fscrypt_setup_filename(dir, &dentry->d_name, 0, nm);
++}
++
+ static int ubifs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
+ 			bool excl)
+ {
+@@ -313,7 +322,7 @@ static int ubifs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
+ 	if (err)
+ 		return err;
+ 
+-	err = fscrypt_setup_filename(dir, &dentry->d_name, 0, &nm);
++	err = ubifs_prepare_create(dir, dentry, &nm);
+ 	if (err)
+ 		goto out_budg;
+ 
+@@ -977,7 +986,7 @@ static int ubifs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
+ 	if (err)
+ 		return err;
+ 
+-	err = fscrypt_setup_filename(dir, &dentry->d_name, 0, &nm);
++	err = ubifs_prepare_create(dir, dentry, &nm);
+ 	if (err)
+ 		goto out_budg;
+ 
+@@ -1062,7 +1071,7 @@ static int ubifs_mknod(struct inode *dir, struct dentry *dentry,
+ 		return err;
+ 	}
+ 
+-	err = fscrypt_setup_filename(dir, &dentry->d_name, 0, &nm);
++	err = ubifs_prepare_create(dir, dentry, &nm);
+ 	if (err) {
+ 		kfree(dev);
+ 		goto out_budg;
+@@ -1146,7 +1155,7 @@ static int ubifs_symlink(struct inode *dir, struct dentry *dentry,
+ 	if (err)
+ 		return err;
+ 
+-	err = fscrypt_setup_filename(dir, &dentry->d_name, 0, &nm);
++	err = ubifs_prepare_create(dir, dentry, &nm);
+ 	if (err)
+ 		goto out_budg;
+ 
 -- 
 2.29.2
 
