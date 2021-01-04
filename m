@@ -2,135 +2,275 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-11.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,
-	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-15.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 67572C433DB
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  4 Jan 2021 20:47:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 60CDEC433DB
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  4 Jan 2021 21:59:03 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 1D2F1216C4
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  4 Jan 2021 20:47:10 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 26B6F2225E
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  4 Jan 2021 21:59:03 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726176AbhADUrJ (ORCPT
+        id S1726980AbhADV6r (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 4 Jan 2021 15:47:09 -0500
-Received: from mail.kernel.org ([198.145.29.99]:36350 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726074AbhADUrJ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 4 Jan 2021 15:47:09 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id C4D02216C4;
-        Mon,  4 Jan 2021 20:46:27 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1609793188;
-        bh=YqIdopmOGx1e+VJgMk2OWtmHGztHh2JIO7mbqBw+ZvA=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=ojDlygvzJm6AJYbApbRtXGu5fn8IHOoEsnavSY9e/5GqTUkwKASrHQkAOWGGsuHaL
-         zPgCMvdZ1mG3pkjWKWmrOOcA2HAwQSUkq5PhQULpdHrln3mUhFkSCJz5T58RlfH5Dl
-         L4Q+q3hmaW57vJiBmLD1Dza0h6gGx3lBp8r5OM2a3ojps/sWAjZRobLN9lKOLofN5G
-         +7Hq0Mz/qS5C9Ipd2xsUOIN0ibiZQ2tdvl7Jx9Pa00tWw4hMEJq4pgUwW3UG2sN+kU
-         ogb1tXgieCNFnX/hQ9+mQe5eNv3hiUe6+lOIPFf0BWAw+a91yMokFHel7RisgsH8ft
-         pH0Ia0dcFLlug==
-Date:   Mon, 4 Jan 2021 12:46:26 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Ulf Hansson <ulf.hansson@linaro.org>
-Cc:     "linux-mmc@vger.kernel.org" <linux-mmc@vger.kernel.org>,
-        linux-arm-msm <linux-arm-msm@vger.kernel.org>,
-        DTML <devicetree@vger.kernel.org>, linux-fscrypt@vger.kernel.org,
-        Satya Tangirala <satyat@google.com>,
-        Andy Gross <agross@kernel.org>,
-        Bjorn Andersson <bjorn.andersson@linaro.org>,
-        Adrian Hunter <adrian.hunter@intel.com>,
-        Ritesh Harjani <riteshh@codeaurora.org>,
-        Asutosh Das <asutoshd@codeaurora.org>,
-        Rob Herring <robh+dt@kernel.org>,
-        Neeraj Soni <neersoni@codeaurora.org>,
-        Barani Muthukumaran <bmuthuku@codeaurora.org>,
-        Peng Zhou <peng.zhou@mediatek.com>,
-        Stanley Chu <stanley.chu@mediatek.com>,
-        Konrad Dybcio <konradybcio@gmail.com>
-Subject: Re: [PATCH 0/8] eMMC inline encryption support
-Message-ID: <X/N+ouEtmMPYT0Qa@sol.localdomain>
-References: <20201112194011.103774-1-ebiggers@kernel.org>
- <X7gQ9Y44iIgkiM64@sol.localdomain>
- <CAPDyKFrXtqqj3RXJ4m666e_danpp2neRD_M+FCaMWPC+Ow2jsA@mail.gmail.com>
+        Mon, 4 Jan 2021 16:58:47 -0500
+Received: from mo4-p01-ob.smtp.rzone.de ([81.169.146.167]:11820 "EHLO
+        mo4-p01-ob.smtp.rzone.de" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726894AbhADV6r (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 4 Jan 2021 16:58:47 -0500
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; t=1609797354;
+        s=strato-dkim-0002; d=chronox.de;
+        h=References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:From:
+        Subject:Sender;
+        bh=6fGapvYj1KUbHyiUaqLugayVcLwc8fLHw2DuUxRIf1I=;
+        b=Bz5ljw7tQ+MN6HibseZZb72afaYxc2bkLJFnUODmNBM8A/0ySGucRLIqURbKfbEBQe
+        /lDmjpo4SEiHYcfRgMhMFO4D53kzTWF7oX/kj1Be9r4phrf8nrtrAhnhpzNaiWjv1nYo
+        QsdN8Kh+pr/CPzruW574v9UcdAxXU1U6vsenoMwCqMTi18sD4wa/2SX5TWgXt6PcSGaG
+        ZkCJ8ymBg20QwlYcB1p//d1hNI6RSRNLrsw/WzCGItW0wAy4cdsxDyFLuoDU3+V1TR0m
+        qbxVBlnXYpQq4SYVM4ZyewbL6TLbAsQPUVinvoZmo+t2bB6M9872K/XwB+2wDpBqX/lH
+        Ymdw==
+X-RZG-AUTH: ":P2ERcEykfu11Y98lp/T7+hdri+uKZK8TKWEqNyiHySGSa9k9xmwdNnzGHXPaIvSZFqc="
+X-RZG-CLASS-ID: mo00
+Received: from positron.chronox.de
+        by smtp.strato.de (RZmta 47.10.7 DYNA|AUTH)
+        with ESMTPSA id h02bd9x04LqhxfJ
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256 bits))
+        (Client did not present a certificate);
+        Mon, 4 Jan 2021 22:52:43 +0100 (CET)
+From:   Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
+To:     herbert@gondor.apana.org.au, ebiggers@kernel.org,
+        mathew.j.martineau@linux.intel.com, dhowells@redhat.com
+Cc:     linux-crypto@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-kernel@vger.kernel.org, keyrings@vger.kernel.org
+Subject: [PATCH 5/5] fs: use HKDF implementation from kernel crypto API
+Date:   Mon, 04 Jan 2021 22:50:49 +0100
+Message-ID: <7857050.T7Z3S40VBb@positron.chronox.de>
+In-Reply-To: <4616980.31r3eYUQgx@positron.chronox.de>
+References: <4616980.31r3eYUQgx@positron.chronox.de>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <CAPDyKFrXtqqj3RXJ4m666e_danpp2neRD_M+FCaMWPC+Ow2jsA@mail.gmail.com>
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Nov 25, 2020 at 10:56:42AM +0100, Ulf Hansson wrote:
-> On Fri, 20 Nov 2020 at 19:54, Eric Biggers <ebiggers@kernel.org> wrote:
-> >
-> > On Thu, Nov 12, 2020 at 11:40:03AM -0800, Eric Biggers wrote:
-> > > Hello,
-> > >
-> > > This patchset adds support for eMMC inline encryption, as specified by
-> > > the upcoming version of the eMMC specification and as already
-> > > implemented and used on many devices.  Building on that, it then adds
-> > > Qualcomm ICE support and wires it up for the Snapdragon 630 SoC.
-> > >
-> > > Inline encryption hardware improves the performance of storage
-> > > encryption and reduces power usage.  See
-> > > Documentation/block/inline-encryption.rst for more information about
-> > > inline encryption and the blk-crypto framework (upstreamed in v5.8)
-> > > which supports it.  Most mobile devices already use UFS or eMMC inline
-> > > encryption hardware; UFS support was already upstreamed in v5.9.
-> > >
-> > > Patches 1-3 add support for the standard eMMC inline encryption.
-> > >
-> > > However, as with UFS, host controller-specific patches are needed on top
-> > > of the standard support.  Therefore, patches 4-8 add Qualcomm ICE
-> > > (Inline Crypto Engine) support and wire it up on the Snapdragon 630 SoC.
-> > >
-> > > To test this I took advantage of the recently upstreamed support for the
-> > > Snapdragon 630 SoC, plus work-in-progress patches from the SoMainline
-> > > project (https://github.com/SoMainline/linux/tree/konrad/v5.10-rc3).  In
-> > > particular, I was able to run the fscrypt xfstests for ext4 and f2fs in
-> > > a Debian chroot.  Among other things, these tests verified that the
-> > > correct ciphertext is written to disk (the same as software encryption).
-> > >
-> > > It will also be possible to add support for Mediatek eMMC inline
-> > > encryption hardware in mtk-sd, and it should be easier than the Qualcomm
-> > > hardware since the Mediatek hardware follows the standard more closely.
-> > > I.e., patches 1-3 should be almost enough for the Mediatek hardware.
-> > > However, I don't have the hardware to do this yet.
-> > >
-> > > This patchset is based on v5.10-rc3, and it can also be retrieved from
-> > > tag "mmc-crypto-v1" of
-> > > https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
-> > >
-> > > Note: the fscrypt inline encryption support is partially broken in
-> > > v5.10-rc3, so for testing a fscrypt fix needs to be applied too:
-> > > https://lkml.kernel.org/r/20201111015224.303073-1-ebiggers@kernel.org
-> > >
-> > > Eric Biggers (8):
-> > >   mmc: add basic support for inline encryption
-> > >   mmc: cqhci: rename cqhci.c to cqhci-core.c
-> > >   mmc: cqhci: add support for inline encryption
-> > >   mmc: cqhci: add cqhci_host_ops::program_key
-> > >   firmware: qcom_scm: update comment for ICE-related functions
-> > >   dt-bindings: mmc: sdhci-msm: add ICE registers and clock
-> > >   arm64: dts: qcom: sdm630: add ICE registers and clocks
-> > >   mmc: sdhci-msm: add Inline Crypto Engine support
-> >
-> > Any comments on this patchset?
-> 
-> I have been busy, but just wanted to let you know that I am moving to
-> start reviewing this series shortly.
-> 
-> I also need to catch up on the eMMC spec a bit, before I can provide
-> you with comments.
-> 
-> Kind regards
-> Uffe
+As the kernel crypto API implements HKDF, replace the
+file-system-specific HKDF implementation with the generic HKDF
+implementation.
 
-Ulf, are you still planning to review this patchset?  I just sent out v4 of this
-patchset based on v5.11-rc2, but not a lot has changed from previous versions,
-since people have generally seemed happy with it.  Any chance that you will
-apply it for 5.12?  Thanks!
+Signed-off-by: Stephan Mueller <smueller@chronox.de>
+---
+ fs/crypto/Kconfig           |   2 +-
+ fs/crypto/fscrypt_private.h |   4 +-
+ fs/crypto/hkdf.c            | 108 +++++++++---------------------------
+ 3 files changed, 30 insertions(+), 84 deletions(-)
 
-- Eric
+diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
+index a5f5c30368a2..9450e958f1d1 100644
+--- a/fs/crypto/Kconfig
++++ b/fs/crypto/Kconfig
+@@ -2,7 +2,7 @@
+ config FS_ENCRYPTION
+ 	bool "FS Encryption (Per-file encryption)"
+ 	select CRYPTO
+-	select CRYPTO_HASH
++	select CRYPTO_HKDF
+ 	select CRYPTO_SKCIPHER
+ 	select CRYPTO_LIB_SHA256
+ 	select KEYS
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 3fa965eb3336..0d6871838099 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -304,7 +304,7 @@ struct fscrypt_hkdf {
+ 	struct crypto_shash *hmac_tfm;
+ };
+ 
+-int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
++int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, u8 *master_key,
+ 		      unsigned int master_key_size);
+ 
+ /*
+@@ -323,7 +323,7 @@ int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+ #define HKDF_CONTEXT_INODE_HASH_KEY	7 /* info=<empty>		*/
+ 
+ int fscrypt_hkdf_expand(const struct fscrypt_hkdf *hkdf, u8 context,
+-			const u8 *info, unsigned int infolen,
++			u8 *info, unsigned int infolen,
+ 			u8 *okm, unsigned int okmlen);
+ 
+ void fscrypt_destroy_hkdf(struct fscrypt_hkdf *hkdf);
+diff --git a/fs/crypto/hkdf.c b/fs/crypto/hkdf.c
+index e0ec21055505..f837cb8ec0a5 100644
+--- a/fs/crypto/hkdf.c
++++ b/fs/crypto/hkdf.c
+@@ -9,7 +9,7 @@
+  * Copyright 2019 Google LLC
+  */
+ 
+-#include <crypto/hash.h>
++#include <crypto/hkdf.h>
+ #include <crypto/sha2.h>
+ 
+ #include "fscrypt_private.h"
+@@ -37,34 +37,25 @@
+  * unnecessarily long master keys.  Thus fscrypt still does HKDF-Extract.  No
+  * salt is used, since fscrypt master keys should already be pseudorandom and
+  * there's no way to persist a random salt per master key from kernel mode.
+- */
+-
+-/* HKDF-Extract (RFC 5869 section 2.2), unsalted */
+-static int hkdf_extract(struct crypto_shash *hmac_tfm, const u8 *ikm,
+-			unsigned int ikmlen, u8 prk[HKDF_HASHLEN])
+-{
+-	static const u8 default_salt[HKDF_HASHLEN];
+-	int err;
+-
+-	err = crypto_shash_setkey(hmac_tfm, default_salt, HKDF_HASHLEN);
+-	if (err)
+-		return err;
+-
+-	return crypto_shash_tfm_digest(hmac_tfm, ikm, ikmlen, prk);
+-}
+-
+-/*
++ *
+  * Compute HKDF-Extract using the given master key as the input keying material,
+  * and prepare an HMAC transform object keyed by the resulting pseudorandom key.
+  *
+  * Afterwards, the keyed HMAC transform object can be used for HKDF-Expand many
+  * times without having to recompute HKDF-Extract each time.
+  */
+-int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
++int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, u8 *master_key,
+ 		      unsigned int master_key_size)
+ {
++	/* HKDF-Extract (RFC 5869 section 2.2), unsalted */
++	const struct kvec seed[] = { {
++		.iov_base = NULL,
++		.iov_len = 0
++	}, {
++		.iov_base = master_key,
++		.iov_len = master_key_size
++	} };
+ 	struct crypto_shash *hmac_tfm;
+-	u8 prk[HKDF_HASHLEN];
+ 	int err;
+ 
+ 	hmac_tfm = crypto_alloc_shash(HKDF_HMAC_ALG, 0, 0);
+@@ -74,16 +65,12 @@ int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+ 		return PTR_ERR(hmac_tfm);
+ 	}
+ 
+-	if (WARN_ON(crypto_shash_digestsize(hmac_tfm) != sizeof(prk))) {
++	if (WARN_ON(crypto_shash_digestsize(hmac_tfm) != HKDF_HASHLEN)) {
+ 		err = -EINVAL;
+ 		goto err_free_tfm;
+ 	}
+ 
+-	err = hkdf_extract(hmac_tfm, master_key, master_key_size, prk);
+-	if (err)
+-		goto err_free_tfm;
+-
+-	err = crypto_shash_setkey(hmac_tfm, prk, sizeof(prk));
++	err = crypto_hkdf_setkey(hmac_tfm, seed, ARRAY_SIZE(seed));
+ 	if (err)
+ 		goto err_free_tfm;
+ 
+@@ -93,7 +80,6 @@ int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+ err_free_tfm:
+ 	crypto_free_shash(hmac_tfm);
+ out:
+-	memzero_explicit(prk, sizeof(prk));
+ 	return err;
+ }
+ 
+@@ -109,65 +95,25 @@ int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+  * accidentally repeat an info string when using HKDF for different purposes.)
+  */
+ int fscrypt_hkdf_expand(const struct fscrypt_hkdf *hkdf, u8 context,
+-			const u8 *info, unsigned int infolen,
++			u8 *info, unsigned int infolen,
+ 			u8 *okm, unsigned int okmlen)
+ {
+-	SHASH_DESC_ON_STACK(desc, hkdf->hmac_tfm);
+-	u8 prefix[9];
+-	unsigned int i;
+-	int err;
+-	const u8 *prev = NULL;
+-	u8 counter = 1;
+-	u8 tmp[HKDF_HASHLEN];
+-
+-	if (WARN_ON(okmlen > 255 * HKDF_HASHLEN))
+-		return -EINVAL;
+-
+-	desc->tfm = hkdf->hmac_tfm;
+-
+-	memcpy(prefix, "fscrypt\0", 8);
+-	prefix[8] = context;
+-
+-	for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
++	const struct kvec info_iov[] = { {
++		.iov_base = "fscrypt\0",
++		.iov_len = 8,
++	}, {
++		.iov_base = &context,
++		.iov_len = 1,
++	}, {
++		.iov_base = info,
++		.iov_len = infolen,
++	} };
++	int err = crypto_hkdf_generate(hkdf->hmac_tfm,
++				       info_iov, ARRAY_SIZE(info_iov),
++				       okm, okmlen);
+ 
+-		err = crypto_shash_init(desc);
+-		if (err)
+-			goto out;
+-
+-		if (prev) {
+-			err = crypto_shash_update(desc, prev, HKDF_HASHLEN);
+-			if (err)
+-				goto out;
+-		}
+-
+-		err = crypto_shash_update(desc, prefix, sizeof(prefix));
+-		if (err)
+-			goto out;
+-
+-		err = crypto_shash_update(desc, info, infolen);
+-		if (err)
+-			goto out;
+-
+-		BUILD_BUG_ON(sizeof(counter) != 1);
+-		if (okmlen - i < HKDF_HASHLEN) {
+-			err = crypto_shash_finup(desc, &counter, 1, tmp);
+-			if (err)
+-				goto out;
+-			memcpy(&okm[i], tmp, okmlen - i);
+-			memzero_explicit(tmp, sizeof(tmp));
+-		} else {
+-			err = crypto_shash_finup(desc, &counter, 1, &okm[i]);
+-			if (err)
+-				goto out;
+-		}
+-		counter++;
+-		prev = &okm[i];
+-	}
+-	err = 0;
+-out:
+ 	if (unlikely(err))
+ 		memzero_explicit(okm, okmlen); /* so caller doesn't need to */
+-	shash_desc_zero(desc);
+ 	return err;
+ }
+ 
+-- 
+2.26.2
+
+
+
+
