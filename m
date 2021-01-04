@@ -2,102 +2,121 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-16.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CEBD5C433E6
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  4 Jan 2021 18:49:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 656D7C433E9
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  4 Jan 2021 18:55:00 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id A264921D93
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  4 Jan 2021 18:49:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 3117022225
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  4 Jan 2021 18:55:00 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726253AbhADSts (ORCPT
+        id S1725921AbhADSyq (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 4 Jan 2021 13:49:48 -0500
-Received: from mail.kernel.org ([198.145.29.99]:48270 "EHLO mail.kernel.org"
+        Mon, 4 Jan 2021 13:54:46 -0500
+Received: from mail.kernel.org ([198.145.29.99]:49416 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726074AbhADSts (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 4 Jan 2021 13:49:48 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 1D48F22225;
-        Mon,  4 Jan 2021 18:48:32 +0000 (UTC)
+        id S1725830AbhADSyp (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 4 Jan 2021 13:54:45 -0500
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 7A36821D1B;
+        Mon,  4 Jan 2021 18:54:04 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1609786112;
-        bh=G16sIENRX9EMyT17x8UvaimcQGeqHoMJpMYb9LmaK3k=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=nR7v/Ysi4UByPoRgGftY4dh5NEWtOVPS7/GJgr5f80rfojttkBR3OejCo4+ImVg95
-         JB2HXIW9mLYNWjV3mit0Kl1A75s8t8yzKC2dfIryC7q3l2rYqwzWhrDlmkI7FfKBjY
-         fDecqnTUlw4ByYOxvt+IKo1kyW3VMQH2CIl2aTZXJgJ4ztzHXzUmPAbxyg32kOvagT
-         jxcOtZ3bsWtdHb63lXVVqF3zNXkmvRgOJCCOArHFW5fZPg8rVl3T5eApFxEMgneFA5
-         U7rzs+Iz0AYNtI1kzaBh3Nn8+pJC0+4+ldpLMQLd4BB7ZrY8/4bUswIkywyfBmpurG
-         xhS9Oyt8aI6lw==
+        s=k20201202; t=1609786444;
+        bh=ALjPf9mA+5qsZKZg6AOgKpgqT+RTFmaxS7GgH34EOpE=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=AVibMkrVYs9xlvjjyN8JjyHSKImCnKlV3z6l7v9mSJjWoYSzmSCPQnGQc8ZosZBH7
+         7S+i6Ks2iM5yLpSZeCUr6CztNcWpxfuZZbIONbbBwnEnWmcYBr72TqTAy4AlWc0WZC
+         V7ytivWEVlUpoR45tJRG/Equ96CDSI+ci7Prvt7y9u7ieO7FOf+DeNADjZqRYfAgRk
+         Z4VhOBrRYr00qBa5dTAnpr29TaXwxgiXQJkFN7+Bw1hI4J6oS1YcAsM6lHA7WFWDlH
+         FiaBYebXIvsYSIg5fl34AIClCFYI3uQkjvLrr5TRVgNMxTi70PT3WHw7W/cxeSz7tf
+         d6FgdGQJTL9Dw==
+Date:   Mon, 4 Jan 2021 10:54:02 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-mmc@vger.kernel.org
-Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>,
-        Ulf Hansson <ulf.hansson@linaro.org>,
-        Andy Gross <agross@kernel.org>,
-        Bjorn Andersson <bjorn.andersson@linaro.org>,
-        Adrian Hunter <adrian.hunter@intel.com>,
-        Asutosh Das <asutoshd@codeaurora.org>,
-        Rob Herring <robh+dt@kernel.org>,
-        Neeraj Soni <neersoni@codeaurora.org>,
-        Barani Muthukumaran <bmuthuku@codeaurora.org>,
-        Peng Zhou <peng.zhou@mediatek.com>,
-        Stanley Chu <stanley.chu@mediatek.com>,
-        Konrad Dybcio <konradybcio@gmail.com>
-Subject: [PATCH v4 8/9] arm64: dts: qcom: sdm630: add ICE registers and clocks
-Date:   Mon,  4 Jan 2021 10:45:41 -0800
-Message-Id: <20210104184542.4616-9-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.30.0
-In-Reply-To: <20210104184542.4616-1-ebiggers@kernel.org>
-References: <20210104184542.4616-1-ebiggers@kernel.org>
+To:     Alexander Viro <viro@zeniv.linux.org.uk>,
+        linux-fsdevel@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org
+Subject: Re: [PATCH] fs/inode.c: make inode_init_always() initialize i_ino to
+ 0
+Message-ID: <X/NkSg4i7h5h4+Wc@sol.localdomain>
+References: <20201031004420.87678-1-ebiggers@kernel.org>
+ <20201106175205.GE845@sol.localdomain>
+ <X7gP9iuTuRp9MHpP@sol.localdomain>
+ <X8gE01JQANXhenMC@gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <X8gE01JQANXhenMC@gmail.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Wed, Dec 02, 2020 at 01:19:15PM -0800, Eric Biggers wrote:
+> On Fri, Nov 20, 2020 at 10:50:30AM -0800, Eric Biggers wrote:
+> > On Fri, Nov 06, 2020 at 09:52:05AM -0800, Eric Biggers wrote:
+> > > On Fri, Oct 30, 2020 at 05:44:20PM -0700, Eric Biggers wrote:
+> > > > From: Eric Biggers <ebiggers@google.com>
+> > > > 
+> > > > Currently inode_init_always() doesn't initialize i_ino to 0.  This is
+> > > > unexpected because unlike the other inode fields that aren't initialized
+> > > > by inode_init_always(), i_ino isn't guaranteed to end up back at its
+> > > > initial value after the inode is freed.  Only one filesystem (XFS)
+> > > > actually sets set i_ino back to 0 when freeing its inodes.
+> > > > 
+> > > > So, callers of new_inode() see some random previous i_ino.  Normally
+> > > > that's fine, since normally i_ino isn't accessed before being set.
+> > > > There can be edge cases where that isn't necessarily true, though.
+> > > > 
+> > > > The one I've run into is that on ext4, when creating an encrypted file,
+> > > > the new file's encryption key has to be set up prior to the jbd2
+> > > > transaction, and thus prior to i_ino being set.  If something goes
+> > > > wrong, fs/crypto/ may log warning or error messages, which normally
+> > > > include i_ino.  So it needs to know whether it is valid to include i_ino
+> > > > yet or not.  Also, on some files i_ino needs to be hashed for use in the
+> > > > crypto, so fs/crypto/ needs to know whether that can be done yet or not.
+> > > > 
+> > > > There are ways this could be worked around, either in fs/crypto/ or in
+> > > > fs/ext4/.  But, it seems there's no reason not to just fix
+> > > > inode_init_always() to do the expected thing and initialize i_ino to 0.
+> > > > 
+> > > > So, do that, and also remove the initialization in jfs_fill_super() that
+> > > > becomes redundant.
+> > > > 
+> > > > Signed-off-by: Eric Biggers <ebiggers@google.com>
+> > > > ---
+> > > >  fs/inode.c     | 1 +
+> > > >  fs/jfs/super.c | 1 -
+> > > >  2 files changed, 1 insertion(+), 1 deletion(-)
+> > > > 
+> > > > diff --git a/fs/inode.c b/fs/inode.c
+> > > > index 9d78c37b00b81..eb001129f157c 100644
+> > > > --- a/fs/inode.c
+> > > > +++ b/fs/inode.c
+> > > > @@ -142,6 +142,7 @@ int inode_init_always(struct super_block *sb, struct inode *inode)
+> > > >  	atomic_set(&inode->i_count, 1);
+> > > >  	inode->i_op = &empty_iops;
+> > > >  	inode->i_fop = &no_open_fops;
+> > > > +	inode->i_ino = 0;
+> > > >  	inode->__i_nlink = 1;
+> > > >  	inode->i_opflags = 0;
+> > > >  	if (sb->s_xattr)
+> > > > diff --git a/fs/jfs/super.c b/fs/jfs/super.c
+> > > > index b2dc4d1f9dcc5..1f0ffabbde566 100644
+> > > > --- a/fs/jfs/super.c
+> > > > +++ b/fs/jfs/super.c
+> > > > @@ -551,7 +551,6 @@ static int jfs_fill_super(struct super_block *sb, void *data, int silent)
+> > > >  		ret = -ENOMEM;
+> > > >  		goto out_unload;
+> > > >  	}
+> > > > -	inode->i_ino = 0;
+> > > >  	inode->i_size = i_size_read(sb->s_bdev->bd_inode);
+> > > >  	inode->i_mapping->a_ops = &jfs_metapage_aops;
+> > > >  	inode_fake_hash(inode);
+> > > > 
+> > > 
+> > > Al, any thoughts on this?
+> 
+> Ping.
 
-Add the registers and clock for the Inline Crypto Engine (ICE) to the
-device tree node for the sdhci-msm host controller on sdm630.  This
-allows sdhci-msm to support inline encryption on sdm630.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/arm64/boot/dts/qcom/sdm630.dtsi | 10 ++++++----
- 1 file changed, 6 insertions(+), 4 deletions(-)
-
-diff --git a/arch/arm64/boot/dts/qcom/sdm630.dtsi b/arch/arm64/boot/dts/qcom/sdm630.dtsi
-index 37d5cc32f6b62..afb3d20c31fa0 100644
---- a/arch/arm64/boot/dts/qcom/sdm630.dtsi
-+++ b/arch/arm64/boot/dts/qcom/sdm630.dtsi
-@@ -808,8 +808,9 @@ spmi_bus: spmi@800f000 {
- 		sdhc_1: sdhci@c0c4000 {
- 			compatible = "qcom,sdm630-sdhci", "qcom,sdhci-msm-v5";
- 			reg = <0x0c0c4000 0x1000>,
--				<0x0c0c5000 0x1000>;
--			reg-names = "hc", "cqhci";
-+				<0x0c0c5000 0x1000>,
-+				<0x0c0c8000 0x8000>;
-+			reg-names = "hc", "cqhci", "ice";
- 
- 			interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
- 					<GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
-@@ -817,8 +818,9 @@ sdhc_1: sdhci@c0c4000 {
- 
- 			clocks = <&gcc GCC_SDCC1_APPS_CLK>,
- 					<&gcc GCC_SDCC1_AHB_CLK>,
--					<&xo_board>;
--			clock-names = "core", "iface", "xo";
-+					<&xo_board>,
-+					<&gcc GCC_SDCC1_ICE_CORE_CLK>;
-+			clock-names = "core", "iface", "xo", "ice";
- 
- 			pinctrl-names = "default", "sleep";
- 			pinctrl-0 = <&sdc1_clk_on &sdc1_cmd_on &sdc1_data_on &sdc1_rclk_on>;
--- 
-2.30.0
-
+Ping.
