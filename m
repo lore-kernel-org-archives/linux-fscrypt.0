@@ -2,92 +2,267 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-15.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED
+	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BCFC6C433DB
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Jan 2021 07:31:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6CB6CC433DB
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Jan 2021 07:53:04 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 7E76F23125
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Jan 2021 07:31:50 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 2B90D23123
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Jan 2021 07:53:04 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1726482AbhAGHbe (ORCPT
+        id S1726362AbhAGHws (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 7 Jan 2021 02:31:34 -0500
-Received: from mail.kernel.org ([198.145.29.99]:55600 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1725763AbhAGHbd (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 7 Jan 2021 02:31:33 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 2391D2311A;
-        Thu,  7 Jan 2021 07:30:52 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1610004652;
-        bh=+nXGNxH2Zt0Faa3QOoPaLUx5njlSeX/AHRJiAlLZcJ0=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=Pp9Q08Y7tYbL2bEI7YSXEaDWoLtI22t+r7/d8VgzxWzlhCxZxvwe6/PYeOjtcXb39
-         tdSPUawxYbdv/jBy4U8DSdNnOkqlptS+8O4/2VAUn9GAcItZOU/BdWDaR3A+cPI6f8
-         TxzhKVr9FruyeVgZrz2CNy+KFh36/FLNEsmRPH2tIM8Qjv9J/mM1nBQKgDq2GvQALm
-         ex2s6aKA1L8zy5t+OHlb8Qk/Jm1lWxEdytyD9Z5TrEmz5XEAQjqT+FZngYnuZl2I07
-         QgioHu+0S8xCmnnCE+Zgry5+Ez0ewlcth4voweLKAtywK9MhVaMz6CctY3YaNpPyEg
-         o2Fo+FY2mt6+g==
-Date:   Wed, 6 Jan 2021 23:30:50 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Stephan =?iso-8859-1?Q?M=FCller?= <smueller@chronox.de>
+        Thu, 7 Jan 2021 02:52:48 -0500
+Received: from mo4-p01-ob.smtp.rzone.de ([85.215.255.51]:24605 "EHLO
+        mo4-p01-ob.smtp.rzone.de" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1726477AbhAGHws (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 7 Jan 2021 02:52:48 -0500
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; t=1610005794;
+        s=strato-dkim-0002; d=chronox.de;
+        h=References:In-Reply-To:Date:Cc:To:From:Subject:Message-ID:From:
+        Subject:Sender;
+        bh=xQth024iRUdWUjPOE1PAw3zt550NobjVi9s6F2FEW0w=;
+        b=VYdnv1FSaht67Gk7feM40vJHAhn82s3av5Qr891ieIRgnrrEJa5lMp53kf3EKpwey1
+        ugmxQcWagh0AlJYjt9/IV1zpVcuQNopa9/4fl1yuuSOs/0Rhxga4MBTPEgjT8rD6Ih4S
+        Vsuf0JiLc8vp1g6Jsq7oZcNTcFf0/kOF2uetP5qIWGAwwIB0r1dm0w+wvOcvROSNKsDN
+        5xdmkUGr+y9NLQYMja5OGEyGc0VVs/ojIFNZ69RoBcHTI1WPr7Bc9GfOrD4Oh10fh5i4
+        vPSA3jhMUIZiWXvbqrgFTuLVSR5mBTd2NeWNXSR9bdQKB8NjHNhSQCUK87vXV7Y4/aOf
+        JpPA==
+X-RZG-AUTH: ":P2ERcEykfu11Y98lp/T7+hdri+uKZK8TKWEqNzyCzy1Sfr67uExK884EC0GFGHavJShPkMRYMkE="
+X-RZG-CLASS-ID: mo00
+Received: from tauon.chronox.de
+        by smtp.strato.de (RZmta 47.12.1 DYNA|AUTH)
+        with ESMTPSA id Z04c46x077nqCXA
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256 bits))
+        (Client did not present a certificate);
+        Thu, 7 Jan 2021 08:49:52 +0100 (CET)
+Message-ID: <a32b424e18672300ed4a72cade1dbbfd0d5bd6a5.camel@chronox.de>
+Subject: Re: [PATCH 5/5] fs: use HKDF implementation from kernel crypto API
+From:   Stephan Mueller <smueller@chronox.de>
+To:     Eric Biggers <ebiggers@kernel.org>
 Cc:     herbert@gondor.apana.org.au, mathew.j.martineau@linux.intel.com,
         dhowells@redhat.com, linux-crypto@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         keyrings@vger.kernel.org
-Subject: Re: [PATCH 3/5] crypto: add RFC5869 HKDF
-Message-ID: <X/a4qt9Oiw4WgoRY@sol.localdomain>
+Date:   Thu, 07 Jan 2021 08:49:52 +0100
+In-Reply-To: <X/a18yALjUcrvXDC@sol.localdomain>
 References: <4616980.31r3eYUQgx@positron.chronox.de>
- <12679948.uLZWGnKmhe@positron.chronox.de>
+         <7857050.T7Z3S40VBb@positron.chronox.de> <X/a18yALjUcrvXDC@sol.localdomain>
+Content-Type: text/plain; charset="UTF-8"
+User-Agent: Evolution 3.38.2 (3.38.2-1.fc33) 
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <12679948.uLZWGnKmhe@positron.chronox.de>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, Jan 04, 2021 at 10:49:13PM +0100, Stephan M�ller wrote:
-> RFC5869 specifies an extract and expand two-step key derivation
-> function. The HKDF implementation is provided as a service function that
-> operates on a caller-provided HMAC cipher handle.
+Am Mittwoch, dem 06.01.2021 um 23:19 -0800 schrieb Eric Biggers:
+> On Mon, Jan 04, 2021 at 10:50:49PM +0100, Stephan Müller wrote:
+> > As the kernel crypto API implements HKDF, replace the
+> > file-system-specific HKDF implementation with the generic HKDF
+> > implementation.
+> > 
+> > Signed-off-by: Stephan Mueller <smueller@chronox.de>
+> > ---
+> >  fs/crypto/Kconfig           |   2 +-
+> >  fs/crypto/fscrypt_private.h |   4 +-
+> >  fs/crypto/hkdf.c            | 108 +++++++++---------------------------
+> >  3 files changed, 30 insertions(+), 84 deletions(-)
+> > 
+> > diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
+> > index a5f5c30368a2..9450e958f1d1 100644
+> > --- a/fs/crypto/Kconfig
+> > +++ b/fs/crypto/Kconfig
+> > @@ -2,7 +2,7 @@
+> >  config FS_ENCRYPTION
+> >         bool "FS Encryption (Per-file encryption)"
+> >         select CRYPTO
+> > -       select CRYPTO_HASH
+> > +       select CRYPTO_HKDF
+> >         select CRYPTO_SKCIPHER
+> >         select CRYPTO_LIB_SHA256
+> >         select KEYS
+> > diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+> > index 3fa965eb3336..0d6871838099 100644
+> > --- a/fs/crypto/fscrypt_private.h
+> > +++ b/fs/crypto/fscrypt_private.h
+> > @@ -304,7 +304,7 @@ struct fscrypt_hkdf {
+> >         struct crypto_shash *hmac_tfm;
+> >  };
+> >  
+> > -int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+> > +int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, u8 *master_key,
+> >                       unsigned int master_key_size);
+> 
+> It shouldn't be necessary to remove const here.
 
-HMAC isn't a "cipher".
+Unfortunately it is when adding the pointer to struct kvec
+> 
+> >  
+> >  /*
+> > @@ -323,7 +323,7 @@ int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const
+> > u8 *master_key,
+> >  #define HKDF_CONTEXT_INODE_HASH_KEY    7 /* info=<empty>               */
+> >  
+> >  int fscrypt_hkdf_expand(const struct fscrypt_hkdf *hkdf, u8 context,
+> > -                       const u8 *info, unsigned int infolen,
+> > +                       u8 *info, unsigned int infolen,
+> >                         u8 *okm, unsigned int okmlen);
+> 
+> Likewise.  In fact some callers rely on 'info' not being modified.
 
-> The extract function is invoked via the crypto_hkdf_setkey call.
+Same here.
+> 
+> > -/*
+> > + *
+> >   * Compute HKDF-Extract using the given master key as the input keying
+> > material,
+> >   * and prepare an HMAC transform object keyed by the resulting
+> > pseudorandom key.
+> >   *
+> >   * Afterwards, the keyed HMAC transform object can be used for HKDF-
+> > Expand many
+> >   * times without having to recompute HKDF-Extract each time.
+> >   */
+> > -int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const u8 *master_key,
+> > +int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, u8 *master_key,
+> >                       unsigned int master_key_size)
+> >  {
+> > +       /* HKDF-Extract (RFC 5869 section 2.2), unsalted */
+> > +       const struct kvec seed[] = { {
+> > +               .iov_base = NULL,
+> > +               .iov_len = 0
+> > +       }, {
+> > +               .iov_base = master_key,
+> > +               .iov_len = master_key_size
+> > +       } };
+> >         struct crypto_shash *hmac_tfm;
+> > -       u8 prk[HKDF_HASHLEN];
+> >         int err;
+> >  
+> >         hmac_tfm = crypto_alloc_shash(HKDF_HMAC_ALG, 0, 0);
+> > @@ -74,16 +65,12 @@ int fscrypt_init_hkdf(struct fscrypt_hkdf *hkdf, const
+> > u8 *master_key,
+> >                 return PTR_ERR(hmac_tfm);
+> >         }
+> >  
+> > -       if (WARN_ON(crypto_shash_digestsize(hmac_tfm) != sizeof(prk))) {
+> > +       if (WARN_ON(crypto_shash_digestsize(hmac_tfm) != HKDF_HASHLEN)) {
+> >                 err = -EINVAL;
+> >                 goto err_free_tfm;
+> >         }
+> >  
+> > -       err = hkdf_extract(hmac_tfm, master_key, master_key_size, prk);
+> > -       if (err)
+> > -               goto err_free_tfm;
+> > -
+> > -       err = crypto_shash_setkey(hmac_tfm, prk, sizeof(prk));
+> > +       err = crypto_hkdf_setkey(hmac_tfm, seed, ARRAY_SIZE(seed));
+> >         if (err)
+> >                 goto err_free_tfm;
+> 
+> It's weird that the salt and key have to be passed in a kvec.
+> Why not just have normal function parameters like:
+> 
+>         int crypto_hkdf_setkey(struct crypto_shash *hmac_tfm,
+>                                const u8 *key, size_t keysize,
+>                                const u8 *salt, size_t saltsize);
 
-Any reason not to call this crypto_hkdf_extract(), to match the specification?
-
-> RFC5869
-> allows two optional parameters to be provided to the extract operation:
-> the salt and additional information. Both are to be provided with the
-> seed parameter where the salt is the first entry of the seed parameter
-> and all subsequent entries are handled as additional information. If
-> the caller intends to invoke the HKDF without salt, it has to provide a
-> NULL/0 entry as first entry in seed.
-
-Where does "additional information" for extract come from?  RFC 5869 has:
-
-	HKDF-Extract(salt, IKM) -> PRK
-
-	Inputs:
-	      salt     optional salt value (a non-secret random value);
-		       if not provided, it is set to a string of HashLen zeros.
-	      IKM      input keying material
-
-There's no "additional information".
+I wanted to have an identical interface for all types of KDFs to allow turning
+them into a template eventually. For example, SP800-108 KDFs only have one
+parameter. Hence the use of a kvec.
 
 > 
-> The expand function is invoked via the crypto_hkdf_generate and can be
-> invoked multiple times. This function allows the caller to provide a
-> context for the key derivation operation. As specified in RFC5869, it is
-> optional. In case such context is not provided, the caller must provide
-> NULL / 0 for the info / info_nvec parameters.
+> >  int fscrypt_hkdf_expand(const struct fscrypt_hkdf *hkdf, u8 context,
+> > -                       const u8 *info, unsigned int infolen,
+> > +                       u8 *info, unsigned int infolen,
+> >                         u8 *okm, unsigned int okmlen)
+> >  {
+> > -       SHASH_DESC_ON_STACK(desc, hkdf->hmac_tfm);
+> > -       u8 prefix[9];
+> > -       unsigned int i;
+> > -       int err;
+> > -       const u8 *prev = NULL;
+> > -       u8 counter = 1;
+> > -       u8 tmp[HKDF_HASHLEN];
+> > -
+> > -       if (WARN_ON(okmlen > 255 * HKDF_HASHLEN))
+> > -               return -EINVAL;
+> > -
+> > -       desc->tfm = hkdf->hmac_tfm;
+> > -
+> > -       memcpy(prefix, "fscrypt\0", 8);
+> > -       prefix[8] = context;
+> > -
+> > -       for (i = 0; i < okmlen; i += HKDF_HASHLEN) {
+> > +       const struct kvec info_iov[] = { {
+> > +               .iov_base = "fscrypt\0",
+> > +               .iov_len = 8,
+> > +       }, {
+> > +               .iov_base = &context,
+> > +               .iov_len = 1,
+> > +       }, {
+> > +               .iov_base = info,
+> > +               .iov_len = infolen,
+> > +       } };
+> > +       int err = crypto_hkdf_generate(hkdf->hmac_tfm,
+> > +                                      info_iov, ARRAY_SIZE(info_iov),
+> > +                                      okm, okmlen);
+> >  
+> > -               err = crypto_shash_init(desc);
+> > -               if (err)
+> > -                       goto out;
+> > -
+> > -               if (prev) {
+> > -                       err = crypto_shash_update(desc, prev,
+> > HKDF_HASHLEN);
+> > -                       if (err)
+> > -                               goto out;
+> > -               }
+> > -
+> > -               err = crypto_shash_update(desc, prefix, sizeof(prefix));
+> > -               if (err)
+> > -                       goto out;
+> > -
+> > -               err = crypto_shash_update(desc, info, infolen);
+> > -               if (err)
+> > -                       goto out;
+> > -
+> > -               BUILD_BUG_ON(sizeof(counter) != 1);
+> > -               if (okmlen - i < HKDF_HASHLEN) {
+> > -                       err = crypto_shash_finup(desc, &counter, 1, tmp);
+> > -                       if (err)
+> > -                               goto out;
+> > -                       memcpy(&okm[i], tmp, okmlen - i);
+> > -                       memzero_explicit(tmp, sizeof(tmp));
+> > -               } else {
+> > -                       err = crypto_shash_finup(desc, &counter, 1,
+> > &okm[i]);
+> > -                       if (err)
+> > -                               goto out;
+> > -               }
+> > -               counter++;
+> > -               prev = &okm[i];
+> > -       }
+> > -       err = 0;
+> > -out:
+> >         if (unlikely(err))
+> >                 memzero_explicit(okm, okmlen); /* so caller doesn't need
+> > to */
+> > -       shash_desc_zero(desc);
+> 
+> Shouldn't crypto_hkdf_generate() handle the above memzero_explicit() of the
+> output buffer on error, so that all callers don't need to do it?
 
-Any reason not to call this crypto_hkdf_expand() to match the specification?
+Yes, I will move it to HKDF (and the SP800-108 KDF as well).
 
-- Eric
+Thanks for the review
+Stephan
+> 
+> - Eric
+
+
