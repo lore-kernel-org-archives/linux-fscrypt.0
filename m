@@ -4,40 +4,40 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 X-Spam-Level: 
 X-Spam-Status: No, score=-19.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 786EDC433DB
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B6903C43381
 	for <linux-fscrypt@archiver.kernel.org>; Wed, 20 Jan 2021 18:33:46 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 4BC5A233FC
+	by mail.kernel.org (Postfix) with ESMTP id 8E594233FC
 	for <linux-fscrypt@archiver.kernel.org>; Wed, 20 Jan 2021 18:33:46 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2391908AbhATScm (ORCPT
+        id S2404429AbhATSc4 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 20 Jan 2021 13:32:42 -0500
-Received: from mail.kernel.org ([198.145.29.99]:51522 "EHLO mail.kernel.org"
+        Wed, 20 Jan 2021 13:32:56 -0500
+Received: from mail.kernel.org ([198.145.29.99]:51488 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2404417AbhATS3s (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S2404398AbhATS3s (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Wed, 20 Jan 2021 13:29:48 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 864AD2342C;
-        Wed, 20 Jan 2021 18:28:51 +0000 (UTC)
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 98B8623428;
+        Wed, 20 Jan 2021 18:28:49 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1611167331;
-        bh=ZPy7MsX3VP8mNVh0Wc4o/iMp/H7aNB3koRbPlYWauRs=;
+        s=k20201202; t=1611167330;
+        bh=nxrqkv0I2sZZsQo01IdmPZIrTKUuNiZQRQhrd5eb6vE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Ru2hGep58ZTWV1ml83eSbhzQdoy4hbTv3CSB0er10n4F3QyOJx27P8YPZ7sT7Q2Mo
-         7ttjz/TOw+zn6S7yhYmRiFDncyakiwbgr2uJaJCgFSdaNoCUV/SAAyiykMvB68q+Xs
-         JjTCqQ1dovoDMU8f6w5QmAisqSjuXzuIkbEqmKptr/MzDuTC0x7v52SxAeQapuyrWo
-         Mzs3NH4vybDg27s30j71kTjabpW4DZEft2WsGmyu4ZaUcbDxJluTQ9yUEXsmodmB/2
-         Cl93gNZ/VNzRTpM9aKLHo3zX4PpDSEUxzQBxiqVRnKrc0QPen6Rf/pWOjMWaAUlyyA
-         LYBjZvw/E+6Tg==
+        b=hJ2OJyWhSq+3kcEY/SYz4J3LsQUcHv9XwzhSPvLi5OFPNtlDepdOLEDk+LNhkcmsU
+         2ybNO+gy8HwUE/NS+Nf1CYDk/Mk84MiXGcK93C8o4A50iToiPAeU0bJhPGfOI8DWzV
+         mAeqi5jLAuu9yzKh29ZUoc3l89pOoxeMoECbI6Q+jaBtfPfcKuNrNb9tlegYdGSS8r
+         I310o3z3POQqow3lLpbTxThc/CAvhft2nd1EviGneNLFiSj8WDGKYhwYqcw3+1Qub8
+         4ieyt0H/mMfnoXPse+YHxMTd/Lj6SQ265Pazyx383fPNhTZW27jow0/vBFfaSArGNu
+         yfjMSQGBk51yA==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
-Subject: [RFC PATCH v4 04/17] fscrypt: add fscrypt_context_for_new_inode
-Date:   Wed, 20 Jan 2021 13:28:34 -0500
-Message-Id: <20210120182847.644850-5-jlayton@kernel.org>
+Subject: [RFC PATCH v4 01/17] vfs: export new_inode_pseudo
+Date:   Wed, 20 Jan 2021 13:28:31 -0500
+Message-Id: <20210120182847.644850-2-jlayton@kernel.org>
 X-Mailer: git-send-email 2.29.2
 In-Reply-To: <20210120182847.644850-1-jlayton@kernel.org>
 References: <20210120182847.644850-1-jlayton@kernel.org>
@@ -47,80 +47,34 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-CephFS will need to be able to generate a context for a new "prepared"
-inode. Add a new routine for getting the context out of an in-core
-inode.
+Ceph needs to be able to allocate inodes ahead of a create that might
+involve a fscrypt-encrypted inode. new_inode() almost fits the bill,
+but it puts the inode on the sb->s_inodes list and when we go to hash
+it, that might be done again.
 
+We could work around that by setting I_CREATING on the new inode, but
+that causes ilookup5 to return -ESTALE if something tries to find it
+before I_NEW is cleared. To work around all of this, just use
+new_inode_pseudo which doesn't add it to the list.
+
+Cc: Al Viro <viro@zeniv.linux.org.uk>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/crypto/policy.c      | 34 ++++++++++++++++++++++++++++------
- include/linux/fscrypt.h |  1 +
- 2 files changed, 29 insertions(+), 6 deletions(-)
+ fs/inode.c | 1 +
+ 1 file changed, 1 insertion(+)
 
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index a51cef6bd27f..44b4236427ba 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -664,6 +664,31 @@ const union fscrypt_policy *fscrypt_policy_to_inherit(struct inode *dir)
- 	return fscrypt_get_dummy_policy(dir->i_sb);
+diff --git a/fs/inode.c b/fs/inode.c
+index 6442d97d9a4a..50edc88c9fe2 100644
+--- a/fs/inode.c
++++ b/fs/inode.c
+@@ -934,6 +934,7 @@ struct inode *new_inode_pseudo(struct super_block *sb)
+ 	}
+ 	return inode;
  }
++EXPORT_SYMBOL(new_inode_pseudo);
  
-+/**
-+ * fscrypt_context_for_new_inode() - create an encryption context for a new inode
-+ * @ctx: where context should be written
-+ * @inode: inode from which to fetch policy and nonce
-+ *
-+ * Given an in-core "prepared" (via fscrypt_prepare_new_inode) inode,
-+ * generate a new context and write it to ctx. ctx _must_ be at least
-+ * FSCRYPT_SET_CONTEXT_MAX_SIZE bytes.
-+ *
-+ * Returns size of the resulting context or a negative error code.
-+ */
-+int fscrypt_context_for_new_inode(void *ctx, struct inode *inode)
-+{
-+	struct fscrypt_info *ci = inode->i_crypt_info;
-+
-+	BUILD_BUG_ON(sizeof(union fscrypt_context) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
-+
-+	/* fscrypt_prepare_new_inode() should have set up the key already. */
-+	if (WARN_ON_ONCE(!ci))
-+		return -ENOKEY;
-+
-+	return fscrypt_new_context(ctx, &ci->ci_policy, ci->ci_nonce);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_context_for_new_inode);
-+
  /**
-  * fscrypt_set_context() - Set the fscrypt context of a new inode
-  * @inode: a new inode
-@@ -680,12 +705,9 @@ int fscrypt_set_context(struct inode *inode, void *fs_data)
- 	union fscrypt_context ctx;
- 	int ctxsize;
- 
--	/* fscrypt_prepare_new_inode() should have set up the key already. */
--	if (WARN_ON_ONCE(!ci))
--		return -ENOKEY;
--
--	BUILD_BUG_ON(sizeof(ctx) != FSCRYPT_SET_CONTEXT_MAX_SIZE);
--	ctxsize = fscrypt_new_context(&ctx, &ci->ci_policy, ci->ci_nonce);
-+	ctxsize = fscrypt_context_for_new_inode(&ctx, inode);
-+	if (ctxsize < 0)
-+		return ctxsize;
- 
- 	/*
- 	 * This may be the first time the inode number is available, so do any
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index b5c31baaa8bf..087fa87bca0b 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -178,6 +178,7 @@ int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg);
- int fscrypt_ioctl_get_policy_ex(struct file *filp, void __user *arg);
- int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
- int fscrypt_has_permitted_context(struct inode *parent, struct inode *child);
-+int fscrypt_context_for_new_inode(void *ctx, struct inode *inode);
- int fscrypt_set_context(struct inode *inode, void *fs_data);
- 
- struct fscrypt_dummy_policy {
+  *	new_inode 	- obtain an inode
 -- 
 2.29.2
 
