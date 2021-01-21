@@ -3,35 +3,35 @@ X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
 X-Spam-Status: No, score=-19.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AAA9DC4332D
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 21 Jan 2021 09:09:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BB8D3C43217
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 21 Jan 2021 09:09:50 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 7889C239D4
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 21 Jan 2021 09:09:49 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 7761B235E4
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 21 Jan 2021 09:09:50 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1727996AbhAUJJX (ORCPT
+        id S1727571AbhAUJJS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 21 Jan 2021 04:09:23 -0500
-Received: from mail.kernel.org ([198.145.29.99]:38128 "EHLO mail.kernel.org"
+        Thu, 21 Jan 2021 04:09:18 -0500
+Received: from mail.kernel.org ([198.145.29.99]:37836 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1728464AbhAUJEy (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 21 Jan 2021 04:04:54 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 58C43239EB;
-        Thu, 21 Jan 2021 09:03:59 +0000 (UTC)
+        id S1728446AbhAUJEe (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 21 Jan 2021 04:04:34 -0500
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 0F41A23356;
+        Thu, 21 Jan 2021 09:03:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1611219839;
-        bh=G16sIENRX9EMyT17x8UvaimcQGeqHoMJpMYb9LmaK3k=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=GgPMthSBk0qpFP6x4IFsXfwMgIEoDzujoULxDVYpQ7/eiI2ZpI3368rqPAZ1oMQKi
-         GAoarxqazOLpraBkzXqlyMRrYsrDyN23M37AoVUFTTMcFlgrlZdVhw6Em6QW7pJxes
-         8+SyYc5LIg8yyISGjFWevHjbZCtojUqxJTBvBISAaZnKljButUXsbr3YlY8ZNCGWfo
-         tSzck/KEkk8IZjh4qm0ZtMfqnmJzFT34c+H/KrexJRT57c+WqMkpKlrJrUBKRlMlcb
-         lxTOThktqU3lU7q0id7azE826IBIxmatZk7h0iB6DKyGQISKGq+SCyk1IIE4snnzat
-         vtagF+DaaJdnQ==
+        s=k20201202; t=1611219833;
+        bh=WWkiOlL5YRAT2gYztz4fBhB6bujfVFTQ5ffqrJmrp0g=;
+        h=From:To:Cc:Subject:Date:From;
+        b=THXg0WhRR+fO/xgH9NKM8+eAVMQeWOtqn1NB81oEl3LY7KefuK0BEqm8MajvimpFe
+         SDgAn3+xqqpneqWw/GFCfB3pYVotp5r1DqxukqAjzt88qz7+6sTCd0+4m58tLmfDvo
+         K6ZdOPjriH4yv5bZQcuc+JVW5MhdHAy6OmW2DeSNdZtCuElaFomO8XGLEdu1EiINHi
+         TVj2u3wVAOTyPA4Ycrvhycc9Xi8JkHSBmHYfpcFLRX1uEvB47Qu7sM5JfzlPqwzaF8
+         DdfGSdoWBAwqcuo+Y1AJ5ZkGsb4Yvk1LBG+2TmhDvwiLZ8VWhvaHwQCHFj1zWLfimn
+         EkzO/Wl7w6nOQ==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-mmc@vger.kernel.org
 Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
@@ -47,57 +47,114 @@ Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
         Peng Zhou <peng.zhou@mediatek.com>,
         Stanley Chu <stanley.chu@mediatek.com>,
         Konrad Dybcio <konradybcio@gmail.com>
-Subject: [PATCH v5 8/9] arm64: dts: qcom: sdm630: add ICE registers and clocks
-Date:   Thu, 21 Jan 2021 01:01:39 -0800
-Message-Id: <20210121090140.326380-9-ebiggers@kernel.org>
+Subject: [PATCH v5 0/9] eMMC inline encryption support
+Date:   Thu, 21 Jan 2021 01:01:31 -0800
+Message-Id: <20210121090140.326380-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.30.0
-In-Reply-To: <20210121090140.326380-1-ebiggers@kernel.org>
-References: <20210121090140.326380-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+Hello,
 
-Add the registers and clock for the Inline Crypto Engine (ICE) to the
-device tree node for the sdhci-msm host controller on sdm630.  This
-allows sdhci-msm to support inline encryption on sdm630.
+This patchset adds support for eMMC inline encryption, as specified by
+the upcoming version of the eMMC specification and as already
+implemented and used on many devices.  Building on that, it then adds
+Qualcomm ICE support and wires it up for the Snapdragon 630 SoC.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- arch/arm64/boot/dts/qcom/sdm630.dtsi | 10 ++++++----
- 1 file changed, 6 insertions(+), 4 deletions(-)
+Inline encryption hardware improves the performance of storage
+encryption and reduces power usage.  See
+Documentation/block/inline-encryption.rst for more information about
+inline encryption and the blk-crypto framework (upstreamed in v5.8)
+which supports it.  Most mobile devices already use UFS or eMMC inline
+encryption hardware; UFS support was already upstreamed in v5.9.
 
-diff --git a/arch/arm64/boot/dts/qcom/sdm630.dtsi b/arch/arm64/boot/dts/qcom/sdm630.dtsi
-index 37d5cc32f6b62..afb3d20c31fa0 100644
---- a/arch/arm64/boot/dts/qcom/sdm630.dtsi
-+++ b/arch/arm64/boot/dts/qcom/sdm630.dtsi
-@@ -808,8 +808,9 @@ spmi_bus: spmi@800f000 {
- 		sdhc_1: sdhci@c0c4000 {
- 			compatible = "qcom,sdm630-sdhci", "qcom,sdhci-msm-v5";
- 			reg = <0x0c0c4000 0x1000>,
--				<0x0c0c5000 0x1000>;
--			reg-names = "hc", "cqhci";
-+				<0x0c0c5000 0x1000>,
-+				<0x0c0c8000 0x8000>;
-+			reg-names = "hc", "cqhci", "ice";
- 
- 			interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
- 					<GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
-@@ -817,8 +818,9 @@ sdhc_1: sdhci@c0c4000 {
- 
- 			clocks = <&gcc GCC_SDCC1_APPS_CLK>,
- 					<&gcc GCC_SDCC1_AHB_CLK>,
--					<&xo_board>;
--			clock-names = "core", "iface", "xo";
-+					<&xo_board>,
-+					<&gcc GCC_SDCC1_ICE_CORE_CLK>;
-+			clock-names = "core", "iface", "xo", "ice";
- 
- 			pinctrl-names = "default", "sleep";
- 			pinctrl-0 = <&sdc1_clk_on &sdc1_cmd_on &sdc1_data_on &sdc1_rclk_on>;
+Patches 1-4 add support for the standard eMMC inline encryption.
+
+However, as with UFS, host controller-specific patches are needed on top
+of the standard support.  Therefore, patches 5-9 add Qualcomm ICE
+(Inline Crypto Engine) support and wire it up on the Snapdragon 630 SoC.
+
+To test this I took advantage of the recently upstreamed support for the
+Snapdragon 630 SoC, plus work-in-progress patches from the SoMainline
+project (https://github.com/SoMainline/linux/tree/konrad/v5.10-rc3).  In
+particular, I was able to run the fscrypt xfstests for ext4 and f2fs in
+a Debian chroot.  Among other things, these tests verified that the
+correct ciphertext is written to disk (the same as software encryption).
+
+It will also be possible to add support for Mediatek eMMC inline
+encryption hardware in mtk-sd, and it should be easier than the Qualcomm
+hardware since the Mediatek hardware follows the standard more closely.
+I.e., patches 1-4 should be almost enough for the Mediatek hardware.
+
+This patchset is based on v5.11-rc2 plus the patch
+"block/keyslot-manager: introduce devm_blk_ksm_init()"
+(https://lkml.kernel.org/r/20210121082155.111333-2-ebiggers@kernel.org).
+It can also be retrieved from tag "mmc-crypto-v5" of
+https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git
+
+Changed since v4:
+  - Use the proposed resource-managed variant of blk_ksm_init().
+  - Removed an unnecessary call to devm_kfree().
+
+Changed since v3:
+  - Added Acked-by and Reviewed-and-tested-by tags.
+  - Rebased onto v5.11-rc2.
+
+Changed since v2:
+  - Improved comment for sdhci_msm_ice_wait_bist_status()
+  - Removed an unhelpful comment in union cqhci_crypto_cfg_entry.
+  - Fixed the commit message of "mmc: cqhci: initialize upper 64 bits of
+    128-bit task descriptors".
+  - Added Reviewed-by's and Acked-by's.
+
+Changed since v1:
+  - Only select QCOM_SCM if ARCH_QCOM.  (Fixes a build break.)
+  - Split most of the cqhci_prep_task_desc() change into its own patch.
+  - Made sdhci_msm_ice_wait_bist_status() use readl_poll_timeout().
+  - Added a couple more comments.
+  - Added some Acked-by's.
+
+Eric Biggers (9):
+  mmc: add basic support for inline encryption
+  mmc: cqhci: rename cqhci.c to cqhci-core.c
+  mmc: cqhci: initialize upper 64 bits of 128-bit task descriptors
+  mmc: cqhci: add support for inline encryption
+  mmc: cqhci: add cqhci_host_ops::program_key
+  firmware: qcom_scm: update comment for ICE-related functions
+  dt-bindings: mmc: sdhci-msm: add ICE registers and clock
+  arm64: dts: qcom: sdm630: add ICE registers and clocks
+  mmc: sdhci-msm: add Inline Crypto Engine support
+
+ .../devicetree/bindings/mmc/sdhci-msm.txt     |   3 +
+ arch/arm64/boot/dts/qcom/sdm630.dtsi          |  10 +-
+ drivers/firmware/qcom_scm.c                   |  16 +-
+ drivers/mmc/core/Kconfig                      |   8 +
+ drivers/mmc/core/Makefile                     |   1 +
+ drivers/mmc/core/block.c                      |   3 +
+ drivers/mmc/core/core.c                       |   3 +
+ drivers/mmc/core/crypto.c                     |  48 +++
+ drivers/mmc/core/crypto.h                     |  40 +++
+ drivers/mmc/core/host.c                       |   1 +
+ drivers/mmc/core/queue.c                      |   3 +
+ drivers/mmc/host/Kconfig                      |   1 +
+ drivers/mmc/host/Makefile                     |   2 +
+ drivers/mmc/host/{cqhci.c => cqhci-core.c}    |  69 ++++-
+ drivers/mmc/host/cqhci-crypto.c               | 242 +++++++++++++++
+ drivers/mmc/host/cqhci-crypto.h               |  47 +++
+ drivers/mmc/host/cqhci.h                      |  84 +++++-
+ drivers/mmc/host/sdhci-msm.c                  | 276 +++++++++++++++++-
+ include/linux/mmc/core.h                      |   6 +
+ include/linux/mmc/host.h                      |   7 +
+ 20 files changed, 845 insertions(+), 25 deletions(-)
+ create mode 100644 drivers/mmc/core/crypto.c
+ create mode 100644 drivers/mmc/core/crypto.h
+ rename drivers/mmc/host/{cqhci.c => cqhci-core.c} (94%)
+ create mode 100644 drivers/mmc/host/cqhci-crypto.c
+ create mode 100644 drivers/mmc/host/cqhci-crypto.h
+
 -- 
 2.30.0
 
