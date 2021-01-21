@@ -2,175 +2,91 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-6.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 88C7AC433E6
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 20 Jan 2021 18:42:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4D7D7C433E0
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 21 Jan 2021 07:46:57 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 42F9C23406
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 20 Jan 2021 18:42:11 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id EB6ED221F8
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 21 Jan 2021 07:46:56 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2404465AbhATSdA (ORCPT
+        id S1727393AbhAUHqr (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 20 Jan 2021 13:33:00 -0500
-Received: from mail.kernel.org ([198.145.29.99]:51500 "EHLO mail.kernel.org"
+        Thu, 21 Jan 2021 02:46:47 -0500
+Received: from mail.kernel.org ([198.145.29.99]:46378 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S2404412AbhATS3t (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 20 Jan 2021 13:29:49 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id D82C223406;
-        Wed, 20 Jan 2021 18:28:50 +0000 (UTC)
+        id S1727718AbhAUHqe (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 21 Jan 2021 02:46:34 -0500
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 367BC2396F;
+        Thu, 21 Jan 2021 07:45:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1611167331;
-        bh=SUj/MlQHr88sV3NN5eFNe9q4T8TjqCyDnCTD+64V3NA=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=d0/jk6gTAZFHh7t+yP2WyG3LSuJ/BSMXHM+3lNWzJaGi5lMwZ9szf9jGm7B05VlGL
-         fftcj4eLYh3kxaBwWpK1xWGYEYc/N/LuClGeVDWE47Qc7Pav2+yNbfZfQwv7xKftar
-         xNw/YortTvMIiN20ne5ZNisY1zuwktBjce77Aofr/SJcnk0DBLm5d2eLiDIM8nhuli
-         vwgQimR68xnMZjkwHBMKfUBgw6FTWiXV2NYwixo1N/IrmfHxXfsO0IwyJVUzOfr9O/
-         zB3/Mb0IzwslhF4xbldV+5ISn5RlWThg6mW18njkGYn9CtyRqGal9gnhYzvTgXMxJZ
-         kbAEklXeBrYfQ==
-From:   Jeff Layton <jlayton@kernel.org>
-To:     ceph-devel@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
-Subject: [RFC PATCH v4 03/17] fscrypt: export fscrypt_fname_encrypt and fscrypt_fname_encrypted_size
-Date:   Wed, 20 Jan 2021 13:28:33 -0500
-Message-Id: <20210120182847.644850-4-jlayton@kernel.org>
-X-Mailer: git-send-email 2.29.2
-In-Reply-To: <20210120182847.644850-1-jlayton@kernel.org>
-References: <20210120182847.644850-1-jlayton@kernel.org>
+        s=k20201202; t=1611215153;
+        bh=jaWMXBe7gnB8W5jif/JfABLr8mo1KpxJERzgLN9oXZo=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=OIDIMftRkRi5Tl0tyXx+ZfQIiktUN9xr0cGBGwWiV3B05YmzMI7mQh/rqhcdylAk2
+         1Sx9vkp4ogpH4hgwRwG/MRGCdmgSw42h+/aLshnTE+Pz3sYTsh6vjN9GOsY9jjkMvB
+         KsR5DjRqcQ8QKqwTJrk5D68VwH7eE6Hd2b0y5xTsi70MkOejjM3G4k3gMqgzXhT8ou
+         GawbG31BRe0AgsWemiWFo7HlHfgRyjIvQ/++wn5al8FF0ny9XFqKVwSYetumffqwK9
+         nHOkG54I3m7qaWH8hgmhvGlbNk25E9pHnCZT6EvEEWlkzVs+fNUJW1Ryx48ORKNJQo
+         Lk5ldJLBn0vsw==
+Date:   Wed, 20 Jan 2021 23:45:51 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Ulf Hansson <ulf.hansson@linaro.org>
+Cc:     "linux-mmc@vger.kernel.org" <linux-mmc@vger.kernel.org>,
+        linux-arm-msm <linux-arm-msm@vger.kernel.org>,
+        DTML <devicetree@vger.kernel.org>, linux-fscrypt@vger.kernel.org,
+        Satya Tangirala <satyat@google.com>,
+        Andy Gross <agross@kernel.org>,
+        Bjorn Andersson <bjorn.andersson@linaro.org>,
+        Adrian Hunter <adrian.hunter@intel.com>,
+        Asutosh Das <asutoshd@codeaurora.org>,
+        Rob Herring <robh+dt@kernel.org>,
+        Neeraj Soni <neersoni@codeaurora.org>,
+        Barani Muthukumaran <bmuthuku@codeaurora.org>,
+        Peng Zhou <peng.zhou@mediatek.com>,
+        Stanley Chu <stanley.chu@mediatek.com>,
+        Konrad Dybcio <konradybcio@gmail.com>
+Subject: Re: [PATCH v4 1/9] mmc: add basic support for inline encryption
+Message-ID: <YAkxLx4JiAtSlx1E@sol.localdomain>
+References: <20210104184542.4616-1-ebiggers@kernel.org>
+ <20210104184542.4616-2-ebiggers@kernel.org>
+ <CAPDyKFq717teu2HPZLCn9QVxLOwZHdi_iS+Ji69S0kYX1o52PQ@mail.gmail.com>
+ <YAHXPREJaKjK/z7+@sol.localdomain>
+ <CAPDyKFopKy6dwENJ6YQQ0KRPQdT25R_zmhrNH7jyu=+p6bKpNA@mail.gmail.com>
+ <YAdGbqU12cbJr78K@sol.localdomain>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <YAdGbqU12cbJr78K@sol.localdomain>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-For ceph, we want to use our own scheme for handling filenames that are
-are longer than NAME_MAX after encryption and base64 encoding. This
-allows us to have a consistent view of the encrypted filenames for
-clients that don't support fscrypt and clients that do but that don't
-have the key.
+On Tue, Jan 19, 2021 at 12:52:00PM -0800, Eric Biggers wrote:
+> > To free up the data structures, blk_ksm_destroy() is called from
+> > mmc_free_host().
+> > 
+> > To me, this can be made more consistent. For example, it looks like
+> > blk_ksm_destroy() could be called, even if blk_ksm_init() hasn't been
+> > called (depending on the probe error path of the mmc host).
+> 
+> blk_ksm_destroy() is a no-op on an all-zeroed struct, so it's fine to call it
+> unnecessarily.  We could call it unconditionally, if that would be clearer.
+> 
+> > There are a couple of options to better deal with this.
+> > 1) Extend the blk_ksm interface with a devm_blk_ksm_init() function
+> > (thus let it deal with lifecycle problems for us) and simply drop the
+> > call to blk_ksm_destroy().
+> 
+> This would require adding APIs to devm to support zeroing buffers on free and to
+> use kvmalloc() instead of kmalloc().  It looks like these new APIs wouldn't be
+> useful for many drivers (since almost everyone else just wants regular kmalloc
+> with no special behavior on free), so they don't seem worth adding yet.
 
-Export fscrypt_fname_encrypt. Rename fscrypt_fname_encrypted_size to
-__fscrypt_fname_encrypted_size and add a new wrapper called
-fscrypt_fname_encrypted_size that takes an inode argument rahter than
-a pointer to a fscrypt_policy union.
+Actually devres is more flexible than I thought; it's possible to register
+custom actions to be executed.  I'll send out a patchset that adds
+devm_blk_ksm_init() and converts the UFS driver to use it.
 
-Signed-off-by: Jeff Layton <jlayton@kernel.org>
----
- fs/crypto/fname.c           | 19 ++++++++++++++-----
- fs/crypto/fscrypt_private.h |  9 +++------
- fs/crypto/hooks.c           |  6 +++---
- include/linux/fscrypt.h     |  4 ++++
- 4 files changed, 24 insertions(+), 14 deletions(-)
-
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 32b1f50433ba..5a794de7f61d 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -126,6 +126,7 @@ int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
- 
- 	return 0;
- }
-+EXPORT_SYMBOL(fscrypt_fname_encrypt);
- 
- /**
-  * fname_decrypt() - decrypt a filename
-@@ -244,9 +245,9 @@ int fscrypt_base64_decode(const char *src, int len, u8 *dst)
- }
- EXPORT_SYMBOL(fscrypt_base64_decode);
- 
--bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
--				  u32 orig_len, u32 max_len,
--				  u32 *encrypted_len_ret)
-+bool __fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
-+				    u32 orig_len, u32 max_len,
-+				    u32 *encrypted_len_ret)
- {
- 	int padding = 4 << (fscrypt_policy_flags(policy) &
- 			    FSCRYPT_POLICY_FLAGS_PAD_MASK);
-@@ -260,6 +261,15 @@ bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
- 	return true;
- }
- 
-+bool fscrypt_fname_encrypted_size(const struct inode *inode, u32 orig_len,
-+				  u32 max_len, u32 *encrypted_len_ret)
-+{
-+	return __fscrypt_fname_encrypted_size(&inode->i_crypt_info->ci_policy,
-+					      orig_len, max_len,
-+					      encrypted_len_ret);
-+}
-+EXPORT_SYMBOL(fscrypt_fname_encrypted_size);
-+
- /**
-  * fscrypt_fname_alloc_buffer() - allocate a buffer for presented filenames
-  * @max_encrypted_len: maximum length of encrypted filenames the buffer will be
-@@ -422,8 +432,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 		return ret;
- 
- 	if (fscrypt_has_encryption_key(dir)) {
--		if (!fscrypt_fname_encrypted_size(&dir->i_crypt_info->ci_policy,
--						  iname->len,
-+		if (!fscrypt_fname_encrypted_size(dir, iname->len,
- 						  dir->i_sb->s_cop->max_namelen,
- 						  &fname->crypto_buf.len))
- 			return -ENAMETOOLONG;
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 3fa965eb3336..195de6d0db40 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -292,14 +292,11 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
- 			 const struct fscrypt_info *ci);
- 
- /* fname.c */
--int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
--			  u8 *out, unsigned int olen);
--bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
--				  u32 orig_len, u32 max_len,
--				  u32 *encrypted_len_ret);
-+bool __fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
-+				    u32 orig_len, u32 max_len,
-+                                    u32 *encrypted_len_ret);
- 
- /* hkdf.c */
--
- struct fscrypt_hkdf {
- 	struct crypto_shash *hmac_tfm;
- };
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index a73b0376e6f3..e65c19aae041 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -228,9 +228,9 @@ int fscrypt_prepare_symlink(struct inode *dir, const char *target,
- 	 * counting it (even though it is meaningless for ciphertext) is simpler
- 	 * for now since filesystems will assume it is there and subtract it.
- 	 */
--	if (!fscrypt_fname_encrypted_size(policy, len,
--					  max_len - sizeof(struct fscrypt_symlink_data),
--					  &disk_link->len))
-+	if (!__fscrypt_fname_encrypted_size(policy, len,
-+					    max_len - sizeof(struct fscrypt_symlink_data),
-+					    &disk_link->len))
- 		return -ENAMETOOLONG;
- 	disk_link->len += sizeof(struct fscrypt_symlink_data);
- 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index e300f6145ddc..b5c31baaa8bf 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -212,6 +212,10 @@ int fscrypt_drop_inode(struct inode *inode);
- /* fname.c */
- int fscrypt_base64_encode(const u8 *src, int len, char *dst);
- int fscrypt_base64_decode(const char *src, int len, u8 *dst);
-+bool fscrypt_fname_encrypted_size(const struct inode *inode, u32 orig_len,
-+				  u32 max_len, u32 *encrypted_len_ret);
-+int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
-+			  u8 *out, unsigned int olen);
- int fscrypt_setup_filename(struct inode *inode, const struct qstr *iname,
- 			   int lookup, struct fscrypt_name *fname);
- 
--- 
-2.29.2
-
+- Eric
