@@ -2,383 +2,155 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-16.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=unavailable
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-23.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
+	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
+	URIBL_BLOCKED,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 57BF0C43217
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 22 Jan 2021 17:56:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C6065C433E0
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 22 Jan 2021 23:27:51 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 2577023B19
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 22 Jan 2021 17:56:56 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 8C3FC23B52
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 22 Jan 2021 23:27:51 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1729283AbhAVRvZ (ORCPT
+        id S1728521AbhAVX1u (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 22 Jan 2021 12:51:25 -0500
-Received: from mail.kernel.org ([198.145.29.99]:48100 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1729498AbhAVR1Y (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 22 Jan 2021 12:27:24 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 769A923A9A;
-        Fri, 22 Jan 2021 17:26:39 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1611336399;
-        bh=1tEokNfyFasxoBx1qMykwyT98H3zjXxbGU+o59yKekI=;
-        h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
-        b=enRzpayif1D3SkCeaseoXkiIMmvhi3DtLynANBOwymMbdvVC96dRpcTvxQoS/cv1j
-         izHk0Jg1xR2WTJ+PQ51Y01NWQIlvHgGVSutZlyw0/SQf3mCl2AuoNQGsdGnLAdL0HP
-         5k9OVgKMWk7gC8hCZn+LBgAwWzmH5kNWkxVSKafKlAzNwgbMIwO/l8FQ8fnGegkggp
-         WoPD9pSYWqMiZr56U6X9XcRx5xLXevmGCTxpIRZrxmzyAVZ5HW65/fSFLKTwgot8UB
-         uoyct8b7ylsZRCeyokitclSADgbTeUa4ONhv/QtfhXRMzxPIHS85yxMm9krIPgeUtz
-         7jaj8cZ3shM/w==
-Message-ID: <48cd711c7f99e6bd52f4ba0565eb54589843ac89.camel@kernel.org>
-Subject: Re: [RFC PATCH v4 05/17] ceph: crypto context handling for ceph
-From:   Jeff Layton <jlayton@kernel.org>
-To:     Luis Henriques <lhenriques@suse.de>
-Cc:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-fsdevel@vger.kernel.org
-Date:   Fri, 22 Jan 2021 12:26:38 -0500
-In-Reply-To: <87y2gk53ft.fsf@suse.de>
-References: <20210120182847.644850-1-jlayton@kernel.org>
-         <20210120182847.644850-6-jlayton@kernel.org> <87y2gk53ft.fsf@suse.de>
-Content-Type: text/plain; charset="ISO-8859-15"
-User-Agent: Evolution 3.38.3 (3.38.3-1.fc33) 
+        Fri, 22 Jan 2021 18:27:50 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55386 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1728310AbhAVX1p (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 22 Jan 2021 18:27:45 -0500
+Received: from mail-io1-xd36.google.com (mail-io1-xd36.google.com [IPv6:2607:f8b0:4864:20::d36])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 415E9C061788
+        for <linux-fscrypt@vger.kernel.org>; Fri, 22 Jan 2021 15:27:03 -0800 (PST)
+Received: by mail-io1-xd36.google.com with SMTP id p72so14604110iod.12
+        for <linux-fscrypt@vger.kernel.org>; Fri, 22 Jan 2021 15:27:03 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=WuooQLj08FTndW6GG4FNdPUFeSvF4QeyXpQNaZQvMQU=;
+        b=YZ6nQ6FOxluHSewTFEdRxogFELFzJ61SLsAvjLFQZbuTGGMmwsF7JRUaxP7S0eEf3O
+         zi4YxhJ311FM5HaM9OKi926md/9trhVY4f8oQ2L69cHtC8SiOc/RvEONC0Brp8EzYXLW
+         lv6khpaUQGj21NLNM2haXeFieuHFHlPe5MsuHoJAAixyciIG/WrLFSbzGXn8urZA33tw
+         GkWrMip0Wro8nMmVc+kl4jfg0hBCevvC6rr682OGhXTOkMjl301uDZC7QbGb7Yz/vxMK
+         LBlL4RWfi61+hAnVPZfXrIwr9DYcO/sReuxxZfpkbORXS6rvMYifp7nAEYX563UTR1UV
+         Vw2w==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=WuooQLj08FTndW6GG4FNdPUFeSvF4QeyXpQNaZQvMQU=;
+        b=q+OPFnDGgiBsfLGphe2My8jLg3CoffuUu6m68XU9zbbjlS2J7NdMz7cLNXzyhjcQhU
+         58nh1tcrLQ53q46AeoW2gcojIjxlR3VXrMH+xffVnW+SNlFCex/N+toMTC+EDmGXWj07
+         S092HmlJlV7g3hijJd514b0APyoRJVveWCYg3bvuTg+/NC3aWawJb6JLuZmHmREDnQ6q
+         fokwxGTZEfOPzUruc0OvY9O7FO/BqUjtdHTUimshK/moV6ZKkQkGp5tq3Wu1iAjmNS/X
+         NYhSCCRt2TvYnDXGwOgbSd+iMQVbae51H+1bHOAurfT4LN8FJ3xl7crD4KBmAMrDtroA
+         22YQ==
+X-Gm-Message-State: AOAM533WASRYLzStJZaBqZkF9+lcUYLAqXGNPvW79CYlHD51v9XeUsBL
+        P07TmxYRw9aLvafdVHjYin0yEIGenitNKxZcm2lgOm6uQZI=
+X-Google-Smtp-Source: ABdhPJx2/n88EpZhF9H0QRhbuIUDjLNzHy/G5ah/y4Nn1FpXH6Y4ko0ibuQnyPTD5D1W2NrSUOQ62tixsem0o23bO4I=
+X-Received: by 2002:a92:4101:: with SMTP id o1mr174997ila.82.1611358022134;
+ Fri, 22 Jan 2021 15:27:02 -0800 (PST)
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+References: <20210115181819.34732-1-ebiggers@kernel.org>
+In-Reply-To: <20210115181819.34732-1-ebiggers@kernel.org>
+From:   Victor Hsieh <victorhsieh@google.com>
+Date:   Fri, 22 Jan 2021 15:26:48 -0800
+Message-ID: <CAFCauYN12bWRn2N+uP455KuRmz7CQkCBXnz0B2sr5kCQtpJo4A@mail.gmail.com>
+Subject: Re: [PATCH 0/6] fs-verity: add an ioctl to read verity metadata
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-api@vger.kernel.org, "Theodore Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>
+Content-Type: text/plain; charset="UTF-8"
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, 2021-01-22 at 16:41 +0000, Luis Henriques wrote:
-> Jeff Layton <jlayton@kernel.org> writes:
-> 
-> > Store the fscrypt context for an inode as an encryption.ctx xattr.
-> > When we get a new inode in a trace, set the S_ENCRYPTED bit if
-> > the xattr blob has an encryption.ctx xattr.
-> > 
-> > Signed-off-by: Jeff Layton <jlayton@kernel.org>
-> > ---
-> >  fs/ceph/Makefile |  1 +
-> >  fs/ceph/crypto.c | 42 ++++++++++++++++++++++++++++++++++++++++++
-> >  fs/ceph/crypto.h | 24 ++++++++++++++++++++++++
-> >  fs/ceph/inode.c  |  6 ++++++
-> >  fs/ceph/super.c  |  3 +++
-> >  fs/ceph/super.h  |  1 +
-> >  fs/ceph/xattr.c  | 32 ++++++++++++++++++++++++++++++++
-> >  7 files changed, 109 insertions(+)
-> >  create mode 100644 fs/ceph/crypto.c
-> >  create mode 100644 fs/ceph/crypto.h
-> > 
-> > diff --git a/fs/ceph/Makefile b/fs/ceph/Makefile
-> > index 50c635dc7f71..1f77ca04c426 100644
-> > --- a/fs/ceph/Makefile
-> > +++ b/fs/ceph/Makefile
-> > @@ -12,3 +12,4 @@ ceph-y := super.o inode.o dir.o file.o locks.o addr.o ioctl.o \
-> >  
-> > 
-> > 
-> > 
-> >  ceph-$(CONFIG_CEPH_FSCACHE) += cache.o
-> >  ceph-$(CONFIG_CEPH_FS_POSIX_ACL) += acl.o
-> > +ceph-$(CONFIG_FS_ENCRYPTION) += crypto.o
-> > diff --git a/fs/ceph/crypto.c b/fs/ceph/crypto.c
-> > new file mode 100644
-> > index 000000000000..dbe8b60fd1b0
-> > --- /dev/null
-> > +++ b/fs/ceph/crypto.c
-> > @@ -0,0 +1,42 @@
-> > +// SPDX-License-Identifier: GPL-2.0
-> > +#include <linux/ceph/ceph_debug.h>
-> > +#include <linux/xattr.h>
-> > +#include <linux/fscrypt.h>
-> > +
-> > +#include "super.h"
-> > +#include "crypto.h"
-> > +
-> > +static int ceph_crypt_get_context(struct inode *inode, void *ctx, size_t len)
-> > +{
-> > +	return __ceph_getxattr(inode, CEPH_XATTR_NAME_ENCRYPTION_CONTEXT, ctx, len);
-> > +}
-> > +
-> > +static int ceph_crypt_set_context(struct inode *inode, const void *ctx, size_t len, void *fs_data)
-> > +{
-> > +	int ret;
-> > +
-> > +	WARN_ON_ONCE(fs_data);
-> > +	ret = __ceph_setxattr(inode, CEPH_XATTR_NAME_ENCRYPTION_CONTEXT, ctx, len, XATTR_CREATE);
-> > +	if (ret == 0)
-> > +		inode_set_flags(inode, S_ENCRYPTED, S_ENCRYPTED);
-> > +	return ret;
-> > +}
-> > +
-> > +static bool ceph_crypt_empty_dir(struct inode *inode)
-> > +{
-> > +	struct ceph_inode_info *ci = ceph_inode(inode);
-> > +
-> > +	return ci->i_rsubdirs + ci->i_rfiles == 1;
-> > +}
-> 
-> This is very tricky, as this check can't really guaranty that the
-> directory is empty.  We need to make sure no other client has access to
-> this directory during the whole operation of setting policy.  Would it be
-> enough to ensure we have Fxc here?
-> 
+LGTM. Thanks!
 
-That's a good point. Yes, we probably should do just that. I'll take a
-look and see what we need as far as caps go to ensure exclusion.
+Reviewed-by: Victor Hsieh <victorhsieh@google.com>
 
-empty_dir is only called when setting the context, so we can grab cap
-refs at that point and then just check to make sure it's empty here.
-
-> > +
-> > +static struct fscrypt_operations ceph_fscrypt_ops = {
-> > +	.get_context		= ceph_crypt_get_context,
-> > +	.set_context		= ceph_crypt_set_context,
-> > +	.empty_dir		= ceph_crypt_empty_dir,
-> > +	.max_namelen		= NAME_MAX,
-> > +};
-> > +
-> > +void ceph_fscrypt_set_ops(struct super_block *sb)
-> > +{
-> > +	fscrypt_set_ops(sb, &ceph_fscrypt_ops);
-> > +}
-> > diff --git a/fs/ceph/crypto.h b/fs/ceph/crypto.h
-> > new file mode 100644
-> > index 000000000000..189bd8424284
-> > --- /dev/null
-> > +++ b/fs/ceph/crypto.h
-> > @@ -0,0 +1,24 @@
-> > +/* SPDX-License-Identifier: GPL-2.0 */
-> > +/*
-> > + * Ceph fscrypt functionality
-> > + */
-> > +
-> > +#ifndef _CEPH_CRYPTO_H
-> > +#define _CEPH_CRYPTO_H
-> > +
-> > +#include <linux/fscrypt.h>
-> > +
-> > +#define	CEPH_XATTR_NAME_ENCRYPTION_CONTEXT	"encryption.ctx"
-> > +
-> > +#ifdef CONFIG_FS_ENCRYPTION
-> > +void ceph_fscrypt_set_ops(struct super_block *sb);
-> > +
-> > +#else /* CONFIG_FS_ENCRYPTION */
-> > +
-> > +static inline void ceph_fscrypt_set_ops(struct super_block *sb)
-> > +{
-> > +}
-> > +
-> > +#endif /* CONFIG_FS_ENCRYPTION */
-> > +
-> > +#endif
-> > diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
-> > index 5d20a620e96c..d465ad48ade5 100644
-> > --- a/fs/ceph/inode.c
-> > +++ b/fs/ceph/inode.c
-> > @@ -14,10 +14,12 @@
-> >  #include <linux/random.h>
-> >  #include <linux/sort.h>
-> >  #include <linux/iversion.h>
-> > +#include <linux/fscrypt.h>
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> >  #include "super.h"
-> >  #include "mds_client.h"
-> >  #include "cache.h"
-> > +#include "crypto.h"
-> >  #include <linux/ceph/decode.h>
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> >  /*
-> > @@ -553,6 +555,7 @@ void ceph_evict_inode(struct inode *inode)
-> >  	clear_inode(inode);
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> >  	ceph_fscache_unregister_inode_cookie(ci);
-> > +	fscrypt_put_encryption_info(inode);
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> >  	__ceph_remove_caps(ci);
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > @@ -912,6 +915,9 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
-> >  		ceph_forget_all_cached_acls(inode);
-> >  		ceph_security_invalidate_secctx(inode);
-> >  		xattr_blob = NULL;
-> > +		if ((inode->i_state & I_NEW) &&
-> > +		     ceph_inode_has_xattr(ci, CEPH_XATTR_NAME_ENCRYPTION_CONTEXT))
-> > +			inode_set_flags(inode, S_ENCRYPTED, S_ENCRYPTED);
-> >  	}
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> >  	/* finally update i_version */
-> > diff --git a/fs/ceph/super.c b/fs/ceph/super.c
-> > index 9b1b7f4cfdd4..cdac6ff675e2 100644
-> > --- a/fs/ceph/super.c
-> > +++ b/fs/ceph/super.c
-> > @@ -20,6 +20,7 @@
-> >  #include "super.h"
-> >  #include "mds_client.h"
-> >  #include "cache.h"
-> > +#include "crypto.h"
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> >  #include <linux/ceph/ceph_features.h>
-> >  #include <linux/ceph/decode.h>
-> > @@ -988,6 +989,8 @@ static int ceph_set_super(struct super_block *s, struct fs_context *fc)
-> >  	s->s_time_min = 0;
-> >  	s->s_time_max = U32_MAX;
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > +	ceph_fscrypt_set_ops(s);
-> > +
-> >  	ret = set_anon_super_fc(s, fc);
-> >  	if (ret != 0)
-> >  		fsc->sb = NULL;
-> > diff --git a/fs/ceph/super.h b/fs/ceph/super.h
-> > index 13b02887b085..efe2e963c631 100644
-> > --- a/fs/ceph/super.h
-> > +++ b/fs/ceph/super.h
-> > @@ -1013,6 +1013,7 @@ extern ssize_t ceph_listxattr(struct dentry *, char *, size_t);
-> >  extern struct ceph_buffer *__ceph_build_xattrs_blob(struct ceph_inode_info *ci);
-> >  extern void __ceph_destroy_xattrs(struct ceph_inode_info *ci);
-> >  extern const struct xattr_handler *ceph_xattr_handlers[];
-> > +bool ceph_inode_has_xattr(struct ceph_inode_info *ci, const char *name);
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> >  struct ceph_acl_sec_ctx {
-> >  #ifdef CONFIG_CEPH_FS_POSIX_ACL
-> > diff --git a/fs/ceph/xattr.c b/fs/ceph/xattr.c
-> > index 24997982de01..d0d719b768e4 100644
-> > --- a/fs/ceph/xattr.c
-> > +++ b/fs/ceph/xattr.c
-> > @@ -1359,6 +1359,38 @@ void ceph_release_acl_sec_ctx(struct ceph_acl_sec_ctx *as_ctx)
-> >  		ceph_pagelist_release(as_ctx->pagelist);
-> >  }
-> >  
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > 
-> > +/* Return true if inode's xattr blob has an xattr named "name" */
-> > +bool ceph_inode_has_xattr(struct ceph_inode_info *ci, const char *name)
-> > +{
-> > +	void *p, *end;
-> > +	u32 numattr;
-> > +	size_t namelen;
-> > +
-> > +	lockdep_assert_held(&ci->i_ceph_lock);
-> > +
-> > +	if (!ci->i_xattrs.blob || ci->i_xattrs.blob->vec.iov_len <= 4)
-> > +		return false;
-> > +
-> > +	namelen = strlen(name);
-> > +	p = ci->i_xattrs.blob->vec.iov_base;
-> > +	end = p + ci->i_xattrs.blob->vec.iov_len;
-> > +	ceph_decode_32_safe(&p, end, numattr, bad);
-> > +
-> > +	while (numattr--) {
-> > +		u32 len;
-> > +
-> > +		ceph_decode_32_safe(&p, end, len, bad);
-> > +		ceph_decode_need(&p, end, len, bad);
-> > +		if (len == namelen && !memcmp(p, name, len))
-> > +			return true;
-> > +		p += len;
-> > +		ceph_decode_32_safe(&p, end, len, bad);
-> > +		ceph_decode_skip_n(&p, end, len, bad);
-> > +	}
-> > +bad:
-> > +	return false;
-> > +}
-> 
-> I wonder if it wouldn't be better have an extra flag in struct
-> ceph_inode_info instead of having to go through the xattr list every time
-> we update an inode with data from the MDS.
-> 
-
-It is ugly, I'll grant you that. A flag in ceph_inode_info won't really
-help though. We'd need some sort of flag in the inode info transmitted
-from the MDS.
-
-For now, we only call this for I_NEW inodes, but now I'm wondering if we
-need to check it every time, to ensure that everything works if you see
-the directory before another client encrypts it.
-
-We may want to extend the protocol with such a flag, but the xattr
-buffer is not usually that long. For now, I'm inclined to live with
-parsing this info each time.
-
-> > 
-> > +
-> >  /*
-> >   * List of handlers for synthetic system.* attributes. Other
-> >   * attributes are handled directly.
-> > -- 
-> > 
-> > 2.29.2
-> > 
-> 
-
--- 
-Jeff Layton <jlayton@kernel.org>
-
+On Fri, Jan 15, 2021 at 10:19 AM Eric Biggers <ebiggers@kernel.org> wrote:
+>
+> [This patchset applies to v5.11-rc3]
+>
+> Add an ioctl FS_IOC_READ_VERITY_METADATA which allows reading verity
+> metadata from a file that has fs-verity enabled, including:
+>
+> - The Merkle tree
+> - The fsverity_descriptor (not including the signature if present)
+> - The built-in signature, if present
+>
+> This ioctl has similar semantics to pread().  It is passed the type of
+> metadata to read (one of the above three), and a buffer, offset, and
+> size.  It returns the number of bytes read or an error.
+>
+> This ioctl doesn't make any assumption about where the metadata is
+> stored on-disk.  It does assume the metadata is in a stable format, but
+> that's basically already the case:
+>
+> - The Merkle tree and fsverity_descriptor are defined by how fs-verity
+>   file digests are computed; see the "File digest computation" section
+>   of Documentation/filesystems/fsverity.rst.  Technically, the way in
+>   which the levels of the tree are ordered relative to each other wasn't
+>   previously specified, but it's logical to put the root level first.
+>
+> - The built-in signature is the value passed to FS_IOC_ENABLE_VERITY.
+>
+> This ioctl is useful because it allows writing a server program that
+> takes a verity file and serves it to a client program, such that the
+> client can do its own fs-verity compatible verification of the file.
+> This only makes sense if the client doesn't trust the server and if the
+> server needs to provide the storage for the client.
+>
+> More concretely, there is interest in using this ability in Android to
+> export APK files (which are protected by fs-verity) to "protected VMs".
+> This would use Protected KVM (https://lwn.net/Articles/836693), which
+> provides an isolated execution environment without having to trust the
+> traditional "host".  A "guest" VM can boot from a signed image and
+> perform specific tasks in a minimum trusted environment using files that
+> have fs-verity enabled on the host, without trusting the host or
+> requiring that the guest has its own trusted storage.
+>
+> Technically, it would be possible to duplicate the metadata and store it
+> in separate files for serving.  However, that would be less efficient
+> and would require extra care in userspace to maintain file consistency.
+>
+> In addition to the above, the ability to read the built-in signatures is
+> useful because it allows a system that is using the in-kernel signature
+> verification to migrate to userspace signature verification.
+>
+> This patchset has been tested by new xfstests which call this new ioctl
+> via a new subcommand for the 'fsverity' program from fsverity-utils.
+>
+> Eric Biggers (6):
+>   fs-verity: factor out fsverity_get_descriptor()
+>   fs-verity: don't pass whole descriptor to fsverity_verify_signature()
+>   fs-verity: add FS_IOC_READ_VERITY_METADATA ioctl
+>   fs-verity: support reading Merkle tree with ioctl
+>   fs-verity: support reading descriptor with ioctl
+>   fs-verity: support reading signature with ioctl
+>
+>  Documentation/filesystems/fsverity.rst |  76 ++++++++++
+>  fs/ext4/ioctl.c                        |   7 +
+>  fs/f2fs/file.c                         |  11 ++
+>  fs/verity/Makefile                     |   1 +
+>  fs/verity/fsverity_private.h           |  13 +-
+>  fs/verity/open.c                       | 133 +++++++++++------
+>  fs/verity/read_metadata.c              | 195 +++++++++++++++++++++++++
+>  fs/verity/signature.c                  |  20 +--
+>  include/linux/fsverity.h               |  12 ++
+>  include/uapi/linux/fsverity.h          |  14 ++
+>  10 files changed, 417 insertions(+), 65 deletions(-)
+>  create mode 100644 fs/verity/read_metadata.c
+>
+>
+> base-commit: 7c53f6b671f4aba70ff15e1b05148b10d58c2837
+> --
+> 2.30.0
+>
