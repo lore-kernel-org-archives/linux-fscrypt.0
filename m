@@ -7,39 +7,39 @@ X-Spam-Status: No, score=-15.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS
 	autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 19720C4332B
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 24 Jan 2021 14:10:21 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A8128C433DB
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 24 Jan 2021 14:10:40 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 0250B22D3E
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 24 Jan 2021 14:10:20 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 7B96522D0A
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 24 Jan 2021 14:10:40 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1725798AbhAXOJt (ORCPT
+        id S1725910AbhAXOK0 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 24 Jan 2021 09:09:49 -0500
-Received: from mo4-p02-ob.smtp.rzone.de ([85.215.255.83]:22338 "EHLO
+        Sun, 24 Jan 2021 09:10:26 -0500
+Received: from mo4-p02-ob.smtp.rzone.de ([85.215.255.83]:21964 "EHLO
         mo4-p02-ob.smtp.rzone.de" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1725968AbhAXOJo (ORCPT
+        with ESMTP id S1725838AbhAXOJi (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 24 Jan 2021 09:09:44 -0500
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; t=1611497207;
+        Sun, 24 Jan 2021 09:09:38 -0500
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; t=1611497205;
         s=strato-dkim-0002; d=chronox.de;
         h=References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:From:
         Subject:Sender;
-        bh=zJqo8nf/jHkzH9Q6/0XyhbU/V8rrLtwyZJii/ef29vM=;
-        b=f2kW1Jhbt9M63652XWycanaxWYdh3wcDidKQUFJSNi1UyHbsPjeMiSNjbAfnowzHha
-        +fhaodTtBcVNeUZHNfRJTgSbQ7N8kbbz0jSDACP+NHerMxK+85jg+HRZ3S1ik5oSD7ak
-        mZXJZccaExfz/VqQn0KA4rJ9nj6PpZg8XCkmAd/qvZ62kKvOC+meGwIv+bAlCqhMLD/I
-        UjI4MtvjPB79+onr3Ix6/zkyqR2clmafCd90y4q81Ed/K4W76ImWob6ZXuiJ6Xr2cPvD
-        aaoZrMPrfOjOZv0qfKoWgv0pOL7Bz8Ub31AGPOwtbnfjTXkfr2JqqmbF59l5PAdVTzLY
-        CqyQ==
+        bh=Fyc0rzVotIOUtUm7++3lcJ+qWnVjlyTyBLMUYptLgRk=;
+        b=R5qniK8GEUCy+q1km8pHfRA3ZfmLr+g/RtQOxgxGrUG31E+a94HlTLQqPa4PhbvdVO
+        8IMgkD+SnbP85DqsK8rVCbHQGfM/w94dkKzhFk4vS9qZPYFJr5EoUaJFgL9czZxAOtUN
+        osKIQlZgsxcuRzuZoMdb/F1Tav/te7zODIapdp/9sJV0NhTaDRbqNAQF1poFrc0WbKqI
+        l4jR88czOkLizwOT2XCKtSF4hjGPX65aEN3X3xTiM2dcgPL2HbqmVUSS4MABFKtXJQef
+        WJYNluT5SXZsO2JRx8meWbgDBk7Q1XrcikwhafslEFpFJqm05wKiRtMEI+GHiusp+vnY
+        d6ag==
 X-RZG-AUTH: ":P2ERcEykfu11Y98lp/T7+hdri+uKZK8TKWEqNyiHySGSa9k9xmwdNnzGHXPZI/ScIzb9"
 X-RZG-CLASS-ID: mo00
 Received: from positron.chronox.de
         by smtp.strato.de (RZmta 47.12.1 DYNA|AUTH)
-        with ESMTPSA id Z04c46x0OE6leib
+        with ESMTPSA id Z04c46x0OE6jeiX
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256 bits))
         (Client did not present a certificate);
-        Sun, 24 Jan 2021 15:06:47 +0100 (CET)
+        Sun, 24 Jan 2021 15:06:45 +0100 (CET)
 From:   Stephan =?ISO-8859-1?Q?M=FCller?= <smueller@chronox.de>
 To:     herbert@gondor.apana.org.au
 Cc:     ebiggers@kernel.org, Jarkko Sakkinen <jarkko@kernel.org>,
@@ -47,9 +47,9 @@ Cc:     ebiggers@kernel.org, Jarkko Sakkinen <jarkko@kernel.org>,
         linux-crypto@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         linux-kernel@vger.kernel.org, keyrings@vger.kernel.org,
         simo@redhat.com
-Subject: [PATCH v2 1/7] crypto: Add key derivation self-test support code
-Date:   Sun, 24 Jan 2021 15:01:43 +0100
-Message-ID: <12692814.uLZWGnKmhe@positron.chronox.de>
+Subject: [PATCH v2 4/7] security: DH - remove dead code for zero padding
+Date:   Sun, 24 Jan 2021 15:03:50 +0100
+Message-ID: <2129848.iZASKD2KPV@positron.chronox.de>
 In-Reply-To: <1772794.tdWV9SEqCh@positron.chronox.de>
 References: <1772794.tdWV9SEqCh@positron.chronox.de>
 MIME-Version: 1.0
@@ -59,101 +59,84 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-As a preparation to add the key derivation implementations, the
-self-test data structure definition and the common test code is made
-available.
-
-The test framework follows the testing applied by the NIST CAVP test
-approach.
-
-The structure of the test code follows the implementations found in
-crypto/testmgr.c|h. In case the KDF implementations will be made
-available via a kernel crypto API templates, the test code is intended
-to be merged into testmgr.c|h.
+Remove the specific code that adds a zero padding that was intended
+to be invoked when the DH operation result was smaller than the
+modulus. However, this cannot occur any more these days because the
+function mpi_write_to_sgl is used in the code path that calculates the
+shared secret in dh_compute_value. This MPI service function guarantees
+that leading zeros are introduced as needed to ensure the resulting data
+is exactly as long as the modulus. This implies that the specific code
+to add zero padding is dead code which can be safely removed.
 
 Signed-off-by: Stephan Mueller <smueller@chronox.de>
 ---
- include/crypto/internal/kdf_selftest.h | 71 ++++++++++++++++++++++++++
- 1 file changed, 71 insertions(+)
- create mode 100644 include/crypto/internal/kdf_selftest.h
+ security/keys/dh.c | 25 ++++---------------------
+ 1 file changed, 4 insertions(+), 21 deletions(-)
 
-diff --git a/include/crypto/internal/kdf_selftest.h b/include/crypto/internal/kdf_selftest.h
-new file mode 100644
-index 000000000000..373fcb11f2fa
---- /dev/null
-+++ b/include/crypto/internal/kdf_selftest.h
-@@ -0,0 +1,71 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+
-+/*
-+ * Copyright (C) 2020, Stephan Mueller <smueller@chronox.de>
-+ */
-+
-+#ifndef _CRYPTO_KDF_SELFTEST_H
-+#define _CRYPTO_KDF_SELFTEST_H
-+
-+#include <crypto/hash.h>
-+#include <linux/uio.h>
-+
-+struct kdf_testvec {
-+	unsigned char *key;
-+	size_t keylen;
-+	unsigned char *ikm;
-+	size_t ikmlen;
-+	struct kvec info;
-+	unsigned char *expected;
-+	size_t expectedlen;
-+};
-+
-+static inline int
-+kdf_test(const struct kdf_testvec *test, const char *name,
-+	 int (*crypto_kdf_setkey)(struct crypto_shash *kmd,
-+				  const u8 *key, size_t keylen,
-+				  const u8 *ikm, size_t ikmlen),
-+	 int (*crypto_kdf_generate)(struct crypto_shash *kmd,
-+				    const struct kvec *info,
-+				    unsigned int info_nvec,
-+				    u8 *dst, unsigned int dlen))
-+{
-+	struct crypto_shash *kmd;
-+	int ret;
-+	u8 *buf = kzalloc(test->expectedlen, GFP_KERNEL);
-+
-+	if (!buf)
-+		return -ENOMEM;
-+
-+	kmd = crypto_alloc_shash(name, 0, 0);
-+	if (IS_ERR(kmd)) {
-+		pr_err("alg: kdf: could not allocate hash handle for %s\n",
-+		       name);
-+		kfree(buf);
-+		return -ENOMEM;
-+	}
-+
-+	ret = crypto_kdf_setkey(kmd, test->key, test->keylen,
-+				test->ikm, test->ikmlen);
-+	if (ret) {
-+		pr_err("alg: kdf: could not set key derivation key\n");
-+		goto err;
-+	}
-+
-+	ret = crypto_kdf_generate(kmd, &test->info, 1, buf, test->expectedlen);
-+	if (ret) {
-+		pr_err("alg: kdf: could not obtain key data\n");
-+		goto err;
-+	}
-+
-+	ret = memcmp(test->expected, buf, test->expectedlen);
-+	if (ret)
-+		ret = -EINVAL;
-+
-+err:
-+	crypto_free_shash(kmd);
-+	kfree(buf);
-+	return ret;
-+}
-+
-+#endif /* _CRYPTO_KDF_SELFTEST_H */
+diff --git a/security/keys/dh.c b/security/keys/dh.c
+index 1abfa70ed6e1..56e12dae4534 100644
+--- a/security/keys/dh.c
++++ b/security/keys/dh.c
+@@ -141,7 +141,7 @@ static void kdf_dealloc(struct kdf_sdesc *sdesc)
+  * 'dlen' must be a multiple of the digest size.
+  */
+ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
+-		   u8 *dst, unsigned int dlen, unsigned int zlen)
++		   u8 *dst, unsigned int dlen)
+ {
+ 	struct shash_desc *desc = &sdesc->shash;
+ 	unsigned int h = crypto_shash_digestsize(desc->tfm);
+@@ -158,22 +158,6 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
+ 		if (err)
+ 			goto err;
+ 
+-		if (zlen && h) {
+-			u8 tmpbuffer[32];
+-			size_t chunk = min_t(size_t, zlen, sizeof(tmpbuffer));
+-			memset(tmpbuffer, 0, chunk);
+-
+-			do {
+-				err = crypto_shash_update(desc, tmpbuffer,
+-							  chunk);
+-				if (err)
+-					goto err;
+-
+-				zlen -= chunk;
+-				chunk = min_t(size_t, zlen, sizeof(tmpbuffer));
+-			} while (zlen);
+-		}
+-
+ 		if (src && slen) {
+ 			err = crypto_shash_update(desc, src, slen);
+ 			if (err)
+@@ -198,7 +182,7 @@ static int kdf_ctr(struct kdf_sdesc *sdesc, const u8 *src, unsigned int slen,
+ 
+ static int keyctl_dh_compute_kdf(struct kdf_sdesc *sdesc,
+ 				 char __user *buffer, size_t buflen,
+-				 uint8_t *kbuf, size_t kbuflen, size_t lzero)
++				 uint8_t *kbuf, size_t kbuflen)
+ {
+ 	uint8_t *outbuf = NULL;
+ 	int ret;
+@@ -211,7 +195,7 @@ static int keyctl_dh_compute_kdf(struct kdf_sdesc *sdesc,
+ 		goto err;
+ 	}
+ 
+-	ret = kdf_ctr(sdesc, kbuf, kbuflen, outbuf, outbuf_len, lzero);
++	ret = kdf_ctr(sdesc, kbuf, kbuflen, outbuf, outbuf_len);
+ 	if (ret)
+ 		goto err;
+ 
+@@ -384,8 +368,7 @@ long __keyctl_dh_compute(struct keyctl_dh_params __user *params,
+ 		}
+ 
+ 		ret = keyctl_dh_compute_kdf(sdesc, buffer, buflen, outbuf,
+-					    req->dst_len + kdfcopy->otherinfolen,
+-					    outlen - req->dst_len);
++					    req->dst_len + kdfcopy->otherinfolen);
+ 	} else if (copy_to_user(buffer, outbuf, req->dst_len) == 0) {
+ 		ret = req->dst_len;
+ 	} else {
 -- 
 2.26.2
 
