@@ -2,102 +2,153 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.3 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-13.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,UNPARSEABLE_RELAY autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BBD16C43217
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Jan 2021 19:13:25 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 60F73C07EBE
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Jan 2021 19:13:26 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 96AF12079A
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Jan 2021 19:13:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 4BA3122A84
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Jan 2021 19:13:26 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1729644AbhAZFzQ (ORCPT
+        id S1726587AbhAZFy0 convert rfc822-to-8bit (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 26 Jan 2021 00:55:16 -0500
-Received: from mail.kernel.org ([198.145.29.99]:58346 "EHLO mail.kernel.org"
+        Tue, 26 Jan 2021 00:54:26 -0500
+Received: from mx2.suse.de ([195.135.220.15]:48252 "EHLO mx2.suse.de"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1726333AbhAYSmC (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 25 Jan 2021 13:42:02 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 7BE2F20758;
-        Mon, 25 Jan 2021 18:40:33 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1611600033;
-        bh=cX3hhlW1d9/YsB6hj6Qe4lavdDpm38z9XYx4ck60cDE=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=EPFhw0lNoxlrY49GsAZvAKUOpZK4XPzgwFXYyf9Rd+k8SQJZ5bb0vUMvSOXDc7mSz
-         hiCFTMXK2ywDnUr5Kxj6KYJPC88m6eLkDSDDx0MXHeblF5mz51tPmZGVwQx6PpvwdV
-         Olkqew5uV8eWaEhzUeOfXtJ+JaSUgnemaEQmVGL1dFHV19mBpx7xVJIywhWUFu2DB4
-         BJKL438zUQmalSA7Mr1L0MMtCt8pOvTkxySAwDZ89o6x3iEs5/AoPLuVQMKRzd0Ndk
-         rGJbqUqfVAnPCV2DvnFxuM1YHZgZfcguzNzJE+TYHhaCYg+qdV4teXI8WuqdoIcQPP
-         4QQDJ3u21P6KA==
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-mmc@vger.kernel.org
-Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>,
-        Ulf Hansson <ulf.hansson@linaro.org>,
-        Andy Gross <agross@kernel.org>,
-        Bjorn Andersson <bjorn.andersson@linaro.org>,
-        Adrian Hunter <adrian.hunter@intel.com>,
-        Asutosh Das <asutoshd@codeaurora.org>,
-        Rob Herring <robh+dt@kernel.org>,
-        Neeraj Soni <neersoni@codeaurora.org>,
-        Barani Muthukumaran <bmuthuku@codeaurora.org>,
-        Peng Zhou <peng.zhou@mediatek.com>,
-        Stanley Chu <stanley.chu@mediatek.com>,
-        Konrad Dybcio <konradybcio@gmail.com>,
-        Rob Herring <robh@kernel.org>
-Subject: [PATCH v6 7/9] dt-bindings: mmc: sdhci-msm: add ICE registers and clock
-Date:   Mon, 25 Jan 2021 10:38:08 -0800
-Message-Id: <20210125183810.198008-8-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.30.0
-In-Reply-To: <20210125183810.198008-1-ebiggers@kernel.org>
-References: <20210125183810.198008-1-ebiggers@kernel.org>
+        id S1727389AbhAYKQJ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 25 Jan 2021 05:16:09 -0500
+X-Virus-Scanned: by amavisd-new at test-mx.suse.de
+Received: from relay2.suse.de (unknown [195.135.221.27])
+        by mx2.suse.de (Postfix) with ESMTP id 18B10AD8C;
+        Mon, 25 Jan 2021 10:13:57 +0000 (UTC)
+Received: from localhost (brahms [local])
+        by brahms (OpenSMTPD) with ESMTPA id 2dfa81f0;
+        Mon, 25 Jan 2021 10:14:49 +0000 (UTC)
+From:   Luis Henriques <lhenriques@suse.de>
+To:     Jeff Layton <jlayton@kernel.org>
+Cc:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-fsdevel@vger.kernel.org
+Subject: Re: [RFC PATCH v4 08/17] ceph: add routine to create fscrypt
+ context prior to RPC
+References: <20210120182847.644850-1-jlayton@kernel.org>
+        <20210120182847.644850-9-jlayton@kernel.org> <87tur8532c.fsf@suse.de>
+        <d4f84211f017280cd1dd98bcdee99d11621c5d7f.camel@kernel.org>
+Date:   Mon, 25 Jan 2021 10:14:49 +0000
+In-Reply-To: <d4f84211f017280cd1dd98bcdee99d11621c5d7f.camel@kernel.org> (Jeff
+        Layton's message of "Fri, 22 Jan 2021 12:32:56 -0500")
+Message-ID: <87zh0xuxuu.fsf@suse.de>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8BIT
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+Jeff Layton <jlayton@kernel.org> writes:
 
-Document the bindings for the registers and clock for the MMC instance
-of the Inline Crypto Engine (ICE) on Snapdragon SoCs.  These bindings
-are needed in order for sdhci-msm to support inline encryption.
+> On Fri, 2021-01-22 at 16:50 +0000, Luis Henriques wrote:
+>> Jeff Layton <jlayton@kernel.org> writes:
+>> 
+>> > After pre-creating a new inode, do an fscrypt prepare on it, fetch a
+>> > new encryption context and then marshal that into the security context
+>> > to be sent along with the RPC.
+>> > 
+>> > Signed-off-by: Jeff Layton <jlayton@kernel.org>
+>> > ---
+>> >  fs/ceph/crypto.c | 61 ++++++++++++++++++++++++++++++++++++++++++++++++
+>> >  fs/ceph/crypto.h | 12 ++++++++++
+>> >  fs/ceph/inode.c  |  9 +++++--
+>> >  fs/ceph/super.h  |  3 +++
+>> >  4 files changed, 83 insertions(+), 2 deletions(-)
+>> > 
+>> > diff --git a/fs/ceph/crypto.c b/fs/ceph/crypto.c
+>> > index 879d9a0d3751..f037a4939026 100644
+>> > --- a/fs/ceph/crypto.c
+>> > +++ b/fs/ceph/crypto.c
+>> > @@ -46,3 +46,64 @@ void ceph_fscrypt_set_ops(struct super_block *sb)
+>> >  {
+>> >  	fscrypt_set_ops(sb, &ceph_fscrypt_ops);
+>> >  }
+>> > +
+>> > +int ceph_fscrypt_prepare_context(struct inode *dir, struct inode *inode,
+>> > +				 struct ceph_acl_sec_ctx *as)
+>> > +{
+>> > +	int ret, ctxsize;
+>> > +	size_t name_len;
+>> > +	char *name;
+>> > +	struct ceph_pagelist *pagelist = as->pagelist;
+>> > +	bool encrypted = false;
+>> > +
+>> > +	ret = fscrypt_prepare_new_inode(dir, inode, &encrypted);
+>> > +	if (ret)
+>> > +		return ret;
+>> > +	if (!encrypted)
+>> > +		return 0;
+>> > +
+>> > +	inode->i_flags |= S_ENCRYPTED;
+>> > +
+>> > +	ctxsize = fscrypt_context_for_new_inode(&as->fscrypt, inode);
+>> > +	if (ctxsize < 0)
+>> > +		return ctxsize;
+>> > +
+>> > +	/* marshal it in page array */
+>> > +	if (!pagelist) {
+>> > +		pagelist = ceph_pagelist_alloc(GFP_KERNEL);
+>> > +		if (!pagelist)
+>> > +			return -ENOMEM;
+>> > +		ret = ceph_pagelist_reserve(pagelist, PAGE_SIZE);
+>> > +		if (ret)
+>> > +			goto out;
+>> > +		ceph_pagelist_encode_32(pagelist, 1);
+>> > +	}
+>> > +
+>> > +	name = CEPH_XATTR_NAME_ENCRYPTION_CONTEXT;
+>> > +	name_len = strlen(name);
+>> > +	ret = ceph_pagelist_reserve(pagelist, 4 * 2 + name_len + ctxsize);
+>> > +	if (ret)
+>> > +		goto out;
+>> > +
+>> > +	if (as->pagelist) {
+>> > +		BUG_ON(pagelist->length <= sizeof(__le32));
+>> > +		if (list_is_singular(&pagelist->head)) {
+>> > +			le32_add_cpu((__le32*)pagelist->mapped_tail, 1);
+>> > +		} else {
+>> > +			struct page *page = list_first_entry(&pagelist->head,
+>> > +							     struct page, lru);
+>> > +			void *addr = kmap_atomic(page);
+>> > +			le32_add_cpu((__le32*)addr, 1);
+>> > +			kunmap_atomic(addr);
+>> > +		}
+>> > +	}
+>> > +
+>> 
+>> I've been staring at this function for a bit.  And at this point I would
+>> expect something like this:
+>> 
+>> 	} else
+>> 		as->pagelist = pagelist;
+>> 
+>> as I'm not seeing pagelist being used anywhere if it's allocated in this
+>> function.
+>> 
+>
+> It gets used near the end, in the ceph_pagelist_append calls. Once we've
+> appended the xattr, we don't need the pagelist anymore and can free it.
 
-Reviewed-by: Satya Tangirala <satyat@google.com>
-Acked-by: Rob Herring <robh@kernel.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/devicetree/bindings/mmc/sdhci-msm.txt | 3 +++
- 1 file changed, 3 insertions(+)
+Doh!  Sorry for the noise ;-)
 
-diff --git a/Documentation/devicetree/bindings/mmc/sdhci-msm.txt b/Documentation/devicetree/bindings/mmc/sdhci-msm.txt
-index 9fa8a24fbc97d..4c7fa6a4ed15c 100644
---- a/Documentation/devicetree/bindings/mmc/sdhci-msm.txt
-+++ b/Documentation/devicetree/bindings/mmc/sdhci-msm.txt
-@@ -31,10 +31,12 @@ Required properties:
- 	- SD Core register map (required for controllers earlier than msm-v5)
- 	- CQE register map (Optional, CQE support is present on SDHC instance meant
- 	                    for eMMC and version v4.2 and above)
-+	- Inline Crypto Engine register map (optional)
- - reg-names: When CQE register map is supplied, below reg-names are required
- 	- "hc" for Host controller register map
- 	- "core" for SD core register map
- 	- "cqhci" for CQE register map
-+	- "ice" for Inline Crypto Engine register map (optional)
- - interrupts: Should contain an interrupt-specifiers for the interrupts:
- 	- Host controller interrupt (required)
- - pinctrl-names: Should contain only one value - "default".
-@@ -47,6 +49,7 @@ Required properties:
- 	"xo"	- TCXO clock (optional)
- 	"cal"	- reference clock for RCLK delay calibration (optional)
- 	"sleep"	- sleep clock for RCLK delay calibration (optional)
-+	"ice" - clock for Inline Crypto Engine (optional)
- 
- - qcom,ddr-config: Certain chipsets and platforms require particular settings
- 	for the DDR_CONFIG register. Use this field to specify the register
+Cheers,
 -- 
-2.30.0
+Luis
 
+> That said, the whole way the ceph_pagelist stuff is managed is weird.
+> I'm not clear why it was done that way, and maybe we ought to rework
+> this, SELinux and ACL handling to not use them.
+>
+> I think that's a cleanup for another day.
+> -- 
+> Jeff Layton <jlayton@kernel.org>
+>
