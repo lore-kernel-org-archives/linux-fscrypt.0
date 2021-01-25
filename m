@@ -2,111 +2,66 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.3 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.3 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 03D23C433E9
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 532F9C43331
 	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Jan 2021 19:13:25 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id DAE6E22A85
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Jan 2021 19:13:24 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 26C0D22B51
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Jan 2021 19:13:25 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S2388979AbhAZFzt (ORCPT
+        id S2388950AbhAZFzZ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 26 Jan 2021 00:55:49 -0500
-Received: from mail.kernel.org ([198.145.29.99]:44852 "EHLO mail.kernel.org"
+        Tue, 26 Jan 2021 00:55:25 -0500
+Received: from mail.kernel.org ([198.145.29.99]:58350 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1732326AbhAZDPL (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 25 Jan 2021 22:15:11 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 7822722D04;
-        Tue, 26 Jan 2021 00:15:15 +0000 (UTC)
+        id S1727610AbhAYSms (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 25 Jan 2021 13:42:48 -0500
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 07A5A230FF;
+        Mon, 25 Jan 2021 18:41:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1611620115;
-        bh=yKVzEkVKDl7uInjhgl+8i9Z04rJES7ElWiONfmMl4Mo=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=ISrf7ntVaR1HaCkk9imONoomkC1u+SElTfRjwSf1IDDMurmYAOcFUZ0K0kAb+m/Rq
-         QxiKd4JbD7y9vJ4fECiChkkuNyPjYVpDUj61QH5Bu0XPZQx5Ikx+mGEyeRLvO4zSlK
-         Re7JpRpHFBPy67b0XPiMYO41MsOAEH6sHwWz60RjEBb77z4SCuSWac/fpyQIFn6hk4
-         gzNr59qhmLLrWpS/MdBkmjCx9RlnCxMS41/LcnSJ8iPy1ZAjmYuqa3aYNL4slPkyXO
-         B+4vgYC5xNY2cARbekQISsDJ0sGB9Xw82A55pEgZqM06+iBhM4JhzbJFbIGpSPX5cN
-         qhe3aeO8ePIYQ==
+        s=k20201202; t=1611600113;
+        bh=BcQjpfINfveQmERew10h4a0n6dN8EsCa5I5lsAkb6Uo=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=Qisl3plDrCd6OrPM4RX01TZ3EzRVZhIIPqBvHsMU53MkaYfxvUrLMMHNJjTnFHqBT
+         tjxUPpYruIOFMXnbKbEymBeQIUOepUclZLvugJfkFZvVa/A3ngMw7W5V4eBOAF/RDV
+         siJKR4b4zuOFcB+BSX7G4VbVlna5M+qfEwOoSkYEb3V7I7AjHuVC8Yz5iVshQ6H850
+         XQXewvlYPcHUIYFplER/X1iD3GkzAK89IibAPUjuUDLP4H9IbLKlbA13f/OGkTJNkq
+         qBqFGHMZozKrQY/hicThNo7ZOqu7H651159DR5T626+ks2I4/+SyZFE8CXknWOHxGo
+         S0AP3otBlibjw==
+Date:   Mon, 25 Jan 2021 10:41:45 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-mmc@vger.kernel.org
-Cc:     linux-arm-msm@vger.kernel.org, devicetree@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, Satya Tangirala <satyat@google.com>,
-        Ulf Hansson <ulf.hansson@linaro.org>,
-        Andy Gross <agross@kernel.org>,
-        Bjorn Andersson <bjorn.andersson@linaro.org>,
-        Adrian Hunter <adrian.hunter@intel.com>,
-        Asutosh Das <asutoshd@codeaurora.org>,
-        Rob Herring <robh+dt@kernel.org>,
-        Neeraj Soni <neersoni@codeaurora.org>,
-        Barani Muthukumaran <bmuthuku@codeaurora.org>,
-        Peng Zhou <peng.zhou@mediatek.com>,
-        Stanley Chu <stanley.chu@mediatek.com>,
-        Konrad Dybcio <konradybcio@gmail.com>
-Subject: [PATCH RESEND v6 6/9] firmware: qcom_scm: update comment for ICE-related functions
-Date:   Mon, 25 Jan 2021 16:14:53 -0800
-Message-Id: <20210126001456.382989-7-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.30.0
-In-Reply-To: <20210126001456.382989-1-ebiggers@kernel.org>
-References: <20210126001456.382989-1-ebiggers@kernel.org>
+To:     Victor Hsieh <victorhsieh@google.com>
+Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-api@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: Re: [PATCH 0/6] fs-verity: add an ioctl to read verity metadata
+Message-ID: <YA8Q6XLrLaaeMQeJ@sol.localdomain>
+References: <20210115181819.34732-1-ebiggers@kernel.org>
+ <CAFCauYN12bWRn2N+uP455KuRmz7CQkCBXnz0B2sr5kCQtpJo4A@mail.gmail.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <CAFCauYN12bWRn2N+uP455KuRmz7CQkCBXnz0B2sr5kCQtpJo4A@mail.gmail.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Jan 22, 2021 at 03:26:48PM -0800, Victor Hsieh wrote:
+> LGTM. Thanks!
+> 
+> Reviewed-by: Victor Hsieh <victorhsieh@google.com>
+> 
+> On Fri, Jan 15, 2021 at 10:19 AM Eric Biggers <ebiggers@kernel.org> wrote:
+> >
+> > [This patchset applies to v5.11-rc3]
+> >
+> > Add an ioctl FS_IOC_READ_VERITY_METADATA which allows reading verity
+> > metadata from a file that has fs-verity enabled, including:
 
-The SCM calls QCOM_SCM_ES_INVALIDATE_ICE_KEY and
-QCOM_SCM_ES_CONFIG_SET_ICE_KEY are also needed for eMMC inline
-encryption support, not just for UFS.  Update the comments accordingly.
+Thanks Victor.  Does anyone else have comments on this patchset?
 
-Reviewed-by: Satya Tangirala <satyat@google.com>
-Acked-by: Bjorn Andersson <bjorn.andersson@linaro.org>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- drivers/firmware/qcom_scm.c | 16 +++++++++++-----
- 1 file changed, 11 insertions(+), 5 deletions(-)
-
-diff --git a/drivers/firmware/qcom_scm.c b/drivers/firmware/qcom_scm.c
-index 7be48c1bec96d..f57779fc7ee93 100644
---- a/drivers/firmware/qcom_scm.c
-+++ b/drivers/firmware/qcom_scm.c
-@@ -965,8 +965,11 @@ EXPORT_SYMBOL(qcom_scm_ice_available);
-  * qcom_scm_ice_invalidate_key() - Invalidate an inline encryption key
-  * @index: the keyslot to invalidate
-  *
-- * The UFSHCI standard defines a standard way to do this, but it doesn't work on
-- * these SoCs; only this SCM call does.
-+ * The UFSHCI and eMMC standards define a standard way to do this, but it
-+ * doesn't work on these SoCs; only this SCM call does.
-+ *
-+ * It is assumed that the SoC has only one ICE instance being used, as this SCM
-+ * call doesn't specify which ICE instance the keyslot belongs to.
-  *
-  * Return: 0 on success; -errno on failure.
-  */
-@@ -995,10 +998,13 @@ EXPORT_SYMBOL(qcom_scm_ice_invalidate_key);
-  *		    units, e.g. 1 = 512 bytes, 8 = 4096 bytes, etc.
-  *
-  * Program a key into a keyslot of Qualcomm ICE (Inline Crypto Engine), where it
-- * can then be used to encrypt/decrypt UFS I/O requests inline.
-+ * can then be used to encrypt/decrypt UFS or eMMC I/O requests inline.
-+ *
-+ * The UFSHCI and eMMC standards define a standard way to do this, but it
-+ * doesn't work on these SoCs; only this SCM call does.
-  *
-- * The UFSHCI standard defines a standard way to do this, but it doesn't work on
-- * these SoCs; only this SCM call does.
-+ * It is assumed that the SoC has only one ICE instance being used, as this SCM
-+ * call doesn't specify which ICE instance the keyslot belongs to.
-  *
-  * Return: 0 on success; -errno on failure.
-  */
--- 
-2.30.0
-
+- Eric
