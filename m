@@ -2,99 +2,71 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-16.4 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-5.3 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,NICE_REPLY_A,SPF_HELO_NONE,
+	SPF_PASS,USER_AGENT_SANE_1 autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 64084C433DB
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  1 Feb 2021 18:43:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D2AB4C433E0
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  7 Feb 2021 07:47:55 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 3336764DDF
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  1 Feb 2021 18:43:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 95DC864E8B
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  7 Feb 2021 07:47:55 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233097AbhBASmn (ORCPT
+        id S229601AbhBGHry (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 1 Feb 2021 13:42:43 -0500
-Received: from mail.kernel.org ([198.145.29.99]:34616 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S233082AbhBASmk (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 1 Feb 2021 13:42:40 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 8ECDE64E2E;
-        Mon,  1 Feb 2021 18:41:59 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1612204920;
-        bh=69cyJhfV0g/b80psHE1hMu/HLzqH+eYN+aOqwwit1qw=;
-        h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
-        b=um3X1oWmo7HdwRXnoleQkOdc/CEsdpBFhIvi2LRl0JbBapmHvfKxKm30etEupj05r
-         zJaInsvZD0no5OwHJOMnhmxzoUDSAv5iE7J/a8hBGjH564IzLPXTyTmyGlGwhqEGjV
-         xuvDQwQRr3Edix8mYwTcSYgbtQsqWzqIzfY50JwHg8yyfmxgv56++Zqk3utMBngKf7
-         dFLg+KeKtCAMiiKNo1BxTG149jiBhKcNDUv2FCX5zQJmhrzSx3+HG3YX7+0FZLcjpd
-         iYL6W+75hUQbTeC8cvYe8RPWN3bKYANXqjvGrCCVgY5wEBHxbXWNoiGHBjN84n57Sd
-         UHZXxVH4SAPzQ==
-Message-ID: <6afe55b64fc517082f708a83cf2748b59f8548dc.camel@kernel.org>
-Subject: Re: [RFC PATCH v4 15/17] ceph: make d_revalidate call fscrypt
- revalidator for encrypted dentries
-From:   Jeff Layton <jlayton@kernel.org>
-To:     Luis Henriques <lhenriques@suse.de>
-Cc:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-fsdevel@vger.kernel.org
-Date:   Mon, 01 Feb 2021 13:41:58 -0500
-In-Reply-To: <87zh0nyaeo.fsf@suse.de>
-References: <20210120182847.644850-1-jlayton@kernel.org>
-         <20210120182847.644850-16-jlayton@kernel.org> <87zh0nyaeo.fsf@suse.de>
-Content-Type: text/plain; charset="ISO-8859-15"
-User-Agent: Evolution 3.38.3 (3.38.3-1.fc33) 
+        Sun, 7 Feb 2021 02:47:54 -0500
+Received: from szxga04-in.huawei.com ([45.249.212.190]:11691 "EHLO
+        szxga04-in.huawei.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S229522AbhBGHry (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 7 Feb 2021 02:47:54 -0500
+Received: from DGGEMS407-HUB.china.huawei.com (unknown [172.30.72.60])
+        by szxga04-in.huawei.com (SkyGuard) with ESMTP id 4DYLlz6xqFzlH7w;
+        Sun,  7 Feb 2021 15:45:03 +0800 (CST)
+Received: from [10.136.110.154] (10.136.110.154) by smtp.huawei.com
+ (10.3.19.207) with Microsoft SMTP Server (TLS) id 14.3.498.0; Sun, 7 Feb 2021
+ 15:46:44 +0800
+Subject: Re: [f2fs-dev] [PATCH 3/6] fs-verity: add FS_IOC_READ_VERITY_METADATA
+ ioctl
+To:     Eric Biggers <ebiggers@kernel.org>, <linux-fscrypt@vger.kernel.org>
+CC:     Theodore Ts'o <tytso@mit.edu>, <linux-api@vger.kernel.org>,
+        <linux-f2fs-devel@lists.sourceforge.net>,
+        <linux-fsdevel@vger.kernel.org>, Jaegeuk Kim <jaegeuk@kernel.org>,
+        <linux-ext4@vger.kernel.org>, Victor Hsieh <victorhsieh@google.com>
+References: <20210115181819.34732-1-ebiggers@kernel.org>
+ <20210115181819.34732-4-ebiggers@kernel.org>
+From:   Chao Yu <yuchao0@huawei.com>
+Message-ID: <107cf2f2-a6fe-57c2-d17d-57679d7c612d@huawei.com>
+Date:   Sun, 7 Feb 2021 15:46:43 +0800
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101
+ Thunderbird/52.9.1
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <20210115181819.34732-4-ebiggers@kernel.org>
+Content-Type: text/plain; charset="windows-1252"; format=flowed
+Content-Language: en-US
+Content-Transfer-Encoding: 7bit
+X-Originating-IP: [10.136.110.154]
+X-CFilter-Loop: Reflected
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, 2021-02-01 at 17:18 +0000, Luis Henriques wrote:
-> Jeff Layton <jlayton@kernel.org> writes:
-> 
-> > If we have a dentry which represents a no-key name, then we need to test
-> > whether the parent directory's encryption key has since been added.  Do
-> > that before we test anything else about the dentry.
-> > 
-> > Signed-off-by: Jeff Layton <jlayton@kernel.org>
-> > ---
-> >  fs/ceph/dir.c | 4 ++++
-> >  1 file changed, 4 insertions(+)
-> > 
-> > diff --git a/fs/ceph/dir.c b/fs/ceph/dir.c
-> > index 236c381ab6bd..cb7ff91a243a 100644
-> > --- a/fs/ceph/dir.c
-> > +++ b/fs/ceph/dir.c
-> > @@ -1726,6 +1726,10 @@ static int ceph_d_revalidate(struct dentry *dentry, unsigned int flags)
-> >  	dout("d_revalidate %p '%pd' inode %p offset 0x%llx\n", dentry,
-> >  	     dentry, inode, ceph_dentry(dentry)->offset);
-> >  
-> > 
-> > +	valid = fscrypt_d_revalidate(dentry, flags);
-> > +	if (valid <= 0)
-> > +		return valid;
-> > +
-> 
-> This one took me a while to figure out, but eventually got there.
-> Initially I was seeing this error:
-> 
-> crypt: ceph: 1 inode(s) still busy after removing key with identifier f019f4a1c5d5665675218f89fccfa3c7, including ino 1099511627791
-> 
-> and, when umounting the filesystem I would get the warning in
-> fs/dcache.c:1623.
-> 
-> Anyway, the patch below should fix it.
-> 
-> Unfortunately I didn't had a lot of time to look into the -experimental
-> branch yet.  On my TODO list for the next few days.
-> 
-> Cheers,
+Hi Eric,
 
-Well spotted! I think the better fix though is to just move the
-fscrypt_d_revalidate call up before the point where we take the parent
-reference. I'll fix that up in my tree. Thanks for tracking that down!
--- 
-Jeff Layton <jlayton@kernel.org>
+On 2021/1/16 2:18, Eric Biggers wrote:
+> +static int f2fs_ioc_read_verity_metadata(struct file *filp, unsigned long arg)
+> +{
+> +	if (!f2fs_sb_has_verity(F2FS_I_SB(file_inode(filp))))
+> +		return -EOPNOTSUPP;
 
+One case is after we update kernel image, f2fs module may no longer support
+compress algorithm which current file was compressed with, to avoid triggering
+IO with empty compress engine (struct f2fs_compress_ops pointer):
+
+It needs to add f2fs_is_compress_backend_ready() check condition here?
+
+Thanks,
+
+> +
+> +	return fsverity_ioctl_read_metadata(filp, (const void __user *)arg);
+> +}
