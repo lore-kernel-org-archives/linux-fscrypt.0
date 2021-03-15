@@ -2,82 +2,65 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-8.8 required=3.0 tests=BAYES_00,
-	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EC553C433E6
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 11 Mar 2021 15:38:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 902D9C433E0
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 15 Mar 2021 23:08:18 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id A97CB64FF5
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 11 Mar 2021 15:38:10 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 598F464F01
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 15 Mar 2021 23:08:18 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S234099AbhCKPhi (ORCPT
+        id S229838AbhCOXHq (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 11 Mar 2021 10:37:38 -0500
-Received: from outgoing-auth-1.mit.edu ([18.9.28.11]:46920 "EHLO
-        outgoing.mit.edu" rhost-flags-OK-OK-OK-FAIL) by vger.kernel.org
-        with ESMTP id S233999AbhCKPh2 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 11 Mar 2021 10:37:28 -0500
-Received: from cwcc.thunk.org (pool-72-74-133-215.bstnma.fios.verizon.net [72.74.133.215])
-        (authenticated bits=0)
-        (User authenticated as tytso@ATHENA.MIT.EDU)
-        by outgoing.mit.edu (8.14.7/8.12.4) with ESMTP id 12BFaNsx028530
-        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Thu, 11 Mar 2021 10:36:24 -0500
-Received: by cwcc.thunk.org (Postfix, from userid 15806)
-        id D0C9815C3AA0; Thu, 11 Mar 2021 10:36:23 -0500 (EST)
-Date:   Thu, 11 Mar 2021 10:36:23 -0500
-From:   "Theodore Ts'o" <tytso@mit.edu>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-fscrypt@vger.kernel.org, Yunlei He <heyunlei@hihonor.com>,
-        bintian.wang@hihonor.com, stable@vger.kernel.org
-Subject: Re: [PATCH 1/2] ext4: fix error handling in ext4_end_enable_verity()
-Message-ID: <YEo4958DZYm/21b+@mit.edu>
-References: <20210302200420.137977-1-ebiggers@kernel.org>
- <20210302200420.137977-2-ebiggers@kernel.org>
+        Mon, 15 Mar 2021 19:07:46 -0400
+Received: from mail.kernel.org ([198.145.29.99]:47510 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S230325AbhCOXH0 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 15 Mar 2021 19:07:26 -0400
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 224A964F01;
+        Mon, 15 Mar 2021 23:07:26 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1615849646;
+        bh=216nMEowzSSSHh5Fh7E+RUDl9qhqxuC/Rz+ZbSY9WYc=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=KaaGFfEykq3eS1IbHdscDAGxAysgM/veoE4wDshY7kSpz8XKNPGciXKTC081PQ/U6
+         73cPY07Mst0hw1Irq6qFvv2b3MaU81vIY0D/jSwjr6sbY15Yzf/bhzKcIGHz5KgyaR
+         ICawpolfbfMSqsiBGbUddtKrlHG7BwLAf+o3X+hNxBlEyS7Lzrf6SVrgSLOdh/R4Ty
+         cqMFe8Dw+luLnEIbtr7aoOTtdjdgrFHwkwv0wGmjcjrgMjLq8de7JbKjI/U8hr7MtI
+         PYhoT08eGnuBbBLRpJNPANLJUVHPDAGGv9lZaOE4xArcioNq56GV4q69r28aTmJ8Hx
+         mFceRlPKksF/A==
+Date:   Mon, 15 Mar 2021 16:07:24 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Boris Burkov <boris@bur.io>
+Cc:     linux-btrfs@vger.kernel.org, kernel-team@fb.com,
+        linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH v2 1/5] btrfs: add compat_flags to btrfs_inode_item
+Message-ID: <YE/orPeVtRAON9II@gmail.com>
+References: <cover.1614971203.git.boris@bur.io>
+ <f47aa729e2c15b9e3f913c4347bf24562a631772.1614971203.git.boris@bur.io>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20210302200420.137977-2-ebiggers@kernel.org>
+In-Reply-To: <f47aa729e2c15b9e3f913c4347bf24562a631772.1614971203.git.boris@bur.io>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, Mar 02, 2021 at 12:04:19PM -0800, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
+On Fri, Mar 05, 2021 at 11:26:29AM -0800, Boris Burkov wrote:
+> The tree checker currently rejects unrecognized flags when it reads
+> btrfs_inode_item. Practically, this means that adding a new flag makes
+> the change backwards incompatible if the flag is ever set on a file.
 > 
-> ext4 didn't properly clean up if verity failed to be enabled on a file:
+> Take up one of the 4 reserved u64 fields in the btrfs_inode_item as a
+> new "compat_flags". These flags are zero on inode creation in btrfs and
+> mkfs and are ignored by an older kernel, so it should be safe to use
+> them in this way.
 > 
-> - It left verity metadata (pages past EOF) in the page cache, which
->   would be exposed to userspace if the file was later extended.
-> 
-> - It didn't truncate the verity metadata at all (either from cache or
->   from disk) if an error occurred while setting the verity bit.
-> 
-> Fix these bugs by adding a call to truncate_inode_pages() and ensuring
-> that we truncate the verity metadata (both from cache and from disk) in
-> all error paths.  Also rework the code to cleanly separate the success
-> path from the error paths, which makes it much easier to understand.
-> 
-> Reported-by: Yunlei He <heyunlei@hihonor.com>
-> Fixes: c93d8f885809 ("ext4: add basic fs-verity support")
-> Cc: <stable@vger.kernel.org> # v5.4+
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> Signed-off-by: Boris Burkov <boris@bur.io>
 
-Thanks, LGTM.
+How does this interact with the RO_COMPAT filesystem flag which is also being
+added?
 
-I've applied this to the ext4 with minor adjustment; I eliminated the
-double blank line here:
-
-> +	ext4_clear_inode_state(inode, EXT4_STATE_VERITY_IN_PROGRESS);
-> +	return 0;
-> +
-> +
-> +stop_and_cleanup:
-> +	ext4_journal_stop(handle);
-     ...
-
-						- Ted
+- Eric
