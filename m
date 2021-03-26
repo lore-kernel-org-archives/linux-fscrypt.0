@@ -2,186 +2,115 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,USER_AGENT_GIT
-	autolearn=ham autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-14.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 12BCFC433E3
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 26 Mar 2021 17:33:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DCC4BC433E4
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 26 Mar 2021 17:33:14 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id DC2D961A42
+	by mail.kernel.org (Postfix) with ESMTP id B541461A43
 	for <linux-fscrypt@archiver.kernel.org>; Fri, 26 Mar 2021 17:33:14 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230253AbhCZRcn (ORCPT
+        id S230179AbhCZRcl (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 26 Mar 2021 13:32:43 -0400
-Received: from mail.kernel.org ([198.145.29.99]:48302 "EHLO mail.kernel.org"
+        Fri, 26 Mar 2021 13:32:41 -0400
+Received: from mail.kernel.org ([198.145.29.99]:48296 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S230195AbhCZRce (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        id S230114AbhCZRce (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
         Fri, 26 Mar 2021 13:32:34 -0400
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 6026961A13;
-        Fri, 26 Mar 2021 17:32:30 +0000 (UTC)
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 0E74D61999;
+        Fri, 26 Mar 2021 17:32:28 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1616779950;
-        bh=Iaj45ElCCWOZw4jfTCgJUxP8Jlh7dU/5VBQsawn972s=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=RmqlGL71PMXydkzgmzQkoJJ10BiYFYdYxLxPbQ9y+oQo4QjT0IcKl4CVcE872nXVn
-         HdU3LGGFxJJs44HjUQeiSmTo5HnXq+twxP7bTCbE4Xk9C1LgcU875tSoZB4z0oLEOg
-         IQqsQmb+Rq9zOb6pKC6/9ytJuEwCIKXkV1e1XsN9+5ab7WD8jyYyE9xAj5S0Gctwtv
-         e05B+hBR4iVbqVYWmcsL7LDNn3JK8F5rHCGPptPPzXBP+uyfbVbSN0AJpJ2a2O782U
-         PlHzHZyCbCu01Xm6hFt7+PIfpfFoldunv6oFFRR1jOqq8MqQ421nqji60WtrN/bhr2
-         Tsxb4N3GSoLMA==
+        s=k20201202; t=1616779949;
+        bh=Hzcg4uW865GDKCUyP1KJdGg/QHNyOV4bvwCKbPtkEUE=;
+        h=From:To:Cc:Subject:Date:From;
+        b=enyDiw9P0EKC6hY6H3B80L6Bx3N3JnDClFzYOh57TbBRxB5CJyCHPQsfo6p24rQoL
+         Defczp9XyxTSdvq3DfOYB141tSn+uaYm2wHbFnH4ZSsgpeh0aVrK3/h7bSF0ZAx5RH
+         7pEP7jNCjZL09Nx2IE+SdL9t2zmR+KKbP9YPlraveoeqFWIsFqE0TGv3q3jn5FT9DI
+         qBIa68/EnnnQoD8oTHUkMdn7/GTGZP998fI3cgJVkLzmDCYBkwpgnnDxdB7e/ZCzF9
+         bNJNEq8jPCA2k0qKE1VMdq6p3wkj0i+buSfkCVvYfB62CKZCOSI3fw44E6vqqdxHLX
+         v/aa3yLc/+lIw==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
-Subject: [RFC PATCH v5 02/19] fscrypt: export fscrypt_base64_encode and fscrypt_base64_decode
-Date:   Fri, 26 Mar 2021 13:32:10 -0400
-Message-Id: <20210326173227.96363-3-jlayton@kernel.org>
+Subject: [RFC PATCH v5 00/19] ceph+fscrypt: context, filename and symlink support
+Date:   Fri, 26 Mar 2021 13:32:08 -0400
+Message-Id: <20210326173227.96363-1-jlayton@kernel.org>
 X-Mailer: git-send-email 2.30.2
-In-Reply-To: <20210326173227.96363-1-jlayton@kernel.org>
-References: <20210326173227.96363-1-jlayton@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Ceph will need to base64-encode some encrypted filenames, so make
-these routines, and FSCRYPT_BASE64_CHARS available to modules.
+I haven't posted this in a while and there were some bugs shaken out of
+the last posting. This adds (partial) support for fscrypt to kcephfs,
+including crypto contexts, filenames and encrypted symlink targets. At
+this point, the xfstests quick tests that generally pass without fscrypt
+also pass with test_dummy_encryption enabled.
 
-Signed-off-by: Jeff Layton <jlayton@kernel.org>
----
- fs/crypto/fname.c       | 34 ++++++++++++++++++++++++----------
- include/linux/fscrypt.h |  5 +++++
- 2 files changed, 29 insertions(+), 10 deletions(-)
+There is one lingering bug that I'm having trouble tracking down: xfstest
+generic/477 (an open_by_handle_at test) sometimes throws a "Busy inodes
+after umount" warning. I'm narrowed down the issue a bit, but there is
+some raciness involved so I haven't quite nailed it down yet.
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 6ca7d16593ff..32b1f50433ba 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -178,10 +178,8 @@ static int fname_decrypt(const struct inode *inode,
- static const char lookup_table[65] =
- 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+,";
- 
--#define BASE64_CHARS(nbytes)	DIV_ROUND_UP((nbytes) * 4, 3)
--
- /**
-- * base64_encode() - base64-encode some bytes
-+ * fscrypt_base64_encode() - base64-encode some bytes
-  * @src: the bytes to encode
-  * @len: number of bytes to encode
-  * @dst: (output) the base64-encoded string.  Not NUL-terminated.
-@@ -191,7 +189,7 @@ static const char lookup_table[65] =
-  *
-  * Return: length of the encoded string
-  */
--static int base64_encode(const u8 *src, int len, char *dst)
-+int fscrypt_base64_encode(const u8 *src, int len, char *dst)
- {
- 	int i, bits = 0, ac = 0;
- 	char *cp = dst;
-@@ -209,8 +207,20 @@ static int base64_encode(const u8 *src, int len, char *dst)
- 		*cp++ = lookup_table[ac & 0x3f];
- 	return cp - dst;
- }
-+EXPORT_SYMBOL(fscrypt_base64_encode);
- 
--static int base64_decode(const char *src, int len, u8 *dst)
-+/**
-+ * fscrypt_base64_decode() - base64-decode some bytes
-+ * @src: the bytes to decode
-+ * @len: number of bytes to decode
-+ * @dst: (output) decoded binary data
-+ *
-+ * Decode an input string that was previously encoded using
-+ * fscrypt_base64_encode.
-+ *
-+ * Return: length of the decoded binary data
-+ */
-+int fscrypt_base64_decode(const char *src, int len, u8 *dst)
- {
- 	int i, bits = 0, ac = 0;
- 	const char *p;
-@@ -232,6 +242,7 @@ static int base64_decode(const char *src, int len, u8 *dst)
- 		return -1;
- 	return cp - dst;
- }
-+EXPORT_SYMBOL(fscrypt_base64_decode);
- 
- bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
- 				  u32 orig_len, u32 max_len,
-@@ -263,8 +274,9 @@ bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
- int fscrypt_fname_alloc_buffer(u32 max_encrypted_len,
- 			       struct fscrypt_str *crypto_str)
- {
--	const u32 max_encoded_len = BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX);
- 	u32 max_presented_len;
-+	const u32 max_encoded_len =
-+		FSCRYPT_BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX);
- 
- 	max_presented_len = max(max_encoded_len, max_encrypted_len);
- 
-@@ -342,7 +354,7 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
- 		     offsetof(struct fscrypt_nokey_name, bytes));
- 	BUILD_BUG_ON(offsetofend(struct fscrypt_nokey_name, bytes) !=
- 		     offsetof(struct fscrypt_nokey_name, sha256));
--	BUILD_BUG_ON(BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
-+	BUILD_BUG_ON(FSCRYPT_BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX) > NAME_MAX);
- 
- 	if (hash) {
- 		nokey_name.dirhash[0] = hash;
-@@ -362,7 +374,8 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
- 		       nokey_name.sha256);
- 		size = FSCRYPT_NOKEY_NAME_MAX;
- 	}
--	oname->len = base64_encode((const u8 *)&nokey_name, size, oname->name);
-+	oname->len = fscrypt_base64_encode((const u8 *)&nokey_name, size,
-+					   oname->name);
- 	return 0;
- }
- EXPORT_SYMBOL(fscrypt_fname_disk_to_usr);
-@@ -436,14 +449,15 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	 * user-supplied name
- 	 */
- 
--	if (iname->len > BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX))
-+	if (iname->len > FSCRYPT_BASE64_CHARS(FSCRYPT_NOKEY_NAME_MAX))
- 		return -ENOENT;
- 
- 	fname->crypto_buf.name = kmalloc(FSCRYPT_NOKEY_NAME_MAX, GFP_KERNEL);
- 	if (fname->crypto_buf.name == NULL)
- 		return -ENOMEM;
- 
--	ret = base64_decode(iname->name, iname->len, fname->crypto_buf.name);
-+	ret = fscrypt_base64_decode(iname->name, iname->len,
-+				    fname->crypto_buf.name);
- 	if (ret < (int)offsetof(struct fscrypt_nokey_name, bytes[1]) ||
- 	    (ret > offsetof(struct fscrypt_nokey_name, sha256) &&
- 	     ret != FSCRYPT_NOKEY_NAME_MAX)) {
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 2ea1387bb497..e300f6145ddc 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -46,6 +46,9 @@ struct fscrypt_name {
- /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
- #define FSCRYPT_SET_CONTEXT_MAX_SIZE	40
- 
-+/* Calculate worst-case base64 encoding inflation */
-+#define FSCRYPT_BASE64_CHARS(nbytes)	DIV_ROUND_UP((nbytes) * 4, 3)
-+
- #ifdef CONFIG_FS_ENCRYPTION
- /*
-  * fscrypt superblock flags
-@@ -207,6 +210,8 @@ void fscrypt_free_inode(struct inode *inode);
- int fscrypt_drop_inode(struct inode *inode);
- 
- /* fname.c */
-+int fscrypt_base64_encode(const u8 *src, int len, char *dst);
-+int fscrypt_base64_decode(const char *src, int len, u8 *dst);
- int fscrypt_setup_filename(struct inode *inode, const struct qstr *iname,
- 			   int lookup, struct fscrypt_name *fname);
- 
+This set is quite invasive. There is probably some further work to be
+done to add common code helpers and the like, but the final diffstat
+probably won't look too different.
+
+This set does not include encryption of file contents. That is turning
+out to be a bit trickier than first expected owing to the fact that the
+MDS is usually what handles truncation, and the i_size no longer
+represents the amount of data stored in the backing store. That will
+probably require an MDS change to fix, and we're still sorting out the
+details.
+
+Jeff Layton (19):
+  vfs: export new_inode_pseudo
+  fscrypt: export fscrypt_base64_encode and fscrypt_base64_decode
+  fscrypt: export fscrypt_fname_encrypt and fscrypt_fname_encrypted_size
+  fscrypt: add fscrypt_context_for_new_inode
+  ceph: crypto context handling for ceph
+  ceph: implement -o test_dummy_encryption mount option
+  ceph: preallocate inode for ops that may create one
+  ceph: add routine to create fscrypt context prior to RPC
+  ceph: make ceph_msdc_build_path use ref-walk
+  ceph: add encrypted fname handling to ceph_mdsc_build_path
+  ceph: decode alternate_name in lease info
+  ceph: send altname in MClientRequest
+  ceph: properly set DCACHE_NOKEY_NAME flag in lookup
+  ceph: make d_revalidate call fscrypt revalidator for encrypted
+    dentries
+  ceph: add helpers for converting names for userland presentation
+  ceph: add fscrypt support to ceph_fill_trace
+  ceph: add support to readdir for encrypted filenames
+  ceph: create symlinks with encrypted and base64-encoded targets
+  ceph: add fscrypt ioctls
+
+ fs/ceph/Makefile            |   1 +
+ fs/ceph/crypto.c            | 185 +++++++++++++++++++++++
+ fs/ceph/crypto.h            | 101 +++++++++++++
+ fs/ceph/dir.c               | 178 ++++++++++++++++++-----
+ fs/ceph/file.c              |  56 ++++---
+ fs/ceph/inode.c             | 255 +++++++++++++++++++++++++++++---
+ fs/ceph/ioctl.c             |  94 ++++++++++++
+ fs/ceph/mds_client.c        | 283 ++++++++++++++++++++++++++++++------
+ fs/ceph/mds_client.h        |  14 +-
+ fs/ceph/super.c             |  80 +++++++++-
+ fs/ceph/super.h             |  16 +-
+ fs/ceph/xattr.c             |  32 ++++
+ fs/crypto/fname.c           |  53 +++++--
+ fs/crypto/fscrypt_private.h |   9 +-
+ fs/crypto/hooks.c           |   6 +-
+ fs/crypto/policy.c          |  34 ++++-
+ fs/inode.c                  |   1 +
+ include/linux/fscrypt.h     |  10 ++
+ 18 files changed, 1246 insertions(+), 162 deletions(-)
+ create mode 100644 fs/ceph/crypto.c
+ create mode 100644 fs/ceph/crypto.h
+
 -- 
 2.30.2
 
