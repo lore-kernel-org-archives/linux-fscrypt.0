@@ -5,51 +5,51 @@ X-Spam-Level:
 X-Spam-Status: No, score=-18.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
 	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
 	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
-	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F3ACDC43470
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  8 Apr 2021 18:34:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 069C5C433ED
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  8 Apr 2021 18:34:07 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id C92A8610FC
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  8 Apr 2021 18:34:03 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id D59D361108
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  8 Apr 2021 18:34:06 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232832AbhDHSeO (ORCPT
+        id S232829AbhDHSeR (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 8 Apr 2021 14:34:14 -0400
-Received: from wout5-smtp.messagingengine.com ([64.147.123.21]:41111 "EHLO
+        Thu, 8 Apr 2021 14:34:17 -0400
+Received: from wout5-smtp.messagingengine.com ([64.147.123.21]:39331 "EHLO
         wout5-smtp.messagingengine.com" rhost-flags-OK-OK-OK-OK)
-        by vger.kernel.org with ESMTP id S232608AbhDHSeO (ORCPT
+        by vger.kernel.org with ESMTP id S232840AbhDHSeR (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 8 Apr 2021 14:34:14 -0400
-Received: from compute4.internal (compute4.nyi.internal [10.202.2.44])
-        by mailout.west.internal (Postfix) with ESMTP id 8088ED40;
-        Thu,  8 Apr 2021 14:34:02 -0400 (EDT)
+        Thu, 8 Apr 2021 14:34:17 -0400
+Received: from compute5.internal (compute5.nyi.internal [10.202.2.45])
+        by mailout.west.internal (Postfix) with ESMTP id 2EBFE10BE;
+        Thu,  8 Apr 2021 14:34:05 -0400 (EDT)
 Received: from mailfrontend2 ([10.202.2.163])
-  by compute4.internal (MEProxy); Thu, 08 Apr 2021 14:34:02 -0400
+  by compute5.internal (MEProxy); Thu, 08 Apr 2021 14:34:05 -0400
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bur.io; h=from
         :to:subject:date:message-id:in-reply-to:references:mime-version
-        :content-transfer-encoding; s=fm3; bh=N20CXryfB2nGoFxRclfcVkf9Fv
-        xw9P7I4zlwZ715vks=; b=NAQ7eCklW/aDM9qpkleYp5wT6L2GZyJaN9lWkX5Th1
-        DfJVzunDmJsy6wbQLnhVpXyJh6EHC1lmJrnRmWchUep5UJH+uAWN+M8mnZPKU1Oc
-        eyCGWBpdcWlX+cHZY4u8ML/UI3FPjov6kPYja6VD2aoblegaQczvZcH809a5pbd6
-        zCGQ5+SHxb2OE6AKKtTZkYaIEnVBXtSRrqyosEvEpYP+O9JSmgrlD8RIqf+JIJ7p
-        V/1RwEOShVURpfJxQeyK+fUah85OgPi8Acxst1OrB/kKLj4VJJ4LkQrGa97KlVF/
-        +ZY4Q1djfQNzctvYZoJSy7KFtNAdBaLtbApW/Nbo/dNQ==
+        :content-transfer-encoding; s=fm3; bh=PGrpzEHlWjPm+65NrdMCAJ+Dtg
+        WEAB65TQyzfNCKOtI=; b=N0ZMeZHKVgUjcho3744mVgFjPCp9rHm5AfOsQsMmdX
+        +aSraPJpxReiMErT1wJ6tAny5+28zs8muVYSV0StAi5xpOkTTjIQSGj3VQtJfs9d
+        Jw709cbncS0AcB1wj5sJvAuOKfl3eJkoYrVTc+zZvzDrMAQrV/p3ovm8613UFwQh
+        fM21mgdxVWRa9ZLwBLYc/R+Ne0Nyi4HE5Ryc7D00AEbEGAou7YPv351aD27t9Ezw
+        j6Mckl0RcU/keQrFBI6K6kD1vn6EM+feDNqPE29uC8CcxKrRztilY0ZCvBPRjCDZ
+        n8ftcyLdOHmIirtYClScytVWGM/2yWIn3eErcnkdVnNw==
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
         messagingengine.com; h=content-transfer-encoding:date:from
         :in-reply-to:message-id:mime-version:references:subject:to
         :x-me-proxy:x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=
-        fm2; bh=N20CXryfB2nGoFxRclfcVkf9Fvxw9P7I4zlwZ715vks=; b=tNwcHom/
-        cDbe9rcyuzXP5uxPAApAYcoXB9KhJnzJK5tyw2z4JQnRyatXEERqLS7xvxwK5l/a
-        ZphL2QOPLe3hPz96WmvERmgh2n2MY2hUlFWFyjsRTgkao6WdMRxpkg/EpwDppSHx
-        JtehI+jc13P5jfZ2r/3RBETKxCBlt5EH1oQ9YHwjo9QboJaV9wAi38+mWE7ROX/+
-        6Fl1HnziSFxfbS9sY3SThNoN4BHsDgJSfy096twJJyS20ImbcwXpot04Isi9Md5n
-        2r4abtqq/eKg3OvinTTxHM2MDvhbOMFbjrH7u48tC7N4mp0uJ5se7AwIrI69r0FN
-        eq2h+B+S/ocDDQ==
-X-ME-Sender: <xms:mkxvYO3pBzzoSDwCOUAdKgJCELnqHNh-DCdIwGGhksk1WVBlV7FspQ>
-    <xme:mkxvYCqEDKHjIqpiwNdI_s-OURsk7jaSKOhyO3BdjxQ3Kg59p5SLvCSwaMNXsIPIj
-    ao7Kj9UfpExmTpdq3A>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgeduledrudejledguddvkecutefuodetggdotefrod
+        fm2; bh=PGrpzEHlWjPm+65NrdMCAJ+DtgWEAB65TQyzfNCKOtI=; b=C7sShPG4
+        WJr/KyqCQ24jCiQVV0bgzsMY8tleL8bhbbAWMrGA+YCaO0RNxJLObrGPoBw60aoC
+        piAfWFh6k/f4kho8fSRFUeqfyFKuC5v7jxLOk6Ga/4HFYfVBU6i43YNmBAD7isGB
+        Ll9un8eU4c9gL6sA4cJ7/1WtQvW8OSqsyQREHJ4y5b7z2U9bOdxPNV8mHp6kEH2m
+        +v4+ja/JbsiI0oa2Lv3ZvJ5lzFm2Ha+YAEOQlC9HnRd7IB+ARalImW/goXaVthUv
+        SK5GtMRKGWEiAmu1SM+CSOWi0XyBdgJR4csI/Tp0NkP76OiRt0Iq8Xs3gyd/UyiP
+        ojFdxBVEbbGoDQ==
+X-ME-Sender: <xms:nExvYOqXG_YAwRuHz1HZRvelkmHIZvfnngxOW0O55tH5IDrLwzwkfg>
+    <xme:nExvYKf4E2W7twDpl0CNR4GmCM8dIESOctd2xihgjLFiqBV8Wr9OmltwbXTjL-zcD
+    sJsRSycQEx7iPNKlno>
+X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgeduledrudejledguddvlecutefuodetggdotefrod
     ftvfcurfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfgh
     necuuegrihhlohhuthemuceftddtnecunecujfgurhephffvufffkffojghfggfgsedtke
     ertdertddtnecuhfhrohhmpeeuohhrihhsuceuuhhrkhhovhcuoegsohhrihhssegsuhhr
@@ -57,19 +57,19 @@ X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgeduledrudejledguddvkecutefuodetgg
     evvdehtddufeeihfekgeeuheelnecukfhppedvtdejrdehfedrvdehfedrjeenucevlhhu
     shhtvghrufhiiigvpedtnecurfgrrhgrmhepmhgrihhlfhhrohhmpegsohhrihhssegsuh
     hrrdhioh
-X-ME-Proxy: <xmx:mkxvYNPolYsaWDhYUvnThqsIktkLkY-1iXKbwJ7dOObABwXXtxtc7A>
-    <xmx:mkxvYLrsKy4QgEZZYGuTeA0nSkYvvPhVjfrDkPJtTmmT5EBgG8K3yg>
-    <xmx:mkxvYIvoT9dzU8O7_9tDEsRj3mXEHzeYoXp23apEnqbtvs47uXP9eA>
-    <xmx:mkxvYG0UcuVbxZHtnxnRIjskq-jyVFTV7dxuueAr--bUXBZgs8op3g>
+X-ME-Proxy: <xmx:nExvYNoeHLSNKjeBbpV4b29CDCzVyXG8ip2Tbzfk1Iu6pmkz8iCv2w>
+    <xmx:nExvYLFMP7_lStXSTpmtu_4d2CuJ5Uv9pdcc3ZJP6hJ9JzDjQuNgEA>
+    <xmx:nExvYNvA8QWB0pBtMGdQNCgcpDOQNm_eF02e0oonouGZ4rbbUZvU-A>
+    <xmx:nExvYF3P_ug_9o3D6_LEh3NiVUw5lQKqcBopzFjWytlnabOxZ0-16A>
 Received: from localhost (unknown [207.53.253.7])
-        by mail.messagingengine.com (Postfix) with ESMTPA id E144A1080057;
-        Thu,  8 Apr 2021 14:34:01 -0400 (EDT)
+        by mail.messagingengine.com (Postfix) with ESMTPA id 70E961080064;
+        Thu,  8 Apr 2021 14:34:04 -0400 (EDT)
 From:   Boris Burkov <boris@bur.io>
 To:     linux-btrfs@vger.kernel.org, kernel-team@fb.com,
         linux-fscrypt@vger.kernel.org
-Subject: [PATCH v3 3/5] btrfs: check verity for reads of inline extents and holes
-Date:   Thu,  8 Apr 2021 11:33:54 -0700
-Message-Id: <533e9f42d156fa2bd27b28c0c62a956e3245f3b9.1617900170.git.boris@bur.io>
+Subject: [PATCH v3 5/5] btrfs: verity metadata orphan items
+Date:   Thu,  8 Apr 2021 11:33:56 -0700
+Message-Id: <73930fec9b9485787196cf06b370a3921c190f9d.1617900170.git.boris@bur.io>
 X-Mailer: git-send-email 2.30.2
 In-Reply-To: <cover.1617900170.git.boris@bur.io>
 References: <cover.1617900170.git.boris@bur.io>
@@ -79,109 +79,199 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-The majority of reads receive a verity check after the bio is complete
-as the page is marked uptodate. However, there is a class of reads which
-are handled with btrfs logic in readpage, rather than by submitting a
-bio. Specifically, these are inline extents, preallocated extents, and
-holes. Tweak readpage so that if it is going to mark such a page
-uptodate, it first checks verity on it.
+If we don't finish creating fsverity metadata for a file, or fail to
+clean up already created metadata after a failure, we could leak the
+verity items.
 
-Now if a veritied file has corruption to this class of EXTENT_DATA
-items, it will be detected at read time.
+To address this issue, we use the orphan mechanism. When we start
+enabling verity on a file, we also add an orphan item for that inode.
+When we are finished, we delete the orphan. However, if we are
+interrupted midway, the orphan will be present at mount and we can
+cleanup the half-formed verity state.
 
-There is one annoying edge case that requires checking for start <
-last_byte: if userspace reads to the end of a file with page aligned
-size and then tries to keep reading (as cat does), the buffered read
-code will try to read the page past the end of the file, and expects it
-to be filled with 0s and marked uptodate. That bogus page is not part of
-the data hashed by verity, so we have to ignore it.
+There is a possible race with a normal unlink operation: if unlink and
+verity run on the same file in parallel, it is possible for verity to
+succeed and delete the still legitimate orphan added by unlink. Then, if
+we are interrupted and mount in that state, we will never clean up the
+inode properly. This is also possible for a file created with O_TMPFILE.
+Check nlink==0 before deleting to avoid this race.
+
+A final thing to note is that this is a resurrection of using orphans to
+signal orphaned metadata that isn't the inode itself. This makes the
+comment discussing deprecating that concept a bit messy in full context.
 
 Signed-off-by: Boris Burkov <boris@bur.io>
 ---
- fs/btrfs/extent_io.c | 26 +++++++-------------------
- 1 file changed, 7 insertions(+), 19 deletions(-)
+ fs/btrfs/inode.c  | 15 ++++++--
+ fs/btrfs/verity.c | 89 +++++++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 92 insertions(+), 12 deletions(-)
 
-diff --git a/fs/btrfs/extent_io.c b/fs/btrfs/extent_io.c
-index bf784c10040b..a15f289e29e6 100644
---- a/fs/btrfs/extent_io.c
-+++ b/fs/btrfs/extent_io.c
-@@ -2202,18 +2202,6 @@ int test_range_bit(struct extent_io_tree *tree, u64 start, u64 end,
- 	return bitset;
+diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
+index 887e1ca2ed66..939893cb039d 100644
+--- a/fs/btrfs/inode.c
++++ b/fs/btrfs/inode.c
+@@ -3419,7 +3419,9 @@ int btrfs_orphan_cleanup(struct btrfs_root *root)
+ 
+ 		/*
+ 		 * If we have an inode with links, there are a couple of
+-		 * possibilities. Old kernels (before v3.12) used to create an
++		 * possibilities:
++		 *
++		 * 1. Old kernels (before v3.12) used to create an
+ 		 * orphan item for truncate indicating that there were possibly
+ 		 * extent items past i_size that needed to be deleted. In v3.12,
+ 		 * truncate was changed to update i_size in sync with the extent
+@@ -3432,13 +3434,22 @@ int btrfs_orphan_cleanup(struct btrfs_root *root)
+ 		 * slim, and it's a pain to do the truncate now, so just delete
+ 		 * the orphan item.
+ 		 *
++		 * 2. We were halfway through creating fsverity metadata for the
++		 * file. In that case, the orphan item represents incomplete
++		 * fsverity metadata which must be cleaned up with
++		 * btrfs_drop_verity_items.
++		 *
+ 		 * It's also possible that this orphan item was supposed to be
+ 		 * deleted but wasn't. The inode number may have been reused,
+ 		 * but either way, we can delete the orphan item.
+ 		 */
+ 		if (ret == -ENOENT || inode->i_nlink) {
+-			if (!ret)
++			if (!ret) {
++				ret = btrfs_drop_verity_items(BTRFS_I(inode));
+ 				iput(inode);
++				if (ret)
++					goto out;
++			}
+ 			trans = btrfs_start_transaction(root, 1);
+ 			if (IS_ERR(trans)) {
+ 				ret = PTR_ERR(trans);
+diff --git a/fs/btrfs/verity.c b/fs/btrfs/verity.c
+index 0cc9bdd876e2..b96f7d9698a8 100644
+--- a/fs/btrfs/verity.c
++++ b/fs/btrfs/verity.c
+@@ -378,6 +378,69 @@ static ssize_t read_key_bytes(struct btrfs_inode *inode, u8 key_type, u64 offset
+ 	return ret;
  }
  
--/*
-- * helper function to set a given page up to date if all the
-- * extents in the tree for that page are up to date
-- */
--static void check_page_uptodate(struct extent_io_tree *tree, struct page *page)
--{
--	u64 start = page_offset(page);
--	u64 end = start + PAGE_SIZE - 1;
--	if (test_range_bit(tree, start, end, EXTENT_UPTODATE, 1, NULL))
--		SetPageUptodate(page);
--}
--
- int free_io_failure(struct extent_io_tree *failure_tree,
- 		    struct extent_io_tree *io_tree,
- 		    struct io_failure_record *rec)
-@@ -3467,14 +3455,14 @@ int btrfs_do_readpage(struct page *page, struct extent_map **em_cached,
- 					    &cached, GFP_NOFS);
- 			unlock_extent_cached(tree, cur,
- 					     cur + iosize - 1, &cached);
--			end_page_read(page, true, cur, iosize);
-+			ret = end_page_read(page, true, cur, iosize);
- 			break;
- 		}
- 		em = __get_extent_map(inode, page, pg_offset, cur,
- 				      end - cur + 1, em_cached);
- 		if (IS_ERR_OR_NULL(em)) {
- 			unlock_extent(tree, cur, end);
--			end_page_read(page, false, cur, end + 1 - cur);
-+			ret = end_page_read(page, false, cur, end + 1 - cur);
- 			break;
- 		}
- 		extent_offset = cur - em->start;
-@@ -3555,9 +3543,10 @@ int btrfs_do_readpage(struct page *page, struct extent_map **em_cached,
- 
- 			set_extent_uptodate(tree, cur, cur + iosize - 1,
- 					    &cached, GFP_NOFS);
++static int add_orphan(struct btrfs_inode *inode)
++{
++	struct btrfs_trans_handle *trans;
++	struct btrfs_root *root = inode->root;
++	int ret = 0;
 +
- 			unlock_extent_cached(tree, cur,
- 					     cur + iosize - 1, &cached);
--			end_page_read(page, true, cur, iosize);
-+			ret = end_page_read(page, true, cur, iosize);
- 			cur = cur + iosize;
- 			pg_offset += iosize;
- 			continue;
-@@ -3565,9 +3554,8 @@ int btrfs_do_readpage(struct page *page, struct extent_map **em_cached,
- 		/* the get_extent function already copied into the page */
- 		if (test_range_bit(tree, cur, cur_end,
- 				   EXTENT_UPTODATE, 1, NULL)) {
--			check_page_uptodate(tree, page);
- 			unlock_extent(tree, cur, cur + iosize - 1);
--			end_page_read(page, true, cur, iosize);
-+			ret = end_page_read(page, true, cur, iosize);
- 			cur = cur + iosize;
- 			pg_offset += iosize;
- 			continue;
-@@ -3577,7 +3565,7 @@ int btrfs_do_readpage(struct page *page, struct extent_map **em_cached,
- 		 */
- 		if (block_start == EXTENT_MAP_INLINE) {
- 			unlock_extent(tree, cur, cur + iosize - 1);
--			end_page_read(page, false, cur, iosize);
-+			ret = end_page_read(page, false, cur, iosize);
- 			cur = cur + iosize;
- 			pg_offset += iosize;
- 			continue;
-@@ -3595,7 +3583,7 @@ int btrfs_do_readpage(struct page *page, struct extent_map **em_cached,
- 			*bio_flags = this_bio_flag;
- 		} else {
- 			unlock_extent(tree, cur, cur + iosize - 1);
--			end_page_read(page, false, cur, iosize);
-+			ret = end_page_read(page, false, cur, iosize);
- 			goto out;
- 		}
- 		cur = cur + iosize;
++	trans = btrfs_start_transaction(root, 1);
++	if (IS_ERR(trans)) {
++		ret = PTR_ERR(trans);
++		goto out;
++	}
++	ret = btrfs_orphan_add(trans, inode);
++	if (ret) {
++		btrfs_abort_transaction(trans, ret);
++		goto out;
++	}
++	btrfs_end_transaction(trans);
++
++out:
++	return ret;
++}
++
++static int del_orphan(struct btrfs_inode *inode)
++{
++	struct btrfs_trans_handle *trans;
++	struct btrfs_root *root = inode->root;
++	int ret;
++
++	if (!inode->vfs_inode.i_nlink)
++		return 0;
++
++	trans = btrfs_start_transaction(root, 1);
++	if (IS_ERR(trans))
++		return PTR_ERR(trans);
++
++	ret = btrfs_del_orphan_item(trans, root, btrfs_ino(inode));
++	if (ret) {
++		btrfs_abort_transaction(trans, ret);
++		return ret;
++	}
++
++	btrfs_end_transaction(trans);
++	return ret;
++}
++
++int btrfs_drop_verity_items(struct btrfs_inode *inode)
++{
++	int ret;
++	struct inode *ino = &inode->vfs_inode;
++	pgoff_t index;
++
++	ret = get_verity_mapping_index(ino, 0, &index);
++	if (ret)
++		return ret;
++	truncate_inode_pages(inode->vfs_inode.i_mapping, index << PAGE_SHIFT);
++
++	ret = drop_verity_items(inode, BTRFS_VERITY_DESC_ITEM_KEY);
++	if (ret)
++		return ret;
++
++	return drop_verity_items(inode, BTRFS_VERITY_MERKLE_ITEM_KEY);
++}
++
+ /*
+  * fsverity op that begins enabling verity.
+  * fsverity calls this to ask us to setup the inode for enabling.  We
+@@ -391,17 +454,13 @@ static int btrfs_begin_enable_verity(struct file *filp)
+ 	if (test_bit(BTRFS_INODE_VERITY_IN_PROGRESS, &BTRFS_I(inode)->runtime_flags))
+ 		return -EBUSY;
+ 
+-	/*
+-	 * ext4 adds the inode to the orphan list here, presumably because the
+-	 * truncate done at orphan processing time will delete partial
+-	 * measurements.  TODO: setup orphans
+-	 */
+ 	set_bit(BTRFS_INODE_VERITY_IN_PROGRESS, &BTRFS_I(inode)->runtime_flags);
+-	ret = drop_verity_items(BTRFS_I(inode), BTRFS_VERITY_DESC_ITEM_KEY);
++
++	ret = btrfs_drop_verity_items(BTRFS_I(inode));
+ 	if (ret)
+ 		goto err;
+ 
+-	ret = drop_verity_items(BTRFS_I(inode), BTRFS_VERITY_MERKLE_ITEM_KEY);
++	ret = add_orphan(BTRFS_I(inode));
+ 	if (ret)
+ 		goto err;
+ 
+@@ -428,6 +487,7 @@ static int btrfs_end_enable_verity(struct file *filp, const void *desc,
+ 	struct btrfs_root *root = BTRFS_I(inode)->root;
+ 	struct btrfs_verity_descriptor_item item;
+ 	int ret;
++	int keep_orphan = 0;
+ 
+ 	if (desc != NULL) {
+ 		/* write out the descriptor item */
+@@ -459,11 +519,20 @@ static int btrfs_end_enable_verity(struct file *filp, const void *desc,
+ 
+ out:
+ 	if (desc == NULL || ret) {
+-		/* If we failed, drop all the verity items */
+-		drop_verity_items(BTRFS_I(inode), BTRFS_VERITY_DESC_ITEM_KEY);
+-		drop_verity_items(BTRFS_I(inode), BTRFS_VERITY_MERKLE_ITEM_KEY);
++		/*
++		 * If verity failed (here or in the generic code), drop all the
++		 * verity items.
++		 */
++		keep_orphan = btrfs_drop_verity_items(BTRFS_I(inode));
+ 	} else
+ 		btrfs_set_fs_compat_ro(root->fs_info, VERITY);
++	/*
++	 * If we are handling an error, but failed to drop the verity items,
++	 * we still need the orphan.
++	 */
++	if (!keep_orphan)
++		del_orphan(BTRFS_I(inode));
++
+ 	clear_bit(BTRFS_INODE_VERITY_IN_PROGRESS, &BTRFS_I(inode)->runtime_flags);
+ 	return ret;
+ }
 -- 
 2.30.2
 
