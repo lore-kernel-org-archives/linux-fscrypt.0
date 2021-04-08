@@ -2,103 +2,146 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-13.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-18.7 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 78014C43461
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E664BC4361B
 	for <linux-fscrypt@archiver.kernel.org>; Thu,  8 Apr 2021 18:30:49 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 5C00261108
+	by mail.kernel.org (Postfix) with ESMTP id C734B61130
 	for <linux-fscrypt@archiver.kernel.org>; Thu,  8 Apr 2021 18:30:49 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233017AbhDHSa7 (ORCPT
+        id S233086AbhDHSa7 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Thu, 8 Apr 2021 14:30:59 -0400
-Received: from wout5-smtp.messagingengine.com ([64.147.123.21]:46583 "EHLO
+Received: from wout5-smtp.messagingengine.com ([64.147.123.21]:42561 "EHLO
         wout5-smtp.messagingengine.com" rhost-flags-OK-OK-OK-OK)
-        by vger.kernel.org with ESMTP id S233015AbhDHSaa (ORCPT
+        by vger.kernel.org with ESMTP id S232666AbhDHSaa (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Thu, 8 Apr 2021 14:30:30 -0400
 Received: from compute2.internal (compute2.nyi.internal [10.202.2.42])
-        by mailout.west.internal (Postfix) with ESMTP id C47E810F3;
-        Thu,  8 Apr 2021 14:30:15 -0400 (EDT)
+        by mailout.west.internal (Postfix) with ESMTP id 3FC0211F4;
+        Thu,  8 Apr 2021 14:30:18 -0400 (EDT)
 Received: from mailfrontend2 ([10.202.2.163])
-  by compute2.internal (MEProxy); Thu, 08 Apr 2021 14:30:16 -0400
+  by compute2.internal (MEProxy); Thu, 08 Apr 2021 14:30:18 -0400
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bur.io; h=from
-        :to:subject:date:message-id:mime-version
-        :content-transfer-encoding; s=fm3; bh=/AGxmyijSMKMc3ZC0YGPRqUjTA
-        bRczItbVqbeNOa+Z0=; b=ST9bxUNnDqlV/RGpdNsyh6vWedAVDo75aFEUzxs5Oc
-        HJG2WIk5K2NBk9QNwczLkQS6czzpYof3jY0NYvwzLeYLHmMG4zKqqjv0KrPPrpp/
-        BINPQYnoSlBruV7raHDEE62gkThl6rCs42e1oI7O3lRemZmP3dXqo+yurS+xpN2K
-        UIR51TONdqsM/1xJofDG4rzwDNos+HBwxmalpi0MB2OiZkWnuxd/rwJmXb0CNh/P
-        rd1n8Vpd00IDVOiBL1lkV6+5e7fnSzutzAUOBxNCZ8Ln2WieXkFTAdoRmaSQt26K
-        Pgkw8mNY4AfMdG29VfCXjFL8TLM8Bkta+Tim1B9RPqtw==
+        :to:subject:date:message-id:in-reply-to:references:mime-version
+        :content-transfer-encoding; s=fm3; bh=Mgk/B0dlPhpxiSE4tISOsRzgWo
+        gtoCcTTbyWOOFMNF4=; b=jEL90Gs5+DkRZX6ErnX93ngGfStzhqR2AwMWDK6ywC
+        raGw2Qv+4+zjcIaFGyBZutoWJdMWS6ho4R4PtLJrqqbe3nngna3E2Sp5xc8R6sDf
+        /lVWHjyy+6Ajlg5hI7MV9qD/sTXgsx17OIXiS6Y25kEwVX1df2QDj4n+nxfKiUqh
+        uBzYXKP4AAn1JfWzxhops0FeOF+LnrkyeThOkqVjJz6p2NLtQ6LoGgkhLt/bLy9U
+        UsulnUkI3Np3bLmLoA12Y/u6J2Jk5fnQAMIv0rbeIqOQZzQ9m197IUsAwbomBEPH
+        PQzwSz0NXFo+8VZiYPHp19ghxYTdOjfwctr7kO40eyMA==
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
         messagingengine.com; h=content-transfer-encoding:date:from
-        :message-id:mime-version:subject:to:x-me-proxy:x-me-proxy
-        :x-me-sender:x-me-sender:x-sasl-enc; s=fm2; bh=/AGxmyijSMKMc3ZC0
-        YGPRqUjTAbRczItbVqbeNOa+Z0=; b=o7FAPhAh6uiXdXWMXVXy+bWOT6K/yHda+
-        FPKDOY6DYJBoCKXvZVBfN3hj3088nCFviE0eAGEOYT9kTuTROLBxn6BWj/CeWIC3
-        W3zuugYm3akzWpvwtwpBUNMD8G+2aZdtCLDOHdgOIXfwZOlDjOseGGDDo+rqeVmd
-        xej2smNjIVLYCCy1Hnfc/6bzzL1/Tw9gvJmuRA/1H8i0xaeVJwwc0q9VAy74zWQa
-        jjJwJfoKz9gHWZqo9lVjufEUf4L3HotYRtTkCL8DQ6zrLcOYWCx1+gFRKa/jBktl
-        zSqnTW437HK36Hj6MUiFiQhsnFgobPIYZjNkkhfX3b8x+RAGGOdQA==
-X-ME-Sender: <xms:t0tvYIKcIOtN4nbyTnwVh1jYgl9VdqdIKZVK-RqjQA3pq1uWBv19Tg>
-    <xme:t0tvYIHwzNXNTdfhy1-cP1nd9gWIm7qG9yKb_MTqNbnzzQWcd8YDIYtrF1ZzeDjna
-    yLsQ6OAA4cHQuGx6zU>
+        :in-reply-to:message-id:mime-version:references:subject:to
+        :x-me-proxy:x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=
+        fm2; bh=Mgk/B0dlPhpxiSE4tISOsRzgWogtoCcTTbyWOOFMNF4=; b=ecYMWJmx
+        BbiOcinXe+HprRSemVoH98yROgFd9flyn0xWJ60t7XBQCmaFSPJ8bfLlnZAginEy
+        bEI9Zw2qdCLqFFwOLRGUrzaEAX6rah+YuqEvAIKmTRv2LZeP66G04S5L0ZBHR6pP
+        KAH5DI18MN9rIpR+5/Y/5fXKjtyjL6VWunij9pT3VDqJ65C3QHn0+dnCBp7wT9bZ
+        neNWCOWZNBt6pplUBTE8Mu8/Ykvxn5ZyAYWyT5XvtGEY3jzlsDT8Iv6XZ6zsk1WE
+        xKA3ZVoux1RbczS69n/7QA7EedcPsbS6FIy/mEw8Cq9Nm9FEbAqqTnbrms7aJSfU
+        hdIDGnz/xryoyg==
+X-ME-Sender: <xms:uUtvYGELHf1hSISfBZSKTr6-7sahYCxqGNyOLfAguNUpLaTe4SdDjg>
+    <xme:uUtvYHUa-cBcRMr5Ec61HwMWjQxrgvL1Td2ID6xexTVJ6PpVhuPgFsZmztv2GZhug
+    mUvIgt1mbrAn9xrqoo>
 X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgeduledrudejledguddvkecutefuodetggdotefrod
     ftvfcurfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfgh
-    necuuegrihhlohhuthemuceftddtnecunecujfgurhephffvufffkffoggfgsedtkeertd
-    ertddtnecuhfhrohhmpeeuohhrihhsuceuuhhrkhhovhcuoegsohhrihhssegsuhhrrdhi
-    oheqnecuggftrfgrthhtvghrnhepudeitdelueeijeefleffveelieefgfejjeeigeekud
-    duteefkefffeethfdvjeevnecukfhppedvtdejrdehfedrvdehfedrjeenucevlhhushht
-    vghrufhiiigvpedtnecurfgrrhgrmhepmhgrihhlfhhrohhmpegsohhrihhssegsuhhrrd
-    hioh
-X-ME-Proxy: <xmx:t0tvYFlCZ15BRd8O7r02Ck1tUhDpj_WdamLiBU7U2Xt7yep0QztTnQ>
-    <xmx:t0tvYNIiShHmHubduSyN_2oE8OZehmY8y29sXjvxPTX_SWcdotpAsw>
-    <xmx:t0tvYOaIcDybbslVMin-dqp-vB9mkPy74clrpfpdpqkGpe2y9ZFRcg>
-    <xmx:t0tvYM0cMUQWfpZemzB3-DHSVFOSiTMSpgAZGM3mMxqjc3K0xUKheQ>
+    necuuegrihhlohhuthemuceftddtnecunecujfgurhephffvufffkffojghfggfgsedtke
+    ertdertddtnecuhfhrohhmpeeuohhrihhsuceuuhhrkhhovhcuoegsohhrihhssegsuhhr
+    rdhioheqnecuggftrfgrthhtvghrnhepieeuffeuvdeiueejhfehiefgkeevudejjeejff
+    evvdehtddufeeihfekgeeuheelnecukfhppedvtdejrdehfedrvdehfedrjeenucevlhhu
+    shhtvghrufhiiigvpedunecurfgrrhgrmhepmhgrihhlfhhrohhmpegsohhrihhssegsuh
+    hrrdhioh
+X-ME-Proxy: <xmx:uUtvYAK6EckS-Ha5ZtNApOCX_k-WbJblcgTC_IbQFadzSiZul-6MWQ>
+    <xmx:uUtvYAFrZQQ3ZwBMpXb8PZQOTKspQoxsFffx3SMmkuJZt6eh0dWvYA>
+    <xmx:uUtvYMU5gbyOrLB347Dbzm4b1FSZuhxBKJBcxk-x38sfT2KEeg4DWQ>
+    <xmx:uUtvYHd1BMCIE6MP43MHNLqH98Wvu7TnLoWOQgC-dNUKwzuDfE90wQ>
 Received: from localhost (unknown [207.53.253.7])
-        by mail.messagingengine.com (Postfix) with ESMTPA id 12B6D1080054;
-        Thu,  8 Apr 2021 14:30:15 -0400 (EDT)
+        by mail.messagingengine.com (Postfix) with ESMTPA id 8F0511080054;
+        Thu,  8 Apr 2021 14:30:17 -0400 (EDT)
 From:   Boris Burkov <boris@bur.io>
 To:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@fb.com
-Subject: [PATCH v2 0/3] tests for btrfs fsverity
-Date:   Thu,  8 Apr 2021 11:30:10 -0700
-Message-Id: <cover.1617906318.git.boris@bur.io>
+Subject: [PATCH v2 2/3] generic/574: corrupt btrfs merkle tree data
+Date:   Thu,  8 Apr 2021 11:30:12 -0700
+Message-Id: <ca320cd0c8427458828cc36d5d5168bbe6b6bab2.1617906318.git.boris@bur.io>
 X-Mailer: git-send-email 2.30.2
+In-Reply-To: <cover.1617906318.git.boris@bur.io>
+References: <cover.1617906318.git.boris@bur.io>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This patchset provides tests for fsverity support in btrfs.
+generic/574 has tests for corrupting the merkle tree data stored by the
+filesystem. Since btrfs uses a different scheme for storing this data,
+the existing logic for corrupting it doesn't work out of the box. Adapt
+it to properly corrupt btrfs merkle items.
 
-It includes modifications for generic tests to pass with btrfs as well
-as new btrfs specific tests.
+Note that there is a bit of a kludge here: since btrfs_corrupt_block
+doesn't handle streaming corruption bytes from stdin (I could change
+that, but it feels like overkill for this purpose), I just read the
+first corruption byte and duplicate it for the desired length. That is
+how the test is using the interface in practice, anyway.
 
-Boris Burkov (3):
-  btrfs: test btrfs specific fsverity corruption
-  generic/574: corrupt btrfs merkle tree data
-  btrfs: test verity orphans with dmlogwrites
+This test relies on the btrfs implementation of fsverity in:
+btrfs: add compat_flags to btrfs_inode_item
+btrfs: initial fsverity support
+btrfs: check verity for reads of inline extents and holes
+btrfs: fallback to buffered io for verity files
 
- common/config       |   1 +
- common/verity       |  22 ++++-
- tests/btrfs/290     | 190 ++++++++++++++++++++++++++++++++++++++++++++
- tests/btrfs/290.out |  17 ++++
- tests/btrfs/291     | 156 ++++++++++++++++++++++++++++++++++++
- tests/btrfs/291.out |   2 +
- tests/btrfs/group   |   2 +
- 7 files changed, 388 insertions(+), 2 deletions(-)
- create mode 100755 tests/btrfs/290
- create mode 100644 tests/btrfs/290.out
- create mode 100755 tests/btrfs/291
- create mode 100644 tests/btrfs/291.out
+It also relies on the btrfs fiemap fix in:
+btrfs: return whole extents in fiemap
 
+and it relies on btrfs-corrupt-block for corruption, with the
+following btrfs-progs patches:
+btrfs-progs: corrupt generic item data with btrfs-corrupt-block
+btrfs-progs: expand corrupt_file_extent in btrfs-corrupt-block
+
+Signed-off-by: Boris Burkov <boris@bur.io>
+---
+ common/verity | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/common/verity b/common/verity
+index c0b0c55d..333526ac 100644
+--- a/common/verity
++++ b/common/verity
+@@ -3,8 +3,7 @@
+ #
+ # Functions for setting up and testing fs-verity
+ 
+-_require_scratch_verity()
+-{
++_require_scratch_verity() {
+ 	_require_scratch
+ 	_require_command "$FSVERITY_PROG" fsverity
+ 
+@@ -244,6 +243,18 @@ _fsv_scratch_corrupt_merkle_tree()
+ 		(( offset += ($(_get_filesize $file) + 65535) & ~65535 ))
+ 		_fsv_scratch_corrupt_bytes $file $offset
+ 		;;
++	btrfs)
++		ino=$(ls -i $file | awk '{print $1}')
++		sync
++		cat > $tmp.bytes
++		sz=$(_get_filesize $tmp.bytes)
++		read -n 1 byte < $tmp.bytes
++		ascii=$(printf "%d" "'$byte'")
++		_scratch_unmount
++		$BTRFS_CORRUPT_BLOCK_PROG -r 5 -I $ino,37,0 -v $ascii -o $offset -b $sz $SCRATCH_DEV
++		sync
++		_scratch_mount
++		;;
+ 	*)
+ 		_fail "_fsv_scratch_corrupt_merkle_tree() unimplemented on $FSTYP"
+ 		;;
 -- 
 2.30.2
 
