@@ -2,43 +2,43 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+X-Spam-Status: No, score=-16.2 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
-	autolearn_force=no version=3.4.0
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,UNWANTED_LANGUAGE_BODY,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 26F48C433B4
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 13 Apr 2021 17:51:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AE32BC43619
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 13 Apr 2021 17:51:03 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id F3B5E61176
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 13 Apr 2021 17:51:01 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 888B761244
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 13 Apr 2021 17:51:03 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1347401AbhDMRvV (ORCPT
+        id S1347409AbhDMRvW (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 13 Apr 2021 13:51:21 -0400
-Received: from mail.kernel.org ([198.145.29.99]:44808 "EHLO mail.kernel.org"
+        Tue, 13 Apr 2021 13:51:22 -0400
+Received: from mail.kernel.org ([198.145.29.99]:44840 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1347382AbhDMRvR (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 13 Apr 2021 13:51:17 -0400
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 5CA78613B1;
-        Tue, 13 Apr 2021 17:50:57 +0000 (UTC)
+        id S1347387AbhDMRvT (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Tue, 13 Apr 2021 13:51:19 -0400
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 764CA61176;
+        Tue, 13 Apr 2021 17:50:59 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1618336257;
-        bh=DzyMLxUXWXSOyVbtES/fB1SKyPh/5SLcvcwE6PDB+Dw=;
+        s=k20201202; t=1618336259;
+        bh=IGfSBhqNJuLT0AEirMbuDkRAXMUfw9+YQUxhg33ObyY=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=tqiwe8fFfPGA6PdT/2kD2zxhNblTN3iMkW1bwaZqladGFXr5i4jfQx5D/MGGXaRjZ
-         MXWdmBJS1ALq6nJWYHxbrSiaHVz2Zj/FgNOl+O+RNUqtYZK4/hbDBynW32A5Oe1f7l
-         qUgLeeDR5zovQWk+Nrj0TiYHYmooqeNi11a/5UNDPVrckZjGIRG70LFQjnnJRG+RuR
-         vcPIZ38f4qAAY6xMqsq4UtqMT3FIzFvcQ2HlzvPaFZ1DLXrauAV+JNzlG8Rp420Z57
-         LrIzkj+5ZmTrFqS8ts/Xq1mMAQw/83sq6sAvLtI6RcS/M9VCD4QQxEZnM2oEkQWf4F
-         qDrtNhL3vS9eQ==
+        b=sLROpoNKjAzoSyQt6ZfTCzVNEBCc0eiunXhWesP6fJUAVF//iuK84hiWypCXWfCx+
+         o8OVVvmHIA/jo+FpyQ+uAq7rGowrRXc0vgfnL8jMRtndtnlT/D2VsGlsjhUOdCQrZW
+         Lcm5ZcQ9vFrJEItUXWS9/8w3HuvNnVldqJq3fl171MIZI8X9of63MF9H6GWf2vuZh0
+         2oNlajWSZXKgyB2KAlvax2PJu+UjmE/IwfRcABU/LmS3aEE0/5sG5V4AH8F/d47OD5
+         r6ItgF9x+INec7rZ2QIqTMC57P6O/RXgNVryUY4OeBqJr4+ECNIHMGeDKyggki+iub
+         lmgTbzj3TwFNw==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         lhenriques@suse.de
-Subject: [RFC PATCH v6 06/20] ceph: implement -o test_dummy_encryption mount option
-Date:   Tue, 13 Apr 2021 13:50:38 -0400
-Message-Id: <20210413175052.163865-7-jlayton@kernel.org>
+Subject: [RFC PATCH v6 09/20] ceph: make ceph_msdc_build_path use ref-walk
+Date:   Tue, 13 Apr 2021 13:50:41 -0400
+Message-Id: <20210413175052.163865-10-jlayton@kernel.org>
 X-Mailer: git-send-email 2.30.2
 In-Reply-To: <20210413175052.163865-1-jlayton@kernel.org>
 References: <20210413175052.163865-1-jlayton@kernel.org>
@@ -48,252 +48,94 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+Encryption potentially requires allocation, at which point we'll need to
+be in a non-atomic context. Convert ceph_msdc_build_path to take dentry
+spinlocks and references instead of using rcu_read_lock to walk the
+path.
+
+This is slightly less efficient, and we may want to eventually allow
+using RCU when the leaf dentry isn't encrypted.
+
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/crypto.c |  6 ++++
- fs/ceph/crypto.h |  8 +++++
- fs/ceph/super.c  | 77 ++++++++++++++++++++++++++++++++++++++++++++++--
- fs/ceph/super.h  |  7 ++++-
- 4 files changed, 95 insertions(+), 3 deletions(-)
+ fs/ceph/mds_client.c | 35 +++++++++++++++++++----------------
+ 1 file changed, 19 insertions(+), 16 deletions(-)
 
-diff --git a/fs/ceph/crypto.c b/fs/ceph/crypto.c
-index dbe8b60fd1b0..879d9a0d3751 100644
---- a/fs/ceph/crypto.c
-+++ b/fs/ceph/crypto.c
-@@ -29,9 +29,15 @@ static bool ceph_crypt_empty_dir(struct inode *inode)
- 	return ci->i_rsubdirs + ci->i_rfiles == 1;
- }
- 
-+static const union fscrypt_policy *ceph_get_dummy_policy(struct super_block *sb)
-+{
-+	return ceph_sb_to_client(sb)->dummy_enc_policy.policy;
-+}
-+
- static struct fscrypt_operations ceph_fscrypt_ops = {
- 	.get_context		= ceph_crypt_get_context,
- 	.set_context		= ceph_crypt_set_context,
-+	.get_dummy_policy	= ceph_get_dummy_policy,
- 	.empty_dir		= ceph_crypt_empty_dir,
- 	.max_namelen		= NAME_MAX,
- };
-diff --git a/fs/ceph/crypto.h b/fs/ceph/crypto.h
-index 189bd8424284..0dd043b56096 100644
---- a/fs/ceph/crypto.h
-+++ b/fs/ceph/crypto.h
-@@ -13,12 +13,20 @@
- #ifdef CONFIG_FS_ENCRYPTION
- void ceph_fscrypt_set_ops(struct super_block *sb);
- 
-+static inline void ceph_fscrypt_free_dummy_policy(struct ceph_fs_client *fsc)
-+{
-+	fscrypt_free_dummy_policy(&fsc->dummy_enc_policy);
-+}
-+
- #else /* CONFIG_FS_ENCRYPTION */
- 
- static inline void ceph_fscrypt_set_ops(struct super_block *sb)
+diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
+index 87e379d8027a..ad0754a45811 100644
+--- a/fs/ceph/mds_client.c
++++ b/fs/ceph/mds_client.c
+@@ -2357,7 +2357,8 @@ static inline  u64 __get_oldest_tid(struct ceph_mds_client *mdsc)
+ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
+ 			   int stop_on_nosnap)
  {
- }
+-	struct dentry *temp;
++	struct dentry *cur;
++	struct inode *inode;
+ 	char *path;
+ 	int pos;
+ 	unsigned seq;
+@@ -2374,34 +2375,35 @@ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
+ 	path[pos] = '\0';
  
-+static inline void ceph_fscrypt_free_dummy_policy(struct ceph_fs_client *fsc)
-+{
-+}
- #endif /* CONFIG_FS_ENCRYPTION */
+ 	seq = read_seqbegin(&rename_lock);
+-	rcu_read_lock();
+-	temp = dentry;
++	cur = dget(dentry);
+ 	for (;;) {
+-		struct inode *inode;
++		struct dentry *temp;
  
- #endif
-diff --git a/fs/ceph/super.c b/fs/ceph/super.c
-index cdac6ff675e2..48a99da4ff97 100644
---- a/fs/ceph/super.c
-+++ b/fs/ceph/super.c
-@@ -45,6 +45,7 @@ static void ceph_put_super(struct super_block *s)
- 	struct ceph_fs_client *fsc = ceph_sb_to_client(s);
- 
- 	dout("put_super\n");
-+	ceph_fscrypt_free_dummy_policy(fsc);
- 	ceph_mdsc_close_sessions(fsc->mdsc);
- }
- 
-@@ -159,6 +160,7 @@ enum {
- 	Opt_quotadf,
- 	Opt_copyfrom,
- 	Opt_wsync,
-+	Opt_test_dummy_encryption,
- };
- 
- enum ceph_recover_session_mode {
-@@ -197,6 +199,8 @@ static const struct fs_parameter_spec ceph_mount_parameters[] = {
- 	fsparam_u32	("rsize",			Opt_rsize),
- 	fsparam_string	("snapdirname",			Opt_snapdirname),
- 	fsparam_string	("source",			Opt_source),
-+	fsparam_flag	("test_dummy_encryption",	Opt_test_dummy_encryption),
-+	fsparam_string	("test_dummy_encryption",	Opt_test_dummy_encryption),
- 	fsparam_u32	("wsize",			Opt_wsize),
- 	fsparam_flag_no	("wsync",			Opt_wsync),
- 	{}
-@@ -455,6 +459,16 @@ static int ceph_parse_mount_param(struct fs_context *fc,
- 		else
- 			fsopt->flags |= CEPH_MOUNT_OPT_ASYNC_DIROPS;
- 		break;
-+	case Opt_test_dummy_encryption:
-+#ifdef CONFIG_FS_ENCRYPTION
-+		kfree(fsopt->test_dummy_encryption);
-+		fsopt->test_dummy_encryption = param->string;
-+		param->string = NULL;
-+		fsopt->flags |= CEPH_MOUNT_OPT_TEST_DUMMY_ENC;
-+#else
-+		warnfc(fc, "FS encryption not supported: test_dummy_encryption mount option ignored");
-+#endif
-+		break;
- 	default:
- 		BUG();
- 	}
-@@ -474,6 +488,7 @@ static void destroy_mount_options(struct ceph_mount_options *args)
- 	kfree(args->mds_namespace);
- 	kfree(args->server_path);
- 	kfree(args->fscache_uniq);
-+	kfree(args->test_dummy_encryption);
- 	kfree(args);
- }
- 
-@@ -581,6 +596,8 @@ static int ceph_show_options(struct seq_file *m, struct dentry *root)
- 	if (fsopt->flags & CEPH_MOUNT_OPT_ASYNC_DIROPS)
- 		seq_puts(m, ",nowsync");
- 
-+	fscrypt_show_test_dummy_encryption(m, ',', root->d_sb);
-+
- 	if (fsopt->wsize != CEPH_MAX_WRITE_SIZE)
- 		seq_printf(m, ",wsize=%u", fsopt->wsize);
- 	if (fsopt->rsize != CEPH_MAX_READ_SIZE)
-@@ -916,6 +933,52 @@ static struct dentry *open_root_dentry(struct ceph_fs_client *fsc,
- 	return root;
- }
- 
-+#ifdef CONFIG_FS_ENCRYPTION
-+static int ceph_set_test_dummy_encryption(struct super_block *sb, struct fs_context *fc,
-+						struct ceph_mount_options *fsopt)
-+{
-+	struct ceph_fs_client *fsc = sb->s_fs_info;
-+
-+	/*
-+	 * No changing encryption context on remount. Note that
-+	 * fscrypt_set_test_dummy_encryption will validate the version
-+	 * string passed in (if any).
-+	 */
-+	if (fsopt->flags & CEPH_MOUNT_OPT_TEST_DUMMY_ENC) {
-+		int err = 0;
-+
-+		if (fc->purpose == FS_CONTEXT_FOR_RECONFIGURE && !fsc->dummy_enc_policy.policy) {
-+			errorfc(fc, "Can't set test_dummy_encryption on remount");
-+			return -EEXIST;
-+		}
-+
-+		err = fscrypt_set_test_dummy_encryption(sb,
-+							fsc->mount_options->test_dummy_encryption,
-+							&fsc->dummy_enc_policy);
-+		if (err) {
-+			if (err == -EEXIST)
-+				errorfc(fc, "Can't change test_dummy_encryption on remount");
-+			else if (err == -EINVAL)
-+				errorfc(fc, "Value of option \"%s\" is unrecognized",
-+					fsc->mount_options->test_dummy_encryption);
-+			else
-+				errorfc(fc, "Error processing option \"%s\" [%d]",
-+					fsc->mount_options->test_dummy_encryption, err);
-+			return err;
-+		}
-+		warnfc(fc, "test_dummy_encryption mode enabled");
-+	}
-+	return 0;
-+}
-+#else
-+static inline int ceph_set_test_dummy_encryption(struct super_block *sb, struct fs_context *fc,
-+						struct ceph_mount_options *fsopt)
-+{
-+	warnfc(fc, "test_dummy_encryption mode ignored");
-+	return 0;
-+}
-+#endif
-+
- /*
-  * mount: join the ceph cluster, and open root directory.
-  */
-@@ -944,6 +1007,10 @@ static struct dentry *ceph_real_mount(struct ceph_fs_client *fsc,
- 				goto out;
+-		spin_lock(&temp->d_lock);
+-		inode = d_inode(temp);
++		spin_lock(&cur->d_lock);
++		inode = d_inode(cur);
+ 		if (inode && ceph_snap(inode) == CEPH_SNAPDIR) {
+ 			dout("build_path path+%d: %p SNAPDIR\n",
+-			     pos, temp);
+-		} else if (stop_on_nosnap && inode && dentry != temp &&
++			     pos, cur);
++		} else if (stop_on_nosnap && inode && dentry != cur &&
+ 			   ceph_snap(inode) == CEPH_NOSNAP) {
+-			spin_unlock(&temp->d_lock);
++			spin_unlock(&cur->d_lock);
+ 			pos++; /* get rid of any prepended '/' */
+ 			break;
+ 		} else {
+-			pos -= temp->d_name.len;
++			pos -= cur->d_name.len;
+ 			if (pos < 0) {
+-				spin_unlock(&temp->d_lock);
++				spin_unlock(&cur->d_lock);
+ 				break;
+ 			}
+-			memcpy(path + pos, temp->d_name.name, temp->d_name.len);
++			memcpy(path + pos, cur->d_name.name, cur->d_name.len);
  		}
++		temp = cur;
+ 		spin_unlock(&temp->d_lock);
+-		temp = READ_ONCE(temp->d_parent);
++		cur = dget_parent(temp);
++		dput(temp);
  
-+		err = ceph_set_test_dummy_encryption(fsc->sb, fc, fsc->mount_options);
-+		if (err)
-+			goto out;
-+
- 		dout("mount opening path '%s'\n", path);
+ 		/* Are we at the root? */
+-		if (IS_ROOT(temp))
++		if (IS_ROOT(cur))
+ 			break;
  
- 		ceph_fs_debugfs_init(fsc);
-@@ -1138,16 +1205,22 @@ static void ceph_free_fc(struct fs_context *fc)
+ 		/* Are we out of buffer? */
+@@ -2410,8 +2412,9 @@ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
  
- static int ceph_reconfigure_fc(struct fs_context *fc)
- {
-+	int err;
- 	struct ceph_parse_opts_ctx *pctx = fc->fs_private;
- 	struct ceph_mount_options *fsopt = pctx->opts;
--	struct ceph_fs_client *fsc = ceph_sb_to_client(fc->root->d_sb);
-+	struct super_block *sb = fc->root->d_sb;
-+	struct ceph_fs_client *fsc = ceph_sb_to_client(sb);
-+
-+	err = ceph_set_test_dummy_encryption(sb, fc, fsopt);
-+	if (err)
-+		return err;
+ 		path[pos] = '/';
+ 	}
+-	base = ceph_ino(d_inode(temp));
+-	rcu_read_unlock();
++	inode = d_inode(cur);
++	base = inode ? ceph_ino(inode) : 0;
++	dput(cur);
  
- 	if (fsopt->flags & CEPH_MOUNT_OPT_ASYNC_DIROPS)
- 		ceph_set_mount_opt(fsc, ASYNC_DIROPS);
- 	else
- 		ceph_clear_mount_opt(fsc, ASYNC_DIROPS);
- 
--	sync_filesystem(fc->root->d_sb);
-+	sync_filesystem(sb);
- 	return 0;
- }
- 
-diff --git a/fs/ceph/super.h b/fs/ceph/super.h
-index 0fa2ea9a8907..ed2929f20258 100644
---- a/fs/ceph/super.h
-+++ b/fs/ceph/super.h
-@@ -17,6 +17,7 @@
- #include <linux/posix_acl.h>
- #include <linux/refcount.h>
- #include <linux/security.h>
-+#include <linux/fscrypt.h>
- 
- #include <linux/ceph/libceph.h>
- 
-@@ -45,6 +46,7 @@
- #define CEPH_MOUNT_OPT_NOQUOTADF       (1<<13) /* no root dir quota in statfs */
- #define CEPH_MOUNT_OPT_NOCOPYFROM      (1<<14) /* don't use RADOS 'copy-from' op */
- #define CEPH_MOUNT_OPT_ASYNC_DIROPS    (1<<15) /* allow async directory ops */
-+#define CEPH_MOUNT_OPT_TEST_DUMMY_ENC  (1<<16) /* enable dummy encryption (for testing) */
- 
- #define CEPH_MOUNT_OPT_DEFAULT			\
- 	(CEPH_MOUNT_OPT_DCACHE |		\
-@@ -97,6 +99,7 @@ struct ceph_mount_options {
- 	char *mds_namespace;  /* default NULL */
- 	char *server_path;    /* default NULL (means "/") */
- 	char *fscache_uniq;   /* default NULL */
-+	char *test_dummy_encryption;	/* default NULL */
- };
- 
- struct ceph_fs_client {
-@@ -136,9 +139,11 @@ struct ceph_fs_client {
- #ifdef CONFIG_CEPH_FSCACHE
- 	struct fscache_cookie *fscache;
- #endif
-+#ifdef CONFIG_FS_ENCRYPTION
-+	struct fscrypt_dummy_policy dummy_enc_policy;
-+#endif
- };
- 
--
- /*
-  * File i/o capability.  This tracks shared state with the metadata
-  * server that allows us to cache or writeback attributes or to read
+ 	if (read_seqretry(&rename_lock, seq))
+ 		goto retry;
 -- 
 2.30.2
 
