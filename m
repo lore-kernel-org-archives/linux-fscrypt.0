@@ -2,141 +2,70 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_NONE,USER_AGENT_GIT autolearn=ham
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-14.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
+	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D0405C4361B
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 13 Apr 2021 17:51:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C661CC433ED
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 16 Apr 2021 16:06:53 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id AF0A2613C4
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 13 Apr 2021 17:51:20 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id A331E610CE
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 16 Apr 2021 16:06:53 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1347414AbhDMRvj (ORCPT
+        id S236004AbhDPQHS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 13 Apr 2021 13:51:39 -0400
-Received: from mail.kernel.org ([198.145.29.99]:44992 "EHLO mail.kernel.org"
+        Fri, 16 Apr 2021 12:07:18 -0400
+Received: from mail.kernel.org ([198.145.29.99]:37386 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S1347438AbhDMRv1 (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 13 Apr 2021 13:51:27 -0400
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 34DE0613B6;
-        Tue, 13 Apr 2021 17:51:06 +0000 (UTC)
+        id S239183AbhDPQHQ (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 16 Apr 2021 12:07:16 -0400
+Received: by mail.kernel.org (Postfix) with ESMTPSA id D17BB610CE;
+        Fri, 16 Apr 2021 16:06:49 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1618336266;
-        bh=jcDrx7LLRF97mNKTEOYiMBgIjq7/ymJfyMoNF9m9bl0=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=ZJmqbaO5DHihf5MpdRYfSQnbXyibXDnohdbSP1AcH8hOW2scxcaWXQbuBwE5UeiKD
-         BMB+uxiW0MfrODNeZyvhSUaWWXjbvo8zkUvv1x9z4m+k5cSe/WAkwNAtdwFyJfWZzG
-         UsFbeejeoSA0U6X4cBxQ50nW31fQHkBgz9XGFOAC9wDlN5dFQHEhp/o8WJSvv+/YGT
-         n1VK0v6doMTZawkPdHt9dtPw/oJHm1ohElsqsXT5v6F/A1GBRz3GV9u48hFZlu9NzG
-         yJq/ACKeAYOgp4W4Ek2FxsfQE71STmvQUldOq/AqNywNwF7peS78HTsn3MFTkt43ir
-         61P7GErVw2HEg==
-From:   Jeff Layton <jlayton@kernel.org>
-To:     ceph-devel@vger.kernel.org
-Cc:     linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        lhenriques@suse.de
-Subject: [RFC PATCH v6 19/20] ceph: make ceph_get_name decrypt filenames
-Date:   Tue, 13 Apr 2021 13:50:51 -0400
-Message-Id: <20210413175052.163865-20-jlayton@kernel.org>
+        s=k20201202; t=1618589211;
+        bh=QhhTe94UVXIibH2YT5/uSfIRE2SEU5NWxlBL3mp1hV4=;
+        h=From:To:Cc:Subject:Date:From;
+        b=C3kkRIi49HfTy4AUZDL1kWyukCikVlY7+skcTGYcfGhTy7G+67MQMTvHw0QU2E2f2
+         zb4xMg8rw4J4qy1aN/viJfnW6p75DFn9b1zGitVcCiCq8uVW4ORYj9dY3J8FUDeZnj
+         fTjjdPFLYbX6goMwsO8WZMxRHwTI+Ewfi5AWQDfr1NlG0XRJr7DCy05qXfMZP9Pjx4
+         KX8XbcqbGtBRf9yrgQ8fvCWzgpvLMopgk07nXpBI/an3Vfjyc8+3KcclZHonJkip/m
+         rHaaE7WW+RAkcEOrGWs9+M01BQXcsnNkNpI55adglXA952F84/na7DUdEbUPSfXXgg
+         Wy6qMtQ/dKHoQ==
+From:   Ard Biesheuvel <ardb@kernel.org>
+To:     linux-crypto@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org, Ard Biesheuvel <ardb@kernel.org>,
+        "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH 0/2] relax crypto Kconfig dependencies for fsverity/fscrypt
+Date:   Fri, 16 Apr 2021 18:06:40 +0200
+Message-Id: <20210416160642.85387-1-ardb@kernel.org>
 X-Mailer: git-send-email 2.30.2
-In-Reply-To: <20210413175052.163865-1-jlayton@kernel.org>
-References: <20210413175052.163865-1-jlayton@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-When we do a lookupino to the MDS, we get a filename in the trace.
-ceph_get_name uses that name directly, so we must properly decrypt
-it before copying it to the name buffer.
+Relax 'select' dependencies to 'imply' for crypto algorithms that are
+fulfilled only at runtime, and which may be implemented by other drivers
+than the generic ones implemented in C. This permits, e.g., arm64 builds
+to omit the generic CRYPTO_SHA256 and CRYPTO_AES drivers, both of which
+are superseded by optimized scalar versions at the very least,
 
-Signed-off-by: Jeff Layton <jlayton@kernel.org>
----
- fs/ceph/export.c | 42 +++++++++++++++++++++++++++++++-----------
- 1 file changed, 31 insertions(+), 11 deletions(-)
+Cc: "Theodore Y. Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: Eric Biggers <ebiggers@kernel.org>
 
-diff --git a/fs/ceph/export.c b/fs/ceph/export.c
-index 65540a4429b2..c81af82568fd 100644
---- a/fs/ceph/export.c
-+++ b/fs/ceph/export.c
-@@ -7,6 +7,7 @@
- 
- #include "super.h"
- #include "mds_client.h"
-+#include "crypto.h"
- 
- /*
-  * Basic fh
-@@ -524,7 +525,9 @@ static int ceph_get_name(struct dentry *parent, char *name,
- {
- 	struct ceph_mds_client *mdsc;
- 	struct ceph_mds_request *req;
-+	struct inode *dir = d_inode(parent);
- 	struct inode *inode = d_inode(child);
-+	struct ceph_mds_reply_info_parsed *rinfo;
- 	int err;
- 
- 	if (ceph_snap(inode) != CEPH_NOSNAP)
-@@ -536,29 +539,46 @@ static int ceph_get_name(struct dentry *parent, char *name,
- 	if (IS_ERR(req))
- 		return PTR_ERR(req);
- 
--	inode_lock(d_inode(parent));
--
-+	inode_lock(dir);
- 	req->r_inode = inode;
- 	ihold(inode);
- 	req->r_ino2 = ceph_vino(d_inode(parent));
--	req->r_parent = d_inode(parent);
-+	req->r_parent = dir;
- 	set_bit(CEPH_MDS_R_PARENT_LOCKED, &req->r_req_flags);
- 	req->r_num_caps = 2;
- 	err = ceph_mdsc_do_request(mdsc, NULL, req);
-+	inode_unlock(dir);
- 
--	inode_unlock(d_inode(parent));
-+	if (err)
-+		goto out;
- 
--	if (!err) {
--		struct ceph_mds_reply_info_parsed *rinfo = &req->r_reply_info;
-+	rinfo = &req->r_reply_info;
-+	if (!IS_ENCRYPTED(dir)) {
- 		memcpy(name, rinfo->dname, rinfo->dname_len);
- 		name[rinfo->dname_len] = 0;
--		dout("get_name %p ino %llx.%llx name %s\n",
--		     child, ceph_vinop(inode), name);
- 	} else {
--		dout("get_name %p ino %llx.%llx err %d\n",
--		     child, ceph_vinop(inode), err);
--	}
-+		struct fscrypt_str oname = FSTR_INIT(NULL, 0);
-+		struct ceph_fname fname = { .dir	= dir,
-+					    .name	= rinfo->dname,
-+					    .ctext	= rinfo->altname,
-+					    .name_len	= rinfo->dname_len,
-+					    .ctext_len	= rinfo->altname_len };
-+
-+		err = ceph_fname_alloc_buffer(dir, &oname);
-+		if (err < 0)
-+			goto out;
- 
-+		err = ceph_fname_to_usr(&fname, NULL, &oname, NULL);
-+		if (!err) {
-+			memcpy(name, oname.name, oname.len);
-+			name[oname.len] = 0;
-+		}
-+		ceph_fname_free_buffer(dir, &oname);
-+	}
-+out:
-+	dout("get_name %p ino %llx.%llx err %d %s%s\n",
-+		     child, ceph_vinop(inode), err,
-+		     err ? "" : "name ", err ? "" : name);
- 	ceph_mdsc_put_request(req);
- 	return err;
- }
+Ard Biesheuvel (2):
+  fscrypt: relax Kconfig dependencies for crypto API algorithms
+  fsverity: relax build time dependency on CRYPTO_SHA256
+
+ fs/crypto/Kconfig | 23 ++++++++++++++------
+ fs/verity/Kconfig |  8 +++++--
+ 2 files changed, 22 insertions(+), 9 deletions(-)
+
 -- 
 2.30.2
 
