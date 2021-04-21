@@ -2,74 +2,93 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-14.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_PATCH,MAILING_LIST_MULTI,
-	SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0DA66C433B4
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 21 Apr 2021 07:55:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0B871C43462
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 21 Apr 2021 07:55:27 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id C5A3461430
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 21 Apr 2021 07:55:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id CAA7E61430
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 21 Apr 2021 07:55:26 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S237504AbhDUHz5 (ORCPT
+        id S237505AbhDUHz6 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 21 Apr 2021 03:55:57 -0400
-Received: from mail.kernel.org ([198.145.29.99]:54736 "EHLO mail.kernel.org"
+        Wed, 21 Apr 2021 03:55:58 -0400
+Received: from mail.kernel.org ([198.145.29.99]:54784 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S231463AbhDUHzu (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 21 Apr 2021 03:55:50 -0400
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 17E5F61430;
-        Wed, 21 Apr 2021 07:55:15 +0000 (UTC)
+        id S237503AbhDUHzz (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 21 Apr 2021 03:55:55 -0400
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 168806143A;
+        Wed, 21 Apr 2021 07:55:20 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1618991717;
-        bh=oodqUZZOMefgCXlr4EtGXlSqgSCFj8nnYrSus5BEwsI=;
-        h=From:To:Cc:Subject:Date:From;
-        b=X5d3T7gwaNuQppwUMzz1tGrE8WKdBdFEDWtCG7PICQA410/+6YKROGQNMQjorGd6e
-         gc5G+FMv+oWjkC2EULl+VXekZb285kQcdn/2/jW5P2cknRCbg7GG9jZDXRYCWcjtmG
-         1rlIyZxBsq/5xfMQSh3kWAsR5QwMDLRMoHqoheswUygD2whLwGI+mDfdUjXWxDNbIw
-         nN2qOEJo5y/SAFtnVMxBVkE77vCDJ10w/5sYGpc7zXX1d/IVj3GwBcF8Ksj+xlLRtH
-         aoDMRIFfJc3pyNPrQOsQ+4pptcLWJWst91whdgeZaqT0jlnwgCoM3CXsxaZ+UOCbNA
-         s/i58dReb2EkQ==
+        s=k20201202; t=1618991722;
+        bh=Ckt8C8nl3QhgUfJhMmpZtLEs1VTyK1g47DgJO1qo5CI=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=qSvQ8qH+6Ef1OeqB7SaG0W6Kko1Utphhkn1DHCars7TQ/PmoCSauQYtb+bbu61gEd
+         VpHHSm0oLfzcEv9Wjgv/ThfpmX2J0vpyTrNA2CGNEvXAtIiXXuJw2N2ZjkcHN+6/Ai
+         X/1SedqFtDtfVxTCqNtIVUvaf1wJ3hgbRqSvpI1K3dMAM7W/MqsmBYoOinm6hXVTqS
+         xuIOP/eM3aAcg2HyBNy9+/3Vy8NYmQb80IqrusSONYWxeNjkLiG5FjTxgLatjDghtu
+         0Haf5ESq202HOGnmpQeuDreg22L3cQngHeF+m8sfWmCiRzOQyRXV+/KAl4DiXqHGKE
+         /VYqDBpsrJt5g==
 From:   Ard Biesheuvel <ardb@kernel.org>
 To:     linux-crypto@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, Ard Biesheuvel <ardb@kernel.org>,
         "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
-        Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 0/2] relax crypto Kconfig dependencies for fsverity/fscrypt
-Date:   Wed, 21 Apr 2021 09:55:09 +0200
-Message-Id: <20210421075511.45321-1-ardb@kernel.org>
+        Eric Biggers <ebiggers@kernel.org>,
+        Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v2 2/2] fsverity: relax build time dependency on CRYPTO_SHA256
+Date:   Wed, 21 Apr 2021 09:55:11 +0200
+Message-Id: <20210421075511.45321-3-ardb@kernel.org>
 X-Mailer: git-send-email 2.30.2
+In-Reply-To: <20210421075511.45321-1-ardb@kernel.org>
+References: <20210421075511.45321-1-ardb@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Relax 'select' dependencies to 'imply' for crypto algorithms that are
-fulfilled only at runtime, and which may be implemented by other drivers
-than the generic ones implemented in C. This permits, e.g., arm64 builds
-to omit the generic CRYPTO_SHA256 and CRYPTO_AES drivers, both of which
-are superseded by optimized scalar versions at the very least,
+CONFIG_CRYPTO_SHA256 denotes the generic C implementation of the SHA-256
+shash algorithm, which is selected as the default crypto shash provider
+for fsverity. However, fsverity has no strict link time dependency, and
+the same shash could be exposed by an optimized implementation, and arm64
+has a number of those (scalar, NEON-based and one based on special crypto
+instructions). In such cases, it makes little sense to require that the
+generic C implementation is incorporated as well, given that it will never
+be called.
 
-Changes since v1:
-- use Eric's suggested comment text in patch #1
-- add Eric's ack to partch #2
+To address this, relax the 'select' clause to 'imply' so that the generic
+driver can be omitted from the build if desired.
 
-Cc: "Theodore Y. Ts'o" <tytso@mit.edu>
-Cc: Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: Eric Biggers <ebiggers@kernel.org>
+Acked-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
+---
+ fs/verity/Kconfig | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
 
-Ard Biesheuvel (2):
-  fscrypt: relax Kconfig dependencies for crypto API algorithms
-  fsverity: relax build time dependency on CRYPTO_SHA256
-
- fs/crypto/Kconfig | 30 ++++++++++++++------
- fs/verity/Kconfig |  8 ++++--
- 2 files changed, 28 insertions(+), 10 deletions(-)
-
+diff --git a/fs/verity/Kconfig b/fs/verity/Kconfig
+index 88fb25119899..24d1b54de807 100644
+--- a/fs/verity/Kconfig
++++ b/fs/verity/Kconfig
+@@ -3,9 +3,13 @@
+ config FS_VERITY
+ 	bool "FS Verity (read-only file-based authenticity protection)"
+ 	select CRYPTO
+-	# SHA-256 is selected as it's intended to be the default hash algorithm.
++	# SHA-256 is implied as it's intended to be the default hash algorithm.
+ 	# To avoid bloat, other wanted algorithms must be selected explicitly.
+-	select CRYPTO_SHA256
++	# Note that CRYPTO_SHA256 denotes the generic C implementation, but
++	# some architectures provided optimized implementations of the same
++	# algorithm that may be used instead. In this case, CRYPTO_SHA256 may
++	# be omitted even if SHA-256 is being used.
++	imply CRYPTO_SHA256
+ 	help
+ 	  This option enables fs-verity.  fs-verity is the dm-verity
+ 	  mechanism implemented at the file level.  On supported
 -- 
 2.30.2
 
