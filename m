@@ -2,112 +2,73 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-19.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
-	autolearn=unavailable autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-11.0 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,MAILING_LIST_MULTI,
+	SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 39596C43460
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 21 Apr 2021 07:55:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3A270C433B4
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 21 Apr 2021 18:18:12 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 07A986143B
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 21 Apr 2021 07:55:25 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id E839961435
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 21 Apr 2021 18:18:11 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231463AbhDUHz5 (ORCPT
+        id S245144AbhDUSSn (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 21 Apr 2021 03:55:57 -0400
-Received: from mail.kernel.org ([198.145.29.99]:54764 "EHLO mail.kernel.org"
+        Wed, 21 Apr 2021 14:18:43 -0400
+Received: from mail.kernel.org ([198.145.29.99]:47448 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S235107AbhDUHzy (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 21 Apr 2021 03:55:54 -0400
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 3F6E761438;
-        Wed, 21 Apr 2021 07:55:18 +0000 (UTC)
+        id S238637AbhDUSSl (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 21 Apr 2021 14:18:41 -0400
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 71C256143B;
+        Wed, 21 Apr 2021 18:18:07 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1618991720;
-        bh=9wo1DQLdtI3MuzZYxymV2WhK5mxjl2O3K1NxVhptqfg=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=GL+4S18dnKDLGfuGPTaV/mn/Ndh1H0XCUa13oQ74/pkRdtNzZFJHrpdyUFEQt4gWJ
-         yrH5n1k8Wo5YZkq5TYEmkagDFk10qcqf3Lsv9drNTEsTzUKvHjlIGaWBq9dQ9Cj22O
-         LpXwG906Hc4ARA9eUBquK9E4mAI3KgnhVVGRMf3T4XuAcPcwimY57JwtSkKqQJoc48
-         0jTL8NoW1uiBR0KIv792vUDHeABSk3N3+yLrV6im5GlaR+KKcQMrrXpDiYQS9zUh8/
-         aGrVNy07viqtuJZHgg2z7jrHMLV0N0cOYQdmftOcm3QODn0xJ+71FeK8NYKkaORdb9
-         cE9aM/6k+PdeQ==
-From:   Ard Biesheuvel <ardb@kernel.org>
-To:     linux-crypto@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org, Ard Biesheuvel <ardb@kernel.org>,
+        s=k20201202; t=1619029087;
+        bh=vvEJ7OhCNNgyEkrC+b1mnLvIJJr1+wwY1dU/KtzL0Bc=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=D/SlkDO9lFoi4+cY9RsVJyQPMOqxLruQDKyEtbWsoqMnw71/p2fzGQybqNDaM1ckS
+         RD78VtaHdXvEQbY1bqT57FQWCXkV+9Qkzfbtb1AzahdtsfPXaduLqE6eOsxfM9B1FX
+         KwABHPKxiS/pdXrF6nMh8Maamju/mVoj4rltWKH9naUnF25qbs0RbgM6l+gE8rCXMw
+         bGp1htEbvhYsMikFMdKdY13zodOGi4krJrdH3FkHKrrYWMhd/0566RYwwt5VLtryf9
+         v8yMF31+ajp07dmk4NMmSJbGjHe+jtxtVFVHEJXVaEhu+MtgjDsfcJts1kXxSUsmUg
+         y5MFZ/aTUIl0w==
+Date:   Wed, 21 Apr 2021 11:18:05 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Herbert Xu <herbert@gondor.apana.org.au>
+Cc:     linux-crypto@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
-        Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v2 1/2] fscrypt: relax Kconfig dependencies for crypto API algorithms
-Date:   Wed, 21 Apr 2021 09:55:10 +0200
-Message-Id: <20210421075511.45321-2-ardb@kernel.org>
-X-Mailer: git-send-email 2.30.2
-In-Reply-To: <20210421075511.45321-1-ardb@kernel.org>
+        Ard Biesheuvel <ardb@kernel.org>
+Subject: Re: [PATCH v2 1/2] fscrypt: relax Kconfig dependencies for crypto
+ API algorithms
+Message-ID: <YIBsXY5QOcEjnZ6I@gmail.com>
 References: <20210421075511.45321-1-ardb@kernel.org>
+ <20210421075511.45321-2-ardb@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20210421075511.45321-2-ardb@kernel.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Even if FS encryption has strict functional dependencies on various
-crypto algorithms and chaining modes. those dependencies could potentially
-be satisified by other implementations than the generic ones, and no link
-time dependency exists on the 'depends on' claused defined by
-CONFIG_FS_ENCRYPTION_ALGS.
+On Wed, Apr 21, 2021 at 09:55:10AM +0200, Ard Biesheuvel wrote:
+> Even if FS encryption has strict functional dependencies on various
+> crypto algorithms and chaining modes. those dependencies could potentially
+> be satisified by other implementations than the generic ones, and no link
+> time dependency exists on the 'depends on' claused defined by
+> CONFIG_FS_ENCRYPTION_ALGS.
+> 
+> So let's relax these clauses to 'imply', so that the default behavior
+> is still to pull in those generic algorithms, but in a way that permits
+> them to be disabled again in Kconfig.
+> 
+> Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
+> ---
 
-So let's relax these clauses to 'imply', so that the default behavior
-is still to pull in those generic algorithms, but in a way that permits
-them to be disabled again in Kconfig.
+Acked-by: Eric Biggers <ebiggers@google.com>
 
-Signed-off-by: Ard Biesheuvel <ardb@kernel.org>
----
- fs/crypto/Kconfig | 30 ++++++++++++++------
- 1 file changed, 22 insertions(+), 8 deletions(-)
+Herbert, is there still time for you to take these two patches through the
+crypto tree for 5.13?  There aren't any other fscrypt or fsverity patches for
+5.13, so that would be easiest for me.
 
-diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index a5f5c30368a2..2d0c8922f635 100644
---- a/fs/crypto/Kconfig
-+++ b/fs/crypto/Kconfig
-@@ -14,16 +14,30 @@ config FS_ENCRYPTION
- 	  F2FS and UBIFS make use of this feature.
- 
- # Filesystems supporting encryption must select this if FS_ENCRYPTION.  This
--# allows the algorithms to be built as modules when all the filesystems are.
-+# allows the algorithms to be built as modules when all the filesystems are,
-+# whereas selecting them from FS_ENCRYPTION would force them to be built-in.
-+#
-+# Note: this option only pulls in the algorithms that filesystem encryption
-+# needs "by default".  If userspace will use "non-default" encryption modes such
-+# as Adiantum encryption, then those other modes need to be explicitly enabled
-+# in the crypto API; see Documentation/filesystems/fscrypt.rst for details.
-+#
-+# Also note that this option only pulls in the generic implementations of the
-+# algorithms, not any per-architecture optimized implementations.  It is
-+# strongly recommended to enable optimized implementations too.  It is safe to
-+# disable these generic implementations if corresponding optimized
-+# implementations will always be available too; for this reason, these are soft
-+# dependencies ('imply' rather than 'select').  Only disable these generic
-+# implementations if you're sure they will never be needed, though.
- config FS_ENCRYPTION_ALGS
- 	tristate
--	select CRYPTO_AES
--	select CRYPTO_CBC
--	select CRYPTO_CTS
--	select CRYPTO_ECB
--	select CRYPTO_HMAC
--	select CRYPTO_SHA512
--	select CRYPTO_XTS
-+	imply CRYPTO_AES
-+	imply CRYPTO_CBC
-+	imply CRYPTO_CTS
-+	imply CRYPTO_ECB
-+	imply CRYPTO_HMAC
-+	imply CRYPTO_SHA512
-+	imply CRYPTO_XTS
- 
- config FS_ENCRYPTION_INLINE_CRYPT
- 	bool "Enable fscrypt to use inline crypto"
--- 
-2.30.2
-
+- Eric
