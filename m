@@ -2,190 +2,345 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-10.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,MAILING_LIST_MULTI,
-	MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=ham
+X-Spam-Status: No, score=-19.4 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT autolearn=ham
 	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 31522C47080
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 31 May 2021 14:33:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F354BC47082
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Jun 2021 20:00:07 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 0E814613AF
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 31 May 2021 14:33:17 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id C75B861402
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  3 Jun 2021 20:00:07 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231631AbhEaOes (ORCPT
+        id S229764AbhFCUBv (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 31 May 2021 10:34:48 -0400
-Received: from mx0a-00148503.pphosted.com ([148.163.157.21]:32352 "EHLO
-        mx0a-00148503.pphosted.com" rhost-flags-OK-OK-OK-OK)
-        by vger.kernel.org with ESMTP id S231889AbhEaOb7 (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 31 May 2021 10:31:59 -0400
-Received: from pps.filterd (m0086145.ppops.net [127.0.0.1])
-        by mx0a-00148503.pphosted.com (8.16.1.2/8.16.1.2) with SMTP id 14VERTdq021701;
-        Mon, 31 May 2021 07:30:17 -0700
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=proofpoint.com; h=from : to : cc :
- subject : date : message-id : references : in-reply-to : content-type :
- content-transfer-encoding : mime-version; s=corp-2019-08-07;
- bh=uYIj54yAVlrZHPtqihoRi0zu/fCoGswddf3XHRnYv0U=;
- b=ogdLLHuzZ8uf9nbPUx8ML2jIh0TI4mWlC2min3W+muB3UM9R7m6eDmizsQmh5jkBgDG8
- dT5SjyFtvhkk21o5/VHzT6tNvDB/xRtN4qUN4b44PW6dtGK+u68JpzGoKMLxakqy2doQ
- KAL4JYApl1/0nRIERLus1Hqc3W8fZwwX5P8VY9hVMW3IyOMrBYKtZEqWM2OPs28EUbnd
- X0yjp7jaEnpqwOn/V0h/GQ8Kc8dWFJiuZRqFIiZI1XjsDI34RIMdnyA7FxM77LwKeq51
- nWqtj4czQtcJ54GlHT+OopABKhya9hv8vvtva5dL5rW/IGKCUPEqUbQzk20a1mVb8dPM 4g== 
-Received: from lv-exch01.corp.proofpoint.com (spf-mailers.proofpoint.com [136.179.16.100])
-        by mx0a-00148503.pphosted.com with ESMTP id 38umkq0p8u-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-SHA384 bits=256 verify=NOT);
-        Mon, 31 May 2021 07:30:16 -0700
-Received: from lv-exch06.corp.proofpoint.com (10.19.10.26) by
- lv-exch01.corp.proofpoint.com (10.94.30.37) with Microsoft SMTP Server
- (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384_P384) id
- 15.1.2176.2; Mon, 31 May 2021 07:30:16 -0700
-Received: from lv-exch04.corp.proofpoint.com (10.19.10.24) by
- lv-exch06.corp.proofpoint.com (10.19.10.26) with Microsoft SMTP Server
- (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384_P384) id
- 15.1.2176.2; Mon, 31 May 2021 07:30:15 -0700
-Received: from NAM12-DM6-obe.outbound.protection.outlook.com (10.19.16.20) by
- lv-exch04.corp.proofpoint.com (10.19.10.24) with Microsoft SMTP Server
- (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384_P384) id
- 15.1.2176.2 via Frontend Transport; Mon, 31 May 2021 07:30:15 -0700
-ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
- b=aFJHe8W2CvS2tK1yTkFm75wCZZQAXExVcjc6x3kgD0edz5rsB1yHj/L3gr7pZ5jKndSfaKTnODQaYWkwMmGOKcaYDPLQxpHL0a/ScJTjT8JJCVGA8Zq0iXLD9nJBzucTupeV1DhSmFlBqh3m/IoVFdfUKN3AVp0827Fk7ZGYwMK6kh+xyeQiVT91WCUgHhlgXnYzP3tNzWBsmyMuDF0/oAforq6TMCG2OS3171s4lRKfsgM/7DEm+pmIkegWsOjBjd6IgUQudQhM6DgvJ6IQ7Nwz/Q+4Nt/wq7k5/rTvrebtUkTBZtJ+sKUkKL/faxImakQoodqnqmUFJeOtVHgJPA==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
- s=arcselector9901;
- h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
- bh=uYIj54yAVlrZHPtqihoRi0zu/fCoGswddf3XHRnYv0U=;
- b=f5msEk8C2/W8zWuQ9Xx+znAmm+J87YBKDvVbpzC7NdDHTHHwdPbxtt6BJCW6rk1/D1t1HG8OZ+9xmxbEcQwLRQbAGrLINlfjxjHq2XxqXnEw3BOnJiri2Se9L+9KOJ5+ss86m3umheN4oKByq6ckYz08Q58/Z8ujCUvVfdYkOCa3Fo/mhbK06JqfeyDYR6O/IhPx2K9PC0tb8QVSPgEaBike7D3Fc/Uz2+LAK5BhusxDlTBPOvl+KXvNOFVytrk2O/f8f1Z+XiP/98O2UIGFBQtRJKTawh/wyEp6M94wNYXIRyOsEDr/Gidfeyx/M27Fdy80xR9PstUHpE4CEF8cww==
-ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
- smtp.mailfrom=proofpoint.com; dmarc=pass action=none
- header.from=proofpoint.com; dkim=pass header.d=proofpoint.com; arc=none
-Received: from BL1PR12MB5334.namprd12.prod.outlook.com (2603:10b6:208:31d::17)
- by BL1PR12MB5159.namprd12.prod.outlook.com (2603:10b6:208:318::6) with
- Microsoft SMTP Server (version=TLS1_2,
- cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.4173.20; Mon, 31 May
- 2021 14:30:13 +0000
-Received: from BL1PR12MB5334.namprd12.prod.outlook.com
- ([fe80::d47:bc49:42ca:11a6]) by BL1PR12MB5334.namprd12.prod.outlook.com
- ([fe80::d47:bc49:42ca:11a6%6]) with mapi id 15.20.4173.030; Mon, 31 May 2021
- 14:30:12 +0000
-From:   Jerry Chung <jchung@proofpoint.com>
-To:     Eric Biggers <ebiggers@kernel.org>
-CC:     "linux-fscrypt@vger.kernel.org" <linux-fscrypt@vger.kernel.org>
-Subject: RE: Is fscrypt encryption FIPS compliant?
-Thread-Topic: Is fscrypt encryption FIPS compliant?
-Thread-Index: AddTM+XKfcaaSuVkSxWD1s/3Vj6PAwAIkYgAAByTTTAABVSusAAS8MkAAH/0QpA=
-Date:   Mon, 31 May 2021 14:30:12 +0000
-Message-ID: <BL1PR12MB53348E43EE0F1003C5B0A5FFA03F9@BL1PR12MB5334.namprd12.prod.outlook.com>
-References: <BL1PR12MB5334C36420D5A8669D7856BFA0239@BL1PR12MB5334.namprd12.prod.outlook.com>
- <YLA1eIEOi3yHWk4X@gmail.com>
- <BL1PR12MB53345FE179D9FA84F0231F3AA0229@BL1PR12MB5334.namprd12.prod.outlook.com>
- <BL1PR12MB5334640D3CB4D8124DD95594A0229@BL1PR12MB5334.namprd12.prod.outlook.com>
- <YLGYHtNESzN5F1hM@sol.localdomain>
-In-Reply-To: <YLGYHtNESzN5F1hM@sol.localdomain>
-Accept-Language: en-CA, en-US
-Content-Language: en-US
-X-MS-Has-Attach: 
-X-MS-TNEF-Correlator: 
-authentication-results: kernel.org; dkim=none (message not signed)
- header.d=none;kernel.org; dmarc=none action=none header.from=proofpoint.com;
-x-originating-ip: [2607:fea8:5761:7100:f8e1:7832:2243:6548]
-x-ms-publictraffictype: Email
-x-ms-office365-filtering-correlation-id: 7807d6ae-276f-4d98-bf05-08d9244099df
-x-ms-traffictypediagnostic: BL1PR12MB5159:
-x-microsoft-antispam-prvs: <BL1PR12MB51596C592DF79BFDFC861E56A03F9@BL1PR12MB5159.namprd12.prod.outlook.com>
-x-ms-oob-tlc-oobclassifiers: OLM:5236;
-x-ms-exchange-senderadcheck: 1
-x-microsoft-antispam: BCL:0;
-x-microsoft-antispam-message-info: CYZOJkD+nd0TF9hLxUhHmlVbd4dTljGJHYxgWxYFZmr+R4xX0ZKRfEwY06zj8KsOYFY7aJ09NBVexxCeiVd+F7j40F+vbz2Wyg99HsHBAgQhvsranDOOGBU74zgliKd2NCvB2A3GAksnCoSYD9A8R4wLTbHmTD77VLse/AoKBfusedjN7yVFKsTmPUojj4yblSrYu81Vw1QN1ri+wgpljJ7AQfKG+Lafv4if+XXaFapRnzpuB7P2uSpx5TEHbLucq2xbwPvIZlXfXArjhzcNu6EPQX+P8T2qadatpkaga4Pm1P7QNtRozfANxSbZTonYe3ry3S0AzbNNseIJ/WFTQY0h/uVyCw6pqedgZBhzeyAh1D+u5I3D9l+9kzllDQCzMpGFJZ6FBlPMbtnbLO4OP6QPSMhQIPKbkbQCW35FcVPFUUw3ZFr0lsx0tLsgUwLLnwpBzDipKq0vPONpZWLb3mZWAdTsZQQFTQwcFNsh7WvAI422y+HYY/DSFn4HEBJi8nUgGi3PLrcIHNa0HkwVlz4pf4yrhtN+leQyfkGd2kUNtVxuXpY9a8Pwf76B9oQy2c8Lk18Y0dEUeBzNuy8QMXnQ4UFLeHqsnhkrh2Sr7SWhzepXob0hHKV0swnvpKRn5BFJqvluDnfLK+OygJ+fmxaazyjH4hsiFRuuAxo81Wtspne6Sdbx/lWBxYE2KZk+TstRFJKyDv2ScNLA6+6wYQ==
-x-forefront-antispam-report: CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:BL1PR12MB5334.namprd12.prod.outlook.com;PTR:;CAT:NONE;SFS:(136003)(396003)(366004)(376002)(346002)(39850400004)(122000001)(55016002)(71200400001)(186003)(33656002)(66446008)(64756008)(966005)(52536014)(316002)(53546011)(478600001)(4326008)(5660300002)(66556008)(76116006)(66476007)(66946007)(8936002)(86362001)(9686003)(38100700002)(6916009)(7696005)(8676002)(83380400001)(2906002)(6506007);DIR:OUT;SFP:1102;
-x-ms-exchange-antispam-messagedata: =?us-ascii?Q?YIrfYrmEs/3UVv/kbKwEn7JG6CdyZXFKK1aT/OX2zUg0ic1SKieElvv8AK8E?=
- =?us-ascii?Q?8CHbcTfi4+VW6jRNU73g0SdgW77GGy0b8I/kB+J0u5QJ2AZcedLFrK7w+aa1?=
- =?us-ascii?Q?jEyjp0bpPanqtfH1H6FpUnluFD4QF9BugnA5VivLp1DphgaV+qiwDUyFFht8?=
- =?us-ascii?Q?MWLRi0gqFQRBw/eRd4LtpYQ5FUXc42vZzvwejRMj5V6KJ6SH1GRhQHKTCnGs?=
- =?us-ascii?Q?Ibo/qGkbhtdAAJS/7yrXc6615xhZD6WvZOwLQ8o0oS8vabiwRBcRiattH4gg?=
- =?us-ascii?Q?c0t6PPUCs6h/EK4kfqTG8aoQ+u+r+6mFltsVQC7FdPAMF7ypJ9xEfLqwjPbf?=
- =?us-ascii?Q?GipzBWogvBGrEerIT6xxnNc9iHceJUopG49JeT8FIrQ1k7SrLs4LeOd/0Mmd?=
- =?us-ascii?Q?HzAJjkjF47eyxwiEw8xFTivlC63AOXJC6N84hMzKr+qjJxXHPPradp2hJ+rQ?=
- =?us-ascii?Q?w0rswm5Seqmslyc3karsw13zHt/f7/rzb4ZQgHATuoIFcIrX7Rb7NNvxLRgn?=
- =?us-ascii?Q?xGhaxladV+0pk4AQaAN+Y6iQK+EBI03MIxH2XRaXSPo5WQ3Y7NWauV9dONkb?=
- =?us-ascii?Q?SJAb3F75/WWk2Wk9Xjj01HUkbqZ1VQQd8tLuP93+Kcl/FQxder5Q8+Q0rmRs?=
- =?us-ascii?Q?yp9qXPsBBErx+3EejfXcGqFFcgOkUX2toEUZoxhfwKcoHFj2ylnu8T8nPqCP?=
- =?us-ascii?Q?Otgc9K826Q4iiRmcUKv+AU5ONWEsXylebo59jJRAX7mfDt83w9xVAiAVb2Cg?=
- =?us-ascii?Q?6+o2MIJp2MNiWf69NNLWHKWeOHbZoBUhheH8P6rW3tZLNqNEddLQ8h49YTgx?=
- =?us-ascii?Q?2u6uAdYeSI3ZqGR0+WZCZUE7HMPBEk6WqJtev4TN8+6TPF6nKwbjWfbPzSwX?=
- =?us-ascii?Q?0YYrfk/h+RkFAdhxP93NYCVSQryEcG09Oa9cUoJF1wjAPfdqbvg+5dvMoClL?=
- =?us-ascii?Q?XZzPXMsaoJKw5NLxhNyPtBUBcN3v/rjCP5EcyeJD+UYiLyoXxb8oe20dMz3f?=
- =?us-ascii?Q?wst3jqOgKK/+42oSoaei4XA5RQgJjUzSm44erE2TF+Kff+YWDKcRC9YvPb7N?=
- =?us-ascii?Q?YUWi5MqLMglNjegrxlHARo23KPueZq8h9/96TSjB094IPqBG/4z5qR4E78eY?=
- =?us-ascii?Q?EoMatVvda8PJnlNemJ8+zWTw0GQ/QlD3XcX+QaFrgny6mj1tL2SIWu6HJ6EO?=
- =?us-ascii?Q?aVav/IjY46bveW7u+VY+1AH5kquRgA2InGEOE3uVgDDMUl06srE3wDQVwm5l?=
- =?us-ascii?Q?nN1coOnnbIj8uVOvTTXcIyuXAuZSTYEEyrmj5E1h+cm/uxpLX3jv3BlHPVHd?=
- =?us-ascii?Q?ILT1rs2bV6Nbte8s438IdmhYlZiWlx123ew1FPTRk08q+06KxCeLequxZ+6y?=
- =?us-ascii?Q?xAmhCOTqf9hno4cJJvEbzWJWsFza?=
-x-ms-exchange-transport-forked: True
-Content-Type: text/plain; charset="us-ascii"
-Content-Transfer-Encoding: quoted-printable
+        Thu, 3 Jun 2021 16:01:51 -0400
+Received: from mail.kernel.org ([198.145.29.99]:36830 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S229675AbhFCUBu (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Thu, 3 Jun 2021 16:01:50 -0400
+Received: by mail.kernel.org (Postfix) with ESMTPSA id DA4936139A;
+        Thu,  3 Jun 2021 20:00:05 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1622750405;
+        bh=2YrqxSaDbqrkFqauDM9hRRvR/T2mY7ydopo8x9/nUM8=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=CJ8gwo14bYXKXby51c+KvUMBeqeFJt3hLxvz+1q5z3M1CAx+RCg2UwHZt+kZcByb2
+         HTSp858jEmDc/fBBUwlPJ1I1SoL1nzccDRQ3Q0ER66Q2Ra6Fr6zau+Sv/AoBuoU7pq
+         obBofjl9nmZ8vlYa009IPrlIT020wWt034cY36BrB3yRtBBhuq8b1Hc4DX7CDK0OrO
+         /zRN0KW27U0P3sE9VN1k5mXhT/lZqUVSgvVzZdvpX+5PHaq+ua3TBC3q8jxPJP9doF
+         a2tnbnpEmnzjU/FrIb+Y+jwj0wnnxmSeRvDQk3Y3HSW/qm4J3OPTqVmsqf+DN0oY3U
+         TmDmKLdpWJ89Q==
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     Victor Hsieh <victorhsieh@google.com>
+Subject: [fsverity-utils PATCH 1/4] lib/compute_digest: add callbacks for getting the verity metadata
+Date:   Thu,  3 Jun 2021 12:58:09 -0700
+Message-Id: <20210603195812.50838-2-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.31.1
+In-Reply-To: <20210603195812.50838-1-ebiggers@kernel.org>
+References: <20210603195812.50838-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-X-MS-Exchange-CrossTenant-AuthAs: Internal
-X-MS-Exchange-CrossTenant-AuthSource: BL1PR12MB5334.namprd12.prod.outlook.com
-X-MS-Exchange-CrossTenant-Network-Message-Id: 7807d6ae-276f-4d98-bf05-08d9244099df
-X-MS-Exchange-CrossTenant-originalarrivaltime: 31 May 2021 14:30:12.4374
- (UTC)
-X-MS-Exchange-CrossTenant-fromentityheader: Hosted
-X-MS-Exchange-CrossTenant-id: 46785c73-1c32-414b-86bc-fae0377cab01
-X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
-X-MS-Exchange-CrossTenant-userprincipalname: dBzATAKb+m6DcHSk963130U4d09E+KWS3NF60A67mKdyg879KSe5MUc9/gVwZgs+tSLb0Cy69LHk9yWmHg+ekA==
-X-MS-Exchange-Transport-CrossTenantHeadersStamped: BL1PR12MB5159
-X-PassedThroughOnPremises: Yes
-X-OriginatorOrg: proofpoint.com
-X-Proofpoint-GUID: O_UELVkAvC2VjSv99S-VNd_1dDQa898c
-X-Proofpoint-ORIG-GUID: O_UELVkAvC2VjSv99S-VNd_1dDQa898c
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.136,Aquarius:18.0.761,Hydra:6.0.391,FMLib:17.0.607.475
- definitions=2021-05-31_08,2021-05-31_01,2020-04-07_01
-X-Proofpoint-Spam-Details: rule=notspam policy=default score=0 malwarescore=0 mlxlogscore=846
- clxscore=1015 bulkscore=0 adultscore=0 spamscore=0 suspectscore=0
- priorityscore=1501 mlxscore=0 lowpriorityscore=0 impostorscore=0
- phishscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2104190000 definitions=main-2105310105
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Thanks a lot for the detail explanation, Eric.
+From: Eric Biggers <ebiggers@google.com>
 
-jerry
------Original Message-----
-From: Eric Biggers <ebiggers@kernel.org>=20
-Sent: Friday, May 28, 2021 9:26 PM
-To: Jerry Chung <jchung@proofpoint.com>
-Cc: linux-fscrypt@vger.kernel.org
-Subject: Re: Is fscrypt encryption FIPS compliant?
+Allow callers of libfsverity_compute_digest() to provide callback
+functions which get passed the Merkle tree and fs-verity descriptor
+after they are calculated.
 
-On Fri, May 28, 2021 at 04:26:56PM +0000, Jerry Chung wrote:
-> Hi Eric,
->=20
-> Does fscrypt (kernel part and userspace part) implement any=20
-> encryptions by itself? Or is it relying on the kernel crypto API?
->=20
-> Thanks,
-> jerry
+This will allow adding options to 'fsverity digest' and 'fsverity sign'
+which cause this metadata to be dumped to files.  Normally this isn't
+useful, but this can be needed in cases where the fs-verity metadata
+needs to be consumed by something other than one of the native Linux
+kernel implementations of fs-verity.
 
-In the kernel part, currently the encryption algorithms are accessed throug=
-h the kernel crypto API and/or through blk-crypto (the kernel's interface t=
-o inline encryption hardware).  The hash algorithms SHA-256 and SipHash are=
- accessed through their library interface.  The key derivation algorithm HK=
-DF is implemented in fs/crypto/ on top of HMAC-SHA512 from the kernel crypt=
-o API.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ include/libfsverity.h |  46 ++++++++++++++-
+ lib/compute_digest.c  | 130 ++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 156 insertions(+), 20 deletions(-)
 
-The userspace tool https://urldefense.com/v3/__https://github.com/google/fs=
-crypt__;!!ORgEfCBsr282Fw!57nse74kKZWgPBVTybhzV_-lLBRUeyq3AyR5Ixx2_qIuPXL2aW=
-TxpZBkKmj0Ze2kIQ$  (note, this isn't the only userspace tool that can use t=
-he kernel part) uses cryptographic algorithms from third-party Go packages,=
- which get built into the resulting binary.  See the source code for detail=
-s.
+diff --git a/include/libfsverity.h b/include/libfsverity.h
+index 6c42e5e..c2c6c18 100644
+--- a/include/libfsverity.h
++++ b/include/libfsverity.h
+@@ -61,8 +61,18 @@ struct libfsverity_merkle_tree_params {
+ 	/** @reserved1: must be 0 */
+ 	uint64_t reserved1[8];
+ 
++	/**
++	 * @metadata_callbacks: if non-NULL, this gives a set of callback
++	 * functions to which libfsverity_compute_digest() will pass the Merkle
++	 * tree blocks and fs-verity descriptor after they are computed.
++	 * Normally this isn't useful, but this can be needed in rare cases
++	 * where the metadata needs to be consumed by something other than one
++	 * of the native Linux kernel implementations of fs-verity.
++	 */
++	const struct libfsverity_metadata_callbacks *metadata_callbacks;
++
+ 	/** @reserved2: must be 0 */
+-	uintptr_t reserved2[8];
++	uintptr_t reserved2[7];
+ };
+ 
+ struct libfsverity_digest {
+@@ -78,6 +88,37 @@ struct libfsverity_signature_params {
+ 	uintptr_t reserved2[8];		/* must be 0 */
+ };
+ 
++struct libfsverity_metadata_callbacks {
++
++	/** @ctx: context passed to the below callbacks (opaque to library) */
++	void *ctx;
++
++	/**
++	 * @merkle_tree_size: if non-NULL, called with the total size of the
++	 * Merkle tree in bytes, prior to any call to @merkle_tree_block.  Must
++	 * return 0 on success, or a negative errno value on failure.
++	 */
++	int (*merkle_tree_size)(void *ctx, uint64_t size);
++
++	/**
++	 * @merkle_tree_block: if non-NULL, called with each block of the
++	 * Merkle tree after it is computed.  The offset is the offset in bytes
++	 * to the block within the Merkle tree, using the Merkle tree layout
++	 * used by FS_IOC_READ_VERITY_METADATA.  The offsets won't necessarily
++	 * be in increasing order.  Must return 0 on success, or a negative
++	 * errno value on failure.
++	 */
++	int (*merkle_tree_block)(void *ctx, const void *block, size_t size,
++				 uint64_t offset);
++
++	/**
++	 * @descriptor: if non-NULL, called with the fs-verity descriptor after
++	 * it is computed.  Must return 0 on success, or a negative errno value
++	 * on failure.
++	 */
++	int (*descriptor)(void *ctx, const void *descriptor, size_t size);
++};
++
+ /*
+  * libfsverity_read_fn_t - callback that incrementally provides a file's data
+  * @fd: the user-provided "file descriptor" (opaque to library)
+@@ -101,7 +142,8 @@ typedef int (*libfsverity_read_fn_t)(void *fd, void *buf, size_t count);
+  *
+  * Returns:
+  * * 0 for success, -EINVAL for invalid input arguments, -ENOMEM if libfsverity
+- *   failed to allocate memory, or an error returned by @read_fn.
++ *   failed to allocate memory, or an error returned by @read_fn or by one of
++ *   the @params->metadata_callbacks.
+  * * digest_ret returns a pointer to the digest on success. The digest object
+  *   is allocated by libfsverity and must be freed by the caller using free().
+  */
+diff --git a/lib/compute_digest.c b/lib/compute_digest.c
+index a4f649c..c5b0100 100644
+--- a/lib/compute_digest.c
++++ b/lib/compute_digest.c
+@@ -24,9 +24,8 @@ struct block_buffer {
+ 
+ /*
+  * Hash a block, writing the result to the next level's pending block buffer.
+- * Returns true if the next level's block became full, else false.
+  */
+-static bool hash_one_block(struct hash_ctx *hash, struct block_buffer *cur,
++static void hash_one_block(struct hash_ctx *hash, struct block_buffer *cur,
+ 			   u32 block_size, const u8 *salt, u32 salt_size)
+ {
+ 	struct block_buffer *next = cur + 1;
+@@ -41,8 +40,60 @@ static bool hash_one_block(struct hash_ctx *hash, struct block_buffer *cur,
+ 
+ 	next->filled += hash->alg->digest_size;
+ 	cur->filled = 0;
++}
++
++static bool block_is_full(const struct block_buffer *block, u32 block_size,
++			  struct hash_ctx *hash)
++{
++	/* Would the next hash put us over the limit? */
++	return block->filled + hash->alg->digest_size > block_size;
++}
++
++static int report_merkle_tree_size(const struct libfsverity_metadata_callbacks *cbs,
++				   u64 size)
++{
++	if (cbs && cbs->merkle_tree_size) {
++		int err = cbs->merkle_tree_size(cbs->ctx, size);
+ 
+-	return next->filled + hash->alg->digest_size > block_size;
++		if (err) {
++			libfsverity_error_msg("error processing Merkle tree size");
++			return err;
++		}
++	}
++	return 0;
++}
++
++static int report_merkle_tree_block(const struct libfsverity_metadata_callbacks *cbs,
++				    const struct block_buffer *block,
++				    u32 block_size, u64 *level_offset)
++{
++
++	if (cbs && cbs->merkle_tree_block) {
++		int err = cbs->merkle_tree_block(cbs->ctx, block->data,
++						 block_size,
++						 *level_offset * block_size);
++
++		if (err) {
++			libfsverity_error_msg("error processing Merkle tree block");
++			return err;
++		}
++		(*level_offset)++;
++	}
++	return 0;
++}
++
++static int report_descriptor(const struct libfsverity_metadata_callbacks *cbs,
++			     const void *descriptor, size_t size)
++{
++	if (cbs && cbs->descriptor) {
++		int err = cbs->descriptor(cbs->ctx, descriptor, size);
++
++		if (err) {
++			libfsverity_error_msg("error processing fs-verity descriptor");
++			return err;
++		}
++	}
++	return 0;
+ }
+ 
+ /*
+@@ -52,6 +103,7 @@ static bool hash_one_block(struct hash_ctx *hash, struct block_buffer *cur,
+ static int compute_root_hash(void *fd, libfsverity_read_fn_t read_fn,
+ 			     u64 file_size, struct hash_ctx *hash,
+ 			     u32 block_size, const u8 *salt, u32 salt_size,
++			     const struct libfsverity_metadata_callbacks *metadata_cbs,
+ 			     u8 *root_hash)
+ {
+ 	const u32 hashes_per_block = block_size / hash->alg->digest_size;
+@@ -60,6 +112,7 @@ static int compute_root_hash(void *fd, libfsverity_read_fn_t read_fn,
+ 	u64 blocks;
+ 	int num_levels = 0;
+ 	int level;
++	u64 level_offset[FS_VERITY_MAX_LEVELS];
+ 	struct block_buffer _buffers[1 + FS_VERITY_MAX_LEVELS + 1] = {};
+ 	struct block_buffer *buffers = &_buffers[1];
+ 	u64 offset;
+@@ -68,7 +121,7 @@ static int compute_root_hash(void *fd, libfsverity_read_fn_t read_fn,
+ 	/* Root hash of empty file is all 0's */
+ 	if (file_size == 0) {
+ 		memset(root_hash, 0, hash->alg->digest_size);
+-		return 0;
++		return report_merkle_tree_size(metadata_cbs, 0);
+ 	}
+ 
+ 	if (salt_size != 0) {
+@@ -78,15 +131,39 @@ static int compute_root_hash(void *fd, libfsverity_read_fn_t read_fn,
+ 		memcpy(padded_salt, salt, salt_size);
+ 	}
+ 
+-	/* Compute number of levels */
+-	for (blocks = DIV_ROUND_UP(file_size, block_size); blocks > 1;
+-	     blocks = DIV_ROUND_UP(blocks, hashes_per_block)) {
++	/* Compute number of levels and the number of blocks in each level. */
++	blocks = DIV_ROUND_UP(file_size, block_size);
++	while (blocks > 1)  {
+ 		if (WARN_ON(num_levels >= FS_VERITY_MAX_LEVELS)) {
+ 			err = -EINVAL;
+ 			goto out;
+ 		}
+-		num_levels++;
++		blocks = DIV_ROUND_UP(blocks, hashes_per_block);
++		/*
++		 * Temporarily use level_offset[] to store the number of blocks
++		 * in each level.  It will be overwritten later.
++		 */
++		level_offset[num_levels++] = blocks;
++	}
++
++	/*
++	 * Compute the starting block of each level, using the convention where
++	 * the root level is first, i.e. the convention used by
++	 * FS_IOC_READ_VERITY_METADATA.  At the same time, compute the total
++	 * size of the Merkle tree.  These values are only needed for the
++	 * metadata callbacks (if they were given), as the hash computation
++	 * itself doesn't prescribe an ordering of the levels and doesn't
++	 * prescribe any special meaning to the total size of the Merkle tree.
++	 */
++	offset = 0;
++	for (level = num_levels - 1; level >= 0; level--) {
++		blocks = level_offset[level];
++		level_offset[level] = offset;
++		offset += blocks;
+ 	}
++	err = report_merkle_tree_size(metadata_cbs, offset * block_size);
++	if (err)
++		goto out;
+ 
+ 	/*
+ 	 * Allocate the block buffers.  Buffer "-1" is for data blocks.
+@@ -112,21 +189,33 @@ static int compute_root_hash(void *fd, libfsverity_read_fn_t read_fn,
+ 			goto out;
+ 		}
+ 
+-		level = -1;
+-		while (hash_one_block(hash, &buffers[level], block_size,
+-				      padded_salt, padded_salt_size)) {
+-			level++;
+-			if (WARN_ON(level >= num_levels)) {
+-				err = -EINVAL;
++		hash_one_block(hash, &buffers[-1], block_size,
++			       padded_salt, padded_salt_size);
++		for (level = 0; level < num_levels; level++) {
++			if (!block_is_full(&buffers[level], block_size, hash))
++				break;
++			hash_one_block(hash, &buffers[level], block_size,
++				       padded_salt, padded_salt_size);
++			err = report_merkle_tree_block(metadata_cbs,
++						       &buffers[level],
++						       block_size,
++						       &level_offset[level]);
++			if (err)
+ 				goto out;
+-			}
+ 		}
+ 	}
+ 	/* Finish all nonempty pending tree blocks */
+ 	for (level = 0; level < num_levels; level++) {
+-		if (buffers[level].filled != 0)
++		if (buffers[level].filled != 0) {
+ 			hash_one_block(hash, &buffers[level], block_size,
+ 				       padded_salt, padded_salt_size);
++			err = report_merkle_tree_block(metadata_cbs,
++						       &buffers[level],
++						       block_size,
++						       &level_offset[level]);
++			if (err)
++				goto out;
++		}
+ 	}
+ 
+ 	/* Root hash was filled by the last call to hash_one_block() */
+@@ -217,8 +306,13 @@ libfsverity_compute_digest(void *fd, libfsverity_read_fn_t read_fn,
+ 	}
+ 
+ 	err = compute_root_hash(fd, read_fn, params->file_size, hash,
+-				block_size, params->salt,
+-				params->salt_size, desc.root_hash);
++				block_size, params->salt, params->salt_size,
++				params->metadata_callbacks, desc.root_hash);
++	if (err)
++		goto out;
++
++	err = report_descriptor(params->metadata_callbacks,
++				&desc, sizeof(desc));
+ 	if (err)
+ 		goto out;
+ 
+-- 
+2.31.1
 
-Note that these are all implementation details, which may differ in past an=
-d future versions of the software, both kernel and userspace.
-
-- Eric
