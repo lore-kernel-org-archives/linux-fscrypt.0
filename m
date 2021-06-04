@@ -5,63 +5,63 @@ X-Spam-Level:
 X-Spam-Status: No, score=-26.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
 	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=ham autolearn_force=no
+	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 57371C4743C
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:09:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 556EDC4743D
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:09:29 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 4089361406
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:09:24 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 427B7613F4
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:09:29 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230302AbhFDVLK (ORCPT
+        id S230424AbhFDVLP (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 4 Jun 2021 17:11:10 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51192 "EHLO
+        Fri, 4 Jun 2021 17:11:15 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51214 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230256AbhFDVLJ (ORCPT
+        with ESMTP id S230389AbhFDVLM (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 4 Jun 2021 17:11:09 -0400
-Received: from mail-yb1-xb4a.google.com (mail-yb1-xb4a.google.com [IPv6:2607:f8b0:4864:20::b4a])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3953BC061795
-        for <linux-fscrypt@vger.kernel.org>; Fri,  4 Jun 2021 14:09:22 -0700 (PDT)
-Received: by mail-yb1-xb4a.google.com with SMTP id m205-20020a25d4d60000b029052a8de1fe41so13323972ybf.23
-        for <linux-fscrypt@vger.kernel.org>; Fri, 04 Jun 2021 14:09:22 -0700 (PDT)
+        Fri, 4 Jun 2021 17:11:12 -0400
+Received: from mail-pj1-x104a.google.com (mail-pj1-x104a.google.com [IPv6:2607:f8b0:4864:20::104a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id ED4C6C061795
+        for <linux-fscrypt@vger.kernel.org>; Fri,  4 Jun 2021 14:09:25 -0700 (PDT)
+Received: by mail-pj1-x104a.google.com with SMTP id mw15-20020a17090b4d0fb0290157199aadbaso8374959pjb.7
+        for <linux-fscrypt@vger.kernel.org>; Fri, 04 Jun 2021 14:09:25 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=RT0RrB/jxKMI6YW+PFYA3ymIrlH2UsJVKGU6y0kBnOw=;
-        b=IlZOZ7kDYPui8ADSyBSgg53Xoy729/anXoL9HE6GnxaUrhX/OSd1UbLB0u1F+7d9Td
-         JVxj6n9wuW+E0OZ7vDRXrTfbCD6XuwNVY9v22kKfJVNYb9WY404LeKW4yQ2tpPmzigpm
-         V+j0KbaKVIPgWl/XtyfWFGvYkgLJlkemDaCQc25sAFQeYkHSg34+XxpgajWSGIfj4/be
-         V52CdBnBn4uGgdqBlgjFpwgA4zIXigOLYYLcck1Ox7vAMAb0YTWh94/lpF9I2Q7F7RI/
-         gPD6HaFeiyqVyFUYSb1DYREYy6u9CegrBeWpsXNHM9mK3f2L+mshA5baEf6Ew6vzjwfA
-         VpKg==
+        bh=P+DRV+1kr28zVJ/U3wDOfdSPd3HkANrRfuFzxqlC4Pc=;
+        b=BD3ZmfBd88tZgrK5VWyAdL43R8ifUsR8x6sFdE82nRuDKynYAWDrzE4ViAPmykHBE4
+         iyytiZIYdAESIcvzY6xdWybqTUGCNisGZiXWYfKieKbymZmV/yt7zvjY9NFl3juibb/s
+         ikEDpwDO3GTB7QBr/5PZz/yTynDJQ+EVyDbqXYxqVspW4jHjr6GfHmb6aePCiI+9M6Vd
+         nAWhQ+RRLTv2OXSWhOZSnRNx4+nvq3NfPSSnycc4sLlhRuBgnNb++2d32IlTONdzLlpM
+         5aRbbSRXEHIXxwZ6wYXd6/i1swYlGsa4c2M1WAwUuXtMLF2EffxUpGOmrT0pPALk2QKG
+         mb2w==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=RT0RrB/jxKMI6YW+PFYA3ymIrlH2UsJVKGU6y0kBnOw=;
-        b=Ntd7E3Q+XtsdsDooOyG4muibuYNPm+gL2ozBMdBZJzoncBDuHBN0stB2HOAiO1gkhK
-         0KmS0ZW89vBj6qjq6uOKl+MsXXUELRg7+1CcafRjVksXeK0Lw+zDa1Z6S/DFtLfNHwPC
-         XH3amw5wqYVVrpOuyOnGjSBBYh68MYMJsHrQM+Uk3AvgvgtikoD8X9JKhwMOpvYcqK4U
-         +Trm4YG8nX7zBZUY0pTPdyvHLV2Vz3ezwJkoTaVGRGoAR53+UZWXLFD9Xfmpg3XSamyD
-         oz3c4rLawaGxv5+aXnZDNPhjL4t6Y1RIcW7EbCxIRpClwssDtzoFywCYW8NsxPMTaNV4
-         qx4g==
-X-Gm-Message-State: AOAM5309rNFipOHP4CsU0vBW04TTP24chqt1KMXrLv9MmezIb/gtRc++
-        6ayLV6IvJmOI4oQNbz12QLHmqGxfA5Y=
-X-Google-Smtp-Source: ABdhPJzJE4zslyGfGvcDlz07boMQ5nRjs8yyzCWvA2MMz8AlycCO4TqXJ8BnIMpWw/eg+X7rMUBks6idOm4=
+        bh=P+DRV+1kr28zVJ/U3wDOfdSPd3HkANrRfuFzxqlC4Pc=;
+        b=gfGu6mX+Xk9ONwy+q1x2U0zKZYdlJ/kohAH6EeYW0ouQ3rs/71MHY8FwOzZDMdsEfy
+         DmHctIKOn+nhKZLpmXZZ+FxSNwFuJoGr0DGCprfq0Hsskh78/XMqsrBZgtJ6IPT6jfSI
+         lqkaNxfCpKK8iG3CvHOYIvxz1MJ/O9rwRhn8sdHcag+6CnHqdwVA5lkVyk52572u43J8
+         A0DNvTEUXT35R/SRRfbuEpDkl1nSl/NGuDbBmFUAQ0CkkXzDfaAxgLtejjSpvUoCH0k2
+         Od2XTUxzY9IkzyuydafVLZOJRLJydr3uZGi1nXIBJ44AQfMeInz1fg5xkM4sU3tnl/h0
+         fTxw==
+X-Gm-Message-State: AOAM533Ugn7nDRxfsT/OTADeFJZwCQXImI8LtQ32mu0NsNtZJpkVkSCw
+        uVzk4z5iUalPEtYKY4Ip12eNPHqiCDQ=
+X-Google-Smtp-Source: ABdhPJxmL8KM/5Kv0n8tQo795U2DFcdkGRAYUhSqHM6sj42QWQ+C3ACMCn3W2CeCnI48cqnYWj3LpGGCTK0=
 X-Received: from satyaprateek.c.googlers.com ([fda3:e722:ac3:10:24:72f4:c0a8:1092])
- (user=satyat job=sendgmr) by 2002:a25:8185:: with SMTP id p5mr7728654ybk.54.1622840961400;
- Fri, 04 Jun 2021 14:09:21 -0700 (PDT)
-Date:   Fri,  4 Jun 2021 21:09:05 +0000
+ (user=satyat job=sendgmr) by 2002:a63:1e55:: with SMTP id p21mr6828807pgm.412.1622840965137;
+ Fri, 04 Jun 2021 14:09:25 -0700 (PDT)
+Date:   Fri,  4 Jun 2021 21:09:07 +0000
 In-Reply-To: <20210604210908.2105870-1-satyat@google.com>
-Message-Id: <20210604210908.2105870-7-satyat@google.com>
+Message-Id: <20210604210908.2105870-9-satyat@google.com>
 Mime-Version: 1.0
 References: <20210604210908.2105870-1-satyat@google.com>
 X-Mailer: git-send-email 2.32.0.rc1.229.g3e70b5a671-goog
-Subject: [PATCH v9 6/9] iomap: support direct I/O with fscrypt using blk-crypto
+Subject: [PATCH v9 8/9] f2fs: support direct I/O with fscrypt using blk-crypto
 From:   Satya Tangirala <satyat@google.com>
 To:     "Theodore Y . Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -80,55 +80,40 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Set bio crypt contexts on bios by calling into fscrypt when required.
-No DUN contiguity checks are done - callers are expected to set up the
-iomap correctly to ensure that each bio submitted by iomap will not have
-blocks with incontiguous DUNs by calling fscrypt_limit_io_blocks()
-appropriately.
+Wire up f2fs with fscrypt direct I/O support. direct I/O with fscrypt is
+only supported through blk-crypto (i.e. CONFIG_BLK_INLINE_ENCRYPTION must
+have been enabled, the 'inlinecrypt' mount option must have been specified,
+and either hardware inline encryption support must be present or
+CONFIG_BLK_INLINE_ENCYRPTION_FALLBACK must have been enabled). Further,
+direct I/O on encrypted files is only supported when the *length* of the
+I/O is aligned to the filesystem block size (which is *not* necessarily the
+same as the block device's block size).
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 Co-developed-by: Satya Tangirala <satyat@google.com>
 Signed-off-by: Satya Tangirala <satyat@google.com>
+Acked-by: Jaegeuk Kim <jaegeuk@kernel.org>
 ---
- fs/iomap/direct-io.c | 6 ++++++
- 1 file changed, 6 insertions(+)
+ fs/f2fs/f2fs.h | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
 
-diff --git a/fs/iomap/direct-io.c b/fs/iomap/direct-io.c
-index 9398b8c31323..1c825deb36a9 100644
---- a/fs/iomap/direct-io.c
-+++ b/fs/iomap/direct-io.c
-@@ -6,6 +6,7 @@
- #include <linux/module.h>
- #include <linux/compiler.h>
- #include <linux/fs.h>
-+#include <linux/fscrypt.h>
- #include <linux/iomap.h>
- #include <linux/backing-dev.h>
- #include <linux/uio.h>
-@@ -185,11 +186,14 @@ static void
- iomap_dio_zero(struct iomap_dio *dio, struct iomap *iomap, loff_t pos,
- 		unsigned len)
- {
-+	struct inode *inode = file_inode(dio->iocb->ki_filp);
- 	struct page *page = ZERO_PAGE(0);
- 	int flags = REQ_SYNC | REQ_IDLE;
- 	struct bio *bio;
+diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+index c83d90125ebd..a416ea3a1a04 100644
+--- a/fs/f2fs/f2fs.h
++++ b/fs/f2fs/f2fs.h
+@@ -4181,7 +4181,11 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
+ 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+ 	int rw = iov_iter_rw(iter);
  
- 	bio = bio_alloc(GFP_KERNEL, 1);
-+	fscrypt_set_bio_crypt_ctx(bio, inode, pos >> inode->i_blkbits,
-+				  GFP_KERNEL);
- 	bio_set_dev(bio, iomap->bdev);
- 	bio->bi_iter.bi_sector = iomap_sector(iomap, pos);
- 	bio->bi_private = dio;
-@@ -306,6 +310,8 @@ iomap_dio_bio_actor(struct inode *inode, loff_t pos, loff_t length,
- 		}
- 
- 		bio = bio_alloc(GFP_KERNEL, nr_pages);
-+		fscrypt_set_bio_crypt_ctx(bio, inode, pos >> inode->i_blkbits,
-+					  GFP_KERNEL);
- 		bio_set_dev(bio, iomap->bdev);
- 		bio->bi_iter.bi_sector = iomap_sector(iomap, pos);
- 		bio->bi_write_hint = dio->iocb->ki_hint;
+-	if (f2fs_post_read_required(inode))
++	if (!fscrypt_dio_supported(iocb, iter))
++		return true;
++	if (fsverity_active(inode))
++		return true;
++	if (f2fs_compressed_file(inode))
+ 		return true;
+ 	if (f2fs_is_multi_device(sbi))
+ 		return true;
 -- 
 2.32.0.rc1.229.g3e70b5a671-goog
 
