@@ -8,60 +8,61 @@ X-Spam-Status: No, score=-26.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
 	version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 556EDC4743D
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:09:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5E16AC4743F
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:09:33 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 427B7613F4
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:09:29 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 404BB61406
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:09:33 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230424AbhFDVLP (ORCPT
+        id S231213AbhFDVLS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 4 Jun 2021 17:11:15 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51214 "EHLO
+        Fri, 4 Jun 2021 17:11:18 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51156 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230389AbhFDVLM (ORCPT
+        with ESMTP id S231148AbhFDVLR (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 4 Jun 2021 17:11:12 -0400
-Received: from mail-pj1-x104a.google.com (mail-pj1-x104a.google.com [IPv6:2607:f8b0:4864:20::104a])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id ED4C6C061795
-        for <linux-fscrypt@vger.kernel.org>; Fri,  4 Jun 2021 14:09:25 -0700 (PDT)
-Received: by mail-pj1-x104a.google.com with SMTP id mw15-20020a17090b4d0fb0290157199aadbaso8374959pjb.7
-        for <linux-fscrypt@vger.kernel.org>; Fri, 04 Jun 2021 14:09:25 -0700 (PDT)
+        Fri, 4 Jun 2021 17:11:17 -0400
+Received: from mail-qv1-xf4a.google.com (mail-qv1-xf4a.google.com [IPv6:2607:f8b0:4864:20::f4a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 9A993C061787
+        for <linux-fscrypt@vger.kernel.org>; Fri,  4 Jun 2021 14:09:15 -0700 (PDT)
+Received: by mail-qv1-xf4a.google.com with SMTP id n12-20020a0c8c0c0000b02901edb8963d4dso7540016qvb.18
+        for <linux-fscrypt@vger.kernel.org>; Fri, 04 Jun 2021 14:09:15 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=P+DRV+1kr28zVJ/U3wDOfdSPd3HkANrRfuFzxqlC4Pc=;
-        b=BD3ZmfBd88tZgrK5VWyAdL43R8ifUsR8x6sFdE82nRuDKynYAWDrzE4ViAPmykHBE4
-         iyytiZIYdAESIcvzY6xdWybqTUGCNisGZiXWYfKieKbymZmV/yt7zvjY9NFl3juibb/s
-         ikEDpwDO3GTB7QBr/5PZz/yTynDJQ+EVyDbqXYxqVspW4jHjr6GfHmb6aePCiI+9M6Vd
-         nAWhQ+RRLTv2OXSWhOZSnRNx4+nvq3NfPSSnycc4sLlhRuBgnNb++2d32IlTONdzLlpM
-         5aRbbSRXEHIXxwZ6wYXd6/i1swYlGsa4c2M1WAwUuXtMLF2EffxUpGOmrT0pPALk2QKG
-         mb2w==
+        bh=91peql34DHbFUki+AbIkoVzV6GEWt4wa1rjinU0Vj1o=;
+        b=NWM6rSqjQWgBV4b0PQCeKKpM41Gh30JBudqV4IzVKloaLmDl/Elq/REtE98KKwRDDK
+         RoyIta1OKr/9Zo6G9QXrLium4ej+9gKZTVPYUePqI1jhOJgobWyhOoEeUm6Z8HlMRjIr
+         Qx4GLl9jime2jzklU9y2MF4l4VIiast22wwPkx8CULvJraclZ2P+a0Rou3l70zG/oHiq
+         1UjT69ghMT/VyqfhLtg/Z6iCpGrigd9QganfvoleBrBwR0XeBn1h+LbhUsV4OYDFF6iX
+         rkUigqHsbMPT6bWEOC6ezUgYqzhG+7kTT2s2TUnbwbfhC+8Z9agd+FqZP4QJKKf7EKS3
+         yU5A==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=P+DRV+1kr28zVJ/U3wDOfdSPd3HkANrRfuFzxqlC4Pc=;
-        b=gfGu6mX+Xk9ONwy+q1x2U0zKZYdlJ/kohAH6EeYW0ouQ3rs/71MHY8FwOzZDMdsEfy
-         DmHctIKOn+nhKZLpmXZZ+FxSNwFuJoGr0DGCprfq0Hsskh78/XMqsrBZgtJ6IPT6jfSI
-         lqkaNxfCpKK8iG3CvHOYIvxz1MJ/O9rwRhn8sdHcag+6CnHqdwVA5lkVyk52572u43J8
-         A0DNvTEUXT35R/SRRfbuEpDkl1nSl/NGuDbBmFUAQ0CkkXzDfaAxgLtejjSpvUoCH0k2
-         Od2XTUxzY9IkzyuydafVLZOJRLJydr3uZGi1nXIBJ44AQfMeInz1fg5xkM4sU3tnl/h0
-         fTxw==
-X-Gm-Message-State: AOAM533Ugn7nDRxfsT/OTADeFJZwCQXImI8LtQ32mu0NsNtZJpkVkSCw
-        uVzk4z5iUalPEtYKY4Ip12eNPHqiCDQ=
-X-Google-Smtp-Source: ABdhPJxmL8KM/5Kv0n8tQo795U2DFcdkGRAYUhSqHM6sj42QWQ+C3ACMCn3W2CeCnI48cqnYWj3LpGGCTK0=
+        bh=91peql34DHbFUki+AbIkoVzV6GEWt4wa1rjinU0Vj1o=;
+        b=BfRHenwy864YunXrxfJT7sUUZaqxWcVqUSgtxBmB7KNQ6045KjXac2+5/FyAUljVay
+         1bWH68vOtCUVTHNceeUHUcN/H3lRoP3XLLZDnv1mI8egO793EExAto7OquIo5iQnxlW4
+         HefHfanGwV7MrfwWNulBhI3gRac47jc4TIiRr7GiNwhWRWNUQdUh8oWcgaQ/WZdc+3YD
+         sSWzEfJ8PVTgDiJpKkRSsJ9yEJa14+n+VOzhLNWbGFxjs+g2bC8OaksmT/NGaqWKO5YE
+         DdYAKK1Su0Idga3qDiOgrD/UwLhLJPBu8OXT6zTLaDKeCY4BbLMREO1//wysQSdzxd3s
+         UESQ==
+X-Gm-Message-State: AOAM530ET3FgggujEzDc3398i1lp29M5BGOePkQcaP0o5zA35u8j4258
+        nN4OP7vYkFflH8u647YagzSexb+PgQM=
+X-Google-Smtp-Source: ABdhPJyxZNAgaBzH8MB4R3w5D0FDEiNYSY0E6g3pRNVW4sq6jgFG0GaBevF/RjxS6fOw2/bE9D33hwV+eRU=
 X-Received: from satyaprateek.c.googlers.com ([fda3:e722:ac3:10:24:72f4:c0a8:1092])
- (user=satyat job=sendgmr) by 2002:a63:1e55:: with SMTP id p21mr6828807pgm.412.1622840965137;
- Fri, 04 Jun 2021 14:09:25 -0700 (PDT)
-Date:   Fri,  4 Jun 2021 21:09:07 +0000
+ (user=satyat job=sendgmr) by 2002:a05:6214:428:: with SMTP id
+ a8mr3037233qvy.3.1622840954643; Fri, 04 Jun 2021 14:09:14 -0700 (PDT)
+Date:   Fri,  4 Jun 2021 21:09:01 +0000
 In-Reply-To: <20210604210908.2105870-1-satyat@google.com>
-Message-Id: <20210604210908.2105870-9-satyat@google.com>
+Message-Id: <20210604210908.2105870-3-satyat@google.com>
 Mime-Version: 1.0
 References: <20210604210908.2105870-1-satyat@google.com>
 X-Mailer: git-send-email 2.32.0.rc1.229.g3e70b5a671-goog
-Subject: [PATCH v9 8/9] f2fs: support direct I/O with fscrypt using blk-crypto
+Subject: [PATCH v9 2/9] block: blk-crypto: relax alignment requirements for
+ bvecs in bios
 From:   Satya Tangirala <satyat@google.com>
 To:     "Theodore Y . Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -71,49 +72,65 @@ To:     "Theodore Y . Ts'o" <tytso@mit.edu>,
 Cc:     linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
         linux-block@vger.kernel.org, linux-ext4@vger.kernel.org,
-        Eric Biggers <ebiggers@google.com>,
-        Satya Tangirala <satyat@google.com>
+        Satya Tangirala <satyat@google.com>,
+        Eric Biggers <ebiggers@google.com>
 Content-Type: text/plain; charset="UTF-8"
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+blk-crypto only accepted bios whose bvecs' offsets and lengths were aligned
+to the crypto data unit size, since blk-crypto-fallback required that to
+work correctly.
 
-Wire up f2fs with fscrypt direct I/O support. direct I/O with fscrypt is
-only supported through blk-crypto (i.e. CONFIG_BLK_INLINE_ENCRYPTION must
-have been enabled, the 'inlinecrypt' mount option must have been specified,
-and either hardware inline encryption support must be present or
-CONFIG_BLK_INLINE_ENCYRPTION_FALLBACK must have been enabled). Further,
-direct I/O on encrypted files is only supported when the *length* of the
-I/O is aligned to the filesystem block size (which is *not* necessarily the
-same as the block device's block size).
+Now that the blk-crypto-fallback has been updated to work without that
+assumption, we relax the alignment requirement - blk-crypto now only needs
+the total size of the bio to be aligned to the crypto data unit size.
 
+Co-developed-by: Eric Biggers <ebiggers@google.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
-Co-developed-by: Satya Tangirala <satyat@google.com>
 Signed-off-by: Satya Tangirala <satyat@google.com>
-Acked-by: Jaegeuk Kim <jaegeuk@kernel.org>
 ---
- fs/f2fs/f2fs.h | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
+ block/blk-crypto.c | 19 ++-----------------
+ 1 file changed, 2 insertions(+), 17 deletions(-)
 
-diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
-index c83d90125ebd..a416ea3a1a04 100644
---- a/fs/f2fs/f2fs.h
-+++ b/fs/f2fs/f2fs.h
-@@ -4181,7 +4181,11 @@ static inline bool f2fs_force_buffered_io(struct inode *inode,
- 	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
- 	int rw = iov_iter_rw(iter);
+diff --git a/block/blk-crypto.c b/block/blk-crypto.c
+index c5bdaafffa29..06f81e64151d 100644
+--- a/block/blk-crypto.c
++++ b/block/blk-crypto.c
+@@ -200,22 +200,6 @@ bool bio_crypt_ctx_mergeable(struct bio_crypt_ctx *bc1, unsigned int bc1_bytes,
+ 	return !bc1 || bio_crypt_dun_is_contiguous(bc1, bc1_bytes, bc2->bc_dun);
+ }
  
--	if (f2fs_post_read_required(inode))
-+	if (!fscrypt_dio_supported(iocb, iter))
-+		return true;
-+	if (fsverity_active(inode))
-+		return true;
-+	if (f2fs_compressed_file(inode))
- 		return true;
- 	if (f2fs_is_multi_device(sbi))
- 		return true;
+-/* Check that all I/O segments are data unit aligned. */
+-static bool bio_crypt_check_alignment(struct bio *bio)
+-{
+-	const unsigned int data_unit_size =
+-		bio->bi_crypt_context->bc_key->crypto_cfg.data_unit_size;
+-	struct bvec_iter iter;
+-	struct bio_vec bv;
+-
+-	bio_for_each_segment(bv, bio, iter) {
+-		if (!IS_ALIGNED(bv.bv_len | bv.bv_offset, data_unit_size))
+-			return false;
+-	}
+-
+-	return true;
+-}
+-
+ blk_status_t __blk_crypto_init_request(struct request *rq)
+ {
+ 	return blk_ksm_get_slot_for_key(rq->q->ksm, rq->crypt_ctx->bc_key,
+@@ -271,7 +255,8 @@ bool __blk_crypto_bio_prep(struct bio **bio_ptr)
+ 		goto fail;
+ 	}
+ 
+-	if (!bio_crypt_check_alignment(bio)) {
++	if (!IS_ALIGNED(bio->bi_iter.bi_size,
++			bc_key->crypto_cfg.data_unit_size)) {
+ 		bio->bi_status = BLK_STS_IOERR;
+ 		goto fail;
+ 	}
 -- 
 2.32.0.rc1.229.g3e70b5a671-goog
 
