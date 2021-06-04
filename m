@@ -2,64 +2,58 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-26.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
+X-Spam-Status: No, score=-21.3 required=3.0 tests=BAYES_00,DKIMWL_WL_MED,
 	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,
-	INCLUDES_CR_TRAILER,INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,
-	USER_AGENT_GIT,USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no
-	version=3.4.0
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT,
+	USER_IN_DEF_DKIM_WL autolearn=unavailable autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8C7F5C4743F
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:10:26 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 70F73C4743E
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:10:28 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 6F9E9613F4
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:10:26 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5AB0F6140C
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Jun 2021 21:10:28 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231532AbhFDVML (ORCPT
+        id S231553AbhFDVMO (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 4 Jun 2021 17:12:11 -0400
-Received: from mail-pg1-f201.google.com ([209.85.215.201]:57101 "EHLO
-        mail-pg1-f201.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231521AbhFDVMK (ORCPT
+        Fri, 4 Jun 2021 17:12:14 -0400
+Received: from mail-pj1-f73.google.com ([209.85.216.73]:64245 "EHLO
+        mail-pj1-f73.google.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S231539AbhFDVMM (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 4 Jun 2021 17:12:10 -0400
-Received: by mail-pg1-f201.google.com with SMTP id 28-20020a63135c0000b029021b78388f01so6666782pgt.23
-        for <linux-fscrypt@vger.kernel.org>; Fri, 04 Jun 2021 14:10:23 -0700 (PDT)
+        Fri, 4 Jun 2021 17:12:12 -0400
+Received: by mail-pj1-f73.google.com with SMTP id h32-20020a17090a29a3b0290161dfc5d1bfso6611814pjd.8
+        for <linux-fscrypt@vger.kernel.org>; Fri, 04 Jun 2021 14:10:11 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20161025;
-        h=date:in-reply-to:message-id:mime-version:references:subject:from:to
-         :cc;
-        bh=H6v2kY5YMxOOHLcLSDdX+aEzIdLNYM1I0EjO3txeols=;
-        b=v1jZNkJYmY3AfKMvuvpfH3JJQcdV29JlvKaiWzw7Pj5dPY3hbHoKohjT3M1SqQ5FFz
-         G/tUkYjzmPiXLBY61CpYrnU7ZI7tvTpp2CBXGHl/LyoFPLLKRvPxUy+N+cPRdapDxLeC
-         Z8Eh4SoflqHue1COLbTamqv01t/mA8CE1LJwQOBgEgyAryAOTaY7MJlPrjluNTGeAint
-         /gc5P2jZaZ3YZjQRytNEvbbEzCD+sJ/qkVZK7oysVmpkIMUsp5TFiGLVJL+HI3o0vFAa
-         ewZH43cN3mTTq1bKsTBmIoWlxjxTnjXv2d97I3HYY+lA+lAakvigohnk7CHOmQBQGEy1
-         o3Fw==
+        h=date:message-id:mime-version:subject:from:to:cc;
+        bh=FMbuMLj5Rm4HXgTCK4ErZpEUdwqkKvJbjVvRhJRuIoI=;
+        b=NL+4ed93frwkVnpKca486IssjHFSLEESSoDOv8HStprQiy6/5mQU9IzMUY5l7uPNKO
+         75naARNfSntgeJO6hteLH9GiTkBTeZAd4d/lU/3tdTLXVa2yVm/6xGwJWbNmUHzSJv81
+         xazThDs8Lx0PEQVChSlLpe4kaCs0N/HvaEo6PXKTynQ5EboeyW62m9xpj0vGQE84WEZj
+         GNv1DWVvrWUTGLz/rvk2HEKwQaSaniLj7tBgdb9DqWmNzMTbn1Ck1ZpqrU8YuXfvBIOy
+         s6AYyUrjbVma7xp2AoVjEMbfwn9BndFbXjtgVJtCEO7Z9trhHlVr7oGjO4nELOIIoGtm
+         L5jA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:in-reply-to:message-id:mime-version
-         :references:subject:from:to:cc;
-        bh=H6v2kY5YMxOOHLcLSDdX+aEzIdLNYM1I0EjO3txeols=;
-        b=lXpLnJueJInO0pBSpj7bUBHDLnXCUsiLqNlq0r5vn4YD3RJWQINBvwRg0v92dNnyJ5
-         y7hDdOj99o51hZrjfiUv1UfY51WDR1JwI3z2J/wT8HT+ZP+W+ge5LXZ4HNEXTZ8IB0Dr
-         66yvTH+tI58MoWGoXHskPr4GKbyu8/nwpYT2psGUEqzAm4ktJsSJHFDPHVSCIOyDw/17
-         rXzF6oaDqfb47Z+F9ydoYk1BP2SMRROqMkrlvJKgaxikt1RIHALmSe5skZdt5HMmnYtO
-         jDy/c0/jxW50KFU2jl45yTqtHdN6LeRV/05/bUmDAGL40hbSxBaj0k44uLpYV04OeJe/
-         mV0w==
-X-Gm-Message-State: AOAM531gg56kEet3g1STSHCu6GTi0FjAkuyVEn2epLSOo/rqDgdP64H7
-        Sg3XgjTE2zPUFm066Ky2hHgi/h+75NE=
-X-Google-Smtp-Source: ABdhPJw2OZI8kOjDJIkhSAHFElaeOr1IGaH93bDYTIxiQQ+b217XZW3IqkglpAxk3/foE4UT4038CtgtNRs=
+        h=x-gm-message-state:date:message-id:mime-version:subject:from:to:cc;
+        bh=FMbuMLj5Rm4HXgTCK4ErZpEUdwqkKvJbjVvRhJRuIoI=;
+        b=Jmuc4qtuRDgGZJb11g3nCyhG1EtMq8tYCy655pe5sWJFKRHWFNzZjcdRYdNZCEb8SN
+         Pg5DkmyZuRSCV9Fv80EK81lK9l3iBO46CfIpMPY+4qR7uDXKfTHmy1v6mfeAN6nOb9ul
+         0t16uKe+gyemKI/B5wR/l+nbeiiGg2t7ijH8FGjm1D7IZHIX+yArdPVsrUqbK34dORxg
+         opfITt/D0qMB9lHSvvFyx4luA/kIwTssjVhFtACvXmKw2opfI4zeriCKqT2Hh8+9Y1pl
+         VH6Wegw7N8SDqfsneX7B9LMxe2gcqHA2qO9Js72qm76LE8QfwBaxDnvKCsoL9hivBzHe
+         tjgA==
+X-Gm-Message-State: AOAM531jjvCULETMU2egPrVg5dChdRXdOUWNxLKqPVho1SGqQBoZf+C6
+        lM7pZpcsJwq42b2lWantiI/5PehESyI=
+X-Google-Smtp-Source: ABdhPJx3G3SE5JulN7r3qwiqrC8W7sc2+Kh8W2VogbHy+/du+MYm6tDJ+dB2nayc3YpfbzPSr8GamE6X94Y=
 X-Received: from satyaprateek.c.googlers.com ([fda3:e722:ac3:10:24:72f4:c0a8:1092])
- (user=satyat job=sendgmr) by 2002:a17:902:6acb:b029:fc:4d8c:cfba with SMTP id
- i11-20020a1709026acbb02900fc4d8ccfbamr6249435plt.29.1622840963331; Fri, 04
- Jun 2021 14:09:23 -0700 (PDT)
-Date:   Fri,  4 Jun 2021 21:09:06 +0000
-In-Reply-To: <20210604210908.2105870-1-satyat@google.com>
-Message-Id: <20210604210908.2105870-8-satyat@google.com>
+ (user=satyat job=sendgmr) by 2002:a17:90a:cb07:: with SMTP id
+ z7mr1618508pjt.0.1622840950549; Fri, 04 Jun 2021 14:09:10 -0700 (PDT)
+Date:   Fri,  4 Jun 2021 21:08:59 +0000
+Message-Id: <20210604210908.2105870-1-satyat@google.com>
 Mime-Version: 1.0
-References: <20210604210908.2105870-1-satyat@google.com>
 X-Mailer: git-send-email 2.32.0.rc1.229.g3e70b5a671-goog
-Subject: [PATCH v9 7/9] ext4: support direct I/O with fscrypt using blk-crypto
+Subject: [PATCH v9 0/9] add support for direct I/O with fscrypt using blk-crypto
 From:   Satya Tangirala <satyat@google.com>
 To:     "Theodore Y . Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -69,94 +63,154 @@ To:     "Theodore Y . Ts'o" <tytso@mit.edu>,
 Cc:     linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
         linux-block@vger.kernel.org, linux-ext4@vger.kernel.org,
-        Eric Biggers <ebiggers@google.com>,
         Satya Tangirala <satyat@google.com>
 Content-Type: text/plain; charset="UTF-8"
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+This patch series adds support for direct I/O with fscrypt using
+blk-crypto. Note that this patch relies on another patchset
+("ensure bios aren't split in middle of crypto data unit" found at
+https://lore.kernel.org/linux-block/20210604195900.2096121-1-satyat@google.com/
+)
 
-Wire up ext4 with fscrypt direct I/O support. Direct I/O with fscrypt is
-only supported through blk-crypto (i.e. CONFIG_BLK_INLINE_ENCRYPTION must
-have been enabled, the 'inlinecrypt' mount option must have been specified,
-and either hardware inline encryption support must be present or
-CONFIG_BLK_INLINE_ENCYRPTION_FALLBACK must have been enabled). Further,
-direct I/O on encrypted files is only supported when the *length* of the
-I/O is aligned to the filesystem block size (which is *not* necessarily the
-same as the block device's block size).
+Till now, the blk-crypto-fallback expected the offset and length of each
+bvec in a bio to be aligned to the crypto data unit size. This in turn
+would mean that any user buffer used to read/write encrypted data using the
+blk-crypto framework would need to be aligned to the crypto data unit size.
+Patch 1 enables blk-crypto-fallback to work without this requirement. It
+also relaxes the alignment requirement that blk-crypto checks for - now,
+blk-crypto only requires that the length of the I/O is aligned to the
+crypto data unit size. This allows direct I/O support introduced in the
+later patches in this series to require extra alignment restrictions on
+user buffers.
 
-fscrypt_limit_io_blocks() is called before setting up the iomap to ensure
-that the blocks of each bio that iomap will submit will have contiguous
-DUNs. Note that fscrypt_limit_io_blocks() is normally a no-op, as normally
-the DUNs simply increment along with the logical blocks. But it's needed
-to handle an edge case in one of the fscrypt IV generation methods.
+Patch 2 relaxes the alignment check that blk-crypto performs on bios.
+blk-crypto would check that the offset and length of each bvec in a bio is
+aligned to the data unit size, since the blk-crypto-fallback required it.
+As this is no longer the case, blk-crypto now only checks that the total
+length of the bio is data unit size aligned.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
-Co-developed-by: Satya Tangirala <satyat@google.com>
-Signed-off-by: Satya Tangirala <satyat@google.com>
-Reviewed-by: Jaegeuk Kim <jaegeuk@kernel.org>
-Acked-by: Theodore Ts'o <tytso@mit.edu>
----
- fs/ext4/file.c  | 10 ++++++----
- fs/ext4/inode.c |  7 +++++++
- 2 files changed, 13 insertions(+), 4 deletions(-)
+Patch 3 adds two functions to fscrypt that need to be called to determine
+if direct I/O is supported for a request.
 
-diff --git a/fs/ext4/file.c b/fs/ext4/file.c
-index 816dedcbd541..a2898a496c4e 100644
---- a/fs/ext4/file.c
-+++ b/fs/ext4/file.c
-@@ -36,9 +36,11 @@
- #include "acl.h"
- #include "truncate.h"
- 
--static bool ext4_dio_supported(struct inode *inode)
-+static bool ext4_dio_supported(struct kiocb *iocb, struct iov_iter *iter)
- {
--	if (IS_ENABLED(CONFIG_FS_ENCRYPTION) && IS_ENCRYPTED(inode))
-+	struct inode *inode = file_inode(iocb->ki_filp);
-+
-+	if (!fscrypt_dio_supported(iocb, iter))
- 		return false;
- 	if (fsverity_active(inode))
- 		return false;
-@@ -61,7 +63,7 @@ static ssize_t ext4_dio_read_iter(struct kiocb *iocb, struct iov_iter *to)
- 		inode_lock_shared(inode);
- 	}
- 
--	if (!ext4_dio_supported(inode)) {
-+	if (!ext4_dio_supported(iocb, to)) {
- 		inode_unlock_shared(inode);
- 		/*
- 		 * Fallback to buffered I/O if the operation being performed on
-@@ -511,7 +513,7 @@ static ssize_t ext4_dio_write_iter(struct kiocb *iocb, struct iov_iter *from)
- 	}
- 
- 	/* Fallback to buffered I/O if the inode does not support direct I/O. */
--	if (!ext4_dio_supported(inode)) {
-+	if (!ext4_dio_supported(iocb, from)) {
- 		if (ilock_shared)
- 			inode_unlock_shared(inode);
- 		else
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index fe6045a46599..fe8006efb5ef 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -3481,6 +3481,13 @@ static int ext4_iomap_begin(struct inode *inode, loff_t offset, loff_t length,
- 	if (ret < 0)
- 		return ret;
- out:
-+	/*
-+	 * When inline encryption is enabled, sometimes I/O to an encrypted file
-+	 * has to be broken up to guarantee DUN contiguity. Handle this by
-+	 * limiting the length of the mapping returned.
-+	 */
-+	map.m_len = fscrypt_limit_io_blocks(inode, map.m_lblk, map.m_len);
-+
- 	ext4_set_iomap(inode, iomap, &map, offset, length);
- 
- 	return 0;
+Patches 4 and 6 modify direct-io and iomap respectively to set bio crypt
+contexts on bios when appropriate by calling into fscrypt.
+
+Patch 5 makes bio_iov_iter_get_pages() respect
+bio_required_sector_alignment() which is now necessary since Patch 6 makes
+it possible for iomap (which uses bio_iov_iter_get_pages()) construct bios
+that have crypt contexts.
+
+Patches 7 and 8 allow ext4 and f2fs direct I/O to support fscrypt without
+falling back to buffered I/O.
+
+Patch 9 updates the fscrypt documentation for direct I/O support.
+The documentation now notes the required conditions for inline encryption
+and direct I/O on encrypted files.
+
+This patch series was tested by running xfstests with test_dummy_encryption
+with and without the 'inlinecrypt' mount option, and there were no
+meaningful regressions. Without any modification, xfstests skip any
+direct I/O test when using ext4/encrypt and f2fs/encrypt, so I modified
+xfstests not to skip those tests.
+
+Among those tests, generic/465 fails with ext4/encrypt because a bio ends
+up being split in the middle of a crypto data unit.  Patch 1 from v7 (which
+has been sent out as a separate patch series) fixes this.
+
+Note that the blk-crypto-fallback changes (Patch 1 in v8 in this series)
+were also tested through xfstests by using this series along with the patch
+series that ensures bios aren't split in the middle of a data unit (Patch 1
+from v7) - Some tests (such as generic/465 again) result in bvecs that
+don't contain a complete data unit (so a data unit is split across multiple
+bvecs), and only pass with this patch.
+
+Changes v8 => v9:
+ - Introduce patch 5 to fix bug with iomap_dio_bio_actor() which
+   constructed bios that had incomplete crypto data units (fixes xfstests
+   generic/465 with ext4)
+
+Changes v7 => v8:
+ - Patch 1 from v7 (which ensured that bios aren't split in the middle of
+   a data unit) has been sent out in a separate patch series, as it's
+   required even without this patch series. That patch series can now
+   be found at
+   https://lore.kernel.org/linux-block/20210604195900.2096121-1-satyat@google.com/
+ - Patch 2 from v7 has been split into 2 patches (Patch 1 and 2 in v8).
+ - Update docs
+
+Changes v6 => v7:
+ - add patches 1 and 2 to allow blk-crypto to work with user buffers not
+   aligned to crypto data unit size, so that direct I/O doesn't require
+   that alignment either.
+ - some cleanups
+
+Changes v5 => v6:
+ - fix bug with fscrypt_limit_io_blocks() and make it ready for 64 bit
+   block numbers.
+ - remove Reviewed-by for Patch 1 due to significant changes from when
+   the Reviewed-by was given.
+
+Changes v4 => v5:
+ - replace fscrypt_limit_io_pages() with fscrypt_limit_io_block(), which
+   is now called by individual filesystems (currently only ext4) instead
+   of the iomap code. This new function serves the same end purpose as
+   the one it replaces (ensuring that DUNs within a bio are contiguous)
+   but operates purely with blocks instead of with pages.
+ - make iomap_dio_zero() set bio_crypt_ctx's again, instead of just a
+   WARN_ON() since some folks prefer that instead.
+ - add Reviewed-by's
+
+Changes v3 => v4:
+ - Fix bug in iomap_dio_bio_actor() where fscrypt_limit_io_pages() was
+   being called too early (thanks Eric!)
+ - Improve comments and fix formatting in documentation
+ - iomap_dio_zero() is only called to zero out partial blocks, but
+   direct I/O is only supported on encrypted files when I/O is
+   blocksize aligned, so it doesn't need to set encryption contexts on
+   bios. Replace setting the encryption context with a WARN_ON(). (Eric)
+
+Changes v2 => v3:
+ - add changelog to coverletter
+
+Changes v1 => v2:
+ - Fix bug in f2fs caused by replacing f2fs_post_read_required() with
+   !fscrypt_dio_supported() since the latter doesn't check for
+   compressed inodes unlike the former.
+ - Add patches 6 and 7 for fscrypt documentation
+ - cleanups and comments
+
+Eric Biggers (5):
+  fscrypt: add functions for direct I/O support
+  direct-io: add support for fscrypt using blk-crypto
+  iomap: support direct I/O with fscrypt using blk-crypto
+  ext4: support direct I/O with fscrypt using blk-crypto
+  f2fs: support direct I/O with fscrypt using blk-crypto
+
+Satya Tangirala (4):
+  block: blk-crypto-fallback: handle data unit split across multiple
+    bvecs
+  block: blk-crypto: relax alignment requirements for bvecs in bios
+  block: Make bio_iov_iter_get_pages() respect
+    bio_required_sector_alignment()
+  fscrypt: update documentation for direct I/O support
+
+ Documentation/filesystems/fscrypt.rst |  21 ++-
+ block/bio.c                           |  13 +-
+ block/blk-crypto-fallback.c           | 203 ++++++++++++++++++++------
+ block/blk-crypto.c                    |  19 +--
+ fs/crypto/crypto.c                    |   8 +
+ fs/crypto/inline_crypt.c              |  75 ++++++++++
+ fs/direct-io.c                        |  15 +-
+ fs/ext4/file.c                        |  10 +-
+ fs/ext4/inode.c                       |   7 +
+ fs/f2fs/f2fs.h                        |   6 +-
+ fs/iomap/direct-io.c                  |   6 +
+ include/linux/fscrypt.h               |  18 +++
+ 12 files changed, 328 insertions(+), 73 deletions(-)
+
 -- 
 2.32.0.rc1.229.g3e70b5a671-goog
 
