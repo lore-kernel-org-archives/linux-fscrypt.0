@@ -2,120 +2,63 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-17.5 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS autolearn=ham autolearn_force=no
-	version=3.4.0
+X-Spam-Status: No, score=-7.5 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
+	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
+	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C0621C4338F
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Jul 2021 19:05:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 535ECC4320A
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 23 Jul 2021 08:16:50 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 9C36660EBC
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 22 Jul 2021 19:04:50 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 3D45060F02
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 23 Jul 2021 08:16:50 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229745AbhGVSYP (ORCPT
+        id S234516AbhGWHgN (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 22 Jul 2021 14:24:15 -0400
-Received: from mail.kernel.org ([198.145.29.99]:50118 "EHLO mail.kernel.org"
+        Fri, 23 Jul 2021 03:36:13 -0400
+Received: from mail.kernel.org ([198.145.29.99]:55622 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S229510AbhGVSYP (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 22 Jul 2021 14:24:15 -0400
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 9748D60EB9;
-        Thu, 22 Jul 2021 19:04:49 +0000 (UTC)
+        id S234488AbhGWHgL (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Fri, 23 Jul 2021 03:36:11 -0400
+Received: by mail.kernel.org (Postfix) with ESMTPSA id DBB2560EBD;
+        Fri, 23 Jul 2021 08:16:44 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1626980689;
-        bh=oWDsz2mqAq9NcEEh1BJyznZQCPm+facoTqPnYlRRhJQ=;
+        s=k20201202; t=1627028205;
+        bh=FmcsTWKVBtnIpV3kMjIYbVPEWxN8HccIeY7NweLv3fc=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=QilYXNDAdzMfF+frM57wtEsK8q1xBhGM/Fw6ySzsoC5LukRf2pi9r343XIPOGGjhw
-         inNMRBNKyr2+WCSrrUv7uZJuoNSJm64GbfIJc7Nquu2D6EMLTWmWw7Xcm69xxwN3em
-         MyoZQsSMilN6DlmympazHrgl3V3HkOqFgjlkpozftLq0ixlYnwg7iEVqAdfLcbBwTk
-         ZW76MEHP/kBQ047J1PXSwSXqVmaV5PZ0ohUOezoWPe17OJPGuQKeNSN8UQV9MkpcKg
-         zqijpJkmcGOjHCLVgEUIRAlnaOnsquR9/cTWbypuBNqFkKdQ78gVo4VnpOSwqM3DnS
-         zmr2Bt9gIvk1A==
-Date:   Thu, 22 Jul 2021 12:04:49 -0700
-From:   "Darrick J. Wong" <djwong@kernel.org>
-To:     Satya Tangirala <satyat@google.com>
-Cc:     "Theodore Y . Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>,
-        Eric Biggers <ebiggers@kernel.org>, Chao Yu <chao@kernel.org>,
-        Jens Axboe <axboe@kernel.dk>,
-        "Darrick J . Wong" <darrick.wong@oracle.com>,
-        linux-kernel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
-        linux-block@vger.kernel.org, linux-ext4@vger.kernel.org,
-        Eric Biggers <ebiggers@google.com>
-Subject: Re: [PATCH v9 6/9] iomap: support direct I/O with fscrypt using
- blk-crypto
-Message-ID: <20210722190449.GH559212@magnolia>
-References: <20210604210908.2105870-1-satyat@google.com>
- <20210604210908.2105870-7-satyat@google.com>
+        b=p83qFCUO8L5H8TZ0pJz+hXz6JmnLt1esXuHZQ1efs1LWA9Opu0oBskpMKhw8FGdEn
+         nRBdyz7JfEQ9qdkIcTf1s6jWVmXGJz0B10YnsGkoqu0Z+PT8MNdItnRK5/riqJ3n3N
+         dMEmHj1FJUqoWauRhi1kqPUaFo4eMLlPmU5/k2LHvRDGmayVlV1MmoN75lE4I69XcO
+         wzI4Wbxrh+pZFV+3FZfLhUXTIWs12fPDDRqUdqsH3RGGbE/sYaa1SZjPi0URUsmrV4
+         MyrBojV249e4n2k4um2W07m0rzgP3013tggjYWhp30V03kOWm9xowzoMT08vWHlk2I
+         2Lox9cg4HZL2A==
+Date:   Fri, 23 Jul 2021 01:16:43 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Jeff Layton <jlayton@kernel.org>
+Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        Hannes Reinecke <hare@suse.de>
+Subject: Re: [PATCH] fscrypt: align Base64 encoding with RFC 4648 base64url
+Message-ID: <YPp667igbuyElEcD@sol.localdomain>
+References: <20210718000125.59701-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20210604210908.2105870-7-satyat@google.com>
+In-Reply-To: <20210718000125.59701-1-ebiggers@kernel.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Jun 04, 2021 at 09:09:05PM +0000, Satya Tangirala wrote:
-> From: Eric Biggers <ebiggers@google.com>
+On Sat, Jul 17, 2021 at 07:01:25PM -0500, Eric Biggers wrote:
 > 
-> Set bio crypt contexts on bios by calling into fscrypt when required.
-> No DUN contiguity checks are done - callers are expected to set up the
-> iomap correctly to ensure that each bio submitted by iomap will not have
-> blocks with incontiguous DUNs by calling fscrypt_limit_io_blocks()
-> appropriately.
-> 
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> Co-developed-by: Satya Tangirala <satyat@google.com>
-> Signed-off-by: Satya Tangirala <satyat@google.com>
+> There have been two attempts to copy the fscrypt Base64 code into lib/
+> (https://lkml.kernel.org/r/20200821182813.52570-6-jlayton@kernel.org and
+> https://lkml.kernel.org/r/20210716110428.9727-5-hare@suse.de), and both
+> have been caught up by the fscrypt Base64 variant being nonstandard and
+> not properly documented.  Also, the planned use of the fscrypt Base64
+> code in the CephFS storage back-end will prevent it from being changed
+> later (whereas currently it can still be changed), so we need to choose
+> an encoding that we're happy with before it's too late.
 
-Looks like a straightforward conversion...
+Jeff, any thoughts on whether this is the variant of Base64 you want to use in
+the CephFS fscrypt support?
 
-Acked-by: Darrick J. Wong <djwong@kernel.org>
-
---D
-
-> ---
->  fs/iomap/direct-io.c | 6 ++++++
->  1 file changed, 6 insertions(+)
-> 
-> diff --git a/fs/iomap/direct-io.c b/fs/iomap/direct-io.c
-> index 9398b8c31323..1c825deb36a9 100644
-> --- a/fs/iomap/direct-io.c
-> +++ b/fs/iomap/direct-io.c
-> @@ -6,6 +6,7 @@
->  #include <linux/module.h>
->  #include <linux/compiler.h>
->  #include <linux/fs.h>
-> +#include <linux/fscrypt.h>
->  #include <linux/iomap.h>
->  #include <linux/backing-dev.h>
->  #include <linux/uio.h>
-> @@ -185,11 +186,14 @@ static void
->  iomap_dio_zero(struct iomap_dio *dio, struct iomap *iomap, loff_t pos,
->  		unsigned len)
->  {
-> +	struct inode *inode = file_inode(dio->iocb->ki_filp);
->  	struct page *page = ZERO_PAGE(0);
->  	int flags = REQ_SYNC | REQ_IDLE;
->  	struct bio *bio;
->  
->  	bio = bio_alloc(GFP_KERNEL, 1);
-> +	fscrypt_set_bio_crypt_ctx(bio, inode, pos >> inode->i_blkbits,
-> +				  GFP_KERNEL);
->  	bio_set_dev(bio, iomap->bdev);
->  	bio->bi_iter.bi_sector = iomap_sector(iomap, pos);
->  	bio->bi_private = dio;
-> @@ -306,6 +310,8 @@ iomap_dio_bio_actor(struct inode *inode, loff_t pos, loff_t length,
->  		}
->  
->  		bio = bio_alloc(GFP_KERNEL, nr_pages);
-> +		fscrypt_set_bio_crypt_ctx(bio, inode, pos >> inode->i_blkbits,
-> +					  GFP_KERNEL);
->  		bio_set_dev(bio, iomap->bdev);
->  		bio->bi_iter.bi_sector = iomap_sector(iomap, pos);
->  		bio->bi_write_hint = dio->iocb->ki_hint;
-> -- 
-> 2.32.0.rc1.229.g3e70b5a671-goog
-> 
+- Eric
