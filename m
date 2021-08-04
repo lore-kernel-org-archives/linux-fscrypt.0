@@ -2,133 +2,129 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-6.7 required=3.0 tests=BAYES_00,DKIMWL_WL_HIGH,
-	DKIM_SIGNED,DKIM_VALID,DKIM_VALID_AU,MAILING_LIST_MULTI,SPF_HELO_NONE,
-	SPF_PASS autolearn=no autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-2.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,HEADER_FROM_DIFFERENT_DOMAINS,
+	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
+	autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 339ADC432BE
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Jul 2021 18:28:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 02127C4338F
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  4 Aug 2021 08:26:21 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 0C9C460F4B
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Jul 2021 18:28:15 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id D89CD60F22
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  4 Aug 2021 08:26:20 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229684AbhG2S2R (ORCPT
+        id S236360AbhHDI0c (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 29 Jul 2021 14:28:17 -0400
-Received: from mail.kernel.org ([198.145.29.99]:39900 "EHLO mail.kernel.org"
-        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S229614AbhG2S2R (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 29 Jul 2021 14:28:17 -0400
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 1132660EBD;
-        Thu, 29 Jul 2021 18:28:13 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1627583293;
-        bh=CBrRBRO/tDGawMDo7/5lR6U7y1rcL3K2D2QD62EAY6s=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=SSnwQJ29s1xjFeEYWBu1pRC14ZtIm/hTtIUu0k3HawS4MB3N4ncTvbVEzae3ViuU7
-         jMa5AUdbBxSVR+sU86OHV8imvEEQ0yRcLvsmV4wgr9p97tx+SeN1m745TVZBloK3NU
-         +PLPoJvqKc+M0iUzkNEBBMzdETD8o3otG55JX/H678jYHFCZICO3RZvay7zsQNEqPU
-         3cPc9DshIMs//k25ZFoTZ6Az0Yyk/ivATKSGF6hGzGUO8ZndNr3l0ZNfodBZozS8lt
-         +bp3xPA5qOIzn21SiBqnQd6NFa3O1VRuEuw5UPvi8FxVaMdAJRFpvLAjIeTYx7kcAj
-         GpNEVPswy/0ig==
-Date:   Thu, 29 Jul 2021 11:28:11 -0700
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Ahmad Fatoum <a.fatoum@pengutronix.de>
-Cc:     Sumit Garg <sumit.garg@linaro.org>,
-        "Theodore Y. Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>,
-        Jarkko Sakkinen <jarkko@kernel.org>,
-        James Morris <jmorris@namei.org>,
-        "Serge E. Hallyn" <serge@hallyn.com>,
-        James Bottomley <jejb@linux.ibm.com>,
-        Mimi Zohar <zohar@linux.ibm.com>,
-        David Howells <dhowells@redhat.com>,
+        Wed, 4 Aug 2021 04:26:32 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55862 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S236282AbhHDI0c (ORCPT
+        <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 4 Aug 2021 04:26:32 -0400
+Received: from mail-wm1-x32a.google.com (mail-wm1-x32a.google.com [IPv6:2a00:1450:4864:20::32a])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id AF429C061799
+        for <linux-fscrypt@vger.kernel.org>; Wed,  4 Aug 2021 01:26:19 -0700 (PDT)
+Received: by mail-wm1-x32a.google.com with SMTP id l34-20020a05600c1d22b02902573c214807so3329311wms.2
+        for <linux-fscrypt@vger.kernel.org>; Wed, 04 Aug 2021 01:26:19 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=linaro.org; s=google;
+        h=date:from:to:cc:subject:message-id:references:mime-version
+         :content-disposition:content-transfer-encoding:in-reply-to;
+        bh=wshwpEouxlj43w/LQBqY2ZUR+r5ng5wTSfjhEdV7ZQ8=;
+        b=REbwzykdm7OHhYkHKTa4GjtmoAm/i/ozHj6HEKSDN2l8DI9yMhJjoD3frpiGcgtfuf
+         B6k4/3bLIv/vNdP6tho5LYyF0rZUupRmPJCOued8whJH/JUG2rWSdfbelUmXEH/ZI/v+
+         2SflUax0cVIuf5qFUmtGeSjNmD177hOaOC1u31X3/1MZEBQLCJRSwk6AwezncWp08aGl
+         Rz6HuxNepkU8dv72WwgMjJnDtKHfA1zczbGIhz4JCvDjHDc/zxSFeRsjxGheGvW8bTGG
+         jsYxYwMJy8H34keULSi4tRMVafjaS+eTGn93fl/EP8YVVkhsVZxL9hp4Hl8UgT+5kuWC
+         DtRA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
+         :mime-version:content-disposition:content-transfer-encoding
+         :in-reply-to;
+        bh=wshwpEouxlj43w/LQBqY2ZUR+r5ng5wTSfjhEdV7ZQ8=;
+        b=md1mAyvlKLz/E9GAaSLS0m0Uy8XxlUXsIBz9O4jp6Vurby/U9wl+UoQhV++9kGH2fN
+         h5mxSUwX6M2CX/cKrjLh0fzZLNSnd3TILcmuiRm4TY1f9TCqAiANN/YN111hESd8ablq
+         3bNmnGjXc5ZUuQZ8tFzw+Q36nKlT+13VYVZUyMkPLHMUt3p8YaKZJP9Q6ETihu4EPXWH
+         2XR6PET1vWKj1PKytn8eaauNb8+E7DBKl5bWDVQKHsA0mkOO5u6WDIyPJ5L/kamFlVrS
+         8VQZmDiX96Xe/M9ff8pRlpFU3LG7iXcBObjzgeAT8T2qzvMRBj2+hsCD9lksJgpkBIUt
+         C5Ug==
+X-Gm-Message-State: AOAM5333aGsHnTCmfm+3ngFLMOFViVVfSq2VUIKbQRCu/K6hzC9Fe0gG
+        aq0vYvWTScM58sobISlBlToZ6g==
+X-Google-Smtp-Source: ABdhPJxSza4YTAHvrQmEe3o94FSosfOKLqFVTx3EseeNpvxzLFtyvsyQMNLyS8I4Tj4Yqe7BtrbYsA==
+X-Received: by 2002:a7b:cb44:: with SMTP id v4mr26665661wmj.169.1628065578184;
+        Wed, 04 Aug 2021 01:26:18 -0700 (PDT)
+Received: from google.com ([109.180.115.228])
+        by smtp.gmail.com with ESMTPSA id j6sm5060494wmq.29.2021.08.04.01.26.17
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Wed, 04 Aug 2021 01:26:17 -0700 (PDT)
+Date:   Wed, 4 Aug 2021 09:26:15 +0100
+From:   Lee Jones <lee.jones@linaro.org>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     Satya Tangirala <satyat@google.com>,
+        "Theodore Y . Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
+        Jens Axboe <axboe@kernel.dk>,
+        "Darrick J . Wong" <darrick.wong@oracle.com>,
+        open list <linux-kernel@vger.kernel.org>,
         linux-fscrypt@vger.kernel.org,
-        "open list:HARDWARE RANDOM NUMBER GENERATOR CORE" 
-        <linux-crypto@vger.kernel.org>,
-        linux-integrity <linux-integrity@vger.kernel.org>,
-        "open list:SECURITY SUBSYSTEM" 
-        <linux-security-module@vger.kernel.org>,
-        "open list:ASYMMETRIC KEYS" <keyrings@vger.kernel.org>,
-        Linux Kernel Mailing List <linux-kernel@vger.kernel.org>,
-        git@andred.net, Omar Sandoval <osandov@osandov.com>,
-        Pengutronix Kernel Team <kernel@pengutronix.de>
-Subject: Re: [RFC PATCH v1] fscrypt: support encrypted and trusted keys
-Message-ID: <YQLzOwnPF1434kUk@gmail.com>
-References: <20210727144349.11215-1-a.fatoum@pengutronix.de>
- <YQA2fHPwH6EsH9BR@sol.localdomain>
- <367ea5bb-76cf-6020-cb99-91b5ca82d679@pengutronix.de>
- <YQGAOTdQRHFv9rlr@gmail.com>
- <CAFA6WYO-h+ngCAT_PS=bZTQkBBtOpBRUmZNP4zhvRuLDJYQXkA@mail.gmail.com>
- <1530428a-ad2c-a169-86a7-24bfafb9b9bd@pengutronix.de>
+        linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
+        linux-block@vger.kernel.org, linux-ext4@vger.kernel.org
+Subject: Re: [PATCH v9 0/9] add support for direct I/O with fscrypt using
+ blk-crypto
+Message-ID: <YQpPJ8To7NN2AIuq@google.com>
+References: <20210604210908.2105870-1-satyat@google.com>
+ <CAF2Aj3h-Gt3bOxH4wXB7aeQ3jVzR3TEqd3uLsh4T9Q=e6W6iqQ@mail.gmail.com>
+ <YPmFSw4JbWnIozSZ@gmail.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <1530428a-ad2c-a169-86a7-24bfafb9b9bd@pengutronix.de>
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <YPmFSw4JbWnIozSZ@gmail.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Jul 29, 2021 at 11:07:00AM +0200, Ahmad Fatoum wrote:
-> >> Most people don't change defaults.
-> >>
-> >> Essentially your same argument was used for Dual_EC_DRBG; people argued it was
-> >> okay to standardize because people had the option to choose their own constants
-> >> if they felt the default constants were backdoored.  That didn't really matter,
-> >> though, since in practice everyone just used the default constants.
-> 
-> I'd appreciate your feedback on my CAAM series if you think the defaults
-> can be improved. Trusted keys are no longer restricted to TPMs,
-> so users of other backends shouldn't be dismissed, because one backend
-> can be used with fscrypt by alternative means.
+On Thu, 22 Jul 2021, Eric Biggers wrote:
 
-I already gave feedback:
-https://lkml.kernel.org/keyrings/YGOcZtkw3ZM5kvl6@gmail.com
-https://lkml.kernel.org/keyrings/YGUHBelwhvJDhKoo@gmail.com
-https://lkml.kernel.org/keyrings/YGViOc3DG+Pjuur6@sol.localdomain
+> Hi Lee,
+> 
+> On Thu, Jul 22, 2021 at 12:23:47PM +0100, Lee Jones wrote:
+> > 
+> > No review after 7 weeks on the list.
+> > 
+> > Is there anything Satya can do to help expedite this please?
+> > 
+> 
+> This series is basically ready, but I can't apply it because it depends on the
+> other patch series
+> "[PATCH v4 0/9] ensure bios aren't split in middle of crypto data unit"
+> (https://lkml.kernel.org/linux-block/20210707052943.3960-1-satyaprateek2357@gmail.com/T/#u).
+> I will be re-reviewing that other patch series soon, but it primary needs review
+> by the people who work more regularly with the block layer, and it will have to
+> go in through the block tree (I can't apply it to the fscrypt tree).
+> 
+> The original version of this series didn't require so many block layer changes,
+> but it would have only allowed direct I/O with user buffer pointers aligned to
+> the filesystem block size, which was too controversial with other filesystem
+> developers; see the long discussion at
+> https://lkml.kernel.org/linux-fscrypt/20200720233739.824943-1-satyat@google.com/T/#u.
+> 
+> In addition, it was requested that we not add features to the "legacy" direct
+> I/O implementation (fs/direct-io.c), so I have a patch series in progress
+> "[PATCH 0/9] f2fs: use iomap for direct I/O"
+> (https://lkml.kernel.org/linux-f2fs-devel/20210716143919.44373-1-ebiggers@kernel.org/T/#u)
+> which will change f2fs to use iomap.
+> 
+> Also please understand that Satya has left Google, so any further work from him
+> on this is happening on a personal capacity in his free time.
 
-> >>>> - trusted and encrypted keys aren't restricted to specific uses in the kernel
-> >>>>   (like the fscrypt-provisioning key type is) but rather are general-purpose.
-> >>>>   Hence, it may be possible to leak their contents to userspace by requesting
-> >>>>   their use for certain algorithms/features, e.g. to encrypt a dm-crypt target
-> >>>>   using a weak cipher that is vulnerable to key recovery attacks.
-> >>>
-> >>> The footgun is already there by allowing users to specify their own
-> >>>
-> >>> raw key. Users can already use $keyid for dm-crypt and then do
-> >>>
-> >>>   $ keyctl pipe $keyid | fscryptctl add_key /mnt
-> >>>
-> >>> The responsibility to not reuse key material already lies with the users,
-> >>> regardless if they handle the raw key material directly or indirectly via
-> >>> a trusted key description/ID.
-> >>
-> >> Elsewhere you are claiming that "trusted" keys can never be disclosed to
-> >> userspace.  So you can't rely on userspace cooperating, right?
-> 
-> The users I meant are humans, e.g. system integrators. They need to think about
-> 
-> burning fuses, signing bootloaders, verifying kernel and root file systems,
-> 
-> encrypting file systems and safekeeping their crypto keys. Ample opportunity for
-> 
-> stuff to go wrong. They would benefit from having relevant kernel functionality
-> 
-> integrate with each other instead of having to carry downstream patches, which
-> we and many others[1] did for years. We now finally have a chance to drop this
-> technical debt thanks to Sumit's trusted key rework and improve user security
-> along the way.
-> 
-> So, Eric, how should we proceed?
-> 
+Thanks for the update Eric.  I'll push this to the back of my queue
+and check back with you at a later date.  Hopefully we see some
+interest from the other maintainers sooner, rather than later.
 
-It is probably inevitable that this be added, but you need to document it
-properly and not make misleading claims like "The key material is generated
-within the kernel" (for the TPM "trust" source the default is to use the TPM's
-RNG, *not* the kernel RNG), and "is never disclosed to userspace in clear text"
-(that's only guaranteed to be true for non-malicious userspace).  Also please
-properly document that this is mainly intended for accessing key wrapping
-hardware such as CAAM that can't be accessed from userspace in another way like
-TPMs can.
-
-- Eric
+-- 
+Lee Jones [李琼斯]
+Senior Technical Lead - Developer Services
+Linaro.org │ Open source software for Arm SoCs
+Follow Linaro: Facebook | Twitter | Blog
