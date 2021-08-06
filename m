@@ -2,129 +2,241 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 X-Spam-Level: 
-X-Spam-Status: No, score=-2.9 required=3.0 tests=BAYES_00,DKIM_SIGNED,
-	DKIM_VALID,DKIM_VALID_AU,FSL_HELO_FAKE,HEADER_FROM_DIFFERENT_DOMAINS,
-	MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED autolearn=no
-	autolearn_force=no version=3.4.0
+X-Spam-Status: No, score=-21.8 required=3.0 tests=BAYES_00,
+	HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,INCLUDES_PATCH,
+	MAILING_LIST_MULTI,MENTIONS_GIT_HOSTING,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 02127C4338F
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  4 Aug 2021 08:26:21 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CDF8CC4338F
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  6 Aug 2021 15:09:54 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id D89CD60F22
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  4 Aug 2021 08:26:20 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id A833960EB9
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  6 Aug 2021 15:09:54 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S236360AbhHDI0c (ORCPT
+        id S242910AbhHFPKJ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 4 Aug 2021 04:26:32 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55862 "EHLO
+        Fri, 6 Aug 2021 11:10:09 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40072 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S236282AbhHDI0c (ORCPT
+        with ESMTP id S242756AbhHFPKJ (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 4 Aug 2021 04:26:32 -0400
-Received: from mail-wm1-x32a.google.com (mail-wm1-x32a.google.com [IPv6:2a00:1450:4864:20::32a])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id AF429C061799
-        for <linux-fscrypt@vger.kernel.org>; Wed,  4 Aug 2021 01:26:19 -0700 (PDT)
-Received: by mail-wm1-x32a.google.com with SMTP id l34-20020a05600c1d22b02902573c214807so3329311wms.2
-        for <linux-fscrypt@vger.kernel.org>; Wed, 04 Aug 2021 01:26:19 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linaro.org; s=google;
-        h=date:from:to:cc:subject:message-id:references:mime-version
-         :content-disposition:content-transfer-encoding:in-reply-to;
-        bh=wshwpEouxlj43w/LQBqY2ZUR+r5ng5wTSfjhEdV7ZQ8=;
-        b=REbwzykdm7OHhYkHKTa4GjtmoAm/i/ozHj6HEKSDN2l8DI9yMhJjoD3frpiGcgtfuf
-         B6k4/3bLIv/vNdP6tho5LYyF0rZUupRmPJCOued8whJH/JUG2rWSdfbelUmXEH/ZI/v+
-         2SflUax0cVIuf5qFUmtGeSjNmD177hOaOC1u31X3/1MZEBQLCJRSwk6AwezncWp08aGl
-         Rz6HuxNepkU8dv72WwgMjJnDtKHfA1zczbGIhz4JCvDjHDc/zxSFeRsjxGheGvW8bTGG
-         jsYxYwMJy8H34keULSi4tRMVafjaS+eTGn93fl/EP8YVVkhsVZxL9hp4Hl8UgT+5kuWC
-         DtRA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20161025;
-        h=x-gm-message-state:date:from:to:cc:subject:message-id:references
-         :mime-version:content-disposition:content-transfer-encoding
-         :in-reply-to;
-        bh=wshwpEouxlj43w/LQBqY2ZUR+r5ng5wTSfjhEdV7ZQ8=;
-        b=md1mAyvlKLz/E9GAaSLS0m0Uy8XxlUXsIBz9O4jp6Vurby/U9wl+UoQhV++9kGH2fN
-         h5mxSUwX6M2CX/cKrjLh0fzZLNSnd3TILcmuiRm4TY1f9TCqAiANN/YN111hESd8ablq
-         3bNmnGjXc5ZUuQZ8tFzw+Q36nKlT+13VYVZUyMkPLHMUt3p8YaKZJP9Q6ETihu4EPXWH
-         2XR6PET1vWKj1PKytn8eaauNb8+E7DBKl5bWDVQKHsA0mkOO5u6WDIyPJ5L/kamFlVrS
-         8VQZmDiX96Xe/M9ff8pRlpFU3LG7iXcBObjzgeAT8T2qzvMRBj2+hsCD9lksJgpkBIUt
-         C5Ug==
-X-Gm-Message-State: AOAM5333aGsHnTCmfm+3ngFLMOFViVVfSq2VUIKbQRCu/K6hzC9Fe0gG
-        aq0vYvWTScM58sobISlBlToZ6g==
-X-Google-Smtp-Source: ABdhPJxSza4YTAHvrQmEe3o94FSosfOKLqFVTx3EseeNpvxzLFtyvsyQMNLyS8I4Tj4Yqe7BtrbYsA==
-X-Received: by 2002:a7b:cb44:: with SMTP id v4mr26665661wmj.169.1628065578184;
-        Wed, 04 Aug 2021 01:26:18 -0700 (PDT)
-Received: from google.com ([109.180.115.228])
-        by smtp.gmail.com with ESMTPSA id j6sm5060494wmq.29.2021.08.04.01.26.17
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Wed, 04 Aug 2021 01:26:17 -0700 (PDT)
-Date:   Wed, 4 Aug 2021 09:26:15 +0100
-From:   Lee Jones <lee.jones@linaro.org>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     Satya Tangirala <satyat@google.com>,
-        "Theodore Y . Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
-        Jens Axboe <axboe@kernel.dk>,
-        "Darrick J . Wong" <darrick.wong@oracle.com>,
-        open list <linux-kernel@vger.kernel.org>,
-        linux-fscrypt@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
-        linux-block@vger.kernel.org, linux-ext4@vger.kernel.org
-Subject: Re: [PATCH v9 0/9] add support for direct I/O with fscrypt using
- blk-crypto
-Message-ID: <YQpPJ8To7NN2AIuq@google.com>
-References: <20210604210908.2105870-1-satyat@google.com>
- <CAF2Aj3h-Gt3bOxH4wXB7aeQ3jVzR3TEqd3uLsh4T9Q=e6W6iqQ@mail.gmail.com>
- <YPmFSw4JbWnIozSZ@gmail.com>
+        Fri, 6 Aug 2021 11:10:09 -0400
+Received: from metis.ext.pengutronix.de (metis.ext.pengutronix.de [IPv6:2001:67c:670:201:290:27ff:fe1d:cc33])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id BD3EEC0613CF
+        for <linux-fscrypt@vger.kernel.org>; Fri,  6 Aug 2021 08:09:53 -0700 (PDT)
+Received: from dude.hi.pengutronix.de ([2001:67c:670:100:1d::7])
+        by metis.ext.pengutronix.de with esmtps (TLS1.3:ECDHE_RSA_AES_256_GCM_SHA384:256)
+        (Exim 4.92)
+        (envelope-from <afa@pengutronix.de>)
+        id 1mC1Tf-0006Dt-Sv; Fri, 06 Aug 2021 17:09:39 +0200
+Received: from afa by dude.hi.pengutronix.de with local (Exim 4.92)
+        (envelope-from <afa@pengutronix.de>)
+        id 1mC1Td-0001mU-C3; Fri, 06 Aug 2021 17:09:37 +0200
+From:   Ahmad Fatoum <a.fatoum@pengutronix.de>
+To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Eric Biggers <ebiggers@kernel.org>
+Cc:     kernel@pengutronix.de, Ahmad Fatoum <a.fatoum@pengutronix.de>,
+        Jarkko Sakkinen <jarkko@kernel.org>,
+        James Morris <jmorris@namei.org>,
+        "Serge E. Hallyn" <serge@hallyn.com>,
+        James Bottomley <jejb@linux.ibm.com>,
+        Mimi Zohar <zohar@linux.ibm.com>,
+        Sumit Garg <sumit.garg@linaro.org>,
+        David Howells <dhowells@redhat.com>,
+        linux-fscrypt@vger.kernel.org, linux-crypto@vger.kernel.org,
+        linux-integrity@vger.kernel.org,
+        linux-security-module@vger.kernel.org, keyrings@vger.kernel.org,
+        linux-kernel@vger.kernel.org
+Subject: [PATCH v2] fscrypt: support trusted keys
+Date:   Fri,  6 Aug 2021 17:09:28 +0200
+Message-Id: <20210806150928.27857-1-a.fatoum@pengutronix.de>
+X-Mailer: git-send-email 2.30.2
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
-Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <YPmFSw4JbWnIozSZ@gmail.com>
+X-SA-Exim-Connect-IP: 2001:67c:670:100:1d::7
+X-SA-Exim-Mail-From: afa@pengutronix.de
+X-SA-Exim-Scanned: No (on metis.ext.pengutronix.de); SAEximRunCond expanded to false
+X-PTX-Original-Recipient: linux-fscrypt@vger.kernel.org
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, 22 Jul 2021, Eric Biggers wrote:
+Kernel trusted keys don't require userspace knowledge of the raw key
+material and instead export a sealed blob, which can be persisted to
+unencrypted storage. Userspace can then load this blob into the kernel,
+where it's unsealed and from there on usable for kernel crypto.
 
-> Hi Lee,
-> 
-> On Thu, Jul 22, 2021 at 12:23:47PM +0100, Lee Jones wrote:
-> > 
-> > No review after 7 weeks on the list.
-> > 
-> > Is there anything Satya can do to help expedite this please?
-> > 
-> 
-> This series is basically ready, but I can't apply it because it depends on the
-> other patch series
-> "[PATCH v4 0/9] ensure bios aren't split in middle of crypto data unit"
-> (https://lkml.kernel.org/linux-block/20210707052943.3960-1-satyaprateek2357@gmail.com/T/#u).
-> I will be re-reviewing that other patch series soon, but it primary needs review
-> by the people who work more regularly with the block layer, and it will have to
-> go in through the block tree (I can't apply it to the fscrypt tree).
-> 
-> The original version of this series didn't require so many block layer changes,
-> but it would have only allowed direct I/O with user buffer pointers aligned to
-> the filesystem block size, which was too controversial with other filesystem
-> developers; see the long discussion at
-> https://lkml.kernel.org/linux-fscrypt/20200720233739.824943-1-satyat@google.com/T/#u.
-> 
-> In addition, it was requested that we not add features to the "legacy" direct
-> I/O implementation (fs/direct-io.c), so I have a patch series in progress
-> "[PATCH 0/9] f2fs: use iomap for direct I/O"
-> (https://lkml.kernel.org/linux-f2fs-devel/20210716143919.44373-1-ebiggers@kernel.org/T/#u)
-> which will change f2fs to use iomap.
-> 
-> Also please understand that Satya has left Google, so any further work from him
-> on this is happening on a personal capacity in his free time.
+This is incompatible with fscrypt, where userspace is supposed to supply
+the raw key material. For TPMs, a work around is to do key unsealing in
+userspace, but this may not be feasible for other trusted key backends.
 
-Thanks for the update Eric.  I'll push this to the back of my queue
-and check back with you at a later date.  Hopefully we see some
-interest from the other maintainers sooner, rather than later.
+Make it possible to benefit from both fscrypt and trusted key sealing
+by extending fscrypt_add_key_arg::key_id to hold either the ID of a
+fscrypt-provisioning or a trusted key.
 
+A non fscrypt-provisioning key_id was so far prohibited, so additionally
+allowing trusted keys won't break backwards compatibility.
+
+Signed-off-by: Ahmad Fatoum <a.fatoum@pengutronix.de>
+---
+Tested with:
+https://github.com/google/fscryptctl/pull/23
+
+v1 here:
+https://lore.kernel.org/linux-fscrypt/20210727144349.11215-1-a.fatoum@pengutronix.de/T/#u
+
+v1 -> v2:
+  - Drop encrypted key support and key_extract_material
+  - Use key_id instead of repurposing raw (Eric)
+  - Shift focus to trusted key sealing for non-TPM as a rationale
+    why this integration is worthwhile (Eric)
+  - Extend documentation with rationale on why one would
+    use trusted keys and warn about trusted key reuse
+
+To: "Theodore Y. Ts'o" <tytso@mit.edu>
+To: Jaegeuk Kim <jaegeuk@kernel.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: Jarkko Sakkinen <jarkko@kernel.org>
+Cc: James Morris <jmorris@namei.org>
+Cc: "Serge E. Hallyn" <serge@hallyn.com>
+Cc: James Bottomley <jejb@linux.ibm.com>
+Cc: Mimi Zohar <zohar@linux.ibm.com>
+Cc: Sumit Garg <sumit.garg@linaro.org>
+Cc: David Howells <dhowells@redhat.com>
+Cc: linux-fscrypt@vger.kernel.org
+Cc: linux-crypto@vger.kernel.org
+Cc: linux-integrity@vger.kernel.org
+Cc: linux-security-module@vger.kernel.org
+Cc: keyrings@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org
+---
+ Documentation/filesystems/fscrypt.rst | 31 ++++++++++++++-----
+ fs/crypto/keyring.c                   | 43 +++++++++++++++++++--------
+ 2 files changed, 54 insertions(+), 20 deletions(-)
+
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 44b67ebd6e40..c1811fa4285a 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -734,23 +734,40 @@ as follows:
+ 
+ - ``key_id`` is 0 if the raw key is given directly in the ``raw``
+   field.  Otherwise ``key_id`` is the ID of a Linux keyring key of
+-  type "fscrypt-provisioning" whose payload is
++  type "fscrypt-provisioning" or "trusted":
++  "fscrypt-provisioning" keys have a payload of
+   struct fscrypt_provisioning_key_payload whose ``raw`` field contains
+   the raw key and whose ``type`` field matches ``key_spec.type``.
+   Since ``raw`` is variable-length, the total size of this key's
+   payload must be ``sizeof(struct fscrypt_provisioning_key_payload)``
+-  plus the raw key size.  The process must have Search permission on
+-  this key.
+-
+-  Most users should leave this 0 and specify the raw key directly.
+-  The support for specifying a Linux keyring key is intended mainly to
+-  allow re-adding keys after a filesystem is unmounted and re-mounted,
++  plus the raw key size.
++  For "trusted" keys, the payload is directly taken as the raw key.
++
++  The process must have Search permission on this key.
++
++  Most users leave this 0 and specify the raw key directly.
++  "trusted" keys are useful to leverage kernel support for sealing
++  and unsealing key material. Sealed keys can be persisted to
++  unencrypted storage and later be used to decrypt the file system
++  without requiring userspace to have knowledge of the raw key
++  material.
++  "fscrypt-provisioning" key support is intended mainly to allow
++  re-adding keys after a filesystem is unmounted and re-mounted,
+   without having to store the raw keys in userspace memory.
+ 
+ - ``raw`` is a variable-length field which must contain the actual
+   key, ``raw_size`` bytes long.  Alternatively, if ``key_id`` is
+   nonzero, then this field is unused.
+ 
++.. note::
++
++   Users should take care not to reuse the fscrypt key material with
++   different ciphers or in multiple contexts as this may make it
++   easier to deduce the key.
++   This also applies when the key material is supplied indirectly
++   via a kernel trusted key. In this case, the trusted key should
++   perferably be used only in a single context.
++
+ For v2 policy keys, the kernel keeps track of which user (identified
+ by effective user ID) added the key, and only allows the key to be
+ removed by that user --- or by "root", if they use
+diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+index 0b3ffbb4faf4..721f5da51416 100644
+--- a/fs/crypto/keyring.c
++++ b/fs/crypto/keyring.c
+@@ -20,6 +20,7 @@
+ 
+ #include <crypto/skcipher.h>
+ #include <linux/key-type.h>
++#include <keys/trusted-type.h>
+ #include <linux/random.h>
+ #include <linux/seq_file.h>
+ 
+@@ -577,28 +578,44 @@ static int get_keyring_key(u32 key_id, u32 type,
+ 	key_ref_t ref;
+ 	struct key *key;
+ 	const struct fscrypt_provisioning_key_payload *payload;
+-	int err;
++	int err = 0;
+ 
+ 	ref = lookup_user_key(key_id, 0, KEY_NEED_SEARCH);
+ 	if (IS_ERR(ref))
+ 		return PTR_ERR(ref);
+ 	key = key_ref_to_ptr(ref);
+ 
+-	if (key->type != &key_type_fscrypt_provisioning)
+-		goto bad_key;
+-	payload = key->payload.data[0];
++	if (key->type == &key_type_fscrypt_provisioning) {
++		payload = key->payload.data[0];
+ 
+-	/* Don't allow fscrypt v1 keys to be used as v2 keys and vice versa. */
+-	if (payload->type != type)
+-		goto bad_key;
++		/* Don't allow fscrypt v1 keys to be used as v2 keys and vice versa. */
++		if (payload->type != type) {
++			err = -EKEYREJECTED;
++			goto out_put;
++		}
+ 
+-	secret->size = key->datalen - sizeof(*payload);
+-	memcpy(secret->raw, payload->raw, secret->size);
+-	err = 0;
+-	goto out_put;
++		secret->size = key->datalen - sizeof(*payload);
++		memcpy(secret->raw, payload->raw, secret->size);
++	} else if (IS_REACHABLE(CONFIG_TRUSTED_KEYS) && key->type == &key_type_trusted) {
++		struct trusted_key_payload *tkp;
++
++		/* avoid reseal changing payload while we memcpy key */
++		down_read(&key->sem);
++		tkp = key->payload.data[0];
++		if (!tkp || tkp->key_len < FSCRYPT_MIN_KEY_SIZE ||
++		    tkp->key_len > FSCRYPT_MAX_KEY_SIZE) {
++			up_read(&key->sem);
++			err = -EINVAL;
++			goto out_put;
++		}
++
++		secret->size = tkp->key_len;
++		memcpy(secret->raw, tkp->key, secret->size);
++		up_read(&key->sem);
++	} else {
++		err = -EKEYREJECTED;
++	}
+ 
+-bad_key:
+-	err = -EKEYREJECTED;
+ out_put:
+ 	key_ref_put(ref);
+ 	return err;
 -- 
-Lee Jones [李琼斯]
-Senior Technical Lead - Developer Services
-Linaro.org │ Open source software for Arm SoCs
-Follow Linaro: Facebook | Twitter | Blog
+2.30.2
+
