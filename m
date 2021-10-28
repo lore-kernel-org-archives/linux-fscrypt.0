@@ -2,272 +2,137 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8474BC433EF
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 27 Oct 2021 09:34:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 65ABFC433EF
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 28 Oct 2021 03:48:57 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 621456103B
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 27 Oct 2021 09:34:52 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 3D3F860F90
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 28 Oct 2021 03:48:57 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S241144AbhJ0JhQ (ORCPT
+        id S229771AbhJ1DvV (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 27 Oct 2021 05:37:16 -0400
-Received: from frasgout.his.huawei.com ([185.176.79.56]:4034 "EHLO
-        frasgout.his.huawei.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232422AbhJ0JhP (ORCPT
-        <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 27 Oct 2021 05:37:15 -0400
-Received: from fraeml713-chm.china.huawei.com (unknown [172.18.147.200])
-        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4HfNht67kzz6GD8D;
-        Wed, 27 Oct 2021 17:30:38 +0800 (CST)
-Received: from fraeml714-chm.china.huawei.com (10.206.15.33) by
- fraeml713-chm.china.huawei.com (10.206.15.32) with Microsoft SMTP Server
- (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
- 15.1.2308.15; Wed, 27 Oct 2021 11:34:48 +0200
-Received: from fraeml714-chm.china.huawei.com ([10.206.15.33]) by
- fraeml714-chm.china.huawei.com ([10.206.15.33]) with mapi id 15.01.2308.015;
- Wed, 27 Oct 2021 11:34:48 +0200
-From:   Roberto Sassu <roberto.sassu@huawei.com>
-To:     Deven Bowers <deven.desai@linux.microsoft.com>,
-        Eric Biggers <ebiggers@kernel.org>
-CC:     "corbet@lwn.net" <corbet@lwn.net>,
-        "axboe@kernel.dk" <axboe@kernel.dk>,
-        "agk@redhat.com" <agk@redhat.com>,
-        "snitzer@redhat.com" <snitzer@redhat.com>,
-        "tytso@mit.edu" <tytso@mit.edu>,
-        "paul@paul-moore.com" <paul@paul-moore.com>,
-        "eparis@redhat.com" <eparis@redhat.com>,
-        "jmorris@namei.org" <jmorris@namei.org>,
-        "serge@hallyn.com" <serge@hallyn.com>,
-        "jannh@google.com" <jannh@google.com>,
-        "dm-devel@redhat.com" <dm-devel@redhat.com>,
-        "linux-doc@vger.kernel.org" <linux-doc@vger.kernel.org>,
-        "linux-kernel@vger.kernel.org" <linux-kernel@vger.kernel.org>,
-        "linux-block@vger.kernel.org" <linux-block@vger.kernel.org>,
-        "linux-fscrypt@vger.kernel.org" <linux-fscrypt@vger.kernel.org>,
-        "linux-audit@redhat.com" <linux-audit@redhat.com>,
-        "linux-security-module@vger.kernel.org" 
-        <linux-security-module@vger.kernel.org>
-Subject: RE: [RFC PATCH v7 12/16] fsverity|security: add security hooks to
+        Wed, 27 Oct 2021 23:51:21 -0400
+Received: from mail.kernel.org ([198.145.29.99]:53574 "EHLO mail.kernel.org"
+        rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
+        id S229704AbhJ1DvT (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Wed, 27 Oct 2021 23:51:19 -0400
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 2F52960F22;
+        Thu, 28 Oct 2021 03:48:51 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1635392931;
+        bh=4uaS2ebATc8X0cVmdWXxFMt9mK9HMe1yPqm7907dkQg=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=dJNWLvWTkhLqS95oSEtp08mQ+7EP1niXdYf5r4ot0nMkvT0wpoI7zdkS4IsXRamZ9
+         qy7a3CpWbsWboUogzIiKuCq3PIle2iM846NEKhcyyE1cA+DCiDd2obFCxCvO/qzuI2
+         FkGxEdyxv6FSORSLBpWEOmHbTB81JbEor5oGC8r95lX9R6bGT/uwKYO1aIdF9jYjom
+         jOoUYpCGdfe6M1f25SBHS8P/Suc7BgDrUG5cQpKRD63QPMqGxxpJGuh1qDQ8DQ6JJu
+         qf2VyQZM6/nwFxHZ2nlG9Er8R2YjsdgWnYsidVZHtH0L5lqloiPJG6Qk1yyO4L7zfE
+         7smMRVWc8v7ag==
+Date:   Wed, 27 Oct 2021 20:48:23 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Deven Bowers <deven.desai@linux.microsoft.com>
+Cc:     corbet@lwn.net, axboe@kernel.dk, agk@redhat.com,
+        snitzer@redhat.com, tytso@mit.edu, paul@paul-moore.com,
+        eparis@redhat.com, jmorris@namei.org, serge@hallyn.com,
+        jannh@google.com, dm-devel@redhat.com, linux-doc@vger.kernel.org,
+        linux-kernel@vger.kernel.org, linux-block@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-audit@redhat.com,
+        linux-security-module@vger.kernel.org
+Subject: Re: [RFC PATCH v7 12/16] fsverity|security: add security hooks to
  fsverity digest and signature
-Thread-Topic: [RFC PATCH v7 12/16] fsverity|security: add security hooks to
- fsverity digest and signature
-Thread-Index: AQHXwGWUN6BqcPCg3Uma5jdt5usPz6vRLYAAgAMlHYCAAAy0gIARNsyAgAESBxA=
-Date:   Wed, 27 Oct 2021 09:34:48 +0000
-Message-ID: <154208f2a248482e8664903f734cf0b4@huawei.com>
+Message-ID: <YXodhzYto5BRxqYO@sol.localdomain>
 References: <1634151995-16266-1-git-send-email-deven.desai@linux.microsoft.com>
  <1634151995-16266-13-git-send-email-deven.desai@linux.microsoft.com>
  <YWcyYBuNppjrVOe2@gmail.com>
  <9089bdb0-b28a-9fa0-c510-00fa275af621@linux.microsoft.com>
  <YWngaVdvMyWBlITZ@gmail.com>
  <f027e3fa-2f70-0cdb-ac7b-255cee68edbb@linux.microsoft.com>
-In-Reply-To: <f027e3fa-2f70-0cdb-ac7b-255cee68edbb@linux.microsoft.com>
-Accept-Language: en-US
-Content-Language: en-US
-X-MS-Has-Attach: 
-X-MS-TNEF-Correlator: 
-x-originating-ip: [10.221.98.153]
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: base64
 MIME-Version: 1.0
-X-CFilter-Loop: Reflected
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <f027e3fa-2f70-0cdb-ac7b-255cee68edbb@linux.microsoft.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-PiBGcm9tOiBEZXZlbiBCb3dlcnMgW21haWx0bzpkZXZlbi5kZXNhaUBsaW51eC5taWNyb3NvZnQu
-Y29tXQ0KPiBTZW50OiBUdWVzZGF5LCBPY3RvYmVyIDI2LCAyMDIxIDk6MDQgUE0NCj4gT24gMTAv
-MTUvMjAyMSAxOjExIFBNLCBFcmljIEJpZ2dlcnMgd3JvdGU6DQo+IA0KPiA+IE9uIEZyaSwgT2N0
-IDE1LCAyMDIxIGF0IDEyOjI1OjUzUE0gLTA3MDAsIERldmVuIEJvd2VycyB3cm90ZToNCj4gPj4g
-T24gMTAvMTMvMjAyMSAxMjoyNCBQTSwgRXJpYyBCaWdnZXJzIHdyb3RlOg0KPiA+Pj4gT24gV2Vk
-LCBPY3QgMTMsIDIwMjEgYXQgMTI6MDY6MzFQTSAtDQo+IDA3MDAsZGV2ZW4uZGVzYWlAbGludXgu
-bWljcm9zb2Z0LmNvbSAgd3JvdGU6DQo+ID4+Pj4gRnJvbTogRmFuIFd1PHd1ZmFuQGxpbnV4Lm1p
-Y3Jvc29mdC5jb20+DQo+ID4+Pj4NCj4gPj4+PiBBZGQgc2VjdXJpdHlfaW5vZGVfc2V0c2VjdXJp
-dHkgdG8gZnN2ZXJpdHkgc2lnbmF0dXJlIHZlcmlmaWNhdGlvbi4NCj4gPj4+PiBUaGlzIGNhbiBs
-ZXQgTFNNcyBzYXZlIHRoZSBzaWduYXR1cmUgZGF0YSBhbmQgZGlnZXN0IGhhc2hlcyBwcm92aWRl
-ZA0KPiA+Pj4+IGJ5IGZzdmVyaXR5Lg0KPiA+Pj4gQ2FuIHlvdSBlbGFib3JhdGUgb24gd2h5IExT
-TXMgbmVlZCB0aGlzIGluZm9ybWF0aW9uPw0KPiA+PiBUaGUgcHJvcG9zZWQgTFNNIChJUEUpIG9m
-IHRoaXMgc2VyaWVzIHdpbGwgYmUgdGhlIG9ubHkgb25lIHRvIG5lZWQNCj4gPj4gdGhpcyBpbmZv
-cm1hdGlvbiBhdCB0aGXCoCBtb21lbnQuIElQReKAmXMgZ29hbCBpcyB0byBoYXZlIHByb3ZpZGUN
-Cj4gPj4gdHJ1c3QtYmFzZWQgYWNjZXNzIGNvbnRyb2wuIFRydXN0IGFuZCBJbnRlZ3JpdHkgYXJl
-IHRpZWQgdG9nZXRoZXIsDQo+ID4+IGFzIHlvdSBjYW5ub3QgcHJvdmUgdHJ1c3Qgd2l0aG91dCBw
-cm92aW5nIGludGVncml0eS4NCj4gPiBJIHRoaW5rIHlvdSBtZWFuIGF1dGhlbnRpY2l0eSwgbm90
-IGludGVncml0eT8NCj4gSeKAmXZlIGhlYXJkIGEgbG90IG9mIHBlb3BsZSB1c2UgdGhlc2UgdGVy
-bXMgaW4gb3ZlcmxvYWRlZCB3YXlzLg0KPiANCj4gSWYgd2XigJlyZSB3b3JraW5nIHdpdGggdGhl
-IGRlZmluaXRpb24gb2YgYXV0aGVudGljaXR5IGJlaW5nDQo+IOKAnHRoZSBwcm9wZXJ0eSB0aGF0
-IGEgcmVzb3VyY2Ugd2FzIF9hY3R1YWxseV8gc2VudC9jcmVhdGVkIGJ5IGENCj4gcGFydHnigJ0s
-IGFuZCBpbnRlZ3JpdHkgYmVpbmcg4oCcdGhlIHByb3BlcnR5IHRoYXQgYSByZXNvdXJjZSB3YXMg
-bm90DQo+IG1vZGlmaWVkIGZyb20gYSBwb2ludCBvZiB0aW1l4oCdLCB0aGVuIHllcy4gVGhvdWdo
-IHRoZSBzdGF0ZW1lbnQgaXNu4oCZdA0KPiBmYWxzZSwgdGhvdWdoLCBiZWNhdXNlIHlvdeKAmWQg
-bmVlZCB0byBwcm92ZSBpbnRlZ3JpdHkgaW4gdGhlIHByb2Nlc3Mgb2YNCj4gcHJvdmluZyBhdXRo
-ZW50aWNpdHkuDQo+IA0KPiBJZiBub3QsIGNvdWxkIHlvdSBjbGFyaWZ5IHdoYXQgeW91IG1lYW4g
-YnkgYXV0aGVudGljaXR5IGFuZCBpbnRlZ3JpdHksDQo+IHNvIHRoYXQgd2UgY2FuIHVzZSBjb25z
-aXN0ZW50IGRlZmluaXRpb25zPw0KPiA+IEFsc28gaG93IGRvZXMgdGhpcyBkaWZmZXIgZnJvbSBJ
-TUE/ICBJIGtub3cgdGhhdCBJTUEgZG9lc24ndCBzdXBwb3J0IGZzLXZlcml0eQ0KPiA+IGZpbGUg
-aGFzaGVzLCBidXQgdGhhdCBjb3VsZCBiZSBjaGFuZ2VkLiAgV2h5IG5vdCBleHRlbmQgSU1BIHRv
-IGNvdmVyIHlvdXIgdXNlDQo+ID4gY2FzZShzKT8NCj4gV2UgbG9va2VkIGF0IGV4dGVuZGluZyBJ
-TUEgdG8gY292ZXIgb3VyIHJlcXVpcmVtZW50cyBleHRlbnNpdmVseSB0aGUNCj4gcGFzdCB5ZWFy
-DQo+IGJhc2VkIG9uIGZlZWRiYWNrIHRoZSBsYXN0IHRpbWUgSSBwb3N0ZWQgdGhlc2UgcGF0Y2hl
-cy4gV2UgaW1wbGVtZW50ZWQgYQ0KPiBwcm90b3R5cGUgdGhhdCBoYWQgaGFsZiBvZiBvdXIgcmVx
-dWlyZW1lbnRzLCBidXQgZm91bmQgaXQgcmVzdWx0ZWQgaW4gYQ0KPiBsYXJnZSBjaGFuZ2UgbGlz
-dCB0aGF0IHdvdWxkIHJlc3VsdCBpbiBhIGxhcmdlIGFtb3VudCBvZiBwYWluIGluIHJlc3BlY3QN
-Cj4gdG8gbWFpbnRlbmFuY2UsIGluIGFkZGl0aW9uIHRvIG90aGVyIG1vcmUgYXJjaGl0ZWN0dXJh
-bCBjb25jZXJucyBhYm91dCB0aGUNCj4gaW1wbGVtZW50YXRpb24uIFdlIHdlcmVu4oCZdCBjb252
-aW5jZWQgaXQgd2FzIHRoZSBjb3JyZWN0IGRpcmVjdGlvbiwgZm9yIG91cg0KPiBuZWVkcy4NCj4g
-DQo+IFRoZXJlIHdhcyBhIHByZXNlbnRhdGlvbiBkb25lIGF0IExTUyAyMDIxIGFyb3VuZCB0aGlz
-IHByb3RvdHlwZSBkb25lIGJ5IG15DQo+IGNvbGxlYWd1ZSwgRmFuLCB3aG8gYXV0aG9yZWQgdGhp
-cyBwYXRjaCBhbmQgaW1wbGVtZW50ZWQgdGhlIGFmb3JlbWVudGlvbmVkDQo+IHByb3RvdHlwZS4N
-Cj4gDQo+IEluIGdlbmVyYWwsIElNQSBwcm92aWRlcyBhIHdob2xlIHN1aXRlIG9mIGFtYXppbmcg
-ZnVuY3Rpb25hbGl0eSB3aGVuIGl0DQo+IGNvbWVzIHRvIGV2ZXJ5dGhpbmcgaW50ZWdyaXR5LCBh
-cyB0aGUgZnMtdmVyaXR5IGRvY3VtZW50YXRpb24gc3RhdGVzDQo+IGl0c2VsZjoNCj4gDQo+ICAg
-ICBJTUEgc3BlY2lmaWVzIGEgc3lzdGVtLXdpZGUgcG9saWN5IHRoYXQgc3BlY2lmaWVzIHdoaWNo
-DQo+ICAgICBmaWxlcyBhcmUgaGFzaGVkIGFuZCB3aGF0IHRvIGRvIHdpdGggdGhvc2UgaGFzaGVz
-LCBzdWNoDQo+ICAgICBhcyBsb2cgdGhlbSwgYXV0aGVudGljYXRlIHRoZW0sIG9yIGFkZCB0aGVt
-IHRvIGENCj4gICAgIG1lYXN1cmVtZW50IGxpc3QuDQo+IA0KPiBJbnN0ZWFkLCBJUEUgcHJvdmlk
-ZXMgYSBmaW5lLXR1bmVkIHdheSB0byBfb25seV8gZW5mb3JjZSBhbiBhY2Nlc3MgY29udHJvbA0K
-PiBwb2xpY3kgdG8gdGhlc2UgZmlsZXMgYmFzZWQgb24gdGhlIGRlZmluZWQgdHJ1c3QgcmVxdWly
-ZW1lbnRzIGluIHRoZSBwb2xpY3ksDQo+IHVuZGVyIHZhcmlvdXMgY29udGV4dHMsICh5b3UgbWln
-aHQgaGF2ZSBkaWZmZXJlbnQgcmVxdWlyZW1lbnRzIGZvciB3aGF0DQo+IGV4ZWN1dGVzIGluIGEg
-Z2VuZXJhbCBwdXJwb3NlLCB2ZXJzdXMgbG9hZGFibGUga2VybmVsIG1vZHVsZXMsIGZvciBleGFt
-cGxlKS4NCj4gSXQgd2lsbCBuZXZlciBwcm92aWRlIGJvdGhlciB0byBsb2csIG1lYXN1cmUsIG9y
-IHJldmFsaWRhdGUgdGhlc2UgaGFzaGVzDQo+IGJlY2F1c2UNCj4gdGhhdOKAmXMgbm90IGl0cyBw
-dXJwb3NlLiBUaGlzIGlzIHdoeSBpdCBiZWxvbmdzIGF0IHRoZSBMU00gbGF5ZXIgaW5zdGVhZA0K
-PiBvZiB0aGUNCj4gaW50ZWdyaXR5IHN1YnN5c3RlbSBsYXllciwgYXMgaXQgaXMgcHJvdmlkaW5n
-IGFjY2VzcyBjb250cm9sIGJhc2VkIG9uIGENCj4gcG9saWN5LA0KPiB2ZXJzdXMgcHJvdmlkaW5n
-IGRlZXAgaW50ZWdyYXRpb25zIHdpdGggdGhlIGFjdHVhbCBpbnRlZ3JpdHkgY2xhaW0uDQo+IA0K
-PiBJUEUgaXMgdHJ5aW5nIHRvIGJlIGFnbm9zdGljIHRvIGhvdyBwcmVjaXNlbHkg4oCcdHJ1c3Ti
-gJ0gaXMgcHJvdmlkZWQsIGFzDQo+IG9wcG9zZWQgdG8gYmUgZGVlcGx5IGludGVncmF0ZWQgaW50
-byB0aGUgbWVjaGFuaXNtIHRoYXQgcHJvdmlkZXMNCj4g4oCcdHJ1c3TigJ0uDQo+ID4+IElQRSBu
-ZWVkcyB0aGUgZGlnZXN0IGluZm9ybWF0aW9uIHRvIGJlIGFibGUgdG8gY29tcGFyZSBhIGRpZ2Vz
-dA0KPiA+PiBwcm92aWRlZCBieSB0aGUgcG9saWN5IGF1dGhvciwgYWdhaW5zdCB0aGUgZGlnZXN0
-IGNhbGN1bGF0ZWQgYnkNCj4gPj4gZnN2ZXJpdHkgdG8gbWFrZSBhIGRlY2lzaW9uIG9uIHdoZXRo
-ZXIgdGhhdCBzcGVjaWZpYyBmaWxlLCByZXByZXNlbnRlZA0KPiA+PiBieSB0aGUgZGlnZXN0IGlz
-IGF1dGhvcml6ZWQgZm9yIHRoZSBhY3Rpb25zIHNwZWNpZmllZCBpbiB0aGUgcG9saWN5Lg0KPiA+
-Pg0KPiA+PiBBIG1vcmUgY29uY3JldGUgZXhhbXBsZSwgaWYgYW4gSVBFIHBvbGljeSBhdXRob3Ig
-d3JpdGVzOg0KPiA+Pg0KPiA+PiAgwqDCoMKgIG9wPUVYRUNVVEUgZnN2ZXJpdHlfZGlnZXN0PTxI
-ZXhEaWdlc3QgPiBhY3Rpb249REVOWQ0KPiA+Pg0KPiA+PiBJUEUgdGFrZXMgdGhlIGRpZ2VzdCBw
-cm92aWRlZCBieSB0aGlzIHNlY3VyaXR5IGhvb2ssIHN0b3JlcyBpdA0KPiA+PiBpbiBJUEUncyBz
-ZWN1cml0eSBibG9iIG9uIHRoZSBpbm9kZS4gSWYgdGhpcyBmaWxlIGlzIGxhdGVyDQo+ID4+IGV4
-ZWN1dGVkLCBJUEUgY29tcGFyZXMgdGhlIGRpZ2VzdCBzdG9yZWQgaW4gdGhlIExTTSBibG9iLA0K
-PiA+PiBwcm92aWRlZCBieSB0aGlzIGhvb2ssIGFnYWluc3QgPEhleERpZ2VzdD4gaW4gdGhlIHBv
-bGljeSwgaWYNCj4gPj4gaXQgbWF0Y2hlcywgaXQgZGVuaWVzIHRoZSBhY2Nlc3MsIHBlcmZvcm1p
-bmcgYSByZXZvY2F0aW9uDQo+ID4+IG9mIHRoYXQgZmlsZS4NCj4gPiBEbyB5b3UgaGF2ZSBhIGJl
-dHRlciBleGFtcGxlPyAgVGhpcyBvbmUgaXMgcHJldHR5IHVzZWxlc3Mgc2luY2Ugb25lIGNhbiBn
-ZXQNCj4gPiBhcm91bmQgaXQganVzdCBieSBleGVjdXRpbmcgYSBmaWxlIHRoYXQgZG9lc24ndCBo
-YXZlIGZzLXZlcml0eSBlbmFibGVkLg0KPiBIZXJl4oCZcyBhIG1vcmUgY29tcGxldGUgZXhhbXBs
-ZToNCj4gDQo+ICAgICBwb2xpY3lfbmFtZT3igJ1mcy1leGVjLW9ubHnigJ0gcG9saWN5X3ZlcnNp
-b249MC4wLjENCj4gICAgIERFRkFVTFQgYWN0aW9uPUFMTE9XDQo+IA0KPiAgICAgREVGQVVMVCBv
-cD1FWEVDVVRFIGFjdGlvbj1ERU5ZDQo+ICAgICBvcD1FWEVDVVRFIGZzdmVyaXR5X2RpZ2VzdD08
-RGlnZXN0PiBhY3Rpb249REVOWQ0KPiAgICAgb3A9RVhFQ1VURSBmc3Zlcml0eV9zaWduYXR1cmU9
-VFJVRSBhY3Rpb249QUxMT1cNCj4gDQo+IEV4ZWN1dGlvbiBpcyBwcm9oaWJpdGVkIHVubGVzcyBp
-dCBpcyBhIHNpZ25lZCBmcy12ZXJpdHkgZmlsZTsNCj4gSG93ZXZlciwgYWZ0ZXIgb25lIG9mIHRo
-b3NlIGV4ZWN1dGFibGVzIHdhcyBzaWduZWQgYW5kIHB1Ymxpc2hlZCwNCj4gYW4gZXhwbG9pdGFi
-bGUgdnVsbmVyYWJpbGl0eSBpbiBzYWlkIGV4ZWN1dGFibGUgd2FzIGZvdW5kLCBhIG5ldw0KPiB2
-ZXJzaW9uIHdhcyBwdWJsaXNoZWQgd2l0aG91dCB0aGF0IHZ1bG5lcmFiaWxpdHkuIFdlIG5lZWQg
-dG8NCj4gcmV2b2tlIHRydXN0IGZvciB0aGF0IGV4ZWN1dGFibGUgc2luY2UgaXQgY291bGQgYmUg
-dXNlZCB0byBleHBsb2l0DQo+IHRoZSBzeXN0ZW0sIHNvIHRoZSBmaXJzdCBydWxlIHByZXZlbnRz
-IGl0IGZyb20gbWF0Y2hpbmcgdGhlIHNlY29uZC4NCg0KV2l0aCBESUdMSU0sIHJldm9jYXRpb24g
-d2lsbCBiZSBjb21wbGV0ZWx5IHRyYW5zcGFyZW50IHNpbmNlDQpkaWdlc3RzIG9mIGZpbGVzIGlu
-IHRoZSBwYWNrYWdlcyBiZWluZyByZW1vdmVkIHdpbGwgYmUgYWxzbyByZW1vdmVkDQpmcm9tIHRo
-ZSBrZXJuZWwuIFRoZSBuZXh0IHRpbWUgSVBFIHdpbGwgZXZhbHVhdGUgYW4gb2xkIHZlcnNpb24g
-b2YgdGhlDQpmaWxlIChhc3N1bWluZyB0aGF0IHRoZXJlIHdhcyBhIGNvcHkgc29tZXdoZXJlKSBp
-dCB3aWxsIHJlYWxpemUgdGhhdA0KdGhlIGRpZ2VzdCBpcyBub3Qga25vd24gYW55bW9yZSBhbmQg
-d2lsbCBkZW55IGFjY2Vzcy4NCg0KUm9iZXJ0bw0KDQpIVUFXRUkgVEVDSE5PTE9HSUVTIER1ZXNz
-ZWxkb3JmIEdtYkgsIEhSQiA1NjA2Mw0KTWFuYWdpbmcgRGlyZWN0b3I6IExpIFBlbmcsIFpob25n
-IFJvbmdodWENCg0KPiA+PiBUaGlzIGJyaW5ncyBtZSB0byB5b3VyIG5leHQgY29tbWVudDoNCj4g
-Pj4NCj4gPj4+IFRoZSBkaWdlc3QgaXNuJ3QgbWVhbmluZ2Z1bCB3aXRob3V0IGtub3dpbmcgdGhl
-IGhhc2ggYWxnb3JpdGhtIGl0IHVzZXMuDQo+ID4+IEl0J3MgYXZhaWxhYmxlIGhlcmUsIGJ1dCB5
-b3UgYXJlbid0IHBhc3NpbmcgaXQgdG8gdGhpcyBmdW5jdGlvbi4NCj4gPj4NCj4gPj4gVGhlIGRp
-Z2VzdCBpcyBtZWFuaW5nZnVsIHdpdGhvdXQgdGhlIGFsZ29yaXRobSBpbiB0aGlzIGNhc2UuDQo+
-ID4gTm8sIGl0J3Mgbm90Lg0KPiA+DQo+ID4gRGlnZXN0cyBhcmUgbWVhbmluZ2xlc3Mgd2l0aG91
-dCBrbm93aW5nIHdoYXQgYWxnb3JpdGhtIHRoZXkgd2VyZSBjcmVhdGVkDQo+IHdpdGguDQo+ID4N
-Cj4gPiBJZiB5b3VyIHNlY3VyaXR5IHBvbGljeSBpcyBzb21ldGhpbmcgbGlrZSAiVHJ1c3QgdGhl
-IGZpbGUgd2l0aCBkaWdlc3QgJGZvbyIgYW5kDQo+ID4gbXVsdGlwbGUgaGFzaCBhbGdvcml0aG1z
-IGFyZSBwb3NzaWJsZSwgdGhlbiB0aGUgYWxvcml0aG0gaW50ZW5kZWQgdG8gYmUgdXNlZA0KPiA+
-IG5lZWRzIHRvIGJlIGV4cGxpY2l0bHkgc3BlY2lmaWVkLiAgT3RoZXJ3aXNlIGFueSBhbGdvcml0
-aG0gd2l0aCB0aGUgc2FtZSBsZW5ndGgNCj4gPiBkaWdlc3Qgd2lsbCBiZSBhY2NlcHRlZC4gIFRo
-YXQncyBhIGZhdGFsIGZsYXcgaWYgYW55IG9mIHRoZXNlIGFsZ29yaXRobXMgaXMNCj4gPiBjcnlw
-dG9ncmFwaGljYWxseSBicm9rZW4gb3Igd2FzIG5ldmVyIGludGVuZGVkIHRvIGJlIGEgY3J5cHRv
-Z3JhcGhpYw0KPiBhbGdvcml0aG0NCj4gPiBpbiB0aGUgZmlyc3QgcGxhY2UgKGUuZy4sIGEgbm9u
-LWNyeXB0b2dyYXBoaWMgY2hlY2tzdW0pLg0KPiA+DQo+ID4gQ3J5cHRvc3lzdGVtcyBhbHdheXMg
-bmVlZCB0byBzcGVjaWZ5IHRoZSBjcnlwdG8gYWxnb3JpdGhtKHMpIHVzZWQ7IHRoZQ0KPiBhZHZl
-cnNhcnkNCj4gPiBtdXN0IG5vdCBiZSBhbGxvd2VkIHRvIGNob29zZSB0aGUgYWxnb3JpdGhtcy4N
-Cj4gT29mLiBZb3XigJlyZSBjb21wbGV0ZWx5IHJpZ2h0LiBUaGUgcGFydCBJIHdhcyBtaXNzaW5n
-IGlzIHRoYXQgYXMgdGltZQ0KPiBnb2VzIG9uLA0KPiB0aGUgc2VjdXJlIHN0YXR1cyBvZiB0aGVz
-ZSBjcnlwdG9ncmFwaGljIGFsZ29yaXRobXMgd2lsbCBjaGFuZ2UsIGFuZA0KPiB0aGVuIHdl4oCZ
-bGwNCj4gbmVlZCBhIHdheSB0byBtaWdyYXRlIGJldHdlZW4gYWxnb3JpdGhtcy4gQWRkaXRpb25h
-bGx5LCB0b29saW5nIGFuZCB0aGUNCj4gbGlrZSB3aWxsDQo+IGxpa2VseSBuZWVkIGEgd2F5IHRv
-IGlkZW50aWZ5IHRoaXMgZnJvbSB0aGUgcG9saWN5IHRleHQgd2l0aG91dA0KPiBjb25zdWx0aW5n
-IGFueXRoaW5nDQo+IGVsc2UuIFRoaXMgaXMgYSBtYWpvciBvdmVyc2lnaHQgZm9yIGdlbmVyYWwg
-dXNlLCB0aGUgc3lzdGVtIHRoYXQgdGhpcw0KPiB3YXMgb3JpZ2luYWxseQ0KPiBkZXNpZ25lZCBm
-b3Igb25seSBoYWQgc3VwcG9ydCBmb3IgYSBzdWJzZXQgb2YgdGhlIHNoYTItZmFtaWx5IChhbGwN
-Cj4gc2VwYXJhdGUgbGVuZ3RocykNCj4gc28gSSBoYWRu4oCZdCBldmVuIGNvbnNpZGVyZWQgaXQu
-DQo+IA0KPiBJdCdzIHRyaXZpYWwgdG8gY29ycmVjdCBpbiBhIG1pbmltYWwgYW1vdW50IG9mIGNv
-ZGUsIG1ha2luZyB0aGUgcG9saWN5DQo+IGV4cHJlc3MgdGhlDQo+IGRpZ2VzdCBsaWtlIHNvOg0K
-PiANCj4gICAgIGZzdmVyaXR5X2RpZ2VzdD08YWxnbz46PGRpZ2VzdD4NCj4gDQo+IGFuZCBjaGFu
-Z2UgdGhlIGFyZ3VtZW50IHBhc3NlZCB0byB0aGUgTFNNIGhvb2sgdG8gYWNjZXB0IGEgc3RydWN0
-dXJlDQo+IGNvbnRhaW5pbmcgdGhlc2UNCj4gdHdvIGZpZWxkcy4NCj4gDQo+ID4gSSdtIG5vdCBz
-dXJlIGhvdyB0aGVzZSBwYXRjaGVzIGNhbiBiZSB0YWtlbiBzZXJpb3VzbHkgd2hlbiB0aGV5J3Jl
-IGdldHRpbmcNCj4gdGhpcw0KPiA+IHNvcnQgb2YgdGhpbmcgd3JvbmcuDQo+IFRoYXQgc2FpZCwg
-SSwgcGVyc29uYWxseSwgaG9wZSB0aGF0IGFuIGhvbmVzdCBtaXN0YWtlLCBpbiBhIHNlcmllcw0K
-PiBzdWJtaXR0ZWQgYXMNCj4gYW4gUkZDIHN1Ym1pdHRlZCBpbiBnb29kIGZhaXRoLCBpcyBub3Qg
-YSByZWFzb24gdG8gZGlzY291bnQgYW4gZW50aXJlIHBhdGNoDQo+IHNlcmllcy4NCj4gDQo+IEkg
-aG9wZSB5b3UgY29udGludWUgdG8gcHJvdmlkZSBmZWVkYmFjaywgYXMgaXQgaXMgaW52YWx1YWJs
-ZSB0byBtYWtpbmcgdGhpcw0KPiBzeXN0ZW0gYmV0dGVyLCBhbmQgbWFraW5nIG1lLCBwZXJzb25h
-bGx5LCBhIGJldHRlciBkZXZlbG9wZXIuDQo+ID4+Pj4gKwkJCQkJRlNfVkVSSVRZX1NJR05BVFVS
-RV9TRUNfTkFNRSwNCj4gPj4+PiArCQkJCQlzaWduYXR1cmUsIHNpZ19zaXplLCAwKTsNCj4gPj4+
-IFRoaXMgaXMgb25seSBmb3IgZnMtdmVyaXR5IGJ1aWx0LWluIHNpZ25hdHVyZXMgd2hpY2ggYXJl
-bid0IHRoZSBvbmx5IHdheSB0byBkbw0KPiA+Pj4gc2lnbmF0dXJlcyB3aXRoIGZzLXZlcml0eS4g
-IEFyZSB5b3Ugc3VyZSB0aGlzIGlzIHdoYXQgeW91J3JlIGxvb2tpbmcgZm9yPw0KPiA+PiBDb3Vs
-ZCB5b3UgZWxhYm9yYXRlIG9uIHRoZSBvdGhlciBzaWduYXR1cmUgdHlwZXMgdGhhdCBjYW4gYmUg
-dXNlZA0KPiA+PiB3aXRoIGZzLXZlcml0eT8gSeKAmW0gOTklIHN1cmUgdGhpcyBpcyB3aGF0IEni
-gJltIGxvb2tpbmcgZm9yIGFzIHRoaXMNCj4gPj4gaXMgYSBzaWduYXR1cmUgdmFsaWRhdGVkIGlu
-IHRoZSBrZXJuZWwgYWdhaW5zdCB0aGUgZnMtdmVyaXR5IGtleXJpbmcNCj4gPj4gYXMgcGFydCBv
-ZiB0aGUg4oCcZnN2ZXJpdHkgZW5hYmxl4oCdIHV0aWxpdHkuDQo+ID4+DQo+ID4+IEl0J3MgaW1w
-b3J0YW50IHRoYXQgdGhlIHNpZ25hdHVyZSBpcyB2YWxpZGF0ZWQgaW4gdGhlIGtlcm5lbCwgYXMN
-Cj4gPj4gdXNlcnNwYWNlIGlzIGNvbnNpZGVyZWQgdW50cnVzdGVkIHVudGlsIHRoZSBzaWduYXR1
-cmUgaXMgdmFsaWRhdGVkDQo+ID4+IGZvciB0aGlzIGNhc2UuDQo+ID4+DQo+ID4+PiBDYW4geW91
-IGVsYWJvcmF0ZSBvbiB5b3VyIHVzZSBjYXNlIGZvciBmcy12ZXJpdHkgYnVpbHQtaW4gc2lnbmF0
-dXJlcywNCj4gPj4gU3VyZSwgc2lnbmF0dXJlcywgbGlrZSBkaWdlc3RzLCBhbHNvIHByb3ZpZGUg
-YSB3YXkgdG8gcHJvdmUgaW50ZWdyaXR5LA0KPiA+PiBhbmQgdGhlIHRydXN0IGNvbXBvbmVudCBj
-b21lcyBmcm9tIHRoZSB2YWxpZGF0aW9uIGFnYWluc3QgdGhlIGtleXJpbmcsDQo+ID4+IGFzIG9w
-cG9zZWQgdG8gYSBmaXhlZCB2YWx1ZSBpbiBJUEXigJlzIHBvbGljeS4gVGhlIHVzZSBjYXNlIGZv
-ciBmcy12ZXJpdHkNCj4gPj4gYnVpbHQtaW4gc2lnbmF0dXJlcyBpcyB0aGF0IHdlIGhhdmUgYSBy
-dyBleHQ0IGZpbGVzeXN0ZW0gdGhhdCBoYXMgc29tZQ0KPiA+PiBleGVjdXRhYmxlIGZpbGVzLCBh
-bmQgd2Ugd2FudCB0byBoYXZlIGEgZXhlY3V0aW9uIHBvbGljeSAodGhyb3VnaCBJUEUpDQo+ID4+
-IHRoYXQgb25seSBfdHJ1c3RlZF8gZXhlY3V0YWJsZXMgY2FuIHJ1bi4gUGVyZiBpcyBpbXBvcnRh
-bnQgaGVyZSwgaGVuY2UNCj4gPj4gZnMtdmVyaXR5Lg0KPiA+IE1vc3QgdXNlcnMgb2YgZnMtdmVy
-aXR5IGJ1aWx0LWluIHNpZ25hdHVyZXMgaGF2ZSBhY3R1YWxseSBiZWVuIGVuZm9yY2luZyB0aGVp
-cg0KPiA+IHNlY3VyaXR5IHBvbGljeSBpbiB1c2Vyc3BhY2UsIGJ5IGNoZWNraW5nIHdoZXRoZXIg
-c3BlY2lmaWMgZmlsZXMgaGF2ZSB0aGUNCj4gPiBmcy12ZXJpdHkgYml0IHNldCBvciBub3QuICBT
-dWNoIHVzZXJzIGNvdWxkIGp1c3Qgc3RvcmUgYW5kIHZlcmlmeSBzaWduYXR1cmVzIGluDQo+ID4g
-dXNlcnNwYWNlIGluc3RlYWQsIHdpdGhvdXQgYW55IGtlcm5lbCBpbnZvbHZlbWVudC4gIFNvIHRo
-YXQncyB3aGF0IEkndmUgYmVlbg0KPiA+IHJlY29tbWVuZGluZyAod2l0aCBsaW1pdGVkIHN1Y2Nl
-c3MsIHVuZm9ydHVuYXRlbHkpLg0KPiBJIGJlbGlldmUgdGhlIGRpZmZlcmVuY2UgaW4gc2VjdXJp
-dHkgbW9kZWxzIGNvbWVzIGZyb20gdGhpcyBsaW5lDQo+IChlbXBoYXNpcywgbWluZSk6DQo+IA0K
-PiAgPiBieSBjaGVja2luZyB3aGV0aGVyIF9zcGVjaWZpYyBmaWxlc18gaGF2ZSB0aGUgZnMtdmVy
-aXR5IGJpdCBzZXQgb3Igbm90Lg0KPiANCj4gSVBFIHBvbGljeSBpcyB3cml0dGVuIGJ5IGEgc3lz
-dGVtIGF1dGhvciB3aG8gb3ducyB0aGUgc3lzdGVtLCBidXQgbWF5DQo+IG5vdCBoYXZlIDEwMCUg
-Y29udHJvbCBvdmVyIGFsbCBvZiB0aGUgYXBwbGljYXRpb24gY29kZSBydW5uaW5nIG9uIHRoZQ0K
-PiBzeXN0ZW0uwqAgSW4gdGhlIGNhc2Ugb2YgYXBwbGljYXRpb25zIHdoaWNoIGFyZSBub3QgYXdh
-cmUgb2YgSVBFLCB0aGUgcG9saWN5DQo+IGNhbiBzdGlsbCBlbmZvcmNlIHRoYXQgYWxsIG9mIHRo
-ZSBjb2RlIHJ1bm5pbmcgb24gdGhlIHN5c3RlbSBpcyB0cnVzdGVkLg0KPiANCj4gQW4gZXhhbXBs
-ZSBhdHRhY2sgb2Ygd2hhdCB3ZSdyZSB0cnlpbmcgdG8gbWl0aWdhdGU6wqAgQSBob3N0aWxlIGFj
-dG9yDQo+IGNvdWxkIGRvd25sb2FkcyBhIGJpbmFyeSBvZmYgdGhlIGludGVybmV0IHdpdGggYWxs
-IHJlcXVpcmVkDQo+IGRlcGVuZGVuY2llcyBpbnRvIHRtcGZzIGFuZCBydW5zIHRoZWlyIG1hbGlj
-aW91cyBleGVjdXRhYmxlLg0KPiANCj4gV2l0aCB1cyB2YWxpZGF0aW5nIHRoaXMgaW5mb3JtYXRp
-b24gaW4gdGhlIGtlcm5lbCwgZXZlbiBpZiB0aGUgYXR0YWNrZXINCj4gZG93bmxvYWRlZCB0aGVp
-ciBtYWxpY2lvdXMgZXhlY3V0YWJsZSB0byAvdG1wIGFuZCBleGVjdXRlZCBpdCwgaXQgd291bGQN
-Cj4gc3RpbGwgZmFpbCB0byBwYXNzIHBvbGljeSBhbmQgYmUgZGVuaWVkLCBhcyB0aGUga2VybmVs
-IGlzIHRoZSBjb21tb24NCj4gZW50cnlwb2ludCBhY3Jvc3MgYWxsIGV4ZWN1dGFibGVzLg0KPiAN
-Cj4gT3BlcmF0aW9uYWxseSwgdGhpcyBfY291bGRfIGJlIGRvbmUgYnkgZGlnZXN0LCBidXQgdGhl
-IHBvbGljaWVzIHdvdWxkDQo+IHF1aWNrbHkgYmVjb21lIGdpZ2FudGljIG9uIGEgY2FydG9vbmlz
-aCBwcm9wb3J0aW9uLCBhcyB5b3UnbGwgaGF2ZSB0bw0KPiBhdXRob3JpemUgZXZlcnkgc2luZ2xl
-IGV4ZWN1dGFibGUgYW5kIGRlcGVuZGVuY3kgYnkgZGlnZXN0IC0gYW5kDQo+IHRoZXJlIHdvdWxk
-IGJlIGEgY29tcGxpY2F0ZWQgdXBkYXRlIHN0b3J5IGFzIHRoZSBwb2xpY3kgd291bGQgaGF2ZSB0
-bw0KPiBiZSB1cGRhdGVkIHRvIG9uYm9hcmQgbmV3IGRpZ2VzdHMuDQo+IA0KPiBCeSB1c2luZyBz
-aWduYXR1cmVzLCB3ZSBjYW4gcHJldmVudCB0aGUgcG9saWN5IHVwZGF0ZSwgYW5kIGtlZXAgdGhl
-DQo+IHBvbGljeSBzaXplIHNtYWxsLg0KPiANCj4gPiBJZiB5b3UgcmVhbGx5IGRvIG5lZWQgaW4t
-a2VybmVsIHNpZ25hdHVyZSB2ZXJpZmljYXRpb24sIHRoZW4gdGhhdCBtYXkgYmUgYQ0KPiA+IGxl
-Z2l0aW1hdGUgdXNlIGNhc2UgZm9yIHRoZSBmcy12ZXJpdHkgYnVpbHQtaW4gc2lnbmF0dXJlcywg
-YWx0aG91Z2ggSSBkbyB3b25kZXINCj4gPiB3aHkgeW91IGFyZW4ndCB1c2luZyBJTUEgYW5kIGl0
-cyBzaWduYXR1cmUgbWVjaGFuaXNtIGluc3RlYWQuDQo+ID4NCj4gPiAtIEVyaWMNCg==
+On Tue, Oct 26, 2021 at 12:03:53PM -0700, Deven Bowers wrote:
+> > > The proposed LSM (IPE) of this series will be the only one to need
+> > > this information at the  moment. IPE’s goal is to have provide
+> > > trust-based access control. Trust and Integrity are tied together,
+> > > as you cannot prove trust without proving integrity.
+> > I think you mean authenticity, not integrity?
+> I’ve heard a lot of people use these terms in overloaded ways.
+> 
+> If we’re working with the definition of authenticity being
+> “the property that a resource was _actually_ sent/created by a
+> party”, and integrity being “the property that a resource was not
+> modified from a point of time”, then yes. Though the statement isn’t
+> false, though, because you’d need to prove integrity in the process of
+> proving authenticity.
+> 
+> If not, could you clarify what you mean by authenticity and integrity,
+> so that we can use consistent definitions?
+
+In cryptography, integrity normally means knowing whether data has been
+non-maliciously changed, while authenticity means knowing whether data is from a
+particular source, which implies knowing whether it has been changed at all
+(whether maliciously or not).  Consider that there are "Message Authentication
+Codes" (MACs) and "Authenticated Encryption", not "Message Integrity Codes" and
+"Intact Encryption".
+
+Unfortunately lots of people do overload "integrity" to mean authenticity, so
+you're not alone.  But it's confusing, so if you're going to do that then please
+make sure to clearly explain what you mean.
+
+> > Also how does this differ from IMA?  I know that IMA doesn't support fs-verity
+> > file hashes, but that could be changed.  Why not extend IMA to cover your use
+> > case(s)?
+> We looked at extending IMA to cover our requirements extensively the past
+> year
+> based on feedback the last time I posted these patches. We implemented a
+> prototype that had half of our requirements, but found it resulted in a
+> large change list that would result in a large amount of pain in respect
+> to maintenance, in addition to other more architectural concerns about the
+> implementation. We weren’t convinced it was the correct direction, for our
+> needs.
+> 
+> There was a presentation done at LSS 2021 around this prototype done by my
+> colleague, Fan, who authored this patch and implemented the aforementioned
+> prototype.
+> 
+> In general, IMA provides a whole suite of amazing functionality when it
+> comes to everything integrity, as the fs-verity documentation states
+> itself:
+> 
+>    IMA specifies a system-wide policy that specifies which
+>    files are hashed and what to do with those hashes, such
+>    as log them, authenticate them, or add them to a
+>    measurement list.
+> 
+> Instead, IPE provides a fine-tuned way to _only_ enforce an access control
+> policy to these files based on the defined trust requirements in the policy,
+> under various contexts, (you might have different requirements for what
+> executes in a general purpose, versus loadable kernel modules, for example).
+> It will never provide bother to log, measure, or revalidate these hashes
+> because
+> that’s not its purpose. This is why it belongs at the LSM layer instead of
+> the
+> integrity subsystem layer, as it is providing access control based on a
+> policy,
+> versus providing deep integrations with the actual integrity claim.
+> 
+> IPE is trying to be agnostic to how precisely “trust” is provided, as
+> opposed to be deeply integrated into the mechanism that provides
+> “trust”.
+
+IMA doesn't require logging or "measuring" hashes, though.  Those are just some
+of its supported features.  And I thought the IMA developers were planning to
+add support for fs-verity hashes, and that it wouldn't require an entirely new
+architecture to do so.
+
+Anyway, while it does sound to me like you're duplicating IMA, I don't really
+have a horse in this race, and I defer to the IMA developers on this.  I trust
+that you've been engaging with them?  This patchset isn't even Cc'ed to
+linux-integrity, so it's unclear that's been happening.
+
+- Eric
