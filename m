@@ -2,31 +2,31 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 664EAC4167D
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  9 Nov 2021 01:00:55 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6F6F8C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  9 Nov 2021 01:05:04 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id 4F2DA6124D
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  9 Nov 2021 01:00:55 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 5ABD461A03
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  9 Nov 2021 01:05:04 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S241687AbhKIBDi (ORCPT
+        id S240590AbhKIBHr (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 8 Nov 2021 20:03:38 -0500
-Received: from mail.kernel.org ([198.145.29.99]:59938 "EHLO mail.kernel.org"
+        Mon, 8 Nov 2021 20:07:47 -0500
+Received: from mail.kernel.org ([198.145.29.99]:33370 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S241539AbhKIBDX (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 8 Nov 2021 20:03:23 -0500
-Received: by mail.kernel.org (Postfix) with ESMTPSA id 8416461361;
-        Tue,  9 Nov 2021 01:00:37 +0000 (UTC)
+        id S238962AbhKIBFz (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Mon, 8 Nov 2021 20:05:55 -0500
+Received: by mail.kernel.org (Postfix) with ESMTPSA id 0FA2061A03;
+        Tue,  9 Nov 2021 01:02:25 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1636419638;
-        bh=XSrM/4N7wkstFVDHzo08fqqGpORo2iClP/4WzKmLCkM=;
+        s=k20201202; t=1636419747;
+        bh=c0QPfypoqZVxYs28xlb+Wql7YAgQ8YUKaG9i8tLaE9c=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=BeM4vrPESf/3LkPzCnveuuRLAfWfVAdpDy+5QoTZdTsDpXXCIYInTpTCutbOSXgVU
-         w0WiGrhjohz5ENaVjjJwktG3EhA+XSgqY8SuD0Yu9dATBBT1j5D+EEeU2My/kPdj4d
-         wvMw5Yk8+3zxCQxysdAO26UVZ9by7sXY6WbZ4p3WwjdGaX1kNjkEh6lF34qj+a1Wbd
-         4YUr8ymNRv7Z1ONIhn+e/Lk1pwBVnJgTcTFXfu7eASMy8qzg9lzzdQtqSGwylWM+lf
-         H6WPOBaDQdX5wsc3cU3LXFUGZhYDnGQ8t0jXOXTorD0WOPk77usTY7oNFK3xRzisro
-         u0Q4z7ZBALlOg==
+        b=k66Ds8hjGa0Hd1WXbW+b7icpHODIGgBjyFfi8X12m0sgTXgnYX8NDJODYqJJgH7pE
+         ZW7SQA2RsLgjLCQuJrVlAyRAHJoXi4GIzB4WUvtNynO9GxUa7ZOI/CmzmwIr3F5JzS
+         XH9cL/q5nLy4cx5Uu2JHuRVSCIP58Qq3b2lUNZ4GFlAquH0SbWfzRImRTOq8vujq4z
+         VqbrdD+VqX8+EUbJqk5PoztlHXU+AC44ZXsXgW3qdbIqmVtNjJFoJFzvFtyyWjZ64Y
+         dzBELGQdRtbEwI84dPBtG9hKCFKqWfhIDfLRLgaIaue4uv4LRfZ6i7oopW1BQ47/th
+         lj1Gnc+d7xGsw==
 From:   Sasha Levin <sashal@kernel.org>
 To:     linux-kernel@vger.kernel.org, stable@vger.kernel.org
 Cc:     Eric Biggers <ebiggers@google.com>,
@@ -34,12 +34,12 @@ Cc:     Eric Biggers <ebiggers@google.com>,
         Sasha Levin <sashal@kernel.org>, tytso@mit.edu,
         jaegeuk@kernel.org, ebiggers@kernel.org, corbet@lwn.net,
         linux-fscrypt@vger.kernel.org, linux-doc@vger.kernel.org
-Subject: [PATCH AUTOSEL 5.15 027/146] fscrypt: allow 256-bit master keys with AES-256-XTS
-Date:   Mon,  8 Nov 2021 12:42:54 -0500
-Message-Id: <20211108174453.1187052-27-sashal@kernel.org>
+Subject: [PATCH AUTOSEL 5.14 025/138] fscrypt: allow 256-bit master keys with AES-256-XTS
+Date:   Mon,  8 Nov 2021 12:44:51 -0500
+Message-Id: <20211108174644.1187889-25-sashal@kernel.org>
 X-Mailer: git-send-email 2.33.0
-In-Reply-To: <20211108174453.1187052-1-sashal@kernel.org>
-References: <20211108174453.1187052-1-sashal@kernel.org>
+In-Reply-To: <20211108174644.1187889-1-sashal@kernel.org>
+References: <20211108174644.1187889-1-sashal@kernel.org>
 MIME-Version: 1.0
 X-stable: review
 X-Patchwork-Hint: Ignore
@@ -88,7 +88,7 @@ Signed-off-by: Sasha Levin <sashal@kernel.org>
  4 files changed, 61 insertions(+), 22 deletions(-)
 
 diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 0eb799d9d05a2..7940a45d39522 100644
+index 44b67ebd6e40d..936fae06db770 100644
 --- a/Documentation/filesystems/fscrypt.rst
 +++ b/Documentation/filesystems/fscrypt.rst
 @@ -176,11 +176,11 @@ Master Keys
