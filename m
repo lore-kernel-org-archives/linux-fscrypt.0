@@ -2,179 +2,99 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DB1C8C433EF
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  5 Nov 2021 00:08:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 60A6AC433EF
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  8 Nov 2021 04:37:36 +0000 (UTC)
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by mail.kernel.org (Postfix) with ESMTP id B471B61242
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  5 Nov 2021 00:08:29 +0000 (UTC)
+	by mail.kernel.org (Postfix) with ESMTP id 3EF916108D
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  8 Nov 2021 04:37:36 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232433AbhKEALF (ORCPT
+        id S234158AbhKHEkT (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 4 Nov 2021 20:11:05 -0400
-Received: from mail.kernel.org ([198.145.29.99]:52756 "EHLO mail.kernel.org"
+        Sun, 7 Nov 2021 23:40:19 -0500
+Received: from mail.kernel.org ([198.145.29.99]:34166 "EHLO mail.kernel.org"
         rhost-flags-OK-OK-OK-OK) by vger.kernel.org with ESMTP
-        id S232040AbhKEALE (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 4 Nov 2021 20:11:04 -0400
-Received: by mail.kernel.org (Postfix) with ESMTPSA id AA8AF61213;
-        Fri,  5 Nov 2021 00:08:25 +0000 (UTC)
+        id S231463AbhKHEkS (ORCPT <rfc822;linux-fscrypt@vger.kernel.org>);
+        Sun, 7 Nov 2021 23:40:18 -0500
+Received: by mail.kernel.org (Postfix) with ESMTPSA id E3D1261076;
+        Mon,  8 Nov 2021 04:37:34 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1636070905;
-        bh=o7fFEo7v95r3iaFFPQHwPY1pIQpE9DbEFCqQaOJe6Lw=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=pfTCFDU4zWT1NbEWL4TbXNmTbeYHhbEpOvZnCEgSFp1XjOi+oe8VVSXRRwecpV8yc
-         6UGhRvK1ypR4w8u5zjLj4qClt2sJTiYOVEtCjxRhI6uPHilBxNGTjnzq2a3DKNUIUu
-         IOGSrUNFLvydShYxr1XPzSK7+k2VVWFE+fsv/moiZVf/0FQPdnPzF55b/5ZqgdWj73
-         iz7vhHFqILa/+NpK3Ho77WNPSFMc+zY4t1gwgmG34jf+Evis8AcJqJdX5u01ujWxf0
-         lxVYYQ+mR0XdkvP9U8OvCZmQ4p2rZq4AV8zY1wSNt2mvsEMN5gJ6JfA6BSpe0yDtKt
-         fLzIbRnWuwM7g==
-Date:   Thu, 4 Nov 2021 17:08:24 -0700
+        s=k20201202; t=1636346255;
+        bh=Pdd82xrVzMnfiWi2u+fTvK6TMnsM7+MLbMGx3FZWteg=;
+        h=From:To:Cc:Subject:Date:From;
+        b=meMzeIxb90AZ12Nr9C9Di6wPtrxB4uLZAQs3rQ5VXuSJMlF4gpUS4mZW0CGuZdgeA
+         lJjvodhnrAKwBIxYm3miQrO0RAjQ7bzEmfjlAq3H1uKOMTPhyVDdm7H0QyiddMWypj
+         5mNdbcpCV1HLZDQ3FzwWTxaJE36f+qNctPS9qWvUP14VQ2J7hxr59ncOASYhSj84Rf
+         MyzXIYMtq637NIAhjG+BJaQjh6I3NAsAAS6ntrqRP1VcfQT3rmFmgszqJpUW6pAKlB
+         LMiWCN8425XyTVEzVXe0OQYQ50L+RwFIZzbYkj1uQ7oCEcHxDi/ggghpE3HJYv5iha
+         e7hgzVfNg2Dfw==
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     Gaurav Kashyap <quic_gaurkash@quicinc.com>
-Cc:     linux-scsi@vger.kernel.org, linux-arm-msm@vger.kernel.org,
-        linux-mmc@vger.kernel.org, linux-block@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, thara.gopinath@linaro.org,
-        asutoshd@codeaurora.org
-Subject: Re: [PATCH 4/4] soc: qcom: add wrapped key support for ICE
-Message-ID: <YYR1+LgBnSQ+pVhr@gmail.com>
-References: <20211103231840.115521-1-quic_gaurkash@quicinc.com>
- <20211103231840.115521-5-quic_gaurkash@quicinc.com>
+To:     fstests@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org, David Howells <dhowells@redhat.com>
+Subject: [PATCH] generic/574: remove invalid test of read completely past EOF
+Date:   Sun,  7 Nov 2021 20:36:20 -0800
+Message-Id: <20211108043620.155257-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.33.1
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20211103231840.115521-5-quic_gaurkash@quicinc.com>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Nov 03, 2021 at 04:18:40PM -0700, Gaurav Kashyap wrote:
-> Add support for wrapped keys in ufs and common ICE library.
-> Qualcomm's ICE solution uses a hardware block called Hardware
-> Key Manager (HWKM) to handle wrapped keys.
-> 
-> This patch adds the following changes to support this.
-> 1. Link to HWKM library for initialization.
-> 2. Most of the key management is done from Trustzone via scm calls.
->    Added calls to this from the ICE library.
-> 3. Added support for this framework in UFS.
-> 4. Added support for deriving SW secret as it cannot be done in
->    linux kernel for wrapped keys.
-> 
-> Signed-off-by: Gaurav Kashyap <quic_gaurkash@quicinc.com>
-> ---
->  drivers/scsi/ufs/ufs-qcom-ice.c   |  34 +++++++++-
->  drivers/scsi/ufs/ufs-qcom.c       |   1 +
->  drivers/scsi/ufs/ufs-qcom.h       |   5 ++
->  drivers/scsi/ufs/ufshcd-crypto.c  |  47 ++++++++++---
->  drivers/scsi/ufs/ufshcd.h         |   5 ++
->  drivers/soc/qcom/qti-ice-common.c | 108 ++++++++++++++++++++++++++----
->  include/linux/qti-ice-common.h    |   7 +-
->  7 files changed, 180 insertions(+), 27 deletions(-)
-> 
-> diff --git a/drivers/scsi/ufs/ufs-qcom-ice.c b/drivers/scsi/ufs/ufs-qcom-ice.c
-> index 6608a9015eab..79d642190997 100644
-> --- a/drivers/scsi/ufs/ufs-qcom-ice.c
-> +++ b/drivers/scsi/ufs/ufs-qcom-ice.c
-> @@ -45,6 +45,21 @@ int ufs_qcom_ice_init(struct ufs_qcom_host *host)
->  	}
->  	mmio.ice_mmio = host->ice_mmio;
->  
-> +#if IS_ENABLED(CONFIG_QTI_HW_WRAPPED_KEYS)
-> +	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ice_hwkm");
-> +	if (!res) {
-> +		dev_warn(dev, "ICE HWKM registers not found\n");
-> +		goto disable;
-> +	}
-> +
-> +	host->ice_hwkm_mmio = devm_ioremap_resource(dev, res);
-> +	if (IS_ERR(host->ice_hwkm_mmio)) {
-> +		err = PTR_ERR(host->ice_hwkm_mmio);
-> +		dev_err(dev, "Failed to map ICE registers; err=%d\n", err);
-> +		return err;
-> +	}
-> +	mmio.ice_hwkm_mmio = host->ice_hwkm_mmio;
-> +#endif
+From: Eric Biggers <ebiggers@google.com>
 
-The driver shouldn't completely disable ICE support just because HW wrapped keys
-aren't supported by the hardware or by the device tree file.  Instead, it should
-declare support for standard keys only.  I.e. CONFIG_QTI_HW_WRAPPED_KEYS
-shouldn't force the use of HW wrapped keys, it should just add support for them.
+One of the test cases in generic/574 tests that if a file of length
+130999 has fs-verity enabled, and if bytes 131000..131071 (i.e. some
+bytes past EOF and in the same block as EOF) are corrupted with nonzero
+values, then reads of the corrupted part should fail with EIO.
 
-> diff --git a/drivers/scsi/ufs/ufshcd-crypto.c b/drivers/scsi/ufs/ufshcd-crypto.c
-> index 0ed82741f981..965a8cc6c183 100644
-> --- a/drivers/scsi/ufs/ufshcd-crypto.c
-> +++ b/drivers/scsi/ufs/ufshcd-crypto.c
+This isn't a valid test case, because reads that start at or past EOF
+are allowed to simply return 0 without doing any I/O.
 
-ufshcd-crypto.c is part of ufshcd-core, not ufs_qcom.  It should be changed in a
-separate patch.
+Therefore, don't run this test case.
 
-> @@ -18,6 +18,7 @@ static const struct ufs_crypto_alg_entry {
->  };
->  
->  static int ufshcd_program_key(struct ufs_hba *hba,
-> +				  const struct blk_crypto_key *key,
->  			      const union ufs_crypto_cfg_entry *cfg, int slot)
->  {
->  	int i;
-> @@ -27,7 +28,7 @@ static int ufshcd_program_key(struct ufs_hba *hba,
->  	ufshcd_hold(hba, false);
->  
->  	if (hba->vops && hba->vops->program_key) {
-> -		err = hba->vops->program_key(hba, cfg, slot);
-> +		err = hba->vops->program_key(hba, key, cfg, slot);
->  		goto out;
->  	}
+This fixes a test failure caused by the kernel commit 8c8387ee3f55
+("mm: stop filemap_read() from grabbing a superfluous page").
 
-vops->program_key shouldn't take in both a key and a cfg.  It should be just one
-or the other.  'cfg' doesn't appear to work for HW wrapped keys, and it seems
-the existing user doesn't really need a 'cfg' in the first place, so it would
-have to be just 'key'.
+Note that the other test cases for this same corrupted file remain
+valid, including testing that an error is reported during full file
+reads and during mmap "reads".  This is because the fs-verity Merkle
+tree is defined over full blocks, so the file's last block won't be
+readable if it contains corrupted (nonzero) bytes past EOF.  This may
+seem odd, but it's working as intended, especially considering that
+bytes past EOF in a file's last block are exposed to userspace in mmaps.
 
-> +#if IS_ENABLED(CONFIG_QTI_HW_WRAPPED_KEYS)
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ tests/generic/574     | 2 +-
+ tests/generic/574.out | 2 --
+ 2 files changed, 1 insertion(+), 3 deletions(-)
 
-As noted above, ufshcd-crypto isn't specific to ufs_qcom.  It therefore must not
-contain references to CONFIG_QTI_HW_WRAPPED_KEYS, as that kconfig option is
-specific to Qualcomm platforms.
+diff --git a/tests/generic/574 b/tests/generic/574
+index df0ef95f..882baa21 100755
+--- a/tests/generic/574
++++ b/tests/generic/574
+@@ -106,7 +106,7 @@ corruption_test()
+ 	dd if=$fsv_file bs=$FSV_BLOCK_SIZE iflag=direct status=none \
+ 		of=/dev/null |& _filter_scratch
+ 
+-	if ! $is_merkle_tree; then
++	if (( zap_offset < file_len )) && ! $is_merkle_tree; then
+ 		echo "Validating corruption (reading just corrupted part)..."
+ 		dd if=$fsv_file bs=1 skip=$zap_offset count=$zap_len \
+ 			of=/dev/null status=none |& _filter_scratch
+diff --git a/tests/generic/574.out b/tests/generic/574.out
+index d43474c5..3c08d3e8 100644
+--- a/tests/generic/574.out
++++ b/tests/generic/574.out
+@@ -63,8 +63,6 @@ Validating corruption (reading full file)...
+ md5sum: SCRATCH_MNT/file.fsv: Input/output error
+ Validating corruption (direct I/O)...
+ dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+-Validating corruption (reading just corrupted part)...
+-dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+ Validating corruption (reading full file via mmap)...
+ Bus error
+ Validating corruption (reading just corrupted part via mmap)...
+-- 
+2.33.1
 
-> +static int ufshcd_crypto_derive_sw_secret(struct blk_crypto_profile *profile,
-> +					 const u8 *wrapped_key,
-> +					 unsigned int wrapped_key_size,
-> +					 u8 sw_secret[BLK_CRYPTO_SW_SECRET_SIZE])
-> +{
-> +	struct ufs_hba *hba =
-> +		container_of(profile, struct ufs_hba, crypto_profile);
-> +
-> +	if (hba->vops && hba->vops->derive_secret)
-> +		return  hba->vops->derive_secret(wrapped_key,
-> +							wrapped_key_size, sw_secret);
-> +
-> +	return 0;
-> +}
-
-The fallback case should return -EOPNOTSUPP, which indicates that the operation
-is not supported, rather than 0 which indicates that it succeeded.
-
-> @@ -190,7 +213,11 @@ int ufshcd_hba_init_crypto_capabilities(struct ufs_hba *hba)
->  	hba->crypto_profile.ll_ops = ufshcd_crypto_ops;
->  	/* UFS only supports 8 bytes for any DUN */
->  	hba->crypto_profile.max_dun_bytes_supported = 8;
-> +#if IS_ENABLED(CONFIG_QTI_HW_WRAPPED_KEYS)
-> +	hba->crypto_profile.key_types_supported = BLK_CRYPTO_KEY_TYPE_HW_WRAPPED;
-> +#else
->  	hba->crypto_profile.key_types_supported = BLK_CRYPTO_KEY_TYPE_STANDARD;
-> +#endif
->  	hba->crypto_profile.dev = hba->dev;
-
-My comments from above apply to this too.  Checking a Qualcomm-specific kconfig
-option isn't appropriate here.  Also the supported key types shouldn't be static
-from the kconfig; they should be determined by the actual hardware capabilities.
-
-Note that in the Android kernels, for the division of work between ufshcd-core
-and host drivers, we ended up going with a solution where the UFS host drivers
-can just override the whole blk_crypto_profile (previously called
-blk_keyslot_manager).  You may have to do the same, although it would be
-preferable to find a way to share more code.
-
-Also, at runtime, does any of the Qualcomm hardware support multiple key types,
-and if so can they be used at the same time?
-
-- Eric
