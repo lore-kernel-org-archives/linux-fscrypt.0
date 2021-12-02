@@ -2,111 +2,76 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9D115C433EF
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  2 Dec 2021 21:56:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D6EEFC433F5
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  2 Dec 2021 22:08:00 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1377194AbhLBV7y (ORCPT
+        id S231365AbhLBWLX (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 2 Dec 2021 16:59:54 -0500
-Received: from mx0b-001b2d01.pphosted.com ([148.163.158.5]:17220 "EHLO
-        mx0a-001b2d01.pphosted.com" rhost-flags-OK-OK-OK-FAIL)
-        by vger.kernel.org with ESMTP id S1348903AbhLBV7y (ORCPT
+        Thu, 2 Dec 2021 17:11:23 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56090 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S231210AbhLBWLW (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 2 Dec 2021 16:59:54 -0500
-Received: from pps.filterd (m0098413.ppops.net [127.0.0.1])
-        by mx0b-001b2d01.pphosted.com (8.16.1.2/8.16.1.2) with SMTP id 1B2KktsN009762;
-        Thu, 2 Dec 2021 21:56:29 GMT
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=from : to : cc : subject
- : date : message-id : content-transfer-encoding : mime-version; s=pp1;
- bh=iTWQP/n0n09z1WP95N0FwphD/XUv/oniGiym4E3oL1A=;
- b=oJwSghfex3WhmIKNZ5mfhtuyyqK/J88kAAbnqZNjSiaB5GDZTGr7Lk1gnBd3WcUPY/zm
- REVf7+1swebpdRTBeAJ6GuQn2ensMbxdIfgaZOnnKJSQP9lVJ8e9tDmH0GaPvSG2gWSP
- Eu9SzO5Sug9Eon23kh72EYu2M1hgbUhs2d0D0Y0K0+y8Ei41n/F0r6OZrXFGZAGEXvD2
- cOxcw4K8j3Rc9cW1I/7y/JnQgYgBtySodeVJDJbuNQI8bhsVYoxLgoWJ1kczZp/jZ/lc
- gMBq9rne1ujGmrCHUREMUEHNoFmYTNeH2d3CPf0KXBJiT4VS3/vC7ZDGpVzws0OBnj5x NA== 
-Received: from ppma05fra.de.ibm.com (6c.4a.5195.ip4.static.sl-reverse.com [149.81.74.108])
-        by mx0b-001b2d01.pphosted.com with ESMTP id 3cq5fxhndn-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Thu, 02 Dec 2021 21:56:29 +0000
-Received: from pps.filterd (ppma05fra.de.ibm.com [127.0.0.1])
-        by ppma05fra.de.ibm.com (8.16.1.2/8.16.1.2) with SMTP id 1B2LnWbS021437;
-        Thu, 2 Dec 2021 21:55:33 GMT
-Received: from b06avi18626390.portsmouth.uk.ibm.com (b06avi18626390.portsmouth.uk.ibm.com [9.149.26.192])
-        by ppma05fra.de.ibm.com with ESMTP id 3ckcaa5rd4-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Thu, 02 Dec 2021 21:55:33 +0000
-Received: from d06av21.portsmouth.uk.ibm.com (d06av21.portsmouth.uk.ibm.com [9.149.105.232])
-        by b06avi18626390.portsmouth.uk.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 1B2Lm0Qb23986568
-        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
-        Thu, 2 Dec 2021 21:48:00 GMT
-Received: from d06av21.portsmouth.uk.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id DD1E352051;
-        Thu,  2 Dec 2021 21:55:30 +0000 (GMT)
-Received: from li-f45666cc-3089-11b2-a85c-c57d1a57929f.ibm.com.com (unknown [9.65.72.23])
-        by d06av21.portsmouth.uk.ibm.com (Postfix) with ESMTP id EF22E5204E;
-        Thu,  2 Dec 2021 21:55:29 +0000 (GMT)
-From:   Mimi Zohar <zohar@linux.ibm.com>
-To:     linux-integrity@vger.kernel.org
-Cc:     Mimi Zohar <zohar@linux.ibm.com>,
-        Eric Biggers <ebiggers@kernel.org>,
-        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
-Subject: [PATCH v1 0/5] ima: support fs-verity signatures stored as
-Date:   Thu,  2 Dec 2021 16:55:02 -0500
-Message-Id: <20211202215507.298415-1-zohar@linux.ibm.com>
-X-Mailer: git-send-email 2.27.0
-X-TM-AS-GCONF: 00
-X-Proofpoint-GUID: gpLRBplFxcHxg_bJYLu81DF49Qbzn6Fs
-X-Proofpoint-ORIG-GUID: gpLRBplFxcHxg_bJYLu81DF49Qbzn6Fs
-Content-Transfer-Encoding: 8bit
-X-Proofpoint-UnRewURL: 0 URL was un-rewritten
+        Thu, 2 Dec 2021 17:11:22 -0500
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 17CBCC06174A;
+        Thu,  2 Dec 2021 14:08:00 -0800 (PST)
+Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id B793B62876;
+        Thu,  2 Dec 2021 22:07:58 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 007C5C00446;
+        Thu,  2 Dec 2021 22:07:57 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1638482878;
+        bh=CfMssIAvzeTzGxLKQ92CmTNaGanKM9UxFjN/LwST5Rk=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=n/VWCC19Ckmx89AdHTh5R1aiB9KwY2I+ebjblK2RzeURINUa4PqUgZ+br2r2lpz19
+         CS9zvlleNjir+0hgaEes0WFVVt6omC8k2xzVav/Jeqv0TQCt1ENuTHBee3+vxBlPt/
+         gTGlK6HsVMNwMfG2dLabvaL1CQpgEr34g7DfYOfE0b92+STsPXNb9pdWSpL4uWePuJ
+         j3RRnVS/28TPfFuNg7ZFyrSazDO+ep6klcvypfszza8i12VCybor0DjT2rauwRr7K4
+         fJaWcNJQhqzeA190UxxP5ykUrlp1TLHMdDDmOn68eoN8iFXQxm6IsmLvYs7AvvLxH9
+         mrJuPnaTuOudA==
+Date:   Thu, 2 Dec 2021 14:07:56 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Mimi Zohar <zohar@linux.ibm.com>
+Cc:     linux-integrity@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v1 4/5] ima: support fs-verity file digest based
+ signatures
+Message-ID: <YalDvGjq0inMFKln@sol.localdomain>
+References: <20211202215507.298415-1-zohar@linux.ibm.com>
+ <20211202215507.298415-5-zohar@linux.ibm.com>
 MIME-Version: 1.0
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.205,Aquarius:18.0.790,Hydra:6.0.425,FMLib:17.11.62.513
- definitions=2021-12-02_14,2021-12-02_01,2021-12-02_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 mlxlogscore=999
- impostorscore=0 bulkscore=0 priorityscore=1501 suspectscore=0 phishscore=0
- malwarescore=0 spamscore=0 adultscore=0 lowpriorityscore=0 mlxscore=0
- clxscore=1015 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2110150000 definitions=main-2112020133
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20211202215507.298415-5-zohar@linux.ibm.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Support for fs-verity file digests in IMA was discussed from the beginning,
-prior to fs-verity being upstreamed[1,2].  This patch set adds signature
-verification support based on the fs-verity file digest.  Both the
-file digest and the signature must be included in the IMA measurement list
-in order to disambiguate the type of file digest.
+On Thu, Dec 02, 2021 at 04:55:06PM -0500, Mimi Zohar wrote:
+>  	case IMA_VERITY_DIGSIG:
+> -		fallthrough;
+> +		set_bit(IMA_DIGSIG, &iint->atomic_flags);
+> +
+> +		/*
+> +		 * The IMA signature is based on a hash of IMA_VERITY_DIGSIG
+> +		 * and the fs-verity file digest, not directly on the
+> +		 * fs-verity file digest.  Both digests should probably be
+> +		 * included in the IMA measurement list, but for now this
+> +		 * digest is only used for verifying the IMA signature.
+> +		 */
+> +		verity_digest[0] = IMA_VERITY_DIGSIG;
+> +		memcpy(verity_digest + 1, iint->ima_hash->digest,
+> +		       iint->ima_hash->length);
+> +
+> +		hash.hdr.algo = iint->ima_hash->algo;
+> +		hash.hdr.length = iint->ima_hash->length;
 
-[1] https://events19.linuxfoundation.org/wp-content/uploads/2017/11/fs-verify_Mike-Halcrow_Eric-Biggers.pdf
-[2] Documentation/filesystems/fsverity.rst
+This is still wrong because the bytes being signed don't include the hash
+algorithm.  Unless you mean for it to be implicitly always SHA-256?  fs-verity
+supports SHA-512 too, and it may support other hash algorithms in the future.
 
-Changelog v1:
-- Updated both fsverity and IMA documentation.
-- Addressed both Eric Bigger's and Lakshmi's comments.
-
-Mimi Zohar (5):
-  fs-verity: define a function to return the integrity protected file
-    digest
-  ima: define a new signature type named IMA_VERITY_DIGSIG
-  ima: limit including fs-verity's file digest in measurement list
-  ima: support fs-verity file digest based signatures
-  fsverity: update the documentation
-
- Documentation/filesystems/fsverity.rst    | 22 ++++++----
- Documentation/security/IMA-templates.rst  |  9 +++-
- fs/verity/Kconfig                         |  1 +
- fs/verity/fsverity_private.h              |  7 ---
- fs/verity/measure.c                       | 49 +++++++++++++++++++++
- include/linux/fsverity.h                  | 18 ++++++++
- security/integrity/ima/ima.h              |  3 +-
- security/integrity/ima/ima_api.c          | 23 +++++++++-
- security/integrity/ima/ima_appraise.c     | 52 ++++++++++++++++++++++-
- security/integrity/ima/ima_main.c         |  7 ++-
- security/integrity/ima/ima_template_lib.c |  3 +-
- security/integrity/integrity.h            |  1 +
- 12 files changed, 172 insertions(+), 23 deletions(-)
-
--- 
-2.27.0
-
+- Eric
