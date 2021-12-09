@@ -2,43 +2,41 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AF3B8C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Dec 2021 15:37:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 86C8DC433EF
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Dec 2021 15:37:54 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S240729AbhLIPlW (ORCPT
+        id S240306AbhLIPl0 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 9 Dec 2021 10:41:22 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50038 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S240291AbhLIPkq (ORCPT
+        Thu, 9 Dec 2021 10:41:26 -0500
+Received: from sin.source.kernel.org ([145.40.73.55]:42572 "EHLO
+        sin.source.kernel.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S240303AbhLIPkw (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 9 Dec 2021 10:40:46 -0500
-Received: from sin.source.kernel.org (sin.source.kernel.org [IPv6:2604:1380:40e1:4800::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 4B026C0698CF;
-        Thu,  9 Dec 2021 07:37:13 -0800 (PST)
+        Thu, 9 Dec 2021 10:40:52 -0500
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by sin.source.kernel.org (Postfix) with ESMTPS id 96B16CE268E;
-        Thu,  9 Dec 2021 15:37:11 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id BF3AEC341C3;
-        Thu,  9 Dec 2021 15:37:10 +0000 (UTC)
+        by sin.source.kernel.org (Postfix) with ESMTPS id D6B50CE2686;
+        Thu,  9 Dec 2021 15:37:15 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id C3CC8C341CB;
+        Thu,  9 Dec 2021 15:37:13 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1639064231;
-        bh=STILXtHzWDcz+Rf7t743jr4/wgA5fwtguyYHBG0wUQc=;
+        s=k20201202; t=1639064234;
+        bh=IZh7sC+wV4H0h89t2oGHa0fMHgaRBEKJfu2O1gu4cdk=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=usoXAHnshDmcGVphue0OZDzfDOtetoF6rHgn1KHmZJiePYfJeGrQR1vPUCTuszli9
-         jPF2rQUh1P5Nt052aSdBKxD8ZGlcwDCC/HsPTCftYitPBwN+F/07It6McK8QAgftRT
-         oLQUFIoRGJqRtJEdyEf/WjrTx03GB7w9He3oNc/MV0qK4TltkwpkZpYFtakC5PkLQN
-         CO1zfahmzOYOsUcr4NDljQO4Eu36JS/HIBifjW1s+iaxaVd41KTje+8NJ4UExKYaqS
-         ccfU8b0qr1eFhHvQho0vMFcoecGO0wJLqCDxA6ApDcOKMoNgXK30B05E0G+MbbY/mV
-         M9bxZLj7ikGdQ==
+        b=i/bM9v/rgolgZj2LvDTk0mwWgzLuygCF/3K9k95D0oPec8OdUApAYilnNKzzV32HB
+         k73GONlw4fLd7es5OZQ9FWFwXWnaNE9eyowCMxeo9yI/R0C54hbyu1JCsLJe4020Ot
+         aj1AW0D8dB3NHuxNDMHBVznk+iwvFXnOmXzi5WTeblybVM0e8r/4+0HpWCTdDXOYnz
+         pYJdq99i4A9JkCp82PVF3N9Ly6qpB3QnaRMK6uTi01TcRhix7nbCOjEr1H/hwbN3FH
+         RlQtg//wRK9SP/MdkW8qbQwA60d2pn1KCXAr2XUC+d+NsP2jCvOa2s5TpEx+b48sDp
+         7/FKpDY2/KNvA==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
-Subject: [PATCH 31/36] ceph: get file size from fscrypt_file when present in inode traces
-Date:   Thu,  9 Dec 2021 10:36:42 -0500
-Message-Id: <20211209153647.58953-32-jlayton@kernel.org>
+Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        Xiubo Li <xiubli@redhat.com>
+Subject: [PATCH 35/36] ceph: add object version support for sync read
+Date:   Thu,  9 Dec 2021 10:36:46 -0500
+Message-Id: <20211209153647.58953-36-jlayton@kernel.org>
 X-Mailer: git-send-email 2.33.1
 In-Reply-To: <20211209153647.58953-1-jlayton@kernel.org>
 References: <20211209153647.58953-1-jlayton@kernel.org>
@@ -48,76 +46,81 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+From: Xiubo Li <xiubli@redhat.com>
+
+Always return the last object's version.
+
+Signed-off-by: Xiubo Li <xiubli@redhat.com>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/inode.c | 30 +++++++++++++++++++-----------
- 1 file changed, 19 insertions(+), 11 deletions(-)
+ fs/ceph/file.c  | 11 +++++++++--
+ fs/ceph/super.h |  3 ++-
+ 2 files changed, 11 insertions(+), 3 deletions(-)
 
-diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
-index b3ea678af5f1..7fb3af552bb8 100644
---- a/fs/ceph/inode.c
-+++ b/fs/ceph/inode.c
-@@ -978,6 +978,16 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
- 		     from_kgid(&init_user_ns, inode->i_gid));
- 		ceph_decode_timespec64(&ci->i_btime, &iinfo->btime);
- 		ceph_decode_timespec64(&ci->i_snap_btime, &iinfo->snap_btime);
-+
-+#ifdef CONFIG_FS_ENCRYPTION
-+		if (iinfo->fscrypt_auth_len && !ci->fscrypt_auth) {
-+			ci->fscrypt_auth_len = iinfo->fscrypt_auth_len;
-+			ci->fscrypt_auth = iinfo->fscrypt_auth;
-+			iinfo->fscrypt_auth = NULL;
-+			iinfo->fscrypt_auth_len = 0;
-+			inode_set_flags(inode, S_ENCRYPTED, S_ENCRYPTED);
-+		}
-+#endif
+diff --git a/fs/ceph/file.c b/fs/ceph/file.c
+index b42158c9aa16..cb72362cb46f 100644
+--- a/fs/ceph/file.c
++++ b/fs/ceph/file.c
+@@ -883,7 +883,8 @@ enum {
+  * only return a short read to the caller if we hit EOF.
+  */
+ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
+-			 struct iov_iter *to, int *retry_op)
++			 struct iov_iter *to, int *retry_op,
++			 u64 *last_objver)
+ {
+ 	struct ceph_inode_info *ci = ceph_inode(inode);
+ 	struct ceph_fs_client *fsc = ceph_inode_to_client(inode);
+@@ -892,6 +893,7 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
+ 	u64 off = *ki_pos;
+ 	u64 len = iov_iter_count(to);
+ 	u64 i_size = i_size_read(inode);
++	u64 objver = 0;
+ 
+ 	dout("sync_read on inode %p %llu~%u\n", inode, *ki_pos, (unsigned)len);
+ 
+@@ -950,6 +952,8 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
+ 					 req->r_end_latency,
+ 					 len, ret);
+ 
++		if (ret > 0)
++			objver = req->r_version;
+ 		ceph_osdc_put_request(req);
+ 
+ 		i_size = i_size_read(inode);
+@@ -1006,6 +1010,9 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
+ 		}
  	}
  
- 	if ((new_version || (new_issued & CEPH_CAP_LINK_SHARED)) &&
-@@ -1001,6 +1011,7 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
- 
- 	if (new_version ||
- 	    (new_issued & (CEPH_CAP_ANY_FILE_RD | CEPH_CAP_ANY_FILE_WR))) {
-+		u64 size = info->size;
- 		s64 old_pool = ci->i_layout.pool_id;
- 		struct ceph_string *old_ns;
- 
-@@ -1014,10 +1025,17 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
- 
- 		pool_ns = old_ns;
- 
-+		if (IS_ENCRYPTED(inode) && size &&
-+		    (iinfo->fscrypt_file_len == sizeof(__le64))) {
-+			size = __le64_to_cpu(*(__le64 *)iinfo->fscrypt_file);
-+			if (info->size != round_up(size, CEPH_FSCRYPT_BLOCK_SIZE))
-+				pr_warn("size=%llu fscrypt_file=%llu\n", info->size, size);
-+		}
++	if (last_objver && ret > 0)
++		*last_objver = objver;
 +
- 		queue_trunc = ceph_fill_file_size(inode, issued,
- 					le32_to_cpu(info->truncate_seq),
- 					le64_to_cpu(info->truncate_size),
--					le64_to_cpu(info->size));
-+					le64_to_cpu(size));
- 		/* only update max_size on auth cap */
- 		if ((info->cap.flags & CEPH_CAP_FLAG_AUTH) &&
- 		    ci->i_max_size != le64_to_cpu(info->max_size)) {
-@@ -1057,16 +1075,6 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
- 		xattr_blob = NULL;
- 	}
+ 	dout("sync_read result %zd retry_op %d\n", ret, *retry_op);
+ 	return ret;
+ }
+@@ -1020,7 +1027,7 @@ static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
+ 	     (unsigned)iov_iter_count(to),
+ 	     (file->f_flags & O_DIRECT) ? "O_DIRECT" : "");
  
--#ifdef CONFIG_FS_ENCRYPTION
--	if (iinfo->fscrypt_auth_len && !ci->fscrypt_auth) {
--		ci->fscrypt_auth_len = iinfo->fscrypt_auth_len;
--		ci->fscrypt_auth = iinfo->fscrypt_auth;
--		iinfo->fscrypt_auth = NULL;
--		iinfo->fscrypt_auth_len = 0;
--		inode_set_flags(inode, S_ENCRYPTED, S_ENCRYPTED);
--	}
--#endif
--
- 	/* finally update i_version */
- 	if (le64_to_cpu(info->version) > ci->i_version)
- 		ci->i_version = le64_to_cpu(info->version);
+-	return __ceph_sync_read(inode, &iocb->ki_pos, to, retry_op);
++	return __ceph_sync_read(inode, &iocb->ki_pos, to, retry_op, NULL);
+ }
+ 
+ struct ceph_aio_request {
+diff --git a/fs/ceph/super.h b/fs/ceph/super.h
+index d8f768495a17..b3393406e84f 100644
+--- a/fs/ceph/super.h
++++ b/fs/ceph/super.h
+@@ -1259,7 +1259,8 @@ extern int ceph_open(struct inode *inode, struct file *file);
+ extern int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
+ 			    struct file *file, unsigned flags, umode_t mode);
+ extern ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
+-				struct iov_iter *to, int *retry_op);
++				struct iov_iter *to, int *retry_op,
++				u64 *last_objver);
+ extern int ceph_release(struct inode *inode, struct file *filp);
+ extern void ceph_fill_inline_data(struct inode *inode, struct page *locked_page,
+ 				  char *data, size_t len);
 -- 
 2.33.1
 
