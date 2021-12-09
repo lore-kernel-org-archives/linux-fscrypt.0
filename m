@@ -2,43 +2,43 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AED85C4332F
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Dec 2021 15:37:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 282DCC433FE
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Dec 2021 15:37:04 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S240070AbhLIPkd (ORCPT
+        id S240106AbhLIPkg (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 9 Dec 2021 10:40:33 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49908 "EHLO
+        Thu, 9 Dec 2021 10:40:36 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49924 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S240024AbhLIPka (ORCPT
+        with ESMTP id S240044AbhLIPkb (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 9 Dec 2021 10:40:30 -0500
+        Thu, 9 Dec 2021 10:40:31 -0500
 Received: from sin.source.kernel.org (sin.source.kernel.org [IPv6:2604:1380:40e1:4800::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 4A6A2C0617A1;
-        Thu,  9 Dec 2021 07:36:56 -0800 (PST)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 37D49C061746;
+        Thu,  9 Dec 2021 07:36:57 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by sin.source.kernel.org (Postfix) with ESMTPS id 92AAECE2689;
+        by sin.source.kernel.org (Postfix) with ESMTPS id AEBE7CE263D;
+        Thu,  9 Dec 2021 15:36:56 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 76D30C341CD;
         Thu,  9 Dec 2021 15:36:54 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 59F4CC341C7;
-        Thu,  9 Dec 2021 15:36:52 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1639064212;
-        bh=NG1st52YEYAGAm8qyNZ6r+/8xroElHqCS5fIfjXfDnA=;
+        s=k20201202; t=1639064214;
+        bh=+DBQWpT7aY2KuM47s4pOM3NrvBsA77WSh5mPWxCIR9Q=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=TLgUjxST8J58NnGwPqPeeej7XKQobZeDGCaauRamdi8tqwqChOHFapktfRby0yiGr
-         JWJQHuaKOrddabCMUaWdFCHUZzOV6+IYcFfzma3hCojMKYXOdLa2WsECf0YLjZJcPK
-         b30dTyXggGbRakTOZkAmLK1ivMN6CwQOjslJto4y1T2aMwa9DzasZ3La1abvZbtW9Y
-         YgbkkbYeR/M/wvzuE1CrL6gxg2KWCcKrWHqbHTUvAlOa15q5jvQkYofDN6Eoo7n7+R
-         aANaoRpUBH7UYofWsFhQ4l+VGRCzI8HPi2mjzOaYYLahHYwOS/h+b9KFDOzhLILNJj
-         9BLMBQ68Zlvfw==
+        b=rCmHAW6gTiPp9DCJbyFSuw05ZQqLvnfs83hJoibS3vVxkpC/7n4dM1Lv1Vmc9TOrL
+         044c4oMBfQt9hu9VIl1uzA1RYldVQtAVuupG7exmnrOug9FMFcLzhAQSnOp39gSpOn
+         qo6/zkldcWto2MoDVc9hN0IZ5Prsry16950N6qEPBcx/uvcMTJlyx0CKTABCKAND5C
+         255nNOjkiMWCdah6o8088nXXfwodzgjhUSGGoV+tU+Ea5+JZfqZWCvUOevyF9Mjvy+
+         GJ2KCBS7FEZik/cgne6AXfjlf/OFvd3sJ80HL5xlQYqeKcg3WagQaS9ZOY4QNNgCDc
+         oCvzP5m8tN/Vw==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
-Subject: [PATCH 05/36] fscrypt: uninline and export fscrypt_require_key
-Date:   Thu,  9 Dec 2021 10:36:16 -0500
-Message-Id: <20211209153647.58953-6-jlayton@kernel.org>
+Subject: [PATCH 08/36] ceph: parse new fscrypt_auth and fscrypt_file fields in inode traces
+Date:   Thu,  9 Dec 2021 10:36:19 -0500
+Message-Id: <20211209153647.58953-9-jlayton@kernel.org>
 X-Mailer: git-send-email 2.33.1
 In-Reply-To: <20211209153647.58953-1-jlayton@kernel.org>
 References: <20211209153647.58953-1-jlayton@kernel.org>
@@ -48,110 +48,182 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-ceph_atomic_open needs to be able to call this.
+...and store them in the ceph_inode_info.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/crypto/fscrypt_private.h | 26 --------------------------
- fs/crypto/keysetup.c        | 27 +++++++++++++++++++++++++++
- include/linux/fscrypt.h     |  5 +++++
- 3 files changed, 32 insertions(+), 26 deletions(-)
+ fs/ceph/file.c       |  2 ++
+ fs/ceph/inode.c      | 18 ++++++++++++++-
+ fs/ceph/mds_client.c | 55 ++++++++++++++++++++++++++++++++++++++++++++
+ fs/ceph/mds_client.h |  4 ++++
+ fs/ceph/super.h      |  6 +++++
+ 5 files changed, 84 insertions(+), 1 deletion(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 51e42767dbd6..89d5d85afdd5 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -579,32 +579,6 @@ void fscrypt_hash_inode_number(struct fscrypt_info *ci,
+diff --git a/fs/ceph/file.c b/fs/ceph/file.c
+index beec875632bc..c2e3e833ffc0 100644
+--- a/fs/ceph/file.c
++++ b/fs/ceph/file.c
+@@ -593,6 +593,8 @@ static int ceph_finish_async_create(struct inode *dir, struct inode *inode,
+ 	iinfo.xattr_data = xattr_buf;
+ 	memset(iinfo.xattr_data, 0, iinfo.xattr_len);
  
- int fscrypt_get_encryption_info(struct inode *inode, bool allow_unsupported);
- 
--/**
-- * fscrypt_require_key() - require an inode's encryption key
-- * @inode: the inode we need the key for
-- *
-- * If the inode is encrypted, set up its encryption key if not already done.
-- * Then require that the key be present and return -ENOKEY otherwise.
-- *
-- * No locks are needed, and the key will live as long as the struct inode --- so
-- * it won't go away from under you.
-- *
-- * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
-- * if a problem occurred while setting up the encryption key.
-- */
--static inline int fscrypt_require_key(struct inode *inode)
--{
--	if (IS_ENCRYPTED(inode)) {
--		int err = fscrypt_get_encryption_info(inode, false);
++	/* FIXME: set fscrypt_auth and fscrypt_file */
++
+ 	in.ino = cpu_to_le64(vino.ino);
+ 	in.snapid = cpu_to_le64(CEPH_NOSNAP);
+ 	in.version = cpu_to_le64(1);	// ???
+diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
+index 472873de234e..dbb31fc0ef76 100644
+--- a/fs/ceph/inode.c
++++ b/fs/ceph/inode.c
+@@ -609,7 +609,10 @@ struct inode *ceph_alloc_inode(struct super_block *sb)
+ 	INIT_WORK(&ci->i_work, ceph_inode_work);
+ 	ci->i_work_mask = 0;
+ 	memset(&ci->i_btime, '\0', sizeof(ci->i_btime));
 -
--		if (err)
--			return err;
--		if (!fscrypt_has_encryption_key(inode))
--			return -ENOKEY;
--	}
--	return 0;
--}
--
- /* keysetup_v1.c */
++#ifdef CONFIG_FS_ENCRYPTION
++	ci->fscrypt_auth = NULL;
++	ci->fscrypt_auth_len = 0;
++#endif
+ 	ceph_fscache_inode_init(ci);
  
- void fscrypt_put_direct_key(struct fscrypt_direct_key *dk);
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index eede186b04ce..7aeb0047d03d 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -792,3 +792,30 @@ int fscrypt_drop_inode(struct inode *inode)
- 	return !is_master_key_secret_present(&mk->mk_secret);
+ 	return &ci->vfs_inode;
+@@ -620,6 +623,9 @@ void ceph_free_inode(struct inode *inode)
+ 	struct ceph_inode_info *ci = ceph_inode(inode);
+ 
+ 	kfree(ci->i_symlink);
++#ifdef CONFIG_FS_ENCRYPTION
++	kfree(ci->fscrypt_auth);
++#endif
+ 	kmem_cache_free(ceph_inode_cachep, ci);
  }
- EXPORT_SYMBOL_GPL(fscrypt_drop_inode);
-+
-+/**
-+ * fscrypt_require_key() - require an inode's encryption key
-+ * @inode: the inode we need the key for
-+ *
-+ * If the inode is encrypted, set up its encryption key if not already done.
-+ * Then require that the key be present and return -ENOKEY otherwise.
-+ *
-+ * No locks are needed, and the key will live as long as the struct inode --- so
-+ * it won't go away from under you.
-+ *
-+ * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
-+ * if a problem occurred while setting up the encryption key.
-+ */
-+int fscrypt_require_key(struct inode *inode)
-+{
-+	if (IS_ENCRYPTED(inode)) {
-+		int err = fscrypt_get_encryption_info(inode, false);
-+
-+		if (err)
-+			return err;
-+		if (!fscrypt_has_encryption_key(inode))
-+			return -ENOKEY;
+ 
+@@ -1016,6 +1022,16 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
+ 		xattr_blob = NULL;
+ 	}
+ 
++#ifdef CONFIG_FS_ENCRYPTION
++	if (iinfo->fscrypt_auth_len && !ci->fscrypt_auth) {
++		ci->fscrypt_auth_len = iinfo->fscrypt_auth_len;
++		ci->fscrypt_auth = iinfo->fscrypt_auth;
++		iinfo->fscrypt_auth = NULL;
++		iinfo->fscrypt_auth_len = 0;
++		inode_set_flags(inode, S_ENCRYPTED, S_ENCRYPTED);
 +	}
-+	return 0;
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_require_key);
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 530433098f82..7d3c670d0c6d 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -334,6 +334,7 @@ bool fscrypt_match_name(const struct fscrypt_name *fname,
- 			const u8 *de_name, u32 de_name_len);
- u64 fscrypt_fname_siphash(const struct inode *dir, const struct qstr *name);
- int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags);
-+int fscrypt_require_key(struct inode *inode);
++#endif
++
+ 	/* finally update i_version */
+ 	if (le64_to_cpu(info->version) > ci->i_version)
+ 		ci->i_version = le64_to_cpu(info->version);
+diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
+index 57cf21c9199f..bd824e989449 100644
+--- a/fs/ceph/mds_client.c
++++ b/fs/ceph/mds_client.c
+@@ -184,8 +184,50 @@ static int parse_reply_info_in(void **p, void *end,
+ 			info->rsnaps = 0;
+ 		}
  
- /* bio.c */
- void fscrypt_decrypt_bio(struct bio *bio);
-@@ -601,6 +602,10 @@ static inline int fscrypt_d_revalidate(struct dentry *dentry,
- 	return 1;
++		if (struct_v >= 5) {
++			u32 alen;
++
++			ceph_decode_32_safe(p, end, alen, bad);
++
++			while (alen--) {
++				u32 len;
++
++				/* key */
++				ceph_decode_32_safe(p, end, len, bad);
++				ceph_decode_skip_n(p, end, len, bad);
++				/* value */
++				ceph_decode_32_safe(p, end, len, bad);
++				ceph_decode_skip_n(p, end, len, bad);
++			}
++		}
++
++		/* fscrypt flag -- ignore */
++		if (struct_v >= 6)
++			ceph_decode_skip_8(p, end, bad);
++
++		info->fscrypt_auth = NULL;
++		info->fscrypt_file = NULL;
++		if (struct_v >= 7) {
++			ceph_decode_32_safe(p, end, info->fscrypt_auth_len, bad);
++			if (info->fscrypt_auth_len) {
++				info->fscrypt_auth = kmalloc(info->fscrypt_auth_len, GFP_KERNEL);
++				if (!info->fscrypt_auth)
++					return -ENOMEM;
++				ceph_decode_copy_safe(p, end, info->fscrypt_auth,
++						      info->fscrypt_auth_len, bad);
++			}
++			ceph_decode_32_safe(p, end, info->fscrypt_file_len, bad);
++			if (info->fscrypt_file_len) {
++				info->fscrypt_file = kmalloc(info->fscrypt_file_len, GFP_KERNEL);
++				if (!info->fscrypt_file)
++					return -ENOMEM;
++				ceph_decode_copy_safe(p, end, info->fscrypt_file,
++						      info->fscrypt_file_len, bad);
++			}
++		}
+ 		*p = end;
+ 	} else {
++		/* legacy (unversioned) struct */
+ 		if (features & CEPH_FEATURE_MDS_INLINE_DATA) {
+ 			ceph_decode_64_safe(p, end, info->inline_version, bad);
+ 			ceph_decode_32_safe(p, end, info->inline_len, bad);
+@@ -626,8 +668,21 @@ static int parse_reply_info(struct ceph_mds_session *s, struct ceph_msg *msg,
+ 
+ static void destroy_reply_info(struct ceph_mds_reply_info_parsed *info)
+ {
++	int i;
++
++	kfree(info->diri.fscrypt_auth);
++	kfree(info->diri.fscrypt_file);
++	kfree(info->targeti.fscrypt_auth);
++	kfree(info->targeti.fscrypt_file);
+ 	if (!info->dir_entries)
+ 		return;
++
++	for (i = 0; i < info->dir_nr; i++) {
++		struct ceph_mds_reply_dir_entry *rde = info->dir_entries + i;
++
++		kfree(rde->inode.fscrypt_auth);
++		kfree(rde->inode.fscrypt_file);
++	}
+ 	free_pages((unsigned long)info->dir_entries, get_order(info->dir_buf_size));
  }
  
-+static inline int fscrypt_require_key(struct inode *inode)
-+{
-+	return 0;
-+}
- /* bio.c */
- static inline void fscrypt_decrypt_bio(struct bio *bio)
- {
+diff --git a/fs/ceph/mds_client.h b/fs/ceph/mds_client.h
+index c3986a412fb5..98a8710807d1 100644
+--- a/fs/ceph/mds_client.h
++++ b/fs/ceph/mds_client.h
+@@ -88,6 +88,10 @@ struct ceph_mds_reply_info_in {
+ 	s32 dir_pin;
+ 	struct ceph_timespec btime;
+ 	struct ceph_timespec snap_btime;
++	u8 *fscrypt_auth;
++	u8 *fscrypt_file;
++	u32 fscrypt_auth_len;
++	u32 fscrypt_file_len;
+ 	u64 rsnaps;
+ 	u64 change_attr;
+ };
+diff --git a/fs/ceph/super.h b/fs/ceph/super.h
+index 7340f163f3ea..28fda0b83bc3 100644
+--- a/fs/ceph/super.h
++++ b/fs/ceph/super.h
+@@ -433,6 +433,12 @@ struct ceph_inode_info {
+ 	struct work_struct i_work;
+ 	unsigned long  i_work_mask;
+ 
++#ifdef CONFIG_FS_ENCRYPTION
++	u32 fscrypt_auth_len;
++	u32 fscrypt_file_len;
++	u8 *fscrypt_auth;
++	u8 *fscrypt_file;
++#endif
+ #ifdef CONFIG_CEPH_FSCACHE
+ 	struct fscache_cookie *fscache;
+ #endif
 -- 
 2.33.1
 
