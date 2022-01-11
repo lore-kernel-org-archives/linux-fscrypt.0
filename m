@@ -2,24 +2,24 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F307FC433F5
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 18:05:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 23314C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 18:06:31 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232475AbiAKSFI (ORCPT
+        id S241290AbiAKSGa (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 11 Jan 2022 13:05:08 -0500
-Received: from frasgout.his.huawei.com ([185.176.79.56]:4400 "EHLO
+        Tue, 11 Jan 2022 13:06:30 -0500
+Received: from frasgout.his.huawei.com ([185.176.79.56]:4396 "EHLO
         frasgout.his.huawei.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1345691AbiAKSEB (ORCPT
+        with ESMTP id S1345192AbiAKSD4 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Jan 2022 13:04:01 -0500
-Received: from fraeml714-chm.china.huawei.com (unknown [172.18.147.200])
-        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4JYJPz6dnDz688Cb;
-        Wed, 12 Jan 2022 02:00:23 +0800 (CST)
+        Tue, 11 Jan 2022 13:03:56 -0500
+Received: from fraeml714-chm.china.huawei.com (unknown [172.18.147.226])
+        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4JYJTz1xTVz682DK;
+        Wed, 12 Jan 2022 02:03:51 +0800 (CST)
 Received: from roberto-ThinkStation-P620.huawei.com (10.204.63.22) by
  fraeml714-chm.china.huawei.com (10.206.15.33) with Microsoft SMTP Server
  (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
- 15.1.2308.20; Tue, 11 Jan 2022 19:03:56 +0100
+ 15.1.2308.20; Tue, 11 Jan 2022 19:03:53 +0100
 From:   Roberto Sassu <roberto.sassu@huawei.com>
 To:     <dhowells@redhat.com>, <dwmw2@infradead.org>,
         <herbert@gondor.apana.org.au>, <davem@davemloft.net>
@@ -27,9 +27,9 @@ CC:     <keyrings@vger.kernel.org>, <linux-crypto@vger.kernel.org>,
         <linux-integrity@vger.kernel.org>, <linux-fscrypt@vger.kernel.org>,
         <linux-kernel@vger.kernel.org>, <zohar@linux.ibm.com>,
         <ebiggers@kernel.org>, Roberto Sassu <roberto.sassu@huawei.com>
-Subject: [PATCH 12/14] PGP: Provide a key type for testing PGP signatures
-Date:   Tue, 11 Jan 2022 19:03:16 +0100
-Message-ID: <20220111180318.591029-13-roberto.sassu@huawei.com>
+Subject: [PATCH 08/14] KEYS: PGP-based public key signature verification
+Date:   Tue, 11 Jan 2022 19:03:12 +0100
+Message-ID: <20220111180318.591029-9-roberto.sassu@huawei.com>
 X-Mailer: git-send-email 2.32.0
 In-Reply-To: <20220111180318.591029-1-roberto.sassu@huawei.com>
 References: <20220111180318.591029-1-roberto.sassu@huawei.com>
@@ -46,291 +46,598 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: David Howells <dhowells@redhat.com>
 
-Provide a key type for testing the PGP signature parser.  It is given a
-non-detached PGP message as payload:
+Provide handlers for PGP-based public-key algorithm signature verification.
+This does most of the work involved in signature verification as most of it
+is public-key algorithm agnostic.  The public-key verification algorithm
+itself is just the last little bit and is supplied the complete hash data
+to process.
 
-	keyctl padd pgp_test a @s <content.txt.gpg
-
-A suitable message can be generated like this:
-
-	echo "This is a test attached-signed content" >content.txt
-	gpg --compress-algo=none -s content.txt
+This requires glue logic putting on top to make use of it - something that
+the patch introducing verify_pgp_signature() provides.
 
 Signed-off-by: David Howells <dhowells@redhat.com>
 Co-developed-by: Roberto Sassu <roberto.sassu@huawei.com>
 Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
 ---
- crypto/asymmetric_keys/Kconfig        |  13 +++
- crypto/asymmetric_keys/Makefile       |   2 +
- crypto/asymmetric_keys/pgp_library.c  |  64 +++++++++++++
- crypto/asymmetric_keys/pgp_test_key.c | 129 ++++++++++++++++++++++++++
- crypto/asymmetric_keys/pgplib.h       |  16 ++++
- 5 files changed, 224 insertions(+)
- create mode 100644 crypto/asymmetric_keys/pgp_test_key.c
+ MAINTAINERS                            |   1 +
+ crypto/asymmetric_keys/Makefile        |   3 +-
+ crypto/asymmetric_keys/pgp_signature.c | 507 +++++++++++++++++++++++++
+ include/crypto/pgp.h                   |  29 ++
+ 4 files changed, 539 insertions(+), 1 deletion(-)
+ create mode 100644 crypto/asymmetric_keys/pgp_signature.c
+ create mode 100644 include/crypto/pgp.h
 
-diff --git a/crypto/asymmetric_keys/Kconfig b/crypto/asymmetric_keys/Kconfig
-index 7be60ef07ac0..5f328f57dd0b 100644
---- a/crypto/asymmetric_keys/Kconfig
-+++ b/crypto/asymmetric_keys/Kconfig
-@@ -113,4 +113,17 @@ config PGP_KEY_PARSER
- 	  for key data and provides the ability to instantiate a crypto key
- 	  from a public key packet found inside the blob.
- 
-+config PGP_TEST_KEY
-+	tristate "PGP testing key type"
-+	depends on SYSTEM_DATA_VERIFICATION
-+	depends on PGP_KEY_PARSER=y
-+	help
-+	  This option provides a type of key that can be loaded up from a
-+	  PGP message - provided the message is signed by a trusted key.  If
-+	  it is, the PGP wrapper is discarded and reading the key returns
-+	  just the payload.  If it isn't, adding the key will fail with an
-+	  error.
-+
-+	  This is intended for testing the PGP parser.
-+
- endif # ASYMMETRIC_KEY_TYPE
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 306de106f31b..844ed460da59 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -3025,6 +3025,7 @@ L:	keyrings@vger.kernel.org
+ S:	Maintained
+ F:	Documentation/crypto/asymmetric-keys.rst
+ F:	crypto/asymmetric_keys/
++F:	include/crypto/pgp.h
+ F:	include/crypto/pkcs7.h
+ F:	include/crypto/public_key.h
+ F:	include/linux/verification.h
 diff --git a/crypto/asymmetric_keys/Makefile b/crypto/asymmetric_keys/Makefile
-index e2aeb2a4b6a6..99240d11f591 100644
+index a68f9a5d1746..e2aeb2a4b6a6 100644
 --- a/crypto/asymmetric_keys/Makefile
 +++ b/crypto/asymmetric_keys/Makefile
-@@ -96,3 +96,5 @@ obj-$(CONFIG_PGP_KEY_PARSER) += pgp_key_parser.o
+@@ -94,4 +94,5 @@ obj-$(CONFIG_PGP_LIBRARY) += pgp_library.o
+ 
+ obj-$(CONFIG_PGP_KEY_PARSER) += pgp_key_parser.o
  pgp_key_parser-y := \
- 	pgp_public_key.o \
- 	pgp_signature.o
-+
-+obj-$(CONFIG_PGP_TEST_KEY) += pgp_test_key.o
-diff --git a/crypto/asymmetric_keys/pgp_library.c b/crypto/asymmetric_keys/pgp_library.c
-index de4a748db9be..5e5d75e99194 100644
---- a/crypto/asymmetric_keys/pgp_library.c
-+++ b/crypto/asymmetric_keys/pgp_library.c
-@@ -554,3 +554,67 @@ int pgp_parse_sig_params(const u8 **_data, size_t *_datalen,
- 	return 0;
- }
- EXPORT_SYMBOL_GPL(pgp_parse_sig_params);
-+
-+#if IS_ENABLED(CONFIG_PGP_TEST_KEY)
-+
-+/**
-+ * pgp_parse_literal_data - Parse basic params from a PGP literal data packet
-+ * @data: Content of packet
-+ * @datalen: Length of packet remaining
-+ * @p: The basic parameters
-+ *
-+ * Parse the basic parameters from a PGP literal data packet [RFC 4880: 5.9]
-+ * that are needed to work out what form the data is in and where it is.
-+ *
-+ * Returns 0 if successful or a negative error code.
-+ */
-+int pgp_parse_literal_data(const u8 *data, size_t datalen,
-+			   struct pgp_literal_data_parameters *p)
-+{
-+	unsigned int tmp;
-+
-+	pr_devel("-->%s(,%zu,,)\n", __func__, datalen);
-+
-+	if (datalen < 6)
-+		goto too_short;
-+	datalen -= 6;
-+
-+	p->format = *data++;
-+	switch (p->format) {
-+	case PGP_LIT_FORMAT_BINARY:
-+	case PGP_LIT_FORMAT_TEXT:
-+	case PGP_LIT_FORMAT_TEXT_UTF8:
-+		break;
-+	default:
-+		pr_debug("Literal data packet with unhandled format %02x\n",
-+			 p->format);
-+		return -EBADMSG;
-+	}
-+
-+	p->filename_len = *data++;
-+	p->filename_offset = 2;
-+	if (datalen < p->filename_len)
-+		goto too_short;
-+	data += p->filename_len;
-+	datalen -= p->filename_len;
-+
-+	tmp  = *data++ << 24;
-+	tmp |= *data++ << 16;
-+	tmp |= *data++ << 8;
-+	tmp |= *data++;
-+	p->time = tmp;
-+
-+	p->content_offset = 6 + p->filename_len;
-+	p->content_len = datalen;
-+
-+	pr_devel("%x,%u,%x,%u\n",
-+		 p->format, p->filename_len, p->time, p->content_len);
-+	return 0;
-+
-+too_short:
-+	pr_debug("Literal data packet too short\n");
-+	return -EBADMSG;
-+}
-+EXPORT_SYMBOL_GPL(pgp_parse_literal_data);
-+
-+#endif /* CONFIG_PGP_TEST_KEY */
-diff --git a/crypto/asymmetric_keys/pgp_test_key.c b/crypto/asymmetric_keys/pgp_test_key.c
+-	pgp_public_key.o
++	pgp_public_key.o \
++	pgp_signature.o
+diff --git a/crypto/asymmetric_keys/pgp_signature.c b/crypto/asymmetric_keys/pgp_signature.c
 new file mode 100644
-index 000000000000..e067dedf6ca0
+index 000000000000..4aa71559bcf4
 --- /dev/null
-+++ b/crypto/asymmetric_keys/pgp_test_key.c
-@@ -0,0 +1,129 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/* Testing module to load key from trusted PGP message
++++ b/crypto/asymmetric_keys/pgp_signature.c
+@@ -0,0 +1,507 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++/* PGP public key signature verification [RFC 4880]
 + *
-+ * Copyright (C) 2014 Red Hat, Inc. All Rights Reserved.
++ * Copyright (C) 2011 Red Hat, Inc. All Rights Reserved.
 + * Written by David Howells (dhowells@redhat.com)
 + */
 +
-+#define pr_fmt(fmt) "PGPtest: "fmt
-+#include <linux/key.h>
-+#include <linux/key-type.h>
-+#include <linux/cred.h>
-+#include <linux/err.h>
++#define pr_fmt(fmt) "PGPSIG: "fmt
 +#include <linux/module.h>
-+#include <linux/verification.h>
-+#include <keys/user-type.h>
-+#include <keys/system_keyring.h>
++#include <linux/kernel.h>
++#include <linux/slab.h>
++#include <linux/mpi.h>
++#include <linux/sched.h>
++#include <linux/cred.h>
++#include <linux/key.h>
++#include <linux/err.h>
++#include <keys/asymmetric-type.h>
++#include <crypto/public_key.h>
++#include <crypto/hash.h>
 +#include <crypto/pgp.h>
 +
 +#include "pgp_parser.h"
 +
-+MODULE_LICENSE("GPL");
-+
-+struct pgp_test_parse_context {
-+	struct pgp_parse_context pgp;
-+	struct pgp_literal_data_parameters params;
-+	const void *content;
++static const struct {
++	enum hash_algo algo : 8;
++} pgp_pubkey_hash[PGP_HASH__LAST] = {
++	[PGP_HASH_MD5].algo		= HASH_ALGO_MD5,
++	[PGP_HASH_SHA1].algo		= HASH_ALGO_SHA1,
++	[PGP_HASH_RIPE_MD_160].algo	= HASH_ALGO_RIPE_MD_160,
++	[PGP_HASH_SHA256].algo		= HASH_ALGO_SHA256,
++	[PGP_HASH_SHA384].algo		= HASH_ALGO_SHA384,
++	[PGP_HASH_SHA512].algo		= HASH_ALGO_SHA512,
++	[PGP_HASH_SHA224].algo		= HASH_ALGO_SHA224,
 +};
 +
-+static int pgp_test_parse_data(struct pgp_parse_context *context,
++struct pgp_current_pkt {
++	enum pgp_packet_tag type;
++	u8 headerlen;
++	const u8 *data;
++	size_t datalen;
++};
++
++struct pgp_sig_verify {
++	enum pgp_signature_version sig_version : 8;
++	struct public_key_signature *sig;
++	u8 signed_hash_msw[2];
++	struct shash_desc *hash;
++	struct pgp_current_pkt pkt;
++};
++
++/*
++ * Find a key in the given keyring by issuer and authority.
++ */
++static struct key *pgp_request_asymmetric_key(struct pgp_sig_verify *ctx,
++					      struct key *keyring)
++{
++	struct key *key;
++	__be32 *issuer32;
++	char id[12];
++
++	issuer32 = (__be32 *)ctx->sig->auth_ids[0]->data;
++	snprintf(id, sizeof(id), "id:%08x%08x", be32_to_cpu(issuer32[0]),
++		 be32_to_cpu(issuer32[1]));
++
++	kenter(",,%s", id);
++
++	pr_debug("Look up key: \"%s\"\n", id);
++
++	key = find_asymmetric_key(keyring, ctx->sig->auth_ids[0],
++				  ctx->sig->auth_ids[1], true);
++	if (IS_ERR(key)) {
++		pr_debug("Request for public key '%08x%08x' err %ld\n",
++			 issuer32[0], issuer32[1], PTR_ERR(key));
++
++		switch (PTR_ERR(key)) {
++			/* Hide some search errors */
++		case -EACCES:
++		case -ENOTDIR:
++		case -EAGAIN:
++			kleave(" = -ENOKEY");
++			return ERR_PTR(-ENOKEY);
++		default:
++			kleave(" = %ld", PTR_ERR(key));
++			return ERR_CAST(key);
++		}
++	}
++
++	kleave(" = 0 [%x]", key_serial(key));
++	return key;
++}
++
++struct pgp_sig_parse_context {
++	struct pgp_parse_context pgp;
++	struct pgp_sig_parameters params;
++	struct pgp_current_pkt pkt;
++};
++
++static int pgp_parse_signature(struct pgp_parse_context *context,
 +			       enum pgp_packet_tag type,
 +			       u8 headerlen,
 +			       const u8 *data,
 +			       size_t datalen)
 +{
-+	struct pgp_test_parse_context *ctx =
-+		container_of(context, struct pgp_test_parse_context, pgp);
++	struct pgp_sig_parse_context *ctx =
++		container_of(context, struct pgp_sig_parse_context, pgp);
++	struct pgp_sig_parameters tmp_params;
++	struct pgp_current_pkt tmp_pkt = { type, headerlen, data, datalen};
 +	int ret;
 +
-+	kenter("");
++	ret = pgp_parse_sig_params(&data, &datalen, &tmp_params);
++	if (ret < 0)
++		return ret;
 +
-+	ret = pgp_parse_literal_data(data, datalen, &ctx->params);
-+	if (ret == 0)
-+		ctx->content = data + ctx->params.content_offset;
-+	return ret;
++	if (tmp_params.signature_type != PGP_SIG_BINARY_DOCUMENT_SIG &&
++	    tmp_params.signature_type != PGP_SIG_STANDALONE_SIG &&
++	    tmp_params.signature_type != PGP_SIG_POSTITIVE_CERT_OF_UID_PUBKEY)
++		return 0;
++
++	memcpy(&ctx->params, &tmp_params, sizeof(tmp_params));
++	memcpy(&ctx->pkt, &tmp_pkt, sizeof(tmp_pkt));
++	return 0;
++}
++
++/**
++ * pgp_sig_parse - Begin the process of verifying a signature
++ * @sigdata: Signature blob
++ * @siglen: Length of signature blob
++ *
++ * This involves allocating the hash into which first the data and then the
++ * metadata will be put, and parsing the signature to get the issuer ID from
++ * which the key used to verify the signature will be searched.
++ *
++ * Return: a PGP sig context pointer on success, an error pointer on error
++ */
++struct pgp_sig_verify *pgp_sig_parse(const u8 *sigdata, size_t siglen)
++{
++	struct pgp_sig_parse_context p;
++	struct pgp_sig_verify *ctx;
++	struct crypto_shash *tfm;
++	const char *pkey_algo;
++	size_t digest_size, desc_size;
++	int ret;
++
++	kenter(",,%zu", siglen);
++
++	p.pgp.types_of_interest = (1 << PGP_PKT_SIGNATURE);
++	p.pgp.process_packet = pgp_parse_signature;
++	p.pkt.data = NULL;
++	ret = pgp_parse_packets(sigdata, siglen, &p.pgp);
++	if (ret < 0) {
++		kleave(" = ERR_PTR [bad pkt]");
++		return ERR_PTR(ret);
++	}
++
++	if (!p.pkt.data) {
++		kleave(" = ERR_PTR [no pkt]");
++		return ERR_PTR(-ENOENT);
++	}
++
++	/* Check the signature itself for usefulness */
++	if (p.params.pubkey_algo >= PGP_PUBKEY__LAST)
++		goto unsupported_pkey_algo;
++	pkey_algo = pgp_to_public_key_algo[p.params.pubkey_algo];
++	if (!pkey_algo)
++		goto unsupported_pkey_algo;
++
++	if (p.params.hash_algo >= PGP_HASH__LAST ||
++	    !pgp_hash_algorithms[p.params.hash_algo]) {
++		pr_debug("Unsupported hash algorithm %u\n",
++			 p.params.hash_algo);
++		kleave(" = -ENOPKG [unsupp hash algo]");
++		return ERR_PTR(-ENOPKG);
++	}
++
++	pr_debug("Signature generated with %s hash\n",
++		 pgp_hash_algorithms[p.params.hash_algo]);
++
++	/* Allocate the hashing algorithm we're going to need and find out how
++	 * big the hash operational data will be.
++	 */
++	tfm = crypto_alloc_shash(pgp_hash_algorithms[p.params.hash_algo], 0, 0);
++	if (IS_ERR(tfm)) {
++		ret = (PTR_ERR(tfm) == -ENOENT ? -ENOPKG : PTR_ERR(tfm));
++		kleave(" = %d", ret);
++		return ERR_PTR(ret);
++	}
++
++	desc_size = crypto_shash_descsize(tfm);
++	digest_size = crypto_shash_digestsize(tfm);
++
++	/* We allocate the hash operational data storage on the end of our
++	 * context data.
++	 */
++	ctx = kzalloc(sizeof(*ctx) + sizeof(struct shash_desc) + desc_size,
++		      GFP_KERNEL);
++	if (!ctx) {
++		ret = -ENOMEM;
++		goto error_have_shash;
++	}
++
++	ctx->sig = kzalloc(sizeof(*ctx->sig), GFP_KERNEL);
++	if (!ctx->sig) {
++		ret = -ENOMEM;
++		goto error_have_ctx;
++	}
++
++	ctx->sig->auth_ids[0] = asymmetric_key_generate_id(p.params.issuer.id,
++					sizeof(p.params.issuer.id), "", 0);
++	if (IS_ERR(ctx->sig->auth_ids[0])) {
++		ret = -ENOMEM;
++		goto error_have_ctx_sig;
++	}
++
++	ctx->sig->encoding	= "pkcs1";
++	ctx->sig->pkey_algo	= pkey_algo;
++	ctx->sig->hash_algo	= pgp_hash_algorithms[p.params.hash_algo];
++	ctx->sig->digest_size	= digest_size;
++	ctx->hash		= (struct shash_desc *)((void *)ctx +
++				  sizeof(*ctx));
++	ctx->hash->tfm		= tfm;
++	ctx->sig_version	= p.params.version;
++
++	memcpy(&ctx->pkt, &p.pkt, sizeof(p.pkt));
++
++	ret = crypto_shash_init(ctx->hash);
++	if (ret < 0)
++		goto error_have_auth_ids;
++
++	kleave(" = %p", ctx);
++	return ctx;
++
++error_have_auth_ids:
++	kfree(ctx->sig->auth_ids[0]);
++error_have_ctx_sig:
++	kfree(ctx->sig);
++error_have_ctx:
++	kfree(ctx);
++error_have_shash:
++	crypto_free_shash(tfm);
++	kleave(" = %d", ret);
++	return ERR_PTR(ret);
++
++unsupported_pkey_algo:
++	pr_debug("Unsupported public key algorithm %u\n",
++		 p.params.pubkey_algo);
++	kleave(" = -ENOPKG [unsupp pk algo]");
++	return ERR_PTR(-ENOPKG);
 +}
 +
 +/*
-+ * Instantiate a PGP wrapped and validated key.
++ * Load data into the hash
 + */
-+static int pgp_test_instantiate(struct key *key,
-+				struct key_preparsed_payload *prep)
++int pgp_sig_add_data(struct pgp_sig_verify *ctx, const void *data,
++		     size_t datalen)
 +{
-+	struct pgp_test_parse_context p;
-+	const void *saved_prep_data;
-+	size_t saved_prep_datalen;
-+	const struct cred *cred = current_cred();
++	return crypto_shash_update(ctx->hash, data, datalen);
++}
++
++/*
++ * Extract required metadata from the signature packet and add what we need to
++ * the hash; finalise the hash.
++ */
++static int pgp_digest_signature(struct pgp_sig_verify *ctx)
++{
++	enum pgp_signature_version version;
++	unsigned int nbytes, nbytes_alloc;
++	enum pgp_packet_tag type = ctx->pkt.type;
++	const u8 *data = ctx->pkt.data;
++	size_t datalen = ctx->pkt.datalen;
 +	int ret;
 +
-+	kenter("");
++	kenter(",%u,,%zu", type, datalen);
 +
-+	memset(&p, 0, sizeof(p));
-+	p.pgp.types_of_interest = (1 << PGP_PKT_LITERAL_DATA);
-+	p.pgp.process_packet = pgp_test_parse_data;
-+	ret = pgp_parse_packets(prep->data, prep->datalen, &p.pgp);
++	if (ctx->sig->digest) {
++		kleave(" = 0 [digest found]");
++		return 0;
++	}
++
++	version = *data;
++	if (version == PGP_SIG_VERSION_3) {
++		/* We just include an excerpt of the metadata from a V3
++		 * signature.
++		 */
++		crypto_shash_update(ctx->hash, data + 2, 5);
++		data += sizeof(struct pgp_signature_v3_packet);
++		datalen -= sizeof(struct pgp_signature_v3_packet);
++	} else if (version == PGP_SIG_VERSION_4) {
++		/* We add the whole metadata header and some of the hashed data
++		 * for a V4 signature, plus a trailer.
++		 */
++		size_t hashedsz, unhashedsz;
++		u8 trailer[6];
++
++		hashedsz = 4 + 2 + (data[4] << 8) + data[5];
++		crypto_shash_update(ctx->hash, data, hashedsz);
++
++		trailer[0] = version;
++		trailer[1] = 0xffU;
++		trailer[2] = hashedsz >> 24;
++		trailer[3] = hashedsz >> 16;
++		trailer[4] = hashedsz >> 8;
++		trailer[5] = hashedsz;
++
++		crypto_shash_update(ctx->hash, trailer, 6);
++		data += hashedsz;
++		datalen -= hashedsz;
++
++		unhashedsz = 2 + (data[0] << 8) + data[1];
++		data += unhashedsz;
++		datalen -= unhashedsz;
++	}
++
++	if (datalen <= 2) {
++		kleave(" = -EBADMSG");
++		return -EBADMSG;
++	}
++
++	/* There's a quick check on the hash available. */
++	ctx->signed_hash_msw[0] = *data++;
++	ctx->signed_hash_msw[1] = *data++;
++	datalen -= 2;
++
++	/* And then the cryptographic data, which we'll need for the
++	 * algorithm.
++	 */
++	ret = mpi_key_length(data, datalen, NULL, &nbytes);
 +	if (ret < 0) {
-+		kleave(" = %d [parse]", ret);
++		kleave(" = -EBADMSG [key length]");
 +		return ret;
 +	}
 +
-+	if (!p.params.content_len) {
-+		kleave(" = -ENODATA [no literal data");
-+		return -ENODATA;
++	if (datalen != nbytes + 2) {
++		kleave(" = -EBADMSG [size mismatch]");
++		return -EBADMSG;
 +	}
 +
-+	ret = verify_pgp_signature(p.content, p.params.content_len,
-+				   prep->data, prep->datalen, NULL,
-+				   VERIFYING_UNSPECIFIED_SIGNATURE, NULL, NULL);
-+	if (ret < 0 && cred->session_keyring) {
-+		ret = verify_pgp_signature(p.content, p.params.content_len,
-+					   prep->data, prep->datalen,
-+					   cred->session_keyring,
-+					   VERIFYING_UNSPECIFIED_SIGNATURE,
-+					   NULL, NULL);
-+		if (ret < 0)
-+			goto error;
++	nbytes_alloc = DIV_ROUND_UP(nbytes, 8) * 8;
 +
-+		pr_warn("PGP message doesn't chain back to a trusted key\n");
++	ctx->sig->s = kzalloc(nbytes_alloc, GFP_KERNEL);
++	if (!ctx->sig->s) {
++		ret = -ENOMEM;
++		goto out;
 +	}
 +
-+	saved_prep_data = prep->data;
-+	saved_prep_datalen = prep->datalen;
-+	prep->data = p.content;
-+	prep->datalen = p.params.content_len;
-+	ret = generic_key_instantiate(key, prep);
-+	prep->data = saved_prep_data;
-+	prep->datalen = saved_prep_datalen;
-+error:
++	memcpy(ctx->sig->s + nbytes_alloc - nbytes, data + 2, nbytes);
++	ctx->sig->s_size = nbytes_alloc;
++
++	ctx->sig->digest = kmalloc(ctx->sig->digest_size, GFP_KERNEL);
++	if (!ctx->sig->digest) {
++		ret = -ENOMEM;
++		goto out;
++	}
++
++	ret = crypto_shash_final(ctx->hash, ctx->sig->digest);
++	if (ret < 0)
++		goto out;
++
++	pr_debug("hash: %*phN\n", ctx->sig->digest_size, ctx->sig->digest);
++out:
 +	kleave(" = %d", ret);
 +	return ret;
 +}
 +
-+/*
-+ * user defined keys take an arbitrary string as the description and an
-+ * arbitrary blob of data as the payload
++/**
++ * pgp_sig_get_digest - Finalize digest calculation
++ * @ctx: PGP sig verification context to use
++ * @buf: Buffer digest is written to
++ * @len: Buffer length
++ * @hash_algo: Digest algorithm
++ *
++ * Copy the calculated digest, length and algorithm to the destinations provided
++ * by the caller.
++ *
++ * Return: 0 on success, a negative value on error
 + */
-+static struct key_type key_type_pgp_test = {
-+	.name			= "pgp_test",
-+	.instantiate		= pgp_test_instantiate,
-+	.revoke			= user_revoke,
-+	.destroy		= user_destroy,
-+	.describe		= user_describe,
-+	.read			= user_read,
-+};
-+
-+/*
-+ * Module stuff
-+ */
-+static int __init pgp_key_init(void)
++int pgp_sig_get_digest(struct pgp_sig_verify *ctx, const u8 **buf, u32 *len,
++		       enum hash_algo *hash_algo)
 +{
-+	return register_key_type(&key_type_pgp_test);
++	int ret, i;
++
++	kenter("");
++
++	ret = pgp_digest_signature(ctx);
++	if (ret < 0)
++		goto out;
++
++	i = match_string(hash_algo_name, HASH_ALGO__LAST,
++			 ctx->sig->hash_algo);
++	if (i < 0) {
++		ret = -ENOENT;
++		goto out;
++	}
++
++	*hash_algo = i;
++	*buf = ctx->sig->digest;
++	*len = ctx->sig->digest_size;
++out:
++	kleave(" = %d", ret);
++	return ret;
 +}
 +
-+static void __exit pgp_key_cleanup(void)
++/**
++ * pgp_sig_verify - Verify the PGP signature
++ * @ctx: PGP sig verification context to use
++ * @keyring: Keyring containing the key for signature verification
++ *
++ * Search the key to be used for signature verification, and verify the PGP
++ * signature.
++ *
++ * Return: 0 if the signature is valid, a negative value otherwise
++ */
++int pgp_sig_verify(struct pgp_sig_verify *ctx, struct key *keyring)
 +{
-+	unregister_key_type(&key_type_pgp_test);
++	const struct public_key *pub;
++	struct key *key;
++	int ret;
++
++	kenter("");
++
++	ret = pgp_digest_signature(ctx);
++	if (ret < 0)
++		goto out;
++
++	if (ctx->sig->digest[0] != ctx->signed_hash_msw[0] ||
++	    ctx->sig->digest[1] != ctx->signed_hash_msw[1]) {
++		pr_err("Hash (%02x%02x) mismatch against quick check (%02x%02x)\n",
++		       ctx->sig->digest[0], ctx->sig->digest[1],
++		       ctx->signed_hash_msw[0], ctx->signed_hash_msw[1]);
++		ret = -EKEYREJECTED;
++		goto out;
++	}
++
++	/* Now we need to find a key to use */
++	key = pgp_request_asymmetric_key(ctx, keyring);
++	if (IS_ERR(key)) {
++		ret = PTR_ERR(key);
++		goto out;
++	}
++
++	pub = key->payload.data[asym_crypto];
++
++	if (strcmp(ctx->sig->pkey_algo, pub->pkey_algo)) {
++		ret = -EKEYREJECTED;
++		goto out_key;
++	}
++
++	ret = verify_signature(key, ctx->sig);
++out_key:
++	key_put(key);
++out:
++	kleave(" = %d", ret);
++	return ret;
 +}
 +
-+module_init(pgp_key_init);
-+module_exit(pgp_key_cleanup);
-diff --git a/crypto/asymmetric_keys/pgplib.h b/crypto/asymmetric_keys/pgplib.h
-index 967e2853186d..0dc3cd142469 100644
---- a/crypto/asymmetric_keys/pgplib.h
-+++ b/crypto/asymmetric_keys/pgplib.h
-@@ -56,3 +56,19 @@ struct pgp_sig_parameters {
- 
- extern int pgp_parse_sig_params(const u8 **_data, size_t *_datalen,
- 				struct pgp_sig_parameters *p);
++/**
++ * pgp_sig_verify_cancel - End the PGP signature verification
++ * @ctx: PGP sig verification context to use
++ * @keep_sig: Don't deallocate the signature
++ *
++ * Free the memory used for the signature verification.
++ */
++void pgp_sig_verify_cancel(struct pgp_sig_verify *ctx, bool keep_sig)
++{
++	kenter("");
 +
-+#if IS_ENABLED(CONFIG_PGP_TEST_KEY)
++	crypto_free_shash(ctx->hash->tfm);
++	if (!keep_sig)
++		public_key_signature_free(ctx->sig);
 +
-+struct pgp_literal_data_parameters {
-+	enum pgp_literal_data_format format : 8;
-+	u8 filename_len;
-+	u8 filename_offset;
-+	u8 content_offset;
-+	u32 content_len;
-+	u32 time;
-+};
++	kfree(ctx);
 +
-+extern int pgp_parse_literal_data(const u8 *data, size_t datalen,
-+				  struct pgp_literal_data_parameters *p);
++	kleave("");
++}
 +
-+#endif /* CONFIG_PGP_TEST_KEY */
++/**
++ * pgp_sig_get_sig - Return the PGP signature
++ * @ctx: PGP sig verification context to use
++ *
++ * Finalize the signature by calculating the digest if not already done. Then,
++ * return the PGP signature to the caller.
++ *
++ * Return: the PGP signature if successfully finalized, an error pointer
++ * otherwise
++ */
++struct public_key_signature *pgp_sig_get_sig(struct pgp_sig_verify *ctx)
++{
++	int ret;
++
++	ret = pgp_digest_signature(ctx);
++	if (ret < 0)
++		return ERR_PTR(-ENOENT);
++
++	return ctx->sig;
++}
++
++/**
++ * pgp_sig_get_version - Return the PGP signature version
++ * @ctx: PGP sig verification context to use
++ *
++ * Return the version of the PGP signature to the caller.
++ *
++ * Return: the PGP signature version
++ */
++u8 pgp_sig_get_version(struct pgp_sig_verify *ctx)
++{
++	return ctx->sig_version;
++}
+diff --git a/include/crypto/pgp.h b/include/crypto/pgp.h
+new file mode 100644
+index 000000000000..a58453843dc8
+--- /dev/null
++++ b/include/crypto/pgp.h
+@@ -0,0 +1,29 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++/* PGP signature processing
++ *
++ * Copyright (C) 2014 Red Hat, Inc. All Rights Reserved.
++ * Written by David Howells (dhowells@redhat.com)
++ */
++
++#ifndef _CRYPTO_PGP_H
++#define _CRYPTO_PGP_H
++
++#include <crypto/hash_info.h>
++
++struct key;
++struct pgp_sig_verify;
++
++/*
++ * pgp_signature.c
++ */
++extern struct pgp_sig_verify *pgp_sig_parse(const u8 *sigdata, size_t siglen);
++extern int pgp_sig_add_data(struct pgp_sig_verify *ctx,
++			    const void *data, size_t datalen);
++extern int pgp_sig_get_digest(struct pgp_sig_verify *ctx, const u8 **buf,
++			      u32 *len, enum hash_algo *hash_algo);
++extern int pgp_sig_verify(struct pgp_sig_verify *ctx, struct key *keyring);
++extern void pgp_sig_verify_cancel(struct pgp_sig_verify *ctx, bool keep_sig);
++extern struct public_key_signature *pgp_sig_get_sig(struct pgp_sig_verify *ctx);
++extern u8 pgp_sig_get_version(struct pgp_sig_verify *ctx);
++
++#endif /* _CRYPTO_PGP_H */
 -- 
 2.32.0
 
