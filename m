@@ -2,40 +2,41 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 46A42C433EF
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:16:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 659BDC4332F
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:16:51 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1350570AbiAKTQs (ORCPT
+        id S1350647AbiAKTQt (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 11 Jan 2022 14:16:48 -0500
-Received: from ams.source.kernel.org ([145.40.68.75]:60804 "EHLO
+        Tue, 11 Jan 2022 14:16:49 -0500
+Received: from ams.source.kernel.org ([145.40.68.75]:60808 "EHLO
         ams.source.kernel.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1350571AbiAKTQa (ORCPT
+        with ESMTP id S1350574AbiAKTQb (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Jan 2022 14:16:30 -0500
+        Tue, 11 Jan 2022 14:16:31 -0500
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 1FF2EB81D24;
-        Tue, 11 Jan 2022 19:16:29 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 63073C36AEF;
-        Tue, 11 Jan 2022 19:16:27 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 7BB59B81D0E;
+        Tue, 11 Jan 2022 19:16:30 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id C214DC36AF2;
+        Tue, 11 Jan 2022 19:16:28 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1641928587;
-        bh=BUNGqy1GSjznvymdULOfn/2cdfR9XlWeBe0mBbHN5BQ=;
+        s=k20201202; t=1641928589;
+        bh=+C2trUiZPCTEWyTvmutqANQLRRY+XvzYO8gZ5/8aZv8=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=box4Xy9Ie3TA/XpluZmx5PrWFxUoAuJ4p5GkRwQeFyfFupP6PO5mh4laWr+6dPqqk
-         nzpfKKCurOUiH6plgCM0yfncsCg6JbcxjgWRNZd8/dIVF5dCua/BkUUWspa5gz8Zfg
-         UxvdbFL9w98YT1u7n4wa1rxWYysZ1THBHJMamjqRcVNaJ1SUPFNeqtGbCOQC4CyqoR
-         xXJrSNc7M7r2Hu/f32gqe1Vcpa7peIWpwguxCGwBSKWJrwlC947NZT9tiGHvgdiTYM
-         T5969eN39vp8qZX61kii0I5IVWAw9rHNw5IsENnIfXqYLSm3b/rP5eBzH/xglGarQl
-         /V5JgK8yzZAqA==
+        b=ZYPTCashaniiRogeQRnsgKRawTLtjBgZp8g8ECRApsml5nPB4ga3xqzPhSkv28j43
+         UMW1dbWLv1JDsRW+PrPszQegGtj4YheRy8aWMZOV+4AmD7kebxLV4ZY++d3p+cfIme
+         MzI7oLb3Q6lwECegCVV/0m7cLXyNLM/XrHt+UNWcHjhrW+Ch8T/vlCU24GqTkmx+6m
+         6+AC0WJ1NuNXzC0Ss+VEhcENRaqZpw4Bw3qXqvp3sQoE5FqAamxS9PslfbxjbBiGUS
+         RQ9UA5klzSyEYiqruJYaC4XCJDsruEjDzOelOMwL7nTT3K+KQZIn/EtPxTmmLMIfot
+         HKU/or0dVyn2Q==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc:     linux-fsdevel@vger.kernel.org, idryomov@gmail.com
-Subject: [RFC PATCH v10 24/48] ceph: add a new ceph.fscrypt.auth vxattr
-Date:   Tue, 11 Jan 2022 14:15:44 -0500
-Message-Id: <20220111191608.88762-25-jlayton@kernel.org>
+Cc:     linux-fsdevel@vger.kernel.org, idryomov@gmail.com,
+        Luis Henriques <lhenriques@suse.de>
+Subject: [RFC PATCH v10 26/48] ceph: don't allow changing layout on encrypted files/directories
+Date:   Tue, 11 Jan 2022 14:15:46 -0500
+Message-Id: <20220111191608.88762-27-jlayton@kernel.org>
 X-Mailer: git-send-email 2.34.1
 In-Reply-To: <20220111191608.88762-1-jlayton@kernel.org>
 References: <20220111191608.88762-1-jlayton@kernel.org>
@@ -45,58 +46,32 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Give the client a way to get at the xattr from userland, mostly for
-future debugging purposes.
+From: Luis Henriques <lhenriques@suse.de>
 
+Encryption is currently only supported on files/directories with layouts
+where stripe_count=1.  Forbid changing layouts when encryption is involved.
+
+Signed-off-by: Luis Henriques <lhenriques@suse.de>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/xattr.c | 26 ++++++++++++++++++++++++++
- 1 file changed, 26 insertions(+)
+ fs/ceph/ioctl.c | 4 ++++
+ 1 file changed, 4 insertions(+)
 
-diff --git a/fs/ceph/xattr.c b/fs/ceph/xattr.c
-index 5e3522457deb..b872673a16a9 100644
---- a/fs/ceph/xattr.c
-+++ b/fs/ceph/xattr.c
-@@ -352,6 +352,23 @@ static ssize_t ceph_vxattrcb_auth_mds(struct ceph_inode_info *ci,
- 	return ret;
- }
+diff --git a/fs/ceph/ioctl.c b/fs/ceph/ioctl.c
+index 477ecc667aee..480d18bb2ff0 100644
+--- a/fs/ceph/ioctl.c
++++ b/fs/ceph/ioctl.c
+@@ -294,6 +294,10 @@ static long ceph_set_encryption_policy(struct file *file, unsigned long arg)
+ 	struct inode *inode = file_inode(file);
+ 	struct ceph_inode_info *ci = ceph_inode(inode);
  
-+#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
-+static bool ceph_vxattrcb_fscrypt_auth_exists(struct ceph_inode_info *ci)
-+{
-+	return ci->fscrypt_auth_len;
-+}
++	/* encrypted directories can't have striped layout */
++	if (ci->i_layout.stripe_count > 1)
++		return -EINVAL;
 +
-+static ssize_t ceph_vxattrcb_fscrypt_auth(struct ceph_inode_info *ci, char *val, size_t size)
-+{
-+	if (size) {
-+		if (size < ci->fscrypt_auth_len)
-+			return -ERANGE;
-+		memcpy(val, ci->fscrypt_auth, ci->fscrypt_auth_len);
-+	}
-+	return ci->fscrypt_auth_len;
-+}
-+#endif /* CONFIG_FS_ENCRYPTION */
-+
- #define CEPH_XATTR_NAME(_type, _name)	XATTR_CEPH_PREFIX #_type "." #_name
- #define CEPH_XATTR_NAME2(_type, _name, _name2)	\
- 	XATTR_CEPH_PREFIX #_type "." #_name "." #_name2
-@@ -492,6 +509,15 @@ static struct ceph_vxattr ceph_common_vxattrs[] = {
- 		.exists_cb = NULL,
- 		.flags = VXATTR_FLAG_READONLY,
- 	},
-+#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
-+	{
-+		.name = "ceph.fscrypt.auth",
-+		.name_size = sizeof("ceph.fscrypt.auth"),
-+		.getxattr_cb = ceph_vxattrcb_fscrypt_auth,
-+		.exists_cb = ceph_vxattrcb_fscrypt_auth_exists,
-+		.flags = VXATTR_FLAG_READONLY,
-+	},
-+#endif /* CONFIG_FS_ENCRYPTION */
- 	{ .name = NULL, 0 }	/* Required table terminator */
- };
- 
+ 	ret = vet_mds_for_fscrypt(file);
+ 	if (ret)
+ 		return ret;
 -- 
 2.34.1
 
