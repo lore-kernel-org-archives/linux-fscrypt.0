@@ -2,123 +2,122 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7E7FBC433F5
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 04:48:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B405BC4321E
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 18:04:05 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1347916AbiAKEsK (ORCPT
+        id S1350063AbiAKSED (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 10 Jan 2022 23:48:10 -0500
-Received: from dfw.source.kernel.org ([139.178.84.217]:60386 "EHLO
-        dfw.source.kernel.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1346578AbiAKEsJ (ORCPT
+        Tue, 11 Jan 2022 13:04:03 -0500
+Received: from frasgout.his.huawei.com ([185.176.79.56]:4389 "EHLO
+        frasgout.his.huawei.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1345158AbiAKSDv (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 10 Jan 2022 23:48:09 -0500
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 39D0161464;
-        Tue, 11 Jan 2022 04:48:09 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 65C1EC36AEB;
-        Tue, 11 Jan 2022 04:48:08 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1641876488;
-        bh=9k7gOl/NHLklU+ZV4oa3MqfoDU/Ae8pDZuPPq4e+vuY=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=TKjMXLohTL3KBqdbMa/XT/78E7lOCg80MzUcrVl+POwdOzlNXTT/v0XkpQwMvO1Hu
-         ZnU6/oVx7vDiq94PluRGsnKlzMmqBIMIgxjE/oB+jK/xKxjxcggUAQjuHl+pUw8QvM
-         KHQDp5jvSf5OOouYoM8ZvLrTEMrN7ErmtAXPGV0KdQD0qODl1bozuIzexS+6I2UtvY
-         jcF49TsTNXgig1bnFP57SOskccPCfVnn6iAlCy9GjW0xGoCvhHoM2kKH82Os4Qbt7t
-         pAg3Usuc/CKwk8R3hP9ExITRl7oSO3LfDWxRe1bVlzVLsyvtH4qxPz30hWlJWutPOi
-         L72N3+S77MUfw==
-Date:   Mon, 10 Jan 2022 20:48:06 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Stefan Berger <stefanb@linux.ibm.com>
-Cc:     Mimi Zohar <zohar@linux.ibm.com>, linux-integrity@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v2 5/6] ima: support fs-verity file digest based
- signatures
-Message-ID: <Yd0MBkL9J5CGF0W9@sol.localdomain>
-References: <20220109185517.312280-1-zohar@linux.ibm.com>
- <20220109185517.312280-6-zohar@linux.ibm.com>
- <Ydy3EA9ONY3kn1xr@gmail.com>
- <b4105f9b-98f7-f941-47db-2f72e0c5b8bd@linux.ibm.com>
+        Tue, 11 Jan 2022 13:03:51 -0500
+Received: from fraeml714-chm.china.huawei.com (unknown [172.18.147.200])
+        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4JYJPq0CrVz67cQc;
+        Wed, 12 Jan 2022 02:00:15 +0800 (CST)
+Received: from roberto-ThinkStation-P620.huawei.com (10.204.63.22) by
+ fraeml714-chm.china.huawei.com (10.206.15.33) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.2308.20; Tue, 11 Jan 2022 19:03:47 +0100
+From:   Roberto Sassu <roberto.sassu@huawei.com>
+To:     <dhowells@redhat.com>, <dwmw2@infradead.org>,
+        <herbert@gondor.apana.org.au>, <davem@davemloft.net>
+CC:     <keyrings@vger.kernel.org>, <linux-crypto@vger.kernel.org>,
+        <linux-integrity@vger.kernel.org>, <linux-fscrypt@vger.kernel.org>,
+        <linux-kernel@vger.kernel.org>, <zohar@linux.ibm.com>,
+        <ebiggers@kernel.org>, Roberto Sassu <roberto.sassu@huawei.com>
+Subject: [PATCH 01/14] mpi: Introduce mpi_key_length()
+Date:   Tue, 11 Jan 2022 19:03:05 +0100
+Message-ID: <20220111180318.591029-2-roberto.sassu@huawei.com>
+X-Mailer: git-send-email 2.32.0
+In-Reply-To: <20220111180318.591029-1-roberto.sassu@huawei.com>
+References: <20220111180318.591029-1-roberto.sassu@huawei.com>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=iso-8859-1
-Content-Disposition: inline
-Content-Transfer-Encoding: 8bit
-In-Reply-To: <b4105f9b-98f7-f941-47db-2f72e0c5b8bd@linux.ibm.com>
+Content-Transfer-Encoding: 7BIT
+Content-Type:   text/plain; charset=US-ASCII
+X-Originating-IP: [10.204.63.22]
+X-ClientProxiedBy: lhreml754-chm.china.huawei.com (10.201.108.204) To
+ fraeml714-chm.china.huawei.com (10.206.15.33)
+X-CFilter-Loop: Reflected
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, Jan 10, 2022 at 10:26:23PM -0500, Stefan Berger wrote:
-> 
-> On 1/10/22 17:45, Eric Biggers wrote:
-> > On Sun, Jan 09, 2022 at 01:55:16PM -0500, Mimi Zohar wrote:
-> > > +	case IMA_VERITY_DIGSIG:
-> > > +		set_bit(IMA_DIGSIG, &iint->atomic_flags);
-> > > +
-> > > +		algo = iint->ima_hash->algo;
-> > > +		hash = kzalloc(sizeof(*hash) + hash_digest_size[algo],
-> > > +			       GFP_KERNEL);
-> > > +		if (!hash) {
-> > > +			*cause = "verity-hashing-error";
-> > > +			*status = INTEGRITY_FAIL;
-> > > +			break;
-> > > +		}
-> > > +
-> > > +		rc = calc_tbs_hash(IMA_VERITY_DIGSIG, iint->ima_hash->algo,
-> > > +				   iint->ima_hash->digest, hash);
-> > > +		if (rc) {
-> > > +			*cause = "verity-hashing-error";
-> > > +			*status = INTEGRITY_FAIL;
-> > > +			break;
-> > > +		}
-> > > +
-> > > +		rc = integrity_digsig_verify(INTEGRITY_KEYRING_IMA,
-> > > +					     (const char *)xattr_value,
-> > > +					     xattr_len, hash->digest,
-> > > +					     hash->length);
-> > This is still verifying a raw hash value, which is wrong as I've explained
-> > several times.  Yes, you are now hashing the hash algorithm ID together with the
-> > original hash value, but at the end the thing being signed/verified is still a
-> > raw hash value, which is ambigious.
-> > 
-> > I think I see where the confusion is.  If rsa-pkcs1pad is used, then the
-> > asymmetric algorithm is parameterized by a hash algorithm, and this hash
-> > algorithm's identifier is automatically built-in to the data which is
-> > signed/verified.  And the data being signed/verified is assumed to be a hash
-> > value of the same type.  So in this case, the caller doesn't need to handle
-> > disambiguating raw hashes.
-> > 
-> > However, asymmetric_verify() also supports ecdsa and ecrdsa signatures.  As far
-> > as I can tell, those do *not* have the hash algorithm identifier built-in to the
-> > data which is signed/verified; they just sign/verify the data given.  That
-> 
-> 
-> The signatures are generated by evmctl by this code here, which works for
-> RSA and ECDSA and likely also ECRDSA:
-> 
-> https://sourceforge.net/p/linux-ima/ima-evm-utils/ci/master/tree/src/libimaevm.c#l1036
-> 
->    if (!EVP_PKEY_sign_init(ctx))
->         goto err;
->     st = "EVP_get_digestbyname";
->     if (!(md = EVP_get_digestbyname(algo)))
->         goto err;
->     st = "EVP_PKEY_CTX_set_signature_md";
->     if (!EVP_PKEY_CTX_set_signature_md(ctx, md))
->         goto err;
->     st = "EVP_PKEY_sign";
->     sigsize = MAX_SIGNATURE_SIZE - sizeof(struct signature_v2_hdr) - 1;
->     if (!EVP_PKEY_sign(ctx, hdr->sig, &sigsize, hash, size))
->         goto err;
->     len = (int)sigsize;
-> 
-> As far as I know, these are not raw signatures but generate the OIDs for RSA
-> + shaXYZ or ECDSA + shaXYZ (1.2.840.10045.4.1 et al) and prepend them to the
-> hash and then sign that.
+Introduce the new function to get the number of bits and bytes from an MPI.
 
-As I said, this appears to be true for RSA but not for ECDSA or ECRDSA.
+Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+---
+ include/linux/mpi.h |  2 ++
+ lib/mpi/mpicoder.c  | 33 ++++++++++++++++++++++++++-------
+ 2 files changed, 28 insertions(+), 7 deletions(-)
 
-- Eric
+diff --git a/include/linux/mpi.h b/include/linux/mpi.h
+index eb0d1c1db208..a7dd4c9d8120 100644
+--- a/include/linux/mpi.h
++++ b/include/linux/mpi.h
+@@ -90,6 +90,8 @@ enum gcry_mpi_format {
+ };
+ 
+ MPI mpi_read_raw_data(const void *xbuffer, size_t nbytes);
++int mpi_key_length(const void *xbuffer, unsigned int ret_nread,
++		   unsigned int *nbits_arg, unsigned int *nbytes_arg);
+ MPI mpi_read_from_buffer(const void *buffer, unsigned *ret_nread);
+ int mpi_fromstr(MPI val, const char *str);
+ MPI mpi_scanval(const char *string);
+diff --git a/lib/mpi/mpicoder.c b/lib/mpi/mpicoder.c
+index 39c4c6731094..cd10ae9968b7 100644
+--- a/lib/mpi/mpicoder.c
++++ b/lib/mpi/mpicoder.c
+@@ -79,22 +79,41 @@ MPI mpi_read_raw_data(const void *xbuffer, size_t nbytes)
+ }
+ EXPORT_SYMBOL_GPL(mpi_read_raw_data);
+ 
+-MPI mpi_read_from_buffer(const void *xbuffer, unsigned *ret_nread)
++int mpi_key_length(const void *xbuffer, unsigned int ret_nread,
++		   unsigned int *nbits_arg, unsigned int *nbytes_arg)
+ {
+ 	const uint8_t *buffer = xbuffer;
+-	unsigned int nbits, nbytes;
+-	MPI val;
++	unsigned int nbits;
+ 
+-	if (*ret_nread < 2)
+-		return ERR_PTR(-EINVAL);
++	if (ret_nread < 2)
++		return -EINVAL;
+ 	nbits = buffer[0] << 8 | buffer[1];
+ 
+ 	if (nbits > MAX_EXTERN_MPI_BITS) {
+ 		pr_info("MPI: mpi too large (%u bits)\n", nbits);
+-		return ERR_PTR(-EINVAL);
++		return -EINVAL;
+ 	}
+ 
+-	nbytes = DIV_ROUND_UP(nbits, 8);
++	if (nbits_arg)
++		*nbits_arg = nbits;
++	if (nbytes_arg)
++		*nbytes_arg = DIV_ROUND_UP(nbits, 8);
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(mpi_key_length);
++
++MPI mpi_read_from_buffer(const void *xbuffer, unsigned int *ret_nread)
++{
++	const uint8_t *buffer = xbuffer;
++	unsigned int nbytes;
++	MPI val;
++	int ret;
++
++	ret = mpi_key_length(xbuffer, *ret_nread, NULL, &nbytes);
++	if (ret < 0)
++		return ERR_PTR(ret);
++
+ 	if (nbytes + 2 > *ret_nread) {
+ 		pr_info("MPI: mpi larger than buffer nbytes=%u ret_nread=%u\n",
+ 				nbytes, *ret_nread);
+-- 
+2.32.0
+
