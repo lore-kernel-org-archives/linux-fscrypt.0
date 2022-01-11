@@ -2,44 +2,43 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A5E21C4167E
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B7B97C4167B
 	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:17:56 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1350650AbiAKTRy (ORCPT
+        id S1350893AbiAKTRz (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 11 Jan 2022 14:17:54 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40392 "EHLO
+        Tue, 11 Jan 2022 14:17:55 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40296 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1350653AbiAKTRJ (ORCPT
+        with ESMTP id S1350622AbiAKTRI (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Jan 2022 14:17:09 -0500
+        Tue, 11 Jan 2022 14:17:08 -0500
 Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D51EBC061759;
-        Tue, 11 Jan 2022 11:16:35 -0800 (PST)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 90D3CC028C38;
+        Tue, 11 Jan 2022 11:16:32 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 7F880B81D2A;
-        Tue, 11 Jan 2022 19:16:35 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id C922EC36AE3;
-        Tue, 11 Jan 2022 19:16:33 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 50887B81D1D;
+        Tue, 11 Jan 2022 19:16:31 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 8B688C36AE3;
+        Tue, 11 Jan 2022 19:16:29 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1641928594;
-        bh=pUjzVc6qsEE/G5nhdfyBWk2Q3jPftIom1jL2bQTs9wk=;
+        s=k20201202; t=1641928590;
+        bh=Mc3RAmxLJpfJHAUhHbNp9M1HMW97BqRBIGQOl2xc5ZE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=OgfpH3GrsrhDXWW14dktSTKCxpbiA63OelrI5kQ6MnIJYfCnf4dJRJ0x5KhNJXQj+
-         +sedxz3yneHOkghjidQTUxvokjKgA+vtjZcnk5byrBh7Km2fj2Rb2lwIa8TO+LwRaK
-         +AJKybd8rMzaYBgu06QduLtC3I/oYEIq0KXjenD3OfkQ/wimsQvKrzORARAeZm1OjF
-         cMWWhNPlxN0/PXQ165AcTM9xcwDqGaR6I5jHgqamshJ020D1uDRs/oGhYBwrGmCMx1
-         YAtaoNvY+bNbhRUF8uEaKQ9RSNSSuIdkwxcWuNF2jDGvXARgv7gKFFCx5RprAZspmz
-         DnpZEQsj+u6bw==
+        b=TF5nwOLaLDjDu1Ml/6m9eWOInPm1tRyRRU+u0jAiqQVD20B+fAGwF/kcKCu+UBe3C
+         QUdV+Sr94U2yxAnSnhPG3PYoDy6x+vhHxiqw8IA1IQ3aDqrqvxijTUTEvYWdJAuzKr
+         FiJx2MmBUpbq4zq9AVX8oe9LGUcvk+rXRvgdWz8emoRgXGLDtm9VcvBP7Cv8zSvngM
+         iMxHBMm5yVRjWpMRCYAYkww586VIyRmaO5NdtxctWoeKFBZAbZTSuQoJT+HPF1WwwK
+         /+HVUE/GbjDrrZm5Sut6PJcP/TsXApbir7Ru/tUvkw9+BYISou6CLaNDj+FK4G2rJj
+         hqghAk4pjwKCg==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc:     linux-fsdevel@vger.kernel.org, idryomov@gmail.com,
-        Xiubo Li <xiubli@redhat.com>
-Subject: [RFC PATCH v10 33/48] ceph: add __ceph_sync_read helper support
-Date:   Tue, 11 Jan 2022 14:15:53 -0500
-Message-Id: <20220111191608.88762-34-jlayton@kernel.org>
+Cc:     linux-fsdevel@vger.kernel.org, idryomov@gmail.com
+Subject: [RFC PATCH v10 27/48] libceph: add CEPH_OSD_OP_ASSERT_VER support
+Date:   Tue, 11 Jan 2022 14:15:47 -0500
+Message-Id: <20220111191608.88762-28-jlayton@kernel.org>
 X-Mailer: git-send-email 2.34.1
 In-Reply-To: <20220111191608.88762-1-jlayton@kernel.org>
 References: <20220111191608.88762-1-jlayton@kernel.org>
@@ -49,98 +48,89 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Xiubo Li <xiubli@redhat.com>
+...and record the user_version in the reply in a new field in
+ceph_osd_request, so we can populate the assert_ver appropriately.
+Shuffle the fields a bit too so that the new field fits in an
+existing hole on x86_64.
 
-Signed-off-by: Xiubo Li <xiubli@redhat.com>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/file.c  | 34 ++++++++++++++++++++++------------
- fs/ceph/super.h |  2 ++
- 2 files changed, 24 insertions(+), 12 deletions(-)
+ include/linux/ceph/osd_client.h | 6 +++++-
+ include/linux/ceph/rados.h      | 4 ++++
+ net/ceph/osd_client.c           | 5 +++++
+ 3 files changed, 14 insertions(+), 1 deletion(-)
 
-diff --git a/fs/ceph/file.c b/fs/ceph/file.c
-index c65f38045f90..4309ff942943 100644
---- a/fs/ceph/file.c
-+++ b/fs/ceph/file.c
-@@ -883,21 +883,18 @@ enum {
-  * If we get a short result from the OSD, check against i_size; we need to
-  * only return a short read to the caller if we hit EOF.
-  */
--static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
--			      int *retry_op)
-+ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
-+			 struct iov_iter *to, int *retry_op)
- {
--	struct file *file = iocb->ki_filp;
--	struct inode *inode = file_inode(file);
- 	struct ceph_inode_info *ci = ceph_inode(inode);
- 	struct ceph_fs_client *fsc = ceph_inode_to_client(inode);
- 	struct ceph_osd_client *osdc = &fsc->client->osdc;
- 	ssize_t ret;
--	u64 off = iocb->ki_pos;
-+	u64 off = *ki_pos;
- 	u64 len = iov_iter_count(to);
- 	u64 i_size = i_size_read(inode);
+diff --git a/include/linux/ceph/osd_client.h b/include/linux/ceph/osd_client.h
+index 3431011f364d..90ee000b0124 100644
+--- a/include/linux/ceph/osd_client.h
++++ b/include/linux/ceph/osd_client.h
+@@ -145,6 +145,9 @@ struct ceph_osd_req_op {
+ 			u32 src_fadvise_flags;
+ 			struct ceph_osd_data osd_data;
+ 		} copy_from;
++		struct {
++			u64 ver;
++		} assert_ver;
+ 	};
+ };
  
--	dout("sync_read on file %p %llu~%u %s\n", file, off, (unsigned)len,
--	     (file->f_flags & O_DIRECT) ? "O_DIRECT" : "");
-+	dout("sync_read on inode %p %llu~%u\n", inode, *ki_pos, (unsigned)len);
+@@ -199,6 +202,7 @@ struct ceph_osd_request {
+ 	struct ceph_osd_client *r_osdc;
+ 	struct kref       r_kref;
+ 	bool              r_mempool;
++	bool		  r_linger;           /* don't resend on failure */
+ 	struct completion r_completion;       /* private to osd_client.c */
+ 	ceph_osdc_callback_t r_callback;
  
- 	if (!len)
- 		return 0;
-@@ -999,14 +996,14 @@ static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
- 			break;
- 	}
+@@ -211,9 +215,9 @@ struct ceph_osd_request {
+ 	struct ceph_snap_context *r_snapc;    /* for writes */
+ 	struct timespec64 r_mtime;            /* ditto */
+ 	u64 r_data_offset;                    /* ditto */
+-	bool r_linger;                        /* don't resend on failure */
  
--	if (off > iocb->ki_pos) {
-+	if (off > *ki_pos) {
- 		if (off >= i_size) {
- 			*retry_op = CHECK_EOF;
--			ret = i_size - iocb->ki_pos;
--			iocb->ki_pos = i_size;
-+			ret = i_size - *ki_pos;
-+			*ki_pos = i_size;
- 		} else {
--			ret = off - iocb->ki_pos;
--			iocb->ki_pos = off;
-+			ret = off - *ki_pos;
-+			*ki_pos = off;
- 		}
- 	}
- 
-@@ -1014,6 +1011,19 @@ static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
- 	return ret;
- }
- 
-+static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
-+			      int *retry_op)
-+{
-+	struct file *file = iocb->ki_filp;
-+	struct inode *inode = file_inode(file);
-+
-+	dout("sync_read on file %p %llu~%u %s\n", file, iocb->ki_pos,
-+	     (unsigned)iov_iter_count(to),
-+	     (file->f_flags & O_DIRECT) ? "O_DIRECT" : "");
-+
-+	return __ceph_sync_read(inode, &iocb->ki_pos, to, retry_op);
-+}
-+
- struct ceph_aio_request {
- 	struct kiocb *iocb;
- 	size_t total_len;
-diff --git a/fs/ceph/super.h b/fs/ceph/super.h
-index c60ff747672a..eb91586ad8f3 100644
---- a/fs/ceph/super.h
-+++ b/fs/ceph/super.h
-@@ -1258,6 +1258,8 @@ extern int ceph_renew_caps(struct inode *inode, int fmode);
- extern int ceph_open(struct inode *inode, struct file *file);
- extern int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
- 			    struct file *file, unsigned flags, umode_t mode);
-+extern ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
-+				struct iov_iter *to, int *retry_op);
- extern int ceph_release(struct inode *inode, struct file *filp);
- extern void ceph_fill_inline_data(struct inode *inode, struct page *locked_page,
- 				  char *data, size_t len);
+ 	/* internal */
++	u64 r_version;			      /* data version sent in reply */
+ 	unsigned long r_stamp;                /* jiffies, send or check time */
+ 	unsigned long r_start_stamp;          /* jiffies */
+ 	ktime_t r_start_latency;              /* ktime_t */
+diff --git a/include/linux/ceph/rados.h b/include/linux/ceph/rados.h
+index 43a7a1573b51..73c3efbec36c 100644
+--- a/include/linux/ceph/rados.h
++++ b/include/linux/ceph/rados.h
+@@ -523,6 +523,10 @@ struct ceph_osd_op {
+ 		struct {
+ 			__le64 cookie;
+ 		} __attribute__ ((packed)) notify;
++		struct {
++			__le64 unused;
++			__le64 ver;
++		} __attribute__ ((packed)) assert_ver;
+ 		struct {
+ 			__le64 offset, length;
+ 			__le64 src_offset;
+diff --git a/net/ceph/osd_client.c b/net/ceph/osd_client.c
+index 1c5815530e0d..8a9416e4893d 100644
+--- a/net/ceph/osd_client.c
++++ b/net/ceph/osd_client.c
+@@ -1038,6 +1038,10 @@ static u32 osd_req_encode_op(struct ceph_osd_op *dst,
+ 		dst->copy_from.src_fadvise_flags =
+ 			cpu_to_le32(src->copy_from.src_fadvise_flags);
+ 		break;
++	case CEPH_OSD_OP_ASSERT_VER:
++		dst->assert_ver.unused = cpu_to_le64(0);
++		dst->assert_ver.ver = cpu_to_le64(src->assert_ver.ver);
++		break;
+ 	default:
+ 		pr_err("unsupported osd opcode %s\n",
+ 			ceph_osd_op_name(src->op));
+@@ -3763,6 +3767,7 @@ static void handle_reply(struct ceph_osd *osd, struct ceph_msg *msg)
+ 	 * one (type of) reply back.
+ 	 */
+ 	WARN_ON(!(m.flags & CEPH_OSD_FLAG_ONDISK));
++	req->r_version = m.user_version;
+ 	req->r_result = m.result ?: data_len;
+ 	finish_request(req);
+ 	mutex_unlock(&osd->lock);
 -- 
 2.34.1
 
