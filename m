@@ -2,24 +2,24 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 01E96C43219
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 18:04:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6BB55C43219
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 18:05:00 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S242714AbiAKSEX (ORCPT
+        id S1350005AbiAKSE6 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 11 Jan 2022 13:04:23 -0500
-Received: from frasgout.his.huawei.com ([185.176.79.56]:4399 "EHLO
+        Tue, 11 Jan 2022 13:04:58 -0500
+Received: from frasgout.his.huawei.com ([185.176.79.56]:4391 "EHLO
         frasgout.his.huawei.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1345640AbiAKSEA (ORCPT
+        with ESMTP id S1345189AbiAKSDw (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Jan 2022 13:04:00 -0500
-Received: from fraeml714-chm.china.huawei.com (unknown [172.18.147.200])
-        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4JYJQv55hlz67x8s;
-        Wed, 12 Jan 2022 02:01:11 +0800 (CST)
+        Tue, 11 Jan 2022 13:03:52 -0500
+Received: from fraeml714-chm.china.huawei.com (unknown [172.18.147.201])
+        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4JYJPr45rbz67wXw;
+        Wed, 12 Jan 2022 02:00:16 +0800 (CST)
 Received: from roberto-ThinkStation-P620.huawei.com (10.204.63.22) by
  fraeml714-chm.china.huawei.com (10.206.15.33) with Microsoft SMTP Server
  (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
- 15.1.2308.20; Tue, 11 Jan 2022 19:03:57 +0100
+ 15.1.2308.20; Tue, 11 Jan 2022 19:03:49 +0100
 From:   Roberto Sassu <roberto.sassu@huawei.com>
 To:     <dhowells@redhat.com>, <dwmw2@infradead.org>,
         <herbert@gondor.apana.org.au>, <davem@davemloft.net>
@@ -27,9 +27,9 @@ CC:     <keyrings@vger.kernel.org>, <linux-crypto@vger.kernel.org>,
         <linux-integrity@vger.kernel.org>, <linux-fscrypt@vger.kernel.org>,
         <linux-kernel@vger.kernel.org>, <zohar@linux.ibm.com>,
         <ebiggers@kernel.org>, Roberto Sassu <roberto.sassu@huawei.com>
-Subject: [PATCH 13/14] KEYS: Provide a function to load keys from a PGP keyring blob
-Date:   Tue, 11 Jan 2022 19:03:17 +0100
-Message-ID: <20220111180318.591029-14-roberto.sassu@huawei.com>
+Subject: [PATCH 03/14] PGPLIB: PGP definitions (RFC 4880)
+Date:   Tue, 11 Jan 2022 19:03:07 +0100
+Message-ID: <20220111180318.591029-4-roberto.sassu@huawei.com>
 X-Mailer: git-send-email 2.32.0
 In-Reply-To: <20220111180318.591029-1-roberto.sassu@huawei.com>
 References: <20220111180318.591029-1-roberto.sassu@huawei.com>
@@ -46,204 +46,230 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: David Howells <dhowells@redhat.com>
 
-Provide a function to load keys from a PGP keyring blob to the built-in
-keyring:
-
-	int preload_pgp_keys(const u8 *pgpdata, size_t pgpdatalen,
-			     struct key *keyring);
-
-Descriptions are generated from user ID notes and key fingerprints.  The
-keys will actually be identified by the ID calculated from the PGP data
-rather than by the description, so this shouldn't be a problem.
-
-The keys are attached to the keyring supplied.
-
-Looking as root in /proc/keys after the built-in keyring has been loaded:
-
-383a00c1 I------     1 perm 1f030000     0     0 asymmetri \
-				Red Hat, Inc. dbeca166: PGP.DSA dbeca166 []
-
-Thanks to Tetsuo Handa <penguin-kernel@I-love.SAKURA.ne.jp> for some
-pointing out some errors.
+Provide some useful PGP definitions from RFC 4880.  These describe details
+of public key crypto as used by crypto keys for things like signature
+verification.
 
 Signed-off-by: David Howells <dhowells@redhat.com>
 Co-developed-by: Roberto Sassu <roberto.sassu@huawei.com>
 Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
 ---
- crypto/asymmetric_keys/Kconfig       |   8 ++
- crypto/asymmetric_keys/Makefile      |   1 +
- crypto/asymmetric_keys/pgp_preload.c | 110 +++++++++++++++++++++++++++
- include/crypto/pgp.h                 |   8 +-
- 4 files changed, 126 insertions(+), 1 deletion(-)
- create mode 100644 crypto/asymmetric_keys/pgp_preload.c
+ crypto/asymmetric_keys/pgp.h | 206 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 206 insertions(+)
+ create mode 100644 crypto/asymmetric_keys/pgp.h
 
-diff --git a/crypto/asymmetric_keys/Kconfig b/crypto/asymmetric_keys/Kconfig
-index 5f328f57dd0b..79a95bf8919a 100644
---- a/crypto/asymmetric_keys/Kconfig
-+++ b/crypto/asymmetric_keys/Kconfig
-@@ -126,4 +126,12 @@ config PGP_TEST_KEY
- 
- 	  This is intended for testing the PGP parser.
- 
-+config PGP_PRELOAD
-+	bool "PGP public key preloading facility"
-+	depends on SYSTEM_TRUSTED_KEYRING
-+	select PGP_KEY_PARSER
-+	help
-+	  This option provides a facility for the kernel to preload PGP-wrapped
-+	  bundles of keys during boot to the built-in keyring.
-+
- endif # ASYMMETRIC_KEY_TYPE
-diff --git a/crypto/asymmetric_keys/Makefile b/crypto/asymmetric_keys/Makefile
-index 99240d11f591..daaed990376f 100644
---- a/crypto/asymmetric_keys/Makefile
-+++ b/crypto/asymmetric_keys/Makefile
-@@ -91,6 +91,7 @@ $(obj)/tpm.asn1.o: $(obj)/tpm.asn1.c $(obj)/tpm.asn1.h
- # PGP handling
- #
- obj-$(CONFIG_PGP_LIBRARY) += pgp_library.o
-+obj-$(CONFIG_PGP_PRELOAD) += pgp_preload.o
- 
- obj-$(CONFIG_PGP_KEY_PARSER) += pgp_key_parser.o
- pgp_key_parser-y := \
-diff --git a/crypto/asymmetric_keys/pgp_preload.c b/crypto/asymmetric_keys/pgp_preload.c
+diff --git a/crypto/asymmetric_keys/pgp.h b/crypto/asymmetric_keys/pgp.h
 new file mode 100644
-index 000000000000..0eb9ba0db3df
+index 000000000000..5eb4f4222090
 --- /dev/null
-+++ b/crypto/asymmetric_keys/pgp_preload.c
-@@ -0,0 +1,110 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/* Asymmetric key request handling
++++ b/crypto/asymmetric_keys/pgp.h
+@@ -0,0 +1,206 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/* PGP definitions (RFC 4880)
 + *
 + * Copyright (C) 2011 Red Hat, Inc. All Rights Reserved.
 + * Written by David Howells (dhowells@redhat.com)
 + */
 +
-+#include <linux/module.h>
-+#include <linux/key.h>
-+#include <linux/err.h>
-+#include <keys/asymmetric-type.h>
++#include <linux/types.h>
 +
-+#include "pgp_parser.h"
++struct pgp_key_ID {
++	u8 id[8];
++} __packed;
 +
-+struct preload_pgp_keys_context {
-+	struct pgp_parse_context pgp;
-+	key_ref_t keyring;
-+	const u8 *key_start;
-+	const u8 *key_end;
-+	bool found_key;
++struct pgp_time {
++	u8 time[4];
++} __packed;
++
++/*
++ * PGP public-key algorithm identifiers [RFC4880: 9.1]
++ */
++enum pgp_pubkey_algo {
++	PGP_PUBKEY_RSA_ENC_OR_SIG	= 1,
++	PGP_PUBKEY_RSA_ENC_ONLY		= 2,
++	PGP_PUBKEY_RSA_SIG_ONLY		= 3,
++	PGP_PUBKEY_ELGAMAL		= 16,
++	PGP_PUBKEY_DSA			= 17,
++	PGP_PUBKEY__LAST
 +};
 +
 +/*
-+ * Create a key.
++ * PGP symmetric-key algorithm identifiers [RFC4880: 9.2]
 + */
-+static void __init create_pgp_key(struct preload_pgp_keys_context *ctx)
-+{
-+	key_ref_t key;
-+
-+	key = key_create_or_update(ctx->keyring,
-+				   "asymmetric",
-+				   NULL,
-+				   ctx->key_start,
-+				   ctx->key_end - ctx->key_start,
-+				   ((KEY_POS_ALL & ~KEY_POS_SETATTR) |
-+				    KEY_USR_VIEW | KEY_USR_READ),
-+				   KEY_ALLOC_NOT_IN_QUOTA |
-+				   KEY_ALLOC_BUILT_IN |
-+				   KEY_ALLOC_BYPASS_RESTRICTION);
-+	if (IS_ERR(key)) {
-+		pr_notice("Ignoring PGP key, error: %ld\n", PTR_ERR(key));
-+		return;
-+	}
-+
-+	pr_notice("Loaded PGP key '%s'\n",
-+		  key_ref_to_ptr(key)->description);
-+
-+	key_ref_put(key);
-+}
++enum pgp_symkey_algo {
++	PGP_SYMKEY_PLAINTEXT		= 0,
++	PGP_SYMKEY_IDEA			= 1,
++	PGP_SYMKEY_3DES			= 2,
++	PGP_SYMKEY_CAST5		= 3,
++	PGP_SYMKEY_BLOWFISH		= 4,
++	PGP_SYMKEY_AES_128KEY		= 7,
++	PGP_SYMKEY_AES_192KEY		= 8,
++	PGP_SYMKEY_AES_256KEY		= 9,
++	PGP_SYMKEY_TWOFISH_256KEY	= 10,
++};
 +
 +/*
-+ * Extract a public key or subkey from the PGP stream.
++ * PGP compression algorithm identifiers [RFC4880: 9.3]
 + */
-+static int __init found_pgp_key(struct pgp_parse_context *context,
-+				enum pgp_packet_tag type, u8 headerlen,
-+				const u8 *data, size_t datalen)
-+{
-+	struct preload_pgp_keys_context *ctx =
-+		container_of(context, struct preload_pgp_keys_context, pgp);
++enum pgp_compr_algo {
++	PGP_COMPR_UNCOMPRESSED		= 0,
++	PGP_COMPR_ZIP			= 1,
++	PGP_COMPR_ZLIB			= 2,
++	PGP_COMPR_BZIP2			= 3,
++};
 +
-+	if (ctx->found_key) {
-+		ctx->key_end = data - headerlen;
-+		create_pgp_key(ctx);
-+	}
-+
-+	ctx->key_start = data - headerlen;
-+	ctx->found_key = true;
-+	return 0;
-+}
-+
-+/**
-+ * preload_pgp_keys - Load keys from a PGP keyring blob
-+ * @pgpdata: The PGP keyring blob containing the keys.
-+ * @pgpdatalen: The size of the @pgpdata blob.
-+ * @keyring: The keyring to add the new keys to.
-+ *
-+ * Preload a pack of keys from a PGP keyring blob.
-+ *
-+ * The keys have their descriptions generated from the user ID and fingerprint
-+ * in the PGP stream.  Since keys can be matched on their key IDs independently
-+ * of the key description, the description is mostly irrelevant apart from the
-+ * fact that keys of the same description displace one another from a keyring.
-+ *
-+ * The caller should override the current creds if they want the keys to be
-+ * owned by someone other than the current process's owner.  Keys will not be
-+ * accounted towards the owner's quota.
-+ *
-+ * This function may only be called whilst the kernel is booting.
-+ */
-+int __init preload_pgp_keys(const u8 *pgpdata, size_t pgpdatalen,
-+			    struct key *keyring)
-+{
-+	struct preload_pgp_keys_context ctx;
-+	int ret;
-+
-+	ctx.pgp.types_of_interest = (1 << PGP_PKT_PUBLIC_KEY);
-+	ctx.pgp.process_packet = found_pgp_key;
-+	ctx.keyring = make_key_ref(keyring, 1);
-+	ctx.found_key = false;
-+
-+	ret = pgp_parse_packets(pgpdata, pgpdatalen, &ctx.pgp);
-+	if (ret < 0)
-+		return ret;
-+
-+	if (ctx.found_key) {
-+		ctx.key_end = pgpdata + pgpdatalen;
-+		create_pgp_key(&ctx);
-+	}
-+	return 0;
-+}
-diff --git a/include/crypto/pgp.h b/include/crypto/pgp.h
-index a58453843dc8..fcb1c4c38a9d 100644
---- a/include/crypto/pgp.h
-+++ b/include/crypto/pgp.h
-@@ -1,5 +1,5 @@
- /* SPDX-License-Identifier: GPL-2.0+ */
--/* PGP signature processing
-+/* PGP key and signature processing
-  *
-  * Copyright (C) 2014 Red Hat, Inc. All Rights Reserved.
-  * Written by David Howells (dhowells@redhat.com)
-@@ -26,4 +26,10 @@ extern void pgp_sig_verify_cancel(struct pgp_sig_verify *ctx, bool keep_sig);
- extern struct public_key_signature *pgp_sig_get_sig(struct pgp_sig_verify *ctx);
- extern u8 pgp_sig_get_version(struct pgp_sig_verify *ctx);
- 
 +/*
-+ * pgp_preload.c
++ * PGP hash algorithm identifiers [RFC4880: 9.4]
 + */
-+extern int __init preload_pgp_keys(const u8 *pgpdata, size_t pgpdatalen,
-+				   struct key *keyring);
++enum pgp_hash_algo {
++	PGP_HASH_MD5			= 1,
++	PGP_HASH_SHA1			= 2,
++	PGP_HASH_RIPE_MD_160		= 3,
++	PGP_HASH_SHA256			= 8,
++	PGP_HASH_SHA384			= 9,
++	PGP_HASH_SHA512			= 10,
++	PGP_HASH_SHA224			= 11,
++	PGP_HASH__LAST
++};
 +
- #endif /* _CRYPTO_PGP_H */
++extern const char *const pgp_hash_algorithms[PGP_HASH__LAST];
++
++/*
++ * PGP packet type tags [RFC4880: 4.3].
++ */
++enum pgp_packet_tag {
++	PGP_PKT_RESERVED		= 0,
++	PGP_PKT_PUBKEY_ENC_SESSION_KEY	= 1,
++	PGP_PKT_SIGNATURE		= 2,
++	PGP_PKT_SYMKEY_ENC_SESSION_KEY	= 3,
++	PGP_PKT_ONEPASS_SIGNATURE	= 4,
++	PGP_PKT_SECRET_KEY		= 5,
++	PGP_PKT_PUBLIC_KEY		= 6,
++	PGP_PKT_SECRET_SUBKEY		= 7,
++	PGP_PKT_COMPRESSED_DATA		= 8,
++	PGP_PKT_SYM_ENC_DATA		= 9,
++	PGP_PKT_MARKER			= 10,
++	PGP_PKT_LITERAL_DATA		= 11,
++	PGP_PKT_TRUST			= 12,
++	PGP_PKT_USER_ID			= 13,
++	PGP_PKT_PUBLIC_SUBKEY		= 14,
++	PGP_PKT_USER_ATTRIBUTE		= 17,
++	PGP_PKT_SYM_ENC_AND_INTEG_DATA	= 18,
++	PGP_PKT_MODIFY_DETECT_CODE	= 19,
++	PGP_PKT_PRIVATE_0		= 60,
++	PGP_PKT_PRIVATE_3		= 63,
++	PGP_PKT__HIGHEST		= 63
++};
++
++/*
++ * Signature (tag 2) packet [RFC4880: 5.2].
++ */
++enum pgp_signature_version {
++	PGP_SIG_VERSION_3			= 3,
++	PGP_SIG_VERSION_4			= 4,
++};
++
++enum pgp_signature_type {
++	PGP_SIG_BINARY_DOCUMENT_SIG		= 0x00,
++	PGP_SIG_CANONICAL_TEXT_DOCUMENT_SIG	= 0x01,
++	PGP_SIG_STANDALONE_SIG			= 0x02,
++	PGP_SIG_GENERAL_CERT_OF_UID_PUBKEY	= 0x10,
++	PGP_SIG_PERSONAL_CERT_OF_UID_PUBKEY	= 0x11,
++	PGP_SIG_CASUAL_CERT_OF_UID_PUBKEY	= 0x12,
++	PGP_SIG_POSTITIVE_CERT_OF_UID_PUBKEY	= 0x13,
++	PGP_SIG_SUBKEY_BINDING_SIG		= 0x18,
++	PGP_SIG_PRIMARY_KEY_BINDING_SIG		= 0x19,
++	PGP_SIG_DIRECTLY_ON_KEY			= 0x1F,
++	PGP_SIG_KEY_REVOCATION_SIG		= 0x20,
++	PGP_SIG_SUBKEY_REVOCATION_SIG		= 0x28,
++	PGP_SIG_CERT_REVOCATION_SIG		= 0x30,
++	PGP_SIG_TIMESTAMP_SIG			= 0x40,
++	PGP_SIG_THIRD_PARTY_CONFIRM_SIG		= 0x50,
++};
++
++struct pgp_signature_v3_packet {
++	enum pgp_signature_version version : 8; /* == PGP_SIG_VERSION_3 */
++	u8	length_of_hashed;	/* == 5 */
++	struct {
++		enum pgp_signature_type signature_type : 8;
++		struct pgp_time	creation_time;
++	} __packed hashed;
++	struct pgp_key_ID issuer;
++	enum pgp_pubkey_algo pubkey_algo : 8;
++	enum pgp_hash_algo hash_algo : 8;
++} __packed;
++
++struct pgp_signature_v4_packet {
++	enum pgp_signature_version version : 8;	/* == PGP_SIG_VERSION_4 */
++	enum pgp_signature_type signature_type : 8;
++	enum pgp_pubkey_algo pubkey_algo : 8;
++	enum pgp_hash_algo hash_algo : 8;
++} __packed;
++
++/*
++ * V4 signature subpacket types [RFC4880: 5.2.3.1].
++ */
++enum pgp_sig_subpkt_type {
++	PGP_SIG_CREATION_TIME			= 2,
++	PGP_SIG_EXPIRATION_TIME			= 3,
++	PGP_SIG_EXPORTABLE_CERT			= 4,
++	PGP_SIG_TRUST_SIG			= 5,
++	PGP_SIG_REGEXP				= 6,
++	PGP_SIG_REVOCABLE			= 7,
++	PGP_SIG_KEY_EXPIRATION_TIME		= 9,
++	PGP_SIG_PREF_SYM_ALGO			= 11,
++	PGP_SIG_REVOCATION_KEY			= 12,
++	PGP_SIG_ISSUER				= 16,
++	PGP_SIG_NOTATION_DATA			= 20,
++	PGP_SIG_PREF_HASH_ALGO			= 21,
++	PGP_SIG_PREF_COMPR_ALGO			= 22,
++	PGP_SIG_KEY_SERVER_PREFS		= 23,
++	PGP_SIG_PREF_KEY_SERVER			= 24,
++	PGP_SIG_PRIMARY_USER_ID			= 25,
++	PGP_SIG_POLICY_URI			= 26,
++	PGP_SIG_KEY_FLAGS			= 27,
++	PGP_SIG_SIGNERS_USER_ID			= 28,
++	PGP_SIG_REASON_FOR_REVOCATION		= 29,
++	PGP_SIG_FEATURES			= 30,
++	PGP_SIG_TARGET				= 31,
++	PGP_SIG_EMBEDDED_SIG			= 32,
++	PGP_SIG__LAST
++};
++
++#define PGP_SIG_SUBPKT_TYPE_CRITICAL_MASK	0x80
++
++/*
++ * Key (tag 5, 6, 7 and 14) packet
++ */
++enum pgp_key_version {
++	PGP_KEY_VERSION_2			= 2,
++	PGP_KEY_VERSION_3			= 3,
++	PGP_KEY_VERSION_4			= 4,
++};
++
++struct pgp_key_v3_packet {
++	enum pgp_key_version version : 8;
++	struct pgp_time	creation_time;
++	u8 expiry[2];			/* 0 or time in days till expiry */
++	enum pgp_pubkey_algo pubkey_algo : 8;
++	u8 key_material[0];
++} __packed;
++
++struct pgp_key_v4_packet {
++	enum pgp_key_version version : 8;
++	struct pgp_time	creation_time;
++	enum pgp_pubkey_algo pubkey_algo : 8;
++	u8 key_material[0];
++} __packed;
++
++/*
++ * Literal Data (tag 11) packet
++ */
++enum pgp_literal_data_format {
++	PGP_LIT_FORMAT_BINARY			= 0x62,
++	PGP_LIT_FORMAT_TEXT			= 0x74,
++	PGP_LIT_FORMAT_TEXT_UTF8		= 0x75,
++};
 -- 
 2.32.0
 
