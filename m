@@ -2,40 +2,43 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CA862C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:17:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B272C433FE
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:17:10 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1346464AbiAKTRI (ORCPT
+        id S1350634AbiAKTRJ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 11 Jan 2022 14:17:08 -0500
-Received: from ams.source.kernel.org ([145.40.68.75]:60938 "EHLO
-        ams.source.kernel.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1350635AbiAKTQq (ORCPT
+        Tue, 11 Jan 2022 14:17:09 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40292 "EHLO
+        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1350582AbiAKTQz (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Jan 2022 14:16:46 -0500
+        Tue, 11 Jan 2022 14:16:55 -0500
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 79D10C033268;
+        Tue, 11 Jan 2022 11:16:26 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 89B93B81D21;
-        Tue, 11 Jan 2022 19:16:45 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id D4A51C36AE9;
-        Tue, 11 Jan 2022 19:16:43 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 4E76161786;
+        Tue, 11 Jan 2022 19:16:26 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4C93CC36AF2;
+        Tue, 11 Jan 2022 19:16:25 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1641928604;
-        bh=rcBiPIKaYqUSZ+A9+95aGX79vYaQ/FdlL2WoyKxfZtc=;
+        s=k20201202; t=1641928585;
+        bh=+c/Qq5ma7DLsv04b9bEy7CbhJXIX39kDZ8UeGZyeh5k=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=QlpzSbCAZEyRr9pj4m2VeNXyaTIkbn2exmyjFOmT6nS3n9tGTBov8IFUG8dgICdhv
-         mwsF6tjZ/9vgg4NAAIlmROIsjLhog1DG1725i4fzY/z70lFxyD1uIIk0/w7CvOuQ9R
-         PELxkdtqjBCoUMTGl9xT7GpL9qxDrZlccKjcOxrVckvdSuOb+3myySo1sPyLq2RBUU
-         WXiHV9gwMGMSMfw2S59quzcJ0l6fav+c5uzby0Fq9oklzmtA9+w9kVF7wRb823N0a6
-         ERa9Dx8bvsF9nzklhNcaMWq4khmx8X/0qeMhqjHk23+5q6lKR1HnU/2aQEjsyo62D6
-         KAlpO4pgVuJ+w==
+        b=h2p8+tofQ/Huml9+WfXLh3/1PgoOIm7nAlkYUJ1KcwsmSjMCOS1N4qNjp1wqRHnlm
+         0BkSJVncVq/N9z3MRNm3FNF5u4KLUOMKOIrkj1geT/gU8i7VLSuMlSurQqgCSBiE50
+         A9jLxa8HByKVVA4m+lvpizQHRgRpS6fl+oSn6yuJqXNjnZnFwwTozJ7aGIQrnJPVTX
+         1gthFQHabiQGjeF8Kv8X4mwXEVIFakTOJnQZUHyhDslCCRRqEaPh28/3kgPo3vsNVs
+         2/aMi6UeEjPWBDgsyaCg8hxyBOs1UrXqYn/K667uT/VoKWpYFnjWsNVXTZlTQmtH2S
+         sGlJJhtBR9mvg==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, idryomov@gmail.com
-Subject: [RFC PATCH v10 47/48] ceph: add encryption support to writepage
-Date:   Tue, 11 Jan 2022 14:16:07 -0500
-Message-Id: <20220111191608.88762-48-jlayton@kernel.org>
+Subject: [RFC PATCH v10 21/48] ceph: add support to readdir for encrypted filenames
+Date:   Tue, 11 Jan 2022 14:15:41 -0500
+Message-Id: <20220111191608.88762-22-jlayton@kernel.org>
 X-Mailer: git-send-email 2.34.1
 In-Reply-To: <20220111191608.88762-1-jlayton@kernel.org>
 References: <20220111191608.88762-1-jlayton@kernel.org>
@@ -45,91 +48,258 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+Add helper functions for buffer management and for decrypting filenames
+returned by the MDS. Wire those into the readdir codepaths.
+
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/addr.c | 34 +++++++++++++++++++++++++++-------
- 1 file changed, 27 insertions(+), 7 deletions(-)
+ fs/ceph/dir.c   | 62 +++++++++++++++++++++++++++++++++++++++----------
+ fs/ceph/inode.c | 38 +++++++++++++++++++++++++++---
+ 2 files changed, 85 insertions(+), 15 deletions(-)
 
-diff --git a/fs/ceph/addr.c b/fs/ceph/addr.c
-index dbc587a41fea..46ff50a2474e 100644
---- a/fs/ceph/addr.c
-+++ b/fs/ceph/addr.c
-@@ -545,10 +545,12 @@ static int writepage_nounlock(struct page *page, struct writeback_control *wbc)
- 	loff_t page_off = page_offset(page);
+diff --git a/fs/ceph/dir.c b/fs/ceph/dir.c
+index 7977484d0317..f8812c976ba0 100644
+--- a/fs/ceph/dir.c
++++ b/fs/ceph/dir.c
+@@ -9,6 +9,7 @@
+ 
+ #include "super.h"
+ #include "mds_client.h"
++#include "crypto.h"
+ 
+ /*
+  * Directory operations: readdir, lookup, create, link, unlink,
+@@ -241,7 +242,9 @@ static int __dcache_readdir(struct file *file,  struct dir_context *ctx,
+ 		di = ceph_dentry(dentry);
+ 		if (d_unhashed(dentry) ||
+ 		    d_really_is_negative(dentry) ||
+-		    di->lease_shared_gen != shared_gen) {
++		    di->lease_shared_gen != shared_gen ||
++		    ((dentry->d_flags & DCACHE_NOKEY_NAME) &&
++		     fscrypt_has_encryption_key(dir))) {
+ 			spin_unlock(&dentry->d_lock);
+ 			dput(dentry);
+ 			err = -EAGAIN;
+@@ -313,6 +316,8 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
  	int err;
- 	loff_t len = thp_size(page);
-+	loff_t wlen;
- 	struct ceph_writeback_ctl ceph_wbc;
- 	struct ceph_osd_client *osdc = &fsc->client->osdc;
- 	struct ceph_osd_request *req;
- 	bool caching = ceph_is_cache_enabled(inode);
-+	struct page *bounce_page = NULL;
+ 	unsigned frag = -1;
+ 	struct ceph_mds_reply_info_parsed *rinfo;
++	struct fscrypt_str tname = FSTR_INIT(NULL, 0);
++	struct fscrypt_str oname = FSTR_INIT(NULL, 0);
  
- 	dout("writepage %p idx %lu\n", page, page->index);
+ 	dout("readdir %p file %p pos %llx\n", inode, file, ctx->pos);
+ 	if (dfi->file_info.flags & CEPH_F_ATEND)
+@@ -340,6 +345,10 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
+ 		ctx->pos = 2;
+ 	}
  
-@@ -579,6 +581,8 @@ static int writepage_nounlock(struct page *page, struct writeback_control *wbc)
- 
- 	if (ceph_wbc.i_size < page_off + len)
- 		len = ceph_wbc.i_size - page_off;
-+	if (IS_ENCRYPTED(inode))
-+		wlen = round_up(len, CEPH_FSCRYPT_BLOCK_SIZE);
- 
- 	dout("writepage %p page %p index %lu on %llu~%llu snapc %p seq %lld\n",
- 	     inode, page, page->index, page_off, len, snapc, snapc->seq);
-@@ -587,22 +591,37 @@ static int writepage_nounlock(struct page *page, struct writeback_control *wbc)
- 	    CONGESTION_ON_THRESH(fsc->mount_options->congestion_kb))
- 		set_bdi_congested(inode_to_bdi(inode), BLK_RW_ASYNC);
- 
--	req = ceph_osdc_new_request(osdc, &ci->i_layout, ceph_vino(inode), page_off, &len, 0, 1,
--				    CEPH_OSD_OP_WRITE, CEPH_OSD_FLAG_WRITE, snapc,
--				    ceph_wbc.truncate_seq, ceph_wbc.truncate_size,
--				    true);
-+	req = ceph_osdc_new_request(osdc, &ci->i_layout, ceph_vino(inode),
-+				    page_off, &wlen, 0, 1, CEPH_OSD_OP_WRITE,
-+				    CEPH_OSD_FLAG_WRITE, snapc,
-+				    ceph_wbc.truncate_seq,
-+				    ceph_wbc.truncate_size, true);
- 	if (IS_ERR(req))
- 		return PTR_ERR(req);
- 
-+	if (wlen < len)
-+		len = wlen;
++	err = fscrypt_prepare_readdir(inode);
++	if (err)
++		goto out;
 +
- 	set_page_writeback(page);
- 	if (caching)
- 		ceph_set_page_fscache(page);
- 	ceph_fscache_write_to_cache(inode, page_off, len, caching);
+ 	spin_lock(&ci->i_ceph_lock);
+ 	/* request Fx cap. if have Fx, we don't need to release Fs cap
+ 	 * for later create/unlink. */
+@@ -360,6 +369,14 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
+ 		spin_unlock(&ci->i_ceph_lock);
+ 	}
  
-+	if (IS_ENCRYPTED(inode)) {
-+		bounce_page = fscrypt_encrypt_pagecache_blocks(page, CEPH_FSCRYPT_BLOCK_SIZE,
-+								0, GFP_NOFS);
-+		if (IS_ERR(bounce_page)) {
-+			err = PTR_ERR(bounce_page);
++	err = ceph_fname_alloc_buffer(inode, &tname);
++	if (err < 0)
++		goto out;
++
++	err = ceph_fname_alloc_buffer(inode, &oname);
++	if (err < 0)
++		goto out;
++
+ 	/* proceed with a normal readdir */
+ more:
+ 	/* do we have the correct frag content buffered? */
+@@ -387,12 +404,14 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
+ 		dout("readdir fetching %llx.%llx frag %x offset '%s'\n",
+ 		     ceph_vinop(inode), frag, dfi->last_name);
+ 		req = ceph_mdsc_create_request(mdsc, op, USE_AUTH_MDS);
+-		if (IS_ERR(req))
+-			return PTR_ERR(req);
++		if (IS_ERR(req)) {
++			err = PTR_ERR(req);
 +			goto out;
 +		}
-+	}
- 	/* it may be a short write due to an object boundary */
- 	WARN_ON_ONCE(len > thp_size(page));
--	osd_req_op_extent_osd_data_pages(req, 0, &page, len, 0, false, false);
--	dout("writepage %llu~%llu (%llu bytes)\n", page_off, len, len);
-+	osd_req_op_extent_osd_data_pages(req, 0,
-+			bounce_page ? &bounce_page : &page, wlen, 0,
-+			false, false);
-+	dout("writepage %llu~%llu (%llu bytes, %sencrypted)\n",
-+	     page_off, len, wlen, IS_ENCRYPTED(inode) ? "" : "not ");
+ 		err = ceph_alloc_readdir_reply_buffer(req, inode);
+ 		if (err) {
+ 			ceph_mdsc_put_request(req);
+-			return err;
++			goto out;
+ 		}
+ 		/* hints to request -> mds selection code */
+ 		req->r_direct_mode = USE_AUTH_MDS;
+@@ -405,7 +424,8 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
+ 			req->r_path2 = kstrdup(dfi->last_name, GFP_KERNEL);
+ 			if (!req->r_path2) {
+ 				ceph_mdsc_put_request(req);
+-				return -ENOMEM;
++				err = -ENOMEM;
++				goto out;
+ 			}
+ 		} else if (is_hash_order(ctx->pos)) {
+ 			req->r_args.readdir.offset_hash =
+@@ -426,7 +446,7 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
+ 		err = ceph_mdsc_do_request(mdsc, NULL, req);
+ 		if (err < 0) {
+ 			ceph_mdsc_put_request(req);
+-			return err;
++			goto out;
+ 		}
+ 		dout("readdir got and parsed readdir result=%d on "
+ 		     "frag %x, end=%d, complete=%d, hash_order=%d\n",
+@@ -479,7 +499,7 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
+ 			err = note_last_dentry(dfi, rde->name, rde->name_len,
+ 					       next_offset);
+ 			if (err)
+-				return err;
++				goto out;
+ 		} else if (req->r_reply_info.dir_end) {
+ 			dfi->next_offset = 2;
+ 			/* keep last name */
+@@ -507,22 +527,37 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
+ 	}
+ 	for (; i < rinfo->dir_nr; i++) {
+ 		struct ceph_mds_reply_dir_entry *rde = rinfo->dir_entries + i;
++		struct ceph_fname fname = { .dir	= inode,
++					    .name	= rde->name,
++					    .name_len	= rde->name_len,
++					    .ctext	= rde->altname,
++					    .ctext_len	= rde->altname_len };
++		u32 olen = oname.len;
  
- 	req->r_mtime = inode->i_mtime;
- 	err = ceph_osdc_start_request(osdc, req, true);
-@@ -611,7 +630,8 @@ static int writepage_nounlock(struct page *page, struct writeback_control *wbc)
+ 		BUG_ON(rde->offset < ctx->pos);
++		BUG_ON(!rde->inode.in);
  
- 	ceph_update_write_metrics(&fsc->mdsc->metric, req->r_start_latency,
- 				  req->r_end_latency, len, err);
+ 		ctx->pos = rde->offset;
+ 		dout("readdir (%d/%d) -> %llx '%.*s' %p\n",
+ 		     i, rinfo->dir_nr, ctx->pos,
+ 		     rde->name_len, rde->name, &rde->inode.in);
+ 
+-		BUG_ON(!rde->inode.in);
++		err = ceph_fname_to_usr(&fname, &tname, &oname, NULL);
++		if (err) {
++			dout("Unable to decode %.*s. Skipping it.\n", rde->name_len, rde->name);
++			continue;
++		}
+ 
+-		if (!dir_emit(ctx, rde->name, rde->name_len,
++		if (!dir_emit(ctx, oname.name, oname.len,
+ 			      ceph_present_ino(inode->i_sb, le64_to_cpu(rde->inode.in->ino)),
+ 			      le32_to_cpu(rde->inode.in->mode) >> 12)) {
+ 			dout("filldir stopping us...\n");
+-			return 0;
++			err = 0;
++			goto out;
+ 		}
++
++		/* Reset the lengths to their original allocated vals */
++		oname.len = olen;
+ 		ctx->pos++;
+ 	}
+ 
+@@ -577,9 +612,12 @@ static int ceph_readdir(struct file *file, struct dir_context *ctx)
+ 					dfi->dir_ordered_count);
+ 		spin_unlock(&ci->i_ceph_lock);
+ 	}
 -
-+	fscrypt_free_bounce_page(bounce_page);
++	err = 0;
+ 	dout("readdir %p file %p done.\n", inode, file);
+-	return 0;
 +out:
- 	ceph_osdc_put_request(req);
- 	if (err == 0)
- 		err = len;
++	ceph_fname_free_buffer(inode, &tname);
++	ceph_fname_free_buffer(inode, &oname);
++	return err;
+ }
+ 
+ static void reset_readdir(struct ceph_dir_file_info *dfi)
+diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
+index 28a5b70e5521..3f3231383780 100644
+--- a/fs/ceph/inode.c
++++ b/fs/ceph/inode.c
+@@ -1741,7 +1741,8 @@ int ceph_readdir_prepopulate(struct ceph_mds_request *req,
+ 			     struct ceph_mds_session *session)
+ {
+ 	struct dentry *parent = req->r_dentry;
+-	struct ceph_inode_info *ci = ceph_inode(d_inode(parent));
++	struct inode *inode = d_inode(parent);
++	struct ceph_inode_info *ci = ceph_inode(inode);
+ 	struct ceph_mds_reply_info_parsed *rinfo = &req->r_reply_info;
+ 	struct qstr dname;
+ 	struct dentry *dn;
+@@ -1751,6 +1752,8 @@ int ceph_readdir_prepopulate(struct ceph_mds_request *req,
+ 	u32 last_hash = 0;
+ 	u32 fpos_offset;
+ 	struct ceph_readdir_cache_control cache_ctl = {};
++	struct fscrypt_str tname = FSTR_INIT(NULL, 0);
++	struct fscrypt_str oname = FSTR_INIT(NULL, 0);
+ 
+ 	if (test_bit(CEPH_MDS_R_ABORTED, &req->r_req_flags))
+ 		return readdir_prepopulate_inodes_only(req, session);
+@@ -1802,14 +1805,36 @@ int ceph_readdir_prepopulate(struct ceph_mds_request *req,
+ 	cache_ctl.index = req->r_readdir_cache_idx;
+ 	fpos_offset = req->r_readdir_offset;
+ 
++	err = ceph_fname_alloc_buffer(inode, &tname);
++	if (err < 0)
++		goto out;
++
++	err = ceph_fname_alloc_buffer(inode, &oname);
++	if (err < 0)
++		goto out;
++
+ 	/* FIXME: release caps/leases if error occurs */
+ 	for (i = 0; i < rinfo->dir_nr; i++) {
++		bool is_nokey = false;
+ 		struct ceph_mds_reply_dir_entry *rde = rinfo->dir_entries + i;
+ 		struct ceph_vino tvino;
++		u32 olen = oname.len;
++		struct ceph_fname fname = { .dir	= inode,
++					    .name	= rde->name,
++					    .name_len	= rde->name_len,
++					    .ctext	= rde->altname,
++					    .ctext_len	= rde->altname_len };
++
++		err = ceph_fname_to_usr(&fname, &tname, &oname, &is_nokey);
++		if (err) {
++			dout("Unable to decode %.*s. Skipping it.", rde->name_len, rde->name);
++			continue;
++		}
+ 
+-		dname.name = rde->name;
+-		dname.len = rde->name_len;
++		dname.name = oname.name;
++		dname.len = oname.len;
+ 		dname.hash = full_name_hash(parent, dname.name, dname.len);
++		oname.len = olen;
+ 
+ 		tvino.ino = le64_to_cpu(rde->inode.in->ino);
+ 		tvino.snap = le64_to_cpu(rde->inode.in->snapid);
+@@ -1840,6 +1865,11 @@ int ceph_readdir_prepopulate(struct ceph_mds_request *req,
+ 				err = -ENOMEM;
+ 				goto out;
+ 			}
++			if (is_nokey) {
++				spin_lock(&dn->d_lock);
++				dn->d_flags |= DCACHE_NOKEY_NAME;
++				spin_unlock(&dn->d_lock);
++			}
+ 		} else if (d_really_is_positive(dn) &&
+ 			   (ceph_ino(d_inode(dn)) != tvino.ino ||
+ 			    ceph_snap(d_inode(dn)) != tvino.snap)) {
+@@ -1928,6 +1958,8 @@ int ceph_readdir_prepopulate(struct ceph_mds_request *req,
+ 		req->r_readdir_cache_idx = cache_ctl.index;
+ 	}
+ 	ceph_readdir_cache_release(&cache_ctl);
++	ceph_fname_free_buffer(inode, &tname);
++	ceph_fname_free_buffer(inode, &oname);
+ 	dout("readdir_prepopulate done\n");
+ 	return err;
+ }
 -- 
 2.34.1
 
