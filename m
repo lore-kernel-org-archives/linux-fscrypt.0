@@ -2,24 +2,24 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D3584C2BA4C
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 36C19C4167E
 	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 18:06:32 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1345542AbiAKSGb (ORCPT
+        id S1345280AbiAKSGb (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Tue, 11 Jan 2022 13:06:31 -0500
-Received: from frasgout.his.huawei.com ([185.176.79.56]:4402 "EHLO
+Received: from frasgout.his.huawei.com ([185.176.79.56]:4393 "EHLO
         frasgout.his.huawei.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1345411AbiAKSEC (ORCPT
+        with ESMTP id S1345458AbiAKSDy (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Jan 2022 13:04:02 -0500
-Received: from fraeml714-chm.china.huawei.com (unknown [172.18.147.206])
-        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4JYJQ13qZMz688Bk;
-        Wed, 12 Jan 2022 02:00:25 +0800 (CST)
+        Tue, 11 Jan 2022 13:03:54 -0500
+Received: from fraeml714-chm.china.huawei.com (unknown [172.18.147.226])
+        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4JYJTw627tz681p5;
+        Wed, 12 Jan 2022 02:03:48 +0800 (CST)
 Received: from roberto-ThinkStation-P620.huawei.com (10.204.63.22) by
  fraeml714-chm.china.huawei.com (10.206.15.33) with Microsoft SMTP Server
  (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
- 15.1.2308.20; Tue, 11 Jan 2022 19:03:58 +0100
+ 15.1.2308.20; Tue, 11 Jan 2022 19:03:50 +0100
 From:   Roberto Sassu <roberto.sassu@huawei.com>
 To:     <dhowells@redhat.com>, <dwmw2@infradead.org>,
         <herbert@gondor.apana.org.au>, <davem@davemloft.net>
@@ -27,9 +27,9 @@ CC:     <keyrings@vger.kernel.org>, <linux-crypto@vger.kernel.org>,
         <linux-integrity@vger.kernel.org>, <linux-fscrypt@vger.kernel.org>,
         <linux-kernel@vger.kernel.org>, <zohar@linux.ibm.com>,
         <ebiggers@kernel.org>, Roberto Sassu <roberto.sassu@huawei.com>
-Subject: [PATCH 14/14] KEYS: Introduce load_pgp_public_keyring()
-Date:   Tue, 11 Jan 2022 19:03:18 +0100
-Message-ID: <20220111180318.591029-15-roberto.sassu@huawei.com>
+Subject: [PATCH 05/14] PGPLIB: Signature parser
+Date:   Tue, 11 Jan 2022 19:03:09 +0100
+Message-ID: <20220111180318.591029-6-roberto.sassu@huawei.com>
 X-Mailer: git-send-email 2.32.0
 In-Reply-To: <20220111180318.591029-1-roberto.sassu@huawei.com>
 References: <20220111180318.591029-1-roberto.sassu@huawei.com>
@@ -44,113 +44,355 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Preload PGP keys from 'pubring.gpg', placed in certs/ of the kernel source
-directory.
+From: David Howells <dhowells@redhat.com>
 
+Provide some PGP signature parsing helpers:
+
+ (1) A function to parse V4 signature subpackets and pass the desired ones
+     to a processor function:
+
+	int pgp_parse_sig_subpkts(const u8 *data, size_t datalen,
+				  struct pgp_parse_sig_context *ctx);
+
+ (2) A function to parse out basic signature parameters from any PGP
+     signature such that the algorithms and public key can be selected:
+
+	int pgp_parse_sig_params(const u8 **_data, size_t *_datalen,
+				 struct pgp_sig_parameters *p);
+
+Signed-off-by: David Howells <dhowells@redhat.com>
+Co-developed-by: Roberto Sassu <roberto.sassu@huawei.com>
 Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
 ---
- certs/Kconfig               | 11 +++++++++++
- certs/Makefile              |  7 +++++++
- certs/system_certificates.S | 18 ++++++++++++++++++
- certs/system_keyring.c      | 21 +++++++++++++++++++++
- 4 files changed, 57 insertions(+)
+ crypto/asymmetric_keys/pgp_library.c | 284 +++++++++++++++++++++++++++
+ crypto/asymmetric_keys/pgplib.h      |  25 +++
+ 2 files changed, 309 insertions(+)
 
-diff --git a/certs/Kconfig b/certs/Kconfig
-index ae7f2e876a31..2f7fa68cd958 100644
---- a/certs/Kconfig
-+++ b/certs/Kconfig
-@@ -126,4 +126,15 @@ config SYSTEM_REVOCATION_KEYS
- 	  containing X.509 certificates to be included in the default blacklist
- 	  keyring.
- 
-+config PGP_PRELOAD_PUBLIC_KEYS
-+	bool "Preload PGP public keys"
-+	depends on SYSTEM_TRUSTED_KEYRING
-+	select PGP_PRELOAD
-+	default n
-+	help
-+	  Load at boot time the PGP public keys from a reserved area (populated
-+	  with the content of 'certs/pubring.gpg' provided at kernel build
-+	  time), and add them to the built-in keyring. Invalid keys are ignored
-+	  and the loading continues.
-+
- endmenu
-diff --git a/certs/Makefile b/certs/Makefile
-index 279433783b10..c85e0ff560ca 100644
---- a/certs/Makefile
-+++ b/certs/Makefile
-@@ -22,6 +22,13 @@ $(obj)/system_certificates.o: $(obj)/x509_certificate_list
- # Cope with signing_key.x509 existing in $(srctree) not $(objtree)
- AFLAGS_system_certificates.o := -I$(srctree)
- 
-+ifdef CONFIG_PGP_PRELOAD_PUBLIC_KEYS
-+ifeq ($(shell ls $(srctree)/certs/pubring.gpg 2> /dev/null), $(srctree)/certs/pubring.gpg)
-+AFLAGS_system_certificates.o += -DHAVE_PUBRING_GPG
-+$(obj)/system_certificates.o: $(srctree)/certs/pubring.gpg
-+endif
-+endif
-+
- quiet_cmd_extract_certs  = EXTRACT_CERTS   $(patsubst "%",%,$(2))
-       cmd_extract_certs  = scripts/extract-cert $(2) $@
- 
-diff --git a/certs/system_certificates.S b/certs/system_certificates.S
-index e1645e6f4d97..03b361bec758 100644
---- a/certs/system_certificates.S
-+++ b/certs/system_certificates.S
-@@ -47,3 +47,21 @@ module_cert_size:
- #else
- 	.long __module_cert_end - __module_cert_start
- #endif
-+
-+	.align 8
-+	.globl pgp_public_keys
-+pgp_public_keys:
-+__pgp_key_list_start:
-+#ifdef HAVE_PUBRING_GPG
-+	.incbin "certs/pubring.gpg"
-+#endif
-+__pgp_key_list_end:
-+
-+	.align 8
-+	.globl pgp_public_keys_size
-+pgp_public_keys_size:
-+#ifdef CONFIG_64BIT
-+	.quad __pgp_key_list_end - __pgp_key_list_start
-+#else
-+	.long __pgp_key_list_end - __pgp_key_list_start
-+#endif
-diff --git a/certs/system_keyring.c b/certs/system_keyring.c
-index 26a11b1dcd59..1612fb97a652 100644
---- a/certs/system_keyring.c
-+++ b/certs/system_keyring.c
-@@ -167,6 +167,27 @@ static __init int load_system_certificate_list(void)
+diff --git a/crypto/asymmetric_keys/pgp_library.c b/crypto/asymmetric_keys/pgp_library.c
+index d2c3149983d5..de4a748db9be 100644
+--- a/crypto/asymmetric_keys/pgp_library.c
++++ b/crypto/asymmetric_keys/pgp_library.c
+@@ -270,3 +270,287 @@ int pgp_parse_public_key(const u8 **_data, size_t *_datalen,
+ 	return 0;
  }
- late_initcall(load_system_certificate_list);
- 
-+#ifdef CONFIG_PGP_PRELOAD_PUBLIC_KEYS
-+extern __initconst const u8 pgp_public_keys[];
-+extern __initconst const unsigned long pgp_public_keys_size;
+ EXPORT_SYMBOL_GPL(pgp_parse_public_key);
 +
-+/*
-+ * Load a list of PGP keys.
++/**
++ * pgp_parse_sig_subpkt_header - Parse a PGP V4 signature subpacket header
++ * @_data: Start of the subpacket (updated to subpacket data)
++ * @_datalen: Amount of data remaining in buffer (decreased)
++ * @_type: Where the subpacket type will be returned
++ *
++ * Parse a PGP V4 signature subpacket header [RFC 4880: 5.2.3.1].
++ *
++ * Return: packet data size on success; non-zero on error.  If successful,
++ * *_data and *_datalen will have been updated and *_headerlen will be set to
++ * hold the length of the packet header.
 + */
-+static __init int load_pgp_public_keyring(void)
++static ssize_t pgp_parse_sig_subpkt_header(const u8 **_data, size_t *_datalen,
++					   enum pgp_sig_subpkt_type *_type)
 +{
-+	pr_notice("Load PGP public keys\n");
++	enum pgp_sig_subpkt_type type;
++	const u8 *data = *_data;
++	size_t size, datalen = *_datalen;
 +
-+	if (preload_pgp_keys(pgp_public_keys,
-+			     pgp_public_keys_size,
-+			     builtin_trusted_keys) < 0)
-+		pr_err("Can't load PGP public keys\n");
++	pr_devel("-->%s(,%zu,,)\n", __func__, datalen);
++
++	if (datalen < 2)
++		goto short_subpacket;
++
++	pr_devel("subpkt hdr %02x, %02x\n", data[0], data[1]);
++
++	switch (data[0]) {
++	case 0x00 ... 0xbf:
++		/* One-byte length */
++		size = data[0];
++		data++;
++		datalen--;
++		break;
++	case 0xc0 ... 0xfe:
++		/* Two-byte length */
++		if (datalen < 3)
++			goto short_subpacket;
++		size = (data[0] - 192) * 256;
++		size += data[1] + 192;
++		data += 2;
++		datalen -= 2;
++		break;
++	case 0xff:
++		if (datalen < 6)
++			goto short_subpacket;
++		size  = data[1] << 24;
++		size |= data[2] << 16;
++		size |= data[3] << 8;
++		size |= data[4];
++		data += 5;
++		datalen -= 5;
++		break;
++	}
++
++	/* The type octet is included in the size */
++	pr_devel("datalen=%zu size=%zu\n", datalen, size);
++	if (datalen < size)
++		goto short_subpacket;
++	if (size == 0)
++		goto very_short_subpacket;
++	if (size > INT_MAX)
++		goto too_big;
++
++	type = *data++ & ~PGP_SIG_SUBPKT_TYPE_CRITICAL_MASK;
++	datalen--;
++	size--;
++
++	*_data = data;
++	*_datalen = datalen;
++	*_type = type;
++	pr_devel("Found subpkt type=%u size=%zd\n", type, size);
++	return size;
++
++very_short_subpacket:
++	pr_debug("Signature subpacket size can't be zero\n");
++	return -EBADMSG;
++short_subpacket:
++	pr_debug("Attempt to parse short signature subpacket\n");
++	return -EBADMSG;
++too_big:
++	pr_debug("Signature subpacket size >2G\n");
++	return -EMSGSIZE;
++}
++
++/**
++ * pgp_parse_sig_subpkts - Parse a set of PGP V4 signatute subpackets
++ * @data: Data to be parsed (updated)
++ * @datalen: Amount of data (updated)
++ * @ctx: Parsing context
++ *
++ * Parse a set of PGP signature subpackets [RFC 4880: 5.2.3].
++ *
++ * Return: 0 on successful parsing, an error value otherwise
++ */
++static int pgp_parse_sig_subpkts(const u8 *data, size_t datalen,
++				 struct pgp_parse_sig_context *ctx)
++{
++	enum pgp_sig_subpkt_type type;
++	ssize_t pktlen;
++	int ret;
++
++	pr_devel("-->%s(,%zu,,)\n", __func__, datalen);
++
++	while (datalen > 2) {
++		pktlen = pgp_parse_sig_subpkt_header(&data, &datalen, &type);
++		if (pktlen < 0)
++			return pktlen;
++		if (test_bit(type, ctx->types_of_interest)) {
++			ret = ctx->process_packet(ctx, type, data, pktlen);
++			if (ret < 0)
++				return ret;
++		}
++		data += pktlen;
++		datalen -= pktlen;
++	}
++
++	if (datalen != 0) {
++		pr_debug("Excess octets in signature subpacket stream\n");
++		return -EBADMSG;
++	}
 +
 +	return 0;
 +}
-+late_initcall(load_pgp_public_keyring);
-+#endif /* CONFIG_PGP_PRELOAD_PUBLIC_KEYS */
 +
- #ifdef CONFIG_SYSTEM_DATA_VERIFICATION
++struct pgp_parse_sig_params_ctx {
++	struct pgp_parse_sig_context base;
++	struct pgp_sig_parameters *params;
++	bool got_the_issuer;
++};
++
++/*
++ * Process a V4 signature subpacket.
++ */
++static int pgp_process_sig_params_subpkt(struct pgp_parse_sig_context *context,
++					 enum pgp_sig_subpkt_type type,
++					 const u8 *data,
++					 size_t datalen)
++{
++	struct pgp_parse_sig_params_ctx *ctx =
++		container_of(context, struct pgp_parse_sig_params_ctx, base);
++
++	if (ctx->got_the_issuer) {
++		pr_debug("V4 signature packet has multiple issuers\n");
++		return -EBADMSG;
++	}
++
++	if (datalen != 8) {
++		pr_debug("V4 signature issuer subpkt not 8 long (%zu)\n",
++			   datalen);
++		return -EBADMSG;
++	}
++
++	memcpy(&ctx->params->issuer, data, 8);
++	ctx->got_the_issuer = true;
++	return 0;
++}
++
++/**
++ * pgp_parse_sig_params - Parse basic parameters from a PGP signature packet
++ * @_data: Content of packet (updated)
++ * @_datalen: Length of packet remaining (updated)
++ * @p: The basic parameters
++ *
++ * Parse the basic parameters from a PGP signature packet [RFC 4880: 5.2] that
++ * are needed to start off a signature verification operation.  The only ones
++ * actually necessary are the signature type (which affects how the data is
++ * transformed) and the hash algorithm.
++ *
++ * We also extract the public key algorithm and the issuer's key ID as we'll
++ * need those to determine if we actually have the public key available.  If
++ * not, then we can't verify the signature anyway.
++ *
++ * Return: 0 if successful or a negative error code.  *_data and *_datalen are
++ * updated to point to the 16-bit subset of the hash value and the set of MPIs.
++ */
++int pgp_parse_sig_params(const u8 **_data, size_t *_datalen,
++			 struct pgp_sig_parameters *p)
++{
++	const u8 *data = *_data;
++	size_t datalen = *_datalen;
++	int ret;
++
++	pr_devel("-->%s(,%zu,,)\n", __func__, datalen);
++
++	if (datalen < 1)
++		return -EBADMSG;
++	p->version = *data;
++
++	if (p->version == PGP_SIG_VERSION_3) {
++		const struct pgp_signature_v3_packet *v3 = (const void *)data;
++
++		if (datalen < sizeof(*v3)) {
++			pr_debug("Short V3 signature packet\n");
++			return -EBADMSG;
++		}
++		datalen -= sizeof(*v3);
++		data += sizeof(*v3);
++
++		/* V3 has everything we need in the header */
++		p->signature_type = v3->hashed.signature_type;
++		memcpy(&p->issuer, &v3->issuer, 8);
++		p->pubkey_algo = v3->pubkey_algo;
++		p->hash_algo = v3->hash_algo;
++
++	} else if (p->version == PGP_SIG_VERSION_4) {
++		const struct pgp_signature_v4_packet *v4 = (const void *)data;
++		struct pgp_parse_sig_params_ctx ctx = {
++			.base.process_packet = pgp_process_sig_params_subpkt,
++			.params = p,
++			.got_the_issuer = false,
++		};
++		size_t subdatalen;
++
++		if (datalen < sizeof(*v4) + 2 + 2 + 2) {
++			pr_debug("Short V4 signature packet\n");
++			return -EBADMSG;
++		}
++		datalen -= sizeof(*v4);
++		data += sizeof(*v4);
++
++		/* V4 has most things in the header... */
++		p->signature_type = v4->signature_type;
++		p->pubkey_algo = v4->pubkey_algo;
++		p->hash_algo = v4->hash_algo;
++
++		/*
++		 * ... but we have to get the key ID from the subpackets, of
++		 * which there are two sets.
++		 */
++		__set_bit(PGP_SIG_ISSUER, ctx.base.types_of_interest);
++
++		subdatalen  = *data++ << 8;
++		subdatalen |= *data++;
++		datalen -= 2;
++		if (subdatalen) {
++			/* Hashed subpackets */
++			pr_devel("hashed data: %zu (after %zu)\n",
++				 subdatalen, sizeof(*v4));
++			if (subdatalen > datalen + 2 + 2) {
++				pr_debug("Short V4 signature packet [hdata]\n");
++				return -EBADMSG;
++			}
++			ret = pgp_parse_sig_subpkts(data, subdatalen,
++						    &ctx.base);
++			if (ret < 0)
++				return ret;
++			data += subdatalen;
++			datalen -= subdatalen;
++		}
++
++		subdatalen  = *data++ << 8;
++		subdatalen |= *data++;
++		datalen -= 2;
++		if (subdatalen) {
++			/* Unhashed subpackets */
++			pr_devel("unhashed data: %zu\n", subdatalen);
++			if (subdatalen > datalen + 2) {
++				pr_debug("Short V4 signature packet [udata]\n");
++				return -EBADMSG;
++			}
++			ret = pgp_parse_sig_subpkts(data, subdatalen,
++						    &ctx.base);
++			if (ret < 0)
++				return ret;
++			data += subdatalen;
++			datalen -= subdatalen;
++		}
++
++		if (!ctx.got_the_issuer) {
++			pr_debug("V4 signature packet lacks issuer\n");
++			return -EBADMSG;
++		}
++	} else {
++		pr_debug("Signature packet with unhandled version %d\n",
++			 p->version);
++		return -EBADMSG;
++	}
++
++	*_data = data;
++	*_datalen = datalen;
++	return 0;
++}
++EXPORT_SYMBOL_GPL(pgp_parse_sig_params);
+diff --git a/crypto/asymmetric_keys/pgplib.h b/crypto/asymmetric_keys/pgplib.h
+index d82b84179433..967e2853186d 100644
+--- a/crypto/asymmetric_keys/pgplib.h
++++ b/crypto/asymmetric_keys/pgplib.h
+@@ -31,3 +31,28 @@ struct pgp_parse_pubkey {
  
- /**
+ extern int pgp_parse_public_key(const u8 **_data, size_t *_datalen,
+ 				struct pgp_parse_pubkey *pk);
++
++struct pgp_parse_sig_context {
++	unsigned long types_of_interest[128 / BITS_PER_LONG];
++	int (*process_packet)(struct pgp_parse_sig_context *context,
++			      enum pgp_sig_subpkt_type type,
++			      const u8 *data,
++			      size_t datalen);
++};
++
++extern int pgp_parse_sig_packets(const u8 *data, size_t datalen,
++				 struct pgp_parse_sig_context *ctx);
++
++struct pgp_sig_parameters {
++	enum pgp_signature_version version : 8;
++	enum pgp_signature_type signature_type : 8;
++	enum pgp_pubkey_algo pubkey_algo : 8;
++	enum pgp_hash_algo hash_algo : 8;
++	union {
++		struct pgp_key_ID issuer;
++		__be32 issuer32[2];
++	};
++};
++
++extern int pgp_parse_sig_params(const u8 **_data, size_t *_datalen,
++				struct pgp_sig_parameters *p);
 -- 
 2.32.0
 
