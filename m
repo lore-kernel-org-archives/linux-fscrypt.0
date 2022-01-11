@@ -2,43 +2,43 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B7B97C4167B
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:17:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4EC75C433FE
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:17:57 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1350893AbiAKTRz (ORCPT
+        id S1346415AbiAKTR4 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 11 Jan 2022 14:17:55 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40296 "EHLO
+        Tue, 11 Jan 2022 14:17:56 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40214 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1350622AbiAKTRI (ORCPT
+        with ESMTP id S1350580AbiAKTRU (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Jan 2022 14:17:08 -0500
+        Tue, 11 Jan 2022 14:17:20 -0500
 Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 90D3CC028C38;
-        Tue, 11 Jan 2022 11:16:32 -0800 (PST)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 45E34C028BF6;
+        Tue, 11 Jan 2022 11:16:45 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 50887B81D1D;
-        Tue, 11 Jan 2022 19:16:31 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 8B688C36AE3;
-        Tue, 11 Jan 2022 19:16:29 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id E0393B81D26;
+        Tue, 11 Jan 2022 19:16:44 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 2B3E4C36AF2;
+        Tue, 11 Jan 2022 19:16:43 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1641928590;
-        bh=Mc3RAmxLJpfJHAUhHbNp9M1HMW97BqRBIGQOl2xc5ZE=;
+        s=k20201202; t=1641928603;
+        bh=P8sVB33NWHzlHstTbhByVQTgljDhm1yEWEhkCJF9FHE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=TF5nwOLaLDjDu1Ml/6m9eWOInPm1tRyRRU+u0jAiqQVD20B+fAGwF/kcKCu+UBe3C
-         QUdV+Sr94U2yxAnSnhPG3PYoDy6x+vhHxiqw8IA1IQ3aDqrqvxijTUTEvYWdJAuzKr
-         FiJx2MmBUpbq4zq9AVX8oe9LGUcvk+rXRvgdWz8emoRgXGLDtm9VcvBP7Cv8zSvngM
-         iMxHBMm5yVRjWpMRCYAYkww586VIyRmaO5NdtxctWoeKFBZAbZTSuQoJT+HPF1WwwK
-         /+HVUE/GbjDrrZm5Sut6PJcP/TsXApbir7Ru/tUvkw9+BYISou6CLaNDj+FK4G2rJj
-         hqghAk4pjwKCg==
+        b=QKTC19ykBNBYRmCOIJx8SxEVe3+UiKGmSqW/acquYlgOT/f2OZQYCgEsW2CzgQWAs
+         rFyG/HNHcZl6tNu0SpHPQO3WvBomuftvv10yWdHIrqQUG2H7xANvVghDCTdN/m/Ojn
+         SNIr9uC1luV8nYgmZQ79heNqwWStTfTRF2MZ8rLQUuj74ceQl6lZlEX1w1RTIwzTK3
+         vZDezQjj+hnlaunCohjSidxcssPKybp3eysTVZayvxw6ohgXBR72KMGoQINc/5NPzk
+         onrLrX+tp6nnG67o172ukwg8kgv2Asdbq/CIhjzxcpBSCvv1ECk0lro+L37wtG/Uwx
+         E54EwDdZmJ5BA==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, idryomov@gmail.com
-Subject: [RFC PATCH v10 27/48] libceph: add CEPH_OSD_OP_ASSERT_VER support
-Date:   Tue, 11 Jan 2022 14:15:47 -0500
-Message-Id: <20220111191608.88762-28-jlayton@kernel.org>
+Subject: [RFC PATCH v10 46/48] ceph: add fscrypt decryption support to ceph_netfs_issue_op
+Date:   Tue, 11 Jan 2022 14:16:06 -0500
+Message-Id: <20220111191608.88762-47-jlayton@kernel.org>
 X-Mailer: git-send-email 2.34.1
 In-Reply-To: <20220111191608.88762-1-jlayton@kernel.org>
 References: <20220111191608.88762-1-jlayton@kernel.org>
@@ -48,89 +48,95 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-...and record the user_version in the reply in a new field in
-ceph_osd_request, so we can populate the assert_ver appropriately.
-Shuffle the fields a bit too so that the new field fits in an
-existing hole on x86_64.
-
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- include/linux/ceph/osd_client.h | 6 +++++-
- include/linux/ceph/rados.h      | 4 ++++
- net/ceph/osd_client.c           | 5 +++++
- 3 files changed, 14 insertions(+), 1 deletion(-)
+ fs/ceph/addr.c | 33 +++++++++++++++++++++++++--------
+ 1 file changed, 25 insertions(+), 8 deletions(-)
 
-diff --git a/include/linux/ceph/osd_client.h b/include/linux/ceph/osd_client.h
-index 3431011f364d..90ee000b0124 100644
---- a/include/linux/ceph/osd_client.h
-+++ b/include/linux/ceph/osd_client.h
-@@ -145,6 +145,9 @@ struct ceph_osd_req_op {
- 			u32 src_fadvise_flags;
- 			struct ceph_osd_data osd_data;
- 		} copy_from;
-+		struct {
-+			u64 ver;
-+		} assert_ver;
- 	};
- };
+diff --git a/fs/ceph/addr.c b/fs/ceph/addr.c
+index b3d9459c9bbd..dbc587a41fea 100644
+--- a/fs/ceph/addr.c
++++ b/fs/ceph/addr.c
+@@ -18,6 +18,7 @@
+ #include "mds_client.h"
+ #include "cache.h"
+ #include "metric.h"
++#include "crypto.h"
+ #include <linux/ceph/osd_client.h>
+ #include <linux/ceph/striper.h>
  
-@@ -199,6 +202,7 @@ struct ceph_osd_request {
- 	struct ceph_osd_client *r_osdc;
- 	struct kref       r_kref;
- 	bool              r_mempool;
-+	bool		  r_linger;           /* don't resend on failure */
- 	struct completion r_completion;       /* private to osd_client.c */
- 	ceph_osdc_callback_t r_callback;
+@@ -200,7 +201,7 @@ static void ceph_netfs_expand_readahead(struct netfs_read_request *rreq)
+ 	rreq->len = roundup(rreq->len, lo->stripe_unit);
+ }
  
-@@ -211,9 +215,9 @@ struct ceph_osd_request {
- 	struct ceph_snap_context *r_snapc;    /* for writes */
- 	struct timespec64 r_mtime;            /* ditto */
- 	u64 r_data_offset;                    /* ditto */
--	bool r_linger;                        /* don't resend on failure */
+-static bool ceph_netfs_clamp_length(struct netfs_read_subrequest *subreq)
++static size_t __ceph_netfs_clamp_length(struct netfs_read_subrequest *subreq)
+ {
+ 	struct inode *inode = subreq->rreq->mapping->host;
+ 	struct ceph_fs_client *fsc = ceph_inode_to_client(inode);
+@@ -211,13 +212,18 @@ static bool ceph_netfs_clamp_length(struct netfs_read_subrequest *subreq)
+ 	/* Truncate the extent at the end of the current block */
+ 	ceph_calc_file_object_mapping(&ci->i_layout, subreq->start, subreq->len,
+ 				      &objno, &objoff, &xlen);
+-	subreq->len = min(xlen, fsc->mount_options->rsize);
+-	return true;
++	return min(xlen, fsc->mount_options->rsize);
+ }
  
- 	/* internal */
-+	u64 r_version;			      /* data version sent in reply */
- 	unsigned long r_stamp;                /* jiffies, send or check time */
- 	unsigned long r_start_stamp;          /* jiffies */
- 	ktime_t r_start_latency;              /* ktime_t */
-diff --git a/include/linux/ceph/rados.h b/include/linux/ceph/rados.h
-index 43a7a1573b51..73c3efbec36c 100644
---- a/include/linux/ceph/rados.h
-+++ b/include/linux/ceph/rados.h
-@@ -523,6 +523,10 @@ struct ceph_osd_op {
- 		struct {
- 			__le64 cookie;
- 		} __attribute__ ((packed)) notify;
-+		struct {
-+			__le64 unused;
-+			__le64 ver;
-+		} __attribute__ ((packed)) assert_ver;
- 		struct {
- 			__le64 offset, length;
- 			__le64 src_offset;
-diff --git a/net/ceph/osd_client.c b/net/ceph/osd_client.c
-index 1c5815530e0d..8a9416e4893d 100644
---- a/net/ceph/osd_client.c
-+++ b/net/ceph/osd_client.c
-@@ -1038,6 +1038,10 @@ static u32 osd_req_encode_op(struct ceph_osd_op *dst,
- 		dst->copy_from.src_fadvise_flags =
- 			cpu_to_le32(src->copy_from.src_fadvise_flags);
- 		break;
-+	case CEPH_OSD_OP_ASSERT_VER:
-+		dst->assert_ver.unused = cpu_to_le64(0);
-+		dst->assert_ver.ver = cpu_to_le64(src->assert_ver.ver);
-+		break;
- 	default:
- 		pr_err("unsupported osd opcode %s\n",
- 			ceph_osd_op_name(src->op));
-@@ -3763,6 +3767,7 @@ static void handle_reply(struct ceph_osd *osd, struct ceph_msg *msg)
- 	 * one (type of) reply back.
- 	 */
- 	WARN_ON(!(m.flags & CEPH_OSD_FLAG_ONDISK));
-+	req->r_version = m.user_version;
- 	req->r_result = m.result ?: data_len;
- 	finish_request(req);
- 	mutex_unlock(&osd->lock);
++static bool ceph_netfs_clamp_length(struct netfs_read_subrequest *subreq)
++{
++	subreq->len = __ceph_netfs_clamp_length(subreq);
++	return true;
++}
+ static void finish_netfs_read(struct ceph_osd_request *req)
+ {
+-	struct ceph_fs_client *fsc = ceph_inode_to_client(req->r_inode);
++	struct inode *inode = req->r_inode;
++	struct ceph_fs_client *fsc = ceph_inode_to_client(inode);
+ 	struct ceph_osd_data *osd_data = osd_req_op_extent_osd_data(req, 0);
+ 	struct netfs_read_subrequest *subreq = req->r_priv;
+ 	int num_pages;
+@@ -235,8 +241,16 @@ static void finish_netfs_read(struct ceph_osd_request *req)
+ 	else if (err == -EBLOCKLISTED)
+ 		fsc->blocklisted = true;
+ 
+-	if (err >= 0 && err < subreq->len)
+-		__set_bit(NETFS_SREQ_CLEAR_TAIL, &subreq->flags);
++	if (err >= 0) {
++		if (err < subreq->len)
++			__set_bit(NETFS_SREQ_CLEAR_TAIL, &subreq->flags);
++		if (IS_ENCRYPTED(inode)) {
++			err = ceph_fscrypt_decrypt_pages(inode, osd_data->pages,
++							 subreq->start, err);
++			if (err > subreq->len)
++				err = subreq->len;
++		}
++	}
+ 
+ 	netfs_subreq_terminated(subreq, err, true);
+ 
+@@ -258,8 +272,11 @@ static void ceph_netfs_issue_op(struct netfs_read_subrequest *subreq)
+ 	size_t page_off;
+ 	int err = 0;
+ 	u64 len = subreq->len;
++	u64 off = subreq->start;
++
++	fscrypt_adjust_off_and_len(inode, &off, &len);
+ 
+-	req = ceph_osdc_new_request(&fsc->client->osdc, &ci->i_layout, vino, subreq->start, &len,
++	req = ceph_osdc_new_request(&fsc->client->osdc, &ci->i_layout, vino, off, &len,
+ 			0, 1, CEPH_OSD_OP_READ,
+ 			CEPH_OSD_FLAG_READ | fsc->client->osdc.client->options->read_from_replica,
+ 			NULL, ci->i_truncate_seq, ci->i_truncate_size, false);
+@@ -270,7 +287,7 @@ static void ceph_netfs_issue_op(struct netfs_read_subrequest *subreq)
+ 	}
+ 
+ 	dout("%s: pos=%llu orig_len=%zu len=%llu\n", __func__, subreq->start, subreq->len, len);
+-	iov_iter_xarray(&iter, READ, &rreq->mapping->i_pages, subreq->start, len);
++	iov_iter_xarray(&iter, READ, &rreq->mapping->i_pages, off, len);
+ 	err = iov_iter_get_pages_alloc(&iter, &pages, len, &page_off);
+ 	if (err < 0) {
+ 		dout("%s: iov_ter_get_pages_alloc returned %d\n", __func__, err);
 -- 
 2.34.1
 
