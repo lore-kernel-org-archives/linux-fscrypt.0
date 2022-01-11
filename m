@@ -2,40 +2,40 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CEABDC43217
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:16:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 63131C433FE
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 11 Jan 2022 19:16:35 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1350501AbiAKTQW (ORCPT
+        id S1350602AbiAKTQe (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 11 Jan 2022 14:16:22 -0500
-Received: from ams.source.kernel.org ([145.40.68.75]:60664 "EHLO
-        ams.source.kernel.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1346195AbiAKTQT (ORCPT
+        Tue, 11 Jan 2022 14:16:34 -0500
+Received: from dfw.source.kernel.org ([139.178.84.217]:36170 "EHLO
+        dfw.source.kernel.org" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S1350478AbiAKTQU (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 11 Jan 2022 14:16:19 -0500
+        Tue, 11 Jan 2022 14:16:20 -0500
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id D43C5B81D0E;
-        Tue, 11 Jan 2022 19:16:17 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 409A8C36AE3;
-        Tue, 11 Jan 2022 19:16:16 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 0E9A361260;
+        Tue, 11 Jan 2022 19:16:20 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 0E15BC36AF2;
+        Tue, 11 Jan 2022 19:16:18 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1641928576;
-        bh=rshLIGLkSgl5Gih0oNkQZSCF2++Y/JIFYSDjzwcuu74=;
+        s=k20201202; t=1641928579;
+        bh=aZu28uwsXkNc6O5OEcdEm8bGxESOMhjV9KGc+dU4FU8=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=tavmGHeBr4EQkz+QOIjUAdLEK8FtV0NC1o1hdvfVIAFbPsoDR6h2KywHLGPk33NLc
-         ONemzx0d3rcnO9W+jfUrDxwSI5spfpchMRdInLZfc5Hj7ZDr8hILC9XLdRUnIyHdtZ
-         J4ATUOe9oN3HCTomQaLrNNLsc5jDFKqGNZQGWNZd1gGXkmQbl4ZHsqTWtMbuPKCK0h
-         XMetx6Jnlu70ExBCj4EQd/bp9zGLFqkwK7tduPoWLYIvwJ27lzAuMI9RcBvitqcM4x
-         LbMEQhdffpGM3wrT7B8USWvSDO00tMRKJn5l56JKX65aTAdILOQnuJQ7lCD3SwWpTH
-         oFC8dTU8oCa9w==
+        b=ApTu7R7NIBoDR61h0EpCB8dcQ3qZ6QNwtq2NHWXKXL+3S39OM+b2x446Ke2X6tjxn
+         eS6i7EyGo0NxVhYkUAOuNO4Hz2hNHJTr7ieCHXX/8uwu+OWW9TqVejki05F5S+37Cc
+         2levh9D9fla8oqv55ntfNq+7FOqZG0b7FtQPhpv2foiGVq+UPfawDSsULpElGmQOrE
+         gPBJtsSUFZnDGQpO6tCBQWK6yfD+cAlcIVwILEC9gIs2GjEuYFVqDNuoCQnrxLEoTP
+         vvbHK6jJrfKLBn6dBOQ/lpbemqIVbAgNowv0T4pt2a/zNOBC+8ok/O3zQrTN18c08n
+         TsV0tqNmq0fKQ==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, idryomov@gmail.com
-Subject: [RFC PATCH v10 08/48] ceph: add fscrypt_* handling to caps.c
-Date:   Tue, 11 Jan 2022 14:15:28 -0500
-Message-Id: <20220111191608.88762-9-jlayton@kernel.org>
+Subject: [RFC PATCH v10 12/48] ceph: add fscrypt ioctls
+Date:   Tue, 11 Jan 2022 14:15:32 -0500
+Message-Id: <20220111191608.88762-13-jlayton@kernel.org>
 X-Mailer: git-send-email 2.34.1
 In-Reply-To: <20220111191608.88762-1-jlayton@kernel.org>
 References: <20220111191608.88762-1-jlayton@kernel.org>
@@ -45,151 +45,129 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+We gate most of the ioctls on MDS feature support. The exception is the
+key removal and status functions that we still want to work if the MDS's
+were to (inexplicably) lose the feature.
+
+For the set_policy ioctl, we take Fcx caps to ensure that nothing can
+create files in the directory while the ioctl is running. That should
+be enough to ensure that the "empty_dir" check is reliable.
+
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/caps.c | 76 +++++++++++++++++++++++++++++++++++++++++---------
- 1 file changed, 63 insertions(+), 13 deletions(-)
+ fs/ceph/ioctl.c | 83 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 83 insertions(+)
 
-diff --git a/fs/ceph/caps.c b/fs/ceph/caps.c
-index f2f1e4db7b6b..87ee9766dc2e 100644
---- a/fs/ceph/caps.c
-+++ b/fs/ceph/caps.c
-@@ -13,6 +13,7 @@
- #include "super.h"
+diff --git a/fs/ceph/ioctl.c b/fs/ceph/ioctl.c
+index 6e061bf62ad4..477ecc667aee 100644
+--- a/fs/ceph/ioctl.c
++++ b/fs/ceph/ioctl.c
+@@ -6,6 +6,7 @@
  #include "mds_client.h"
- #include "cache.h"
-+#include "crypto.h"
- #include <linux/ceph/decode.h>
- #include <linux/ceph/messenger.h>
- 
-@@ -1214,15 +1215,12 @@ struct cap_msg_args {
- 	umode_t			mode;
- 	bool			inline_data;
- 	bool			wake;
-+	u32			fscrypt_auth_len;
-+	u32			fscrypt_file_len;
-+	u8			fscrypt_auth[sizeof(struct ceph_fscrypt_auth)]; // for context
-+	u8			fscrypt_file[sizeof(u64)]; // for size
- };
- 
--/*
-- * cap struct size + flock buffer size + inline version + inline data size +
-- * osd_epoch_barrier + oldest_flush_tid
-- */
--#define CAP_MSG_SIZE (sizeof(struct ceph_mds_caps) + \
--		      4 + 8 + 4 + 4 + 8 + 4 + 4 + 4 + 8 + 8 + 4)
--
- /* Marshal up the cap msg to the MDS */
- static void encode_cap_msg(struct ceph_msg *msg, struct cap_msg_args *arg)
- {
-@@ -1238,7 +1236,7 @@ static void encode_cap_msg(struct ceph_msg *msg, struct cap_msg_args *arg)
- 	     arg->size, arg->max_size, arg->xattr_version,
- 	     arg->xattr_buf ? (int)arg->xattr_buf->vec.iov_len : 0);
- 
--	msg->hdr.version = cpu_to_le16(10);
-+	msg->hdr.version = cpu_to_le16(12);
- 	msg->hdr.tid = cpu_to_le64(arg->flush_tid);
- 
- 	fc = msg->front.iov_base;
-@@ -1309,6 +1307,21 @@ static void encode_cap_msg(struct ceph_msg *msg, struct cap_msg_args *arg)
- 
- 	/* Advisory flags (version 10) */
- 	ceph_encode_32(&p, arg->flags);
-+
-+	/* dirstats (version 11) - these are r/o on the client */
-+	ceph_encode_64(&p, 0);
-+	ceph_encode_64(&p, 0);
-+
-+#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
-+	/* fscrypt_auth and fscrypt_file (version 12) */
-+	ceph_encode_32(&p, arg->fscrypt_auth_len);
-+	ceph_encode_copy(&p, arg->fscrypt_auth, arg->fscrypt_auth_len);
-+	ceph_encode_32(&p, arg->fscrypt_file_len);
-+	ceph_encode_copy(&p, arg->fscrypt_file, arg->fscrypt_file_len);
-+#else /* CONFIG_FS_ENCRYPTION */
-+	ceph_encode_32(&p, 0);
-+	ceph_encode_32(&p, 0);
-+#endif /* CONFIG_FS_ENCRYPTION */
- }
+ #include "ioctl.h"
+ #include <linux/ceph/striper.h>
++#include <linux/fscrypt.h>
  
  /*
-@@ -1430,8 +1443,37 @@ static void __prep_cap(struct cap_msg_args *arg, struct ceph_cap *cap,
- 		}
- 	}
- 	arg->flags = flags;
-+#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
-+	if (ci->fscrypt_auth_len &&
-+	    WARN_ON_ONCE(ci->fscrypt_auth_len != sizeof(struct ceph_fscrypt_auth))) {
-+		/* Don't set this if it isn't right size */
-+		arg->fscrypt_auth_len = 0;
-+	} else {
-+		arg->fscrypt_auth_len = ci->fscrypt_auth_len;
-+		memcpy(arg->fscrypt_auth, ci->fscrypt_auth,
-+			min_t(size_t, ci->fscrypt_auth_len, sizeof(arg->fscrypt_auth)));
-+	}
-+	/* FIXME: use this to track "real" size */
-+	arg->fscrypt_file_len = 0;
-+#endif /* CONFIG_FS_ENCRYPTION */
- }
- 
-+#define CAP_MSG_FIXED_FIELDS (sizeof(struct ceph_mds_caps) + \
-+		      4 + 8 + 4 + 4 + 8 + 4 + 4 + 4 + 8 + 8 + 4 + 8 + 8 + 4 + 4)
-+
-+#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
-+static inline int cap_msg_size(struct cap_msg_args *arg)
-+{
-+	return CAP_MSG_FIXED_FIELDS + arg->fscrypt_auth_len +
-+			arg->fscrypt_file_len;
-+}
-+#else
-+static inline int cap_msg_size(struct cap_msg_args *arg)
-+{
-+	return CAP_MSG_FIXED_FIELDS;
-+}
-+#endif /* CONFIG_FS_ENCRYPTION */
-+
- /*
-  * Send a cap msg on the given inode.
-  *
-@@ -1442,7 +1484,7 @@ static void __send_cap(struct cap_msg_args *arg, struct ceph_inode_info *ci)
- 	struct ceph_msg *msg;
- 	struct inode *inode = &ci->vfs_inode;
- 
--	msg = ceph_msg_new(CEPH_MSG_CLIENT_CAPS, CAP_MSG_SIZE, GFP_NOFS, false);
-+	msg = ceph_msg_new(CEPH_MSG_CLIENT_CAPS, cap_msg_size(arg), GFP_NOFS, false);
- 	if (!msg) {
- 		pr_err("error allocating cap msg: ino (%llx.%llx) flushing %s tid %llu, requeuing cap.\n",
- 		       ceph_vinop(inode), ceph_cap_string(arg->dirty),
-@@ -1468,10 +1510,6 @@ static inline int __send_flush_snap(struct inode *inode,
- 	struct cap_msg_args	arg;
- 	struct ceph_msg		*msg;
- 
--	msg = ceph_msg_new(CEPH_MSG_CLIENT_CAPS, CAP_MSG_SIZE, GFP_NOFS, false);
--	if (!msg)
--		return -ENOMEM;
--
- 	arg.session = session;
- 	arg.ino = ceph_vino(inode).ino;
- 	arg.cid = 0;
-@@ -1509,6 +1547,18 @@ static inline int __send_flush_snap(struct inode *inode,
- 	arg.flags = 0;
- 	arg.wake = false;
- 
-+	/*
-+	 * No fscrypt_auth changes from a capsnap. It will need
-+	 * to update fscrypt_file on size changes (TODO).
-+	 */
-+	arg.fscrypt_auth_len = 0;
-+	arg.fscrypt_file_len = 0;
-+
-+	msg = ceph_msg_new(CEPH_MSG_CLIENT_CAPS, cap_msg_size(&arg),
-+			   GFP_NOFS, false);
-+	if (!msg)
-+		return -ENOMEM;
-+
- 	encode_cap_msg(msg, &arg);
- 	ceph_con_send(&arg.session->s_con, msg);
+  * ioctls
+@@ -268,8 +269,54 @@ static long ceph_ioctl_syncio(struct file *file)
  	return 0;
+ }
+ 
++static int vet_mds_for_fscrypt(struct file *file)
++{
++	int i, ret = -EOPNOTSUPP;
++	struct ceph_mds_client	*mdsc = ceph_sb_to_mdsc(file_inode(file)->i_sb);
++
++	mutex_lock(&mdsc->mutex);
++	for (i = 0; i < mdsc->max_sessions; i++) {
++		struct ceph_mds_session *s = mdsc->sessions[i];
++
++		if (!s)
++			continue;
++		if (test_bit(CEPHFS_FEATURE_ALTERNATE_NAME, &s->s_features))
++			ret = 0;
++		break;
++	}
++	mutex_unlock(&mdsc->mutex);
++	return ret;
++}
++
++static long ceph_set_encryption_policy(struct file *file, unsigned long arg)
++{
++	int ret, got = 0;
++	struct inode *inode = file_inode(file);
++	struct ceph_inode_info *ci = ceph_inode(inode);
++
++	ret = vet_mds_for_fscrypt(file);
++	if (ret)
++		return ret;
++
++	/*
++	 * Ensure we hold these caps so that we _know_ that the rstats check
++	 * in the empty_dir check is reliable.
++	 */
++	ret = ceph_get_caps(file, CEPH_CAP_FILE_SHARED, 0, -1, &got);
++	if (ret)
++		return ret;
++
++	ret = fscrypt_ioctl_set_policy(file, (const void __user *)arg);
++	if (got)
++		ceph_put_cap_refs(ci, got);
++
++	return ret;
++}
++
+ long ceph_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ {
++	int ret;
++
+ 	dout("ioctl file %p cmd %u arg %lu\n", file, cmd, arg);
+ 	switch (cmd) {
+ 	case CEPH_IOC_GET_LAYOUT:
+@@ -289,6 +336,42 @@ long ceph_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+ 
+ 	case CEPH_IOC_SYNCIO:
+ 		return ceph_ioctl_syncio(file);
++
++	case FS_IOC_SET_ENCRYPTION_POLICY:
++		return ceph_set_encryption_policy(file, arg);
++
++	case FS_IOC_GET_ENCRYPTION_POLICY:
++		ret = vet_mds_for_fscrypt(file);
++		if (ret)
++			return ret;
++		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
++
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		ret = vet_mds_for_fscrypt(file);
++		if (ret)
++			return ret;
++		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
++
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		ret = vet_mds_for_fscrypt(file);
++		if (ret)
++			return ret;
++		return fscrypt_ioctl_add_key(file, (void __user *)arg);
++
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		return fscrypt_ioctl_remove_key(file, (void __user *)arg);
++
++	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
++		return fscrypt_ioctl_remove_key_all_users(file, (void __user *)arg);
++
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
++
++	case FS_IOC_GET_ENCRYPTION_NONCE:
++		ret = vet_mds_for_fscrypt(file);
++		if (ret)
++			return ret;
++		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
+ 	}
+ 
+ 	return -ENOTTY;
 -- 
 2.34.1
 
