@@ -2,338 +2,281 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 68B75C63684
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 26 Jan 2022 00:07:28 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 48053C6369B
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 26 Jan 2022 00:07:29 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S235208AbiAZAH1 (ORCPT
+        id S235147AbiAZAH2 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 25 Jan 2022 19:07:27 -0500
-Received: from mx0a-001b2d01.pphosted.com ([148.163.156.1]:31048 "EHLO
+        Tue, 25 Jan 2022 19:07:28 -0500
+Received: from mx0a-001b2d01.pphosted.com ([148.163.156.1]:51280 "EHLO
         mx0a-001b2d01.pphosted.com" rhost-flags-OK-OK-OK-OK)
-        by vger.kernel.org with ESMTP id S235156AbiAZAHX (ORCPT
+        by vger.kernel.org with ESMTP id S235179AbiAZAHZ (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 25 Jan 2022 19:07:23 -0500
-Received: from pps.filterd (m0098396.ppops.net [127.0.0.1])
-        by mx0a-001b2d01.pphosted.com (8.16.1.2/8.16.1.2) with SMTP id 20PNgTde026636;
-        Wed, 26 Jan 2022 00:07:21 GMT
+        Tue, 25 Jan 2022 19:07:25 -0500
+Received: from pps.filterd (m0098399.ppops.net [127.0.0.1])
+        by mx0a-001b2d01.pphosted.com (8.16.1.2/8.16.1.2) with SMTP id 20Q05qdx009016;
+        Wed, 26 Jan 2022 00:07:22 GMT
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=from : to : cc : subject
  : date : message-id : in-reply-to : references : mime-version :
  content-transfer-encoding; s=pp1;
- bh=iGr19k7o6hb3Nkx430pzdrb1sBfVddXzHyYuPPk6Ju0=;
- b=B+y3Z/A8czNUYqjO5q4AUi6FS/tleUZdRI5XhNC4UHNbsTytpjGS3l/HCjHatjXXlL9X
- BrLPvhcpqNxWsMUj0UnpkTjyycfjt0tcqG8RUTyPi+M4mk0oS2bMuV7i/pQGKIkmpbtG
- ZCdoLWevrDhNwWoPdWRDskgH7qnNH+YssJ0nh2sX7mFTzghXjXnFKqPP2XFXbWZ4Bjbr
- zV8tYvYScflMkMG/ZN2DXXI1rGcD2JDNEWJoYorNeW7FUjcm54kLMHHhop5K2p3lX5U2
- chLpa8Md51Ul1v3axTA76R4WvTBc92XCSBfsyi92mV6RTCmE4LGo696WxDOVoDnDDFh/ YA== 
-Received: from ppma03ams.nl.ibm.com (62.31.33a9.ip4.static.sl-reverse.com [169.51.49.98])
-        by mx0a-001b2d01.pphosted.com with ESMTP id 3dtu3u8e0a-1
+ bh=R7R5foVU/Im5PGylEF0xbOzDNnjoBVKtWXh3C22nZII=;
+ b=JcdDF6gXce4CmD/mwjnuvkThl2DuV7vBHDUmNJuCSoauuEw25geb0Hwxij61ZLI+FbTC
+ vTcbwvFj9Omg8MPQtq9mYl8Fui63HRnQZgKdM3x0ijVFk0iRo1WG7RPN3M1Ort9W0Yo5
+ xKkL/zk7+SbDyIr3RvYofpuSzcIsgq7YwTUEHxPeBwlJ36Y5dvkGzJoPx17NyK0hun2V
+ V69+Zg+1egDqprlDVfjwQfbcBXI4aOuJgt7qf0cLk4D1aOdO87D5ng+DyGzmegeDFA5X
+ 4Sm0dp7FWiVCmEhWzfVAcpLyGeFWrRebMSO9TfI598c4MhlwZXC27lGIktPgsAW0tnPw NQ== 
+Received: from ppma01fra.de.ibm.com (46.49.7a9f.ip4.static.sl-reverse.com [159.122.73.70])
+        by mx0a-001b2d01.pphosted.com with ESMTP id 3dttae950b-1
         (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
         Wed, 26 Jan 2022 00:07:21 +0000
-Received: from pps.filterd (ppma03ams.nl.ibm.com [127.0.0.1])
-        by ppma03ams.nl.ibm.com (8.16.1.2/8.16.1.2) with SMTP id 20Q03ur6014076;
-        Wed, 26 Jan 2022 00:07:18 GMT
-Received: from b06cxnps3074.portsmouth.uk.ibm.com (d06relay09.portsmouth.uk.ibm.com [9.149.109.194])
-        by ppma03ams.nl.ibm.com with ESMTP id 3dr9j9a7u6-1
+Received: from pps.filterd (ppma01fra.de.ibm.com [127.0.0.1])
+        by ppma01fra.de.ibm.com (8.16.1.2/8.16.1.2) with SMTP id 20Q03V2P003644;
+        Wed, 26 Jan 2022 00:07:19 GMT
+Received: from b06avi18626390.portsmouth.uk.ibm.com (b06avi18626390.portsmouth.uk.ibm.com [9.149.26.192])
+        by ppma01fra.de.ibm.com with ESMTP id 3dr9j9gr2f-1
         (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Wed, 26 Jan 2022 00:07:18 +0000
+        Wed, 26 Jan 2022 00:07:19 +0000
 Received: from d06av22.portsmouth.uk.ibm.com (d06av22.portsmouth.uk.ibm.com [9.149.105.58])
-        by b06cxnps3074.portsmouth.uk.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 20Q07DFn48496904
+        by b06avi18626390.portsmouth.uk.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 20PNvfd032440794
         (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
-        Wed, 26 Jan 2022 00:07:13 GMT
+        Tue, 25 Jan 2022 23:57:42 GMT
 Received: from d06av22.portsmouth.uk.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id 4540A4C04A;
-        Wed, 26 Jan 2022 00:07:13 +0000 (GMT)
+        by IMSVA (Postfix) with ESMTP id C5ECC4C040;
+        Wed, 26 Jan 2022 00:07:15 +0000 (GMT)
 Received: from d06av22.portsmouth.uk.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id 4424B4C044;
-        Wed, 26 Jan 2022 00:07:12 +0000 (GMT)
+        by IMSVA (Postfix) with ESMTP id CDD144C044;
+        Wed, 26 Jan 2022 00:07:14 +0000 (GMT)
 Received: from li-f45666cc-3089-11b2-a85c-c57d1a57929f.ibm.com.com (unknown [9.65.78.94])
         by d06av22.portsmouth.uk.ibm.com (Postfix) with ESMTP;
-        Wed, 26 Jan 2022 00:07:12 +0000 (GMT)
+        Wed, 26 Jan 2022 00:07:14 +0000 (GMT)
 From:   Mimi Zohar <zohar@linux.ibm.com>
 To:     linux-integrity@vger.kernel.org
 Cc:     Mimi Zohar <zohar@linux.ibm.com>,
         Eric Biggers <ebiggers@kernel.org>,
         Stefan Berger <stefanb@linux.ibm.com>,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
-Subject: [PATCH v3 5/8] ima: include fsverity's file digests in the IMA measurement list
-Date:   Tue, 25 Jan 2022 19:06:55 -0500
-Message-Id: <20220126000658.138345-6-zohar@linux.ibm.com>
+Subject: [PATCH v3 7/8] ima: support fs-verity file digest based version 3 signatures
+Date:   Tue, 25 Jan 2022 19:06:57 -0500
+Message-Id: <20220126000658.138345-8-zohar@linux.ibm.com>
 X-Mailer: git-send-email 2.27.0
 In-Reply-To: <20220126000658.138345-1-zohar@linux.ibm.com>
 References: <20220126000658.138345-1-zohar@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 X-TM-AS-GCONF: 00
-X-Proofpoint-ORIG-GUID: MvAqJgF8Aw9ta8t3428_e-XEGej9e-SL
-X-Proofpoint-GUID: MvAqJgF8Aw9ta8t3428_e-XEGej9e-SL
+X-Proofpoint-GUID: YAdKyRFYUFj1WVUzXswdT9B1ttZES040
+X-Proofpoint-ORIG-GUID: YAdKyRFYUFj1WVUzXswdT9B1ttZES040
 X-Proofpoint-Virus-Version: vendor=baseguard
  engine=ICAP:2.0.205,Aquarius:18.0.816,Hydra:6.0.425,FMLib:17.11.62.513
  definitions=2022-01-25_06,2022-01-25_02,2021-12-02_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 malwarescore=0 bulkscore=0
- phishscore=0 spamscore=0 suspectscore=0 adultscore=0 lowpriorityscore=0
- impostorscore=0 mlxlogscore=999 clxscore=1015 priorityscore=1501
- mlxscore=0 classifier=spam adjust=0 reason=mlx scancount=1
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 clxscore=1015 mlxscore=0
+ lowpriorityscore=0 bulkscore=0 malwarescore=0 suspectscore=0
+ mlxlogscore=999 adultscore=0 phishscore=0 impostorscore=0 spamscore=0
+ priorityscore=1501 classifier=spam adjust=0 reason=mlx scancount=1
  engine=8.12.0-2201110000 definitions=main-2201250145
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Allow fsverity's file digests to be included in the IMA measurement list
-based on policy.
+Instead of calculating a file hash and verifying the signature stored
+in the security.ima xattr against the calculated file hash, verify
+fs-verity's signature (version 3).
 
-Define a new measurement policy rule option named 'digest_type=' to
-allow fsverity file digests to be included in the measurement list
-in the d-ng field.
+To differentiate between a regular file hash and an fs-verity file digest
+based signature stored as security.ima xattr, define a new signature type
+named IMA_VERITY_DIGSIG.
 
-Including the 'd-type' template field is recommended for unsigned
-fs-verity digests to distinguish between d-ng digest types.  The
-following policy rule, for example, specifies the new 'ima-ngv2'
-template.
+Update the 'ima-sig' template field to display the new fs-verity signature
+type as well.
 
-measure func=FILE_CHECK digest_type=hash|verity template=ima-ngv2
+For example:
+  appraise func=BPRM_CHECK digest_type=hash|verity
 
 Signed-off-by: Mimi Zohar <zohar@linux.ibm.com>
 ---
- Documentation/ABI/testing/ima_policy      |  7 +++++
- Documentation/security/IMA-templates.rst  |  6 ++++
- security/integrity/ima/ima_api.c          | 29 +++++++++++++++--
- security/integrity/ima/ima_policy.c       | 38 ++++++++++++++++++++++-
- security/integrity/ima/ima_template_lib.c |  9 +++++-
- security/integrity/integrity.h            |  4 ++-
- 6 files changed, 88 insertions(+), 5 deletions(-)
+ Documentation/ABI/testing/ima_policy      | 10 +++++
+ Documentation/security/IMA-templates.rst  |  4 +-
+ security/integrity/ima/ima_appraise.c     | 49 ++++++++++++++++++++++-
+ security/integrity/ima/ima_template_lib.c |  3 +-
+ security/integrity/integrity.h            |  5 ++-
+ 5 files changed, 65 insertions(+), 6 deletions(-)
 
 diff --git a/Documentation/ABI/testing/ima_policy b/Documentation/ABI/testing/ima_policy
-index 839fab811b18..444bb7ccbe03 100644
+index 444bb7ccbe03..fadf90dde289 100644
 --- a/Documentation/ABI/testing/ima_policy
 +++ b/Documentation/ABI/testing/ima_policy
-@@ -51,6 +51,7 @@ Description:
- 			appraise_flag:= [check_blacklist]
- 			Currently, blacklist check is only for files signed with appended
- 			signature.
-+			digest_type:= [hash|verity]
- 			keyrings:= list of keyrings
- 			(eg, .builtin_trusted_keys|.ima). Only valid
- 			when action is "measure" and func is KEY_CHECK.
-@@ -149,3 +150,9 @@ Description:
- 		security.ima xattr of a file:
+@@ -151,6 +151,16 @@ Description:
  
  			appraise func=SETXATTR_CHECK appraise_algos=sha256,sha384,sha512
+ 
++		Example of measure and appraise rules allowing fs-verity
++		signed digests on a particular filesystem identified by
++		it's fsuuid:
 +
-+		Example of measure rule allowing fs-verity's digests on a
-+		particular filesystem with indication of type of digest.
++			measure func=BPRM_CHECK digest_type=hash|verity \
++				fsuuid=... template=ima-sig
++			appraise func=BPRM_CHECK digest_type=hash|verity \
++				fsuuid=...
 +
-+			measure func=FILE_CHECK digest_type=hash|verity \
-+				fsuuid=... template=ima-ngv2
++
+ 		Example of measure rule allowing fs-verity's digests on a
+ 		particular filesystem with indication of type of digest.
+ 
 diff --git a/Documentation/security/IMA-templates.rst b/Documentation/security/IMA-templates.rst
-index 1a91d92950a7..5e31513e8ec4 100644
+index 5e31513e8ec4..390936810ebc 100644
 --- a/Documentation/security/IMA-templates.rst
 +++ b/Documentation/security/IMA-templates.rst
-@@ -69,6 +69,7 @@ descriptors by adding their identifier to the format string
-    algorithm (field format: [<hash algo>:]digest, where the digest
-    prefix is shown only if the hash algorithm is not SHA1 or MD5);
+@@ -71,8 +71,8 @@ descriptors by adding their identifier to the format string
   - 'd-modsig': the digest of the event without the appended modsig;
-+ - 'd-type': the type of file digest (e.g. hash, verity[1]);
+  - 'd-type': the type of file digest (e.g. hash, verity[1]);
   - 'n-ng': the name of the event, without size limitations;
-  - 'sig': the file signature, or the EVM portable signature if the file
-    signature is not found;
-@@ -106,3 +107,8 @@ currently the following methods are supported:
-    the ``ima_template=`` parameter;
-  - register a new template descriptor with custom format through the kernel
-    command line parameter ``ima_template_fmt=``.
-+
-+
-+References
-+==========
-+[1] Documentation/filesystems/fsverity.rst
-diff --git a/security/integrity/ima/ima_api.c b/security/integrity/ima/ima_api.c
-index 5b220a2fe573..3f8fbddcabf6 100644
---- a/security/integrity/ima/ima_api.c
-+++ b/security/integrity/ima/ima_api.c
-@@ -14,6 +14,7 @@
- #include <linux/xattr.h>
+- - 'sig': the file signature, or the EVM portable signature if the file
+-   signature is not found;
++ - 'sig': the file signature, based on either the file's/fsverity's digest[1],
++   or the EVM portable signature if the file signature is not found;
+  - 'modsig' the appended file signature;
+  - 'buf': the buffer data that was used to generate the hash without size limitations;
+  - 'evmsig': the EVM portable signature;
+diff --git a/security/integrity/ima/ima_appraise.c b/security/integrity/ima/ima_appraise.c
+index 7bc180bd808e..68376c56feff 100644
+--- a/security/integrity/ima/ima_appraise.c
++++ b/security/integrity/ima/ima_appraise.c
+@@ -13,7 +13,9 @@
+ #include <linux/magic.h>
+ #include <linux/ima.h>
  #include <linux/evm.h>
- #include <linux/iversion.h>
 +#include <linux/fsverity.h>
+ #include <keys/system_keyring.h>
++#include <uapi/linux/fsverity.h>
  
  #include "ima.h"
  
-@@ -200,6 +201,23 @@ int ima_get_action(struct user_namespace *mnt_userns, struct inode *inode,
- 				allowed_algos);
- }
+@@ -183,13 +185,18 @@ enum hash_algo ima_get_hash_algo(const struct evm_ima_xattr_data *xattr_value,
+ 		return ima_hash_algo;
  
-+static int ima_get_verity_digest(struct integrity_iint_cache *iint,
-+				 struct ima_digest_data *hash)
-+{
-+	u8 verity_digest[FS_VERITY_MAX_DIGEST_SIZE];
-+	enum hash_algo verity_alg;
-+	int rc;
-+
-+	rc = fsverity_get_digest(iint->inode, verity_digest, &verity_alg);
-+	if (rc)
-+		return -EINVAL;
-+	if (hash->algo != verity_alg)
-+		return -EINVAL;
-+	hash->length = hash_digest_size[verity_alg];
-+	memcpy(hash->digest, verity_digest, hash->length);
-+	return 0;
-+}
-+
- /*
-  * ima_collect_measurement - collect file measurement
+ 	switch (xattr_value->type) {
++	case IMA_VERITY_DIGSIG:
++		sig = (typeof(sig))xattr_value;
++		if (sig->version != 3 || xattr_len <= sizeof(*sig) ||
++		    sig->hash_algo >= HASH_ALGO__LAST)
++			return ima_hash_algo;
++		return sig->hash_algo;
+ 	case EVM_IMA_XATTR_DIGSIG:
+ 		sig = (typeof(sig))xattr_value;
+ 		if (sig->version != 2 || xattr_len <= sizeof(*sig)
+ 		    || sig->hash_algo >= HASH_ALGO__LAST)
+ 			return ima_hash_algo;
+ 		return sig->hash_algo;
+-		break;
+ 	case IMA_XATTR_DIGEST_NG:
+ 		/* first byte contains algorithm id */
+ 		ret = xattr_value->data[0];
+@@ -235,15 +242,22 @@ int ima_read_xattr(struct dentry *dentry,
+  * IMA signature version 3 disambiguates the data that is signed by
+  * indirectly signing the hash of the ima_file_id structure data.
   *
-@@ -248,10 +266,17 @@ int ima_collect_measurement(struct integrity_iint_cache *iint,
- 	/* Initialize hash digest to 0's in case of failure */
- 	memset(&hash.digest, 0, sizeof(hash.digest));
- 
--	if (buf)
-+	if (buf) {
- 		result = ima_calc_buffer_hash(buf, size, &hash.hdr);
--	else
-+	} else if (iint->flags & IMA_VERITY_ALLOWED) {
-+		result = ima_get_verity_digest(iint, &hash.hdr);
-+		if (result < 0)
-+			result = ima_calc_file_hash(file, &hash.hdr);
-+		else
-+			iint->flags |= IMA_VERITY_DIGEST;
-+	} else {
- 		result = ima_calc_file_hash(file, &hash.hdr);
-+	}
- 
- 	if (result && result != -EBADF && result != -EINVAL)
- 		goto out;
-diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
-index 56a9f75c3d44..787e0eb506e6 100644
---- a/security/integrity/ima/ima_policy.c
-+++ b/security/integrity/ima/ima_policy.c
-@@ -1024,6 +1024,7 @@ enum policy_opt {
- 	Opt_fowner_gt, Opt_fgroup_gt,
- 	Opt_uid_lt, Opt_euid_lt, Opt_gid_lt, Opt_egid_lt,
- 	Opt_fowner_lt, Opt_fgroup_lt,
-+	Opt_digest_type,
- 	Opt_appraise_type, Opt_appraise_flag, Opt_appraise_algos,
- 	Opt_permit_directio, Opt_pcr, Opt_template, Opt_keyrings,
- 	Opt_label, Opt_err
-@@ -1066,6 +1067,7 @@ static const match_table_t policy_tokens = {
- 	{Opt_egid_lt, "egid<%s"},
- 	{Opt_fowner_lt, "fowner<%s"},
- 	{Opt_fgroup_lt, "fgroup<%s"},
-+	{Opt_digest_type, "digest_type=%s"},
- 	{Opt_appraise_type, "appraise_type=%s"},
- 	{Opt_appraise_flag, "appraise_flag=%s"},
- 	{Opt_appraise_algos, "appraise_algos=%s"},
-@@ -1173,6 +1175,21 @@ static void check_template_modsig(const struct ima_template_desc *template)
- #undef MSG
- }
- 
-+/*
-+ * Make sure the policy rule and template format are in sync.
-+ */
-+static void check_template_field(const struct ima_template_desc *template,
-+				 const char *field, const char *msg)
-+{
-+	int i;
-+
-+	for (i = 0; i < template->num_fields; i++)
-+		if (!strcmp(template->fields[i]->field_id, field))
-+			return;
-+
-+	pr_notice_once("%s", msg);
-+}
-+
- static bool ima_validate_rule(struct ima_rule_entry *entry)
++ * Signing the ima_file_id struct is currently only supported for
++ * IMA_VERITY_DIGSIG type xattrs.
++ *
+  * Return 0 on success, error code otherwise.
+  */
+ static int calc_file_id_hash(enum evm_ima_xattr_type type,
+ 			     enum hash_algo algo, const u8 *digest,
+ 			     struct ima_max_digest_data *hash)
  {
- 	/* Ensure that the action is set and is compatible with the flags */
-@@ -1215,7 +1232,8 @@ static bool ima_validate_rule(struct ima_rule_entry *entry)
- 				     IMA_INMASK | IMA_EUID | IMA_PCR |
- 				     IMA_FSNAME | IMA_GID | IMA_EGID |
- 				     IMA_FGROUP | IMA_DIGSIG_REQUIRED |
--				     IMA_PERMIT_DIRECTIO | IMA_VALIDATE_ALGOS))
-+				     IMA_PERMIT_DIRECTIO | IMA_VALIDATE_ALGOS |
-+				     IMA_VERITY_ALLOWED))
- 			return false;
+-	struct ima_file_id file_id = {.hash_algorithm = algo};
++	struct ima_file_id file_id = {
++		.hash_type = IMA_VERITY_DIGSIG, .hash_algorithm = algo};
+ 	uint unused = HASH_MAX_DIGESTSIZE - hash_digest_size[algo];
  
- 		break;
-@@ -1708,6 +1726,13 @@ static int ima_parse_rule(char *rule, struct ima_rule_entry *entry)
- 						   LSM_SUBJ_TYPE,
- 						   AUDIT_SUBJ_TYPE);
- 			break;
-+		case Opt_digest_type:
-+			ima_log_string(ab, "digest_type", args[0].from);
-+			if ((strcmp(args[0].from, "hash|verity")) == 0)
-+				entry->flags |= IMA_VERITY_ALLOWED;
-+			else
-+				result = -EINVAL;
-+			break;
- 		case Opt_appraise_type:
- 			ima_log_string(ab, "appraise_type", args[0].from);
- 			if ((strcmp(args[0].from, "imasig")) == 0)
-@@ -1798,6 +1823,15 @@ static int ima_parse_rule(char *rule, struct ima_rule_entry *entry)
- 		check_template_modsig(template_desc);
- 	}
- 
-+	/* d-type template field recommended for unsigned fs-verity digests */
-+	if (!result && entry->action == MEASURE &&
-+	    entry->flags & IMA_VERITY_ALLOWED) {
-+		template_desc = entry->template ? entry->template :
-+						  ima_template_desc_current();
-+		check_template_field(template_desc, "d-type",
-+				     "verity rules should include d-type");
-+	}
++	if (type != IMA_VERITY_DIGSIG)
++		return -EINVAL;
 +
- 	audit_log_format(ab, "res=%d", !result);
- 	audit_log_end(ab);
- 	return result;
-@@ -2147,6 +2181,8 @@ int ima_policy_show(struct seq_file *m, void *v)
- 		else
- 			seq_puts(m, "appraise_type=imasig ");
- 	}
-+	if (entry->flags & IMA_VERITY_ALLOWED)
-+		seq_puts(m, "digest_type=hash|verity ");
- 	if (entry->flags & IMA_CHECK_BLACKLIST)
- 		seq_puts(m, "appraise_flag=check_blacklist ");
- 	if (entry->flags & IMA_PERMIT_DIRECTIO)
+ 	memcpy(file_id.hash, digest, hash_digest_size[algo]);
+ 
+ 	hash->algo = algo;
+@@ -264,6 +278,7 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
+ 			struct evm_ima_xattr_data *xattr_value, int xattr_len,
+ 			enum integrity_status *status, const char **cause)
+ {
++	struct ima_max_digest_data hash;
+ 	struct signature_v2_hdr *sig;
+ 	int rc = -EINVAL, hash_start = 0;
+ 
+@@ -332,6 +347,36 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
+ 		} else {
+ 			*status = INTEGRITY_PASS;
+ 		}
++		break;
++	case IMA_VERITY_DIGSIG:
++		set_bit(IMA_DIGSIG, &iint->atomic_flags);
++
++		sig = (typeof(sig))xattr_value;
++		if (sig->version != 3) {
++			*cause = "invalid-verity-version";
++			*status = INTEGRITY_FAIL;
++			break;
++		}
++
++		rc = calc_file_id_hash(IMA_VERITY_DIGSIG, iint->ima_hash->algo,
++				       iint->ima_hash->digest, &hash);
++		if (rc) {
++			*cause = "verity-hashing-error";
++			*status = INTEGRITY_FAIL;
++			break;
++		}
++
++		rc = integrity_digsig_verify(INTEGRITY_KEYRING_IMA,
++					     (const char *)xattr_value,
++					     xattr_len, hash.digest,
++					     hash.length);
++		if (rc) {
++			*cause = "invalid-verity-signature";
++			*status = INTEGRITY_FAIL;
++		} else {
++			*status = INTEGRITY_PASS;
++		}
++
+ 		break;
+ 	default:
+ 		*status = INTEGRITY_UNKNOWN;
 diff --git a/security/integrity/ima/ima_template_lib.c b/security/integrity/ima/ima_template_lib.c
-index aa5d4a490657..44e57d7e5fed 100644
+index 44e57d7e5fed..0d4bbb4da59a 100644
 --- a/security/integrity/ima/ima_template_lib.c
 +++ b/security/integrity/ima/ima_template_lib.c
-@@ -393,7 +393,14 @@ int ima_eventdigest_ng_init(struct ima_event_data *event_data,
- int ima_eventdigest_type_init(struct ima_event_data *event_data,
- 			      struct ima_field_data *field_data)
+@@ -499,7 +499,8 @@ int ima_eventsig_init(struct ima_event_data *event_data,
  {
--	static const char * const digest_type[] = {"hash"};
-+	static const char * const digest_type[] = {"hash", "verity"};
-+
-+	if (event_data->iint->flags & IMA_VERITY_DIGEST) {
-+		return ima_write_template_field_data(digest_type[1],
-+						     strlen(digest_type[1]),
-+						     DATA_FMT_STRING,
-+						     field_data);
-+	}
+ 	struct evm_ima_xattr_data *xattr_value = event_data->xattr_value;
  
- 	return ima_write_template_field_data(digest_type[0],
- 					     strlen(digest_type[0]),
+-	if ((!xattr_value) || (xattr_value->type != EVM_IMA_XATTR_DIGSIG))
++	if (!xattr_value ||
++	    !(xattr_value->type & (EVM_IMA_XATTR_DIGSIG | IMA_VERITY_DIGSIG)))
+ 		return ima_eventevmsig_init(event_data, field_data);
+ 
+ 	return ima_write_template_field_data(xattr_value, event_data->xattr_len,
 diff --git a/security/integrity/integrity.h b/security/integrity/integrity.h
-index ee2e6b7c7575..a996d4fa7be3 100644
+index ed4966d943e9..5b1aa8b7d61c 100644
 --- a/security/integrity/integrity.h
 +++ b/security/integrity/integrity.h
-@@ -32,7 +32,7 @@
- #define IMA_HASHED		0x00000200
+@@ -80,6 +80,7 @@ enum evm_ima_xattr_type {
+ 	EVM_IMA_XATTR_DIGSIG,
+ 	IMA_XATTR_DIGEST_NG,
+ 	EVM_XATTR_PORTABLE_DIGSIG,
++	IMA_VERITY_DIGSIG,
+ 	IMA_XATTR_LAST
+ };
  
- /* iint policy rule cache flags */
--#define IMA_NONACTION_FLAGS	0xff000000
-+#define IMA_NONACTION_FLAGS	0xff800000
- #define IMA_DIGSIG_REQUIRED	0x01000000
- #define IMA_PERMIT_DIRECTIO	0x02000000
- #define IMA_NEW_FILE		0x04000000
-@@ -40,6 +40,8 @@
- #define IMA_FAIL_UNVERIFIABLE_SIGS	0x10000000
- #define IMA_MODSIG_ALLOWED	0x20000000
- #define IMA_CHECK_BLACKLIST	0x40000000
-+#define IMA_VERITY_ALLOWED	0x80000000
-+#define IMA_VERITY_DIGEST	0x00800000
+@@ -154,7 +155,9 @@ struct signature_v2_hdr {
  
- #define IMA_DO_MASK		(IMA_MEASURE | IMA_APPRAISE | IMA_AUDIT | \
- 				 IMA_HASH | IMA_APPRAISE_SUBMASK)
+ /*
+  * IMA signature version 3 disambiguates the data that is signed, by
+- * indirectly signing the hash of the ima_file_id structure data.
++ * indirectly signing the hash of the ima_file_id structure data,
++ * containing either the fsverity_descriptor struct digest or, in the
++ * future, the regular IMA file hash.
+  *
+  * (The hash of the ima_file_id structure is only of the portion used.)
+  */
 -- 
 2.27.0
 
