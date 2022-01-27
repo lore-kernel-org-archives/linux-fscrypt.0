@@ -2,75 +2,83 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E1C9FC433F5
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 27 Jan 2022 11:08:45 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2DC8CC433F5
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 27 Jan 2022 18:46:36 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232396AbiA0LIp (ORCPT
+        id S233143AbiA0Sqe (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 27 Jan 2022 06:08:45 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58442 "EHLO
-        lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S239985AbiA0LIo (ORCPT
+        Thu, 27 Jan 2022 13:46:34 -0500
+Received: from frasgout.his.huawei.com ([185.176.79.56]:4534 "EHLO
+        frasgout.his.huawei.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
+        with ESMTP id S236489AbiA0Sqc (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 27 Jan 2022 06:08:44 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5FC5FC061714;
-        Thu, 27 Jan 2022 03:08:44 -0800 (PST)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 2B756B821EE;
-        Thu, 27 Jan 2022 11:08:43 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 75F1EC340E4;
-        Thu, 27 Jan 2022 11:08:41 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1643281722;
-        bh=4OAdEMRzvapE205uztx5+93irJfsV1aOiji4c3kdYJA=;
-        h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
-        b=mJDPLsE0OMNsBOXjQ9p2OiRuUjvw6mZ2PI/5aKWQyE4yoATHs+6i1a23el5tIMcRK
-         fu49UpHK/lVglSgJhMJmZU6IiJSgE4zNJ0SAAyBzArqZq8BPn8qPr+mX3p9UoZ4+fO
-         XyNdiWkYKVHCWLWy9yrZeRHcovKmIre9iavUD1chuBzCBxJTPS//ZYMIktWHq/t545
-         bggudhhQcBosmSTqD/L4PX8rL31vTKpz4OeJ8WYO6/Tkw3NOAMiIidUBmO1x8i+d5J
-         cJZo6gXrYe0zcU+L3Ol43uQssTC45nxb9t6Nha4MlT8i1i10DwXB7wHbCAArgmtQQB
-         q57FVg7XyKNDA==
-Message-ID: <9777517aececf5d178e555315afc2453ab8dc9b7.camel@kernel.org>
-Subject: Re: [RFC PATCH v10 00/48] ceph+fscrypt: full support
-From:   Jeff Layton <jlayton@kernel.org>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-fsdevel@vger.kernel.org, idryomov@gmail.com
-Date:   Thu, 27 Jan 2022 06:08:40 -0500
-In-Reply-To: <YfH/8xCAtyCA9raH@sol.localdomain>
-References: <20220111191608.88762-1-jlayton@kernel.org>
-         <YfH/8xCAtyCA9raH@sol.localdomain>
-Content-Type: text/plain; charset="ISO-8859-15"
-User-Agent: Evolution 3.42.3 (3.42.3-1.fc35) 
+        Thu, 27 Jan 2022 13:46:32 -0500
+Received: from fraeml714-chm.china.huawei.com (unknown [172.18.147.207])
+        by frasgout.his.huawei.com (SkyGuard) with ESMTP id 4Jl8bk6DQ8z67N6L;
+        Fri, 28 Jan 2022 02:42:58 +0800 (CST)
+Received: from roberto-ThinkStation-P620.huawei.com (10.204.63.22) by
+ fraeml714-chm.china.huawei.com (10.206.15.33) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.2308.21; Thu, 27 Jan 2022 19:46:30 +0100
+From:   Roberto Sassu <roberto.sassu@huawei.com>
+To:     <linux-integrity@vger.kernel.org>
+CC:     <zohar@linux.ibm.com>, <ebiggers@kernel.org>,
+        <stefanb@linux.ibm.com>, <linux-fscrypt@vger.kernel.org>,
+        <linux-kernel@vger.kernel.org>,
+        Roberto Sassu <roberto.sassu@huawei.com>
+Subject: [RFC][PATCH v3a 08/11] fsverity: Completely disable signature verification if not requested
+Date:   Thu, 27 Jan 2022 19:46:12 +0100
+Message-ID: <20220127184614.2837938-4-roberto.sassu@huawei.com>
+X-Mailer: git-send-email 2.32.0
+In-Reply-To: <20220127184614.2837938-1-roberto.sassu@huawei.com>
+References: <20220127184614.2837938-1-roberto.sassu@huawei.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 7BIT
+Content-Type:   text/plain; charset=US-ASCII
+X-Originating-IP: [10.204.63.22]
+X-ClientProxiedBy: lhreml754-chm.china.huawei.com (10.201.108.204) To
+ fraeml714-chm.china.huawei.com (10.206.15.33)
+X-CFilter-Loop: Reflected
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, 2022-01-26 at 18:14 -0800, Eric Biggers wrote:
-> On Tue, Jan 11, 2022 at 02:15:20PM -0500, Jeff Layton wrote:
-> > Still, I was able to run xfstests on this set yesterday. Bug #2 above
-> > prevented all of the tests from passing, but it didn't oops! I call that
-> > progress! Given that, I figured this is a good time to post what I have
-> > so far.
-> 
-> One question: what sort of testing are you doing to show that the file contents
-> and filenames being stored (i.e., sent by the client to the server in this case)
-> have been encrypted correctly?  xfstests has tests that verify this for block
-> device based filesystems; are you doing any equivalent testing?
-> 
+Currently, fsverity verifies the signature, if supplied, regardless of
+whether signature verification is requested or not.
 
-I've been testing this pretty regularly with xfstests, and the filenames
-portion all seems to be working correctly. Parts of the content
-encryption also seem to work ok. I'm still working that piece, so I
-haven't been able to validate that part yet.
+Completely disable signature verification, if not requested, so that other
+users of fsverity can do their own verification without relying on the
+fsverity-specific verification to work.
 
-At the moment I'm working on switching the ceph client over to doing
-sparse reads, which is necessary in order to be able to handle sparse
-writes without filling in unwritten holes.
+Signed-off-by: Roberto Sassu <roberto.sassu@huawei.com>
+---
+ fs/verity/signature.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/fs/verity/signature.c b/fs/verity/signature.c
+index 143a530a8008..b45a2cea6c59 100644
+--- a/fs/verity/signature.c
++++ b/fs/verity/signature.c
+@@ -45,13 +45,13 @@ int fsverity_verify_signature(const struct fsverity_info *vi,
+ 	struct fsverity_formatted_digest *d;
+ 	int err;
+ 
+-	if (sig_size == 0) {
+-		if (fsverity_require_signatures) {
+-			fsverity_err(inode,
+-				     "require_signatures=1, rejecting unsigned file!");
+-			return -EPERM;
+-		}
++	if (!fsverity_require_signatures)
+ 		return 0;
++
++	if (sig_size == 0) {
++		fsverity_err(inode,
++			     "require_signatures=1, rejecting unsigned file!");
++		return -EPERM;
+ 	}
+ 
+ 	d = kzalloc(sizeof(*d) + hash_alg->digest_size, GFP_KERNEL);
 -- 
-Jeff Layton <jlayton@kernel.org>
+2.32.0
+
