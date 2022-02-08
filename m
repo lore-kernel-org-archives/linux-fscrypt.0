@@ -2,215 +2,148 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7B0C3C35274
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Feb 2022 01:48:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A2BB8C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Feb 2022 01:48:06 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S243313AbiBHBsE (ORCPT
+        id S243570AbiBHBsE (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Mon, 7 Feb 2022 20:48:04 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34784 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34730 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1344968AbiBHBmb (ORCPT
+        with ESMTP id S1344854AbiBHBm1 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 7 Feb 2022 20:42:31 -0500
-Received: from mx0a-001b2d01.pphosted.com (mx0a-001b2d01.pphosted.com [148.163.156.1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EB3B1C043181;
-        Mon,  7 Feb 2022 17:42:30 -0800 (PST)
-Received: from pps.filterd (m0098399.ppops.net [127.0.0.1])
-        by mx0a-001b2d01.pphosted.com (8.16.1.2/8.16.1.2) with SMTP id 217MZQnW025115;
-        Tue, 8 Feb 2022 01:42:29 GMT
+        Mon, 7 Feb 2022 20:42:27 -0500
+Received: from mx0b-001b2d01.pphosted.com (mx0b-001b2d01.pphosted.com [148.163.158.5])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id F4212C06109E;
+        Mon,  7 Feb 2022 17:42:25 -0800 (PST)
+Received: from pps.filterd (m0127361.ppops.net [127.0.0.1])
+        by mx0a-001b2d01.pphosted.com (8.16.1.2/8.16.1.2) with SMTP id 217N69aH015605;
+        Tue, 8 Feb 2022 01:42:22 GMT
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=from : to : cc : subject
  : date : message-id : in-reply-to : references : mime-version :
  content-transfer-encoding; s=pp1;
- bh=GXju7EEK3Cz6A2AIspO4Y3DS6ZtSGgC1yD1hXV9wP50=;
- b=NbKbcUQ5vd4JUlDQhxANqIv8GnzI931ma9ZYSKlK/vHnP1mSVQUThTiYaYfen/1yvFiN
- 4Ljwa/u+KqYSEtuFeMLzFFZ4QytLAGLUMrOYOHDA6WkUPf6bdRKKw/bKhn5t6SPXCHhe
- aCl5qsMFVe09XPMldID6bTfRXbxPJhlvIf443uXrGGkagMpqruNIaTopqu+GmpEAJplM
- b8thCBu/9Ce1Uc2LdCOoxfpKq8BWgg9iWETUGyk/k45tdhnIPF2zOhe9bgznpgIwfLob
- JhcidavOxw3hlFy+Ujx3k51RYUgBy7jUrAv0Cei0F+wrmiPhHpot146ocau6oG03nPhy +Q== 
-Received: from ppma04ams.nl.ibm.com (63.31.33a9.ip4.static.sl-reverse.com [169.51.49.99])
-        by mx0a-001b2d01.pphosted.com with ESMTP id 3e22tr4jvn-1
+ bh=fApnaRWACVUPpeVBH0HFNVuIthCj71ypW1R4B1fdcwE=;
+ b=fUj+QzxZnX77QtZ8UizZyCQeviRnyylus2SVPMHSlNkWEdZzUBMMYDF2/sP9k+b8uIzU
+ oGRPC1D+tpOkIf6EWH3n0xisY92V7hHDbhCxU+2MeVK5LFDnd6S4331bh3v8TumfHxtf
+ Wl5rvPpqQJ0jzR+7psMzTs6aleN739iJaM0Oy3M7sXIj9dysgk+kOyoSw8XLnAYup2/I
+ CqGfCYw3zlJumpKhXSo9GrxrLURYxJIN51JYU62ooFf1+hcJRDYRXpHp5+LGtEUQ9Sfv
+ YryM6twOtxdHbuTJ1KGZBFqFqAr/eBfHQg4T/lr4oqkc8c6FH3TRBV4tuQj7FtgdlOzT hA== 
+Received: from ppma06fra.de.ibm.com (48.49.7a9f.ip4.static.sl-reverse.com [159.122.73.72])
+        by mx0a-001b2d01.pphosted.com with ESMTP id 3e236f3rej-1
         (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Tue, 08 Feb 2022 01:42:29 +0000
-Received: from pps.filterd (ppma04ams.nl.ibm.com [127.0.0.1])
-        by ppma04ams.nl.ibm.com (8.16.1.2/8.16.1.2) with SMTP id 2181WgVK028927;
-        Tue, 8 Feb 2022 01:42:27 GMT
-Received: from b06cxnps4074.portsmouth.uk.ibm.com (d06relay11.portsmouth.uk.ibm.com [9.149.109.196])
-        by ppma04ams.nl.ibm.com with ESMTP id 3e1gv91k7h-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Tue, 08 Feb 2022 01:42:26 +0000
-Received: from d06av23.portsmouth.uk.ibm.com (d06av23.portsmouth.uk.ibm.com [9.149.105.59])
-        by b06cxnps4074.portsmouth.uk.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 2181gK9841877888
-        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
+        Tue, 08 Feb 2022 01:42:22 +0000
+Received: from pps.filterd (ppma06fra.de.ibm.com [127.0.0.1])
+        by ppma06fra.de.ibm.com (8.16.1.2/8.16.1.2) with SMTP id 2181WqOs025785;
         Tue, 8 Feb 2022 01:42:20 GMT
+Received: from b06cxnps3074.portsmouth.uk.ibm.com (d06relay09.portsmouth.uk.ibm.com [9.149.109.194])
+        by ppma06fra.de.ibm.com with ESMTP id 3e1ggj0pr6-1
+        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+        Tue, 08 Feb 2022 01:42:20 +0000
+Received: from d06av23.portsmouth.uk.ibm.com (d06av23.portsmouth.uk.ibm.com [9.149.105.59])
+        by b06cxnps3074.portsmouth.uk.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 2181gE9I46334242
+        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
+        Tue, 8 Feb 2022 01:42:14 GMT
 Received: from d06av23.portsmouth.uk.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id 39ABDA4055;
-        Tue,  8 Feb 2022 01:42:20 +0000 (GMT)
+        by IMSVA (Postfix) with ESMTP id 9FC0CA405B;
+        Tue,  8 Feb 2022 01:42:14 +0000 (GMT)
 Received: from d06av23.portsmouth.uk.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id 5D9CAA405B;
-        Tue,  8 Feb 2022 01:42:19 +0000 (GMT)
+        by IMSVA (Postfix) with ESMTP id 862DAA404D;
+        Tue,  8 Feb 2022 01:42:13 +0000 (GMT)
 Received: from li-f45666cc-3089-11b2-a85c-c57d1a57929f.ibm.com.com (unknown [9.65.90.153])
         by d06av23.portsmouth.uk.ibm.com (Postfix) with ESMTP;
-        Tue,  8 Feb 2022 01:42:19 +0000 (GMT)
+        Tue,  8 Feb 2022 01:42:13 +0000 (GMT)
 From:   Mimi Zohar <zohar@linux.ibm.com>
 To:     linux-integrity@vger.kernel.org
 Cc:     Mimi Zohar <zohar@linux.ibm.com>,
         Eric Biggers <ebiggers@kernel.org>,
         Stefan Berger <stefanb@linux.ibm.com>,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
-Subject: [PATCH v4 6/8] ima: define signature version 3
-Date:   Mon,  7 Feb 2022 20:41:38 -0500
-Message-Id: <20220208014140.483447-7-zohar@linux.ibm.com>
+Subject: [PATCH v4 1/8] ima: rename IMA_ACTION_FLAGS to IMA_NONACTION_FLAGS
+Date:   Mon,  7 Feb 2022 20:41:33 -0500
+Message-Id: <20220208014140.483447-2-zohar@linux.ibm.com>
 X-Mailer: git-send-email 2.27.0
 In-Reply-To: <20220208014140.483447-1-zohar@linux.ibm.com>
 References: <20220208014140.483447-1-zohar@linux.ibm.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 X-TM-AS-GCONF: 00
-X-Proofpoint-ORIG-GUID: A3IvOQR_YHaoE0XrROrvJPCAZwZVaUDv
-X-Proofpoint-GUID: A3IvOQR_YHaoE0XrROrvJPCAZwZVaUDv
+X-Proofpoint-ORIG-GUID: fMaOV1Yxc0Gb8MUcm6BYPR-O0w48Zowa
+X-Proofpoint-GUID: fMaOV1Yxc0Gb8MUcm6BYPR-O0w48Zowa
 X-Proofpoint-Virus-Version: vendor=baseguard
  engine=ICAP:2.0.205,Aquarius:18.0.816,Hydra:6.0.425,FMLib:17.11.62.513
  definitions=2022-02-07_07,2022-02-07_02,2021-12-02_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 adultscore=0 mlxlogscore=999
- impostorscore=0 phishscore=0 suspectscore=0 malwarescore=0 mlxscore=0
- spamscore=0 priorityscore=1501 clxscore=1015 bulkscore=0
- lowpriorityscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2201110000 definitions=main-2202080006
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 suspectscore=0
+ lowpriorityscore=0 clxscore=1015 adultscore=0 priorityscore=1501
+ mlxscore=0 phishscore=0 spamscore=0 malwarescore=0 impostorscore=0
+ bulkscore=0 mlxlogscore=999 classifier=spam adjust=0 reason=mlx
+ scancount=1 engine=8.12.0-2201110000 definitions=main-2202080006
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-To disambiguate the signed data stored in the 'security.ima' xattr,
-define signature version 3 as the hash of the ima_file_id structure.
+Simple policy rule options, such as fowner, uid, or euid, can be checked
+immediately, while other policy rule options, such as requiring a file
+signature, need to be deferred.
+
+The 'flags' field in the integrity_iint_cache struct contains the policy
+action', 'subaction', and non action/subaction.
+
+action: measure/measured, appraise/appraised, (collect)/collected,
+        audit/audited
+subaction: appraise status for each hook (e.g. file, mmap, bprm, read,
+        creds)
+non action/subaction: deferred policy rule options and state
+
+Rename the IMA_ACTION_FLAGS to IMA_NONACTION_FLAGS.
 
 Signed-off-by: Mimi Zohar <zohar@linux.ibm.com>
 ---
- security/integrity/digsig.c           |  3 ++-
- security/integrity/ima/ima_appraise.c | 36 +++++++++++++++++++++++++++
- security/integrity/integrity.h        | 20 +++++++++++++--
- 3 files changed, 56 insertions(+), 3 deletions(-)
+ security/integrity/ima/ima_main.c   | 2 +-
+ security/integrity/ima/ima_policy.c | 2 +-
+ security/integrity/integrity.h      | 4 ++--
+ 3 files changed, 4 insertions(+), 4 deletions(-)
 
-diff --git a/security/integrity/digsig.c b/security/integrity/digsig.c
-index 3b06a01bd0fd..fd8f77d92a62 100644
---- a/security/integrity/digsig.c
-+++ b/security/integrity/digsig.c
-@@ -74,7 +74,8 @@ int integrity_digsig_verify(const unsigned int id, const char *sig, int siglen,
- 		/* v1 API expect signature without xattr type */
- 		return digsig_verify(keyring, sig + 1, siglen - 1, digest,
- 				     digestlen);
--	case 2:
-+	case 2: /* regular file data hash based sginature */
-+	case 3: /* struct ima_file_id data base signature */
- 		return asymmetric_verify(keyring, sig, siglen, digest,
- 					 digestlen);
- 	}
-diff --git a/security/integrity/ima/ima_appraise.c b/security/integrity/ima/ima_appraise.c
-index 17232bbfb9f9..7bc180bd808e 100644
---- a/security/integrity/ima/ima_appraise.c
-+++ b/security/integrity/ima/ima_appraise.c
-@@ -225,6 +225,34 @@ int ima_read_xattr(struct dentry *dentry,
- 	return ret;
- }
+diff --git a/security/integrity/ima/ima_main.c b/security/integrity/ima/ima_main.c
+index 8ed6da428328..7c80dfe2c7a5 100644
+--- a/security/integrity/ima/ima_main.c
++++ b/security/integrity/ima/ima_main.c
+@@ -263,7 +263,7 @@ static int process_measurement(struct file *file, const struct cred *cred,
+ 		/* reset appraisal flags if ima_inode_post_setattr was called */
+ 		iint->flags &= ~(IMA_APPRAISE | IMA_APPRAISED |
+ 				 IMA_APPRAISE_SUBMASK | IMA_APPRAISED_SUBMASK |
+-				 IMA_ACTION_FLAGS);
++				 IMA_NONACTION_FLAGS);
  
-+/*
-+ * calc_file_id_hash - calculate the hash of the ima_file_id struct data
-+ * @type: xattr type [enum evm_ima_xattr_type]
-+ * @algo: hash algorithm [enum hash_algo]
-+ * @digest: pointer to the digest to be hashed
-+ * @hash: (out) pointer to the hash
-+ *
-+ * IMA signature version 3 disambiguates the data that is signed by
-+ * indirectly signing the hash of the ima_file_id structure data.
-+ *
-+ * Return 0 on success, error code otherwise.
-+ */
-+static int calc_file_id_hash(enum evm_ima_xattr_type type,
-+			     enum hash_algo algo, const u8 *digest,
-+			     struct ima_max_digest_data *hash)
-+{
-+	struct ima_file_id file_id = {.hash_algorithm = algo};
-+	uint unused = HASH_MAX_DIGESTSIZE - hash_digest_size[algo];
-+
-+	memcpy(file_id.hash, digest, hash_digest_size[algo]);
-+
-+	hash->algo = algo;
-+	hash->length = hash_digest_size[algo];
-+
-+	return ima_calc_buffer_hash(&file_id, sizeof(file_id) - unused,
-+				    (struct ima_digest_data *)hash);
-+}
-+
- /*
-  * xattr_verify - verify xattr digest or signature
-  *
-@@ -236,6 +264,7 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
- 			struct evm_ima_xattr_data *xattr_value, int xattr_len,
- 			enum integrity_status *status, const char **cause)
- {
-+	struct signature_v2_hdr *sig;
- 	int rc = -EINVAL, hash_start = 0;
+ 	/*
+ 	 * Re-evaulate the file if either the xattr has changed or the
+diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
+index 90f528558adc..a0f3775cbd82 100644
+--- a/security/integrity/ima/ima_policy.c
++++ b/security/integrity/ima/ima_policy.c
+@@ -712,7 +712,7 @@ int ima_match_policy(struct user_namespace *mnt_userns, struct inode *inode,
+ 				     func, mask, func_data))
+ 			continue;
  
- 	switch (xattr_value->type) {
-@@ -274,6 +303,13 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
- 		break;
- 	case EVM_IMA_XATTR_DIGSIG:
- 		set_bit(IMA_DIGSIG, &iint->atomic_flags);
-+
-+		sig = (typeof(sig))xattr_value;
-+		if (sig->version != 2) {
-+			*cause = "invalid-signature-version";
-+			*status = INTEGRITY_FAIL;
-+			break;
-+		}
- 		rc = integrity_digsig_verify(INTEGRITY_KEYRING_IMA,
- 					     (const char *)xattr_value,
- 					     xattr_len,
+-		action |= entry->flags & IMA_ACTION_FLAGS;
++		action |= entry->flags & IMA_NONACTION_FLAGS;
+ 
+ 		action |= entry->action & IMA_DO_MASK;
+ 		if (entry->action & IMA_APPRAISE) {
 diff --git a/security/integrity/integrity.h b/security/integrity/integrity.h
-index cbc41d4288ed..f59f83527c0c 100644
+index 547425c20e11..d045dccd415a 100644
 --- a/security/integrity/integrity.h
 +++ b/security/integrity/integrity.h
-@@ -94,7 +94,7 @@ struct evm_xattr {
- 	u8 digest[SHA1_DIGEST_SIZE];
- } __packed;
+@@ -30,8 +30,8 @@
+ #define IMA_HASH		0x00000100
+ #define IMA_HASHED		0x00000200
  
--#define IMA_MAX_DIGEST_SIZE	64
-+#define IMA_MAX_DIGEST_SIZE	HASH_MAX_DIGESTSIZE
- 
- struct ima_digest_data {
- 	u8 algo;
-@@ -137,7 +137,11 @@ struct ima_max_digest_data {
- } __packed;
- 
- /*
-- * signature format v2 - for using with asymmetric keys
-+ * signature header format v2 - for using with asymmetric keys
-+ *
-+ * signature format:
-+ * version 2: regular file data hash based signature
-+ * version 3: struct ima_file_id data based signature
-  */
- struct signature_v2_hdr {
- 	uint8_t type;		/* xattr type */
-@@ -148,6 +152,18 @@ struct signature_v2_hdr {
- 	uint8_t sig[];		/* signature payload */
- } __packed;
- 
-+/*
-+ * IMA signature version 3 disambiguates the data that is signed, by
-+ * indirectly signing the hash of the ima_file_id structure data.
-+ *
-+ * (The hash of the ima_file_id structure is only of the portion used.)
-+ */
-+struct ima_file_id {
-+	__u8 hash_type;		/* xattr type [enum evm_ima_xattr_type] */
-+	__u8 hash_algorithm;	/* Digest algorithm [enum hash_algo] */
-+	__u8 hash[HASH_MAX_DIGESTSIZE];
-+} __packed;
-+
- /* integrity data associated with an inode */
- struct integrity_iint_cache {
- 	struct rb_node rb_node;	/* rooted in integrity_iint_tree */
+-/* iint cache flags */
+-#define IMA_ACTION_FLAGS	0xff000000
++/* iint policy rule cache flags */
++#define IMA_NONACTION_FLAGS	0xff000000
+ #define IMA_DIGSIG_REQUIRED	0x01000000
+ #define IMA_PERMIT_DIRECTIO	0x02000000
+ #define IMA_NEW_FILE		0x04000000
 -- 
 2.27.0
 
