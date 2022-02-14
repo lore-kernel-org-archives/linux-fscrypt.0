@@ -2,225 +2,114 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A1F35C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Feb 2022 21:10:10 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A6D1AC433EF
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 14 Feb 2022 21:10:26 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230270AbiBNVKR (ORCPT
+        id S230306AbiBNVKd (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 14 Feb 2022 16:10:17 -0500
-Received: from mxb-00190b01.gslb.pphosted.com ([23.128.96.19]:39078 "EHLO
+        Mon, 14 Feb 2022 16:10:33 -0500
+Received: from mxb-00190b01.gslb.pphosted.com ([23.128.96.19]:40108 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230024AbiBNVKO (ORCPT
+        with ESMTP id S230324AbiBNVKc (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 14 Feb 2022 16:10:14 -0500
-Received: from mx0a-001b2d01.pphosted.com (mx0b-001b2d01.pphosted.com [148.163.158.5])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 09D40C2492;
-        Mon, 14 Feb 2022 13:10:05 -0800 (PST)
-Received: from pps.filterd (m0098419.ppops.net [127.0.0.1])
-        by mx0b-001b2d01.pphosted.com (8.16.1.2/8.16.1.2) with SMTP id 21EI9WKD008775;
-        Mon, 14 Feb 2022 20:13:34 GMT
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=message-id : date :
- mime-version : subject : to : cc : references : from : in-reply-to :
- content-type : content-transfer-encoding; s=pp1;
- bh=N0QNkjW3qGQaVeorojZWrqSjCFf0AtLA6NMcO9ypCik=;
- b=QtPNgtDvx2E/gY526BJifF3ty15H/Yo2Sl/iOcAuiyVpbf4hQrbed9/jIVlYdAHganmZ
- Cq4kJScL7N4y8YSN9loMUD2Ah+UQOTFTAFqy4bQmURty3/SWtiSzsdNQsp/1jb7zwS8Y
- Pwx8iQIRemIiPmraJ5lh0SHrvPqlviAPIlzJXgWJcEkIUWxaGBpX2dDgZRs76kIXEDPe
- QIxAVCEi0pu07MHHIe2GWZPJzlqEbTqsrL+eTMVcYP7yB3FHrsN15gKVE2WQx8ZkBRA1
- WTZFwn98qMvOjw4x/Hu7u0f/oDBg+yFj/EHW3aQEr+PabmftEHE9SvS/YgmdPQV920jy mQ== 
-Received: from ppma02wdc.us.ibm.com (aa.5b.37a9.ip4.static.sl-reverse.com [169.55.91.170])
-        by mx0b-001b2d01.pphosted.com with ESMTP id 3e6ycr3fef-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Mon, 14 Feb 2022 20:13:33 +0000
-Received: from pps.filterd (ppma02wdc.us.ibm.com [127.0.0.1])
-        by ppma02wdc.us.ibm.com (8.16.1.2/8.16.1.2) with SMTP id 21EK1xcr005846;
-        Mon, 14 Feb 2022 20:13:33 GMT
-Received: from b01cxnp22035.gho.pok.ibm.com (b01cxnp22035.gho.pok.ibm.com [9.57.198.25])
-        by ppma02wdc.us.ibm.com with ESMTP id 3e64ha7x5r-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Mon, 14 Feb 2022 20:13:33 +0000
-Received: from b01ledav006.gho.pok.ibm.com (b01ledav006.gho.pok.ibm.com [9.57.199.111])
-        by b01cxnp22035.gho.pok.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 21EKDWHp33423846
-        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
-        Mon, 14 Feb 2022 20:13:32 GMT
-Received: from b01ledav006.gho.pok.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id BF291AC065;
-        Mon, 14 Feb 2022 20:13:32 +0000 (GMT)
-Received: from b01ledav006.gho.pok.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id 8156EAC059;
-        Mon, 14 Feb 2022 20:13:32 +0000 (GMT)
-Received: from [9.47.158.152] (unknown [9.47.158.152])
-        by b01ledav006.gho.pok.ibm.com (Postfix) with ESMTP;
-        Mon, 14 Feb 2022 20:13:32 +0000 (GMT)
-Message-ID: <b0ba8db6-cf85-0ee3-af19-c8b1251d5b63@linux.ibm.com>
-Date:   Mon, 14 Feb 2022 15:13:32 -0500
+        Mon, 14 Feb 2022 16:10:32 -0500
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 39E89EBAE3;
+        Mon, 14 Feb 2022 13:10:24 -0800 (PST)
+Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by ams.source.kernel.org (Postfix) with ESMTPS id C1382B81597;
+        Mon, 14 Feb 2022 21:10:22 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id D735DC340E9;
+        Mon, 14 Feb 2022 21:10:20 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1644873021;
+        bh=JiaAGh7oCBrdNUMpb/YBUDzSVTs/ZALqa2VQEa0XIJU=;
+        h=Subject:From:To:Cc:Date:In-Reply-To:References:From;
+        b=A/tJXgbDGr4UI6EDlPXuVgsH7Ti08lA8fWano/mAMM0Lz8fJ+wD3eG5DSXLOfVGt9
+         FlUj5idSE41H7g91TwSAdBO1GLVeLvuXGl14qZ7Tm45gfFkdx9ShaK1DcOBvcBhI/V
+         XqnVBhDjX7jCdEZoPLb1AK+j3grOTpYcqZ0xMok50mKcPQ5HcqWjzbyoV0+teNRObC
+         wO4k2WDz90NXPn8C6SiGI/bkqFKmuVhk20NMI/V9bLcwmZJASOBAw7JtJvw2DWkvyJ
+         9Aj48bT95tvCMwuyskJk/q6K6+Kzg/dLrj+J0H0Jy6NNMO66q+0mpobEAQCn8Fmohe
+         EI0h+S62uztyg==
+Message-ID: <a74ee4eb4944a5429ce9c3a7e8405d0a59f0fde4.camel@kernel.org>
+Subject: Re: [RFC PATCH v10 00/48] ceph+fscrypt: full support
+From:   Jeff Layton <jlayton@kernel.org>
+To:     =?ISO-8859-1?Q?Lu=EDs?= Henriques <lhenriques@suse.de>
+Cc:     ceph-devel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-fsdevel@vger.kernel.org, idryomov@gmail.com
+Date:   Mon, 14 Feb 2022 16:10:19 -0500
+In-Reply-To: <87mtittb8b.fsf@brahms.olymp>
+References: <20220111191608.88762-1-jlayton@kernel.org>
+         <87r185tjpi.fsf@brahms.olymp>
+         <62e06980ebc36c91e368e4d8bfa340b5ff291369.camel@kernel.org>
+         <87mtittb8b.fsf@brahms.olymp>
+Content-Type: text/plain; charset="ISO-8859-15"
+User-Agent: Evolution 3.42.3 (3.42.3-1.fc35) 
 MIME-Version: 1.0
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
- Thunderbird/91.5.0
-Subject: Re: [PATCH v5 2/8] ima: define ima_max_digest_data struct without a
- flexible array variable
-Content-Language: en-US
-To:     Mimi Zohar <zohar@linux.ibm.com>, linux-integrity@vger.kernel.org
-Cc:     Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org,
-        linux-kernel@vger.kernel.org
-References: <20220211214310.119257-1-zohar@linux.ibm.com>
- <20220211214310.119257-3-zohar@linux.ibm.com>
-From:   Stefan Berger <stefanb@linux.ibm.com>
-In-Reply-To: <20220211214310.119257-3-zohar@linux.ibm.com>
-Content-Type: text/plain; charset=UTF-8; format=flowed
-Content-Transfer-Encoding: 7bit
-X-TM-AS-GCONF: 00
-X-Proofpoint-ORIG-GUID: DUZyhJckYq_l8o03iQFE7ETTRaar7VtR
-X-Proofpoint-GUID: DUZyhJckYq_l8o03iQFE7ETTRaar7VtR
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.205,Aquarius:18.0.816,Hydra:6.0.425,FMLib:17.11.62.513
- definitions=2022-02-14_07,2022-02-14_03,2021-12-02_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 mlxlogscore=999 bulkscore=0
- adultscore=0 spamscore=0 priorityscore=1501 mlxscore=0 suspectscore=0
- impostorscore=0 malwarescore=0 clxscore=1015 phishscore=0
- lowpriorityscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2201110000 definitions=main-2202140116
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+On Mon, 2022-02-14 at 21:00 +0000, Luís Henriques wrote:
+> Jeff Layton <jlayton@kernel.org> writes:
+> 
+> > On Mon, 2022-02-14 at 17:57 +0000, Luís Henriques wrote:
+> > > Jeff Layton <jlayton@kernel.org> writes:
+> > > 
+> > > > This patchset represents a (mostly) complete rough draft of fscrypt
+> > > > support for cephfs. The context, filename and symlink support is more or
+> > > > less the same as the versions posted before, and comprise the first half
+> > > > of the patches.
+> > > > 
+> > > > The new bits here are the size handling changes and support for content
+> > > > encryption, in buffered, direct and synchronous codepaths. Much of this
+> > > > code is still very rough and needs a lot of cleanup work.
+> > > > 
+> > > > fscrypt support relies on some MDS changes that are being tracked here:
+> > > > 
+> > > >     https://github.com/ceph/ceph/pull/43588
+> > > > 
+> > > 
+> > > Please correct me if I'm wrong (and I've a feeling that I *will* be
+> > > wrong): we're still missing some mechanism that prevents clients that do
+> > > not support fscrypt from creating new files in an encryption directory,
+> > > right?  I'm pretty sure I've discussed this "somewhere" with "someone",
+> > > but I can't remember anything else.
+> > > 
+> > > At this point, I can create an encrypted directory and, from a different
+> > > client (that doesn't support fscrypt), create a new non-encrypted file in
+> > > that directory.  The result isn't good, of course.
+> > > 
+> > > I guess that a new feature bit can be used so that the MDS won't allow any
+> > > sort of operations (or, at least, write/create operations) on encrypted
+> > > dirs from clients that don't have this bit set.
+> > > 
+> > > So, am I missing something or is this still on the TODO list?
+> > > 
+> > > (I can try to have a look at it if this is still missing.)
+> > > 
+> > > Cheers,
+> > 
+> > It's still on the TODO list.
+> > 
+> > Basically, I think we'll want to allow non-fscrypt-enabled clients to
+> > stat and readdir in an fscrypt-enabled directory tree, and unlink files
+> > and directories in it.
+> > 
+> > They should have no need to do anything else. You can't run backups from
+> > such clients since you wouldn't have the real size or crypto context.
+> 
+> Yep, that makes sense.  And do you think that adding a new feature bit is
+> the best way to sort this out, or did you had other solution in mind?
+> 
+> I'll try to spend some time on this tomorrow.
+> 
 
-On 2/11/22 16:43, Mimi Zohar wrote:
-> To support larger hash digests in the 'iint' cache, instead of defining
-> the 'digest' field as the maximum digest size, the 'digest' field was
-> defined as a flexible array variable.  The "ima_digest_data" struct was
-> wrapped inside a local structure with the maximum digest size.  But
-> before adding the record to the iint cache, memory for the exact digest
-> size was dynamically allocated.
->
-> The original reason for defining the 'digest' field as a flexible array
-> variable is still valid for the 'iint' cache use case.  Instead of
-> wrapping the 'ima_digest_data' struct in a local structure define
-> 'ima_max_digest_data' struct.
->
-> Signed-off-by: Mimi Zohar <zohar@linux.ibm.com>
-> ---
->   security/integrity/ima/ima_api.c          | 10 ++++------
->   security/integrity/ima/ima_init.c         |  5 +----
->   security/integrity/ima/ima_main.c         |  5 +----
->   security/integrity/ima/ima_template_lib.c |  5 +----
->   security/integrity/integrity.h            | 10 ++++++++++
->   5 files changed, 17 insertions(+), 18 deletions(-)
->
-> diff --git a/security/integrity/ima/ima_api.c b/security/integrity/ima/ima_api.c
-> index 5b220a2fe573..c6805af46211 100644
-> --- a/security/integrity/ima/ima_api.c
-> +++ b/security/integrity/ima/ima_api.c
-> @@ -217,14 +217,11 @@ int ima_collect_measurement(struct integrity_iint_cache *iint,
->   	const char *audit_cause = "failed";
->   	struct inode *inode = file_inode(file);
->   	const char *filename = file->f_path.dentry->d_name.name;
-> +	struct ima_max_digest_data hash;
->   	int result = 0;
->   	int length;
->   	void *tmpbuf;
->   	u64 i_version;
-> -	struct {
-> -		struct ima_digest_data hdr;
-> -		char digest[IMA_MAX_DIGEST_SIZE];
-> -	} hash;
->   
->   	/*
->   	 * Always collect the modsig, because IMA might have already collected
-> @@ -239,8 +236,9 @@ int ima_collect_measurement(struct integrity_iint_cache *iint,
->   
->   	/*
->   	 * Detecting file change is based on i_version. On filesystems
-> -	 * which do not support i_version, support is limited to an initial
-> -	 * measurement/appraisal/audit.
-> +	 * which do not support i_version, support was originally limited
-> +	 * to an initial measurement/appraisal/audit, but was modified to
-> +	 * assume the file changed.
->   	 */
->   	i_version = inode_query_iversion(inode);
->   	hash.hdr.algo = algo;
-> diff --git a/security/integrity/ima/ima_init.c b/security/integrity/ima/ima_init.c
-> index b26fa67476b4..63979aefc95f 100644
-> --- a/security/integrity/ima/ima_init.c
-> +++ b/security/integrity/ima/ima_init.c
-> @@ -47,12 +47,9 @@ static int __init ima_add_boot_aggregate(void)
->   	struct integrity_iint_cache tmp_iint, *iint = &tmp_iint;
->   	struct ima_event_data event_data = { .iint = iint,
->   					     .filename = boot_aggregate_name };
-> +	struct ima_max_digest_data hash;
->   	int result = -ENOMEM;
->   	int violation = 0;
-> -	struct {
-> -		struct ima_digest_data hdr;
-> -		char digest[TPM_MAX_DIGEST_SIZE];
-> -	} hash;
->   
->   	memset(iint, 0, sizeof(*iint));
->   	memset(&hash, 0, sizeof(hash));
-> diff --git a/security/integrity/ima/ima_main.c b/security/integrity/ima/ima_main.c
-> index 7c80dfe2c7a5..c6412dec3810 100644
-> --- a/security/integrity/ima/ima_main.c
-> +++ b/security/integrity/ima/ima_main.c
-> @@ -874,10 +874,7 @@ int process_buffer_measurement(struct user_namespace *mnt_userns,
->   					    .buf = buf,
->   					    .buf_len = size};
->   	struct ima_template_desc *template;
-> -	struct {
-> -		struct ima_digest_data hdr;
-> -		char digest[IMA_MAX_DIGEST_SIZE];
-> -	} hash = {};
-> +	struct ima_max_digest_data hash;
-
-
-It looks like the initialization wasn't necessary.
-
-Reviewed-by: Stefan Berger <stefanb@linux.ibm.com>
-
-
->   	char digest_hash[IMA_MAX_DIGEST_SIZE];
->   	int digest_hash_len = hash_digest_size[ima_hash_algo];
->   	int violation = 0;
-> diff --git a/security/integrity/ima/ima_template_lib.c b/security/integrity/ima/ima_template_lib.c
-> index 5a5d462ab36d..7155d17a3b75 100644
-> --- a/security/integrity/ima/ima_template_lib.c
-> +++ b/security/integrity/ima/ima_template_lib.c
-> @@ -307,10 +307,7 @@ static int ima_eventdigest_init_common(const u8 *digest, u32 digestsize,
->   int ima_eventdigest_init(struct ima_event_data *event_data,
->   			 struct ima_field_data *field_data)
->   {
-> -	struct {
-> -		struct ima_digest_data hdr;
-> -		char digest[IMA_MAX_DIGEST_SIZE];
-> -	} hash;
-> +	struct ima_max_digest_data hash;
->   	u8 *cur_digest = NULL;
->   	u32 cur_digestsize = 0;
->   	struct inode *inode;
-> diff --git a/security/integrity/integrity.h b/security/integrity/integrity.h
-> index d045dccd415a..daf49894fd7d 100644
-> --- a/security/integrity/integrity.h
-> +++ b/security/integrity/integrity.h
-> @@ -15,6 +15,7 @@
->   #include <linux/types.h>
->   #include <linux/integrity.h>
->   #include <crypto/sha1.h>
-> +#include <crypto/hash.h>
->   #include <linux/key.h>
->   #include <linux/audit.h>
->   
-> @@ -110,6 +111,15 @@ struct ima_digest_data {
->   	u8 digest[];
->   } __packed;
->   
-> +/*
-> + * Instead of wrapping the ima_digest_data struct inside a local structure
-> + * with the maximum hash size, define ima_max_digest_data struct.
-> + */
-> +struct ima_max_digest_data {
-> +	struct ima_digest_data hdr;
-> +	u8 digest[HASH_MAX_DIGESTSIZE];
-> +} __packed;
-> +
->   /*
->    * signature format v2 - for using with asymmetric keys
->    */
+Probably a new cephfs feature bit is fine, and indeed we already have
+one for fscrypt anyway. This can probably share a value with the
+ALTERNATE_NAME bit.
+-- 
+Jeff Layton <jlayton@kernel.org>
