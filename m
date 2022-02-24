@@ -2,123 +2,177 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E34B6C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 24 Feb 2022 00:40:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BB2F3C433EF
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 24 Feb 2022 01:31:38 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229587AbiBXAlN (ORCPT
+        id S229447AbiBXBcG (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 23 Feb 2022 19:41:13 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38930 "EHLO
+        Wed, 23 Feb 2022 20:32:06 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58862 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229569AbiBXAlN (ORCPT
+        with ESMTP id S229470AbiBXBcF (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 23 Feb 2022 19:41:13 -0500
+        Wed, 23 Feb 2022 20:32:05 -0500
 Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 057EFCB90A;
-        Wed, 23 Feb 2022 16:40:38 -0800 (PST)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 9E18365CB;
+        Wed, 23 Feb 2022 17:31:34 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 8ADE360ED9;
-        Thu, 24 Feb 2022 00:40:38 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id C336FC340E7;
-        Thu, 24 Feb 2022 00:40:37 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 1595460FCE;
+        Thu, 24 Feb 2022 01:24:15 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 50B24C340EF;
+        Thu, 24 Feb 2022 01:24:14 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1645663237;
-        bh=ziQOSAhDXJgwY7NYsTem4a1wH3ZzbHa8A+6fyznxquM=;
+        s=k20201202; t=1645665854;
+        bh=eQfAZltdUG4mDqD4yPpgabYWAEQGMIeeu2UXiTgjl3w=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=kAo7N29V5pBSN6BCtjwBlK2qvGJyvHu6e3bicy24IRCFChqTDY+Lj/X+iDrnaLZEh
-         qc/xAO4FbdWU/H6YHvXC+UxyGzXlO0sZq5p+A5+VrKbxsKg+KK2MuKegyTlsmsdZnZ
-         y2Fh3P7ldogrybdjrZ9Wuv40kk3wgK4rb2DdtUXK7ZK3BQkyF9D5W18K2I9QMtH1Eb
-         my+3L/S5StoTdWu2AgX3VQDQOGcDyXyAaJ8AmguyJSGVKj5bRNBMytKXBV2gm2xRwg
-         KIA9j9NKZEPUzdbiN5wOU03rUXKQ7AG0ExxPg25NEb7xu1aVcfNbbm2AQgkZBUJUhr
-         eE/16o3aU6cGQ==
-Date:   Wed, 23 Feb 2022 16:40:36 -0800
+        b=QVOThs1DJLpp6RKm2WBRauaEH8PdlgXau2pkVIP9BoUePiXZAswrcyc3PXFBbQikt
+         2oDtpaFdnWG6hYqPJlHRvEAGOxkucDmBdsjdEEEl4TDyJ/Z4fh1eDueJSKU13Jdy7Z
+         BAE0PxVMNxXPjnhAOM76bNuwBKoAXHF5p5gr1cyhLBdqcFqblu8khZO8Y4NsE79lpc
+         cQ7nQQ4niDH79xmBJaLIgAk+trPJHBiMjLD0YDawtNOATJOUvgvyngxuAyWFqD1dkp
+         mC6fTvwjyna6qMzaIgjSyEdM7doPBd0NG3N31GP1n9vDEzZOUJ6xqocB9B/MI97R1q
+         MG91fUK1cZUfQ==
+Date:   Wed, 23 Feb 2022 17:24:12 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     Mimi Zohar <zohar@linux.ibm.com>
 Cc:     linux-integrity@vger.kernel.org,
         Stefan Berger <stefanb@linux.ibm.com>,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v5 5/8] ima: permit fsverity's file digests in the IMA
- measurement list
-Message-ID: <YhbUBJbQ+nCN515p@sol.localdomain>
+Subject: Re: [PATCH v5 7/8] ima: support fs-verity file digest based version
+ 3 signatures
+Message-ID: <YhbePM/BiRCzL3bn@sol.localdomain>
 References: <20220211214310.119257-1-zohar@linux.ibm.com>
- <20220211214310.119257-6-zohar@linux.ibm.com>
+ <20220211214310.119257-8-zohar@linux.ibm.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20220211214310.119257-6-zohar@linux.ibm.com>
+In-Reply-To: <20220211214310.119257-8-zohar@linux.ibm.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Feb 11, 2022 at 04:43:07PM -0500, Mimi Zohar wrote:
+On Fri, Feb 11, 2022 at 04:43:09PM -0500, Mimi Zohar wrote:
+> Instead of calculating a regular file hash and verifying the signature
+> stored in the 'security.ima' xattr against the calculated file hash, get
+> fs-verity's file digest and verify the signature (version 3) stored in
+> 'security.ima' against the digest.
+> 
+> The policy rule 'appraise_type=' option is extended to support 'sigv3',
+> which is initiality limited to fs-verity.
+> 
+> The fs-verity 'appraise' rules are identified by the 'digest-type=verity'
+> option and require the 'appraise_type=sigv3' option.  The following
+> 'appraise' policy rule requires fsverity file digests.  (The rule may be
+> constrained, for example based on a fsuuid or LSM label.)
+> 
+> Basic fs-verity policy rule example:
+>   appraise func=BPRM_CHECK digest_type=verity appraise_type=sigv3
+> 
+> Lastly, for IMA to differentiate between the original IMA signature
+> from an fs-verity signature a new 'xattr_type' named IMA_VERITY_DIGSIG
+> is defined.
+
+I'm having a hard time understanding this patch.  Can you please describe the
+motivation for doing things, not just the things themselves, and make sure the
+explanation is understandable to someone who isn't an IMA expert?
+
 > diff --git a/Documentation/ABI/testing/ima_policy b/Documentation/ABI/testing/ima_policy
-> index 839fab811b18..ff3c906738cb 100644
+> index ff3c906738cb..508053b8dd0a 100644
 > --- a/Documentation/ABI/testing/ima_policy
 > +++ b/Documentation/ABI/testing/ima_policy
-> @@ -51,6 +51,9 @@ Description:
+> @@ -47,7 +47,7 @@ Description:
+>  			fgroup:= decimal value
+>  		  lsm:  are LSM specific
+>  		  option:
+> -			appraise_type:= [imasig] [imasig|modsig]
+> +			appraise_type:= [imasig] | [imasig|modsig] | [sigv3]
 >  			appraise_flag:= [check_blacklist]
 >  			Currently, blacklist check is only for files signed with appended
 >  			signature.
-> +			digest_type:= verity
-> +			    Require fs-verity's file digest instead of the
-> +			    regular IMA file hash.
->  			keyrings:= list of keyrings
->  			(eg, .builtin_trusted_keys|.ima). Only valid
->  			when action is "measure" and func is KEY_CHECK.
-> @@ -149,3 +152,10 @@ Description:
->  		security.ima xattr of a file:
+> @@ -153,9 +153,27 @@ Description:
 >  
 >  			appraise func=SETXATTR_CHECK appraise_algos=sha256,sha384,sha512
-> +
-> +		Example of 'measure' rule requiring fs-verity's digests on a
-> +		particular filesystem with indication of type of digest in
-> +		the measurement list.
-> +
-> +			measure func=FILE_CHECK digest_type=verity \
-> +				fsuuid=... template=ima-ngv2
-> diff --git a/Documentation/security/IMA-templates.rst b/Documentation/security/IMA-templates.rst
-> index 1a91d92950a7..1e3fe986764e 100644
-> --- a/Documentation/security/IMA-templates.rst
-> +++ b/Documentation/security/IMA-templates.rst
-> @@ -69,6 +69,8 @@ descriptors by adding their identifier to the format string
->     algorithm (field format: [<hash algo>:]digest, where the digest
->     prefix is shown only if the hash algorithm is not SHA1 or MD5);
->   - 'd-modsig': the digest of the event without the appended modsig;
-> + - 'd-type': differentiate between fs-verity's Merkle tree based file hash
-> +   from a regular IMA file hash measurement.
->   - 'n-ng': the name of the event, without size limitations;
->   - 'sig': the file signature, or the EVM portable signature if the file
->     signature is not found;
-> @@ -106,3 +108,8 @@ currently the following methods are supported:
->     the ``ima_template=`` parameter;
->   - register a new template descriptor with custom format through the kernel
->     command line parameter ``ima_template_fmt=``.
-
-Is there more IMA documentation elsewhere, or is this everything?  These files
-are hard to follow.
-
-> diff --git a/security/integrity/integrity.h b/security/integrity/integrity.h
-> index daf49894fd7d..39a999877013 100644
-> --- a/security/integrity/integrity.h
-> +++ b/security/integrity/integrity.h
-> @@ -32,7 +32,7 @@
->  #define IMA_HASHED		0x00000200
 >  
->  /* iint policy rule cache flags */
-> -#define IMA_NONACTION_FLAGS	0xff000000
-> +#define IMA_NONACTION_FLAGS	0xff800000
->  #define IMA_DIGSIG_REQUIRED	0x01000000
->  #define IMA_PERMIT_DIRECTIO	0x02000000
->  #define IMA_NEW_FILE		0x04000000
-> @@ -40,6 +40,8 @@
->  #define IMA_FAIL_UNVERIFIABLE_SIGS	0x10000000
->  #define IMA_MODSIG_ALLOWED	0x20000000
->  #define IMA_CHECK_BLACKLIST	0x40000000
-> +#define IMA_VERITY_REQUIRED	0x80000000
-> +#define IMA_VERITY_DIGEST	0x00800000
+> -		Example of 'measure' rule requiring fs-verity's digests on a
+> -		particular filesystem with indication of type of digest in
+> -		the measurement list.
+> +		Example of a 'measure' rule requiring fs-verity's digests
+> +		with indication of type of digest in the measurement list.
+>  
+>  			measure func=FILE_CHECK digest_type=verity \
+> -				fsuuid=... template=ima-ngv2
+> +				template=ima-ngv2
+> +
+> +		Example of 'measure' and 'appraise' rules requiring fs-verity
+> +		signatures (version 3) stored in security.ima xattr.
+> +
+> +		The 'measure' rule specifies the 'ima-sig' template option,
+> +		which includes the file signature in the measurement list.
+> +
+> +			measure func=BPRM_CHECK digest_type=verity \
+> +				template=ima-sig
+> +
+> +		The 'appraise' rule specifies the type and signature version
+> +		(sigv3) required.
+> +
+> +			appraise func=BPRM_CHECK digest_type=verity \
+> +				appraise_type=sigv3
+> +
+> +		All of these policy rules could, for example, be constrained
+> +		either based on a filesystem's UUID (fsuuid) or based on LSM
+> +		labels.
 
-How about defining these flags in numerical order?
+Is there documentation for what the appraise_type argument means, or does it
+just need to be reverse engineered from the above example?
+
+> + - 'sig': the file signature, based on either the file's/fsverity's digest[1],
+> +   or the EVM portable signature if the file signature is not found;
+
+This sentence doesn't make sense.  How can it be the file signature if the
+"file signature is not found"?
+
+> @@ -303,6 +321,12 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
+>  	case EVM_IMA_XATTR_DIGSIG:
+>  		set_bit(IMA_DIGSIG, &iint->atomic_flags);
+>  
+> +		if (iint->flags & (IMA_DIGSIG_REQUIRED | IMA_VERITY_REQUIRED)) {
+> +			*cause = "verity-signature-required";
+> +			*status = INTEGRITY_FAIL;
+> +			break;
+> +		}
+
+Shouldn't this check whether *both* of these flags are set?
+
+> diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
+> index 28aca1f9633b..d3006cc22ab1 100644
+> --- a/security/integrity/ima/ima_policy.c
+> +++ b/security/integrity/ima/ima_policy.c
+> @@ -1311,6 +1311,12 @@ static bool ima_validate_rule(struct ima_rule_entry *entry)
+>  	    !(entry->flags & IMA_MODSIG_ALLOWED))
+>  		return false;
+>  
+> +	/* Ensure APPRAISE verity file implies a v3 signature */
+> +	if (entry->action == APPRAISE &&
+> +	    (entry->flags & IMA_VERITY_REQUIRED) &&
+> +	    !(entry->flags & IMA_DIGSIG_REQUIRED))
+> +		return false;
+
+This comment doesn't seem to match the code.
+
+> diff --git a/security/integrity/ima/ima_template_lib.c b/security/integrity/ima/ima_template_lib.c
+> index d370fca04de4..ecbe61c53d40 100644
+> --- a/security/integrity/ima/ima_template_lib.c
+> +++ b/security/integrity/ima/ima_template_lib.c
+> @@ -495,7 +495,8 @@ int ima_eventsig_init(struct ima_event_data *event_data,
+>  {
+>  	struct evm_ima_xattr_data *xattr_value = event_data->xattr_value;
+>  
+> -	if ((!xattr_value) || (xattr_value->type != EVM_IMA_XATTR_DIGSIG))
+> +	if (!xattr_value ||
+> +	    !(xattr_value->type & (EVM_IMA_XATTR_DIGSIG | IMA_VERITY_DIGSIG)))
+>  		return ima_eventevmsig_init(event_data, field_data);
+
+This is OR-ing together values that aren't bit flags.
 
 - Eric
