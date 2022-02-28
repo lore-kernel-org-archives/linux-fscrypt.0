@@ -2,209 +2,108 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 413E8C433FE
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Feb 2022 07:49:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 45895C43219
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Feb 2022 07:49:02 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231867AbiB1Hth (ORCPT
+        id S233726AbiB1Hti (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 28 Feb 2022 02:49:37 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33090 "EHLO
+        Mon, 28 Feb 2022 02:49:38 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33092 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S233711AbiB1Htf (ORCPT
+        with ESMTP id S233713AbiB1Htf (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 28 Feb 2022 02:49:35 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id DAABC3D1CE;
+Received: from sin.source.kernel.org (sin.source.kernel.org [IPv6:2604:1380:40e1:4800::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id DAB4D3D1D3;
         Sun, 27 Feb 2022 23:48:56 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 3D17FB80E58;
-        Mon, 28 Feb 2022 07:48:55 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id BE3FEC340F3;
-        Mon, 28 Feb 2022 07:48:53 +0000 (UTC)
+        by sin.source.kernel.org (Postfix) with ESMTPS id E5FD1CE0FAF;
+        Mon, 28 Feb 2022 07:48:54 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id E7850C340F1;
+        Mon, 28 Feb 2022 07:48:52 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
         s=k20201202; t=1646034533;
-        bh=SVSbmmZuBNWRYo5l3+eRPfTfeDjvLCb7XGjy8DkFlBA=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=BWXczMefXLjGBj96On3ikhUuVhRq/7D5npkeBWWyKAmR7I39iKcvi3RyFEUF3YPKm
-         x84aTpWMqL9JAg3fPWwy1ox5/22kipHipaTWoWxFrRP+85b8gwngzw04L6lcBkG4ei
-         +e1ukdrIOhG/Hb6YmwP0r8CZ0fqmSy14TdC+qrpaYQyHq8/mj5wfAG+nsa5B0QOmVz
-         LflPEm9HoSQ9WDlIJYvUAqapKNHY4wHwUsiMTtQVP/4z8g/+Ls6bm6hnvBPu5qgCOJ
-         2TaWGz3Ph/T8xUIC3Y4JbzqtmlxsJnDP7hcEy59CbDfOr3hWRdCjeXExQ2Nar//MZB
-         v+4BCpel/vIgg==
+        bh=saAwFH1FaLLdJFFEVyAhzNz7xcWflZ0a5XcegzPx/rs=;
+        h=From:To:Cc:Subject:Date:From;
+        b=FPZnksqEk9wAbFrqdMG9siRfXhsYw7zNgGA6+75HGF6LOvGxBmkxEcqPszI9IvTca
+         dPh5lDQGatFjax5iX4f0ShpiiNE9aKn1xxPgM6cb8U668LZkO+y4yGesLQeNqUxt10
+         CcSLwUo45oYN5lHADDPTd+zEihfx+IqACOuJbuAn3fjDyX+8Fpg4v+WnvSwGLEZp94
+         fFyEovLWj83b/7ENzL71MYx/eVz3gfBdfWs8nSv0cXXg4s6ZokW8NhbPa8CeW25lcq
+         n1RaULvduZStoc3D4LAzVGDJkfyuqAm/P4en/4NC5oxXX2Hf+tbTtfMiIbQGVWT+KC
+         ACqrixdG/l8gw==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         Gaurav Kashyap <quic_gaurkash@quicinc.com>
-Subject: [RFC PATCH 3/8] fscrypt-crypt-util: add support for dumping key identifier
-Date:   Sun, 27 Feb 2022 23:47:17 -0800
-Message-Id: <20220228074722.77008-4-ebiggers@kernel.org>
+Subject: [RFC PATCH 0/8] xfstests: test the fscrypt hardware-wrapped key support
+Date:   Sun, 27 Feb 2022 23:47:14 -0800
+Message-Id: <20220228074722.77008-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.35.1
-In-Reply-To: <20220228074722.77008-1-ebiggers@kernel.org>
-References: <20220228074722.77008-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+This series adds xfstests for the "hardware-wrapped inline encryption
+keys" feature which I've proposed adding to the kernel
+(https://lore.kernel.org/linux-fscrypt/20220228070520.74082-1-ebiggers@kernel.org/T/#u).
 
-Add an option to fscrypt-crypt-util to make it compute the key
-identifier for the given key.  This will allow testing the correctness
-of the filesystem's key identifier computation.
+This applies to the master branch of xfstests (commit 2ea74ba4e70b).
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- src/fscrypt-crypt-util.c | 82 +++++++++++++++++++++++++++++-----------
- 1 file changed, 60 insertions(+), 22 deletions(-)
+For now, the new tests just include ciphertext verification tests.
+These are the most important type of test to have here, as they validate
+the on-disk format, which must be gotten right from the start.  They
+verify that all the cryptography is implemented correctly, including
+both the parts handled by the hardware and the parts handled by the
+kernel.  Naturally, to do their work they exercise the new UAPIs too.
 
-diff --git a/src/fscrypt-crypt-util.c b/src/fscrypt-crypt-util.c
-index 0ecf9272..876d9f5c 100644
---- a/src/fscrypt-crypt-util.c
-+++ b/src/fscrypt-crypt-util.c
-@@ -46,7 +46,7 @@
- static void usage(FILE *fp)
- {
- 	fputs(
--"Usage: " PROGRAM_NAME " [OPTION]... CIPHER MASTER_KEY\n"
-+"Usage: " PROGRAM_NAME " [OPTION]... [CIPHER | --dump-key-identifier] MASTER_KEY\n"
- "\n"
- "Utility for verifying fscrypt-encrypted data.  This program encrypts\n"
- "(or decrypts) the data on stdin using the given CIPHER with the given\n"
-@@ -66,6 +66,8 @@ static void usage(FILE *fp)
- "  --decrypt                   Decrypt instead of encrypt\n"
- "  --direct-key                Use the format where the IVs include the file\n"
- "                                nonce and the same key is shared across files.\n"
-+"  --dump-key-identifier       Instead of encrypting/decrypting data, just\n"
-+"                                compute and dump the key identifier.\n"
- "  --file-nonce=NONCE          File's nonce as a 32-character hex string\n"
- "  --fs-uuid=UUID              The filesystem UUID as a 32-character hex string.\n"
- "                                Required for --iv-ino-lblk-32 and\n"
-@@ -1946,11 +1948,31 @@ static void get_key_and_iv(const struct key_and_iv_params *params,
- 	generate_iv(params, iv);
- }
- 
-+static void do_dump_key_identifier(const struct key_and_iv_params *params)
-+{
-+	u8 info[9] = "fscrypt";
-+	u8 key_identifier[16];
-+	int i;
-+
-+	if (params->kdf != KDF_HKDF_SHA512)
-+		die("--dump-key-identifier requires --kdf=HKDF-SHA512");
-+
-+	info[8] = HKDF_CONTEXT_KEY_IDENTIFIER;
-+
-+	hkdf_sha512(params->master_key, params->master_key_size,
-+		    NULL, 0, info, sizeof(info), key_identifier,
-+		    sizeof(key_identifier));
-+
-+	for (i = 0; i < sizeof(key_identifier); i++)
-+		printf("%02x", key_identifier[i]);
-+}
-+
- enum {
- 	OPT_BLOCK_NUMBER,
- 	OPT_BLOCK_SIZE,
- 	OPT_DECRYPT,
- 	OPT_DIRECT_KEY,
-+	OPT_DUMP_KEY_IDENTIFIER,
- 	OPT_FILE_NONCE,
- 	OPT_FS_UUID,
- 	OPT_HELP,
-@@ -1967,6 +1989,7 @@ static const struct option longopts[] = {
- 	{ "block-size",      required_argument, NULL, OPT_BLOCK_SIZE },
- 	{ "decrypt",         no_argument,       NULL, OPT_DECRYPT },
- 	{ "direct-key",      no_argument,       NULL, OPT_DIRECT_KEY },
-+	{ "dump-key-identifier", no_argument,   NULL, OPT_DUMP_KEY_IDENTIFIER },
- 	{ "file-nonce",      required_argument, NULL, OPT_FILE_NONCE },
- 	{ "fs-uuid",         required_argument, NULL, OPT_FS_UUID },
- 	{ "help",            no_argument,       NULL, OPT_HELP },
-@@ -1983,9 +2006,10 @@ int main(int argc, char *argv[])
- {
- 	size_t block_size = 4096;
- 	bool decrypting = false;
-+	bool dump_key_identifier = false;
- 	struct key_and_iv_params params;
- 	size_t padding = 0;
--	const struct fscrypt_cipher *cipher;
-+	const struct fscrypt_cipher *cipher = NULL;
- 	u8 real_key[MAX_KEY_SIZE];
- 	union fscrypt_iv iv;
- 	char *tmp;
-@@ -2024,6 +2048,9 @@ int main(int argc, char *argv[])
- 		case OPT_DIRECT_KEY:
- 			params.direct_key = true;
- 			break;
-+		case OPT_DUMP_KEY_IDENTIFIER:
-+			dump_key_identifier = true;
-+			break;
- 		case OPT_FILE_NONCE:
- 			if (hex2bin(optarg, params.file_nonce, FILE_NONCE_SIZE)
- 			    != FILE_NONCE_SIZE)
-@@ -2071,29 +2098,40 @@ int main(int argc, char *argv[])
- 	argc -= optind;
- 	argv += optind;
- 
--	if (argc != 2) {
--		usage(stderr);
--		return 2;
-+	if (dump_key_identifier) {
-+		if (argc != 1) {
-+			usage(stderr);
-+			return 2;
-+		}
-+	} else {
-+		if (argc != 2) {
-+			usage(stderr);
-+			return 2;
-+		}
-+		cipher = find_fscrypt_cipher(*argv);
-+		if (cipher == NULL)
-+			die("Unknown cipher: %s", *argv);
-+
-+		if (block_size < cipher->min_input_size)
-+			die("Block size of %zu bytes is too small for cipher %s",
-+			    block_size, cipher->name);
-+		argv++;
- 	}
--
--	cipher = find_fscrypt_cipher(argv[0]);
--	if (cipher == NULL)
--		die("Unknown cipher: %s", argv[0]);
--
--	if (block_size < cipher->min_input_size)
--		die("Block size of %zu bytes is too small for cipher %s",
--		    block_size, cipher->name);
--
--	params.master_key_size = hex2bin(argv[1], params.master_key,
-+	params.master_key_size = hex2bin(*argv, params.master_key,
- 					 MAX_KEY_SIZE);
- 	if (params.master_key_size < 0)
--		die("Invalid master_key: %s", argv[1]);
--	if (params.master_key_size < cipher->keysize)
--		die("Master key is too short for cipher %s", cipher->name);
-+		die("Invalid master_key: %s", *argv);
- 
--	get_key_and_iv(&params, real_key, cipher->keysize, &iv);
--
--	crypt_loop(cipher, real_key, &iv, decrypting, block_size, padding,
--		   params.iv_ino_lblk_64 || params.iv_ino_lblk_32);
-+	if (dump_key_identifier) {
-+		do_dump_key_identifier(&params);
-+	} else {
-+		if (params.master_key_size < cipher->keysize)
-+			die("Master key is too short for cipher %s",
-+			    cipher->name);
-+		get_key_and_iv(&params, real_key, cipher->keysize, &iv);
-+		crypt_loop(cipher, real_key, &iv, decrypting, block_size,
-+			   padding,
-+			   params.iv_ino_lblk_64 || params.iv_ino_lblk_32);
-+	}
- 	return 0;
- }
+For now this is an RFC, as the corresponding kernel patches have yet to
+be applied.  Patches 1-5 are cleanups that could be applied earlier, but
+I need to look them over again first and probably will resend them.
+
+In any case, any reviews would be greatly appreciated!
+
+I've verified that the new tests run and pass when all their
+prerequisites are met, namely:                                                             
+                                                                         
+- Hardware supporting the feature must be present.  I tested this on the
+  SM8350 HDK (note: this currently requires a custom TrustZone image);
+  this hardware is compatible with both of IV_INO_LBLK_{64,32}.
+- The kernel patches for hardware-wrapped key support must be applied.
+- The filesystem must be ext4 or f2fs.
+- The kernel must have CONFIG_FS_ENCRYPTION_INLINE_CRYPT=y.
+- The fscryptctl program must be available, and must have my patches for
+  hardware-wrapped key support applied.  These can currently be found at
+  https://github.com/ebiggers/fscryptctl/tree/wip-wrapped-keys.
+
+Eric Biggers (8):
+  fscrypt-crypt-util: use an explicit --direct-key option
+  fscrypt-crypt-util: refactor get_key_and_iv()
+  fscrypt-crypt-util: add support for dumping key identifier
+  common/encrypt: log full ciphertext verification params
+  common/encrypt: verify the key identifiers
+  fscrypt-crypt-util: add hardware KDF support
+  common/encrypt: support hardware-wrapped key testing
+  generic: verify ciphertext with hardware-wrapped keys
+
+ common/config            |   1 +
+ common/encrypt           | 149 +++++++++++--
+ src/fscrypt-crypt-util.c | 454 ++++++++++++++++++++++++++++++++-------
+ tests/generic/900        |  30 +++
+ tests/generic/900.out    |   6 +
+ tests/generic/901        |  30 +++
+ tests/generic/901.out    |   6 +
+ 7 files changed, 579 insertions(+), 97 deletions(-)
+ create mode 100755 tests/generic/900
+ create mode 100644 tests/generic/900.out
+ create mode 100755 tests/generic/901
+ create mode 100644 tests/generic/901.out
+
+
+base-commit: 2ea74ba4e70b546279896e2a733c8c7f4b206193
 -- 
 2.35.1
 
