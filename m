@@ -2,44 +2,44 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BAC03C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Feb 2022 07:48:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 413E8C433FE
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Feb 2022 07:49:01 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233715AbiB1Htf (ORCPT
+        id S231867AbiB1Hth (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 28 Feb 2022 02:49:35 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:32976 "EHLO
+        Mon, 28 Feb 2022 02:49:37 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33090 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S233687AbiB1Hte (ORCPT
+        with ESMTP id S233711AbiB1Htf (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 28 Feb 2022 02:49:34 -0500
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 924263D1EE;
-        Sun, 27 Feb 2022 23:48:55 -0800 (PST)
+        Mon, 28 Feb 2022 02:49:35 -0500
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id DAABC3D1CE;
+        Sun, 27 Feb 2022 23:48:56 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 2EC12610A1;
+        by ams.source.kernel.org (Postfix) with ESMTPS id 3D17FB80E58;
         Mon, 28 Feb 2022 07:48:55 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id D994CC340F5;
-        Mon, 28 Feb 2022 07:48:54 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id BE3FEC340F3;
+        Mon, 28 Feb 2022 07:48:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1646034535;
-        bh=rqA/l3I5m4OBXf1eHf/RwStmBflVY6DtAmuwtrEw/5c=;
+        s=k20201202; t=1646034533;
+        bh=SVSbmmZuBNWRYo5l3+eRPfTfeDjvLCb7XGjy8DkFlBA=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=prgicrLAfOZTl8nCZnaRWFpJseTYxq/jQdII8MIynAeCRB5TVtnWM5AKvWUgBPrvI
-         JzMuprzehMwDDeHvtdi0JU/l5Mdxc5vFHnIs9rv0LCnNYZ4uylvqamFB8lYZe59uCX
-         4URD5bfAqxlOHC2ENciizA2ly1tZh3GETTS/AAaYKakvTftM4Zf9MLwZFu6lR79JG4
-         TpC1OMEObBUdAWIeQEkVeIpDM+9X6ommJBGHrV5kb92icjGgEQhkUJItthOieBloXF
-         HIMgFRDATFF+IrbKcYn2AtLOk7gwl3qxS/96B/cSHlaMM4w4K+vcI9yArLLu9Kw9Wk
-         05TOcjQ1C4fXg==
+        b=BWXczMefXLjGBj96On3ikhUuVhRq/7D5npkeBWWyKAmR7I39iKcvi3RyFEUF3YPKm
+         x84aTpWMqL9JAg3fPWwy1ox5/22kipHipaTWoWxFrRP+85b8gwngzw04L6lcBkG4ei
+         +e1ukdrIOhG/Hb6YmwP0r8CZ0fqmSy14TdC+qrpaYQyHq8/mj5wfAG+nsa5B0QOmVz
+         LflPEm9HoSQ9WDlIJYvUAqapKNHY4wHwUsiMTtQVP/4z8g/+Ls6bm6hnvBPu5qgCOJ
+         2TaWGz3Ph/T8xUIC3Y4JbzqtmlxsJnDP7hcEy59CbDfOr3hWRdCjeXExQ2Nar//MZB
+         v+4BCpel/vIgg==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         Gaurav Kashyap <quic_gaurkash@quicinc.com>
-Subject: [RFC PATCH 7/8] common/encrypt: support hardware-wrapped key testing
-Date:   Sun, 27 Feb 2022 23:47:21 -0800
-Message-Id: <20220228074722.77008-8-ebiggers@kernel.org>
+Subject: [RFC PATCH 3/8] fscrypt-crypt-util: add support for dumping key identifier
+Date:   Sun, 27 Feb 2022 23:47:17 -0800
+Message-Id: <20220228074722.77008-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220228074722.77008-1-ebiggers@kernel.org>
 References: <20220228074722.77008-1-ebiggers@kernel.org>
@@ -51,264 +51,160 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-To support testing the kernel's support for hardware-wrapped inline
-encryption keys, add some new functions to common/encrypt:
-
-  - _require_hw_wrapped_key_support(): Checks that a block device
-    supports hardware-wrapped keys and that some related fscryptctl
-    commands are present.
-
-  - _require_scratch_inlinecrypt(): Checks that the filesystem accepts
-    the inlinecrypt mount option.
-
-  - _generate_raw_hw_key(): Generates a raw key of an appropriate size
-    for importing as a hardware-wrapped key.
-
-  - _add_hw_wrapped_key(): Imports and prepares a hardware-wrapped key,
-    then adds it to a filesystem.
-
-In addition, update _require_encryption_policy_support() and
-_verify_ciphertext_for_encryption_policy() to support
-FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY.
-
-Note: some of this relies on being able to call new block device ioctls.
-For now these are accessed through the fscryptctl program.
+Add an option to fscrypt-crypt-util to make it compute the key
+identifier for the given key.  This will allow testing the correctness
+of the filesystem's key identifier computation.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- common/config  |   1 +
- common/encrypt | 116 ++++++++++++++++++++++++++++++++++++++++++++-----
- 2 files changed, 106 insertions(+), 11 deletions(-)
+ src/fscrypt-crypt-util.c | 82 +++++++++++++++++++++++++++++-----------
+ 1 file changed, 60 insertions(+), 22 deletions(-)
 
-diff --git a/common/config b/common/config
-index 479e50d1..85a7919c 100644
---- a/common/config
-+++ b/common/config
-@@ -228,6 +228,7 @@ export E2IMAGE_PROG="$(type -P e2image)"
- export BLKZONE_PROG="$(type -P blkzone)"
- export GZIP_PROG="$(type -P gzip)"
- export BTRFS_IMAGE_PROG="$(type -P btrfs-image)"
-+export FSCRYPTCTL_PROG="$(type -P fscryptctl)"
- 
- # use 'udevadm settle' or 'udevsettle' to wait for lv to be settled.
- # newer systems have udevadm command but older systems like RHEL5 don't.
-diff --git a/common/encrypt b/common/encrypt
-index d8e2dba9..e91e05c4 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -58,22 +58,21 @@ _require_scratch_encryption()
- 	# If required, check for support for the specific type of encryption
- 	# policy required by the test.
- 	if [ $# -ne 0 ]; then
--		_require_encryption_policy_support $SCRATCH_MNT "$@"
-+		_require_scratch_encryption_policy_support "$@"
- 	fi
- 
- 	_scratch_unmount
+diff --git a/src/fscrypt-crypt-util.c b/src/fscrypt-crypt-util.c
+index 0ecf9272..876d9f5c 100644
+--- a/src/fscrypt-crypt-util.c
++++ b/src/fscrypt-crypt-util.c
+@@ -46,7 +46,7 @@
+ static void usage(FILE *fp)
+ {
+ 	fputs(
+-"Usage: " PROGRAM_NAME " [OPTION]... CIPHER MASTER_KEY\n"
++"Usage: " PROGRAM_NAME " [OPTION]... [CIPHER | --dump-key-identifier] MASTER_KEY\n"
+ "\n"
+ "Utility for verifying fscrypt-encrypted data.  This program encrypts\n"
+ "(or decrypts) the data on stdin using the given CIPHER with the given\n"
+@@ -66,6 +66,8 @@ static void usage(FILE *fp)
+ "  --decrypt                   Decrypt instead of encrypt\n"
+ "  --direct-key                Use the format where the IVs include the file\n"
+ "                                nonce and the same key is shared across files.\n"
++"  --dump-key-identifier       Instead of encrypting/decrypting data, just\n"
++"                                compute and dump the key identifier.\n"
+ "  --file-nonce=NONCE          File's nonce as a 32-character hex string\n"
+ "  --fs-uuid=UUID              The filesystem UUID as a 32-character hex string.\n"
+ "                                Required for --iv-ino-lblk-32 and\n"
+@@ -1946,11 +1948,31 @@ static void get_key_and_iv(const struct key_and_iv_params *params,
+ 	generate_iv(params, iv);
  }
  
--_require_encryption_policy_support()
-+_require_scratch_encryption_policy_support()
- {
--	local mnt=$1
--	local dir=$mnt/tmpdir
-+	local dir=$SCRATCH_MNT/tmpdir
- 	local set_encpolicy_args=""
- 	local policy_flags=0
- 	local policy_version=1
- 	local c
- 
--	OPTIND=2
-+	OPTIND=1
- 	while getopts "c:n:f:v:" c; do
- 		case $c in
- 		c|n)
-@@ -94,6 +93,12 @@ _require_encryption_policy_support()
- 	done
- 	set_encpolicy_args=${set_encpolicy_args# }
- 
-+	if (( policy_flags & FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY )); then
-+		echo "Checking whether $SCRATCH_DEV supports hardware-wrapped keys" \
-+			>> $seqres.full
-+		_require_hw_wrapped_key_support $SCRATCH_DEV
-+	fi
++static void do_dump_key_identifier(const struct key_and_iv_params *params)
++{
++	u8 info[9] = "fscrypt";
++	u8 key_identifier[16];
++	int i;
 +
- 	echo "Checking whether kernel supports encryption policy: $set_encpolicy_args" \
- 		>> $seqres.full
++	if (params->kdf != KDF_HKDF_SHA512)
++		die("--dump-key-identifier requires --kdf=HKDF-SHA512");
++
++	info[8] = HKDF_CONTEXT_KEY_IDENTIFIER;
++
++	hkdf_sha512(params->master_key, params->master_key_size,
++		    NULL, 0, info, sizeof(info), key_identifier,
++		    sizeof(key_identifier));
++
++	for (i = 0; i < sizeof(key_identifier); i++)
++		printf("%02x", key_identifier[i]);
++}
++
+ enum {
+ 	OPT_BLOCK_NUMBER,
+ 	OPT_BLOCK_SIZE,
+ 	OPT_DECRYPT,
+ 	OPT_DIRECT_KEY,
++	OPT_DUMP_KEY_IDENTIFIER,
+ 	OPT_FILE_NONCE,
+ 	OPT_FS_UUID,
+ 	OPT_HELP,
+@@ -1967,6 +1989,7 @@ static const struct option longopts[] = {
+ 	{ "block-size",      required_argument, NULL, OPT_BLOCK_SIZE },
+ 	{ "decrypt",         no_argument,       NULL, OPT_DECRYPT },
+ 	{ "direct-key",      no_argument,       NULL, OPT_DIRECT_KEY },
++	{ "dump-key-identifier", no_argument,   NULL, OPT_DUMP_KEY_IDENTIFIER },
+ 	{ "file-nonce",      required_argument, NULL, OPT_FILE_NONCE },
+ 	{ "fs-uuid",         required_argument, NULL, OPT_FS_UUID },
+ 	{ "help",            no_argument,       NULL, OPT_HELP },
+@@ -1983,9 +2006,10 @@ int main(int argc, char *argv[])
+ {
+ 	size_t block_size = 4096;
+ 	bool decrypting = false;
++	bool dump_key_identifier = false;
+ 	struct key_and_iv_params params;
+ 	size_t padding = 0;
+-	const struct fscrypt_cipher *cipher;
++	const struct fscrypt_cipher *cipher = NULL;
+ 	u8 real_key[MAX_KEY_SIZE];
+ 	union fscrypt_iv iv;
+ 	char *tmp;
+@@ -2024,6 +2048,9 @@ int main(int argc, char *argv[])
+ 		case OPT_DIRECT_KEY:
+ 			params.direct_key = true;
+ 			break;
++		case OPT_DUMP_KEY_IDENTIFIER:
++			dump_key_identifier = true;
++			break;
+ 		case OPT_FILE_NONCE:
+ 			if (hex2bin(optarg, params.file_nonce, FILE_NONCE_SIZE)
+ 			    != FILE_NONCE_SIZE)
+@@ -2071,29 +2098,40 @@ int main(int argc, char *argv[])
+ 	argc -= optind;
+ 	argv += optind;
  
-@@ -117,8 +122,15 @@ _require_encryption_policy_support()
- 		# Both the kernel and xfs_io support v2 encryption policies, and
- 		# therefore also filesystem-level keys -- since that's the only
- 		# way to provide keys for v2 policies.
--		local raw_key=$(_generate_raw_encryption_key)
--		local keyspec=$(_add_enckey $mnt "$raw_key" | awk '{print $NF}')
-+		if (( policy_flags & FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY )); then
-+			local raw_key=$(_generate_raw_hw_key)
-+			local keyspec=$(_add_hw_wrapped_key $SCRATCH_DEV \
-+					$SCRATCH_MNT "$raw_key")
-+		else
-+			local raw_key=$(_generate_raw_encryption_key)
-+			local keyspec=$(_add_enckey $SCRATCH_MNT "$raw_key" | \
-+					awk '{print $NF}')
-+		fi
- 	else
- 		_require_command "$KEYCTL_PROG" keyctl
- 		_new_session_keyring
-@@ -143,6 +155,47 @@ _require_encryption_policy_support()
- 	rm -r $dir
+-	if (argc != 2) {
+-		usage(stderr);
+-		return 2;
++	if (dump_key_identifier) {
++		if (argc != 1) {
++			usage(stderr);
++			return 2;
++		}
++	} else {
++		if (argc != 2) {
++			usage(stderr);
++			return 2;
++		}
++		cipher = find_fscrypt_cipher(*argv);
++		if (cipher == NULL)
++			die("Unknown cipher: %s", *argv);
++
++		if (block_size < cipher->min_input_size)
++			die("Block size of %zu bytes is too small for cipher %s",
++			    block_size, cipher->name);
++		argv++;
+ 	}
+-
+-	cipher = find_fscrypt_cipher(argv[0]);
+-	if (cipher == NULL)
+-		die("Unknown cipher: %s", argv[0]);
+-
+-	if (block_size < cipher->min_input_size)
+-		die("Block size of %zu bytes is too small for cipher %s",
+-		    block_size, cipher->name);
+-
+-	params.master_key_size = hex2bin(argv[1], params.master_key,
++	params.master_key_size = hex2bin(*argv, params.master_key,
+ 					 MAX_KEY_SIZE);
+ 	if (params.master_key_size < 0)
+-		die("Invalid master_key: %s", argv[1]);
+-	if (params.master_key_size < cipher->keysize)
+-		die("Master key is too short for cipher %s", cipher->name);
++		die("Invalid master_key: %s", *argv);
+ 
+-	get_key_and_iv(&params, real_key, cipher->keysize, &iv);
+-
+-	crypt_loop(cipher, real_key, &iv, decrypting, block_size, padding,
+-		   params.iv_ino_lblk_64 || params.iv_ino_lblk_32);
++	if (dump_key_identifier) {
++		do_dump_key_identifier(&params);
++	} else {
++		if (params.master_key_size < cipher->keysize)
++			die("Master key is too short for cipher %s",
++			    cipher->name);
++		get_key_and_iv(&params, real_key, cipher->keysize, &iv);
++		crypt_loop(cipher, real_key, &iv, decrypting, block_size,
++			   padding,
++			   params.iv_ino_lblk_64 || params.iv_ino_lblk_32);
++	}
+ 	return 0;
  }
- 
-+# Require that the filesystem accepts the "inlinecrypt" mount option.
-+#
-+# Note: this doesn't check whether $SCRATCH_DEV has any specific inline
-+# encryption capabilities.  For encryption policies that require specific
-+# capabilities, support is detected later by
-+# _require_scratch_encryption_policy_support() (provided that inlinecrypt has
-+# been added to $MOUNT_OPTIONS by that point).
-+_require_scratch_inlinecrypt()
-+{
-+	_require_scratch
-+	_scratch_mkfs &>> $seqres.full
-+	if ! _try_scratch_mount -o inlinecrypt &>> $seqres.full; then
-+		_notrun "filesystem doesn't support -o inlinecrypt"
-+	fi
-+}
-+
-+# Require that the given block device supports hardware-wrapped inline
-+# encryption keys, and require that a command-line tool that supports
-+# importing/generating/preparing them is available.
-+_require_hw_wrapped_key_support()
-+{
-+	local dev=$1
-+
-+	_require_command "$FSCRYPTCTL_PROG" fscryptctl
-+	if ! "$FSCRYPTCTL_PROG" --help | grep -q "import_hw_wrapped_key"; then
-+		_notrun "fscryptctl too old; doesn't support hardware-wrapped inline encryption keys"
-+	fi
-+
-+	if ! head -c $RAW_HW_KEY_SIZE /dev/urandom | \
-+		"$FSCRYPTCTL_PROG" import_hw_wrapped_key "$dev" \
-+		>/dev/null 2>$tmp.err
-+	then
-+		if grep -E -q \
-+			"(Operation not supported)|(Inappropriate ioctl for device)" $tmp.err
-+		then
-+			_notrun "$dev doesn't support hardware-wrapped inline encryption keys"
-+		fi
-+		_fail "Unexpected error from fscryptctl import_hw_wrapped_key: $(< $tmp.err)"
-+	fi
-+}
-+
- _scratch_mkfs_encrypted()
- {
- 	case $FSTYP in
-@@ -220,14 +273,24 @@ _generate_key_descriptor()
- # Generate a raw encryption key, but don't add it to any keyring yet.
- _generate_raw_encryption_key()
- {
-+	local size=${1:-64}
- 	local raw=""
- 	local i
--	for ((i = 0; i < 64; i++)); do
-+	for ((i = 0; i < $size; i++)); do
- 		raw="${raw}\\x$(printf "%02x" $(( $RANDOM % 256 )))"
- 	done
- 	echo $raw
- }
- 
-+RAW_HW_KEY_SIZE=32
-+
-+# Generate a raw key of the proper size to be imported as a hardware-wrapped
-+# key.
-+_generate_raw_hw_key()
-+{
-+	_generate_raw_encryption_key $RAW_HW_KEY_SIZE
-+}
-+
- # Serialize an integer into a CPU-endian bytestring of the given length, and
- # print it as a string where each byte is hex-escaped.  For example,
- # `_num_to_hex 1000 4` == "\xe8\x03\x00\x00" if the CPU is little endian.
-@@ -358,6 +421,21 @@ _add_enckey()
- 	echo -ne "$raw_key" | $XFS_IO_PROG -c "add_enckey $*" "$mnt"
- }
- 
-+# Create a hardware-wrapped key from the given raw key using the given block
-+# device, add it to the given filesystem, and print the resulting key
-+# identifier.
-+_add_hw_wrapped_key()
-+{
-+	local dev=$1
-+	local mnt=$2
-+	local raw_key=$3
-+
-+	echo -ne "$raw_key" | \
-+		$FSCRYPTCTL_PROG import_hw_wrapped_key "$dev" | \
-+		$FSCRYPTCTL_PROG prepare_hw_wrapped_key "$dev" | \
-+		$FSCRYPTCTL_PROG add_key --hw-wrapped-key "$mnt"
-+}
-+
- _user_do_add_enckey()
- {
- 	local mnt=$1
-@@ -771,6 +849,7 @@ FSCRYPT_MODE_ADIANTUM=9
- FSCRYPT_POLICY_FLAG_DIRECT_KEY=0x04
- FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64=0x08
- FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32=0x10
-+FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY=0x20
- 
- FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR=1
- FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER=2
-@@ -800,6 +879,7 @@ _fscrypt_mode_name_to_num()
- #	'direct':		test the DIRECT_KEY policy flag
- #	'iv_ino_lblk_64':	test the IV_INO_LBLK_64 policy flag
- #	'iv_ino_lblk_32':	test the IV_INO_LBLK_32 policy flag
-+#	'hw_wrapped_key':	test the HW_WRAPPED_KEY policy flag
- #
- _verify_ciphertext_for_encryption_policy()
- {
-@@ -832,6 +912,9 @@ _verify_ciphertext_for_encryption_policy()
- 		iv_ino_lblk_32)
- 			(( policy_flags |= FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32 ))
- 			;;
-+		hw_wrapped_key)
-+			(( policy_flags |= FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY ))
-+			;;
- 		*)
- 			_fail "Unknown option '$opt' passed to ${FUNCNAME[0]}"
- 			;;
-@@ -855,6 +938,10 @@ _verify_ciphertext_for_encryption_policy()
- 		elif (( policy_flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32 )); then
- 			crypt_util_args+=" --iv-ino-lblk-32"
- 		fi
-+		if (( policy_flags & FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY )); then
-+			crypt_util_args+=" --enable-hw-kdf"
-+			crypt_util_contents_args+=" --use-inlinecrypt-key"
-+		fi
- 	else
- 		if (( policy_flags & ~FSCRYPT_POLICY_FLAG_DIRECT_KEY )); then
- 			_fail "unsupported flags for v1 policy: $policy_flags"
-@@ -891,11 +978,18 @@ _verify_ciphertext_for_encryption_policy()
- 	crypt_util_filename_args+="$crypt_util_args"
- 
- 	echo "Generating encryption key" >> $seqres.full
--	local raw_key=$(_generate_raw_encryption_key)
- 	if (( policy_version > 1 )); then
--		local keyspec=$(_add_enckey $SCRATCH_MNT "$raw_key" \
--				| awk '{print $NF}')
-+		if (( policy_flags & FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY )); then
-+			local raw_key=$(_generate_raw_hw_key)
-+			local keyspec=$(_add_hw_wrapped_key $SCRATCH_DEV \
-+					$SCRATCH_MNT "$raw_key")
-+		else
-+			local raw_key=$(_generate_raw_encryption_key)
-+			local keyspec=$(_add_enckey $SCRATCH_MNT "$raw_key" | \
-+					awk '{print $NF}')
-+		fi
- 	else
-+		local raw_key=$(_generate_raw_encryption_key)
- 		local keyspec=$(_generate_key_descriptor)
- 		_new_session_keyring
- 		_add_session_encryption_key $keyspec $raw_key
 -- 
 2.35.1
 
