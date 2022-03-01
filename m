@@ -2,490 +2,258 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8D2C7C4707F
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Feb 2022 07:49:02 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 16C11C433EF
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  1 Mar 2022 10:57:37 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233731AbiB1Hti (ORCPT
+        id S231287AbiCAK6P (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 28 Feb 2022 02:49:38 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33160 "EHLO
+        Tue, 1 Mar 2022 05:58:15 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:48320 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S233723AbiB1Htg (ORCPT
+        with ESMTP id S229759AbiCAK6O (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 28 Feb 2022 02:49:36 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 997053D1D2;
-        Sun, 27 Feb 2022 23:48:57 -0800 (PST)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 132BFB80E5C;
-        Mon, 28 Feb 2022 07:48:56 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 9604FC340F4;
-        Mon, 28 Feb 2022 07:48:54 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1646034534;
-        bh=MsaVrw266YzU16CjaXzIUoUY0yLlOc2autQhKBnUZPY=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=MerbDE00Ntfj86QYmgD3T4DRWAJWGeFWSK7YKVp7h2omJChYuNyu7oXY5QX2bGc5K
-         fTFWtI0Bjj8RPJfN7pjp36t9cUQBXir8NG3qHS3Zs06tXnPi1NZtj4fjzpa0lFp4W1
-         fcEtwQIyTek+FefTWh2gWuDYffwGFNNGfwpiRfYaRDCOMC5DIoNXQ4zuqOvD7Ez+ZD
-         I/lIOfIJ0vS983oc9ugU7TYBZyFkYBSasvwm6WrJ12NN2osRCAgTcyBSqbyvaWgwuI
-         8FXm/Li8Zxbx0ya5oiwoz/VzqtfdRh8r1hHrr9dHtx7uicGffD/W4SilHIaE63XnwT
-         F7INLtZ1rbRHg==
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     fstests@vger.kernel.org
-Cc:     linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        Gaurav Kashyap <quic_gaurkash@quicinc.com>
-Subject: [RFC PATCH 6/8] fscrypt-crypt-util: add hardware KDF support
-Date:   Sun, 27 Feb 2022 23:47:20 -0800
-Message-Id: <20220228074722.77008-7-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.35.1
-In-Reply-To: <20220228074722.77008-1-ebiggers@kernel.org>
-References: <20220228074722.77008-1-ebiggers@kernel.org>
+        Tue, 1 Mar 2022 05:58:14 -0500
+Received: from us-smtp-delivery-124.mimecast.com (us-smtp-delivery-124.mimecast.com [170.10.133.124])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTP id 70B0A2E6AF
+        for <linux-fscrypt@vger.kernel.org>; Tue,  1 Mar 2022 02:57:33 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+        s=mimecast20190719; t=1646132252;
+        h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+         to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+         content-transfer-encoding:content-transfer-encoding:
+         in-reply-to:in-reply-to:references:references;
+        bh=rTDnVPnfohntA6gS3N1Dq6PzjjBXnod4G2YetN69TLc=;
+        b=AzAce2a0QJNK9Vk5K5rvmM0zzB7UyVvdrbNW9U/G9P0o+S63tvcGE+tyQ4LI+2p2WJpYjy
+        GpW8T4bq0kDjWjm1+vFsXNOmJs6KxisLKwAZPW7pvlCcV6O731b+XWL8mQ8UuKyLMJL4zX
+        xLNEuozRLrkEuAdbESI7B9iI3OeBjNM=
+Received: from mail-pj1-f71.google.com (mail-pj1-f71.google.com
+ [209.85.216.71]) by relay.mimecast.com with ESMTP with STARTTLS
+ (version=TLSv1.2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ us-mta-600-rMRt3JwsNgOmfSvTCv3vig-1; Tue, 01 Mar 2022 05:57:31 -0500
+X-MC-Unique: rMRt3JwsNgOmfSvTCv3vig-1
+Received: by mail-pj1-f71.google.com with SMTP id u11-20020a17090ae00b00b001bc4cef20f1so8190842pjy.9
+        for <linux-fscrypt@vger.kernel.org>; Tue, 01 Mar 2022 02:57:31 -0800 (PST)
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=x-gm-message-state:subject:to:cc:references:from:message-id:date
+         :user-agent:mime-version:in-reply-to:content-transfer-encoding
+         :content-language;
+        bh=rTDnVPnfohntA6gS3N1Dq6PzjjBXnod4G2YetN69TLc=;
+        b=L17xsrO0g2l7Wgtkjffdu7hKHoVW0oZFfHsuqhRSTipv/OLFgZ4RGi6o7uVD8ZTg84
+         8ntzPCStchtph2hmklNsyVD+O0CpVDyr30EZebbs0OrnKSRAolXipOgzPiIuwTrtdvA/
+         webMvnuPXba0q1JcHRa7bawnrk8GMm79/SWsYgDgS698PtuH8NSXdN0aBDkkyFfbag2v
+         dTy4eQSuws0LJKjie0XcXai/IRy2kH43EgsxIjNHCO8Z7FJX31fae9vV/QmiIA5dX9ym
+         v0vIdDRnXW/DyKynq2aRgdHwhiVi6U1YWAvyKgtBwE3oBVRimMxXQh5+fo/xrJyJ5nZ/
+         P7Vg==
+X-Gm-Message-State: AOAM531Os7JMrkz85Hwi8UWXjFKzhYlEEbgGX4VwSDzqb0YWGGrihBp7
+        EXPfv61ozVL/XLJavWBmnXfILgLjF/A46Hms/Svuc3zF5203U5LZYc2Q88eYYiEVuTIh3u9nTND
+        SGATqZX84cDXzI0RSIBjgaKCM8g==
+X-Received: by 2002:a17:902:f652:b0:150:1af4:85e7 with SMTP id m18-20020a170902f65200b001501af485e7mr23592769plg.105.1646132250199;
+        Tue, 01 Mar 2022 02:57:30 -0800 (PST)
+X-Google-Smtp-Source: ABdhPJzryXxvJgntpsPT5nxhAuMq2U6pQNdWfv0XUA5kqCkRICBd7VtJc5RNqg7xCc3bRT7Fez4AKg==
+X-Received: by 2002:a17:902:f652:b0:150:1af4:85e7 with SMTP id m18-20020a170902f65200b001501af485e7mr23592746plg.105.1646132249803;
+        Tue, 01 Mar 2022 02:57:29 -0800 (PST)
+Received: from [10.72.12.114] ([209.132.188.80])
+        by smtp.gmail.com with ESMTPSA id m6-20020a62f206000000b004e152bc0527sm16454963pfh.153.2022.03.01.02.57.26
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Tue, 01 Mar 2022 02:57:28 -0800 (PST)
+Subject: Re: [RFC PATCH v10 11/48] ceph: decode alternate_name in lease info
+To:     Jeff Layton <jlayton@kernel.org>, ceph-devel@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org
+Cc:     linux-fsdevel@vger.kernel.org, idryomov@gmail.com
+References: <20220111191608.88762-1-jlayton@kernel.org>
+ <20220111191608.88762-12-jlayton@kernel.org>
+From:   Xiubo Li <xiubli@redhat.com>
+Message-ID: <ae096a5b-2f2e-c392-e598-59fd82b44734@redhat.com>
+Date:   Tue, 1 Mar 2022 18:57:22 +0800
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101
+ Thunderbird/78.10.1
 MIME-Version: 1.0
+In-Reply-To: <20220111191608.88762-12-jlayton@kernel.org>
+Content-Type: text/plain; charset=utf-8; format=flowed
 Content-Transfer-Encoding: 8bit
+Content-Language: en-US
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
 
-Add support to fscrypt-crypt-util for replicating the extra KDF (Key
-Derivation Function) step that is required when a hardware-wrapped key
-is used.  This step normally occurs in hardware, but we need to
-replicate it for testing purposes.
+On 1/12/22 3:15 AM, Jeff Layton wrote:
+> Ceph is a bit different from local filesystems, in that we don't want
+> to store filenames as raw binary data, since we may also be dealing
+> with clients that don't support fscrypt.
+>
+> We could just base64-encode the encrypted filenames, but that could
+> leave us with filenames longer than NAME_MAX. It turns out that the
+> MDS doesn't care much about filename length, but the clients do.
+>
+> To manage this, we've added a new "alternate name" field that can be
+> optionally added to any dentry that we'll use to store the binary
+> crypttext of the filename if its base64-encoded value will be longer
+> than NAME_MAX. When a dentry has one of these names attached, the MDS
+> will send it along in the lease info, which we can then store for
+> later usage.
+>
+> Signed-off-by: Jeff Layton <jlayton@kernel.org>
+> ---
+>   fs/ceph/mds_client.c | 40 ++++++++++++++++++++++++++++++----------
+>   fs/ceph/mds_client.h | 11 +++++++----
+>   2 files changed, 37 insertions(+), 14 deletions(-)
+>
+> diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
+> index 34a4f6dbac9d..709f3f654555 100644
+> --- a/fs/ceph/mds_client.c
+> +++ b/fs/ceph/mds_client.c
+> @@ -306,27 +306,44 @@ static int parse_reply_info_dir(void **p, void *end,
+>   
+>   static int parse_reply_info_lease(void **p, void *end,
+>   				  struct ceph_mds_reply_lease **lease,
+> -				  u64 features)
+> +				  u64 features, u32 *altname_len, u8 **altname)
+>   {
+> +	u8 struct_v;
+> +	u32 struct_len;
+> +
+>   	if (features == (u64)-1) {
+> -		u8 struct_v, struct_compat;
+> -		u32 struct_len;
+> +		u8 struct_compat;
+> +
+>   		ceph_decode_8_safe(p, end, struct_v, bad);
+>   		ceph_decode_8_safe(p, end, struct_compat, bad);
+> +
+>   		/* struct_v is expected to be >= 1. we only understand
+>   		 * encoding whose struct_compat == 1. */
+>   		if (!struct_v || struct_compat != 1)
+>   			goto bad;
+> +
+>   		ceph_decode_32_safe(p, end, struct_len, bad);
+> -		ceph_decode_need(p, end, struct_len, bad);
+> -		end = *p + struct_len;
 
-Note, some care was needed to handle the fact that both inlinecrypt_key
-and sw_secret can be needed in a single run of fscrypt-crypt-util.
-Namely, with --iv-ino-lblk-32, inlinecrypt_key is needed for the
-en/decryption while sw_secret is needed for hash_inode_number().
+Hi Jeff,
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- src/fscrypt-crypt-util.c | 253 +++++++++++++++++++++++++++++++++++++--
- 1 file changed, 242 insertions(+), 11 deletions(-)
+This is buggy, more detail please see https://tracker.ceph.com/issues/54430.
 
-diff --git a/src/fscrypt-crypt-util.c b/src/fscrypt-crypt-util.c
-index 876d9f5c..7c19bb90 100644
---- a/src/fscrypt-crypt-util.c
-+++ b/src/fscrypt-crypt-util.c
-@@ -68,6 +68,10 @@ static void usage(FILE *fp)
- "                                nonce and the same key is shared across files.\n"
- "  --dump-key-identifier       Instead of encrypting/decrypting data, just\n"
- "                                compute and dump the key identifier.\n"
-+"  --enable-hw-kdf             Apply the hardware KDF (replicated in software)\n"
-+"                                to the key before using it.  Use this to\n"
-+"                                replicate the en/decryption that is done when\n"
-+"                                the filesystem is given a hardware-wrapped key.\n"
- "  --file-nonce=NONCE          File's nonce as a 32-character hex string\n"
- "  --fs-uuid=UUID              The filesystem UUID as a 32-character hex string.\n"
- "                                Required for --iv-ino-lblk-32 and\n"
-@@ -86,6 +90,10 @@ static void usage(FILE *fp)
- "                                for key derivation, depending on other options.\n"
- "  --padding=PADDING           If last block is partial, zero-pad it to next\n"
- "                                PADDING-byte boundary.  Default: BLOCK_SIZE\n"
-+"  --use-inlinecrypt-key       In combination with --enable-hw-kdf, this causes\n"
-+"                                the en/decryption to be done with the \"inline\n"
-+"                                encryption key\" rather than with a key derived\n"
-+"                                from the \"software secret\".\n"
- 	, fp);
- }
- 
-@@ -295,6 +303,12 @@ typedef struct {
- 	__le64 hi;
- } ble128;
- 
-+/* Same as ble128 but with big-endian byte order */
-+typedef struct {
-+	__be64 hi;
-+	__be64 lo;
-+} bbe128;
-+
- /* Multiply a GF(2^128) element by the polynomial 'x' */
- static inline void gf2_128_mul_x(ble128 *t)
- {
-@@ -305,6 +319,16 @@ static inline void gf2_128_mul_x(ble128 *t)
- 	t->lo = cpu_to_le64((lo << 1) ^ ((hi & (1ULL << 63)) ? 0x87 : 0));
- }
- 
-+/* Same as gf2_128_mul_x() but with big-endian byte order */
-+static inline void gf2_128_mul_x_be(bbe128 *t)
-+{
-+	u64 lo = be64_to_cpu(t->lo);
-+	u64 hi = be64_to_cpu(t->hi);
-+
-+	t->hi = cpu_to_be64((hi << 1) | (lo >> 63));
-+	t->lo = cpu_to_be64((lo << 1) ^ ((hi & (1ULL << 63)) ? 0x87 : 0));
-+}
-+
- /*----------------------------------------------------------------------------*
-  *                             Group arithmetic                               *
-  *----------------------------------------------------------------------------*/
-@@ -1176,6 +1200,67 @@ static void aes_128_cts_cbc_decrypt(const u8 key[AES_128_KEY_SIZE],
- 	aes_cts_cbc_decrypt(key, AES_128_KEY_SIZE, iv, src, dst, nbytes);
- }
- 
-+static void aes_256_cmac(const u8 key[AES_256_KEY_SIZE],
-+			 const u8 *msg, size_t msglen, u8 mac[AES_BLOCK_SIZE])
-+{
-+	const size_t partial = msglen % AES_BLOCK_SIZE;
-+	const size_t full_blocks = msglen ? (msglen - 1) / AES_BLOCK_SIZE : 0;
-+	struct aes_key k;
-+	bbe128 subkey;
-+	size_t i;
-+
-+	aes_setkey(&k, key, AES_256_KEY_SIZE);
-+	memset(&subkey, 0, sizeof(subkey));
-+	aes_encrypt(&k, (u8 *)&subkey, (u8 *)&subkey);
-+	gf2_128_mul_x_be(&subkey);
-+
-+	memset(mac, 0, AES_BLOCK_SIZE);
-+	for (i = 0; i < full_blocks * AES_BLOCK_SIZE; i += AES_BLOCK_SIZE) {
-+		xor(mac, mac, &msg[i], AES_BLOCK_SIZE);
-+		aes_encrypt(&k, mac, mac);
-+	}
-+	xor(mac, mac, &msg[i], msglen - i);
-+	if (partial != 0 || msglen == 0) {
-+		mac[msglen - i] ^= 0x80;
-+		gf2_128_mul_x_be(&subkey);
-+	}
-+	xor(mac, mac, (u8 *)&subkey, AES_BLOCK_SIZE);
-+	aes_encrypt(&k, mac, mac);
-+}
-+
-+#ifdef ENABLE_ALG_TESTS
-+#include <openssl/cmac.h>
-+static void test_aes_256_cmac(void)
-+{
-+	unsigned long num_tests = NUM_ALG_TEST_ITERATIONS;
-+	CMAC_CTX *ctx = CMAC_CTX_new();
-+
-+	ASSERT(ctx != NULL);
-+	while (num_tests--) {
-+		u8 key[AES_256_KEY_SIZE];
-+		u8 msg[128];
-+		u8 mac[AES_BLOCK_SIZE];
-+		u8 ref_mac[sizeof(mac)];
-+		const size_t msglen = 1 + (rand() % sizeof(msg));
-+		size_t out_len = 0;
-+
-+		rand_bytes(key, sizeof(key));
-+		rand_bytes(msg, msglen);
-+
-+		aes_256_cmac(key, msg, msglen, mac);
-+
-+		ASSERT(ctx != NULL);
-+		ASSERT(CMAC_Init(ctx, key, sizeof(key), EVP_aes_256_cbc(),
-+				 NULL) == 1);
-+		ASSERT(CMAC_Update(ctx, msg, msglen) == 1);
-+		ASSERT(CMAC_Final(ctx, ref_mac, &out_len));
-+		ASSERT(out_len == sizeof(mac));
-+		ASSERT(memcmp(mac, ref_mac, sizeof(mac)) == 0);
-+	}
-+	CMAC_CTX_free(ctx);
-+}
-+#endif /* ENABLE_ALG_TESTS */
-+
- /*----------------------------------------------------------------------------*
-  *                           XChaCha12 stream cipher                          *
-  *----------------------------------------------------------------------------*/
-@@ -1787,9 +1872,17 @@ static u8 parse_mode_number(const char *arg)
- }
- 
- struct key_and_iv_params {
-+	/*
-+	 * If enable_hw_kdf=true, then master_key and sw_secret will differ.
-+	 * Otherwise they will be the same.
-+	 */
- 	u8 master_key[MAX_KEY_SIZE];
- 	int master_key_size;
-+	u8 sw_secret[MAX_KEY_SIZE];
-+	int sw_secret_size;
- 	enum kdf_algorithm kdf;
-+	bool enable_hw_kdf;
-+	bool use_inlinecrypt_key;
- 	u8 mode_num;
- 	u8 file_nonce[FILE_NONCE_SIZE];
- 	bool file_nonce_specified;
-@@ -1802,13 +1895,14 @@ struct key_and_iv_params {
- 	bool fs_uuid_specified;
- };
- 
--#define HKDF_CONTEXT_KEY_IDENTIFIER	1
-+#define HKDF_CONTEXT_KEY_IDENTIFIER_FOR_STANDARD_KEY 1
- #define HKDF_CONTEXT_PER_FILE_ENC_KEY	2
- #define HKDF_CONTEXT_DIRECT_KEY		3
- #define HKDF_CONTEXT_IV_INO_LBLK_64_KEY	4
- #define HKDF_CONTEXT_DIRHASH_KEY	5
- #define HKDF_CONTEXT_IV_INO_LBLK_32_KEY	6
- #define HKDF_CONTEXT_INODE_HASH_KEY	7
-+#define HKDF_CONTEXT_KEY_IDENTIFIER_FOR_HW_WRAPPED_KEY 8
- 
- /* Hash the file's inode number using SipHash keyed by a derived key */
- static u32 hash_inode_number(const struct key_and_iv_params *params)
-@@ -1820,7 +1914,7 @@ static u32 hash_inode_number(const struct key_and_iv_params *params)
- 	} hash_key;
- 
- 	info[8] = HKDF_CONTEXT_INODE_HASH_KEY;
--	hkdf_sha512(params->master_key, params->master_key_size,
-+	hkdf_sha512(params->sw_secret, params->sw_secret_size,
- 		    NULL, 0, info, sizeof(info),
- 		    hash_key.bytes, sizeof(hash_key));
- 
-@@ -1830,6 +1924,102 @@ static u32 hash_inode_number(const struct key_and_iv_params *params)
- 	return (u32)siphash_1u64(hash_key.words, params->inode_number);
- }
- 
-+/*
-+ * Replicate the hardware KDF, given the raw master key and the context
-+ * indicating which type of key to derive.
-+ *
-+ * Detailed explanation:
-+ *
-+ * With hardware-wrapped keys, an extra level is inserted into fscrypt's key
-+ * hierarchy, above what was previously the root:
-+ *
-+ *                           master_key
-+ *                               |
-+ *                         -------------
-+ *                         |            |
-+ *                         |            |
-+ *                inlinecrypt_key    sw_secret
-+ *                                      |
-+ *                                      |
-+ *                                (everything else)
-+ *
-+ * From the master key, the "inline encryption key" (inlinecrypt_key) and
-+ * "software secret" (sw_secret) are derived.  The inlinecrypt_key is used to
-+ * encrypt file contents.  The sw_secret is used just like the old master key,
-+ * except that it isn't used to derive the file contents key.  (I.e., it's used
-+ * to derive filenames encryption keys, key identifiers, inode hash keys, etc.)
-+ *
-+ * Normally, software only sees master_key in "wrapped" form, and can never see
-+ * inlinecrypt_key at all.  Only specialized hardware can access the raw
-+ * master_key to derive the subkeys, in a step we call the "HW KDF".
-+ *
-+ * However, the HW KDF is a well-specified algorithm, and when a
-+ * hardware-wrapped key is initially created, software can choose to import a
-+ * raw key.  This allows software to test the feature by replicating the HW KDF.
-+ *
-+ * This is what this function does; it will derive either the inlinecrypt_key
-+ * key or the sw_secret, depending on the KDF context passed.
-+ */
-+static void hw_kdf(const u8 *master_key, size_t master_key_size,
-+		   const u8 *ctx, size_t ctx_size,
-+		   u8 *derived_key, size_t derived_key_size)
-+{
-+	static const u8 label[11] = "\0\0\x40\0\0\0\0\0\0\0\x20";
-+	u8 info[128];
-+	size_t i;
-+
-+	if (master_key_size != AES_256_KEY_SIZE)
-+		die("--hw-kdf requires a 32-byte master key");
-+	ASSERT(derived_key_size % AES_BLOCK_SIZE == 0);
-+
-+	/*
-+	 * This is NIST SP 800-108 "KDF in Counter Mode" with AES-256-CMAC as
-+	 * the PRF and a particular choice of labels and contexts.
-+	 */
-+	for (i = 0; i < derived_key_size; i += AES_BLOCK_SIZE) {
-+		u8 *p = info;
-+
-+		ASSERT(sizeof(__be32) + sizeof(label) + 1 + ctx_size +
-+		       sizeof(__be32) <= sizeof(info));
-+
-+		put_unaligned_be32(1 + (i / AES_BLOCK_SIZE), p);
-+		p += sizeof(__be32);
-+		memcpy(p, label, sizeof(label));
-+		p += sizeof(label);
-+		*p++ = 0;
-+		memcpy(p, ctx, ctx_size);
-+		p += ctx_size;
-+		put_unaligned_be32(derived_key_size * 8, p);
-+		p += sizeof(__be32);
-+
-+		aes_256_cmac(master_key, info, p - info, &derived_key[i]);
-+	}
-+}
-+
-+#define INLINECRYPT_KEY_SIZE 64
-+#define SW_SECRET_SIZE 32
-+
-+static void derive_inline_encryption_key(const u8 *master_key,
-+					 size_t master_key_size,
-+					 u8 inlinecrypt_key[INLINECRYPT_KEY_SIZE])
-+{
-+	static const u8 ctx[36] =
-+		"inline encryption key\0\0\0\0\0\0\x03\x43\0\x82\x50\0\0\0\0";
-+
-+	hw_kdf(master_key, master_key_size, ctx, sizeof(ctx),
-+	       inlinecrypt_key, INLINECRYPT_KEY_SIZE);
-+}
-+
-+static void derive_sw_secret(const u8 *master_key, size_t master_key_size,
-+			     u8 sw_secret[SW_SECRET_SIZE])
-+{
-+	static const u8 ctx[28] =
-+		"raw secret\0\0\0\0\0\0\0\0\0\x03\x17\0\x80\x50\0\0\0\0";
-+
-+	hw_kdf(master_key, master_key_size, ctx, sizeof(ctx),
-+	       sw_secret, SW_SECRET_SIZE);
-+}
-+
- static void derive_real_key(const struct key_and_iv_params *params,
- 			    u8 *real_key, size_t real_key_size)
- {
-@@ -1838,11 +2028,30 @@ static void derive_real_key(const struct key_and_iv_params *params,
- 	size_t infolen = 8;
- 	size_t i;
- 
--	ASSERT(real_key_size <= params->master_key_size);
-+	if (params->use_inlinecrypt_key) {
-+		/*
-+		 * With --use-inlinecrypt-key, we need to use the "hardware KDF"
-+		 * rather than the normal fscrypt KDF.  Note that the fscrypt
-+		 * KDF might still be used elsewhere, e.g. hash_inode_number()
-+		 * -- it just won't be used for the actual encryption key.
-+		 */
-+		if (!params->enable_hw_kdf)
-+			die("--use-inlinecrypt-key requires --enable-hw-kdf");
-+		if (!params->iv_ino_lblk_64 && !params->iv_ino_lblk_32)
-+			die("--use-inlinecrypt-key requires one of --iv-ino-lblk-*");
-+		if (real_key_size != INLINECRYPT_KEY_SIZE)
-+			die("cipher not compatible with --use-inlinecrypt-key");
-+		derive_inline_encryption_key(params->master_key,
-+					     params->master_key_size, real_key);
-+		return;
-+	}
-+
-+	if (params->sw_secret_size < real_key_size)
-+		die("Master key is too short for cipher");
- 
- 	switch (params->kdf) {
- 	case KDF_NONE:
--		memcpy(real_key, params->master_key, real_key_size);
-+		memcpy(real_key, params->sw_secret, real_key_size);
- 		break;
- 	case KDF_AES_128_ECB:
- 		if (!params->file_nonce_specified)
-@@ -1851,7 +2060,7 @@ static void derive_real_key(const struct key_and_iv_params *params,
- 		ASSERT(real_key_size % AES_BLOCK_SIZE == 0);
- 		aes_setkey(&aes_key, params->file_nonce, AES_128_KEY_SIZE);
- 		for (i = 0; i < real_key_size; i += AES_BLOCK_SIZE)
--			aes_encrypt(&aes_key, &params->master_key[i],
-+			aes_encrypt(&aes_key, &params->sw_secret[i],
- 				    &real_key[i]);
- 		break;
- 	case KDF_HKDF_SHA512:
-@@ -1886,7 +2095,7 @@ static void derive_real_key(const struct key_and_iv_params *params,
- 		} else {
- 			die("--kdf=HKDF-SHA512 requires --file-nonce or --iv-ino-lblk-*");
- 		}
--		hkdf_sha512(params->master_key, params->master_key_size,
-+		hkdf_sha512(params->sw_secret, params->sw_secret_size,
- 			    NULL, 0, info, infolen, real_key, real_key_size);
- 		break;
- 	default:
-@@ -1957,9 +2166,12 @@ static void do_dump_key_identifier(const struct key_and_iv_params *params)
- 	if (params->kdf != KDF_HKDF_SHA512)
- 		die("--dump-key-identifier requires --kdf=HKDF-SHA512");
- 
--	info[8] = HKDF_CONTEXT_KEY_IDENTIFIER;
-+	if (params->enable_hw_kdf)
-+		info[8] = HKDF_CONTEXT_KEY_IDENTIFIER_FOR_HW_WRAPPED_KEY;
-+	else
-+		info[8] = HKDF_CONTEXT_KEY_IDENTIFIER_FOR_STANDARD_KEY;
- 
--	hkdf_sha512(params->master_key, params->master_key_size,
-+	hkdf_sha512(params->sw_secret, params->sw_secret_size,
- 		    NULL, 0, info, sizeof(info), key_identifier,
- 		    sizeof(key_identifier));
- 
-@@ -1973,6 +2185,7 @@ enum {
- 	OPT_DECRYPT,
- 	OPT_DIRECT_KEY,
- 	OPT_DUMP_KEY_IDENTIFIER,
-+	OPT_ENABLE_HW_KDF,
- 	OPT_FILE_NONCE,
- 	OPT_FS_UUID,
- 	OPT_HELP,
-@@ -1982,6 +2195,7 @@ enum {
- 	OPT_KDF,
- 	OPT_MODE_NUM,
- 	OPT_PADDING,
-+	OPT_USE_INLINECRYPT_KEY,
- };
- 
- static const struct option longopts[] = {
-@@ -1990,6 +2204,7 @@ static const struct option longopts[] = {
- 	{ "decrypt",         no_argument,       NULL, OPT_DECRYPT },
- 	{ "direct-key",      no_argument,       NULL, OPT_DIRECT_KEY },
- 	{ "dump-key-identifier", no_argument,   NULL, OPT_DUMP_KEY_IDENTIFIER },
-+	{ "enable-hw-kdf",   no_argument,       NULL, OPT_ENABLE_HW_KDF },
- 	{ "file-nonce",      required_argument, NULL, OPT_FILE_NONCE },
- 	{ "fs-uuid",         required_argument, NULL, OPT_FS_UUID },
- 	{ "help",            no_argument,       NULL, OPT_HELP },
-@@ -1999,6 +2214,7 @@ static const struct option longopts[] = {
- 	{ "kdf",             required_argument, NULL, OPT_KDF },
- 	{ "mode-num",        required_argument, NULL, OPT_MODE_NUM },
- 	{ "padding",         required_argument, NULL, OPT_PADDING },
-+	{ "use-inlinecrypt-key", no_argument,   NULL, OPT_USE_INLINECRYPT_KEY },
- 	{ NULL, 0, NULL, 0 },
- };
- 
-@@ -2025,6 +2241,7 @@ int main(int argc, char *argv[])
- 	test_hkdf_sha512();
- 	test_aes_256_xts();
- 	test_aes_256_cts_cbc();
-+	test_aes_256_cmac();
- 	test_adiantum();
- #endif
- 
-@@ -2051,6 +2268,9 @@ int main(int argc, char *argv[])
- 		case OPT_DUMP_KEY_IDENTIFIER:
- 			dump_key_identifier = true;
- 			break;
-+		case OPT_ENABLE_HW_KDF:
-+			params.enable_hw_kdf = true;
-+			break;
- 		case OPT_FILE_NONCE:
- 			if (hex2bin(optarg, params.file_nonce, FILE_NONCE_SIZE)
- 			    != FILE_NONCE_SIZE)
-@@ -2090,6 +2310,9 @@ int main(int argc, char *argv[])
- 			    padding > INT_MAX)
- 				die("Invalid padding amount: %s", optarg);
- 			break;
-+		case OPT_USE_INLINECRYPT_KEY:
-+			params.use_inlinecrypt_key = true;
-+			break;
- 		default:
- 			usage(stderr);
- 			return 2;
-@@ -2122,12 +2345,20 @@ int main(int argc, char *argv[])
- 	if (params.master_key_size < 0)
- 		die("Invalid master_key: %s", *argv);
- 
-+	/* Derive sw_secret from master_key, if needed. */
-+	if (params.enable_hw_kdf) {
-+		derive_sw_secret(params.master_key, params.master_key_size,
-+				 params.sw_secret);
-+		params.sw_secret_size = SW_SECRET_SIZE;
-+	} else {
-+		memcpy(params.sw_secret, params.master_key,
-+		       params.master_key_size);
-+		params.sw_secret_size = params.master_key_size;
-+	}
-+
- 	if (dump_key_identifier) {
- 		do_dump_key_identifier(&params);
- 	} else {
--		if (params.master_key_size < cipher->keysize)
--			die("Master key is too short for cipher %s",
--			    cipher->name);
- 		get_key_and_iv(&params, real_key, cipher->keysize, &iv);
- 		crypt_loop(cipher, real_key, &iv, decrypting, block_size,
- 			   padding,
--- 
-2.35.1
+The following patch will fix it. We should skip the extra memories anyway.
+
+
+diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
+index 94b4c6508044..3dea96df4769 100644
+--- a/fs/ceph/mds_client.c
++++ b/fs/ceph/mds_client.c
+@@ -326,6 +326,7 @@ static int parse_reply_info_lease(void **p, void *end,
+                         goto bad;
+
+                 ceph_decode_32_safe(p, end, struct_len, bad);
++               end = *p + struct_len;
+         } else {
+                 struct_len = sizeof(**lease);
+                 *altname_len = 0;
+@@ -346,6 +347,7 @@ static int parse_reply_info_lease(void **p, void *end,
+                         *altname = NULL;
+                         *altname_len = 0;
+                 }
++               *p = end;
+         }
+         return 0;
+  bad:
+
+
+
+> +	} else {
+> +		struct_len = sizeof(**lease);
+> +		*altname_len = 0;
+> +		*altname = NULL;
+>   	}
+>   
+> -	ceph_decode_need(p, end, sizeof(**lease), bad);
+> +	ceph_decode_need(p, end, struct_len, bad);
+>   	*lease = *p;
+>   	*p += sizeof(**lease);
+> -	if (features == (u64)-1)
+> -		*p = end;
+> +
+> +	if (features == (u64)-1) {
+> +		if (struct_v >= 2) {
+> +			ceph_decode_32_safe(p, end, *altname_len, bad);
+> +			ceph_decode_need(p, end, *altname_len, bad);
+> +			*altname = *p;
+> +			*p += *altname_len;
+> +		} else {
+> +			*altname = NULL;
+> +			*altname_len = 0;
+> +		}
+> +	}
+>   	return 0;
+>   bad:
+>   	return -EIO;
+> @@ -356,7 +373,8 @@ static int parse_reply_info_trace(void **p, void *end,
+>   		info->dname = *p;
+>   		*p += info->dname_len;
+>   
+> -		err = parse_reply_info_lease(p, end, &info->dlease, features);
+> +		err = parse_reply_info_lease(p, end, &info->dlease, features,
+> +					     &info->altname_len, &info->altname);
+>   		if (err < 0)
+>   			goto out_bad;
+>   	}
+> @@ -423,9 +441,11 @@ static int parse_reply_info_readdir(void **p, void *end,
+>   		dout("parsed dir dname '%.*s'\n", rde->name_len, rde->name);
+>   
+>   		/* dentry lease */
+> -		err = parse_reply_info_lease(p, end, &rde->lease, features);
+> +		err = parse_reply_info_lease(p, end, &rde->lease, features,
+> +					     &rde->altname_len, &rde->altname);
+>   		if (err)
+>   			goto out_bad;
+> +
+>   		/* inode */
+>   		err = parse_reply_info_in(p, end, &rde->inode, features);
+>   		if (err < 0)
+> diff --git a/fs/ceph/mds_client.h b/fs/ceph/mds_client.h
+> index e7d2c8a1b9c1..128901a847af 100644
+> --- a/fs/ceph/mds_client.h
+> +++ b/fs/ceph/mds_client.h
+> @@ -29,8 +29,8 @@ enum ceph_feature_type {
+>   	CEPHFS_FEATURE_MULTI_RECONNECT,
+>   	CEPHFS_FEATURE_DELEG_INO,
+>   	CEPHFS_FEATURE_METRIC_COLLECT,
+> -
+> -	CEPHFS_FEATURE_MAX = CEPHFS_FEATURE_METRIC_COLLECT,
+> +	CEPHFS_FEATURE_ALTERNATE_NAME,
+> +	CEPHFS_FEATURE_MAX = CEPHFS_FEATURE_ALTERNATE_NAME,
+>   };
+>   
+>   /*
+> @@ -45,8 +45,7 @@ enum ceph_feature_type {
+>   	CEPHFS_FEATURE_MULTI_RECONNECT,		\
+>   	CEPHFS_FEATURE_DELEG_INO,		\
+>   	CEPHFS_FEATURE_METRIC_COLLECT,		\
+> -						\
+> -	CEPHFS_FEATURE_MAX,			\
+> +	CEPHFS_FEATURE_ALTERNATE_NAME,		\
+>   }
+>   #define CEPHFS_FEATURES_CLIENT_REQUIRED {}
+>   
+> @@ -98,7 +97,9 @@ struct ceph_mds_reply_info_in {
+>   
+>   struct ceph_mds_reply_dir_entry {
+>   	char                          *name;
+> +	u8			      *altname;
+>   	u32                           name_len;
+> +	u32			      altname_len;
+>   	struct ceph_mds_reply_lease   *lease;
+>   	struct ceph_mds_reply_info_in inode;
+>   	loff_t			      offset;
+> @@ -117,7 +118,9 @@ struct ceph_mds_reply_info_parsed {
+>   	struct ceph_mds_reply_info_in diri, targeti;
+>   	struct ceph_mds_reply_dirfrag *dirfrag;
+>   	char                          *dname;
+> +	u8			      *altname;
+>   	u32                           dname_len;
+> +	u32                           altname_len;
+>   	struct ceph_mds_reply_lease   *dlease;
+>   
+>   	/* extra */
 
