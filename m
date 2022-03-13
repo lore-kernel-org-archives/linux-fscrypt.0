@@ -2,70 +2,98 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3ED0CC4332F
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Mar 2022 01:06:41 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B77B8C4167B
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Mar 2022 01:06:42 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233319AbiCMBHp (ORCPT
+        id S233325AbiCMBHr (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 12 Mar 2022 20:07:45 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36772 "EHLO
+        Sat, 12 Mar 2022 20:07:47 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36876 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232296AbiCMBHo (ORCPT
+        with ESMTP id S233320AbiCMBHp (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 12 Mar 2022 20:07:44 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E4C51148673;
-        Sat, 12 Mar 2022 17:06:37 -0800 (PST)
+        Sat, 12 Mar 2022 20:07:45 -0500
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 31343149979;
+        Sat, 12 Mar 2022 17:06:39 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 9C69BB80123;
+        by ams.source.kernel.org (Postfix) with ESMTPS id D6D69B80AF4;
+        Sun, 13 Mar 2022 01:06:37 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 6C1CCC340F7;
         Sun, 13 Mar 2022 01:06:36 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4E841C340EB;
-        Sun, 13 Mar 2022 01:06:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1647133595;
-        bh=gKCPK1CZydLFQnN48XiydmgDLWHBROPmToWgQcg1y3I=;
-        h=From:To:Cc:Subject:Date:From;
-        b=l2VsyGe/k2pBXtfaSrDXoAqIojxm+dxChc2K0Zwmq26YnfCGa3osCuxJiqQIwSluq
-         fkZtvUnFz+y6EJ5nRC/8/WIFvsYpEvTAbIY54hI4hN3Vq68M444ut9rFxfopZl6C98
-         LdBrbRxuRjEhDRJZw/ye2ax0lOlHyGGhVOM1115+RcvqDcnrzQQHGKT/LPG5IViXQ2
-         Ntdsp10HmzXYF6xGnErk2lVwx3gBUcWfb1LKxOUjA9VgvEbQQFfBVsowokz7rx879P
-         LJg1YcGxh9Gipfv8BHhGmHUsOAO1XGfjDcedDLFA7SCndrCOlVrwzOD0kot9YDAy5A
-         R4ABbnXMMDc3A==
+        s=k20201202; t=1647133596;
+        bh=0hiKtnvItwbeAVZHNDETPFE8syYxYRcQaVRMGhIxECM=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=jEZ6kHkBZGcXpASLKqYGG4lBh1Kyq2fL2gC7O/yot1W+WFYiVLkA2UKplN99Iv1qR
+         SXN43vx6u1cfXtjwcSy9JyZOwzYHcSfUDmPsxLacKoykzKR6bTW+1jpz0voeXcW8rK
+         gQIzZP0aiFMeLdexW/asc1bD3sWH3ZyLa8aSvMTHPNlpKuds7AUmi2Ppb/9nHUAyWN
+         VZ1URr8IN91KlgrPOja3q0E7NaqLXo4BEsa79uNDcMIGpZd5oIMkRuOBcEEfHeeQgV
+         gS7DMucvW06tvMT3q3CoIAQr6/AY4o+89Me6V8fU7NM1+owWlwvJcDkSTvmgTOqVF+
+         978C+M9TsT2bw==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org
-Subject: [PATCH v2 0/5] xfstests: fscrypt test cleanups
-Date:   Sat, 12 Mar 2022 17:05:54 -0800
-Message-Id: <20220313010559.545995-1-ebiggers@kernel.org>
+Subject: [PATCH v2 5/5] common/encrypt: verify the key identifiers
+Date:   Sat, 12 Mar 2022 17:05:59 -0800
+Message-Id: <20220313010559.545995-6-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.35.1
+In-Reply-To: <20220313010559.545995-1-ebiggers@kernel.org>
+References: <20220313010559.545995-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This series makes some minor improvements to the fscrypt ciphertext
-verification tests.  I've split these out from my series
-"[RFC PATCH 0/8] xfstests: test the fscrypt hardware-wrapped key support"
-(https://lore.kernel.org/fstests/20220228074722.77008-1-ebiggers@kernel.org/T/#u)
-and updated them slightly.  These can be applied now.
+From: Eric Biggers <ebiggers@google.com>
 
-I've verified that all the 'encrypt' group tests still pass with this
-series applied.
+As part of all the ciphertext verification tests, verify that the
+filesystem correctly computed the key identifier from the key the test
+generated.  This uses fscrypt-crypt-util to compute the key identifier.
 
-Eric Biggers (5):
-  fscrypt-crypt-util: use an explicit --direct-key option
-  fscrypt-crypt-util: refactor get_key_and_iv()
-  fscrypt-crypt-util: add support for dumping key identifier
-  common/encrypt: log full ciphertext verification params
-  common/encrypt: verify the key identifiers
+Previously this was only being tested indirectly, via the tests that
+happen to use the hardcoded $TEST_RAW_KEY and $TEST_KEY_IDENTIFIER.
+The new check provides better coverage.
 
- common/encrypt           |  34 +++++--
- src/fscrypt-crypt-util.c | 193 ++++++++++++++++++++++++++-------------
- 2 files changed, 159 insertions(+), 68 deletions(-)
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ common/encrypt | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
 
+diff --git a/common/encrypt b/common/encrypt
+index cf402570..78a574bd 100644
+--- a/common/encrypt
++++ b/common/encrypt
+@@ -812,6 +812,7 @@ _verify_ciphertext_for_encryption_policy()
+ 	local crypt_util_args=""
+ 	local crypt_util_contents_args=""
+ 	local crypt_util_filename_args=""
++	local expected_identifier
+ 
+ 	shift 2
+ 	for opt; do
+@@ -902,6 +903,18 @@ _verify_ciphertext_for_encryption_policy()
+ 	fi
+ 	local raw_key_hex=$(echo "$raw_key" | tr -d '\\x')
+ 
++	if (( policy_version > 1 )); then
++		echo "Verifying key identifier" >> $seqres.full
++		expected_identifier=$($here/src/fscrypt-crypt-util  \
++				      --dump-key-identifier "$raw_key_hex" \
++				      $crypt_util_args)
++		if [ "$expected_identifier" != "$keyspec" ]; then
++			echo "KEY IDENTIFIER MISMATCH!"
++			echo "    Expected: $expected_identifier"
++			echo "    Actual: $keyspec"
++		fi
++	fi
++
+ 	echo
+ 	echo -e "Verifying ciphertext with parameters:"
+ 	echo -e "\tcontents_encryption_mode: $contents_encryption_mode"
 -- 
 2.35.1
 
