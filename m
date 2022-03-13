@@ -2,106 +2,179 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5DD6AC433F5
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 11 Mar 2022 05:18:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F0D78C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 13 Mar 2022 01:06:40 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1346416AbiCKFTu (ORCPT
+        id S233316AbiCMBHo (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 11 Mar 2022 00:19:50 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:41958 "EHLO
+        Sat, 12 Mar 2022 20:07:44 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36766 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1346387AbiCKFTt (ORCPT
+        with ESMTP id S231147AbiCMBHn (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 11 Mar 2022 00:19:49 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E526A53B40;
-        Thu, 10 Mar 2022 21:18:46 -0800 (PST)
+        Sat, 12 Mar 2022 20:07:43 -0500
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1AF51145E38;
+        Sat, 12 Mar 2022 17:06:37 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 52591B82A78;
-        Fri, 11 Mar 2022 05:18:45 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id A7EA5C340EC;
-        Fri, 11 Mar 2022 05:18:43 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 9F46C60DC6;
+        Sun, 13 Mar 2022 01:06:36 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id F3B1EC340F3;
+        Sun, 13 Mar 2022 01:06:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1646975923;
-        bh=5iTm8AeQHWcspGp/ADW+jMjLy3o3qtcRvAvIkXEZzfg=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=hjo2jWAf5hpi3mLDP7pod3VhSowZ8b9tCqUFwFAGXsH4lLvV8Ji3hQdeQiLrfHvsS
-         zFQhCr2Bp+8DndACGpNH0eC5Nwc/puIVOxbOZMsJYnvDLuWbSDZQ6gJVVL6VKVYVJY
-         UIY/kg3zoYjxc/zzF8heQCT/2rv5Ir3lLOKPIl/OuaMml6Gy1o3jQWkk/7UsSRM5YK
-         ffGGyVJFju0VBTwmtWc7DJBTaYB9vvxsXLp48vOfYFFPPIDmvOWJNkYsy4oabsxCpu
-         /oxkfczBlfSN6h7Y68Lb82OapBKBnM+5iKH32wC9gcOd5/X5ueF08wBiilzvAWxOhz
-         xpvm1FfvWTU2A==
-Date:   Thu, 10 Mar 2022 21:18:42 -0800
+        s=k20201202; t=1647133596;
+        bh=xSWwMaATSOlo0tZ18wM2im1YC+0I7XtkCleyPTUOXE4=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=KIbbAyZlVUwPQlgZ4+NSZ/FEnOTksBOI1IV1qg2wxSAhHNaVp9mj6GZXgsvEsWyAf
+         Ajbu+dLoAOCn9e/oe01r8n+XXKlaZbiaiDU/U1hEsko8WWbg7D2LqsDR8CbspxN8vX
+         GHbCks97u3Mls0XG5oVRPJBYlGPzx7MGXieQr2HVS4R0Ki1jyPavi72zdSPCNjtgay
+         QqyPulnAaIkVcKByCReAEj+zZgiKTVWsI+pQdLLtHfr8ryT6RsAlSHq5lxP+hm4Y7s
+         G4q8hBSrZyl0eGiYqqfmduUEsYPKpN3u8AvIx/QjCkQxQzvUPyuhhfypZYd6UmcxOX
+         MSTMzhpV+8Fog==
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     Bart Van Assche <bvanassche@acm.org>
-Cc:     linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-arm-msm@vger.kernel.org, linux-scsi@vger.kernel.org,
-        kernel-team@android.com,
-        Gaurav Kashyap <quic_gaurkash@quicinc.com>,
-        Israel Rukshin <israelr@nvidia.com>
-Subject: Re: [PATCH v5 3/3] fscrypt: add support for hardware-wrapped keys
-Message-ID: <YirbspMr5CAnlWAC@sol.localdomain>
-References: <20220228070520.74082-1-ebiggers@kernel.org>
- <20220228070520.74082-4-ebiggers@kernel.org>
- <c1da8aec-7bb9-dd88-7500-a09d29bbc1e4@acm.org>
+To:     fstests@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org
+Subject: [PATCH v2 3/5] fscrypt-crypt-util: add support for dumping key identifier
+Date:   Sat, 12 Mar 2022 17:05:57 -0800
+Message-Id: <20220313010559.545995-4-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.35.1
+In-Reply-To: <20220313010559.545995-1-ebiggers@kernel.org>
+References: <20220313010559.545995-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <c1da8aec-7bb9-dd88-7500-a09d29bbc1e4@acm.org>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Mar 03, 2022 at 05:03:10PM -0800, Bart Van Assche wrote:
-> On 2/27/22 23:05, Eric Biggers wrote:
-> > diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
-> > index 9f4428be3e362..884c5bf526a05 100644
-> > --- a/include/uapi/linux/fscrypt.h
-> > +++ b/include/uapi/linux/fscrypt.h
-> > @@ -20,6 +20,7 @@
-> >   #define FSCRYPT_POLICY_FLAG_DIRECT_KEY		0x04
-> >   #define FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64	0x08
-> >   #define FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32	0x10
-> > +#define FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY	0x20
-> >   /* Encryption algorithms */
-> >   #define FSCRYPT_MODE_AES_256_XTS		1
-> > @@ -115,7 +116,7 @@ struct fscrypt_key_specifier {
-> >    */
-> >   struct fscrypt_provisioning_key_payload {
-> >   	__u32 type;
-> > -	__u32 __reserved;
-> > +	__u32 flags;
-> >   	__u8 raw[];
-> >   };
-> > @@ -124,7 +125,9 @@ struct fscrypt_add_key_arg {
-> >   	struct fscrypt_key_specifier key_spec;
-> >   	__u32 raw_size;
-> >   	__u32 key_id;
-> > -	__u32 __reserved[8];
-> > +#define FSCRYPT_ADD_KEY_FLAG_HW_WRAPPED			0x00000001
-> > +	__u32 flags;
-> > +	__u32 __reserved[7];
-> >   	__u8 raw[];
-> >   };
-> 
-> Is it allowed to use _Static_assert() in UAPI header files? There are
-> already some static_assert() checks under include/linux to verify the size
-> of certain data structures. gcc supports _Static_assert() since version 4.6.
-> That is older than the minimum required gcc version to build the kernel.
-> 
+From: Eric Biggers <ebiggers@google.com>
 
-Are you requesting static assertions that verify that the size of each fscrypt
-UAPI struct is a certain value?  Kernel UAPIs generally don't bother with that
-sort of thing, but it does seem like a good idea.  I'll add them as a cleanup,
-but it's orthogonal to this patch series.
+Add an option to fscrypt-crypt-util to make it compute the key
+identifier for the given key.  This will allow testing the correctness
+of the filesystem's key identifier computation.
 
-To answer your direct question, I believe that _Static_assert generally can't be
-used in UAPI header files, as it's a C11 feature and UAPI headers are included
-by arbitrary userspace programs.  These assertions will need to be in
-kernel-only code, either in a kernel-only file such as include/linux/fscrypt.h,
-or in an #ifdef __KERNEL__ section of the UAPI header.  Also, the kernel already
-conventionally uses BUILD_BUG_ON() for static assertions.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ src/fscrypt-crypt-util.c | 51 ++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 46 insertions(+), 5 deletions(-)
 
-- Eric
+diff --git a/src/fscrypt-crypt-util.c b/src/fscrypt-crypt-util.c
+index 124eb23f..ffb9534d 100644
+--- a/src/fscrypt-crypt-util.c
++++ b/src/fscrypt-crypt-util.c
+@@ -46,7 +46,7 @@
+ static void usage(FILE *fp)
+ {
+ 	fputs(
+-"Usage: " PROGRAM_NAME " [OPTION]... CIPHER MASTER_KEY\n"
++"Usage: " PROGRAM_NAME " [OPTION]... [CIPHER | --dump-key-identifier] MASTER_KEY\n"
+ "\n"
+ "Utility for verifying fscrypt-encrypted data.  This program encrypts\n"
+ "(or decrypts) the data on stdin using the given CIPHER with the given\n"
+@@ -66,6 +66,8 @@ static void usage(FILE *fp)
+ "  --decrypt                   Decrypt instead of encrypt\n"
+ "  --direct-key                Use the format where the IVs include the file\n"
+ "                                nonce and the same key is shared across files.\n"
++"  --dump-key-identifier       Instead of encrypting/decrypting data, just\n"
++"                                compute and dump the key identifier.\n"
+ "  --file-nonce=NONCE          File's nonce as a 32-character hex string\n"
+ "  --fs-uuid=UUID              The filesystem UUID as a 32-character hex string.\n"
+ "                                Required for --iv-ino-lblk-32 and\n"
+@@ -1949,11 +1951,38 @@ static void get_key_and_iv(const struct key_and_iv_params *params,
+ 	generate_iv(params, iv);
+ }
+ 
++static void do_dump_key_identifier(const struct key_and_iv_params *params)
++{
++	u8 info[9] = "fscrypt";
++	u8 key_identifier[16];
++	int i;
++
++	info[8] = HKDF_CONTEXT_KEY_IDENTIFIER;
++
++	if (params->kdf != KDF_HKDF_SHA512)
++		die("--dump-key-identifier requires --kdf=HKDF-SHA512");
++	hkdf_sha512(params->master_key, params->master_key_size,
++		    NULL, 0, info, sizeof(info),
++		    key_identifier, sizeof(key_identifier));
++
++	for (i = 0; i < sizeof(key_identifier); i++)
++		printf("%02x", key_identifier[i]);
++}
++
++static void parse_master_key(const char *arg, struct key_and_iv_params *params)
++{
++	params->master_key_size = hex2bin(arg, params->master_key,
++					  MAX_KEY_SIZE);
++	if (params->master_key_size < 0)
++		die("Invalid master_key: %s", arg);
++}
++
+ enum {
+ 	OPT_BLOCK_NUMBER,
+ 	OPT_BLOCK_SIZE,
+ 	OPT_DECRYPT,
+ 	OPT_DIRECT_KEY,
++	OPT_DUMP_KEY_IDENTIFIER,
+ 	OPT_FILE_NONCE,
+ 	OPT_FS_UUID,
+ 	OPT_HELP,
+@@ -1970,6 +1999,7 @@ static const struct option longopts[] = {
+ 	{ "block-size",      required_argument, NULL, OPT_BLOCK_SIZE },
+ 	{ "decrypt",         no_argument,       NULL, OPT_DECRYPT },
+ 	{ "direct-key",      no_argument,       NULL, OPT_DIRECT_KEY },
++	{ "dump-key-identifier", no_argument,   NULL, OPT_DUMP_KEY_IDENTIFIER },
+ 	{ "file-nonce",      required_argument, NULL, OPT_FILE_NONCE },
+ 	{ "fs-uuid",         required_argument, NULL, OPT_FS_UUID },
+ 	{ "help",            no_argument,       NULL, OPT_HELP },
+@@ -1986,6 +2016,7 @@ int main(int argc, char *argv[])
+ {
+ 	size_t block_size = 4096;
+ 	bool decrypting = false;
++	bool dump_key_identifier = false;
+ 	struct key_and_iv_params params;
+ 	size_t padding = 0;
+ 	const struct fscrypt_cipher *cipher;
+@@ -2027,6 +2058,9 @@ int main(int argc, char *argv[])
+ 		case OPT_DIRECT_KEY:
+ 			params.direct_key = true;
+ 			break;
++		case OPT_DUMP_KEY_IDENTIFIER:
++			dump_key_identifier = true;
++			break;
+ 		case OPT_FILE_NONCE:
+ 			if (hex2bin(optarg, params.file_nonce, FILE_NONCE_SIZE)
+ 			    != FILE_NONCE_SIZE)
+@@ -2074,6 +2108,15 @@ int main(int argc, char *argv[])
+ 	argc -= optind;
+ 	argv += optind;
+ 
++	if (dump_key_identifier) {
++		if (argc != 1) {
++			usage(stderr);
++			return 2;
++		}
++		parse_master_key(argv[0], &params);
++		do_dump_key_identifier(&params);
++		return 0;
++	}
+ 	if (argc != 2) {
+ 		usage(stderr);
+ 		return 2;
+@@ -2087,10 +2130,8 @@ int main(int argc, char *argv[])
+ 		die("Block size of %zu bytes is too small for cipher %s",
+ 		    block_size, cipher->name);
+ 
+-	params.master_key_size = hex2bin(argv[1], params.master_key,
+-					 MAX_KEY_SIZE);
+-	if (params.master_key_size < 0)
+-		die("Invalid master_key: %s", argv[1]);
++	parse_master_key(argv[1], &params);
++
+ 	if (params.master_key_size < cipher->keysize)
+ 		die("Master key is too short for cipher %s", cipher->name);
+ 
+-- 
+2.35.1
+
