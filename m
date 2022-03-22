@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7ECE0C433EF
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ABBCCC433FE
 	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Mar 2022 14:15:05 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S237075AbiCVOQ0 (ORCPT
+        id S237367AbiCVOQ3 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 22 Mar 2022 10:16:26 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:52206 "EHLO
+        Tue, 22 Mar 2022 10:16:29 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53128 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S237079AbiCVOPt (ORCPT
+        with ESMTP id S237074AbiCVOPt (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Tue, 22 Mar 2022 10:15:49 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 98A4CB6B;
-        Tue, 22 Mar 2022 07:14:00 -0700 (PDT)
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 78208888FB;
+        Tue, 22 Mar 2022 07:13:56 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 42645B81D07;
-        Tue, 22 Mar 2022 14:13:59 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 3E503C340EE;
-        Tue, 22 Mar 2022 14:13:57 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 5DA26B81D0A;
+        Tue, 22 Mar 2022 14:13:55 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 79FA1C340F0;
+        Tue, 22 Mar 2022 14:13:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1647958437;
-        bh=TFpslucr0MvoQQPC3IwpQcVR+/+2Tk10A5LMcyCYzX4=;
+        s=k20201202; t=1647958434;
+        bh=Jdo7TCIyxtvQPJ+hlH539+vzhWTksO54inwqu739lNU=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Yte3rpwSe7jJQr8qVXO7JxNoibm2rZUQXJAbWVM+R0poPaXwAjprY0B6BJ1m9KJNt
-         +CFAWqJdgzUdx4muKgDvS5pWddtwy54+piEjWwqaITlvjXLipkQbLJBaYZMFUW/7jf
-         ZLQYphoVT3CctnIaabGhx7MvqIvLwo0H4f8rGLYsSj5auu2y+cbWkwMAJTO8Uz9Atn
-         EtlT8sFSdO8maB0xOQY3G21+X0qbU9cC7BEoXQKMjOL13SXVd/3M4NWXHKWoBuhLz2
-         k6I2Kx1e4kTSbpOUO7gG3dh3zWSjc46WuWpyIR3wOw3Coe4MlV5EiRt87rLcfGh3Oe
-         dL4+XI72r8X9g==
+        b=Usn78BtD+5jU+rMIipQlLpV462vDFrEeSRLTSE1mp+WZo/3eLNB2NmWg5tj6enP1M
+         rBgapmGed7LxS60M/OCnVVs5My6a8+GUxBbgDIAr82aH0m1GGojaGbJ1QzcNQ/WdqC
+         pKs3qnjmF2ryt2zpACRnI48N7UShMov+zuEROHdn/qR4RFyQhJqWc+i+AHJu7pEuMI
+         su+s+RygBI05gvKDgL+IkyRvUK/A1NJJ1floWvVyvZELDqFStJlyCkq/U7hSoo39KW
+         zD/byntNJ/bcsL7RiwhBCoe8YPY7ALrUbleVLksFcv/DVWL6Qb3VChQqSmOklE+bYX
+         sF1Ldu4Ba2HYA==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [RFC PATCH v11 41/51] libceph: allow ceph_osdc_new_request to accept a multi-op read
-Date:   Tue, 22 Mar 2022 10:13:06 -0400
-Message-Id: <20220322141316.41325-42-jlayton@kernel.org>
+Subject: [RFC PATCH v11 37/51] ceph: add __ceph_sync_read helper support
+Date:   Tue, 22 Mar 2022 10:13:02 -0400
+Message-Id: <20220322141316.41325-38-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220322141316.41325-1-jlayton@kernel.org>
 References: <20220322141316.41325-1-jlayton@kernel.org>
@@ -50,60 +50,102 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Currently we have some special-casing for multi-op writes, but in the
-case of a read, we can't really handle it. All of the current multi-op
-callers call it with CEPH_OSD_FLAG_WRITE set.
+From: Xiubo Li <xiubli@redhat.com>
 
-Have ceph_osdc_new_request check for CEPH_OSD_FLAG_READ and if it's set,
-allocate multiple reply ops instead of multiple request ops. If neither
-flag is set, return -EINVAL.
+Turn the guts of ceph_sync_read into a new helper that takes an inode
+and an offset instead of a kiocb struct, and make ceph_sync_read call
+the helper as a wrapper.
 
+Signed-off-by: Xiubo Li <xiubli@redhat.com>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- net/ceph/osd_client.c | 27 +++++++++++++++++++++------
- 1 file changed, 21 insertions(+), 6 deletions(-)
+ fs/ceph/file.c  | 33 +++++++++++++++++++++------------
+ fs/ceph/super.h |  2 ++
+ 2 files changed, 23 insertions(+), 12 deletions(-)
 
-diff --git a/net/ceph/osd_client.c b/net/ceph/osd_client.c
-index b67c56ddade7..5df1450cd30f 100644
---- a/net/ceph/osd_client.c
-+++ b/net/ceph/osd_client.c
-@@ -1130,15 +1130,30 @@ struct ceph_osd_request *ceph_osdc_new_request(struct ceph_osd_client *osdc,
- 	if (flags & CEPH_OSD_FLAG_WRITE)
- 		req->r_data_offset = off;
+diff --git a/fs/ceph/file.c b/fs/ceph/file.c
+index df790317bedb..0e91ae995f78 100644
+--- a/fs/ceph/file.c
++++ b/fs/ceph/file.c
+@@ -923,22 +923,19 @@ enum {
+  * If we get a short result from the OSD, check against i_size; we need to
+  * only return a short read to the caller if we hit EOF.
+  */
+-static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
+-			      int *retry_op)
++ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
++			 struct iov_iter *to, int *retry_op)
+ {
+-	struct file *file = iocb->ki_filp;
+-	struct inode *inode = file_inode(file);
+ 	struct ceph_inode_info *ci = ceph_inode(inode);
+ 	struct ceph_fs_client *fsc = ceph_inode_to_client(inode);
+ 	struct ceph_osd_client *osdc = &fsc->client->osdc;
+ 	ssize_t ret;
+-	u64 off = iocb->ki_pos;
++	u64 off = *ki_pos;
+ 	u64 len = iov_iter_count(to);
+ 	u64 i_size = i_size_read(inode);
+ 	bool sparse = ceph_test_mount_opt(fsc, SPARSEREAD);
  
--	if (num_ops > 1)
-+	if (num_ops > 1) {
-+		int num_req_ops, num_rep_ops;
-+
- 		/*
--		 * This is a special case for ceph_writepages_start(), but it
--		 * also covers ceph_uninline_data().  If more multi-op request
--		 * use cases emerge, we will need a separate helper.
-+		 * If this is a multi-op write request, assume that we'll need
-+		 * request ops. If it's a multi-op read then assume we'll need
-+		 * reply ops. Anything else and call it -EINVAL.
- 		 */
--		r = __ceph_osdc_alloc_messages(req, GFP_NOFS, num_ops, 0);
--	else
-+		if (flags & CEPH_OSD_FLAG_WRITE) {
-+			num_req_ops = num_ops;
-+			num_rep_ops = 0;
-+		} else if (flags & CEPH_OSD_FLAG_READ) {
-+			num_req_ops = 0;
-+			num_rep_ops = num_ops;
-+		} else {
-+			r = -EINVAL;
-+			goto fail;
-+		}
-+
-+		r = __ceph_osdc_alloc_messages(req, GFP_NOFS, num_req_ops,
-+					       num_rep_ops);
-+	} else {
- 		r = ceph_osdc_alloc_messages(req, GFP_NOFS);
-+	}
- 	if (r)
- 		goto fail;
+-	dout("sync_read on file %p %llu~%u %s\n", file, off, (unsigned)len,
+-	     (file->f_flags & O_DIRECT) ? "O_DIRECT" : "");
++	dout("sync_read on inode %p %llx~%llx\n", inode, *ki_pos, len);
  
+ 	if (!len)
+ 		return 0;
+@@ -1057,14 +1054,14 @@ static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
+ 			break;
+ 	}
+ 
+-	if (off > iocb->ki_pos) {
++	if (off > *ki_pos) {
+ 		if (off >= i_size) {
+ 			*retry_op = CHECK_EOF;
+-			ret = i_size - iocb->ki_pos;
+-			iocb->ki_pos = i_size;
++			ret = i_size - *ki_pos;
++			*ki_pos = i_size;
+ 		} else {
+-			ret = off - iocb->ki_pos;
+-			iocb->ki_pos = off;
++			ret = off - *ki_pos;
++			*ki_pos = off;
+ 		}
+ 	}
+ 
+@@ -1072,6 +1069,18 @@ static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
+ 	return ret;
+ }
+ 
++static ssize_t ceph_sync_read(struct kiocb *iocb, struct iov_iter *to,
++			      int *retry_op)
++{
++	struct file *file = iocb->ki_filp;
++	struct inode *inode = file_inode(file);
++
++	dout("sync_read on file %p %llx~%zx %s\n", file, iocb->ki_pos,
++	     iov_iter_count(to), (file->f_flags & O_DIRECT) ? "O_DIRECT" : "");
++
++	return __ceph_sync_read(inode, &iocb->ki_pos, to, retry_op);
++}
++
+ struct ceph_aio_request {
+ 	struct kiocb *iocb;
+ 	size_t total_len;
+diff --git a/fs/ceph/super.h b/fs/ceph/super.h
+index fef4cda44861..339284e90cb3 100644
+--- a/fs/ceph/super.h
++++ b/fs/ceph/super.h
+@@ -1266,6 +1266,8 @@ extern int ceph_renew_caps(struct inode *inode, int fmode);
+ extern int ceph_open(struct inode *inode, struct file *file);
+ extern int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
+ 			    struct file *file, unsigned flags, umode_t mode);
++extern ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
++				struct iov_iter *to, int *retry_op);
+ extern int ceph_release(struct inode *inode, struct file *filp);
+ extern void ceph_fill_inline_data(struct inode *inode, struct page *locked_page,
+ 				  char *data, size_t len);
 -- 
 2.35.1
 
