@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4AF6CC433EF
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Mar 2022 14:15:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CB40EC433FE
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Mar 2022 14:15:51 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S237270AbiCVORL (ORCPT
+        id S237526AbiCVORQ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 22 Mar 2022 10:17:11 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50792 "EHLO
+        Tue, 22 Mar 2022 10:17:16 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51506 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S236456AbiCVOPD (ORCPT
+        with ESMTP id S236427AbiCVOPC (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 22 Mar 2022 10:15:03 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 938F313F56;
-        Tue, 22 Mar 2022 07:13:34 -0700 (PDT)
+        Tue, 22 Mar 2022 10:15:02 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 786767EA03;
+        Tue, 22 Mar 2022 07:13:30 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 0F050615B3;
-        Tue, 22 Mar 2022 14:13:34 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id C0E10C340F0;
-        Tue, 22 Mar 2022 14:13:32 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 06330B81BBA;
+        Tue, 22 Mar 2022 14:13:29 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1E31FC340EE;
+        Tue, 22 Mar 2022 14:13:27 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1647958413;
-        bh=3sKIx0wg/bXMtXRTudbxxlY6mSrUeCIfS3+6P2XzOUI=;
+        s=k20201202; t=1647958407;
+        bh=2MNpUfarQg/2Uu3lT5jQdRPXKkKOlLyKc/i360see5Y=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=XzITViuuJX9qedzZnw+jmdKJETBUMWny0NY8pjZ+yQ5vQOihzU0NnCZu4H2JcYoOp
-         6yKz8fJO65tk4XiqZnOhzlmFmTWcrJ3AL54YeM79ljdRimiccyw0bJpGijM6WiAeHm
-         X0+cO88But+10Z0eQUEu9gn6DXOk+o8TiqcX2ULivjsqmkKkeUd+JX6NnkjNw/ybZR
-         sv30gLqK2hrsTCIqnI/kLtLMDGK7s/h9SCTm0IYvJZu2R9SpqNlxkZivoL6QJiyvLY
-         khvnaJ6Xj+7MYlcIorniyDbJnppXkQdL4kdddGkaKr/zldDrLtgWlUJaoDLP247uGX
-         AjqpMCXNPSFZg==
+        b=o0J/xyLQT1BsSHTd4XL8IJd1RN4sVZR72hJ35SzTLFLLMWmwhNWSsQs8wM4dECtMa
+         jw+7jcVummor7Ulwbn2XFmdOxyGLfikeC0lafoIQUJBMU8VuhD8kVYxOjSVmA3D0Y/
+         lIi8vLqy1CQiOgI/KRiCMVSBpo9YTe3pla/e9ARIKQpi8tKDcmwgqsPNdEBhDWGWGc
+         3EASpKLGNDLQ87IGUQsSLE3Uo5JOUbnAfoQetDI4iU6xkqm8jTUene6K30GKSnq+Ko
+         LC6aQmXzF1tWD0Pk7MafPWN2u+E9mc7HmSiE0iPE8Z5nRlNf9rlI7dG3b5CURQ1tYR
+         pHQ493E+SmHcw==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [RFC PATCH v11 15/51] ceph: add encrypted fname handling to ceph_mdsc_build_path
-Date:   Tue, 22 Mar 2022 10:12:40 -0400
-Message-Id: <20220322141316.41325-16-jlayton@kernel.org>
+Subject: [RFC PATCH v11 09/51] ceph: add ability to set fscrypt_auth via setattr
+Date:   Tue, 22 Mar 2022 10:12:34 -0400
+Message-Id: <20220322141316.41325-10-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220322141316.41325-1-jlayton@kernel.org>
 References: <20220322141316.41325-1-jlayton@kernel.org>
@@ -50,283 +50,325 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Allow ceph_mdsc_build_path to encrypt and base64 encode the filename
-when the parent is encrypted and we're sending the path to the MDS.
-
-In most cases, we just encrypt the filenames and base64 encode them,
-but when the name is longer than CEPH_NOHASH_NAME_MAX, we use a similar
-scheme to fscrypt proper, and hash the remaning bits with sha256.
-
-When doing this, we then send along the full crypttext of the name in
-the new alternate_name field of the MClientRequest. The MDS can then
-send that along in readdir responses and traces.
+Allow the client to use a setattr request for setting the fscrypt_auth
+field. Since this is not a standard setattr request from the VFS, we add
+a new field to __ceph_setattr that carries ceph-specific inode attrs.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/crypto.c     | 47 ++++++++++++++++++++++++++
- fs/ceph/crypto.h     | 32 ++++++++++++++++++
- fs/ceph/mds_client.c | 80 ++++++++++++++++++++++++++++++++++----------
- 3 files changed, 141 insertions(+), 18 deletions(-)
+ fs/ceph/acl.c                |  4 +--
+ fs/ceph/crypto.h             |  9 +++++-
+ fs/ceph/inode.c              | 42 ++++++++++++++++++++++++++--
+ fs/ceph/mds_client.c         | 54 ++++++++++++++++++++++++++++++------
+ fs/ceph/mds_client.h         |  3 ++
+ fs/ceph/super.h              |  7 ++++-
+ include/linux/ceph/ceph_fs.h | 21 ++++++++------
+ 7 files changed, 117 insertions(+), 23 deletions(-)
 
-diff --git a/fs/ceph/crypto.c b/fs/ceph/crypto.c
-index 017f31eacb74..3e3b12cd3413 100644
---- a/fs/ceph/crypto.c
-+++ b/fs/ceph/crypto.c
-@@ -127,3 +127,50 @@ void ceph_fscrypt_as_ctx_to_req(struct ceph_mds_request *req, struct ceph_acl_se
- {
- 	swap(req->r_fscrypt_auth, as->fscrypt_auth);
- }
-+
-+int ceph_encode_encrypted_fname(const struct inode *parent, struct dentry *dentry, char *buf)
-+{
-+	u32 len;
-+	int elen;
-+	int ret;
-+	u8 *cryptbuf;
-+
-+	WARN_ON_ONCE(!fscrypt_has_encryption_key(parent));
-+
-+	/*
-+	 * Convert cleartext d_name to ciphertext. If result is longer than
-+	 * CEPH_NOHASH_NAME_MAX, sha256 the remaining bytes
-+	 *
-+	 * See: fscrypt_setup_filename
-+	 */
-+	if (!fscrypt_fname_encrypted_size(parent, dentry->d_name.len, NAME_MAX, &len))
-+		return -ENAMETOOLONG;
-+
-+	/* Allocate a buffer appropriate to hold the result */
-+	cryptbuf = kmalloc(len > CEPH_NOHASH_NAME_MAX ? NAME_MAX : len, GFP_KERNEL);
-+	if (!cryptbuf)
-+		return -ENOMEM;
-+
-+	ret = fscrypt_fname_encrypt(parent, &dentry->d_name, cryptbuf, len);
-+	if (ret) {
-+		kfree(cryptbuf);
-+		return ret;
-+	}
-+
-+	/* hash the end if the name is long enough */
-+	if (len > CEPH_NOHASH_NAME_MAX) {
-+		u8 hash[SHA256_DIGEST_SIZE];
-+		u8 *extra = cryptbuf + CEPH_NOHASH_NAME_MAX;
-+
-+		/* hash the extra bytes and overwrite crypttext beyond that point with it */
-+		sha256(extra, len - CEPH_NOHASH_NAME_MAX, hash);
-+		memcpy(extra, hash, SHA256_DIGEST_SIZE);
-+		len = CEPH_NOHASH_NAME_MAX + SHA256_DIGEST_SIZE;
-+	}
-+
-+	/* base64 encode the encrypted name */
-+	elen = fscrypt_base64url_encode(cryptbuf, len, buf);
-+	kfree(cryptbuf);
-+	dout("base64-encoded ciphertext name = %.*s\n", elen, buf);
-+	return elen;
-+}
+diff --git a/fs/ceph/acl.c b/fs/ceph/acl.c
+index f4fc8e0b847c..427724c36316 100644
+--- a/fs/ceph/acl.c
++++ b/fs/ceph/acl.c
+@@ -139,7 +139,7 @@ int ceph_set_acl(struct user_namespace *mnt_userns, struct inode *inode,
+ 		newattrs.ia_ctime = current_time(inode);
+ 		newattrs.ia_mode = new_mode;
+ 		newattrs.ia_valid = ATTR_MODE | ATTR_CTIME;
+-		ret = __ceph_setattr(inode, &newattrs);
++		ret = __ceph_setattr(inode, &newattrs, NULL);
+ 		if (ret)
+ 			goto out_free;
+ 	}
+@@ -150,7 +150,7 @@ int ceph_set_acl(struct user_namespace *mnt_userns, struct inode *inode,
+ 			newattrs.ia_ctime = old_ctime;
+ 			newattrs.ia_mode = old_mode;
+ 			newattrs.ia_valid = ATTR_MODE | ATTR_CTIME;
+-			__ceph_setattr(inode, &newattrs);
++			__ceph_setattr(inode, &newattrs, NULL);
+ 		}
+ 		goto out_free;
+ 	}
 diff --git a/fs/ceph/crypto.h b/fs/ceph/crypto.h
-index cb00fe42d5b7..9a66a29d5c8b 100644
+index 6c3831c57c8d..6dca674f79b8 100644
 --- a/fs/ceph/crypto.h
 +++ b/fs/ceph/crypto.h
-@@ -6,6 +6,7 @@
- #ifndef _CEPH_CRYPTO_H
- #define _CEPH_CRYPTO_H
+@@ -14,8 +14,15 @@ struct ceph_fscrypt_auth {
+ 	u8	cfa_blob[FSCRYPT_SET_CONTEXT_MAX_SIZE];
+ } __packed;
  
-+#include <crypto/sha2.h>
- #include <linux/fscrypt.h>
- 
- struct ceph_fs_client;
-@@ -27,6 +28,30 @@ static inline u32 ceph_fscrypt_auth_len(struct ceph_fscrypt_auth *fa)
- }
- 
- #ifdef CONFIG_FS_ENCRYPTION
-+/*
-+ * We want to encrypt filenames when creating them, but the encrypted
-+ * versions of those names may have illegal characters in them. To mitigate
-+ * that, we base64 encode them, but that gives us a result that can exceed
-+ * NAME_MAX.
-+ *
-+ * Follow a similar scheme to fscrypt itself, and cap the filename to a
-+ * smaller size. If the ciphertext name is longer than the value below, then
-+ * sha256 hash the remaining bytes.
-+ *
-+ * For the fscrypt_nokey_name struct the dirhash[2] member is useless in ceph
-+ * so the corresponding struct will be:
-+ *
-+ * struct fscrypt_ceph_nokey_name {
-+ *	u8 bytes[157];
-+ *	u8 sha256[SHA256_DIGEST_SIZE];
-+ * }; // 189 bytes => 252 bytes base64-encoded, which is <= NAME_MAX (255)
-+ *
-+ * Note that for long names that end up having their tail portion hashed, we
-+ * must also store the full encrypted name (in the dentry's alternate_name
-+ * field).
-+ */
-+#define CEPH_NOHASH_NAME_MAX (189 - SHA256_DIGEST_SIZE)
+-#ifdef CONFIG_FS_ENCRYPTION
+ #define CEPH_FSCRYPT_AUTH_VERSION	1
++static inline u32 ceph_fscrypt_auth_len(struct ceph_fscrypt_auth *fa)
++{
++	u32 ctxsize = le32_to_cpu(fa->cfa_blob_len);
 +
++	return offsetof(struct ceph_fscrypt_auth, cfa_blob) + ctxsize;
++}
++
++#ifdef CONFIG_FS_ENCRYPTION
  void ceph_fscrypt_set_ops(struct super_block *sb);
  
- void ceph_fscrypt_free_dummy_policy(struct ceph_fs_client *fsc);
-@@ -34,6 +59,7 @@ void ceph_fscrypt_free_dummy_policy(struct ceph_fs_client *fsc);
- int ceph_fscrypt_prepare_context(struct inode *dir, struct inode *inode,
- 				 struct ceph_acl_sec_ctx *as);
- void ceph_fscrypt_as_ctx_to_req(struct ceph_mds_request *req, struct ceph_acl_sec_ctx *as);
-+int ceph_encode_encrypted_fname(const struct inode *parent, struct dentry *dentry, char *buf);
- 
  #else /* CONFIG_FS_ENCRYPTION */
+diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
+index 2c9a482444e0..c52625f4b5f4 100644
+--- a/fs/ceph/inode.c
++++ b/fs/ceph/inode.c
+@@ -2096,7 +2096,7 @@ static const struct inode_operations ceph_symlink_iops = {
+ 	.listxattr = ceph_listxattr,
+ };
  
-@@ -57,6 +83,12 @@ static inline void ceph_fscrypt_as_ctx_to_req(struct ceph_mds_request *req,
- 						struct ceph_acl_sec_ctx *as_ctx)
+-int __ceph_setattr(struct inode *inode, struct iattr *attr)
++int __ceph_setattr(struct inode *inode, struct iattr *attr, struct ceph_iattr *cia)
  {
- }
-+
-+static inline int ceph_encode_encrypted_fname(const struct inode *parent,
-+						struct dentry *dentry, char *buf)
-+{
-+	return -EOPNOTSUPP;
-+}
- #endif /* CONFIG_FS_ENCRYPTION */
- 
- #endif
-diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
-index d12b1bfb2d29..ff80f09fbc12 100644
---- a/fs/ceph/mds_client.c
-+++ b/fs/ceph/mds_client.c
-@@ -14,6 +14,7 @@
- #include <linux/bitmap.h>
- 
- #include "super.h"
-+#include "crypto.h"
- #include "mds_client.h"
- #include "crypto.h"
- 
-@@ -2385,18 +2386,27 @@ static inline  u64 __get_oldest_tid(struct ceph_mds_client *mdsc)
- 	return mdsc->oldest_tid;
- }
- 
--/*
-- * Build a dentry's path.  Allocate on heap; caller must kfree.  Based
-- * on build_path_from_dentry in fs/cifs/dir.c.
-+/**
-+ * ceph_mdsc_build_path - build a path string to a given dentry
-+ * @dentry: dentry to which path should be built
-+ * @plen: returned length of string
-+ * @pbase: returned base inode number
-+ * @for_wire: is this path going to be sent to the MDS?
-+ *
-+ * Build a string that represents the path to the dentry. This is mostly called
-+ * for two different purposes:
-  *
-- * If @stop_on_nosnap, generate path relative to the first non-snapped
-- * inode.
-+ * 1) we need to build a path string to send to the MDS (for_wire == true)
-+ * 2) we need a path string for local presentation (e.g. debugfs) (for_wire == false)
-+ *
-+ * The path is built in reverse, starting with the dentry. Walk back up toward
-+ * the root, building the path until the first non-snapped inode is reached (for_wire)
-+ * or the root inode is reached (!for_wire).
-  *
-  * Encode hidden .snap dirs as a double /, i.e.
-  *   foo/.snap/bar -> foo//bar
-  */
--char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
--			   int stop_on_nosnap)
-+char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase, int for_wire)
- {
- 	struct dentry *cur;
- 	struct inode *inode;
-@@ -2418,30 +2428,65 @@ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
- 	seq = read_seqbegin(&rename_lock);
- 	cur = dget(dentry);
- 	for (;;) {
--		struct dentry *temp;
-+		struct dentry *parent;
- 
- 		spin_lock(&cur->d_lock);
- 		inode = d_inode(cur);
- 		if (inode && ceph_snap(inode) == CEPH_SNAPDIR) {
- 			dout("build_path path+%d: %p SNAPDIR\n",
- 			     pos, cur);
--		} else if (stop_on_nosnap && inode && dentry != cur &&
--			   ceph_snap(inode) == CEPH_NOSNAP) {
-+			spin_unlock(&cur->d_lock);
-+			parent = dget_parent(cur);
-+		} else if (for_wire && inode && dentry != cur && ceph_snap(inode) == CEPH_NOSNAP) {
- 			spin_unlock(&cur->d_lock);
- 			pos++; /* get rid of any prepended '/' */
- 			break;
--		} else {
-+		} else if (!for_wire || !IS_ENCRYPTED(d_inode(cur->d_parent))) {
- 			pos -= cur->d_name.len;
- 			if (pos < 0) {
- 				spin_unlock(&cur->d_lock);
- 				break;
- 			}
- 			memcpy(path + pos, cur->d_name.name, cur->d_name.len);
-+			spin_unlock(&cur->d_lock);
-+			parent = dget_parent(cur);
-+		} else {
-+			int len, ret;
-+			char buf[NAME_MAX];
-+
-+			/*
-+			 * Proactively copy name into buf, in case we need to present
-+			 * it as-is.
-+			 */
-+			memcpy(buf, cur->d_name.name, cur->d_name.len);
-+			len = cur->d_name.len;
-+			spin_unlock(&cur->d_lock);
-+			parent = dget_parent(cur);
-+
-+			ret = __fscrypt_prepare_readdir(d_inode(parent));
-+			if (ret < 0) {
-+				dput(parent);
-+				dput(cur);
-+				return ERR_PTR(ret);
-+			}
-+
-+			if (fscrypt_has_encryption_key(d_inode(parent))) {
-+				len = ceph_encode_encrypted_fname(d_inode(parent), cur, buf);
-+				if (len < 0) {
-+					dput(parent);
-+					dput(cur);
-+					return ERR_PTR(len);
-+				}
-+			}
-+			pos -= len;
-+			if (pos < 0) {
-+				dput(parent);
-+				break;
-+			}
-+			memcpy(path + pos, buf, len);
- 		}
--		temp = cur;
--		spin_unlock(&temp->d_lock);
--		cur = dget_parent(temp);
--		dput(temp);
-+		dput(cur);
-+		cur = parent;
- 
- 		/* Are we at the root? */
- 		if (IS_ROOT(cur))
-@@ -2465,8 +2510,7 @@ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
- 		 * A rename didn't occur, but somehow we didn't end up where
- 		 * we thought we would. Throw a warning and try again.
- 		 */
--		pr_warn("build_path did not end path lookup where "
--			"expected, pos is %d\n", pos);
-+		pr_warn("build_path did not end path lookup where expected (pos = %d)\n", pos);
- 		goto retry;
+ 	struct ceph_inode_info *ci = ceph_inode(inode);
+ 	unsigned int ia_valid = attr->ia_valid;
+@@ -2136,6 +2136,43 @@ int __ceph_setattr(struct inode *inode, struct iattr *attr)
  	}
  
-@@ -2486,7 +2530,7 @@ static int build_dentry_path(struct dentry *dentry, struct inode *dir,
- 	rcu_read_lock();
- 	if (!dir)
- 		dir = d_inode_rcu(dentry->d_parent);
--	if (dir && parent_locked && ceph_snap(dir) == CEPH_NOSNAP) {
-+	if (dir && parent_locked && ceph_snap(dir) == CEPH_NOSNAP && !IS_ENCRYPTED(dir)) {
- 		*pino = ceph_ino(dir);
- 		rcu_read_unlock();
- 		*ppath = dentry->d_name.name;
+ 	dout("setattr %p issued %s\n", inode, ceph_cap_string(issued));
++#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
++	if (cia && cia->fscrypt_auth) {
++		u32 len = ceph_fscrypt_auth_len(cia->fscrypt_auth);
++
++		if (len > sizeof(*cia->fscrypt_auth)) {
++			err = -EINVAL;
++			spin_unlock(&ci->i_ceph_lock);
++			goto out;
++		}
++
++		dout("setattr %llx:%llx fscrypt_auth len %u to %u)\n",
++			ceph_vinop(inode), ci->fscrypt_auth_len, len);
++
++		/* It should never be re-set once set */
++		WARN_ON_ONCE(ci->fscrypt_auth);
++
++		if (issued & CEPH_CAP_AUTH_EXCL) {
++			dirtied |= CEPH_CAP_AUTH_EXCL;
++			kfree(ci->fscrypt_auth);
++			ci->fscrypt_auth = (u8 *)cia->fscrypt_auth;
++			ci->fscrypt_auth_len = len;
++		} else if ((issued & CEPH_CAP_AUTH_SHARED) == 0 ||
++			   ci->fscrypt_auth_len != len ||
++			   memcmp(ci->fscrypt_auth, cia->fscrypt_auth, len)) {
++			req->r_fscrypt_auth = cia->fscrypt_auth;
++			mask |= CEPH_SETATTR_FSCRYPT_AUTH;
++			release |= CEPH_CAP_AUTH_SHARED;
++		}
++		cia->fscrypt_auth = NULL;
++	}
++#else
++	if (cia && cia->fscrypt_auth) {
++		err = -EINVAL;
++		spin_unlock(&ci->i_ceph_lock);
++		goto out;
++	}
++#endif /* CONFIG_FS_ENCRYPTION */
+ 
+ 	if (ia_valid & ATTR_UID) {
+ 		dout("setattr %p uid %d -> %d\n", inode,
+@@ -2298,6 +2335,7 @@ int __ceph_setattr(struct inode *inode, struct iattr *attr)
+ 		req->r_stamp = attr->ia_ctime;
+ 		err = ceph_mdsc_do_request(mdsc, NULL, req);
+ 	}
++out:
+ 	dout("setattr %p result=%d (%s locally, %d remote)\n", inode, err,
+ 	     ceph_cap_string(dirtied), mask);
+ 
+@@ -2338,7 +2376,7 @@ int ceph_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
+ 	    ceph_quota_is_max_bytes_exceeded(inode, attr->ia_size))
+ 		return -EDQUOT;
+ 
+-	err = __ceph_setattr(inode, attr);
++	err = __ceph_setattr(inode, attr, NULL);
+ 
+ 	if (err >= 0 && (attr->ia_valid & ATTR_MODE))
+ 		err = posix_acl_chmod(&init_user_ns, inode, attr->ia_mode);
+diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
+index 8e7ef76d80ea..648816eb4228 100644
+--- a/fs/ceph/mds_client.c
++++ b/fs/ceph/mds_client.c
+@@ -15,6 +15,7 @@
+ 
+ #include "super.h"
+ #include "mds_client.h"
++#include "crypto.h"
+ 
+ #include <linux/ceph/ceph_features.h>
+ #include <linux/ceph/messenger.h>
+@@ -946,6 +947,7 @@ void ceph_mdsc_release_request(struct kref *kref)
+ 	put_cred(req->r_cred);
+ 	if (req->r_pagelist)
+ 		ceph_pagelist_release(req->r_pagelist);
++	kfree(req->r_fscrypt_auth);
+ 	put_request_session(req);
+ 	ceph_unreserve_caps(req->r_mdsc, &req->r_caps_reservation);
+ 	WARN_ON_ONCE(!list_empty(&req->r_wait));
+@@ -2526,8 +2528,7 @@ static int set_request_path_attr(struct inode *rinode, struct dentry *rdentry,
+ 	return r;
+ }
+ 
+-static void encode_timestamp_and_gids(void **p,
+-				      const struct ceph_mds_request *req)
++static void encode_mclientrequest_tail(void **p, const struct ceph_mds_request *req)
+ {
+ 	struct ceph_timespec ts;
+ 	int i;
+@@ -2540,6 +2541,20 @@ static void encode_timestamp_and_gids(void **p,
+ 	for (i = 0; i < req->r_cred->group_info->ngroups; i++)
+ 		ceph_encode_64(p, from_kgid(&init_user_ns,
+ 					    req->r_cred->group_info->gid[i]));
++
++	/* v5: altname (TODO: skip for now) */
++	ceph_encode_32(p, 0);
++
++	/* v6: fscrypt_auth and fscrypt_file */
++	if (req->r_fscrypt_auth) {
++		u32 authlen = ceph_fscrypt_auth_len(req->r_fscrypt_auth);
++
++		ceph_encode_32(p, authlen);
++		ceph_encode_copy(p, req->r_fscrypt_auth, authlen);
++	} else {
++		ceph_encode_32(p, 0);
++	}
++	ceph_encode_32(p, 0); // fscrypt_file for now
+ }
+ 
+ /*
+@@ -2584,12 +2599,14 @@ static struct ceph_msg *create_request_message(struct ceph_mds_session *session,
+ 		goto out_free1;
+ 	}
+ 
++	/* head */
+ 	len = legacy ? sizeof(*head) : sizeof(struct ceph_mds_request_head);
+-	len += pathlen1 + pathlen2 + 2*(1 + sizeof(u32) + sizeof(u64)) +
+-		sizeof(struct ceph_timespec);
+-	len += sizeof(u32) + (sizeof(u64) * req->r_cred->group_info->ngroups);
+ 
+-	/* calculate (max) length for cap releases */
++	/* filepaths */
++	len += 2 * (1 + sizeof(u32) + sizeof(u64));
++	len += pathlen1 + pathlen2;
++
++	/* cap releases */
+ 	len += sizeof(struct ceph_mds_request_release) *
+ 		(!!req->r_inode_drop + !!req->r_dentry_drop +
+ 		 !!req->r_old_inode_drop + !!req->r_old_dentry_drop);
+@@ -2599,6 +2616,25 @@ static struct ceph_msg *create_request_message(struct ceph_mds_session *session,
+ 	if (req->r_old_dentry_drop)
+ 		len += pathlen2;
+ 
++	/* MClientRequest tail */
++
++	/* req->r_stamp */
++	len += sizeof(struct ceph_timespec);
++
++	/* gid list */
++	len += sizeof(u32) + (sizeof(u64) * req->r_cred->group_info->ngroups);
++
++	/* alternate name */
++	len += sizeof(u32);	// TODO
++
++	/* fscrypt_auth */
++	len += sizeof(u32); // fscrypt_auth
++	if (req->r_fscrypt_auth)
++		len += ceph_fscrypt_auth_len(req->r_fscrypt_auth);
++
++	/* fscrypt_file */
++	len += sizeof(u32);
++
+ 	msg = ceph_msg_new2(CEPH_MSG_CLIENT_REQUEST, len, 1, GFP_NOFS, false);
+ 	if (!msg) {
+ 		msg = ERR_PTR(-ENOMEM);
+@@ -2618,7 +2654,7 @@ static struct ceph_msg *create_request_message(struct ceph_mds_session *session,
+ 	} else {
+ 		struct ceph_mds_request_head *new_head = msg->front.iov_base;
+ 
+-		msg->hdr.version = cpu_to_le16(4);
++		msg->hdr.version = cpu_to_le16(6);
+ 		new_head->version = cpu_to_le16(CEPH_MDS_REQUEST_HEAD_VERSION);
+ 		head = (struct ceph_mds_request_head_old *)&new_head->oldest_client_tid;
+ 		p = msg->front.iov_base + sizeof(*new_head);
+@@ -2669,7 +2705,7 @@ static struct ceph_msg *create_request_message(struct ceph_mds_session *session,
+ 
+ 	head->num_releases = cpu_to_le16(releases);
+ 
+-	encode_timestamp_and_gids(&p, req);
++	encode_mclientrequest_tail(&p, req);
+ 
+ 	if (WARN_ON_ONCE(p > end)) {
+ 		ceph_msg_put(msg);
+@@ -2778,7 +2814,7 @@ static int __prepare_send_request(struct ceph_mds_session *session,
+ 		rhead->num_releases = 0;
+ 
+ 		p = msg->front.iov_base + req->r_request_release_offset;
+-		encode_timestamp_and_gids(&p, req);
++		encode_mclientrequest_tail(&p, req);
+ 
+ 		msg->front.iov_len = p - msg->front.iov_base;
+ 		msg->hdr.front_len = cpu_to_le32(msg->front.iov_len);
+diff --git a/fs/ceph/mds_client.h b/fs/ceph/mds_client.h
+index 96d726ee5250..aab3ab284fce 100644
+--- a/fs/ceph/mds_client.h
++++ b/fs/ceph/mds_client.h
+@@ -284,6 +284,9 @@ struct ceph_mds_request {
+ 	struct mutex r_fill_mutex;
+ 
+ 	union ceph_mds_request_args r_args;
++
++	struct ceph_fscrypt_auth *r_fscrypt_auth;
++
+ 	int r_fmode;        /* file mode, if expecting cap */
+ 	int r_request_release_offset;
+ 	const struct cred *r_cred;
+diff --git a/fs/ceph/super.h b/fs/ceph/super.h
+index e12e5b484564..b05ae8899a1a 100644
+--- a/fs/ceph/super.h
++++ b/fs/ceph/super.h
+@@ -1052,7 +1052,12 @@ static inline int ceph_do_getattr(struct inode *inode, int mask, bool force)
+ }
+ extern int ceph_permission(struct user_namespace *mnt_userns,
+ 			   struct inode *inode, int mask);
+-extern int __ceph_setattr(struct inode *inode, struct iattr *attr);
++
++struct ceph_iattr {
++	struct ceph_fscrypt_auth	*fscrypt_auth;
++};
++
++extern int __ceph_setattr(struct inode *inode, struct iattr *attr, struct ceph_iattr *cia);
+ extern int ceph_setattr(struct user_namespace *mnt_userns,
+ 			struct dentry *dentry, struct iattr *attr);
+ extern int ceph_getattr(struct user_namespace *mnt_userns,
+diff --git a/include/linux/ceph/ceph_fs.h b/include/linux/ceph/ceph_fs.h
+index 86bf82dbd8b8..2810b214fa3f 100644
+--- a/include/linux/ceph/ceph_fs.h
++++ b/include/linux/ceph/ceph_fs.h
+@@ -359,14 +359,19 @@ enum {
+ 
+ extern const char *ceph_mds_op_name(int op);
+ 
+-
+-#define CEPH_SETATTR_MODE   1
+-#define CEPH_SETATTR_UID    2
+-#define CEPH_SETATTR_GID    4
+-#define CEPH_SETATTR_MTIME  8
+-#define CEPH_SETATTR_ATIME 16
+-#define CEPH_SETATTR_SIZE  32
+-#define CEPH_SETATTR_CTIME 64
++#define CEPH_SETATTR_MODE              (1 << 0)
++#define CEPH_SETATTR_UID               (1 << 1)
++#define CEPH_SETATTR_GID               (1 << 2)
++#define CEPH_SETATTR_MTIME             (1 << 3)
++#define CEPH_SETATTR_ATIME             (1 << 4)
++#define CEPH_SETATTR_SIZE              (1 << 5)
++#define CEPH_SETATTR_CTIME             (1 << 6)
++#define CEPH_SETATTR_MTIME_NOW         (1 << 7)
++#define CEPH_SETATTR_ATIME_NOW         (1 << 8)
++#define CEPH_SETATTR_BTIME             (1 << 9)
++#define CEPH_SETATTR_KILL_SGUID        (1 << 10)
++#define CEPH_SETATTR_FSCRYPT_AUTH      (1 << 11)
++#define CEPH_SETATTR_FSCRYPT_FILE      (1 << 12)
+ 
+ /*
+  * Ceph setxattr request flags.
 -- 
 2.35.1
 
