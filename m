@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 34929C433FE
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Mar 2022 14:15:20 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 56A3BC433EF
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Mar 2022 14:15:32 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S237479AbiCVOQo (ORCPT
+        id S236582AbiCVOPP (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 22 Mar 2022 10:16:44 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53520 "EHLO
+        Tue, 22 Mar 2022 10:15:15 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50670 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S237237AbiCVOQK (ORCPT
+        with ESMTP id S236474AbiCVOPI (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 22 Mar 2022 10:16:10 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 060075EDCF;
-        Tue, 22 Mar 2022 07:14:06 -0700 (PDT)
+        Tue, 22 Mar 2022 10:15:08 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B1A63B5B;
+        Tue, 22 Mar 2022 07:13:40 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 3070561604;
-        Tue, 22 Mar 2022 14:14:04 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id E3C11C340EC;
-        Tue, 22 Mar 2022 14:14:02 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 632BCB81CFB;
+        Tue, 22 Mar 2022 14:13:39 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 79C81C340EE;
+        Tue, 22 Mar 2022 14:13:37 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1647958443;
-        bh=e+oOV9jSgG9m9f5wAlr9642Rk7E1Wa3hgaprHfDb/dg=;
+        s=k20201202; t=1647958418;
+        bh=lJtYp4YF5XEmdB7kK8sq8DEt9pC8dp6Fe46c9JOFrDs=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=oTzgcWJFNV4LI9X30f4Ftw7KG01r5h7CqR2bX0DZS4dtX4EcBOuNA7eW/FARmGwkf
-         mPvz649l/RpgEcmqGXHtLSrAgJZz6FScJ1+q8h+XQ2nQqMNZWHpQefVs2L5YsXVQBv
-         LkF3faVI+mqbOKZBCJm1UUWj6yyfk722+F2HarnuIu4jORw7XVJDcSTyFfe1Brp6yl
-         aKWkeUXReToYwpT3uX1D9kiuVx7fwN+HXoAWg9Y1d7eN0LG4QpeZNYs2ODp5KlHaGm
-         yWl9q3LqWYT7RIc+8Gx32FO54lsiu60nGyu+PDr+VdJjOEXz2lkmNRSoz1ILCG5ErO
-         DtyjBy4y9t2hQ==
+        b=WJKhwYF0QQ/rNWJOS/fHwWUthc1LxW+3ZoJj356KjwZ4QLgqjKlnzzzsBjrWj8hdT
+         FqAs8aqM3u/iOUpgYiLonrzmnYYm9XTFmwL/WwvNVwSCz5KYw3M0MtzU96PabdPqLT
+         M56XlSXd5Rf9ilMqye7teE4fOBDRvk1zyMFs0+z9RVafzCNxDkxirEv8JkzRWEg2xF
+         FyB6wL+is8kAfFUjpYPEQ5TJ6jWu6GY1edt+rRae16wg0+nlWfrk9gPSNbnQWS/OuR
+         DY9M/GKySqfPhgKTXInWSq+WhhLVR3+wWYM7AywIm3JU8SDRPZh765IwlIDj2gbdUS
+         UiCGdmEKqPv8g==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [RFC PATCH v11 47/51] ceph: plumb in decryption during sync reads
-Date:   Tue, 22 Mar 2022 10:13:12 -0400
-Message-Id: <20220322141316.41325-48-jlayton@kernel.org>
+Subject: [RFC PATCH v11 20/51] ceph: add helpers for converting names for userland presentation
+Date:   Tue, 22 Mar 2022 10:12:45 -0400
+Message-Id: <20220322141316.41325-21-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220322141316.41325-1-jlayton@kernel.org>
 References: <20220322141316.41325-1-jlayton@kernel.org>
@@ -50,177 +50,167 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Switch to using sparse reads when the inode is encrypted.
-
-Note that the crypto block may be smaller than a page, but the reverse
-cannot be true.
+Define a new ceph_fname struct that we can use to carry information
+about encrypted dentry names. Add helpers for working with these
+objects, including ceph_fname_to_usr which formats an encrypted filename
+for userland presentation.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/file.c | 89 ++++++++++++++++++++++++++++++++++++--------------
- 1 file changed, 65 insertions(+), 24 deletions(-)
+ fs/ceph/crypto.c | 76 ++++++++++++++++++++++++++++++++++++++++++++++++
+ fs/ceph/crypto.h | 41 ++++++++++++++++++++++++++
+ 2 files changed, 117 insertions(+)
 
-diff --git a/fs/ceph/file.c b/fs/ceph/file.c
-index 19d5c50f60df..eb04dc8f1f93 100644
---- a/fs/ceph/file.c
-+++ b/fs/ceph/file.c
-@@ -934,7 +934,7 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 	u64 off = *ki_pos;
- 	u64 len = iov_iter_count(to);
- 	u64 i_size = i_size_read(inode);
--	bool sparse = ceph_test_mount_opt(fsc, SPARSEREAD);
-+	bool sparse = IS_ENCRYPTED(inode) || ceph_test_mount_opt(fsc, SPARSEREAD);
- 	u64 objver = 0;
- 
- 	dout("sync_read on inode %p %llx~%llx\n", inode, *ki_pos, len);
-@@ -962,10 +962,19 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 		int idx;
- 		size_t left;
- 		struct ceph_osd_req_op *op;
-+		u64 read_off = off;
-+		u64 read_len = len;
+diff --git a/fs/ceph/crypto.c b/fs/ceph/crypto.c
+index 3e3b12cd3413..86de8483032f 100644
+--- a/fs/ceph/crypto.c
++++ b/fs/ceph/crypto.c
+@@ -174,3 +174,79 @@ int ceph_encode_encrypted_fname(const struct inode *parent, struct dentry *dentr
+ 	dout("base64-encoded ciphertext name = %.*s\n", elen, buf);
+ 	return elen;
+ }
 +
-+		/* determine new offset/length if encrypted */
-+		ceph_fscrypt_adjust_off_and_len(inode, &read_off, &read_len);
++/**
++ * ceph_fname_to_usr - convert a filename for userland presentation
++ * @fname: ceph_fname to be converted
++ * @tname: temporary name buffer to use for conversion (may be NULL)
++ * @oname: where converted name should be placed
++ * @is_nokey: set to true if key wasn't available during conversion (may be NULL)
++ *
++ * Given a filename (usually from the MDS), format it for presentation to
++ * userland. If @parent is not encrypted, just pass it back as-is.
++ *
++ * Otherwise, base64 decode the string, and then ask fscrypt to format it
++ * for userland presentation.
++ *
++ * Returns 0 on success or negative error code on error.
++ */
++int ceph_fname_to_usr(const struct ceph_fname *fname, struct fscrypt_str *tname,
++		      struct fscrypt_str *oname, bool *is_nokey)
++{
++	int ret;
++	struct fscrypt_str _tname = FSTR_INIT(NULL, 0);
++	struct fscrypt_str iname;
 +
-+		dout("sync_read orig %llu~%llu reading %llu~%llu",
-+		     off, len, read_off, read_len);
- 
- 		req = ceph_osdc_new_request(osdc, &ci->i_layout,
--					ci->i_vino, off, &len, 0, 1,
--					sparse ? CEPH_OSD_OP_SPARSE_READ : CEPH_OSD_OP_READ,
-+					ci->i_vino, read_off, &read_len, 0, 1,
-+					sparse ? CEPH_OSD_OP_SPARSE_READ :
-+						 CEPH_OSD_OP_READ,
- 					CEPH_OSD_FLAG_READ,
- 					NULL, ci->i_truncate_seq,
- 					ci->i_truncate_size, false);
-@@ -974,10 +983,13 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 			break;
- 		}
- 
-+		/* adjust len downward if the request truncated the len */
-+		if (off + len > read_off + read_len)
-+			len = read_off + read_len - off;
- 		more = len < iov_iter_count(to);
- 
--		num_pages = calc_pages_for(off, len);
--		page_off = off & ~PAGE_MASK;
-+		num_pages = calc_pages_for(read_off, read_len);
-+		page_off = offset_in_page(off);
- 		pages = ceph_alloc_page_vector(num_pages, GFP_KERNEL);
- 		if (IS_ERR(pages)) {
- 			ceph_osdc_put_request(req);
-@@ -985,7 +997,8 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 			break;
- 		}
- 
--		osd_req_op_extent_osd_data_pages(req, 0, pages, len, page_off,
-+		osd_req_op_extent_osd_data_pages(req, 0, pages, read_len,
-+						 offset_in_page(read_off),
- 						 false, false);
- 
- 		op = &req->r_ops[0];
-@@ -1004,7 +1017,7 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 		ceph_update_read_metrics(&fsc->mdsc->metric,
- 					 req->r_start_latency,
- 					 req->r_end_latency,
--					 len, ret);
-+					 read_len, ret);
- 
- 		if (ret > 0)
- 			objver = req->r_version;
-@@ -1019,8 +1032,34 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 		else if (ret == -ENOENT)
- 			ret = 0;
- 
-+		if (ret > 0 && IS_ENCRYPTED(inode)) {
-+			int fret;
++	if (!IS_ENCRYPTED(fname->dir)) {
++		oname->name = fname->name;
++		oname->len = fname->name_len;
++		return 0;
++	}
 +
-+			fret = ceph_fscrypt_decrypt_extents(inode, pages, read_off,
-+					op->extent.sparse_ext, op->extent.sparse_ext_cnt);
-+			if (fret < 0) {
-+				ret = fret;
-+				ceph_osdc_put_request(req);
-+				break;
-+			}
++	/* Sanity check that the resulting name will fit in the buffer */
++	if (fname->name_len > FSCRYPT_BASE64URL_CHARS(NAME_MAX))
++		return -EIO;
 +
-+			/* account for any partial block at the beginning */
-+			fret -= (off - read_off);
++	ret = __fscrypt_prepare_readdir(fname->dir);
++	if (ret)
++		return ret;
 +
-+			/*
-+			 * Short read after big offset adjustment?
-+			 * Nothing is usable, just call it a zero
-+			 * len read.
-+			 */
-+			fret = max(fret, 0);
++	/*
++	 * Use the raw dentry name as sent by the MDS instead of
++	 * generating a nokey name via fscrypt.
++	 */
++	if (!fscrypt_has_encryption_key(fname->dir)) {
++		memcpy(oname->name, fname->name, fname->name_len);
++		oname->len = fname->name_len;
++		if (is_nokey)
++			*is_nokey = true;
++		return 0;
++	}
 +
-+			/* account for partial block at the end */
-+			ret = min_t(ssize_t, fret, len);
++	if (fname->ctext_len == 0) {
++		int declen;
++
++		if (!tname) {
++			ret = fscrypt_fname_alloc_buffer(NAME_MAX, &_tname);
++			if (ret)
++				return ret;
++			tname = &_tname;
 +		}
 +
- 		ceph_osdc_put_request(req);
- 
-+		/* Short read but not EOF? Zero out the remainder. */
- 		if (ret >= 0 && ret < len && (off + ret < i_size)) {
- 			int zlen = min(len - ret, i_size - off - ret);
- 			int zoff = page_off + ret;
-@@ -1034,15 +1073,16 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 		idx = 0;
- 		left = ret > 0 ? ret : 0;
- 		while (left > 0) {
--			size_t len, copied;
--			page_off = off & ~PAGE_MASK;
--			len = min_t(size_t, left, PAGE_SIZE - page_off);
-+			size_t plen, copied;
-+
-+			plen = min_t(size_t, left, PAGE_SIZE - page_off);
- 			SetPageUptodate(pages[idx]);
- 			copied = copy_page_to_iter(pages[idx++],
--						   page_off, len, to);
-+						   page_off, plen, to);
- 			off += copied;
- 			left -= copied;
--			if (copied < len) {
-+			page_off = 0;
-+			if (copied < plen) {
- 				ret = -EFAULT;
- 				break;
- 			}
-@@ -1059,20 +1099,21 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 			break;
- 	}
- 
--	if (off > *ki_pos) {
--		if (off >= i_size) {
--			*retry_op = CHECK_EOF;
--			ret = i_size - *ki_pos;
--			*ki_pos = i_size;
--		} else {
--			ret = off - *ki_pos;
--			*ki_pos = off;
-+	if (ret > 0) {
-+		if (off > *ki_pos) {
-+			if (off >= i_size) {
-+				*retry_op = CHECK_EOF;
-+				ret = i_size - *ki_pos;
-+				*ki_pos = i_size;
-+			} else {
-+				ret = off - *ki_pos;
-+				*ki_pos = off;
-+			}
- 		}
--	}
--
--	if (last_objver && ret > 0)
--		*last_objver = objver;
- 
-+		if (last_objver)
-+			*last_objver = objver;
++		declen = fscrypt_base64url_decode(fname->name, fname->name_len, tname->name);
++		if (declen <= 0) {
++			ret = -EIO;
++			goto out;
++		}
++		iname.name = tname->name;
++		iname.len = declen;
++	} else {
++		iname.name = fname->ctext;
++		iname.len = fname->ctext_len;
 +	}
- 	dout("sync_read result %zd retry_op %d\n", ret, *retry_op);
- 	return ret;
++
++	ret = fscrypt_fname_disk_to_usr(fname->dir, 0, 0, &iname, oname);
++out:
++	fscrypt_fname_free_buffer(&_tname);
++	return ret;
++}
+diff --git a/fs/ceph/crypto.h b/fs/ceph/crypto.h
+index 9a66a29d5c8b..7e56aded5124 100644
+--- a/fs/ceph/crypto.h
++++ b/fs/ceph/crypto.h
+@@ -13,6 +13,14 @@ struct ceph_fs_client;
+ struct ceph_acl_sec_ctx;
+ struct ceph_mds_request;
+ 
++struct ceph_fname {
++	struct inode	*dir;
++	char		*name;		// b64 encoded, possibly hashed
++	unsigned char	*ctext;		// binary crypttext (if any)
++	u32		name_len;	// length of name buffer
++	u32		ctext_len;	// length of crypttext
++};
++
+ struct ceph_fscrypt_auth {
+ 	__le32	cfa_version;
+ 	__le32	cfa_blob_len;
+@@ -61,6 +69,22 @@ int ceph_fscrypt_prepare_context(struct inode *dir, struct inode *inode,
+ void ceph_fscrypt_as_ctx_to_req(struct ceph_mds_request *req, struct ceph_acl_sec_ctx *as);
+ int ceph_encode_encrypted_fname(const struct inode *parent, struct dentry *dentry, char *buf);
+ 
++static inline int ceph_fname_alloc_buffer(struct inode *parent, struct fscrypt_str *fname)
++{
++	if (!IS_ENCRYPTED(parent))
++		return 0;
++	return fscrypt_fname_alloc_buffer(NAME_MAX, fname);
++}
++
++static inline void ceph_fname_free_buffer(struct inode *parent, struct fscrypt_str *fname)
++{
++	if (IS_ENCRYPTED(parent))
++		fscrypt_fname_free_buffer(fname);
++}
++
++int ceph_fname_to_usr(const struct ceph_fname *fname, struct fscrypt_str *tname,
++			struct fscrypt_str *oname, bool *is_nokey);
++
+ #else /* CONFIG_FS_ENCRYPTION */
+ 
+ static inline void ceph_fscrypt_set_ops(struct super_block *sb)
+@@ -89,6 +113,23 @@ static inline int ceph_encode_encrypted_fname(const struct inode *parent,
+ {
+ 	return -EOPNOTSUPP;
  }
++
++static inline int ceph_fname_alloc_buffer(struct inode *parent, struct fscrypt_str *fname)
++{
++	return 0;
++}
++
++static inline void ceph_fname_free_buffer(struct inode *parent, struct fscrypt_str *fname)
++{
++}
++
++static inline int ceph_fname_to_usr(const struct ceph_fname *fname, struct fscrypt_str *tname,
++				    struct fscrypt_str *oname, bool *is_nokey)
++{
++	oname->name = fname->name;
++	oname->len = fname->name_len;
++	return 0;
++}
+ #endif /* CONFIG_FS_ENCRYPTION */
+ 
+ #endif
 -- 
 2.35.1
 
