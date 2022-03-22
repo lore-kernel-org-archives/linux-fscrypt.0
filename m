@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 8B191C433FE
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Mar 2022 14:14:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id ABFFFC433F5
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 22 Mar 2022 14:14:56 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232273AbiCVOQO (ORCPT
+        id S237086AbiCVOQS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 22 Mar 2022 10:16:14 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56434 "EHLO
+        Tue, 22 Mar 2022 10:16:18 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55018 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S237164AbiCVOQI (ORCPT
+        with ESMTP id S237087AbiCVOPu (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 22 Mar 2022 10:16:08 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id F172389302;
+        Tue, 22 Mar 2022 10:15:50 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 09F0C88B16;
         Tue, 22 Mar 2022 07:14:01 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 4C7E8B81D08;
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 57D9361617;
+        Tue, 22 Mar 2022 14:14:01 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1ACACC340EE;
         Tue, 22 Mar 2022 14:14:00 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 2EF5EC36AE5;
-        Tue, 22 Mar 2022 14:13:58 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1647958438;
-        bh=fIQCTp9Y7kfKaBrUj+OULhWKUXCgvBtogiNxMmypJws=;
+        s=k20201202; t=1647958440;
+        bh=/gxeEbNRrhQUUKat+3pmAKrCE5MwF5L1g1xQKvPeLuE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Z8b3GxtRc+f0w14hNQIndEdzTWQr8sRPgEBnpilcVyborBSQaEiS+2lfZHn7wnYVE
-         9/bV9NONU1+AFuak6jcuuRK4fAZ5u8YIhbm4svks5f0Mg6jK60UggUs0zd52W7Xudf
-         fG9KVC9N0SmJOtpGPxg2US4l870QJTH0Pdy2lt4P4mRMNPuVL/ZTzpZFjTNwgOm4Vz
-         UDBb1kOk8Nz9dnNqFSsBILPAepfakUK1Nwxv0tPl4Vp9HjC0W7itvxyjghTP0mL9y/
-         LQODQudqtI8Y5zXsHQJ8OJOIX+/N1HOp3wqC6zC/VfiV9jJEgzKLwJOnscPu22wK/C
-         N1Eu/bCIDhmcQ==
+        b=MukAyGxPuQ9w/fFYYg1FiprSCI4ckndR1qX/Hjika5sBjMMrWImc6LxFp6q7RoXxV
+         FJTOakYzd8cACm/Y8FVHuEhzwbcUWG7TEeKAMEBdSUhQx86c8T4JHoEzj9x97dBT+q
+         8CoEQaQotc9OepA1AlIowb3oky9atZDhiOhuMChdwNnpy9niCGfaTp0501ytonAR/z
+         Gp3tPE/10rjxE2D2RlgWnOCjPZhqpz345gvdKazwm6znFqF3nuVfxx7E2PjPi4jBdJ
+         JwhfXmty6BFFd8xlN04cGicnt/ffYU8WQdrbMCFWmWUDrgIvtw0iJvsAWTeeha9/I+
+         /YVuxnDeGudJA==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [RFC PATCH v11 42/51] ceph: disable fallocate for encrypted inodes
-Date:   Tue, 22 Mar 2022 10:13:07 -0400
-Message-Id: <20220322141316.41325-43-jlayton@kernel.org>
+Subject: [RFC PATCH v11 44/51] ceph: don't use special DIO path for encrypted inodes
+Date:   Tue, 22 Mar 2022 10:13:09 -0400
+Message-Id: <20220322141316.41325-45-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220322141316.41325-1-jlayton@kernel.org>
 References: <20220322141316.41325-1-jlayton@kernel.org>
@@ -50,27 +50,39 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-...hopefully, just for now.
+Eventually I want to merge the synchronous and direct read codepaths,
+possibly via new netfs infrastructure. For now, the direct path is not
+crypto-enabled, so use the sync read/write paths instead.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/file.c | 3 +++
- 1 file changed, 3 insertions(+)
+ fs/ceph/file.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/fs/ceph/file.c b/fs/ceph/file.c
-index 1985e3102533..00e6a5bc37c8 100644
+index ba17288b1db3..5a637158f9c5 100644
 --- a/fs/ceph/file.c
 +++ b/fs/ceph/file.c
-@@ -2203,6 +2203,9 @@ static long ceph_fallocate(struct file *file, int mode,
- 	if (!S_ISREG(inode->i_mode))
- 		return -EOPNOTSUPP;
+@@ -1705,7 +1705,9 @@ static ssize_t ceph_read_iter(struct kiocb *iocb, struct iov_iter *to)
+ 		     ceph_cap_string(got));
  
-+	if (IS_ENCRYPTED(inode))
-+		return -EOPNOTSUPP;
-+
- 	prealloc_cf = ceph_alloc_cap_flush();
- 	if (!prealloc_cf)
- 		return -ENOMEM;
+ 		if (ci->i_inline_version == CEPH_INLINE_NONE) {
+-			if (!retry_op && (iocb->ki_flags & IOCB_DIRECT)) {
++			if (!retry_op &&
++			    (iocb->ki_flags & IOCB_DIRECT) &&
++			    !IS_ENCRYPTED(inode)) {
+ 				ret = ceph_direct_read_write(iocb, to,
+ 							     NULL, NULL);
+ 				if (ret >= 0 && ret < len)
+@@ -1931,7 +1933,7 @@ static ssize_t ceph_write_iter(struct kiocb *iocb, struct iov_iter *from)
+ 
+ 		/* we might need to revert back to that point */
+ 		data = *from;
+-		if (iocb->ki_flags & IOCB_DIRECT)
++		if ((iocb->ki_flags & IOCB_DIRECT) && !IS_ENCRYPTED(inode))
+ 			written = ceph_direct_read_write(iocb, &data, snapc,
+ 							 &prealloc_cf);
+ 		else
 -- 
 2.35.1
 
