@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D504AC433F5
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BEDC6C433EF
 	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:09 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1345325AbiDFFPL (ORCPT
+        id S1348675AbiDFFOv (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:15:11 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37376 "EHLO
+        Wed, 6 Apr 2022 01:14:51 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38256 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573584AbiDETXF (ORCPT
+        with ESMTP id S1573598AbiDETXS (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:23:05 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3584A4A910;
-        Tue,  5 Apr 2022 12:21:06 -0700 (PDT)
+        Tue, 5 Apr 2022 15:23:18 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id BF0664F45F;
+        Tue,  5 Apr 2022 12:21:19 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id C9B9C61899;
-        Tue,  5 Apr 2022 19:21:05 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 91C0BC385A3;
-        Tue,  5 Apr 2022 19:21:04 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 666ADB81FAA;
+        Tue,  5 Apr 2022 19:21:18 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 5EA4AC385A3;
+        Tue,  5 Apr 2022 19:21:16 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186465;
-        bh=z6i7+1naGRJ17oSoDdDmMlOtJ7LJFiXxSfJ3S7KoaqU=;
+        s=k20201202; t=1649186477;
+        bh=PJPyqDK6DNMW9F+5wYxGCw3ywIqwNAhCuh2XTGubQow=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=RiQdlvTzhjRwJP6Mzz9TVIY8iE/q/hyXdo9g0rYao26aQZ1bdfKyHo0pqS6F14EzI
-         ZXz4qCi4F2Gq9w+c/tqyiN3WVqfsLbQnm5lb6Ahhu5O34fp1IQ/uZhnjUmIJtYFVc2
-         6DYDq4dqvi57kRsSE6E3RKRqP6EzO3tdm9tIQoxo2ypRSlnf58h2UXm3/aVDKuQjUr
-         2f9my0R6nk11CuVC6dGcHEWAfex93Y/5WoVfxiBprna+/TwpIIa84GLl6HL2qr1mke
-         XF8yl3o6S+ZwgNGiRIbVP1awnZnjxEVq64YkI6shrd0CtpjCZ+IANo8V+1G1rBu3JP
-         53BgivWs/Bwlw==
+        b=VHTfVfFNYI9LHTiG9Bs4cHcpNr/9s3fqIqPmOWNKMB1wC8auyB8ll+7SfvqJDzli0
+         p7l6gtLT6OhJIUYKuj4e7XSoW89v0ZaG99pNkDGtaDadVuh8y00onEOiEp4vMEAITt
+         8V5ko5nOrVYSOYoov7SNqVS+wbgtmhJc+ZCWcarhMC3wmHeFlWoAnjK3e5UJfCInxr
+         6VlQumLqW7w+HwyzsO1tOPPsCXvZArTVj9Vsi9eRrEq/OAy2W9CSl6RBTeh17jRHvm
+         K/QhiYNL3uFmt6BGHGtIjAQ3C8zCztTq+KBh1CjsEqVU7o6TqPUsNOwcEGtGZF1Oi6
+         c5bPPW9kHlBEw==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [PATCH v13 36/59] ceph: add some fscrypt guardrails
-Date:   Tue,  5 Apr 2022 15:20:07 -0400
-Message-Id: <20220405192030.178326-37-jlayton@kernel.org>
+Subject: [PATCH v13 49/59] libceph: allow ceph_osdc_new_request to accept a multi-op read
+Date:   Tue,  5 Apr 2022 15:20:20 -0400
+Message-Id: <20220405192030.178326-50-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,90 +50,60 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add the appropriate calls into fscrypt for various actions, including
-link, rename, setattr, and the open codepaths.
+Currently we have some special-casing for multi-op writes, but in the
+case of a read, we can't really handle it. All of the current multi-op
+callers call it with CEPH_OSD_FLAG_WRITE set.
+
+Have ceph_osdc_new_request check for CEPH_OSD_FLAG_READ and if it's set,
+allocate multiple reply ops instead of multiple request ops. If neither
+flag is set, return -EINVAL.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/dir.c   |  8 ++++++++
- fs/ceph/file.c  | 14 +++++++++++++-
- fs/ceph/inode.c |  4 ++++
- 3 files changed, 25 insertions(+), 1 deletion(-)
+ net/ceph/osd_client.c | 27 +++++++++++++++++++++------
+ 1 file changed, 21 insertions(+), 6 deletions(-)
 
-diff --git a/fs/ceph/dir.c b/fs/ceph/dir.c
-index 82a5f37e9d4a..8a9f916bfc6c 100644
---- a/fs/ceph/dir.c
-+++ b/fs/ceph/dir.c
-@@ -1121,6 +1121,10 @@ static int ceph_link(struct dentry *old_dentry, struct inode *dir,
- 	if (ceph_snap(dir) != CEPH_NOSNAP)
- 		return -EROFS;
+diff --git a/net/ceph/osd_client.c b/net/ceph/osd_client.c
+index febdd728b2fb..39d38b69a953 100644
+--- a/net/ceph/osd_client.c
++++ b/net/ceph/osd_client.c
+@@ -1130,15 +1130,30 @@ struct ceph_osd_request *ceph_osdc_new_request(struct ceph_osd_client *osdc,
+ 	if (flags & CEPH_OSD_FLAG_WRITE)
+ 		req->r_data_offset = off;
  
-+	err = fscrypt_prepare_link(old_dentry, dir, dentry);
-+	if (err)
-+		return err;
+-	if (num_ops > 1)
++	if (num_ops > 1) {
++		int num_req_ops, num_rep_ops;
 +
- 	dout("link in dir %p old_dentry %p dentry %p\n", dir,
- 	     old_dentry, dentry);
- 	req = ceph_mdsc_create_request(mdsc, CEPH_MDS_OP_LINK, USE_AUTH_MDS);
-@@ -1318,6 +1322,10 @@ static int ceph_rename(struct user_namespace *mnt_userns, struct inode *old_dir,
- 	    (!ceph_quota_is_same_realm(old_dir, new_dir)))
- 		return -EXDEV;
- 
-+	err = fscrypt_prepare_rename(old_dir, old_dentry, new_dir, new_dentry, flags);
-+	if (err)
-+		return err;
-+
- 	dout("rename dir %p dentry %p to dir %p dentry %p\n",
- 	     old_dir, old_dentry, new_dir, new_dentry);
- 	req = ceph_mdsc_create_request(mdsc, op, USE_AUTH_MDS);
-diff --git a/fs/ceph/file.c b/fs/ceph/file.c
-index dfc02caf4229..a3afdb9cfddb 100644
---- a/fs/ceph/file.c
-+++ b/fs/ceph/file.c
-@@ -372,8 +372,13 @@ int ceph_open(struct inode *inode, struct file *file)
- 
- 	/* filter out O_CREAT|O_EXCL; vfs did that already.  yuck. */
- 	flags = file->f_flags & ~(O_CREAT|O_EXCL);
--	if (S_ISDIR(inode->i_mode))
-+	if (S_ISDIR(inode->i_mode)) {
- 		flags = O_DIRECTORY;  /* mds likes to know */
-+	} else if (S_ISREG(inode->i_mode)) {
-+		err = fscrypt_file_open(inode, file);
-+		if (err)
-+			return err;
-+	}
- 
- 	dout("open inode %p ino %llx.%llx file %p flags %d (%d)\n", inode,
- 	     ceph_vinop(inode), file, flags, file->f_flags);
-@@ -847,6 +852,13 @@ int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
- 		dout("atomic_open finish_no_open on dn %p\n", dn);
- 		err = finish_no_open(file, dn);
- 	} else {
-+		if (IS_ENCRYPTED(dir) &&
-+		    !fscrypt_has_permitted_context(dir, d_inode(dentry))) {
-+			pr_warn("Inconsistent encryption context (parent %llx:%llx child %llx:%llx)\n",
-+				ceph_vinop(dir), ceph_vinop(d_inode(dentry)));
-+			goto out_req;
+ 		/*
+-		 * This is a special case for ceph_writepages_start(), but it
+-		 * also covers ceph_uninline_data().  If more multi-op request
+-		 * use cases emerge, we will need a separate helper.
++		 * If this is a multi-op write request, assume that we'll need
++		 * request ops. If it's a multi-op read then assume we'll need
++		 * reply ops. Anything else and call it -EINVAL.
+ 		 */
+-		r = __ceph_osdc_alloc_messages(req, GFP_NOFS, num_ops, 0);
+-	else
++		if (flags & CEPH_OSD_FLAG_WRITE) {
++			num_req_ops = num_ops;
++			num_rep_ops = 0;
++		} else if (flags & CEPH_OSD_FLAG_READ) {
++			num_req_ops = 0;
++			num_rep_ops = num_ops;
++		} else {
++			r = -EINVAL;
++			goto fail;
 +		}
 +
- 		dout("atomic_open finish_open on dn %p\n", dn);
- 		if (req->r_op == CEPH_MDS_OP_CREATE && req->r_reply_info.has_create_ino) {
- 			struct inode *newino = d_inode(dentry);
-diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
-index bb1b1a57970c..183b9f52dc7d 100644
---- a/fs/ceph/inode.c
-+++ b/fs/ceph/inode.c
-@@ -2487,6 +2487,10 @@ int ceph_setattr(struct user_namespace *mnt_userns, struct dentry *dentry,
- 	if (ceph_inode_is_shutdown(inode))
- 		return -ESTALE;
++		r = __ceph_osdc_alloc_messages(req, GFP_NOFS, num_req_ops,
++					       num_rep_ops);
++	} else {
+ 		r = ceph_osdc_alloc_messages(req, GFP_NOFS);
++	}
+ 	if (r)
+ 		goto fail;
  
-+	err = fscrypt_prepare_setattr(dentry, attr);
-+	if (err)
-+		return err;
-+
- 	err = setattr_prepare(&init_user_ns, dentry, attr);
- 	if (err != 0)
- 		return err;
 -- 
 2.35.1
 
