@@ -2,153 +2,180 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DDF67C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 28 Mar 2022 13:51:21 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 29B53C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  5 Apr 2022 02:18:46 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S243494AbiC1NxB (ORCPT
+        id S229648AbiDECUl (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 28 Mar 2022 09:53:01 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37824 "EHLO
+        Mon, 4 Apr 2022 22:20:41 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54802 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S243495AbiC1NxA (ORCPT
+        with ESMTP id S229628AbiDECUl (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 28 Mar 2022 09:53:00 -0400
-Received: from mx0a-001b2d01.pphosted.com (mx0b-001b2d01.pphosted.com [148.163.158.5])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3DD855EBEB;
-        Mon, 28 Mar 2022 06:51:18 -0700 (PDT)
-Received: from pps.filterd (m0098413.ppops.net [127.0.0.1])
-        by mx0b-001b2d01.pphosted.com (8.16.1.2/8.16.1.2) with SMTP id 22SDIID9013485;
-        Mon, 28 Mar 2022 13:51:08 GMT
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=message-id : subject :
- from : to : cc : date : in-reply-to : references : content-type :
- mime-version : content-transfer-encoding; s=pp1;
- bh=pr6D/jbd4lK0qyeCKzWTrtA5NkWr9yYSeGF6wt9w0lg=;
- b=nwI9w/Ew6yo8vLrscTHGMKI9xfdxGTFFWQoBmQocesNdw2JEw9ssABQg+O1xVqDaNbYy
- p2v3G4jd5f/aLQBV49tN+0UPTehXrebc3GFBeTaVWejzS03GPFPjXubqicuJ3h4Q70KL
- yYlv+vAYikdmImV9enkOuW9qG29h0spLp7PNsC5077j8TeuF0qkR54izO/6BBttTUZvp
- FReUDLmuNvl0pPpdU21eDp8UJCI/GnzzBvE9uCeNF+xh2fyRwgpFMFUSCWpZaO8pT4Z/
- LQlkyy1O5TTcDVtvHEghUPXJQlA/09Kfrdv7eu4ozHb9Tv240QSK5f4hgtwp9/N4rLox ZQ== 
-Received: from pps.reinject (localhost [127.0.0.1])
-        by mx0b-001b2d01.pphosted.com with ESMTP id 3f3dsngn76-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Mon, 28 Mar 2022 13:51:08 +0000
-Received: from m0098413.ppops.net (m0098413.ppops.net [127.0.0.1])
-        by pps.reinject (8.16.0.43/8.16.0.43) with SMTP id 22SDg5wt019333;
-        Mon, 28 Mar 2022 13:51:08 GMT
-Received: from ppma04ams.nl.ibm.com (63.31.33a9.ip4.static.sl-reverse.com [169.51.49.99])
-        by mx0b-001b2d01.pphosted.com with ESMTP id 3f3dsngn6r-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Mon, 28 Mar 2022 13:51:07 +0000
-Received: from pps.filterd (ppma04ams.nl.ibm.com [127.0.0.1])
-        by ppma04ams.nl.ibm.com (8.16.1.2/8.16.1.2) with SMTP id 22SDhaa7013419;
-        Mon, 28 Mar 2022 13:51:06 GMT
-Received: from b06cxnps4076.portsmouth.uk.ibm.com (d06relay13.portsmouth.uk.ibm.com [9.149.109.198])
-        by ppma04ams.nl.ibm.com with ESMTP id 3f1tf8v3hc-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Mon, 28 Mar 2022 13:51:06 +0000
-Received: from d06av24.portsmouth.uk.ibm.com (mk.ibm.com [9.149.105.60])
-        by b06cxnps4076.portsmouth.uk.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 22SDp3Bl34210212
-        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
-        Mon, 28 Mar 2022 13:51:03 GMT
-Received: from d06av24.portsmouth.uk.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id 6D7634203F;
-        Mon, 28 Mar 2022 13:51:03 +0000 (GMT)
-Received: from d06av24.portsmouth.uk.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id 731E042045;
-        Mon, 28 Mar 2022 13:51:02 +0000 (GMT)
-Received: from sig-9-65-77-40.ibm.com (unknown [9.65.77.40])
-        by d06av24.portsmouth.uk.ibm.com (Postfix) with ESMTP;
-        Mon, 28 Mar 2022 13:51:02 +0000 (GMT)
-Message-ID: <152f1bfa9a07354183ca808a036d5e3fef664ea8.camel@linux.ibm.com>
-Subject: Re: [PATCH v7 1/5] fs-verity: define a function to return the
- integrity protected file digest
-From:   Mimi Zohar <zohar@linux.ibm.com>
-To:     "Guozihua (Scott)" <guozihua@huawei.com>,
-        linux-integrity@vger.kernel.org
-Cc:     Eric Biggers <ebiggers@kernel.org>,
-        Stefan Berger <stefanb@linux.ibm.com>,
-        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
-        Eric Biggers <ebiggers@google.com>
-Date:   Mon, 28 Mar 2022 09:51:01 -0400
-In-Reply-To: <0e803aad-5ae6-349b-b17e-89a832306925@huawei.com>
-References: <20220325223824.310119-1-zohar@linux.ibm.com>
-         <20220325223824.310119-2-zohar@linux.ibm.com>
-         <0e803aad-5ae6-349b-b17e-89a832306925@huawei.com>
-Content-Type: text/plain; charset="ISO-8859-15"
-X-Mailer: Evolution 3.28.5 (3.28.5-18.el8) 
-Mime-Version: 1.0
-Content-Transfer-Encoding: 7bit
-X-TM-AS-GCONF: 00
-X-Proofpoint-GUID: WC8DueF78B8C15jgMAIQ6z0M7HltKIvp
-X-Proofpoint-ORIG-GUID: TsjQreu5Rozw_elGqqFo-o0zcO1GdIi9
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.205,Aquarius:18.0.850,Hydra:6.0.425,FMLib:17.11.64.514
- definitions=2022-03-28_05,2022-03-28_01,2022-02-23_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 priorityscore=1501
- bulkscore=0 malwarescore=0 adultscore=0 clxscore=1015 suspectscore=0
- impostorscore=0 mlxscore=0 spamscore=0 phishscore=0 mlxlogscore=999
- lowpriorityscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2202240000 definitions=main-2203280078
+        Mon, 4 Apr 2022 22:20:41 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A904D1AC41F;
+        Mon,  4 Apr 2022 18:15:33 -0700 (PDT)
+Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 7C05D61794;
+        Tue,  5 Apr 2022 01:10:44 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id B5985C2BBE4;
+        Tue,  5 Apr 2022 01:10:43 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1649121043;
+        bh=/wQGv+a5YNqAzNePjyG4n29JhJYDL+Zyw5nRut7cPrc=;
+        h=From:To:Cc:Subject:Date:From;
+        b=q8VfEa/oASHdKAkWs2vcgyr8IFyfZpgeO+2YxRec8fu1S5I/16C+2g1X8fOEDJ/dB
+         64eOp+fLrNCiX4pmDDz89Fvaz28wO5peHW1tvH8Q+ANFh8+b3JSAnWgTGSQNUnuMfY
+         GvDS3RbRdDy3f0v35lJ6CsuXQxnlXMq+uHCcECfkLY8apdfr3xbR7Nrm4TC6erTq1u
+         x8aKSIeDPdXmMZqU0KAZEKjtNJN/2enPWNfDMlHiU3yzn+DlIZORiMljEtv48rXNZN
+         +xS+ZQcGnl+E3Z37rSp9+BvQxGB7G7gIziWS54dIpEFGfYRYNpyU3TlXt9kBNrnKtT
+         rjU1AZVFsuHyQ==
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-mtd@lists.infradead.org, ceph-devel@vger.kernel.org
+Subject: [PATCH] fscrypt: split up FS_CRYPTO_BLOCK_SIZE
+Date:   Mon,  4 Apr 2022 18:09:14 -0700
+Message-Id: <20220405010914.18519-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.35.1
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Hi Scott,
+From: Eric Biggers <ebiggers@google.com>
 
-On Mon, 2022-03-28 at 11:45 +0800, Guozihua (Scott) wrote:
-> > +
-> > +/**
-> > + * fsverity_get_digest() - get a verity file's digest
-> > + * @inode: inode to get digest of
-> > + * @digest: (out) pointer to the digest
-> > + * @alg: (out) pointer to the hash algorithm enumeration
-> > + *
-> > + * Return the file hash algorithm and digest of an fsverity protected file.
-> > + * Assumption: before calling fsverity_get_digest(), the file must have been
-> > + * opened.
-> > + *
-> > + * Return: 0 on success, -errno on failure
-> > + */
-> > +int fsverity_get_digest(struct inode *inode,
-> > +                     u8 digest[FS_VERITY_MAX_DIGEST_SIZE],
-> > +                     enum hash_algo *alg)
-> > +{
-> > +     const struct fsverity_info *vi;
-> > +     const struct fsverity_hash_alg *hash_alg;
-> > +     int i;
-> > +
-> > +     vi = fsverity_get_info(inode);
-> > +     if (!vi)
-> > +             return -ENODATA; /* not a verity file */
-> > +
-> > +     hash_alg = vi->tree_params.hash_alg;
-> > +     memset(digest, 0, FS_VERITY_MAX_DIGEST_SIZE);
-> 
-> Hi Mimi,
-> 
-> I would suggest moving this memset downward right before the memcpy.
+FS_CRYPTO_BLOCK_SIZE is neither the filesystem block size nor the
+granularity of encryption.  Rather, it defines two logically separate
+constraints that both arise from the block size of the AES cipher:
 
-By doing it here, any existing garbage stored in the digest is cleared
-before returning a failure.
+- The alignment required for the lengths of file contents blocks
+- The minimum input/output length for the filenames encryption modes
 
-thanks,
+Since there are way too many things called the "block size", and the
+connection with the AES block size is not easily understood, split
+FS_CRYPTO_BLOCK_SIZE into two constants FSCRYPT_CONTENTS_ALIGNMENT and
+FSCRYPT_FNAME_MIN_MSG_LEN that more clearly describe what they are.
 
-Mimi
-> 
-> > +
-> > +     /* convert the verity hash algorithm name to a hash_algo_name enum */
-> > +     i = match_string(hash_algo_name, HASH_ALGO__LAST, hash_alg->name);
-> > +     if (i < 0)
-> > +             return -EINVAL;
-> > +     *alg = i;
-> > +
-> > +     if (WARN_ON_ONCE(hash_alg->digest_size != hash_digest_size[*alg]))
-> > +             return -EINVAL;
-> > +     memcpy(digest, vi->file_digest, hash_alg->digest_size);
-> > +
-> > +     pr_debug("file digest %s:%*phN\n", hash_algo_name[*alg],
-> > +              hash_digest_size[*alg], digest);
-> > +
-> > +     return 0;
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/crypto.c      | 10 +++++-----
+ fs/crypto/fname.c       | 11 +++++++++--
+ fs/ubifs/ubifs.h        |  2 +-
+ include/linux/fscrypt.h | 12 +++++++++++-
+ 4 files changed, 26 insertions(+), 9 deletions(-)
 
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 526a4c1bed994..e78be66bbf015 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -113,7 +113,7 @@ int fscrypt_crypt_block(const struct inode *inode, fscrypt_direction_t rw,
+ 
+ 	if (WARN_ON_ONCE(len <= 0))
+ 		return -EINVAL;
+-	if (WARN_ON_ONCE(len % FS_CRYPTO_BLOCK_SIZE != 0))
++	if (WARN_ON_ONCE(len % FSCRYPT_CONTENTS_ALIGNMENT != 0))
+ 		return -EINVAL;
+ 
+ 	fscrypt_generate_iv(&iv, lblk_num, ci);
+@@ -213,8 +213,8 @@ EXPORT_SYMBOL(fscrypt_encrypt_pagecache_blocks);
+  * fscrypt_encrypt_block_inplace() - Encrypt a filesystem block in-place
+  * @inode:     The inode to which this block belongs
+  * @page:      The page containing the block to encrypt
+- * @len:       Size of block to encrypt.  Doesn't need to be a multiple of the
+- *		fs block size, but must be a multiple of FS_CRYPTO_BLOCK_SIZE.
++ * @len:       Size of block to encrypt.  This must be a multiple of
++ *		FSCRYPT_CONTENTS_ALIGNMENT.
+  * @offs:      Byte offset within @page at which the block to encrypt begins
+  * @lblk_num:  Filesystem logical block number of the block, i.e. the 0-based
+  *		number of the block within the file
+@@ -283,8 +283,8 @@ EXPORT_SYMBOL(fscrypt_decrypt_pagecache_blocks);
+  * fscrypt_decrypt_block_inplace() - Decrypt a filesystem block in-place
+  * @inode:     The inode to which this block belongs
+  * @page:      The page containing the block to decrypt
+- * @len:       Size of block to decrypt.  Doesn't need to be a multiple of the
+- *		fs block size, but must be a multiple of FS_CRYPTO_BLOCK_SIZE.
++ * @len:       Size of block to decrypt.  This must be a multiple of
++ *		FSCRYPT_CONTENTS_ALIGNMENT.
+  * @offs:      Byte offset within @page at which the block to decrypt begins
+  * @lblk_num:  Filesystem logical block number of the block, i.e. the 0-based
+  *		number of the block within the file
+diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+index a9be4bc74a94a..14e0ef5e9a20a 100644
+--- a/fs/crypto/fname.c
++++ b/fs/crypto/fname.c
+@@ -18,6 +18,13 @@
+ #include <crypto/skcipher.h>
+ #include "fscrypt_private.h"
+ 
++/*
++ * The minimum message length (input and output length), in bytes, for all
++ * filenames encryption modes.  Filenames shorter than this will be zero-padded
++ * before being encrypted.
++ */
++#define FSCRYPT_FNAME_MIN_MSG_LEN 16
++
+ /*
+  * struct fscrypt_nokey_name - identifier for directory entry when key is absent
+  *
+@@ -267,7 +274,7 @@ bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
+ 
+ 	if (orig_len > max_len)
+ 		return false;
+-	encrypted_len = max(orig_len, (u32)FS_CRYPTO_BLOCK_SIZE);
++	encrypted_len = max_t(u32, orig_len, FSCRYPT_FNAME_MIN_MSG_LEN);
+ 	encrypted_len = round_up(encrypted_len, padding);
+ 	*encrypted_len_ret = min(encrypted_len, max_len);
+ 	return true;
+@@ -350,7 +357,7 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
+ 		return 0;
+ 	}
+ 
+-	if (iname->len < FS_CRYPTO_BLOCK_SIZE)
++	if (iname->len < FSCRYPT_FNAME_MIN_MSG_LEN)
+ 		return -EUCLEAN;
+ 
+ 	if (fscrypt_has_encryption_key(inode))
+diff --git a/fs/ubifs/ubifs.h b/fs/ubifs/ubifs.h
+index 008fa46ef61e7..7d6d2f152e039 100644
+--- a/fs/ubifs/ubifs.h
++++ b/fs/ubifs/ubifs.h
+@@ -132,7 +132,7 @@
+ #define WORST_COMPR_FACTOR 2
+ 
+ #ifdef CONFIG_FS_ENCRYPTION
+-#define UBIFS_CIPHER_BLOCK_SIZE FS_CRYPTO_BLOCK_SIZE
++#define UBIFS_CIPHER_BLOCK_SIZE FSCRYPT_CONTENTS_ALIGNMENT
+ #else
+ #define UBIFS_CIPHER_BLOCK_SIZE 0
+ #endif
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 50d92d805bd8c..efc7f96e5e26b 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -18,7 +18,17 @@
+ #include <linux/slab.h>
+ #include <uapi/linux/fscrypt.h>
+ 
+-#define FS_CRYPTO_BLOCK_SIZE		16
++/*
++ * The lengths of all file contents blocks must be divisible by this value.
++ * This is needed to ensure that all contents encryption modes will work, as
++ * some of the supported modes don't support arbitrarily byte-aligned messages.
++ *
++ * Since the needed alignment is 16 bytes, most filesystems will meet this
++ * requirement naturally, as typical block sizes are powers of 2.  However, if a
++ * filesystem can generate arbitrarily byte-aligned block lengths (e.g., via
++ * compression), then it will need to pad to this alignment before encryption.
++ */
++#define FSCRYPT_CONTENTS_ALIGNMENT 16
+ 
+ union fscrypt_policy;
+ struct fscrypt_info;
+-- 
+2.35.1
 
