@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AAD95C43217
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BA207C43219
 	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:42 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1385653AbiDFFRV (ORCPT
+        id S1386135AbiDFFR3 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:17:21 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38702 "EHLO
+        Wed, 6 Apr 2022 01:17:29 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35780 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573604AbiDETXZ (ORCPT
+        with ESMTP id S1573558AbiDETWn (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:23:25 -0400
-Received: from sin.source.kernel.org (sin.source.kernel.org [IPv6:2604:1380:40e1:4800::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A622752E44;
-        Tue,  5 Apr 2022 12:21:25 -0700 (PDT)
+        Tue, 5 Apr 2022 15:22:43 -0400
+Received: from sin.source.kernel.org (sin.source.kernel.org [145.40.73.55])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A87644091B;
+        Tue,  5 Apr 2022 12:20:44 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by sin.source.kernel.org (Postfix) with ESMTPS id 1BB1ACE1D71;
-        Tue,  5 Apr 2022 19:21:24 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id D216DC385A5;
-        Tue,  5 Apr 2022 19:21:21 +0000 (UTC)
+        by sin.source.kernel.org (Postfix) with ESMTPS id 123EACE1FB7;
+        Tue,  5 Apr 2022 19:20:43 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id C385AC385A5;
+        Tue,  5 Apr 2022 19:20:40 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186482;
-        bh=FJBkwUgyhXk/5NkW1/W+Deix1TBTinD9Cdy4DVDu0x4=;
+        s=k20201202; t=1649186441;
+        bh=VavI1xtUqjkJNyDAit+vwUdU1iO1gYw4vnwxHnE4eZo=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=GzfD7WsZm2TcrLhQPrzqyBGMwXnYvyuVLq3sITKkFZGDD2XjkZXLF1f1WIvEyt2mk
-         49BMjClt8PDRhIaL5godjcGz0XEjtO1hM/sDmvEufUCexokZekigsD7kBU7F6gAqB8
-         Ym5ZpCWJg/B2y2L26q2LdC+R6M3ZXarU8yIZsneiPqIVDbtmGF45ILkgdC1raK9By2
-         riLuJetycYMAWFpV2GdMERzN6DfcUwCSXVYyUa2GxIyrG5nf64YK8BINcvGDYM8k/e
-         RJnHT3f1T8sBG6wvLgF+yNWQQtGxreg2LC16B68MHEq2J634qd7q/3M1BJO7CF8VlZ
-         z4zPvBhnjyZXg==
+        b=F02a4y98R/WYeJZOnGcn1AJn7z5GbL1pSyDrlpN2Ut7UTvTP0SiWeqP97gKYizkFq
+         +qUwBrNobxeg/XX4c8ccrrXr2R+3AtwFDmKZfNgW8xAktn9HPGBtfOwx4nhKWcTtFx
+         +nx/1zZ5gpudtUCWEKpdARBi8ASsoQjDbak0arHoYHDKd2jjOL/cz1luz6vyCYq9cr
+         e1cox2Nl1Sd8IkjulzRYRwTO8yrbk3mM5X0402aJklwBuuiHb1yQ0eOmB+zkp93tiD
+         A30F01ofcAiJsTRGONWR/e1G6zNqWGmlzILQsqcXyVDBi6hqRke6+P5lah8DON0iVK
+         hXHYHmGRMSUfA==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
-        lhenriques@suse.de
-Subject: [PATCH v13 55/59] ceph: plumb in decryption during sync reads
-Date:   Tue,  5 Apr 2022 15:20:26 -0400
-Message-Id: <20220405192030.178326-56-jlayton@kernel.org>
+        lhenriques@suse.de, Eric Biggers <ebiggers@google.com>
+Subject: [PATCH v13 10/59] fscrypt: export fscrypt_fname_encrypt and fscrypt_fname_encrypted_size
+Date:   Tue,  5 Apr 2022 15:19:41 -0400
+Message-Id: <20220405192030.178326-11-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,177 +50,161 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Switch to using sparse reads when the inode is encrypted.
+For ceph, we want to use our own scheme for handling filenames that are
+are longer than NAME_MAX after encryption and Base64 encoding. This
+allows us to have a consistent view of the encrypted filenames for
+clients that don't support fscrypt and clients that do but that don't
+have the key.
 
-Note that the crypto block may be smaller than a page, but the reverse
-cannot be true.
+Currently, fs/crypto only supports encrypting filenames using
+fscrypt_setup_filename, but that also handles encoding nokey names. Ceph
+can't use that because it handles nokey names in a different way.
 
+Export fscrypt_fname_encrypt. Rename fscrypt_fname_encrypted_size to
+__fscrypt_fname_encrypted_size and add a new wrapper called
+fscrypt_fname_encrypted_size that takes an inode argument rather than a
+pointer to a fscrypt_policy union.
+
+Acked-by: Eric Biggers <ebiggers@google.com>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/file.c | 89 ++++++++++++++++++++++++++++++++++++--------------
- 1 file changed, 65 insertions(+), 24 deletions(-)
+ fs/crypto/fname.c           | 36 ++++++++++++++++++++++++++++++------
+ fs/crypto/fscrypt_private.h |  9 +++------
+ fs/crypto/hooks.c           |  6 +++---
+ include/linux/fscrypt.h     |  4 ++++
+ 4 files changed, 40 insertions(+), 15 deletions(-)
 
-diff --git a/fs/ceph/file.c b/fs/ceph/file.c
-index 522189ed6642..5d39d8e54273 100644
---- a/fs/ceph/file.c
-+++ b/fs/ceph/file.c
-@@ -938,7 +938,7 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 	u64 off = *ki_pos;
- 	u64 len = iov_iter_count(to);
- 	u64 i_size = i_size_read(inode);
--	bool sparse = ceph_test_mount_opt(fsc, SPARSEREAD);
-+	bool sparse = IS_ENCRYPTED(inode) || ceph_test_mount_opt(fsc, SPARSEREAD);
- 	u64 objver = 0;
+diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
+index 1e4233c95005..77d38188a168 100644
+--- a/fs/crypto/fname.c
++++ b/fs/crypto/fname.c
+@@ -79,7 +79,8 @@ static inline bool fscrypt_is_dot_dotdot(const struct qstr *str)
+ /**
+  * fscrypt_fname_encrypt() - encrypt a filename
+  * @inode: inode of the parent directory (for regular filenames)
+- *	   or of the symlink (for symlink targets)
++ *	   or of the symlink (for symlink targets). Key must already be
++ *	   set up.
+  * @iname: the filename to encrypt
+  * @out: (output) the encrypted filename
+  * @olen: size of the encrypted filename.  It must be at least @iname->len.
+@@ -130,6 +131,7 @@ int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
  
- 	dout("sync_read on inode %p %llx~%llx\n", inode, *ki_pos, len);
-@@ -966,10 +966,19 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 		int idx;
- 		size_t left;
- 		struct ceph_osd_req_op *op;
-+		u64 read_off = off;
-+		u64 read_len = len;
-+
-+		/* determine new offset/length if encrypted */
-+		ceph_fscrypt_adjust_off_and_len(inode, &read_off, &read_len);
-+
-+		dout("sync_read orig %llu~%llu reading %llu~%llu",
-+		     off, len, read_off, read_len);
- 
- 		req = ceph_osdc_new_request(osdc, &ci->i_layout,
--					ci->i_vino, off, &len, 0, 1,
--					sparse ? CEPH_OSD_OP_SPARSE_READ : CEPH_OSD_OP_READ,
-+					ci->i_vino, read_off, &read_len, 0, 1,
-+					sparse ? CEPH_OSD_OP_SPARSE_READ :
-+						 CEPH_OSD_OP_READ,
- 					CEPH_OSD_FLAG_READ,
- 					NULL, ci->i_truncate_seq,
- 					ci->i_truncate_size, false);
-@@ -978,10 +987,13 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 			break;
- 		}
- 
-+		/* adjust len downward if the request truncated the len */
-+		if (off + len > read_off + read_len)
-+			len = read_off + read_len - off;
- 		more = len < iov_iter_count(to);
- 
--		num_pages = calc_pages_for(off, len);
--		page_off = off & ~PAGE_MASK;
-+		num_pages = calc_pages_for(read_off, read_len);
-+		page_off = offset_in_page(off);
- 		pages = ceph_alloc_page_vector(num_pages, GFP_KERNEL);
- 		if (IS_ERR(pages)) {
- 			ceph_osdc_put_request(req);
-@@ -989,7 +1001,8 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 			break;
- 		}
- 
--		osd_req_op_extent_osd_data_pages(req, 0, pages, len, page_off,
-+		osd_req_op_extent_osd_data_pages(req, 0, pages, read_len,
-+						 offset_in_page(read_off),
- 						 false, false);
- 
- 		op = &req->r_ops[0];
-@@ -1008,7 +1021,7 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 		ceph_update_read_metrics(&fsc->mdsc->metric,
- 					 req->r_start_latency,
- 					 req->r_end_latency,
--					 len, ret);
-+					 read_len, ret);
- 
- 		if (ret > 0)
- 			objver = req->r_version;
-@@ -1023,8 +1036,34 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 		else if (ret == -ENOENT)
- 			ret = 0;
- 
-+		if (ret > 0 && IS_ENCRYPTED(inode)) {
-+			int fret;
-+
-+			fret = ceph_fscrypt_decrypt_extents(inode, pages, read_off,
-+					op->extent.sparse_ext, op->extent.sparse_ext_cnt);
-+			if (fret < 0) {
-+				ret = fret;
-+				ceph_osdc_put_request(req);
-+				break;
-+			}
-+
-+			/* account for any partial block at the beginning */
-+			fret -= (off - read_off);
-+
-+			/*
-+			 * Short read after big offset adjustment?
-+			 * Nothing is usable, just call it a zero
-+			 * len read.
-+			 */
-+			fret = max(fret, 0);
-+
-+			/* account for partial block at the end */
-+			ret = min_t(ssize_t, fret, len);
-+		}
-+
- 		ceph_osdc_put_request(req);
- 
-+		/* Short read but not EOF? Zero out the remainder. */
- 		if (ret >= 0 && ret < len && (off + ret < i_size)) {
- 			int zlen = min(len - ret, i_size - off - ret);
- 			int zoff = page_off + ret;
-@@ -1038,15 +1077,16 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 		idx = 0;
- 		left = ret > 0 ? ret : 0;
- 		while (left > 0) {
--			size_t len, copied;
--			page_off = off & ~PAGE_MASK;
--			len = min_t(size_t, left, PAGE_SIZE - page_off);
-+			size_t plen, copied;
-+
-+			plen = min_t(size_t, left, PAGE_SIZE - page_off);
- 			SetPageUptodate(pages[idx]);
- 			copied = copy_page_to_iter(pages[idx++],
--						   page_off, len, to);
-+						   page_off, plen, to);
- 			off += copied;
- 			left -= copied;
--			if (copied < len) {
-+			page_off = 0;
-+			if (copied < plen) {
- 				ret = -EFAULT;
- 				break;
- 			}
-@@ -1063,20 +1103,21 @@ ssize_t __ceph_sync_read(struct inode *inode, loff_t *ki_pos,
- 			break;
- 	}
- 
--	if (off > *ki_pos) {
--		if (off >= i_size) {
--			*retry_op = CHECK_EOF;
--			ret = i_size - *ki_pos;
--			*ki_pos = i_size;
--		} else {
--			ret = off - *ki_pos;
--			*ki_pos = off;
-+	if (ret > 0) {
-+		if (off > *ki_pos) {
-+			if (off >= i_size) {
-+				*retry_op = CHECK_EOF;
-+				ret = i_size - *ki_pos;
-+				*ki_pos = i_size;
-+			} else {
-+				ret = off - *ki_pos;
-+				*ki_pos = off;
-+			}
- 		}
--	}
--
--	if (last_objver && ret > 0)
--		*last_objver = objver;
- 
-+		if (last_objver)
-+			*last_objver = objver;
-+	}
- 	dout("sync_read result %zd retry_op %d\n", ret, *retry_op);
- 	return ret;
+ 	return 0;
  }
++EXPORT_SYMBOL_GPL(fscrypt_fname_encrypt);
+ 
+ /**
+  * fname_decrypt() - decrypt a filename
+@@ -257,9 +259,9 @@ int fscrypt_base64url_decode(const char *src, int srclen, u8 *dst)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_base64url_decode);
+ 
+-bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
+-				  u32 orig_len, u32 max_len,
+-				  u32 *encrypted_len_ret)
++bool __fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
++				    u32 orig_len, u32 max_len,
++				    u32 *encrypted_len_ret)
+ {
+ 	int padding = 4 << (fscrypt_policy_flags(policy) &
+ 			    FSCRYPT_POLICY_FLAGS_PAD_MASK);
+@@ -273,6 +275,29 @@ bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
+ 	return true;
+ }
+ 
++/**
++ * fscrypt_fname_encrypted_size() - calculate length of encrypted filename
++ * @inode:		parent inode of dentry name being encrypted. Key must
++ *			already be set up.
++ * @orig_len:		length of the original filename
++ * @max_len:		maximum length to return
++ * @encrypted_len_ret:	where calculated length should be returned (on success)
++ *
++ * Filenames that are shorter than the maximum length may have their lengths
++ * increased slightly by encryption, due to padding that is applied.
++ *
++ * Return: false if the orig_len is greater than max_len. Otherwise, true and
++ *	   fill out encrypted_len_ret with the length (up to max_len).
++ */
++bool fscrypt_fname_encrypted_size(const struct inode *inode, u32 orig_len,
++				  u32 max_len, u32 *encrypted_len_ret)
++{
++	return __fscrypt_fname_encrypted_size(&inode->i_crypt_info->ci_policy,
++					      orig_len, max_len,
++					      encrypted_len_ret);
++}
++EXPORT_SYMBOL_GPL(fscrypt_fname_encrypted_size);
++
+ /**
+  * fscrypt_fname_alloc_buffer() - allocate a buffer for presented filenames
+  * @max_encrypted_len: maximum length of encrypted filenames the buffer will be
+@@ -428,8 +453,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
+ 		return ret;
+ 
+ 	if (fscrypt_has_encryption_key(dir)) {
+-		if (!fscrypt_fname_encrypted_size(&dir->i_crypt_info->ci_policy,
+-						  iname->len, NAME_MAX,
++		if (!fscrypt_fname_encrypted_size(dir, iname->len, NAME_MAX,
+ 						  &fname->crypto_buf.len))
+ 			return -ENAMETOOLONG;
+ 		fname->crypto_buf.name = kmalloc(fname->crypto_buf.len,
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 5b0a9e6478b5..f3e6e566daff 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -297,14 +297,11 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
+ 			 const struct fscrypt_info *ci);
+ 
+ /* fname.c */
+-int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
+-			  u8 *out, unsigned int olen);
+-bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
+-				  u32 orig_len, u32 max_len,
+-				  u32 *encrypted_len_ret);
++bool __fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
++				    u32 orig_len, u32 max_len,
++				    u32 *encrypted_len_ret);
+ 
+ /* hkdf.c */
+-
+ struct fscrypt_hkdf {
+ 	struct crypto_shash *hmac_tfm;
+ };
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index af74599ae1cf..7c01025879b3 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -228,9 +228,9 @@ int fscrypt_prepare_symlink(struct inode *dir, const char *target,
+ 	 * counting it (even though it is meaningless for ciphertext) is simpler
+ 	 * for now since filesystems will assume it is there and subtract it.
+ 	 */
+-	if (!fscrypt_fname_encrypted_size(policy, len,
+-					  max_len - sizeof(struct fscrypt_symlink_data),
+-					  &disk_link->len))
++	if (!__fscrypt_fname_encrypted_size(policy, len,
++					    max_len - sizeof(struct fscrypt_symlink_data),
++					    &disk_link->len))
+ 		return -ENAMETOOLONG;
+ 	disk_link->len += sizeof(struct fscrypt_symlink_data);
+ 
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 629ccd09e095..84b363665162 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -308,8 +308,12 @@ void fscrypt_free_inode(struct inode *inode);
+ int fscrypt_drop_inode(struct inode *inode);
+ 
+ /* fname.c */
++int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
++			  u8 *out, unsigned int olen);
+ int fscrypt_base64url_encode(const u8 *src, int len, char *dst);
+ int fscrypt_base64url_decode(const char *src, int len, u8 *dst);
++bool fscrypt_fname_encrypted_size(const struct inode *inode, u32 orig_len,
++				  u32 max_len, u32 *encrypted_len_ret);
+ int fscrypt_setup_filename(struct inode *inode, const struct qstr *iname,
+ 			   int lookup, struct fscrypt_name *fname);
+ 
 -- 
 2.35.1
 
