@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6339BC433EF
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BCA1FC433FE
 	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:44 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1448103AbiDFFTq (ORCPT
+        id S1450995AbiDFFUK (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:19:46 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35496 "EHLO
+        Wed, 6 Apr 2022 01:20:10 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38656 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573554AbiDETWj (ORCPT
+        with ESMTP id S1573603AbiDETXY (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:22:39 -0400
+        Tue, 5 Apr 2022 15:23:24 -0400
 Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 632473E0DB;
-        Tue,  5 Apr 2022 12:20:40 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 6AD7051E65;
+        Tue,  5 Apr 2022 12:21:24 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 0AB56B81F6B;
-        Tue,  5 Apr 2022 19:20:39 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 0503FC385A1;
-        Tue,  5 Apr 2022 19:20:36 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id E949FB81FAA;
+        Tue,  5 Apr 2022 19:21:22 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id E89D5C385A0;
+        Tue,  5 Apr 2022 19:21:20 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186437;
-        bh=gFp0s2+yOcXsxdx+8FwxESNn106vn66cOvnAIMvKYsk=;
+        s=k20201202; t=1649186481;
+        bh=3k0F7k/flOmPH0AUjNjEF/MgnBNUhqWecKWs+ePIhNk=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=VsI1yGO5xbYAMRP+i5E4Cubrv3Faw4rfQwY+423rZ6IyILXWi/UVtF9IXBaZ74/cY
-         YZEUqMyQk4EMV9V3S3jSi2IAM7DqaPSbNcDfW0Ejr/z/0dJdfQAQ0ixi+kvNt514kE
-         bgAahZ/++1hP+6TyivNQ8X4bEpOxYz4r8ptcfSeE+kHI56pwrnkiLWYe1MXkJcO6Xu
-         VSlJPqyYzNm+VMd+4EQX7NUfEiruPnZ+46ahMdmpGqjGjqmaCijz55i2ea1VlGKnjF
-         jyTCJPP6/RZac+VTbaqI8Kv149wFgV6jpJ8trlqdSOYGunrAt5aD4ANDjKiu8jyDVw
-         Q3NtEK2o+UCZg==
+        b=P5FnZITw0s3+Sx4qA/1VH9O15GScBDQIXZ8nCsBNvFSg+Vdhw4RJy65/ZWY3F26tN
+         +4wgSvFIxpRxMqVvwbddLycn5sm2fBqSX5enOuz3/nMZgjvkBRpfQRrYgzu933ABhM
+         bUK5j/4dRoKo1aXvdEQ2xwqAH6w6EtGLxLAWsiyaqei8j1uOyT26UhA7GPFBwnCiRG
+         AZhTCWYQdeUim6IHONerJIOdP5WGysPM9ji91K1ZdR8dlYKo0QlOQA4XDLf2epbYld
+         WMc4FowZckPvSYyRxcnzH2Oqmsgyxbw6BKk8z5M7VgDtLUaArwCmukYNRcf/Vk/woY
+         5qWycATSrxwYQ==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [PATCH v13 06/59] libceph: add sparse read support to msgr1
-Date:   Tue,  5 Apr 2022 15:19:37 -0400
-Message-Id: <20220405192030.178326-7-jlayton@kernel.org>
+Subject: [PATCH v13 54/59] ceph: add read/modify/write to ceph_sync_write
+Date:   Tue,  5 Apr 2022 15:20:25 -0400
+Message-Id: <20220405192030.178326-55-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,170 +50,420 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add 2 new fields to ceph_connection_v1_info to track the necessary info
-in sparse reads. Skip initializing the cursor for a sparse read.
+When doing a synchronous write on an encrypted inode, we have no
+guarantee that the caller is writing crypto block-aligned data. When
+that happens, we must do a read/modify/write cycle.
 
-Break out read_partial_message_section into a wrapper around a new
-read_partial_message_chunk function that doesn't zero out the crc first.
+First, expand the range to cover complete blocks. If we had to change
+the original pos or length, issue a read to fill the first and/or last
+pages, and fetch the version of the object from the result.
 
-Add new helper functions to drive receiving into the destinations
-provided by the sparse_read state machine.
+We then copy data into the pages as usual, encrypt the result and issue
+a write prefixed by an assertion that the version hasn't changed. If it has
+changed then we restart the whole thing again.
+
+If there is no object at that position in the file (-ENOENT), we prefix
+the write on an exclusive create of the object instead.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- include/linux/ceph/messenger.h |  4 ++
- net/ceph/messenger_v1.c        | 98 +++++++++++++++++++++++++++++++---
- 2 files changed, 94 insertions(+), 8 deletions(-)
+ fs/ceph/file.c | 319 ++++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 290 insertions(+), 29 deletions(-)
 
-diff --git a/include/linux/ceph/messenger.h b/include/linux/ceph/messenger.h
-index 7f09a4213834..f4adbfee56d5 100644
---- a/include/linux/ceph/messenger.h
-+++ b/include/linux/ceph/messenger.h
-@@ -337,6 +337,10 @@ struct ceph_connection_v1_info {
+diff --git a/fs/ceph/file.c b/fs/ceph/file.c
+index 69ac67c93552..522189ed6642 100644
+--- a/fs/ceph/file.c
++++ b/fs/ceph/file.c
+@@ -1540,18 +1540,16 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
+ 	struct inode *inode = file_inode(file);
+ 	struct ceph_inode_info *ci = ceph_inode(inode);
+ 	struct ceph_fs_client *fsc = ceph_inode_to_client(inode);
+-	struct ceph_vino vino;
++	struct ceph_osd_client *osdc = &fsc->client->osdc;
+ 	struct ceph_osd_request *req;
+ 	struct page **pages;
+ 	u64 len;
+ 	int num_pages;
+ 	int written = 0;
+-	int flags;
+ 	int ret;
+ 	bool check_caps = false;
+ 	struct timespec64 mtime = current_time(inode);
+ 	size_t count = iov_iter_count(from);
+-	size_t off;
  
- 	int in_base_pos;     /* bytes read */
+ 	if (ceph_snap(file_inode(file)) != CEPH_NOSNAP)
+ 		return -EROFS;
+@@ -1571,29 +1569,236 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
+ 	if (ret < 0)
+ 		dout("invalidate_inode_pages2_range returned %d\n", ret);
  
-+	/* sparse reads */
-+	struct kvec in_sr_kvec; /* current location to receive into */
-+	u64 in_sr_len;		/* amount of data in this extent */
-+
- 	/* message in temps */
- 	u8 in_tag;           /* protocol control byte */
- 	struct ceph_msg_header in_hdr;
-diff --git a/net/ceph/messenger_v1.c b/net/ceph/messenger_v1.c
-index 6b014eca3a13..bf385e458a01 100644
---- a/net/ceph/messenger_v1.c
-+++ b/net/ceph/messenger_v1.c
-@@ -160,9 +160,9 @@ static size_t sizeof_footer(struct ceph_connection *con)
- 
- static void prepare_message_data(struct ceph_msg *msg, u32 data_len)
- {
--	/* Initialize data cursor */
+-	flags = /* CEPH_OSD_FLAG_ORDERSNAP | */ CEPH_OSD_FLAG_WRITE;
 -
--	ceph_msg_data_cursor_init(&msg->cursor, msg, data_len);
-+	/* Initialize data cursor if it's not a sparse read */
-+	if (!msg->sparse_read)
-+		ceph_msg_data_cursor_init(&msg->cursor, msg, data_len);
- }
+ 	while ((len = iov_iter_count(from)) > 0) {
+ 		size_t left;
+ 		int n;
++		u64 write_pos = pos;
++		u64 write_len = len;
++		u64 objnum, objoff;
++		u32 xlen;
++		u64 assert_ver;
++		bool rmw;
++		bool first, last;
++		struct iov_iter saved_iter = *from;
++		size_t off;
++
++		ceph_fscrypt_adjust_off_and_len(inode, &write_pos, &write_len);
++
++		/* clamp the length to the end of first object */
++		ceph_calc_file_object_mapping(&ci->i_layout, write_pos,
++						write_len, &objnum, &objoff,
++						&xlen);
++		write_len = xlen;
++
++		/* adjust len downward if it goes beyond current object */
++		if (pos + len > write_pos + write_len)
++			len = write_pos + write_len - pos;
  
- /*
-@@ -967,9 +967,9 @@ static void process_ack(struct ceph_connection *con)
- 	prepare_read_tag(con);
- }
+-		vino = ceph_vino(inode);
+-		req = ceph_osdc_new_request(&fsc->client->osdc, &ci->i_layout,
+-					    vino, pos, &len, 0, 1,
+-					    CEPH_OSD_OP_WRITE, flags, snapc,
+-					    ci->i_truncate_seq,
+-					    ci->i_truncate_size,
+-					    false);
+-		if (IS_ERR(req)) {
+-			ret = PTR_ERR(req);
+-			break;
+-		}
++		/*
++		 * If we had to adjust the length or position to align with a
++		 * crypto block, then we must do a read/modify/write cycle. We
++		 * use a version assertion to redrive the thing if something
++		 * changes in between.
++		 */
++		first = pos != write_pos;
++		last = (pos + len) != (write_pos + write_len);
++		rmw = first || last;
  
--static int read_partial_message_section(struct ceph_connection *con,
--					struct kvec *section,
--					unsigned int sec_len, u32 *crc)
-+static int read_partial_message_chunk(struct ceph_connection *con,
-+				      struct kvec *section,
-+				      unsigned int sec_len, u32 *crc)
- {
- 	int ret, left;
+-		num_pages = calc_pages_for(pos, len);
++		dout("sync_write ino %llx %lld~%llu adjusted %lld~%llu -- %srmw\n",
++		     ci->i_vino.ino, pos, len, write_pos, write_len, rmw ? "" : "no ");
++
++		/*
++		 * The data is emplaced into the page as it would be if it were in
++		 * an array of pagecache pages.
++		 */
++		num_pages = calc_pages_for(write_pos, write_len);
+ 		pages = ceph_alloc_page_vector(num_pages, GFP_KERNEL);
+ 		if (IS_ERR(pages)) {
+ 			ret = PTR_ERR(pages);
+-			goto out;
++			break;
++		}
++
++		/* Do we need to preload the pages? */
++		if (rmw) {
++			u64 first_pos = write_pos;
++			u64 last_pos = (write_pos + write_len) - CEPH_FSCRYPT_BLOCK_SIZE;
++			u64 read_len = CEPH_FSCRYPT_BLOCK_SIZE;
++			struct ceph_osd_req_op *op;
++
++			/* We should only need to do this for encrypted inodes */
++			WARN_ON_ONCE(!IS_ENCRYPTED(inode));
++
++			/* No need to do two reads if first and last blocks are same */
++			if (first && last_pos == first_pos)
++				last = false;
++
++			/*
++			 * Allocate a read request for one or two extents, depending
++			 * on how the request was aligned.
++			 */
++			req = ceph_osdc_new_request(osdc, &ci->i_layout,
++					ci->i_vino, first ? first_pos : last_pos,
++					&read_len, 0, (first && last) ? 2 : 1,
++					CEPH_OSD_OP_SPARSE_READ, CEPH_OSD_FLAG_READ,
++					NULL, ci->i_truncate_seq,
++					ci->i_truncate_size, false);
++			if (IS_ERR(req)) {
++				ceph_release_page_vector(pages, num_pages);
++				ret = PTR_ERR(req);
++				break;
++			}
++
++			/* Something is misaligned! */
++			if (read_len != CEPH_FSCRYPT_BLOCK_SIZE) {
++				ceph_osdc_put_request(req);
++				ceph_release_page_vector(pages, num_pages);
++				ret = -EIO;
++				break;
++			}
++
++			/* Add extent for first block? */
++			op = &req->r_ops[0];
++
++			if (first) {
++				osd_req_op_extent_osd_data_pages(req, 0, pages,
++							 CEPH_FSCRYPT_BLOCK_SIZE,
++							 offset_in_page(first_pos),
++							 false, false);
++				/* We only expect a single extent here */
++				ret = __ceph_alloc_sparse_ext_map(op, 1);
++				if (ret) {
++					ceph_osdc_put_request(req);
++					ceph_release_page_vector(pages, num_pages);
++					break;
++				}
++			}
++
++			/* Add extent for last block */
++			if (last) {
++				/* Init the other extent if first extent has been used */
++				if (first) {
++					op = &req->r_ops[1];
++					osd_req_op_extent_init(req, 1, CEPH_OSD_OP_SPARSE_READ,
++							last_pos, CEPH_FSCRYPT_BLOCK_SIZE,
++							ci->i_truncate_size,
++							ci->i_truncate_seq);
++				}
++
++				ret = __ceph_alloc_sparse_ext_map(op, 1);
++				if (ret) {
++					ceph_osdc_put_request(req);
++					ceph_release_page_vector(pages, num_pages);
++					break;
++				}
++
++				osd_req_op_extent_osd_data_pages(req, first ? 1 : 0,
++							&pages[num_pages - 1],
++							CEPH_FSCRYPT_BLOCK_SIZE,
++							offset_in_page(last_pos),
++							false, false);
++			}
++
++			ret = ceph_osdc_start_request(osdc, req, false);
++			if (!ret)
++				ret = ceph_osdc_wait_request(osdc, req);
++
++			/* FIXME: length field is wrong if there are 2 extents */
++			ceph_update_read_metrics(&fsc->mdsc->metric,
++						 req->r_start_latency,
++						 req->r_end_latency,
++						 read_len, ret);
++
++			/* Ok if object is not already present */
++			if (ret == -ENOENT) {
++				/*
++				 * If there is no object, then we can't assert
++				 * on its version. Set it to 0, and we'll use an
++				 * exclusive create instead.
++				 */
++				ceph_osdc_put_request(req);
++				assert_ver = 0;
++				ret = 0;
++
++				/*
++				 * zero out the soon-to-be uncopied parts of the
++				 * first and last pages.
++				 */
++				if (first)
++					zero_user_segment(pages[0], 0,
++							  offset_in_page(first_pos));
++				if (last)
++					zero_user_segment(pages[num_pages - 1],
++							  offset_in_page(last_pos),
++							  PAGE_SIZE);
++			} else {
++				if (ret < 0) {
++					ceph_osdc_put_request(req);
++					ceph_release_page_vector(pages, num_pages);
++					break;
++				}
++
++				op = &req->r_ops[0];
++				if (op->extent.sparse_ext_cnt == 0) {
++					if (first)
++						zero_user_segment(pages[0], 0,
++								  offset_in_page(first_pos));
++					else
++						zero_user_segment(pages[num_pages - 1],
++								  offset_in_page(last_pos),
++								  PAGE_SIZE);
++				} else if (op->extent.sparse_ext_cnt != 1 ||
++					   ceph_sparse_ext_map_end(op) !=
++						CEPH_FSCRYPT_BLOCK_SIZE) {
++					ret = -EIO;
++					ceph_osdc_put_request(req);
++					ceph_release_page_vector(pages, num_pages);
++					break;
++				}
++
++				if (first && last) {
++					op = &req->r_ops[1];
++					if (op->extent.sparse_ext_cnt == 0) {
++						zero_user_segment(pages[num_pages - 1],
++								  offset_in_page(last_pos),
++								  PAGE_SIZE);
++					} else if (op->extent.sparse_ext_cnt != 1 ||
++						   ceph_sparse_ext_map_end(op) !=
++							CEPH_FSCRYPT_BLOCK_SIZE) {
++						ret = -EIO;
++						ceph_osdc_put_request(req);
++						ceph_release_page_vector(pages, num_pages);
++						break;
++					}
++				}
++
++				/* Grab assert version. It must be non-zero. */
++				assert_ver = req->r_version;
++				WARN_ON_ONCE(ret > 0 && assert_ver == 0);
++
++				ceph_osdc_put_request(req);
++				if (first) {
++					ret = ceph_fscrypt_decrypt_block_inplace(inode,
++							pages[0],
++							CEPH_FSCRYPT_BLOCK_SIZE,
++							offset_in_page(first_pos),
++							first_pos >> CEPH_FSCRYPT_BLOCK_SHIFT);
++					if (ret < 0) {
++						ceph_release_page_vector(pages, num_pages);
++						break;
++					}
++				}
++				if (last) {
++					ret = ceph_fscrypt_decrypt_block_inplace(inode,
++							pages[num_pages - 1],
++							CEPH_FSCRYPT_BLOCK_SIZE,
++							offset_in_page(last_pos),
++							last_pos >> CEPH_FSCRYPT_BLOCK_SHIFT);
++					if (ret < 0) {
++						ceph_release_page_vector(pages, num_pages);
++						break;
++					}
++				}
++			}
+ 		}
  
-@@ -985,11 +985,91 @@ static int read_partial_message_section(struct ceph_connection *con,
- 		section->iov_len += ret;
+ 		left = len;
+@@ -1601,43 +1806,98 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
+ 		for (n = 0; n < num_pages; n++) {
+ 			size_t plen = min_t(size_t, left, PAGE_SIZE - off);
+ 
++			/* copy the data */
+ 			ret = copy_page_from_iter(pages[n], off, plen, from);
+-			off = 0;
+ 			if (ret != plen) {
+ 				ret = -EFAULT;
+ 				break;
+ 			}
++			off = 0;
+ 			left -= ret;
+ 		}
+-
+ 		if (ret < 0) {
++			dout("sync_write write failed with %d\n", ret);
+ 			ceph_release_page_vector(pages, num_pages);
+-			goto out;
++			break;
+ 		}
+ 
+-		req->r_inode = inode;
++		if (IS_ENCRYPTED(inode)) {
++			ret = ceph_fscrypt_encrypt_pages(inode, pages,
++							 write_pos, write_len,
++							 GFP_KERNEL);
++			if (ret < 0) {
++				dout("encryption failed with %d\n", ret);
++				ceph_release_page_vector(pages, num_pages);
++				break;
++			}
++		}
+ 
+-		osd_req_op_extent_osd_data_pages(req, 0, pages, len,
+-						 offset_in_page(pos),
+-						 false, true);
++		req = ceph_osdc_new_request(osdc, &ci->i_layout,
++					    ci->i_vino, write_pos, &write_len,
++					    rmw ? 1 : 0, rmw ? 2 : 1,
++					    CEPH_OSD_OP_WRITE,
++					    CEPH_OSD_FLAG_WRITE,
++					    snapc, ci->i_truncate_seq,
++					    ci->i_truncate_size, false);
++		if (IS_ERR(req)) {
++			ret = PTR_ERR(req);
++			ceph_release_page_vector(pages, num_pages);
++			break;
++		}
+ 
++		dout("sync_write write op %lld~%llu\n", write_pos, write_len);
++		osd_req_op_extent_osd_data_pages(req, rmw ? 1 : 0, pages, write_len,
++						 offset_in_page(write_pos), false,
++						 true);
++		req->r_inode = inode;
+ 		req->r_mtime = mtime;
+-		ret = ceph_osdc_start_request(&fsc->client->osdc, req, false);
++
++		/* Set up the assertion */
++		if (rmw) {
++			/*
++			 * Set up the assertion. If we don't have a version number,
++			 * then the object doesn't exist yet. Use an exclusive create
++			 * instead of a version assertion in that case.
++			 */
++			if (assert_ver) {
++				osd_req_op_init(req, 0, CEPH_OSD_OP_ASSERT_VER, 0);
++				req->r_ops[0].assert_ver.ver = assert_ver;
++			} else {
++				osd_req_op_init(req, 0, CEPH_OSD_OP_CREATE,
++						CEPH_OSD_OP_FLAG_EXCL);
++			}
++		}
++
++		ret = ceph_osdc_start_request(osdc, req, false);
+ 		if (!ret)
+-			ret = ceph_osdc_wait_request(&fsc->client->osdc, req);
++			ret = ceph_osdc_wait_request(osdc, req);
+ 
+ 		ceph_update_write_metrics(&fsc->mdsc->metric, req->r_start_latency,
+ 					  req->r_end_latency, len, ret);
+-out:
+ 		ceph_osdc_put_request(req);
+ 		if (ret != 0) {
++			dout("sync_write osd write returned %d\n", ret);
++			/* Version changed! Must re-do the rmw cycle */
++			if ((assert_ver && (ret == -ERANGE || ret == -EOVERFLOW)) ||
++			     (!assert_ver && ret == -EEXIST)) {
++				/* We should only ever see this on a rmw */
++				WARN_ON_ONCE(!rmw);
++
++				/* The version should never go backward */
++				WARN_ON_ONCE(ret == -EOVERFLOW);
++
++				*from = saved_iter;
++
++				/* FIXME: limit number of times we loop? */
++				continue;
++			}
+ 			ceph_set_error_write(ci);
+ 			break;
+ 		}
+-
+ 		ceph_clear_error_write(ci);
+ 		pos += len;
+ 		written += len;
++		dout("sync_write written %d\n", written);
+ 		if (pos > i_size_read(inode)) {
+ 			check_caps = ceph_inode_set_size(inode, pos);
+ 			if (check_caps)
+@@ -1652,6 +1912,7 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
+ 		ret = written;
+ 		iocb->ki_pos = pos;
  	}
- 	if (section->iov_len == sec_len)
--		*crc = crc32c(0, section->iov_base, section->iov_len);
-+		*crc = crc32c(*crc, section->iov_base, section->iov_len);
- 
- 	return 1;
++	dout("sync_write returning %d\n", ret);
+ 	return ret;
  }
  
-+static inline int read_partial_message_section(struct ceph_connection *con,
-+					       struct kvec *section,
-+					       unsigned int sec_len, u32 *crc)
-+{
-+	*crc = 0;
-+	return read_partial_message_chunk(con, section, sec_len, crc);
-+}
-+
-+static int read_sparse_msg_extent(struct ceph_connection *con, u32 *crc)
-+{
-+	struct ceph_msg_data_cursor *cursor = &con->in_msg->cursor;
-+	bool do_bounce = ceph_test_opt(from_msgr(con->msgr), RXBOUNCE);
-+
-+	if (do_bounce && unlikely(!con->bounce_page)) {
-+		con->bounce_page = alloc_page(GFP_NOIO);
-+		if (!con->bounce_page) {
-+			pr_err("failed to allocate bounce page\n");
-+			return -ENOMEM;
-+		}
-+	}
-+
-+	while (cursor->sr_resid > 0) {
-+		struct page *page, *rpage;
-+		size_t off, len;
-+		int ret;
-+
-+		page = ceph_msg_data_next(cursor, &off, &len, NULL);
-+		rpage = do_bounce ? con->bounce_page : page;
-+
-+		/* clamp to what remains in extent */
-+		len = min_t(int, len, cursor->sr_resid);
-+		ret = ceph_tcp_recvpage(con->sock, rpage, (int)off, len);
-+		if (ret <= 0)
-+			return ret;
-+		*crc = ceph_crc32c_page(*crc, rpage, off, ret);
-+		ceph_msg_data_advance(cursor, (size_t)ret);
-+		cursor->sr_resid -= ret;
-+		if (do_bounce)
-+			memcpy_page(page, off, rpage, off, ret);
-+	}
-+	return 1;
-+}
-+
-+static int read_sparse_msg_data(struct ceph_connection *con)
-+{
-+	struct ceph_msg_data_cursor *cursor = &con->in_msg->cursor;
-+	bool do_datacrc = !ceph_test_opt(from_msgr(con->msgr), NOCRC);
-+	u32 crc = 0;
-+	int ret = 1;
-+
-+	if (do_datacrc)
-+		crc = con->in_data_crc;
-+
-+	do {
-+		if (con->v1.in_sr_kvec.iov_base)
-+			ret = read_partial_message_chunk(con,
-+							 &con->v1.in_sr_kvec,
-+							 con->v1.in_sr_len,
-+							 &crc);
-+		else if (cursor->sr_resid > 0)
-+			ret = read_sparse_msg_extent(con, &crc);
-+
-+		if (ret <= 0) {
-+			if (do_datacrc)
-+				con->in_data_crc = crc;
-+			return ret;
-+		}
-+
-+		memset(&con->v1.in_sr_kvec, 0, sizeof(con->v1.in_sr_kvec));
-+		ret = con->ops->sparse_read(con, cursor,
-+				(char **)&con->v1.in_sr_kvec.iov_base);
-+		con->v1.in_sr_len = ret;
-+	} while (ret > 0);
-+
-+	if (do_datacrc)
-+		con->in_data_crc = crc;
-+
-+	return ret < 0 ? ret : 1;	/* must return > 0 to indicate success */
-+}
-+
- static int read_partial_msg_data(struct ceph_connection *con)
- {
- 	struct ceph_msg_data_cursor *cursor = &con->in_msg->cursor;
-@@ -1180,7 +1260,9 @@ static int read_partial_message(struct ceph_connection *con)
- 		if (!m->num_data_items)
- 			return -EIO;
- 
--		if (ceph_test_opt(from_msgr(con->msgr), RXBOUNCE))
-+		if (m->sparse_read)
-+			ret = read_sparse_msg_data(con);
-+		else if (ceph_test_opt(from_msgr(con->msgr), RXBOUNCE))
- 			ret = read_partial_msg_data_bounce(con);
- 		else
- 			ret = read_partial_msg_data(con);
 -- 
 2.35.1
 
