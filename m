@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CF29AC433EF
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:11:31 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 86E29C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:11:51 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229820AbiDFFNR (ORCPT
+        id S232301AbiDFFNa (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:13:17 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37008 "EHLO
+        Wed, 6 Apr 2022 01:13:30 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38752 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573578AbiDETW7 (ORCPT
+        with ESMTP id S1573606AbiDETX0 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:22:59 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C0F4748E4C;
-        Tue,  5 Apr 2022 12:21:00 -0700 (PDT)
+        Tue, 5 Apr 2022 15:23:26 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EF12353719;
+        Tue,  5 Apr 2022 12:21:26 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 608E861899;
-        Tue,  5 Apr 2022 19:21:00 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 2943AC385A3;
-        Tue,  5 Apr 2022 19:20:59 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 8E28FB81FA5;
+        Tue,  5 Apr 2022 19:21:26 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 8C286C385A1;
+        Tue,  5 Apr 2022 19:21:24 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186459;
-        bh=VuAetinbMIJ3jeBAT3F1PDyYDvpSu4GO847Nw/6AauI=;
+        s=k20201202; t=1649186485;
+        bh=UyhoaEfN26kChKGPTQMMPNGQiUm6otQmJCvQT6vOeVI=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=EV9WI8Ws5j3ZBLTudp20Epsy/TrTwGPL8CNzVCuRB/h6ET739GafztHdfWyE63F+G
-         QMkCTG8y8xslilsSfeVFmZb+NeKEvILYI9xZoVtZ0o0bPBAYbV/usa+jfOd1bTRCII
-         RqTCFexLXjQs50YQzwG3fKRxVqF/RZTTJn2jWrHt1p86OuBQKfe/JZtBH3s7TxvCyR
-         q8mZSr8ZYBi+zbHhWNDEMk4/fL8NWA0e3fVbEhDI5u3uh8Fe5W0TyCrlvZtq7UFRTE
-         4+6I1l+DEaBdgpeeGEgatDnXiWLsESQe8ozUJAUNJjhRxp9EaKCgeebofDmB9w7tEQ
-         WzTUdijRPHRyw==
+        b=Hy9oPgfHZ178DRYZNlzmpYwSt9a7y7tuEeZdQVKXo6BFXh3FbqxXieJG9rJpHZbwr
+         P7x8hxMfmdHFV5RiqEFM5rWcfmudlsqLssv687p6QjMUu6SwsCoLxbsuHLErRslSnZ
+         kiWAqbjGV1ZDBSX67BSOYZBCKhklrUjmubSfNvSrG0Onj+kL6BvAnXVhlWoW5SzZBh
+         vXlbUu1zhEDHiX8nLpbU+Dek3h0Na6KtomU1EMElYgdL3yjKG5xTQJp2Chzd7lHCwB
+         ZAd7u8J3JnCl6w+hr0UUpt+CXrWJOVnC71hgzPzvmx9mAAHpROTHnCeBPpr14vfcOR
+         qR/RLSYhkRy9g==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [PATCH v13 30/59] ceph: pass the request to parse_reply_info_readdir()
-Date:   Tue,  5 Apr 2022 15:20:01 -0400
-Message-Id: <20220405192030.178326-31-jlayton@kernel.org>
+Subject: [PATCH v13 58/59] ceph: add encryption support to writepage
+Date:   Tue,  5 Apr 2022 15:20:29 -0400
+Message-Id: <20220405192030.178326-59-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,93 +50,95 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Xiubo Li <xiubli@redhat.com>
+Allow writepage to issue encrypted writes. Extend out the requested size
+and offset to cover complete blocks, and then encrypt and write them to
+the OSDs.
 
-Instead of passing just the r_reply_info to the readdir reply parser,
-pass the request pointer directly instead. This will facilitate
-implementing readdir on fscrypted directories.
-
-Signed-off-by: Xiubo Li <xiubli@redhat.com>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/mds_client.c | 22 ++++++++++++----------
- 1 file changed, 12 insertions(+), 10 deletions(-)
+ fs/ceph/addr.c | 34 +++++++++++++++++++++++++++-------
+ 1 file changed, 27 insertions(+), 7 deletions(-)
 
-diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
-index 750a67643850..0a7f18d4df73 100644
---- a/fs/ceph/mds_client.c
-+++ b/fs/ceph/mds_client.c
-@@ -406,9 +406,10 @@ static int parse_reply_info_trace(void **p, void *end,
-  * parse readdir results
-  */
- static int parse_reply_info_readdir(void **p, void *end,
--				struct ceph_mds_reply_info_parsed *info,
--				u64 features)
-+				    struct ceph_mds_request *req,
-+				    u64 features)
- {
-+	struct ceph_mds_reply_info_parsed *info = &req->r_reply_info;
- 	u32 num, i = 0;
+diff --git a/fs/ceph/addr.c b/fs/ceph/addr.c
+index bcb74b1d46bb..ff015f251fcc 100644
+--- a/fs/ceph/addr.c
++++ b/fs/ceph/addr.c
+@@ -584,10 +584,12 @@ static int writepage_nounlock(struct page *page, struct writeback_control *wbc)
+ 	loff_t page_off = page_offset(page);
  	int err;
+ 	loff_t len = thp_size(page);
++	loff_t wlen;
+ 	struct ceph_writeback_ctl ceph_wbc;
+ 	struct ceph_osd_client *osdc = &fsc->client->osdc;
+ 	struct ceph_osd_request *req;
+ 	bool caching = ceph_is_cache_enabled(inode);
++	struct page *bounce_page = NULL;
  
-@@ -650,15 +651,16 @@ static int parse_reply_info_getvxattr(void **p, void *end,
-  * parse extra results
-  */
- static int parse_reply_info_extra(void **p, void *end,
--				  struct ceph_mds_reply_info_parsed *info,
-+				  struct ceph_mds_request *req,
- 				  u64 features, struct ceph_mds_session *s)
- {
-+	struct ceph_mds_reply_info_parsed *info = &req->r_reply_info;
- 	u32 op = le32_to_cpu(info->head->op);
+ 	dout("writepage %p idx %lu\n", page, page->index);
  
- 	if (op == CEPH_MDS_OP_GETFILELOCK)
- 		return parse_reply_info_filelock(p, end, info, features);
- 	else if (op == CEPH_MDS_OP_READDIR || op == CEPH_MDS_OP_LSSNAP)
--		return parse_reply_info_readdir(p, end, info, features);
-+		return parse_reply_info_readdir(p, end, req, features);
- 	else if (op == CEPH_MDS_OP_CREATE)
- 		return parse_reply_info_create(p, end, info, features, s);
- 	else if (op == CEPH_MDS_OP_GETVXATTR)
-@@ -671,9 +673,9 @@ static int parse_reply_info_extra(void **p, void *end,
-  * parse entire mds reply
-  */
- static int parse_reply_info(struct ceph_mds_session *s, struct ceph_msg *msg,
--			    struct ceph_mds_reply_info_parsed *info,
--			    u64 features)
-+			    struct ceph_mds_request *req, u64 features)
- {
-+	struct ceph_mds_reply_info_parsed *info = &req->r_reply_info;
- 	void *p, *end;
- 	u32 len;
- 	int err;
-@@ -695,7 +697,7 @@ static int parse_reply_info(struct ceph_mds_session *s, struct ceph_msg *msg,
- 	ceph_decode_32_safe(&p, end, len, bad);
- 	if (len > 0) {
- 		ceph_decode_need(&p, end, len, bad);
--		err = parse_reply_info_extra(&p, p+len, info, features, s);
-+		err = parse_reply_info_extra(&p, p+len, req, features, s);
- 		if (err < 0)
- 			goto out_bad;
- 	}
-@@ -3440,14 +3442,14 @@ static void handle_reply(struct ceph_mds_session *session, struct ceph_msg *msg)
- 	}
+@@ -619,6 +621,8 @@ static int writepage_nounlock(struct page *page, struct writeback_control *wbc)
  
- 	dout("handle_reply tid %lld result %d\n", tid, result);
--	rinfo = &req->r_reply_info;
- 	if (test_bit(CEPHFS_FEATURE_REPLY_ENCODING, &session->s_features))
--		err = parse_reply_info(session, msg, rinfo, (u64)-1);
-+		err = parse_reply_info(session, msg, req, (u64)-1);
- 	else
--		err = parse_reply_info(session, msg, rinfo, session->s_con.peer_features);
-+		err = parse_reply_info(session, msg, req, session->s_con.peer_features);
- 	mutex_unlock(&mdsc->mutex);
+ 	if (ceph_wbc.i_size < page_off + len)
+ 		len = ceph_wbc.i_size - page_off;
++	if (IS_ENCRYPTED(inode))
++		wlen = round_up(len, CEPH_FSCRYPT_BLOCK_SIZE);
  
- 	/* Must find target inode outside of mutexes to avoid deadlocks */
-+	rinfo = &req->r_reply_info;
- 	if ((err >= 0) && rinfo->head->is_target) {
- 		struct inode *in = xchg(&req->r_new_inode, NULL);
- 		struct ceph_vino tvino = {
+ 	dout("writepage %p page %p index %lu on %llu~%llu snapc %p seq %lld\n",
+ 	     inode, page, page->index, page_off, len, snapc, snapc->seq);
+@@ -627,22 +631,37 @@ static int writepage_nounlock(struct page *page, struct writeback_control *wbc)
+ 	    CONGESTION_ON_THRESH(fsc->mount_options->congestion_kb))
+ 		fsc->write_congested = true;
+ 
+-	req = ceph_osdc_new_request(osdc, &ci->i_layout, ceph_vino(inode), page_off, &len, 0, 1,
+-				    CEPH_OSD_OP_WRITE, CEPH_OSD_FLAG_WRITE, snapc,
+-				    ceph_wbc.truncate_seq, ceph_wbc.truncate_size,
+-				    true);
++	req = ceph_osdc_new_request(osdc, &ci->i_layout, ceph_vino(inode),
++				    page_off, &wlen, 0, 1, CEPH_OSD_OP_WRITE,
++				    CEPH_OSD_FLAG_WRITE, snapc,
++				    ceph_wbc.truncate_seq,
++				    ceph_wbc.truncate_size, true);
+ 	if (IS_ERR(req))
+ 		return PTR_ERR(req);
+ 
++	if (wlen < len)
++		len = wlen;
++
+ 	set_page_writeback(page);
+ 	if (caching)
+ 		ceph_set_page_fscache(page);
+ 	ceph_fscache_write_to_cache(inode, page_off, len, caching);
+ 
++	if (IS_ENCRYPTED(inode)) {
++		bounce_page = fscrypt_encrypt_pagecache_blocks(page, CEPH_FSCRYPT_BLOCK_SIZE,
++								0, GFP_NOFS);
++		if (IS_ERR(bounce_page)) {
++			err = PTR_ERR(bounce_page);
++			goto out;
++		}
++	}
+ 	/* it may be a short write due to an object boundary */
+ 	WARN_ON_ONCE(len > thp_size(page));
+-	osd_req_op_extent_osd_data_pages(req, 0, &page, len, 0, false, false);
+-	dout("writepage %llu~%llu (%llu bytes)\n", page_off, len, len);
++	osd_req_op_extent_osd_data_pages(req, 0,
++			bounce_page ? &bounce_page : &page, wlen, 0,
++			false, false);
++	dout("writepage %llu~%llu (%llu bytes, %sencrypted)\n",
++	     page_off, len, wlen, IS_ENCRYPTED(inode) ? "" : "not ");
+ 
+ 	req->r_mtime = inode->i_mtime;
+ 	err = ceph_osdc_start_request(osdc, req, true);
+@@ -651,7 +670,8 @@ static int writepage_nounlock(struct page *page, struct writeback_control *wbc)
+ 
+ 	ceph_update_write_metrics(&fsc->mdsc->metric, req->r_start_latency,
+ 				  req->r_end_latency, len, err);
+-
++	fscrypt_free_bounce_page(bounce_page);
++out:
+ 	ceph_osdc_put_request(req);
+ 	if (err == 0)
+ 		err = len;
 -- 
 2.35.1
 
