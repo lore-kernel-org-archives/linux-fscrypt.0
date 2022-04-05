@@ -2,86 +2,142 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 19A2CC47081
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 539BBC35296
 	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:44 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1446917AbiDFFTb (ORCPT
+        id S1447773AbiDFFTk (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:19:31 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36664 "EHLO
+        Wed, 6 Apr 2022 01:19:40 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36512 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573573AbiDETWy (ORCPT
+        with ESMTP id S1573570AbiDETWw (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:22:54 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 4489347ACB;
-        Tue,  5 Apr 2022 12:20:56 -0700 (PDT)
+        Tue, 5 Apr 2022 15:22:52 -0400
+Received: from sin.source.kernel.org (sin.source.kernel.org [145.40.73.55])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 0D4AA47050;
+        Tue,  5 Apr 2022 12:20:54 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id D6299617EE;
-        Tue,  5 Apr 2022 19:20:55 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 9B7EBC385A3;
-        Tue,  5 Apr 2022 19:20:54 +0000 (UTC)
+        by sin.source.kernel.org (Postfix) with ESMTPS id 4AA77CE1FB6;
+        Tue,  5 Apr 2022 19:20:52 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 18778C385A1;
+        Tue,  5 Apr 2022 19:20:50 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186455;
-        bh=wuel0yRpvqoH42Shg0phMCGGxQASot3eqVV2HwOD7gc=;
+        s=k20201202; t=1649186450;
+        bh=4gK8ZAn+TacGcAjwCDK5lhYYnjJ7LL+dT0yZHFaadd0=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=VKJuTRiHJZSsnavBh4ApUesE7dAteXIDTW0TI5t1JbNUsVsjzWFNsDdsKvPP3855c
-         M6i7YsE8mD9NgZCGl0hlLG8U6iqmjGturZFM09UvpopaTwhFFGH1I/lofFP2ZT9wPf
-         6lp/9beYBIE4Cnn9PzAJM+wjpb9vyD92BuSyD6y9lsf9nWOJ3R83BJoFbbLaKnp9KL
-         SeVlDrYh6+U1FnmXz0nvlBM7bCJyX8Y2fw2dVzQpJzVnpVC3X5PuUetkuxxUrMePhm
-         cAcSlYaHNPqJ5TaulfkqLMyQUcCJbYUAnIPHjkur3pplzKxsySPTxKyGnB5ImO6R61
-         XKkHmM/apDlug==
+        b=h3vPiIxfkK6OiYb/165G98js1mP4pade1hlyPqwCLOvWG47or0gv3JuZz2PzrhdeW
+         LEGz361/FC7O/xfSPkIV/SJG0WEwEk98VAFZ3Tvk2MFbkwJsljtP1Tueh4ji9g/UpZ
+         WfOKEqy9nSA4+mDWZl+mGCxzFyeYrQSYLvFbhEtBnk2ctUsiJsC+N63QUwbmi9YTdr
+         C7kv5ohRf44g1IoriEV3OgQVzt7/5bWnQ2RpSESLGg1L9erv90p18H0cJ33Sm+/FyI
+         LuATH4VtQJt47boufQaIYAOWq3jdd/BnQHnHQdHz8hD3byTOgfG5bC61qqfGM+MnQ3
+         aaDVyC2xxMFgw==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [PATCH v13 25/59] ceph: set DCACHE_NOKEY_NAME in atomic open
-Date:   Tue,  5 Apr 2022 15:19:56 -0400
-Message-Id: <20220405192030.178326-26-jlayton@kernel.org>
+Subject: [PATCH v13 20/59] ceph: make ceph_msdc_build_path use ref-walk
+Date:   Tue,  5 Apr 2022 15:19:51 -0400
+Message-Id: <20220405192030.178326-21-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Atomic open can act as a lookup if handed a dentry that is negative on
-the MDS. Ensure that we set DCACHE_NOKEY_NAME on the dentry in
-atomic_open, if we don't have the key for the parent. Otherwise, we can
-end up validating the dentry inappropriately if someone later adds a
-key.
+Encryption potentially requires allocation, at which point we'll need to
+be in a non-atomic context. Convert ceph_msdc_build_path to take dentry
+spinlocks and references instead of using rcu_read_lock to walk the
+path.
 
-Reviewed-by: Xiubo Li <xiubli@redhat.com>
-Reviewed-by: Luís Henriques <lhenriques@suse.de>
+This is slightly less efficient, and we may want to eventually allow
+using RCU when the leaf dentry isn't encrypted.
+
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/file.c | 7 +++++++
- 1 file changed, 7 insertions(+)
+ fs/ceph/mds_client.c | 35 +++++++++++++++++++----------------
+ 1 file changed, 19 insertions(+), 16 deletions(-)
 
-diff --git a/fs/ceph/file.c b/fs/ceph/file.c
-index dd183d12a3bd..dfc02caf4229 100644
---- a/fs/ceph/file.c
-+++ b/fs/ceph/file.c
-@@ -758,6 +758,13 @@ int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
- 	req->r_args.open.mask = cpu_to_le32(mask);
- 	req->r_parent = dir;
- 	ihold(dir);
-+	if (IS_ENCRYPTED(dir)) {
-+		if (!fscrypt_has_encryption_key(dir)) {
-+			spin_lock(&dentry->d_lock);
-+			dentry->d_flags |= DCACHE_NOKEY_NAME;
-+			spin_unlock(&dentry->d_lock);
-+		}
-+	}
+diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
+index 2f2f8221eb25..28315053e116 100644
+--- a/fs/ceph/mds_client.c
++++ b/fs/ceph/mds_client.c
+@@ -2398,7 +2398,8 @@ static inline  u64 __get_oldest_tid(struct ceph_mds_client *mdsc)
+ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
+ 			   int stop_on_nosnap)
+ {
+-	struct dentry *temp;
++	struct dentry *cur;
++	struct inode *inode;
+ 	char *path;
+ 	int pos;
+ 	unsigned seq;
+@@ -2415,34 +2416,35 @@ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
+ 	path[pos] = '\0';
  
- 	if (flags & O_CREAT) {
- 		struct ceph_file_layout lo;
+ 	seq = read_seqbegin(&rename_lock);
+-	rcu_read_lock();
+-	temp = dentry;
++	cur = dget(dentry);
+ 	for (;;) {
+-		struct inode *inode;
++		struct dentry *temp;
+ 
+-		spin_lock(&temp->d_lock);
+-		inode = d_inode(temp);
++		spin_lock(&cur->d_lock);
++		inode = d_inode(cur);
+ 		if (inode && ceph_snap(inode) == CEPH_SNAPDIR) {
+ 			dout("build_path path+%d: %p SNAPDIR\n",
+-			     pos, temp);
+-		} else if (stop_on_nosnap && inode && dentry != temp &&
++			     pos, cur);
++		} else if (stop_on_nosnap && inode && dentry != cur &&
+ 			   ceph_snap(inode) == CEPH_NOSNAP) {
+-			spin_unlock(&temp->d_lock);
++			spin_unlock(&cur->d_lock);
+ 			pos++; /* get rid of any prepended '/' */
+ 			break;
+ 		} else {
+-			pos -= temp->d_name.len;
++			pos -= cur->d_name.len;
+ 			if (pos < 0) {
+-				spin_unlock(&temp->d_lock);
++				spin_unlock(&cur->d_lock);
+ 				break;
+ 			}
+-			memcpy(path + pos, temp->d_name.name, temp->d_name.len);
++			memcpy(path + pos, cur->d_name.name, cur->d_name.len);
+ 		}
++		temp = cur;
+ 		spin_unlock(&temp->d_lock);
+-		temp = READ_ONCE(temp->d_parent);
++		cur = dget_parent(temp);
++		dput(temp);
+ 
+ 		/* Are we at the root? */
+-		if (IS_ROOT(temp))
++		if (IS_ROOT(cur))
+ 			break;
+ 
+ 		/* Are we out of buffer? */
+@@ -2451,8 +2453,9 @@ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
+ 
+ 		path[pos] = '/';
+ 	}
+-	base = ceph_ino(d_inode(temp));
+-	rcu_read_unlock();
++	inode = d_inode(cur);
++	base = inode ? ceph_ino(inode) : 0;
++	dput(cur);
+ 
+ 	if (read_seqretry(&rename_lock, seq))
+ 		goto retry;
 -- 
 2.35.1
 
