@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9185AC4707A
+	by smtp.lore.kernel.org (Postfix) with ESMTP id AFE38C4707E
 	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:43 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1444492AbiDFFSp (ORCPT
+        id S1446000AbiDFFTB (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:18:45 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35578 "EHLO
+        Wed, 6 Apr 2022 01:19:01 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37682 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573555AbiDETWl (ORCPT
+        with ESMTP id S1573588AbiDETXK (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:22:41 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 477353CFCD;
-        Tue,  5 Apr 2022 12:20:42 -0700 (PDT)
+        Tue, 5 Apr 2022 15:23:10 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id F2AC14BB9E;
+        Tue,  5 Apr 2022 12:21:10 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id D4AA7B81FA5;
-        Tue,  5 Apr 2022 19:20:40 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id C5A20C385A1;
-        Tue,  5 Apr 2022 19:20:39 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 5AB8761899;
+        Tue,  5 Apr 2022 19:21:10 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1FD4CC385A0;
+        Tue,  5 Apr 2022 19:21:09 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186440;
-        bh=u6cpxI3/hvGaiyZFCeu55d6yaSo4kUHVnzeT4mNgI6I=;
+        s=k20201202; t=1649186469;
+        bh=PDf3viSS4Mrr2b1LxuraoL8yqmsI0zQ6OYJs90Hla08=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=nxmTSsYbQna7Zx3YoDwuUWRwNf5AdGwzzK96nh63/QltKFEnpr2PwhwuQyaEUKrfI
-         VmN1uf1EXU+xTBMcM0xQIkGQnrfebS6qxczBYaXfBy7+dgrogjZbb+oJsQZ8G99/zt
-         m1UAohAn5Z6Lt9yEoSz50mbQaNjV+zuK6QWz+GhsADdTJyysdJ5gR2cH+b4og7vRV1
-         SdLTIIHrHWnG9boNnJWQSHXaeMf+A5N7IhyWG8cQShe7U6MSY4t2bUF3whg6EmHHvW
-         6G0JUFKiVb0hUoWhBOiPiVVyu7yXfDEKf196oeE7VlGUSoDz1KKw9riH3VkX/NJ/HF
-         mVoj8euy/4W5Q==
+        b=oHkKb0zOXEGuXDRiw+PFtURhv5EVKSUUB/pEPOSwoTvrDKMMkparT8Yo9oxfzEdL7
+         bvqrG7PYDMEL/jj4n/I1QjdBPH5Iz5sKnujn5kmgM+FsE1GbkM4ubK5HYbiB5i5GRt
+         2GcheSsP2jMI0mhKOO25nWlz8HuwFSYd4XZYRKqNMBMfZji8WIC2CWZPrnd+ZW5RDK
+         4Pr63v2KKhS0GKMKuMiM7gSXx76ok2+wQrXigURfS7r4uJ3XEuk8lChHl/M0dM9RFe
+         lBusEbXaxGN9jNBzLuuXFfJasFxbyPQbDFs7VY/qr/PCYY6ZIgcswU24BwK29WyORq
+         YTE1HezVsEIQQ==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
-        lhenriques@suse.de, Eric Biggers <ebiggers@google.com>
-Subject: [PATCH v13 09/59] fscrypt: export fscrypt_base64url_encode and fscrypt_base64url_decode
-Date:   Tue,  5 Apr 2022 15:19:40 -0400
-Message-Id: <20220405192030.178326-10-jlayton@kernel.org>
+        lhenriques@suse.de
+Subject: [PATCH v13 41/59] ceph: get file size from fscrypt_file when present in inode traces
+Date:   Tue,  5 Apr 2022 15:20:12 -0400
+Message-Id: <20220405192030.178326-42-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,98 +50,52 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Ceph is going to add fscrypt support, but we still want encrypted
-filenames to be composed of printable characters, so we can maintain
-compatibility with clients that don't support fscrypt.
+When we get an inode trace from the MDS, grab the fscrypt_file field if
+the inode is encrypted, and use it to populate the i_size field instead
+of the regular inode size field.
 
-We could just adopt fscrypt's current nokey name format, but that is
-subject to change in the future, and it also contains dirhash fields
-that we don't need for cephfs. Because of this, we're going to concoct
-our own scheme for encoding encrypted filenames. It's very similar to
-fscrypt's current scheme, but doesn't bother with the dirhash fields.
-
-The ceph encoding scheme will use base64 encoding as well, and we also
-want it to avoid characters that are illegal in filenames. Export the
-fscrypt base64 encoding/decoding routines so we can use them in ceph's
-fscrypt implementation.
-
-Acked-by: Eric Biggers <ebiggers@google.com>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/crypto/fname.c       | 8 ++++----
- include/linux/fscrypt.h | 5 +++++
- 2 files changed, 9 insertions(+), 4 deletions(-)
+ fs/ceph/inode.c | 18 +++++++++++++++---
+ 1 file changed, 15 insertions(+), 3 deletions(-)
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index a9be4bc74a94..1e4233c95005 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -182,8 +182,6 @@ static int fname_decrypt(const struct inode *inode,
- static const char base64url_table[65] =
- 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
+index b9454721c976..f2a59306e4a6 100644
+--- a/fs/ceph/inode.c
++++ b/fs/ceph/inode.c
+@@ -1024,6 +1024,7 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
  
--#define FSCRYPT_BASE64URL_CHARS(nbytes)	DIV_ROUND_UP((nbytes) * 4, 3)
--
- /**
-  * fscrypt_base64url_encode() - base64url-encode some binary data
-  * @src: the binary data to encode
-@@ -198,7 +196,7 @@ static const char base64url_table[65] =
-  * Return: the length of the resulting base64url-encoded string in bytes.
-  *	   This will be equal to FSCRYPT_BASE64URL_CHARS(srclen).
-  */
--static int fscrypt_base64url_encode(const u8 *src, int srclen, char *dst)
-+int fscrypt_base64url_encode(const u8 *src, int srclen, char *dst)
- {
- 	u32 ac = 0;
- 	int bits = 0;
-@@ -217,6 +215,7 @@ static int fscrypt_base64url_encode(const u8 *src, int srclen, char *dst)
- 		*cp++ = base64url_table[(ac << (6 - bits)) & 0x3f];
- 	return cp - dst;
- }
-+EXPORT_SYMBOL_GPL(fscrypt_base64url_encode);
+ 	if (new_version ||
+ 	    (new_issued & (CEPH_CAP_ANY_FILE_RD | CEPH_CAP_ANY_FILE_WR))) {
++		u64 size = le64_to_cpu(info->size);
+ 		s64 old_pool = ci->i_layout.pool_id;
+ 		struct ceph_string *old_ns;
  
- /**
-  * fscrypt_base64url_decode() - base64url-decode a string
-@@ -233,7 +232,7 @@ static int fscrypt_base64url_encode(const u8 *src, int srclen, char *dst)
-  * Return: the length of the resulting decoded binary data in bytes,
-  *	   or -1 if the string isn't a valid base64url string.
-  */
--static int fscrypt_base64url_decode(const char *src, int srclen, u8 *dst)
-+int fscrypt_base64url_decode(const char *src, int srclen, u8 *dst)
- {
- 	u32 ac = 0;
- 	int bits = 0;
-@@ -256,6 +255,7 @@ static int fscrypt_base64url_decode(const char *src, int srclen, u8 *dst)
- 		return -1;
- 	return bp - dst;
- }
-+EXPORT_SYMBOL_GPL(fscrypt_base64url_decode);
+@@ -1037,10 +1038,21 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
  
- bool fscrypt_fname_encrypted_size(const union fscrypt_policy *policy,
- 				  u32 orig_len, u32 max_len,
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 50d92d805bd8..629ccd09e095 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -46,6 +46,9 @@ struct fscrypt_name {
- /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
- #define FSCRYPT_SET_CONTEXT_MAX_SIZE	40
+ 		pool_ns = old_ns;
  
-+/* len of resulting string (sans NUL terminator) after base64 encoding nbytes */
-+#define FSCRYPT_BASE64URL_CHARS(nbytes)		DIV_ROUND_UP((nbytes) * 4, 3)
++		if (IS_ENCRYPTED(inode) && size && (iinfo->fscrypt_file_len == sizeof(__le64))) {
++			u64 fsize = __le64_to_cpu(*(__le64 *)iinfo->fscrypt_file);
 +
- #ifdef CONFIG_FS_ENCRYPTION
- 
- /*
-@@ -305,6 +308,8 @@ void fscrypt_free_inode(struct inode *inode);
- int fscrypt_drop_inode(struct inode *inode);
- 
- /* fname.c */
-+int fscrypt_base64url_encode(const u8 *src, int len, char *dst);
-+int fscrypt_base64url_decode(const char *src, int len, u8 *dst);
- int fscrypt_setup_filename(struct inode *inode, const struct qstr *iname,
- 			   int lookup, struct fscrypt_name *fname);
- 
++			if (size == round_up(fsize, CEPH_FSCRYPT_BLOCK_SIZE)) {
++				size = fsize;
++			} else {
++				pr_warn("fscrypt size mismatch: size=%llu fscrypt_file=%llu, discarding fscrypt_file size.\n",
++					info->size, size);
++			}
++		}
++
+ 		queue_trunc = ceph_fill_file_size(inode, issued,
+-					le32_to_cpu(info->truncate_seq),
+-					le64_to_cpu(info->truncate_size),
+-					le64_to_cpu(info->size));
++						  le32_to_cpu(info->truncate_seq),
++						  le64_to_cpu(info->truncate_size),
++						  size);
+ 		/* only update max_size on auth cap */
+ 		if ((info->cap.flags & CEPH_CAP_FLAG_AUTH) &&
+ 		    ci->i_max_size != le64_to_cpu(info->max_size)) {
 -- 
 2.35.1
 
