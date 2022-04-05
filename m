@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 99ED3C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:11:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CF29AC433EF
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:11:31 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S236368AbiDFFNI (ORCPT
+        id S229820AbiDFFNR (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:13:08 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35276 "EHLO
+        Wed, 6 Apr 2022 01:13:17 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37008 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573551AbiDETWf (ORCPT
+        with ESMTP id S1573578AbiDETW7 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:22:35 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C65443B2B0;
-        Tue,  5 Apr 2022 12:20:36 -0700 (PDT)
+        Tue, 5 Apr 2022 15:22:59 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C0F4748E4C;
+        Tue,  5 Apr 2022 12:21:00 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 59D9EB81F6B;
-        Tue,  5 Apr 2022 19:20:35 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 611E1C385A0;
-        Tue,  5 Apr 2022 19:20:33 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 608E861899;
+        Tue,  5 Apr 2022 19:21:00 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 2943AC385A3;
+        Tue,  5 Apr 2022 19:20:59 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186434;
-        bh=WUMUKws9bRjZTrkHwsGynA7tUQA6j+UO+nipvx8/Pxc=;
+        s=k20201202; t=1649186459;
+        bh=VuAetinbMIJ3jeBAT3F1PDyYDvpSu4GO847Nw/6AauI=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=ViqzZ1njQjHURsQFB+bQws/EXFJXBVZ0713Vy6dx/7ZW2JLu/xJiUvM59gv19WtuH
-         jfUpil6gly2i2pNknMzzqQLgdSP/9zSp1jWAsMzq31/yBk1ZmtSHwQo8W93YF+gpoH
-         q6gA5ImURC+5w6E7ZP7KxFXbq5yPmvGsDpR55YX9rpAnUorWYz8YyWWxca89/CYEGb
-         dCmAQsLRhI+xEKB9lYpcxr7hUR7Dp1hQy01Plzo+DQB9eu66rhzwF1tqLuh0RVcn/E
-         8dUtp6FjBKqDcfNtEjqOTl56bgrKgfjt0ySudygn2hIFJ1pt3dBuGefss3n3vS2CxR
-         5uhc00PJzXdlQ==
+        b=EV9WI8Ws5j3ZBLTudp20Epsy/TrTwGPL8CNzVCuRB/h6ET739GafztHdfWyE63F+G
+         QMkCTG8y8xslilsSfeVFmZb+NeKEvILYI9xZoVtZ0o0bPBAYbV/usa+jfOd1bTRCII
+         RqTCFexLXjQs50YQzwG3fKRxVqF/RZTTJn2jWrHt1p86OuBQKfe/JZtBH3s7TxvCyR
+         q8mZSr8ZYBi+zbHhWNDEMk4/fL8NWA0e3fVbEhDI5u3uh8Fe5W0TyCrlvZtq7UFRTE
+         4+6I1l+DEaBdgpeeGEgatDnXiWLsESQe8ozUJAUNJjhRxp9EaKCgeebofDmB9w7tEQ
+         WzTUdijRPHRyw==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [PATCH v13 02/59] libceph: define struct ceph_sparse_extent and add some helpers
-Date:   Tue,  5 Apr 2022 15:19:33 -0400
-Message-Id: <20220405192030.178326-3-jlayton@kernel.org>
+Subject: [PATCH v13 30/59] ceph: pass the request to parse_reply_info_readdir()
+Date:   Tue,  5 Apr 2022 15:20:01 -0400
+Message-Id: <20220405192030.178326-31-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,124 +50,93 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-When the OSD sends back a sparse read reply, it contains an array of
-these structures. Define the structure and add a couple of helpers for
-dealing with them.
+From: Xiubo Li <xiubli@redhat.com>
 
-Also add a place in struct ceph_osd_req_op to store the extent buffer,
-and code to free it if it's populated when the req is torn down.
+Instead of passing just the r_reply_info to the readdir reply parser,
+pass the request pointer directly instead. This will facilitate
+implementing readdir on fscrypted directories.
 
-Reviewed-by: Xiubo Li <xiubli@redhat.com>
+Signed-off-by: Xiubo Li <xiubli@redhat.com>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- include/linux/ceph/osd_client.h | 43 ++++++++++++++++++++++++++++++++-
- net/ceph/osd_client.c           | 13 ++++++++++
- 2 files changed, 55 insertions(+), 1 deletion(-)
+ fs/ceph/mds_client.c | 22 ++++++++++++----------
+ 1 file changed, 12 insertions(+), 10 deletions(-)
 
-diff --git a/include/linux/ceph/osd_client.h b/include/linux/ceph/osd_client.h
-index 3122c1a3205f..1dd02240d00d 100644
---- a/include/linux/ceph/osd_client.h
-+++ b/include/linux/ceph/osd_client.h
-@@ -29,6 +29,17 @@ typedef void (*ceph_osdc_callback_t)(struct ceph_osd_request *);
- 
- #define CEPH_HOMELESS_OSD	-1
- 
-+/*
-+ * A single extent in a SPARSE_READ reply.
-+ *
-+ * Note that these come from the OSD as little-endian values. On BE arches,
-+ * we convert them in-place after receipt.
-+ */
-+struct ceph_sparse_extent {
-+	u64	off;
-+	u64	len;
-+} __packed;
-+
- /*
-  * A given osd we're communicating with.
-  *
-@@ -104,6 +115,8 @@ struct ceph_osd_req_op {
- 			u64 offset, length;
- 			u64 truncate_size;
- 			u32 truncate_seq;
-+			int sparse_ext_cnt;
-+			struct ceph_sparse_extent *sparse_ext;
- 			struct ceph_osd_data osd_data;
- 		} extent;
- 		struct {
-@@ -507,6 +520,20 @@ extern struct ceph_osd_request *ceph_osdc_new_request(struct ceph_osd_client *,
- 				      u32 truncate_seq, u64 truncate_size,
- 				      bool use_mempool);
- 
-+int __ceph_alloc_sparse_ext_map(struct ceph_osd_req_op *op, int cnt);
-+
-+/*
-+ * How big an extent array should we preallocate for a sparse read? This is
-+ * just a starting value.  If we get more than this back from the OSD, the
-+ * receiver will reallocate.
-+ */
-+#define CEPH_SPARSE_EXT_ARRAY_INITIAL  16
-+
-+static inline int ceph_alloc_sparse_ext_map(struct ceph_osd_req_op *op)
-+{
-+	return __ceph_alloc_sparse_ext_map(op, CEPH_SPARSE_EXT_ARRAY_INITIAL);
-+}
-+
- extern void ceph_osdc_get_request(struct ceph_osd_request *req);
- extern void ceph_osdc_put_request(struct ceph_osd_request *req);
- 
-@@ -562,5 +589,19 @@ int ceph_osdc_list_watchers(struct ceph_osd_client *osdc,
- 			    struct ceph_object_locator *oloc,
- 			    struct ceph_watch_item **watchers,
- 			    u32 *num_watchers);
--#endif
- 
-+/* Find offset into the buffer of the end of the extent map */
-+static inline u64 ceph_sparse_ext_map_end(struct ceph_osd_req_op *op)
-+{
-+	struct ceph_sparse_extent *ext;
-+
-+	/* No extents? No data */
-+	if (op->extent.sparse_ext_cnt == 0)
-+		return 0;
-+
-+	ext = &op->extent.sparse_ext[op->extent.sparse_ext_cnt - 1];
-+
-+	return ext->off + ext->len - op->extent.offset;
-+}
-+
-+#endif
-diff --git a/net/ceph/osd_client.c b/net/ceph/osd_client.c
-index 17c792b32343..c150683f2a2f 100644
---- a/net/ceph/osd_client.c
-+++ b/net/ceph/osd_client.c
-@@ -378,6 +378,7 @@ static void osd_req_op_data_release(struct ceph_osd_request *osd_req,
- 	case CEPH_OSD_OP_READ:
- 	case CEPH_OSD_OP_WRITE:
- 	case CEPH_OSD_OP_WRITEFULL:
-+		kfree(op->extent.sparse_ext);
- 		ceph_osd_data_release(&op->extent.osd_data);
- 		break;
- 	case CEPH_OSD_OP_CALL:
-@@ -1141,6 +1142,18 @@ struct ceph_osd_request *ceph_osdc_new_request(struct ceph_osd_client *osdc,
- }
- EXPORT_SYMBOL(ceph_osdc_new_request);
- 
-+int __ceph_alloc_sparse_ext_map(struct ceph_osd_req_op *op, int cnt)
-+{
-+	op->extent.sparse_ext_cnt = cnt;
-+	op->extent.sparse_ext = kmalloc_array(cnt,
-+					      sizeof(*op->extent.sparse_ext),
-+					      GFP_NOFS);
-+	if (!op->extent.sparse_ext)
-+		return -ENOMEM;
-+	return 0;
-+}
-+EXPORT_SYMBOL(__ceph_alloc_sparse_ext_map);
-+
- /*
-  * We keep osd requests in an rbtree, sorted by ->r_tid.
+diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
+index 750a67643850..0a7f18d4df73 100644
+--- a/fs/ceph/mds_client.c
++++ b/fs/ceph/mds_client.c
+@@ -406,9 +406,10 @@ static int parse_reply_info_trace(void **p, void *end,
+  * parse readdir results
   */
+ static int parse_reply_info_readdir(void **p, void *end,
+-				struct ceph_mds_reply_info_parsed *info,
+-				u64 features)
++				    struct ceph_mds_request *req,
++				    u64 features)
+ {
++	struct ceph_mds_reply_info_parsed *info = &req->r_reply_info;
+ 	u32 num, i = 0;
+ 	int err;
+ 
+@@ -650,15 +651,16 @@ static int parse_reply_info_getvxattr(void **p, void *end,
+  * parse extra results
+  */
+ static int parse_reply_info_extra(void **p, void *end,
+-				  struct ceph_mds_reply_info_parsed *info,
++				  struct ceph_mds_request *req,
+ 				  u64 features, struct ceph_mds_session *s)
+ {
++	struct ceph_mds_reply_info_parsed *info = &req->r_reply_info;
+ 	u32 op = le32_to_cpu(info->head->op);
+ 
+ 	if (op == CEPH_MDS_OP_GETFILELOCK)
+ 		return parse_reply_info_filelock(p, end, info, features);
+ 	else if (op == CEPH_MDS_OP_READDIR || op == CEPH_MDS_OP_LSSNAP)
+-		return parse_reply_info_readdir(p, end, info, features);
++		return parse_reply_info_readdir(p, end, req, features);
+ 	else if (op == CEPH_MDS_OP_CREATE)
+ 		return parse_reply_info_create(p, end, info, features, s);
+ 	else if (op == CEPH_MDS_OP_GETVXATTR)
+@@ -671,9 +673,9 @@ static int parse_reply_info_extra(void **p, void *end,
+  * parse entire mds reply
+  */
+ static int parse_reply_info(struct ceph_mds_session *s, struct ceph_msg *msg,
+-			    struct ceph_mds_reply_info_parsed *info,
+-			    u64 features)
++			    struct ceph_mds_request *req, u64 features)
+ {
++	struct ceph_mds_reply_info_parsed *info = &req->r_reply_info;
+ 	void *p, *end;
+ 	u32 len;
+ 	int err;
+@@ -695,7 +697,7 @@ static int parse_reply_info(struct ceph_mds_session *s, struct ceph_msg *msg,
+ 	ceph_decode_32_safe(&p, end, len, bad);
+ 	if (len > 0) {
+ 		ceph_decode_need(&p, end, len, bad);
+-		err = parse_reply_info_extra(&p, p+len, info, features, s);
++		err = parse_reply_info_extra(&p, p+len, req, features, s);
+ 		if (err < 0)
+ 			goto out_bad;
+ 	}
+@@ -3440,14 +3442,14 @@ static void handle_reply(struct ceph_mds_session *session, struct ceph_msg *msg)
+ 	}
+ 
+ 	dout("handle_reply tid %lld result %d\n", tid, result);
+-	rinfo = &req->r_reply_info;
+ 	if (test_bit(CEPHFS_FEATURE_REPLY_ENCODING, &session->s_features))
+-		err = parse_reply_info(session, msg, rinfo, (u64)-1);
++		err = parse_reply_info(session, msg, req, (u64)-1);
+ 	else
+-		err = parse_reply_info(session, msg, rinfo, session->s_con.peer_features);
++		err = parse_reply_info(session, msg, req, session->s_con.peer_features);
+ 	mutex_unlock(&mdsc->mutex);
+ 
+ 	/* Must find target inode outside of mutexes to avoid deadlocks */
++	rinfo = &req->r_reply_info;
+ 	if ((err >= 0) && rinfo->head->is_target) {
+ 		struct inode *in = xchg(&req->r_new_inode, NULL);
+ 		struct ceph_vino tvino = {
 -- 
 2.35.1
 
