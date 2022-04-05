@@ -2,145 +2,85 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4774AC433EF
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:14 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 99B9EC433FE
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:17 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1348415AbiDFFP0 (ORCPT
+        id S1349094AbiDFFP2 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:15:26 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37258 "EHLO
+        Wed, 6 Apr 2022 01:15:28 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58738 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573581AbiDETXD (ORCPT
+        with ESMTP id S1387042AbiDEVuz (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:23:03 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 65A4549F92;
-        Tue,  5 Apr 2022 12:21:04 -0700 (PDT)
+        Tue, 5 Apr 2022 17:50:55 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D49238D681;
+        Tue,  5 Apr 2022 13:35:41 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 03FDF618A0;
-        Tue,  5 Apr 2022 19:21:04 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id C13BEC385A1;
-        Tue,  5 Apr 2022 19:21:02 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id DDA43619AF;
+        Tue,  5 Apr 2022 20:35:26 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 30537C385A1;
+        Tue,  5 Apr 2022 20:35:26 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186463;
-        bh=cDPy0xI578WfkDIktMt8wJvIbPGQCoBzzMq2Fpkpaf4=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=O58UFv1Xdgf5DMHZT5h+btU7dWQqw0aMYUPwmFYCQ177ViMlNAkPvRYNs2VrT2VMB
-         8Mljj04e8YcFXzFo2t2PaNyunOFVx/R1Wc0hPzMy86axMHWVmIlWtkEfuSwkvLL8hE
-         kwmXQgSqsd3DsSeYqz7PIf6w1aEl4K0GRzUGgEak5/5HB84YBomMs+o7D+0DoBajIv
-         N4UgUQGJUZu0oGvdp61sTfpLziUZcaLxbQ7xXa4Y8Kf9Lhm39z5TRIzEwz/9SEF2DT
-         vtblc3YJofL+1otmKbBz/whZEc2vI7ojdqvSHusBhkDPl8eCm0g0Z/nW07kURihgOm
-         UJM+I/hw93PWg==
-From:   Jeff Layton <jlayton@kernel.org>
-To:     idryomov@gmail.com, xiubli@redhat.com
-Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
-        lhenriques@suse.de
-Subject: [PATCH v13 34/59] ceph: make ceph_get_name decrypt filenames
-Date:   Tue,  5 Apr 2022 15:20:05 -0400
-Message-Id: <20220405192030.178326-35-jlayton@kernel.org>
-X-Mailer: git-send-email 2.35.1
-In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
-References: <20220405192030.178326-1-jlayton@kernel.org>
+        s=k20201202; t=1649190926;
+        bh=5AMYXQake7hH4Sl7hM9HYLwlrWswqrY810AOuA4uvuY=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=i0h8TOPZyYXw7YxYxsVl6M7m9galZt/HSu2NrnpCZivNyZ7yuqNR6VPzSsh9B5xZ7
+         wEI8GFAsRtI1+5cpvV4y5V6bD7ZTHWPrNms51oMeBLqlbhz/Pt4jHjEr4YMtpS04bv
+         inUsXA39X6lGwlO1xGyJPxEYe1/qPedJg+ZQA8CccgWdLyfHb14wrrbhHpPIc+xAb6
+         2Kx5UkD3i6eV7U8TpRrO27fFNcv6EyK0xn1bXYnJaKFcb7onhVzGsI0JoyGopO2ej3
+         a1PNnKsF+R00mz8wCgz30M0lR6/Fgfb+1bACZztdZ/k/7a5j2fhFUCttN/z9s5wiPu
+         gNWEMYwCMmdpw==
+Date:   Tue, 5 Apr 2022 20:35:24 +0000
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Mimi Zohar <zohar@linux.ibm.com>
+Cc:     linux-integrity@vger.kernel.org,
+        Stefan Berger <stefanb@linux.ibm.com>,
+        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v7 5/5] fsverity: update the documentation
+Message-ID: <YkyoDE3HPkxcV1jM@gmail.com>
+References: <20220325223824.310119-1-zohar@linux.ibm.com>
+ <20220325223824.310119-6-zohar@linux.ibm.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20220325223824.310119-6-zohar@linux.ibm.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-When we do a lookupino to the MDS, we get a filename in the trace.
-ceph_get_name uses that name directly, so we must properly decrypt
-it before copying it to the name buffer.
+On Fri, Mar 25, 2022 at 06:38:24PM -0400, Mimi Zohar wrote:
+> Update the fsverity documentation related to IMA signature support.
+> 
+> Signed-off-by: Mimi Zohar <zohar@linux.ibm.com>
+> ---
+>  Documentation/filesystems/fsverity.rst | 20 ++++++++++++--------
+>  1 file changed, 12 insertions(+), 8 deletions(-)
+> 
+> diff --git a/Documentation/filesystems/fsverity.rst b/Documentation/filesystems/fsverity.rst
+> index 1d831e3cbcb3..c1d355f17a54 100644
+> --- a/Documentation/filesystems/fsverity.rst
+> +++ b/Documentation/filesystems/fsverity.rst
+> @@ -74,8 +74,12 @@ authenticating the files is up to userspace.  However, to meet some
+>  users' needs, fs-verity optionally supports a simple signature
+>  verification mechanism where users can configure the kernel to require
+>  that all fs-verity files be signed by a key loaded into a keyring; see
+> -`Built-in signature verification`_.  Support for fs-verity file hashes
+> -in IMA (Integrity Measurement Architecture) policies is also planned.
+> +`Built-in signature verification`_.
+> +
+> +The Integrity Measurement Architecture (IMA) supports including
+> +fs-verity file digests and signatures in the IMA measurement list
+> +and verifying fs-verity based file signatures stored as security.ima
+> +xattrs, based on policy.
 
-Signed-off-by: Jeff Layton <jlayton@kernel.org>
----
- fs/ceph/export.c | 44 ++++++++++++++++++++++++++++++++------------
- 1 file changed, 32 insertions(+), 12 deletions(-)
+This looks okay, but this would be easier to understand as a list of alternative
+ways to do signature verification with fs-verity:
 
-diff --git a/fs/ceph/export.c b/fs/ceph/export.c
-index e0fa66ac8b9f..0ebf2bd93055 100644
---- a/fs/ceph/export.c
-+++ b/fs/ceph/export.c
-@@ -7,6 +7,7 @@
- 
- #include "super.h"
- #include "mds_client.h"
-+#include "crypto.h"
- 
- /*
-  * Basic fh
-@@ -534,7 +535,9 @@ static int ceph_get_name(struct dentry *parent, char *name,
- {
- 	struct ceph_mds_client *mdsc;
- 	struct ceph_mds_request *req;
-+	struct inode *dir = d_inode(parent);
- 	struct inode *inode = d_inode(child);
-+	struct ceph_mds_reply_info_parsed *rinfo;
- 	int err;
- 
- 	if (ceph_snap(inode) != CEPH_NOSNAP)
-@@ -546,30 +549,47 @@ static int ceph_get_name(struct dentry *parent, char *name,
- 	if (IS_ERR(req))
- 		return PTR_ERR(req);
- 
--	inode_lock(d_inode(parent));
--
-+	inode_lock(dir);
- 	req->r_inode = inode;
- 	ihold(inode);
- 	req->r_ino2 = ceph_vino(d_inode(parent));
--	req->r_parent = d_inode(parent);
--	ihold(req->r_parent);
-+	req->r_parent = dir;
-+	ihold(dir);
- 	set_bit(CEPH_MDS_R_PARENT_LOCKED, &req->r_req_flags);
- 	req->r_num_caps = 2;
- 	err = ceph_mdsc_do_request(mdsc, NULL, req);
-+	inode_unlock(dir);
- 
--	inode_unlock(d_inode(parent));
-+	if (err)
-+		goto out;
- 
--	if (!err) {
--		struct ceph_mds_reply_info_parsed *rinfo = &req->r_reply_info;
-+	rinfo = &req->r_reply_info;
-+	if (!IS_ENCRYPTED(dir)) {
- 		memcpy(name, rinfo->dname, rinfo->dname_len);
- 		name[rinfo->dname_len] = 0;
--		dout("get_name %p ino %llx.%llx name %s\n",
--		     child, ceph_vinop(inode), name);
- 	} else {
--		dout("get_name %p ino %llx.%llx err %d\n",
--		     child, ceph_vinop(inode), err);
--	}
-+		struct fscrypt_str oname = FSTR_INIT(NULL, 0);
-+		struct ceph_fname fname = { .dir	= dir,
-+					    .name	= rinfo->dname,
-+					    .ctext	= rinfo->altname,
-+					    .name_len	= rinfo->dname_len,
-+					    .ctext_len	= rinfo->altname_len };
-+
-+		err = ceph_fname_alloc_buffer(dir, &oname);
-+		if (err < 0)
-+			goto out;
- 
-+		err = ceph_fname_to_usr(&fname, NULL, &oname, NULL);
-+		if (!err) {
-+			memcpy(name, oname.name, oname.len);
-+			name[oname.len] = 0;
-+		}
-+		ceph_fname_free_buffer(dir, &oname);
-+	}
-+out:
-+	dout("get_name %p ino %llx.%llx err %d %s%s\n",
-+		     child, ceph_vinop(inode), err,
-+		     err ? "" : "name ", err ? "" : name);
- 	ceph_mdsc_put_request(req);
- 	return err;
- }
--- 
-2.35.1
+	* Userspace-only
+	* Built-in signature verification + userspace policy
+	* IMA
 
+- Eric
