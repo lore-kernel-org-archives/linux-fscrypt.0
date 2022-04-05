@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6CE61C433EF
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7CDB8C433FE
 	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:42 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1383845AbiDFFQu (ORCPT
+        id S1384769AbiDFFRC (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:16:50 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35486 "EHLO
+        Wed, 6 Apr 2022 01:17:02 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37214 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573552AbiDETWj (ORCPT
+        with ESMTP id S1573579AbiDETXC (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:22:39 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 57AC73CFDB;
-        Tue,  5 Apr 2022 12:20:39 -0700 (PDT)
+        Tue, 5 Apr 2022 15:23:02 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 97D4D49C84;
+        Tue,  5 Apr 2022 12:21:03 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 0A6DDB81FA4;
-        Tue,  5 Apr 2022 19:20:38 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1BD42C385A0;
-        Tue,  5 Apr 2022 19:20:36 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 1EE80618CD;
+        Tue,  5 Apr 2022 19:21:03 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id D8933C385A3;
+        Tue,  5 Apr 2022 19:21:01 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186436;
-        bh=y1CHM8STK8OTbioMqhyja91DwJu2qLFOOxUQqODp/bA=;
+        s=k20201202; t=1649186462;
+        bh=AWzsTg+UTHKEk8QehJZJCF5BnvPHMbE6gVQ/WVlXD74=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=KKgdKxatD/6nBp3Zy2wQE3CVP9KcHcBNn3W7yivtMJdaCRwY4ooZp1XV0xJHqWBfz
-         qbz8sDTdhukY/sGPLUBHvA/x4w7zwvzJD87Vgs0KTidTFbLURAnWNVSjYY/psun+Ur
-         mnYvFyN7EC8TfEIkpHNRNatHCvQ8rC2pgfPj4AvDpxYKy4ErUqq7/rf66/P5S7mSWT
-         v/Gh/s2vgrIccinHt98aPCL1EJrR6T2kOZlgJ6xa3xQpMa5bQlX9HtfmPkWlZ8gMdQ
-         On3g+1VHlFRp7+t1nTzcug2oxPr5KbQbmcFVMqtTnOF1lwDgjE8a+9MC23FOk+A7yV
-         UxMGTrGm9J3og==
+        b=CDMkMuVHglb+rWTsUJfqPzgEB06jnyqqRgnZaA2bbXB+XHGmjqnPXsuSIq+jsHJrJ
+         AKrKgtP9E9nEkZFLSQSlKUxn20XBSRcyCYZVhYb0Iax96PfpmmtkHSb4CL4VHM89vw
+         vtTSoBSvPZseTRdOiwO2mqAW81J17pOwso4FtP5T4vYxWzKxXS+1Uv0OJ4o7nn8s0L
+         wV0CDY/jvORblSCm1Nn+Ndx8yWlArMcdPHSw452smhJKbX5ra7/lQojjfroP99ORqA
+         QePVt1bw8vzWpLEquTxh3YhVe+IlHcsUp63IEM45NU0kmv18OWTGNzRaXX9f0b8qCB
+         5Qe5zpNlRbM/w==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [PATCH v13 05/59] libceph: support sparse reads on msgr2 secure codepath
-Date:   Tue,  5 Apr 2022 15:19:36 -0400
-Message-Id: <20220405192030.178326-6-jlayton@kernel.org>
+Subject: [PATCH v13 33/59] ceph: create symlinks with encrypted and base64-encoded targets
+Date:   Tue,  5 Apr 2022 15:20:04 -0400
+Message-Id: <20220405192030.178326-34-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,207 +50,261 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add a new init_sgs_pages helper that populates the scatterlist from
-an arbitrary point in an array of pages.
+When creating symlinks in encrypted directories, encrypt and
+base64-encode the target with the new inode's key before sending to the
+MDS.
 
-Change setup_message_sgs to take an optional pointer to an array of
-pages. If that's set, then the scatterlist will be set using that
-array instead of the cursor.
-
-When given a sparse read on a secure connection, decrypt the data
-in-place rather than into the final destination, by passing it the
-in_enc_pages array.
-
-After decrypting, run the sparse_read state machine in a loop, copying
-data from the decrypted pages until it's complete.
+When filling a symlinked inode, base64-decode it into a buffer that
+we'll keep in ci->i_symlink. When get_link is called, decrypt the buffer
+into a new one that will hang off i_link.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- net/ceph/messenger_v2.c | 119 ++++++++++++++++++++++++++++++++++++----
- 1 file changed, 109 insertions(+), 10 deletions(-)
+ fs/ceph/dir.c   |  51 ++++++++++++++++++++---
+ fs/ceph/inode.c | 107 ++++++++++++++++++++++++++++++++++++++++++------
+ 2 files changed, 141 insertions(+), 17 deletions(-)
 
-diff --git a/net/ceph/messenger_v2.c b/net/ceph/messenger_v2.c
-index d527777af584..3dcaee6f8903 100644
---- a/net/ceph/messenger_v2.c
-+++ b/net/ceph/messenger_v2.c
-@@ -963,12 +963,48 @@ static void init_sgs_cursor(struct scatterlist **sg,
- 	}
+diff --git a/fs/ceph/dir.c b/fs/ceph/dir.c
+index 5ce2a6384e55..82a5f37e9d4a 100644
+--- a/fs/ceph/dir.c
++++ b/fs/ceph/dir.c
+@@ -942,6 +942,40 @@ static int ceph_create(struct user_namespace *mnt_userns, struct inode *dir,
+ 	return ceph_mknod(mnt_userns, dir, dentry, mode, 0);
  }
  
-+/**
-+ * init_sgs_pages: set up scatterlist on an array of page pointers
-+ * @sg: 	scatterlist to populate
-+ * @pages: 	pointer to page array
-+ * @dpos:	position in the array to start (bytes)
-+ * @dlen:	len to add to sg (bytes)
-+ * @pad:	pointer to pad destination (if any)
-+ *
-+ * Populate the scatterlist from the page array, starting at an arbitrary
-+ * byte in the array and running for a specified length.
-+ */
-+static void init_sgs_pages(struct scatterlist **sg, struct page **pages,
-+			     int dpos, int dlen, u8 *pad)
++#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
++static int prep_encrypted_symlink_target(struct ceph_mds_request *req, const char *dest)
 +{
-+	int idx = dpos >> PAGE_SHIFT;
-+	int off = offset_in_page(dpos);
-+	int resid = dlen;
++	int err;
++	int len = strlen(dest);
++	struct fscrypt_str osd_link = FSTR_INIT(NULL, 0);
 +
-+	do {
-+		int len = min(resid, (int)PAGE_SIZE - off);
++	err = fscrypt_prepare_symlink(req->r_parent, dest, len, PATH_MAX, &osd_link);
++	if (err)
++		goto out;
 +
-+		sg_set_page(*sg, pages[idx], len, off);
-+		*sg = sg_next(*sg);
-+		off = 0;
-+		++idx;
-+		resid -= len;
-+	} while (resid);
++	err = fscrypt_encrypt_symlink(req->r_new_inode, dest, len, &osd_link);
++	if (err)
++		goto out;
 +
-+	if (need_padding(dlen)) {
-+		sg_set_buf(*sg, pad, padding_len(dlen));
-+		*sg = sg_next(*sg);
++	req->r_path2 = kmalloc(FSCRYPT_BASE64URL_CHARS(osd_link.len) + 1, GFP_KERNEL);
++	if (!req->r_path2) {
++		err = -ENOMEM;
++		goto out;
 +	}
++
++	len = fscrypt_base64url_encode(osd_link.name, osd_link.len, req->r_path2);
++	req->r_path2[len] = '\0';
++out:
++	fscrypt_fname_free_buffer(&osd_link);
++	return err;
++}
++#else
++static int prep_encrypted_symlink_target(struct ceph_mds_request *req, const char *dest)
++{
++	return -EOPNOTSUPP;
++}
++#endif
++
+ static int ceph_symlink(struct user_namespace *mnt_userns, struct inode *dir,
+ 			struct dentry *dentry, const char *dest)
+ {
+@@ -973,14 +1007,21 @@ static int ceph_symlink(struct user_namespace *mnt_userns, struct inode *dir,
+ 		goto out_req;
+ 	}
+ 
+-	req->r_path2 = kstrdup(dest, GFP_KERNEL);
+-	if (!req->r_path2) {
+-		err = -ENOMEM;
+-		goto out_req;
+-	}
+ 	req->r_parent = dir;
+ 	ihold(dir);
+ 
++	if (IS_ENCRYPTED(req->r_new_inode)) {
++		err = prep_encrypted_symlink_target(req, dest);
++		if (err)
++			goto out_req;
++	} else {
++		req->r_path2 = kstrdup(dest, GFP_KERNEL);
++		if (!req->r_path2) {
++			err = -ENOMEM;
++			goto out_req;
++		}
++	}
++
+ 	set_bit(CEPH_MDS_R_PARENT_LOCKED, &req->r_req_flags);
+ 	req->r_dentry = dget(dentry);
+ 	req->r_num_caps = 2;
+diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
+index d1ade1651214..bb1b1a57970c 100644
+--- a/fs/ceph/inode.c
++++ b/fs/ceph/inode.c
+@@ -35,6 +35,7 @@
+  */
+ 
+ static const struct inode_operations ceph_symlink_iops;
++static const struct inode_operations ceph_encrypted_symlink_iops;
+ 
+ static void ceph_inode_work(struct work_struct *work);
+ 
+@@ -639,6 +640,7 @@ void ceph_free_inode(struct inode *inode)
+ #ifdef CONFIG_FS_ENCRYPTION
+ 	kfree(ci->fscrypt_auth);
+ #endif
++	fscrypt_free_inode(inode);
+ 	kmem_cache_free(ceph_inode_cachep, ci);
+ }
+ 
+@@ -836,6 +838,34 @@ void ceph_fill_file_time(struct inode *inode, int issued,
+ 		     inode, time_warp_seq, ci->i_time_warp_seq);
+ }
+ 
++#if IS_ENABLED(CONFIG_FS_ENCRYPTION)
++static int decode_encrypted_symlink(const char *encsym, int enclen, u8 **decsym)
++{
++	int declen;
++	u8 *sym;
++
++	sym = kmalloc(enclen + 1, GFP_NOFS);
++	if (!sym)
++		return -ENOMEM;
++
++	declen = fscrypt_base64url_decode(encsym, enclen, sym);
++	if (declen < 0) {
++		pr_err("%s: can't decode symlink (%d). Content: %.*s\n",
++		       __func__, declen, enclen, encsym);
++		kfree(sym);
++		return -EIO;
++	}
++	sym[declen + 1] = '\0';
++	*decsym = sym;
++	return declen;
++}
++#else
++static int decode_encrypted_symlink(const char *encsym, int symlen, u8 **decsym)
++{
++	return -EOPNOTSUPP;
++}
++#endif
++
+ /*
+  * Populate an inode based on info from mds.  May be called on new or
+  * existing inodes.
+@@ -1070,26 +1100,39 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
+ 		inode->i_fop = &ceph_file_fops;
+ 		break;
+ 	case S_IFLNK:
+-		inode->i_op = &ceph_symlink_iops;
+ 		if (!ci->i_symlink) {
+ 			u32 symlen = iinfo->symlink_len;
+ 			char *sym;
+ 
+ 			spin_unlock(&ci->i_ceph_lock);
+ 
+-			if (symlen != i_size_read(inode)) {
+-				pr_err("%s %llx.%llx BAD symlink "
+-					"size %lld\n", __func__,
+-					ceph_vinop(inode),
+-					i_size_read(inode));
++			if (IS_ENCRYPTED(inode)) {
++				if (symlen != i_size_read(inode))
++					pr_err("%s %llx.%llx BAD symlink size %lld\n",
++						__func__, ceph_vinop(inode), i_size_read(inode));
++
++				err = decode_encrypted_symlink(iinfo->symlink, symlen, (u8 **)&sym);
++				if (err < 0) {
++					pr_err("%s decoding encrypted symlink failed: %d\n",
++						__func__, err);
++					goto out;
++				}
++				symlen = err;
+ 				i_size_write(inode, symlen);
+ 				inode->i_blocks = calc_inode_blocks(symlen);
+-			}
++			} else {
++				if (symlen != i_size_read(inode)) {
++					pr_err("%s %llx.%llx BAD symlink size %lld\n",
++						__func__, ceph_vinop(inode), i_size_read(inode));
++					i_size_write(inode, symlen);
++					inode->i_blocks = calc_inode_blocks(symlen);
++				}
+ 
+-			err = -ENOMEM;
+-			sym = kstrndup(iinfo->symlink, symlen, GFP_NOFS);
+-			if (!sym)
+-				goto out;
++				err = -ENOMEM;
++				sym = kstrndup(iinfo->symlink, symlen, GFP_NOFS);
++				if (!sym)
++					goto out;
++			}
+ 
+ 			spin_lock(&ci->i_ceph_lock);
+ 			if (!ci->i_symlink)
+@@ -1097,7 +1140,17 @@ int ceph_fill_inode(struct inode *inode, struct page *locked_page,
+ 			else
+ 				kfree(sym); /* lost a race */
+ 		}
+-		inode->i_link = ci->i_symlink;
++
++		if (IS_ENCRYPTED(inode)) {
++			/*
++			 * Encrypted symlinks need to be decrypted before we can
++			 * cache their targets in i_link. Don't touch it here.
++			 */
++			inode->i_op = &ceph_encrypted_symlink_iops;
++		} else {
++			inode->i_link = ci->i_symlink;
++			inode->i_op = &ceph_symlink_iops;
++		}
+ 		break;
+ 	case S_IFDIR:
+ 		inode->i_op = &ceph_dir_iops;
+@@ -2126,6 +2179,29 @@ static void ceph_inode_work(struct work_struct *work)
+ 	iput(inode);
+ }
+ 
++static const char *ceph_encrypted_get_link(struct dentry *dentry, struct inode *inode,
++					   struct delayed_call *done)
++{
++	struct ceph_inode_info *ci = ceph_inode(inode);
++
++	if (!dentry)
++		return ERR_PTR(-ECHILD);
++
++	return fscrypt_get_symlink(inode, ci->i_symlink, i_size_read(inode), done);
 +}
 +
- static int setup_message_sgs(struct sg_table *sgt, struct ceph_msg *msg,
- 			     u8 *front_pad, u8 *middle_pad, u8 *data_pad,
--			     void *epilogue, bool add_tag)
-+			     void *epilogue, struct page **pages, int dpos,
-+			     bool add_tag)
- {
- 	struct ceph_msg_data_cursor cursor;
- 	struct scatterlist *cur_sg;
-+	int dlen = data_len(msg);
- 	int sg_cnt;
- 	int ret;
- 
-@@ -982,9 +1018,15 @@ static int setup_message_sgs(struct sg_table *sgt, struct ceph_msg *msg,
- 	if (middle_len(msg))
- 		sg_cnt += calc_sg_cnt(msg->middle->vec.iov_base,
- 				      middle_len(msg));
--	if (data_len(msg)) {
--		ceph_msg_data_cursor_init(&cursor, msg, data_len(msg));
--		sg_cnt += calc_sg_cnt_cursor(&cursor);
-+	if (dlen) {
-+		if (pages) {
-+			sg_cnt += calc_pages_for(dpos, dlen);
-+			if (need_padding(dlen))
-+				sg_cnt++;
-+		} else {
-+			ceph_msg_data_cursor_init(&cursor, msg, dlen);
-+			sg_cnt += calc_sg_cnt_cursor(&cursor);
-+		}
- 	}
- 
- 	ret = sg_alloc_table(sgt, sg_cnt, GFP_NOIO);
-@@ -998,9 +1040,13 @@ static int setup_message_sgs(struct sg_table *sgt, struct ceph_msg *msg,
- 	if (middle_len(msg))
- 		init_sgs(&cur_sg, msg->middle->vec.iov_base, middle_len(msg),
- 			 middle_pad);
--	if (data_len(msg)) {
--		ceph_msg_data_cursor_init(&cursor, msg, data_len(msg));
--		init_sgs_cursor(&cur_sg, &cursor, data_pad);
-+	if (dlen) {
-+		if (pages) {
-+			init_sgs_pages(&cur_sg, pages, dpos, dlen, data_pad);
-+		} else {
-+			ceph_msg_data_cursor_init(&cursor, msg, dlen);
-+			init_sgs_cursor(&cur_sg, &cursor, data_pad);
-+		}
- 	}
- 
- 	WARN_ON(!sg_is_last(cur_sg));
-@@ -1035,10 +1081,52 @@ static int decrypt_control_remainder(struct ceph_connection *con)
- 			 padded_len(rem_len) + CEPH_GCM_TAG_LEN);
- }
- 
-+/* Process sparse read data that lives in a buffer */
-+static int process_v2_sparse_read(struct ceph_connection *con, struct page **pages, int spos)
++static int ceph_encrypted_symlink_getattr(struct user_namespace *mnt_userns,
++					  const struct path *path, struct kstat *stat,
++					  u32 request_mask, unsigned int query_flags)
 +{
-+	struct ceph_msg_data_cursor *cursor = &con->v2.in_cursor;
 +	int ret;
 +
-+	for (;;) {
-+		char *buf = NULL;
-+
-+		ret = con->ops->sparse_read(con, cursor, &buf);
-+		if (ret <= 0)
-+			return ret;
-+
-+		dout("%s: sparse_read return %x buf %p\n", __func__, ret, buf);
-+
-+		do {
-+			int idx = spos >> PAGE_SHIFT;
-+			int soff = offset_in_page(spos);
-+			struct page *spage = con->v2.in_enc_pages[idx];
-+			int len = min_t(int, ret, PAGE_SIZE - soff);
-+
-+			if (buf) {
-+				memcpy_from_page(buf, spage, soff, len);
-+				buf += len;
-+			} else {
-+				struct bio_vec bv;
-+
-+				get_bvec_at(cursor, &bv);
-+				len = min_t(int, len, bv.bv_len);
-+				memcpy_page(bv.bv_page, bv.bv_offset,
-+					    spage, soff, len);
-+				ceph_msg_data_advance(cursor, len);
-+			}
-+			spos += len;
-+			ret -= len;
-+		} while (ret);
-+	}
++	ret = ceph_getattr(mnt_userns, path, stat, request_mask, query_flags);
++	if (ret)
++		return ret;
++	return fscrypt_symlink_getattr(path, stat);
 +}
 +
- static int decrypt_tail(struct ceph_connection *con)
+ /*
+  * symlinks
+  */
+@@ -2136,6 +2212,13 @@ static const struct inode_operations ceph_symlink_iops = {
+ 	.listxattr = ceph_listxattr,
+ };
+ 
++static const struct inode_operations ceph_encrypted_symlink_iops = {
++	.get_link = ceph_encrypted_get_link,
++	.setattr = ceph_setattr,
++	.getattr = ceph_encrypted_symlink_getattr,
++	.listxattr = ceph_listxattr,
++};
++
+ int __ceph_setattr(struct inode *inode, struct iattr *attr, struct ceph_iattr *cia)
  {
- 	struct sg_table enc_sgt = {};
- 	struct sg_table sgt = {};
-+	struct page **pages = NULL;
-+	bool sparse = con->in_msg->sparse_read;
-+	int dpos = 0;
- 	int tail_len;
- 	int ret;
- 
-@@ -1049,9 +1137,14 @@ static int decrypt_tail(struct ceph_connection *con)
- 	if (ret)
- 		goto out;
- 
-+	if (sparse) {
-+		dpos = padded_len(front_len(con->in_msg) + padded_len(middle_len(con->in_msg)));
-+		pages = con->v2.in_enc_pages;
-+	}
-+
- 	ret = setup_message_sgs(&sgt, con->in_msg, FRONT_PAD(con->v2.in_buf),
--			MIDDLE_PAD(con->v2.in_buf), DATA_PAD(con->v2.in_buf),
--			con->v2.in_buf, true);
-+				MIDDLE_PAD(con->v2.in_buf), DATA_PAD(con->v2.in_buf),
-+				con->v2.in_buf, pages, dpos, true);
- 	if (ret)
- 		goto out;
- 
-@@ -1061,6 +1154,12 @@ static int decrypt_tail(struct ceph_connection *con)
- 	if (ret)
- 		goto out;
- 
-+	if (sparse && data_len(con->in_msg)) {
-+		ret = process_v2_sparse_read(con, con->v2.in_enc_pages, dpos);
-+		if (ret)
-+			goto out;
-+	}
-+
- 	WARN_ON(!con->v2.in_enc_page_cnt);
- 	ceph_release_page_vector(con->v2.in_enc_pages,
- 				 con->v2.in_enc_page_cnt);
-@@ -1584,7 +1683,7 @@ static int prepare_message_secure(struct ceph_connection *con)
- 
- 	encode_epilogue_secure(con, false);
- 	ret = setup_message_sgs(&sgt, con->out_msg, zerop, zerop, zerop,
--				&con->v2.out_epil, false);
-+				&con->v2.out_epil, NULL, 0, false);
- 	if (ret)
- 		goto out;
- 
+ 	struct ceph_inode_info *ci = ceph_inode(inode);
 -- 
 2.35.1
 
