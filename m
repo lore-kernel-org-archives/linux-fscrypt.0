@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C1659C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2D95DC433F5
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:31 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1354435AbiDFFQC (ORCPT
+        id S1359043AbiDFFQG (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:16:02 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37640 "EHLO
+        Wed, 6 Apr 2022 01:16:06 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37940 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573587AbiDETXJ (ORCPT
+        with ESMTP id S1573593AbiDETXO (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:23:09 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 95F234B842;
-        Tue,  5 Apr 2022 12:21:09 -0700 (PDT)
+        Tue, 5 Apr 2022 15:23:14 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2EFF14C432;
+        Tue,  5 Apr 2022 12:21:15 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 43BAEB81FA5;
-        Tue,  5 Apr 2022 19:21:08 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 64BBCC385A0;
-        Tue,  5 Apr 2022 19:21:06 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id D6F69B81FA4;
+        Tue,  5 Apr 2022 19:21:13 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id D0B88C385A0;
+        Tue,  5 Apr 2022 19:21:11 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186467;
-        bh=X85CZobPXWulW9mgO7+FK15JdkLRqeyY4fhr5BUdygo=;
+        s=k20201202; t=1649186472;
+        bh=BuPDaFFHn9DI+S2jJNJ0UstMiP6cacU6yo5802iH8rs=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=FroQz6bZzBiDzl4/Y8m8ivQwBBM15kgJDRQkBcOis27RIWqJXdO/Up+Ja0+ps5+1G
-         lybMxpr+MB0gRbaNM9Op70KXPihW9axLWkrm04rpRfRDHuT1Mp28xgJehOxjpBPHnQ
-         vmi+J8QmBbzd5p39I7Dv75ece+Qil/41XLC4pjfDJajYKp7hAnfjbXHyRlGETbSqAt
-         LoQYbDx2D33rSSgYWZsRVZrlcKs/KF9q8kvoMHh1IDXh5+c0i1N4DIPZs4QZpHPP4g
-         a56POnYOgmaSA8+WsW93I3VRAPJV1W8n7s7nIKHB8s+g7L95PiezKBoDInvKh7JoEK
-         9Mnv85xTgyntg==
+        b=tdMW82DnD5bTmA5CqP5EzSXRVOMUszinsLxMfqiNz9OVYhh54+e8ZFVqi+XAj7QXE
+         nnR0bjnC3+DpVo5VV7EcHVGJ6AQHQnB/J82A4cVarwg5fdzyyvDVGV0R5uaJWhUXBo
+         z15clcrY0/kbyQqt9DzJQrDFrDllwUk77es0gIP0TydIoiUMEF+VXWE7BVRLEyCSgO
+         ohRW0JyTukIOAkSmNL5P3vyRUh2c4qIi4IjoQziLPetustN+IVkcNtwBRFWrhWku0v
+         dH14LoanPrI4wBObU98yR2Ie45WWFMwQVV+i7nUn8A2bB25A+i4Px1m0X5aJyJ0zCe
+         w8AfxTrsKRwVA==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [PATCH v13 38/59] libceph: add CEPH_OSD_OP_ASSERT_VER support
-Date:   Tue,  5 Apr 2022 15:20:09 -0400
-Message-Id: <20220405192030.178326-39-jlayton@kernel.org>
+Subject: [PATCH v13 44/59] ceph: add __ceph_get_caps helper support
+Date:   Tue,  5 Apr 2022 15:20:15 -0400
+Message-Id: <20220405192030.178326-45-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,89 +50,90 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-...and record the user_version in the reply in a new field in
-ceph_osd_request, so we can populate the assert_ver appropriately.
-Shuffle the fields a bit too so that the new field fits in an
-existing hole on x86_64.
+From: Xiubo Li <xiubli@redhat.com>
 
+Break out the guts of ceph_get_caps into a helper that takes an inode
+and ceph_file_info instead of a file pointer.
+
+Signed-off-by: Xiubo Li <xiubli@redhat.com>
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- include/linux/ceph/osd_client.h | 6 +++++-
- include/linux/ceph/rados.h      | 4 ++++
- net/ceph/osd_client.c           | 5 +++++
- 3 files changed, 14 insertions(+), 1 deletion(-)
+ fs/ceph/caps.c  | 19 +++++++++++++------
+ fs/ceph/super.h |  2 ++
+ 2 files changed, 15 insertions(+), 6 deletions(-)
 
-diff --git a/include/linux/ceph/osd_client.h b/include/linux/ceph/osd_client.h
-index 4088601beacc..8c7f34df66d3 100644
---- a/include/linux/ceph/osd_client.h
-+++ b/include/linux/ceph/osd_client.h
-@@ -196,6 +196,9 @@ struct ceph_osd_req_op {
- 			u32 src_fadvise_flags;
- 			struct ceph_osd_data osd_data;
- 		} copy_from;
-+		struct {
-+			u64 ver;
-+		} assert_ver;
- 	};
- };
+diff --git a/fs/ceph/caps.c b/fs/ceph/caps.c
+index cb2c18d43946..69af17df59be 100644
+--- a/fs/ceph/caps.c
++++ b/fs/ceph/caps.c
+@@ -2947,10 +2947,9 @@ int ceph_try_get_caps(struct inode *inode, int need, int want,
+  * due to a small max_size, make sure we check_max_size (and possibly
+  * ask the mds) so we don't get hung up indefinitely.
+  */
+-int ceph_get_caps(struct file *filp, int need, int want, loff_t endoff, int *got)
++int __ceph_get_caps(struct inode *inode, struct ceph_file_info *fi, int need,
++		    int want, loff_t endoff, int *got)
+ {
+-	struct ceph_file_info *fi = filp->private_data;
+-	struct inode *inode = file_inode(filp);
+ 	struct ceph_inode_info *ci = ceph_inode(inode);
+ 	struct ceph_fs_client *fsc = ceph_inode_to_client(inode);
+ 	int ret, _got, flags;
+@@ -2959,7 +2958,7 @@ int ceph_get_caps(struct file *filp, int need, int want, loff_t endoff, int *got
+ 	if (ret < 0)
+ 		return ret;
  
-@@ -250,6 +253,7 @@ struct ceph_osd_request {
- 	struct ceph_osd_client *r_osdc;
- 	struct kref       r_kref;
- 	bool              r_mempool;
-+	bool		  r_linger;           /* don't resend on failure */
- 	struct completion r_completion;       /* private to osd_client.c */
- 	ceph_osdc_callback_t r_callback;
+-	if ((fi->fmode & CEPH_FILE_MODE_WR) &&
++	if (fi && (fi->fmode & CEPH_FILE_MODE_WR) &&
+ 	    fi->filp_gen != READ_ONCE(fsc->filp_gen))
+ 		return -EBADF;
  
-@@ -262,9 +266,9 @@ struct ceph_osd_request {
- 	struct ceph_snap_context *r_snapc;    /* for writes */
- 	struct timespec64 r_mtime;            /* ditto */
- 	u64 r_data_offset;                    /* ditto */
--	bool r_linger;                        /* don't resend on failure */
+@@ -2967,7 +2966,7 @@ int ceph_get_caps(struct file *filp, int need, int want, loff_t endoff, int *got
  
- 	/* internal */
-+	u64 r_version;			      /* data version sent in reply */
- 	unsigned long r_stamp;                /* jiffies, send or check time */
- 	unsigned long r_start_stamp;          /* jiffies */
- 	ktime_t r_start_latency;              /* ktime_t */
-diff --git a/include/linux/ceph/rados.h b/include/linux/ceph/rados.h
-index 43a7a1573b51..73c3efbec36c 100644
---- a/include/linux/ceph/rados.h
-+++ b/include/linux/ceph/rados.h
-@@ -523,6 +523,10 @@ struct ceph_osd_op {
- 		struct {
- 			__le64 cookie;
- 		} __attribute__ ((packed)) notify;
-+		struct {
-+			__le64 unused;
-+			__le64 ver;
-+		} __attribute__ ((packed)) assert_ver;
- 		struct {
- 			__le64 offset, length;
- 			__le64 src_offset;
-diff --git a/net/ceph/osd_client.c b/net/ceph/osd_client.c
-index acf6a19b6677..febdd728b2fb 100644
---- a/net/ceph/osd_client.c
-+++ b/net/ceph/osd_client.c
-@@ -1042,6 +1042,10 @@ static u32 osd_req_encode_op(struct ceph_osd_op *dst,
- 		dst->copy_from.src_fadvise_flags =
- 			cpu_to_le32(src->copy_from.src_fadvise_flags);
- 		break;
-+	case CEPH_OSD_OP_ASSERT_VER:
-+		dst->assert_ver.unused = cpu_to_le64(0);
-+		dst->assert_ver.ver = cpu_to_le64(src->assert_ver.ver);
-+		break;
- 	default:
- 		pr_err("unsupported osd opcode %s\n",
- 			ceph_osd_op_name(src->op));
-@@ -3804,6 +3808,7 @@ static void handle_reply(struct ceph_osd *osd, struct ceph_msg *msg)
- 	 * one (type of) reply back.
- 	 */
- 	WARN_ON(!(m.flags & CEPH_OSD_FLAG_ONDISK));
-+	req->r_version = m.user_version;
- 	req->r_result = m.result ?: data_len;
- 	finish_request(req);
- 	mutex_unlock(&osd->lock);
+ 	while (true) {
+ 		flags &= CEPH_FILE_MODE_MASK;
+-		if (atomic_read(&fi->num_locks))
++		if (fi && atomic_read(&fi->num_locks))
+ 			flags |= CHECK_FILELOCK;
+ 		_got = 0;
+ 		ret = try_get_cap_refs(inode, need, want, endoff,
+@@ -3012,7 +3011,7 @@ int ceph_get_caps(struct file *filp, int need, int want, loff_t endoff, int *got
+ 				continue;
+ 		}
+ 
+-		if ((fi->fmode & CEPH_FILE_MODE_WR) &&
++		if (fi && (fi->fmode & CEPH_FILE_MODE_WR) &&
+ 		    fi->filp_gen != READ_ONCE(fsc->filp_gen)) {
+ 			if (ret >= 0 && _got)
+ 				ceph_put_cap_refs(ci, _got);
+@@ -3075,6 +3074,14 @@ int ceph_get_caps(struct file *filp, int need, int want, loff_t endoff, int *got
+ 	return 0;
+ }
+ 
++int ceph_get_caps(struct file *filp, int need, int want, loff_t endoff, int *got)
++{
++	struct ceph_file_info *fi = filp->private_data;
++	struct inode *inode = file_inode(filp);
++
++	return __ceph_get_caps(inode, fi, need, want, endoff, got);
++}
++
+ /*
+  * Take cap refs.  Caller must already know we hold at least one ref
+  * on the caps in question or we don't know this is safe.
+diff --git a/fs/ceph/super.h b/fs/ceph/super.h
+index a97a6f6f3089..752bc3c820ca 100644
+--- a/fs/ceph/super.h
++++ b/fs/ceph/super.h
+@@ -1229,6 +1229,8 @@ extern int ceph_encode_dentry_release(void **p, struct dentry *dn,
+ 				      struct inode *dir,
+ 				      int mds, int drop, int unless);
+ 
++extern int __ceph_get_caps(struct inode *inode, struct ceph_file_info *fi,
++			   int need, int want, loff_t endoff, int *got);
+ extern int ceph_get_caps(struct file *filp, int need, int want,
+ 			 loff_t endoff, int *got);
+ extern int ceph_try_get_caps(struct inode *inode,
 -- 
 2.35.1
 
