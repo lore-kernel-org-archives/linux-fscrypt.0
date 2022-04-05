@@ -2,85 +2,84 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 99B9EC433FE
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1D74FC43219
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:19 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1349094AbiDFFP2 (ORCPT
+        id S1350599AbiDFFPp (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:15:28 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58738 "EHLO
+        Wed, 6 Apr 2022 01:15:45 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36574 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1387042AbiDEVuz (ORCPT
+        with ESMTP id S1573572AbiDETWx (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 17:50:55 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D49238D681;
-        Tue,  5 Apr 2022 13:35:41 -0700 (PDT)
+        Tue, 5 Apr 2022 15:22:53 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5BE7847551;
+        Tue,  5 Apr 2022 12:20:55 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id DDA43619AF;
-        Tue,  5 Apr 2022 20:35:26 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 30537C385A1;
-        Tue,  5 Apr 2022 20:35:26 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id F09E260A5F;
+        Tue,  5 Apr 2022 19:20:54 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id B1686C385A1;
+        Tue,  5 Apr 2022 19:20:53 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649190926;
-        bh=5AMYXQake7hH4Sl7hM9HYLwlrWswqrY810AOuA4uvuY=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=i0h8TOPZyYXw7YxYxsVl6M7m9galZt/HSu2NrnpCZivNyZ7yuqNR6VPzSsh9B5xZ7
-         wEI8GFAsRtI1+5cpvV4y5V6bD7ZTHWPrNms51oMeBLqlbhz/Pt4jHjEr4YMtpS04bv
-         inUsXA39X6lGwlO1xGyJPxEYe1/qPedJg+ZQA8CccgWdLyfHb14wrrbhHpPIc+xAb6
-         2Kx5UkD3i6eV7U8TpRrO27fFNcv6EyK0xn1bXYnJaKFcb7onhVzGsI0JoyGopO2ej3
-         a1PNnKsF+R00mz8wCgz30M0lR6/Fgfb+1bACZztdZ/k/7a5j2fhFUCttN/z9s5wiPu
-         gNWEMYwCMmdpw==
-Date:   Tue, 5 Apr 2022 20:35:24 +0000
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Mimi Zohar <zohar@linux.ibm.com>
-Cc:     linux-integrity@vger.kernel.org,
-        Stefan Berger <stefanb@linux.ibm.com>,
-        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v7 5/5] fsverity: update the documentation
-Message-ID: <YkyoDE3HPkxcV1jM@gmail.com>
-References: <20220325223824.310119-1-zohar@linux.ibm.com>
- <20220325223824.310119-6-zohar@linux.ibm.com>
+        s=k20201202; t=1649186454;
+        bh=40bz7fgcSkfmSJmWJDKxd9JZxineBbUvX30XOIb7qbk=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=ScUndJsO1iIF8TZnZGyatLX8D1Sre9qw03pcugwOP94pa2shH71KCYubeRtwLcte8
+         q9RYFCVt+6ZMZu+QFNAqmtzeaZqPzTNzF+0MMe1HSjLzlKAUfQJOCwSn5IPQyvFZwA
+         Vih4e+llhlS//shafvtvaB0Z5W9Dp2d+KmN/zlOSYwX9QOC2RhLZzyzN8RTJeMrYOv
+         hpyzzA2FW6n9d9mp4bD/8vGRDgPflyQ83mZ5r+BySLJASgExrd54G46yrVdy9Ui5KN
+         DXSaIWV0SsLsQ8K4bfs044u75kf+1m/5jdjNBj+fbaDli3Pysk4GHIOYY/Jhud32+3
+         2fSg1Jk/m2S2Q==
+From:   Jeff Layton <jlayton@kernel.org>
+To:     idryomov@gmail.com, xiubli@redhat.com
+Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
+        lhenriques@suse.de
+Subject: [PATCH v13 24/59] ceph: properly set DCACHE_NOKEY_NAME flag in lookup
+Date:   Tue,  5 Apr 2022 15:19:55 -0400
+Message-Id: <20220405192030.178326-25-jlayton@kernel.org>
+X-Mailer: git-send-email 2.35.1
+In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
+References: <20220405192030.178326-1-jlayton@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20220325223824.310119-6-zohar@linux.ibm.com>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Mar 25, 2022 at 06:38:24PM -0400, Mimi Zohar wrote:
-> Update the fsverity documentation related to IMA signature support.
-> 
-> Signed-off-by: Mimi Zohar <zohar@linux.ibm.com>
-> ---
->  Documentation/filesystems/fsverity.rst | 20 ++++++++++++--------
->  1 file changed, 12 insertions(+), 8 deletions(-)
-> 
-> diff --git a/Documentation/filesystems/fsverity.rst b/Documentation/filesystems/fsverity.rst
-> index 1d831e3cbcb3..c1d355f17a54 100644
-> --- a/Documentation/filesystems/fsverity.rst
-> +++ b/Documentation/filesystems/fsverity.rst
-> @@ -74,8 +74,12 @@ authenticating the files is up to userspace.  However, to meet some
->  users' needs, fs-verity optionally supports a simple signature
->  verification mechanism where users can configure the kernel to require
->  that all fs-verity files be signed by a key loaded into a keyring; see
-> -`Built-in signature verification`_.  Support for fs-verity file hashes
-> -in IMA (Integrity Measurement Architecture) policies is also planned.
-> +`Built-in signature verification`_.
-> +
-> +The Integrity Measurement Architecture (IMA) supports including
-> +fs-verity file digests and signatures in the IMA measurement list
-> +and verifying fs-verity based file signatures stored as security.ima
-> +xattrs, based on policy.
+This is required so that we know to invalidate these dentries when the
+directory is unlocked.
 
-This looks okay, but this would be easier to understand as a list of alternative
-ways to do signature verification with fs-verity:
+Signed-off-by: Jeff Layton <jlayton@kernel.org>
+---
+ fs/ceph/dir.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
 
-	* Userspace-only
-	* Built-in signature verification + userspace policy
-	* IMA
+diff --git a/fs/ceph/dir.c b/fs/ceph/dir.c
+index 8cc7a49ee508..897f8618151b 100644
+--- a/fs/ceph/dir.c
++++ b/fs/ceph/dir.c
+@@ -760,6 +760,17 @@ static struct dentry *ceph_lookup(struct inode *dir, struct dentry *dentry,
+ 	if (dentry->d_name.len > NAME_MAX)
+ 		return ERR_PTR(-ENAMETOOLONG);
+ 
++	if (IS_ENCRYPTED(dir)) {
++		err = __fscrypt_prepare_readdir(dir);
++		if (err)
++			return ERR_PTR(err);
++		if (!fscrypt_has_encryption_key(dir)) {
++			spin_lock(&dentry->d_lock);
++			dentry->d_flags |= DCACHE_NOKEY_NAME;
++			spin_unlock(&dentry->d_lock);
++		}
++	}
++
+ 	/* can we conclude ENOENT locally? */
+ 	if (d_really_is_negative(dentry)) {
+ 		struct ceph_inode_info *ci = ceph_inode(dir);
+-- 
+2.35.1
 
-- Eric
