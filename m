@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 539BBC35296
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 72A5CC352A7
 	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:44 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1447773AbiDFFTk (ORCPT
+        id S1448473AbiDFFTw (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:19:40 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36512 "EHLO
+        Wed, 6 Apr 2022 01:19:52 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38448 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573570AbiDETWw (ORCPT
+        with ESMTP id S1573600AbiDETXV (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:22:52 -0400
-Received: from sin.source.kernel.org (sin.source.kernel.org [145.40.73.55])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 0D4AA47050;
-        Tue,  5 Apr 2022 12:20:54 -0700 (PDT)
+        Tue, 5 Apr 2022 15:23:21 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 6C0ED50E37;
+        Tue,  5 Apr 2022 12:21:22 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by sin.source.kernel.org (Postfix) with ESMTPS id 4AA77CE1FB6;
-        Tue,  5 Apr 2022 19:20:52 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 18778C385A1;
-        Tue,  5 Apr 2022 19:20:50 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 1E282B81F6B;
+        Tue,  5 Apr 2022 19:21:21 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 215F3C385A3;
+        Tue,  5 Apr 2022 19:21:19 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186450;
-        bh=4gK8ZAn+TacGcAjwCDK5lhYYnjJ7LL+dT0yZHFaadd0=;
+        s=k20201202; t=1649186479;
+        bh=+2Vkh7etWPpq3ECuOQUyhhfQFepRWAk8lFgAlse9LJs=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=h3vPiIxfkK6OiYb/165G98js1mP4pade1hlyPqwCLOvWG47or0gv3JuZz2PzrhdeW
-         LEGz361/FC7O/xfSPkIV/SJG0WEwEk98VAFZ3Tvk2MFbkwJsljtP1Tueh4ji9g/UpZ
-         WfOKEqy9nSA4+mDWZl+mGCxzFyeYrQSYLvFbhEtBnk2ctUsiJsC+N63QUwbmi9YTdr
-         C7kv5ohRf44g1IoriEV3OgQVzt7/5bWnQ2RpSESLGg1L9erv90p18H0cJ33Sm+/FyI
-         LuATH4VtQJt47boufQaIYAOWq3jdd/BnQHnHQdHz8hD3byTOgfG5bC61qqfGM+MnQ3
-         aaDVyC2xxMFgw==
+        b=PYEUv2DlDfZZodloCX6EfAoA5aOT1NjpSCd8by9nr3AoYfa/qqd2jWJy7MvrgisjA
+         e0iX+toF52FPTgwjRUm6M08XzAL5//L+htGwTBqeEeu4Tgb8i/GxYV4F+32iftBGnk
+         lMLl+5HM7kTcU85qP5jbqIxAmyrefEOiOjfAWWT+/ZW0GKr8lL1SYpbT1Jbr+oRdxN
+         6lUvuaR/gDyfZqQLDgk/0HHlrJv/rYF0OhbAsuCywUnIGGh+TU9Koq3zGzXEUJsH8j
+         o3eBR8LmDhH4rGh7NRhlRfEmXcN1hzVAsjAXHHNIlmc0akk1cHgZGsWBRAoZA2mOFZ
+         NH361eFDpuA9g==
 From:   Jeff Layton <jlayton@kernel.org>
 To:     idryomov@gmail.com, xiubli@redhat.com
 Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         lhenriques@suse.de
-Subject: [PATCH v13 20/59] ceph: make ceph_msdc_build_path use ref-walk
-Date:   Tue,  5 Apr 2022 15:19:51 -0400
-Message-Id: <20220405192030.178326-21-jlayton@kernel.org>
+Subject: [PATCH v13 52/59] ceph: don't use special DIO path for encrypted inodes
+Date:   Tue,  5 Apr 2022 15:20:23 -0400
+Message-Id: <20220405192030.178326-53-jlayton@kernel.org>
 X-Mailer: git-send-email 2.35.1
 In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
 References: <20220405192030.178326-1-jlayton@kernel.org>
@@ -50,94 +50,39 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Encryption potentially requires allocation, at which point we'll need to
-be in a non-atomic context. Convert ceph_msdc_build_path to take dentry
-spinlocks and references instead of using rcu_read_lock to walk the
-path.
-
-This is slightly less efficient, and we may want to eventually allow
-using RCU when the leaf dentry isn't encrypted.
+Eventually I want to merge the synchronous and direct read codepaths,
+possibly via new netfs infrastructure. For now, the direct path is not
+crypto-enabled, so use the sync read/write paths instead.
 
 Signed-off-by: Jeff Layton <jlayton@kernel.org>
 ---
- fs/ceph/mds_client.c | 35 +++++++++++++++++++----------------
- 1 file changed, 19 insertions(+), 16 deletions(-)
+ fs/ceph/file.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
-diff --git a/fs/ceph/mds_client.c b/fs/ceph/mds_client.c
-index 2f2f8221eb25..28315053e116 100644
---- a/fs/ceph/mds_client.c
-+++ b/fs/ceph/mds_client.c
-@@ -2398,7 +2398,8 @@ static inline  u64 __get_oldest_tid(struct ceph_mds_client *mdsc)
- char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
- 			   int stop_on_nosnap)
- {
--	struct dentry *temp;
-+	struct dentry *cur;
-+	struct inode *inode;
- 	char *path;
- 	int pos;
- 	unsigned seq;
-@@ -2415,34 +2416,35 @@ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
- 	path[pos] = '\0';
+diff --git a/fs/ceph/file.c b/fs/ceph/file.c
+index f9e775d6cdf0..41b97d32dfcf 100644
+--- a/fs/ceph/file.c
++++ b/fs/ceph/file.c
+@@ -1709,7 +1709,9 @@ static ssize_t ceph_read_iter(struct kiocb *iocb, struct iov_iter *to)
+ 		     ceph_cap_string(got));
  
- 	seq = read_seqbegin(&rename_lock);
--	rcu_read_lock();
--	temp = dentry;
-+	cur = dget(dentry);
- 	for (;;) {
--		struct inode *inode;
-+		struct dentry *temp;
+ 		if (ci->i_inline_version == CEPH_INLINE_NONE) {
+-			if (!retry_op && (iocb->ki_flags & IOCB_DIRECT)) {
++			if (!retry_op &&
++			    (iocb->ki_flags & IOCB_DIRECT) &&
++			    !IS_ENCRYPTED(inode)) {
+ 				ret = ceph_direct_read_write(iocb, to,
+ 							     NULL, NULL);
+ 				if (ret >= 0 && ret < len)
+@@ -1935,7 +1937,7 @@ static ssize_t ceph_write_iter(struct kiocb *iocb, struct iov_iter *from)
  
--		spin_lock(&temp->d_lock);
--		inode = d_inode(temp);
-+		spin_lock(&cur->d_lock);
-+		inode = d_inode(cur);
- 		if (inode && ceph_snap(inode) == CEPH_SNAPDIR) {
- 			dout("build_path path+%d: %p SNAPDIR\n",
--			     pos, temp);
--		} else if (stop_on_nosnap && inode && dentry != temp &&
-+			     pos, cur);
-+		} else if (stop_on_nosnap && inode && dentry != cur &&
- 			   ceph_snap(inode) == CEPH_NOSNAP) {
--			spin_unlock(&temp->d_lock);
-+			spin_unlock(&cur->d_lock);
- 			pos++; /* get rid of any prepended '/' */
- 			break;
- 		} else {
--			pos -= temp->d_name.len;
-+			pos -= cur->d_name.len;
- 			if (pos < 0) {
--				spin_unlock(&temp->d_lock);
-+				spin_unlock(&cur->d_lock);
- 				break;
- 			}
--			memcpy(path + pos, temp->d_name.name, temp->d_name.len);
-+			memcpy(path + pos, cur->d_name.name, cur->d_name.len);
- 		}
-+		temp = cur;
- 		spin_unlock(&temp->d_lock);
--		temp = READ_ONCE(temp->d_parent);
-+		cur = dget_parent(temp);
-+		dput(temp);
- 
- 		/* Are we at the root? */
--		if (IS_ROOT(temp))
-+		if (IS_ROOT(cur))
- 			break;
- 
- 		/* Are we out of buffer? */
-@@ -2451,8 +2453,9 @@ char *ceph_mdsc_build_path(struct dentry *dentry, int *plen, u64 *pbase,
- 
- 		path[pos] = '/';
- 	}
--	base = ceph_ino(d_inode(temp));
--	rcu_read_unlock();
-+	inode = d_inode(cur);
-+	base = inode ? ceph_ino(inode) : 0;
-+	dput(cur);
- 
- 	if (read_seqretry(&rename_lock, seq))
- 		goto retry;
+ 		/* we might need to revert back to that point */
+ 		data = *from;
+-		if (iocb->ki_flags & IOCB_DIRECT)
++		if ((iocb->ki_flags & IOCB_DIRECT) && !IS_ENCRYPTED(inode))
+ 			written = ceph_direct_read_write(iocb, &data, snapc,
+ 							 &prealloc_cf);
+ 		else
 -- 
 2.35.1
 
