@@ -2,468 +2,181 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BCA1FC433FE
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  6 Apr 2022 05:19:44 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0216AC433EF
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  7 Apr 2022 01:50:49 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1450995AbiDFFUK (ORCPT
+        id S231495AbiDGBwo (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 6 Apr 2022 01:20:10 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38656 "EHLO
+        Wed, 6 Apr 2022 21:52:44 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:39276 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1573603AbiDETXY (ORCPT
+        with ESMTP id S235731AbiDGBwd (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 5 Apr 2022 15:23:24 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 6AD7051E65;
-        Tue,  5 Apr 2022 12:21:24 -0700 (PDT)
+        Wed, 6 Apr 2022 21:52:33 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5BD8211BCCB;
+        Wed,  6 Apr 2022 18:50:34 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id E949FB81FAA;
-        Tue,  5 Apr 2022 19:21:22 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id E89D5C385A0;
-        Tue,  5 Apr 2022 19:21:20 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 00C4C612A4;
+        Thu,  7 Apr 2022 01:50:34 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 5192EC385A1;
+        Thu,  7 Apr 2022 01:50:33 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1649186481;
-        bh=3k0F7k/flOmPH0AUjNjEF/MgnBNUhqWecKWs+ePIhNk=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=P5FnZITw0s3+Sx4qA/1VH9O15GScBDQIXZ8nCsBNvFSg+Vdhw4RJy65/ZWY3F26tN
-         +4wgSvFIxpRxMqVvwbddLycn5sm2fBqSX5enOuz3/nMZgjvkBRpfQRrYgzu933ABhM
-         bUK5j/4dRoKo1aXvdEQ2xwqAH6w6EtGLxLAWsiyaqei8j1uOyT26UhA7GPFBwnCiRG
-         AZhTCWYQdeUim6IHONerJIOdP5WGysPM9ji91K1ZdR8dlYKo0QlOQA4XDLf2epbYld
-         WMc4FowZckPvSYyRxcnzH2Oqmsgyxbw6BKk8z5M7VgDtLUaArwCmukYNRcf/Vk/woY
-         5qWycATSrxwYQ==
-From:   Jeff Layton <jlayton@kernel.org>
-To:     idryomov@gmail.com, xiubli@redhat.com
-Cc:     ceph-devel@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
-        lhenriques@suse.de
-Subject: [PATCH v13 54/59] ceph: add read/modify/write to ceph_sync_write
-Date:   Tue,  5 Apr 2022 15:20:25 -0400
-Message-Id: <20220405192030.178326-55-jlayton@kernel.org>
-X-Mailer: git-send-email 2.35.1
-In-Reply-To: <20220405192030.178326-1-jlayton@kernel.org>
-References: <20220405192030.178326-1-jlayton@kernel.org>
+        s=k20201202; t=1649296233;
+        bh=KSjX707K2yOpklDkFe3hYkXxzGvA4HUFSojJhfJktmE=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=LczaHNawhUlBcEdA2qj2WOiTqNMSnF6wexj5GxRK3ihpz0b5wZeJ4KafwslEHdklG
+         6SMttkBgf24aB8wFy/vebqS4CdciMEdK1oSVvj0pqOtf3lwV+ODWO/bpbXXN+imUdo
+         gSL19uxENhwkUHemjctGkD0cerrIwl/V69y+ul2gML3TU1RShu01+6VwYfNy7ldTgk
+         Eua59MwiC++C0+dNv6TPYayAQRm3LkywPHKBeeIfGABVaeFspIwMN3vvE6wN7jl5vO
+         Kc3OqgBnUzEInl19i7I5sAgB8V54OBTZTytcUESC3CB0ZFOqEnP/bdERuK2wce2hkT
+         mwe/Cv1I9NU4w==
+Date:   Wed, 6 Apr 2022 18:50:31 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Ritesh Harjani <ritesh.list@gmail.com>
+Cc:     fstests <fstests@vger.kernel.org>, linux-fscrypt@vger.kernel.org
+Subject: Re: "Operation not permitted" message with "-g encrypt" in xfstests
+Message-ID: <Yk5DZ+LZXVOKSjnt@sol.localdomain>
+References: <20220406180826.6wdjr3zwzedstbft@riteshh-domain>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20220406180826.6wdjr3zwzedstbft@riteshh-domain>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-When doing a synchronous write on an encrypted inode, we have no
-guarantee that the caller is writing crypto block-aligned data. When
-that happens, we must do a read/modify/write cycle.
+Hi Ritesh,
 
-First, expand the range to cover complete blocks. If we had to change
-the original pos or length, issue a read to fill the first and/or last
-pages, and fetch the version of the object from the result.
+On Wed, Apr 06, 2022 at 11:38:26PM +0530, Ritesh Harjani wrote:
+> Hello,
+> 
+> Needed some help on "encrypt" group tests in fstests.
+> 
+> so when I run "./check -g encrypt". All my tests (ext4) fails with
+> "keyctl_session_to_parent: Operation not permitted" print.
+> 
+> for e.g.
+> qemu-> sudo ./check -s ext4_4k tests/ext4/024
+> SECTION       -- ext4_4k
+> FSTYP         -- ext4
+> PLATFORM      -- Linux/x86_64 qemu 5.17.0-rc5+ #25 SMP PREEMPT Tue Apr 5 14:10:07 CDT 2022
+> MKFS_OPTIONS  -- -I 256 -O 64bit -F -b 4096 /dev/loop3
+> MOUNT_OPTIONS -- -o data=ordered /dev/loop3 /mnt1/scratch
+> 
+> ext4/024 1s ... - output mismatch (see /home/qemu/src/tools/xfstests-dev/results//ext4_4k/ext4/024.out.bad)
+>     --- tests/ext4/024.out      2022-03-30 21:07:38.117980201 +0000
+>     +++ /home/qemu/src/tools/xfstests-dev/results//ext4_4k/ext4/024.out.bad     2022-04-06 17:49:25.653513710 +0000
+>     @@ -1,2 +1,3 @@
+>      QA output created by 024
+>     +keyctl_session_to_parent: Operation not permitted
+>      Didn't crash!
+>     ...
+>     (Run 'diff -u /home/qemu/src/tools/xfstests-dev/tests/ext4/024.out /home/qemu/src/tools/xfstests-dev/results//ext4_4k/ext4/024.out.bad'  to see the entire diff)
+> Ran: ext4/024
+> Failures: ext4/024
+> Failed 1 of 1 tests
+> 
+> SECTION       -- ext4_4k
+> =========================
+> Ran: ext4/024
+> Failures: ext4/024
+> Failed 1 of 1 tests
+> 
+> 
+> On further investigation what I notice is -
+> 
+> When I run below command in qemu "sudo keyctl new_session" (which I think is
+> also done by _new_session_keyring()), it returns "Operation not permitted"
+> 
+> i.e.
+> qemu-> sudo keyctl new_session
+> keyctl_session_to_parent: Operation not permitted
+> 
+> Is this because there is already some existing session or something?
+> So when I do "sudo keyctl show", I see below.
+> 
+> qemu-> sudo keyctl show
+> Session Keyring
+>  699777301 --alswrv   1000  1000  keyring: _ses
+>   63328941 ---lswrv   1000 65534   \_ keyring: _uid.1000
+> 
+> Could you please help with what am I missing here?
+> So for now I ran with the tests with below diff, which ignores this operation
+> not permitted print message. With this all the tests passes.
+> 
+> diff --git a/common/encrypt b/common/encrypt
+> index f90c4ef0..a0920664 100644
+> --- a/common/encrypt
+> +++ b/common/encrypt
+> @@ -203,7 +203,7 @@ TEST_KEY_IDENTIFIER="69b2f6edeee720cce0577937eb8a6751"
+>  # the session keyring scoped to the lifetime of the test script.
+>  _new_session_keyring()
+>  {
+> -       $KEYCTL_PROG new_session >>$seqres.full
+> +       $KEYCTL_PROG new_session >>$seqres.full 2>&1
+>  }
+> 
+>  # Generate a key descriptor (16 character hex string)
+> 
+> But is there anything else which I should check to confirm "-g encrypt" tests
+> actually gets excercised?
+> 
+> Also, do you know why this "operation not permitted" error while running with sudo?
+> Do I need to change anything at my end? Or does this needs fixing at fstests level?
+> 
+> I agree by spending more time in understanding the encryption stack and how it
+> is interacting with different kernel subsystems, I should be able to figure this
+> out. But I assumed, that this test should ideally run out of box, if not then there
+> is something very basic I am missing. I needed this for testing some basic cleanup
+> work which I am doing in ext4 related to CONFIG_FS_ENCRYPTION.
+> And wanted to make sure I test those changes against "-g encrypt" in fstests.
+> 
+> Please feel free to point me to the doc which I can refer for more information
+> about this.
+> 
 
-We then copy data into the pages as usual, encrypt the result and issue
-a write prefixed by an assertion that the version hasn't changed. If it has
-changed then we restart the whole thing again.
+First, I'm sorry you're running into this.  The reliance of the original version
+of fs encryption on the process-subscribed keyrings has been a disaster, and I
+spent several years fixing it to use filesystem keyrings instead.  I'm not at
+all surprised this is where you happen to be having a problem.  We have to keep
+testing the old interface, though, so that is why xfstests is still using it.
 
-If there is no object at that position in the file (-ENOENT), we prefix
-the write on an exclusive create of the object instead.
+The tests want to start with an empty set of keys at the beginning of each test,
+have them be accessible during the whole test (including by subprocesses), and
+ensure they get deleted afterwards.  The way they currently do this is by
+creating a new session keyring.  A process can replace its own session keyring;
+however, there is no bash built-in for this, so instead the tests use
+'keyctl new_session' which replaces the parent process's session keyring.
 
-Signed-off-by: Jeff Layton <jlayton@kernel.org>
----
- fs/ceph/file.c | 319 ++++++++++++++++++++++++++++++++++++++++++++-----
- 1 file changed, 290 insertions(+), 29 deletions(-)
+What I think is happening is that you're running xfstests in an environment
+where the session keyring belongs to a non-root user.  'keyctl new_session'
+(specifically KEYCTL_SESSION_TO_PARENT which it uses) as root will fail in that
+case, since it requires that the parent keyring's UID be the same.
 
-diff --git a/fs/ceph/file.c b/fs/ceph/file.c
-index 69ac67c93552..522189ed6642 100644
---- a/fs/ceph/file.c
-+++ b/fs/ceph/file.c
-@@ -1540,18 +1540,16 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
- 	struct inode *inode = file_inode(file);
- 	struct ceph_inode_info *ci = ceph_inode(inode);
- 	struct ceph_fs_client *fsc = ceph_inode_to_client(inode);
--	struct ceph_vino vino;
-+	struct ceph_osd_client *osdc = &fsc->client->osdc;
- 	struct ceph_osd_request *req;
- 	struct page **pages;
- 	u64 len;
- 	int num_pages;
- 	int written = 0;
--	int flags;
- 	int ret;
- 	bool check_caps = false;
- 	struct timespec64 mtime = current_time(inode);
- 	size_t count = iov_iter_count(from);
--	size_t off;
- 
- 	if (ceph_snap(file_inode(file)) != CEPH_NOSNAP)
- 		return -EROFS;
-@@ -1571,29 +1569,236 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
- 	if (ret < 0)
- 		dout("invalidate_inode_pages2_range returned %d\n", ret);
- 
--	flags = /* CEPH_OSD_FLAG_ORDERSNAP | */ CEPH_OSD_FLAG_WRITE;
--
- 	while ((len = iov_iter_count(from)) > 0) {
- 		size_t left;
- 		int n;
-+		u64 write_pos = pos;
-+		u64 write_len = len;
-+		u64 objnum, objoff;
-+		u32 xlen;
-+		u64 assert_ver;
-+		bool rmw;
-+		bool first, last;
-+		struct iov_iter saved_iter = *from;
-+		size_t off;
-+
-+		ceph_fscrypt_adjust_off_and_len(inode, &write_pos, &write_len);
-+
-+		/* clamp the length to the end of first object */
-+		ceph_calc_file_object_mapping(&ci->i_layout, write_pos,
-+						write_len, &objnum, &objoff,
-+						&xlen);
-+		write_len = xlen;
-+
-+		/* adjust len downward if it goes beyond current object */
-+		if (pos + len > write_pos + write_len)
-+			len = write_pos + write_len - pos;
- 
--		vino = ceph_vino(inode);
--		req = ceph_osdc_new_request(&fsc->client->osdc, &ci->i_layout,
--					    vino, pos, &len, 0, 1,
--					    CEPH_OSD_OP_WRITE, flags, snapc,
--					    ci->i_truncate_seq,
--					    ci->i_truncate_size,
--					    false);
--		if (IS_ERR(req)) {
--			ret = PTR_ERR(req);
--			break;
--		}
-+		/*
-+		 * If we had to adjust the length or position to align with a
-+		 * crypto block, then we must do a read/modify/write cycle. We
-+		 * use a version assertion to redrive the thing if something
-+		 * changes in between.
-+		 */
-+		first = pos != write_pos;
-+		last = (pos + len) != (write_pos + write_len);
-+		rmw = first || last;
- 
--		num_pages = calc_pages_for(pos, len);
-+		dout("sync_write ino %llx %lld~%llu adjusted %lld~%llu -- %srmw\n",
-+		     ci->i_vino.ino, pos, len, write_pos, write_len, rmw ? "" : "no ");
-+
-+		/*
-+		 * The data is emplaced into the page as it would be if it were in
-+		 * an array of pagecache pages.
-+		 */
-+		num_pages = calc_pages_for(write_pos, write_len);
- 		pages = ceph_alloc_page_vector(num_pages, GFP_KERNEL);
- 		if (IS_ERR(pages)) {
- 			ret = PTR_ERR(pages);
--			goto out;
-+			break;
-+		}
-+
-+		/* Do we need to preload the pages? */
-+		if (rmw) {
-+			u64 first_pos = write_pos;
-+			u64 last_pos = (write_pos + write_len) - CEPH_FSCRYPT_BLOCK_SIZE;
-+			u64 read_len = CEPH_FSCRYPT_BLOCK_SIZE;
-+			struct ceph_osd_req_op *op;
-+
-+			/* We should only need to do this for encrypted inodes */
-+			WARN_ON_ONCE(!IS_ENCRYPTED(inode));
-+
-+			/* No need to do two reads if first and last blocks are same */
-+			if (first && last_pos == first_pos)
-+				last = false;
-+
-+			/*
-+			 * Allocate a read request for one or two extents, depending
-+			 * on how the request was aligned.
-+			 */
-+			req = ceph_osdc_new_request(osdc, &ci->i_layout,
-+					ci->i_vino, first ? first_pos : last_pos,
-+					&read_len, 0, (first && last) ? 2 : 1,
-+					CEPH_OSD_OP_SPARSE_READ, CEPH_OSD_FLAG_READ,
-+					NULL, ci->i_truncate_seq,
-+					ci->i_truncate_size, false);
-+			if (IS_ERR(req)) {
-+				ceph_release_page_vector(pages, num_pages);
-+				ret = PTR_ERR(req);
-+				break;
-+			}
-+
-+			/* Something is misaligned! */
-+			if (read_len != CEPH_FSCRYPT_BLOCK_SIZE) {
-+				ceph_osdc_put_request(req);
-+				ceph_release_page_vector(pages, num_pages);
-+				ret = -EIO;
-+				break;
-+			}
-+
-+			/* Add extent for first block? */
-+			op = &req->r_ops[0];
-+
-+			if (first) {
-+				osd_req_op_extent_osd_data_pages(req, 0, pages,
-+							 CEPH_FSCRYPT_BLOCK_SIZE,
-+							 offset_in_page(first_pos),
-+							 false, false);
-+				/* We only expect a single extent here */
-+				ret = __ceph_alloc_sparse_ext_map(op, 1);
-+				if (ret) {
-+					ceph_osdc_put_request(req);
-+					ceph_release_page_vector(pages, num_pages);
-+					break;
-+				}
-+			}
-+
-+			/* Add extent for last block */
-+			if (last) {
-+				/* Init the other extent if first extent has been used */
-+				if (first) {
-+					op = &req->r_ops[1];
-+					osd_req_op_extent_init(req, 1, CEPH_OSD_OP_SPARSE_READ,
-+							last_pos, CEPH_FSCRYPT_BLOCK_SIZE,
-+							ci->i_truncate_size,
-+							ci->i_truncate_seq);
-+				}
-+
-+				ret = __ceph_alloc_sparse_ext_map(op, 1);
-+				if (ret) {
-+					ceph_osdc_put_request(req);
-+					ceph_release_page_vector(pages, num_pages);
-+					break;
-+				}
-+
-+				osd_req_op_extent_osd_data_pages(req, first ? 1 : 0,
-+							&pages[num_pages - 1],
-+							CEPH_FSCRYPT_BLOCK_SIZE,
-+							offset_in_page(last_pos),
-+							false, false);
-+			}
-+
-+			ret = ceph_osdc_start_request(osdc, req, false);
-+			if (!ret)
-+				ret = ceph_osdc_wait_request(osdc, req);
-+
-+			/* FIXME: length field is wrong if there are 2 extents */
-+			ceph_update_read_metrics(&fsc->mdsc->metric,
-+						 req->r_start_latency,
-+						 req->r_end_latency,
-+						 read_len, ret);
-+
-+			/* Ok if object is not already present */
-+			if (ret == -ENOENT) {
-+				/*
-+				 * If there is no object, then we can't assert
-+				 * on its version. Set it to 0, and we'll use an
-+				 * exclusive create instead.
-+				 */
-+				ceph_osdc_put_request(req);
-+				assert_ver = 0;
-+				ret = 0;
-+
-+				/*
-+				 * zero out the soon-to-be uncopied parts of the
-+				 * first and last pages.
-+				 */
-+				if (first)
-+					zero_user_segment(pages[0], 0,
-+							  offset_in_page(first_pos));
-+				if (last)
-+					zero_user_segment(pages[num_pages - 1],
-+							  offset_in_page(last_pos),
-+							  PAGE_SIZE);
-+			} else {
-+				if (ret < 0) {
-+					ceph_osdc_put_request(req);
-+					ceph_release_page_vector(pages, num_pages);
-+					break;
-+				}
-+
-+				op = &req->r_ops[0];
-+				if (op->extent.sparse_ext_cnt == 0) {
-+					if (first)
-+						zero_user_segment(pages[0], 0,
-+								  offset_in_page(first_pos));
-+					else
-+						zero_user_segment(pages[num_pages - 1],
-+								  offset_in_page(last_pos),
-+								  PAGE_SIZE);
-+				} else if (op->extent.sparse_ext_cnt != 1 ||
-+					   ceph_sparse_ext_map_end(op) !=
-+						CEPH_FSCRYPT_BLOCK_SIZE) {
-+					ret = -EIO;
-+					ceph_osdc_put_request(req);
-+					ceph_release_page_vector(pages, num_pages);
-+					break;
-+				}
-+
-+				if (first && last) {
-+					op = &req->r_ops[1];
-+					if (op->extent.sparse_ext_cnt == 0) {
-+						zero_user_segment(pages[num_pages - 1],
-+								  offset_in_page(last_pos),
-+								  PAGE_SIZE);
-+					} else if (op->extent.sparse_ext_cnt != 1 ||
-+						   ceph_sparse_ext_map_end(op) !=
-+							CEPH_FSCRYPT_BLOCK_SIZE) {
-+						ret = -EIO;
-+						ceph_osdc_put_request(req);
-+						ceph_release_page_vector(pages, num_pages);
-+						break;
-+					}
-+				}
-+
-+				/* Grab assert version. It must be non-zero. */
-+				assert_ver = req->r_version;
-+				WARN_ON_ONCE(ret > 0 && assert_ver == 0);
-+
-+				ceph_osdc_put_request(req);
-+				if (first) {
-+					ret = ceph_fscrypt_decrypt_block_inplace(inode,
-+							pages[0],
-+							CEPH_FSCRYPT_BLOCK_SIZE,
-+							offset_in_page(first_pos),
-+							first_pos >> CEPH_FSCRYPT_BLOCK_SHIFT);
-+					if (ret < 0) {
-+						ceph_release_page_vector(pages, num_pages);
-+						break;
-+					}
-+				}
-+				if (last) {
-+					ret = ceph_fscrypt_decrypt_block_inplace(inode,
-+							pages[num_pages - 1],
-+							CEPH_FSCRYPT_BLOCK_SIZE,
-+							offset_in_page(last_pos),
-+							last_pos >> CEPH_FSCRYPT_BLOCK_SHIFT);
-+					if (ret < 0) {
-+						ceph_release_page_vector(pages, num_pages);
-+						break;
-+					}
-+				}
-+			}
- 		}
- 
- 		left = len;
-@@ -1601,43 +1806,98 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
- 		for (n = 0; n < num_pages; n++) {
- 			size_t plen = min_t(size_t, left, PAGE_SIZE - off);
- 
-+			/* copy the data */
- 			ret = copy_page_from_iter(pages[n], off, plen, from);
--			off = 0;
- 			if (ret != plen) {
- 				ret = -EFAULT;
- 				break;
- 			}
-+			off = 0;
- 			left -= ret;
- 		}
--
- 		if (ret < 0) {
-+			dout("sync_write write failed with %d\n", ret);
- 			ceph_release_page_vector(pages, num_pages);
--			goto out;
-+			break;
- 		}
- 
--		req->r_inode = inode;
-+		if (IS_ENCRYPTED(inode)) {
-+			ret = ceph_fscrypt_encrypt_pages(inode, pages,
-+							 write_pos, write_len,
-+							 GFP_KERNEL);
-+			if (ret < 0) {
-+				dout("encryption failed with %d\n", ret);
-+				ceph_release_page_vector(pages, num_pages);
-+				break;
-+			}
-+		}
- 
--		osd_req_op_extent_osd_data_pages(req, 0, pages, len,
--						 offset_in_page(pos),
--						 false, true);
-+		req = ceph_osdc_new_request(osdc, &ci->i_layout,
-+					    ci->i_vino, write_pos, &write_len,
-+					    rmw ? 1 : 0, rmw ? 2 : 1,
-+					    CEPH_OSD_OP_WRITE,
-+					    CEPH_OSD_FLAG_WRITE,
-+					    snapc, ci->i_truncate_seq,
-+					    ci->i_truncate_size, false);
-+		if (IS_ERR(req)) {
-+			ret = PTR_ERR(req);
-+			ceph_release_page_vector(pages, num_pages);
-+			break;
-+		}
- 
-+		dout("sync_write write op %lld~%llu\n", write_pos, write_len);
-+		osd_req_op_extent_osd_data_pages(req, rmw ? 1 : 0, pages, write_len,
-+						 offset_in_page(write_pos), false,
-+						 true);
-+		req->r_inode = inode;
- 		req->r_mtime = mtime;
--		ret = ceph_osdc_start_request(&fsc->client->osdc, req, false);
-+
-+		/* Set up the assertion */
-+		if (rmw) {
-+			/*
-+			 * Set up the assertion. If we don't have a version number,
-+			 * then the object doesn't exist yet. Use an exclusive create
-+			 * instead of a version assertion in that case.
-+			 */
-+			if (assert_ver) {
-+				osd_req_op_init(req, 0, CEPH_OSD_OP_ASSERT_VER, 0);
-+				req->r_ops[0].assert_ver.ver = assert_ver;
-+			} else {
-+				osd_req_op_init(req, 0, CEPH_OSD_OP_CREATE,
-+						CEPH_OSD_OP_FLAG_EXCL);
-+			}
-+		}
-+
-+		ret = ceph_osdc_start_request(osdc, req, false);
- 		if (!ret)
--			ret = ceph_osdc_wait_request(&fsc->client->osdc, req);
-+			ret = ceph_osdc_wait_request(osdc, req);
- 
- 		ceph_update_write_metrics(&fsc->mdsc->metric, req->r_start_latency,
- 					  req->r_end_latency, len, ret);
--out:
- 		ceph_osdc_put_request(req);
- 		if (ret != 0) {
-+			dout("sync_write osd write returned %d\n", ret);
-+			/* Version changed! Must re-do the rmw cycle */
-+			if ((assert_ver && (ret == -ERANGE || ret == -EOVERFLOW)) ||
-+			     (!assert_ver && ret == -EEXIST)) {
-+				/* We should only ever see this on a rmw */
-+				WARN_ON_ONCE(!rmw);
-+
-+				/* The version should never go backward */
-+				WARN_ON_ONCE(ret == -EOVERFLOW);
-+
-+				*from = saved_iter;
-+
-+				/* FIXME: limit number of times we loop? */
-+				continue;
-+			}
- 			ceph_set_error_write(ci);
- 			break;
- 		}
--
- 		ceph_clear_error_write(ci);
- 		pos += len;
- 		written += len;
-+		dout("sync_write written %d\n", written);
- 		if (pos > i_size_read(inode)) {
- 			check_caps = ceph_inode_set_size(inode, pos);
- 			if (check_caps)
-@@ -1652,6 +1912,7 @@ ceph_sync_write(struct kiocb *iocb, struct iov_iter *from, loff_t pos,
- 		ret = written;
- 		iocb->ki_pos = pos;
- 	}
-+	dout("sync_write returning %d\n", ret);
- 	return ret;
- }
- 
--- 
-2.35.1
+I guess this can happen fairly easily if you run xfstests from a sudo session,
+though it might depend on the Linux distro.  I must have never noticed this
+because for xfstests I always use one of the xfstests-bld test appliances, or
+another system where I log in as root directly.
 
+If this theory is correct, it should work if you do:
+
+	keyctl session - ./check -g encrypt
+
+For making it work by default, it is a bit tricky.  We could make the test
+scripts, or 'check' itself, re-execute themselves using 'keyctl session', though
+that's a bit awkward.  We could just skip creating a new session keyring
+entirely (which is what your workaround did), though that would cause xfstests
+to blow away anything that happens to be in your session keyring, which would be
+bad if it's actually being used for something unrelated to xfstests.
+
+Or maybe we could make xfstests stop using the session keyring directly, and
+instead create a keyring "xfstests" within the session keyring, and work with
+that only.  We may still need 'keyctl new_session' in the case where there was
+no session keyring yet, as some Linux systems never set up a session keyring.
+
+Aren't Linux keyrings fun?  :-)
+
+- Eric
