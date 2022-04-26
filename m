@@ -2,124 +2,134 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id ABA76C433EF
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 23 Apr 2022 01:00:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2B437C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Apr 2022 22:40:24 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229965AbiDWBDA (ORCPT
+        id S1355895AbiDZWnb (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 22 Apr 2022 21:03:00 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:41036 "EHLO
+        Tue, 26 Apr 2022 18:43:31 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49056 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229785AbiDWBC7 (ORCPT
+        with ESMTP id S240418AbiDZWna (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 22 Apr 2022 21:02:59 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B30D5527C9;
-        Fri, 22 Apr 2022 18:00:03 -0700 (PDT)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 4FB80B83344;
-        Sat, 23 Apr 2022 01:00:02 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id D0332C385A4;
-        Sat, 23 Apr 2022 01:00:00 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1650675601;
-        bh=3L5PJgdEy97z+D+D0QAwn839C0O1ozkKJYjxHicbAqg=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=gUVj69+/VZcfRYpID6zkGH9kH8dsghdv7gMri0/JwevJnXBtqjgVJgUxcN3vriRsU
-         Fb5eqIcPLj5CeL3cJPOMkr1Y1h3VZueWo7XFxpB9cFil1oP8DTzL8e2zbEj5sQN2nF
-         7Hrpn05NhxF7foFFT73x+VhvwddvvhPClaPm2OlJYsnkQuSs/PKxyR92IVqo6gEWwv
-         oKVD5w+NYdnmSUAR4dlCbi3wXRr4zv1xJRUSgPh6m715Aw8OKK6PL2RzB2SVK6GQkQ
-         5D+ZaqdqrNoCuUf5ITmmg21ppcfCpKB2WtvIlZbs91RseZ7oXs0p/iJ8C6f8WrZg6h
-         3G1OkYwnFOcCQ==
-Date:   Fri, 22 Apr 2022 17:59:51 -0700
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Boris Burkov <boris@bur.io>
-Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        Tue, 26 Apr 2022 18:43:30 -0400
+Received: from out3-smtp.messagingengine.com (out3-smtp.messagingengine.com [66.111.4.27])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 7FF2A13F0A;
+        Tue, 26 Apr 2022 15:40:20 -0700 (PDT)
+Received: from compute4.internal (compute4.nyi.internal [10.202.2.44])
+        by mailout.nyi.internal (Postfix) with ESMTP id 399195C0164;
+        Tue, 26 Apr 2022 18:40:20 -0400 (EDT)
+Received: from mailfrontend2 ([10.202.2.163])
+  by compute4.internal (MEProxy); Tue, 26 Apr 2022 18:40:20 -0400
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bur.io; h=cc
+        :content-transfer-encoding:date:date:from:from:in-reply-to
+        :in-reply-to:message-id:mime-version:references:reply-to:sender
+        :subject:subject:to:to; s=fm1; t=1651012820; x=1651099220; bh=ss
+        XnEw9itOkmvU5n03mfVnTTvDIDQzuYWNCfiA8EImc=; b=rdXJO4n+zvSMyf0bfx
+        APovOQXpWQ+u708ePQHg17Ds1IB0TngWZjqZvgzpZOT6R7Mpw+aOXoTvff0dbOn+
+        YOcxxA+sFmR0RvskXAH6vkt9TbEG46PDbLLEAbIEqqmPqNsT276VPiysigBYZSFQ
+        l42G49F2YYJWf4fFAAnPR+aa7kD4oUrk9432pAm5s3I3ShbOukJYe0Ek4xq1lZ2L
+        0scbHK7wLT0lUJ1uYeyIygn08M/q3myk3h6zTnxQF7onwkTNrdoreuIQPo88Ysxa
+        7/+WjMM8ejPGxmdFBB3bI2foGhrFfND201iNxMv8PCazyoxRaR8wJjbIf11O/+wA
+        KblQ==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
+        messagingengine.com; h=cc:content-transfer-encoding:date:date
+        :from:from:in-reply-to:in-reply-to:message-id:mime-version
+        :references:reply-to:sender:subject:subject:to:to:x-me-proxy
+        :x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=fm1; t=
+        1651012820; x=1651099220; bh=ssXnEw9itOkmvU5n03mfVnTTvDIDQzuYWNC
+        fiA8EImc=; b=zhStwTUOtdyr2aNfIiAfMk78ksLMpxJzhvGZ2c7HVjOBDWqTAbT
+        TOnAAXonChn9l6yDQFWgYfmo/ZYztqf8n7md0pOuYIV/M3sHTN+j7ee70D8B+dz/
+        Lt5CTM3ItLPck8QGuS6skEARWD7YlR9jMj1xJCCoZdRFPtCnH3G2xs83GYEOq7Xb
+        dlwui8y8iw8uQ0IqdNSLLku12J652b4BZavm3o1+MXU5Y+RszCQp8LZjf8AjV2x2
+        w2if+QOL/i7ZikQa0M1tS15brT37zG3gY0/Q/DUyNASnHn1AxFdga3XM61hjKSl1
+        Z/puZ2Jmoli5kMmvqKKc9QNiLU9lLHvnlnA==
+X-ME-Sender: <xms:1HRoYh5tn3zkVcOrk9D5vIUg3-JEhARc9F9GzFe4oCg2HwwAkcaJUA>
+    <xme:1HRoYu6FiC9XWXpvHAaDznfn30WJeJsL_wA_oJQ9kc6fyJsC5zD4uZ5N3Un26xzpr
+    YuLWEOOu375j4wCzIk>
+X-ME-Received: <xmr:1HRoYocyPbhWKaXH28jq0S_A7KIdVAaEOJLRN61zrkWYkTm_T-C6IuKDsPN9qWa1dtuCZ9fmfC-tSTTot1S4WXJLyOZlqw>
+X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedvfedrudeggddugecutefuodetggdotefrodftvf
+    curfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfghnecu
+    uegrihhlohhuthemuceftddtnecunecujfgurhephffvufffkffojghfggfgsedtkeertd
+    ertddtnecuhfhrohhmpeeuohhrihhsuceuuhhrkhhovhcuoegsohhrihhssegsuhhrrdhi
+    oheqnecuggftrfgrthhtvghrnhepieeuffeuvdeiueejhfehiefgkeevudejjeejffevvd
+    ehtddufeeihfekgeeuheelnecuvehluhhsthgvrhfuihiivgeptdenucfrrghrrghmpehm
+    rghilhhfrhhomhepsghorhhishessghurhdrihho
+X-ME-Proxy: <xmx:1HRoYqI5y1jbuEsxi4cAuaTxoFx9FRC4kwQ-WUM0EiLZDIjitA6lbg>
+    <xmx:1HRoYlLa6j28915KHEgyURR5ASkTFXlCTVBBB3QXrtHEDlGjKykyKg>
+    <xmx:1HRoYjw9oz169eVHOKn6_WS-WLq-CmBOzIC8dunOWUffUjo84Kq-Og>
+    <xmx:1HRoYsUfhBHdCqIj4KEeRc1tqaMzC3oSxRi6qLNeq-zOGdpQBPBBVg>
+Received: by mail.messagingengine.com (Postfix) with ESMTPA; Tue,
+ 26 Apr 2022 18:40:19 -0400 (EDT)
+From:   Boris Burkov <boris@bur.io>
+To:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@fb.com
-Subject: Re: [PATCH v8 2/5] common/verity: support btrfs in generic fsverity
- tests
-Message-ID: <YmNPhzTpoE9jIU4D@sol.localdomain>
-References: <cover.1647461985.git.boris@bur.io>
- <9c64fbf9ad37dc84a31caf91762edd64b33d59db.1647461985.git.boris@bur.io>
- <YjN7Dc9aTD2FHTTO@gmail.com>
- <YmM54bCgX6Kz2XVX@zen>
+Subject: [PATCH v9 1/5] common/verity: require corruption functionality
+Date:   Tue, 26 Apr 2022 15:40:12 -0700
+Message-Id: <657cd5facdbd0b41ee99ab18ad0bba9f0d690729.1651012461.git.boris@bur.io>
+X-Mailer: git-send-email 2.35.1
+In-Reply-To: <cover.1651012461.git.boris@bur.io>
+References: <cover.1651012461.git.boris@bur.io>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <YmM54bCgX6Kz2XVX@zen>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Apr 22, 2022 at 04:27:29PM -0700, Boris Burkov wrote:
-> On Thu, Mar 17, 2022 at 06:16:45PM +0000, Eric Biggers wrote:
-> > On Wed, Mar 16, 2022 at 01:25:12PM -0700, Boris Burkov wrote:
-> > > generic/572-579 have tests for fsverity. Now that btrfs supports
-> > > fsverity, make these tests function as well. For a majority of the tests
-> > > that pass, simply adding the case to mkfs a btrfs filesystem with no
-> > > extra options is sufficient.
-> > > 
-> > > However, generic/574 has tests for corrupting the merkle tree itself.
-> > > Since btrfs uses a different scheme from ext4 and f2fs for storing this
-> > > data, the existing logic for corrupting it doesn't work out of the box.
-> > > Adapt it to properly corrupt btrfs merkle items.
-> > > 
-> > > 576 does not run because btrfs does not support transparent encryption.
-> > > 
-> > > This test relies on the btrfs implementation of fsverity in the patch:
-> > > btrfs: initial fsverity support
-> > > 
-> > > and on btrfs-corrupt-block for corruption in the patches titled:
-> > > btrfs-progs: corrupt generic item data with btrfs-corrupt-block
-> > > btrfs-progs: expand corrupt_file_extent in btrfs-corrupt-block
-> > > 
-> > > Signed-off-by: Boris Burkov <boris@bur.io>
-> > > ---
-> > >  common/btrfs  |  5 +++++
-> > >  common/config |  1 +
-> > >  common/verity | 23 +++++++++++++++++++++++
-> > >  3 files changed, 29 insertions(+)
-> > 
-> > Reviewed-by: Eric Biggers <ebiggers@google.com>
-> > 
-> > - Eric
-> 
-> Eric,
-> 
-> Unfortunately, I think I found a more serious problem with the
-> compatibility of generic/574 and btrfs while working on testing the
-> enable/disable sysctls.
-> 
-> I realized that I had forgotten to customize the mount options for btrfs
-> to use "nodatasum" and as a result, this test was passing for btrfs
-> inappropriately, since we were getting EIOs for failing data checksums,
-> not verity checks.
-> 
-> I fixed the mount option issue only to realize that some of the test
-> cases make assumptions that don't apply to btrfs. For example:
-> "corruption_test 130999 131000 72"
-> 
-> Btrfs zeros pages past EOF in readpage before they make it to the user
-> via read or mmap, and the fsverity check is done at that point, so
-> corrupting the disk past EOF does not cause a verity failure (or get
-> leaked to the user) but it does cause csum failures since those are done
-> on bios, like verity checks in ext4. I verified that removing that
-> zeroing in readpage makes the test case pass.
-> 
-> Do you have a preference for how I might fix this? My first thought is
-> to try to factor out any such test cases into a new test with a new
-> requires clause that btrfs fails but ext4/f2fs pass, kind of like what
-> we did for the EFBIG test for future FSes that might not logically
-> address the Merkle tree in the past-EOF space.
+Corrupting ext4 and f2fs relies on xfs_io fiemap. Btrfs corruption
+testing will rely on a btrfs specific corruption utility. Add the
+ability to require corruption functionality to make this properly
+modular. To start, just check for fiemap, as that is needed
+universally for _fsv_scratch_corrupt_bytes.
 
-The reason that an error is expected for corruption past EOF in the block
-containing EOF, is to ensure that the bad data isn't visible via mmap reads.  If
-that's not a problem for btrfs due to it always zeroing the part past EOF, I
-think it would be fine to change that test case (specifically the one with
-parameters "corruption_test 130999 131000 72") to just try a mmap read of the
-whole EOF block, and check that it either fails with an error *or* returns
-zeroes.  I don't think that an entirely new test script would be warranted.
+Signed-off-by: Boris Burkov <boris@bur.io>
+---
+ common/verity     | 6 ++++++
+ tests/generic/574 | 1 +
+ tests/generic/576 | 1 +
+ 3 files changed, 8 insertions(+)
 
-- Eric
+diff --git a/common/verity b/common/verity
+index 38eea157..d58cad90 100644
+--- a/common/verity
++++ b/common/verity
+@@ -141,6 +141,12 @@ _require_fsverity_dump_metadata()
+ 	_fail "Unexpected output from 'fsverity dump_metadata': $(<"$tmpfile")"
+ }
+ 
++# Check for userspace tools needed to corrupt verity data or metadata.
++_require_fsverity_corruption()
++{
++	_require_xfs_io_command "fiemap"
++}
++
+ _scratch_mkfs_verity()
+ {
+ 	case $FSTYP in
+diff --git a/tests/generic/574 b/tests/generic/574
+index 882baa21..17fdea52 100755
+--- a/tests/generic/574
++++ b/tests/generic/574
+@@ -28,6 +28,7 @@ _cleanup()
+ _supported_fs generic
+ _require_scratch_verity
+ _disable_fsverity_signatures
++_require_fsverity_corruption
+ 
+ _scratch_mkfs_verity &>> $seqres.full
+ _scratch_mount
+diff --git a/tests/generic/576 b/tests/generic/576
+index 82fbdd71..d3e0a2d6 100755
+--- a/tests/generic/576
++++ b/tests/generic/576
+@@ -28,6 +28,7 @@ _supported_fs generic
+ _require_scratch_verity
+ _require_scratch_encryption
+ _require_command "$KEYCTL_PROG" keyctl
++_require_fsverity_corruption
+ _disable_fsverity_signatures
+ 
+ _scratch_mkfs_encrypted_verity &>> $seqres.full
+-- 
+2.35.1
+
