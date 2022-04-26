@@ -2,156 +2,275 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 743E3C4332F
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Apr 2022 22:40:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5AA51C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Apr 2022 22:40:26 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1355897AbiDZWnb (ORCPT
+        id S1345860AbiDZWnd (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 26 Apr 2022 18:43:31 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49054 "EHLO
+        Tue, 26 Apr 2022 18:43:33 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49134 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1345860AbiDZWna (ORCPT
+        with ESMTP id S1355900AbiDZWnc (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 26 Apr 2022 18:43:30 -0400
+        Tue, 26 Apr 2022 18:43:32 -0400
 Received: from out3-smtp.messagingengine.com (out3-smtp.messagingengine.com [66.111.4.27])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 7FEAE13EB2;
-        Tue, 26 Apr 2022 15:40:20 -0700 (PDT)
-Received: from compute3.internal (compute3.nyi.internal [10.202.2.43])
-        by mailout.nyi.internal (Postfix) with ESMTP id 92EE05C016C;
-        Tue, 26 Apr 2022 18:40:18 -0400 (EDT)
-Received: from mailfrontend2 ([10.202.2.163])
-  by compute3.internal (MEProxy); Tue, 26 Apr 2022 18:40:18 -0400
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 03AD514026;
+        Tue, 26 Apr 2022 15:40:23 -0700 (PDT)
+Received: from compute5.internal (compute5.nyi.internal [10.202.2.45])
+        by mailout.nyi.internal (Postfix) with ESMTP id 668F45C0176;
+        Tue, 26 Apr 2022 18:40:22 -0400 (EDT)
+Received: from mailfrontend1 ([10.202.2.162])
+  by compute5.internal (MEProxy); Tue, 26 Apr 2022 18:40:22 -0400
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bur.io; h=cc
         :content-transfer-encoding:date:date:from:from:in-reply-to
-        :message-id:mime-version:reply-to:sender:subject:subject:to:to;
-         s=fm1; t=1651012818; x=1651099218; bh=GVOxxF6CxDAlP5EYgy6Xe7pqM
-        H8D9OEw6NHfUbYlWWs=; b=I0oHZmcDseCahMm1HT/Y5PsPjprLi8ZOo68s5EGkL
-        pgpgXrwai0KVQ/E0FfMdqTkpVvRGCaMHPi6pE1MqZkrPLdx8z01o+Ha/wOaR+V6S
-        +YsVB5BUJuanH5OxsX2E1ZMUWi5mFtNpfiVXbjRwblfBF9gag/2S+dd4LX9dCz/i
-        fIRyYdGCKE7/UMU4MZS/bLandDDOG+uciELxUdzP2KTkGj/QULYHPgyewinhxy37
-        LU4grM4gV9wmzKvM8E6V+kf5254I2s8tS4UUxXbxYFtF1FgEijis3w17YNYEs9B2
-        W+1eWR2h552CXJJkfj8tkfwSJOhDR670hhsy7TP/R4BCw==
+        :in-reply-to:message-id:mime-version:references:reply-to:sender
+        :subject:subject:to:to; s=fm1; t=1651012822; x=1651099222; bh=YE
+        aTmrniy5m8AfmjwUsMBxrwMa8bYqmGYLciN6SG0XY=; b=npPNJBDwePqBXGBfJq
+        IaQnz1gKXTDUIh0CzEPnlLFlyyeYYYAyHM5jpxR92Cns92gqZmOuKQ+rOHx3Qe9b
+        n5xng0oa67lXw/BZQvP+Ga8yv8SVckhQo1hwvmxH3gELCma4x/QHiPUnV54VfU4/
+        GWwcQ9wBeU7VGYV79mhw4o7zBHBMVMZlFUuaogU9C1pvp9wL+zpGg4IAqFn9gV+H
+        IhWtrLAkREyEtmhFLLhd2VdI5YzVeljSjztJbfUrKhAT4eGclvUlMxJnCGmxGju6
+        C0LNTaCr2oMRWDJn6MzSXBVRM/61nVQdRJBpnYYqlSDPVyK5KgwjjXWSC94YjyFc
+        PllQ==
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
         messagingengine.com; h=cc:content-transfer-encoding:date:date
-        :from:from:in-reply-to:message-id:mime-version:reply-to:sender
-        :subject:subject:to:to:x-me-proxy:x-me-proxy:x-me-sender
-        :x-me-sender:x-sasl-enc; s=fm1; t=1651012818; x=1651099218; bh=G
-        VOxxF6CxDAlP5EYgy6Xe7pqMH8D9OEw6NHfUbYlWWs=; b=XB1CMYF3ozQV0+zNp
-        5YLeQmDkGwAANhWmnw7Q+oHDVX45SmdwcbtfOASuukehsHvUJcAUtlW2Dic2eiXZ
-        9DteTzjNUWe9WKbxw50zxgrELTJ2GE23nqfQ+pTD9/GN08nzAy4+0IXX0mu1dDN8
-        5QPjm8o5M94U5kQ6ZJFXNvoVr8CKeMdgY9b3jHvxtgdgy+6wnJ+N5g6Lh3YCb04k
-        5AmyXIlx/zMxyd/KkKwpsEPiOrwj0wItA/Upzn3MVnBGxtrYjW6USAq8yPp9w7uJ
-        aJtKcotvOq7pmNzAhbohdPHUiqwHM+4pF5eWqb1bfoyfHsAz9ZK7APgPLUzNc9Id
-        J52Wg==
-X-ME-Sender: <xms:0nRoYvNIYTAv11gcqyJ1XETzUxwBrLriDyEATGozkC5lE5Uv07qxow>
-    <xme:0nRoYp998EIU8C9_JOwQ51KUYk4SXgVRgpWDfv3JUjYbpDpWR6I_txcz-tobaLGgQ
-    LmA1M1fbq7VYEwaA9k>
-X-ME-Received: <xmr:0nRoYuSuNjlJRkUSm17N2V61jPce7ivKkhYt7kHQS6bm3i9vRAr_XieATV7x3gxlgRMblOg6INWJMveHMmwEVqoPn6p7og>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedvfedrudeggddugecutefuodetggdotefrodftvf
+        :from:from:in-reply-to:in-reply-to:message-id:mime-version
+        :references:reply-to:sender:subject:subject:to:to:x-me-proxy
+        :x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=fm1; t=
+        1651012822; x=1651099222; bh=YEaTmrniy5m8AfmjwUsMBxrwMa8bYqmGYLc
+        iN6SG0XY=; b=LD4rAQShqNhx5caDJR6OCo9RnZxpr4b1aZkZF08iZuSQDECvxH/
+        8hvBUS62zJuyPhEnLJGQogQsIkZ2VQsuRsIkCX2GwQN6n1A3o/2Zfv/NICO8+fR5
+        sPpHzeCfWT3dpoW2PhpXRxW/R8wanX9gLOfLasXZVmHTD3YCXYjrmNcqj6zUiE0n
+        vi2Tdo7ZGBq9JNtWBuNLvfj3MiQAvk0Tn+XutP8U77+X+dX5ko5Z1NgFIDhZB9po
+        5gU9BqjCcpCAgW7xOEgPhdZxX0CYZrK5TsOUTytlcY+Al0K7w1siCVJjq4tZmW7A
+        LR/ddrFH7swfRNt8vd+VRNs7b/X4FyAZu2w==
+X-ME-Sender: <xms:1nRoYlS4cpAHkmPmIxfw0AcZ5nQONlqknPjUmq0zH-16W57NZOVX3g>
+    <xme:1nRoYuwP2p88QILkW3eV4M6i5MSlZUJ1lEr1EBVTTuuiUa48vWNQobLmr6TnBQ_4s
+    pkUw5V5fAgx6AaqDCs>
+X-ME-Received: <xmr:1nRoYq0nF0d4w3WlIslSKIX93jT2AtNAiBAd-oa017lWUdqLT0dEItymdUOR0a9Slj5MH6BTeU4Sik3AEmDSA8tXp6JlgA>
+X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedvfedrudeggddufecutefuodetggdotefrodftvf
     curfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfghnecu
-    uegrihhlohhuthemuceftddtnecunecujfgurhephffvufffkffoggfgsedtkeertdertd
-    dtnecuhfhrohhmpeeuohhrihhsuceuuhhrkhhovhcuoegsohhrihhssegsuhhrrdhioheq
-    necuggftrfgrthhtvghrnhepudeitdelueeijeefleffveelieefgfejjeeigeekuddute
-    efkefffeethfdvjeevnecuvehluhhsthgvrhfuihiivgeptdenucfrrghrrghmpehmrghi
-    lhhfrhhomhepsghorhhishessghurhdrihho
-X-ME-Proxy: <xmx:0nRoYju7fLTfSnoSstKIS8Bm1CPnp_jzEdikZijWMgH0CHIQ1Gs_tA>
-    <xmx:0nRoYnd--ukJ63JkKTyw6UxZ87o-64kMnr_G49c9x_ara7rhXywOBw>
-    <xmx:0nRoYv1e4fXOwDYidG3fwzFxrVbtstBLp0uhoZUuGGXSo1w38YLdxg>
-    <xmx:0nRoYopD1KomiSi4JQu5619P9Rhhliw_PFVT_t_3qhJpQdqqLiVMyQ>
+    uegrihhlohhuthemuceftddtnecunecujfgurhephffvufffkffojghfggfgsedtkeertd
+    ertddtnecuhfhrohhmpeeuohhrihhsuceuuhhrkhhovhcuoegsohhrihhssegsuhhrrdhi
+    oheqnecuggftrfgrthhtvghrnhepieeuffeuvdeiueejhfehiefgkeevudejjeejffevvd
+    ehtddufeeihfekgeeuheelnecuvehluhhsthgvrhfuihiivgeptdenucfrrghrrghmpehm
+    rghilhhfrhhomhepsghorhhishessghurhdrihho
+X-ME-Proxy: <xmx:1nRoYtC-4PC7apVgr0Fzi6mwruU0AakPxmODG8sMw-MAY57vxdan6w>
+    <xmx:1nRoYujiI_-fFwlsVVC7XPzJPUxqvT-NqGunwADiMIfo7o_WwCXkag>
+    <xmx:1nRoYhqp6r5uWFIrxDCEInahKCHTM0V6WDpyn8EYxEOugYvAoLEl4w>
+    <xmx:1nRoYhtl4c1GqA5Vl_vDeqcxOI6U_wipTKfPvQgwCj0h-cF0VWrgAw>
 Received: by mail.messagingengine.com (Postfix) with ESMTPA; Tue,
- 26 Apr 2022 18:40:18 -0400 (EDT)
+ 26 Apr 2022 18:40:22 -0400 (EDT)
 From:   Boris Burkov <boris@bur.io>
 To:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@fb.com
-Subject: [PATCH v9 0/5] tests for btrfs fsverity
-Date:   Tue, 26 Apr 2022 15:40:11 -0700
-Message-Id: <cover.1651012461.git.boris@bur.io>
+Subject: [PATCH v9 2/5] common/verity: support btrfs in generic fsverity tests
+Date:   Tue, 26 Apr 2022 15:40:13 -0700
+Message-Id: <3ac2f088ab31052659aa37a7e2f0821ef7b95e60.1651012461.git.boris@bur.io>
 X-Mailer: git-send-email 2.35.1
+In-Reply-To: <cover.1651012461.git.boris@bur.io>
+References: <cover.1651012461.git.boris@bur.io>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This patchset provides tests for fsverity support in btrfs.
+generic/572-579 have tests for fsverity. Now that btrfs supports
+fsverity, make these tests function as well. For a majority of the tests
+that pass, simply adding the case to mkfs a btrfs filesystem with no
+extra options is sufficient.
 
-It includes modifications for generic tests to pass with btrfs as well
-as new tests.
+However, generic/574 has tests for corrupting the merkle tree itself.
+Since btrfs uses a different scheme from ext4 and f2fs for storing this
+data, the existing logic for corrupting it doesn't work out of the box.
+Adapt it to properly corrupt btrfs merkle items.
 
---
-v9:
-- use nodatasum for btrfs corruption tests.
-- modify eof block corruption test to allow all zeroes rather than
-  requiring an error.
-v8:
-- reorganize to have a patch for enabling generic tests followed by the
-  patches with new and specific tests.
-- fix some rebasing miscues from v7.
-- fix a chunk of space characters instead of a tab in the new requires
-  function.
-v7:
-- add a new patch to make the new corruption requires more clear
-- require corruption in generic/576
-- require only btrfs_corrupt_block in btrfs/290
-- add missing xfs_io requirements in btrfs/290
-- remove unneeded zero byte check from btrfs corruption function
-- fix sloppy extras in generic/690
-v6:
-- refactor "requires" for verity corruption tests so that other verity
-  tests can run on btrfs even without the corruption command available.
-  Also, explictly require xfs_io fiemap for all corruption tests.
-- simplify and clarify "non-trivial EFBIG" calculation and documentation
-  per suggestions by Eric Biggers.
-- remove unnecessary adjustment to max file size in the new EFBIG test;
-  the bug it worked around has been fixed.
-v5:
-- more idiomatic requires structure for making efbig test generic
-- make efbig test use truncate instead of pwrite for making a big file
-- improve documentation for efbig test approximation
-- fix underscores vs dashes in btrfs_requires_corrupt_block
-- improvements in missing/redundant requires invocations
-- move orphan test image file to $TEST_DIR
-- make orphan test replay/snapshot device size depend on log device
-  instead of hard-coding it.
-- rebase (signicant: no more "groups" file; use preamble)
-v4:
-- mark local variables
-- get rid of redundant mounts and syncs
-- use '_' in function names correctly
-- add a test for the EFBIG case
-- reduce usage of requires_btrfs_corrupt_block
-- handle variable input when corrupting merkle tree
-v3: rebase onto xfstests master branch
-v2: pass generic tests, add logwrites test
+576 does not run because btrfs does not support transparent encryption.
 
+This test relies on the btrfs implementation of fsverity in the patch:
+btrfs: initial fsverity support
 
-Boris Burkov (5):
-  common/verity: require corruption functionality
-  common/verity: support btrfs in generic fsverity tests
-  btrfs: test btrfs specific fsverity corruption
-  btrfs: test verity orphans with dmlogwrites
-  generic: test fs-verity EFBIG scenarios
+and on btrfs-corrupt-block for corruption in the patches titled:
+btrfs-progs: corrupt generic item data with btrfs-corrupt-block
+btrfs-progs: expand corrupt_file_extent in btrfs-corrupt-block
 
- common/btrfs          |   5 ++
- common/config         |   1 +
- common/verity         |  45 +++++++++++
- tests/btrfs/290       | 168 ++++++++++++++++++++++++++++++++++++++++++
- tests/btrfs/290.out   |  25 +++++++
- tests/btrfs/291       | 161 ++++++++++++++++++++++++++++++++++++++++
- tests/btrfs/291.out   |   2 +
- tests/generic/574     |  40 +++++++++-
- tests/generic/574.out |  12 +--
- tests/generic/576     |   1 +
- tests/generic/690     |  64 ++++++++++++++++
- tests/generic/690.out |   7 ++
- 12 files changed, 520 insertions(+), 11 deletions(-)
- create mode 100755 tests/btrfs/290
- create mode 100644 tests/btrfs/290.out
- create mode 100755 tests/btrfs/291
- create mode 100644 tests/btrfs/291.out
- create mode 100755 tests/generic/690
- create mode 100644 tests/generic/690.out
+Signed-off-by: Boris Burkov <boris@bur.io>
+---
+ common/btrfs          |  5 +++++
+ common/config         |  1 +
+ common/verity         | 28 ++++++++++++++++++++++++++++
+ tests/generic/574     | 39 +++++++++++++++++++++++++++++++++++++--
+ tests/generic/574.out | 12 +++---------
+ 5 files changed, 74 insertions(+), 11 deletions(-)
 
+diff --git a/common/btrfs b/common/btrfs
+index 670d9d1f..c3a7dc6e 100644
+--- a/common/btrfs
++++ b/common/btrfs
+@@ -511,3 +511,8 @@ _btrfs_metadump()
+ 	$BTRFS_IMAGE_PROG "$device" "$dumpfile"
+ 	[ -n "$DUMP_COMPRESSOR" ] && $DUMP_COMPRESSOR -f "$dumpfile" &> /dev/null
+ }
++
++_require_btrfs_corrupt_block()
++{
++	_require_command "$BTRFS_CORRUPT_BLOCK_PROG" btrfs-corrupt-block
++}
+diff --git a/common/config b/common/config
+index 479e50d1..67bdf912 100644
+--- a/common/config
++++ b/common/config
+@@ -296,6 +296,7 @@ export BTRFS_UTIL_PROG=$(type -P btrfs)
+ export BTRFS_SHOW_SUPER_PROG=$(type -P btrfs-show-super)
+ export BTRFS_CONVERT_PROG=$(type -P btrfs-convert)
+ export BTRFS_TUNE_PROG=$(type -P btrfstune)
++export BTRFS_CORRUPT_BLOCK_PROG=$(type -P btrfs-corrupt-block)
+ export XFS_FSR_PROG=$(type -P xfs_fsr)
+ export MKFS_NFS_PROG="false"
+ export MKFS_CIFS_PROG="false"
+diff --git a/common/verity b/common/verity
+index d58cad90..8cde2737 100644
+--- a/common/verity
++++ b/common/verity
+@@ -3,6 +3,13 @@
+ #
+ # Functions for setting up and testing fs-verity
+ 
++. common/btrfs
++# btrfs will return IO errors on corrupted data with or without fs-verity.
++# to really test fs-verity, use nodatasum.
++if [ "$FSTYP" == "btrfs" ]; then
++	export MOUNT_OPTIONS="-o nodatasum"
++fi
++
+ _require_scratch_verity()
+ {
+ 	_require_scratch
+@@ -145,6 +152,9 @@ _require_fsverity_dump_metadata()
+ _require_fsverity_corruption()
+ {
+ 	_require_xfs_io_command "fiemap"
++	if [ $FSTYP == "btrfs" ]; then
++		_require_btrfs_corrupt_block
++	fi
+ }
+ 
+ _scratch_mkfs_verity()
+@@ -153,6 +163,9 @@ _scratch_mkfs_verity()
+ 	ext4|f2fs)
+ 		_scratch_mkfs -O verity
+ 		;;
++	btrfs)
++		_scratch_mkfs
++		;;
+ 	*)
+ 		_notrun "No verity support for $FSTYP"
+ 		;;
+@@ -314,6 +327,21 @@ _fsv_scratch_corrupt_merkle_tree()
+ 		(( offset += ($(_get_filesize $file) + 65535) & ~65535 ))
+ 		_fsv_scratch_corrupt_bytes $file $offset
+ 		;;
++	btrfs)
++		local ino=$(stat -c '%i' $file)
++		_scratch_unmount
++		local byte=""
++		while read -n 1 byte; do
++			local ascii=$(printf "%d" "'$byte'")
++			# This command will find a Merkle tree item for the inode (-I $ino,37,0)
++			# in the default filesystem tree (-r 5) and corrupt one byte (-b 1) at
++			# $offset (-o $offset) with the ascii representation of the byte we read
++			# (-v $ascii)
++			$BTRFS_CORRUPT_BLOCK_PROG -r 5 -I $ino,37,0 -v $ascii -o $offset -b 1 $SCRATCH_DEV
++			(( offset += 1 ))
++		done
++		_scratch_mount
++		;;
+ 	*)
+ 		_fail "_fsv_scratch_corrupt_merkle_tree() unimplemented on $FSTYP"
+ 		;;
+diff --git a/tests/generic/574 b/tests/generic/574
+index 17fdea52..680cece3 100755
+--- a/tests/generic/574
++++ b/tests/generic/574
+@@ -126,6 +126,41 @@ corruption_test()
+ 	fi
+ }
+ 
++# xfs_io mread's output is parseable by xxd -r, except it has an extra space
++# after the colon. Output the number of non zero characters in the parsed contents.
++filter_mread() {
++	sed 's/:  /: /' | xxd -r | sed 's/\x0//g' | wc -c
++}
++
++# this expects to see stdout + stderr passed through filter_sigbus and filter_mread.
++# Outputs "OK" on a bus error or 0 non-zero characters counted by mread.
++filter_eof_block() {
++	sed 's/^Bus error$/OK/' | sed 's/^0$/OK/'
++}
++
++# some filesystems return zeros in the last block past EOF, regardless of
++# their contents. Handle those with a special test that accepts either zeros
++# or SIGBUS on an mmap+read of that block.
++corrupt_eof_block_test() {
++	local file_len=$1
++	local zap_len=$2
++	local page_aligned_eof=$(round_up_to_page_boundary $file_len)
++	local eof_page_start=$((page_aligned_eof - $(get_page_size)))
++	local corrupt_func=_fsv_scratch_corrupt_bytes
++	_fsv_scratch_begin_subtest "Corruption test: EOF block"
++	setup_zeroed_file $file_len false
++	cmp $fsv_file $fsv_orig_file
++	echo "Corrupting bytes..."
++	head -c $zap_len /dev/zero | tr '\0' X \
++		| $corrupt_func $fsv_file $((file_len + 1))
++
++	echo "Validating corruption or zeros (reading eof block via mmap)..."
++	bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
++		-c 'mmap -r $eof_page_start $(get_page_size)' \
++		-c 'mread -v $eof_page_start $(get_page_size)'" \
++		|& filter_mread | filter_sigbus | filter_eof_block
++}
++
+ # Note: these tests just overwrite some bytes without checking their original
+ # values.  Therefore, make sure to overwrite at least 5 or so bytes, to make it
+ # nearly guaranteed that there will be a change -- even when the test file is
+@@ -137,8 +172,8 @@ corruption_test 131072 65536 65536
+ corruption_test 131072 131067 5
+ 
+ # Non-zeroed bytes in the final partial block beyond EOF should cause reads to
+-# fail too.  Such bytes would be visible via mmap().
+-corruption_test 130999 131000 72
++# fail too.  Such bytes could be visible via mmap().
++corrupt_eof_block_test 130999 72
+ 
+ # Merkle tree corruption.
+ corruption_test 200000 100 10 true
+diff --git a/tests/generic/574.out b/tests/generic/574.out
+index 3c08d3e8..51bbd17b 100644
+--- a/tests/generic/574.out
++++ b/tests/generic/574.out
+@@ -56,17 +56,11 @@ Bus error
+ Validating corruption (reading just corrupted part via mmap)...
+ Bus error
+ 
+-# Corruption test: file_len=130999 zap_offset=131000 zap_len=72
++# Corruption test: EOF block
+ f5cca0d7fbb8b02bc6118a9954d5d306  SCRATCH_MNT/file.fsv
+ Corrupting bytes...
+-Validating corruption (reading full file)...
+-md5sum: SCRATCH_MNT/file.fsv: Input/output error
+-Validating corruption (direct I/O)...
+-dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+-Validating corruption (reading full file via mmap)...
+-Bus error
+-Validating corruption (reading just corrupted part via mmap)...
+-Bus error
++Validating corruption or zeros (reading eof block via mmap)...
++OK
+ 
+ # Corruption test: file_len=200000 zap_offset=100 (in Merkle tree) zap_len=10
+ 4a1e4325031b13f933ac4f1db9ecb63f  SCRATCH_MNT/file.fsv
 -- 
 2.35.1
 
