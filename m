@@ -2,137 +2,76 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7517AC433F5
-	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 May 2022 05:13:01 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6E695C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 May 2022 05:21:28 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S240904AbiEAFQW (ORCPT
+        id S241060AbiEAFYv (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 1 May 2022 01:16:22 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:41012 "EHLO
+        Sun, 1 May 2022 01:24:51 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:59162 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S240674AbiEAFQS (ORCPT
+        with ESMTP id S241046AbiEAFYu (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 1 May 2022 01:16:18 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 47B3A506F0;
-        Sat, 30 Apr 2022 22:12:54 -0700 (PDT)
+        Sun, 1 May 2022 01:24:50 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2F37413D4B;
+        Sat, 30 Apr 2022 22:21:27 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 0464DB80CDB;
-        Sun,  1 May 2022 05:12:50 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 86F20C385B2;
-        Sun,  1 May 2022 05:12:48 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id BF43561188;
+        Sun,  1 May 2022 05:21:26 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 0F9FBC385AA;
+        Sun,  1 May 2022 05:21:26 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1651381968;
-        bh=miRma4LpgMJ8145QGIGH87Z+R/bPOmgH/Fe9h/IwTn8=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=czXM3McfZVhZDclBL2XeUoocs7vKzKavmpxjE4XY4JRjaWptmpKQCLXtHXo4ytnVK
-         BAv1j8W73tI0TMXd6pD15396Y++3yI7dP8GRFWTbBUTzw2P5MFzHewhQYDqrZd+b/l
-         7rNntTTRAzWbFkkofLvoVlGUL4NlOvqfIS2B2wCxNxMm6ppktA/1H0CWZdX+98K+Yg
-         JOKU/+BWSQhIaDdZJCu5xR9sZfz/PQ1yUucw92SAo6ox0RHjfbVEVhBxOdP3RZaIj+
-         N4qexuGTg1fT7RWmIatgLxOQF24AotVKcXXHXXvOypHjQ6bM5b3ZbiPpNsdkcQENUn
-         ymKzzIhXeLzCg==
+        s=k20201202; t=1651382486;
+        bh=oqw2QlJKv5HbaXvjkUeK2eClFe54dcF0yYz3t+B3oWU=;
+        h=From:To:Cc:Subject:Date:From;
+        b=dN6n4uIyFWqGhNfR1YrNSS0JK0RGp/5leaeNN/hvXLWxyKFMfV5sPCoM89fDDIRLB
+         5g91Zdl77hNXZuQYVOGGB45LtF9SAlJSj3jVqg8+z+3GTM4c+XoYjU4L22dS2WyhuT
+         1sojW1EPW0KbLNRXs+/BILLxPn1ETwrGahFULyIAABPGF+Sum7hGRp0h0WLzuR7Uv1
+         LObSuo0jRI51L7S7V6f594gyyXpxaMvUpb6lr2WjFTeAYUXUrIcE7zy7dBEBnhnoig
+         P6pLmzHe7g0NOPFMzWNG0K9ilS6Z3NP+XoEK5lHQBYPpjFdFY6L7P3fhF0FJvjLMqZ
+         BTUV8RdrsTtkg==
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net
-Cc:     Lukas Czerner <lczerner@redhat.com>, Theodore Ts'o <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>,
-        Jeff Layton <jlayton@kernel.org>
-Subject: [PATCH v2 6/7] f2fs: use the updated test_dummy_encryption helper functions
-Date:   Sat, 30 Apr 2022 22:08:56 -0700
-Message-Id: <20220501050857.538984-7-ebiggers@kernel.org>
+To:     fstests@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        Lukas Czerner <lczerner@redhat.com>
+Subject: [xfstests PATCH 0/2] update test_dummy_encryption testing in ext4/053
+Date:   Sat, 30 Apr 2022 22:19:26 -0700
+Message-Id: <20220501051928.540278-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.36.0
-In-Reply-To: <20220501050857.538984-1-ebiggers@kernel.org>
-References: <20220501050857.538984-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+This series updates the testing of the test_dummy_encryption mount
+option in ext4/053.
 
-Switch f2fs over to the functions that are replacing
-fscrypt_set_test_dummy_encryption().  Since f2fs hasn't been converted
-to the new mount API yet, this doesn't really provide a benefit for
-f2fs.  But it allows fscrypt_set_test_dummy_encryption() to be removed.
+The first patch will be needed for the test to pass if the kernel patch
+"ext4: only allow test_dummy_encryption when supported"
+(https://lore.kernel.org/r/20220501050857.538984-2-ebiggers@kernel.org)
+is applied.
 
-Also take the opportunity to eliminate an #ifdef.
+The second patch starts testing a case that previously wasn't tested.
+It reproduces a bug that was introduced in the v5.17 kernel and will
+be fixed by the kernel patch
+"ext4: fix up test_dummy_encryption handling for new mount API"
+(https://lore.kernel.org/r/20220501050857.538984-6-ebiggers@kernel.org).
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- fs/f2fs/super.c | 29 +++++++++++++++++++++--------
- 1 file changed, 21 insertions(+), 8 deletions(-)
+This applies on top of my recent patch
+"ext4/053: fix the rejected mount option testing"
+(https://lore.kernel.org/r/20220430192130.131842-1-ebiggers@kernel.org).
 
-diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 6f69491aa5731..c08cbe0dfcd85 100644
---- a/fs/f2fs/super.c
-+++ b/fs/f2fs/super.c
-@@ -8,6 +8,7 @@
- #include <linux/module.h>
- #include <linux/init.h>
- #include <linux/fs.h>
-+#include <linux/fs_context.h>
- #include <linux/sched/mm.h>
- #include <linux/statfs.h>
- #include <linux/buffer_head.h>
-@@ -492,9 +493,19 @@ static int f2fs_set_test_dummy_encryption(struct super_block *sb,
- 					  bool is_remount)
- {
- 	struct f2fs_sb_info *sbi = F2FS_SB(sb);
--#ifdef CONFIG_FS_ENCRYPTION
-+	struct fs_parameter param = {
-+		.type = fs_value_is_string,
-+		.string = arg->from ? arg->from : "",
-+	};
-+	struct fscrypt_dummy_policy *policy =
-+		&F2FS_OPTION(sbi).dummy_enc_policy;
- 	int err;
- 
-+	if (!IS_ENABLED(CONFIG_FS_ENCRYPTION)) {
-+		f2fs_warn(sbi, "test_dummy_encryption option not supported");
-+		return -EINVAL;
-+	}
-+
- 	if (!f2fs_sb_has_encrypt(sbi)) {
- 		f2fs_err(sbi, "Encrypt feature is off");
- 		return -EINVAL;
-@@ -506,12 +517,12 @@ static int f2fs_set_test_dummy_encryption(struct super_block *sb,
- 	 * needed to allow it to be set or changed during remount.  We do allow
- 	 * it to be specified during remount, but only if there is no change.
- 	 */
--	if (is_remount && !F2FS_OPTION(sbi).dummy_enc_policy.policy) {
-+	if (is_remount && !fscrypt_is_dummy_policy_set(policy)) {
- 		f2fs_warn(sbi, "Can't set test_dummy_encryption on remount");
- 		return -EINVAL;
- 	}
--	err = fscrypt_set_test_dummy_encryption(
--		sb, arg->from, &F2FS_OPTION(sbi).dummy_enc_policy);
-+
-+	err = fscrypt_parse_test_dummy_encryption(&param, policy);
- 	if (err) {
- 		if (err == -EEXIST)
- 			f2fs_warn(sbi,
-@@ -524,12 +535,14 @@ static int f2fs_set_test_dummy_encryption(struct super_block *sb,
- 				  opt, err);
- 		return -EINVAL;
- 	}
-+	err = fscrypt_add_test_dummy_key(sb, policy);
-+	if (err) {
-+		f2fs_warn(sbi, "Error adding test dummy encryption key [%d]",
-+			  err);
-+		return err;
-+	}
- 	f2fs_warn(sbi, "Test dummy encryption mode enabled");
- 	return 0;
--#else
--	f2fs_warn(sbi, "test_dummy_encryption option not supported");
--	return -EINVAL;
--#endif
- }
- 
- #ifdef CONFIG_F2FS_FS_COMPRESSION
+Eric Biggers (2):
+  ext4/053: update the test_dummy_encryption tests
+  ext4/053: test changing test_dummy_encryption on remount
+
+ tests/ext4/053 | 38 ++++++++++++++++++++++++--------------
+ 1 file changed, 24 insertions(+), 14 deletions(-)
+
 -- 
 2.36.0
 
