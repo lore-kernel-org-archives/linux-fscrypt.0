@@ -2,388 +2,191 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 57912C433FE
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 29 Apr 2022 21:51:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1ECA2C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 May 2022 05:12:54 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S239654AbiD2VzM (ORCPT
+        id S240316AbiEAFQQ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 29 Apr 2022 17:55:12 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56338 "EHLO
+        Sun, 1 May 2022 01:16:16 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40808 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S239101AbiD2VzL (ORCPT
+        with ESMTP id S232817AbiEAFQP (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 29 Apr 2022 17:55:11 -0400
-Received: from mx0a-001b2d01.pphosted.com (mx0a-001b2d01.pphosted.com [148.163.156.1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 81274140D4;
-        Fri, 29 Apr 2022 14:51:51 -0700 (PDT)
-Received: from pps.filterd (m0098399.ppops.net [127.0.0.1])
-        by mx0a-001b2d01.pphosted.com (8.17.1.5/8.17.1.5) with ESMTP id 23TL0TbL018234;
-        Fri, 29 Apr 2022 21:51:49 GMT
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=message-id : date :
- mime-version : subject : to : cc : references : from : in-reply-to :
- content-type : content-transfer-encoding; s=pp1;
- bh=JbH+EfCmJGIsUSA3ahL4gd3zveVzJdcZTPDmaNBEqUI=;
- b=mx19pxHJW0EUhE7o1pA5S6CpWoiA5uo8mH+beKqQuk+QVE9yq2aSrsjHwZ28874NGttt
- gvDsHoE56NG+4eOgji8RNfTcYABPdgwA8w8CpSdmilW/+CuX5P+kyEb+5olbbSFatTVf
- skjVwNKleWYAgDPXg5wHKUrcb/3KiuBmMps5Qjz5DNeQpF5Wdihwpr6LYRYMfi8C7pr+
- lBTee/xksf26clr6DfF2XBblIXivI1ZZ1pk/eqeO1dwdpfCn5+22wVZ/YkL75g096rDp
- QwmFUs9CdJhes81RBMD4Gh9GDJQtQJ00+1vvMQkRd0SJsZxWRN5c4wkpQwyCc3lqMXi4 2Q== 
-Received: from ppma02dal.us.ibm.com (a.bd.3ea9.ip4.static.sl-reverse.com [169.62.189.10])
-        by mx0a-001b2d01.pphosted.com (PPS) with ESMTPS id 3frma4mye3-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Fri, 29 Apr 2022 21:51:49 +0000
-Received: from pps.filterd (ppma02dal.us.ibm.com [127.0.0.1])
-        by ppma02dal.us.ibm.com (8.16.1.2/8.16.1.2) with SMTP id 23TLlmQQ012069;
-        Fri, 29 Apr 2022 21:51:48 GMT
-Received: from b01cxnp23033.gho.pok.ibm.com (b01cxnp23033.gho.pok.ibm.com [9.57.198.28])
-        by ppma02dal.us.ibm.com with ESMTP id 3fm93aqbp3-1
-        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Fri, 29 Apr 2022 21:51:48 +0000
-Received: from b01ledav002.gho.pok.ibm.com (b01ledav002.gho.pok.ibm.com [9.57.199.107])
-        by b01cxnp23033.gho.pok.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 23TLplNM28377542
-        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
-        Fri, 29 Apr 2022 21:51:47 GMT
-Received: from b01ledav002.gho.pok.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id B82C3124054;
-        Fri, 29 Apr 2022 21:51:47 +0000 (GMT)
-Received: from b01ledav002.gho.pok.ibm.com (unknown [127.0.0.1])
-        by IMSVA (Postfix) with ESMTP id 81385124052;
-        Fri, 29 Apr 2022 21:51:47 +0000 (GMT)
-Received: from [9.47.158.152] (unknown [9.47.158.152])
-        by b01ledav002.gho.pok.ibm.com (Postfix) with ESMTP;
-        Fri, 29 Apr 2022 21:51:47 +0000 (GMT)
-Message-ID: <8a18eb04-4d07-7bad-e6f9-0015788e6a11@linux.ibm.com>
-Date:   Fri, 29 Apr 2022 17:51:47 -0400
+        Sun, 1 May 2022 01:16:15 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EF655506F0;
+        Sat, 30 Apr 2022 22:12:47 -0700 (PDT)
+Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 7BF06611AA;
+        Sun,  1 May 2022 05:12:47 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id A219EC385B2;
+        Sun,  1 May 2022 05:12:46 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1651381966;
+        bh=nAmBt61GKAfsWjQfkolSXWscTvEpi56hFaS0lvkymzQ=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=bHuEseytMNqKSviC9FuPd+k1bTCjEacx1KTn/1Fv2Q4hZs3WnN7urP3xit4Z7h+lQ
+         QoTFJpdXGS1WWry4Qk6n/vofkicHjG6nR7QkIo3xnzVoNC99XjC9lo7QhGr7Ig+eWf
+         Fi//JrXYD5+IBWhohGOfFwLIqwI55jFpUPFGNo2VZ5HGIaDEWH5DPCVXcf5KN+J3j8
+         0Dx2J03UOgaewhIeRwNaXvpTxEn3s3e/qkzayiAfTDs4bSC7N9832/VTZfVsMX05O5
+         XjFe7bnIypIenkmzZc48g5/6kHgszEe/srrmCj1M64ZXkR6f0NJmdlNyB08kFx/0u8
+         gURKokmoAG1rg==
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net
+Cc:     Lukas Czerner <lczerner@redhat.com>, Theodore Ts'o <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Jeff Layton <jlayton@kernel.org>
+Subject: [PATCH v2 1/7] ext4: only allow test_dummy_encryption when supported
+Date:   Sat, 30 Apr 2022 22:08:51 -0700
+Message-Id: <20220501050857.538984-2-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.36.0
+In-Reply-To: <20220501050857.538984-1-ebiggers@kernel.org>
+References: <20220501050857.538984-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
- Thunderbird/91.7.0
-Subject: Re: [PATCH v8 6/7] ima: support fs-verity file digest based version 3
- signatures
-Content-Language: en-US
-To:     Mimi Zohar <zohar@linux.ibm.com>, linux-integrity@vger.kernel.org
-Cc:     Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org,
-        linux-kernel@vger.kernel.org
-References: <20220429112601.1421947-1-zohar@linux.ibm.com>
- <20220429112601.1421947-7-zohar@linux.ibm.com>
-From:   Stefan Berger <stefanb@linux.ibm.com>
-In-Reply-To: <20220429112601.1421947-7-zohar@linux.ibm.com>
-Content-Type: text/plain; charset=UTF-8; format=flowed
-Content-Transfer-Encoding: 7bit
-X-TM-AS-GCONF: 00
-X-Proofpoint-ORIG-GUID: w6WYkOvB2QTl30jagM3OBTJQtYQD6zKC
-X-Proofpoint-GUID: w6WYkOvB2QTl30jagM3OBTJQtYQD6zKC
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.205,Aquarius:18.0.858,Hydra:6.0.486,FMLib:17.11.64.514
- definitions=2022-04-29_09,2022-04-28_01,2022-02-23_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 suspectscore=0 adultscore=0
- clxscore=1015 phishscore=0 priorityscore=1501 malwarescore=0 mlxscore=0
- lowpriorityscore=0 bulkscore=0 mlxlogscore=999 impostorscore=0 spamscore=0
- classifier=spam adjust=0 reason=mlx scancount=1 engine=8.12.0-2202240000
- definitions=main-2204290115
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+From: Eric Biggers <ebiggers@google.com>
 
+Make the test_dummy_encryption mount option require that the encrypt
+feature flag be already enabled on the filesystem, rather than
+automatically enabling it.  Practically, this means that "-O encrypt"
+will need to be included in MKFS_OPTIONS when running xfstests with the
+test_dummy_encryption mount option.  (ext4/053 also needs an update.)
 
-On 4/29/22 07:26, Mimi Zohar wrote:
-> IMA may verify a file's integrity against a "good" value stored in the
-> 'security.ima' xattr or as an appended signature, based on policy.  When
-> the "good value" is stored in the xattr, the xattr may contain a file
-> hash or signature.  In either case, the "good" value is preceded by a
-> header.  The first byte of the xattr header indicates the type of data
-> - hash, signature - stored in the xattr.  To support storing fs-verity
-> signatures in the 'security.ima' xattr requires further differentiating
-> the fs-verity signature from the existing IMA signature.
-> 
-> In addition the signatures stored in 'security.ima' xattr, need to be
-> disambiguated.  Instead of directly signing the fs-verity digest, a new
-> signature format version 3 is defined as the hash of the ima_file_id
-> structure, which identifies the type of signature and the digest.
-> 
-> The IMA policy defines "which" files are to be measured, verified, and/or
-> audited.  For those files being verified, the policy rules indicate "how"
-> the file should be verified.  For example to require a file be signed,
-> the appraise policy rule must include the 'appraise_type' option.
-> 
-> 	appraise_type:= [imasig] | [imasig|modsig] | [sigv3]
->             where 'imasig' is the original or signature format v2 (default),
->             where 'modsig' is an appended signature,
->             where 'sigv3' is the signature format v3.
-> 
-> The policy rule must also indicate the type of digest, if not the IMA
-> default, by first specifying the digest type:
-> 
-> 	digest_type:= [verity]
-> 
-> The following policy rule requires fsverity signatures.  The rule may be
-> constrained, for example based on a fsuuid or LSM label.
-> 
->        appraise func=BPRM_CHECK digest_type=verity appraise_type=sigv3
-> 
-> Signed-off-by: Mimi Zohar <zohar@linux.ibm.com>
-> ---
->   Documentation/ABI/testing/ima_policy      |  31 +++++-
->   Documentation/security/IMA-templates.rst  |   4 +-
->   security/integrity/digsig.c               |   3 +-
->   security/integrity/ima/ima_appraise.c     | 114 +++++++++++++++++++++-
->   security/integrity/ima/ima_policy.c       |  43 ++++++--
->   security/integrity/ima/ima_template_lib.c |   4 +-
->   security/integrity/integrity.h            |  26 ++++-
->   7 files changed, 206 insertions(+), 19 deletions(-)
-> 
+Moreover, as long as the preconditions for test_dummy_encryption are
+being tightened anyway, take the opportunity to start rejecting it when
+!CONFIG_FS_ENCRYPTION rather than ignoring it.
 
-> diff --git a/Documentation/security/IMA-templates.rst b/Documentation/security/IMA-templates.rst
-> index 09b5fac38195..15b4add314fc 100644
-> --- a/Documentation/security/IMA-templates.rst
-> +++ b/Documentation/security/IMA-templates.rst
-> @@ -71,8 +71,8 @@ descriptors by adding their identifier to the format string
->      (field format: <digest type>:<hash algo>:digest);
->    - 'd-modsig': the digest of the event without the appended modsig;
->    - 'n-ng': the name of the event, without size limitations;
-> - - 'sig': the file signature, or the EVM portable signature if the file
-> -   signature is not found;
-> + - 'sig': the file signature, based on either the file's/fsverity's digest[1],
-> +   or the EVM portable signature, if 'security.ima' contains a file hash.
->    - 'modsig' the appended file signature;
->    - 'buf': the buffer data that was used to generate the hash without size limitations;
->    - 'evmsig': the EVM portable signature;
-> diff --git a/security/integrity/digsig.c b/security/integrity/digsig.c
-> index c8c8a4a4e7a0..5f5639971b04 100644
-> --- a/security/integrity/digsig.c
-> +++ b/security/integrity/digsig.c
-> @@ -75,7 +75,8 @@ int integrity_digsig_verify(const unsigned int id, const char *sig, int siglen,
->   		/* v1 API expect signature without xattr type */
->   		return digsig_verify(keyring, sig + 1, siglen - 1, digest,
->   				     digestlen);
-> -	case 2:
-> +	case 2: /* regular file data hash based signature */
-> +	case 3: /* struct ima_file_id data base signature */
+The motivation for requiring the encrypt feature flag is that:
 
-nit: base -> based
+- Having the filesystem auto-enable feature flags is problematic, as it
+  bypasses the usual sanity checks.  The specific issue which came up
+  recently is that in kernel versions where ext4 supports casefold but
+  not encrypt+casefold (v5.1 through v5.10), the kernel will happily add
+  the encrypt flag to a filesystem that has the casefold flag, making it
+  unmountable -- but only for subsequent mounts, not the initial one.
+  This confused the casefold support detection in xfstests, causing
+  generic/556 to fail rather than be skipped.
 
->   		return asymmetric_verify(keyring, sig, siglen, digest,
->   					 digestlen);
->   	}
-> diff --git a/security/integrity/ima/ima_appraise.c b/security/integrity/ima/ima_appraise.c
-> index 17232bbfb9f9..37ff20fc7294 100644
-> --- a/security/integrity/ima/ima_appraise.c
-> +++ b/security/integrity/ima/ima_appraise.c
-> @@ -13,7 +13,9 @@
->   #include <linux/magic.h>
->   #include <linux/ima.h>
->   #include <linux/evm.h>
-> +#include <linux/fsverity.h>
->   #include <keys/system_keyring.h>
-> +#include <uapi/linux/fsverity.h>
->   
->   #include "ima.h"
->   
-> @@ -183,13 +185,18 @@ enum hash_algo ima_get_hash_algo(const struct evm_ima_xattr_data *xattr_value,
->   		return ima_hash_algo;
->   
->   	switch (xattr_value->type) {
-> +	case IMA_VERITY_DIGSIG:
-> +		sig = (typeof(sig))xattr_value;
-> +		if (sig->version != 3 || xattr_len <= sizeof(*sig) ||
-> +		    sig->hash_algo >= HASH_ALGO__LAST)
-> +			return ima_hash_algo;
-> +		return sig->hash_algo;
->   	case EVM_IMA_XATTR_DIGSIG:
->   		sig = (typeof(sig))xattr_value;
->   		if (sig->version != 2 || xattr_len <= sizeof(*sig)
->   		    || sig->hash_algo >= HASH_ALGO__LAST)
->   			return ima_hash_algo;
->   		return sig->hash_algo;
-> -		break;
->   	case IMA_XATTR_DIGEST_NG:
->   		/* first byte contains algorithm id */
->   		ret = xattr_value->data[0];
-> @@ -225,6 +232,40 @@ int ima_read_xattr(struct dentry *dentry,
->   	return ret;
->   }
->   
-> +/*
-> + * calc_file_id_hash - calculate the hash of the ima_file_id struct data
-> + * @type: xattr type [enum evm_ima_xattr_type]
-> + * @algo: hash algorithm [enum hash_algo]
-> + * @digest: pointer to the digest to be hashed
-> + * @hash: (out) pointer to the hash
-> + *
-> + * IMA signature version 3 disambiguates the data that is signed by
-> + * indirectly signing the hash of the ima_file_id structure data.
-> + *
-> + * Signing the ima_file_id struct is currently only supported for
-> + * IMA_VERITY_DIGSIG type xattrs.
-> + *
-> + * Return 0 on success, error code otherwise.
-> + */
-> +static int calc_file_id_hash(enum evm_ima_xattr_type type,
-> +			     enum hash_algo algo, const u8 *digest,
-> +			     struct ima_digest_data *hash)
-> +{
-> +	struct ima_file_id file_id = {
-> +		.hash_type = IMA_VERITY_DIGSIG, .hash_algorithm = algo};
-> +	unsigned int unused = HASH_MAX_DIGESTSIZE - hash_digest_size[algo];
-> +
-> +	if (type != IMA_VERITY_DIGSIG)
-> +		return -EINVAL;
-> +
-> +	memcpy(file_id.hash, digest, hash_digest_size[algo]);
-> +
-> +	hash->algo = algo;
-> +	hash->length = hash_digest_size[algo];
-> +
-> +	return ima_calc_buffer_hash(&file_id, sizeof(file_id) - unused, hash);
+- The xfstests-bld test runners (kvm-xfstests et al.) already use the
+  required mkfs flag, so they will not be affected by this change.  Only
+  users of test_dummy_encryption alone will be affected.  But, this
+  option has always been for testing only, so it should be fine to
+  require that the few users of this option update their test scripts.
 
-+struct ima_file_id {
-+	__u8 hash_type;		/* xattr type [enum evm_ima_xattr_type] */
-+	__u8 hash_algorithm;	/* Digest algorithm [enum hash_algo] */
-+	__u8 hash[HASH_MAX_DIGESTSIZE];
-+} __packed;
+- f2fs already requires it (for its equivalent feature flag).
 
-did you maybe mean 'sizeof(file_id.hash) - unused' ?
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ext4/super.c | 59 +++++++++++++++++++++++++++++++------------------
+ 1 file changed, 37 insertions(+), 22 deletions(-)
 
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 1466fbdbc8e34..64ce17714e193 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -2427,11 +2427,12 @@ static int ext4_parse_param(struct fs_context *fc, struct fs_parameter *param)
+ 		ctx->spec |= EXT4_SPEC_DUMMY_ENCRYPTION;
+ 		ctx->test_dummy_enc_arg = kmemdup_nul(param->string, param->size,
+ 						      GFP_KERNEL);
++		return 0;
+ #else
+ 		ext4_msg(NULL, KERN_WARNING,
+-			 "Test dummy encryption mount option ignored");
++			 "test_dummy_encryption option not supported");
++		return -EINVAL;
+ #endif
+-		return 0;
+ 	case Opt_dax:
+ 	case Opt_dax_type:
+ #ifdef CONFIG_FS_DAX
+@@ -2786,12 +2787,43 @@ static int ext4_check_quota_consistency(struct fs_context *fc,
+ #endif
+ }
+ 
++static int ext4_check_test_dummy_encryption(const struct fs_context *fc,
++					    struct super_block *sb)
++{
++	const struct ext4_fs_context *ctx = fc->fs_private;
++	const struct ext4_sb_info *sbi = EXT4_SB(sb);
++
++	if (!IS_ENABLED(CONFIG_FS_ENCRYPTION) ||
++	    !(ctx->spec & EXT4_SPEC_DUMMY_ENCRYPTION))
++		return 0;
++
++	if (!ext4_has_feature_encrypt(sb)) {
++		ext4_msg(NULL, KERN_WARNING,
++			 "test_dummy_encryption requires encrypt feature");
++		return -EINVAL;
++	}
++	/*
++	 * This mount option is just for testing, and it's not worthwhile to
++	 * implement the extra complexity (e.g. RCU protection) that would be
++	 * needed to allow it to be set or changed during remount.  We do allow
++	 * it to be specified during remount, but only if there is no change.
++	 */
++	if (fc->purpose == FS_CONTEXT_FOR_RECONFIGURE &&
++	    !DUMMY_ENCRYPTION_ENABLED(sbi)) {
++		ext4_msg(NULL, KERN_WARNING,
++			 "Can't set test_dummy_encryption on remount");
++		return -EINVAL;
++	}
++	return 0;
++}
++
+ static int ext4_check_opt_consistency(struct fs_context *fc,
+ 				      struct super_block *sb)
+ {
+ 	struct ext4_fs_context *ctx = fc->fs_private;
+ 	struct ext4_sb_info *sbi = fc->s_fs_info;
+ 	int is_remount = fc->purpose == FS_CONTEXT_FOR_RECONFIGURE;
++	int err;
+ 
+ 	if ((ctx->opt_flags & MOPT_NO_EXT2) && IS_EXT2_SB(sb)) {
+ 		ext4_msg(NULL, KERN_ERR,
+@@ -2821,20 +2853,9 @@ static int ext4_check_opt_consistency(struct fs_context *fc,
+ 				 "for blocksize < PAGE_SIZE");
+ 	}
+ 
+-#ifdef CONFIG_FS_ENCRYPTION
+-	/*
+-	 * This mount option is just for testing, and it's not worthwhile to
+-	 * implement the extra complexity (e.g. RCU protection) that would be
+-	 * needed to allow it to be set or changed during remount.  We do allow
+-	 * it to be specified during remount, but only if there is no change.
+-	 */
+-	if ((ctx->spec & EXT4_SPEC_DUMMY_ENCRYPTION) &&
+-	    is_remount && !sbi->s_dummy_enc_policy.policy) {
+-		ext4_msg(NULL, KERN_WARNING,
+-			 "Can't set test_dummy_encryption on remount");
+-		return -1;
+-	}
+-#endif
++	err = ext4_check_test_dummy_encryption(fc, sb);
++	if (err)
++		return err;
+ 
+ 	if ((ctx->spec & EXT4_SPEC_DATAJ) && is_remount) {
+ 		if (!sbi->s_journal) {
+@@ -5279,12 +5300,6 @@ static int __ext4_fill_super(struct fs_context *fc, struct super_block *sb)
+ 		goto failed_mount_wq;
+ 	}
+ 
+-	if (DUMMY_ENCRYPTION_ENABLED(sbi) && !sb_rdonly(sb) &&
+-	    !ext4_has_feature_encrypt(sb)) {
+-		ext4_set_feature_encrypt(sb);
+-		ext4_commit_super(sb);
+-	}
+-
+ 	/*
+ 	 * Get the # of file system overhead blocks from the
+ 	 * superblock if present.
+-- 
+2.36.0
 
-> +}
-> +
->   /*
->    * xattr_verify - verify xattr digest or signature
->    *
-> @@ -236,7 +277,10 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
->   			struct evm_ima_xattr_data *xattr_value, int xattr_len,
->   			enum integrity_status *status, const char **cause)
->   {
-> +	struct ima_max_digest_data hash;
-> +	struct signature_v2_hdr *sig;
->   	int rc = -EINVAL, hash_start = 0;
-> +	int mask;
->   
->   	switch (xattr_value->type) {
->   	case IMA_XATTR_DIGEST_NG:
-> @@ -246,7 +290,10 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
->   	case IMA_XATTR_DIGEST:
->   		if (*status != INTEGRITY_PASS_IMMUTABLE) {
->   			if (iint->flags & IMA_DIGSIG_REQUIRED) {
-> -				*cause = "IMA-signature-required";
-> +				if (iint->flags & IMA_VERITY_REQUIRED)
-> +					*cause = "verity-signature-required";
-> +				else
-> +					*cause = "IMA-signature-required";
->   				*status = INTEGRITY_FAIL;
->   				break;
->   			}
-> @@ -274,6 +321,20 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
->   		break;
->   	case EVM_IMA_XATTR_DIGSIG:
->   		set_bit(IMA_DIGSIG, &iint->atomic_flags);
-> +
-> +		mask = IMA_DIGSIG_REQUIRED | IMA_VERITY_REQUIRED;
-> +		if ((iint->flags & mask) == mask) {
-> +			*cause = "verity-signature-required";
-> +			*status = INTEGRITY_FAIL;
-> +			break;
-> +		}
-> +
-> +		sig = (typeof(sig))xattr_value;
-> +		if (sig->version == 3) {
-
-nit for the future(?): sig->version >= 3
-
-> +			*cause = "invalid-signature-version";
-> +			*status = INTEGRITY_FAIL;
-> +			break;
-> +		}
->   		rc = integrity_digsig_verify(INTEGRITY_KEYRING_IMA,
->   					     (const char *)xattr_value,
->   					     xattr_len,
-> @@ -296,6 +357,44 @@ static int xattr_verify(enum ima_hooks func, struct integrity_iint_cache *iint,
->   		} else {
->   			*status = INTEGRITY_PASS;
->   		}
-> +		break;
-> +	case IMA_VERITY_DIGSIG:
-> +		set_bit(IMA_DIGSIG, &iint->atomic_flags);
-> +
-> +		if (iint->flags & IMA_DIGSIG_REQUIRED) {
-> +			if (!(iint->flags & IMA_VERITY_REQUIRED)) {
-> +				*cause = "IMA-signature-required";
-> +				*status = INTEGRITY_FAIL;
-> +				break;
-> +			}
-> +		}
-> +
-> +		sig = (typeof(sig))xattr_value;
-> +		if (sig->version != 3) {
-> +			*cause = "invalid-signature-version";
-> +			*status = INTEGRITY_FAIL;
-> +			break;
-> +		}
-> +
-> +		rc = calc_file_id_hash(IMA_VERITY_DIGSIG, iint->ima_hash->algo,
-> +				       iint->ima_hash->digest, &hash.hdr);
-> +		if (rc) {
-> +			*cause = "sigv3-hashing-error";
-> +			*status = INTEGRITY_FAIL;
-> +			break;
-> +		}
-> +
-> +		rc = integrity_digsig_verify(INTEGRITY_KEYRING_IMA,
-> +					     (const char *)xattr_value,
-> +					     xattr_len, hash.digest,
-> +					     hash.hdr.length);
-> +		if (rc) {
-> +			*cause = "invalid-verity-signature";
-> +			*status = INTEGRITY_FAIL;
-> +		} else {
-> +			*status = INTEGRITY_PASS;
-> +		}
-> +
->   		break;
->   	default:
->   		*status = INTEGRITY_UNKNOWN;
-> @@ -396,8 +495,15 @@ int ima_appraise_measurement(enum ima_hooks func,
->   		if (rc && rc != -ENODATA)
->   			goto out;
->   
-> -		cause = iint->flags & IMA_DIGSIG_REQUIRED ?
-> -				"IMA-signature-required" : "missing-hash";
-> +		if (iint->flags & IMA_DIGSIG_REQUIRED) {
-> +			if (iint->flags & IMA_VERITY_REQUIRED)
-> +				cause = "verity-signature-required";
-> +			else
-> +				cause = "IMA-signature-required";
-> +		} else {
-> +			cause = "missing-hash";
-> +		}
-> +
->   		status = INTEGRITY_NOLABEL;
->   		if (file->f_mode & FMODE_CREATED)
->   			iint->flags |= IMA_NEW_FILE;
-> diff --git a/security/integrity/ima/ima_policy.c b/security/integrity/ima/ima_policy.c
-> index 390a8faa77f9..e24531db95cd 100644
-> --- a/security/integrity/ima/ima_policy.c
-> +++ b/security/integrity/ima/ima_policy.c
-> @@ -1310,6 +1310,15 @@ static bool ima_validate_rule(struct ima_rule_entry *entry)
->   	    !(entry->flags & IMA_MODSIG_ALLOWED))
->   		return false;
->   
-> +	/*
-> +	 * Ensure verity appraise rules require signature format v3 signatures
-> +	 * ('appraise_type=sigv3').
-
-This comment doesn't seem to reflect what is actually checked below ... 
-at least for me it's difficult to see that.
-
-It's more like 'ensure that appraise rules for verity signature type 
-also have the IMA_DIGSIG_REQUIRED flag set.'
-
-> +	 */
-> +	if (entry->action == APPRAISE &&
-> +	    (entry->flags & IMA_VERITY_REQUIRED) &&
-> +	    !(entry->flags & IMA_DIGSIG_REQUIRED))
-> +		return false;
-> +
->   	return true;
->   }
->   
