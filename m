@@ -2,46 +2,46 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D89AFC433EF
-	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 May 2022 05:12:57 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1B6F7C433F5
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 May 2022 05:12:59 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S240655AbiEAFQS (ORCPT
+        id S240284AbiEAFQU (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 1 May 2022 01:16:18 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40888 "EHLO
+        Sun, 1 May 2022 01:16:20 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40884 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S240583AbiEAFQQ (ORCPT
+        with ESMTP id S240557AbiEAFQQ (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Sun, 1 May 2022 01:16:16 -0400
 Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1813450E1C;
-        Sat, 30 Apr 2022 22:12:51 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 4040550E16;
+        Sat, 30 Apr 2022 22:12:50 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id A3E46B80CE1;
-        Sun,  1 May 2022 05:12:49 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 2A868C385AE;
+        by ams.source.kernel.org (Postfix) with ESMTPS id DE9F6B80CDF;
         Sun,  1 May 2022 05:12:48 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 65DC8C385B5;
+        Sun,  1 May 2022 05:12:47 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1651381968;
-        bh=p8tiiKATzO2hyRuPrsR+ZymzRhe50NHUY+7zaZOZIzc=;
+        s=k20201202; t=1651381967;
+        bh=lZT1gByo3Y9Ub5T0TA1IR1XBzyPH8WZkJ9F8N3p3es0=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=V3cr3J5nJjBfk0+fWzXkZG6TmCghjm8H1l6zLP6CLIG7VGf9IHmc6NLuKX6G27H5M
-         ZbkkWR6ZytqvBjKCRLDDLERudu6T4LahRW+ATo7C7dliYkRAQ5uEdaFgtSNXxkZ91Q
-         QNHKy/trz2e9e+TPVPzxkgPfPOLeHD3nACKypw7NuOFrjmbkOeOZs/i9DI/TJ61Ea0
-         bFs0sYn0uqeZUX0Msum91WVWF8TW7F/pq0vJqxIKA+sEMjRvkXMmM7ZRLts9nTGokV
-         +vqIlzZkLX/WdQG617FIyleCW65WtsiR9bRFg4eEJsnFmJ5U5VPDYFZzJvbNYCTw7x
-         I/6CMwPoJQS9Q==
+        b=T1+iweG7jBy7ELy5r7MYHZHjHcu7ab9qUVX9z9mtOopxiYXR3GmtbIVHrvfIq0eIG
+         7PUhfBXIP7yVu5kYBw+5KGjR8vunqyY5dBv9I5zbDqqXj5vR5fD73Fvzhe/DmCweL+
+         hIDnU0LhqOzYEcD4HGGLbF04ArCT6/dF2S5HXYOnnKv4OHPE4T3UxKUUCudovpcqQX
+         Pr6d8ah7kthYGLA3m18muKEZv3nOOZ8lo1tg78FTiZWkRAC6xvBzXpIUP0VHU9yTRF
+         36AIHnGOB0/DP2Qxwk9hYgm0lsUXf87CYWnKEukWlweCR0i1deBNzR6/UHH+wX6ak/
+         IJtWAQr466irQ==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net
 Cc:     Lukas Czerner <lczerner@redhat.com>, Theodore Ts'o <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
         Jeff Layton <jlayton@kernel.org>
-Subject: [PATCH v2 5/7] ext4: fix up test_dummy_encryption handling for new mount API
-Date:   Sat, 30 Apr 2022 22:08:55 -0700
-Message-Id: <20220501050857.538984-6-ebiggers@kernel.org>
+Subject: [PATCH v2 3/7] fscrypt: factor out fscrypt_policy_to_key_spec()
+Date:   Sat, 30 Apr 2022 22:08:53 -0700
+Message-Id: <20220501050857.538984-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.36.0
 In-Reply-To: <20220501050857.538984-1-ebiggers@kernel.org>
 References: <20220501050857.538984-1-ebiggers@kernel.org>
@@ -53,293 +53,92 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Since ext4 was converted to the new mount API, the test_dummy_encryption
-mount option isn't being handled entirely correctly, because the needed
-fscrypt_set_test_dummy_encryption() helper function combines
-parsing/checking/applying into one function.  That doesn't work well
-with the new mount API, which split these into separate steps.
+Factor out a function that builds the fscrypt_key_specifier for an
+fscrypt_policy.  Before this was only needed when finding the key for a
+file, but now it will also be needed for test_dummy_encryption support.
 
-This was sort of okay anyway, due to the parsing logic that was copied
-from fscrypt_set_test_dummy_encryption() into ext4_parse_param(),
-combined with an additional check in ext4_check_test_dummy_encryption().
-However, these overlooked the case of changing the value of
-test_dummy_encryption on remount, which isn't allowed but ext4 wasn't
-detecting until ext4_apply_options() when it's too late to fail.
-Another bug is that if test_dummy_encryption was specified multiple
-times with an argument, memory was leaked.
-
-Fix this up properly by using the new helper functions that allow
-splitting up the parse/check/apply steps for test_dummy_encryption.
-
-Fixes: cebe85d570cf ("ext4: switch to the new mount api")
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/ext4.h  |   6 ---
- fs/ext4/super.c | 131 +++++++++++++++++++++++++-----------------------
- 2 files changed, 67 insertions(+), 70 deletions(-)
+ fs/crypto/fscrypt_private.h |  2 ++
+ fs/crypto/keysetup.c        | 20 +++-----------------
+ fs/crypto/policy.c          | 20 ++++++++++++++++++++
+ 3 files changed, 25 insertions(+), 17 deletions(-)
 
-diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
-index a743b1e3b89ec..f6d6661817b63 100644
---- a/fs/ext4/ext4.h
-+++ b/fs/ext4/ext4.h
-@@ -1440,12 +1440,6 @@ struct ext4_super_block {
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 5b0a9e6478b5d..f32d0ee91e70e 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -621,6 +621,8 @@ int fscrypt_setup_v1_file_key_via_subscribed_keyrings(struct fscrypt_info *ci);
  
- #ifdef __KERNEL__
+ bool fscrypt_policies_equal(const union fscrypt_policy *policy1,
+ 			    const union fscrypt_policy *policy2);
++int fscrypt_policy_to_key_spec(const union fscrypt_policy *policy,
++			       struct fscrypt_key_specifier *key_spec);
+ bool fscrypt_supported_policy(const union fscrypt_policy *policy_u,
+ 			      const struct inode *inode);
+ int fscrypt_policy_from_context(union fscrypt_policy *policy_u,
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index eede186b04ce3..571d220d6e226 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -425,23 +425,9 @@ static int setup_file_encryption_key(struct fscrypt_info *ci,
+ 	if (err)
+ 		return err;
  
--#ifdef CONFIG_FS_ENCRYPTION
--#define DUMMY_ENCRYPTION_ENABLED(sbi) ((sbi)->s_dummy_enc_policy.policy != NULL)
--#else
--#define DUMMY_ENCRYPTION_ENABLED(sbi) (0)
--#endif
--
- /* Number of quota types we support */
- #define EXT4_MAXQUOTAS 3
- 
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 64ce17714e193..43e4cd358b33b 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -87,7 +87,7 @@ static struct inode *ext4_get_journal_inode(struct super_block *sb,
- static int ext4_validate_options(struct fs_context *fc);
- static int ext4_check_opt_consistency(struct fs_context *fc,
- 				      struct super_block *sb);
--static int ext4_apply_options(struct fs_context *fc, struct super_block *sb);
-+static void ext4_apply_options(struct fs_context *fc, struct super_block *sb);
- static int ext4_parse_param(struct fs_context *fc, struct fs_parameter *param);
- static int ext4_get_tree(struct fs_context *fc);
- static int ext4_reconfigure(struct fs_context *fc);
-@@ -1989,31 +1989,12 @@ ext4_sb_read_encoding(const struct ext4_super_block *es)
- }
- #endif
- 
--static int ext4_set_test_dummy_encryption(struct super_block *sb, char *arg)
--{
--#ifdef CONFIG_FS_ENCRYPTION
--	struct ext4_sb_info *sbi = EXT4_SB(sb);
--	int err;
--
--	err = fscrypt_set_test_dummy_encryption(sb, arg,
--						&sbi->s_dummy_enc_policy);
--	if (err) {
--		ext4_msg(sb, KERN_WARNING,
--			 "Error while setting test dummy encryption [%d]", err);
--		return err;
--	}
--	ext4_msg(sb, KERN_WARNING, "Test dummy encryption mode enabled");
--#endif
--	return 0;
--}
--
- #define EXT4_SPEC_JQUOTA			(1 <<  0)
- #define EXT4_SPEC_JQFMT				(1 <<  1)
- #define EXT4_SPEC_DATAJ				(1 <<  2)
- #define EXT4_SPEC_SB_BLOCK			(1 <<  3)
- #define EXT4_SPEC_JOURNAL_DEV			(1 <<  4)
- #define EXT4_SPEC_JOURNAL_IOPRIO		(1 <<  5)
--#define EXT4_SPEC_DUMMY_ENCRYPTION		(1 <<  6)
- #define EXT4_SPEC_s_want_extra_isize		(1 <<  7)
- #define EXT4_SPEC_s_max_batch_time		(1 <<  8)
- #define EXT4_SPEC_s_min_batch_time		(1 <<  9)
-@@ -2030,7 +2011,7 @@ static int ext4_set_test_dummy_encryption(struct super_block *sb, char *arg)
- 
- struct ext4_fs_context {
- 	char		*s_qf_names[EXT4_MAXQUOTAS];
--	char		*test_dummy_enc_arg;
-+	struct fscrypt_dummy_policy dummy_enc_policy;
- 	int		s_jquota_fmt;	/* Format of quota to use */
- #ifdef CONFIG_EXT4_DEBUG
- 	int s_fc_debug_max_replay;
-@@ -2061,9 +2042,8 @@ struct ext4_fs_context {
- 	ext4_fsblk_t	s_sb_block;
- };
- 
--static void ext4_fc_free(struct fs_context *fc)
-+static void __ext4_fc_free(struct ext4_fs_context *ctx)
- {
--	struct ext4_fs_context *ctx = fc->fs_private;
- 	int i;
- 
- 	if (!ctx)
-@@ -2072,10 +2052,15 @@ static void ext4_fc_free(struct fs_context *fc)
- 	for (i = 0; i < EXT4_MAXQUOTAS; i++)
- 		kfree(ctx->s_qf_names[i]);
- 
--	kfree(ctx->test_dummy_enc_arg);
-+	fscrypt_free_dummy_policy(&ctx->dummy_enc_policy);
- 	kfree(ctx);
- }
- 
-+static void ext4_fc_free(struct fs_context *fc)
-+{
-+	__ext4_fc_free(fc->fs_private);
-+}
-+
- int ext4_init_fs_context(struct fs_context *fc)
- {
- 	struct ext4_fs_context *ctx;
-@@ -2148,6 +2133,29 @@ static int unnote_qf_name(struct fs_context *fc, int qtype)
- }
- #endif
- 
-+static int ext4_parse_test_dummy_encryption(const struct fs_parameter *param,
-+					    struct ext4_fs_context *ctx)
-+{
-+	int err;
-+
-+	if (!IS_ENABLED(CONFIG_FS_ENCRYPTION)) {
-+		ext4_msg(NULL, KERN_WARNING,
-+			 "test_dummy_encryption option not supported");
-+		return -EINVAL;
-+	}
-+	err = fscrypt_parse_test_dummy_encryption(param,
-+						  &ctx->dummy_enc_policy);
-+	if (err == -EINVAL) {
-+		ext4_msg(NULL, KERN_WARNING,
-+			 "Value of option \"%s\" is unrecognized", param->key);
-+	} else if (err == -EEXIST) {
-+		ext4_msg(NULL, KERN_WARNING,
-+			 "Conflicting test_dummy_encryption options");
-+		return -EINVAL;
-+	}
-+	return err;
-+}
-+
- #define EXT4_SET_CTX(name)						\
- static inline void ctx_set_##name(struct ext4_fs_context *ctx,		\
- 				  unsigned long flag)			\
-@@ -2410,29 +2418,7 @@ static int ext4_parse_param(struct fs_context *fc, struct fs_parameter *param)
- 		ctx->spec |= EXT4_SPEC_JOURNAL_IOPRIO;
- 		return 0;
- 	case Opt_test_dummy_encryption:
--#ifdef CONFIG_FS_ENCRYPTION
--		if (param->type == fs_value_is_flag) {
--			ctx->spec |= EXT4_SPEC_DUMMY_ENCRYPTION;
--			ctx->test_dummy_enc_arg = NULL;
--			return 0;
--		}
--		if (*param->string &&
--		    !(!strcmp(param->string, "v1") ||
--		      !strcmp(param->string, "v2"))) {
--			ext4_msg(NULL, KERN_WARNING,
--				 "Value of option \"%s\" is unrecognized",
--				 param->key);
--			return -EINVAL;
--		}
--		ctx->spec |= EXT4_SPEC_DUMMY_ENCRYPTION;
--		ctx->test_dummy_enc_arg = kmemdup_nul(param->string, param->size,
--						      GFP_KERNEL);
--		return 0;
--#else
--		ext4_msg(NULL, KERN_WARNING,
--			 "test_dummy_encryption option not supported");
+-	switch (ci->ci_policy.version) {
+-	case FSCRYPT_POLICY_V1:
+-		mk_spec.type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
+-		memcpy(mk_spec.u.descriptor,
+-		       ci->ci_policy.v1.master_key_descriptor,
+-		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
+-		break;
+-	case FSCRYPT_POLICY_V2:
+-		mk_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
+-		memcpy(mk_spec.u.identifier,
+-		       ci->ci_policy.v2.master_key_identifier,
+-		       FSCRYPT_KEY_IDENTIFIER_SIZE);
+-		break;
+-	default:
+-		WARN_ON(1);
 -		return -EINVAL;
--#endif
-+		return ext4_parse_test_dummy_encryption(param, ctx);
- 	case Opt_dax:
- 	case Opt_dax_type:
- #ifdef CONFIG_FS_DAX
-@@ -2623,10 +2609,11 @@ static int parse_apply_sb_mount_options(struct super_block *sb,
- 	if (s_ctx->spec & EXT4_SPEC_JOURNAL_IOPRIO)
- 		m_ctx->journal_ioprio = s_ctx->journal_ioprio;
- 
--	ret = ext4_apply_options(fc, sb);
-+	ext4_apply_options(fc, sb);
-+	ret = 0;
- 
- out_free:
--	kfree(s_ctx);
-+	__ext4_fc_free(s_ctx);
- 	kfree(fc);
- 	kfree(s_mount_opts);
- 	return ret;
-@@ -2792,9 +2779,9 @@ static int ext4_check_test_dummy_encryption(const struct fs_context *fc,
- {
- 	const struct ext4_fs_context *ctx = fc->fs_private;
- 	const struct ext4_sb_info *sbi = EXT4_SB(sb);
-+	int err;
- 
--	if (!IS_ENABLED(CONFIG_FS_ENCRYPTION) ||
--	    !(ctx->spec & EXT4_SPEC_DUMMY_ENCRYPTION))
-+	if (!fscrypt_is_dummy_policy_set(&ctx->dummy_enc_policy))
- 		return 0;
- 
- 	if (!ext4_has_feature_encrypt(sb)) {
-@@ -2808,13 +2795,35 @@ static int ext4_check_test_dummy_encryption(const struct fs_context *fc,
- 	 * needed to allow it to be set or changed during remount.  We do allow
- 	 * it to be specified during remount, but only if there is no change.
- 	 */
--	if (fc->purpose == FS_CONTEXT_FOR_RECONFIGURE &&
--	    !DUMMY_ENCRYPTION_ENABLED(sbi)) {
-+	if (fc->purpose == FS_CONTEXT_FOR_RECONFIGURE) {
-+		if (fscrypt_dummy_policies_equal(&sbi->s_dummy_enc_policy,
-+						 &ctx->dummy_enc_policy))
-+			return 0;
- 		ext4_msg(NULL, KERN_WARNING,
--			 "Can't set test_dummy_encryption on remount");
-+			 "Can't set or change test_dummy_encryption on remount");
- 		return -EINVAL;
- 	}
--	return 0;
-+	/*
-+	 * fscrypt_add_test_dummy_key() technically changes the super_block, so
-+	 * it technically should be delayed until ext4_apply_options() like the
-+	 * other changes.  But since we never get here for remounts (see above),
-+	 * and this is the last chance to report errors, we do it here.
-+	 */
-+	err = fscrypt_add_test_dummy_key(sb, &ctx->dummy_enc_policy);
+-	}
++	err = fscrypt_policy_to_key_spec(&ci->ci_policy, &mk_spec);
 +	if (err)
-+		ext4_msg(NULL, KERN_WARNING,
-+			 "Error adding test dummy encryption key [%d]", err);
-+	return err;
++		return err;
+ 
+ 	key = fscrypt_find_master_key(ci->ci_inode->i_sb, &mk_spec);
+ 	if (IS_ERR(key)) {
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index ed3d623724cdd..2a11276913a98 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -32,6 +32,26 @@ bool fscrypt_policies_equal(const union fscrypt_policy *policy1,
+ 	return !memcmp(policy1, policy2, fscrypt_policy_size(policy1));
+ }
+ 
++int fscrypt_policy_to_key_spec(const union fscrypt_policy *policy,
++			       struct fscrypt_key_specifier *key_spec)
++{
++	switch (policy->version) {
++	case FSCRYPT_POLICY_V1:
++		key_spec->type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
++		memcpy(key_spec->u.descriptor, policy->v1.master_key_descriptor,
++		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
++		return 0;
++	case FSCRYPT_POLICY_V2:
++		key_spec->type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
++		memcpy(key_spec->u.identifier, policy->v2.master_key_identifier,
++		       FSCRYPT_KEY_IDENTIFIER_SIZE);
++		return 0;
++	default:
++		WARN_ON(1);
++		return -EINVAL;
++	}
 +}
 +
-+static void ext4_apply_test_dummy_encryption(struct ext4_fs_context *ctx,
-+					     struct super_block *sb)
-+{
-+	if (!fscrypt_is_dummy_policy_set(&ctx->dummy_enc_policy))
-+		return;
-+	EXT4_SB(sb)->s_dummy_enc_policy = ctx->dummy_enc_policy;
-+	memset(&ctx->dummy_enc_policy, 0, sizeof(ctx->dummy_enc_policy));
-+	ext4_msg(sb, KERN_WARNING, "Test dummy encryption mode enabled");
- }
- 
- static int ext4_check_opt_consistency(struct fs_context *fc,
-@@ -2901,11 +2910,10 @@ static int ext4_check_opt_consistency(struct fs_context *fc,
- 	return ext4_check_quota_consistency(fc, sb);
- }
- 
--static int ext4_apply_options(struct fs_context *fc, struct super_block *sb)
-+static void ext4_apply_options(struct fs_context *fc, struct super_block *sb)
+ static const union fscrypt_policy *
+ fscrypt_get_dummy_policy(struct super_block *sb)
  {
- 	struct ext4_fs_context *ctx = fc->fs_private;
- 	struct ext4_sb_info *sbi = fc->s_fs_info;
--	int ret = 0;
- 
- 	sbi->s_mount_opt &= ~ctx->mask_s_mount_opt;
- 	sbi->s_mount_opt |= ctx->vals_s_mount_opt;
-@@ -2942,10 +2950,7 @@ static int ext4_apply_options(struct fs_context *fc, struct super_block *sb)
- 
- 	ext4_apply_quota_options(fc, sb);
- 
--	if (ctx->spec & EXT4_SPEC_DUMMY_ENCRYPTION)
--		ret = ext4_set_test_dummy_encryption(sb, ctx->test_dummy_enc_arg);
--
--	return ret;
-+	ext4_apply_test_dummy_encryption(ctx, sb);
- }
- 
- 
-@@ -4667,9 +4672,7 @@ static int __ext4_fill_super(struct fs_context *fc, struct super_block *sb)
- 	if (err < 0)
- 		goto failed_mount;
- 
--	err = ext4_apply_options(fc, sb);
--	if (err < 0)
--		goto failed_mount;
-+	ext4_apply_options(fc, sb);
- 
- #if IS_ENABLED(CONFIG_UNICODE)
- 	if (ext4_has_feature_casefold(sb) && !sb->s_encoding) {
 -- 
 2.36.0
 
