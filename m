@@ -2,58 +2,59 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C2CB3C4332F
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 May 2022 19:20:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C4AC6C433EF
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  9 May 2022 19:20:45 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S240528AbiEITYX (ORCPT
+        id S240514AbiEITYh (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 9 May 2022 15:24:23 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58022 "EHLO
+        Mon, 9 May 2022 15:24:37 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58262 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S240519AbiEITYU (ORCPT
+        with ESMTP id S240543AbiEITYX (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 9 May 2022 15:24:20 -0400
-Received: from mail-yw1-x114a.google.com (mail-yw1-x114a.google.com [IPv6:2607:f8b0:4864:20::114a])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E3A1D245613
-        for <linux-fscrypt@vger.kernel.org>; Mon,  9 May 2022 12:20:22 -0700 (PDT)
-Received: by mail-yw1-x114a.google.com with SMTP id 00721157ae682-2f7c322f770so127815517b3.20
-        for <linux-fscrypt@vger.kernel.org>; Mon, 09 May 2022 12:20:22 -0700 (PDT)
+        Mon, 9 May 2022 15:24:23 -0400
+Received: from mail-ua1-x949.google.com (mail-ua1-x949.google.com [IPv6:2607:f8b0:4864:20::949])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 836F32469EE
+        for <linux-fscrypt@vger.kernel.org>; Mon,  9 May 2022 12:20:26 -0700 (PDT)
+Received: by mail-ua1-x949.google.com with SMTP id z11-20020a9f2a8b000000b003581b14a0b6so7256950uai.19
+        for <linux-fscrypt@vger.kernel.org>; Mon, 09 May 2022 12:20:26 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20210112;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
-         :cc:content-transfer-encoding;
-        bh=+dsVM9Y27pmOMIfKE7orFwRJ/ZFEy3PieWHgI3C86jU=;
-        b=CbtaYEf/ajZQYE2eRzLBz03dP9rrcRYHvaRy4HkI0uacuz7U1oSN6b4cNk2LCqsGuR
-         hUUJf8YSY+GC/M4aC4fXzd60wn02rJ+D24uB+t7eZJ9Pjh6t/4EOk/rRGgefBP8cuT9f
-         Dc0xYegUQq4M6FOHjHa9Db5cGsEfaJmiNd1ttJo4/SEQIithA4GFNnyLV4GRX6OFI8FF
-         8SkBWVoN+19S/j2/4n45MLvXgU4fbzKje4ViPKeC+TdY50dkUTHIN/cXxRIOjq8eaZ9E
-         tQ2mfvRkYueKRGtaD3ySzcG5IWBYM4Pxoyay+DrNdpeGLP6VGjNlnNlryWUzzKt2XzyV
-         sgRQ==
+         :cc;
+        bh=Z/d4sbLzsi7vD2pyMSoW/HH/4CiW8Dg9N9/4FppREjo=;
+        b=KjwCZxgBNMeFQa1Ma99L49DWhzlEYU8OUYbeOv9qrUd4blNvMYoxSzEoHQjth/nyo8
+         rF9pCKyqbW/zsVphmlk+j0CpcqTNzeIUKJgo+8tF89jKVSdEukaEfY3iyzdOw8WKjD+0
+         N3L5Wmq1ZJzV5daEfxg7U75yhnm/0lq25t0TpuudU0UyFtEYKljayAbuFRHjiVDojCQL
+         jzOWECqD3rZp2E8bLN1TuIrTj9ZtcHdJKoizvJ6mID62/ynk26Oeg3Pf3DvDFhQ3QOaT
+         jS05ZhKEKZBNZos009ONo4c7Wati5R1p5CBqADkwuqI6HoBbnOMDUfVJRRZdiuIxEsdU
+         gd4Q==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
-         :references:subject:from:to:cc:content-transfer-encoding;
-        bh=+dsVM9Y27pmOMIfKE7orFwRJ/ZFEy3PieWHgI3C86jU=;
-        b=Yh/jfV/bI+k/Xt54YsPIJ0pybutvpkv0PMqHaw+I8ThLJ8Ek1lyk3f6IMCgt9L/G3L
-         oam8dsfb94upoj/AVGgPTTp1o6e+DTSgMI6bIJYJeAmJvE3LaIiaoOPd0Pk8Nu94/4iv
-         KpvV/Z9OdUftN78ePpaxIsfgXb3kh2JKSMr2U9iQtT3AjJ+AOYVGaFUHl6q3qdevuIde
-         t6h5ywAUUU64s/CnW+q1KtvODmYZEDYEuGYX7fAxplCOYDreWFwI0mRz5cRr+TPs4/Vu
-         69PMbkU7lGYZb8OFx2uwNMJG4yxQ+kXR2RaNE5+0h61guggoz4a/7ZGMf3V2prGkgZRe
-         WAKA==
-X-Gm-Message-State: AOAM533seyIFl7CLbRiDbhHyAfMrw67A5Ul2irDWhsLLuvMTe/W71K5I
-        qlsXPaWRvT1Ct2QzzNqhiqaKsfP0pw==
-X-Google-Smtp-Source: ABdhPJy/MhSwplrXNgkHFooCIL4Gt5kNFvEUR1AnLO3Lbo3OKyp9pkFfGkRvitaQlcca+GgfImGw8HhbqQ==
+         :references:subject:from:to:cc;
+        bh=Z/d4sbLzsi7vD2pyMSoW/HH/4CiW8Dg9N9/4FppREjo=;
+        b=7zrhK6Pfa4N1pt0eM4LyZD5qvAD6vezSsytmx7xWHeUdcq5fhKpcl7gpahSkfe+hbT
+         IuXTwWo7f8W8qstwb9CMB8ZmTrAdwdkIj+11oT8W7J/dhCw+rnQ4edp0KLMxOOHOJ2TS
+         37L9KBc/YN7cS8dsaCb9Mpt0v7Y5Rpw11gvh3s9XXB+FRVIT9D+6K3GVRRqpGApwWQxW
+         KSaHo49oxn3iwfR2G73mvmVd7dJrbRihwQ9KfhVnh+cLTl+AeDORgw+p4S07cqhLgfuj
+         we1vCQSggDsCXb6KGcMai2juW9SywBwhahAsT4/PlU/jERwBvcb+zHM5cvNrhm2IANE2
+         nPew==
+X-Gm-Message-State: AOAM533PStpQmA6jgJlBdQLoG74sDxPaCPtgc2sUj3ElOFujQI3evxXW
+        eJLPjz//mtbFpvYfBeysZHroqWdBWA==
+X-Google-Smtp-Source: ABdhPJykTz3ySkyJMNoRs9z5FAbJDqO42c81dxAnLsSzHGUAizTmxarXDTgLP1y65gUea435/r2pj3W8Cw==
 X-Received: from nhuck.c.googlers.com ([fda3:e722:ac3:cc00:14:4d90:c0a8:39cc])
- (user=nhuck job=sendgmr) by 2002:a25:256:0:b0:649:6cb:c4b3 with SMTP id
- 83-20020a250256000000b0064906cbc4b3mr13862423ybc.246.1652124022115; Mon, 09
- May 2022 12:20:22 -0700 (PDT)
-Date:   Mon,  9 May 2022 19:11:00 +0000
+ (user=nhuck job=sendgmr) by 2002:a67:dd97:0:b0:32c:bbe4:5191 with SMTP id
+ i23-20020a67dd97000000b0032cbbe45191mr9179084vsk.41.1652124025522; Mon, 09
+ May 2022 12:20:25 -0700 (PDT)
+Date:   Mon,  9 May 2022 19:11:02 +0000
 In-Reply-To: <20220509191107.3556468-1-nhuck@google.com>
-Message-Id: <20220509191107.3556468-3-nhuck@google.com>
+Message-Id: <20220509191107.3556468-5-nhuck@google.com>
 Mime-Version: 1.0
 References: <20220509191107.3556468-1-nhuck@google.com>
 X-Mailer: git-send-email 2.36.0.512.ge40c2bad7a-goog
-Subject: [PATCH v7 2/9] crypto: polyval - Add POLYVAL support
+Subject: [PATCH v7 4/9] crypto: x86/aesni-xctr: Add accelerated implementation
+ of XCTR
 From:   Nathan Huckleberry <nhuck@google.com>
 To:     linux-crypto@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org,
@@ -67,534 +68,555 @@ Cc:     linux-fscrypt@vger.kernel.org,
         Nathan Huckleberry <nhuck@google.com>,
         Eric Biggers <ebiggers@google.com>
 Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add support for POLYVAL, an =CE=B5-=CE=94-universal hash function similar t=
-o
-GHASH.  This patch only uses POLYVAL as a component to implement HCTR2
-mode.  It should be noted that POLYVAL was originally specified for use
-in AES-GCM-SIV (RFC 8452), but the kernel does not currently support
-this mode.
+Add hardware accelerated version of XCTR for x86-64 CPUs with AESNI
+support.
 
-POLYVAL is implemented as an shash algorithm.  The implementation is
-modified from ghash-generic.c.
-
-For more information on POLYVAL see:
-Length-preserving encryption with HCTR2:
-  https://eprint.iacr.org/2021/1441.pdf
-AES-GCM-SIV: Nonce Misuse-Resistant Authenticated Encryption:
-  https://datatracker.ietf.org/doc/html/rfc8452
+More information on XCTR can be found in the HCTR2 paper:
+"Length-preserving encryption with HCTR2":
+https://eprint.iacr.org/2021/1441.pdf
 
 Signed-off-by: Nathan Huckleberry <nhuck@google.com>
-Reviewed-by: Eric Biggers <ebiggers@google.com>
 Reviewed-by: Ard Biesheuvel <ardb@kernel.org>
+Reviewed-by: Eric Biggers <ebiggers@google.com>
 ---
- crypto/Kconfig           |   8 ++
- crypto/Makefile          |   1 +
- crypto/polyval-generic.c | 205 +++++++++++++++++++++++++++++++++++++++
- crypto/tcrypt.c          |   4 +
- crypto/testmgr.c         |   6 ++
- crypto/testmgr.h         | 171 ++++++++++++++++++++++++++++++++
- include/crypto/polyval.h |  17 ++++
- 7 files changed, 412 insertions(+)
- create mode 100644 crypto/polyval-generic.c
- create mode 100644 include/crypto/polyval.h
+ arch/x86/crypto/aes_ctrby8_avx-x86_64.S | 232 ++++++++++++++++--------
+ arch/x86/crypto/aesni-intel_glue.c      | 114 +++++++++++-
+ crypto/Kconfig                          |   2 +-
+ 3 files changed, 266 insertions(+), 82 deletions(-)
 
+diff --git a/arch/x86/crypto/aes_ctrby8_avx-x86_64.S b/arch/x86/crypto/aes_ctrby8_avx-x86_64.S
+index 43852ba6e19c..2402b9418cd7 100644
+--- a/arch/x86/crypto/aes_ctrby8_avx-x86_64.S
++++ b/arch/x86/crypto/aes_ctrby8_avx-x86_64.S
+@@ -23,6 +23,11 @@
+ 
+ #define VMOVDQ		vmovdqu
+ 
++/*
++ * Note: the "x" prefix in these aliases means "this is an xmm register".  The
++ * alias prefixes have no relation to XCTR where the "X" prefix means "XOR
++ * counter".
++ */
+ #define xdata0		%xmm0
+ #define xdata1		%xmm1
+ #define xdata2		%xmm2
+@@ -31,8 +36,10 @@
+ #define xdata5		%xmm5
+ #define xdata6		%xmm6
+ #define xdata7		%xmm7
+-#define xcounter	%xmm8
+-#define xbyteswap	%xmm9
++#define xcounter	%xmm8	// CTR mode only
++#define xiv		%xmm8	// XCTR mode only
++#define xbyteswap	%xmm9	// CTR mode only
++#define xtmp		%xmm9	// XCTR mode only
+ #define xkey0		%xmm10
+ #define xkey4		%xmm11
+ #define xkey8		%xmm12
+@@ -45,7 +52,7 @@
+ #define p_keys		%rdx
+ #define p_out		%rcx
+ #define num_bytes	%r8
+-
++#define counter		%r9	// XCTR mode only
+ #define tmp		%r10
+ #define	DDQ_DATA	0
+ #define	XDATA		1
+@@ -102,7 +109,7 @@ ddq_add_8:
+  * do_aes num_in_par load_keys key_len
+  * This increments p_in, but not p_out
+  */
+-.macro do_aes b, k, key_len
++.macro do_aes b, k, key_len, xctr
+ 	.set by, \b
+ 	.set load_keys, \k
+ 	.set klen, \key_len
+@@ -111,29 +118,48 @@ ddq_add_8:
+ 		vmovdqa	0*16(p_keys), xkey0
+ 	.endif
+ 
+-	vpshufb	xbyteswap, xcounter, xdata0
+-
+-	.set i, 1
+-	.rept (by - 1)
+-		club XDATA, i
+-		vpaddq	(ddq_add_1 + 16 * (i - 1))(%rip), xcounter, var_xdata
+-		vptest	ddq_low_msk(%rip), var_xdata
+-		jnz 1f
+-		vpaddq	ddq_high_add_1(%rip), var_xdata, var_xdata
+-		vpaddq	ddq_high_add_1(%rip), xcounter, xcounter
+-		1:
+-		vpshufb	xbyteswap, var_xdata, var_xdata
+-		.set i, (i +1)
+-	.endr
++	.if \xctr
++		movq counter, xtmp
++		.set i, 0
++		.rept (by)
++			club XDATA, i
++			vpaddq	(ddq_add_1 + 16 * i)(%rip), xtmp, var_xdata
++			.set i, (i +1)
++		.endr
++		.set i, 0
++		.rept (by)
++			club	XDATA, i
++			vpxor	xiv, var_xdata, var_xdata
++			.set i, (i +1)
++		.endr
++	.else
++		vpshufb	xbyteswap, xcounter, xdata0
++		.set i, 1
++		.rept (by - 1)
++			club XDATA, i
++			vpaddq	(ddq_add_1 + 16 * (i - 1))(%rip), xcounter, var_xdata
++			vptest	ddq_low_msk(%rip), var_xdata
++			jnz 1f
++			vpaddq	ddq_high_add_1(%rip), var_xdata, var_xdata
++			vpaddq	ddq_high_add_1(%rip), xcounter, xcounter
++			1:
++			vpshufb	xbyteswap, var_xdata, var_xdata
++			.set i, (i +1)
++		.endr
++	.endif
+ 
+ 	vmovdqa	1*16(p_keys), xkeyA
+ 
+ 	vpxor	xkey0, xdata0, xdata0
+-	vpaddq	(ddq_add_1 + 16 * (by - 1))(%rip), xcounter, xcounter
+-	vptest	ddq_low_msk(%rip), xcounter
+-	jnz	1f
+-	vpaddq	ddq_high_add_1(%rip), xcounter, xcounter
+-	1:
++	.if \xctr
++		add $by, counter
++	.else
++		vpaddq	(ddq_add_1 + 16 * (by - 1))(%rip), xcounter, xcounter
++		vptest	ddq_low_msk(%rip), xcounter
++		jnz	1f
++		vpaddq	ddq_high_add_1(%rip), xcounter, xcounter
++		1:
++	.endif
+ 
+ 	.set i, 1
+ 	.rept (by - 1)
+@@ -371,94 +397,99 @@ ddq_add_8:
+ 	.endr
+ .endm
+ 
+-.macro do_aes_load val, key_len
+-	do_aes \val, 1, \key_len
++.macro do_aes_load val, key_len, xctr
++	do_aes \val, 1, \key_len, \xctr
+ .endm
+ 
+-.macro do_aes_noload val, key_len
+-	do_aes \val, 0, \key_len
++.macro do_aes_noload val, key_len, xctr
++	do_aes \val, 0, \key_len, \xctr
+ .endm
+ 
+ /* main body of aes ctr load */
+ 
+-.macro do_aes_ctrmain key_len
++.macro do_aes_ctrmain key_len, xctr
+ 	cmp	$16, num_bytes
+-	jb	.Ldo_return2\key_len
++	jb	.Ldo_return2\xctr\key_len
+ 
+-	vmovdqa	byteswap_const(%rip), xbyteswap
+-	vmovdqu	(p_iv), xcounter
+-	vpshufb	xbyteswap, xcounter, xcounter
++	.if \xctr
++		shr	$4, counter
++		vmovdqu	(p_iv), xiv
++	.else
++		vmovdqa	byteswap_const(%rip), xbyteswap
++		vmovdqu	(p_iv), xcounter
++		vpshufb	xbyteswap, xcounter, xcounter
++	.endif
+ 
+ 	mov	num_bytes, tmp
+ 	and	$(7*16), tmp
+-	jz	.Lmult_of_8_blks\key_len
++	jz	.Lmult_of_8_blks\xctr\key_len
+ 
+ 	/* 1 <= tmp <= 7 */
+ 	cmp	$(4*16), tmp
+-	jg	.Lgt4\key_len
+-	je	.Leq4\key_len
++	jg	.Lgt4\xctr\key_len
++	je	.Leq4\xctr\key_len
+ 
+-.Llt4\key_len:
++.Llt4\xctr\key_len:
+ 	cmp	$(2*16), tmp
+-	jg	.Leq3\key_len
+-	je	.Leq2\key_len
++	jg	.Leq3\xctr\key_len
++	je	.Leq2\xctr\key_len
+ 
+-.Leq1\key_len:
+-	do_aes_load	1, \key_len
++.Leq1\xctr\key_len:
++	do_aes_load	1, \key_len, \xctr
+ 	add	$(1*16), p_out
+ 	and	$(~7*16), num_bytes
+-	jz	.Ldo_return2\key_len
+-	jmp	.Lmain_loop2\key_len
++	jz	.Ldo_return2\xctr\key_len
++	jmp	.Lmain_loop2\xctr\key_len
+ 
+-.Leq2\key_len:
+-	do_aes_load	2, \key_len
++.Leq2\xctr\key_len:
++	do_aes_load	2, \key_len, \xctr
+ 	add	$(2*16), p_out
+ 	and	$(~7*16), num_bytes
+-	jz	.Ldo_return2\key_len
+-	jmp	.Lmain_loop2\key_len
++	jz	.Ldo_return2\xctr\key_len
++	jmp	.Lmain_loop2\xctr\key_len
+ 
+ 
+-.Leq3\key_len:
+-	do_aes_load	3, \key_len
++.Leq3\xctr\key_len:
++	do_aes_load	3, \key_len, \xctr
+ 	add	$(3*16), p_out
+ 	and	$(~7*16), num_bytes
+-	jz	.Ldo_return2\key_len
+-	jmp	.Lmain_loop2\key_len
++	jz	.Ldo_return2\xctr\key_len
++	jmp	.Lmain_loop2\xctr\key_len
+ 
+-.Leq4\key_len:
+-	do_aes_load	4, \key_len
++.Leq4\xctr\key_len:
++	do_aes_load	4, \key_len, \xctr
+ 	add	$(4*16), p_out
+ 	and	$(~7*16), num_bytes
+-	jz	.Ldo_return2\key_len
+-	jmp	.Lmain_loop2\key_len
++	jz	.Ldo_return2\xctr\key_len
++	jmp	.Lmain_loop2\xctr\key_len
+ 
+-.Lgt4\key_len:
++.Lgt4\xctr\key_len:
+ 	cmp	$(6*16), tmp
+-	jg	.Leq7\key_len
+-	je	.Leq6\key_len
++	jg	.Leq7\xctr\key_len
++	je	.Leq6\xctr\key_len
+ 
+-.Leq5\key_len:
+-	do_aes_load	5, \key_len
++.Leq5\xctr\key_len:
++	do_aes_load	5, \key_len, \xctr
+ 	add	$(5*16), p_out
+ 	and	$(~7*16), num_bytes
+-	jz	.Ldo_return2\key_len
+-	jmp	.Lmain_loop2\key_len
++	jz	.Ldo_return2\xctr\key_len
++	jmp	.Lmain_loop2\xctr\key_len
+ 
+-.Leq6\key_len:
+-	do_aes_load	6, \key_len
++.Leq6\xctr\key_len:
++	do_aes_load	6, \key_len, \xctr
+ 	add	$(6*16), p_out
+ 	and	$(~7*16), num_bytes
+-	jz	.Ldo_return2\key_len
+-	jmp	.Lmain_loop2\key_len
++	jz	.Ldo_return2\xctr\key_len
++	jmp	.Lmain_loop2\xctr\key_len
+ 
+-.Leq7\key_len:
+-	do_aes_load	7, \key_len
++.Leq7\xctr\key_len:
++	do_aes_load	7, \key_len, \xctr
+ 	add	$(7*16), p_out
+ 	and	$(~7*16), num_bytes
+-	jz	.Ldo_return2\key_len
+-	jmp	.Lmain_loop2\key_len
++	jz	.Ldo_return2\xctr\key_len
++	jmp	.Lmain_loop2\xctr\key_len
+ 
+-.Lmult_of_8_blks\key_len:
++.Lmult_of_8_blks\xctr\key_len:
+ 	.if (\key_len != KEY_128)
+ 		vmovdqa	0*16(p_keys), xkey0
+ 		vmovdqa	4*16(p_keys), xkey4
+@@ -471,17 +502,19 @@ ddq_add_8:
+ 		vmovdqa	9*16(p_keys), xkey12
+ 	.endif
+ .align 16
+-.Lmain_loop2\key_len:
++.Lmain_loop2\xctr\key_len:
+ 	/* num_bytes is a multiple of 8 and >0 */
+-	do_aes_noload	8, \key_len
++	do_aes_noload	8, \key_len, \xctr
+ 	add	$(8*16), p_out
+ 	sub	$(8*16), num_bytes
+-	jne	.Lmain_loop2\key_len
++	jne	.Lmain_loop2\xctr\key_len
+ 
+-.Ldo_return2\key_len:
+-	/* return updated IV */
+-	vpshufb	xbyteswap, xcounter, xcounter
+-	vmovdqu	xcounter, (p_iv)
++.Ldo_return2\xctr\key_len:
++	.if !\xctr
++		/* return updated IV */
++		vpshufb	xbyteswap, xcounter, xcounter
++		vmovdqu	xcounter, (p_iv)
++	.endif
+ 	RET
+ .endm
+ 
+@@ -494,7 +527,7 @@ ddq_add_8:
+  */
+ SYM_FUNC_START(aes_ctr_enc_128_avx_by8)
+ 	/* call the aes main loop */
+-	do_aes_ctrmain KEY_128
++	do_aes_ctrmain KEY_128 0
+ 
+ SYM_FUNC_END(aes_ctr_enc_128_avx_by8)
+ 
+@@ -507,7 +540,7 @@ SYM_FUNC_END(aes_ctr_enc_128_avx_by8)
+  */
+ SYM_FUNC_START(aes_ctr_enc_192_avx_by8)
+ 	/* call the aes main loop */
+-	do_aes_ctrmain KEY_192
++	do_aes_ctrmain KEY_192 0
+ 
+ SYM_FUNC_END(aes_ctr_enc_192_avx_by8)
+ 
+@@ -520,6 +553,45 @@ SYM_FUNC_END(aes_ctr_enc_192_avx_by8)
+  */
+ SYM_FUNC_START(aes_ctr_enc_256_avx_by8)
+ 	/* call the aes main loop */
+-	do_aes_ctrmain KEY_256
++	do_aes_ctrmain KEY_256 0
+ 
+ SYM_FUNC_END(aes_ctr_enc_256_avx_by8)
++
++/*
++ * routine to do AES128 XCTR enc/decrypt "by8"
++ * XMM registers are clobbered.
++ * Saving/restoring must be done at a higher level
++ * aes_xctr_enc_128_avx_by8(const u8 *in, const u8 *iv, const void *keys,
++ * 	u8* out, unsigned int num_bytes, unsigned int byte_ctr)
++ */
++SYM_FUNC_START(aes_xctr_enc_128_avx_by8)
++	/* call the aes main loop */
++	do_aes_ctrmain KEY_128 1
++
++SYM_FUNC_END(aes_xctr_enc_128_avx_by8)
++
++/*
++ * routine to do AES192 XCTR enc/decrypt "by8"
++ * XMM registers are clobbered.
++ * Saving/restoring must be done at a higher level
++ * aes_xctr_enc_192_avx_by8(const u8 *in, const u8 *iv, const void *keys,
++ * 	u8* out, unsigned int num_bytes, unsigned int byte_ctr)
++ */
++SYM_FUNC_START(aes_xctr_enc_192_avx_by8)
++	/* call the aes main loop */
++	do_aes_ctrmain KEY_192 1
++
++SYM_FUNC_END(aes_xctr_enc_192_avx_by8)
++
++/*
++ * routine to do AES256 XCTR enc/decrypt "by8"
++ * XMM registers are clobbered.
++ * Saving/restoring must be done at a higher level
++ * aes_xctr_enc_256_avx_by8(const u8 *in, const u8 *iv, const void *keys,
++ * 	u8* out, unsigned int num_bytes, unsigned int byte_ctr)
++ */
++SYM_FUNC_START(aes_xctr_enc_256_avx_by8)
++	/* call the aes main loop */
++	do_aes_ctrmain KEY_256 1
++
++SYM_FUNC_END(aes_xctr_enc_256_avx_by8)
+diff --git a/arch/x86/crypto/aesni-intel_glue.c b/arch/x86/crypto/aesni-intel_glue.c
+index 41901ba9d3a2..a5b0cb3efeba 100644
+--- a/arch/x86/crypto/aesni-intel_glue.c
++++ b/arch/x86/crypto/aesni-intel_glue.c
+@@ -135,6 +135,20 @@ asmlinkage void aes_ctr_enc_192_avx_by8(const u8 *in, u8 *iv,
+ 		void *keys, u8 *out, unsigned int num_bytes);
+ asmlinkage void aes_ctr_enc_256_avx_by8(const u8 *in, u8 *iv,
+ 		void *keys, u8 *out, unsigned int num_bytes);
++
++
++asmlinkage void aes_xctr_enc_128_avx_by8(const u8 *in, const u8 *iv,
++	const void *keys, u8 *out, unsigned int num_bytes,
++	unsigned int byte_ctr);
++
++asmlinkage void aes_xctr_enc_192_avx_by8(const u8 *in, const u8 *iv,
++	const void *keys, u8 *out, unsigned int num_bytes,
++	unsigned int byte_ctr);
++
++asmlinkage void aes_xctr_enc_256_avx_by8(const u8 *in, const u8 *iv,
++	const void *keys, u8 *out, unsigned int num_bytes,
++	unsigned int byte_ctr);
++
+ /*
+  * asmlinkage void aesni_gcm_init_avx_gen2()
+  * gcm_data *my_ctx_data, context data
+@@ -527,6 +541,59 @@ static int ctr_crypt(struct skcipher_request *req)
+ 	return err;
+ }
+ 
++static void aesni_xctr_enc_avx_tfm(struct crypto_aes_ctx *ctx, u8 *out,
++				   const u8 *in, unsigned int len, u8 *iv,
++				   unsigned int byte_ctr)
++{
++	if (ctx->key_length == AES_KEYSIZE_128)
++		aes_xctr_enc_128_avx_by8(in, iv, (void *)ctx, out, len,
++					 byte_ctr);
++	else if (ctx->key_length == AES_KEYSIZE_192)
++		aes_xctr_enc_192_avx_by8(in, iv, (void *)ctx, out, len,
++					 byte_ctr);
++	else
++		aes_xctr_enc_256_avx_by8(in, iv, (void *)ctx, out, len,
++					 byte_ctr);
++}
++
++static int xctr_crypt(struct skcipher_request *req)
++{
++	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
++	struct crypto_aes_ctx *ctx = aes_ctx(crypto_skcipher_ctx(tfm));
++	u8 keystream[AES_BLOCK_SIZE];
++	struct skcipher_walk walk;
++	unsigned int nbytes;
++	unsigned int byte_ctr = 0;
++	int err;
++	__le32 block[AES_BLOCK_SIZE / sizeof(__le32)];
++
++	err = skcipher_walk_virt(&walk, req, false);
++
++	while ((nbytes = walk.nbytes) > 0) {
++		kernel_fpu_begin();
++		if (nbytes & AES_BLOCK_MASK)
++			aesni_xctr_enc_avx_tfm(ctx, walk.dst.virt.addr,
++				walk.src.virt.addr, nbytes & AES_BLOCK_MASK,
++				walk.iv, byte_ctr);
++		nbytes &= ~AES_BLOCK_MASK;
++		byte_ctr += walk.nbytes - nbytes;
++
++		if (walk.nbytes == walk.total && nbytes > 0) {
++			memcpy(block, walk.iv, AES_BLOCK_SIZE);
++			block[0] ^= cpu_to_le32(1 + byte_ctr / AES_BLOCK_SIZE);
++			aesni_enc(ctx, keystream, (u8 *)block);
++			crypto_xor_cpy(walk.dst.virt.addr + walk.nbytes -
++				       nbytes, walk.src.virt.addr + walk.nbytes
++				       - nbytes, keystream, nbytes);
++			byte_ctr += nbytes;
++			nbytes = 0;
++		}
++		kernel_fpu_end();
++		err = skcipher_walk_done(&walk, nbytes);
++	}
++	return err;
++}
++
+ static int
+ rfc4106_set_hash_subkey(u8 *hash_subkey, const u8 *key, unsigned int key_len)
+ {
+@@ -1050,6 +1117,33 @@ static struct skcipher_alg aesni_skciphers[] = {
+ static
+ struct simd_skcipher_alg *aesni_simd_skciphers[ARRAY_SIZE(aesni_skciphers)];
+ 
++#ifdef CONFIG_X86_64
++/*
++ * XCTR does not have a non-AVX implementation, so it must be enabled
++ * conditionally.
++ */
++static struct skcipher_alg aesni_xctr = {
++	.base = {
++		.cra_name		= "__xctr(aes)",
++		.cra_driver_name	= "__xctr-aes-aesni",
++		.cra_priority		= 400,
++		.cra_flags		= CRYPTO_ALG_INTERNAL,
++		.cra_blocksize		= 1,
++		.cra_ctxsize		= CRYPTO_AES_CTX_SIZE,
++		.cra_module		= THIS_MODULE,
++	},
++	.min_keysize	= AES_MIN_KEY_SIZE,
++	.max_keysize	= AES_MAX_KEY_SIZE,
++	.ivsize		= AES_BLOCK_SIZE,
++	.chunksize	= AES_BLOCK_SIZE,
++	.setkey		= aesni_skcipher_setkey,
++	.encrypt	= xctr_crypt,
++	.decrypt	= xctr_crypt,
++};
++
++static struct simd_skcipher_alg *aesni_simd_xctr;
++#endif /* CONFIG_X86_64 */
++
+ #ifdef CONFIG_X86_64
+ static int generic_gcmaes_set_key(struct crypto_aead *aead, const u8 *key,
+ 				  unsigned int key_len)
+@@ -1163,7 +1257,7 @@ static int __init aesni_init(void)
+ 		static_call_update(aesni_ctr_enc_tfm, aesni_ctr_enc_avx_tfm);
+ 		pr_info("AES CTR mode by8 optimization enabled\n");
+ 	}
+-#endif
++#endif /* CONFIG_X86_64 */
+ 
+ 	err = crypto_register_alg(&aesni_cipher_alg);
+ 	if (err)
+@@ -1180,8 +1274,22 @@ static int __init aesni_init(void)
+ 	if (err)
+ 		goto unregister_skciphers;
+ 
++#ifdef CONFIG_X86_64
++	if (boot_cpu_has(X86_FEATURE_AVX))
++		err = simd_register_skciphers_compat(&aesni_xctr, 1,
++						     &aesni_simd_xctr);
++	if (err)
++		goto unregister_aeads;
++#endif /* CONFIG_X86_64 */
++
+ 	return 0;
+ 
++#ifdef CONFIG_X86_64
++unregister_aeads:
++	simd_unregister_aeads(aesni_aeads, ARRAY_SIZE(aesni_aeads),
++				aesni_simd_aeads);
++#endif /* CONFIG_X86_64 */
++
+ unregister_skciphers:
+ 	simd_unregister_skciphers(aesni_skciphers, ARRAY_SIZE(aesni_skciphers),
+ 				  aesni_simd_skciphers);
+@@ -1197,6 +1305,10 @@ static void __exit aesni_exit(void)
+ 	simd_unregister_skciphers(aesni_skciphers, ARRAY_SIZE(aesni_skciphers),
+ 				  aesni_simd_skciphers);
+ 	crypto_unregister_alg(&aesni_cipher_alg);
++#ifdef CONFIG_X86_64
++	if (boot_cpu_has(X86_FEATURE_AVX))
++		simd_unregister_skciphers(&aesni_xctr, 1, &aesni_simd_xctr);
++#endif /* CONFIG_X86_64 */
+ }
+ 
+ late_initcall(aesni_init);
 diff --git a/crypto/Kconfig b/crypto/Kconfig
-index 47752aaa16ff..00139845d76d 100644
+index 0dedba74db4a..aa06af0e0ebe 100644
 --- a/crypto/Kconfig
 +++ b/crypto/Kconfig
-@@ -768,6 +768,14 @@ config CRYPTO_GHASH
- 	  GHASH is the hash function used in GCM (Galois/Counter Mode).
- 	  It is not a general-purpose cryptographic hash function.
-=20
-+config CRYPTO_POLYVAL
-+	tristate
-+	select CRYPTO_GF128MUL
-+	select CRYPTO_HASH
-+	help
-+	  POLYVAL is the hash function used in HCTR2.  It is not a general-purpos=
-e
-+	  cryptographic hash function.
-+
- config CRYPTO_POLY1305
- 	tristate "Poly1305 authenticator algorithm"
- 	select CRYPTO_HASH
-diff --git a/crypto/Makefile b/crypto/Makefile
-index 6b3fe3df1489..561f901a91d4 100644
---- a/crypto/Makefile
-+++ b/crypto/Makefile
-@@ -169,6 +169,7 @@ UBSAN_SANITIZE_jitterentropy.o =3D n
- jitterentropy_rng-y :=3D jitterentropy.o jitterentropy-kcapi.o
- obj-$(CONFIG_CRYPTO_TEST) +=3D tcrypt.o
- obj-$(CONFIG_CRYPTO_GHASH) +=3D ghash-generic.o
-+obj-$(CONFIG_CRYPTO_POLYVAL) +=3D polyval-generic.o
- obj-$(CONFIG_CRYPTO_USER_API) +=3D af_alg.o
- obj-$(CONFIG_CRYPTO_USER_API_HASH) +=3D algif_hash.o
- obj-$(CONFIG_CRYPTO_USER_API_SKCIPHER) +=3D algif_skcipher.o
-diff --git a/crypto/polyval-generic.c b/crypto/polyval-generic.c
-new file mode 100644
-index 000000000000..bf2b03b7bfc0
---- /dev/null
-+++ b/crypto/polyval-generic.c
-@@ -0,0 +1,205 @@
-+// SPDX-License-Identifier: GPL-2.0-only
-+/*
-+ * POLYVAL: hash function for HCTR2.
-+ *
-+ * Copyright (c) 2007 Nokia Siemens Networks - Mikko Herranen <mh1@iki.fi>
-+ * Copyright (c) 2009 Intel Corp.
-+ *   Author: Huang Ying <ying.huang@intel.com>
-+ * Copyright 2021 Google LLC
-+ */
-+
-+/*
-+ * Code based on crypto/ghash-generic.c
-+ *
-+ * POLYVAL is a keyed hash function similar to GHASH. POLYVAL uses a diffe=
-rent
-+ * modulus for finite field multiplication which makes hardware accelerate=
-d
-+ * implementations on little-endian machines faster. POLYVAL is used in th=
-e
-+ * kernel to implement HCTR2, but was originally specified for AES-GCM-SIV
-+ * (RFC 8452).
-+ *
-+ * For more information see:
-+ * Length-preserving encryption with HCTR2:
-+ *   https://eprint.iacr.org/2021/1441.pdf
-+ * AES-GCM-SIV: Nonce Misuse-Resistant Authenticated Encryption:
-+ *   https://datatracker.ietf.org/doc/html/rfc8452
-+ *
-+ * Like GHASH, POLYVAL is not a cryptographic hash function and should
-+ * not be used outside of crypto modes explicitly designed to use POLYVAL.
-+ *
-+ * This implementation uses a convenient trick involving the GHASH and POL=
-YVAL
-+ * fields. This trick allows multiplication in the POLYVAL field to be
-+ * implemented by using multiplication in the GHASH field as a subroutine.=
- An
-+ * element of the POLYVAL field can be converted to an element of the GHAS=
-H
-+ * field by computing x*REVERSE(a), where REVERSE reverses the byte-orderi=
-ng of
-+ * a. Similarly, an element of the GHASH field can be converted back to th=
-e
-+ * POLYVAL field by computing REVERSE(x^{-1}*a). For more information, see=
-:
-+ * https://datatracker.ietf.org/doc/html/rfc8452#appendix-A
-+ *
-+ * By using this trick, we do not need to implement the POLYVAL field for =
-the
-+ * generic implementation.
-+ *
-+ * Warning: this generic implementation is not intended to be used in prac=
-tice
-+ * and is not constant time. For practical use, a hardware accelerated
-+ * implementation of POLYVAL should be used instead.
-+ *
-+ */
-+
-+#include <asm/unaligned.h>
-+#include <crypto/algapi.h>
-+#include <crypto/gf128mul.h>
-+#include <crypto/polyval.h>
-+#include <crypto/internal/hash.h>
-+#include <linux/crypto.h>
-+#include <linux/init.h>
-+#include <linux/kernel.h>
-+#include <linux/module.h>
-+
-+struct polyval_tfm_ctx {
-+	struct gf128mul_4k *gf128;
-+};
-+
-+struct polyval_desc_ctx {
-+	union {
-+		u8 buffer[POLYVAL_BLOCK_SIZE];
-+		be128 buffer128;
-+	};
-+	u32 bytes;
-+};
-+
-+static void copy_and_reverse(u8 dst[POLYVAL_BLOCK_SIZE],
-+			     const u8 src[POLYVAL_BLOCK_SIZE])
-+{
-+	u64 a =3D get_unaligned((const u64 *)&src[0]);
-+	u64 b =3D get_unaligned((const u64 *)&src[8]);
-+
-+	put_unaligned(swab64(a), (u64 *)&dst[8]);
-+	put_unaligned(swab64(b), (u64 *)&dst[0]);
-+}
-+
-+static int polyval_setkey(struct crypto_shash *tfm,
-+			  const u8 *key, unsigned int keylen)
-+{
-+	struct polyval_tfm_ctx *ctx =3D crypto_shash_ctx(tfm);
-+	be128 k;
-+
-+	if (keylen !=3D POLYVAL_BLOCK_SIZE)
-+		return -EINVAL;
-+
-+	gf128mul_free_4k(ctx->gf128);
-+
-+	BUILD_BUG_ON(sizeof(k) !=3D POLYVAL_BLOCK_SIZE);
-+	copy_and_reverse((u8 *)&k, key);
-+	gf128mul_x_lle(&k, &k);
-+
-+	ctx->gf128 =3D gf128mul_init_4k_lle(&k);
-+	memzero_explicit(&k, POLYVAL_BLOCK_SIZE);
-+
-+	if (!ctx->gf128)
-+		return -ENOMEM;
-+
-+	return 0;
-+}
-+
-+static int polyval_init(struct shash_desc *desc)
-+{
-+	struct polyval_desc_ctx *dctx =3D shash_desc_ctx(desc);
-+
-+	memset(dctx, 0, sizeof(*dctx));
-+
-+	return 0;
-+}
-+
-+static int polyval_update(struct shash_desc *desc,
-+			 const u8 *src, unsigned int srclen)
-+{
-+	struct polyval_desc_ctx *dctx =3D shash_desc_ctx(desc);
-+	const struct polyval_tfm_ctx *ctx =3D crypto_shash_ctx(desc->tfm);
-+	u8 *pos;
-+	u8 tmp[POLYVAL_BLOCK_SIZE];
-+	int n;
-+
-+	if (dctx->bytes) {
-+		n =3D min(srclen, dctx->bytes);
-+		pos =3D dctx->buffer + dctx->bytes - 1;
-+
-+		dctx->bytes -=3D n;
-+		srclen -=3D n;
-+
-+		while (n--)
-+			*pos-- ^=3D *src++;
-+
-+		if (!dctx->bytes)
-+			gf128mul_4k_lle(&dctx->buffer128, ctx->gf128);
-+	}
-+
-+	while (srclen >=3D POLYVAL_BLOCK_SIZE) {
-+		copy_and_reverse(tmp, src);
-+		crypto_xor(dctx->buffer, tmp, POLYVAL_BLOCK_SIZE);
-+		gf128mul_4k_lle(&dctx->buffer128, ctx->gf128);
-+		src +=3D POLYVAL_BLOCK_SIZE;
-+		srclen -=3D POLYVAL_BLOCK_SIZE;
-+	}
-+
-+	if (srclen) {
-+		dctx->bytes =3D POLYVAL_BLOCK_SIZE - srclen;
-+		pos =3D dctx->buffer + POLYVAL_BLOCK_SIZE - 1;
-+		while (srclen--)
-+			*pos-- ^=3D *src++;
-+	}
-+
-+	return 0;
-+}
-+
-+static int polyval_final(struct shash_desc *desc, u8 *dst)
-+{
-+	struct polyval_desc_ctx *dctx =3D shash_desc_ctx(desc);
-+	const struct polyval_tfm_ctx *ctx =3D crypto_shash_ctx(desc->tfm);
-+
-+	if (dctx->bytes)
-+		gf128mul_4k_lle(&dctx->buffer128, ctx->gf128);
-+	copy_and_reverse(dst, dctx->buffer);
-+	return 0;
-+}
-+
-+static void polyval_exit_tfm(struct crypto_tfm *tfm)
-+{
-+	struct polyval_tfm_ctx *ctx =3D crypto_tfm_ctx(tfm);
-+
-+	gf128mul_free_4k(ctx->gf128);
-+}
-+
-+static struct shash_alg polyval_alg =3D {
-+	.digestsize	=3D POLYVAL_DIGEST_SIZE,
-+	.init		=3D polyval_init,
-+	.update		=3D polyval_update,
-+	.final		=3D polyval_final,
-+	.setkey		=3D polyval_setkey,
-+	.descsize	=3D sizeof(struct polyval_desc_ctx),
-+	.base		=3D {
-+		.cra_name		=3D "polyval",
-+		.cra_driver_name	=3D "polyval-generic",
-+		.cra_priority		=3D 100,
-+		.cra_blocksize		=3D POLYVAL_BLOCK_SIZE,
-+		.cra_ctxsize		=3D sizeof(struct polyval_tfm_ctx),
-+		.cra_module		=3D THIS_MODULE,
-+		.cra_exit		=3D polyval_exit_tfm,
-+	},
-+};
-+
-+static int __init polyval_mod_init(void)
-+{
-+	return crypto_register_shash(&polyval_alg);
-+}
-+
-+static void __exit polyval_mod_exit(void)
-+{
-+	crypto_unregister_shash(&polyval_alg);
-+}
-+
-+subsys_initcall(polyval_mod_init);
-+module_exit(polyval_mod_exit);
-+
-+MODULE_LICENSE("GPL");
-+MODULE_DESCRIPTION("POLYVAL hash function");
-+MODULE_ALIAS_CRYPTO("polyval");
-+MODULE_ALIAS_CRYPTO("polyval-generic");
-diff --git a/crypto/tcrypt.c b/crypto/tcrypt.c
-index fd671d0e2012..dd9cf216029b 100644
---- a/crypto/tcrypt.c
-+++ b/crypto/tcrypt.c
-@@ -1730,6 +1730,10 @@ static int do_test(const char *alg, u32 type, u32 ma=
-sk, int m, u32 num_mb)
- 		ret +=3D tcrypt_test("ccm(sm4)");
- 		break;
-=20
-+	case 57:
-+		ret +=3D tcrypt_test("polyval");
-+		break;
-+
- 	case 100:
- 		ret +=3D tcrypt_test("hmac(md5)");
- 		break;
-diff --git a/crypto/testmgr.c b/crypto/testmgr.c
-index fbb12d7d78af..d807b200edf6 100644
---- a/crypto/testmgr.c
-+++ b/crypto/testmgr.c
-@@ -5284,6 +5284,12 @@ static const struct alg_test_desc alg_test_descs[] =
-=3D {
- 		.suite =3D {
- 			.hash =3D __VECS(poly1305_tv_template)
- 		}
-+	}, {
-+		.alg =3D "polyval",
-+		.test =3D alg_test_hash,
-+		.suite =3D {
-+			.hash =3D __VECS(polyval_tv_template)
-+		}
- 	}, {
- 		.alg =3D "rfc3686(ctr(aes))",
- 		.test =3D alg_test_skcipher,
-diff --git a/crypto/testmgr.h b/crypto/testmgr.h
-index bf4ff97eeb37..c581e5405916 100644
---- a/crypto/testmgr.h
-+++ b/crypto/testmgr.h
-@@ -34929,4 +34929,175 @@ static const struct cipher_testvec aes_xctr_tv_te=
-mplate[] =3D {
-=20
- };
-=20
-+/*
-+ * Test vectors generated using https://github.com/google/hctr2
-+ *
-+ * To ensure compatibility with RFC 8452, some tests were sourced from
-+ * https://datatracker.ietf.org/doc/html/rfc8452
-+ */
-+static const struct hash_testvec polyval_tv_template[] =3D {
-+	{ // From RFC 8452
-+		.key	=3D "\x31\x07\x28\xd9\x91\x1f\x1f\x38"
-+			  "\x37\xb2\x43\x16\xc3\xfa\xb9\xa0",
-+		.plaintext	=3D "\x65\x78\x61\x6d\x70\x6c\x65\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x48\x65\x6c\x6c\x6f\x20\x77\x6f"
-+			  "\x72\x6c\x64\x00\x00\x00\x00\x00"
-+			  "\x38\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x58\x00\x00\x00\x00\x00\x00\x00",
-+		.digest	=3D "\xad\x7f\xcf\x0b\x51\x69\x85\x16"
-+			  "\x62\x67\x2f\x3c\x5f\x95\x13\x8f",
-+		.psize	=3D 48,
-+		.ksize	=3D 16,
-+	},
-+	{ // From RFC 8452
-+		.key	=3D "\xd9\xb3\x60\x27\x96\x94\x94\x1a"
-+			  "\xc5\xdb\xc6\x98\x7a\xda\x73\x77",
-+		.plaintext	=3D "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00",
-+		.digest	=3D "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00",
-+		.psize	=3D 16,
-+		.ksize	=3D 16,
-+	},
-+	{ // From RFC 8452
-+		.key	=3D "\xd9\xb3\x60\x27\x96\x94\x94\x1a"
-+			  "\xc5\xdb\xc6\x98\x7a\xda\x73\x77",
-+		.plaintext	=3D "\x01\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x40\x00\x00\x00\x00\x00\x00\x00",
-+		.digest	=3D "\xeb\x93\xb7\x74\x09\x62\xc5\xe4"
-+			  "\x9d\x2a\x90\xa7\xdc\x5c\xec\x74",
-+		.psize	=3D 32,
-+		.ksize	=3D 16,
-+	},
-+	{ // From RFC 8452
-+		.key	=3D "\xd9\xb3\x60\x27\x96\x94\x94\x1a"
-+			  "\xc5\xdb\xc6\x98\x7a\xda\x73\x77",
-+		.plaintext	=3D "\x01\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x02\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x03\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x80\x01\x00\x00\x00\x00\x00\x00",
-+		.digest	=3D "\x81\x38\x87\x46\xbc\x22\xd2\x6b"
-+			  "\x2a\xbc\x3d\xcb\x15\x75\x42\x22",
-+		.psize	=3D 64,
-+		.ksize	=3D 16,
-+	},
-+	{ // From RFC 8452
-+		.key	=3D "\xd9\xb3\x60\x27\x96\x94\x94\x1a"
-+			  "\xc5\xdb\xc6\x98\x7a\xda\x73\x77",
-+		.plaintext	=3D "\x01\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x02\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x03\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x04\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x02\x00\x00\x00\x00\x00\x00",
-+		.digest	=3D "\x1e\x39\xb6\xd3\x34\x4d\x34\x8f"
-+			  "\x60\x44\xf8\x99\x35\xd1\xcf\x78",
-+		.psize	=3D 80,
-+		.ksize	=3D 16,
-+	},
-+	{ // From RFC 8452
-+		.key	=3D "\xd9\xb3\x60\x27\x96\x94\x94\x1a"
-+			  "\xc5\xdb\xc6\x98\x7a\xda\x73\x77",
-+		.plaintext	=3D "\x01\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x02\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x03\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x04\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x05\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x08\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x02\x00\x00\x00\x00\x00\x00",
-+		.digest	=3D "\xff\xcd\x05\xd5\x77\x0f\x34\xad"
-+			  "\x92\x67\xf0\xa5\x99\x94\xb1\x5a",
-+		.psize	=3D 96,
-+		.ksize	=3D 16,
-+	},
-+	{ // Random ( 1)
-+		.key	=3D "\x90\xcc\xac\xee\xba\xd7\xd4\x68"
-+			  "\x98\xa6\x79\x70\xdf\x66\x15\x6c",
-+		.plaintext	=3D "",
-+		.digest	=3D "\x00\x00\x00\x00\x00\x00\x00\x00"
-+			  "\x00\x00\x00\x00\x00\x00\x00\x00",
-+		.psize	=3D 0,
-+		.ksize	=3D 16,
-+	},
-+	{ // Random ( 1)
-+		.key	=3D "\xc1\x45\x71\xf0\x30\x07\x94\xe7"
-+			  "\x3a\xdd\xe4\xc6\x19\x2d\x02\xa2",
-+		.plaintext	=3D "\xc1\x5d\x47\xc7\x4c\x7c\x5e\x07"
-+			  "\x85\x14\x8f\x79\xcc\x73\x83\xf7"
-+			  "\x35\xb8\xcb\x73\x61\xf0\x53\x31"
-+			  "\xbf\x84\xde\xb6\xde\xaf\xb0\xb8"
-+			  "\xb7\xd9\x11\x91\x89\xfd\x1e\x4c"
-+			  "\x84\x4a\x1f\x2a\x87\xa4\xaf\x62"
-+			  "\x8d\x7d\x58\xf6\x43\x35\xfc\x53"
-+			  "\x8f\x1a\xf6\x12\xe1\x13\x3f\x66"
-+			  "\x91\x4b\x13\xd6\x45\xfb\xb0\x7a"
-+			  "\xe0\x8b\x8e\x99\xf7\x86\x46\x37"
-+			  "\xd1\x22\x9e\x52\xf3\x3f\xd9\x75"
-+			  "\x2c\x2c\xc6\xbb\x0e\x08\x14\x29"
-+			  "\xe8\x50\x2f\xd8\xbe\xf4\xe9\x69"
-+			  "\x4a\xee\xf7\xae\x15\x65\x35\x1e",
-+		.digest	=3D "\x00\x4f\x5d\xe9\x3b\xc0\xd6\x50"
-+			  "\x3e\x38\x73\x86\xc6\xda\xca\x7f",
-+		.psize	=3D 112,
-+		.ksize	=3D 16,
-+	},
-+	{ // Random ( 1)
-+		.key	=3D "\x37\xbe\x68\x16\x50\xb9\x4e\xb0"
-+			  "\x47\xde\xe2\xbd\xde\xe4\x48\x09",
-+		.plaintext	=3D "\x87\xfc\x68\x9f\xff\xf2\x4a\x1e"
-+			  "\x82\x3b\x73\x8f\xc1\xb2\x1b\x7a"
-+			  "\x6c\x4f\x81\xbc\x88\x9b\x6c\xa3"
-+			  "\x9c\xc2\xa5\xbc\x14\x70\x4c\x9b"
-+			  "\x0c\x9f\x59\x92\x16\x4b\x91\x3d"
-+			  "\x18\x55\x22\x68\x12\x8c\x63\xb2"
-+			  "\x51\xcb\x85\x4b\xd2\xae\x0b\x1c"
-+			  "\x5d\x28\x9d\x1d\xb1\xc8\xf0\x77"
-+			  "\xe9\xb5\x07\x4e\x06\xc8\xee\xf8"
-+			  "\x1b\xed\x72\x2a\x55\x7d\x16\xc9"
-+			  "\xf2\x54\xe7\xe9\xe0\x44\x5b\x33"
-+			  "\xb1\x49\xee\xff\x43\xfb\x82\xcd"
-+			  "\x4a\x70\x78\x81\xa4\x34\x36\xe8"
-+			  "\x4c\x28\x54\xa6\x6c\xc3\x6b\x78"
-+			  "\xe7\xc0\x5d\xc6\x5d\x81\xab\x70"
-+			  "\x08\x86\xa1\xfd\xf4\x77\x55\xfd"
-+			  "\xa3\xe9\xe2\x1b\xdf\x99\xb7\x80"
-+			  "\xf9\x0a\x4f\x72\x4a\xd3\xaf\xbb"
-+			  "\xb3\x3b\xeb\x08\x58\x0f\x79\xce"
-+			  "\xa5\x99\x05\x12\x34\xd4\xf4\x86"
-+			  "\x37\x23\x1d\xc8\x49\xc0\x92\xae"
-+			  "\xa6\xac\x9b\x31\x55\xed\x15\xc6"
-+			  "\x05\x17\x37\x8d\x90\x42\xe4\x87"
-+			  "\x89\x62\x88\x69\x1c\x6a\xfd\xe3"
-+			  "\x00\x2b\x47\x1a\x73\xc1\x51\xc2"
-+			  "\xc0\x62\x74\x6a\x9e\xb2\xe5\x21"
-+			  "\xbe\x90\xb5\xb0\x50\xca\x88\x68"
-+			  "\xe1\x9d\x7a\xdf\x6c\xb7\xb9\x98"
-+			  "\xee\x28\x62\x61\x8b\xd1\x47\xf9"
-+			  "\x04\x7a\x0b\x5d\xcd\x2b\x65\xf5"
-+			  "\x12\xa3\xfe\x1a\xaa\x2c\x78\x42"
-+			  "\xb8\xbe\x7d\x74\xeb\x59\xba\xba",
-+		.digest	=3D "\xae\x11\xd4\x60\x2a\x5f\x9e\x42"
-+			  "\x89\x04\xc2\x34\x8d\x55\x94\x0a",
-+		.psize	=3D 256,
-+		.ksize	=3D 16,
-+	},
-+
-+};
-+
- #endif	/* _CRYPTO_TESTMGR_H */
-diff --git a/include/crypto/polyval.h b/include/crypto/polyval.h
-new file mode 100644
-index 000000000000..b14c38aa9166
---- /dev/null
-+++ b/include/crypto/polyval.h
-@@ -0,0 +1,17 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+/*
-+ * Common values for the Polyval hash algorithm
-+ *
-+ * Copyright 2021 Google LLC
-+ */
-+
-+#ifndef _CRYPTO_POLYVAL_H
-+#define _CRYPTO_POLYVAL_H
-+
-+#include <linux/types.h>
-+#include <linux/crypto.h>
-+
-+#define POLYVAL_BLOCK_SIZE	16
-+#define POLYVAL_DIGEST_SIZE	16
-+
-+#endif
---=20
+@@ -1161,7 +1161,7 @@ config CRYPTO_AES_NI_INTEL
+ 	  In addition to AES cipher algorithm support, the acceleration
+ 	  for some popular block cipher mode is supported too, including
+ 	  ECB, CBC, LRW, XTS. The 64 bit version has additional
+-	  acceleration for CTR.
++	  acceleration for CTR and XCTR.
+ 
+ config CRYPTO_AES_SPARC64
+ 	tristate "AES cipher algorithms (SPARC64)"
+-- 
 2.36.0.512.ge40c2bad7a-goog
 
