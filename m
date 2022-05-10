@@ -2,59 +2,59 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A4C79C433FE
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D6DE5C4332F
 	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 May 2022 17:24:35 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1348049AbiEJR2b (ORCPT
+        id S1347975AbiEJR2c (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 10 May 2022 13:28:31 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56616 "EHLO
+        Tue, 10 May 2022 13:28:32 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56768 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1348026AbiEJR2Y (ORCPT
+        with ESMTP id S1348019AbiEJR20 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 10 May 2022 13:28:24 -0400
+        Tue, 10 May 2022 13:28:26 -0400
 Received: from mail-yw1-x1149.google.com (mail-yw1-x1149.google.com [IPv6:2607:f8b0:4864:20::1149])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 853812734F6
-        for <linux-fscrypt@vger.kernel.org>; Tue, 10 May 2022 10:24:23 -0700 (PDT)
-Received: by mail-yw1-x1149.google.com with SMTP id 00721157ae682-2f4dee8688cso151790457b3.16
-        for <linux-fscrypt@vger.kernel.org>; Tue, 10 May 2022 10:24:23 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B3434270191
+        for <linux-fscrypt@vger.kernel.org>; Tue, 10 May 2022 10:24:26 -0700 (PDT)
+Received: by mail-yw1-x1149.google.com with SMTP id 00721157ae682-2f4e17a5809so153305967b3.2
+        for <linux-fscrypt@vger.kernel.org>; Tue, 10 May 2022 10:24:26 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=google.com; s=20210112;
         h=date:in-reply-to:message-id:mime-version:references:subject:from:to
          :cc;
-        bh=Z/d4sbLzsi7vD2pyMSoW/HH/4CiW8Dg9N9/4FppREjo=;
-        b=gfqdngSUSkTkMljKWNtM+10wDcK4YL877y4sOex4gy/YEFWWXqN8T+S5ZSpJkU7GMA
-         dOQv4wBU3gRSpYoaWwNhFaEcZe+X2NQ0kMtGmJ7STCf9fg7JoPefqETkU6TA/RFCT3zV
-         LGGNSxPcGnmx0qtHDSmXphn+v302Msr5yfzUddkHJtal+zvvOF1k4Y8iIuInLOetzMuo
-         DBaiidK76yCUEWt3jl5FcKaqUHTFAbllSD6CIlBX9wSJ+8XZhsLwVubw1cxbG0A2G/nK
-         LagNAAd3Y2K2/ad2iV4wLFLbzj9mPmPxCwvXwPWF/cphKe9u4XvP/1f7P9ocbRWrz3tV
-         9fJQ==
+        bh=WSrbFKwerqUI/JN21WT4vWHxZo+4QVu8EVmPg9AsedY=;
+        b=dn53xNxtndc3Wo/QopfBacQVAft2M3HAC07bBCpp92gwMrMdr5ZodMvkKCL76gzVpL
+         8aFLztiIZ47Gzqbu/ZsXbwBtJFM1GCmaIuaKJIGvn3j6vyC4EEdnu9TZfZc9RP7UXe8m
+         pZcljHGRKbCyiMLcSfA0UTy4Haearn/iHtsmg4LCzbPEVw0wqAZqDdsxcHL2nvm5HEJD
+         eWwcYzD4cD4O1AEEOZao7FQiZ4j1Wp6Kk+BgSKLfOER27SBuB9xv3yJt/wEIv/Ht2R2Y
+         kKPvLGyJtNTQnL5gGuskbmDhG4k2XLwU65W/CZIwoC+EuNCIlkyzXqEcNxOHKyMmnJGG
+         ErOg==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
         d=1e100.net; s=20210112;
         h=x-gm-message-state:date:in-reply-to:message-id:mime-version
          :references:subject:from:to:cc;
-        bh=Z/d4sbLzsi7vD2pyMSoW/HH/4CiW8Dg9N9/4FppREjo=;
-        b=BEuZM+JcxoS+lm4MpTHDA+tiIe3GpUMo10TrlhQ8FyOO3KLvGpz+f+caiAIvc6Th+K
-         nSnWKAMoPEPxkskO0WrkEn7mB+OmWnyJ6I4r6pctYmtwYV7jd1Kbi+2zWUJ5IW/14YzI
-         fQZZSmtioNWZl9vp87pYs6KlTTPYKKy3euiPjsHNDhPGX4lOXhnGjVyPBbtl+vhsNbLI
-         3/OPNNPtQqJjX4xzYW37TMA8qF1Mbn6Au6BPR/mhtipmdSsrJ7qUqmxN0jTspHmnE7ir
-         0nDXAda8L1BB1BPVYSILhkfeXIZKjl2ciERjZxsRz/1F43nsNQ+XrGn6lFk42sUVE7p7
-         76qw==
-X-Gm-Message-State: AOAM530Js9HjEy0PPpUJy124yTajwdXsKcTM1UzU76YHPYCmSEpyezKJ
-        y24n0W6So6OGACzPtXTb3Z6RYZwK7A==
-X-Google-Smtp-Source: ABdhPJz6GKydHOboZzPd2pUCT4IMN1LeJPJwiHOyv4bwXedc2WmwsrocxZbJmGdOzaFfzbW8UWRn3LNw0w==
+        bh=WSrbFKwerqUI/JN21WT4vWHxZo+4QVu8EVmPg9AsedY=;
+        b=YObbVOUpFumwIKVIT0/Ky08S1M4nMmiFXGcxLf4fMyNTGQGoJd47e+M+A4PTx7cFoB
+         1HPvjvtyOBbdIKb3fgsP6ifkrs1do4xY6qdxPxVu09giNBFGgPls8X8BKXZ0ANndgTwk
+         LDGVkPx8lc/H1zjcgVigakuq0ntDwbT1IgcK0qpV60HgDfOMRechxyQtG+c9oSEZafYf
+         rGX2GE1jrGSJC349mjAAIeEOB9HxUP0mctBGQXfJiIx8bGR84hGDv3waOa2mqzepxYJH
+         6KDkqlVwzhKsA7JbmE8mvyDGvsvPPctOqusKseBoDIsTraPffxGaCdyPBXBFcaAnsMHS
+         6jIA==
+X-Gm-Message-State: AOAM532KZdtjnZWGvPsAypE7m9hzH8tY38WTuRwEWU6bXW34b/Khg4/1
+        D0ItTVbagzGsQ4KGJTdAgmFCXQspAw==
+X-Google-Smtp-Source: ABdhPJyAFtSEgdhII4m5ZP9iW97b/cOWK2Wa4/r0RZC1QoMb0DhvnnmONQ5uHJMm+M7+ibQ0Zv6xFcNQVg==
 X-Received: from nhuck.c.googlers.com ([fda3:e722:ac3:cc00:14:4d90:c0a8:39cc])
- (user=nhuck job=sendgmr) by 2002:a05:690c:318:b0:2f8:ec1f:594f with SMTP id
- bg24-20020a05690c031800b002f8ec1f594fmr20255586ywb.77.1652203462719; Tue, 10
- May 2022 10:24:22 -0700 (PDT)
-Date:   Tue, 10 May 2022 17:23:54 +0000
+ (user=nhuck job=sendgmr) by 2002:a81:1215:0:b0:2f4:e248:844c with SMTP id
+ 21-20020a811215000000b002f4e248844cmr19982672yws.205.1652203465929; Tue, 10
+ May 2022 10:24:25 -0700 (PDT)
+Date:   Tue, 10 May 2022 17:23:56 +0000
 In-Reply-To: <20220510172359.3720527-1-nhuck@google.com>
-Message-Id: <20220510172359.3720527-5-nhuck@google.com>
+Message-Id: <20220510172359.3720527-7-nhuck@google.com>
 Mime-Version: 1.0
 References: <20220510172359.3720527-1-nhuck@google.com>
 X-Mailer: git-send-email 2.36.0.512.ge40c2bad7a-goog
-Subject: [PATCH v8 4/9] crypto: x86/aesni-xctr: Add accelerated implementation
- of XCTR
+Subject: [PATCH v8 6/9] crypto: arm64/aes-xctr: Improve readability of XCTR
+ and CTR modes
 From:   Nathan Huckleberry <nhuck@google.com>
 To:     linux-crypto@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org,
@@ -72,551 +72,406 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add hardware accelerated version of XCTR for x86-64 CPUs with AESNI
-support.
-
-More information on XCTR can be found in the HCTR2 paper:
-"Length-preserving encryption with HCTR2":
-https://eprint.iacr.org/2021/1441.pdf
+Added some clarifying comments, changed the register allocations to make
+the code clearer, and added register aliases.
 
 Signed-off-by: Nathan Huckleberry <nhuck@google.com>
-Reviewed-by: Ard Biesheuvel <ardb@kernel.org>
 Reviewed-by: Eric Biggers <ebiggers@google.com>
 ---
- arch/x86/crypto/aes_ctrby8_avx-x86_64.S | 232 ++++++++++++++++--------
- arch/x86/crypto/aesni-intel_glue.c      | 114 +++++++++++-
- crypto/Kconfig                          |   2 +-
- 3 files changed, 266 insertions(+), 82 deletions(-)
+ arch/arm64/crypto/aes-glue.c  |  16 +++
+ arch/arm64/crypto/aes-modes.S | 237 ++++++++++++++++++++++++----------
+ 2 files changed, 185 insertions(+), 68 deletions(-)
 
-diff --git a/arch/x86/crypto/aes_ctrby8_avx-x86_64.S b/arch/x86/crypto/aes_ctrby8_avx-x86_64.S
-index 43852ba6e19c..2402b9418cd7 100644
---- a/arch/x86/crypto/aes_ctrby8_avx-x86_64.S
-+++ b/arch/x86/crypto/aes_ctrby8_avx-x86_64.S
-@@ -23,6 +23,11 @@
+diff --git a/arch/arm64/crypto/aes-glue.c b/arch/arm64/crypto/aes-glue.c
+index b6883288234c..162787c7aa86 100644
+--- a/arch/arm64/crypto/aes-glue.c
++++ b/arch/arm64/crypto/aes-glue.c
+@@ -464,6 +464,14 @@ static int __maybe_unused xctr_encrypt(struct skcipher_request *req)
+ 		u8 *dst = walk.dst.virt.addr;
+ 		u8 buf[AES_BLOCK_SIZE];
  
- #define VMOVDQ		vmovdqu
++		/*
++		 * If given less than 16 bytes, we must copy the partial block
++		 * into a temporary buffer of 16 bytes to avoid out of bounds
++		 * reads and writes.  Furthermore, this code is somewhat unusual
++		 * in that it expects the end of the data to be at the end of
++		 * the temporary buffer, rather than the start of the data at
++		 * the start of the temporary buffer.
++		 */
+ 		if (unlikely(nbytes < AES_BLOCK_SIZE))
+ 			src = dst = memcpy(buf + sizeof(buf) - nbytes,
+ 					   src, nbytes);
+@@ -501,6 +509,14 @@ static int __maybe_unused ctr_encrypt(struct skcipher_request *req)
+ 		u8 *dst = walk.dst.virt.addr;
+ 		u8 buf[AES_BLOCK_SIZE];
  
-+/*
-+ * Note: the "x" prefix in these aliases means "this is an xmm register".  The
-+ * alias prefixes have no relation to XCTR where the "X" prefix means "XOR
-+ * counter".
-+ */
- #define xdata0		%xmm0
- #define xdata1		%xmm1
- #define xdata2		%xmm2
-@@ -31,8 +36,10 @@
- #define xdata5		%xmm5
- #define xdata6		%xmm6
- #define xdata7		%xmm7
--#define xcounter	%xmm8
--#define xbyteswap	%xmm9
-+#define xcounter	%xmm8	// CTR mode only
-+#define xiv		%xmm8	// XCTR mode only
-+#define xbyteswap	%xmm9	// CTR mode only
-+#define xtmp		%xmm9	// XCTR mode only
- #define xkey0		%xmm10
- #define xkey4		%xmm11
- #define xkey8		%xmm12
-@@ -45,7 +52,7 @@
- #define p_keys		%rdx
- #define p_out		%rcx
- #define num_bytes	%r8
--
-+#define counter		%r9	// XCTR mode only
- #define tmp		%r10
- #define	DDQ_DATA	0
- #define	XDATA		1
-@@ -102,7 +109,7 @@ ddq_add_8:
-  * do_aes num_in_par load_keys key_len
-  * This increments p_in, but not p_out
-  */
--.macro do_aes b, k, key_len
-+.macro do_aes b, k, key_len, xctr
- 	.set by, \b
- 	.set load_keys, \k
- 	.set klen, \key_len
-@@ -111,29 +118,48 @@ ddq_add_8:
- 		vmovdqa	0*16(p_keys), xkey0
++		/*
++		 * If given less than 16 bytes, we must copy the partial block
++		 * into a temporary buffer of 16 bytes to avoid out of bounds
++		 * reads and writes.  Furthermore, this code is somewhat unusual
++		 * in that it expects the end of the data to be at the end of
++		 * the temporary buffer, rather than the start of the data at
++		 * the start of the temporary buffer.
++		 */
+ 		if (unlikely(nbytes < AES_BLOCK_SIZE))
+ 			src = dst = memcpy(buf + sizeof(buf) - nbytes,
+ 					   src, nbytes);
+diff --git a/arch/arm64/crypto/aes-modes.S b/arch/arm64/crypto/aes-modes.S
+index 9a027200bdba..5e0f0e51557c 100644
+--- a/arch/arm64/crypto/aes-modes.S
++++ b/arch/arm64/crypto/aes-modes.S
+@@ -322,32 +322,60 @@ AES_FUNC_END(aes_cbc_cts_decrypt)
+ 	 * This macro generates the code for CTR and XCTR mode.
+ 	 */
+ .macro ctr_encrypt xctr
++	// Arguments
++	OUT		.req x0
++	IN		.req x1
++	KEY		.req x2
++	ROUNDS_W	.req w3
++	BYTES_W		.req w4
++	IV		.req x5
++	BYTE_CTR_W 	.req w6		// XCTR only
++	// Intermediate values
++	CTR_W		.req w11	// XCTR only
++	CTR		.req x11	// XCTR only
++	IV_PART		.req x12
++	BLOCKS		.req x13
++	BLOCKS_W	.req w13
++
+ 	stp		x29, x30, [sp, #-16]!
+ 	mov		x29, sp
+ 
+-	enc_prepare	w3, x2, x12
+-	ld1		{vctr.16b}, [x5]
++	enc_prepare	ROUNDS_W, KEY, IV_PART
++	ld1		{vctr.16b}, [IV]
+ 
++	/*
++	 * Keep 64 bits of the IV in a register.  For CTR mode this lets us
++	 * easily increment the IV.  For XCTR mode this lets us efficiently XOR
++	 * the 64-bit counter with the IV.
++	 */
+ 	.if \xctr
+-		umov		x12, vctr.d[0]
+-		lsr		w11, w6, #4
++		umov		IV_PART, vctr.d[0]
++		lsr		CTR_W, BYTE_CTR_W, #4
+ 	.else
+-		umov		x12, vctr.d[1] /* keep swabbed ctr in reg */
+-		rev		x12, x12
++		umov		IV_PART, vctr.d[1]
++		rev		IV_PART, IV_PART
  	.endif
  
--	vpshufb	xbyteswap, xcounter, xdata0
--
--	.set i, 1
--	.rept (by - 1)
--		club XDATA, i
--		vpaddq	(ddq_add_1 + 16 * (i - 1))(%rip), xcounter, var_xdata
--		vptest	ddq_low_msk(%rip), var_xdata
--		jnz 1f
--		vpaddq	ddq_high_add_1(%rip), var_xdata, var_xdata
--		vpaddq	ddq_high_add_1(%rip), xcounter, xcounter
--		1:
--		vpshufb	xbyteswap, var_xdata, var_xdata
--		.set i, (i +1)
--	.endr
-+	.if \xctr
-+		movq counter, xtmp
-+		.set i, 0
-+		.rept (by)
-+			club XDATA, i
-+			vpaddq	(ddq_add_1 + 16 * i)(%rip), xtmp, var_xdata
-+			.set i, (i +1)
-+		.endr
-+		.set i, 0
-+		.rept (by)
-+			club	XDATA, i
-+			vpxor	xiv, var_xdata, var_xdata
-+			.set i, (i +1)
-+		.endr
-+	.else
-+		vpshufb	xbyteswap, xcounter, xdata0
-+		.set i, 1
-+		.rept (by - 1)
-+			club XDATA, i
-+			vpaddq	(ddq_add_1 + 16 * (i - 1))(%rip), xcounter, var_xdata
-+			vptest	ddq_low_msk(%rip), var_xdata
-+			jnz 1f
-+			vpaddq	ddq_high_add_1(%rip), var_xdata, var_xdata
-+			vpaddq	ddq_high_add_1(%rip), xcounter, xcounter
-+			1:
-+			vpshufb	xbyteswap, var_xdata, var_xdata
-+			.set i, (i +1)
-+		.endr
-+	.endif
+ .LctrloopNx\xctr:
+-	add		w7, w4, #15
+-	sub		w4, w4, #MAX_STRIDE << 4
+-	lsr		w7, w7, #4
++	add		BLOCKS_W, BYTES_W, #15
++	sub		BYTES_W, BYTES_W, #MAX_STRIDE << 4
++	lsr		BLOCKS_W, BLOCKS_W, #4
+ 	mov		w8, #MAX_STRIDE
+-	cmp		w7, w8
+-	csel		w7, w7, w8, lt
++	cmp		BLOCKS_W, w8
++	csel		BLOCKS_W, BLOCKS_W, w8, lt
  
- 	vmovdqa	1*16(p_keys), xkeyA
- 
- 	vpxor	xkey0, xdata0, xdata0
--	vpaddq	(ddq_add_1 + 16 * (by - 1))(%rip), xcounter, xcounter
--	vptest	ddq_low_msk(%rip), xcounter
--	jnz	1f
--	vpaddq	ddq_high_add_1(%rip), xcounter, xcounter
--	1:
-+	.if \xctr
-+		add $by, counter
-+	.else
-+		vpaddq	(ddq_add_1 + 16 * (by - 1))(%rip), xcounter, xcounter
-+		vptest	ddq_low_msk(%rip), xcounter
-+		jnz	1f
-+		vpaddq	ddq_high_add_1(%rip), xcounter, xcounter
-+		1:
-+	.endif
- 
- 	.set i, 1
- 	.rept (by - 1)
-@@ -371,94 +397,99 @@ ddq_add_8:
- 	.endr
- .endm
- 
--.macro do_aes_load val, key_len
--	do_aes \val, 1, \key_len
-+.macro do_aes_load val, key_len, xctr
-+	do_aes \val, 1, \key_len, \xctr
- .endm
- 
--.macro do_aes_noload val, key_len
--	do_aes \val, 0, \key_len
-+.macro do_aes_noload val, key_len, xctr
-+	do_aes \val, 0, \key_len, \xctr
- .endm
- 
- /* main body of aes ctr load */
- 
--.macro do_aes_ctrmain key_len
-+.macro do_aes_ctrmain key_len, xctr
- 	cmp	$16, num_bytes
--	jb	.Ldo_return2\key_len
-+	jb	.Ldo_return2\xctr\key_len
- 
--	vmovdqa	byteswap_const(%rip), xbyteswap
--	vmovdqu	(p_iv), xcounter
--	vpshufb	xbyteswap, xcounter, xcounter
-+	.if \xctr
-+		shr	$4, counter
-+		vmovdqu	(p_iv), xiv
-+	.else
-+		vmovdqa	byteswap_const(%rip), xbyteswap
-+		vmovdqu	(p_iv), xcounter
-+		vpshufb	xbyteswap, xcounter, xcounter
-+	.endif
- 
- 	mov	num_bytes, tmp
- 	and	$(7*16), tmp
--	jz	.Lmult_of_8_blks\key_len
-+	jz	.Lmult_of_8_blks\xctr\key_len
- 
- 	/* 1 <= tmp <= 7 */
- 	cmp	$(4*16), tmp
--	jg	.Lgt4\key_len
--	je	.Leq4\key_len
-+	jg	.Lgt4\xctr\key_len
-+	je	.Leq4\xctr\key_len
- 
--.Llt4\key_len:
-+.Llt4\xctr\key_len:
- 	cmp	$(2*16), tmp
--	jg	.Leq3\key_len
--	je	.Leq2\key_len
-+	jg	.Leq3\xctr\key_len
-+	je	.Leq2\xctr\key_len
- 
--.Leq1\key_len:
--	do_aes_load	1, \key_len
-+.Leq1\xctr\key_len:
-+	do_aes_load	1, \key_len, \xctr
- 	add	$(1*16), p_out
- 	and	$(~7*16), num_bytes
--	jz	.Ldo_return2\key_len
--	jmp	.Lmain_loop2\key_len
-+	jz	.Ldo_return2\xctr\key_len
-+	jmp	.Lmain_loop2\xctr\key_len
- 
--.Leq2\key_len:
--	do_aes_load	2, \key_len
-+.Leq2\xctr\key_len:
-+	do_aes_load	2, \key_len, \xctr
- 	add	$(2*16), p_out
- 	and	$(~7*16), num_bytes
--	jz	.Ldo_return2\key_len
--	jmp	.Lmain_loop2\key_len
-+	jz	.Ldo_return2\xctr\key_len
-+	jmp	.Lmain_loop2\xctr\key_len
- 
- 
--.Leq3\key_len:
--	do_aes_load	3, \key_len
-+.Leq3\xctr\key_len:
-+	do_aes_load	3, \key_len, \xctr
- 	add	$(3*16), p_out
- 	and	$(~7*16), num_bytes
--	jz	.Ldo_return2\key_len
--	jmp	.Lmain_loop2\key_len
-+	jz	.Ldo_return2\xctr\key_len
-+	jmp	.Lmain_loop2\xctr\key_len
- 
--.Leq4\key_len:
--	do_aes_load	4, \key_len
-+.Leq4\xctr\key_len:
-+	do_aes_load	4, \key_len, \xctr
- 	add	$(4*16), p_out
- 	and	$(~7*16), num_bytes
--	jz	.Ldo_return2\key_len
--	jmp	.Lmain_loop2\key_len
-+	jz	.Ldo_return2\xctr\key_len
-+	jmp	.Lmain_loop2\xctr\key_len
- 
--.Lgt4\key_len:
-+.Lgt4\xctr\key_len:
- 	cmp	$(6*16), tmp
--	jg	.Leq7\key_len
--	je	.Leq6\key_len
-+	jg	.Leq7\xctr\key_len
-+	je	.Leq6\xctr\key_len
- 
--.Leq5\key_len:
--	do_aes_load	5, \key_len
-+.Leq5\xctr\key_len:
-+	do_aes_load	5, \key_len, \xctr
- 	add	$(5*16), p_out
- 	and	$(~7*16), num_bytes
--	jz	.Ldo_return2\key_len
--	jmp	.Lmain_loop2\key_len
-+	jz	.Ldo_return2\xctr\key_len
-+	jmp	.Lmain_loop2\xctr\key_len
- 
--.Leq6\key_len:
--	do_aes_load	6, \key_len
-+.Leq6\xctr\key_len:
-+	do_aes_load	6, \key_len, \xctr
- 	add	$(6*16), p_out
- 	and	$(~7*16), num_bytes
--	jz	.Ldo_return2\key_len
--	jmp	.Lmain_loop2\key_len
-+	jz	.Ldo_return2\xctr\key_len
-+	jmp	.Lmain_loop2\xctr\key_len
- 
--.Leq7\key_len:
--	do_aes_load	7, \key_len
-+.Leq7\xctr\key_len:
-+	do_aes_load	7, \key_len, \xctr
- 	add	$(7*16), p_out
- 	and	$(~7*16), num_bytes
--	jz	.Ldo_return2\key_len
--	jmp	.Lmain_loop2\key_len
-+	jz	.Ldo_return2\xctr\key_len
-+	jmp	.Lmain_loop2\xctr\key_len
- 
--.Lmult_of_8_blks\key_len:
-+.Lmult_of_8_blks\xctr\key_len:
- 	.if (\key_len != KEY_128)
- 		vmovdqa	0*16(p_keys), xkey0
- 		vmovdqa	4*16(p_keys), xkey4
-@@ -471,17 +502,19 @@ ddq_add_8:
- 		vmovdqa	9*16(p_keys), xkey12
++	/*
++	 * Set up the counter values in v0-v{MAX_STRIDE-1}.
++	 *
++	 * If we are encrypting less than MAX_STRIDE blocks, the tail block
++	 * handling code expects the last keystream block to be in
++	 * v{MAX_STRIDE-1}.  For example: if encrypting two blocks with
++	 * MAX_STRIDE=5, then v3 and v4 should have the next two counter blocks.
++	 */
+ 	.if \xctr
+-		add		x11, x11, x7
++		add		CTR, CTR, BLOCKS
+ 	.else
+-		adds		x12, x12, x7
++		adds		IV_PART, IV_PART, BLOCKS
  	.endif
- .align 16
--.Lmain_loop2\key_len:
-+.Lmain_loop2\xctr\key_len:
- 	/* num_bytes is a multiple of 8 and >0 */
--	do_aes_noload	8, \key_len
-+	do_aes_noload	8, \key_len, \xctr
- 	add	$(8*16), p_out
- 	sub	$(8*16), num_bytes
--	jne	.Lmain_loop2\key_len
-+	jne	.Lmain_loop2\xctr\key_len
+ 	mov		v0.16b, vctr.16b
+ 	mov		v1.16b, vctr.16b
+@@ -355,16 +383,16 @@ AES_FUNC_END(aes_cbc_cts_decrypt)
+ 	mov		v3.16b, vctr.16b
+ ST5(	mov		v4.16b, vctr.16b		)
+ 	.if \xctr
+-		sub		x6, x11, #MAX_STRIDE - 1
+-		sub		x7, x11, #MAX_STRIDE - 2
+-		sub		x8, x11, #MAX_STRIDE - 3
+-		sub		x9, x11, #MAX_STRIDE - 4
+-ST5(		sub		x10, x11, #MAX_STRIDE - 5	)
+-		eor		x6, x6, x12
+-		eor		x7, x7, x12
+-		eor		x8, x8, x12
+-		eor		x9, x9, x12
+-ST5(		eor		x10, x10, x12			)
++		sub		x6, CTR, #MAX_STRIDE - 1
++		sub		x7, CTR, #MAX_STRIDE - 2
++		sub		x8, CTR, #MAX_STRIDE - 3
++		sub		x9, CTR, #MAX_STRIDE - 4
++ST5(		sub		x10, CTR, #MAX_STRIDE - 5	)
++		eor		x6, x6, IV_PART
++		eor		x7, x7, IV_PART
++		eor		x8, x8, IV_PART
++		eor		x9, x9, IV_PART
++ST5(		eor		x10, x10, IV_PART		)
+ 		mov		v0.d[0], x6
+ 		mov		v1.d[0], x7
+ 		mov		v2.d[0], x8
+@@ -373,17 +401,32 @@ ST5(		mov		v4.d[0], x10			)
+ 	.else
+ 		bcs		0f
+ 		.subsection	1
+-		/* apply carry to outgoing counter */
++		/*
++		 * This subsection handles carries.
++		 *
++		 * Conditional branching here is allowed with respect to time
++		 * invariance since the branches are dependent on the IV instead
++		 * of the plaintext or key.  This code is rarely executed in
++		 * practice anyway.
++		 */
++
++		/* Apply carry to outgoing counter. */
+ 0:		umov		x8, vctr.d[0]
+ 		rev		x8, x8
+ 		add		x8, x8, #1
+ 		rev		x8, x8
+ 		ins		vctr.d[0], x8
  
--.Ldo_return2\key_len:
--	/* return updated IV */
--	vpshufb	xbyteswap, xcounter, xcounter
--	vmovdqu	xcounter, (p_iv)
-+.Ldo_return2\xctr\key_len:
-+	.if !\xctr
-+		/* return updated IV */
-+		vpshufb	xbyteswap, xcounter, xcounter
-+		vmovdqu	xcounter, (p_iv)
-+	.endif
- 	RET
+-		/* apply carry to N counter blocks for N := x12 */
+-		cbz		x12, 2f
++		/*
++		 * Apply carry to counter blocks if needed.
++		 *
++		 * Since the carry flag was set, we know 0 <= IV_PART <
++		 * MAX_STRIDE.  Using the value of IV_PART we can determine how
++		 * many counter blocks need to be updated.
++		 */
++		cbz		IV_PART, 2f
+ 		adr		x16, 1f
+-		sub		x16, x16, x12, lsl #3
++		sub		x16, x16, IV_PART, lsl #3
+ 		br		x16
+ 		bti		c
+ 		mov		v0.d[0], vctr.d[0]
+@@ -398,71 +441,88 @@ ST5(		mov		v4.d[0], vctr.d[0]		)
+ 1:		b		2f
+ 		.previous
+ 
+-2:		rev		x7, x12
++2:		rev		x7, IV_PART
+ 		ins		vctr.d[1], x7
+-		sub		x7, x12, #MAX_STRIDE - 1
+-		sub		x8, x12, #MAX_STRIDE - 2
+-		sub		x9, x12, #MAX_STRIDE - 3
++		sub		x7, IV_PART, #MAX_STRIDE - 1
++		sub		x8, IV_PART, #MAX_STRIDE - 2
++		sub		x9, IV_PART, #MAX_STRIDE - 3
+ 		rev		x7, x7
+ 		rev		x8, x8
+ 		mov		v1.d[1], x7
+ 		rev		x9, x9
+-ST5(		sub		x10, x12, #MAX_STRIDE - 4	)
++ST5(		sub		x10, IV_PART, #MAX_STRIDE - 4	)
+ 		mov		v2.d[1], x8
+ ST5(		rev		x10, x10			)
+ 		mov		v3.d[1], x9
+ ST5(		mov		v4.d[1], x10			)
+ 	.endif
+-	tbnz		w4, #31, .Lctrtail\xctr
+-    	ld1		{v5.16b-v7.16b}, [x1], #48
++
++	/*
++	 * If there are at least MAX_STRIDE blocks left, XOR the data with
++	 * keystream and store.  Otherwise jump to tail handling.
++	 */
++	tbnz		BYTES_W, #31, .Lctrtail\xctr
++    	ld1		{v5.16b-v7.16b}, [IN], #48
+ ST4(	bl		aes_encrypt_block4x		)
+ ST5(	bl		aes_encrypt_block5x		)
+ 	eor		v0.16b, v5.16b, v0.16b
+-ST4(	ld1		{v5.16b}, [x1], #16		)
++ST4(	ld1		{v5.16b}, [IN], #16		)
+ 	eor		v1.16b, v6.16b, v1.16b
+-ST5(	ld1		{v5.16b-v6.16b}, [x1], #32	)
++ST5(	ld1		{v5.16b-v6.16b}, [IN], #32	)
+ 	eor		v2.16b, v7.16b, v2.16b
+ 	eor		v3.16b, v5.16b, v3.16b
+ ST5(	eor		v4.16b, v6.16b, v4.16b		)
+-	st1		{v0.16b-v3.16b}, [x0], #64
+-ST5(	st1		{v4.16b}, [x0], #16		)
+-	cbz		w4, .Lctrout\xctr
++	st1		{v0.16b-v3.16b}, [OUT], #64
++ST5(	st1		{v4.16b}, [OUT], #16		)
++	cbz		BYTES_W, .Lctrout\xctr
+ 	b		.LctrloopNx\xctr
+ 
+ .Lctrout\xctr:
+ 	.if !\xctr
+-		st1		{vctr.16b}, [x5] /* return next CTR value */
++		st1		{vctr.16b}, [IV] /* return next CTR value */
+ 	.endif
+ 	ldp		x29, x30, [sp], #16
+ 	ret
+ 
+ .Lctrtail\xctr:
++	/*
++	 * Handle up to MAX_STRIDE * 16 - 1 bytes of plaintext
++	 *
++	 * This code expects the last keystream block to be in v{MAX_STRIDE-1}.
++	 * For example: if encrypting two blocks with MAX_STRIDE=5, then v3 and
++	 * v4 should have the next two counter blocks.
++	 *
++	 * This allows us to store the ciphertext by writing to overlapping
++	 * regions of memory.  Any invalid ciphertext blocks get overwritten by
++	 * correctly computed blocks.  This approach greatly simplifies the
++	 * logic for storing the ciphertext.
++	 */
+ 	mov		x16, #16
+-	ands		x6, x4, #0xf
+-	csel		x13, x6, x16, ne
++	ands		w7, BYTES_W, #0xf
++	csel		x13, x7, x16, ne
+ 
+-ST5(	cmp		w4, #64 - (MAX_STRIDE << 4)	)
++ST5(	cmp		BYTES_W, #64 - (MAX_STRIDE << 4))
+ ST5(	csel		x14, x16, xzr, gt		)
+-	cmp		w4, #48 - (MAX_STRIDE << 4)
++	cmp		BYTES_W, #48 - (MAX_STRIDE << 4)
+ 	csel		x15, x16, xzr, gt
+-	cmp		w4, #32 - (MAX_STRIDE << 4)
++	cmp		BYTES_W, #32 - (MAX_STRIDE << 4)
+ 	csel		x16, x16, xzr, gt
+-	cmp		w4, #16 - (MAX_STRIDE << 4)
++	cmp		BYTES_W, #16 - (MAX_STRIDE << 4)
+ 
+-	adr_l		x12, .Lcts_permute_table
+-	add		x12, x12, x13
++	adr_l		x9, .Lcts_permute_table
++	add		x9, x9, x13
+ 	ble		.Lctrtail1x\xctr
+ 
+-ST5(	ld1		{v5.16b}, [x1], x14		)
+-	ld1		{v6.16b}, [x1], x15
+-	ld1		{v7.16b}, [x1], x16
++ST5(	ld1		{v5.16b}, [IN], x14		)
++	ld1		{v6.16b}, [IN], x15
++	ld1		{v7.16b}, [IN], x16
+ 
+ ST4(	bl		aes_encrypt_block4x		)
+ ST5(	bl		aes_encrypt_block5x		)
+ 
+-	ld1		{v8.16b}, [x1], x13
+-	ld1		{v9.16b}, [x1]
+-	ld1		{v10.16b}, [x12]
++	ld1		{v8.16b}, [IN], x13
++	ld1		{v9.16b}, [IN]
++	ld1		{v10.16b}, [x9]
+ 
+ ST4(	eor		v6.16b, v6.16b, v0.16b		)
+ ST4(	eor		v7.16b, v7.16b, v1.16b		)
+@@ -477,35 +537,70 @@ ST5(	eor		v7.16b, v7.16b, v2.16b		)
+ ST5(	eor		v8.16b, v8.16b, v3.16b		)
+ ST5(	eor		v9.16b, v9.16b, v4.16b		)
+ 
+-ST5(	st1		{v5.16b}, [x0], x14		)
+-	st1		{v6.16b}, [x0], x15
+-	st1		{v7.16b}, [x0], x16
+-	add		x13, x13, x0
++ST5(	st1		{v5.16b}, [OUT], x14		)
++	st1		{v6.16b}, [OUT], x15
++	st1		{v7.16b}, [OUT], x16
++	add		x13, x13, OUT
+ 	st1		{v9.16b}, [x13]		// overlapping stores
+-	st1		{v8.16b}, [x0]
++	st1		{v8.16b}, [OUT]
+ 	b		.Lctrout\xctr
+ 
+ .Lctrtail1x\xctr:
+-	sub		x7, x6, #16
+-	csel		x6, x6, x7, eq
+-	add		x1, x1, x6
+-	add		x0, x0, x6
+-	ld1		{v5.16b}, [x1]
+-	ld1		{v6.16b}, [x0]
++	/*
++	 * Handle <= 16 bytes of plaintext
++	 *
++	 * This code always reads and writes 16 bytes.  To avoid out of bounds
++	 * accesses, XCTR and CTR modes must use a temporary buffer when
++	 * encrypting/decrypting less than 16 bytes.
++	 *
++	 * This code is unusual in that it loads the input and stores the output
++	 * relative to the end of the buffers rather than relative to the start.
++	 * This causes unusual behaviour when encrypting/decrypting less than 16
++	 * bytes; the end of the data is expected to be at the end of the
++	 * temporary buffer rather than the start of the data being at the start
++	 * of the temporary buffer.
++	 */
++	sub		x8, x7, #16
++	csel		x7, x7, x8, eq
++	add		IN, IN, x7
++	add		OUT, OUT, x7
++	ld1		{v5.16b}, [IN]
++	ld1		{v6.16b}, [OUT]
+ ST5(	mov		v3.16b, v4.16b			)
+-	encrypt_block	v3, w3, x2, x8, w7
+-	ld1		{v10.16b-v11.16b}, [x12]
++	encrypt_block	v3, ROUNDS_W, KEY, x8, w7
++	ld1		{v10.16b-v11.16b}, [x9]
+ 	tbl		v3.16b, {v3.16b}, v10.16b
+ 	sshr		v11.16b, v11.16b, #7
+ 	eor		v5.16b, v5.16b, v3.16b
+ 	bif		v5.16b, v6.16b, v11.16b
+-	st1		{v5.16b}, [x0]
++	st1		{v5.16b}, [OUT]
+ 	b		.Lctrout\xctr
++
++	// Arguments
++	.unreq OUT
++	.unreq IN
++	.unreq KEY
++	.unreq ROUNDS_W
++	.unreq BYTES_W
++	.unreq IV
++	.unreq BYTE_CTR_W	// XCTR only
++	// Intermediate values
++	.unreq CTR_W		// XCTR only
++	.unreq CTR		// XCTR only
++	.unreq IV_PART
++	.unreq BLOCKS
++	.unreq BLOCKS_W
  .endm
  
-@@ -494,7 +527,7 @@ ddq_add_8:
-  */
- SYM_FUNC_START(aes_ctr_enc_128_avx_by8)
- 	/* call the aes main loop */
--	do_aes_ctrmain KEY_128
-+	do_aes_ctrmain KEY_128 0
+ 	/*
+ 	 * aes_ctr_encrypt(u8 out[], u8 const in[], u8 const rk[], int rounds,
+ 	 *		   int bytes, u8 ctr[])
++	 *
++	 * The input and output buffers must always be at least 16 bytes even if
++	 * encrypting/decrypting less than 16 bytes.  Otherwise out of bounds
++	 * accesses will occur.  The data to be encrypted/decrypted is expected
++	 * to be at the end of this 16-byte temporary buffer rather than the
++	 * start.
+ 	 */
  
- SYM_FUNC_END(aes_ctr_enc_128_avx_by8)
+ AES_FUNC_START(aes_ctr_encrypt)
+@@ -515,6 +610,12 @@ AES_FUNC_END(aes_ctr_encrypt)
+ 	/*
+ 	 * aes_xctr_encrypt(u8 out[], u8 const in[], u8 const rk[], int rounds,
+ 	 *		   int bytes, u8 const iv[], int byte_ctr)
++	 *
++	 * The input and output buffers must always be at least 16 bytes even if
++	 * encrypting/decrypting less than 16 bytes.  Otherwise out of bounds
++	 * accesses will occur.  The data to be encrypted/decrypted is expected
++	 * to be at the end of this 16-byte temporary buffer rather than the
++	 * start.
+ 	 */
  
-@@ -507,7 +540,7 @@ SYM_FUNC_END(aes_ctr_enc_128_avx_by8)
-  */
- SYM_FUNC_START(aes_ctr_enc_192_avx_by8)
- 	/* call the aes main loop */
--	do_aes_ctrmain KEY_192
-+	do_aes_ctrmain KEY_192 0
- 
- SYM_FUNC_END(aes_ctr_enc_192_avx_by8)
- 
-@@ -520,6 +553,45 @@ SYM_FUNC_END(aes_ctr_enc_192_avx_by8)
-  */
- SYM_FUNC_START(aes_ctr_enc_256_avx_by8)
- 	/* call the aes main loop */
--	do_aes_ctrmain KEY_256
-+	do_aes_ctrmain KEY_256 0
- 
- SYM_FUNC_END(aes_ctr_enc_256_avx_by8)
-+
-+/*
-+ * routine to do AES128 XCTR enc/decrypt "by8"
-+ * XMM registers are clobbered.
-+ * Saving/restoring must be done at a higher level
-+ * aes_xctr_enc_128_avx_by8(const u8 *in, const u8 *iv, const void *keys,
-+ * 	u8* out, unsigned int num_bytes, unsigned int byte_ctr)
-+ */
-+SYM_FUNC_START(aes_xctr_enc_128_avx_by8)
-+	/* call the aes main loop */
-+	do_aes_ctrmain KEY_128 1
-+
-+SYM_FUNC_END(aes_xctr_enc_128_avx_by8)
-+
-+/*
-+ * routine to do AES192 XCTR enc/decrypt "by8"
-+ * XMM registers are clobbered.
-+ * Saving/restoring must be done at a higher level
-+ * aes_xctr_enc_192_avx_by8(const u8 *in, const u8 *iv, const void *keys,
-+ * 	u8* out, unsigned int num_bytes, unsigned int byte_ctr)
-+ */
-+SYM_FUNC_START(aes_xctr_enc_192_avx_by8)
-+	/* call the aes main loop */
-+	do_aes_ctrmain KEY_192 1
-+
-+SYM_FUNC_END(aes_xctr_enc_192_avx_by8)
-+
-+/*
-+ * routine to do AES256 XCTR enc/decrypt "by8"
-+ * XMM registers are clobbered.
-+ * Saving/restoring must be done at a higher level
-+ * aes_xctr_enc_256_avx_by8(const u8 *in, const u8 *iv, const void *keys,
-+ * 	u8* out, unsigned int num_bytes, unsigned int byte_ctr)
-+ */
-+SYM_FUNC_START(aes_xctr_enc_256_avx_by8)
-+	/* call the aes main loop */
-+	do_aes_ctrmain KEY_256 1
-+
-+SYM_FUNC_END(aes_xctr_enc_256_avx_by8)
-diff --git a/arch/x86/crypto/aesni-intel_glue.c b/arch/x86/crypto/aesni-intel_glue.c
-index 41901ba9d3a2..a5b0cb3efeba 100644
---- a/arch/x86/crypto/aesni-intel_glue.c
-+++ b/arch/x86/crypto/aesni-intel_glue.c
-@@ -135,6 +135,20 @@ asmlinkage void aes_ctr_enc_192_avx_by8(const u8 *in, u8 *iv,
- 		void *keys, u8 *out, unsigned int num_bytes);
- asmlinkage void aes_ctr_enc_256_avx_by8(const u8 *in, u8 *iv,
- 		void *keys, u8 *out, unsigned int num_bytes);
-+
-+
-+asmlinkage void aes_xctr_enc_128_avx_by8(const u8 *in, const u8 *iv,
-+	const void *keys, u8 *out, unsigned int num_bytes,
-+	unsigned int byte_ctr);
-+
-+asmlinkage void aes_xctr_enc_192_avx_by8(const u8 *in, const u8 *iv,
-+	const void *keys, u8 *out, unsigned int num_bytes,
-+	unsigned int byte_ctr);
-+
-+asmlinkage void aes_xctr_enc_256_avx_by8(const u8 *in, const u8 *iv,
-+	const void *keys, u8 *out, unsigned int num_bytes,
-+	unsigned int byte_ctr);
-+
- /*
-  * asmlinkage void aesni_gcm_init_avx_gen2()
-  * gcm_data *my_ctx_data, context data
-@@ -527,6 +541,59 @@ static int ctr_crypt(struct skcipher_request *req)
- 	return err;
- }
- 
-+static void aesni_xctr_enc_avx_tfm(struct crypto_aes_ctx *ctx, u8 *out,
-+				   const u8 *in, unsigned int len, u8 *iv,
-+				   unsigned int byte_ctr)
-+{
-+	if (ctx->key_length == AES_KEYSIZE_128)
-+		aes_xctr_enc_128_avx_by8(in, iv, (void *)ctx, out, len,
-+					 byte_ctr);
-+	else if (ctx->key_length == AES_KEYSIZE_192)
-+		aes_xctr_enc_192_avx_by8(in, iv, (void *)ctx, out, len,
-+					 byte_ctr);
-+	else
-+		aes_xctr_enc_256_avx_by8(in, iv, (void *)ctx, out, len,
-+					 byte_ctr);
-+}
-+
-+static int xctr_crypt(struct skcipher_request *req)
-+{
-+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
-+	struct crypto_aes_ctx *ctx = aes_ctx(crypto_skcipher_ctx(tfm));
-+	u8 keystream[AES_BLOCK_SIZE];
-+	struct skcipher_walk walk;
-+	unsigned int nbytes;
-+	unsigned int byte_ctr = 0;
-+	int err;
-+	__le32 block[AES_BLOCK_SIZE / sizeof(__le32)];
-+
-+	err = skcipher_walk_virt(&walk, req, false);
-+
-+	while ((nbytes = walk.nbytes) > 0) {
-+		kernel_fpu_begin();
-+		if (nbytes & AES_BLOCK_MASK)
-+			aesni_xctr_enc_avx_tfm(ctx, walk.dst.virt.addr,
-+				walk.src.virt.addr, nbytes & AES_BLOCK_MASK,
-+				walk.iv, byte_ctr);
-+		nbytes &= ~AES_BLOCK_MASK;
-+		byte_ctr += walk.nbytes - nbytes;
-+
-+		if (walk.nbytes == walk.total && nbytes > 0) {
-+			memcpy(block, walk.iv, AES_BLOCK_SIZE);
-+			block[0] ^= cpu_to_le32(1 + byte_ctr / AES_BLOCK_SIZE);
-+			aesni_enc(ctx, keystream, (u8 *)block);
-+			crypto_xor_cpy(walk.dst.virt.addr + walk.nbytes -
-+				       nbytes, walk.src.virt.addr + walk.nbytes
-+				       - nbytes, keystream, nbytes);
-+			byte_ctr += nbytes;
-+			nbytes = 0;
-+		}
-+		kernel_fpu_end();
-+		err = skcipher_walk_done(&walk, nbytes);
-+	}
-+	return err;
-+}
-+
- static int
- rfc4106_set_hash_subkey(u8 *hash_subkey, const u8 *key, unsigned int key_len)
- {
-@@ -1050,6 +1117,33 @@ static struct skcipher_alg aesni_skciphers[] = {
- static
- struct simd_skcipher_alg *aesni_simd_skciphers[ARRAY_SIZE(aesni_skciphers)];
- 
-+#ifdef CONFIG_X86_64
-+/*
-+ * XCTR does not have a non-AVX implementation, so it must be enabled
-+ * conditionally.
-+ */
-+static struct skcipher_alg aesni_xctr = {
-+	.base = {
-+		.cra_name		= "__xctr(aes)",
-+		.cra_driver_name	= "__xctr-aes-aesni",
-+		.cra_priority		= 400,
-+		.cra_flags		= CRYPTO_ALG_INTERNAL,
-+		.cra_blocksize		= 1,
-+		.cra_ctxsize		= CRYPTO_AES_CTX_SIZE,
-+		.cra_module		= THIS_MODULE,
-+	},
-+	.min_keysize	= AES_MIN_KEY_SIZE,
-+	.max_keysize	= AES_MAX_KEY_SIZE,
-+	.ivsize		= AES_BLOCK_SIZE,
-+	.chunksize	= AES_BLOCK_SIZE,
-+	.setkey		= aesni_skcipher_setkey,
-+	.encrypt	= xctr_crypt,
-+	.decrypt	= xctr_crypt,
-+};
-+
-+static struct simd_skcipher_alg *aesni_simd_xctr;
-+#endif /* CONFIG_X86_64 */
-+
- #ifdef CONFIG_X86_64
- static int generic_gcmaes_set_key(struct crypto_aead *aead, const u8 *key,
- 				  unsigned int key_len)
-@@ -1163,7 +1257,7 @@ static int __init aesni_init(void)
- 		static_call_update(aesni_ctr_enc_tfm, aesni_ctr_enc_avx_tfm);
- 		pr_info("AES CTR mode by8 optimization enabled\n");
- 	}
--#endif
-+#endif /* CONFIG_X86_64 */
- 
- 	err = crypto_register_alg(&aesni_cipher_alg);
- 	if (err)
-@@ -1180,8 +1274,22 @@ static int __init aesni_init(void)
- 	if (err)
- 		goto unregister_skciphers;
- 
-+#ifdef CONFIG_X86_64
-+	if (boot_cpu_has(X86_FEATURE_AVX))
-+		err = simd_register_skciphers_compat(&aesni_xctr, 1,
-+						     &aesni_simd_xctr);
-+	if (err)
-+		goto unregister_aeads;
-+#endif /* CONFIG_X86_64 */
-+
- 	return 0;
- 
-+#ifdef CONFIG_X86_64
-+unregister_aeads:
-+	simd_unregister_aeads(aesni_aeads, ARRAY_SIZE(aesni_aeads),
-+				aesni_simd_aeads);
-+#endif /* CONFIG_X86_64 */
-+
- unregister_skciphers:
- 	simd_unregister_skciphers(aesni_skciphers, ARRAY_SIZE(aesni_skciphers),
- 				  aesni_simd_skciphers);
-@@ -1197,6 +1305,10 @@ static void __exit aesni_exit(void)
- 	simd_unregister_skciphers(aesni_skciphers, ARRAY_SIZE(aesni_skciphers),
- 				  aesni_simd_skciphers);
- 	crypto_unregister_alg(&aesni_cipher_alg);
-+#ifdef CONFIG_X86_64
-+	if (boot_cpu_has(X86_FEATURE_AVX))
-+		simd_unregister_skciphers(&aesni_xctr, 1, &aesni_simd_xctr);
-+#endif /* CONFIG_X86_64 */
- }
- 
- late_initcall(aesni_init);
-diff --git a/crypto/Kconfig b/crypto/Kconfig
-index 0dedba74db4a..aa06af0e0ebe 100644
---- a/crypto/Kconfig
-+++ b/crypto/Kconfig
-@@ -1161,7 +1161,7 @@ config CRYPTO_AES_NI_INTEL
- 	  In addition to AES cipher algorithm support, the acceleration
- 	  for some popular block cipher mode is supported too, including
- 	  ECB, CBC, LRW, XTS. The 64 bit version has additional
--	  acceleration for CTR.
-+	  acceleration for CTR and XCTR.
- 
- config CRYPTO_AES_SPARC64
- 	tristate "AES cipher algorithms (SPARC64)"
+ AES_FUNC_START(aes_xctr_encrypt)
 -- 
 2.36.0.512.ge40c2bad7a-goog
 
