@@ -2,46 +2,47 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 58043C433EF
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 May 2022 23:23:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E029EC43217
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 May 2022 23:23:39 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231236AbiEMXXh (ORCPT
+        id S231317AbiEMXXi (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 13 May 2022 19:23:37 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34360 "EHLO
+        Fri, 13 May 2022 19:23:38 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34372 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229704AbiEMXX3 (ORCPT
+        with ESMTP id S230391AbiEMXX3 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Fri, 13 May 2022 19:23:29 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 485A42FDA14;
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5C63C2FDA18;
         Fri, 13 May 2022 16:20:58 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 72471617E2;
-        Fri, 13 May 2022 23:20:57 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id A04CFC34119;
+        by ams.source.kernel.org (Postfix) with ESMTPS id 9FB80B83220;
         Fri, 13 May 2022 23:20:56 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 102ABC34113;
+        Fri, 13 May 2022 23:20:55 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1652484056;
-        bh=5M/AZsC8gJLP8HFVo/AGzWoR7VyDQEAa1r6XJg17fJE=;
+        s=k20201202; t=1652484055;
+        bh=b92LkAqhO5PUVsDiRTBhHHeNaJDTEdm3bJ8lN4kNIfg=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=nBkGJ+jTPn1NfvTN0PGMha6IDJgbcGKh0m9rtJZ3KB71/1QIMddlyvbm2nTpQEKou
-         YC9QgCZu75rOyw9JieGTFp9HE22DK5RnzOiEZp94UcwE+YrJKrYdvn1uUC7GKiYgAP
-         sA+MOjPNUTM/F+q4vVip2idiw/v3t0XQ5Ge3ypoc7/TmSSNxwYPtj6KfGv3waAUPD7
-         s5rF6utZjnHPVlyGOv5kwa2s8K8lUW+rSTq7Iqgp447Y5RmEyZeusYSHA/qSOlbzOI
-         /nK+VAXo4yfE4Ouh4iY1z1IiWI0DPptR/ivziccPYM8+q6TbQSUevLTRHPxrgfbxBF
-         rJN/TAG1ue4ZA==
+        b=FXmYdsz0VOS5bnNgZiePUFvY4PBeM7didV6ZMHJAFIjZZs4OxD+YKw2GWUImfihKT
+         I8p8PLNSwblLJPzYS1xBLQqBf3UyVdPRXQs5c6Q3ZcvtDXZ1T0ZYBdfkaCNlPlX/nx
+         huOW+ydQXjo9tTd/MnOeIjMJeZqu+6rIbUWJyArYj9QWq/CTnSgQYXYC6w45Y6WtpG
+         XzXGz36/vK8xYXOKx28jqW5Oy/gvZW1zVTH9FOXNZuyC3HmOK640v0tJapmDRcKgdU
+         p6ktSn+1jBvoJ4nOagefuu1EsctNc3giLo6APE847uxu1aYEDfdlJljZI3kyaHHC5i
+         +E/A/Nb3JLh7w==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net
 Cc:     Jeff Layton <jlayton@kernel.org>,
         Lukas Czerner <lczerner@redhat.com>,
-        Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
-Subject: [PATCH v3 5/5] fscrypt: remove fscrypt_set_test_dummy_encryption()
-Date:   Fri, 13 May 2022 16:16:05 -0700
-Message-Id: <20220513231605.175121-6-ebiggers@kernel.org>
+        Theodore Ts'o <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>, stable@vger.kernel.org
+Subject: [PATCH v3 1/5] ext4: fix memory leak in parse_apply_sb_mount_options()
+Date:   Fri, 13 May 2022 16:16:01 -0700
+Message-Id: <20220513231605.175121-2-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.36.1
 In-Reply-To: <20220513231605.175121-1-ebiggers@kernel.org>
 References: <20220513231605.175121-1-ebiggers@kernel.org>
@@ -53,53 +54,45 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Now that all its callers have been converted to
-fscrypt_parse_test_dummy_encryption() and fscrypt_add_test_dummy_key()
-instead, fscrypt_set_test_dummy_encryption() can be removed.
+If processing the on-disk mount options fails after any memory was
+allocated in the ext4_fs_context, e.g. s_qf_names, then this memory is
+leaked.  Fix this by calling ext4_fc_free() instead of kfree() directly.
 
+Reproducer:
+
+    mkfs.ext4 -F /dev/vdc
+    tune2fs /dev/vdc -E mount_opts=usrjquota=file
+    echo clear > /sys/kernel/debug/kmemleak
+    mount /dev/vdc /vdc
+    echo scan > /sys/kernel/debug/kmemleak
+    sleep 5
+    echo scan > /sys/kernel/debug/kmemleak
+    cat /sys/kernel/debug/kmemleak
+
+Fixes: 7edfd85b1ffd ("ext4: Completely separate options parsing and sb setup")
+Cc: stable@vger.kernel.org
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/policy.c      | 13 -------------
- include/linux/fscrypt.h |  2 --
- 2 files changed, 15 deletions(-)
+ fs/ext4/super.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 5f858cee1e3b0..d0a8921577def 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -802,19 +802,6 @@ bool fscrypt_dummy_policies_equal(const struct fscrypt_dummy_policy *p1,
- }
- EXPORT_SYMBOL_GPL(fscrypt_dummy_policies_equal);
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 1466fbdbc8e34..60fa2f2623e07 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -2625,8 +2625,10 @@ static int parse_apply_sb_mount_options(struct super_block *sb,
+ 	ret = ext4_apply_options(fc, sb);
  
--/* Deprecated, do not use */
--int fscrypt_set_test_dummy_encryption(struct super_block *sb, const char *arg,
--				      struct fscrypt_dummy_policy *dummy_policy)
--{
--	struct fs_parameter param = {
--		.type = fs_value_is_string,
--		.string = arg ? (char *)arg : "",
--	};
--	return fscrypt_parse_test_dummy_encryption(&param, dummy_policy) ?:
--		fscrypt_add_test_dummy_key(sb, dummy_policy);
--}
--EXPORT_SYMBOL_GPL(fscrypt_set_test_dummy_encryption);
--
- /**
-  * fscrypt_show_test_dummy_encryption() - show '-o test_dummy_encryption'
-  * @seq: the seq_file to print the option to
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 099b881e63e49..11db6d61d4244 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -284,8 +284,6 @@ int fscrypt_parse_test_dummy_encryption(const struct fs_parameter *param,
- 				    struct fscrypt_dummy_policy *dummy_policy);
- bool fscrypt_dummy_policies_equal(const struct fscrypt_dummy_policy *p1,
- 				  const struct fscrypt_dummy_policy *p2);
--int fscrypt_set_test_dummy_encryption(struct super_block *sb, const char *arg,
--				struct fscrypt_dummy_policy *dummy_policy);
- void fscrypt_show_test_dummy_encryption(struct seq_file *seq, char sep,
- 					struct super_block *sb);
- static inline bool
+ out_free:
+-	kfree(s_ctx);
+-	kfree(fc);
++	if (fc) {
++		ext4_fc_free(fc);
++		kfree(fc);
++	}
+ 	kfree(s_mount_opts);
+ 	return ret;
+ }
 -- 
 2.36.1
 
