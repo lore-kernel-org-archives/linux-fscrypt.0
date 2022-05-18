@@ -2,94 +2,172 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A9910C433EF
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 18 May 2022 22:05:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9D2F6C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 18 May 2022 23:53:35 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229516AbiERWE6 (ORCPT
+        id S231589AbiERXxe (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 18 May 2022 18:04:58 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35242 "EHLO
+        Wed, 18 May 2022 19:53:34 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54846 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229965AbiERWE3 (ORCPT
+        with ESMTP id S229832AbiERXxd (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 18 May 2022 18:04:29 -0400
+        Wed, 18 May 2022 19:53:33 -0400
 Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 940FB4755B;
-        Wed, 18 May 2022 15:01:10 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B3AA319FAC;
+        Wed, 18 May 2022 16:53:31 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 6905B60FC8;
-        Wed, 18 May 2022 22:01:10 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id A9D65C385A9;
-        Wed, 18 May 2022 22:01:09 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id D9D2061762;
+        Wed, 18 May 2022 23:53:29 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id F00AFC34113;
+        Wed, 18 May 2022 23:53:28 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1652911269;
-        bh=Dz5y7AtcgMaq6vy+R0Fpm0/Nxq0RyA35q79peiTxQMY=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=iAGvg+QQ7BZNMzRi3f3bNzJpEXGWBXOaLhnMlMKsgcdv4hp7Gb2+NdnCpsEsp2V7T
-         l0X5pB+LfworHlmVU8DSzqL3eSYGUIpVO2F4/MxuNSCYNfdGYq/oWE3HQIqRekF5bK
-         1t3mT7TfBxHBLgf6e+nKEYbaIG+mCzTG+rduCBWcmAPeeWiR4otHGx9glqhrNa5GNI
-         4doE+49Hot1l8jbQtTYsQVY6Mz3FrBTyLhmAtuYvkV8jhk4Of1ccSHx4GUM86pIkqm
-         lWKP5DONLuHHPILNZxZP6iPdduxJVqlZnY+UuCaKRedA842ptzN2yRSr7gtWFim05r
-         WHLp/YIdOdKHg==
-Date:   Wed, 18 May 2022 15:01:08 -0700
+        s=k20201202; t=1652918009;
+        bh=W4in/ybmcjm+UrJuvAG7UeC7pkJyRJbDj25/2WE1Eh0=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=lOAtpiNFQkTYZE91Q/t5P4je8t/RVIkVfNdzALCn4RoRU4e4sFnMKtE93c6dW/6rZ
+         L//O7wlP73j+497ckrHMFzwwn8p0H6HbGOTHeoaSmWCFZADXvSqBBAH3IExgDuGJ2j
+         uB1z4wbDKYKUKl6H3vD43vI5utDgaLZSwkF30Ap9o6+SAfhV1CU/2O16gwjnaf0/Cx
+         O6WgzKb3DQ/d865dHztAoRmWomCcYWCmZECuR0Rj7/Wbi6yGhj5j6SqbWwrugT3/AZ
+         HNrSCu7xlXphpO/cuvQqNSqP0BdXAPtyBb+rJz/ndUVdzFELKDPmCfCgz5hGua/cDd
+         l/bdVDq9X6gtQ==
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     Zorro Lang <zlang@redhat.com>
-Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-ext4@vger.kernel.org, Lukas Czerner <lczerner@redhat.com>
-Subject: Re: [xfstests PATCH 0/2] update test_dummy_encryption testing in
- ext4/053
-Message-ID: <YoVspJ6NUByHPn3r@sol.localdomain>
-References: <20220501051928.540278-1-ebiggers@kernel.org>
- <20220518141911.zg73znk2o2krxxwk@zlang-mailbox>
- <YoUu60S2AjP2fEOk@sol.localdomain>
- <20220518181607.fpzqmtnaky5jdiuw@zlang-mailbox>
+To:     linux-fsdevel@vger.kernel.org
+Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-xfs@vger.kernel.org, linux-api@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-block@vger.kernel.org,
+        linux-kernel@vger.kernel.org, Keith Busch <kbusch@kernel.org>
+Subject: [RFC PATCH v2 1/7] statx: add I/O alignment information
+Date:   Wed, 18 May 2022 16:50:05 -0700
+Message-Id: <20220518235011.153058-2-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.36.1
+In-Reply-To: <20220518235011.153058-1-ebiggers@kernel.org>
+References: <20220518235011.153058-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20220518181607.fpzqmtnaky5jdiuw@zlang-mailbox>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Zorro, can you fix your email configuration?  Your emails have a
-Mail-Followup-To header that excludes you, so replying doesn't work correctly;
-I had to manually fix the recipients list.  If you're using mutt, you need to
-add 'set followup_to = no' to your muttrc.
+From: Eric Biggers <ebiggers@google.com>
 
-On Thu, May 19, 2022 at 02:16:07AM +0800, Zorro Lang wrote:
-> > > 
-> > > And I saw some discussion under this patchset, and no any RVB, so I'm wondering
-> > > if you are still working/changing on it?
-> > > 
-> > 
-> > I might add a check for kernel version >= 5.19 in patch 1.  Otherwise I'm not
-> > planning any more changes.
-> 
-> Actually I don't think the kernel version check (in fstests) is a good method. Better
-> to check a behavior/feature directly likes those "_require_*" functions.
-> 
-> Why ext4/053 need >=5.12 or even >=5.19, what features restrict that? If some
-> features testing might break the garden image (.out file), we can refer to
-> _link_out_file(). Or even split this case to several small cases, make ext4/053
-> only test old stable behaviors. Then use other cases to test new features,
-> and use _require_$feature_you_test for them (avoid the kernel version
-> restriction).
+Traditionally, the conditions for when DIO (direct I/O) is supported
+were fairly simple: filesystems either supported DIO aligned to the
+block device's logical block size, or didn't support DIO at all.
 
-This has been discussed earlier in this thread as well as on the patch that
-added ext4/053 originally.  ext4/053 has been gated on version >= 5.12 since the
-beginning.  Kernel version checks are certainly bad in general, but ext4/053 is
-a very nit-picky test intended to detect if anything changed, where a change
-does not necessarily mean a bug.  So maybe the kernel version check makes sense
-there.  Lukas, any thoughts about the issues you encountered when running
-ext4/053 on older kernels?
+However, due to filesystem features that have been added over time (e.g,
+data journalling, inline data, encryption, verity, compression,
+checkpoint disabling, log-structured mode), the conditions for when DIO
+is allowed on a file have gotten increasingly complex.  Whether a
+particular file supports DIO, and with what alignment, can depend on
+various file attributes and filesystem mount options, as well as which
+block device(s) the file's data is located on.
 
-If you don't want a >= 5.19 version check for the test_dummy_encryption test
-case as well, then I'd rather treat the kernel patch
-"ext4: only allow test_dummy_encryption when supported" as a bug fix and
-backport it to the LTS kernels.  The patch is fixing the mount option to work
-the way it should have worked originally.  Either that or we just remove the
-test_dummy_encryption test case as Ted suggested.
+XFS has an ioctl XFS_IOC_DIOINFO which exposes this information to
+applications.  However, as discussed
+(https://lore.kernel.org/linux-fsdevel/20220120071215.123274-1-ebiggers@kernel.org/T/#u),
+this ioctl is rarely used and not known to be used outside of
+XFS-specific code.  It also was never intended to indicate when a file
+doesn't support DIO at all, and it only exposes the minimum I/O
+alignment, not the optimal I/O alignment which has been requested too.
 
-- Eric
+Therefore, let's expose this information via statx().  Add the
+STATX_IOALIGN flag and three fields associated with it:
+
+* stx_mem_align_dio: the alignment (in bytes) required for user memory
+  buffers for DIO, or 0 if DIO is not supported on the file.
+
+* stx_offset_align_dio: the alignment (in bytes) required for file
+  offsets and I/O segment lengths for DIO, or 0 if DIO is not supported
+  on the file.  This will only be nonzero if stx_mem_align_dio is
+  nonzero, and vice versa.
+
+* stx_offset_align_optimal: the alignment (in bytes) suggested for file
+  offsets and I/O segment lengths to get optimal performance.  This
+  applies to both DIO and buffered I/O.  It differs from stx_blocksize
+  in that stx_offset_align_optimal will contain the real optimum I/O
+  size, which may be a large value.  In contrast, for compatibility
+  reasons stx_blocksize is the minimum size needed to avoid page cache
+  read/write/modify cycles, which may be much smaller than the optimum
+  I/O size.  For more details about the motivation for this field, see
+  https://lore.kernel.org/r/20220210040304.GM59729@dread.disaster.area
+
+Note that as with other statx() extensions, if STATX_IOALIGN isn't set
+in the returned statx struct, then these new fields won't be filled in.
+This will happen if the filesystem doesn't support STATX_IOALIGN, or if
+the file isn't a regular file.  (It might be supported on block device
+files in the future.)  It might also happen if the caller didn't include
+STATX_IOALIGN in the request mask, since statx() isn't required to
+return information that wasn't requested.
+
+This commit adds the VFS-level plumbing for STATX_IOALIGN.  Individual
+filesystems will still need to add code to support it.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/stat.c                 | 3 +++
+ include/linux/stat.h      | 3 +++
+ include/uapi/linux/stat.h | 9 +++++++--
+ 3 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/fs/stat.c b/fs/stat.c
+index 5c2c94464e8b0..9d477218545b8 100644
+--- a/fs/stat.c
++++ b/fs/stat.c
+@@ -611,6 +611,9 @@ cp_statx(const struct kstat *stat, struct statx __user *buffer)
+ 	tmp.stx_dev_major = MAJOR(stat->dev);
+ 	tmp.stx_dev_minor = MINOR(stat->dev);
+ 	tmp.stx_mnt_id = stat->mnt_id;
++	tmp.stx_mem_align_dio = stat->mem_align_dio;
++	tmp.stx_offset_align_dio = stat->offset_align_dio;
++	tmp.stx_offset_align_optimal = stat->offset_align_optimal;
+ 
+ 	return copy_to_user(buffer, &tmp, sizeof(tmp)) ? -EFAULT : 0;
+ }
+diff --git a/include/linux/stat.h b/include/linux/stat.h
+index 7df06931f25d8..48b8b1ad1567c 100644
+--- a/include/linux/stat.h
++++ b/include/linux/stat.h
+@@ -50,6 +50,9 @@ struct kstat {
+ 	struct timespec64 btime;			/* File creation time */
+ 	u64		blocks;
+ 	u64		mnt_id;
++	u32		mem_align_dio;
++	u32		offset_align_dio;
++	u32		offset_align_optimal;
+ };
+ 
+ #endif
+diff --git a/include/uapi/linux/stat.h b/include/uapi/linux/stat.h
+index 1500a0f58041a..f822b23e81091 100644
+--- a/include/uapi/linux/stat.h
++++ b/include/uapi/linux/stat.h
+@@ -124,9 +124,13 @@ struct statx {
+ 	__u32	stx_dev_minor;
+ 	/* 0x90 */
+ 	__u64	stx_mnt_id;
+-	__u64	__spare2;
++	__u32	stx_mem_align_dio;	/* Memory buffer alignment for direct I/O */
++	__u32	stx_offset_align_dio;	/* File offset alignment for direct I/O */
+ 	/* 0xa0 */
+-	__u64	__spare3[12];	/* Spare space for future expansion */
++	__u32	stx_offset_align_optimal; /* Optimal file offset alignment for I/O */
++	__u32	__spare2;
++	/* 0xa8 */
++	__u64	__spare3[11];	/* Spare space for future expansion */
+ 	/* 0x100 */
+ };
+ 
+@@ -152,6 +156,7 @@ struct statx {
+ #define STATX_BASIC_STATS	0x000007ffU	/* The stuff in the normal stat struct */
+ #define STATX_BTIME		0x00000800U	/* Want/got stx_btime */
+ #define STATX_MNT_ID		0x00001000U	/* Got stx_mnt_id */
++#define STATX_IOALIGN		0x00002000U	/* Want/got IO alignment info */
+ 
+ #define STATX__RESERVED		0x80000000U	/* Reserved for future struct statx expansion */
+ 
+-- 
+2.36.1
+
