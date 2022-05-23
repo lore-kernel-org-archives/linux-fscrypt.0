@@ -2,69 +2,76 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EA877C433F5
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 22 May 2022 02:32:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B5A50C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 23 May 2022 07:24:55 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232830AbiEVCcF (ORCPT
+        id S229530AbiEWHYZ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 21 May 2022 22:32:05 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35692 "EHLO
+        Mon, 23 May 2022 03:24:25 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:59620 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229650AbiEVCcF (ORCPT
+        with ESMTP id S230051AbiEWHXg (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 21 May 2022 22:32:05 -0400
-Received: from outgoing.mit.edu (outgoing-auth-1.mit.edu [18.9.28.11])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E745A34647;
-        Sat, 21 May 2022 19:32:02 -0700 (PDT)
-Received: from cwcc.thunk.org (pool-108-7-220-252.bstnma.fios.verizon.net [108.7.220.252])
-        (authenticated bits=0)
-        (User authenticated as tytso@ATHENA.MIT.EDU)
-        by outgoing.mit.edu (8.14.7/8.12.4) with ESMTP id 24M2VmPC006110
-        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-        Sat, 21 May 2022 22:31:49 -0400
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=mit.edu; s=outgoing;
-        t=1653186710; bh=IzQhsbhHWeNT5Ib9P4izdH+zZDT7w5Gp6o7vfD6cqEc=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References;
-        b=PHsazClU2hpGX3E/Jqyg4YIKR3tKIuWheXKFB2zMUyCNojVe6TaGuh30JWM/79gC5
-         1dfAW06QBPBcjcAXNsMaFwe7q0sSkpuJrML6VkAqzTgIbU6n7jtQYHS4L+Eb9NFRjC
-         6mkTaDEOqTyMNuRS1x/j1i9mWYvmQkpUJWwDmVwGSmel6gm6NkYvDIXIcBlmTBqmhn
-         tZgMq2u+yvm38mivsNTKVS2Xu6S9n/IoyNftK9BpcuTnZqfFkANLJgIVa0xrGH8BV7
-         EJ4AVdcjLmUbLXtTh9z0Sx7sD1WVTcubLULsPP1QGa2oGVqOtDE4bi+PxgJ9Oz/dRZ
-         CXHMCovyuY32g==
-Received: by cwcc.thunk.org (Postfix, from userid 15806)
-        id 9030715C3EC0; Sat, 21 May 2022 22:31:48 -0400 (EDT)
-From:   "Theodore Ts'o" <tytso@mit.edu>
-To:     linux-ext4@vger.kernel.org, Eric Biggers <ebiggers@kernel.org>
-Cc:     "Theodore Ts'o" <tytso@mit.edu>, linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH v4] ext4: only allow test_dummy_encryption when supported
-Date:   Sat, 21 May 2022 22:31:47 -0400
-Message-Id: <165318668323.1718738.16352700096125589456.b4-ty@mit.edu>
-X-Mailer: git-send-email 2.31.0
-In-Reply-To: <20220519204437.61645-1-ebiggers@kernel.org>
-References: <20220519204437.61645-1-ebiggers@kernel.org>
+        Mon, 23 May 2022 03:23:36 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 896F939696;
+        Mon, 23 May 2022 00:15:39 -0700 (PDT)
+Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 769D6B80F10;
+        Mon, 23 May 2022 07:10:17 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id C8469C385A9;
+        Mon, 23 May 2022 07:10:15 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1653289816;
+        bh=IAOOiC06hudRZNZSQ1tFtrdnEBH2mP9eJjRcKNb1ZFo=;
+        h=Date:From:To:Cc:Subject:From;
+        b=WTN7gamih7ocrr+IWwuOXn2dQwM32MoBNyoo6fsBOuIBeQ2w9BaMC3dPEzJHx8h5c
+         T0V9xFB5Hd5qFsxHNbiYYkPXoEBYddEZNttYTAxzCkCL4kHHrhZ8QU2T512xw8zvL/
+         5DSWJJJWLubg5J/jNfg18086HakZKQHOreZQKx4k4Iawl24fccWAgB2ppbB31aG82u
+         hT8I8WXyDf0pXmJRCU9YGtxz4lh/gQx+d/nJ2MHry9G/rsLQbqOkxPBSu9VA5/h8nl
+         bUASg6m+iflTREnbQWwbbsVB9XAS3uutXWismc8+mkiCWhjoh+JhFPZbZwslhzO+6V
+         YfHYrEVkEL84w==
+Date:   Mon, 23 May 2022 00:10:14 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Linus Torvalds <torvalds@linux-foundation.org>
+Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net,
+        linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
+        Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: [GIT PULL] fsverity updates for 5.19
+Message-ID: <YoszVvtG55xJnUJ6@sol.localdomain>
 MIME-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, 19 May 2022 13:44:37 -0700, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> Make the test_dummy_encryption mount option require that the encrypt
-> feature flag be already enabled on the filesystem, rather than
-> automatically enabling it.  Practically, this means that "-O encrypt"
-> will need to be included in MKFS_OPTIONS when running xfstests with the
-> test_dummy_encryption mount option.  (ext4/053 also needs an update.)
-> 
-> [...]
+The following changes since commit 42226c989789d8da4af1de0c31070c96726d990c:
 
-I've replaced the older version of the commit with this one, thanks!
+  Linux 5.18-rc7 (2022-05-15 18:08:58 -0700)
 
-[1/1] ext4: only allow test_dummy_encryption when supported
-      commit: d177c151d74881536aa6b58f450c70fd5a7b6c1a
+are available in the Git repository at:
 
-Best regards,
--- 
-Theodore Ts'o <tytso@mit.edu>
+  https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fsverity-for-linus
+
+for you to fetch changes up to e6af1bb07704b53bad7771db1b05ee17abad11cb:
+
+  fs-verity: Use struct_size() helper in enable_verity() (2022-05-19 09:53:33 -0700)
+
+----------------------------------------------------------------
+
+A couple small cleanups for fs/verity/.
+
+----------------------------------------------------------------
+Zhang Jianhua (2):
+      fs-verity: remove unused parameter desc_size in fsverity_create_info()
+      fs-verity: Use struct_size() helper in enable_verity()
+
+ fs/verity/enable.c           |  4 ++--
+ fs/verity/fsverity_private.h |  6 ++----
+ fs/verity/open.c             | 12 ++++--------
+ fs/verity/read_metadata.c    |  5 ++---
+ 4 files changed, 10 insertions(+), 17 deletions(-)
