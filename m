@@ -2,31 +2,31 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 508B8CCA496
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jun 2022 19:01:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 62218CCA498
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Jun 2022 19:01:55 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S234604AbiFHTBv (ORCPT
+        id S234629AbiFHTBx (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 8 Jun 2022 15:01:51 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51702 "EHLO
+        Wed, 8 Jun 2022 15:01:53 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51736 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S234053AbiFHTBs (ORCPT
+        with ESMTP id S234378AbiFHTBs (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Wed, 8 Jun 2022 15:01:48 -0400
 Received: from linux.microsoft.com (linux.microsoft.com [13.77.154.182])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTP id B33E814009;
-        Wed,  8 Jun 2022 12:01:46 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTP id 1F4193BF8B;
+        Wed,  8 Jun 2022 12:01:47 -0700 (PDT)
 Received: from linuxonhyperv3.guj3yctzbm1etfxqx2vob5hsef.xx.internal.cloudapp.net (linux.microsoft.com [13.77.154.182])
-        by linux.microsoft.com (Postfix) with ESMTPSA id B9A3F20BE675;
-        Wed,  8 Jun 2022 12:01:44 -0700 (PDT)
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com B9A3F20BE675
+        by linux.microsoft.com (Postfix) with ESMTPSA id 4E5E020BE67D;
+        Wed,  8 Jun 2022 12:01:45 -0700 (PDT)
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 4E5E020BE67D
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-        s=default; t=1654714904;
-        bh=f0vSpS6anSX7AZBsr6faYd1/rpmG95KXroudjr7PV6o=;
+        s=default; t=1654714905;
+        bh=bcDRvwHkQ7mJMK4bMPPQgcu3F/EDdN8MgVfDEjoCLjw=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=O7EUIS91Bk1e6w8uIHqQVaQpsJ5HVw0zHbWUobt7AK9lGhTOHrfL2xwqZFAdIuGZz
-         HDrGxcoYFxEwbniLrOeDU4NFz1vGMlOD52yDgD5W/+GSNWHH+f46+PO9A0BHleLvuW
-         aLPNxlo6d4HD2bEfxyXIRafPqy9URPxYWWTtEOWQ=
+        b=GkH0rJDZX9JJsdeC5dqLATtZa0w7zH2aKUwQ459Jmmql7evTSGwFSe9UGs/nDiDez
+         Izo0olK9+gmPd1bxX49O/gm6nW8ETxBYEeLFnXdluukj3qbbZm5OPnNLIunIjtfP+N
+         OxaYkhMyKE6yYxv1IKGkhGR/LWy+ruKVpIZDJXpE=
 From:   Deven Bowers <deven.desai@linux.microsoft.com>
 To:     corbet@lwn.net, zohar@linux.ibm.com, jmorris@namei.org,
         serge@hallyn.com, tytso@mit.edu, ebiggers@kernel.org,
@@ -37,9 +37,9 @@ Cc:     linux-doc@vger.kernel.org, linux-integrity@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-block@vger.kernel.org,
         dm-devel@redhat.com, linux-audit@redhat.com,
         roberto.sassu@huawei.com, linux-kernel@vger.kernel.org
-Subject: [RFC PATCH v8 09/17] ipe: introduce 'boot_verified' as a trust provider
-Date:   Wed,  8 Jun 2022 12:01:21 -0700
-Message-Id: <1654714889-26728-10-git-send-email-deven.desai@linux.microsoft.com>
+Subject: [RFC PATCH v8 14/17] ipe: enable support for fs-verity as a trust provider
+Date:   Wed,  8 Jun 2022 12:01:26 -0700
+Message-Id: <1654714889-26728-15-git-send-email-deven.desai@linux.microsoft.com>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1654714889-26728-1-git-send-email-deven.desai@linux.microsoft.com>
 References: <1654714889-26728-1-git-send-email-deven.desai@linux.microsoft.com>
@@ -47,347 +47,244 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-IPE is designed to provide system level trust guarantees, this usually
-implies that trust starts from bootup with a hardware root of trust,
-which validates the bootloader. After this, the bootloader verifies the
-kernel and the initramfs.
+From: Fan Wu <wufan@linux.microsoft.com>
 
-As there's no currently supported integrity method for initramfs, and
-it's typically already verified by the bootloader, introduce a property
-that causes the first superblock to have an execution to be "pinned",
-which is typically initramfs.
+Enable IPE policy authors to indicate trust for a singular fsverity
+file, identified by the digest information, through "fsverity_digest"
+and all files using fsverity's builtin signatures via
+"fsverity_signature".
 
+This enables file-level integrity claims to be expressed in IPE,
+allowing individual files to be authorized, giving some flexibility
+for policy authors. Such file-level claims are important to be expressed
+for enforcing the integrity of packages, as well as address some of the
+scalability issues in a sole dm-verity based solution (# of loop back
+devices, etc).
+
+This solution cannot be done in userspace as the minimum threat that
+IPE should mitigate is an attacker downloads malicious payload with
+all required dependencies. These dependencies can lack the userspace
+check, bypassing the protection entirely. A similar attack succeeds if
+the userspace component is replaced with a version that does not
+perform the check. As a result, this can only be done in the common
+entry point - the kernel.
+
+Signed-off-by: Fan Wu <wufan@linux.microsoft.com>
 Signed-off-by: Deven Bowers <deven.desai@linux.microsoft.com>
-
 ---
-v2:
-  + No Changes
-
-v3:
-  + Remove useless caching system
-  + Move ipe_load_properties to this match
-  + Minor changes from checkpatch --strict warnings
-
-v4:
-  + Remove comments from headers that was missed previously.
-  + Grammatical corrections.
-
-v5:
-  + No significant changes
-
-v6:
-  + No changes
+v1-v6:
+  + Not present
 
 v7:
-  + Reword and refactor patch 04/12 to [09/16],
-    based on changes in the underlying system.
-  + Add common audit function for boolean values
-  + Use common audit function as implementation.
+  Introduced
 
 v8:
-  + No changes
+  * Undo squash of 08/12, 10/12 - separating drivers/md/ from security/
+  * Use common-audit function for fsverity_signature.
+  + Change fsverity implementation to use fsverity_get_digest
+  + prevent unnecessary copy of fs-verity signature data, instead
+    just check for presence of signature data.
+  + Remove free_inode_security hook, as the digest is now acquired
+    at runtime instead of via LSM blob.
 ---
- security/ipe/Kconfig                 |  2 +
- security/ipe/Makefile                |  1 +
- security/ipe/eval.c                  | 71 ++++++++++++++++++++++++++++
- security/ipe/eval.h                  |  5 ++
- security/ipe/hooks.c                 | 14 ++++++
- security/ipe/hooks.h                 |  2 +
- security/ipe/ipe.c                   |  1 +
- security/ipe/modules.c               | 30 ++++++++++++
- security/ipe/modules/Kconfig         | 20 ++++++++
- security/ipe/modules/Makefile        |  8 ++++
- security/ipe/modules/boot_verified.c | 26 ++++++++++
- security/ipe/modules/ipe_module.h    |  3 ++
- 12 files changed, 183 insertions(+)
- create mode 100644 security/ipe/modules/Kconfig
- create mode 100644 security/ipe/modules/Makefile
- create mode 100644 security/ipe/modules/boot_verified.c
+ security/ipe/eval.c                       |  1 +
+ security/ipe/eval.h                       |  5 +++
+ security/ipe/hooks.c                      | 29 +++++++++++++++++
+ security/ipe/hooks.h                      |  5 +++
+ security/ipe/ipe.c                        |  7 ++++
+ security/ipe/ipe.h                        |  1 +
+ security/ipe/modules/Kconfig              | 23 +++++++++++++
+ security/ipe/modules/Makefile             |  2 ++
+ security/ipe/modules/fsverity_digest.c    | 39 +++++++++++++++++++++++
+ security/ipe/modules/fsverity_signature.c | 34 ++++++++++++++++++++
+ 10 files changed, 146 insertions(+)
+ create mode 100644 security/ipe/modules/fsverity_digest.c
+ create mode 100644 security/ipe/modules/fsverity_signature.c
 
-diff --git a/security/ipe/Kconfig b/security/ipe/Kconfig
-index 1ad2f34b98ec..69345fa49be5 100644
---- a/security/ipe/Kconfig
-+++ b/security/ipe/Kconfig
-@@ -69,4 +69,6 @@ config IPE_AUDIT_HASH_ALG
- 	default "sha384" if IPE_AUDIT_HASH_SHA384
- 	default "sha512" if IPE_AUDIT_HASH_SHA512
- 
-+source "security/ipe/modules/Kconfig"
-+
- endif
-diff --git a/security/ipe/Makefile b/security/ipe/Makefile
-index 25a7d7c8f07c..0d970236efc4 100644
---- a/security/ipe/Makefile
-+++ b/security/ipe/Makefile
-@@ -13,6 +13,7 @@ obj-$(CONFIG_SECURITY_IPE) += \
- 	fs.o \
- 	hooks.o \
- 	ipe.o \
-+	modules/ \
- 	modules.o \
- 	parsers/ \
- 	parsers.o \
 diff --git a/security/ipe/eval.c b/security/ipe/eval.c
-index eafa670558e3..ccf9b843040b 100644
+index 9b29d83cd466..e8205a6fce44 100644
 --- a/security/ipe/eval.c
 +++ b/security/ipe/eval.c
-@@ -11,10 +11,62 @@
- #include "modules/ipe_module.h"
- #include "audit.h"
- 
-+#include <linux/fs.h>
-+#include <linux/types.h>
- #include <linux/slab.h>
- #include <linux/file.h>
- #include <linux/sched.h>
- #include <linux/rcupdate.h>
-+#include <linux/spinlock.h>
-+
-+static struct super_block *pinned_sb;
-+static DEFINE_SPINLOCK(pin_lock);
-+
-+#define FILE_SUPERBLOCK(f) ((f)->f_path.mnt->mnt_sb)
-+
-+/**
-+ * pin_sb: pin the underlying superblock of @f, marking it as trusted
-+ * @f: Supplies a file structure to source the super_block from.
-+ */
-+static void pin_sb(const struct file *f)
-+{
-+	if (!f)
-+		return;
-+
-+	spin_lock(&pin_lock);
-+
-+	if (pinned_sb)
-+		goto out;
-+
-+	pinned_sb = FILE_SUPERBLOCK(f);
-+
-+out:
-+	spin_unlock(&pin_lock);
-+}
-+
-+/**
-+ * from_pinned: determine whether @f is source from the pinned super_block.
-+ * @f: Supplies a file structure to check against the pinned super_block.
-+ *
-+ * Return:
-+ * true - @f is sourced from the pinned super_block
-+ * false - @f is not sourced from the pinned super_block
-+ */
-+static bool from_pinned(const struct file *f)
-+{
-+	bool rv;
-+
-+	if (!f)
-+		return false;
-+
-+	spin_lock(&pin_lock);
-+
-+	rv = !IS_ERR_OR_NULL(pinned_sb) && pinned_sb == FILE_SUPERBLOCK(f);
-+
-+	spin_unlock(&pin_lock);
-+
-+	return rv;
-+}
- 
- /**
-  * build_ctx: Build an evaluation context.
-@@ -40,6 +92,7 @@ static struct ipe_eval_ctx *build_ctx(const struct file *file,
- 	ctx->file = file;
- 	ctx->op = op;
+@@ -95,6 +95,7 @@ static struct ipe_eval_ctx *build_ctx(const struct file *file,
  	ctx->ci_ctx = ipe_current_ctx();
-+	ctx->from_init_sb = from_pinned(file);
- 
- 	return ctx;
- }
-@@ -148,6 +201,9 @@ int ipe_process_event(const struct file *file, enum ipe_operation op)
- 	int rc = 0;
- 	struct ipe_eval_ctx *ctx = NULL;
- 
-+	if (op == ipe_operation_exec)
-+		pin_sb(file);
-+
- 	ctx = build_ctx(file, op);
- 	if (IS_ERR(ctx))
- 		return PTR_ERR(ctx);
-@@ -157,3 +213,18 @@ int ipe_process_event(const struct file *file, enum ipe_operation op)
- 	free_ctx(ctx);
- 	return rc;
- }
-+
-+/**
-+ * ipe_invalidate_pinned_sb: if @mnt_sb is the pinned superblock, ensure
-+ *			     nothing can match it again.
-+ * @mnt_sb: super_block to check against the pinned super_block
-+ */
-+void ipe_invalidate_pinned_sb(const struct super_block *mnt_sb)
-+{
-+	spin_lock(&pin_lock);
-+
-+	if (!IS_ERR_OR_NULL(pinned_sb) && mnt_sb == pinned_sb)
-+		pinned_sb = ERR_PTR(-EIO);
-+
-+	spin_unlock(&pin_lock);
-+}
+ 	ctx->from_init_sb = from_pinned(file);
+ 	if (file) {
++		ctx->ipe_inode = ipe_inode(file->f_inode);
+ 		if (FILE_BLOCK_DEV(file))
+ 			ctx->ipe_bdev = ipe_bdev(FILE_BLOCK_DEV(file));
+ 	}
 diff --git a/security/ipe/eval.h b/security/ipe/eval.h
-index 50bc16b0be25..f195671eaa8f 100644
+index 57b7b2b424f8..541251125e8e 100644
 --- a/security/ipe/eval.h
 +++ b/security/ipe/eval.h
-@@ -7,6 +7,7 @@
- #define IPE_EVAL_H
- 
- #include <linux/file.h>
-+#include <linux/types.h>
- 
- #include "ctx.h"
- #include "hooks.h"
-@@ -17,6 +18,8 @@ struct ipe_eval_ctx {
- 
- 	const struct file *file;
- 	struct ipe_context *ci_ctx;
-+
-+	bool from_init_sb;
+@@ -22,6 +22,10 @@ struct ipe_bdev {
+ 	const char     *digest_algo;
  };
  
- enum ipe_match {
-@@ -28,4 +31,6 @@ enum ipe_match {
- 
- int ipe_process_event(const struct file *file, enum ipe_operation op);
- 
-+void ipe_invalidate_pinned_sb(const struct super_block *mnt_sb);
++struct ipe_inode {
++	bool fs_verity_signed;
++};
 +
- #endif /* IPE_EVAL_H */
+ struct ipe_eval_ctx {
+ 	enum ipe_operation op;
+ 
+@@ -29,6 +33,7 @@ struct ipe_eval_ctx {
+ 	struct ipe_context *ci_ctx;
+ 
+ 	const struct ipe_bdev *ipe_bdev;
++	const struct ipe_inode *ipe_inode;
+ 
+ 	bool from_init_sb;
+ };
 diff --git a/security/ipe/hooks.c b/security/ipe/hooks.c
-index d20de25bbd40..4dc7b0c0fd31 100644
+index 1072ee5bb8f6..7c99afad4924 100644
 --- a/security/ipe/hooks.c
 +++ b/security/ipe/hooks.c
-@@ -202,3 +202,17 @@ int ipe_kernel_load_data(enum kernel_load_data_id id, bool contents)
- 	WARN(op == ipe_operation_max, "no rule setup for enum %d", id);
- 	return ipe_process_event(NULL, op);
+@@ -267,3 +267,32 @@ int ipe_bdev_setsecurity(struct block_device *bdev, const char *key,
+ 
+ 	return -EOPNOTSUPP;
  }
 +
 +/**
-+ * ipe_bdev_free_security: free nested structures within IPE's LSM blob
-+ *			   in super_blocks
-+ * @mnt_sb: Supplies a pointer to a super_block that contains the structure
-+ *	    to free.
++ * ipe_inode_setsecurity: Sets the a certain field of a inode security
++ *			 blob, based on @key.
++ * @inode: The inode to source the security blob from.
++ * @name: The name representing the information to be stored.
++ * @value: The value to be stored.
++ * @size: The size of @value.
++ * @flags: unused
 + *
-+ * IPE does not have any structures with mnt_sb, but uses this hook to
-+ * invalidate a pinned super_block.
-+ */
-+void ipe_sb_free_security(struct super_block *mnt_sb)
-+{
-+	ipe_invalidate_pinned_sb(mnt_sb);
-+}
-diff --git a/security/ipe/hooks.h b/security/ipe/hooks.h
-index fa9e0657bd64..43d5b2fe67fd 100644
---- a/security/ipe/hooks.h
-+++ b/security/ipe/hooks.h
-@@ -29,4 +29,6 @@ int ipe_kernel_read_file(struct file *file, enum kernel_read_file_id id,
- 
- int ipe_kernel_load_data(enum kernel_load_data_id id, bool contents);
- 
-+void ipe_sb_free_security(struct super_block *mnt_sb);
-+
- #endif /* IPE_HOOKS_H */
-diff --git a/security/ipe/ipe.c b/security/ipe/ipe.c
-index fca7019ca53c..d52ad248dfd3 100644
---- a/security/ipe/ipe.c
-+++ b/security/ipe/ipe.c
-@@ -32,6 +32,7 @@ static struct security_hook_list ipe_hooks[] __lsm_ro_after_init = {
- 	LSM_HOOK_INIT(file_mprotect, ipe_file_mprotect),
- 	LSM_HOOK_INIT(kernel_read_file, ipe_kernel_read_file),
- 	LSM_HOOK_INIT(kernel_load_data, ipe_kernel_load_data),
-+	LSM_HOOK_INIT(sb_free_security, ipe_sb_free_security),
- };
- 
- /**
-diff --git a/security/ipe/modules.c b/security/ipe/modules.c
-index fb100c14cce5..30346f7ad35c 100644
---- a/security/ipe/modules.c
-+++ b/security/ipe/modules.c
-@@ -107,3 +107,33 @@ int ipe_register_module(struct ipe_module *m)
- 
- 	return 0;
- }
-+
-+/**
-+ * ipe_bool_parse: parse a boolean in IPE's policy and associate
-+ *		   it as @value in IPE's policy.
-+ * @valstr: Supplies the string parsed from the policy
-+ * @value: Supplies a pointer to be populated with the result.
-+ *
-+ * Modules can use this function for simple true/false values
-+ * instead of defining their own.
++ * Saves fsverity signature & digest into inode security blob
 + *
 + * Return:
 + * 0 - OK
 + * !0 - Error
 + */
-+int ipe_bool_parse(const char *valstr, void **value)
++int ipe_inode_setsecurity(struct inode *inode, const char *name,
++			  const void *value, size_t size,
++			  int flags)
 +{
-+	if (!strcmp(valstr, "TRUE"))
-+		*value = (void *)true;
-+	else if (!strcmp(valstr, "FALSE"))
-+		*value = (void *)false;
-+	else
-+		return -EBADMSG;
++	struct ipe_inode *inode_sec = ipe_inode(inode);
 +
-+	return 0;
++	if (!strcmp(name, FS_VERITY_INODE_SEC_NAME)) {
++		inode_sec->fs_verity_signed = size > 0 && value;
++		return 0;
++	}
++
++	return -EOPNOTSUPP;
++}
+diff --git a/security/ipe/hooks.h b/security/ipe/hooks.h
+index 0d1589e47f8f..1edcc91d6d33 100644
+--- a/security/ipe/hooks.h
++++ b/security/ipe/hooks.h
+@@ -10,6 +10,7 @@
+ #include <linux/sched.h>
+ #include <linux/binfmts.h>
+ #include <linux/security.h>
++#include <linux/fsverity.h>
+ #include <linux/device-mapper.h>
+ 
+ int ipe_task_alloc(struct task_struct *task,
+@@ -37,4 +38,8 @@ void ipe_bdev_free_security(struct block_device *bdev);
+ int ipe_bdev_setsecurity(struct block_device *bdev, const char *key,
+ 			 const void *value, size_t len);
+ 
++int ipe_inode_setsecurity(struct inode *inode, const char *name,
++			  const void *value, size_t size,
++			  int flags);
++
+ #endif /* IPE_HOOKS_H */
+diff --git a/security/ipe/ipe.c b/security/ipe/ipe.c
+index 398014ac6004..caf0ebf8381a 100644
+--- a/security/ipe/ipe.c
++++ b/security/ipe/ipe.c
+@@ -24,6 +24,7 @@ bool ipe_enabled;
+ static struct lsm_blob_sizes ipe_blobs __lsm_ro_after_init = {
+ 	.lbs_task = sizeof(struct ipe_context __rcu *),
+ 	.lbs_bdev = sizeof(struct ipe_bdev),
++	.lbs_inode = sizeof(struct ipe_inode),
+ };
+ 
+ struct ipe_bdev *ipe_bdev(struct block_device *b)
+@@ -31,6 +32,11 @@ struct ipe_bdev *ipe_bdev(struct block_device *b)
+ 	return b->security + ipe_blobs.lbs_bdev;
+ }
+ 
++struct ipe_inode *ipe_inode(const struct inode *inode)
++{
++	return inode->i_security + ipe_blobs.lbs_inode;
 +}
 +
-+void ipe_bool_audit(struct audit_buffer *ab, const void *val)
-+{
-+	audit_log_format(ab, "%s", ((bool)val) ? "TRUE" : "FALSE");
-+}
+ static struct security_hook_list ipe_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(task_alloc, ipe_task_alloc),
+ 	LSM_HOOK_INIT(task_free, ipe_task_free),
+@@ -42,6 +48,7 @@ static struct security_hook_list ipe_hooks[] __lsm_ro_after_init = {
+ 	LSM_HOOK_INIT(sb_free_security, ipe_sb_free_security),
+ 	LSM_HOOK_INIT(bdev_free_security, ipe_bdev_free_security),
+ 	LSM_HOOK_INIT(bdev_setsecurity, ipe_bdev_setsecurity),
++	LSM_HOOK_INIT(inode_setsecurity, ipe_inode_setsecurity),
+ };
+ 
+ /**
+diff --git a/security/ipe/ipe.h b/security/ipe/ipe.h
+index df2b56d8b5e9..cd7e5c1bb343 100644
+--- a/security/ipe/ipe.h
++++ b/security/ipe/ipe.h
+@@ -23,5 +23,6 @@ extern struct ipe_parser __start_ipe_parsers[], __end_ipe_parsers[];
+ extern struct ipe_module __start_ipe_modules[], __end_ipe_modules[];
+ 
+ struct ipe_bdev *ipe_bdev(struct block_device *b);
++struct ipe_inode *ipe_inode(const struct inode *inode);
+ 
+ #endif /* IPE_H */
 diff --git a/security/ipe/modules/Kconfig b/security/ipe/modules/Kconfig
-new file mode 100644
-index 000000000000..fad96ba534e2
---- /dev/null
+index a6ea06cf0737..8f823a1edf96 100644
+--- a/security/ipe/modules/Kconfig
 +++ b/security/ipe/modules/Kconfig
-@@ -0,0 +1,20 @@
-+
-+menu "IPE Trust Providers"
-+
-+config IPE_PROP_BOOT_VERIFIED
-+	bool "Enable trust for initramfs"
-+	depends on SECURITY_IPE
-+	default N
+@@ -40,4 +40,27 @@ config IPE_PROP_DM_VERITY_ROOTHASH
+ 
+ 	  If unsure, answer Y.
+ 
++config IPE_PROP_FS_VERITY_SIGNATURE
++	bool "Enable property for signed fs-verity files"
++	depends on FS_VERITY_BUILTIN_SIGNATURES
 +	help
-+	  This option enables the property 'boot_verified' in IPE policy.
-+	  This property 'pins' the initial superblock when something
-+	  is evaluated as an execution. This property will evaluate
-+	  to true when the file being evaluated originates from this
-+	  superblock.
++	  This option enables IPE's integration with FSVerity's
++	  signed hashes. This enables the usage of the property,
++	  "fsverity_signature" in IPE's policy.
 +
-+	  This property is useful to authorize a signed initramfs.
++	  if unsure, answer Y.
 +
-+	  If unsure, answer N.
++config IPE_PROP_FS_VERITY_DIGEST
++	bool "Enable property for authorizing fs-verity files via digest"
++	depends on FS_VERITY
++	help
++	  This option enables IPE's integration with FSVerity.
++	  This enables the usage of the property "fsverity_digest" in IPE's
++	  policy. This property allows authorization or revocation via a
++	  a hex-string representing the digest of a fsverity file.
++
++	  if unsure, answer Y.
 +
 +
-+endmenu
++
+ endmenu
 diff --git a/security/ipe/modules/Makefile b/security/ipe/modules/Makefile
-new file mode 100644
-index 000000000000..e0045ec65434
---- /dev/null
+index 84fadce85193..890440b9050f 100644
+--- a/security/ipe/modules/Makefile
 +++ b/security/ipe/modules/Makefile
-@@ -0,0 +1,8 @@
-+# SPDX-License-Identifier: GPL-2.0
-+#
-+# Copyright (C) Microsoft Corporation. All rights reserved.
-+#
-+# Makefile for building the IPE module as part of the kernel tree.
-+#
-+
-+obj-$(CONFIG_IPE_PROP_BOOT_VERIFIED) += boot_verified.o
-diff --git a/security/ipe/modules/boot_verified.c b/security/ipe/modules/boot_verified.c
+@@ -8,3 +8,5 @@
+ obj-$(CONFIG_IPE_PROP_BOOT_VERIFIED) += boot_verified.o
+ obj-$(CONFIG_IPE_PROP_DM_VERITY_SIGNATURE) += dmverity_signature.o
+ obj-$(CONFIG_IPE_PROP_DM_VERITY_ROOTHASH) += dmverity_roothash.o
++obj-$(CONFIG_IPE_PROP_FS_VERITY_SIGNATURE) += fsverity_signature.o
++obj-$(CONFIG_IPE_PROP_FS_VERITY_DIGEST) += fsverity_digest.o
+diff --git a/security/ipe/modules/fsverity_digest.c b/security/ipe/modules/fsverity_digest.c
 new file mode 100644
-index 000000000000..6b12146263af
+index 000000000000..c3e7998393f5
 --- /dev/null
-+++ b/security/ipe/modules/boot_verified.c
-@@ -0,0 +1,26 @@
++++ b/security/ipe/modules/fsverity_digest.c
+@@ -0,0 +1,39 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Copyright (C) Microsoft Corporation. All rights reserved.
@@ -397,37 +294,76 @@ index 000000000000..6b12146263af
 +
 +#include <linux/fs.h>
 +#include <linux/types.h>
-+#include <linux/audit.h>
++#include <linux/fsverity.h>
++#include <crypto/hash_info.h>
 +
-+static bool bv_eval(const struct ipe_eval_ctx *ctx, const void *val)
++static bool evaluate(const struct ipe_eval_ctx *ctx, const void *val)
 +{
-+	bool expect = (bool)val;
++	enum hash_algo alg;
++	u8 digest[FS_VERITY_MAX_DIGEST_SIZE];
++	struct inode *ino;
 +
-+	return expect == ctx->from_init_sb;
++	if (!ctx->file)
++		return false;
++
++	ino = file_inode(ctx->file);
++	if (!ino)
++		return false;
++
++	if (fsverity_get_digest(ino, digest, &alg))
++		return false;
++
++	return ipe_digest_eval(val, digest, hash_digest_size[alg], hash_algo_name[alg]);
 +}
 +
-+IPE_MODULE(bv) = {
-+	.name = "boot_verified",
++IPE_MODULE(fsv_digest) = {
++	.name = "fsverity_digest",
++	.version = 1,
++	.parse = ipe_digest_parse,
++	.free = ipe_digest_free,
++	.eval = evaluate,
++	.audit = ipe_digest_audit,
++};
+diff --git a/security/ipe/modules/fsverity_signature.c b/security/ipe/modules/fsverity_signature.c
+new file mode 100644
+index 000000000000..26442af0a2ba
+--- /dev/null
++++ b/security/ipe/modules/fsverity_signature.c
+@@ -0,0 +1,34 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++
++#include "ipe_module.h"
++
++#include <linux/fs.h>
++#include <linux/types.h>
++#include <linux/slab.h>
++#include <linux/audit.h>
++#include <linux/mount.h>
++
++static bool evaluate(const struct ipe_eval_ctx *ctx, const void *value)
++{
++	bool expect = (bool)value;
++
++	if (!ctx->file || !IS_VERITY(ctx->file->f_inode))
++		return false;
++
++	if (!ctx->ipe_inode)
++		return false;
++
++	return (!!ctx->ipe_inode->fs_verity_signed) == expect;
++}
++
++IPE_MODULE(fsvs) = {
++	.name = "fsverity_signature",
 +	.version = 1,
 +	.parse = ipe_bool_parse,
 +	.free = NULL,
-+	.eval = bv_eval,
++	.eval = evaluate,
 +	.audit = ipe_bool_audit,
 +};
-diff --git a/security/ipe/modules/ipe_module.h b/security/ipe/modules/ipe_module.h
-index 1381ab977da5..5255a57c4784 100644
---- a/security/ipe/modules/ipe_module.h
-+++ b/security/ipe/modules/ipe_module.h
-@@ -9,6 +9,9 @@
- #include <linux/audit.h>
- #include "../eval.h"
- 
-+int ipe_bool_parse(const char *valstr, void **value);
-+void ipe_bool_audit(struct audit_buffer *ab, const void *val);
-+
- /**
-  * ipe_module: definition of an extensible module for IPE properties.
-  *	       These structures are used to implement 'key=value' pairs
 -- 
 2.25.1
 
