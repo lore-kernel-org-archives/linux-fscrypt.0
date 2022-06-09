@@ -2,34 +2,35 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 75846CCA473
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Jun 2022 12:34:05 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 992AAC43334
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Jun 2022 12:34:07 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S245475AbiFIMeE (ORCPT
+        id S245372AbiFIMeF (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 9 Jun 2022 08:34:04 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53542 "EHLO
+        Thu, 9 Jun 2022 08:34:05 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54582 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S245363AbiFIMeA (ORCPT
+        with ESMTP id S245554AbiFIMeC (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 9 Jun 2022 08:34:00 -0400
+        Thu, 9 Jun 2022 08:34:02 -0400
 Received: from smtp3.ccs.ornl.gov (smtp3.ccs.ornl.gov [160.91.203.39])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A6AE622BC2
-        for <linux-fscrypt@vger.kernel.org>; Thu,  9 Jun 2022 05:33:47 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 30088237C6
+        for <linux-fscrypt@vger.kernel.org>; Thu,  9 Jun 2022 05:33:52 -0700 (PDT)
 Received: from star.ccs.ornl.gov (star.ccs.ornl.gov [160.91.202.134])
-        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 51DBAEFC;
+        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 56F15EFE;
         Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
 Received: by star.ccs.ornl.gov (Postfix, from userid 2004)
-        id 4FA1BD43AC; Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
+        id 55D8CD438A; Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
 From:   James Simmons <jsimmons@infradead.org>
 To:     Eric Biggers <ebiggers@google.com>,
         Andreas Dilger <adilger@whamcloud.com>,
         NeilBrown <neilb@suse.de>
-Cc:     linux-fscrypt@vger.kernel.org, Lai Siyao <lai.siyao@whamcloud.com>,
+Cc:     linux-fscrypt@vger.kernel.org,
+        Alexey Lyashkov <alexey.lyashkov@hpe.com>,
         James Simmons <jsimmons@infradead.org>
-Subject: [PATCH 13/18] lustre: llite: access lli_lsm_md with lock in all places
-Date:   Thu,  9 Jun 2022 08:33:09 -0400
-Message-Id: <1654777994-29806-14-git-send-email-jsimmons@infradead.org>
+Subject: [PATCH 15/18] lnet: selftest: improve lnet_selftest speed
+Date:   Thu,  9 Jun 2022 08:33:11 -0400
+Message-Id: <1654777994-29806-16-git-send-email-jsimmons@infradead.org>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1654777994-29806-1-git-send-email-jsimmons@infradead.org>
 References: <1654777994-29806-1-git-send-email-jsimmons@infradead.org>
@@ -37,192 +38,226 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Lai Siyao <lai.siyao@whamcloud.com>
+From: Alexey Lyashkov <alexey.lyashkov@hpe.com>
 
-lli_lsm_md should be accessed with lock in all places. Among all the
-changes, ll_rease_page() is inside lock already, except statahead
-code.
+lets replace a global spinlock with atomic variables,
+to avoid cpu power limit in testing.
 
-WC-bug-id: https://jira.whamcloud.com/browse/LU-15284
-Lustre-commit: 1dfae156d1dbc11cf ("LU-15284 llite: access lli_lsm_md with lock in all places")
-Signed-off-by: Lai Siyao <lai.siyao@whamcloud.com>
-Reviewed-on: https://review.whamcloud.com/46355
-Reviewed-by: Mike Pershin <mpershin@whamcloud.com>
-Reviewed-by: John L. Hammond <jhammond@whamcloud.com>
+HPE-bug-id: LUS-10812
+WC-bug-id: https://jira.whamcloud.com/browse/LU-15718
+Lustre-commit: dd5aa640781d8c6dc ("LU-15718 lnet: improve lnet_selftest speed")
+Signed-off-by: Alexey Lyashkov <alexey.lyashkov@hpe.com>
+Reviewed-on: https://review.whamcloud.com/47002
+Reviewed-by: Cyril Bordage <cbordage@whamcloud.com>
+Reviewed-by: Chris Horn <chris.horn@hpe.com>
 Reviewed-by: Oleg Drokin <green@whamcloud.com>
 Signed-off-by: James Simmons <jsimmons@infradead.org>
 ---
- fs/lustre/llite/dir.c            |  6 +++---
- fs/lustre/llite/file.c           |  8 +++++---
- fs/lustre/llite/llite_internal.h | 17 +++++++++++++++--
- fs/lustre/llite/llite_lib.c      | 20 +++++++++++---------
- fs/lustre/llite/namei.c          |  7 +++++--
- fs/lustre/llite/statahead.c      |  2 ++
- fs/lustre/lmv/lmv_obd.c          |  3 ++-
- 7 files changed, 43 insertions(+), 20 deletions(-)
+ net/lnet/selftest/rpc.c      | 105 ++++++++++++++++++++++++-------------------
+ net/lnet/selftest/selftest.h |   1 -
+ 2 files changed, 58 insertions(+), 48 deletions(-)
 
-diff --git a/fs/lustre/llite/dir.c b/fs/lustre/llite/dir.c
-index cfd8184..29d7e44 100644
---- a/fs/lustre/llite/dir.c
-+++ b/fs/lustre/llite/dir.c
-@@ -162,11 +162,11 @@ void ll_release_page(struct inode *inode, struct page *page, bool remove)
+diff --git a/net/lnet/selftest/rpc.c b/net/lnet/selftest/rpc.c
+index 17277b8..c376019 100644
+--- a/net/lnet/selftest/rpc.c
++++ b/net/lnet/selftest/rpc.c
+@@ -50,15 +50,41 @@ enum srpc_state {
+ 	SRPC_STATE_STOPPING,
+ };
+ 
++enum rpc_counter_32 {
++	SRPC_ERROR,
++	SRPC_RPC_SENT,
++	SRPC_RPC_RCVD,
++	SRPC_RPC_DROP,
++	SRPC_RPC_EXPIRED,
++	SRPC_COUNTER32_MAX,
++};
++
++enum rpc_counter_64 {
++	SRPC_BULK_GET,
++	SRPC_BULK_PUT,
++	SRPC_COUNTER64_MAX,
++};
++
+ static struct smoketest_rpc {
+-	spinlock_t	 rpc_glock;	/* global lock */
+-	struct srpc_service	*rpc_services[SRPC_SERVICE_MAX_ID + 1];
+-	lnet_handler_t		 rpc_lnet_handler; /* _the_ LNet event queue */
+-	enum srpc_state	 rpc_state;
+-	struct srpc_counters	 rpc_counters;
+-	u64		 rpc_matchbits;	/* matchbits counter */
++	spinlock_t		rpc_glock;	/* global lock */
++	struct srpc_service    *rpc_services[SRPC_SERVICE_MAX_ID + 1];
++	lnet_handler_t		rpc_lnet_handler; /* _the_ LNet event queue */
++	enum srpc_state		rpc_state;
++	struct srpc_counters	rpc_counters;
++	atomic_t		rpc_counters32[SRPC_COUNTER32_MAX];
++	atomic64_t		rpc_counters64[SRPC_COUNTER64_MAX];
++	atomic64_t		rpc_matchbits;	/* matchbits counter */
+ } srpc_data;
+ 
++#define RPC_STAT32(a) \
++	srpc_data.rpc_counters32[(a)]
++
++#define GET_RPC_STAT32(a) \
++	atomic_read(&srpc_data.rpc_counters32[(a)])
++
++#define GET_RPC_STAT64(a) \
++	atomic64_read(&srpc_data.rpc_counters64[(a)])
++
+ static inline int
+ srpc_serv_portal(int svc_id)
  {
- 	kunmap(page);
+@@ -69,18 +95,17 @@ enum srpc_state {
+ /* forward ref's */
+ void srpc_handle_rpc(struct swi_workitem *wi);
  
--	/*
--	 * Always remove the page for striped dir, because the page is
-+	/* Always remove the page for striped dir, because the page is
- 	 * built from temporarily in LMV layer
- 	 */
--	if (inode && ll_dir_striped(inode)) {
-+	if (inode && S_ISDIR(inode->i_mode) &&
-+	    lmv_dir_striped(ll_i2info(inode)->lli_lsm_md)) {
- 		__free_page(page);
- 		return;
- 	}
-diff --git a/fs/lustre/llite/file.c b/fs/lustre/llite/file.c
-index 1ac3e4f..30f522b 100644
---- a/fs/lustre/llite/file.c
-+++ b/fs/lustre/llite/file.c
-@@ -5066,12 +5066,14 @@ static int ll_merge_md_attr(struct inode *inode)
- 	struct cl_attr attr = { 0 };
- 	int rc;
+-void srpc_get_counters(struct srpc_counters *cnt)
+-{
+-	spin_lock(&srpc_data.rpc_glock);
+-	*cnt = srpc_data.rpc_counters;
+-	spin_unlock(&srpc_data.rpc_glock);
+-}
  
--	LASSERT(lli->lli_lsm_md);
--
--	if (!lmv_dir_striped(lli->lli_lsm_md))
-+	if (!lli->lli_lsm_md)
- 		return 0;
- 
- 	down_read(&lli->lli_lsm_sem);
-+	if (!lmv_dir_striped(lli->lli_lsm_md)) {
-+		up_read(&lli->lli_lsm_sem);
-+		return 0;
-+	}
- 	rc = md_merge_attr(ll_i2mdexp(inode), lli->lli_lsm_md, &attr,
- 			   ll_md_blocking_ast);
- 	up_read(&lli->lli_lsm_sem);
-diff --git a/fs/lustre/llite/llite_internal.h b/fs/lustre/llite/llite_internal.h
-index f51ab19..bc50169 100644
---- a/fs/lustre/llite/llite_internal.h
-+++ b/fs/lustre/llite/llite_internal.h
-@@ -1373,9 +1373,22 @@ static inline struct lu_fid *ll_inode2fid(struct inode *inode)
- 
- static inline bool ll_dir_striped(struct inode *inode)
+-void srpc_set_counters(const struct srpc_counters *cnt)
++void srpc_get_counters(struct srpc_counters *cnt)
  {
-+	struct ll_inode_info *lli;
-+	bool rc;
+-	spin_lock(&srpc_data.rpc_glock);
+-	srpc_data.rpc_counters = *cnt;
+-	spin_unlock(&srpc_data.rpc_glock);
++	cnt->errors = GET_RPC_STAT32(SRPC_ERROR);
++	cnt->rpcs_sent = GET_RPC_STAT32(SRPC_RPC_SENT);
++	cnt->rpcs_rcvd = GET_RPC_STAT32(SRPC_RPC_RCVD);
++	cnt->rpcs_dropped = GET_RPC_STAT32(SRPC_RPC_DROP);
++	cnt->rpcs_expired = GET_RPC_STAT32(SRPC_RPC_EXPIRED);
 +
- 	LASSERT(inode);
--	return S_ISDIR(inode->i_mode) &&
--	       lmv_dir_striped(ll_i2info(inode)->lli_lsm_md);
-+	if (!S_ISDIR(inode->i_mode))
-+		return false;
-+
-+	lli = ll_i2info(inode);
-+	if (!lli->lli_lsm_md)
-+		return false;
-+
-+	down_read(&lli->lli_lsm_sem);
-+	rc = lmv_dir_striped(lli->lli_lsm_md);
-+	up_read(&lli->lli_lsm_sem);
-+
-+	return rc;
++	cnt->bulk_get = GET_RPC_STAT64(SRPC_BULK_GET);
++	cnt->bulk_put = GET_RPC_STAT64(SRPC_BULK_PUT);
  }
  
- static inline loff_t ll_file_maxbytes(struct inode *inode)
-diff --git a/fs/lustre/llite/llite_lib.c b/fs/lustre/llite/llite_lib.c
-index ad77ef0..99ab9ac 100644
---- a/fs/lustre/llite/llite_lib.c
-+++ b/fs/lustre/llite/llite_lib.c
-@@ -1626,23 +1626,25 @@ static int ll_update_lsm_md(struct inode *inode, struct lustre_md *md)
- 	}
- 
- 	rc = ll_init_lsm_md(inode, md);
--	up_write(&lli->lli_lsm_sem);
--
--	if (rc)
-+	if (rc) {
-+		up_write(&lli->lli_lsm_sem);
- 		return rc;
-+	}
-+
-+	/* md_merge_attr() may take long, since lsm is already set, switch to
-+	 * read lock.
-+	 */
-+	downgrade_write(&lli->lli_lsm_sem);
- 
- 	/* set md->lmv to NULL, so the following free lustre_md will not free
- 	 * this lsm.
- 	 */
- 	md->lmv = NULL;
- 
--	/* md_merge_attr() may take long, since lsm is already set, switch to
--	 * read lock.
--	 */
--	down_read(&lli->lli_lsm_sem);
--
--	if (!lmv_dir_striped(lli->lli_lsm_md))
-+	if (!lmv_dir_striped(lli->lli_lsm_md)) {
-+		rc = 0;
- 		goto unlock;
-+	}
- 
- 	attr = kzalloc(sizeof(*attr), GFP_NOFS);
- 	if (!attr) {
-diff --git a/fs/lustre/llite/namei.c b/fs/lustre/llite/namei.c
-index c05e3bf..f7e900d 100644
---- a/fs/lustre/llite/namei.c
-+++ b/fs/lustre/llite/namei.c
-@@ -765,14 +765,17 @@ static int ll_lookup_it_finish(struct ptlrpc_request *request,
- 			.it_op = IT_GETATTR,
- 			.it_lock_handle = 0
- 		};
--		struct lu_fid fid = ll_i2info(parent)->lli_fid;
-+		struct ll_inode_info *lli = ll_i2info(parent);
-+		struct lu_fid fid = lli->lli_fid;
- 
- 		/* If it is striped directory, get the real stripe parent */
- 		if (unlikely(ll_dir_striped(parent))) {
-+			down_read(&lli->lli_lsm_sem);
- 			rc = md_get_fid_from_lsm(ll_i2mdexp(parent),
--						 ll_i2info(parent)->lli_lsm_md,
-+						 lli->lli_lsm_md,
- 						 (*de)->d_name.name,
- 						 (*de)->d_name.len, &fid);
-+			up_read(&lli->lli_lsm_sem);
- 			if (rc)
- 				return rc;
- 		}
-diff --git a/fs/lustre/llite/statahead.c b/fs/lustre/llite/statahead.c
-index c781e49..3043a51 100644
---- a/fs/lustre/llite/statahead.c
-+++ b/fs/lustre/llite/statahead.c
-@@ -1164,8 +1164,10 @@ static int ll_statahead_thread(void *arg)
- 		}
- 
- 		pos = le64_to_cpu(dp->ldp_hash_end);
-+		down_read(&lli->lli_lsm_sem);
- 		ll_release_page(dir, page,
- 				le32_to_cpu(dp->ldp_flags) & LDF_COLLIDE);
-+		up_read(&lli->lli_lsm_sem);
- 
- 		if (sa_low_hit(sai)) {
- 			rc = -EFAULT;
-diff --git a/fs/lustre/lmv/lmv_obd.c b/fs/lustre/lmv/lmv_obd.c
-index 5b43cfd..d83ba41ff 100644
---- a/fs/lustre/lmv/lmv_obd.c
-+++ b/fs/lustre/lmv/lmv_obd.c
-@@ -3654,7 +3654,8 @@ static int lmv_revalidate_lock(struct obd_export *exp, struct lookup_intent *it,
+ static int
+@@ -162,12 +187,7 @@ struct srpc_bulk *
+ static inline u64
+ srpc_next_id(void)
  {
- 	const struct lmv_oinfo *oinfo;
+-	u64 id;
+-
+-	spin_lock(&srpc_data.rpc_glock);
+-	id = srpc_data.rpc_matchbits++;
+-	spin_unlock(&srpc_data.rpc_glock);
+-	return id;
++	return atomic64_inc_return(&srpc_data.rpc_matchbits);
+ }
  
--	LASSERT(lmv_dir_striped(lsm));
-+	if (!lmv_dir_striped(lsm))
-+		return -ESTALE;
+ static void
+@@ -922,11 +942,8 @@ struct srpc_bulk *
+ 		     rpc, sv->sv_name, libcfs_id2str(rpc->srpc_peer),
+ 		     swi_state2str(rpc->srpc_wi.swi_state), status);
  
- 	oinfo = lsm_name_to_stripe_info(lsm, name, namelen, false);
- 	if (IS_ERR(oinfo))
+-	if (status) {
+-		spin_lock(&srpc_data.rpc_glock);
+-		srpc_data.rpc_counters.rpcs_dropped++;
+-		spin_unlock(&srpc_data.rpc_glock);
+-	}
++	if (status)
++		atomic_inc(&RPC_STAT32(SRPC_RPC_DROP));
+ 
+ 	if (rpc->srpc_done)
+ 		(*rpc->srpc_done) (rpc);
+@@ -1096,9 +1113,7 @@ struct srpc_bulk *
+ 
+ 	spin_unlock(&rpc->crpc_lock);
+ 
+-	spin_lock(&srpc_data.rpc_glock);
+-	srpc_data.rpc_counters.rpcs_expired++;
+-	spin_unlock(&srpc_data.rpc_glock);
++	atomic_inc(&RPC_STAT32(SRPC_RPC_EXPIRED));
+ }
+ 
+ static void
+@@ -1431,11 +1446,10 @@ struct srpc_client_rpc *
+ 	if (ev->status) {
+ 		u32 errors;
+ 
+-		spin_lock(&srpc_data.rpc_glock);
+ 		if (ev->status != -ECANCELED) /* cancellation is not error */
+-			srpc_data.rpc_counters.errors++;
+-		errors = srpc_data.rpc_counters.errors;
+-		spin_unlock(&srpc_data.rpc_glock);
++			errors = atomic_inc_return(&RPC_STAT32(SRPC_ERROR));
++		else
++			errors = atomic_read(&RPC_STAT32(SRPC_ERROR));
+ 
+ 		CNETERR("LNet event status %d type %d, RPC errors %u\n",
+ 			ev->status, ev->type, errors);
+@@ -1449,11 +1463,9 @@ struct srpc_client_rpc *
+ 		       rpcev->ev_status, rpcev->ev_type, rpcev->ev_lnet);
+ 		LBUG();
+ 	case SRPC_REQUEST_SENT:
+-		if (!ev->status && ev->type != LNET_EVENT_UNLINK) {
+-			spin_lock(&srpc_data.rpc_glock);
+-			srpc_data.rpc_counters.rpcs_sent++;
+-			spin_unlock(&srpc_data.rpc_glock);
+-		}
++		if (!ev->status && ev->type != LNET_EVENT_UNLINK)
++			atomic_inc(&RPC_STAT32(SRPC_RPC_SENT));
++
+ 		/* fall through */
+ 	case SRPC_REPLY_RCVD:
+ 	case SRPC_BULK_REQ_RCVD:
+@@ -1566,9 +1578,7 @@ struct srpc_client_rpc *
+ 
+ 		spin_unlock(&scd->scd_lock);
+ 
+-		spin_lock(&srpc_data.rpc_glock);
+-		srpc_data.rpc_counters.rpcs_rcvd++;
+-		spin_unlock(&srpc_data.rpc_glock);
++		atomic_inc(&RPC_STAT32(SRPC_RPC_RCVD));
+ 		break;
+ 
+ 	case SRPC_BULK_GET_RPLD:
+@@ -1581,14 +1591,14 @@ struct srpc_client_rpc *
+ 		/* fall through */
+ 	case SRPC_BULK_PUT_SENT:
+ 		if (!ev->status && ev->type != LNET_EVENT_UNLINK) {
+-			spin_lock(&srpc_data.rpc_glock);
++			atomic64_t *data;
+ 
+ 			if (rpcev->ev_type == SRPC_BULK_GET_RPLD)
+-				srpc_data.rpc_counters.bulk_get += ev->mlength;
++				data = &srpc_data.rpc_counters64[SRPC_BULK_GET];
+ 			else
+-				srpc_data.rpc_counters.bulk_put += ev->mlength;
++				data = &srpc_data.rpc_counters64[SRPC_BULK_PUT];
+ 
+-			spin_unlock(&srpc_data.rpc_glock);
++			atomic64_add(ev->mlength, data);
+ 		}
+ 		/* fall through */
+ 	case SRPC_REPLY_SENT:
+@@ -1619,7 +1629,8 @@ struct srpc_client_rpc *
+ 
+ 	/* 1 second pause to avoid timestamp reuse */
+ 	schedule_timeout_uninterruptible(HZ);
+-	srpc_data.rpc_matchbits = ((u64)ktime_get_real_seconds()) << 48;
++	atomic64_set(&srpc_data.rpc_matchbits,
++		     ((u64)ktime_get_real_seconds() << 48));
+ 
+ 	srpc_data.rpc_state = SRPC_STATE_NONE;
+ 
+diff --git a/net/lnet/selftest/selftest.h b/net/lnet/selftest/selftest.h
+index 26202c1..223a432 100644
+--- a/net/lnet/selftest/selftest.h
++++ b/net/lnet/selftest/selftest.h
+@@ -452,7 +452,6 @@ struct srpc_bulk *srpc_alloc_bulk(int cpt, unsigned int off,
+ int srpc_service_add_buffers(struct srpc_service *sv, int nbuffer);
+ void srpc_service_remove_buffers(struct srpc_service *sv, int nbuffer);
+ void srpc_get_counters(struct srpc_counters *cnt);
+-void srpc_set_counters(const struct srpc_counters *cnt);
+ 
+ extern struct workqueue_struct *lst_serial_wq;
+ extern struct workqueue_struct **lst_test_wq;
 -- 
 1.8.3.1
 
