@@ -2,198 +2,121 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4933ECCA473
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Jun 2022 12:33:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id EF80BC3F2D4
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Jun 2022 12:33:35 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S235786AbiFIMdd (ORCPT
+        id S245198AbiFIMde (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 9 Jun 2022 08:33:33 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51912 "EHLO
+        Thu, 9 Jun 2022 08:33:34 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51464 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S245425AbiFIMda (ORCPT
+        with ESMTP id S244894AbiFIMdW (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 9 Jun 2022 08:33:30 -0400
+        Thu, 9 Jun 2022 08:33:22 -0400
 Received: from smtp3.ccs.ornl.gov (smtp3.ccs.ornl.gov [160.91.203.39])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 12501192AB
-        for <linux-fscrypt@vger.kernel.org>; Thu,  9 Jun 2022 05:33:27 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C44B4192AB
+        for <linux-fscrypt@vger.kernel.org>; Thu,  9 Jun 2022 05:33:17 -0700 (PDT)
 Received: from star.ccs.ornl.gov (star.ccs.ornl.gov [160.91.202.134])
-        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 3D405EF3;
+        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 2F1DFEEF;
         Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
 Received: by star.ccs.ornl.gov (Postfix, from userid 2004)
-        id 31CF9D43A3; Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
+        id 278D8D4381; Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
 From:   James Simmons <jsimmons@infradead.org>
 To:     Eric Biggers <ebiggers@google.com>,
         Andreas Dilger <adilger@whamcloud.com>,
         NeilBrown <neilb@suse.de>
 Cc:     linux-fscrypt@vger.kernel.org,
-        Etienne AUJAMES <etienne.aujames@cea.fr>,
         James Simmons <jsimmons@infradead.org>
-Subject: [PATCH 04/18] lustre: llog: read canceled records in llog_backup
-Date:   Thu,  9 Jun 2022 08:33:00 -0400
-Message-Id: <1654777994-29806-5-git-send-email-jsimmons@infradead.org>
+Subject: [PATCH 00/18] lustre: sync with OpenSFS tree June 8, 2022
+Date:   Thu,  9 Jun 2022 08:32:56 -0400
+Message-Id: <1654777994-29806-1-git-send-email-jsimmons@infradead.org>
 X-Mailer: git-send-email 1.8.3.1
-In-Reply-To: <1654777994-29806-1-git-send-email-jsimmons@infradead.org>
-References: <1654777994-29806-1-git-send-email-jsimmons@infradead.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Etienne AUJAMES <etienne.aujames@cea.fr>
+Sync with the new work coming in for 2.16 development branch.
+Hold back the LU-15189 work since it introduced a regression
+that has an outstanding fix.
 
-llog_backup() do not reproduce index "holes" in the generated copy.
-This could result to a llog copy indexes different from the source.
-Then it might confuse the configuration update mechanism that rely on
-indexes between the MGS source and the target copy.
+Alexander Boyko (1):
+  lustre: ptlrpc: send disconnected events
 
-This index gaps can be caused by "lctl --device MGS llog_cancel".
+Alexey Lyashkov (1):
+  lnet: selftest: improve lnet_selftest speed
 
-This patch add "raw" read mode to llog_process* to read canceled
-records.
+Arshad Hussain (1):
+  lustre: quota: fallocate does not increase projectid usage
 
-WC-bug-id: https://jira.whamcloud.com/browse/LU-15000
-Lustre-commit: d8e2723b4e9409954 ("LU-15000 llog: read canceled records in llog_backup")
-Signed-off-by: Etienne AUJAMES <etienne.aujames@cea.fr>
-Reviewed-on: https://review.whamcloud.com/46552
-Reviewed-by: Dominique Martinet <qhufhnrynczannqp.f@noclue.notk.org>
-Reviewed-by: DELBARY Gael <gael.delbary@cea.fr>
-Reviewed-by: Stephane Thiell <sthiell@stanford.edu>
-Reviewed-by: Oleg Drokin <green@whamcloud.com>
-Signed-off-by: James Simmons <jsimmons@infradead.org>
----
- fs/lustre/include/lustre_log.h  | 11 +++++++++++
- fs/lustre/obdclass/llog.c       | 22 +++++++++++++++++-----
- fs/lustre/obdclass/llog_cat.c   |  5 ++++-
- fs/lustre/obdclass/obd_config.c |  1 +
- 4 files changed, 33 insertions(+), 6 deletions(-)
+Chris Horn (1):
+  lnet: Avoid redundant peer NI lookups
 
-diff --git a/fs/lustre/include/lustre_log.h b/fs/lustre/include/lustre_log.h
-index 1fc7729..2e43d56 100644
---- a/fs/lustre/include/lustre_log.h
-+++ b/fs/lustre/include/lustre_log.h
-@@ -94,6 +94,13 @@ int llog_open(const struct lu_env *env, struct llog_ctxt *ctxt,
- /* llog_process flags */
- #define LLOG_FLAG_NODEAMON 0x0001
- 
-+/* llog read mode, LLOG_READ_MODE_RAW will process llog canceled records */
-+enum llog_read_mode {
-+	LLOG_READ_MODE_NORMAL	= 0x0000,
-+	LLOG_READ_MODE_RAW	= 0x0001,
-+};
-+
-+
- /* llog_cat.c - catalog api */
- struct llog_process_data {
- 	/**
-@@ -122,6 +129,10 @@ struct llog_process_cat_data {
- 	 * Temporary stored last_idx while scanning log.
- 	 */
- 	int			lpcd_last_idx;
-+	/**
-+	 * llog read mode
-+	 */
-+	enum llog_read_mode	lpcd_read_mode;
- };
- 
- struct thandle;
-diff --git a/fs/lustre/obdclass/llog.c b/fs/lustre/obdclass/llog.c
-index acede87..0cc64ce 100644
---- a/fs/lustre/obdclass/llog.c
-+++ b/fs/lustre/obdclass/llog.c
-@@ -256,6 +256,15 @@ int llog_verify_record(const struct llog_handle *llh, struct llog_rec_hdr *rec)
- 	return 0;
- }
- 
-+static inline bool llog_is_index_skipable(int idx, struct llog_log_hdr *llh,
-+					  struct llog_process_cat_data *cd)
-+{
-+	if (cd && (cd->lpcd_read_mode & LLOG_READ_MODE_RAW))
-+		return false;
-+
-+	return !test_bit_le(idx, LLOG_HDR_BITMAP(llh));
-+}
-+
- static int llog_process_thread(void *arg)
- {
- 	struct llog_process_info *lpi = arg;
-@@ -291,6 +300,8 @@ static int llog_process_thread(void *arg)
- 	}
- 	if (cd && cd->lpcd_last_idx)
- 		last_index = cd->lpcd_last_idx;
-+	else if (cd && (cd->lpcd_read_mode & LLOG_READ_MODE_RAW))
-+		last_index = loghandle->lgh_last_idx;
- 	else
- 		last_index = LLOG_HDR_BITMAP_SIZE(llh) - 1;
- 
-@@ -303,7 +314,7 @@ static int llog_process_thread(void *arg)
- 
- 		/* skip records not set in bitmap */
- 		while (index <= last_index &&
--		       !test_bit_le(index, LLOG_HDR_BITMAP(llh)))
-+		       llog_is_index_skipable(index, llh, cd))
- 			++index;
- 
- 		if (index > last_index)
-@@ -451,8 +462,8 @@ static int llog_process_thread(void *arg)
- 			loghandle->lgh_cur_offset = (char *)rec - (char *)buf +
- 						    chunk_offset;
- 
--			/* if set, process the callback on this record */
--			if (test_bit_le(index, LLOG_HDR_BITMAP(llh))) {
-+			/* if needed, process the callback on this record */
-+			if (!llog_is_index_skipable(index, llh, cd)) {
- 				rc = lpi->lpi_cb(lpi->lpi_env, loghandle, rec,
- 						 lpi->lpi_cbdata);
- 				last_called_index = index;
-@@ -522,11 +533,12 @@ int llog_process_or_fork(const struct lu_env *env,
- 	lpi->lpi_catdata = catdata;
- 
- 	CDEBUG(D_OTHER,
--	       "Processing " DFID " flags 0x%03x startcat %d startidx %d first_idx %d last_idx %d\n",
-+	       "Processing " DFID " flags 0x%03x startcat %d startidx %d first_idx %d last_idx %d read_mode %d\n",
- 	       PFID(&loghandle->lgh_id.lgl_oi.oi_fid), flags,
- 	       (flags & LLOG_F_IS_CAT) && d ? d->lpd_startcat : -1,
- 	       (flags & LLOG_F_IS_CAT) && d ? d->lpd_startidx : -1,
--	       cd ? cd->lpcd_first_idx : -1, cd ? cd->lpcd_last_idx : -1);
-+	       cd ? cd->lpcd_first_idx : -1, cd ? cd->lpcd_last_idx : -1,
-+	       cd ? cd->lpcd_read_mode : -1);
- 
- 	if (fork) {
- 		struct task_struct *task;
-diff --git a/fs/lustre/obdclass/llog_cat.c b/fs/lustre/obdclass/llog_cat.c
-index 7f55895..753422b 100644
---- a/fs/lustre/obdclass/llog_cat.c
-+++ b/fs/lustre/obdclass/llog_cat.c
-@@ -197,6 +197,7 @@ static int llog_cat_process_cb(const struct lu_env *env,
- 	else if (d->lpd_startidx > 0) {
- 		struct llog_process_cat_data cd;
- 
-+		cd.lpcd_read_mode = LLOG_READ_MODE_NORMAL;
- 		cd.lpcd_first_idx = d->lpd_startidx;
- 		cd.lpcd_last_idx = 0;
- 		rc = llog_process_or_fork(env, llh, d->lpd_cb, d->lpd_data,
-@@ -231,7 +232,9 @@ static int llog_cat_process_or_fork(const struct lu_env *env,
- 	d.lpd_startidx = startidx;
- 
- 	if (llh->llh_cat_idx > cat_llh->lgh_last_idx) {
--		struct llog_process_cat_data cd;
-+		struct llog_process_cat_data cd = {
-+			.lpcd_read_mode = LLOG_READ_MODE_NORMAL
-+		};
- 
- 		CWARN("%s: catlog " DFID " crosses index zero\n",
- 		      loghandle2name(cat_llh),
-diff --git a/fs/lustre/obdclass/obd_config.c b/fs/lustre/obdclass/obd_config.c
-index cb70ed5..4db7399 100644
---- a/fs/lustre/obdclass/obd_config.c
-+++ b/fs/lustre/obdclass/obd_config.c
-@@ -1401,6 +1401,7 @@ int class_config_parse_llog(const struct lu_env *env, struct llog_ctxt *ctxt,
- {
- 	struct llog_process_cat_data cd = {
- 		.lpcd_first_idx = 0,
-+		.lpcd_read_mode = LLOG_READ_MODE_NORMAL,
- 	};
- 	struct llog_handle *llh;
- 	llog_cb_t callback;
+Etienne AUJAMES (2):
+  lustre: llog: read canceled records in llog_backup
+  lustre: mdc: Use early cancels for hsm requests
+
+John L. Hammond (1):
+  lustre: llite: reenable fast_read by default
+
+Lai Siyao (1):
+  lustre: llite: access lli_lsm_md with lock in all places
+
+Mr NeilBrown (8):
+  lnet: change LNetPrimaryNID to use struct lnet_nid
+  lnet: alter lnet_drop_rule_match() to take lnet_nid
+  lnet: Change LNetDist to work with struct lnet_nid
+  lnet: convert LNetPut to take 16byte nid and pid.
+  lnet: change LNetGet to take 16byte nid and pid.
+  lnet: socklnd: pass large processid to ksocknal_add_peer
+  lnet: socklnd: large processid for ksocknal_get_peer_info
+  lnet: socklnd: switch ksocknal_del_peer to lnet_processid
+
+Oleg Drokin (1):
+  lustre: update version to 2.15.50
+
+Patrick Farrell (1):
+  lustre: llite: Check vmpage in releasepage
+
+ fs/lustre/include/cl_object.h          |  10 +++
+ fs/lustre/include/lustre_log.h         |  11 +++
+ fs/lustre/include/obd_class.h          |   3 +-
+ fs/lustre/llite/dir.c                  |   6 +-
+ fs/lustre/llite/file.c                 |  26 ++++---
+ fs/lustre/llite/llite_internal.h       |  17 ++++-
+ fs/lustre/llite/llite_lib.c            |  22 +++---
+ fs/lustre/llite/namei.c                |   7 +-
+ fs/lustre/llite/rw26.c                 |  19 +++--
+ fs/lustre/llite/statahead.c            |   2 +
+ fs/lustre/llite/vvp_object.c           |   3 +-
+ fs/lustre/lmv/lmv_obd.c                |   3 +-
+ fs/lustre/lov/lov_io.c                 |   2 +
+ fs/lustre/mdc/mdc_request.c            |  37 ++++++++--
+ fs/lustre/obdclass/llog.c              |  22 ++++--
+ fs/lustre/obdclass/llog_cat.c          |   5 +-
+ fs/lustre/obdclass/lustre_peer.c       |   4 +-
+ fs/lustre/obdclass/obd_config.c        |   1 +
+ fs/lustre/osc/osc_io.c                 |   9 ++-
+ fs/lustre/osc/osc_page.c               |   9 ++-
+ fs/lustre/ptlrpc/connection.c          |   2 +-
+ fs/lustre/ptlrpc/events.c              |  12 ++--
+ fs/lustre/ptlrpc/import.c              |   4 ++
+ fs/lustre/ptlrpc/niobuf.c              |  15 ++--
+ include/linux/lnet/api.h               |  12 ++--
+ include/linux/lnet/lib-lnet.h          |   4 +-
+ include/uapi/linux/lustre/lustre_ver.h |   4 +-
+ net/lnet/klnds/socklnd/socklnd.c       |  77 +++++++++------------
+ net/lnet/klnds/socklnd/socklnd.h       |   2 +-
+ net/lnet/klnds/socklnd/socklnd_cb.c    |  28 +++++---
+ net/lnet/lnet/api-ni.c                 |  29 ++++----
+ net/lnet/lnet/lib-move.c               | 100 ++++++++++++---------------
+ net/lnet/lnet/lib-msg.c                |   3 +-
+ net/lnet/lnet/net_fault.c              |  40 ++++++-----
+ net/lnet/lnet/peer.c                   | 105 +++++++++++++---------------
+ net/lnet/lnet/router.c                 |   6 +-
+ net/lnet/selftest/rpc.c                | 122 +++++++++++++++++++--------------
+ net/lnet/selftest/selftest.h           |   1 -
+ 38 files changed, 447 insertions(+), 337 deletions(-)
+
 -- 
 1.8.3.1
 
