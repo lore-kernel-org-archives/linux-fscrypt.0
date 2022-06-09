@@ -2,34 +2,35 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E4353C43334
-	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Jun 2022 12:34:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 02BCACCA47B
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Jun 2022 12:34:05 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S235883AbiFIMeC (ORCPT
+        id S245507AbiFIMeD (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 9 Jun 2022 08:34:02 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53678 "EHLO
+        Thu, 9 Jun 2022 08:34:03 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54360 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S245500AbiFIMdu (ORCPT
+        with ESMTP id S245520AbiFIMeA (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 9 Jun 2022 08:33:50 -0400
+        Thu, 9 Jun 2022 08:34:00 -0400
 Received: from smtp3.ccs.ornl.gov (smtp3.ccs.ornl.gov [160.91.203.39])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EE2E922B28
-        for <linux-fscrypt@vger.kernel.org>; Thu,  9 Jun 2022 05:33:45 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E035A22B30
+        for <linux-fscrypt@vger.kernel.org>; Thu,  9 Jun 2022 05:33:49 -0700 (PDT)
 Received: from star.ccs.ornl.gov (star.ccs.ornl.gov [160.91.202.134])
-        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 4F0DCEFB;
+        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 55970EFD;
         Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
 Received: by star.ccs.ornl.gov (Postfix, from userid 2004)
-        id 4C91ED43A3; Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
+        id 52B30D4381; Thu,  9 Jun 2022 08:33:16 -0400 (EDT)
 From:   James Simmons <jsimmons@infradead.org>
 To:     Eric Biggers <ebiggers@google.com>,
         Andreas Dilger <adilger@whamcloud.com>,
         NeilBrown <neilb@suse.de>
 Cc:     linux-fscrypt@vger.kernel.org,
+        Arshad Hussain <arshad.hussain@aeoncomputing.com>,
         James Simmons <jsimmons@infradead.org>
-Subject: [PATCH 12/18] lnet: socklnd: switch ksocknal_del_peer to lnet_processid
-Date:   Thu,  9 Jun 2022 08:33:08 -0400
-Message-Id: <1654777994-29806-13-git-send-email-jsimmons@infradead.org>
+Subject: [PATCH 14/18] lustre: quota: fallocate does not increase projectid usage
+Date:   Thu,  9 Jun 2022 08:33:10 -0400
+Message-Id: <1654777994-29806-15-git-send-email-jsimmons@infradead.org>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1654777994-29806-1-git-send-email-jsimmons@infradead.org>
 References: <1654777994-29806-1-git-send-email-jsimmons@infradead.org>
@@ -37,130 +38,153 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Mr NeilBrown <neilb@suse.de>
+From: Arshad Hussain <arshad.hussain@aeoncomputing.com>
 
-ksocknal_del_peer now takes a pointer to a lnet_processid,
-with room for a large address.
-A NULL means "ANY NID, AND PID".
-The "ip" argument was completely unused, so has been removed.
+fallocate() was not accounting for projectid quota usage.
+This was happening due to two reasons. 1) the projectid
+was not properly passed to md_op_data in ll_set_project()
+and 2) the OBD_MD_FLPROJID flag was not set receive the
+projctid.
 
-This was the last use of 'struct lnet_process_id' in ksocklnd.
+This patch addresses the above reasons.
 
-WC-bug-id: https://jira.whamcloud.com/browse/LU-10391
-Lustre-commit: 782e37e54f5c54886 ("LU-10391 socklnd: switch ksocknal_del_peer to lnet_processid")
-Signed-off-by: Mr NeilBrown <neilb@suse.de>
-Reviewed-on: https://review.whamcloud.com/44623
-Reviewed-by: James Simmons <jsimmons@infradead.org>
-Reviewed-by: Chris Horn <chris.horn@hpe.com>
+Fixes: d748d2ffa1bc ("lustre: fallocate: Implement fallocate preallocate operation")
+WC-bug-id: https://jira.whamcloud.com/browse/LU-15519
+Lustre-commit: 5fc934ebbbe665f24 ("LU-15519 quota: fallocate does not increase projectid usage")
+Signed-off-by: Arshad Hussain <arshad.hussain@aeoncomputing.com>
+Reviewed-on: https://review.whamcloud.com/46676
+Reviewed-by: Andreas Dilger <adilger@whamcloud.com>
+Reviewed-by: Hongchao Zhang <hongchao@whamcloud.com>
 Reviewed-by: Oleg Drokin <green@whamcloud.com>
 Signed-off-by: James Simmons <jsimmons@infradead.org>
 ---
- net/lnet/klnds/socklnd/socklnd.c | 36 +++++++++++++-----------------------
- 1 file changed, 13 insertions(+), 23 deletions(-)
+ fs/lustre/include/cl_object.h |  1 +
+ fs/lustre/llite/file.c        | 18 +++++++++++-------
+ fs/lustre/llite/vvp_object.c  |  3 ++-
+ fs/lustre/lov/lov_io.c        |  2 ++
+ fs/lustre/osc/osc_io.c        |  9 ++++++---
+ 5 files changed, 22 insertions(+), 11 deletions(-)
 
-diff --git a/net/lnet/klnds/socklnd/socklnd.c b/net/lnet/klnds/socklnd/socklnd.c
-index 857aa05..01b434f 100644
---- a/net/lnet/klnds/socklnd/socklnd.c
-+++ b/net/lnet/klnds/socklnd/socklnd.c
-@@ -660,7 +660,7 @@ struct ksock_peer_ni *
- }
- 
- static void
--ksocknal_del_peer_locked(struct ksock_peer_ni *peer_ni, u32 ip)
-+ksocknal_del_peer_locked(struct ksock_peer_ni *peer_ni)
- {
- 	struct ksock_conn *conn;
- 	struct ksock_conn *cnxt;
-@@ -683,7 +683,7 @@ struct ksock_peer_ni *
- }
- 
- static int
--ksocknal_del_peer(struct lnet_ni *ni, struct lnet_process_id id4, u32 ip)
-+ksocknal_del_peer(struct lnet_ni *ni, struct lnet_processid *id)
- {
- 	LIST_HEAD(zombies);
- 	struct hlist_node *pnxt;
-@@ -692,15 +692,11 @@ struct ksock_peer_ni *
- 	int hi;
- 	int i;
- 	int rc = -ENOENT;
--	struct lnet_processid id;
--
--	id.pid = id4.pid;
--	lnet_nid4_to_nid(id4.nid, &id.nid);
- 
- 	write_lock_bh(&ksocknal_data.ksnd_global_lock);
- 
--	if (!LNET_NID_IS_ANY(&id.nid)) {
--		lo = hash_min(nidhash(&id.nid),
-+	if (id && !LNET_NID_IS_ANY(&id->nid)) {
-+		lo = hash_min(nidhash(&id->nid),
- 			      HASH_BITS(ksocknal_data.ksnd_peers));
- 		hi = lo;
- 	} else {
-@@ -715,15 +711,15 @@ struct ksock_peer_ni *
- 			if (peer_ni->ksnp_ni != ni)
- 				continue;
- 
--			if (!((LNET_NID_IS_ANY(&id.nid) ||
--			       nid_same(&peer_ni->ksnp_id.nid, &id.nid)) &&
--			      (id.pid == LNET_PID_ANY ||
--			       peer_ni->ksnp_id.pid == id.pid)))
-+			if (!((!id || LNET_NID_IS_ANY(&id->nid) ||
-+			       nid_same(&peer_ni->ksnp_id.nid, &id->nid)) &&
-+			      (!id || id->pid == LNET_PID_ANY ||
-+			       peer_ni->ksnp_id.pid == id->pid)))
- 				continue;
- 
- 			ksocknal_peer_addref(peer_ni);     /* a ref for me... */
- 
--			ksocknal_del_peer_locked(peer_ni, ip);
-+			ksocknal_del_peer_locked(peer_ni);
- 
- 			if (peer_ni->ksnp_closing &&
- 			    !list_empty(&peer_ni->ksnp_tx_queue)) {
-@@ -1764,7 +1760,6 @@ static int ksocknal_push(struct lnet_ni *ni, struct lnet_processid *id)
- int
- ksocknal_ctl(struct lnet_ni *ni, unsigned int cmd, void *arg)
- {
--	struct lnet_process_id id4 = {};
- 	struct lnet_processid id = {};
- 	struct libcfs_ioctl_data *data = arg;
- 	int rc;
-@@ -1832,10 +1827,9 @@ static int ksocknal_push(struct lnet_ni *ni, struct lnet_processid *id)
- 		return ksocknal_add_peer(ni, &id, (struct sockaddr *)&sa);
+diff --git a/fs/lustre/include/cl_object.h b/fs/lustre/include/cl_object.h
+index b98109d..06f03b4 100644
+--- a/fs/lustre/include/cl_object.h
++++ b/fs/lustre/include/cl_object.h
+@@ -1889,6 +1889,7 @@ struct cl_io {
+ 			loff_t			sa_falloc_end;
+ 			uid_t			sa_falloc_uid;
+ 			gid_t			sa_falloc_gid;
++			u32			sa_falloc_projid;
+ 		} ci_setattr;
+ 		struct cl_data_version_io {
+ 			u64			dv_data_version;
+diff --git a/fs/lustre/llite/file.c b/fs/lustre/llite/file.c
+index 30f522b..5be77e8 100644
+--- a/fs/lustre/llite/file.c
++++ b/fs/lustre/llite/file.c
+@@ -2629,7 +2629,7 @@ static int ll_do_fiemap(struct inode *inode, struct fiemap *fiemap,
+ 			goto out;
  	}
- 	case IOC_LIBCFS_DEL_PEER:
--		id4.nid = data->ioc_nid;
--		id4.pid = LNET_PID_ANY;
--		return ksocknal_del_peer(ni, id4,
--					 data->ioc_u32[0]); /* IP */
-+		lnet_nid4_to_nid(data->ioc_nid, &id.nid);
-+		id.pid = LNET_PID_ANY;
-+		return ksocknal_del_peer(ni, &id);
  
- 	case IOC_LIBCFS_GET_CONN: {
- 		int txmem;
-@@ -2347,10 +2341,6 @@ static int ksocknal_inetaddr_event(struct notifier_block *unused,
- ksocknal_shutdown(struct lnet_ni *ni)
+-	fmkey.lfik_oa.o_valid = OBD_MD_FLID | OBD_MD_FLGROUP;
++	fmkey.lfik_oa.o_valid = OBD_MD_FLID | OBD_MD_FLGROUP | OBD_MD_FLPROJID;
+ 	obdo_from_inode(&fmkey.lfik_oa, inode, OBD_MD_FLSIZE);
+ 	obdo_set_parent_fid(&fmkey.lfik_oa, &ll_i2info(inode)->lli_fid);
+ 
+@@ -3412,10 +3412,12 @@ static int ll_set_project(struct inode *inode, u32 xflags, u32 projid)
+ 	op_data->op_attr_flags = ll_inode_to_ext_flags(inode_flags);
+ 	if (xflags & FS_XFLAG_PROJINHERIT)
+ 		op_data->op_attr_flags |= LUSTRE_PROJINHERIT_FL;
++
++	/* pass projid to md_op_data */
+ 	op_data->op_projid = projid;
+-	op_data->op_xvalid |= OP_XVALID_PROJID;
+-	rc = md_setattr(ll_i2sbi(inode)->ll_md_exp, op_data, NULL,
+-			0, &req);
++
++	op_data->op_xvalid |= OP_XVALID_PROJID | OP_XVALID_FLAGS;
++	rc = md_setattr(ll_i2sbi(inode)->ll_md_exp, op_data, NULL, 0, &req);
+ 	ptlrpc_req_finished(req);
+ 	if (rc)
+ 		goto out_fsxattr;
+@@ -5262,11 +5264,11 @@ int ll_getattr(const struct path *path, struct kstat *stat,
+ int cl_falloc(struct file *file, struct inode *inode, int mode, loff_t offset,
+ 	      loff_t len)
  {
- 	struct ksock_net *net = ni->ni_data;
--	struct lnet_process_id anyid = { 0 };
--
--	anyid.nid = LNET_NID_ANY;
--	anyid.pid = LNET_PID_ANY;
++	loff_t size = i_size_read(inode);
+ 	struct lu_env *env;
+ 	struct cl_io *io;
+ 	u16 refcheck;
+ 	int rc;
+-	loff_t size = i_size_read(inode);
  
- 	LASSERT(ksocknal_data.ksnd_init == SOCKNAL_INIT_ALL);
- 	LASSERT(ksocknal_data.ksnd_nnets > 0);
-@@ -2359,7 +2349,7 @@ static int ksocknal_inetaddr_event(struct notifier_block *unused,
- 	atomic_add(SOCKNAL_SHUTDOWN_BIAS, &net->ksnn_npeers);
+ 	env = cl_env_get(&refcheck);
+ 	if (IS_ERR(env))
+@@ -5283,12 +5285,14 @@ int cl_falloc(struct file *file, struct inode *inode, int mode, loff_t offset,
+ 	io->u.ci_setattr.sa_falloc_end = offset + len;
+ 	io->u.ci_setattr.sa_subtype = CL_SETATTR_FALLOCATE;
  
- 	/* Delete all peers */
--	ksocknal_del_peer(ni, anyid, 0);
-+	ksocknal_del_peer(ni, NULL);
+-	CDEBUG(D_INODE, "UID %u GID %u\n",
++	CDEBUG(D_INODE, "UID %u GID %u PRJID %u\n",
+ 	       from_kuid(&init_user_ns, inode->i_uid),
+-	       from_kgid(&init_user_ns, inode->i_gid));
++	       from_kgid(&init_user_ns, inode->i_gid),
++	       ll_i2info(inode)->lli_projid);
  
- 	/* Wait for all peer_ni state to clean up */
- 	wait_var_event_warning(&net->ksnn_npeers,
+ 	io->u.ci_setattr.sa_falloc_uid = from_kuid(&init_user_ns, inode->i_uid);
+ 	io->u.ci_setattr.sa_falloc_gid = from_kgid(&init_user_ns, inode->i_gid);
++	io->u.ci_setattr.sa_falloc_projid = ll_i2info(inode)->lli_projid;
+ 
+ 	if (io->u.ci_setattr.sa_falloc_end > size) {
+ 		loff_t newsize = io->u.ci_setattr.sa_falloc_end;
+diff --git a/fs/lustre/llite/vvp_object.c b/fs/lustre/llite/vvp_object.c
+index 8a53458..64ecdb9 100644
+--- a/fs/lustre/llite/vvp_object.c
++++ b/fs/lustre/llite/vvp_object.c
+@@ -190,7 +190,8 @@ static int vvp_object_glimpse(const struct lu_env *env,
+ static void vvp_req_attr_set(const struct lu_env *env, struct cl_object *obj,
+ 			     struct cl_req_attr *attr)
+ {
+-	u64 valid_flags = OBD_MD_FLTYPE | OBD_MD_FLUID | OBD_MD_FLGID;
++	u64 valid_flags = OBD_MD_FLTYPE | OBD_MD_FLUID | OBD_MD_FLGID |
++			  OBD_MD_FLPROJID;
+ 	struct inode *inode;
+ 	struct obdo *oa;
+ 
+diff --git a/fs/lustre/lov/lov_io.c b/fs/lustre/lov/lov_io.c
+index 38dacd35..b535092 100644
+--- a/fs/lustre/lov/lov_io.c
++++ b/fs/lustre/lov/lov_io.c
+@@ -685,6 +685,8 @@ static void lov_io_sub_inherit(struct lov_io_sub *sub, struct lov_io *lio,
+ 				parent->u.ci_setattr.sa_falloc_uid;
+ 			io->u.ci_setattr.sa_falloc_gid =
+ 				parent->u.ci_setattr.sa_falloc_gid;
++			io->u.ci_setattr.sa_falloc_projid =
++				parent->u.ci_setattr.sa_falloc_projid;
+ 		}
+ 		if (cl_io_is_trunc(io)) {
+ 			loff_t new_size = parent->u.ci_setattr.sa_attr.lvb_size;
+diff --git a/fs/lustre/osc/osc_io.c b/fs/lustre/osc/osc_io.c
+index db91bf2..1361d7f 100644
+--- a/fs/lustre/osc/osc_io.c
++++ b/fs/lustre/osc/osc_io.c
+@@ -671,11 +671,14 @@ static int osc_io_setattr_start(const struct lu_env *env,
+ 			oa->o_blocks = io->u.ci_setattr.sa_falloc_end;
+ 			oa->o_uid = io->u.ci_setattr.sa_falloc_uid;
+ 			oa->o_gid = io->u.ci_setattr.sa_falloc_gid;
++			oa->o_projid = io->u.ci_setattr.sa_falloc_projid;
+ 			oa->o_valid |= OBD_MD_FLSIZE | OBD_MD_FLBLOCKS |
+-				OBD_MD_FLUID | OBD_MD_FLGID;
++				OBD_MD_FLUID | OBD_MD_FLGID | OBD_MD_FLPROJID;
+ 
+-			CDEBUG(D_INODE, "size %llu blocks %llu uid %u gid %u\n",
+-			       oa->o_size, oa->o_blocks, oa->o_uid, oa->o_gid);
++			CDEBUG(D_INODE,
++			       "size %llu blocks %llu uid %u gid %u prjid %u\n",
++			       oa->o_size, oa->o_blocks, oa->o_uid, oa->o_gid,
++			       oa->o_projid);
+ 			result = osc_fallocate_base(osc_export(cl2osc(obj)),
+ 						    oa, osc_async_upcall,
+ 						    cbargs, falloc_mode);
 -- 
 1.8.3.1
 
