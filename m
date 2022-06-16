@@ -2,78 +2,135 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id F340FC433EF
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 16 Jun 2022 06:29:53 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A21DDC433EF
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 16 Jun 2022 20:18:19 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1359178AbiFPG3w (ORCPT
+        id S1378293AbiFPUSS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 16 Jun 2022 02:29:52 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50040 "EHLO
+        Thu, 16 Jun 2022 16:18:18 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:59738 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1358783AbiFPG3r (ORCPT
+        with ESMTP id S1378388AbiFPUSR (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 16 Jun 2022 02:29:47 -0400
-Received: from bombadil.infradead.org (bombadil.infradead.org [IPv6:2607:7c80:54:3::133])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A0BC756B19;
-        Wed, 15 Jun 2022 23:29:45 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
-        d=infradead.org; s=bombadil.20210309; h=In-Reply-To:Content-Type:MIME-Version
-        :References:Message-ID:Subject:Cc:To:From:Date:Sender:Reply-To:
-        Content-Transfer-Encoding:Content-ID:Content-Description;
-        bh=COuN5Zz+YBR/xeVdeWv1MuY4NtQSVs4UMHwcz0WDnnQ=; b=26COe9EvreWGEeNT1/sD1d3kfz
-        6eiHSoJj3HJNczxIgN6ZNyHhGyF8lkqwkIOL2rgXq98uxDdUx8uC3Lu2IAjIfP6R/f0aliM5EVC6O
-        1IhASH35qFwNzseZJ4XUFc3+jdZJ4c7Xluvv7sbbyUQTCbN3yrpBR/WmIvNi7io2ncbPNVRlOnIDy
-        hqQ2OPazzRsUwaxn27aCXA9ZVEcHgflQQLkk46TasGiAi8tRAQZfnChJgkw8OGb0eXj325Mwkt6LL
-        e0wbU4YbmLMbwRPuPBtRocrTHAynRb7PqFxnUF7o6IDlLRxUJhNefflB5q17jn1tsA4Npc8hfXRTy
-        ddSAS+0w==;
-Received: from hch by bombadil.infradead.org with local (Exim 4.94.2 #2 (Red Hat Linux))
-        id 1o1j0i-000jIM-EX; Thu, 16 Jun 2022 06:29:44 +0000
-Date:   Wed, 15 Jun 2022 23:29:44 -0700
-From:   Christoph Hellwig <hch@infradead.org>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     Christoph Hellwig <hch@infradead.org>,
-        Dave Chinner <david@fromorbit.com>,
-        "Darrick J. Wong" <djwong@kernel.org>,
-        linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
-        linux-api@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-block@vger.kernel.org, linux-kernel@vger.kernel.org,
-        Keith Busch <kbusch@kernel.org>
-Subject: Re: [RFC PATCH v2 1/7] statx: add I/O alignment information
-Message-ID: <YqrN2J6r4Z+BIN+o@infradead.org>
-References: <20220518235011.153058-1-ebiggers@kernel.org>
- <20220518235011.153058-2-ebiggers@kernel.org>
- <YobNXbYnhBiqniTH@magnolia>
- <20220520032739.GB1098723@dread.disaster.area>
- <YqgbuDbdH2OLcbC7@sol.localdomain>
- <YqnapOLvHDmX/3py@infradead.org>
- <YqpzqZQgu0Zz+vW1@sol.localdomain>
- <YqrIlVtI85zF9qyO@infradead.org>
- <YqrLdORPM5qm9PC0@sol.localdomain>
+        Thu, 16 Jun 2022 16:18:17 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1650135257;
+        Thu, 16 Jun 2022 13:18:17 -0700 (PDT)
+Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id A8CE561DB9;
+        Thu, 16 Jun 2022 20:18:16 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id C3B2AC3411F;
+        Thu, 16 Jun 2022 20:18:15 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1655410696;
+        bh=iOxOv0QdDiqnoNfajHWkadykNw8yw6SMHWPSQ+/Z1Cs=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=XCySuz3YzYlgIHp8UL9jy8oSMx9yC+Hk6wTrq88c+IqE3hXqu0MY+j4K/xAAKTOAB
+         sAbep1qh9fUb8cPkmzPaQXFgxh+7nOMstYpxFHqIhVpafDfYexM9uSN3fhdwzTOemJ
+         vVKthy2fIB4Jh7ii0yur32iWQbzJuBIUYh4gNt3v2cHdnfB4jmyxfEh79bOgfZG9iS
+         MwwX6yNWttTI2eKEHpQxjcfMtWiL98SiARcc+j/jzMKfzRbnNY05boFEMDVUk5YG+S
+         rtMLJEhH/UUTKqs7mFfPlqVdeaqbFX2S7jZCkEZDBN+SJH0Yk7KT3G3/QA0AbK9qR/
+         ASb2CbGMlBDdA==
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fsdevel@vger.kernel.org
+Cc:     linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
+        linux-xfs@vger.kernel.org, linux-api@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-block@vger.kernel.org,
+        linux-kernel@vger.kernel.org, Keith Busch <kbusch@kernel.org>
+Subject: [PATCH v3 2/8] vfs: support STATX_DIOALIGN on block devices
+Date:   Thu, 16 Jun 2022 13:15:00 -0700
+Message-Id: <20220616201506.124209-3-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.36.1
+In-Reply-To: <20220616201506.124209-1-ebiggers@kernel.org>
+References: <20220616201506.124209-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <YqrLdORPM5qm9PC0@sol.localdomain>
-X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Jun 15, 2022 at 11:19:32PM -0700, Eric Biggers wrote:
-> Yes I know that.  The issue is that the inode that statx() is operating on is
-> the device node, so *all* the other statx fields come from that inode.  Size,
-> nlink, uid, gid, mode, timestamps (including btime if the filesystem supports
-> it), inode number, device number of the containing filesystem, mount ID, etc.
-> If we were to randomly grab one field from the underlying block device instead,
-> that would be inconsistent with everything else.
+From: Eric Biggers <ebiggers@google.com>
 
-At least on XFS we have a magic hardcoded st_blksize for block devices,
-but it seems like the generic doesn't do that.
+Add support for STATX_DIOALIGN to block devices, so that direct I/O
+alignment restrictions are exposed to userspace in a generic way.
 
-But I'm really much more worried about an inconsistency where we get
-usefull information or some special files rather than where we acquire
-this information from.  So I think going to the block device inode, and
-also going to it for stx_blksize is the right thing as it actually
-makes the interface useful.  We just need a good helper that all
-getattr implementations can use to be consistent and/or override these
-fields after the call to ->getattr.
+Note that this breaks the tradition of stat operating only on the block
+device node, not the block device itself.  However, it was felt that
+doing this is preferable, in order to make the interface useful and
+avoid needing separate interfaces for regular files and block devices.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/stat.c | 35 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 35 insertions(+)
+
+diff --git a/fs/stat.c b/fs/stat.c
+index a7930d7444830..c1ce447c1a383 100644
+--- a/fs/stat.c
++++ b/fs/stat.c
+@@ -5,6 +5,7 @@
+  *  Copyright (C) 1991, 1992  Linus Torvalds
+  */
+ 
++#include <linux/blkdev.h>
+ #include <linux/export.h>
+ #include <linux/mm.h>
+ #include <linux/errno.h>
+@@ -198,6 +199,35 @@ int getname_statx_lookup_flags(int flags)
+ 	return lookup_flags;
+ }
+ 
++/* Handle STATX_DIOALIGN for block devices. */
++static inline void handle_bdev_dioalign(struct path *path, u32 request_mask,
++					struct kstat *stat)
++{
++#ifdef CONFIG_BLOCK
++	struct inode *inode;
++	struct block_device *bdev;
++	unsigned int lbs;
++
++	if (likely(!(request_mask & STATX_DIOALIGN)))
++		return;
++
++	inode = d_backing_inode(path->dentry);
++	if (!S_ISBLK(inode->i_mode))
++		return;
++
++	bdev = blkdev_get_no_open(inode->i_rdev);
++	if (!bdev)
++		return;
++
++	lbs = bdev_logical_block_size(bdev);
++	stat->dio_mem_align = lbs;
++	stat->dio_offset_align = lbs;
++	stat->result_mask |= STATX_DIOALIGN;
++
++	blkdev_put_no_open(bdev);
++#endif /* CONFIG_BLOCK */
++}
++
+ /**
+  * vfs_statx - Get basic and extra attributes by filename
+  * @dfd: A file descriptor representing the base dir for a relative filename
+@@ -230,11 +260,16 @@ static int vfs_statx(int dfd, struct filename *filename, int flags,
+ 		goto out;
+ 
+ 	error = vfs_getattr(&path, stat, request_mask, flags);
++
+ 	stat->mnt_id = real_mount(path.mnt)->mnt_id;
+ 	stat->result_mask |= STATX_MNT_ID;
++
+ 	if (path.mnt->mnt_root == path.dentry)
+ 		stat->attributes |= STATX_ATTR_MOUNT_ROOT;
+ 	stat->attributes_mask |= STATX_ATTR_MOUNT_ROOT;
++
++	handle_bdev_dioalign(&path, request_mask, stat);
++
+ 	path_put(&path);
+ 	if (retry_estale(error, lookup_flags)) {
+ 		lookup_flags |= LOOKUP_REVAL;
+-- 
+2.36.1
+
