@@ -2,34 +2,35 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 80749CCA473
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E26D3CCA481
 	for <linux-fscrypt@archiver.kernel.org>; Sat, 18 Jun 2022 13:52:47 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233932AbiFRNwj (ORCPT
+        id S233988AbiFRNwk (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 18 Jun 2022 09:52:39 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47598 "EHLO
+        Sat, 18 Jun 2022 09:52:40 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47642 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232528AbiFRNwV (ORCPT
+        with ESMTP id S233500AbiFRNw1 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 18 Jun 2022 09:52:21 -0400
+        Sat, 18 Jun 2022 09:52:27 -0400
 Received: from smtp3.ccs.ornl.gov (smtp3.ccs.ornl.gov [160.91.203.39])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EB7EC1D328
-        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:52:19 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id F2F921D328
+        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:52:25 -0700 (PDT)
 Received: from star.ccs.ornl.gov (star.ccs.ornl.gov [160.91.202.134])
-        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id ED05213C4;
-        Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
+        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 07BFA13C7;
+        Sat, 18 Jun 2022 09:52:14 -0400 (EDT)
 Received: by star.ccs.ornl.gov (Postfix, from userid 2004)
-        id E3D7CFD3BF; Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
+        id EFB1E1002DD; Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
 From:   James Simmons <jsimmons@infradead.org>
 To:     Eric Biggers <ebiggers@google.com>,
         Andreas Dilger <adilger@whamcloud.com>,
         NeilBrown <neilb@suse.de>
 Cc:     linux-fscrypt@vger.kernel.org,
-        James Simmons <jsimmons@infradead.org>
-Subject: [PATCH 03/28] lnet: support removal of kernel_setsockopt()
-Date:   Sat, 18 Jun 2022 09:51:45 -0400
-Message-Id: <1655560330-30743-4-git-send-email-jsimmons@infradead.org>
+        James Simmons <jsimmons@infradead.org>,
+        Sebastien Buisson <sbuisson@ddn.com>
+Subject: [PATCH 06/28] lustre: sec: support test_dummy_encryption=v2
+Date:   Sat, 18 Jun 2022 09:51:48 -0400
+Message-Id: <1655560330-30743-7-git-send-email-jsimmons@infradead.org>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
 References: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
@@ -37,345 +38,320 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Mr NeilBrown <neilb@suse.de>
-
-Linux 5.8 removes kernel_setsockopt() and kernel_getsockopt(), and
-provides some helper functions for some accesses that are
-not trivial.
-
-This patch adds those helpers to libcfs when they are not available,
-and changes (nearly) all calls to kernel_[gs]etsockopt() to
-either use direct access to a helper call.
-
-->keepalive() is not available before v4.11-rc1~94^2~43^2~14
-and there is no helper function, so for SO_KEEPALIVE we
-need to have #ifdef code in the C file.
-
-TCP_BACKOFF* setting are not converted as they are not available in
-any upstream kernel, so no conversion is possible.
-
-Also include some minor style fixes and change lnet_sock_setbuf() and
- lnet_sock_getbuf() to be 'void' functions.
+A new version, v2, for test_dummy_encryption was added to the
+fscrypt API. Add support for this new test encryption to Lustre.
 
 WC-bug-id: https://jira.whamcloud.com/browse/LU-13783
-Lustre-commit: 99d9638d6c074b48 ("LU-13783 libcfs: support removal of kernel_setsockopt()")
-Signed-off-by: Mr NeilBrown <neilb@suse.de>
-Reviewed-on: https://review.whamcloud.com/39259
-Reviewed-by: Aurelien Degremont <degremoa@amazon.com>
-Reviewed-by: Chris Horn <chris.horn@hpe.com>
-Reviewed-by: James Simmons <jsimmons@infradead.org>
-Reviewed-by: Oleg Drokin <green@whamcloud.com>
+Lustre-commit: ed318a6cc0b620440 ("LU-13783 sec: support of native Ubuntu 20.04 HWE 5.8 kernel")
 Signed-off-by: James Simmons <jsimmons@infradead.org>
+Signed-off-by: Sebastien Buisson <sbuisson@ddn.com>
+Reviewed-on: https://review.whamcloud.com/46238
+Reviewed-by: Jian Yu <yujian@whamcloud.com>
+Reviewed-by: Oleg Drokin <green@whamcloud.com>
 ---
- include/linux/lnet/lib-lnet.h        |   4 +-
- net/lnet/klnds/socklnd/socklnd_lib.c | 123 ++++++++++-------------------------
- net/lnet/lnet/lib-socket.c           |  41 +++---------
- 3 files changed, 47 insertions(+), 121 deletions(-)
+ fs/lustre/include/lustre_crypto.h | 15 +++++++--------
+ fs/lustre/include/lustre_disk.h   |  3 +++
+ fs/lustre/llite/crypto.c          | 30 +++++++++++++-----------------
+ fs/lustre/llite/dir.c             |  2 +-
+ fs/lustre/llite/llite_internal.h  |  2 +-
+ fs/lustre/llite/llite_lib.c       | 33 +++++++++++++++++++++++++++------
+ fs/lustre/llite/namei.c           |  3 ++-
+ 7 files changed, 54 insertions(+), 34 deletions(-)
 
-diff --git a/include/linux/lnet/lib-lnet.h b/include/linux/lnet/lib-lnet.h
-index ca2a565..ceb12b1 100644
---- a/include/linux/lnet/lib-lnet.h
-+++ b/include/linux/lnet/lib-lnet.h
-@@ -827,8 +827,8 @@ struct lnet_inetdev {
+diff --git a/fs/lustre/include/lustre_crypto.h b/fs/lustre/include/lustre_crypto.h
+index 6cc946d..c31cc1e 100644
+--- a/fs/lustre/include/lustre_crypto.h
++++ b/fs/lustre/include/lustre_crypto.h
+@@ -32,11 +32,16 @@
+ 
+ #include <linux/fscrypt.h>
+ 
++/* Macro to extract digest from Lustre specific structures */
++#define LLCRYPT_EXTRACT_DIGEST(name, len)			\
++	((name) + round_down((len) - FS_CRYPTO_BLOCK_SIZE - 1,	\
++			     FS_CRYPTO_BLOCK_SIZE))
++
+ struct ll_sb_info;
+ #ifdef CONFIG_FS_ENCRYPTION
+ int ll_set_encflags(struct inode *inode, void *encctx, u32 encctxlen,
+ 		    bool preload);
+-bool ll_sbi_has_test_dummy_encryption(struct ll_sb_info *sbi);
++bool ll_sb_has_test_dummy_encryption(struct super_block *sb);
+ bool ll_sbi_has_encrypt(struct ll_sb_info *sbi);
+ void ll_sbi_set_encrypt(struct ll_sb_info *sbi, bool set);
+ #else
+@@ -46,7 +51,7 @@ static inline int ll_set_encflags(struct inode *inode, void *encctx,
+ 	return 0;
+ }
+ 
+-static inline bool ll_sbi_has_test_dummy_encryption(struct ll_sb_info *sbi)
++static inline bool ll_sb_has_test_dummy_encryption(struct super_block *sb)
+ {
+ 	return false;
+ }
+@@ -123,10 +128,4 @@ static inline int critical_decode(const u8 *src, int len, char *dst)
+ 	return (char *)q - dst;
+ }
+ 
+-/* Extracts the second-to-last ciphertext block */
+-#define LLCRYPT_FNAME_DIGEST(name, len)					\
+-	((name) + round_down((len) - FS_CRYPTO_BLOCK_SIZE - 1,		\
+-			     FS_CRYPTO_BLOCK_SIZE))
+-#define LLCRYPT_FNAME_DIGEST_SIZE	FS_CRYPTO_BLOCK_SIZE
+-
+ #endif /* _LUSTRE_CRYPTO_H_ */
+diff --git a/fs/lustre/include/lustre_disk.h b/fs/lustre/include/lustre_disk.h
+index d8686fc..15f94ad8 100644
+--- a/fs/lustre/include/lustre_disk.h
++++ b/fs/lustre/include/lustre_disk.h
+@@ -47,6 +47,7 @@
+ #include <asm/byteorder.h>
+ #include <linux/types.h>
+ #include <linux/backing-dev.h>
++#include <lustre_crypto.h>
+ 
+ /****************** persistent mount data *********************/
+ 
+@@ -131,6 +132,8 @@ struct lustre_sb_info {
+ 	struct obd_export	 *lsi_osd_exp;
+ 	char			  lsi_osd_type[16];
+ 	char			  lsi_fstype[16];
++	/* Encryption context for '-o test_dummy_encryption' */
++	struct fscrypt_dummy_context lsi_dummy_enc_ctx;
  };
  
- int lnet_inet_enumerate(struct lnet_inetdev **dev_list, struct net *ns);
--int lnet_sock_setbuf(struct socket *socket, int txbufsize, int rxbufsize);
--int lnet_sock_getbuf(struct socket *socket, int *txbufsize, int *rxbufsize);
-+void lnet_sock_setbuf(struct socket *socket, int txbufsize, int rxbufsize);
-+void lnet_sock_getbuf(struct socket *socket, int *txbufsize, int *rxbufsize);
- int lnet_sock_getaddr(struct socket *socket, bool remote,
- 		      struct sockaddr_storage *peer);
- int lnet_sock_write(struct socket *sock, void *buffer, int nob, int timeout);
-diff --git a/net/lnet/klnds/socklnd/socklnd_lib.c b/net/lnet/klnds/socklnd/socklnd_lib.c
-index 78e58f6..047e7a6 100644
---- a/net/lnet/klnds/socklnd/socklnd_lib.c
-+++ b/net/lnet/klnds/socklnd/socklnd_lib.c
-@@ -147,17 +147,13 @@
- void
- ksocknal_lib_eager_ack(struct ksock_conn *conn)
- {
--	int opt = 1;
- 	struct socket *sock = conn->ksnc_sock;
- 
--	/*
--	 * Remind the socket to ACK eagerly.  If I don't, the socket might
--	 * think I'm about to send something it could piggy-back the ACK
--	 * on, introducing delay in completing zero-copy sends in my
--	 * peer_ni.
-+	/* Remind the socket to ACK eagerly.  If I don't, the socket might
-+	 * think I'm about to send something it could piggy-back the ACK on,
-+	 * introducing delay in completing zero-copy sends in my peer_ni.
- 	 */
--	kernel_setsockopt(sock, SOL_TCP, TCP_QUICKACK, (char *)&opt,
--			  sizeof(opt));
-+	tcp_sock_set_quickack(sock->sk, 1);
+ #define LSI_UMOUNT_FAILOVER	0x00200000
+diff --git a/fs/lustre/llite/crypto.c b/fs/lustre/llite/crypto.c
+index b0e4f76..f075b9a 100644
+--- a/fs/lustre/llite/crypto.c
++++ b/fs/lustre/llite/crypto.c
+@@ -145,16 +145,17 @@ int ll_file_open_encrypt(struct inode *inode, struct file *filp)
+ 	return rc;
  }
  
- static int lustre_csum(struct kvec *v, void *context)
-@@ -235,87 +231,47 @@ static int lustre_csum(struct kvec *v, void *context)
- 			       int *rxmem, int *nagle)
+-bool ll_sbi_has_test_dummy_encryption(struct ll_sb_info *sbi)
++static const union fscrypt_context *
++ll_get_dummy_context(struct super_block *sb)
  {
- 	struct socket *sock = conn->ksnc_sock;
--	int len;
--	int rc;
-+	struct tcp_sock *tp = tcp_sk(sock->sk);
+-	return unlikely(test_bit(LL_SBI_TEST_DUMMY_ENCRYPTION, sbi->ll_flags));
++	struct lustre_sb_info *lsi = s2lsi(sb);
++
++	return lsi ? lsi->lsi_dummy_enc_ctx.ctx : NULL;
+ }
  
--	rc = ksocknal_connsock_addref(conn);
--	if (rc) {
-+	if (ksocknal_connsock_addref(conn) < 0) {
- 		LASSERT(conn->ksnc_closing);
--		*txmem = *rxmem = *nagle = 0;
-+		*txmem = 0;
-+		*rxmem = 0;
-+		*nagle = 0;
- 		return -ESHUTDOWN;
+-static bool ll_dummy_context(struct inode *inode)
++bool ll_sb_has_test_dummy_encryption(struct super_block *sb)
+ {
+-	struct ll_sb_info *sbi = ll_i2sbi(inode);
+-
+-	return sbi ? ll_sbi_has_test_dummy_encryption(sbi) : false;
++	return ll_get_dummy_context(sb) != NULL;
+ }
+ 
+ bool ll_sbi_has_encrypt(struct ll_sb_info *sbi)
+@@ -263,14 +264,14 @@ int ll_setup_filename(struct inode *dir, const struct qstr *iname,
+ 			rc = -EINVAL;
+ 			goto out_free;
+ 		}
+-		digest = (struct ll_digest_filename *)fname->crypto_buf.name;
++		digest = (struct ll_digest_filename *)fname->disk_name.name;
+ 		*fid = digest->ldf_fid;
+ 		if (!fid_is_sane(fid)) {
+ 			rc = -EINVAL;
+ 			goto out_free;
+ 		}
+ 		fname->disk_name.name = digest->ldf_excerpt;
+-		fname->disk_name.len = LLCRYPT_FNAME_DIGEST_SIZE;
++		fname->disk_name.len = sizeof(digest->ldf_excerpt);
+ 	}
+ 	if (IS_ENCRYPTED(dir) &&
+ 	    !name_is_dot_or_dotdot(fname->disk_name.name,
+@@ -305,11 +306,6 @@ int ll_setup_filename(struct inode *dir, const struct qstr *iname,
+ 	return rc;
+ }
+ 
+-#define LLCRYPT_FNAME_DIGEST(name, len) \
+-	((name) + round_down((len) - FS_CRYPTO_BLOCK_SIZE - 1, \
+-			     FS_CRYPTO_BLOCK_SIZE))
+-#define LLCRYPT_FNAME_MAX_UNDIGESTED_SIZE	32
+-
+ /**
+  * ll_fname_disk_to_usr() - overlay to fscrypt_fname_disk_to_usr
+  * @inode: the inode to convert name
+@@ -359,7 +355,7 @@ int ll_fname_disk_to_usr(struct inode *inode,
+ 			lltr.name = buf;
+ 			lltr.len = len;
+ 		}
+-		if (lltr.len > LLCRYPT_FNAME_MAX_UNDIGESTED_SIZE &&
++		if (lltr.len > FS_CRYPTO_BLOCK_SIZE * 2 &&
+ 		    !fscrypt_has_encryption_key(inode)) {
+ 			digested = 1;
+ 			/* Without the key for long names, set the dentry name
+@@ -371,8 +367,8 @@ int ll_fname_disk_to_usr(struct inode *inode,
+ 				return -EINVAL;
+ 			digest.ldf_fid = *fid;
+ 			memcpy(digest.ldf_excerpt,
+-			       LLCRYPT_FNAME_DIGEST(lltr.name, lltr.len),
+-			       LLCRYPT_FNAME_DIGEST_SIZE);
++			       LLCRYPT_EXTRACT_DIGEST(lltr.name, lltr.len),
++			       sizeof(digest.ldf_excerpt));
+ 
+ 			lltr.name = (char *)&digest;
+ 			lltr.len = sizeof(digest);
+@@ -440,7 +436,7 @@ int ll_revalidate_d_crypto(struct dentry *dentry, unsigned int flags)
+ 	.key_prefix		= "lustre:",
+ 	.get_context		= ll_get_context,
+ 	.set_context		= ll_set_context,
+-	.dummy_context		= ll_dummy_context,
++	.get_dummy_context	= ll_get_dummy_context,
+ 	.empty_dir		= ll_empty_dir,
+ 	.max_namelen		= NAME_MAX,
+ };
+diff --git a/fs/lustre/llite/dir.c b/fs/lustre/llite/dir.c
+index 29d7e44..6eaac9a 100644
+--- a/fs/lustre/llite/dir.c
++++ b/fs/lustre/llite/dir.c
+@@ -495,7 +495,7 @@ static int ll_dir_setdirstripe(struct dentry *dparent, struct lmv_user_md *lump,
+ 
+ 	if (ll_sbi_has_encrypt(sbi) &&
+ 	    (IS_ENCRYPTED(parent) ||
+-	     unlikely(fscrypt_dummy_context_enabled(parent)))) {
++	     unlikely(ll_sb_has_test_dummy_encryption(parent->i_sb)))) {
+ 		err = fscrypt_get_encryption_info(parent);
+ 		if (err)
+ 			goto out_op_data;
+diff --git a/fs/lustre/llite/llite_internal.h b/fs/lustre/llite/llite_internal.h
+index 426c797..b052e82 100644
+--- a/fs/lustre/llite/llite_internal.h
++++ b/fs/lustre/llite/llite_internal.h
+@@ -1726,7 +1726,7 @@ static inline struct pcc_super *ll_info2pccs(struct ll_inode_info *lli)
+  */
+ struct ll_digest_filename {
+ 	struct lu_fid ldf_fid;
+-	char ldf_excerpt[LLCRYPT_FNAME_DIGEST_SIZE];
++	char ldf_excerpt[FS_CRYPTO_BLOCK_SIZE];
+ };
+ 
+ int ll_setup_filename(struct inode *dir, const struct qstr *iname,
+diff --git a/fs/lustre/llite/llite_lib.c b/fs/lustre/llite/llite_lib.c
+index 99ab9ac..aaff3fa 100644
+--- a/fs/lustre/llite/llite_lib.c
++++ b/fs/lustre/llite/llite_lib.c
+@@ -474,7 +474,7 @@ static int client_common_fill_super(struct super_block *sb, char *md, char *dt)
+ 		set_bit(LL_SBI_FILE_SECCTX, sbi->ll_flags);
+ 
+ 	if (ll_sbi_has_encrypt(sbi) && !obd_connect_has_enc(data)) {
+-		if (ll_sbi_has_test_dummy_encryption(sbi))
++		if (ll_sb_has_test_dummy_encryption(sb))
+ 			LCONSOLE_WARN("%s: server %s does not support encryption feature, encryption deactivated.\n",
+ 				      sbi->ll_fsname,
+ 				      sbi->ll_md_exp->exp_obd->obd_name);
+@@ -571,11 +571,11 @@ static int client_common_fill_super(struct super_block *sb, char *md, char *dt)
+ 
+ 	if (ll_sbi_has_encrypt(sbi) &&
+ 	    !obd_connect_has_enc(&sbi->ll_dt_obd->u.lov.lov_ocd)) {
+-		if (ll_sbi_has_test_dummy_encryption(sbi))
++		if (ll_sb_has_test_dummy_encryption(sb))
+ 			LCONSOLE_WARN("%s: server %s does not support encryption feature, encryption deactivated.\n",
+ 				      sbi->ll_fsname, dt);
+ 		ll_sbi_set_encrypt(sbi, false);
+-	} else if (ll_sbi_has_test_dummy_encryption(sbi)) {
++	} else if (ll_sb_has_test_dummy_encryption(sb)) {
+ 		LCONSOLE_WARN("Test dummy encryption mode enabled\n");
  	}
  
--	rc = lnet_sock_getbuf(sock, txmem, rxmem);
--	if (!rc) {
--		len = sizeof(*nagle);
--		rc = kernel_getsockopt(sock, SOL_TCP, TCP_NODELAY,
--				       (char *)nagle, &len);
--	}
-+	lnet_sock_getbuf(sock, txmem, rxmem);
- 
--	ksocknal_connsock_decref(conn);
-+	*nagle = !(tp->nonagle & TCP_NAGLE_OFF);
- 
--	if (!rc)
--		*nagle = !*nagle;
--	else
--		*txmem = *rxmem = *nagle = 0;
-+	ksocknal_connsock_decref(conn);
- 
--	return rc;
-+	return 0;
- }
- 
- int
- ksocknal_lib_setup_sock(struct socket *sock)
+@@ -909,6 +909,7 @@ void ll_kill_super(struct super_block *sb)
+ 	{LL_SBI_VERBOSE,		"verbose"},
+ 	{LL_SBI_VERBOSE,		"noverbose"},
+ 	{LL_SBI_ALWAYS_PING,		"always_ping"},
++	{LL_SBI_TEST_DUMMY_ENCRYPTION,	"test_dummy_encryption=%s"},
+ 	{LL_SBI_TEST_DUMMY_ENCRYPTION,	"test_dummy_encryption"},
+ 	{LL_SBI_ENCRYPT,		"encrypt"},
+ 	{LL_SBI_ENCRYPT,		"noencrypt"},
+@@ -957,6 +958,7 @@ static int ll_options(char *options, struct super_block *sb)
  {
- 	int rc;
--	int option;
- 	int keep_idle;
- 	int keep_intvl;
- 	int keep_count;
- 	int do_keepalive;
--	struct linger linger;
-+	struct tcp_sock *tp = tcp_sk(sock->sk);
+ 	struct ll_sb_info *sbi = ll_s2sbi(sb);
+ 	char *s2, *s1, *opts;
++	int err = 0;
  
- 	sock->sk->sk_allocation = GFP_NOFS;
- 
--	/*
--	 * Ensure this socket aborts active sends immediately when we close
--	 * it.
--	 */
--	linger.l_onoff = 0;
--	linger.l_linger = 0;
--
--	rc = kernel_setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&linger,
--			       sizeof(linger));
--	if (rc) {
--		CERROR("Can't set SO_LINGER: %d\n", rc);
--		return rc;
--	}
--
--	option = -1;
--	rc = kernel_setsockopt(sock, SOL_TCP, TCP_LINGER2, (char *)&option,
--			       sizeof(option));
--	if (rc) {
--		CERROR("Can't set SO_LINGER2: %d\n", rc);
--		return rc;
--	}
--
--	if (!*ksocknal_tunables.ksnd_nagle) {
--		option = 1;
-+	/* Ensure this socket aborts active sends immediately when closed. */
-+	sock_reset_flag(sock->sk, SOCK_LINGER);
- 
--		rc = kernel_setsockopt(sock, SOL_TCP, TCP_NODELAY,
--				       (char *)&option, sizeof(option));
--		if (rc) {
--			CERROR("Can't disable nagle: %d\n", rc);
--			return rc;
--		}
--	}
-+	tp->linger2 = -1;
-+	if (!*ksocknal_tunables.ksnd_nagle)
-+		tcp_sock_set_nodelay(sock->sk);
- 
--	rc = lnet_sock_setbuf(sock, *ksocknal_tunables.ksnd_tx_buffer_size,
--			      *ksocknal_tunables.ksnd_rx_buffer_size);
--	if (rc) {
--		CERROR("Can't set buffer tx %d, rx %d buffers: %d\n",
--		       *ksocknal_tunables.ksnd_tx_buffer_size,
--		       *ksocknal_tunables.ksnd_rx_buffer_size, rc);
--		return rc;
--	}
-+	lnet_sock_setbuf(sock,
-+			 *ksocknal_tunables.ksnd_tx_buffer_size,
-+			 *ksocknal_tunables.ksnd_rx_buffer_size);
- 
- 	/* TCP_BACKOFF_* sockopt tunables unsupported in stock kernels */
- 
-@@ -326,34 +282,30 @@ static int lustre_csum(struct kvec *v, void *context)
- 
- 	do_keepalive = (keep_idle > 0 && keep_count > 0 && keep_intvl > 0);
- 
--	option = (do_keepalive ? 1 : 0);
--	rc = kernel_setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (char *)&option,
--			       sizeof(option));
--	if (rc) {
--		CERROR("Can't set SO_KEEPALIVE: %d\n", rc);
--		return rc;
--	}
-+	if (sock->sk->sk_prot->keepalive)
-+		sock->sk->sk_prot->keepalive(sock->sk, do_keepalive);
-+	if (do_keepalive)
-+		sock_set_flag(sock->sk, SOCK_KEEPOPEN);
-+	else
-+		sock_reset_flag(sock->sk, SOCK_KEEPOPEN);
- 
- 	if (!do_keepalive)
+ 	if (!options)
  		return 0;
- 
--	rc = kernel_setsockopt(sock, SOL_TCP, TCP_KEEPIDLE, (char *)&keep_idle,
--			       sizeof(keep_idle));
--	if (rc) {
-+	rc = tcp_sock_set_keepidle(sock->sk, keep_idle);
-+	if (rc != 0) {
- 		CERROR("Can't set TCP_KEEPIDLE: %d\n", rc);
- 		return rc;
+@@ -1038,7 +1040,22 @@ static int ll_options(char *options, struct super_block *sb)
+ 			break;
+ 		case LL_SBI_TEST_DUMMY_ENCRYPTION: {
+ #ifdef CONFIG_FS_ENCRYPTION
+-			set_bit(token, sbi->ll_flags);
++			struct lustre_sb_info *lsi = s2lsi(sb);
++
++			err = fscrypt_set_test_dummy_encryption(sb, &args[0],
++								&lsi->lsi_dummy_enc_ctx);
++			if (!err)
++				break;
++
++			if (err == -EEXIST)
++				LCONSOLE_WARN("Can't change test_dummy_encryption");
++			else if (err == -EINVAL)
++				LCONSOLE_WARN("Value of option \"%s\" unrecognized",
++					      options);
++			else
++				LCONSOLE_WARN("Error processing option \"%s\" [%d]",
++					      options, err);
++			err = -1;
+ #else
+ 			LCONSOLE_WARN("Test dummy encryption mount option ignored: encryption not supported\n");
+ #endif
+@@ -1094,7 +1111,7 @@ static int ll_options(char *options, struct super_block *sb)
+ 		}
  	}
- 
--	rc = kernel_setsockopt(sock, SOL_TCP, TCP_KEEPINTVL,
--			       (char *)&keep_intvl, sizeof(keep_intvl));
--	if (rc) {
-+	rc = tcp_sock_set_keepintvl(sock->sk, keep_intvl);
-+	if (rc != 0) {
- 		CERROR("Can't set TCP_KEEPINTVL: %d\n", rc);
- 		return rc;
- 	}
- 
--	rc = kernel_setsockopt(sock, SOL_TCP, TCP_KEEPCNT, (char *)&keep_count,
--			       sizeof(keep_count));
--	if (rc) {
-+	rc = tcp_sock_set_keepcnt(sock->sk, keep_count);
-+	if (rc != 0) {
- 		CERROR("Can't set TCP_KEEPCNT: %d\n", rc);
- 		return rc;
- 	}
-@@ -367,7 +319,6 @@ static int lustre_csum(struct kvec *v, void *context)
- 	struct sock *sk;
- 	struct tcp_sock *tp;
- 	int nonagle;
--	int val = 1;
- 	int rc;
- 
- 	rc = ksocknal_connsock_addref(conn);
-@@ -379,12 +330,10 @@ static int lustre_csum(struct kvec *v, void *context)
- 
- 	lock_sock(sk);
- 	nonagle = tp->nonagle;
--	tp->nonagle = 1;
-+	tp->nonagle = TCP_NAGLE_OFF;
- 	release_sock(sk);
- 
--	rc = kernel_setsockopt(conn->ksnc_sock, SOL_TCP, TCP_NODELAY,
--			       (char *)&val, sizeof(val));
--	LASSERT(!rc);
-+	tcp_sock_set_nodelay(conn->ksnc_sock->sk);
- 
- 	lock_sock(sk);
- 	tp->nonagle = nonagle;
-diff --git a/net/lnet/lnet/lib-socket.c b/net/lnet/lnet/lib-socket.c
-index 7deb48a..7bb8d5c 100644
---- a/net/lnet/lnet/lib-socket.c
-+++ b/net/lnet/lnet/lib-socket.c
-@@ -182,7 +182,6 @@ int choose_ipv4_src(u32 *ret, int interface, u32 dst_ipaddr, struct net *ns)
- {
- 	struct socket *sock;
- 	int rc;
--	int option;
- 	int family;
- 
- 	family = AF_INET6;
-@@ -200,13 +199,7 @@ int choose_ipv4_src(u32 *ret, int interface, u32 dst_ipaddr, struct net *ns)
- 		return ERR_PTR(rc);
- 	}
- 
--	option = 1;
--	rc = kernel_setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
--			       (char *)&option, sizeof(option));
--	if (rc) {
--		CERROR("Can't set SO_REUSEADDR for socket: %d\n", rc);
--		goto failed;
--	}
-+	sock->sk->sk_reuseport = 1;
- 
- 	if (interface >= 0 || local_port) {
- 		struct sockaddr_storage locaddr = {};
-@@ -296,34 +289,21 @@ int choose_ipv4_src(u32 *ret, int interface, u32 dst_ipaddr, struct net *ns)
- 	return ERR_PTR(rc);
- }
- 
--int
-+void
- lnet_sock_setbuf(struct socket *sock, int txbufsize, int rxbufsize)
- {
--	int option;
--	int rc;
-+	struct sock *sk = sock->sk;
- 
- 	if (txbufsize) {
--		option = txbufsize;
--		rc = kernel_setsockopt(sock, SOL_SOCKET, SO_SNDBUF,
--				       (char *)&option, sizeof(option));
--		if (rc) {
--			CERROR("Can't set send buffer %d: %d\n",
--			       option, rc);
--			return rc;
--		}
-+		sk->sk_userlocks |= SOCK_SNDBUF_LOCK;
-+		sk->sk_sndbuf = txbufsize;
-+		sk->sk_write_space(sk);
- 	}
- 
- 	if (rxbufsize) {
--		option = rxbufsize;
--		rc = kernel_setsockopt(sock, SOL_SOCKET, SO_RCVBUF,
--				       (char *)&option, sizeof(option));
--		if (rc) {
--			CERROR("Can't set receive buffer %d: %d\n",
--			       option, rc);
--			return rc;
--		}
-+		sk->sk_userlocks |= SOCK_RCVBUF_LOCK;
-+		sk->sk_sndbuf = rxbufsize;
- 	}
+ 	kfree(opts);
 -	return 0;
++	return err;
  }
- EXPORT_SYMBOL(lnet_sock_setbuf);
  
-@@ -359,16 +339,13 @@ int choose_ipv4_src(u32 *ret, int interface, u32 dst_ipaddr, struct net *ns)
+ void ll_lli_init(struct ll_inode_info *lli)
+@@ -1369,6 +1386,7 @@ void ll_put_super(struct super_block *sb)
+ 	if (profilenm)
+ 		class_del_profile(profilenm);
+ 
++	fscrypt_free_dummy_context(&lsi->lsi_dummy_enc_ctx);
+ 	ll_free_sbi(sb);
+ 	lsi->lsi_llsbi = NULL;
+ 
+@@ -3236,9 +3254,10 @@ struct md_op_data *ll_prep_md_op_data(struct md_op_data *op_data,
+ 			op_data->op_bias = MDS_FID_OP;
+ 		}
+ 		if (fname.disk_name.name &&
+-		    fname.disk_name.name != (unsigned char *)name)
++		    fname.disk_name.name != (unsigned char *)name) {
+ 			/* op_data->op_name must be freed after use */
+ 			op_data->op_flags |= MF_OPNAME_KMALLOCED;
++		}
+ 	}
+ 
+ 	/* In fact LUSTRE_OPC_LOOKUP, LUSTRE_OPC_OPEN
+@@ -3317,6 +3336,8 @@ int ll_show_options(struct seq_file *seq, struct dentry *dentry)
+ 		}
+ 	}
+ 
++	fscrypt_show_test_dummy_encryption(seq, ',', dentry->d_sb);
++
+ 	return 0;
  }
- EXPORT_SYMBOL(lnet_sock_getaddr);
  
--int
--lnet_sock_getbuf(struct socket *sock, int *txbufsize, int *rxbufsize)
-+void lnet_sock_getbuf(struct socket *sock, int *txbufsize, int *rxbufsize)
- {
- 	if (txbufsize)
- 		*txbufsize = sock->sk->sk_sndbuf;
- 
- 	if (rxbufsize)
- 		*rxbufsize = sock->sk->sk_rcvbuf;
--
--	return 0;
- }
- EXPORT_SYMBOL(lnet_sock_getbuf);
- 
+diff --git a/fs/lustre/llite/namei.c b/fs/lustre/llite/namei.c
+index f7e900d..cc7b243 100644
+--- a/fs/lustre/llite/namei.c
++++ b/fs/lustre/llite/namei.c
+@@ -1581,7 +1581,8 @@ static int ll_new_node(struct inode *dir, struct dentry *dchild,
+ 	if (ll_sbi_has_encrypt(sbi) &&
+ 	    ((IS_ENCRYPTED(dir) &&
+ 	    (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode))) ||
+-	    (unlikely(fscrypt_dummy_context_enabled(dir)) && S_ISDIR(mode)))) {
++	    (unlikely(ll_sb_has_test_dummy_encryption(dir->i_sb)) &&
++	     S_ISDIR(mode)))) {
+ 		err = fscrypt_get_encryption_info(dir);
+ 		if (err)
+ 			goto err_exit;
 -- 
 1.8.3.1
 
