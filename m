@@ -2,144 +2,73 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 284C8C43334
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 18 Jun 2022 13:52:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 5CDB0C433EF
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 18 Jun 2022 13:52:47 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233376AbiFRNwZ (ORCPT
+        id S233973AbiFRNwk (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 18 Jun 2022 09:52:25 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47572 "EHLO
+        Sat, 18 Jun 2022 09:52:40 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47628 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230469AbiFRNwS (ORCPT
+        with ESMTP id S229542AbiFRNwZ (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 18 Jun 2022 09:52:18 -0400
+        Sat, 18 Jun 2022 09:52:25 -0400
 Received: from smtp3.ccs.ornl.gov (smtp3.ccs.ornl.gov [160.91.203.39])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id ED1DA1D328
-        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:52:15 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id BB1941D328
+        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:52:24 -0700 (PDT)
 Received: from star.ccs.ornl.gov (star.ccs.ornl.gov [160.91.202.134])
-        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id E8F2313C2;
+        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id F1DF113C6;
         Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
 Received: by star.ccs.ornl.gov (Postfix, from userid 2004)
-        id D8867DC803; Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
+        id E7D5A1002C9; Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
 From:   James Simmons <jsimmons@infradead.org>
 To:     Eric Biggers <ebiggers@google.com>,
         Andreas Dilger <adilger@whamcloud.com>,
         NeilBrown <neilb@suse.de>
 Cc:     linux-fscrypt@vger.kernel.org,
+        Sergey Gorenko <sergeygo@mellanox.com>,
         James Simmons <jsimmons@infradead.org>
-Subject: [PATCH 00/28] lustre: sync to OpenSFS June 15, 2022
-Date:   Sat, 18 Jun 2022 09:51:42 -0400
-Message-Id: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
+Subject: [PATCH 04/28] lnet: o2ib: Fix compilation with Linux 5.8
+Date:   Sat, 18 Jun 2022 09:51:46 -0400
+Message-Id: <1655560330-30743-5-git-send-email-jsimmons@infradead.org>
 X-Mailer: git-send-email 1.8.3.1
+In-Reply-To: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
+References: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Backport OpenSFS work as of June 15, 2022. Move to a Linux 5.9
-kernel.
+From: Sergey Gorenko <sergeygo@mellanox.com>
 
-Alex Zhuravlev (2):
-  lnet: libcfs: reset hs_rehash_bits
-  lustre: ptlrpc: don't report eviction for light weigth connections
+A new argument was added to rdma_reject() in Linux 5.8
 
-Alexander Boyko (2):
-  lustre: lmv: try another MDT if statfs failed
-  lustre: lmv: skip qos for qos_threshold_rr=100
+WC-bug-id: https://jira.whamcloud.com/browse/LU-13761
+Lustre-commit: 956deb0fe8195c7a0 ("LU-13761 o2ib: Fix compilation with MOFED 5.1")
+Signed-off-by: Sergey Gorenko <sergeygo@mellanox.com>
+Reviewed-on: https://review.whamcloud.com/39323
+Reviewed-by: Neil Brown <neilb@suse.de>
+Reviewed-by: Alexey Lyashkov <alexey.lyashkov@hpe.com>
+Reviewed-by: James Simmons <jsimmons@infradead.org>
+Reviewed-by: Oleg Drokin <green@whamcloud.com>
+Signed-off-by: James Simmons <jsimmons@infradead.org>
+---
+ net/lnet/klnds/o2iblnd/o2iblnd_cb.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-Andreas Dilger (1):
-  lnet: libcfs: add "default" keyword for debug mask
-
-Andrew Elwell (1):
-  lustre: ptlrpc: Rearrange version mismatch message
-
-Bobi Jam (1):
-  lustre: ec: add necessary structure member for EC file
-
-Chris Horn (4):
-  lnet: Ping buffer ref leak in lnet_peer_data_present
-  lnet: DLC sets map_on_demand incorrectly
-  lnet: Return ESHUTDOWN in lnet_parse()
-  lnet: libcfs: libcfs_debug_mb set incorrectly on init
-
-Cyril Bordage (1):
-  lnet: set max recovery interval duration
-
-James Simmons (2):
-  lustre: sec: support test_dummy_encryption=v2
-  lustre: uapi: avoid gcc-11 -Werror=stringop-overread warning
-
-John L. Hammond (1):
-  lustre: lov: remove lov_page
-
-Lai Siyao (1):
-  lustre: llite: add option to disable Lustre inode cache
-
-Mr NeilBrown (4):
-  lustre: osc: handle removal of NR_UNSTABLE_NFS
-  lustre: llite: switch from ->mmap_sem to mmap_lock()
-  lnet: support removal of kernel_setsockopt()
-  lnet: improve compat code for IPV6_V6ONLY sock opt
-
-Patrick Farrell (6):
-  lustre: llite: Correct cl_env comments
-  lustre: llite: Make iotrace logging quieter
-  lustre: llite: Add strided readahead to iotrace
-  lustre: llite: Add FID to async ra iotrace
-  lustre: llite: Add COMPLETED iotrace messages
-  lustre: osc: Add RPC to iotrace
-
-Sergey Gorenko (1):
-  lnet: o2ib: Fix compilation with Linux 5.8
-
-Serguei Smirnov (1):
-  lnet: o2iblnd: clean up zombie connections on shutdown
-
- fs/lustre/include/cl_object.h              |  13 ++-
- fs/lustre/include/lu_object.h              |   1 +
- fs/lustre/include/lustre_crypto.h          |  15 ++--
- fs/lustre/include/lustre_disk.h            |   3 +
- fs/lustre/llite/crypto.c                   |  30 +++----
- fs/lustre/llite/dir.c                      |   2 +-
- fs/lustre/llite/file.c                     |  12 +++
- fs/lustre/llite/llite_internal.h           |  17 ++--
- fs/lustre/llite/llite_lib.c                |  34 ++++++--
- fs/lustre/llite/llite_mmap.c               |  20 +++--
- fs/lustre/llite/lproc_llite.c              |  31 +++++++
- fs/lustre/llite/namei.c                    |   3 +-
- fs/lustre/llite/pcc.c                      |   6 +-
- fs/lustre/llite/rw.c                       |  17 ++--
- fs/lustre/llite/super25.c                  |   7 +-
- fs/lustre/llite/vvp_io.c                   |   4 +-
- fs/lustre/lmv/lmv_obd.c                    |  11 ++-
- fs/lustre/lmv/lproc_lmv.c                  |   5 +-
- fs/lustre/lov/lov_cl_internal.h            |  32 +++----
- fs/lustre/lov/lov_object.c                 |   5 +-
- fs/lustre/lov/lov_page.c                   |  46 ++--------
- fs/lustre/obdclass/cl_object.c             |  32 +++----
- fs/lustre/obdclass/lu_tgt_descs.c          |  12 ++-
- fs/lustre/osc/osc_page.c                   |   4 +-
- fs/lustre/osc/osc_request.c                |  16 +++-
- fs/lustre/ptlrpc/import.c                  |  10 ++-
- fs/lustre/ptlrpc/pack_generic.c            |   4 +
- fs/lustre/ptlrpc/wiretest.c                |  24 +++++-
- include/linux/libcfs/libcfs_string.h       |   3 +-
- include/linux/lnet/lib-lnet.h              |  13 +--
- include/uapi/linux/lnet/libcfs_debug.h     | 129 +++++++++++++++--------------
- include/uapi/linux/lustre/lustre_user.h    |  46 ++++++----
- net/lnet/klnds/o2iblnd/o2iblnd.c           |   6 ++
- net/lnet/klnds/o2iblnd/o2iblnd_cb.c        |   3 +-
- net/lnet/klnds/o2iblnd/o2iblnd_modparams.c |   3 +
- net/lnet/klnds/socklnd/socklnd_lib.c       | 123 ++++++++-------------------
- net/lnet/libcfs/debug.c                    |  20 ++---
- net/lnet/libcfs/hash.c                     |  11 ++-
- net/lnet/libcfs/libcfs_string.c            |  11 ++-
- net/lnet/libcfs/tracefile.c                |   5 +-
- net/lnet/lnet/api-ni.c                     |  49 +++++++++++
- net/lnet/lnet/lib-move.c                   |   2 +-
- net/lnet/lnet/lib-socket.c                 |  57 ++++---------
- net/lnet/lnet/peer.c                       |   9 +-
- 44 files changed, 506 insertions(+), 400 deletions(-)
-
+diff --git a/net/lnet/klnds/o2iblnd/o2iblnd_cb.c b/net/lnet/klnds/o2iblnd/o2iblnd_cb.c
+index a88939e7..cb96282 100644
+--- a/net/lnet/klnds/o2iblnd/o2iblnd_cb.c
++++ b/net/lnet/klnds/o2iblnd/o2iblnd_cb.c
+@@ -2323,8 +2323,7 @@ static int kiblnd_map_tx(struct lnet_ni *ni, struct kib_tx *tx,
+ {
+ 	int rc;
+ 
+-	rc = rdma_reject(cmid, rej, sizeof(*rej));
+-
++	rc = rdma_reject(cmid, rej, sizeof(*rej), IB_CM_REJ_CONSUMER_DEFINED);
+ 	if (rc)
+ 		CWARN("Error %d sending reject\n", rc);
+ }
 -- 
 1.8.3.1
 
