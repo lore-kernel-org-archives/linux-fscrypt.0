@@ -2,35 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 129DCCCA480
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 18 Jun 2022 14:01:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DF6DBCCA47C
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 18 Jun 2022 14:01:07 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232528AbiFROAt (ORCPT
+        id S234228AbiFROAv (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 18 Jun 2022 10:00:49 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:48626 "EHLO
+        Sat, 18 Jun 2022 10:00:51 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:48732 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S233500AbiFRNxM (ORCPT
+        with ESMTP id S235271AbiFRNxV (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 18 Jun 2022 09:53:12 -0400
+        Sat, 18 Jun 2022 09:53:21 -0400
 Received: from smtp3.ccs.ornl.gov (smtp3.ccs.ornl.gov [160.91.203.39])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 40B8664F4
-        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:53:10 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5AECC3AD
+        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:53:20 -0700 (PDT)
 Received: from star.ccs.ornl.gov (star.ccs.ornl.gov [160.91.202.134])
-        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 365AC13FA;
+        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 484FF13FE;
         Sat, 18 Jun 2022 09:52:14 -0400 (EDT)
 Received: by star.ccs.ornl.gov (Postfix, from userid 2004)
-        id 318CBE9152; Sat, 18 Jun 2022 09:52:14 -0400 (EDT)
+        id 43A4AE9152; Sat, 18 Jun 2022 09:52:14 -0400 (EDT)
 From:   James Simmons <jsimmons@infradead.org>
 To:     Eric Biggers <ebiggers@google.com>,
         Andreas Dilger <adilger@whamcloud.com>,
         NeilBrown <neilb@suse.de>
-Cc:     linux-fscrypt@vger.kernel.org,
-        Patrick Farrell <pfarrell@whamcloud.com>,
+Cc:     linux-fscrypt@vger.kernel.org, Chris Horn <chris.horn@hpe.com>,
         James Simmons <jsimmons@infradead.org>
-Subject: [PATCH 19/28] lustre: osc: Add RPC to iotrace
-Date:   Sat, 18 Jun 2022 09:52:01 -0400
-Message-Id: <1655560330-30743-20-git-send-email-jsimmons@infradead.org>
+Subject: [PATCH 23/28] lnet: Ping buffer ref leak in lnet_peer_data_present
+Date:   Sat, 18 Jun 2022 09:52:05 -0400
+Message-Id: <1655560330-30743-24-git-send-email-jsimmons@infradead.org>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
 References: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
@@ -38,64 +37,66 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Patrick Farrell <pfarrell@whamcloud.com>
+From: Chris Horn <chris.horn@hpe.com>
 
-Add RPCs to iotrace debugging.
+lnet_peer_merge_data() and lnet_peer_set_primary_data() are
+responsible for dropping the reference on the ping buffer that is
+taken by lnet_peer_push_event() and lnet_discovery_event_reply().
+However, there are some error paths in lnet_peer_data_present()
+where we do not call either lnet_peer_merge_data() or
+lnet_peer_set_primary_data(). In these cases, we need to drop
+the reference on the ping buffer otherwise it will leak.
 
-To avoid creating too much debug output, this debug
-ignores the possiblity that an RPC contains non-contiguous
-extents.  Thus the eventual visualization will act as
-though the RPC is a continuous whole.  I judge this to be
-superior to the amount of log data and complexity of
-capturing each extent separately.  If that level of detail
-is needed, a higher debug level can be used.
-
-WC-bug-id: https://jira.whamcloud.com/browse/LU-15317
-Lustre-commit: 5cb722c384077dd24 ("LU-15317 osc: Add RPC to iotrace")
-Signed-off-by: Patrick Farrell <pfarrell@whamcloud.com>
-Reviewed-on: https://review.whamcloud.com/45894
-Reviewed-by: Sebastien Buisson <sbuisson@ddn.com>
-Reviewed-by: Andreas Dilger <adilger@whamcloud.com>
+HPE-bug-id: LUS-10715
+WC-bug-id: https://jira.whamcloud.com/browse/LU-15509
+Lustre-commit: 4de9793654ec1b2f0 ("LU-15509 lnet: Ping buffer ref leak in lnet_peer_data_present")
+Signed-off-by: Chris Horn <chris.horn@hpe.com>
+Reviewed-on: https://review.whamcloud.com/46431
+Reviewed-by: Andriy Skulysh <andriy.skulysh@hpe.com>
+Reviewed-by: James Simmons <jsimmons@infradead.org>
+Reviewed-by: Serguei Smirnov <ssmirnov@whamcloud.com>
+Reviewed-by: Cyril Bordage <cbordage@whamcloud.com>
 Reviewed-by: Oleg Drokin <green@whamcloud.com>
 Signed-off-by: James Simmons <jsimmons@infradead.org>
 ---
- fs/lustre/osc/osc_request.c | 16 ++++++++++++++--
- 1 file changed, 14 insertions(+), 2 deletions(-)
+ net/lnet/lnet/peer.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
 
-diff --git a/fs/lustre/osc/osc_request.c b/fs/lustre/osc/osc_request.c
-index 124d3c57..d84884f 100644
---- a/fs/lustre/osc/osc_request.c
-+++ b/fs/lustre/osc/osc_request.c
-@@ -2665,6 +2665,7 @@ int osc_build_rpc(const struct lu_env *env, struct client_obd *cli,
- 
- 	spin_lock(&cli->cl_loi_list_lock);
- 	starting_offset >>= PAGE_SHIFT;
-+	ending_offset >>= PAGE_SHIFT;
- 	if (cmd == OBD_BRW_READ) {
- 		cli->cl_r_in_flight++;
- 		lprocfs_oh_tally_log2(&cli->cl_read_page_hist, page_count);
-@@ -2681,8 +2682,19 @@ int osc_build_rpc(const struct lu_env *env, struct client_obd *cli,
- 	spin_unlock(&cli->cl_loi_list_lock);
- 
- 	DEBUG_REQ(D_INODE, req, "%d pages, aa %p, now %ur/%dw in flight",
--		  page_count, aa, cli->cl_r_in_flight,
--		  cli->cl_w_in_flight);
-+		  page_count, aa, cli->cl_r_in_flight, cli->cl_w_in_flight);
-+	if (libcfs_debug & D_IOTRACE) {
-+		struct lu_fid fid;
-+
-+		fid.f_seq = crattr->cra_oa->o_parent_seq;
-+		fid.f_oid = crattr->cra_oa->o_parent_oid;
-+		fid.f_ver = crattr->cra_oa->o_parent_ver;
-+		CDEBUG(D_IOTRACE,
-+		       DFID": %d %s pages, start %lld, end %lld, now %ur/%uw in flight\n",
-+		       PFID(&fid), page_count,
-+		       cmd == OBD_BRW_READ ? "read" : "write", starting_offset,
-+		       ending_offset, cli->cl_r_in_flight, cli->cl_w_in_flight);
+diff --git a/net/lnet/lnet/peer.c b/net/lnet/lnet/peer.c
+index 57d137c..3909c5d 100644
+--- a/net/lnet/lnet/peer.c
++++ b/net/lnet/lnet/peer.c
+@@ -3317,8 +3317,10 @@ static int lnet_peer_data_present(struct lnet_peer *lp)
+ 	 * down, and our reference count may be all that is keeping it
+ 	 * alive. Don't do any work on it.
+ 	 */
+-	if (list_empty(&lp->lp_peer_list))
++	if (list_empty(&lp->lp_peer_list)) {
++		lnet_ping_buffer_decref(pbuf);
+ 		goto out;
 +	}
- 	OBD_FAIL_TIMEOUT(OBD_FAIL_OSC_DELAY_IO, cfs_fail_val);
  
- 	ptlrpcd_add_req(req);
+ 	flags = LNET_PEER_DISCOVERED;
+ 	if (pbuf->pb_info.pi_features & LNET_PING_FEAT_MULTI_RAIL)
+@@ -3345,7 +3347,9 @@ static int lnet_peer_data_present(struct lnet_peer *lp)
+ 	nid = pbuf->pb_info.pi_ni[1].ns_nid;
+ 	if (nid_is_lo0(&lp->lp_primary_nid)) {
+ 		rc = lnet_peer_set_primary_nid(lp, nid, flags);
+-		if (!rc)
++		if (rc)
++			lnet_ping_buffer_decref(pbuf);
++		else
+ 			rc = lnet_peer_merge_data(lp, pbuf);
+ 	/* if the primary nid of the peer is present in the ping info returned
+ 	 * from the peer, but it's not the local primary peer we have
+@@ -3367,6 +3371,7 @@ static int lnet_peer_data_present(struct lnet_peer *lp)
+ 				CERROR("Primary NID error %s versus %s: %d\n",
+ 				       libcfs_nidstr(&lp->lp_primary_nid),
+ 				       libcfs_nid2str(nid), rc);
++				lnet_ping_buffer_decref(pbuf);
+ 			} else {
+ 				rc = lnet_peer_merge_data(lp, pbuf);
+ 			}
 -- 
 1.8.3.1
 
