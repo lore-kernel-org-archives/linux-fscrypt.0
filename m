@@ -2,34 +2,35 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5E580CCA47C
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CDD2ACCA483
 	for <linux-fscrypt@archiver.kernel.org>; Sat, 18 Jun 2022 14:02:04 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1350581AbiFROAy (ORCPT
+        id S233500AbiFROBO (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 18 Jun 2022 10:00:54 -0400
+        Sat, 18 Jun 2022 10:01:14 -0400
 Received: from lindbergh.monkeyblade.net ([23.128.96.19]:48850 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S237024AbiFRNxd (ORCPT
+        with ESMTP id S235115AbiFRNxT (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 18 Jun 2022 09:53:33 -0400
+        Sat, 18 Jun 2022 09:53:19 -0400
 Received: from smtp3.ccs.ornl.gov (smtp3.ccs.ornl.gov [160.91.203.39])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id CD8B8D108
-        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:53:29 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 87D51AE7F
+        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:53:18 -0700 (PDT)
 Received: from star.ccs.ornl.gov (star.ccs.ornl.gov [160.91.202.134])
-        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 5C0D81E8D;
+        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 40FF213FD;
         Sat, 18 Jun 2022 09:52:14 -0400 (EDT)
 Received: by star.ccs.ornl.gov (Postfix, from userid 2004)
-        id 59C94FD3BF; Sat, 18 Jun 2022 09:52:14 -0400 (EDT)
+        id 3E232E4F1D; Sat, 18 Jun 2022 09:52:14 -0400 (EDT)
 From:   James Simmons <jsimmons@infradead.org>
 To:     Eric Biggers <ebiggers@google.com>,
         Andreas Dilger <adilger@whamcloud.com>,
         NeilBrown <neilb@suse.de>
-Cc:     linux-fscrypt@vger.kernel.org, Alex Zhuravlev <bzzz@whamcloud.com>,
+Cc:     linux-fscrypt@vger.kernel.org,
+        Alexander Boyko <alexander.boyko@hpe.com>,
         James Simmons <jsimmons@infradead.org>
-Subject: [PATCH 28/28] lustre: ptlrpc: don't report eviction for light weigth connections
-Date:   Sat, 18 Jun 2022 09:52:10 -0400
-Message-Id: <1655560330-30743-29-git-send-email-jsimmons@infradead.org>
+Subject: [PATCH 22/28] lustre: lmv: skip qos for qos_threshold_rr=100
+Date:   Sat, 18 Jun 2022 09:52:04 -0400
+Message-Id: <1655560330-30743-23-git-send-email-jsimmons@infradead.org>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
 References: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
@@ -37,45 +38,98 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Alex Zhuravlev <bzzz@whamcloud.com>
+From: Alexander Boyko <alexander.boyko@hpe.com>
 
-lightweight connections aren't persistent, so they found themselves
-"evicted" after target's restart, which is not correct.
-don't confuse people with false error.
+Current implementation of qos allocation is called for
+every statfs update. It takes lq_rw_sem for write and
+recalculate penalties, even whith setting qos_threshold_rr=100.
+Which means always use rr allocation. Let's skip unnecessary
+locking and calculation for 100% round robin allocation.
 
-WC-bug-id: https://jira.whamcloud.com/browse/LU-15865
-Lustre-commit: 3e5dc84be447e16a8 ("LU-15865 ptlrpc: don't report eviction for lwp")
-Signed-off-by: Alex Zhuravlev <bzzz@whamcloud.com>
-Reviewed-on: https://review.whamcloud.com/47374
+HPE-bug-id: LUS-10388
+WC-bug-id: https://jira.whamcloud.com/browse/LU-15393
+Lustre-commit: 2f23140d5c1396fd0 ("LU-15393 lod: skip qos for qos_threshold_rr=100")
+Signed-off-by: Alexander Boyko <alexander.boyko@hpe.com>
+Reviewed-on: https://review.whamcloud.com/46388
+Reviewed-by: Andrew Perepechko <andrew.perepechko@hpe.com>
+Reviewed-by: Alexey Lyashkov <alexey.lyashkov@hpe.com>
 Reviewed-by: Andreas Dilger <adilger@whamcloud.com>
-Reviewed-by: Mike Pershin <mpershin@whamcloud.com>
 Reviewed-by: Oleg Drokin <green@whamcloud.com>
 Signed-off-by: James Simmons <jsimmons@infradead.org>
 ---
- fs/lustre/ptlrpc/import.c | 5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+ fs/lustre/include/lu_object.h     |  1 +
+ fs/lustre/lmv/lproc_lmv.c         |  5 +++--
+ fs/lustre/obdclass/lu_tgt_descs.c | 12 ++++++++----
+ 3 files changed, 12 insertions(+), 6 deletions(-)
 
-diff --git a/fs/lustre/ptlrpc/import.c b/fs/lustre/ptlrpc/import.c
-index d685b96..a5fdb8a8 100644
---- a/fs/lustre/ptlrpc/import.c
-+++ b/fs/lustre/ptlrpc/import.c
-@@ -1516,12 +1516,15 @@ int ptlrpc_import_recovery_state_machine(struct obd_import *imp)
+diff --git a/fs/lustre/include/lu_object.h b/fs/lustre/include/lu_object.h
+index 3fb40c6..e4dd287c5 100644
+--- a/fs/lustre/include/lu_object.h
++++ b/fs/lustre/include/lu_object.h
+@@ -1503,6 +1503,7 @@ struct lu_tgt_desc_idx {
+ };
  
- 	if (imp->imp_state == LUSTRE_IMP_EVICTED) {
- 		struct task_struct *task;
-+		u64 connect_flags;
+ /* QoS data for LOD/LMV */
++#define QOS_THRESHOLD_MAX 256 /* should be power of two */
+ struct lu_qos {
+ 	struct list_head	lq_svr_list;	 /* lu_svr_qos list */
+ 	struct rw_semaphore	lq_rw_sem;
+diff --git a/fs/lustre/lmv/lproc_lmv.c b/fs/lustre/lmv/lproc_lmv.c
+index b9efae9..6d4e8d9 100644
+--- a/fs/lustre/lmv/lproc_lmv.c
++++ b/fs/lustre/lmv/lproc_lmv.c
+@@ -158,7 +158,8 @@ static ssize_t qos_threshold_rr_show(struct kobject *kobj,
+ 					      obd_kset.kobj);
  
- 		deuuidify(obd2cli_tgt(imp->imp_obd), NULL,
- 			  &target_start, &target_len);
-+		connect_flags = imp->imp_connect_data.ocd_connect_flags;
- 		/* Don't care about MGC eviction */
- 		if (strcmp(imp->imp_obd->obd_type->typ_name,
--			   LUSTRE_MGC_NAME) != 0) {
-+			   LUSTRE_MGC_NAME) != 0 &&
-+		    (connect_flags & OBD_CONNECT_LIGHTWEIGHT) == 0) {
- 			LCONSOLE_ERROR_MSG(0x167,
- 					   "%s: This client was evicted by %.*s; in progress operations using this service will fail.\n",
- 					   imp->imp_obd->obd_name, target_len,
+ 	return scnprintf(buf, PAGE_SIZE, "%u%%\n",
+-			(obd->u.lmv.lmv_qos.lq_threshold_rr * 100 + 255) >> 8);
++			(obd->u.lmv.lmv_qos.lq_threshold_rr * 100 +
++			(QOS_THRESHOLD_MAX - 1)) / QOS_THRESHOLD_MAX);
+ }
+ 
+ static ssize_t qos_threshold_rr_store(struct kobject *kobj,
+@@ -190,7 +191,7 @@ static ssize_t qos_threshold_rr_store(struct kobject *kobj,
+ 	if (val > 100)
+ 		return -EINVAL;
+ 
+-	lmv->lmv_qos.lq_threshold_rr = (val << 8) / 100;
++	lmv->lmv_qos.lq_threshold_rr = (val * QOS_THRESHOLD_MAX) / 100;
+ 	set_bit(LQ_DIRTY, &lmv->lmv_qos.lq_flags);
+ 
+ 	return count;
+diff --git a/fs/lustre/obdclass/lu_tgt_descs.c b/fs/lustre/obdclass/lu_tgt_descs.c
+index 935cff6..51d2e21 100644
+--- a/fs/lustre/obdclass/lu_tgt_descs.c
++++ b/fs/lustre/obdclass/lu_tgt_descs.c
+@@ -275,11 +275,13 @@ int lu_tgt_descs_init(struct lu_tgt_descs *ltd, bool is_mdt)
+ 		ltd->ltd_lmv_desc.ld_pattern = LMV_HASH_TYPE_DEFAULT;
+ 		ltd->ltd_qos.lq_prio_free = LMV_QOS_DEF_PRIO_FREE * 256 / 100;
+ 		ltd->ltd_qos.lq_threshold_rr =
+-			LMV_QOS_DEF_THRESHOLD_RR_PCT * 256 / 100;
++			LMV_QOS_DEF_THRESHOLD_RR_PCT *
++			QOS_THRESHOLD_MAX / 100;
+ 	} else {
+ 		ltd->ltd_qos.lq_prio_free = LOV_QOS_DEF_PRIO_FREE * 256 / 100;
+ 		ltd->ltd_qos.lq_threshold_rr =
+-			LOV_QOS_DEF_THRESHOLD_RR_PCT * 256 / 100;
++			LOV_QOS_DEF_THRESHOLD_RR_PCT *
++			QOS_THRESHOLD_MAX / 100;
+ 	}
+ 
+ 	return 0;
+@@ -568,8 +570,10 @@ int ltd_qos_penalties_calc(struct lu_tgt_descs *ltd)
+ 	 * creation performance
+ 	 */
+ 	clear_bit(LQ_SAME_SPACE, &qos->lq_flags);
+-	if ((ba_max * (256 - qos->lq_threshold_rr)) >> 8 < ba_min &&
+-	    (ia_max * (256 - qos->lq_threshold_rr)) >> 8 < ia_min) {
++	if (((ba_max * (QOS_THRESHOLD_MAX - qos->lq_threshold_rr)) /
++	    QOS_THRESHOLD_MAX) < ba_min &&
++	    ((ia_max * (QOS_THRESHOLD_MAX - qos->lq_threshold_rr)) /
++	    QOS_THRESHOLD_MAX) < ia_min) {
+ 		set_bit(LQ_SAME_SPACE, &qos->lq_flags);
+ 		/* Reset weights for the next time we enter qos mode */
+ 		set_bit(LQ_RESET, &qos->lq_flags);
 -- 
 1.8.3.1
 
