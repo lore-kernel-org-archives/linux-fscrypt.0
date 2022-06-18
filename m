@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 91991CCA480
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C3431CCA482
 	for <linux-fscrypt@archiver.kernel.org>; Sat, 18 Jun 2022 13:52:47 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229492AbiFRNwh (ORCPT
+        id S234073AbiFRNwl (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 18 Jun 2022 09:52:37 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47586 "EHLO
+        Sat, 18 Jun 2022 09:52:41 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47668 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232419AbiFRNwT (ORCPT
+        with ESMTP id S233887AbiFRNwb (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 18 Jun 2022 09:52:19 -0400
+        Sat, 18 Jun 2022 09:52:31 -0400
 Received: from smtp3.ccs.ornl.gov (smtp3.ccs.ornl.gov [160.91.203.39])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 56FA31D328
-        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:52:18 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A0E481DA48
+        for <linux-fscrypt@vger.kernel.org>; Sat, 18 Jun 2022 06:52:30 -0700 (PDT)
 Received: from star.ccs.ornl.gov (star.ccs.ornl.gov [160.91.202.134])
-        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id EB62F13C3;
-        Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
+        by smtp3.ccs.ornl.gov (Postfix) with ESMTP id 080FA13D5;
+        Sat, 18 Jun 2022 09:52:14 -0400 (EDT)
 Received: by star.ccs.ornl.gov (Postfix, from userid 2004)
-        id DD002E4F1D; Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
+        id EC7551002D3; Sat, 18 Jun 2022 09:52:13 -0400 (EDT)
 From:   James Simmons <jsimmons@infradead.org>
 To:     Eric Biggers <ebiggers@google.com>,
         Andreas Dilger <adilger@whamcloud.com>,
         NeilBrown <neilb@suse.de>
 Cc:     linux-fscrypt@vger.kernel.org,
         James Simmons <jsimmons@infradead.org>
-Subject: [PATCH 01/28] lustre: osc: handle removal of NR_UNSTABLE_NFS
-Date:   Sat, 18 Jun 2022 09:51:43 -0400
-Message-Id: <1655560330-30743-2-git-send-email-jsimmons@infradead.org>
+Subject: [PATCH 05/28] lnet: improve compat code for IPV6_V6ONLY sock opt
+Date:   Sat, 18 Jun 2022 09:51:47 -0400
+Message-Id: <1655560330-30743-6-git-send-email-jsimmons@infradead.org>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
 References: <1655560330-30743-1-git-send-email-jsimmons@infradead.org>
@@ -39,45 +39,51 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Mr NeilBrown <neilb@suse.de>
 
-In Linux 5.8 the NR_UNSTABLE_NFS page counters are go.  All pages that
-have been writen but are not yet safe are now counted in NR_WRITEBACK.
+Since linux 5.9 (v5.8-rc4-1952-ga7b75c5a8c41) it has been
+possible to pass a "sockptr" to ->setsockopt() which can provide
+a kernel address.
 
-So change osc_page to count in NR_WRITEBACK.
-
-WC-bug-id: https://jira.whamcloud.com/browse/LU-13783
-Lustre-commit: 3e5faa441266cd8d ("LU-13783 osc: handle removal of NR_UNSTABLE_NFS")
+WC-bug-id: https://jira.whamcloud.com/browse/LU-14195
+Lustre-commit: 6d111ff0dde182bfb ("LU-14195 lnet: improve compat code for IPV6_V6ONLY sock opt")
 Signed-off-by: Mr NeilBrown <neilb@suse.de>
-Reviewed-on: https://review.whamcloud.com/39260
-Reviewed-by: Shaun Tancheff <shaun.tancheff@hpe.com>
+Reviewed-on: https://review.whamcloud.com/43559
 Reviewed-by: James Simmons <jsimmons@infradead.org>
+Reviewed-by: Arshad Hussain <arshad.hussain@aeoncomputing.com>
+Reviewed-by: Chris Horn <chris.horn@hpe.com>
 Reviewed-by: Oleg Drokin <green@whamcloud.com>
 Signed-off-by: James Simmons <jsimmons@infradead.org>
 ---
- fs/lustre/osc/osc_page.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ net/lnet/lnet/lib-socket.c | 16 +++++-----------
+ 1 file changed, 5 insertions(+), 11 deletions(-)
 
-diff --git a/fs/lustre/osc/osc_page.c b/fs/lustre/osc/osc_page.c
-index b56bc1a..fd87698 100644
---- a/fs/lustre/osc/osc_page.c
-+++ b/fs/lustre/osc/osc_page.c
-@@ -934,7 +934,7 @@ static inline void unstable_page_accounting(struct ptlrpc_bulk_desc *desc,
- 		}
+diff --git a/net/lnet/lnet/lib-socket.c b/net/lnet/lnet/lib-socket.c
+index 7bb8d5c..3a99cb6 100644
+--- a/net/lnet/lnet/lib-socket.c
++++ b/net/lnet/lnet/lib-socket.c
+@@ -237,18 +237,12 @@ int choose_ipv4_src(u32 *ret, int interface, u32 dst_ipaddr, struct net *ns)
+ 			 * This is the default, but it can be overridden so we
+ 			 * force it back.
+ 			 */
+-			/* From v5.7-rc6-2614-g5a892ff2facb when
+-			 * kernel_setsockopt() was removed until
+-			 * sockptr_t (above) there is no clean way to
+-			 * pass kernel address to setsockopt.  We could
+-			 * use get_fs()/set_fs(), but in this particular
+-			 * situation there is an easier way.  It depends
+-			 * on the fact that at least for these few
+-			 * kernels a NULL address to ipv6_setsockopt()
+-			 * is treated like the address of a zero.
++			/* sockptr_t was introduced around
++			 * v5.8-rc4-1952-ga7b75c5a8c41 and allows a
++			 * kernel address to be passed to ->setsockopt
+ 			 */
+-			if (ipv6_only_sock(sock->sk) && !val) {
+-				void *optval = NULL;
++			if (ipv6_only_sock(sock->sk)) {
++				sockptr_t optval = KERNEL_SOCKPTR(&val);
  
- 		if (count > 0) {
--			mod_node_page_state(pgdat, NR_UNSTABLE_NFS,
-+			mod_node_page_state(pgdat, NR_WRITEBACK,
- 					    factor * count);
- 			count = 0;
- 		}
-@@ -942,7 +942,7 @@ static inline void unstable_page_accounting(struct ptlrpc_bulk_desc *desc,
- 		++count;
- 	}
- 	if (count > 0)
--		mod_node_page_state(last, NR_UNSTABLE_NFS, factor * count);
-+		mod_node_page_state(last, NR_WRITEBACK, factor * count);
- }
- 
- static inline void add_unstable_page_accounting(struct ptlrpc_bulk_desc *desc,
+ 				sock->ops->setsockopt(sock,
+ 						      IPPROTO_IPV6, IPV6_V6ONLY,
 -- 
 1.8.3.1
 
