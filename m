@@ -2,137 +2,207 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 26D0FCCA47E
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 26 Jun 2022 10:20:32 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B446EC43334
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 27 Jun 2022 06:51:57 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229565AbiFZKUb (ORCPT
+        id S232350AbiF0Gv4 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 26 Jun 2022 06:20:31 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53492 "EHLO
+        Mon, 27 Jun 2022 02:51:56 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:43838 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S233665AbiFZKUa (ORCPT
+        with ESMTP id S232117AbiF0Gv4 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 26 Jun 2022 06:20:30 -0400
-Received: from mail-ed1-x533.google.com (mail-ed1-x533.google.com [IPv6:2a00:1450:4864:20::533])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 604D712612
-        for <linux-fscrypt@vger.kernel.org>; Sun, 26 Jun 2022 03:20:27 -0700 (PDT)
-Received: by mail-ed1-x533.google.com with SMTP id eo8so9312413edb.0
-        for <linux-fscrypt@vger.kernel.org>; Sun, 26 Jun 2022 03:20:27 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=scylladb.com; s=google;
-        h=message-id:date:mime-version:user-agent:subject:content-language:to
-         :cc:references:from:organization:in-reply-to
-         :content-transfer-encoding;
-        bh=zy1Ih5xnZLYR31pscqnLVprtiUwTUenQdef+MWxKKMA=;
-        b=oBfck6+XscL2VeZ+MF8T02/Q0GkUoM1jN27mDG9zEwpHpTEFhiBjXDUOLSiVvUMvGM
-         2sicpmI3J24iRKAA/5RxJuX+VnPWJOq0n/0CFMTZwa0ERpZlFUFFpw22CJ5BPYHwH0NF
-         xzEehUBouX/IGDTkYFQ5Ev+S6CtOjASt8p1uYEBuekmHqcuo9NYiLJuBQ11SgTbV+s4Q
-         h+eTO5wsRZUjz6KnScQnB5ClLMK88d5eMfaRvO0FBf2N/bHMRc5rTU2sCUNWnro6M8G+
-         X6ErBcZ5i27Gmfz0rtcLWgvjPPhKS2RKwPNQrtAxFkITjgYwLdz6VFt3v67paBWA0AQH
-         wxMw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20210112;
-        h=x-gm-message-state:message-id:date:mime-version:user-agent:subject
-         :content-language:to:cc:references:from:organization:in-reply-to
-         :content-transfer-encoding;
-        bh=zy1Ih5xnZLYR31pscqnLVprtiUwTUenQdef+MWxKKMA=;
-        b=hlBAumG4HszY9saRo35EtD9o1Wgx42a92aoDYKjDdesBxAybUFo8qKmw69/2/bYO9W
-         8IXNXRl5g2t1j0ubODPncDvuYk3ffWVrFXbKPFDximY7UcExRzZCiBRHB9L8MyhNichX
-         7nwLHXcgdu0pwzcx+fWbGXKXaVteyLys7bQwnXLYszEj4SUdeVP7vTJmmCaGJN9OH9Ur
-         Lu5j3t7zHXfrBzHgCv9c178g2G3Vr2USjo34FlI+6prG72DVytgNA/S+clrbQUhUTz10
-         203wjFIsa9OnUZnJztWK+il7Q2MM0Mu4OBD49TkBQfP1Ltau41FXPofysrXZLv6MxHIL
-         DB2Q==
-X-Gm-Message-State: AJIora/vteU/wGRDW4cw/bJsTfPJ9QV9hk/7l2TQTXGX9k4Y9wuaDj1B
-        OnS1zCf88kMXcNRvp/bn+ZpVfA==
-X-Google-Smtp-Source: AGRyM1tv3WbUrJipd2xn/7Heq9RfOQOWLVedSKXLcrr95zGLiEg/pzWHi319OrG4Zqw5VAKidmbPoA==
-X-Received: by 2002:a05:6402:26d5:b0:435:aba2:9495 with SMTP id x21-20020a05640226d500b00435aba29495mr10073740edd.133.1656238825841;
-        Sun, 26 Jun 2022 03:20:25 -0700 (PDT)
-Received: from [10.0.0.1] (system.cloudius-systems.com. [199.203.229.89])
-        by smtp.gmail.com with ESMTPSA id c4-20020a170906340400b0070abf371274sm3634422ejb.136.2022.06.26.03.20.23
-        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
-        Sun, 26 Jun 2022 03:20:25 -0700 (PDT)
-Message-ID: <23067de5-7955-7f58-f8ad-70a812602ac8@scylladb.com>
-Date:   Sun, 26 Jun 2022 13:20:22 +0300
+        Mon, 27 Jun 2022 02:51:56 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3C2FD26C5;
+        Sun, 26 Jun 2022 23:51:55 -0700 (PDT)
+Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id D61A2612DB;
+        Mon, 27 Jun 2022 06:51:54 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 19B4BC341CA;
+        Mon, 27 Jun 2022 06:51:54 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1656312714;
+        bh=+AyvxCvn4yrPcBcWfqYEVWf1b1GQlpHfuY/Cybxb1qo=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=u0kyDImxb6ZyniuA/XFG2ZruQkJXYj/PfvDeFPPIezA765VThYsDr0ji2oiz5QF3F
+         s1jByKAMJMVVEXc5AuuOQLBnBq86wBerTj9/815un4oI9ozaoP0eeS8AWP9+7tAT6R
+         7RX3MwLUokZiHug3h6a3TdaiphQDUbgY2Uzbsm5xq75/eqw0FN1OcWMYObRQLFxedC
+         mn2dPEufhuVilIqA//hKPekPP9ycmFsNDul+tU66lBUF/sVnnJTaiJf0nDTcB+KBaS
+         l2sT2EGU5EygVJobO9Jr3V9xkWr750hBsJUGi3Tg3rMkO8virBGT3EjrFsh0tGIULe
+         48KLCemLgTGpQ==
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     linux-fscrypt@vger.kernel.org
+Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net,
+        Matthew Wilcox <willy@infradead.org>
+Subject: [PATCH 1/2] fscrypt: stop using PG_error to track error status
+Date:   Sun, 26 Jun 2022 23:50:49 -0700
+Message-Id: <20220627065050.274716-2-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.36.1
+In-Reply-To: <20220627065050.274716-1-ebiggers@kernel.org>
+References: <20220627065050.274716-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101
- Thunderbird/91.10.0
-Subject: Re: [PATCH v3 1/8] statx: add direct I/O alignment information
-Content-Language: en-US
-To:     Christoph Hellwig <hch@infradead.org>
-Cc:     Eric Biggers <ebiggers@kernel.org>, linux-fsdevel@vger.kernel.org,
-        linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-xfs@vger.kernel.org, linux-api@vger.kernel.org,
-        linux-fscrypt@vger.kernel.org, linux-block@vger.kernel.org,
-        linux-kernel@vger.kernel.org, Keith Busch <kbusch@kernel.org>
-References: <20220616201506.124209-1-ebiggers@kernel.org>
- <20220616201506.124209-2-ebiggers@kernel.org>
- <6c06b2d4-2d96-c4a6-7aca-5147a91e7cf2@scylladb.com>
- <YrgOUw6YM2c6k59U@infradead.org>
-From:   Avi Kivity <avi@scylladb.com>
-Organization: ScyllaDB
-In-Reply-To: <YrgOUw6YM2c6k59U@infradead.org>
-Content-Type: text/plain; charset=UTF-8; format=flowed
-Content-Transfer-Encoding: 7bit
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+From: Eric Biggers <ebiggers@google.com>
 
-On 26/06/2022 10.44, Christoph Hellwig wrote:
-> On Sun, Jun 19, 2022 at 02:30:47PM +0300, Avi Kivity wrote:
->>> * stx_dio_offset_align: the alignment (in bytes) required for file
->>>     offsets and I/O segment lengths for DIO, or 0 if DIO is not supported
->>>     on the file.  This will only be nonzero if stx_dio_mem_align is
->>>     nonzero, and vice versa.
->>
->> If you consider AIO, this is actually three alignments:
->>
->> 1. offset alignment for reads (sector size in XFS)
->>
->> 2. offset alignment for overwrites (sector size in XFS since ed1128c2d0c87e,
->> block size earlier)
->>
->> 3. offset alignment for appending writes (block size)
->>
->>
->> This is critical for linux-aio since violation of these alignments will
->> stall the io_submit system call. Perhaps io_uring handles it better by
->> bouncing to a workqueue, but there is a significant performance and latency
->> penalty for that.
-> I think you are mixing things up here.
+As a step towards freeing the PG_error flag for other uses, change ext4
+and f2fs to stop using PG_error to track decryption errors.  Instead, if
+a decryption error occurs, just mark the whole bio as failed.  The
+coarser granularity isn't really a problem since it isn't any worse than
+what the block layer provides, and errors from a multi-page readahead
+aren't reported to applications unless a single-page read fails too.
 
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/crypto/bio.c         | 16 ++++++++++------
+ fs/ext4/readpage.c      |  8 +++++---
+ fs/f2fs/data.c          | 17 +++++++++--------
+ include/linux/fscrypt.h |  5 +++--
+ 4 files changed, 27 insertions(+), 19 deletions(-)
 
-Yes.
+diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+index 2217fe5ece6f9..1b4403136d05c 100644
+--- a/fs/crypto/bio.c
++++ b/fs/crypto/bio.c
+@@ -25,21 +25,25 @@
+  * then this function isn't applicable.  This function may sleep, so it must be
+  * called from a workqueue rather than from the bio's bi_end_io callback.
+  *
+- * This function sets PG_error on any pages that contain any blocks that failed
+- * to be decrypted.  The filesystem must not mark such pages uptodate.
++ * Return: %true on success; %false on failure.  On failure, bio->bi_status is
++ *	   also set to an error status.
+  */
+-void fscrypt_decrypt_bio(struct bio *bio)
++bool fscrypt_decrypt_bio(struct bio *bio)
+ {
+ 	struct bio_vec *bv;
+ 	struct bvec_iter_all iter_all;
+ 
+ 	bio_for_each_segment_all(bv, bio, iter_all) {
+ 		struct page *page = bv->bv_page;
+-		int ret = fscrypt_decrypt_pagecache_blocks(page, bv->bv_len,
++		int err = fscrypt_decrypt_pagecache_blocks(page, bv->bv_len,
+ 							   bv->bv_offset);
+-		if (ret)
+-			SetPageError(page);
++
++		if (err) {
++			bio->bi_status = errno_to_blk_status(err);
++			return false;
++		}
+ 	}
++	return true;
+ }
+ EXPORT_SYMBOL(fscrypt_decrypt_bio);
+ 
+diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
+index e02a5f14e0211..5ce4706f68a7c 100644
+--- a/fs/ext4/readpage.c
++++ b/fs/ext4/readpage.c
+@@ -96,10 +96,12 @@ static void decrypt_work(struct work_struct *work)
+ {
+ 	struct bio_post_read_ctx *ctx =
+ 		container_of(work, struct bio_post_read_ctx, work);
++	struct bio *bio = ctx->bio;
+ 
+-	fscrypt_decrypt_bio(ctx->bio);
+-
+-	bio_post_read_processing(ctx);
++	if (fscrypt_decrypt_bio(bio))
++		bio_post_read_processing(ctx);
++	else
++		__read_end_io(bio);
+ }
+ 
+ static void verity_work(struct work_struct *work)
+diff --git a/fs/f2fs/data.c b/fs/f2fs/data.c
+index 7fcbcf9797372..47065f17d579c 100644
+--- a/fs/f2fs/data.c
++++ b/fs/f2fs/data.c
+@@ -138,7 +138,7 @@ static void f2fs_finish_read_bio(struct bio *bio)
+ 			continue;
+ 		}
+ 
+-		/* PG_error was set if decryption or verity failed. */
++		/* PG_error was set if verity failed. */
+ 		if (bio->bi_status || PageError(page)) {
+ 			ClearPageUptodate(page);
+ 			/* will re-read again later */
+@@ -184,7 +184,7 @@ static void f2fs_verify_bio(struct work_struct *work)
+ 			struct page *page = bv->bv_page;
+ 
+ 			if (!f2fs_is_compressed_page(page) &&
+-			    !PageError(page) && !fsverity_verify_page(page))
++			    !fsverity_verify_page(page))
+ 				SetPageError(page);
+ 		}
+ 	} else {
+@@ -234,10 +234,8 @@ static void f2fs_handle_step_decompress(struct bio_post_read_ctx *ctx)
+ 	bio_for_each_segment_all(bv, ctx->bio, iter_all) {
+ 		struct page *page = bv->bv_page;
+ 
+-		/* PG_error was set if decryption failed. */
+ 		if (f2fs_is_compressed_page(page))
+-			f2fs_end_read_compressed_page(page, PageError(page),
+-						blkaddr);
++			f2fs_end_read_compressed_page(page, false, blkaddr);
+ 		else
+ 			all_compressed = false;
+ 
+@@ -257,14 +255,17 @@ static void f2fs_post_read_work(struct work_struct *work)
+ {
+ 	struct bio_post_read_ctx *ctx =
+ 		container_of(work, struct bio_post_read_ctx, work);
++	struct bio *bio = ctx->bio;
+ 
+-	if (ctx->enabled_steps & STEP_DECRYPT)
+-		fscrypt_decrypt_bio(ctx->bio);
++	if ((ctx->enabled_steps & STEP_DECRYPT) && !fscrypt_decrypt_bio(bio)) {
++		f2fs_finish_read_bio(bio);
++		return;
++	}
+ 
+ 	if (ctx->enabled_steps & STEP_DECOMPRESS)
+ 		f2fs_handle_step_decompress(ctx);
+ 
+-	f2fs_verify_and_finish_bio(ctx->bio);
++	f2fs_verify_and_finish_bio(bio);
+ }
+ 
+ static void f2fs_read_end_io(struct bio *bio)
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index e60d57c99cb6f..e9a3a51f29632 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -348,7 +348,7 @@ u64 fscrypt_fname_siphash(const struct inode *dir, const struct qstr *name);
+ int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags);
+ 
+ /* bio.c */
+-void fscrypt_decrypt_bio(struct bio *bio);
++bool fscrypt_decrypt_bio(struct bio *bio);
+ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+ 			  sector_t pblk, unsigned int len);
+ 
+@@ -641,8 +641,9 @@ static inline int fscrypt_d_revalidate(struct dentry *dentry,
+ }
+ 
+ /* bio.c */
+-static inline void fscrypt_decrypt_bio(struct bio *bio)
++static inline bool fscrypt_decrypt_bio(struct bio *bio)
+ {
++	return true;
+ }
+ 
+ static inline int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
 
-
-> We actually have two limits that
-> matter:
->
->   a) the hard limit, which if violated will return an error.
->      This has been sector size for all common file systems for years,
->      but can be bigger than that with fscrypt in the game (which
->      triggered this series)
->   b) an optimal write size, which can be done asynchronous and
->      without exclusive locking.
->      This is what your cases 2) and 3) above refer to.
->
-> Exposting this additional optimal performance size might be a good idea
-> in addition to what is proposed here, even if matters a little less
-> with io_uring.  But I'm not sure I'd additional split it into append
-> vs overwrite vs hole filling but just round up to the maximum of those.
-
-
-Rounding up will penalize database workloads, with and without io_uring. 
-Database commit logs are characterized by frequent small writes. Telling 
-the database to round up to 4k vs 512 bytes means large write 
-amplification. The disk probably won't care (or maybe it will - it will 
-also have to generate more erase blocks), but the database will run out 
-of commitlog space much sooner and will have to compensate in expensive 
-ways.
-
-
-Of course, people that care can continue to use internal filesystem 
-knowledge, and maybe there are few enough of those that the API can 
-choose to ignore them.
-
+-- 
+2.36.1
 
