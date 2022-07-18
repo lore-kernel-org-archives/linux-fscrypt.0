@@ -2,130 +2,137 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B717CC43334
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 18 Jul 2022 20:43:54 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 59E65C433EF
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 18 Jul 2022 23:13:46 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S234636AbiGRUnw (ORCPT
+        id S236443AbiGRXNp (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 18 Jul 2022 16:43:52 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46336 "EHLO
+        Mon, 18 Jul 2022 19:13:45 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38466 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S235656AbiGRUnp (ORCPT
+        with ESMTP id S229888AbiGRXNp (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 18 Jul 2022 16:43:45 -0400
+        Mon, 18 Jul 2022 19:13:45 -0400
 Received: from out3-smtp.messagingengine.com (out3-smtp.messagingengine.com [66.111.4.27])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A951B30F58;
-        Mon, 18 Jul 2022 13:43:44 -0700 (PDT)
-Received: from compute2.internal (compute2.nyi.internal [10.202.2.46])
-        by mailout.nyi.internal (Postfix) with ESMTP id 177D85C011B;
-        Mon, 18 Jul 2022 16:43:44 -0400 (EDT)
-Received: from mailfrontend2 ([10.202.2.163])
-  by compute2.internal (MEProxy); Mon, 18 Jul 2022 16:43:44 -0400
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bur.io; h=cc:cc
-        :content-type:date:date:from:from:in-reply-to:in-reply-to
-        :message-id:mime-version:references:reply-to:sender:subject
-        :subject:to:to; s=fm3; t=1658177024; x=1658263424; bh=FnddR2qd/j
-        yRaeemWdHw9cVjrT+zhuOzDDuuSDRdvrM=; b=UA/GX3UTbWgyUovjwr0xb3Z9eV
-        AdDQl/CZGFZ66k/l5fSvvOZ+XQ3xVfYIjKeqxldD163jfHDvGSiJZItz4oNU3dA5
-        VM3mf5S02xR69Tyf8alReXmyaRWcl9dRvCrX+hNXvZxSyzmeklO+SX0dlWoNbatz
-        +WHFMYezWX2iyWnUp3WVzVuZON58AFM58cOxIjs996jRq8MmJ+l764t17hzPQ9lD
-        qHP2ip1Ac0qVg9oj+7Yl57lVAdmqFx2aTltGO74qBasjB3W6Gix6SuiSgcQ9Mqfi
-        5Ax8k/Z/r2euxfhBAa/dVvjAud6/PjMO3oDh3RShp+KNQiM4Yg930U0zAkPw==
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 0259933368;
+        Mon, 18 Jul 2022 16:13:41 -0700 (PDT)
+Received: from compute4.internal (compute4.nyi.internal [10.202.2.44])
+        by mailout.nyi.internal (Postfix) with ESMTP id 73DA15C0143;
+        Mon, 18 Jul 2022 19:13:40 -0400 (EDT)
+Received: from mailfrontend1 ([10.202.2.162])
+  by compute4.internal (MEProxy); Mon, 18 Jul 2022 19:13:40 -0400
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bur.io; h=cc
+        :content-transfer-encoding:date:date:from:from:in-reply-to
+        :in-reply-to:message-id:mime-version:references:reply-to:sender
+        :subject:subject:to:to; s=fm3; t=1658186020; x=1658272420; bh=2s
+        f0/qhtYUFQefEjNOYr1zz/jjRB8K8ODeUOsWiRJsQ=; b=LdLRLkbplqcKoZymtl
+        uwUnapyGnPX2enovoDgaCtNmJQ0YswPM9mNfMI/S8BqQ0G2bGRiFXENZR2m9MFvQ
+        9G+F5mAp9cIBnoJO9P8QxzjtTosZQjBff3CiMoeXFpBt/GMxmQkju9uKBGtdTgRT
+        V7rUBTuIuyjV5c17Z2gnaRKRo/wq8zBG7rghlRP5J5UGZaXmPDIWo/CAI4NxBEh0
+        aj4lwkLoKo765hhOZVzomNUW6nyaMgOBPZvhscxpNE+WKwMW5YeekXaCYJ7PZVaZ
+        IORZYRh9PuN0qF34q7Wg1/4l79s5emfh29DGT9vpidIOgqh7ndV02qoB0fH+Ldy4
+        kFLQ==
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
-        messagingengine.com; h=cc:cc:content-type:date:date:feedback-id
-        :feedback-id:from:from:in-reply-to:in-reply-to:message-id
-        :mime-version:references:reply-to:sender:subject:subject:to:to
-        :x-me-proxy:x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=
-        fm3; t=1658177024; x=1658263424; bh=FnddR2qd/jyRaeemWdHw9cVjrT+z
-        huOzDDuuSDRdvrM=; b=dfAfHjoojTGtNkHbD84B4SvXyLDoo9o9xU2XioBjrAPt
-        ZvZo8NqWUb2vmmTWP/63l4vC47QrPmCt7iASyZk3OGXpb67ilDTZg46mVcSuWfHB
-        zuKI6ASgWO1ha/qs8jsAJYuUeq+NvTHh6lqTJrKYpv4UAJsLJKYLsIs/niNFGBjR
-        7eETO/o3m5jQR47nE9T6iNLS2g2V2EgqN7lFTcqnVGksKbnApYnY0AkJqu0JnhC5
-        6Z/+KheVKyF85PEgRvf/aYkV9ri+Vl+4fwTBU/p7u8VoESsJlfsJArExLvnquHcP
-        YDEkRAUghlgGjeZv9aJ3ZtfZP8bH40A8AyLRnyiCAQ==
-X-ME-Sender: <xms:_8XVYlQNRf2UQopAyBoME94EpDpVi4NcqmGWk_ds_U5yGgGZ9UzVfw>
-    <xme:_8XVYuxAxkmaevShgh5JK1zYKpyjzBNFFNkesspr1W_eDx3ukIKEycJz2OD32vJlR
-    73Orm7GZIH6lR5_J6M>
-X-ME-Received: <xmr:_8XVYq0ErgCDDSCHzAv-DkroIi36oFg6uVIc9BFt0oEm5urQPDNLdf4KgYlGSMp2qd6NIBod567NV5RHIohHtHiSebiauw>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedvfedrudekkedgudehudcutefuodetggdotefrod
-    ftvfcurfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfgh
-    necuuegrihhlohhuthemuceftddtnecusecvtfgvtghiphhivghnthhsucdlqddutddtmd
-    enucfjughrpeffhffvvefukfhfgggtuggjsehttdertddttddvnecuhfhrohhmpeeuohhr
-    ihhsuceuuhhrkhhovhcuoegsohhrihhssegsuhhrrdhioheqnecuggftrfgrthhtvghrnh
-    ephedthfevgffhtdevgffhlefhgfeuueegtdevudeiheeiheetleeghedvfeegfeegnecu
-    ffhomhgrihhnpehkvghrnhgvlhdrohhrghenucevlhhushhtvghrufhiiigvpedtnecurf
-    grrhgrmhepmhgrihhlfhhrohhmpegsohhrihhssegsuhhrrdhioh
-X-ME-Proxy: <xmx:_8XVYtDXqjwSKGUFZhMgehWMl5vFCr4EvD8EiQVOruMuZFsZ_ZM5IA>
-    <xmx:_8XVYuiHpuLLCApiTShlifmZMMAk_mQVmHEHvauCX08SuKuvY5ovNQ>
-    <xmx:_8XVYhrqyBntTN_75_QaxrqqHLTcAL0Lo1FNG3m4AaNhoW47-EP7gQ>
-    <xmx:AMbVYgbAIxs-qcOokqrDVWGiD2EpzSEWxS5IKyN2g_ItUhmiH_8_KQ>
+        messagingengine.com; h=cc:content-transfer-encoding:date:date
+        :feedback-id:feedback-id:from:from:in-reply-to:in-reply-to
+        :message-id:mime-version:references:reply-to:sender:subject
+        :subject:to:to:x-me-proxy:x-me-proxy:x-me-sender:x-me-sender
+        :x-sasl-enc; s=fm3; t=1658186020; x=1658272420; bh=2sf0/qhtYUFQe
+        fEjNOYr1zz/jjRB8K8ODeUOsWiRJsQ=; b=ncf9n7pHowese4SrFbumPBpQntK4o
+        5FLxGRQopyPNdwBnOfh1vLy8x0iZP05gt8D7qQs62S3UomcTjaM719ZklsXOAsLG
+        Sv93IkMG4eDSWZscFpsV1pQyR1SNR/M627+n+iKLBLdai51ejcTdIvP/EsirkXDL
+        F6yYxBSw+/RIA7R8BPTd9ZMS+nKCPgMf7RkDj+o66TFneEhqHPHcqF90Ihrd65MU
+        ZPIGUALfdm4ojf3IUdMYY5q2yUWzf5iq4aQN8Zh+qw2Xjb+eSdri7Fc7ffF96mzM
+        6hD2dxd+tbV1bxvOw1z4JMYU9wfY98BGSM09lyLga2kDeiLIoLcJLktEg==
+X-ME-Sender: <xms:JOnVYilfB2RDiRilmcXK97vQDkvKAWgqS2tHkhDY11EIVnjK9-_hVw>
+    <xme:JOnVYp12ZMbLcu9Dvo2CoOqOhs_u1GkEoG4HIoOEAFUwUqSl4R3ZBQtNuPwdH3Xrl
+    yuGLy2SlF5gd969U6A>
+X-ME-Received: <xmr:JOnVYgrnczGKxud8NIKRaFTjy6aNYhtnGOF7Ox4lMwXhrJtrmrAz_6w3IjNZOMdN7PTwLLFbA9TUFZjxH7XD0SiYMloySg>
+X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedvfedrudekledgvddtucetufdoteggodetrfdotf
+    fvucfrrhhofhhilhgvmecuhfgrshhtofgrihhlpdfqfgfvpdfurfetoffkrfgpnffqhgen
+    uceurghilhhouhhtmecufedttdenucenucfjughrpefhvffufffkofgjfhgggfestdekre
+    dtredttdenucfhrhhomhepuehorhhishcuuehurhhkohhvuceosghorhhishessghurhdr
+    ihhoqeenucggtffrrghtthgvrhhnpeeiueffuedvieeujefhheeigfekvedujeejjeffve
+    dvhedtudefiefhkeegueehleenucevlhhushhtvghrufhiiigvpedtnecurfgrrhgrmhep
+    mhgrihhlfhhrohhmpegsohhrihhssegsuhhrrdhioh
+X-ME-Proxy: <xmx:JOnVYmnHBx4o6D5f91GLCwlE-vC6nZTyPFPELaykZ8EpTWQJ_wILzg>
+    <xmx:JOnVYg0CiOWxOcfsJbtbhIK3QA7TvnNwqFfOznlbD9wkvyTuftOfcw>
+    <xmx:JOnVYtspo5f-MBYiTEkhZZ7HdSVqVfqFn8hbxdP9tBzvEvSq6tJ4PA>
+    <xmx:JOnVYuBjeivR4rwLm9jQp4CKYyftt5crGFVhrXVabDr9RwZh8Nuz7Q>
 Feedback-ID: i083147f8:Fastmail
 Received: by mail.messagingengine.com (Postfix) with ESMTPA; Mon,
- 18 Jul 2022 16:43:43 -0400 (EDT)
-Date:   Mon, 18 Jul 2022 13:43:41 -0700
+ 18 Jul 2022 19:13:39 -0400 (EDT)
 From:   Boris Burkov <boris@bur.io>
-To:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-btrfs@vger.kernel.org, kernel-team@fb.com,
-        Eric Biggers <ebiggers@google.com>,
-        Josef Bacik <josefbacik@toxicpanda.com>
-Subject: Re: [PATCH v10 4/5] btrfs: test verity orphans with dmlogwrites
-Message-ID: <YtXF/d4j8KrKDkV8@zen>
-References: <28979252b803c073d6a8084c11b5ba27@dorminy.me>
- <YtWzWN3R4pbftK4o@zen>
- <441eacdd0e69e6e87aab2d0c6b4890dd@dorminy.me>
+To:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-btrfs@vger.kernel.org, kernel-team@fb.com
+Subject: [PATCH v11 1/5] common/verity: require corruption functionality
+Date:   Mon, 18 Jul 2022 16:13:33 -0700
+Message-Id: <8a0a68f0729b66fceb43e2638305fc85ace58702.1658185784.git.boris@bur.io>
+X-Mailer: git-send-email 2.37.0
+In-Reply-To: <cover.1658185784.git.boris@bur.io>
+References: <cover.1658185784.git.boris@bur.io>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <441eacdd0e69e6e87aab2d0c6b4890dd@dorminy.me>
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Mon, Jul 18, 2022 at 04:01:47PM -0400, Sweet Tea Dorminy wrote:
-> 
-> > > 
-> > > I'm not understanding the snapshot part. It seems like most tests
-> > > using
-> > > log-writes do `_log_writes_replay_log_range $cur $SCRATCH_DEV >>
-> > > $seqres.full` to start each iteration; and then it seems like this
-> > > test can
-> > > check the item counts before and after a
-> > > _scratch_mount/_scratch_umount
-> > > cycle  and get the same results. (And, if that worked, the test
-> > > wouldn't
-> > > need its own _cleanup() and its own lv management, I think?) But I'm
-> > > probably missing something.
-> > 
-> > IIRC, the purpose of the snapshots is that the mount/unmount cycle is
-> > destructive in the middle of the operation. If the orphan is present,
-> > we'll blow up all the verity items, so if we did it on the device we
-> > were replaying onto, it would leave it in a messed up state as we kept
-> > replaying. So we snapshot at each entry and mount/unmount that to check
-> > the invariants.
-> 
-> I think what you're saying is that we can't use the device itself instead of
-> the snapshot, because mount/unmount change the underlying device, and this
-> definitely makes sense.
-> 
-> Looking at other dmlogwrites users, though, generic/482 looks like it does
-> something similar, and I don't understand what the difference between the
-> replay+snapshot+mount cycles here and the replay+mount cycles there. I
-> probably just don't understand what the difference between the two tests'
-> scenarios is, though.
+Corrupting ext4 and f2fs relies on xfs_io fiemap. Btrfs corruption
+testing will rely on a btrfs specific corruption utility. Add the
+ability to require corruption functionality to make this properly
+modular. To start, just check for fiemap, as that is needed
+universally for _fsv_scratch_corrupt_bytes.
 
-I just noticed a comment in generic/482 that I think explains it:
+Signed-off-by: Boris Burkov <boris@bur.io>
+Reviewed-by: Josef Bacik <josef@toxicpanda.com>
+Reviewed-by: Eric Biggers <ebiggers@google.com>
+---
+ common/verity     | 6 ++++++
+ tests/generic/574 | 1 +
+ tests/generic/576 | 1 +
+ 3 files changed, 8 insertions(+)
 
-# We don't care to preserve any data on the replay dev, as we can replay
-# back to the point we need, and in fact sometimes creating/deleting
-# snapshots repeatedly can be slower than replaying the log.
+diff --git a/common/verity b/common/verity
+index 38eea157..d58cad90 100644
+--- a/common/verity
++++ b/common/verity
+@@ -141,6 +141,12 @@ _require_fsverity_dump_metadata()
+ 	_fail "Unexpected output from 'fsverity dump_metadata': $(<"$tmpfile")"
+ }
+ 
++# Check for userspace tools needed to corrupt verity data or metadata.
++_require_fsverity_corruption()
++{
++	_require_xfs_io_command "fiemap"
++}
++
+ _scratch_mkfs_verity()
+ {
+ 	case $FSTYP in
+diff --git a/tests/generic/574 b/tests/generic/574
+index 882baa21..17fdea52 100755
+--- a/tests/generic/574
++++ b/tests/generic/574
+@@ -28,6 +28,7 @@ _cleanup()
+ _supported_fs generic
+ _require_scratch_verity
+ _disable_fsverity_signatures
++_require_fsverity_corruption
+ 
+ _scratch_mkfs_verity &>> $seqres.full
+ _scratch_mount
+diff --git a/tests/generic/576 b/tests/generic/576
+index 3ef04953..c8862de2 100755
+--- a/tests/generic/576
++++ b/tests/generic/576
+@@ -28,6 +28,7 @@ _supported_fs generic
+ _require_scratch_verity
+ _require_scratch_encryption
+ _require_command "$KEYCTL_PROG" keyctl
++_require_fsverity_corruption
+ _disable_fsverity_signatures
+ 
+ _scratch_mkfs_encrypted_verity &>> $seqres.full
+-- 
+2.37.1
 
-So it looks to me like those tests re-replay the full log, including
-whatever the mkfs preamble stuff is onto replaydev for each FUA. That
-would work for me, I just assumed snapshots would be more efficient,
-though this comment challenges that assumption.
-
-Also, it looks like that tests tracks the prev entry redundantly.
-Looking into its history, it looks like it was always that way, but
-evolved into that state from originally being more like my test.
-https://patchwork.kernel.org/project/linux-btrfs/patch/20180314090230.25055-3-wqu@suse.com/#21608233
