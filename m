@@ -2,44 +2,65 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 048D3C25B08
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  9 Aug 2022 19:07:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CDA00C19F2A
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 11 Aug 2022 16:50:20 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1345390AbiHITHl (ORCPT
+        id S235750AbiHKQuU (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 9 Aug 2022 15:07:41 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38692 "EHLO
+        Thu, 11 Aug 2022 12:50:20 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:40746 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1347399AbiHITG2 (ORCPT
+        with ESMTP id S234129AbiHKQt6 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 9 Aug 2022 15:06:28 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 065FF1CB1D;
-        Tue,  9 Aug 2022 11:48:27 -0700 (PDT)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 98B38B816EC;
-        Tue,  9 Aug 2022 18:48:26 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id BCE4EC433D6;
-        Tue,  9 Aug 2022 18:48:24 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1660070905;
-        bh=KDjLZfZKk5p+iqbsWFja1ZBsHYDrWv9/93Yvy/BtmLQ=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=fW4BZ8iImzfjx7wrCMoWFf7OamP4/gbTphsAJb5FJly3pD6kNVUf0cLIYR3SZRw9s
-         l6IlBLkn+/4rC1dvqINn3zSXz7Kn0DHjejkLFCBSl6h9J9TdZBk88IlEFFHPGSYAit
-         8QQEBoq162vmqVvXQXTuljv7QKAyVF/hRgawYU9dJVf0Jq27k7Qk/qTcGfWe3ZuT9q
-         6NYdTZasrBbPrEZ4HQAG/e913bbHcUAQbz6ihsj9XRGjCRwGWCidsKi/L8GJucYrHN
-         Bl06xy1Pnxc+j27X7yw6QfCK4KcqGDO9ji9w6fa1wOu4Xhjy1XZZh6uKI1WT7Kc9g0
-         Ulwdd2+ftt9pg==
-Date:   Tue, 9 Aug 2022 18:48:23 +0000
-From:   Eric Biggers <ebiggers@kernel.org>
+        Thu, 11 Aug 2022 12:49:58 -0400
+Received: from us-smtp-delivery-124.mimecast.com (us-smtp-delivery-124.mimecast.com [170.10.133.124])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTP id 145799D8E9
+        for <linux-fscrypt@vger.kernel.org>; Thu, 11 Aug 2022 09:23:12 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+        s=mimecast20190719; t=1660234991;
+        h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+         to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+         in-reply-to:in-reply-to:references:references;
+        bh=GlT7Sic8QO1AMTJC4OHa6oG5D/j9d4B9LH00c/lFNEY=;
+        b=LMKRy79eYpxWbzMPZzrgwK+cbjVcrIBA5G9SndoaKmoVIL0o0/6er/Y303c6Wi48Ry9ujL
+        QbAseOgvszxyQMQJ8PNF/ab7g5TXO7ssxWsoN36rDIQGVGPBImdUD5U1xBoN9AWgcTklKu
+        awlC8wdInOI6Kv9bml7Iygl2kWUDBW4=
+Received: from mail-qk1-f198.google.com (mail-qk1-f198.google.com
+ [209.85.222.198]) by relay.mimecast.com with ESMTP with STARTTLS
+ (version=TLSv1.3, cipher=TLS_AES_128_GCM_SHA256) id
+ us-mta-634-bH7VCmcmOeWHXXiTclSH8A-1; Thu, 11 Aug 2022 12:23:10 -0400
+X-MC-Unique: bH7VCmcmOeWHXXiTclSH8A-1
+Received: by mail-qk1-f198.google.com with SMTP id bs33-20020a05620a472100b006b97dc17ab4so6144819qkb.6
+        for <linux-fscrypt@vger.kernel.org>; Thu, 11 Aug 2022 09:23:10 -0700 (PDT)
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:x-gm-message-state:from:to:cc;
+        bh=GlT7Sic8QO1AMTJC4OHa6oG5D/j9d4B9LH00c/lFNEY=;
+        b=uE0qVIVsMaVaj50CZU5fsqSeA7U6RiF1TSX0G3/7k8sfXp3GNkL3D9Aa6uT67Vdple
+         BPHt37hJAKuCGzPuZqYyQcDgZXNFXsYv5zzJHjPX9x8HdleVFI7rtkI65IZZAiX+Y4OZ
+         7XcuJ+qEEXBBXdS9PSrzUV63NruPOeRKYfEIJoZ0VUPrMXnKWBr3vYqINxsj8CPAtbHF
+         lwllGZh4lKX6kCSxsIAf15vkdTA3YfoFErE+sa0BmK9D8xm8EYRP7fpdan4Y7lfpSFA2
+         b8d8XiVVWcLHz0b4ghiFoIh+lJt6R8JVS6g3VVune0NL60n8OVWArIlCnp4wChq2xBWC
+         xFOA==
+X-Gm-Message-State: ACgBeo31ovHxn31DTVZ3pOU74eMg/t6t7T6nB1dpXp8G9DpoPLqdtZJu
+        grzJsz/jgCuRvF2rEUePzX6b2D0kMHPnWfeC5pIjzADyawdPOy5LbDCD+KxPYteWcfuMGu+UBr0
+        88AeIWTwkHObqe3pDi9GkVYnM2w==
+X-Received: by 2002:a05:620a:4901:b0:6ba:15c1:beae with SMTP id ed1-20020a05620a490100b006ba15c1beaemr1883262qkb.516.1660234990075;
+        Thu, 11 Aug 2022 09:23:10 -0700 (PDT)
+X-Google-Smtp-Source: AA6agR4yT3ubSXo2cVxDNK9V5RCYyWvQCpUpZslOCNokBU7WUhVeLg0OfXJT4oU326i5KodhzmmmXA==
+X-Received: by 2002:a05:620a:4901:b0:6ba:15c1:beae with SMTP id ed1-20020a05620a490100b006ba15c1beaemr1883240qkb.516.1660234989798;
+        Thu, 11 Aug 2022 09:23:09 -0700 (PDT)
+Received: from zlang-mailbox ([209.132.188.80])
+        by smtp.gmail.com with ESMTPSA id s12-20020a05620a29cc00b006af147d4876sm2567969qkp.30.2022.08.11.09.23.07
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Thu, 11 Aug 2022 09:23:09 -0700 (PDT)
+Date:   Fri, 12 Aug 2022 00:23:03 +0800
+From:   Zorro Lang <zlang@redhat.com>
 To:     Nathan Huckleberry <nhuck@google.com>
-Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        Sami Tolvanen <samitolvanen@google.com>
+Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Subject: Re: [PATCH v6 0/2] generic: test HCTR2 filename encryption
-Message-ID: <YvKr97mYRUF5m4h8@gmail.com>
+Message-ID: <20220811162303.7fn5kexteoc7haov@zlang-mailbox>
 References: <20220809184037.636578-1-nhuck@google.com>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
@@ -59,12 +80,53 @@ On Tue, Aug 09, 2022 at 11:40:35AM -0700, Nathan Huckleberry wrote:
 > 
 > The patchset introducing HCTR2 to the kernel can be found here:
 > https://lore.kernel.org/linux-crypto/20220520181501.2159644-1-nhuck@google.com/
+> 
+> Changes in v6:
+> * Remove unused variable
+> * Rework cover letter
 
-Thanks Huck.  Zorro already applied v5 to the for-next branch, with the
-chunk_size variable removed (which is the only code you changed in v6), and with
-generic/900 renamed to its final name of generic/693.  See
-https://lore.kernel.org/fstests/20220807155112.E0989C433D6@smtp.kernel.org/T/#u
+I've merged your v5 patchset. So feel free to send bug fix patches if you
+found more issues.
 
-So I think everything is good to go already.
+Thanks,
+Zorro
 
-- Eric
+> 
+> Changes in v5:
+> * Added links to relevant references for POLYVAL and HCTR2
+> * Removed POLYVAL partial block handling
+> * Referenced HCTR2 commit in test
+
+
+
+> 
+> Changes in v4:
+> * Add helper functions for HCTR2 hashing
+> * Fix accumulator alignment bug
+> * Small style fixes
+> 
+> Changes in v3:
+> * Consolidate tests into one file
+> 
+> Changes in v2:
+> * Use POLYVAL multiplication directly instead of using GHASH trick
+> * Split reference implementation and tests into two patches
+> * Remove v1 policy tests
+> * Various small style fixes
+> 
+> Nathan Huckleberry (2):
+>   fscrypt-crypt-util: add HCTR2 implementation
+>   generic: add tests for fscrypt policies with HCTR2
+> 
+>  common/encrypt           |   2 +
+>  src/fscrypt-crypt-util.c | 357 ++++++++++++++++++++++++++++++++-------
+>  tests/generic/900        |  31 ++++
+>  tests/generic/900.out    |  16 ++
+>  4 files changed, 349 insertions(+), 57 deletions(-)
+>  create mode 100755 tests/generic/900
+>  create mode 100644 tests/generic/900.out
+> 
+> -- 
+> 2.37.1.559.g78731f0fdb-goog
+> 
+
