@@ -2,313 +2,108 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 0044EC00140
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 16 Aug 2022 01:07:23 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B89F1C25B0F
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 16 Aug 2022 04:23:12 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1344103AbiHPBHU (ORCPT
+        id S229738AbiHPEXL (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 15 Aug 2022 21:07:20 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38998 "EHLO
+        Tue, 16 Aug 2022 00:23:11 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:60978 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1348818AbiHPBFr (ORCPT
+        with ESMTP id S229541AbiHPEW4 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 15 Aug 2022 21:05:47 -0400
-Received: from wout1-smtp.messagingengine.com (wout1-smtp.messagingengine.com [64.147.123.24])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 638461A6CF1;
-        Mon, 15 Aug 2022 13:53:20 -0700 (PDT)
-Received: from compute5.internal (compute5.nyi.internal [10.202.2.45])
-        by mailout.west.internal (Postfix) with ESMTP id 431B6320005D;
-        Mon, 15 Aug 2022 16:53:19 -0400 (EDT)
-Received: from mailfrontend2 ([10.202.2.163])
-  by compute5.internal (MEProxy); Mon, 15 Aug 2022 16:53:19 -0400
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=bur.io; h=cc
-        :content-transfer-encoding:date:date:from:from:in-reply-to
-        :message-id:mime-version:reply-to:sender:subject:subject:to:to;
-         s=fm1; t=1660596798; x=1660683198; bh=4HF4atPitOwJxsFpcbFwEfLwG
-        6JNhwmv0CdXypzbmE8=; b=qPachOO9GEkwzkLhDVYmaq4nRHvU/2aLUfpalA42/
-        WGeVULkU0xvq5ly0hzSImQ3zTKFNhqlMzWwkXnCr9UeB5bR3D3gBkG9I2j01DWLN
-        l9TkhAKN4Ij6q4hk8+mrIQlA0RSC4ejybF2xUEoNJXelrJlOu5+2q3Al5P4SnNuJ
-        agqs84X5VA+OJSGTe7RLcbl3NTXqbZ97cxZJnVurha6RHVC6MPzjXMbCLm86ZYmv
-        Jam91lybxvcNQvsxpFJa3oA85t9Hf3xxh38DVyrGzWveZO3ez1AFhmAfget2UOlG
-        f3woMyMuJKNNsms6kfgn+YQt7h9zdcd4ULgVh6fssyTQg==
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
-        messagingengine.com; h=cc:content-transfer-encoding:date:date
-        :feedback-id:feedback-id:from:from:in-reply-to:message-id
-        :mime-version:reply-to:sender:subject:subject:to:to:x-me-proxy
-        :x-me-proxy:x-me-sender:x-me-sender:x-sasl-enc; s=fm1; t=
-        1660596798; x=1660683198; bh=4HF4atPitOwJxsFpcbFwEfLwG6JNhwmv0Cd
-        XypzbmE8=; b=4uyznmwvJXSKGsEdaBGdjPnT3GkD7Bjkd94MGbj7CEjWphdR0Xy
-        0RY0Sva05QtgSk7Xvy3cJ2KshgaqqexbgArdXJe0KJosycoJmsnVF/zaXpLVa5Mh
-        T18mo5wjOsLoCpMJ6t8FxvaRhKzahhAXdv1fnOZBCLsSEuWPTj1L6pVrV/yyJBsX
-        LF+E7rrxFbivhK30eD4kbxHR7mGLMUm1m8ATvXMUVZknp1xWetzfNUI9EsEYt98/
-        3W4L85RpdjNkHUMV/byuJVeuFPtX5g9tEYwwBRFShsnfWL1W1vLm/ho5scpudEU/
-        ti2B/6zfQsoxOeNFnVXPxn56WKIORPvjAdw==
-X-ME-Sender: <xms:PrL6YislSrhXdyJOsqtAAgdm0gGdXHs6igpEOD_8RdseQRMVT-CB7g>
-    <xme:PrL6YneRkOo5QYOYkv7N47hNGUiBQRYJnfVinmhWgzLmh4vkQQvJdqVLLorrKle6N
-    CDWIaTTYxx-TeP66BM>
-X-ME-Received: <xmr:PrL6YtwxUwWvjU8cm1cihestUWORDnwubeqodhq3DqmucEL42qJoD487Ibb5JOnYdUjJoIrJx6KG6HwHlK79A67VwVbm1Q>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedvfedrvdehvddgudehjecutefuodetggdotefrod
-    ftvfcurfhrohhfihhlvgemucfhrghsthforghilhdpqfgfvfdpuffrtefokffrpgfnqfgh
-    necuuegrihhlohhuthemuceftddtnecunecujfgurhephffvufffkffoggfgsedtkeertd
-    ertddtnecuhfhrohhmpeeuohhrihhsuceuuhhrkhhovhcuoegsohhrihhssegsuhhrrdhi
-    oheqnecuggftrfgrthhtvghrnhepudeitdelueeijeefleffveelieefgfejjeeigeekud
-    duteefkefffeethfdvjeevnecuvehluhhsthgvrhfuihiivgeptdenucfrrghrrghmpehm
-    rghilhhfrhhomhepsghorhhishessghurhdrihho
-X-ME-Proxy: <xmx:PrL6YtNO6wag4T4i0RHovNdh21s8_YwoYIovENWvr2FgtkL6E239Dg>
-    <xmx:PrL6Yi_myTtA9Q4TJdiUzk0bzxf3adzg7APHI96z2-_j3UJ4K_nugA>
-    <xmx:PrL6YlXY_09-SnoUb2UBta3yHhdhcXTNr_bX6JxpuSyCdhGqbbl-GA>
-    <xmx:PrL6YolBIJep7REj46N7cv8tce_fhlaysTPQTTqXEFxidQoD3o0yQQ>
-Feedback-ID: i083147f8:Fastmail
-Received: by mail.messagingengine.com (Postfix) with ESMTPA; Mon,
- 15 Aug 2022 16:53:18 -0400 (EDT)
-From:   Boris Burkov <boris@bur.io>
-To:     linux-fscrypt@vger.kernel.org, linux-btrfs@vger.kernel.org,
-        kernel-team@fb.com
-Subject: [PATCH v3] btrfs-progs: receive: add support for fs-verity
-Date:   Mon, 15 Aug 2022 13:54:42 -0700
-Message-Id: <3cf3573328789fcacb968f7707dc6839e44043f9.1660595824.git.boris@bur.io>
-X-Mailer: git-send-email 2.37.0
+        Tue, 16 Aug 2022 00:22:56 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2C58337BB3D;
+        Mon, 15 Aug 2022 17:55:48 -0700 (PDT)
+Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
+        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        (No client certificate requested)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 4303A6125E;
+        Tue, 16 Aug 2022 00:55:48 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 5212EC433C1;
+        Tue, 16 Aug 2022 00:55:47 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+        s=k20201202; t=1660611347;
+        bh=iu6B25e0sTxWSWP58J3cvJLRVLHWY1NS7egktCILRVc=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=krd6+dWmORUQTM50F/8J5UTDFvQpmjgyE2xt2quw2vdfZh6niGmFxiiV4AIz32H48
+         v/54PgeHP2vwqXwK32ajRlxpPJzlh1estyjWKs69bXa2t8XK5AILpoD8G+6e6l6TN2
+         JacTQRI/ggjw/oFEBUWvGlPNpoBqWi7pvwHjXWTNYZ4waocnQ7ZvCRK+HV+rcPvgUj
+         rn2X10wArCcnKg5D/Bt2iE7+193xqZkmDFK77dfsfvgi03cysOyvwTWWYr7n7HZDYk
+         5Leu70it3DTXaYFTpbub7m2JQZmVrC/jYpJVhrCsVduHmj+8JAVU1IiAScCxzXl5Gb
+         5hx6GXtLZcXBw==
+Date:   Mon, 15 Aug 2022 17:55:45 -0700
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Jaegeuk Kim <jaegeuk@kernel.org>
+Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
+        linux-api@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-block@vger.kernel.org, linux-kernel@vger.kernel.org,
+        Keith Busch <kbusch@kernel.org>
+Subject: Re: [PATCH v4 6/9] f2fs: don't allow DIO reads but not DIO writes
+Message-ID: <YvrrEcw4E+rpDLwM@sol.localdomain>
+References: <20220722071228.146690-1-ebiggers@kernel.org>
+ <20220722071228.146690-7-ebiggers@kernel.org>
+ <YtyoF89iOg8gs7hj@google.com>
+ <Yt7dCcG0ns85QqJe@sol.localdomain>
+ <YuXyKh8Zvr56rR4R@google.com>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <YuXyKh8Zvr56rR4R@google.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Process an enable_verity cmd by running the enable verity ioctl on the
-file. Since enabling verity denies write access to the file, it is
-important that we don't have any open write file descriptors.
+On Sat, Jul 30, 2022 at 08:08:26PM -0700, Jaegeuk Kim wrote:
+> On 07/25, Eric Biggers wrote:
+> > On Sat, Jul 23, 2022 at 07:01:59PM -0700, Jaegeuk Kim wrote:
+> > > On 07/22, Eric Biggers wrote:
+> > > > From: Eric Biggers <ebiggers@google.com>
+> > > > 
+> > > > Currently, if an f2fs filesystem is mounted with the mode=lfs and
+> > > > io_bits mount options, DIO reads are allowed but DIO writes are not.
+> > > > Allowing DIO reads but not DIO writes is an unusual restriction, which
+> > > > is likely to be surprising to applications, namely any application that
+> > > > both reads and writes from a file (using O_DIRECT).  This behavior is
+> > > > also incompatible with the proposed STATX_DIOALIGN extension to statx.
+> > > > Given this, let's drop the support for DIO reads in this configuration.
+> > > 
+> > > IIRC, we allowed DIO reads since applications complained a lower performance.
+> > > So, I'm afraid this change will make another confusion to users. Could
+> > > you please apply the new bahavior only for STATX_DIOALIGN?
+> > > 
+> > 
+> > Well, the issue is that the proposed STATX_DIOALIGN fields cannot represent this
+> > weird case where DIO reads are allowed but not DIO writes.  So the question is
+> > whether this case actually matters, in which case we should make STATX_DIOALIGN
+> > distinguish between DIO reads and DIO writes, or whether it's some odd edge case
+> > that doesn't really matter, in which case we could just fix it or make
+> > STATX_DIOALIGN report that DIO is unsupported.  I was hoping that you had some
+> > insight here.  What sort of applications want DIO reads but not DIO writes?
+> > Is this common at all?
+> 
+> I think there's no specific application to use the LFS mode at this
+> moment, but I'd like to allow DIO read for zoned device which will be
+> used for Android devices.
+> 
 
-This also revs the send stream format to version 3 with no format
-changes besides the new commands and attributes.
+So if the zoned device feature becomes widely adopted, then STATX_DIOALIGN will
+be useless on all Android devices?  That sounds undesirable.  Are you sure that
+supporting DIO reads but not DIO writes actually works?  Does it not cause
+problems for existing applications?
 
-Note: the build is conditional on the header linux/fsverity.h
+What we need to do is make a decision about whether this means we should build
+in a stx_dio_direction field (indicating no support / readonly support /
+writeonly support / readwrite support) into the API from the beginning.  If we
+don't do that, then I don't think we could simply add such a field later, as the
+statx_dio_*_align fields will have already been assigned their meaning.  I think
+we'd instead have to "duplicate" the API, with STATX_DIOROALIGN and
+statx_dio_ro_*_align fields.  That seems uglier than building a directional
+indicator into the API from the beginning.  On the other hand, requiring all
+programs to check stx_dio_direction would add complexity to using the API.
 
-Signed-off-by: Boris Burkov <boris@bur.io>
---
-Changes for v3:
-- make build conditional on presence of header file
-- read errno for errors in fsverity ioctl
-- correct uintptr_t casting for salt/sig pointers
-Changes for v2:
-- remove verity.h copy, use UAPI
----
- cmds/receive-dump.c  | 10 +++++++
- cmds/receive.c       | 65 ++++++++++++++++++++++++++++++++++++++++++++
- common/send-stream.c | 16 +++++++++++
- common/send-stream.h |  3 ++
- configure.ac         |  1 +
- kernel-shared/send.h | 13 +++++++--
- 6 files changed, 106 insertions(+), 2 deletions(-)
+Any thoughts on this?
 
-diff --git a/cmds/receive-dump.c b/cmds/receive-dump.c
-index 92e0a4c9a..5d68ecbca 100644
---- a/cmds/receive-dump.c
-+++ b/cmds/receive-dump.c
-@@ -344,6 +344,15 @@ static int print_fileattr(const char *path, u64 attr, void *user)
- 	return PRINT_DUMP(user, path, "fileattr", "fileattr=0x%llu", attr);
- }
- 
-+static int print_enable_verity (const char *path, u8 algorithm, u32 block_size,
-+				int salt_len, char *salt,
-+				int sig_len, char *sig, void *user)
-+{
-+	return PRINT_DUMP(user, path, "enable_verity",
-+			  "algorithm=%u block_size=%u salt_len=%d sig_len=%d",
-+			  algorithm, block_size, salt_len, sig_len);
-+}
-+
- struct btrfs_send_ops btrfs_print_send_ops = {
- 	.subvol = print_subvol,
- 	.snapshot = print_snapshot,
-@@ -369,4 +378,5 @@ struct btrfs_send_ops btrfs_print_send_ops = {
- 	.encoded_write = print_encoded_write,
- 	.fallocate = print_fallocate,
- 	.fileattr = print_fileattr,
-+	.enable_verity = print_enable_verity,
- };
-diff --git a/cmds/receive.c b/cmds/receive.c
-index aec324587..02caa0b56 100644
---- a/cmds/receive.c
-+++ b/cmds/receive.c
-@@ -39,6 +39,9 @@
- #include <sys/uio.h>
- #include <sys/xattr.h>
- #include <linux/fs.h>
-+#if HAVE_LINUX_FSVERITY_H
-+#include <linux/fsverity.h>
-+#endif
- #include <uuid/uuid.h>
- 
- #include <zlib.h>
-@@ -1333,6 +1336,67 @@ static int process_fileattr(const char *path, u64 attr, void *user)
- 	return 0;
- }
- 
-+#if HAVE_LINUX_FSVERITY_H
-+static int process_enable_verity(const char *path, u8 algorithm, u32 block_size,
-+				 int salt_len, char *salt,
-+				 int sig_len, char *sig, void *user)
-+{
-+	int ret;
-+	struct btrfs_receive *rctx = user;
-+	char full_path[PATH_MAX];
-+	struct fsverity_enable_arg verity_args = {
-+		.version = 1,
-+		.hash_algorithm = algorithm,
-+		.block_size = block_size,
-+	};
-+	if (salt_len) {
-+		verity_args.salt_size = salt_len;
-+		verity_args.salt_ptr = (__u64)(uintptr_t)salt;
-+	}
-+	if (sig_len) {
-+		verity_args.sig_size = sig_len;
-+		verity_args.sig_ptr = (__u64)(uintptr_t)sig;
-+	}
-+	int ioctl_fd;
-+
-+	ret = path_cat_out(full_path, rctx->full_subvol_path, path);
-+	if (ret < 0) {
-+		error("write: path invalid: %s", path);
-+		goto out;
-+	}
-+
-+	ioctl_fd = open(full_path, O_RDONLY);
-+	if (ioctl_fd < 0) {
-+		ret = -errno;
-+		error("cannot open %s for verity ioctl: %m", full_path);
-+		goto out;
-+	}
-+
-+	/*
-+	 * Enabling verity denies write access, so it cannot be done with an
-+	 * open writeable file descriptor.
-+	 */
-+	close_inode_for_write(rctx);
-+	ret = ioctl(ioctl_fd, FS_IOC_ENABLE_VERITY, &verity_args);
-+	if (ret < 0) {
-+		ret = -errno;
-+		fprintf(stderr, "Failed to enable verity on %s: %d\n", full_path, ret);
-+	}
-+
-+	close(ioctl_fd);
-+out:
-+	return ret;
-+}
-+#else
-+static int process_enable_verity(const char *path, u8 algorithm, u32 block_size,
-+				 int salt_len, char *salt,
-+				 int sig_len, char *sig, void *user)
-+{
-+	error("fs-verity for stream not compiled in");
-+	return -EOPNOTSUPP;
-+}
-+#endif
-+
- static struct btrfs_send_ops send_ops = {
- 	.subvol = process_subvol,
- 	.snapshot = process_snapshot,
-@@ -1358,6 +1422,7 @@ static struct btrfs_send_ops send_ops = {
- 	.encoded_write = process_encoded_write,
- 	.fallocate = process_fallocate,
- 	.fileattr = process_fileattr,
-+	.enable_verity = process_enable_verity,
- };
- 
- static int do_receive(struct btrfs_receive *rctx, const char *tomnt,
-diff --git a/common/send-stream.c b/common/send-stream.c
-index 96d1aa218..1a0c0a5b0 100644
---- a/common/send-stream.c
-+++ b/common/send-stream.c
-@@ -353,6 +353,12 @@ static int read_and_process_cmd(struct btrfs_send_stream *sctx)
- 	char *xattr_name = NULL;
- 	void *xattr_data = NULL;
- 	void *data = NULL;
-+	u8 verity_algorithm;
-+	u32 verity_block_size;
-+	int verity_salt_len;
-+	void *verity_salt = NULL;
-+	int verity_sig_len;
-+	void *verity_sig = NULL;
- 	struct timespec at;
- 	struct timespec ct;
- 	struct timespec mt;
-@@ -537,6 +543,16 @@ static int read_and_process_cmd(struct btrfs_send_stream *sctx)
- 		TLV_GET_U64(sctx, BTRFS_SEND_A_SIZE, &tmp);
- 		ret = sctx->ops->update_extent(path, offset, tmp, sctx->user);
- 		break;
-+	case BTRFS_SEND_C_ENABLE_VERITY:
-+		TLV_GET_STRING(sctx, BTRFS_SEND_A_PATH, &path);
-+		TLV_GET_U8(sctx, BTRFS_SEND_A_VERITY_ALGORITHM, &verity_algorithm);
-+		TLV_GET_U32(sctx, BTRFS_SEND_A_VERITY_BLOCK_SIZE, &verity_block_size);
-+		TLV_GET(sctx, BTRFS_SEND_A_VERITY_SALT_DATA, &verity_salt, &verity_salt_len);
-+		TLV_GET(sctx, BTRFS_SEND_A_VERITY_SIG_DATA, &verity_sig, &verity_sig_len);
-+		ret = sctx->ops->enable_verity(path, verity_algorithm, verity_block_size,
-+					       verity_salt_len, verity_salt,
-+					       verity_sig_len, verity_sig, sctx->user);
-+		break;
- 	case BTRFS_SEND_C_END:
- 		ret = 1;
- 		break;
-diff --git a/common/send-stream.h b/common/send-stream.h
-index b5973b66f..6649b55b9 100644
---- a/common/send-stream.h
-+++ b/common/send-stream.h
-@@ -60,6 +60,9 @@ struct btrfs_send_ops {
- 	int (*fallocate)(const char *path, int mode, u64 offset, u64 len,
- 			 void *user);
- 	int (*fileattr)(const char *path, u64 attr, void *user);
-+	int (*enable_verity)(const char *path, u8 algorithm, u32 block_size,
-+			     int salt_len, char *salt,
-+			     int sig_len, char *sig, void *user);
- };
- 
- int btrfs_read_and_process_send_stream(int fd,
-diff --git a/configure.ac b/configure.ac
-index f6b341813..6fd1a93bb 100644
---- a/configure.ac
-+++ b/configure.ac
-@@ -66,6 +66,7 @@ AX_GCC_BUILTIN([__builtin_mul_overflow])
- 
- AC_CHECK_HEADERS([linux/perf_event.h])
- AC_CHECK_HEADERS([linux/hw_breakpoint.h])
-+AC_CHECK_HEADERS([linux/fsverity.h])
- 
- m4_ifndef([PKG_PROG_PKG_CONFIG],
-   [m4_fatal([Could not locate the pkg-config autoconf
-diff --git a/kernel-shared/send.h b/kernel-shared/send.h
-index 0236d9fd8..db1bec19f 100644
---- a/kernel-shared/send.h
-+++ b/kernel-shared/send.h
-@@ -102,8 +102,10 @@ enum btrfs_send_cmd {
- 	BTRFS_SEND_C_ENCODED_WRITE	= 25,
- 	BTRFS_SEND_C_MAX_V2		= 25,
- 
-+	BTRFS_SEND_C_ENABLE_VERITY	= 26,
-+	BTRFS_SEND_C_MAX_V3		= 26,
- 	/* End */
--	BTRFS_SEND_C_MAX		= 25,
-+	BTRFS_SEND_C_MAX		= 26,
- };
- 
- /* attributes in send stream */
-@@ -170,8 +172,15 @@ enum {
- 	BTRFS_SEND_A_ENCRYPTION		= 31,
- 	BTRFS_SEND_A_MAX_V2		= 31,
- 
-+	/* Version 3 */
-+	BTRFS_SEND_A_VERITY_ALGORITHM	= 32,
-+	BTRFS_SEND_A_VERITY_BLOCK_SIZE	= 33,
-+	BTRFS_SEND_A_VERITY_SALT_DATA	= 34,
-+	BTRFS_SEND_A_VERITY_SIG_DATA	= 35,
-+	BTRFS_SEND_A_MAX_V3		= 35,
-+
- 	/* End */
--	BTRFS_SEND_A_MAX		= 31,
-+	BTRFS_SEND_A_MAX		= 35,
- };
- 
- #endif
--- 
-2.37.1
-
+- Eric
