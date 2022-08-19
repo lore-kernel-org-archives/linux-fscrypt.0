@@ -2,162 +2,144 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id DA005C32771
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 19 Aug 2022 11:14:34 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 49374C32772
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 19 Aug 2022 11:16:24 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1348762AbiHSLOe (ORCPT
+        id S1347912AbiHSLQX (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 19 Aug 2022 07:14:34 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:43092 "EHLO
+        Fri, 19 Aug 2022 07:16:23 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:45020 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1348267AbiHSLOd (ORCPT
+        with ESMTP id S1348328AbiHSLQW (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 19 Aug 2022 07:14:33 -0400
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.220.28])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2F9D5CCE1A;
-        Fri, 19 Aug 2022 04:14:31 -0700 (PDT)
-Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
-        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
-        (No client certificate requested)
-        by smtp-out1.suse.de (Postfix) with ESMTPS id C002D3F8CD;
-        Fri, 19 Aug 2022 11:14:29 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
-        t=1660907669;
-        h=from:from:reply-to:reply-to:date:date:message-id:message-id:to:to:
-         cc:cc:mime-version:mime-version:content-type:content-type:
-         in-reply-to:in-reply-to:references:references;
-        bh=Z1GDxJbx+KB/qA4pxm9HVh5vMJZlaEZx8YtS83ZfxTg=;
-        b=P541Xi9aO3pFkCcmOMJ6PLo+o9b1TBwcys/jYx0gp7NEL6OvWgMWdBYn++wg6Sj+gNVWK9
-        R/ZNvZB0IiXeBwcfdxq6KwKTWEWPVOEqD/tQGx8X7nCEqRiRaJMvE2bfs5XTd4YPaD8qMC
-        4w0yUX3DvgCw30kP3xth9u5V9dtPI58=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
-        s=susede2_ed25519; t=1660907669;
-        h=from:from:reply-to:reply-to:date:date:message-id:message-id:to:to:
-         cc:cc:mime-version:mime-version:content-type:content-type:
-         in-reply-to:in-reply-to:references:references;
-        bh=Z1GDxJbx+KB/qA4pxm9HVh5vMJZlaEZx8YtS83ZfxTg=;
-        b=/GhM+MayMH8BLSN1+0urh0zTPlB3pozih4aK0+YFpPyS2jHIaQ7FmIQO85zIbMlE8qi5Fs
-        uFTZDsMwgE2/MZAQ==
-Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
-        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
-        (No client certificate requested)
-        by imap2.suse-dmz.suse.de (Postfix) with ESMTPS id 7BA9813AE9;
-        Fri, 19 Aug 2022 11:14:29 +0000 (UTC)
-Received: from dovecot-director2.suse.de ([192.168.254.65])
-        by imap2.suse-dmz.suse.de with ESMTPSA
-        id fLc7HZVw/2JkKQAAMHmgww
-        (envelope-from <dsterba@suse.cz>); Fri, 19 Aug 2022 11:14:29 +0000
-Date:   Fri, 19 Aug 2022 13:09:17 +0200
-From:   David Sterba <dsterba@suse.cz>
-To:     Boris Burkov <boris@bur.io>
-Cc:     linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        fstests@vger.kernel.org
-Subject: Re: [PATCH v3] fstests: add btrfs fs-verity send/recv test
-Message-ID: <20220819110917.GQ13489@twin.jikos.cz>
-Reply-To: dsterba@suse.cz
-Mail-Followup-To: dsterba@suse.cz, Boris Burkov <boris@bur.io>,
-        linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        fstests@vger.kernel.org
-References: <e1e77ce5d7277b235e48adc8daf00a0dc0ae36e9.1660860807.git.boris@bur.io>
+        Fri, 19 Aug 2022 07:16:22 -0400
+Received: from mail-ed1-x52b.google.com (mail-ed1-x52b.google.com [IPv6:2a00:1450:4864:20::52b])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1BF82D5DF3;
+        Fri, 19 Aug 2022 04:16:21 -0700 (PDT)
+Received: by mail-ed1-x52b.google.com with SMTP id r4so5243290edi.8;
+        Fri, 19 Aug 2022 04:16:21 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20210112;
+        h=content-transfer-encoding:mime-version:references:in-reply-to
+         :message-id:date:subject:cc:to:from:from:to:cc;
+        bh=itseYdGoOoNrZ4b7CTSPCW7acA5mJKihiu6lV8OPi8o=;
+        b=o062D1xyt9gEqH+QMY//Eh8mTGWyMmvkY/6jUfPPECOrx9pl6afdiJnQq32Zt+9s8z
+         I2jKDjNhLhlWsuRTFsKvZyfOCtKSwGGvA6NmeLEMxYFMXR54Obvw4fuISrA5uCA6P6cy
+         CDZ43d73oP6/zpEm2zwAY22cx0OtuJv1BtzUi4W7miNG6EL8oNtWuCBHPGTnAeMCdSry
+         rklm38uL35QRtZON09u1J+UOCfCgCqLmzFOG0fjvqE8R8ZF8FQ56pncpn+x2SjXF0iiG
+         ZV52+wx27/7u8YcQGCEatev34SNvRjsEP/XYoSmxv6V7k3G3slBWNP3LwaegiREwBn8S
+         JBVA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=content-transfer-encoding:mime-version:references:in-reply-to
+         :message-id:date:subject:cc:to:from:x-gm-message-state:from:to:cc;
+        bh=itseYdGoOoNrZ4b7CTSPCW7acA5mJKihiu6lV8OPi8o=;
+        b=TPTcIeBeKCIGerWJpgSmvWNa9ApFr6lq5KNJdJ/N8quPhsqa67qPX1160VcIB/ufTF
+         t09CDMWzwSqi8DnMyQ1Pn4Wbhxi8vU2ZImvUCB04BE5zB/NavndX5aPM2gr36K+wBeYc
+         gDlEtArmNOVPeIeExQs8PGI7jp4wnwOZwi3MjQH5s6WP0Kei+GTNuYMAHy3eJyPeVFHR
+         /CbcHIc4l6yXzYEIgBucXEcVvhhDSWxUw5ifE0H6U3tTn3czCUs5x1JZhrdDmPfom12Y
+         LlKU8a8l3VggRFE2KOhEEd3g4q/m4QOLqhWfEVjZj5LXzb4pecw3Mmw6p7E9Oiux7spO
+         lTGQ==
+X-Gm-Message-State: ACgBeo16UsyQYzcUUY54QnjFPfF9LfesLh+JS2WOMmyzsMpEnLXolJuR
+        TgMU8Uey56AmodZRpF1agmHo7tK0Q7M=
+X-Google-Smtp-Source: AA6agR7QEURtBcz9WghqlpLI+jUia82IkHOa3YUWxPiwM58VubLC/Ml8YjQn/NWyOuaKLm5plYECyw==
+X-Received: by 2002:a05:6402:354e:b0:440:5398:cd65 with SMTP id f14-20020a056402354e00b004405398cd65mr5681684edd.43.1660907779067;
+        Fri, 19 Aug 2022 04:16:19 -0700 (PDT)
+Received: from localhost.localdomain (host-87-17-106-94.retail.telecomitalia.it. [87.17.106.94])
+        by smtp.gmail.com with ESMTPSA id k21-20020a170906579500b0072fa24c2ecbsm2210091ejq.94.2022.08.19.04.16.17
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Fri, 19 Aug 2022 04:16:17 -0700 (PDT)
+From:   "Fabio M. De Francesco" <fmdefrancesco@gmail.com>
+To:     linux-fscrypt@vger.kernel.org, Eric Biggers <ebiggers@kernel.org>
+Cc:     linux-fsdevel@vger.kernel.org, linux-mm@kvack.org
+Subject: Re: [PATCH] fs-verity: use memcpy_from_page()
+Date:   Fri, 19 Aug 2022 13:16:15 +0200
+Message-ID: <8113955.T7Z3S40VBb@localhost.localdomain>
+In-Reply-To: <20220818223903.43710-1-ebiggers@kernel.org>
+References: <20220818223903.43710-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <e1e77ce5d7277b235e48adc8daf00a0dc0ae36e9.1660860807.git.boris@bur.io>
-User-Agent: Mutt/1.5.23.1-rc1 (2014-03-12)
+Content-Transfer-Encoding: 7Bit
+Content-Type: text/plain; charset="us-ascii"
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Thu, Aug 18, 2022 at 03:16:30PM -0700, Boris Burkov wrote:
-> Test btrfs send/recv support for fs-verity. Includes tests for
-> signatures, salts, and interaction with chmod/caps. The last of those is
-> to ensure the various features that go in during inode_finalize interact
-> properly.
+On Friday, August 19, 2022 12:39:03 AM CEST Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
 > 
-> This depends on the kernel patch adding support for send:
-> btrfs: send: add support for fs-verity
+> Replace extract_hash() with the memcpy_from_page() helper function.
 > 
-> And the btrfs-progs patch adding support for recv:
-> btrfs-progs: receive: add support for fs-verity
+> This is simpler, and it has the side effect of replacing the use of
+> kmap_atomic() with its recommended replacement kmap_local_page().
 > 
-> Signed-off-by: Boris Burkov <boris@bur.io>
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
 > ---
-> Changes for v3:
-> - commit a few things from v2 that I left unstaged (277 in output,
->   true/false)
-> Changes for v2:
-> - btrfs/271 -> btrfs/277
-> - YOUR NAME HERE -> Meta
-> - change 0/1 to false/true
-> - change drop caches to cycle mount
-> - get rid of unneeded _require_test
-> - compare file contents
+>  fs/verity/verify.c | 14 ++------------
+>  1 file changed, 2 insertions(+), 12 deletions(-)
 > 
->  tests/btrfs/277     | 115 ++++++++++++++++++++++++++++++++++++++++++++
->  tests/btrfs/277.out |  59 +++++++++++++++++++++++
->  2 files changed, 174 insertions(+)
->  create mode 100755 tests/btrfs/277
->  create mode 100644 tests/btrfs/277.out
-> 
-> diff --git a/tests/btrfs/277 b/tests/btrfs/277
-> new file mode 100755
-> index 00000000..251e2818
-> --- /dev/null
-> +++ b/tests/btrfs/277
-> @@ -0,0 +1,115 @@
-> +#! /bin/bash
-> +# SPDX-License-Identifier: GPL-2.0
-> +# Copyright (c) 2022 Meta, Inc.  All Rights Reserved.
-> +#
-> +# FS QA Test 277
-> +#
-> +# Test sendstreams involving fs-verity enabled files.
-> +#
-> +. ./common/preamble
-> +_begin_fstest auto quick verity send
-> +
-> +# Override the default cleanup function.
-> +_cleanup()
-> +{
-> +	cd /
-> +	_restore_fsverity_signatures
-> +	rm -r -f $tmp.*
-> +}
-> +
-> +# Import common functions.
-> +. ./common/filter
-> +. ./common/verity
-> +
-> +# real QA test starts here
-> +
-> +# Modify as appropriate.
-> +_supported_fs btrfs
-> +_require_scratch_verity
-> +_require_fsverity_builtin_signatures
-> +_require_command "$SETCAP_PROG" setcap
-> +_require_command "$GETCAP_PROG" getcap
-> +
-> +subv=$SCRATCH_MNT/subv
-> +fsv_file=$subv/file.fsv
-> +keyfile=$tmp.key.pem
-> +certfile=$tmp.cert.pem
-> +certfileder=$tmp.cert.der
-> +sigfile=$tmp.sig
-> +stream=$tmp.fsv.ss
-> +
-> +_test_send_verity() {
-> +	local sig=$1
-> +	local salt=$2
-> +	local extra_args=""
-> +
-> +	_scratch_mkfs >> $seqres.full
-> +	_scratch_mount
-> +	echo -e "\nverity send/recv test: sig: $sig salt: $salt"
-> +	_disable_fsverity_signatures
-> +
-> +	echo "create subvolume"
-> +	$BTRFS_UTIL_PROG subv create $subv >> $seqres.full
 
-Please use full name of subcommands, ie. 'subvolume'
+It looks good to me...
+
+Reviewed-by: Fabio M. De Francesco <fmdefrancesco@gmail.com>
+
+Thanks,
+
+Fabio
+
+> diff --git a/fs/verity/verify.c b/fs/verity/verify.c
+> index 14e2fb49cff561..bde8c9b7d25f64 100644
+> --- a/fs/verity/verify.c
+> +++ b/fs/verity/verify.c
+> @@ -39,16 +39,6 @@ static void hash_at_level(const struct merkle_tree_params 
+*params,
+>  		   (params->log_blocksize - params->log_arity);
+>  }
+>  
+> -/* Extract a hash from a hash page */
+> -static void extract_hash(struct page *hpage, unsigned int hoffset,
+> -			 unsigned int hsize, u8 *out)
+> -{
+> -	void *virt = kmap_atomic(hpage);
+> -
+> -	memcpy(out, virt + hoffset, hsize);
+> -	kunmap_atomic(virt);
+> -}
+> -
+>  static inline int cmp_hashes(const struct fsverity_info *vi,
+>  			     const u8 *want_hash, const u8 
+*real_hash,
+>  			     pgoff_t index, int level)
+> @@ -129,7 +119,7 @@ static bool verify_page(struct inode *inode, const 
+struct fsverity_info *vi,
+>  		}
+>  
+>  		if (PageChecked(hpage)) {
+> -			extract_hash(hpage, hoffset, hsize, 
+_want_hash);
+> +			memcpy_from_page(_want_hash, hpage, hoffset, 
+hsize);
+>  			want_hash = _want_hash;
+>  			put_page(hpage);
+>  			pr_debug_ratelimited("Hash page already 
+checked, want %s:%*phN\n",
+> @@ -158,7 +148,7 @@ static bool verify_page(struct inode *inode, const 
+struct fsverity_info *vi,
+>  		if (err)
+>  			goto out;
+>  		SetPageChecked(hpage);
+> -		extract_hash(hpage, hoffset, hsize, _want_hash);
+> +		memcpy_from_page(_want_hash, hpage, hoffset, hsize);
+>  		want_hash = _want_hash;
+>  		put_page(hpage);
+>  		pr_debug("Verified hash page at level %d, now want %s:
+%*phN\n",
+> 
+> base-commit: 568035b01cfb107af8d2e4bd2fb9aea22cf5b868
+> -- 
+> 2.37.1
+> 
+> 
+
+
+
+
