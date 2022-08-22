@@ -2,94 +2,96 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D99C6C28D13
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 22 Aug 2022 19:11:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 35150C28D13
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 22 Aug 2022 19:26:13 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S238294AbiHVTLq (ORCPT
+        id S237604AbiHVT0M (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 22 Aug 2022 15:11:46 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33242 "EHLO
+        Mon, 22 Aug 2022 15:26:12 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:32910 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S238302AbiHVTLL (ORCPT
+        with ESMTP id S238611AbiHVTYJ (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 22 Aug 2022 15:11:11 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E662213F0D;
-        Mon, 22 Aug 2022 12:09:39 -0700 (PDT)
+        Mon, 22 Aug 2022 15:24:09 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 30EC91583A;
+        Mon, 22 Aug 2022 12:21:59 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 966EBB8105A;
-        Mon, 22 Aug 2022 19:09:11 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 0FDA6C433D7;
-        Mon, 22 Aug 2022 19:09:10 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id BD949B818AB;
+        Mon, 22 Aug 2022 19:21:57 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 532E8C433D7;
+        Mon, 22 Aug 2022 19:21:56 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1661195350;
-        bh=WWCjwf+JxkZw6WU1iL1hmp/k5Wm7uGOBx3r+Y2H6l1Y=;
-        h=From:To:Cc:Subject:Date:From;
-        b=mnLUtKYQ+K0xS88by5TxE4Sr1PYVXcwBR2AyrI6v3NsyYaqFjcCvaY2qPRMNd93EW
-         CLNY3vCy+qq3Unkhhi1WLrbq94ni40doG9rjTPMRReXQOuo2+hjpjWU9QAUtkfu0pZ
-         WQl4XcZ8U/uMRTJ4fxjjUY1KuwqrH8tghMr1kZUARVjknalAiLdEMMbGTn14oIhTsE
-         GDYOuxv5G1modgBVW/a760YFTqaXKWzub0sBO/yBjPAMzO3YTm/lPJgDdquf3r51Cb
-         8+VF6noBrzCVwHOaXI+HcjfIAvuJYMZP9rkTmPRHN+Fk93mqqR3lQaJpj/yoko0dWS
-         S4eO1KMCDkLBg==
+        s=k20201202; t=1661196116;
+        bh=mgWtjVWoyx6ivVv6KqvRp9PNUZE+61+wnocBktCea/A=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=CIFs7w+cOjoG4BduE0LbUS1ENxhhjU7JJzqn72xXr+ZLB3RpzO/QkWWY3ng4xKySB
+         YXFCYUBJtkKG/eskdtYg/+xKiscWgupSY2/uxcdx7uc8dwA8KxDcetGyqgmWWRoUil
+         XYqsqkCEKihHOJiDYVY/gmdt8gPwBs8ROSzQSXnx8EATmxvwAn4uB5a0X+MZZDFBCv
+         F1EGyec7neAHgHcZVfCqAKNaFBZNaaxOl1VYe1j0sGVtblXVdiUXVSTnOQEhS6tH/b
+         XIUEqTfRRK4c8OPWdupcRVgBwEZmSKKXgPoHKkZQGh18LOwgjjXU42YapqtH7v7Csl
+         1P4cEan3FnB1A==
+Date:   Mon, 22 Aug 2022 12:21:54 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-fsdevel@vger.kernel.org, linux-block@vger.kernel.org,
-        linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        Christoph Hellwig <hch@lst.de>
-Subject: [PATCH v3 0/3] fscrypt: rework keyring and stop using request_queue
-Date:   Mon, 22 Aug 2022 12:08:09 -0700
-Message-Id: <20220822190812.54581-1-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.37.2
+To:     linux-f2fs-devel@lists.sourceforge.net,
+        Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>
+Cc:     linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-ext4@vger.kernel.org, Matthew Wilcox <willy@infradead.org>
+Subject: Re: [PATCH v2 0/2] ext4, f2fs: stop using PG_error for fscrypt and
+ fsverity
+Message-ID: <YwPXUrawcKdy9qDx@sol.localdomain>
+References: <20220815235052.86545-1-ebiggers@kernel.org>
+ <YwPKh9fWUJLnSEF/@sol.localdomain>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <YwPKh9fWUJLnSEF/@sol.localdomain>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Patch 1 of this series reworks the fscrypt filesystem-level keyring to
-not use the keyrings subsystem as part of its internal implementation
-(except for ->mk_users, which remains unchanged for now).  This fixes
-several issues, described in the patch itself.  This is also a
-prerequisite for eliminating the direct use of struct request_queue from
-filesystem code, as discussed at
-https://lore.kernel.org/linux-fscrypt/20220721125929.1866403-1-hch@lst.de/T/#u
+On Mon, Aug 22, 2022 at 11:27:19AM -0700, Eric Biggers wrote:
+> On Mon, Aug 15, 2022 at 04:50:50PM -0700, Eric Biggers wrote:
+> > This series changes ext4 and f2fs to stop using PG_error to track
+> > decryption and verity errors.  This is a step towards freeing up
+> > PG_error for other uses, as discussed at
+> > https://lore.kernel.org/linux-fsdevel/Yn10Iz1mJX1Mu1rv@casper.infradead.org
+> > 
+> > Note: due to the interdependencies with fs/crypto/ and fs/verity/,
+> > I couldn't split this up into separate patches for each filesystem.
+> > I'd appreciate Acks from the ext4 and f2fs maintainers so that I can
+> > take these patches.  Otherwise I'm not sure how to move them forward.
+> > 
+> > Changed v1 => v2:
+> >    - Rebased onto v6.0-rc1 and resolved conflicts in f2fs.
+> > 
+> > Eric Biggers (2):
+> >   fscrypt: stop using PG_error to track error status
+> >   fsverity: stop using PG_error to track error status
+> > 
+> >  fs/crypto/bio.c         | 16 +++++++----
+> >  fs/ext4/readpage.c      | 16 +++++------
+> >  fs/f2fs/compress.c      | 64 ++++++++++++++++++++---------------------
+> >  fs/f2fs/data.c          | 64 +++++++++++++++++++++++------------------
+> >  fs/verity/verify.c      | 12 ++++----
+> >  include/linux/fscrypt.h |  5 ++--
+> >  6 files changed, 93 insertions(+), 84 deletions(-)
+> > 
+> > 
+> > base-commit: 568035b01cfb107af8d2e4bd2fb9aea22cf5b868
+> 
+> I'd appreciate review from the f2fs folks on this series, as that's where the
+> most complex changes are.
+> 
 
-Patches 2-3 eliminate the direct uses of struct request_queue from
-fs/crypto/ that don't require block layer changes.  (The remaining uses
-will be eliminated later by changing some of the blk-crypto functions.)
+There's already a merge conflict with f2fs/dev, in the second patch :-(
 
-Changed in v3:
-    - Added patch "fscrypt: work on block_devices instead of request_queues"
+It's going to be hard get this series merged, due to cross-tree dependencies.
 
-Changed in v2:
-    - Don't compare uninitialized bytes of struct fscrypt_key_specifier
-    - Don't use refcount_dec_and_lock() unnecessarily
-    - Other minor cleanups
+I'll try to take the first patch (which handles decryption only, and is smaller)
+through the fscrypt tree for 6.1.  Then maybe the second patch can go through
+the f2fs tree later.
 
-Christoph Hellwig (1):
-  fscrypt: work on block_devices instead of request_queues
-
-Eric Biggers (2):
-  fscrypt: stop using keyrings subsystem for fscrypt_master_key
-  fscrypt: stop holding extra request_queue references
-
- fs/crypto/fscrypt_private.h |  74 ++++--
- fs/crypto/hooks.c           |  10 +-
- fs/crypto/inline_crypt.c    | 150 ++++++-----
- fs/crypto/keyring.c         | 495 +++++++++++++++++++-----------------
- fs/crypto/keysetup.c        |  89 +++----
- fs/crypto/keysetup_v1.c     |   4 +-
- fs/crypto/policy.c          |   8 +-
- fs/f2fs/super.c             |  24 +-
- fs/super.c                  |   2 +-
- include/linux/fs.h          |   2 +-
- include/linux/fscrypt.h     |  25 +-
- 11 files changed, 462 insertions(+), 421 deletions(-)
-
-
-base-commit: 1c23f9e627a7b412978b4e852793c5e3c3efc555
--- 
-2.37.2
-
+- Eric
