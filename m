@@ -2,115 +2,110 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A1269C6FA83
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  7 Sep 2022 09:10:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B4ECDC38145
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  7 Sep 2022 19:43:37 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229685AbiIGJKN (ORCPT
+        id S229523AbiIGTng (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 7 Sep 2022 05:10:13 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47896 "EHLO
+        Wed, 7 Sep 2022 15:43:36 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37846 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229560AbiIGJKL (ORCPT
+        with ESMTP id S229480AbiIGTnf (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 7 Sep 2022 05:10:11 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B84D174B84;
-        Wed,  7 Sep 2022 02:10:09 -0700 (PDT)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        Wed, 7 Sep 2022 15:43:35 -0400
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.220.28])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 02D1BA74C5;
+        Wed,  7 Sep 2022 12:43:34 -0700 (PDT)
+Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 3A50B617D8;
-        Wed,  7 Sep 2022 09:10:09 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 9BFE0C433C1;
-        Wed,  7 Sep 2022 09:10:05 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1662541808;
-        bh=a6rxNDyNfNYsftFOTgasxTViBPk+jSbvU4105tQOkhw=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=WbUGnYmnyFUJoHmUJJNdkTfTbKlPdXgHPr6kq8a5AS52w8H4F2fLqyyuPqnpfXV8k
-         37Zvs4OH5t6Hisr1Kr1ar+Srb4OFC2sceheTmucJeYWHEk0UabmunmqGt+Rmk/BZA+
-         MIBjoqwWGIc1EU3fa/Pn7cfW3nZvtyCJNLWYMQY+jxycJNzGnHvEuiUs0DKarv6FSg
-         XcNIBcxLDyRBP1Qbu0guN/v1Kfnb3RRqgCT2UJ3oHI7Yc1I2V8NTb8eTLSB5xrknjZ
-         ATDIZfsT+DqdOdZMjCbb2DP99VSiZ1Mj/Xnsu3jHmWSU81XAYsNmH/NaXvzC45Ug5c
-         w/N7bwzH1xjJw==
-Date:   Wed, 7 Sep 2022 11:10:02 +0200
-From:   Christian Brauner <brauner@kernel.org>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net, linux-xfs@vger.kernel.org,
-        linux-api@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        linux-block@vger.kernel.org, linux-kernel@vger.kernel.org,
-        Keith Busch <kbusch@kernel.org>,
-        Christoph Hellwig <hch@lst.de>,
-        "Darrick J. Wong" <djwong@kernel.org>,
-        "Martin K. Petersen" <martin.petersen@oracle.com>
-Subject: Re: [PATCH v5 1/8] statx: add direct I/O alignment information
-Message-ID: <20220907091002.6ay72r4tgk5g6rma@wittgenstein>
-References: <20220827065851.135710-1-ebiggers@kernel.org>
- <20220827065851.135710-2-ebiggers@kernel.org>
+        by smtp-out1.suse.de (Postfix) with ESMTPS id A4F10340C4;
+        Wed,  7 Sep 2022 19:43:32 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
+        t=1662579812;
+        h=from:from:reply-to:reply-to:date:date:message-id:message-id:to:to:
+         cc:cc:mime-version:mime-version:content-type:content-type:
+         in-reply-to:in-reply-to:references:references;
+        bh=EP/1Vlbw0S1UBbwYHHOBOq3U6vSqqSVRO1eynQXcM9Q=;
+        b=SvBHqO4oiak30Dq/lfM86S04N9lNz5H5ZVcz+XsX/WtChTmE9TDnPuGl+c2U/I3G510YR3
+        Go+Z7mq9P1enXyAxZtVXOTh7gWPI4HYtPWYJ+BneGDe7kpkcM3dco1pF6iwgJoK2oRvTLQ
+        xLryoAxt52B6i3fxCCONA5GDWDECQSM=
+DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
+        s=susede2_ed25519; t=1662579812;
+        h=from:from:reply-to:reply-to:date:date:message-id:message-id:to:to:
+         cc:cc:mime-version:mime-version:content-type:content-type:
+         in-reply-to:in-reply-to:references:references;
+        bh=EP/1Vlbw0S1UBbwYHHOBOq3U6vSqqSVRO1eynQXcM9Q=;
+        b=Yal7LMJlsecELjsUeQ/qh3i+LOuItLuPmH/IBuY4D5o2W7Ii+s606bQJZglIiZZsCOJh+S
+        Si+v5GAKHp/CB4Dg==
+Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
+        (No client certificate requested)
+        by imap2.suse-dmz.suse.de (Postfix) with ESMTPS id 6740713A66;
+        Wed,  7 Sep 2022 19:43:32 +0000 (UTC)
+Received: from dovecot-director2.suse.de ([192.168.254.65])
+        by imap2.suse-dmz.suse.de with ESMTPSA
+        id 9I1TGGT0GGOHNAAAMHmgww
+        (envelope-from <dsterba@suse.cz>); Wed, 07 Sep 2022 19:43:32 +0000
+Date:   Wed, 7 Sep 2022 21:38:09 +0200
+From:   David Sterba <dsterba@suse.cz>
+To:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Eric Biggers <ebiggers@kernel.org>, Chris Mason <clm@fb.com>,
+        Josef Bacik <josef@toxicpanda.com>,
+        David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
+        linux-btrfs@vger.kernel.org, kernel-team@fb.com
+Subject: Re: [PATCH v2 00/20] btrfs: add fscrypt integration
+Message-ID: <20220907193809.GH32411@twin.jikos.cz>
+Reply-To: dsterba@suse.cz
+References: <cover.1662420176.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=utf-8
+Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20220827065851.135710-2-ebiggers@kernel.org>
+In-Reply-To: <cover.1662420176.git.sweettea-kernel@dorminy.me>
+User-Agent: Mutt/1.5.23.1-rc1 (2014-03-12)
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Aug 26, 2022 at 11:58:44PM -0700, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
+On Mon, Sep 05, 2022 at 08:35:15PM -0400, Sweet Tea Dorminy wrote:
+> This is a changeset adding encryption to btrfs.
 > 
-> Traditionally, the conditions for when DIO (direct I/O) is supported
-> were fairly simple.  For both block devices and regular files, DIO had
-> to be aligned to the logical block size of the block device.
+> Last October, Omar Sandoval sent out a design document for having fscrypt
+> integration with btrfs [1]. In summary, it proposes btrfs storing its
+> own encryption IVs on a per-file-extent basis. fscrypt usually encrypts
+> files using an IV derived from per-inode information; this would prevent
+> snapshotting or reflinking or data relocation for btrfs. We have
+> refined this into a fscrypt extent context object, opaque to the
+> filesystem, which fscrypt uses to generate an IV associated with each
+> block in an extent. Thus, all the inodes sharing a particular
+> key and file extent may decrypt the extent.
 > 
-> However, due to filesystem features that have been added over time (e.g.
-> multi-device support, data journalling, inline data, encryption, verity,
-> compression, checkpoint disabling, log-structured mode), the conditions
-> for when DIO is allowed on a regular file have gotten increasingly
-> complex.  Whether a particular regular file supports DIO, and with what
-> alignment, can depend on various file attributes and filesystem mount
-> options, as well as which block device(s) the file's data is located on.
-> 
-> Moreover, the general rule of DIO needing to be aligned to the block
-> device's logical block size was recently relaxed to allow user buffers
-> (but not file offsets) aligned to the DMA alignment instead.  See
-> commit bf8d08532bc1 ("iomap: add support for dma aligned direct-io").
-> 
-> XFS has an ioctl XFS_IOC_DIOINFO that exposes DIO alignment information.
-> Uplifting this to the VFS is one possibility.  However, as discussed
-> (https://lore.kernel.org/linux-fsdevel/20220120071215.123274-1-ebiggers@kernel.org/T/#u),
-> this ioctl is rarely used and not known to be used outside of
-> XFS-specific code.  It was also never intended to indicate when a file
-> doesn't support DIO at all, nor was it intended for block devices.
-> 
-> Therefore, let's expose this information via statx().  Add the
-> STATX_DIOALIGN flag and two new statx fields associated with it:
-> 
-> * stx_dio_mem_align: the alignment (in bytes) required for user memory
->   buffers for DIO, or 0 if DIO is not supported on the file.
-> 
-> * stx_dio_offset_align: the alignment (in bytes) required for file
->   offsets and I/O segment lengths for DIO, or 0 if DIO is not supported
->   on the file.  This will only be nonzero if stx_dio_mem_align is
->   nonzero, and vice versa.
-> 
-> Note that as with other statx() extensions, if STATX_DIOALIGN isn't set
-> in the returned statx struct, then these new fields won't be filled in.
-> This will happen if the file is neither a regular file nor a block
-> device, or if the file is a regular file and the filesystem doesn't
-> support STATX_DIOALIGN.  It might also happen if the caller didn't
-> include STATX_DIOALIGN in the request mask, since statx() isn't required
-> to return unrequested information.
-> 
-> This commit only adds the VFS-level plumbing for STATX_DIOALIGN.  For
-> regular files, individual filesystems will still need to add code to
-> support it.  For block devices, a separate commit will wire it up too.
-> 
-> Reviewed-by: Christoph Hellwig <hch@lst.de>
-> Reviewed-by: Darrick J. Wong <djwong@kernel.org>
-> Reviewed-by: Martin K. Petersen <martin.petersen@oracle.com>
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> ---
+> This series implements this integration for the simple
+> case, non-compressed data extents. Followup changes will allow
+> encryption of compressed extents, inline extents, and verity items, and
+> will add tests around subvolume encryption. This series should provide
+> encryption for the simplest cases, but this series should not be used in
+> production, as there are likely bugs.
+>  
+> Preliminary btrfs-progs changes are available at [2]; fstests changes
+> are available at [3].
 
-Looks good to me,
-Reviewed-by: Christian Brauner (Microsoft) <brauner@kernel.org>
+I did a quick pass to check if there's anything that could be merged to
+6.1 as preparatory, the fname is a candidate but I've also seen random
+coding style issues that I'd like to get fixed first.
+
+One thing I've noticed is that the incompat bit is only defined but not
+used anywhere. Any functional change should be guarded behind it, and
+once the implementation is complete the enabling part is in a separate
+patch.
+
+Regarding the build config options, I assume that the fscrypt support is
+optional, so it should build with and without the option. I'm not sure
+I've see enough ifdefs for that. For such features there should be a
+line in btrfs_print_mod_info, like we have eg. for verity.
+
+I'll post other comments under the patches.
