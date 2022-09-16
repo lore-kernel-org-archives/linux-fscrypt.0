@@ -2,107 +2,87 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 45BF3ECAAA1
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 15 Sep 2022 18:58:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id BA099C6FA86
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 16 Sep 2022 22:55:57 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229591AbiIOS6S (ORCPT
+        id S229733AbiIPWz4 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 15 Sep 2022 14:58:18 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58272 "EHLO
+        Fri, 16 Sep 2022 18:55:56 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:39298 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229459AbiIOS6S (ORCPT
+        with ESMTP id S229725AbiIPWzy (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 15 Sep 2022 14:58:18 -0400
-Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5C7BB88DC4;
-        Thu, 15 Sep 2022 11:58:16 -0700 (PDT)
-Received: from authenticated-user (box.fidei.email [71.19.144.250])
-        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
-        (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id A3CBD815F8;
-        Thu, 15 Sep 2022 14:58:15 -0400 (EDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1663268295; bh=jxil2TSpiZjUeINH3d6Nb2E6mFkEyMpwiV+LHN23cyc=;
-        h=Date:From:To:Cc:Subject:In-Reply-To:References:From;
-        b=cE4608iLK99tTUHYsNslz43/ejJ6tLFcwmGVW8dMpNUS+nliCCfP1BHWOiGOYugbz
-         yb3sCSG/fvKyQFtYloFrfKDhO43R4kbTfjne0wNE7y0mrMXPi7lp53nDDvXvlOJkW6
-         fNjGhDkju2QT4V67vQ7eObEaQ4gf0g9rT9yRuaEBDqs41ve/EVNvVQeGq258uTTrKf
-         Cfw3ukTpTVbt9joztQ/ViMP1tizy+uSsdwNcBlxr5/7/mk0euZDmAyYOg1Hse2BpyP
-         c3Q4pcR8RsmdxGio2a200zZmh/eXBcrydXlB85qo3v8D0KN1voJvUo+OpxaheNLYHK
-         M//u24F3NIWHg==
+        Fri, 16 Sep 2022 18:55:54 -0400
+X-Greylist: delayed 2219 seconds by postgrey-1.37 at lindbergh.monkeyblade.net; Fri, 16 Sep 2022 15:55:52 PDT
+Received: from mx1.supremebox.com (mx2.supremebox.com [198.23.53.42])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2B00EABF10;
+        Fri, 16 Sep 2022 15:55:51 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=jilayne.com
+        ; s=default; h=Content-Transfer-Encoding:Content-Type:In-Reply-To:From:
+        References:Cc:To:Subject:MIME-Version:Date:Message-ID:Sender:Reply-To:
+        Content-ID:Content-Description:Resent-Date:Resent-From:Resent-Sender:
+        Resent-To:Resent-Cc:Resent-Message-ID:List-Id:List-Help:List-Unsubscribe:
+        List-Subscribe:List-Post:List-Owner:List-Archive;
+        bh=EJzOhgSSv2MWdF1Cpycu1xYUB5X/V+5T1f/8hC9RPmc=; b=J2iMMXA6DFtSl8eNUhs170UAPv
+        RHwcP7RZmV04ha33f7fgnW+nS4FJ446fqNJRQ/vSj9u/jCTdFsTJidtZhLIxkE+p5lnnwLVDEOIg/
+        WzvtrPWOLMyoh+/ao3RgnoBFlDHY7RUVSQD5yg0V5y1sYHQq5hEumljIwKOniHJTdPbY=;
+Received: from 71-211-172-5.hlrn.qwest.net ([71.211.172.5] helo=[192.168.0.91])
+        by mx1.supremebox.com with esmtpa (Exim 4.92)
+        (envelope-from <opensource@jilayne.com>)
+        id 1oZJfd-0002GR-Fu; Fri, 16 Sep 2022 22:18:49 +0000
+Message-ID: <b4d3d155-e614-2075-8918-3082c42e099f@jilayne.com>
+Date:   Fri, 16 Sep 2022 16:18:47 -0600
 MIME-Version: 1.0
-Date:   Thu, 15 Sep 2022 14:58:15 -0400
-From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>, Chris Mason <clm@fb.com>,
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:102.0)
+ Gecko/20100101 Thunderbird/102.2.2
+Subject: Re: [PATCH v2 10/20] btrfs: factor a fscrypt_name matching method
+Content-Language: en-US
+To:     dsterba@suse.cz, Christoph Hellwig <hch@infradead.org>
+Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>,
+        "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Eric Biggers <ebiggers@kernel.org>, Chris Mason <clm@fb.com>,
         Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@fb.com,
-        Omar Sandoval <osandov@osandov.com>
-Subject: Re: [PATCH v2 02/20] fscrypt: add flag allowing partially-encrypted
- directories
-In-Reply-To: <Yx6Oh67pW+Fs6E0P@quark>
+        Omar Sandoval <osandov@osandov.com>, linux-spdx@vger.kernel.org
 References: <cover.1662420176.git.sweettea-kernel@dorminy.me>
- <5e762e300535cbb9f04b25a97e1d13fd082f5b0e.1662420176.git.sweettea-kernel@dorminy.me>
- <Yx6Oh67pW+Fs6E0P@quark>
-Message-ID: <d7351139e8ffe727685f5f53110a5e73@dorminy.me>
-X-Sender: sweettea-kernel@dorminy.me
-Content-Type: text/plain; charset=US-ASCII;
- format=flowed
+ <685c8abce7bdb110bc306752314b4fb0e7867290.1662420176.git.sweettea-kernel@dorminy.me>
+ <20220909101521.GS32411@twin.jikos.cz> <Yxs43SlMqqJ4Fa2h@infradead.org>
+ <20220909133400.GY32411@twin.jikos.cz>
+From:   J Lovejoy <opensource@jilayne.com>
+In-Reply-To: <20220909133400.GY32411@twin.jikos.cz>
+Content-Type: text/plain; charset=UTF-8; format=flowed
 Content-Transfer-Encoding: 7bit
+X-Sender-Ident-agJab5osgicCis: opensource@jilayne.com
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 
-> I'm still trying to wrap my head around what this part involves 
-> exactly.  This
-> is a pretty big change in semantics.
-> 
-> Could this be moved to the end of the patchset, or is this a 
-> fundamental part of
-> the btrfs fscrypt support that the rest of your patchset depends on?  
-> I'd think
-> it would be a lot easier to review if this change was an add-on at the 
-> end.
 
-Definitely.
+On 9/9/22 7:34 AM, David Sterba wrote:
+> On Fri, Sep 09, 2022 at 06:00:13AM -0700, Christoph Hellwig wrote:
+>> On Fri, Sep 09, 2022 at 12:15:21PM +0200, David Sterba wrote:
+>>>> +// SPDX-License-Identifier: GPL-2.0
+>>>> +/*
+>>>> + * Copyright (C) 2020 Facebook
+>>>> + */
+>>> Please use only SPDX in new files
+>>>
+>>> https://btrfs.wiki.kernel.org/index.php/Developer%27s_FAQ#Copyright_notices_in_files.2C_SPDX
+>> The wiki is incorrect.  The SPDX tag deals with the licensing tags
+>> only.  It is not a replacement for the copyright notice in any way, and
+>> having been involved with Copyright enforcement I can tell you that
+>> at least in some jurisdictions Copytight notices absolutely do matter.
+> I believe you and can update the wiki text so it's more explicit about
+> the license an copyright.
 
-> 
-> One thing to keep in mind is that FS_IOC_SET_ENCRYPTION_POLICY failing 
-> on
-> nonempty directories can actually be very useful, since it makes it 
-> possible to
-> detect bugs where people create files in encrypted directories 
-> (expecting that
-> they are encrypted) before an encryption policy actually gets assigned. 
->  Since
-> FS_IOC_SET_ENCRYPTION_POLICY fails in that case, such bugs can be 
-> detected and
-> fixed.
+Can you update the wiki text to remove "SPDX" from the heading and 
+remove the sentence stating, "An initiative started in 2017 [1] aims to 
+unify licensing information in all files using SPDX tags, this is driven 
+by the Linux Foundation."
 
-I agree that this has risks of inadvertent misuse in that fashion.
+Thanks,
+Jilayne
 
-The usecase I'm oriented towards is: someone builds an unencrypted 
-subvolume with a container base filesystem, takes several snapshots of 
-the subvolume, starts a container on each subvolume, and has each 
-container encrypt its designated subvolume going forward with a 
-different key. This usecase needs some way to mark a subvolume/directory 
-already containing files as encrypted going forward; I've had a hard 
-time coming up with a way to both protect users against such accidental 
-misuse, but also allow this container usecase.
-
-> 
-> It might be warranted to use an encryption policy flag to explicitly 
-> indicate
-> that mixing encrypted and unencrypted files is being allowed.
-
-Could it be sufficient to check either empty or read-only, something 
-like (is_empty_dir(inode) || (FS_CFLG_PARTIAL && !inode_permission(..., 
-inode, MAY_WRITE)))? Then the user is unable to accidentally write 
-unencrypted data, since they've taken an action to make the directory 
-read-only, until they've set a policy and key and turned the directory 
-read-write again.
-
-Thanks!
