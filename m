@@ -2,175 +2,154 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 18D8CC07E9D
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 27 Sep 2022 01:49:35 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0C174C32771
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 27 Sep 2022 01:49:36 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229462AbiI0Bte (ORCPT
+        id S229963AbiI0Btf (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 26 Sep 2022 21:49:34 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37450 "EHLO
+        Mon, 26 Sep 2022 21:49:35 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:37442 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230003AbiI0Btd (ORCPT
+        with ESMTP id S229724AbiI0Btd (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 26 Sep 2022 21:49:33 -0400
 Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5FC9A2BCF;
-        Mon, 26 Sep 2022 18:49:31 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id CE518E53;
+        Mon, 26 Sep 2022 18:49:30 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id B56D06151E;
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 24544614FF;
         Tue, 27 Sep 2022 01:49:30 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 02B8EC433D7;
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 613B0C433C1;
         Tue, 27 Sep 2022 01:49:29 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1664243370;
-        bh=MBf/QZvYrr/+1ypzuJfgis+Aql70e5TU6XjS8eDZRZs=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=QTpItj9AR1UXnDzWSj3NFSlcvxnqfbs//QHLqAcuSKc2WIQSBXJS6uue/f2IxSyOw
-         5dxM8kWmVVuGCwM/zpdJ68kIs7JF3h4Wb95xiDB/Qec9jkqnbRLTMbkNxxSgfpHZ5+
-         ON0Y6Ys6bTOJN7Xo1TfdQKDkQ2qWc5ibBgtFv9LSb7siGi2L1VojufAHB3YrGoOaL0
-         pH2cGuYxuRmGVUkawKz1/BIAgRWJxm0KjmbThgxbNWCEZ4H2IpQqVYMFelRs4B8C6n
-         X0mrU2OgqqAa7DrHTtdMPDlXD22Ubb/m8ITGBb3WqvvCIMQAaEyyMCBEJS4tD0GdDb
-         wRE3cImr8HZNw==
+        s=k20201202; t=1664243369;
+        bh=Eu518v0ArlfpWppRcP6ZW1XVeJHR+VUkRhfqa+dnkXA=;
+        h=From:To:Cc:Subject:Date:From;
+        b=M8HCKNykvp9YsAQKV1cuG1myxFBLt1rxltjZFONqxpWhIYCUseEAwC9xcrUwtVuds
+         6wgiD78w/Ls3DQNqfW/v/jhaHpXWcJASEZ/7reXHACFjR+ufs2/2G0qamKbXVdNWQX
+         VmOdnTn0qWIzeG1k/AXEAAUbX2sqBebiP8p8he9Wt8LAatB5BLsDItCI3+3U/j3KFp
+         yQ/62esHsdp5KFuodHSFobI2oNRsSCpQzKmSrxUEMOWyWyNzVf51ayKZHIlVwcJFsv
+         I1kPs6IpGGoRr6XlC2g7ayNJxMbu0++tfB9sknZLvYiyPa1vRa1F6/FiysybaLoZxE
+         uIa2XLEEBHVqg==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     kernel-team@android.com, Israel Rukshin <israelr@nvidia.com>
-Subject: [RFC PATCH v6 2/4] blk-crypto: show supported key types in sysfs
-Date:   Mon, 26 Sep 2022 18:47:16 -0700
-Message-Id: <20220927014718.125308-3-ebiggers@kernel.org>
+Subject: [RFC PATCH v6 0/4] Support for hardware-wrapped inline encryption keys
+Date:   Mon, 26 Sep 2022 18:47:14 -0700
+Message-Id: <20220927014718.125308-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.37.3
-In-Reply-To: <20220927014718.125308-1-ebiggers@kernel.org>
-References: <20220927014718.125308-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+[This patchset is based on the master branch of
+https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git.  It can also be
+retrieved from the tag "wrapped-keys-v6" of the same repo.]
 
-Add sysfs files that indicate which type(s) of keys are supported by the
-inline encryption hardware associated with a particular request queue:
+This patchset adds the block and fscrypt support for hardware-wrapped
+inline encryption keys, a security feature supported by recent Qualcomm
+and Google SoCs.  Unfortunately, although this feature has already been
+working in Android for several years (with some slight differences in
+the software design), the SoC-specific software support needed to
+actually test and use this feature end-to-end with the upstream kernel
+continues to not be ready, mostly for reasons outside my control.
+Therefore, I've downgraded this patchset back to a RFC.  Nevertheless,
+I'd greatly appreciate feedback on it.
 
-	/sys/block/$disk/queue/crypto/hw_wrapped_keys
-	/sys/block/$disk/queue/crypto/standard_keys
+This feature is described in full detail in the included Documentation
+changes.  But to summarize, hardware-wrapped keys are inline encryption
+keys that are wrapped (encrypted) by a key internal to the hardware so
+that they can only be unwrapped (decrypted) by the hardware.  Initially
+keys are wrapped with a permanent hardware key, but during actual use
+they are re-wrapped with a per-boot ephemeral key for improved security.
+The hardware supports importing keys as well as generating keys itself.
 
-Userspace can use the presence or absence of these files to decide what
-encyption settings to use.
+This feature protects encryption keys from read-only compromises of
+kernel memory, such as that which can occur during a cold boot attack.
+It does this without limiting the number of keys that can be used, as
+would be the case with solutions that didn't use key wrapping.
 
-Don't use a single key_type file, as devices might support both key
-types at the same time.
+This differs from the existing support for hardware-wrapped keys in the
+kernel crypto API (which also goes by names such as "hardware-bound
+keys", depending on the driver) in the same way that the crypto API
+differs from blk-crypto: the crypto API is for general crypto
+operations, whereas blk-crypto is for inline storage encryption.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/ABI/stable/sysfs-block | 18 ++++++++++++++
- block/blk-crypto-sysfs.c             | 35 ++++++++++++++++++++++++++++
- 2 files changed, 53 insertions(+)
+I've written xfstests which test that this feature encrypts files
+correctly.  I've sent these separately, and the latest version is at
+https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/xfstests-dev.git/log/?h=wip-wrapped-keys.
 
-diff --git a/Documentation/ABI/stable/sysfs-block b/Documentation/ABI/stable/sysfs-block
-index cd14ecb3c9a5..ab0a36a342d5 100644
---- a/Documentation/ABI/stable/sysfs-block
-+++ b/Documentation/ABI/stable/sysfs-block
-@@ -166,6 +166,16 @@ Description:
- 		encryption, refer to Documentation/block/inline-encryption.rst.
- 
- 
-+What:		/sys/block/<disk>/queue/crypto/hw_wrapped_keys
-+Contact:	linux-block@vger.kernel.org
-+Description:
-+		[RO] The presence of this file indicates that the device
-+		supports hardware-wrapped inline encryption keys, i.e. key blobs
-+		that can only be unwrapped and used by dedicated hardware.  For
-+		more information about hardware-wrapped inline encryption keys,
-+		see Documentation/block/inline-encryption.rst.
-+
-+
- What:		/sys/block/<disk>/queue/crypto/max_dun_bits
- Date:		February 2022
- Contact:	linux-block@vger.kernel.org
-@@ -204,6 +214,14 @@ Description:
- 		use with inline encryption.
- 
- 
-+What:		/sys/block/<disk>/queue/crypto/standard_keys
-+Contact:	linux-block@vger.kernel.org
-+Description:
-+		[RO] The presence of this file indicates that the device
-+		supports standard inline encryption keys, i.e. keys that are
-+		managed in raw, plaintext form in software.
-+
-+
- What:		/sys/block/<disk>/queue/dax
- Date:		June 2016
- Contact:	linux-block@vger.kernel.org
-diff --git a/block/blk-crypto-sysfs.c b/block/blk-crypto-sysfs.c
-index fd93bd2f33b7..d1dbe50f806a 100644
---- a/block/blk-crypto-sysfs.c
-+++ b/block/blk-crypto-sysfs.c
-@@ -31,6 +31,13 @@ static struct blk_crypto_attr *attr_to_crypto_attr(struct attribute *attr)
- 	return container_of(attr, struct blk_crypto_attr, attr);
- }
- 
-+static ssize_t hw_wrapped_keys_show(struct blk_crypto_profile *profile,
-+				    struct blk_crypto_attr *attr, char *page)
-+{
-+	/* Always show supported, since the file doesn't exist otherwise. */
-+	return sysfs_emit(page, "supported\n");
-+}
-+
- static ssize_t max_dun_bits_show(struct blk_crypto_profile *profile,
- 				 struct blk_crypto_attr *attr, char *page)
- {
-@@ -43,20 +50,48 @@ static ssize_t num_keyslots_show(struct blk_crypto_profile *profile,
- 	return sysfs_emit(page, "%u\n", profile->num_slots);
- }
- 
-+static ssize_t standard_keys_show(struct blk_crypto_profile *profile,
-+				  struct blk_crypto_attr *attr, char *page)
-+{
-+	/* Always show supported, since the file doesn't exist otherwise. */
-+	return sysfs_emit(page, "supported\n");
-+}
-+
- #define BLK_CRYPTO_RO_ATTR(_name) \
- 	static struct blk_crypto_attr _name##_attr = __ATTR_RO(_name)
- 
-+BLK_CRYPTO_RO_ATTR(hw_wrapped_keys);
- BLK_CRYPTO_RO_ATTR(max_dun_bits);
- BLK_CRYPTO_RO_ATTR(num_keyslots);
-+BLK_CRYPTO_RO_ATTR(standard_keys);
-+
-+static umode_t blk_crypto_is_visible(struct kobject *kobj,
-+				     struct attribute *attr, int n)
-+{
-+	struct blk_crypto_profile *profile = kobj_to_crypto_profile(kobj);
-+	struct blk_crypto_attr *a = attr_to_crypto_attr(attr);
-+
-+	if (a == &hw_wrapped_keys_attr &&
-+	    !(profile->key_types_supported & BLK_CRYPTO_KEY_TYPE_HW_WRAPPED))
-+		return 0;
-+	if (a == &standard_keys_attr &&
-+	    !(profile->key_types_supported & BLK_CRYPTO_KEY_TYPE_STANDARD))
-+		return 0;
-+
-+	return 0444;
-+}
- 
- static struct attribute *blk_crypto_attrs[] = {
-+	&hw_wrapped_keys_attr.attr,
- 	&max_dun_bits_attr.attr,
- 	&num_keyslots_attr.attr,
-+	&standard_keys_attr.attr,
- 	NULL,
- };
- 
- static const struct attribute_group blk_crypto_attr_group = {
- 	.attrs = blk_crypto_attrs,
-+	.is_visible = blk_crypto_is_visible,
- };
- 
- /*
+Changed v5 => v6:
+    - Downgraded the patchset back to RFC status.
+    - Exposed the supported key types in sysfs.
+    - Shortened some field names, e.g. longterm_wrapped_key => lt_key.
+    - Avoided adding a new use of struct request_queue by fs/crypto/.
+    - Moved the blk-crypto ioctls to a new blk-crypto UAPI header file
+      and fixed their numbering.
+    - Other cleanups.
+
+Changed v4 => v5:
+    - Dropped the RFC tag, now that these patches are actually testable.
+    - Split the BLKCRYPTOCREATEKEY ioctl into BLKCRYPTOIMPORTKEY and
+      BLKCRYPTOGENERATEKEY.  (I'm thinking that these operations are
+      distinct enough that two separate ioctls would be best.)
+    - Added some warning messages in fscrypt_derive_sw_secret().
+    - Rebased onto v5.17-rc6.
+
+Changed v3 => v4:
+    - Rebased onto v5.16-rc1 and dropped a few bits that were upstreamed.
+    - Updated cover letter to link to Gaurav's UFS driver patchset.
+
+Changed v2 => v3:
+    - Dropped some fscrypt cleanups that were applied.
+    - Rebased on top of the latest linux-block and fscrypt branches.
+    - Minor cleanups.
+
+Changed v1 => v2:
+    - Added new ioctls for creating and preparing hardware-wrapped keys.
+    - Rebased onto my patchset which renames blk_keyslot_manager to
+      blk_crypto_profile.
+
+Eric Biggers (4):
+  blk-crypto: add basic hardware-wrapped key support
+  blk-crypto: show supported key types in sysfs
+  blk-crypto: add ioctls to create and prepare hardware-wrapped keys
+  fscrypt: add support for hardware-wrapped keys
+
+ Documentation/ABI/stable/sysfs-block          |  18 ++
+ Documentation/block/inline-encryption.rst     | 245 +++++++++++++++++-
+ Documentation/filesystems/fscrypt.rst         | 154 +++++++++--
+ .../userspace-api/ioctl/ioctl-number.rst      |   4 +-
+ block/blk-crypto-fallback.c                   |   5 +-
+ block/blk-crypto-internal.h                   |  10 +
+ block/blk-crypto-profile.c                    | 119 +++++++++
+ block/blk-crypto-sysfs.c                      |  35 +++
+ block/blk-crypto.c                            | 193 +++++++++++++-
+ block/ioctl.c                                 |   5 +
+ drivers/md/dm-table.c                         |   1 +
+ drivers/mmc/host/cqhci-crypto.c               |   2 +
+ drivers/ufs/core/ufshcd-crypto.c              |   1 +
+ fs/crypto/fscrypt_private.h                   |  70 ++++-
+ fs/crypto/hkdf.c                              |   4 +-
+ fs/crypto/inline_crypt.c                      |  64 ++++-
+ fs/crypto/keyring.c                           | 122 ++++++---
+ fs/crypto/keysetup.c                          |  54 +++-
+ fs/crypto/keysetup_v1.c                       |   5 +-
+ fs/crypto/policy.c                            |  11 +-
+ include/linux/blk-crypto-profile.h            |  73 ++++++
+ include/linux/blk-crypto.h                    |  78 +++++-
+ include/uapi/linux/blk-crypto.h               |  44 ++++
+ include/uapi/linux/fs.h                       |   6 +-
+ include/uapi/linux/fscrypt.h                  |   7 +-
+ 25 files changed, 1233 insertions(+), 97 deletions(-)
+ create mode 100644 include/uapi/linux/blk-crypto.h
+
+
+base-commit: 0e91fc1e0f5c70ce575451103ec66c2ec21f1a6e
 -- 
 2.37.3
 
