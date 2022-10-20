@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B5ECEC433FE
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 20 Oct 2022 16:59:12 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E16F9C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 20 Oct 2022 16:59:13 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229731AbiJTQ7J (ORCPT
+        id S229967AbiJTQ7N (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 20 Oct 2022 12:59:09 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:45728 "EHLO
+        Thu, 20 Oct 2022 12:59:13 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:45724 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230060AbiJTQ7H (ORCPT
+        with ESMTP id S230023AbiJTQ7K (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 20 Oct 2022 12:59:07 -0400
+        Thu, 20 Oct 2022 12:59:10 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 76ADA1C2F33;
-        Thu, 20 Oct 2022 09:59:06 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 77FFE19ABD6;
+        Thu, 20 Oct 2022 09:59:09 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 40DE3811BE;
-        Thu, 20 Oct 2022 12:59:05 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id B418F811D3;
+        Thu, 20 Oct 2022 12:59:08 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1666285145; bh=6JC0+mWJqGTMpvKCsgFkL1LrgyiUyxbniwczcUOG8oA=;
+        t=1666285149; bh=erAaLba6FK5VEGkkAglED36H4L0ixL6DFkvbnr+ZkDE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=XQsd/L1b0jTcgZmxH+Py+izHuesaHsYLPiO1/OzDYjU99JImXMW1hIY0AFJ6Oj40e
-         4H7AlDuJnppkVuZhZpFKucdYvNcr4YS2CCaFuVBDx0TXf1ZW27/SKTFLbdhH897evz
-         Y7tB/9qAXKDDcftVaOn3TsNlVndehCpTe4I0Y6rbvEkT4hX2jHROl1FhP3DCgAbmLb
-         wcIk0etmCE5J9BB6RrQQDkp6OJoVVk47dz+Jtpw6fw76fVtNLwc7g2tCYKHOP3OvPn
-         cI5yifzwVxJ3HmINq0oyBU0TWpcrb0gDX6GoTVJXMt76srtgegjCxxBpl1NPRAWxSP
-         vRRY3RVmau0zA==
+        b=BE0GpDLWNABnmFnVIeyJ8jRkl75W0GbPVDhb4rCarkPR6xYnS1gJTcFXQYXQTKv5h
+         cYxy2l5f00BAhqI+Qq7joDobZPLZcsfL0QIfENOUQt9TzYkHwhyx2PxmlCVI20XaoU
+         ehnIaKtY7dPwEt04WF21aFp/Mo/tcY2UqcQeqjU9w7xXUMp+bi5SyoJlFqS7vwbLUA
+         n4vfxMH9aW4AQl1Cr0piM3VSK2Wh8GGpetYAwOMxA91/4F2V8WV1lVrt+44LkmsKz1
+         8Uzo25/UomKxVaY+6FW7/MZNaxeM5Q7GEVOWKUZRFRLZbIuQh2Ssvl8IjiHbN28MrM
+         2ya1R4enw288w==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -38,9 +38,9 @@ To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@meta.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v3 03/22] fscrypt: allow fscrypt_generate_iv() to distinguish filenames
-Date:   Thu, 20 Oct 2022 12:58:22 -0400
-Message-Id: <020efb334cd6dab01dd711665db8d32e77aaebf8.1666281277.git.sweettea-kernel@dorminy.me>
+Subject: [PATCH v3 05/22] fscrypt: document btrfs' fscrypt quirks.
+Date:   Thu, 20 Oct 2022 12:58:24 -0400
+Message-Id: <6ffe9471b0caedf1e134d417644d2b3d1a273799.1666281277.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1666281276.git.sweettea-kernel@dorminy.me>
 References: <cover.1666281276.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -49,75 +49,133 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-For extent-based file contents encryption, filenames will need to
-generate an IV based on the inode context, while file contents will need
-to generate an IV based on the extent context. Currently filenames and
-the first block of file contents both pass fscrypt_generate_iv() a block
-number of 0, making it hard to distinguish the two cases.
-
-To enable distinguishing these two cases for extent-based encryption,
-this change adjusts all callers to pass U64_MAX when requesting an IV
-for filename encryption, and then changes fscrypt_generate_iv() to
-convert U64_MAX to 0 for traditional inode-context encryption. For
-extent-based encryption, any block number other than U64_MAX will get an
-IV from the extent context, while U64_MAX will indicate falling back to
-inode contexts.
+As btrfs has a couple of quirks in its encryption compared to other
+filesystems, they should be documented like ext4's quirks. Additionally,
+extent-based contents encryption, being wholly new, deserves its own
+section to compare against inode-based contents encryption.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Reviewed-by: Josef Bacik <josef@toxicpanda.com>
 ---
- fs/crypto/crypto.c | 9 ++++++++-
- fs/crypto/fname.c  | 4 ++--
- 2 files changed, 10 insertions(+), 3 deletions(-)
+ Documentation/filesystems/fscrypt.rst | 62 +++++++++++++++++++--------
+ 1 file changed, 45 insertions(+), 17 deletions(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index e78be66bbf01..7fe5979fbea2 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -71,7 +71,7 @@ EXPORT_SYMBOL(fscrypt_free_bounce_page);
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 5ba5817c17c2..c8c2600a7f8d 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -31,7 +31,7 @@ However, except for filenames, fscrypt does not encrypt filesystem
+ metadata.
  
- /*
-  * Generate the IV for the given logical block number within the given file.
-- * For filenames encryption, lblk_num == 0.
-+ * For filenames encryption, lblk_num == U64_MAX.
-  *
-  * Keep this in sync with fscrypt_limit_io_blocks().  fscrypt_limit_io_blocks()
-  * needs to know about any IV generation methods where the low bits of IV don't
-@@ -84,6 +84,13 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
+ Unlike eCryptfs, which is a stacked filesystem, fscrypt is integrated
+-directly into supported filesystems --- currently ext4, F2FS, and
++directly into supported filesystems --- currently btrfs, ext4, F2FS, and
+ UBIFS.  This allows encrypted files to be read and written without
+ caching both the decrypted and encrypted pages in the pagecache,
+ thereby nearly halving the memory used and bringing it in line with
+@@ -41,10 +41,10 @@ causing application compatibility issues; fscrypt allows the full 255
+ bytes (NAME_MAX).  Finally, unlike eCryptfs, the fscrypt API can be
+ used by unprivileged users, with no need to mount anything.
  
- 	memset(iv, 0, ci->ci_mode->ivsize);
+-fscrypt does not support encrypting files in-place.  Instead, it
+-supports marking an empty directory as encrypted.  Then, after
+-userspace provides the key, all regular files, directories, and
+-symbolic links created in that directory tree are transparently
++For most filesystems, fscrypt does not support encrypting files
++in-place.  Instead, it supports marking an empty directory as encrypted.
++Then, after userspace provides the key, all regular files, directories,
++and symbolic links created in that directory tree are transparently
+ encrypted.
  
-+	/*
-+	 * Filename encryption. For inode-based policies, filenames are
-+	 * encrypted as though they are lblk 0.
-+	 */
-+	if (lblk_num == U64_MAX)
-+		lblk_num = 0;
+ Threat model
+@@ -280,6 +280,11 @@ included in the IV.  Moreover:
+   key derived using the KDF.  Users may use the same master key for
+   other v2 encryption policies.
+ 
++For filesystems with extent-based content encryption (e.g. btrfs),
++this is the only choice. Data shared among multiple inodes must share
++the exact same key, therefore necessitating inodes using the same key
++for contents encryption.
 +
- 	if (flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
- 		WARN_ON_ONCE(lblk_num > U32_MAX);
- 		WARN_ON_ONCE(ci->ci_inode->i_ino > U32_MAX);
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index 6c092a1533f7..b3e7e3a66312 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -79,7 +79,7 @@ int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
- 	memset(out + iname->len, 0, olen - iname->len);
+ IV_INO_LBLK_64 policies
+ -----------------------
  
- 	/* Initialize the IV */
--	fscrypt_generate_iv(&iv, 0, ci);
-+	fscrypt_generate_iv(&iv, U64_MAX, ci);
+@@ -374,12 +379,12 @@ to individual filesystems.  However, authenticated encryption (AE)
+ modes are not currently supported because of the difficulty of dealing
+ with ciphertext expansion.
  
- 	/* Set up the encryption request */
- 	req = skcipher_request_alloc(tfm, GFP_NOFS);
-@@ -134,7 +134,7 @@ static int fname_decrypt(const struct inode *inode,
- 		crypto_req_done, &wait);
+-Contents encryption
+--------------------
++File-based contents encryption
++------------------------------
  
- 	/* Initialize IV */
--	fscrypt_generate_iv(&iv, 0, ci);
-+	fscrypt_generate_iv(&iv, U64_MAX, ci);
+-For file contents, each filesystem block is encrypted independently.
+-Starting from Linux kernel 5.5, encryption of filesystems with block
+-size less than system's page size is supported.
++For most filesystems, each filesystem block within each file is
++encrypted independently.  Starting from Linux kernel 5.5, encryption of
++filesystems with block size less than system's page size is supported.
  
- 	/* Create decryption request */
- 	sg_init_one(&src_sg, iname->name, iname->len);
+ Each block's IV is set to the logical block number within the file as
+ a little endian number, except that:
+@@ -403,6 +408,20 @@ Note that because file logical block numbers are included in the IVs,
+ filesystems must enforce that blocks are never shifted around within
+ encrypted files, e.g. via "collapse range" or "insert range".
+ 
++Extent-based contents encryption
++--------------------------------
++
++For certain filesystems (currently only btrfs), data is encrypted on a
++per-extent basis. Each filesystem block in a data extent is encrypted
++independently. Multiple files may refer to the extent, as long as they
++all share the same key.  The filesystem may relocate the extent on disk,
++as long as the encrypted data within the extent retains its offset
++within the data extent.
++
++Each extent stores a starting IV; each block's IV within this is
++set to the logical block number within the extent as a little endian
++number.
++
+ Filenames encryption
+ --------------------
+ 
+@@ -525,13 +544,14 @@ This structure must be initialized as follows:
+   struct fscrypt_policy_v2.
+ 
+ If the file is not yet encrypted, then FS_IOC_SET_ENCRYPTION_POLICY
+-verifies that the file is an empty directory.  If so, the specified
+-encryption policy is assigned to the directory, turning it into an
+-encrypted directory.  After that, and after providing the
+-corresponding master key as described in `Adding keys`_, all regular
+-files, directories (recursively), and symlinks created in the
+-directory will be encrypted, inheriting the same encryption policy.
+-The filenames in the directory's entries will be encrypted as well.
++verifies that the file is an empty directory, unless btrfs is being
++used.  If so, the specified encryption policy is assigned to the
++directory, turning it into an encrypted directory.  After that, and
++after providing the corresponding master key as described in `Adding
++keys`_, all regular files, directories (recursively), and symlinks
++created in the directory will be encrypted, inheriting the same
++encryption policy.  The filenames in the directory's entries will be
++encrypted as well.
+ 
+ Alternatively, if the file is already encrypted, then
+ FS_IOC_SET_ENCRYPTION_POLICY validates that the specified encryption
+@@ -552,6 +572,14 @@ Note that the ext4 filesystem does not allow the root directory to be
+ encrypted, even if it is empty.  Users who want to encrypt an entire
+ filesystem with one key should consider using dm-crypt instead.
+ 
++Note that btrfs permits setting a currently unencrypted 'subvolume' to
++encrypted. This means all newly written data, and files, will be
++encrypted, but existing data and filenames will remain unencrypted. This
++is intended for use in containers: initially identical unencrypted
++snapshot volumes provide the base for multiple containers' filesystems,
++but after each encrypts their volume with a different key, any new
++sensitive data written by the container will be encrypted.
++
+ FS_IOC_SET_ENCRYPTION_POLICY can fail with the following errors:
+ 
+ - ``EACCES``: the file is not owned by the process's uid, nor does the
 -- 
 2.35.1
 
