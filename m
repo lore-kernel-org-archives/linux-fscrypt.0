@@ -2,132 +2,132 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D5223C433FE
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 20 Oct 2022 17:00:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0CD90C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 20 Oct 2022 20:52:09 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229986AbiJTRAS (ORCPT
+        id S229519AbiJTUwI (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 20 Oct 2022 13:00:18 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51300 "EHLO
+        Thu, 20 Oct 2022 16:52:08 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58236 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229998AbiJTRAQ (ORCPT
+        with ESMTP id S229596AbiJTUwH (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 20 Oct 2022 13:00:16 -0400
-Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 058259AF80;
-        Thu, 20 Oct 2022 10:00:10 -0700 (PDT)
-Received: from authenticated-user (box.fidei.email [71.19.144.250])
-        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
-        (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 27563811D7;
-        Thu, 20 Oct 2022 12:59:39 -0400 (EDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1666285179; bh=3LGhGx+DVMJdPU0aZqSOrMi0E7gESXwazg7yDLKnx58=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=xGL3EISPUMovbSyRBawkfTzaclVpdq1Ytc0J0nVkSQAbrQhpx/vglddAqqnRS2szs
-         rF9mMV0/oJ0R28jJDY/iNe5rqaGSAvHjfakMy0iscnPE0+wlXyZA+hHlkjkJNbGKBK
-         eUaLqDW3E0syGKpADgOepGtm/x+rgmJ6+viJqZjdD51j7rzuARC+esc30ZiMfa+1Vo
-         xjsfVD31lR/3G/dmNsL7+y5Rg67xhKkLvw5a4lmThI5it+5oyaw6TKoLxxEXuvswln
-         iArZg5+NAyXz8TJm0nACPLAulnH5CFpr8yHhKrenyR74uLlcUgmHoynS0LKE9r8HL/
-         F4KKYcHQMLNmA==
-From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Thu, 20 Oct 2022 16:52:07 -0400
+Received: from mail-qk1-x72b.google.com (mail-qk1-x72b.google.com [IPv6:2607:f8b0:4864:20::72b])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A6BB71956DC
+        for <linux-fscrypt@vger.kernel.org>; Thu, 20 Oct 2022 13:52:04 -0700 (PDT)
+Received: by mail-qk1-x72b.google.com with SMTP id f8so788088qkg.3
+        for <linux-fscrypt@vger.kernel.org>; Thu, 20 Oct 2022 13:52:04 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=toxicpanda-com.20210112.gappssmtp.com; s=20210112;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:from:to:cc:subject:date:message-id:reply-to;
+        bh=av5V+WheLiDAHJF0b7an8Md+TjzU0+zz397YBrxXlTw=;
+        b=r70rtr5AXbl5b5tLDkIscd9pbipR2zArcKNoNdm9+LO7KIZrhAZB6d1kyvY8i3lwPh
+         +knJacn53H+wZUKZ11KqtEIs7zx/N+j47PabYVLcO8gLdgc4hJeZPfVAtthUHjjEgcWD
+         IJPG440FZ+u0xtBUwGDW0KwDf0DJZHXiYqYQgH7ZS50v5xM847gFWvzysqrOdo0CndEa
+         KJ3ZwaM+itilkRN/9WMtGMuGOpjbBj6XeSNvHb9ve2oEE0W11TLLIyVzjsvV4QfQnP2I
+         VkBQoZ43M7fHNj8HW1NyJl5ZGbudSap/6ExijTmdxMHNE5//8/N99JEEAorASXvP6JXr
+         DGsQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=av5V+WheLiDAHJF0b7an8Md+TjzU0+zz397YBrxXlTw=;
+        b=NW8fi7xB3BT2YqxG2/b/OdFbrzUXorl19wEB8h63bWu68+Zaro8ywfFMxwOUImgeLp
+         jIRa4XDsQ2be77bigzhFUQp8qRtxWULEgwKLM2K6+BmgvJoQuhNaOl35XmsdK+BWgmF+
+         mzJ4O8ZSDJ4hE1geqrUcrelZc68+vH2g9JohplrM23YE+LnbPUSE5G1AC09Ob4gNKJ0H
+         PN1GD01Gw4KVjITYf+qKy7vG5WET/jQtPy5hpTBRPPaYYDPHt6K/a4pCX/A9kE7H4a98
+         AK+kH/BqymNei1/96rBC/fDmk1uxSp3lU6+56B15lAZOPCN96qW85ewJqxRq5uOFL7Z9
+         5AVg==
+X-Gm-Message-State: ACrzQf0eLE2ZqTqPCPQt8Thw6E2cAgXHPruoq3OU4s7qS11CSe3S1aKo
+        eZDR3+0TbihntrWmit/R+99m1fLWm/8D0w==
+X-Google-Smtp-Source: AMsMyM6Tx1YV8cs3l45QaFzSAhH9VLgpVxHNyIFBlYpPZ24uuSy8/81D5UDFaOu5Ej8xxaWdKw2UEg==
+X-Received: by 2002:a05:620a:e8c:b0:6ee:7820:fa2a with SMTP id w12-20020a05620a0e8c00b006ee7820fa2amr10962914qkm.624.1666299123654;
+        Thu, 20 Oct 2022 13:52:03 -0700 (PDT)
+Received: from localhost (cpe-174-109-170-245.nc.res.rr.com. [174.109.170.245])
+        by smtp.gmail.com with ESMTPSA id r2-20020ae9d602000000b006ceb933a9fesm7889783qkk.81.2022.10.20.13.52.02
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Thu, 20 Oct 2022 13:52:03 -0700 (PDT)
+Date:   Thu, 20 Oct 2022 16:52:01 -0400
+From:   Josef Bacik <josef@toxicpanda.com>
+To:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
         Eric Biggers <ebiggers@kernel.org>, Chris Mason <clm@fb.com>,
-        Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
-        linux-btrfs@vger.kernel.org, kernel-team@meta.com
-Cc:     Omar Sandoval <osandov@osandov.com>,
-        Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v3 21/22] fscrypt: add flag allowing partially-encrypted directories
-Date:   Thu, 20 Oct 2022 12:58:40 -0400
-Message-Id: <2664d197270314e809421f58aaeb728df3a3daf4.1666281277.git.sweettea-kernel@dorminy.me>
-In-Reply-To: <cover.1666281276.git.sweettea-kernel@dorminy.me>
+        linux-btrfs@vger.kernel.org, kernel-team@meta.com,
+        Omar Sandoval <osandov@osandov.com>
+Subject: Re: [PATCH v3 02/22] fscrypt: add fscrypt_have_same_policy() to
+ check inode compatibility
+Message-ID: <Y1G08XNhCr9o1ANi@localhost.localdomain>
 References: <cover.1666281276.git.sweettea-kernel@dorminy.me>
+ <48538f6e8b733d4e273510491a40a162545a7300.1666281277.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <48538f6e8b733d4e273510491a40a162545a7300.1666281277.git.sweettea-kernel@dorminy.me>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Omar Sandoval <osandov@osandov.com>
+On Thu, Oct 20, 2022 at 12:58:21PM -0400, Sweet Tea Dorminy wrote:
+> From: Omar Sandoval <osandov@osandov.com>
+> 
+> Btrfs will need to check whether inode policies are identical for
+> various purposes: if two inodes want to share an extent, they must have
+> the same policy, including key identifier; symlinks must not span the
+> encrypted/unencrypted border; and certain encryption policies will allow
+> btrfs to store one fscrypt_context for multiple objects. Therefore, add
+> a function which allows checking the encryption policies of two inodes
+> to ensure they are identical.
+> 
+> Signed-off-by: Omar Sandoval <osandov@osandov.com>
+> Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+> ---
+>  fs/crypto/policy.c      | 26 ++++++++++++++++++++++++++
+>  include/linux/fscrypt.h |  7 +++++++
+>  2 files changed, 33 insertions(+)
+> 
+> diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+> index 46757c3052ef..b7c4820a8001 100644
+> --- a/fs/crypto/policy.c
+> +++ b/fs/crypto/policy.c
+> @@ -415,6 +415,32 @@ static int fscrypt_get_policy(struct inode *inode, union fscrypt_policy *policy)
+>  	return fscrypt_policy_from_context(policy, &ctx, ret);
+>  }
+>  
+> +/**
+> + * fscrypt_have_same_policy() - check whether two inodes have the same policy
+> + * @inode1: the first inode
+> + * @inode2: the second inode
+> + *
+> + * Return: %true if they are definitely equal, else %false
+> + */
+> +int fscrypt_have_same_policy(struct inode *inode1, struct inode *inode2)
+> +{
+> +	union fscrypt_policy policy1, policy2;
+> +	int err;
+> +
+> +	if (!IS_ENCRYPTED(inode1) && !IS_ENCRYPTED(inode2))
+> +		return true;
+> +	else if (!IS_ENCRYPTED(inode1) || !IS_ENCRYPTED(inode2))
+> +		return false;
+> +	err = fscrypt_get_policy(inode1, &policy1);
+> +	if (err)
+> +		return false;
+> +	err = fscrypt_get_policy(inode2, &policy2);
+> +	if (err)
+> +		return false;
+> +	return fscrypt_policies_equal(&policy1, &policy2);
 
-Creating several new subvolumes out of snapshots of another subvolume,
-each for a different VM's storage, is a important usecase for btrfs.  We
-would like to give each VM a unique encryption key to use for new writes
-to its subvolume, so that secure deletion of the VM's data is as simple
-as securely deleting the key; to avoid needing multiple keys in each VM,
-we envision the initial subvolume being unencrypted. However, this means
-that the snapshot's directories would have a mix of encrypted and
-unencrypted files. During lookup with a key, both unencrypted and
-encrypted forms of the desired name must be queried.
+You're returning bools here, you should maket his return bool instead of int.
+Also you could just do
 
-To allow this, add another FS_CFLG to allow filesystems to opt into
-partially encrypted directories.
+if (fscrypt_get_policy())
+	return false;
 
-Signed-off-by: Omar Sandoval <osandov@osandov.com>
-Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
----
- fs/crypto/fname.c       | 17 ++++++++++++++++-
- include/linux/fscrypt.h |  2 ++
- 2 files changed, 18 insertions(+), 1 deletion(-)
+Thanks,
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index b3e7e3a66312..16b64e0589e4 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -414,6 +414,7 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	fname->usr_fname = iname;
- 
- 	if (!IS_ENCRYPTED(dir) || fscrypt_is_dot_dotdot(iname)) {
-+unencrypted:
- 		fname->disk_name.name = (unsigned char *)iname->name;
- 		fname->disk_name.len = iname->len;
- 		return 0;
-@@ -448,8 +449,16 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	 * user-supplied name
- 	 */
- 
--	if (iname->len > FSCRYPT_NOKEY_NAME_MAX_ENCODED)
-+	if (iname->len > FSCRYPT_NOKEY_NAME_MAX_ENCODED) {
-+		/*
-+		 * This isn't a valid nokey name, but it could be an unencrypted
-+		 * name if the filesystem allows partially encrypted
-+		 * directories.
-+		 */
-+		if (dir->i_sb->s_cop->flags & FS_CFLG_ALLOW_PARTIAL)
-+			goto unencrypted;
- 		return -ENOENT;
-+	}
- 
- 	fname->crypto_buf.name = kmalloc(FSCRYPT_NOKEY_NAME_MAX, GFP_KERNEL);
- 	if (fname->crypto_buf.name == NULL)
-@@ -460,6 +469,12 @@ int fscrypt_setup_filename(struct inode *dir, const struct qstr *iname,
- 	if (ret < (int)offsetof(struct fscrypt_nokey_name, bytes[1]) ||
- 	    (ret > offsetof(struct fscrypt_nokey_name, sha256) &&
- 	     ret != FSCRYPT_NOKEY_NAME_MAX)) {
-+		/* Again, this could be an unencrypted name. */
-+		if (dir->i_sb->s_cop->flags & FS_CFLG_ALLOW_PARTIAL) {
-+			kfree(fname->crypto_buf.name);
-+			fname->crypto_buf.name = NULL;
-+			goto unencrypted;
-+		}
- 		ret = -ENOENT;
- 		goto errout;
- 	}
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 4143c722ea1b..485471174594 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -109,6 +109,8 @@ struct fscrypt_nokey_name {
-  * pages for writes and therefore won't need the fscrypt bounce page pool.
-  */
- #define FS_CFLG_OWN_PAGES (1U << 1)
-+/* The filesystem allows partially encrypted directories/files. */
-+#define FS_CFLG_ALLOW_PARTIAL (1U << 2)
- 
- /* Crypto operations for filesystems */
- struct fscrypt_operations {
--- 
-2.35.1
-
+Josef
