@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 5632BFA373F
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 25 Oct 2022 00:42:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 53A7AFA373D
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 25 Oct 2022 00:42:39 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229501AbiJYAmg (ORCPT
+        id S230310AbiJYAmh (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 24 Oct 2022 20:42:36 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35600 "EHLO
+        Mon, 24 Oct 2022 20:42:37 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34148 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229976AbiJYAmR (ORCPT
+        with ESMTP id S230447AbiJYAmS (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 24 Oct 2022 20:42:17 -0400
+        Mon, 24 Oct 2022 20:42:18 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D9595A6C15;
-        Mon, 24 Oct 2022 16:13:54 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1B77A5AA26;
+        Mon, 24 Oct 2022 16:13:58 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id E613B811D7;
-        Mon, 24 Oct 2022 19:13:53 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 00C07811C2;
+        Mon, 24 Oct 2022 19:13:57 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1666653234; bh=oQS0BYOv8JriDqqGYDsnAgBs05N36uspePc8xhdhmlw=;
+        t=1666653238; bh=JcpDyvmOMp4d80Av2reDfag13fp9EDIDDTeyKSo+e/A=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=p/TedflAuoDZbiHNj1Gy5vQxt/MEVCuxvc/UlddcrQ5FsBDYpn+OqcKFDR680Mivs
-         dLqINjy/Qe2LdHNa9c6UnlwDK4XTN4Lxf6yV6sGXLg3DIHTAbXyjOtSrQwyV5f46MY
-         XYiILvV69hX5jiXnTMw6tzI1NV0hh6J5063qfUfP6LtTN3ISEZUw+w7BoVlQcyvr+d
-         1dX74clw5M9PYhiwruBTJAgISVCnzyzt3irtEkWLi9fCz6al3DlsFVZRvwzyemUvTy
-         1NaikfVPR/0e/M0wuYpuJ7f+uM/IOeSHUxR8oPPXSLDUA0gQH6IbMtfWxB0WvBUlPJ
-         u43W34gw6lNnQ==
+        b=FaOGr+hfP8Cyzw4I7i1ed5tomd4KbgRt8Y9gSt4Ovi7MAvE97Vdql+V27G/frpmVi
+         KqY6Gfkp/lREoyA+cZZCNY5UB9xNpb0dRjWdU8ixq1wCrzjsIYG+lgeV14QwJISTX2
+         jNJ85u5E1N4h5tvmeMSfvoeRR6CAzVFAn4I4oPap+Jlp7nCOqPwodPNctBxlh+iS8f
+         nLhInzn1kJnZurDwCc1YdW7aF2G8UWhgaNv2RSkBJgqQnCTLtSj8TEfii2x4cOT8Fx
+         3o5zALVxCRHRR+ontKH1wTKJFkxAsnWwJByzKfqoqDhj3SygCAQ8ilU0I3I87ABIlA
+         oSEiN3mvar6Zw==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -37,10 +37,11 @@ To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@meta.com
-Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v4 08/21] btrfs: setup qstrings from dentrys using fscrypt helper
-Date:   Mon, 24 Oct 2022 19:13:18 -0400
-Message-Id: <0bc4b89f82d49a12a2d33777824afde9dac80985.1666651724.git.sweettea-kernel@dorminy.me>
+Cc:     Omar Sandoval <osandov@osandov.com>,
+        Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Subject: [PATCH v4 10/21] btrfs: store directory encryption state
+Date:   Mon, 24 Oct 2022 19:13:20 -0400
+Message-Id: <bfcdcdb9d5135407e99069a4963b9c5ee929052f.1666651724.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1666651724.git.sweettea-kernel@dorminy.me>
 References: <cover.1666651724.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -49,729 +50,326 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Most places where we get a struct qstr, we are doing so from a dentry.
-With fscrypt, the dentry's name may be encrypted on-disk, so fscrypt
-provides a helper to convert a dentry name to the appropriate disk name
-if necessary. Convert each of the dentry name accesses to use
-fscrypt_setup_filename(), then convert the resulting fscrypt_name back
-to an unencrypted qstr. This does not work for nokey names, but the
-specific locations that could spawn nokey names are noted.
+From: Omar Sandoval <osandov@osandov.com>
 
-At present, since there are no encrypted directories,
-nothing goes down the filename encryption paths.
+For directories with encrypted files/filenames, we need to store a flag
+indicating this fact. There's no room in other fields, so we'll need to
+borrow a bit from dir_type. Since it's now a combination of type and
+flags, we rename it to dir_flags to reflect its new usage.
 
+The new flag, FT_ENCRYPTED, indicates a directory containing encrypted
+data, which is orthogonal to file type; therefore, add the new
+flag, and make conversion from directory type to file type strip the
+flag.
+
+Signed-off-by: Omar Sandoval <osandov@osandov.com>
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/btrfs/ctree.h       |   3 +
- fs/btrfs/inode.c       | 187 ++++++++++++++++++++++++++++++++---------
- fs/btrfs/transaction.c |  40 ++++++---
- fs/btrfs/tree-log.c    |  11 ++-
- 4 files changed, 186 insertions(+), 55 deletions(-)
+ fs/btrfs/accessors.h            | 15 +++++++++++++--
+ fs/btrfs/delayed-inode.c        |  6 +++---
+ fs/btrfs/delayed-inode.h        |  2 +-
+ fs/btrfs/dir-item.c             |  7 +++++--
+ fs/btrfs/inode.c                | 13 +++++++------
+ fs/btrfs/print-tree.c           |  4 ++--
+ fs/btrfs/send.c                 |  2 +-
+ fs/btrfs/tree-checker.c         |  2 +-
+ fs/btrfs/tree-log.c             | 20 ++++++++++----------
+ include/uapi/linux/btrfs_tree.h |  7 +++++++
+ 10 files changed, 50 insertions(+), 28 deletions(-)
 
-diff --git a/fs/btrfs/ctree.h b/fs/btrfs/ctree.h
-index d80ebd5b1a83..6653972d7c01 100644
---- a/fs/btrfs/ctree.h
-+++ b/fs/btrfs/ctree.h
-@@ -28,6 +28,7 @@
- #include <linux/refcount.h>
- #include <linux/crc32c.h>
- #include <linux/iomap.h>
-+#include <linux/fscrypt.h>
- #include "extent-io-tree.h"
- #include "extent_io.h"
- #include "extent_map.h"
-@@ -1674,6 +1675,8 @@ struct btrfs_new_inode_args {
- 	 */
- 	struct posix_acl *default_acl;
- 	struct posix_acl *acl;
-+	struct fscrypt_name fname;
-+	struct qstr name;
- };
- int btrfs_new_inode_prepare(struct btrfs_new_inode_args *args,
- 			    unsigned int *trans_num_items);
+diff --git a/fs/btrfs/accessors.h b/fs/btrfs/accessors.h
+index 18504c205b01..157f5712c7ac 100644
+--- a/fs/btrfs/accessors.h
++++ b/fs/btrfs/accessors.h
+@@ -493,10 +493,10 @@ BTRFS_SETGET_FUNCS(root_ref_name_len, struct btrfs_root_ref, name_len, 16);
+ 
+ /* struct btrfs_dir_item */
+ BTRFS_SETGET_FUNCS(dir_data_len, struct btrfs_dir_item, data_len, 16);
+-BTRFS_SETGET_FUNCS(dir_type, struct btrfs_dir_item, type, 8);
++BTRFS_SETGET_FUNCS(dir_flags, struct btrfs_dir_item, type, 8);
+ BTRFS_SETGET_FUNCS(dir_name_len, struct btrfs_dir_item, name_len, 16);
+ BTRFS_SETGET_FUNCS(dir_transid, struct btrfs_dir_item, transid, 64);
+-BTRFS_SETGET_STACK_FUNCS(stack_dir_type, struct btrfs_dir_item, type, 8);
++BTRFS_SETGET_STACK_FUNCS(stack_dir_flags, struct btrfs_dir_item, type, 8);
+ BTRFS_SETGET_STACK_FUNCS(stack_dir_data_len, struct btrfs_dir_item,
+ 			 data_len, 16);
+ BTRFS_SETGET_STACK_FUNCS(stack_dir_name_len, struct btrfs_dir_item,
+@@ -504,6 +504,17 @@ BTRFS_SETGET_STACK_FUNCS(stack_dir_name_len, struct btrfs_dir_item,
+ BTRFS_SETGET_STACK_FUNCS(stack_dir_transid, struct btrfs_dir_item,
+ 			 transid, 64);
+ 
++static inline u8 btrfs_dir_ftype(const struct extent_buffer *eb,
++				 const struct btrfs_dir_item *item)
++{
++	return btrfs_dir_flags_to_ftype(btrfs_dir_flags(eb, item));
++}
++
++static inline u8 btrfs_stack_dir_ftype(const struct btrfs_dir_item *item)
++{
++	return btrfs_dir_flags_to_ftype(btrfs_stack_dir_flags(item));
++}
++
+ static inline void btrfs_dir_item_key(const struct extent_buffer *eb,
+ 				      const struct btrfs_dir_item *item,
+ 				      struct btrfs_disk_key *key)
+diff --git a/fs/btrfs/delayed-inode.c b/fs/btrfs/delayed-inode.c
+index 74ef2db1b2ec..a935709f2a29 100644
+--- a/fs/btrfs/delayed-inode.c
++++ b/fs/btrfs/delayed-inode.c
+@@ -1417,7 +1417,7 @@ void btrfs_balance_delayed_items(struct btrfs_fs_info *fs_info)
+ int btrfs_insert_delayed_dir_index(struct btrfs_trans_handle *trans,
+ 				   const char *name, int name_len,
+ 				   struct btrfs_inode *dir,
+-				   struct btrfs_disk_key *disk_key, u8 type,
++				   struct btrfs_disk_key *disk_key, u8 flags,
+ 				   u64 index)
+ {
+ 	struct btrfs_fs_info *fs_info = trans->fs_info;
+@@ -1448,7 +1448,7 @@ int btrfs_insert_delayed_dir_index(struct btrfs_trans_handle *trans,
+ 	btrfs_set_stack_dir_transid(dir_item, trans->transid);
+ 	btrfs_set_stack_dir_data_len(dir_item, 0);
+ 	btrfs_set_stack_dir_name_len(dir_item, name_len);
+-	btrfs_set_stack_dir_type(dir_item, type);
++	btrfs_set_stack_dir_flags(dir_item, flags);
+ 	memcpy((char *)(dir_item + 1), name, name_len);
+ 
+ 	data_len = delayed_item->data_len + sizeof(struct btrfs_item);
+@@ -1758,7 +1758,7 @@ int btrfs_readdir_delayed_dir_index(struct dir_context *ctx,
+ 		name = (char *)(di + 1);
+ 		name_len = btrfs_stack_dir_name_len(di);
+ 
+-		d_type = fs_ftype_to_dtype(di->type);
++		d_type = fs_ftype_to_dtype(btrfs_dir_flags_to_ftype(di->type));
+ 		btrfs_disk_key_to_cpu(&location, &di->location);
+ 
+ 		over = !dir_emit(ctx, name, name_len,
+diff --git a/fs/btrfs/delayed-inode.h b/fs/btrfs/delayed-inode.h
+index 0163ca637a96..4f21daa3dbc7 100644
+--- a/fs/btrfs/delayed-inode.h
++++ b/fs/btrfs/delayed-inode.h
+@@ -113,7 +113,7 @@ static inline void btrfs_init_delayed_root(
+ int btrfs_insert_delayed_dir_index(struct btrfs_trans_handle *trans,
+ 				   const char *name, int name_len,
+ 				   struct btrfs_inode *dir,
+-				   struct btrfs_disk_key *disk_key, u8 type,
++				   struct btrfs_disk_key *disk_key, u8 flags,
+ 				   u64 index);
+ 
+ int btrfs_delete_delayed_dir_index(struct btrfs_trans_handle *trans,
+diff --git a/fs/btrfs/dir-item.c b/fs/btrfs/dir-item.c
+index 23777021b331..ca69fb35a2cc 100644
+--- a/fs/btrfs/dir-item.c
++++ b/fs/btrfs/dir-item.c
+@@ -83,7 +83,7 @@ int btrfs_insert_xattr_item(struct btrfs_trans_handle *trans,
+ 	leaf = path->nodes[0];
+ 	btrfs_cpu_key_to_disk(&disk_key, &location);
+ 	btrfs_set_dir_item_key(leaf, dir_item, &disk_key);
+-	btrfs_set_dir_type(leaf, dir_item, BTRFS_FT_XATTR);
++	btrfs_set_dir_flags(leaf, dir_item, BTRFS_FT_XATTR);
+ 	btrfs_set_dir_name_len(leaf, dir_item, name_len);
+ 	btrfs_set_dir_transid(leaf, dir_item, trans->transid);
+ 	btrfs_set_dir_data_len(leaf, dir_item, data_len);
+@@ -140,9 +140,12 @@ int btrfs_insert_dir_item(struct btrfs_trans_handle *trans,
+ 		goto out_free;
+ 	}
+ 
++	if (IS_ENCRYPTED(&dir->vfs_inode))
++		type |= BTRFS_FT_ENCRYPTED;
++
+ 	leaf = path->nodes[0];
+ 	btrfs_set_dir_item_key(leaf, dir_item, &disk_key);
+-	btrfs_set_dir_type(leaf, dir_item, type);
++	btrfs_set_dir_flags(leaf, dir_item, type);
+ 	btrfs_set_dir_data_len(leaf, dir_item, 0);
+ 	btrfs_set_dir_name_len(leaf, dir_item, name->len);
+ 	btrfs_set_dir_transid(leaf, dir_item, trans->transid);
 diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
-index 32beee9d9d85..5607d05c309b 100644
+index b4f5e90c674d..c41ae611767c 100644
 --- a/fs/btrfs/inode.c
 +++ b/fs/btrfs/inode.c
-@@ -4428,16 +4428,27 @@ static int btrfs_unlink(struct inode *dir, struct dentry *dentry)
- 	struct btrfs_trans_handle *trans;
- 	struct inode *inode = d_inode(dentry);
- 	int ret;
-+	struct fscrypt_name fname;
-+	struct qstr name;
-+
-+	ret = fscrypt_setup_filename(dir, &dentry->d_name, 1, &fname);
-+	if (ret)
-+		return ret;
-+	name = (struct qstr)FSTR_TO_QSTR(&fname.disk_name);
-+
-+	/* This needs to handle no-key deletions later on */
- 
- 	trans = __unlink_start_trans(dir);
--	if (IS_ERR(trans))
--		return PTR_ERR(trans);
-+	if (IS_ERR(trans)) {
-+		ret = PTR_ERR(trans);
-+		goto out;
-+	}
- 
- 	btrfs_record_unlink_dir(trans, BTRFS_I(dir), BTRFS_I(d_inode(dentry)),
- 			0);
- 
- 	ret = btrfs_unlink_inode(trans, BTRFS_I(dir), BTRFS_I(d_inode(dentry)),
--				 &dentry->d_name);
-+				 &name);
- 	if (ret)
- 		goto out;
- 
-@@ -4448,6 +4459,7 @@ static int btrfs_unlink(struct inode *dir, struct dentry *dentry)
- 	}
- 
- out:
-+	fscrypt_free_filename(&fname);
- 	btrfs_end_transaction(trans);
- 	btrfs_btree_balance_dirty(BTRFS_I(dir)->root->fs_info);
- 	return ret;
-@@ -4462,11 +4474,19 @@ static int btrfs_unlink_subvol(struct btrfs_trans_handle *trans,
- 	struct extent_buffer *leaf;
- 	struct btrfs_dir_item *di;
- 	struct btrfs_key key;
--	const struct qstr *name = &dentry->d_name;
-+	struct qstr name;
- 	u64 index;
- 	int ret;
- 	u64 objectid;
- 	u64 dir_ino = btrfs_ino(BTRFS_I(dir));
-+	struct fscrypt_name fname;
-+
-+	ret = fscrypt_setup_filename(dir, &dentry->d_name, 1, &fname);
-+	if (ret)
-+		return ret;
-+	name = (struct qstr)FSTR_TO_QSTR(&fname.disk_name);
-+
-+	/* This needs to handle no-key deletions later on */
- 
- 	if (btrfs_ino(inode) == BTRFS_FIRST_FREE_OBJECTID) {
- 		objectid = inode->root->root_key.objectid;
-@@ -4474,15 +4494,18 @@ static int btrfs_unlink_subvol(struct btrfs_trans_handle *trans,
- 		objectid = inode->location.objectid;
- 	} else {
- 		WARN_ON(1);
-+		fscrypt_free_filename(&fname);
- 		return -EINVAL;
- 	}
- 
- 	path = btrfs_alloc_path();
--	if (!path)
--		return -ENOMEM;
-+	if (!path) {
-+		ret = -ENOMEM;
-+		goto out;
-+	}
- 
- 	di = btrfs_lookup_dir_item(trans, root, path, dir_ino,
--				   name, -1);
-+				   &name, -1);
- 	if (IS_ERR_OR_NULL(di)) {
- 		ret = di ? PTR_ERR(di) : -ENOENT;
- 		goto out;
-@@ -4508,7 +4531,7 @@ static int btrfs_unlink_subvol(struct btrfs_trans_handle *trans,
- 	 * call btrfs_del_root_ref, and it _shouldn't_ fail.
- 	 */
- 	if (btrfs_ino(inode) == BTRFS_EMPTY_SUBVOL_DIR_OBJECTID) {
--		di = btrfs_search_dir_index_item(root, path, dir_ino, name);
-+		di = btrfs_search_dir_index_item(root, path, dir_ino, &name);
- 		if (IS_ERR_OR_NULL(di)) {
- 			if (!di)
- 				ret = -ENOENT;
-@@ -4525,7 +4548,7 @@ static int btrfs_unlink_subvol(struct btrfs_trans_handle *trans,
- 	} else {
- 		ret = btrfs_del_root_ref(trans, objectid,
- 					 root->root_key.objectid, dir_ino,
--					 &index, name);
-+					 &index, &name);
- 		if (ret) {
- 			btrfs_abort_transaction(trans, ret);
- 			goto out;
-@@ -4538,7 +4561,7 @@ static int btrfs_unlink_subvol(struct btrfs_trans_handle *trans,
- 		goto out;
- 	}
- 
--	btrfs_i_size_write(BTRFS_I(dir), dir->i_size - name->len * 2);
-+	btrfs_i_size_write(BTRFS_I(dir), dir->i_size - name.len * 2);
- 	inode_inc_iversion(dir);
- 	dir->i_mtime = current_time(dir);
- 	dir->i_ctime = dir->i_mtime;
-@@ -4547,6 +4570,7 @@ static int btrfs_unlink_subvol(struct btrfs_trans_handle *trans,
- 		btrfs_abort_transaction(trans, ret);
- out:
- 	btrfs_free_path(path);
-+	fscrypt_free_filename(&fname);
- 	return ret;
- }
- 
-@@ -4810,6 +4834,8 @@ static int btrfs_rmdir(struct inode *dir, struct dentry *dentry)
- 	int err = 0;
- 	struct btrfs_trans_handle *trans;
- 	u64 last_unlink_trans;
-+	struct fscrypt_name fname;
-+	struct qstr name;
- 
- 	if (inode->i_size > BTRFS_EMPTY_DIR_SIZE)
- 		return -ENOTEMPTY;
-@@ -4822,9 +4848,18 @@ static int btrfs_rmdir(struct inode *dir, struct dentry *dentry)
- 		return btrfs_delete_subvolume(dir, dentry);
- 	}
- 
-+	err = fscrypt_setup_filename(dir, &dentry->d_name, 1, &fname);
-+	if (err)
-+		return err;
-+	name = (struct qstr)FSTR_TO_QSTR(&fname.disk_name);
-+
-+	/* This needs to handle no-key deletions later on */
-+
- 	trans = __unlink_start_trans(dir);
--	if (IS_ERR(trans))
--		return PTR_ERR(trans);
-+	if (IS_ERR(trans)) {
-+		err = PTR_ERR(trans);
-+		goto out_notrans;
-+	}
- 
- 	if (unlikely(btrfs_ino(BTRFS_I(inode)) == BTRFS_EMPTY_SUBVOL_DIR_OBJECTID)) {
- 		err = btrfs_unlink_subvol(trans, dir, dentry);
-@@ -4839,7 +4874,7 @@ static int btrfs_rmdir(struct inode *dir, struct dentry *dentry)
- 
- 	/* now the directory is empty */
- 	err = btrfs_unlink_inode(trans, BTRFS_I(dir), BTRFS_I(d_inode(dentry)),
--				 &dentry->d_name);
-+				 &name);
- 	if (!err) {
- 		btrfs_i_size_write(BTRFS_I(inode), 0);
- 		/*
-@@ -4858,7 +4893,9 @@ static int btrfs_rmdir(struct inode *dir, struct dentry *dentry)
- 	}
- out:
- 	btrfs_end_transaction(trans);
-+out_notrans:
- 	btrfs_btree_balance_dirty(fs_info);
-+	fscrypt_free_filename(&fname);
- 
- 	return err;
- }
-@@ -5523,7 +5560,7 @@ void btrfs_evict_inode(struct inode *inode)
- 
- /*
-  * Return the key found in the dir entry in the location pointer, fill @type
-- * with BTRFS_FT_*, and return 0.
-+ * with BTRFS_FT_*, and return 0. Used only for lookups, not removals.
-  *
-  * If no dir entries were found, returns -ENOENT.
-  * If found a corrupted location in dir entry, returns -EUCLEAN.
-@@ -5531,18 +5568,27 @@ void btrfs_evict_inode(struct inode *inode)
- static int btrfs_inode_by_name(struct inode *dir, struct dentry *dentry,
- 			       struct btrfs_key *location, u8 *type)
- {
--	const struct qstr *name = &dentry->d_name;
-+	struct qstr name;
- 	struct btrfs_dir_item *di;
- 	struct btrfs_path *path;
- 	struct btrfs_root *root = BTRFS_I(dir)->root;
- 	int ret = 0;
-+	struct fscrypt_name fname;
- 
- 	path = btrfs_alloc_path();
- 	if (!path)
- 		return -ENOMEM;
- 
-+	ret = fscrypt_setup_filename(dir, &dentry->d_name, 1, &fname);
-+	if (ret)
-+		goto out;
-+
-+	name = (struct qstr)FSTR_TO_QSTR(&fname.disk_name);
-+
-+	/* This needs to handle no-key deletions later on */
-+
- 	di = btrfs_lookup_dir_item(NULL, root, path, btrfs_ino(BTRFS_I(dir)),
--				   name, 0);
-+				   &name, 0);
- 	if (IS_ERR_OR_NULL(di)) {
- 		ret = di ? PTR_ERR(di) : -ENOENT;
- 		goto out;
-@@ -5554,12 +5600,13 @@ static int btrfs_inode_by_name(struct inode *dir, struct dentry *dentry,
- 		ret = -EUCLEAN;
- 		btrfs_warn(root->fs_info,
- "%s gets something invalid in DIR_ITEM (name %s, directory ino %llu, location(%llu %u %llu))",
--			   __func__, name->name, btrfs_ino(BTRFS_I(dir)),
-+			   __func__, name.name, btrfs_ino(BTRFS_I(dir)),
+@@ -5595,7 +5595,7 @@ static int btrfs_inode_by_name(struct inode *dir, struct dentry *dentry,
  			   location->objectid, location->type, location->offset);
  	}
  	if (!ret)
- 		*type = btrfs_dir_type(path->nodes[0], di);
+-		*type = btrfs_dir_type(path->nodes[0], di);
++		*type = btrfs_dir_ftype(path->nodes[0], di);
  out:
-+	fscrypt_free_filename(&fname);
+ 	fscrypt_free_filename(&fname);
  	btrfs_free_path(path);
- 	return ret;
- }
-@@ -5582,6 +5629,14 @@ static int fixup_tree_root_location(struct btrfs_fs_info *fs_info,
- 	struct btrfs_key key;
- 	int ret;
- 	int err = 0;
-+	struct fscrypt_name fname;
-+	struct qstr name;
-+
-+	ret = fscrypt_setup_filename(dir, &dentry->d_name, 0, &fname);
-+	if (ret)
-+		return ret;
-+
-+	name = (struct qstr)FSTR_TO_QSTR(&fname.disk_name);
+@@ -6045,6 +6045,7 @@ static int btrfs_real_readdir(struct file *file, struct dir_context *ctx)
+ 	btrfs_for_each_slot(root, &key, &found_key, path, ret) {
+ 		struct dir_entry *entry;
+ 		struct extent_buffer *leaf = path->nodes[0];
++		u8 ftype;
  
- 	path = btrfs_alloc_path();
- 	if (!path) {
-@@ -5604,12 +5659,11 @@ static int fixup_tree_root_location(struct btrfs_fs_info *fs_info,
- 	leaf = path->nodes[0];
- 	ref = btrfs_item_ptr(leaf, path->slots[0], struct btrfs_root_ref);
- 	if (btrfs_root_ref_dirid(leaf, ref) != btrfs_ino(BTRFS_I(dir)) ||
--	    btrfs_root_ref_name_len(leaf, ref) != dentry->d_name.len)
-+	    btrfs_root_ref_name_len(leaf, ref) != name.len)
- 		goto out;
- 
--	ret = memcmp_extent_buffer(leaf, dentry->d_name.name,
--				   (unsigned long)(ref + 1),
--				   dentry->d_name.len);
-+	ret = memcmp_extent_buffer(leaf, name.name, (unsigned long)(ref + 1),
-+				   name.len);
- 	if (ret)
- 		goto out;
- 
-@@ -5628,6 +5682,7 @@ static int fixup_tree_root_location(struct btrfs_fs_info *fs_info,
- 	err = 0;
- out:
- 	btrfs_free_path(path);
-+	fscrypt_free_filename(&fname);
- 	return err;
- }
- 
-@@ -6236,9 +6291,19 @@ int btrfs_new_inode_prepare(struct btrfs_new_inode_args *args,
- 	struct inode *inode = args->inode;
- 	int ret;
- 
-+	if (!args->orphan) {
-+		ret = fscrypt_setup_filename(dir, &args->dentry->d_name, 0,
-+					     &args->fname);
-+		if (ret)
-+			return ret;
-+		args->name = (struct qstr)FSTR_TO_QSTR(&args->fname.disk_name);
-+	}
-+
- 	ret = posix_acl_create(dir, &inode->i_mode, &args->default_acl, &args->acl);
--	if (ret)
-+	if (ret) {
-+		fscrypt_free_filename(&args->fname);
- 		return ret;
-+	}
- 
- 	/* 1 to add inode item */
- 	*trans_num_items = 1;
-@@ -6278,6 +6343,7 @@ void btrfs_new_inode_args_destroy(struct btrfs_new_inode_args *args)
- {
- 	posix_acl_release(args->acl);
- 	posix_acl_release(args->default_acl);
-+	fscrypt_free_filename(&args->fname);
- }
- 
- /*
-@@ -6703,6 +6769,8 @@ static int btrfs_link(struct dentry *old_dentry, struct inode *dir,
- 	struct btrfs_root *root = BTRFS_I(dir)->root;
- 	struct inode *inode = d_inode(old_dentry);
- 	struct btrfs_fs_info *fs_info = btrfs_sb(inode->i_sb);
-+	struct fscrypt_name fname;
-+	struct qstr name;
- 	u64 index;
- 	int err;
- 	int drop_inode = 0;
-@@ -6714,6 +6782,12 @@ static int btrfs_link(struct dentry *old_dentry, struct inode *dir,
- 	if (inode->i_nlink >= BTRFS_LINK_MAX)
- 		return -EMLINK;
- 
-+	err = fscrypt_setup_filename(dir, &dentry->d_name, 0, &fname);
-+	if (err)
-+		goto fail;
-+
-+	name = (struct qstr)FSTR_TO_QSTR(&fname.disk_name);
-+
- 	err = btrfs_set_inode_index(BTRFS_I(dir), &index);
- 	if (err)
- 		goto fail;
-@@ -6740,7 +6814,7 @@ static int btrfs_link(struct dentry *old_dentry, struct inode *dir,
- 	set_bit(BTRFS_INODE_COPY_EVERYTHING, &BTRFS_I(inode)->runtime_flags);
- 
- 	err = btrfs_add_link(trans, BTRFS_I(dir), BTRFS_I(inode),
--			     &dentry->d_name, 1, index);
-+			     &name, 1, index);
- 
- 	if (err) {
- 		drop_inode = 1;
-@@ -6764,6 +6838,7 @@ static int btrfs_link(struct dentry *old_dentry, struct inode *dir,
- 	}
- 
- fail:
-+	fscrypt_free_filename(&fname);
- 	if (trans)
- 		btrfs_end_transaction(trans);
- 	if (drop_inode) {
-@@ -8995,6 +9070,8 @@ static int btrfs_rename_exchange(struct inode *old_dir,
- 	int ret;
- 	int ret2;
- 	bool need_abort = false;
-+	struct fscrypt_name old_fname, new_fname;
-+	struct qstr old_name, new_name;
- 
- 	/*
- 	 * For non-subvolumes allow exchange only within one subvolume, in the
-@@ -9006,6 +9083,19 @@ static int btrfs_rename_exchange(struct inode *old_dir,
- 	     new_ino != BTRFS_FIRST_FREE_OBJECTID))
- 		return -EXDEV;
- 
-+	ret = fscrypt_setup_filename(old_dir, &old_dentry->d_name, 0, &old_fname);
-+	if (ret)
-+		return ret;
-+
-+	ret = fscrypt_setup_filename(new_dir, &new_dentry->d_name, 0, &new_fname);
-+	if (ret) {
-+		fscrypt_free_filename(&old_fname);
-+		return ret;
-+	}
-+
-+	old_name = (struct qstr)FSTR_TO_QSTR(&old_fname.disk_name);
-+	new_name = (struct qstr)FSTR_TO_QSTR(&new_fname.disk_name);
-+
- 	/* close the race window with snapshot create/destroy ioctl */
- 	if (old_ino == BTRFS_FIRST_FREE_OBJECTID ||
- 	    new_ino == BTRFS_FIRST_FREE_OBJECTID)
-@@ -9073,8 +9163,7 @@ static int btrfs_rename_exchange(struct inode *old_dir,
- 		/* force full log commit if subvolume involved. */
- 		btrfs_set_log_full_commit(trans);
- 	} else {
--		ret = btrfs_insert_inode_ref(trans, dest, &new_dentry->d_name,
--					     old_ino,
-+		ret = btrfs_insert_inode_ref(trans, dest, &new_name, old_ino,
- 					     btrfs_ino(BTRFS_I(new_dir)),
- 					     old_idx);
- 		if (ret)
-@@ -9087,8 +9176,7 @@ static int btrfs_rename_exchange(struct inode *old_dir,
- 		/* force full log commit if subvolume involved. */
- 		btrfs_set_log_full_commit(trans);
- 	} else {
--		ret = btrfs_insert_inode_ref(trans, root, &old_dentry->d_name,
--					     new_ino,
-+		ret = btrfs_insert_inode_ref(trans, root, &old_name, new_ino,
- 					     btrfs_ino(BTRFS_I(old_dir)),
- 					     new_idx);
- 		if (ret) {
-@@ -9123,8 +9211,7 @@ static int btrfs_rename_exchange(struct inode *old_dir,
- 	} else { /* src is an inode */
- 		ret = __btrfs_unlink_inode(trans, BTRFS_I(old_dir),
- 					   BTRFS_I(old_dentry->d_inode),
--					   &old_dentry->d_name,
--					   &old_rename_ctx);
-+					   &old_name, &old_rename_ctx);
- 		if (!ret)
- 			ret = btrfs_update_inode(trans, root, BTRFS_I(old_inode));
- 	}
-@@ -9139,8 +9226,7 @@ static int btrfs_rename_exchange(struct inode *old_dir,
- 	} else { /* dest is an inode */
- 		ret = __btrfs_unlink_inode(trans, BTRFS_I(new_dir),
- 					   BTRFS_I(new_dentry->d_inode),
--					   &new_dentry->d_name,
--					   &new_rename_ctx);
-+					   &new_name, &new_rename_ctx);
- 		if (!ret)
- 			ret = btrfs_update_inode(trans, dest, BTRFS_I(new_inode));
- 	}
-@@ -9150,14 +9236,14 @@ static int btrfs_rename_exchange(struct inode *old_dir,
- 	}
- 
- 	ret = btrfs_add_link(trans, BTRFS_I(new_dir), BTRFS_I(old_inode),
--			     &new_dentry->d_name, 0, old_idx);
-+			     &new_name, 0, old_idx);
- 	if (ret) {
- 		btrfs_abort_transaction(trans, ret);
- 		goto out_fail;
- 	}
- 
- 	ret = btrfs_add_link(trans, BTRFS_I(old_dir), BTRFS_I(new_inode),
--			     &old_dentry->d_name, 0, new_idx);
-+			     &old_name, 0, new_idx);
- 	if (ret) {
- 		btrfs_abort_transaction(trans, ret);
- 		goto out_fail;
-@@ -9200,6 +9286,8 @@ static int btrfs_rename_exchange(struct inode *old_dir,
- 	    old_ino == BTRFS_FIRST_FREE_OBJECTID)
- 		up_read(&fs_info->subvol_sem);
- 
-+	fscrypt_free_filename(&new_fname);
-+	fscrypt_free_filename(&old_fname);
- 	return ret;
- }
- 
-@@ -9239,6 +9327,8 @@ static int btrfs_rename(struct user_namespace *mnt_userns,
- 	int ret;
- 	int ret2;
- 	u64 old_ino = btrfs_ino(BTRFS_I(old_inode));
-+	struct fscrypt_name old_fname, new_fname;
-+	struct qstr old_name, new_name;
- 
- 	if (btrfs_ino(BTRFS_I(new_dir)) == BTRFS_EMPTY_SUBVOL_DIR_OBJECTID)
- 		return -EPERM;
-@@ -9255,21 +9345,32 @@ static int btrfs_rename(struct user_namespace *mnt_userns,
- 	    new_inode->i_size > BTRFS_EMPTY_DIR_SIZE)
- 		return -ENOTEMPTY;
- 
-+	ret = fscrypt_setup_filename(old_dir, &old_dentry->d_name, 0, &old_fname);
-+	if (ret)
-+		return ret;
-+
-+	ret = fscrypt_setup_filename(new_dir, &new_dentry->d_name, 0, &new_fname);
-+	if (ret) {
-+		fscrypt_free_filename(&old_fname);
-+		return ret;
-+	}
-+
-+	old_name = (struct qstr)FSTR_TO_QSTR(&old_fname.disk_name);
-+	new_name = (struct qstr)FSTR_TO_QSTR(&new_fname.disk_name);
- 
- 	/* check for collisions, even if the  name isn't there */
--	ret = btrfs_check_dir_item_collision(dest, new_dir->i_ino,
--					     &new_dentry->d_name);
-+	ret = btrfs_check_dir_item_collision(dest, new_dir->i_ino, &new_name);
- 
- 	if (ret) {
- 		if (ret == -EEXIST) {
- 			/* we shouldn't get
- 			 * eexist without a new_inode */
- 			if (WARN_ON(!new_inode)) {
--				return ret;
-+				goto out_fscrypt_names;
- 			}
- 		} else {
- 			/* maybe -EOVERFLOW */
--			return ret;
-+			goto out_fscrypt_names;
+ 		if (found_key.objectid != key.objectid)
+ 			break;
+@@ -6068,13 +6069,13 @@ static int btrfs_real_readdir(struct file *file, struct dir_context *ctx)
+ 			goto again;
  		}
- 	}
- 	ret = 0;
-@@ -9352,8 +9453,7 @@ static int btrfs_rename(struct user_namespace *mnt_userns,
- 		/* force full log commit if subvolume involved. */
- 		btrfs_set_log_full_commit(trans);
- 	} else {
--		ret = btrfs_insert_inode_ref(trans, dest, &new_dentry->d_name,
--					     old_ino,
-+		ret = btrfs_insert_inode_ref(trans, dest, &new_name, old_ino,
- 					     btrfs_ino(BTRFS_I(new_dir)), index);
- 		if (ret)
- 			goto out_fail;
-@@ -9377,7 +9477,7 @@ static int btrfs_rename(struct user_namespace *mnt_userns,
- 	} else {
- 		ret = __btrfs_unlink_inode(trans, BTRFS_I(old_dir),
- 					   BTRFS_I(d_inode(old_dentry)),
--					   &old_dentry->d_name, &rename_ctx);
-+					   &old_name, &rename_ctx);
- 		if (!ret)
- 			ret = btrfs_update_inode(trans, root, BTRFS_I(old_inode));
- 	}
-@@ -9396,7 +9496,7 @@ static int btrfs_rename(struct user_namespace *mnt_userns,
- 		} else {
- 			ret = btrfs_unlink_inode(trans, BTRFS_I(new_dir),
- 						 BTRFS_I(d_inode(new_dentry)),
--						 &new_dentry->d_name);
-+						 &new_name);
+ 
++		ftype = btrfs_dir_flags_to_ftype(btrfs_dir_flags(leaf, di));
+ 		entry = addr;
+-		put_unaligned(name_len, &entry->name_len);
+ 		name_ptr = (char *)(entry + 1);
+-		read_extent_buffer(leaf, name_ptr, (unsigned long)(di + 1),
+-				   name_len);
+-		put_unaligned(fs_ftype_to_dtype(btrfs_dir_type(leaf, di)),
+-				&entry->type);
++		read_extent_buffer(leaf, name_ptr,
++				   (unsigned long)(di + 1), name_len);
++		put_unaligned(name_len, &entry->name_len);
++		put_unaligned(fs_ftype_to_dtype(ftype), &entry->type);
+ 		btrfs_dir_item_key_to_cpu(leaf, di, &location);
+ 		put_unaligned(location.objectid, &entry->ino);
+ 		put_unaligned(found_key.offset, &entry->offset);
+diff --git a/fs/btrfs/print-tree.c b/fs/btrfs/print-tree.c
+index aab7d30eed55..1a2350fd68be 100644
+--- a/fs/btrfs/print-tree.c
++++ b/fs/btrfs/print-tree.c
+@@ -242,9 +242,9 @@ void btrfs_print_leaf(struct extent_buffer *l)
+ 		case BTRFS_DIR_ITEM_KEY:
+ 			di = btrfs_item_ptr(l, i, struct btrfs_dir_item);
+ 			btrfs_dir_item_key_to_cpu(l, di, &found_key);
+-			pr_info("\t\tdir oid %llu type %u\n",
++			pr_info("\t\tdir oid %llu flags %u\n",
+ 				found_key.objectid,
+-				btrfs_dir_type(l, di));
++				btrfs_dir_flags(l, di));
+ 			break;
+ 		case BTRFS_ROOT_ITEM_KEY:
+ 			ri = btrfs_item_ptr(l, i, struct btrfs_root_item);
+diff --git a/fs/btrfs/send.c b/fs/btrfs/send.c
+index 4de7e2157c2b..cc9580232c9f 100644
+--- a/fs/btrfs/send.c
++++ b/fs/btrfs/send.c
+@@ -1094,7 +1094,7 @@ static int iterate_dir_item(struct btrfs_root *root, struct btrfs_path *path,
+ 		data_len = btrfs_dir_data_len(eb, di);
+ 		btrfs_dir_item_key_to_cpu(eb, di, &di_key);
+ 
+-		if (btrfs_dir_type(eb, di) == BTRFS_FT_XATTR) {
++		if (btrfs_dir_ftype(eb, di) == BTRFS_FT_XATTR) {
+ 			if (name_len > XATTR_NAME_MAX) {
+ 				ret = -ENAMETOOLONG;
+ 				goto out;
+diff --git a/fs/btrfs/tree-checker.c b/fs/btrfs/tree-checker.c
+index 11cafc520b47..1c2d418dda6a 100644
+--- a/fs/btrfs/tree-checker.c
++++ b/fs/btrfs/tree-checker.c
+@@ -531,7 +531,7 @@ static int check_dir_item(struct extent_buffer *leaf,
  		}
- 		if (!ret && new_inode->i_nlink == 0)
- 			ret = btrfs_orphan_add(trans,
-@@ -9408,7 +9508,7 @@ static int btrfs_rename(struct user_namespace *mnt_userns,
- 	}
  
- 	ret = btrfs_add_link(trans, BTRFS_I(new_dir), BTRFS_I(old_inode),
--			     &new_dentry->d_name, 0, index);
-+			     &new_name, 0, index);
- 	if (ret) {
- 		btrfs_abort_transaction(trans, ret);
- 		goto out_fail;
-@@ -9443,6 +9543,9 @@ static int btrfs_rename(struct user_namespace *mnt_userns,
- out_whiteout_inode:
- 	if (flags & RENAME_WHITEOUT)
- 		iput(whiteout_args.inode);
-+out_fscrypt_names:
-+	fscrypt_free_filename(&old_fname);
-+	fscrypt_free_filename(&new_fname);
- 	return ret;
- }
- 
-diff --git a/fs/btrfs/transaction.c b/fs/btrfs/transaction.c
-index 7db9612f4d0e..c2883d2b7111 100644
---- a/fs/btrfs/transaction.c
-+++ b/fs/btrfs/transaction.c
-@@ -6,6 +6,7 @@
- #include <linux/fs.h>
- #include <linux/slab.h>
- #include <linux/sched.h>
-+#include <linux/sched/mm.h>
- #include <linux/writeback.h>
- #include <linux/pagemap.h>
- #include <linux/blkdev.h>
-@@ -1611,10 +1612,9 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	struct btrfs_root *root = pending->root;
- 	struct btrfs_root *parent_root;
- 	struct btrfs_block_rsv *rsv;
--	struct inode *parent_inode;
-+	struct inode *parent_inode = pending->dir;
- 	struct btrfs_path *path;
- 	struct btrfs_dir_item *dir_item;
--	struct dentry *dentry;
- 	struct extent_buffer *tmp;
- 	struct extent_buffer *old;
- 	struct timespec64 cur_time;
-@@ -1623,6 +1623,9 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	u64 index = 0;
- 	u64 objectid;
- 	u64 root_flags;
-+	unsigned int mem_flags;
-+	struct fscrypt_name fname;
-+	struct qstr name;
- 
- 	ASSERT(pending->path);
- 	path = pending->path;
-@@ -1630,9 +1633,23 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	ASSERT(pending->root_item);
- 	new_root_item = pending->root_item;
- 
-+	/*
-+	 * Since this is during btrfs_commit_transaction() and more items
-+	 * joining the transaction at this point would be bad, use NOFS
-+	 * allocations so that no new writes are kicked off.
-+	 */
-+	mem_flags = memalloc_nofs_save();
-+	pending->error = fscrypt_setup_filename(parent_inode,
-+						&pending->dentry->d_name, 0,
-+						&fname);
-+	memalloc_nofs_restore(mem_flags);
-+	if (pending->error)
-+		goto free_pending;
-+	name = (struct qstr)FSTR_TO_QSTR(&fname.disk_name);
-+
- 	pending->error = btrfs_get_free_objectid(tree_root, &objectid);
- 	if (pending->error)
--		goto no_free_objectid;
-+		goto free_fname;
- 
- 	/*
- 	 * Make qgroup to skip current new snapshot's qgroupid, as it is
-@@ -1661,8 +1678,6 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	trace_btrfs_space_reservation(fs_info, "transaction",
- 				      trans->transid,
- 				      trans->bytes_reserved, 1);
--	dentry = pending->dentry;
--	parent_inode = pending->dir;
- 	parent_root = BTRFS_I(parent_inode)->root;
- 	ret = record_root_in_trans(trans, parent_root, 0);
- 	if (ret)
-@@ -1678,7 +1693,7 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	/* check if there is a file/dir which has the same name. */
- 	dir_item = btrfs_lookup_dir_item(NULL, parent_root, path,
- 					 btrfs_ino(BTRFS_I(parent_inode)),
--					 &dentry->d_name, 0);
-+					 &name, 0);
- 	if (dir_item != NULL && !IS_ERR(dir_item)) {
- 		pending->error = -EEXIST;
- 		goto dir_item_existed;
-@@ -1773,7 +1788,7 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	ret = btrfs_add_root_ref(trans, objectid,
- 				 parent_root->root_key.objectid,
- 				 btrfs_ino(BTRFS_I(parent_inode)), index,
--				 &dentry->d_name);
-+				 &name);
- 	if (ret) {
- 		btrfs_abort_transaction(trans, ret);
- 		goto fail;
-@@ -1805,9 +1820,8 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	if (ret < 0)
- 		goto fail;
- 
--	ret = btrfs_insert_dir_item(trans, &dentry->d_name,
--				    BTRFS_I(parent_inode), &key, BTRFS_FT_DIR,
--				    index);
-+	ret = btrfs_insert_dir_item(trans, &name, BTRFS_I(parent_inode), &key,
-+				    BTRFS_FT_DIR, index);
- 	/* We have check then name at the beginning, so it is impossible. */
- 	BUG_ON(ret == -EEXIST || ret == -EOVERFLOW);
- 	if (ret) {
-@@ -1816,7 +1830,7 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	}
- 
- 	btrfs_i_size_write(BTRFS_I(parent_inode), parent_inode->i_size +
--					 dentry->d_name.len * 2);
-+						  name.len * 2);
- 	parent_inode->i_mtime = current_time(parent_inode);
- 	parent_inode->i_ctime = parent_inode->i_mtime;
- 	ret = btrfs_update_inode_fallback(trans, parent_root, BTRFS_I(parent_inode));
-@@ -1848,7 +1862,9 @@ static noinline int create_pending_snapshot(struct btrfs_trans_handle *trans,
- 	trans->bytes_reserved = 0;
- clear_skip_qgroup:
- 	btrfs_clear_skip_qgroup(trans);
--no_free_objectid:
-+free_fname:
-+	fscrypt_free_filename(&fname);
-+free_pending:
- 	kfree(new_root_item);
- 	pending->root_item = NULL;
- 	btrfs_free_path(path);
+ 		/* dir type check */
+-		dir_type = btrfs_dir_type(leaf, di);
++		dir_type = btrfs_dir_ftype(leaf, di);
+ 		if (unlikely(dir_type >= BTRFS_FT_MAX)) {
+ 			dir_item_err(leaf, slot,
+ 			"invalid dir item type, have %u expect [0, %u)",
 diff --git a/fs/btrfs/tree-log.c b/fs/btrfs/tree-log.c
-index d6c0bce7569a..f9ed05285a97 100644
+index 3cb490d604e4..f261f8589033 100644
 --- a/fs/btrfs/tree-log.c
 +++ b/fs/btrfs/tree-log.c
-@@ -7395,9 +7395,16 @@ void btrfs_log_new_name(struct btrfs_trans_handle *trans,
- 	if (old_dir && old_dir->logged_trans == trans->transid) {
- 		struct btrfs_root *log = old_dir->root->log_root;
- 		struct btrfs_path *path;
-+		struct fscrypt_name fname;
-+		struct qstr name;
+@@ -1799,7 +1799,7 @@ static int delete_conflicting_dir_entry(struct btrfs_trans_handle *trans,
+ 					struct btrfs_path *path,
+ 					struct btrfs_dir_item *dst_di,
+ 					const struct btrfs_key *log_key,
+-					u8 log_type,
++					u8 log_flags,
+ 					bool exists)
+ {
+ 	struct btrfs_key found_key;
+@@ -1809,7 +1809,7 @@ static int delete_conflicting_dir_entry(struct btrfs_trans_handle *trans,
+ 	if (found_key.objectid == log_key->objectid &&
+ 	    found_key.type == log_key->type &&
+ 	    found_key.offset == log_key->offset &&
+-	    btrfs_dir_type(path->nodes[0], dst_di) == log_type)
++	    btrfs_dir_flags(path->nodes[0], dst_di) == log_flags)
+ 		return 1;
  
- 		ASSERT(old_dir_index >= BTRFS_DIR_START_INDEX);
+ 	/*
+@@ -1853,7 +1853,7 @@ static noinline int replay_one_name(struct btrfs_trans_handle *trans,
+ 	struct btrfs_key log_key;
+ 	struct btrfs_key search_key;
+ 	struct inode *dir;
+-	u8 log_type;
++	u8 log_flags;
+ 	bool exists;
+ 	int ret;
+ 	bool update_size = true;
+@@ -1867,7 +1867,7 @@ static noinline int replay_one_name(struct btrfs_trans_handle *trans,
+ 	if (ret)
+ 		goto out;
  
-+		ret = fscrypt_setup_filename(&old_dir->vfs_inode,
-+					     &old_dentry->d_name, 0, &fname);
-+		if (ret)
-+			goto out;
-+		name = (struct qstr)FSTR_TO_QSTR(&fname.disk_name);
- 		/*
- 		 * We have two inodes to update in the log, the old directory and
- 		 * the inode that got renamed, so we must pin the log to prevent
-@@ -7417,6 +7424,7 @@ void btrfs_log_new_name(struct btrfs_trans_handle *trans,
- 		path = btrfs_alloc_path();
- 		if (!path) {
- 			ret = -ENOMEM;
-+			fscrypt_free_filename(&fname);
- 			goto out;
- 		}
- 
-@@ -7432,7 +7440,7 @@ void btrfs_log_new_name(struct btrfs_trans_handle *trans,
- 		 */
- 		mutex_lock(&old_dir->log_mutex);
- 		ret = del_logged_dentry(trans, log, path, btrfs_ino(old_dir),
--					&old_dentry->d_name, old_dir_index);
-+					&name, old_dir_index);
- 		if (ret > 0) {
- 			/*
- 			 * The dentry does not exist in the log, so record its
-@@ -7446,6 +7454,7 @@ void btrfs_log_new_name(struct btrfs_trans_handle *trans,
- 		mutex_unlock(&old_dir->log_mutex);
- 
- 		btrfs_free_path(path);
-+		fscrypt_free_filename(&fname);
+-	log_type = btrfs_dir_type(eb, di);
++	log_flags = btrfs_dir_flags(eb, di);
+ 	btrfs_dir_item_key_to_cpu(eb, di, &log_key);
+ 	ret = btrfs_lookup_inode(trans, root, path, &log_key, 0);
+ 	btrfs_release_path(path);
+@@ -1883,8 +1883,8 @@ static noinline int replay_one_name(struct btrfs_trans_handle *trans,
+ 		goto out;
+ 	} else if (dir_dst_di) {
+ 		ret = delete_conflicting_dir_entry(trans, BTRFS_I(dir), path,
+-						   dir_dst_di, &log_key, log_type,
+-						   exists);
++						   dir_dst_di, &log_key,
++						   log_flags, exists);
  		if (ret < 0)
  			goto out;
- 	}
+ 		dir_dst_matches = (ret == 1);
+@@ -1901,7 +1901,7 @@ static noinline int replay_one_name(struct btrfs_trans_handle *trans,
+ 	} else if (index_dst_di) {
+ 		ret = delete_conflicting_dir_entry(trans, BTRFS_I(dir), path,
+ 						   index_dst_di, &log_key,
+-						   log_type, exists);
++						   log_flags, exists);
+ 		if (ret < 0)
+ 			goto out;
+ 		index_dst_matches = (ret == 1);
+@@ -2010,7 +2010,7 @@ static noinline int replay_one_dir_item(struct btrfs_trans_handle *trans,
+ 	 * to ever delete the parent directory has it would result in stale
+ 	 * dentries that can never be deleted.
+ 	 */
+-	if (ret == 1 && btrfs_dir_type(eb, di) != BTRFS_FT_DIR) {
++	if (ret == 1 && btrfs_dir_ftype(eb, di) != BTRFS_FT_DIR) {
+ 		struct btrfs_path *fixup_path;
+ 		struct btrfs_key di_key;
+ 
+@@ -5401,7 +5401,7 @@ static int log_new_dir_dentries(struct btrfs_trans_handle *trans,
+ 			}
+ 
+ 			di = btrfs_item_ptr(leaf, i, struct btrfs_dir_item);
+-			type = btrfs_dir_type(leaf, di);
++			type = btrfs_dir_ftype(leaf, di);
+ 			if (btrfs_dir_transid(leaf, di) < trans->transid)
+ 				continue;
+ 			btrfs_dir_item_key_to_cpu(leaf, di, &di_key);
+@@ -6241,7 +6241,7 @@ static int log_new_delayed_dentries(struct btrfs_trans_handle *trans,
+ 			continue;
+ 		}
+ 
+-		if (btrfs_stack_dir_type(dir_item) == BTRFS_FT_DIR)
++		if (btrfs_stack_dir_ftype(dir_item) == BTRFS_FT_DIR)
+ 			log_mode = LOG_INODE_ALL;
+ 
+ 		ctx->log_new_dentries = false;
+diff --git a/include/uapi/linux/btrfs_tree.h b/include/uapi/linux/btrfs_tree.h
+index f6eb8a0aee6e..10c3c41329bc 100644
+--- a/include/uapi/linux/btrfs_tree.h
++++ b/include/uapi/linux/btrfs_tree.h
+@@ -375,6 +375,13 @@ enum btrfs_csum_type {
+ #define BTRFS_FT_SYMLINK	7
+ #define BTRFS_FT_XATTR		8
+ #define BTRFS_FT_MAX		9
++/* Directory contains encrypted data */
++#define BTRFS_FT_ENCRYPTED	0x80
++
++static inline __u8 btrfs_dir_flags_to_ftype(__u8 flags)
++{
++	return flags & ~BTRFS_FT_ENCRYPTED;
++}
+ 
+ /*
+  * Inode flags
 -- 
 2.35.1
 
