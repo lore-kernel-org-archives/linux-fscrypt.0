@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 76C6AC67871
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 25 Oct 2022 00:42:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2BF4CC67871
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 25 Oct 2022 00:42:49 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230349AbiJYAmm (ORCPT
+        id S230410AbiJYAmr (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 24 Oct 2022 20:42:42 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35950 "EHLO
+        Mon, 24 Oct 2022 20:42:47 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34510 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230513AbiJYAmW (ORCPT
+        with ESMTP id S230525AbiJYAmX (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 24 Oct 2022 20:42:22 -0400
+        Mon, 24 Oct 2022 20:42:23 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id AA8A21C931;
-        Mon, 24 Oct 2022 16:14:11 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2A09F31DEA;
+        Mon, 24 Oct 2022 16:14:17 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 00357812CC;
-        Mon, 24 Oct 2022 19:14:10 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 6B8B581308;
+        Mon, 24 Oct 2022 19:14:16 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1666653251; bh=m4XS7ptSlATCJ6WssAKT/6DqqFRIRstG9avwQzZsF68=;
+        t=1666653256; bh=XHH1uogd6ho7h/w7R3kxnHFjMN6kEy35unxxY/PVHJ8=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=d7A8MO1wS62anydC4ErwyHoDGTqCR4GaUQREJIamyUX3OqNuZhfeOGW2zRZ5D4WTR
-         4BixP7OmJL0EpIShVSHkayO6a0yjY+uTTIowNczQSDwQio9QM1zEzpqXk9Zf9c/uz3
-         iZjaboEd04BkpwVCDWU5lMXPEUtRB/kkHRJRRQPKirQQuvExzzlTcurOHesMhrump6
-         2Jo8FGu/9oIRApR7OCPUb2AC6i7Tc9fEyymOx+xckRzRWbevmD14yH2uI9LVXMhh4c
-         EcfJtXAK0dpF+YiEtdjnSytX9po6iCEr6lVAu2Jt6iL0WnS4+zT1iDtqxECoiHUE+S
-         KKIXWEPME670Q==
+        b=A4wpKX2R8H1OYfbi1AVx8gMDiI1wxKfgl/+iw///paWS4eGUkNqK8xkoRUBynpICp
+         IeRPIKDnsA8BVlOqAslqqjEIeQC0U9pHhjjfkOsU9b/qyRnL/RPTUDLIbTwGrEJy38
+         AtLllABG2gySNI0N3e6GtGQI5NOxMFdiUmWmR1b5vflvXi1HxHMoRkJEHo/lYasArx
+         D7qlEqqfm3wIuAFqvhihFWKqVhQi3U8QSbP5iivjmQVLmqu6GKalZ9WAMiyGelxMO/
+         LHfMNCHExRAY04iG1FAKqek6jVz1iqwA++ujA6U+l7jK/6YyLwQ2MCciz7MxlXzVSD
+         cUbFczNxehApQ==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -37,11 +37,10 @@ To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@meta.com
-Cc:     Omar Sandoval <osandov@osandov.com>,
-        Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v4 17/21] btrfs: Add new FEATURE_INCOMPAT_ENCRYPT feature flag.
-Date:   Mon, 24 Oct 2022 19:13:27 -0400
-Message-Id: <fa558869c5dd4edd2625e3012daecfeb3d06df56.1666651724.git.sweettea-kernel@dorminy.me>
+Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Subject: [PATCH v4 20/21] btrfs: use correct name hash for nokey names
+Date:   Mon, 24 Oct 2022 19:13:30 -0400
+Message-Id: <55e2bd7c38a3b18c33b67c33bd2608a2364ad41b.1666651724.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1666651724.git.sweettea-kernel@dorminy.me>
 References: <cover.1666651724.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -50,71 +49,36 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Omar Sandoval <osandov@osandov.com>
+For encrypted or unencrypted names, we calculate the offset for the dir
+item by hashing the name for the dir item. However, this doesn't work
+for a long nokey name, where we do not have the complete ciphertext.
+Instead, fscrypt stores the filesystem-provided hash in the nokey name,
+and we can extract it from the fscrypt_name structure in such a case.
 
-As encrypted files will be incompatible with older filesystem versions,
-new filesystems should be created with an incompat flag for fscrypt,
-which will gate access to the encryption ioctls.
-
-Signed-off-by: Omar Sandoval <osandov@osandov.com>
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/btrfs/fs.h              | 5 +++--
- fs/btrfs/super.c           | 5 +++++
- include/uapi/linux/btrfs.h | 1 +
- 3 files changed, 9 insertions(+), 2 deletions(-)
+ fs/btrfs/dir-item.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
 
-diff --git a/fs/btrfs/fs.h b/fs/btrfs/fs.h
-index 2bd1b9e03d30..8eeb1918aa1c 100644
---- a/fs/btrfs/fs.h
-+++ b/fs/btrfs/fs.h
-@@ -159,7 +159,7 @@ enum {
+diff --git a/fs/btrfs/dir-item.c b/fs/btrfs/dir-item.c
+index d5275475e69e..11236ebdb07f 100644
+--- a/fs/btrfs/dir-item.c
++++ b/fs/btrfs/dir-item.c
+@@ -256,8 +256,12 @@ struct btrfs_dir_item *btrfs_lookup_dir_item_fname(struct btrfs_trans_handle *tr
  
- #ifdef CONFIG_BTRFS_DEBUG
- /*
-- * Extent tree v2 supported only with CONFIG_BTRFS_DEBUG
-+ * Extent tree v2 and encryption supported only with CONFIG_BTRFS_DEBUG
-  */
- #define BTRFS_FEATURE_INCOMPAT_SUPP			\
- 	(BTRFS_FEATURE_INCOMPAT_MIXED_BACKREF |		\
-@@ -175,7 +175,8 @@ enum {
- 	 BTRFS_FEATURE_INCOMPAT_METADATA_UUID	|	\
- 	 BTRFS_FEATURE_INCOMPAT_RAID1C34	|	\
- 	 BTRFS_FEATURE_INCOMPAT_ZONED		|	\
--	 BTRFS_FEATURE_INCOMPAT_EXTENT_TREE_V2)
-+	 BTRFS_FEATURE_INCOMPAT_EXTENT_TREE_V2	|	\
-+	 BTRFS_FEATURE_INCOMPAT_ENCRYPT)
- #else
- #define BTRFS_FEATURE_INCOMPAT_SUPP			\
- 	(BTRFS_FEATURE_INCOMPAT_MIXED_BACKREF |		\
-diff --git a/fs/btrfs/super.c b/fs/btrfs/super.c
-index 8ab5171d07e8..c1075db7bfc7 100644
---- a/fs/btrfs/super.c
-+++ b/fs/btrfs/super.c
-@@ -2751,6 +2751,11 @@ static int __init btrfs_print_mod_info(void)
- 			", fsverity=yes"
- #else
- 			", fsverity=no"
-+#endif
-+#ifdef CONFIG_FS_ENCRYPTION
-+			", fscrypt=yes"
-+#else
-+			", fscrypt=no"
- #endif
- 			;
- 	pr_info("Btrfs loaded, crc32c=%s%s\n", crc32c_impl(), options);
-diff --git a/include/uapi/linux/btrfs.h b/include/uapi/linux/btrfs.h
-index 5655e89b962b..1d29f0df995b 100644
---- a/include/uapi/linux/btrfs.h
-+++ b/include/uapi/linux/btrfs.h
-@@ -316,6 +316,7 @@ struct btrfs_ioctl_fs_info_args {
- #define BTRFS_FEATURE_INCOMPAT_RAID1C34		(1ULL << 11)
- #define BTRFS_FEATURE_INCOMPAT_ZONED		(1ULL << 12)
- #define BTRFS_FEATURE_INCOMPAT_EXTENT_TREE_V2	(1ULL << 13)
-+#define BTRFS_FEATURE_INCOMPAT_ENCRYPT		(1ULL << 14)
+ 	key.objectid = dir;
+ 	key.type = BTRFS_DIR_ITEM_KEY;
+-	key.offset = btrfs_name_hash(name->disk_name.name, name->disk_name.len);
+-	/* XXX get the right hash for no-key names */
++
++	if (!name->disk_name.name)
++		key.offset = name->hash | ((u64)name->minor_hash << 32);
++	else
++		key.offset = btrfs_name_hash(name->disk_name.name,
++					     name->disk_name.len);
  
- struct btrfs_ioctl_feature_flags {
- 	__u64 compat_flags;
+ 	ret = btrfs_search_slot(trans, root, &key, path, mod, -mod);
+ 	if (ret == 0)
 -- 
 2.35.1
 
