@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2BF4CC67871
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 25 Oct 2022 00:42:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7D954C67871
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 25 Oct 2022 00:43:01 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230410AbiJYAmr (ORCPT
+        id S230080AbiJYAnA (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 24 Oct 2022 20:42:47 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34510 "EHLO
+        Mon, 24 Oct 2022 20:43:00 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35590 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230525AbiJYAmX (ORCPT
+        with ESMTP id S230155AbiJYAmZ (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 24 Oct 2022 20:42:23 -0400
+        Mon, 24 Oct 2022 20:42:25 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2A09F31DEA;
-        Mon, 24 Oct 2022 16:14:17 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 29E2E31DC9;
+        Mon, 24 Oct 2022 16:14:13 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 6B8B581308;
-        Mon, 24 Oct 2022 19:14:16 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 206C0812D5;
+        Mon, 24 Oct 2022 19:14:13 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1666653256; bh=XHH1uogd6ho7h/w7R3kxnHFjMN6kEy35unxxY/PVHJ8=;
+        t=1666653253; bh=eMq+vVnpDE2N/Y2tcKkmx6gAKc5sFfybCpTg+ZV2Ugw=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=A4wpKX2R8H1OYfbi1AVx8gMDiI1wxKfgl/+iw///paWS4eGUkNqK8xkoRUBynpICp
-         IeRPIKDnsA8BVlOqAslqqjEIeQC0U9pHhjjfkOsU9b/qyRnL/RPTUDLIbTwGrEJy38
-         AtLllABG2gySNI0N3e6GtGQI5NOxMFdiUmWmR1b5vflvXi1HxHMoRkJEHo/lYasArx
-         D7qlEqqfm3wIuAFqvhihFWKqVhQi3U8QSbP5iivjmQVLmqu6GKalZ9WAMiyGelxMO/
-         LHfMNCHExRAY04iG1FAKqek6jVz1iqwA++ujA6U+l7jK/6YyLwQ2MCciz7MxlXzVSD
-         cUbFczNxehApQ==
+        b=iSubk/5vhV+JVdS/fuARCjpxkay1GXRg+Gcg1m985SixTC8rKoIPIMIK0aUQnNyxb
+         YbJ6xW80TKqpLP1L4J6agJVx7Zw9CrstE6M8asPQgCdwl11zbgSlVG2aiKvm5zRL+3
+         VbKobcGXZNKGsZ3vRtxFJUPRCjKvmc4Q+W+Wz2ar65PfOd79B8MxyYQOYDLj/PAZU5
+         fNloC/ZA4SKPnuZyC9OwmG3pHd3Hx5Ixb6PDRSL0GpX2FYIEZuttu9tdFuK94N6h32
+         ERTgZOeY/GhPt9ia/XBhUohqNbbVqTqz8yGFsphCoj5d27z19Ya86ZAlLyAlocR1Eh
+         QgRAq7LoI1/Xg==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -37,10 +37,11 @@ To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@meta.com
-Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v4 20/21] btrfs: use correct name hash for nokey names
-Date:   Mon, 24 Oct 2022 19:13:30 -0400
-Message-Id: <55e2bd7c38a3b18c33b67c33bd2608a2364ad41b.1666651724.git.sweettea-kernel@dorminy.me>
+Cc:     Omar Sandoval <osandov@osandov.com>,
+        Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Subject: [PATCH v4 18/21] btrfs: implement fscrypt ioctls
+Date:   Mon, 24 Oct 2022 19:13:28 -0400
+Message-Id: <490c30e32a41194a578eb3006842e0260c0441b5.1666651724.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1666651724.git.sweettea-kernel@dorminy.me>
 References: <cover.1666651724.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -49,36 +50,67 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-For encrypted or unencrypted names, we calculate the offset for the dir
-item by hashing the name for the dir item. However, this doesn't work
-for a long nokey name, where we do not have the complete ciphertext.
-Instead, fscrypt stores the filesystem-provided hash in the nokey name,
-and we can extract it from the fscrypt_name structure in such a case.
+From: Omar Sandoval <osandov@osandov.com>
 
+These ioctls allow encryption to actually be used.
+
+The set_encryption_policy ioctl is the thing which actually turns on
+encryption, and therefore sets the ENCRYPT flag in the superblock. This
+prevents the filesystem from being loaded on older kernels.
+
+fscrypt provides CONFIG_FS_ENCRYPTION-disabled versions of all these
+functions which just return -EOPNOTSUPP, so the ioctls don't need to be
+compiled out if CONFIG_FS_ENCRYPTION isn't enabled.
+
+We could instead gate this ioctl on the superblock having the flag set,
+if we wanted to require mkfs with the encrypt flag in order to have a
+filesystem with any encryption.
+
+Signed-off-by: Omar Sandoval <osandov@osandov.com>
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/btrfs/dir-item.c | 8 ++++++--
- 1 file changed, 6 insertions(+), 2 deletions(-)
+ fs/btrfs/ioctl.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
 
-diff --git a/fs/btrfs/dir-item.c b/fs/btrfs/dir-item.c
-index d5275475e69e..11236ebdb07f 100644
---- a/fs/btrfs/dir-item.c
-+++ b/fs/btrfs/dir-item.c
-@@ -256,8 +256,12 @@ struct btrfs_dir_item *btrfs_lookup_dir_item_fname(struct btrfs_trans_handle *tr
- 
- 	key.objectid = dir;
- 	key.type = BTRFS_DIR_ITEM_KEY;
--	key.offset = btrfs_name_hash(name->disk_name.name, name->disk_name.len);
--	/* XXX get the right hash for no-key names */
-+
-+	if (!name->disk_name.name)
-+		key.offset = name->hash | ((u64)name->minor_hash << 32);
-+	else
-+		key.offset = btrfs_name_hash(name->disk_name.name,
-+					     name->disk_name.len);
- 
- 	ret = btrfs_search_slot(trans, root, &key, path, mod, -mod);
- 	if (ret == 0)
+diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
+index 9cd59ab5a8a9..aa5845d95f7d 100644
+--- a/fs/btrfs/ioctl.c
++++ b/fs/btrfs/ioctl.c
+@@ -5450,6 +5450,34 @@ long btrfs_ioctl(struct file *file, unsigned int
+ 		return btrfs_ioctl_get_fslabel(fs_info, argp);
+ 	case FS_IOC_SETFSLABEL:
+ 		return btrfs_ioctl_set_fslabel(file, argp);
++	case FS_IOC_SET_ENCRYPTION_POLICY: {
++		if (!IS_ENABLED(CONFIG_FS_ENCRYPTION))
++			return -EOPNOTSUPP;
++		if (sb_rdonly(fs_info->sb))
++			return -EROFS;
++		/*
++		 *  If we crash before we commit, nothing encrypted could have
++		 * been written so it doesn't matter whether the encrypted
++		 * state persists.
++		 */
++		btrfs_set_fs_incompat(fs_info, ENCRYPT);
++		return fscrypt_ioctl_set_policy(file, (const void __user *)arg);
++	}
++	case FS_IOC_GET_ENCRYPTION_POLICY:
++		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		return fscrypt_ioctl_add_key(file, (void __user *)arg);
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		return fscrypt_ioctl_remove_key(file, (void __user *)arg);
++	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
++		return fscrypt_ioctl_remove_key_all_users(file,
++							  (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_NONCE:
++		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
+ 	case FITRIM:
+ 		return btrfs_ioctl_fitrim(fs_info, argp);
+ 	case BTRFS_IOC_SNAP_CREATE:
 -- 
 2.35.1
 
