@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 97759C38A2D
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 25 Oct 2022 00:42:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 24CC3FA373F
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 25 Oct 2022 00:42:31 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230375AbiJYAm1 (ORCPT
+        id S231245AbiJYAm2 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 24 Oct 2022 20:42:27 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34592 "EHLO
+        Mon, 24 Oct 2022 20:42:28 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35728 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230090AbiJYAmN (ORCPT
+        with ESMTP id S230218AbiJYAmO (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 24 Oct 2022 20:42:13 -0400
+        Mon, 24 Oct 2022 20:42:14 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 15F822BABCA;
-        Mon, 24 Oct 2022 16:13:37 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 348A9133322;
+        Mon, 24 Oct 2022 16:13:44 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 7E7DA811C2;
-        Mon, 24 Oct 2022 19:13:35 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 1087B812B8;
+        Mon, 24 Oct 2022 19:13:43 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1666653216; bh=OdBC8CZ0gnoGPnz4kji26J0abhuOTzcIiOLYSDaKmE8=;
-        h=From:To:Cc:Subject:Date:From;
-        b=aJC8bPrL4b/iakc9hi653z3THJf027NINmmvRFp0ZbeMhYE4ogAkV7kaqEp5PTyeQ
-         pBtIyk6FYVxxzkn0YKC/kJ2O3ymGLBl6GBtWJ6Pv9tXjkrl5vSCjJZ14VnFyXnLhD9
-         LrlscRywVBJQGKWSPm5vIboGjnWNYeF48vxwo03mUQ8JmFUWJMKCDzDFOPouwupRDy
-         JVcHoJ+Lfc97CcN/5G37EPCN2a/rtCDzmagSVTdkQGiLYqsUI4vEi6BRy5byAaAIG2
-         LEq3cbmaPhYGOZyMVul8nMUT8ac9vmsGPQ/ouKxittxIT0/iaxDLMT9HqUmBZgekHE
-         At4n5WSTPNDfA==
+        t=1666653224; bh=9/na80/caayvu5qUAkhGu2fgmA5dZvAe/0Jw035PeNY=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=UExfjvUmeGWWIl+3GgoXJEKPFq0kadZb1E814wkXNcMuCq1h/JbMprDZ2jojKbYG2
+         rin6Ell92yMtwNoOoaFihFjwI2PG9PDPkVAZRJ9nSxtA6DPDvBaKak7eL6dYFKH0gx
+         6eCtCiZm+6JXpm/PpFByiBqb5uskyABcKnrRZqdDjANY97q5063W8TRL7Wdt5Py+O/
+         IW7DGfoeQqMDwtrHAJfauWRnXfr6zaj1G+blxavvUzIGVISjvuf+OY6dQWSYAHLiq6
+         mn53RJNkC7nx3cl6a4aXLD44qDBRsNJkPlIyXtoakV2PZlUHWZ4fe+IM/n3jb1Lb/P
+         RNZoyJDKLF8jw==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -38,193 +38,344 @@ To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@meta.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v4 00/21] btrfs: add fscrypt integration
-Date:   Mon, 24 Oct 2022 19:13:10 -0400
-Message-Id: <cover.1666651724.git.sweettea-kernel@dorminy.me>
+Subject: [PATCH v4 04/21] fscrypt: add extent-based encryption
+Date:   Mon, 24 Oct 2022 19:13:14 -0400
+Message-Id: <151619c834c84dee1f740b89a846a4445e26a42e.1666651724.git.sweettea-kernel@dorminy.me>
+In-Reply-To: <cover.1666651724.git.sweettea-kernel@dorminy.me>
+References: <cover.1666651724.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This is a changeset adding encryption to btrfs.
+Some filesystems need to encrypt data based on extents, rather than on
+inodes, due to features incompatible with inode-based encryption. For
+instance, btrfs can have multiple inodes referencing a single block of
+data, and moves logical data blocks to different physical locations on
+disk in the background; these two features mean traditional inode-based
+file contents encryption will not work for btrfs.
 
-Last October, Omar Sandoval sent out a design document for having fscrypt
-integration with btrfs [1]. In summary, it proposes btrfs storing its
-own encryption IVs on a per-file-extent basis. fscrypt usually encrypts
-files using an IV derived from per-inode information; this would prevent
-snapshotting or reflinking or data relocation for btrfs. We have
-refined this into a fscrypt extent context object, opaque to the
-filesystem, which fscrypt uses to generate an IV associated with each
-block in an extent. Thus, all the inodes sharing a particular
-key and file extent may decrypt the extent.
+This change introduces fscrypt_extent_context objects, in analogy to
+existing context objects based on inodes. For a filesystem which opts to
+use extent-based encryption, a new hook provides a new
+fscrypt_extent_context. During file content encryption/decryption, the
+existing fscrypt_context object provides key information, while the new
+fscrypt_extent_context provides nonce information. For filename encryption,
+the existing IV generation methods are still used, since filenames are
+not stored in extents.
 
-This series implements this integration for the simple case,
-non-compressed data extents, and for verity items. Followup changes will
-allow encryption of compressed extents, inline extents, and will add
-tests around subvolume encryption. This series should provide encryption
-for the simplest cases, but this series should not be used in
-production, as there are likely bugs.
+Only direct key policies are allowed, but any encryption mode is allowed
+within that constraint.
 
-This set hopefully reflects all of the feedback given on v3.
+Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+---
+ fs/crypto/crypto.c          | 20 +++++++++--
+ fs/crypto/fscrypt_private.h | 25 +++++++++++++-
+ fs/crypto/inline_crypt.c    | 28 ++++++++++++----
+ fs/crypto/policy.c          | 66 +++++++++++++++++++++++++++++++++++++
+ include/linux/fscrypt.h     | 47 ++++++++++++++++++++++++++
+ 5 files changed, 176 insertions(+), 10 deletions(-)
 
-I apologize if I missed any past feedback.
-
-[1]
-https://lore.kernel.org/linux-btrfs/YXGyq+buM79A1S0L@relinquished.localdomain/
-
-Changelog:
-v4:
- - Dropped the partial directory encryption trio of patches, as it's an
-   easy and orthogonal followon.
- - fscrypt: Changed extent-based encryption to require a direct key policy.
- - fscrypt: Changed to allow direct key policies with mixed
-   filename/contents encryption modes, to enable usage of existing AES
-   modes with btrfs.
- - fscrypt: Changed terminology used for extent context contents to 'nonce'
-   instead of 'IV', to match the nonces used in direct-key policies
-   elsewhere.
- - fscrypt: Changed IV generation for extent-based encryption to generate
-   16-byte IVs (if needed) from a 16-byte nonce plus extent offset, hopefully
-   as discussed.
- - fscrypt: Updated documentation change to remove partial directory
-   encryption.
- - fscrypt: Fixed another place to refer to 'inode-based' encryption
-   instead of a more generic term.
- - btrfs: Factored btrfs_fscrypt_set_extent_context() as per Josef's
-   feedback.
- - btrfs: Fixed a couple of style nits.
- - https://lore.kernel.org/linux-btrfs/cover.1666651724.git.sweettea-kernel@dorminy.me
-  
-v3: 
- - fscrypt: changed to generate extent contexts the same way as IVs are
-   generated for inode-based encryption, allowing use of any existing
-   policy and making the difference in encryption more minimal.
- - Changed to use qstr's, then fscrypt_strs, then fscrypt_names only
-   where absolutely necessary, rather than fscrypt_names everywhere.
- - Reordered changes to put partially-encrypted directories, and no-key
-   name handling, in their own sections at the end of the patchset.
- - Expanded on descriptions of how no-key name handling works.
- - Added encryption of verity items (but see notes in change about
-   outstanding questions there)
- - Stylistic fixes
- - Renamed flags from FSCRYPT to ENCRYPT in multiple instances.
- - Made the incompat encrypt superblock flag be set the first time a
-   directory is set to be encrypted, so there isn't a need for a mkfs
-   option.
- - Hopefully addressed all other minor feedback points.
- - https://lore.kernel.org/linux-btrfs/cover.1666281276.git.sweettea-kernel@dorminy.me
-
-v2:
- - Amended the fscrypt side to generically add extent contexts,
-   hopefully as per Eric Biggers' past comments. IVs are now entirely
-   abstracted within an extent context, and there is no longer a new
-   encryption policy, as DIRECT_KEY sufficiently encapsulates the
-   needs of extent-based encryption. Documented its usage in btrfs
-   briefly in the documentation. 
- - Adjusted the btrfs side to deal in opaque extent contexts. Improved
-   optimization to skip storing inode contexts if they are the same as
-   the inode's root item's inode context.
- - Combined 'add fscrypt operation table to superblock' into 'start
-   using fscrypt hooks'.
- - https://lore.kernel.org/linux-btrfs/cover.1662420176.git.sweettea-kernel@dorminy.me
- - progs: https://lore.kernel.org/linux-btrfs/cover.1662417859.git.sweettea-kernel@dorminy.me
- - tests: https://lore.kernel.org/linux-btrfs/cover.1662417905.git.sweettea-kernel@dorminy.me
-
-v1:
- - Recombined the fscrypt changes back into this patchset.
- - Fixed several races and incorrectly ordered operations.
- - Improved IV retrieval to correctly distinguish between
-   filename/symlink encryption and encryption of block 0 of a file.
- - https://lore.kernel.org/linux-btrfs/cover.1660744500.git.sweettea-kernel@dorminy.me
- - progs: https://lore.kernel.org/linux-btrfs/cover.1660729916.git.sweettea-kernel@dorminy.me
- - tests: https://lore.kernel.org/linux-btrfs/cover.1660729861.git.sweettea-kernel@dorminy.me
-
-RFC v2: 
- - Fixed all warnings and known incorrectnesses.
- - Split fscrypt changes into their own patchset:
-    https://lore.kernel.org/linux-fscrypt/cover.1658623235.git.sweettea-kernel@dorminy.me
- - Combined and reordered changes so that enabling fscrypt is the last change.
- - Removed unnecessary factoring.
- - Split a cleanup change off.
- - https://lore.kernel.org/linux-btrfs/cover.1658623319.git.sweettea-kernel@dorminy.me 
-
-RFC v1:
- - https://lore.kernel.org/linux-btrfs/cover.1657707686.git.sweettea-kernel@dorminy.me
-
-
-Omar Sandoval (11):
-  fscrypt: expose fscrypt_nokey_name
-  fscrypt: add fscrypt_have_same_policy() to check inode compatibility
-  btrfs: store directory encryption state
-  btrfs: disable various operations on encrypted inodes
-  btrfs: start using fscrypt hooks
-  btrfs: add fscrypt_context items
-  btrfs: translate btrfs encryption flags and encrypted inode flag
-  btrfs: encrypt normal file extent data if appropriate
-  btrfs: Add new FEATURE_INCOMPAT_ENCRYPT feature flag.
-  btrfs: implement fscrypt ioctls
-  btrfs: permit searching for nokey names for removal
-
-Sweet Tea Dorminy (10):
-  fscrypt: allow fscrypt_generate_iv() to distinguish filenames
-  fscrypt: add extent-based encryption
-  fscrypt: direct key policies for extent-based encryption
-  fscrypt: document btrfs' fscrypt quirks.
-  btrfs: use struct qstr instead of name and namelen
-  btrfs: setup qstrings from dentrys using fscrypt helper
-  btrfs: use struct fscrypt_str instead of struct qstr
-  btrfs: store a fscrypt extent context per normal file extent
-  btrfs: use correct name hash for nokey names
-  btrfs: encrypt verity items
-
- Documentation/filesystems/fscrypt.rst |  31 +-
- fs/btrfs/Makefile                     |   1 +
- fs/btrfs/accessors.h                  |  44 +-
- fs/btrfs/btrfs_inode.h                |   3 +
- fs/btrfs/ctree.h                      |  46 ++-
- fs/btrfs/delayed-inode.c              |  36 +-
- fs/btrfs/delayed-inode.h              |   6 +-
- fs/btrfs/dir-item.c                   | 170 ++++++--
- fs/btrfs/extent_io.c                  |  94 ++++-
- fs/btrfs/extent_io.h                  |   3 +
- fs/btrfs/extent_map.c                 |   7 +
- fs/btrfs/extent_map.h                 |   4 +
- fs/btrfs/file-item.c                  |  25 +-
- fs/btrfs/file.c                       |  11 +-
- fs/btrfs/fs.h                         |   5 +-
- fs/btrfs/fscrypt.c                    | 287 +++++++++++++
- fs/btrfs/fscrypt.h                    |  63 +++
- fs/btrfs/inode-item.c                 |  73 ++--
- fs/btrfs/inode-item.h                 |  20 +-
- fs/btrfs/inode.c                      | 560 +++++++++++++++++++-------
- fs/btrfs/ioctl.c                      |  55 ++-
- fs/btrfs/ordered-data.c               |  11 +-
- fs/btrfs/ordered-data.h               |   4 +-
- fs/btrfs/print-tree.c                 |   4 +-
- fs/btrfs/reflink.c                    |   8 +
- fs/btrfs/root-tree.c                  |  21 +-
- fs/btrfs/send.c                       |  13 +-
- fs/btrfs/super.c                      |  10 +-
- fs/btrfs/transaction.c                |  40 +-
- fs/btrfs/tree-checker.c               |  51 ++-
- fs/btrfs/tree-log.c                   | 304 +++++++-------
- fs/btrfs/tree-log.h                   |   4 +-
- fs/btrfs/verity.c                     | 114 +++++-
- fs/crypto/crypto.c                    |  40 +-
- fs/crypto/fname.c                     |  43 +-
- fs/crypto/fscrypt_private.h           |  23 +-
- fs/crypto/inline_crypt.c              |  28 +-
- fs/crypto/policy.c                    |  96 +++++
- include/linux/fscrypt.h               |  91 +++++
- include/uapi/linux/btrfs.h            |   1 +
- include/uapi/linux/btrfs_tree.h       |  28 ++
- 41 files changed, 1935 insertions(+), 543 deletions(-)
- create mode 100644 fs/btrfs/fscrypt.c
- create mode 100644 fs/btrfs/fscrypt.h
-
-
-base-commit: cc159678aee59042e24fd1b039405b4fdf7b0538
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 7fe5979fbea2..08b495dc5c0c 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -81,8 +81,22 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
+ 			 const struct fscrypt_info *ci)
+ {
+ 	u8 flags = fscrypt_policy_flags(&ci->ci_policy);
++	struct inode *inode = ci->ci_inode;
++	const struct fscrypt_operations *s_cop = inode->i_sb->s_cop;
+ 
+-	memset(iv, 0, ci->ci_mode->ivsize);
++	memset(iv, 0, sizeof(*iv));
++	if (s_cop->get_extent_context && lblk_num != U64_MAX) {
++		size_t extent_offset;
++		union fscrypt_extent_context ctx;
++		int ret;
++
++		ret = fscrypt_get_extent_context(inode, lblk_num, &ctx,
++						 &extent_offset, NULL);
++		WARN_ON_ONCE(ret);
++		memcpy(iv->raw, ctx.v1.iv.raw, sizeof(*iv));
++		iv->lblk_num += cpu_to_le64(extent_offset);
++		return;
++	}
+ 
+ 	/*
+ 	 * Filename encryption. For inode-based policies, filenames are
+@@ -93,8 +107,8 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
+ 
+ 	if (flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
+ 		WARN_ON_ONCE(lblk_num > U32_MAX);
+-		WARN_ON_ONCE(ci->ci_inode->i_ino > U32_MAX);
+-		lblk_num |= (u64)ci->ci_inode->i_ino << 32;
++		WARN_ON_ONCE(inode->i_ino > U32_MAX);
++		lblk_num |= (u64)inode->i_ino << 32;
+ 	} else if (flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) {
+ 		WARN_ON_ONCE(lblk_num > U32_MAX);
+ 		lblk_num = (u32)(ci->ci_hashed_ino + lblk_num);
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index d5f68a0c5d15..9c4cae2580de 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -280,7 +280,6 @@ fscrypt_msg(const struct inode *inode, const char *level, const char *fmt, ...);
+ 	fscrypt_msg((inode), KERN_ERR, fmt, ##__VA_ARGS__)
+ 
+ #define FSCRYPT_MAX_IV_SIZE	32
+-
+ union fscrypt_iv {
+ 	struct {
+ 		/* logical block number within the file */
+@@ -293,6 +292,27 @@ union fscrypt_iv {
+ 	__le64 dun[FSCRYPT_MAX_IV_SIZE / sizeof(__le64)];
+ };
+ 
++
++/*
++ * fscrypt_extent_context - the encryption context for an extent
++ *
++ * For filesystems that support extent encryption, this context provides the
++ * necessary randomly-initialized IV in order to encrypt/decrypt the data
++ * stored in the extent. It is stored alongside each extent, and is
++ * insufficient to decrypt the extent: the extent's owning inode(s) provide the
++ * policy information (including key identifier) necessary to decrypt.
++ */
++struct fscrypt_extent_context_v1 {
++	u8 version;
++	union fscrypt_iv iv;
++} __packed;
++
++union fscrypt_extent_context {
++	u8 version;
++	struct fscrypt_extent_context_v1 v1;
++};
++
++
+ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
+ 			 const struct fscrypt_info *ci);
+ 
+@@ -662,5 +682,8 @@ int fscrypt_policy_from_context(union fscrypt_policy *policy_u,
+ 				const union fscrypt_context *ctx_u,
+ 				int ctx_size);
+ const union fscrypt_policy *fscrypt_policy_to_inherit(struct inode *dir);
++int fscrypt_get_extent_context(const struct inode *inode, u64 lblk_num,
++			       union fscrypt_extent_context *ctx,
++			       size_t *extent_offset, size_t *extent_length);
+ 
+ #endif /* _FSCRYPT_PRIVATE_H */
+diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
+index cea8b14007e6..6adb72c52ce2 100644
+--- a/fs/crypto/inline_crypt.c
++++ b/fs/crypto/inline_crypt.c
+@@ -460,6 +460,7 @@ EXPORT_SYMBOL_GPL(fscrypt_dio_supported);
+  */
+ u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks)
+ {
++	const struct fscrypt_operations *s_cop = inode->i_sb->s_cop;
+ 	const struct fscrypt_info *ci;
+ 	u32 dun;
+ 
+@@ -470,14 +471,29 @@ u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks)
+ 		return nr_blocks;
+ 
+ 	ci = inode->i_crypt_info;
+-	if (!(fscrypt_policy_flags(&ci->ci_policy) &
+-	      FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32))
+-		return nr_blocks;
+ 
+-	/* With IV_INO_LBLK_32, the DUN can wrap around from U32_MAX to 0. */
++	if (s_cop->get_extent_context) {
++		size_t extent_offset, extent_length;
++		int ret = fscrypt_get_extent_context(inode, lblk, NULL,
++						     &extent_offset,
++						     &extent_length);
++		if (ret < 0) {
++			WARN_ON_ONCE(ret < 0);
++			return 1;
++		}
++		return extent_length - extent_offset;
++	}
+ 
+-	dun = ci->ci_hashed_ino + lblk;
++	if ((fscrypt_policy_flags(&ci->ci_policy) &
++	      FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32)) {
++		/*
++		 * With IV_INO_LBLK_32, the DUN can wrap around from U32_MAX to
++		 * 0.
++		 */
++		dun = ci->ci_hashed_ino + lblk;
++		return min_t(u64, nr_blocks, (u64)U32_MAX + 1 - dun);
++	}
+ 
+-	return min_t(u64, nr_blocks, (u64)U32_MAX + 1 - dun);
++	return nr_blocks;
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_limit_io_blocks);
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index b7c4820a8001..4a86b80e7c0b 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -222,6 +222,10 @@ static bool fscrypt_supported_v2_policy(const struct fscrypt_policy_v2 *policy,
+ 		return false;
+ 	}
+ 
++	if (inode->i_sb->s_cop->get_extent_context &&
++	    !(policy->flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY))
++		return false;
++
+ 	if ((policy->flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY) &&
+ 	    !supported_direct_key_modes(inode, policy->contents_encryption_mode,
+ 					policy->filenames_encryption_mode))
+@@ -777,6 +781,68 @@ int fscrypt_set_context(struct inode *inode, void *fs_data)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_set_context);
+ 
++/**
++ * fscrypt_get_extent_context() - Get the fscrypt extent context for a location
++ *
++ * @inode: an inode associated with the extent
++ * @lblk_num: a logical block number within the inode owned by the extent
++ * @ctx: a pointer to return the context found (may be NULL)
++ * @extent_offset: a pointer to return the offset of @lblk_num within the
++ *                 extent (may be NULL)
++ * @extent_length: a pointer to return the length of the extent found (may be
++ *                 NULL)
++ *
++ * Return: 0 on success, -errno on failure
++ */
++int fscrypt_get_extent_context(const struct inode *inode, u64 lblk_num,
++			       union fscrypt_extent_context *ctx,
++			       size_t *extent_offset, size_t *extent_length)
++{
++	int ret;
++	int ctxsize = (ctx == NULL ? 0 : sizeof(*ctx));
++
++	if (!IS_ENCRYPTED(inode))
++		return -ENODATA;
++
++	ret = inode->i_sb->s_cop->get_extent_context(inode, lblk_num, ctx,
++						     ctxsize, extent_offset,
++						     extent_length);
++	if (ret == ctxsize && (!ctx || ctx->version == 1))
++		return 0;
++	if (ret >= 0)
++		return -EINVAL;
++	return ret;
++}
++EXPORT_SYMBOL_GPL(fscrypt_get_extent_context);
++
++/**
++ * fscrypt_set_extent_context() - Set an extent's fscrypt context
++ *
++ * @inode: an inode to which the extent belongs
++ * @lblk_num: the offset into the inode at which the extent starts
++ * @extent: private data referring to the extent, given by the FS and passed
++ *          to ->set_extent_context()
++ *
++ * This should be called after fscrypt_prepare_new_inode(), generally during a
++ * filesystem transaction.  Everything here must be %GFP_NOFS-safe.
++ *
++ * Return: 0 on success, -errno on failure
++ */
++int fscrypt_set_extent_context(struct inode *inode, u64 lblk_num, void *extent)
++{
++	union fscrypt_extent_context ctx;
++
++	if (!IS_ENCRYPTED(inode))
++		return -ENODATA;
++
++	ctx.v1.version = 1;
++	get_random_bytes(ctx.v1.nonce, FSCRYPT_FILE_NONCE_SIZE);
++
++	return inode->i_sb->s_cop->set_extent_context(extent,
++						      &ctx, sizeof(ctx));
++}
++EXPORT_SYMBOL_GPL(fscrypt_set_extent_context);
++
+ /**
+  * fscrypt_parse_test_dummy_encryption() - parse the test_dummy_encryption mount option
+  * @param: the mount option
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 9cc5a61c1200..4143c722ea1b 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -94,6 +94,13 @@ struct fscrypt_nokey_name {
+ /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
+ #define FSCRYPT_SET_CONTEXT_MAX_SIZE	40
+ 
++/*
++ * Maximum value for the third parameter of
++ * fscrypt_operations.set_extent_context(). Update if fscrypt_private.h:
++ * FSCRYPT_MAX_IVSIZE changes
++ */
++#define FSCRYPT_EXTENT_CONTEXT_MAX_SIZE	33
++
+ #ifdef CONFIG_FS_ENCRYPTION
+ 
+ /*
+@@ -150,6 +157,39 @@ struct fscrypt_operations {
+ 	int (*set_context)(struct inode *inode, const void *ctx, size_t len,
+ 			   void *fs_data);
+ 
++	/*
++	 * Get the fscrypt extent context for a given inode and lblk number.
++	 *
++	 * @inode: the inode to which the extent belongs
++	 * @lblk_num: the block number within the file whose extent is being
++	 *            queried
++	 * @ctx: the buffer into which to get the context (may be NULL)
++	 * @len: the length of the @ctx buffer in bytes
++	 * @extent_offset: a pointer to return the offset of @lblk_num within
++	 *                 the extent whose context is returned (may be NULL)
++	 * @extent_length: a pointer to return the total length of the extent
++	 *                 whose context was found (may be NULL)
++	 *
++	 * Return: On success, returns the length of the context in bytes,
++	 * which may be less than @len. On failure, returns -ENODATA if the
++	 * extent doesn't have a context, -ERANGE if the context is longer
++	 * than @len, or another -errno code.
++	 */
++	int (*get_extent_context)(const struct inode *inode, u64 lblk_num,
++				  void *ctx, size_t len,
++				  size_t *extent_offset, size_t *extent_length);
++
++	/*
++	 * Set the fscrypt extent context for an extent.
++	 *
++	 * @extent: an opaque pointer to the filesystem's extent object
++	 * @ctx: the buffer containing the extent context to set
++	 * @len: the length of the @ctx buffer in bytes
++	 *
++	 * Return: 0 on success, -errno on failure.
++	 */
++	int (*set_extent_context)(void *extent, void *ctx, size_t len);
++
+ 	/*
+ 	 * Get the dummy fscrypt policy in use on the filesystem (if any).
+ 	 *
+@@ -321,6 +361,7 @@ int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
+ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child);
+ int fscrypt_context_for_new_inode(void *ctx, struct inode *inode);
+ int fscrypt_set_context(struct inode *inode, void *fs_data);
++int fscrypt_set_extent_context(struct inode *inode, u64 offset, void *extent);
+ 
+ struct fscrypt_dummy_policy {
+ 	const union fscrypt_policy *policy;
+@@ -530,6 +571,12 @@ static inline int fscrypt_set_context(struct inode *inode, void *fs_data)
+ 	return -EOPNOTSUPP;
+ }
+ 
++static inline int fscrypt_set_extent_context(struct inode *inode, u64 offset,
++					     void *extent)
++{
++	return -EOPNOTSUPP;
++}
++
+ struct fscrypt_dummy_policy {
+ };
+ 
 -- 
 2.35.1
 
