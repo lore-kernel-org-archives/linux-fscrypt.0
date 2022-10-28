@@ -2,100 +2,99 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 79CEEFA3749
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DB289FA374A
 	for <linux-fscrypt@archiver.kernel.org>; Fri, 28 Oct 2022 22:47:53 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230080AbiJ1Wrv (ORCPT
+        id S230104AbiJ1Wrw (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 28 Oct 2022 18:47:51 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54818 "EHLO
+        Fri, 28 Oct 2022 18:47:52 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54828 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229993AbiJ1Wrt (ORCPT
+        with ESMTP id S230007AbiJ1Wrt (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Fri, 28 Oct 2022 18:47:49 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3CD231E1975;
+Received: from sin.source.kernel.org (sin.source.kernel.org [145.40.73.55])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 31142199F45;
         Fri, 28 Oct 2022 15:47:48 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id CD66A62ACA;
+        by sin.source.kernel.org (Postfix) with ESMTPS id 37582CE2E9F;
         Fri, 28 Oct 2022 22:47:47 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 172DFC43140;
-        Fri, 28 Oct 2022 22:47:47 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 3A8C6C433D6;
+        Fri, 28 Oct 2022 22:47:45 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1666997267;
-        bh=TLSDtgBK8VwfTvMigEag46MpMj/1E/6Gz70hTRHuF58=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=nL7PsiwDTtGmgJRb1Ml4ZRkAUzl+Hn3bfm/T0QY0nf+V+2s6Lx9cwZRmeec8RdnnT
-         zwd9cZifwQnY0jQBYPGOoJHmnWUnRfYM/nr+n56j5/lB3wpWBX+o/1Taw+KkU9c+Ae
-         MFdnQQBtHyumLYjJl/7OltHD/Cmg5KDUk4pvinxrIgG1dTwRVti2uT5mS1wsOH8/co
-         f4is+iamKC+Lg6cGTQYgM52bmWLhNBlJza7rslc/b6yY45Yh8KV8fXTMk4j/+aiYCA
-         uUKGlXNMteCmwTJijTox6n6z8DHJQymzTS6D/zt2pucmwZZ8GgV1NtTy+RamhQoJ2X
-         91SGzr7N3zDHQ==
+        s=k20201202; t=1666997265;
+        bh=4Gis4J6FInfcpasgqe1VktNVUDifHwCLxkhJxJDfYg8=;
+        h=From:To:Cc:Subject:Date:From;
+        b=Tw4NUWnK6m8OaUTrRHH905TS9LfG6I9nYNG0Jz3Uwr35Q4LdLMKMs0hb76xKH7hUw
+         iArYiH+CVoeUAmZthSWPhlWnJUbHrZchEbvc9FmGtPQPMGTgMKvqmGvnLVSLhShpBx
+         cD08RgkjZqPlkfrUwHJ+XK5wBpnsqJnjS/97vyQQwn8z/ucBccm12lX2mOWcQRfBXu
+         WpIB/tX9t5N9/KpVA3U8usMiE7H60bhctbfQ2tsHguU9frpYL8hZlu/P7jo0qnvOH/
+         w0yqFmOfrREE0MYc95OfB4zZfV10TbZbgNcGKqIjAe9XMbgmcIj2dWNipIvi0tBMbP
+         u51kmtmDq6UUg==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net, linux-btrfs@vger.kernel.org
-Subject: [PATCH 6/6] ext4: allow verity with fs block size < PAGE_SIZE
-Date:   Fri, 28 Oct 2022 15:45:39 -0700
-Message-Id: <20221028224539.171818-7-ebiggers@kernel.org>
+Subject: [PATCH 0/6] fsverity: support for non-4K pages
+Date:   Fri, 28 Oct 2022 15:45:33 -0700
+Message-Id: <20221028224539.171818-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.38.0
-In-Reply-To: <20221028224539.171818-1-ebiggers@kernel.org>
-References: <20221028224539.171818-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+[This patchset applies to v6.1-rc2 + my other patch
+ https://lore.kernel.org/r/20221028175807.55495-1-ebiggers@kernel.org.
+ You can get everything from tag "fsverity-non4k-v1" of
+ https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git]
 
-Now that the needed changes have been made to fs/buffer.c, ext4 is ready
-to support the verity feature when the filesystem block size is less
-than the page size.  So remove the mount-time check that prevented this.
+Currently, filesystems (ext4, f2fs, and btrfs) only support fsverity
+when the Merkle tree block size, filesystem block size, and page size
+are all the same.  In practice that means 4K, since increasing the page
+size, e.g. to 16K, forces the Merkle tree block size and filesystem
+block size to be increased accordingly.  That can be impractical; for
+one, users want the same file signatures to work on all systems.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/filesystems/fsverity.rst | 8 +++++---
- fs/ext4/super.c                        | 5 -----
- 2 files changed, 5 insertions(+), 8 deletions(-)
+Therefore, this patchset reduces the coupling between these sizes.
 
-diff --git a/Documentation/filesystems/fsverity.rst b/Documentation/filesystems/fsverity.rst
-index 4c202e0dee102..46c344eb41635 100644
---- a/Documentation/filesystems/fsverity.rst
-+++ b/Documentation/filesystems/fsverity.rst
-@@ -497,9 +497,11 @@ To create verity files on an ext4 filesystem, the filesystem must have
- been formatted with ``-O verity`` or had ``tune2fs -O verity`` run on
- it.  "verity" is an RO_COMPAT filesystem feature, so once set, old
- kernels will only be able to mount the filesystem readonly, and old
--versions of e2fsck will be unable to check the filesystem.  Moreover,
--currently ext4 only supports mounting a filesystem with the "verity"
--feature when its block size is equal to PAGE_SIZE (often 4096 bytes).
-+versions of e2fsck will be unable to check the filesystem.
-+
-+Originally, an ext4 filesystem with the "verity" feature could only be
-+mounted when its block size was equal to the system page size
-+(typically 4096 bytes).  In Linux v6.2, this limitation was removed.
- 
- ext4 sets the EXT4_VERITY_FL on-disk inode flag on verity files.  It
- can only be set by `FS_IOC_ENABLE_VERITY`_, and it cannot be cleared.
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 989365b878a67..3e6037a744585 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -5339,11 +5339,6 @@ static int __ext4_fill_super(struct fs_context *fc, struct super_block *sb)
- 		}
- 	}
- 
--	if (ext4_has_feature_verity(sb) && sb->s_blocksize != PAGE_SIZE) {
--		ext4_msg(sb, KERN_ERR, "Unsupported blocksize for fs-verity");
--		goto failed_mount_wq;
--	}
--
- 	/*
- 	 * Get the # of file system overhead blocks from the
- 	 * superblock if present.
+First, patches 1-4 allow the Merkle tree block size to be less than the
+page size or filesystem block size, provided that it's not larger than
+either one.  This involves, among other things, changing the way that
+fs/verity/verify.c tracks which hash blocks have been verified.
+
+Second, patches 5-6 makes ext4 support fsverity when the filesystem
+block size is less than the page size.  Note, f2fs doesn't need similar
+changes because f2fs always assumes that the filesystem block size and
+page size are the same anyway.  I haven't looked into btrfs yet.
+
+I've tested this patchset with changes to the verity tests in xfstests.
+I'll be sending out these xfstests changes separately.
+
+Eric Biggers (6):
+  fsverity: support verification with tree block size < PAGE_SIZE
+  fsverity: support enabling with tree block size < PAGE_SIZE
+  ext4: simplify ext4_readpage_limit()
+  f2fs: simplify f2fs_readpage_limit()
+  fs/buffer.c: support fsverity in block_read_full_folio()
+  ext4: allow verity with fs block size < PAGE_SIZE
+
+ Documentation/filesystems/fsverity.rst |  76 +++---
+ fs/buffer.c                            |  66 ++++-
+ fs/ext4/readpage.c                     |   3 +-
+ fs/ext4/super.c                        |   5 -
+ fs/f2fs/data.c                         |   3 +-
+ fs/verity/enable.c                     | 268 ++++++++++----------
+ fs/verity/fsverity_private.h           |  17 +-
+ fs/verity/hash_algs.c                  |  48 ++--
+ fs/verity/open.c                       | 101 ++++++--
+ fs/verity/verify.c                     | 325 +++++++++++++++++--------
+ include/linux/fsverity.h               |  14 +-
+ 11 files changed, 575 insertions(+), 351 deletions(-)
+
 -- 
 2.38.0
 
