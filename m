@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2BDC5C4321E
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  2 Nov 2022 11:54:03 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1FA2AC433FE
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  2 Nov 2022 11:54:34 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230362AbiKBLxc (ORCPT
+        id S230139AbiKBLyC (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 2 Nov 2022 07:53:32 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49202 "EHLO
+        Wed, 2 Nov 2022 07:54:02 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49438 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230372AbiKBLx1 (ORCPT
+        with ESMTP id S230380AbiKBLxc (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 2 Nov 2022 07:53:27 -0400
+        Wed, 2 Nov 2022 07:53:32 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E9B9F2DC1;
-        Wed,  2 Nov 2022 04:53:26 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id AE172E004;
+        Wed,  2 Nov 2022 04:53:31 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id EB9E981480;
-        Wed,  2 Nov 2022 07:53:25 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 0B2E281462;
+        Wed,  2 Nov 2022 07:53:30 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1667390006; bh=QmVA9H0nSPcygFxTf/MqkL34QZs5kM7ggaeduE2USWQ=;
+        t=1667390011; bh=1XhfSCiKluVAYhbmx4i3yfdlOK4Zbh6VrYXNw1i+Esc=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Ey8PerdN2yGDRylbYBArs9+ulFif5q+PBK16WkJ1mRHREkHNEQPM/eUwCvyuVIj14
-         PRVBWPdseCGpB6cRsQxJtzVr0Vqr4YGp7rwn5f+IAOkJTwG4dflKq72AjCElcrkVGQ
-         w5wiY7uXyB19Nt6rqDgdUAfGPE2nylJ+baS4xoKmpD8AOrWcg31q9/wwoKWy8Aos9G
-         lGCdIr8R07ecU5MhfaiZVXnPDNoWn4qLIpCFYpXE8QVMFFIH+rJ1HGHLu0oXOeSlJ2
-         ZUGGSoAlvv+qf48ipShjlJOMRmAD316jFOOF35/1beVyNH1Ng5sSwL2pUTRzjGizpT
-         piVoJ/ggPdwaw==
+        b=N2cJq3U0j9ONaCtH86cmDe1/2wJHYgfu6MdHA8kyr2NFmGYzKRx7ADY1DuiXE5yre
+         1AgMA2CbB0epA0h0uqyz8jRk9kuQTL3s2qZVSeFUVeMJVSUteotnKPQqk68AWF12sZ
+         lpicz/3Jdk3WBFf5+f56JOewfm3XNWuSJo7CB52ZlAWFbQTdYc4WduhYyDB96UQoTx
+         kGRq8fobKXFbbf2w3C9di03d8VBUXLi7g2+4dAz6M3m8FMs25H0/CmyzlVeMrIT6c4
+         d5hwdEZjJU3wsOd4pc1QNugAL+vydTHl0JcPXa/e/1+IFqf1IW8LDoEjSW4XxJbKLG
+         IhAksfXSZ+Ltg==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -39,9 +39,9 @@ To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         linux-btrfs@vger.kernel.org, kernel-team@meta.com
 Cc:     Omar Sandoval <osandov@osandov.com>,
         Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v5 09/18] btrfs: add fscrypt_context items
-Date:   Wed,  2 Nov 2022 07:52:58 -0400
-Message-Id: <8ec52752965fa3cddc73c3da2b3826b1fed31d5c.1667389115.git.sweettea-kernel@dorminy.me>
+Subject: [PATCH v5 12/18] btrfs: encrypt normal file extent data if appropriate
+Date:   Wed,  2 Nov 2022 07:53:01 -0400
+Message-Id: <9e6e11154b096255ad1541192ddb18610991bb28.1667389115.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1667389115.git.sweettea-kernel@dorminy.me>
 References: <cover.1667389115.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -52,388 +52,223 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Omar Sandoval <osandov@osandov.com>
 
-In order to store per-inode information such as the inode nonce and the
-key identifier, fscrypt stores a context item with each encrypted inode.
-This can be implemented as a new item type, as fscrypt provides an
-arbitrary blob for the filesystem to store.
+Add in the necessary calls to encrypt and decrypt data to achieve
+encryption of normal data.
 
-This also provides a good place to implement full-subvolume encryption:
-a subvolume flag permits setting one context for the whole subvolume.
-However, since an unencrypted subvolume would be unable to read
-encrypted data, encrypted subvolumes should only be snapshottable to
-other encrypted subvolumes.
+Since these are all page cache pages being encrypted, we can't encrypt
+them in place and must encrypt/decrypt into a new page. fscrypt provides a pool
+of pages for this purpose, which it calls bounce pages. For IO of
+encrypted data, we use a bounce page for the actual IO, and
+encrypt/decrypt from/to the actual page cache page on either side of the
+IO.
 
 Signed-off-by: Omar Sandoval <osandov@osandov.com>
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/btrfs/ctree.h                |   1 +
- fs/btrfs/fscrypt.c              | 184 ++++++++++++++++++++++++++++++++
- fs/btrfs/inode.c                |  39 +++++++
- fs/btrfs/ioctl.c                |   7 +-
- fs/btrfs/tree-checker.c         |   1 +
- include/uapi/linux/btrfs_tree.h |  12 +++
- 6 files changed, 243 insertions(+), 1 deletion(-)
+ fs/btrfs/extent_io.c    | 56 ++++++++++++++++++++++++++++++++++++-----
+ fs/btrfs/file-item.c    |  9 +++++--
+ fs/btrfs/fscrypt.c      | 33 +++++++++++++++++++++++-
+ fs/btrfs/tree-checker.c | 11 +++++---
+ 4 files changed, 97 insertions(+), 12 deletions(-)
 
-diff --git a/fs/btrfs/ctree.h b/fs/btrfs/ctree.h
-index 5649f8907984..be628dd3ecd4 100644
---- a/fs/btrfs/ctree.h
-+++ b/fs/btrfs/ctree.h
-@@ -32,6 +32,7 @@
- #include "extent-io-tree.h"
- #include "extent_io.h"
- #include "extent_map.h"
-+#include "fscrypt.h"
- #include "async-thread.h"
- #include "block-rsv.h"
- #include "locking.h"
+diff --git a/fs/btrfs/extent_io.c b/fs/btrfs/extent_io.c
+index 2ec989b83f54..97aaa74c4822 100644
+--- a/fs/btrfs/extent_io.c
++++ b/fs/btrfs/extent_io.c
+@@ -117,6 +117,7 @@ static void submit_one_bio(struct btrfs_bio_ctrl *bio_ctrl)
+ {
+ 	struct bio *bio;
+ 	struct bio_vec *bv;
++	struct page *first_page;
+ 	struct inode *inode;
+ 	int mirror_num;
+ 
+@@ -125,13 +126,17 @@ static void submit_one_bio(struct btrfs_bio_ctrl *bio_ctrl)
+ 
+ 	bio = bio_ctrl->bio;
+ 	bv = bio_first_bvec_all(bio);
+-	inode = bv->bv_page->mapping->host;
++	first_page = bio_first_page_all(bio);
++	if (fscrypt_is_bounce_page(first_page))
++		inode = fscrypt_pagecache_page(first_page)->mapping->host;
++	else
++		inode = first_page->mapping->host;
+ 	mirror_num = bio_ctrl->mirror_num;
+ 
+ 	/* Caller should ensure the bio has at least some range added */
+ 	ASSERT(bio->bi_iter.bi_size);
+ 
+-	btrfs_bio(bio)->file_offset = page_offset(bv->bv_page) + bv->bv_offset;
++	btrfs_bio(bio)->file_offset = page_offset(first_page) + bv->bv_offset;
+ 
+ 	if (!is_data_inode(inode))
+ 		btrfs_submit_metadata_bio(inode, bio, mirror_num);
+@@ -1018,9 +1023,19 @@ static void end_bio_extent_writepage(struct btrfs_bio *bbio)
+ 	ASSERT(!bio_flagged(bio, BIO_CLONED));
+ 	bio_for_each_segment_all(bvec, bio, iter_all) {
+ 		struct page *page = bvec->bv_page;
+-		struct inode *inode = page->mapping->host;
+-		struct btrfs_fs_info *fs_info = btrfs_sb(inode->i_sb);
+-		const u32 sectorsize = fs_info->sectorsize;
++		struct inode *inode;
++		struct btrfs_fs_info *fs_info;
++		u32 sectorsize;
++		struct page *bounce_page = NULL;
++
++		if (fscrypt_is_bounce_page(page)) {
++			bounce_page = page;
++			page = fscrypt_pagecache_page(bounce_page);
++		}
++
++		inode = page->mapping->host;
++		fs_info = btrfs_sb(inode->i_sb);
++		sectorsize = fs_info->sectorsize;
+ 
+ 		/* Our read/write should always be sector aligned. */
+ 		if (!IS_ALIGNED(bvec->bv_offset, sectorsize))
+@@ -1041,7 +1056,7 @@ static void end_bio_extent_writepage(struct btrfs_bio *bbio)
+ 		}
+ 
+ 		end_extent_writepage(page, error, start, end);
+-
++		fscrypt_free_bounce_page(bounce_page);
+ 		btrfs_page_clear_writeback(fs_info, page, start, bvec->bv_len);
+ 	}
+ 
+@@ -1233,6 +1248,17 @@ static void end_bio_extent_readpage(struct btrfs_bio *bbio)
+ 			}
+ 		}
+ 
++		if (likely(uptodate)) {
++			if (fscrypt_inode_uses_fs_layer_crypto(inode)) {
++				int ret = fscrypt_decrypt_pagecache_blocks(page,
++									   bvec->bv_len,
++									   bvec->bv_offset);
++				if (ret) {
++					error_bitmap = (unsigned int) -1;
++					uptodate = false;
++				}
++			}
++		}
+ 		if (likely(uptodate)) {
+ 			loff_t i_size = i_size_read(inode);
+ 			pgoff_t end_index = i_size >> PAGE_SHIFT;
+@@ -1567,11 +1593,29 @@ static int submit_extent_page(blk_opf_t opf,
+ 			      bool force_bio_submit)
+ {
+ 	int ret = 0;
++	struct page *bounce_page = NULL;
+ 	struct btrfs_inode *inode = BTRFS_I(page->mapping->host);
+ 	unsigned int cur = pg_offset;
+ 
+ 	ASSERT(bio_ctrl);
+ 
++	if ((opf & REQ_OP_MASK) == REQ_OP_WRITE &&
++	    fscrypt_inode_uses_fs_layer_crypto(&inode->vfs_inode)) {
++		gfp_t gfp_flags = GFP_NOFS;
++
++		if (bio_ctrl->bio)
++			gfp_flags = GFP_NOWAIT | __GFP_NOWARN;
++		else
++			gfp_flags = GFP_NOFS;
++		bounce_page = fscrypt_encrypt_pagecache_blocks(page, size,
++							       pg_offset,
++							       gfp_flags);
++		if (IS_ERR(bounce_page))
++			return PTR_ERR(bounce_page);
++		page = bounce_page;
++		pg_offset = 0;
++	}
++
+ 	ASSERT(pg_offset < PAGE_SIZE && size <= PAGE_SIZE &&
+ 	       pg_offset + size <= PAGE_SIZE);
+ 
+diff --git a/fs/btrfs/file-item.c b/fs/btrfs/file-item.c
+index 36b7e2a8d698..2faac05ce137 100644
+--- a/fs/btrfs/file-item.c
++++ b/fs/btrfs/file-item.c
+@@ -681,8 +681,13 @@ blk_status_t btrfs_csum_one_bio(struct btrfs_inode *inode, struct bio *bio,
+ 	shash->tfm = fs_info->csum_shash;
+ 
+ 	bio_for_each_segment(bvec, bio, iter) {
+-		if (use_page_offsets)
+-			offset = page_offset(bvec.bv_page) + bvec.bv_offset;
++		if (use_page_offsets) {
++			struct page *page = bvec.bv_page;
++
++			if (fscrypt_is_bounce_page(page))
++				page = fscrypt_pagecache_page(page);
++			offset = page_offset(page) + bvec.bv_offset;
++		}
+ 
+ 		if (!ordered) {
+ 			ordered = btrfs_lookup_ordered_extent(inode, offset);
 diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
-index 48ab99dfe48d..babaa0fffed4 100644
+index 2c9f2d84b539..661fe7cc119c 100644
 --- a/fs/btrfs/fscrypt.c
 +++ b/fs/btrfs/fscrypt.c
-@@ -1,7 +1,191 @@
- // SPDX-License-Identifier: GPL-2.0
- 
-+#include <linux/iversion.h>
- #include "ctree.h"
-+#include "accessors.h"
-+#include "btrfs_inode.h"
-+#include "disk-io.h"
-+#include "fs.h"
- #include "fscrypt.h"
-+#include "messages.h"
-+#include "transaction.h"
-+#include "xattr.h"
-+
-+static int btrfs_fscrypt_get_context(struct inode *inode, void *ctx, size_t len)
-+{
-+	struct btrfs_root *root = BTRFS_I(inode)->root;
-+	struct btrfs_key key = {
-+		.objectid = btrfs_ino(BTRFS_I(inode)),
-+		.type = BTRFS_FSCRYPT_CTXT_ITEM_KEY,
-+		.offset = 0,
-+	};
-+	struct inode *put_inode = NULL;
-+	struct btrfs_path *path;
-+	struct extent_buffer *leaf;
-+	unsigned long ptr;
+@@ -190,7 +190,38 @@ static int btrfs_fscrypt_get_extent_context(const struct inode *inode,
+ 					    size_t *extent_offset,
+ 					    size_t *extent_length)
+ {
+-	return len;
++	u64 offset = lblk_num << inode->i_blkbits;
++	struct extent_map *em;
 +	int ret;
 +
++	/* Since IO must be in progress on this extent, this must succeed */
++	em = btrfs_get_extent(BTRFS_I(inode), NULL, 0, offset, PAGE_SIZE);
++	if (!em)
++		return -EINVAL;
 +
-+	if (btrfs_root_flags(&root->root_item) & BTRFS_ROOT_SUBVOL_FSCRYPT) {
-+		inode = btrfs_iget(inode->i_sb, BTRFS_FIRST_FREE_OBJECTID,
-+				   root);
-+		if (IS_ERR(inode))
-+			return PTR_ERR(inode);
-+		put_inode = inode;
++	if (em->block_start == EXTENT_MAP_HOLE) {
++		btrfs_info(BTRFS_I(inode)->root->fs_info,
++			   "extent context requested for block %llu of inode %lu without an extent",
++			   lblk_num, inode->i_ino);
++		free_extent_map(em);
++		return -ENOENT;
 +	}
 +
-+	path = btrfs_alloc_path();
-+	if (!path)
-+		return -ENOMEM;
++	ret = ctx ? em->fscrypt_context.len : 0;
 +
-+	ret = btrfs_search_slot(NULL, BTRFS_I(inode)->root, &key, path, 0, 0);
-+	if (ret) {
-+		len = -EINVAL;
-+		goto out;
-+	}
++	if (ctx)
++		memcpy(ctx, em->fscrypt_context.buffer,
++		       em->fscrypt_context.len);
 +
-+	leaf = path->nodes[0];
-+	ptr = btrfs_item_ptr_offset(leaf, path->slots[0]);
-+	/* fscrypt provides max context length, but it could be less */
-+	len = min_t(size_t, len, btrfs_item_size(leaf, path->slots[0]));
-+	read_extent_buffer(leaf, ctx, ptr, len);
++	if (extent_offset)
++		*extent_offset
++			 = (offset - em->start) >> inode->i_blkbits;
 +
-+out:
-+	btrfs_free_path(path);
-+	iput(put_inode);
-+	return len;
-+}
++	if (extent_length)
++		*extent_length = em->len >> inode->i_blkbits;
 +
-+static void btrfs_fscrypt_update_context(struct btrfs_path *path,
-+					 const void *ctx, size_t len)
-+{
-+	struct extent_buffer *leaf = path->nodes[0];
-+	unsigned long ptr = btrfs_item_ptr_offset(leaf, path->slots[0]);
-+
-+	len = min_t(size_t, len, btrfs_item_size(leaf, path->slots[0]));
-+	write_extent_buffer(leaf, ctx, ptr, len);
-+	btrfs_mark_buffer_dirty(leaf);
-+}
-+
-+static int __btrfs_fscrypt_set_context(struct inode *inode,
-+				       struct btrfs_trans_handle *trans,
-+				       const void *ctx, size_t len)
-+{
-+	struct btrfs_path *path;
-+	int ret;
-+	struct btrfs_key key = {
-+		.objectid = btrfs_ino(BTRFS_I(inode)),
-+		.type = BTRFS_FSCRYPT_CTXT_ITEM_KEY,
-+		.offset = 0,
-+	};
-+
-+	path = btrfs_alloc_path();
-+	if (!path)
-+		return -ENOMEM;
-+
-+	ret = btrfs_search_slot(trans, BTRFS_I(inode)->root, &key, path, 0, 1);
-+	if (ret == 0) {
-+		btrfs_fscrypt_update_context(path, ctx, len);
-+		btrfs_free_path(path);
-+		return ret;
-+	}
-+
-+	btrfs_free_path(path);
-+	if (ret < 0)
-+		return ret;
-+
-+	ret = btrfs_insert_item(trans, BTRFS_I(inode)->root, &key, (void *) ctx, len);
-+	if (ret)
-+		return ret;
-+
-+	BTRFS_I(inode)->flags |= BTRFS_INODE_FSCRYPT_CONTEXT;
-+	btrfs_sync_inode_flags_to_i_flags(inode);
-+	inode_inc_iversion(inode);
-+	inode->i_ctime = current_time(inode);
-+	ret = btrfs_update_inode(trans, BTRFS_I(inode)->root, BTRFS_I(inode));
-+	if (!ret)
-+		return ret;
-+
-+	btrfs_abort_transaction(trans, ret);
++	free_extent_map(em);
 +	return ret;
-+}
-+
-+static int btrfs_fscrypt_set_context(struct inode *inode, const void *ctx,
-+				     size_t len, void *fs_data)
-+{
-+	struct btrfs_root *root = BTRFS_I(inode)->root;
-+	struct btrfs_trans_handle *trans;
-+	int is_subvolume = inode->i_ino == BTRFS_FIRST_FREE_OBJECTID;
-+	int ret;
-+
-+	/*
-+	 * If the whole subvolume is encrypted, we expect that all children
-+	 * have the same policy.
-+	 */
-+	if (btrfs_root_flags(&root->root_item) & BTRFS_ROOT_SUBVOL_FSCRYPT) {
-+		bool same_policy;
-+		struct inode *root_inode = NULL;
-+
-+		root_inode = btrfs_iget(inode->i_sb, BTRFS_FIRST_FREE_OBJECTID,
-+				   root);
-+		if (IS_ERR(inode))
-+			return PTR_ERR(inode);
-+		ret = fscrypt_have_same_policy(inode, root_inode, &same_policy);
-+		iput(root_inode);
-+
-+		if (ret)
-+			return ret;
-+		if (same_policy)
-+			return 0;
-+	}
-+
-+	if (fs_data) {
-+		/*
-+		 * We are setting the context as part of an existing
-+		 * transaction. This happens when we are inheriting the context
-+		 * for a new inode.
-+		 */
-+		return __btrfs_fscrypt_set_context(inode, fs_data, ctx, len);
-+	}
-+
-+	/*
-+	 * 1 for the inode item
-+	 * 1 for the fscrypt item
-+	 * 1 for the root item if the inode is a subvolume
-+	 */
-+	trans = btrfs_start_transaction(root, 2 + is_subvolume);
-+	if (IS_ERR(trans))
-+		return PTR_ERR(trans);
-+
-+	ret = __btrfs_fscrypt_set_context(inode, trans, ctx, len);
-+
-+	/*
-+	 * For new subvolumes, the root item is already initialized with
-+	 * the BTRFS_ROOT_SUBVOL_FSCRYPT flag.
-+	 */
-+	if (!ret && is_subvolume) {
-+		u64 root_flags = btrfs_root_flags(&root->root_item);
-+
-+		btrfs_set_root_flags(&root->root_item,
-+				     root_flags |
-+				     BTRFS_ROOT_SUBVOL_FSCRYPT);
-+		ret = btrfs_update_root(trans, root->fs_info->tree_root,
-+					&root->root_key,
-+					&root->root_item);
-+	}
-+
-+	btrfs_end_transaction(trans);
-+	return ret;
-+}
-+
-+static bool btrfs_fscrypt_empty_dir(struct inode *inode)
-+{
-+	return inode->i_size == BTRFS_EMPTY_DIR_SIZE;
-+}
+ }
  
- const struct fscrypt_operations btrfs_fscrypt_ops = {
-+	.key_prefix = "btrfs:",
-+	.get_context = btrfs_fscrypt_get_context,
-+	.set_context = btrfs_fscrypt_set_context,
-+	.empty_dir = btrfs_fscrypt_empty_dir,
- };
-diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
-index 6904b2228112..1be0b53abc83 100644
---- a/fs/btrfs/inode.c
-+++ b/fs/btrfs/inode.c
-@@ -6297,6 +6297,34 @@ int btrfs_new_inode_prepare(struct btrfs_new_inode_args *args,
- 	struct inode *inode = args->inode;
- 	int ret;
- 
-+	if (fscrypt_is_nokey_name(args->dentry))
-+		return -ENOKEY;
-+
-+	if (IS_ENCRYPTED(dir) &&
-+	    !(BTRFS_I(dir)->flags & BTRFS_INODE_FSCRYPT_CONTEXT)) {
-+		struct inode *root_inode;
-+		bool encrypt;
-+
-+		root_inode = btrfs_iget(inode->i_sb, BTRFS_FIRST_FREE_OBJECTID,
-+					BTRFS_I(dir)->root);
-+		if (IS_ERR(root_inode))
-+			return PTR_ERR(root_inode);
-+		/*
-+		 * TODO: perhaps instead of faking making a new dir to get a
-+		 * new context, it would be better to expose
-+		 * fscrypt_setup_encryption_info() for our use.
-+		 */
-+		ret = fscrypt_prepare_new_inode(root_inode, dir, &encrypt);
-+		if (!ret) {
-+			ret = fscrypt_set_context(dir, NULL);
-+			if (ret)
-+				fscrypt_put_encryption_info(dir);
-+		}
-+		iput(root_inode);
-+		if (ret)
-+			return ret;
-+	}
-+
- 	if (!args->orphan) {
- 		ret = fscrypt_setup_filename(dir, &args->dentry->d_name, 0,
- 					     &args->fname);
-@@ -6330,6 +6358,9 @@ int btrfs_new_inode_prepare(struct btrfs_new_inode_args *args,
- 	if (dir->i_security)
- 		(*trans_num_items)++;
- #endif
-+	/* 1 to add fscrypt item */
-+	if (args->encrypt)
-+		(*trans_num_items)++;
- 	if (args->orphan) {
- 		/* 1 to add orphan item */
- 		(*trans_num_items)++;
-@@ -6583,6 +6614,14 @@ int btrfs_create_new_inode(struct btrfs_trans_handle *trans,
- 		}
- 	}
- 
-+	if (args->encrypt) {
-+		ret = fscrypt_set_context(inode, trans);
-+		if (ret) {
-+			btrfs_abort_transaction(trans, ret);
-+			goto discard;
-+		}
-+	}
-+
- 	inode_tree_add(inode);
- 
- 	trace_btrfs_inode_new(inode);
-diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
-index 9c1cb5113178..5bb34da6ee25 100644
---- a/fs/btrfs/ioctl.c
-+++ b/fs/btrfs/ioctl.c
-@@ -669,7 +669,8 @@ static noinline int create_subvol(struct user_namespace *mnt_userns,
- 				     fs_info->nodesize);
- 	btrfs_set_stack_inode_mode(inode_item, S_IFDIR | 0755);
- 
--	btrfs_set_root_flags(root_item, 0);
-+	btrfs_set_root_flags(root_item, new_inode_args.encrypt ?
-+			     BTRFS_ROOT_SUBVOL_FSCRYPT : 0);
- 	btrfs_set_root_limit(root_item, 0);
- 	btrfs_set_stack_inode_flags(inode_item, BTRFS_INODE_ROOT_ITEM_INIT);
- 
-@@ -798,6 +799,10 @@ static int create_snapshot(struct btrfs_root *root, struct inode *dir,
- 		return -ETXTBSY;
- 	}
- 
-+	if ((btrfs_root_flags(&root->root_item) & BTRFS_ROOT_SUBVOL_FSCRYPT) &&
-+	    !IS_ENCRYPTED(dir))
-+		return -EXDEV;
-+
- 	pending_snapshot = kzalloc(sizeof(*pending_snapshot), GFP_KERNEL);
- 	if (!pending_snapshot)
- 		return -ENOMEM;
+ static int btrfs_fscrypt_set_extent_context(void *extent, void *ctx,
 diff --git a/fs/btrfs/tree-checker.c b/fs/btrfs/tree-checker.c
-index 1c2d418dda6a..77e678efef65 100644
+index e72c8176f7bc..84bdd6ca3d2b 100644
 --- a/fs/btrfs/tree-checker.c
 +++ b/fs/btrfs/tree-checker.c
-@@ -1123,6 +1123,7 @@ static int check_root_item(struct extent_buffer *leaf, struct btrfs_key *key,
- 	struct btrfs_fs_info *fs_info = leaf->fs_info;
- 	struct btrfs_root_item ri = { 0 };
- 	const u64 valid_root_flags = BTRFS_ROOT_SUBVOL_RDONLY |
-+				     BTRFS_ROOT_SUBVOL_FSCRYPT |
- 				     BTRFS_ROOT_SUBVOL_DEAD;
- 	int ret;
+@@ -276,9 +276,14 @@ static int check_extent_data_item(struct extent_buffer *leaf,
+ 			return -EUCLEAN;
+ 		}
  
-diff --git a/include/uapi/linux/btrfs_tree.h b/include/uapi/linux/btrfs_tree.h
-index 29895ffa470d..52641fdc65bc 100644
---- a/include/uapi/linux/btrfs_tree.h
-+++ b/include/uapi/linux/btrfs_tree.h
-@@ -161,6 +161,8 @@
- #define BTRFS_VERITY_DESC_ITEM_KEY	36
- #define BTRFS_VERITY_MERKLE_ITEM_KEY	37
+-		/* Compressed inline extent has no on-disk size, skip it */
+-		if (btrfs_file_extent_compression(leaf, fi) !=
+-		    BTRFS_COMPRESS_NONE)
++		/*
++		 * Compressed inline extent has no on-disk size; encrypted has
++		 * variable size; skip them
++		 */
++		if ((btrfs_file_extent_compression(leaf, fi) !=
++		     BTRFS_COMPRESS_NONE) ||
++		    (btrfs_file_extent_encryption(leaf, fi) !=
++		     BTRFS_ENCRYPTION_NONE))
+ 			return 0;
  
-+#define BTRFS_FSCRYPT_CTXT_ITEM_KEY	41
-+
- #define BTRFS_ORPHAN_ITEM_KEY		48
- /* reserve 2-15 close to the inode for later flexibility */
- 
-@@ -399,6 +401,7 @@ static inline __u8 btrfs_dir_flags_to_ftype(__u8 flags)
- #define BTRFS_INODE_NOATIME		(1U << 9)
- #define BTRFS_INODE_DIRSYNC		(1U << 10)
- #define BTRFS_INODE_COMPRESS		(1U << 11)
-+#define BTRFS_INODE_FSCRYPT_CONTEXT	(1U << 12)
- 
- #define BTRFS_INODE_ROOT_ITEM_INIT	(1U << 31)
- 
-@@ -415,6 +418,7 @@ static inline __u8 btrfs_dir_flags_to_ftype(__u8 flags)
- 	 BTRFS_INODE_NOATIME |						\
- 	 BTRFS_INODE_DIRSYNC |						\
- 	 BTRFS_INODE_COMPRESS |						\
-+	 BTRFS_INODE_FSCRYPT_CONTEXT |					\
- 	 BTRFS_INODE_ROOT_ITEM_INIT)
- 
- #define BTRFS_INODE_RO_VERITY		(1U << 0)
-@@ -860,6 +864,8 @@ struct btrfs_dir_item {
- } __attribute__ ((__packed__));
- 
- #define BTRFS_ROOT_SUBVOL_RDONLY	(1ULL << 0)
-+/* Top-level subvolume directory is encrypted with fscrypt. */
-+#define BTRFS_ROOT_SUBVOL_FSCRYPT	(1ULL << 1)
- 
- /*
-  * Internal in-memory flag that a subvolume has been marked for deletion but
-@@ -1015,6 +1021,12 @@ enum {
- 	BTRFS_NR_FILE_EXTENT_TYPES = 3,
- };
- 
-+enum {
-+	BTRFS_ENCRYPTION_NONE,
-+	BTRFS_ENCRYPTION_FSCRYPT,
-+	BTRFS_NR_ENCRYPTION_TYPES,
-+};
-+
- struct btrfs_file_extent_item {
- 	/*
- 	 * transaction id that created this extent
+ 		/* Uncompressed inline extent size must match item size */
 -- 
 2.37.3
 
