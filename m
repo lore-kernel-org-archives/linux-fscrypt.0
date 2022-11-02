@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C3AC6C4167E
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 94303C4321E
 	for <linux-fscrypt@archiver.kernel.org>; Wed,  2 Nov 2022 11:54:34 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230457AbiKBLyG (ORCPT
+        id S230425AbiKBLyE (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 2 Nov 2022 07:54:06 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49974 "EHLO
+        Wed, 2 Nov 2022 07:54:04 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:49644 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230416AbiKBLxn (ORCPT
+        with ESMTP id S230373AbiKBLxg (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 2 Nov 2022 07:53:43 -0400
+        Wed, 2 Nov 2022 07:53:36 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EFA4DBD1;
-        Wed,  2 Nov 2022 04:53:41 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 998DDBD1;
+        Wed,  2 Nov 2022 04:53:35 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 32FB681472;
-        Wed,  2 Nov 2022 07:53:41 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 0B2C781462;
+        Wed,  2 Nov 2022 07:53:34 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1667390021; bh=IQRToKMmjUM+53ysQVVAJFNybuNa5MMWtNOLXU7bfFo=;
+        t=1667390015; bh=Jzf2meALQNwbu6QzJ4+dSLFPhD/DJS2tyJYuVKeMWWQ=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=IHwVL8SIwsVVjN8x3mnvY6H51b4h6dotCyOE5K7IKz0OBFgYXHbl+YIX2O0nMwV2L
-         IXlpipTK4j0WvXot3ovsGHOomkuv1z4xsRciyKs56VWK6pIyiYZ/QBWGmEFWQMVavD
-         orVMd2CRnRjh/vvhRAncroNNcz4pYod9XC7WQg40np3GXzfqxWvAN3cXfaHx724wb3
-         A8dmY7Jsvr68m7Ki7Jv3gqkIT2xZtmtDt3gpudbvZKOHXQjye5ZQMvLozTqrDrzVOE
-         kgIXjGzOiFtTOToCFUH4X3bxPntWqJGIBkmjvNMyYuG6BGUGuDTu6eZDgczUr9Z3+B
-         jI8PYS3y0+Urw==
+        b=UTM7ZFyGslVlRBtooHK3AFRm6XB8Omg9S1Q8dpW7hO90eSEGx6tp7k3CpIxNw7msJ
+         R+H4mbyw9eFAr8jrPvyjIUZg8vMLszODtwcuTFk+E0tz0U7EZXInxhu+fKYPxlalZW
+         1u+P+ip4A7tPvPRD8CzD9F9nCNlDFHzydGyQ3dtRgX0yHPAo7EXcIoHlH2EpADtEaL
+         ei0n8ccDxH/XHkZt5wRzj5+EMjmoyIKfzoCuH/+7c7kPH9ox/lx5GCKVrzt4tQWesu
+         GdoDrrfYG9T7BpGN1IzG4UYCkNQsMeBLFB/o55lzqwuLqwWt3mAaBLwp9j+Nj1uh0g
+         gKJPF4ShZikVw==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
@@ -37,10 +37,11 @@ To:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>, linux-fscrypt@vger.kernel.org,
         linux-btrfs@vger.kernel.org, kernel-team@meta.com
-Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v5 17/18] btrfs: encrypt verity items
-Date:   Wed,  2 Nov 2022 07:53:06 -0400
-Message-Id: <746be0f68a5a9e34ae82d6484daac02826104b74.1667389116.git.sweettea-kernel@dorminy.me>
+Cc:     Omar Sandoval <osandov@osandov.com>,
+        Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Subject: [PATCH v5 14/18] btrfs: implement fscrypt ioctls
+Date:   Wed,  2 Nov 2022 07:53:03 -0400
+Message-Id: <83b95b5a864fa17384b21b26d080813151f9cb6c.1667389115.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1667389115.git.sweettea-kernel@dorminy.me>
 References: <cover.1667389115.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -49,221 +50,67 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Verity items are deemed to have sensitive information about the file
-contents, so verity items for a encrypted file should be encrypted. In
-order to make sure there are extent contexts with which to encrypt,
-encrypted verity items wait for the file data to be written before
-writing the verity items; it may be better to store a new fscrypt extent
-context with verity items.
+From: Omar Sandoval <osandov@osandov.com>
 
+These ioctls allow encryption to actually be used.
+
+The set_encryption_policy ioctl is the thing which actually turns on
+encryption, and therefore sets the ENCRYPT flag in the superblock. This
+prevents the filesystem from being loaded on older kernels.
+
+fscrypt provides CONFIG_FS_ENCRYPTION-disabled versions of all these
+functions which just return -EOPNOTSUPP, so the ioctls don't need to be
+compiled out if CONFIG_FS_ENCRYPTION isn't enabled.
+
+We could instead gate this ioctl on the superblock having the flag set,
+if we wanted to require mkfs with the encrypt flag in order to have a
+filesystem with any encryption.
+
+Signed-off-by: Omar Sandoval <osandov@osandov.com>
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/btrfs/verity.c | 124 ++++++++++++++++++++++++++++++++++++++++------
- 1 file changed, 109 insertions(+), 15 deletions(-)
+ fs/btrfs/ioctl.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
 
-diff --git a/fs/btrfs/verity.c b/fs/btrfs/verity.c
-index bf9eb693a6a7..c5784994c03e 100644
---- a/fs/btrfs/verity.c
-+++ b/fs/btrfs/verity.c
-@@ -8,6 +8,7 @@
- #include <linux/security.h>
- #include <linux/posix_acl_xattr.h>
- #include <linux/iversion.h>
-+#include <linux/fscrypt.h>
- #include <linux/fsverity.h>
- #include <linux/sched/mm.h>
- #include "messages.h"
-@@ -224,14 +225,52 @@ static int write_key_bytes(struct btrfs_inode *inode, u8 key_type, u64 offset,
- 	struct btrfs_key key;
- 	unsigned long copy_bytes;
- 	unsigned long src_offset = 0;
--	void *data;
-+	void *data_pos;
- 	int ret = 0;
-+#ifdef CONFIG_FS_ENCRYPTION
-+	struct page *ciphertext_page = NULL;
-+	char *ciphertext_buf;
-+
-+	if (IS_ENCRYPTED(&inode->vfs_inode)) {
-+		ciphertext_page = alloc_page(GFP_NOFS);
-+		if (!ciphertext_page)
-+			return -ENOMEM;
-+		ciphertext_buf = kmap_local_page(ciphertext_page);
-+	}
-+#endif /* CONFIG_FS_ENCRYPTION */
- 
- 	path = btrfs_alloc_path();
- 	if (!path)
- 		return -ENOMEM;
- 
- 	while (len > 0) {
-+		const char *data = src + src_offset;
+diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
+index a40025e18216..9869a26e36ad 100644
+--- a/fs/btrfs/ioctl.c
++++ b/fs/btrfs/ioctl.c
+@@ -4557,6 +4557,34 @@ long btrfs_ioctl(struct file *file, unsigned int
+ 		return btrfs_ioctl_get_fslabel(fs_info, argp);
+ 	case FS_IOC_SETFSLABEL:
+ 		return btrfs_ioctl_set_fslabel(file, argp);
++	case FS_IOC_SET_ENCRYPTION_POLICY: {
++		if (!IS_ENABLED(CONFIG_FS_ENCRYPTION))
++			return -EOPNOTSUPP;
++		if (sb_rdonly(fs_info->sb))
++			return -EROFS;
 +		/*
-+		 * Insert 2K at a time mostly to be friendly for smaller leaf
-+		 * size filesystems
++		 *  If we crash before we commit, nothing encrypted could have
++		 * been written so it doesn't matter whether the encrypted
++		 * state persists.
 +		 */
-+		copy_bytes = min_t(u64, len, 2048);
-+
-+#ifdef CONFIG_FS_ENCRYPTION
-+		if (ciphertext_page) {
-+			struct btrfs_fs_info *fs_info = inode->root->fs_info;
-+			u64 lblk_num = offset >> fs_info->sectorsize_bits;
-+
-+			memset(ciphertext_buf, 0, PAGE_SIZE);
-+			memcpy(ciphertext_buf, data, copy_bytes);
-+			copy_bytes = ALIGN(copy_bytes,
-+					   FSCRYPT_CONTENTS_ALIGNMENT);
-+			ret = fscrypt_encrypt_block_inplace(&inode->vfs_inode,
-+							    ciphertext_page,
-+							    copy_bytes, 0,
-+							    lblk_num,
-+							    GFP_NOFS);
-+			if (ret)
-+				break;
-+			data = ciphertext_buf;
-+		}
-+#endif /* CONFIG_FS_ENCRYPTION */
-+
- 		/* 1 for the new item being inserted */
- 		trans = btrfs_start_transaction(root, 1);
- 		if (IS_ERR(trans)) {
-@@ -243,12 +282,6 @@ static int write_key_bytes(struct btrfs_inode *inode, u8 key_type, u64 offset,
- 		key.type = key_type;
- 		key.offset = offset;
- 
--		/*
--		 * Insert 2K at a time mostly to be friendly for smaller leaf
--		 * size filesystems
--		 */
--		copy_bytes = min_t(u64, len, 2048);
--
- 		ret = btrfs_insert_empty_item(trans, root, path, &key, copy_bytes);
- 		if (ret) {
- 			btrfs_end_transaction(trans);
-@@ -257,18 +290,25 @@ static int write_key_bytes(struct btrfs_inode *inode, u8 key_type, u64 offset,
- 
- 		leaf = path->nodes[0];
- 
--		data = btrfs_item_ptr(leaf, path->slots[0], void);
--		write_extent_buffer(leaf, src + src_offset,
--				    (unsigned long)data, copy_bytes);
-+		data_pos = btrfs_item_ptr(leaf, path->slots[0], void);
-+		write_extent_buffer(leaf, data,
-+				    (unsigned long)data_pos, copy_bytes);
- 		offset += copy_bytes;
- 		src_offset += copy_bytes;
--		len -= copy_bytes;
-+		len -= min_t(u64, copy_bytes, len);
- 
- 		btrfs_release_path(path);
- 		btrfs_end_transaction(trans);
- 	}
- 
- 	btrfs_free_path(path);
-+#ifdef CONFIG_FS_ENCRYPTION
-+	if (ciphertext_page) {
-+		kunmap_local(ciphertext_buf);
-+		__free_page(ciphertext_page);
++		btrfs_set_fs_incompat(fs_info, ENCRYPT);
++		return fscrypt_ioctl_set_policy(file, (const void __user *)arg);
 +	}
-+#endif /* CONFIG_FS_ENCRYPTION */
-+
- 	return ret;
- }
- 
-@@ -310,6 +350,17 @@ static int read_key_bytes(struct btrfs_inode *inode, u8 key_type, u64 offset,
- 	void *data;
- 	char *kaddr = dest;
- 	int ret;
-+#ifdef CONFIG_FS_ENCRYPTION
-+	char *ciphertext_buf;
-+	struct page *ciphertext_page = NULL;
-+
-+	if (dest && IS_ENCRYPTED(&inode->vfs_inode)) {
-+		ciphertext_page = alloc_page(GFP_NOFS);
-+		if (!ciphertext_page)
-+			return -ENOMEM;
-+		ciphertext_buf = kmap_local_page(ciphertext_page);
-+	}
-+#endif /* CONFIG_FS_ENCRYPTION */
- 
- 	path = btrfs_alloc_path();
- 	if (!path)
-@@ -371,14 +422,41 @@ static int read_key_bytes(struct btrfs_inode *inode, u8 key_type, u64 offset,
- 		/* Offset from the start of item for copying */
- 		copy_offset = offset - key.offset;
- 
-+		data = btrfs_item_ptr(leaf, path->slots[0], void);
- 		if (dest) {
-+#ifdef CONFIG_FS_ENCRYPTION
-+			if (ciphertext_page) {
-+				struct btrfs_fs_info *fs_info =
-+					inode->root->fs_info;
-+				u64 lblk_num = offset >> fs_info->sectorsize_bits;
-+
-+				read_extent_buffer(leaf, ciphertext_buf,
-+						   (unsigned long)data + copy_offset,
-+						   item_end - offset);
-+				ret = fscrypt_decrypt_block_inplace(&inode->vfs_inode,
-+								    ciphertext_page,
-+								    item_end - offset, 0,
-+								    lblk_num);
-+				if (ret)
-+					break;
-+			}
-+#endif /* CONFIG_FS_ENCRYPTION */
-+
- 			if (dest_page)
- 				kaddr = kmap_local_page(dest_page);
- 
--			data = btrfs_item_ptr(leaf, path->slots[0], void);
--			read_extent_buffer(leaf, kaddr + dest_offset,
--					   (unsigned long)data + copy_offset,
--					   copy_bytes);
-+			if (IS_ENABLED(CONFIG_FS_ENCRYPTION) &&
-+			    IS_ENCRYPTED(&inode->vfs_inode)) {
-+#ifdef CONFIG_FS_ENCRYPTION
-+				memcpy(kaddr + dest_offset,
-+				       ciphertext_buf + copy_offset,
-+				       copy_bytes);
-+#endif /* CONFIG_FS_ENCRYPTION */
-+			} else {
-+				read_extent_buffer(leaf, kaddr + dest_offset,
-+						   (unsigned long)data + copy_offset,
-+						   copy_bytes);
-+			}
- 
- 			if (dest_page)
- 				kunmap_local(kaddr);
-@@ -405,6 +483,12 @@ static int read_key_bytes(struct btrfs_inode *inode, u8 key_type, u64 offset,
- 		}
- 	}
- out:
-+#ifdef CONFIG_FS_ENCRYPTION
-+	if (ciphertext_page) {
-+		kunmap_local(ciphertext_buf);
-+		__free_page(ciphertext_page);
-+	}
-+#endif /* CONFIG_FS_ENCRYPTION */
- 	btrfs_free_path(path);
- 	if (!ret)
- 		ret = copied;
-@@ -601,6 +685,16 @@ static int btrfs_begin_enable_verity(struct file *filp)
- 	if (ret)
- 		return ret;
- 
-+	if (IS_ENCRYPTED(file_inode(filp))) {
-+		/*
-+		 * Make sure the data has been written (so that we can reuse
-+		 * its encryption info to encrypt verity items).
-+		 */
-+		ret = btrfs_wait_ordered_range(file_inode(filp), 0, (u64)-1);
-+		if (ret)
-+			return ret;
-+	}
-+
- 	/* 1 for the orphan item */
- 	trans = btrfs_start_transaction(root, 1);
- 	if (IS_ERR(trans))
++	case FS_IOC_GET_ENCRYPTION_POLICY:
++		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		return fscrypt_ioctl_add_key(file, (void __user *)arg);
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		return fscrypt_ioctl_remove_key(file, (void __user *)arg);
++	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
++		return fscrypt_ioctl_remove_key_all_users(file,
++							  (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_NONCE:
++		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
+ 	case FITRIM:
+ 		return btrfs_ioctl_fitrim(fs_info, argp);
+ 	case BTRFS_IOC_SNAP_CREATE:
 -- 
 2.37.3
 
