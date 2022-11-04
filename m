@@ -2,44 +2,43 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 711A3C4167B
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Nov 2022 20:59:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 679C9C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Nov 2022 22:55:54 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229501AbiKDU7V (ORCPT
+        id S229471AbiKDWzx (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 4 Nov 2022 16:59:21 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:52646 "EHLO
+        Fri, 4 Nov 2022 18:55:53 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34454 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229713AbiKDU7U (ORCPT
+        with ESMTP id S229523AbiKDWzx (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 4 Nov 2022 16:59:20 -0400
-Received: from sin.source.kernel.org (sin.source.kernel.org [145.40.73.55])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id ACBEE3F05F;
-        Fri,  4 Nov 2022 13:59:16 -0700 (PDT)
+        Fri, 4 Nov 2022 18:55:53 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 72A776464;
+        Fri,  4 Nov 2022 15:55:51 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by sin.source.kernel.org (Postfix) with ESMTPS id 25663CE2E3B;
-        Fri,  4 Nov 2022 20:59:15 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 51A8DC433C1;
-        Fri,  4 Nov 2022 20:59:13 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 0B5AD62262;
+        Fri,  4 Nov 2022 22:55:51 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4C279C433C1;
+        Fri,  4 Nov 2022 22:55:50 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1667595553;
-        bh=2DnjCwJhhqMLCsZwA0rRCeG/AkUzh69QXfmEHZY+dz4=;
+        s=k20201202; t=1667602550;
+        bh=gI/1/YvwK2fZ3oaZuGkDzBJJRoPGLxYviRWYBDCg+RE=;
         h=From:To:Cc:Subject:Date:From;
-        b=s4vWe4rqi2o//OUfOcniAfs3S/x0IFNiVZfbLlQBCRYHeHPkckFKcqYbgGv9P2LbQ
-         VlwGPs1jz+tc1NsWWnUumXAXeqf+8HLNBuj2C18T+GVrARcIYNY4+tGGb8u7bEod6x
-         6WDt7JgDqjDqUvUegf6QxE1kieXVob+M6AB/Q6CdON2lPA4iXsDcmqVZ05Mr9AFDaW
-         Mo9eoSrq/ro106rFUfhvgS4pjzjlwb0VmLCPIWxGIcg5/75FEEd9ZoINOhLx0Zee1Y
-         IubOeAp0vj5Lz4F39ls4vQxXPT8AkVnnN3EA4LMtITiTb9acgw33O2cn77nMQnD5D2
-         VQ0hxx99vvO4w==
+        b=QBAOqtdaI8TNbeVd/cv2xpy9SMCXByjm+ycQNcqwkol9G53u4A4ZiJ/Dpzn4olCz0
+         CAxSxlb1dK3K73zDP5fhl6McsMHcyL1ifCRyvkoFhhvbNj89Z7BA9yR4ycBJNsYcqK
+         scrag3Dx83rir/9NrkcNup/ufZhtVIVi8qArxa8h3hpxE8OuqmLFYoeSedKqVCMepJ
+         RCIexjc0fFDTF7MYCXYXou9UocBINnY1miiw8OIDq7ORPZOyx2KDmgF1XUzV7VLK1r
+         pgZi8fMuT6K9LjtWQ2yPDpy5CqcWKtbpFvW9OY/evU2tOlDaOiMxRYrbvb2HNo/BEu
+         Ev1oW/lZE82YQ==
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     fstests@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org,
-        Andrey Albershteyn <aalbersh@redhat.com>
-Subject: [xfstests PATCH v2 0/3] Fix test bugs related to fs.verity.require_signatures
-Date:   Fri,  4 Nov 2022 13:58:27 -0700
-Message-Id: <20221104205830.130132-1-ebiggers@kernel.org>
+To:     stable@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org
+Subject: [PATCH 6.0 0/2] fscrypt fixes for stable
+Date:   Fri,  4 Nov 2022 15:54:37 -0700
+Message-Id: <20221104225439.338239-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.38.1
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -47,30 +46,24 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This is a replacement for Andrey's patchset
-"generic/577: fix hash check and add metadata cleaning".
-It handles some other things that were overlooked.
+Please apply these to 6.0-stable.
 
-Changed v1 => v2:
-   - Slight code simplification (kept check for require_signatures
-     existence in _disable_fsverity_signatures() only)
-   - Added Reviewed-by tags
+Eric Biggers (2):
+  fscrypt: stop using keyrings subsystem for fscrypt_master_key
+  fscrypt: fix keyring memory leak on mount failure
 
-Eric Biggers (3):
-  common/verity: fix _fsv_have_hash_algorithm() with required signatures
-  generic/577: add missing file removal before empty file test
-  tests: fix some tests for systems with fs.verity.require_signatures=1
-
- common/verity     | 58 ++++++++++++++++++++++++++++++-----------------
- tests/btrfs/290   |  9 ++++++++
- tests/btrfs/291   |  2 ++
- tests/generic/577 |  1 +
- tests/generic/624 |  8 +++++++
- tests/generic/692 |  8 +++++++
- 6 files changed, 65 insertions(+), 21 deletions(-)
+ fs/crypto/fscrypt_private.h |  71 ++++--
+ fs/crypto/hooks.c           |  10 +-
+ fs/crypto/keyring.c         | 491 +++++++++++++++++++-----------------
+ fs/crypto/keysetup.c        |  81 +++---
+ fs/crypto/policy.c          |   8 +-
+ fs/super.c                  |   3 +-
+ include/linux/fs.h          |   2 +-
+ include/linux/fscrypt.h     |   4 +-
+ 8 files changed, 359 insertions(+), 311 deletions(-)
 
 
-base-commit: a75c5f50584e03ca7862ad51f48efd2d524d1dc5
+base-commit: 3a2fa3c01fc7c2183eb3278bd912e5bcec20eb2a
 -- 
 2.38.1
 
