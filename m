@@ -2,80 +2,112 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 846E7C4167E
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Nov 2022 06:48:46 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B49A7C433FE
+	for <linux-fscrypt@archiver.kernel.org>; Fri,  4 Nov 2022 07:23:13 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231637AbiKDGsp (ORCPT
+        id S231493AbiKDHXN (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 4 Nov 2022 02:48:45 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36768 "EHLO
+        Fri, 4 Nov 2022 03:23:13 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51856 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231642AbiKDGsA (ORCPT
+        with ESMTP id S231490AbiKDHXM (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 4 Nov 2022 02:48:00 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B76E32B266;
-        Thu,  3 Nov 2022 23:47:58 -0700 (PDT)
+        Fri, 4 Nov 2022 03:23:12 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id AD346DF51;
+        Fri,  4 Nov 2022 00:23:11 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 72F07B82B45;
-        Fri,  4 Nov 2022 06:47:57 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1278CC433D7;
-        Fri,  4 Nov 2022 06:47:56 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 710C5B82B41;
+        Fri,  4 Nov 2022 07:23:10 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id D4D54C433D6;
+        Fri,  4 Nov 2022 07:23:08 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1667544476;
-        bh=dJSEu0lKsb2RDpf3fl/Ist4zPInufhx9O+WauiS9WhA=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=LjlxH85/NedKsuXVnTkh8+1DAbK841cz34G0JMLTMQkBycZtiQkCUtvCPrG7abf2N
-         smMozBoqA5oNlXbHDNXQgsd1YQETmSbDRLjuDL7cyduxqxE5OikAaArXtr3CVJZMV+
-         gxR8w3NQpbN1Z+b32RSTntRtV12QKFQhbEPeF5N3bLREHiH/KOzmpivKLAhlQkSW1C
-         lRebOtSFZjB5nnEMqFwsmDnABkmsUrsz4YuAFkWPhK6pIfI6AofTp+vUDp11JvuPR+
-         VlAwl40mg+EzaZu4jwHbqe1qoW7cSF8Juy49X2ZopNzzriOUQXYCB/bczlG80iUHij
-         Gg5dCuGhtFkQw==
+        s=k20201202; t=1667546589;
+        bh=eSuuH9/oUtk/WtNsMhQHynTS3lzvAy6kg0GggGpltfQ=;
+        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+        b=Skak6zHOpyfHS3AN62zTx4FcXcyFdQVkTaEs5VPTldbAve0m9Vp40ff1uGgmWSGEK
+         H75OOWMCOHZp5G/WrdinbPjch72hLdY+5pheETQrLz84gDN/uyTDfdeaz5u/A1Wvpj
+         kCfkFj51eyrbfJlqmjwkGA6ZTti0BgBGCx4z0Hdu40wqYa4w1I+PdcNJrYlqXKW/PU
+         yXDIaSNm/+SOMLhkjLD53P9dLoqrYO2ViFGIAX4rJnP8k7nyoHiEJ12JmHb+mKWq3X
+         ZoWtD4oiU3k1zZlvGMxtmhK2wlv1hmsBi7nxpVvVS6cpHuMdG2FThAVTxsI+64QyTg
+         q3h4MYrSdJwyA==
+Date:   Fri, 4 Nov 2022 00:23:07 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     fstests@vger.kernel.org
-Cc:     Andrey Albershteyn <aalbersh@redhat.com>,
-        linux-fscrypt@vger.kernel.org
-Subject: [xfstests PATCH 2/3] generic/577: add missing file removal before empty file test
-Date:   Thu,  3 Nov 2022 23:47:41 -0700
-Message-Id: <20221104064742.167326-3-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.38.1
-In-Reply-To: <20221104064742.167326-1-ebiggers@kernel.org>
-References: <20221104064742.167326-1-ebiggers@kernel.org>
+To:     Christoph Hellwig <hch@lst.de>
+Cc:     Jens Axboe <axboe@kernel.dk>, Mike Snitzer <snitzer@kernel.org>,
+        "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>, dm-devel@redhat.com,
+        linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH 2/2] blk-crypto: add a blk_crypto_cfg_supported helper
+Message-ID: <Y2S927PXuEYM7xwJ@sol.localdomain>
+References: <20221104054621.628369-1-hch@lst.de>
+ <20221104054621.628369-3-hch@lst.de>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20221104054621.628369-3-hch@lst.de>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Fri, Nov 04, 2022 at 06:46:21AM +0100, Christoph Hellwig wrote:
+> Add a blk_crypto_cfg_supported helper that wraps
+> __blk_crypto_cfg_supported to retreive the crypto_profile from the
+> request queue.
+> 
+> Signed-off-by: Christoph Hellwig <hch@lst.de>
+> ---
+>  block/blk-crypto-profile.c         |  7 +++++++
+>  block/blk-crypto.c                 | 13 ++++---------
+>  fs/crypto/inline_crypt.c           |  4 +---
+>  include/linux/blk-crypto-profile.h |  2 ++
+>  4 files changed, 14 insertions(+), 12 deletions(-)
+> 
+> diff --git a/block/blk-crypto-profile.c b/block/blk-crypto-profile.c
+> index 96c511967386d..e8a0a3457fa29 100644
+> --- a/block/blk-crypto-profile.c
+> +++ b/block/blk-crypto-profile.c
+> @@ -353,6 +353,13 @@ bool __blk_crypto_cfg_supported(struct blk_crypto_profile *profile,
+>  	return true;
+>  }
+>  
+> +bool blk_crypto_cfg_supported(struct block_device *bdev,
+> +			      const struct blk_crypto_config *cfg)
+> +{
+> +	return __blk_crypto_cfg_supported(bdev_get_queue(bdev)->crypto_profile,
+> +					  cfg);
+> +}
 
-The fix for _fsv_have_hash_algorithm() exposed a bug where one of the
-test cases in generic/577 isn't deleting the file from the previous test
-case before it tries to write to it.  That causes a failure, since due
-to the fix for _fsv_have_hash_algorithm(), the file from the previous
-test case now ends up with verity enabled and therefore cannot be
-written to.  Fix this by deleting the file.
+I think this part is too confusing, because there's already a function
+blk_crypto_config_supported() which does something slightly different.
 
-Reported-by: Andrey Albershteyn <aalbersh@redhat.com>
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/577 | 1 +
- 1 file changed, 1 insertion(+)
+How about calling this blk_crypto_config_supported_natively() instead?  It's
+kind of long, but it's much clearer.
 
-diff --git a/tests/generic/577 b/tests/generic/577
-index 98c3888f..5f7e0573 100755
---- a/tests/generic/577
-+++ b/tests/generic/577
-@@ -121,6 +121,7 @@ if _fsv_have_hash_algorithm sha512 $fsv_file; then
- fi
- 
- echo -e "\n# Testing empty file"
-+rm -f $fsv_file
- echo -n > $fsv_file
- _fsv_sign $fsv_file $sigfile.emptyfile --key=$keyfile --cert=$certfile | \
- 		_filter_scratch
--- 
-2.38.1
+Also, it should be defined in blk-crypto.c, next to
+blk_crypto_config_supported(), and not in blk-crypto-profile.c.
+(And declared in blk-crypto.h, not blk-crypto-profile.h.)
 
+This would also make it so that fs/crypto/inline_crypt.c could go back to
+including blk-crypto.h instead of blk-crypto-profile.h.  blk-crypto.h is
+supposed to be the interface to upper layers, not blk-crypto-profile.h.
+
+So, something like this:
+
+	bool blk_crypto_config_supported(struct block_device *bdev,
+					 const struct blk_crypto_config *cfg)
+	{
+		return IS_ENABLED(CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK) ||
+		       blk_crypto_config_supported_natively(bdev, cfg);
+	}
+
+	bool blk_crypto_config_supported_natively(struct block_device *bdev,
+						  const struct blk_crypto_config *cfg)
+	{
+		return __blk_crypto_cfg_supported(bdev_get_queue(bdev)->crypto_profile,
+						  cfg);
+	}
+
+- Eric
