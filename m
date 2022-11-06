@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id BAA2FC4167D
-	for <linux-fscrypt@archiver.kernel.org>; Sun,  6 Nov 2022 22:52:44 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3CBB2C433FE
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  6 Nov 2022 22:52:46 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230263AbiKFWwm (ORCPT
+        id S230273AbiKFWwo (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 6 Nov 2022 17:52:42 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:60812 "EHLO
+        Sun, 6 Nov 2022 17:52:44 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:60832 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230245AbiKFWwi (ORCPT
+        with ESMTP id S230254AbiKFWwj (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 6 Nov 2022 17:52:38 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 7BADB101D2;
-        Sun,  6 Nov 2022 14:52:37 -0800 (PST)
+        Sun, 6 Nov 2022 17:52:39 -0500
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 12DB210066;
+        Sun,  6 Nov 2022 14:52:38 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 2E866B80D44;
+        by ams.source.kernel.org (Postfix) with ESMTPS id BC3A7B80D48;
         Sun,  6 Nov 2022 22:52:36 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id B2410C43470;
-        Sun,  6 Nov 2022 22:52:34 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 490E0C433D7;
+        Sun,  6 Nov 2022 22:52:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1667775154;
-        bh=CwmSnIVpI76sT1bVYr4KtSadFui5lOLyxo/0xcTMzvM=;
+        s=k20201202; t=1667775155;
+        bh=EIFImRJhrHvC8VtkQyKQx9/usgbKtcApLH9PflVR6ro=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=oBo4YwohcKJ5Gb6zL8JUxCqqN1OeCSUWe56m8LQPgE9nA1BwcMF2ajlxVC84lLaYN
-         66KgWzMujwx08uOiOpJrgxkKW4+DnQEPDGlM4zDf6RF4kmijM4UP8ztW4d4jkxmtmy
-         KFv2f0+Wtx37B3QxKBmqMvG+Rf+dJUSeI0jfh663vnyZ0TOU9gA8rXUFCcbKW0xht8
-         2y06T0kVTNNbC7K8zwxIV6u+f2txcyoPdu7SGXSfBQDAc4pMnF2wA+6BT/RnQknqgk
-         KcpNY7q01RqrLIgPxUblIWsv9advemqEIj2raLjOvMp2+XDeLFOMzKU/TLqFkZe9XM
-         amHczqSnk0XwQ==
+        b=ISxGsSh3CkCLD5k/9Tnptc/FFGkWScPpqL/1pmJEf47qd4E+FmggXpsrEzdy4R3JV
+         YkZK0JYgzvrS6KMiMEO/MZ4znTam7I9f3Qpx6tSOD0mh4I1WrEvfHN9RZfqqB0kh4D
+         BKVv+HN0jrOIfPwud6/uB5yoxzH6LgYkEXz5I5YE7k7qH321i5rFZIsgBlVnibe6tY
+         R+74Dlq8VzTmz122GTwoD5tzvdckpNdcRqcUuKWM9qf/KUxOBr87sTE2FUB3q7oAyO
+         4uMfWxIYVbfv6DuAAvbQfV/mSDJ/zZlfsw4yyPN4JQDso9y0ck+987xKL2nbD03k6k
+         5bhOsmIUYvjVg==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-ext4@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org,
         Harshad Shirwadkar <harshadshirwadkar@gmail.com>,
         stable@vger.kernel.org
-Subject: [PATCH 4/7] ext4: add missing validation of fast-commit record lengths
-Date:   Sun,  6 Nov 2022 14:48:38 -0800
-Message-Id: <20221106224841.279231-5-ebiggers@kernel.org>
+Subject: [PATCH 6/7] ext4: fix off-by-one errors in fast-commit block filling
+Date:   Sun,  6 Nov 2022 14:48:40 -0800
+Message-Id: <20221106224841.279231-7-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.38.1
 In-Reply-To: <20221106224841.279231-1-ebiggers@kernel.org>
 References: <20221106224841.279231-1-ebiggers@kernel.org>
@@ -52,95 +52,162 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Validate the inode and filename lengths in fast-commit journal records
-so that a malicious fast-commit journal cannot cause a crash by having
-invalid values for these.  Also validate EXT4_FC_TAG_DEL_RANGE.
+Due to several different off-by-one errors, or perhaps due to a late
+change in design that wasn't fully reflected in the code that was
+actually merged, there are several very strange constraints on how
+fast-commit blocks are filled with tlv entries:
+
+- tlvs must start at least 10 bytes before the end of the block, even
+  though the minimum tlv length is 8.  Otherwise, the replay code will
+  ignore them.  (BUG: ext4_fc_reserve_space() could violate this
+  requirement if called with a len of blocksize - 9 or blocksize - 8.
+  Fortunately, this doesn't seem to happen currently.)
+
+- tlvs must end at least 1 byte before the end of the block.  Otherwise
+  the replay code will consider them to be invalid.  This quirk
+  contributed to a bug (fixed by an earlier commit) where uninitialized
+  memory was being leaked to disk in the last byte of blocks.
+
+Also, strangely these constraints don't apply to the replay code in
+e2fsprogs, which will accept any tlvs in the blocks (with no bounds
+checks at all, but that is a separate issue...).
+
+Given that this all seems to be a bug, let's fix it by just filling
+blocks with tlv entries in the natural way.
+
+Note that old kernels will be unable to replay fast-commit journals
+created by kernels that have this commit.
 
 Fixes: aa75f4d3daae ("ext4: main fast-commit commit path")
 Cc: <stable@vger.kernel.org> # v5.10+
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/ext4/fast_commit.c | 38 +++++++++++++++++++-------------------
- fs/ext4/fast_commit.h |  2 +-
- 2 files changed, 20 insertions(+), 20 deletions(-)
+ fs/ext4/fast_commit.c | 66 +++++++++++++++++++++----------------------
+ 1 file changed, 33 insertions(+), 33 deletions(-)
 
 diff --git a/fs/ext4/fast_commit.c b/fs/ext4/fast_commit.c
-index 1e8be05542396..d5ad4b2b235d6 100644
+index 892fa7c7a768b..7ed71c652f67f 100644
 --- a/fs/ext4/fast_commit.c
 +++ b/fs/ext4/fast_commit.c
-@@ -1991,32 +1991,31 @@ void ext4_fc_replay_cleanup(struct super_block *sb)
- 	kfree(sbi->s_fc_replay_state.fc_modified_inodes);
- }
+@@ -714,43 +714,43 @@ static u8 *ext4_fc_reserve_space(struct super_block *sb, int len, u32 *crc)
+ 	struct buffer_head *bh;
+ 	int bsize = sbi->s_journal->j_blocksize;
+ 	int ret, off = sbi->s_fc_bytes % bsize;
+-	int pad_len;
++	int remaining;
+ 	u8 *dst;
  
--static inline bool ext4_fc_tag_len_isvalid(struct ext4_fc_tl *tl,
--					   u8 *val, u8 *end)
-+static bool ext4_fc_value_len_isvalid(struct ext4_sb_info *sbi,
-+				      int tag, int len)
- {
--	if (val + tl->fc_len > end)
--		return false;
--
--	/* Here only check ADD_RANGE/TAIL/HEAD which will read data when do
--	 * journal rescan before do CRC check. Other tags length check will
--	 * rely on CRC check.
--	 */
--	switch (tl->fc_tag) {
-+	switch (tag) {
- 	case EXT4_FC_TAG_ADD_RANGE:
--		return (sizeof(struct ext4_fc_add_range) == tl->fc_len);
--	case EXT4_FC_TAG_TAIL:
--		return (sizeof(struct ext4_fc_tail) <= tl->fc_len);
--	case EXT4_FC_TAG_HEAD:
--		return (sizeof(struct ext4_fc_head) == tl->fc_len);
-+		return len == sizeof(struct ext4_fc_add_range);
- 	case EXT4_FC_TAG_DEL_RANGE:
-+		return len == sizeof(struct ext4_fc_del_range);
-+	case EXT4_FC_TAG_CREAT:
- 	case EXT4_FC_TAG_LINK:
- 	case EXT4_FC_TAG_UNLINK:
--	case EXT4_FC_TAG_CREAT:
-+		len -= sizeof(struct ext4_fc_dentry_info);
-+		return len >= 1 && len <= EXT4_NAME_LEN;
- 	case EXT4_FC_TAG_INODE:
-+		len -= sizeof(struct ext4_fc_inode);
-+		return len >= EXT4_GOOD_OLD_INODE_SIZE &&
-+			len <= sbi->s_inode_size;
- 	case EXT4_FC_TAG_PAD:
--	default:
--		return true;
-+		return true; /* padding can have any length */
-+	case EXT4_FC_TAG_TAIL:
-+		return len >= sizeof(struct ext4_fc_tail);
-+	case EXT4_FC_TAG_HEAD:
-+		return len == sizeof(struct ext4_fc_head);
+ 	/*
+-	 * After allocating len, we should have space at least for a 0 byte
+-	 * padding.
++	 * If 'len' is too long to fit in any block alongside a PAD tlv, then we
++	 * cannot fulfill the request.
+ 	 */
+-	if (len + EXT4_FC_TAG_BASE_LEN > bsize)
++	if (len > bsize - EXT4_FC_TAG_BASE_LEN)
+ 		return NULL;
+ 
+-	if (bsize - off - 1 > len + EXT4_FC_TAG_BASE_LEN) {
+-		/*
+-		 * Only allocate from current buffer if we have enough space for
+-		 * this request AND we have space to add a zero byte padding.
+-		 */
+-		if (!sbi->s_fc_bh) {
+-			ret = jbd2_fc_get_buf(EXT4_SB(sb)->s_journal, &bh);
+-			if (ret)
+-				return NULL;
+-			sbi->s_fc_bh = bh;
+-		}
+-		sbi->s_fc_bytes += len;
+-		return sbi->s_fc_bh->b_data + off;
++	if (!sbi->s_fc_bh) {
++		ret = jbd2_fc_get_buf(EXT4_SB(sb)->s_journal, &bh);
++		if (ret)
++			return NULL;
++		sbi->s_fc_bh = bh;
  	}
-+	return false;
+-	/* Need to add PAD tag */
+ 	dst = sbi->s_fc_bh->b_data + off;
++
++	/*
++	 * Allocate the bytes in the current block if we can do so while still
++	 * leaving enough space for a PAD tlv.
++	 */
++	remaining = bsize - EXT4_FC_TAG_BASE_LEN - off;
++	if (len <= remaining) {
++		sbi->s_fc_bytes += len;
++		return dst;
++	}
++
++	/*
++	 * Else, terminate the current block with a PAD tlv, then allocate a new
++	 * block and allocate the bytes at the start of that new block.
++	 */
++
+ 	tl.fc_tag = cpu_to_le16(EXT4_FC_TAG_PAD);
+-	pad_len = bsize - off - 1 - EXT4_FC_TAG_BASE_LEN;
+-	tl.fc_len = cpu_to_le16(pad_len);
++	tl.fc_len = cpu_to_le16(remaining);
+ 	ext4_fc_memcpy(sb, dst, &tl, EXT4_FC_TAG_BASE_LEN, crc);
+-	dst += EXT4_FC_TAG_BASE_LEN;
+-	if (pad_len > 0) {
+-		ext4_fc_memzero(sb, dst, pad_len, crc);
+-		dst += pad_len;
+-	}
+-	/* Don't leak uninitialized memory in the unused last byte. */
+-	*dst = 0;
++	ext4_fc_memzero(sb, dst + EXT4_FC_TAG_BASE_LEN, remaining, crc);
+ 
+ 	ext4_fc_submit_bh(sb, false);
+ 
+@@ -758,7 +758,7 @@ static u8 *ext4_fc_reserve_space(struct super_block *sb, int len, u32 *crc)
+ 	if (ret)
+ 		return NULL;
+ 	sbi->s_fc_bh = bh;
+-	sbi->s_fc_bytes = (sbi->s_fc_bytes / bsize + 1) * bsize + len;
++	sbi->s_fc_bytes += bsize - off + len;
+ 	return sbi->s_fc_bh->b_data;
  }
  
- /*
-@@ -2079,7 +2078,8 @@ static int ext4_fc_replay_scan(journal_t *journal,
+@@ -789,7 +789,7 @@ static int ext4_fc_write_tail(struct super_block *sb, u32 crc)
+ 	off = sbi->s_fc_bytes % bsize;
+ 
+ 	tl.fc_tag = cpu_to_le16(EXT4_FC_TAG_TAIL);
+-	tl.fc_len = cpu_to_le16(bsize - off - 1 + sizeof(struct ext4_fc_tail));
++	tl.fc_len = cpu_to_le16(bsize - off + sizeof(struct ext4_fc_tail));
+ 	sbi->s_fc_bytes = round_up(sbi->s_fc_bytes, bsize);
+ 
+ 	ext4_fc_memcpy(sb, dst, &tl, EXT4_FC_TAG_BASE_LEN, &crc);
+@@ -2056,7 +2056,7 @@ static int ext4_fc_replay_scan(journal_t *journal,
+ 	state = &sbi->s_fc_replay_state;
+ 
+ 	start = (u8 *)bh->b_data;
+-	end = (__u8 *)bh->b_data + journal->j_blocksize - 1;
++	end = start + journal->j_blocksize;
+ 
+ 	if (state->fc_replay_expected_off == 0) {
+ 		state->fc_cur_tag = 0;
+@@ -2077,7 +2077,7 @@ static int ext4_fc_replay_scan(journal_t *journal,
+ 	}
+ 
+ 	state->fc_replay_expected_off++;
+-	for (cur = start; cur < end - EXT4_FC_TAG_BASE_LEN;
++	for (cur = start; cur <= end - EXT4_FC_TAG_BASE_LEN;
  	     cur = cur + EXT4_FC_TAG_BASE_LEN + tl.fc_len) {
  		ext4_fc_get_tl(&tl, cur);
  		val = cur + EXT4_FC_TAG_BASE_LEN;
--		if (!ext4_fc_tag_len_isvalid(&tl, val, end)) {
-+		if (tl.fc_len > end - val ||
-+		    !ext4_fc_value_len_isvalid(sbi, tl.fc_tag, tl.fc_len)) {
- 			ret = state->fc_replay_num_tags ?
- 				JBD2_FC_REPLAY_STOP : -ECANCELED;
- 			goto out_err;
-diff --git a/fs/ext4/fast_commit.h b/fs/ext4/fast_commit.h
-index 256f2ad27204a..2fadb2c4780c8 100644
---- a/fs/ext4/fast_commit.h
-+++ b/fs/ext4/fast_commit.h
-@@ -58,7 +58,7 @@ struct ext4_fc_dentry_info {
- 	__u8 fc_dname[];
- };
+@@ -2195,9 +2195,9 @@ static int ext4_fc_replay(journal_t *journal, struct buffer_head *bh,
+ #endif
  
--/* Value structure for EXT4_FC_TAG_INODE and EXT4_FC_TAG_INODE_PARTIAL. */
-+/* Value structure for EXT4_FC_TAG_INODE. */
- struct ext4_fc_inode {
- 	__le32 fc_ino;
- 	__u8 fc_raw_inode[];
+ 	start = (u8 *)bh->b_data;
+-	end = (__u8 *)bh->b_data + journal->j_blocksize - 1;
++	end = start + journal->j_blocksize;
+ 
+-	for (cur = start; cur < end - EXT4_FC_TAG_BASE_LEN;
++	for (cur = start; cur <= end - EXT4_FC_TAG_BASE_LEN;
+ 	     cur = cur + EXT4_FC_TAG_BASE_LEN + tl.fc_len) {
+ 		ext4_fc_get_tl(&tl, cur);
+ 		val = cur + EXT4_FC_TAG_BASE_LEN;
 -- 
 2.38.1
 
