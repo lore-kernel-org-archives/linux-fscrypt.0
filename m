@@ -2,82 +2,172 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D97EFC4167E
-	for <linux-fscrypt@archiver.kernel.org>; Sun,  6 Nov 2022 22:52:39 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C865FC4167D
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  6 Nov 2022 22:52:40 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230207AbiKFWwi (ORCPT
+        id S230249AbiKFWwi (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Sun, 6 Nov 2022 17:52:38 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:60774 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:60790 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230214AbiKFWwh (ORCPT
+        with ESMTP id S230080AbiKFWwh (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Sun, 6 Nov 2022 17:52:37 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 772F81005E;
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B77EB10066;
         Sun,  6 Nov 2022 14:52:36 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 29BCAB80D42;
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 49BF660CA3;
+        Sun,  6 Nov 2022 22:52:36 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 8F08DC433C1;
         Sun,  6 Nov 2022 22:52:35 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 90AEAC433D6;
-        Sun,  6 Nov 2022 22:52:33 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1667775153;
-        bh=5co5XEYnUIjBEHcTDXg4FnklrEFDaO2M2XUSJYBofYk=;
-        h=From:To:Cc:Subject:Date:From;
-        b=N97gUcaXbS9QGKdoJhW+xzcO3TJWPSUkyfRaa59RYe0aH85R9I0Dfg3hZCVxWSCRO
-         rl8Ylr+TbnkeetPpe4kY2oTdHGUPJE2dp3LkldFvmJ7oGi6vRIaXMzR0HeAHTxICMV
-         q1ajk7w5bRF+bs1igHHaeWkFHSAHfaDMv2wWBNszcEtKOOhCpOV7CU/3jXWPfpzDTX
-         LRhEvCnyNKIrKyrHV4voecIrdxWkPAVku1SExg3/Ulx9nJ7Q8lt5+tV4OrpsFu1Ptl
-         pZqwIEphTRc9U8Kgb5bPJloaVv5ITwB7quzTixlCQoT8dhApKAM2DLhyt83aoL3ts8
-         x1tUIzna1kCzA==
+        s=k20201202; t=1667775155;
+        bh=FTMJf9tJaJ+vA5K6ogaxVdllbIlkNpkMhDKCwzVAMTI=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=j6DpbLjh0MDYXje2DnvKkE0b0IgFXNnQKbokuy7FqMwaUefDJlYBxiHBqkJwuFMKz
+         82a6Sdl+Jb91jpW8T1SrjXZnQl0X1FkY1A2w2XL/MNZ0+snArcf90WlHgx1GunSnGw
+         z5bhCV3MYHusUGe6RSGpbRbRaiQHGc1gHe+Y4ugl5HbH77ovqYuEdINTnKdlZ4Dyf4
+         djxCH9rJ0Ip7i5sxqgiNaw61PEXmop3APhFxcdDpw9N4XTHZYGFNId/gX2oyEH8ANL
+         na8NieMMxJRBREdlNG3hOODNF7DlCx8MMJXEVmeW7O3xf46BFblVvdQaSB65qdyJxU
+         Yzxf6por18WfQ==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-ext4@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org,
         Harshad Shirwadkar <harshadshirwadkar@gmail.com>
-Subject: [PATCH 0/7] ext4 fast-commit fixes
-Date:   Sun,  6 Nov 2022 14:48:34 -0800
-Message-Id: <20221106224841.279231-1-ebiggers@kernel.org>
+Subject: [PATCH 7/7] ext4: simplify fast-commit CRC calculation
+Date:   Sun,  6 Nov 2022 14:48:41 -0800
+Message-Id: <20221106224841.279231-8-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.38.1
+In-Reply-To: <20221106224841.279231-1-ebiggers@kernel.org>
+References: <20221106224841.279231-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@kernel.org
+From: Eric Biggers <ebiggers@google.com>
 
-This series fixes several bugs in the fast-commit feature.
+Instead of checksumming each field as it is added to the block, just
+checksum each block before it is written.  This is simpler, and also
+much more efficient.
 
-Patch 6 may be the most controversial patch of this series, since it
-would make old kernels unable to replay fast-commit journals created by
-new kernels.  I'd appreciate any thoughts on whether that's okay.  I can
-drop that patch if needed.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ext4/fast_commit.c | 54 +++++++++++++------------------------------
+ 1 file changed, 16 insertions(+), 38 deletions(-)
 
-I've tested that this series doesn't introduce any regressions with
-'gce-xfstests -c ext4/fast_commit -g auto'.  Note that ext4/039,
-ext4/053, and generic/475 fail both before and after.
-
-Eric Biggers (7):
-  ext4: disable fast-commit of encrypted dir operations
-  ext4: don't set up encryption key during jbd2 transaction
-  ext4: fix leaking uninitialized memory in fast-commit journal
-  ext4: add missing validation of fast-commit record lengths
-  ext4: fix unaligned memory access in ext4_fc_reserve_space()
-  ext4: fix off-by-one errors in fast-commit block filling
-  ext4: simplify fast-commit CRC calculation
-
- fs/ext4/ext4.h              |   4 +-
- fs/ext4/fast_commit.c       | 203 ++++++++++++++++++------------------
- fs/ext4/fast_commit.h       |   3 +-
- fs/ext4/namei.c             |  44 ++++----
- include/trace/events/ext4.h |   7 +-
- 5 files changed, 132 insertions(+), 129 deletions(-)
-
-
-base-commit: 089d1c31224e6b266ece3ee555a3ea2c9acbe5c2
+diff --git a/fs/ext4/fast_commit.c b/fs/ext4/fast_commit.c
+index 7ed71c652f67f..1da85f6261166 100644
+--- a/fs/ext4/fast_commit.c
++++ b/fs/ext4/fast_commit.c
+@@ -675,27 +675,6 @@ static void ext4_fc_submit_bh(struct super_block *sb, bool is_tail)
+ 
+ /* Ext4 commit path routines */
+ 
+-/* memcpy to fc reserved space and update CRC */
+-static void *ext4_fc_memcpy(struct super_block *sb, void *dst, const void *src,
+-				int len, u32 *crc)
+-{
+-	if (crc)
+-		*crc = ext4_chksum(EXT4_SB(sb), *crc, src, len);
+-	return memcpy(dst, src, len);
+-}
+-
+-/* memzero and update CRC */
+-static void *ext4_fc_memzero(struct super_block *sb, void *dst, int len,
+-				u32 *crc)
+-{
+-	void *ret;
+-
+-	ret = memset(dst, 0, len);
+-	if (crc)
+-		*crc = ext4_chksum(EXT4_SB(sb), *crc, dst, len);
+-	return ret;
+-}
+-
+ /*
+  * Allocate len bytes on a fast commit buffer.
+  *
+@@ -749,8 +728,9 @@ static u8 *ext4_fc_reserve_space(struct super_block *sb, int len, u32 *crc)
+ 
+ 	tl.fc_tag = cpu_to_le16(EXT4_FC_TAG_PAD);
+ 	tl.fc_len = cpu_to_le16(remaining);
+-	ext4_fc_memcpy(sb, dst, &tl, EXT4_FC_TAG_BASE_LEN, crc);
+-	ext4_fc_memzero(sb, dst + EXT4_FC_TAG_BASE_LEN, remaining, crc);
++	memcpy(dst, &tl, EXT4_FC_TAG_BASE_LEN);
++	memset(dst + EXT4_FC_TAG_BASE_LEN, 0, remaining);
++	*crc = ext4_chksum(sbi, *crc, sbi->s_fc_bh->b_data, bsize);
+ 
+ 	ext4_fc_submit_bh(sb, false);
+ 
+@@ -792,13 +772,15 @@ static int ext4_fc_write_tail(struct super_block *sb, u32 crc)
+ 	tl.fc_len = cpu_to_le16(bsize - off + sizeof(struct ext4_fc_tail));
+ 	sbi->s_fc_bytes = round_up(sbi->s_fc_bytes, bsize);
+ 
+-	ext4_fc_memcpy(sb, dst, &tl, EXT4_FC_TAG_BASE_LEN, &crc);
++	memcpy(dst, &tl, EXT4_FC_TAG_BASE_LEN);
+ 	dst += EXT4_FC_TAG_BASE_LEN;
+ 	tail.fc_tid = cpu_to_le32(sbi->s_journal->j_running_transaction->t_tid);
+-	ext4_fc_memcpy(sb, dst, &tail.fc_tid, sizeof(tail.fc_tid), &crc);
++	memcpy(dst, &tail.fc_tid, sizeof(tail.fc_tid));
+ 	dst += sizeof(tail.fc_tid);
++	crc = ext4_chksum(sbi, crc, sbi->s_fc_bh->b_data,
++			  dst - (u8 *)sbi->s_fc_bh->b_data);
+ 	tail.fc_crc = cpu_to_le32(crc);
+-	ext4_fc_memcpy(sb, dst, &tail.fc_crc, sizeof(tail.fc_crc), NULL);
++	memcpy(dst, &tail.fc_crc, sizeof(tail.fc_crc));
+ 	dst += sizeof(tail.fc_crc);
+ 	memset(dst, 0, bsize - off); /* Don't leak uninitialized memory. */
+ 
+@@ -824,8 +806,8 @@ static bool ext4_fc_add_tlv(struct super_block *sb, u16 tag, u16 len, u8 *val,
+ 	tl.fc_tag = cpu_to_le16(tag);
+ 	tl.fc_len = cpu_to_le16(len);
+ 
+-	ext4_fc_memcpy(sb, dst, &tl, EXT4_FC_TAG_BASE_LEN, crc);
+-	ext4_fc_memcpy(sb, dst + EXT4_FC_TAG_BASE_LEN, val, len, crc);
++	memcpy(dst, &tl, EXT4_FC_TAG_BASE_LEN);
++	memcpy(dst + EXT4_FC_TAG_BASE_LEN, val, len);
+ 
+ 	return true;
+ }
+@@ -847,11 +829,11 @@ static bool ext4_fc_add_dentry_tlv(struct super_block *sb, u32 *crc,
+ 	fcd.fc_ino = cpu_to_le32(fc_dentry->fcd_ino);
+ 	tl.fc_tag = cpu_to_le16(fc_dentry->fcd_op);
+ 	tl.fc_len = cpu_to_le16(sizeof(fcd) + dlen);
+-	ext4_fc_memcpy(sb, dst, &tl, EXT4_FC_TAG_BASE_LEN, crc);
++	memcpy(dst, &tl, EXT4_FC_TAG_BASE_LEN);
+ 	dst += EXT4_FC_TAG_BASE_LEN;
+-	ext4_fc_memcpy(sb, dst, &fcd, sizeof(fcd), crc);
++	memcpy(dst, &fcd, sizeof(fcd));
+ 	dst += sizeof(fcd);
+-	ext4_fc_memcpy(sb, dst, fc_dentry->fcd_name.name, dlen, crc);
++	memcpy(dst, fc_dentry->fcd_name.name, dlen);
+ 
+ 	return true;
+ }
+@@ -889,15 +871,11 @@ static int ext4_fc_write_inode(struct inode *inode, u32 *crc)
+ 	if (!dst)
+ 		goto err;
+ 
+-	if (!ext4_fc_memcpy(inode->i_sb, dst, &tl, EXT4_FC_TAG_BASE_LEN, crc))
+-		goto err;
++	memcpy(dst, &tl, EXT4_FC_TAG_BASE_LEN);
+ 	dst += EXT4_FC_TAG_BASE_LEN;
+-	if (!ext4_fc_memcpy(inode->i_sb, dst, &fc_inode, sizeof(fc_inode), crc))
+-		goto err;
++	memcpy(dst, &fc_inode, sizeof(fc_inode));
+ 	dst += sizeof(fc_inode);
+-	if (!ext4_fc_memcpy(inode->i_sb, dst, (u8 *)ext4_raw_inode(&iloc),
+-					inode_len, crc))
+-		goto err;
++	memcpy(dst, (u8 *)ext4_raw_inode(&iloc), inode_len);
+ 	ret = 0;
+ err:
+ 	brelse(iloc.bh);
 -- 
 2.38.1
 
