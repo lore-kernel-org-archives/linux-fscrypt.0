@@ -2,57 +2,69 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 9579CC433FE
-	for <linux-fscrypt@archiver.kernel.org>; Mon,  7 Nov 2022 09:08:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1E762C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Mon,  7 Nov 2022 14:42:45 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231565AbiKGJIP (ORCPT
+        id S231712AbiKGOmo (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 7 Nov 2022 04:08:15 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36330 "EHLO
+        Mon, 7 Nov 2022 09:42:44 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56136 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231588AbiKGJIL (ORCPT
+        with ESMTP id S230434AbiKGOmn (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 7 Nov 2022 04:08:11 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 39F17165BA;
-        Mon,  7 Nov 2022 01:08:10 -0800 (PST)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id DE5E4B80E6D;
-        Mon,  7 Nov 2022 09:08:08 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 0FA41C433D6;
-        Mon,  7 Nov 2022 09:08:06 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=linuxfoundation.org;
-        s=korg; t=1667812087;
-        bh=OhByz0T9SQQs92Itd0spYibA9KnFzTYX2OAXyF3uH58=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=QqsjNSlrsfllLC6v2KlBLnD9RAtf8YmqVwNIGE67VhSqi8md3hsXvlpnjDVgOxVNl
-         b/V4xoLtENXfCKdMzfnW8hA/BAihMtWk3Ew241HuT7vvGkpj0xk6eMp4DeZlDnOtB7
-         iNe2FBO1pBji/WM9wTcahXCsF5+HvP72fo/vebMc=
-Date:   Mon, 7 Nov 2022 10:07:58 +0100
-From:   Greg KH <gregkh@linuxfoundation.org>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     stable@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH 5.10 0/3] fscrypt fixes for stable
-Message-ID: <Y2jK7kjycJrpJq5a@kroah.com>
-References: <20221104233800.421135-1-ebiggers@kernel.org>
+        Mon, 7 Nov 2022 09:42:43 -0500
+Received: from bombadil.infradead.org (bombadil.infradead.org [IPv6:2607:7c80:54:3::133])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 8564312AD0;
+        Mon,  7 Nov 2022 06:42:42 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+        d=infradead.org; s=bombadil.20210309; h=Content-Transfer-Encoding:
+        MIME-Version:Message-Id:Date:Subject:Cc:To:From:Sender:Reply-To:Content-Type:
+        Content-ID:Content-Description:In-Reply-To:References;
+        bh=HueqHs75+uu16iwiA7HFzJWXHvl6AXbQrRJFOr0opp0=; b=YnnwPV7YIWOZA4ZOWUmHO2Rxnh
+        2sCkjNCVt7J98j7YsZs273LaEoV5Hsuu6AEJAscqa1jpzATF3Kyqefgdm1sq5bPjl5ZV7y4t35nLz
+        y5jsh8aK5J8WThgh+9sC1UTzZ0SyyUT19OkiR//miYgpkV8JKtYfyoGsWgo6YriYKmBxkrK++0ki4
+        JLaZeJAsjfyGcUm+vd14E3rfW3XdtfqnzzMKcoJ33G+eQCjk3zwP3v9xh6AzSqvI7YidqImuR+BiD
+        h1xcKLUWLyDOJWjdKpiREW3GJfMXBfODNWWL7OTmThxWH83+I0TCpyHthnr48fA7MK4b56m0ybVr5
+        Jle++K9Q==;
+Received: from [2001:4bb8:191:2450:bd6a:c86c:b287:8b99] (helo=localhost)
+        by bombadil.infradead.org with esmtpsa (Exim 4.94.2 #2 (Red Hat Linux))
+        id 1os3KZ-00FJWE-PF; Mon, 07 Nov 2022 14:42:32 +0000
+From:   Christoph Hellwig <hch@lst.de>
+To:     Jens Axboe <axboe@kernel.dk>
+Cc:     Mike Snitzer <snitzer@kernel.org>,
+        "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Eric Biggers <ebiggers@kernel.org>, dm-devel@redhat.com,
+        linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Subject: pass a struct block_device to the blk-crypto interfaces v2
+Date:   Mon,  7 Nov 2022 15:42:26 +0100
+Message-Id: <20221107144229.1547370-1-hch@lst.de>
+X-Mailer: git-send-email 2.30.2
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20221104233800.421135-1-ebiggers@kernel.org>
+Content-Transfer-Encoding: 8bit
+X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Fri, Nov 04, 2022 at 04:37:57PM -0700, Eric Biggers wrote:
-> Please apply these to 5.10-stable.
-> 
-> Eric Biggers (3):
->   fscrypt: simplify master key locking
->   fscrypt: stop using keyrings subsystem for fscrypt_master_key
->   fscrypt: fix keyring memory leak on mount failure
+Hi all,
 
-Now queued up, thanks.
+this series switches the blk-crypto interfaces to take block_device
+arguments instead of request_queues, and with that finishes off the
+project to hide struct request_queue from file systems.
 
-greg k-h
+Changes since v1:
+ - keep using request_queue in the Documentation for driver interfaces
+ - rename to blk_crypto_cfg_supported to
+   blk_crypto_config_supported_natively and move it to blk-crypto.[ch]
+ - mark __blk_crypto_cfg_supported private
+
+Diffstat:
+ Documentation/block/inline-encryption.rst |   12 +++++-----
+ block/blk-crypto-internal.h               |    3 ++
+ block/blk-crypto.c                        |   33 ++++++++++++++++++------------
+ drivers/md/dm-table.c                     |    2 -
+ fs/crypto/inline_crypt.c                  |   14 ++++--------
+ include/linux/blk-crypto-profile.h        |    3 --
+ include/linux/blk-crypto.h                |   10 +++++----
+ 7 files changed, 41 insertions(+), 36 deletions(-)
