@@ -2,44 +2,42 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C5421C43219
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Nov 2022 13:57:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 4C2D8C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Nov 2022 13:58:13 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S234827AbiKHN5A (ORCPT
+        id S234858AbiKHN6M (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Nov 2022 08:57:00 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58836 "EHLO
+        Tue, 8 Nov 2022 08:58:12 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:60314 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S234823AbiKHN47 (ORCPT
+        with ESMTP id S234849AbiKHN6J (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 8 Nov 2022 08:56:59 -0500
+        Tue, 8 Nov 2022 08:58:09 -0500
 Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 8F5ADCCF;
-        Tue,  8 Nov 2022 05:56:58 -0800 (PST)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1661C623A7;
+        Tue,  8 Nov 2022 05:58:05 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 2C03D6157B;
-        Tue,  8 Nov 2022 13:56:58 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 24BB3C433C1;
-        Tue,  8 Nov 2022 13:56:56 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 99A06615A3;
+        Tue,  8 Nov 2022 13:58:04 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id A479EC433D7;
+        Tue,  8 Nov 2022 13:58:03 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=linuxfoundation.org;
-        s=korg; t=1667915817;
-        bh=YV56Qv4wz7zOVx4PQgODxJYPLbTWTfoDq/RaAwr/mW0=;
+        s=korg; t=1667915884;
+        bh=wA5jijDbpEQbs5m8nu46fYFGnecBZUjnCkqKr4Gubf0=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=BG4rQdHm2ctCHc5Y7l4ZBrCy0k7Wd1sYR18eYDDVcvpTZ01xBqLkMqGkqOq0g1f7h
-         W0Il8IFwMDTl0faQ1hd7JEXEHcnyNScOZwwRTkahGMuv0565v82GyG76n8JcvftqZ3
-         dCduWY/I8DoWHpGBrCNGwbBb62b/26LTaD+/QyWU=
+        b=adZdOQI9ornWsuJfwF6n/zabxGvJ9CDM3Vw21QOfJJFdVamCYdTFToySR2+GQ5QPX
+         KpV7gHi1rRs1ANJLJVwiDaMSJtV9ajyJkdFl4Mn+fDxZUuND5yoJk/vB3aSGpkEBxp
+         Dw2ppeBOz4y7n50xXiFyzMLuCMQ7yN6enpjhJNFY=
 From:   Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 To:     stable@vger.kernel.org
 Cc:     Greg Kroah-Hartman <gregkh@linuxfoundation.org>,
         patches@lists.linux.dev, linux-fscrypt@vger.kernel.org,
-        syzbot+104c2a89561289cec13e@syzkaller.appspotmail.com,
-        "Christian Brauner (Microsoft)" <brauner@kernel.org>,
         Eric Biggers <ebiggers@google.com>
-Subject: [PATCH 5.10 082/118] fscrypt: fix keyring memory leak on mount failure
-Date:   Tue,  8 Nov 2022 14:39:20 +0100
-Message-Id: <20221108133344.269148624@linuxfoundation.org>
+Subject: [PATCH 5.10 080/118] fscrypt: simplify master key locking
+Date:   Tue,  8 Nov 2022 14:39:18 +0100
+Message-Id: <20221108133344.190915106@linuxfoundation.org>
 X-Mailer: git-send-email 2.38.1
 In-Reply-To: <20221108133340.718216105@linuxfoundation.org>
 References: <20221108133340.718216105@linuxfoundation.org>
@@ -53,95 +51,201 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-commit ccd30a476f8e864732de220bd50e6f372f5ebcab upstream.
+commit 4a4b8721f1a5e4b01e45b3153c68d5a1014b25de upstream.
 
-Commit d7e7b9af104c ("fscrypt: stop using keyrings subsystem for
-fscrypt_master_key") moved the keyring destruction from __put_super() to
-generic_shutdown_super() so that the filesystem's block device(s) are
-still available.  Unfortunately, this causes a memory leak in the case
-where a mount is attempted with the test_dummy_encryption mount option,
-but the mount fails after the option has already been processed.
+The stated reasons for separating fscrypt_master_key::mk_secret_sem from
+the standard semaphore contained in every 'struct key' no longer apply.
 
-To fix this, attempt the keyring destruction in both places.
+First, due to commit a992b20cd4ee ("fscrypt: add
+fscrypt_prepare_new_inode() and fscrypt_set_context()"),
+fscrypt_get_encryption_info() is no longer called from within a
+filesystem transaction.
 
-Reported-by: syzbot+104c2a89561289cec13e@syzkaller.appspotmail.com
-Fixes: d7e7b9af104c ("fscrypt: stop using keyrings subsystem for fscrypt_master_key")
+Second, due to commit d3ec10aa9581 ("KEYS: Don't write out to userspace
+while holding key semaphore"), the semaphore for the "keyring" key type
+no longer ranks above page faults.
+
+That leaves performance as the only possible reason to keep the separate
+mk_secret_sem.  Specifically, having mk_secret_sem reduces the
+contention between setup_file_encryption_key() and
+FS_IOC_{ADD,REMOVE}_ENCRYPTION_KEY.  However, these ioctls aren't
+executed often, so this doesn't seem to be worth the extra complexity.
+
+Therefore, simplify the locking design by just using key->sem instead of
+mk_secret_sem.
+
+Link: https://lore.kernel.org/r/20201117032626.320275-1-ebiggers@kernel.org
 Signed-off-by: Eric Biggers <ebiggers@google.com>
-Reviewed-by: Christian Brauner (Microsoft) <brauner@kernel.org>
-Link: https://lore.kernel.org/r/20221011213838.209879-1-ebiggers@kernel.org
 Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 ---
- fs/crypto/keyring.c     |   17 +++++++++++------
- fs/super.c              |    3 ++-
- include/linux/fscrypt.h |    4 ++--
- 3 files changed, 15 insertions(+), 9 deletions(-)
+ fs/crypto/fscrypt_private.h |   19 ++++++-------------
+ fs/crypto/hooks.c           |    8 +++++---
+ fs/crypto/keyring.c         |    8 +-------
+ fs/crypto/keysetup.c        |   20 +++++++++-----------
+ 4 files changed, 21 insertions(+), 34 deletions(-)
 
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -439,16 +439,9 @@ struct fscrypt_master_key {
+ 	 * FS_IOC_REMOVE_ENCRYPTION_KEY can be retried, or
+ 	 * FS_IOC_ADD_ENCRYPTION_KEY can add the secret again.
+ 	 *
+-	 * Locking: protected by key->sem (outer) and mk_secret_sem (inner).
+-	 * The reason for two locks is that key->sem also protects modifying
+-	 * mk_users, which ranks it above the semaphore for the keyring key
+-	 * type, which is in turn above page faults (via keyring_read).  But
+-	 * sometimes filesystems call fscrypt_get_encryption_info() from within
+-	 * a transaction, which ranks it below page faults.  So we need a
+-	 * separate lock which protects mk_secret but not also mk_users.
++	 * Locking: protected by this master key's key->sem.
+ 	 */
+ 	struct fscrypt_master_key_secret	mk_secret;
+-	struct rw_semaphore			mk_secret_sem;
+ 
+ 	/*
+ 	 * For v1 policy keys: an arbitrary key descriptor which was assigned by
+@@ -467,8 +460,8 @@ struct fscrypt_master_key {
+ 	 *
+ 	 * This is NULL for v1 policy keys; those can only be added by root.
+ 	 *
+-	 * Locking: in addition to this keyrings own semaphore, this is
+-	 * protected by the master key's key->sem, so we can do atomic
++	 * Locking: in addition to this keyring's own semaphore, this is
++	 * protected by this master key's key->sem, so we can do atomic
+ 	 * search+insert.  It can also be searched without taking any locks, but
+ 	 * in that case the returned key may have already been removed.
+ 	 */
+@@ -510,9 +503,9 @@ is_master_key_secret_present(const struc
+ 	/*
+ 	 * The READ_ONCE() is only necessary for fscrypt_drop_inode() and
+ 	 * fscrypt_key_describe().  These run in atomic context, so they can't
+-	 * take ->mk_secret_sem and thus 'secret' can change concurrently which
+-	 * would be a data race.  But they only need to know whether the secret
+-	 * *was* present at the time of check, so READ_ONCE() suffices.
++	 * take the key semaphore and thus 'secret' can change concurrently
++	 * which would be a data race.  But they only need to know whether the
++	 * secret *was* present at the time of check, so READ_ONCE() suffices.
+ 	 */
+ 	return READ_ONCE(secret->size) != 0;
+ }
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -139,6 +139,7 @@ int fscrypt_prepare_setflags(struct inod
+ 			     unsigned int oldflags, unsigned int flags)
+ {
+ 	struct fscrypt_info *ci;
++	struct key *key;
+ 	struct fscrypt_master_key *mk;
+ 	int err;
+ 
+@@ -154,13 +155,14 @@ int fscrypt_prepare_setflags(struct inod
+ 		ci = inode->i_crypt_info;
+ 		if (ci->ci_policy.version != FSCRYPT_POLICY_V2)
+ 			return -EINVAL;
+-		mk = ci->ci_master_key->payload.data[0];
+-		down_read(&mk->mk_secret_sem);
++		key = ci->ci_master_key;
++		mk = key->payload.data[0];
++		down_read(&key->sem);
+ 		if (is_master_key_secret_present(&mk->mk_secret))
+ 			err = fscrypt_derive_dirhash_key(ci, mk);
+ 		else
+ 			err = -ENOKEY;
+-		up_read(&mk->mk_secret_sem);
++		up_read(&key->sem);
+ 		return err;
+ 	}
+ 	return 0;
 --- a/fs/crypto/keyring.c
 +++ b/fs/crypto/keyring.c
-@@ -202,14 +202,19 @@ static int allocate_filesystem_keyring(s
+@@ -347,7 +347,6 @@ static int add_new_master_key(struct fsc
+ 	mk->mk_spec = *mk_spec;
+ 
+ 	move_master_key_secret(&mk->mk_secret, secret);
+-	init_rwsem(&mk->mk_secret_sem);
+ 
+ 	refcount_set(&mk->mk_refcount, 1); /* secret is present */
+ 	INIT_LIST_HEAD(&mk->mk_decrypted_inodes);
+@@ -427,11 +426,8 @@ static int add_existing_master_key(struc
+ 	}
+ 
+ 	/* Re-add the secret if needed. */
+-	if (rekey) {
+-		down_write(&mk->mk_secret_sem);
++	if (rekey)
+ 		move_master_key_secret(&mk->mk_secret, secret);
+-		up_write(&mk->mk_secret_sem);
+-	}
+ 	return 0;
  }
  
- /*
-- * This is called at unmount time to release all encryption keys that have been
-- * added to the filesystem, along with the keyring that contains them.
-+ * Release all encryption keys that have been added to the filesystem, along
-+ * with the keyring that contains them.
+@@ -975,10 +971,8 @@ static int do_remove_key(struct file *fi
+ 	/* No user claims remaining.  Go ahead and wipe the secret. */
+ 	dead = false;
+ 	if (is_master_key_secret_present(&mk->mk_secret)) {
+-		down_write(&mk->mk_secret_sem);
+ 		wipe_master_key_secret(&mk->mk_secret);
+ 		dead = refcount_dec_and_test(&mk->mk_refcount);
+-		up_write(&mk->mk_secret_sem);
+ 	}
+ 	up_write(&key->sem);
+ 	if (dead) {
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -405,11 +405,11 @@ static bool fscrypt_valid_master_key_siz
+  * Find the master key, then set up the inode's actual encryption key.
   *
-- * Note that besides clearing and freeing memory, this might need to evict keys
-- * from the keyslots of an inline crypto engine.  Therefore, this must be called
-- * while the filesystem's underlying block device(s) are still available.
-+ * This is called at unmount time.  The filesystem's underlying block device(s)
-+ * are still available at this time; this is important because after user file
-+ * accesses have been allowed, this function may need to evict keys from the
-+ * keyslots of an inline crypto engine, which requires the block device(s).
-+ *
-+ * This is also called when the super_block is being freed.  This is needed to
-+ * avoid a memory leak if mounting fails after the "test_dummy_encryption"
-+ * option was processed, as in that case the unmount-time call isn't made.
+  * If the master key is found in the filesystem-level keyring, then the
+- * corresponding 'struct key' is returned in *master_key_ret with
+- * ->mk_secret_sem read-locked.  This is needed to ensure that only one task
+- * links the fscrypt_info into ->mk_decrypted_inodes (as multiple tasks may race
+- * to create an fscrypt_info for the same inode), and to synchronize the master
+- * key being removed with a new inode starting to use it.
++ * corresponding 'struct key' is returned in *master_key_ret with its semaphore
++ * read-locked.  This is needed to ensure that only one task links the
++ * fscrypt_info into ->mk_decrypted_inodes (as multiple tasks may race to create
++ * an fscrypt_info for the same inode), and to synchronize the master key being
++ * removed with a new inode starting to use it.
   */
--void fscrypt_sb_delete(struct super_block *sb)
-+void fscrypt_destroy_keyring(struct super_block *sb)
- {
- 	struct fscrypt_keyring *keyring = sb->s_master_keys;
- 	size_t i;
---- a/fs/super.c
-+++ b/fs/super.c
-@@ -293,6 +293,7 @@ static void __put_super(struct super_blo
- 		WARN_ON(s->s_inode_lru.node);
- 		WARN_ON(!list_empty(&s->s_mounts));
- 		security_sb_free(s);
-+		fscrypt_destroy_keyring(s);
- 		put_user_ns(s->s_user_ns);
- 		kfree(s->s_subtype);
- 		call_rcu(&s->rcu, destroy_super_rcu);
-@@ -453,7 +454,7 @@ void generic_shutdown_super(struct super
- 		evict_inodes(sb);
- 		/* only nonzero refcount inodes can have marks */
- 		fsnotify_sb_delete(sb);
--		fscrypt_sb_delete(sb);
-+		fscrypt_destroy_keyring(sb);
+ static int setup_file_encryption_key(struct fscrypt_info *ci,
+ 				     bool need_dirhash_key,
+@@ -458,7 +458,7 @@ static int setup_file_encryption_key(str
+ 	}
  
- 		if (sb->s_dio_done_wq) {
- 			destroy_workqueue(sb->s_dio_done_wq);
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -193,7 +193,7 @@ fscrypt_free_dummy_policy(struct fscrypt
+ 	mk = key->payload.data[0];
+-	down_read(&mk->mk_secret_sem);
++	down_read(&key->sem);
+ 
+ 	/* Has the secret been removed (via FS_IOC_REMOVE_ENCRYPTION_KEY)? */
+ 	if (!is_master_key_secret_present(&mk->mk_secret)) {
+@@ -490,7 +490,7 @@ static int setup_file_encryption_key(str
+ 	return 0;
+ 
+ out_release_key:
+-	up_read(&mk->mk_secret_sem);
++	up_read(&key->sem);
+ 	key_put(key);
+ 	return err;
  }
+@@ -593,9 +593,7 @@ fscrypt_setup_encryption_info(struct ino
+ 	res = 0;
+ out:
+ 	if (master_key) {
+-		struct fscrypt_master_key *mk = master_key->payload.data[0];
+-
+-		up_read(&mk->mk_secret_sem);
++		up_read(&master_key->sem);
+ 		key_put(master_key);
+ 	}
+ 	put_crypt_info(crypt_info);
+@@ -769,7 +767,7 @@ int fscrypt_drop_inode(struct inode *ino
+ 		return 0;
  
- /* keyring.c */
--void fscrypt_sb_delete(struct super_block *sb);
-+void fscrypt_destroy_keyring(struct super_block *sb);
- int fscrypt_ioctl_add_key(struct file *filp, void __user *arg);
- int fscrypt_ioctl_remove_key(struct file *filp, void __user *arg);
- int fscrypt_ioctl_remove_key_all_users(struct file *filp, void __user *arg);
-@@ -380,7 +380,7 @@ fscrypt_free_dummy_policy(struct fscrypt
- }
- 
- /* keyring.c */
--static inline void fscrypt_sb_delete(struct super_block *sb)
-+static inline void fscrypt_destroy_keyring(struct super_block *sb)
- {
- }
- 
+ 	/*
+-	 * Note: since we aren't holding ->mk_secret_sem, the result here can
++	 * Note: since we aren't holding the key semaphore, the result here can
+ 	 * immediately become outdated.  But there's no correctness problem with
+ 	 * unnecessarily evicting.  Nor is there a correctness problem with not
+ 	 * evicting while iput() is racing with the key being removed, since
 
 
