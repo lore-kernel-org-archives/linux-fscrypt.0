@@ -2,106 +2,122 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7233FC4332F
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 10 Nov 2022 14:15:11 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 93FE7C433FE
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 10 Nov 2022 14:15:12 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231400AbiKJOPI (ORCPT
+        id S231316AbiKJOPK (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 10 Nov 2022 09:15:08 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46646 "EHLO
+        Thu, 10 Nov 2022 09:15:10 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46092 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230102AbiKJOOg (ORCPT
+        with ESMTP id S231347AbiKJOOh (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 10 Nov 2022 09:14:36 -0500
+        Thu, 10 Nov 2022 09:14:37 -0500
 Received: from us-smtp-delivery-124.mimecast.com (us-smtp-delivery-124.mimecast.com [170.10.129.124])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2ACBA6DCE2
-        for <linux-fscrypt@vger.kernel.org>; Thu, 10 Nov 2022 06:12:49 -0800 (PST)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D7D9C6DCDC
+        for <linux-fscrypt@vger.kernel.org>; Thu, 10 Nov 2022 06:12:46 -0800 (PST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-        s=mimecast20190719; t=1668089568;
+        s=mimecast20190719; t=1668089566;
         h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
          to:to:cc:cc:mime-version:mime-version:
          content-transfer-encoding:content-transfer-encoding:
          in-reply-to:in-reply-to:references:references;
-        bh=QJWwfh7LX7eiz2P4HljirE5EYpLzzlQouMCEDG93yHg=;
-        b=AcvChltQQRFv1+9xCg7Vb21cMJfuoty9ePcMulZ4l2xZNs30OrnE4p2uAJTfQHDCvTbRnI
-        as1lboat7IH6UR7VlT7JXOw1IzTm6MyLJBac+OFySKIKbQpaMTbXAo3b3KHvpxjmLlhsi7
-        T7qigaOl0HrpU8EFXHGHLxLzVveuZVQ=
-Received: from mimecast-mx02.redhat.com (mx3-rdu2.redhat.com
- [66.187.233.73]) by relay.mimecast.com with ESMTP with STARTTLS
+        bh=38ue1jY8VU+EcrxuQImyzYXXhrd8yNBwxAlm16CtPHM=;
+        b=CByoB9G3rr3/CRYDT0MJ5sPVDcfu558mjSHJYmx5senxdzkOH44JZAn7/qoq/UEy+Bc3rs
+        bs2hqf9E8yX6XkaiAtcy61NBnDJe60OiuZ0Y5FLNdGotinFlHsNdAJ8levNT35tGikYfJy
+        hE30TUUyveautaTNcRWOMjwDdCuImws=
+Received: from mimecast-mx02.redhat.com (mimecast-mx02.redhat.com
+ [66.187.233.88]) by relay.mimecast.com with ESMTP with STARTTLS
  (version=TLSv1.2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
- us-mta-307-SHVtPAOxNNeXXb0eEdHBDw-1; Thu, 10 Nov 2022 09:12:45 -0500
-X-MC-Unique: SHVtPAOxNNeXXb0eEdHBDw-1
-Received: from smtp.corp.redhat.com (int-mx03.intmail.prod.int.rdu2.redhat.com [10.11.54.3])
+ us-mta-639-MGHg6gf5PcqXN6diWwUnxQ-1; Thu, 10 Nov 2022 09:12:41 -0500
+X-MC-Unique: MGHg6gf5PcqXN6diWwUnxQ-1
+Received: from smtp.corp.redhat.com (int-mx10.intmail.prod.int.rdu2.redhat.com [10.11.54.10])
         (using TLSv1.2 with cipher AECDH-AES256-SHA (256/256 bits))
         (No client certificate requested)
-        by mimecast-mx02.redhat.com (Postfix) with ESMTPS id EF4FB2999B44;
-        Thu, 10 Nov 2022 14:12:44 +0000 (UTC)
+        by mimecast-mx02.redhat.com (Postfix) with ESMTPS id 61F40858F17;
+        Thu, 10 Nov 2022 14:12:41 +0000 (UTC)
 Received: from localhost (unknown [10.39.208.44])
-        by smtp.corp.redhat.com (Postfix) with ESMTPS id AAE10112131B;
-        Thu, 10 Nov 2022 14:12:44 +0000 (UTC)
+        by smtp.corp.redhat.com (Postfix) with ESMTPS id 7DF34492B0F;
+        Thu, 10 Nov 2022 14:12:40 +0000 (UTC)
 From:   Niels de Vos <ndevos@redhat.com>
 To:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org
 Cc:     linux-kernel@vger.kernel.org, Xiubo Li <xiubli@redhat.com>,
         Marcel Lauhoff <marcel.lauhoff@suse.com>,
         Niels de Vos <ndevos@redhat.com>
-Subject: [RFC 4/4] fs: make fscrypt support a UBIFS config option
-Date:   Thu, 10 Nov 2022 15:12:25 +0100
-Message-Id: <20221110141225.2308856-5-ndevos@redhat.com>
+Subject: [RFC 2/4] fs: make fscrypt support an ext4 config option
+Date:   Thu, 10 Nov 2022 15:12:23 +0100
+Message-Id: <20221110141225.2308856-3-ndevos@redhat.com>
 In-Reply-To: <20221110141225.2308856-1-ndevos@redhat.com>
 References: <20221110141225.2308856-1-ndevos@redhat.com>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Scanned-By: MIMEDefang 3.1 on 10.11.54.3
+X-Scanned-By: MIMEDefang 3.1 on 10.11.54.10
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add CONFIG_UBIFS_FS_ENCRYPTION as a config option, which depends on the
+Add CONFIG_EXT4_FS_ENCRYPTION as a config option, which depends on the
 global CONFIG_FS_ENCRYPTION setting. This makes it possible to opt-out
-of fscrypt for UBIFS, while enabling it for others.
+of fscrypt for ext4 filesystems, while enabling it for others.
 
 Signed-off-by: Niels de Vos <ndevos@redhat.com>
 ---
- fs/crypto/Kconfig |  1 +
- fs/ubifs/Kconfig  | 14 ++++++++++++--
- fs/ubifs/Makefile |  2 +-
- fs/ubifs/sb.c     |  4 ++--
- fs/ubifs/ubifs.h  |  6 +++---
- 5 files changed, 19 insertions(+), 8 deletions(-)
+ Documentation/filesystems/fscrypt.rst |  2 +-
+ fs/crypto/Kconfig                     |  1 +
+ fs/ext4/Kconfig                       | 13 ++++++++++++-
+ fs/ext4/Makefile                      |  2 +-
+ fs/ext4/ext4.h                        | 10 +++++-----
+ fs/ext4/inode.c                       |  6 +++---
+ fs/ext4/namei.c                       |  6 +++---
+ fs/ext4/super.c                       |  6 +++---
+ fs/ext4/sysfs.c                       |  8 ++++----
+ 9 files changed, 33 insertions(+), 21 deletions(-)
 
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index 5ba5817c17c2..66e3e2afb4a4 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -574,7 +574,7 @@ FS_IOC_SET_ENCRYPTION_POLICY can fail with the following errors:
+ - ``EOPNOTSUPP``: the kernel was not configured with encryption
+   support for filesystems, or the filesystem superblock has not
+   had encryption enabled on it.  (For example, to use encryption on an
+-  ext4 filesystem, CONFIG_FS_ENCRYPTION must be enabled in the
++  ext4 filesystem, CONFIG_EXT4_FS_ENCRYPTION must be enabled in the
+   kernel config, and the superblock must have had the "encrypt"
+   feature flag enabled using ``tune2fs -O encrypt`` or ``mkfs.ext4 -O
+   encrypt``.)
 diff --git a/fs/crypto/Kconfig b/fs/crypto/Kconfig
-index a809847e820d..2aef21786449 100644
+index 2d0c8922f635..7e1267deee51 100644
 --- a/fs/crypto/Kconfig
 +++ b/fs/crypto/Kconfig
-@@ -8,6 +8,7 @@ config FS_ENCRYPTION
+@@ -6,6 +6,7 @@ config FS_ENCRYPTION
+ 	select CRYPTO_SKCIPHER
+ 	select CRYPTO_LIB_SHA256
  	select KEYS
- 	imply EXT4_FS_ENCRYPTION
- 	imply F2FS_FS_ENCRYPTION
-+	imply UBIFS_FS_ENCRYPTION
++	imply EXT4_FS_ENCRYPTION
  	help
  	  Enable encryption of files and directories.  This
  	  feature is similar to ecryptfs, but it is more memory
-diff --git a/fs/ubifs/Kconfig b/fs/ubifs/Kconfig
-index 45d3d207fb99..886056777d68 100644
---- a/fs/ubifs/Kconfig
-+++ b/fs/ubifs/Kconfig
-@@ -11,8 +11,6 @@ config UBIFS_FS
- 	select CRYPTO_DEFLATE if UBIFS_FS_ZLIB
- 	select CRYPTO_ZSTD if UBIFS_FS_ZSTD
- 	select CRYPTO_HASH_INFO
--	select UBIFS_FS_XATTR if FS_ENCRYPTION
+diff --git a/fs/ext4/Kconfig b/fs/ext4/Kconfig
+index 86699c8cab28..3108ec1cd046 100644
+--- a/fs/ext4/Kconfig
++++ b/fs/ext4/Kconfig
+@@ -33,7 +33,6 @@ config EXT4_FS
+ 	select CRYPTO
+ 	select CRYPTO_CRC32C
+ 	select FS_IOMAP
 -	select FS_ENCRYPTION_ALGS if FS_ENCRYPTION
- 	depends on MTD_UBI
  	help
- 	  UBIFS is a file system for flash devices which works on top of UBI.
-@@ -98,4 +96,16 @@ config UBIFS_FS_AUTHENTICATION
- 	  sha256, these are not selected automatically since there are many
- 	  different options.
+ 	  This is the next generation of the ext3 filesystem.
  
-+config UBIFS_FS_ENCRYPTION
-+	bool "UBIFS with support for filesystem encryption"
+@@ -92,6 +91,18 @@ config EXT4_FS_SECURITY
+ 	  If you are not using a security module that requires using
+ 	  extended attributes for file security labels, say N.
+ 
++config EXT4_FS_ENCRYPTION
++	bool "Ext4 with support for filesystem encryption"
++	depends on EXT4_FS
 +	depends on FS_ENCRYPTION
-+	select UBIFS_FS_XATTR
 +	select FS_ENCRYPTION_ALGS if FS_ENCRYPTION
 +	help
 +	  Enable encryption of files and directories. This feature is similar
@@ -110,72 +126,201 @@ index 45d3d207fb99..886056777d68 100644
 +
 +	  If unsure, say N.
 +
- endif # UBIFS_FS
-diff --git a/fs/ubifs/Makefile b/fs/ubifs/Makefile
-index 314c80b24a76..df49a573f8bd 100644
---- a/fs/ubifs/Makefile
-+++ b/fs/ubifs/Makefile
-@@ -6,6 +6,6 @@ ubifs-y += tnc.o master.o scan.o replay.o log.o commit.o gc.o orphan.o
- ubifs-y += budget.o find.o tnc_commit.o compress.o lpt.o lprops.o
- ubifs-y += recovery.o ioctl.o lpt_commit.o tnc_misc.o debug.o
- ubifs-y += misc.o sysfs.o
--ubifs-$(CONFIG_FS_ENCRYPTION) += crypto.o
-+ubifs-$(CONFIG_UBIFS_FS_ENCRYPTION) += crypto.o
- ubifs-$(CONFIG_UBIFS_FS_XATTR) += xattr.o
- ubifs-$(CONFIG_UBIFS_FS_AUTHENTICATION) += auth.o
-diff --git a/fs/ubifs/sb.c b/fs/ubifs/sb.c
-index e7693b94e5b5..1eb2a9be1177 100644
---- a/fs/ubifs/sb.c
-+++ b/fs/ubifs/sb.c
-@@ -746,7 +746,7 @@ int ubifs_read_superblock(struct ubifs_info *c)
- 		goto out;
- 	}
- 
--	if (!IS_ENABLED(CONFIG_FS_ENCRYPTION) && c->encrypted) {
-+	if (!IS_ENABLED(CONFIG_UBIFS_FS_ENCRYPTION) && c->encrypted) {
- 		ubifs_err(c, "file system contains encrypted files but UBIFS"
- 			     " was built without crypto support.");
- 		err = -EINVAL;
-@@ -932,7 +932,7 @@ int ubifs_enable_encryption(struct ubifs_info *c)
- 	int err;
- 	struct ubifs_sb_node *sup = c->sup_node;
- 
--	if (!IS_ENABLED(CONFIG_FS_ENCRYPTION))
-+	if (!IS_ENABLED(CONFIG_UBIFS_FS_ENCRYPTION))
- 		return -EOPNOTSUPP;
- 
- 	if (c->encrypted)
-diff --git a/fs/ubifs/ubifs.h b/fs/ubifs/ubifs.h
-index 3ef0e9ef5015..e20f3284f504 100644
---- a/fs/ubifs/ubifs.h
-+++ b/fs/ubifs/ubifs.h
-@@ -33,7 +33,7 @@
- #include <crypto/hash.h>
- #include <crypto/algapi.h>
+ config EXT4_DEBUG
+ 	bool "Ext4 debugging support"
+ 	depends on EXT4_FS
+diff --git a/fs/ext4/Makefile b/fs/ext4/Makefile
+index 72206a292676..ed4a8232bccf 100644
+--- a/fs/ext4/Makefile
++++ b/fs/ext4/Makefile
+@@ -17,4 +17,4 @@ ext4-$(CONFIG_EXT4_FS_SECURITY)		+= xattr_security.o
+ ext4-inode-test-objs			+= inode-test.o
+ obj-$(CONFIG_EXT4_KUNIT_TESTS)		+= ext4-inode-test.o
+ ext4-$(CONFIG_FS_VERITY)		+= verity.o
+-ext4-$(CONFIG_FS_ENCRYPTION)		+= crypto.o
++ext4-$(CONFIG_EXT4_FS_ENCRYPTION)	+= crypto.o
+diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
+index 23c2ceaa074d..a38c50ae742e 100644
+--- a/fs/ext4/ext4.h
++++ b/fs/ext4/ext4.h
+@@ -41,7 +41,7 @@
+ #include <linux/compat.h>
+ #endif
  
 -#ifdef CONFIG_FS_ENCRYPTION
-+#ifdef CONFIG_UBIFS_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
  #define USE_FS_ENCRYPTION
  #endif
  #include <linux/fscrypt.h>
-@@ -134,7 +134,7 @@
-  */
- #define WORST_COMPR_FACTOR 2
+@@ -2495,7 +2495,7 @@ struct ext4_filename {
+ 	const struct qstr *usr_fname;
+ 	struct fscrypt_str disk_name;
+ 	struct dx_hash_info hinfo;
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ 	struct fscrypt_str crypto_buf;
+ #endif
+ #if IS_ENABLED(CONFIG_UNICODE)
+@@ -2741,7 +2741,7 @@ extern int ext4_fname_setup_ci_filename(struct inode *dir,
+ #endif
+ 
+ /* ext4 encryption related stuff goes here crypto.c */
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ extern const struct fscrypt_operations ext4_cryptops;
+ 
+ int ext4_fname_setup_filename(struct inode *dir, const struct qstr *iname,
+@@ -2754,7 +2754,7 @@ void ext4_fname_free_filename(struct ext4_filename *fname);
+ 
+ int ext4_ioctl_get_encryption_pwsalt(struct file *filp, void __user *arg);
+ 
+-#else /* !CONFIG_FS_ENCRYPTION */
++#else /* !CONFIG_EXT4_FS_ENCRYPTION */
+ static inline int ext4_fname_setup_filename(struct inode *dir,
+ 					    const struct qstr *iname,
+ 					    int lookup,
+@@ -2792,7 +2792,7 @@ static inline int ext4_ioctl_get_encryption_pwsalt(struct file *filp,
+ {
+ 	return -EOPNOTSUPP;
+ }
+-#endif /* !CONFIG_FS_ENCRYPTION */
++#endif /* !CONFIG_EXT4_FS_ENCRYPTION */
+ 
+ /* dir.c */
+ extern int __ext4_check_dir_entry(const char *, unsigned int, struct inode *,
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 2b5ef1b64249..087dd42ddd42 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -1049,7 +1049,7 @@ int do_journal_get_write_access(handle_t *handle, struct inode *inode,
+ 	return ret;
+ }
  
 -#ifdef CONFIG_FS_ENCRYPTION
-+#ifdef CONFIG_UBIFS_FS_ENCRYPTION
- #define UBIFS_CIPHER_BLOCK_SIZE FSCRYPT_CONTENTS_ALIGNMENT
- #else
- #define UBIFS_CIPHER_BLOCK_SIZE 0
-@@ -2114,7 +2114,7 @@ void ubifs_sysfs_unregister(struct ubifs_info *c);
- #include "misc.h"
- #include "key.h"
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ static int ext4_block_write_begin(struct page *page, loff_t pos, unsigned len,
+ 				  get_block_t *get_block)
+ {
+@@ -1215,7 +1215,7 @@ static int ext4_write_begin(struct file *file, struct address_space *mapping,
+ 	/* In case writeback began while the page was unlocked */
+ 	wait_for_stable_page(page);
  
--#ifndef CONFIG_FS_ENCRYPTION
-+#ifndef CONFIG_UBIFS_FS_ENCRYPTION
- static inline int ubifs_encrypt(const struct inode *inode,
- 				struct ubifs_data_node *dn,
- 				unsigned int in_len, unsigned int *out_len,
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ 	if (ext4_should_dioread_nolock(inode))
+ 		ret = ext4_block_write_begin(page, pos, len,
+ 					     ext4_get_block_unwritten);
+@@ -2999,7 +2999,7 @@ static int ext4_da_write_begin(struct file *file, struct address_space *mapping,
+ 	/* In case writeback began while the page was unlocked */
+ 	wait_for_stable_page(page);
+ 
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ 	ret = ext4_block_write_begin(page, pos, len,
+ 				     ext4_da_get_block_prep);
+ #else
+diff --git a/fs/ext4/namei.c b/fs/ext4/namei.c
+index c08c0aba1883..0f61b231ecf6 100644
+--- a/fs/ext4/namei.c
++++ b/fs/ext4/namei.c
+@@ -663,7 +663,7 @@ static struct stats dx_show_leaf(struct inode *dir,
+ 		{
+ 			if (show_names)
+ 			{
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ 				int len;
+ 				char *name;
+ 				struct fscrypt_str fname_crypto_str =
+@@ -1475,7 +1475,7 @@ static bool ext4_match(struct inode *parent,
+ 
+ 	f.usr_fname = fname->usr_fname;
+ 	f.disk_name = fname->disk_name;
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ 	f.crypto_buf = fname->crypto_buf;
+ #endif
+ 
+@@ -1765,7 +1765,7 @@ static struct buffer_head * ext4_dx_find_entry(struct inode *dir,
+ 	ext4_lblk_t block;
+ 	int retval;
+ 
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ 	*res_dir = NULL;
+ #endif
+ 	frame = dx_probe(fname, dir, NULL, frames);
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 7cdd2138c897..ef3c7c71ecca 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -2000,7 +2000,7 @@ static int ext4_parse_test_dummy_encryption(const struct fs_parameter *param,
+ {
+ 	int err;
+ 
+-	if (!IS_ENABLED(CONFIG_FS_ENCRYPTION)) {
++	if (!IS_ENABLED(CONFIG_EXT4_FS_ENCRYPTION)) {
+ 		ext4_msg(NULL, KERN_WARNING,
+ 			 "test_dummy_encryption option not supported");
+ 		return -EINVAL;
+@@ -2122,7 +2122,7 @@ static int ext4_parse_param(struct fs_context *fc, struct fs_parameter *param)
+ 		ctx_set_mount_flag(ctx, EXT4_MF_FS_ABORTED);
+ 		return 0;
+ 	case Opt_inlinecrypt:
+-#ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
++#if defined(CONFIG_EXT4_FS_ENCRYPTION) && defined(CONFIG_FS_ENCRYPTION_INLINE_CRYPT)
+ 		ctx_set_flags(ctx, SB_INLINECRYPT);
+ #else
+ 		ext4_msg(NULL, KERN_ERR, "inline encryption not supported");
+@@ -5241,7 +5241,7 @@ static int __ext4_fill_super(struct fs_context *fc, struct super_block *sb)
+ 	sb->s_op = &ext4_sops;
+ 	sb->s_export_op = &ext4_export_ops;
+ 	sb->s_xattr = ext4_xattr_handlers;
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ 	sb->s_cop = &ext4_cryptops;
+ #endif
+ #ifdef CONFIG_FS_VERITY
+diff --git a/fs/ext4/sysfs.c b/fs/ext4/sysfs.c
+index d233c24ea342..148f992dc1a0 100644
+--- a/fs/ext4/sysfs.c
++++ b/fs/ext4/sysfs.c
+@@ -305,7 +305,7 @@ ATTRIBUTE_GROUPS(ext4);
+ EXT4_ATTR_FEATURE(lazy_itable_init);
+ EXT4_ATTR_FEATURE(batched_discard);
+ EXT4_ATTR_FEATURE(meta_bg_resize);
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ EXT4_ATTR_FEATURE(encryption);
+ EXT4_ATTR_FEATURE(test_dummy_encryption_v2);
+ #endif
+@@ -317,7 +317,7 @@ EXT4_ATTR_FEATURE(verity);
+ #endif
+ EXT4_ATTR_FEATURE(metadata_csum_seed);
+ EXT4_ATTR_FEATURE(fast_commit);
+-#if IS_ENABLED(CONFIG_UNICODE) && defined(CONFIG_FS_ENCRYPTION)
++#if IS_ENABLED(CONFIG_UNICODE) && defined(CONFIG_EXT4_FS_ENCRYPTION)
+ EXT4_ATTR_FEATURE(encrypted_casefold);
+ #endif
+ 
+@@ -325,7 +325,7 @@ static struct attribute *ext4_feat_attrs[] = {
+ 	ATTR_LIST(lazy_itable_init),
+ 	ATTR_LIST(batched_discard),
+ 	ATTR_LIST(meta_bg_resize),
+-#ifdef CONFIG_FS_ENCRYPTION
++#ifdef CONFIG_EXT4_FS_ENCRYPTION
+ 	ATTR_LIST(encryption),
+ 	ATTR_LIST(test_dummy_encryption_v2),
+ #endif
+@@ -337,7 +337,7 @@ static struct attribute *ext4_feat_attrs[] = {
+ #endif
+ 	ATTR_LIST(metadata_csum_seed),
+ 	ATTR_LIST(fast_commit),
+-#if IS_ENABLED(CONFIG_UNICODE) && defined(CONFIG_FS_ENCRYPTION)
++#if IS_ENABLED(CONFIG_UNICODE) && defined(CONFIG_EXT4_FS_ENCRYPTION)
+ 	ATTR_LIST(encrypted_casefold),
+ #endif
+ 	NULL,
 -- 
 2.37.3
 
