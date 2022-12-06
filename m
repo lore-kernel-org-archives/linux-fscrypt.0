@@ -2,76 +2,76 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 543C3C4321E
-	for <linux-fscrypt@archiver.kernel.org>; Fri,  2 Dec 2022 12:08:27 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0D8D1C3A5A7
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  6 Dec 2022 21:02:08 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232750AbiLBMI0 (ORCPT
+        id S229777AbiLFVCH (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 2 Dec 2022 07:08:26 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58628 "EHLO
+        Tue, 6 Dec 2022 16:02:07 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:48564 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S233079AbiLBMIW (ORCPT
+        with ESMTP id S229456AbiLFVCG (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 2 Dec 2022 07:08:22 -0500
-Received: from out30-42.freemail.mail.aliyun.com (out30-42.freemail.mail.aliyun.com [115.124.30.42])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C4AD52FC02;
-        Fri,  2 Dec 2022 04:08:20 -0800 (PST)
-X-Alimail-AntiSpam: AC=PASS;BC=-1|-1;BR=01201311R811e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=ay29a033018046050;MF=tianjia.zhang@linux.alibaba.com;NM=1;PH=DS;RN=3;SR=0;TI=SMTPD_---0VWE9zAq_1669982897;
-Received: from 30.32.112.227(mailfrom:tianjia.zhang@linux.alibaba.com fp:SMTPD_---0VWE9zAq_1669982897)
-          by smtp.aliyun-inc.com;
-          Fri, 02 Dec 2022 20:08:18 +0800
-Message-ID: <65e77226-7ba7-5f72-0197-ea4f4fcd774a@linux.alibaba.com>
-Date:   Fri, 2 Dec 2022 20:08:16 +0800
+        Tue, 6 Dec 2022 16:02:06 -0500
+Received: from outgoing.mit.edu (outgoing-auth-1.mit.edu [18.9.28.11])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3F66B45EE9;
+        Tue,  6 Dec 2022 13:02:05 -0800 (PST)
+Received: from cwcc.thunk.org (pool-173-48-120-46.bstnma.fios.verizon.net [173.48.120.46])
+        (authenticated bits=0)
+        (User authenticated as tytso@ATHENA.MIT.EDU)
+        by outgoing.mit.edu (8.14.7/8.12.4) with ESMTP id 2B6L1sU5001527
+        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+        Tue, 6 Dec 2022 16:01:55 -0500
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=mit.edu; s=outgoing;
+        t=1670360516; bh=ODQvcrPTn9RADyagdb6ol57IAff8wz0X0HXgGWqOtU0=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References;
+        b=K95iNMJtkNVJ44MzIxkjQFvmjyBdSxFHt06ONmBKvz1ym/QW0NPJg/dTnayuQd09e
+         8ZnQw7ujaJA6YrSyJ0Tds+/fMI4oyZx4uYiU/+P+3eSkEuwZREO0xLT6YucbROr+Fj
+         gLJ6v8CDAVB0VXjdKOHdYLfq12u8vyIZQYO+LX6EHSjL5CkmeVG5RP4mKSKMQo81Ir
+         c3NKM2GV+LHm4ecSlVW9WRePw4pN2TsU/40Ngepj5wud6R1cLdxNqWsy6vATL+6g7g
+         vcmzSrA3S+nypwhLP9iP1lR6BcSLFh1pmkgXH2MFLn/ZWy50LyMEBrzR+BIpVvYl52
+         sh8wBkPSyNIuA==
+Received: by cwcc.thunk.org (Postfix, from userid 15806)
+        id D3F5715C39E4; Tue,  6 Dec 2022 16:01:54 -0500 (EST)
+From:   "Theodore Ts'o" <tytso@mit.edu>
+To:     Eric Biggers <ebiggers@kernel.org>, linux-ext4@vger.kernel.org
+Cc:     "Theodore Ts'o" <tytso@mit.edu>,
+        syzbot+ba9dac45bc76c490b7c3@syzkaller.appspotmail.com,
+        linux-fscrypt@vger.kernel.org, stable@vger.kernel.org
+Subject: Re: [PATCH] ext4: don't allow journal inode to have encrypt flag
+Date:   Tue,  6 Dec 2022 16:01:48 -0500
+Message-Id: <167036049593.156498.14603526492088665546.b4-ty@mit.edu>
+X-Mailer: git-send-email 2.31.0
+In-Reply-To: <20221102053312.189962-1-ebiggers@kernel.org>
+References: <20221102053312.189962-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:91.0)
- Gecko/20100101 Thunderbird/91.13.1
-Subject: Re: [PATCH] fscrypt: add additional documentation for SM4 support
-Content-Language: en-US
-To:     Eric Biggers <ebiggers@kernel.org>, linux-fscrypt@vger.kernel.org
-Cc:     linux-doc@vger.kernel.org
-References: <20221201191452.6557-1-ebiggers@kernel.org>
-From:   Tianjia Zhang <tianjia.zhang@linux.alibaba.com>
-In-Reply-To: <20221201191452.6557-1-ebiggers@kernel.org>
-Content-Type: text/plain; charset=UTF-8; format=flowed
-Content-Transfer-Encoding: 7bit
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Hi Eric,
-
-On 12/2/22 3:14 AM, Eric Biggers wrote:
+On Tue, 1 Nov 2022 22:33:12 -0700, Eric Biggers wrote:
 > From: Eric Biggers <ebiggers@google.com>
 > 
-> Add a paragraph about SM4, like there is for the other modes.
+> Mounting a filesystem whose journal inode has the encrypt flag causes a
+> NULL dereference in fscrypt_limit_io_blocks() when the 'inlinecrypt'
+> mount option is used.
 > 
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> ---
->   Documentation/filesystems/fscrypt.rst | 6 ++++++
->   1 file changed, 6 insertions(+)
+> The problem is that when jbd2_journal_init_inode() calls bmap(), it
+> eventually finds its way into ext4_iomap_begin(), which calls
+> fscrypt_limit_io_blocks().  fscrypt_limit_io_blocks() requires that if
+> the inode is encrypted, then its encryption key must already be set up.
+> That's not the case here, since the journal inode is never "opened" like
+> a normal file would be.  Hence the crash.
 > 
-> diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-> index c0784ec055530..ef183387da208 100644
-> --- a/Documentation/filesystems/fscrypt.rst
-> +++ b/Documentation/filesystems/fscrypt.rst
-> @@ -370,6 +370,12 @@ CONFIG_CRYPTO_HCTR2 must be enabled.  Also, fast implementations of XCTR and
->   POLYVAL should be enabled, e.g. CRYPTO_POLYVAL_ARM64_CE and
->   CRYPTO_AES_ARM64_CE_BLK for ARM64.
->   
-> +SM4 is a Chinese block cipher that is an alternative to AES.  It has
-> +not seen as much security review as AES, and it only has a 128-bit key
-> +size.  It may be useful in cases where its use is mandated.
-> +Otherwise, it should not be used.  For SM4 support to be available, it
-> +also needs to be enabled in the kernel crypto API.
-> +
+> [...]
 
-Looks good to me, this description is appropriate.
+Applied, thanks!
 
-Reviewed-by: Tianjia Zhang <tianjia.zhang@linux.alibaba.com>
+[1/1] ext4: don't allow journal inode to have encrypt flag
+      commit: 29cef51d8522c4d8953856afaffcaf1b754e4f6c
 
-Thanks,
-Tianjia
-
->   New encryption modes can be added relatively easily, without changes
->   to individual filesystems.  However, authenticated encryption (AE)
->   modes are not currently supported because of the difficulty of dealing
+Best regards,
+-- 
+Theodore Ts'o <tytso@mit.edu>
