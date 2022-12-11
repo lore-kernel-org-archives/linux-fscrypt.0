@@ -2,158 +2,91 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4AB5FC2D0CB
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 94955C3DA6D
 	for <linux-fscrypt@archiver.kernel.org>; Sun, 11 Dec 2022 07:08:00 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230036AbiLKHH7 (ORCPT
+        id S230169AbiLKHH7 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Sun, 11 Dec 2022 02:07:59 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:42594 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:42600 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230118AbiLKHHy (ORCPT
+        with ESMTP id S230133AbiLKHHy (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Sun, 11 Dec 2022 02:07:54 -0500
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 9F49C5F76;
-        Sat, 10 Dec 2022 23:07:47 -0800 (PST)
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5A8EABE30;
+        Sat, 10 Dec 2022 23:07:48 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id EBF0E60DBE;
+        by ams.source.kernel.org (Postfix) with ESMTPS id 464B1B80954;
         Sun, 11 Dec 2022 07:07:46 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 292E2C43398;
-        Sun, 11 Dec 2022 07:07:46 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 8A9B8C433EF;
+        Sun, 11 Dec 2022 07:07:44 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1670742466;
-        bh=I4KycfrJoluDh3XxkUca9i14tk/eHh0ttbMMC9iWP/s=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=QPACzPIivRbHhcZrLNNr3YlOXBjtFNaoVp9zzgzNrNWYRjie86XEdxH93NAkUHFEp
-         4EOzCGF6SAUST5LKSZ0Wah2sXzYJXKskUUeY6SaJZIEOOaeNStsDtcUnTJRc+/CNPE
-         DmyLHm2yxOEPIwcEA73wbZJk/Ca5B8HorWG0Es62RncUZyTkJLbyE4qub3NRMqSS/H
-         E6Ae5+/cUzFHr6eL1WAKXFti38YS4EblGOmgey4sz1eEIeaaHv6Wh4QjJ3w41cxtKi
-         5Gm4FDfJwwEo3K3l6AIlM/AP7+PUIGIl68/0z3SeM1DPSqvv5UcGbPiJy82cgnWItR
-         VxTR2vHcSt7Jg==
+        s=k20201202; t=1670742464;
+        bh=0PlfufLRdt0TiFkVc3hJh+Gbl/yW5nD7nXQiauHI8Hw=;
+        h=From:To:Cc:Subject:Date:From;
+        b=OZwYvK9/618gEChCFsudGCykW9DS9tQklTfiJcGAwnNZncdMO5iyoNSv28XNmKQ1w
+         mHwYiVy0nkyPqisbOHIi4vGeg7vpsKJtJJsFCu1jPG7Ddc7tbjtADLpZOjuOAyqK2J
+         E2OzTp3kOb8DtLSEUW+JVaQfwPkx48Pfem9B48L65YBjWgCZyP11gnLbmFacMwqLWT
+         YpdEYbdo6H/2/uyuEtyWOcTcP5Z6RBdGbnM7Oq3fZFW3o0gDfaHwbTB203DqMKalHW
+         ekLfMjANgWIvReoVKETBPIHh4TB2kmpL6OcDC0C/OxRaOEegk6r554FC0k7DuuvRzc
+         NHJnbe38Qcmfw==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org
-Subject: [PATCH 07/10] generic/577: support non-4K Merkle tree block size
-Date:   Sat, 10 Dec 2022 23:07:00 -0800
-Message-Id: <20221211070704.341481-8-ebiggers@kernel.org>
+Subject: [PATCH 00/10] xfstests: update verity tests for non-4K block and page size
+Date:   Sat, 10 Dec 2022 23:06:53 -0800
+Message-Id: <20221211070704.341481-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.38.1
-In-Reply-To: <20221211070704.341481-1-ebiggers@kernel.org>
-References: <20221211070704.341481-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+This series updates the verity xfstests to eliminate implicit
+assumptions that 'merkle_tree_block_size == fs_block_size == page_size
+== 4096', and to provide some test coverage for cases where
+merkle_tree_block_size differs from fs_block_size and/or page_size.  It
+doesn't add any new test scripts, but it does update some of the
+existing test scripts to test multiple block sizes.
 
-Update generic/577 to not implicitly assume that the Merkle tree block
-size being used is 4096 bytes.
+This goes along with my kernel patch series
+"fsverity: support for non-4K pages"
+(https://lore.kernel.org/linux-fsdevel/20221028224539.171818-1-ebiggers@kernel.org/T/#u).
+However, it's not necessary to wait for that kernel patch series to be
+applied before applying this xfstests patch series.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/577     | 22 ++++++++++++----------
- tests/generic/577.out | 10 +++++-----
- 2 files changed, 17 insertions(+), 15 deletions(-)
+Eric Biggers (10):
+  common/verity: add and use _fsv_can_enable()
+  common/verity: set FSV_BLOCK_SIZE to an appropriate value
+  common/verity: use FSV_BLOCK_SIZE by default
+  common/verity: add _filter_fsverity_digest()
+  generic/572: support non-4K Merkle tree block size
+  generic/573: support non-4K Merkle tree block size
+  generic/577: support non-4K Merkle tree block size
+  generic/574: test multiple Merkle tree block sizes
+  generic/624: test multiple Merkle tree block sizes
+  generic/575: test 1K Merkle tree block size
 
-diff --git a/tests/generic/577 b/tests/generic/577
-index 85d680df..bbbfdb0a 100755
---- a/tests/generic/577
-+++ b/tests/generic/577
-@@ -38,6 +38,11 @@ sigfile=$tmp.sig
- otherfile=$SCRATCH_MNT/otherfile
- othersigfile=$tmp.othersig
- 
-+sign()
-+{
-+	_fsv_sign "$@" | _filter_scratch | _filter_fsverity_digest
-+}
-+
- # Setup
- 
- echo -e "\n# Generating certificates and private keys"
-@@ -57,14 +62,13 @@ _enable_fsverity_signatures
- echo -e "\n# Generating file and signing it for fs-verity"
- head -c 100000 /dev/zero > $fsv_orig_file
- for suffix in '' '.2'; do
--	_fsv_sign $fsv_orig_file $sigfile$suffix --key=$keyfile$suffix \
--		--cert=$certfile$suffix | _filter_scratch
-+	sign $fsv_orig_file $sigfile$suffix --key=$keyfile$suffix \
-+		--cert=$certfile$suffix
- done
- 
- echo -e "\n# Signing a different file for fs-verity"
- head -c 100000 /dev/zero | tr '\0' 'X' > $otherfile
--_fsv_sign $otherfile $othersigfile --key=$keyfile --cert=$certfile \
--	| _filter_scratch
-+sign $otherfile $othersigfile --key=$keyfile --cert=$certfile
- 
- # Actual tests
- 
-@@ -106,16 +110,15 @@ _fsv_enable $fsv_file --signature=$tmp.malformed_sig |& _filter_scratch
- 
- echo -e "\n# Testing salt"
- reset_fsv_file
--_fsv_sign $fsv_orig_file $sigfile.salted --key=$keyfile --cert=$certfile \
--	--salt=abcd | _filter_scratch
-+sign $fsv_orig_file $sigfile.salted --key=$keyfile --cert=$certfile --salt=abcd
- _fsv_enable $fsv_file --signature=$sigfile.salted --salt=abcd
- cmp $fsv_file $fsv_orig_file
- 
- echo -e "\n# Testing non-default hash algorithm"
- if _fsv_can_enable $fsv_file --hash-alg=sha512; then
- 	reset_fsv_file
--	_fsv_sign $fsv_orig_file $sigfile.sha512 --key=$keyfile \
--		--cert=$certfile --hash-alg=sha512 > /dev/null
-+	sign $fsv_orig_file $sigfile.sha512 --key=$keyfile --cert=$certfile \
-+		--hash-alg=sha512 > /dev/null
- 	_fsv_enable $fsv_file --signature=$sigfile.sha512 --hash-alg=sha512
- 	cmp $fsv_file $fsv_orig_file
- fi
-@@ -123,8 +126,7 @@ fi
- echo -e "\n# Testing empty file"
- rm -f $fsv_file
- echo -n > $fsv_file
--_fsv_sign $fsv_file $sigfile.emptyfile --key=$keyfile --cert=$certfile | \
--		_filter_scratch
-+sign $fsv_file $sigfile.emptyfile --key=$keyfile --cert=$certfile
- _fsv_enable $fsv_file --signature=$sigfile.emptyfile
- 
- # success, all done
-diff --git a/tests/generic/577.out b/tests/generic/577.out
-index 0ca417c4..4f360d57 100644
---- a/tests/generic/577.out
-+++ b/tests/generic/577.out
-@@ -9,11 +9,11 @@ QA output created by 577
- # Enabling fs.verity.require_signatures
- 
- # Generating file and signing it for fs-verity
--Signed file 'SCRATCH_MNT/file' (sha256:ecabbfca4efd69a721be824965da10d27900b109549f96687b35a4d91d810dac)
--Signed file 'SCRATCH_MNT/file' (sha256:ecabbfca4efd69a721be824965da10d27900b109549f96687b35a4d91d810dac)
-+Signed file 'SCRATCH_MNT/file' (sha256:<digest>)
-+Signed file 'SCRATCH_MNT/file' (sha256:<digest>)
- 
- # Signing a different file for fs-verity
--Signed file 'SCRATCH_MNT/otherfile' (sha256:b2a419c5a8c767a78c6275d6729794bf51e52ddf8713e31d12a93d61d961f49f)
-+Signed file 'SCRATCH_MNT/otherfile' (sha256:<digest>)
- 
- # Enabling verity with valid signature (should succeed)
- 
-@@ -33,9 +33,9 @@ ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Key was rejected b
- ERROR: FS_IOC_ENABLE_VERITY failed on 'SCRATCH_MNT/file.fsv': Bad message
- 
- # Testing salt
--Signed file 'SCRATCH_MNT/file' (sha256:1cb173bcd199133eb80e9ea4f0f741001b9e73227aa8812685156f2bc8ff45f5)
-+Signed file 'SCRATCH_MNT/file' (sha256:<digest>)
- 
- # Testing non-default hash algorithm
- 
- # Testing empty file
--Signed file 'SCRATCH_MNT/file.fsv' (sha256:3d248ca542a24fc62d1c43b916eae5016878e2533c88238480b26128a1f1af95)
-+Signed file 'SCRATCH_MNT/file.fsv' (sha256:<digest>)
+ common/verity         |  84 +++++++++++++++-----
+ tests/generic/572     |  21 ++---
+ tests/generic/572.out |  10 +--
+ tests/generic/573     |   8 +-
+ tests/generic/574     | 174 ++++++++++++++++++++++++++----------------
+ tests/generic/574.out |  83 ++------------------
+ tests/generic/575     |  58 +++++++++-----
+ tests/generic/575.out |   8 +-
+ tests/generic/577     |  24 +++---
+ tests/generic/577.out |  10 +--
+ tests/generic/624     | 119 ++++++++++++++++++++---------
+ tests/generic/624.out |  15 ++--
+ 12 files changed, 346 insertions(+), 268 deletions(-)
+
+
+base-commit: 41f2bbdec5faa5d6522e86e63c1f30473a99dbfe
 -- 
 2.38.1
 
