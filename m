@@ -2,406 +2,96 @@ Return-Path: <linux-fscrypt-owner@kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 98BD7C25B04
-	for <linux-fscrypt@archiver.kernel.org>; Sun, 11 Dec 2022 07:08:04 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A14F6C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 12 Dec 2022 04:46:02 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230192AbiLKHID (ORCPT
+        id S231230AbiLLEqA (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 11 Dec 2022 02:08:03 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:42610 "EHLO
+        Sun, 11 Dec 2022 23:46:00 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46304 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230142AbiLKHHz (ORCPT
+        with ESMTP id S229799AbiLLEp7 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 11 Dec 2022 02:07:55 -0500
-Received: from sin.source.kernel.org (sin.source.kernel.org [IPv6:2604:1380:40e1:4800::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 43FED6271;
-        Sat, 10 Dec 2022 23:07:49 -0800 (PST)
+        Sun, 11 Dec 2022 23:45:59 -0500
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 8DA6E64E9;
+        Sun, 11 Dec 2022 20:45:57 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by sin.source.kernel.org (Postfix) with ESMTPS id 1636ECE010F;
-        Sun, 11 Dec 2022 07:07:48 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 610EBC4339B;
-        Sun, 11 Dec 2022 07:07:46 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 2A9D560EAB;
+        Mon, 12 Dec 2022 04:45:57 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4021DC433D2;
+        Mon, 12 Dec 2022 04:45:56 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1670742466;
-        bh=nrkQXIoWCqYJDiO8TdnndxrMelAO8KLzT+5blm/T28c=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=QR3Ir1/w0Saogh8KNc/zaVM2XO9LEyTPCtjhR0ax3fw7JjNhCiTAu7BsftfBYR4q2
-         0wHLuHcdw1GdcZqPM9MaolqsPF/NQjRO60OIavooZd3vBkIzfv3sq9AUcQqkziuB4B
-         K1olNuRm6UCdvjWr39HmweY0071pd8fNJm24NxFqCa2ALs5yxTon8xVf6CZAeEbTY1
-         0xZ+rhvsu6uU9mHu7WsgQTTSWrgdlqVC/Sqp0EL8kb83Vp7zZ5viKAxwN4h03pFKlQ
-         bO4rDj/Xh9sWUo3kYP9cm15ez7sXY+Ss9QXit+tiVCKB6SO3ZVtw1eEDTwIINRnP6o
-         Y4DMknY+9CmXA==
+        s=k20201202; t=1670820356;
+        bh=ZiPqywrfVYJKyTMOBz5ADrSOCtd+XOKFfeu5S1nMah4=;
+        h=Date:From:To:Cc:Subject:From;
+        b=HHl82Mya2ZR0wKm/58rpz/ANETzs4T9/LlUcAtG6Jj/kdDcSPMy3nUSluiVp8JwXG
+         5Zx/BL/ckxlDkCXUPLL9ML9luXQVYAs6fZ+ytcqXBYsADAqzIE7i3GKmkbTrSW/Kw2
+         3XWKMbBePAmK7rN4+xXQ8ZaI0tsddiJh0pnmP8PZueq0XoVAbGF6TIgTBuagMf3cb6
+         Lct0ctXRuaxw6z9+1GJaxO70Dsudj2HbinzikLEoff2C/Ux+gZAKDKEfXZsivs/eKS
+         MgwgMj5QowZcxObgBI0FlnIbym4sDn6ocMgkng+dpntHP+WBUO09whZTmB+UJ6+foK
+         l2I392lOG5/3w==
+Date:   Sun, 11 Dec 2022 20:45:54 -0800
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     fstests@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org
-Subject: [PATCH 08/10] generic/574: test multiple Merkle tree block sizes
-Date:   Sat, 10 Dec 2022 23:07:01 -0800
-Message-Id: <20221211070704.341481-9-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.38.1
-In-Reply-To: <20221211070704.341481-1-ebiggers@kernel.org>
-References: <20221211070704.341481-1-ebiggers@kernel.org>
+To:     Linus Torvalds <torvalds@linux-foundation.org>
+Cc:     linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org,
+        linux-f2fs-devel@lists.sourceforge.net,
+        linux-mtd@lists.infradead.org, linux-fsdevel@vger.kernel.org,
+        linux-kernel@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>
+Subject: [GIT PULL] fscrypt updates for 6.2
+Message-ID: <Y5ayAsXkTF3jK13s@sol.localdomain>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+The following changes since commit f0c4d9fc9cc9462659728d168387191387e903cc:
 
-Instead of only testing 4K Merkle tree blocks, test FSV_BLOCK_SIZE, and
-also other sizes if they happen to be supported.  This allows this test
-to run in cases where it couldn't before and improves test coverage in
-cases where it did run before.
+  Linux 6.1-rc4 (2022-11-06 15:07:11 -0800)
 
-Given that the list of Merkle tree block sizes that will actually work
-is not fixed, this required reworking the test to not rely on the .out
-file so heavily.
+are available in the Git repository at:
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- tests/generic/574     | 174 ++++++++++++++++++++++++++----------------
- tests/generic/574.out |  83 ++------------------
- 2 files changed, 112 insertions(+), 145 deletions(-)
+  https://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git tags/fscrypt-for-linus
 
-diff --git a/tests/generic/574 b/tests/generic/574
-index fd4488c9..0da3382c 100755
---- a/tests/generic/574
-+++ b/tests/generic/574
-@@ -37,18 +37,19 @@ fsv_file=$SCRATCH_MNT/file.fsv
- 
- setup_zeroed_file()
- {
--	local len=$1
--	local sparse=$2
-+	local block_size=$1
-+	local file_len=$2
-+	local sparse=$3
- 
- 	if $sparse; then
--		dd if=/dev/zero of=$fsv_orig_file bs=1 count=0 seek=$len \
-+		dd if=/dev/zero of=$fsv_orig_file bs=1 count=0 seek=$file_len \
- 			status=none
- 	else
--		head -c $len /dev/zero > $fsv_orig_file
-+		head -c $file_len /dev/zero > $fsv_orig_file
- 	fi
- 	cp $fsv_orig_file $fsv_file
--	_fsv_enable $fsv_file
--	md5sum $fsv_file |& _filter_scratch
-+	_fsv_enable $fsv_file --block-size=$block_size
-+	cmp $fsv_orig_file $fsv_file
- }
- 
- filter_sigbus()
-@@ -66,63 +67,84 @@ round_up_to_page_boundary()
- 
- corruption_test()
- {
--	local file_len=$1
--	local zap_offset=$2
--	local zap_len=$3
--	local is_merkle_tree=${4:-false} # if true, zap tree instead of data
--	local use_sparse_file=${5:-false}
-+	local block_size=$1
-+	local file_len=$2
-+	local zap_offset=$3
-+	local zap_len=$4
-+	local is_merkle_tree=${5:-false} # if true, zap tree instead of data
-+	local use_sparse_file=${6:-false}
- 	local page_aligned_eof=$(round_up_to_page_boundary $file_len)
--	local measurement
-+
-+	local paramstr="block_size=$block_size"
-+	paramstr+=", file_len=$file_len"
-+	paramstr+=", zap_offset=$zap_offset"
-+	paramstr+=", zap_len=$zap_len"
-+	paramstr+=", is_merkle_tree=$is_merkle_tree"
-+	paramstr+=", use_sparse_file=$use_sparse_file"
- 
- 	if $is_merkle_tree; then
- 		local corrupt_func=_fsv_scratch_corrupt_merkle_tree
- 	else
- 		local corrupt_func=_fsv_scratch_corrupt_bytes
- 	fi
-+	local fs_block_size=$(_get_block_size $SCRATCH_MNT)
- 
--	local msg="Corruption test:"
--	msg+=" file_len=$file_len"
--	if $use_sparse_file; then
--		msg+=" (sparse)"
--	fi
--	msg+=" zap_offset=$zap_offset"
--	if $is_merkle_tree; then
--		msg+=" (in Merkle tree)"
--	fi
--	msg+=" zap_len=$zap_len"
-+	rm -rf "${SCRATCH_MNT:?}"/*
-+	setup_zeroed_file $block_size $file_len $use_sparse_file
- 
--	_fsv_scratch_begin_subtest "$msg"
--	setup_zeroed_file $file_len $use_sparse_file
--	cmp $fsv_file $fsv_orig_file
--	echo "Corrupting bytes..."
-+	# Corrupt part of the file (data or Merkle tree).
- 	head -c $zap_len /dev/zero | tr '\0' X \
- 		| $corrupt_func $fsv_file $zap_offset
- 
--	echo "Validating corruption (reading full file)..."
-+	# Reading the full file with buffered I/O should fail.
- 	_scratch_cycle_mount
--	md5sum $fsv_file |& _filter_scratch
-+	if cat $fsv_file >/dev/null 2>$tmp.out; then
-+		echo "Unexpectedly was able to read full file ($paramstr)"
-+	elif ! grep -q 'Input/output error' $tmp.out; then
-+		echo "Wrong error reading full file ($paramstr):"
-+		cat $tmp.out
-+	fi
- 
--	echo "Validating corruption (direct I/O)..."
-+	# Reading the full file with direct I/O should fail.
- 	_scratch_cycle_mount
--	dd if=$fsv_file bs=$FSV_BLOCK_SIZE iflag=direct status=none \
--		of=/dev/null |& _filter_scratch
-+	if dd if=$fsv_file bs=$fs_block_size iflag=direct status=none \
-+		of=/dev/null 2>$tmp.out
-+	then
-+		echo "Unexpectedly was able to read full file with DIO ($paramstr)"
-+	elif ! grep -q 'Input/output error' $tmp.out; then
-+		echo "Wrong error reading full file with DIO ($paramstr):"
-+		cat $tmp.out
-+	fi
- 
--	if (( zap_offset < file_len )) && ! $is_merkle_tree; then
--		echo "Validating corruption (reading just corrupted part)..."
--		dd if=$fsv_file bs=1 skip=$zap_offset count=$zap_len \
--			of=/dev/null status=none |& _filter_scratch
-+	# Reading just the corrupted part of the file should fail.
-+	if ! $is_merkle_tree; then
-+		if dd if=$fsv_file bs=1 skip=$zap_offset count=$zap_len \
-+			of=/dev/null status=none 2>$tmp.out; then
-+			echo "Unexpectedly was able to read corrupted part ($paramstr)"
-+		elif ! grep -q 'Input/output error' $tmp.out; then
-+			echo "Wrong error reading corrupted part ($paramstr):"
-+			cat $tmp.out
-+		fi
- 	fi
- 
--	echo "Validating corruption (reading full file via mmap)..."
-+	# Reading the file via mmap should fail.
- 	bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
- 		-c 'mmap -r 0 $page_aligned_eof' \
--		-c 'mread 0 $file_len'" |& filter_sigbus
-+		-c 'mread 0 $file_len'" >/dev/null 2>$tmp.out
-+	if ! grep -q 'Bus error' $tmp.out; then
-+		echo "Didn't see SIGBUS when reading file via mmap"
-+		cat $tmp.out
-+	fi
- 
-+	# Reading just the corrupted part via mmap should fail.
- 	if ! $is_merkle_tree; then
--		echo "Validating corruption (reading just corrupted part via mmap)..."
- 		bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
- 			-c 'mmap -r 0 $page_aligned_eof' \
--			-c 'mread $zap_offset $zap_len'" |& filter_sigbus
-+			-c 'mread $zap_offset $zap_len'" >/dev/null 2>$tmp.out
-+		if ! grep -q 'Bus error' $tmp.out; then
-+			echo "Didn't see SIGBUS when reading corrupted part via mmap"
-+			cat $tmp.out
-+		fi
- 	fi
- }
- 
-@@ -132,17 +154,16 @@ corruption_test()
- # disk. In the former, corruption should be detected and result in SIGBUS,
- # while in the latter we would expect zeros past EOF, but no error.
- corrupt_eof_block_test() {
--	local file_len=$1
--	local zap_len=$2
-+	local block_size=$1
-+	local file_len=$2
-+	local zap_len=$3
- 	local page_aligned_eof=$(round_up_to_page_boundary $file_len)
--	_fsv_scratch_begin_subtest "Corruption test: EOF block"
--	setup_zeroed_file $file_len false
--	cmp $fsv_file $fsv_orig_file
--	echo "Corrupting bytes..."
-+
-+	rm -rf "${SCRATCH_MNT:?}"/*
-+	setup_zeroed_file $block_size $file_len false
- 	head -c $zap_len /dev/zero | tr '\0' X \
- 		| _fsv_scratch_corrupt_bytes $fsv_file $file_len
- 
--	echo "Reading eof block via mmap into a temporary file..."
- 	bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
- 		-c 'mmap -r 0 $page_aligned_eof' \
- 		-c 'mread -v $file_len $zap_len'" \
-@@ -153,30 +174,49 @@ corrupt_eof_block_test() {
- 		-c "mmap -r 0 $page_aligned_eof" \
- 		-c "mread -v $file_len $zap_len" >$tmp.eof_zero_read
- 
--	echo "Checking for SIGBUS or zeros..."
--	grep -q -e '^Bus error$' $tmp.eof_block_read \
--		|| diff $tmp.eof_block_read $tmp.eof_zero_read \
--		&& echo "OK"
-+	grep -q -e '^Bus error$' $tmp.eof_block_read || \
-+		diff $tmp.eof_block_read $tmp.eof_zero_read
- }
- 
--# Note: these tests just overwrite some bytes without checking their original
--# values.  Therefore, make sure to overwrite at least 5 or so bytes, to make it
--# nearly guaranteed that there will be a change -- even when the test file is
--# encrypted due to the test_dummy_encryption mount option being specified.
--
--corruption_test 131072 0 5
--corruption_test 131072 4091 5
--corruption_test 131072 65536 65536
--corruption_test 131072 131067 5
--
--corrupt_eof_block_test 130999 72
--
--# Merkle tree corruption.
--corruption_test 200000 100 10 true
-+test_block_size()
-+{
-+	local block_size=$1
-+
-+	# Note: these tests just overwrite some bytes without checking their
-+	# original values.  Therefore, make sure to overwrite at least 5 or so
-+	# bytes, to make it nearly guaranteed that there will be a change --
-+	# even when the test file is encrypted due to the test_dummy_encryption
-+	# mount option being specified.
-+	corruption_test $block_size 131072 0 5
-+	corruption_test $block_size 131072 4091 5
-+	corruption_test $block_size 131072 65536 65536
-+	corruption_test $block_size 131072 131067 5
-+
-+	corrupt_eof_block_test $block_size 130999 72
-+
-+	# Merkle tree corruption.
-+	corruption_test $block_size 200000 100 10 true
-+
-+	# Sparse file.  Corrupting the Merkle tree should still cause reads to
-+	# fail, i.e. the filesystem must verify holes.
-+	corruption_test $block_size 200000 100 10 true true
-+}
- 
--# Sparse file.  Corrupting the Merkle tree should still cause reads to fail,
--# i.e. the filesystem must verify holes.
--corruption_test 200000 100 10 true true
-+# Always test FSV_BLOCK_SIZE.  Also test some other block sizes if they happen
-+# to be supported.
-+_fsv_scratch_begin_subtest "Corruption test with block_size=FSV_BLOCK_SIZE"
-+test_block_size $FSV_BLOCK_SIZE
-+for block_size in 1024 4096 16384 65536; do
-+	_fsv_scratch_begin_subtest "Corruption test with block_size=$block_size"
-+	if (( block_size == FSV_BLOCK_SIZE )); then
-+		continue
-+	fi
-+	if ! _fsv_can_enable $fsv_file --block-size=$block_size; then
-+		echo "block_size=$block_size is unsupported" >> $seqres.full
-+		continue
-+	fi
-+	test_block_size $block_size
-+done
- 
- # success, all done
- status=0
-diff --git a/tests/generic/574.out b/tests/generic/574.out
-index d40d1263..248aee78 100644
---- a/tests/generic/574.out
-+++ b/tests/generic/574.out
-@@ -1,84 +1,11 @@
- QA output created by 574
- 
--# Corruption test: file_len=131072 zap_offset=0 zap_len=5
--0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
--Corrupting bytes...
--Validating corruption (reading full file)...
--md5sum: SCRATCH_MNT/file.fsv: Input/output error
--Validating corruption (direct I/O)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading just corrupted part)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading full file via mmap)...
--Bus error
--Validating corruption (reading just corrupted part via mmap)...
--Bus error
-+# Corruption test with block_size=FSV_BLOCK_SIZE
- 
--# Corruption test: file_len=131072 zap_offset=4091 zap_len=5
--0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
--Corrupting bytes...
--Validating corruption (reading full file)...
--md5sum: SCRATCH_MNT/file.fsv: Input/output error
--Validating corruption (direct I/O)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading just corrupted part)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading full file via mmap)...
--Bus error
--Validating corruption (reading just corrupted part via mmap)...
--Bus error
-+# Corruption test with block_size=1024
- 
--# Corruption test: file_len=131072 zap_offset=65536 zap_len=65536
--0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
--Corrupting bytes...
--Validating corruption (reading full file)...
--md5sum: SCRATCH_MNT/file.fsv: Input/output error
--Validating corruption (direct I/O)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading just corrupted part)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading full file via mmap)...
--Bus error
--Validating corruption (reading just corrupted part via mmap)...
--Bus error
-+# Corruption test with block_size=4096
- 
--# Corruption test: file_len=131072 zap_offset=131067 zap_len=5
--0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
--Corrupting bytes...
--Validating corruption (reading full file)...
--md5sum: SCRATCH_MNT/file.fsv: Input/output error
--Validating corruption (direct I/O)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading just corrupted part)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading full file via mmap)...
--Bus error
--Validating corruption (reading just corrupted part via mmap)...
--Bus error
-+# Corruption test with block_size=16384
- 
--# Corruption test: EOF block
--f5cca0d7fbb8b02bc6118a9954d5d306  SCRATCH_MNT/file.fsv
--Corrupting bytes...
--Reading eof block via mmap into a temporary file...
--Checking for SIGBUS or zeros...
--OK
--
--# Corruption test: file_len=200000 zap_offset=100 (in Merkle tree) zap_len=10
--4a1e4325031b13f933ac4f1db9ecb63f  SCRATCH_MNT/file.fsv
--Corrupting bytes...
--Validating corruption (reading full file)...
--md5sum: SCRATCH_MNT/file.fsv: Input/output error
--Validating corruption (direct I/O)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading full file via mmap)...
--Bus error
--
--# Corruption test: file_len=200000 (sparse) zap_offset=100 (in Merkle tree) zap_len=10
--4a1e4325031b13f933ac4f1db9ecb63f  SCRATCH_MNT/file.fsv
--Corrupting bytes...
--Validating corruption (reading full file)...
--md5sum: SCRATCH_MNT/file.fsv: Input/output error
--Validating corruption (direct I/O)...
--dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
--Validating corruption (reading full file via mmap)...
--Bus error
-+# Corruption test with block_size=65536
--- 
-2.38.1
+for you to fetch changes up to 41952551acb405080726aa38a8a7ce317d9de4bb:
 
+  fscrypt: add additional documentation for SM4 support (2022-12-02 10:43:00 -0800)
+
+----------------------------------------------------------------
+
+This release adds SM4 encryption support, contributed by Tianjia Zhang.
+SM4 is a Chinese block cipher that is an alternative to AES.
+
+I recommend against using SM4, but (according to Tianjia) some people
+are being required to use it.  Since SM4 has been turning up in many
+other places (crypto API, wireless, TLS, OpenSSL, ARMv8 CPUs, etc.), it
+hasn't been very controversial, and some people have to use it, I don't
+think it would be fair for me to reject this optional feature.
+
+Besides the above, there are a couple cleanups.
+
+----------------------------------------------------------------
+Eric Biggers (4):
+      fscrypt: pass super_block to fscrypt_put_master_key_activeref()
+      fscrypt: add comment for fscrypt_valid_enc_modes_v1()
+      fscrypt: remove unused Speck definitions
+      fscrypt: add additional documentation for SM4 support
+
+Tianjia Zhang (2):
+      blk-crypto: Add support for SM4-XTS blk crypto mode
+      fscrypt: Add SM4 XTS/CTS symmetric algorithm support
+
+ Documentation/filesystems/fscrypt.rst |  7 +++++++
+ block/blk-crypto.c                    |  6 ++++++
+ fs/crypto/fscrypt_private.h           | 13 ++++---------
+ fs/crypto/keyring.c                   | 14 ++++++--------
+ fs/crypto/keysetup.c                  | 17 ++++++++++++++++-
+ fs/crypto/policy.c                    | 12 ++++++++++++
+ include/linux/blk-crypto.h            |  1 +
+ include/uapi/linux/fscrypt.h          |  4 ++--
+ 8 files changed, 54 insertions(+), 20 deletions(-)
