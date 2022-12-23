@@ -2,46 +2,46 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 12FB9C4167B
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 23 Dec 2022 20:37:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 35AC9C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 23 Dec 2022 20:37:11 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233459AbiLWUhE (ORCPT
+        id S232401AbiLWUhK (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 23 Dec 2022 15:37:04 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56428 "EHLO
+        Fri, 23 Dec 2022 15:37:10 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56454 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232915AbiLWUg7 (ORCPT
+        with ESMTP id S233351AbiLWUhB (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 23 Dec 2022 15:36:59 -0500
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 27B2D1DA51;
-        Fri, 23 Dec 2022 12:36:58 -0800 (PST)
+        Fri, 23 Dec 2022 15:37:01 -0500
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 877E51DA51;
+        Fri, 23 Dec 2022 12:37:00 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id B8E7E61EF5;
-        Fri, 23 Dec 2022 20:36:57 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 529BEC433F0;
-        Fri, 23 Dec 2022 20:36:57 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 21E9461F10;
+        Fri, 23 Dec 2022 20:37:00 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4A262C433EF;
+        Fri, 23 Dec 2022 20:36:59 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1671827817;
-        bh=hUMxvtChJHIBiEf3QPm8r6dGOW77G56OuiC6WrUXTPs=;
+        s=k20201202; t=1671827819;
+        bh=4oD1V523N4OyxstVi41q9/FPJsjEFrEIUKGeeV0MTvk=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=oyXzMNc4twgXBPEgKTMYdpGLLF0S+W/JjUp0sjBRFNQ3R4P31+mrvxJ1ZdzEO/JJc
-         2yKvKtQA9ldermdyYk7cM+zj2pjKPm0I75L/OXvjsuQE/OAGY837S/3OT0He6mjGqY
-         3j3T4wKkte1o51XsKB+PHC1Izsf/oUC1bfVwiOg4gw7gjU0B9svWzFhfkBbDrPocAD
-         1XMwZ/QDk5X9Rg0lKgwPpLFxyvZngASNHLl8b9jIRzfvRwbLUsillkGJn73NxFi93d
-         fVFDCv4mQrgG9lGb015HN3LMPQmH2Ovw7RAizFoP6ZmdtiGTgHwaPIU7gmKvmC/rH7
-         WO6RF5z584vmA==
+        b=CPWnTNgYmt6CHb9BL1qsJSCqM3DzwpOukO6P/TF58fagSqhT4layB4JaIZgvDEsoa
+         brZ/vkXQ0/N2NTvHV8gxSfrysKPIq8spCa7Klmpfw1m6Z5dGbmJhPf75v0RMwCfPHL
+         iCDoakd4sHQgLNoYwCUBLXwxsZAfjtCkiwoBI771EW0whZ1URkj0PFxWZrH8mwPKEa
+         U1lix5nDUvqRaQBXdiAmBReWIgaK7eubwfI1JD68dvWqj5YVohIxpUmiXT2soZvFDN
+         YpdC0krtFjeEQaYvRSXplVkyNp1GHNIIl0sofW0z+53fYnX14aCYrjLkUFD//aOry/
+         IEHktE1X0geUg==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         linux-btrfs@vger.kernel.org, linux-xfs@vger.kernel.org,
         Andrey Albershteyn <aalbersh@redhat.com>
-Subject: [PATCH v2 04/11] fsverity: use EFBIG for file too large to enable verity
-Date:   Fri, 23 Dec 2022 12:36:31 -0800
-Message-Id: <20221223203638.41293-5-ebiggers@kernel.org>
+Subject: [PATCH v2 09/11] f2fs: simplify f2fs_readpage_limit()
+Date:   Fri, 23 Dec 2022 12:36:36 -0800
+Message-Id: <20221223203638.41293-10-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.39.0
 In-Reply-To: <20221223203638.41293-1-ebiggers@kernel.org>
 References: <20221223203638.41293-1-ebiggers@kernel.org>
@@ -53,53 +53,29 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Currently, there is an implementation limit where files can't have more
-than 8 Merkle tree levels.  With SHA-256 and 4K blocks, this limit is
-never reached, since a file would need to be larger than 2**64 bytes to
-need 9 levels.  However, with SHA-512, 9 levels are needed for files
-larger than about 1.15 EB, which is possible on btrfs.  Therefore, this
-limit technically became reachable when btrfs added fsverity support.
-
-Meanwhile, support for merkle_tree_block_size < PAGE_SIZE will introduce
-another implementation limit on file size, resulting from the use of an
-in-memory bitmap to track which Merkle tree blocks have been verified.
-
-In any case, currently FS_IOC_ENABLE_VERITY fails with EINVAL when the
-file is too large.  This is undocumented, and also ambiguous since
-EINVAL can mean other things too.  Let's change the error code to EFBIG,
-which is much clearer, and document it.
+Now that the implementation of FS_IOC_ENABLE_VERITY has changed to not
+involve reading back Merkle tree blocks that were previously written,
+there is no need for f2fs_readpage_limit() to allow for this case.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- Documentation/filesystems/fsverity.rst | 1 +
- fs/verity/open.c                       | 2 +-
- 2 files changed, 2 insertions(+), 1 deletion(-)
+ fs/f2fs/data.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
 
-diff --git a/Documentation/filesystems/fsverity.rst b/Documentation/filesystems/fsverity.rst
-index cb8e7573882a1..66cdca30ff58b 100644
---- a/Documentation/filesystems/fsverity.rst
-+++ b/Documentation/filesystems/fsverity.rst
-@@ -161,6 +161,7 @@ FS_IOC_ENABLE_VERITY can fail with the following errors:
- - ``EBUSY``: this ioctl is already running on the file
- - ``EEXIST``: the file already has verity enabled
- - ``EFAULT``: the caller provided inaccessible memory
-+- ``EFBIG``: the file is too large to enable verity on
- - ``EINTR``: the operation was interrupted by a fatal signal
- - ``EINVAL``: unsupported version, hash algorithm, or block size; or
-   reserved bits are set; or the file descriptor refers to neither a
-diff --git a/fs/verity/open.c b/fs/verity/open.c
-index ca8de73e5a0b8..09512daa22db5 100644
---- a/fs/verity/open.c
-+++ b/fs/verity/open.c
-@@ -92,7 +92,7 @@ int fsverity_init_merkle_tree_params(struct merkle_tree_params *params,
- 	while (blocks > 1) {
- 		if (params->num_levels >= FS_VERITY_MAX_LEVELS) {
- 			fsverity_err(inode, "Too many levels in Merkle tree");
--			err = -EINVAL;
-+			err = -EFBIG;
- 			goto out_err;
- 		}
- 		blocks = (blocks + params->hashes_per_block - 1) >>
+diff --git a/fs/f2fs/data.c b/fs/f2fs/data.c
+index 6e43e19c7d1ca..6c403e22002de 100644
+--- a/fs/f2fs/data.c
++++ b/fs/f2fs/data.c
+@@ -2053,8 +2053,7 @@ int f2fs_fiemap(struct inode *inode, struct fiemap_extent_info *fieinfo,
+ 
+ static inline loff_t f2fs_readpage_limit(struct inode *inode)
+ {
+-	if (IS_ENABLED(CONFIG_FS_VERITY) &&
+-	    (IS_VERITY(inode) || f2fs_verity_in_progress(inode)))
++	if (IS_ENABLED(CONFIG_FS_VERITY) && IS_VERITY(inode))
+ 		return inode->i_sb->s_maxbytes;
+ 
+ 	return i_size_read(inode);
 -- 
 2.39.0
 
