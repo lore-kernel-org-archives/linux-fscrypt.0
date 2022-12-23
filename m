@@ -2,46 +2,46 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1C33FC4332F
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 23 Dec 2022 20:37:19 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E24EAC4332F
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 23 Dec 2022 20:37:21 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233600AbiLWUhQ (ORCPT
+        id S233666AbiLWUhU (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 23 Dec 2022 15:37:16 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56466 "EHLO
+        Fri, 23 Dec 2022 15:37:20 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56538 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232428AbiLWUhB (ORCPT
+        with ESMTP id S231238AbiLWUhJ (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 23 Dec 2022 15:37:01 -0500
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 4723F1DA66;
-        Fri, 23 Dec 2022 12:37:01 -0800 (PST)
+        Fri, 23 Dec 2022 15:37:09 -0500
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C65991D307;
+        Fri, 23 Dec 2022 12:36:59 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id D720461F25;
-        Fri, 23 Dec 2022 20:37:00 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 11D60C433D2;
-        Fri, 23 Dec 2022 20:37:00 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 673CAB8213F;
+        Fri, 23 Dec 2022 20:36:58 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id E8F55C433EF;
+        Fri, 23 Dec 2022 20:36:56 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1671827820;
-        bh=qLoSGFi2QkFfE5PAtk38FT/yWSIKsO+TzvgyJfycJFQ=;
+        s=k20201202; t=1671827817;
+        bh=wN7s/A4toTfgS+KIXn99r7XJg8+e84l5l3auBwZ0mnc=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=XQdKCLLelfI4SoxzCMAnCUtgdS+h9/wA0ND1Sx878oRw5ipn2eXs8emLgIEWu7IIf
-         JBsFNvEu/j58OSutvkMWLShj6wyhrUy37JNS2DnPwotL4+tmwysUERhVyhSs7ei+h9
-         NKtBVyxLlMbc7C4ITMY+Kw7pVpPh7GXAnZFYIueqVWBYPwPpAXrpLLXbi8ujGYPUD5
-         QFlSPCJd9Yuo0zOm5Dldc8Jq66Lwkia/3lxTXrKYU+xSn7wVnfBP2VDx3inq3A52bz
-         ChvrTaw6ccDIJgTioKbE631T7CAD6ukJcDD2rq+lINmp6BCvnCVN2Uz2bCbYl+fKG8
-         rgFvJqVI6oY7w==
+        b=d+p4IyQ3t6U+M3aSYLY7BTKWPteCG8tVzna1JJQAIpse35DoJuLJVcnL9qLS4mzyh
+         k7KwBMCk5nVGNNDuy2jvKNYRFsk5/nDWizFU+pzBPFBHk7xgCOw85MKqG17wjP18lX
+         X8T9nGdOTH1z0NJ+Vos6/3qahMbaj5/jamCSA4XFqXx0oI+PtiZ/MgtUbJ2VNW1Rvo
+         RCCMc80qeU3NmXJ6t9NCaBooCNzueEY61w6QyElnwELbfer37W5f7YGtJsKYPqErmQ
+         41EyJ9E5j5WcBWIHGP00Uhg49JEFBe4CwecifaNHeN7+914nLOLfgCq/fZ5IsWLkaD
+         dHUMnqCIZJZgw==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         linux-btrfs@vger.kernel.org, linux-xfs@vger.kernel.org,
         Andrey Albershteyn <aalbersh@redhat.com>
-Subject: [PATCH v2 11/11] ext4: allow verity with fs block size < PAGE_SIZE
-Date:   Fri, 23 Dec 2022 12:36:38 -0800
-Message-Id: <20221223203638.41293-12-ebiggers@kernel.org>
+Subject: [PATCH v2 03/11] fsverity: store log2(digest_size) precomputed
+Date:   Fri, 23 Dec 2022 12:36:30 -0800
+Message-Id: <20221223203638.41293-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.39.0
 In-Reply-To: <20221223203638.41293-1-ebiggers@kernel.org>
 References: <20221223203638.41293-1-ebiggers@kernel.org>
@@ -53,51 +53,59 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Now that the needed changes have been made to fs/buffer.c, ext4 is ready
-to support the verity feature when the filesystem block size is less
-than the page size.  So remove the mount-time check that prevented this.
+Add log_digestsize to struct merkle_tree_params so that it can be used
+in verify.c.  Also save memory by using u8 for all the log_* fields.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- Documentation/filesystems/fsverity.rst | 8 +++++---
- fs/ext4/super.c                        | 5 -----
- 2 files changed, 5 insertions(+), 8 deletions(-)
+ fs/verity/fsverity_private.h | 5 +++--
+ fs/verity/open.c             | 3 ++-
+ fs/verity/verify.c           | 2 +-
+ 3 files changed, 6 insertions(+), 4 deletions(-)
 
-diff --git a/Documentation/filesystems/fsverity.rst b/Documentation/filesystems/fsverity.rst
-index 948d202545240..c0c8a25b41bb8 100644
---- a/Documentation/filesystems/fsverity.rst
-+++ b/Documentation/filesystems/fsverity.rst
-@@ -497,9 +497,11 @@ To create verity files on an ext4 filesystem, the filesystem must have
- been formatted with ``-O verity`` or had ``tune2fs -O verity`` run on
- it.  "verity" is an RO_COMPAT filesystem feature, so once set, old
- kernels will only be able to mount the filesystem readonly, and old
--versions of e2fsck will be unable to check the filesystem.  Moreover,
--currently ext4 only supports mounting a filesystem with the "verity"
--feature when its block size is equal to PAGE_SIZE (often 4096 bytes).
-+versions of e2fsck will be unable to check the filesystem.
-+
-+Originally, an ext4 filesystem with the "verity" feature could only be
-+mounted when its block size was equal to the system page size
-+(typically 4096 bytes).  In Linux v6.3, this limitation was removed.
- 
- ext4 sets the EXT4_VERITY_FL on-disk inode flag on verity files.  It
- can only be set by `FS_IOC_ENABLE_VERITY`_, and it cannot be cleared.
-diff --git a/fs/ext4/super.c b/fs/ext4/super.c
-index 16a343e8047d4..798cb19e2258b 100644
---- a/fs/ext4/super.c
-+++ b/fs/ext4/super.c
-@@ -5336,11 +5336,6 @@ static int __ext4_fill_super(struct fs_context *fc, struct super_block *sb)
- 		}
+diff --git a/fs/verity/fsverity_private.h b/fs/verity/fsverity_private.h
+index 48b97f5d05569..fc1c2797fab19 100644
+--- a/fs/verity/fsverity_private.h
++++ b/fs/verity/fsverity_private.h
+@@ -42,8 +42,9 @@ struct merkle_tree_params {
+ 	unsigned int digest_size;	/* same as hash_alg->digest_size */
+ 	unsigned int block_size;	/* size of data and tree blocks */
+ 	unsigned int hashes_per_block;	/* number of hashes per tree block */
+-	unsigned int log_blocksize;	/* log2(block_size) */
+-	unsigned int log_arity;		/* log2(hashes_per_block) */
++	u8 log_digestsize;		/* log2(digest_size) */
++	u8 log_blocksize;		/* log2(block_size) */
++	u8 log_arity;			/* log2(hashes_per_block) */
+ 	unsigned int num_levels;	/* number of levels in Merkle tree */
+ 	u64 tree_size;			/* Merkle tree size in bytes */
+ 	unsigned long tree_pages;	/* Merkle tree size in pages */
+diff --git a/fs/verity/open.c b/fs/verity/open.c
+index e356eefb54d7b..ca8de73e5a0b8 100644
+--- a/fs/verity/open.c
++++ b/fs/verity/open.c
+@@ -76,7 +76,8 @@ int fsverity_init_merkle_tree_params(struct merkle_tree_params *params,
+ 		err = -EINVAL;
+ 		goto out_err;
  	}
+-	params->log_arity = params->log_blocksize - ilog2(params->digest_size);
++	params->log_digestsize = ilog2(params->digest_size);
++	params->log_arity = log_blocksize - params->log_digestsize;
+ 	params->hashes_per_block = 1 << params->log_arity;
  
--	if (ext4_has_feature_verity(sb) && sb->s_blocksize != PAGE_SIZE) {
--		ext4_msg(sb, KERN_ERR, "Unsupported blocksize for fs-verity");
--		goto failed_mount_wq;
--	}
--
  	/*
- 	 * Get the # of file system overhead blocks from the
- 	 * superblock if present.
+diff --git a/fs/verity/verify.c b/fs/verity/verify.c
+index 4c57a1bd01afc..d2fcb6a21ea8e 100644
+--- a/fs/verity/verify.c
++++ b/fs/verity/verify.c
+@@ -35,7 +35,7 @@ static void hash_at_level(const struct merkle_tree_params *params,
+ 
+ 	/* Offset of the wanted hash (in bytes) within the hash block */
+ 	*hoffset = (position & ((1 << params->log_arity) - 1)) <<
+-		   (params->log_blocksize - params->log_arity);
++		   params->log_digestsize;
+ }
+ 
+ static inline int cmp_hashes(const struct fsverity_info *vi,
 -- 
 2.39.0
 
