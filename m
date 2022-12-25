@@ -2,463 +2,467 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6A2FAC3DA79
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 23 Dec 2022 20:37:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 888FBC4332F
+	for <linux-fscrypt@archiver.kernel.org>; Sun, 25 Dec 2022 12:46:59 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231846AbiLWUhV (ORCPT
+        id S229649AbiLYMq6 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 23 Dec 2022 15:37:21 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56546 "EHLO
+        Sun, 25 Dec 2022 07:46:58 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58524 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231575AbiLWUhK (ORCPT
+        with ESMTP id S229489AbiLYMq5 (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 23 Dec 2022 15:37:10 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B32611DA75;
-        Fri, 23 Dec 2022 12:37:01 -0800 (PST)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 1A5EEB82143;
-        Fri, 23 Dec 2022 20:37:00 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 827BCC43392;
-        Fri, 23 Dec 2022 20:36:58 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1671827818;
-        bh=nPQyTTjkuapR0y8nmSKVFSDuoUvtzAU7nkm9t0RWfX8=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Pvt4I3vz9U0qtlx8U8p4YRFxZTQpAUkN5OH0Xt6Z46aZolX9m7U/jnHMoXfVGdjud
-         uT52nI2yVMK1n+L9E6nRe9wXztz5R/zcDJ08fLfZNjilQl55A9q+MnSamYMr4CXcDu
-         rBrvPlr20c6Zl+1MBPTIxTUnhBvdKl8zuwitG87rdQLGTQqpYIsBnw4DoTKKwp6Hev
-         J4jeIa0RrPi+/35mxcawcvi1vGXrkD4jXejr0LxxAp5H/92v5PDkPB+CMWBqrVFZNB
-         XI3Tx7x3eRJzg0P9szPHVOHpwoqKhACQzGnB2p+8ZpT0Y0HuSmbHpvCrWXjTCbIyg/
-         0lD2+A656l7Uw==
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-fscrypt@vger.kernel.org
-Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
-        linux-f2fs-devel@lists.sourceforge.net,
-        linux-btrfs@vger.kernel.org, linux-xfs@vger.kernel.org,
-        Andrey Albershteyn <aalbersh@redhat.com>
-Subject: [PATCH v2 07/11] fsverity: support enabling with tree block size < PAGE_SIZE
-Date:   Fri, 23 Dec 2022 12:36:34 -0800
-Message-Id: <20221223203638.41293-8-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.39.0
-In-Reply-To: <20221223203638.41293-1-ebiggers@kernel.org>
-References: <20221223203638.41293-1-ebiggers@kernel.org>
+        Sun, 25 Dec 2022 07:46:57 -0500
+Received: from us-smtp-delivery-124.mimecast.com (us-smtp-delivery-124.mimecast.com [170.10.129.124])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B7A29F60
+        for <linux-fscrypt@vger.kernel.org>; Sun, 25 Dec 2022 04:46:09 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+        s=mimecast20190719; t=1671972368;
+        h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+         to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+         in-reply-to:in-reply-to:references:references;
+        bh=YfAC/5PeQsKQlnxEjL+kVYChtB6S3VLAnjAd/zjjpoc=;
+        b=d5ACLP9yRDnejr/7N2+hpMHHnh0p3G7RylhJ3EOyqNhv57Y/yaXqCxh3aU3WzhZrTRneQ9
+        cPNEUSO+2fUuvKYeG9TAAX/vHe6WZTlY1Aubl2quJc6uj/MmVF1BEbrNaDka++mkLsHNAo
+        vm/rGFx1UrARB8lId8Qt0LJIttnp/iA=
+Received: from mail-pf1-f199.google.com (mail-pf1-f199.google.com
+ [209.85.210.199]) by relay.mimecast.com with ESMTP with STARTTLS
+ (version=TLSv1.3, cipher=TLS_AES_128_GCM_SHA256) id
+ us-mta-343-wTpSQiRLOk-9Yl-HEWzBfQ-1; Sun, 25 Dec 2022 07:46:06 -0500
+X-MC-Unique: wTpSQiRLOk-9Yl-HEWzBfQ-1
+Received: by mail-pf1-f199.google.com with SMTP id a1-20020a056a001d0100b0057a6f74d7bcso4497727pfx.1
+        for <linux-fscrypt@vger.kernel.org>; Sun, 25 Dec 2022 04:46:06 -0800 (PST)
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=YfAC/5PeQsKQlnxEjL+kVYChtB6S3VLAnjAd/zjjpoc=;
+        b=WQs6uh0uTTrr4LryMBHJuDHTkbj6C7PhoNRnWxAm/qmqeoZAu76wezJAqnvuK5vSUF
+         wpwtTp2bhJzG3SoSd2ed+RcHvtRlmQiuwfNNXksJrMKMvekSBAaFdRsTPKWWpLSLNU68
+         G1SiDxh3yC3uvzMRFDowIhCzXKpTAOMeAkbSCGrljZbm3+09B+n2tQ/9+TT2Jzd/y9rJ
+         z15pPzt0IzSUjd2xctWUoqapGUbDWLuRGJ/Id8XZlPmKUU6Bso1gxOCCXO7XT/hFFkQY
+         /5dp88neOyWjLe6iASCBZ6oOBxUILpUb1qPGhD3DA+G5fI2eG1svijpeI0AkJhg/MaKB
+         R0Qg==
+X-Gm-Message-State: AFqh2kpwL3Gtlmx6h2I4az6gEDeysO6pSh8COWCuJFse/HwhHS7reO8r
+        hprus1zhsavmjeRRls1cSs5qwTULAPF8LG+R8J2XIa4MPLcxlYXpN8g+ZkXkIcLtIDLfXzSoT4Z
+        Xgior8ZgNEK314xRiUOZppVIPQg==
+X-Received: by 2002:a17:902:b493:b0:189:cb73:75f0 with SMTP id y19-20020a170902b49300b00189cb7375f0mr15137386plr.8.1671972365523;
+        Sun, 25 Dec 2022 04:46:05 -0800 (PST)
+X-Google-Smtp-Source: AMrXdXs2OgcRABMP7MGyUnh3JS/CU9o/2/yjm7UuHu0b+4FmYtTTS48hfGo/a36BwA5k0mqbihHp3Q==
+X-Received: by 2002:a17:902:b493:b0:189:cb73:75f0 with SMTP id y19-20020a170902b49300b00189cb7375f0mr15137371plr.8.1671972365074;
+        Sun, 25 Dec 2022 04:46:05 -0800 (PST)
+Received: from zlang-mailbox ([43.228.180.230])
+        by smtp.gmail.com with ESMTPSA id y12-20020a17090322cc00b00182d25a1e4bsm5275864plg.259.2022.12.25.04.46.03
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Sun, 25 Dec 2022 04:46:04 -0800 (PST)
+Date:   Sun, 25 Dec 2022 20:46:00 +0800
+From:   Zorro Lang <zlang@redhat.com>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH v2 08/10] generic/574: test multiple Merkle tree block
+ sizes
+Message-ID: <20221225124600.faouh6a7suhq2wuu@zlang-mailbox>
+References: <20221223010554.281679-1-ebiggers@kernel.org>
+ <20221223010554.281679-9-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20221223010554.281679-9-ebiggers@kernel.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+On Thu, Dec 22, 2022 at 05:05:52PM -0800, Eric Biggers wrote:
+> From: Eric Biggers <ebiggers@google.com>
+> 
+> Instead of only testing 4K Merkle tree blocks, test FSV_BLOCK_SIZE, and
+> also other sizes if they happen to be supported.  This allows this test
+> to run in cases where it couldn't before and improves test coverage in
+> cases where it did run before.
+> 
+> Given that the list of Merkle tree block sizes that will actually work
+> is not fixed, this required reworking the test to not rely on the .out
+> file so heavily.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@google.com>
+> ---
+>  tests/generic/574     | 177 ++++++++++++++++++++++++++----------------
+>  tests/generic/574.out |  83 ++------------------
+>  2 files changed, 114 insertions(+), 146 deletions(-)
+> 
+> diff --git a/tests/generic/574 b/tests/generic/574
+> index fd4488c9..8f7923ba 100755
+> --- a/tests/generic/574
+> +++ b/tests/generic/574
+> @@ -37,18 +37,19 @@ fsv_file=$SCRATCH_MNT/file.fsv
+>  
+>  setup_zeroed_file()
+>  {
+> -	local len=$1
+> -	local sparse=$2
+> +	local block_size=$1
+> +	local file_len=$2
+> +	local sparse=$3
+>  
+>  	if $sparse; then
+> -		dd if=/dev/zero of=$fsv_orig_file bs=1 count=0 seek=$len \
+> +		dd if=/dev/zero of=$fsv_orig_file bs=1 count=0 seek=$file_len \
+>  			status=none
+>  	else
+> -		head -c $len /dev/zero > $fsv_orig_file
+> +		head -c $file_len /dev/zero > $fsv_orig_file
+>  	fi
+>  	cp $fsv_orig_file $fsv_file
+> -	_fsv_enable $fsv_file
+> -	md5sum $fsv_file |& _filter_scratch
+> +	_fsv_enable $fsv_file --block-size=$block_size
+> +	cmp $fsv_orig_file $fsv_file
+>  }
+>  
+>  filter_sigbus()
+> @@ -66,63 +67,84 @@ round_up_to_page_boundary()
+>  
+>  corruption_test()
+>  {
+> -	local file_len=$1
+> -	local zap_offset=$2
+> -	local zap_len=$3
+> -	local is_merkle_tree=${4:-false} # if true, zap tree instead of data
+> -	local use_sparse_file=${5:-false}
+> +	local block_size=$1
+> +	local file_len=$2
+> +	local zap_offset=$3
+> +	local zap_len=$4
+> +	local is_merkle_tree=${5:-false} # if true, zap tree instead of data
+> +	local use_sparse_file=${6:-false}
+>  	local page_aligned_eof=$(round_up_to_page_boundary $file_len)
+> -	local measurement
+> +
+> +	local paramstr="block_size=$block_size"
+> +	paramstr+=", file_len=$file_len"
+> +	paramstr+=", zap_offset=$zap_offset"
+> +	paramstr+=", zap_len=$zap_len"
+> +	paramstr+=", is_merkle_tree=$is_merkle_tree"
+> +	paramstr+=", use_sparse_file=$use_sparse_file"
+>  
+>  	if $is_merkle_tree; then
+>  		local corrupt_func=_fsv_scratch_corrupt_merkle_tree
+>  	else
+>  		local corrupt_func=_fsv_scratch_corrupt_bytes
+>  	fi
+> +	local fs_block_size=$(_get_block_size $SCRATCH_MNT)
+>  
+> -	local msg="Corruption test:"
+> -	msg+=" file_len=$file_len"
+> -	if $use_sparse_file; then
+> -		msg+=" (sparse)"
+> -	fi
+> -	msg+=" zap_offset=$zap_offset"
+> -	if $is_merkle_tree; then
+> -		msg+=" (in Merkle tree)"
+> -	fi
+> -	msg+=" zap_len=$zap_len"
+> +	rm -rf "${SCRATCH_MNT:?}"/*
+> +	setup_zeroed_file $block_size $file_len $use_sparse_file
+>  
+> -	_fsv_scratch_begin_subtest "$msg"
+> -	setup_zeroed_file $file_len $use_sparse_file
+> -	cmp $fsv_file $fsv_orig_file
+> -	echo "Corrupting bytes..."
+> +	# Corrupt part of the file (data or Merkle tree).
+>  	head -c $zap_len /dev/zero | tr '\0' X \
+>  		| $corrupt_func $fsv_file $zap_offset
+>  
+> -	echo "Validating corruption (reading full file)..."
+> +	# Reading the full file with buffered I/O should fail.
+>  	_scratch_cycle_mount
+> -	md5sum $fsv_file |& _filter_scratch
+> +	if cat $fsv_file >/dev/null 2>$tmp.out; then
+> +		echo "Unexpectedly was able to read full file ($paramstr)"
+> +	elif ! grep -q 'Input/output error' $tmp.out; then
+> +		echo "Wrong error reading full file ($paramstr):"
+> +		cat $tmp.out
+> +	fi
+>  
+> -	echo "Validating corruption (direct I/O)..."
+> +	# Reading the full file with direct I/O should fail.
+>  	_scratch_cycle_mount
+> -	dd if=$fsv_file bs=$FSV_BLOCK_SIZE iflag=direct status=none \
+> -		of=/dev/null |& _filter_scratch
+> +	if dd if=$fsv_file bs=$fs_block_size iflag=direct status=none \
+> +		of=/dev/null 2>$tmp.out
+> +	then
+> +		echo "Unexpectedly was able to read full file with DIO ($paramstr)"
+> +	elif ! grep -q 'Input/output error' $tmp.out; then
+> +		echo "Wrong error reading full file with DIO ($paramstr):"
+> +		cat $tmp.out
+> +	fi
+>  
+> -	if (( zap_offset < file_len )) && ! $is_merkle_tree; then
+> -		echo "Validating corruption (reading just corrupted part)..."
+> -		dd if=$fsv_file bs=1 skip=$zap_offset count=$zap_len \
+> -			of=/dev/null status=none |& _filter_scratch
+> +	# Reading just the corrupted part of the file should fail.
+> +	if ! $is_merkle_tree; then
+> +		if dd if=$fsv_file bs=1 skip=$zap_offset count=$zap_len \
+> +			of=/dev/null status=none 2>$tmp.out; then
+> +			echo "Unexpectedly was able to read corrupted part ($paramstr)"
+> +		elif ! grep -q 'Input/output error' $tmp.out; then
+> +			echo "Wrong error reading corrupted part ($paramstr):"
+> +			cat $tmp.out
+> +		fi
+>  	fi
+>  
+> -	echo "Validating corruption (reading full file via mmap)..."
+> +	# Reading the full file via mmap should fail.
+>  	bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
+>  		-c 'mmap -r 0 $page_aligned_eof' \
+> -		-c 'mread 0 $file_len'" |& filter_sigbus
+> +		-c 'mread 0 $file_len'" >/dev/null 2>$tmp.out
+> +	if ! grep -q 'Bus error' $tmp.out; then
+> +		echo "Didn't see SIGBUS when reading file via mmap"
 
-Make FS_IOC_ENABLE_VERITY support values of
-fsverity_enable_arg::block_size other than PAGE_SIZE.
+Hmm... will sigbus error really be output to stderr? From a testing, the
+generic/574 fails as:
 
-To make this possible, rework build_merkle_tree(), which was reading
-data and hash pages from the file and assuming that they were the same
-thing as "blocks".
+# ./check -s simpledev generic/574
+SECTION       -- simpledev
+FSTYP         -- ext4
+PLATFORM      -- Linux/x86_64 xx-xxxxxx-xxx 6.1.0-rc3 #5 SMP PREEMPT_DYNAMIC Tue Nov  1 01:08:52 CST 2022
+MKFS_OPTIONS  -- -F /dev/sdb
+MOUNT_OPTIONS -- -o acl,user_xattr -o context=system_u:object_r:root_t:s0 /dev/sdb /mnt/scratch
 
-For reading the data blocks, just replace the direct pagecache access
-with __kernel_read(), to naturally read one block at a time.
+generic/574       - output mismatch (see /root/git/xfstests/results//simpledev/generic/574.out.bad)
+    --- tests/generic/574.out   2022-12-25 20:02:41.609104749 +0800
+    +++ /root/git/xfstests/results//simpledev/generic/574.out.bad       2022-12-25 20:21:57.430719504 +0800
+    @@ -1,6 +1,32 @@
+     QA output created by 574
+     
+     # Testing block_size=FSV_BLOCK_SIZE
+    +/root/git/xfstests/tests/generic/574: line 69: 1949533 Bus error               (core dumped) bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file            -c 'mmap -r 0 $page_aligned_eof'               -c 'mread 0 $file_len'" > /dev/null 2> $tmp.out
+    +Didn't see SIGBUS when reading file via mmap
+    +/root/git/xfstests/tests/generic/574: line 69: 1949544 Bus error               (core dumped) bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file                    -c 'mmap -r 0 $page_aligned_eof'                       -c 'mread $zap_offset $zap_len'" > /dev/null 2> $tmp.out
+    +Didn't see SIGBUS when reading corrupted part via mmap
+    ...
+    (Run 'diff -u /root/git/xfstests/tests/generic/574.out /root/git/xfstests/results//simpledev/generic/574.out.bad'  to see the entire diff)
+Ran: generic/574
+Failures: generic/574
+Failed 1 of 1 tests
 
-(A disadvantage of the above is that we lose the two optimizations of
-hashing the pagecache pages in-place and forcing the maximum readahead.
-That shouldn't be very important, though.)
+Thanks,
+Zorro
 
-The hash block reads are a bit more difficult to handle, as the only way
-to do them is through fsverity_operations::read_merkle_tree_page().
-
-Instead, let's switch to the single-pass tree construction algorithm
-that fsverity-utils uses.  This eliminates the need to read back any
-hash blocks while the tree is being built, at the small cost of an extra
-block-sized memory buffer per Merkle tree level.  This is probably what
-I should have done originally.
-
-Taken together, the above two changes result in page-size independent
-code that is also a bit simpler than what we had before.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/filesystems/fsverity.rst |  20 +-
- fs/verity/enable.c                     | 260 ++++++++++++-------------
- include/linux/fsverity.h               |   3 +-
- 3 files changed, 134 insertions(+), 149 deletions(-)
-
-diff --git a/Documentation/filesystems/fsverity.rst b/Documentation/filesystems/fsverity.rst
-index 0b26134ebff73..948d202545240 100644
---- a/Documentation/filesystems/fsverity.rst
-+++ b/Documentation/filesystems/fsverity.rst
-@@ -118,10 +118,11 @@ as follows:
- - ``hash_algorithm`` must be the identifier for the hash algorithm to
-   use for the Merkle tree, such as FS_VERITY_HASH_ALG_SHA256.  See
-   ``include/uapi/linux/fsverity.h`` for the list of possible values.
--- ``block_size`` must be the Merkle tree block size.  Currently, this
--  must be equal to the system page size, which is usually 4096 bytes.
--  Other sizes may be supported in the future.  This value is not
--  necessarily the same as the filesystem block size.
-+- ``block_size`` is the Merkle tree block size, in bytes.  In Linux
-+  v6.3 and later, this can be any power of 2 between (inclusively)
-+  1024 and the minimum of the system page size and the filesystem
-+  block size.  In earlier versions, the page size was the only allowed
-+  value.
- - ``salt_size`` is the size of the salt in bytes, or 0 if no salt is
-   provided.  The salt is a value that is prepended to every hashed
-   block; it can be used to personalize the hashing for a particular
-@@ -519,9 +520,7 @@ support paging multi-gigabyte xattrs into memory, and to support
- encrypting xattrs.  Note that the verity metadata *must* be encrypted
- when the file is, since it contains hashes of the plaintext data.
- 
--Currently, ext4 verity only supports the case where the Merkle tree
--block size, filesystem block size, and page size are all the same.  It
--also only supports extent-based files.
-+ext4 only allows verity on extent-based files.
- 
- f2fs
- ----
-@@ -539,11 +538,10 @@ Like ext4, f2fs stores the verity metadata (Merkle tree and
- fsverity_descriptor) past the end of the file, starting at the first
- 64K boundary beyond i_size.  See explanation for ext4 above.
- Moreover, f2fs supports at most 4096 bytes of xattr entries per inode
--which wouldn't be enough for even a single Merkle tree block.
-+which usually wouldn't be enough for even a single Merkle tree block.
- 
--Currently, f2fs verity only supports a Merkle tree block size of 4096.
--Also, f2fs doesn't support enabling verity on files that currently
--have atomic or volatile writes pending.
-+f2fs doesn't support enabling verity on files that currently have
-+atomic or volatile writes pending.
- 
- btrfs
- -----
-diff --git a/fs/verity/enable.c b/fs/verity/enable.c
-index 144483319f1a3..e13db6507b38b 100644
---- a/fs/verity/enable.c
-+++ b/fs/verity/enable.c
-@@ -7,132 +7,50 @@
- 
- #include "fsverity_private.h"
- 
--#include <crypto/hash.h>
--#include <linux/backing-dev.h>
- #include <linux/mount.h>
- #include <linux/pagemap.h>
- #include <linux/sched/signal.h>
- #include <linux/uaccess.h>
- 
--/*
-- * Read a file data page for Merkle tree construction.  Do aggressive readahead,
-- * since we're sequentially reading the entire file.
-- */
--static struct page *read_file_data_page(struct file *file, pgoff_t index,
--					struct file_ra_state *ra,
--					unsigned long remaining_pages)
--{
--	DEFINE_READAHEAD(ractl, file, ra, file->f_mapping, index);
--	struct folio *folio;
--
--	folio = __filemap_get_folio(ractl.mapping, index, FGP_ACCESSED, 0);
--	if (!folio || !folio_test_uptodate(folio)) {
--		if (folio)
--			folio_put(folio);
--		else
--			page_cache_sync_ra(&ractl, remaining_pages);
--		folio = read_cache_folio(ractl.mapping, index, NULL, file);
--		if (IS_ERR(folio))
--			return &folio->page;
--	}
--	if (folio_test_readahead(folio))
--		page_cache_async_ra(&ractl, folio, remaining_pages);
--	return folio_file_page(folio, index);
--}
-+struct block_buffer {
-+	u32 filled;
-+	u8 *data;
-+};
- 
--static int build_merkle_tree_level(struct file *filp, unsigned int level,
--				   u64 num_blocks_to_hash,
--				   const struct merkle_tree_params *params,
--				   u8 *pending_hashes,
--				   struct ahash_request *req)
-+/* Hash a block, writing the result to the next level's pending block buffer. */
-+static int hash_one_block(struct inode *inode,
-+			  const struct merkle_tree_params *params,
-+			  struct ahash_request *req, struct block_buffer *cur)
- {
--	struct inode *inode = file_inode(filp);
--	const struct fsverity_operations *vops = inode->i_sb->s_vop;
--	struct file_ra_state ra = { 0 };
--	unsigned int pending_size = 0;
--	u64 dst_block_num;
--	u64 i;
-+	struct block_buffer *next = cur + 1;
- 	int err;
- 
--	if (WARN_ON(params->block_size != PAGE_SIZE)) /* checked earlier too */
--		return -EINVAL;
--
--	if (level < params->num_levels) {
--		dst_block_num = params->level_start[level];
--	} else {
--		if (WARN_ON(num_blocks_to_hash != 1))
--			return -EINVAL;
--		dst_block_num = 0; /* unused */
--	}
-+	/* Zero-pad the block if it's shorter than the block size. */
-+	memset(&cur->data[cur->filled], 0, params->block_size - cur->filled);
- 
--	file_ra_state_init(&ra, filp->f_mapping);
--
--	for (i = 0; i < num_blocks_to_hash; i++) {
--		struct page *src_page;
--
--		if (level == 0) {
--			/* Leaf: hashing a data block */
--			src_page = read_file_data_page(filp, i, &ra,
--						       num_blocks_to_hash - i);
--			if (IS_ERR(src_page)) {
--				err = PTR_ERR(src_page);
--				fsverity_err(inode,
--					     "Error %d reading data page %llu",
--					     err, i);
--				return err;
--			}
--		} else {
--			unsigned long num_ra_pages =
--				min_t(unsigned long, num_blocks_to_hash - i,
--				      inode->i_sb->s_bdi->io_pages);
--
--			/* Non-leaf: hashing hash block from level below */
--			src_page = vops->read_merkle_tree_page(inode,
--					params->level_start[level - 1] + i,
--					num_ra_pages);
--			if (IS_ERR(src_page)) {
--				err = PTR_ERR(src_page);
--				fsverity_err(inode,
--					     "Error %d reading Merkle tree page %llu",
--					     err, params->level_start[level - 1] + i);
--				return err;
--			}
--		}
-+	err = fsverity_hash_block(params, inode, req, virt_to_page(cur->data),
-+				  offset_in_page(cur->data),
-+				  &next->data[next->filled]);
-+	if (err)
-+		return err;
-+	next->filled += params->digest_size;
-+	cur->filled = 0;
-+	return 0;
-+}
- 
--		err = fsverity_hash_block(params, inode, req, src_page, 0,
--					  &pending_hashes[pending_size]);
--		put_page(src_page);
--		if (err)
--			return err;
--		pending_size += params->digest_size;
--
--		if (level == params->num_levels) /* Root hash? */
--			return 0;
--
--		if (pending_size + params->digest_size > params->block_size ||
--		    i + 1 == num_blocks_to_hash) {
--			/* Flush the pending hash block */
--			memset(&pending_hashes[pending_size], 0,
--			       params->block_size - pending_size);
--			err = vops->write_merkle_tree_block(inode,
--					pending_hashes,
--					dst_block_num << params->log_blocksize,
--					params->block_size);
--			if (err) {
--				fsverity_err(inode,
--					     "Error %d writing Merkle tree block %llu",
--					     err, dst_block_num);
--				return err;
--			}
--			dst_block_num++;
--			pending_size = 0;
--		}
-+static int write_merkle_tree_block(struct inode *inode, const u8 *buf,
-+				   unsigned long index,
-+				   const struct merkle_tree_params *params)
-+{
-+	u64 pos = (u64)index << params->log_blocksize;
-+	int err;
- 
--		if (fatal_signal_pending(current))
--			return -EINTR;
--		cond_resched();
--	}
--	return 0;
-+	err = inode->i_sb->s_vop->write_merkle_tree_block(inode, buf, pos,
-+							  params->block_size);
-+	if (err)
-+		fsverity_err(inode, "Error %d writing Merkle tree block %lu",
-+			     err, index);
-+	return err;
- }
- 
- /*
-@@ -148,13 +66,17 @@ static int build_merkle_tree(struct file *filp,
- 			     u8 *root_hash)
- {
- 	struct inode *inode = file_inode(filp);
--	u8 *pending_hashes;
-+	const u64 data_size = inode->i_size;
-+	const int num_levels = params->num_levels;
- 	struct ahash_request *req;
--	u64 blocks;
--	unsigned int level;
--	int err = -ENOMEM;
-+	struct block_buffer _buffers[1 + FS_VERITY_MAX_LEVELS + 1] = {};
-+	struct block_buffer *buffers = &_buffers[1];
-+	unsigned long level_offset[FS_VERITY_MAX_LEVELS];
-+	int level;
-+	u64 offset;
-+	int err;
- 
--	if (inode->i_size == 0) {
-+	if (data_size == 0) {
- 		/* Empty file is a special case; root hash is all 0's */
- 		memset(root_hash, 0, params->digest_size);
- 		return 0;
-@@ -163,29 +85,95 @@ static int build_merkle_tree(struct file *filp,
- 	/* This allocation never fails, since it's mempool-backed. */
- 	req = fsverity_alloc_hash_request(params->hash_alg, GFP_KERNEL);
- 
--	pending_hashes = kmalloc(params->block_size, GFP_KERNEL);
--	if (!pending_hashes)
--		goto out;
--
- 	/*
--	 * Build each level of the Merkle tree, starting at the leaf level
--	 * (level 0) and ascending to the root node (level 'num_levels - 1').
--	 * Then at the end (level 'num_levels'), calculate the root hash.
-+	 * Allocate the block buffers.  Buffer "-1" is for data blocks.
-+	 * Buffers 0 <= level < num_levels are for the actual tree levels.
-+	 * Buffer 'num_levels' is for the root hash.
- 	 */
--	blocks = ((u64)inode->i_size + params->block_size - 1) >>
--		 params->log_blocksize;
--	for (level = 0; level <= params->num_levels; level++) {
--		err = build_merkle_tree_level(filp, level, blocks, params,
--					      pending_hashes, req);
-+	for (level = -1; level < num_levels; level++) {
-+		buffers[level].data = kzalloc(params->block_size, GFP_KERNEL);
-+		if (!buffers[level].data) {
-+			err = -ENOMEM;
-+			goto out;
-+		}
-+	}
-+	buffers[num_levels].data = root_hash;
-+
-+	BUILD_BUG_ON(sizeof(level_offset) != sizeof(params->level_start));
-+	memcpy(level_offset, params->level_start, sizeof(level_offset));
-+
-+	/* Hash each data block, also hashing the tree blocks as they fill up */
-+	for (offset = 0; offset < data_size; offset += params->block_size) {
-+		ssize_t bytes_read;
-+		loff_t pos = offset;
-+
-+		buffers[-1].filled = min_t(u64, params->block_size,
-+					   data_size - offset);
-+		bytes_read = __kernel_read(filp, buffers[-1].data,
-+					   buffers[-1].filled, &pos);
-+		if (bytes_read < 0) {
-+			err = bytes_read;
-+			fsverity_err(inode, "Error %d reading file data", err);
-+			goto out;
-+		}
-+		if (bytes_read != buffers[-1].filled) {
-+			err = -EINVAL;
-+			fsverity_err(inode, "Short read of file data");
-+			goto out;
-+		}
-+		err = hash_one_block(inode, params, req, &buffers[-1]);
- 		if (err)
- 			goto out;
--		blocks = (blocks + params->hashes_per_block - 1) >>
--			 params->log_arity;
-+		for (level = 0; level < num_levels; level++) {
-+			if (buffers[level].filled + params->digest_size <=
-+			    params->block_size) {
-+				/* Next block at @level isn't full yet */
-+				break;
-+			}
-+			/* Next block at @level is full */
-+
-+			err = hash_one_block(inode, params, req,
-+					     &buffers[level]);
-+			if (err)
-+				goto out;
-+			err = write_merkle_tree_block(inode,
-+						      buffers[level].data,
-+						      level_offset[level],
-+						      params);
-+			if (err)
-+				goto out;
-+			level_offset[level]++;
-+		}
-+		if (fatal_signal_pending(current)) {
-+			err = -EINTR;
-+			goto out;
-+		}
-+		cond_resched();
-+	}
-+	/* Finish all nonempty pending tree blocks. */
-+	for (level = 0; level < num_levels; level++) {
-+		if (buffers[level].filled != 0) {
-+			err = hash_one_block(inode, params, req,
-+					     &buffers[level]);
-+			if (err)
-+				goto out;
-+			err = write_merkle_tree_block(inode,
-+						      buffers[level].data,
-+						      level_offset[level],
-+						      params);
-+			if (err)
-+				goto out;
-+		}
-+	}
-+	/* The root hash was filled by the last call to hash_one_block(). */
-+	if (WARN_ON(buffers[num_levels].filled != params->digest_size)) {
-+		err = -EINVAL;
-+		goto out;
- 	}
--	memcpy(root_hash, pending_hashes, params->digest_size);
- 	err = 0;
- out:
--	kfree(pending_hashes);
-+	for (level = -1; level < num_levels; level++)
-+		kfree(buffers[level].data);
- 	fsverity_free_hash_request(params->hash_alg, req);
- 	return err;
- }
-@@ -341,7 +329,7 @@ int fsverity_ioctl_enable(struct file *filp, const void __user *uarg)
- 	    memchr_inv(arg.__reserved2, 0, sizeof(arg.__reserved2)))
- 		return -EINVAL;
- 
--	if (arg.block_size != PAGE_SIZE)
-+	if (!is_power_of_2(arg.block_size))
- 		return -EINVAL;
- 
- 	if (arg.salt_size > sizeof_field(struct fsverity_descriptor, salt))
-diff --git a/include/linux/fsverity.h b/include/linux/fsverity.h
-index 6ecc51f80221a..991a444589966 100644
---- a/include/linux/fsverity.h
-+++ b/include/linux/fsverity.h
-@@ -93,8 +93,7 @@ struct fsverity_operations {
- 	 *		  isn't already cached.  Implementations may ignore this
- 	 *		  argument; it's only a performance optimization.
- 	 *
--	 * This can be called at any time on an open verity file, as well as
--	 * between ->begin_enable_verity() and ->end_enable_verity().  It may be
-+	 * This can be called at any time on an open verity file.  It may be
- 	 * called by multiple processes concurrently, even with the same page.
- 	 *
- 	 * Note that this must retrieve a *page*, not necessarily a *block*.
--- 
-2.39.0
+> +		cat $tmp.out
+> +	fi
+>  
+> +	# Reading just the corrupted part via mmap should fail.
+>  	if ! $is_merkle_tree; then
+> -		echo "Validating corruption (reading just corrupted part via mmap)..."
+>  		bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
+>  			-c 'mmap -r 0 $page_aligned_eof' \
+> -			-c 'mread $zap_offset $zap_len'" |& filter_sigbus
+> +			-c 'mread $zap_offset $zap_len'" >/dev/null 2>$tmp.out
+> +		if ! grep -q 'Bus error' $tmp.out; then
+> +			echo "Didn't see SIGBUS when reading corrupted part via mmap"
+> +			cat $tmp.out
+> +		fi
+>  	fi
+>  }
+>  
+> @@ -131,18 +153,18 @@ corruption_test()
+>  # return zeros in the last block past EOF, regardless of the contents on
+>  # disk. In the former, corruption should be detected and result in SIGBUS,
+>  # while in the latter we would expect zeros past EOF, but no error.
+> -corrupt_eof_block_test() {
+> -	local file_len=$1
+> -	local zap_len=$2
+> +corrupt_eof_block_test()
+> +{
+> +	local block_size=$1
+> +	local file_len=$2
+> +	local zap_len=$3
+>  	local page_aligned_eof=$(round_up_to_page_boundary $file_len)
+> -	_fsv_scratch_begin_subtest "Corruption test: EOF block"
+> -	setup_zeroed_file $file_len false
+> -	cmp $fsv_file $fsv_orig_file
+> -	echo "Corrupting bytes..."
+> +
+> +	rm -rf "${SCRATCH_MNT:?}"/*
+> +	setup_zeroed_file $block_size $file_len false
+>  	head -c $zap_len /dev/zero | tr '\0' X \
+>  		| _fsv_scratch_corrupt_bytes $fsv_file $file_len
+>  
+> -	echo "Reading eof block via mmap into a temporary file..."
+>  	bash -c "trap '' SIGBUS; $XFS_IO_PROG -r $fsv_file \
+>  		-c 'mmap -r 0 $page_aligned_eof' \
+>  		-c 'mread -v $file_len $zap_len'" \
+> @@ -153,30 +175,49 @@ corrupt_eof_block_test() {
+>  		-c "mmap -r 0 $page_aligned_eof" \
+>  		-c "mread -v $file_len $zap_len" >$tmp.eof_zero_read
+>  
+> -	echo "Checking for SIGBUS or zeros..."
+> -	grep -q -e '^Bus error$' $tmp.eof_block_read \
+> -		|| diff $tmp.eof_block_read $tmp.eof_zero_read \
+> -		&& echo "OK"
+> +	grep -q -e '^Bus error$' $tmp.eof_block_read || \
+> +		diff $tmp.eof_block_read $tmp.eof_zero_read
+>  }
+>  
+> -# Note: these tests just overwrite some bytes without checking their original
+> -# values.  Therefore, make sure to overwrite at least 5 or so bytes, to make it
+> -# nearly guaranteed that there will be a change -- even when the test file is
+> -# encrypted due to the test_dummy_encryption mount option being specified.
+> -
+> -corruption_test 131072 0 5
+> -corruption_test 131072 4091 5
+> -corruption_test 131072 65536 65536
+> -corruption_test 131072 131067 5
+> -
+> -corrupt_eof_block_test 130999 72
+> -
+> -# Merkle tree corruption.
+> -corruption_test 200000 100 10 true
+> +test_block_size()
+> +{
+> +	local block_size=$1
+> +
+> +	# Note: these tests just overwrite some bytes without checking their
+> +	# original values.  Therefore, make sure to overwrite at least 5 or so
+> +	# bytes, to make it nearly guaranteed that there will be a change --
+> +	# even when the test file is encrypted due to the test_dummy_encryption
+> +	# mount option being specified.
+> +	corruption_test $block_size 131072 0 5
+> +	corruption_test $block_size 131072 4091 5
+> +	corruption_test $block_size 131072 65536 65536
+> +	corruption_test $block_size 131072 131067 5
+> +
+> +	corrupt_eof_block_test $block_size 130999 72
+> +
+> +	# Merkle tree corruption.
+> +	corruption_test $block_size 200000 100 10 true
+> +
+> +	# Sparse file.  Corrupting the Merkle tree should still cause reads to
+> +	# fail, i.e. the filesystem must verify holes.
+> +	corruption_test $block_size 200000 100 10 true true
+> +}
+>  
+> -# Sparse file.  Corrupting the Merkle tree should still cause reads to fail,
+> -# i.e. the filesystem must verify holes.
+> -corruption_test 200000 100 10 true true
+> +# Always test FSV_BLOCK_SIZE.  Also test some other block sizes if they happen
+> +# to be supported.
+> +_fsv_scratch_begin_subtest "Testing block_size=FSV_BLOCK_SIZE"
+> +test_block_size $FSV_BLOCK_SIZE
+> +for block_size in 1024 4096 16384 65536; do
+> +	_fsv_scratch_begin_subtest "Testing block_size=$block_size if supported"
+> +	if (( block_size == FSV_BLOCK_SIZE )); then
+> +		continue # Skip redundant test case.
+> +	fi
+> +	if ! _fsv_can_enable $fsv_file --block-size=$block_size; then
+> +		echo "block_size=$block_size is unsupported" >> $seqres.full
+> +		continue
+> +	fi
+> +	test_block_size $block_size
+> +done
+>  
+>  # success, all done
+>  status=0
+> diff --git a/tests/generic/574.out b/tests/generic/574.out
+> index d40d1263..3ed57f1c 100644
+> --- a/tests/generic/574.out
+> +++ b/tests/generic/574.out
+> @@ -1,84 +1,11 @@
+>  QA output created by 574
+>  
+> -# Corruption test: file_len=131072 zap_offset=0 zap_len=5
+> -0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
+> -Corrupting bytes...
+> -Validating corruption (reading full file)...
+> -md5sum: SCRATCH_MNT/file.fsv: Input/output error
+> -Validating corruption (direct I/O)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading just corrupted part)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading full file via mmap)...
+> -Bus error
+> -Validating corruption (reading just corrupted part via mmap)...
+> -Bus error
+> +# Testing block_size=FSV_BLOCK_SIZE
+>  
+> -# Corruption test: file_len=131072 zap_offset=4091 zap_len=5
+> -0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
+> -Corrupting bytes...
+> -Validating corruption (reading full file)...
+> -md5sum: SCRATCH_MNT/file.fsv: Input/output error
+> -Validating corruption (direct I/O)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading just corrupted part)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading full file via mmap)...
+> -Bus error
+> -Validating corruption (reading just corrupted part via mmap)...
+> -Bus error
+> +# Testing block_size=1024 if supported
+>  
+> -# Corruption test: file_len=131072 zap_offset=65536 zap_len=65536
+> -0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
+> -Corrupting bytes...
+> -Validating corruption (reading full file)...
+> -md5sum: SCRATCH_MNT/file.fsv: Input/output error
+> -Validating corruption (direct I/O)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading just corrupted part)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading full file via mmap)...
+> -Bus error
+> -Validating corruption (reading just corrupted part via mmap)...
+> -Bus error
+> +# Testing block_size=4096 if supported
+>  
+> -# Corruption test: file_len=131072 zap_offset=131067 zap_len=5
+> -0dfbe8aa4c20b52e1b8bf3cb6cbdf193  SCRATCH_MNT/file.fsv
+> -Corrupting bytes...
+> -Validating corruption (reading full file)...
+> -md5sum: SCRATCH_MNT/file.fsv: Input/output error
+> -Validating corruption (direct I/O)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading just corrupted part)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading full file via mmap)...
+> -Bus error
+> -Validating corruption (reading just corrupted part via mmap)...
+> -Bus error
+> +# Testing block_size=16384 if supported
+>  
+> -# Corruption test: EOF block
+> -f5cca0d7fbb8b02bc6118a9954d5d306  SCRATCH_MNT/file.fsv
+> -Corrupting bytes...
+> -Reading eof block via mmap into a temporary file...
+> -Checking for SIGBUS or zeros...
+> -OK
+> -
+> -# Corruption test: file_len=200000 zap_offset=100 (in Merkle tree) zap_len=10
+> -4a1e4325031b13f933ac4f1db9ecb63f  SCRATCH_MNT/file.fsv
+> -Corrupting bytes...
+> -Validating corruption (reading full file)...
+> -md5sum: SCRATCH_MNT/file.fsv: Input/output error
+> -Validating corruption (direct I/O)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading full file via mmap)...
+> -Bus error
+> -
+> -# Corruption test: file_len=200000 (sparse) zap_offset=100 (in Merkle tree) zap_len=10
+> -4a1e4325031b13f933ac4f1db9ecb63f  SCRATCH_MNT/file.fsv
+> -Corrupting bytes...
+> -Validating corruption (reading full file)...
+> -md5sum: SCRATCH_MNT/file.fsv: Input/output error
+> -Validating corruption (direct I/O)...
+> -dd: error reading 'SCRATCH_MNT/file.fsv': Input/output error
+> -Validating corruption (reading full file via mmap)...
+> -Bus error
+> +# Testing block_size=65536 if supported
+> -- 
+> 2.39.0
+> 
 
