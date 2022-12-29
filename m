@@ -2,98 +2,94 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E61DAC3DA79
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Dec 2022 23:35:06 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 45D8EC3DA79
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Dec 2022 23:35:09 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S234187AbiL2XfF (ORCPT
+        id S234256AbiL2XfH (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Thu, 29 Dec 2022 18:35:05 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:44156 "EHLO
+        Thu, 29 Dec 2022 18:35:07 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:44182 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229650AbiL2XfF (ORCPT
+        with ESMTP id S234211AbiL2XfG (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Thu, 29 Dec 2022 18:35:05 -0500
+        Thu, 29 Dec 2022 18:35:06 -0500
 Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 3B1AC167CE;
-        Thu, 29 Dec 2022 15:35:04 -0800 (PST)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5853017408;
+        Thu, 29 Dec 2022 15:35:05 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 96FE76198E;
-        Thu, 29 Dec 2022 23:35:03 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id E2DDCC433EF;
-        Thu, 29 Dec 2022 23:35:02 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id E7A39619A0;
+        Thu, 29 Dec 2022 23:35:04 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4847BC433EF;
+        Thu, 29 Dec 2022 23:35:04 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1672356903;
-        bh=THjtJ8q6i0Z5+bcbU0FCCq+HLhNtYnnJ43O6xBuqoD4=;
-        h=From:To:Cc:Subject:Date:From;
-        b=OalXhWmAZLKcybYW0xj8hMsfrz+eQmG8gBRtl6CAC033K0AW7YH5QbEzYP+kTbyST
-         P5WFHZn1wQLoVjXg5yZ8cVHH4lvzrIxnVV2YrNeipgfYyt8s53QC9y7ifXgiliKnJw
-         AiIyhZMUv1oS+/JfWk4DJ2gVOxtQ/IFp9KQxlLfmKYQ4KAm0L2eOeNkJzAajBbRV4e
-         j/LttB8SlUQaFj0IQuyj/9Q2oHN05C/aPuwsXwgpfddeZjCsenulXK5iRbTadNfNi3
-         SvXQx0R75ZSVDbnoOgDC0yKp8KR5u6dmTs03W4jQFhFCfyhlZ1YZXnextC32gPJIta
-         2oH6nMUKjLUnw==
+        s=k20201202; t=1672356904;
+        bh=xKsP/0Vh5sWLaXmpf4gkpUu9ysvAPC2FvhutYJM8cqk=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=Dg5K8oALAEZJ0TFxHOXCT6QjdILMmdfaLanS6nThOaPCJyme1FWXZrKZ5mpdJVfxd
+         vfN9sX2rG79ihmRqTpEJfdnQ5dzKV+TGXrXGbgThTOPnyq0GF3WKY43YzCre5hBXIF
+         KjrT7/gy8oDLWaf6+rV/IfGLjAYo6wP4V4EngjiJg4BsEgGsktm/oe5EELx8phE6dw
+         yJp1G2yOrfIphMTScZaZyUUsQeOEN+ejMwP+9Dht9W9C0Kd4hPW/v/JxNuRN785YeD
+         CkDEPzUi4Z8hiQKSG5vHS0rSxEE7/5QdfdfMNyCkSt7CVxlrWUyV7zHsB7GBJSrCqv
+         ZVYZi9XJP+Z9g==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     fstests@vger.kernel.org
 Cc:     linux-fscrypt@vger.kernel.org
-Subject: [PATCH v3 00/10] xfstests: update verity tests for non-4K block and page size
-Date:   Thu, 29 Dec 2022 15:32:12 -0800
-Message-Id: <20221229233222.119630-1-ebiggers@kernel.org>
+Subject: [PATCH v3 06/10] generic/573: support non-4K Merkle tree block size
+Date:   Thu, 29 Dec 2022 15:32:18 -0800
+Message-Id: <20221229233222.119630-7-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.39.0
+In-Reply-To: <20221229233222.119630-1-ebiggers@kernel.org>
+References: <20221229233222.119630-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This series updates the verity xfstests to eliminate implicit
-assumptions that 'merkle_tree_block_size == fs_block_size == page_size
-== 4096', and to provide some test coverage for cases where
-merkle_tree_block_size differs from fs_block_size and/or page_size.  It
-doesn't add any new test scripts, but it does update some of the
-existing test scripts to test multiple block sizes.
+From: Eric Biggers <ebiggers@google.com>
 
-This goes along with my kernel patch series
-"fsverity: support for non-4K pages"
-(https://lore.kernel.org/linux-fsdevel/20221223203638.41293-1-ebiggers@kernel.org/T/#u).
-However, it's not necessary to wait for that kernel patch series to be
-applied before applying this xfstests patch series.
+Update generic/573 to not implicitly assume that the Merkle tree block
+size being used is 4096 bytes.
 
-Changed in v3:
-  - Fixed generic/574 failure with some bash versions.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ tests/generic/573 | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
-Changed in v2:
-  - Adjusted the output of generic/574, generic/575, and generic/624
-    slightly to avoid confusion.
-
-Eric Biggers (10):
-  common/verity: add and use _fsv_can_enable()
-  common/verity: set FSV_BLOCK_SIZE to an appropriate value
-  common/verity: use FSV_BLOCK_SIZE by default
-  common/verity: add _filter_fsverity_digest()
-  generic/572: support non-4K Merkle tree block size
-  generic/573: support non-4K Merkle tree block size
-  generic/577: support non-4K Merkle tree block size
-  generic/574: test multiple Merkle tree block sizes
-  generic/624: test multiple Merkle tree block sizes
-  generic/575: test 1K Merkle tree block size
-
- common/verity         |  84 ++++++++++++----
- tests/generic/572     |  21 ++--
- tests/generic/572.out |  10 +-
- tests/generic/573     |   8 +-
- tests/generic/574     | 219 +++++++++++++++++++++++++-----------------
- tests/generic/574.out |  83 +---------------
- tests/generic/575     |  57 ++++++++---
- tests/generic/575.out |   8 +-
- tests/generic/577     |  24 ++---
- tests/generic/577.out |  10 +-
- tests/generic/624     | 119 ++++++++++++++++-------
- tests/generic/624.out |  15 +--
- 12 files changed, 370 insertions(+), 288 deletions(-)
-
-
-base-commit: 3dc46f477b39d732e1841e6f5a180759cee3e8ce
+diff --git a/tests/generic/573 b/tests/generic/573
+index 63c0aef5..ca0f27f9 100755
+--- a/tests/generic/573
++++ b/tests/generic/573
+@@ -36,23 +36,23 @@ fsv_file=$SCRATCH_MNT/file.fsv
+ _fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY doesn't require root"
+ echo foo > $fsv_file
+ chmod 666 $fsv_file
+-_user_do "$FSVERITY_PROG enable $fsv_file"
++_user_do "$FSVERITY_PROG enable --block-size=$FSV_BLOCK_SIZE $fsv_file"
+ 
+ _fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires write access"
+ echo foo > $fsv_file >> $seqres.full
+ chmod 444 $fsv_file
+-_user_do "$FSVERITY_PROG enable $fsv_file" |& _filter_scratch
++_user_do "$FSVERITY_PROG enable --block-size=$FSV_BLOCK_SIZE $fsv_file" |& _filter_scratch
+ 
+ _fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires !append-only"
+ echo foo > $fsv_file >> $seqres.full
+ $CHATTR_PROG +a $fsv_file
+-$FSVERITY_PROG enable $fsv_file |& _filter_scratch
++_fsv_enable $fsv_file |& _filter_scratch
+ $CHATTR_PROG -a $fsv_file
+ 
+ _fsv_scratch_begin_subtest "FS_IOC_ENABLE_VERITY requires !immutable"
+ echo foo > $fsv_file >> $seqres.full
+ $CHATTR_PROG +i $fsv_file
+-$FSVERITY_PROG enable $fsv_file |& _filter_scratch
++_fsv_enable $fsv_file |& _filter_scratch
+ $CHATTR_PROG -i $fsv_file
+ 
+ _fsv_scratch_begin_subtest "FS_IOC_MEASURE_VERITY doesn't require root"
 -- 
 2.39.0
 
