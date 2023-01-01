@@ -2,42 +2,42 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 24CA6C46467
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A1660C3DA79
 	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Jan 2023 05:13:56 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230344AbjAAFNz (ORCPT
+        id S229703AbjAAFNz (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Sun, 1 Jan 2023 00:13:55 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50854 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50862 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232200AbjAAFNs (ORCPT
+        with ESMTP id S232274AbjAAFNs (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Sun, 1 Jan 2023 00:13:48 -0500
-Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C740663CC
+Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C745663E3
         for <linux-fscrypt@vger.kernel.org>; Sat, 31 Dec 2022 21:13:47 -0800 (PST)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id EF33A8263A;
-        Sun,  1 Jan 2023 00:06:50 -0500 (EST)
+        by box.fidei.email (Postfix) with ESMTPSA id 286A082634;
+        Sun,  1 Jan 2023 00:06:37 -0500 (EST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1672549611; bh=vKdl56H3Eyn9tkwdYaYdYBVUmySGklaAQ944HyzOxvk=;
+        t=1672549597; bh=Cjs7qIoema7Ub8xzcx1e2WzqdwoTIiR4o58nP15fEEE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=a+Lj2YATo3BpRGr9IYea1LP7ykI9Ewmd4AvDQKRIxvuJwP0WPf+TAIVTHpY9iUkc9
-         4hSZdWs+LKQ3HKSvmIG97806Wr78F01nnCrfYJ9qA2mCYtuELHd8jz9ZIjlVtsfu9F
-         HH1iyVil2NEj6P5FTcdPEzqUL8rs/0PAbyTRw/o1aqTf6uEo5cbtt+drvZHRB+nE6g
-         nxE/9VEYxk9LII9/kedErvXZgJUPqr8gilCgg/Joac1YfJIo+bJHwqJQWh723p3LI8
-         jUNOClmz6Q85BJEup6p53I1ltoq3pbRLDZxXiFrz5ShEol8QFj0v+qiiREXHabEB/r
-         PVkIkfA3Letmg==
+        b=MHShNtu7TCZXL4t0PajRcdozfNL56jqTolrDeHM06KiaNyvGOa1eI7pzQOe3Vumv1
+         ocTSygXmLbPAK9E6Fsqq1wtaT5tG+mMdb6GHjeMyKytooz4Xvo/9HONkqGTVzIp3bw
+         Yud/Y+3whiyYAG55iHtK9CuhZ5l6P7Fm6KnqR7BoYFZLR4zaqpyIPK0S2cBR4uuIu1
+         rPlmwPbWo0xJ3QpCKC30I5imz1U5xWFb9AEz/MQTgiaWvN7JqBQ/Vwc7jpbkVFplOx
+         L6tSTz9D/WsUgHGC3AOssGbAHN/r8/BUlONw3WCGw0d5TmjvuotG78B1Lp2akMg9hi
+         vE3oOFMcLrgng==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     linux-fscrypt@vger.kernel.org, ebiggers@kernel.org,
         paulcrowley@google.com, linux-btrfs@vger.kernel.org,
         kernel-team@meta.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [RFC PATCH 11/17] fscrypt: update all the *per_file_* function names
-Date:   Sun,  1 Jan 2023 00:06:15 -0500
-Message-Id: <a73edc7151764e82a26bf2682cc675e1d509e411.1672547582.git.sweettea-kernel@dorminy.me>
+Subject: [RFC PATCH 04/17] fscrypt: factor out fscrypt_set_inode_info()
+Date:   Sun,  1 Jan 2023 00:06:08 -0500
+Message-Id: <fba20d354834b5b9f20c284b577381e5147692a0.1672547582.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1672547582.git.sweettea-kernel@dorminy.me>
 References: <cover.1672547582.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -46,187 +46,113 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-As they are no longer per-file but per-info, whether that info is
-per-inode or per-extent, it seems better to rename all the relevant
-functions to be per_info instead of per-key.
+As this function needs to be called in several different places to
+short-circuit creating a new fscrypt_info for extent-based encryption,
+it makes sense to pull it into its own function for easy calling.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/crypto/fscrypt_private.h |  6 +++---
- fs/crypto/keysetup.c        | 22 +++++++++++-----------
- fs/crypto/keysetup_v1.c     | 18 +++++++++---------
- 3 files changed, 23 insertions(+), 23 deletions(-)
+ fs/crypto/keysetup.c | 60 +++++++++++++++++++++++++++-----------------
+ 1 file changed, 37 insertions(+), 23 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index dc45cd35391f..a34d2e525ddf 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -687,7 +687,7 @@ int fscrypt_prepare_key(struct fscrypt_prepared_key *prep_key,
- void fscrypt_destroy_prepared_key(struct super_block *sb,
- 				  struct fscrypt_prepared_key *prep_key);
- 
--int fscrypt_set_per_file_enc_key(struct fscrypt_info *ci, const u8 *raw_key);
-+int fscrypt_set_per_info_enc_key(struct fscrypt_info *ci, const u8 *raw_key);
- 
- int fscrypt_derive_dirhash_key(struct fscrypt_info *ci,
- 			       const struct fscrypt_master_key *mk);
-@@ -727,10 +727,10 @@ static inline int fscrypt_require_key(struct inode *inode)
- 
- void fscrypt_put_direct_key(struct fscrypt_direct_key *dk);
- 
--int fscrypt_setup_v1_file_key(struct fscrypt_info *ci,
-+int fscrypt_setup_v1_info_key(struct fscrypt_info *ci,
- 			      const u8 *raw_master_key);
- 
--int fscrypt_setup_v1_file_key_via_subscribed_keyrings(struct fscrypt_info *ci);
-+int fscrypt_setup_v1_info_key_via_subscribed_keyrings(struct fscrypt_info *ci);
- 
- /* policy.c */
- 
 diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index c611e2613aa6..1751e3ed9956 100644
+index 87f28d666602..4d7ff8244c55 100644
 --- a/fs/crypto/keysetup.c
 +++ b/fs/crypto/keysetup.c
-@@ -162,8 +162,8 @@ void fscrypt_destroy_prepared_key(struct super_block *sb,
- 	memzero_explicit(prep_key, sizeof(*prep_key));
+@@ -515,6 +515,38 @@ static void put_crypt_info(struct fscrypt_info *ci)
+ 	kmem_cache_free(fscrypt_info_cachep, ci);
  }
  
--/* Given a per-file encryption key, set up the file's crypto transform object */
--int fscrypt_set_per_file_enc_key(struct fscrypt_info *ci, const u8 *raw_key)
-+/* Given a fscrypt_info, set up an appropriate crypto transform object */
-+int fscrypt_set_per_info_enc_key(struct fscrypt_info *ci, const u8 *raw_key)
- {
- 	ci->ci_owns_key = true;
- 	return fscrypt_prepare_key(&ci->ci_enc_key, raw_key, ci);
-@@ -313,7 +313,7 @@ static int fscrypt_setup_iv_ino_lblk_32_key(struct fscrypt_info *ci,
- 	return 0;
- }
++static bool fscrypt_set_inode_info(struct inode *inode,
++				   struct fscrypt_info *ci,
++				   struct fscrypt_master_key *mk)
++{
++	if (ci == NULL) {
++		inode->i_crypt_info = NULL;
++		return true;
++	}
++
++	/*
++	 * For existing inodes, multiple tasks may race to set ->i_crypt_info.
++	 * So use cmpxchg_release().  This pairs with the smp_load_acquire() in
++	 * fscrypt_get_info().  I.e., here we publish ->i_crypt_info with a
++	 * RELEASE barrier so that other tasks can ACQUIRE it.
++	 */
++	if (cmpxchg_release(&inode->i_crypt_info, NULL, ci) != NULL)
++		return false;
++
++	/*
++	 * We won the race and set ->i_crypt_info to our crypt_info.
++	 * Now link it into the master key's inode list.
++	 */
++	if (mk) {
++		ci->ci_master_key = mk;
++		refcount_inc(&mk->mk_active_refs);
++		spin_lock(&mk->mk_decrypted_inodes_lock);
++		list_add(&ci->ci_master_key_link, &mk->mk_decrypted_inodes);
++		spin_unlock(&mk->mk_decrypted_inodes_lock);
++	}
++	return true;
++}
++
+ static int
+ fscrypt_setup_encryption_info(struct inode *inode,
+ 			      const union fscrypt_policy *policy,
+@@ -525,6 +557,7 @@ fscrypt_setup_encryption_info(struct inode *inode,
+ 	struct fscrypt_mode *mode;
+ 	struct fscrypt_master_key *mk = NULL;
+ 	int res;
++	bool set_succeeded;
  
--static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
-+static int fscrypt_setup_v2_info_key(struct fscrypt_info *ci,
- 				     struct fscrypt_master_key *mk,
- 				     bool need_dirhash_key)
- {
-@@ -321,8 +321,8 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
- 
- 	if (ci->ci_policy.v2.flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY) {
- 		/*
--		 * DIRECT_KEY: instead of deriving per-file encryption keys, the
--		 * per-file nonce will be included in all the IVs.  But unlike
-+		 * DIRECT_KEY: instead of deriving per-info encryption keys, the
-+		 * per-info nonce will be included in all the IVs.  But unlike
- 		 * v1 policies, for v2 policies in this case we don't encrypt
- 		 * with the master key directly but rather derive a per-mode
- 		 * encryption key.  This ensures that the master key is
-@@ -354,7 +354,7 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
- 		if (err)
- 			return err;
- 
--		err = fscrypt_set_per_file_enc_key(ci, derived_key);
-+		err = fscrypt_set_per_info_enc_key(ci, derived_key);
- 		memzero_explicit(derived_key, ci->ci_mode->keysize);
- 	}
- 	if (err)
-@@ -418,7 +418,7 @@ static bool fscrypt_valid_master_key_size(const struct fscrypt_master_key *mk,
-  * multiple tasks may race to create an fscrypt_info for the same inode), and to
-  * synchronize the master key being removed with a new inode starting to use it.
-  */
--static int setup_file_encryption_key(struct fscrypt_info *ci,
-+static int setup_info_encryption_key(struct fscrypt_info *ci,
- 				     bool need_dirhash_key,
- 				     struct fscrypt_master_key **mk_ret)
- {
-@@ -445,7 +445,7 @@ static int setup_file_encryption_key(struct fscrypt_info *ci,
- 		 * to before the search of ->s_master_keys, since users
- 		 * shouldn't be able to override filesystem-level keys.
- 		 */
--		return fscrypt_setup_v1_file_key_via_subscribed_keyrings(ci);
-+		return fscrypt_setup_v1_info_key_via_subscribed_keyrings(ci);
- 	}
- 	down_read(&mk->mk_sem);
- 
-@@ -462,10 +462,10 @@ static int setup_file_encryption_key(struct fscrypt_info *ci,
- 
- 	switch (ci->ci_policy.version) {
- 	case FSCRYPT_POLICY_V1:
--		err = fscrypt_setup_v1_file_key(ci, mk->mk_secret.raw);
-+		err = fscrypt_setup_v1_info_key(ci, mk->mk_secret.raw);
- 		break;
- 	case FSCRYPT_POLICY_V2:
--		err = fscrypt_setup_v2_file_key(ci, mk, need_dirhash_key);
-+		err = fscrypt_setup_v2_info_key(ci, mk, need_dirhash_key);
- 		break;
- 	default:
- 		WARN_ON(1);
-@@ -584,7 +584,7 @@ fscrypt_setup_encryption_info(struct inode *inode,
- 	WARN_ON(mode->ivsize > FSCRYPT_MAX_IV_SIZE);
- 	crypt_info->ci_mode = mode;
- 
--	res = setup_file_encryption_key(crypt_info, need_dirhash_key, &mk);
-+	res = setup_info_encryption_key(crypt_info, need_dirhash_key, &mk);
+ 	res = fscrypt_initialize(inode->i_sb->s_cop->flags);
+ 	if (res)
+@@ -550,34 +583,15 @@ fscrypt_setup_encryption_info(struct inode *inode,
  	if (res)
  		goto out;
  
-diff --git a/fs/crypto/keysetup_v1.c b/fs/crypto/keysetup_v1.c
-index 3cbf1480c457..3c3a203c2a94 100644
---- a/fs/crypto/keysetup_v1.c
-+++ b/fs/crypto/keysetup_v1.c
-@@ -250,7 +250,7 @@ fscrypt_get_direct_key(const struct fscrypt_info *ci, const u8 *raw_key)
- }
- 
- /* v1 policy, DIRECT_KEY: use the master key directly */
--static int setup_v1_file_key_direct(struct fscrypt_info *ci,
-+static int setup_v1_info_key_direct(struct fscrypt_info *ci,
- 				    const u8 *raw_master_key)
- {
- 	struct fscrypt_direct_key *dk;
-@@ -263,8 +263,8 @@ static int setup_v1_file_key_direct(struct fscrypt_info *ci,
- 	return 0;
- }
- 
--/* v1 policy, !DIRECT_KEY: derive the file's encryption key */
--static int setup_v1_file_key_derived(struct fscrypt_info *ci,
-+/* v1 policy, !DIRECT_KEY: derive the info's encryption key */
-+static int setup_v1_info_key_derived(struct fscrypt_info *ci,
- 				     const u8 *raw_master_key)
- {
- 	u8 *derived_key;
-@@ -283,21 +283,21 @@ static int setup_v1_file_key_derived(struct fscrypt_info *ci,
- 	if (err)
- 		goto out;
- 
--	err = fscrypt_set_per_file_enc_key(ci, derived_key);
-+	err = fscrypt_set_per_info_enc_key(ci, derived_key);
+-	/*
+-	 * For existing inodes, multiple tasks may race to set ->i_crypt_info.
+-	 * So use cmpxchg_release().  This pairs with the smp_load_acquire() in
+-	 * fscrypt_get_info().  I.e., here we publish ->i_crypt_info with a
+-	 * RELEASE barrier so that other tasks can ACQUIRE it.
+-	 */
+-	if (cmpxchg_release(&inode->i_crypt_info, NULL, crypt_info) == NULL) {
+-		/*
+-		 * We won the race and set ->i_crypt_info to our crypt_info.
+-		 * Now link it into the master key's inode list.
+-		 */
+-		if (mk) {
+-			crypt_info->ci_master_key = mk;
+-			refcount_inc(&mk->mk_active_refs);
+-			spin_lock(&mk->mk_decrypted_inodes_lock);
+-			list_add(&crypt_info->ci_master_key_link,
+-				 &mk->mk_decrypted_inodes);
+-			spin_unlock(&mk->mk_decrypted_inodes_lock);
+-		}
+-		crypt_info = NULL;
+-	}
++	set_succeeded = fscrypt_set_inode_info(inode, crypt_info, mk);
+ 	res = 0;
  out:
- 	kfree_sensitive(derived_key);
- 	return err;
+ 	if (mk) {
+ 		up_read(&mk->mk_sem);
+ 		fscrypt_put_master_key(mk);
+ 	}
+-	put_crypt_info(crypt_info);
++	if (!set_succeeded)
++		put_crypt_info(crypt_info);
+ 	return res;
  }
  
--int fscrypt_setup_v1_file_key(struct fscrypt_info *ci, const u8 *raw_master_key)
-+int fscrypt_setup_v1_info_key(struct fscrypt_info *ci, const u8 *raw_master_key)
+@@ -707,7 +721,7 @@ EXPORT_SYMBOL_GPL(fscrypt_prepare_new_inode);
+ void fscrypt_put_encryption_info(struct inode *inode)
  {
- 	if (ci->ci_policy.v1.flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY)
--		return setup_v1_file_key_direct(ci, raw_master_key);
-+		return setup_v1_info_key_direct(ci, raw_master_key);
- 	else
--		return setup_v1_file_key_derived(ci, raw_master_key);
-+		return setup_v1_info_key_derived(ci, raw_master_key);
+ 	put_crypt_info(fscrypt_get_inode_info(inode));
+-	inode->i_crypt_info = NULL;
++	fscrypt_set_inode_info(inode, NULL, NULL);
  }
+ EXPORT_SYMBOL(fscrypt_put_encryption_info);
  
--int fscrypt_setup_v1_file_key_via_subscribed_keyrings(struct fscrypt_info *ci)
-+int fscrypt_setup_v1_info_key_via_subscribed_keyrings(struct fscrypt_info *ci)
- {
- 	struct key *key;
- 	const struct fscrypt_key *payload;
-@@ -314,7 +314,7 @@ int fscrypt_setup_v1_file_key_via_subscribed_keyrings(struct fscrypt_info *ci)
- 	if (IS_ERR(key))
- 		return PTR_ERR(key);
- 
--	err = fscrypt_setup_v1_file_key(ci, payload->raw);
-+	err = fscrypt_setup_v1_info_key(ci, payload->raw);
- 	up_read(&key->sem);
- 	key_put(key);
- 	return err;
 -- 
 2.38.1
 
