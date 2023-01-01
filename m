@@ -2,43 +2,42 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 28238C3DA79
-	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Jan 2023 05:13:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 03405C46467
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Jan 2023 05:13:52 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230463AbjAAFNt (ORCPT
+        id S229892AbjAAFNu (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 1 Jan 2023 00:13:49 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50860 "EHLO
+        Sun, 1 Jan 2023 00:13:50 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50784 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230510AbjAAFNr (ORCPT
+        with ESMTP id S229437AbjAAFNr (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Sun, 1 Jan 2023 00:13:47 -0500
-X-Greylist: delayed 435 seconds by postgrey-1.37 at lindbergh.monkeyblade.net; Sat, 31 Dec 2022 21:13:46 PST
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 229E963CC
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 22B6763FE
         for <linux-fscrypt@vger.kernel.org>; Sat, 31 Dec 2022 21:13:45 -0800 (PST)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 4CB8B82647;
-        Sun,  1 Jan 2023 00:06:49 -0500 (EST)
+        by box.fidei.email (Postfix) with ESMTPSA id 458918263D;
+        Sun,  1 Jan 2023 00:06:41 -0500 (EST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1672549609; bh=kIBJVYH2JqSKtwNK1QBti5TNYAdm7cp7w0tqOZfFeZo=;
+        t=1672549601; bh=g4930koxwcaUYiQSLl2wE+AjGCHIuIimXlcUqzwAigE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Fxgx0hEHqqVEcnK6BIa/+pYem6g0O8j9J23+hUXjO/eDzvi6M7hh+/ECz7Up9fASz
-         y6o7wXRgGLWa08X9mr5kMePPIOGN4+t0ITtx3iRSiEllAyjuzg1cHGgBu2+wXJDcZi
-         nNu6Xu3RYWve/ghkpaSPn/yvzl9zv9uBoIewWw0ud89Xuv0ZUyIB8P06vAI0jMNJlU
-         62eXZHV1ZHhQ5mP2arJuidwPWOrZqYpxiJNK3mtRbJmte9A9KO+DricGHIOpy28yGr
-         fFiZh2VXytIB+N+whS36XbyWGK/A6LAYgBjdGOSc07wRN25oPMctAxdlrZs8SqboBI
-         YfgdAZ2vtb7gQ==
+        b=fIkX44IO6MorEtvfv+mGLpDBwN8hknZG8e0TxdHdH7VRBIPKcJKPMEBX1IhXYvBY2
+         xFvVDQ7/DZxzbKmOzRAiMVYU8lcVhA49JWwO10S51V9I5fgEMb8TIW91Zdn3OIvyFp
+         ZoZ2JlTppz+rvzet39QImw1DI5s6PAWuHmwGS7IdhwgyMV240cnhZOE/inXDjsUfte
+         ZRtiuvQeRQ8ZzVnR/fwudaXO5FAcQddgEGGghUwHCE/fCNqG2AUrXkem93gaWrGDtU
+         yg1cZP5dBSx6KRCb+JqXmlu2UXbxyaqw1zY7Cy+KYibAkycqJHPua36kHpDF45DkkB
+         3A5cLNe22IuPA==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     linux-fscrypt@vger.kernel.org, ebiggers@kernel.org,
         paulcrowley@google.com, linux-btrfs@vger.kernel.org,
         kernel-team@meta.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [RFC PATCH 10/17] fscrypt: let fscrypt_infos be owned by an extent
-Date:   Sun,  1 Jan 2023 00:06:14 -0500
-Message-Id: <e5e72a4404601c495551ea96f80f0eca4bc8942c.1672547582.git.sweettea-kernel@dorminy.me>
+Subject: [RFC PATCH 06/17] fscrypt: add a super_block pointer to fscrypt_info
+Date:   Sun,  1 Jan 2023 00:06:10 -0500
+Message-Id: <623191aef09dc226a77d59230b5363f674910915.1672547582.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1672547582.git.sweettea-kernel@dorminy.me>
 References: <cover.1672547582.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -47,63 +46,128 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-In order to notify extents when their info is part of a master key which
-is going away, the fscrypt_info must have a backpointer to the extent
-somehow. Similarly, if a fscrypt_info is owned by an extent, the info
-must not have a pointer to an inode -- multiple inodes may reference a
-extent, and the first inode to cause an extent's creation may have a
-lifetime much shorter than the extent, so there is no inode pointer
-safe to track in an extent-owned info. Therefore, this adds a new
-pointer for extent-owned infos to track their extent and updates
-fscrypt_setup_encryption_info() accordingly.
-
- Since it's simple to track the piece of extent memory pointing to the
-info, and for the extent to then go from such a pointer to the whole
-extent via container_of(), we store that. Although some sort of generic
-void * or some artificial fscrypt_extent embedded structure would also
-work, those would require additional plumbing which doesn't seem
-strictly required or clarifying.
+When fscrypt_infos are attached to extents instead of inodes, we can't
+go through the inode to get at the filesystems's superblock. Therefore,
+add a dedicated superblock pointer to fscrypt_info to keep track of it.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/crypto/fscrypt_private.h | 6 ++++++
- fs/crypto/keysetup.c        | 6 +++++-
- 2 files changed, 11 insertions(+), 1 deletion(-)
+ fs/crypto/fscrypt_private.h | 3 +++
+ fs/crypto/inline_crypt.c    | 6 +++---
+ fs/crypto/keysetup.c        | 9 ++++-----
+ fs/crypto/keysetup_v1.c     | 6 +++---
+ 4 files changed, 13 insertions(+), 11 deletions(-)
 
 diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 0c7b785f1d8c..dc45cd35391f 100644
+index e4c9c483114f..da4df8642456 100644
 --- a/fs/crypto/fscrypt_private.h
 +++ b/fs/crypto/fscrypt_private.h
-@@ -229,6 +229,12 @@ struct fscrypt_info {
- 	/* Back-pointer to the inode, for infos owned by a specific inode */
+@@ -220,6 +220,9 @@ struct fscrypt_info {
+ 	/* Back-pointer to the inode */
  	struct inode *ci_inode;
  
-+	/*
-+	 * Back-pointer to the info pointer in the extent, for infos owned
-+	 * by an extent
-+	 */
-+	struct fscrypt_info **ci_info_ptr;
++	/* The superblock of the filesystem to which this fscrypt_info pertains */
++	struct super_block *ci_sb;
 +
- 	/* The superblock of the filesystem to which this fscrypt_info pertains */
- 	struct super_block *ci_sb;
+ 	/*
+ 	 * The master key with which this inode was unlocked (decrypted).  This
+ 	 * will be NULL if the master key was found in a process-subscribed
+diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
+index 0ae220c8afa3..7e85167d9f37 100644
+--- a/fs/crypto/inline_crypt.c
++++ b/fs/crypto/inline_crypt.c
+@@ -41,7 +41,7 @@ static struct block_device **fscrypt_get_devices(struct super_block *sb,
  
+ static unsigned int fscrypt_get_dun_bytes(const struct fscrypt_info *ci)
+ {
+-	struct super_block *sb = ci->ci_inode->i_sb;
++	struct super_block *sb = ci->ci_sb;
+ 	unsigned int flags = fscrypt_policy_flags(&ci->ci_policy);
+ 	int ino_bits = 64, lblk_bits = 64;
+ 
+@@ -95,7 +95,7 @@ static void fscrypt_log_blk_crypto_impl(struct fscrypt_mode *mode,
+ int fscrypt_select_encryption_impl(struct fscrypt_info *ci)
+ {
+ 	const struct inode *inode = ci->ci_inode;
+-	struct super_block *sb = inode->i_sb;
++	struct super_block *sb = ci->ci_sb;
+ 	struct blk_crypto_config crypto_cfg;
+ 	struct block_device **devs;
+ 	unsigned int num_devs;
+@@ -158,7 +158,7 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
+ 				     const struct fscrypt_info *ci)
+ {
+ 	const struct inode *inode = ci->ci_inode;
+-	struct super_block *sb = inode->i_sb;
++	struct super_block *sb = ci->ci_sb;
+ 	enum blk_crypto_mode_num crypto_mode = ci->ci_mode->blk_crypto_mode;
+ 	struct blk_crypto_key *blk_key;
+ 	struct block_device **devs;
 diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index 04f01da900ca..c611e2613aa6 100644
+index 52244e0dd1e4..dacf3c47a24a 100644
 --- a/fs/crypto/keysetup.c
 +++ b/fs/crypto/keysetup.c
-@@ -567,7 +567,11 @@ fscrypt_setup_encryption_info(struct inode *inode,
- 	if (!crypt_info)
+@@ -174,8 +174,7 @@ static int setup_per_mode_enc_key(struct fscrypt_info *ci,
+ 				  struct fscrypt_prepared_key *keys,
+ 				  u8 hkdf_context, bool include_fs_uuid)
+ {
+-	const struct inode *inode = ci->ci_inode;
+-	const struct super_block *sb = inode->i_sb;
++	const struct super_block *sb = ci->ci_sb;
+ 	struct fscrypt_mode *mode = ci->ci_mode;
+ 	const u8 mode_num = mode - fscrypt_modes;
+ 	struct fscrypt_prepared_key *prep_key;
+@@ -435,7 +434,7 @@ static int setup_file_encryption_key(struct fscrypt_info *ci,
+ 	if (err)
+ 		return err;
+ 
+-	mk = fscrypt_find_master_key(ci->ci_inode->i_sb, &mk_spec);
++	mk = fscrypt_find_master_key(ci->ci_sb, &mk_spec);
+ 	if (!mk) {
+ 		if (ci->ci_policy.version != FSCRYPT_POLICY_V1)
+ 			return -ENOKEY;
+@@ -495,8 +494,7 @@ static void put_crypt_info(struct fscrypt_info *ci)
+ 	if (ci->ci_direct_key)
+ 		fscrypt_put_direct_key(ci->ci_direct_key);
+ 	else if (ci->ci_owns_key)
+-		fscrypt_destroy_prepared_key(ci->ci_inode->i_sb,
+-					     &ci->ci_enc_key);
++		fscrypt_destroy_prepared_key(ci->ci_sb, &ci->ci_enc_key);
+ 
+ 	mk = ci->ci_master_key;
+ 	if (mk) {
+@@ -568,6 +566,7 @@ fscrypt_setup_encryption_info(struct inode *inode,
  		return -ENOMEM;
  
--	crypt_info->ci_inode = inode;
-+	if (fscrypt_uses_extent_encryption(inode))
-+		crypt_info->ci_info_ptr = info_ptr;
-+	else
-+		crypt_info->ci_inode = inode;
-+
- 	crypt_info->ci_sb = inode->i_sb;
+ 	crypt_info->ci_inode = inode;
++	crypt_info->ci_sb = inode->i_sb;
  	crypt_info->ci_policy = *policy;
  	memcpy(crypt_info->ci_nonce, nonce, FSCRYPT_FILE_NONCE_SIZE);
+ 
+diff --git a/fs/crypto/keysetup_v1.c b/fs/crypto/keysetup_v1.c
+index 75dabd9b27f9..3cbf1480c457 100644
+--- a/fs/crypto/keysetup_v1.c
++++ b/fs/crypto/keysetup_v1.c
+@@ -232,7 +232,7 @@ fscrypt_get_direct_key(const struct fscrypt_info *ci, const u8 *raw_key)
+ 	dk = kzalloc(sizeof(*dk), GFP_KERNEL);
+ 	if (!dk)
+ 		return ERR_PTR(-ENOMEM);
+-	dk->dk_sb = ci->ci_inode->i_sb;
++	dk->dk_sb = ci->ci_sb;
+ 	refcount_set(&dk->dk_refcount, 1);
+ 	dk->dk_mode = ci->ci_mode;
+ 	err = fscrypt_prepare_key(&dk->dk_key, raw_key, ci);
+@@ -306,8 +306,8 @@ int fscrypt_setup_v1_file_key_via_subscribed_keyrings(struct fscrypt_info *ci)
+ 	key = find_and_lock_process_key(FSCRYPT_KEY_DESC_PREFIX,
+ 					ci->ci_policy.v1.master_key_descriptor,
+ 					ci->ci_mode->keysize, &payload);
+-	if (key == ERR_PTR(-ENOKEY) && ci->ci_inode->i_sb->s_cop->key_prefix) {
+-		key = find_and_lock_process_key(ci->ci_inode->i_sb->s_cop->key_prefix,
++	if (key == ERR_PTR(-ENOKEY) && ci->ci_sb->s_cop->key_prefix) {
++		key = find_and_lock_process_key(ci->ci_sb->s_cop->key_prefix,
+ 						ci->ci_policy.v1.master_key_descriptor,
+ 						ci->ci_mode->keysize, &payload);
+ 	}
 -- 
 2.38.1
 
