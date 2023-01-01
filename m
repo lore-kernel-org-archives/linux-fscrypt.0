@@ -2,195 +2,130 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2315BC3DA7D
-	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Jan 2023 05:14:00 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 57176C4332F
+	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Jan 2023 13:31:25 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232334AbjAAFN7 (ORCPT
+        id S231180AbjAANbY (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 1 Jan 2023 00:13:59 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50794 "EHLO
+        Sun, 1 Jan 2023 08:31:24 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50598 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232561AbjAAFNt (ORCPT
+        with ESMTP id S229550AbjAANbX (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 1 Jan 2023 00:13:49 -0500
-Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E935E6403
-        for <linux-fscrypt@vger.kernel.org>; Sat, 31 Dec 2022 21:13:47 -0800 (PST)
-Received: from authenticated-user (box.fidei.email [71.19.144.250])
-        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
-        (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 977B682666;
-        Sun,  1 Jan 2023 00:06:54 -0500 (EST)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1672549615; bh=Zek6tJgMgpf4jZZbZ1RTIGxYIEyVbndBB6tiZz5U+Z0=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Cy7dhjJZufvJ8Jd9URDZVffFHYdnNbyHNr1XwkS5gMgsTUtUKWCJl6sn32QPUpLey
-         S8JPBplt1Xia1zW5Qtn4G8nwzSnIoA6IKgWhz/TijRJRQSOlI8YFHnyx1/XVKfHKar
-         RpaFaL1JYV/WYdnPvui6uJGsw2qYBnvd3OhvmW9aABl+QxX+gxVKg0uefvxyT8nqme
-         Ieg2ujWqTM8qsgYKEWH8+C+Xc0hLVLxDm098vqfn+hSuArYv4N/qT+618k1YE1Ap2T
-         oDiO+tZMyz7doTp4ssg8HYqmnDOuk7b9m38BCEX47Bg4BK/qE6DDkeyuhVFECNu0TV
-         meXRyGkUG9aRQ==
-From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-To:     linux-fscrypt@vger.kernel.org, ebiggers@kernel.org,
-        paulcrowley@google.com, linux-btrfs@vger.kernel.org,
-        kernel-team@meta.com
-Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [RFC PATCH 13/17] fscrypt: use an optional ino equivalent for per-extent infos
-Date:   Sun,  1 Jan 2023 00:06:17 -0500
-Message-Id: <f2b7d9f5412a2e8d2bb2c88d41a76495c6c1bc89.1672547582.git.sweettea-kernel@dorminy.me>
-In-Reply-To: <cover.1672547582.git.sweettea-kernel@dorminy.me>
-References: <cover.1672547582.git.sweettea-kernel@dorminy.me>
+        Sun, 1 Jan 2023 08:31:23 -0500
+Received: from us-smtp-delivery-124.mimecast.com (us-smtp-delivery-124.mimecast.com [170.10.129.124])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id F06883885
+        for <linux-fscrypt@vger.kernel.org>; Sun,  1 Jan 2023 05:30:39 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
+        s=mimecast20190719; t=1672579839;
+        h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
+         to:to:cc:cc:mime-version:mime-version:content-type:content-type:
+         in-reply-to:in-reply-to:references:references;
+        bh=PfyKh+6ly8mcavFLlVRXy4fl8nsb5VprOU1Yhje8hko=;
+        b=izhNnQHRE7KlYb7hftRtHtqk8eK0bzvsK24OAp+mSSaazQLEPB/Thc0cvx2P+isjV3XfUO
+        uZERU8Y/1sswZG5NhSRFuFsiLKvsxdJeDrG12LEKxYpYM+6e03fpq/N19K7J5o3bU1paWM
+        dJ2QJSnBICRXjx6jeg9M0dj9u6W03ck=
+Received: from mail-pf1-f198.google.com (mail-pf1-f198.google.com
+ [209.85.210.198]) by relay.mimecast.com with ESMTP with STARTTLS
+ (version=TLSv1.3, cipher=TLS_AES_128_GCM_SHA256) id
+ us-mta-241-Zq6rxK0ROT6KhrGo_mLJvA-1; Sun, 01 Jan 2023 08:30:38 -0500
+X-MC-Unique: Zq6rxK0ROT6KhrGo_mLJvA-1
+Received: by mail-pf1-f198.google.com with SMTP id 24-20020aa79118000000b00580476432deso12245912pfh.23
+        for <linux-fscrypt@vger.kernel.org>; Sun, 01 Jan 2023 05:30:37 -0800 (PST)
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112;
+        h=in-reply-to:content-disposition:mime-version:references:message-id
+         :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=PfyKh+6ly8mcavFLlVRXy4fl8nsb5VprOU1Yhje8hko=;
+        b=Lf7+VQeoGB3mhUUGFJrX4SbVqH8K6H9vKdNqSR3FdJjrEugt/K/ueqpbLHk/aXISZQ
+         ElvjwtR84y1GU5k6wYg7Bu8s1yI4UtSmeVaiADR2Q/O9NGTq4ru3iZSnN4iSwJ3fYKVB
+         3sRwUh4dM2GXgzQZ30f+7qkAwYOW3jvgtX7SLf7wb0k3UYgnC+WmDlJYpDFq6ZxTfTiX
+         QxgZEGUaKBVPn7rjtTgbasBper1rYw6ROhKn88eWC7aib/boCCmyMghw7Xb3uE6FDhc1
+         cod1wsXQhsdTGrth2BMWQabvTp0D/D8JprnnWIKZSKpR94JJqSAZulWwP195jSEYpxrY
+         48ag==
+X-Gm-Message-State: AFqh2kqelPLYs6b8OHNiByXtTX637xc0WKO5YDI+YfDWmu5S+kPJawAE
+        iUu03eViQfsRSELNNPUKkxuTUP91e/1Ici1AKU0osJeO2ozwgN60uWrwzY/uZtIixuf2pNB/cf4
+        H4Dj7vwsm9zwjhmUVqk9vlR0BQA==
+X-Received: by 2002:aa7:9147:0:b0:56c:318a:f83b with SMTP id 7-20020aa79147000000b0056c318af83bmr44952567pfi.13.1672579836906;
+        Sun, 01 Jan 2023 05:30:36 -0800 (PST)
+X-Google-Smtp-Source: AMrXdXsZcU2Onik1n60YvsLbDVPYFSI38W8QIO1sdI79iDnlqKaQNWTbKI/2r0XZuH9+dgDdmHkEOA==
+X-Received: by 2002:aa7:9147:0:b0:56c:318a:f83b with SMTP id 7-20020aa79147000000b0056c318af83bmr44952552pfi.13.1672579836596;
+        Sun, 01 Jan 2023 05:30:36 -0800 (PST)
+Received: from zlang-mailbox ([43.228.180.230])
+        by smtp.gmail.com with ESMTPSA id z15-20020a63190f000000b0046ffe3fea77sm15361159pgl.76.2023.01.01.05.30.34
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Sun, 01 Jan 2023 05:30:36 -0800 (PST)
+Date:   Sun, 1 Jan 2023 21:30:32 +0800
+From:   Zorro Lang <zlang@redhat.com>
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH v3 00/10] xfstests: update verity tests for non-4K block
+ and page size
+Message-ID: <20230101133032.6jz4dvd6wx5m3ws5@zlang-mailbox>
+References: <20221229233222.119630-1-ebiggers@kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20221229233222.119630-1-ebiggers@kernel.org>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Since per-extent infos are not tied to inodes, an ino-based policy
-cannot access the inode's i_ino to get the necessary information.
-Instead, this adds an optional fscrypt_operation pointer to get the ino
-equivalent for an extent, adds a wrapper to get the ino for an info, and
-uses this wrapper everywhere where the ci's inode's i_ino is currently
-accessed.
+On Thu, Dec 29, 2022 at 03:32:12PM -0800, Eric Biggers wrote:
+> This series updates the verity xfstests to eliminate implicit
+> assumptions that 'merkle_tree_block_size == fs_block_size == page_size
+> == 4096', and to provide some test coverage for cases where
+> merkle_tree_block_size differs from fs_block_size and/or page_size.  It
+> doesn't add any new test scripts, but it does update some of the
+> existing test scripts to test multiple block sizes.
+> 
+> This goes along with my kernel patch series
+> "fsverity: support for non-4K pages"
+> (https://lore.kernel.org/linux-fsdevel/20221223203638.41293-1-ebiggers@kernel.org/T/#u).
+> However, it's not necessary to wait for that kernel patch series to be
+> applied before applying this xfstests patch series.
+> 
+> Changed in v3:
+>   - Fixed generic/574 failure with some bash versions.
 
-Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
----
- fs/crypto/crypto.c          |  5 +++--
- fs/crypto/fscrypt_private.h | 18 ++++++++++++++++++
- fs/crypto/keyring.c         |  6 +++---
- fs/crypto/keysetup.c        |  8 ++++----
- include/linux/fscrypt.h     | 18 ++++++++++++++++++
- 5 files changed, 46 insertions(+), 9 deletions(-)
+Thanks for fixing this failure, this version looks good to me. I'd like to
+merge this patchset with my RVB.
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 93b83dbe82ee..4760adc1158f 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -85,9 +85,10 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
- 	memset(iv, 0, ci->ci_mode->ivsize);
- 
- 	if (flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
-+		u64 ino = fscrypt_get_info_ino(ci);
- 		WARN_ON_ONCE(lblk_num > U32_MAX);
--		WARN_ON_ONCE(ci->ci_inode->i_ino > U32_MAX);
--		lblk_num |= (u64)ci->ci_inode->i_ino << 32;
-+		WARN_ON_ONCE(ino > U32_MAX);
-+		lblk_num |= (u64)ino << 32;
- 	} else if (flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) {
- 		WARN_ON_ONCE(lblk_num > U32_MAX);
- 		lblk_num = (u32)(ci->ci_hashed_ino + lblk_num);
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index a34d2e525ddf..d937a320361e 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -344,6 +344,24 @@ fscrypt_get_lblk_info(const struct inode *inode, u64 lblk, u64 *offset,
- 	return fscrypt_get_info(inode);
- }
- 
-+/**
-+ * fscrypt_get_info_ino() - get the ino or ino equivalent for an info
-+ *
-+ * @ci: the fscrypt_info in question
-+ *
-+ * For inode-based encryption, this will return the info's inode's ino.
-+ * For extent-based encryption, this will return the extent's ino equivalent
-+ * or 0 if it is not implemented.
-+ */
-+static inline u64 fscrypt_get_info_ino(const struct fscrypt_info *ci)
-+{
-+	if (ci->ci_inode)
-+		return ci->ci_inode->i_ino;
-+	if (!ci->ci_sb->s_cop->get_extent_ino_equivalent)
-+		return 0;
-+	return ci->ci_sb->s_cop->get_extent_ino_equivalent(ci->ci_info_ptr);
-+}
-+
- /* crypto.c */
- extern struct kmem_cache *fscrypt_info_cachep;
- int fscrypt_initialize(unsigned int cop_flags);
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 0c4e917a5281..48e732628d43 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -933,11 +933,11 @@ static int check_for_busy_inodes(struct super_block *sb,
- 
- 	{
- 		/* select an example file to show for debugging purposes */
--		struct inode *inode =
-+		struct fscrypt_info *ci =
- 			list_first_entry(&mk->mk_active_infos,
- 					 struct fscrypt_info,
--					 ci_master_key_link)->ci_inode;
--		ino = inode->i_ino;
-+					 ci_master_key_link);
-+		ino = fscrypt_get_info_ino(ci);
- 	}
- 	spin_unlock(&mk->mk_active_infos_lock);
- 
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index 1751e3ed9956..f32b6f0a8336 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -266,11 +266,11 @@ int fscrypt_derive_dirhash_key(struct fscrypt_info *ci,
- void fscrypt_hash_inode_number(struct fscrypt_info *ci,
- 			       const struct fscrypt_master_key *mk)
- {
--	WARN_ON(ci->ci_inode->i_ino == 0);
-+	u64 ino = fscrypt_get_info_ino(ci);
-+	WARN_ON(ino == 0);
- 	WARN_ON(!mk->mk_ino_hash_key_initialized);
- 
--	ci->ci_hashed_ino = (u32)siphash_1u64(ci->ci_inode->i_ino,
--					      &mk->mk_ino_hash_key);
-+	ci->ci_hashed_ino = (u32)siphash_1u64(ino, &mk->mk_ino_hash_key);
- }
- 
- static int fscrypt_setup_iv_ino_lblk_32_key(struct fscrypt_info *ci,
-@@ -308,7 +308,7 @@ static int fscrypt_setup_iv_ino_lblk_32_key(struct fscrypt_info *ci,
- 	 * New inodes may not have an inode number assigned yet.
- 	 * Hashing their inode number is delayed until later.
- 	 */
--	if (ci->ci_inode->i_ino)
-+	if (fscrypt_get_info_ino(ci))
- 		fscrypt_hash_inode_number(ci, mk);
- 	return 0;
- }
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 4f5f8a651213..c05e6ad3e729 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -129,6 +129,15 @@ struct fscrypt_operations {
- 	 */
- 	bool (*empty_dir)(struct inode *inode);
- 
-+	/*
-+	 * Inform the filesystem that a particular extent must forget its
-+	 * fscrypt_info (for instance, for a key removal).
-+	 *
-+	 * @info_ptr: a pointer to the location storing the fscrypt_info pointer
-+	 *            within the opaque extent whose info is to be freed
-+	 */
-+	void (*forget_extent_info)(struct fscrypt_info **info_ptr);
-+
- 	/*
- 	 * Check whether the filesystem's inode numbers and UUID are stable,
- 	 * meaning that they will never be changed even by offline operations
-@@ -160,6 +169,15 @@ struct fscrypt_operations {
- 	void (*get_ino_and_lblk_bits)(struct super_block *sb,
- 				      int *ino_bits_ret, int *lblk_bits_ret);
- 
-+	/*
-+	 * Get the inode number equivalent for filesystems using per-extent
-+	 * encryption keys.
-+	 *
-+	 * This function only needs to be implemented if support for one of the
-+	 * FSCRYPT_POLICY_FLAG_IV_INO_* flags is needed.
-+	 */
-+	u64 (*get_extent_ino_equivalent)(struct fscrypt_info **info_ptr);
-+
- 	/*
- 	 * Return an array of pointers to the block devices to which the
- 	 * filesystem may write encrypted file contents, NULL if the filesystem
--- 
-2.38.1
+> 
+> Changed in v2:
+>   - Adjusted the output of generic/574, generic/575, and generic/624
+>     slightly to avoid confusion.
+> 
+> Eric Biggers (10):
+>   common/verity: add and use _fsv_can_enable()
+>   common/verity: set FSV_BLOCK_SIZE to an appropriate value
+>   common/verity: use FSV_BLOCK_SIZE by default
+>   common/verity: add _filter_fsverity_digest()
+>   generic/572: support non-4K Merkle tree block size
+>   generic/573: support non-4K Merkle tree block size
+>   generic/577: support non-4K Merkle tree block size
+>   generic/574: test multiple Merkle tree block sizes
+>   generic/624: test multiple Merkle tree block sizes
+>   generic/575: test 1K Merkle tree block size
+> 
+>  common/verity         |  84 ++++++++++++----
+>  tests/generic/572     |  21 ++--
+>  tests/generic/572.out |  10 +-
+>  tests/generic/573     |   8 +-
+>  tests/generic/574     | 219 +++++++++++++++++++++++++-----------------
+>  tests/generic/574.out |  83 +---------------
+>  tests/generic/575     |  57 ++++++++---
+>  tests/generic/575.out |   8 +-
+>  tests/generic/577     |  24 ++---
+>  tests/generic/577.out |  10 +-
+>  tests/generic/624     | 119 ++++++++++++++++-------
+>  tests/generic/624.out |  15 +--
+>  12 files changed, 370 insertions(+), 288 deletions(-)
+> 
+> 
+> base-commit: 3dc46f477b39d732e1841e6f5a180759cee3e8ce
+> -- 
+> 2.39.0
+> 
 
