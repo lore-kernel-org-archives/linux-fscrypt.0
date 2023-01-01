@@ -2,42 +2,43 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2E6EEC4167B
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 611C2C46467
 	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Jan 2023 05:13:49 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229775AbjAAFNs (ORCPT
+        id S230364AbjAAFNs (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Sun, 1 Jan 2023 00:13:48 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50806 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50858 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229947AbjAAFNq (ORCPT
+        with ESMTP id S230463AbjAAFNr (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 1 Jan 2023 00:13:46 -0500
+        Sun, 1 Jan 2023 00:13:47 -0500
+X-Greylist: delayed 433 seconds by postgrey-1.37 at lindbergh.monkeyblade.net; Sat, 31 Dec 2022 21:13:45 PST
 Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 22A6D63E9
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id BFE1063FA
         for <linux-fscrypt@vger.kernel.org>; Sat, 31 Dec 2022 21:13:45 -0800 (PST)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id BC9CB82670;
-        Sun,  1 Jan 2023 00:06:59 -0500 (EST)
+        by box.fidei.email (Postfix) with ESMTPSA id 400E482637;
+        Sun,  1 Jan 2023 00:06:43 -0500 (EST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1672549620; bh=59kU/7xIENmIwXKjj5p7OjDGbHH5fEFReYyZ3dopUqE=;
+        t=1672549603; bh=ZORFfQlfZYXnSAgBDpsuOJNt0B3Xahqp03FH9Bh5A7M=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=ZKu3rfANw9d3ck1QUxwCt5VWEpKOp6MJ13occV7vo2JT5aLnAzw2zlu88dr/356EB
-         /yX0kEpIVifjl4vTKM0aMq7jm+7BYaOVGWxwI3RT75dGMbL+h4nwDQby7fKqm5/OW2
-         xCv7L+0ZVgq/TV0iwtwYECmi2esta7sW2pn4eRJH+XMjsG/rfDYCm4MuBrozlGgNze
-         7RC3YOxUAtf9j65JU02NK36NGrf7oMKjvvWClySTK8eVpKX41C2Mm9Ttz/wRH1k7cP
-         1iup3H9Aj9XyoyvXhnIVQVjDGQQMbXen0iELH11nHfxZHWxg3RQ3o/LjQ7x+VSg42s
-         GftTueelwJ4Nw==
+        b=G0jEQZY06oZbPBJai/shCDs6YEalHOJcULZ2b9lUx7jz/s4XdMijEll4JiQj2eCQj
+         8ykmzEYyLPEJbWadfsP7WnfNdb4a6elXmn+7dpLAHciuencMReBlgRwTviaWkE9TKK
+         xsZXSqc51QWb7S7JvODSx8HRS66tLs9JiUm8bJ3OaE35jueyV/T5ptmT79m8ZVKp6t
+         h1TydsF0pVe5yeChaNSFIFax/GHJr9+gbwcd2GKkl3pdCMNHDABklwM/2gCRvwhAia
+         XNI80Uw1piOde/EGIfflp0OZyxcjpqawJMppbHEfN1X+L4PwD9TACXZq1rBgXjV/HJ
+         zB8hZEWiSzyGg==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     linux-fscrypt@vger.kernel.org, ebiggers@kernel.org,
         paulcrowley@google.com, linux-btrfs@vger.kernel.org,
         kernel-team@meta.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [RFC PATCH 16/17] fscrypt: disable inline encryption for extent-based encryption
-Date:   Sun,  1 Jan 2023 00:06:20 -0500
-Message-Id: <1dce5730bff1479ef9fe6a52c9dd0dfc31576b91.1672547582.git.sweettea-kernel@dorminy.me>
+Subject: [RFC PATCH 07/17] fscrypt: update comments about inodes to include extents
+Date:   Sun,  1 Jan 2023 00:06:11 -0500
+Message-Id: <7cb86ab7780f3a5dadc176a2071977cb0e4af0a5.1672547582.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1672547582.git.sweettea-kernel@dorminy.me>
 References: <cover.1672547582.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -46,29 +47,263 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-I haven't worked out how to do inline-suitable fscrypt_infos for
-extent-based encryption, so disable the combo for now.
+There are a bunch of comments that need updating to refer to any sort of
+owning object, be it inode or extent, and they don't really fit anywhere
+else. So do it.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/crypto/inline_crypt.c | 4 ++++
- 1 file changed, 4 insertions(+)
+ fs/crypto/fscrypt_private.h | 57 +++++++++++++++++++++----------------
+ fs/crypto/inline_crypt.c    |  9 ++++--
+ fs/crypto/keyring.c         | 24 +++++++++-------
+ fs/crypto/keysetup.c        |  6 ++--
+ 4 files changed, 55 insertions(+), 41 deletions(-)
 
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index da4df8642456..71e16d188fe8 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -53,14 +53,15 @@ struct fscrypt_context_v2 {
+ };
+ 
+ /*
+- * fscrypt_context - the encryption context of an inode
++ * fscrypt_context - the encryption context of an object
+  *
+  * This is the on-disk equivalent of an fscrypt_policy, stored alongside each
+- * encrypted file usually in a hidden extended attribute.  It contains the
+- * fields from the fscrypt_policy, in order to identify the encryption algorithm
+- * and key with which the file is encrypted.  It also contains a nonce that was
+- * randomly generated by fscrypt itself; this is used as KDF input or as a tweak
+- * to cause different files to be encrypted differently.
++ * encrypted file usually in a hidden extended attribute, or along with an extent.
++ * It contains the fields from the fscrypt_policy, in order to identify the
++ * encryption algorithm and key with which the file or extent is encrypted. It
++ * also contains a nonce that was randomly generated by fscrypt itself; this is
++ * used as KDF input or as a tweak to cause different files to be encrypted
++ * differently.
+  */
+ union fscrypt_context {
+ 	u8 version;
+@@ -189,11 +190,19 @@ struct fscrypt_prepared_key {
+ };
+ 
+ /*
+- * fscrypt_info - the "encryption key" for an inode
++ * fscrypt_info - the "encryption key" for an object (inode or extent)
+  *
+- * When an encrypted file's key is made available, an instance of this struct is
+- * allocated and stored in ->i_crypt_info.  Once created, it remains until the
+- * inode is evicted.
++ * For filesystems using inode-based encryption, or non-regular files for
++ * filesystems with extent-based encryption: when an encrypted file's key is
++ * made available, an instance of this struct is allocated and stored in
++ * ->i_crypt_info.  Once created, it remains until the inode is evicted.
++ *
++ * For filesystems using extent-based encryption, for regular files: when
++ * a file is opened, a pointer to the parent directory's fscrypt_info is stored
++ * in the inode's ->i_crypt_info. When an extent's key is made available, an
++ * instance of this struct is allocated and should be stored with the extent.
++ * It is freed when the filesystem decides to drop the extent, or when the key
++ * needs to be removed.
+  */
+ struct fscrypt_info {
+ 
+@@ -205,33 +214,33 @@ struct fscrypt_info {
+ 
+ #ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
+ 	/*
+-	 * True if this inode will use inline encryption (blk-crypto) instead of
++	 * True if this info will use inline encryption (blk-crypto) instead of
+ 	 * the traditional filesystem-layer encryption.
+ 	 */
+ 	bool ci_inlinecrypt;
+ #endif
+ 
+ 	/*
+-	 * Encryption mode used for this inode.  It corresponds to either the
++	 * Encryption mode for this info.  It corresponds to either the
+ 	 * contents or filenames encryption mode, depending on the inode type.
+ 	 */
+ 	struct fscrypt_mode *ci_mode;
+ 
+-	/* Back-pointer to the inode */
++	/* Back-pointer to the inode, for infos owned by a specific inode */
+ 	struct inode *ci_inode;
+ 
+ 	/* The superblock of the filesystem to which this fscrypt_info pertains */
+ 	struct super_block *ci_sb;
+ 
+ 	/*
+-	 * The master key with which this inode was unlocked (decrypted).  This
++	 * The master key with which this info was unlocked (decrypted).  This
+ 	 * will be NULL if the master key was found in a process-subscribed
+ 	 * keyring rather than in the filesystem-level keyring.
+ 	 */
+ 	struct fscrypt_master_key *ci_master_key;
+ 
+ 	/*
+-	 * Link in list of inodes that were unlocked with the master key.
++	 * Link in list of infos that were unlocked with the master key.
+ 	 * Only used when ->ci_master_key is set.
+ 	 */
+ 	struct list_head ci_master_key_link;
+@@ -243,20 +252,20 @@ struct fscrypt_info {
+ 	struct fscrypt_direct_key *ci_direct_key;
+ 
+ 	/*
+-	 * This inode's hash key for filenames.  This is a 128-bit SipHash-2-4
++	 * This infos' hash key for filenames.  This is a 128-bit SipHash-2-4
+ 	 * key.  This is only set for directories that use a keyed dirhash over
+ 	 * the plaintext filenames -- currently just casefolded directories.
+ 	 */
+ 	siphash_key_t ci_dirhash_key;
+ 	bool ci_dirhash_key_initialized;
+ 
+-	/* The encryption policy used by this inode */
++	/* The encryption policy used by this info */
+ 	union fscrypt_policy ci_policy;
+ 
+-	/* This inode's nonce, copied from the fscrypt_context */
++	/* This info's nonce, copied from the fscrypt_context */
+ 	u8 ci_nonce[FSCRYPT_FILE_NONCE_SIZE];
+ 
+-	/* Hashed inode number.  Only set for IV_INO_LBLK_32 */
++	/* Hashed object number.  Only set for IV_INO_LBLK_32 */
+ 	u32 ci_hashed_ino;
+ };
+ 
+@@ -271,7 +280,7 @@ typedef enum {
+  *
+  * @param inode	 the inode in question
+  *
+- * Return: true if the inode uses per-extent encryption infos, false otherwise
++ * Return: true if the inode uses per-extent fscrypt_infos, false otherwise
+  */
+ static inline bool fscrypt_uses_extent_encryption(const struct inode *inode)
+ {
+@@ -350,10 +359,10 @@ fscrypt_msg(const struct inode *inode, const char *level, const char *fmt, ...);
+ 
+ union fscrypt_iv {
+ 	struct {
+-		/* logical block number within the file */
++		/* logical block number within the owning object */
+ 		__le64 lblk_num;
+ 
+-		/* per-file nonce; only set in DIRECT_KEY mode */
++		/* per-object nonce; only set in DIRECT_KEY mode */
+ 		u8 nonce[FSCRYPT_FILE_NONCE_SIZE];
+ 	};
+ 	u8 raw[FSCRYPT_MAX_IV_SIZE];
+@@ -684,9 +693,9 @@ int fscrypt_get_encryption_info(struct inode *inode, bool allow_unsupported);
+ 
+ /**
+  * fscrypt_require_key() - require an inode's encryption key
+- * @inode: the inode we need the key for
+  *
+- * If the inode is encrypted, set up its encryption key if not already done.
++ * @inode: the inode we need the key for
++ * * If the inode is encrypted, set up its encryption key if not already done.
+  * Then require that the key be present and return -ENOKEY otherwise.
+  *
+  * No locks are needed, and the key will live as long as the struct inode --- so
 diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index 808c8712ebe7..43fb0d933ff4 100644
+index 7e85167d9f37..808c8712ebe7 100644
 --- a/fs/crypto/inline_crypt.c
 +++ b/fs/crypto/inline_crypt.c
-@@ -113,6 +113,10 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci)
- 	if (!(sb->s_flags & SB_INLINECRYPT))
- 		return 0;
+@@ -344,8 +344,9 @@ EXPORT_SYMBOL_GPL(fscrypt_set_bio_crypt_ctx_bh);
+  * fscrypt_set_bio_crypt_ctx() must have already been called on the bio.
+  *
+  * This function isn't required in cases where crypto-mergeability is ensured in
+- * another way, such as I/O targeting only a single file (and thus a single key)
+- * combined with fscrypt_limit_io_blocks() to ensure DUN contiguity.
++ * another way, such as I/O targeting only a single file combined with
++ * fscrypt_limit_io_blocks() to ensure DUN contiguity (which also ensures,
++ * for extent-based encryption, that the I/O doesn't span extents).
+  *
+  * Return: true iff the I/O is mergeable
+  */
+@@ -458,7 +459,9 @@ EXPORT_SYMBOL_GPL(fscrypt_dio_supported);
+  * DUN to wrap around within logically contiguous blocks, and that wraparound
+  * will occur.  If this happens, a value less than @nr_blocks will be returned
+  * so that the wraparound doesn't occur in the middle of a bio, which would
+- * cause encryption/decryption to produce wrong results.
++ * cause encryption/decryption to produce wrong results. Similarly, the
++ * filesystem could be using extent-based encryption, which will return a value
++ * less than @nr_blocks if needed to prevent spanning multiple extents.
+  *
+  * Return: the actual number of blocks that can be submitted
+  */
+diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+index 2a24b1f0ae68..f825d800867c 100644
+--- a/fs/crypto/keyring.c
++++ b/fs/crypto/keyring.c
+@@ -876,7 +876,7 @@ static void shrink_dcache_inode(struct inode *inode)
+ 	d_prune_aliases(inode);
+ }
  
-+	/* The filesystem must not use per-extent infos */
-+	if (fscrypt_uses_extent_encryption(inode))
-+		return 0;
-+
+-static void evict_dentries_for_decrypted_inodes(struct fscrypt_master_key *mk)
++static void evict_dentries_for_decrypted_objects(struct fscrypt_master_key *mk)
+ {
+ 	struct fscrypt_info *ci;
+ 	struct inode *inode;
+@@ -970,12 +970,14 @@ static int try_to_lock_encrypted_files(struct super_block *sb,
+ 	 * Inodes are pinned by their dentries, so we have to evict their
+ 	 * dentries.  shrink_dcache_sb() would suffice, but would be overkill
+ 	 * and inappropriate for use by unprivileged users.  So instead go
+-	 * through the inodes' alias lists and try to evict each dentry.
++	 * through the inodes' alias lists and try to evict each dentry. Also,
++	 * for extent-based encryption, notify the filesystem that it must free
++	 * all the infos for extents using this key.
+ 	 */
+-	evict_dentries_for_decrypted_inodes(mk);
++	evict_dentries_for_decrypted_objects(mk);
+ 
  	/*
- 	 * When a page contains multiple logically contiguous filesystem blocks,
- 	 * some filesystem code only calls fscrypt_mergeable_bio() for the first
+-	 * evict_dentries_for_decrypted_inodes() already iput() each inode in
++	 * evict_dentries_for_decrypted_objects() already iput() each inode in
+ 	 * the list; any inodes for which that dropped the last reference will
+ 	 * have been evicted due to fscrypt_drop_inode() detecting the key
+ 	 * removal and telling the VFS to evict the inode.  So to finish, we
+@@ -995,14 +997,14 @@ static int try_to_lock_encrypted_files(struct super_block *sb,
+  * key itself.
+  *
+  * To "remove the key itself", first we wipe the actual master key secret, so
+- * that no more inodes can be unlocked with it.  Then we try to evict all cached
+- * inodes that had been unlocked with the key.
++ * that nothing else can be unlocked with it.  Then we try to evict all cached
++ * inodes and extents that had been unlocked with the key.
+  *
+- * If all inodes were evicted, then we unlink the fscrypt_master_key from the
+- * keyring.  Otherwise it remains in the keyring in the "incompletely removed"
+- * state (without the actual secret key) where it tracks the list of remaining
+- * inodes.  Userspace can execute the ioctl again later to retry eviction, or
+- * alternatively can re-add the secret key again.
++ * If all were evicted, then we unlink the fscrypt_master_key from the keyring.
++ * Otherwise it remains in the keyring in the "incompletely removed" state
++ * (without the actual secret key) where it tracks the list of remaining inodes
++ * and extents.  Userspace can execute the ioctl again later to retry eviction,
++ * or alternatively can re-add the secret key again.
+  *
+  * For more details, see the "Removing keys" section of
+  * Documentation/filesystems/fscrypt.rst.
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index dacf3c47a24a..22e3ce5d61dc 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -334,9 +334,9 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 		   FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
+ 		/*
+ 		 * IV_INO_LBLK_64: encryption keys are derived from (master_key,
+-		 * mode_num, filesystem_uuid), and inode number is included in
+-		 * the IVs.  This format is optimized for use with inline
+-		 * encryption hardware compliant with the UFS standard.
++		 * mode_num, filesystem_uuid), and inode/extent number is
++		 * included in the IVs.  This format is optimized for use with
++		 * inline encryption hardware compliant with the UFS standard.
+ 		 */
+ 		err = setup_per_mode_enc_key(ci, mk, mk->mk_iv_ino_lblk_64_keys,
+ 					     HKDF_CONTEXT_IV_INO_LBLK_64_KEY,
 -- 
 2.38.1
 
