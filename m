@@ -2,42 +2,42 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id B7CE0C54E76
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3CD1AC3DA7D
 	for <linux-fscrypt@archiver.kernel.org>; Sun,  1 Jan 2023 05:13:57 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229947AbjAAFN5 (ORCPT
+        id S229725AbjAAFN4 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 1 Jan 2023 00:13:57 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50784 "EHLO
+        Sun, 1 Jan 2023 00:13:56 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50860 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232359AbjAAFNs (ORCPT
+        with ESMTP id S229947AbjAAFNs (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Sun, 1 Jan 2023 00:13:48 -0500
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D7B6663FB
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B42CE63CA
         for <linux-fscrypt@vger.kernel.org>; Sat, 31 Dec 2022 21:13:47 -0800 (PST)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 6994682619;
-        Sun,  1 Jan 2023 00:06:35 -0500 (EST)
+        by box.fidei.email (Postfix) with ESMTPSA id D9B5982640;
+        Sun,  1 Jan 2023 00:06:45 -0500 (EST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1672549595; bh=L8Z9jfs1qqxz9SQqCfkx1PISHOTf+3H/IZb2IdVh3RE=;
+        t=1672549606; bh=ZPrF757A3eeai3f9ewaah8yVadD7gA3m855rzNAOjbg=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=No+Mw/CX+0ZyaAc+EYiIDWaJ6KsyXgQvOHaR2EccacW3RMBbZQdqgGzwkAddaa+xI
-         QHq3peWOI0ANYkN3ZJVcnsdHpNM2En6owtcpXMZApMeyH/XYRbwtFATXEVq0M224ls
-         qE89Cb1VTvoqspGl7qRbTHY3AvgoSldFiKlwNmhOoZoXrVa/TjB1KCEwmgVVn7nLni
-         3LCLmvSDB7CNhx99KAiQRomYlpA7JmDkphCGASw/dr4M8BUTDLP5F2B53IYqITC+Nx
-         0m/sp1tf2P40f+JG8xvFuHWCNz9nyx2O5OImuJFmd/QUBrQEWxanAMhDMBN2qeqgO5
-         lQICohWqliIoA==
+        b=RVog0Xuu8dmtl5r4A4gDKn8lb4pBMjKMnjzwCpemhBKu0h2J5URobR4TpgyU0iva0
+         wLsbnXHJPRjSpEL2cuzukKr0CqvwijBfYcnLYGUofDev96M2S+ZMOipTvSqQqO02rt
+         nQ2Og8JrcBlKW1fS8OtbHGhqD6JXooLPu6HOPkAZySH+gRcrUwSWSckOxYDPIDXW15
+         U0S/pq6eK8uuB541f6+PTttsvkyB7wbAmwJPKyT2sWxaYPo19DK9UmoM1pZirTKtUG
+         VAEkYBlxER8hlKsvA6pnjwPShDmk1MVy8wWFBdapGImMK9gUCxU9f1I4lZ62x1imo4
+         5BdbP5BKaFNmw==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     linux-fscrypt@vger.kernel.org, ebiggers@kernel.org,
         paulcrowley@google.com, linux-btrfs@vger.kernel.org,
         kernel-team@meta.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [RFC PATCH 03/17] fscrypt: adjust effective lblks based on extents
-Date:   Sun,  1 Jan 2023 00:06:07 -0500
-Message-Id: <fdd515d87735087324687de6ea5c8b93d77bf8ef.1672547582.git.sweettea-kernel@dorminy.me>
+Subject: [RFC PATCH 08/17] fscrypt: rename mk->mk_decrypted_inodes*
+Date:   Sun,  1 Jan 2023 00:06:12 -0500
+Message-Id: <5040a466038d72547f2ecaae489a4eccc0453fc5.1672547582.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1672547582.git.sweettea-kernel@dorminy.me>
 References: <cover.1672547582.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -46,119 +46,196 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-If a filesystem uses extent-based encryption, then the offset within a
-file is not a constant which can be used for calculating an IV.
-For instance, the same extent could be blocks 0-8 in one file, and
-blocks 100-108 in another file. Instead, the block offset within the
-extent must be used instead.
-
-Update all uses of logical block offset within the file to use logical
-block offset within the extent, if applicable.
+With the advent of extent-owned infos, we will need to track both inodes
+and extents in each master key, in order to appropriately notify
+filesystems that an extent needs to forget its fscrypt_info. Thus, it no
+longer makes sense for the list of these objects to be called 'decrypted
+inodes'. This change renames mk_decrypted_inodes{,_lock} to
+mk_active_infos{,_lock} since the list tracks active fscrypt_info
+objects of any provenance.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/crypto/crypto.c       |  7 ++++---
- fs/crypto/inline_crypt.c | 19 +++++++++++++------
- 2 files changed, 17 insertions(+), 9 deletions(-)
+ fs/crypto/fscrypt_private.h | 12 ++++++------
+ fs/crypto/keyring.c         | 30 +++++++++++++++---------------
+ fs/crypto/keysetup.c        | 12 ++++++------
+ 3 files changed, 27 insertions(+), 27 deletions(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 41c60c60b74c..93b83dbe82ee 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -107,8 +107,9 @@ int fscrypt_crypt_block(const struct inode *inode, fscrypt_direction_t rw,
- 	struct skcipher_request *req = NULL;
- 	DECLARE_CRYPTO_WAIT(wait);
- 	struct scatterlist dst, src;
--	struct fscrypt_info *ci = fscrypt_get_lblk_info(inode, lblk_num, NULL,
--							NULL);
-+	u64 ci_offset = 0;
-+	struct fscrypt_info *ci = fscrypt_get_lblk_info(inode, lblk_num,
-+						        &ci_offset, NULL);
- 	struct crypto_skcipher *tfm = ci->ci_enc_key.tfm;
- 	int res = 0;
- 
-@@ -117,7 +118,7 @@ int fscrypt_crypt_block(const struct inode *inode, fscrypt_direction_t rw,
- 	if (WARN_ON_ONCE(len % FSCRYPT_CONTENTS_ALIGNMENT != 0))
- 		return -EINVAL;
- 
--	fscrypt_generate_iv(&iv, lblk_num, ci);
-+	fscrypt_generate_iv(&iv, ci_offset, ci);
- 
- 	req = skcipher_request_alloc(tfm, gfp_flags);
- 	if (!req)
-diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index 56d69b231875..0ae220c8afa3 100644
---- a/fs/crypto/inline_crypt.c
-+++ b/fs/crypto/inline_crypt.c
-@@ -271,12 +271,13 @@ void fscrypt_set_bio_crypt_ctx(struct bio *bio, const struct inode *inode,
- {
- 	const struct fscrypt_info *ci;
- 	u64 dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
-+	u64 ci_offset = 0;
- 
- 	if (!fscrypt_inode_uses_inline_crypto(inode))
- 		return;
--	ci = fscrypt_get_lblk_info(inode, first_lblk, NULL, NULL);
-+	ci = fscrypt_get_lblk_info(inode, first_lblk, &ci_offset, NULL);
- 
--	fscrypt_generate_dun(ci, first_lblk, dun);
-+	fscrypt_generate_dun(ci, ci_offset, dun);
- 	bio_crypt_set_ctx(bio, ci->ci_enc_key.blk_key, dun, gfp_mask);
- }
- EXPORT_SYMBOL_GPL(fscrypt_set_bio_crypt_ctx);
-@@ -354,13 +355,14 @@ bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
- 	const struct bio_crypt_ctx *bc = bio->bi_crypt_context;
- 	u64 next_dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
- 	struct fscrypt_info *ci;
-+	u64 ci_offset = 0;
- 
- 	if (!!bc != fscrypt_inode_uses_inline_crypto(inode))
- 		return false;
- 	if (!bc)
- 		return true;
- 
--	ci = fscrypt_get_lblk_info(inode, next_lblk, NULL, NULL);
-+	ci = fscrypt_get_lblk_info(inode, next_lblk, &ci_offset, NULL);
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 71e16d188fe8..0c7b785f1d8c 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -537,7 +537,7 @@ struct fscrypt_master_key {
+ 	 * A structural ref only guarantees that the struct continues to exist.
+ 	 *
+ 	 * There is one active ref associated with ->mk_secret being present,
+-	 * and one active ref for each inode in ->mk_decrypted_inodes.
++	 * and one active ref for each inode in ->mk_active_infos.
+ 	 *
+ 	 * There is one structural ref associated with the active refcount being
+ 	 * nonzero.  Finding a key in the keyring also takes a structural ref,
+@@ -551,7 +551,7 @@ struct fscrypt_master_key {
  	/*
- 	 * Comparing the key pointers is good enough, as all I/O for each key
- 	 * uses the same pointer.  I.e., there's currently no need to support
-@@ -369,7 +371,7 @@ bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
- 	if (bc->bc_key != ci->ci_enc_key.blk_key)
- 		return false;
+ 	 * The secret key material.  After FS_IOC_REMOVE_ENCRYPTION_KEY is
+ 	 * executed, this is wiped and no new inodes can be unlocked with this
+-	 * key; however, there may still be inodes in ->mk_decrypted_inodes
++	 * key; however, there may still be inodes in ->mk_active_infos
+ 	 * which could not be evicted.  As long as some inodes still remain,
+ 	 * FS_IOC_REMOVE_ENCRYPTION_KEY can be retried, or
+ 	 * FS_IOC_ADD_ENCRYPTION_KEY can add the secret again.
+@@ -587,11 +587,11 @@ struct fscrypt_master_key {
+ 	struct key		*mk_users;
  
--	fscrypt_generate_dun(ci, next_lblk, next_dun);
-+	fscrypt_generate_dun(ci, ci_offset, next_dun);
- 	return bio_crypt_dun_is_contiguous(bc, bio->bi_iter.bi_size, next_dun);
+ 	/*
+-	 * List of inodes that were unlocked using this key.  This allows the
+-	 * inodes to be evicted efficiently if the key is removed.
++	 * List of infos that were unlocked using this key.  This allows the
++	 * owning objects to be evicted efficiently if the key is removed.
+ 	 */
+-	struct list_head	mk_decrypted_inodes;
+-	spinlock_t		mk_decrypted_inodes_lock;
++	struct list_head	mk_active_infos;
++	spinlock_t		mk_active_infos_lock;
+ 
+ 	/*
+ 	 * Per-mode encryption keys for the various types of encryption policies
+diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+index f825d800867c..846f480da081 100644
+--- a/fs/crypto/keyring.c
++++ b/fs/crypto/keyring.c
+@@ -99,10 +99,10 @@ void fscrypt_put_master_key_activeref(struct fscrypt_master_key *mk)
+ 
+ 	/*
+ 	 * ->mk_active_refs == 0 implies that ->mk_secret is not present and
+-	 * that ->mk_decrypted_inodes is empty.
++	 * that ->mk_active_infos is empty.
+ 	 */
+ 	WARN_ON(is_master_key_secret_present(&mk->mk_secret));
+-	WARN_ON(!list_empty(&mk->mk_decrypted_inodes));
++	WARN_ON(!list_empty(&mk->mk_active_infos));
+ 
+ 	for (i = 0; i <= FSCRYPT_MODE_MAX; i++) {
+ 		fscrypt_destroy_prepared_key(
+@@ -429,8 +429,8 @@ static int add_new_master_key(struct super_block *sb,
+ 	refcount_set(&mk->mk_struct_refs, 1);
+ 	mk->mk_spec = *mk_spec;
+ 
+-	INIT_LIST_HEAD(&mk->mk_decrypted_inodes);
+-	spin_lock_init(&mk->mk_decrypted_inodes_lock);
++	INIT_LIST_HEAD(&mk->mk_active_infos);
++	spin_lock_init(&mk->mk_active_infos_lock);
+ 
+ 	if (mk_spec->type == FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER) {
+ 		err = allocate_master_key_users_keyring(mk);
+@@ -882,9 +882,9 @@ static void evict_dentries_for_decrypted_objects(struct fscrypt_master_key *mk)
+ 	struct inode *inode;
+ 	struct inode *toput_inode = NULL;
+ 
+-	spin_lock(&mk->mk_decrypted_inodes_lock);
++	spin_lock(&mk->mk_active_infos_lock);
+ 
+-	list_for_each_entry(ci, &mk->mk_decrypted_inodes, ci_master_key_link) {
++	list_for_each_entry(ci, &mk->mk_active_infos, ci_master_key_link) {
+ 		inode = ci->ci_inode;
+ 		spin_lock(&inode->i_lock);
+ 		if (inode->i_state & (I_FREEING | I_WILL_FREE | I_NEW)) {
+@@ -893,16 +893,16 @@ static void evict_dentries_for_decrypted_objects(struct fscrypt_master_key *mk)
+ 		}
+ 		__iget(inode);
+ 		spin_unlock(&inode->i_lock);
+-		spin_unlock(&mk->mk_decrypted_inodes_lock);
++		spin_unlock(&mk->mk_active_infos_lock);
+ 
+ 		shrink_dcache_inode(inode);
+ 		iput(toput_inode);
+ 		toput_inode = inode;
+ 
+-		spin_lock(&mk->mk_decrypted_inodes_lock);
++		spin_lock(&mk->mk_active_infos_lock);
+ 	}
+ 
+-	spin_unlock(&mk->mk_decrypted_inodes_lock);
++	spin_unlock(&mk->mk_active_infos_lock);
+ 	iput(toput_inode);
  }
- EXPORT_SYMBOL_GPL(fscrypt_mergeable_bio);
-@@ -464,6 +466,8 @@ u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks)
- {
- 	const struct fscrypt_info *ci;
- 	u32 dun;
-+	u64 ci_offset;
-+	u64 extent_len;
  
- 	if (!fscrypt_inode_uses_inline_crypto(inode))
- 		return nr_blocks;
-@@ -471,14 +475,17 @@ u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks)
- 	if (nr_blocks <= 1)
- 		return nr_blocks;
+@@ -914,25 +914,25 @@ static int check_for_busy_inodes(struct super_block *sb,
+ 	unsigned long ino;
+ 	char ino_str[50] = "";
  
--	ci = fscrypt_get_lblk_info(inode, lblk, NULL, NULL);
-+	ci = fscrypt_get_lblk_info(inode, lblk, &ci_offset, &extent_len);
-+
-+	/* Spanning an extent boundary will change the DUN */
-+	nr_blocks = min_t(u64, nr_blocks, extent_len);
- 	if (!(fscrypt_policy_flags(&ci->ci_policy) &
- 	      FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32))
- 		return nr_blocks;
+-	spin_lock(&mk->mk_decrypted_inodes_lock);
++	spin_lock(&mk->mk_active_infos_lock);
  
- 	/* With IV_INO_LBLK_32, the DUN can wrap around from U32_MAX to 0. */
+-	list_for_each(pos, &mk->mk_decrypted_inodes)
++	list_for_each(pos, &mk->mk_active_infos)
+ 		busy_count++;
  
--	dun = ci->ci_hashed_ino + lblk;
-+	dun = ci->ci_hashed_ino + ci_offset;
+ 	if (busy_count == 0) {
+-		spin_unlock(&mk->mk_decrypted_inodes_lock);
++		spin_unlock(&mk->mk_active_infos_lock);
+ 		return 0;
+ 	}
  
- 	return min_t(u64, nr_blocks, (u64)U32_MAX + 1 - dun);
+ 	{
+ 		/* select an example file to show for debugging purposes */
+ 		struct inode *inode =
+-			list_first_entry(&mk->mk_decrypted_inodes,
++			list_first_entry(&mk->mk_active_infos,
+ 					 struct fscrypt_info,
+ 					 ci_master_key_link)->ci_inode;
+ 		ino = inode->i_ino;
+ 	}
+-	spin_unlock(&mk->mk_decrypted_inodes_lock);
++	spin_unlock(&mk->mk_active_infos_lock);
+ 
+ 	/* If the inode is currently being created, ino may still be 0. */
+ 	if (ino)
+@@ -954,7 +954,7 @@ static int try_to_lock_encrypted_files(struct super_block *sb,
+ 
+ 	/*
+ 	 * An inode can't be evicted while it is dirty or has dirty pages.
+-	 * Thus, we first have to clean the inodes in ->mk_decrypted_inodes.
++	 * Thus, we first have to clean the inodes in ->mk_active_infos.
+ 	 *
+ 	 * Just do it the easy way: call sync_filesystem().  It's overkill, but
+ 	 * it works, and it's more important to minimize the amount of caches we
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index 22e3ce5d61dc..cb3ba4e4f816 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -414,7 +414,7 @@ static bool fscrypt_valid_master_key_size(const struct fscrypt_master_key *mk,
+  *
+  * If the master key is found in the filesystem-level keyring, then it is
+  * returned in *mk_ret with its semaphore read-locked.  This is needed to ensure
+- * that only one task links the fscrypt_info into ->mk_decrypted_inodes (as
++ * that only one task links the fscrypt_info into ->mk_active_infos (as
+  * multiple tasks may race to create an fscrypt_info for the same inode), and to
+  * synchronize the master key being removed with a new inode starting to use it.
+  */
+@@ -504,9 +504,9 @@ static void put_crypt_info(struct fscrypt_info *ci)
+ 		 * inode from a master key struct that already had its secret
+ 		 * removed, then complete the full removal of the struct.
+ 		 */
+-		spin_lock(&mk->mk_decrypted_inodes_lock);
++		spin_lock(&mk->mk_active_infos_lock);
+ 		list_del(&ci->ci_master_key_link);
+-		spin_unlock(&mk->mk_decrypted_inodes_lock);
++		spin_unlock(&mk->mk_active_infos_lock);
+ 		fscrypt_put_master_key_activeref(mk);
+ 	}
+ 	memzero_explicit(ci, sizeof(*ci));
+@@ -538,9 +538,9 @@ static bool fscrypt_set_inode_info(struct inode *inode,
+ 	if (mk) {
+ 		ci->ci_master_key = mk;
+ 		refcount_inc(&mk->mk_active_refs);
+-		spin_lock(&mk->mk_decrypted_inodes_lock);
+-		list_add(&ci->ci_master_key_link, &mk->mk_decrypted_inodes);
+-		spin_unlock(&mk->mk_decrypted_inodes_lock);
++		spin_lock(&mk->mk_active_infos_lock);
++		list_add(&ci->ci_master_key_link, &mk->mk_active_infos);
++		spin_unlock(&mk->mk_active_infos_lock);
+ 	}
+ 	return true;
  }
 -- 
 2.38.1
