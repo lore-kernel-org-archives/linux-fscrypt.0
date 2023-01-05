@@ -2,88 +2,116 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id AA881C46467
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  4 Jan 2023 07:25:25 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7A45AC3DA7D
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  5 Jan 2023 11:25:18 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233562AbjADHZY (ORCPT
+        id S232968AbjAELZP (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 4 Jan 2023 02:25:24 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38406 "EHLO
+        Thu, 5 Jan 2023 06:25:15 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:57022 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230387AbjADHZY (ORCPT
+        with ESMTP id S233245AbjAELZF (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 4 Jan 2023 02:25:24 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5D022A44D;
-        Tue,  3 Jan 2023 23:25:23 -0800 (PST)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-        (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id B2E51B811A3;
-        Wed,  4 Jan 2023 07:25:21 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1AFCBC433D2;
-        Wed,  4 Jan 2023 07:25:20 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1672817120;
-        bh=EY0QIS6ah2VRlLsuBHHzFqCxhBDp5eEMXYtwzaAjNBw=;
-        h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=Y8eevhPlbLQQByJxtZSN0ftIYXlnqoyA5BJUM6AP5KbL8Hdw0HMg2nuBQ5sdlamXc
-         LExL2VFObRchVEVgRsCm15mnz4C6rXRbtTsMN2cr4b6oRiHMmmABbSNflU3EWaJhst
-         5J1PEpb3DqjERtGwRqlzrEMz3WeV19T0b43MtEWOjh9knfnp7tviL6qmTp7aHZSXLT
-         IEN/P6uhszJ2K9eZEk+XPP3yijgHtnJlqNNbbV7wSwv2r5oqXKVzoj6Y3IR7JL9E+a
-         vEiPUYFi+z+qSUbJ0/w3bVi8IcSNUBhhDXmmHc9rII8AQDlMi9JWlYLQi6CtdvuVhT
-         N9g/5kMqBLp7w==
-Date:   Tue, 3 Jan 2023 23:25:18 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Ojaswin Mujoo <ojaswin@linux.ibm.com>
+        Thu, 5 Jan 2023 06:25:05 -0500
+Received: from mx0a-001b2d01.pphosted.com (mx0b-001b2d01.pphosted.com [148.163.158.5])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 64E994FD75;
+        Thu,  5 Jan 2023 03:25:00 -0800 (PST)
+Received: from pps.filterd (m0098419.ppops.net [127.0.0.1])
+        by mx0b-001b2d01.pphosted.com (8.17.1.19/8.17.1.19) with ESMTP id 305BGe9v007451;
+        Thu, 5 Jan 2023 11:24:36 GMT
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=date : from : to : cc :
+ subject : message-id : references : mime-version : content-type :
+ in-reply-to; s=pp1; bh=LynWwuoBtbTAuC+gq6MIO5+/sTdrwQNrdj7hw7C9k5c=;
+ b=ZaHqwNGmDgFaA2BCR/4TxIdHCatsD318PRNxFYCtffGxLPneSaGeF9l88ctbfwh1MGaT
+ XAdBcCDBUEFPG4orWx1qoUB0wWzPhQ3Hs3dEO+wIkc9uyrLoe6AE9t3Sf5TmyHlJNcVv
+ H9IqfGGONcpHYmLvgKjaSLcaUFBd51WQzUdSMQs4ucijcbgeqUKgdg18RB4IrsV7GBDC
+ QplBGPQjjK+OZ5vCwt3PeSz/b31LpVoBaO0pV9O02qgWxZnaoGdsodES86MEXQB52MpH
+ /F9m8s3S4+hJV+ZA2bkd62KQyWJc/BgbiJ3ueyHQQkzYZMCgrXlWuexs3HyDrobf/Rl9 GA== 
+Received: from pps.reinject (localhost [127.0.0.1])
+        by mx0b-001b2d01.pphosted.com (PPS) with ESMTPS id 3mwwhng4f0-1
+        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+        Thu, 05 Jan 2023 11:24:36 +0000
+Received: from m0098419.ppops.net (m0098419.ppops.net [127.0.0.1])
+        by pps.reinject (8.17.1.5/8.17.1.5) with ESMTP id 305BM5qH025452;
+        Thu, 5 Jan 2023 11:24:35 GMT
+Received: from ppma06fra.de.ibm.com (48.49.7a9f.ip4.static.sl-reverse.com [159.122.73.72])
+        by mx0b-001b2d01.pphosted.com (PPS) with ESMTPS id 3mwwhng4ep-1
+        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+        Thu, 05 Jan 2023 11:24:35 +0000
+Received: from pps.filterd (ppma06fra.de.ibm.com [127.0.0.1])
+        by ppma06fra.de.ibm.com (8.17.1.19/8.17.1.19) with ESMTP id 305176xm010137;
+        Thu, 5 Jan 2023 11:24:33 GMT
+Received: from smtprelay04.fra02v.mail.ibm.com ([9.218.2.228])
+        by ppma06fra.de.ibm.com (PPS) with ESMTPS id 3mtcbfmwqb-1
+        (version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+        Thu, 05 Jan 2023 11:24:33 +0000
+Received: from smtpav07.fra02v.mail.ibm.com (smtpav07.fra02v.mail.ibm.com [10.20.54.106])
+        by smtprelay04.fra02v.mail.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 305BOVNF21823928
+        (version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
+        Thu, 5 Jan 2023 11:24:31 GMT
+Received: from smtpav07.fra02v.mail.ibm.com (unknown [127.0.0.1])
+        by IMSVA (Postfix) with ESMTP id 3107120040;
+        Thu,  5 Jan 2023 11:24:31 +0000 (GMT)
+Received: from smtpav07.fra02v.mail.ibm.com (unknown [127.0.0.1])
+        by IMSVA (Postfix) with ESMTP id 24D3220049;
+        Thu,  5 Jan 2023 11:24:29 +0000 (GMT)
+Received: from li-bb2b2a4c-3307-11b2-a85c-8fa5c3a69313.ibm.com (unknown [9.109.253.169])
+        by smtpav07.fra02v.mail.ibm.com (Postfix) with ESMTPS;
+        Thu,  5 Jan 2023 11:24:28 +0000 (GMT)
+Date:   Thu, 5 Jan 2023 16:54:21 +0530
+From:   Ojaswin Mujoo <ojaswin@linux.ibm.com>
+To:     Eric Biggers <ebiggers@kernel.org>
 Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
         linux-ext4@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
         linux-btrfs@vger.kernel.org, linux-xfs@vger.kernel.org,
         Andrey Albershteyn <aalbersh@redhat.com>
 Subject: Re: [PATCH v2 00/11] fsverity: support for non-4K pages
-Message-ID: <Y7Up3kpGcJr0FCgq@sol.localdomain>
+Message-ID: <Y7azZTcMvDZt9Eya@li-bb2b2a4c-3307-11b2-a85c-8fa5c3a69313.ibm.com>
 References: <20221223203638.41293-1-ebiggers@kernel.org>
  <Y7UeuYVkyy2/fWF1@li-bb2b2a4c-3307-11b2-a85c-8fa5c3a69313.ibm.com>
+ <Y7Up3kpGcJr0FCgq@sol.localdomain>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <Y7UeuYVkyy2/fWF1@li-bb2b2a4c-3307-11b2-a85c-8fa5c3a69313.ibm.com>
+In-Reply-To: <Y7Up3kpGcJr0FCgq@sol.localdomain>
+X-TM-AS-GCONF: 00
+X-Proofpoint-GUID: 890KEnm2Wi9_d5p_zTlxhAtZQDq7bwHI
+X-Proofpoint-ORIG-GUID: 3AV4vqvnUNdNa4KL2nVnBiy8hfxXvknE
+X-Proofpoint-Virus-Version: vendor=baseguard
+ engine=ICAP:2.0.205,Aquarius:18.0.923,Hydra:6.0.545,FMLib:17.11.122.1
+ definitions=2023-01-05_04,2023-01-04_02,2022-06-22_01
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 priorityscore=1501
+ lowpriorityscore=0 adultscore=0 impostorscore=0 bulkscore=0 suspectscore=0
+ phishscore=0 malwarescore=0 mlxscore=0 spamscore=0 clxscore=1015
+ mlxlogscore=999 classifier=spam adjust=0 reason=mlx scancount=1
+ engine=8.12.0-2212070000 definitions=main-2301050089
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Wed, Jan 04, 2023 at 12:08:09PM +0530, Ojaswin Mujoo wrote:
-> Hi Eric,
+On Tue, Jan 03, 2023 at 11:25:18PM -0800, Eric Biggers wrote:
 > 
-> I have roughly gone through the series and run the (patched) xfstests on
-> this patchset on a powerpc machine with 64k pagesize and 64k,4k and 1k
-> merkle tree size on EXT4 and everything seems to work correctly. 
-> 
-> Just for records, test generic/692 takes a lot of time to complete with
-> 64k merkel tree size due to the calculations assuming it to be 4k,
-> however I was able to manually test that particular scenario. (I'll try
-> to send a patch to fix the fstest later).
-> 
-> Anyways, feel free to add:
-> 
-> Tested-by: Ojaswin Mujoo <ojaswin@linux.ibm.com>
-> 
-> Since I was not very familiar with the fsverty codebase, I'll try to
-> take some more time to review the code and get back with any
-> comments/RVBs.
-> 
-> Regards,
-> ojaswin
 
-Thanks Ojaswin!  That's a good point about generic/692.  The right fix for it is
-to make it use $FSV_BLOCK_SIZE instead of 4K in its calculations.
+Hi Eric,
 
-I suppose you saw that issue by running the test on ext4 with fs_block_size ==
-page_size == 64K, causing xfstests to use merkle_tree_block_size == 64K by
-default.  Thanks for doing that; that's something I haven't been able to test
-yet.  My focus has been on merkle_tree_block_size < page_size.
-merkle_tree_block_size > 4K should just work, though, assuming
-merkle_tree_block_size <= min(fs_block_size, page_size).  (Or
-merkle_tree_block_size == fs_block_size == page_size before this patch series.)
+> Thanks Ojaswin!  That's a good point about generic/692.  The right fix for it is
+> to make it use $FSV_BLOCK_SIZE instead of 4K in its calculations.
+Yes, that should fix the issue, I'll try to send in a patch for this
+when I find some time.
 
-- Eric
+> 
+> I suppose you saw that issue by running the test on ext4 with fs_block_size ==
+> page_size == 64K, causing xfstests to use merkle_tree_block_size == 64K by
+> default.  Thanks for doing that; that's something I haven't been able to test
+> yet.  My focus has been on merkle_tree_block_size < page_size.
+Correct, I was testing "everything = 64k" scenario when I
+noticed the slowdown.
+
+> merkle_tree_block_size > 4K should just work, though, assuming
+> merkle_tree_block_size <= min(fs_block_size, page_size).  (Or
+> merkle_tree_block_size == fs_block_size == page_size before this patch series.)
+
+Yes true, I still tested them just in case :) 
+
+Regards,
+Ojaswin
