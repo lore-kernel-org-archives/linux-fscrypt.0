@@ -2,72 +2,81 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D910CC61D97
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 24 Jan 2023 21:18:12 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 08257C54E94
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 24 Jan 2023 21:46:19 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S234866AbjAXVSM (ORCPT
+        id S235085AbjAXVqS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 24 Jan 2023 16:18:12 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46652 "EHLO
+        Tue, 24 Jan 2023 16:46:18 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33562 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S234929AbjAXVSJ (ORCPT
+        with ESMTP id S235074AbjAXVqO (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 24 Jan 2023 16:18:09 -0500
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E550B521E4;
-        Tue, 24 Jan 2023 13:17:37 -0800 (PST)
+        Tue, 24 Jan 2023 16:46:14 -0500
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C9F0351C56;
+        Tue, 24 Jan 2023 13:46:12 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id BD8CE6134F;
-        Tue, 24 Jan 2023 21:16:59 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPS id 2C230C433D2;
-        Tue, 24 Jan 2023 21:16:59 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 7B05DB81710;
+        Tue, 24 Jan 2023 21:46:11 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id D2990C433EF;
+        Tue, 24 Jan 2023 21:46:09 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1674595019;
-        bh=s1zs0WyGeKXAC/DydA7ShaIPwIC03u1UtcwEAUkUj9g=;
-        h=Subject:From:In-Reply-To:References:Date:To:Cc:From;
-        b=YZiH+BAUS4vP3iBsTlsGUaEMZuTezot1Rf3aV1Q+w//8eY0LtiGInqDcWv06F3qEr
-         4Nhd9yNkZ79pwTOdINiUi3+OPmPgSmObClwGQ5ygFcC+R1R9SPf2X11RDKiAHShtV3
-         GZp5nXcoaCK2BUo6MYNnnTOqLMnn0qov/IM5Z+2rjiLN22J0p6aLjOn0TSrweM0jqF
-         rFGUTfVau36WrZYVWs/xfN33MvBkIVK2aBAgvQsuFTxL19pszykZpaycN9kSYfaj4F
-         N5kmMGV9awS3gqWJ+ptYNlXA0wFsmBP0tM096bOoSwncLApGVe//t/no0soMwc4Rmp
-         BhBpTTHmScOtA==
-Received: from aws-us-west-2-korg-oddjob-1.ci.codeaurora.org (localhost.localdomain [127.0.0.1])
-        by aws-us-west-2-korg-oddjob-1.ci.codeaurora.org (Postfix) with ESMTP id 1443AC04E33;
-        Tue, 24 Jan 2023 21:16:59 +0000 (UTC)
-Subject: Re: [GIT PULL] fscrypt MAINTAINERS entry update for 6.2-rc6
-From:   pr-tracker-bot@kernel.org
-In-Reply-To: <Y88g398lWBul+756@sol.localdomain>
-References: <Y88g398lWBul+756@sol.localdomain>
-X-PR-Tracked-List-Id: <linux-fsdevel.vger.kernel.org>
-X-PR-Tracked-Message-Id: <Y88g398lWBul+756@sol.localdomain>
-X-PR-Tracked-Remote: https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
-X-PR-Tracked-Commit-Id: 31e1be62abdebc28bd51d0999a25f0eea535b5af
-X-PR-Merge-Tree: torvalds/linux.git
-X-PR-Merge-Refname: refs/heads/master
-X-PR-Merge-Commit-Id: 50306df38ac4edbeb1eac29d68128f84630405d8
-Message-Id: <167459501907.6044.5610473642802691277.pr-tracker-bot@kernel.org>
-Date:   Tue, 24 Jan 2023 21:16:59 +0000
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     Linus Torvalds <torvalds@linux-foundation.org>,
-        Theodore Ts'o <tytso@mit.edu>,
+        s=k20201202; t=1674596770;
+        bh=tyYq5kUwEdbE7CszQ0qp7rYJOubbzA7XgZByp+TgBuE=;
+        h=Date:From:To:Cc:Subject:From;
+        b=a67hXsCak5/DDjwXlochSLbzo2jyntzGsVFzV6DfzO3Uo/VTQsvwwioY2Q6ILzTDn
+         5DoKfDXpVNHePMTUA+BqAf6F8L4VxetlP4oJXnqYF2Z1in4OQsWr0b/vXSeANFC52Z
+         +ae22Zi2kWJrQX8yFR1fCvnGkg/8UBgKGfOHtgW6OEaCjglObDt0R2H2mo5sNeh5lm
+         DSZkMU7y5sTP2lSs4qsvxnaE7hTVOr+rYOLGlIRUfvBx4yHstQ+eiXIGqp5mn8XdPh
+         ZKGCNwtyBFpjZcUKuw2gRKhIGJv3a3Yzl6e5dg2LeMJruHsg7c9UxVSRrtNN3Lxv90
+         OVPsda5y3DQqA==
+Date:   Tue, 24 Jan 2023 13:46:08 -0800
+From:   Eric Biggers <ebiggers@kernel.org>
+To:     Stephen Rothwell <sfr@canb.auug.org.au>, linux-next@vger.kernel.org
+Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
-        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        linux-kernel@vger.kernel.org
+        linux-fscrypt@vger.kernel.org, fsverity@lists.linux.dev
+Subject: Please update fscrypt and fsverity branches in linux-next
+Message-ID: <Y9BRoE/SIg1aUh+P@sol.localdomain>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-The pull request you sent on Mon, 23 Jan 2023 16:05:51 -0800:
+Hi Stephen,
 
-> https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
+I've moved the fscrypt and fsverity development branches to split them up
+properly and make it clear what each branch is for.  Therefore, can you please
+remove the following branches from linux-next:
 
-has been merged into torvalds/linux.git:
-https://git.kernel.org/torvalds/c/50306df38ac4edbeb1eac29d68128f84630405d8
+	Repo:      git://git.kernel.org/pub/scm/fs/fscrypt/fscrypt.git
+	Branches:  master, for-stable, and fsverity
 
-Thank you!
+And please add the following branches to linux-next:
 
--- 
-Deet-doot-dot, I am a bot.
-https://korg.docs.kernel.org/prtracker.html
+	Repo:      https://git.kernel.org/pub/scm/fs/fscrypt/linux.git
+	Branches:  for-next and for-current
+
+	Repo:      https://git.kernel.org/pub/scm/fs/fsverity/linux.git
+	Branches:  for-next and for-current
+
+Also please ensure the contacts match the corresponding MAINTAINERS file
+entries.  For fscrypt that is:
+
+	M:      Eric Biggers <ebiggers@kernel.org>
+	M:      Theodore Y. Ts'o <tytso@mit.edu>
+	M:      Jaegeuk Kim <jaegeuk@kernel.org>
+
+and for fsverity that is:
+
+	M:      Eric Biggers <ebiggers@kernel.org>
+	M:      Theodore Y. Ts'o <tytso@mit.edu>
+
+Thanks!
+
+- Eric
