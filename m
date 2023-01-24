@@ -2,70 +2,71 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 49DA2C25B50
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 24 Jan 2023 00:05:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1F9CCC54E94
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 24 Jan 2023 21:17:43 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231617AbjAXAF6 (ORCPT
+        id S234655AbjAXVRm (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 23 Jan 2023 19:05:58 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:42054 "EHLO
+        Tue, 24 Jan 2023 16:17:42 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:45634 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231182AbjAXAF5 (ORCPT
+        with ESMTP id S234858AbjAXVRj (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 23 Jan 2023 19:05:57 -0500
-Received: from sin.source.kernel.org (sin.source.kernel.org [IPv6:2604:1380:40e1:4800::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E167A26B5;
-        Mon, 23 Jan 2023 16:05:56 -0800 (PST)
+        Tue, 24 Jan 2023 16:17:39 -0500
+Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 6695945225;
+        Tue, 24 Jan 2023 13:17:02 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by sin.source.kernel.org (Postfix) with ESMTPS id E3215CE13DE;
-        Tue, 24 Jan 2023 00:05:54 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id C4F35C433EF;
-        Tue, 24 Jan 2023 00:05:52 +0000 (UTC)
+        by ams.source.kernel.org (Postfix) with ESMTPS id 649DDB81710;
+        Tue, 24 Jan 2023 21:17:00 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPS id 1BB02C4339E;
+        Tue, 24 Jan 2023 21:16:59 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1674518753;
-        bh=hBXjg01PaQHYf+Ggs6/zaY5Tjug7rDb4bQDRZBQLMEM=;
-        h=Date:From:To:Cc:Subject:From;
-        b=Mh6BvlmGfYDepPXnv6lJagmU/2/FKHdGHz4F7AIyAXUCqfksANU1RyCmBULwsWEEM
-         Sd7RwhqJPhe2F0S0LLeTmKmGaiIGtC+dQ132S5Y5UATRJjtRCuF7D0v9cgZLRVJ8oY
-         IHJx2ihQq9M8p8SmZO7ndqL7HXChJEEtB7NhcLOTxtYN4SE3pXrn7mEsc5vtFtORwY
-         jCpl15W5CuXkc3AWfa8DnkIRitg1hote/AXc3r9Gvfs5pFjEO+RZ8poszS2HipAwhH
-         1LAxv9Hi0WXW6q8xxklbx8WY1Q58v/DVy7h1uwFYTfo2GRKUmDy2ohhbO7nwNV1scY
-         fIXebnr/Wvh/Q==
-Date:   Mon, 23 Jan 2023 16:05:51 -0800
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Linus Torvalds <torvalds@linux-foundation.org>
-Cc:     Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>,
-        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        s=k20201202; t=1674595019;
+        bh=pEYX0+MZgf58CJyU0+5oXs+dmwVpMK09+9EkEuczC7E=;
+        h=Subject:From:In-Reply-To:References:Date:To:Cc:From;
+        b=LLgqk8B9/cvTRISTcuMuVRpGicEqq+7awe/wNiZC7fC8up/EGApdzPANmz7/jx2Ct
+         G1w04SZSXhNBTkZVYqz/JbGFulVvuLd9bILPF1ICl+IbKbPN4P/d1uVbM5VpCqlilc
+         aryjbg73Qs+lSgzS4gp8O4cy+QxBBl42QhBlilJLdVHL/6S9Oad2wjHNxY1oZgixV8
+         Ks0Ofd0XY7n3Q7MeCEfnUFfG9nOfcAmXexOvvrjF8AjPeEa1MrBIIOoY6ceVFb77O8
+         v3wpgEC/TLyBKzBDZOEdmzoOAy1IAJZ773Fk5j6ZDIaxqV4k1qLLKHGmFMtv5dS8WT
+         pR0syTOQDyf1w==
+Received: from aws-us-west-2-korg-oddjob-1.ci.codeaurora.org (localhost.localdomain [127.0.0.1])
+        by aws-us-west-2-korg-oddjob-1.ci.codeaurora.org (Postfix) with ESMTP id 04593C5C7D4;
+        Tue, 24 Jan 2023 21:16:59 +0000 (UTC)
+Subject: Re: [GIT PULL] fsverity MAINTAINERS entry update for 6.2-rc6
+From:   pr-tracker-bot@kernel.org
+In-Reply-To: <Y88gdkbdscJPOqSX@sol.localdomain>
+References: <Y88gdkbdscJPOqSX@sol.localdomain>
+X-PR-Tracked-List-Id: <linux-fsdevel.vger.kernel.org>
+X-PR-Tracked-Message-Id: <Y88gdkbdscJPOqSX@sol.localdomain>
+X-PR-Tracked-Remote: https://git.kernel.org/pub/scm/fs/fsverity/linux.git tags/fsverity-for-linus
+X-PR-Tracked-Commit-Id: ef7592e466ef7b2595fdfdfd23559a779f4b211a
+X-PR-Merge-Tree: torvalds/linux.git
+X-PR-Merge-Refname: refs/heads/master
+X-PR-Merge-Commit-Id: 5149394c899808667e0f8444d3d39cba1dfb42f7
+Message-Id: <167459501901.6044.16348460970361042850.pr-tracker-bot@kernel.org>
+Date:   Tue, 24 Jan 2023 21:16:59 +0000
+To:     Eric Biggers <ebiggers@kernel.org>
+Cc:     Linus Torvalds <torvalds@linux-foundation.org>,
+        Theodore Ts'o <tytso@mit.edu>, fsverity@lists.linux.dev,
+        linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         linux-kernel@vger.kernel.org
-Subject: [GIT PULL] fscrypt MAINTAINERS entry update for 6.2-rc6
-Message-ID: <Y88g398lWBul+756@sol.localdomain>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-The following changes since commit 5dc4c995db9eb45f6373a956eb1f69460e69e6d4:
+The pull request you sent on Mon, 23 Jan 2023 16:04:06 -0800:
 
-  Linux 6.2-rc4 (2023-01-15 09:22:43 -0600)
+> https://git.kernel.org/pub/scm/fs/fsverity/linux.git tags/fsverity-for-linus
 
-are available in the Git repository at:
+has been merged into torvalds/linux.git:
+https://git.kernel.org/torvalds/c/5149394c899808667e0f8444d3d39cba1dfb42f7
 
-  https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
+Thank you!
 
-for you to fetch changes up to 31e1be62abdebc28bd51d0999a25f0eea535b5af:
-
-  MAINTAINERS: update fscrypt git repo (2023-01-16 15:40:48 -0800)
-
-----------------------------------------------------------------
-Update the MAINTAINERS file entry for fscrypt.
-
-----------------------------------------------------------------
-Eric Biggers (1):
-      MAINTAINERS: update fscrypt git repo
-
- MAINTAINERS | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
+-- 
+Deet-doot-dot, I am a bot.
+https://korg.docs.kernel.org/prtracker.html
