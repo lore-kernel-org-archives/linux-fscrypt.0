@@ -2,30 +2,30 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id A7F05C64EC4
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 30 Jan 2023 22:58:50 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 13C0FC636CD
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 30 Jan 2023 22:58:53 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229836AbjA3W6t (ORCPT
+        id S230227AbjA3W6v (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 30 Jan 2023 17:58:49 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55240 "EHLO
+        Mon, 30 Jan 2023 17:58:51 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55284 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229501AbjA3W6o (ORCPT
+        with ESMTP id S229874AbjA3W6q (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 30 Jan 2023 17:58:44 -0500
+        Mon, 30 Jan 2023 17:58:46 -0500
 Received: from linux.microsoft.com (linux.microsoft.com [13.77.154.182])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTP id 35E8B17CFF;
+        by lindbergh.monkeyblade.net (Postfix) with ESMTP id 674C91A49F;
         Mon, 30 Jan 2023 14:58:42 -0800 (PST)
 Received: by linux.microsoft.com (Postfix, from userid 1052)
-        id E04B220E9FB1; Mon, 30 Jan 2023 14:58:41 -0800 (PST)
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com E04B220E9FB1
+        id 089C720EA1E2; Mon, 30 Jan 2023 14:58:41 -0800 (PST)
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 089C720EA1E2
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
-        s=default; t=1675119521;
-        bh=5qiayccWWeIprZftNcexwMPx/3TPh3cnTMySbicNepo=;
-        h=From:To:Cc:Subject:Date:From;
-        b=WYHER4iAN1x9X5AlLg6KY8c9gz9YX3ZWe3KwhVjHt0qFYOw4gJK0eRoPk9hqADkeS
-         eo2PES9sSV6nD8T5JMylRuWud4oHiedmT6jivfW8Kci0h9i1ILhz/18Zt1SWWB9hPE
-         n+EavpG6dCHIWQ46rBhYrpyIdI6vOchBueSL65jE=
+        s=default; t=1675119522;
+        bh=KCNOjzZbT3Uj5F5qkHyht64APwfHvc7grVxcalolHFc=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=Z5uz9LjXksS+xV6ZntuWLfSIgHZjhZ6IAJX0X0YZkIdMExQMiQ1ULGD5Z53w+l/5B
+         vcKYmUtMHg6Ob5F0q+ObAvIZLdqrhKXZjE9OUDkz34y3/1aRH5MFe1WwnWxqvVQ7rM
+         5sOmrzV+0JTTz86wNPEUDE2AMet2t9B0oCQf3yyA=
 From:   Fan Wu <wufan@linux.microsoft.com>
 To:     corbet@lwn.net, zohar@linux.ibm.com, jmorris@namei.org,
         serge@hallyn.com, tytso@mit.edu, ebiggers@kernel.org,
@@ -36,563 +36,838 @@ Cc:     linux-doc@vger.kernel.org, linux-integrity@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-block@vger.kernel.org,
         dm-devel@redhat.com, linux-audit@redhat.com,
         roberto.sassu@huawei.com, linux-kernel@vger.kernel.org,
+        Deven Bowers <deven.desai@linux.microsoft.com>,
         Fan Wu <wufan@linux.microsoft.com>
-Subject: [RFC PATCH v9 00/16] Integrity Policy Enforcement LSM (IPE)
-Date:   Mon, 30 Jan 2023 14:57:15 -0800
-Message-Id: <1675119451-23180-1-git-send-email-wufan@linux.microsoft.com>
+Subject: [RFC PATCH v9 02/16] ipe: add policy parser
+Date:   Mon, 30 Jan 2023 14:57:17 -0800
+Message-Id: <1675119451-23180-3-git-send-email-wufan@linux.microsoft.com>
 X-Mailer: git-send-email 1.8.3.1
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+In-Reply-To: <1675119451-23180-1-git-send-email-wufan@linux.microsoft.com>
+References: <1675119451-23180-1-git-send-email-wufan@linux.microsoft.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Overview:
----------
+From: Deven Bowers <deven.desai@linux.microsoft.com>
 
-IPE is a Linux Security Module which takes a complimentary approach to
-access control. Whereas existing mandatory access control mechanisms
-base their decisions on labels and paths, IPE instead determines
-whether or not an operation should be allowed based on immutable
-security properties of the system component the operation is being
-performed on.
+IPE's interpretation of the what the user trusts is accomplished through
+its policy. IPE's design is to not provide support for a single trust
+provider, but to support multiple providers to enable the end-user to
+choose the best one to seek their needs.
 
-IPE itself does not mandate how the security property should be
-evaluated, but relies on an extensible set of external property providers
-to evaluate the component. IPE makes its decision based on reference
-values for the selected properties, specified in the IPE policy.
+This requires the policy to be rather flexible and modular so that
+integrity providers, like fs-verity, dm-verity, dm-integrity, or
+some other system, can plug into the policy with minimal code changes.
 
-The reference values represent the value that the policy writer and the
-local system administrator (based on the policy signature) trust for the
-system to accomplish the desired tasks.
+Signed-off-by: Deven Bowers <deven.desai@linux.microsoft.com>
+Signed-off-by: Fan Wu <wufan@linux.microsoft.com>
 
-One such provider is for example dm-verity, which is able to represent
-the integrity property of a partition (its immutable state) with a digest.
-
-IPE is compiled under CONFIG_SECURITY_IPE.
-
-Use Cases
----------
-
-IPE works best in fixed-function devices: Devices in which their purpose
-is clearly defined and not supposed to be changed (e.g. network firewall
-device in a data center, an IoT device, etcetera), where all software and
-configuration is built and provisioned by the system owner.
-
-IPE is a long-way off for use in general-purpose computing: the Linux
-community as a whole tends to follow a decentralized trust model,
-known as the web of trust, which IPE has no support for as of  yet.
-There are exceptions, such as the case where a Linux distribution
-vendor trusts only their own keys, where IPE can successfully be used
-to enforce the trust requirement.
-
-Additionally, while most packages are signed today, the files inside
-the packages (for instance, the executables), tend to be unsigned. This
-makes it difficult to utilize IPE in systems where a package manager is
-expected to be functional, without major changes to the package manager
-and ecosystem behind it.
-
-DIGLIM[1] is a system that when combined with IPE, could be used to
-enable general purpose computing scenarios.
-
-Policy:
--------
-
-IPE policy is a plain-text policy composed of multiple statements
-over several lines. There is one required line, at the top of the
-policy, indicating the policy name, and the policy version, for
-instance:
-
-  policy_name=Ex_Policy policy_version=0.0.0
-
-The policy version indicates the current version of the policy. This is
-used to prevent roll-back of policy to potentially insecure previous
-versions of the policy.
-
-The next portion of IPE policy, are rules. Rules are formed by key=value
-pairs, known as properties. IPE rules require two keys: "action", which
-determines what IPE does when it encounters a match against the policy
-and "op", which determines when that rule should be evaluated.
-
-Thus, a minimal rule is:
-
-  op=EXECUTE action=ALLOW
-
-This example rule will allow any execution. A rule is required to have the
-"op" property as the first token of a rule, and the "action" as the last
-token of the rule. 
-
-Additional properties are used to restrict attributes about the files being
-evaluated. These properties are intended to be deterministic attributes
-that are resident in the kernel. 
-
-For example:
-
-  op=EXECUTE dmverity_signature=FALSE action=DENY
-
-This rule with property dmverity_signature will deny any file not from
-a signed dmverity volume to be executed. 
-
-All available properties for IPE described in the documentation patch of
-this series.
-
-Rules are evaluated top-to-bottom. As a result, any revocation rules,
-or denies should be placed early in the file to ensure that these rules
-are evaluated before a rule with "action=ALLOW" is hit.
-
-Any unknown syntax in IPE policy will result in a fatal error to parse
-the policy. 
-
-Additionally, a DEFAULT operation must be set for all understood
-operations within IPE. For policies to remain completely forwards
-compatible, it is recommended that users add a "DEFAULT action=ALLOW"
-and override the defaults on a per-operation basis.
-
-For more information about the policy syntax, see the kernel
-documentation page.
-
-Early Usermode Protection:
---------------------------
-
-IPE can be provided with a policy at startup to load and enforce.
-This is intended to be a minimal policy to get the system to a state
-where userspace is setup and ready to receive commands, at which
-point a policy can be deployed via securityfs. This "boot policy" can be
-specified via the config, SECURITY_IPE_BOOT_POLICY, which accepts a path
-to a plain-text version of the IPE policy to apply. This policy will be
-compiled into the kernel. If not specified, IPE will be disabled until a
-policy is deployed and activated through the method above.
-
-Policy Examples:
-----------------
-
-Allow all:
-
-  policy_name=Allow_All policy_version=0.0.0
-  DEFAULT action=ALLOW
-
-Allow only initial superblock:
-
-  policy_name=Allow_All_Initial_SB policy_version=0.0.0
-  DEFAULT action=DENY
-
-  op=EXECUTE boot_verified=TRUE action=ALLOW
-
-Allow any signed dm-verity volume and the initial superblock:
-
-  policy_name=AllowSignedAndInitial policy_version=0.0.0
-  DEFAULT action=DENY
-
-  op=EXECUTE boot_verified=TRUE action=ALLOW
-  op=EXECUTE dmverity_signature=TRUE action=ALLOW
-
-Prohibit execution from a specific dm-verity volume, while allowing
-all signed volumes and the initial superblock:
-
-  policy_name=ProhibitSingleVolume policy_version=0.0.0
-  DEFAULT action=DENY
-
-  op=EXECUTE dmverity_roothash=sha256:401fcec5944823ae12f62726e8184407a5fa9599783f030dec146938 action=DENY
-  op=EXECUTE boot_verified=TRUE action=ALLOW
-  op=EXECUTE dmverity_signature=TRUE action=ALLOW
-
-Allow only a specific dm-verity volume:
-
-  policy_name=AllowSpecific policy_version=0.0.0
-  DEFAULT action=DENY
-
-  op=EXECUTE dmverity_roothash=sha256:401fcec5944823ae12f62726e8184407a5fa9599783f030dec146938 action=ALLOW
-
-Allow any signed fs-verity file
-
-  policy_name="AllowSignedFSVerity" policy_version=0.0.0
-  DEFAULT action=DENY
-
-  op=EXECUTE fsverity_signature=TRUE action=ALLOW
-
-Deny a specific fs-verity file:
-
-  policy_name="ProhibitSpecificFSVF" policy_version=0.0.0
-  DEFAULT action=DENY
-
-  op=EXECUTE fsverity_digest=sha256:fd88f2b8824e197f850bf4c5109bea5cf0ee38104f710843bb72da796ba5af9e action=DENY
-  op=EXECUTE boot_verified=TRUE action=ALLOW
-  op=EXECUTE dmverity_signature=TRUE action=ALLOW
-
-Deploying Policies:
--------------------
-
-First sign a plain text policy, with a certificate that is present in
-the SYSTEM_TRUSTED_KEYRING of your test machine. Through openssl, the
-signing can be done via:
-
-  openssl smime -sign -in "$MY_POLICY" -signer "$MY_CERTIFICATE" \
-    -inkey "$MY_PRIVATE_KEY" -outform der -noattr -nodetach \
-    -out "$MY_POLICY.p7s"
-
-Then, simply cat the file into the IPE's "new_policy" securityfs node:
-
-  cat "$MY_POLICY.p7s" > /sys/kernel/security/ipe/new_policy
-
-The policy should now be present under the policies/ subdirectory, under
-its "policy_name" attribute.
-
-The policy is now present in the kernel and can be marked as active,
-via the securityfs node:
-
-  echo 1 > "/sys/kernel/security/ipe/$MY_POLICY_NAME/active"
-
-This will now mark the policy as active and the system will be enforcing
-$MY_POLICY_NAME.
-
-There is one requirement when marking a policy as active, the policy_version
-attribute must either increase, or remain the same as the currently running
-policy.
-
-Policies can be updated via:
-
-  cat "$MY_UPDATED_POLICY.p7s" > \
-    "/sys/kernel/security/ipe/policies/$MY_POLICY_NAME/update"
-
-Additionally, policies can be deleted via the "delete" securityfs
-node. Simply write "1" to the corresponding node in the policy folder:
-
-  echo 1 > "/sys/kernel/security/ipe/policies/$MY_POLICY_NAME/delete"
-
-There is only one requirement to delete policies, the policy being
-deleted must not be the active policy.
-
-NOTE: Any securityfs write to IPE's nodes will require CAP_MAC_ADMIN.
-
-Integrations:
--------------
-
-This patch series adds support for fsverity via digest and signature
-(fsverity_signature and fsverity_digest), dm-verity by digest and
-signature (dmverity_signature and dmverity_roothash), and trust for
-the initramfs (boot_verified).
-
-Please see the documentation patch for more information about the
-integrations available.
-
-Testing:
---------
-
-KUnit Tests are available. Recommended kunitconfig:
-
-    CONFIG_KUNIT=y
-    CONFIG_SECURITY=y
-    CONFIG_SECURITYFS=y
-    CONFIG_PKCS7_MESSAGE_PARSER=y
-    CONFIG_SYSTEM_DATA_VERIFICATION=y
-    CONFIG_FS_VERITY=y
-    CONFIG_FS_VERITY_BUILTIN_SIGNATURES=y
-    CONFIG_BLOCK=y
-    CONFIG_MD=y
-    CONFIG_BLK_DEV_DM=y
-    CONFIG_DM_VERITY=y
-    CONFIG_DM_VERITY_VERIFY_ROOTHASH_SIG=y
-    CONFIG_NET=y
-    CONFIG_AUDIT=y
-    CONFIG_AUDITSYSCALL=y
-
-    CONFIG_SECURITY_IPE=y
-    CONFIG_IPE_PROP_DM_VERITY=y
-    CONFIG_IPE_PROP_FS_VERITY=y
-    CONFIG_SECURITY_IPE_KUNIT_TEST=y
-
-Simply run:
-
-    make ARCH=um mrproper
-    ./tools/testing/kunit/kunit.py run --kunitconfig <path/to/config>
-
-And the tests will execute and report the result. For more indepth testing,
-it will require you to create and mount a dm-verity volume or fs-verity
-enabled file.
-
-Documentation:
---------------
-
-There is both documentation available on github at
-https://microsoft.github.io/ipe, and Documentation in this patch series,
-to be added in-tree.
-
-Known Gaps:
------------
-
-IPE has two known gaps:
-
-1. IPE cannot verify the integrity of anonymous executable memory, such as
-  the trampolines created by gcc closures and libffi (<3.4.2), or JIT'd code.
-  Unfortunately, as this is dynamically generated code, there is no way
-  for IPE to ensure the integrity of this code to form a trust basis. In all
-  cases, the return result for these operations will be whatever the admin
-  configures the DEFAULT action for "EXECUTE".
-
-2. IPE cannot verify the integrity of interpreted languages' programs when
-  these scripts invoked via ``<interpreter> <file>``. This is because the
-  way interpreters execute these files, the scripts themselves are not
-  evaluated as executable code through one of IPE's hooks. Interpreters
-  can be enlightened to the usage of IPE by trying to mmap a file into
-  executable memory (+X), after opening the file and responding to the
-  error code appropriately. This also applies to included files, or high
-  value files, such as configuration files of critical system components.
-
-Appendix:
----------
-
-A. IPE Github Repository: https://github.com/microsoft/ipe
-B. IPE Users' Guide: Documentation/admin-guide/LSM/ipe.rst
-
-References:
------------
-
-1: https://lore.kernel.org/bpf/4d6932e96d774227b42721d9f645ba51@huawei.com/T/
-
-FAQ:
-----
-
-Q: What is the difference between IMA and IPE?
-
-A: See the documentation patch for more on this topic.
-
-Previous Postings
------------------
-
-v1: https://lore.kernel.org/all/20200406181045.1024164-1-deven.desai@linux.microsoft.com/
-v2: https://lore.kernel.org/all/20200406221439.1469862-1-deven.desai@linux.microsoft.com/
-v3: https://lore.kernel.org/all/20200415162550.2324-1-deven.desai@linux.microsoft.com/
-v4: https://lore.kernel.org/all/20200717230941.1190744-1-deven.desai@linux.microsoft.com/
-v5: https://lore.kernel.org/all/20200728213614.586312-1-deven.desai@linux.microsoft.com/
-v6: https://lore.kernel.org/all/20200730003113.2561644-1-deven.desai@linux.microsoft.com/
-v7: https://lore.kernel.org/all/1634151995-16266-1-git-send-email-deven.desai@linux.microsoft.com/
-v8: https://lore.kernel.org/all/1654714889-26728-1-git-send-email-deven.desai@linux.microsoft.com/
-
-Changelog:
-----------
-
+---
 v2:
-  Split the second patch of the previous series into two.
-  Minor corrections in the cover-letter and documentation
-  comments regarding CAP_MAC_ADMIN checks in IPE.
+  + Split evaluation loop, access control hooks,
+    and evaluation loop from policy parser and userspace
+    interface to pass mailing list character limit
 
 v3:
-  Address various comments by Jann Horn. Highlights:
-    Switch various audit allocators to GFP_KERNEL.
-    Utilize rcu_access_pointer() in various locations.
-    Strip out the caching system for properties
-    Strip comments from headers
-    Move functions around in patches
-    Remove kernel command line parameters
-    Reconcile the race condition on the delete node for policy by
-      expanding the policy critical section.
-
-  Address a few comments by Jonathan Corbet around the documentation
-    pages for IPE.
-
-  Fix an issue with the initialization of IPE policy with a "-0"
-    version, caused by not initializing the hlist entries before
-    freeing.
+  + Move policy load and activation audit event to 03/12
+  + Fix a potential panic when a policy failed to load.
+  + use pr_warn for a failure to parse instead of an
+    audit record
+  + Remove comments from headers
+  + Add lockdep assertions to ipe_update_active_policy and
+    ipe_activate_policy
+  + Fix up warnings with checkpatch --strict
+  + Use file_ns_capable for CAP_MAC_ADMIN for securityfs
+    nodes.
+  + Use memdup_user instead of kzalloc+simple_write_to_buffer.
+  + Remove strict_parse command line parameter, as it is added
+    by the sysctl command line.
+  + Prefix extern variables with ipe_
 
 v4:
-  Address a concern around IPE's behavior with unknown syntax.
-    Specifically, make any unknown syntax a fatal error instead of a
-    warning, as suggested by Mickaël Salaün.
-  Introduce a new securityfs node, $securityfs/ipe/property_config,
-    which provides a listing of what properties are enabled by the
-    kernel and their versions. This allows usermode to predict what
-    policies should be allowed.
-  Strip some comments from c files that I missed.
-  Clarify some documentation comments around 'boot_verified'.
-    While this currently does not functionally change the property
-    itself, the distinction is important when IPE can enforce verified
-    reads. Additionally, 'KERNEL_READ' was omitted from the documentation.
-    This has been corrected.
-  Change SecurityFS and SHA1 to a reverse dependency.
-  Update the cover-letter with the updated behavior of unknown syntax.
-  Remove all sysctls, making an equivalent function in securityfs.
-  Rework the active/delete mechanism to be a node under the policy in
-    $securityfs/ipe/policies.
-  The kernel command line parameters ipe.enforce and ipe.success_audit
-    have returned as this functionality is no longer exposed through
-    sysfs.
+  + Remove securityfs to reverse-dependency
+  + Add SHA1 reverse dependency.
+  + Add versioning scheme for IPE properties, and associated
+    interface to query the versioning scheme.
+  + Cause a parser to always return an error on unknown syntax.
+  + Remove strict_parse option
+  + Change active_policy interface from sysctl, to securityfs,
+    and change scheme.
 
 v5:
-  Correct some grammatical errors reported by Randy Dunlap.
-  Fix some warnings reported by kernel test bot.
-  Change convention around security_bdev_setsecurity. -ENOSYS
-    is now expected if an LSM does not implement a particular @name,
-    as suggested by Casey Schaufler.
-  Minor string corrections related to the move from sysfs to securityfs
-  Correct a spelling of an #ifdef for the permissive argument.
-  Add the kernel parameters re-added to the documentation.
-  Fix a minor bug where the mode being audited on permissive switch
-    was the original mode, not the mode being swapped to.
-  Cleanup doc comments, fix some whitespace alignment issues.
+  + Cause an error if a default action is not defined for each
+    operaiton.
+  + Minor function renames
 
 v6:
-  Change if statement condition in security_bdev_setsecurity to be
-    more concise, as suggested by Casey Schaufler and Al Viro
-  Drop the 6th patch in the series, "dm-verity move signature check..."
-    due to numerous issues, and it ultimately providing no real value.
-  Fix the patch tree - the previous iteration appears to have been in a
-    torn state (patches 8+9 were merged). This has since been corrected.
+  + No changes
 
 v7:
-  * Reword cover letter to more accurate convey IPE's purpose
-    and latest updates.
-  * Refactor series to:
-      1. Support a context structure, enabling:
-          1. Easier Testing via KUNIT
-          2. A better architecture for future designs
-      2. Make parser code cleaner
-  * Move patch 01/12 to [14/16] of the series
-  * Split up patch 02/12 into four parts:
-      1. context creation [01/16]
-      2. audit [07/16]
-      3. evaluation loop [03/16]
-      4. access control hooks [05/16]
-      5. permissive mode [08/16]
-  * Split up patch 03/12 into two parts:
-      1. parser [02/16]
-      2. userspace interface [04/16]
-  * Reword and refactor patch 04/12 to [09/16]
-  * Squash patch 05/12, 07/12, 09/12 to [10/16]
-  * Squash patch 08/12, 10/12 to [11/16]
-  * Change audit records to MAC region (14XX) from Integrity region (18XX)
-  * Add FSVerity Support
-  * Interface changes:
-      1. "raw" was renamed to "pkcs7" and made read only
-      2. "raw"'s write functionality (update a policy) moved to "update"
-      3. introduced "version", "policy_name" nodes.
-      4. "content" renamed to "policy"
-      5. The boot policy can now be updated like any other policy.
-  * Add additional developer-level documentation
-  * Update admin-guide docs to reflect changes.
-  * Kunit tests
-  * Dropped CONFIG_SECURITY_IPE_PERMISSIVE_SWITCH - functionality can
-    easily come later with a small patch.
-  * Use partition0 for block_device for dm-verity patch
+  + Further split parser and userspace interface into two
+    separate commits, for easier review.
+
+  + Refactor policy parser to make code cleaner via introducing a
+    more modular design, for easier extension of policy, and
+    easier review.
 
 v8:
-  * Add changelog information to individual commits
-  * A large number of changes to the audit patch.
-  * split fs/ & security/ changes to two separate patches.
-  * split block/, security/ & drivers/md/ changes to separate patches.
-  * Add some historical context to what lead to the creation of IPE
-    in the documentation patch.
-  * Cover-letter changes suggested by Roberto Sassu.
+  + remove unnecessary pr_info emission on parser loading
+
+  + add explicit newline to the pr_err emitted when a parser
+    fails to load.
 
 v9:
-  * Rewrite IPE parser to use kernel match_table parser.
-  * Adapt existing IPE properties to the new parser.
-  * Remove ipe_context, quote policy syntax, kernel_read for simplicity.
-  * Add new function in the security file system to delete IPE policy.
-  * Make IPE audit builtin and change several audit formats.
-  * Make boot_verified property builtin
+  + switch to match table to parse policy
 
-Deven Bowers (13):
-  security: add ipe lsm
-  ipe: add policy parser
-  ipe: add evaluation loop and introduce 'boot_verified' as a trust
-    provider
-  ipe: add userspace interface
-  ipe: add LSM hooks on execution and kernel read
-  uapi|audit|ipe: add ipe auditing support
-  ipe: add permissive toggle
-  block|security: add LSM blob to block_device
-  dm-verity: consume root hash digest and signature data via LSM hook
-  ipe: add support for dm-verity as a trust provider
-  scripts: add boot policy generation program
-  ipe: kunit test for parser
-  documentation: add ipe documentation
-
-Fan Wu (3):
-  security: add new securityfs delete function
-  fsverity: consume builtin signature via LSM hook
-  ipe: enable support for fs-verity as a trust provider
-
- Documentation/admin-guide/LSM/index.rst       |   1 +
- Documentation/admin-guide/LSM/ipe.rst         | 729 ++++++++++++++++++
- .../admin-guide/kernel-parameters.txt         |  12 +
- Documentation/security/index.rst              |   1 +
- Documentation/security/ipe.rst                | 436 +++++++++++
- MAINTAINERS                                   |   8 +
- block/bdev.c                                  |   7 +
- drivers/md/dm-verity-target.c                 |  25 +-
- drivers/md/dm-verity-verify-sig.c             |  16 +-
- drivers/md/dm-verity-verify-sig.h             |  10 +-
- fs/verity/fsverity_private.h                  |   2 +-
- fs/verity/open.c                              |  13 +-
- fs/verity/signature.c                         |   1 +
- include/linux/blk_types.h                     |   3 +
- include/linux/dm-verity.h                     |  19 +
- include/linux/fsverity.h                      |   2 +
- include/linux/lsm_hook_defs.h                 |   5 +
- include/linux/lsm_hooks.h                     |  12 +
- include/linux/security.h                      |  23 +
- include/uapi/linux/audit.h                    |   1 +
- scripts/Makefile                              |   1 +
- scripts/ipe/Makefile                          |   2 +
- scripts/ipe/polgen/.gitignore                 |   1 +
- scripts/ipe/polgen/Makefile                   |   6 +
- scripts/ipe/polgen/polgen.c                   | 145 ++++
- security/Kconfig                              |  11 +-
- security/Makefile                             |   1 +
- security/inode.c                              |  25 +
- security/ipe/.gitignore                       |   1 +
- security/ipe/Kconfig                          |  75 ++
- security/ipe/Makefile                         |  32 +
- security/ipe/audit.c                          | 279 +++++++
- security/ipe/audit.h                          |  19 +
- security/ipe/digest.c                         | 144 ++++
- security/ipe/digest.h                         |  26 +
- security/ipe/eval.c                           | 424 ++++++++++
- security/ipe/eval.h                           |  60 ++
- security/ipe/fs.c                             | 242 ++++++
- security/ipe/fs.h                             |  17 +
- security/ipe/hooks.c                          | 275 +++++++
- security/ipe/hooks.h                          |  42 +
- security/ipe/ipe.c                            |  97 +++
- security/ipe/ipe.h                            |  22 +
- security/ipe/policy.c                         | 259 +++++++
- security/ipe/policy.h                         |  93 +++
- security/ipe/policy_fs.c                      | 459 +++++++++++
- security/ipe/policy_parser.c                  | 545 +++++++++++++
- security/ipe/policy_parser.h                  |  11 +
- security/ipe/policy_tests.c                   | 294 +++++++
- security/security.c                           |  70 ++
- 50 files changed, 4988 insertions(+), 16 deletions(-)
- create mode 100644 Documentation/admin-guide/LSM/ipe.rst
- create mode 100644 Documentation/security/ipe.rst
- create mode 100644 include/linux/dm-verity.h
- create mode 100644 scripts/ipe/Makefile
- create mode 100644 scripts/ipe/polgen/.gitignore
- create mode 100644 scripts/ipe/polgen/Makefile
- create mode 100644 scripts/ipe/polgen/polgen.c
- create mode 100644 security/ipe/.gitignore
- create mode 100644 security/ipe/Kconfig
- create mode 100644 security/ipe/Makefile
- create mode 100644 security/ipe/audit.c
- create mode 100644 security/ipe/audit.h
- create mode 100644 security/ipe/digest.c
- create mode 100644 security/ipe/digest.h
- create mode 100644 security/ipe/eval.c
- create mode 100644 security/ipe/eval.h
- create mode 100644 security/ipe/fs.c
- create mode 100644 security/ipe/fs.h
- create mode 100644 security/ipe/hooks.c
- create mode 100644 security/ipe/hooks.h
- create mode 100644 security/ipe/ipe.c
- create mode 100644 security/ipe/ipe.h
+  + remove quote syntax and KERNEL_READ operation
+---
+ security/ipe/Makefile        |   2 +
+ security/ipe/policy.c        |  99 +++++++
+ security/ipe/policy.h        |  77 ++++++
+ security/ipe/policy_parser.c | 515 +++++++++++++++++++++++++++++++++++
+ security/ipe/policy_parser.h |  11 +
+ 5 files changed, 704 insertions(+)
  create mode 100644 security/ipe/policy.c
  create mode 100644 security/ipe/policy.h
- create mode 100644 security/ipe/policy_fs.c
  create mode 100644 security/ipe/policy_parser.c
  create mode 100644 security/ipe/policy_parser.h
- create mode 100644 security/ipe/policy_tests.c
 
+diff --git a/security/ipe/Makefile b/security/ipe/Makefile
+index 571648579991..16bbe80991f1 100644
+--- a/security/ipe/Makefile
++++ b/security/ipe/Makefile
+@@ -8,3 +8,5 @@
+ obj-$(CONFIG_SECURITY_IPE) += \
+ 	hooks.o \
+ 	ipe.o \
++	policy.o \
++	policy_parser.o \
+diff --git a/security/ipe/policy.c b/security/ipe/policy.c
+new file mode 100644
+index 000000000000..e446f4b84152
+--- /dev/null
++++ b/security/ipe/policy.c
+@@ -0,0 +1,99 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++
++#include "ipe.h"
++#include "policy.h"
++#include "policy_parser.h"
++#include "digest.h"
++
++#include <linux/verification.h>
++
++/**
++ * ipe_free_policy - Deallocate a given IPE policy.
++ * @p: Supplies the policy to free.
++ *
++ * Safe to call on IS_ERR/NULL.
++ */
++void ipe_free_policy(struct ipe_policy *p)
++{
++	if (IS_ERR_OR_NULL(p))
++		return;
++
++	free_parsed_policy(p->parsed);
++	if (!p->pkcs7)
++		kfree(p->text);
++	kfree(p->pkcs7);
++	kfree(p);
++}
++
++static int set_pkcs7_data(void *ctx, const void *data, size_t len,
++			  size_t asn1hdrlen)
++{
++	struct ipe_policy *p = ctx;
++
++	p->text = (const char *)data;
++	p->textlen = len;
++
++	return 0;
++}
++
++/**
++ * ipe_new_policy - Allocate and parse an ipe_policy structure.
++ *
++ * @text: Supplies a pointer to the plain-text policy to parse.
++ * @textlen: Supplies the length of @text.
++ * @pkcs7: Supplies a pointer to a pkcs7-signed IPE policy.
++ * @pkcs7len: Supplies the length of @pkcs7.
++ *
++ * @text/@textlen Should be NULL/0 if @pkcs7/@pkcs7len is set.
++ *
++ * The result will still need to be associated with a context via
++ * ipe_add_policy.
++ *
++ * Return:
++ * * !IS_ERR	- Success
++ * * -EBADMSG	- Policy is invalid
++ * * -ENOMEM	- Out of memory
++ */
++struct ipe_policy *ipe_new_policy(const char *text, size_t textlen,
++				  const char *pkcs7, size_t pkcs7len)
++{
++	int rc = 0;
++	struct ipe_policy *new = NULL;
++
++	new = kzalloc(sizeof(*new), GFP_KERNEL);
++	if (!new)
++		return ERR_PTR(-ENOMEM);
++
++	if (!text) {
++		new->pkcs7len = pkcs7len;
++		new->pkcs7 = kmemdup(pkcs7, pkcs7len, GFP_KERNEL);
++		if (!new->pkcs7) {
++			rc = -ENOMEM;
++			goto err;
++		}
++
++		rc = verify_pkcs7_signature(NULL, 0, new->pkcs7, pkcs7len, NULL,
++					    VERIFYING_UNSPECIFIED_SIGNATURE,
++					    set_pkcs7_data, new);
++		if (rc)
++			goto err;
++	} else {
++		new->textlen = textlen;
++		new->text = kstrdup(text, GFP_KERNEL);
++		if (!new->text) {
++			rc = -ENOMEM;
++			goto err;
++		}
++	}
++
++	rc = parse_policy(new);
++	if (rc)
++		goto err;
++
++	return new;
++err:
++	return ERR_PTR(rc);
++}
+diff --git a/security/ipe/policy.h b/security/ipe/policy.h
+new file mode 100644
+index 000000000000..6af2d9a811ec
+--- /dev/null
++++ b/security/ipe/policy.h
+@@ -0,0 +1,77 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++#ifndef IPE_POLICY_H
++#define IPE_POLICY_H
++
++#include <linux/list.h>
++#include <linux/types.h>
++
++enum ipe_op_type {
++	ipe_op_exec = 0,
++	ipe_op_firmware,
++	ipe_op_kernel_module,
++	ipe_op_kexec_image,
++	ipe_op_kexec_initramfs,
++	ipe_op_ima_policy,
++	ipe_op_ima_x509,
++	ipe_op_max
++};
++
++enum ipe_action_type {
++	ipe_action_allow = 0,
++	ipe_action_deny,
++	ipe_action_max
++};
++
++enum ipe_prop_type {
++	ipe_prop_max
++};
++
++struct ipe_prop {
++	struct list_head next;
++	enum ipe_prop_type type;
++	void *value;
++};
++
++struct ipe_rule {
++	enum ipe_op_type op;
++	enum ipe_action_type action;
++	struct list_head props;
++	struct list_head next;
++};
++
++struct ipe_op_table {
++	struct list_head rules;
++	enum ipe_action_type default_action;
++};
++
++struct ipe_parsed_policy {
++	const char *name;
++	struct {
++		u16 major;
++		u16 minor;
++		u16 rev;
++	} version;
++
++	enum ipe_action_type global_default_action;
++
++	struct ipe_op_table rules[ipe_op_max];
++};
++
++struct ipe_policy {
++	const char     *pkcs7;
++	size_t		pkcs7len;
++
++	const char     *text;
++	size_t		textlen;
++
++	struct ipe_parsed_policy *parsed;
++};
++
++struct ipe_policy *ipe_new_policy(const char *text, size_t textlen,
++				  const char *pkcs7, size_t pkcs7len);
++void ipe_free_policy(struct ipe_policy *pol);
++
++#endif /* IPE_POLICY_H */
+diff --git a/security/ipe/policy_parser.c b/security/ipe/policy_parser.c
+new file mode 100644
+index 000000000000..c7ba0e865366
+--- /dev/null
++++ b/security/ipe/policy_parser.c
+@@ -0,0 +1,515 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++
++#include "policy.h"
++#include "policy_parser.h"
++#include "digest.h"
++
++#include <linux/parser.h>
++
++#define START_COMMENT	'#'
++
++/**
++ * new_parsed_policy - Allocate and initialize a parsed policy.
++ *
++ * Return:
++ * * !IS_ERR	- OK
++ * * -ENOMEM	- Out of memory
++ */
++static struct ipe_parsed_policy *new_parsed_policy(void)
++{
++	size_t i = 0;
++	struct ipe_parsed_policy *p = NULL;
++	struct ipe_op_table *t = NULL;
++
++	p = kzalloc(sizeof(*p), GFP_KERNEL);
++	if (!p)
++		return ERR_PTR(-ENOMEM);
++
++	p->global_default_action = ipe_action_max;
++
++	for (i = 0; i < ARRAY_SIZE(p->rules); ++i) {
++		t = &p->rules[i];
++
++		t->default_action = ipe_action_max;
++		INIT_LIST_HEAD(&t->rules);
++	}
++
++	return p;
++}
++
++/**
++ * remove_comment - Truncate all chars following START_COMMENT in a string.
++ *
++ * @line: Supplies a poilcy line string for preprocessing.
++ */
++static void remove_comment(char *line)
++{
++	size_t i, len = 0;
++
++	len = strlen(line);
++	for (i = 0; i < len && line[i] != START_COMMENT; ++i)
++		;
++
++	line[i] = '\0';
++}
++
++/**
++ * remove_trailing_spaces - Truncate all trailing spaces in a string.
++ *
++ * @line: Supplies a poilcy line string for preprocessing.
++ */
++static void remove_trailing_spaces(char *line)
++{
++	size_t i, len = 0;
++
++	len = strlen(line);
++	for (i = len; i > 0 && (line[i - 1] == ' ' || line[i - 1] == '\t'); --i)
++		;
++
++	line[i] = '\0';
++}
++
++/**
++ * parse_version - Parse policy version.
++ * @ver: Supplies a version string to be parsed.
++ * @p: Supplies the partial parsed policy.
++ *
++ * Return:
++ * * 0	- OK
++ * * !0	- Standard errno
++ */
++static int parse_version(char *ver, struct ipe_parsed_policy *p)
++{
++	int rc = 0;
++	size_t sep_count = 0;
++	char *token;
++	u16 *const cv[] = { &p->version.major, &p->version.minor, &p->version.rev };
++
++	while ((token = strsep(&ver, ".")) != NULL) {
++		/* prevent overflow */
++		if (sep_count >= ARRAY_SIZE(cv)) {
++			rc = -EBADMSG;
++			goto err;
++		}
++
++		rc = kstrtou16(token, 10, cv[sep_count]);
++		if (rc)
++			goto err;
++
++		++sep_count;
++	}
++
++	/* prevent underflow */
++	if (sep_count != ARRAY_SIZE(cv))
++		rc = -EBADMSG;
++
++err:
++	return rc;
++}
++
++enum header_opt {
++	ipe_header_policy_name = 0,
++	ipe_header_policy_version,
++	ipe_header_max
++};
++
++static const match_table_t header_tokens = {
++	{ipe_header_policy_name,	"policy_name=%s"},
++	{ipe_header_policy_version,	"policy_version=%s"},
++	{ipe_header_max,		NULL}
++};
++
++/**
++ * parse_header - Parse policy header information.
++ * @line: Supplies header line to be parsed.
++ * @p: Supplies the partial parsed policy.
++ *
++ * Return:
++ * * 0	- OK
++ * * !0	- Standard errno
++ */
++static int parse_header(char *line, struct ipe_parsed_policy *p)
++{
++	int rc = 0;
++	char *t, *ver = NULL;
++	substring_t args[MAX_OPT_ARGS];
++	size_t idx = 0;
++
++	while ((t = strsep(&line, " \t")) != NULL) {
++		int token;
++
++		if (*t == '\0')
++			continue;
++		if (idx >= ipe_header_max) {
++			rc = -EBADMSG;
++			goto err;
++		}
++
++		token = match_token(t, header_tokens, args);
++		if (token != idx) {
++			rc = -EBADMSG;
++			goto err;
++		}
++
++		switch (token) {
++		case ipe_header_policy_name:
++			p->name = match_strdup(&args[0]);
++			if (!p->name)
++				rc = -ENOMEM;
++			break;
++		case ipe_header_policy_version:
++			ver = match_strdup(&args[0]);
++			if (!ver) {
++				rc = -ENOMEM;
++				break;
++			}
++			rc = parse_version(ver, p);
++			break;
++		default:
++			rc = -EBADMSG;
++		}
++		if (rc)
++			goto err;
++		++idx;
++	}
++
++	if (idx != ipe_header_max) {
++		rc = -EBADMSG;
++		goto err;
++	}
++	goto out;
++
++err:
++	kfree(p->name);
++	p->name = NULL;
++out:
++	kfree(ver);
++	return rc;
++}
++
++/**
++ * is_default - Determine if the given token is "DEFAULT".
++ * @token: Supplies the token string to be compared.
++ *
++ * Return:
++ * * 0	- The token is not "DEFAULT"
++ * * !0	- The token is "DEFAULT"
++ */
++static bool is_default(char *token)
++{
++	return !strcmp(token, "DEFAULT");
++}
++
++/**
++ * free_rule - Free the supplied ipe_rule struct.
++ * @r: Supplies the ipe_rule struct to be freed.
++ */
++static void free_rule(struct ipe_rule *r)
++{
++	struct ipe_prop *p, *t;
++
++	if (IS_ERR_OR_NULL(r))
++		return;
++
++	list_for_each_entry_safe(p, t, &r->props, next) {
++		kfree(p);
++	}
++
++	kfree(r);
++}
++
++static const match_table_t operation_tokens = {
++	{ipe_op_exec,			"op=EXECUTE"},
++	{ipe_op_firmware,		"op=FIRMWARE"},
++	{ipe_op_kernel_module,		"op=KMODULE"},
++	{ipe_op_kexec_image,		"op=KEXEC_IMAGE"},
++	{ipe_op_kexec_initramfs,	"op=KEXEC_INITRAMFS"},
++	{ipe_op_ima_policy,		"op=IMA_POLICY"},
++	{ipe_op_ima_x509,		"op=IMA_X509_CERT"},
++	{ipe_op_max,			NULL}
++};
++
++/**
++ * parse_operation - Parse the opeartion type given a token string.
++ * @t: Supplies the token string to be parsed.
++ *
++ * Return: The parsed opeartion type.
++ */
++static enum ipe_op_type parse_operation(char *t)
++{
++	substring_t args[MAX_OPT_ARGS];
++
++	return match_token(t, operation_tokens, args);
++}
++
++static const match_table_t action_tokens = {
++	{ipe_action_allow,	"action=ALLOW"},
++	{ipe_action_deny,	"action=DENY"},
++	{ipe_action_max,	NULL}
++};
++
++/**
++ * parse_action - Parse the action type given a token string.
++ * @t: Supplies the token string to be parsed.
++ *
++ * Return: The parsed action type.
++ */
++static enum ipe_action_type parse_action(char *t)
++{
++	substring_t args[MAX_OPT_ARGS];
++
++	return match_token(t, action_tokens, args);
++}
++
++static const match_table_t property_tokens = {
++	{ipe_prop_max,					NULL}
++};
++
++/**
++ * parse_property - Parse the property type given a token string.
++ * @t: Supplies the token string to be parsed.
++ * @r: Supplies the ipe_rule the parsed property will be associated with.
++ *
++ * Return:
++ * * !IS_ERR	- OK
++ * * -ENOMEM	- Out of memory
++ * * -EBADMSG	- The supplied token cannot be parsed
++ */
++int parse_property(char *t, struct ipe_rule *r)
++{
++	substring_t args[MAX_OPT_ARGS];
++	struct ipe_prop *p = NULL;
++	int rc = 0;
++	int token;
++	char *dup = NULL;
++
++	p = kzalloc(sizeof(*p), GFP_KERNEL);
++	if (!p) {
++		rc = -ENOMEM;
++		goto err;
++	}
++
++	token = match_token(t, property_tokens, args);
++
++	switch (token) {
++	case ipe_prop_max:
++	default:
++		rc = -EBADMSG;
++		break;
++	}
++	list_add_tail(&p->next, &r->props);
++
++err:
++	kfree(dup);
++	return rc;
++}
++
++/**
++ * parse_rule - parse a policy rule line.
++ * @line: Supplies rule line to be parsed.
++ * @p: Supplies the partial parsed policy.
++ *
++ * Return:
++ * * !IS_ERR	- OK
++ * * -ENOMEM	- Out of memory
++ * * -EBADMSG	- Policy syntax error
++ */
++static int parse_rule(char *line, struct ipe_parsed_policy *p)
++{
++	int rc = 0;
++	bool first_token = true, is_default_rule = false;
++	bool op_parsed = false;
++	enum ipe_op_type op = ipe_op_max;
++	enum ipe_action_type action = ipe_action_max;
++	struct ipe_rule *r = NULL;
++	char *t;
++
++	r = kzalloc(sizeof(*r), GFP_KERNEL);
++	if (!r) {
++		rc = -ENOMEM;
++		goto err;
++	}
++
++	INIT_LIST_HEAD(&r->next);
++	INIT_LIST_HEAD(&r->props);
++
++	while (t = strsep(&line, " \t"), line) {
++		if (*t == '\0')
++			continue;
++		if (first_token && is_default(t)) {
++			is_default_rule = true;
++		} else {
++			if (!op_parsed) {
++				op = parse_operation(t);
++				if (op == ipe_op_max)
++					rc = -EBADMSG;
++				else
++					op_parsed = true;
++			} else {
++				rc = parse_property(t, r);
++			}
++		}
++
++		if (rc)
++			goto err;
++		first_token = false;
++	}
++
++	action = parse_action(t);
++	if (action == ipe_action_max) {
++		rc = -EBADMSG;
++		goto err;
++	}
++
++	if (is_default_rule) {
++		if (op == ipe_op_max) {
++			if (p->global_default_action != ipe_action_max)
++				rc = -EBADMSG;
++			else
++				p->global_default_action = action;
++		} else {
++			if (p->rules[op].default_action != ipe_action_max)
++				rc = -EBADMSG;
++			else
++				p->rules[op].default_action = action;
++		}
++		free_rule(r);
++	} else if (op != ipe_op_max && action != ipe_action_max) {
++		r->op = op;
++		r->action = action;
++		list_add_tail(&r->next, &p->rules[op].rules);
++	} else {
++		rc = -EBADMSG;
++	}
++
++	if (rc)
++		goto err;
++
++	goto out;
++
++err:
++	free_rule(r);
++out:
++	return rc;
++}
++
++/**
++ * free_parsed_policy - free a parsed policy structure.
++ * @p: Supplies the parsed policy.
++ */
++void free_parsed_policy(struct ipe_parsed_policy *p)
++{
++	size_t i = 0;
++	struct ipe_rule *pp, *t;
++
++	if (IS_ERR_OR_NULL(p))
++		return;
++
++	for (i = 0; i < ARRAY_SIZE(p->rules); ++i)
++		list_for_each_entry_safe(pp, t, &p->rules[i].rules, next)
++			free_rule(pp);
++
++	kfree(p);
++}
++
++/**
++ * validate_policy - validate a parsed policy.
++ * @p: Supplies the fully parsed policy.
++ *
++ * Given a policy structure that was just parsed, validate that all
++ * necessary fields are present, initialized correctly, and all lines
++ * parsed are have been consumed.
++ *
++ * A parsed policy can be an invalid state for use (a default was
++ * undefined, a header was undefined) by just parsing the policy.
++ *
++ * Return:
++ * * 0		- OK
++ * * -EBADMSG	- Policy is invalid
++ */
++static int validate_policy(const struct ipe_parsed_policy *p)
++{
++	int i = 0;
++
++	if (p->global_default_action != ipe_action_max)
++		return 0;
++
++	for (i = 0; i < ARRAY_SIZE(p->rules); ++i) {
++		if (p->rules[i].default_action == ipe_action_max)
++			return -EBADMSG;
++	}
++
++	return 0;
++}
++
++/**
++ * parse_policy - Given a string, parse the string into an IPE policy.
++ * @p: partially filled ipe_policy structure to populate with the result.
++ *     it must have text and textlen set.
++ *
++ * Return:
++ * * 0		- OK
++ * * -EBADMSG	- Policy is invalid
++ * * -ENOMEM	- Out of Memory
++ */
++int parse_policy(struct ipe_policy *p)
++{
++	int rc = 0;
++	size_t len;
++	char *policy = NULL, *dup = NULL;
++	char *line = NULL;
++	bool header_parsed = false;
++	struct ipe_parsed_policy *pp = NULL;
++
++	if (!p->textlen)
++		return -EBADMSG;
++
++	policy = kmemdup_nul(p->text, p->textlen, GFP_KERNEL);
++	if (!policy)
++		return -ENOMEM;
++	dup = policy;
++
++	pp = new_parsed_policy();
++	if (IS_ERR(pp)) {
++		rc = PTR_ERR(pp);
++		goto out;
++	}
++
++	while ((line = strsep(&policy, "\n\r")) != NULL) {
++		remove_comment(line);
++		remove_trailing_spaces(line);
++		len = strlen(line);
++		if (!len)
++			continue;
++
++		if (!header_parsed) {
++			rc = parse_header(line, pp);
++			if (rc)
++				goto err;
++			header_parsed = true;
++			continue;
++		}
++
++		rc = parse_rule(line, pp);
++		if (rc)
++			goto err;
++	}
++
++	if (!header_parsed || validate_policy(pp)) {
++		rc = -EBADMSG;
++		goto err;
++	}
++
++	p->parsed = pp;
++
++	goto out;
++err:
++	free_parsed_policy(pp);
++out:
++	kfree(dup);
++
++	return rc;
++}
+diff --git a/security/ipe/policy_parser.h b/security/ipe/policy_parser.h
+new file mode 100644
+index 000000000000..699ca58a5a32
+--- /dev/null
++++ b/security/ipe/policy_parser.h
+@@ -0,0 +1,11 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++#ifndef IPE_POLICY_PARSER_H
++#define IPE_POLICY_PARSER_H
++
++int parse_policy(struct ipe_policy *p);
++void free_parsed_policy(struct ipe_parsed_policy *p);
++
++#endif /* IPE_POLICY_PARSER */
 -- 
 2.39.0
 
