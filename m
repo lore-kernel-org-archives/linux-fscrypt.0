@@ -2,89 +2,81 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 4D08FC05027
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Feb 2023 06:21:42 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 7FC22C636D4
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Feb 2023 06:21:44 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229530AbjBHGVj (ORCPT
+        id S230061AbjBHGVj (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Wed, 8 Feb 2023 01:21:39 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50742 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50732 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229517AbjBHGVi (ORCPT
+        with ESMTP id S229505AbjBHGVh (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 8 Feb 2023 01:21:38 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 8265F40BFB;
+        Wed, 8 Feb 2023 01:21:37 -0500
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 20FAC16322;
         Tue,  7 Feb 2023 22:21:37 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 297F7B81AB4;
+        by dfw.source.kernel.org (Postfix) with ESMTPS id AB030614E6;
         Wed,  8 Feb 2023 06:21:36 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 9D596C433EF;
-        Wed,  8 Feb 2023 06:21:34 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id E4C28C433A0;
+        Wed,  8 Feb 2023 06:21:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1675837294;
-        bh=5/jCW9hCuDP1bPRnmDpSkCHU7uopSOqd4DhFBilNJRU=;
-        h=From:To:Cc:Subject:Date:From;
-        b=I8/gHZ3fzWa+jyUy6KyNSxroGCmJEfpCWfi01Wrqimo7Oqt3gpGOv01fKFG6/kLoJ
-         1Rnd09J0j1RgQK9Le3OI12MScPZM4cbR3ftqtHaEfDcMkLvKaQMul+jEP0FH2INKn+
-         58jvH9LKmqZ6J9YGH8BoYV+Y+h4mRNbPvf+UiMnBgotr85EPqODtNnXa4p8uCK8Fwy
-         VkX8XeauE4V1sE8uVb15qARkYw7T84Se2mRDCv3hlgFDM6Jy1pdSW3ynrEPoZ3eWuw
-         v3dMHo+r18cyKs9JCn04GN4PGAYMDiH4PzDGWz8aacPgzoNjtfGNYtcLTT+/t6ZhBX
-         7isGFDAXEfaRg==
+        s=k20201202; t=1675837296;
+        bh=yjmeR+HuHfvezqUObRjW0JmkMkN4qqziD8/F7kQFQoY=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=hT9wbh5lvDI4fsinMVQlijsAmGKYTa8mpzuBKjJvZdcI59ojR9Cc8Y0JeTfP6EcUW
+         gnmWte7KXT5+7DMRhWstF+GOYeEdc0mWM3C9q2/d/uS++ZXpPcKaWFLMX+5Bz0KcXV
+         svLKcryv3OwMsB3NjgUpy1TI4h79P4ZvpFk8EY2LMpMMK4U8+/AEy4nESn4eHgVt2Q
+         LDB5rnitSdhws3R/f5wYRp6nIbFdruxxBqVUbwNsv97kpoCbHw1Myev+E+sNUpoVfR
+         qJTkvr0Y+k9p1FoLAfA1PRBrCLIYncTqVpO0qbIa2pNsuyBF39Uj5wCQbAp8HfXVcz
+         N+FuuAq++dH3g==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         Linus Torvalds <torvalds@linux-foundation.org>
-Subject: [PATCH 0/5] Add the test_dummy_encryption key on-demand
-Date:   Tue,  7 Feb 2023 22:21:02 -0800
-Message-Id: <20230208062107.199831-1-ebiggers@kernel.org>
+Subject: [PATCH 4/5] fs/super.c: stop calling fscrypt_destroy_keyring() from __put_super()
+Date:   Tue,  7 Feb 2023 22:21:06 -0800
+Message-Id: <20230208062107.199831-5-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.39.1
+In-Reply-To: <20230208062107.199831-1-ebiggers@kernel.org>
+References: <20230208062107.199831-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This series eliminates the call to fscrypt_destroy_keyring() from
-__put_super(), which is causing confusion because it looks like (but
-actually isn't) a sleep-in-atomic bug.  See the thread "block: sleeping
-in atomic warnings", i.e.
-https://lore.kernel.org/linux-fsdevel/CAHk-=wg6ohuyrmLJYTfEpDbp2Jwnef54gkcpZ3-BYgy4C6UxRQ@mail.gmail.com
-and its responses.
+From: Eric Biggers <ebiggers@google.com>
 
-To do this, this series makes it so that the key associated with the
-"test_dummy_encryption" mount option is added on-demand when files are
-accessed, instead of immediately when the filesystem is mounted.
+Now that the key associated with the "test_dummy_operation" mount option
+is added on-demand when it's needed, rather than immediately when the
+filesystem is mounted, fscrypt_destroy_keyring() no longer needs to be
+called from __put_super() to avoid a memory leak on mount failure.
 
-I was going back and forth between this solution and instead having ext4
-and f2fs call fscrypt_destroy_keyring() on ->fill_super failure.  (Or
-using Linus's suggestion of adding the test dummy key as the very last
-step of ->fill_super.)  It does seem ideal to add the key at mount time,
-but I ended up going with this solution instead because it reduces the
-number of things the individual filesystems have to handle.
+Remove this call, which was causing confusion because it appeared to be
+a sleep-in-atomic bug (though it wasn't, for a somewhat-subtle reason).
 
-Eric Biggers (5):
-  fscrypt: add the test dummy encryption key on-demand
-  ext4: stop calling fscrypt_add_test_dummy_key()
-  f2fs: stop calling fscrypt_add_test_dummy_key()
-  fs/super.c: stop calling fscrypt_destroy_keyring() from __put_super()
-  fscrypt: clean up fscrypt_add_test_dummy_key()
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/super.c | 1 -
+ 1 file changed, 1 deletion(-)
 
- fs/crypto/fscrypt_private.h |  4 ++++
- fs/crypto/keyring.c         | 26 +++++++-------------------
- fs/crypto/keysetup.c        | 23 +++++++++++++++++++++--
- fs/crypto/policy.c          |  3 +--
- fs/ext4/super.c             | 13 +------------
- fs/f2fs/super.c             |  6 ------
- fs/super.c                  |  1 -
- include/linux/fscrypt.h     |  9 ---------
- 8 files changed, 34 insertions(+), 51 deletions(-)
-
-
-base-commit: 6d796c50f84ca79f1722bb131799e5a5710c4700
+diff --git a/fs/super.c b/fs/super.c
+index 12c08cb20405d..ce45b7fd27f90 100644
+--- a/fs/super.c
++++ b/fs/super.c
+@@ -291,7 +291,6 @@ static void __put_super(struct super_block *s)
+ 		WARN_ON(s->s_inode_lru.node);
+ 		WARN_ON(!list_empty(&s->s_mounts));
+ 		security_sb_free(s);
+-		fscrypt_destroy_keyring(s);
+ 		put_user_ns(s->s_user_ns);
+ 		kfree(s->s_subtype);
+ 		call_rcu(&s->rcu, destroy_super_rcu);
 -- 
 2.39.1
 
