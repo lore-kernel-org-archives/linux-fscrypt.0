@@ -2,44 +2,44 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id CB105C6FD1F
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Mar 2023 19:39:40 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 24514C742A7
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Mar 2023 19:39:42 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229720AbjCHTjk (ORCPT
+        id S229729AbjCHTjk (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Wed, 8 Mar 2023 14:39:40 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36694 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36696 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229707AbjCHTjj (ORCPT
+        with ESMTP id S229580AbjCHTjj (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Wed, 8 Mar 2023 14:39:39 -0500
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B161C7C3C7;
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 093AB7D091;
         Wed,  8 Mar 2023 11:39:37 -0800 (PST)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 4D8CA61938;
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 7A5C361939;
         Wed,  8 Mar 2023 19:39:37 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 90D60C433D2;
-        Wed,  8 Mar 2023 19:39:36 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 2CC25C433A0;
+        Wed,  8 Mar 2023 19:39:37 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1678304376;
-        bh=bbb+45XrVULPTKf/JqPwmrPjLg03mNEHizYqoAVoe1I=;
+        s=k20201202; t=1678304377;
+        bh=jUFFwIrjwlkdx2u75JjBew7+G5pN2IhZ8ExoTUl0X5o=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=aEc4Lbjtd0ge0AydvT2tB0mTOToL+HIr1wjag7UXlEzHxFjBDwEK4yFzn9T9uD9Xz
-         ASSdEnK5QRT4Jf1ngG102uNYYxpQGcYanKxYuUxWn3i5qrI5gwL7rW4/eI6sIPBr38
-         ijwfqKMfEhTyv7557LiY+cOe4cbxXUeH9RHjtj8gKZVaGvETgnAA8zU4PJK5dL5dpP
-         /a588v2OAURbEyRRB5DdrWRmzncO7k2zlCpUtU77pZME2Eplt5tCNVDu9+QJkJ/lc7
-         uJR/M2RGpmdFXGy7TnPbgAMT9qXbmbg3NY/vcjr1lx3lHMiol7RudAoY3LoQ3KR0qx
-         7cSiwtLBbjFeg==
+        b=gk17Dxws07+M1VsKyVxeKzfhatrISPPml9Ha1FomdjF03NnY60rQ4WDwbmBE8j0az
+         IRr/CEb8wexZ+rRaF9josTKFvBPh4hbbU+Lp4mDzCtdSKJM0PaXmwGGVkFO2EUTOZe
+         O6G3Qk/WMfEnJcXLyBR4f01d3x7a8tCiuMLYgPlZrVbHfan5yOQTdPpZkZQD64elA9
+         utcFMDkNcz40H46FVoft9WWtuGs+GBkgijIMk5I8oWsD0VZuY79IQHujWPV5xvihJP
+         gQSEsQDJVPLHfJpp2D5l/jsy1/HMMxdsHMaSR9wt1JNURrAlm8DsNBPbKLlr+jVvYi
+         +jYpK7uRSac4g==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-block@vger.kernel.org, Jens Axboe <axboe@kernel.dk>
 Cc:     linux-fscrypt@vger.kernel.org,
-        Nathan Huckleberry <nhuck@google.com>, stable@vger.kernel.org
-Subject: [PATCH v2 2/4] blk-crypto: make blk_crypto_evict_key() more robust
-Date:   Wed,  8 Mar 2023 11:36:43 -0800
-Message-Id: <20230308193645.114069-3-ebiggers@kernel.org>
+        Nathan Huckleberry <nhuck@google.com>
+Subject: [PATCH v2 4/4] blk-crypto: drop the NULL check from blk_crypto_put_keyslot()
+Date:   Wed,  8 Mar 2023 11:36:45 -0800
+Message-Id: <20230308193645.114069-5-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.39.2
 In-Reply-To: <20230308193645.114069-1-ebiggers@kernel.org>
 References: <20230308193645.114069-1-ebiggers@kernel.org>
@@ -51,137 +51,59 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-If blk_crypto_evict_key() sees that the key is still in-use (due to a
-bug) or that ->keyslot_evict failed, it currently just returns an error
-while leaving the key linked into the keyslot management structures.
+Now that all callers of blk_crypto_put_keyslot() check for NULL before
+calling it, there is no need for blk_crypto_put_keyslot() to do the NULL
+check itself.
 
-However, blk_crypto_evict_key() is only called in contexts such as inode
-eviction where failure is not an option.  So actually the caller
-proceeds with freeing the blk_crypto_key regardless of the return value
-of blk_crypto_evict_key().
-
-These two assumptions don't match, and the result is that there can be a
-use-after-free in blk_crypto_reprogram_all_keys() after one of these
-errors occurs.  (Note, these errors *shouldn't* happen; we're just
-talking about what happens if they do anyway.)
-
-Fix this by making blk_crypto_evict_key() unlink the key from the
-keyslot management structures even on failure.
-
-Fixes: 1b2628397058 ("block: Keyslot Manager for Inline Encryption")
-Cc: stable@vger.kernel.org
-Reviewed-by: Nathan Huckleberry <nhuck@google.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- block/blk-crypto-profile.c | 50 +++++++++++++++-----------------------
- block/blk-crypto.c         | 23 +++++++++++-------
- 2 files changed, 33 insertions(+), 40 deletions(-)
+ block/blk-crypto-profile.c | 14 ++++----------
+ 1 file changed, 4 insertions(+), 10 deletions(-)
 
 diff --git a/block/blk-crypto-profile.c b/block/blk-crypto-profile.c
-index 0307fb0d95d3..1b20ead59f39 100644
+index 1b20ead59f39..6c16edfa0dee 100644
 --- a/block/blk-crypto-profile.c
 +++ b/block/blk-crypto-profile.c
-@@ -354,22 +354,10 @@ bool __blk_crypto_cfg_supported(struct blk_crypto_profile *profile,
- 	return true;
- }
- 
--/**
-- * __blk_crypto_evict_key() - Evict a key from a device.
-- * @profile: the crypto profile of the device
-- * @key: the key to evict.  It must not still be used in any I/O.
+@@ -227,14 +227,13 @@ EXPORT_SYMBOL_GPL(blk_crypto_keyslot_index);
+  * @profile: the crypto profile of the device the key will be used on
+  * @key: the key that will be used
+  * @slot_ptr: If a keyslot is allocated, an opaque pointer to the keyslot struct
+- *	      will be stored here; otherwise NULL will be stored here.
++ *	      will be stored here.  blk_crypto_put_keyslot() must be called
++ *	      later to release it.  Otherwise, NULL will be stored here.
+  *
+  * If the device has keyslots, this gets a keyslot that's been programmed with
+  * the specified key.  If the key is already in a slot, this reuses it;
+  * otherwise this waits for a slot to become idle and programs the key into it.
+  *
+- * This must be paired with a call to blk_crypto_put_keyslot().
 - *
-- * If the device has keyslots, this finds the keyslot (if any) that contains the
-- * specified key and calls the driver's keyslot_evict function to evict it.
-- *
-- * Otherwise, this just calls the driver's keyslot_evict function if it is
-- * implemented, passing just the key (without any particular keyslot).  This
-- * allows layered devices to evict the key from their underlying devices.
-- *
-- * Context: Process context. Takes and releases profile->lock.
-- * Return: 0 on success or if there's no keyslot with the specified key, -EBUSY
-- *	   if the keyslot is still in use, or another -errno value on other
-- *	   error.
-+/*
-+ * This is an internal function that evicts a key from an inline encryption
-+ * device that can be either a real device or the blk-crypto-fallback "device".
-+ * It is used only by blk_crypto_evict_key(); see that function for details.
-  */
- int __blk_crypto_evict_key(struct blk_crypto_profile *profile,
- 			   const struct blk_crypto_key *key)
-@@ -389,22 +377,22 @@ int __blk_crypto_evict_key(struct blk_crypto_profile *profile,
- 
- 	blk_crypto_hw_enter(profile);
- 	slot = blk_crypto_find_keyslot(profile, key);
--	if (!slot)
--		goto out_unlock;
--
--	if (WARN_ON_ONCE(atomic_read(&slot->slot_refs) != 0)) {
--		err = -EBUSY;
--		goto out_unlock;
-+	if (slot) {
-+		if (WARN_ON_ONCE(atomic_read(&slot->slot_refs) != 0)) {
-+			/* BUG: key is still in use by I/O */
-+			err = -EBUSY;
-+		} else {
-+			err = profile->ll_ops.keyslot_evict(
-+					profile, key,
-+					blk_crypto_keyslot_index(slot));
-+		}
-+		/*
-+		 * Callers may free the key even on error, so unlink the key
-+		 * from the hash table and clear slot->key even on error.
-+		 */
-+		hlist_del(&slot->hash_node);
-+		slot->key = NULL;
- 	}
--	err = profile->ll_ops.keyslot_evict(profile, key,
--					    blk_crypto_keyslot_index(slot));
--	if (err)
--		goto out_unlock;
--
--	hlist_del(&slot->hash_node);
--	slot->key = NULL;
--	err = 0;
--out_unlock:
- 	blk_crypto_hw_exit(profile);
- 	return err;
- }
-diff --git a/block/blk-crypto.c b/block/blk-crypto.c
-index d0c7feb447e9..4e26fac64199 100644
---- a/block/blk-crypto.c
-+++ b/block/blk-crypto.c
-@@ -399,17 +399,22 @@ int blk_crypto_start_using_key(struct block_device *bdev,
- }
+  * Context: Process context. Takes and releases profile->lock.
+  * Return: BLK_STS_OK on success, meaning that either a keyslot was allocated or
+  *	   one wasn't needed; or a blk_status_t error on failure.
+@@ -312,20 +311,15 @@ blk_status_t blk_crypto_get_keyslot(struct blk_crypto_profile *profile,
  
  /**
-- * blk_crypto_evict_key() - Evict a key from any inline encryption hardware
-- *			    it may have been programmed into
-- * @bdev: The block_device who's associated inline encryption hardware this key
-- *     might have been programmed into
-- * @key: The key to evict
-+ * blk_crypto_evict_key() - Evict a blk_crypto_key from a block_device
-+ * @bdev: a block_device on which I/O using the key may have been done
-+ * @key: the key to evict
+  * blk_crypto_put_keyslot() - Release a reference to a keyslot
+- * @slot: The keyslot to release the reference of (may be NULL).
++ * @slot: The keyslot to release the reference of
   *
-- * Upper layers (filesystems) must call this function to ensure that a key is
-- * evicted from any hardware that it might have been programmed into.  The key
-- * must not be in use by any in-flight IO when this function is called.
-+ * For a given block_device, this function removes the given blk_crypto_key from
-+ * the keyslot management structures and evicts it from any underlying hardware
-+ * keyslot(s) or blk-crypto-fallback keyslot it may have been programmed into.
-  *
-- * Return: 0 on success or if the key wasn't in any keyslot; -errno on error.
-+ * Upper layers must call this before freeing the blk_crypto_key.  It must be
-+ * called for every block_device the key may have been used on.  The key must no
-+ * longer be in use by any I/O when this function is called.
-+ *
-+ * Context: May sleep.
-+ * Return: 0 on success or if the key wasn't in any keyslot; -errno if the key
-+ *	   failed to be evicted from a keyslot or is still in-use.  Even on
-+ *	   "failure", the key is removed from the keyslot management structures.
+  * Context: Any context.
   */
- int blk_crypto_evict_key(struct block_device *bdev,
- 			 const struct blk_crypto_key *key)
+ void blk_crypto_put_keyslot(struct blk_crypto_keyslot *slot)
+ {
+-	struct blk_crypto_profile *profile;
++	struct blk_crypto_profile *profile = slot->profile;
+ 	unsigned long flags;
+ 
+-	if (!slot)
+-		return;
+-
+-	profile = slot->profile;
+-
+ 	if (atomic_dec_and_lock_irqsave(&slot->slot_refs,
+ 					&profile->idle_slots_lock, flags)) {
+ 		list_add_tail(&slot->idle_slot_node, &profile->idle_slots);
 -- 
 2.39.2
 
