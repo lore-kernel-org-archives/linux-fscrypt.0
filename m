@@ -2,118 +2,120 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 13F6AC76186
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  8 Mar 2023 19:39:43 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id E8F11C61DA4
+	for <linux-fscrypt@archiver.kernel.org>; Thu,  9 Mar 2023 12:19:18 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229954AbjCHTjm (ORCPT
+        id S230143AbjCIMTS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 8 Mar 2023 14:39:42 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36714 "EHLO
+        Thu, 9 Mar 2023 07:19:18 -0500
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33680 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229707AbjCHTjk (ORCPT
+        with ESMTP id S229722AbjCIMTR (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 8 Mar 2023 14:39:40 -0500
-Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A6C8C838A9;
-        Wed,  8 Mar 2023 11:39:39 -0800 (PST)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+        Thu, 9 Mar 2023 07:19:17 -0500
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [IPv6:2001:67c:2178:6::1c])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5268D1C7FC;
+        Thu,  9 Mar 2023 04:19:16 -0800 (PST)
+Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 69FE6B81269;
-        Wed,  8 Mar 2023 19:39:38 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id DCEF5C4339C;
-        Wed,  8 Mar 2023 19:39:36 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1678304377;
-        bh=vEKYcc/LTBd9qDV4oAD0WbQzxrfB47Q4z7AN/AsRbpY=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=RIDAcnzmSNMdM77xUUJI93gQ+oCUgHyITXqF1NGtAayyh0/1I6FQwiXIEYDjA1Ob6
-         B8KIq7GS4CMFxLhsIYkeao9xHWM5vZ4of9CbhICNIj5P+rQQVWW9GwPHpMyNji5TO7
-         MyWbLw/QdzwsxT72NNx/WFJZkyVMb3IPo+DWToYpvMTPno9TvbWrmU+6xFbQUAZgnZ
-         iwMZse34Nlaez7z1vBXHbm/rJidsX7h6XqncKDUYf8MsicCVy6DZXySTs8Dh5SpY/s
-         f94/Bg2zvjE8YJYmITG6wGTyNwwyHdeaIUOdyh7yfRDraCngbZ3wbvQ5pEIXATaWGc
-         MyeExzdwtiGZw==
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     linux-block@vger.kernel.org, Jens Axboe <axboe@kernel.dk>
-Cc:     linux-fscrypt@vger.kernel.org,
-        Nathan Huckleberry <nhuck@google.com>
-Subject: [PATCH v2 3/4] blk-crypto: remove blk_crypto_insert_cloned_request()
-Date:   Wed,  8 Mar 2023 11:36:44 -0800
-Message-Id: <20230308193645.114069-4-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.39.2
-In-Reply-To: <20230308193645.114069-1-ebiggers@kernel.org>
-References: <20230308193645.114069-1-ebiggers@kernel.org>
+        by smtp-out1.suse.de (Postfix) with ESMTPS id EB262219B9;
+        Thu,  9 Mar 2023 12:19:14 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.de; s=susede2_rsa;
+        t=1678364354; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+         mime-version:mime-version:content-type:content-type:
+         content-transfer-encoding:content-transfer-encoding;
+        bh=YtlE06MK38v4wUEGCfv9Lya1P+SBRtcUPdCKrIFmkWY=;
+        b=QwhEfbgNYoa66mBXwPIK8+kmgDqlUpWJkv6ic6Gy6A7Rq9mKxoPQHH0y4k/0UxBPIHIQD0
+        t6jTVm0xwkpiQBSBAt4Nf4r9NC3dflMXxqe8ns4QsiAPFD/5PQwL9Rvvds/MVfplCxK6ih
+        ihqL+OtK1toFylXVi5L7C8629S9aKvs=
+DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.de;
+        s=susede2_ed25519; t=1678364354;
+        h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+         mime-version:mime-version:content-type:content-type:
+         content-transfer-encoding:content-transfer-encoding;
+        bh=YtlE06MK38v4wUEGCfv9Lya1P+SBRtcUPdCKrIFmkWY=;
+        b=WIhze/eSN4I/rAvLyoYJrZuLC+wJtkXKfuRQSukyV+HhYD79jz9HhL9NvBqZqMXS717V9b
+        UJHzZ04V1VSwo2Bw==
+Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
+        (No client certificate requested)
+        by imap2.suse-dmz.suse.de (Postfix) with ESMTPS id 4D12913A10;
+        Thu,  9 Mar 2023 12:19:14 +0000 (UTC)
+Received: from dovecot-director2.suse.de ([192.168.254.65])
+        by imap2.suse-dmz.suse.de with ESMTPSA
+        id V2WpD8LOCWSqbAAAMHmgww
+        (envelope-from <lhenriques@suse.de>); Thu, 09 Mar 2023 12:19:14 +0000
+Received: from localhost (brahms.olymp [local])
+        by brahms.olymp (OpenSMTPD) with ESMTPA id a07c9311;
+        Thu, 9 Mar 2023 12:19:13 +0000 (UTC)
+From:   =?UTF-8?q?Lu=C3=ADs=20Henriques?= <lhenriques@suse.de>
+To:     Eric Biggers <ebiggers@kernel.org>, Xiubo Li <xiubli@redhat.com>,
+        Jeff Layton <jlayton@kernel.org>
+Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Ilya Dryomov <idryomov@gmail.com>,
+        linux-fscrypt@vger.kernel.org, ceph-devel@vger.kernel.org,
+        linux-kernel@vger.kernel.org,
+        =?UTF-8?q?Lu=C3=ADs=20Henriques?= <lhenriques@suse.de>
+Subject: [RFC PATCH 0/2] ceph: fscrypt: fix atomic open bug for encrypted directories
+Date:   Thu,  9 Mar 2023 12:19:08 +0000
+Message-Id: <20230309121910.18939-1-lhenriques@suse.de>
 MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Eric Biggers <ebiggers@google.com>
+Hi!
 
-blk_crypto_insert_cloned_request() is the same as
-blk_crypto_rq_get_keyslot(), so just use that directly.
+I started seeing fstest generic/123 failing in ceph fscrypt, when running it
+with 'test_dummy_encryption'.  This test is quite simple:
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
----
- Documentation/block/inline-encryption.rst |  3 +--
- block/blk-crypto-internal.h               | 15 ---------------
- block/blk-mq.c                            |  2 +-
- 3 files changed, 2 insertions(+), 18 deletions(-)
+1. Creates a directory with write permissions for root only
+2. Writes into a file in that directory
+3. Uses 'su' to try to modify that file as a different user, and
+   gets -EPERM
 
-diff --git a/Documentation/block/inline-encryption.rst b/Documentation/block/inline-encryption.rst
-index f9bf18ea6509..90b733422ed4 100644
---- a/Documentation/block/inline-encryption.rst
-+++ b/Documentation/block/inline-encryption.rst
-@@ -270,8 +270,7 @@ Request queue based layered devices like dm-rq that wish to support inline
- encryption need to create their own blk_crypto_profile for their request_queue,
- and expose whatever functionality they choose. When a layered device wants to
- pass a clone of that request to another request_queue, blk-crypto will
--initialize and prepare the clone as necessary; see
--``blk_crypto_insert_cloned_request()``.
-+initialize and prepare the clone as necessary.
- 
- Interaction between inline encryption and blk integrity
- =======================================================
-diff --git a/block/blk-crypto-internal.h b/block/blk-crypto-internal.h
-index 4f1de2495f0c..93a141979694 100644
---- a/block/blk-crypto-internal.h
-+++ b/block/blk-crypto-internal.h
-@@ -205,21 +205,6 @@ static inline int blk_crypto_rq_bio_prep(struct request *rq, struct bio *bio,
- 	return 0;
- }
- 
--/**
-- * blk_crypto_insert_cloned_request - Prepare a cloned request to be inserted
-- *				      into a request queue.
-- * @rq: the request being queued
-- *
-- * Return: BLK_STS_OK on success, nonzero on error.
-- */
--static inline blk_status_t blk_crypto_insert_cloned_request(struct request *rq)
--{
--
--	if (blk_crypto_rq_is_encrypted(rq))
--		return blk_crypto_rq_get_keyslot(rq);
--	return BLK_STS_OK;
--}
--
- #ifdef CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK
- 
- int blk_crypto_fallback_start_using_mode(enum blk_crypto_mode_num mode_num);
-diff --git a/block/blk-mq.c b/block/blk-mq.c
-index 49825538d932..5e819de2f5e7 100644
---- a/block/blk-mq.c
-+++ b/block/blk-mq.c
-@@ -3049,7 +3049,7 @@ blk_status_t blk_insert_cloned_request(struct request *rq)
- 	if (q->disk && should_fail_request(q->disk->part0, blk_rq_bytes(rq)))
- 		return BLK_STS_IOERR;
- 
--	if (blk_crypto_insert_cloned_request(rq))
-+	if (blk_crypto_rq_get_keyslot(rq))
- 		return BLK_STS_IOERR;
- 
- 	blk_account_io_start(rq);
--- 
-2.39.2
+All the test steps succeed, but the test fails to cleanup: 'rm -rf <dir>'
+will fail with -ENOTEMPTY.  'strace' shows that calling unlinkat() to remove
+the file got a -ENOENT and then -ENOTEMPTY for the directory.
+
+This is because 'su' does a drop_caches ('su (874): drop_caches: 2' in
+dmesg), and ceph's atomic open will do:
+
+	if (IS_ENCRYPTED(dir)) {
+		set_bit(CEPH_MDS_R_FSCRYPT_FILE, &req->r_req_flags);
+		if (!fscrypt_has_encryption_key(dir)) {
+			spin_lock(&dentry->d_lock);
+			dentry->d_flags |= DCACHE_NOKEY_NAME;
+			spin_unlock(&dentry->d_lock);
+		}
+	}
+
+Although 'dir' has the encryption key available, fscrypt_has_encryption_key()
+will return 'false' because fscrypt info isn't yet set after the cache
+cleanup.
+
+The first patch will add a new helper for the atomic_open that will force
+the fscrypt info to be loaded into an inode that has been evicted recently
+but for which the key is still available.
+
+The second patch switches ceph atomic_open to use the new fscrypt helper.
+
+Cheers,
+--
+Luís Henriques
+
+Luís Henriques (2):
+  fscrypt: new helper function - __fscrypt_prepare_atomic_open()
+  ceph: switch atomic open to use new fscrypt helper
+
+ fs/ceph/file.c          |  8 +++-----
+ fs/crypto/hooks.c       | 14 ++++++++++++++
+ include/linux/fscrypt.h |  6 ++++++
+ 3 files changed, 23 insertions(+), 5 deletions(-)
 
