@@ -2,116 +2,104 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 11223C64EC4
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 10 Mar 2023 12:58:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A3E25C6FD19
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 13 Mar 2023 12:33:19 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229996AbjCJM6G (ORCPT
+        id S229753AbjCMMdS (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 10 Mar 2023 07:58:06 -0500
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51614 "EHLO
+        Mon, 13 Mar 2023 08:33:18 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58612 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230071AbjCJM5m (ORCPT
+        with ESMTP id S229698AbjCMMdQ (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 10 Mar 2023 07:57:42 -0500
-Received: from wout3-smtp.messagingengine.com (wout3-smtp.messagingengine.com [64.147.123.19])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 37A407D57E;
-        Fri, 10 Mar 2023 04:57:41 -0800 (PST)
-Received: from compute2.internal (compute2.nyi.internal [10.202.2.46])
-        by mailout.west.internal (Postfix) with ESMTP id DF456320082A;
-        Fri, 10 Mar 2023 07:57:37 -0500 (EST)
-Received: from mailfrontend1 ([10.202.2.162])
-  by compute2.internal (MEProxy); Fri, 10 Mar 2023 07:57:39 -0500
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kroah.com; h=cc
-        :cc:content-type:content-type:date:date:from:from:in-reply-to
-        :in-reply-to:message-id:mime-version:references:reply-to:sender
-        :subject:subject:to:to; s=fm1; t=1678453057; x=1678539457; bh=4h
-        bZNGAH3VbTqYHe4cWGMIuHI9sJyZoDcjp+RPcyk/M=; b=aBRmzaxBq2hjxCES4c
-        yAJkgqHVHuVcZXnuUCAxe6iV/ug2/2KOZXUl/X0Dr0cxGHIhqyrRylTIOIKss0WF
-        TXSPYSosNQsJQsFK+QTgvjMnn1kogQghYpduGhOSJSiybQ+s86Ys7yU6rypMncjq
-        SxNfFCxbSnEMp7wqKJ3LOkNKn8v//xd8Vc+VSpyE6SQuGL0bs3R5DEzFJ19Ei4OQ
-        nWR+4efcxF0EnFYL9bK5tLYyIqnJMV+yC8Cg8eNVR/I31yQn6IC83CLsw76eagof
-        D84wd9yMpkizEJSF4vd4Gk91OpQvZv1cfEuMMINVzZUkDblIhpjqgEuzvRJVqgdG
-        A02A==
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=
-        messagingengine.com; h=cc:cc:content-type:content-type:date:date
-        :feedback-id:feedback-id:from:from:in-reply-to:in-reply-to
-        :message-id:mime-version:references:reply-to:sender:subject
-        :subject:to:to:x-me-proxy:x-me-proxy:x-me-sender:x-me-sender
-        :x-sasl-enc; s=fm1; t=1678453057; x=1678539457; bh=4hbZNGAH3VbTq
-        YHe4cWGMIuHI9sJyZoDcjp+RPcyk/M=; b=F2oJ9DJPLUOtBGOkYzglEiaxsYNW3
-        fPhQHX4BN42oUcESpz9iec+edGOwmfDkEYrOzLXBAS/2cVUUVNLrxy0rFTvlTbKo
-        SNB/OXq7WHgK8o3tniEl/H9TFM/sP78QFnrGSoPEt/JI3CZGOHPiry94syXpJNtK
-        8tMOCGm0vP4Ya0smbCdYi1G/yWyLDq+tXf1WKDNBOb8GlA0UtS0vlMj+XQhzRgTR
-        nKGy1fxTQZ0R1uXvr677YxttAONx/hMPq+Ldfx80ZZY2eiuriPLNsn3Pr09rk1xz
-        WOF9F2hqGthZKynk8/+IUbE6J7uXbYmP47Zr2lnytBU5AtPt9LLQxtG4w==
-X-ME-Sender: <xms:QSkLZE3X5tC-lPUXdmHvuq-W-xFvl_xQih9wwhobj6UVCOuej68_ew>
-    <xme:QSkLZPH1quDfzecAsYWGhw9Icl_QXh-NphCei0dhnaFYmZJE3HJyix4VTU-0viw8y
-    6-NwN1VpqSrOg>
-X-ME-Received: <xmr:QSkLZM6VTfF4PwudjPjE5-bAjaipqTePRFSLpuXkXRZL1yJMglg1V5LMZ4z4hmayKOMyyjOVSbVdUf5WAt5y1ff8gvbQpFKUyLjQRw>
-X-ME-Proxy-Cause: gggruggvucftvghtrhhoucdtuddrgedvhedrvddukedggeegucetufdoteggodetrfdotf
-    fvucfrrhhofhhilhgvmecuhfgrshhtofgrihhlpdfqfgfvpdfurfetoffkrfgpnffqhgen
-    uceurghilhhouhhtmecufedttdenucesvcftvggtihhpihgvnhhtshculddquddttddmne
-    cujfgurhepfffhvfevuffkfhggtggujgesthdtredttddtvdenucfhrhhomhepifhrvghg
-    ucfmjfcuoehgrhgvgheskhhrohgrhhdrtghomheqnecuggftrfgrthhtvghrnhepheegvd
-    evvdeljeeugfdtudduhfekledtiefhveejkeejuefhtdeufefhgfehkeetnecuvehluhhs
-    thgvrhfuihiivgeptdenucfrrghrrghmpehmrghilhhfrhhomhepghhrvghgsehkrhhorg
-    hhrdgtohhm
-X-ME-Proxy: <xmx:QSkLZN1Ia3XEHfYA-T3leHNGEyizo-tfco0g-YyWms51E6Nmcin9RA>
-    <xmx:QSkLZHFYJHDg5IoVpv78vb7gHbb448rUSw-BgcTrwbTLHdgVfTcIwg>
-    <xmx:QSkLZG_KAW57kJAHjjtakvDJn1wG6ibnATXkqe5d94gorzGBGfQ_sw>
-    <xmx:QSkLZEe9YT5C22GILSpEi99odMnGKYnEeveGjOTM-W0B7Q3SWJPUhg>
-Feedback-ID: i787e41f1:Fastmail
-Received: by mail.messagingengine.com (Postfix) with ESMTPA; Fri,
- 10 Mar 2023 07:57:36 -0500 (EST)
-Date:   Fri, 10 Mar 2023 13:57:34 +0100
-From:   Greg KH <greg@kroah.com>
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     stable@vger.kernel.org, linux-f2fs-devel@lists.sourceforge.net,
-        linux-fscrypt@vger.kernel.org,
-        "Matthew Wilcox (Oracle)" <willy@infradead.org>,
-        Tejun Heo <tj@kernel.org>, Chao Yu <chao@kernel.org>,
-        Jaegeuk Kim <jaegeuk@kernel.org>
-Subject: Re: [PATCH 4.19] f2fs: fix cgroup writeback accounting with fs-layer
- encryption
-Message-ID: <ZAspPgX+RazeDcgx@kroah.com>
-References: <20230308061746.711142-1-ebiggers@kernel.org>
+        Mon, 13 Mar 2023 08:33:16 -0400
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [IPv6:2001:67c:2178:6::1d])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A5D00196A1;
+        Mon, 13 Mar 2023 05:33:15 -0700 (PDT)
+Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
+        (No client certificate requested)
+        by smtp-out2.suse.de (Postfix) with ESMTPS id 3F39C1FE0D;
+        Mon, 13 Mar 2023 12:33:14 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.de; s=susede2_rsa;
+        t=1678710794; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+         mime-version:mime-version:content-type:content-type:
+         content-transfer-encoding:content-transfer-encoding:
+         in-reply-to:in-reply-to:references:references;
+        bh=Wi/DSEelWohyw8yWLL1NnkiRzPqUQBsHap+bfimcrtg=;
+        b=WeshQ6Lv8biUxqcFdv2eExqvHx3pToKI8CsYvXqUzknHdkGj3Qoq55kMlKsxSWMMIIlCct
+        xAzPgAjc+CuddpxPoIL1nNx4Uut1NLIpRyhHU9NNb39F445cobArmPVfidnZ5QLVoQ9CMw
+        tFEHd+euX7wEShNc18ROEFAnbrMSyLQ=
+DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.de;
+        s=susede2_ed25519; t=1678710794;
+        h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+         mime-version:mime-version:content-type:content-type:
+         content-transfer-encoding:content-transfer-encoding:
+         in-reply-to:in-reply-to:references:references;
+        bh=Wi/DSEelWohyw8yWLL1NnkiRzPqUQBsHap+bfimcrtg=;
+        b=FJUMlQwRteHpzv87KQRR0kfn9YAHAMA9aGdtpc7g/wDK893ymVQKYQ+miN/qCZ5BfGarb2
+        oS5UYcCrPCDhgACw==
+Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
+        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
+        (No client certificate requested)
+        by imap2.suse-dmz.suse.de (Postfix) with ESMTPS id 8CA8313582;
+        Mon, 13 Mar 2023 12:33:13 +0000 (UTC)
+Received: from dovecot-director2.suse.de ([192.168.254.65])
+        by imap2.suse-dmz.suse.de with ESMTPSA
+        id wHpQHwkYD2RnCQAAMHmgww
+        (envelope-from <lhenriques@suse.de>); Mon, 13 Mar 2023 12:33:13 +0000
+Received: from localhost (brahms.olymp [local])
+        by brahms.olymp (OpenSMTPD) with ESMTPA id 42149d88;
+        Mon, 13 Mar 2023 12:33:11 +0000 (UTC)
+From:   =?UTF-8?q?Lu=C3=ADs=20Henriques?= <lhenriques@suse.de>
+To:     Eric Biggers <ebiggers@kernel.org>, Xiubo Li <xiubli@redhat.com>,
+        Jeff Layton <jlayton@kernel.org>
+Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
+        Jaegeuk Kim <jaegeuk@kernel.org>,
+        Ilya Dryomov <idryomov@gmail.com>,
+        linux-fscrypt@vger.kernel.org, ceph-devel@vger.kernel.org,
+        linux-kernel@vger.kernel.org,
+        =?UTF-8?q?Lu=C3=ADs=20Henriques?= <lhenriques@suse.de>
+Subject: [PATCH 2/2] ceph: switch atomic open to use new fscrypt helper
+Date:   Mon, 13 Mar 2023 12:33:10 +0000
+Message-Id: <20230313123310.13040-3-lhenriques@suse.de>
+In-Reply-To: <20230313123310.13040-1-lhenriques@suse.de>
+References: <20230313123310.13040-1-lhenriques@suse.de>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20230308061746.711142-1-ebiggers@kernel.org>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, Mar 07, 2023 at 10:17:46PM -0800, Eric Biggers wrote:
-> From: Eric Biggers <ebiggers@google.com>
-> 
-> commit 844545c51a5b2a524b22a2fe9d0b353b827d24b4 upstream.
-> 
-> When writing a page from an encrypted file that is using
-> filesystem-layer encryption (not inline encryption), f2fs encrypts the
-> pagecache page into a bounce page, then writes the bounce page.
-> 
-> It also passes the bounce page to wbc_account_cgroup_owner().  That's
-> incorrect, because the bounce page is a newly allocated temporary page
-> that doesn't have the memory cgroup of the original pagecache page.
-> This makes wbc_account_cgroup_owner() not account the I/O to the owner
-> of the pagecache page as it should.
-> 
-> Fix this by always passing the pagecache page to
-> wbc_account_cgroup_owner().
-> 
-> Fixes: 578c647879f7 ("f2fs: implement cgroup writeback support")
-> Cc: stable@vger.kernel.org
-> Reported-by: Matthew Wilcox (Oracle) <willy@infradead.org>
-> Signed-off-by: Eric Biggers <ebiggers@google.com>
-> Acked-by: Tejun Heo <tj@kernel.org>
-> Reviewed-by: Chao Yu <chao@kernel.org>
-> Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
-> ---
->  fs/f2fs/data.c | 4 ++--
->  1 file changed, 2 insertions(+), 2 deletions(-)
+Switch ceph atomic open to use fscrypt_prepare_atomic_open().  This fixes
+a bug where a dentry is incorrectly set with DCACHE_NOKEY_NAME when 'dir'
+has been evicted but the key is still available (for example, where there's
+a drop_caches).
 
-Now queued up, thanks.
+Signed-off-by: Luís Henriques <lhenriques@suse.de>
+---
+ fs/ceph/file.c | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
 
-greg k-h
+diff --git a/fs/ceph/file.c b/fs/ceph/file.c
+index dee3b445f415..5ad57cc4c13b 100644
+--- a/fs/ceph/file.c
++++ b/fs/ceph/file.c
+@@ -795,11 +795,9 @@ int ceph_atomic_open(struct inode *dir, struct dentry *dentry,
+ 	ihold(dir);
+ 	if (IS_ENCRYPTED(dir)) {
+ 		set_bit(CEPH_MDS_R_FSCRYPT_FILE, &req->r_req_flags);
+-		if (!fscrypt_has_encryption_key(dir)) {
+-			spin_lock(&dentry->d_lock);
+-			dentry->d_flags |= DCACHE_NOKEY_NAME;
+-			spin_unlock(&dentry->d_lock);
+-		}
++		err = fscrypt_prepare_atomic_open(dir, dentry);
++		if (err)
++			goto out_req;
+ 	}
+ 
+ 	if (flags & O_CREAT) {
