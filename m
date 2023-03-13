@@ -2,162 +2,212 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 66D29C6FD19
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 13 Mar 2023 12:33:22 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 945B3C61DA4
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 13 Mar 2023 15:55:06 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229723AbjCMMdT (ORCPT
+        id S230291AbjCMPzF (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 13 Mar 2023 08:33:19 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58628 "EHLO
+        Mon, 13 Mar 2023 11:55:05 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55966 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229734AbjCMMdR (ORCPT
+        with ESMTP id S229621AbjCMPzE (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 13 Mar 2023 08:33:17 -0400
-Received: from smtp-out2.suse.de (smtp-out2.suse.de [IPv6:2001:67c:2178:6::1d])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A5B091969F;
-        Mon, 13 Mar 2023 05:33:14 -0700 (PDT)
-Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
-        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
-        (No client certificate requested)
-        by smtp-out2.suse.de (Postfix) with ESMTPS id 78D4C1FE0C;
-        Mon, 13 Mar 2023 12:33:13 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.de; s=susede2_rsa;
-        t=1678710793; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-         mime-version:mime-version:content-type:content-type:
-         content-transfer-encoding:content-transfer-encoding:
-         in-reply-to:in-reply-to:references:references;
-        bh=bc2iGS3vObLzmQ9MIUXqwa39aRJrh3amfgSHRWBj7bQ=;
-        b=HBhJiQauaNSAKXRLDJb4C7AN5y6XV0PAD4EEEx2JLMUMBp+an4mWFkMLojnQVNSmxJgMJh
-        aGaV6v48u3t1lZdzBwVD68G9CsNELpiOe+bULzVR4nuT0u7cs+IrPAe+hevLfRl81pOIgC
-        VYJqVLTp2Ef34aSqeSAvnznhZBuaGf4=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.de;
-        s=susede2_ed25519; t=1678710793;
-        h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-         mime-version:mime-version:content-type:content-type:
-         content-transfer-encoding:content-transfer-encoding:
-         in-reply-to:in-reply-to:references:references;
-        bh=bc2iGS3vObLzmQ9MIUXqwa39aRJrh3amfgSHRWBj7bQ=;
-        b=eBB7qNSiDz9RNbMBX1zyQcYZ0ITMLS1WEE/w/sPjr+8d47mKjBdyHcIu2ZIrv/mqYecZOW
-        Tme07aX8VkAPeiCw==
-Received: from imap2.suse-dmz.suse.de (imap2.suse-dmz.suse.de [192.168.254.74])
-        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-         key-exchange X25519 server-signature ECDSA (P-521) server-digest SHA512)
-        (No client certificate requested)
-        by imap2.suse-dmz.suse.de (Postfix) with ESMTPS id CBB8F13582;
-        Mon, 13 Mar 2023 12:33:12 +0000 (UTC)
-Received: from dovecot-director2.suse.de ([192.168.254.65])
-        by imap2.suse-dmz.suse.de with ESMTPSA
-        id 4LfeLggYD2RnCQAAMHmgww
-        (envelope-from <lhenriques@suse.de>); Mon, 13 Mar 2023 12:33:12 +0000
-Received: from localhost (brahms.olymp [local])
-        by brahms.olymp (OpenSMTPD) with ESMTPA id 0119dc8c;
-        Mon, 13 Mar 2023 12:33:11 +0000 (UTC)
-From:   =?UTF-8?q?Lu=C3=ADs=20Henriques?= <lhenriques@suse.de>
-To:     Eric Biggers <ebiggers@kernel.org>, Xiubo Li <xiubli@redhat.com>,
-        Jeff Layton <jlayton@kernel.org>
-Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>,
-        Ilya Dryomov <idryomov@gmail.com>,
-        linux-fscrypt@vger.kernel.org, ceph-devel@vger.kernel.org,
-        linux-kernel@vger.kernel.org,
-        =?UTF-8?q?Lu=C3=ADs=20Henriques?= <lhenriques@suse.de>
-Subject: [PATCH 1/2] fscrypt: new helper function - fscrypt_prepare_atomic_open()
-Date:   Mon, 13 Mar 2023 12:33:09 +0000
-Message-Id: <20230313123310.13040-2-lhenriques@suse.de>
-In-Reply-To: <20230313123310.13040-1-lhenriques@suse.de>
-References: <20230313123310.13040-1-lhenriques@suse.de>
+        Mon, 13 Mar 2023 11:55:04 -0400
+Received: from mail-il1-f206.google.com (mail-il1-f206.google.com [209.85.166.206])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 6731926847
+        for <linux-fscrypt@vger.kernel.org>; Mon, 13 Mar 2023 08:54:23 -0700 (PDT)
+Received: by mail-il1-f206.google.com with SMTP id p8-20020a92d288000000b0032314990768so847300ilp.22
+        for <linux-fscrypt@vger.kernel.org>; Mon, 13 Mar 2023 08:54:23 -0700 (PDT)
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20210112; t=1678722835;
+        h=to:from:subject:message-id:date:mime-version:x-gm-message-state
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=6vaShXChXf9BcORoi0tFSiNxi7xLZqWmExJATcqzfoI=;
+        b=4WpqFrV2myuS7r+3Ts9BiSLIsCprvgLfijBpDf+4IX+lm0nR3KULIvl3sVeX5b74+7
+         hWv8NvRzq7ZYUJhiqVzAtwfDsBiCDpf/oTGWmKl0H0O8sqGUNnydofwlqpVWE0mSsNE9
+         s2UEROTPi3PsbZ5XMyKFY0KiCWcydqB5Op83ikPQr6WoX6c9s0rOnuWpm3uZNgYGoa56
+         rdt86RQL7vM/XBzb/V8jtekTL4ireIocUW1YUghx9TjMmc0a5mioDmP2o4yDvFz21L16
+         VF1zSVXglxa7Hm6oprqF0P9i2xs7ja4BGlX8fwDqx77g22ndGFdDbBA8SAVRPoFGoSjh
+         QnKA==
+X-Gm-Message-State: AO0yUKUORCPeZNGVxf2D2SifTMgV+hZZV4NWDxiz0r5iPwDg+KvhzVbY
+        pff64H87IMQSPXDvNIWsmhFyVbK6A6rNH9BgZJk8qGVRwBad
+X-Google-Smtp-Source: AK7set8fg58FsPagCxOjtwijK6qtBHk6VlgfsLkPWW8QDoP8Vno1VuivzIIWVzxQW+qxVh2CL7lBB6MakUwjRteKO03lyV+leLgg
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+X-Received: by 2002:a92:da8a:0:b0:313:cc98:7eee with SMTP id
+ u10-20020a92da8a000000b00313cc987eeemr110294iln.1.1678722835176; Mon, 13 Mar
+ 2023 08:53:55 -0700 (PDT)
+Date:   Mon, 13 Mar 2023 08:53:55 -0700
+X-Google-Appengine-App-Id: s~syzkaller
+X-Google-Appengine-App-Id-Alias: syzkaller
+Message-ID: <00000000000044651705f6ca1e30@google.com>
+Subject: [syzbot] [fscrypt?] WARNING in fscrypt_destroy_keyring
+From:   syzbot <syzbot+93e495f6a4f748827c88@syzkaller.appspotmail.com>
+To:     ebiggers@kernel.org, jaegeuk@kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+        linux-kernel@vger.kernel.org, syzkaller-bugs@googlegroups.com,
+        tytso@mit.edu
+Content-Type: text/plain; charset="UTF-8"
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This patch introduces a new helper function which prepares an atomic_open.
-Because atomic open can act as a lookup if handed a dentry that is negative,
-we need to set DCACHE_NOKEY_NAME if the key for the parent isn't available.
+Hello,
 
-The reason for getting the encryption info before checking if the directory
-has the encryption key is because we may have the key available but the
-encryption info isn't yet set (maybe due to a drop_caches).  The regular
-open path will use fscrypt_file_open for that but in the atomic open a
-different approach is required.
+syzbot found the following issue on:
 
-Signed-off-by: Luís Henriques <lhenriques@suse.de>
+HEAD commit:    fe15c26ee26e Linux 6.3-rc1
+git tree:       git://git.kernel.org/pub/scm/linux/kernel/git/arm64/linux.git for-kernelci
+console output: https://syzkaller.appspot.com/x/log.txt?x=14e2d88ac80000
+kernel config:  https://syzkaller.appspot.com/x/.config?x=7573cbcd881a88c9
+dashboard link: https://syzkaller.appspot.com/bug?extid=93e495f6a4f748827c88
+compiler:       Debian clang version 15.0.7, GNU ld (GNU Binutils for Debian) 2.35.2
+userspace arch: arm64
+syz repro:      https://syzkaller.appspot.com/x/repro.syz?x=16171188c80000
+C reproducer:   https://syzkaller.appspot.com/x/repro.c?x=15ac08dac80000
+
+Downloadable assets:
+disk image: https://storage.googleapis.com/syzbot-assets/89d41abd07bd/disk-fe15c26e.raw.xz
+vmlinux: https://storage.googleapis.com/syzbot-assets/fa75f5030ade/vmlinux-fe15c26e.xz
+kernel image: https://storage.googleapis.com/syzbot-assets/590d0f5903ee/Image-fe15c26e.gz.xz
+mounted in repro: https://storage.googleapis.com/syzbot-assets/bf3b409baf10/mount_0.gz
+
+IMPORTANT: if you fix the issue, please add the following tag to the commit:
+Reported-by: syzbot+93e495f6a4f748827c88@syzkaller.appspotmail.com
+
+EXT4-fs (loop0): mounted filesystem 76b65be2-f6da-4727-8c75-0525a5b65a09 without journal. Quota mode: writeback.
+fscrypt: AES-256-CTS-CBC using implementation "cts-cbc-aes-ce"
+------------[ cut here ]------------
+WARNING: CPU: 1 PID: 5945 at fs/crypto/keyring.c:237 fscrypt_destroy_keyring+0x164/0x240 fs/crypto/keyring.c:237
+Modules linked in:
+CPU: 1 PID: 5945 Comm: syz-executor265 Not tainted 6.3.0-rc1-syzkaller-gfe15c26ee26e #0
+Hardware name: Google Google Compute Engine/Google Compute Engine, BIOS Google 03/02/2023
+pstate: 80400005 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+pc : fscrypt_destroy_keyring+0x164/0x240 fs/crypto/keyring.c:237
+lr : fscrypt_destroy_keyring+0x164/0x240 fs/crypto/keyring.c:237
+sp : ffff80001e4c7960
+x29: ffff80001e4c7960 x28: 1fffe0001aaec0fa x27: 0000000000000000
+x26: 0000000000000073 x25: 1fffe00019138025 x24: dfff800000000000
+x23: 0000000000000002 x22: ffff0000cbffa000 x21: ffff0000c738e000
+x20: ffff0000c89c0000 x19: ffff0000c89c0128 x18: ffff80001e4c7320
+x17: ffff800015cdd000 x16: ffff800008313a3c x15: ffff8000081cd8e0
+x14: 1ffff00002b9c0b2 x13: dfff800000000000 x12: 0000000000000001
+x11: ff80800008bcd61c x10: 0000000000000000 x9 : ffff800008bcd61c
+x8 : ffff0000cc0b3680 x7 : ffff800008b76ab4 x6 : 0000000000000000
+x5 : 0000000000000000 x4 : 0000000000000000 x3 : ffff800008bcd558
+x2 : 0000000000000000 x1 : 0000000000000002 x0 : 0000000000000001
+Call trace:
+ fscrypt_destroy_keyring+0x164/0x240 fs/crypto/keyring.c:237
+ generic_shutdown_super+0xac/0x328 fs/super.c:482
+ kill_block_super+0x70/0xdc fs/super.c:1398
+ deactivate_locked_super+0xac/0x124 fs/super.c:331
+ deactivate_super+0xf0/0x110 fs/super.c:362
+ cleanup_mnt+0x34c/0x3dc fs/namespace.c:1177
+ __cleanup_mnt+0x20/0x30 fs/namespace.c:1184
+ task_work_run+0x240/0x2f0 kernel/task_work.c:179
+ exit_task_work include/linux/task_work.h:38 [inline]
+ do_exit+0x4fc/0x1a30 kernel/exit.c:869
+ do_group_exit+0x194/0x22c kernel/exit.c:1019
+ __do_sys_exit_group kernel/exit.c:1030 [inline]
+ __se_sys_exit_group kernel/exit.c:1028 [inline]
+ __wake_up_parent+0x0/0x60 kernel/exit.c:1028
+ __invoke_syscall arch/arm64/kernel/syscall.c:38 [inline]
+ invoke_syscall+0x98/0x2c0 arch/arm64/kernel/syscall.c:52
+ el0_svc_common+0x138/0x258 arch/arm64/kernel/syscall.c:142
+ do_el0_svc+0x64/0x198 arch/arm64/kernel/syscall.c:193
+ el0_svc+0x58/0x168 arch/arm64/kernel/entry-common.c:637
+ el0t_64_sync_handler+0x84/0xf0 arch/arm64/kernel/entry-common.c:655
+ el0t_64_sync+0x190/0x194 arch/arm64/kernel/entry.S:591
+irq event stamp: 16114
+hardirqs last  enabled at (16113): [<ffff8000083af01c>] __call_rcu_common kernel/rcu/tree.c:2658 [inline]
+hardirqs last  enabled at (16113): [<ffff8000083af01c>] call_rcu+0x65c/0xb38 kernel/rcu/tree.c:2736
+hardirqs last disabled at (16114): [<ffff80001245e098>] el1_dbg+0x24/0x80 arch/arm64/kernel/entry-common.c:405
+softirqs last  enabled at (15276): [<ffff800008020ec0>] softirq_handle_end kernel/softirq.c:414 [inline]
+softirqs last  enabled at (15276): [<ffff800008020ec0>] __do_softirq+0xd64/0xfbc kernel/softirq.c:600
+softirqs last disabled at (15265): [<ffff80000802b524>] ____do_softirq+0x14/0x20 arch/arm64/kernel/irq.c:80
+---[ end trace 0000000000000000 ]---
+Unable to handle kernel paging request at virtual address dfff800000000003
+KASAN: null-ptr-deref in range [0x0000000000000018-0x000000000000001f]
+Mem abort info:
+  ESR = 0x0000000096000006
+  EC = 0x25: DABT (current EL), IL = 32 bits
+  SET = 0, FnV = 0
+  EA = 0, S1PTW = 0
+  FSC = 0x06: level 2 translation fault
+Data abort info:
+  ISV = 0, ISS = 0x00000006
+  CM = 0, WnR = 0
+[dfff800000000003] address between user and kernel address ranges
+Internal error: Oops: 0000000096000006 [#1] PREEMPT SMP
+Modules linked in:
+CPU: 0 PID: 5945 Comm: syz-executor265 Tainted: G        W          6.3.0-rc1-syzkaller-gfe15c26ee26e #0
+Hardware name: Google Google Compute Engine/Google Compute Engine, BIOS Google 03/02/2023
+pstate: 804000c5 (Nzcv daIF +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+pc : __lock_acquire+0x104/0x764c kernel/locking/lockdep.c:4926
+lr : lock_acquire+0x2f0/0x8c8 kernel/locking/lockdep.c:5669
+sp : ffff80001e4c7040
+x29: ffff80001e4c72e0 x28: 1ffff00002b9c0b1 x27: ffff800008bcd13c
+x26: 0000000000000001 x25: ffff700003c98e2c x24: 0000000000000000
+x23: 0000000000000000 x22: 0000000000000000 x21: 0000000000000000
+x20: 0000000000000000 x19: 0000000000000018 x18: ffff80001e4c7398
+x17: ffff800015cdd000 x16: ffff80001246263c x15: ffff8000081cd8e0
+x14: 1ffff00002b9c0b2 x13: ffff80001e4c7160 x12: dfff800000000000
+x11: ffff800008318d80 x10: ffff800015ce058c x9 : 00000000000000f3
+x8 : 0000000000000003 x7 : ffff800008bcd13c x6 : 0000000000000000
+x5 : 0000000000000000 x4 : 0000000000000001 x3 : 0000000000000000
+x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000018
+Call trace:
+ __lock_acquire+0x104/0x764c kernel/locking/lockdep.c:4926
+ lock_acquire+0x2f0/0x8c8 kernel/locking/lockdep.c:5669
+ __raw_spin_lock include/linux/spinlock_api_smp.h:133 [inline]
+ _raw_spin_lock+0x54/0x6c kernel/locking/spinlock.c:154
+ spin_lock include/linux/spinlock.h:350 [inline]
+ fscrypt_put_master_key_activeref+0x8c/0x408 fs/crypto/keyring.c:95
+ put_crypt_info+0x218/0x2d0 fs/crypto/keysetup.c:546
+ fscrypt_put_encryption_info+0x44/0x6c fs/crypto/keysetup.c:743
+ ext4_clear_inode+0x154/0x1a0 fs/ext4/super.c:1445
+ ext4_evict_inode+0x6ec/0x148c fs/ext4/inode.c:346
+ evict+0x260/0x68c fs/inode.c:665
+ iput_final fs/inode.c:1748 [inline]
+ iput+0x988/0xa6c fs/inode.c:1774
+ hook_sb_delete+0x688/0xa10 security/landlock/fs.c:1025
+ security_sb_delete+0x50/0x94 security/security.c:950
+ generic_shutdown_super+0xb4/0x328 fs/super.c:483
+ kill_block_super+0x70/0xdc fs/super.c:1398
+ deactivate_locked_super+0xac/0x124 fs/super.c:331
+ deactivate_super+0xf0/0x110 fs/super.c:362
+ cleanup_mnt+0x34c/0x3dc fs/namespace.c:1177
+ __cleanup_mnt+0x20/0x30 fs/namespace.c:1184
+ task_work_run+0x240/0x2f0 kernel/task_work.c:179
+ exit_task_work include/linux/task_work.h:38 [inline]
+ do_exit+0x4fc/0x1a30 kernel/exit.c:869
+ do_group_exit+0x194/0x22c kernel/exit.c:1019
+ __do_sys_exit_group kernel/exit.c:1030 [inline]
+ __se_sys_exit_group kernel/exit.c:1028 [inline]
+ __wake_up_parent+0x0/0x60 kernel/exit.c:1028
+ __invoke_syscall arch/arm64/kernel/syscall.c:38 [inline]
+ invoke_syscall+0x98/0x2c0 arch/arm64/kernel/syscall.c:52
+ el0_svc_common+0x138/0x258 arch/arm64/kernel/syscall.c:142
+ do_el0_svc+0x64/0x198 arch/arm64/kernel/syscall.c:193
+ el0_svc+0x58/0x168 arch/arm64/kernel/entry-common.c:637
+ el0t_64_sync_handler+0x84/0xf0 arch/arm64/kernel/entry-common.c:655
+ el0t_64_sync+0x190/0x194 arch/arm64/kernel/entry.S:591
+Code: d006d368 b9482108 34000208 d343fe68 (386c6908) 
+---[ end trace 0000000000000000 ]---
+----------------
+Code disassembly (best guess):
+   0:	d006d368 	adrp	x8, 0xda6e000
+   4:	b9482108 	ldr	w8, [x8, #2080]
+   8:	34000208 	cbz	w8, 0x48
+   c:	d343fe68 	lsr	x8, x19, #3
+* 10:	386c6908 	ldrb	w8, [x8, x12] <-- trapping instruction
+
+
 ---
- fs/crypto/hooks.c       | 35 +++++++++++++++++++++++++++++++++++
- include/linux/fscrypt.h |  7 +++++++
- 2 files changed, 42 insertions(+)
+This report is generated by a bot. It may contain errors.
+See https://goo.gl/tpsmEJ for more information about syzbot.
+syzbot engineers can be reached at syzkaller@googlegroups.com.
 
-diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
-index 7b8c5a1104b5..8be1e35984f1 100644
---- a/fs/crypto/hooks.c
-+++ b/fs/crypto/hooks.c
-@@ -117,6 +117,41 @@ int __fscrypt_prepare_readdir(struct inode *dir)
- }
- EXPORT_SYMBOL_GPL(__fscrypt_prepare_readdir);
- 
-+/**
-+ * fscrypt_prepare_atomic_open() - prepare an atomic open on an encrypted directory
-+ * @dir: inode of parent directory
-+ * @dentry: dentry being open
-+ *
-+ * Because atomic open can act as a lookup if handed a dentry that is negative,
-+ * we need to set DCACHE_NOKEY_NAME if the key for the parent isn't available.
-+ *
-+ * The reason for getting the encryption info before checking if the directory
-+ * has the encryption key is because the key may be available but the encryption
-+ * info isn't yet set (maybe due to a drop_caches).  The regular open path will
-+ * use fscrypt_file_open for that, but in the atomic open a different approach
-+ * is required.
-+ *
-+ * Return: 0 on success, or an error code if fscrypt_get_encryption_info()
-+ * fails.
-+ */
-+int fscrypt_prepare_atomic_open(struct inode *dir, struct dentry *dentry)
-+{
-+	int err;
-+
-+	if (!IS_ENCRYPTED(dir))
-+		return 0;
-+
-+	err = fscrypt_get_encryption_info(dir, true);
-+	if (!err && !fscrypt_has_encryption_key(dir)) {
-+		spin_lock(&dentry->d_lock);
-+		dentry->d_flags |= DCACHE_NOKEY_NAME;
-+		spin_unlock(&dentry->d_lock);
-+	}
-+
-+	return err;
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_prepare_atomic_open);
-+
- int __fscrypt_prepare_setattr(struct dentry *dentry, struct iattr *attr)
- {
- 	if (attr->ia_valid & ATTR_SIZE)
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 4f5f8a651213..c70acb2a737a 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -362,6 +362,7 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
- int __fscrypt_prepare_lookup(struct inode *dir, struct dentry *dentry,
- 			     struct fscrypt_name *fname);
- int __fscrypt_prepare_readdir(struct inode *dir);
-+int fscrypt_prepare_atomic_open(struct inode *dir, struct dentry *dentry);
- int __fscrypt_prepare_setattr(struct dentry *dentry, struct iattr *attr);
- int fscrypt_prepare_setflags(struct inode *inode,
- 			     unsigned int oldflags, unsigned int flags);
-@@ -688,6 +689,12 @@ static inline int __fscrypt_prepare_readdir(struct inode *dir)
- 	return -EOPNOTSUPP;
- }
- 
-+static inline int fscrypt_prepare_atomic_open(struct inode *dir,
-+					      struct dentry *dentry)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
- static inline int __fscrypt_prepare_setattr(struct dentry *dentry,
- 					    struct iattr *attr)
- {
+syzbot will keep track of this issue. See:
+https://goo.gl/tpsmEJ#status for how to communicate with syzbot.
+syzbot can test patches for this issue, for details see:
+https://goo.gl/tpsmEJ#testing-patches
