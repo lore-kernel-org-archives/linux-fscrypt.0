@@ -2,89 +2,79 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id EC26BC61DA4
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 15 Mar 2023 18:42:08 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id DADFCC6FD1D
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 15 Mar 2023 18:42:16 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230163AbjCOSmI (ORCPT
+        id S230421AbjCOSmQ (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 15 Mar 2023 14:42:08 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35268 "EHLO
+        Wed, 15 Mar 2023 14:42:16 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:35512 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S230106AbjCOSmH (ORCPT
+        with ESMTP id S231290AbjCOSmP (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 15 Mar 2023 14:42:07 -0400
-Received: from ams.source.kernel.org (ams.source.kernel.org [IPv6:2604:1380:4601:e00::1])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5F69F2CFD0;
-        Wed, 15 Mar 2023 11:41:43 -0700 (PDT)
+        Wed, 15 Mar 2023 14:42:15 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5F1F313DDA;
+        Wed, 15 Mar 2023 11:41:47 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
         (No client certificate requested)
-        by ams.source.kernel.org (Postfix) with ESMTPS id 4A34CB81ED4;
+        by dfw.source.kernel.org (Postfix) with ESMTPS id 1A02861E50;
+        Wed, 15 Mar 2023 18:40:34 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 5BFCAC433D2;
         Wed, 15 Mar 2023 18:40:33 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id CE7F3C433EF;
-        Wed, 15 Mar 2023 18:40:31 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1678905632;
-        bh=A9CDt2T2bSgHBYCuFLZU5l1szdQcB7LuRR7PmZw2Nfo=;
-        h=From:To:Cc:Subject:Date:From;
-        b=DgBPNufh+Yo4pDS7QWDgzAlec0QUL/BlA05u9mUfLG/SslHoGEACkueoQIsyKT5B+
-         mJ0f2hUmVaR9rYSKpj0P5YccXB+1H7ZW6Vow9g4VNjjsFkFNrOsifs0KjZzjfFu1iC
-         RDaHatSsHWO6pvpzd3CBM24fKCh4oHG7LHJp/W/dd8kQj7ww5vtvirV31x/BRKYAWe
-         0xDyrigprgkOBXCE7KH5mN9wg/nNsBh1fgvOr0s0l+hO8BspDKeVryMupMNpxQUKsd
-         qzdNM3al8jQalz8v+DGjj9phB/MPDT5/bQA7mMXTIFJRLCr/ykmwIUPh6/z9NMR6oJ
-         RCuTr2xkAVnbw==
+        s=k20201202; t=1678905633;
+        bh=JxQjRBgYS6KrYKBuMUapr6XvhJ+sb1I8bM5e+bk8euE=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=ppeym9PMY1rGkTvyOtpcNq7n09HVCZWOSk/S1LQuOY9TSPs3KU5TJXxoiPGsDhdYx
+         gB+llmbKXowE09KA+dfykisJMMLxeTuDiZuxdB76QKzIuNw1zN1uB0XEM2wyxuDrKw
+         gYcyM1Gj1QdnkOS+4+j9Wm7zrsQe5DHBrm0gej1NUL3jSB/hfGpjuuBk4oXMIFCiyX
+         +2EScC8Cu3EvHZ4L6MeRY9JpoRBRz7YeR/BnKzqJ/VFaZEg7U0VGLbpDVsQ1j91AbJ
+         Wbk/Y27x/DpeZDsFI8ToBT8F7g9fznwTNfkxfdKZnVKgbWjZtxxwzceANXG7KJAq7I
+         u8Eo4z0sf5zjQ==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-block@vger.kernel.org, Jens Axboe <axboe@kernel.dk>
 Cc:     linux-fscrypt@vger.kernel.org,
         Nathan Huckleberry <nhuck@google.com>
-Subject: [PATCH v3 0/6] Fix blk-crypto keyslot race condition
-Date:   Wed, 15 Mar 2023 11:39:01 -0700
-Message-Id: <20230315183907.53675-1-ebiggers@kernel.org>
+Subject: [PATCH v3 5/6] blk-mq: return actual keyslot error in blk_insert_cloned_request()
+Date:   Wed, 15 Mar 2023 11:39:06 -0700
+Message-Id: <20230315183907.53675-6-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.39.2
+In-Reply-To: <20230315183907.53675-1-ebiggers@kernel.org>
+References: <20230315183907.53675-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This series fixes a race condition in blk-crypto keyslot management and
-makes some related cleanups.  It replaces
-"[PATCH] blk-crypto: make blk_crypto_evict_key() always try to evict"
-(https://lore.kernel.org/r/20230226203816.207449-1-ebiggers@kernel.org),
-which was a simpler fix but didn't fix the keyslot reference counting to
-work as expected.
+From: Eric Biggers <ebiggers@google.com>
 
-Changed in v3:
-  - Add a patch that makes blk_crypto_evict_key() return void
-  - Add a patch that makes blk_insert_cloned_request() pass on the
-    actual error code from blk_crypto_rq_put_keyslot()
-  - Use gotos in __blk_crypto_evict_key()
+To avoid hiding information, pass on the error code from
+blk_crypto_rq_get_keyslot() instead of always using BLK_STS_IOERR.
 
-Changed in v2:
-  - Call blk_crypto_rq_put_keyslot() when requests are merged
-  - Add and use blk_crypto_rq_has_keyslot()
-  - Add patch "blk-crypto: drop the NULL check from blk_crypto_put_keyslot()"
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ block/blk-mq.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
 
-Eric Biggers (6):
-  blk-mq: release crypto keyslot before reporting I/O complete
-  blk-crypto: make blk_crypto_evict_key() return void
-  blk-crypto: make blk_crypto_evict_key() more robust
-  blk-crypto: remove blk_crypto_insert_cloned_request()
-  blk-mq: return actual keyslot error in blk_insert_cloned_request()
-  blk-crypto: drop the NULL check from blk_crypto_put_keyslot()
-
- Documentation/block/inline-encryption.rst |  3 +-
- block/blk-crypto-internal.h               | 38 ++++++-------
- block/blk-crypto-profile.c                | 60 +++++++++------------
- block/blk-crypto.c                        | 66 +++++++++++++----------
- block/blk-merge.c                         |  2 +
- block/blk-mq.c                            | 20 +++++--
- drivers/md/dm-table.c                     | 19 ++-----
- include/linux/blk-crypto.h                |  4 +-
- 8 files changed, 110 insertions(+), 102 deletions(-)
-
-
-base-commit: eeac8ede17557680855031c6f305ece2378af326
+diff --git a/block/blk-mq.c b/block/blk-mq.c
+index 5e819de2f5e70..a875b1cdff9b5 100644
+--- a/block/blk-mq.c
++++ b/block/blk-mq.c
+@@ -3049,8 +3049,9 @@ blk_status_t blk_insert_cloned_request(struct request *rq)
+ 	if (q->disk && should_fail_request(q->disk->part0, blk_rq_bytes(rq)))
+ 		return BLK_STS_IOERR;
+ 
+-	if (blk_crypto_rq_get_keyslot(rq))
+-		return BLK_STS_IOERR;
++	ret = blk_crypto_rq_get_keyslot(rq);
++	if (ret != BLK_STS_OK)
++		return ret;
+ 
+ 	blk_account_io_start(rq);
+ 
 -- 
 2.39.2
 
