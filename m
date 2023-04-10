@@ -2,41 +2,41 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 346FAC77B61
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 10 Apr 2023 10:26:59 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 2708DC77B71
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 10 Apr 2023 10:27:00 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229485AbjDJK06 (ORCPT
+        id S229728AbjDJK07 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 10 Apr 2023 06:26:58 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34474 "EHLO
+        Mon, 10 Apr 2023 06:26:59 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:34480 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229717AbjDJK0y (ORCPT
+        with ESMTP id S229722AbjDJK0y (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 10 Apr 2023 06:26:54 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E782D198
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 03B761AB
         for <linux-fscrypt@vger.kernel.org>; Mon, 10 Apr 2023 03:26:52 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 8BCB28064B;
-        Mon, 10 Apr 2023 06:16:57 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 87BF780581;
+        Mon, 10 Apr 2023 06:16:44 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1681121817; bh=fPISzagGl1bOo9aNSqDTkAyacC799poKs6aM3P+PRaY=;
+        t=1681121804; bh=5nRHX81h0KqwjjUiKDGpJl8ybfFXjI7s7YYv/VC9bSY=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=qXVJAVoq/RHIC/LHsqEr6Qs02LXB6ZGTTzEO9S8Wo787xfr9olMAJrcjqkTfoe2WP
-         hmXGUjUdMIAOdagGbWR824walIvd93FMVQTPYQ4liyJhXBI1KtqRwFbwXdwVatPuBa
-         6zQxq4XOIKkkPaDGUyYkaaf/5lFZbWrICSED+uWVzSIBwql1IDs9ADe0RVXKm3bjCr
-         L6lTdAcuYaju2nFY+TwxtDqOpKNG101KsIwdLJyFBbR5cbCcxFV2mt8TJB397Ik1MH
-         GY5Ib0QRy+b7wgSoban1Juk+ytNJgFqL8kHtAI7GssTYI8XBvrhGcik2uaqMSkxSKx
-         waxKvYDMU3d3g==
+        b=AJVcg1PcFZOvTPds2tvJy3JV7Bp97cVXTFdwlGwIG5ZkFQm8tioyMMomNPwNjbNIN
+         woMddE90gvKQQ/XRk7zAq4G403EcJntsbQw96VA1Flji9C4dfLc2YQcrqiz6wLq5rL
+         62+eDn4/lm5AlAGHRFP1rNXOdnog9CGKlVKluUiyyF4+BgBAp/yzBeQCZCQKNMGfZu
+         5h9uo4FaUzJzP0bM+BwynXt6kG1pBw2RU3fO4Y0jbYqEX62RJ4rkn/nhKU62VJ2xUH
+         0C77WbsV8lQNPswzqpe0lfhjnk/IzxRGdOdadJHTXI80UvP3yRx+VSO/ZAbGVwhsp8
+         qyJgA2UiuB+4A==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     ebiggers@kernel.org, tytso@mit.edu, jaegeuk@kernel.org,
         linux-fscrypt@vger.kernel.org, kernel-team@meta.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v1 09/10] fscrypt: explicitly track prepared parts of key
-Date:   Mon, 10 Apr 2023 06:16:30 -0400
-Message-Id: <7d901a1dfebb32fe84ea63938a2503f145480b02.1681116740.git.sweettea-kernel@dorminy.me>
+Subject: [PATCH v1 02/10] fscrypt: split and rename setup_per_mode_enc_key()
+Date:   Mon, 10 Apr 2023 06:16:23 -0400
+Message-Id: <ce606f56fd22df9c6a69219b82b1dcd074c08ba9.1681116739.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1681116739.git.sweettea-kernel@dorminy.me>
 References: <cover.1681116739.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -45,174 +45,135 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-So far, it has sufficed to allocate and prepare the block key or the TFM
-completely before ever setting the relevant field in the prepared key.
-This is necessary for mode keys -- because multiple inodes could be
-trying to set up the same per-mode prepared key at the same time on
-different threads, we currently must not set the prepared key's tfm or
-block key pointer until that key is completely set up. Otherwise,
-another inode could see the key to be present and attempt to use it
-before it is fully set up.
+At present, setup_per_mode_enc_key() tries to find, within an array of
+mode keys in the master key, an already prepared key, and if it doesn't
+find a pre-prepared key, sets up a new one. This caching is not super
+clear, at least to me, and splitting this function makes it clearer.
 
-But when using pooled prepared keys, we'll have pre-allocated fields,
-and if we separate allocating the fields of a prepared key from
-preparing the fields, that inherently sets the fields before they're
-ready to use. So, either pooled prepared keys must use different
-allocation and setup functions, or we can split allocation and
-preparation for all prepared keys and use some other mechanism to signal
-that the key is fully prepared.
-
-In order to avoid having similar yet different functions, this function
-adds a new field to the prepared key to explicitly track which parts of
-it are prepared, setting it explicitly. The same acquire/release
-semantics are used to check it in the case of shared mode keys; the cost
-lies in the extra byte per prepared key recording which members are
-fully prepared.
+So, the new find_mode_prepared_key() decides if a pre-prepared key
+already exists. If not, the renamed setup_new_mode_prepared_key()
+deals with taking the mode setup lock and creating the new prepared key
+for the master key.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/crypto/fscrypt_private.h | 26 +++++++++++++++-----------
- fs/crypto/inline_crypt.c    |  8 +-------
- fs/crypto/keysetup.c        | 36 ++++++++++++++++++++++++++----------
- 3 files changed, 42 insertions(+), 28 deletions(-)
+ fs/crypto/keysetup.c | 57 ++++++++++++++++++++++++++++----------------
+ 1 file changed, 36 insertions(+), 21 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index e726a1fb9f7e..7253cdb5e4d8 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -197,6 +197,8 @@ enum fscrypt_prepared_key_type {
-  * @tfm: crypto API transform object
-  * @blk_key: key for blk-crypto
-  * @type: records the ownership type of the prepared key
-+ * @prepared_members: records which of @tfm and @blk_key are prepared. tfm
-+ *		      corresponds to bit 0; blk_key corresponds to bit 1.
-  *
-  * Normally only one of @tfm and @blk_key will be non-NULL, although it is
-  * possible if @type is FSCRYPT_KEY_MASTER_KEY.
-@@ -207,6 +209,7 @@ struct fscrypt_prepared_key {
- 	struct blk_crypto_key *blk_key;
- #endif
- 	enum fscrypt_prepared_key_type type;
-+	u8 prepared_members;
- };
- 
- /*
-@@ -363,24 +366,25 @@ void fscrypt_destroy_inline_crypt_key(struct super_block *sb,
- 				      struct fscrypt_prepared_key *prep_key);
- 
- /*
-- * Check whether the crypto transform or blk-crypto key has been allocated in
-+ * Check whether the crypto transform or blk-crypto key has been prepared in
-  * @prep_key, depending on which encryption implementation the file will use.
-  */
- static inline bool
- fscrypt_is_key_prepared(struct fscrypt_prepared_key *prep_key,
- 			const struct fscrypt_info *ci)
- {
-+	u8 prepared_members = smp_load_acquire(&prep_key->prepared_members);
-+	bool inlinecrypt = fscrypt_using_inline_encryption(ci);
-+
- 	/*
--	 * The two smp_load_acquire()'s here pair with the smp_store_release()'s
--	 * in fscrypt_prepare_inline_crypt_key() and fscrypt_prepare_key().
--	 * I.e., in some cases (namely, if this prep_key is a per-mode
--	 * encryption key) another task can publish blk_key or tfm concurrently,
--	 * executing a RELEASE barrier.  We need to use smp_load_acquire() here
--	 * to safely ACQUIRE the memory the other task published.
-+	 * The smp_load_acquire() here pairs with the smp_store_release()
-+	 * in fscrypt_prepare_key().  I.e., in some cases (namely, if this
-+	 * prep_key is a per-mode encryption key) another task can publish
-+	 * blk_key or tfm concurrently, executing a RELEASE barrier.  We need
-+	 * to use smp_load_acquire() here to safely ACQUIRE the memory the
-+	 * other task published.
- 	 */
--	if (fscrypt_using_inline_encryption(ci))
--		return smp_load_acquire(&prep_key->blk_key) != NULL;
--	return smp_load_acquire(&prep_key->tfm) != NULL;
-+	return prepared_members & (1U << inlinecrypt);
- }
- 
- #else /* CONFIG_FS_ENCRYPTION_INLINE_CRYPT */
-@@ -415,7 +419,7 @@ static inline bool
- fscrypt_is_key_prepared(struct fscrypt_prepared_key *prep_key,
- 			const struct fscrypt_info *ci)
- {
--	return smp_load_acquire(&prep_key->tfm) != NULL;
-+	return smp_load_acquire(&prep_key->prepared_members);
- }
- #endif /* !CONFIG_FS_ENCRYPTION_INLINE_CRYPT */
- 
-diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index 2063f7941ce6..ce952dedba77 100644
---- a/fs/crypto/inline_crypt.c
-+++ b/fs/crypto/inline_crypt.c
-@@ -191,13 +191,7 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
- 		goto fail;
- 	}
- 
--	/*
--	 * Pairs with the smp_load_acquire() in fscrypt_is_key_prepared().
--	 * I.e., here we publish ->blk_key with a RELEASE barrier so that
--	 * concurrent tasks can ACQUIRE it.  Note that this concurrency is only
--	 * possible for per-mode keys, not for per-file keys.
--	 */
--	smp_store_release(&prep_key->blk_key, blk_key);
-+	prep_key->blk_key = blk_key;
- 	return 0;
- 
- fail:
 diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index f338bb544932..6efac89d49ec 100644
+index 5989d53971ca..7a3147382033 100644
 --- a/fs/crypto/keysetup.c
 +++ b/fs/crypto/keysetup.c
-@@ -155,21 +155,37 @@ fscrypt_allocate_skcipher(struct fscrypt_mode *mode, const u8 *raw_key,
- int fscrypt_prepare_key(struct fscrypt_prepared_key *prep_key,
- 			const u8 *raw_key, const struct fscrypt_info *ci)
- {
--	struct crypto_skcipher *tfm;
-+	int err;
-+	bool inlinecrypt = fscrypt_using_inline_encryption(ci);
-+	u8 prepared_member = (1 << inlinecrypt);
- 
--	if (fscrypt_using_inline_encryption(ci))
--		return fscrypt_prepare_inline_crypt_key(prep_key, raw_key, ci);
-+	if (inlinecrypt) {
-+		err = fscrypt_prepare_inline_crypt_key(prep_key, raw_key, ci);
-+	} else {
-+		struct crypto_skcipher *tfm;
-+
-+		tfm = fscrypt_allocate_skcipher(ci->ci_mode, raw_key, ci->ci_inode);
-+		if (IS_ERR(tfm))
-+			return PTR_ERR(tfm);
-+		}
-+
-+		prep_key->tfm = tfm;
-+	}
- 
--	tfm = fscrypt_allocate_skcipher(ci->ci_mode, raw_key, ci->ci_inode);
--	if (IS_ERR(tfm))
--		return PTR_ERR(tfm);
- 	/*
- 	 * Pairs with the smp_load_acquire() in fscrypt_is_key_prepared().
--	 * I.e., here we publish ->tfm with a RELEASE barrier so that
--	 * concurrent tasks can ACQUIRE it.  Note that this concurrency is only
--	 * possible for per-mode keys, not for per-file keys.
-+	 * I.e., here we publish ->prepared_members with a RELEASE barrier so
-+	 * that concurrent tasks can ACQUIRE it.
-+	 *
-+	 * Note that this concurrency is only possible for per-mode keys,
-+	 * not for per-file keys. For per-mode keys, we have smp_load_acquire'd
-+	 * the value of ->prepared_members after taking a lock serializing
-+	 * preparing this key, so the value is stable and no other thread can
-+	 * have modified it since the read. So another thread can't be trying
-+	 * to run this same code in parallel, and we don't need to use cmpxchg.
- 	 */
--	smp_store_release(&prep_key->tfm, tfm);
-+	smp_store_release(&prep_key->prepared_members,
-+			  prep_key->prepared_members | prepared_member);
- 	return 0;
+@@ -184,34 +184,24 @@ int fscrypt_set_per_file_enc_key(struct fscrypt_info *ci, const u8 *raw_key)
+ 	return fscrypt_prepare_key(&ci->ci_enc_key, raw_key, ci);
  }
  
+-static int setup_per_mode_enc_key(struct fscrypt_info *ci,
+-				  struct fscrypt_master_key *mk,
+-				  struct fscrypt_prepared_key *keys,
+-				  u8 hkdf_context, bool include_fs_uuid)
++static int setup_new_mode_prepared_key(struct fscrypt_master_key *mk,
++				       struct fscrypt_prepared_key *prep_key,
++				       const struct fscrypt_info *ci,
++				       u8 hkdf_context, bool include_fs_uuid)
+ {
+ 	const struct inode *inode = ci->ci_inode;
+ 	const struct super_block *sb = inode->i_sb;
+ 	struct fscrypt_mode *mode = ci->ci_mode;
+ 	const u8 mode_num = mode - fscrypt_modes;
+-	struct fscrypt_prepared_key *prep_key;
+ 	u8 mode_key[FSCRYPT_MAX_KEY_SIZE];
+ 	u8 hkdf_info[sizeof(mode_num) + sizeof(sb->s_uuid)];
+ 	unsigned int hkdf_infolen = 0;
+ 	int err;
+ 
+-	if (WARN_ON_ONCE(mode_num > FSCRYPT_MODE_MAX))
+-		return -EINVAL;
+-
+-	prep_key = &keys[mode_num];
+-	if (fscrypt_is_key_prepared(prep_key, ci)) {
+-		ci->ci_enc_key = *prep_key;
+-		return 0;
+-	}
+-
+ 	mutex_lock(&fscrypt_mode_key_setup_mutex);
+ 
+ 	if (fscrypt_is_key_prepared(prep_key, ci))
+-		goto done_unlock;
++		goto out_unlock;
+ 
+ 	BUILD_BUG_ON(sizeof(mode_num) != 1);
+ 	BUILD_BUG_ON(sizeof(sb->s_uuid) != 16);
+@@ -231,14 +221,39 @@ static int setup_per_mode_enc_key(struct fscrypt_info *ci,
+ 	memzero_explicit(mode_key, mode->keysize);
+ 	if (err)
+ 		goto out_unlock;
+-done_unlock:
+-	ci->ci_enc_key = *prep_key;
+-	err = 0;
++
+ out_unlock:
+ 	mutex_unlock(&fscrypt_mode_key_setup_mutex);
+ 	return err;
+ }
+ 
++static int find_mode_prepared_key(struct fscrypt_info *ci,
++				  struct fscrypt_master_key *mk,
++				  struct fscrypt_prepared_key *keys,
++				  u8 hkdf_context, bool include_fs_uuid)
++{
++	struct fscrypt_mode *mode = ci->ci_mode;
++	const u8 mode_num = mode - fscrypt_modes;
++	struct fscrypt_prepared_key *prep_key;
++	int err;
++
++	if (WARN_ON_ONCE(mode_num > FSCRYPT_MODE_MAX))
++		return -EINVAL;
++
++	prep_key = &keys[mode_num];
++	if (fscrypt_is_key_prepared(prep_key, ci)) {
++		ci->ci_enc_key = *prep_key;
++		return 0;
++	}
++	err = setup_new_mode_prepared_key(mk, prep_key, ci, hkdf_context,
++					  include_fs_uuid);
++	if (err)
++		return err;
++
++	ci->ci_enc_key = *prep_key;
++	return 0;
++}
++
+ /*
+  * Derive a SipHash key from the given fscrypt master key and the given
+  * application-specific information string.
+@@ -294,7 +309,7 @@ static int fscrypt_setup_iv_ino_lblk_32_key(struct fscrypt_info *ci,
+ {
+ 	int err;
+ 
+-	err = setup_per_mode_enc_key(ci, mk, mk->mk_iv_ino_lblk_32_keys,
++	err = find_mode_prepared_key(ci, mk, mk->mk_iv_ino_lblk_32_keys,
+ 				     HKDF_CONTEXT_IV_INO_LBLK_32_KEY, true);
+ 	if (err)
+ 		return err;
+@@ -344,7 +359,7 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 		 * encryption key.  This ensures that the master key is
+ 		 * consistently used only for HKDF, avoiding key reuse issues.
+ 		 */
+-		err = setup_per_mode_enc_key(ci, mk, mk->mk_direct_keys,
++		err = find_mode_prepared_key(ci, mk, mk->mk_direct_keys,
+ 					     HKDF_CONTEXT_DIRECT_KEY, false);
+ 	} else if (ci->ci_policy.v2.flags &
+ 		   FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
+@@ -354,7 +369,7 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 		 * the IVs.  This format is optimized for use with inline
+ 		 * encryption hardware compliant with the UFS standard.
+ 		 */
+-		err = setup_per_mode_enc_key(ci, mk, mk->mk_iv_ino_lblk_64_keys,
++		err = find_mode_prepared_key(ci, mk, mk->mk_iv_ino_lblk_64_keys,
+ 					     HKDF_CONTEXT_IV_INO_LBLK_64_KEY,
+ 					     true);
+ 	} else if (ci->ci_policy.v2.flags &
 -- 
 2.40.0
 
