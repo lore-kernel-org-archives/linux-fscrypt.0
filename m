@@ -2,99 +2,149 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 16044C77B75
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 16 May 2023 18:35:07 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id F01DBC77B75
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 22 May 2023 21:39:34 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230225AbjEPSfF (ORCPT
+        id S231860AbjEVVje (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 16 May 2023 14:35:05 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:45660 "EHLO
+        Mon, 22 May 2023 17:39:34 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46840 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231819AbjEPSe5 (ORCPT
+        with ESMTP id S229707AbjEVVjd (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 16 May 2023 14:34:57 -0400
-Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5F3FB61AD
-        for <linux-fscrypt@vger.kernel.org>; Tue, 16 May 2023 11:34:53 -0700 (PDT)
-Received: from authenticated-user (box.fidei.email [71.19.144.250])
-        (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits))
-        (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 9D29C81433;
-        Tue, 16 May 2023 14:34:52 -0400 (EDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1684262093; bh=SpPTLLIM60IzIeO9tOu+LTBG9Pzi7CzCKxUmlesHtf0=;
-        h=Date:Subject:To:Cc:References:From:In-Reply-To:From;
-        b=wKdHIcIfjVzsc0M/JQ0sm3Xrsyjh4a5QfPLD3LfyPZKnAJ0O+KwGYHFUrRRZiI6TO
-         PP6qbXHykRP2McvK8i/QtXG6ybDX6lljyhn3/MRmzEZf4MAcRgnZUevp1shmMA2viy
-         qXU1ZXisWMB000Vxge3VoH0VG5QXHkjvrHO1A71TxIpeGZRmBeqPbctiVJjCcqwKgG
-         s5okVsyOpB7RfEYdh2QEUfq3o3NRtor/DYNevLkrXNBzD9IMSg5m/M04mjQZI143x/
-         qenfnnWDuVUMu5GGMa2y5II7hQnuULNveNjp8vsXyzwig041WeX3BCY89nMWdEFFiU
-         ckiubSgXY/Wdg==
-Message-ID: <80496cfe-161d-fb0d-8230-93818b966b1b@dorminy.me>
-Date:   Tue, 16 May 2023 14:34:51 -0400
-MIME-Version: 1.0
-Subject: Re: [PATCH v1 0/7] fscrypt: add pooled prepared keys facility
-Content-Language: en-US
+        Mon, 22 May 2023 17:39:33 -0400
+Received: from mail-pf1-x436.google.com (mail-pf1-x436.google.com [IPv6:2607:f8b0:4864:20::436])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 8BFA6C6
+        for <linux-fscrypt@vger.kernel.org>; Mon, 22 May 2023 14:39:30 -0700 (PDT)
+Received: by mail-pf1-x436.google.com with SMTP id d2e1a72fcca58-64d1a0d640cso3821595b3a.1
+        for <linux-fscrypt@vger.kernel.org>; Mon, 22 May 2023 14:39:30 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=chromium.org; s=google; t=1684791570; x=1687383570;
+        h=content-transfer-encoding:mime-version:message-id:date:subject:cc
+         :to:from:from:to:cc:subject:date:message-id:reply-to;
+        bh=yYwGioKHAJzzXpZNwhrgt0fRkyN2XRD/FBakCK3HKOU=;
+        b=Q/22MWbGb4LJqU4oSYD5bGLZUhkksBa8VfQiVKUE2LGw0hyXubaLn9Y/Pdl4qcu1Aq
+         flztw3sWhfSnCqIMTr7eJNRRxwjAiXYBXb8l0ib+XijXpYkN7UQ2e7ONMhEfFjUsQvF9
+         zYB+8w4BCBY2hNioWCZf1Gfu45jCcBbXUNlUY=
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20221208; t=1684791570; x=1687383570;
+        h=content-transfer-encoding:mime-version:message-id:date:subject:cc
+         :to:from:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=yYwGioKHAJzzXpZNwhrgt0fRkyN2XRD/FBakCK3HKOU=;
+        b=Wi3wmVTCANYIsVLxI1cOTXzYweYWZ32lOfBpN6b3LBnOgNjyf6GXGsi2Aigl9D5drd
+         kc5yxixn/WVVWtYHSvTRzDpVYsYrCo+p51Xkoohu3x/akQhuJxIfRIVLCdPrQbRHPyq0
+         +Bmd/deLi0iSM7vyfd44zhrWiHdincJ8sCEYKqO2NJPpFmyvBn/9R+WVT/hhTIY9eKzR
+         lUYHzSHcnKqfysxivIrBU4hnUlmcDDnKwQvm3c19QvuUKfdcHr4Cxa/DfjRE7fM318bT
+         a4nJ5IqtMxQrwWT2cF/68e77CzYcKta+CLF1MktAOk5m3rVOcYuiZGOHjBwZeeHQC9LE
+         NiCg==
+X-Gm-Message-State: AC+VfDxuk9t/mZsO7az7ly9RWSzc4dbBBXP2YRzCUZfWl+0jWSHNfwT5
+        IxeM/Gi/1ibjeRyXSJWAAEYsPA==
+X-Google-Smtp-Source: ACHHUZ4tELJVgwSsxaTjmW47Bpn3ZRSsp7oLQq+wh9pdRRCLxA4adydSsg0EjneIuLPo0/xXkmXAhQ==
+X-Received: by 2002:a05:6a20:394c:b0:100:15c4:23af with SMTP id r12-20020a056a20394c00b0010015c423afmr11925142pzg.60.1684791570055;
+        Mon, 22 May 2023 14:39:30 -0700 (PDT)
+Received: from www.outflux.net (198-0-35-241-static.hfc.comcastbusiness.net. [198.0.35.241])
+        by smtp.gmail.com with ESMTPSA id l19-20020a635713000000b00530621e5ee4sm4839164pgb.9.2023.05.22.14.39.29
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 22 May 2023 14:39:29 -0700 (PDT)
+From:   Kees Cook <keescook@chromium.org>
 To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     "Theodore Y. Ts'o" <tytso@mit.edu>,
+Cc:     Kees Cook <keescook@chromium.org>,
+        "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>,
-        linux-fscrypt@vger.kernel.org, kernel-team@meta.com
-References: <cover.1681871298.git.sweettea-kernel@dorminy.me>
- <20230502034736.GA1131@sol.localdomain>
- <e7ee1491-e67c-6461-8825-6f39bf723c86@dorminy.me>
- <ZFWFzUE6r30yVPB+@gmail.com>
- <6f860e67-c998-0066-5f04-bc394164c5ba@dorminy.me>
- <20230515064047.GC15871@sol.localdomain>
-From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-In-Reply-To: <20230515064047.GC15871@sol.localdomain>
-Content-Type: text/plain; charset=UTF-8; format=flowed
-Content-Transfer-Encoding: 7bit
+        "Gustavo A . R . Silva" <gustavoars@kernel.org>,
+        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
+        linux-hardening@vger.kernel.org
+Subject: [PATCH] fscrypt: Replace 1-element array with flexible array
+Date:   Mon, 22 May 2023 14:39:28 -0700
+Message-Id: <20230522213924.never.119-kees@kernel.org>
+X-Mailer: git-send-email 2.34.1
+MIME-Version: 1.0
+X-Developer-Signature: v=1; a=openpgp-sha256; l=2912; h=from:subject:message-id; bh=Azb8w1rjB2zyvDvJ+lSvv6YeF+QInB+mT0KQipjdFM0=; b=owEBbQKS/ZANAwAKAYly9N/cbcAmAcsmYgBka+EPHAALilDffN1PW5lkx5fDdiqwuf/mqnCY5D5f 78uDTNKJAjMEAAEKAB0WIQSlw/aPIp3WD3I+bhOJcvTf3G3AJgUCZGvhDwAKCRCJcvTf3G3AJpBTEA CH/KLnWo3rWXcLH4l1ngTeGWFakuc0FBlaAc2kTkmzyNqbxgOsNxCWX/KtSatEIflpNsffvr3z+tlh rQsCg95Ka1NbY3UGKHk74Aith96RuR5HvQ8WpcDc/ICyNRuI6KHw3z7QO4ap7lnla1/ntHE58BwEJM iopopn2Jn8MroUBQhE3+eKeToDdJVJ2nYCfq0Mp/qUcuLdemVi3q58UjcFQMy58M+X0pWkLsLPVO5i ++4o+Vtyx5UfvMo8E+Q3G4ecoTYvKtgZFN4bcf8KPETs+4bR4y2xALvbWoQq+b+wU2T1JnbCNgIt5T xLLDGOrAg54DlJJG5ewCspp6u6OL0b/NLsxwN7GqJxAMuGt0gnj22YpZgt66teZohQTDheU2nNQ/Io rkF+KIE3E1GurJkkANbkBvO1hzbRiOyO/M5whlcp1aoxlNGQLmYS7QnX/xHdnAa4cYmMUUZkfZCpEb +DTQS7IINv8Jd/R2eXY+OQxD8Su8YkumjE8ntZ7eyvM7j2Ercs0ocqnk57JlhgJHD/Bj1rDUkXd0nd HHtoncl8G6j2ocDo2B7aovg522H+j78QpKXmDIU7tOnkxErXT5bWq2+JmkEMd0OKUI5Ep0aLP0/lTo iXdbaA0iKs2qVCPTGCIQuMhzlJbAnTvtEpGQRIk3XInGQnizAGUThZLZa3mg==
+X-Developer-Key: i=keescook@chromium.org; a=openpgp; fpr=A5C3F68F229DD60F723E6E138972F4DFDC6DC026
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+1-element arrays are deprecated, and are being replaced with C99
+flexible arrays[1]. In the future, we can add annotations for the
+flexible array member "encrypted_path" to have a size determined
+by the "len" member.
 
-> To clarify my suggestion, blk-crypto could be used for file contents
-> en/decryption at the same time that filesystem-layer crypto is used for verity
-> metadata en/decryption.  blk-crypto and filesystem-layer crypto don't need to be
-> mutually exclusive, even on the same file.
+As sizes were being calculated with the extra byte intentionally,
+propagate the difference so there is no change in binary output.
 
-That's a great point. I'm dropping these two patchsets and updating the 
-original one at the start of the year to use blk-crypto, as per our 
-discussions both here and at LSF.
+[1] https://github.com/KSPP/linux/issues/79
 
-> 
-> Also, I'm glad that you're interested in xattr encryption, but unfortunately
-> it's a tough problem, and all the other filesystems that implement fscrypt have
-> left it out.  You have enough other things to worry about, so I think leaving
-> xattr encryption out for now is the right call.  Similarly, the other
-> filesystems that implement fscrypt have left out encryption of inline data,
-> instead opting to disable inline data on encrypted files.
+Cc: Eric Biggers <ebiggers@kernel.org>
+Cc: "Theodore Y. Ts'o" <tytso@mit.edu>
+Cc: Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: Gustavo A. R. Silva <gustavoars@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org
+Signed-off-by: Kees Cook <keescook@chromium.org>
+---
+ fs/crypto/fscrypt_private.h |  2 +-
+ fs/crypto/hooks.c           | 10 +++++-----
+ 2 files changed, 6 insertions(+), 6 deletions(-)
 
-A good point. I'll defer xattrs and inline data (and verity) for the 
-first round, and add in doing those with inode infos after getting 
-extent infos working well.
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 7ab5a7b7eef8..2d63da48635a 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -171,7 +171,7 @@ fscrypt_policy_flags(const union fscrypt_policy *policy)
+  */
+ struct fscrypt_symlink_data {
+ 	__le16 len;
+-	char encrypted_path[1];
++	char encrypted_path[];
+ } __packed;
+ 
+ /**
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index 9e786ae66a13..6238dbcadcad 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -255,10 +255,10 @@ int fscrypt_prepare_symlink(struct inode *dir, const char *target,
+ 	 * for now since filesystems will assume it is there and subtract it.
+ 	 */
+ 	if (!__fscrypt_fname_encrypted_size(policy, len,
+-					    max_len - sizeof(struct fscrypt_symlink_data),
++					    max_len - sizeof(struct fscrypt_symlink_data) - 1,
+ 					    &disk_link->len))
+ 		return -ENAMETOOLONG;
+-	disk_link->len += sizeof(struct fscrypt_symlink_data);
++	disk_link->len += sizeof(struct fscrypt_symlink_data) + 1;
+ 
+ 	disk_link->name = NULL;
+ 	return 0;
+@@ -289,7 +289,7 @@ int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
+ 		if (!sd)
+ 			return -ENOMEM;
+ 	}
+-	ciphertext_len = disk_link->len - sizeof(*sd);
++	ciphertext_len = disk_link->len - sizeof(*sd) - 1;
+ 	sd->len = cpu_to_le16(ciphertext_len);
+ 
+ 	err = fscrypt_fname_encrypt(inode, &iname, sd->encrypted_path,
+@@ -367,7 +367,7 @@ const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
+ 	 * the ciphertext length, even though this is redundant with i_size.
+ 	 */
+ 
+-	if (max_size < sizeof(*sd))
++	if (max_size < sizeof(*sd) + 1)
+ 		return ERR_PTR(-EUCLEAN);
+ 	sd = caddr;
+ 	cstr.name = (unsigned char *)sd->encrypted_path;
+@@ -376,7 +376,7 @@ const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
+ 	if (cstr.len == 0)
+ 		return ERR_PTR(-EUCLEAN);
+ 
+-	if (cstr.len + sizeof(*sd) - 1 > max_size)
++	if (cstr.len + sizeof(*sd) > max_size)
+ 		return ERR_PTR(-EUCLEAN);
+ 
+ 	err = fscrypt_fname_alloc_buffer(cstr.len, &pstr);
+-- 
+2.34.1
 
-> 
-> Anyway, the main reason I'm sending this email is actually that I wanted to
-> mention another possible solution to the per-extent key problem that I just
-> became aware of.  In v6.4-rc1, the crypto API added a new function
-> crypto_clone_tfm() which allocates a new tfm object, given an existing one.
-> Unlike crypto_alloc_tfm(), crypto_clone_tfm() doesn't take any locks.  See:
-> https://lore.kernel.org/linux-crypto/ZDefxOq6Ax0JeTRH@gondor.apana.org.au/T/#u
-> 
-> For now, only shash and ahash tfms can be cloned.  However, it looks like
-> support for cloning skcipher tfms could be added.
-> 
-> With "cloning" skcipher tfms, there could just be a crypto_skcipher per extent,
-> allocated on the I/O path.  That would solve the problem we've been trying to
-> solve, without having to bring in the complexity of "pooled prepared keys".
-
-Huh. A cool new thing for sure. I suppose one would have an initial tfm 
-per supported crypto alg, and clone it for each extent as needed. That's 
-definitely better than pooling prepared keys. I'll explore this after 
-everything else, and work on blk-crypto oriented for now.
-
-Thanks!
-
-Sweet Tea
