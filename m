@@ -2,74 +2,185 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 11216EB64DC
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 26 Jun 2023 01:51:37 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3E60EEB64DA
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 26 Jun 2023 09:00:21 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229596AbjFZBvf (ORCPT
+        id S229693AbjFZJAU (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sun, 25 Jun 2023 21:51:35 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:57816 "EHLO
+        Mon, 26 Jun 2023 05:00:20 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50598 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229452AbjFZBvf (ORCPT
+        with ESMTP id S229976AbjFZI7y (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sun, 25 Jun 2023 21:51:35 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 83D2F180;
-        Sun, 25 Jun 2023 18:51:34 -0700 (PDT)
-Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-         key-exchange X25519 server-signature RSA-PSS (2048 bits))
-        (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 0AE1060BEF;
-        Mon, 26 Jun 2023 01:51:34 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 332FFC433C8;
-        Mon, 26 Jun 2023 01:51:33 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1687744293;
-        bh=i0BJzq+S+kAaSYz2lVGfmZ1peFQkvlqg/MoLC/PWQNM=;
-        h=Date:From:To:Cc:Subject:From;
-        b=Z1WP7Qpa9MoQMJleHipXMqjw9XJj7JURYqO2FXlRJFLpaLKHH1Lr1AmiPCblAr/Px
-         p9tL2CMSq8P58LVP7tX8VAgoSzrEKrnO6r9zsOv8SnxicNUiAWP4TOIngqyZFcV4Kw
-         42LXDrFuqF3gp5DT7XT2zhVyk8WEInyTorXt2e6FlmcVzcdOK63l6W0x3sWpQPatkt
-         SOF+UnEWlDS+WjMgaii8OVCojxHAOHNjkd+RqHGye7fAW8Xv6OkoiJuiZoFy67HipM
-         CZRuSR+/pLX51l/t5oU9htHFIIN8wmQ4sAq47CIA/fwX5+y9YCY8gDMQYdCtRrf8Mt
-         JxQ3sYkvXuQkg==
-Date:   Sun, 25 Jun 2023 18:51:31 -0700
-From:   Eric Biggers <ebiggers@kernel.org>
-To:     Linus Torvalds <torvalds@linux-foundation.org>
-Cc:     linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-        linux-kernel@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>,
+        Mon, 26 Jun 2023 04:59:54 -0400
+Received: from mail.nsr.re.kr (unknown [210.104.33.65])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 0FF5B4EC0
+        for <linux-fscrypt@vger.kernel.org>; Mon, 26 Jun 2023 01:55:41 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; s=LIY0OQ3MUMW6182UNI14; d=nsr.re.kr; t=1687769580; c=relaxed/relaxed; h=date:from:message-id:mime-version:subject:to; bh=zuuP2jIe0pZPqoUtxjvL55N6OHfrTkFefMjYKKtwGHs=; b=P/GTSFUjdhT93uRcZ7N5Mf9yKfeZyDvDZoOOoVztHt5bqdnITZyXFbaflivWQnF6QIFzDHXsavJ57MQJugO8IeZvpobCKYgiY/URyNXHEgHYBxiQ/8itIaoISKY3S3T7bYfv5SniSzspsJJMMucbCQFHnUuPMr3v60zCz+RHEyDK5v/GSWyjmZmD3NvtmYCLj0+5RMq2j2NngJIfjanZrGScZux3Hp21GZiTgGHvcDa/bZC6o3A7beodxPw3bVl2zLLK6zK9IgVFWX3UFoBIKB9kDtf8pxZxlMBmNMMsy+ss2owpZBwdPGHct1Z9vWN8NXNjMNo4Zi6JfG6OJk44Ig==
+Received: from 210.104.33.70 (nsr.re.kr)
+        (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128 bits))
+        by mail.nsr.re.kr with SMTP; Mon, 26 Jun 2023 17:45:39 +0900
+Received: from 192.168.155.188 ([192.168.155.188])
+          by mail.nsr.re.kr (Crinity Message Backbone-7.0.1) with SMTP ID 334;
+          Mon, 26 Jun 2023 17:47:46 +0900 (KST)
+From:   Dongsoo Lee <letrhee@nsr.re.kr>
+To:     Herbert Xu <herbert@gondor.apana.org.au>,
+        "David S. Miller" <davem@davemloft.net>,
+        Jens Axboe <axboe@kernel.dk>,
+        Eric Biggers <ebiggers@kernel.org>,
+        "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>
-Subject: [GIT PULL] fscrypt updates for 6.5
-Message-ID: <20230626015131.GA1024@sol.localdomain>
+Cc:     linux-crypto@vger.kernel.org, linux-block@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
+        Dongsoo Lee <letrhee@nsr.re.kr>
+Subject: [PATCH v3 4/4] fscrypt: Add LEA-256-XTS, LEA-256-CTS support
+Date:   Mon, 26 Jun 2023 17:47:03 +0900
+Message-Id: <20230626084703.907331-5-letrhee@nsr.re.kr>
+X-Mailer: git-send-email 2.34.1
+In-Reply-To: <20230626084703.907331-1-letrhee@nsr.re.kr>
+References: <20230626084703.907331-1-letrhee@nsr.re.kr>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
+Add LEA-256-XTS, LEA-256-CTS fscrypt support.
 
-The following changes since commit 44c026a73be8038f03dbdeef028b642880cf1511:
+LEA is a South Korean 128-bit block cipher (with 128/192/256-bit keys)
+included in the ISO/IEC 29192-2:2019 standard (Information security -
+Lightweight cryptography - Part 2: Block ciphers). It shows fast
+performance and, when SIMD instructions are available, it performs even
+faster. Particularly, it outperforms AES when the dedicated crypto
+instructions for AES are unavailable, regardless of the presence of SIMD
+instructions. However, it is not recommended to use LEA unless there is
+a clear reason (such as the absence of dedicated crypto instructions for
+AES or a mandatory requirement) to do so. Also, to enable LEA support,
+it needs to be enabled in the kernel crypto API.
 
-  Linux 6.4-rc3 (2023-05-21 14:05:48 -0700)
+Signed-off-by: Dongsoo Lee <letrhee@nsr.re.kr>
+---
+ Documentation/filesystems/fscrypt.rst | 12 ++++++++++++
+ fs/crypto/fscrypt_private.h           |  2 +-
+ fs/crypto/keysetup.c                  | 15 +++++++++++++++
+ fs/crypto/policy.c                    |  4 ++++
+ include/uapi/linux/fscrypt.h          |  4 +++-
+ tools/include/uapi/linux/fscrypt.h    |  4 +++-
+ 6 files changed, 38 insertions(+), 3 deletions(-)
 
-are available in the Git repository at:
-
-  https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
-
-for you to fetch changes up to d617ef039fb8eec48a3424f79327220e0b7cbff7:
-
-  fscrypt: Replace 1-element array with flexible array (2023-05-23 19:46:09 -0700)
-
-----------------------------------------------------------------
-
-Just one flex array conversion patch.
-
-----------------------------------------------------------------
-Kees Cook (1):
-      fscrypt: Replace 1-element array with flexible array
-
- fs/crypto/fscrypt_private.h |  2 +-
- fs/crypto/hooks.c           | 10 +++++-----
- 2 files changed, 6 insertions(+), 6 deletions(-)
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index eccd327e6df5..60fb82c3382e 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -339,6 +339,7 @@ Currently, the following pairs of encryption modes are supported:
+ - Adiantum for both contents and filenames
+ - AES-256-XTS for contents and AES-256-HCTR2 for filenames (v2 policies only)
+ - SM4-XTS for contents and SM4-CTS-CBC for filenames (v2 policies only)
++- LEA-256-XTS for contents and LEA-256-CTS-CBC for filenames (v2 policies only)
+ 
+ If unsure, you should use the (AES-256-XTS, AES-256-CTS-CBC) pair.
+ 
+@@ -376,6 +377,17 @@ size.  It may be useful in cases where its use is mandated.
+ Otherwise, it should not be used.  For SM4 support to be available, it
+ also needs to be enabled in the kernel crypto API.
+ 
++LEA is a South Korean 128-bit block cipher (with 128/192/256-bit keys)
++included in the ISO/IEC 29192-2:2019 standard (Information security -
++Lightweight cryptography - Part 2: Block ciphers). It shows fast
++performance and, when SIMD instructions are available, it performs even
++faster. Particularly, it outperforms AES when the dedicated crypto
++instructions for AES are unavailable, regardless of the presence of SIMD
++instructions. However, it is not recommended to use LEA unless there is
++a clear reason (such as the absence of dedicated crypto instructions for
++AES or a mandatory requirement) to do so. Also, to enable LEA support,
++it needs to be enabled in the kernel crypto API.
++
+ New encryption modes can be added relatively easily, without changes
+ to individual filesystems.  However, authenticated encryption (AE)
+ modes are not currently supported because of the difficulty of dealing
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 7ab5a7b7eef8..400238057219 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -31,7 +31,7 @@
+ #define FSCRYPT_CONTEXT_V2	2
+ 
+ /* Keep this in sync with include/uapi/linux/fscrypt.h */
+-#define FSCRYPT_MODE_MAX	FSCRYPT_MODE_AES_256_HCTR2
++#define FSCRYPT_MODE_MAX	FSCRYPT_MODE_LEA_256_CTS
+ 
+ struct fscrypt_context_v1 {
+ 	u8 version; /* FSCRYPT_CONTEXT_V1 */
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index 361f41ef46c7..fa82579e56eb 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -74,6 +74,21 @@ struct fscrypt_mode fscrypt_modes[] = {
+ 		.security_strength = 32,
+ 		.ivsize = 32,
+ 	},
++	[FSCRYPT_MODE_LEA_256_XTS] = {
++		.friendly_name = "LEA-256-XTS",
++		.cipher_str = "xts(lea)",
++		.keysize = 64,
++		.security_strength = 32,
++		.ivsize = 16,
++		.blk_crypto_mode = BLK_ENCRYPTION_MODE_LEA_256_XTS,
++	},
++	[FSCRYPT_MODE_LEA_256_CTS] = {
++		.friendly_name = "LEA-256-CTS-CBC",
++		.cipher_str = "cts(cbc(lea))",
++		.keysize = 32,
++		.security_strength = 32,
++		.ivsize = 16,
++	},
+ };
+ 
+ static DEFINE_MUTEX(fscrypt_mode_key_setup_mutex);
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index f4456ecb3f87..9d1e80c43c6d 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -94,6 +94,10 @@ static bool fscrypt_valid_enc_modes_v2(u32 contents_mode, u32 filenames_mode)
+ 	    filenames_mode == FSCRYPT_MODE_SM4_CTS)
+ 		return true;
+ 
++	if (contents_mode == FSCRYPT_MODE_LEA_256_XTS &&
++	    filenames_mode == FSCRYPT_MODE_LEA_256_CTS)
++		return true;
++
+ 	return fscrypt_valid_enc_modes_v1(contents_mode, filenames_mode);
+ }
+ 
+diff --git a/include/uapi/linux/fscrypt.h b/include/uapi/linux/fscrypt.h
+index fd1fb0d5389d..df3c8af98210 100644
+--- a/include/uapi/linux/fscrypt.h
++++ b/include/uapi/linux/fscrypt.h
+@@ -30,7 +30,9 @@
+ #define FSCRYPT_MODE_SM4_CTS			8
+ #define FSCRYPT_MODE_ADIANTUM			9
+ #define FSCRYPT_MODE_AES_256_HCTR2		10
+-/* If adding a mode number > 10, update FSCRYPT_MODE_MAX in fscrypt_private.h */
++#define FSCRYPT_MODE_LEA_256_XTS		11
++#define FSCRYPT_MODE_LEA_256_CTS		12
++/* If adding a mode number > 12, update FSCRYPT_MODE_MAX in fscrypt_private.h */
+ 
+ /*
+  * Legacy policy version; ad-hoc KDF and no key verification.
+diff --git a/tools/include/uapi/linux/fscrypt.h b/tools/include/uapi/linux/fscrypt.h
+index fd1fb0d5389d..df3c8af98210 100644
+--- a/tools/include/uapi/linux/fscrypt.h
++++ b/tools/include/uapi/linux/fscrypt.h
+@@ -30,7 +30,9 @@
+ #define FSCRYPT_MODE_SM4_CTS			8
+ #define FSCRYPT_MODE_ADIANTUM			9
+ #define FSCRYPT_MODE_AES_256_HCTR2		10
+-/* If adding a mode number > 10, update FSCRYPT_MODE_MAX in fscrypt_private.h */
++#define FSCRYPT_MODE_LEA_256_XTS		11
++#define FSCRYPT_MODE_LEA_256_CTS		12
++/* If adding a mode number > 12, update FSCRYPT_MODE_MAX in fscrypt_private.h */
+ 
+ /*
+  * Legacy policy version; ad-hoc KDF and no key verification.
+-- 
+2.34.1
