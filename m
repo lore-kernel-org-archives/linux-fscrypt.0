@@ -2,21 +2,21 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3AF09EB64D7
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 26 Jun 2023 09:01:38 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id C3FFDEB64DA
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 26 Jun 2023 09:01:54 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229574AbjFZJBh (ORCPT
+        id S229940AbjFZJBv (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 26 Jun 2023 05:01:37 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50084 "EHLO
+        Mon, 26 Jun 2023 05:01:51 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:50548 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229550AbjFZJBJ (ORCPT
+        with ESMTP id S230000AbjFZJBN (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 26 Jun 2023 05:01:09 -0400
+        Mon, 26 Jun 2023 05:01:13 -0400
 Received: from mail.nsr.re.kr (unknown [210.104.33.65])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 6C61446A1
-        for <linux-fscrypt@vger.kernel.org>; Mon, 26 Jun 2023 01:56:21 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; s=LIY0OQ3MUMW6182UNI14; d=nsr.re.kr; t=1687769644; c=relaxed/relaxed; h=date:from:message-id:mime-version:subject:to; bh=EApqQ6uoe2J8t6KKqJtI9FKl5fra2p1B54wZxyPswJ0=; b=XX5ekCN9Ui7oKu5VoMqCffSg7ZuNEumHJwabJ/pkMzjSBtVupbnwNK4ZwANdl5Qkioj0kxosg4M/4ETROubW/nKyvmB0znV4NQpu+VHmo2ht6rT20/aOYc0NYQH2dw2kZHmlqcvXMV5JhH2c5huJNDadCkKm/pDTNo9XBsFmoiPEduK4YkWFzEfj3M/1Bh4GwPalKjBkfT0nWD2eLrE0x3RTGLPurT0cqxVhS7t+x8ZIYZlgxZ/zBTr53mB4wbPIncdXjQArTvH+IkZDFOCiSx1JG/5vx8OSmMux74f3/8/Gz4UFof8V6KCR2fHdkWluxnsJNamPzVihhx2RUCsThw==
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2782B524F
+        for <linux-fscrypt@vger.kernel.org>; Mon, 26 Jun 2023 01:56:22 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; s=LIY0OQ3MUMW6182UNI14; d=nsr.re.kr; t=1687769646; c=relaxed/relaxed; h=content-type:date:from:message-id:mime-version:subject:to; bh=DyrfY0crg++/09jon1RFZl0ms2Mo5gm3lj4/Yg6if8A=; b=DB4MWYRh0rTmQKKKIW2/u0oejYqrpb1yFurZVWXnLQwxjhqciQ4uUe/DbnMC369Wl9LVZ6d5wKiPoUTbPnMWWONCkzsobMymTqT//TgsI1cb7C/E0tQSDJmln7gt9820U2HUlVuAcOu+ArnNBEe5LQLi8v+tnXfGkW8UP4+TYj9hz7/sJPHmg3z1WUroDQDEHQyZJ2XlE9VOjjFUYQBNycqAKwMBTq0DTn8PFd0GIMRA/vr4f8wy8rMvq4E8MPKRjUe7quXHWdQfHXPTYxicudWUzu9FSVh1ms9AojEfvoTsexCqxYw6I4uKyMYjBvuiLluvRZzqAy+etrW2IFDFOA==
 Received: from 210.104.33.70 (nsr.re.kr)
         (using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128 bits))
         by mail.nsr.re.kr with SMTP; Mon, 26 Jun 2023 17:45:39 +0900
@@ -33,64 +33,97 @@ To:     Herbert Xu <herbert@gondor.apana.org.au>,
 Cc:     linux-crypto@vger.kernel.org, linux-block@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         Dongsoo Lee <letrhee@nsr.re.kr>
-Subject: [PATCH v3 3/4] blk-crypto: Add LEA-256-XTS blk-crypto support
-Date:   Mon, 26 Jun 2023 17:47:02 +0900
-Message-Id: <20230626084703.907331-4-letrhee@nsr.re.kr>
+Subject: [PATCH v3 0/4] crypto: LEA block cipher implementation
+Date:   Mon, 26 Jun 2023 17:46:59 +0900
+Message-Id: <20230626084703.907331-1-letrhee@nsr.re.kr>
 X-Mailer: git-send-email 2.34.1
-In-Reply-To: <20230626084703.907331-1-letrhee@nsr.re.kr>
-References: <20230626084703.907331-1-letrhee@nsr.re.kr>
 MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add LEA-256-XTS blk-crypto support
+This submission contains a generic C implementation of the LEA cipher algorithm and test vectors for it. It also includes modifications to use the LEA in fscrypt.
 
-LEA is a 128-bit block cipher developed by South Korea.
+The LEA algorithm is a lightweight block cipher that processes data blocks of 128-bits and has three different key lengths, each with a different number of rounds:
 
-LEA is a Korean national standard (KS X 3246) and included in the
-ISO/IEC 29192-2:2019 standard (Information security - Lightweight
-cryptography - Part 2: Block ciphers).
+- LEA-128: 128-bit key, 24 rounds,
+- LEA-192: 192-bit key, 28 rounds, and
+- LEA-256: 256-bit key, 32 rounds.
 
-Enable the LEA to be used in block inline encryption. This can be
-used via blk-crypto-fallback, when using the "inlinecrypt" mount
-option in fscrypt.
+The round function of LEA consists of 32-bit ARX(modular Addition, bitwise Rotation, and bitwise XOR) operations. See [2, 5, 7] for details.
 
-Signed-off-by: Dongsoo Lee <letrhee@nsr.re.kr>
----
- block/blk-crypto.c         | 6 ++++++
- include/linux/blk-crypto.h | 1 +
- 2 files changed, 7 insertions(+)
+LEA is a Korean national standard block cipher, described in "KS X 3246"[1] and is also included in the international standard, "ISO/IEC 29192-2:2019 standard"[2].
 
-diff --git a/block/blk-crypto.c b/block/blk-crypto.c
-index 4d760b092deb..b847706bbc59 100644
---- a/block/blk-crypto.c
-+++ b/block/blk-crypto.c
-@@ -43,6 +43,12 @@ const struct blk_crypto_mode blk_crypto_modes[] = {
- 		.keysize = 32,
- 		.ivsize = 16,
- 	},
-+	[BLK_ENCRYPTION_MODE_LEA_256_XTS] = {
-+		.name = "LEA-256-XTS",
-+		.cipher_str = "xts(lea)",
-+		.keysize = 64,
-+		.ivsize = 16,
-+	},
- };
- 
- /*
-diff --git a/include/linux/blk-crypto.h b/include/linux/blk-crypto.h
-index 5e5822c18ee4..b6bf2a5c58ed 100644
---- a/include/linux/blk-crypto.h
-+++ b/include/linux/blk-crypto.h
-@@ -14,6 +14,7 @@ enum blk_crypto_mode_num {
- 	BLK_ENCRYPTION_MODE_AES_128_CBC_ESSIV,
- 	BLK_ENCRYPTION_MODE_ADIANTUM,
- 	BLK_ENCRYPTION_MODE_SM4_XTS,
-+	BLK_ENCRYPTION_MODE_LEA_256_XTS,
- 	BLK_ENCRYPTION_MODE_MAX,
- };
- 
+It is one of the approved block ciphers for the current Korean Cryptographic Module Validation Program (KCMVP).
+
+We expect that the first application of the patch would be disk encryption on the Gooroom platform ('Gooroom' is a Korean word, meaning 'cloud') [3]. Currently, the Gooroom platform uses AES-XTS for disk encryption. The main reason for submitting this patch is to make disk encryption with LEA (e.g. LEA-XTS) available on there. It is possible to use LEA without any additional modifications in dm-crypt, a module that provides disk encryption functionality within the kernel.
+
+This patch also includes a modification to enable LEA for use in fscrypt, another data-at-rest method available within the kernel, and a modification to blk-crypto-fallback to enable the "inlinecrypt" mount option in fscrypt.
+
+The Gooroom platform is a government-driven Debian-based Linux distribution in South Korea. In Korea, there are many crypto companies that want to bundle Linux into their products and sell them. They create their own Gooroom platforms by modifying the original Gooroom platform for their services. (Of course, the Gooroom platform is not mandatory, and companies wishing to use Linux are free to choose an appropriate distribution.) BTW, in Korea, many crypto companies want to use LEA, because LEA is one of the block ciphers of the KCMVP, a validation program for commercial crypto S/W to be delivered to the Korean government.
+
+The Linux Crypto API already has another Korean block cipher, ARIA, also one of the block ciphers of the KCVMP. However, LEA is more widely used than ARIA in industry nowadays, because LEA is one of the lightweight cryptography standard of ISO/IEC [2] and performs well on low-end devices that support 32-bit operations. So we think they are complementary to each other.
+
+In general, it's obvious that the hardware-accelerated AES is the best performer. However, there exist not only environments where the hardware-accelerated AES is not supported, but also situations where AES is not preferred for various reasons. In these cases, if someone wants to encrypt using a block cipher, LEA could be an alternative.
+
+There are also SIMD implementations for efficiently using LEA, which is not included in this patch. We have SSE2 and AVX2 assembly implementations, some of which were included in the previous version of the patch. The SIMD implementations are being re-implemented to support a wider range of environments.
+
+Apart from this, we also have implemented LEA in lightweight environments such as 8-bit AVR, 16-bit MSP and 32-bit ARM [4]. If LEA were to be included in the Linux kernel, it would be possible to modify and supplement the submission with lightweight implementations to provide efficient encryption on embedded linux devices.
+
+Although the designers of LEA did not provide test vectors in their paper [5], the ISO/IEC standard [2] and the KS standard [1] do. Furthermore, the Block Cipher LEA Specification("블록암호 LEA 규격서", written in Korean) document on the LEA introduction page [6] and the Wikipedia article on LEA [7] show the same test vectors as in the standards.
+
+The test vectors for ECB, CBC, CTR, and GCM modes included in the testmgr module are taken from the KCMVP Cryptographic Algorithm Verification Criteria V3.0("KCMVP 검증대상 암호알고리즘 검증기준 V3.0", written in Korean) [8]. Test vectors for the XTS mode were generated by ourselves, and we crosschecked them using Crypto++ [9] and testmgr on Linux.
+
+The implementation has been tested with kernel module tcrypt.ko and has passed the selftest using above-mentioned test vectors. It also has been tested with CONFIG_CRYPTO_MANAGER_EXTRA_TESTS. The fscrypt patch was tested using a modified tool by forking https://github.com/google/fscrypt.
+
+[1] KS X 3246, 128-bit block cipher LEA.
+[2] ISO/IEC 29192-2:2019, Information security — Lightweight cryptography — Part 2: Block ciphers.
+[3] https://github.com/gooroom https://www.gooroom.kr/
+[4] https://github.com/cryptolu/FELICS/tree/master/block_ciphers/source/ciphers/LEA_128_128_v01/source
+[5] Hong, Deukjo, et al. "LEA: A 128-bit block cipher for fast encryption on common processors.", WISA 2013.
+[6] https://seed.kisa.or.kr/kisa/algorithm/EgovLeaInfo.do
+[7] https://en.wikipedia.org/wiki/LEA_(cipher)
+[8] https://seed.kisa.or.kr/kisa/kcmvp/EgovVerification.do
+[9] https://www.cryptopp.com/
+
+Changelog:
+v3:
+- Added implementations to enable LEA in fscrypt and blk-crypt.
+v2:
+- Reimplemented the Generic C implementation as a Loop version.
+  - The decryption code was adapted from an optimized implementation by Eric Biggers.
+    https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git/commit/?h=old/wip-lea&id=1d1cbba14380f8a1abc76baf939b9e51de047fb6
+- Removed AVX2 SIMD implementation.
+- Added comments for functions.
+- Improved the description in Kconfig.
+- Added test vectors from the standard documentation.
+
+Dongsoo Lee (4):
+  crypto: LEA block cipher implementation
+  crypto: add LEA testmgr tests
+  blk-crypto: Add LEA-256-XTS blk-crypto support
+  fscrypt: Add LEA-256-XTS, LEA-256-CTS support
+
+ Documentation/filesystems/fscrypt.rst |   12 +
+ block/blk-crypto.c                    |    6 +
+ crypto/Kconfig                        |   18 +
+ crypto/Makefile                       |    1 +
+ crypto/lea_generic.c                  |  410 ++++++++
+ crypto/tcrypt.c                       |   73 ++
+ crypto/testmgr.c                      |   32 +
+ crypto/testmgr.h                      | 1241 +++++++++++++++++++++++++
+ fs/crypto/fscrypt_private.h           |    2 +-
+ fs/crypto/keysetup.c                  |   15 +
+ fs/crypto/policy.c                    |    4 +
+ include/crypto/lea.h                  |   44 +
+ include/linux/blk-crypto.h            |    1 +
+ include/uapi/linux/fscrypt.h          |    4 +-
+ tools/include/uapi/linux/fscrypt.h    |    4 +-
+ 15 files changed, 1864 insertions(+), 3 deletions(-)
+ create mode 100644 crypto/lea_generic.c
+ create mode 100644 include/crypto/lea.h
+
 -- 
 2.34.1
