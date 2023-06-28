@@ -2,27 +2,27 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3744EC04FDF
-	for <linux-fscrypt@archiver.kernel.org>; Wed, 28 Jun 2023 21:10:53 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 180D5C27C5F
+	for <linux-fscrypt@archiver.kernel.org>; Wed, 28 Jun 2023 21:10:54 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231410AbjF1VKZ (ORCPT
+        id S232689AbjF1VK1 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 28 Jun 2023 17:10:25 -0400
-Received: from linux.microsoft.com ([13.77.154.182]:39272 "EHLO
+        Wed, 28 Jun 2023 17:10:27 -0400
+Received: from linux.microsoft.com ([13.77.154.182]:39530 "EHLO
         linux.microsoft.com" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232301AbjF1VJt (ORCPT
+        with ESMTP id S232381AbjF1VJw (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 28 Jun 2023 17:09:49 -0400
+        Wed, 28 Jun 2023 17:09:52 -0400
 Received: by linux.microsoft.com (Postfix, from userid 1052)
-        id 38B3720C08FE; Wed, 28 Jun 2023 14:09:48 -0700 (PDT)
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 38B3720C08FE
+        id 9FB0920ABD7E; Wed, 28 Jun 2023 14:09:48 -0700 (PDT)
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 9FB0920ABD7E
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
         s=default; t=1687986588;
-        bh=LHnS3KBCE9CXxf/tUzfRiFyBlBvtWWxrCNQ8gimP4Os=;
+        bh=jDAVZfGLcA9i+psEagTOByxNSvZxyShuJvujQY6FoMI=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=Cp6ytnenRVVtbqo4U+QJESf/vIZQgWIMk0BCw0HV6jbQUyblfIrrKLT5w/s01rA3x
-         E0c3/cnQQlUuxwXTbvIBh/Vbzfke3rSOzphSni1KgevmSqsNOWXIFOGQ0wjHl5Ri5Y
-         W+D7KSn0AKfvX0GUxPJEpLfIz8rg4YnZK/TqLZ5k=
+        b=VC/bIisuUI9qsXSEaK7wMsFQ446RGYJ/RPT7yPmV3gwIPTNbYzjRS7hUrbMFUB7P7
+         7/pwtTz7Xzq67eMdPup8vgxmoIuIUR2CXjxaM/8mR/5cdFQq/jZsKv0IjB9gFYFPp4
+         JchWZ70ACL44ssy7f2BgeyXpjp59yJcKf7V+Crrs=
 From:   Fan Wu <wufan@linux.microsoft.com>
 To:     corbet@lwn.net, zohar@linux.ibm.com, jmorris@namei.org,
         serge@hallyn.com, tytso@mit.edu, ebiggers@kernel.org,
@@ -35,9 +35,9 @@ Cc:     linux-doc@vger.kernel.org, linux-integrity@vger.kernel.org,
         roberto.sassu@huawei.com, linux-kernel@vger.kernel.org,
         Deven Bowers <deven.desai@linux.microsoft.com>,
         Fan Wu <wufan@linux.microsoft.com>
-Subject: [RFC PATCH v10 04/17] ipe: add LSM hooks on execution and kernel read
-Date:   Wed, 28 Jun 2023 14:09:18 -0700
-Message-Id: <1687986571-16823-5-git-send-email-wufan@linux.microsoft.com>
+Subject: [RFC PATCH v10 11/17] dm-verity: consume root hash digest and signature data via LSM hook
+Date:   Wed, 28 Jun 2023 14:09:25 -0700
+Message-Id: <1687986571-16823-12-git-send-email-wufan@linux.microsoft.com>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1687986571-16823-1-git-send-email-wufan@linux.microsoft.com>
 References: <1687986571-16823-1-git-send-email-wufan@linux.microsoft.com>
@@ -47,351 +47,256 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Deven Bowers <deven.desai@linux.microsoft.com>
 
-IPE's initial goal is to control both execution and the loading of
-kernel modules based on the system's definition of trust. It
-accomplishes this by plugging into the security hooks for
-bprm_check_security, file_mprotect, mmap_file, kernel_load_data,
-and kernel_read_data.
+dm-verity provides a strong guarantee of a block device's integrity. As
+a generic way to check the integrity of a block device, it provides
+those integrity guarantees to its higher layers, including the filesystem
+level.
+
+An LSM that control access to a resource on the system based on the
+available integrity claims can use this transitive property of
+dm-verity, by querying the underlying block_device of a particular
+file.
+
+The digest and signature information need to be stored in the block
+device to fulfill the next requirement of authorization via LSM policy.
+This will enable the LSM to perform revocation of devices that are still
+mounted, prohibiting execution of files that are no longer authorized
+by the LSM in question.
+
+This patch added two security hook calls in dm-verity to save the
+dm-verity roothash and the roothash signature to LSM blobs.
 
 Signed-off-by: Deven Bowers <deven.desai@linux.microsoft.com>
 Signed-off-by: Fan Wu <wufan@linux.microsoft.com>
 ---
 v2:
-  + Split evaluation loop, access control hooks,
-    and evaluation loop from policy parser and userspace
-    interface to pass mailing list character limit
+  + No Changes
 
 v3:
-  + Move ipe_load_properties to patch 04.
-  + Remove useless 0-initializations
-  + Prefix extern variables with ipe_
-  + Remove kernel module parameters, as these are
-    exposed through sysctls.
-  + Add more prose to the IPE base config option
-    help text.
-  + Use GFP_KERNEL for audit_log_start.
-  + Remove unnecessary caching system.
-  + Remove comments from headers
-  + Use rcu_access_pointer for rcu-pointer null check
-  + Remove usage of reqprot; use prot only.
-  + Move policy load and activation audit event to 03/12
-
-v4:
-  + Remove sysctls in favor of securityfs nodes
-  + Re-add kernel module parameters, as these are now
-    exposed through securityfs.
-  + Refactor property audit loop to a separate function.
-
-v5:
-  + fix minor grammatical errors
-  + do not group rule by curly-brace in audit record,
-    reconstruct the exact rule.
-
-v6:
   + No changes
 
+v4:
+  + No changes
+
+v5:
+  + No changes
+
+v6:
+  + Fix an improper cleanup that can result in
+    a leak
+
 v7:
-  + Further split lsm creation, the audit system, the evaluation loop
-    and access control hooks into separate commits.
+  + Squash patch 08/12, 10/12 to [11/16]
+  + Use part0 for block_device, to retrieve the block_device, when
+    calling security_bdev_setsecurity
 
 v8:
-  + Rename hook functions to follow the lsmname_hook_name convention
-  + Remove ipe_hook enumeration, can be derived from correlation with
-    syscall audit record.
+  + Undo squash of 08/12, 10/12 - separating drivers/md/ from
+    security/ & block/
+  + Use common-audit function for dmverity_signature.
+  + Change implementation for storing the dm-verity digest to use the
+    newly introduced dm_verity_digest structure introduced in patch
+    14/20.
+  + Create new structure, dm_verity_digest, containing digest algorithm,
+    size, and digest itself to pass to the LSM layer. V7 was missing the
+    algorithm.
+  + Create an associated public header containing this new structure and
+    the key values for the LSM hook, specific to dm-verity.
+  + Additional information added to commit, discussing the layering of
+    the changes and how the information passed will be used.
 
 v9:
-  + Minor changes for adapting to the new parser
+  + No changes
 
 v10:
-  + Remove @reqprot part
+  + No changes
 ---
- security/ipe/eval.c  |  14 ++++
- security/ipe/eval.h  |   1 +
- security/ipe/hooks.c | 182 +++++++++++++++++++++++++++++++++++++++++++
- security/ipe/hooks.h |  25 ++++++
- security/ipe/ipe.c   |   6 ++
- 5 files changed, 228 insertions(+)
- create mode 100644 security/ipe/hooks.c
- create mode 100644 security/ipe/hooks.h
+ drivers/md/dm-verity-target.c     | 25 +++++++++++++++++++++++--
+ drivers/md/dm-verity-verify-sig.c | 16 +++++++++++++---
+ drivers/md/dm-verity-verify-sig.h | 10 ++++++----
+ include/linux/dm-verity.h         | 19 +++++++++++++++++++
+ 4 files changed, 61 insertions(+), 9 deletions(-)
+ create mode 100644 include/linux/dm-verity.h
 
-diff --git a/security/ipe/eval.c b/security/ipe/eval.c
-index 59144b2ecdda..8d0ec7c80f8f 100644
---- a/security/ipe/eval.c
-+++ b/security/ipe/eval.c
-@@ -17,6 +17,20 @@
- 
- struct ipe_policy __rcu *ipe_active_policy;
- 
-+/**
-+ * build_eval_ctx - Build an evaluation context.
-+ * @ctx: Supplies a pointer to the context to be populdated.
-+ * @file: Supplies a pointer to the file to associated with the evaluation.
-+ * @op: Supplies the IPE policy operation associated with the evaluation.
-+ */
-+void build_eval_ctx(struct ipe_eval_ctx *ctx,
-+		    const struct file *file,
-+		    enum ipe_op_type op)
-+{
-+	ctx->file = file;
-+	ctx->op = op;
-+}
-+
- /**
-  * evaluate_property - Analyze @ctx against a property.
-  * @ctx: Supplies a pointer to the context to be evaluated.
-diff --git a/security/ipe/eval.h b/security/ipe/eval.h
-index 972580dfec15..5abb845d5c4e 100644
---- a/security/ipe/eval.h
-+++ b/security/ipe/eval.h
-@@ -20,6 +20,7 @@ struct ipe_eval_ctx {
- 	const struct file *file;
- };
- 
-+void build_eval_ctx(struct ipe_eval_ctx *ctx, const struct file *file, enum ipe_op_type op);
- int ipe_evaluate_event(const struct ipe_eval_ctx *const ctx);
- 
- #endif /* _IPE_EVAL_H */
-diff --git a/security/ipe/hooks.c b/security/ipe/hooks.c
-new file mode 100644
-index 000000000000..d896a5a474bc
---- /dev/null
-+++ b/security/ipe/hooks.c
-@@ -0,0 +1,182 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Copyright (C) Microsoft Corporation. All rights reserved.
-+ */
-+
-+#include <linux/fs.h>
-+#include <linux/types.h>
-+#include <linux/binfmts.h>
-+#include <linux/mman.h>
-+
-+#include "ipe.h"
-+#include "hooks.h"
-+#include "eval.h"
-+
-+/**
-+ * ipe_bprm_check_security - ipe security hook function for bprm check.
-+ * @bprm: Supplies a pointer to a linux_binprm structure to source the file
-+ *	  being evaluated.
-+ *
-+ * This LSM hook is called when a binary is loaded through the exec
-+ * family of system calls.
-+ * Return:
-+ * *0	- OK
-+ * *!0	- Error
-+ */
-+int ipe_bprm_check_security(struct linux_binprm *bprm)
-+{
-+	struct ipe_eval_ctx ctx = { 0 };
-+
-+	build_eval_ctx(&ctx, bprm->file, __IPE_OP_EXEC);
-+	return ipe_evaluate_event(&ctx);
-+}
-+
-+/**
-+ * ipe_mmap_file - ipe security hook function for mmap check.
-+ * @f: File being mmap'd. Can be NULL in the case of anonymous memory.
-+ * @reqprot: The requested protection on the mmap, passed from usermode.
-+ * @prot: The effective protection on the mmap, resolved from reqprot and
-+ *	  system configuration.
-+ * @flags: Unused.
-+ *
-+ * This hook is called when a file is loaded through the mmap
-+ * family of system calls.
-+ *
-+ * Return:
-+ * * 0	- OK
-+ * * !0	- Error
-+ */
-+int ipe_mmap_file(struct file *f, unsigned long reqprot, unsigned long prot,
-+		  unsigned long flags)
-+{
-+	struct ipe_eval_ctx ctx = { 0 };
-+
-+	if (prot & PROT_EXEC) {
-+		build_eval_ctx(&ctx, f, __IPE_OP_EXEC);
-+		return ipe_evaluate_event(&ctx);
-+	}
-+
-+	return 0;
-+}
-+
-+/**
-+ * ipe_file_mprotect - ipe security hook function for mprotect check.
-+ * @vma: Existing virtual memory area created by mmap or similar.
-+ * @reqprot: The requested protection on the mmap, passed from usermode.
-+ * @prot: The effective protection on the mmap, resolved from reqprot and
-+ *	  system configuration.
-+ *
-+ * This LSM hook is called when a mmap'd region of memory is changing
-+ * its protections via mprotect.
-+ *
-+ * Return:
-+ * * 0	- OK
-+ * * !0	- Error
-+ */
-+int ipe_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,
-+		      unsigned long prot)
-+{
-+	struct ipe_eval_ctx ctx = { 0 };
-+
-+	/* Already Executable */
-+	if (vma->vm_flags & VM_EXEC)
-+		return 0;
-+
-+	if (prot & PROT_EXEC) {
-+		build_eval_ctx(&ctx, vma->vm_file, __IPE_OP_EXEC);
-+		return ipe_evaluate_event(&ctx);
-+	}
-+
-+	return 0;
-+}
-+
-+/**
-+ * ipe_kernel_read_file - ipe security hook function for kernel read.
-+ * @file: Supplies a pointer to the file structure being read in from disk.
-+ * @id: Supplies the enumeration identifying the purpose of the read.
-+ * @contents: Unused.
-+ *
-+ * This LSM hook is called when a file is being read in from disk from
-+ * the kernel.
-+ *
-+ * Return:
-+ * 0 - OK
-+ * !0 - Error
-+ */
-+int ipe_kernel_read_file(struct file *file, enum kernel_read_file_id id,
-+			 bool contents)
-+{
-+	enum ipe_op_type op;
-+	struct ipe_eval_ctx ctx;
-+
-+	switch (id) {
-+	case READING_FIRMWARE:
-+		op = __IPE_OP_FIRMWARE;
-+		break;
-+	case READING_MODULE:
-+		op = __IPE_OP_KERNEL_MODULE;
-+		break;
-+	case READING_KEXEC_INITRAMFS:
-+		op = __IPE_OP_KEXEC_INITRAMFS;
-+		break;
-+	case READING_KEXEC_IMAGE:
-+		op = __IPE_OP_KEXEC_IMAGE;
-+		break;
-+	case READING_POLICY:
-+		op = __IPE_OP_IMA_POLICY;
-+		break;
-+	case READING_X509_CERTIFICATE:
-+		op = __IPE_OP_IMA_X509;
-+		break;
-+	default:
-+		op = __IPE_OP_INVALID;
-+		WARN(op == __IPE_OP_INVALID, "no rule setup for enum %d", id);
-+	}
-+
-+	build_eval_ctx(&ctx, file, op);
-+	return ipe_evaluate_event(&ctx);
-+}
-+
-+/**
-+ * ipe_kernel_load_data - ipe security hook function for kernel load data.
-+ * @id: Supplies the enumeration identifying the purpose of the read.
-+ * @contents: Unused.
-+ *
-+ * This LSM hook is called when a buffer is being read in from disk.
-+ *
-+ * Return:
-+ * * 0	- OK
-+ * * !0	- Error
-+ */
-+int ipe_kernel_load_data(enum kernel_load_data_id id, bool contents)
-+{
-+	enum ipe_op_type op;
-+	struct ipe_eval_ctx ctx = { 0 };
-+
-+	switch (id) {
-+	case LOADING_FIRMWARE:
-+		op = __IPE_OP_FIRMWARE;
-+		break;
-+	case LOADING_MODULE:
-+		op = __IPE_OP_KERNEL_MODULE;
-+		break;
-+	case LOADING_KEXEC_INITRAMFS:
-+		op = __IPE_OP_KEXEC_INITRAMFS;
-+		break;
-+	case LOADING_KEXEC_IMAGE:
-+		op = __IPE_OP_KEXEC_IMAGE;
-+		break;
-+	case LOADING_POLICY:
-+		op = __IPE_OP_IMA_POLICY;
-+		break;
-+	case LOADING_X509_CERTIFICATE:
-+		op = __IPE_OP_IMA_X509;
-+		break;
-+	default:
-+		op = __IPE_OP_INVALID;
-+		WARN(op == __IPE_OP_INVALID, "no rule setup for enum %d", id);
-+	}
-+
-+	build_eval_ctx(&ctx, NULL, op);
-+	return ipe_evaluate_event(&ctx);
-+}
-diff --git a/security/ipe/hooks.h b/security/ipe/hooks.h
-new file mode 100644
-index 000000000000..23205452f758
---- /dev/null
-+++ b/security/ipe/hooks.h
-@@ -0,0 +1,25 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+/*
-+ * Copyright (C) Microsoft Corporation. All rights reserved.
-+ */
-+#ifndef _IPE_HOOKS_H
-+#define _IPE_HOOKS_H
-+
-+#include <linux/fs.h>
-+#include <linux/binfmts.h>
-+#include <linux/security.h>
-+
-+int ipe_bprm_check_security(struct linux_binprm *bprm);
-+
-+int ipe_mmap_file(struct file *f, unsigned long reqprot, unsigned long prot,
-+		  unsigned long flags);
-+
-+int ipe_file_mprotect(struct vm_area_struct *vma, unsigned long reqprot,
-+		      unsigned long prot);
-+
-+int ipe_kernel_read_file(struct file *file, enum kernel_read_file_id id,
-+			 bool contents);
-+
-+int ipe_kernel_load_data(enum kernel_load_data_id id, bool contents);
-+
-+#endif /* _IPE_HOOKS_H */
-diff --git a/security/ipe/ipe.c b/security/ipe/ipe.c
-index 2ee0f5de29d7..29bedc0b2ad6 100644
---- a/security/ipe/ipe.c
-+++ b/security/ipe/ipe.c
-@@ -4,11 +4,17 @@
+diff --git a/drivers/md/dm-verity-target.c b/drivers/md/dm-verity-target.c
+index 26adcfea0302..54d46b2f2723 100644
+--- a/drivers/md/dm-verity-target.c
++++ b/drivers/md/dm-verity-target.c
+@@ -13,6 +13,7 @@
+  * access behavior.
   */
  
- #include "ipe.h"
-+#include "hooks.h"
++#include "dm-core.h"
+ #include "dm-verity.h"
+ #include "dm-verity-fec.h"
+ #include "dm-verity-verify-sig.h"
+@@ -22,6 +23,9 @@
+ #include <linux/scatterlist.h>
+ #include <linux/string.h>
+ #include <linux/jump_label.h>
++#include <linux/security.h>
++#include <linux/dm-verity.h>
++#include <crypto/hash_info.h>
  
- static struct lsm_blob_sizes ipe_blobs __ro_after_init = {
- };
+ #define DM_MSG_PREFIX			"verity"
  
- static struct security_hook_list ipe_hooks[] __ro_after_init = {
-+	LSM_HOOK_INIT(bprm_check_security, ipe_bprm_check_security),
-+	LSM_HOOK_INIT(mmap_file, ipe_mmap_file),
-+	LSM_HOOK_INIT(file_mprotect, ipe_file_mprotect),
-+	LSM_HOOK_INIT(kernel_read_file, ipe_kernel_read_file),
-+	LSM_HOOK_INIT(kernel_load_data, ipe_kernel_load_data),
- };
+@@ -1183,6 +1187,8 @@ static int verity_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+ 	sector_t hash_position;
+ 	char dummy;
+ 	char *root_hash_digest_to_validate;
++	struct block_device *bdev;
++	struct dm_verity_digest root_digest;
  
- /**
+ 	v = kzalloc(sizeof(struct dm_verity), GFP_KERNEL);
+ 	if (!v) {
+@@ -1225,6 +1231,13 @@ static int verity_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+ 	}
+ 	v->version = num;
+ 
++	bdev = dm_table_get_md(ti->table)->disk->part0;
++	if (!bdev) {
++		ti->error = "Mapped device lookup failed";
++		r = -ENOMEM;
++		goto bad;
++	}
++
+ 	r = dm_get_device(ti, argv[1], BLK_OPEN_READ, &v->data_dev);
+ 	if (r) {
+ 		ti->error = "Data device lookup failed";
+@@ -1357,7 +1370,7 @@ static int verity_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+ 	}
+ 
+ 	/* Root hash signature is  a optional parameter*/
+-	r = verity_verify_root_hash(root_hash_digest_to_validate,
++	r = verity_verify_root_hash(bdev, root_hash_digest_to_validate,
+ 				    strlen(root_hash_digest_to_validate),
+ 				    verify_args.sig,
+ 				    verify_args.sig_size);
+@@ -1440,6 +1453,15 @@ static int verity_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+ 	ti->per_io_data_size = roundup(ti->per_io_data_size,
+ 				       __alignof__(struct dm_verity_io));
+ 
++	root_digest.digest = v->root_digest;
++	root_digest.digest_len = v->digest_size;
++	root_digest.algo = v->alg_name;
++
++	r = security_bdev_setsecurity(bdev, DM_VERITY_ROOTHASH_SEC_NAME, &root_digest,
++				      sizeof(root_digest));
++	if (r)
++		goto bad;
++
+ 	verity_verify_sig_opts_cleanup(&verify_args);
+ 
+ 	dm_audit_log_ctr(DM_MSG_PREFIX, ti, 1);
+@@ -1447,7 +1469,6 @@ static int verity_ctr(struct dm_target *ti, unsigned int argc, char **argv)
+ 	return 0;
+ 
+ bad:
+-
+ 	verity_verify_sig_opts_cleanup(&verify_args);
+ 	dm_audit_log_ctr(DM_MSG_PREFIX, ti, 0);
+ 	verity_dtr(ti);
+diff --git a/drivers/md/dm-verity-verify-sig.c b/drivers/md/dm-verity-verify-sig.c
+index 4836508ea50c..33165dd7470f 100644
+--- a/drivers/md/dm-verity-verify-sig.c
++++ b/drivers/md/dm-verity-verify-sig.c
+@@ -9,6 +9,9 @@
+ #include <linux/verification.h>
+ #include <keys/user-type.h>
+ #include <linux/module.h>
++#include <linux/security.h>
++#include <linux/dm-verity.h>
++#include "dm-core.h"
+ #include "dm-verity.h"
+ #include "dm-verity-verify-sig.h"
+ 
+@@ -97,14 +100,17 @@ int verity_verify_sig_parse_opt_args(struct dm_arg_set *as,
+  * verify_verify_roothash - Verify the root hash of the verity hash device
+  *			     using builtin trusted keys.
+  *
++ * @bdev: block_device representing the device-mapper created block device.
++ *	  Used by the security hook, to set information about the block_device.
+  * @root_hash: For verity, the roothash/data to be verified.
+  * @root_hash_len: Size of the roothash/data to be verified.
+  * @sig_data: The trusted signature that verifies the roothash/data.
+  * @sig_len: Size of the signature.
+  *
+  */
+-int verity_verify_root_hash(const void *root_hash, size_t root_hash_len,
+-			    const void *sig_data, size_t sig_len)
++int verity_verify_root_hash(struct block_device *bdev, const void *root_hash,
++			    size_t root_hash_len, const void *sig_data,
++			    size_t sig_len)
+ {
+ 	int ret;
+ 
+@@ -126,8 +132,12 @@ int verity_verify_root_hash(const void *root_hash, size_t root_hash_len,
+ 				NULL,
+ #endif
+ 				VERIFYING_UNSPECIFIED_SIGNATURE, NULL, NULL);
++	if (ret)
++		return ret;
+ 
+-	return ret;
++	return security_bdev_setsecurity(bdev,
++					 DM_VERITY_SIGNATURE_SEC_NAME,
++					 sig_data, sig_len);
+ }
+ 
+ void verity_verify_sig_opts_cleanup(struct dm_verity_sig_opts *sig_opts)
+diff --git a/drivers/md/dm-verity-verify-sig.h b/drivers/md/dm-verity-verify-sig.h
+index f36ea92127bf..5c6023fac97b 100644
+--- a/drivers/md/dm-verity-verify-sig.h
++++ b/drivers/md/dm-verity-verify-sig.h
+@@ -20,8 +20,9 @@ struct dm_verity_sig_opts {
+ 
+ #define DM_VERITY_ROOT_HASH_VERIFICATION_OPTS 2
+ 
+-int verity_verify_root_hash(const void *data, size_t data_len,
+-			    const void *sig_data, size_t sig_len);
++int verity_verify_root_hash(struct block_device *bdev, const void *data,
++			    size_t data_len, const void *sig_data,
++			    size_t sig_len);
+ bool verity_verify_is_sig_opt_arg(const char *arg_name);
+ 
+ int verity_verify_sig_parse_opt_args(struct dm_arg_set *as, struct dm_verity *v,
+@@ -34,8 +35,9 @@ void verity_verify_sig_opts_cleanup(struct dm_verity_sig_opts *sig_opts);
+ 
+ #define DM_VERITY_ROOT_HASH_VERIFICATION_OPTS 0
+ 
+-static inline int verity_verify_root_hash(const void *data, size_t data_len,
+-					  const void *sig_data, size_t sig_len)
++int verity_verify_root_hash(struct block_device *bdev, const void *data,
++			    size_t data_len, const void *sig_data,
++			    size_t sig_len)
+ {
+ 	return 0;
+ }
+diff --git a/include/linux/dm-verity.h b/include/linux/dm-verity.h
+new file mode 100644
+index 000000000000..bb0413d55d72
+--- /dev/null
++++ b/include/linux/dm-verity.h
+@@ -0,0 +1,19 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++
++#ifndef _LINUX_DM_VERITY_H
++#define _LINUX_DM_VERITY_H
++
++#include <linux/types.h>
++#include <crypto/hash_info.h>
++#include <linux/device-mapper.h>
++
++struct dm_verity_digest {
++	const char *algo;
++	const u8 *digest;
++	size_t digest_len;
++};
++
++#define DM_VERITY_SIGNATURE_SEC_NAME DM_NAME	".verity-signature"
++#define DM_VERITY_ROOTHASH_SEC_NAME  DM_NAME	".verity-roothash"
++
++#endif /* _LINUX_DM_VERITY_H */
 -- 
 2.25.1
 
