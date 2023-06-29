@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2F63EEB64DA
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Jun 2023 00:35:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A8BF5C001DB
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Jun 2023 00:35:54 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231443AbjF2Afo (ORCPT
+        id S230449AbjF2Afx (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 28 Jun 2023 20:35:44 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58568 "EHLO
+        Wed, 28 Jun 2023 20:35:53 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58674 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231359AbjF2AfW (ORCPT
+        with ESMTP id S231447AbjF2Aft (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 28 Jun 2023 20:35:22 -0400
-Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1363F2961;
-        Wed, 28 Jun 2023 17:35:19 -0700 (PDT)
+        Wed, 28 Jun 2023 20:35:49 -0400
+Received: from box.fidei.email (box.fidei.email [71.19.144.250])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id E64262728;
+        Wed, 28 Jun 2023 17:35:47 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id D1509807A9;
-        Wed, 28 Jun 2023 20:29:12 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 3F3AC8030E;
+        Wed, 28 Jun 2023 20:35:47 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1687998553; bh=zpbsNmNWpCCseiP3oLkRBDQESuU4ORz8TCsKQNmW/kg=;
+        t=1687998947; bh=mS8xcbyfJ2L+bJJYin0TxhoCv7CCnF7NZeAWVfGmOqw=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=dyPiF14BwnSAp66L4ZgdGkD47oR0m93nb5iJY4kzvD6G0Jvq0u4Uv2f0yuDbGM/B7
-         OkC5gGFdbgzo++rJDLTaJY/dXRWlYPhYW57A0Jy7E/YwJ/8Y5gbjNNo6MTBz+SyzNO
-         GpVJWOXwwzQc+87IpD2ZAJULoUEY+3Xtuhgc2wGcUISTLJ6bVy7iOW3Ul1pXx6TXXR
-         TNOH7KnE3YCetskxW36Jd1voiuMzj47LPHfBsh4KXgfH+cMWwbfct3ya0oNOZDfJfk
-         S0E9j5fBo3cnng9uHk+XY3ZKMmwl116Cv7vW7AN70sQwH2DqIe5O0tUSUzMaAsEq0/
-         olFQPsd3WORTA==
+        b=WWltYi1FfNjf/ZCGmuELIxDthB2YhneXl44dzR4QmVcCWB/CXRq8vPf/bcuhDFdP8
+         pwFi3qhJ0OOOgRDMxGT7aiQhWnjnii6wefF+wqgXYqS1rwpkQ0R+bwnwB0ajcCffL8
+         mQXj2m2j58Rq67BBkLlvoPKZJFnARBHYrVyOiYwzNXzZasPARzGM0zUTF4agINmktw
+         wzPbfclehwHmQWqpFyTzaNmM8FCKIiqKU2S1Bq1GC+YHHD3CY/4aGQM0VaRlejcaBs
+         KBrTYmR6AQzH8lNLUUoDmdkV+6MjAmXDHnc2yRAyQJ1ydOb+zBkAdEHut6+ouJ7Cq3
+         S9tKfDBea1B3g==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>,
@@ -37,162 +37,96 @@ To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         "Theodore Y. Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>, kernel-team@meta.com,
         linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v4 2/8] fscrypt: split and rename setup_file_encryption_key()
-Date:   Wed, 28 Jun 2023 20:28:52 -0400
-Message-Id: <741d936ed04b00a6122f0043c00f261116bee8b3.1687988119.git.sweettea-kernel@dorminy.me>
-In-Reply-To: <cover.1687988119.git.sweettea-kernel@dorminy.me>
-References: <cover.1687988119.git.sweettea-kernel@dorminy.me>
+Cc:     Omar Sandoval <osandov@osandov.com>,
+        Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Subject: [PATCH v1 01/17] btrfs: disable various operations on encrypted inodes
+Date:   Wed, 28 Jun 2023 20:35:24 -0400
+Message-Id: <e7785ffe237e581a7ba7e45d2724fca4d8fa1470.1687988380.git.sweettea-kernel@dorminy.me>
+In-Reply-To: <cover.1687988380.git.sweettea-kernel@dorminy.me>
+References: <cover.1687988380.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-At present, setup_file_encryption_key() does several things: it finds
-and locks the master key, and then calls into the appropriate functions
-to setup the prepared key for the fscrypt_info. The code is clearer to
-follow if these functions are divided.
+From: Omar Sandoval <osandov@osandov.com>
 
-Thus, move calling the appropriate file key setup function into a new
-fscrypt_setup_file_key() function. After the file key setup functions
-are moved, the remaining function can take a const fscrypt_info, and is
-renamed find_and_lock_master_key() to precisely describe its action.
+Initially, only normal data extents, using the normal (non-direct) IO
+path, will be encrypted. This change forbids various other bits:
+- allows reflinking only if both inodes have the same encryption status
+- disables direct IO on encrypted inodes
+- disable inline data on encrypted inodes
 
+Signed-off-by: Omar Sandoval <osandov@osandov.com>
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/crypto/keysetup.c | 77 ++++++++++++++++++++++++++++++--------------
- 1 file changed, 52 insertions(+), 25 deletions(-)
+ fs/btrfs/file.c    | 4 ++--
+ fs/btrfs/inode.c   | 3 ++-
+ fs/btrfs/reflink.c | 7 +++++++
+ 3 files changed, 11 insertions(+), 3 deletions(-)
 
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index b89c32ad19fb..727d473b6b03 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -386,6 +386,43 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
- 	return 0;
- }
- 
-+/*
-+ * Find or create the appropriate prepared key for an info.
-+ */
-+static int fscrypt_setup_file_key(struct fscrypt_info *ci,
-+				  struct fscrypt_master_key *mk,
-+				  bool need_dirhash_key)
-+{
-+	int err;
-+
-+	if (!mk) {
-+		if (ci->ci_policy.version != FSCRYPT_POLICY_V1)
-+			return -ENOKEY;
-+
-+		/*
-+		 * As a legacy fallback for v1 policies, search for the key in
-+		 * the current task's subscribed keyrings too.  Don't move this
-+		 * to before the search of ->s_master_keys, since users
-+		 * shouldn't be able to override filesystem-level keys.
-+		 */
-+		return fscrypt_setup_v1_file_key_via_subscribed_keyrings(ci);
-+	}
-+
-+	switch (ci->ci_policy.version) {
-+	case FSCRYPT_POLICY_V1:
-+		err = fscrypt_setup_v1_file_key(ci, mk->mk_secret.raw);
-+		break;
-+	case FSCRYPT_POLICY_V2:
-+		err = fscrypt_setup_v2_file_key(ci, mk, need_dirhash_key);
-+		break;
-+	default:
-+		WARN_ON_ONCE(1);
-+		err = -EINVAL;
-+		break;
-+	}
-+	return err;
-+}
-+
- /*
-  * Check whether the size of the given master key (@mk) is appropriate for the
-  * encryption settings which a particular file will use (@ci).
-@@ -426,7 +463,7 @@ static bool fscrypt_valid_master_key_size(const struct fscrypt_master_key *mk,
- }
- 
- /*
-- * Find the master key, then set up the inode's actual encryption key.
-+ * Find and lock the master key.
-  *
-  * If the master key is found in the filesystem-level keyring, then it is
-  * returned in *mk_ret with its semaphore read-locked.  This is needed to ensure
-@@ -434,9 +471,8 @@ static bool fscrypt_valid_master_key_size(const struct fscrypt_master_key *mk,
-  * multiple tasks may race to create an fscrypt_info for the same inode), and to
-  * synchronize the master key being removed with a new inode starting to use it.
-  */
--static int setup_file_encryption_key(struct fscrypt_info *ci,
--				     bool need_dirhash_key,
--				     struct fscrypt_master_key **mk_ret)
-+static int find_and_lock_master_key(const struct fscrypt_info *ci,
-+				    struct fscrypt_master_key **mk_ret)
- {
- 	struct super_block *sb = ci->ci_inode->i_sb;
- 	struct fscrypt_key_specifier mk_spec;
-@@ -466,17 +502,19 @@ static int setup_file_encryption_key(struct fscrypt_info *ci,
- 			mk = fscrypt_find_master_key(sb, &mk_spec);
- 		}
- 	}
-+
- 	if (unlikely(!mk)) {
- 		if (ci->ci_policy.version != FSCRYPT_POLICY_V1)
- 			return -ENOKEY;
- 
- 		/*
--		 * As a legacy fallback for v1 policies, search for the key in
--		 * the current task's subscribed keyrings too.  Don't move this
--		 * to before the search of ->s_master_keys, since users
--		 * shouldn't be able to override filesystem-level keys.
-+		 * This might be the case of a v1 policy using a process
-+		 * subscribed keyring to get the key, so there may not be
-+		 * a relevant master key.
- 		 */
--		return fscrypt_setup_v1_file_key_via_subscribed_keyrings(ci);
-+
-+		*mk_ret = NULL;
-+		return 0;
- 	}
- 	down_read(&mk->mk_sem);
- 
-@@ -491,21 +529,6 @@ static int setup_file_encryption_key(struct fscrypt_info *ci,
- 		goto out_release_key;
+diff --git a/fs/btrfs/file.c b/fs/btrfs/file.c
+index 392bc7d512a0..354962a7dd72 100644
+--- a/fs/btrfs/file.c
++++ b/fs/btrfs/file.c
+@@ -1502,7 +1502,7 @@ static ssize_t btrfs_direct_write(struct kiocb *iocb, struct iov_iter *from)
+ 		goto relock;
  	}
  
--	switch (ci->ci_policy.version) {
--	case FSCRYPT_POLICY_V1:
--		err = fscrypt_setup_v1_file_key(ci, mk->mk_secret.raw);
--		break;
--	case FSCRYPT_POLICY_V2:
--		err = fscrypt_setup_v2_file_key(ci, mk, need_dirhash_key);
--		break;
--	default:
--		WARN_ON_ONCE(1);
--		err = -EINVAL;
--		break;
--	}
--	if (err)
--		goto out_release_key;
--
- 	*mk_ret = mk;
- 	return 0;
+-	if (check_direct_IO(fs_info, from, pos)) {
++	if (IS_ENCRYPTED(inode) || check_direct_IO(fs_info, from, pos)) {
+ 		btrfs_inode_unlock(BTRFS_I(inode), ilock_flags);
+ 		goto buffered;
+ 	}
+@@ -3741,7 +3741,7 @@ static ssize_t btrfs_direct_read(struct kiocb *iocb, struct iov_iter *to)
+ 	ssize_t read = 0;
+ 	ssize_t ret;
  
-@@ -580,7 +603,11 @@ fscrypt_setup_encryption_info(struct inode *inode,
- 	if (res)
- 		goto out;
+-	if (fsverity_active(inode))
++	if (IS_ENCRYPTED(inode) || fsverity_active(inode))
+ 		return 0;
  
--	res = setup_file_encryption_key(crypt_info, need_dirhash_key, &mk);
-+	res = find_and_lock_master_key(crypt_info, &mk);
-+	if (res)
-+		goto out;
+ 	if (check_direct_read(btrfs_sb(inode->i_sb), to, iocb->ki_pos))
+diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
+index dbbb67293e34..48eadc4f187f 100644
+--- a/fs/btrfs/inode.c
++++ b/fs/btrfs/inode.c
+@@ -630,7 +630,8 @@ static noinline int cow_file_range_inline(struct btrfs_inode *inode, u64 size,
+ 	 * compressed) data fits in a leaf and the configured maximum inline
+ 	 * size.
+ 	 */
+-	if (size < i_size_read(&inode->vfs_inode) ||
++	if (IS_ENCRYPTED(&inode->vfs_inode) ||
++	    size < i_size_read(&inode->vfs_inode) ||
+ 	    size > fs_info->sectorsize ||
+ 	    data_len > BTRFS_MAX_INLINE_DATA_SIZE(fs_info) ||
+ 	    data_len > fs_info->max_inline)
+diff --git a/fs/btrfs/reflink.c b/fs/btrfs/reflink.c
+index 0474bbe39da7..ad722f495c9b 100644
+--- a/fs/btrfs/reflink.c
++++ b/fs/btrfs/reflink.c
+@@ -1,6 +1,7 @@
+ // SPDX-License-Identifier: GPL-2.0
+ 
+ #include <linux/blkdev.h>
++#include <linux/fscrypt.h>
+ #include <linux/iversion.h>
+ #include "ctree.h"
+ #include "fs.h"
+@@ -811,6 +812,12 @@ static int btrfs_remap_file_range_prep(struct file *file_in, loff_t pos_in,
+ 		ASSERT(inode_in->i_sb == inode_out->i_sb);
+ 	}
+ 
++	/*
++	 * Can only reflink encrypted files if both files are encrypted.
++	 */
++	if (IS_ENCRYPTED(inode_in) != IS_ENCRYPTED(inode_out))
++		return -EINVAL;
 +
-+	res = fscrypt_setup_file_key(crypt_info, mk, need_dirhash_key);
- 	if (res)
- 		goto out;
- 
+ 	/* Don't make the dst file partly checksummed */
+ 	if ((BTRFS_I(inode_in)->flags & BTRFS_INODE_NODATASUM) !=
+ 	    (BTRFS_I(inode_out)->flags & BTRFS_INODE_NODATASUM)) {
 -- 
 2.40.1
 
