@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id E8FBCC001B1
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Jun 2023 00:34:56 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0A6DEEB64D7
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Jun 2023 00:35:25 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229585AbjF2Aez (ORCPT
+        id S230492AbjF2AfU (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 28 Jun 2023 20:34:55 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58414 "EHLO
+        Wed, 28 Jun 2023 20:35:20 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58562 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231169AbjF2Aey (ORCPT
+        with ESMTP id S231208AbjF2AfT (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 28 Jun 2023 20:34:54 -0400
+        Wed, 28 Jun 2023 20:35:19 -0400
 Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 918681FC2;
-        Wed, 28 Jun 2023 17:34:53 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 192D02979;
+        Wed, 28 Jun 2023 17:35:16 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 9927680727;
-        Wed, 28 Jun 2023 20:34:52 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 40469807BF;
+        Wed, 28 Jun 2023 20:29:17 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1687998893; bh=OU3phguMvW6dB4K+YYW4zI9XIY0ZO0OgTtdZGLxn5UQ=;
+        t=1687998557; bh=+8DZxpJFKaFfo1GwUlCINDS5EWG3O4GW/P3hhF6pzcA=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=wi8h+uGAIz/FpxQu/0pNrDjn1DWsZPLLMzZh0kkftOfnJqbbEhR8TZreMaxjqk1wq
-         CS1M3LmqKIKwdZy8FgZmsEi1ys5eaSmYaWGdAhq+h41X+zGDfrg2M8py/sS/JICzBW
-         omL+N7XwTTs5ePXlW+4jcyTdr2+QpVRIagnAhjdrE2Qc0v+mVxX7W41ncKs6XmZeaL
-         drvSDATB4/7UGbMc7ygfDzniu26pD6RRS+S9WPBAOQSgrADtFoJqmDQn6mA9D9ndrC
-         BBbGod9ruSNpKkGfPjmGMMAEsvb4oVQClhOxvfbh1Fh9qR+ym4hHWxnFkj+W8unzCN
-         qS7uz5MYDNshg==
+        b=S3heQ/4RouvtPrKerWNnwxB6ka3+sN5urA2BxuanKZ6AxiqE/3oHgBKSR3tFHg82x
+         IJ4xe1BC3Ghyw6pxPlWnkJaSn+AE4JBNHImix7byUz4jzfM7znwk3ZPZSYgSN/Dn+r
+         JrkWdXcpfJuHomkUTJJnQMbl6wTkec6wPZzRdoyCS/a8vYmU1cxlXRu9t6mtYSB8gf
+         JyocU8OL/6kTROA9umhmoJZ38lUhrXWHuA/TgbaLjyPFX5Us5tHa6ue8qeAr7J4iZE
+         FQuvSREOQRyIsdMKadXoHtdvaC7NP+q10WO2BXGygPKq44Gq/g2E7fIShiGpzwdnuJ
+         nYHixs8RK2RMQ==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>,
@@ -38,96 +38,128 @@ To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         Jaegeuk Kim <jaegeuk@kernel.org>, kernel-team@meta.com,
         linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v1 12/12] fscrypt: update documentation for per-extent keys
-Date:   Wed, 28 Jun 2023 20:29:42 -0400
-Message-Id: <212cb3d0b8f4abf657671f05dbe0b3d9d858211d.1687988246.git.sweettea-kernel@dorminy.me>
-In-Reply-To: <cover.1687988246.git.sweettea-kernel@dorminy.me>
-References: <cover.1687988246.git.sweettea-kernel@dorminy.me>
+Subject: [PATCH v4 5/8] fscrypt: reduce special-casing of IV_INO_LBLK_32
+Date:   Wed, 28 Jun 2023 20:28:55 -0400
+Message-Id: <761a44f07219a83c7b5d30990922f07363a4e305.1687988119.git.sweettea-kernel@dorminy.me>
+In-Reply-To: <cover.1687988119.git.sweettea-kernel@dorminy.me>
+References: <cover.1687988119.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add some documentation of how extent-based encryption works, hopefully
-enough for future filesystem users.
+Right now, the IV_INO_LBLK_32 policy is handled by its own function
+called in fscrypt_setup_v2_file_key(), different from all other policies
+which just call find_mode_prepared_key() with various parameters. The
+function additionally sets up the relevant inode hashing key in the
+master key, and uses it to hash the inode number if possible. This is
+not particularly relevant to setting up a prepared key, so this change
+tries to make it clear that every non-default policy uses basically the
+same setup mechanism for its prepared key. The other setup is moved to
+be called from the top crypt_info setup function.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- Documentation/filesystems/fscrypt.rst | 38 ++++++++++++++++++++++-----
- 1 file changed, 32 insertions(+), 6 deletions(-)
+ fs/crypto/keysetup.c | 62 +++++++++++++++++++++++---------------------
+ 1 file changed, 32 insertions(+), 30 deletions(-)
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index eccd327e6df5..9bbfcd84a29f 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -31,7 +31,7 @@ However, except for filenames, fscrypt does not encrypt filesystem
- metadata.
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index 302a1ccde439..0648ae22ecc4 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -302,44 +302,30 @@ void fscrypt_hash_inode_number(struct fscrypt_info *ci,
+ 					      &mk->mk_ino_hash_key);
+ }
  
- Unlike eCryptfs, which is a stacked filesystem, fscrypt is integrated
--directly into supported filesystems --- currently ext4, F2FS, and
-+directly into supported filesystems --- currently btrfs, ext4, F2FS, and
- UBIFS.  This allows encrypted files to be read and written without
- caching both the decrypted and encrypted pages in the pagecache,
- thereby nearly halving the memory used and bringing it in line with
-@@ -280,6 +280,11 @@ included in the IV.  Moreover:
-   key derived using the KDF.  Users may use the same master key for
-   other v2 encryption policies.
+-static int fscrypt_setup_iv_ino_lblk_32_key(struct fscrypt_info *ci,
+-					    struct fscrypt_master_key *mk)
++static int fscrypt_setup_ino_hash_key(struct fscrypt_master_key *mk)
+ {
+ 	int err;
  
-+For filesystems with extent-based content encryption (e.g. btrfs),
-+this is the only choice. Data shared among multiple inodes must share
-+the exact same key, therefore necessitating inodes using the same key
-+for contents encryption.
+-	err = find_mode_prepared_key(ci, mk, mk->mk_iv_ino_lblk_32_keys,
+-				     HKDF_CONTEXT_IV_INO_LBLK_32_KEY, true);
+-	if (err)
+-		return err;
+-
+ 	/* pairs with smp_store_release() below */
+-	if (!smp_load_acquire(&mk->mk_ino_hash_key_initialized)) {
++	if (smp_load_acquire(&mk->mk_ino_hash_key_initialized))
++		return 0;
+ 
+-		mutex_lock(&fscrypt_mode_key_setup_mutex);
++	mutex_lock(&fscrypt_mode_key_setup_mutex);
+ 
+-		if (mk->mk_ino_hash_key_initialized)
+-			goto unlock;
++	if (mk->mk_ino_hash_key_initialized)
++		goto unlock;
+ 
+-		err = fscrypt_derive_siphash_key(mk,
+-						 HKDF_CONTEXT_INODE_HASH_KEY,
+-						 NULL, 0, &mk->mk_ino_hash_key);
+-		if (err)
+-			goto unlock;
+-		/* pairs with smp_load_acquire() above */
+-		smp_store_release(&mk->mk_ino_hash_key_initialized, true);
++	err = fscrypt_derive_siphash_key(mk,
++					 HKDF_CONTEXT_INODE_HASH_KEY,
++					 NULL, 0, &mk->mk_ino_hash_key);
++	if (err)
++		goto unlock;
++	/* pairs with smp_load_acquire() above */
++	smp_store_release(&mk->mk_ino_hash_key_initialized, true);
+ unlock:
+-		mutex_unlock(&fscrypt_mode_key_setup_mutex);
+-		if (err)
+-			return err;
+-	}
++	mutex_unlock(&fscrypt_mode_key_setup_mutex);
+ 
+-	/*
+-	 * New inodes may not have an inode number assigned yet.
+-	 * Hashing their inode number is delayed until later.
+-	 */
+-	if (ci->ci_inode->i_ino)
+-		fscrypt_hash_inode_number(ci, mk);
+-	return 0;
++	return err;
+ }
+ 
+ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+@@ -371,7 +357,9 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
+ 					     true);
+ 	} else if (ci->ci_policy.v2.flags &
+ 		   FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) {
+-		err = fscrypt_setup_iv_ino_lblk_32_key(ci, mk);
++		err = find_mode_prepared_key(ci, mk, mk->mk_iv_ino_lblk_32_keys,
++					     HKDF_CONTEXT_IV_INO_LBLK_32_KEY,
++					     true);
+ 	} else {
+ 		u8 derived_key[FSCRYPT_MAX_KEY_SIZE];
+ 
+@@ -629,6 +617,20 @@ fscrypt_setup_encryption_info(struct inode *inode,
+ 			goto out;
+ 	}
+ 
++	/*
++	 * The IV_INO_LBLK_32 policy needs a hashed inode number, but new
++	 * inodes may not have an inode number assigned yet.
++	 */
++	if (policy->version == FSCRYPT_POLICY_V2 &&
++	    (policy->v2.flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32)) {
++		res = fscrypt_setup_ino_hash_key(mk);
++		if (res)
++			goto out;
 +
- IV_INO_LBLK_64 policies
- -----------------------
- 
-@@ -381,12 +386,13 @@ to individual filesystems.  However, authenticated encryption (AE)
- modes are not currently supported because of the difficulty of dealing
- with ciphertext expansion.
- 
--Contents encryption
---------------------
-+Inode-based contents encryption
-+-------------------------------
- 
--For file contents, each filesystem block is encrypted independently.
--Starting from Linux kernel 5.5, encryption of filesystems with block
--size less than system's page size is supported.
-+Most filesystems use the previously discussed per-file keys. For these
-+filesystems, for file contents, each filesystem block is encrypted
-+independently.  Starting from Linux kernel 5.5, encryption of filesystems
-+with block size less than system's page size is supported.
- 
- Each block's IV is set to the logical block number within the file as
- a little endian number, except that:
-@@ -410,6 +416,26 @@ Note that because file logical block numbers are included in the IVs,
- filesystems must enforce that blocks are never shifted around within
- encrypted files, e.g. via "collapse range" or "insert range".
- 
-+Extent-based contents encryption
-+--------------------------------
++		if (inode->i_ino)
++			fscrypt_hash_inode_number(crypt_info, mk);
++	}
 +
-+For certain filesystems (currently only btrfs), data is encrypted on a
-+per-extent basis, for whatever the filesystem's notion of an extent is. The
-+scheme is exactly as with inode-based contents encryption, except that the
-+'inode number' for an extent is requested from the filesystem instead of from
-+the file's inode, and the 'logical block number' refers to an offset within the
-+extent.
-+
-+Because the encryption material is per-extent instead of per-inode, as long
-+as the extent's encryption context does not change, the filesystem may shift
-+around the position of the extent, and may have multiple files referring to
-+the same encrypted extent.
-+
-+Not all extents within a file are decrypted simultaneously, so it is possible
-+for a file read to fail partway through the file if it crosses into an extent
-+whose key is unavailable.  However, all writes will succeed, unless the key is
-+removed mid-write.
-+
- Filenames encryption
- --------------------
- 
+ 	/*
+ 	 * For existing inodes, multiple tasks may race to set ->i_crypt_info.
+ 	 * So use cmpxchg_release().  This pairs with the smp_load_acquire() in
 -- 
 2.40.1
 
