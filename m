@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 229B9C001B0
-	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Jun 2023 00:36:13 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id B127AC001DE
+	for <linux-fscrypt@archiver.kernel.org>; Thu, 29 Jun 2023 00:36:14 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231563AbjF2AgK (ORCPT
+        id S231645AbjF2AgN (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 28 Jun 2023 20:36:10 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58776 "EHLO
+        Wed, 28 Jun 2023 20:36:13 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58830 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S231571AbjF2AgC (ORCPT
+        with ESMTP id S231638AbjF2AgH (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 28 Jun 2023 20:36:02 -0400
-Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 41EDF2961;
-        Wed, 28 Jun 2023 17:36:01 -0700 (PDT)
+        Wed, 28 Jun 2023 20:36:07 -0400
+Received: from box.fidei.email (box.fidei.email [71.19.144.250])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 4BAA22979;
+        Wed, 28 Jun 2023 17:36:05 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id C2AE38030E;
-        Wed, 28 Jun 2023 20:36:00 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id CF53080794;
+        Wed, 28 Jun 2023 20:36:04 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1687998961; bh=ygx6Fucsv/PfbNluCySqHdaXBDBAud2k2FS6o3SlCkM=;
+        t=1687998965; bh=Gsyo6UI5OxD1zrZt4kHcLSsHKxT2/RB4lv7sLpxhsWE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=dRt+br6hPkVTDaU5CLyyWMrHIPkWwPfOR1lRCyKwKV0zsKdr+K6aNRTczTF7kJ9YA
-         NCWsFvwSFBUL/Kj7MOgPvOIW5iw1oS5UTSKn3TYG70YYCEEZJ7AaUtSjFwcb2OxcYP
-         qafLpoOa5A1r1wkVThPnQkvBj6+C/9ZfQjAjnWen/E6l63ceeyBIr6L4m/LIcEmiUQ
-         5zW5LC9169y/SV6J9cY53zbKlCpQgm3x8e8u/VehrCzzHW79qtCmINsrToCkDoIZ0O
-         t/c+qJ+YOQhjFGEE8PTkJ0oBHaN3snhxBK+5H7cTR8/2tAH9FEOCiqYQF0/45Vxr5N
-         xc/luygE4d8Gw==
+        b=N7m63AHfRANuFOPqcyRSwRKoGKzDfQ3yfQiCPJ1KdhyrW28W4wUAcvF5AdnQaFcba
+         2OgYnPAYmcqWd7dFeIoTXq39zuDTvUxlsoHE6PbH2/ziUH2Jl8zJYZ7JCshiNWJ0m2
+         HsrQVemHlEGXnAPjz+2OWT65mTlPL2hOysMQvP+d4x9JqzRKuTE9TN5P9GXyHqxhOU
+         lO4pvWDP+vQlb5JsALHfcBE10dPFeGKN3lrqHl10cWXJqKnCedK4nN5mRbWFCnHo5C
+         zEnaJZufzc6Vo7xJIMzn8381kbFiXjr212sjwouD1ThD0Tro58AZxaVCdb52WFI6is
+         PWdgcliKO1SuA==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>,
@@ -38,9 +38,9 @@ To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         Jaegeuk Kim <jaegeuk@kernel.org>, kernel-team@meta.com,
         linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v1 08/17] btrfs: use correct name hash for nokey names
-Date:   Wed, 28 Jun 2023 20:35:31 -0400
-Message-Id: <7490cfa3f5d851c622fc63a6b873f20104666322.1687988380.git.sweettea-kernel@dorminy.me>
+Subject: [PATCH v1 11/17] btrfs: add get_devices hook for fscrypt
+Date:   Wed, 28 Jun 2023 20:35:34 -0400
+Message-Id: <2a8b091cdb0993ad1cc618643e6df49d1aac9045.1687988380.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1687988380.git.sweettea-kernel@dorminy.me>
 References: <cover.1687988380.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -49,36 +49,70 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-For encrypted or unencrypted names, we calculate the offset for the dir
-item by hashing the name for the dir item. However, this doesn't work
-for a long nokey name, where we do not have the complete ciphertext.
-Instead, fscrypt stores the filesystem-provided hash in the nokey name,
-and we can extract it from the fscrypt_name structure in such a case.
+Since extent encryption requires inline encryption, even though we
+expect to use the inlinecrypt software fallback most of the time, we
+need to enumerate all the devices in use by btrfs.
+
+I'm not sure this is the correct list of active devices and it isn't
+tested with any multi-device test yet.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/btrfs/dir-item.c | 8 ++++++--
- 1 file changed, 6 insertions(+), 2 deletions(-)
+ fs/btrfs/fscrypt.c | 30 ++++++++++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
 
-diff --git a/fs/btrfs/dir-item.c b/fs/btrfs/dir-item.c
-index da95ae411d72..87993b19cd9d 100644
---- a/fs/btrfs/dir-item.c
-+++ b/fs/btrfs/dir-item.c
-@@ -257,8 +257,12 @@ struct btrfs_dir_item *btrfs_lookup_dir_item_fname(struct btrfs_trans_handle *tr
+diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
+index 20727d920841..658a67856de6 100644
+--- a/fs/btrfs/fscrypt.c
++++ b/fs/btrfs/fscrypt.c
+@@ -11,7 +11,9 @@
+ #include "ioctl.h"
+ #include "messages.h"
+ #include "root-tree.h"
++#include "super.h"
+ #include "transaction.h"
++#include "volumes.h"
+ #include "xattr.h"
  
- 	key.objectid = dir;
- 	key.type = BTRFS_DIR_ITEM_KEY;
--	key.offset = btrfs_name_hash(name->disk_name.name, name->disk_name.len);
--	/* XXX get the right hash for no-key names */
+ /*
+@@ -162,9 +164,37 @@ static bool btrfs_fscrypt_empty_dir(struct inode *inode)
+ 	return inode->i_size == BTRFS_EMPTY_DIR_SIZE;
+ }
+ 
++static struct block_device **btrfs_fscrypt_get_devices(struct super_block *sb,
++						       unsigned int *num_devs)
++{
++	struct btrfs_fs_info *fs_info = btrfs_sb(sb);
++	struct btrfs_fs_devices *fs_devices = fs_info->fs_devices;
++	struct block_device **devs;
++	struct btrfs_device *device;
++	int i;
 +
-+	if (!name->disk_name.name)
-+		key.offset = name->hash | ((u64)name->minor_hash << 32);
-+	else
-+		key.offset = btrfs_name_hash(name->disk_name.name,
-+					     name->disk_name.len);
- 
- 	ret = btrfs_search_slot(trans, root, &key, path, mod, -mod);
- 	if (ret == 0)
++	devs = kmalloc_array(fs_devices->num_devices, sizeof(*devs),
++		GFP_KERNEL);
++	if (!devs)
++		return ERR_PTR(-ENOMEM);
++
++	mutex_lock(&fs_devices->device_list_mutex);
++	i = 0;
++	list_for_each_entry(device, &fs_devices->devices, dev_list) {
++		if (test_bit(BTRFS_DEV_STATE_MISSING, &device->dev_state))
++			continue;
++
++		devs[i++] = device->bdev;
++	}
++	mutex_unlock(&fs_devices->device_list_mutex);
++	*num_devs = i;
++	return devs;
++}
++
+ const struct fscrypt_operations btrfs_fscrypt_ops = {
+ 	.get_context = btrfs_fscrypt_get_context,
+ 	.set_context = btrfs_fscrypt_set_context,
+ 	.empty_dir = btrfs_fscrypt_empty_dir,
++	.get_devices = btrfs_fscrypt_get_devices,
+ 	.key_prefix = "btrfs:"
+ };
 -- 
 2.40.1
 
