@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 20ADEC001B0
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:54:24 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 6A5E8C04E69
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:54:25 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231261AbjHHSyX (ORCPT
+        id S232065AbjHHSyY (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Aug 2023 14:54:23 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56212 "EHLO
+        Tue, 8 Aug 2023 14:54:24 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:53820 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S234204AbjHHSyB (ORCPT
+        with ESMTP id S230156AbjHHSyG (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 8 Aug 2023 14:54:01 -0400
-Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 802EC1A77F;
-        Tue,  8 Aug 2023 10:08:27 -0700 (PDT)
+        Tue, 8 Aug 2023 14:54:06 -0400
+Received: from box.fidei.email (box.fidei.email [71.19.144.250])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2F01715C7AB;
+        Tue,  8 Aug 2023 10:08:56 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id DE4EA83546;
-        Tue,  8 Aug 2023 13:08:24 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 8E1C983545;
+        Tue,  8 Aug 2023 13:08:56 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1691514505; bh=aTSgRaKoyZXOKio0Qeto3AOD8EsEQ5Vi7X+iufCiWwk=;
+        t=1691514536; bh=2ZaZcvfT6uFM7Cddjz5wTfSOll3Q7q+Pkodda/OJVXQ=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=bDrukw0alMlnR3CHpwMq69UsKZ26hp5nasovN7kaZdb5DVR40QL02hIk1fdi5995w
-         bxoUHFOoJnyv+3cpFncJ8elwVT22eBETo/JwDq48f4u2k2TTiMAAbMZO0eRxhPu5rb
-         cgXGuLIzSTSIyXtKMlsNX/NTUI0X/6iyv9xsWOw5AMKcz8Dq5kLZotM0Ll25EujIdw
-         Gj3A2MPzL+9ER4Op1AoB9yofPvW74fWQUZKXq1oC8h98lExwIDQ+HkHct7zJUzEuTp
-         MTQB5sFfiz3oTnYeCrSoe2ZjgQvC7kW6E+I2xhjsfLQItX8zboChn8kn3IMi5cuklZ
-         +yI7kH02Q9VbA==
+        b=CS59DW8dgnl2QJcxT1wvYPH4cgF9BQpn/xf3es2ccHX6kv2xa3TNpZ6fehsy3zuhm
+         3DIkUF7E6/RW/6fhoCHOMLiq+B3Hmbtdp/nkXzmiOepZHBh0ztm8fXCLGxDlGuqBhk
+         YHKxB5soApS/Vht3RcZPJlTQfhGseJPL8/4/NXaLqXGAD0U05qX0bNrEIX5gZylHq/
+         e87Fy0BcLbalc7jhTDNb321kq1dD2aLAR6XBctJuoMfU6eKWTwOEWbrwjK4ugdj+5p
+         RUdgPVR+qJJ83eQ6EzFxlfjyqyRp7ZsMlJsQSiNc9OC3DyvqbUVTcu2h6tdD1y2nP+
+         yI6f0mU6ct6/Q==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>,
@@ -38,232 +38,167 @@ To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         Eric Biggers <ebiggers@kernel.org>
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v6 6/8] fscrypt: move all the shared mode key setup deeper
-Date:   Tue,  8 Aug 2023 13:08:06 -0400
-Message-ID: <953985195b4cce824ed64ee68827558544e93dcc.1691505830.git.sweettea-kernel@dorminy.me>
-In-Reply-To: <cover.1691505830.git.sweettea-kernel@dorminy.me>
-References: <cover.1691505830.git.sweettea-kernel@dorminy.me>
+Subject: [PATCH v3 11/16] fscrypt: allow load/save of extent contexts
+Date:   Tue,  8 Aug 2023 13:08:28 -0400
+Message-ID: <6088e52bd6565c4e896033d0e79955b576f05048.1691505882.git.sweettea-kernel@dorminy.me>
+In-Reply-To: <cover.1691505882.git.sweettea-kernel@dorminy.me>
+References: <cover.1691505882.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Currently, fscrypt_setup_v2_file_key() has a set of ifs which encode
-various information about how to set up a new mode key if necessary for
-a shared-key policy (DIRECT or IV_INO_LBLK_*). This is somewhat awkward
--- this information is only needed at the point that we need to setup a
-new key, which is not the common case; the setup details are recorded as
-function parameters relatively far from where they're actually used; and
-at the point we use the parameters, we can derive the information
-equally well.
-
-So this moves mode and policy checking as deep into the callstack as
-possible. mk_prepared_key_for_mode_policy() deals with the array lookup
-within a master key. And fill_hkdf_info_for mode_key() deals with
-filling in the hkdf info as necessary for a particular policy. These
-seem a little clearer in broad strokes, emphasizing the similarities
-between the policies, but it does spread out the information on how the
-key is derived for a particular policy more.
+The other half of using per-extent infos is saving and loading them from
+disk.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/crypto/keysetup.c | 131 +++++++++++++++++++++++++++++--------------
- 1 file changed, 88 insertions(+), 43 deletions(-)
+ fs/crypto/keysetup.c    | 49 +++++++++++++++++++++++++++++++++++++++++
+ fs/crypto/policy.c      | 20 +++++++++++++++++
+ include/linux/fscrypt.h | 17 ++++++++++++++
+ 3 files changed, 86 insertions(+)
 
 diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index 8b201b91c036..7dd12c1821dd 100644
+index c4ec042ca892..0076c7f2af3d 100644
 --- a/fs/crypto/keysetup.c
 +++ b/fs/crypto/keysetup.c
-@@ -13,6 +13,17 @@
+@@ -983,6 +983,55 @@ void fscrypt_free_extent_info(struct fscrypt_info **info_ptr)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_free_extent_info);
  
- #include "fscrypt_private.h"
- 
-+#define MAX_MODE_KEY_HKDF_INFO_SIZE 17
-+
-+/*
-+ * Constant defining the various policy flags which require a non-default key
-+ * policy.
++/**
++ * fscrypt_load_extent_info() - set up a preexisting extent's fscrypt_info
++ * @inode: the inode to which the extent belongs. Must be encrypted.
++ * @buf: a buffer containing the extent's stored context
++ * @len: the length of the @ctx buffer
++ * @info_ptr: a pointer to return the extent's fscrypt_info into. Should be
++ *	      a pointer to a member of the extent struct, as it will be passed
++ *	      back to the filesystem if key removal demands removal of the
++ *	      info from the extent
++ *
++ * This is not %GFP_NOFS safe, so the caller is expected to call
++ * memalloc_nofs_save/restore() if appropriate.
++ *
++ * Return: 0 if successful, or -errno if it fails.
 + */
-+#define FSCRYPT_POLICY_FLAGS_KEY_MASK		\
-+	(FSCRYPT_POLICY_FLAG_DIRECT_KEY		\
-+	 | FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64	\
-+	 | FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32)
++int fscrypt_load_extent_info(struct inode *inode, void *buf, size_t len,
++			     struct fscrypt_info **info_ptr)
++{
++	int res;
++	union fscrypt_context ctx;
++	union fscrypt_policy policy;
 +
- struct fscrypt_mode fscrypt_modes[] = {
- 	[FSCRYPT_MODE_AES_256_XTS] = {
- 		.friendly_name = "AES-256-XTS",
-@@ -184,20 +195,83 @@ int fscrypt_set_per_file_enc_key(struct fscrypt_info *ci, const u8 *raw_key)
- 	return fscrypt_prepare_key(&ci->ci_enc_key, raw_key, ci);
++	if (!fscrypt_has_encryption_key(inode))
++		return -EINVAL;
++
++	memcpy(&ctx, buf, len);
++
++	res = fscrypt_policy_from_context(&policy, &ctx, len);
++	if (res) {
++		fscrypt_warn(inode,
++			     "Unrecognized or corrupt encryption context");
++		return res;
++	}
++
++	if (!fscrypt_supported_policy(&policy, inode))
++		return -EINVAL;
++
++	res = fscrypt_setup_encryption_info(inode, &policy,
++					    fscrypt_context_nonce(&ctx),
++					    IS_CASEFOLDED(inode) &&
++					    S_ISDIR(inode->i_mode),
++					    info_ptr);
++
++	if (res == -ENOPKG) /* Algorithm unavailable? */
++		res = 0;
++	return res;
++}
++EXPORT_SYMBOL_GPL(fscrypt_load_extent_info);
++
+ /**
+  * fscrypt_put_encryption_info() - free most of an inode's fscrypt data
+  * @inode: an inode being evicted
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index f4456ecb3f87..9ecb01e49d33 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -762,6 +762,26 @@ int fscrypt_set_context(struct inode *inode, void *fs_data)
+ }
+ EXPORT_SYMBOL_GPL(fscrypt_set_context);
+ 
++/**
++ * fscrypt_set_extent_context() - Set the fscrypt context for an extent
++ * @ci: info from which to fetch policy and nonce
++ * @ctx: where context should be written
++ * @len: the size of ctx
++ *
++ * Given an fscrypt_info belonging to an extent (generated via
++ * fscrypt_prepare_new_extent()), generate a new context and write it to @ctx.
++ * len is checked to be at least FSCRYPT_SET_CONTEXT_MAX_SIZE bytes.
++ *
++ * Return: size of the resulting context or a negative error code.
++ */
++int fscrypt_set_extent_context(struct fscrypt_info *ci, void *ctx, size_t len)
++{
++	if (len < FSCRYPT_SET_CONTEXT_MAX_SIZE)
++		return -EINVAL;
++	return fscrypt_new_context(ctx, &ci->ci_policy, ci->ci_nonce);
++}
++EXPORT_SYMBOL_GPL(fscrypt_set_extent_context);
++
+ /**
+  * fscrypt_parse_test_dummy_encryption() - parse the test_dummy_encryption mount option
+  * @param: the mount option
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index e39165fbed41..4ba624beea91 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -325,6 +325,8 @@ int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
+ int fscrypt_has_permitted_context(struct inode *parent, struct inode *child);
+ int fscrypt_context_for_new_inode(void *ctx, struct inode *inode);
+ int fscrypt_set_context(struct inode *inode, void *fs_data);
++int fscrypt_set_extent_context(struct fscrypt_info *info, void *ctx,
++			       size_t len);
+ 
+ struct fscrypt_dummy_policy {
+ 	const union fscrypt_policy *policy;
+@@ -365,6 +367,8 @@ int fscrypt_drop_inode(struct inode *inode);
+ int fscrypt_prepare_new_extent(struct inode *inode,
+ 			       struct fscrypt_info **info_ptr);
+ void fscrypt_free_extent_info(struct fscrypt_info **info_ptr);
++int fscrypt_load_extent_info(struct inode *inode, void *buf, size_t len,
++			     struct fscrypt_info **info_ptr);
+ 
+ /* fname.c */
+ int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
+@@ -541,6 +545,12 @@ static inline int fscrypt_set_context(struct inode *inode, void *fs_data)
+ 	return -EOPNOTSUPP;
  }
  
-+static struct fscrypt_prepared_key *
-+mk_prepared_key_for_mode_policy(struct fscrypt_master_key *mk,
-+				union fscrypt_policy *policy,
-+				struct fscrypt_mode *mode)
++static inline int fscrypt_set_extent_context(struct fscrypt_info *info,
++					     void *ctx, size_t len)
 +{
-+	const u8 mode_num = mode - fscrypt_modes;
-+
-+	switch (policy->v2.flags & FSCRYPT_POLICY_FLAGS_KEY_MASK) {
-+	case FSCRYPT_POLICY_FLAG_DIRECT_KEY:
-+		return &mk->mk_direct_keys[mode_num];
-+	case FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64:
-+		return &mk->mk_iv_ino_lblk_64_keys[mode_num];
-+	case FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32:
-+		return &mk->mk_iv_ino_lblk_32_keys[mode_num];
-+	default:
-+		return ERR_PTR(-EINVAL);
-+	}
++	return -EOPNOTSUPP;
 +}
 +
-+static size_t
-+fill_hkdf_info_for_mode_key(const struct fscrypt_info *ci,
-+			    u8 hkdf_info[MAX_MODE_KEY_HKDF_INFO_SIZE])
-+{
-+	const u8 mode_num = ci->ci_mode - fscrypt_modes;
-+	const struct super_block *sb = ci->ci_inode->i_sb;
-+	u8 hkdf_infolen = 0;
-+
-+	hkdf_info[hkdf_infolen++] = mode_num;
-+	if (!(ci->ci_policy.v2.flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY)) {
-+		memcpy(&hkdf_info[hkdf_infolen], &sb->s_uuid,
-+				sizeof(sb->s_uuid));
-+		hkdf_infolen += sizeof(sb->s_uuid);
-+	}
-+	return hkdf_infolen;
-+}
-+
- static int setup_new_mode_prepared_key(struct fscrypt_master_key *mk,
- 				       struct fscrypt_prepared_key *prep_key,
--				       const struct fscrypt_info *ci,
--				       u8 hkdf_context, bool include_fs_uuid)
-+				       const struct fscrypt_info *ci)
+ struct fscrypt_dummy_policy {
+ };
+ 
+@@ -639,6 +649,13 @@ static inline void fscrypt_free_extent_info(struct fscrypt_info **info_ptr)
  {
- 	const struct inode *inode = ci->ci_inode;
- 	const struct super_block *sb = inode->i_sb;
-+	unsigned int policy_flags = fscrypt_policy_flags(&ci->ci_policy);
- 	struct fscrypt_mode *mode = ci->ci_mode;
- 	const u8 mode_num = mode - fscrypt_modes;
- 	u8 mode_key[FSCRYPT_MAX_KEY_SIZE];
- 	u8 hkdf_info[sizeof(mode_num) + sizeof(sb->s_uuid)];
- 	unsigned int hkdf_infolen = 0;
-+	u8 hkdf_context = 0;
- 	int err = 0;
- 
-+	switch (policy_flags & FSCRYPT_POLICY_FLAGS_KEY_MASK) {
-+	case FSCRYPT_POLICY_FLAG_DIRECT_KEY:
-+		hkdf_context = HKDF_CONTEXT_DIRECT_KEY;
-+		break;
-+	case FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64:
-+		hkdf_context = HKDF_CONTEXT_IV_INO_LBLK_64_KEY;
-+		break;
-+	case FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32:
-+		hkdf_context = HKDF_CONTEXT_IV_INO_LBLK_32_KEY;
-+		break;
-+	}
-+
-+	/*
-+	 * For DIRECT_KEY policies: instead of deriving per-file encryption
-+	 * keys, the per-file nonce will be included in all the IVs.  But
-+	 * unlike v1 policies, for v2 policies in this case we don't encrypt
-+	 * with the master key directly but rather derive a per-mode encryption
-+	 * key.  This ensures that the master key is consistently used only for
-+	 * HKDF, avoiding key reuse issues.
-+	 *
-+	 * For IV_INO_LBLK policies: encryption keys are derived from
-+	 * (master_key, mode_num, filesystem_uuid), and inode number is
-+	 * included in the IVs.  This format is optimized for use with inline
-+	 * encryption hardware compliant with the UFS standard.
-+	 */
-+
- 	mutex_lock(&fscrypt_mode_key_setup_mutex);
- 
- 	if (fscrypt_is_key_prepared(prep_key, ci))
-@@ -205,13 +279,9 @@ static int setup_new_mode_prepared_key(struct fscrypt_master_key *mk,
- 
- 	BUILD_BUG_ON(sizeof(mode_num) != 1);
- 	BUILD_BUG_ON(sizeof(sb->s_uuid) != 16);
--	BUILD_BUG_ON(sizeof(hkdf_info) != 17);
--	hkdf_info[hkdf_infolen++] = mode_num;
--	if (include_fs_uuid) {
--		memcpy(&hkdf_info[hkdf_infolen], &sb->s_uuid,
--		       sizeof(sb->s_uuid));
--		hkdf_infolen += sizeof(sb->s_uuid);
--	}
-+	BUILD_BUG_ON(sizeof(hkdf_info) != MAX_MODE_KEY_HKDF_INFO_SIZE);
-+	hkdf_infolen = fill_hkdf_info_for_mode_key(ci, hkdf_info);
-+
- 	err = fscrypt_hkdf_expand(&mk->mk_secret.hkdf,
- 				  hkdf_context, hkdf_info, hkdf_infolen,
- 				  mode_key, mode->keysize);
-@@ -225,10 +295,8 @@ static int setup_new_mode_prepared_key(struct fscrypt_master_key *mk,
- 	return err;
  }
  
--static int find_mode_prepared_key(struct fscrypt_info *ci,
--				  struct fscrypt_master_key *mk,
--				  struct fscrypt_prepared_key *keys,
--				  u8 hkdf_context, bool include_fs_uuid)
-+static int setup_mode_prepared_key(struct fscrypt_info *ci,
-+				  struct fscrypt_master_key *mk)
- {
- 	struct fscrypt_mode *mode = ci->ci_mode;
- 	const u8 mode_num = mode - fscrypt_modes;
-@@ -238,13 +306,15 @@ static int find_mode_prepared_key(struct fscrypt_info *ci,
- 	if (WARN_ON_ONCE(mode_num > FSCRYPT_MODE_MAX))
- 		return -EINVAL;
- 
--	prep_key = &keys[mode_num];
-+	prep_key = mk_prepared_key_for_mode_policy(mk, &ci->ci_policy, mode);
-+	if (IS_ERR(prep_key))
-+		return PTR_ERR(prep_key);
++static inline int fscrypt_load_extent_info(struct inode *inode, void *buf,
++					   size_t len,
++					   struct fscrypt_info **info_ptr)
++{
++	return -EOPNOTSUPP;
++}
 +
- 	if (fscrypt_is_key_prepared(prep_key, ci)) {
- 		ci->ci_enc_key = *prep_key;
- 		return 0;
- 	}
--	err = setup_new_mode_prepared_key(mk, prep_key, ci, hkdf_context,
--					  include_fs_uuid);
-+	err = setup_new_mode_prepared_key(mk, prep_key, ci);
- 	if (err)
- 		return err;
- 
-@@ -333,33 +403,8 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_info *ci,
- {
- 	int err;
- 
--	if (ci->ci_policy.v2.flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY) {
--		/*
--		 * DIRECT_KEY: instead of deriving per-file encryption keys, the
--		 * per-file nonce will be included in all the IVs.  But unlike
--		 * v1 policies, for v2 policies in this case we don't encrypt
--		 * with the master key directly but rather derive a per-mode
--		 * encryption key.  This ensures that the master key is
--		 * consistently used only for HKDF, avoiding key reuse issues.
--		 */
--		err = find_mode_prepared_key(ci, mk, mk->mk_direct_keys,
--					     HKDF_CONTEXT_DIRECT_KEY, false);
--	} else if (ci->ci_policy.v2.flags &
--		   FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
--		/*
--		 * IV_INO_LBLK_64: encryption keys are derived from (master_key,
--		 * mode_num, filesystem_uuid), and inode number is included in
--		 * the IVs.  This format is optimized for use with inline
--		 * encryption hardware compliant with the UFS standard.
--		 */
--		err = find_mode_prepared_key(ci, mk, mk->mk_iv_ino_lblk_64_keys,
--					     HKDF_CONTEXT_IV_INO_LBLK_64_KEY,
--					     true);
--	} else if (ci->ci_policy.v2.flags &
--		   FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) {
--		err = find_mode_prepared_key(ci, mk, mk->mk_iv_ino_lblk_32_keys,
--					     HKDF_CONTEXT_IV_INO_LBLK_32_KEY,
--					     true);
-+	if (ci->ci_policy.v2.flags & FSCRYPT_POLICY_FLAGS_KEY_MASK) {
-+		err = setup_mode_prepared_key(ci, mk);
- 	} else {
- 		u8 derived_key[FSCRYPT_MAX_KEY_SIZE];
- 
+  /* fname.c */
+ static inline int fscrypt_setup_filename(struct inode *dir,
+ 					 const struct qstr *iname,
 -- 
 2.41.0
 
