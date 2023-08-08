@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 50007C001B0
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:55:15 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 21D93C04A94
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:55:16 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232768AbjHHSzN (ORCPT
+        id S229553AbjHHSzP (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Aug 2023 14:55:13 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:46178 "EHLO
+        Tue, 8 Aug 2023 14:55:15 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54242 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232708AbjHHSyq (ORCPT
+        with ESMTP id S232883AbjHHSyq (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Tue, 8 Aug 2023 14:54:46 -0400
 Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 2C13F696A5;
-        Tue,  8 Aug 2023 10:12:28 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 38FD41B057;
+        Tue,  8 Aug 2023 10:12:39 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 8E1AF83439;
-        Tue,  8 Aug 2023 13:12:27 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id BC32A83441;
+        Tue,  8 Aug 2023 13:12:38 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1691514747; bh=vlBC78VJmNMxunWwFnRcE+UT0odKU0TdcAhiXzR6flE=;
+        t=1691514759; bh=a6xP0jJSWbHcthsubcHuP76jkFDSkrf84bFyrS2PycI=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=XVDbAyrLq8XD4ZP7gtLCGYDMwyHsxTXFV86QWDSoaHmtKtSJYjtAyTl4GoSTpdAzU
-         DsW4RdY/gOf4hv9cpDENGYeBR1/cgqXwToR3rmQnAX95ITGh9VATtxQy6bAQ91eHkQ
-         3yoLaBvsh6CsoLyd6/ZJ28kjZJME943jvH6zhory004/Ndhyh5mfj5oqp4laWBUOkk
-         8TteVne4nKXacwpiy9+gLv3oscSD80g9OOr88HG2kM23FqyJZrkzgndo9nVacBJV6l
-         JO14Dp/TEeNHGby4geXxUiBbYGfFokkqZtKjEkEPEvzt9/G4YxO35xyTZj1Zc2TdPb
-         L8oPNVOuW0bJw==
+        b=k4MASSa6kgIIgCCAtm7FtQP1c5FYWko50nAA838AHiHR+0yimESWkUSHYmaRv/lQ8
+         +96mEUgLFCxH1W931euRikDOzesE9tD+WIcMX87rzsLf64BkEtrUBx8C0193GK8G3y
+         xMWQVA8oG1kdGdY40dfTqZuEJf/vYrOJxTG4Wa0wpttLThDaJR1JoxzQOoqh064zOQ
+         vC/3rGAHJRiP8R3pFbPplURiz5yfHL2v2qCTDqqzwRBp3UxswTNb2qiLeaXjha5EAR
+         OnRaPNhBobOxq7TWZQqkvR3pVPjwGs+QqLZNJml+YaYqJDSKbSIhR4b0tbZHZEE2Xa
+         33HlTFOeu+9Eg==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>,
@@ -39,9 +39,9 @@ To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         Eric Biggers <ebiggers@kernel.org>
 Cc:     Omar Sandoval <osandov@osandov.com>,
         Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v3 01/17] btrfs: disable various operations on encrypted inodes
-Date:   Tue,  8 Aug 2023 13:12:03 -0400
-Message-ID: <6032492d9ee3168248d1d66577fca50464716c01.1691510179.git.sweettea-kernel@dorminy.me>
+Subject: [PATCH v3 09/17] btrfs: implement fscrypt ioctls
+Date:   Tue,  8 Aug 2023 13:12:11 -0400
+Message-ID: <f9437a837be4709fc2e6ddf7e275a4c1e2b71c13.1691510179.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1691510179.git.sweettea-kernel@dorminy.me>
 References: <cover.1691510179.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -52,57 +52,65 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Omar Sandoval <osandov@osandov.com>
 
-Initially, only normal data extents will be encrypted. This change
-forbids various other bits:
-- allows reflinking only if both inodes have the same encryption status
-- disable inline data on encrypted inodes
+These ioctls allow encryption to actually be used.
+
+The set_encryption_policy ioctl is the thing which actually turns on
+encryption, and therefore sets the ENCRYPT flag in the superblock. This
+prevents the filesystem from being loaded on older kernels.
+
+fscrypt provides CONFIG_FS_ENCRYPTION-disabled versions of all these
+functions which just return -EOPNOTSUPP, so the ioctls don't need to be
+compiled out if CONFIG_FS_ENCRYPTION isn't enabled.
+
+We could instead gate this ioctl on the superblock having the flag set,
+if we wanted to require mkfs with the encrypt flag in order to have a
+filesystem with any encryption.
 
 Signed-off-by: Omar Sandoval <osandov@osandov.com>
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/btrfs/inode.c   | 3 ++-
- fs/btrfs/reflink.c | 7 +++++++
- 2 files changed, 9 insertions(+), 1 deletion(-)
+ fs/btrfs/ioctl.c | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
 
-diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
-index 6a68d5a3ed20..bb9e1e608488 100644
---- a/fs/btrfs/inode.c
-+++ b/fs/btrfs/inode.c
-@@ -629,7 +629,8 @@ static noinline int cow_file_range_inline(struct btrfs_inode *inode, u64 size,
- 	 * compressed) data fits in a leaf and the configured maximum inline
- 	 * size.
- 	 */
--	if (size < i_size_read(&inode->vfs_inode) ||
-+	if (IS_ENCRYPTED(&inode->vfs_inode) ||
-+	    size < i_size_read(&inode->vfs_inode) ||
- 	    size > fs_info->sectorsize ||
- 	    data_len > BTRFS_MAX_INLINE_DATA_SIZE(fs_info) ||
- 	    data_len > fs_info->max_inline)
-diff --git a/fs/btrfs/reflink.c b/fs/btrfs/reflink.c
-index 0474bbe39da7..ad722f495c9b 100644
---- a/fs/btrfs/reflink.c
-+++ b/fs/btrfs/reflink.c
-@@ -1,6 +1,7 @@
- // SPDX-License-Identifier: GPL-2.0
- 
- #include <linux/blkdev.h>
-+#include <linux/fscrypt.h>
- #include <linux/iversion.h>
- #include "ctree.h"
- #include "fs.h"
-@@ -811,6 +812,12 @@ static int btrfs_remap_file_range_prep(struct file *file_in, loff_t pos_in,
- 		ASSERT(inode_in->i_sb == inode_out->i_sb);
- 	}
- 
-+	/*
-+	 * Can only reflink encrypted files if both files are encrypted.
-+	 */
-+	if (IS_ENCRYPTED(inode_in) != IS_ENCRYPTED(inode_out))
-+		return -EINVAL;
-+
- 	/* Don't make the dst file partly checksummed */
- 	if ((BTRFS_I(inode_in)->flags & BTRFS_INODE_NODATASUM) !=
- 	    (BTRFS_I(inode_out)->flags & BTRFS_INODE_NODATASUM)) {
+diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
+index 05984e5448b4..03ea92218749 100644
+--- a/fs/btrfs/ioctl.c
++++ b/fs/btrfs/ioctl.c
+@@ -4562,6 +4562,34 @@ long btrfs_ioctl(struct file *file, unsigned int
+ 		return btrfs_ioctl_get_fslabel(fs_info, argp);
+ 	case FS_IOC_SETFSLABEL:
+ 		return btrfs_ioctl_set_fslabel(file, argp);
++	case FS_IOC_SET_ENCRYPTION_POLICY: {
++		if (!IS_ENABLED(CONFIG_FS_ENCRYPTION))
++			return -EOPNOTSUPP;
++		if (sb_rdonly(fs_info->sb))
++			return -EROFS;
++		/*
++		 *  If we crash before we commit, nothing encrypted could have
++		 * been written so it doesn't matter whether the encrypted
++		 * state persists.
++		 */
++		btrfs_set_fs_incompat(fs_info, ENCRYPT);
++		return fscrypt_ioctl_set_policy(file, (const void __user *)arg);
++	}
++	case FS_IOC_GET_ENCRYPTION_POLICY:
++		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
++		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
++	case FS_IOC_ADD_ENCRYPTION_KEY:
++		return fscrypt_ioctl_add_key(file, (void __user *)arg);
++	case FS_IOC_REMOVE_ENCRYPTION_KEY:
++		return fscrypt_ioctl_remove_key(file, (void __user *)arg);
++	case FS_IOC_REMOVE_ENCRYPTION_KEY_ALL_USERS:
++		return fscrypt_ioctl_remove_key_all_users(file,
++							  (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_KEY_STATUS:
++		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
++	case FS_IOC_GET_ENCRYPTION_NONCE:
++		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
+ 	case FITRIM:
+ 		return btrfs_ioctl_fitrim(fs_info, argp);
+ 	case BTRFS_IOC_SNAP_CREATE:
 -- 
 2.41.0
 
