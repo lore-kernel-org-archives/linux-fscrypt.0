@@ -2,43 +2,43 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 66973C0729B
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:16:14 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 3324CC07E8E
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:16:15 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S235537AbjHHSQM (ORCPT
+        id S235555AbjHHSQO (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Aug 2023 14:16:12 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:58532 "EHLO
+        Tue, 8 Aug 2023 14:16:14 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:42852 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S235442AbjHHSPx (ORCPT
+        with ESMTP id S234958AbjHHSPz (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 8 Aug 2023 14:15:53 -0400
-Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A2A1B1F406;
-        Tue,  8 Aug 2023 10:22:12 -0700 (PDT)
+        Tue, 8 Aug 2023 14:15:55 -0400
+Received: from box.fidei.email (box.fidei.email [71.19.144.250])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EBBCC72BA;
+        Tue,  8 Aug 2023 10:22:16 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 3385E809D8;
-        Tue,  8 Aug 2023 13:22:12 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 868BC8354E;
+        Tue,  8 Aug 2023 13:22:16 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1691515332; bh=YBYT5+wjFCkvsFKr1anN5MPIlgnu4aucZknFt5kUKMw=;
+        t=1691515336; bh=p0lhrwRpH0M08g76wr/r8ueKNz5/IfAaaBLhtQvn+Po=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=SqV+z961XpUFSRkO1ScWO5VvlCHhN3yH0Ks8QgG5pbUgaPnj5PQZRX64o1gwzport
-         KF7GoAx9BdjtW6xrlvTSnzsJtfqenNFsLEANEP8H7lM64mjUWHCZ+3MD0+Ofg1ECHI
-         mlM1Kb20BqVk501xAhiNPu48GBEoyD/JYlMNUhSrp6FdVfp/adgXzVJX+Pco2Y0beK
-         KxOwMhw3dfvB06Xy2CyLX9Xd+PDuFXvq51ZuXiimVEI93KRDJ41xigKpa9KUZXoSEB
-         5Mc3QGfp6khVM0mAADUy5sVbs2wLooV/cuCjzvJSNf7Uogleof2KCGlX0H28hM81DQ
-         7h1CFpv+FDing==
+        b=JULWczvRUBLxdZcdp04IbpPnHo4zu+K8pB7HAS8HjKcIz+L9GtjY2H43j9OFxRvvJ
+         5qXoYchSa9DeV/WCGLCuIRuaMctWnM5jEMYy02QXXJH5e2eeIMMSPDQuv+ZW1Lju5g
+         fLR0xEFF5whXC27nKEpNEXV3HXty1c2Yjohm58JcP3ja/mxuJvG6vfKgKvQSnbWu9f
+         0KsWQKw41rPlJLOF39aH+epy1dPvnNgHNpnVWcnE2E7WsfmaNUY0QvsaeJV7DpqwLy
+         bT8DsQq61CfR8v6Nm4qPc9oNVhHjYG6dIORsGHvziGVpb3ecgNhKa4yD62aNX5gFXv
+         Pp4dNl8YcpX+w==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     linux-btrfs@vger.kernel.org, fstests@vger.kernel.org,
         kernel-team@meta.com, ebiggers@google.com, anand.jain@oracle.com,
         fdmanana@suse.com, linux-fscrypt@vger.kernel.org,
         fsverity@lists.linux.dev, zlang@kernel.org
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [RFC PATCH v3 3/9] common/encrypt: add btrfs to get_ciphertext_filename
-Date:   Tue,  8 Aug 2023 13:21:22 -0400
-Message-ID: <3e0ebf7a15ff15818f3188fd757f396284ddbc3a.1691530000.git.sweettea-kernel@dorminy.me>
+Subject: [RFC PATCH v3 6/9] tests: adjust generic/429 for extent encryption
+Date:   Tue,  8 Aug 2023 13:21:25 -0400
+Message-ID: <0952e60c8e73a41a0448e3ada8172744a6882550.1691530000.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1691530000.git.sweettea-kernel@dorminy.me>
 References: <cover.1691530000.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -47,47 +47,45 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Add the relevant call to get an encrypted filename from btrfs.
+Extent encryption is different from the existing inode-based encryption
+insofar as it only generates encryption keys for data encryption at the
+moment at which the data is written. This means that when a session key is
+removed, even if there's an open file using it, that file immediately
+becomes unreadable and unwritable.
+
+This isn't an issue for non-session keys, which are soft deleted by
+fscrypt and stick around until there are no more open files with extent
+encryption using them. But for session keys, which are managed by the
+kernel keyring directly instead of through fscrypt, when they're removed
+they're removed.
+
+generic/429 uses session keys and expects to use the written data after
+key removal; while it's not quite what the test means for other
+filesystems, most of the test is still meaningful if we push the dirty
+data into the filesystem with a sync before dropping the key.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- common/encrypt | 16 ++++++++++++++++
- 1 file changed, 16 insertions(+)
+ tests/generic/429 | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
-diff --git a/common/encrypt b/common/encrypt
-index fc1c8cc7..2c1925da 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -618,6 +618,19 @@ _get_ciphertext_filename()
- 	local dir_inode=$3
+diff --git a/tests/generic/429 b/tests/generic/429
+index 2cf12316..1d26deda 100755
+--- a/tests/generic/429
++++ b/tests/generic/429
+@@ -68,6 +68,12 @@ show_directory_with_key()
+ 	show_file_contents
+ }
  
- 	case $FSTYP in
-+	btrfs)
-+		# Extract the filename from the inode_ref object, similar to:
-+		# item 24 key (259 INODE_REF 257) itemoff 14826 itemsize 26
-+		# 	index 3 namelen 16 name: J\xf7\x15tD\x8eL\xae/\x98\x9f\x09\xc1\xb6\x09>
-+		#
-+		$BTRFS_UTIL_PROG inspect-internal dump-tree $device | \
-+			grep -A 1 "key ($inode INODE_REF " | tail -n 1 | \
-+			perl -ne '
-+				s/.*?name: //;
-+				chomp;
-+				s/\\x([[:xdigit:]]{2})/chr hex $1/eg;
-+				print;'
-+		;;
- 	ext4)
- 		# Extract the filename from the debugfs output line like:
- 		#
-@@ -715,6 +728,9 @@ _require_get_ciphertext_filename_support()
- 			_notrun "dump.f2fs (f2fs-tools) is too old; doesn't support showing unambiguous on-disk filenames"
- 		fi
- 		;;
-+	btrfs)
-+		_require_command "$BTRFS_UTIL_PROG" btrfs
-+		;;
- 	*)
- 		_notrun "_get_ciphertext_filename() isn't implemented on $FSTYP"
- 		;;
++# btrfs needs to have dirty data pushed into it before session keyring
++# is unlinked, as it doesn't set up the data encryption key until then.	
++if [ "$FSTYP" = "btrfs" ]; then
++	sync
++fi
++
+ # View the directory without the encryption key.  The plaintext names shouldn't
+ # exist, but 'cat' each to verify this, which also should create negative
+ # dentries.  The no-key names are unpredictable by design, but verify that the
 -- 
 2.41.0
 
