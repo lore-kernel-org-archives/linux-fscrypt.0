@@ -2,43 +2,43 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 7DB53C04FE1
+	by smtp.lore.kernel.org (Postfix) with ESMTP id CD31AC04FDF
 	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:16:17 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233324AbjHHSQQ (ORCPT
+        id S232808AbjHHSQR (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Aug 2023 14:16:16 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:38282 "EHLO
+        Tue, 8 Aug 2023 14:16:17 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:42836 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232864AbjHHSP4 (ORCPT
+        with ESMTP id S232978AbjHHSPy (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 8 Aug 2023 14:15:56 -0400
-Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 78DAA1F40C;
-        Tue,  8 Aug 2023 10:22:18 -0700 (PDT)
+        Tue, 8 Aug 2023 14:15:54 -0400
+Received: from box.fidei.email (box.fidei.email [71.19.144.250])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 7DCFA35AA;
+        Tue,  8 Aug 2023 10:22:15 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 016B78354F;
-        Tue,  8 Aug 2023 13:22:17 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 1542F83548;
+        Tue,  8 Aug 2023 13:22:15 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1691515338; bh=PYXYRGTxzf2mT8aQvtS64Oy9XHNpPxgL/l5PEONJa0A=;
+        t=1691515335; bh=k80BosUuOf3+UJm9EFkXHB69AfR7v14eADYsDzCRrm8=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=md0/SRAy/lGS01fQdNMFysv9kvTGeMRYsQwSM6CYwnOdzRKuA9ufS4JO57TEwaue1
-         Br8D5ufY6/NyCEc5TAeQ5Bbn+ck4WqL0wPD4TYGxvN3vuVBTFvlMGA5UZkUl8wiju8
-         C9EerO3sXwOJ8OA9dzrkw6N2SZDKh9QjDnE4UMSv3Q4sRg2Rd7EFyP6E37IUP0rDwX
-         I+jL1HDZ78pZ6ZqYXLoPBPoE5o5ANHVNVDcGimwdsgXzj0wuKQdwfOp/brg8ywV7O2
-         nAXrgxuaT2tcdYrGNjsq/wFpbbUPLuGL40agGuHjmjueuvOOAV0Swp8Z+NH5vLfDYz
-         GLG1SECtZhVdQ==
+        b=ehjjsu3wu1rmbMIsG8YnYBgeZrV5ixD8xbUyncG5Ux1jx2ZVVq5OpekqEcHmbqtPE
+         RsROO5EZclETdFRvSgxUyKu9/YEM5mwY6E1pfA5yfsfr//lIKcofAI5hGn2RXOIrUE
+         DgEGAmstfmbkgy7t2ae8akFhm+0P3yE1C/HRVvOitL3YfrAhWhzBRI7mdlcpoSJH4M
+         MyZ/1I3AQ1TpghdvWyzIvBanGvwcbnyfJ0Ixmj5cfYJ2Dc2/C/pK4uadaOSAFSsxJB
+         AljBYxqlJrMzoarmJM9bXIecmQ34GfJmoqqeX19XHAi7MxwSUSyP1ahqZYrsNyOwgn
+         G71014MWyEG0w==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     linux-btrfs@vger.kernel.org, fstests@vger.kernel.org,
         kernel-team@meta.com, ebiggers@google.com, anand.jain@oracle.com,
         fdmanana@suse.com, linux-fscrypt@vger.kernel.org,
         fsverity@lists.linux.dev, zlang@kernel.org
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [RFC PATCH v3 7/9] common/verity: explicitly don't allow btrfs encryption
-Date:   Tue,  8 Aug 2023 13:21:26 -0400
-Message-ID: <27188582f31ad7e6e7027170a81fa84d77815868.1691530000.git.sweettea-kernel@dorminy.me>
+Subject: [RFC PATCH v3 5/9] generic/613: write some actual data for btrfs
+Date:   Tue,  8 Aug 2023 13:21:24 -0400
+Message-ID: <200c306794a620f1ff7db0dddf304ec5997e4456.1691530000.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1691530000.git.sweettea-kernel@dorminy.me>
 References: <cover.1691530000.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -47,30 +47,39 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Currently btrfs encryption doesn't support verity, but it is planned to
-one day. To be explicit about the lack of support, add a custom error
-message to the combination.
+Currently, the test touches a file and assumes that that is sufficient
+to generate a new nonce to test for that file. However, btrfs doesn't
+store an encryption context for a leaf inode, and doesn't store an
+encryption context for data within a leaf inode until data is actually
+written. Thus, merely touching the file on btrfs doesn't actually
+generate a testable nonce.
+
+Instead, write a trivial bit of data to each file, which provokes btrfs
+to generate a encryption context for the data and thus a testable nonce.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- common/verity | 4 ++++
- 1 file changed, 4 insertions(+)
+ tests/generic/613 | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/common/verity b/common/verity
-index e0937717..5e651316 100644
---- a/common/verity
-+++ b/common/verity
-@@ -224,6 +224,10 @@ _scratch_mkfs_encrypted_verity()
- 		# features with -O.  Instead -O must be supplied multiple times.
- 		_scratch_mkfs -O encrypt -O verity
- 		;;
-+	btrfs)
-+		# currently verity + encryption is not supported
-+		_notrun "btrfs doesn't currently support verity + encryption"
-+		;;
- 	*)
- 		_notrun "$FSTYP not supported in _scratch_mkfs_encrypted_verity"
- 		;;
+diff --git a/tests/generic/613 b/tests/generic/613
+index 279b1bfb..11f28c74 100755
+--- a/tests/generic/613
++++ b/tests/generic/613
+@@ -53,11 +53,11 @@ for i in {1..50}; do
+ done
+ for i in {1..50}; do
+ 	file=$SCRATCH_MNT/v1_policy_dir_1/$i
+-	touch $file
++	echo "0" > $file
+ 	inodes+=("$(stat -c %i $file)")
+ 
+ 	file=$SCRATCH_MNT/v2_policy_dir_1/$i
+-	touch $file
++	echo "0" > $file
+ 	inodes+=("$(stat -c %i $file)")
+ done
+ _scratch_unmount
 -- 
 2.41.0
 
