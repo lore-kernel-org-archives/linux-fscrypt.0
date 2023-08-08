@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 41CEDC41513
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:54:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 60B94C04E69
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:54:51 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S234250AbjHHSyr (ORCPT
+        id S233517AbjHHSyu (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Aug 2023 14:54:47 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54268 "EHLO
+        Tue, 8 Aug 2023 14:54:50 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54290 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S233301AbjHHSya (ORCPT
+        with ESMTP id S231582AbjHHSyb (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 8 Aug 2023 14:54:30 -0400
+        Tue, 8 Aug 2023 14:54:31 -0400
 Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EC7116A3AB;
-        Tue,  8 Aug 2023 10:12:30 -0700 (PDT)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id C23041B046;
+        Tue,  8 Aug 2023 10:12:37 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 4F9F68343D;
-        Tue,  8 Aug 2023 13:12:30 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id 568118343D;
+        Tue,  8 Aug 2023 13:12:37 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1691514750; bh=3IWatOH7yE2Wr/SMT2Ef+K/OCGYvcAy8aJjTU5cB8IA=;
+        t=1691514757; bh=vZtFoQKKsLfpwHLBX9gD6fBDzJ/9AqqYRAOFzdVkosE=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=MIWesGwZJs2Ld83oAARL1X6iQj0XZkssLRKTmOpIjyOlAaQ4uvt252QqfRPTqTAvW
-         P59pbJpq84OfO/2l+wHvVV/UEflohwI+osa7MLs89JB0Inm6UYCzXfeEoBYYyKjr3F
-         6oFu9aYJKLj4qm0gYA9t1/L4NSr6TLZHO+yruHyDzWFLClJL8lPNZNRs92+dD6VxJf
-         NV5XxvObA49t+G8E0J9rHX2+7B0GIltpre+vRmtTR8xEkstrkfBuiPob/3PJ+QI7hs
-         HaE9/K9Y5APICBY0KFxo1SqL6Ay6dAnp/DPP02SA+ezlXDH7f5BzQK1tP/N/qv3XmU
-         /mqg7OOBEFeVg==
+        b=uG811T2FMO1JW4X+P10AWUFIXCj+pjs0SkzPJyJIJJCwkIr6THA3lIHzg/ca51l1y
+         SpEzSWSjVBvdRT9gEKr3u8qGj54sVCu2HMX1eR0Ffvj6SXizjKIE8hYjOC+oXw5Cet
+         TZY4rMxs0lWO2VuQLx0UhyRTvl5npdMVnLhKwuX8iOIq7/E8WNIYOOpB6N3k73/68b
+         lPRTNEA7Yhplh3X2Fjzd8XEqs5ZguMuBtGWfJata1UDrse7BnTpBrPGuA8ZX9VSLNi
+         5gYR6Os9x4kB1MCq8Cb5cJFHtUhFJwr8ZjR65zCTY+QrMI563xfyNS9SgRxO3VcI1X
+         4jA61lIKnngfQ==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>,
@@ -37,11 +37,10 @@ To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         Jaegeuk Kim <jaegeuk@kernel.org>, kernel-team@meta.com,
         linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         Eric Biggers <ebiggers@kernel.org>
-Cc:     Omar Sandoval <osandov@osandov.com>,
-        Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v3 03/17] fscrypt: expose fscrypt_nokey_name
-Date:   Tue,  8 Aug 2023 13:12:05 -0400
-Message-ID: <6205fb63ea974cb39be20137f6e4cc7f6ed2d47a.1691510179.git.sweettea-kernel@dorminy.me>
+Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Subject: [PATCH v3 08/17] btrfs: handle nokey names.
+Date:   Tue,  8 Aug 2023 13:12:10 -0400
+Message-ID: <adfd6682729107364481959f2ee4850c276ce211.1691510179.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1691510179.git.sweettea-kernel@dorminy.me>
 References: <cover.1691510179.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -50,137 +49,158 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-From: Omar Sandoval <osandov@osandov.com>
+For encrypted or unencrypted names, we calculate the offset for the dir
+item by hashing the name for the dir item. However, this doesn't work
+for a long nokey name, where we do not have the complete ciphertext.
+Instead, fscrypt stores the filesystem-provided hash in the nokey name,
+and we can extract it from the fscrypt_name structure in such a case.
 
-btrfs stores its data structures, including filenames in directories, in
-its own buffer implementation, struct extent_buffer, composed of
-several non-contiguous pages. We could copy filenames into a
-temporary buffer and use fscrypt_match_name() against that buffer, such
-extensive memcpying would be expensive. Instead, exposing
-fscrypt_nokey_name as in this change allows btrfs to recapitulate
-fscrypt_match_name() using methods on struct extent_buffer instead of
-dealing with a raw byte array.
+Additionally, for nokey names, if we find the nokey name on disk we can
+update the fscrypt_name with the disk name, so add that to searching for
+diritems.
 
-Signed-off-by: Omar Sandoval <osandov@osandov.com>
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Reviewed-by: Josef Bacik <josef@toxicpanda.com>
 ---
- fs/crypto/fname.c       | 39 +--------------------------------------
- include/linux/fscrypt.h | 37 +++++++++++++++++++++++++++++++++++++
- 2 files changed, 38 insertions(+), 38 deletions(-)
+ fs/btrfs/dir-item.c | 37 +++++++++++++++++++++++++++++++++++--
+ fs/btrfs/fscrypt.c  | 27 +++++++++++++++++++++++++++
+ fs/btrfs/fscrypt.h  | 11 +++++++++++
+ 3 files changed, 73 insertions(+), 2 deletions(-)
 
-diff --git a/fs/crypto/fname.c b/fs/crypto/fname.c
-index edb78cd1b0e7..fb6bc46302c1 100644
---- a/fs/crypto/fname.c
-+++ b/fs/crypto/fname.c
-@@ -14,7 +14,6 @@
- #include <linux/namei.h>
- #include <linux/scatterlist.h>
- #include <crypto/hash.h>
--#include <crypto/sha2.h>
- #include <crypto/skcipher.h>
- #include "fscrypt_private.h"
- 
-@@ -26,43 +25,7 @@
- #define FSCRYPT_FNAME_MIN_MSG_LEN 16
- 
- /*
-- * struct fscrypt_nokey_name - identifier for directory entry when key is absent
-- *
-- * When userspace lists an encrypted directory without access to the key, the
-- * filesystem must present a unique "no-key name" for each filename that allows
-- * it to find the directory entry again if requested.  Naively, that would just
-- * mean using the ciphertext filenames.  However, since the ciphertext filenames
-- * can contain illegal characters ('\0' and '/'), they must be encoded in some
-- * way.  We use base64url.  But that can cause names to exceed NAME_MAX (255
-- * bytes), so we also need to use a strong hash to abbreviate long names.
-- *
-- * The filesystem may also need another kind of hash, the "dirhash", to quickly
-- * find the directory entry.  Since filesystems normally compute the dirhash
-- * over the on-disk filename (i.e. the ciphertext), it's not computable from
-- * no-key names that abbreviate the ciphertext using the strong hash to fit in
-- * NAME_MAX.  It's also not computable if it's a keyed hash taken over the
-- * plaintext (but it may still be available in the on-disk directory entry);
-- * casefolded directories use this type of dirhash.  At least in these cases,
-- * each no-key name must include the name's dirhash too.
-- *
-- * To meet all these requirements, we base64url-encode the following
-- * variable-length structure.  It contains the dirhash, or 0's if the filesystem
-- * didn't provide one; up to 149 bytes of the ciphertext name; and for
-- * ciphertexts longer than 149 bytes, also the SHA-256 of the remaining bytes.
-- *
-- * This ensures that each no-key name contains everything needed to find the
-- * directory entry again, contains only legal characters, doesn't exceed
-- * NAME_MAX, is unambiguous unless there's a SHA-256 collision, and that we only
-- * take the performance hit of SHA-256 on very long filenames (which are rare).
-- */
--struct fscrypt_nokey_name {
--	u32 dirhash[2];
--	u8 bytes[149];
--	u8 sha256[SHA256_DIGEST_SIZE];
--}; /* 189 bytes => 252 bytes base64url-encoded, which is <= NAME_MAX (255) */
--
--/*
-- * Decoded size of max-size no-key name, i.e. a name that was abbreviated using
-+ * Decoded size of max-size nokey name, i.e. a name that was abbreviated using
-  * the strong hash and thus includes the 'sha256' field.  This isn't simply
-  * sizeof(struct fscrypt_nokey_name), as the padding at the end isn't included.
-  */
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index b67054a2c965..fd8cb413e718 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -16,6 +16,7 @@
- #include <linux/fs.h>
- #include <linux/mm.h>
- #include <linux/slab.h>
-+#include <crypto/sha2.h>
- #include <uapi/linux/fscrypt.h>
- 
- /*
-@@ -54,6 +55,42 @@ struct fscrypt_name {
- #define fname_name(p)		((p)->disk_name.name)
- #define fname_len(p)		((p)->disk_name.len)
+diff --git a/fs/btrfs/dir-item.c b/fs/btrfs/dir-item.c
+index da95ae411d72..ee7dad888f53 100644
+--- a/fs/btrfs/dir-item.c
++++ b/fs/btrfs/dir-item.c
+@@ -231,6 +231,28 @@ struct btrfs_dir_item *btrfs_lookup_dir_item(struct btrfs_trans_handle *trans,
+ 	return di;
+ }
  
 +/*
-+ * struct fscrypt_nokey_name - identifier for directory entry when key is absent
++ * If appropriate, populate the disk name for a fscrypt_name looked up without
++ * a key.
 + *
-+ * When userspace lists an encrypted directory without access to the key, the
-+ * filesystem must present a unique "no-key name" for each filename that allows
-+ * it to find the directory entry again if requested.  Naively, that would just
-+ * mean using the ciphertext filenames.  However, since the ciphertext filenames
-+ * can contain illegal characters ('\0' and '/'), they must be encoded in some
-+ * way.  We use base64url.  But that can cause names to exceed NAME_MAX (255
-+ * bytes), so we also need to use a strong hash to abbreviate long names.
++ * @path:	The path to the extent buffer in which the name was found.
++ * @di:		The dir item corresponding.
++ * @fname:	The fscrypt_name to perhaps populate.
 + *
-+ * The filesystem may also need another kind of hash, the "dirhash", to quickly
-+ * find the directory entry.  Since filesystems normally compute the dirhash
-+ * over the on-disk filename (i.e. the ciphertext), it's not computable from
-+ * no-key names that abbreviate the ciphertext using the strong hash to fit in
-+ * NAME_MAX.  It's also not computable if it's a keyed hash taken over the
-+ * plaintext (but it may still be available in the on-disk directory entry);
-+ * casefolded directories use this type of dirhash.  At least in these cases,
-+ * each no-key name must include the name's dirhash too.
-+ *
-+ * To meet all these requirements, we base64url-encode the following
-+ * variable-length structure.  It contains the dirhash, or 0's if the filesystem
-+ * didn't provide one; up to 149 bytes of the ciphertext name; and for
-+ * ciphertexts longer than 149 bytes, also the SHA-256 of the remaining bytes.
-+ *
-+ * This ensures that each no-key name contains everything needed to find the
-+ * directory entry again, contains only legal characters, doesn't exceed
-+ * NAME_MAX, is unambiguous unless there's a SHA-256 collision, and that we only
-+ * take the performance hit of SHA-256 on very long filenames (which are rare).
++ * Returns: 0 if the name is already populated or the dir item doesn't exist
++ * or the name was successfully populated, else an error code.
 + */
-+struct fscrypt_nokey_name {
-+	u32 dirhash[2];
-+	u8 bytes[149];
-+	u8 sha256[SHA256_DIGEST_SIZE];
-+}; /* 189 bytes => 252 bytes base64url-encoded, which is <= NAME_MAX (255) */
++static int ensure_disk_name_from_dir_item(struct btrfs_path *path,
++					  struct btrfs_dir_item *di,
++					  struct fscrypt_name *name)
++{
++	if (name->disk_name.name || !di)
++		return 0;
 +
- /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
- #define FSCRYPT_SET_CONTEXT_MAX_SIZE	40
++	return btrfs_fscrypt_get_disk_name(path->nodes[0], di,
++					   &name->disk_name);
++}
++
+ /*
+  * Lookup for a directory item by fscrypt_name.
+  *
+@@ -257,8 +279,12 @@ struct btrfs_dir_item *btrfs_lookup_dir_item_fname(struct btrfs_trans_handle *tr
  
+ 	key.objectid = dir;
+ 	key.type = BTRFS_DIR_ITEM_KEY;
+-	key.offset = btrfs_name_hash(name->disk_name.name, name->disk_name.len);
+-	/* XXX get the right hash for no-key names */
++
++	if (!name->disk_name.name)
++		key.offset = name->hash | ((u64)name->minor_hash << 32);
++	else
++		key.offset = btrfs_name_hash(name->disk_name.name,
++					     name->disk_name.len);
+ 
+ 	ret = btrfs_search_slot(trans, root, &key, path, mod, -mod);
+ 	if (ret == 0)
+@@ -266,6 +292,8 @@ struct btrfs_dir_item *btrfs_lookup_dir_item_fname(struct btrfs_trans_handle *tr
+ 
+ 	if (ret == -ENOENT || (di && IS_ERR(di) && PTR_ERR(di) == -ENOENT))
+ 		return NULL;
++	if (ret == 0)
++		ret = ensure_disk_name_from_dir_item(path, di, name);
+ 	if (ret < 0)
+ 		di = ERR_PTR(ret);
+ 
+@@ -382,7 +410,12 @@ btrfs_search_dir_index_item(struct btrfs_root *root, struct btrfs_path *path,
+ 	btrfs_for_each_slot(root, &key, &key, path, ret) {
+ 		if (key.objectid != dirid || key.type != BTRFS_DIR_INDEX_KEY)
+ 			break;
++
+ 		di = btrfs_match_dir_item_fname(root->fs_info, path, name);
++		if (di)
++			ret = ensure_disk_name_from_dir_item(path, di, name);
++		if (ret)
++			break;
+ 		if (di)
+ 			return di;
+ 	}
+diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
+index fcd926907f82..bdd58415f93c 100644
+--- a/fs/btrfs/fscrypt.c
++++ b/fs/btrfs/fscrypt.c
+@@ -14,6 +14,33 @@
+ #include "transaction.h"
+ #include "xattr.h"
+ 
++/*
++ * From a given location in a leaf, read a name into a qstr (usually a
++ * fscrypt_name's disk_name), allocating the required buffer. Used for
++ * nokey names.
++ */
++int btrfs_fscrypt_get_disk_name(struct extent_buffer *leaf,
++				struct btrfs_dir_item *dir_item,
++				struct fscrypt_str *name)
++{
++	unsigned long de_name_len = btrfs_dir_name_len(leaf, dir_item);
++	unsigned long de_name = (unsigned long)(dir_item + 1);
++	/*
++	 * For no-key names, we use this opportunity to find the disk
++	 * name, so future searches don't need to deal with nokey names
++	 * and we know what the encrypted size is.
++	 */
++	name->name = kmalloc(de_name_len, GFP_NOFS);
++
++	if (!name->name)
++		return -ENOMEM;
++
++	read_extent_buffer(leaf, name->name, de_name, de_name_len);
++
++	name->len = de_name_len;
++	return 0;
++}
++
+ /*
+  * This function is extremely similar to fscrypt_match_name() but uses an
+  * extent_buffer.
+diff --git a/fs/btrfs/fscrypt.h b/fs/btrfs/fscrypt.h
+index 1647bbbcd609..c08fd52c99b4 100644
+--- a/fs/btrfs/fscrypt.h
++++ b/fs/btrfs/fscrypt.h
+@@ -9,11 +9,22 @@
+ #include "fs.h"
+ 
+ #ifdef CONFIG_FS_ENCRYPTION
++int btrfs_fscrypt_get_disk_name(struct extent_buffer *leaf,
++				struct btrfs_dir_item *di,
++				struct fscrypt_str *qstr);
++
+ bool btrfs_fscrypt_match_name(struct fscrypt_name *fname,
+ 			      struct extent_buffer *leaf,
+ 			      unsigned long de_name, u32 de_name_len);
+ 
+ #else
++static inline int btrfs_fscrypt_get_disk_name(struct extent_buffer *leaf,
++					      struct btrfs_dir_item *di,
++					      struct fscrypt_str *qstr)
++{
++	return 0;
++}
++
+ static inline bool btrfs_fscrypt_match_name(struct fscrypt_name *fname,
+ 					    struct extent_buffer *leaf,
+ 					    unsigned long de_name,
 -- 
 2.41.0
 
