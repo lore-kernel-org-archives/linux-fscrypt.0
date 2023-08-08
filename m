@@ -2,121 +2,102 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 1EEE2C04A94
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:10:58 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 1DE3FC04FDF
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  8 Aug 2023 18:16:11 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S235391AbjHHSK5 (ORCPT
+        id S235525AbjHHSQK (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 8 Aug 2023 14:10:57 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:59310 "EHLO
+        Tue, 8 Aug 2023 14:16:10 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:47258 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S234321AbjHHSK2 (ORCPT
+        with ESMTP id S235426AbjHHSPs (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 8 Aug 2023 14:10:28 -0400
-Received: from box.fidei.email (box.fidei.email [71.19.144.250])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D8FF51B065;
-        Tue,  8 Aug 2023 10:12:41 -0700 (PDT)
+        Tue, 8 Aug 2023 14:15:48 -0400
+Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 794D31F401;
+        Tue,  8 Aug 2023 10:22:08 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 7528583442;
-        Tue,  8 Aug 2023 13:12:41 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id C48E280281;
+        Tue,  8 Aug 2023 13:22:07 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1691514761; bh=rWirf37iqZkz5t+gTTLXe5NpdCjOHBl1ebtWn28/poY=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=H/G/J2WlsNju2isdv2I72IEHomsxz1ozmFiP2I066GUdAyVzePy/5FlGtqeO3D8lq
-         ViiT3t2ZyNtwP6gJHQClzHTzGsS1/A0jEtF25lQ3sUqImCJrkGCo93ePnKwDD83iwk
-         gL86tFRyq0Fle9hbnR+DY3rODDd1K7fOCTyJSg2xE6NeLxbEWwraG6j/weuhOz+/n1
-         L7rrriPccLRyZHhH/GwurNBjrs7pd/4CAHDyWjEvb14b+fn6ZbxLPKBazOoTDmhM8F
-         zDxhONZTCPVo3vwQCVbdPRVJDaDa6BiCMzlGkE7pAohygMUJwuvMiQYHsK+n+jBCyb
-         XEEqBlJ0czp1g==
+        t=1691515328; bh=olh/IabzO6GOzB5svMvsvjY1MrZsZZeekcwwHyDB70k=;
+        h=From:To:Cc:Subject:Date:From;
+        b=BSltcF9jF2SvLKHRet0WJH2GHukmTiqhy5mEkq151kEgjxjwxFo2phn4M6IVKGsul
+         npniGxv1PfIN9OXOMmLOtsdk2k3Pr09z3qA/y286BtOzOBGym9WYVFbaWuDmFV7K4d
+         wkbjsoaFjUtLxqsLs9xk6NSJ3lPpT5AFLCPRx5HpwhpNridgxUa2MANZ5oXmfABnAg
+         sooT5v4nzQ8Z654XeLkqoAIK7YxpjEF5hIlfT/V1iNJb4LXNjfuVs9GeLLW1NWWyQL
+         QWK2PKriTrI2/DsmuWlsmvII7Axe15JvsMuV1tgQ0LhhJbf4nwI6OtWQs7K7XCobMm
+         tBnh+V7ySvKfg==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
-        David Sterba <dsterba@suse.com>,
-        "Theodore Y . Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>, kernel-team@meta.com,
-        linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        Eric Biggers <ebiggers@kernel.org>
+To:     linux-btrfs@vger.kernel.org, fstests@vger.kernel.org,
+        kernel-team@meta.com, ebiggers@google.com, anand.jain@oracle.com,
+        fdmanana@suse.com, linux-fscrypt@vger.kernel.org,
+        fsverity@lists.linux.dev, zlang@kernel.org
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v3 11/17] btrfs: add get_devices hook for fscrypt
-Date:   Tue,  8 Aug 2023 13:12:13 -0400
-Message-ID: <c985780df51bcc4394a695c087f0b18861f28ae9.1691510179.git.sweettea-kernel@dorminy.me>
-In-Reply-To: <cover.1691510179.git.sweettea-kernel@dorminy.me>
-References: <cover.1691510179.git.sweettea-kernel@dorminy.me>
+Subject: [RFC PATCH v3 0/9] fstests: add btrfs encryption testing
+Date:   Tue,  8 Aug 2023 13:21:19 -0400
+Message-ID: <cover.1691530000.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Since extent encryption requires inline encryption, even though we
-expect to use the inlinecrypt software fallback most of the time, we
-need to enumerate all the devices in use by btrfs.
+This is a preliminary fstests side of the btrfs encryption feature. This
+requires the latest related progs and kernel changesets.
 
-Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
----
- fs/btrfs/fscrypt.c | 37 +++++++++++++++++++++++++++++++++++++
- 1 file changed, 37 insertions(+)
+Marked as RFC because they're not ready to merge until all its
+dependencies finish landing; this is primarily to demonstrate that
+extent encryption, between fscrypt and btrfs, does not significantly
+change user-visible behavior.
 
-diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
-index bdd58415f93c..499073376110 100644
---- a/fs/btrfs/fscrypt.c
-+++ b/fs/btrfs/fscrypt.c
-@@ -11,7 +11,9 @@
- #include "ioctl.h"
- #include "messages.h"
- #include "root-tree.h"
-+#include "super.h"
- #include "transaction.h"
-+#include "volumes.h"
- #include "xattr.h"
- 
- /*
-@@ -179,9 +181,44 @@ static bool btrfs_fscrypt_empty_dir(struct inode *inode)
- 	return inode->i_size == BTRFS_EMPTY_DIR_SIZE;
- }
- 
-+static struct block_device **btrfs_fscrypt_get_devices(struct super_block *sb,
-+						       unsigned int *num_devs)
-+{
-+	struct btrfs_fs_info *fs_info = btrfs_sb(sb);
-+	struct btrfs_fs_devices *fs_devices = fs_info->fs_devices;
-+	int nr_devices = fs_devices->open_devices;
-+	struct block_device **devs;
-+	struct btrfs_device *device;
-+	int i = 0;
-+
-+	devs = kmalloc_array(nr_devices, sizeof(*devs), GFP_NOFS | GFP_NOWAIT);
-+	if (!devs)
-+		return ERR_PTR(-ENOMEM);
-+
-+	rcu_read_lock();
-+	list_for_each_entry_rcu(device, &fs_devices->devices, dev_list) {
-+		if (!test_bit(BTRFS_DEV_STATE_IN_FS_METADATA,
-+						&device->dev_state) ||
-+		    !device->bdev ||
-+		    test_bit(BTRFS_DEV_STATE_REPLACE_TGT, &device->dev_state))
-+			continue;
-+
-+		devs[i++] = device->bdev;
-+
-+		if (i >= nr_devices)
-+			break;
-+
-+	}
-+	rcu_read_unlock();
-+
-+	*num_devs = i;
-+	return devs;
-+}
-+
- const struct fscrypt_operations btrfs_fscrypt_ops = {
- 	.get_context = btrfs_fscrypt_get_context,
- 	.set_context = btrfs_fscrypt_set_context,
- 	.empty_dir = btrfs_fscrypt_empty_dir,
-+	.get_devices = btrfs_fscrypt_get_devices,
- 	.key_prefix = "btrfs:"
- };
+Changelog:
+
+RFC v3:
+- add test of snapshotting encrypted subvol
+- updated f2fs/002 to match edits to common/encrypt, thanks Anand.
+
+RFC v2:
+- https://lore.kernel.org/linux-btrfs/cover.1688929294.git.sweettea-kernel@dorminy.me/
+- Reverted changes to generic/580 and generic/595 to match the new
+  'soft-delete' behavior introduced in v2 of kernel patchset
+  "fscrypt: add extent encryption". (change 6)
+- Removed extraneous syncs/drop_caches and added copyright to new test
+  (change 8), as per Filipe's comments.
+
+RFC v1:
+- https://lore.kernel.org/linux-btrfs/cover.1688076612.git.sweettea-kernel@dorminy.me/T/#t
+
+Sweet Tea Dorminy (9):
+  common/encrypt: separate data and inode nonces
+  common/encrypt: add btrfs to get_encryption_*nonce
+  common/encrypt: add btrfs to get_ciphertext_filename
+  common/encrypt: enable making a encrypted btrfs filesystem
+  generic/613: write some actual data for btrfs
+  tests: adjust generic/429 for extent encryption
+  common/verity: explicitly don't allow btrfs encryption
+  btrfs: add simple test of reflink of encrypted data
+  btrfs: test snapshotting encrypted subvol
+
+ common/encrypt      |  86 +++++++++++++++++++++++++++++++---
+ common/verity       |   4 ++
+ tests/btrfs/613     |  59 +++++++++++++++++++++++
+ tests/btrfs/613.out |  13 ++++++
+ tests/btrfs/614     |  76 ++++++++++++++++++++++++++++++
+ tests/btrfs/614.out | 111 ++++++++++++++++++++++++++++++++++++++++++++
+ tests/f2fs/002      |   2 +-
+ tests/generic/429   |   6 +++
+ tests/generic/613   |  12 +++--
+ 9 files changed, 357 insertions(+), 12 deletions(-)
+ create mode 100755 tests/btrfs/613
+ create mode 100644 tests/btrfs/613.out
+ create mode 100755 tests/btrfs/614
+ create mode 100644 tests/btrfs/614.out
+
+
+base-commit: 8de535c53887bb49adae74a1b2e83e77d7e8457d
 -- 
 2.41.0
 
