@@ -2,39 +2,39 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D4089C001B0
-	for <linux-fscrypt@archiver.kernel.org>; Sat, 12 Aug 2023 22:34:49 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 700D5C001B0
+	for <linux-fscrypt@archiver.kernel.org>; Sat, 12 Aug 2023 22:41:49 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S230078AbjHLWeo (ORCPT
+        id S230092AbjHLWlo (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 12 Aug 2023 18:34:44 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55512 "EHLO
+        Sat, 12 Aug 2023 18:41:44 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:45872 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229589AbjHLWeh (ORCPT
+        with ESMTP id S229589AbjHLWlo (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 12 Aug 2023 18:34:37 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1D5931985;
-        Sat, 12 Aug 2023 15:34:41 -0700 (PDT)
+        Sat, 12 Aug 2023 18:41:44 -0400
+Received: from dfw.source.kernel.org (dfw.source.kernel.org [IPv6:2604:1380:4641:c500::1])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 50AEE1985;
+        Sat, 12 Aug 2023 15:41:47 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
          key-exchange X25519 server-signature RSA-PSS (2048 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id ACF236188F;
-        Sat, 12 Aug 2023 22:34:40 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id BE908C433C8;
-        Sat, 12 Aug 2023 22:34:39 +0000 (UTC)
+        by dfw.source.kernel.org (Postfix) with ESMTPS id D9D6061769;
+        Sat, 12 Aug 2023 22:41:46 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id DC255C433C8;
+        Sat, 12 Aug 2023 22:41:45 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1691879680;
-        bh=CQDg6zUXw3J0ox/1/CzOeuQlFKtmCULtOMLvAiXWZ0Q=;
+        s=k20201202; t=1691880106;
+        bh=jQoWuVGAGz2XkHuD3UbriES1sJmINymZmimavq1rqo4=;
         h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
-        b=qOeh19aacJOszFonsaIDiB7w1eut04TUwN+yPihdBeTdVvTZ0mUsJfOImF+8fSkg8
-         Ux6Dy+EzWnqIHe3GOnCwXnFex32m8Wmv4kPoHsgqjL6W+eoX0PXIQB8ItxHoz1PPuY
-         EGL+fxlda1JSdOJj6/ncSuBDIBzU/87SSrh6d2Igd2uC0EsMJmEdEvtXBhKHgQuS6A
-         nHBJz1jTqoj4d0A2w88h1vutyGqdDAJI+bQ8FyyKMxsAGA9wz5rTychwoOWKI593Uk
-         iRLLTkuxcKm4ioj1RHyFlydisjwDBEA3h6s2iTl9c1JZyTuT8wrMGKsOSlRexwbw2F
-         ltusL38kUUL+w==
-Date:   Sat, 12 Aug 2023 15:34:08 -0700
+        b=KnByuTvV9qbDwO4JYfvLA5YkUTEAZMeA+Fa2Vb3qeFYG45IVCMsEQrE7pY7OLG4HP
+         cGtkbIfG6Am/IECVAdOZFmNpeq+m68Pb7BFJEYMakWeh0lpitAprKGbig3TdMxMDMl
+         eCf+sKcs5zyshMAaPWRy/gVFDqi97DaAtw7Gcfgasw58yZBOBfIM9LMnz51Wz83pSY
+         sfOCJHVNvgtNTHJXX/ByFSVK0K6nHp2YvaIz/A0wsR6Dq945jg1/R+eMUqM2gWgHZc
+         tgKgCDTZyIWJ4dzkGo6r41H8KHD14TKDI3WsDUN6xd2+jf5/zbeobLYoKquDntgIJE
+         RlPgk6a40ZaTA==
+Date:   Sat, 12 Aug 2023 15:41:44 -0700
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 Cc:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
@@ -42,39 +42,65 @@ Cc:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         "Theodore Y . Ts'o" <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>, kernel-team@meta.com,
         linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH v3 12/16] fscrypt: save session key credentials for
- extent infos
-Message-ID: <20230812223408.GA41642@sol.localdomain>
+Subject: Re: [PATCH v3 14/16] fscrypt: cache list of inlinecrypt devices
+Message-ID: <20230812224144.GB41642@sol.localdomain>
 References: <cover.1691505882.git.sweettea-kernel@dorminy.me>
- <bb78cdd486094afb51c431c089d92f951f391c6d.1691505882.git.sweettea-kernel@dorminy.me>
+ <62170e01a2c0b107619018c859250c03b6023a57.1691505882.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <bb78cdd486094afb51c431c089d92f951f391c6d.1691505882.git.sweettea-kernel@dorminy.me>
+In-Reply-To: <62170e01a2c0b107619018c859250c03b6023a57.1691505882.git.sweettea-kernel@dorminy.me>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Tue, Aug 08, 2023 at 01:08:29PM -0400, Sweet Tea Dorminy wrote:
-> For v1 encryption policies using per-session keys, the thread which
-> opens the inode and therefore initializes the encryption info is part of
-> the session, so it can get the key from the session keyring. However,
-> for extent encryption, the extent infos are likely loaded from a
-> different thread, which does not have access to the session keyring.
-> This change saves the credentials of the inode opening thread and reuses
-> those credentials temporarily when dealing with extent infos, allowing
-> finding the encryption key correctly.
-> 
-> v1 encryption policies using per-session keys should probably not exist
-> for new usages such as extent encryption, but this makes more tests
-> work without change; maybe the right answer is to disallow v1 session
-> keys plus extent encryption and deal with editing tests to not use v1
-> session encryption so much.
+On Tue, Aug 08, 2023 at 01:08:31PM -0400, Sweet Tea Dorminy wrote:
+> btrfs sometimes frees extents while holding a mutex, which makes it
+> impossible to free an inlinecrypt prepared key since that requires
+> taking a semaphore. Therefore, we will need to offload prepared key
+> freeing into an asynchronous process (rcu is insufficient since that can
+> run in softirq context which is also incompatible with taking a
+> semaphore). In order to avoid use-after-free on the filesystem
+> superblock for keys being freed during shutdown, we need to cache the
+> list of devices that the key has been loaded into, so that we can later
+> remove it without reference to the superblock.
 > 
 > Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+> ---
+>  fs/crypto/fscrypt_private.h | 13 +++++++++++--
+>  fs/crypto/inline_crypt.c    | 20 +++++++++-----------
+>  fs/crypto/keysetup.c        |  2 +-
+>  3 files changed, 21 insertions(+), 14 deletions(-)
+> 
+> diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+> index 03be2c136c0e..aba83509c735 100644
+> --- a/fs/crypto/fscrypt_private.h
+> +++ b/fs/crypto/fscrypt_private.h
+> @@ -205,6 +205,16 @@ struct fscrypt_prepared_key {
+>  	struct crypto_skcipher *tfm;
+>  #ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
+>  	struct blk_crypto_key *blk_key;
+> +
+> +	/*
+> +	 * The list of devices that have this block key.
+> +	 */
+> +	struct block_device **devices;
+> +
+> +	/*
+> +	 * The number of devices in @ci_devices.
+> +	 */
+> +	size_t device_count;
+>  #endif
+>  	enum fscrypt_prepared_key_type type;
+>  };
 
-I don't understand why you would need to look up the master key for each extent.
-The master key should just come from the inode, which the master key was already
-looked up for when the file was opened.
+Well, this is basically reverting commit 22e9947a4b2b, but doing it in a
+slightly different way.
+
+I worry about potentially bringing back problems from doing work after the
+filesystem has already been unmounted.
+
+Can't you just make the filesystem flush its eviction work items when it is
+being unmounted?
 
 - Eric
