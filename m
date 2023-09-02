@@ -2,34 +2,34 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id C2E8FCA0FF8
-	for <linux-fscrypt@archiver.kernel.org>; Sat,  2 Sep 2023 05:55:52 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 889EACA0FFC
+	for <linux-fscrypt@archiver.kernel.org>; Sat,  2 Sep 2023 05:55:50 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1351609AbjIBFzy (ORCPT
+        id S1351560AbjIBFzw (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Sat, 2 Sep 2023 01:55:54 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:32878 "EHLO
+        Sat, 2 Sep 2023 01:55:52 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:41060 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1343615AbjIBFzx (ORCPT
+        with ESMTP id S231132AbjIBFzv (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Sat, 2 Sep 2023 01:55:53 -0400
-Received: from box.fidei.email (box.fidei.email [IPv6:2605:2700:0:2:a800:ff:feba:dc44])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 0966210F4;
-        Fri,  1 Sep 2023 22:55:50 -0700 (PDT)
+        Sat, 2 Sep 2023 01:55:51 -0400
+Received: from box.fidei.email (box.fidei.email [71.19.144.250])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id CA47610F5;
+        Fri,  1 Sep 2023 22:55:46 -0700 (PDT)
 Received: from authenticated-user (box.fidei.email [71.19.144.250])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits))
         (No client certificate requested)
-        by box.fidei.email (Postfix) with ESMTPSA id 68C88807EE;
-        Sat,  2 Sep 2023 01:55:50 -0400 (EDT)
+        by box.fidei.email (Postfix) with ESMTPSA id E801F803B8;
+        Sat,  2 Sep 2023 01:55:45 -0400 (EDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=dorminy.me; s=mail;
-        t=1693634150; bh=b0hkPiFJJoeGPFIcEAEMWTWUyHVLSXX4xFrlWcwMaGU=;
+        t=1693634146; bh=kxcFIEA+Tz7C5XSXfEIV9jwTiWVBlr8UrdIiPo4CwNM=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=HZxXhxmXRGRsxJDu7m5kcD2liS3Heh4gquDSrd5mBzDMrOJJbsQvtcDFU0NtRTb8i
-         oIkPDu0lfiKYQ9FLr12s0V+cY6RVK2typusK6A1pAqtMmz/FJRVtrtd+ULH/NWN3lU
-         sUbovEf6vMb5A6cgb7dLXcJf1CIsN/2dF5eTlXQ7/H8oLJYwCiJlJSvgrjppqc9ynl
-         z72uAewr1PVBPL0kM/PexsENM6vBCmCU/4I1aXScU3oFue0galMV9UAfYGFJ/D7bOK
-         FBXlJUL4A5CSxOZMV/1Ipd34hdLQ4SLnblpk01lNwpY6Mv/1tF0FmmVP0MQ7+M+BuP
-         UjdAqm9sCc82g==
+        b=u6URqt6LxmS6/sFtcmFMkwTXguzyuzsyA2Ntaf+SZEygOWe5UkHDHpGNvYZvx064M
+         oo6QPoLcnO3WCuu9hadAA3ehzwmE50rPjUgV3HHSHZRzlOMD6YAK6FP3DCU2JgnR5b
+         gwJfM2zHmHPP0n/EwJ68c3S+m1PKGGd8xW1dsqPzJ6nvCWZeWV4p811ZDLdUsCzY5g
+         y/gdLHjKEWGbJqAXxzoADRiItr3bsaTFKzWH6eZjFVlL/PoEfkw24CG6l2gBkWOLGn
+         1BHLTohN3b/plTqArm4gAE76TwmzXhUzh0yt4LY3TCZrFoZNq1VM1UGOfb4yfsQ/e5
+         i9v+d3ADSvA2g==
 From:   Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         David Sterba <dsterba@suse.com>,
@@ -38,9 +38,9 @@ To:     Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
         linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org,
         ebiggers@kernel.org, ngompa13@gmail.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [RFC PATCH 03/13] fscrypt: move function call warning of busy inodes
-Date:   Sat,  2 Sep 2023 01:54:21 -0400
-Message-ID: <bc0729de13b00eebc1e1c8b7b832c994b07b4d6c.1693630890.git.sweettea-kernel@dorminy.me>
+Subject: [RFC PATCH 01/13] fscrypt: factor getting info for a specific block
+Date:   Sat,  2 Sep 2023 01:54:19 -0400
+Message-ID: <3f70553c0c8fe344aaa5e9b6c54c0267c26d2d7b.1693630890.git.sweettea-kernel@dorminy.me>
 In-Reply-To: <cover.1693630890.git.sweettea-kernel@dorminy.me>
 References: <cover.1693630890.git.sweettea-kernel@dorminy.me>
 MIME-Version: 1.0
@@ -49,75 +49,125 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Extent encryption will want to attempt to evict inodes, and not warn of
-busy ones, before removing the key instead of after as it is at present.
-Therefore pull the call for check_for_busy_inodes() out of
-try_to_lock_encrypted_files() into its only callsite.
+For filesystems using extent-based encryption, the content of each
+extent will be encrypted with a different fscrypt_info for each extent.
+Meanwhile, directories and symlinks will continue to use the
+fscrypt_info for the inode. Therefore, merely grabbing
+inode->i_crypt_info will be insufficient; the caller must specifically
+request the inode info or the info for a specific block.
+
+Add fscrypt_get_lblk_info() to get info for a specific block, and update
+all relevant callsites.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 ---
- fs/crypto/keyring.c | 25 ++++++++++++-------------
- 1 file changed, 12 insertions(+), 13 deletions(-)
+ fs/crypto/crypto.c          |  3 ++-
+ fs/crypto/fscrypt_private.h | 29 +++++++++++++++++++++++++++++
+ fs/crypto/inline_crypt.c    | 10 ++++++----
+ 3 files changed, 37 insertions(+), 5 deletions(-)
 
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 7cbb1fd872ac..d153988b7403 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -938,8 +938,7 @@ static int check_for_busy_inodes(struct super_block *sb,
- static int try_to_lock_encrypted_files(struct super_block *sb,
- 				       struct fscrypt_master_key *mk)
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 9f3bda18c797..1b7e375b1c6b 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -107,7 +107,8 @@ int fscrypt_crypt_block(const struct inode *inode, fscrypt_direction_t rw,
+ 	struct skcipher_request *req = NULL;
+ 	DECLARE_CRYPTO_WAIT(wait);
+ 	struct scatterlist dst, src;
+-	struct fscrypt_info *ci = inode->i_crypt_info;
++	struct fscrypt_info *ci =
++		fscrypt_get_lblk_info(inode, lblk_num, NULL, NULL);
+ 	struct crypto_skcipher *tfm = ci->ci_enc_key->tfm;
+ 	int res = 0;
+ 
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index e2acd8894ea7..8a1fd1d33cfc 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -277,6 +277,35 @@ typedef enum {
+ 	FS_ENCRYPT,
+ } fscrypt_direction_t;
+ 
++/**
++ * fscrypt_get_lblk_info() - get the fscrypt_info to crypt a particular block
++ *
++ * @inode:      the inode to which the block belongs
++ * @lblk:       the offset of the block within the file which the inode
++ *              references
++ * @offset:     a pointer to return the offset of the block from the first block
++ *              that the info covers. For inode-based encryption, this will
++ *              always be @lblk; for extent-based encryption, this will be in
++ *              the range [0, lblk]. Can be NULL
++ * @extent_len: a pointer to return the minimum number of lblks starting at
++ *              this offset which also belong to the same fscrypt_info. Can be
++ *              NULL
++ *
++ * Return: the appropriate fscrypt_info if there is one, else NULL.
++ */
++static inline struct fscrypt_info *
++fscrypt_get_lblk_info(const struct inode *inode, u64 lblk, u64 *offset,
++		      u64 *extent_len)
++{
++	if (offset)
++		*offset = lblk;
++	if (extent_len)
++		*extent_len = U64_MAX;
++
++	return inode->i_crypt_info;
++}
++
++
+ /* crypto.c */
+ extern struct kmem_cache *fscrypt_info_cachep;
+ int fscrypt_initialize(struct super_block *sb);
+diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
+index 2063f7941ce6..885a2ec3d711 100644
+--- a/fs/crypto/inline_crypt.c
++++ b/fs/crypto/inline_crypt.c
+@@ -270,7 +270,7 @@ void fscrypt_set_bio_crypt_ctx(struct bio *bio, const struct inode *inode,
+ 
+ 	if (!fscrypt_inode_uses_inline_crypto(inode))
+ 		return;
+-	ci = inode->i_crypt_info;
++	ci = fscrypt_get_lblk_info(inode, first_lblk, NULL, NULL);
+ 
+ 	fscrypt_generate_dun(ci, first_lblk, dun);
+ 	bio_crypt_set_ctx(bio, ci->ci_enc_key->blk_key, dun, gfp_mask);
+@@ -349,21 +349,23 @@ bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
  {
--	int err1;
--	int err2;
-+	int err;
+ 	const struct bio_crypt_ctx *bc = bio->bi_crypt_context;
+ 	u64 next_dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
++	struct fscrypt_info *ci;
  
+ 	if (!!bc != fscrypt_inode_uses_inline_crypto(inode))
+ 		return false;
+ 	if (!bc)
+ 		return true;
+ 
++	ci = fscrypt_get_lblk_info(inode, next_lblk, NULL, NULL);
  	/*
- 	 * An inode can't be evicted while it is dirty or has dirty pages.
-@@ -951,7 +950,7 @@ static int try_to_lock_encrypted_files(struct super_block *sb,
- 	 * already call sync_filesystem() via sys_syncfs() or sys_sync().
+ 	 * Comparing the key pointers is good enough, as all I/O for each key
+ 	 * uses the same pointer.  I.e., there's currently no need to support
+ 	 * merging requests where the keys are the same but the pointers differ.
  	 */
- 	down_read(&sb->s_umount);
--	err1 = sync_filesystem(sb);
-+	err = sync_filesystem(sb);
- 	up_read(&sb->s_umount);
- 	/* If a sync error occurs, still try to evict as much as possible. */
+-	if (bc->bc_key != inode->i_crypt_info->ci_enc_key->blk_key)
++	if (bc->bc_key != ci->ci_enc_key->blk_key)
+ 		return false;
  
-@@ -963,16 +962,7 @@ static int try_to_lock_encrypted_files(struct super_block *sb,
- 	 */
- 	evict_dentries_for_decrypted_inodes(mk);
- 
--	/*
--	 * evict_dentries_for_decrypted_inodes() already iput() each inode in
--	 * the list; any inodes for which that dropped the last reference will
--	 * have been evicted due to fscrypt_drop_inode() detecting the key
--	 * removal and telling the VFS to evict the inode.  So to finish, we
--	 * just need to check whether any inodes couldn't be evicted.
--	 */
--	err2 = check_for_busy_inodes(sb, mk);
--
--	return err1 ?: err2;
-+	return err;
+-	fscrypt_generate_dun(inode->i_crypt_info, next_lblk, next_dun);
++	fscrypt_generate_dun(ci, next_lblk, next_dun);
+ 	return bio_crypt_dun_is_contiguous(bc, bio->bi_iter.bi_size, next_dun);
  }
+ EXPORT_SYMBOL_GPL(fscrypt_mergeable_bio);
+@@ -465,7 +467,7 @@ u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks)
+ 	if (nr_blocks <= 1)
+ 		return nr_blocks;
  
- /*
-@@ -1064,8 +1054,17 @@ static int do_remove_key(struct file *filp, void __user *_uarg, bool all_users)
- 	up_write(&mk->mk_sem);
- 
- 	if (inodes_remain) {
-+		int err2;
- 		/* Some inodes still reference this key; try to evict them. */
- 		err = try_to_lock_encrypted_files(sb, mk);
-+		/* We already tried to iput() each inode referencing this key
-+		 * which would cause the inode to be evicted if that was the
-+		 * last reference (since fscrypt_drop_inode() would see the
-+		 * key removal). So the only remaining inodes referencing this
-+		 * key are still busy and couldn't be evicted; check for them.
-+		 */
-+		err2 = check_for_busy_inodes(sb, mk);
-+		err = err ?: err2;
- 		if (err == -EBUSY) {
- 			status_flags |=
- 				FSCRYPT_KEY_REMOVAL_STATUS_FLAG_FILES_BUSY;
+-	ci = inode->i_crypt_info;
++	ci = fscrypt_get_lblk_info(inode, lblk, NULL, NULL);
+ 	if (!(fscrypt_policy_flags(&ci->ci_policy) &
+ 	      FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32))
+ 		return nr_blocks;
 -- 
 2.41.0
 
