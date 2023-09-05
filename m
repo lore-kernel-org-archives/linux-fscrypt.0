@@ -2,45 +2,45 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 55778C83F2C
-	for <linux-fscrypt@archiver.kernel.org>; Tue,  5 Sep 2023 15:59:29 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 82E46CA0FFC
+	for <linux-fscrypt@archiver.kernel.org>; Tue,  5 Sep 2023 15:59:31 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S231756AbjIEP7Z (ORCPT
+        id S232306AbjIEP7Z (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Tue, 5 Sep 2023 11:59:25 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:48362 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:45898 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S243917AbjIEBEb (ORCPT
+        with ESMTP id S243925AbjIEBEe (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 4 Sep 2023 21:04:31 -0400
-Received: from dfw.source.kernel.org (dfw.source.kernel.org [139.178.84.217])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id EFDDB1BE;
-        Mon,  4 Sep 2023 18:04:27 -0700 (PDT)
+        Mon, 4 Sep 2023 21:04:34 -0400
+Received: from ams.source.kernel.org (ams.source.kernel.org [145.40.68.75])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 5E278CC3;
+        Mon,  4 Sep 2023 18:04:30 -0700 (PDT)
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
         (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
          key-exchange X25519 server-signature RSA-PSS (2048 bits))
         (No client certificate requested)
-        by dfw.source.kernel.org (Postfix) with ESMTPS id 7C48461197;
+        by ams.source.kernel.org (Postfix) with ESMTPS id B3E65B80EF6;
+        Tue,  5 Sep 2023 01:04:28 +0000 (UTC)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 53823C433CC;
         Tue,  5 Sep 2023 01:04:27 +0000 (UTC)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id B00CCC433C8;
-        Tue,  5 Sep 2023 01:04:26 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1693875866;
-        bh=mA/Dvgn43PcLulCBha8yDFRXAbYYmz0W5UhWW5k2V0U=;
+        s=k20201202; t=1693875867;
+        bh=ZD+Z0ymC6v+NTgD8Io2pUOkKRPb7xF1w6LxtCKdRREU=;
         h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=DqsUKpp+DESWe4xI4x4m+43TguAisfpiOWMlga8z5er8oM3F0oHOQNRAnTX5TBQg3
-         UuV8aCgTuSbhnsofkbhOgSDf0l/QqCr45WJpwvrizqcDgOfltg8/pUM3ncdj3vm8yl
-         9kS3Y1jc06DxH/qbMp2iyLyZXHd97llvlE6NM+FbNiX7cvB/vbctzzz926HgBKzJZS
-         bbuT3LIkc6AyHdfhm2duWA3lHHBnTSQ9bwVfrbP7nFRm02mVBn4Lx+mnJmAa9O7y1w
-         I2/0k/V5UIEUTO22Al89dZxI+miSnWEaIEPvzMHck9D8TGtuveZqlitVPKFBjyGXDX
-         8T56f8ALmUVgQ==
+        b=k5Ywg0BWZ9QNcRcFSQLFqhYxn6yBSHXSk/gg6rAoBOoiF9PYiOSNYl6NPK0GJFPTh
+         cvv6WlnIsA8NJ4Au0a19Ya4r/lzv64+t9HxEr/59HiggwZNKodlpiblrPqFstn+kxm
+         eYyUDqdfvmfqMcg4udD+EfYRwEhHuZ+tqE3fH15R352YL78Nr59OaA2m0JwcVFJyZK
+         8xTUQrCj6mEY3yjt9OVUsbbPPLzuY9vo+ATi40uLljMAW/nvicYPMi+RdJYBRK5e6s
+         j1LaPmAljyIHEVI0N63gDH9AQlt37u+ZIh+TH2HHYg7P7I8q1Qdmrrd6PE7uPmUFhD
+         Uk1NTiFUTF+/Q==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net, linux-btrfs@vger.kernel.org
-Subject: [PATCH 2/5] fscrypt: make the bounce page pool opt-in instead of opt-out
-Date:   Mon,  4 Sep 2023 17:58:27 -0700
-Message-ID: <20230905005830.365985-3-ebiggers@kernel.org>
+Subject: [PATCH 4/5] fscrypt: replace get_ino_and_lblk_bits with just has_32bit_inodes
+Date:   Mon,  4 Sep 2023 17:58:29 -0700
+Message-ID: <20230905005830.365985-5-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.42.0
 In-Reply-To: <20230905005830.365985-1-ebiggers@kernel.org>
 References: <20230905005830.365985-1-ebiggers@kernel.org>
@@ -52,122 +52,191 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Replace FS_CFLG_OWN_PAGES with a bit flag 'needs_bounce_pages' which has
-the opposite meaning.  I.e., filesystems now opt into the bounce page
-pool instead of opt out.  Make fscrypt_alloc_bounce_page() check that
-the bounce page pool has been initialized.
+Now that fs/crypto/ computes the filesystem's lblk_bits from its maximum
+file size, it is no longer necessary for filesystems to provide
+lblk_bits via fscrypt_operations::get_ino_and_lblk_bits.
 
-I believe the opt in makes more sense, since nothing else in
-fscrypt_operations is opt out, and these days filesystems can choose to
-use blk-crypto which doesn't need the fscrypt bounce page pool.  Also, I
-happen to be planning to add two more flags, and I wanted to fix the
-"FS_CFLG_" name anyway as it wasn't prefixed with "FSCRYPT_".
+It is still necessary for fs/crypto/ to retrieve ino_bits from the
+filesystem.  However, this is used only to decide whether inode numbers
+fit in 32 bits.  Also, ino_bits is static for all relevant filesystems,
+i.e. it doesn't depend on the filesystem instance.
+
+Therefore, in the interest of keeping things as simple as possible,
+replace 'get_ino_and_lblk_bits' with a flag 'has_32bit_inodes'.  This
+can always be changed back to a function if a filesystem needs it to be
+dynamic, but for now a static flag is all that's needed.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/crypto/crypto.c      |  9 ++++++++-
- fs/ext4/crypto.c        |  1 +
- fs/f2fs/super.c         |  1 +
- fs/ubifs/crypto.c       |  1 -
- include/linux/fscrypt.h | 19 ++++++++++---------
- 5 files changed, 20 insertions(+), 11 deletions(-)
+ fs/crypto/policy.c      | 33 +++++++++++++++------------------
+ fs/ext4/crypto.c        |  9 +--------
+ fs/f2fs/super.c         |  9 +--------
+ include/linux/fscrypt.h | 26 +++++++++++---------------
+ 4 files changed, 28 insertions(+), 49 deletions(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 6a837e4b80dcb..803347a5d0a6d 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -49,6 +49,13 @@ EXPORT_SYMBOL(fscrypt_enqueue_decrypt_work);
- 
- struct page *fscrypt_alloc_bounce_page(gfp_t gfp_flags)
- {
-+	if (WARN_ON_ONCE(!fscrypt_bounce_page_pool)) {
-+		/*
-+		 * Oops, the filesystem called a function that uses the bounce
-+		 * page pool, but it forgot to set needs_bounce_pages.
-+		 */
-+		return NULL;
-+	}
- 	return mempool_alloc(fscrypt_bounce_page_pool, gfp_flags);
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index 36bffc4d6228d..c8072a634af8f 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -118,11 +118,11 @@ static bool supported_direct_key_modes(const struct inode *inode,
  }
  
-@@ -325,7 +332,7 @@ int fscrypt_initialize(struct super_block *sb)
- 		return 0;
+ static bool supported_iv_ino_lblk_policy(const struct fscrypt_policy_v2 *policy,
+-					 const struct inode *inode,
+-					 const char *type, int max_ino_bits)
++					 const struct inode *inode)
+ {
++	const char *type = (policy->flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64)
++				? "IV_INO_LBLK_64" : "IV_INO_LBLK_32";
+ 	struct super_block *sb = inode->i_sb;
+-	int ino_bits = 64, lblk_bits = 64;
  
- 	/* No need to allocate a bounce page pool if this FS won't use it. */
--	if (sb->s_cop->flags & FS_CFLG_OWN_PAGES)
-+	if (!sb->s_cop->needs_bounce_pages)
- 		return 0;
+ 	/*
+ 	 * IV_INO_LBLK_* exist only because of hardware limitations, and
+@@ -149,9 +149,15 @@ static bool supported_iv_ino_lblk_policy(const struct fscrypt_policy_v2 *policy,
+ 			     type, sb->s_id);
+ 		return false;
+ 	}
+-	if (sb->s_cop->get_ino_and_lblk_bits)
+-		sb->s_cop->get_ino_and_lblk_bits(sb, &ino_bits, &lblk_bits);
+-	if (ino_bits > max_ino_bits) {
++
++	/*
++	 * IV_INO_LBLK_64 requires that inode numbers fit in 32 bits.
++	 * IV_INO_LBLK_32 hashes the inode number, so in principle it can
++	 * support any length; however, currently the inode number is gotten
++	 * from inode::i_ino which is 'unsigned long'.  So for now the
++	 * implementation limit is 32 bits, the same as IV_INO_LBLK_64.
++	 */
++	if (!sb->s_cop->has_32bit_inodes) {
+ 		fscrypt_warn(inode,
+ 			     "Can't use %s policy on filesystem '%s' because its maximum inode number is too large",
+ 			     type, sb->s_id);
+@@ -242,18 +248,9 @@ static bool fscrypt_supported_v2_policy(const struct fscrypt_policy_v2 *policy,
+ 					policy->filenames_encryption_mode))
+ 		return false;
  
- 	mutex_lock(&fscrypt_init_mutex);
+-	if ((policy->flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) &&
+-	    !supported_iv_ino_lblk_policy(policy, inode, "IV_INO_LBLK_64", 32))
+-		return false;
+-
+-	/*
+-	 * IV_INO_LBLK_32 hashes the inode number, so in principle it can
+-	 * support any ino_bits.  However, currently the inode number is gotten
+-	 * from inode::i_ino which is 'unsigned long'.  So for now the
+-	 * implementation limit is 32 bits.
+-	 */
+-	if ((policy->flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) &&
+-	    !supported_iv_ino_lblk_policy(policy, inode, "IV_INO_LBLK_32", 32))
++	if ((policy->flags & (FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64 |
++			      FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32)) &&
++	    !supported_iv_ino_lblk_policy(policy, inode))
+ 		return false;
+ 
+ 	if (memchr_inv(policy->__reserved, 0, sizeof(policy->__reserved))) {
 diff --git a/fs/ext4/crypto.c b/fs/ext4/crypto.c
-index 8cdb7bbc655b0..a9221be67f2a7 100644
+index a9221be67f2a7..2859d9569aa74 100644
 --- a/fs/ext4/crypto.c
 +++ b/fs/ext4/crypto.c
-@@ -240,6 +240,7 @@ static void ext4_get_ino_and_lblk_bits(struct super_block *sb,
+@@ -232,20 +232,13 @@ static bool ext4_has_stable_inodes(struct super_block *sb)
+ 	return ext4_has_feature_stable_inodes(sb);
  }
  
+-static void ext4_get_ino_and_lblk_bits(struct super_block *sb,
+-				       int *ino_bits_ret, int *lblk_bits_ret)
+-{
+-	*ino_bits_ret = 8 * sizeof(EXT4_SB(sb)->s_es->s_inodes_count);
+-	*lblk_bits_ret = 8 * sizeof(ext4_lblk_t);
+-}
+-
  const struct fscrypt_operations ext4_cryptops = {
-+	.needs_bounce_pages	= 1,
+ 	.needs_bounce_pages	= 1,
++	.has_32bit_inodes	= 1,
  	.legacy_key_prefix_for_backcompat = "ext4:",
  	.get_context		= ext4_get_context,
  	.set_context		= ext4_set_context,
+ 	.get_dummy_policy	= ext4_get_dummy_policy,
+ 	.empty_dir		= ext4_empty_dir,
+ 	.has_stable_inodes	= ext4_has_stable_inodes,
+-	.get_ino_and_lblk_bits	= ext4_get_ino_and_lblk_bits,
+ };
 diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 8de799a8bad04..276535af5bf3c 100644
+index 276535af5bf3c..7e8e510ef77af 100644
 --- a/fs/f2fs/super.c
 +++ b/fs/f2fs/super.c
-@@ -3231,6 +3231,7 @@ static struct block_device **f2fs_get_devices(struct super_block *sb,
+@@ -3203,13 +3203,6 @@ static bool f2fs_has_stable_inodes(struct super_block *sb)
+ 	return true;
  }
  
+-static void f2fs_get_ino_and_lblk_bits(struct super_block *sb,
+-				       int *ino_bits_ret, int *lblk_bits_ret)
+-{
+-	*ino_bits_ret = 8 * sizeof(nid_t);
+-	*lblk_bits_ret = 8 * sizeof(block_t);
+-}
+-
+ static struct block_device **f2fs_get_devices(struct super_block *sb,
+ 					      unsigned int *num_devs)
+ {
+@@ -3232,13 +3225,13 @@ static struct block_device **f2fs_get_devices(struct super_block *sb,
+ 
  static const struct fscrypt_operations f2fs_cryptops = {
-+	.needs_bounce_pages	= 1,
+ 	.needs_bounce_pages	= 1,
++	.has_32bit_inodes	= 1,
  	.legacy_key_prefix_for_backcompat = "f2fs:",
  	.get_context		= f2fs_get_context,
  	.set_context		= f2fs_set_context,
-diff --git a/fs/ubifs/crypto.c b/fs/ubifs/crypto.c
-index fab90f9a8eaff..f0ca403777d9a 100644
---- a/fs/ubifs/crypto.c
-+++ b/fs/ubifs/crypto.c
-@@ -88,7 +88,6 @@ int ubifs_decrypt(const struct inode *inode, struct ubifs_data_node *dn,
- }
- 
- const struct fscrypt_operations ubifs_crypt_operations = {
--	.flags			= FS_CFLG_OWN_PAGES,
- 	.legacy_key_prefix_for_backcompat = "ubifs:",
- 	.get_context		= ubifs_crypt_get_context,
- 	.set_context		= ubifs_crypt_set_context,
+ 	.get_dummy_policy	= f2fs_get_dummy_policy,
+ 	.empty_dir		= f2fs_empty_dir,
+ 	.has_stable_inodes	= f2fs_has_stable_inodes,
+-	.get_ino_and_lblk_bits	= f2fs_get_ino_and_lblk_bits,
+ 	.get_devices		= f2fs_get_devices,
+ };
+ #endif
 diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 85574282c7e52..ac684f688d488 100644
+index ac684f688d488..fb2a74e618a11 100644
 --- a/include/linux/fscrypt.h
 +++ b/include/linux/fscrypt.h
-@@ -59,18 +59,19 @@ struct fscrypt_name {
+@@ -73,6 +73,17 @@ struct fscrypt_operations {
+ 	 */
+ 	unsigned int needs_bounce_pages : 1;
  
- #ifdef CONFIG_FS_ENCRYPTION
- 
--/*
-- * If set, the fscrypt bounce page pool won't be allocated (unless another
-- * filesystem needs it).  Set this if the filesystem always uses its own bounce
-- * pages for writes and therefore won't need the fscrypt bounce page pool.
-- */
--#define FS_CFLG_OWN_PAGES (1U << 1)
--
- /* Crypto operations for filesystems */
- struct fscrypt_operations {
- 
--	/* Set of optional flags; see above for allowed flags */
--	unsigned int flags;
 +	/*
-+	 * If set, then fs/crypto/ will allocate a global bounce page pool.  The
-+	 * bounce page pool is required by the following functions:
-+	 *
-+	 * - fscrypt_encrypt_pagecache_blocks()
-+	 * - fscrypt_zeroout_range() for files not using inline crypto
-+	 *
-+	 * If the filesystem doesn't use those, it doesn't need to set this.
++	 * If set, then fs/crypto/ will allow the use of encryption settings
++	 * that assume inode numbers fit in 32 bits (i.e.
++	 * FSCRYPT_POLICY_FLAG_IV_INO_LBLK_{32,64}), provided that the other
++	 * prerequisites for these settings are also met.  This is only useful
++	 * if the filesystem wants to support inline encryption hardware that is
++	 * limited to 32-bit or 64-bit data unit numbers and where programming
++	 * keyslots is very slow.
 +	 */
-+	unsigned int needs_bounce_pages : 1;
- 
++	unsigned int has_32bit_inodes : 1;
++
  	/*
  	 * This field exists only for backwards compatibility reasons and should
+ 	 * only be set by the filesystems that are setting it already.  It
+@@ -150,21 +161,6 @@ struct fscrypt_operations {
+ 	 */
+ 	bool (*has_stable_inodes)(struct super_block *sb);
+ 
+-	/*
+-	 * Get the number of bits that the filesystem uses to represent inode
+-	 * numbers and file logical block numbers.
+-	 *
+-	 * By default, both of these are assumed to be 64-bit.  This function
+-	 * can be implemented to declare that either or both of these numbers is
+-	 * shorter, which may allow the use of the
+-	 * FSCRYPT_POLICY_FLAG_IV_INO_LBLK_{32,64} flags and/or the use of
+-	 * inline crypto hardware whose maximum DUN length is less than 64 bits
+-	 * (e.g., eMMC v5.2 spec compliant hardware).  This function only needs
+-	 * to be implemented if support for one of these features is needed.
+-	 */
+-	void (*get_ino_and_lblk_bits)(struct super_block *sb,
+-				      int *ino_bits_ret, int *lblk_bits_ret);
+-
+ 	/*
+ 	 * Return an array of pointers to the block devices to which the
+ 	 * filesystem may write encrypted file contents, NULL if the filesystem
 -- 
 2.42.0
 
