@@ -2,112 +2,273 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id D9E7BCE7A98
-	for <linux-fscrypt@archiver.kernel.org>; Mon, 25 Sep 2023 05:59:14 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 27C73CE7A9F
+	for <linux-fscrypt@archiver.kernel.org>; Mon, 25 Sep 2023 05:59:15 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232098AbjIYF7S (ORCPT
+        id S232122AbjIYF7T (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 25 Sep 2023 01:59:18 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:41552 "EHLO
+        Mon, 25 Sep 2023 01:59:19 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:42062 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232065AbjIYF7K (ORCPT
+        with ESMTP id S232066AbjIYF7K (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
         Mon, 25 Sep 2023 01:59:10 -0400
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id CB6E2DA;
-        Sun, 24 Sep 2023 22:58:58 -0700 (PDT)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1E30AC433C7;
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 759B7DF;
+        Sun, 24 Sep 2023 22:58:59 -0700 (PDT)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id D7002C433CC;
         Mon, 25 Sep 2023 05:58:58 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1695621538;
-        bh=tCCLwxvLEvFpLMK/KOG8gn3XG5X7DHq/Kv/q5swH83k=;
-        h=From:To:Cc:Subject:Date:From;
-        b=USnS67doJkAOwCvzzO4pxVWEqjaMKotK5QoJyyt8fjA0gw+S+R4xPcvpw24VnFDEF
-         Ypg5ZAKGGE8kNlKVbBPl3VnLafVGwWh/V+sM3pAu1SOtB6b94Pv7m6R79glQrSo7AK
-         9uvSZ0D6WCG1KR5dg+osBg4eDjkele/x3wGQO1HLWtjhs8ujnUtGRT9rFGVqZD1hOj
-         IEYdXeCFex9RhZAoUvWTKKIr9BO7UHh/psJRUf+GzYK59rDq+33qVcTyKjZzzNkivS
-         LTsx6CM+KNv5HHMxwe1olIcqIGIWpv2Uq96r8JhuKOVx7sP9iOVNuCz6b7G5cwotJS
-         QCpKAf1h09yow==
+        s=k20201202; t=1695621539;
+        bh=cz+gERetg21kponi71Jesmq5RBOAugZisOFCZXrnPoE=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=aOIWr4FQuLTUSVe5DbQnUf8DYvsA6dOLF9Z8hgHs6YuXdu2eRspUt+JKXDxnUaiUc
+         8yMz1HAIqzuWfvAUNZ8eDM2pWxaSDQZO7eredhZ2tgvTx1x/avI2dukZCuiFPUD+i6
+         SqqWxscoEtpz3c4VmWJwC8/LwksgCYIjTDTy6KEAptztbp0+QAaSjQYN9c4dIkAVhM
+         zg5Fj17CjuNI3ensjc0Fk+X74jvFedal048aEJ5xpM8xAOaYodPiCV1BkXm65WjjHB
+         PZoi7kMfEj6WHgQ5z2Z6RTGyb/7n9yLpB2ryYMDCWqAcFUGG3SBUU8REcCIr+aXCk9
+         rOW3vF+8eGmWg==
 From:   Eric Biggers <ebiggers@kernel.org>
 To:     linux-fscrypt@vger.kernel.org
 Cc:     linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
         linux-f2fs-devel@lists.sourceforge.net,
         linux-btrfs@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>,
         Jaegeuk Kim <jaegeuk@kernel.org>
-Subject: [PATCH v3 0/5] fscrypt: add support for data_unit_size < fs_block_size
-Date:   Sun, 24 Sep 2023 22:54:46 -0700
-Message-ID: <20230925055451.59499-1-ebiggers@kernel.org>
+Subject: [PATCH v3 2/5] fscrypt: make the bounce page pool opt-in instead of opt-out
+Date:   Sun, 24 Sep 2023 22:54:48 -0700
+Message-ID: <20230925055451.59499-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.42.0
+In-Reply-To: <20230925055451.59499-1-ebiggers@kernel.org>
+References: <20230925055451.59499-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This patchset adds support for configuring the granularity of file
-contents encryption (a.k.a. the "crypto data unit size") to be less than
-the filesystem block size on ext4 and f2fs.  The main use case for this
-is to support inline crypto hardware that only supports a data unit size
-that is less than the FS block size being used.  Another possible use
-case is to support direct I/O on encrypted files without the FS block
-alignment restriction.  Note that decreasing the crypto data unit size
-decreases efficiency, so this feature should only be used when needed.
+From: Eric Biggers <ebiggers@google.com>
 
-For full details, see patch 5 which adds the actual feature.  Patches
-1-4 are preparatory patches.
+Replace FS_CFLG_OWN_PAGES with a bit flag 'needs_bounce_pages' which has
+the opposite meaning.  I.e., filesystems now opt into the bounce page
+pool instead of opt out.  Make fscrypt_alloc_bounce_page() check that
+the bounce page pool has been initialized.
 
-I've written an xfstest that verifies that when a sub-block data unit
-size is selected, the data on-disk is encrypted correctly with that data
-unit size.  I'll be sending that out separately.  Other testing of this
-patchset with xfstests has gone well, though it turns out that some
-additional changes will be needed for a sub-block data unit size to work
-with the IV_INO_LBLK_* encryption settings.  See patch 5 for details.
-This patchset focuses on basic sub-block data unit size support first.
+I believe the opt-in makes more sense, since nothing else in
+fscrypt_operations is opt-out, and these days filesystems can choose to
+use blk-crypto which doesn't need the fscrypt bounce page pool.  Also, I
+happen to be planning to add two more flags, and I wanted to fix the
+"FS_CFLG_" name anyway as it wasn't prefixed with "FSCRYPT_".
 
-This patchset will cause some conflicts in the extent-based encryption
-patches that the btrfs folks are working on, as both are touching file
-contents encryption, but logically they are orthogonal features.
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ fs/ceph/crypto.c        |  1 +
+ fs/crypto/crypto.c      |  9 ++++++++-
+ fs/ext4/crypto.c        |  1 +
+ fs/f2fs/super.c         |  1 +
+ fs/ubifs/crypto.c       |  1 -
+ include/linux/fscrypt.h | 20 +++++++++++---------
+ 6 files changed, 22 insertions(+), 11 deletions(-)
 
-This patchset is based on v6.6-rc3.
-
-Changed in v3:
-  - Shortened 'legacy_key_prefix_for_backcompat' to 'legacy_key_prefix'
-  - Other miscellaneous cleanups
-  - Rebased onto v6.6-rc3
-
-Changed in v2:
-  - Rebased onto v6.6-rc1 and took into account CephFS's recent addition
-    of support for fscrypt
-  - Narrowed the focus somewhat by dropping the attempted support for
-    IV_INO_LBLK_32 and clearly documenting what is considered out of
-    scope for now
-  - Other cleanups
-
-Eric Biggers (5):
-  fscrypt: make it clearer that key_prefix is deprecated
-  fscrypt: make the bounce page pool opt-in instead of opt-out
-  fscrypt: compute max_lblk_bits from s_maxbytes and block size
-  fscrypt: replace get_ino_and_lblk_bits with just has_32bit_inodes
-  fscrypt: support crypto data unit size less than filesystem block size
-
- Documentation/filesystems/fscrypt.rst | 117 ++++++++++++++------
- fs/ceph/crypto.c                      |   1 +
- fs/crypto/bio.c                       |  39 ++++---
- fs/crypto/crypto.c                    | 148 +++++++++++++++-----------
- fs/crypto/fscrypt_private.h           |  58 ++++++++--
- fs/crypto/inline_crypt.c              |  19 ++--
- fs/crypto/keysetup.c                  |   5 +
- fs/crypto/keysetup_v1.c               |   5 +-
- fs/crypto/policy.c                    |  73 +++++++++----
- fs/ext4/crypto.c                      |  13 +--
- fs/f2fs/super.c                       |  13 +--
- fs/ubifs/crypto.c                     |   3 +-
- include/linux/fscrypt.h               |  72 ++++++++-----
- include/uapi/linux/fscrypt.h          |   3 +-
- 14 files changed, 364 insertions(+), 205 deletions(-)
-
-
-base-commit: 6465e260f48790807eef06b583b38ca9789b6072
+diff --git a/fs/ceph/crypto.c b/fs/ceph/crypto.c
+index e4d5cd56a80b9..cc63f1e6fdef6 100644
+--- a/fs/ceph/crypto.c
++++ b/fs/ceph/crypto.c
+@@ -126,20 +126,21 @@ static bool ceph_crypt_empty_dir(struct inode *inode)
+ 
+ 	return ci->i_rsubdirs + ci->i_rfiles == 1;
+ }
+ 
+ static const union fscrypt_policy *ceph_get_dummy_policy(struct super_block *sb)
+ {
+ 	return ceph_sb_to_client(sb)->fsc_dummy_enc_policy.policy;
+ }
+ 
+ static struct fscrypt_operations ceph_fscrypt_ops = {
++	.needs_bounce_pages	= 1,
+ 	.get_context		= ceph_crypt_get_context,
+ 	.set_context		= ceph_crypt_set_context,
+ 	.get_dummy_policy	= ceph_get_dummy_policy,
+ 	.empty_dir		= ceph_crypt_empty_dir,
+ };
+ 
+ void ceph_fscrypt_set_ops(struct super_block *sb)
+ {
+ 	fscrypt_set_ops(sb, &ceph_fscrypt_ops);
+ }
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 6a837e4b80dcb..aed0c5ea75781 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -42,20 +42,27 @@ static DEFINE_MUTEX(fscrypt_init_mutex);
+ struct kmem_cache *fscrypt_info_cachep;
+ 
+ void fscrypt_enqueue_decrypt_work(struct work_struct *work)
+ {
+ 	queue_work(fscrypt_read_workqueue, work);
+ }
+ EXPORT_SYMBOL(fscrypt_enqueue_decrypt_work);
+ 
+ struct page *fscrypt_alloc_bounce_page(gfp_t gfp_flags)
+ {
++	if (WARN_ON_ONCE(!fscrypt_bounce_page_pool)) {
++		/*
++		 * Oops, the filesystem called a function that uses the bounce
++		 * page pool, but it didn't set needs_bounce_pages.
++		 */
++		return NULL;
++	}
+ 	return mempool_alloc(fscrypt_bounce_page_pool, gfp_flags);
+ }
+ 
+ /**
+  * fscrypt_free_bounce_page() - free a ciphertext bounce page
+  * @bounce_page: the bounce page to free, or NULL
+  *
+  * Free a bounce page that was allocated by fscrypt_encrypt_pagecache_blocks(),
+  * or by fscrypt_alloc_bounce_page() directly.
+  */
+@@ -318,21 +325,21 @@ EXPORT_SYMBOL(fscrypt_decrypt_block_inplace);
+ int fscrypt_initialize(struct super_block *sb)
+ {
+ 	int err = 0;
+ 	mempool_t *pool;
+ 
+ 	/* pairs with smp_store_release() below */
+ 	if (likely(smp_load_acquire(&fscrypt_bounce_page_pool)))
+ 		return 0;
+ 
+ 	/* No need to allocate a bounce page pool if this FS won't use it. */
+-	if (sb->s_cop->flags & FS_CFLG_OWN_PAGES)
++	if (!sb->s_cop->needs_bounce_pages)
+ 		return 0;
+ 
+ 	mutex_lock(&fscrypt_init_mutex);
+ 	if (fscrypt_bounce_page_pool)
+ 		goto out_unlock;
+ 
+ 	err = -ENOMEM;
+ 	pool = mempool_create_page_pool(num_prealloc_crypto_pages, 0);
+ 	if (!pool)
+ 		goto out_unlock;
+diff --git a/fs/ext4/crypto.c b/fs/ext4/crypto.c
+index 99a4769a53f63..5cd7bcfae46b2 100644
+--- a/fs/ext4/crypto.c
++++ b/fs/ext4/crypto.c
+@@ -233,18 +233,19 @@ static bool ext4_has_stable_inodes(struct super_block *sb)
+ }
+ 
+ static void ext4_get_ino_and_lblk_bits(struct super_block *sb,
+ 				       int *ino_bits_ret, int *lblk_bits_ret)
+ {
+ 	*ino_bits_ret = 8 * sizeof(EXT4_SB(sb)->s_es->s_inodes_count);
+ 	*lblk_bits_ret = 8 * sizeof(ext4_lblk_t);
+ }
+ 
+ const struct fscrypt_operations ext4_cryptops = {
++	.needs_bounce_pages	= 1,
+ 	.legacy_key_prefix	= "ext4:",
+ 	.get_context		= ext4_get_context,
+ 	.set_context		= ext4_set_context,
+ 	.get_dummy_policy	= ext4_get_dummy_policy,
+ 	.empty_dir		= ext4_empty_dir,
+ 	.has_stable_inodes	= ext4_has_stable_inodes,
+ 	.get_ino_and_lblk_bits	= ext4_get_ino_and_lblk_bits,
+ };
+diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+index f60062b558fd1..55aa0ed531f22 100644
+--- a/fs/f2fs/super.c
++++ b/fs/f2fs/super.c
+@@ -3224,20 +3224,21 @@ static struct block_device **f2fs_get_devices(struct super_block *sb,
+ 	if (!devs)
+ 		return ERR_PTR(-ENOMEM);
+ 
+ 	for (i = 0; i < sbi->s_ndevs; i++)
+ 		devs[i] = FDEV(i).bdev;
+ 	*num_devs = sbi->s_ndevs;
+ 	return devs;
+ }
+ 
+ static const struct fscrypt_operations f2fs_cryptops = {
++	.needs_bounce_pages	= 1,
+ 	.legacy_key_prefix	= "f2fs:",
+ 	.get_context		= f2fs_get_context,
+ 	.set_context		= f2fs_set_context,
+ 	.get_dummy_policy	= f2fs_get_dummy_policy,
+ 	.empty_dir		= f2fs_empty_dir,
+ 	.has_stable_inodes	= f2fs_has_stable_inodes,
+ 	.get_ino_and_lblk_bits	= f2fs_get_ino_and_lblk_bits,
+ 	.get_devices		= f2fs_get_devices,
+ };
+ #endif
+diff --git a/fs/ubifs/crypto.c b/fs/ubifs/crypto.c
+index 1be3e11da3b3e..921f9033d0d2d 100644
+--- a/fs/ubifs/crypto.c
++++ b/fs/ubifs/crypto.c
+@@ -81,16 +81,15 @@ int ubifs_decrypt(const struct inode *inode, struct ubifs_data_node *dn,
+ 	if (err) {
+ 		ubifs_err(c, "fscrypt_decrypt_block_inplace() failed: %d", err);
+ 		return err;
+ 	}
+ 	*out_len = clen;
+ 
+ 	return 0;
+ }
+ 
+ const struct fscrypt_operations ubifs_crypt_operations = {
+-	.flags			= FS_CFLG_OWN_PAGES,
+ 	.legacy_key_prefix	= "ubifs:",
+ 	.get_context		= ubifs_crypt_get_context,
+ 	.set_context		= ubifs_crypt_set_context,
+ 	.empty_dir		= ubifs_crypt_empty_dir,
+ };
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index b0037566ce308..4505078e89b7e 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -52,32 +52,34 @@ struct fscrypt_name {
+ #define FSTR_INIT(n, l)		{ .name = n, .len = l }
+ #define FSTR_TO_QSTR(f)		QSTR_INIT((f)->name, (f)->len)
+ #define fname_name(p)		((p)->disk_name.name)
+ #define fname_len(p)		((p)->disk_name.len)
+ 
+ /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
+ #define FSCRYPT_SET_CONTEXT_MAX_SIZE	40
+ 
+ #ifdef CONFIG_FS_ENCRYPTION
+ 
+-/*
+- * If set, the fscrypt bounce page pool won't be allocated (unless another
+- * filesystem needs it).  Set this if the filesystem always uses its own bounce
+- * pages for writes and therefore won't need the fscrypt bounce page pool.
+- */
+-#define FS_CFLG_OWN_PAGES (1U << 1)
+-
+ /* Crypto operations for filesystems */
+ struct fscrypt_operations {
+ 
+-	/* Set of optional flags; see above for allowed flags */
+-	unsigned int flags;
++	/*
++	 * If set, then fs/crypto/ will allocate a global bounce page pool the
++	 * first time an encryption key is set up for a file.  The bounce page
++	 * pool is required by the following functions:
++	 *
++	 * - fscrypt_encrypt_pagecache_blocks()
++	 * - fscrypt_zeroout_range() for files not using inline crypto
++	 *
++	 * If the filesystem doesn't use those, it doesn't need to set this.
++	 */
++	unsigned int needs_bounce_pages : 1;
+ 
+ 	/*
+ 	 * This field exists only for backwards compatibility reasons and should
+ 	 * only be set by the filesystems that are setting it already.  It
+ 	 * contains the filesystem-specific key description prefix that is
+ 	 * accepted for "logon" keys for v1 fscrypt policies.  This
+ 	 * functionality is deprecated in favor of the generic prefix
+ 	 * "fscrypt:", which itself is deprecated in favor of the filesystem
+ 	 * keyring ioctls such as FS_IOC_ADD_ENCRYPTION_KEY.  Filesystems that
+ 	 * are newly adding fscrypt support should not set this field.
 -- 
 2.42.0
 
