@@ -2,63 +2,63 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3F025E8181E
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Sep 2023 18:03:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 9A6C5E7E65E
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 26 Sep 2023 18:03:37 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S235459AbjIZSDl (ORCPT
+        id S235471AbjIZSDm (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Tue, 26 Sep 2023 14:03:41 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55318 "EHLO
+        Tue, 26 Sep 2023 14:03:42 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33654 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S235432AbjIZSDj (ORCPT
+        with ESMTP id S235432AbjIZSDl (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 26 Sep 2023 14:03:39 -0400
-Received: from mail-qk1-x72d.google.com (mail-qk1-x72d.google.com [IPv6:2607:f8b0:4864:20::72d])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 94D65BF
-        for <linux-fscrypt@vger.kernel.org>; Tue, 26 Sep 2023 11:03:32 -0700 (PDT)
-Received: by mail-qk1-x72d.google.com with SMTP id af79cd13be357-7740cd2e404so583445585a.2
-        for <linux-fscrypt@vger.kernel.org>; Tue, 26 Sep 2023 11:03:32 -0700 (PDT)
+        Tue, 26 Sep 2023 14:03:41 -0400
+Received: from mail-qt1-x82c.google.com (mail-qt1-x82c.google.com [IPv6:2607:f8b0:4864:20::82c])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id D40E6BF
+        for <linux-fscrypt@vger.kernel.org>; Tue, 26 Sep 2023 11:03:34 -0700 (PDT)
+Received: by mail-qt1-x82c.google.com with SMTP id d75a77b69052e-41820eecff2so19631711cf.1
+        for <linux-fscrypt@vger.kernel.org>; Tue, 26 Sep 2023 11:03:34 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=toxicpanda-com.20230601.gappssmtp.com; s=20230601; t=1695751411; x=1696356211; darn=vger.kernel.org;
+        d=toxicpanda-com.20230601.gappssmtp.com; s=20230601; t=1695751414; x=1696356214; darn=vger.kernel.org;
         h=content-transfer-encoding:mime-version:references:in-reply-to
          :message-id:date:subject:cc:to:from:from:to:cc:subject:date
          :message-id:reply-to;
-        bh=vFmLojnAQHX9YXUek43MmCebXJuRqe4GXtQt5j98L5c=;
-        b=PfBq3zaZ0pBC1BrJyRE9dW5sYMqAeiiHWww56Dp6EH40n6Ck2eFifE81k0Z1XBxclK
-         5Ip427Pne1SRRqDncudKBWY/x4kJ0wXuS197uugNB47oNIFtyfcZvCU0HBcxuP8boSD3
-         e/ZN/BM4kx/0OYgsN8BLb+91LvSgQD0kX5GHuRiJN4QWFQ0uaHMDMrUB5R6XiqkcvP6p
-         7v/I8mhMuVlx+H8upcFH3I1hWLrR4Px2XeXQyxBFTyKrXzNj7p1DMa2eV2j/CXHXYcb1
-         FmQpMyXD+v7MLPkdMfU9KL3rSC1ldKDs34t5K6yz9rh/6z/XR3A+6dpwExaHuuxXtvbS
-         wMGw==
+        bh=9KLmh2uaP15Sf9VJ5dLtRkPlzZHoo+djMGrpIoeSOJk=;
+        b=shf1DcHi9otxTUCLdnixnQHt2PLxxOP76AMPtM61f9ri8ZwhBzEMbyZaQOaPCzzSWG
+         5kNyvzlII5cvi27IlmgoAzSsBTWlWFu59d2X8vpiJeSQnC72R3/wAHVVs9mbRvgnKBkS
+         F52gMfUXGzKTx98MA9tUyF+g2rb1ABFBJ9yBtWhDUtXqAGI+YRJPM5CzRGan86obGScc
+         HsBHmaSz6tHRwWfZrGGGnBLUAbzmzdeSa6O+AtaMKqtZR9xzxaS8biIGlpHDLeEzckWL
+         2nCt8FPM6gGRtBMMpWptKOuvLzpuUAMqd0foJ96y5zUJ1QWeTDobErMNA/kVl1Rq2hMb
+         lyrw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1695751411; x=1696356211;
+        d=1e100.net; s=20230601; t=1695751414; x=1696356214;
         h=content-transfer-encoding:mime-version:references:in-reply-to
          :message-id:date:subject:cc:to:from:x-gm-message-state:from:to:cc
          :subject:date:message-id:reply-to;
-        bh=vFmLojnAQHX9YXUek43MmCebXJuRqe4GXtQt5j98L5c=;
-        b=uKTjZnLKpTDNLwwmGznLNv3KB0Bjgx84Oaac3jtB+v66sdMcvj+dxLZW3yy1s1eCln
-         xQ2E8omdkyM9XwGVxYcfHUGBndnxBqx+uT4mHhKo9R0BCxaraTvOOrtsZ0SfY0KRxlJc
-         j/uoYj77QEKXn4bx1os2wtvBMCC/dux5ct3tw4U5GPG+WFMzBOrKREemRSRATzRGeErq
-         UVFRBxGlC2F3QWl1j9lXsekoqfNrU2WNJRWWKXNan89lm2pzCjRDPaGwh9yMESY5grc6
-         CKJAdOA7dx8gQeu8CgvDIUuZbenkC05ETqvy6sEdCDaEcDSjWRqitDt84Ka3JqxHmhto
-         7XSg==
-X-Gm-Message-State: AOJu0YyK8+1tdpx8QVoWG0DOGan0JYXuwxIt0FjyHU7v7WM64ZiFhUrN
-        j7OobqzPMKdUgvMz99eQpLXiDg==
-X-Google-Smtp-Source: AGHT+IF0jSltUuviG8KvY1FN5h0GExlxFexp4nMp13D6VaWn7ON/O1uWrDh6lZh+i7fEv1MXko7mZA==
-X-Received: by 2002:a05:620a:1a87:b0:76f:f64:58bf with SMTP id bl7-20020a05620a1a8700b0076f0f6458bfmr12674146qkb.18.1695751411725;
-        Tue, 26 Sep 2023 11:03:31 -0700 (PDT)
+        bh=9KLmh2uaP15Sf9VJ5dLtRkPlzZHoo+djMGrpIoeSOJk=;
+        b=NHPM88/oAImLP0A3nF2/PgGB0OvmnR8v8kX2f4nouwegVYsGhxtY67fbEjWN8LVBPK
+         6NmHqr0tM6zqgcyFJTAsxgHxNNG8j6q+G2MWDngZkvStYJvfkJ0QjgXHIHMXIc+Dkac3
+         Mroj3BiTh+NtcdUbxSwl6IZvfQNRjJat5JRiaSQ2S9FflCPQt/xOIRCBZGJ4pc/g/IpJ
+         pufX/SNtQdCykQgAAdzXWDWKSk33knMFQ0EBLh2stcy1ybLXsj55nn3+ImtlPa4bPJ6C
+         swVjtkB2oAViTb8tjtyVs1Ti2felIcQZR2kgCEMP10oiiWjlsoXy9G9TT+GNo1CVgm2T
+         Zcig==
+X-Gm-Message-State: AOJu0YzM2zPts6ToV4pbnUVog3bV6nXwwT4RoVqz4AP5uaEcnfFM2zKv
+        pKGoIiDHrN0rKk9rHkCMukCPFg==
+X-Google-Smtp-Source: AGHT+IEXrkR7x9Pl2saCQ8KSIwNXmAj6BRTstm+LKNEDSuk08JhC7QykpQg3Fx5yvNLDXUu/U6NaCA==
+X-Received: by 2002:a05:622a:34a:b0:417:fe9c:6dce with SMTP id r10-20020a05622a034a00b00417fe9c6dcemr12030385qtw.25.1695751413829;
+        Tue, 26 Sep 2023 11:03:33 -0700 (PDT)
 Received: from localhost (cpe-76-182-20-124.nc.res.rr.com. [76.182.20.124])
-        by smtp.gmail.com with ESMTPSA id e15-20020a05620a12cf00b007756d233fbdsm379708qkl.37.2023.09.26.11.03.31
+        by smtp.gmail.com with ESMTPSA id fp6-20020a05622a508600b004181aa90b46sm1671764qtb.89.2023.09.26.11.03.33
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Tue, 26 Sep 2023 11:03:31 -0700 (PDT)
+        Tue, 26 Sep 2023 11:03:33 -0700 (PDT)
 From:   Josef Bacik <josef@toxicpanda.com>
 To:     linux-btrfs@vger.kernel.org, kernel-team@fb.com,
         ebiggers@kernel.org, linux-fscrypt@vger.kernel.org,
         ngompa13@gmail.com
 Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH 16/35] btrfs: add encryption to CONFIG_BTRFS_DEBUG
-Date:   Tue, 26 Sep 2023 14:01:42 -0400
-Message-ID: <1b65ae762b4039cada3f29b996de690b34aad0c1.1695750478.git.josef@toxicpanda.com>
+Subject: [PATCH 18/35] btrfs: turn on inlinecrypt mount option for encrypt
+Date:   Tue, 26 Sep 2023 14:01:44 -0400
+Message-ID: <e4816641d25052d421cf2118739e6297f225e641.1695750478.git.josef@toxicpanda.com>
 X-Mailer: git-send-email 2.41.0
 In-Reply-To: <cover.1695750478.git.josef@toxicpanda.com>
 References: <cover.1695750478.git.josef@toxicpanda.com>
@@ -70,36 +70,55 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 
-Since encryption is currently under BTRFS_DEBUG, this adds its
-dependencies: inline encryption from fscrypt, and the inline encryption
-fallback path from the block layer.
+fscrypt's extent encryption requires the use of inline encryption or the
+software fallback that the block layer provides; it is rather
+complicated to allow software encryption with extent encryption due to
+the timing of memory allocations. Thus, if btrfs has ever had a
+encrypted file, or when encryption is enabled on a directory, update the
+mount flags to include inlinecrypt.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 ---
- fs/btrfs/ioctl.c | 2 ++
- 1 file changed, 2 insertions(+)
+ fs/btrfs/ioctl.c |  3 +++
+ fs/btrfs/super.c | 10 ++++++++++
+ 2 files changed, 13 insertions(+)
 
 diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
-index ddc2d2c7fc7f..8e5f9dbb547a 100644
+index 8e5f9dbb547a..33bf4d9416a9 100644
 --- a/fs/btrfs/ioctl.c
 +++ b/fs/btrfs/ioctl.c
-@@ -4587,6 +4587,7 @@ long btrfs_ioctl(struct file *file, unsigned int
- 		return btrfs_ioctl_get_fslabel(fs_info, argp);
- 	case FS_IOC_SETFSLABEL:
- 		return btrfs_ioctl_set_fslabel(file, argp);
-+#ifdef CONFIG_BTRFS_DEBUG
- 	case FS_IOC_SET_ENCRYPTION_POLICY: {
- 		if (!IS_ENABLED(CONFIG_FS_ENCRYPTION))
- 			return -EOPNOTSUPP;
-@@ -4615,6 +4616,7 @@ long btrfs_ioctl(struct file *file, unsigned int
- 		return fscrypt_ioctl_get_key_status(file, (void __user *)arg);
- 	case FS_IOC_GET_ENCRYPTION_NONCE:
- 		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
-+#endif /* CONFIG_BTRFS_DEBUG */
- 	case FITRIM:
- 		return btrfs_ioctl_fitrim(fs_info, argp);
- 	case BTRFS_IOC_SNAP_CREATE:
+@@ -4599,6 +4599,9 @@ long btrfs_ioctl(struct file *file, unsigned int
+ 		 * state persists.
+ 		 */
+ 		btrfs_set_fs_incompat(fs_info, ENCRYPT);
++		if (!(inode->i_sb->s_flags & SB_INLINECRYPT)) {
++			inode->i_sb->s_flags |= SB_INLINECRYPT;
++		}
+ 		return fscrypt_ioctl_set_policy(file, (const void __user *)arg);
+ 	}
+ 	case FS_IOC_GET_ENCRYPTION_POLICY:
+diff --git a/fs/btrfs/super.c b/fs/btrfs/super.c
+index 2b5d60cb7fed..a8a609f4a9f4 100644
+--- a/fs/btrfs/super.c
++++ b/fs/btrfs/super.c
+@@ -1120,6 +1120,16 @@ static int btrfs_fill_super(struct super_block *sb,
+ 		return err;
+ 	}
+ 
++	if (btrfs_fs_incompat(fs_info, ENCRYPT)) {
++		if (IS_ENABLED(CONFIG_FS_ENCRYPTION_INLINE_CRYPT)) {
++			sb->s_flags |= SB_INLINECRYPT;
++		} else {
++			btrfs_err(fs_info, "encryption not supported");
++			err = -EINVAL;
++			goto fail_close;
++		}
++	}
++
+ 	inode = btrfs_iget(sb, BTRFS_FIRST_FREE_OBJECTID, fs_info->fs_root);
+ 	if (IS_ERR(inode)) {
+ 		err = PTR_ERR(inode);
 -- 
 2.41.0
 
