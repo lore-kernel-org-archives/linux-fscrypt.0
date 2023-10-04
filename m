@@ -2,123 +2,298 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 75FEDE7C4E3
-	for <linux-fscrypt@archiver.kernel.org>; Wed,  4 Oct 2023 16:44:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D824DE936ED
+	for <linux-fscrypt@archiver.kernel.org>; Wed,  4 Oct 2023 22:09:54 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S233485AbjJDQoT (ORCPT
+        id S231948AbjJDWJ4 (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Wed, 4 Oct 2023 12:44:19 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:60666 "EHLO
+        Wed, 4 Oct 2023 18:09:56 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36176 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S233112AbjJDQoS (ORCPT
+        with ESMTP id S231651AbjJDWJy (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Wed, 4 Oct 2023 12:44:18 -0400
-Received: from mail-yw1-x1131.google.com (mail-yw1-x1131.google.com [IPv6:2607:f8b0:4864:20::1131])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 512AB9B
-        for <linux-fscrypt@vger.kernel.org>; Wed,  4 Oct 2023 09:44:15 -0700 (PDT)
-Received: by mail-yw1-x1131.google.com with SMTP id 00721157ae682-5a229ac185aso27984847b3.1
-        for <linux-fscrypt@vger.kernel.org>; Wed, 04 Oct 2023 09:44:15 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=toxicpanda-com.20230601.gappssmtp.com; s=20230601; t=1696437854; x=1697042654; darn=vger.kernel.org;
-        h=content-disposition:mime-version:message-id:subject:cc:to:from:date
-         :from:to:cc:subject:date:message-id:reply-to;
-        bh=I2if2iM6EGws4IARNzJAuoshxU4FqGDhSF3pEDm7d7Q=;
-        b=kfrFb/5vsv65eCXxGeSdVxze4xDAyZDSuckqB2O8FLbyPYtKeYyYOpk3Fdukin0+B+
-         9wFDhrWylTwi/Hu4N5v9S1sBlVs+gG9TkHvUwx1160oViwx+jT0lWzXmdsRIk2cfSMGy
-         lsBRSoqFpf+nsAdJI9nlN6lXwnCmINgwHIZg+uSXCslCq2KnevABLeZEuQHuxeeOGkvk
-         ehxt13xKSctgCqFI97MjIB/MAvF50F9jkKZndCDF8ejq48HUV6xLb3HuvfTg8HPh95Yg
-         tSiq3EJvCI/r67QZuRKNxJ+mFp+Vz+BoBI6HldYsCEY3PqtkLf/UcHqu2HZSVpXEp98J
-         tlSA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1696437854; x=1697042654;
-        h=content-disposition:mime-version:message-id:subject:cc:to:from:date
-         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
-        bh=I2if2iM6EGws4IARNzJAuoshxU4FqGDhSF3pEDm7d7Q=;
-        b=kA5LvIWH/0MWNs5htyS9OtyywCQRyN8PPN9ghuNcLHWy/nj43lJl/1qR8Kg5sZj31o
-         0v+nycx8EE/2dgKsP6urIHRzHDnQIaNi2knu/8QHBEDVx3OInHM7yQlOEaa0zlnUR/d6
-         XaAE6jPROcgzLI/d4SqiDKUoCn11AdFTo5iA+B5uRZPt8tenL3gv7BDmLsV+GgD0tDvP
-         I7KpgbvXw9/IWt8ljl/at+o78L+UMKQ4lGSJTwhZTqIJnV6VRDniWFgYELTXybDiDM3O
-         wW0CcbJ2C5KA88fc1KwLrxz9x5E9ZpuYaJMRFx/3yGMV6uVhGVBSjTJcE/i3EvpMe8Fo
-         GXbw==
-X-Gm-Message-State: AOJu0YyJLQCHCs8CadpOlQe1ObZ0Zh+wuNPCGP4q2o+aY0fpH2MzATBn
-        Pann75GpgJVXmcyD2ZguOhOErg==
-X-Google-Smtp-Source: AGHT+IE4YjR68xXnXd7rYcGClYleMtC0WnYuLBTfMzqeBxFFH/S/Wk0pB4fIHKHJfTqLmCINlDqudw==
-X-Received: by 2002:a0d:df12:0:b0:570:7b4d:f694 with SMTP id i18-20020a0ddf12000000b005707b4df694mr3237209ywe.3.1696437854399;
-        Wed, 04 Oct 2023 09:44:14 -0700 (PDT)
-Received: from localhost (144-129-254-068.biz.spectrum.com. [144.129.254.68])
-        by smtp.gmail.com with ESMTPSA id n133-20020a81728b000000b005777a2c356asm1243457ywc.65.2023.10.04.09.44.13
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Wed, 04 Oct 2023 09:44:13 -0700 (PDT)
-Date:   Wed, 4 Oct 2023 12:44:12 -0400
-From:   Josef Bacik <josef@toxicpanda.com>
-To:     ebiggers@kernel.org
-Cc:     linux-btrfs@vger.kernel.org, linux-fscrypt@vger.kernel.org,
-        sweettea-kernel@dorminy.me
-Subject: Master key removal semantics
-Message-ID: <20231004164412.GA363973@localhost.localdomain>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
+        Wed, 4 Oct 2023 18:09:54 -0400
+Received: from linux.microsoft.com (linux.microsoft.com [13.77.154.182])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTP id CC9CCC9;
+        Wed,  4 Oct 2023 15:09:50 -0700 (PDT)
+Received: by linux.microsoft.com (Postfix, from userid 1052)
+        id 30FF620B74C2; Wed,  4 Oct 2023 15:09:50 -0700 (PDT)
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 30FF620B74C2
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
+        s=default; t=1696457390;
+        bh=oBYPhxhjQL5BN0Kiy8n4HfaBWKlzqDu9gGFuvxbs4W4=;
+        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+        b=YlE6XpLZ+4/+yT20r/6R09Nc/lR/L+ItVzP+479faG/k3TjLT266PmJZQFNO6GW46
+         B2vIZ+VHlGUOqxvp+AWQl0MmJnSFwEf6asTMMPdsFPJ4eKACvglV+iC2rsWBJ/LuPy
+         XUUSlLY2kj5bhK/WqYQcQL5WVH3qOCeHK0+P2+LY=
+From:   Fan Wu <wufan@linux.microsoft.com>
+To:     corbet@lwn.net, zohar@linux.ibm.com, jmorris@namei.org,
+        serge@hallyn.com, tytso@mit.edu, ebiggers@kernel.org,
+        axboe@kernel.dk, agk@redhat.com, snitzer@kernel.org,
+        eparis@redhat.com, paul@paul-moore.com
+Cc:     linux-doc@vger.kernel.org, linux-integrity@vger.kernel.org,
+        linux-security-module@vger.kernel.org,
+        linux-fscrypt@vger.kernel.org, linux-block@vger.kernel.org,
+        dm-devel@redhat.com, audit@vger.kernel.org,
+        roberto.sassu@huawei.com, linux-kernel@vger.kernel.org,
+        Deven Bowers <deven.desai@linux.microsoft.com>,
+        Fan Wu <wufan@linux.microsoft.com>
+Subject: [RFC PATCH v11 01/19] security: add ipe lsm
+Date:   Wed,  4 Oct 2023 15:09:28 -0700
+Message-Id: <1696457386-3010-2-git-send-email-wufan@linux.microsoft.com>
+X-Mailer: git-send-email 1.8.3.1
+In-Reply-To: <1696457386-3010-1-git-send-email-wufan@linux.microsoft.com>
+References: <1696457386-3010-1-git-send-email-wufan@linux.microsoft.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-Hello,
+From: Deven Bowers <deven.desai@linux.microsoft.com>
 
-While getting the fstests stuff nailed down to deal with btrfs I ran into
-failures with generic/595, specifically the multi-threaded part.
+Integrity Policy Enforcement (IPE) is an LSM that provides an
+complimentary approach to Mandatory Access Control than existing LSMs
+today.
 
-In one thread we have a loop adding and removing the master key.
+Existing LSMs have centered around the concept of access to a resource
+should be controlled by the current user's credentials. IPE's approach,
+is that access to a resource should be controlled by the system's trust
+of a current resource.
 
-In the other thread we have us trying to echo a character into a flie in the
-encrypted side, and if it succeeds we echo a character into a temporary file,
-and then after the runtime has elapsed we compare these two files to make sure
-they match.
+The basis of this approach is defining a global policy to specify which
+resource can be trusted.
 
-The problem with this is that btrfs derives the per-extent key from the master
-key at writeout time.  Everybody else has their content key derived at flie open
-time, so they don't need the master key to be around once the file is opened, so
-any writes that occur while that file is held open are allowed to happen.
+Signed-off-by: Deven Bowers <deven.desai@linux.microsoft.com>
+Signed-off-by: Fan Wu <wufan@linux.microsoft.com>
+---
+v2:
+  + Split evaluation loop, access control hooks,
+    and evaluation loop from policy parser and userspace
+    interface to pass mailing list character limit
 
-Sweet Tea had some changes around soft unloading the master key to handle this
-case.  Basically we allow the master key to stick around by anybody who may need
-it who is currently open, and then any new users get denied.  Once all the
-outstanding open files are closed the master key is unloaded.
+v3:
+  + Move ipe_load_properties to patch 04.
+  + Remove useless 0-initializations
+  + Prefix extern variables with ipe_
+  + Remove kernel module parameters, as these are
+    exposed through sysctls.
+  + Add more prose to the IPE base config option
+    help text.
+  + Use GFP_KERNEL for audit_log_start.
+  + Remove unnecessary caching system.
+  + Remove comments from headers
+  + Use rcu_access_pointer for rcu-pointer null check
+  + Remove usage of reqprot; use prot only.
+  + Move policy load and activation audit event to 03/12
 
-This keeps the semantics of what happens for everybody else.
+v4:
+  + Remove sysctls in favor of securityfs nodes
+  + Re-add kernel module parameters, as these are now
+    exposed through securityfs.
+  + Refactor property audit loop to a separate function.
 
-What is currently happening with my version of the patchset, which didn't bring
-in those patches, is that you get an ENOKEY at writeout time if you remove the
-key.  The fstest fails because even tho we let you write to the file sometimes,
-it doesn't necessarily mean it'll make it to disk.
+v5:
+  + fix minor grammatical errors
+  + do not group rule by curly-brace in audit record,
+    reconstruct the exact rule.
 
-If we want to keep the semantics of "when userspace tells us to throw away the
-master key, we absolutely throw the master key away" then I can just make
-adjustments to the fstests test and call what I have good enough.
+v6:
+  + No changes
 
-If we want to have the semantics of "when userspace tells us to throw away the
-master key we'll make it unavailable for any new users, but existing open files
-operate as normal" then I can pull in Sweet Tea's soft removal patches and call
-it good enough.
+v7:
+  + Further split lsm creation into a separate commit from the
+    evaluation loop and audit system, for easier review.
 
-There's a third option that is a bit of a middle ground with varying degrees of
-raciness.  We could sync the file system before we do the removal just to narrow
-the window where we could successfully write to a file but get an ENOKEY at
-writeout time.  We could freeze the filesystem to make sure it's sync'ed and
-allow any current writers to complete, this would be a stronger version of the
-first option, again just narrows the window.  Neither of these cases help if the
-file is being held open.  If we wanted to fully deal with the file being held
-open case we could set a flag, sync, then remove the key.  Then we add a new
-fscrypt_prep_write() hook that filesystems could optionally use, obviously just
-btrfs for now, that we'd stick in the write path that would check for this flag
-or if the master key had been removed so we can deny dirtying when the key is
-removed.
+  + Introduce the concept of an ipe_context, a scoped way to
+    introduce execution policies, used initially for allowing for
+    kunit tests in isolation.
 
-At this point I don't have strong opinions, it's easier for me to just leave it
-like it is and change fstests.  Anything else is a change in the semantics of
-how the master key is handled, and that's not really a decision I feel
-comfortable making for everybody.  Once we nail this detail down I can send the
-updated version of all the patches and we can start talking about inclusion.
-Thanks,
+v8:
+  + Follow lsmname_hook_name convention for lsm hooks.
+  + Move LSM blob accessors to ipe.c and mark LSM blobs as static.
 
-Josef
+v9:
+  + Remove ipe_context for simplification
+
+v10:
+  + Add github url
+
+v11:
+  + Correct github url
+  + Move ipe before bpf
+---
+ MAINTAINERS           |  7 +++++++
+ security/Kconfig      | 11 ++++++-----
+ security/Makefile     |  1 +
+ security/ipe/Kconfig  | 17 +++++++++++++++++
+ security/ipe/Makefile |  9 +++++++++
+ security/ipe/ipe.c    | 35 +++++++++++++++++++++++++++++++++++
+ security/ipe/ipe.h    | 16 ++++++++++++++++
+ 7 files changed, 91 insertions(+), 5 deletions(-)
+ create mode 100644 security/ipe/Kconfig
+ create mode 100644 security/ipe/Makefile
+ create mode 100644 security/ipe/ipe.c
+ create mode 100644 security/ipe/ipe.h
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 35977b269d5e..b898f2f8f9c4 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -10389,6 +10389,13 @@ T:	git git://git.kernel.org/pub/scm/linux/kernel/git/zohar/linux-integrity.git
+ F:	security/integrity/
+ F:	security/integrity/ima/
+ 
++INTEGRITY POLICY ENFORCEMENT (IPE)
++M:	Fan Wu <wufan@linux.microsoft.com>
++L:	linux-security-module@vger.kernel.org
++S:	Supported
++T:	git https://github.com/microsoft/ipe.git
++F:	security/ipe/
++
+ INTEL 810/815 FRAMEBUFFER DRIVER
+ M:	Antonino Daplas <adaplas@gmail.com>
+ L:	linux-fbdev@vger.kernel.org
+diff --git a/security/Kconfig b/security/Kconfig
+index 52c9af08ad35..cc7adfbb6b96 100644
+--- a/security/Kconfig
++++ b/security/Kconfig
+@@ -194,6 +194,7 @@ source "security/yama/Kconfig"
+ source "security/safesetid/Kconfig"
+ source "security/lockdown/Kconfig"
+ source "security/landlock/Kconfig"
++source "security/ipe/Kconfig"
+ 
+ source "security/integrity/Kconfig"
+ 
+@@ -233,11 +234,11 @@ endchoice
+ 
+ config LSM
+ 	string "Ordered list of enabled LSMs"
+-	default "landlock,lockdown,yama,loadpin,safesetid,smack,selinux,tomoyo,apparmor,bpf" if DEFAULT_SECURITY_SMACK
+-	default "landlock,lockdown,yama,loadpin,safesetid,apparmor,selinux,smack,tomoyo,bpf" if DEFAULT_SECURITY_APPARMOR
+-	default "landlock,lockdown,yama,loadpin,safesetid,tomoyo,bpf" if DEFAULT_SECURITY_TOMOYO
+-	default "landlock,lockdown,yama,loadpin,safesetid,bpf" if DEFAULT_SECURITY_DAC
+-	default "landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,bpf"
++	default "landlock,lockdown,yama,loadpin,safesetid,smack,selinux,tomoyo,apparmor,ipe,bpf" if DEFAULT_SECURITY_SMACK
++	default "landlock,lockdown,yama,loadpin,safesetid,apparmor,selinux,smack,tomoyo,ipe,bpf" if DEFAULT_SECURITY_APPARMOR
++	default "landlock,lockdown,yama,loadpin,safesetid,tomoyo,ipe,bpf" if DEFAULT_SECURITY_TOMOYO
++	default "landlock,lockdown,yama,loadpin,safesetid,ipe,bpf" if DEFAULT_SECURITY_DAC
++	default "landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,ipe,bpf"
+ 	help
+ 	  A comma-separated list of LSMs, in initialization order.
+ 	  Any LSMs left off this list, except for those with order
+diff --git a/security/Makefile b/security/Makefile
+index 18121f8f85cd..527b1864d96c 100644
+--- a/security/Makefile
++++ b/security/Makefile
+@@ -24,6 +24,7 @@ obj-$(CONFIG_SECURITY_LOCKDOWN_LSM)	+= lockdown/
+ obj-$(CONFIG_CGROUPS)			+= device_cgroup.o
+ obj-$(CONFIG_BPF_LSM)			+= bpf/
+ obj-$(CONFIG_SECURITY_LANDLOCK)		+= landlock/
++obj-$(CONFIG_SECURITY_IPE)		+= ipe/
+ 
+ # Object integrity file lists
+ obj-$(CONFIG_INTEGRITY)			+= integrity/
+diff --git a/security/ipe/Kconfig b/security/ipe/Kconfig
+new file mode 100644
+index 000000000000..e4875fb04883
+--- /dev/null
++++ b/security/ipe/Kconfig
+@@ -0,0 +1,17 @@
++# SPDX-License-Identifier: GPL-2.0-only
++#
++# Integrity Policy Enforcement (IPE) configuration
++#
++
++menuconfig SECURITY_IPE
++	bool "Integrity Policy Enforcement (IPE)"
++	depends on SECURITY && SECURITYFS
++	select PKCS7_MESSAGE_PARSER
++	select SYSTEM_DATA_VERIFICATION
++	help
++	  This option enables the Integrity Policy Enforcement LSM
++	  allowing users to define a policy to enforce a trust-based access
++	  control. A key feature of IPE is a customizable policy to allow
++	  admins to reconfigure trust requirements on the fly.
++
++	  If unsure, answer N.
+diff --git a/security/ipe/Makefile b/security/ipe/Makefile
+new file mode 100644
+index 000000000000..f7a80d0f18f8
+--- /dev/null
++++ b/security/ipe/Makefile
+@@ -0,0 +1,9 @@
++# SPDX-License-Identifier: GPL-2.0
++#
++# Copyright (C) Microsoft Corporation. All rights reserved.
++#
++# Makefile for building the IPE module as part of the kernel tree.
++#
++
++obj-$(CONFIG_SECURITY_IPE) += \
++	ipe.o \
+diff --git a/security/ipe/ipe.c b/security/ipe/ipe.c
+new file mode 100644
+index 000000000000..ba5526f9d527
+--- /dev/null
++++ b/security/ipe/ipe.c
+@@ -0,0 +1,35 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++
++#include "ipe.h"
++
++static struct lsm_blob_sizes ipe_blobs __ro_after_init = {
++};
++
++static struct security_hook_list ipe_hooks[] __ro_after_init = {
++};
++
++/**
++ * ipe_init - Entry point of IPE.
++ *
++ * This is called at LSM init, which happens occurs early during kernel
++ * start up. During this phase, IPE registers its hooks and loads the
++ * builtin boot policy.
++ * Return:
++ * * 0		- OK
++ * * -ENOMEM	- Out of memory
++ */
++static int __init ipe_init(void)
++{
++	security_add_hooks(ipe_hooks, ARRAY_SIZE(ipe_hooks), "ipe");
++
++	return 0;
++}
++
++DEFINE_LSM(ipe) = {
++	.name = "ipe",
++	.init = ipe_init,
++	.blobs = &ipe_blobs,
++};
+diff --git a/security/ipe/ipe.h b/security/ipe/ipe.h
+new file mode 100644
+index 000000000000..a1c68d0fc2e0
+--- /dev/null
++++ b/security/ipe/ipe.h
+@@ -0,0 +1,16 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++
++#ifndef _IPE_H
++#define _IPE_H
++
++#ifdef pr_fmt
++#undef pr_fmt
++#endif
++#define pr_fmt(fmt) "IPE: " fmt
++
++#include <linux/lsm_hooks.h>
++
++#endif /* _IPE_H */
+-- 
+2.25.1
+
