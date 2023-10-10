@@ -2,61 +2,61 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3F508CD6115
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Oct 2023 20:41:18 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 0157ACD68E9
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Oct 2023 20:41:19 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S234473AbjJJUlR (ORCPT
+        id S234483AbjJJUlR (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
         Tue, 10 Oct 2023 16:41:17 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55244 "EHLO
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:55228 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S234416AbjJJUlN (ORCPT
+        with ESMTP id S234583AbjJJUlO (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Tue, 10 Oct 2023 16:41:13 -0400
-Received: from mail-yw1-x112f.google.com (mail-yw1-x112f.google.com [IPv6:2607:f8b0:4864:20::112f])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 1A98EA7
-        for <linux-fscrypt@vger.kernel.org>; Tue, 10 Oct 2023 13:41:09 -0700 (PDT)
-Received: by mail-yw1-x112f.google.com with SMTP id 00721157ae682-59f6441215dso75755027b3.2
-        for <linux-fscrypt@vger.kernel.org>; Tue, 10 Oct 2023 13:41:09 -0700 (PDT)
+        Tue, 10 Oct 2023 16:41:14 -0400
+Received: from mail-yw1-x112c.google.com (mail-yw1-x112c.google.com [IPv6:2607:f8b0:4864:20::112c])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 41631D8
+        for <linux-fscrypt@vger.kernel.org>; Tue, 10 Oct 2023 13:41:11 -0700 (PDT)
+Received: by mail-yw1-x112c.google.com with SMTP id 00721157ae682-59b5484fbe6so75352327b3.1
+        for <linux-fscrypt@vger.kernel.org>; Tue, 10 Oct 2023 13:41:11 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=toxicpanda-com.20230601.gappssmtp.com; s=20230601; t=1696970468; x=1697575268; darn=vger.kernel.org;
+        d=toxicpanda-com.20230601.gappssmtp.com; s=20230601; t=1696970470; x=1697575270; darn=vger.kernel.org;
         h=content-transfer-encoding:mime-version:references:in-reply-to
          :message-id:date:subject:to:from:from:to:cc:subject:date:message-id
          :reply-to;
-        bh=ptIykhvVmDV5wYmbmhkhou1KdWmw8NP+zHPSeBcATWU=;
-        b=J2Yn96UvMXSVCiMs2b+YgkcYW9RnFa0V/y/A1K8qcDpAtJ1ACutYMXx+6RTi7buGOL
-         15wLMYSxhRG6WEA1gZlGBmb3rNG5JKeykQ6c1q+Dv+iaQpiYYDab5MHr84yxEXvZZUF4
-         GZmGleyL5I0t4W8CdFu+fUQTu6FrOUz+rYApH/jZwmeRGFImDX26b/hdJcAB1aPXyKVv
-         6pwzp2LigpTcnBJxPlr8Js7wfhjNoo6d8V102Ht6aVZ6jBxIADC5+QE/9vi2wXuh29q8
-         PlV6yGpyWuRknl5jaMfLL45GPibxxVH4RPuqCyf0K44OWHeGWrbao+/COVcK9E2j4h+g
-         8zbA==
+        bh=3m4RAmLF+khaONHXt5qu//wFJJoUrRtGots1ic/eLAI=;
+        b=WjfFi+gH5h5K1Rxx88fOl7il7cMo1NwVuHfhNO9uPV/j+y2+ahEQd4RjsgDL5154by
+         RWeE+SibHed/VdWh/hho6I2YbWoyMVip28dIWPKHu174IYo2U/+z21MrZwuqWYp4EiVg
+         05Rr5czj4m+0KvVdJNfMUxT/xH0VzgKoO4r5Zr0oFpRAh1yTgNU/Sx6wZMAlDhODlFpc
+         n8/5xsl5LbO18JHqI41LT3qyyoAXaOafyCKF0uktkzV3+rjU1VHgVQlcFXqflpZQgTve
+         ICJTARlqXYiGTJ8mgVrXIKI3jGRY/Ez4M1a0ITVB/tuX9nyC2U/aL3mv6UCdLu2Wy32C
+         bxIw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1696970468; x=1697575268;
+        d=1e100.net; s=20230601; t=1696970470; x=1697575270;
         h=content-transfer-encoding:mime-version:references:in-reply-to
          :message-id:date:subject:to:from:x-gm-message-state:from:to:cc
          :subject:date:message-id:reply-to;
-        bh=ptIykhvVmDV5wYmbmhkhou1KdWmw8NP+zHPSeBcATWU=;
-        b=Yem3J7FGk55zBGgD0B2axiEMIXXeJ0M7SRxFZA/1ZR+BRJ9xcYXVXikifKPBZw0GMt
-         lsiFZLaQbWBRlLgBGKOSKv9A0DKKuwO05oWpni9aAj23QM8qGuyame+vyUcIUpMW648R
-         BonkP5XdeojO5uus3HyWCLHoW5x9CWCy0DxFSLd7TZnHNNM3249AJRcd8dZvMRhZ1lBh
-         41GKVBHwa0IHZcgCe1meK3/eVbTCo5xIMs2uEU66kceJ5r8jMKdJrWaDK1Iov/qDFWzj
-         272OaGcb8B6L2xOqApTNY0kkk1tiuIyaU0QyqIav4w6zIsQNWBN4KosmPrvXDy9VLgco
-         gQkA==
-X-Gm-Message-State: AOJu0YzLBWJgiT/8LbmlBDJyPkTpiBmBJAxC3SSd5dRBluMKQ3OLHFiw
-        ITepuH7hpBCZnfLWzIWRm+0NM+AVuQTzqxWNXn+2wA==
-X-Google-Smtp-Source: AGHT+IGScARPLfxJAJxWq4Ayy1mL7Y/VqtKIttBRulZlEyVjZxjIWSk5h2DRzV2cHEZoG0D2o+OmyA==
-X-Received: by 2002:a25:b203:0:b0:d9a:61d1:3a85 with SMTP id i3-20020a25b203000000b00d9a61d13a85mr2597733ybj.0.1696970467579;
-        Tue, 10 Oct 2023 13:41:07 -0700 (PDT)
+        bh=3m4RAmLF+khaONHXt5qu//wFJJoUrRtGots1ic/eLAI=;
+        b=j+pWnO7NIRFE6DAMI1o63ymQe6ut8cUdOFj/ARLfb9RPabdcd4LDG1PWoRyGnSarWp
+         0vcZ/6WBL2PjTPcWZx00TjHrQ2ECzWJOE6tfl+0SjJn9IR2GnQyNyqDuSeEsgZt6BLNC
+         4Fq3go8VZH/pzri+JnMzM5op6gDi7V05OlcbLh2ASOeZC2I62EfnnZV1NwMg41B1vS2H
+         XOxHXGGZkZZxo0ReLT4mAKxqZNfbiRz3L9awhw7Qj+cZBeGMwBolAv3ZF2eQH5RHIwc0
+         UQQkv0gaYIChIFLzl8uC52+nr7PZ2z4hrgE9DYQtDh1tWMTlCvo4BqywYxjBkFtb8SG3
+         errQ==
+X-Gm-Message-State: AOJu0YwaL5T/owsL8d166ltJIRht6QQaaj+UCvdYqlB0cx2TUgyXpJdH
+        n5LW0v9pLIQ1BQgOTs5hXSVGuCT3zkzy7DivZVG0cA==
+X-Google-Smtp-Source: AGHT+IEouGSIjN904f72tEDHIxSSZumqXFfqa+Z9ibdW067FA51KO6BL+bO0SLL2rzK/kWN9sdei7g==
+X-Received: by 2002:a81:4e4a:0:b0:5a7:ca59:82b9 with SMTP id c71-20020a814e4a000000b005a7ca5982b9mr2301640ywb.16.1696970470319;
+        Tue, 10 Oct 2023 13:41:10 -0700 (PDT)
 Received: from localhost (cpe-76-182-20-124.nc.res.rr.com. [76.182.20.124])
-        by smtp.gmail.com with ESMTPSA id x142-20020a25ce94000000b00d89679f6d22sm795669ybe.64.2023.10.10.13.41.06
+        by smtp.gmail.com with ESMTPSA id n184-20020a0de4c1000000b005a4d922cf77sm4656731ywe.119.2023.10.10.13.41.09
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Tue, 10 Oct 2023 13:41:06 -0700 (PDT)
+        Tue, 10 Oct 2023 13:41:09 -0700 (PDT)
 From:   Josef Bacik <josef@toxicpanda.com>
 To:     linux-fscrypt@vger.kernel.org, ebiggers@kernel.org,
         linux-btrfs@vger.kernel.org
-Subject: [PATCH v2 03/36] fscrypt: add per-extent encryption support
-Date:   Tue, 10 Oct 2023 16:40:18 -0400
-Message-ID: <f2096b710ebad976d9bb5f3176e6c6fa8bab19dc.1696970227.git.josef@toxicpanda.com>
+Subject: [PATCH v2 05/36] blk-crypto: add a process bio callback
+Date:   Tue, 10 Oct 2023 16:40:20 -0400
+Message-ID: <ab3493e225d34845fa953c429b3cd07c112ec7e7.1696970227.git.josef@toxicpanda.com>
 X-Mailer: git-send-email 2.41.0
 In-Reply-To: <cover.1696970227.git.josef@toxicpanda.com>
 References: <cover.1696970227.git.josef@toxicpanda.com>
@@ -66,609 +66,232 @@ Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-This adds the code necessary for per-extent encryption.  We will store a
-nonce for every extent we create, and then use the inode's policy and
-the extents nonce to derive a per-extent key.
+Btrfs does checksumming, and the checksums need to match the bytes on
+disk.  In order to facilitate this add a process bio callback for the
+blk-crypto layer.  This allows the file system to specify a callback and
+then can process the encrypted bio as necessary.
 
-This is meant to be flexible, if we choose to expand the on-disk extent
-information in the future we have a version number we can use to change
-what exists on disk.
+For btrfs, writes will have the checksums calculated and saved into our
+relevant data structures for storage once the write completes.  For
+reads we will validate the checksums match what is on disk and error out
+if there is a mismatch.
 
-The file system indicates it wants to use per-extent encryption by
-setting s_cop->set_extent_context.  This also requires the use of inline
-block encryption.
-
-The support is relatively straightforward, the only "extra" bit is we're
-deriving a per-extent key to use for the encryption, the inode still
-controls the policy and access to the master key.
+This is incompatible with native encryption obviously, so make sure we
+don't use native encryption if this callback is set.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 ---
- fs/crypto/crypto.c          |  10 ++-
- fs/crypto/fscrypt_private.h |  44 ++++++++++
- fs/crypto/inline_crypt.c    |  84 +++++++++++++++++++
- fs/crypto/keysetup.c        | 155 ++++++++++++++++++++++++++++++++++++
- fs/crypto/policy.c          |  47 +++++++++++
- include/linux/fscrypt.h     |  71 +++++++++++++++++
- 6 files changed, 410 insertions(+), 1 deletion(-)
+ block/blk-crypto-fallback.c        | 28 ++++++++++++++++++++++++++++
+ block/blk-crypto-profile.c         |  2 ++
+ block/blk-crypto.c                 |  6 +++++-
+ fs/crypto/inline_crypt.c           |  3 ++-
+ include/linux/blk-crypto-profile.h |  7 +++++++
+ include/linux/blk-crypto.h         |  9 +++++++--
+ include/linux/fscrypt.h            | 14 ++++++++++++++
+ 7 files changed, 65 insertions(+), 4 deletions(-)
 
-diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
-index 328470d40dec..18bd96b9db4e 100644
---- a/fs/crypto/crypto.c
-+++ b/fs/crypto/crypto.c
-@@ -40,6 +40,7 @@ static struct workqueue_struct *fscrypt_read_workqueue;
- static DEFINE_MUTEX(fscrypt_init_mutex);
+diff --git a/block/blk-crypto-fallback.c b/block/blk-crypto-fallback.c
+index e6468eab2681..8b4a83534127 100644
+--- a/block/blk-crypto-fallback.c
++++ b/block/blk-crypto-fallback.c
+@@ -346,6 +346,15 @@ static bool blk_crypto_fallback_encrypt_bio(struct bio **bio_ptr)
+ 		}
+ 	}
  
- struct kmem_cache *fscrypt_inode_info_cachep;
-+struct kmem_cache *fscrypt_extent_info_cachep;
- 
- void fscrypt_enqueue_decrypt_work(struct work_struct *work)
- {
-@@ -414,12 +415,19 @@ static int __init fscrypt_init(void)
- 	if (!fscrypt_inode_info_cachep)
- 		goto fail_free_queue;
- 
-+	fscrypt_extent_info_cachep = KMEM_CACHE(fscrypt_extent_info,
-+						SLAB_RECLAIM_ACCOUNT);
-+	if (!fscrypt_extent_info_cachep)
-+		goto fail_free_inode_info;
++	/* Process the encrypted bio before we submit it. */
++	if (bc->bc_key->crypto_cfg.process_bio) {
++		blk_st = bc->bc_key->crypto_cfg.process_bio(src_bio, enc_bio);
++		if (blk_st != BLK_STS_OK) {
++			src_bio->bi_status = blk_st;
++			goto out_free_bounce_pages;
++		}
++	}
 +
- 	err = fscrypt_init_keyring();
- 	if (err)
--		goto fail_free_inode_info;
-+		goto fail_free_extent_info;
- 
- 	return 0;
- 
-+fail_free_extent_info:
-+	kmem_cache_destroy(fscrypt_extent_info_cachep);
- fail_free_inode_info:
- 	kmem_cache_destroy(fscrypt_inode_info_cachep);
- fail_free_queue:
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index f44342f17269..c672c3e537f3 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -30,6 +30,8 @@
- #define FSCRYPT_CONTEXT_V1	1
- #define FSCRYPT_CONTEXT_V2	2
- 
-+#define FSCRYPT_EXTENT_CONTEXT_V1	1
-+
- /* Keep this in sync with include/uapi/linux/fscrypt.h */
- #define FSCRYPT_MODE_MAX	FSCRYPT_MODE_AES_256_HCTR2
- 
-@@ -53,6 +55,28 @@ struct fscrypt_context_v2 {
- 	u8 nonce[FSCRYPT_FILE_NONCE_SIZE];
- };
- 
-+/*
-+ * fscrypt_extent_context - the encryption context of an extent
-+ *
-+ * This is the on-disk information stored for an extent.  The policy and
-+ * relevante information is stored in the inode, the per-extent information is
-+ * simply the nonce that's used in as KDF input in conjunction with the inode
-+ * context to derive a per-extent key for encryption.
-+ *
-+ * At this point the master_key_identifier exists only for possible future
-+ * expansion.  This will allow for an inode to have extents with multiple master
-+ * keys, although sharing the same encryption mode.  This would be for re-keying
-+ * or for reflinking between two differently encrypted inodes.  For now the
-+ * master_key_descriptor must match the inode's, and we'll be using the inode's
-+ * for all key derivation.
-+ */
-+struct fscrypt_extent_context {
-+	u8 version; /* FSCRYPT_EXTENT_CONTEXT_V2 */
-+	u8 encryption_mode;
-+	u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
-+	u8 nonce[FSCRYPT_FILE_NONCE_SIZE];
-+};
-+
- /*
-  * fscrypt_context - the encryption context of an inode
-  *
-@@ -288,6 +312,25 @@ struct fscrypt_inode_info {
- 	u32 ci_hashed_ino;
- };
- 
-+/*
-+ * fscrypt_extent_info - the "encryption key" for an extent.
-+ *
-+ * This contains the dervied key for the given extent and the nonce for the
-+ * extent.
-+ */
-+struct fscrypt_extent_info {
-+	refcount_t refs;
-+
-+	/* The derived key for this extent. */
-+	struct fscrypt_prepared_key prep_key;
-+
-+	/* The super block that this extent belongs to. */
-+	struct super_block *sb;
-+
-+	/* This is the extents nonce, loaded from the fscrypt_extent_context */
-+	u8 nonce[FSCRYPT_FILE_NONCE_SIZE];
-+};
-+
- typedef enum {
- 	FS_DECRYPT = 0,
- 	FS_ENCRYPT,
-@@ -295,6 +338,7 @@ typedef enum {
- 
- /* crypto.c */
- extern struct kmem_cache *fscrypt_inode_info_cachep;
-+extern struct kmem_cache *fscrypt_extent_info_cachep;
- int fscrypt_initialize(struct super_block *sb);
- int fscrypt_crypt_data_unit(const struct fscrypt_inode_info *ci,
- 			    fscrypt_direction_t rw, u64 index,
-diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index b4002aea7cdb..4eeb75410ba8 100644
---- a/fs/crypto/inline_crypt.c
-+++ b/fs/crypto/inline_crypt.c
-@@ -279,6 +279,40 @@ void fscrypt_set_bio_crypt_ctx(struct bio *bio, const struct inode *inode,
- }
- EXPORT_SYMBOL_GPL(fscrypt_set_bio_crypt_ctx);
- 
-+/**
-+ * fscrypt_set_bio_crypt_ctx() - prepare a file contents bio for inline crypto
-+ * @bio: a bio which will eventually be submitted to the file
-+ * @inode: the file's inode
-+ * @ei: the extent's crypto info
-+ * @first_lblk: the first file logical block number in the I/O
-+ * @gfp_mask: memory allocation flags - these must be a waiting mask so that
-+ *					bio_crypt_set_ctx can't fail.
-+ *
-+ * If the contents of the file should be encrypted (or decrypted) with inline
-+ * encryption, then assign the appropriate encryption context to the bio.
-+ *
-+ * Normally the bio should be newly allocated (i.e. no pages added yet), as
-+ * otherwise fscrypt_mergeable_bio() won't work as intended.
-+ *
-+ * The encryption context will be freed automatically when the bio is freed.
-+ */
-+void fscrypt_set_bio_crypt_ctx_from_extent(struct bio *bio,
-+					   const struct inode *inode,
-+					   const struct fscrypt_extent_info *ei,
-+					   u64 first_lblk, gfp_t gfp_mask)
-+{
-+	const struct fscrypt_inode_info *ci;
-+	u64 dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
-+
-+	if (!fscrypt_inode_uses_inline_crypto(inode))
-+		return;
-+	ci = inode->i_crypt_info;
-+
-+	fscrypt_generate_dun(ci, first_lblk, dun);
-+	bio_crypt_set_ctx(bio, ei->prep_key.blk_key, dun, gfp_mask);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_set_bio_crypt_ctx_from_extent);
-+
- /* Extract the inode and logical block number from a buffer_head. */
- static bool bh_get_inode_and_lblk_num(const struct buffer_head *bh,
- 				      const struct inode **inode_ret,
-@@ -370,6 +404,56 @@ bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
- }
- EXPORT_SYMBOL_GPL(fscrypt_mergeable_bio);
- 
-+/**
-+ * fscrypt_mergeable_extent_bio() - test whether data can be added to a bio
-+ * @bio: the bio being built up
-+ * @inode: the inode for the next part of the I/O
-+ * @ei: the fscrypt_extent_info for this extent
-+ * @next_lblk: the next file logical block number in the I/O
-+ *
-+ * When building a bio which may contain data which should undergo inline
-+ * encryption (or decryption) via fscrypt, filesystems should call this function
-+ * to ensure that the resulting bio contains only contiguous data unit numbers.
-+ * This will return false if the next part of the I/O cannot be merged with the
-+ * bio because either the encryption key would be different or the encryption
-+ * data unit numbers would be discontiguous.
-+ *
-+ * fscrypt_set_bio_crypt_ctx_from_extent() must have already been called on the
-+ * bio.
-+ *
-+ * This function isn't required in cases where crypto-mergeability is ensured in
-+ * another way, such as I/O targeting only a single file (and thus a single key)
-+ * combined with fscrypt_limit_io_blocks() to ensure DUN contiguity.
-+ *
-+ * Return: true iff the I/O is mergeable
-+ */
-+bool fscrypt_mergeable_extent_bio(struct bio *bio, const struct inode *inode,
-+				  const struct fscrypt_extent_info *ei,
-+				  u64 next_lblk)
-+{
-+	const struct bio_crypt_ctx *bc = bio->bi_crypt_context;
-+	u64 next_dun[BLK_CRYPTO_DUN_ARRAY_SIZE];
-+
-+	if (!ei)
-+		return true;
-+	if (!!bc != fscrypt_inode_uses_inline_crypto(inode))
-+		return false;
-+	if (!bc)
-+		return true;
-+
-+	/*
-+	 * Comparing the key pointers is good enough, as all I/O for each key
-+	 * uses the same pointer.  I.e., there's currently no need to support
-+	 * merging requests where the keys are the same but the pointers differ.
-+	 */
-+	if (bc->bc_key != ei->prep_key.blk_key)
-+		return false;
-+
-+	fscrypt_generate_dun(inode->i_crypt_info, next_lblk, next_dun);
-+	return bio_crypt_dun_is_contiguous(bc, bio->bi_iter.bi_size, next_dun);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_mergeable_extent_bio);
-+
- /**
-  * fscrypt_mergeable_bio_bh() - test whether data can be added to a bio
-  * @bio: the bio being built up
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index 92eca1400b2d..6d1f00be44f8 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -811,3 +811,158 @@ int fscrypt_drop_inode(struct inode *inode)
- 	return !is_master_key_secret_present(ci->ci_master_key);
- }
- EXPORT_SYMBOL_GPL(fscrypt_drop_inode);
-+
-+static struct fscrypt_extent_info *
-+setup_extent_info(struct inode *inode, const u8 nonce[FSCRYPT_FILE_NONCE_SIZE])
-+{
-+	struct fscrypt_extent_info *ei;
-+	struct fscrypt_inode_info *ci;
-+	struct fscrypt_master_key *mk;
-+	u8 derived_key[FSCRYPT_MAX_KEY_SIZE];
-+	int err;
-+
-+	ci = inode->i_crypt_info;
-+	mk = ci->ci_master_key;
-+	if (!mk)
-+		return ERR_PTR(-ENOKEY);
-+
-+	ei = kmem_cache_zalloc(fscrypt_extent_info_cachep, GFP_KERNEL);
-+	if (!ei)
-+		return ERR_PTR(-ENOMEM);
-+
-+	refcount_set(&ei->refs, 1);
-+	memcpy(ei->nonce, nonce, FSCRYPT_FILE_NONCE_SIZE);
-+	ei->sb = inode->i_sb;
-+
-+	down_read(&mk->mk_sem);
-+	/*
-+	 * We specifically don't do is_master_key_secret_present() here because
-+	 * if the inode is open and has a reference on the master key then it
-+	 * should be available for us to use.
-+	 */
-+
-+	err = fscrypt_hkdf_expand(&mk->mk_secret.hkdf,
-+				  HKDF_CONTEXT_PER_FILE_ENC_KEY, ei->nonce,
-+				  FSCRYPT_FILE_NONCE_SIZE, derived_key,
-+				  ci->ci_mode->keysize);
-+	if (err)
-+		goto out_free;
-+
-+	err = fscrypt_prepare_inline_crypt_key(&ei->prep_key, derived_key, ci);
-+	memzero_explicit(derived_key, ci->ci_mode->keysize);
-+	if (err)
-+		goto out_free;
-+	up_read(&mk->mk_sem);
-+	return ei;
-+out_free:
-+	up_read(&mk->mk_sem);
-+	memzero_explicit(ei, sizeof(*ei));
-+	kmem_cache_free(fscrypt_extent_info_cachep, ei);
-+	return ERR_PTR(err);
-+}
-+
-+/**
-+ * fscrypt_prepare_new_extent() - prepare to create a new extent for a file
-+ * @inode: the possibly-encrypted inode
-+ *
-+ * If the inode is encrypted, setup the fscrypt_extent_info for a new extent.
-+ * This will include the nonce and the derived key necessary for the extent to
-+ * be encrypted.  This is only meant to be used with inline crypto.
-+ *
-+ * This doesn't persist the new extents encryption context, this is done later
-+ * by calling fscrypt_set_extent_context().
-+ *
-+ * Return: The newly allocated fscrypt_extent_info on success, -EOPNOTSUPP if
-+ *	   we're not encrypted, or another -errno code
-+ */
-+struct fscrypt_extent_info *fscrypt_prepare_new_extent(struct inode *inode)
-+{
-+	u8 nonce[FSCRYPT_FILE_NONCE_SIZE];
-+
-+	if (!fscrypt_inode_uses_inline_crypto(inode))
-+		return ERR_PTR(-EOPNOTSUPP);
-+
-+	get_random_bytes(nonce, FSCRYPT_FILE_NONCE_SIZE);
-+	return setup_extent_info(inode, nonce);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_prepare_new_extent);
-+
-+/**
-+ * fscrypt_load_extent_info() - create an fscrypt_extent_info from the context
-+ * @inode: the inode
-+ * @ctx: the context buffer
-+ * @ctx_size: the size of the context buffer
-+ *
-+ * Create the file_extent_info and derive the key based on the
-+ * fscrypt_extent_context buffer that is probided.
-+ *
-+ * Return: The newly allocated fscrypt_extent_info on success, -EOPNOTSUPP if
-+ *	   we're not encrypted, or another -errno code
-+ */
-+struct fscrypt_extent_info *fscrypt_load_extent_info(struct inode *inode,
-+						     u8 *ctx, size_t ctx_size)
-+{
-+	struct fscrypt_extent_context extent_ctx;
-+	const struct fscrypt_inode_info *ci = inode->i_crypt_info;
-+	const struct fscrypt_policy_v2 *policy = &ci->ci_policy.v2;
-+
-+	if (!fscrypt_inode_uses_inline_crypto(inode))
-+		return ERR_PTR(-EOPNOTSUPP);
-+	if (ctx_size < sizeof(extent_ctx))
-+		return ERR_PTR(-EINVAL);
-+
-+	memcpy(&extent_ctx, ctx, sizeof(extent_ctx));
-+
-+	/*
-+	 * For now we need to validate that the master key for the inode matches
-+	 * the extent.
-+	 */
-+	if (memcmp(extent_ctx.master_key_identifier,
-+		   policy->master_key_identifier,
-+		   sizeof(extent_ctx.master_key_identifier)))
-+		return ERR_PTR(-EINVAL);
-+
-+	return setup_extent_info(inode, extent_ctx.nonce);
-+}
-+EXPORT_SYMBOL(fscrypt_load_extent_info);
-+
-+/**
-+ * fscrypt_put_extent_info() - free the extent_info fscrypt data
-+ * @ei: the extent_info being evicted
-+ *
-+ * Drop a reference and possibly free the fscrypt_extent_info.
-+ *
-+ * Note this will unload the key from the block layer, which takes the crypto
-+ * profile semaphore to unload the key.  Make sure you're not dropping this in a
-+ * context that can't sleep.
-+ */
-+void fscrypt_put_extent_info(struct fscrypt_extent_info *ei)
-+{
-+	if (!ei)
-+		return;
-+
-+	if (!refcount_dec_and_test(&ei->refs))
-+		return;
-+
-+	fscrypt_destroy_prepared_key(ei->sb, &ei->prep_key);
-+	memzero_explicit(ei, sizeof(*ei));
-+	kmem_cache_free(fscrypt_extent_info_cachep, ei);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_put_extent_info);
-+
-+/**
-+ * fscrypt_get_extent_info() - get a ref on the fscrypt extent info
-+ * @ei: the extent_info to get.
-+ *
-+ * Get a reference on the fscrypt_extent_info.
-+ *
-+ * Return: the ei with an extra ref, NULL if there was no ei passed in.
-+ */
-+struct fscrypt_extent_info *fscrypt_get_extent_info(struct fscrypt_extent_info *ei)
-+{
-+	if (!ei)
-+		return NULL;
-+	refcount_inc(&ei->refs);
-+	return ei;
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_get_extent_info);
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 701259991277..4729f21e21d8 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -789,6 +789,53 @@ int fscrypt_set_context(struct inode *inode, void *fs_data)
- }
- EXPORT_SYMBOL_GPL(fscrypt_set_context);
- 
-+/**
-+ * fscrypt_set_extent_context() - Set the fscrypt extent context of a new extent
-+ * @inode: the inode this extent belongs to
-+ * @ei: the fscrypt_extent_info for the given extent
-+ * @buf: the buffer to copy the fscrypt extent context into
-+ *
-+ * This should be called after fscrypt_prepare_new_extent(), using the
-+ * fscrypt_extent_info that was created at that point.
-+ *
-+ * Return: the size of the fscrypt_extent_context, errno if the inode has the
-+ *	   wrong policy version.
-+ */
-+ssize_t fscrypt_set_extent_context(struct inode *inode,
-+				   struct fscrypt_extent_info *ei, u8 *buf)
-+{
-+	struct fscrypt_extent_context *ctx = (struct fscrypt_extent_context *)buf;
-+	const struct fscrypt_inode_info *ci = inode->i_crypt_info;
-+
-+	if (ci->ci_policy.version != 2)
-+		return -EINVAL;
-+
-+	ctx->version = 1;
-+	memcpy(ctx->master_key_identifier,
-+	       ci->ci_policy.v2.master_key_identifier,
-+	       sizeof(ctx->master_key_identifier));
-+	memcpy(ctx->nonce, ei->nonce, FSCRYPT_FILE_NONCE_SIZE);
-+	return sizeof(struct fscrypt_extent_context);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_set_extent_context);
-+
-+/**
-+ * fscrypt_extent_context_size() - Return the size of the on-disk extent context
-+ * @inode: the inode this extent belongs to.
-+ *
-+ * Return the size of the extent context for this inode.  Since there is only
-+ * one extent context version currently this is just the size of the extent
-+ * context if the inode is encrypted.
-+ */
-+size_t fscrypt_extent_context_size(struct inode *inode)
-+{
-+	if (!IS_ENCRYPTED(inode))
-+		return 0;
-+
-+	return sizeof(struct fscrypt_extent_context);
-+}
-+EXPORT_SYMBOL_GPL(fscrypt_extent_context_size);
-+
- /**
-  * fscrypt_parse_test_dummy_encryption() - parse the test_dummy_encryption mount option
-  * @param: the mount option
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 12f9e455d569..ea8fdc6f3b83 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -32,6 +32,7 @@
- 
- union fscrypt_policy;
- struct fscrypt_inode_info;
-+struct fscrypt_extent_info;
- struct fs_parameter;
- struct seq_file;
- 
-@@ -97,6 +98,14 @@ struct fscrypt_operations {
- 	 */
- 	unsigned int supports_subblock_data_units : 1;
+ 	enc_bio->bi_private = src_bio;
+ 	enc_bio->bi_end_io = blk_crypto_fallback_encrypt_endio;
+ 	*bio_ptr = enc_bio;
+@@ -391,6 +400,24 @@ static void blk_crypto_fallback_decrypt_bio(struct work_struct *work)
+ 	unsigned int i;
+ 	blk_status_t blk_st;
  
 +	/*
-+	 * If set then extent based encryption will be used for this file
-+	 * system, and fs/crypto/ will enforce limits on the policies that are
-+	 * allowed to be chosen.  Currently this means only plain v2 policies
-+	 * are supported.
++	 * Process the bio first before trying to decrypt.
++	 *
++	 * NOTE: btrfs expects that this bio is the same that was submitted.  If
++	 * at any point this changes we will need to update process_bio to take
++	 * f_ctx->crypt_iter in order to make sure we can iterate the pages for
++	 * checksumming.  We're currently saving this in our btrfs_bio, so this
++	 * works, but if at any point in the future we start allocating a bounce
++	 * bio or something we need to update this callback.
 +	 */
-+	unsigned int has_per_extent_encryption : 1;
++	if (bc->bc_key->crypto_cfg.process_bio) {
++		blk_st = bc->bc_key->crypto_cfg.process_bio(bio, bio);
++		if (blk_st != BLK_STS_OK) {
++			bio->bi_status = blk_st;
++			goto out_no_keyslot;
++		}
++	}
 +
  	/*
- 	 * This field exists only for backwards compatibility reasons and should
- 	 * only be set by the filesystems that are setting it already.  It
-@@ -308,6 +317,11 @@ int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
- int fscrypt_has_permitted_context(struct inode *parent, struct inode *child);
- int fscrypt_context_for_new_inode(void *ctx, struct inode *inode);
- int fscrypt_set_context(struct inode *inode, void *fs_data);
-+ssize_t fscrypt_set_extent_context(struct inode *inode,
-+				   struct fscrypt_extent_info *ei, u8 *buf);
-+struct fscrypt_extent_info *fscrypt_load_extent_info(struct inode *inode,
-+						     u8 *ctx, size_t ctx_size);
-+size_t fscrypt_extent_context_size(struct inode *inode);
+ 	 * Get a blk-crypto-fallback keyslot that contains a crypto_skcipher for
+ 	 * this bio's algorithm and key.
+@@ -560,6 +587,7 @@ static int blk_crypto_fallback_init(void)
  
- struct fscrypt_dummy_policy {
- 	const union fscrypt_policy *policy;
-@@ -344,6 +358,9 @@ int fscrypt_prepare_new_inode(struct inode *dir, struct inode *inode,
- void fscrypt_put_encryption_info(struct inode *inode);
- void fscrypt_free_inode(struct inode *inode);
- int fscrypt_drop_inode(struct inode *inode);
-+struct fscrypt_extent_info *fscrypt_prepare_new_extent(struct inode *inode);
-+void fscrypt_put_extent_info(struct fscrypt_extent_info *ei);
-+struct fscrypt_extent_info *fscrypt_get_extent_info(struct fscrypt_extent_info *ei);
+ 	blk_crypto_fallback_profile->ll_ops = blk_crypto_fallback_ll_ops;
+ 	blk_crypto_fallback_profile->max_dun_bytes_supported = BLK_CRYPTO_MAX_IV_SIZE;
++	blk_crypto_fallback_profile->process_bio_supported = true;
  
- /* fname.c */
- int fscrypt_fname_encrypt(const struct inode *inode, const struct qstr *iname,
-@@ -555,6 +572,24 @@ fscrypt_free_dummy_policy(struct fscrypt_dummy_policy *dummy_policy)
- {
- }
- 
-+static inline ssize_t
-+fscrypt_set_extent_context(struct inode *inode, struct fscrypt_extent_info *ei,
-+			   u8 *buf)
-+{
-+	return -EOPNOTSUPP;
-+}
-+
-+static inline struct fscrypt_extent_info *
-+fscrypt_load_extent_info(struct inode *inode, u8 *ctx, size_t ctx_size)
-+{
-+	return ERR_PTR(-EOPNOTSUPP);
-+}
-+
-+static inline size_t fscrypt_extent_context_size(struct inode *inode)
-+{
-+	return 0;
-+}
-+
- /* keyring.c */
- static inline void fscrypt_destroy_keyring(struct super_block *sb)
- {
-@@ -607,6 +642,20 @@ static inline int fscrypt_drop_inode(struct inode *inode)
- 	return 0;
- }
- 
-+static inline struct fscrypt_extent_info *
-+fscrypt_prepare_new_extent(struct inode *inode)
-+{
-+	return ERR_PTR(-EOPNOTSUPP);
-+}
-+
-+static inline void fscrypt_put_extent_info(struct fscrypt_extent_info *ei) { }
-+
-+static inline struct fscrypt_extent_info *
-+fscrypt_get_extent_info(struct fscrypt_extent_info *ei)
-+{
-+	return ei;
-+}
-+
-  /* fname.c */
- static inline int fscrypt_setup_filename(struct inode *dir,
- 					 const struct qstr *iname,
-@@ -788,6 +837,11 @@ void fscrypt_set_bio_crypt_ctx(struct bio *bio,
- 			       const struct inode *inode, u64 first_lblk,
- 			       gfp_t gfp_mask);
- 
-+void fscrypt_set_bio_crypt_ctx_from_extent(struct bio *bio,
-+					   const struct inode *inode,
-+					   const struct fscrypt_extent_info *ei,
-+					   u64 first_lblk, gfp_t gfp_mask);
-+
- void fscrypt_set_bio_crypt_ctx_bh(struct bio *bio,
- 				  const struct buffer_head *first_bh,
- 				  gfp_t gfp_mask);
-@@ -798,6 +852,10 @@ bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
- bool fscrypt_mergeable_bio_bh(struct bio *bio,
- 			      const struct buffer_head *next_bh);
- 
-+bool fscrypt_mergeable_extent_bio(struct bio *bio, const struct inode *inode,
-+				  const struct fscrypt_extent_info *ei,
-+				  u64 next_lblk);
-+
- bool fscrypt_dio_supported(struct inode *inode);
- 
- u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks);
-@@ -813,6 +871,11 @@ static inline void fscrypt_set_bio_crypt_ctx(struct bio *bio,
- 					     const struct inode *inode,
- 					     u64 first_lblk, gfp_t gfp_mask) { }
- 
-+static inline void fscrypt_set_bio_crypt_ctx_from_extent(struct bio *bio,
-+					const struct inode *inode,
-+					const struct fscrypt_extent_info *ei,
-+					u64 first_lblk, gfp_t gfp_mask) { }
-+
- static inline void fscrypt_set_bio_crypt_ctx_bh(
- 					 struct bio *bio,
- 					 const struct buffer_head *first_bh,
-@@ -825,6 +888,14 @@ static inline bool fscrypt_mergeable_bio(struct bio *bio,
+ 	/* All blk-crypto modes have a crypto API fallback. */
+ 	for (i = 0; i < BLK_ENCRYPTION_MODE_MAX; i++)
+diff --git a/block/blk-crypto-profile.c b/block/blk-crypto-profile.c
+index 7fabc883e39f..640cf2ea3fcc 100644
+--- a/block/blk-crypto-profile.c
++++ b/block/blk-crypto-profile.c
+@@ -352,6 +352,8 @@ bool __blk_crypto_cfg_supported(struct blk_crypto_profile *profile,
+ 		return false;
+ 	if (profile->max_dun_bytes_supported < cfg->dun_bytes)
+ 		return false;
++	if (cfg->process_bio && !profile->process_bio_supported)
++		return false;
  	return true;
  }
  
-+static inline bool fscrypt_mergeable_extent_bio(struct bio *bio,
-+						const struct inode *inode,
-+						const struct fscrypt_extent_info *ei,
-+						u64 next_lblk)
-+{
-+	return true;
-+}
-+
- static inline bool fscrypt_mergeable_bio_bh(struct bio *bio,
- 					    const struct buffer_head *next_bh)
+diff --git a/block/blk-crypto.c b/block/blk-crypto.c
+index 4d760b092deb..50556952df19 100644
+--- a/block/blk-crypto.c
++++ b/block/blk-crypto.c
+@@ -321,6 +321,8 @@ int __blk_crypto_rq_bio_prep(struct request *rq, struct bio *bio,
+  * @dun_bytes: number of bytes that will be used to specify the DUN when this
+  *	       key is used
+  * @data_unit_size: the data unit size to use for en/decryption
++ * @process_bio: the call back if the upper layer needs to process the encrypted
++ *		 bio
+  *
+  * Return: 0 on success, -errno on failure.  The caller is responsible for
+  *	   zeroizing both blk_key and raw_key when done with them.
+@@ -328,7 +330,8 @@ int __blk_crypto_rq_bio_prep(struct request *rq, struct bio *bio,
+ int blk_crypto_init_key(struct blk_crypto_key *blk_key, const u8 *raw_key,
+ 			enum blk_crypto_mode_num crypto_mode,
+ 			unsigned int dun_bytes,
+-			unsigned int data_unit_size)
++			unsigned int data_unit_size,
++			blk_crypto_process_bio_t process_bio)
  {
+ 	const struct blk_crypto_mode *mode;
+ 
+@@ -350,6 +353,7 @@ int blk_crypto_init_key(struct blk_crypto_key *blk_key, const u8 *raw_key,
+ 	blk_key->crypto_cfg.crypto_mode = crypto_mode;
+ 	blk_key->crypto_cfg.dun_bytes = dun_bytes;
+ 	blk_key->crypto_cfg.data_unit_size = data_unit_size;
++	blk_key->crypto_cfg.process_bio = process_bio;
+ 	blk_key->data_unit_size_bits = ilog2(data_unit_size);
+ 	blk_key->size = mode->keysize;
+ 	memcpy(blk_key->raw, raw_key, mode->keysize);
+diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
+index 4eeb75410ba8..57776c548a06 100644
+--- a/fs/crypto/inline_crypt.c
++++ b/fs/crypto/inline_crypt.c
+@@ -168,7 +168,8 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
+ 
+ 	err = blk_crypto_init_key(blk_key, raw_key, crypto_mode,
+ 				  fscrypt_get_dun_bytes(ci),
+-				  1U << ci->ci_data_unit_bits);
++				  1U << ci->ci_data_unit_bits,
++				  sb->s_cop->process_bio);
+ 	if (err) {
+ 		fscrypt_err(inode, "error %d initializing blk-crypto key", err);
+ 		goto fail;
+diff --git a/include/linux/blk-crypto-profile.h b/include/linux/blk-crypto-profile.h
+index 90ab33cb5d0e..3c002e85631a 100644
+--- a/include/linux/blk-crypto-profile.h
++++ b/include/linux/blk-crypto-profile.h
+@@ -100,6 +100,13 @@ struct blk_crypto_profile {
+ 	 */
+ 	struct device *dev;
+ 
++	/**
++	 * @process_bio_supported: Some things, like btrfs, require the
++	 * encrypted data for checksumming. Drivers set this to true if they can
++	 * handle the process_bio() callback.
++	 */
++	bool process_bio_supported;
++
+ 	/* private: The following fields shouldn't be accessed by drivers. */
+ 
+ 	/* Number of keyslots, or 0 if not applicable */
+diff --git a/include/linux/blk-crypto.h b/include/linux/blk-crypto.h
+index 5e5822c18ee4..194c1d727013 100644
+--- a/include/linux/blk-crypto.h
++++ b/include/linux/blk-crypto.h
+@@ -6,7 +6,7 @@
+ #ifndef __LINUX_BLK_CRYPTO_H
+ #define __LINUX_BLK_CRYPTO_H
+ 
+-#include <linux/types.h>
++#include <linux/blk_types.h>
+ 
+ enum blk_crypto_mode_num {
+ 	BLK_ENCRYPTION_MODE_INVALID,
+@@ -17,6 +17,9 @@ enum blk_crypto_mode_num {
+ 	BLK_ENCRYPTION_MODE_MAX,
+ };
+ 
++typedef blk_status_t (blk_crypto_process_bio_t)(struct bio *orig_bio,
++						struct bio *enc_bio);
++
+ #define BLK_CRYPTO_MAX_KEY_SIZE		64
+ /**
+  * struct blk_crypto_config - an inline encryption key's crypto configuration
+@@ -31,6 +34,7 @@ struct blk_crypto_config {
+ 	enum blk_crypto_mode_num crypto_mode;
+ 	unsigned int data_unit_size;
+ 	unsigned int dun_bytes;
++	blk_crypto_process_bio_t *process_bio;
+ };
+ 
+ /**
+@@ -90,7 +94,8 @@ bool bio_crypt_dun_is_contiguous(const struct bio_crypt_ctx *bc,
+ int blk_crypto_init_key(struct blk_crypto_key *blk_key, const u8 *raw_key,
+ 			enum blk_crypto_mode_num crypto_mode,
+ 			unsigned int dun_bytes,
+-			unsigned int data_unit_size);
++			unsigned int data_unit_size,
++			blk_crypto_process_bio_t process_bio);
+ 
+ int blk_crypto_start_using_key(struct block_device *bdev,
+ 			       const struct blk_crypto_key *key);
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index ea8fdc6f3b83..a3576da6a9fa 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -16,6 +16,7 @@
+ #include <linux/fs.h>
+ #include <linux/mm.h>
+ #include <linux/slab.h>
++#include <linux/blk-crypto.h>
+ #include <uapi/linux/fscrypt.h>
+ 
+ /*
+@@ -199,6 +200,19 @@ struct fscrypt_operations {
+ 	 */
+ 	struct block_device **(*get_devices)(struct super_block *sb,
+ 					     unsigned int *num_devs);
++
++	/*
++	 * A callback if the file system requires the ability to process the
++	 * encrypted bio.
++	 *
++	 * @orig_bio: the original bio submitted.
++	 * @enc_bio: the encrypted bio.
++	 *
++	 * For writes the enc_bio will be different from the orig_bio, for reads
++	 * they will be the same.  For reads we get the bio before it is
++	 * decrypted, for writes we get the bio before it is submitted.
++	 */
++	blk_crypto_process_bio_t *process_bio;
+ };
+ 
+ static inline struct fscrypt_inode_info *
 -- 
 2.41.0
 
