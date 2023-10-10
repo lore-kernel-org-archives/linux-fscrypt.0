@@ -2,81 +2,192 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 3337ACD68E6
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Oct 2023 03:21:17 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 8D635CD8CB7
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 10 Oct 2023 20:26:26 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S1441951AbjJJDVP convert rfc822-to-8bit (ORCPT
+        id S229598AbjJJU0X (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 9 Oct 2023 23:21:15 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:56334 "EHLO
+        Tue, 10 Oct 2023 16:26:23 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:36390 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S1441964AbjJJDVO (ORCPT
+        with ESMTP id S230510AbjJJU0W (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 9 Oct 2023 23:21:14 -0400
-Received: from mail-ed1-f49.google.com (mail-ed1-f49.google.com [209.85.208.49])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id B2C69CF;
-        Mon,  9 Oct 2023 20:21:11 -0700 (PDT)
-Received: by mail-ed1-f49.google.com with SMTP id 4fb4d7f45d1cf-5347e657a11so8584229a12.2;
-        Mon, 09 Oct 2023 20:21:11 -0700 (PDT)
+        Tue, 10 Oct 2023 16:26:22 -0400
+Received: from mail-yb1-xb2f.google.com (mail-yb1-xb2f.google.com [IPv6:2607:f8b0:4864:20::b2f])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 6159CCA
+        for <linux-fscrypt@vger.kernel.org>; Tue, 10 Oct 2023 13:26:20 -0700 (PDT)
+Received: by mail-yb1-xb2f.google.com with SMTP id 3f1490d57ef6-d8a000f6a51so6641288276.3
+        for <linux-fscrypt@vger.kernel.org>; Tue, 10 Oct 2023 13:26:20 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=toxicpanda-com.20230601.gappssmtp.com; s=20230601; t=1696969579; x=1697574379; darn=vger.kernel.org;
+        h=content-transfer-encoding:mime-version:references:in-reply-to
+         :message-id:date:subject:cc:to:from:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=Hwy8Zi2uzZrYdFBsR35VWjRso0l8oMrGMg/hmDe3qJM=;
+        b=Yl0pGiFBg6X/6EpYGRdhV9NPnuFkdKffP4AQG+REbjvJdJ97qLeTFoHibxIo6b/G3K
+         AcnnUxQwf+OweE/xI1l7XiAFkI7hngfozZyARh0Ei/IiCJxHzIoK7dfUSLM50k7gnpap
+         KLGefxb+/XkUNrNbuqENo2Y8K0JP9DLAe/mFksIHRSPv2g8YFBNgphzVTeeNiiCaqaTm
+         x/+xX8IzzO5D6oEZGR6WtdAT99gV7RhxueHU2EcX2kmUweeegVRRBq+zrTs8qZhGZhYF
+         yegap7TCqgZRK3EfkwdSgePurl67ZVE+3Bqx3WHin/ccFy0yy8tmt1pfNt2eeRTC2PL+
+         UaTw==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1696908070; x=1697512870;
-        h=content-transfer-encoding:cc:to:subject:message-id:date:from
-         :in-reply-to:references:mime-version:x-gm-message-state:from:to:cc
+        d=1e100.net; s=20230601; t=1696969579; x=1697574379;
+        h=content-transfer-encoding:mime-version:references:in-reply-to
+         :message-id:date:subject:cc:to:from:x-gm-message-state:from:to:cc
          :subject:date:message-id:reply-to;
-        bh=x+OgkZUadfjoEZL7fmzof6YYlwLrC/x1bfRHtSLtmb0=;
-        b=LEMgQqA97CodUdBqw4zeaqmJckE6ysyX+7EMWByrPF2Gm52vY86KuqjDZlPqG6fDZA
-         uVIxNUty7DMwuuSdeZZkUlEV8AFAqR38eoK2yAQNLscYKaJKLntePTM/5A49tnleHf8+
-         lUd/GhkKzAe18Q+Lnk/fHJO1SE06e6rpsr8cHSxbnxo0G1lgYpNJF/L2bq1xZ0sL9664
-         9SWpuLNRcmPKyitZ4nLptyzdO1jSdvsMAkb8zLVDs3FJ1afafqP2S5hL+/ck8MUAjqiz
-         qipALqYlotUarvze1gf3BzVwNH8Qer0DuJBktbfcXpwaXLVZjZ+7wUQU22+E6pdgsXEy
-         s1Yg==
-X-Gm-Message-State: AOJu0Yw4fkk3EMCNjU2/k96KDoJkbyyTTtUHQRz95D1j11S4dWNQo1Gw
-        Ngw3ifJYKJT+lIjW1dUcF4BRTbjUhnDC4w==
-X-Google-Smtp-Source: AGHT+IHJkXOejY7VwM9QUnQdY6ldReqeoLPKPER/CGfjLJQq5nLmnYu8/dfnXxwOSeRL+mDNs7Zvnw==
-X-Received: by 2002:a17:906:29c:b0:9b2:7584:80dc with SMTP id 28-20020a170906029c00b009b2758480dcmr13705996ejf.20.1696908069692;
-        Mon, 09 Oct 2023 20:21:09 -0700 (PDT)
-Received: from mail-ed1-f54.google.com (mail-ed1-f54.google.com. [209.85.208.54])
-        by smtp.gmail.com with ESMTPSA id p16-20020a170906b21000b009b9a1714524sm7759943ejz.12.2023.10.09.20.21.09
-        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
-        Mon, 09 Oct 2023 20:21:09 -0700 (PDT)
-Received: by mail-ed1-f54.google.com with SMTP id 4fb4d7f45d1cf-534659061afso8582053a12.3;
-        Mon, 09 Oct 2023 20:21:09 -0700 (PDT)
-X-Received: by 2002:a50:ee8b:0:b0:530:e180:ab9a with SMTP id
- f11-20020a50ee8b000000b00530e180ab9amr15111170edr.3.1696908069234; Mon, 09
- Oct 2023 20:21:09 -0700 (PDT)
+        bh=Hwy8Zi2uzZrYdFBsR35VWjRso0l8oMrGMg/hmDe3qJM=;
+        b=Gn8dw09RnorulLendgM4dxKIEP/HpsRadf8YC6bPWSb4GlqslE1V2xH00ciPEpxgrK
+         zS6r0VzFhNceLPxdoe2aNn9UQ6sfvgAkj6UULj8hvk0Q33l7nEqaPvi+7Hh9k8HQ5BZA
+         lYrEgR4otWNk1evfkYF6p/431o+5+U94FF1F7sooU5fYaQ77Vx8NeBoTsH4NwJxDTuB1
+         GjFR2NFlA6+WPalCinyhB1F1QWsZf9VX5g5TKWxRVJnoDKAgq1yhM5CZet+wc6QWclDY
+         AjxVaaoonCIFee2E0t1iczX6PU8aCDOtMAzRiyUE/XVqWmBtUuafuATFP9jgawBOMkMS
+         LoqA==
+X-Gm-Message-State: AOJu0YzMNWDZjOs56BDcvVth+PLE+0fc5b52eNc4Gl5yWJd/tDm1Wkef
+        rdRM42PbcvEtfm7yhpWQdS3V1Xain4I12Ut74xmZ/g==
+X-Google-Smtp-Source: AGHT+IGazxV6INO6CLta8CjXhAk2I8g2uwMKRNIInMbviKy22fPV7nEsEgC0OCc6sZ0Sr9E6Z7ZHBQ==
+X-Received: by 2002:a25:6810:0:b0:d78:878d:e1e1 with SMTP id d16-20020a256810000000b00d78878de1e1mr17959900ybc.50.1696969579546;
+        Tue, 10 Oct 2023 13:26:19 -0700 (PDT)
+Received: from localhost (cpe-76-182-20-124.nc.res.rr.com. [76.182.20.124])
+        by smtp.gmail.com with ESMTPSA id 6-20020a251806000000b00d800eb5ac2asm3972167yby.65.2023.10.10.13.26.19
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Tue, 10 Oct 2023 13:26:19 -0700 (PDT)
+From:   Josef Bacik <josef@toxicpanda.com>
+To:     fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+        linux-btrfs@vger.kernel.org
+Cc:     Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Subject: [PATCH 01/12] common/encrypt: separate data and inode nonces
+Date:   Tue, 10 Oct 2023 16:25:54 -0400
+Message-ID: <d5a7bbf5027095a1177c0da42c26aa72aba84064.1696969376.git.josef@toxicpanda.com>
+X-Mailer: git-send-email 2.41.0
+In-Reply-To: <cover.1696969376.git.josef@toxicpanda.com>
+References: <cover.1696969376.git.josef@toxicpanda.com>
 MIME-Version: 1.0
-References: <20231005025757.33521-1-ebiggers@kernel.org> <CAEg-Je9giOLBVwuXAQ+F6do7sTBcCpP_ARbGA6TowTT+6GBc4g@mail.gmail.com>
- <20231009034416.GA279961@sol.localdomain>
-In-Reply-To: <20231009034416.GA279961@sol.localdomain>
-From:   Neal Gompa <neal@gompa.dev>
-Date:   Mon, 9 Oct 2023 23:20:32 -0400
-X-Gmail-Original-Message-ID: <CAEg-Je-RzwMPhoKGN73QBkKmfxeSDkFi6yJNaBF6Gxz8YBd-Wg@mail.gmail.com>
-Message-ID: <CAEg-Je-RzwMPhoKGN73QBkKmfxeSDkFi6yJNaBF6Gxz8YBd-Wg@mail.gmail.com>
-Subject: Re: [PATCH] fscrypt: rename fscrypt_info => fscrypt_inode_info
-To:     Eric Biggers <ebiggers@kernel.org>
-Cc:     linux-fscrypt@vger.kernel.org, linux-btrfs@vger.kernel.org,
-        Sweet Tea Dorminy <sweettea-kernel@dorminy.me>,
-        Josef Bacik <josef@toxicpanda.com>
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 8BIT
+Content-Transfer-Encoding: 8bit
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
-On Sun, Oct 8, 2023 at 11:44 PM Eric Biggers <ebiggers@kernel.org> wrote:
->
-> On Sun, Oct 08, 2023 at 02:11:36AM -0400, Neal Gompa wrote:
-> >
-> > Looks reasonable to me.
-> >
-> > Reviewed-by: Neal Gompa <neal@gompa.dev>
-> >
->
-> Thanks.  BTW, please only quote the part that you're replying to.
->
+From: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 
-Well, I was replying to the whole patch, so that's why I put my r-b at the end.
+btrfs will have different inode and data nonces, so we need to be
+specific about which nonce each use needs. For now, there is no
+difference in the two functions.
 
+Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+---
+ common/encrypt    | 33 ++++++++++++++++++++++++++-------
+ tests/f2fs/002    |  2 +-
+ tests/generic/613 |  4 ++--
+ 3 files changed, 29 insertions(+), 10 deletions(-)
 
+diff --git a/common/encrypt b/common/encrypt
+index 1a77e23b..04b6e5ac 100644
+--- a/common/encrypt
++++ b/common/encrypt
+@@ -488,7 +488,7 @@ _add_fscrypt_provisioning_key()
+ # Retrieve the encryption nonce of the given inode as a hex string.  The nonce
+ # was randomly generated by the filesystem and isn't exposed directly to
+ # userspace.  But it can be read using the filesystem's debugging tools.
+-_get_encryption_nonce()
++_get_encryption_file_nonce()
+ {
+ 	local device=$1
+ 	local inode=$2
+@@ -532,15 +532,34 @@ _get_encryption_nonce()
+ 			}'
+ 		;;
+ 	*)
+-		_fail "_get_encryption_nonce() isn't implemented on $FSTYP"
++		_fail "_get_encryption_file_nonce() isn't implemented on $FSTYP"
+ 		;;
+ 	esac
+ }
+ 
+-# Require support for _get_encryption_nonce()
++# Retrieve the encryption nonce used to encrypt the data of the given inode as
++# a hex string.  The nonce was randomly generated by the filesystem and isn't
++# exposed directly to userspace.  But it can be read using the filesystem's
++# debugging tools.
++_get_encryption_data_nonce()
++{
++	local device=$1
++	local inode=$2
++
++	case $FSTYP in
++	ext4|f2fs)
++		_get_encryption_file_nonce $device $inode
++		;;
++	*)
++		_fail "_get_encryption_data_nonce() isn't implemented on $FSTYP"
++		;;
++	esac
++}
++
++# Require support for _get_encryption_*nonce()
+ _require_get_encryption_nonce_support()
+ {
+-	echo "Checking for _get_encryption_nonce() support for $FSTYP" >> $seqres.full
++	echo "Checking for _get_encryption_*nonce() support for $FSTYP" >> $seqres.full
+ 	case $FSTYP in
+ 	ext4)
+ 		_require_command "$DEBUGFS_PROG" debugfs
+@@ -554,7 +573,7 @@ _require_get_encryption_nonce_support()
+ 		# the test fail in that case, as it was an f2fs-tools bug...
+ 		;;
+ 	*)
+-		_notrun "_get_encryption_nonce() isn't implemented on $FSTYP"
++		_notrun "_get_encryption_*nonce() isn't implemented on $FSTYP"
+ 		;;
+ 	esac
+ }
+@@ -760,7 +779,7 @@ _do_verify_ciphertext_for_encryption_policy()
+ 	echo "Verifying encrypted file contents" >> $seqres.full
+ 	for f in "${test_contents_files[@]}"; do
+ 		read -r src inode blocklist <<< "$f"
+-		nonce=$(_get_encryption_nonce $SCRATCH_DEV $inode)
++		nonce=$(_get_encryption_data_nonce $SCRATCH_DEV $inode)
+ 		_dump_ciphertext_blocks $SCRATCH_DEV $blocklist > $tmp.actual_contents
+ 		$crypt_contents_cmd $contents_encryption_mode $raw_key_hex \
+ 			--file-nonce=$nonce --block-size=$blocksize \
+@@ -780,7 +799,7 @@ _do_verify_ciphertext_for_encryption_policy()
+ 	echo "Verifying encrypted file names" >> $seqres.full
+ 	for f in "${test_filenames_files[@]}"; do
+ 		read -r name inode dir_inode padding <<< "$f"
+-		nonce=$(_get_encryption_nonce $SCRATCH_DEV $dir_inode)
++		nonce=$(_get_encryption_file_nonce $SCRATCH_DEV $dir_inode)
+ 		_get_ciphertext_filename $SCRATCH_DEV $inode $dir_inode \
+ 			> $tmp.actual_name
+ 		echo -n "$name" | \
+diff --git a/tests/f2fs/002 b/tests/f2fs/002
+index 8235d88a..a51ddf22 100755
+--- a/tests/f2fs/002
++++ b/tests/f2fs/002
+@@ -129,7 +129,7 @@ blocklist=$(_get_ciphertext_block_list $file)
+ _scratch_unmount
+ 
+ echo -e "\n# Getting file's encryption nonce"
+-nonce=$(_get_encryption_nonce $SCRATCH_DEV $inode)
++nonce=$(_get_encryption_data_nonce $SCRATCH_DEV $inode)
+ 
+ echo -e "\n# Dumping the file's raw data"
+ _dump_ciphertext_blocks $SCRATCH_DEV $blocklist > $tmp.raw
+diff --git a/tests/generic/613 b/tests/generic/613
+index 4cf5ccc6..47c60e9c 100755
+--- a/tests/generic/613
++++ b/tests/generic/613
+@@ -68,10 +68,10 @@ echo -e "\n# Getting encryption nonces from inodes"
+ echo -n > $tmp.nonces_hex
+ echo -n > $tmp.nonces_bin
+ for inode in "${inodes[@]}"; do
+-	nonce=$(_get_encryption_nonce $SCRATCH_DEV $inode)
++	nonce=$(_get_encryption_data_nonce $SCRATCH_DEV $inode)
+ 	if (( ${#nonce} != 32 )) || [ -n "$(echo "$nonce" | tr -d 0-9a-fA-F)" ]
+ 	then
+-		_fail "Expected nonce to be 16 bytes (32 hex characters), but got \"$nonce\""
++		_fail "Expected nonce for inode $inode to be 16 bytes (32 hex characters), but got \"$nonce\""
+ 	fi
+ 	echo $nonce >> $tmp.nonces_hex
+ 	echo -ne "$(echo $nonce | sed 's/[0-9a-fA-F]\{2\}/\\x\0/g')" \
 -- 
-真実はいつも一つ！/ Always, there's only one truth!
+2.41.0
+
