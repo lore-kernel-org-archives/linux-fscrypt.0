@@ -2,41 +2,39 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 6B8BCCDB486
-	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 Oct 2023 06:17:36 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 02374CDB47E
+	for <linux-fscrypt@archiver.kernel.org>; Fri, 13 Oct 2023 06:26:46 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S229745AbjJMGRg (ORCPT
+        id S229741AbjJMG0q (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Fri, 13 Oct 2023 02:17:36 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54262 "EHLO
+        Fri, 13 Oct 2023 02:26:46 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:33774 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S229487AbjJMGRf (ORCPT
+        with ESMTP id S229441AbjJMG0q (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Fri, 13 Oct 2023 02:17:35 -0400
+        Fri, 13 Oct 2023 02:26:46 -0400
 Received: from smtp.kernel.org (relay.kernel.org [52.25.139.140])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 41424BE;
-        Thu, 12 Oct 2023 23:17:32 -0700 (PDT)
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id CF1FBC433CA;
-        Fri, 13 Oct 2023 06:17:31 +0000 (UTC)
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 9BE07B7;
+        Thu, 12 Oct 2023 23:26:43 -0700 (PDT)
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1A100C433C8;
+        Fri, 13 Oct 2023 06:26:43 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-        s=k20201202; t=1697177851;
-        bh=rcgUik+zlUAo8DAdhC6ZivfgGSEeA8EG8rAoKMEfK74=;
-        h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-        b=GST7ve5RWYVs76Mj56KLnPr0y2rlEYba3B4mMfPsUk/lhEkQKAK7123FtD/Bd1UNs
-         232kMSKVl8Ua7erFXXocvWIOU0iquT7VcGT+gz0o49Yz3qf4yEl1XIWD2/aVLQx7H9
-         71WLRhw8lfSaU4nzH3mvSWSP/vxjaKletL4lDOwaGk+cak9dzoWECrHZ9TcWqC/Xn/
-         9QGaUJ+MZ15wAqqkKZWrM2aqmA0dqH/qUyRx4gQ/aRQa2HzpEuecApEZYX5Eh4Worb
-         j6fctxtHyPxe0CSQdfFhoilPJkziompDPeYKlVUBuutZnSU5KXNvlIL9mrygQ0NE85
-         u50GOfZOyXBeg==
+        s=k20201202; t=1697178403;
+        bh=wXCwf18WXU/XuRehE5AvSS0N52oh5k0pBpII03jJ73Y=;
+        h=From:To:Cc:Subject:Date:From;
+        b=g8ZwkSEfOX7ZA11DlsR+Gh9Xlwlf2M4FedtFwCAdmQy5fHrhHWkwzQNnl9+PmV+py
+         BnTlMpl+4GTzv64qPX1ABjnjklrK5je3n20bnev2SI6+L9BerEbAYbhEhmEVPK9jwJ
+         W1xGgrz7QROtI6NHQT2i+Lge5GAOD3gQVqami24u3Yeqr4ZXtBtC5eVTYsDih+3FSH
+         FONaIyB2uwmfICCNVGUVUttHzfrU6v9tT0Oi81AgAX1EqSMnB7YDgwKbMLAwa6U4HJ
+         Uk3qBeFBDVIbDgk203KsMJaGalvr3gI191LYQKBZSUFBGWj58SiYkY5PaGk/pvd+iV
+         7G4+fMeHDuBog==
 From:   Eric Biggers <ebiggers@kernel.org>
-To:     fstests@vger.kernel.org
-Cc:     linux-fscrypt@vger.kernel.org
-Subject: [PATCH 3/4] common/encrypt: support custom data unit size
-Date:   Thu, 12 Oct 2023 23:14:02 -0700
-Message-ID: <20231013061403.138425-4-ebiggers@kernel.org>
+To:     linux-xfs@vger.kernel.org
+Cc:     linux-fscrypt@vger.kernel.org, fstests@vger.kernel.org
+Subject: [xfsprogs PATCH] xfs_io/encrypt: support specifying crypto data unit size
+Date:   Thu, 12 Oct 2023 23:26:39 -0700
+Message-ID: <20231013062639.141468-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.42.0
-In-Reply-To: <20231013061403.138425-1-ebiggers@kernel.org>
-References: <20231013061403.138425-1-ebiggers@kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 Precedence: bulk
@@ -45,233 +43,457 @@ X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 From: Eric Biggers <ebiggers@google.com>
 
-Make _require_scratch_encryption() and
-_require_encryption_policy_support() support the new '-s' option to
-set_encpolicy to specify a custom value of log2_data_unit_size.
+Add an '-s' option to the 'set_encpolicy' command of xfs_io to allow
+exercising the log2_data_unit_size field that is being added to struct
+fscrypt_policy_v2 (kernel patch:
+https://lore.kernel.org/linux-fscrypt/20230925055451.59499-6-ebiggers@kernel.org).
 
-Likewise, make _verify_ciphertext_for_encryption_policy() accept an
-argument "log2_dusize=*" to cause it to use the specified data unit size
-for the test and verify that the file contents are encrypted as expected
-for that data unit size.
+The xfs_io support is needed for xfstests
+(https://lore.kernel.org/fstests/20231013061403.138425-1-ebiggers@kernel.org),
+which currently relies on xfs_io to access the encryption ioctls.
 
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- common/encrypt | 38 ++++++++++++++++++++++++++++++--------
- 1 file changed, 30 insertions(+), 8 deletions(-)
+ configure.ac          |  1 +
+ include/builddefs.in  |  4 +++
+ io/encrypt.c          | 72 ++++++++++++++++++++++++++++++++-----------
+ m4/package_libcdev.m4 | 21 +++++++++++++
+ man/man8/xfs_io.8     |  5 ++-
+ 5 files changed, 84 insertions(+), 19 deletions(-)
 
-diff --git a/common/encrypt b/common/encrypt
-index 5688745c..d90a566a 100644
---- a/common/encrypt
-+++ b/common/encrypt
-@@ -1,32 +1,41 @@
- ##/bin/bash
- # SPDX-License-Identifier: GPL-2.0
- # Copyright (c) 2016 Google, Inc.  All Rights Reserved.
- #
- # Functions for setting up and testing file encryption
+diff --git a/configure.ac b/configure.ac
+index febd0c09..2034f02e 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -180,20 +180,21 @@ AC_HAVE_PREADV
+ AC_HAVE_COPY_FILE_RANGE
+ AC_HAVE_SYNC_FILE_RANGE
+ AC_HAVE_SYNCFS
+ AC_HAVE_MNTENT
+ AC_HAVE_FLS
+ AC_HAVE_READDIR
+ AC_HAVE_FSETXATTR
+ AC_HAVE_MREMAP
+ AC_NEED_INTERNAL_FSXATTR
+ AC_NEED_INTERNAL_FSCRYPT_ADD_KEY_ARG
++AC_NEED_INTERNAL_FSCRYPT_POLICY_V2
+ AC_HAVE_GETFSMAP
+ AC_HAVE_STATFS_FLAGS
+ AC_HAVE_MAP_SYNC
+ AC_HAVE_DEVMAPPER
+ AC_HAVE_MALLINFO
+ AC_HAVE_MALLINFO2
+ AC_PACKAGE_WANT_ATTRIBUTES_H
+ AC_HAVE_LIBATTR
+ if test "$enable_scrub" = "yes"; then
+         if test "$enable_libicu" = "yes" || test "$enable_libicu" = "probe"; then
+diff --git a/include/builddefs.in b/include/builddefs.in
+index 147c9b98..43025ba4 100644
+--- a/include/builddefs.in
++++ b/include/builddefs.in
+@@ -103,20 +103,21 @@ HAVE_PWRITEV2 = @have_pwritev2@
+ HAVE_COPY_FILE_RANGE = @have_copy_file_range@
+ HAVE_SYNC_FILE_RANGE = @have_sync_file_range@
+ HAVE_SYNCFS = @have_syncfs@
+ HAVE_READDIR = @have_readdir@
+ HAVE_MNTENT = @have_mntent@
+ HAVE_FLS = @have_fls@
+ HAVE_FSETXATTR = @have_fsetxattr@
+ HAVE_MREMAP = @have_mremap@
+ NEED_INTERNAL_FSXATTR = @need_internal_fsxattr@
+ NEED_INTERNAL_FSCRYPT_ADD_KEY_ARG = @need_internal_fscrypt_add_key_arg@
++NEED_INTERNAL_FSCRYPT_POLICY_V2 = @need_internal_fscrypt_policy_v2@
+ HAVE_GETFSMAP = @have_getfsmap@
+ HAVE_STATFS_FLAGS = @have_statfs_flags@
+ HAVE_MAP_SYNC = @have_map_sync@
+ HAVE_DEVMAPPER = @have_devmapper@
+ HAVE_MALLINFO = @have_mallinfo@
+ HAVE_MALLINFO2 = @have_mallinfo2@
+ HAVE_LIBATTR = @have_libattr@
+ HAVE_LIBICU = @have_libicu@
+ HAVE_OPENAT = @have_openat@
+ HAVE_FSTATAT = @have_fstatat@
+@@ -150,20 +151,23 @@ PCFLAGS+= -DHAVE_FSETXATTR
+ endif
+ ifeq ($(ENABLE_BLKID),yes)
+ PCFLAGS+= -DENABLE_BLKID
+ endif
+ ifeq ($(NEED_INTERNAL_FSXATTR),yes)
+ PCFLAGS+= -DOVERRIDE_SYSTEM_FSXATTR
+ endif
+ ifeq ($(NEED_INTERNAL_FSCRYPT_ADD_KEY_ARG),yes)
+ PCFLAGS+= -DOVERRIDE_SYSTEM_FSCRYPT_ADD_KEY_ARG
+ endif
++ifeq ($(NEED_INTERNAL_FSCRYPT_POLICY_V2),yes)
++PCFLAGS+= -DOVERRIDE_SYSTEM_FSCRYPT_POLICY_V2
++endif
+ ifeq ($(HAVE_GETFSMAP),yes)
+ PCFLAGS+= -DHAVE_GETFSMAP
+ endif
+ ifeq ($(HAVE_FALLOCATE),yes)
+ PCFLAGS += -DHAVE_FALLOCATE
+ endif
  
- #
- # _require_scratch_encryption [-c CONTENTS_MODE] [-n FILENAMES_MODE]
- #			      [-f POLICY_FLAGS] [-v POLICY_VERSION]
-+#			      [-s LOG2_DUSIZE]
- #
- # Require encryption support on the scratch device.
- #
- # This checks for support for the default type of encryption policy (v1 with
- # AES-256-XTS and AES-256-CTS).  Options can be specified to also require
- # support for a different type of encryption policy.
- #
- _require_scratch_encryption()
- {
--	_require_scratch
-+	local arg
+ LIBICU_LIBS = @libicu_LIBS@
+ LIBICU_CFLAGS = @libicu_CFLAGS@
+ ifeq ($(HAVE_LIBURCU_ATOMIC64),yes)
+diff --git a/io/encrypt.c b/io/encrypt.c
+index 1b347dc1..79061b07 100644
+--- a/io/encrypt.c
++++ b/io/encrypt.c
+@@ -1,19 +1,23 @@
+ // SPDX-License-Identifier: GPL-2.0
+ /*
+  * Copyright 2016, 2019 Google LLC
+  * Author: Eric Biggers <ebiggers@google.com>
+  */
  
-+	_require_scratch
- 	_require_xfs_io_command "set_encpolicy"
+ #ifdef OVERRIDE_SYSTEM_FSCRYPT_ADD_KEY_ARG
+ #  define fscrypt_add_key_arg sys_fscrypt_add_key_arg
+ #endif
++#ifdef OVERRIDE_SYSTEM_FSCRYPT_POLICY_V2
++#  define fscrypt_policy_v2 sys_fscrypt_policy_v2
++#  define fscrypt_get_policy_ex_arg sys_fscrypt_get_policy_ex_arg
++#endif
+ #include "platform_defs.h"
+ #include "command.h"
+ #include "init.h"
+ #include "libfrog/paths.h"
+ #include "io.h"
  
-+	for arg; do
-+		if [ "$arg" = "-s" ]; then
-+			# -s option was added later.  Make sure it's available.
-+			_require_xfs_io_command "set_encpolicy" "-s"
-+		fi
-+	done
+ #ifndef ARRAY_SIZE
+ #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+ #endif
+ 
+@@ -24,20 +28,49 @@
+  */
+ 
+ /* first batch of ioctls (Linux headers v4.6+) */
+ #ifndef FS_IOC_SET_ENCRYPTION_POLICY
+ #define fscrypt_policy fscrypt_policy_v1
+ #define FS_IOC_SET_ENCRYPTION_POLICY		_IOR('f', 19, struct fscrypt_policy)
+ #define FS_IOC_GET_ENCRYPTION_PWSALT		_IOW('f', 20, __u8[16])
+ #define FS_IOC_GET_ENCRYPTION_POLICY		_IOW('f', 21, struct fscrypt_policy)
+ #endif
+ 
++/*
++ * Since the log2_data_unit_size field was added later than fscrypt_policy_v2
++ * itself, we may need to override the system definition to get that field.
++ * And also fscrypt_get_policy_ex_arg since it contains fscrypt_policy_v2.
++ */
++#if !defined(FS_IOC_GET_ENCRYPTION_POLICY_EX) || \
++	defined(OVERRIDE_SYSTEM_FSCRYPT_POLICY_V2)
++#undef fscrypt_policy_v2
++struct fscrypt_policy_v2 {
++	__u8 version;
++	__u8 contents_encryption_mode;
++	__u8 filenames_encryption_mode;
++	__u8 flags;
++	__u8 log2_data_unit_size;
++	__u8 __reserved[3];
++	__u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
++};
 +
- 	# The 'test_dummy_encryption' mount option interferes with trying to use
- 	# encryption for real, even if we are just trying to get/set policies
- 	# and never put any keys in the keyring.  So skip the real encryption
- 	# tests if the 'test_dummy_encryption' mount option was specified.
- 	_exclude_scratch_mount_option "test_dummy_encryption"
- 
- 	# Make a filesystem on the scratch device with the encryption feature
- 	# enabled.  If this fails then probably the userspace tools (e.g.
- 	# e2fsprogs or f2fs-tools) are too old to understand encryption.
- 	if ! _scratch_mkfs_encrypted &>>$seqres.full; then
-@@ -67,35 +76,35 @@ _require_scratch_encryption()
- _require_encryption_policy_support()
- {
- 	local mnt=$1
- 	local dir=$mnt/tmpdir
- 	local set_encpolicy_args=""
- 	local policy_flags=0
- 	local policy_version=1
- 	local c
- 
- 	OPTIND=2
--	while getopts "c:n:f:v:" c; do
-+	while getopts "c:n:f:s:v:" c; do
- 		case $c in
--		c|n)
-+		c|n|s)
- 			set_encpolicy_args+=" -$c $OPTARG"
- 			;;
- 		f)
- 			set_encpolicy_args+=" -$c $OPTARG"
- 			policy_flags=$OPTARG
- 			;;
- 		v)
- 			set_encpolicy_args+=" -$c $OPTARG"
- 			policy_version=$OPTARG
- 			;;
- 		*)
--			_fail "Unrecognized option '$c'"
-+			_fail "${FUNCNAME[0]}: unrecognized option '$c'"
- 			;;
- 		esac
- 	done
- 	set_encpolicy_args=${set_encpolicy_args# }
- 
- 	echo "Checking whether kernel supports encryption policy: $set_encpolicy_args" \
- 		>> $seqres.full
- 
- 	if (( policy_flags & (FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64 |
- 			      FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) )); then
-@@ -756,28 +765,27 @@ _do_verify_ciphertext_for_encryption_policy()
- 
- 	# Now unmount the filesystem and verify the ciphertext we just wrote.
- 	_scratch_unmount
- 
- 	echo "Verifying encrypted file contents" >> $seqres.full
- 	for f in "${test_contents_files[@]}"; do
- 		read -r src inode blocklist <<< "$f"
- 		nonce=$(_get_encryption_nonce $SCRATCH_DEV $inode)
- 		_dump_ciphertext_blocks $SCRATCH_DEV $blocklist > $tmp.actual_contents
- 		$crypt_contents_cmd $contents_encryption_mode $raw_key_hex \
--			--file-nonce=$nonce --data-unit-size=$blocksize \
--			--inode-number=$inode < $src > $tmp.expected_contents
-+			--file-nonce=$nonce --inode-number=$inode \
-+                        < $src > $tmp.expected_contents
- 		if ! cmp $tmp.expected_contents $tmp.actual_contents; then
- 			_fail "Expected encrypted contents != actual encrypted contents.  File: $f"
- 		fi
- 		$crypt_contents_cmd $contents_encryption_mode $raw_key_hex \
--			--decrypt --file-nonce=$nonce \
--                        --data-unit-size=$blocksize --inode-number=$inode \
-+			--decrypt --file-nonce=$nonce --inode-number=$inode \
- 			< $tmp.actual_contents > $tmp.decrypted_contents
- 		if ! cmp $src $tmp.decrypted_contents; then
- 			_fail "Contents decryption sanity check failed.  File: $f"
- 		fi
- 	done
- 
- 	echo "Verifying encrypted file names" >> $seqres.full
- 	for f in "${test_filenames_files[@]}"; do
- 		read -r name inode dir_inode padding <<< "$f"
- 		nonce=$(_get_encryption_nonce $SCRATCH_DEV $dir_inode)
-@@ -837,28 +845,30 @@ _fscrypt_mode_name_to_num()
- # policy of the specified type is used.
- #
- # The first two parameters are the contents and filenames encryption modes to
- # test.  The following optional parameters are also accepted to further modify
- # the type of encryption policy that is tested:
- #
- #	'v2':			test a v2 encryption policy
- #	'direct':		test the DIRECT_KEY policy flag
- #	'iv_ino_lblk_64':	test the IV_INO_LBLK_64 policy flag
- #	'iv_ino_lblk_32':	test the IV_INO_LBLK_32 policy flag
-+#	'log2_dusize=N':        test the log2_data_unit_size field
- #
- _verify_ciphertext_for_encryption_policy()
- {
- 	local contents_encryption_mode=$1
- 	local filenames_encryption_mode=$2
- 	local opt
- 	local policy_version=1
- 	local policy_flags=0
-+	local log2_dusize=0
- 	local set_encpolicy_args=""
- 	local crypt_util_args=""
- 	local crypt_util_contents_args=""
- 	local crypt_util_filename_args=""
- 	local expected_identifier
- 
- 	shift 2
- 	for opt; do
- 		case "$opt" in
- 		v2)
-@@ -870,30 +880,36 @@ _verify_ciphertext_for_encryption_policy()
- 				_fail "For direct key mode, contents and filenames modes must match"
- 			fi
- 			(( policy_flags |= FSCRYPT_POLICY_FLAG_DIRECT_KEY ))
- 			;;
- 		iv_ino_lblk_64)
- 			(( policy_flags |= FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64 ))
- 			;;
- 		iv_ino_lblk_32)
- 			(( policy_flags |= FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32 ))
- 			;;
-+		log2_dusize=*)
-+			log2_dusize=$(echo "$opt" | sed 's/^log2_dusize=//')
-+			;;
- 		*)
- 			_fail "Unknown option '$opt' passed to ${FUNCNAME[0]}"
- 			;;
- 		esac
- 	done
- 	local contents_mode_num=$(_fscrypt_mode_name_to_num $contents_encryption_mode)
- 	local filenames_mode_num=$(_fscrypt_mode_name_to_num $filenames_encryption_mode)
- 
- 	set_encpolicy_args+=" -c $contents_mode_num"
- 	set_encpolicy_args+=" -n $filenames_mode_num"
-+	if (( log2_dusize != 0 )); then
-+		set_encpolicy_args+=" -s $log2_dusize"
-+	fi
- 	crypt_util_contents_args+=" --mode-num=$contents_mode_num"
- 	crypt_util_filename_args+=" --mode-num=$filenames_mode_num"
- 
- 	if (( policy_version > 1 )); then
- 		set_encpolicy_args+=" -v 2"
- 		crypt_util_args+=" --kdf=HKDF-SHA512"
- 		if (( policy_flags & FSCRYPT_POLICY_FLAG_DIRECT_KEY )); then
- 			crypt_util_args+=" --direct-key"
- 		elif (( policy_flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64 )); then
- 			crypt_util_args+=" --iv-ino-lblk-64"
-@@ -923,20 +939,26 @@ _verify_ciphertext_for_encryption_policy()
- 
- 	echo "Creating encryption-capable filesystem" >> $seqres.full
- 	if (( policy_flags & (FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64 |
- 			      FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) )); then
- 		_scratch_mkfs_stable_inodes_encrypted &>> $seqres.full
- 	else
- 		_scratch_mkfs_encrypted &>> $seqres.full
- 	fi
- 	_scratch_mount
- 
-+	if (( log2_dusize != 0 )); then
-+		crypt_util_contents_args+=" --data-unit-size=$((1 << log2_dusize))"
-+	else
-+		crypt_util_contents_args+=" --data-unit-size=$(_get_block_size $SCRATCH_MNT)"
-+	fi
++#undef fscrypt_get_policy_ex_arg
++struct fscrypt_get_policy_ex_arg {
++	__u64 policy_size; /* input/output */
++	union {
++		__u8 version;
++		struct fscrypt_policy_v1 v1;
++		struct fscrypt_policy_v2 v2;
++	} policy; /* output */
++};
++#endif
 +
- 	crypt_util_args+=" --fs-uuid=$(blkid -s UUID -o value $SCRATCH_DEV | tr -d -)"
+ /*
+  * Second batch of ioctls (Linux headers v5.4+), plus some renamings from FS_ to
+  * FSCRYPT_.  We don't bother defining the old names here.
+  */
+ #ifndef FS_IOC_GET_ENCRYPTION_POLICY_EX
  
- 	crypt_util_contents_args+="$crypt_util_args"
- 	crypt_util_filename_args+="$crypt_util_args"
+ #define FSCRYPT_POLICY_FLAGS_PAD_4		0x00
+ #define FSCRYPT_POLICY_FLAGS_PAD_8		0x01
+ #define FSCRYPT_POLICY_FLAGS_PAD_16		0x02
+ #define FSCRYPT_POLICY_FLAGS_PAD_32		0x03
+@@ -62,40 +95,26 @@
+ struct fscrypt_policy_v1 {
+ 	__u8 version;
+ 	__u8 contents_encryption_mode;
+ 	__u8 filenames_encryption_mode;
+ 	__u8 flags;
+ 	__u8 master_key_descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+ };
  
- 	echo "Generating encryption key" >> $seqres.full
- 	local raw_key=$(_generate_raw_encryption_key)
- 	if (( policy_version > 1 )); then
- 		local keyspec=$(_add_enckey $SCRATCH_MNT "$raw_key" \
- 				| awk '{print $NF}')
+ #define FSCRYPT_POLICY_V2		2
+ #define FSCRYPT_KEY_IDENTIFIER_SIZE	16
+-struct fscrypt_policy_v2 {
+-	__u8 version;
+-	__u8 contents_encryption_mode;
+-	__u8 filenames_encryption_mode;
+-	__u8 flags;
+-	__u8 __reserved[4];
+-	__u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
+-};
++/* struct fscrypt_policy_v2 was defined earlier */
+ 
+ #define FSCRYPT_MAX_KEY_SIZE		64
+ 
+ #define FS_IOC_GET_ENCRYPTION_POLICY_EX		_IOWR('f', 22, __u8[9]) /* size + version */
+-struct fscrypt_get_policy_ex_arg {
+-	__u64 policy_size; /* input/output */
+-	union {
+-		__u8 version;
+-		struct fscrypt_policy_v1 v1;
+-		struct fscrypt_policy_v2 v2;
+-	} policy; /* output */
+-};
++/* struct fscrypt_get_policy_ex_arg was defined earlier */
+ 
+ #define FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR	1
+ #define FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER	2
+ struct fscrypt_key_specifier {
+ 	__u32 type;	/* one of FSCRYPT_KEY_SPEC_TYPE_* */
+ 	__u32 __reserved;
+ 	union {
+ 		__u8 __reserved[32]; /* reserve some extra space */
+ 		__u8 descriptor[FSCRYPT_KEY_DESCRIPTOR_SIZE];
+ 		__u8 identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
+@@ -198,20 +217,21 @@ set_encpolicy_help(void)
+ "                   (0000000000000000)\n"
+ " 'set_encpolicy -v 2' - assign v2 policy with default key identifier\n"
+ "                        (00000000000000000000000000000000)\n"
+ " 'set_encpolicy 0000111122223333' - assign v1 policy with given key descriptor\n"
+ " 'set_encpolicy 00001111222233334444555566667777' - assign v2 policy with given\n"
+ "                                                    key identifier\n"
+ "\n"
+ " -c MODE -- contents encryption mode\n"
+ " -n MODE -- filenames encryption mode\n"
+ " -f FLAGS -- policy flags\n"
++" -s LOG2_DUSIZE -- log2 of data unit size\n"
+ " -v VERSION -- policy version\n"
+ "\n"
+ " MODE can be numeric or one of the following predefined values:\n"));
+ 	printf("    ");
+ 	for (i = 0; i < ARRAY_SIZE(available_modes); i++) {
+ 		printf("%s", available_modes[i].name);
+ 		if (i != ARRAY_SIZE(available_modes) - 1)
+ 			printf(", ");
+ 	}
+ 	printf("\n");
+@@ -581,29 +601,30 @@ get_encpolicy_f(int argc, char **argv)
+ 	return 0;
+ }
+ 
+ static int
+ set_encpolicy_f(int argc, char **argv)
+ {
+ 	int c;
+ 	__u8 contents_encryption_mode = FSCRYPT_MODE_AES_256_XTS;
+ 	__u8 filenames_encryption_mode = FSCRYPT_MODE_AES_256_CTS;
+ 	__u8 flags = FSCRYPT_POLICY_FLAGS_PAD_16;
++	__u8 log2_data_unit_size = 0;
+ 	int version = -1; /* unspecified */
+ 	struct fscrypt_key_specifier key_spec;
+ 	union {
+ 		__u8 version;
+ 		struct fscrypt_policy_v1 v1;
+ 		struct fscrypt_policy_v2 v2;
+ 	} policy;
+ 
+-	while ((c = getopt(argc, argv, "c:n:f:v:")) != EOF) {
++	while ((c = getopt(argc, argv, "c:n:f:s:v:")) != EOF) {
+ 		switch (c) {
+ 		case 'c':
+ 			if (!parse_mode(optarg, &contents_encryption_mode)) {
+ 				fprintf(stderr,
+ 					_("invalid contents encryption mode: %s\n"),
+ 					optarg);
+ 				exitcode = 1;
+ 				return 0;
+ 			}
+ 			break;
+@@ -617,20 +638,28 @@ set_encpolicy_f(int argc, char **argv)
+ 			}
+ 			break;
+ 		case 'f':
+ 			if (!parse_byte_value(optarg, &flags)) {
+ 				fprintf(stderr, _("invalid flags: %s\n"),
+ 					optarg);
+ 				exitcode = 1;
+ 				return 0;
+ 			}
+ 			break;
++		case 's':
++			if (!parse_byte_value(optarg, &log2_data_unit_size)) {
++				fprintf(stderr, _("invalid log2_dusize: %s\n"),
++					optarg);
++				exitcode = 1;
++				return 0;
++			}
++			break;
+ 		case 'v': {
+ 			__u8 val;
+ 
+ 			if (!parse_byte_value(optarg, &val)) {
+ 				fprintf(stderr,
+ 					_("invalid policy version: %s\n"),
+ 					optarg);
+ 				exitcode = 1;
+ 				return 0;
+ 			}
+@@ -666,23 +695,30 @@ set_encpolicy_f(int argc, char **argv)
+ 	}
+ 	if (version < 0) /* version unspecified? */
+ 		version = FSCRYPT_POLICY_V1;
+ 
+ 	memset(&policy, 0, sizeof(policy));
+ 	policy.version = version;
+ 	if (version == FSCRYPT_POLICY_V2) {
+ 		policy.v2.contents_encryption_mode = contents_encryption_mode;
+ 		policy.v2.filenames_encryption_mode = filenames_encryption_mode;
+ 		policy.v2.flags = flags;
++		policy.v2.log2_data_unit_size = log2_data_unit_size;
+ 		memcpy(policy.v2.master_key_identifier, key_spec.u.identifier,
+ 		       FSCRYPT_KEY_IDENTIFIER_SIZE);
+ 	} else {
++		if (log2_data_unit_size != 0) {
++			fprintf(stderr,
++				"v1 policy does not support selecting the data unit size\n");
++			exitcode = 1;
++			return 0;
++		}
+ 		/*
+ 		 * xfstests passes .version = 255 for testing.  Just use
+ 		 * 'struct fscrypt_policy_v1' for both v1 and unknown versions.
+ 		 */
+ 		policy.v1.contents_encryption_mode = contents_encryption_mode;
+ 		policy.v1.filenames_encryption_mode = filenames_encryption_mode;
+ 		policy.v1.flags = flags;
+ 		memcpy(policy.v1.master_key_descriptor, key_spec.u.descriptor,
+ 		       FSCRYPT_KEY_DESCRIPTOR_SIZE);
+ 	}
+@@ -901,21 +937,21 @@ encrypt_init(void)
+ 	get_encpolicy_cmd.argmin = 0;
+ 	get_encpolicy_cmd.argmax = -1;
+ 	get_encpolicy_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
+ 	get_encpolicy_cmd.oneline =
+ 		_("display the encryption policy of the current file");
+ 	get_encpolicy_cmd.help = get_encpolicy_help;
+ 
+ 	set_encpolicy_cmd.name = "set_encpolicy";
+ 	set_encpolicy_cmd.cfunc = set_encpolicy_f;
+ 	set_encpolicy_cmd.args =
+-		_("[-c mode] [-n mode] [-f flags] [-v version] [keyspec]");
++		_("[-c mode] [-n mode] [-f flags] [-s log2_dusize] [-v version] [keyspec]");
+ 	set_encpolicy_cmd.argmin = 0;
+ 	set_encpolicy_cmd.argmax = -1;
+ 	set_encpolicy_cmd.flags = CMD_NOMAP_OK | CMD_FOREIGN_OK;
+ 	set_encpolicy_cmd.oneline =
+ 		_("assign an encryption policy to the current file");
+ 	set_encpolicy_cmd.help = set_encpolicy_help;
+ 
+ 	add_enckey_cmd.name = "add_enckey";
+ 	add_enckey_cmd.cfunc = add_enckey_f;
+ 	add_enckey_cmd.args = _("[-d descriptor] [-k key_id]");
+diff --git a/m4/package_libcdev.m4 b/m4/package_libcdev.m4
+index f987aa4a..17407065 100644
+--- a/m4/package_libcdev.m4
++++ b/m4/package_libcdev.m4
+@@ -319,20 +319,41 @@ AC_DEFUN([AC_NEED_INTERNAL_FSCRYPT_ADD_KEY_ARG],
+           ,
+           need_internal_fscrypt_add_key_arg=yes,
+           [#include <linux/fs.h>]
+         )
+       ],,
+       [#include <linux/fs.h>]
+     )
+     AC_SUBST(need_internal_fscrypt_add_key_arg)
+   ])
+ 
++#
++# Check if we need to override the system struct fscrypt_policy_v2
++# with the internal definition.  This /only/ happens if the system
++# actually defines struct fscrypt_policy_v2 /and/ the system
++# definition is missing certain fields.
++#
++AC_DEFUN([AC_NEED_INTERNAL_FSCRYPT_POLICY_V2],
++  [
++    AC_CHECK_TYPE(struct fscrypt_policy_v2,
++      [
++        AC_CHECK_MEMBER(struct fscrypt_policy_v2.log2_data_unit_size,
++          ,
++          need_internal_fscrypt_policy_v2=yes,
++          [#include <linux/fs.h>]
++        )
++      ],,
++      [#include <linux/fs.h>]
++    )
++    AC_SUBST(need_internal_fscrypt_policy_v2)
++  ])
++
+ #
+ # Check if we have a FS_IOC_GETFSMAP ioctl (Linux)
+ #
+ AC_DEFUN([AC_HAVE_GETFSMAP],
+   [ AC_MSG_CHECKING([for GETFSMAP])
+     AC_LINK_IFELSE(
+     [	AC_LANG_PROGRAM([[
+ #define _GNU_SOURCE
+ #include <sys/syscall.h>
+ #include <unistd.h>
+diff --git a/man/man8/xfs_io.8 b/man/man8/xfs_io.8
+index ef7087b3..52f04dd7 100644
+--- a/man/man8/xfs_io.8
++++ b/man/man8/xfs_io.8
+@@ -706,21 +706,21 @@ Copy up to
+ .I length
+ bytes of data.
+ .RE
+ .PD
+ .TP
+ .BI swapext " donor_file "
+ Swaps extent forks between files. The current open file is the target. The donor
+ file is specified by path. Note that file data is not copied (file content moves
+ with the fork(s)).
+ .TP
+-.BI "set_encpolicy [ \-c " mode " ] [ \-n " mode " ] [ \-f " flags " ] [ \-v " version " ] [ " keyspec " ]"
++.BI "set_encpolicy [ \-c " mode " ] [ \-n " mode " ] [ \-f " flags " ] [ \-s " log2_dusize " ] [ \-v " version " ] [ " keyspec " ]"
+ On filesystems that support encryption, assign an encryption policy to the
+ current file.
+ .I keyspec
+ is a hex string which specifies the encryption key to use.  For v1 encryption
+ policies,
+ .I keyspec
+ must be a 16-character hex string (8 bytes).  For v2 policies,
+ .I keyspec
+ must be a 32-character hex string (16 bytes).  If unspecified, an all-zeroes
+ value is used.
+@@ -729,20 +729,23 @@ value is used.
+ .TP 0.4i
+ .BI \-c " mode"
+ contents encryption mode (e.g. AES-256-XTS)
+ .TP
+ .BI \-n " mode"
+ filenames encryption mode (e.g. AES-256-CTS)
+ .TP
+ .BI \-f " flags"
+ policy flags (numeric)
+ .TP
++.BI \-s " log2_dusize"
++log2 of data unit size.  Not supported by v1 policies.
++.TP
+ .BI \-v " version"
+ policy version.  Defaults to 1 or 2 depending on the length of
+ .IR keyspec ;
+ or to 1 if
+ .I keyspec
+ is unspecified.
+ .RE
+ .PD
+ .TP
+ .BI "get_encpolicy [ \-1 ] [ \-t ]"
+
+base-commit: 91d9bdb83deffa675d0d2323433de0748effb581
 -- 
 2.42.0
 
