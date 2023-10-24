@@ -2,55 +2,55 @@ Return-Path: <linux-fscrypt-owner@vger.kernel.org>
 X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
 	aws-us-west-2-korg-lkml-1.web.codeaurora.org
 Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
-	by smtp.lore.kernel.org (Postfix) with ESMTP id 2D6B7C07545
-	for <linux-fscrypt@archiver.kernel.org>; Tue, 24 Oct 2023 03:52:48 +0000 (UTC)
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 628B7C25B6F
+	for <linux-fscrypt@archiver.kernel.org>; Tue, 24 Oct 2023 03:52:55 +0000 (UTC)
 Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
-        id S232320AbjJXDwr (ORCPT
+        id S232286AbjJXDwy (ORCPT
         <rfc822;linux-fscrypt@archiver.kernel.org>);
-        Mon, 23 Oct 2023 23:52:47 -0400
-Received: from lindbergh.monkeyblade.net ([23.128.96.19]:51688 "EHLO
+        Mon, 23 Oct 2023 23:52:54 -0400
+Received: from lindbergh.monkeyblade.net ([23.128.96.19]:54154 "EHLO
         lindbergh.monkeyblade.net" rhost-flags-OK-OK-OK-OK) by vger.kernel.org
-        with ESMTP id S232222AbjJXDwf (ORCPT
+        with ESMTP id S232287AbjJXDwr (ORCPT
         <rfc822;linux-fscrypt@vger.kernel.org>);
-        Mon, 23 Oct 2023 23:52:35 -0400
-Received: from mail-qk1-x72e.google.com (mail-qk1-x72e.google.com [IPv6:2607:f8b0:4864:20::72e])
-        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 0F58010D5
-        for <linux-fscrypt@vger.kernel.org>; Mon, 23 Oct 2023 20:52:27 -0700 (PDT)
-Received: by mail-qk1-x72e.google.com with SMTP id af79cd13be357-77891c236fcso312570085a.3
-        for <linux-fscrypt@vger.kernel.org>; Mon, 23 Oct 2023 20:52:26 -0700 (PDT)
+        Mon, 23 Oct 2023 23:52:47 -0400
+Received: from mail-qt1-x82c.google.com (mail-qt1-x82c.google.com [IPv6:2607:f8b0:4864:20::82c])
+        by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 4076310E6
+        for <linux-fscrypt@vger.kernel.org>; Mon, 23 Oct 2023 20:52:31 -0700 (PDT)
+Received: by mail-qt1-x82c.google.com with SMTP id d75a77b69052e-41cbd1d7e04so23843111cf.1
+        for <linux-fscrypt@vger.kernel.org>; Mon, 23 Oct 2023 20:52:31 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=paul-moore.com; s=google; t=1698119546; x=1698724346; darn=vger.kernel.org;
+        d=paul-moore.com; s=google; t=1698119550; x=1698724350; darn=vger.kernel.org;
         h=in-reply-to:references:subject:cc:to:from:message-id:date:from:to
          :cc:subject:date:message-id:reply-to;
-        bh=GnPZt7wTu5bHl+yZIdMyk9dSEtxPVy94lr+8pKkfEn4=;
-        b=Qk2NAnk+d3PS2nhphbsNh4pXDwIkiF/OEugwNqtX8DEU03CEfroRIc3UcQKLCx0RJB
-         c/SnoKoKs7NXwkEjbsod/f2u8PP3uqJdYiRs/R2l+++7jXOlKo3J8QMLftlSgdlmrf+S
-         WDpNm7dOHUoRzJI8nxhDZADh7OPpxVkCdKQNTLwgNHsnyxbj6+fDjztk56ap664Rh+ph
-         GiJ4k5abmtn8z0O2bAg5QoevXeJcBa4b8IMwN9UzkCbNXv5BiYWoCajzAoBQt0a80b5Z
-         nchL+39mHH0b1gi98t637zPu3o3WUyn7fI3B9Y99ScaMgRAxoK5C1XdyDLO4ci0w0AAU
-         IysA==
+        bh=HLvkudqanD7ho/JohV3yYMvdl0m/YZEqjpT0bM0Y7Gw=;
+        b=XNc3KcIb+IR8QS+MHo1fOpYYF218BMMpw9ZcQas/Zpj/xANT2PzcX4M5DsFY6GkHqo
+         GerPdig2n7O8sfAn0qDHvpz7jzGrLAenJNm2fMLtJgW6GHMP1BM/mocMG5qmzrI00V8z
+         OD2X/6lxilvyC0tlj2dWBsJrLgBQnunzBka62gH08EiefGgRKntxbfvMO3yzbVXTldlr
+         QPnp2txrzw92B0Cicpf2FTbrf7sRyc3NGEdJdeTq2R4bArrNpYRBleLaA/LChZocuWuk
+         pjqLpKlaAh+qrOCmUZL5tI60SseyZxjXGmoEe6jGKxvMeejw6mSyHUDZQTDbWUQwK6Hr
+         j0ZQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1698119546; x=1698724346;
+        d=1e100.net; s=20230601; t=1698119550; x=1698724350;
         h=in-reply-to:references:subject:cc:to:from:message-id:date
          :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
-        bh=GnPZt7wTu5bHl+yZIdMyk9dSEtxPVy94lr+8pKkfEn4=;
-        b=IHr40uIPWjb/UgoFLt66qVp76wwzxKclBfnZmlm3UaROIQzi0rpLIP8uY+U83TUna+
-         pN5A2EVLaPofG54eFCRbgn+/BNV1XsD8rGkN1kT9KuehUgRdkRIcAkVmLFhA2j4fbGRL
-         pSyasDeUqylcDtu9+f1phQ8+9zC3lpOWa1OHdxg0a0M9949PCVXwaOsX+nlwm6zctjLl
-         oNHUTI46mu4+3vSDuXRzhpQZK1GSTOWciEoLpnaA4GyG22Rcd0hXK44inG/cqf/L+Riz
-         dra4U6qpLDQtZk6ICeVPWVvg7+XehrFIq4S6YaTmYkDQwKcI/LqzRafE1W7s/mqzNvuS
-         RfYA==
-X-Gm-Message-State: AOJu0YwsgCLNtDUpbKGM1FR1K+BAtaz5r+GMlD9YtB1xOtLMFgvhUTWe
-        05lSDZmyqf+DuHT3ocrMb08m
-X-Google-Smtp-Source: AGHT+IFvSV+EXgEeBKXX2Mm2c4Pu+xlgfjLQsVDGRnKVVxJUbzV3yBw9uUXEzF2i2rsqjzOaeFEfJQ==
-X-Received: by 2002:a05:620a:4049:b0:778:9232:a564 with SMTP id i9-20020a05620a404900b007789232a564mr13553158qko.47.1698119546060;
-        Mon, 23 Oct 2023 20:52:26 -0700 (PDT)
+        bh=HLvkudqanD7ho/JohV3yYMvdl0m/YZEqjpT0bM0Y7Gw=;
+        b=ABX41G2vhrM5Glm6os3uwD/803FmRIKcRhc0W3w7JoS7LkxLtNRCUde67w/K/IUjB9
+         9uxPcAp/JJNQZU64XrOOqsRHgBIJIMpLwywYeCBbcTQswaDYYEbj3hof+djgYhzv9VMp
+         vYN6ftVzvfuTVyqAfycDVPlaZafUTX4f3IjkWMiGsxjnqTsyRCrK4pAFGhM3qZykazKN
+         GXGaQu26e5OPgpkpGVbAJyyY7leeOkvKsWQ9NvVKlEFKgJ+DFNO0kIJjbkVgEEouY5jr
+         rn/zJlMzPDK5IUU9kvWNdgMYozAzl7O9iiZKneAlvVwULukWeqE/qasRPOfDZBeHUFsN
+         cfkA==
+X-Gm-Message-State: AOJu0YzsvygxRHWIainMUVdSapF8/YtxEdu7kar+LMRmqknM2/qpmaLU
+        BuXYIlBws3KHsNsvXFpUam14
+X-Google-Smtp-Source: AGHT+IHxiDP0oQS0IHZl9PGSzz8xG4YIOPId7UdDJm7uyxgqMm7h4born+PADWw4P1qOvg39+RCjvw==
+X-Received: by 2002:ac8:5c08:0:b0:41b:ff51:4e72 with SMTP id i8-20020ac85c08000000b0041bff514e72mr11390786qti.48.1698119550281;
+        Mon, 23 Oct 2023 20:52:30 -0700 (PDT)
 Received: from localhost ([70.22.175.108])
-        by smtp.gmail.com with ESMTPSA id w12-20020ae9e50c000000b0077407e3d68asm3162408qkf.111.2023.10.23.20.52.25
+        by smtp.gmail.com with ESMTPSA id kr25-20020ac861d9000000b004181c32dcc3sm3179140qtb.16.2023.10.23.20.52.29
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Mon, 23 Oct 2023 20:52:25 -0700 (PDT)
-Date:   Mon, 23 Oct 2023 23:52:25 -0400
-Message-ID: <c53599e9d278fc55be30e3bac9411328.paul@paul-moore.com>
+        Mon, 23 Oct 2023 20:52:29 -0700 (PDT)
+Date:   Mon, 23 Oct 2023 23:52:29 -0400
+Message-ID: <85311850a862fe6ccb946634429b890a.paul@paul-moore.com>
 From:   Paul Moore <paul@paul-moore.com>
 To:     Fan Wu <wufan@linux.microsoft.com>, corbet@lwn.net,
         zohar@linux.ibm.com, jmorris@namei.org, serge@hallyn.com,
@@ -61,144 +61,51 @@ Cc:     linux-doc@vger.kernel.org, linux-integrity@vger.kernel.org,
         linux-fscrypt@vger.kernel.org, linux-block@vger.kernel.org,
         dm-devel@redhat.com, audit@vger.kernel.org,
         roberto.sassu@huawei.com, linux-kernel@vger.kernel.org,
-        Deven Bowers <deven.desai@linux.microsoft.com>,
         Fan Wu <wufan@linux.microsoft.com>
-Subject: Re: [PATCH RFC v11 5/19] ipe: introduce 'boot_verified' as a trust  provider
-References: <1696457386-3010-6-git-send-email-wufan@linux.microsoft.com>
-In-Reply-To: <1696457386-3010-6-git-send-email-wufan@linux.microsoft.com>
+Subject: Re: [PATCH RFC v11 11/19] dm verity: set DM_TARGET_SINGLETON feature  flag
+References: <1696457386-3010-12-git-send-email-wufan@linux.microsoft.com>
+In-Reply-To: <1696457386-3010-12-git-send-email-wufan@linux.microsoft.com>
 Precedence: bulk
 List-ID: <linux-fscrypt.vger.kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 
 On Oct  4, 2023 Fan Wu <wufan@linux.microsoft.com> wrote:
 > 
-> IPE is designed to provide system level trust guarantees, this usually
-> implies that trust starts from bootup with a hardware root of trust,
-> which validates the bootloader. After this, the bootloader verifies the
-> kernel and the initramfs.
+> The device-mapper has a flag to mark targets as singleton, which is a
+> required flag for immutable targets. Without this flag, multiple
+> dm-verity targets can be added to a mapped device, which has no
+> practical use cases and will let dm_table_get_immutable_target return
+> NULL. This patch adds the missing flag, restricting only one
+> dm-verity target per mapped device.
 > 
-> As there's no currently supported integrity method for initramfs, and
-> it's typically already verified by the bootloader, introduce a property
-> that causes the first superblock to have an execution to be "pinned",
-> which is typically initramfs.
-> 
-> When the "pinned" device is unmounted, it will be "unpinned" and
-> `boot_verified` property will always evaluate to false afterward.
-> 
-> We use a pointer with a spin_lock to "pin" the device instead of rcu
-> because rcu synchronization may sleep, which is not allowed when
-> unmounting a device.
->
-> Signed-off-by: Deven Bowers <deven.desai@linux.microsoft.com>
 > Signed-off-by: Fan Wu <wufan@linux.microsoft.com>
 > ---
-> v2:
->   +No Changes
-> 
-> v3:
->   + Remove useless caching system
->   + Move ipe_load_properties to this match
->   + Minor changes from checkpatch --strict warnings
-> 
-> v4:
->   + Remove comments from headers that was missed previously.
->   + Grammatical corrections.
-> 
-> v5:
->   + No significant changes
-> 
-> v6:
->   + No changes
-> 
-> v7:
->   + Reword and refactor patch 04/12 to [09/16], based on changes in the underlying system.
->   + Add common audit function for boolean values
->   + Use common audit function as implementation.
-> 
-> v8:
->   + No changes
-> 
-> v9:
->   + No changes
-> 
-> v10:
->   + Replace struct file with struct super_block
-> 
-> v11:
->   + Fix code style issues
+> v1-v10:
+>   + Not present
 > ---
->  security/ipe/eval.c          | 72 +++++++++++++++++++++++++++++++++++-
->  security/ipe/eval.h          |  2 +
->  security/ipe/hooks.c         | 12 ++++++
->  security/ipe/hooks.h         |  2 +
->  security/ipe/ipe.c           |  1 +
->  security/ipe/policy.h        |  2 +
->  security/ipe/policy_parser.c | 35 +++++++++++++++++-
->  7 files changed, 124 insertions(+), 2 deletions(-)
-> 
-> diff --git a/security/ipe/eval.c b/security/ipe/eval.c
-> index 8a8bcc5c7d7f..bdac4abc0ddb 100644
-> --- a/security/ipe/eval.c
-> +++ b/security/ipe/eval.c
-> @@ -9,6 +9,7 @@
->  #include <linux/file.h>
->  #include <linux/sched.h>
->  #include <linux/rcupdate.h>
-> +#include <linux/spinlock.h>
->  
->  #include "ipe.h"
->  #include "eval.h"
-> @@ -16,6 +17,44 @@
->  
->  struct ipe_policy __rcu *ipe_active_policy;
->  
-> +static const struct super_block *pinned_sb;
-> +static DEFINE_SPINLOCK(pin_lock);
-> +#define FILE_SUPERBLOCK(f) ((f)->f_path.mnt->mnt_sb)
-> +
-> +/**
-> + * pin_sb - Pin the underlying superblock of @f, marking it as trusted.
-> + * @sb: Supplies a super_block structure to be pinned.
-> + */
-> +static void pin_sb(const struct super_block *sb)
-> +{
-> +	if (!sb)
-> +		return;
-> +	spin_lock(&pin_lock);
-> +	if (!pinned_sb)
-> +		pinned_sb = sb;
-> +	spin_unlock(&pin_lock);
-> +}
-> +
-> +/**
-> + * from_pinned - Determine whether @sb is the pinned super_block.
-> + * @sb: Supplies a super_block to check against the pinned super_block.
-> + *
-> + * Return:
-> + * * true	- @sb is the pinned super_block
-> + * * false	- @sb is not the pinned super_block
-> + */
-> +static bool from_pinned(const struct super_block *sb)
-> +{
-> +	bool rv;
-> +
-> +	if (!sb)
-> +		return false;
-> +	spin_lock(&pin_lock);
-> +	rv = !IS_ERR_OR_NULL(pinned_sb) && pinned_sb == sb;
-> +	spin_unlock(&pin_lock);
+>  drivers/md/dm-verity-target.c | 2 +-
+>  1 file changed, 1 insertion(+), 1 deletion(-)
 
-It's okay for an initial version, but I still think you need to get
-away from this spinlock in from_pinned() as quickly as possible.
-Maybe I'm wrong, but this looks like a major source of lock contention.
+This seems reasonable to me and matches with other users of
+DM_TARGET_IMMUTABLE.
 
-I understand the issue around RCU and the potential for matching on
-a reused buffer/address, but if you modified IPE to have its own LSM
-security blob in super_block::security you could mark the superblock
-when it was mounted and do a lockless lookup here in from_pinned().
+Alasdair, Mike, can we get an ACK on this?
 
-> +	return rv;
-> +}
+> diff --git a/drivers/md/dm-verity-target.c b/drivers/md/dm-verity-target.c
+> index 26adcfea0302..80673b66c194 100644
+> --- a/drivers/md/dm-verity-target.c
+> +++ b/drivers/md/dm-verity-target.c
+> @@ -1503,7 +1503,7 @@ int dm_verity_get_root_digest(struct dm_target *ti, u8 **root_digest, unsigned i
+>  
+>  static struct target_type verity_target = {
+>  	.name		= "verity",
+> -	.features	= DM_TARGET_IMMUTABLE,
+> +	.features	= DM_TARGET_SINGLETON | DM_TARGET_IMMUTABLE,
+>  	.version	= {1, 9, 0},
+>  	.module		= THIS_MODULE,
+>  	.ctr		= verity_ctr,
+> -- 
+> 2.25.1
 
 --
 paul-moore.com
