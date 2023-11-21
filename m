@@ -1,32 +1,34 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-1.web.codeaurora.org [10.30.226.201])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 512C116405;
-	Tue, 21 Nov 2023 22:39:35 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 83E854207D;
+	Tue, 21 Nov 2023 22:39:36 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="lhpw0ES8"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 8FCD6C433C7;
-	Tue, 21 Nov 2023 22:39:35 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Pm0hdeER"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 372DCC433CA;
+	Tue, 21 Nov 2023 22:39:36 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1700606375;
-	bh=F7T9ozkx5kq3xFIaUUxDQId3Ryj4a172IH01F7bLlaA=;
-	h=From:To:Cc:Subject:Date:From;
-	b=lhpw0ES8jbh5enMJozW9b9tfugeonU6dStP/RBqgzl6iW4a2QYjdVbrLamfcFe6ZM
-	 n1AfA68K0vk7gYwZ4DVK6cBs7YgncKMSPbJ+48E0DKjGJqloppllX1aI+hvM/Psard
-	 eDLY8DTaFPpYB9LOnb7BLfW1Vg4TtTE6T0qOXFK5HxayRph8zgZdsSjJDbpm2Nxf6M
-	 /3PxIQ67MLlFu+4GEn38Idncz6/l1K7ljSl0Sxk4XHP6cAmkWnYkb2EZLVl1cwsVl6
-	 l9kRe3IvMRhHJs+1bmn/WtqDcXNBF/F6sqM8CAzZXNi164XKNgq4l/o5Z3w6emAgVB
-	 00EsoXKMJbGUw==
+	s=k20201202; t=1700606376;
+	bh=KtsSq5LYvPatFAAXEjl+Y4OaaAiq0o6mzQHlHZHSUC4=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+	b=Pm0hdeERQdM86iFIoenPcFcCHMgeHmJ5ufw1PyLPxu3eurY+ylVFB3V7VF6CUIe3o
+	 dgBuXop3SNQ7eSXkgyl33LvcRTmsosZqpfm1Oq071kcquPsWmQ2VSLbpdXT9HCATOt
+	 IFqRGJlQQXjS0XvHw50LI+HZ70xqaZ7O4zcv/EutWn2keDZMoIh7H2iU37x8Bvb9PW
+	 7mTg2WJEV0zRMbi5JcNw4ThThFDf0lMsYfOFHb/11z6QlZf+QSQQ1eikoIprv/YFbQ
+	 iJn8DNQXc8vygVj+20jAfHjkR1i1ybaM8X1ZA5H2ec/A+opn7I/hb0Qe30/5iKYmuD
+	 13RLPhNS+yflg==
 From: Eric Biggers <ebiggers@kernel.org>
 To: fstests@vger.kernel.org
 Cc: linux-fscrypt@vger.kernel.org,
 	linux-ext4@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
 	Daniel Rosenberg <drosen@google.com>
-Subject: [PATCH v2 0/4] xfstests: test custom crypto data unit size
-Date: Tue, 21 Nov 2023 14:39:05 -0800
-Message-ID: <20231121223909.4617-1-ebiggers@kernel.org>
+Subject: [PATCH v2 2/4] common/rc: fix _require_xfs_io_command with digits in argument
+Date: Tue, 21 Nov 2023 14:39:07 -0800
+Message-ID: <20231121223909.4617-3-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.42.1
+In-Reply-To: <20231121223909.4617-1-ebiggers@kernel.org>
+References: <20231121223909.4617-1-ebiggers@kernel.org>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -35,44 +37,52 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-This series adds a test that verifies the on-disk format of encrypted
-files that use a crypto data unit size that differs from the filesystem
-block size.  This tests the functionality that was introduced in Linux
-6.7 by kernel commit 5b1188847180 ("fscrypt: support crypto data unit
-size less than filesystem block size").
+From: Eric Biggers <ebiggers@google.com>
 
-This depends on the xfsprogs patch
-"xfs_io/encrypt: support specifying crypto data unit size"
-(https://lore.kernel.org/r/20231013062639.141468-1-ebiggers@kernel.org)
-which adds the '-s' option to the set_encpolicy command of xfs_io.
+'_require_xfs_io_command set_encpolicy -s' does not work as expected
+because the following in the output of 'xfs_io -c "help set_encpolicy"':
 
-As usual, the test skips itself when any prerequisite isn't met.
+     -s LOG2_DUSIZE -- log2 of data unit size
 
-I've tested the new test on both ext4 and f2fs.
+... does not match the regex:
 
-Changed in v2:
-- Updated the cover letter, commit message, and a comment to reflect
-  that the kernel commit that added this feature was merged in 6.7.
-- Rebased onto latest for-next branch of xfstests.
+    "^ -s ([a-zA-Z_]+ )?--"
 
-Eric Biggers (4):
-  fscrypt-crypt-util: rename block to data unit
-  common/rc: fix _require_xfs_io_command with digits in argument
-  common/encrypt: support custom data unit size
-  generic: add test for custom crypto data unit size
+... because the 2 in the argument name LOG2_DUSIZE is not matched.  Fix
+the regex to support digits in the argument name.
 
- common/encrypt           | 42 +++++++++++++-----
- common/rc                |  2 +-
- src/fscrypt-crypt-util.c | 93 ++++++++++++++++++++--------------------
- tests/f2fs/002           |  6 +--
- tests/generic/900        | 29 +++++++++++++
- tests/generic/900.out    | 11 +++++
- 6 files changed, 123 insertions(+), 60 deletions(-)
- create mode 100755 tests/generic/900
- create mode 100644 tests/generic/900.out
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+---
+ common/rc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
-
-base-commit: b9e1a88f8198ac02f3b82fe3b127d4e14f4a97b7
+diff --git a/common/rc b/common/rc
+index cc92fe06..dab672d8 100644
+--- a/common/rc
++++ b/common/rc
+@@ -2719,21 +2719,21 @@ _require_xfs_io_command()
+ 	echo $testio | grep -q "foreign file active" && \
+ 		_notrun "xfs_io $command $param_checked not supported on $FSTYP"
+ 	echo $testio | grep -q "Function not implemented" && \
+ 		_notrun "xfs_io $command $param_checked support is missing (missing syscall?)"
+ 	echo $testio | grep -q "unknown flag" && \
+ 		_notrun "xfs_io $command $param_checked support is missing (unknown flag)"
+ 
+ 	[ -n "$param" ] || return
+ 
+ 	if [ -z "$param_checked" ]; then
+-		$XFS_IO_PROG -c "help $command" | grep -E -q "^ $param ([a-zA-Z_]+ )?--" || \
++		$XFS_IO_PROG -c "help $command" | grep -E -q "^ $param ([a-zA-Z0-9_]+ )?--" || \
+ 			_notrun "xfs_io $command doesn't support $param"
+ 	else
+ 		# xfs_io could result in "command %c not supported" if it was
+ 		# built on kernels not supporting pwritev2() calls
+ 		echo $testio | grep -q "\(invalid option\|not supported\)" && \
+ 			_notrun "xfs_io $command doesn't support $param"
+ 	fi
+ 
+ 	# On XFS, ioctl(FSSETXATTR)(called by xfs_io -c "chattr") maskes off unsupported
+ 	# or invalid flags silently so need to check these flags by extra ioctl(FSGETXATTR)
 -- 
 2.42.1
 
