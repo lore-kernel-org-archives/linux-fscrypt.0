@@ -1,251 +1,229 @@
-Received: from mail.nsr.re.kr (unknown [210.104.33.65])
-	by lindbergh.monkeyblade.net (Postfix) with ESMTPS id A60FE102
-	for <linux-fscrypt@vger.kernel.org>; Mon,  4 Dec 2023 17:06:23 -0800 (PST)
-Received: from 210.104.33.70 (nsr.re.kr)
-	(using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128 bits))
-	by mail.nsr.re.kr with SMTP; Tue, 05 Dec 2023 10:03:54 +0900
-X-Sender: letrehee@nsr.re.kr
-Received: from 192.168.155.188 ([192.168.155.188])
-          by mail.nsr.re.kr (Crinity Message Backbone-7.0.1) with SMTP ID 438;
-          Tue, 5 Dec 2023 10:03:49 +0900 (KST)
-From: Dongsoo Lee <letrehee@nsr.re.kr>
-To: Herbert Xu <herbert@gondor.apana.org.au>, 
-	"David S. Miller" <davem@davemloft.net>, 
-	Jens Axboe <axboe@kernel.dk>, Eric Biggers <ebiggers@kernel.org>, 
-	"Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, 
-	Thomas Gleixner <tglx@linutronix.de>, Ingo Molnar <mingo@redhat.com>, 
-	Borislav Petkov <bp@alien8.de>, 
-	Dave Hansen <dave.hansen@linux.intel.com>, x86@kernel.org, 
-	"H. Peter Anvin" <hpa@zytor.com>
-Cc: linux-crypto@vger.kernel.org, linux-block@vger.kernel.org, 
-	linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org, 
-	Dongsoo Lee <letrhee@nsr.re.kr>
-Subject: [PATCH v6 0/5] crypto: LEA block cipher implementation
-Date: Tue,  5 Dec 2023 01:03:24 +0000
-Message-Id: <20231205010329.21996-1-letrehee@nsr.re.kr>
-X-Mailer: git-send-email 2.40.1
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (2048-bit key) header.d=linaro.org header.i=@linaro.org header.b="lYNsBBqo"
+Received: from mail-wm1-x334.google.com (mail-wm1-x334.google.com [IPv6:2a00:1450:4864:20::334])
+	by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 0FC171A1
+	for <linux-fscrypt@vger.kernel.org>; Tue,  5 Dec 2023 09:33:58 -0800 (PST)
+Received: by mail-wm1-x334.google.com with SMTP id 5b1f17b1804b1-40c032962c5so43035275e9.3
+        for <linux-fscrypt@vger.kernel.org>; Tue, 05 Dec 2023 09:33:57 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=linaro.org; s=google; t=1701797636; x=1702402436; darn=vger.kernel.org;
+        h=content-transfer-encoding:in-reply-to:organization:autocrypt
+         :content-language:references:cc:to:subject:reply-to:from:user-agent
+         :mime-version:date:message-id:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=VJL8PlMbGmUjOCL0RQsFaIVNSGNIFrU43ufyj8haIXI=;
+        b=lYNsBBqo9B8Cte2tUfX6FH4vb9yuQyZSjGYwKcQYwWNOVys6iNydTyGWfVXgWN8cKR
+         aMH5H35TxF/5jsW5SRqrWZgCttNtGxVl5qiZ8eoEHOkkBJH3tmzI2ctj7dFHNKLfyBQN
+         BkNFRWZ1gHD9w4ivw2bOnzYQLdis8SFjWhxnGWGmkjkRbjw91eDq4LK8vmu5pufd2QFd
+         V6eMwVkLEI8+OTfj7mXFlkCO/Znh4QxpFxK0VzPAqWwUOrIMV2rHDSZ6G8xvyfBcwYrV
+         yjqWNxBomTyev8o1BV+jMInp/nKPY/HdCzg9DhRMAAbG8NidF0SNJXJ+ypOKkfW4Lr2t
+         RM3g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1701797636; x=1702402436;
+        h=content-transfer-encoding:in-reply-to:organization:autocrypt
+         :content-language:references:cc:to:subject:reply-to:from:user-agent
+         :mime-version:date:message-id:x-gm-message-state:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=VJL8PlMbGmUjOCL0RQsFaIVNSGNIFrU43ufyj8haIXI=;
+        b=nVEnbQ9XBLag6jxSBJguOX0qQnZxdMjQIhKJiMJdF3G+ptV39pbCkcVGH4AvuF5uk7
+         kS+CTBvuzQlCvQRXwKJo0r8rwJ71nrRnB/QTPx1JDobcB2OJi/PPaHzzemPbfP8A+hqR
+         4fHPI6ftQ/Mai/hMVhSFEeECCPRnwxoCk7N1PYDNA6Ai2ubouZJrydhXjKQsxzK2JkDe
+         zxeebRMqqOtC4w3jPguLLJg7If8YREyQy4ngETkPmNeLYQI46yWwOnrYfsNScNqrDVqZ
+         RLu9o6eJ4STSwaEe9n8CjwuBhaP17ACwTZBBbAESD3UcfzfW2WUDrBOBoxJzbvKI6AL9
+         BMHA==
+X-Gm-Message-State: AOJu0Ywhfi/IogEe1/md54IYxw3dgxHuDMEa4KzmP+9+XsUCB1eAkkVt
+	++v/kxldhYTbw7pN3H3yG5qllQ==
+X-Google-Smtp-Source: AGHT+IHBIsl3mYv3KXrgx9Ctqap8Zyx0kHI99w5JKnXrWg6CnRY/rCgHaZbjAHIbGhg00vREgMtCdQ==
+X-Received: by 2002:a05:600c:1d0b:b0:40c:90f:e51f with SMTP id l11-20020a05600c1d0b00b0040c090fe51fmr571638wms.172.1701797636303;
+        Tue, 05 Dec 2023 09:33:56 -0800 (PST)
+Received: from ?IPV6:2a01:e0a:982:cbb0:a215:77cd:3141:d5d0? ([2a01:e0a:982:cbb0:a215:77cd:3141:d5d0])
+        by smtp.gmail.com with ESMTPSA id a13-20020a05600c348d00b0040b5377cf03sm23144654wmq.1.2023.12.05.09.33.55
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Tue, 05 Dec 2023 09:33:55 -0800 (PST)
+Message-ID: <9ba9be67-93a3-4c08-8410-adc9de3e45b4@linaro.org>
+Date: Tue, 5 Dec 2023 18:33:54 +0100
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
+User-Agent: Mozilla Thunderbird
+From: neil.armstrong@linaro.org
+Reply-To: neil.armstrong@linaro.org
+Subject: Re: [PATCH v3 00/12] Hardware wrapped key support for qcom ice and
+ ufs
+To: Gaurav Kashyap <quic_gaurkash@quicinc.com>, linux-scsi@vger.kernel.org,
+ linux-arm-msm@vger.kernel.org, ebiggers@google.com,
+ srinivas.kandagatla@linaro.org
+Cc: linux-mmc@vger.kernel.org, linux-block@vger.kernel.org,
+ linux-fscrypt@vger.kernel.org, omprsing@qti.qualcomm.com,
+ quic_psodagud@quicinc.com, abel.vesa@linaro.org, quic_spuppala@quicinc.com,
+ kernel@quicinc.com
+References: <20231122053817.3401748-1-quic_gaurkash@quicinc.com>
+Content-Language: en-US, fr
+Autocrypt: addr=neil.armstrong@linaro.org; keydata=
+ xsBNBE1ZBs8BCAD78xVLsXPwV/2qQx2FaO/7mhWL0Qodw8UcQJnkrWmgTFRobtTWxuRx8WWP
+ GTjuhvbleoQ5Cxjr+v+1ARGCH46MxFP5DwauzPekwJUD5QKZlaw/bURTLmS2id5wWi3lqVH4
+ BVF2WzvGyyeV1o4RTCYDnZ9VLLylJ9bneEaIs/7cjCEbipGGFlfIML3sfqnIvMAxIMZrvcl9
+ qPV2k+KQ7q+aXavU5W+yLNn7QtXUB530Zlk/d2ETgzQ5FLYYnUDAaRl+8JUTjc0CNOTpCeik
+ 80TZcE6f8M76Xa6yU8VcNko94Ck7iB4vj70q76P/J7kt98hklrr85/3NU3oti3nrIHmHABEB
+ AAHNKk5laWwgQXJtc3Ryb25nIDxuZWlsLmFybXN0cm9uZ0BsaW5hcm8ub3JnPsLAkQQTAQoA
+ OwIbIwULCQgHAwUVCgkICwUWAgMBAAIeAQIXgBYhBInsPQWERiF0UPIoSBaat7Gkz/iuBQJk
+ Q5wSAhkBAAoJEBaat7Gkz/iuyhMIANiD94qDtUTJRfEW6GwXmtKWwl/mvqQtaTtZID2dos04
+ YqBbshiJbejgVJjy+HODcNUIKBB3PSLaln4ltdsV73SBcwUNdzebfKspAQunCM22Mn6FBIxQ
+ GizsMLcP/0FX4en9NaKGfK6ZdKK6kN1GR9YffMJd2P08EO8mHowmSRe/ExAODhAs9W7XXExw
+ UNCY4pVJyRPpEhv373vvff60bHxc1k/FF9WaPscMt7hlkbFLUs85kHtQAmr8pV5Hy9ezsSRa
+ GzJmiVclkPc2BY592IGBXRDQ38urXeM4nfhhvqA50b/nAEXc6FzqgXqDkEIwR66/Gbp0t3+r
+ yQzpKRyQif3OwE0ETVkGzwEIALyKDN/OGURaHBVzwjgYq+ZtifvekdrSNl8TIDH8g1xicBYp
+ QTbPn6bbSZbdvfeQPNCcD4/EhXZuhQXMcoJsQQQnO4vwVULmPGgtGf8PVc7dxKOeta+qUh6+
+ SRh3vIcAUFHDT3f/Zdspz+e2E0hPV2hiSvICLk11qO6cyJE13zeNFoeY3ggrKY+IzbFomIZY
+ 4yG6xI99NIPEVE9lNBXBKIlewIyVlkOaYvJWSV+p5gdJXOvScNN1epm5YHmf9aE2ZjnqZGoM
+ Mtsyw18YoX9BqMFInxqYQQ3j/HpVgTSvmo5ea5qQDDUaCsaTf8UeDcwYOtgI8iL4oHcsGtUX
+ oUk33HEAEQEAAcLAXwQYAQIACQUCTVkGzwIbDAAKCRAWmrexpM/4rrXiB/sGbkQ6itMrAIfn
+ M7IbRuiSZS1unlySUVYu3SD6YBYnNi3G5EpbwfBNuT3H8//rVvtOFK4OD8cRYkxXRQmTvqa3
+ 3eDIHu/zr1HMKErm+2SD6PO9umRef8V82o2oaCLvf4WeIssFjwB0b6a12opuRP7yo3E3gTCS
+ KmbUuLv1CtxKQF+fUV1cVaTPMyT25Od+RC1K+iOR0F54oUJvJeq7fUzbn/KdlhA8XPGzwGRy
+ 4zcsPWvwnXgfe5tk680fEKZVwOZKIEuJC3v+/yZpQzDvGYJvbyix0lHnrCzq43WefRHI5XTT
+ QbM0WUIBIcGmq38+OgUsMYu4NzLu7uZFAcmp6h8g
+Organization: Linaro Developer Services
+In-Reply-To: <20231122053817.3401748-1-quic_gaurkash@quicinc.com>
+Content-Type: text/plain; charset=UTF-8; format=flowed
 Content-Transfer-Encoding: 8bit
 
-From: Dongsoo Lee <letrhee@nsr.re.kr>
+Hi Gaurav,
 
-This submission contains a generic C implementation of the LEA cipher and test vectors for it. It also includes modifications to use the LEA in fscrypt.
+On 22/11/2023 06:38, Gaurav Kashyap wrote:
+> These are the third iteration of patches that add support to Qualcomm ICE (Inline Crypto Engine) for hardware wrapped keys using Qualcomm Hardware Key Manager (HWKM)
+> 
+> They patches do the following:
+> - Address comments from v2 (Found here: https://lore.kernel.org/all/20230719170423.220033-1-quic_gaurkash@quicinc.com/)
+> - Rebased and tested on top of Eric's latest patchset: https://lore.kernel.org/all/20231104211259.17448-1-ebiggers@kernel.org/
+> - Rebased and tested on top of SM8650 patches from Linaro: https://lore.kernel.org/all/?q=sm8650
+> 
+> Information about patches copied over from v2:
+> 
+> "
+> Explanation and use of hardware-wrapped-keys can be found here:
+> Documentation/block/inline-encryption.rst
+> 
+> This patch is organized as follows:
+> 
+> Patch 1 - Prepares ICE and storage layers (UFS and EMMC) to pass around wrapped keys.
+> Patch 2 - Adds a new SCM api to support deriving software secret when wrapped keys are used
+> Patch 3-4 - Adds support for wrapped keys in the ICE driver. This includes adding HWKM support
+> Patch 5-6 - Adds support for wrapped keys in UFS
+> Patch 7-10 - Supports generate, prepare and import functionality in ICE and UFS
+> 
+> NOTE: MMC will have similar changes to UFS and will be uploaded in a different patchset
+>        Patch 3, 4, 8, 10 will have MMC equivalents.
+> "
+> 
+> Testing:
+> Test platform: SM8650 MTP
+> 
+> The changes were tested by mounting initramfs and running the fscryptctl
+> tool (Ref: https://github.com/ebiggers/fscryptctl/tree/wip-wrapped-keys) to
+> generate and prepare keys, as well as to set policies on folders, which
+> consequently invokes disk encryption flows through UFS.
+> 
+> Tested both standard and wrapped keys (Removing qcom,ice-use-hwkm from dtsi will support using standard keys)
+> 
+> Steps to test:
+> 
+> The following configs were enabled:
+> CONFIG_BLK_INLINE_ENCRYPTION=y
+> CONFIG_QCOM_INLINE_CRYPTO_ENGINE=m
+> CONFIG_FS_ENCRYPTION_INLINE_CRYPT=y
+> CONFIG_SCSI_UFS_CRYPTO=y
+> 
+> Flash boot image, boot to shell and run the following commands
+> 
+> Creating and preparing keys
+> - mkfs.ext4 -F -O encrypt,stable_inodes /dev/disk/by-partlabel/userdata
+> - mount /dev/disk/by-partlabel/userdata -o inlinecrypt /mnt
+> - ./fscryptctl generate_hw_wrapped_key /dev/disk/by-partlabel/userdata > /mnt/key.longterm
+> Note: import_hw_wrapped_key currently has a big which just got fixed, so it will be functional in the next SM8650 release
+> (It might already be available by the time the boards are available to public)
+> - ./fscryptctl prepare_hw_wrapped_key /dev/disk/by-partlabel/userdata < /mnt/key.longterm > /tmp/key.ephemeral
+> - ./fscryptctl add_key --hw-wrapped-key < /tmp/key.ephemeral /mnt
+> 
+> Create a folder and associate created keys with the folder
+> - rm -rf /mnt/dir
+> - mkdir /mnt/dir
+> - ./fscryptctl set_policy --hw-wrapped-key --iv-ino-lblk-64 "$keyid" /mnt/dir
+> - dmesg > /mnt/dir/test.txt
+> - sync
+> 
+> - Reboot
+> - mount /dev/disk/by-partlabel/userdata -o inlinecrypt /mnt
+> - ls /mnt/dir (You should see an encrypted file)
+> - ./fscryptctl prepare_hw_wrapped_key /dev/disk/by-partlabel/userdata < /mnt/key.longterm > /tmp/key.ephemeral
+> - ./fscryptctl add_key --hw-wrapped-key < /tmp/key.ephemeral /mnt
+> - cat /mnt/dir/test.txt
 
-The LEA algorithm is a lightweight block cipher that processes data blocks of 128-bits and has three different key lengths, each with a different number of rounds:
+I successfully tested with those instructions on the SM8650 QRD,
 
-- LEA-128: 128-bit key, 24 rounds,
-- LEA-192: 192-bit key, 28 rounds, and
-- LEA-256: 256-bit key, 32 rounds.
+Tested-by: Neil Armstrong <neil.armstrong@linaro.org> # on SM8650-QRD
 
-The round function of LEA consists of 32-bit ARX (modular Addition, bitwise Rotation, and bitwise XOR) operations. See [2, 5, 7] for details.
+however I got some build errors on sdhci-msm:
 
-LEA is a Korean national standard block cipher, described in "KS X 3246"[1] and is also included in the international standard, "ISO/IEC 29192-2:2019 standard"[2].
+drivers/mmc/host/sdhci-msm.c:1862:19: error: ‘blk_crypto_key_type’ defined as wrong kind of tag
+  1862 |      const struct blk_crypto_key_type *bkey,
+       |                   ^~~~~~~~~~~~~~~~~~~
+drivers/mmc/host/sdhci-msm.c:1862:19: warning: ‘struct blk_crypto_key_type’ declared inside parameter list will not be visible outside of thi
+s definition or declaration
+drivers/mmc/host/sdhci-msm.c: In function ‘sdhci_msm_program_key’:
+drivers/mmc/host/sdhci-msm.c:1882:24: error: passing argument 4 of ‘qcom_ice_program_key’ from incompatible pointer type [-Werror=incompatibl
+e-pointer-types]
+  1882 |          ice_key_size, bkey,
+       |                        ^~~~
+       |                        |
+       |                        const struct blk_crypto_key_type *
+In file included from drivers/mmc/host/sdhci-msm.c:21:
+include/soc/qcom/ice.h:35:34: note: expected ‘const struct blk_crypto_key *’ but argument is of type ‘const struct blk_crypto_key_type *’
+    35 |     const struct blk_crypto_key *bkey,
+       |     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~
+drivers/mmc/host/sdhci-msm.c: At top level:
+drivers/mmc/host/sdhci-msm.c:1993:17: error: initialization of ‘int (*)(struct cqhci_host *, const struct blk_crypto_key *, const union cqhci
+_crypto_cfg_entry *, int)’ from incompatible pointer type ‘int (*)(struct cqhci_host *, const struct blk_crypto_key_type *, const union cqhci_crypto_cfg_entry *, int)’ [-Werro
+r=incompatible-pointer-types]
+  1993 |  .program_key = sdhci_msm_program_key,
+       |                 ^~~~~~~~~~~~~~~~~~~~~
+drivers/mmc/host/sdhci-msm.c:1993:17: note: (near initialization for ‘sdhci_msm_cqhci_ops.program_key’)
 
-It is one of the approved block ciphers for the current Korean Cryptographic Module Validation Program (KCMVP).
+Thanks,
+Neil
 
-At the time of submission, no successful attack on full-round LEA is known. As is typical for iterated block ciphers, reduced-round variants have been attacked. The best published attacks on LEA in the standard attack model (CPA/CCA with unknown key) are boomerang attacks and differential linear attacks. The security margin to the whole rounds ratio is greater than 29% against various existing cryptanalytic techniques for block ciphers. [3]
 
-We expect that the first application of the patch would be the disk encryption on the Gooroom platform ('Gooroom' is a Korean word, meaning 'cloud') [4]. The Gooroom platform is a government-driven Debian-based Linux distribution in South Korea. In Korea, there are many crypto companies that want to bundle Linux into their products and sell them. They create their own Gooroom platforms by modifying the original Gooroom platform for their services. (Of course, the Gooroom platform is not mandatory, and companies wishing to use Linux are free to choose an appropriate distribution.) BTW, in Korea, many crypto companies want to use LEA, because LEA is one of the block ciphers of the KCMVP, a validation program for commercial crypto S/W to be delivered to the Korean government.
+> 
+> Gaurav Kashyap (12):
+>    ice, ufs, mmc: use blk_crypto_key for program_key
+>    qcom_scm: scm call for deriving a software secret
+>    soc: qcom: ice: add hwkm support in ice
+>    soc: qcom: ice: support for hardware wrapped keys
+>    ufs: core: support wrapped keys in ufs core
+>    ufs: host: wrapped keys support in ufs qcom
+>    qcom_scm: scm call for create, prepare and import keys
+>    ufs: core: add support for generate, import and prepare keys
+>    soc: qcom: support for generate, import and prepare key
+>    ufs: host: support for generate, import and prepare key
+>    arm64: dts: qcom: sm8650: add hwkm support to ufs ice
+>    dt-bindings: crypto: ice: document the hwkm property
+> 
+>   .../crypto/qcom,inline-crypto-engine.yaml     |   7 +
+>   arch/arm64/boot/dts/qcom/sm8650.dtsi          |   3 +-
+>   drivers/firmware/qcom/qcom_scm.c              | 276 +++++++++++++++
+>   drivers/firmware/qcom/qcom_scm.h              |   4 +
+>   drivers/mmc/host/cqhci-crypto.c               |   7 +-
+>   drivers/mmc/host/cqhci.h                      |   2 +
+>   drivers/mmc/host/sdhci-msm.c                  |   6 +-
+>   drivers/soc/qcom/ice.c                        | 321 +++++++++++++++++-
+>   drivers/ufs/core/ufshcd-crypto.c              |  87 ++++-
+>   drivers/ufs/host/ufs-qcom.c                   |  61 +++-
+>   include/linux/firmware/qcom/qcom_scm.h        |   7 +
+>   include/soc/qcom/ice.h                        |  18 +-
+>   include/ufs/ufshcd.h                          |  22 ++
+>   13 files changed, 784 insertions(+), 37 deletions(-)
+> 
 
-Currently, the Gooroom platform uses AES-XTS for disk encryption. The main reason for submitting this patch is to make disk encryption with LEA (e.g. LEA-XTS) available on there. If this submission is accepted, LEA can be used without any additional modifications in dm-crypt, a module that provides disk encryption functionality within the kernel.
-
-This patch also includes a modification to enable LEA for use in fscrypt, another data-at-rest encryption method available within the kernel, and a modification to blk-crypto-fallback to enable the "inlinecrypt" mount option in fscrypt.
-
-The Linux Crypto API already has another Korean block cipher, ARIA, also one of the block ciphers of the KCVMP. However, LEA is more widely used than ARIA in industry nowadays, because LEA is one of the lightweight cryptography standard of ISO/IEC [2] and performs well on low-end devices that support 32-bit operations. So we think they are complementary to each other.
-
-In general, it's obvious that the hardware-accelerated AES is the best performer. However, there exist not only environments where the hardware-accelerated AES is not supported, but also situations where AES is not preferred for various reasons. In these cases, if someone wants to encrypt using a block cipher, LEA could be an alternative.
-
-This submission includes a SIMD implementation for the x86-64 platform. The LEA cipher consists of 32-bit integer addition, rotation, and XOR operations, allowing for 4 blocks (XMM), 8 blocks (YMM), and 16 blocks (ZMM) of parallelism depending on the size of the registers. In addition, AVX2 and AVX-512F have more instructions to increase parallel encryption performance, which can be implemented differently even though they use the same registers. Therefore, lea-x86_64 selects the appropriate implementation in one glue code at module initialization. If additional SIMD instructions are added in the future, such as AVX10, this can be handled as well.
-
-Below are the speedtest performed with the tcrypt module for AES, LEA, ARIA, and Adiantum on three different platforms (AMD Ryzen 9 5950X, Intel(R) Core(TM) i5-12600K, and Intel(R) Xeon(R) Gold 6254).
-
-(4,096-byte block enc/decryption results in the tcrypt speedtest. Unit: cycles)
-
-- AMD Ryzen 9 5950X (Virtual Machine)
-  - aesni        ecb 128-bit key:  1,956 /   1,892
-  - aesni        ecb 256-bit key:  2,086 /   2,098
-  - lea-x86_64   ecb 128-bit key:  5,647 /   6,133
-  - lea-x86_64   ecb 256-bit key:  6,702 /   7,444
-  - aria-avx2    ecb 128-bit key:  8,316 /   8,153
-  - aria-avx2    ecb 256-bit key: 10,539 /  10,550
-
-  - aesni        cbc 128-bit key:  7,758 /   1,830
-  - aesni        cbc 256-bit key: 10,660 /   2,071
-  - lea-x86_64   cbc 128-bit key: 22,501 /   6,283
-  - lea-x86_64   cbc 256-bit key: 28,125 /   7,592
-
-  - aesni        ctr 128-bit key:  1,514 /   1,505
-  - aesni        ctr 256-bit key:  1,884 /   1,867
-  - lea-x86_64   ctr 128-bit key:  5,804 /   5,792
-  - lea-x86_64   ctr 256-bit key:  6,958 /   6,951
-  - aria-avx2    ctr 128-bit key:  8,819 /   8,736
-  - aria-avx2    ctr 256-bit key: 11,101 /  10,636
-
-  - adiantum(xchacha12-simd,...):  8,390 /   8,427
-  - adiantum(xchacha20-simd,...):  9,698 /   9,732
-
-  - aesni        xts 256-bit key:  2,177 /   2,165
-  - aesni        xts 512-bit key:  2,589 /   2,527
-  - lea-x86_64   xts 256-bit key:  6,488 /   6,745
-  - lea-x86_64   xts 512-bit key:  7,484 /   8,083
-
-  - aes-generic  ecb 128-bit key: 35,768 /  36,329
-  - aes-generic  ecb 256-bit key: 35,785 /  35,237
-  - lea-generic  ecb 128-bit key: 30,719 /  38,092
-  - lea-generic  ecb 256-bit key: 35,373 /  46,941
-  - aria-generic ecb 128-bit key:186,660 / 188,674
-  - aria-generic ecb 256-bit key:247,919 / 245,527
-
-- Intel(R) Core(TM) i5-12600K (microcode 0x15, AVX-512F Enabled)
-  - aesni        ecb 128-bit key:  1,436 /   1,441
-  - aesni        ecb 256-bit key:  1,984 /   1,987
-  - lea-x86_64   ecb 128-bit key:  5,318 /   5,916
-  - lea-x86_64   ecb 256-bit key:  6,209 /   7,071
-  - aria-avx512  ecb 128-bit key:  4,786 /   4,799
-  - aria-avx512  ecb 256-bit key:  5,988 /   5,989
-
-  - aesni        cbc 128-bit key:  8,741 /   1,467
-  - aesni        cbc 256-bit key: 11,803 /   1,995
-  - lea-x86_64   cbc 128-bit key: 31,070 /   6,063
-  - lea-x86_64   cbc 256-bit key: 39,117 /   7,173
-
-  - aesni        ctr 128-bit key:  2,120 /   2,112
-  - aesni        ctr 256-bit key:  2,588 /   2,595
-  - lea-x86_64   ctr 128-bit key:  4,438 /   4,397
-  - lea-x86_64   ctr 256-bit key:  5,217 /   5,196
-  - aria-avx512  ctr 128-bit key:  6,270 /   6,272
-  - aria-avx512  ctr 256-bit key:  7,469 /   7,473
-
-  - adiantum(xchacha12-simd,...):  7,526 /   7,453
-  - adiantum(xchacha20-simd,...):  8,983 /   8,892
-
-  - aesni        xts 256-bit key:  2,234 /   2,241
-  - aesni        xts 512-bit key:  2,525 /   2,538
-  - lea-x86_64   xts 256-bit key:  6,687 /   7,333
-  - lea-x86_64   xts 512-bit key:  7,626 /   8,457
-
-  - aes-generic  ecb 128-bit key: 34,399 /  34,765
-  - aes-generic  ecb 256-bit key: 48,568 /  49,245
-  - lea-generic  ecb 128-bit key: 23,576 /  36,230
-  - lea-generic  ecb 256-bit key: 31,715 /  50,461
-  - aria-generic ecb 128-bit key:108,227 / 108,135
-  - aria-generic ecb 256-bit key:146,669 / 145,993
-
-- Intel(R) Xeon(R) Gold 6254 (Virtual Machine)
-  - aesni        ecb 128-bit key:  3,390 /   3,396
-  - aesni        ecb 256-bit key:  4,533 /   4,549
-  - lea-x86_64   ecb 128-bit key:  5,500 /   6,594
-  - lea-x86_64   ecb 256-bit key:  6,506 /   7,467
-  - aria-avx2    ecb 128-bit key: 14,109 /  13,573
-  - aria-avx2    ecb 256-bit key: 17,605 /  16,955
-
-  - aesni        cbc 128-bit key: 12,559 /   3,544
-  - aesni        cbc 256-bit key: 17,150 /   4,681
-  - lea-x86_64   cbc 128-bit key: 33,471 /   5,900
-  - lea-x86_64   cbc 256-bit key: 41,024 /   6,948
-
-  - aesni        ctr 128-bit key:  3,099 /   3,095
-  - aesni        ctr 256-bit key:  4,126 /   4,124
-  - lea-x86_64   ctr 128-bit key:  5,054 /   4,909
-  - lea-x86_64   ctr 256-bit key:  5,795 /   5,797
-  - aria-avx2    ctr 128-bit key: 13,439 /  13,017
-  - aria-avx2    ctr 256-bit key: 17,325 /  16,731
-
-  - adiantum(xchacha12-simd,...):  9,064 /   9,006
-  - adiantum(xchacha20-simd,...): 10,702 /  10,628
-
-  - aesni        xts 256-bit key:  3,886 /   3,857
-  - aesni        xts 512-bit key:  4,949 /   5,008
-  - lea-x86_64   xts 256-bit key:  6,457 /   7,409
-  - lea-x86_64   xts 512-bit key:  7,438 /   8,510
-
-  - aes-generic  ecb 128-bit key: 49,438 /  48,803
-  - aes-generic  ecb 256-bit key: 72,348 /  73,804
-  - lea-generic  ecb 128-bit key: 30,300 /  45,072
-  - lea-generic  ecb 256-bit key: 39,054 /  60,472
-  - aria-generic ecb 128-bit key:189,850 / 175,073
-  - aria-generic ecb 256-bit key:243,704 / 228,347
-
-If this submission is accepted, future submissions may include an LEA implementation for aarch64 and an implementation with masks for AVX-512F.
-
-Although the designers of LEA did not provide test vectors in their paper [5], the ISO/IEC standard [2] and the KS standard [1] do. Furthermore, the Block Cipher LEA Specification("블록암호 LEA 규격서", written in Korean) document on the LEA introduction page [6] and the Wikipedia article on LEA [7] show the same test vectors as in the standards.
-
-The test vectors for ECB, CBC, CTR, and GCM modes included in the testmgr module are taken from the KCMVP Cryptographic Algorithm Verification Criteria V3.0("KCMVP 검증대상 암호알고리즘 검증기준 V3.0", written in Korean) [8]. Test vectors for the XTS mode were generated by ourselves, and we crosschecked them using Crypto++ [9] and testmgr on Linux.
-
-The implementation was tested with kernel module tcrypt.ko and passed the selftest using the above-mentioned test vectors. It also has been tested with CONFIG_CRYPTO_MANAGER_EXTRA_TESTS. The fscrypt patch was tested using a modified tool by forking https://github.com/google/fscrypt.
-
-The AVX2 and AVX-512F implementations were tested on the device that performed the speedtest, while the SSE2 implementation was tested using QEMU's x86-64 binary emulation.
-
-[1] KS X 3246, 128-bit block cipher LEA.
-[2] ISO/IEC 29192-2:2019, Information security — Lightweight cryptography — Part 2: Block ciphers.
-[3] Yi, Chen, et al. "Differential-Linear Approximation Semi-Unconstrained Searching and Partition Tree: Application to LEA and Speck", Asiacrypt 2023. (eprint 2023/1414)
-[4] https://github.com/gooroom https://www.gooroom.kr/
-[5] Hong, Deukjo, et al. "LEA: A 128-bit block cipher for fast encryption on common processors.", WISA 2013.
-[6] https://seed.kisa.or.kr/kisa/algorithm/EgovLeaInfo.do
-[7] https://en.wikipedia.org/wiki/LEA_(cipher)
-[8] https://seed.kisa.or.kr/kisa/kcmvp/EgovVerification.do
-[9] https://www.cryptopp.com/
-
-Changelog:
-v6:
-- Resended due to missing subsystem and incorrect title
-  - The patch is unchanged from v5.
-v5:
-- Added SSE2/AVX2/AVX-512F implementation
-  - Single glue code to determine proper SIMD acceleration
-- Adjusted ordering within structures to align with 16-byte boundaries.
-- Added more test vectors.
-  - Increased the maximum test-vector length to evaluate 16-block parallelism.
-  - Added the CBC-CTS test vector.
-v4:
-- Removed documentation to describe LEAs in fscrypt.
-v3:
-- Added implementations to enable LEA in fscrypt and blk-crypt.
-v2:
-- Reimplemented the Generic C implementation as a Loop version.
-  - The decryption code was adapted from an optimized implementation by Eric Biggers.
-    https://git.kernel.org/pub/scm/linux/kernel/git/ebiggers/linux.git/commit/?h=old/wip-lea&id=1d1cbba14380f8a1abc76baf939b9e51de047fb6
-- Removed AVX2 SIMD implementation.
-- Added comments for functions.
-- Improved the description in Kconfig.
-- Added test vectors from the standard documentation.
-
-Dongsoo Lee (5):
-  crypto: LEA block cipher implementation
-  crypto: add LEA testmgr tests
-  blk-crypto: Add LEA-256-XTS blk-crypto support
-  fscrypt: Add LEA-256-XTS, LEA-256-CTS support
-  crypto: LEA block cipher x86_64 optimization
-
- arch/x86/crypto/Kconfig            |   29 +
- arch/x86/crypto/Makefile           |    3 +
- arch/x86/crypto/lea-x86_64-asm.S   | 2272 +++++++++++++++++++++
- arch/x86/crypto/lea-x86_64-glue.c  |  820 ++++++++
- block/blk-crypto.c                 |    6 +
- crypto/Kconfig                     |   18 +
- crypto/Makefile                    |    1 +
- crypto/lea_generic.c               |  410 ++++
- crypto/tcrypt.c                    |   97 +
- crypto/testmgr.c                   |   38 +
- crypto/testmgr.h                   | 3022 ++++++++++++++++++++++++++++
- fs/crypto/fscrypt_private.h        |    2 +-
- fs/crypto/keysetup.c               |   15 +
- fs/crypto/policy.c                 |    4 +
- include/crypto/lea.h               |   44 +
- include/linux/blk-crypto.h         |    1 +
- include/uapi/linux/fscrypt.h       |    4 +-
- tools/include/uapi/linux/fscrypt.h |    4 +-
- 18 files changed, 6787 insertions(+), 3 deletions(-)
- create mode 100644 arch/x86/crypto/lea-x86_64-asm.S
- create mode 100644 arch/x86/crypto/lea-x86_64-glue.c
- create mode 100644 crypto/lea_generic.c
- create mode 100644 include/crypto/lea.h
-
--- 
-2.40.1
