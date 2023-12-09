@@ -1,119 +1,63 @@
+Received: from smtp.kernel.org (aws-us-west-2-korg-mail-1.web.codeaurora.org [10.30.226.201])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+	(No client certificate requested)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A08D21804D;
+	Sat,  9 Dec 2023 21:29:40 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=quicinc.com header.i=@quicinc.com header.b="TqUnNlwp"
-Received: from mx0b-0031df01.pphosted.com (mx0b-0031df01.pphosted.com [205.220.180.131])
-	by lindbergh.monkeyblade.net (Postfix) with ESMTPS id 075BA171C;
-	Fri,  8 Dec 2023 00:47:54 -0800 (PST)
-Received: from pps.filterd (m0279871.ppops.net [127.0.0.1])
-	by mx0a-0031df01.pphosted.com (8.17.1.19/8.17.1.19) with ESMTP id 3B88haBG031366;
-	Fri, 8 Dec 2023 08:47:47 GMT
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=quicinc.com; h=message-id : date :
- mime-version : subject : to : cc : references : from : in-reply-to :
- content-type : content-transfer-encoding; s=qcppdkim1;
- bh=sJFSWpBix3ucYjDy7sX1k4wYmjCFS/pCIXxw8fhDtOs=;
- b=TqUnNlwpjnKpeH/rMRGMV0Nuw2EsvaCC4S322rEDPn+EwqdU1zjXLzJhSzEFLEoq44He
- DdSer7SE2FrF4+bC4AZPoNhfQKya0XLvGsADmO4oG9Iw+5KAOoPAjsRWHsTIxosCXJiD
- 3GLnGqKVPzVBsoCAIhmMv8JB64RYqhb+7Gnz8l+6v/vguRPgCc85YdD60kDSEvUwbTpc
- J9Jd/oTL2BdySy6Cjqm4HJr+yDgYEcfJ0B3NPHluxn9FmAXPpP1Q2D7BzWAKJ5+q4lxp
- IXlZ5bMDw1Nw31ZVVJRa8UuPd9zRcQ8GpLJqKeI/QFBbByQIr4Dosmf8I0jfoIIqvGtw QA== 
-Received: from nalasppmta01.qualcomm.com (Global_NAT1.qualcomm.com [129.46.96.20])
-	by mx0a-0031df01.pphosted.com (PPS) with ESMTPS id 3uuphg9154-1
-	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-	Fri, 08 Dec 2023 08:47:47 +0000
-Received: from nalasex01b.na.qualcomm.com (nalasex01b.na.qualcomm.com [10.47.209.197])
-	by NALASPPMTA01.qualcomm.com (8.17.1.5/8.17.1.5) with ESMTPS id 3B88lkGD008964
-	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-	Fri, 8 Dec 2023 08:47:46 GMT
-Received: from [10.216.14.21] (10.80.80.8) by nalasex01b.na.qualcomm.com
- (10.47.209.197) with Microsoft SMTP Server (version=TLS1_2,
- cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.2.1118.40; Fri, 8 Dec
- 2023 00:45:59 -0800
-Message-ID: <c8885f86-1bb5-4322-9a0a-1a6227e34fa3@quicinc.com>
-Date: Fri, 8 Dec 2023 14:15:55 +0530
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="R82/Bplq"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 0554EC433C8;
+	Sat,  9 Dec 2023 21:29:39 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
+	s=k20201202; t=1702157380;
+	bh=enCUt3M3djVROs6vqIrAQpW2GmD+0gM0t0LR46XBsh8=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To:From;
+	b=R82/Bplq6CAp1nCStIcs1hX0A4dsqGZeaJI2AYCPwVoPa0uFrYBJrBVtH/ZNHje8k
+	 VBFbJfQ1/sAK0TMxGRIW/jRp5sOy0f4+fJzPW335RPlHVY8hEDwykI4YV+zmTlo1Pc
+	 GMWBiTIFmi+R2N/yPpf1EbRdtOUnmPUzbpQka7TnViUGtZG5sHxfUl3kGB/Hn6/Ttf
+	 Vs/K4OLGZyVN3stchVFUSz1F2bTOY18onCC8gS6bk9bTHXuxlFe68qOhs7sQngYyKU
+	 sev/K5c+uIPJAxUQA5mnGs/VNGDMdWEAWvMs7AhgCUJn9dIdOBZeP+gSWCoPsxsF7u
+	 JPal5vMFoi7Vg==
+Date: Sat, 9 Dec 2023 13:29:38 -0800
+From: Eric Biggers <ebiggers@kernel.org>
+To: Christoph Hellwig <hch@infradead.org>
+Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+	linux-btrfs@vger.kernel.org, Josef Bacik <josef@toxicpanda.com>
+Subject: Re: [PATCH] fscrypt: move the call to fscrypt_destroy_keyring() into
+ ->put_super()
+Message-ID: <20231209212938.GA2270@sol.localdomain>
+References: <20231206001325.13676-1-ebiggers@kernel.org>
+ <ZXAW1BREPtCSUz4W@infradead.org>
+ <20231206064430.GA41771@sol.localdomain>
+ <ZXAf0WUbCccBn5QM@infradead.org>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-User-Agent: Mozilla Thunderbird
-Subject: Re: [PATCH v3 11/12] arm64: dts: qcom: sm8650: add hwkm support to
- ufs ice
-Content-Language: en-US
-To: Bjorn Andersson <andersson@kernel.org>,
-        Gaurav Kashyap
-	<quic_gaurkash@quicinc.com>
-CC: <linux-scsi@vger.kernel.org>, <linux-arm-msm@vger.kernel.org>,
-        <ebiggers@google.com>, <neil.armstrong@linaro.org>,
-        <srinivas.kandagatla@linaro.org>, <linux-mmc@vger.kernel.org>,
-        <linux-block@vger.kernel.org>, <linux-fscrypt@vger.kernel.org>,
-        <omprsing@qti.qualcomm.com>, <quic_psodagud@quicinc.com>,
-        <abel.vesa@linaro.org>, <quic_spuppala@quicinc.com>,
-        <kernel@quicinc.com>
-References: <20231122053817.3401748-1-quic_gaurkash@quicinc.com>
- <20231122053817.3401748-12-quic_gaurkash@quicinc.com>
- <blzia6asujby2xsfg2na6piwcgfkorodugebvflstjfexeyfvj@t5ifq3kxquhw>
-From: Om Prakash Singh <quic_omprsing@quicinc.com>
-In-Reply-To: <blzia6asujby2xsfg2na6piwcgfkorodugebvflstjfexeyfvj@t5ifq3kxquhw>
-Content-Type: text/plain; charset="UTF-8"; format=flowed
-Content-Transfer-Encoding: 7bit
-X-ClientProxiedBy: nasanex01a.na.qualcomm.com (10.52.223.231) To
- nalasex01b.na.qualcomm.com (10.47.209.197)
-X-QCInternal: smtphost
-X-Proofpoint-Virus-Version: vendor=nai engine=6200 definitions=5800 signatures=585085
-X-Proofpoint-ORIG-GUID: YFtx0sXkLhCp189oQP_LKcLjktbtQuCB
-X-Proofpoint-GUID: YFtx0sXkLhCp189oQP_LKcLjktbtQuCB
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.272,Aquarius:18.0.997,Hydra:6.0.619,FMLib:17.11.176.26
- definitions=2023-12-08_04,2023-12-07_01,2023-05-22_02
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0 priorityscore=1501
- spamscore=0 impostorscore=0 clxscore=1011 lowpriorityscore=0 phishscore=0
- adultscore=0 malwarescore=0 mlxlogscore=920 suspectscore=0 mlxscore=0
- bulkscore=0 classifier=spam adjust=0 reason=mlx scancount=1
- engine=8.12.0-2311290000 definitions=main-2312080071
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <ZXAf0WUbCccBn5QM@infradead.org>
 
-
-
-On 12/8/2023 9:21 AM, Bjorn Andersson wrote:
-> On Tue, Nov 21, 2023 at 09:38:16PM -0800, Gaurav Kashyap wrote:
->> The Inline Crypto Engine (ICE) for UFS supports the
->> Hardware Key Manager (hwkm) to securely manage storage
->> keys. Enable using this hardware on sm8650.
+On Tue, Dec 05, 2023 at 11:16:33PM -0800, Christoph Hellwig wrote:
+> On Tue, Dec 05, 2023 at 10:44:30PM -0800, Eric Biggers wrote:
+> > There are lots of filesystems that free their ->s_fs_info in ->put_super().  Are
+> > they all wrong?
 > 
-> I'm unable to understand why the size of the reg changes based on this
-> motivation.
+> Wrong is the wrong word :)
 > 
-> Regards,
-> Bjorn
->
-Actual size of register space size is 0x18000 (as per IPCAT). But all 
-registers space are not used.
-
-HWKM register offset is start at 0x8000. Hence needed to expand reg map 
-size.
-
-
->>
->> Signed-off-by: Gaurav Kashyap <quic_gaurkash@quicinc.com>
->> ---
->>   arch/arm64/boot/dts/qcom/sm8650.dtsi | 3 ++-
->>   1 file changed, 2 insertions(+), 1 deletion(-)
->>
->> diff --git a/arch/arm64/boot/dts/qcom/sm8650.dtsi b/arch/arm64/boot/dts/qcom/sm8650.dtsi
->> index bbebe15437aa..b61066210e09 100644
->> --- a/arch/arm64/boot/dts/qcom/sm8650.dtsi
->> +++ b/arch/arm64/boot/dts/qcom/sm8650.dtsi
->> @@ -763,7 +763,8 @@ rng: rng@10c3000 {
->>   		ice: crypto@1d88000 {
->>   			compatible = "qcom,sm8650-inline-crypto-engine",
->>   				     "qcom,inline-crypto-engine";
->> -			reg = <0 0x01d88000 0 0x8000>;
->> +			reg = <0 0x01d88000 0 0x10000>;
->> +			qcom,ice-use-hwkm;
->>   
->>   			clocks = <&gcc GCC_UFS_PHY_ICE_CORE_CLK>;
->>   		};
->> -- 
->> 2.25.1
->>
->>
+> For simple file systems that either don't use block devices, or just
+> the main one set up by the super.c code using ->put_super is perfectly
+> fine.  Once a file system does something complicated like setting up
+> their own block devices, or trying to reuse super blocks using custom
+> rules it basically has to free ->s_fs_info  in it's own ->kill_sb
+> handler.  This whole area is a bit messy unfortunately.
 > 
+
+btrfs releases its block devices in ->put_super(), so with your proposal that
+would need to be moved to ->kill_sb() as well, right?
+
+I guess I'm a bit concerned about introducing a requirement "->put_super() must
+not release the block devices" which seemingly didn't exist before.
+
+- Eric
