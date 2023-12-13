@@ -1,33 +1,32 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-1.web.codeaurora.org [10.30.226.201])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 5C99DBE6D;
-	Wed, 13 Dec 2023 04:01:14 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id F03A4C8D4;
+	Wed, 13 Dec 2023 04:01:15 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="f0KKoY2j"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 8D37EC433C7;
-	Wed, 13 Dec 2023 04:01:14 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Mtsw78xN"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4A0D1C433C9;
+	Wed, 13 Dec 2023 04:01:15 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1702440074;
-	bh=x1ouiu2WnKIQtV47erUmnthL70kDRsFLvcEjWZFRFeg=;
+	s=k20201202; t=1702440075;
+	bh=/IgnbynuauVVnwnYuvTis66K2+UvLrV1IZcqqY1dQxo=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=f0KKoY2jT1ZANMkBJSLNQH5u8pVIMTsBy73HXBRpwKDV7Y9DEaZ3MOTaU6elnCdH5
-	 FEifJwGLDyd6ZCqq1Uxg65Uwdai7TBwjjtQs8EfW6obfdASjJ/0m23vQ8KPHo6TMju
-	 hQQ9jWtHdGElAkeKMaVUcltO3blbnswYq/yrMfCuij5ThcE+PRpE/suLTrQNhM5Lxy
-	 qcQ0xAqr3VM87rfeMHQ34tQ6Zj+NkaAl6JVTKgFojpSuA4mXi6VGxMsVnWl+Hi55zF
-	 UbfeVpEKmp9Oq4lTMdTCFosg906UJ++dakgjzl56DBXB2Nos2yVxhUpVEdNM0pcDiT
-	 gsKVYq/cC6eAA==
+	b=Mtsw78xNFAYW72ZVSI58XmG3r3b7jzf5YBccAulp9/1BO7zRBF+wDqWlYrljaMm4k
+	 +9/Vx7T1sw6/jBV6IO4Yha52vkFfiqnum5DEck4Ip6XZ9VSVH1PeChkoTOrTWNuszY
+	 c1N8MVSA6ovIcnZMimKA5Kw55To5yhNMb79uFZKY8fg5hjndWVeVqmfW9hQxcY7xS6
+	 5+OGVzgKJ3Y/tofA5oACmOTMCIwq0P6wpqYrMHO3JTqaGLbs50MhOKakxkbUvrYTPf
+	 xDELOGTPUziyVV7E1kKLU0GuHB2LUKeXJ1Ptab8+IqkLO6TSYZX3avBSD7LXIRnRgW
+	 OYnRi5KlA9t3A==
 From: Eric Biggers <ebiggers@kernel.org>
 To: linux-fsdevel@vger.kernel.org
 Cc: linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
 	Josef Bacik <josef@toxicpanda.com>,
-	Christoph Hellwig <hch@lst.de>,
-	Christian Brauner <brauner@kernel.org>
-Subject: [PATCH 1/3] btrfs: call btrfs_close_devices from ->kill_sb
-Date: Tue, 12 Dec 2023 20:00:16 -0800
-Message-ID: <20231213040018.73803-2-ebiggers@kernel.org>
+	Christoph Hellwig <hch@lst.de>
+Subject: [PATCH 3/3] fs: move fscrypt keyring destruction to after ->put_super
+Date: Tue, 12 Dec 2023 20:00:18 -0800
+Message-ID: <20231213040018.73803-4-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.43.0
 In-Reply-To: <20231213040018.73803-1-ebiggers@kernel.org>
 References: <20231213040018.73803-1-ebiggers@kernel.org>
@@ -39,157 +38,65 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-From: Christoph Hellwig <hch@lst.de>
+From: Josef Bacik <josef@toxicpanda.com>
 
-blkdev_put must not be called under sb->s_umount to avoid a lock order
-reversal with disk->open_mutex once call backs from block devices to
-the file system using the holder ops are supported.  Move the call
-to btrfs_close_devices into btrfs_free_fs_info so that it is closed
-from ->kill_sb (which is also called from the mount failure handling
-path unlike ->put_super) as well as when an fs_info is freed because
-an existing superblock already exists.
+btrfs has a variety of asynchronous things we do with inodes that can
+potentially last until ->put_super, when we shut everything down and
+clean up all of our async work.  Due to this we need to move
+fscrypt_destroy_keyring() to after ->put_super, otherwise we get
+warnings about still having active references on the master key.
 
-Signed-off-by: Christoph Hellwig <hch@lst.de>
-Reviewed-by: Christian Brauner <brauner@kernel.org>
+Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Eric Biggers <ebiggers@google.com>
 ---
- fs/btrfs/disk-io.c | 4 ++--
- fs/btrfs/super.c   | 7 ++-----
- 2 files changed, 4 insertions(+), 7 deletions(-)
+ fs/super.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
 
-diff --git a/fs/btrfs/disk-io.c b/fs/btrfs/disk-io.c
-index bbcc3df776461..fe98e6b1d9c61 100644
---- a/fs/btrfs/disk-io.c
-+++ b/fs/btrfs/disk-io.c
-@@ -1237,20 +1237,22 @@ static void free_global_roots(struct btrfs_fs_info *fs_info)
+diff --git a/fs/super.c b/fs/super.c
+index 076392396e724..faf7d248145d2 100644
+--- a/fs/super.c
++++ b/fs/super.c
+@@ -674,34 +674,34 @@ void generic_shutdown_super(struct super_block *sb)
+ 		/* Evict all inodes with zero refcount. */
+ 		evict_inodes(sb);
  
- 	while ((node = rb_first_postorder(&fs_info->global_root_tree)) != NULL) {
- 		root = rb_entry(node, struct btrfs_root, rb_node);
- 		rb_erase(&root->rb_node, &fs_info->global_root_tree);
- 		btrfs_put_root(root);
- 	}
- }
+ 		/*
+ 		 * Clean up and evict any inodes that still have references due
+ 		 * to fsnotify or the security policy.
+ 		 */
+ 		fsnotify_sb_delete(sb);
+ 		security_sb_delete(sb);
  
- void btrfs_free_fs_info(struct btrfs_fs_info *fs_info)
- {
-+	if (fs_info->fs_devices)
-+		btrfs_close_devices(fs_info->fs_devices);
- 	percpu_counter_destroy(&fs_info->dirty_metadata_bytes);
- 	percpu_counter_destroy(&fs_info->delalloc_bytes);
- 	percpu_counter_destroy(&fs_info->ordered_bytes);
- 	percpu_counter_destroy(&fs_info->dev_replace.bio_counter);
- 	btrfs_free_csum_hash(fs_info);
- 	btrfs_free_stripe_hash_table(fs_info);
- 	btrfs_free_ref_cache(fs_info);
- 	kfree(fs_info->balance_ctl);
- 	kfree(fs_info->delayed_root);
- 	free_global_roots(fs_info);
-@@ -3605,21 +3607,20 @@ int __cold open_ctree(struct super_block *sb, struct btrfs_fs_devices *fs_device
- 	invalidate_inode_pages2(fs_info->btree_inode->i_mapping);
+-		/*
+-		 * Now that all potentially-encrypted inodes have been evicted,
+-		 * the fscrypt keyring can be destroyed.
+-		 */
+-		fscrypt_destroy_keyring(sb);
+-
+ 		if (sb->s_dio_done_wq) {
+ 			destroy_workqueue(sb->s_dio_done_wq);
+ 			sb->s_dio_done_wq = NULL;
+ 		}
  
- fail_sb_buffer:
- 	btrfs_stop_all_workers(fs_info);
- 	btrfs_free_block_groups(fs_info);
- fail_alloc:
- 	btrfs_mapping_tree_free(&fs_info->mapping_tree);
+ 		if (sop->put_super)
+ 			sop->put_super(sb);
  
- 	iput(fs_info->btree_inode);
- fail:
--	btrfs_close_devices(fs_info->fs_devices);
- 	ASSERT(ret < 0);
- 	return ret;
- }
- ALLOW_ERROR_INJECTION(open_ctree, ERRNO);
++		/*
++		 * Now that all potentially-encrypted inodes have been evicted,
++		 * the fscrypt keyring can be destroyed.
++		 */
++		fscrypt_destroy_keyring(sb);
++
+ 		if (CHECK_DATA_CORRUPTION(!list_empty(&sb->s_inodes),
+ 				"VFS: Busy inodes after unmount of %s (%s)",
+ 				sb->s_id, sb->s_type->name)) {
+ 			/*
+ 			 * Adding a proper bailout path here would be hard, but
+ 			 * we can at least make it more likely that a later
+ 			 * iput_final() or such crashes cleanly.
+ 			 */
+ 			struct inode *inode;
  
- static void btrfs_end_super_write(struct bio *bio)
- {
- 	struct btrfs_device *device = bio->bi_private;
- 	struct bio_vec *bvec;
- 	struct bvec_iter_all iter_all;
-@@ -4385,21 +4386,20 @@ void __cold close_ctree(struct btrfs_fs_info *fs_info)
- 	 * have had an IO error and have left over tree log blocks that aren't
- 	 * cleaned up until the fs roots are freed.  This makes the block group
- 	 * accounting appear to be wrong because there's pending reserved bytes,
- 	 * so make sure we do the block group cleanup afterwards.
- 	 */
- 	btrfs_free_block_groups(fs_info);
- 
- 	iput(fs_info->btree_inode);
- 
- 	btrfs_mapping_tree_free(&fs_info->mapping_tree);
--	btrfs_close_devices(fs_info->fs_devices);
- }
- 
- void btrfs_mark_buffer_dirty(struct btrfs_trans_handle *trans,
- 			     struct extent_buffer *buf)
- {
- 	struct btrfs_fs_info *fs_info = buf->fs_info;
- 	u64 transid = btrfs_header_generation(buf);
- 
- #ifdef CONFIG_BTRFS_FS_RUN_SANITY_TESTS
- 	/*
-diff --git a/fs/btrfs/super.c b/fs/btrfs/super.c
-index ef256b944c72a..9616ce63c5630 100644
---- a/fs/btrfs/super.c
-+++ b/fs/btrfs/super.c
-@@ -1450,55 +1450,52 @@ static struct dentry *btrfs_mount_root(struct file_system_type *fs_type,
- 	fs_devices = device->fs_devices;
- 	fs_info->fs_devices = fs_devices;
- 
- 	error = btrfs_open_devices(fs_devices, mode, fs_type);
- 	mutex_unlock(&uuid_mutex);
- 	if (error)
- 		goto error_fs_info;
- 
- 	if (!(flags & SB_RDONLY) && fs_devices->rw_devices == 0) {
- 		error = -EACCES;
--		goto error_close_devices;
-+		goto error_fs_info;
- 	}
- 
- 	bdev = fs_devices->latest_dev->bdev;
- 	s = sget(fs_type, btrfs_test_super, btrfs_set_super, flags | SB_NOSEC,
- 		 fs_info);
- 	if (IS_ERR(s)) {
- 		error = PTR_ERR(s);
--		goto error_close_devices;
-+		goto error_fs_info;
- 	}
- 
- 	if (s->s_root) {
--		btrfs_close_devices(fs_devices);
- 		btrfs_free_fs_info(fs_info);
- 		if ((flags ^ s->s_flags) & SB_RDONLY)
- 			error = -EBUSY;
- 	} else {
- 		snprintf(s->s_id, sizeof(s->s_id), "%pg", bdev);
- 		shrinker_debugfs_rename(s->s_shrink, "sb-%s:%s", fs_type->name,
- 					s->s_id);
- 		btrfs_sb(s)->bdev_holder = fs_type;
- 		error = btrfs_fill_super(s, fs_devices, data);
- 	}
- 	if (!error)
- 		error = security_sb_set_mnt_opts(s, new_sec_opts, 0, NULL);
- 	security_free_mnt_opts(&new_sec_opts);
- 	if (error) {
- 		deactivate_locked_super(s);
- 		return ERR_PTR(error);
- 	}
- 
- 	return dget(s->s_root);
- 
--error_close_devices:
--	btrfs_close_devices(fs_devices);
- error_fs_info:
- 	btrfs_free_fs_info(fs_info);
- error_sec_opts:
- 	security_free_mnt_opts(&new_sec_opts);
- 	return ERR_PTR(error);
- }
- 
- /*
-  * Mount function which is called by VFS layer.
-  *
 -- 
 2.43.0
 
