@@ -1,140 +1,278 @@
-Received: from smtp.kernel.org (aws-us-west-2-korg-mail-1.web.codeaurora.org [10.30.226.201])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
-	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BA4AB1FAA
-	for <linux-fscrypt@vger.kernel.org>; Sat, 24 Feb 2024 06:01:53 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=10.30.226.201
+Received: from linux.microsoft.com (linux.microsoft.com [13.77.154.182])
+	by smtp.subspace.kernel.org (Postfix) with ESMTP id B955F2C856;
+	Thu, 29 Feb 2024 00:55:19 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=13.77.154.182
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1708754513; cv=none; b=XPZptCyqyzCl4dJrqfO6tVrupXwZb7nnb35Zw/HI9cj1PbZBIRICcgjHWnoLrs+7+xUAGOZ7uXOVAvej+QRPyw3Z8MddxVGV9W8x0Ib+7KG1bA4P8Dy4CxDD8eg3SmYFDT7VO9h360UcIGEiQ+R7lBXeFIpEKyG4xFkVrnDRSVU=
+	t=1709168121; cv=none; b=jtB/mvuWAE7gl6Au+jORpQ4T0elTTXugxBnaAXtiEX2QsJBX/6uv+mGK3ZrFNEE20a/5tmZSBBSjMG1l8CztIY26avSUKD74jfoeX2fF3I1z5DI4wlr2XxfcLKisjg7uakqDHapJkjUqh1/tRgpdTrsJ/IeZj3yprBwNjTcpf4s=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1708754513; c=relaxed/simple;
-	bh=F2+whYXAh7qvhGyZbgUIT9BuWE8TH/Bwu4CpObDrxBA=;
-	h=From:To:Subject:Date:Message-ID:MIME-Version; b=kbKPneYsgxbywwx4lEMw1B0UW2GeXDr65ZjXElP6F1i94LzwHKVJD8wPI7sBeu7E8kL4Fw7pNhLpQ5rjCZswGeOt18c+jcgfzAhJPwsxyvfEt3GqVdvv/8UZu3B1fP4LU316h9eFMrvdQ5/05re5FEWhrXyVfinYThWzNsbxJqI=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=d496LrwI; arc=none smtp.client-ip=10.30.226.201
+	s=arc-20240116; t=1709168121; c=relaxed/simple;
+	bh=EDo5RTtPeuCmWwByqD0kigCW6lb+mDj+rRRl1BJXMoU=;
+	h=From:To:Cc:Subject:Date:Message-Id:In-Reply-To:References; b=huaT5/pf/f+0aDIVx0bLUS3LkrmPxPU6W177c8bWEJYhUGfwpotvIBjd8jA4uH/K/nE3RpQvplh+uT4+HSVgXhcV3dN/cyaCoyAX1Tjr9KJcnZ8ICjopjUg/G50tkua//Xi53Nl+Tz2DjPWQtD56aucaX/YBw7ljTkK10QCZG7g=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.microsoft.com; spf=pass smtp.mailfrom=linux.microsoft.com; dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b=VaeyjUDc; arc=none smtp.client-ip=13.77.154.182
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.microsoft.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.microsoft.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="d496LrwI"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4108AC433F1
-	for <linux-fscrypt@vger.kernel.org>; Sat, 24 Feb 2024 06:01:53 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1708754513;
-	bh=F2+whYXAh7qvhGyZbgUIT9BuWE8TH/Bwu4CpObDrxBA=;
-	h=From:To:Subject:Date:From;
-	b=d496LrwIvHuIgpkkKtHOoA20Mgli5VmJmIvWA/y5/t/1DHFHk4NndIIUwyzQgiA5o
-	 gXfcc89YBkUJLhA0mOoM3KqYKJZgtev1aMEQzEwOv6BW/aMF4U7Tki+C5cFRW0tZfR
-	 m3dP5n2uOflHJuVSkTKh6takvlsvFxpYEGUMtypj1kgeq5bqjvb0IX51w/IlwNcxUZ
-	 G45o8kHuW8pkOEseZMhG2x5dYXTIIAk2Wfu486lXogg30oivX91AOHOeBD/IEo1eqp
-	 DmQETaaGxt0uujKsK+P2CwkUkghBDgOUH17D4KGAhknel1s0D3dOHReQxK0TSGSv/g
-	 +kokPXBDdxrZQ==
-From: Eric Biggers <ebiggers@kernel.org>
-To: linux-fscrypt@vger.kernel.org
-Subject: [PATCH] fscrypt: shrink the size of struct fscrypt_inode_info slightly
-Date: Fri, 23 Feb 2024 22:01:03 -0800
-Message-ID: <20240224060103.91037-1-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.43.2
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="VaeyjUDc"
+Received: by linux.microsoft.com (Postfix, from userid 1052)
+	id 8BDCC20B74C5; Wed, 28 Feb 2024 16:55:18 -0800 (PST)
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 8BDCC20B74C5
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
+	s=default; t=1709168118;
+	bh=HFneUDC8Z8Dzy3b48RYvWYU96HA+vpivC93Ukb00udk=;
+	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
+	b=VaeyjUDc+8JO4rPJ7hesRJoJksglcnozafZKfBahk6zuyIG+QRWSyE+tKnQvxTnaH
+	 Ayl4NCvWI1kr9hog/zpSl9jtmfYwzlQgmBqAGBAptUfY3VB892TGccF7+zPhuIxsYl
+	 Edptdjhq0lGodpRzH/Iu5ov0L4Q/puX05ZpY+kkQ=
+From: Fan Wu <wufan@linux.microsoft.com>
+To: corbet@lwn.net,
+	zohar@linux.ibm.com,
+	jmorris@namei.org,
+	serge@hallyn.com,
+	tytso@mit.edu,
+	ebiggers@kernel.org,
+	axboe@kernel.dk,
+	agk@redhat.com,
+	snitzer@kernel.org,
+	eparis@redhat.com,
+	paul@paul-moore.com
+Cc: linux-doc@vger.kernel.org,
+	linux-integrity@vger.kernel.org,
+	linux-security-module@vger.kernel.org,
+	linux-fscrypt@vger.kernel.org,
+	linux-block@vger.kernel.org,
+	dm-devel@lists.linux.dev,
+	audit@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	Deven Bowers <deven.desai@linux.microsoft.com>,
+	Fan Wu <wufan@linux.microsoft.com>
+Subject: [RFC PATCH v13 03/20] ipe: add evaluation loop
+Date: Wed, 28 Feb 2024 16:54:45 -0800
+Message-Id: <1709168102-7677-4-git-send-email-wufan@linux.microsoft.com>
+X-Mailer: git-send-email 1.8.3.1
+In-Reply-To: <1709168102-7677-1-git-send-email-wufan@linux.microsoft.com>
+References: <1709168102-7677-1-git-send-email-wufan@linux.microsoft.com>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
 
-From: Eric Biggers <ebiggers@google.com>
+From: Deven Bowers <deven.desai@linux.microsoft.com>
 
-Shrink the size of struct fscrypt_inode_info by 8 bytes by packing the
-small fields into the 64 bits after ci_enc_key.
+IPE must have a centralized function to evaluate incoming callers
+against IPE's policy. This iteration of the policy for against the rules
+for that specific caller is known as the evaluation loop.
 
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Deven Bowers <deven.desai@linux.microsoft.com>
+Signed-off-by: Fan Wu <wufan@linux.microsoft.com>
+
 ---
- fs/crypto/fscrypt_private.h | 14 ++++++++------
- 1 file changed, 8 insertions(+), 6 deletions(-)
+v2:
++ Split evaluation loop, access control hooks, and evaluation loop from policy parser and userspace interface to pass mailing list character limit
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 1892356cf924a..8371e4e1f596a 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -215,40 +215,46 @@ struct fscrypt_prepared_key {
-  * When an encrypted file's key is made available, an instance of this struct is
-  * allocated and stored in ->i_crypt_info.  Once created, it remains until the
-  * inode is evicted.
-  */
- struct fscrypt_inode_info {
- 
- 	/* The key in a form prepared for actual encryption/decryption */
- 	struct fscrypt_prepared_key ci_enc_key;
- 
- 	/* True if ci_enc_key should be freed when this struct is freed */
--	bool ci_owns_key;
-+	u8 ci_owns_key : 1;
- 
- #ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
- 	/*
- 	 * True if this inode will use inline encryption (blk-crypto) instead of
- 	 * the traditional filesystem-layer encryption.
- 	 */
--	bool ci_inlinecrypt;
-+	u8 ci_inlinecrypt : 1;
- #endif
- 
-+	/* True if ci_dirhash_key is initialized */
-+	u8 ci_dirhash_key_initialized : 1;
-+
- 	/*
- 	 * log2 of the data unit size (granularity of contents encryption) of
- 	 * this file.  This is computable from ci_policy and ci_inode but is
- 	 * cached here for efficiency.  Only used for regular files.
- 	 */
- 	u8 ci_data_unit_bits;
- 
- 	/* Cached value: log2 of number of data units per FS block */
- 	u8 ci_data_units_per_block_bits;
- 
-+	/* Hashed inode number.  Only set for IV_INO_LBLK_32 */
-+	u32 ci_hashed_ino;
-+
- 	/*
- 	 * Encryption mode used for this inode.  It corresponds to either the
- 	 * contents or filenames encryption mode, depending on the inode type.
- 	 */
- 	struct fscrypt_mode *ci_mode;
- 
- 	/* Back-pointer to the inode */
- 	struct inode *ci_inode;
- 
- 	/*
-@@ -269,30 +275,26 @@ struct fscrypt_inode_info {
- 	 * and ci_enc_key will equal ci_direct_key->dk_key.
- 	 */
- 	struct fscrypt_direct_key *ci_direct_key;
- 
- 	/*
- 	 * This inode's hash key for filenames.  This is a 128-bit SipHash-2-4
- 	 * key.  This is only set for directories that use a keyed dirhash over
- 	 * the plaintext filenames -- currently just casefolded directories.
- 	 */
- 	siphash_key_t ci_dirhash_key;
--	bool ci_dirhash_key_initialized;
- 
- 	/* The encryption policy used by this inode */
- 	union fscrypt_policy ci_policy;
- 
- 	/* This inode's nonce, copied from the fscrypt_context */
- 	u8 ci_nonce[FSCRYPT_FILE_NONCE_SIZE];
--
--	/* Hashed inode number.  Only set for IV_INO_LBLK_32 */
--	u32 ci_hashed_ino;
- };
- 
- typedef enum {
- 	FS_DECRYPT = 0,
- 	FS_ENCRYPT,
- } fscrypt_direction_t;
- 
- /* crypto.c */
- extern struct kmem_cache *fscrypt_inode_info_cachep;
- int fscrypt_initialize(struct super_block *sb);
+v3:
++ Move ipe_load_properties to patch 04.
++ Remove useless 0-initializations Prefix extern variables with ipe_
++ Remove kernel module parameters, as these are exposed through sysctls.
++ Add more prose to the IPE base config option help text.
++ Use GFP_KERNEL for audit_log_start.
++ Remove unnecessary caching system.
++ Remove comments from headers
++ Use rcu_access_pointer for rcu-pointer null check
++ Remove usage of reqprot; use prot only.
++Move policy load and activation audit event to 03/12
 
-base-commit: 2f944c66ae73eed4250607ccd3acdf2531afc194
+v4:
++ Remove sysctls in favor of securityfs nodes
++ Re-add kernel module parameters, as these are now exposed through securityfs.
++ Refactor property audit loop to a separate function.
+
+v5:
++ fix minor grammatical errors
++ do not group rule by curly-brace in audit record,
++ reconstruct the exact rule.
+
+v6:
++ No changes
+
+v7:
++ Further split lsm creation into a separate commit from the evaluation loop and audit system, for easier review.
++ Propagating changes to support the new ipe_context structure in the evaluation loop.
+
+v8:
++ Remove ipe_hook enumeration; hooks can be correlated via syscall record.
+
+v9:
++ Remove ipe_context related code and simplify the evaluation loop.
+
+v10:
++ Split eval part and boot_verified part
+
+v11:
++ Fix code style issues
+
+v12:
++ Correct an rcu_read_unlock usage
++ Add a WARN to unknown op during evaluation
+
+v13:
++ No changes
+---
+ security/ipe/Makefile |   1 +
+ security/ipe/eval.c   | 100 ++++++++++++++++++++++++++++++++++++++++++
+ security/ipe/eval.h   |  24 ++++++++++
+ 3 files changed, 125 insertions(+)
+ create mode 100644 security/ipe/eval.c
+ create mode 100644 security/ipe/eval.h
+
+diff --git a/security/ipe/Makefile b/security/ipe/Makefile
+index c09aec4904f2..57fe922cf1fc 100644
+--- a/security/ipe/Makefile
++++ b/security/ipe/Makefile
+@@ -6,6 +6,7 @@
+ #
+ 
+ obj-$(CONFIG_SECURITY_IPE) += \
++	eval.o \
+ 	ipe.o \
+ 	policy.o \
+ 	policy_parser.o \
+diff --git a/security/ipe/eval.c b/security/ipe/eval.c
+new file mode 100644
+index 000000000000..af56815ed0fa
+--- /dev/null
++++ b/security/ipe/eval.c
+@@ -0,0 +1,100 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++
++#include <linux/fs.h>
++#include <linux/types.h>
++#include <linux/slab.h>
++#include <linux/file.h>
++#include <linux/sched.h>
++#include <linux/rcupdate.h>
++
++#include "ipe.h"
++#include "eval.h"
++#include "policy.h"
++
++struct ipe_policy __rcu *ipe_active_policy;
++
++/**
++ * evaluate_property - Analyze @ctx against a property.
++ * @ctx: Supplies a pointer to the context to be evaluated.
++ * @p: Supplies a pointer to the property to be evaluated.
++ *
++ * Return:
++ * * true	- The current @ctx match the @p
++ * * false	- The current @ctx doesn't match the @p
++ */
++static bool evaluate_property(const struct ipe_eval_ctx *const ctx,
++			      struct ipe_prop *p)
++{
++	return false;
++}
++
++/**
++ * ipe_evaluate_event - Analyze @ctx against the current active policy.
++ * @ctx: Supplies a pointer to the context to be evaluated.
++ *
++ * This is the loop where all policy evaluation happens against IPE policy.
++ *
++ * Return:
++ * * 0		- OK
++ * * -EACCES	- @ctx did not pass evaluation.
++ * * !0		- Error
++ */
++int ipe_evaluate_event(const struct ipe_eval_ctx *const ctx)
++{
++	bool match = false;
++	enum ipe_action_type action;
++	struct ipe_policy *pol = NULL;
++	const struct ipe_rule *rule = NULL;
++	const struct ipe_op_table *rules = NULL;
++	struct ipe_prop *prop = NULL;
++
++	rcu_read_lock();
++
++	pol = rcu_dereference(ipe_active_policy);
++	if (!pol) {
++		rcu_read_unlock();
++		return 0;
++	}
++
++	if (ctx->op == IPE_OP_INVALID) {
++		if (pol->parsed->global_default_action == IPE_ACTION_DENY) {
++			rcu_read_unlock();
++			return -EACCES;
++		}
++		if (pol->parsed->global_default_action == IPE_ACTION_INVALID)
++			WARN(1, "no default rule set for unknown op, ALLOW it");
++		rcu_read_unlock();
++		return 0;
++	}
++
++	rules = &pol->parsed->rules[ctx->op];
++
++	list_for_each_entry(rule, &rules->rules, next) {
++		match = true;
++
++		list_for_each_entry(prop, &rule->props, next) {
++			match = evaluate_property(ctx, prop);
++			if (!match)
++				break;
++		}
++
++		if (match)
++			break;
++	}
++
++	if (match)
++		action = rule->action;
++	else if (rules->default_action != IPE_ACTION_INVALID)
++		action = rules->default_action;
++	else
++		action = pol->parsed->global_default_action;
++
++	rcu_read_unlock();
++	if (action == IPE_ACTION_DENY)
++		return -EACCES;
++
++	return 0;
++}
+diff --git a/security/ipe/eval.h b/security/ipe/eval.h
+new file mode 100644
+index 000000000000..6b434515968f
+--- /dev/null
++++ b/security/ipe/eval.h
+@@ -0,0 +1,24 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright (C) Microsoft Corporation. All rights reserved.
++ */
++
++#ifndef _IPE_EVAL_H
++#define _IPE_EVAL_H
++
++#include <linux/file.h>
++#include <linux/types.h>
++
++#include "policy.h"
++
++extern struct ipe_policy __rcu *ipe_active_policy;
++
++struct ipe_eval_ctx {
++	enum ipe_op_type op;
++
++	const struct file *file;
++};
++
++int ipe_evaluate_event(const struct ipe_eval_ctx *const ctx);
++
++#endif /* _IPE_EVAL_H */
 -- 
-2.43.2
+2.43.1
 
