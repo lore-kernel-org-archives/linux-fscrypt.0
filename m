@@ -1,28 +1,28 @@
 Received: from linux.microsoft.com (linux.microsoft.com [13.77.154.182])
-	by smtp.subspace.kernel.org (Postfix) with ESMTP id BAD6725767;
-	Wed,  6 Mar 2024 23:34:56 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTP id E2CAE1CD05;
+	Wed,  6 Mar 2024 23:34:55 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=13.77.154.182
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1709768101; cv=none; b=UUWSGZP6Xwc33tbsUBpZLGTE9FtLWdGQMI69yoMNmcqRQNAaQ/dbwzgBJ+r07uJdhSx5wZ/JIA0IUdLIAgeD/YJGxC+KuCgFWMH7wmVjBo8awRQLLnWSjIcKrWglgsMXH0scxCXI8YZIxH6IaGrKFF5NdHI1nWQEdRH0zyTV1/E=
+	t=1709768101; cv=none; b=cRPHX+BG5j61TV5qXanaTrc104r1GrY4nE1O4opOh9NtWn0DPE2ldrLE5h3N9/HaTv/wRKyXPeVKEfZPjgHItJrmMuQG4rHjNcg88O3N9Cx4i3rv8/6bRBQMNIqq0Yvg4oAkjwkKLjCxiF7xOCHaJ26ZruA1+fsxnlEIE0oNjS8=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
 	s=arc-20240116; t=1709768101; c=relaxed/simple;
-	bh=emcL+vYILjaOfq7wlTL8ehbQYBOuvpe+KNYEJXFUKs8=;
-	h=From:To:Cc:Subject:Date:Message-Id:In-Reply-To:References; b=MX0g2XhsA8VtB9bYnXtlRbFj72vhcQFPXsQFEbagifdmxGFZ07fUBS9ItlS9OjDBTvCHRctzH3w6x9jJBiAI5RKBeg2GiSvNlh8FU3qtXayrVPInul7rcI+Ro/E2l46PyWTWGFLrCA75Kp2BtEJ6SbLUimgBkgAgKFNIr9/x8d0=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.microsoft.com; spf=pass smtp.mailfrom=linux.microsoft.com; dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b=cGin7cCJ; arc=none smtp.client-ip=13.77.154.182
+	bh=lhcpsSgmIKPdWKFGSPrgCpOZyw5E8X4X6o0rcRnO6Ts=;
+	h=From:To:Cc:Subject:Date:Message-Id:In-Reply-To:References; b=PDDsJLzk/WTnoNfFc0lgmsUuBscqYwfOOKCaePzFQVvJfrkzKQZu/CAc0qh8iJ2UOS9Il1Q0cC63SEVCPbuI2k/HYZ5sl+gpTvbjIqSP0sbEuayVHcndU+786vSFs+Tw6Qr2G8+s6s1Xe+e3FcZVtr0AIAkmqX80SNVB3jv199E=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.microsoft.com; spf=pass smtp.mailfrom=linux.microsoft.com; dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b=cb4GAJNz; arc=none smtp.client-ip=13.77.154.182
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.microsoft.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.microsoft.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="cGin7cCJ"
+	dkim=pass (1024-bit key) header.d=linux.microsoft.com header.i=@linux.microsoft.com header.b="cb4GAJNz"
 Received: by linux.microsoft.com (Postfix, from userid 1052)
-	id BDEB920B74DB; Wed,  6 Mar 2024 15:34:52 -0800 (PST)
-DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com BDEB920B74DB
+	id 9149D20B74D5; Wed,  6 Mar 2024 15:34:52 -0800 (PST)
+DKIM-Filter: OpenDKIM Filter v2.11.0 linux.microsoft.com 9149D20B74D5
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=linux.microsoft.com;
 	s=default; t=1709768092;
-	bh=qULjwUAx+qpH6wN6gAMo3Am9Y0xGiQL+7KtdiOJsnGc=;
+	bh=iSuMxHd4X5zPSdyMKGiOczdYwNtNwHyoZWCoaCn1mhw=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References:From;
-	b=cGin7cCJrpCmWQ6Us9lvzSJp7b8HmgssyekkBGjMEsKxcL7awn71PoSeIlQwy8oy2
-	 FtLAeDGbjzwydjHDMKRTD/sDQsMvBnSXsQZ2kI1MmygRxiLmUjqy+roxabeXhZJcu8
-	 iJJ2MIAnGIQb+s5pjYQ7Ae7cdC0qY4Ha92J0uZUA=
+	b=cb4GAJNzQ++KPgs3zIjA6q3sNSMVjKe/QS2ZU9IOgkx43l1GhTwpjNDAzSU8mlv5o
+	 oZ1Bjla9/F0VS942LMKo1rP3R0bKo4UjGsxgdXQKFFZpb1NCuaW0lLszzI3b+mCoU+
+	 ojgFSIvyZPEMJNCsoj5VxFoCNyUn+ubKU5kBGLD4=
 From: Fan Wu <wufan@linux.microsoft.com>
 To: corbet@lwn.net,
 	zohar@linux.ibm.com,
@@ -45,9 +45,9 @@ Cc: linux-doc@vger.kernel.org,
 	linux-kernel@vger.kernel.org,
 	Deven Bowers <deven.desai@linux.microsoft.com>,
 	Fan Wu <wufan@linux.microsoft.com>
-Subject: [RFC PATCH v14 14/19] ipe: add support for dm-verity as a trust provider
-Date: Wed,  6 Mar 2024 15:34:39 -0800
-Message-Id: <1709768084-22539-15-git-send-email-wufan@linux.microsoft.com>
+Subject: [RFC PATCH v14 11/19] block|security: add LSM blob to block_device
+Date: Wed,  6 Mar 2024 15:34:36 -0800
+Message-Id: <1709768084-22539-12-git-send-email-wufan@linux.microsoft.com>
 X-Mailer: git-send-email 1.8.3.1
 In-Reply-To: <1709768084-22539-1-git-send-email-wufan@linux.microsoft.com>
 References: <1709768084-22539-1-git-send-email-wufan@linux.microsoft.com>
@@ -59,756 +59,346 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 
 From: Deven Bowers <deven.desai@linux.microsoft.com>
 
-Allows author of IPE policy to indicate trust for a singular dm-verity
-volume, identified by roothash, through "dmverity_roothash" and all
-signed dm-verity volumes, through "dmverity_signature".
+Some block devices have valuable security properties that is only
+accessible during the creation time.
+
+For example, when creating a dm-verity block device, the dm-verity's
+roothash and roothash signature, which are extreme important security
+metadata, are passed to the kernel. However, the roothash will be saved
+privately in dm-verity, which prevents the security subsystem to easily
+access that information. Worse, in the current implementation the
+roothash signature will be discarded after the verification, making it
+impossible to utilize the roothash signature by the security subsystem.
+
+With this patch, an LSM blob is added to the block_device structure.
+This enables the security subsystem to store security-sensitive data
+related to block devices within the security blob. For example, LSM can
+use the new LSM blob to save the roothash signature of a dm-verity,
+and LSM can make access decision based on the data inside the signature,
+like the signer certificate.
+
+The implementation follows the same approach used for security blobs in
+other structures like struct file, struct inode, and struct superblock.
+The initialization of the security blob occurs after the creation of the
+struct block_device, performed by the security subsystem. Similarly, the
+security blob is freed by the security subsystem before the struct
+block_device is deallocated or freed.
 
 Signed-off-by: Deven Bowers <deven.desai@linux.microsoft.com>
 Signed-off-by: Fan Wu <wufan@linux.microsoft.com>
+Reviewed-by: Casey Schaufler <casey@schaufler-ca.com>
 
 ---
 v2:
   + No Changes
 
 v3:
-  + No changes
+  + Minor style changes from checkpatch --strict
 
 v4:
-  + No changes
+  + No Changes
 
 v5:
-  + No changes
+  + Allow multiple callers to call security_bdev_setsecurity
 
 v6:
-  + Fix an improper cleanup that can result in
-    a leak
+  + Simplify security_bdev_setsecurity break condition
 
 v7:
-  + Squash patch 08/12, 10/12 to [11/16]
+  + Squash all dm-verity related patches to two patches,
+    the additions to dm-verity/fs, and the consumption of
+    the additions.
 
 v8:
-  + Undo squash of 08/12, 10/12 - separating drivers/md/ from security/
-    & block/
-  + Use common-audit function for dmverity_signature.
-  + Change implementation for storing the dm-verity digest to use the
-    newly introduced dm_verity_digest structure introduced in patch
-    14/20.
+  + Split dm-verity related patches squashed in v7 to 3 commits based on
+    topic:
+      + New LSM hook
+      + Consumption of hook outside LSM
+      + Consumption of hook inside LSM.
+
+  + change return of security_bdev_alloc / security_bdev_setsecurity
+    to LSM_RET_DEFAULT instead of 0.
+
+  + Change return code to -EOPNOTSUPP, bring inline with other
+    setsecurity hooks.
 
 v9:
-  + Adapt to the new parser
+  + Add Reviewed-by: Casey Schaufler <casey@schaufler-ca.com>
+  + Remove unlikely when calling LSM hook
+  + Make the security field dependent on CONFIG_SECURITY
 
 v10:
-  + Select the Kconfig when all dependencies are enabled
+  + No changes
 
 v11:
   + No changes
 
 v12:
-  + Refactor to use struct digest_info* instead of void*
-  + Correct audit format
+  + No changes
 
 v13:
-  + Remove the CONFIG_IPE_PROP_DM_VERITY dependency inside the parser
-    to make the policy grammar independent of the kernel config.
+  + No changes
 
 v14:
   + No changes
 ---
- security/ipe/Kconfig         |  18 ++++++
- security/ipe/Makefile        |   1 +
- security/ipe/audit.c         |  29 ++++++++-
- security/ipe/digest.c        | 120 +++++++++++++++++++++++++++++++++++
- security/ipe/digest.h        |  26 ++++++++
- security/ipe/eval.c          |  91 +++++++++++++++++++++++++-
- security/ipe/eval.h          |  10 +++
- security/ipe/hooks.c         |  67 +++++++++++++++++++
- security/ipe/hooks.h         |   8 +++
- security/ipe/ipe.c           |  15 +++++
- security/ipe/ipe.h           |   4 ++
- security/ipe/policy.h        |   3 +
- security/ipe/policy_parser.c |  24 ++++++-
- 13 files changed, 412 insertions(+), 4 deletions(-)
- create mode 100644 security/ipe/digest.c
- create mode 100644 security/ipe/digest.h
+ block/bdev.c                  |  7 +++
+ include/linux/blk_types.h     |  3 ++
+ include/linux/lsm_hook_defs.h |  5 ++
+ include/linux/lsm_hooks.h     |  1 +
+ include/linux/security.h      | 22 ++++++++
+ security/security.c           | 99 +++++++++++++++++++++++++++++++++++
+ 6 files changed, 137 insertions(+)
 
-diff --git a/security/ipe/Kconfig b/security/ipe/Kconfig
-index ac4d558e69d5..7afb1ce0cb99 100644
---- a/security/ipe/Kconfig
-+++ b/security/ipe/Kconfig
-@@ -8,6 +8,7 @@ menuconfig SECURITY_IPE
- 	depends on SECURITY && SECURITYFS && AUDIT && AUDITSYSCALL
- 	select PKCS7_MESSAGE_PARSER
- 	select SYSTEM_DATA_VERIFICATION
-+	select IPE_PROP_DM_VERITY if DM_VERITY && DM_VERITY_VERIFY_ROOTHASH_SIG
- 	help
- 	  This option enables the Integrity Policy Enforcement LSM
- 	  allowing users to define a policy to enforce a trust-based access
-@@ -15,3 +16,20 @@ menuconfig SECURITY_IPE
- 	  admins to reconfigure trust requirements on the fly.
- 
- 	  If unsure, answer N.
+diff --git a/block/bdev.c b/block/bdev.c
+index e9f1b12bd75c..c3bb5d6a030c 100644
+--- a/block/bdev.c
++++ b/block/bdev.c
+@@ -24,6 +24,7 @@
+ #include <linux/pseudo_fs.h>
+ #include <linux/uio.h>
+ #include <linux/namei.h>
++#include <linux/security.h>
+ #include <linux/part_stat.h>
+ #include <linux/uaccess.h>
+ #include <linux/stat.h>
+@@ -307,6 +308,11 @@ static struct inode *bdev_alloc_inode(struct super_block *sb)
+ 	if (!ei)
+ 		return NULL;
+ 	memset(&ei->bdev, 0, sizeof(ei->bdev));
 +
-+if SECURITY_IPE
-+menu "IPE Trust Providers"
-+
-+config IPE_PROP_DM_VERITY
-+	bool "Enable support for dm-verity volumes"
-+	depends on DM_VERITY && DM_VERITY_VERIFY_ROOTHASH_SIG
-+	help
-+	  This option enables the properties 'dmverity_signature' and
-+	  'dmverity_roothash' in IPE policy. These properties evaluates
-+	  to TRUE when a file is evaluated against a dm-verity volume
-+	  that was mounted with a signed root-hash or the volume's
-+	  root hash matches the supplied value in the policy.
-+
-+endmenu
-+
-+endif
-diff --git a/security/ipe/Makefile b/security/ipe/Makefile
-index 2279eaa3cea3..66de53687d11 100644
---- a/security/ipe/Makefile
-+++ b/security/ipe/Makefile
-@@ -6,6 +6,7 @@
- #
++	if (security_bdev_alloc(&ei->bdev)) {
++		kmem_cache_free(bdev_cachep, ei);
++		return NULL;
++	}
+ 	return &ei->vfs_inode;
+ }
  
- obj-$(CONFIG_SECURITY_IPE) += \
-+	digest.o \
- 	eval.o \
- 	hooks.o \
- 	fs.o \
-diff --git a/security/ipe/audit.c b/security/ipe/audit.c
-index a480f27278df..3acbfecc9f43 100644
---- a/security/ipe/audit.c
-+++ b/security/ipe/audit.c
-@@ -13,6 +13,7 @@
- #include "hooks.h"
- #include "policy.h"
- #include "audit.h"
-+#include "digest.h"
+@@ -316,6 +322,7 @@ static void bdev_free_inode(struct inode *inode)
  
- #define ACTSTR(x) ((x) == IPE_ACTION_ALLOW ? "ALLOW" : "DENY")
+ 	free_percpu(bdev->bd_stats);
+ 	kfree(bdev->bd_meta_info);
++	security_bdev_free(bdev);
  
-@@ -49,8 +50,22 @@ static const char *const audit_hook_names[__IPE_HOOK_MAX] = {
- static const char *const audit_prop_names[__IPE_PROP_MAX] = {
- 	"boot_verified=FALSE",
- 	"boot_verified=TRUE",
-+	"dmverity_roothash=",
-+	"dmverity_signature=FALSE",
-+	"dmverity_signature=TRUE",
+ 	if (!bdev_is_partition(bdev)) {
+ 		if (bdev->bd_disk && bdev->bd_disk->bdi)
+diff --git a/include/linux/blk_types.h b/include/linux/blk_types.h
+index f288c94374b3..339647f8645a 100644
+--- a/include/linux/blk_types.h
++++ b/include/linux/blk_types.h
+@@ -69,6 +69,9 @@ struct block_device {
+ #endif
+ 	bool			bd_ro_warned;
+ 	int			bd_writers;
++#ifdef CONFIG_SECURITY
++	void			*security;
++#endif
+ 	/*
+ 	 * keep this out-of-line as it's both big and not needed in the fast
+ 	 * path
+diff --git a/include/linux/lsm_hook_defs.h b/include/linux/lsm_hook_defs.h
+index e0f50789a18f..8303f10ba7b2 100644
+--- a/include/linux/lsm_hook_defs.h
++++ b/include/linux/lsm_hook_defs.h
+@@ -427,3 +427,8 @@ LSM_HOOK(int, 0, uring_cmd, struct io_uring_cmd *ioucmd)
+ #endif /* CONFIG_IO_URING */
+ 
+ LSM_HOOK(void, LSM_RET_VOID, initramfs_populated, void)
++
++LSM_HOOK(int, 0, bdev_alloc_security, struct block_device *bdev)
++LSM_HOOK(void, LSM_RET_VOID, bdev_free_security, struct block_device *bdev)
++LSM_HOOK(int, 0, bdev_setsecurity, struct block_device *bdev, const char *name,
++	 const void *value, size_t size)
+diff --git a/include/linux/lsm_hooks.h b/include/linux/lsm_hooks.h
+index a2ade0ffe9e7..f1692179aa56 100644
+--- a/include/linux/lsm_hooks.h
++++ b/include/linux/lsm_hooks.h
+@@ -78,6 +78,7 @@ struct lsm_blob_sizes {
+ 	int	lbs_msg_msg;
+ 	int	lbs_task;
+ 	int	lbs_xattr_count; /* number of xattr slots in new_xattrs array */
++	int	lbs_bdev;
  };
  
-+/**
-+ * audit_dmv_roothash - audit the roothash of a dmverity_roothash property.
-+ * @ab: Supplies a pointer to the audit_buffer to append to.
-+ * @rh: Supplies a pointer to the digest structure.
-+ */
-+static void audit_dmv_roothash(struct audit_buffer *ab, const void *rh)
+ /**
+diff --git a/include/linux/security.h b/include/linux/security.h
+index e74e8b2a07f4..22707bddf8c9 100644
+--- a/include/linux/security.h
++++ b/include/linux/security.h
+@@ -496,6 +496,11 @@ int security_inode_getsecctx(struct inode *inode, void **ctx, u32 *ctxlen);
+ int security_locked_down(enum lockdown_reason what);
+ int lsm_fill_user_ctx(struct lsm_ctx __user *uctx, size_t *uctx_len,
+ 		      void *val, size_t val_len, u64 id, u64 flags);
++int security_bdev_alloc(struct block_device *bdev);
++void security_bdev_free(struct block_device *bdev);
++int security_bdev_setsecurity(struct block_device *bdev,
++			      const char *name, const void *value,
++			      size_t size);
+ #else /* CONFIG_SECURITY */
+ 
+ static inline int call_blocking_lsm_notifier(enum lsm_event event, void *data)
+@@ -1439,6 +1444,23 @@ static inline int lsm_fill_user_ctx(struct lsm_ctx __user *uctx,
+ {
+ 	return -EOPNOTSUPP;
+ }
++
++static inline int security_bdev_alloc(struct block_device *bdev)
 +{
-+	audit_log_format(ab, "%s", audit_prop_names[IPE_PROP_DMV_ROOTHASH]);
-+	ipe_digest_audit(ab, rh);
++	return 0;
++}
++
++static inline void security_bdev_free(struct block_device *bdev)
++{
++}
++
++static inline int security_bdev_setsecurity(struct block_device *bdev,
++					    const char *name,
++					    const void *value, size_t size)
++{
++	return 0;
++}
++
+ #endif	/* CONFIG_SECURITY */
+ 
+ #if defined(CONFIG_SECURITY) && defined(CONFIG_WATCH_QUEUE)
+diff --git a/security/security.c b/security/security.c
+index 26c28db211fd..32989a6b0478 100644
+--- a/security/security.c
++++ b/security/security.c
+@@ -31,6 +31,7 @@
+ #include <linux/msg.h>
+ #include <linux/overflow.h>
+ #include <net/flow.h>
++#include <linux/fs.h>
+ 
+ /* How many LSMs were built into the kernel? */
+ #define LSM_COUNT (__end_lsm_info - __start_lsm_info)
+@@ -232,6 +233,7 @@ static void __init lsm_set_blob_sizes(struct lsm_blob_sizes *needed)
+ 	lsm_set_blob_size(&needed->lbs_task, &blob_sizes.lbs_task);
+ 	lsm_set_blob_size(&needed->lbs_xattr_count,
+ 			  &blob_sizes.lbs_xattr_count);
++	lsm_set_blob_size(&needed->lbs_bdev, &blob_sizes.lbs_bdev);
+ }
+ 
+ /* Prepare LSM for initialization. */
+@@ -405,6 +407,7 @@ static void __init ordered_lsm_init(void)
+ 	init_debug("superblock blob size = %d\n", blob_sizes.lbs_superblock);
+ 	init_debug("task blob size       = %d\n", blob_sizes.lbs_task);
+ 	init_debug("xattr slots          = %d\n", blob_sizes.lbs_xattr_count);
++	init_debug("bdev blob size       = %d\n", blob_sizes.lbs_bdev);
+ 
+ 	/*
+ 	 * Create any kmem_caches needed for blobs
+@@ -737,6 +740,28 @@ static int lsm_msg_msg_alloc(struct msg_msg *mp)
+ 	return 0;
+ }
+ 
++/**
++ * lsm_bdev_alloc - allocate a composite block_device blob
++ * @bdev: the block_device that needs a blob
++ *
++ * Allocate the block_device blob for all the modules
++ *
++ * Returns 0, or -ENOMEM if memory can't be allocated.
++ */
++static int lsm_bdev_alloc(struct block_device *bdev)
++{
++	if (blob_sizes.lbs_bdev == 0) {
++		bdev->security = NULL;
++		return 0;
++	}
++
++	bdev->security = kzalloc(blob_sizes.lbs_bdev, GFP_KERNEL);
++	if (!bdev->security)
++		return -ENOMEM;
++
++	return 0;
 +}
 +
  /**
-  * audit_rule - audit an IPE policy rule approximation.
-  * @ab: Supplies a pointer to the audit_buffer to append to.
-@@ -62,8 +77,18 @@ static void audit_rule(struct audit_buffer *ab, const struct ipe_rule *r)
- 
- 	audit_log_format(ab, " rule=\"%s ", audit_op_names[r->op]);
- 
--	list_for_each_entry(ptr, &r->props, next)
--		audit_log_format(ab, "%s ", audit_prop_names[ptr->type]);
-+	list_for_each_entry(ptr, &r->props, next) {
-+		switch (ptr->type) {
-+		case IPE_PROP_DMV_ROOTHASH:
-+			audit_dmv_roothash(ab, ptr->value);
-+			break;
-+		default:
-+			audit_log_format(ab, "%s", audit_prop_names[ptr->type]);
-+			break;
-+		}
-+
-+		audit_log_format(ab, " ");
-+	}
- 
- 	audit_log_format(ab, "action=%s\"", ACTSTR(r->action));
+  * lsm_early_task - during initialization allocate a composite task blob
+  * @task: the task that needs a blob
+@@ -5512,6 +5537,80 @@ int security_locked_down(enum lockdown_reason what)
  }
-diff --git a/security/ipe/digest.c b/security/ipe/digest.c
-new file mode 100644
-index 000000000000..f6fde0b1fe74
---- /dev/null
-+++ b/security/ipe/digest.c
-@@ -0,0 +1,120 @@
-+// SPDX-License-Identifier: GPL-2.0
-+/*
-+ * Copyright (C) Microsoft Corporation. All rights reserved.
-+ */
-+
-+#include "digest.h"
-+
+ EXPORT_SYMBOL(security_locked_down);
+ 
 +/**
-+ * ipe_digest_parse - parse a digest in IPE's policy.
-+ * @valstr: Supplies the string parsed from the policy.
++ * security_bdev_alloc() - Allocate a block device LSM blob
++ * @bdev: block device
 + *
-+ * Digests in IPE are defined in a standard way:
-+ *	<alg_name>:<hex>
++ * Allocate and attach a security structure to @bdev->security.  The
++ * security field is initialized to NULL when the bdev structure is
++ * allocated.
 + *
-+ * Use this function to create a property to parse the digest
-+ * consistently. The parsed digest will be saved in @value in IPE's
-+ * policy.
-+ *
-+ * Return: The parsed digest_info structure.
++ * Return: Return 0 if operation was successful.
 + */
-+struct digest_info *ipe_digest_parse(const char *valstr)
++int security_bdev_alloc(struct block_device *bdev)
 +{
-+	char *sep, *raw_digest;
-+	size_t raw_digest_len;
 +	int rc = 0;
-+	char *alg = NULL;
-+	u8 *digest = NULL;
-+	struct digest_info *info = NULL;
 +
-+	info = kzalloc(sizeof(*info), GFP_KERNEL);
-+	if (!info)
-+		return ERR_PTR(-ENOMEM);
++	rc = lsm_bdev_alloc(bdev);
++	if (unlikely(rc))
++		return rc;
 +
-+	sep = strchr(valstr, ':');
-+	if (!sep) {
-+		rc = -EBADMSG;
-+		goto err;
-+	}
++	rc = call_int_hook(bdev_alloc_security, 0, bdev);
++	if (unlikely(rc))
++		security_bdev_free(bdev);
 +
-+	alg = kstrndup(valstr, sep - valstr, GFP_KERNEL);
-+	if (!alg) {
-+		rc = -ENOMEM;
-+		goto err;
-+	}
-+
-+	raw_digest = sep + 1;
-+	raw_digest_len = strlen(raw_digest);
-+
-+	info->digest_len = (raw_digest_len + 1) / 2;
-+	digest = kzalloc(info->digest_len, GFP_KERNEL);
-+	if (!digest) {
-+		rc = -ENOMEM;
-+		goto err;
-+	}
-+
-+	rc = hex2bin(digest, raw_digest, info->digest_len);
-+	if (rc < 0) {
-+		rc = -EINVAL;
-+		goto err;
-+	}
-+
-+	info->alg = alg;
-+	info->digest = digest;
-+	return info;
-+
-+err:
-+	kfree(alg);
-+	kfree(digest);
-+	kfree(info);
-+	return ERR_PTR(rc);
++	return LSM_RET_DEFAULT(bdev_alloc_security);
 +}
++EXPORT_SYMBOL(security_bdev_alloc);
 +
 +/**
-+ * ipe_digest_eval - evaluate an IPE digest against another digest.
-+ * @expected: Supplies the policy-provided digest value.
-+ * @digest: Supplies the digest to compare against the policy digest value.
++ * security_bdev_free() - Free a block device's LSM blob
++ * @bdev: block device
 + *
-+ * Return:
-+ * * true	- digests match
-+ * * false	- digests do not match
++ * Deallocate the bdev security structure and set @bdev->security to NULL.
 + */
-+bool ipe_digest_eval(const struct digest_info *expected,
-+		     const struct digest_info *digest)
++void security_bdev_free(struct block_device *bdev)
 +{
-+	return (expected->digest_len == digest->digest_len) &&
-+	       (!strcmp(expected->alg, digest->alg)) &&
-+	       (!memcmp(expected->digest, digest->digest, expected->digest_len));
-+}
-+
-+/**
-+ * ipe_digest_free - free an IPE digest.
-+ * @info: Supplies a pointer the policy-provided digest to free.
-+ */
-+void ipe_digest_free(struct digest_info *info)
-+{
-+	if (IS_ERR_OR_NULL(info))
++	if (!bdev->security)
 +		return;
 +
-+	kfree(info->alg);
-+	kfree(info->digest);
-+	kfree(info);
++	call_void_hook(bdev_free_security, bdev);
++
++	kfree(bdev->security);
++	bdev->security = NULL;
 +}
++EXPORT_SYMBOL(security_bdev_free);
 +
 +/**
-+ * ipe_digest_audit - audit a digest that was sourced from IPE's policy.
-+ * @ab: Supplies the audit_buffer to append the formatted result.
-+ * @info: Supplies a pointer to source the audit record from.
++ * security_bdev_setsecurity() - Set a security property of a block device
++ * @bdev: block device
++ * @name: security property name
++ * @value: security property value
++ * @size: length of the property value
 + *
-+ * Digests in IPE are defined in a standard way:
-+ *	<alg_name>:<hex>
++ * Set the security property associated with @name for @bdev from the security
++ * property value @value. @size indicates the size of the @value in bytes.
++ * If a @name is not implemented for a hook, it should return -EOPNOTSUPP.
 + *
-+ * Use this function to create a property to audit the digest
-+ * consistently.
++ * Return: Returns 0 on success.
 + */
-+void ipe_digest_audit(struct audit_buffer *ab, const struct digest_info *info)
++int security_bdev_setsecurity(struct block_device *bdev,
++			      const char *name, const void *value,
++			      size_t size)
 +{
-+	audit_log_untrustedstring(ab, info->alg);
-+	audit_log_format(ab, ":");
-+	audit_log_n_hex(ab, info->digest, info->digest_len);
-+}
-diff --git a/security/ipe/digest.h b/security/ipe/digest.h
-new file mode 100644
-index 000000000000..13fa67071805
---- /dev/null
-+++ b/security/ipe/digest.h
-@@ -0,0 +1,26 @@
-+/* SPDX-License-Identifier: GPL-2.0 */
-+/*
-+ * Copyright (C) Microsoft Corporation. All rights reserved.
-+ */
++	int rc = 0;
++	struct security_hook_list *p;
 +
-+#ifndef _IPE_DIGEST_H
-+#define _IPE_DIGEST_H
-+
-+#include <linux/types.h>
-+#include <linux/audit.h>
-+
-+#include "policy.h"
-+
-+struct digest_info {
-+	const char *alg;
-+	const u8 *digest;
-+	size_t digest_len;
-+};
-+
-+struct digest_info *ipe_digest_parse(const char *valstr);
-+void ipe_digest_free(struct digest_info *digest_info);
-+void ipe_digest_audit(struct audit_buffer *ab, const struct digest_info *val);
-+bool ipe_digest_eval(const struct digest_info *expected,
-+		     const struct digest_info *digest);
-+
-+#endif /* _IPE_DIGEST_H */
-diff --git a/security/ipe/eval.c b/security/ipe/eval.c
-index 3f3125478dd0..8dcf7809c9fc 100644
---- a/security/ipe/eval.c
-+++ b/security/ipe/eval.c
-@@ -15,10 +15,12 @@
- #include "eval.h"
- #include "policy.h"
- #include "audit.h"
-+#include "digest.h"
- 
- struct ipe_policy __rcu *ipe_active_policy;
- bool success_audit;
- bool enforce = true;
-+#define INO_BLOCK_DEV(ino) ((ino)->i_sb->s_bdev)
- 
- #define FILE_SUPERBLOCK(f) ((f)->f_path.mnt->mnt_sb)
- 
-@@ -32,6 +34,23 @@ static void build_ipe_sb_ctx(struct ipe_eval_ctx *ctx, const struct file *const
- 	ctx->initramfs = ipe_sb(FILE_SUPERBLOCK(file))->initramfs;
- }
- 
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+/**
-+ * build_ipe_bdev_ctx - Build ipe_bdev field of an evaluation context.
-+ * @ctx: Supplies a pointer to the context to be populated.
-+ * @ino: Supplies the inode struct of the file triggered IPE event.
-+ */
-+static void build_ipe_bdev_ctx(struct ipe_eval_ctx *ctx, const struct inode *const ino)
-+{
-+	if (INO_BLOCK_DEV(ino))
-+		ctx->ipe_bdev = ipe_bdev(INO_BLOCK_DEV(ino));
-+}
-+#else
-+static void build_ipe_bdev_ctx(struct ipe_eval_ctx *ctx, const struct inode *const ino)
-+{
-+}
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
-+
- /**
-  * build_eval_ctx - Build an evaluation context.
-  * @ctx: Supplies a pointer to the context to be populated.
-@@ -48,8 +67,10 @@ void build_eval_ctx(struct ipe_eval_ctx *ctx,
- 	ctx->op = op;
- 	ctx->hook = hook;
- 
--	if (file)
-+	if (file) {
- 		build_ipe_sb_ctx(ctx, file);
-+		build_ipe_bdev_ctx(ctx, d_real_inode(file->f_path.dentry));
-+	}
- }
- 
- /**
-@@ -65,6 +86,68 @@ static bool evaluate_boot_verified(const struct ipe_eval_ctx *const ctx)
- 	return ctx->initramfs;
- }
- 
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+/**
-+ * evaluate_dmv_roothash - Evaluate @ctx against a dmv roothash property.
-+ * @ctx: Supplies a pointer to the context being evaluated.
-+ * @p: Supplies a pointer to the property being evaluated.
-+ *
-+ * Return:
-+ * * true	- The current @ctx match the @p
-+ * * false	- The current @ctx doesn't match the @p
-+ */
-+static bool evaluate_dmv_roothash(const struct ipe_eval_ctx *const ctx,
-+				  struct ipe_prop *p)
-+{
-+	return !!ctx->ipe_bdev &&
-+	       !!ctx->ipe_bdev->root_hash &&
-+	       ipe_digest_eval(p->value,
-+			       ctx->ipe_bdev->root_hash);
-+}
-+
-+/**
-+ * evaluate_dmv_sig_false: Analyze @ctx against a dmv sig false property.
-+ * @ctx: Supplies a pointer to the context being evaluated.
-+ *
-+ * Return:
-+ * * true	- The current @ctx match the property
-+ * * false	- The current @ctx doesn't match the property
-+ */
-+static bool evaluate_dmv_sig_false(const struct ipe_eval_ctx *const ctx)
-+{
-+	return !ctx->ipe_bdev || (!ctx->ipe_bdev->dm_verity_signed);
-+}
-+
-+/**
-+ * evaluate_dmv_sig_true: Analyze @ctx against a dmv sig true property.
-+ * @ctx: Supplies a pointer to the context being evaluated.
-+ *
-+ * Return:
-+ * * true	- The current @ctx match the property
-+ * * false	- The current @ctx doesn't match the property
-+ */
-+static bool evaluate_dmv_sig_true(const struct ipe_eval_ctx *const ctx)
-+{
-+	return !evaluate_dmv_sig_false(ctx);
-+}
-+#else
-+static bool evaluate_dmv_roothash(const struct ipe_eval_ctx *const ctx,
-+				  struct ipe_prop *p)
-+{
-+	return false;
-+}
-+
-+static bool evaluate_dmv_sig_false(const struct ipe_eval_ctx *const ctx)
-+{
-+	return false;
-+}
-+
-+static bool evaluate_dmv_sig_true(const struct ipe_eval_ctx *const ctx)
-+{
-+	return false;
-+}
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
-+
- /**
-  * evaluate_property - Analyze @ctx against a property.
-  * @ctx: Supplies a pointer to the context to be evaluated.
-@@ -82,6 +165,12 @@ static bool evaluate_property(const struct ipe_eval_ctx *const ctx,
- 		return !evaluate_boot_verified(ctx);
- 	case IPE_PROP_BOOT_VERIFIED_TRUE:
- 		return evaluate_boot_verified(ctx);
-+	case IPE_PROP_DMV_ROOTHASH:
-+		return evaluate_dmv_roothash(ctx, p);
-+	case IPE_PROP_DMV_SIG_FALSE:
-+		return evaluate_dmv_sig_false(ctx);
-+	case IPE_PROP_DMV_SIG_TRUE:
-+		return evaluate_dmv_sig_true(ctx);
- 	default:
- 		return false;
- 	}
-diff --git a/security/ipe/eval.h b/security/ipe/eval.h
-index 0b50302611a4..494c0754f512 100644
---- a/security/ipe/eval.h
-+++ b/security/ipe/eval.h
-@@ -22,12 +22,22 @@ struct ipe_superblock {
- 	bool initramfs;
- };
- 
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+struct ipe_bdev {
-+	bool dm_verity_signed;
-+	struct digest_info *root_hash;
-+};
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
-+
- struct ipe_eval_ctx {
- 	enum ipe_op_type op;
- 	enum ipe_hook_type hook;
- 
- 	const struct file *file;
- 	bool initramfs;
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+	const struct ipe_bdev *ipe_bdev;
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
- };
- 
- enum ipe_match {
-diff --git a/security/ipe/hooks.c b/security/ipe/hooks.c
-index 6bcc7908ed13..f5190a1347a6 100644
---- a/security/ipe/hooks.c
-+++ b/security/ipe/hooks.c
-@@ -8,10 +8,14 @@
- #include <linux/types.h>
- #include <linux/binfmts.h>
- #include <linux/mman.h>
-+#include <linux/blk_types.h>
-+#include <linux/dm-verity.h>
-+#include <crypto/hash_info.h>
- 
- #include "ipe.h"
- #include "hooks.h"
- #include "eval.h"
-+#include "digest.h"
- 
- /**
-  * ipe_bprm_check_security - ipe security hook function for bprm check.
-@@ -187,3 +191,66 @@ void ipe_unpack_initramfs(void)
- {
- 	ipe_sb(current->fs->root.mnt->mnt_sb)->initramfs = true;
- }
-+
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+/**
-+ * ipe_bdev_free_security - free IPE's LSM blob of block_devices.
-+ * @bdev: Supplies a pointer to a block_device that contains the structure
-+ *	  to free.
-+ */
-+void ipe_bdev_free_security(struct block_device *bdev)
-+{
-+	struct ipe_bdev *blob = ipe_bdev(bdev);
-+
-+	ipe_digest_free(blob->root_hash);
-+}
-+
-+/**
-+ * ipe_bdev_setsecurity - save data from a bdev to IPE's LSM blob.
-+ * @bdev: Supplies a pointer to a block_device that contains the LSM blob.
-+ * @key: Supplies the string key that uniquely identifies the value.
-+ * @value: Supplies the value to store.
-+ * @len: The length of @value.
-+ */
-+int ipe_bdev_setsecurity(struct block_device *bdev, const char *key,
-+			 const void *value, size_t len)
-+{
-+	struct ipe_bdev *blob = ipe_bdev(bdev);
-+
-+	if (!strcmp(key, DM_VERITY_ROOTHASH_SEC_NAME)) {
-+		const struct dm_verity_digest *digest = value;
-+		struct digest_info *info = NULL;
-+		u8 *raw_digest = NULL;
-+		char *alg = NULL;
-+
-+		info = kzalloc(sizeof(*info), GFP_KERNEL);
-+		if (!info)
-+			return -ENOMEM;
-+
-+		raw_digest = kmemdup(digest->digest, digest->digest_len,
-+				     GFP_KERNEL);
-+		if (!raw_digest)
-+			goto err;
-+
-+		alg = kstrdup(digest->alg, GFP_KERNEL);
-+		if (!alg)
-+			goto err;
-+
-+		info->alg = alg;
-+		info->digest = raw_digest;
-+		info->digest_len = digest->digest_len;
-+		blob->root_hash = info;
-+		return 0;
-+err:
-+		kfree(info);
-+		kfree(raw_digest);
-+		kfree(alg);
-+		return -ENOMEM;
-+	} else if (!strcmp(key, DM_VERITY_SIGNATURE_SEC_NAME)) {
-+		blob->dm_verity_signed = true;
-+		return 0;
++	hlist_for_each_entry(p, &security_hook_heads.bdev_setsecurity, list) {
++		rc = p->hook.bdev_setsecurity(bdev, name, value, size);
++		if (rc && rc != -EOPNOTSUPP)
++			return rc;
 +	}
 +
-+	return -EOPNOTSUPP;
++	return LSM_RET_DEFAULT(bdev_setsecurity);
 +}
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
-diff --git a/security/ipe/hooks.h b/security/ipe/hooks.h
-index b92c1d78e253..26a58cbcc276 100644
---- a/security/ipe/hooks.h
-+++ b/security/ipe/hooks.h
-@@ -8,6 +8,7 @@
- #include <linux/fs.h>
- #include <linux/binfmts.h>
- #include <linux/security.h>
-+#include <linux/blk_types.h>
- 
- enum ipe_hook_type {
- 	IPE_HOOK_BPRM_CHECK = 0,
-@@ -35,4 +36,11 @@ int ipe_kernel_load_data(enum kernel_load_data_id id, bool contents);
- 
- void ipe_unpack_initramfs(void);
- 
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+void ipe_bdev_free_security(struct block_device *bdev);
++EXPORT_SYMBOL(security_bdev_setsecurity);
 +
-+int ipe_bdev_setsecurity(struct block_device *bdev, const char *key,
-+			 const void *value, size_t len);
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
-+
- #endif /* _IPE_HOOKS_H */
-diff --git a/security/ipe/ipe.c b/security/ipe/ipe.c
-index 53820ca6d5b7..a62b9dc0c8f6 100644
---- a/security/ipe/ipe.c
-+++ b/security/ipe/ipe.c
-@@ -7,11 +7,15 @@
- #include "ipe.h"
- #include "eval.h"
- #include "hooks.h"
-+#include "eval.h"
- 
- bool ipe_enabled;
- 
- static struct lsm_blob_sizes ipe_blobs __ro_after_init = {
- 	.lbs_superblock = sizeof(struct ipe_superblock),
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+	.lbs_bdev = sizeof(struct ipe_bdev),
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
- };
- 
- static const struct lsm_id ipe_lsmid = {
-@@ -24,6 +28,13 @@ struct ipe_superblock *ipe_sb(const struct super_block *sb)
- 	return sb->s_security + ipe_blobs.lbs_superblock;
- }
- 
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+struct ipe_bdev *ipe_bdev(struct block_device *b)
-+{
-+	return b->security + ipe_blobs.lbs_bdev;
-+}
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
-+
- static struct security_hook_list ipe_hooks[] __ro_after_init = {
- 	LSM_HOOK_INIT(bprm_check_security, ipe_bprm_check_security),
- 	LSM_HOOK_INIT(mmap_file, ipe_mmap_file),
-@@ -31,6 +42,10 @@ static struct security_hook_list ipe_hooks[] __ro_after_init = {
- 	LSM_HOOK_INIT(kernel_read_file, ipe_kernel_read_file),
- 	LSM_HOOK_INIT(kernel_load_data, ipe_kernel_load_data),
- 	LSM_HOOK_INIT(initramfs_populated, ipe_unpack_initramfs),
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+	LSM_HOOK_INIT(bdev_free_security, ipe_bdev_free_security),
-+	LSM_HOOK_INIT(bdev_setsecurity, ipe_bdev_setsecurity),
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
- };
- 
+ #ifdef CONFIG_PERF_EVENTS
  /**
-diff --git a/security/ipe/ipe.h b/security/ipe/ipe.h
-index 86c2b8394d93..64626702b689 100644
---- a/security/ipe/ipe.h
-+++ b/security/ipe/ipe.h
-@@ -16,4 +16,8 @@ struct ipe_superblock *ipe_sb(const struct super_block *sb);
- 
- extern bool ipe_enabled;
- 
-+#ifdef CONFIG_IPE_PROP_DM_VERITY
-+struct ipe_bdev *ipe_bdev(struct block_device *b);
-+#endif /* CONFIG_IPE_PROP_DM_VERITY */
-+
- #endif /* _IPE_H */
-diff --git a/security/ipe/policy.h b/security/ipe/policy.h
-index dba5e71e089e..35629e9699f7 100644
---- a/security/ipe/policy.h
-+++ b/security/ipe/policy.h
-@@ -33,6 +33,9 @@ enum ipe_action_type {
- enum ipe_prop_type {
- 	IPE_PROP_BOOT_VERIFIED_FALSE,
- 	IPE_PROP_BOOT_VERIFIED_TRUE,
-+	IPE_PROP_DMV_ROOTHASH,
-+	IPE_PROP_DMV_SIG_FALSE,
-+	IPE_PROP_DMV_SIG_TRUE,
- 	__IPE_PROP_MAX
- };
- 
-diff --git a/security/ipe/policy_parser.c b/security/ipe/policy_parser.c
-index 3fc8fea55b95..802e31f14b22 100644
---- a/security/ipe/policy_parser.c
-+++ b/security/ipe/policy_parser.c
-@@ -11,6 +11,7 @@
- 
- #include "policy.h"
- #include "policy_parser.h"
-+#include "digest.h"
- 
- #define START_COMMENT	'#'
- #define IPE_POLICY_DELIM " \t"
-@@ -216,6 +217,7 @@ static void free_rule(struct ipe_rule *r)
- 
- 	list_for_each_entry_safe(p, t, &r->props, next) {
- 		list_del(&p->next);
-+		ipe_digest_free(p->value);
- 		kfree(p);
- 	}
- 
-@@ -268,6 +270,9 @@ static enum ipe_action_type parse_action(char *t)
- static const match_table_t property_tokens = {
- 	{IPE_PROP_BOOT_VERIFIED_FALSE,	"boot_verified=FALSE"},
- 	{IPE_PROP_BOOT_VERIFIED_TRUE,	"boot_verified=TRUE"},
-+	{IPE_PROP_DMV_ROOTHASH,		"dmverity_roothash=%s"},
-+	{IPE_PROP_DMV_SIG_FALSE,	"dmverity_signature=FALSE"},
-+	{IPE_PROP_DMV_SIG_TRUE,		"dmverity_signature=TRUE"},
- 	{IPE_PROP_INVALID,		NULL}
- };
- 
-@@ -287,6 +292,7 @@ static int parse_property(char *t, struct ipe_rule *r)
- 	struct ipe_prop *p = NULL;
- 	int rc = 0;
- 	int token;
-+	char *dup = NULL;
- 
- 	p = kzalloc(sizeof(*p), GFP_KERNEL);
- 	if (!p)
-@@ -295,8 +301,22 @@ static int parse_property(char *t, struct ipe_rule *r)
- 	token = match_token(t, property_tokens, args);
- 
- 	switch (token) {
-+	case IPE_PROP_DMV_ROOTHASH:
-+		dup = match_strdup(&args[0]);
-+		if (!dup) {
-+			rc = -ENOMEM;
-+			goto err;
-+		}
-+		p->value = ipe_digest_parse(dup);
-+		if (IS_ERR(p->value)) {
-+			rc = PTR_ERR(p->value);
-+			goto err;
-+		}
-+		fallthrough;
- 	case IPE_PROP_BOOT_VERIFIED_FALSE:
- 	case IPE_PROP_BOOT_VERIFIED_TRUE:
-+	case IPE_PROP_DMV_SIG_FALSE:
-+	case IPE_PROP_DMV_SIG_TRUE:
- 		p->type = token;
- 		break;
- 	default:
-@@ -307,10 +327,12 @@ static int parse_property(char *t, struct ipe_rule *r)
- 		goto err;
- 	list_add_tail(&p->next, &r->props);
- 
-+out:
-+	kfree(dup);
- 	return rc;
- err:
- 	kfree(p);
--	return rc;
-+	goto out;
- }
- 
- /**
+  * security_perf_event_open() - Check if a perf event open is allowed
 -- 
 2.43.1
 
