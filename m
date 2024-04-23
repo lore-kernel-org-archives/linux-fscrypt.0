@@ -1,33 +1,33 @@
 Received: from casper.infradead.org (casper.infradead.org [90.155.50.34])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 7192B2D7B8;
-	Tue, 23 Apr 2024 22:56:00 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id E134218B04;
+	Tue, 23 Apr 2024 22:56:03 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=90.155.50.34
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1713912961; cv=none; b=KhjGDqHOikKYI2H5p/oY2WrNU8igQiuEEjmD5OINWhVzGJendGdVqMiHhQRO8tqVOSZH+9qrYxYByP5Ltd8baE1GLSeYt4zF8zDrZT9Remutz/Qo+nO20yzvc13MsZY9KCxFm2GOudm+Vw7Ve2t5kE8vJKVjaVeY0hbcZ+LPjDs=
+	t=1713912965; cv=none; b=lZUXcj6HFp3NQKywuyqGxh9pbDedvButH5+TTMKLcNzhFjhuVaTR2iG7EutRfrZ0DqYsJIFr6SzUyrED/knQdEU9p94xzPdkizUxXtyLNYPSLG9o8Gz5id6oFKXlBkGkMvO41VEQY58ypGfWea+1aA2dQGwFxL0HPAE9gXoswFg=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1713912961; c=relaxed/simple;
-	bh=x05nB8CV24cVY9QFR/FA8A3qcUuLXnziParyT35nHvk=;
+	s=arc-20240116; t=1713912965; c=relaxed/simple;
+	bh=yVX3L0/mzon+qEKCJUk3SLiwzTsR0/rXbZi6nOebKOw=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=WF5ehyrskuJ/l0PT93204mSPftZb7WcibZiBlhE1T+b/hxqZM+ngWFAQNgquSE648kJbiaWSHm7n/kNd4qRfHjJwsTp+LMZTICveqtarkxxgDiZtfdlrU9s1cB8hTtcVxafsB5aa/UhzlnMjW2jomX5HRDOuL9yvqFLXaHqjkIg=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org; spf=none smtp.mailfrom=infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=FXyig58g; arc=none smtp.client-ip=90.155.50.34
+	 MIME-Version; b=WHwOT5Gfq3vrtB8hEaZ22iyQ6c3bGVFbFcDkSuqEnmU4T6pZojMJkKPVTO2iz6sRn9wr9RoiFXMoo6SlilI/Kwf+YZyaEUbJVstD9MnqR0XtF+MsIqYEjkmvC6KNAH7dMdZpgP65HHRdhVpgdr4Zsj9USFS4KCP3aWfFH/9Xup8=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org; spf=none smtp.mailfrom=infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=NT2phuhB; arc=none smtp.client-ip=90.155.50.34
 Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
 Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=infradead.org
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="FXyig58g"
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="NT2phuhB"
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
 	d=infradead.org; s=casper.20170209; h=Content-Transfer-Encoding:MIME-Version:
 	References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:Sender:Reply-To:
 	Content-Type:Content-ID:Content-Description;
-	bh=1UBrmnaxgdYln7b2mU/BBhde5q/G6uvD2LkDa5Pux+I=; b=FXyig58gEqE0F6D2bAAxl1bEFd
-	TbFp9s4R4fwTdL3FoSptQkFN5bTLYpT2jK+iDm6A9Vd2xto13SwNEaT1EwGTWmHY1vfbQefgEJuOR
-	b/BHY7oS1QcrvdIAreAEC6wH3j+qFshjaaKAPEK3+Po/R/mODKCCYi59tgvKXJci0zKzuL66k1o8i
-	4eYUH1+6nTLEPJc8Yut2z5NOHLc3JqxriqRcbP7ZBOS06YHw0F5qkjuzColyWuGAuOyZbByJWdqHu
-	eN0FPCovV+XhG6nor35qADfuyXqAP339rkydvrF9oaJrG+/FwSONIFwhfZ9uaTxpLs0ZwZSOumrKM
-	mX1TZc+Q==;
+	bh=INusEyB6dR3vgU5usJpWnfIw4VplmU4zwONWpNN/d/w=; b=NT2phuhB9ilem0ZbyyRx5jBEPe
+	JMbXTjlRG5reeWvDli1o699wO7DV0K1j8OXZXC8c8ksIm2T9sSZfzRhbwbbmtDaYai/OMJX/h/1JI
+	2Hn/U3vhEWzalCdjm77c4mqnQ+rH/OsTFTV8JaPtAvfgZwPAvz5UHlCvTC8+vsBdFMTjE3HcZXKYo
+	DpCBiYu1SklMcCKYgHCwhIswIDNhKdBrOEFI9xxAiMPxg3s4gsElsBR9yY7M+djUeP8uizrw/2tDR
+	YHfKURym5m/8DjC3/f6CiRiSoFIkd0ryFFDjaIS3EB+O0v+cFV4uZQo6kEfFJbQf6gmj6pJeYFn6Y
+	S3L4opow==;
 Received: from willy by casper.infradead.org with local (Exim 4.97.1 #2 (Red Hat Linux))
-	id 1rzP3K-0000000HG6I-1wTt;
+	id 1rzP3K-0000000HG6E-1Erv;
 	Tue, 23 Apr 2024 22:55:54 +0000
 From: "Matthew Wilcox (Oracle)" <willy@infradead.org>
 To: Andrew Morton <akpm@linux-foundation.org>,
@@ -36,9 +36,9 @@ Cc: "Matthew Wilcox (Oracle)" <willy@infradead.org>,
 	linux-fsdevel@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net
-Subject: [PATCH 3/6] memory-failure: Remove calls to page_mapping()
-Date: Tue, 23 Apr 2024 23:55:34 +0100
-Message-ID: <20240423225552.4113447-4-willy@infradead.org>
+Subject: [PATCH 1/6] fscrypt: Convert bh_get_inode_and_lblk_num to use a folio
+Date: Tue, 23 Apr 2024 23:55:32 +0100
+Message-ID: <20240423225552.4113447-2-willy@infradead.org>
 X-Mailer: git-send-email 2.44.0
 In-Reply-To: <20240423225552.4113447-1-willy@infradead.org>
 References: <20240423225552.4113447-1-willy@infradead.org>
@@ -50,44 +50,43 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-This is mostly just inlining page_mapping() into the two callers.
+Remove uses of page->index, page_mapping() and b_page.  Saves a call
+to compound_head().
 
 Signed-off-by: Matthew Wilcox (Oracle) <willy@infradead.org>
 ---
- mm/memory-failure.c | 6 ++++--
- 1 file changed, 4 insertions(+), 2 deletions(-)
+ fs/crypto/inline_crypt.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/mm/memory-failure.c b/mm/memory-failure.c
-index e065dd9be21e..62aa3db17854 100644
---- a/mm/memory-failure.c
-+++ b/mm/memory-failure.c
-@@ -216,6 +216,7 @@ EXPORT_SYMBOL_GPL(hwpoison_filter_flags_value);
- 
- static int hwpoison_filter_dev(struct page *p)
+diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
+index b4002aea7cdb..40de69860dcf 100644
+--- a/fs/crypto/inline_crypt.c
++++ b/fs/crypto/inline_crypt.c
+@@ -284,7 +284,7 @@ static bool bh_get_inode_and_lblk_num(const struct buffer_head *bh,
+ 				      const struct inode **inode_ret,
+ 				      u64 *lblk_num_ret)
  {
-+	struct folio *folio = page_folio(p);
- 	struct address_space *mapping;
- 	dev_t dev;
+-	struct page *page = bh->b_page;
++	struct folio *folio = bh->b_folio;
+ 	const struct address_space *mapping;
+ 	const struct inode *inode;
  
-@@ -223,7 +224,7 @@ static int hwpoison_filter_dev(struct page *p)
- 	    hwpoison_filter_dev_minor == ~0U)
- 		return 0;
- 
--	mapping = page_mapping(p);
+@@ -292,13 +292,13 @@ static bool bh_get_inode_and_lblk_num(const struct buffer_head *bh,
+ 	 * The ext4 journal (jbd2) can submit a buffer_head it directly created
+ 	 * for a non-pagecache page.  fscrypt doesn't care about these.
+ 	 */
+-	mapping = page_mapping(page);
 +	mapping = folio_mapping(folio);
- 	if (mapping == NULL || mapping->host == NULL)
- 		return -EINVAL;
+ 	if (!mapping)
+ 		return false;
+ 	inode = mapping->host;
  
-@@ -1090,7 +1091,8 @@ static int me_pagecache_clean(struct page_state *ps, struct page *p)
-  */
- static int me_pagecache_dirty(struct page_state *ps, struct page *p)
- {
--	struct address_space *mapping = page_mapping(p);
-+	struct folio *folio = page_folio(p);
-+	struct address_space *mapping = folio_mapping(folio);
- 
- 	/* TBD: print more information about the file. */
- 	if (mapping) {
+ 	*inode_ret = inode;
+-	*lblk_num_ret = ((u64)page->index << (PAGE_SHIFT - inode->i_blkbits)) +
++	*lblk_num_ret = ((u64)folio->index << (PAGE_SHIFT - inode->i_blkbits)) +
+ 			(bh_offset(bh) >> inode->i_blkbits);
+ 	return true;
+ }
 -- 
 2.43.0
 
