@@ -1,111 +1,106 @@
-Received: from mail-qk1-f180.google.com (mail-qk1-f180.google.com [209.85.222.180])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+Received: from casper.infradead.org (casper.infradead.org [90.155.50.34])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id DB44B610E
-	for <linux-fscrypt@vger.kernel.org>; Thu, 11 Apr 2024 18:45:46 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=209.85.222.180
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id B58E018B04;
+	Tue, 23 Apr 2024 22:55:57 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=90.155.50.34
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1712861148; cv=none; b=KtHmJkIEBeIj4nYlHlERTCepupyTrz1fePoHwR125NnjuX6kvKDHt0mVXYkDGde+hwTgxiJwXAz+pj2ufIdKOfA60LRpXqkQmPb5ldO7hiCmn0pW5c3mlk36S5eRsMtMwgEqdzRDcdPwigcIUUWrewx7eLhDGhbKpTeeZbaM94I=
+	t=1713912961; cv=none; b=i9VwKUwzZuf3dtbfyPtydUi4uHZmKFJIaTLVHSYgPICQzSvHXNUZ7y1oRTqKGc5cSjlNREvgFYAi9vgePWHZYAPfxeH07ewVV0kYl1nmVaNVq1iM1CWEn13tIuaO78NVnPuvXbfwu526Y0p70rlQSNYYdBYdqnY1etgrXguo7r8=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1712861148; c=relaxed/simple;
-	bh=oVMdIyNqBeXSXnx7wDKSkd3EgqG0HvyDwjqk5K10aFA=;
-	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=PR90NVEhecH0Q4mJRzPWXNUOyQaIIQAyU0DvuDQevGE/k2o2jMoJPrnswVcffESxQjjJ3KHwEzK/nez8/c9K2saOAg8PMduKI+GjRfqXwQJFEBy+nnIen73kkpDwsZxSyaBEU0QqjRTNnEAXwRWIw6On3HYwEJJh1Vqhw12knGk=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=toxicpanda.com; spf=none smtp.mailfrom=toxicpanda.com; dkim=pass (2048-bit key) header.d=toxicpanda-com.20230601.gappssmtp.com header.i=@toxicpanda-com.20230601.gappssmtp.com header.b=P1yZ9b1Z; arc=none smtp.client-ip=209.85.222.180
-Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=toxicpanda.com
-Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=toxicpanda.com
+	s=arc-20240116; t=1713912961; c=relaxed/simple;
+	bh=mY02sjApj92WbOT1RK08GYS2x+06eI7Qu6cd3MFYGGw=;
+	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
+	 MIME-Version; b=pmFE6PHkCZW9gPC/Nnwl70qve0i24S4pUpBdnhEsPuzs/nIXW+NxsoTGMTlonoxgaubjvbSXzNOu5ZQNUR6r+Glf1q96r40Q+DcctKp7A16a/O3beiWGvLR2+rqsB4PjcWOBDu8jN0yttS275t10nX11VdbKCn4urdZ9TOC9dOU=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org; spf=none smtp.mailfrom=infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=fWz1hx0j; arc=none smtp.client-ip=90.155.50.34
+Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
+Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=infradead.org
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=toxicpanda-com.20230601.gappssmtp.com header.i=@toxicpanda-com.20230601.gappssmtp.com header.b="P1yZ9b1Z"
-Received: by mail-qk1-f180.google.com with SMTP id af79cd13be357-78d5e80bc42so9675185a.0
-        for <linux-fscrypt@vger.kernel.org>; Thu, 11 Apr 2024 11:45:46 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=toxicpanda-com.20230601.gappssmtp.com; s=20230601; t=1712861146; x=1713465946; darn=vger.kernel.org;
-        h=in-reply-to:content-disposition:mime-version:references:message-id
-         :subject:cc:to:from:date:from:to:cc:subject:date:message-id:reply-to;
-        bh=GT33Nx43+d+3gMdSLbU7Cu58/JxP71aX5N4ktQ89HWU=;
-        b=P1yZ9b1ZHRnxlw1wdhYCSReOoSmeKNwiuVZD7w8ORP+hkOLsRdleler54eX0XJiF3s
-         PGS3VLuckCQIxP7hl8Bdv4RDMVwWF7FQKGaOwkuRbJZSiC5hmaVVLHDRz565aMZpMCB+
-         O1hy6GnK13TKBxdpwMtDLbyKbr42+bz9H6YLnLA2E25SbMSagBstjD9GSd9tB7kEFxJn
-         YX/dZc3jPO+huqzqZWujBZVsPXraaoxue+91fefND+MWft5HTz8ZaeVQMp+Od9eEbh6c
-         hhQNJM0FgOIo8rcMGkzOtvouw1m5Alj6f7SUEyOEG5U8DZoQYp9wSJI10hQ/1XFEoGVW
-         L3fg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1712861146; x=1713465946;
-        h=in-reply-to:content-disposition:mime-version:references:message-id
-         :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
-         :message-id:reply-to;
-        bh=GT33Nx43+d+3gMdSLbU7Cu58/JxP71aX5N4ktQ89HWU=;
-        b=gIeLKMo1EjiQoGZmWCfhlvrAOxUlL/VrWge/k5smXlutG9qKkiAvFyKWu1O8buUFX3
-         9trVfhH+TGkZqWr18IgzcaMHPexGl6wnquZdHVAJ/czso4VzJnEoMsv4ZRZ/5pjw8lg9
-         B/u8uhzuR1fsiTakcDIOwJy8NX8OrTaMr8rG7YX1H9k9UgYHOSeppZNQdEnnLgAzxH5e
-         U/hq3uiD8tbbd9MS3k56aqrYHRaQ4+aPuleqM0H3H//cgtPa4Vs2n5YTolIzJ5MeVrDS
-         dbRSzybFMsCcEiLAOojz2vQHZE8haqyEqvhlR+z8P9kNW1A5fZOs0HUkfJ6vJ86e+OYM
-         cY5w==
-X-Forwarded-Encrypted: i=1; AJvYcCU3m9B1lfxv98gO6gvJrtxFv3a0I4ixQQS7bbqWRXSGhv7bBjKtS7M4FesSHVw0kgsXo4bBj0SBWPKeGvanpsk+wD0GZ+N2ruYKQSyMqQ==
-X-Gm-Message-State: AOJu0YzqP7NrOd9amNtsv5EB6DwjMkARvYJR7Pmfr9vtEhO8G4YWPAjm
-	pBaGPRQ7g8miHARnWjwBkX48aVJgSN0At8W8IZd7BBLYhs0TfN1PNe9n0rSN5xw=
-X-Google-Smtp-Source: AGHT+IGLaaNLGKir3cJVdY7/H7iSf6w4PHXqQuqqVWzoZf/NEr8GKe4qBLcjYGfA+RqTIe+K7c9yzw==
-X-Received: by 2002:a05:620a:166c:b0:78d:61ff:d608 with SMTP id d12-20020a05620a166c00b0078d61ffd608mr492045qko.22.1712861145775;
-        Thu, 11 Apr 2024 11:45:45 -0700 (PDT)
-Received: from localhost (076-182-020-124.res.spectrum.com. [76.182.20.124])
-        by smtp.gmail.com with ESMTPSA id c42-20020a05620a26aa00b0078d70336243sm1362946qkp.49.2024.04.11.11.45.45
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Thu, 11 Apr 2024 11:45:45 -0700 (PDT)
-Date: Thu, 11 Apr 2024 14:45:44 -0400
-From: Josef Bacik <josef@toxicpanda.com>
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>,
-	linux-btrfs@vger.kernel.org, kernel-team@fb.com,
-	linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH v4 00/46] btrfs: add fscrypt support
-Message-ID: <20240411184544.GA1036728@perftesting>
-References: <cover.1701468305.git.josef@toxicpanda.com>
- <20240409234222.GB1609@quark.localdomain>
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="fWz1hx0j"
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=casper.20170209; h=Content-Transfer-Encoding:MIME-Version:
+	References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:Sender:Reply-To:
+	Content-Type:Content-ID:Content-Description;
+	bh=HkiZG9m0iZUn7YHN2uAFIsSMCWAiQIiQFvg2/jh9MHY=; b=fWz1hx0jDqtp05rXrTDwSTlW1l
+	oZeuyvzFJHEc/0+YW3p1DyW3UWM9dRaBZjHbmz1C2E2jOB081Aye+WIX7P/XqgdmV3Q8eP/iI/ryH
+	IBIzcVOSH1sK7V8oDiocBKo6gv42nFvkExjp6vRYblqvxaazX6cDDC4vZtSxOcaBVbPeheHmXvL2Y
+	k/WZKL/TVFnczAEaKfgpo7QUMvQsNxDyf8R9tZI3BePQ/lc9p6Ng0uqXMg0uvh1mlm/8c0PzoZq/D
+	JiJEX09m8u2IIH8YhGn/N7Fv7wzw5XCysAFi3vVgjr8VPfs3ZvqeDOJCkoh8FHu8h1YQzPomRTlhV
+	f6LivFTw==;
+Received: from willy by casper.infradead.org with local (Exim 4.97.1 #2 (Red Hat Linux))
+	id 1rzP3K-0000000HG6K-2IMq;
+	Tue, 23 Apr 2024 22:55:54 +0000
+From: "Matthew Wilcox (Oracle)" <willy@infradead.org>
+To: Andrew Morton <akpm@linux-foundation.org>,
+	linux-mm@kvack.org
+Cc: "Matthew Wilcox (Oracle)" <willy@infradead.org>,
+	linux-fsdevel@vger.kernel.org,
+	linux-fscrypt@vger.kernel.org,
+	linux-f2fs-devel@lists.sourceforge.net
+Subject: [PATCH 4/6] migrate: Expand the use of folio in __migrate_device_pages()
+Date: Tue, 23 Apr 2024 23:55:35 +0100
+Message-ID: <20240423225552.4113447-5-willy@infradead.org>
+X-Mailer: git-send-email 2.44.0
+In-Reply-To: <20240423225552.4113447-1-willy@infradead.org>
+References: <20240423225552.4113447-1-willy@infradead.org>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20240409234222.GB1609@quark.localdomain>
+Content-Transfer-Encoding: 8bit
 
-On Tue, Apr 09, 2024 at 07:42:22PM -0400, Eric Biggers wrote:
-> Hi Josef and Sweet Tea,
-> 
-> On Fri, Dec 01, 2023 at 05:10:57PM -0500, Josef Bacik wrote:
-> > Hello,
-> > 
-> > v3 can be found here
-> > 
-> > https://lore.kernel.org/linux-btrfs/cover.1697480198.git.josef@toxicpanda.com/
-> > 
-> > There's been a longer delay between versions than I'd like, this was mostly due
-> > to Plumbers, Holidays, and then uncovering a bunch of new issues with '-o
-> > test_dummy_encryption'.  I'm still working through some of the btrfs specific
-> > failures, but the fscrypt side appears to be stable.  I had to add a few changes
-> > to fscrypt since the last time, but nothing earth shattering, just moving the
-> > keyring destruction and adding a helper we need for btrfs send to work properly.
-> > 
-> > This is passing a good chunk of the fstests, at this point the majority appear
-> > to be cases where I need to exclude the test when using test_dummy_encryption
-> > because of various limitations of our tools or other infrastructure related
-> > things.
-> > 
-> > I likely will have a follow-up series with more fixes, but the bulk of this is
-> > unchanged since the last posting.  There were some bug fixes and such but the
-> > overall design remains the same.  Thanks,
-> > 
-> 
-> Is there a plan for someone to keep working on this?  I think it was finally
-> getting somewhere, but the work on it seems to have stopped.
-> 
+Removes a few calls to compound_head() and a call to page_mapping().
 
-I fixed up all your review comments, but yes we don't care about this internally
-anymore so it's been de-prioritized.  I have to rebase onto the new stuff,
-re-run tests, fix any bugs that may have creeped in, but the current code
-addressed all of your comments.  Once I get time to get back to this you'll have
-a new version in your inbox, but that may be some time.  Thanks,
+Signed-off-by: Matthew Wilcox (Oracle) <willy@infradead.org>
+---
+ mm/migrate_device.c | 13 +++++--------
+ 1 file changed, 5 insertions(+), 8 deletions(-)
 
-Josef
+diff --git a/mm/migrate_device.c b/mm/migrate_device.c
+index a68616c1965f..aecc71972a87 100644
+--- a/mm/migrate_device.c
++++ b/mm/migrate_device.c
+@@ -692,6 +692,7 @@ static void __migrate_device_pages(unsigned long *src_pfns,
+ 		struct page *newpage = migrate_pfn_to_page(dst_pfns[i]);
+ 		struct page *page = migrate_pfn_to_page(src_pfns[i]);
+ 		struct address_space *mapping;
++		struct folio *folio;
+ 		int r;
+ 
+ 		if (!newpage) {
+@@ -726,15 +727,12 @@ static void __migrate_device_pages(unsigned long *src_pfns,
+ 			continue;
+ 		}
+ 
+-		mapping = page_mapping(page);
++		folio = page_folio(page);
++		mapping = folio_mapping(folio);
+ 
+ 		if (is_device_private_page(newpage) ||
+ 		    is_device_coherent_page(newpage)) {
+ 			if (mapping) {
+-				struct folio *folio;
+-
+-				folio = page_folio(page);
+-
+ 				/*
+ 				 * For now only support anonymous memory migrating to
+ 				 * device private or coherent memory.
+@@ -757,11 +755,10 @@ static void __migrate_device_pages(unsigned long *src_pfns,
+ 
+ 		if (migrate && migrate->fault_page == page)
+ 			r = migrate_folio_extra(mapping, page_folio(newpage),
+-						page_folio(page),
+-						MIGRATE_SYNC_NO_COPY, 1);
++						folio, MIGRATE_SYNC_NO_COPY, 1);
+ 		else
+ 			r = migrate_folio(mapping, page_folio(newpage),
+-					page_folio(page), MIGRATE_SYNC_NO_COPY);
++					folio, MIGRATE_SYNC_NO_COPY);
+ 		if (r != MIGRATEPAGE_SUCCESS)
+ 			src_pfns[i] &= ~MIGRATE_PFN_MIGRATE;
+ 	}
+-- 
+2.43.0
+
