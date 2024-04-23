@@ -1,33 +1,33 @@
 Received: from casper.infradead.org (casper.infradead.org [90.155.50.34])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id EB0B738DC0;
-	Tue, 23 Apr 2024 22:56:05 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 8FAFC2E647;
+	Tue, 23 Apr 2024 22:56:09 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=90.155.50.34
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1713912967; cv=none; b=ggO69sfT2K8ik90Pnj1G9oQDHXerAwC/c39CBqi/2kyUv0/12vRuExT4+rSqWaLrYlORO4wqS9LDczjjIAW7Rd1t01TEpQZ2+jIZ7y+9PTiCd9SXsFj1OC71u+rvlLg+yHlUbodtmH/kVe1kGOvGXTiYzqeDJbFCiBkI28UOOl0=
+	t=1713912970; cv=none; b=rKUEm+jTIbHpS1628fQ1bEHg2kr0/5arAbRpIMRLbOUYJdyY6d/bNJe+4xHTSDwvLVS5lbWdmR01g6CG/YGwuRPutx15IvK8Cq4rWeO47mpdD9SH2fGH1oHddVuaC0aK3WW2u/eI1TxDTfkw6vNrIMotmsMdqLsxHfuVNskjIQw=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1713912967; c=relaxed/simple;
-	bh=7byEvOBB2FsdAqIYH925KsVyTe1J2ZPjsZBYCN2u2mU=;
+	s=arc-20240116; t=1713912970; c=relaxed/simple;
+	bh=b/AEiwuu1jH80Px8Xd6RO8rH7YWktD0bHMXARyA5LOU=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=PLqFEc9XoaTMaUBIkoVNQr9FZ7yL5UhHJ79u9kQsFtzl+MHWm9O8ymEH/a1axIJWZvgUIG2TTAB+9t6PkPp1oflx6dusFYN3yyGdz9KGdGdiLtbhYciESg2njlyEKD9o90R13aiYN+XpFnpKdp/iw2pbWw6V/GTEeYMoZnelBuY=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org; spf=none smtp.mailfrom=infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=VPD3YkPl; arc=none smtp.client-ip=90.155.50.34
+	 MIME-Version; b=b1T+VANQk80MRpFT6LdBW+0cDq35vQo94b6L7wP9ZB1avZwCOVuDqj5fPaWPTVUWQ1ujxXfN8gJyIV8bgGWYYgWOqQc5EC6zIm4E6UKnFYVFSa0Y9CmLfKSPFUV29kQLtDF3SVXd/cZx4HKs3Z4qUCK9TXqtiExIDvE6ZxBOkKk=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org; spf=none smtp.mailfrom=infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=GXqibsIW; arc=none smtp.client-ip=90.155.50.34
 Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=infradead.org
 Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=infradead.org
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="VPD3YkPl"
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="GXqibsIW"
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
 	d=infradead.org; s=casper.20170209; h=Content-Transfer-Encoding:MIME-Version:
 	References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:Sender:Reply-To:
 	Content-Type:Content-ID:Content-Description;
-	bh=KYDG6ZsjDj+2iBPQ3OajYlgseuthmwTxF2D+L3YSI+w=; b=VPD3YkPlOZgK3F00x6rBjyB/qa
-	7iLvl71KcyySOFpXv6VNcIvJ4kLBFTS/SXC3ZzrjOZBGWVSosHva8VS0O89ku2EGoSb9qZG20yWz2
-	gsbxrWVoRLITZhb+GHv47Fr7Tcbg/hDcEGYqKicULJLqtr7/WQI/SbIVuXP87EClD4lburQZ8Bn0E
-	1sENDUkd5HyuQEQA7bd59fijov3p1eibLXaD65uZE4xl1bPmqZpVd8Bz2kpemDPimf7xp4wYx1Bts
-	biZFYcGHus1s7W3aAtQd9JEgMLwAi1M2Q51JgD2jB+d0NH8QBSQz+8Dfe99630W60Xx6+tpx6+3jk
-	Cq8mW83A==;
+	bh=6BdbrjGMJLxdb5ZMK/G6foThAN9UndlEGGEDv4wlWRI=; b=GXqibsIW/9Se+tRhLO20+7a/v9
+	wsmcZhSZd4aKV02wYbXtdOm7xh9lbELNh6lQxP5GxA27iIrRPW1rK/Ymdtqpu/+/nGFyAzNy9lxxP
+	vy6pUdo+sbheXOrI4jhKUlZ6Ipc8ez5vku8zL1C7HWAh5Bri1s4bZXyjWL8pl+8/66uAUJKoXWRUz
+	3l94tyRtywEBnqZANW5qHke2GMUTLpyMRSsIt3MczQUwOdg6NTMK+fBrHg0SKG1L5aBKO9/X9mPsn
+	+iuTcNxlzraFoaUd4AYsaG73ZFUkHXpkDEIEYj9kpBzwsfM/1YOZAAJd1F/v7zGZqC0EVto1KhuBu
+	8OzRZSlQ==;
 Received: from willy by casper.infradead.org with local (Exim 4.97.1 #2 (Red Hat Linux))
-	id 1rzP3K-0000000HG6G-1bIa;
+	id 1rzP3K-0000000HG6O-308H;
 	Tue, 23 Apr 2024 22:55:54 +0000
 From: "Matthew Wilcox (Oracle)" <willy@infradead.org>
 To: Andrew Morton <akpm@linux-foundation.org>,
@@ -36,9 +36,9 @@ Cc: "Matthew Wilcox (Oracle)" <willy@infradead.org>,
 	linux-fsdevel@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net
-Subject: [PATCH 2/6] f2fs: Convert f2fs_clear_page_cache_dirty_tag to use a folio
-Date: Tue, 23 Apr 2024 23:55:33 +0100
-Message-ID: <20240423225552.4113447-3-willy@infradead.org>
+Subject: [PATCH 6/6] mm: Remove page_mapping()
+Date: Tue, 23 Apr 2024 23:55:37 +0100
+Message-ID: <20240423225552.4113447-7-willy@infradead.org>
 X-Mailer: git-send-email 2.44.0
 In-Reply-To: <20240423225552.4113447-1-willy@infradead.org>
 References: <20240423225552.4113447-1-willy@infradead.org>
@@ -50,32 +50,43 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Removes uses of page_mapping() and page_index().
+All callers are now converted, delete this compatibility wrapper.
 
 Signed-off-by: Matthew Wilcox (Oracle) <willy@infradead.org>
 ---
- fs/f2fs/data.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+ include/linux/pagemap.h | 1 -
+ mm/folio-compat.c       | 6 ------
+ 2 files changed, 7 deletions(-)
 
-diff --git a/fs/f2fs/data.c b/fs/f2fs/data.c
-index 5d641fac02ba..9f74c867d790 100644
---- a/fs/f2fs/data.c
-+++ b/fs/f2fs/data.c
-@@ -4100,11 +4100,12 @@ const struct address_space_operations f2fs_dblock_aops = {
- 
- void f2fs_clear_page_cache_dirty_tag(struct page *page)
- {
--	struct address_space *mapping = page_mapping(page);
-+	struct folio *folio = page_folio(page);
-+	struct address_space *mapping = folio->mapping;
- 	unsigned long flags;
- 
- 	xa_lock_irqsave(&mapping->i_pages, flags);
--	__xa_clear_mark(&mapping->i_pages, page_index(page),
-+	__xa_clear_mark(&mapping->i_pages, folio->index,
- 						PAGECACHE_TAG_DIRTY);
- 	xa_unlock_irqrestore(&mapping->i_pages, flags);
+diff --git a/include/linux/pagemap.h b/include/linux/pagemap.h
+index b6f14e9a2d98..941f7ed714b9 100644
+--- a/include/linux/pagemap.h
++++ b/include/linux/pagemap.h
+@@ -399,7 +399,6 @@ static inline void filemap_nr_thps_dec(struct address_space *mapping)
+ #endif
  }
+ 
+-struct address_space *page_mapping(struct page *);
+ struct address_space *folio_mapping(struct folio *);
+ struct address_space *swapcache_mapping(struct folio *);
+ 
+diff --git a/mm/folio-compat.c b/mm/folio-compat.c
+index f31e0ce65b11..f05906006b3c 100644
+--- a/mm/folio-compat.c
++++ b/mm/folio-compat.c
+@@ -10,12 +10,6 @@
+ #include <linux/swap.h>
+ #include "internal.h"
+ 
+-struct address_space *page_mapping(struct page *page)
+-{
+-	return folio_mapping(page_folio(page));
+-}
+-EXPORT_SYMBOL(page_mapping);
+-
+ void unlock_page(struct page *page)
+ {
+ 	return folio_unlock(page_folio(page));
 -- 
 2.43.0
 
