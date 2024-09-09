@@ -1,199 +1,120 @@
-Received: from mail-lf1-f47.google.com (mail-lf1-f47.google.com [209.85.167.47])
+Received: from mail-wr1-f50.google.com (mail-wr1-f50.google.com [209.85.221.50])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id B917315A876
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Sep 2024 22:07:20 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=209.85.167.47
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D4F5D1AD9F1;
+	Mon,  9 Sep 2024 07:08:18 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=209.85.221.50
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1725660444; cv=none; b=s6rCKaGvGHUke7sDVD0d5Ue6w6cEYGg1eUcW2FTQV1YAdDm46g/Evq/wWiCvszA9Uz5qzrA8VHEm8d1PLbAp3uRtV7CZWYk4jJKlyn6HfwqZO7I29VyWTbM34eOs7C+MsMezs6s8ahIPFoBdnORtLPQgiTqlDnUAYn1b5gH1n8I=
+	t=1725865700; cv=none; b=HAXBYKOQ56G4AoU0UuG63ZvG1hO5nFQxtR0XI0cbqDlQEpkUgIi87sLDfxa/mzQQ7p6OqpSjge7xf/XEWP2qZmiTww+KnRmfgbe3AEukJnJpv00QkNXUcdiQkdMapKwg7hVN13FPBYL76hRoto3WBxVmxKgGaA3FVsI/ykVCHJs=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1725660444; c=relaxed/simple;
-	bh=DMDXUtr2tKydRZROnQMaVv9GRGluLW3xfbvWKrH84YM=;
-	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=YK0qgp2qwe5EUR3sHCRen0hIUcQeajR+VL+bUxYKpTdHtbWUL7+BHbpPiAsgMFK6Blkz+V2X96G5rh220cg9tgKW0Dls8JfM37M/Jlh8p6G3GPPcxe2Mf0UhlnMa2aktTeRqheLlbRWI3kPBwepC4ccbbbnVEQzojd1RNRht7DA=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linaro.org; spf=pass smtp.mailfrom=linaro.org; dkim=pass (2048-bit key) header.d=linaro.org header.i=@linaro.org header.b=kaQN6uA+; arc=none smtp.client-ip=209.85.167.47
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linaro.org
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linaro.org
+	s=arc-20240116; t=1725865700; c=relaxed/simple;
+	bh=vg8RVh1QVSzklqVo21bOPOyAtUZ4RZO6cEL+S2fGkkU=;
+	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
+	 MIME-Version; b=GHbLOOtJKYyaUnd16ZcJjrwPWgm1+YxMlVNq5Nzm9Vd0V59VY5P4OO5S5ZcXPNbx5UQEGZ9THjE5FPq2QLXElILX/81uqwO2wGl9b+jozglW/zd3uPeDMpnnLhxDuh76Nut+rzfrXO9vQlT5Vg9diZHCUQCR/MpUsrXjgsyyQvk=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=gmail.com; spf=pass smtp.mailfrom=gmail.com; dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b=hOb2shye; arc=none smtp.client-ip=209.85.221.50
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=gmail.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=gmail.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=linaro.org header.i=@linaro.org header.b="kaQN6uA+"
-Received: by mail-lf1-f47.google.com with SMTP id 2adb3069b0e04-53655b9bbcdso2240416e87.2
-        for <linux-fscrypt@vger.kernel.org>; Fri, 06 Sep 2024 15:07:20 -0700 (PDT)
+	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="hOb2shye"
+Received: by mail-wr1-f50.google.com with SMTP id ffacd0b85a97d-374c1e5fe79so2573496f8f.1;
+        Mon, 09 Sep 2024 00:08:18 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=linaro.org; s=google; t=1725660439; x=1726265239; darn=vger.kernel.org;
-        h=in-reply-to:content-disposition:mime-version:references:message-id
-         :subject:cc:to:from:date:from:to:cc:subject:date:message-id:reply-to;
-        bh=6HOhtyEYYt7rA6jCBX+L1mlm8hngGJHlfFCxxooVTC4=;
-        b=kaQN6uA+5cYL38uaZLKBGyobZmQgr12YaaCLn80DRzBTFtLrZuxB9OfNnowN+YWS0/
-         EZ0gQ3vWXINxF5r6dptQxWlxL/HsAJSIa84VDdlUnGPTF5YbPo+W6DfbkDoaMcVR15/x
-         wFYLJhsb3PRYorSk0ZQaKryX5jPKwfekTUBAabltz/SA2X/sfyn5OaZMVJMgh/Apcdek
-         61nJUyQ2IXVMaSJKQdyr/p+3t8Q8WSzxqpGCL6dBAsHVzmADYQ/vBUUrEnRy0xC9jOc6
-         5SFk5FiKfO6nWnqqYh04CF4UcyB1vemf2TMzQb4F5yBJ+klIumSK8vzj0NAZAjlnccDI
-         J2dw==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1725660439; x=1726265239;
-        h=in-reply-to:content-disposition:mime-version:references:message-id
-         :subject:cc:to:from:date:x-gm-message-state:from:to:cc:subject:date
+        d=gmail.com; s=20230601; t=1725865697; x=1726470497; darn=vger.kernel.org;
+        h=content-transfer-encoding:mime-version:references:in-reply-to
+         :message-id:date:subject:cc:to:from:from:to:cc:subject:date
          :message-id:reply-to;
-        bh=6HOhtyEYYt7rA6jCBX+L1mlm8hngGJHlfFCxxooVTC4=;
-        b=Xmrdrt+aiCkdINMVmXNjYFPYc96GlvNcw0DR8v/1uO/UFWgl46azetBnanJ7p4bJMk
-         RbvB9pZtVpAFkMSVKOjbY5m2wV3NUbOptiHqA0plmqx9VRC4XaB38ak5Gk8wP+WXgOM9
-         NsxMSEXMkicqvf3YDo1O2rN18hjaTprNljBTFGlsWMeDgM6vXXeZP9JaKA9gq0SnNNgQ
-         QQLlgb/hLxctnZn7frvOSphjTD5RXMTYaOscDpZZzqMxJgERCXN/+8TkAZkKQrtbzrhl
-         aMUXoGRekbWcVidXnl1smP1N9Lexj2zmZ27WEWyiblLwwfus3o8w7qDU5zuswU3FFinM
-         coPQ==
-X-Forwarded-Encrypted: i=1; AJvYcCVEvQmMRK6kVj6SQ67/Cdbb1HHfACIf2DdIWrRJ2i7OcDYamGcrBcjG9MCoyLWJb0RsWMGHTXopMcz5wxu5@vger.kernel.org
-X-Gm-Message-State: AOJu0YwWM7mbYbVKQur6YksY9GvRA+4vu41facsUhQ2jwxHcjOPkPJsg
-	06oiwtBJYFyMCSf4IMBR72lbJs33oE07AMoawt+LihOC3an9qtjMI/4IQ6xt1ic=
-X-Google-Smtp-Source: AGHT+IGo5Rf50EbBmOUBUAeWLcQnh0sLqD8vtwGBMm3Zld7y3VkY79ttTtwoqkfdSYGppGMy/IXnlA==
-X-Received: by 2002:a05:6512:280d:b0:530:ba4b:f65d with SMTP id 2adb3069b0e04-536587b4b74mr2903071e87.28.1725660438133;
-        Fri, 06 Sep 2024 15:07:18 -0700 (PDT)
-Received: from eriador.lumag.spb.ru (2001-14ba-a0c3-3a00--7a1.rev.dnainternet.fi. [2001:14ba:a0c3:3a00::7a1])
-        by smtp.gmail.com with ESMTPSA id 2adb3069b0e04-536536a12f4sm529135e87.230.2024.09.06.15.07.17
+        bh=8B7BVoErPcOoKPxSdUBz41r3SRVlI1m5+I4zzu3vMfI=;
+        b=hOb2shyew6VcFuElGULlrfNIjky0KF0Pr8T+bMV1osEqJEDlb4yKdZjqIR5auEz/QI
+         Ao+qeWQhCNiM6qLB3/yvXiTiKTHgInbDjkJq2fcDoJCxGj4w4lMMDaCdjBM9xD78Tw1H
+         gyr7BmoR4Z7u6rttdffn/l+5T6OUwfuRb6GWiKCdBW+17g6mrDUdWEWjHWtgAuzcDgXP
+         8OxxvAP4w4+/+18QO6Ub1cckD/UfePT5ICMBDszAIhXtUJ1fTejrjKMY5K1nY2U3J3pH
+         QKJZPdn1NYi7PJaTKV7bnRCIwNxVNYFPrz7ikzMdUgXCycdgb0OHNeyxhcVzQRGSsl7H
+         xzPw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1725865697; x=1726470497;
+        h=content-transfer-encoding:mime-version:references:in-reply-to
+         :message-id:date:subject:cc:to:from:x-gm-message-state:from:to:cc
+         :subject:date:message-id:reply-to;
+        bh=8B7BVoErPcOoKPxSdUBz41r3SRVlI1m5+I4zzu3vMfI=;
+        b=KuTVlD+OrDDyGjdlsz7wdLJJ7NE3bo5z701VI4bIxL9S+Gds7cjWfVeD5C+uSTqWdr
+         GQElE0Q3P6X3usMjHkksNRjZNpDceo9Gb3lzwEeOhfeWS+gIY1+AwuodB8g0s9v1qdyW
+         FAUFgbc6ap2IRfEit5KfvTU1cORFkPM+f0noqqyBGhYbMTYQsHZn4S7cMOmENyVhSwCI
+         FqFVzoNqAa9a5HBQrFOZ8cLMAXHtFcSghhKBDSstAEh06PN/3oyVE+9bjcL5LampSJnQ
+         +zRSuoXUZmKg3joyDpzHgLasv5+E2lWeB4RAGzPcdWprJR3dKOFbHV1aOJWpQ0N+RHYF
+         59tQ==
+X-Forwarded-Encrypted: i=1; AJvYcCUQb25kQyBmaNG8nJUwedggVSTMhgOMmF4lOQeJagL9jJgn0TnVLSAxV9H735nsVp3B2PtEJmN2YG3kog==@vger.kernel.org, AJvYcCVOCYj5tV1FDDox2p1WXj9JkZS8yq1w3J4vhJe6q/JQDBnfSDUKi4QWI6N6vY9nSs7UT3E=@vger.kernel.org, AJvYcCVbNxPujFfFnPkeeea7zLgaA+3+5kP7IrbmRgMQqH0/qaZs85USjJS3cuAG8XZ0ECM2tMNfSqUkzoT+iAU=@vger.kernel.org, AJvYcCWmbfcje/Y9okhRxV7YH++yIFDmU3seqdu07VdhnwrJVZ8bTIqQwm4yHO8L7dFVpk7IjRx/i0tcCxc3+OnV@vger.kernel.org, AJvYcCXGfiSt1lDTVmlSjMH6he3HOJlBo9fw43YP/S2arzjHvoBh8rE4wFkDVZp6EqrRXTRTk7k2TB+8IBrq1N7LswsN@vger.kernel.org, AJvYcCXVDWg9NES1B9EcvtKqq4BCOq/PImnMpEKo6oN1J1C259+zHCFw/VAbkhdSI2EYgoD/Rfo72fxuU9WuKbp6/A==@vger.kernel.org
+X-Gm-Message-State: AOJu0Yy4C7kuOXhPPEWOtcnDSKVD90Zu291hOy3qxy8Sauq7BuY6CqQB
+	LciMcPXayyKQiLzZQxsJnGYpFr46FSjUQZg2rTXHSgJckJIFbemr
+X-Google-Smtp-Source: AGHT+IGYyMu3Vg6t0QKAaHpT+Zfos7iWqitbr5XWvfDWFMrJwqorNUfbV12tuLSocQgEo0BB8LI95Q==
+X-Received: by 2002:adf:fe84:0:b0:371:8e3c:59 with SMTP id ffacd0b85a97d-378895c2578mr7304772f8f.5.1725865697132;
+        Mon, 09 Sep 2024 00:08:17 -0700 (PDT)
+Received: from fedora.iskraemeco.si ([193.77.86.250])
+        by smtp.gmail.com with ESMTPSA id ffacd0b85a97d-378956d375asm5178754f8f.66.2024.09.09.00.08.16
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Fri, 06 Sep 2024 15:07:17 -0700 (PDT)
-Date: Sat, 7 Sep 2024 01:07:16 +0300
-From: Dmitry Baryshkov <dmitry.baryshkov@linaro.org>
-To: Bartosz Golaszewski <brgl@bgdev.pl>
-Cc: Jens Axboe <axboe@kernel.dk>, Jonathan Corbet <corbet@lwn.net>, 
-	Alasdair Kergon <agk@redhat.com>, Mike Snitzer <snitzer@kernel.org>, 
-	Mikulas Patocka <mpatocka@redhat.com>, Adrian Hunter <adrian.hunter@intel.com>, 
-	Asutosh Das <quic_asutoshd@quicinc.com>, Ritesh Harjani <ritesh.list@gmail.com>, 
-	Ulf Hansson <ulf.hansson@linaro.org>, Alim Akhtar <alim.akhtar@samsung.com>, 
-	Avri Altman <avri.altman@wdc.com>, Bart Van Assche <bvanassche@acm.org>, 
-	"James E.J. Bottomley" <James.Bottomley@hansenpartnership.com>, "Martin K. Petersen" <martin.petersen@oracle.com>, 
-	Eric Biggers <ebiggers@kernel.org>, "Theodore Y. Ts'o" <tytso@mit.edu>, 
-	Jaegeuk Kim <jaegeuk@kernel.org>, Alexander Viro <viro@zeniv.linux.org.uk>, 
-	Christian Brauner <brauner@kernel.org>, Jan Kara <jack@suse.cz>, Bjorn Andersson <andersson@kernel.org>, 
-	Konrad Dybcio <konradybcio@kernel.org>, Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>, 
-	Gaurav Kashyap <quic_gaurkash@quicinc.com>, Neil Armstrong <neil.armstrong@linaro.org>, 
-	linux-block@vger.kernel.org, linux-doc@vger.kernel.org, linux-kernel@vger.kernel.org, 
-	dm-devel@lists.linux.dev, linux-mmc@vger.kernel.org, linux-scsi@vger.kernel.org, 
-	linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-arm-msm@vger.kernel.org, 
-	Bartosz Golaszewski <bartosz.golaszewski@linaro.org>
-Subject: Re: [PATCH v6 09/17] soc: qcom: ice: add HWKM support to the ICE
- driver
-Message-ID: <7uoq72bpiqmo2olwpnudpv3gtcowpnd6jrifff34ubmfpijgc6@k6rmnalu5z4o>
-References: <20240906-wrapped-keys-v6-0-d59e61bc0cb4@linaro.org>
- <20240906-wrapped-keys-v6-9-d59e61bc0cb4@linaro.org>
+        Mon, 09 Sep 2024 00:08:16 -0700 (PDT)
+From: Uros Bizjak <ubizjak@gmail.com>
+To: x86@kernel.org,
+	linux-crypto@vger.kernel.org,
+	intel-gfx@lists.freedesktop.org,
+	dri-devel@lists.freedesktop.org,
+	linux-media@vger.kernel.org,
+	linux-mtd@lists.infradead.org,
+	linux-fscrypt@vger.kernel.org,
+	linux-scsi@vger.kernel.org,
+	bpf@vger.kernel.org,
+	linux-kselftest@vger.kernel.org,
+	kunit-dev@googlegroups.com
+Cc: Uros Bizjak <ubizjak@gmail.com>,
+	Dave Hansen <dave.hansen@linux.intel.com>,
+	Andy Lutomirski <luto@kernel.org>,
+	Peter Zijlstra <peterz@infradead.org>,
+	Thomas Gleixner <tglx@linutronix.de>,
+	Ingo Molnar <mingo@kernel.org>,
+	Borislav Petkov <bp@alien8.de>,
+	"H. Peter Anvin" <hpa@zytor.com>
+Subject: [PATCH v2 01/19] x86/kaslr: Include <linux/prandom.h> instead of <linux/random.h>
+Date: Mon,  9 Sep 2024 09:05:15 +0200
+Message-ID: <20240909070742.75425-2-ubizjak@gmail.com>
+X-Mailer: git-send-email 2.46.0
+In-Reply-To: <20240909070742.75425-1-ubizjak@gmail.com>
+References: <20240909070742.75425-1-ubizjak@gmail.com>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20240906-wrapped-keys-v6-9-d59e61bc0cb4@linaro.org>
+Content-Transfer-Encoding: 8bit
 
-On Fri, Sep 06, 2024 at 08:07:12PM GMT, Bartosz Golaszewski wrote:
-> From: Gaurav Kashyap <quic_gaurkash@quicinc.com>
-> 
-> Qualcomm's ICE (Inline Crypto Engine) contains a proprietary key
-> management hardware called Hardware Key Manager (HWKM). Add HWKM support
-> to the ICE driver if it is available on the platform. HWKM primarily
-> provides hardware wrapped key support where the ICE (storage) keys are
-> not available in software and instead protected in hardware.
-> 
-> When HWKM software support is not fully available (from Trustzone), there
-> can be a scenario where the ICE hardware supports HWKM, but it cannot be
-> used for wrapped keys. In this case, raw keys have to be used without
-> using the HWKM. We query the TZ at run-time to find out whether wrapped
-> keys support is available.
-> 
-> Tested-by: Neil Armstrong <neil.armstrong@linaro.org>
-> Signed-off-by: Gaurav Kashyap <quic_gaurkash@quicinc.com>
-> Signed-off-by: Bartosz Golaszewski <bartosz.golaszewski@linaro.org>
-> ---
->  drivers/soc/qcom/ice.c | 152 +++++++++++++++++++++++++++++++++++++++++++++++--
->  include/soc/qcom/ice.h |   1 +
->  2 files changed, 149 insertions(+), 4 deletions(-)
-> 
->  int qcom_ice_enable(struct qcom_ice *ice)
->  {
-> +	int err;
-> +
->  	qcom_ice_low_power_mode_enable(ice);
->  	qcom_ice_optimization_enable(ice);
->  
-> -	return qcom_ice_wait_bist_status(ice);
-> +	if (ice->use_hwkm)
-> +		qcom_ice_enable_standard_mode(ice);
-> +
-> +	err = qcom_ice_wait_bist_status(ice);
-> +	if (err)
-> +		return err;
-> +
-> +	if (ice->use_hwkm)
-> +		qcom_ice_hwkm_init(ice);
-> +
-> +	return err;
->  }
->  EXPORT_SYMBOL_GPL(qcom_ice_enable);
->  
-> @@ -150,6 +282,10 @@ int qcom_ice_resume(struct qcom_ice *ice)
->  		return err;
->  	}
->  
-> +	if (ice->use_hwkm) {
-> +		qcom_ice_enable_standard_mode(ice);
-> +		qcom_ice_hwkm_init(ice);
-> +	}
->  	return qcom_ice_wait_bist_status(ice);
->  }
->  EXPORT_SYMBOL_GPL(qcom_ice_resume);
-> @@ -157,6 +293,7 @@ EXPORT_SYMBOL_GPL(qcom_ice_resume);
->  int qcom_ice_suspend(struct qcom_ice *ice)
->  {
->  	clk_disable_unprepare(ice->core_clk);
-> +	ice->hwkm_init_complete = false;
->  
->  	return 0;
->  }
-> @@ -206,6 +343,12 @@ int qcom_ice_evict_key(struct qcom_ice *ice, int slot)
->  }
->  EXPORT_SYMBOL_GPL(qcom_ice_evict_key);
->  
-> +bool qcom_ice_hwkm_supported(struct qcom_ice *ice)
-> +{
-> +	return ice->use_hwkm;
-> +}
-> +EXPORT_SYMBOL_GPL(qcom_ice_hwkm_supported);
-> +
->  static struct qcom_ice *qcom_ice_create(struct device *dev,
->  					void __iomem *base)
->  {
-> @@ -240,6 +383,7 @@ static struct qcom_ice *qcom_ice_create(struct device *dev,
->  		engine->core_clk = devm_clk_get_enabled(dev, NULL);
->  	if (IS_ERR(engine->core_clk))
->  		return ERR_CAST(engine->core_clk);
-> +	engine->use_hwkm = qcom_scm_has_wrapped_key_support();
+Substitute the inclusion of <linux/random.h> header with
+<linux/prandom.h> to allow the removal of legacy inclusion
+of <linux/prandom.h> from <linux/random.h>.
 
-This still makes the decision on whether to use HW-wrapped keys on
-behalf of a user. I suppose this is incorrect. The user must be able to
-use raw keys even if HW-wrapped keys are available on the platform. One
-of the examples for such use-cases is if a user prefers to be able to
-recover stored information in case of a device failure (such recovery
-will be impossible if SoC is damaged and HW-wrapped keys are used).
+Signed-off-by: Uros Bizjak <ubizjak@gmail.com>
+Cc: Dave Hansen <dave.hansen@linux.intel.com>
+Cc: Andy Lutomirski <luto@kernel.org>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Ingo Molnar <mingo@kernel.org>
+Cc: Borislav Petkov <bp@alien8.de>
+Cc: "H. Peter Anvin" <hpa@zytor.com>
+---
+ arch/x86/mm/kaslr.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
->  
->  	if (!qcom_ice_check_supported(engine))
->  		return ERR_PTR(-EOPNOTSUPP);
-> diff --git a/include/soc/qcom/ice.h b/include/soc/qcom/ice.h
-> index 9dd835dba2a7..1f52e82e3e1c 100644
-> --- a/include/soc/qcom/ice.h
-> +++ b/include/soc/qcom/ice.h
-> @@ -34,5 +34,6 @@ int qcom_ice_program_key(struct qcom_ice *ice,
->  			 const struct blk_crypto_key *bkey,
->  			 u8 data_unit_size, int slot);
->  int qcom_ice_evict_key(struct qcom_ice *ice, int slot);
-> +bool qcom_ice_hwkm_supported(struct qcom_ice *ice);
->  struct qcom_ice *of_qcom_ice_get(struct device *dev);
->  #endif /* __QCOM_ICE_H__ */
-> 
-> -- 
-> 2.43.0
-> 
-
+diff --git a/arch/x86/mm/kaslr.c b/arch/x86/mm/kaslr.c
+index 230f1dee4f09..e17e6e27b7ec 100644
+--- a/arch/x86/mm/kaslr.c
++++ b/arch/x86/mm/kaslr.c
+@@ -22,7 +22,7 @@
+ 
+ #include <linux/kernel.h>
+ #include <linux/init.h>
+-#include <linux/random.h>
++#include <linux/prandom.h>
+ #include <linux/memblock.h>
+ #include <linux/pgtable.h>
+ 
 -- 
-With best wishes
-Dmitry
+2.46.0
+
