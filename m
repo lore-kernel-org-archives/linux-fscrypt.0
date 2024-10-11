@@ -1,61 +1,61 @@
-Received: from mail-wr1-f49.google.com (mail-wr1-f49.google.com [209.85.221.49])
+Received: from mail-wr1-f47.google.com (mail-wr1-f47.google.com [209.85.221.47])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D18A91D04B0
-	for <linux-fscrypt@vger.kernel.org>; Fri, 11 Oct 2024 18:54:34 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=209.85.221.49
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 863C81D0420
+	for <linux-fscrypt@vger.kernel.org>; Fri, 11 Oct 2024 18:54:37 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=209.85.221.47
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1728672879; cv=none; b=rpT5vRQFwqlua/Z5j6w56/2M2q6Ww1x1m9WpGepX/VUj8UGCHoaqc87Fv1CgxQsr8MIQyvXzUpyds+Bnrwm82DzcEs59Zmv0fom6MmiGwioef63I5hFC9E5DvgCI6ihzi7Zi8kl2xbU1bqfgM5QYSAONuWx5pJiN73OcpPHpcqU=
+	t=1728672884; cv=none; b=f0aIp6r7nK1DAEoP6CF6rkfqzOKG03MCA+6ltU1E8YWSw0nwT6gLLMzf95jOEeThHoKLT/B7gRCHsWVWslv/Jx98Lyq/bfWh9PJnJptg7svT1ksNw2sigZ7xS4sF1sXvo2M/YmluhvYrONP2XLu2z5y+5f0U7ACF6irV8KQtgxc=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1728672879; c=relaxed/simple;
-	bh=t0j2TWNXIEE1XSVs17WK1amJZhXb4Xu0TQEn6JQEVCU=;
+	s=arc-20240116; t=1728672884; c=relaxed/simple;
+	bh=TVcoi08YdOSb8oDH8EN+lfvTR+VBW0n8+wvckAnUAa4=;
 	h=From:Date:Subject:MIME-Version:Content-Type:Message-Id:References:
-	 In-Reply-To:To:Cc; b=PilObM0uxKcqhOxvYyTYFixqmYfemxekeUqpb1QQHcTGvbCKi/wXTZDgugtbYviE047MDyCysXu/HH3Ji8x5LPUwIEs8kKA6JMx6gsNxsmmncH9ej9Ne7CevhwkIZkgLiLJx+O2VB+PVL26r6YxACq1IzIC5Dyx80q1sBhn2q2M=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=bgdev.pl; spf=none smtp.mailfrom=bgdev.pl; dkim=pass (2048-bit key) header.d=bgdev-pl.20230601.gappssmtp.com header.i=@bgdev-pl.20230601.gappssmtp.com header.b=TATA+opz; arc=none smtp.client-ip=209.85.221.49
+	 In-Reply-To:To:Cc; b=ITSN2wJWSUmC8mgtqzxazfoeNUO64bbVr8Vd+wzfiuLW/D+7ds8WuxqjNlZ3GUI+bfyX93mOhp75CSIeJ77gegQZ16YDK08CueeFwljXWSGvKrpBlkesx+gjdhAOmCcHpd4OsEuZj4GWBroFbLlmvqqExI961SK9is5QER+ptoE=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=bgdev.pl; spf=none smtp.mailfrom=bgdev.pl; dkim=pass (2048-bit key) header.d=bgdev-pl.20230601.gappssmtp.com header.i=@bgdev-pl.20230601.gappssmtp.com header.b=s4n74iM3; arc=none smtp.client-ip=209.85.221.47
 Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=bgdev.pl
 Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=bgdev.pl
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=bgdev-pl.20230601.gappssmtp.com header.i=@bgdev-pl.20230601.gappssmtp.com header.b="TATA+opz"
-Received: by mail-wr1-f49.google.com with SMTP id ffacd0b85a97d-37d43a9bc03so1325954f8f.2
-        for <linux-fscrypt@vger.kernel.org>; Fri, 11 Oct 2024 11:54:34 -0700 (PDT)
+	dkim=pass (2048-bit key) header.d=bgdev-pl.20230601.gappssmtp.com header.i=@bgdev-pl.20230601.gappssmtp.com header.b="s4n74iM3"
+Received: by mail-wr1-f47.google.com with SMTP id ffacd0b85a97d-37d3ecad390so2073053f8f.1
+        for <linux-fscrypt@vger.kernel.org>; Fri, 11 Oct 2024 11:54:37 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=bgdev-pl.20230601.gappssmtp.com; s=20230601; t=1728672872; x=1729277672; darn=vger.kernel.org;
+        d=bgdev-pl.20230601.gappssmtp.com; s=20230601; t=1728672876; x=1729277676; darn=vger.kernel.org;
         h=cc:to:in-reply-to:references:message-id:content-transfer-encoding
          :mime-version:subject:date:from:from:to:cc:subject:date:message-id
          :reply-to;
-        bh=YjQIxbAuKMCqqgI+EUZOelMCCp6uAS5Qt0dyo69PSSY=;
-        b=TATA+opztfn/Bnh4D4vHevONqJ6Cxx7FbsEcn3fWIdmZla9HiDf8rEz1iuGHhNDcho
-         3JC5YGzhYCnv5a3Zb/eLXtmfkLYroHQLEGLj055RnXsOEmz8YJVRO0DDqJtU3xLfoqiK
-         JQck0Ejzv3X/iPv4zqRL5P7NJ8xs6ltg3kFvYp/XrvyUYQp8Qe/q9pUAcKWyYhPhyopL
-         lgE2lAb9k1J/yiAA/BVts7KEc57ZopV8B46XE8mcb3i3aQ8HY8819+DNtyhj9KY20L49
-         NSEaQcHiEh0w6Bpa3oXv53CZbdfNi/9FDyvfyRHUXf0irPE0QKrwMqll6b0I1A8Bf+H+
-         AkDg==
+        bh=nZnC+NzMxbBNE8bYS/olhN0qtTPuhjTkO3+y4T7Jrac=;
+        b=s4n74iM3kF2n0V+Jrcjc+f89xyxk6aoiJJqLONaAsFy1sxtAFGpnqlidtOp5Ma1DMm
+         9Bpr6ZGnqR3n9hc1lcZGqYYTC1gJaCSJHNuoZpQPzXQZti1frSWJLV3UNQhjLT4jnfyu
+         CjnrjffrEqUUdrAcbKtoeDd93FymRH+dMXYIbRTaEaWpkzpfr5HumlFDxms+NPXIg24w
+         IvZcVc1WN2F3khJamFgrnl2lqA3TOYGug+Utr/L0cf68GlEiTcByFFosAlsFdh4z3qGn
+         37VBLFONaLUNiPOiQ5dSw53CaVtfbF3MPq7Zsoti51lJQYm9duWFlMPgb+xDEqmaTG5O
+         0stA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1728672872; x=1729277672;
+        d=1e100.net; s=20230601; t=1728672876; x=1729277676;
         h=cc:to:in-reply-to:references:message-id:content-transfer-encoding
          :mime-version:subject:date:from:x-gm-message-state:from:to:cc
          :subject:date:message-id:reply-to;
-        bh=YjQIxbAuKMCqqgI+EUZOelMCCp6uAS5Qt0dyo69PSSY=;
-        b=wDt7gUqaLkc8d/ZS/QrE4QRgt1LUHx3IKsiTlUymBOzgEFqBC37R8qTvETrxFhNKLm
-         ln/M17a9GCJA9nGnKGVvFnATTZlcJs+4kSBZvEpH+C28Rgis7bYo20qR94iZQM/tiEDd
-         0zL3pk1ACg1zsAkV1Wq6lbYqj/BaKq4r1RmLbni4jDeEeOwqKdANRn1juluwG/G5FhhD
-         vgizpFb6GcipbHKVhwIsoCtnEYWlkxBXHb0gRcQz1OtjyOmdLc4JUIEWTc1QtShiarb2
-         gfIyK0qq8KIhTE05oqln68b2a6dU7B4sN2sz+IbXPa/KDblqVuKTlKa23Q5lYss33b7J
-         zZNw==
-X-Forwarded-Encrypted: i=1; AJvYcCXjQur2Ti59omxTf7gBpZaho6+XJVOoVEp1E8UjXkjrQgsbLYlea7clrB5Y0AnulkJL9+7/iaogxUpVSMun@vger.kernel.org
-X-Gm-Message-State: AOJu0YycAEnoG1L7WCLoF3RoSQnflNqTtXLfRnS7/n0eBProrhN15+YD
-	JkUSjsbn2IJcbW0se8oRsW0ieIdwgNNxh7r53MowUYMSigrVZfoQOxTpVXcm1mQ=
-X-Google-Smtp-Source: AGHT+IEN2nPKa+ReGmkPEHCHh1RaEgT1Am49tNhqAOTT1iDxBJmhrOrV3Oas2VHfnfwE2ix2/CBbuQ==
-X-Received: by 2002:adf:e383:0:b0:374:b9d7:5120 with SMTP id ffacd0b85a97d-37d5feae644mr414247f8f.23.1728672872379;
-        Fri, 11 Oct 2024 11:54:32 -0700 (PDT)
+        bh=nZnC+NzMxbBNE8bYS/olhN0qtTPuhjTkO3+y4T7Jrac=;
+        b=aYLoZ74tlfP6COLj+FOPQo3JHIDSYSG6I/9ue/0+vBVD10Yc4JDH/2He14avPpUsD0
+         kg8qzEXGsDrhckCXPxe210L5FaCl+G9kkMAEExAivHwht+bd7oZwwA8VZAXn4DOmTQ1L
+         SL3+qrZXsvcdfdeYhXJU69ujIKdlWrn4UuJAW+C2H/9n6WX3AqtWxH+ZdfsYbEyaw2O1
+         BdLGVc+fTTqmQkdJlTHOqAZ3kMOrDnZu6RpIR/zIcpj9BfvrZ1Lm53HkC2py6YUKByN8
+         jaRTAhBDp5nTFpltkpzYMtHdrUruQ9nicbJZOcXHWzzgIQa/OWUhymrlQz2bRHLvWYCu
+         AY/Q==
+X-Forwarded-Encrypted: i=1; AJvYcCUwVgCjiBLdoZm04nif+vkY11WBb4gjoMVWlOH1gFq7q7QN4aH3fb0frrNCIoILxyYobczZQWVvZsC3fCrW@vger.kernel.org
+X-Gm-Message-State: AOJu0Yw7narXv+euQ6K+X3yKG7d63mGrjnnzuOqTXqH714aZQ3m3stHw
+	rn9uYzsay2V3DO1GQsMbD6pkSwW5ml9DwLzeLYLXFy+C5d1Q4t5OjsaJ5NBKohw=
+X-Google-Smtp-Source: AGHT+IHF5ftxwy6C2IV6BhdzepwOwmc8pV/1K2VFvT4bOGIqEF+YlIwsiJG8XtWohgCM+DxnW6PhCw==
+X-Received: by 2002:a5d:4b4f:0:b0:37c:ccba:8c93 with SMTP id ffacd0b85a97d-37d551d5520mr2941090f8f.11.1728672875839;
+        Fri, 11 Oct 2024 11:54:35 -0700 (PDT)
 Received: from [127.0.1.1] ([2a01:cb1d:dc:7e00:68b8:bef:b7eb:538f])
-        by smtp.gmail.com with ESMTPSA id ffacd0b85a97d-37d4b79fe7csm4559161f8f.70.2024.10.11.11.54.31
+        by smtp.gmail.com with ESMTPSA id ffacd0b85a97d-37d4b79fe7csm4559161f8f.70.2024.10.11.11.54.34
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Fri, 11 Oct 2024 11:54:31 -0700 (PDT)
+        Fri, 11 Oct 2024 11:54:34 -0700 (PDT)
 From: Bartosz Golaszewski <brgl@bgdev.pl>
-Date: Fri, 11 Oct 2024 20:54:02 +0200
-Subject: [PATCH v7 03/17] blk-crypto: add ioctls to create and prepare
- hardware-wrapped keys
+Date: Fri, 11 Oct 2024 20:54:04 +0200
+Subject: [PATCH v7 05/17] ice, ufs, mmc: use the blk_crypto_key struct when
+ programming the key
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -64,7 +64,7 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Message-Id: <20241011-wrapped-keys-v7-3-e3f7a752059b@linaro.org>
+Message-Id: <20241011-wrapped-keys-v7-5-e3f7a752059b@linaro.org>
 References: <20241011-wrapped-keys-v7-0-e3f7a752059b@linaro.org>
 In-Reply-To: <20241011-wrapped-keys-v7-0-e3f7a752059b@linaro.org>
 To: Jens Axboe <axboe@kernel.dk>, Jonathan Corbet <corbet@lwn.net>, 
@@ -92,549 +92,277 @@ Cc: linux-block@vger.kernel.org, linux-doc@vger.kernel.org,
  linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, 
  linux-arm-msm@vger.kernel.org, 
  Bartosz Golaszewski <bartosz.golaszewski@linaro.org>, 
- Eric Biggers <ebiggers@google.com>
+ Om Prakash Singh <quic_omprsing@quicinc.com>
 X-Mailer: b4 0.13.0
-X-Developer-Signature: v=1; a=openpgp-sha256; l=18904;
+X-Developer-Signature: v=1; a=openpgp-sha256; l=9551;
  i=bartosz.golaszewski@linaro.org; h=from:subject:message-id;
- bh=DSL9y/P7XfTHfozptQmZffunJ2OisLCtXw2avt512Hw=;
- b=owEBbQKS/ZANAwAKARGnLqAUcddyAcsmYgBnCXRclNgmNRMJcrVtDAtJIVMLA9koYBkW4Ljs4
- 077zgUU1X6JAjMEAAEKAB0WIQQWnetsC8PEYBPSx58Rpy6gFHHXcgUCZwl0XAAKCRARpy6gFHHX
- ckrsEAClQCeK4yMn9w+KoIt5NP9dejE3uR6zOLEA7SF2Ov5zEZJ1wE7LF9Od3IFAK4itVeM4kaO
- WgtWX6S6n8Ptm/9h/oQXOjjlCpPQxks2RZ9nP5rI9QR0euhku6U5Xx8gb0L4E8FEzrIoTc3LHTD
- o5nbADmxb42Kefrm9edyqxw/xnkgV9ajWRDiF9m9sCtZh/gIMxn00djZG0nn6WlIx2IRHgtiadD
- d23zcbqlKu6mUJ0Vnu8T3YPFuXVeneMe4F5NbbOPHcbi+cs1S+E0mRCUgQi6RpaS41FAXW3seWO
- XVJcR7nWfWVDtcDMHf/zKWLMH1d6cprYdrP7qx7jx7NqRd5Hy0HjGyCjjnNWEXkGRwTur+3B4KL
- TxLtQ1CAtydkvzBhdtt3jJ6Jm0kJZRJvobQ/kiATBBsFn+NQqk6i6rysOLvUgkP8Aa32yGOXdj7
- iX0UbGaY/1VYm0RVxXiaHfQHQusrf8c1gXHj9Q65+pE25aL/Kmb2XcdKQYVg5wGgRwG7Pu9YNkN
- J53S+k42BYL7l/HgMJOL5luILC+dXq2/kb0hzhJcG8jERBCWNyV5GMZMUatNuVIaWVAD7pT4aSN
- 2+ieV3fuEHAQ3hKNBZ3J3onC6zDYH/KzPUSI7H7uHYt3VtAMX38haLkV0EQ0GVGflja1mQ8JRIw
- 0M35mlD3EaghqLQ==
+ bh=I7Y+KQKzlXr1sMzaRDIfaMwDopJDttwwaTz2q/TpDsE=;
+ b=owEBbQKS/ZANAwAKARGnLqAUcddyAcsmYgBnCXRdiOyTz9952m6q9xkxcxzv5R+NuuY425uuP
+ OZyG30oqOCJAjMEAAEKAB0WIQQWnetsC8PEYBPSx58Rpy6gFHHXcgUCZwl0XQAKCRARpy6gFHHX
+ cl3OD/4kJqfrmCHLUkuFbrjWMCbspjq53py6mnP6O8OqR0vXrvBsCuNYRAnLYHzQVo7s1ZcK31j
+ A60GPeW7V9FlAw5gxHCWUkFYnPngMZCuLmrzicpBzg1Bfizq7BGdNLkXPj0VOIUP+J7WOSzCPSG
+ p2uEisbzWamNpSd/h4Rpt3whOeMYFSBYp/4JIfB89EPCeqhz+5YSOGETtXqVwpCtFfqM1neM69g
+ Z6DKCh6ew4BVBEEm/xQCIhBUI5AVW6HfDvOU5GOFyRY1u2SjhwRQnuMVJScU8PzLGOqPv3wGejN
+ jTeDbzUrJJQI5nDjUK6n/gaxQ9YDkLeOR8oslD2UTSW4NDYIumd5bDFhnS2Kx9RXt87BQV9HbxP
+ nwSNWHsksBQbFfZvdjO/jBqJ6MUNtWDY8VmC+whvmrpSCi2/0ot2hOGgnQUSgEsHewtFxkaqA5M
+ SYQUYNFbZ7XNSG9IHYRj3Pn0wfL/VIQkYyHmq9NzopneTWIaUT/1qxEe0hK+THN5cfEffVIWc9h
+ CKQ0xWvVqEukh40O4QkAw/9i6M9Ek0Zua34mxPoavEyjm+pNrSVAPpJNIPldLBFh4Ct/CmbJT0E
+ p10ilYlAyg/TucqzYILf+qwjU35xjpaErDrmV55TRJjHPgUrp0AXsy+TcU7gw+1yOK5RdtY+WHz
+ jlHMDFxePBkxvRA==
 X-Developer-Key: i=bartosz.golaszewski@linaro.org; a=openpgp;
  fpr=169DEB6C0BC3C46013D2C79F11A72EA01471D772
 
-From: Eric Biggers <ebiggers@google.com>
+From: Gaurav Kashyap <quic_gaurkash@quicinc.com>
 
-Until this point, the kernel can use hardware-wrapped keys to do
-encryption if userspace provides one -- specifically a key in
-ephemerally-wrapped form.  However, no generic way has been provided for
-userspace to get such a key in the first place.
+The program key ops in the storage controller does not pass on the
+blk_crypto_key structure to ICE, this is okay with raw keys of standard
+AES XTS sizes. However, wrapped keyblobs can be of any size and in
+preparation for that, modify the ICE and storage controller APIs to
+accept blk_crypto_key which can carry larger keys and indicate their
+size.
 
-Getting such a key is a two-step process.  First, the key needs to be
-imported from a raw key or generated by the hardware, producing a key in
-long-term wrapped form.  This happens once in the whole lifetime of the
-key.  Second, the long-term wrapped key needs to be converted into
-ephemerally-wrapped form.  This happens each time the key is "unlocked".
-
-In Android, these operations are supported in a generic way through
-KeyMint, a userspace abstraction layer.  However, that method is
-Android-specific and can't be used on other Linux systems, may rely on
-proprietary libraries, and also misleads people into supporting KeyMint
-features like rollback resistance that make sense for other KeyMint keys
-but don't make sense for hardware-wrapped inline encryption keys.
-
-Therefore, this patch provides a generic kernel interface for these
-operations by introducing new block device ioctls:
-
-- BLKCRYPTOIMPORTKEY: convert a raw key to long-term wrapped form.
-
-- BLKCRYPTOGENERATEKEY: have the hardware generate a new key, then
-  return it in long-term wrapped form.
-
-- BLKCRYPTOPREPAREKEY: convert a key from long-term wrapped form to
-  ephemerally-wrapped form.
-
-These ioctls are implemented using new operations in blk_crypto_ll_ops.
-
-Signed-off-by: Eric Biggers <ebiggers@google.com>
+Reviewed-by: Om Prakash Singh <quic_omprsing@quicinc.com>
+Tested-by: Neil Armstrong <neil.armstrong@linaro.org>
+Acked-by: Ulf Hansson <ulf.hansson@linaro.org> # For MMC
+Reviewed-by: Bartosz Golaszewski <bartosz.golaszewski@linaro.org>
+Signed-off-by: Gaurav Kashyap <quic_gaurkash@quicinc.com>
 Signed-off-by: Bartosz Golaszewski <bartosz.golaszewski@linaro.org>
 ---
- Documentation/block/inline-encryption.rst          |  32 +++++
- Documentation/userspace-api/ioctl/ioctl-number.rst |   2 +
- block/blk-crypto-internal.h                        |   9 ++
- block/blk-crypto-profile.c                         |  57 ++++++++
- block/blk-crypto.c                                 | 143 +++++++++++++++++++++
- block/ioctl.c                                      |   5 +
- include/linux/blk-crypto-profile.h                 |  53 ++++++++
- include/linux/blk-crypto.h                         |   1 +
- include/uapi/linux/blk-crypto.h                    |  44 +++++++
- include/uapi/linux/fs.h                            |   6 +-
- 10 files changed, 348 insertions(+), 4 deletions(-)
+ drivers/mmc/host/cqhci-crypto.c  | 7 ++++---
+ drivers/mmc/host/cqhci.h         | 2 ++
+ drivers/mmc/host/sdhci-msm.c     | 6 ++++--
+ drivers/soc/qcom/ice.c           | 6 +++---
+ drivers/ufs/core/ufshcd-crypto.c | 7 ++++---
+ drivers/ufs/host/ufs-qcom.c      | 6 ++++--
+ include/soc/qcom/ice.h           | 5 +++--
+ include/ufs/ufshcd.h             | 1 +
+ 8 files changed, 25 insertions(+), 15 deletions(-)
 
-diff --git a/Documentation/block/inline-encryption.rst b/Documentation/block/inline-encryption.rst
-index 07218455a2bc..e31b32495f66 100644
---- a/Documentation/block/inline-encryption.rst
-+++ b/Documentation/block/inline-encryption.rst
-@@ -486,6 +486,38 @@ keys, when hardware support is available.  This works in the following way:
- blk-crypto-fallback doesn't support hardware-wrapped keys.  Therefore,
- hardware-wrapped keys can only be used with actual inline encryption hardware.
- 
-+All the above deals with hardware-wrapped keys in ephemerally-wrapped form only.
-+To get such keys in the first place, new block device ioctls have been added to
-+provide a generic interface to creating and preparing such keys:
-+
-+- ``BLKCRYPTOIMPORTKEY`` converts a raw key to long-term wrapped form.  It takes
-+  in a pointer to a ``struct blk_crypto_import_key_arg``.  The caller must set
-+  ``raw_key_ptr`` and ``raw_key_size`` to the pointer and size (in bytes) of the
-+  raw key to import.  On success, ``BLKCRYPTOIMPORTKEY`` returns 0 and writes
-+  the resulting long-term wrapped key blob to the buffer pointed to by
-+  ``lt_key_ptr``, which is of maximum size ``lt_key_size``.  It also updates
-+  ``lt_key_size`` to be the actual size of the key.  On failure, it returns -1
-+  and sets errno.
-+
-+- ``BLKCRYPTOGENERATEKEY`` is like ``BLKCRYPTOIMPORTKEY``, but it has the
-+  hardware generate the key instead of importing one.  It takes in a pointer to
-+  a ``struct blk_crypto_generate_key_arg``.
-+
-+- ``BLKCRYPTOPREPAREKEY`` converts a key from long-term wrapped form to
-+  ephemerally-wrapped form.  It takes in a pointer to a ``struct
-+  blk_crypto_prepare_key_arg``.  The caller must set ``lt_key_ptr`` and
-+  ``lt_key_size`` to the pointer and size (in bytes) of the long-term wrapped
-+  key blob to convert.  On success, ``BLKCRYPTOPREPAREKEY`` returns 0 and writes
-+  the resulting ephemerally-wrapped key blob to the buffer pointed to by
-+  ``eph_key_ptr``, which is of maximum size ``eph_key_size``.  It also updates
-+  ``eph_key_size`` to be the actual size of the key.  On failure, it returns -1
-+  and sets errno.
-+
-+Userspace needs to use either ``BLKCRYPTOIMPORTKEY`` or ``BLKCRYPTOGENERATEKEY``
-+once to create a key, and then ``BLKCRYPTOPREPAREKEY`` each time the key is
-+unlocked and added to the kernel.  Note that these ioctls have no relevance for
-+standard keys; they are only for hardware-wrapped keys.
-+
- Testability
- -----------
- 
-diff --git a/Documentation/userspace-api/ioctl/ioctl-number.rst b/Documentation/userspace-api/ioctl/ioctl-number.rst
-index e4be1378ba26..dad55a26cd5a 100644
---- a/Documentation/userspace-api/ioctl/ioctl-number.rst
-+++ b/Documentation/userspace-api/ioctl/ioctl-number.rst
-@@ -85,6 +85,8 @@ Code  Seq#    Include File                                           Comments
- 0x10  20-2F  arch/s390/include/uapi/asm/hypfs.h
- 0x12  all    linux/fs.h                                              BLK* ioctls
-              linux/blkpg.h
-+             linux/blkzoned.h
-+             linux/blk-crypto.h
- 0x15  all    linux/fs.h                                              FS_IOC_* ioctls
- 0x1b  all                                                            InfiniBand Subsystem
-                                                                      <http://infiniband.sourceforge.net/>
-diff --git a/block/blk-crypto-internal.h b/block/blk-crypto-internal.h
-index 1893df9a8f06..ccf6dff6ff6b 100644
---- a/block/blk-crypto-internal.h
-+++ b/block/blk-crypto-internal.h
-@@ -83,6 +83,9 @@ int __blk_crypto_evict_key(struct blk_crypto_profile *profile,
- bool __blk_crypto_cfg_supported(struct blk_crypto_profile *profile,
- 				const struct blk_crypto_config *cfg);
- 
-+int blk_crypto_ioctl(struct block_device *bdev, unsigned int cmd,
-+		     void __user *argp);
-+
- #else /* CONFIG_BLK_INLINE_ENCRYPTION */
- 
- static inline int blk_crypto_sysfs_register(struct gendisk *disk)
-@@ -130,6 +133,12 @@ static inline bool blk_crypto_rq_has_keyslot(struct request *rq)
- 	return false;
+diff --git a/drivers/mmc/host/cqhci-crypto.c b/drivers/mmc/host/cqhci-crypto.c
+index 6652982410ec..91da6de1d650 100644
+--- a/drivers/mmc/host/cqhci-crypto.c
++++ b/drivers/mmc/host/cqhci-crypto.c
+@@ -32,6 +32,7 @@ cqhci_host_from_crypto_profile(struct blk_crypto_profile *profile)
  }
  
-+static inline int blk_crypto_ioctl(struct block_device *bdev, unsigned int cmd,
-+				   void __user *argp)
-+{
-+	return -ENOTTY;
-+}
-+
- #endif /* CONFIG_BLK_INLINE_ENCRYPTION */
+ static int cqhci_crypto_program_key(struct cqhci_host *cq_host,
++				    const struct blk_crypto_key *bkey,
+ 				    const union cqhci_crypto_cfg_entry *cfg,
+ 				    int slot)
+ {
+@@ -39,7 +40,7 @@ static int cqhci_crypto_program_key(struct cqhci_host *cq_host,
+ 	int i;
  
- void __bio_crypt_advance(struct bio *bio, unsigned int bytes);
-diff --git a/block/blk-crypto-profile.c b/block/blk-crypto-profile.c
-index 1b92276ed2fc..f6419502fcbe 100644
---- a/block/blk-crypto-profile.c
-+++ b/block/blk-crypto-profile.c
-@@ -502,6 +502,63 @@ int blk_crypto_derive_sw_secret(struct block_device *bdev,
+ 	if (cq_host->ops->program_key)
+-		return cq_host->ops->program_key(cq_host, cfg, slot);
++		return cq_host->ops->program_key(cq_host, bkey, cfg, slot);
+ 
+ 	/* Clear CFGE */
+ 	cqhci_writel(cq_host, 0, slot_offset + 16 * sizeof(cfg->reg_val[0]));
+@@ -99,7 +100,7 @@ static int cqhci_crypto_keyslot_program(struct blk_crypto_profile *profile,
+ 		memcpy(cfg.crypto_key, key->raw, key->size);
+ 	}
+ 
+-	err = cqhci_crypto_program_key(cq_host, &cfg, slot);
++	err = cqhci_crypto_program_key(cq_host, key, &cfg, slot);
+ 
+ 	memzero_explicit(&cfg, sizeof(cfg));
  	return err;
+@@ -113,7 +114,7 @@ static int cqhci_crypto_clear_keyslot(struct cqhci_host *cq_host, int slot)
+ 	 */
+ 	union cqhci_crypto_cfg_entry cfg = {};
+ 
+-	return cqhci_crypto_program_key(cq_host, &cfg, slot);
++	return cqhci_crypto_program_key(cq_host, NULL, &cfg, slot);
  }
  
-+int blk_crypto_import_key(struct blk_crypto_profile *profile,
-+			  const u8 *raw_key, size_t raw_key_size,
-+			  u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE])
-+{
-+	int ret;
-+
-+	if (!profile)
-+		return -EOPNOTSUPP;
-+	if (!(profile->key_types_supported & BLK_CRYPTO_KEY_TYPE_HW_WRAPPED))
-+		return -EOPNOTSUPP;
-+	if (!profile->ll_ops.import_key)
-+		return -EOPNOTSUPP;
-+	blk_crypto_hw_enter(profile);
-+	ret = profile->ll_ops.import_key(profile, raw_key, raw_key_size,
-+					 lt_key);
-+	blk_crypto_hw_exit(profile);
-+	return ret;
-+}
-+
-+int blk_crypto_generate_key(struct blk_crypto_profile *profile,
-+			    u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE])
-+{
-+	int ret;
-+
-+	if (!profile)
-+		return -EOPNOTSUPP;
-+	if (!(profile->key_types_supported & BLK_CRYPTO_KEY_TYPE_HW_WRAPPED))
-+		return -EOPNOTSUPP;
-+	if (!profile->ll_ops.generate_key)
-+		return -EOPNOTSUPP;
-+
-+	blk_crypto_hw_enter(profile);
-+	ret = profile->ll_ops.generate_key(profile, lt_key);
-+	blk_crypto_hw_exit(profile);
-+	return ret;
-+}
-+
-+int blk_crypto_prepare_key(struct blk_crypto_profile *profile,
-+			   const u8 *lt_key, size_t lt_key_size,
-+			   u8 eph_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE])
-+{
-+	int ret;
-+
-+	if (!profile)
-+		return -EOPNOTSUPP;
-+	if (!(profile->key_types_supported & BLK_CRYPTO_KEY_TYPE_HW_WRAPPED))
-+		return -EOPNOTSUPP;
-+	if (!profile->ll_ops.prepare_key)
-+		return -EOPNOTSUPP;
-+
-+	blk_crypto_hw_enter(profile);
-+	ret = profile->ll_ops.prepare_key(profile, lt_key, lt_key_size,
-+					  eph_key);
-+	blk_crypto_hw_exit(profile);
-+	return ret;
-+}
-+
- /**
-  * blk_crypto_intersect_capabilities() - restrict supported crypto capabilities
-  *					 by child device
-diff --git a/block/blk-crypto.c b/block/blk-crypto.c
-index 5a09d0ef1a01..2270a88e2e4d 100644
---- a/block/blk-crypto.c
-+++ b/block/blk-crypto.c
-@@ -467,3 +467,146 @@ void blk_crypto_evict_key(struct block_device *bdev,
- 		pr_warn_ratelimited("%pg: error %d evicting key\n", bdev, err);
- }
- EXPORT_SYMBOL_GPL(blk_crypto_evict_key);
-+
-+static int blk_crypto_ioctl_import_key(struct blk_crypto_profile *profile,
-+				       void __user *argp)
-+{
-+	struct blk_crypto_import_key_arg arg;
-+	u8 raw_key[BLK_CRYPTO_MAX_STANDARD_KEY_SIZE];
-+	u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE];
-+	int ret;
-+
-+	if (copy_from_user(&arg, argp, sizeof(arg)))
-+		return -EFAULT;
-+
-+	if (memchr_inv(arg.reserved, 0, sizeof(arg.reserved)))
-+		return -EINVAL;
-+
-+	if (arg.raw_key_size < 16 || arg.raw_key_size > sizeof(raw_key))
-+		return -EINVAL;
-+
-+	if (copy_from_user(raw_key, u64_to_user_ptr(arg.raw_key_ptr),
-+			   arg.raw_key_size)) {
-+		ret = -EFAULT;
-+		goto out;
-+	}
-+	ret = blk_crypto_import_key(profile, raw_key, arg.raw_key_size, lt_key);
-+	if (ret < 0)
-+		goto out;
-+	if (ret > arg.lt_key_size) {
-+		ret = -EOVERFLOW;
-+		goto out;
-+	}
-+	arg.lt_key_size = ret;
-+	if (copy_to_user(u64_to_user_ptr(arg.lt_key_ptr), lt_key,
-+			 arg.lt_key_size) ||
-+	    copy_to_user(argp, &arg, sizeof(arg))) {
-+		ret = -EFAULT;
-+		goto out;
-+	}
-+	ret = 0;
-+
-+out:
-+	memzero_explicit(raw_key, sizeof(raw_key));
-+	memzero_explicit(lt_key, sizeof(lt_key));
-+	return ret;
-+}
-+
-+static int blk_crypto_ioctl_generate_key(struct blk_crypto_profile *profile,
-+					 void __user *argp)
-+{
-+	struct blk_crypto_generate_key_arg arg;
-+	u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE];
-+	int ret;
-+
-+	if (copy_from_user(&arg, argp, sizeof(arg)))
-+		return -EFAULT;
-+
-+	if (memchr_inv(arg.reserved, 0, sizeof(arg.reserved)))
-+		return -EINVAL;
-+
-+	ret = blk_crypto_generate_key(profile, lt_key);
-+	if (ret < 0)
-+		goto out;
-+	if (ret > arg.lt_key_size) {
-+		ret = -EOVERFLOW;
-+		goto out;
-+	}
-+	arg.lt_key_size = ret;
-+	if (copy_to_user(u64_to_user_ptr(arg.lt_key_ptr), lt_key,
-+			 arg.lt_key_size) ||
-+	    copy_to_user(argp, &arg, sizeof(arg))) {
-+		ret = -EFAULT;
-+		goto out;
-+	}
-+	ret = 0;
-+
-+out:
-+	memzero_explicit(lt_key, sizeof(lt_key));
-+	return ret;
-+}
-+
-+static int blk_crypto_ioctl_prepare_key(struct blk_crypto_profile *profile,
-+					void __user *argp)
-+{
-+	struct blk_crypto_prepare_key_arg arg;
-+	u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE];
-+	u8 eph_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE];
-+	int ret;
-+
-+	if (copy_from_user(&arg, argp, sizeof(arg)))
-+		return -EFAULT;
-+
-+	if (memchr_inv(arg.reserved, 0, sizeof(arg.reserved)))
-+		return -EINVAL;
-+
-+	if (arg.lt_key_size > sizeof(lt_key))
-+		return -EINVAL;
-+
-+	if (copy_from_user(lt_key, u64_to_user_ptr(arg.lt_key_ptr),
-+			   arg.lt_key_size)) {
-+		ret = -EFAULT;
-+		goto out;
-+	}
-+	ret = blk_crypto_prepare_key(profile, lt_key, arg.lt_key_size, eph_key);
-+	if (ret < 0)
-+		goto out;
-+	if (ret > arg.eph_key_size) {
-+		ret = -EOVERFLOW;
-+		goto out;
-+	}
-+	arg.eph_key_size = ret;
-+	if (copy_to_user(u64_to_user_ptr(arg.eph_key_ptr), eph_key,
-+			 arg.eph_key_size) ||
-+	    copy_to_user(argp, &arg, sizeof(arg))) {
-+		ret = -EFAULT;
-+		goto out;
-+	}
-+	ret = 0;
-+
-+out:
-+	memzero_explicit(lt_key, sizeof(lt_key));
-+	memzero_explicit(eph_key, sizeof(eph_key));
-+	return ret;
-+}
-+
-+int blk_crypto_ioctl(struct block_device *bdev, unsigned int cmd,
-+		     void __user *argp)
-+{
-+	struct blk_crypto_profile *profile =
-+		bdev_get_queue(bdev)->crypto_profile;
-+
-+	if (!profile)
-+		return -EOPNOTSUPP;
-+
-+	switch (cmd) {
-+	case BLKCRYPTOIMPORTKEY:
-+		return blk_crypto_ioctl_import_key(profile, argp);
-+	case BLKCRYPTOGENERATEKEY:
-+		return blk_crypto_ioctl_generate_key(profile, argp);
-+	case BLKCRYPTOPREPAREKEY:
-+		return blk_crypto_ioctl_prepare_key(profile, argp);
-+	default:
-+		return -ENOTTY;
-+	}
-+}
-diff --git a/block/ioctl.c b/block/ioctl.c
-index 6554b728bae6..faa40f383e27 100644
---- a/block/ioctl.c
-+++ b/block/ioctl.c
-@@ -15,6 +15,7 @@
- #include <linux/io_uring/cmd.h>
- #include <uapi/linux/blkdev.h>
- #include "blk.h"
-+#include "blk-crypto-internal.h"
+ static int cqhci_crypto_keyslot_evict(struct blk_crypto_profile *profile,
+diff --git a/drivers/mmc/host/cqhci.h b/drivers/mmc/host/cqhci.h
+index fab9d74445ba..06099fd32f23 100644
+--- a/drivers/mmc/host/cqhci.h
++++ b/drivers/mmc/host/cqhci.h
+@@ -12,6 +12,7 @@
+ #include <linux/completion.h>
+ #include <linux/wait.h>
+ #include <linux/irqreturn.h>
++#include <linux/blk-crypto.h>
+ #include <asm/io.h>
  
- static int blkpg_do_ioctl(struct block_device *bdev,
- 			  struct blkpg_partition __user *upart, int op)
-@@ -620,6 +621,10 @@ static int blkdev_common_ioctl(struct block_device *bdev, blk_mode_t mode,
- 	case BLKTRACESTOP:
- 	case BLKTRACETEARDOWN:
- 		return blk_trace_ioctl(bdev, cmd, argp);
-+	case BLKCRYPTOIMPORTKEY:
-+	case BLKCRYPTOGENERATEKEY:
-+	case BLKCRYPTOPREPAREKEY:
-+		return blk_crypto_ioctl(bdev, cmd, argp);
- 	case IOC_PR_REGISTER:
- 		return blkdev_pr_register(bdev, mode, argp);
- 	case IOC_PR_RESERVE:
-diff --git a/include/linux/blk-crypto-profile.h b/include/linux/blk-crypto-profile.h
-index 229287a7f451..a3eef098f3c3 100644
---- a/include/linux/blk-crypto-profile.h
-+++ b/include/linux/blk-crypto-profile.h
-@@ -71,6 +71,48 @@ struct blk_crypto_ll_ops {
- 	int (*derive_sw_secret)(struct blk_crypto_profile *profile,
- 				const u8 *eph_key, size_t eph_key_size,
- 				u8 sw_secret[BLK_CRYPTO_SW_SECRET_SIZE]);
-+
-+	/**
-+	 * @import_key: Create a hardware-wrapped key by importing a raw key.
-+	 *
-+	 * This only needs to be implemented if BLK_CRYPTO_KEY_TYPE_HW_WRAPPED
-+	 * is supported.
-+	 *
-+	 * On success, must write the new key in long-term wrapped form to
-+	 * @lt_key and return its size in bytes.  On failure, must return a
-+	 * -errno value.
-+	 */
-+	int (*import_key)(struct blk_crypto_profile *profile,
-+			  const u8 *raw_key, size_t raw_key_size,
-+			  u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE]);
-+
-+	/**
-+	 * @generate_key: Generate a hardware-wrapped key.
-+	 *
-+	 * This only needs to be implemented if BLK_CRYPTO_KEY_TYPE_HW_WRAPPED
-+	 * is supported.
-+	 *
-+	 * On success, must write the new key in long-term wrapped form to
-+	 * @lt_key and return its size in bytes.  On failure, must return a
-+	 * -errno value.
-+	 */
-+	int (*generate_key)(struct blk_crypto_profile *profile,
-+			    u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE]);
-+
-+	/**
-+	 * @prepare_key: Prepare a hardware-wrapped key to be used.
-+	 *
-+	 * Prepare a hardware-wrapped key to be used by converting it from
-+	 * long-term wrapped form to ephemerally-wrapped form.  This only needs
-+	 * to be implemented if BLK_CRYPTO_KEY_TYPE_HW_WRAPPED is supported.
-+	 *
-+	 * On success, must write the key in ephemerally-wrapped form to
-+	 * @eph_key and return its size in bytes.  On failure, must return a
-+	 * -errno value.
-+	 */
-+	int (*prepare_key)(struct blk_crypto_profile *profile,
-+			   const u8 *lt_key, size_t lt_key_size,
-+			   u8 eph_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE]);
+ /* registers */
+@@ -291,6 +292,7 @@ struct cqhci_host_ops {
+ 	void (*post_disable)(struct mmc_host *mmc);
+ #ifdef CONFIG_MMC_CRYPTO
+ 	int (*program_key)(struct cqhci_host *cq_host,
++			   const struct blk_crypto_key *bkey,
+ 			   const union cqhci_crypto_cfg_entry *cfg, int slot);
+ #endif
+ 	void (*set_tran_desc)(struct cqhci_host *cq_host, u8 **desc,
+diff --git a/drivers/mmc/host/sdhci-msm.c b/drivers/mmc/host/sdhci-msm.c
+index e00208535bd1..b8770524c008 100644
+--- a/drivers/mmc/host/sdhci-msm.c
++++ b/drivers/mmc/host/sdhci-msm.c
+@@ -1859,6 +1859,7 @@ static __maybe_unused int sdhci_msm_ice_suspend(struct sdhci_msm_host *msm_host)
+  * vendor-specific SCM calls for this; it doesn't support the standard way.
+  */
+ static int sdhci_msm_program_key(struct cqhci_host *cq_host,
++				 const struct blk_crypto_key *bkey,
+ 				 const union cqhci_crypto_cfg_entry *cfg,
+ 				 int slot)
+ {
+@@ -1866,6 +1867,7 @@ static int sdhci_msm_program_key(struct cqhci_host *cq_host,
+ 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+ 	struct sdhci_msm_host *msm_host = sdhci_pltfm_priv(pltfm_host);
+ 	union cqhci_crypto_cap_entry cap;
++	u8 ice_key_size;
+ 
+ 	/* Only AES-256-XTS has been tested so far. */
+ 	cap = cq_host->crypto_cap_array[cfg->crypto_cap_idx];
+@@ -1873,11 +1875,11 @@ static int sdhci_msm_program_key(struct cqhci_host *cq_host,
+ 		cap.key_size != CQHCI_CRYPTO_KEY_SIZE_256)
+ 		return -EINVAL;
+ 
++	ice_key_size = QCOM_ICE_CRYPTO_KEY_SIZE_256;
+ 	if (cfg->config_enable & CQHCI_CRYPTO_CONFIGURATION_ENABLE)
+ 		return qcom_ice_program_key(msm_host->ice,
+ 					    QCOM_ICE_CRYPTO_ALG_AES_XTS,
+-					    QCOM_ICE_CRYPTO_KEY_SIZE_256,
+-					    cfg->crypto_key,
++					    ice_key_size, bkey,
+ 					    cfg->data_unit_size, slot);
+ 	else
+ 		return qcom_ice_evict_key(msm_host->ice, slot);
+diff --git a/drivers/soc/qcom/ice.c b/drivers/soc/qcom/ice.c
+index 50be7a9274a1..4393262a1bf2 100644
+--- a/drivers/soc/qcom/ice.c
++++ b/drivers/soc/qcom/ice.c
+@@ -164,8 +164,8 @@ EXPORT_SYMBOL_GPL(qcom_ice_suspend);
+ 
+ int qcom_ice_program_key(struct qcom_ice *ice,
+ 			 u8 algorithm_id, u8 key_size,
+-			 const u8 crypto_key[], u8 data_unit_size,
+-			 int slot)
++			 const struct blk_crypto_key *bkey,
++			 u8 data_unit_size, int slot)
+ {
+ 	struct device *dev = ice->dev;
+ 	union {
+@@ -184,7 +184,7 @@ int qcom_ice_program_key(struct qcom_ice *ice,
+ 		return -EINVAL;
+ 	}
+ 
+-	memcpy(key.bytes, crypto_key, AES_256_XTS_KEY_SIZE);
++	memcpy(key.bytes, bkey->raw, AES_256_XTS_KEY_SIZE);
+ 
+ 	/* The SCM call requires that the key words are encoded in big endian */
+ 	for (i = 0; i < ARRAY_SIZE(key.words); i++)
+diff --git a/drivers/ufs/core/ufshcd-crypto.c b/drivers/ufs/core/ufshcd-crypto.c
+index 7d3a3e228db0..33083e0cad6e 100644
+--- a/drivers/ufs/core/ufshcd-crypto.c
++++ b/drivers/ufs/core/ufshcd-crypto.c
+@@ -18,6 +18,7 @@ static const struct ufs_crypto_alg_entry {
  };
  
- /**
-@@ -163,6 +205,17 @@ void blk_crypto_reprogram_all_keys(struct blk_crypto_profile *profile);
+ static int ufshcd_program_key(struct ufs_hba *hba,
++			      const struct blk_crypto_key *bkey,
+ 			      const union ufs_crypto_cfg_entry *cfg, int slot)
+ {
+ 	int i;
+@@ -27,7 +28,7 @@ static int ufshcd_program_key(struct ufs_hba *hba,
+ 	ufshcd_hold(hba);
  
- void blk_crypto_profile_destroy(struct blk_crypto_profile *profile);
+ 	if (hba->vops && hba->vops->program_key) {
+-		err = hba->vops->program_key(hba, cfg, slot);
++		err = hba->vops->program_key(hba, bkey, cfg, slot);
+ 		goto out;
+ 	}
  
-+int blk_crypto_import_key(struct blk_crypto_profile *profile,
-+			  const u8 *raw_key, size_t raw_key_size,
-+			  u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE]);
-+
-+int blk_crypto_generate_key(struct blk_crypto_profile *profile,
-+			    u8 lt_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE]);
-+
-+int blk_crypto_prepare_key(struct blk_crypto_profile *profile,
-+			   const u8 *lt_key, size_t lt_key_size,
-+			   u8 eph_key[BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE]);
-+
- void blk_crypto_intersect_capabilities(struct blk_crypto_profile *parent,
- 				       const struct blk_crypto_profile *child);
+@@ -89,7 +90,7 @@ static int ufshcd_crypto_keyslot_program(struct blk_crypto_profile *profile,
+ 		memcpy(cfg.crypto_key, key->raw, key->size);
+ 	}
  
-diff --git a/include/linux/blk-crypto.h b/include/linux/blk-crypto.h
-index 19066d86ecbf..e61008c23668 100644
---- a/include/linux/blk-crypto.h
-+++ b/include/linux/blk-crypto.h
+-	err = ufshcd_program_key(hba, &cfg, slot);
++	err = ufshcd_program_key(hba, key, &cfg, slot);
+ 
+ 	memzero_explicit(&cfg, sizeof(cfg));
+ 	return err;
+@@ -107,7 +108,7 @@ static int ufshcd_crypto_keyslot_evict(struct blk_crypto_profile *profile,
+ 	 */
+ 	union ufs_crypto_cfg_entry cfg = {};
+ 
+-	return ufshcd_program_key(hba, &cfg, slot);
++	return ufshcd_program_key(hba, NULL, &cfg, slot);
+ }
+ 
+ /*
+diff --git a/drivers/ufs/host/ufs-qcom.c b/drivers/ufs/host/ufs-qcom.c
+index a5a0646bb80a..2f317a4c3edf 100644
+--- a/drivers/ufs/host/ufs-qcom.c
++++ b/drivers/ufs/host/ufs-qcom.c
+@@ -150,6 +150,7 @@ static inline int ufs_qcom_ice_suspend(struct ufs_qcom_host *host)
+ }
+ 
+ static int ufs_qcom_ice_program_key(struct ufs_hba *hba,
++				    const struct blk_crypto_key *bkey,
+ 				    const union ufs_crypto_cfg_entry *cfg,
+ 				    int slot)
+ {
+@@ -157,6 +158,7 @@ static int ufs_qcom_ice_program_key(struct ufs_hba *hba,
+ 	union ufs_crypto_cap_entry cap;
+ 	bool config_enable =
+ 		cfg->config_enable & UFS_CRYPTO_CONFIGURATION_ENABLE;
++	u8 ice_key_size;
+ 
+ 	/* Only AES-256-XTS has been tested so far. */
+ 	cap = hba->crypto_cap_array[cfg->crypto_cap_idx];
+@@ -164,11 +166,11 @@ static int ufs_qcom_ice_program_key(struct ufs_hba *hba,
+ 	    cap.key_size != UFS_CRYPTO_KEY_SIZE_256)
+ 		return -EOPNOTSUPP;
+ 
++	ice_key_size = QCOM_ICE_CRYPTO_KEY_SIZE_256;
+ 	if (config_enable)
+ 		return qcom_ice_program_key(host->ice,
+ 					    QCOM_ICE_CRYPTO_ALG_AES_XTS,
+-					    QCOM_ICE_CRYPTO_KEY_SIZE_256,
+-					    cfg->crypto_key,
++					    ice_key_size, bkey,
+ 					    cfg->data_unit_size, slot);
+ 	else
+ 		return qcom_ice_evict_key(host->ice, slot);
+diff --git a/include/soc/qcom/ice.h b/include/soc/qcom/ice.h
+index 5870a94599a2..9dd835dba2a7 100644
+--- a/include/soc/qcom/ice.h
++++ b/include/soc/qcom/ice.h
 @@ -7,6 +7,7 @@
- #define __LINUX_BLK_CRYPTO_H
+ #define __QCOM_ICE_H__
  
  #include <linux/types.h>
-+#include <uapi/linux/blk-crypto.h>
++#include <linux/blk-crypto.h>
  
- enum blk_crypto_mode_num {
- 	BLK_ENCRYPTION_MODE_INVALID,
-diff --git a/include/uapi/linux/blk-crypto.h b/include/uapi/linux/blk-crypto.h
-new file mode 100644
-index 000000000000..97302c6eb6af
---- /dev/null
-+++ b/include/uapi/linux/blk-crypto.h
-@@ -0,0 +1,44 @@
-+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-+#ifndef _UAPI_LINUX_BLK_CRYPTO_H
-+#define _UAPI_LINUX_BLK_CRYPTO_H
-+
-+#include <linux/ioctl.h>
-+#include <linux/types.h>
-+
-+struct blk_crypto_import_key_arg {
-+	/* Raw key (input) */
-+	__u64 raw_key_ptr;
-+	__u64 raw_key_size;
-+	/* Long-term wrapped key blob (output) */
-+	__u64 lt_key_ptr;
-+	__u64 lt_key_size;
-+	__u64 reserved[4];
-+};
-+
-+struct blk_crypto_generate_key_arg {
-+	/* Long-term wrapped key blob (output) */
-+	__u64 lt_key_ptr;
-+	__u64 lt_key_size;
-+	__u64 reserved[4];
-+};
-+
-+struct blk_crypto_prepare_key_arg {
-+	/* Long-term wrapped key blob (input) */
-+	__u64 lt_key_ptr;
-+	__u64 lt_key_size;
-+	/* Ephemerally-wrapped key blob (output) */
-+	__u64 eph_key_ptr;
-+	__u64 eph_key_size;
-+	__u64 reserved[4];
-+};
-+
-+/*
-+ * These ioctls share the block device ioctl space; see uapi/linux/fs.h.
-+ * 140-141 are reserved for future blk-crypto ioctls; any more than that would
-+ * require an additional allocation from the block device ioctl space.
-+ */
-+#define BLKCRYPTOIMPORTKEY _IOWR(0x12, 137, struct blk_crypto_import_key_arg)
-+#define BLKCRYPTOGENERATEKEY _IOWR(0x12, 138, struct blk_crypto_generate_key_arg)
-+#define BLKCRYPTOPREPAREKEY _IOWR(0x12, 139, struct blk_crypto_prepare_key_arg)
-+
-+#endif /* _UAPI_LINUX_BLK_CRYPTO_H */
-diff --git a/include/uapi/linux/fs.h b/include/uapi/linux/fs.h
-index 753971770733..07180da44e13 100644
---- a/include/uapi/linux/fs.h
-+++ b/include/uapi/linux/fs.h
-@@ -203,10 +203,8 @@ struct fsxattr {
- #define BLKROTATIONAL _IO(0x12,126)
- #define BLKZEROOUT _IO(0x12,127)
- #define BLKGETDISKSEQ _IOR(0x12,128,__u64)
--/*
-- * A jump here: 130-136 are reserved for zoned block devices
-- * (see uapi/linux/blkzoned.h)
-- */
-+/* 130-136 are used by zoned block device ioctls (uapi/linux/blkzoned.h) */
-+/* 137-141 are used by blk-crypto ioctls (uapi/linux/blk-crypto.h) */
+ struct qcom_ice;
  
- #define BMAP_IOCTL 1		/* obsolete - kept for compatibility */
- #define FIBMAP	   _IO(0x00,1)	/* bmap access */
+@@ -30,8 +31,8 @@ int qcom_ice_resume(struct qcom_ice *ice);
+ int qcom_ice_suspend(struct qcom_ice *ice);
+ int qcom_ice_program_key(struct qcom_ice *ice,
+ 			 u8 algorithm_id, u8 key_size,
+-			 const u8 crypto_key[], u8 data_unit_size,
+-			 int slot);
++			 const struct blk_crypto_key *bkey,
++			 u8 data_unit_size, int slot);
+ int qcom_ice_evict_key(struct qcom_ice *ice, int slot);
+ struct qcom_ice *of_qcom_ice_get(struct device *dev);
+ #endif /* __QCOM_ICE_H__ */
+diff --git a/include/ufs/ufshcd.h b/include/ufs/ufshcd.h
+index a95282b9f743..331b1ed171da 100644
+--- a/include/ufs/ufshcd.h
++++ b/include/ufs/ufshcd.h
+@@ -370,6 +370,7 @@ struct ufs_hba_variant_ops {
+ 				struct devfreq_dev_profile *profile,
+ 				struct devfreq_simple_ondemand_data *data);
+ 	int	(*program_key)(struct ufs_hba *hba,
++			       const struct blk_crypto_key *bkey,
+ 			       const union ufs_crypto_cfg_entry *cfg, int slot);
+ 	int	(*fill_crypto_prdt)(struct ufs_hba *hba,
+ 				    const struct bio_crypt_ctx *crypt_ctx,
 
 -- 
 2.43.0
