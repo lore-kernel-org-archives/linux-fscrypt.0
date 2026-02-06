@@ -1,58 +1,37 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1F65744A70A
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:11 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 64FC343CEC2
+	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:13 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402311; cv=none; b=DkBMOwPeSSwobHtXNnPIDkFPfiHsT/3J7wvQJ0OCzFDsoWjUmVDy2NGh0FqDA9C8W47XflfYrYUvk2kJ3IYLePJXxWBvmZC6jTHMheyMs0ZDLwg44qN+rgao2pVQsdzBHMZJ3GnR2zVTUJ/aRs3XFUWQTWIWLttiahl2USSXgCs=
+	t=1770402313; cv=none; b=jgTwNUgHzBOMrDcOiaB2GY7GURBBb0cALPpoXKOsZrJO36ckafnhH5ob/y4IRWGByT1tr51NFLmRZoTgAKH35u1Vv/lYjYjaHydrOFXib9q1Ea3ICSkChAOl2LQ8R0oeCpqA8PEOpSVvOOqv+8J/NV0f2p3rvuBeYQrhFsIFJmk=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1770402311; c=relaxed/simple;
-	bh=01Qr6eo0ySyzsJAE+aRqlzlEGMAUXrRO3vLfBmO34jk=;
+	s=arc-20240116; t=1770402313; c=relaxed/simple;
+	bh=jxsfwWOkFu6y3aSWsnhI7vrlS53sGNFWe3N9q0oyctE=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=eryBg8zeN/lU00+/fZ7X+vc1f9dnKQJq4ycMxLW23tu/rZhkCcis3uD4uWGPZMh4IHe1muJAXV/LrEk2ik3YdacKHc/V7W9ak1JhQnM0CdKfciJdrzqBWFbm8tye5Tw4sH8mpMpz7VHTJVIfxugBGkCOcjXdvjdmnKkPM9e5Pew=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=dOl9FZg0; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=dOl9FZg0; arc=none smtp.client-ip=195.135.223.130
+	 MIME-Version; b=X/XWblEVDvgAAc604HZfO2FQ8aTobN3u2YfqCOXRUo1xwNcaoSMDLWYFRwyal9DGtDuS+qb5RRFRfAwC5810Fu5Gc1HGm9gQYEvYgr13Nwjp8KpFqD56EtZnR/ezWbY+P4yAfIGKufhIeqQZUVZZ9uFjemZjgFl5RL4F5uNIGJI=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="dOl9FZg0";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="dOl9FZg0"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 3434A3E757;
-	Fri,  6 Feb 2026 18:24:14 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1770402254; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=TlRycN/r/hzMtCufsix9uWAe9WmB5Kqoq1qghJz4TLY=;
-	b=dOl9FZg0+Rg6TRLur29O2zhigULec92c2Ovjjr/QRjk/Zpjctzpt2pAqv52mMGFA1PRE3H
-	2+EQrhMVOazJYnfkZTmglTQPYYDbEzj2a0RVAT5FtlCy+hOyFRMDhRKwXpFF2y2L2oS5On
-	I+DtK93/qbZs19kDxFr1TGlgQFiEWW4=
-Authentication-Results: smtp-out1.suse.de;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id E5CDF5BD03;
+	Fri,  6 Feb 2026 18:24:17 +0000 (UTC)
+Authentication-Results: smtp-out2.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1770402254; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=TlRycN/r/hzMtCufsix9uWAe9WmB5Kqoq1qghJz4TLY=;
-	b=dOl9FZg0+Rg6TRLur29O2zhigULec92c2Ovjjr/QRjk/Zpjctzpt2pAqv52mMGFA1PRE3H
-	2+EQrhMVOazJYnfkZTmglTQPYYDbEzj2a0RVAT5FtlCy+hOyFRMDhRKwXpFF2y2L2oS5On
-	I+DtK93/qbZs19kDxFr1TGlgQFiEWW4=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 0771C3EA63;
-	Fri,  6 Feb 2026 18:24:14 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id B97A53EA63;
+	Fri,  6 Feb 2026 18:24:17 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id WOFWAc4xhmkTCQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:14 +0000
+	id gEDCLNExhmkTCQAAD6G6ig
+	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:17 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -66,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 31/43] btrfs: limit encrypted writes to 256 segments
-Date: Fri,  6 Feb 2026 19:23:03 +0100
-Message-ID: <20260206182336.1397715-32-neelx@suse.com>
+Subject: [PATCH v6 37/43] btrfs: decrypt file names for send
+Date: Fri,  6 Feb 2026 19:23:09 +0100
+Message-ID: <20260206182336.1397715-38-neelx@suse.com>
 X-Mailer: git-send-email 2.51.0
 In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
 References: <20260206182336.1397715-1-neelx@suse.com>
@@ -79,175 +58,135 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Spamd-Result: default: False [-6.80 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	MID_CONTAINS_FROM(1.00)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[toxicpanda.com:email,suse.com:mid,suse.com:email];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	TO_DN_SOME(0.00)[];
-	RCPT_COUNT_TWELVE(0.00)[12];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	FROM_HAS_DN(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_COUNT_TWO(0.00)[2];
-	R_RATELIMIT(0.00)[to_ip_from(RLdafymbgddseoxkryad1wgu8n)];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	RCVD_TLS_ALL(0.00)[]
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
 X-Spam-Flag: NO
-X-Spam-Score: -6.80
+X-Spam-Score: -4.00
+X-Rspamd-Queue-Id: E5CDF5BD03
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Action: no action
+X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
 X-Spam-Level: 
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-For the fallback encrypted writes it allocates a bounce buffer to
-encrypt, and if the bio is larger than 256 segments it splits the bio we
-send down.  This wreaks havoc on us because we need our actual original
-bio to be passed into the process_cb callback in order to get at our
-ordered extent.  With the split we'll get some cloned bio that has none
-of our information.  Handle this by returning the length we need to be
-truncated to and then splitting ourselves, which will handle giving us
-the correct btrfs_bio that we need.
+In send we're going to be looking up file names from back references and
+putting them into the send stream.  If we are encrypted use the helper
+for decrypting names and copy the decrypted name into the buffer.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/1fc07b885453495bccea5a37e13d7d26333bd2af.1706116485.git.josef@toxicpanda.com/
- * No changes since.
+v5: https://lore.kernel.org/linux-btrfs/fd8b1d5f395a890dbdf8281a52fbaaa920c7b726.1706116485.git.josef@toxicpanda.com/
+ * Simplified the error return logic in fs_path_add_from_encrypted().
 ---
- fs/btrfs/bio.c     | 29 ++++++++++++++++++++++++++++-
- fs/btrfs/fscrypt.c | 24 ++++++++++++++++++++++++
- fs/btrfs/fscrypt.h |  6 ++++++
- 3 files changed, 58 insertions(+), 1 deletion(-)
+ fs/btrfs/send.c | 47 +++++++++++++++++++++++++++++++++++++----------
+ 1 file changed, 37 insertions(+), 10 deletions(-)
 
-diff --git a/fs/btrfs/bio.c b/fs/btrfs/bio.c
-index 487dd9267fd7..1ae81997fb2d 100644
---- a/fs/btrfs/bio.c
-+++ b/fs/btrfs/bio.c
-@@ -14,6 +14,7 @@
- #include "zoned.h"
- #include "file-item.h"
- #include "raid-stripe-tree.h"
+diff --git a/fs/btrfs/send.c b/fs/btrfs/send.c
+index b77f96ae2fea..faaade4c35dc 100644
+--- a/fs/btrfs/send.c
++++ b/fs/btrfs/send.c
+@@ -32,6 +32,7 @@
+ #include "ioctl.h"
+ #include "verity.h"
+ #include "lru_cache.h"
 +#include "fscrypt.h"
  
- static struct bio_set btrfs_bioset;
- static struct bio_set btrfs_clone_bioset;
-@@ -751,6 +752,7 @@ static bool btrfs_submit_chunk(struct btrfs_bio *bbio, int mirror_num)
- 	u64 logical = bio->bi_iter.bi_sector << SECTOR_SHIFT;
- 	u64 length = bio->bi_iter.bi_size;
- 	u64 map_length = length;
-+	u64 max_bio_len = length;
- 	struct btrfs_io_context *bioc = NULL;
- 	struct btrfs_io_stripe smap;
- 	blk_status_t status;
-@@ -762,6 +764,31 @@ static bool btrfs_submit_chunk(struct btrfs_bio *bbio, int mirror_num)
- 		smap.rst_search_commit_root = false;
- 
- 	btrfs_bio_counter_inc_blocked(fs_info);
-+
-+	/*
-+	 * The blk-crypto-fallback limits bio sizes to 256 segments, because it
-+	 * has no way of controlling the pages it gets for the bounce bio it
-+	 * submits.
-+	 *
-+	 * If we don't pre-split our bio blk-crypto-fallback will do it for us,
-+	 * and then call into our checksum callback with a random cloned bio
-+	 * that isn't a btrfs_bio.
-+	 *
-+	 * To account for this we must truncate the bio ourselves, so we need to
-+	 * get our length at 256 segments and return that.  We must do this
-+	 * before btrfs_map_block because the RAID5/6 code relies on having
-+	 * properly stripe aligned things, so we return the truncated length
-+	 * here so that btrfs_map_block() does the correct thing.  Further down
-+	 * we actually truncate map_length to map_bio_len because map_length
-+	 * will be set to whatever the mapping length is for the underlying
-+	 * geometry.  This will work properly with RAID5/6 as it will have
-+	 * already setup everything for the expected length, and everything else
-+	 * can handle with a truncated map_length.
-+	 */
-+	if (bio_has_crypt_ctx(bio))
-+		max_bio_len = btrfs_fscrypt_bio_length(bio, map_length);
-+
-+	map_length = max_bio_len;
- 	ret = btrfs_map_block(fs_info, btrfs_op(bio), logical, &map_length,
- 			      &bioc, &smap, &mirror_num);
- 	if (ret) {
-@@ -780,7 +807,7 @@ static bool btrfs_submit_chunk(struct btrfs_bio *bbio, int mirror_num)
- 
- 	bbio->can_use_append = btrfs_use_zone_append(bbio);
- 
--	map_length = min(map_length, length);
-+	map_length = min(map_length, max_bio_len);
- 	if (bbio->can_use_append)
- 		map_length = btrfs_append_map_length(bbio, map_length);
- 
-diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
-index f4d6979a581b..b6350b043994 100644
---- a/fs/btrfs/fscrypt.c
-+++ b/fs/btrfs/fscrypt.c
-@@ -328,6 +328,30 @@ bool btrfs_mergeable_encrypted_bio(struct bio *bio, struct inode *inode,
- 	return fscrypt_mergeable_extent_bio(bio, fi, logical_offset);
+ /*
+  * Maximum number of references an extent can have in order for us to attempt to
+@@ -579,13 +580,39 @@ static inline int fs_path_add_path(struct fs_path *p, const struct fs_path *p2)
+ 	return fs_path_add(p, p2->start, fs_path_len(p2));
  }
  
-+/*
-+ * The block crypto stuff allocates bounce buffers for encryption, so splits at
-+ * BIO_MAX_VECS worth of segments.  If we are larger than that number of
-+ * segments then we need to limit the size to the size that BIO_MAX_VECS covers.
-+ */
-+int btrfs_fscrypt_bio_length(struct bio *bio, u64 map_length)
+-static int fs_path_add_from_extent_buffer(struct fs_path *p,
++static int fs_path_add_from_encrypted(struct btrfs_root *root,
++				      struct fs_path *p,
++				      struct extent_buffer *eb,
++				      unsigned long off, int len,
++				      u64 parent_ino)
 +{
-+	unsigned int i = 0;
-+	struct bio_vec bv;
-+	struct bvec_iter iter;
-+	u64 segments_length = 0;
++	struct fscrypt_str fname = FSTR_INIT(NULL, 0);
++	int ret;
 +
-+	if (bio_op(bio) != REQ_OP_WRITE)
-+		return map_length;
++	ret = fscrypt_fname_alloc_buffer(BTRFS_NAME_LEN, &fname);
++	if (ret)
++		return ret;
 +
-+	bio_for_each_segment(bv, bio, iter) {
-+		segments_length += bv.bv_len;
-+		if (++i == BIO_MAX_VECS)
-+			return segments_length;
-+	}
++	ret = btrfs_decrypt_name(root, eb, off, len, parent_ino, &fname);
++	if (!ret)
++		ret = fs_path_add(p, fname.name, fname.len);
 +
-+	return map_length;
++	fscrypt_fname_free_buffer(&fname);
++	return ret;
 +}
 +
- const struct fscrypt_operations btrfs_fscrypt_ops = {
- 	.inode_info_offs = (int)offsetof(struct btrfs_inode, i_crypt_info) -
- 			   (int)offsetof(struct btrfs_inode, vfs_inode),
-diff --git a/fs/btrfs/fscrypt.h b/fs/btrfs/fscrypt.h
-index 1a2a4ffee383..347b34f45715 100644
---- a/fs/btrfs/fscrypt.h
-+++ b/fs/btrfs/fscrypt.h
-@@ -31,6 +31,7 @@ void btrfs_set_bio_crypt_ctx_from_extent(struct bio *bio,
- bool btrfs_mergeable_encrypted_bio(struct bio *bio, struct inode *inode,
- 				   struct fscrypt_extent_info *fi,
- 				   u64 logical_offset);
-+int btrfs_fscrypt_bio_length(struct bio *bio, u64 map_length);
++static int fs_path_add_from_extent_buffer(struct btrfs_root *root,
++					  struct fs_path *p,
+ 					  struct extent_buffer *eb,
+-					  unsigned long off, int len)
++					  unsigned long off, int len,
++					  u64 parent_ino)
+ {
+ 	int ret;
+ 	char *prepared;
  
- #else
- static inline void btrfs_fscrypt_save_extent_info(struct btrfs_path *path,
-@@ -85,6 +86,11 @@ static inline bool btrfs_mergeable_encrypted_bio(struct bio *bio,
- 	return true;
++	if (root && btrfs_fs_incompat(root->fs_info, ENCRYPT))
++		return fs_path_add_from_encrypted(root, p, eb, off, len, parent_ino);
++
+ 	ret = fs_path_prepare_for_add(p, len, &prepared);
+ 	if (ret < 0)
+ 		return ret;
+@@ -1062,8 +1089,7 @@ static int iterate_inode_ref(struct btrfs_root *root, struct btrfs_path *path,
+ 			}
+ 			p->start = start;
+ 		} else {
+-			ret = fs_path_add_from_extent_buffer(p, eb, name_off,
+-							     name_len);
++			ret = fs_path_add_from_extent_buffer(root, p, eb, name_off, name_len, dir);
+ 			if (ret < 0)
+ 				goto out;
+ 		}
+@@ -1759,7 +1785,7 @@ static int read_symlink_unencrypted(struct btrfs_root *root, u64 ino, struct fs_
+ 	off = btrfs_file_extent_inline_start(ei);
+ 	len = btrfs_file_extent_ram_bytes(path->nodes[0], ei);
+ 
+-	return fs_path_add_from_extent_buffer(dest, path->nodes[0], off, len);
++	return fs_path_add_from_extent_buffer(NULL, dest, path->nodes[0], off, len, 0);
  }
  
-+static inline u64 btrfs_fscrypt_bio_length(struct bio *bio, u64 map_length)
-+{
-+	return map_length;
-+}
-+
- #endif /* CONFIG_FS_ENCRYPTION */
- 
- extern const struct fscrypt_operations btrfs_fscrypt_ops;
+ static int read_symlink_encrypted(struct btrfs_root *root, u64 ino, struct fs_path *dest)
+@@ -2034,18 +2060,19 @@ static int get_first_ref(struct btrfs_root *root, u64 ino,
+ 		iref = btrfs_item_ptr(path->nodes[0], path->slots[0],
+ 				      struct btrfs_inode_ref);
+ 		len = btrfs_inode_ref_name_len(path->nodes[0], iref);
+-		ret = fs_path_add_from_extent_buffer(name, path->nodes[0],
+-						     (unsigned long)(iref + 1),
+-						     len);
+ 		parent_dir = found_key.offset;
++		ret = fs_path_add_from_extent_buffer(root, name, path->nodes[0],
++						     (unsigned long)(iref + 1),
++						     len, parent_dir);
+ 	} else {
+ 		struct btrfs_inode_extref *extref;
+ 		extref = btrfs_item_ptr(path->nodes[0], path->slots[0],
+ 					struct btrfs_inode_extref);
+ 		len = btrfs_inode_extref_name_len(path->nodes[0], extref);
+-		ret = fs_path_add_from_extent_buffer(name, path->nodes[0],
+-					(unsigned long)&extref->name, len);
+ 		parent_dir = btrfs_inode_extref_parent(path->nodes[0], extref);
++		ret = fs_path_add_from_extent_buffer(root, name, path->nodes[0],
++					(unsigned long)&extref->name, len,
++					parent_dir);
+ 	}
+ 	if (ret < 0)
+ 		return ret;
 -- 
 2.51.0
 
