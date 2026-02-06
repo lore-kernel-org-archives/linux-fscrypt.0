@@ -1,58 +1,37 @@
-Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 8AB6644A71D
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:17 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 5264343D509
+	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:21 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402317; cv=none; b=X3qGtKE8yu51tgWu8Hh++rh4cW2zJq7gH77ePK0lsiiHg7Ip094OASgqdKEmpaTkAaXbvMIIpQUvlp2RLjz0HnShWFrOymM9lF+yE3xsXstc2yxpwznrTGv2CbYnbKPY+Ho8qegovgP6FM/UVm8pOkX/SxEZqc6yYGOvDY3vEhg=
+	t=1770402321; cv=none; b=ACm9IUroWK9V2SgoLkZwoO9iJQFaVPJhasuxz3bB0q9EIx2Su0if7jwQ9ZWdvJOULdW7FDZmV6a6Ar3iDJyr78iXl0NYd1MmM9lVkHN25IT8zQ2kpXqJONOU6CHJwU6JxV6LiHohOEXjOkxwORM1xEWbP/mCtIsRBTm2wgQFQRo=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1770402317; c=relaxed/simple;
-	bh=x51Cg5xsCzKVGWOmBJtih3DOztBpxfL6ZG35siCQ3ms=;
+	s=arc-20240116; t=1770402321; c=relaxed/simple;
+	bh=U0l18ou8F/MGcFM1MDGVGTmRLR8+PcY/gyt+caSfplE=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=V/lBFGeNTdy0UVIQn93ABbF75O5nwHC4NClqXLUwVtNcFTthMzGX82yfA6F6UWAAC0UBjdiQtG5JyNIR35/zYc+mYxts1g3YU5dR+IU6N+smvGUUO9HxDATqu/EUGRXPj2r6gKjVWpx9xN2kmTOtRa0W3/MHfVKjlHOMPwF+j0U=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=D7eLlhRf; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=o3CIKfJw; arc=none smtp.client-ip=195.135.223.131
+	 MIME-Version; b=OXK9OAJ1EyOQ0bYvqMMbPSub7traqQgJQULjjl9T5lO57t1XMpvG/ld9pQ/56qGGcsaEXZZ4tYk6jiaRMT93oLH6rx6cQw+/VgHKsIZ+oO2N926ecfcGrAJkvNpxzw9wKiDJyKENv6cfBsa43/ZqoDWUEejWQZAcOjCmVQcIEzU=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="D7eLlhRf";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="o3CIKfJw"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id E70C05BD38;
-	Fri,  6 Feb 2026 18:24:18 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1770402259; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=u9CaRWPO0XEEkcqklCFMGPi2Gz5Gl8+A3LyPbQLO5J0=;
-	b=D7eLlhRfCnY9+hkf+p9KXeqIRvCUG/8VTOeBoBatxFEeHl/Xn0bMe5QwI88ijwFQ+EWRiH
-	uvth8ETfOFWA1ozenxXnMFRMTrVEiI/qif9B64u8lnRZnzmxLfbBQmV88MX8fSKsMuXwcI
-	VopFnAy38Gpat5BMEP9cRgdHwHI2HQc=
-Authentication-Results: smtp-out2.suse.de;
+	by smtp-out1.suse.de (Postfix) with ESMTPS id 67DD23E75E;
+	Fri,  6 Feb 2026 18:24:16 +0000 (UTC)
+Authentication-Results: smtp-out1.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1770402258; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=u9CaRWPO0XEEkcqklCFMGPi2Gz5Gl8+A3LyPbQLO5J0=;
-	b=o3CIKfJwv0X6WkIAr2IiYMi8eN6avPef/zXeFxEXUE36h903nV+Owpb7u4etSigKcKohLD
-	gdEgUE5gkC9KQaUnY11RyWswS+kgcFwLNuK7No7/ssnOEx6DuCszdIE0mPjwJE35N/GHJl
-	2U392xn0mh+Rg5g2lhcEdHOhoNKz4CY=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id B9DC33EA63;
-	Fri,  6 Feb 2026 18:24:18 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 3C6803EA63;
+	Fri,  6 Feb 2026 18:24:16 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id ACrlLNIxhmkTCQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:18 +0000
+	id oElJDtAxhmkTCQAAD6G6ig
+	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:16 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -66,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 39/43] btrfs: set the appropriate free space settings in reconfigure
-Date: Fri,  6 Feb 2026 19:23:11 +0100
-Message-ID: <20260206182336.1397715-40-neelx@suse.com>
+Subject: [PATCH v6 34/43] btrfs: add test_dummy_encryption support
+Date: Fri,  6 Feb 2026 19:23:06 +0100
+Message-ID: <20260206182336.1397715-35-neelx@suse.com>
 X-Mailer: git-send-email 2.51.0
 In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
 References: <20260206182336.1397715-1-neelx@suse.com>
@@ -79,158 +58,246 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Spamd-Result: default: False [-6.80 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	MID_CONTAINS_FROM(1.00)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.com:mid,suse.com:email,toxicpanda.com:email];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	TO_DN_SOME(0.00)[];
-	RCPT_COUNT_TWELVE(0.00)[12];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	FROM_HAS_DN(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_COUNT_TWO(0.00)[2];
-	R_RATELIMIT(0.00)[to_ip_from(RLdafymbgddseoxkryad1wgu8n)];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	RCVD_TLS_ALL(0.00)[]
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
 X-Spam-Flag: NO
-X-Spam-Score: -6.80
+X-Spam-Score: -4.00
+X-Rspamd-Queue-Id: 67DD23E75E
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Action: no action
+X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
 X-Spam-Level: 
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-btrfs/330 uncovered a problem where we were accidentally turning off the
-free space tree when we do the transition from ro->rw.  This happens
-because we don't update
+In order to enable more thorough testing of fscrypt enable the
+test_dummy_encryption mount option.  This is used by fscrypt users to
+easily enable fscrypt on the file system for testing without needing to
+do the key setup and everything.
+
+The only deviation from other file systems we make is we only support
+the fsparam_flag version of this mount option, as it defaults to v2.  We
+don't want to have to bother with rejecting v1 related mount options.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/325598eeb1d23f9ae04f675b4ee218f7e98e3ff0.1706116485.git.josef@toxicpanda.com/
- * Re-wrapped comments.
- * Fixed argument type.  mount_opt is now ull.
+v5: https://lore.kernel.org/linux-btrfs/77449ee5a882db2945429946c74ea7e796122328.1706116485.git.josef@toxicpanda.com/
+ * No changes since.  Just re-wrapping.  We now accept longer lines.
 ---
- fs/btrfs/disk-io.c |  2 +-
- fs/btrfs/super.c   | 28 +++++++++++++++-------------
- fs/btrfs/super.h   |  3 ++-
- 3 files changed, 18 insertions(+), 15 deletions(-)
+ fs/btrfs/disk-io.c |  1 +
+ fs/btrfs/fs.h      |  3 +++
+ fs/btrfs/fscrypt.c |  6 +++++
+ fs/btrfs/super.c   | 58 ++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 68 insertions(+)
 
 diff --git a/fs/btrfs/disk-io.c b/fs/btrfs/disk-io.c
-index f47a20976b53..993d2080fcbf 100644
+index 20c405a4789d..f47a20976b53 100644
 --- a/fs/btrfs/disk-io.c
 +++ b/fs/btrfs/disk-io.c
-@@ -3416,7 +3416,7 @@ int __cold open_ctree(struct super_block *sb, struct btrfs_fs_devices *fs_device
- 	 * Handle the space caching options appropriately now that we have the
- 	 * super block loaded and validated.
- 	 */
--	btrfs_set_free_space_cache_settings(fs_info);
-+	btrfs_set_free_space_cache_settings(fs_info, &fs_info->mount_opt);
+@@ -1224,6 +1224,7 @@ void btrfs_free_fs_info(struct btrfs_fs_info *fs_info)
+ 	btrfs_extent_buffer_leak_debug_check(fs_info);
+ 	kfree(fs_info->super_copy);
+ 	kfree(fs_info->super_for_commit);
++	fscrypt_free_dummy_policy(&fs_info->dummy_enc_policy);
+ 	kvfree(fs_info);
+ }
  
- 	if (!btrfs_check_options(fs_info, &fs_info->mount_opt, sb->s_flags)) {
- 		ret = -EINVAL;
+diff --git a/fs/btrfs/fs.h b/fs/btrfs/fs.h
+index 5077b7eed4b8..13cfb6887d89 100644
+--- a/fs/btrfs/fs.h
++++ b/fs/btrfs/fs.h
+@@ -27,6 +27,7 @@
+ #include <linux/sched.h>
+ #include <linux/rbtree.h>
+ #include <linux/xxhash.h>
++#include <linux/fscrypt.h>
+ #include <uapi/linux/btrfs.h>
+ #include <uapi/linux/btrfs_tree.h>
+ #include "extent-io-tree.h"
+@@ -263,6 +264,7 @@ enum {
+ 	BTRFS_MOUNT_IGNOREMETACSUMS		= (1ULL << 31),
+ 	BTRFS_MOUNT_IGNORESUPERFLAGS		= (1ULL << 32),
+ 	BTRFS_MOUNT_REF_TRACKER			= (1ULL << 33),
++	BTRFS_MOUNT_TEST_DUMMY_ENCRYPTION	= (1ULL << 34),
+ };
+ 
+ /* These mount options require a full read-only fs, no new transaction is allowed. */
+@@ -951,6 +953,7 @@ struct btrfs_fs_info {
+ 	spinlock_t eb_leak_lock;
+ 	struct list_head allocated_ebs;
+ #endif
++	struct fscrypt_dummy_policy dummy_enc_policy;
+ };
+ 
+ #define folio_to_inode(_folio)	(BTRFS_I(_Generic((_folio),			\
+diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
+index f74404bdd89e..d1a4cbb990d4 100644
+--- a/fs/btrfs/fscrypt.c
++++ b/fs/btrfs/fscrypt.c
+@@ -240,6 +240,11 @@ static blk_status_t btrfs_process_encrypted_bio(struct bio *orig_bio,
+ 	return btrfs_csum_one_bio(bbio, enc_bio, false);
+ }
+ 
++static const union fscrypt_policy *btrfs_get_dummy_policy(struct super_block *sb)
++{
++	return btrfs_sb(sb)->dummy_enc_policy.policy;
++}
++
+ int btrfs_fscrypt_load_extent_info(struct btrfs_inode *inode,
+ 				   struct btrfs_path *path,
+ 				   struct btrfs_key *key,
+@@ -389,4 +394,5 @@ const struct fscrypt_operations btrfs_fscrypt_ops = {
+ 	.empty_dir = btrfs_fscrypt_empty_dir,
+ 	.get_devices = btrfs_fscrypt_get_devices,
+ 	.process_bio = btrfs_process_encrypted_bio,
++	.get_dummy_policy = btrfs_get_dummy_policy,
+ };
 diff --git a/fs/btrfs/super.c b/fs/btrfs/super.c
-index 06788b27a870..4a2887147ead 100644
+index 3914abec5b12..06788b27a870 100644
 --- a/fs/btrfs/super.c
 +++ b/fs/btrfs/super.c
-@@ -745,10 +745,10 @@ bool btrfs_check_options(const struct btrfs_fs_info *info,
+@@ -87,6 +87,7 @@ struct btrfs_fs_context {
+ 	unsigned long compress_type:4;
+ 	int compress_level;
+ 	refcount_t refs;
++	struct fscrypt_dummy_policy dummy_enc_policy;
+ };
+ 
+ static void btrfs_emit_options(struct btrfs_fs_info *info,
+@@ -125,6 +126,7 @@ enum {
+ 	Opt_treelog,
+ 	Opt_user_subvol_rm_allowed,
+ 	Opt_norecovery,
++	Opt_test_dummy_encryption,
+ 
+ 	/* Rescue options */
+ 	Opt_rescue,
+@@ -259,6 +261,8 @@ static const struct fs_parameter_spec btrfs_fs_parameters[] = {
+ 	fsparam_enum("fragment", Opt_fragment, btrfs_parameter_fragment),
+ 	fsparam_flag("ref_tracker", Opt_ref_tracker),
+ 	fsparam_flag("ref_verify", Opt_ref_verify),
++	fsparam_flag("test_dummy_encryption", Opt_test_dummy_encryption),
++	fsparam_string("test_dummy_encryption", Opt_test_dummy_encryption),
+ #endif
+ 	{}
+ };
+@@ -651,6 +655,23 @@ static int btrfs_parse_param(struct fs_context *fc, struct fs_parameter *param)
+ 	case Opt_ref_tracker:
+ 		btrfs_set_opt(ctx->mount_opt, REF_TRACKER);
+ 		break;
++	case Opt_test_dummy_encryption:
++		int ret;
++
++		/*
++		 * We only support v2, so reject any v1 policies.
++		 */
++		if (param->type == fs_value_is_string && *param->string &&
++		    !strcmp(param->string, "v1")) {
++			btrfs_info(NULL, "v1 encryption isn't supported");
++			return -EINVAL;
++		}
++
++		btrfs_set_opt(ctx->mount_opt, TEST_DUMMY_ENCRYPTION);
++		ret = fscrypt_parse_test_dummy_encryption(param, &ctx->dummy_enc_policy);
++		if (ret)
++			return ret;
++		break;
+ #endif
+ 	default:
+ 		btrfs_err(NULL, "unrecognized mount option '%s'", param->key);
+@@ -986,6 +1007,9 @@ static int btrfs_fill_super(struct super_block *sb,
+ 		return ret;
+ 	}
+ 
++	if (fscrypt_is_dummy_policy_set(&fs_info->dummy_enc_policy))
++		btrfs_set_fs_incompat(fs_info, ENCRYPT);
++
+ 	btrfs_emit_options(fs_info, NULL);
+ 
+ 	inode = btrfs_iget(BTRFS_FIRST_FREE_OBJECTID, fs_info->fs_root);
+@@ -1150,6 +1174,8 @@ static int btrfs_show_options(struct seq_file *seq, struct dentry *dentry)
+ 		seq_puts(seq, ",ref_verify");
+ 	if (btrfs_test_opt(info, REF_TRACKER))
+ 		seq_puts(seq, ",ref_tracker");
++	if (btrfs_test_opt(info, TEST_DUMMY_ENCRYPTION))
++		fscrypt_show_test_dummy_encryption(seq, ',', dentry->d_sb);
+ 	seq_printf(seq, ",subvolid=%llu", btrfs_root_id(BTRFS_I(d_inode(dentry))->root));
+ 	subvol_name = btrfs_get_subvol_name_from_objectid(info,
+ 			btrfs_root_id(BTRFS_I(d_inode(dentry))->root));
+@@ -1415,6 +1441,18 @@ static void btrfs_ctx_to_info(struct btrfs_fs_info *fs_info, struct btrfs_fs_con
+ 	fs_info->mount_opt = ctx->mount_opt;
+ 	fs_info->compress_type = ctx->compress_type;
+ 	fs_info->compress_level = ctx->compress_level;
++
++	/*
++	 * If there's nothing set, or if the fs_info already has one set, don't
++	 * do anything.  If the fs_info is set we'll free the dummy one when we
++	 * free the ctx.
++	 */
++	if (!fscrypt_is_dummy_policy_set(&ctx->dummy_enc_policy) ||
++	    fscrypt_is_dummy_policy_set(&fs_info->dummy_enc_policy))
++		return;
++
++	fs_info->dummy_enc_policy = ctx->dummy_enc_policy;
++	memset(&ctx->dummy_enc_policy, 0, sizeof(ctx->dummy_enc_policy));
  }
  
- /*
-- * This is subtle, we only call this during open_ctree().  We need to pre-load
-- * the mount options with the on-disk settings.  Before the new mount API took
-- * effect we would do this on mount and remount.  With the new mount API we'll
-- * only do this on the initial mount.
-+ * Because we have an odd set of behavior with turning on and off the space cache
-+ * and free space tree we have to call this before we start the mount operation
-+ * after we load the super, or before we start remount.  This is to make sure we
-+ * have the proper free space settings in place if the user didn't specify any.
-  *
-  * This isn't a change in behavior, because we're using the current state of the
-  * file system to set the current mount options.  If you mounted with special
-@@ -756,21 +756,22 @@ bool btrfs_check_options(const struct btrfs_fs_info *info,
-  * settings, because mounting without these features cleared the on-disk
-  * settings, so this being called on re-mount is not needed.
-  */
--void btrfs_set_free_space_cache_settings(struct btrfs_fs_info *fs_info)
-+void btrfs_set_free_space_cache_settings(struct btrfs_fs_info *fs_info,
-+					 unsigned long long *mount_opt)
+ static void btrfs_info_to_ctx(struct btrfs_fs_info *fs_info, struct btrfs_fs_context *ctx)
+@@ -1468,6 +1506,7 @@ static void btrfs_emit_options(struct btrfs_fs_info *info,
+ 	btrfs_info_if_set(info, old, IGNOREDATACSUMS, "ignoring data csums");
+ 	btrfs_info_if_set(info, old, IGNOREMETACSUMS, "ignoring meta csums");
+ 	btrfs_info_if_set(info, old, IGNORESUPERFLAGS, "ignoring unknown super block flags");
++	btrfs_info_if_set(info, old, TEST_DUMMY_ENCRYPTION, "test dummy encryption mode enabled");
+ 
+ 	btrfs_info_if_unset(info, old, NODATASUM, "setting datasum");
+ 	btrfs_info_if_unset(info, old, NODATACOW, "setting datacow");
+@@ -1498,6 +1537,21 @@ static void btrfs_emit_options(struct btrfs_fs_info *info,
+ 		btrfs_info(info, "max_inline set to %llu", info->max_inline);
+ }
+ 
++static bool btrfs_check_test_dummy_encryption(struct fs_context *fc)
++{
++	struct btrfs_fs_context *ctx = fc->fs_private;
++	struct btrfs_fs_info *fs_info = btrfs_sb(fc->root->d_sb);
++
++	if (!fscrypt_is_dummy_policy_set(&ctx->dummy_enc_policy))
++		return true;
++
++	if (fscrypt_dummy_policies_equal(&fs_info->dummy_enc_policy, &ctx->dummy_enc_policy))
++		return true;
++
++	btrfs_warn(fs_info, "Can't set or change test_dummy_encryption on remount");
++	return false;
++}
++
+ static int btrfs_reconfigure(struct fs_context *fc)
  {
--	if (fs_info->sectorsize != PAGE_SIZE && btrfs_test_opt(fs_info, SPACE_CACHE)) {
-+	if (fs_info->sectorsize != PAGE_SIZE && btrfs_raw_test_opt(*mount_opt, SPACE_CACHE)) {
- 		btrfs_info(fs_info,
- 			   "forcing free space tree for sector size %u with page size %lu",
- 			   fs_info->sectorsize, PAGE_SIZE);
--		btrfs_clear_opt(fs_info->mount_opt, SPACE_CACHE);
--		btrfs_set_opt(fs_info->mount_opt, FREE_SPACE_TREE);
-+		btrfs_clear_opt(*mount_opt, SPACE_CACHE);
-+		btrfs_set_opt(*mount_opt, FREE_SPACE_TREE);
- 	}
- 
- 	/*
- 	 * At this point our mount options are populated, so we only mess with
- 	 * these settings if we don't have any settings already.
- 	 */
--	if (btrfs_test_opt(fs_info, FREE_SPACE_TREE))
-+	if (btrfs_raw_test_opt(*mount_opt, FREE_SPACE_TREE))
- 		return;
- 
- 	if (btrfs_is_zoned(fs_info) &&
-@@ -780,10 +781,10 @@ void btrfs_set_free_space_cache_settings(struct btrfs_fs_info *fs_info)
- 		return;
- 	}
- 
--	if (btrfs_test_opt(fs_info, SPACE_CACHE))
-+	if (btrfs_raw_test_opt(*mount_opt, SPACE_CACHE))
- 		return;
- 
--	if (btrfs_test_opt(fs_info, NOSPACECACHE))
-+	if (btrfs_raw_test_opt(*mount_opt, NOSPACECACHE))
- 		return;
- 
- 	/*
-@@ -791,9 +792,9 @@ void btrfs_set_free_space_cache_settings(struct btrfs_fs_info *fs_info)
- 	 * them ourselves based on the state of the file system.
- 	 */
- 	if (btrfs_fs_compat_ro(fs_info, FREE_SPACE_TREE))
--		btrfs_set_opt(fs_info->mount_opt, FREE_SPACE_TREE);
-+		btrfs_set_opt(*mount_opt, FREE_SPACE_TREE);
- 	else if (btrfs_free_space_cache_v1_active(fs_info))
--		btrfs_set_opt(fs_info->mount_opt, SPACE_CACHE);
-+		btrfs_set_opt(*mount_opt, SPACE_CACHE);
- }
- 
- static void set_device_specific_options(struct btrfs_fs_info *fs_info)
-@@ -1573,6 +1574,7 @@ static int btrfs_reconfigure(struct fs_context *fc)
- 
- 	sync_filesystem(sb);
- 	set_bit(BTRFS_FS_STATE_REMOUNTING, &fs_info->fs_state);
-+	btrfs_set_free_space_cache_settings(fs_info, &ctx->mount_opt);
- 
+ 	struct super_block *sb = fc->root->d_sb;
+@@ -1523,6 +1577,9 @@ static int btrfs_reconfigure(struct fs_context *fc)
  	if (!btrfs_check_options(fs_info, &ctx->mount_opt, fc->sb_flags))
  		return -EINVAL;
-diff --git a/fs/btrfs/super.h b/fs/btrfs/super.h
-index d80a86acfbbe..584f428d36e2 100644
---- a/fs/btrfs/super.h
-+++ b/fs/btrfs/super.h
-@@ -16,7 +16,8 @@ bool btrfs_check_options(const struct btrfs_fs_info *info,
- int btrfs_sync_fs(struct super_block *sb, int wait);
- char *btrfs_get_subvol_name_from_objectid(struct btrfs_fs_info *fs_info,
- 					  u64 subvol_objectid);
--void btrfs_set_free_space_cache_settings(struct btrfs_fs_info *fs_info);
-+void btrfs_set_free_space_cache_settings(struct btrfs_fs_info *fs_info,
-+					 unsigned long long *mount_opt);
  
- static inline struct btrfs_fs_info *btrfs_sb(struct super_block *sb)
- {
++	if (!mount_reconfigure && !btrfs_check_test_dummy_encryption(fc))
++		return -EINVAL;
++
+ 	ret = btrfs_check_features(fs_info, !(fc->sb_flags & SB_RDONLY));
+ 	if (ret < 0)
+ 		return ret;
+@@ -2139,6 +2196,7 @@ static void btrfs_free_fs_context(struct fs_context *fc)
+ 		btrfs_free_fs_info(fs_info);
+ 
+ 	if (ctx && refcount_dec_and_test(&ctx->refs)) {
++		fscrypt_free_dummy_policy(&ctx->dummy_enc_policy);
+ 		kfree(ctx->subvol_name);
+ 		kfree(ctx);
+ 	}
 -- 
 2.51.0
 
