@@ -1,37 +1,58 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 737D443DA25
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 7E9F544BC87
 	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:25 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402325; cv=none; b=Eog23RpRkI16kvFfEeSNTpdsNRpqjLi2oRq+fvIGqWLdHK1F75jh9IuR7bD8JSyz2Z8yhiWPwbUiQxVpr5Ezr3IYz0McbW8mLMnGnUvNB9DnrBF0ZwvtDXCWVGyqBua3OC+AckVrKyOUlmZNGSGRncBKlG+06nDcCXnVn7B5360=
+	t=1770402325; cv=none; b=GexJdS9D8LUff12UiTxmYZxafGJmUiYqg2tl+6wyzBUZ8FIZeLYWEvm0fZw/8afUGGHhjPxMNMmDw7MStuC/ndYv+a+NuC8Ij7T+TCn9O6gXcWURE6ASrwkQpYK+sYu9VN/W21/y6ATKMot15a3FIXmmXhvB6Zo5iBO31W31TGc=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
 	s=arc-20240116; t=1770402325; c=relaxed/simple;
-	bh=9LsGDAhN6yaS4eVreOGRrVmOuVBkuDvHtHFMAJyoGyQ=;
+	bh=GfnO68KXoBeEnqOHN5arOyt9p0B9ZFFw2XWnNOvoB4o=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=Nr2PsdFQ2evnLZXOraBX7/uyTuoReMNlsbSWLUkATaiRbMu/23wDj52mmU9BqaWnsb5Q7yMdd2UOEL+Fl0gXbdk1eH6QqB8oU4Sz41jiu/5xTqB7QfUNZwOe5J9Ctd6SyeN9zICNdh2oz/jORZoliYBoelvKiTqwJwOSoh7Iass=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
+	 MIME-Version; b=DzBpV/voBeNLlG3+x4bbqhGcLnN3iw4j/IElXnb9fwfo3vzAom60iYWygRb/Ja4P68SbxN7zfh5ZzUNcRMDosOC16uhLvrgBCoi31r4Axow8BH+T0LOr5FmB0qjZIi/HTxvTKZnhzufP4mJ3DncOtJCtZpJbtnpAZKFdvFoJhaA=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=ZKtaFJlK; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=ZKtaFJlK; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="ZKtaFJlK";
+	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="ZKtaFJlK"
+Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 102F53E737;
-	Fri,  6 Feb 2026 18:24:17 +0000 (UTC)
-Authentication-Results: smtp-out1.suse.de;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id BCF995BD35;
+	Fri,  6 Feb 2026 18:24:20 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
+	t=1770402260; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=sbKbFDBvAoHVV+zcvNVZ9N7jQeEHQ8nUuWj4G99Gpu0=;
+	b=ZKtaFJlKLO4EkBCD9rOxrt3wRA/eB6Va5Y04z9GKP2c1HIs0s7R2RltIyO5sKyCH2X+rcq
+	i+OmSfDOUess3SWpjYnq2Gs4zxWhqjAwgTz3NWfX6qx6VoCVpYTL6/9CtVdoqZCM4nHim/
+	sDauKpUpaqCiUu0grk0La6pHWEyEhWw=
+Authentication-Results: smtp-out2.suse.de;
 	none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
+	t=1770402260; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=sbKbFDBvAoHVV+zcvNVZ9N7jQeEHQ8nUuWj4G99Gpu0=;
+	b=ZKtaFJlKLO4EkBCD9rOxrt3wRA/eB6Va5Y04z9GKP2c1HIs0s7R2RltIyO5sKyCH2X+rcq
+	i+OmSfDOUess3SWpjYnq2Gs4zxWhqjAwgTz3NWfX6qx6VoCVpYTL6/9CtVdoqZCM4nHim/
+	sDauKpUpaqCiUu0grk0La6pHWEyEhWw=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id D5F513EA63;
-	Fri,  6 Feb 2026 18:24:16 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 8FD033EA63;
+	Fri,  6 Feb 2026 18:24:20 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id uOKzM9AxhmkTCQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:16 +0000
+	id eMOcItQxhmkTCQAAD6G6ig
+	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:20 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -44,10 +65,11 @@ Cc: linux-block@vger.kernel.org,
 	Daniel Vacek <neelx@suse.com>,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
-	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 35/43] btrfs: make btrfs_ref_to_path handle encrypted filenames
-Date: Fri,  6 Feb 2026 19:23:07 +0100
-Message-ID: <20260206182336.1397715-36-neelx@suse.com>
+	linux-kernel@vger.kernel.org,
+	Boris Burkov <boris@bur.io>
+Subject: [PATCH v6 43/43] btrfs: disable send if we have encryption enabled
+Date: Fri,  6 Feb 2026 19:23:15 +0100
+Message-ID: <20260206182336.1397715-44-neelx@suse.com>
 X-Mailer: git-send-email 2.51.0
 In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
 References: <20260206182336.1397715-1-neelx@suse.com>
@@ -58,193 +80,67 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Spam-Score: -4.00
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Rspamd-Action: no action
-X-Rspamd-Queue-Id: 102F53E737
-X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
+X-Spam-Score: -6.80
+X-Spamd-Result: default: False [-6.80 / 50.00];
+	REPLY(-4.00)[];
+	BAYES_HAM(-3.00)[100.00%];
+	NEURAL_HAM_LONG(-1.00)[-1.000];
+	MID_CONTAINS_FROM(1.00)[];
+	R_MISSING_CHARSET(0.50)[];
+	NEURAL_HAM_SHORT(-0.20)[-1.000];
+	MIME_GOOD(-0.10)[text/plain];
+	RCVD_COUNT_TWO(0.00)[2];
+	FROM_HAS_DN(0.00)[];
+	ARC_NA(0.00)[];
+	MIME_TRACE(0.00)[0:+];
+	TO_DN_SOME(0.00)[];
+	TO_MATCH_ENVRCPT_ALL(0.00)[];
+	RCVD_VIA_SMTP_AUTH(0.00)[];
+	FROM_EQ_ENVFROM(0.00)[];
+	DKIM_SIGNED(0.00)[suse.com:s=susede1];
+	FUZZY_RATELIMITED(0.00)[rspamd.com];
+	RCPT_COUNT_TWELVE(0.00)[13];
+	DBL_BLOCKED_OPENRESOLVER(0.00)[toxicpanda.com:email,suse.com:mid,suse.com:email];
+	RCVD_TLS_ALL(0.00)[]
 X-Spam-Level: 
-X-Spamd-Result: default: False [-4.00 / 50.00];
-	REPLY(-4.00)[]
 X-Spam-Flag: NO
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-We use this helper for inode-resolve and path resolution in send, so
-update this helper to properly decrypt any encrypted names it finds.
+send needs to track the dir item values to see if files were renamed
+when doing an incremental send.  There is code to decrypt the names, but
+this breaks the code that checks to see if something was overwritten.
+Until this gap is closed we need to disable send on encrypted file
+systems.  Fixing this is straightforward, but a medium sized project.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
+Reviewed-by: Boris Burkov <boris@bur.io>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/365d4f820f70b7cf69b1b9cae9b949a15c3350b0.1706116485.git.josef@toxicpanda.com/
- * Adapted to btrfs_iget() now returning binode instead of vfs inode
-   as before.
- * Adapted to crypt info being moved from vfs inode to FS specific inode.
+v5: https://lore.kernel.org/linux-btrfs/62ce86b38e2575c542eed7fbe8d986e68496b1d7.1706116485.git.josef@toxicpanda.com/
+ * No changes since.
 ---
- fs/btrfs/backref.c | 42 +++++++++++++++++++++++++++++++++++++----
- fs/btrfs/fscrypt.c | 47 ++++++++++++++++++++++++++++++++++++++++++++++
- fs/btrfs/fscrypt.h | 10 ++++++++++
- 3 files changed, 95 insertions(+), 4 deletions(-)
+ fs/btrfs/send.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
-diff --git a/fs/btrfs/backref.c b/fs/btrfs/backref.c
-index 9bb406f7dd30..577c3ef87791 100644
---- a/fs/btrfs/backref.c
-+++ b/fs/btrfs/backref.c
-@@ -20,6 +20,7 @@
- #include "extent-tree.h"
- #include "relocation.h"
- #include "tree-checker.h"
-+#include "fscrypt.h"
+diff --git a/fs/btrfs/send.c b/fs/btrfs/send.c
+index bf9a99a9d24d..a3aa95ce4f87 100644
+--- a/fs/btrfs/send.c
++++ b/fs/btrfs/send.c
+@@ -8095,6 +8095,12 @@ long btrfs_ioctl_send(struct btrfs_root *send_root, const struct btrfs_ioctl_sen
+ 	if (!capable(CAP_SYS_ADMIN))
+ 		return -EPERM;
  
- /* Just arbitrary numbers so we can be sure one of these happened. */
- #define BACKREF_FOUND_SHARED     6
-@@ -2107,6 +2108,39 @@ int btrfs_find_one_extref(struct btrfs_root *root, u64 inode_objectid,
- 	return ret;
- }
- 
-+static int copy_resolved_iref_to_buf(struct btrfs_root *fs_root,
-+				     struct extent_buffer *eb, char *dest,
-+				     u64 parent, unsigned long name_off,
-+				     u32 name_len, s64 *bytes_left)
-+{
-+	struct btrfs_fs_info *fs_info = fs_root->fs_info;
-+	struct fscrypt_str fname = FSTR_INIT(NULL, 0);
-+	int ret;
-+
-+	/* No encryption, just copy the name in. */
-+	if (!btrfs_fs_incompat(fs_info, ENCRYPT)) {
-+		*bytes_left -= name_len;
-+		if (*bytes_left >= 0)
-+			read_extent_buffer(eb, dest + *bytes_left, name_off, name_len);
-+		return 0;
++	if (btrfs_fs_incompat(fs_info, ENCRYPT)) {
++		btrfs_err(fs_info,
++		  "send with encryption enabled isn't currently suported");
++		return -EINVAL;
 +	}
 +
-+	ret = fscrypt_fname_alloc_buffer(BTRFS_NAME_LEN, &fname);
-+	if (ret)
-+		return ret;
-+
-+	ret = btrfs_decrypt_name(fs_root, eb, name_off, name_len, parent, &fname);
-+	if (ret)
-+		goto out;
-+
-+	*bytes_left -= fname.len;
-+	if (*bytes_left >= 0)
-+		memcpy(dest + *bytes_left, fname.name, fname.len);
-+out:
-+	fscrypt_fname_free_buffer(&fname);
-+	return ret;
-+}
-+
- /*
-  * this iterates to turn a name (from iref/extref) into a full filesystem path.
-  * Elements of the path are separated by '/' and the path is guaranteed to be
-@@ -2138,10 +2172,10 @@ char *btrfs_ref_to_path(struct btrfs_root *fs_root, struct btrfs_path *path,
- 		dest[bytes_left] = '\0';
- 
- 	while (1) {
--		bytes_left -= name_len;
--		if (bytes_left >= 0)
--			read_extent_buffer(eb, dest + bytes_left,
--					   name_off, name_len);
-+		ret = copy_resolved_iref_to_buf(fs_root, eb, dest, parent,
-+						name_off, name_len, &bytes_left);
-+		if (ret)
-+			break;
- 		if (eb != eb_in) {
- 			if (!path->skip_locking)
- 				btrfs_tree_read_unlock(eb);
-diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
-index d1a4cbb990d4..bcb86cbaa171 100644
---- a/fs/btrfs/fscrypt.c
-+++ b/fs/btrfs/fscrypt.c
-@@ -385,6 +385,53 @@ int btrfs_fscrypt_bio_length(struct bio *bio, u64 map_length)
- 	return map_length;
- }
- 
-+int btrfs_decrypt_name(struct btrfs_root *root, struct extent_buffer *eb,
-+		       unsigned long name_off, u32 name_len,
-+		       u64 parent_ino, struct fscrypt_str *name)
-+{
-+	struct btrfs_inode *inode;
-+	struct inode *dir;
-+	struct fscrypt_str iname = FSTR_INIT(NULL, 0);
-+	int ret;
-+
-+	ASSERT(name_len <= BTRFS_NAME_LEN);
-+
-+	ret = fscrypt_fname_alloc_buffer(name_len, &iname);
-+	if (ret)
-+		return ret;
-+
-+	inode = btrfs_iget(parent_ino, root);
-+	if (IS_ERR(inode)) {
-+		ret = PTR_ERR(inode);
-+		goto out;
-+	}
-+	dir = &inode->vfs_inode;
-+
-+	/*
-+	 * Directory isn't encrypted, the name isn't encrypted, we can just copy
-+	 * it into the buffer.
-+	 */
-+	if (!IS_ENCRYPTED(dir)) {
-+		read_extent_buffer(eb, name->name, name_off, name_len);
-+		name->len = name_len;
-+		goto out_inode;
-+	}
-+
-+	read_extent_buffer(eb, iname.name, name_off, name_len);
-+
-+	ret = fscrypt_prepare_readdir(dir);
-+	if (ret)
-+		goto out_inode;
-+
-+	ASSERT(inode->i_crypt_info);
-+	ret = fscrypt_fname_disk_to_usr(dir, 0, 0, &iname, name);
-+out_inode:
-+	iput(dir);
-+out:
-+	fscrypt_fname_free_buffer(&iname);
-+	return ret;
-+}
-+
- const struct fscrypt_operations btrfs_fscrypt_ops = {
- 	.inode_info_offs = (int)offsetof(struct btrfs_inode, i_crypt_info) -
- 			   (int)offsetof(struct btrfs_inode, vfs_inode),
-diff --git a/fs/btrfs/fscrypt.h b/fs/btrfs/fscrypt.h
-index 347b34f45715..4f49ed6176d4 100644
---- a/fs/btrfs/fscrypt.h
-+++ b/fs/btrfs/fscrypt.h
-@@ -32,6 +32,9 @@ bool btrfs_mergeable_encrypted_bio(struct bio *bio, struct inode *inode,
- 				   struct fscrypt_extent_info *fi,
- 				   u64 logical_offset);
- int btrfs_fscrypt_bio_length(struct bio *bio, u64 map_length);
-+int btrfs_decrypt_name(struct btrfs_root *root, struct extent_buffer *eb,
-+		       unsigned long name_off, u32 name_len,
-+		       u64 parent_ino, struct fscrypt_str *name);
- 
- #else
- static inline void btrfs_fscrypt_save_extent_info(struct btrfs_path *path,
-@@ -91,6 +94,13 @@ static inline u64 btrfs_fscrypt_bio_length(struct bio *bio, u64 map_length)
- 	return map_length;
- }
- 
-+static inline int btrfs_decrypt_name(struct btrfs_root *root, struct extent_buffer *eb,
-+				     unsigned long name_off, u32 name_len,
-+				     u64 parent_ino, struct fscrypt_str *name)
-+{
-+	return -EINVAL;
-+}
-+
- #endif /* CONFIG_FS_ENCRYPTION */
- 
- extern const struct fscrypt_operations btrfs_fscrypt_ops;
+ 	/*
+ 	 * The subvolume must remain read-only during send, protect against
+ 	 * making it RW. This also protects against deletion.
 -- 
 2.51.0
 
