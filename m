@@ -1,37 +1,58 @@
-Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6DD7A43C05E
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:03 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9354D4418E3
+	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:05 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402303; cv=none; b=TmOy3Qt16qVPR4n02jPndgDW3TIQausJFnKS3v0HIJ+H5kIB4bcJTg6aZyIutelglvTbHiPZQhD8UzKSWVlxvgAfKIOc4pON3Q1J/BnpBFi9p/sEcPm8hdQFZYxq/NBc5OxZQfcZloGkcSaxgs0FdBmMr/y/+LMtAH+9Eo1pbHM=
+	t=1770402305; cv=none; b=FqBt0/lD8N4EzXpG7XMBtklMDpowSJ1146b4YRvzCSXI9gs1iC9ySotE1wbqu3gtuYWQeljqRTgmm7T9FZQEcnEdO93Vg7ZyzexUm4v2mIj0hwMDc8mxovS9CWqzw0uou9pVQhcGC4itZ7faIP9tycYQLhFUvFiJuTHEkMTzQvI=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1770402303; c=relaxed/simple;
-	bh=blFKUpi3xvJKZR3+nYjzSJqvyUo+6IFCcloG9ZycAU0=;
+	s=arc-20240116; t=1770402305; c=relaxed/simple;
+	bh=FBy99Pni9ZqUQJCWFn5hJAPFNmk7nOaxxWnDwn8nPjA=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=iJ4iubZ2V9fReOIMDle1WfG4rowHj8gk7agQ+bFYcV6t4Hmivkh6sOjMxse+6GzXT6q1o1ffbHkZ9ZlHL/wPRL0+WlDqPXQMKwWKy0HHHLtQP1KzVuCWd2SdE/PZFZMosqKOvY0EM7NAbHXgyeccdtzfjP88Ew9BTRSZWiTC0uk=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
+	 MIME-Version; b=mo5b8tW6FvSTMRo43YGQMELlsCC0m3Kb+UreRySc8+bCJq0922VAzCP7OK+Qx/jENJTbrxaa/l8Nm/GC30qFGyXnFOADGlEiMVJc03PE4fJtEwmR5tu+terx4wG/JM8C9PeXwx2D5jMbvuBJYBBHElhxpytdC5txQfPiMnZgq78=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=dgnhT86q; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=dgnhT86q; arc=none smtp.client-ip=195.135.223.130
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="dgnhT86q";
+	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="dgnhT86q"
+Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id 1FD0F5BD2C;
-	Fri,  6 Feb 2026 18:24:12 +0000 (UTC)
-Authentication-Results: smtp-out2.suse.de;
+	by smtp-out1.suse.de (Postfix) with ESMTPS id 95C6C3E74C;
+	Fri,  6 Feb 2026 18:24:13 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
+	t=1770402253; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=HiR3m+n+8ALmEnGsv/bKdMO09KbAjSFNZ63G9sqGBN0=;
+	b=dgnhT86qpk1BBbJ6q5dy6D/4ZkkJHYXxV3PLkgBqWX4UmuDUlm2DpPFzNGcax/QzCwibmV
+	dRNlHH5U34MGyGsm4n0aj+soJxXwdxqjki6oMot27IsaBYyIYCYPyKd6FHYVlyyYe8kBiy
+	Xob5nXnLwfMXiMjS1tnVP+R/vR5VYZQ=
+Authentication-Results: smtp-out1.suse.de;
 	none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
+	t=1770402253; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=HiR3m+n+8ALmEnGsv/bKdMO09KbAjSFNZ63G9sqGBN0=;
+	b=dgnhT86qpk1BBbJ6q5dy6D/4ZkkJHYXxV3PLkgBqWX4UmuDUlm2DpPFzNGcax/QzCwibmV
+	dRNlHH5U34MGyGsm4n0aj+soJxXwdxqjki6oMot27IsaBYyIYCYPyKd6FHYVlyyYe8kBiy
+	Xob5nXnLwfMXiMjS1tnVP+R/vR5VYZQ=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id E74633EA63;
-	Fri,  6 Feb 2026 18:24:11 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 6B23C3EA63;
+	Fri,  6 Feb 2026 18:24:13 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id WBf+N8sxhmkTCQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:11 +0000
+	id +N+uGc0xhmkTCQAAD6G6ig
+	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:13 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -45,9 +66,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 28/43] btrfs: populate ordered_extent with the orig offset
-Date: Fri,  6 Feb 2026 19:23:00 +0100
-Message-ID: <20260206182336.1397715-29-neelx@suse.com>
+Subject: [PATCH v6 30/43] btrfs: add a bio argument to btrfs_csum_one_bio
+Date: Fri,  6 Feb 2026 19:23:02 +0100
+Message-ID: <20260206182336.1397715-31-neelx@suse.com>
 X-Mailer: git-send-email 2.51.0
 In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
 References: <20260206182336.1397715-1-neelx@suse.com>
@@ -58,194 +79,152 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Spamd-Result: default: False [-4.00 / 50.00];
-	REPLY(-4.00)[]
-X-Spam-Flag: NO
-X-Spam-Score: -4.00
-X-Rspamd-Queue-Id: 1FD0F5BD2C
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Rspamd-Action: no action
-X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
+X-Spam-Score: -6.80
+X-Spamd-Result: default: False [-6.80 / 50.00];
+	REPLY(-4.00)[];
+	BAYES_HAM(-3.00)[100.00%];
+	MID_CONTAINS_FROM(1.00)[];
+	NEURAL_HAM_LONG(-1.00)[-1.000];
+	R_MISSING_CHARSET(0.50)[];
+	NEURAL_HAM_SHORT(-0.20)[-1.000];
+	MIME_GOOD(-0.10)[text/plain];
+	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.com:mid,suse.com:email,toxicpanda.com:email];
+	ARC_NA(0.00)[];
+	MIME_TRACE(0.00)[0:+];
+	TO_DN_SOME(0.00)[];
+	RCPT_COUNT_TWELVE(0.00)[12];
+	RCVD_VIA_SMTP_AUTH(0.00)[];
+	FUZZY_RATELIMITED(0.00)[rspamd.com];
+	FROM_HAS_DN(0.00)[];
+	TO_MATCH_ENVRCPT_ALL(0.00)[];
+	FROM_EQ_ENVFROM(0.00)[];
+	RCVD_COUNT_TWO(0.00)[2];
+	R_RATELIMIT(0.00)[to_ip_from(RLdafymbgddseoxkryad1wgu8n)];
+	DKIM_SIGNED(0.00)[suse.com:s=susede1];
+	RCVD_TLS_ALL(0.00)[]
 X-Spam-Level: 
+X-Spam-Flag: NO
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-For extent encryption we have to use a logical block nr as input for the
-IV.  For btrfs we're using the offset into the extent we're operating
-on.  For most ordered extents this is the same as the file_offset,
-however for prealloc and NOCOW we have to use the original offset.
-
-Add this as an argument and plumb it through everywhere, this will be
-used when setting up the bio.
+We only ever needed the bbio in btrfs_csum_one_bio, since that has the
+bio embedded in it.  However with encryption we'll have a different bio
+with the encrypted data in it, and the original bbio.  Update
+btrfs_csum_one_bio to take the bio we're going to csum as an argument,
+which will allow us to csum the encrypted bio and stuff the csums into
+the corresponding bbio to be used later when the IO completes.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/fe06053fe2973c424dd539fecfee8cc171bdd22d.1706116485.git.josef@toxicpanda.com/
- * Splitted the dio-related hunks from inode.c to direct-io.c as upstream
-   refactored in the meantime.
- * Open-code orig_start to start - offset.
+v5: https://lore.kernel.org/linux-btrfs/595a2e46dae3d18bceb5dfa60ac3ae23760fc800.1706116485.git.josef@toxicpanda.com/
+ * Adapted for async csums.  For writes we have to stick with sync
+   csums.  Otherwise fscrypt would have to hand us the bounced bio
+   instead of releasing it.  Though that is not implemented yet.
 ---
- fs/btrfs/direct-io.c    |  1 +
- fs/btrfs/inode.c        |  5 +++++
- fs/btrfs/ordered-data.c | 21 ++++++++++++++++++---
- fs/btrfs/ordered-data.h |  7 +++++++
- 4 files changed, 31 insertions(+), 3 deletions(-)
+ fs/btrfs/bio.c       |  4 ++--
+ fs/btrfs/bio.h       |  1 +
+ fs/btrfs/file-item.c | 13 ++++++-------
+ fs/btrfs/file-item.h |  2 +-
+ 4 files changed, 10 insertions(+), 10 deletions(-)
 
-diff --git a/fs/btrfs/direct-io.c b/fs/btrfs/direct-io.c
-index d3789109ca85..2d89ac05b1b3 100644
---- a/fs/btrfs/direct-io.c
-+++ b/fs/btrfs/direct-io.c
-@@ -155,6 +155,7 @@ static struct extent_map *btrfs_create_dio_extent(struct btrfs_inode *inode,
- 		file_extent->fscrypt_info = em->fscrypt_info;
- 	}
- 
-+	file_extent->orig_offset = start - file_extent->offset;
- 	ordered = btrfs_alloc_ordered_extent(inode, start, file_extent,
- 					     (1U << type) |
- 					     (1U << BTRFS_ORDERED_DIRECT));
-diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
-index de1989edffc1..b28e1b7497b8 100644
---- a/fs/btrfs/inode.c
-+++ b/fs/btrfs/inode.c
-@@ -1192,6 +1192,7 @@ static void submit_one_async_extent(struct async_chunk *async_chunk,
- 	}
- 
- 	file_extent.fscrypt_info = em->fscrypt_info;
-+	file_extent.orig_offset = start;
- 	ordered = btrfs_alloc_ordered_extent(inode, start, &file_extent,
- 					     1U << BTRFS_ORDERED_COMPRESSED);
- 	btrfs_free_extent_map(em);
-@@ -1336,6 +1337,7 @@ static int cow_one_range(struct btrfs_inode *inode, struct folio *locked_folio,
- 	}
- 
- 	file_extent.fscrypt_info = em->fscrypt_info;
-+	file_extent.orig_offset = file_offset;
- 	ordered = btrfs_alloc_ordered_extent(inode, file_offset, &file_extent,
- 					     1U << BTRFS_ORDERED_REGULAR);
- 	btrfs_free_extent_map(em);
-@@ -2281,6 +2283,8 @@ static noinline int run_delalloc_nocow(struct btrfs_inode *inode,
- 			cow_start = (u64)-1;
- 		}
- 
-+		nocow_args.file_extent.orig_offset =
-+			found_key.offset - nocow_args.file_extent.offset;
- 		ret = nocow_one_range(inode, locked_folio, &cached_state,
- 				      &nocow_args, cur_offset,
- 				      extent_type == BTRFS_FILE_EXTENT_PREALLOC);
-@@ -10218,6 +10222,7 @@ ssize_t btrfs_do_encoded_write(struct kiocb *iocb, struct iov_iter *from,
- 	}
- 
- 	file_extent.fscrypt_info = em->fscrypt_info;
-+	file_extent.orig_offset = start - encoded->unencoded_offset;
- 	ordered = btrfs_alloc_ordered_extent(inode, start, &file_extent,
- 				       (1U << BTRFS_ORDERED_ENCODED) |
- 				       (1U << BTRFS_ORDERED_COMPRESSED));
-diff --git a/fs/btrfs/ordered-data.c b/fs/btrfs/ordered-data.c
-index 1b4d20a2f983..bb5477ce58db 100644
---- a/fs/btrfs/ordered-data.c
-+++ b/fs/btrfs/ordered-data.c
-@@ -146,7 +146,8 @@ static inline struct rb_node *ordered_tree_search(struct btrfs_inode *inode,
+diff --git a/fs/btrfs/bio.c b/fs/btrfs/bio.c
+index 0a69e09bfe28..487dd9267fd7 100644
+--- a/fs/btrfs/bio.c
++++ b/fs/btrfs/bio.c
+@@ -592,9 +592,9 @@ static int btrfs_bio_csum(struct btrfs_bio *bbio)
+ 	if (bbio->bio.bi_opf & REQ_META)
+ 		return btree_csum_one_bio(bbio);
+ #ifdef CONFIG_BTRFS_EXPERIMENTAL
+-	return btrfs_csum_one_bio(bbio, true);
++	return btrfs_csum_one_bio(bbio, &bbio->bio, true);
+ #else
+-	return btrfs_csum_one_bio(bbio, false);
++	return btrfs_csum_one_bio(bbio, &bbio->bio, false);
+ #endif
  }
  
- static struct btrfs_ordered_extent *alloc_ordered_extent(
--			struct btrfs_inode *inode, u64 file_offset, u64 num_bytes,
-+			struct btrfs_inode *inode,
-+			u64 file_offset, u64 orig_offset, u64 num_bytes,
- 			u64 ram_bytes, u64 disk_bytenr, u64 disk_num_bytes,
- 			u64 offset, unsigned long flags, int compress_type,
- 			struct fscrypt_extent_info *fscrypt_info)
-@@ -180,6 +181,7 @@ static struct btrfs_ordered_extent *alloc_ordered_extent(
+diff --git a/fs/btrfs/bio.h b/fs/btrfs/bio.h
+index 303ed6c7103d..43f7544029ac 100644
+--- a/fs/btrfs/bio.h
++++ b/fs/btrfs/bio.h
+@@ -59,6 +59,7 @@ struct btrfs_bio {
+ 			struct btrfs_ordered_sum *sums;
+ 			struct work_struct csum_work;
+ 			struct completion csum_done;
++			struct bio *csum_bio;
+ 			struct bvec_iter csum_saved_iter;
+ 			u64 orig_physical;
+ 			u64 orig_logical;
+diff --git a/fs/btrfs/file-item.c b/fs/btrfs/file-item.c
+index 08dc78295707..ef0b6faf3de0 100644
+--- a/fs/btrfs/file-item.c
++++ b/fs/btrfs/file-item.c
+@@ -764,11 +764,10 @@ int btrfs_lookup_csums_bitmap(struct btrfs_root *root, struct btrfs_path *path,
+ 	return ret;
+ }
+ 
+-static void csum_one_bio(struct btrfs_bio *bbio, struct bvec_iter *src)
++static void csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, struct bvec_iter *src)
+ {
+ 	struct btrfs_inode *inode = bbio->inode;
+ 	struct btrfs_fs_info *fs_info = inode->root->fs_info;
+-	struct bio *bio = &bbio->bio;
+ 	struct btrfs_ordered_sum *sums = bbio->sums;
+ 	struct bvec_iter iter = *src;
+ 	phys_addr_t paddr;
+@@ -796,19 +795,18 @@ static void csum_one_bio_work(struct work_struct *work)
+ 
+ 	ASSERT(btrfs_op(&bbio->bio) == BTRFS_MAP_WRITE);
+ 	ASSERT(bbio->async_csum == true);
+-	csum_one_bio(bbio, &bbio->csum_saved_iter);
++	csum_one_bio(bbio, bbio->csum_bio, &bbio->csum_saved_iter);
+ 	complete(&bbio->csum_done);
+ }
+ 
+ /*
+  * Calculate checksums of the data contained inside a bio.
+  */
+-int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async)
++int btrfs_csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, bool async)
+ {
+ 	struct btrfs_ordered_extent *ordered = bbio->ordered;
+ 	struct btrfs_inode *inode = bbio->inode;
+ 	struct btrfs_fs_info *fs_info = inode->root->fs_info;
+-	struct bio *bio = &bbio->bio;
+ 	struct btrfs_ordered_sum *sums;
+ 	unsigned nofs_flag;
+ 
+@@ -827,12 +825,13 @@ int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async)
+ 	btrfs_add_ordered_sum(ordered, sums);
+ 
+ 	if (!async) {
+-		csum_one_bio(bbio, &bbio->bio.bi_iter);
++		csum_one_bio(bbio, bio, &bio->bi_iter);
+ 		return 0;
  	}
- 
- 	entry->file_offset = file_offset;
-+	entry->orig_offset = orig_offset;
- 	entry->num_bytes = num_bytes;
- 	entry->ram_bytes = ram_bytes;
- 	entry->disk_bytenr = disk_bytenr;
-@@ -268,6 +270,7 @@ static void insert_ordered_extent(struct btrfs_ordered_extent *entry)
-  *
-  * @inode:           Inode that this extent is for.
-  * @file_offset:     Logical offset in file where the extent starts.
-+ * @orig_offset:     Logical offset of the original extent (PREALLOC or NOCOW)
-  * @num_bytes:       Logical length of extent in file.
-  * @ram_bytes:       Full length of unencoded data.
-  * @disk_bytenr:     Offset of extent on disk.
-@@ -305,6 +308,7 @@ struct btrfs_ordered_extent *btrfs_alloc_ordered_extent(
- 	 */
- 	if (flags & ((1U << BTRFS_ORDERED_NOCOW) | (1U << BTRFS_ORDERED_PREALLOC)))
- 		entry = alloc_ordered_extent(inode, file_offset,
-+					     file_extent->orig_offset,
- 					     file_extent->num_bytes,
- 					     file_extent->num_bytes,
- 					     file_extent->disk_bytenr + file_extent->offset,
-@@ -313,6 +317,7 @@ struct btrfs_ordered_extent *btrfs_alloc_ordered_extent(
- 					     file_extent->fscrypt_info);
- 	else
- 		entry = alloc_ordered_extent(inode, file_offset,
-+					     file_extent->orig_offset,
- 					     file_extent->num_bytes,
- 					     file_extent->ram_bytes,
- 					     file_extent->disk_bytenr,
-@@ -1277,8 +1282,8 @@ struct btrfs_ordered_extent *btrfs_split_ordered_extent(
- 	if (WARN_ON_ONCE(ordered->disk_num_bytes != ordered->num_bytes))
- 		return ERR_PTR(-EINVAL);
- 
--	new = alloc_ordered_extent(inode, file_offset, len, len, disk_bytenr, len, 0,
--				   flags, ordered->compress_type, ordered->fscrypt_info);
-+	new = alloc_ordered_extent(inode, file_offset, ordered->orig_offset, len, len, disk_bytenr,
-+				   len, 0, flags, ordered->compress_type, ordered->fscrypt_info);
- 	if (IS_ERR(new))
- 		return new;
- 
-@@ -1315,6 +1320,16 @@ struct btrfs_ordered_extent *btrfs_split_ordered_extent(
- 	ordered->disk_num_bytes -= len;
- 	ordered->ram_bytes -= len;
- 
-+	/*
-+	 * ->orig_offset is the original offset of the original extent, which
-+	 * for PREALLOC or NOCOW stays the same, but if we're a regular extent
-+	 * that means this is a new extent and thus ->orig_offset must equal
-+	 * ->file_offset.  This is only important for encryption as we only use
-+	 * it for setting the offset for the bio encryption context.
-+	 */
-+	if (test_bit(BTRFS_ORDERED_REGULAR, &ordered->flags))
-+		ordered->orig_offset = ordered->file_offset;
-+
- 	if (test_bit(BTRFS_ORDERED_IO_DONE, &ordered->flags)) {
- 		ASSERT(ordered->bytes_left == 0);
- 		new->bytes_left = 0;
-diff --git a/fs/btrfs/ordered-data.h b/fs/btrfs/ordered-data.h
-index 51c795865fe6..58cc1713eb4d 100644
---- a/fs/btrfs/ordered-data.h
-+++ b/fs/btrfs/ordered-data.h
-@@ -99,6 +99,12 @@ struct btrfs_ordered_extent {
- 	/* logical offset in the file */
- 	u64 file_offset;
- 
-+	/*
-+	 * The original logical offset of the extent, this is for NOCOW and
-+	 * PREALLOC extents, otherwise it'll be the same as file_offset.
-+	 */
-+	u64 orig_offset;
-+
- 	/*
- 	 * These fields directly correspond to the same fields in
- 	 * btrfs_file_extent_item.
-@@ -188,6 +194,7 @@ struct btrfs_file_extent {
- 	u64 num_bytes;
- 	u64 ram_bytes;
- 	u64 offset;
-+	u64 orig_offset;
- 	struct fscrypt_extent_info *fscrypt_info;
- 	u8 compression;
- };
+ 	init_completion(&bbio->csum_done);
+ 	bbio->async_csum = true;
+-	bbio->csum_saved_iter = bbio->bio.bi_iter;
++	bbio->csum_bio = bio;
++	bbio->csum_saved_iter = bio->bi_iter;
+ 	INIT_WORK(&bbio->csum_work, csum_one_bio_work);
+ 	schedule_work(&bbio->csum_work);
+ 	return 0;
+diff --git a/fs/btrfs/file-item.h b/fs/btrfs/file-item.h
+index 5645c5e3abdb..d16fd2144552 100644
+--- a/fs/btrfs/file-item.h
++++ b/fs/btrfs/file-item.h
+@@ -64,7 +64,7 @@ int btrfs_lookup_file_extent(struct btrfs_trans_handle *trans,
+ int btrfs_csum_file_blocks(struct btrfs_trans_handle *trans,
+ 			   struct btrfs_root *root,
+ 			   struct btrfs_ordered_sum *sums);
+-int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async);
++int btrfs_csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, bool async);
+ int btrfs_alloc_dummy_sum(struct btrfs_bio *bbio);
+ int btrfs_lookup_csums_range(struct btrfs_root *root, u64 start, u64 end,
+ 			     struct list_head *list, int search_commit,
 -- 
 2.51.0
 
