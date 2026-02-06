@@ -1,36 +1,36 @@
-Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 81072426D1C
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:23:59 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id C4B3E3D902A
+	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:24:05 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402241; cv=none; b=pTOWRp4JnZ3t+wBKPI0vMTEMkggg065PUDi3IChV15DphbIA9PuoDP39VNU4l04XNpD+4YJWGpzkCAigYchzTXqTZhHRDZS7xpsE26ztiiAHnjgboj4p/WqdvhBRYFHO9xMnIOCKC08PUsvVb2ImfYHuaG5pEM1ZPAX5NyYGu/A=
+	t=1770402246; cv=none; b=bA6CM96wHR9DgljNuPloYwW7URhbQcommZ1LKK9FqvcQSRBhUbKHFYo4lJPwPamuStcoYuzrf22+owJXF7Sm9/u88Y0Xha6C1KSb99jiIUwHBC/JDRws8GK3WoDvuK/j8wps9l4w9JYhKemiePdX8jFi1Hs0YJ+x6kV049Rdlgg=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1770402241; c=relaxed/simple;
-	bh=Bl9NNyMFA+wH+8Z3rKl870aGK0RPvwizp/Q1YDkqEgM=;
+	s=arc-20240116; t=1770402246; c=relaxed/simple;
+	bh=V3qkz5KR+/fbjcLmGLO6jWlKLTc0sUhs1UdnMQPC+Mc=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=eth+ShjqVN/0+EyigVNlV2vMAXz+HYZwnrcntr4BbYixV1rSymtwtd7SN55ZCoiZDU3qOsH++ThkNuV44uOZLY3ret+zUvjWeJZQ8Qt/iAv6KXWfk7tJ3MEzFb8Lzh9p0Qs9JgnWrl/sVdgKlKw9nGx2ZXspaWS8WfRPrmNCfms=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
+	 MIME-Version; b=HyGnqFTuSJ8x41IGGaEA+aU/tg6R62VFe4yVndlFIpgYHSlOs6Dk6Fg57zg6IndZppnmzFya5y7kkZ8yA+g+hMIP4CsUkhb7ZsoaOJXgqaRes/ollNR6miD6hamxJz7mxKkliZkD3TmTukk3+KoQtMmMkkcmzZI1B4CnJq8cwmc=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
 Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id F3A565BCE4;
+	by smtp-out1.suse.de (Postfix) with ESMTPS id 8E7693E743;
 	Fri,  6 Feb 2026 18:23:55 +0000 (UTC)
-Authentication-Results: smtp-out2.suse.de;
+Authentication-Results: smtp-out1.suse.de;
 	none
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id C82A73EA63;
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 638BB3EA63;
 	Fri,  6 Feb 2026 18:23:55 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id wIZlMLsxhmkTCQAAD6G6ig
+	id wM/aF7sxhmkTCQAAD6G6ig
 	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:23:55 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
@@ -45,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 04/43] fscrypt: conditionally don't wipe mk secret until the last active user is done
-Date: Fri,  6 Feb 2026 19:22:36 +0100
-Message-ID: <20260206182336.1397715-5-neelx@suse.com>
+Subject: [PATCH v6 03/43] fscrypt: add a __fscrypt_file_open helper
+Date: Fri,  6 Feb 2026 19:22:35 +0100
+Message-ID: <20260206182336.1397715-4-neelx@suse.com>
 X-Mailer: git-send-email 2.51.0
 In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
 References: <20260206182336.1397715-1-neelx@suse.com>
@@ -65,7 +65,7 @@ X-Spamd-Result: default: False [-4.00 / 50.00];
 	REPLY(-4.00)[]
 X-Spam-Flag: NO
 X-Spam-Score: -4.00
-X-Rspamd-Queue-Id: F3A565BCE4
+X-Rspamd-Queue-Id: 8E7693E743
 X-Rspamd-Pre-Result: action=no action;
 	module=replies;
 	Message is reply to one we originated
@@ -75,71 +75,106 @@ X-Spam-Level:
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-Previously we were wiping the master key secret when we do
-FS_IOC_REMOVE_ENCRYPTION_KEY, and then using the fact that it was
-cleared as the mechanism from keeping new users from being setup.  This
-works with inode based encryption, as the per-inode key is derived at
-setup time, so the secret disappearing doesn't affect any currently open
-files from being able to continue working.
+We have fscrypt_file_open() which is meant to be called on files being
+opened so that their key is loaded when we start reading data from them.
 
-However for extent based encryption we do our key derivation at page
-writeout and readpage time, which means we need the master key secret to
-be available while we still have our file open.
-
-Since the master key lifetime is controlled by a flag, move the clearing
-of the secret to the mk_active_users cleanup stage if we have extent
-based encryption enabled on this super block.  This counter represents
-the actively open files that still exist on the file system, and thus
-should still be able to operate normally.  Once the last user is closed
-we can clear the secret.  Until then no new users are allowed, and this
-allows currently open files to continue to operate until they're closed.
+However for btrfs send we are opening the inode directly without a filp,
+so we need a different helper to make sure we can load the fscrypt
+context for the inode before reading its contents.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/5f28e46ce99d918a16f5bf4d8190870d0fffefc4.1706116485.git.josef@toxicpanda.com/
- * No changes since.
+v5: https://lore.kernel.org/linux-btrfs/4a372419c3fe6ad425e1b124c342a054e9d6db23.1706116485.git.josef@toxicpanda.com/
+ * Adapted to fscrypt changes.
 ---
- fs/crypto/keyring.c | 18 +++++++++++++++++-
- 1 file changed, 17 insertions(+), 1 deletion(-)
+ fs/crypto/hooks.c       | 38 ++++++++++++++++++++++++++++++++------
+ include/linux/fscrypt.h |  8 ++++++++
+ 2 files changed, 40 insertions(+), 6 deletions(-)
 
-diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 5e939ea3ac28..7ccec27e4e4a 100644
---- a/fs/crypto/keyring.c
-+++ b/fs/crypto/keyring.c
-@@ -110,6 +110,14 @@ void fscrypt_put_master_key_activeref(struct super_block *sb,
- 	WARN_ON_ONCE(mk->mk_present);
- 	WARN_ON_ONCE(!list_empty(&mk->mk_decrypted_inodes));
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index b97de0d1430f..17eb2e844f30 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -9,6 +9,37 @@
  
-+	/* We can't wipe the master key secret until the last activeref is
-+	 * dropped on the master key with per-extent encryption since the key
-+	 * derivation continues to happen as long as there are active refs.
-+	 * Wipe it here now that we're done using it.
-+	 */
-+	if (sb->s_cop->has_per_extent_encryption)
-+		wipe_master_key_secret(&mk->mk_secret);
+ #include "fscrypt_private.h"
+ 
++/**
++ * __fscrypt_file_open() - prepare for filesystem-internal access to a
++ *			   possibly-encrypted regular file
++ * @dir: the inode for the directory via which the file is being accessed
++ * @inode: the inode being "opened"
++ *
++ * This is like fscrypt_file_open(), but instead of taking the 'struct file'
++ * being opened it takes the parent directory explicitly.  This is intended for
++ * use cases such as "send/receive" which involve the filesystem accessing file
++ * contents without setting up a 'struct file'.
++ *
++ * Return: 0 on success, -ENOKEY if the key is missing, or another -errno code
++ */
++int __fscrypt_file_open(struct inode *dir, struct inode *inode)
++{
++	int err;
 +
- 	for (i = 0; i <= FSCRYPT_MODE_MAX; i++) {
- 		fscrypt_destroy_prepared_key(
- 				sb, &mk->mk_direct_keys[i]);
-@@ -134,7 +142,15 @@ static void fscrypt_initiate_key_removal(struct super_block *sb,
- 					 struct fscrypt_master_key *mk)
- {
- 	WRITE_ONCE(mk->mk_present, false);
--	wipe_master_key_secret(&mk->mk_secret);
++	err = fscrypt_require_key(inode);
++	if (err)
++		return err;
 +
-+	/*
-+	 * Per-extent encryption requires the master key to stick around until
-+	 * writeout has completed as we derive the per-extent keys at writeout
-+	 * time.  Once the activeref drops to 0 we'll wipe the master secret
-+	 * key.
-+	 */
-+	if (!sb->s_cop->has_per_extent_encryption)
-+		wipe_master_key_secret(&mk->mk_secret);
- 	fscrypt_put_master_key_activeref(sb, mk);
++	if (!fscrypt_has_permitted_context(dir, inode)) {
++		fscrypt_warn(inode,
++			     "Inconsistent encryption context (parent directory: %lu)",
++			     dir->i_ino);
++		return -EPERM;
++	}
++	return 0;
++}
++EXPORT_SYMBOL_GPL(__fscrypt_file_open);
++
+ /**
+  * fscrypt_file_open() - prepare to open a possibly-encrypted regular file
+  * @inode: the inode being opened
+@@ -60,12 +91,7 @@ int fscrypt_file_open(struct inode *inode, struct file *filp)
+ 	rcu_read_unlock();
+ 
+ 	dentry_parent = dget_parent(dentry);
+-	if (!fscrypt_has_permitted_context(d_inode(dentry_parent), inode)) {
+-		fscrypt_warn(inode,
+-			     "Inconsistent encryption context (parent directory: %lu)",
+-			     d_inode(dentry_parent)->i_ino);
+-		err = -EPERM;
+-	}
++	err = __fscrypt_file_open(d_inode(dentry_parent), inode);
+ 	dput(dentry_parent);
+ 	return err;
+ }
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 5a17e4975b06..dba5ca122775 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -471,6 +471,7 @@ int fscrypt_zeroout_range(const struct inode *inode, pgoff_t lblk,
+ 
+ /* hooks.c */
+ int fscrypt_file_open(struct inode *inode, struct file *filp);
++int __fscrypt_file_open(struct inode *dir, struct inode *inode);
+ int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
+ 			   struct dentry *dentry);
+ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
+@@ -818,6 +819,13 @@ static inline int fscrypt_file_open(struct inode *inode, struct file *filp)
+ 	return 0;
  }
  
++static inline int __fscrypt_file_open(struct inode *dir, struct inode *inode)
++{
++	if (IS_ENCRYPTED(inode))
++		return -EOPNOTSUPP;
++	return 0;
++}
++
+ static inline int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
+ 					 struct dentry *dentry)
+ {
 -- 
 2.51.0
 
