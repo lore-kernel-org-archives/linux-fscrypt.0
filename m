@@ -1,134 +1,246 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from mail-wm1-f54.google.com (mail-wm1-f54.google.com [209.85.128.54])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BF02144CF22
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:43 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
-ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402344; cv=none; b=Wknfeb5H/vhkFee3SkXr1kUNp2QgJxhOnNrbFCLZVNHPblBetJLd04yyCjhu1UwdttuMUKi1nGsFSY+F7CtY4KZk9Frma2Gm+ITPSZHj8RbuKwz+nPR8w06yOU8V9v1PNFhLC1XrlWshJEiQXpPiiqOCmx/TfibFwzFiUAAsgvA=
-ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1770402344; c=relaxed/simple;
-	bh=JHBmb8Tt6hvKekTkLiQSRIgJNkTIdVCMwN3m2x25jJQ=;
-	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=eHjB92ovWYYQfYXbv9I7ZJ3x5COlk/lcxAHU2qjRZa+0hh5fSE+iO7wcHvM4hestOf2neezY04j11mXU6G0+WKXwjsLg1IAHQrQpwQDkiHR87QF2LwubntIktY7HqCsDfINwQ28DLi77s+itUptt3cXPc2qXbcW4dkM0ke9nNso=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id DF9AC27E05E
+	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:42:56 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=pass smtp.client-ip=209.85.128.54
+ARC-Seal:i=2; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
+	t=1770403377; cv=pass; b=WtTGdavTsJEjkFlMymixM8FEAXrYa7Nz5Kvx8OOGenB2QiUKdNZY6y7A810A5DKCbKYtPDyVxC4G3lbm9REDcWmVImPLTP2vweh7dIHgkO4KYQy44SGUfEhNpxHwb4cvxxSjrj7i8fIsjUZT8kTwPS7IAuGDtY9S9gDF9qLNHnA=
+ARC-Message-Signature:i=2; a=rsa-sha256; d=subspace.kernel.org;
+	s=arc-20240116; t=1770403377; c=relaxed/simple;
+	bh=g8Y05MZTXiuFZYd64ykcy98HIVrpwYbXDId97ydkZYA=;
+	h=MIME-Version:References:In-Reply-To:From:Date:Message-ID:Subject:
+	 To:Cc:Content-Type; b=Mah8+TAzUogCuAkAti+3ZCR0iJTniYqpCTL6LTAM3EWa9ty+UDwLL/Ynei1lNxeniBir70IEqhtPAzvalEdj10idICQLewrizHE5U6+92jSrpN/HesxjwZTWjVQUBRH7lF5Pfvqr/SwGQQ307hu8jK3Pa5iSLGWKOVUmnEkq/NA=
+ARC-Authentication-Results:i=2; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b=E8yQja34; arc=pass smtp.client-ip=209.85.128.54
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 5B60F3E763;
-	Fri,  6 Feb 2026 18:24:20 +0000 (UTC)
-Authentication-Results: smtp-out1.suse.de;
-	none
-Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 2E7C83EA63;
-	Fri,  6 Feb 2026 18:24:20 +0000 (UTC)
-Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
-	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id yPvbCtQxhmkTCQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:20 +0000
-From: Daniel Vacek <neelx@suse.com>
-To: Chris Mason <clm@fb.com>,
-	Josef Bacik <josef@toxicpanda.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	"Theodore Y. Ts'o" <tytso@mit.edu>,
-	Jaegeuk Kim <jaegeuk@kernel.org>,
-	Jens Axboe <axboe@kernel.dk>,
-	David Sterba <dsterba@suse.com>
-Cc: linux-block@vger.kernel.org,
-	Daniel Vacek <neelx@suse.com>,
-	linux-fscrypt@vger.kernel.org,
-	linux-btrfs@vger.kernel.org,
-	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 42/43] btrfs: disable encryption on RAID5/6
-Date: Fri,  6 Feb 2026 19:23:14 +0100
-Message-ID: <20260206182336.1397715-43-neelx@suse.com>
-X-Mailer: git-send-email 2.51.0
-In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
-References: <20260206182336.1397715-1-neelx@suse.com>
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b="E8yQja34"
+Received: by mail-wm1-f54.google.com with SMTP id 5b1f17b1804b1-48069a48629so22355675e9.0
+        for <linux-fscrypt@vger.kernel.org>; Fri, 06 Feb 2026 10:42:56 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1770403375; cv=none;
+        d=google.com; s=arc-20240605;
+        b=RMg/z9zQUNklE/tXsDuUoARQ8ZVsCn64xnuPwTaLCXLqnkzZmOaaMy+ETIYu64jF2q
+         RAhQzFEdnIfOb6MhWSHicHVkmTgB/yOMudvX0mp6IHZkNy06eeB58zxtsFVSiYMQFtMV
+         MZ5b76XyEcYwi1hlkK9Luk+K89TkDNSES12CyZG9PGR35n5mg5wDYVEqDy+JVz2Pb98t
+         sDfbU1Sw1IjD7Gk3jY898bR2uvfmMvFJf2qoBWW035eynLHKajrPoCas2gkscv3KwNmP
+         a8K1ChxePnbseQe+OPsPaH7M+3O/o0IyqrSpC6CjXIoXy3D/AYAWqxOw45n8OQKOrMfc
+         FiAA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:dkim-signature;
+        bh=Sxa3uxhQCjgxX8L2FFCW63mMb6ghyNt+G2P+1nE+3T8=;
+        fh=s5msTDRFyuyazzpC8sxEx3VN2qKS0cDAw0We14AxySE=;
+        b=YKkwJD1Xr4jNsqhOV/prjwWt3gHLUCUD/ZrZawN0UrwpvAW3Ra6Otur0nGsZXz8ddL
+         8/fjDLTooyXKXlY1geodRA0nX5aCEy+XuyCnRtUlPvGHwYbOsrPI33UYF1HB09v4YLSd
+         FDoZNjzJDAUHCnrWs2nH88TO5+Y7TS88nWVfkTKvXb353EmwROkOaO4rvXsM3WuPOuxX
+         zGx5mc+SjT3a+eU45n0RjDa9+FIjAZRBeK9o57Ue7+wdD9FPqwusH6FZmkb3K+H1RQQ3
+         gfZCuh9SOtp6HfcSGUkch+YOPTKQpd0u4LIex9zLBVf0jm1ilMfg9oAcDCluOi9x9XBi
+         vaaw==;
+        darn=vger.kernel.org
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=suse.com; s=google; t=1770403375; x=1771008175; darn=vger.kernel.org;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=Sxa3uxhQCjgxX8L2FFCW63mMb6ghyNt+G2P+1nE+3T8=;
+        b=E8yQja34o1ZTqQjsLKMpplW253rLuzLMpB7gHSKNHCFgB4etc0KTFhal+BdTAgCwB/
+         F+iw8gxD4FQz9NV00eWtyo5VwRDTXXaXzDiLXxg6AkGNao6DqtaRJD0O0oJQ6j83CC/R
+         /EWpSD+HvRQCxV/6KpVUkiOY1eALHwFvyDHSmqf5Yhowj5lCQTUl7F1mauRVo/fWzJe8
+         MfsLccPN/i3Br4IQuUfKjuQoywNxqMHq8wASvJCvC3DLydU1d7o6FsjHoWuVIzMfXbVY
+         oFonGh7xgLSgsEDX97aMO9ZmajQmsIquyLJAX05HtuuHN6YHoYU526YVr+fuCm3kjMtQ
+         Uu9g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1770403375; x=1771008175;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-gg:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=Sxa3uxhQCjgxX8L2FFCW63mMb6ghyNt+G2P+1nE+3T8=;
+        b=TeJcC/ZjipS6ozSRZpR7v8v25nSNdtuUZNu/JOkAP2NmakO/2O862Uz11+lTF7cfFX
+         jUN/IDtJHmTnO0g5PmdxBLjTVsYxrntPq+qwsLN7sgwnHbk4Sxw0HnVq4WPOQwG2ujk4
+         CSpZjg+UHvGqWxDinA5Z7jYlw5liIYESxD/rxINgdj71kLfSakKv2rA3l82OY13Eqtyy
+         cQy/k9OTxXL5F2iEmQANbv3ip/4J4bn/oNpCtNdL/YsaKZL0Aqe9q3QH9FCdzvHlYHE5
+         uWJBQPWMajavJHhyKIxnK7vlNt/wtHpRh8wz1/74p+yuW3ocf+b3FUrnt1a6xOCSLg/2
+         JtIQ==
+X-Forwarded-Encrypted: i=1; AJvYcCUpBb+bO1SeQRmd1GvbynWGtVdp0Gs+wG8JyYqz0eRSyHp5FN6RpBb6ZXnSsRiCzdbigiBSNL4VIRoXopFn@vger.kernel.org
+X-Gm-Message-State: AOJu0Ywb7HiXgjaUuYokT4Yi52TSO9MZqCiCyW5NHKLgyqxB5WRc2or5
+	N36vORnrxObrLG3J7817yKrMfvdoCFCCdEyQvgh8E+bTMw8JZTpwQ5P4UM6tLV7WBK2rB8F5b/K
+	qJ6C0iNbcO5q37NTrmhxA2BBh3bc9l3bolyGEnpqPbg==
+X-Gm-Gg: AZuq6aIwqqVQ9pbDW+OmexIWPi922qAbn4rakboPYNtyyf8h1t8mZqiDbpbfo9YbJRs
+	dkIhY3fU2Aj3BaPeJRlAMsM0DRq6Qx1XFqJqCqId5fa3l4om4i1GhtCjlTqkpQYz95H2dxIkeNb
+	Z96iDxibkblWBmJnEFlBanjEP3hb9HbThD2Ol31Dp5m/GX+Lhtrbrdd8XMMsprO9KlMoCzUpVLg
+	C+MNySzjYzzjSKVbCWiZWjajCYOfmnjChYtNba0lWvu+9qTzdZsF3eL0wJ4dewhhf236ftzpTza
+	7Phtz+gbOBWspEOjkInoK0JvRTDEPLTK/ftDX91CMXbUHkzvSTONDi16rT1Bl9Ei9GPK
+X-Received: by 2002:a05:600c:1d8c:b0:480:6873:b2f6 with SMTP id
+ 5b1f17b1804b1-48320216ce4mr47675115e9.20.1770403375319; Fri, 06 Feb 2026
+ 10:42:55 -0800 (PST)
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Spam-Score: -4.00
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Rspamd-Action: no action
-X-Rspamd-Queue-Id: 5B60F3E763
-X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
-X-Spam-Level: 
-X-Spamd-Result: default: False [-4.00 / 50.00];
-	REPLY(-4.00)[]
-X-Spam-Flag: NO
+References: <20260206182336.1397715-1-neelx@suse.com>
+In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
+From: Daniel Vacek <neelx@suse.com>
+Date: Fri, 6 Feb 2026 19:42:44 +0100
+X-Gm-Features: AZwV_QjVbpQ8MRsr1Ro9fPeDc-ZyPEQuxPOuPcg2A5_GzI5Zx2BISHue62_Jkik
+Message-ID: <CAPjX3Fc_VNNXoJaa4uYoX_EJ7YK_z2BVM84oOtfg1ME-8qyuDw@mail.gmail.com>
+Subject: Re: [PATCH v6 00/43] btrfs: add fscrypt support
+To: Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>, Eric Biggers <ebiggers@kernel.org>, 
+	"Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Jens Axboe <axboe@kernel.dk>, 
+	David Sterba <dsterba@suse.com>
+Cc: linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org, 
+	linux-btrfs@vger.kernel.org, linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
 
-From: Josef Bacik <josef@toxicpanda.com>
+Heads up,
 
-The RAID5/6 code will re-arrange bios and submit them through a
-different mechanism.  This is problematic with inline encryption as we
-have to get the bio and csum it after it's been encrypted, and the
-radi5/6 bio's don't have the btrfs_bio embedded, so we have no way to
-get the csums put on disk.
+I also have related btrfs-progs and xfs-tests changes matching this
+series. But I won't be able to send them before my vacation next week.
+That also means I will (most likely) not be able to get back to review
+feedback before Feb 16. But for sure, any feedback is appreciated.
 
-This isn't an unsolvable problem, but would require a bit of reworking.
-Since we discourage users from using this code currently simply don't
-allow encryption on RAID5/6 setups.  If there's sufficient demand in the
-future we can add the support for this.
+Thank you,
+Daniel
 
-Signed-off-by: Josef Bacik <josef@toxicpanda.com>
-Signed-off-by: Daniel Vacek <neelx@suse.com>
----
-
-v5: https://lore.kernel.org/linux-btrfs/941f02bb923edadae1aea4ae3e5aa6ba05d1215a.1706116485.git.josef@toxicpanda.com/
- * No changes since.
----
- fs/btrfs/ioctl.c | 4 ++++
- fs/btrfs/super.c | 6 ++++++
- 2 files changed, 10 insertions(+)
-
-diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
-index a8adf99ad0a8..1bade8fea16e 100644
---- a/fs/btrfs/ioctl.c
-+++ b/fs/btrfs/ioctl.c
-@@ -5198,6 +5198,10 @@ long btrfs_ioctl(struct file *file, unsigned int
- 			return -EOPNOTSUPP;
- 		if (sb_rdonly(fs_info->sb))
- 			return -EROFS;
-+		if (btrfs_fs_incompat(fs_info, RAID56)) {
-+			btrfs_warn(fs_info, "can't enable encryption with RAID5/6");
-+			return -EINVAL;
-+		}
- 		/*
- 		 *  If we crash before we commit, nothing encrypted could have
- 		 * been written so it doesn't matter whether the encrypted
-diff --git a/fs/btrfs/super.c b/fs/btrfs/super.c
-index 4a2887147ead..aefcbe56e85a 100644
---- a/fs/btrfs/super.c
-+++ b/fs/btrfs/super.c
-@@ -734,6 +734,12 @@ bool btrfs_check_options(const struct btrfs_fs_info *info,
- 	if (btrfs_check_mountopts_zoned(info, mount_opt))
- 		ret = false;
- 
-+	if (btrfs_fs_incompat(info, RAID56) &&
-+	    btrfs_raw_test_opt(*mount_opt, TEST_DUMMY_ENCRYPTION)) {
-+		btrfs_err(info, "cannot use test_dummy_encryption with RAID5/6");
-+		ret = false;
-+	}
-+
- 	if (!test_bit(BTRFS_FS_STATE_REMOUNTING, &info->fs_state)) {
- 		if (btrfs_raw_test_opt(*mount_opt, SPACE_CACHE)) {
- 			btrfs_warn(info,
--- 
-2.51.0
-
+On Fri, 6 Feb 2026 at 19:23, Daniel Vacek <neelx@suse.com> wrote:
+>
+> Hello,
+>
+> These are the remaining parts from former series [1] from Omar, Sweet Tea
+> and Josef.  Some bits of it were split into the separate set [2] before.
+>
+> Notably, at this stage encryption is not supported with RAID5/6 setup
+> and send is also isabled for now.
+>
+> There are a few changes since v5:
+>  * Rebased to btrfs/for-next branch.  Couple things changed in the last
+>    years.  A few patches were dropped as the code cleaned up or refactored.
+>    More details in the patches themselves.
+>  * As suggested by Qu and Dave, the on-disk format of storing the extent
+>    encryption context was re-designed.  Now, a new tree item with dedicated
+>    key is inserted instead of extending the file extent item.  As a result
+>    a special care needs to be taken when removing the encrypted extents
+>    to also remove the related encryption context item.
+>  * Fixed bugs found during testing.
+>
+> Have a nice day,
+> Daniel
+>
+> [1] v5 https://lore.kernel.org/linux-btrfs/cover.1706116485.git.josef@toxicpanda.com/
+> [2] https://lore.kernel.org/linux-btrfs/20251112193611.2536093-1-neelx@suse.com/
+>
+> Josef Bacik (33):
+>   fscrypt: add per-extent encryption support
+>   fscrypt: allow inline encryption for extent based encryption
+>   fscrypt: add a __fscrypt_file_open helper
+>   fscrypt: conditionally don't wipe mk secret until the last active user
+>     is done
+>   blk-crypto: add a process bio callback
+>   fscrypt: add a process_bio hook to fscrypt_operations
+>   fscrypt: add documentation about extent encryption
+>   btrfs: add infrastructure for safe em freeing
+>   btrfs: select encryption dependencies if FS_ENCRYPTION
+>   btrfs: add fscrypt_info and encryption_type to ordered_extent
+>   btrfs: plumb through setting the fscrypt_info for ordered extents
+>   btrfs: populate the ordered_extent with the fscrypt context
+>   btrfs: keep track of fscrypt info and orig_start for dio reads
+>   btrfs: add extent encryption context tree item type
+>   btrfs: pass through fscrypt_extent_info to the file extent helpers
+>   btrfs: implement the fscrypt extent encryption hooks
+>   btrfs: setup fscrypt_extent_info for new extents
+>   btrfs: populate ordered_extent with the orig offset
+>   btrfs: set the bio fscrypt context when applicable
+>   btrfs: add a bio argument to btrfs_csum_one_bio
+>   btrfs: limit encrypted writes to 256 segments
+>   btrfs: implement process_bio cb for fscrypt
+>   btrfs: implement read repair for encryption
+>   btrfs: add test_dummy_encryption support
+>   btrfs: make btrfs_ref_to_path handle encrypted filenames
+>   btrfs: deal with encrypted symlinks in send
+>   btrfs: decrypt file names for send
+>   btrfs: load the inode context before sending writes
+>   btrfs: set the appropriate free space settings in reconfigure
+>   btrfs: support encryption with log replay
+>   btrfs: disable auto defrag on encrypted files
+>   btrfs: disable encryption on RAID5/6
+>   btrfs: disable send if we have encryption enabled
+>
+> Omar Sandoval (6):
+>   fscrypt: expose fscrypt_nokey_name
+>   btrfs: start using fscrypt hooks
+>   btrfs: add inode encryption contexts
+>   btrfs: add new FEATURE_INCOMPAT_ENCRYPT flag
+>   btrfs: adapt readdir for encrypted and nokey names
+>   btrfs: implement fscrypt ioctls
+>
+> Sweet Tea Dorminy (4):
+>   btrfs: handle nokey names.
+>   btrfs: add get_devices hook for fscrypt
+>   btrfs: set file extent encryption excplicitly
+>   btrfs: add fscrypt_info and encryption_type to extent_map
+>
+>  Documentation/filesystems/fscrypt.rst |  41 +++
+>  block/blk-crypto-fallback.c           |  43 +++
+>  block/blk-crypto-internal.h           |   8 +
+>  block/blk-crypto-profile.c            |   2 +
+>  block/blk-crypto.c                    |   6 +-
+>  fs/btrfs/Kconfig                      |   3 +
+>  fs/btrfs/Makefile                     |   1 +
+>  fs/btrfs/accessors.h                  |   2 +
+>  fs/btrfs/backref.c                    |  42 ++-
+>  fs/btrfs/bio.c                        | 146 ++++++++-
+>  fs/btrfs/bio.h                        |  14 +-
+>  fs/btrfs/btrfs_inode.h                |   6 +-
+>  fs/btrfs/compression.c                |   6 +
+>  fs/btrfs/ctree.h                      |   3 +
+>  fs/btrfs/defrag.c                     |  14 +
+>  fs/btrfs/delayed-inode.c              |  25 +-
+>  fs/btrfs/delayed-inode.h              |   5 +-
+>  fs/btrfs/dir-item.c                   | 102 +++++-
+>  fs/btrfs/dir-item.h                   |  10 +-
+>  fs/btrfs/direct-io.c                  |  28 +-
+>  fs/btrfs/disk-io.c                    |   3 +-
+>  fs/btrfs/extent_io.c                  | 115 ++++++-
+>  fs/btrfs/extent_io.h                  |   3 +
+>  fs/btrfs/extent_map.c                 | 102 +++++-
+>  fs/btrfs/extent_map.h                 |  26 ++
+>  fs/btrfs/file-item.c                  |  28 +-
+>  fs/btrfs/file-item.h                  |   2 +-
+>  fs/btrfs/file.c                       |  75 +++++
+>  fs/btrfs/fs.h                         |   6 +-
+>  fs/btrfs/fscrypt.c                    | 446 ++++++++++++++++++++++++++
+>  fs/btrfs/fscrypt.h                    | 108 +++++++
+>  fs/btrfs/inode.c                      | 408 +++++++++++++++++------
+>  fs/btrfs/ioctl.c                      |  41 ++-
+>  fs/btrfs/ordered-data.c               |  35 +-
+>  fs/btrfs/ordered-data.h               |  14 +
+>  fs/btrfs/reflink.c                    |  43 ++-
+>  fs/btrfs/root-tree.c                  |   9 +-
+>  fs/btrfs/root-tree.h                  |   2 +-
+>  fs/btrfs/send.c                       | 134 +++++++-
+>  fs/btrfs/super.c                      |  99 +++++-
+>  fs/btrfs/super.h                      |   3 +-
+>  fs/btrfs/sysfs.c                      |   6 +
+>  fs/btrfs/tree-checker.c               |  67 +++-
+>  fs/btrfs/tree-log.c                   |  34 +-
+>  fs/crypto/crypto.c                    |  10 +-
+>  fs/crypto/fname.c                     |  36 ---
+>  fs/crypto/fscrypt_private.h           |  42 +++
+>  fs/crypto/hooks.c                     |  38 ++-
+>  fs/crypto/inline_crypt.c              |  84 ++++-
+>  fs/crypto/keyring.c                   |  18 +-
+>  fs/crypto/keysetup.c                  | 165 ++++++++++
+>  fs/crypto/policy.c                    |  47 +++
+>  include/linux/blk-crypto.h            |  15 +-
+>  include/linux/fscrypt.h               | 125 ++++++++
+>  include/uapi/linux/btrfs.h            |   1 +
+>  include/uapi/linux/btrfs_tree.h       |  26 +-
+>  56 files changed, 2683 insertions(+), 240 deletions(-)
+>  create mode 100644 fs/btrfs/fscrypt.c
+>  create mode 100644 fs/btrfs/fscrypt.h
+>
+> --
+> 2.51.0
+>
