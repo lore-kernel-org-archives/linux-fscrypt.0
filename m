@@ -1,58 +1,37 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9354D4418E3
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:05 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id B4AA1449EC6
+	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:08 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402305; cv=none; b=FqBt0/lD8N4EzXpG7XMBtklMDpowSJ1146b4YRvzCSXI9gs1iC9ySotE1wbqu3gtuYWQeljqRTgmm7T9FZQEcnEdO93Vg7ZyzexUm4v2mIj0hwMDc8mxovS9CWqzw0uou9pVQhcGC4itZ7faIP9tycYQLhFUvFiJuTHEkMTzQvI=
+	t=1770402309; cv=none; b=dq4puWyPBwdPW4IQvYkENSyPqFDsKD49C8QfrEu/gI0cWSS9jmToylIaKljME0ZqhYtKQTTkaPFoVCGBeGwRkqPB07PmN5A9BvoKmJY3K+8XrW24AR5lPs8L1dpqw/JbvlhBdUdkmaLYDb3SDSGhr5RWpp7MlDw3f9ENZXdcUHA=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1770402305; c=relaxed/simple;
-	bh=FBy99Pni9ZqUQJCWFn5hJAPFNmk7nOaxxWnDwn8nPjA=;
+	s=arc-20240116; t=1770402309; c=relaxed/simple;
+	bh=/fJqgQjZ/DCnSZEMQWs3+DMllQ5f35E6cTh4k19I5AQ=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=mo5b8tW6FvSTMRo43YGQMELlsCC0m3Kb+UreRySc8+bCJq0922VAzCP7OK+Qx/jENJTbrxaa/l8Nm/GC30qFGyXnFOADGlEiMVJc03PE4fJtEwmR5tu+terx4wG/JM8C9PeXwx2D5jMbvuBJYBBHElhxpytdC5txQfPiMnZgq78=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=dgnhT86q; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=dgnhT86q; arc=none smtp.client-ip=195.135.223.130
+	 MIME-Version; b=jkPNzQ/4umsIwoRg3TjlyLqT9O0tr5RIphtWyHxu3Wt9/LlJ6smKtA3irIgLVqJbcLzGEwxtRsIYYYqRzD5PS5Ye9PBy/88yVBesCqKZXHEaqUoomfD41Jmg2BLBpf93J1IyzGWG8sEEWKfOwkUWeUNRDsWHvWvnfk3qFM4nxzA=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="dgnhT86q";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="dgnhT86q"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 95C6C3E74C;
-	Fri,  6 Feb 2026 18:24:13 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1770402253; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=HiR3m+n+8ALmEnGsv/bKdMO09KbAjSFNZ63G9sqGBN0=;
-	b=dgnhT86qpk1BBbJ6q5dy6D/4ZkkJHYXxV3PLkgBqWX4UmuDUlm2DpPFzNGcax/QzCwibmV
-	dRNlHH5U34MGyGsm4n0aj+soJxXwdxqjki6oMot27IsaBYyIYCYPyKd6FHYVlyyYe8kBiy
-	Xob5nXnLwfMXiMjS1tnVP+R/vR5VYZQ=
-Authentication-Results: smtp-out1.suse.de;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id DA3A35BD2D;
+	Fri,  6 Feb 2026 18:24:14 +0000 (UTC)
+Authentication-Results: smtp-out2.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1770402253; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=HiR3m+n+8ALmEnGsv/bKdMO09KbAjSFNZ63G9sqGBN0=;
-	b=dgnhT86qpk1BBbJ6q5dy6D/4ZkkJHYXxV3PLkgBqWX4UmuDUlm2DpPFzNGcax/QzCwibmV
-	dRNlHH5U34MGyGsm4n0aj+soJxXwdxqjki6oMot27IsaBYyIYCYPyKd6FHYVlyyYe8kBiy
-	Xob5nXnLwfMXiMjS1tnVP+R/vR5VYZQ=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 6B23C3EA63;
-	Fri,  6 Feb 2026 18:24:13 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id AFFB93EA63;
+	Fri,  6 Feb 2026 18:24:14 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id +N+uGc0xhmkTCQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:13 +0000
+	id gJeBKs4xhmkTCQAAD6G6ig
+	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:14 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -66,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 30/43] btrfs: add a bio argument to btrfs_csum_one_bio
-Date: Fri,  6 Feb 2026 19:23:02 +0100
-Message-ID: <20260206182336.1397715-31-neelx@suse.com>
+Subject: [PATCH v6 32/43] btrfs: implement process_bio cb for fscrypt
+Date: Fri,  6 Feb 2026 19:23:04 +0100
+Message-ID: <20260206182336.1397715-33-neelx@suse.com>
 X-Mailer: git-send-email 2.51.0
 In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
 References: <20260206182336.1397715-1-neelx@suse.com>
@@ -79,152 +58,243 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Spam-Score: -6.80
-X-Spamd-Result: default: False [-6.80 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	MID_CONTAINS_FROM(1.00)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.com:mid,suse.com:email,toxicpanda.com:email];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	TO_DN_SOME(0.00)[];
-	RCPT_COUNT_TWELVE(0.00)[12];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	FROM_HAS_DN(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_COUNT_TWO(0.00)[2];
-	R_RATELIMIT(0.00)[to_ip_from(RLdafymbgddseoxkryad1wgu8n)];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	RCVD_TLS_ALL(0.00)[]
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spam-Score: -4.00
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Action: no action
+X-Rspamd-Queue-Id: DA3A35BD2D
+X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
 X-Spam-Level: 
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
 X-Spam-Flag: NO
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-We only ever needed the bbio in btrfs_csum_one_bio, since that has the
-bio embedded in it.  However with encryption we'll have a different bio
-with the encrypted data in it, and the original bbio.  Update
-btrfs_csum_one_bio to take the bio we're going to csum as an argument,
-which will allow us to csum the encrypted bio and stuff the csums into
-the corresponding bbio to be used later when the IO completes.
+We are going to be checksumming the encrypted data, so we have to
+implement the ->process_bio fscrypt callback.  This will provide us with
+the original bio and the encrypted bio to do work on.  For WRITE's this
+will happen after the encrypted bio has been encrypted.  For READ's this
+will happen after the read has completed and before the decryption step
+is done.
+
+For write's this is straightforward, we can just pass in the encrypted
+bio to btrfs_csum_one_bio and then the csums will be added to the bbio
+as normal.
+
+For read's this is relatively straightforward, but requires some care.
+We assume (because that's how it works currently) that the encrypted bio
+match the original bio, this is important because we save the iter of
+the bio before we submit.  If this changes in the future we'll need a
+hook to give us the bi_iter of the decryption bio before it's submitted.
+We check the csums before decryption.  If it doesn't match we simply
+error out and we let the normal path handle the repair work.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/595a2e46dae3d18bceb5dfa60ac3ae23760fc800.1706116485.git.josef@toxicpanda.com/
- * Adapted for async csums.  For writes we have to stick with sync
-   csums.  Otherwise fscrypt would have to hand us the bounced bio
-   instead of releasing it.  Though that is not implemented yet.
+v5: https://lore.kernel.org/linux-btrfs/ca32684b01ff8c252be515509137e0a4a0e5db7a.1706116485.git.josef@toxicpanda.com/
+ * Adapt to btrfs_data_csum_ok() changes for bs > ps.  Mostly follow
+   what was done in 052fd7a5cace ("btrfs: make read verification
+   handle bs > ps cases without large folios").
+ * Rename bbio::csum_done to csum_ok due to name collision.
+   With upstream, member name csum_done was used for async csums.
 ---
- fs/btrfs/bio.c       |  4 ++--
- fs/btrfs/bio.h       |  1 +
- fs/btrfs/file-item.c | 13 ++++++-------
- fs/btrfs/file-item.h |  2 +-
- 4 files changed, 10 insertions(+), 10 deletions(-)
+ fs/btrfs/bio.c       | 38 +++++++++++++++++++++++++++++++++++++-
+ fs/btrfs/bio.h       |  3 +++
+ fs/btrfs/file-item.c | 14 ++++++++++++--
+ fs/btrfs/fscrypt.c   | 29 +++++++++++++++++++++++++++++
+ 4 files changed, 81 insertions(+), 3 deletions(-)
 
 diff --git a/fs/btrfs/bio.c b/fs/btrfs/bio.c
-index 0a69e09bfe28..487dd9267fd7 100644
+index 1ae81997fb2d..69dc32cb4ed6 100644
 --- a/fs/btrfs/bio.c
 +++ b/fs/btrfs/bio.c
-@@ -592,9 +592,9 @@ static int btrfs_bio_csum(struct btrfs_bio *bbio)
- 	if (bbio->bio.bi_opf & REQ_META)
- 		return btree_csum_one_bio(bbio);
- #ifdef CONFIG_BTRFS_EXPERIMENTAL
--	return btrfs_csum_one_bio(bbio, true);
-+	return btrfs_csum_one_bio(bbio, &bbio->bio, true);
- #else
--	return btrfs_csum_one_bio(bbio, false);
-+	return btrfs_csum_one_bio(bbio, &bbio->bio, false);
- #endif
+@@ -300,6 +300,34 @@ static struct btrfs_failed_bio *repair_one_sector(struct btrfs_bio *failed_bbio,
+ 	return fbio;
  }
  
++blk_status_t btrfs_check_encrypted_read_bio(struct btrfs_bio *bbio, struct bio *enc_bio)
++{
++	struct btrfs_inode *inode = bbio->inode;
++	struct btrfs_fs_info *fs_info = inode->root->fs_info;
++	struct bvec_iter iter = bbio->saved_iter;
++	struct btrfs_device *dev = bbio->bio.bi_private;
++	const u32 step = min(fs_info->sectorsize, PAGE_SIZE);
++	const u32 nr_steps = iter.bi_size / step;
++	phys_addr_t paddrs[BTRFS_MAX_BLOCKSIZE / PAGE_SIZE];
++	phys_addr_t paddr;
++	unsigned int slot = 0;
++
++	/*
++	 * We have to use a copy of iter in case there's an error,
++	 * btrfs_check_read_bio will handle submitting the repair bios.
++	 */
++	btrfs_bio_for_each_block(paddr, enc_bio, &iter, step) {
++		ASSERT(slot < nr_steps);
++		paddrs[slot] = paddr;
++		slot++;
++	}
++	if (!btrfs_data_csum_ok(bbio, dev, 0, paddrs))
++			return BLK_STS_IOERR;
++
++	bbio->csum_ok = true;
++	return BLK_STS_OK;
++}
++
+ static void btrfs_check_read_bio(struct btrfs_bio *bbio, struct btrfs_device *dev)
+ {
+ 	struct btrfs_inode *inode = bbio->inode;
+@@ -329,6 +357,10 @@ static void btrfs_check_read_bio(struct btrfs_bio *bbio, struct btrfs_device *de
+ 	/* Clear the I/O error. A failed repair will reset it. */
+ 	bbio->bio.bi_status = BLK_STS_OK;
+ 
++	/* This was an encrypted bio and we've already done the csum check. */
++	if (status == BLK_STS_OK && bbio->csum_ok)
++		goto out;
++
+ 	btrfs_bio_for_each_block(paddr, &bbio->bio, iter, step) {
+ 		paddrs[(offset / step) % nr_steps] = paddr;
+ 		offset += step;
+@@ -340,6 +372,7 @@ static void btrfs_check_read_bio(struct btrfs_bio *bbio, struct btrfs_device *de
+ 							 paddrs, fbio);
+ 		}
+ 	}
++out:
+ 	if (bbio->csum != bbio->csum_inline)
+ 		kvfree(bbio->csum);
+ 
+@@ -851,10 +884,13 @@ static bool btrfs_submit_chunk(struct btrfs_bio *bbio, int mirror_num)
+ 		/*
+ 		 * Csum items for reloc roots have already been cloned at this
+ 		 * point, so they are handled as part of the no-checksum case.
++		 *
++		 * Encrypted inodes are csum'ed via the ->process_bio callback.
+ 		 */
+ 		if (!(inode->flags & BTRFS_INODE_NODATASUM) &&
+ 		    !test_bit(BTRFS_FS_STATE_NO_DATA_CSUMS, &fs_info->fs_state) &&
+-		    !btrfs_is_data_reloc_root(inode->root) && !bbio->is_remap) {
++		    !btrfs_is_data_reloc_root(inode->root) && !bbio->is_remap &&
++		    !IS_ENCRYPTED(&inode->vfs_inode)) {
+ 			if (should_async_write(bbio) &&
+ 			    btrfs_wq_submit_bio(bbio, bioc, &smap, mirror_num))
+ 				goto done;
 diff --git a/fs/btrfs/bio.h b/fs/btrfs/bio.h
-index 303ed6c7103d..43f7544029ac 100644
+index 43f7544029ac..456d32db9e9e 100644
 --- a/fs/btrfs/bio.h
 +++ b/fs/btrfs/bio.h
-@@ -59,6 +59,7 @@ struct btrfs_bio {
- 			struct btrfs_ordered_sum *sums;
- 			struct work_struct csum_work;
- 			struct completion csum_done;
-+			struct bio *csum_bio;
- 			struct bvec_iter csum_saved_iter;
- 			u64 orig_physical;
- 			u64 orig_logical;
+@@ -43,6 +43,7 @@ struct btrfs_bio {
+ 		struct {
+ 			u8 *csum;
+ 			u8 csum_inline[BTRFS_BIO_INLINE_CSUM_SIZE];
++			bool csum_ok;
+ 			struct bvec_iter saved_iter;
+ 		};
+ 
+@@ -130,5 +131,7 @@ void btrfs_submit_repair_write(struct btrfs_bio *bbio, int mirror_num, bool dev_
+ int btrfs_repair_io_failure(struct btrfs_fs_info *fs_info, u64 ino, u64 fileoff,
+ 			    u32 length, u64 logical, const phys_addr_t paddrs[],
+ 			    unsigned int step, int mirror_num);
++blk_status_t btrfs_check_encrypted_read_bio(struct btrfs_bio *bbio,
++					    struct bio *enc_bio);
+ 
+ #endif
 diff --git a/fs/btrfs/file-item.c b/fs/btrfs/file-item.c
-index 08dc78295707..ef0b6faf3de0 100644
+index ef0b6faf3de0..cee57a2f241b 100644
 --- a/fs/btrfs/file-item.c
 +++ b/fs/btrfs/file-item.c
-@@ -764,11 +764,10 @@ int btrfs_lookup_csums_bitmap(struct btrfs_root *root, struct btrfs_path *path,
+@@ -331,6 +331,14 @@ static int search_csum_tree(struct btrfs_fs_info *fs_info,
  	return ret;
  }
  
--static void csum_one_bio(struct btrfs_bio *bbio, struct bvec_iter *src)
-+static void csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, struct bvec_iter *src)
- {
- 	struct btrfs_inode *inode = bbio->inode;
- 	struct btrfs_fs_info *fs_info = inode->root->fs_info;
--	struct bio *bio = &bbio->bio;
- 	struct btrfs_ordered_sum *sums = bbio->sums;
- 	struct bvec_iter iter = *src;
- 	phys_addr_t paddr;
-@@ -796,19 +795,18 @@ static void csum_one_bio_work(struct work_struct *work)
- 
- 	ASSERT(btrfs_op(&bbio->bio) == BTRFS_MAP_WRITE);
- 	ASSERT(bbio->async_csum == true);
--	csum_one_bio(bbio, &bbio->csum_saved_iter);
-+	csum_one_bio(bbio, bbio->csum_bio, &bbio->csum_saved_iter);
- 	complete(&bbio->csum_done);
- }
- 
++static inline bool inode_skip_csum(struct btrfs_inode *inode)
++{
++	struct btrfs_fs_info *fs_info = inode->root->fs_info;
++
++	return (inode->flags & BTRFS_INODE_NODATASUM) ||
++		test_bit(BTRFS_FS_STATE_NO_DATA_CSUMS, &fs_info->fs_state);
++}
++
  /*
-  * Calculate checksums of the data contained inside a bio.
-  */
--int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async)
-+int btrfs_csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, bool async)
- {
- 	struct btrfs_ordered_extent *ordered = bbio->ordered;
- 	struct btrfs_inode *inode = bbio->inode;
- 	struct btrfs_fs_info *fs_info = inode->root->fs_info;
--	struct bio *bio = &bbio->bio;
+  * Lookup the checksum for the read bio in csum tree.
+  *
+@@ -350,8 +358,7 @@ int btrfs_lookup_bio_sums(struct btrfs_bio *bbio)
+ 	int ret = 0;
+ 	u32 bio_offset = 0;
+ 
+-	if ((inode->flags & BTRFS_INODE_NODATASUM) ||
+-	    test_bit(BTRFS_FS_STATE_NO_DATA_CSUMS, &fs_info->fs_state))
++	if (inode_skip_csum(inode))
+ 		return 0;
+ 
+ 	/*
+@@ -810,6 +817,9 @@ int btrfs_csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, bool async)
  	struct btrfs_ordered_sum *sums;
  	unsigned nofs_flag;
  
-@@ -827,12 +825,13 @@ int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async)
- 	btrfs_add_ordered_sum(ordered, sums);
++	if (inode_skip_csum(inode))
++		return 0;
++
+ 	nofs_flag = memalloc_nofs_save();
+ 	sums = kvzalloc(btrfs_ordered_sum_size(fs_info, bio->bi_iter.bi_size),
+ 		       GFP_KERNEL);
+diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
+index b6350b043994..f74404bdd89e 100644
+--- a/fs/btrfs/fscrypt.c
++++ b/fs/btrfs/fscrypt.c
+@@ -16,6 +16,7 @@
+ #include "transaction.h"
+ #include "volumes.h"
+ #include "xattr.h"
++#include "file-item.h"
  
- 	if (!async) {
--		csum_one_bio(bbio, &bbio->bio.bi_iter);
-+		csum_one_bio(bbio, bio, &bio->bi_iter);
- 		return 0;
- 	}
- 	init_completion(&bbio->csum_done);
- 	bbio->async_csum = true;
--	bbio->csum_saved_iter = bbio->bio.bi_iter;
-+	bbio->csum_bio = bio;
-+	bbio->csum_saved_iter = bio->bi_iter;
- 	INIT_WORK(&bbio->csum_work, csum_one_bio_work);
- 	schedule_work(&bbio->csum_work);
- 	return 0;
-diff --git a/fs/btrfs/file-item.h b/fs/btrfs/file-item.h
-index 5645c5e3abdb..d16fd2144552 100644
---- a/fs/btrfs/file-item.h
-+++ b/fs/btrfs/file-item.h
-@@ -64,7 +64,7 @@ int btrfs_lookup_file_extent(struct btrfs_trans_handle *trans,
- int btrfs_csum_file_blocks(struct btrfs_trans_handle *trans,
- 			   struct btrfs_root *root,
- 			   struct btrfs_ordered_sum *sums);
--int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async);
-+int btrfs_csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, bool async);
- int btrfs_alloc_dummy_sum(struct btrfs_bio *bbio);
- int btrfs_lookup_csums_range(struct btrfs_root *root, u64 start, u64 end,
- 			     struct list_head *list, int search_commit,
+ /*
+  * From a given location in a leaf, read a name into a qstr (usually a
+@@ -212,6 +213,33 @@ static struct block_device **btrfs_fscrypt_get_devices(struct super_block *sb,
+ 	return devs;
+ }
+ 
++static blk_status_t btrfs_process_encrypted_bio(struct bio *orig_bio,
++						struct bio *enc_bio)
++{
++	struct btrfs_bio *bbio;
++
++	/*
++	 * If our bio is from the normal fs_bio_set then we know this is a
++	 * mirror split and we can skip it, we'll get the real bio on the last
++	 * mirror and we can process that one.
++	 */
++	if (orig_bio->bi_pool == &fs_bio_set)
++		return BLK_STS_OK;
++
++	bbio = btrfs_bio(orig_bio);
++
++	if (bio_op(orig_bio) == REQ_OP_READ) {
++		/*
++		 * We have ->saved_iter based on the orig_bio, so if the block
++		 * layer changes we need to notice this asap so we can update
++		 * our code to handle the new world order.
++		 */
++		ASSERT(orig_bio == enc_bio);
++		return btrfs_check_encrypted_read_bio(bbio, enc_bio);
++	}
++	return btrfs_csum_one_bio(bbio, enc_bio, false);
++}
++
+ int btrfs_fscrypt_load_extent_info(struct btrfs_inode *inode,
+ 				   struct btrfs_path *path,
+ 				   struct btrfs_key *key,
+@@ -360,4 +388,5 @@ const struct fscrypt_operations btrfs_fscrypt_ops = {
+ 	.set_context = btrfs_fscrypt_set_context,
+ 	.empty_dir = btrfs_fscrypt_empty_dir,
+ 	.get_devices = btrfs_fscrypt_get_devices,
++	.process_bio = btrfs_process_encrypted_bio,
+ };
 -- 
 2.51.0
 
