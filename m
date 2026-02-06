@@ -1,37 +1,37 @@
-Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id AB19842EEBF
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:24:58 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 0A4D843635D
+	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:01 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402299; cv=none; b=btraekP1qO8mFiI8x5xlLIbJATiTPKdN0EKqsxxjtn+t9h8wONs2esxSbMzRCBXEJQdd3S8uoI5suqbcHgduamO/+0IECVThoti6qZBHypPMZ/PxSyzqZBixCQFq/fwd1WHeRFoNHYUz+vNv3EIFKhuKEesIbhCGXB+ZvGOM9jk=
+	t=1770402301; cv=none; b=OjhN40umMyb1qj4CkmJyFaSf9GcgiYeIl6Yvi9EH7xxlxu03AbyOW6CipQliS6bJKIMrqh3Qgqh2R5u5AIFMlBKXcQBwSw4rgSo5wCb+z04smFKvzHzwRwahBN9mHMgqCLKXjHcEwRIRuYu9beAk8rQFhpuK+ifOlhjCh2vCA+w=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1770402299; c=relaxed/simple;
-	bh=FfvPlXAyWoUxGB8f+0UO9dIt1mwkYNum1bSIDzve2Ic=;
+	s=arc-20240116; t=1770402301; c=relaxed/simple;
+	bh=qffIPQg1d8ufVNyNSiBteACKOtofx3HUKppGtoXGvFg=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=Jb9efhi7dDDb88hcpYZUxndseqv3BMcW9nFCq4MrAvEqloIOpK47MrbV5NAlMnGPbNLDk9ds79iDJmzb0QPb4O8oq6w64jPqlLs2MFVS7KhTuhGlrZiT6FveOT8hvr+Mk2UTLNnyXJZ8X0cG2NTKzX2tYTGYmEOBZL+aAIJgr9o=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
+	 MIME-Version; b=fW6IGMRqbqxy9VfopR/TSGAjqbJCVORqXTlv+4nhRsHkqCELgyT5KS5fn/CnRhTBHMM5VJxQ8aGbVYoSPwSd4BrEoEKE134fJAP/lx6QWwHRiYBG7aH0ijk5in7ychlJmk5tEsfL1TmkJ25F6TNv/0gWReJWyQywFmoHzqy7gkM=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
 Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id 043805BD2E;
-	Fri,  6 Feb 2026 18:24:11 +0000 (UTC)
-Authentication-Results: smtp-out2.suse.de;
+	by smtp-out1.suse.de (Postfix) with ESMTPS id E7D913E759;
+	Fri,  6 Feb 2026 18:24:12 +0000 (UTC)
+Authentication-Results: smtp-out1.suse.de;
 	none
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id CBA723EA63;
-	Fri,  6 Feb 2026 18:24:10 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id BAEC33EA63;
+	Fri,  6 Feb 2026 18:24:12 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id wGH9MMoxhmkTCQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:10 +0000
+	id kHonLcwxhmkTCQAAD6G6ig
+	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:12 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -45,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 26/43] btrfs: implement the fscrypt extent encryption hooks
-Date: Fri,  6 Feb 2026 19:22:58 +0100
-Message-ID: <20260206182336.1397715-27-neelx@suse.com>
+Subject: [PATCH v6 29/43] btrfs: set the bio fscrypt context when applicable
+Date: Fri,  6 Feb 2026 19:23:01 +0100
+Message-ID: <20260206182336.1397715-30-neelx@suse.com>
 X-Mailer: git-send-email 2.51.0
 In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
 References: <20260206182336.1397715-1-neelx@suse.com>
@@ -65,7 +65,7 @@ X-Spamd-Result: default: False [-4.00 / 50.00];
 	REPLY(-4.00)[]
 X-Spam-Flag: NO
 X-Spam-Score: -4.00
-X-Rspamd-Queue-Id: 043805BD2E
+X-Rspamd-Queue-Id: E7D913E759
 X-Rspamd-Pre-Result: action=no action;
 	module=replies;
 	Message is reply to one we originated
@@ -75,470 +75,353 @@ X-Spam-Level:
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-This patch implements the necessary hooks from fscrypt to support
-per-extent encryption.  There's two main entry points
+Now that we have the fscrypt_info plumbed through everywhere, add the
+code to setup the bio encryption context from the extent context.
 
-btrfs_fscrypt_load_extent_info
-btrfs_fscrypt_save_extent_info
-
-btrfs_fscrypt_load_extent_info gets called when we create the extent
-maps from the file extent item at btrfs_get_extent() time.  We read the
-extent context, and pass it into fscrypt to create the appropriate
-fscrypt_extent_info structure.  This is then used on the bio's to make
-sure the encryption is done properly.
-
-btrfs_fscrypt_save_extent_info is used to generate the fscrypt context
-from fscrypt and save it into the tree item when we create a new
-file extent item.
+We use the per-extent fscrypt_extent_info for encryption/decryption.
+We use the offset into the extent as the lblk for fscrypt.  So the start
+of the extent has the lblk of 0, 4k into the extent has the lblk of 4k,
+etc.  This is done to allow things like relocation to continue to work
+properly.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/30eaad31964c88c3497a0c5bc8f2c727c1dc763a.1706116485.git.josef@toxicpanda.com/
- * Also significantly reworked due to the changes in previous commit [24/43].
+v5: https://lore.kernel.org/linux-btrfs/9ca883acc746b5aba980d1d19317168a7491aba6.1706116485.git.josef@toxicpanda.com/
+ * The dio-related changes in inode.c were moved to direct-io.c
+   as upstream refactored in the meantime.
+ * Open-code orig_start to start - offset.
+ * Get the inode from bbio instead of from page mapping
+   as we no longer have the page in btrfs_bio_is_contig().
+ * Directly use the file_offset passed to btrfs_bio_is_contig(), no need
+   to compute it locally.  We even no longer have the page and offset.
 ---
- fs/btrfs/ctree.h    |  3 ++
- fs/btrfs/defrag.c   |  6 ++++
- fs/btrfs/file.c     | 11 ++++++
- fs/btrfs/fscrypt.c  | 84 +++++++++++++++++++++++++++++++++++++++++++++
- fs/btrfs/fscrypt.h  | 29 ++++++++++++++++
- fs/btrfs/inode.c    | 36 +++++++++++++++++++
- fs/btrfs/reflink.c  | 43 ++++++++++++++++++++++-
- fs/btrfs/tree-log.c | 19 ++++++++++
- 8 files changed, 230 insertions(+), 1 deletion(-)
+ fs/btrfs/compression.c |  4 +++
+ fs/btrfs/direct-io.c   | 10 ++++++
+ fs/btrfs/extent_io.c   | 72 +++++++++++++++++++++++++++++++++++++++++-
+ fs/btrfs/fscrypt.c     | 33 +++++++++++++++++++
+ fs/btrfs/fscrypt.h     | 22 +++++++++++++
+ 5 files changed, 140 insertions(+), 1 deletion(-)
 
-diff --git a/fs/btrfs/ctree.h b/fs/btrfs/ctree.h
-index 6de7ad191e04..89d3c3137786 100644
---- a/fs/btrfs/ctree.h
-+++ b/fs/btrfs/ctree.h
-@@ -400,6 +400,9 @@ struct btrfs_replace_extent_info {
- 	u64 file_offset;
- 	/* Pointer to a file extent item of type regular or prealloc. */
- 	char *extent_buf;
-+	/* The fscrypt_extent_info for a new extent. */
-+	u8 *fscrypt_ctx;
-+	u32 fscrypt_context_size;
- 	/*
- 	 * Set to true when attempting to replace a file range with a new extent
- 	 * described by this structure, set to false when attempting to clone an
-diff --git a/fs/btrfs/defrag.c b/fs/btrfs/defrag.c
-index ecf05cd64696..f64c0502cef9 100644
---- a/fs/btrfs/defrag.c
-+++ b/fs/btrfs/defrag.c
-@@ -16,6 +16,7 @@
- #include "file-item.h"
+diff --git a/fs/btrfs/compression.c b/fs/btrfs/compression.c
+index 4c6298cf01b2..cd7b245bedb8 100644
+--- a/fs/btrfs/compression.c
++++ b/fs/btrfs/compression.c
+@@ -33,6 +33,7 @@
+ #include "subpage.h"
+ #include "messages.h"
  #include "super.h"
- #include "compression.h"
 +#include "fscrypt.h"
  
- static struct kmem_cache *btrfs_inode_defrag_cachep;
+ static struct bio_set btrfs_compressed_bioset;
  
-@@ -720,6 +721,11 @@ static struct extent_map *defrag_get_extent(struct btrfs_inode *inode,
- 		if (ret > 0)
- 			goto not_found;
- 	}
-+	btrfs_release_path(&path);
+@@ -391,6 +392,8 @@ void btrfs_submit_compressed_write(struct btrfs_ordered_extent *ordered,
+ 	cb->bbio.ordered = ordered;
+ 	btrfs_add_compressed_bio_folios(cb);
+ 
++	btrfs_set_bio_crypt_ctx_from_extent(&cb->bbio.bio, inode, ordered->fscrypt_info, 0);
 +
-+	ret = btrfs_fscrypt_load_extent_info(inode, &path, &key, em);
-+	if (ret)
-+		goto err;
- 	return em;
- 
- not_found:
-diff --git a/fs/btrfs/file.c b/fs/btrfs/file.c
-index 639462164d08..89cd4f49e84b 100644
---- a/fs/btrfs/file.c
-+++ b/fs/btrfs/file.c
-@@ -37,6 +37,7 @@
- #include "file.h"
- #include "super.h"
- #include "print-tree.h"
-+#include "fscrypt.h"
- 
- /*
-  * Unlock folio after btrfs_file_write() is done with it.
-@@ -2401,6 +2402,16 @@ static int btrfs_insert_replace_extent(struct btrfs_trans_handle *trans,
- 	if (extent_info->is_new_extent)
- 		btrfs_set_file_extent_generation(leaf, extent, trans->transid);
- 	btrfs_release_path(path);
-+	if (extent_info->fscrypt_context_size) {
-+		key.type = BTRFS_FSCRYPT_CTX_KEY;
-+		ret = btrfs_insert_empty_item(trans, root, path, &key,
-+					      extent_info->fscrypt_context_size);
-+		if (ret)
-+			return ret;
-+		btrfs_fscrypt_save_extent_info(path,
-+					       extent_info->fscrypt_ctx,
-+					       extent_info->fscrypt_context_size);
-+	}
- 
- 	ret = btrfs_inode_set_file_extent_range(inode, extent_info->file_offset,
- 						replace_len);
-diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
-index 608f8797ea6f..26060f3e50de 100644
---- a/fs/btrfs/fscrypt.c
-+++ b/fs/btrfs/fscrypt.c
-@@ -212,9 +212,93 @@ static struct block_device **btrfs_fscrypt_get_devices(struct super_block *sb,
- 	return devs;
+ 	btrfs_submit_bbio(&cb->bbio, 0);
  }
  
-+int btrfs_fscrypt_load_extent_info(struct btrfs_inode *inode,
-+				   struct btrfs_path *path,
-+				   struct btrfs_key *key,
-+				   struct extent_map *em)
+@@ -604,6 +607,7 @@ void btrfs_submit_compressed_read(struct btrfs_bio *bbio)
+ 	cb->orig_bbio = bbio;
+ 	cb->bbio.csum_search_commit_root = bbio->csum_search_commit_root;
+ 
++	btrfs_set_bio_crypt_ctx_from_extent(&cb->bbio.bio, inode, em->fscrypt_info, 0);
+ 	btrfs_free_extent_map(em);
+ 
+ 	cb->nr_folios = DIV_ROUND_UP(compressed_len, btrfs_min_folio_size(fs_info));
+diff --git a/fs/btrfs/direct-io.c b/fs/btrfs/direct-io.c
+index 2d89ac05b1b3..d20a5b99bdde 100644
+--- a/fs/btrfs/direct-io.c
++++ b/fs/btrfs/direct-io.c
+@@ -12,6 +12,7 @@
+ #include "volumes.h"
+ #include "bio.h"
+ #include "ordered-data.h"
++#include "fscrypt.h"
+ 
+ struct btrfs_dio_data {
+ 	ssize_t submitted;
+@@ -728,6 +729,8 @@ static void btrfs_dio_submit_io(const struct iomap_iter *iter, struct bio *bio,
+ 	struct btrfs_dio_private *dip =
+ 		container_of(bbio, struct btrfs_dio_private, bbio);
+ 	struct btrfs_dio_data *dio_data = iter->private;
++	struct fscrypt_extent_info *fscrypt_info = NULL;
++	u64 offset = 0;
+ 
+ 	btrfs_bio_init(bbio, BTRFS_I(iter->inode), file_offset,
+ 		       btrfs_dio_end_io, bio->bi_private);
+@@ -747,6 +750,9 @@ static void btrfs_dio_submit_io(const struct iomap_iter *iter, struct bio *bio,
+ 	if (iter->flags & IOMAP_WRITE) {
+ 		int ret;
+ 
++		offset = file_offset - dio_data->ordered->orig_offset;
++		fscrypt_info = dio_data->ordered->fscrypt_info;
++
+ 		ret = btrfs_extract_ordered_extent(bbio, dio_data->ordered);
+ 		if (ret) {
+ 			btrfs_finish_ordered_extent(dio_data->ordered, NULL,
+@@ -756,8 +762,12 @@ static void btrfs_dio_submit_io(const struct iomap_iter *iter, struct bio *bio,
+ 			iomap_dio_bio_end_io(bio);
+ 			return;
+ 		}
++	} else {
++		fscrypt_info = dio_data->fscrypt_info;
++		offset = file_offset - dio_data->orig_start;
+ 	}
+ 
++	btrfs_set_bio_crypt_ctx_from_extent(&bbio->bio, bbio->inode, fscrypt_info, offset);
+ 	btrfs_submit_bbio(bbio, 0);
+ }
+ 
+diff --git a/fs/btrfs/extent_io.c b/fs/btrfs/extent_io.c
+index a440cc550ece..3273b7e3b4b0 100644
+--- a/fs/btrfs/extent_io.c
++++ b/fs/btrfs/extent_io.c
+@@ -34,6 +34,7 @@
+ #include "dev-replace.h"
+ #include "super.h"
+ #include "transaction.h"
++#include "fscrypt.h"
+ 
+ static struct kmem_cache *extent_buffer_cache;
+ 
+@@ -149,6 +150,10 @@ struct btrfs_bio_ctrl {
+ 	 * inside the same inode.
+ 	 */
+ 	u64 last_em_start;
++
++	/* This is set for reads and we have encryption. */
++	struct fscrypt_extent_info *fscrypt_info;
++	u64 orig_start;
+ };
+ 
+ /*
+@@ -711,9 +716,28 @@ static int alloc_eb_folio_array(struct extent_buffer *eb, bool nofail)
+ static bool btrfs_bio_is_contig(struct btrfs_bio_ctrl *bio_ctrl,
+ 				u64 disk_bytenr, loff_t file_offset)
+ {
+-	struct bio *bio = &bio_ctrl->bbio->bio;
++	struct btrfs_bio *bbio = bio_ctrl->bbio;
++	struct bio *bio = &bbio->bio;
++	struct inode *inode = &bbio->inode->vfs_inode;
+ 	const sector_t sector = disk_bytenr >> SECTOR_SHIFT;
+ 
++	if (IS_ENCRYPTED(inode)) {
++		u64 offset = 0;
++		struct fscrypt_extent_info *fscrypt_info = NULL;
++
++		/* bio_ctrl->fscrypt_info is only set in the READ case. */
++		if (bio_ctrl->fscrypt_info) {
++			offset = file_offset - bio_ctrl->orig_start;
++			fscrypt_info = bio_ctrl->fscrypt_info;
++		} else if (bbio->ordered) {
++			fscrypt_info = bbio->ordered->fscrypt_info;
++			offset = file_offset - bbio->ordered->orig_offset;
++		}
++
++		if (!btrfs_mergeable_encrypted_bio(bio, inode, fscrypt_info, offset))
++			return false;
++	}
++
+ 	if (bio_ctrl->compress_type != BTRFS_COMPRESS_NONE) {
+ 		/*
+ 		 * For compression, all IO should have its logical bytenr set
+@@ -736,6 +760,8 @@ static void alloc_new_bio(struct btrfs_inode *inode,
+ {
+ 	struct btrfs_fs_info *fs_info = inode->root->fs_info;
+ 	struct btrfs_bio *bbio;
++	struct fscrypt_extent_info *fscrypt_info = NULL;
++	u64 offset = 0;
+ 
+ 	bbio = btrfs_bio_alloc(BIO_MAX_VECS, bio_ctrl->opf, inode,
+ 			       file_offset, bio_ctrl->end_io_func, NULL);
+@@ -755,6 +781,8 @@ static void alloc_new_bio(struct btrfs_inode *inode,
+ 					ordered->file_offset +
+ 					ordered->disk_num_bytes - file_offset);
+ 			bbio->ordered = ordered;
++			fscrypt_info = ordered->fscrypt_info;
++			offset = file_offset - ordered->orig_offset;
+ 		}
+ 
+ 		/*
+@@ -765,7 +793,12 @@ static void alloc_new_bio(struct btrfs_inode *inode,
+ 		 */
+ 		bio_set_dev(&bbio->bio, fs_info->fs_devices->latest_dev->bdev);
+ 		wbc_init_bio(bio_ctrl->wbc, &bbio->bio);
++	} else {
++		fscrypt_info = bio_ctrl->fscrypt_info;
++		offset = file_offset - bio_ctrl->orig_start;
+ 	}
++
++	btrfs_set_bio_crypt_ctx_from_extent(&bbio->bio, inode, fscrypt_info, offset);
+ }
+ 
+ /*
+@@ -811,6 +844,19 @@ static void submit_extent_folio(struct btrfs_bio_ctrl *bio_ctrl,
+ 			len = bio_ctrl->len_to_oe_boundary;
+ 		}
+ 
++		/*
++		 * Encryption has to allocate bounce buffers to encrypt the bio,
++		 * and we need to make sure that it doesn't split the bio so we
++		 * retain all of our special info in the btrfs_bio, so submit
++		 * any bio that gets up to BIO_MAX_VECS worth of segments.
++		 */
++		if (IS_ENCRYPTED(&inode->vfs_inode) &&
++		    bio_data_dir(&bio_ctrl->bbio->bio) == WRITE &&
++		    bio_segments(&bio_ctrl->bbio->bio) == BIO_MAX_VECS) {
++			submit_one_bio(bio_ctrl);
++			continue;
++		}
++
+ 		if (!bio_add_folio(&bio_ctrl->bbio->bio, folio, len, pg_offset)) {
+ 			/* bio full: move on to a new one */
+ 			submit_one_bio(bio_ctrl);
+@@ -1031,6 +1077,8 @@ static int btrfs_do_readpage(struct folio *folio, struct extent_map **em_cached,
+ 		u64 block_start;
+ 		u64 em_gen;
+ 
++		bio_ctrl->fscrypt_info = NULL;
++
+ 		ASSERT(IS_ALIGNED(cur, fs_info->sectorsize));
+ 		if (cur >= last_byte) {
+ 			folio_zero_range(folio, pg_offset, end - cur + 1);
+@@ -1120,6 +1168,21 @@ static int btrfs_do_readpage(struct folio *folio, struct extent_map **em_cached,
+ 
+ 		bio_ctrl->last_em_start = em->start;
+ 
++		/*
++		 * We use the extent offset for the IV when decrypting the page,
++		 * so we have to set the extent_offset based on the orig_start
++		 * for this extent.  Also save the fscrypt_info so the bio ctx
++		 * can be set properly.  If this inode isn't encrypted this
++		 * won't do anything.
++		 *
++		 * If we're compressed we'll handle all of this in
++		 * btrfs_submit_compressed_read.
++		 */
++		if (compress_type == BTRFS_COMPRESS_NONE) {
++			bio_ctrl->orig_start = em->start - em->offset;
++			bio_ctrl->fscrypt_info = fscrypt_get_extent_info(em->fscrypt_info);
++		}
++
+ 		em_gen = em->generation;
+ 		btrfs_free_extent_map(em);
+ 		em = NULL;
+@@ -1128,11 +1191,17 @@ static int btrfs_do_readpage(struct folio *folio, struct extent_map **em_cached,
+ 		if (block_start == EXTENT_MAP_HOLE) {
+ 			folio_zero_range(folio, pg_offset, blocksize);
+ 			end_folio_read(folio, true, cur, blocksize);
++
++			/* This shouldn't be set, but clear it just in case. */
++			fscrypt_put_extent_info(bio_ctrl->fscrypt_info);
+ 			continue;
+ 		}
+ 		/* the get_extent function already copied into the folio */
+ 		if (block_start == EXTENT_MAP_INLINE) {
+ 			end_folio_read(folio, true, cur, blocksize);
++
++			/* This shouldn't be set, but clear it just in case. */
++			fscrypt_put_extent_info(bio_ctrl->fscrypt_info);
+ 			continue;
+ 		}
+ 
+@@ -1145,6 +1214,7 @@ static int btrfs_do_readpage(struct folio *folio, struct extent_map **em_cached,
+ 			submit_one_bio(bio_ctrl);
+ 		submit_extent_folio(bio_ctrl, disk_bytenr, folio, blocksize,
+ 				    pg_offset, em_gen);
++		fscrypt_put_extent_info(bio_ctrl->fscrypt_info);
+ 	}
+ 	return 0;
+ }
+diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
+index 26060f3e50de..f4d6979a581b 100644
+--- a/fs/btrfs/fscrypt.c
++++ b/fs/btrfs/fscrypt.c
+@@ -295,6 +295,39 @@ ssize_t btrfs_fscrypt_context_for_new_extent(struct btrfs_inode *inode,
+ 	return ret;
+ }
+ 
++void btrfs_set_bio_crypt_ctx_from_extent(struct bio *bio,
++					 struct btrfs_inode *inode,
++					 struct fscrypt_extent_info *fi,
++					 u64 logical_offset)
 +{
-+	struct extent_buffer *leaf;
-+	int slot;
-+	unsigned long offset;
-+	u8 ctx[BTRFS_MAX_EXTENT_CTX_SIZE];
-+	unsigned long size;
-+	struct fscrypt_extent_info *info;
-+	unsigned long nofs_flag;
-+	int ret;
++	if (!fi)
++		return;
 +
-+	if (em->disk_bytenr == EXTENT_MAP_HOLE)
-+		return 0;
-+	if (btrfs_extent_map_encryption(em) != BTRFS_ENCRYPTION_FSCRYPT)
-+		return 0;
-+
-+	key->type = BTRFS_FSCRYPT_CTX_KEY;
-+	ret = btrfs_search_slot(NULL, inode->root, key, path, 0, 0);
-+	leaf = path->nodes[0];
-+	slot = path->slots[0];
-+	if (ret) {
-+		btrfs_err(leaf->fs_info,
-+	"missing or error searching encryption context item in leaf: root=%llu block=%llu slot=%d ino=%llu file_offset=%llu, err %i",
-+			  btrfs_header_owner(leaf), btrfs_header_bytenr(leaf), slot,
-+			  key->objectid, key->offset, ret);
-+		btrfs_release_path(path);
-+		return ret;
-+	}
-+
-+	size = btrfs_item_size(leaf, slot);
-+	if (size > FSCRYPT_SET_CONTEXT_MAX_SIZE) {
-+		btrfs_err(leaf->fs_info,
-+	"unexpected or corrupted encryption context size in leaf: root=%llu block=%llu slot=%d ino=%llu file_offset=%llu, size %lu (too big)",
-+			  btrfs_header_owner(leaf), btrfs_header_bytenr(leaf), slot,
-+			  key->objectid, key->offset, size);
-+		btrfs_release_path(path);
-+		return -EIO;
-+	}
-+
-+	offset = btrfs_item_ptr_offset(leaf, slot),
-+	read_extent_buffer(leaf, ctx, offset, size);
-+	btrfs_release_path(path);
-+
-+	nofs_flag = memalloc_nofs_save();
-+	info = fscrypt_load_extent_info(&inode->vfs_inode, ctx, size);
-+	memalloc_nofs_restore(nofs_flag);
-+	if (IS_ERR(info))
-+		return PTR_ERR(info);
-+	em->fscrypt_info = info;
-+	return 0;
++	/*
++	 * fscrypt uses bytes >> s_blocksize_bits for the block numbers, so we
++	 * have to adjust everything based on our sectorsize so that the DUN
++	 * calculations are correct.
++	 */
++	logical_offset = div64_u64(logical_offset, inode->root->fs_info->sectorsize);
++	fscrypt_set_bio_crypt_ctx_from_extent(bio, fi, logical_offset, GFP_NOFS);
 +}
 +
-+void btrfs_fscrypt_save_extent_info(struct btrfs_path *path, u8 *ctx, unsigned long size)
++bool btrfs_mergeable_encrypted_bio(struct bio *bio, struct inode *inode,
++				   struct fscrypt_extent_info *fi,
++				   u64 logical_offset)
 +{
-+	struct extent_buffer *leaf = path->nodes[0];
-+	unsigned long offset = btrfs_item_ptr_offset(leaf, path->slots[0]);
++	if (!fi)
++		return true;
 +
-+	ASSERT(size <= FSCRYPT_SET_CONTEXT_MAX_SIZE);
-+
-+	write_extent_buffer(leaf, ctx, offset, size);
-+	btrfs_release_path(path);
-+}
-+
-+ssize_t btrfs_fscrypt_context_for_new_extent(struct btrfs_inode *inode,
-+					     struct fscrypt_extent_info *info,
-+					     u8 *ctx)
-+{
-+	ssize_t ret;
-+
-+	if (!info)
-+		return 0;
-+
-+	ret = fscrypt_context_for_new_extent(&inode->vfs_inode, info, ctx);
-+	if (ret < 0) {
-+		btrfs_err_rl(inode->root->fs_info, "invalid encrypt context");
-+		return ret;
-+	}
-+	return ret;
++	/*
++	 * fscrypt uses bytes >> s_blocksize_bits for the block numbers, so we
++	 * have to adjust everything based on our sectorsize so that the DUN
++	 * calculations are correct.
++	 */
++	logical_offset = div64_u64(logical_offset, BTRFS_I(inode)->root->fs_info->sectorsize);
++	return fscrypt_mergeable_extent_bio(bio, fi, logical_offset);
 +}
 +
  const struct fscrypt_operations btrfs_fscrypt_ops = {
  	.inode_info_offs = (int)offsetof(struct btrfs_inode, i_crypt_info) -
  			   (int)offsetof(struct btrfs_inode, vfs_inode),
-+	.has_per_extent_encryption = 1,
- 	.get_context = btrfs_fscrypt_get_context,
- 	.set_context = btrfs_fscrypt_set_context,
- 	.empty_dir = btrfs_fscrypt_empty_dir,
 diff --git a/fs/btrfs/fscrypt.h b/fs/btrfs/fscrypt.h
-index c5cdc27f943c..68eab4606935 100644
+index 68eab4606935..1a2a4ffee383 100644
 --- a/fs/btrfs/fscrypt.h
 +++ b/fs/btrfs/fscrypt.h
-@@ -16,8 +16,27 @@ int btrfs_fscrypt_get_disk_name(struct extent_buffer *leaf,
- bool btrfs_fscrypt_match_name(struct fscrypt_name *fname,
- 			      struct extent_buffer *leaf,
- 			      unsigned long de_name, u32 de_name_len);
-+int btrfs_fscrypt_load_extent_info(struct btrfs_inode *inode,
-+				   struct btrfs_path *path,
-+				   struct btrfs_key *key,
-+				   struct extent_map *em);
-+void btrfs_fscrypt_save_extent_info(struct btrfs_path *path, u8 *ctx, unsigned long size);
-+ssize_t btrfs_fscrypt_context_for_new_extent(struct btrfs_inode *inode,
-+					     struct fscrypt_extent_info *info,
-+					     u8 *ctx);
+@@ -24,6 +24,13 @@ void btrfs_fscrypt_save_extent_info(struct btrfs_path *path, u8 *ctx, unsigned l
+ ssize_t btrfs_fscrypt_context_for_new_extent(struct btrfs_inode *inode,
+ 					     struct fscrypt_extent_info *info,
+ 					     u8 *ctx);
++void btrfs_set_bio_crypt_ctx_from_extent(struct bio *bio,
++					 struct btrfs_inode *inode,
++					 struct fscrypt_extent_info *fi,
++					 u64 logical_offset);
++bool btrfs_mergeable_encrypted_bio(struct bio *bio, struct inode *inode,
++				   struct fscrypt_extent_info *fi,
++				   u64 logical_offset);
  
  #else
-+static inline void btrfs_fscrypt_save_extent_info(struct btrfs_path *path,
-+						  u8 *ctx, unsigned long size) { }
-+
-+static inline int btrfs_fscrypt_load_extent_info(struct btrfs_inode *inode,
-+						 struct btrfs_path *path,
-+						 struct btrfs_key *key,
-+						 struct extent_map *em)
+ static inline void btrfs_fscrypt_save_extent_info(struct btrfs_path *path,
+@@ -63,6 +70,21 @@ static inline ssize_t btrfs_fscrypt_context_for_new_extent(struct btrfs_inode *i
+ 	return -EINVAL;
+ }
+ 
++static inline void btrfs_set_bio_crypt_ctx_from_extent(struct bio *bio,
++						       struct btrfs_inode *inode,
++						       struct fscrypt_extent_info *fi,
++						       u64 logical_offset)
 +{
-+	return 0;
 +}
 +
- static inline int btrfs_fscrypt_get_disk_name(struct extent_buffer *leaf,
- 					      struct btrfs_dir_item *di,
- 					      struct fscrypt_str *qstr)
-@@ -34,6 +53,16 @@ static inline bool btrfs_fscrypt_match_name(struct fscrypt_name *fname,
- 		return false;
- 	return !memcmp_extent_buffer(leaf, fname->disk_name.name, de_name, de_name_len);
- }
-+
-+static inline ssize_t btrfs_fscrypt_context_for_new_extent(struct btrfs_inode *inode,
-+							   struct fscrypt_extent_info *info,
-+							   u8 *ctx)
++static inline bool btrfs_mergeable_encrypted_bio(struct bio *bio,
++						 struct inode *inode,
++						 struct fscrypt_extent_info *fi,
++						 u64 logical_offset)
 +{
-+	if (!info)
-+		return 0;
-+	return -EINVAL;
++	return true;
 +}
 +
  #endif /* CONFIG_FS_ENCRYPTION */
  
  extern const struct fscrypt_operations btrfs_fscrypt_ops;
-diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
-index f449839d6d84..15191dffa354 100644
---- a/fs/btrfs/inode.c
-+++ b/fs/btrfs/inode.c
-@@ -3036,8 +3036,16 @@ static int insert_reserved_file_extent(struct btrfs_trans_handle *trans,
- 	u64 num_bytes = btrfs_stack_file_extent_num_bytes(stack_fi);
- 	u64 ram_bytes = btrfs_stack_file_extent_ram_bytes(stack_fi);
- 	struct btrfs_drop_extents_args drop_args = { 0 };
-+	u8 fscrypt_ctx[FSCRYPT_SET_CONTEXT_MAX_SIZE];
-+	ssize_t fscrypt_context_size;
- 	int ret;
- 
-+	fscrypt_context_size = btrfs_fscrypt_context_for_new_extent(inode,
-+								    fscrypt_info,
-+								    fscrypt_ctx);
-+	if (fscrypt_context_size < 0)
-+		return (int)fscrypt_context_size;
-+
- 	path = btrfs_alloc_path();
- 	if (!path)
- 		return -ENOMEM;
-@@ -3078,6 +3086,16 @@ static int insert_reserved_file_extent(struct btrfs_trans_handle *trans,
- 
- 	btrfs_release_path(path);
- 
-+	if (fscrypt_context_size) {
-+		ins.objectid = btrfs_ino(inode);
-+		ins.type = BTRFS_FSCRYPT_CTX_KEY;
-+		ins.offset = file_pos;
-+		ret = btrfs_insert_empty_item(trans, root, path, &ins, fscrypt_context_size);
-+		if (ret)
-+			return ret;
-+		btrfs_fscrypt_save_extent_info(path, fscrypt_ctx, fscrypt_context_size);
-+	}
-+
- 	/*
- 	 * If we dropped an inline extent here, we know the range where it is
- 	 * was not marked with the EXTENT_DELALLOC_NEW bit, so we update the
-@@ -7406,6 +7424,12 @@ struct extent_map *btrfs_get_extent(struct btrfs_inode *inode,
- 		goto out;
- 	}
- 
-+	ret = btrfs_fscrypt_load_extent_info(inode, path, &found_key, em);
-+	if (ret > 0)
-+		ret = -EIO;
-+	if (ret < 0)
-+		goto out;
-+
- 	write_lock(&em_tree->lock);
- 	ret = btrfs_add_extent_mapping(inode, &em, start, len);
- 	write_unlock(&em_tree->lock);
-@@ -9219,6 +9243,8 @@ static struct btrfs_trans_handle *insert_prealloc_file_extent(
- 				       u64 file_offset)
- {
- 	struct btrfs_file_extent_item stack_fi;
-+	u8 fscrypt_ctx[FSCRYPT_SET_CONTEXT_MAX_SIZE];
-+	ssize_t fscrypt_context_size;
- 	struct btrfs_replace_extent_info extent_info;
- 	struct btrfs_trans_handle *trans = trans_in;
- 	struct btrfs_path *path;
-@@ -9252,6 +9278,14 @@ static struct btrfs_trans_handle *insert_prealloc_file_extent(
- 		return trans;
- 	}
- 
-+	fscrypt_context_size = btrfs_fscrypt_context_for_new_extent(inode,
-+								    fscrypt_info,
-+								    fscrypt_ctx);
-+	if (fscrypt_context_size < 0) {
-+		ret = (int)fscrypt_context_size;
-+		goto free_qgroup;
-+	}
-+
- 	extent_info.disk_offset = start;
- 	extent_info.disk_len = len;
- 	extent_info.data_offset = 0;
-@@ -9262,6 +9296,8 @@ static struct btrfs_trans_handle *insert_prealloc_file_extent(
- 	extent_info.update_times = true;
- 	extent_info.qgroup_reserved = qgroup_released;
- 	extent_info.insertions = 0;
-+	extent_info.fscrypt_ctx = fscrypt_ctx;
-+	extent_info.fscrypt_context_size = fscrypt_context_size;
- 
- 	path = btrfs_alloc_path();
- 	if (!path) {
-diff --git a/fs/btrfs/reflink.c b/fs/btrfs/reflink.c
-index 314cb95ba846..8e8d2f3c4c0a 100644
---- a/fs/btrfs/reflink.c
-+++ b/fs/btrfs/reflink.c
-@@ -376,7 +376,7 @@ static int btrfs_clone(struct inode *src, struct inode *inode,
- 		struct btrfs_key new_key;
- 		u64 disko = 0, diskl = 0;
- 		u64 datao = 0, datal = 0;
--		u8 comp;
-+		u8 comp, encryption;
- 		u64 drop_start;
- 
- 		/* Note the key will change type as we walk through the tree */
-@@ -419,6 +419,7 @@ static int btrfs_clone(struct inode *src, struct inode *inode,
- 		extent = btrfs_item_ptr(leaf, slot,
- 					struct btrfs_file_extent_item);
- 		extent_gen = btrfs_file_extent_generation(leaf, extent);
-+		encryption = btrfs_file_extent_encryption(leaf, extent);
- 		comp = btrfs_file_extent_compression(leaf, extent);
- 		type = btrfs_file_extent_type(leaf, extent);
- 		if (type == BTRFS_FILE_EXTENT_REG ||
-@@ -478,6 +479,7 @@ static int btrfs_clone(struct inode *src, struct inode *inode,
- 		if (type == BTRFS_FILE_EXTENT_REG ||
- 		    type == BTRFS_FILE_EXTENT_PREALLOC) {
- 			struct btrfs_replace_extent_info clone_info;
-+			u8 fscrypt_ctx[FSCRYPT_SET_CONTEXT_MAX_SIZE];
- 
- 			/*
- 			 *    a  | --- range to clone ---|  b
-@@ -494,6 +496,43 @@ static int btrfs_clone(struct inode *src, struct inode *inode,
- 				datal -= off - key.offset;
- 			}
- 
-+			if (encryption == BTRFS_ENCRYPTION_FSCRYPT) {
-+				unsigned long offset;
-+
-+				key.type = BTRFS_FSCRYPT_CTX_KEY;
-+				ret = btrfs_search_slot(NULL, BTRFS_I(src)->root, &key, path, 0, 0);
-+				if (ret < 0)
-+					goto out;
-+				leaf = path->nodes[0];
-+				slot = path->slots[0];
-+				if (ret) {
-+					btrfs_err(leaf->fs_info,
-+	"missing or error searching encryption context item in leaf: root=%llu block=%llu slot=%d ino=%llu file_offset=%llu, err %i",
-+						btrfs_header_owner(leaf),
-+						btrfs_header_bytenr(leaf), slot,
-+						key.objectid, key.offset, ret);
-+					goto out;
-+				}
-+
-+				size = btrfs_item_size(leaf, slot);
-+				if (size > FSCRYPT_SET_CONTEXT_MAX_SIZE) {
-+					btrfs_err(leaf->fs_info,
-+	"unexpected or corrupted encryption context size in leaf: root=%llu block=%llu slot=%d ino=%llu file_offset=%llu, size %u (too big)",
-+						btrfs_header_owner(leaf),
-+						btrfs_header_bytenr(leaf), slot,
-+						key.objectid, key.offset, size);
-+					ret = -EIO;
-+					goto out;
-+				}
-+
-+				offset = btrfs_item_ptr_offset(leaf, slot),
-+				read_extent_buffer(leaf, fscrypt_ctx, offset, size);
-+				btrfs_release_path(path);
-+				key.type = BTRFS_EXTENT_DATA_KEY;
-+			} else {
-+				size = 0;
-+			}
-+
- 			clone_info.disk_offset = disko;
- 			clone_info.disk_len = diskl;
- 			clone_info.data_offset = datao;
-@@ -502,6 +541,8 @@ static int btrfs_clone(struct inode *src, struct inode *inode,
- 			clone_info.extent_buf = buf;
- 			clone_info.is_new_extent = false;
- 			clone_info.update_times = !no_time_update;
-+			clone_info.fscrypt_ctx = fscrypt_ctx;
-+			clone_info.fscrypt_context_size = size;
- 			ret = btrfs_replace_file_extents(BTRFS_I(inode), path,
- 					drop_start, new_key.offset + datal - 1,
- 					&clone_info, &trans);
-diff --git a/fs/btrfs/tree-log.c b/fs/btrfs/tree-log.c
-index 43b1470ebf71..0d01e31a4592 100644
---- a/fs/btrfs/tree-log.c
-+++ b/fs/btrfs/tree-log.c
-@@ -30,6 +30,7 @@
- #include "print-tree.h"
- #include "tree-checker.h"
- #include "delayed-inode.h"
-+#include "fscrypt.h"
- 
- #define MAX_CONFLICT_INODES 10
- 
-@@ -5118,6 +5119,8 @@ static int log_one_extent(struct btrfs_trans_handle *trans,
- 	struct btrfs_file_extent_item fi = { 0 };
- 	struct extent_buffer *leaf;
- 	struct btrfs_key key;
-+	u8 fscrypt_ctx[FSCRYPT_SET_CONTEXT_MAX_SIZE];
-+	ssize_t fscrypt_context_size;
- 	enum btrfs_compression_type compress_type;
- 	u64 extent_offset = em->offset;
- 	u64 block_start = btrfs_extent_map_block_start(em);
-@@ -5125,6 +5128,12 @@ static int log_one_extent(struct btrfs_trans_handle *trans,
- 	int ret;
- 	u8 encryption = btrfs_extent_map_encryption(em);
- 
-+	fscrypt_context_size = btrfs_fscrypt_context_for_new_extent(inode,
-+								    em->fscrypt_info,
-+								    fscrypt_ctx);
-+	if (fscrypt_context_size < 0)
-+		return (int)fscrypt_context_size;
-+
- 	btrfs_set_stack_file_extent_generation(&fi, trans->transid);
- 	if (em->flags & EXTENT_FLAG_PREALLOC)
- 		btrfs_set_stack_file_extent_type(&fi, BTRFS_FILE_EXTENT_PREALLOC);
-@@ -5188,6 +5197,16 @@ static int log_one_extent(struct btrfs_trans_handle *trans,
- 
- 	btrfs_release_path(path);
- 
-+	if (fscrypt_context_size) {
-+		key.objectid = btrfs_ino(inode);
-+		key.type = BTRFS_FSCRYPT_CTX_KEY;
-+		key.offset = em->start;
-+		ret = btrfs_insert_empty_item(trans, log, path, &key, fscrypt_context_size);
-+		if (ret)
-+			return ret;
-+		btrfs_fscrypt_save_extent_info(path, fscrypt_ctx, fscrypt_context_size);
-+	}
-+
- 	return ret;
- }
- 
 -- 
 2.51.0
 
