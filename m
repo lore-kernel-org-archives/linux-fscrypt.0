@@ -1,58 +1,37 @@
-Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 7E9F544BC87
-	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:25 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 2403C44BC9F
+	for <linux-fscrypt@vger.kernel.org>; Fri,  6 Feb 2026 18:25:30 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1770402325; cv=none; b=GexJdS9D8LUff12UiTxmYZxafGJmUiYqg2tl+6wyzBUZ8FIZeLYWEvm0fZw/8afUGGHhjPxMNMmDw7MStuC/ndYv+a+NuC8Ij7T+TCn9O6gXcWURE6ASrwkQpYK+sYu9VN/W21/y6ATKMot15a3FIXmmXhvB6Zo5iBO31W31TGc=
+	t=1770402330; cv=none; b=N3yw6Y8IGkSPY3oYcdq/4NUuRZcw3q+JcngjVT4qk/TXJPMpfh98KfSZBn8spf+qkNFSJtuIYkuyHLrZq4Es8qW3pW58yVSbJn+LrvOINcuXDcG3cEUEAiyhiorqelJ146lnRuDaHsua7B30iEugP3O7Di6GxynsMF4TJcbgteI=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1770402325; c=relaxed/simple;
-	bh=GfnO68KXoBeEnqOHN5arOyt9p0B9ZFFw2XWnNOvoB4o=;
+	s=arc-20240116; t=1770402330; c=relaxed/simple;
+	bh=Tfn+Z9xauLtsg6WSNT0FytGznv6AKi3dk0uKZsElWiM=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=DzBpV/voBeNLlG3+x4bbqhGcLnN3iw4j/IElXnb9fwfo3vzAom60iYWygRb/Ja4P68SbxN7zfh5ZzUNcRMDosOC16uhLvrgBCoi31r4Axow8BH+T0LOr5FmB0qjZIi/HTxvTKZnhzufP4mJ3DncOtJCtZpJbtnpAZKFdvFoJhaA=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=ZKtaFJlK; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=ZKtaFJlK; arc=none smtp.client-ip=195.135.223.131
+	 MIME-Version; b=fS1Z1DhGf3tpgHUmfMo0TlI3LXDU+UZkSJuKVj1fRmdkTrqDxj10b1fGz1SDHkue6bRaBaX/gSA9hsG4AgtFQLutwby70+mupAcOzYRUj90yUxl/U9qMMWogLNDuMh+RCnbL5DTxt5guEWeybuZEkMcCqer7s5IdzB4VAUBgfdQ=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="ZKtaFJlK";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="ZKtaFJlK"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id BCF995BD35;
-	Fri,  6 Feb 2026 18:24:20 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1770402260; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=sbKbFDBvAoHVV+zcvNVZ9N7jQeEHQ8nUuWj4G99Gpu0=;
-	b=ZKtaFJlKLO4EkBCD9rOxrt3wRA/eB6Va5Y04z9GKP2c1HIs0s7R2RltIyO5sKyCH2X+rcq
-	i+OmSfDOUess3SWpjYnq2Gs4zxWhqjAwgTz3NWfX6qx6VoCVpYTL6/9CtVdoqZCM4nHim/
-	sDauKpUpaqCiUu0grk0La6pHWEyEhWw=
-Authentication-Results: smtp-out2.suse.de;
+	by smtp-out1.suse.de (Postfix) with ESMTPS id 7B99D3E75F;
+	Fri,  6 Feb 2026 18:24:17 +0000 (UTC)
+Authentication-Results: smtp-out1.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1770402260; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=sbKbFDBvAoHVV+zcvNVZ9N7jQeEHQ8nUuWj4G99Gpu0=;
-	b=ZKtaFJlKLO4EkBCD9rOxrt3wRA/eB6Va5Y04z9GKP2c1HIs0s7R2RltIyO5sKyCH2X+rcq
-	i+OmSfDOUess3SWpjYnq2Gs4zxWhqjAwgTz3NWfX6qx6VoCVpYTL6/9CtVdoqZCM4nHim/
-	sDauKpUpaqCiUu0grk0La6pHWEyEhWw=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 8FD033EA63;
-	Fri,  6 Feb 2026 18:24:20 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 505653EA63;
+	Fri,  6 Feb 2026 18:24:17 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id eMOcItQxhmkTCQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:20 +0000
+	id IFK3EtExhmkTCQAAD6G6ig
+	(envelope-from <neelx@suse.com>); Fri, 06 Feb 2026 18:24:17 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -65,11 +44,10 @@ Cc: linux-block@vger.kernel.org,
 	Daniel Vacek <neelx@suse.com>,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	Boris Burkov <boris@bur.io>
-Subject: [PATCH v6 43/43] btrfs: disable send if we have encryption enabled
-Date: Fri,  6 Feb 2026 19:23:15 +0100
-Message-ID: <20260206182336.1397715-44-neelx@suse.com>
+	linux-kernel@vger.kernel.org
+Subject: [PATCH v6 36/43] btrfs: deal with encrypted symlinks in send
+Date: Fri,  6 Feb 2026 19:23:08 +0100
+Message-ID: <20260206182336.1397715-37-neelx@suse.com>
 X-Mailer: git-send-email 2.51.0
 In-Reply-To: <20260206182336.1397715-1-neelx@suse.com>
 References: <20260206182336.1397715-1-neelx@suse.com>
@@ -80,67 +58,100 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Spam-Score: -6.80
-X-Spamd-Result: default: False [-6.80 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	MID_CONTAINS_FROM(1.00)[];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	RCVD_COUNT_TWO(0.00)[2];
-	FROM_HAS_DN(0.00)[];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	TO_DN_SOME(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	RCPT_COUNT_TWELVE(0.00)[13];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[toxicpanda.com:email,suse.com:mid,suse.com:email];
-	RCVD_TLS_ALL(0.00)[]
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spam-Score: -4.00
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Action: no action
+X-Rspamd-Queue-Id: 7B99D3E75F
+X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
 X-Spam-Level: 
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
 X-Spam-Flag: NO
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-send needs to track the dir item values to see if files were renamed
-when doing an incremental send.  There is code to decrypt the names, but
-this breaks the code that checks to see if something was overwritten.
-Until this gap is closed we need to disable send on encrypted file
-systems.  Fixing this is straightforward, but a medium sized project.
+Send needs to send the decrypted value of the symlinks, handle the case
+where the inode is encrypted and decrypt the symlink name into a buffer
+and copy this buffer into our fs_path struct.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
-Reviewed-by: Boris Burkov <boris@bur.io>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/62ce86b38e2575c542eed7fbe8d986e68496b1d7.1706116485.git.josef@toxicpanda.com/
- * No changes since.
+v5: https://lore.kernel.org/linux-btrfs/4d97f35d6f85ff041b09bed33b63446a92b7a20c.1706116485.git.josef@toxicpanda.com/
+ * read_symlink_encrypted() reworked from using pages to using folios.
 ---
- fs/btrfs/send.c | 6 ++++++
- 1 file changed, 6 insertions(+)
+ fs/btrfs/send.c | 45 ++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 42 insertions(+), 3 deletions(-)
 
 diff --git a/fs/btrfs/send.c b/fs/btrfs/send.c
-index bf9a99a9d24d..a3aa95ce4f87 100644
+index 3dcfdba018b5..b77f96ae2fea 100644
 --- a/fs/btrfs/send.c
 +++ b/fs/btrfs/send.c
-@@ -8095,6 +8095,12 @@ long btrfs_ioctl_send(struct btrfs_root *send_root, const struct btrfs_ioctl_sen
- 	if (!capable(CAP_SYS_ADMIN))
- 		return -EPERM;
+@@ -1701,9 +1701,7 @@ static int find_extent_clone(struct send_ctx *sctx,
+ 	return ret;
+ }
  
-+	if (btrfs_fs_incompat(fs_info, ENCRYPT)) {
-+		btrfs_err(fs_info,
-+		  "send with encryption enabled isn't currently suported");
-+		return -EINVAL;
+-static int read_symlink(struct btrfs_root *root,
+-			u64 ino,
+-			struct fs_path *dest)
++static int read_symlink_unencrypted(struct btrfs_root *root, u64 ino, struct fs_path *dest)
+ {
+ 	int ret;
+ 	BTRFS_PATH_AUTO_FREE(path);
+@@ -1764,6 +1762,47 @@ static int read_symlink(struct btrfs_root *root,
+ 	return fs_path_add_from_extent_buffer(dest, path->nodes[0], off, len);
+ }
+ 
++static int read_symlink_encrypted(struct btrfs_root *root, u64 ino, struct fs_path *dest)
++{
++	DEFINE_DELAYED_CALL(done);
++	const char *buf;
++	struct folio *folio;
++	struct btrfs_inode *inode;
++	int ret = 0;
++
++	inode = btrfs_iget(ino, root);
++	if (IS_ERR(inode))
++		return PTR_ERR(inode);
++
++	folio = read_mapping_folio(inode->vfs_inode.i_mapping, 0, NULL);
++	if (IS_ERR(folio)) {
++		iput(&inode->vfs_inode);
++		return PTR_ERR(folio);
 +	}
 +
- 	/*
- 	 * The subvolume must remain read-only during send, protect against
- 	 * making it RW. This also protects against deletion.
++	buf = fscrypt_get_symlink(&inode->vfs_inode, folio_address(folio),
++				  BTRFS_MAX_INLINE_DATA_SIZE(root->fs_info),
++				  &done);
++	folio_put(folio);
++	iput(&inode->vfs_inode);
++
++	if (IS_ERR(buf))
++		return PTR_ERR(buf);
++
++	ret = fs_path_add(dest, buf, strlen(buf));
++	do_delayed_call(&done);
++	return ret;
++}
++
++
++static int read_symlink(struct btrfs_root *root, u64 ino,
++			struct fs_path *dest)
++{
++	if (btrfs_fs_incompat(root->fs_info, ENCRYPT))
++		return read_symlink_encrypted(root, ino, dest);
++	return read_symlink_unencrypted(root, ino, dest);
++}
++
+ /*
+  * Helper function to generate a file name that is unique in the root of
+  * send_root and parent_root. This is used to generate names for orphan inodes.
 -- 
 2.51.0
 
