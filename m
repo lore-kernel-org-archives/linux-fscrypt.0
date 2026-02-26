@@ -1,35 +1,35 @@
 Received: from bombadil.infradead.org (bombadil.infradead.org [198.137.202.133])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D85BC37B407;
-	Thu, 26 Feb 2026 14:50:02 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3D8503D4111;
+	Thu, 26 Feb 2026 14:50:04 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=198.137.202.133
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1772117406; cv=none; b=hI9wF8bjzAI8/Fg83i6sQcK+NiNyTSEgybIsScZf9azZ9J4g4IKF4c01XUIqHPqhcRSsk6jfwdwHDW4BremXGM7xJpCSApetbrxt+79lCjfwoMHl1V+P+wu+unJjdO3pv6DCVqGtkPP+cthTCGr8IxBP4Ng5liLB9mhywKDs5SM=
+	t=1772117406; cv=none; b=Tbt60nnMqpu6l8DE0Piv6YIiUXDSTIWNn/8E+mK4SurCN58eiHqRIjbMJsHPMw3VDxzlrItflQHWdr54XD1GmSX+VY3POZ+4nrLt3cdy7lac2iIfE5JMDKljhHppNvUHURVbP4DF0LcOLGw4IlJvY9OkRFuzI97YzSmQ1cXfYeQ=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
 	s=arc-20240116; t=1772117406; c=relaxed/simple;
-	bh=+wHiVyfSOQVJKi++Q69ibDVdlloP+2QKxdOPc8jjpuA=;
+	bh=teNEmMAjMk/HnC/LaUlWzrUXQZtdIm1rm0+xNXEeBlI=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=dF7gzXN8Fan0eqgK0hCHUdnxlzLErFNGMDYfHdQ4Ty43x6dlOTbJAq6olmaVBfNTo2hhEA71LSb2vfu9x0jYsJN6PzDOROZO7O83g4b5DVNGLDk1sA2zH0ET4eHHjx/bTGlt06BnCsJbG3bi5fbOldUklX04xe8FjglDI4O7ePY=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de; spf=none smtp.mailfrom=bombadil.srs.infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=JP1VyVt3; arc=none smtp.client-ip=198.137.202.133
+	 MIME-Version; b=RVjK7c3516/96kxwGJWfYCkqFjPUi4Dt3kyJizIt9qqg+2jMoBZ5PTeEY59x9wBa3Y5IFnjn2/bXRAJJ49EPxvPD6vUc7ihuvPWjbNmh6SkPa/sL+nddRxrCyB92nAlnvEQgRmssJktHCy2USLHrS5On73+zFPhGVs+t0ecXNFc=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de; spf=none smtp.mailfrom=bombadil.srs.infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=LGCVb2mw; arc=none smtp.client-ip=198.137.202.133
 Authentication-Results: smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de
 Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=bombadil.srs.infradead.org
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="JP1VyVt3"
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="LGCVb2mw"
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
 	d=infradead.org; s=bombadil.20210309; h=Content-Transfer-Encoding:
 	MIME-Version:References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:Sender
 	:Reply-To:Content-Type:Content-ID:Content-Description;
-	bh=9T8HNQ5u5iYA6DgMe/kaeMoku+2OmLLlwAsb6+NA9LM=; b=JP1VyVt3zwEEQbAowV64xybWA3
-	OgUVIFMKZzw6LY26jZrodv4pBs2w4X6qFDcBLhiFWXue+S0WEVep7B+e/SUEiDqpCoNsHqHXmhvG9
-	T5lavSkohaBVNsJqoe29FBNxUp1yXJ2G5Pi7ch4qdt6+Qa8uawg0kDnbmPtawAPdQHvRkjhvGvO0d
-	sS/v0YYh+lyagDjmMQWLyrCtH9xEIGKfR2kFDMZMJdmTNENb7OMUqc2m42UeO4dtVR6iwK9yK2awV
-	VBnfqB8K1zuLVx1d1yeADn2u9RQhoK4K94jxGZD6fi1oD+39ogV8buk/egyR2EFkKndSh0H3zvBMm
-	0apa/NEw==;
+	bh=SiNWzpJZ1Wfv02Erml8bTB6xkGMGQzWqEZOwAf2CgLQ=; b=LGCVb2mwZ+4Q98nJp4KxIoJkUW
+	1BgfxKsdGZg6e9CEoAzOe4jGYlwQNo5NfaCM/qiMjUK/bahtR65oIzyvjnaE/SR2uRxaEoj1mw1c3
+	++Vzf1pFBh7n5LAMvDlEM5XpN+iXZhixyo2KPCzaquRZ3o4A3timCEP3xzi5P45xjVSWAv+nMtt1j
+	epf7D917rrx6diXpWQAnfKeieA5Vh18s8Riso6T2kSDTqFWGPrEEVizaXH8R4T/Y7NFsfszVzAkat
+	lyJHkzGpqgQ8iik0rZQCfSi2pZX1eC0cAScIFcP2Vg2I/T0wMEZF+zGyRm/ZkoivkR12ZUHwfHkwO
+	vWqqvZkg==;
 Received: from [4.28.11.157] (helo=localhost)
 	by bombadil.infradead.org with esmtpsa (Exim 4.98.2 #2 (Red Hat Linux))
-	id 1vvcge-00000006Nad-1NUx;
-	Thu, 26 Feb 2026 14:49:56 +0000
+	id 1vvcgg-00000006NcH-1qqF;
+	Thu, 26 Feb 2026 14:49:58 +0000
 From: Christoph Hellwig <hch@lst.de>
 To: Eric Biggers <ebiggers@kernel.org>
 Cc: "Theodore Y. Ts'o" <tytso@mit.edu>,
@@ -42,9 +42,9 @@ Cc: "Theodore Y. Ts'o" <tytso@mit.edu>,
 	linux-ext4@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
 	linux-fsdevel@vger.kernel.org
-Subject: [PATCH 04/14] ext4, fscrypt: merge fscrypt_mergeable_bio_bh into io_submit_need_new_bio
-Date: Thu, 26 Feb 2026 06:49:24 -0800
-Message-ID: <20260226144954.142278-5-hch@lst.de>
+Subject: [PATCH 12/14] fscrypt: pass a byte length to fscrypt_zeroout_range
+Date: Thu, 26 Feb 2026 06:49:32 -0800
+Message-ID: <20260226144954.142278-13-hch@lst.de>
 X-Mailer: git-send-email 2.47.3
 In-Reply-To: <20260226144954.142278-1-hch@lst.de>
 References: <20260226144954.142278-1-hch@lst.de>
@@ -57,108 +57,117 @@ MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
 
-ext4 already has the inode and folio and can't have a NULL
-folio->mapping in this path. Open code fscrypt_mergeable_bio_bh in
-io_submit_need_new_bio based on these simplifying assumptions.
+Range lengths are usually expressed as bytes in the VFS, switch
+fscrypt_zeroout_range to this convention.
 
 Signed-off-by: Christoph Hellwig <hch@lst.de>
 ---
- fs/crypto/inline_crypt.c | 23 -----------------------
- fs/ext4/page-io.c        |  8 ++++++--
- include/linux/fscrypt.h  |  9 ---------
- 3 files changed, 6 insertions(+), 34 deletions(-)
+ fs/crypto/bio.c         | 10 +++++-----
+ fs/ext4/inode.c         |  3 ++-
+ fs/f2fs/file.c          |  2 +-
+ include/linux/fscrypt.h |  6 +++---
+ 4 files changed, 11 insertions(+), 10 deletions(-)
 
-diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index c0852b920dbc..0da53956a9b1 100644
---- a/fs/crypto/inline_crypt.c
-+++ b/fs/crypto/inline_crypt.c
-@@ -406,29 +406,6 @@ bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
- }
- EXPORT_SYMBOL_GPL(fscrypt_mergeable_bio);
+diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+index a4f4ee86c573..7d57ffb1e8c6 100644
+--- a/fs/crypto/bio.c
++++ b/fs/crypto/bio.c
+@@ -71,7 +71,7 @@ static void fscrypt_zeroout_range_end_io(struct bio *bio)
  
--/**
-- * fscrypt_mergeable_bio_bh() - test whether data can be added to a bio
-- * @bio: the bio being built up
-- * @next_bh: the next buffer_head for which I/O will be submitted
-- *
-- * Same as fscrypt_mergeable_bio(), except this takes a buffer_head instead of
-- * an inode and block number directly.
-- *
-- * Return: true iff the I/O is mergeable
-- */
--bool fscrypt_mergeable_bio_bh(struct bio *bio,
--			      const struct buffer_head *next_bh)
--{
--	const struct inode *inode;
--	u64 next_lblk;
--
--	if (!bh_get_inode_and_lblk_num(next_bh, &inode, &next_lblk))
--		return !bio->bi_crypt_context;
--
--	return fscrypt_mergeable_bio(bio, inode, next_lblk);
--}
--EXPORT_SYMBOL_GPL(fscrypt_mergeable_bio_bh);
--
- /**
-  * fscrypt_dio_supported() - check whether DIO (direct I/O) is supported on an
-  *			     inode, as far as encryption is concerned
-diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-index 88226979c503..3db3c19a29e5 100644
---- a/fs/ext4/page-io.c
-+++ b/fs/ext4/page-io.c
-@@ -441,11 +441,15 @@ static void io_submit_init_bio(struct ext4_io_submit *io,
- }
+ static int fscrypt_zeroout_range_inline_crypt(const struct inode *inode,
+ 					      loff_t pos, sector_t sector,
+-					      unsigned int len)
++					      u64 len)
+ {
+ 	struct fscrypt_zero_done done = {
+ 		.pending	= ATOMIC_INIT(1),
+@@ -115,7 +115,7 @@ static int fscrypt_zeroout_range_inline_crypt(const struct inode *inode,
+  * @inode: the file's inode
+  * @pos: the first file position (in bytes) to zero out
+  * @pblk: the first filesystem physical block to zero out
+- * @len: number of blocks to zero out
++ * @len: bytes to zero out
+  *
+  * Zero out filesystem blocks in an encrypted regular file on-disk, i.e. write
+  * ciphertext blocks which decrypt to the all-zeroes block.  The blocks must be
+@@ -128,7 +128,7 @@ static int fscrypt_zeroout_range_inline_crypt(const struct inode *inode,
+  * Return: 0 on success; -errno on failure.
+  */
+ int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
+-			  sector_t pblk, unsigned int len)
++			  sector_t pblk, u64 len)
+ {
+ 	const struct fscrypt_inode_info *ci = fscrypt_get_inode_info_raw(inode);
+ 	const unsigned int du_bits = ci->ci_data_unit_bits;
+@@ -136,7 +136,7 @@ int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
+ 	const unsigned int du_per_page_bits = PAGE_SHIFT - du_bits;
+ 	const unsigned int du_per_page = 1U << du_per_page_bits;
+ 	u64 du_index = pos >> du_bits;
+-	u64 du_remaining = (u64)len << (inode->i_blkbits - du_bits);
++	u64 du_remaining = len >> du_bits;
+ 	sector_t sector = pblk << (inode->i_blkbits - SECTOR_SHIFT);
+ 	struct page *pages[16]; /* write up to 16 pages at a time */
+ 	unsigned int nr_pages;
+@@ -150,7 +150,7 @@ int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
  
- static bool io_submit_need_new_bio(struct ext4_io_submit *io,
-+				   struct inode *inode,
-+				   struct folio *io_folio,
- 				   struct buffer_head *bh)
- {
- 	if (bh->b_blocknr != io->io_next_block)
- 		return true;
--	if (!fscrypt_mergeable_bio_bh(io->io_bio, bh))
-+	if (!fscrypt_mergeable_bio(io->io_bio, inode,
-+			(folio_pos(io_folio) + bh_offset(bh)) >>
-+			 inode->i_blkbits))
- 		return true;
- 	return false;
- }
-@@ -456,7 +460,7 @@ static void io_submit_add_bh(struct ext4_io_submit *io,
- 			     struct folio *io_folio,
- 			     struct buffer_head *bh)
- {
--	if (io->io_bio && io_submit_need_new_bio(io, bh)) {
-+	if (io->io_bio && io_submit_need_new_bio(io, inode, io_folio, bh)) {
- submit_and_retry:
- 		ext4_io_submit(io);
- 	}
+ 	if (fscrypt_inode_uses_inline_crypto(inode))
+ 		return fscrypt_zeroout_range_inline_crypt(inode, pos, sector,
+-				len << inode->i_blkbits);
++				len);
+ 
+ 	BUILD_BUG_ON(ARRAY_SIZE(pages) > BIO_MAX_VECS);
+ 	nr_pages = min_t(u64, ARRAY_SIZE(pages),
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 945613c95ffa..675ef741cb30 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -406,7 +406,8 @@ int ext4_issue_zeroout(struct inode *inode, ext4_lblk_t lblk, ext4_fsblk_t pblk,
+ 
+ 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
+ 		return fscrypt_zeroout_range(inode,
+-				(loff_t)lblk << inode->i_blkbits, pblk, len);
++				(loff_t)lblk << inode->i_blkbits, pblk,
++				len << inode->i_blkbits);
+ 
+ 	ret = sb_issue_zeroout(inode->i_sb, pblk, len, GFP_NOFS);
+ 	if (ret > 0)
+diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+index 239c2666ceb5..5b7013f7f6a1 100644
+--- a/fs/f2fs/file.c
++++ b/fs/f2fs/file.c
+@@ -4164,7 +4164,7 @@ static int f2fs_secure_erase(struct block_device *bdev, struct inode *inode,
+ 		if (IS_ENCRYPTED(inode))
+ 			ret = fscrypt_zeroout_range(inode,
+ 					(loff_t)off << inode->i_blkbits, block,
+-					len);
++					len << inode->i_blkbits);
+ 		else
+ 			ret = blkdev_issue_zeroout(bdev, sector, nr_sects,
+ 					GFP_NOFS, 0);
 diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 516aba5b858b..6af3c1907adc 100644
+index 9fc15e1fbe57..90ac62fda926 100644
 --- a/include/linux/fscrypt.h
 +++ b/include/linux/fscrypt.h
-@@ -876,9 +876,6 @@ void fscrypt_set_bio_crypt_ctx_bh(struct bio *bio,
- bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
- 			   u64 next_lblk);
+@@ -450,8 +450,8 @@ u64 fscrypt_fname_siphash(const struct inode *dir, const struct qstr *name);
  
--bool fscrypt_mergeable_bio_bh(struct bio *bio,
--			      const struct buffer_head *next_bh);
--
- bool fscrypt_dio_supported(struct inode *inode);
+ /* bio.c */
+ bool fscrypt_decrypt_bio(struct bio *bio);
+-int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
+-			  sector_t pblk, unsigned int len);
++int fscrypt_zeroout_range(const struct inode *inode, loff_t pos, sector_t pblk,
++			  u64 len);
  
- u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks);
-@@ -906,12 +903,6 @@ static inline bool fscrypt_mergeable_bio(struct bio *bio,
- 	return true;
+ /* hooks.c */
+ int fscrypt_file_open(struct inode *inode, struct file *filp);
+@@ -756,7 +756,7 @@ static inline bool fscrypt_decrypt_bio(struct bio *bio)
  }
  
--static inline bool fscrypt_mergeable_bio_bh(struct bio *bio,
--					    const struct buffer_head *next_bh)
--{
--	return true;
--}
--
- static inline bool fscrypt_dio_supported(struct inode *inode)
+ static inline int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
+-					sector_t pblk, unsigned int len)
++					sector_t pblk, u64 len)
  {
- 	return !fscrypt_needs_contents_encryption(inode);
+ 	return -EOPNOTSUPP;
+ }
 -- 
 2.47.3
 
