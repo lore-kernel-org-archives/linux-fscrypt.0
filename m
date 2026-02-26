@@ -1,35 +1,35 @@
 Received: from bombadil.infradead.org (bombadil.infradead.org [198.137.202.133])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 537A13AEF29;
-	Thu, 26 Feb 2026 14:50:03 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D84E036CDE7;
+	Thu, 26 Feb 2026 14:50:02 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=198.137.202.133
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1772117405; cv=none; b=Lc0C9qLbE8Qlk9U1aQlahuEYTOrnKFFc0An7mXZcXeE19Gi+JSHbpXngXGsOgks1PJ/FW54bHrpDyQPzRmrPaoMessv1lHtoCRdlJmh3kcNMmlPNCmE6LgqrRB6qiuGKYTQQAnUVD1okpTLeiHqKKSn/JEiE66gDhyBMalsF0sk=
+	t=1772117405; cv=none; b=rTo5Ka81BEr2NjOVLdNZ779e4n3UMWZVZKjTnjN2bYLgTCzUQlngVDprcW3QjX9ZCS83ZN3i7zwUDoXJdOTZ0qy0D4vMHnFQ4MNWMcQv6I9iKi9/Gwc6ytTspEwkm04WxaWexvun9hDnNMbZPehawP6+huBUNuG27eukrzQp/iU=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
 	s=arc-20240116; t=1772117405; c=relaxed/simple;
-	bh=xrZ56GwN0DxtCOcCCQXmr+B+xIIiunz1BcHYsiIyL+o=;
+	bh=gxj7df4pLdAg3ug5PfRTsMw5sDhm6O8+97nt564Zj74=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=AHTQM4+naYeiKRp7a9eaq5uESJaieeppa+sIGSurJtobKGB3Un3on3aLpQSmDQgMQFRGDZVF+wVBBqPgPSVICQmUBuNR5nLtdO8ePGSs0Y9zp3xAzDkLVSvU0b5HKpx2Gr1XijccKDLX4Hw5+HumWMr1CsZuF7PUrz6FPT/Sl3c=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de; spf=none smtp.mailfrom=bombadil.srs.infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=jDdcwxsD; arc=none smtp.client-ip=198.137.202.133
+	 MIME-Version; b=iXJ5gm3S4/XMmF7/hOuHjLW8iJSeMMalWw29UHPxQHCFke3bL/CsYjW0Zs60i2Fb9ENoR3YAxybJg4zbFWSLL3NPFGFbFxrwWkKRgI46NxJtVycvVxHO0aHvnzDG5pkI4yTzNuJ01ZUSDMxqsMW7jpefkUi9NbwowQHFLX2XUng=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de; spf=none smtp.mailfrom=bombadil.srs.infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=XfcK+cvI; arc=none smtp.client-ip=198.137.202.133
 Authentication-Results: smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de
 Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=bombadil.srs.infradead.org
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="jDdcwxsD"
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="XfcK+cvI"
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
 	d=infradead.org; s=bombadil.20210309; h=Content-Transfer-Encoding:
 	MIME-Version:References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:Sender
 	:Reply-To:Content-Type:Content-ID:Content-Description;
-	bh=prullTp9LHQrqh8Xt6O1yFS0g5pZcBygbWXiKMvvhew=; b=jDdcwxsDnRBxmI58i9QfsXcGMX
-	fa3h4t5/BKNG+M8VGQ8Ir0uruXkUUMxCEAOUjQGt330hcivLliF8STs9c7tEWFqOn71enK46Vt2cm
-	8h5SpoM1/88SWDju4QsYp/BHyR9nyQ0XVX4IrhAbf/Dle9tI+kRW1nRINDyZJ6UM8Zd8/9+9ucW2p
-	+mpcZFF0n+LNryoFtkX0G5DaBWVykdj0PDHGH3enekzRmGo0XcKfCLSyOYXe3xvoeSQQYum8LbJWu
-	oUOFVJWyTvqAHkjMwHTJROyQICuqzeja8jAomJkrOlHIsWU1ERgy+hMaZe0a+p8wT0G1XucNWXNQA
-	hJCxXE9g==;
+	bh=NoVQIsbZaWVeMYaoymE6GlqeIrC54yXJhWsgztpQSEs=; b=XfcK+cvIRGZFkN/js6p1Y/xEr2
+	fOzNyiA2gHBOc2SaRrSWq29L2oNzy0QiorrkW1Uwltw1ygP+aeqMzJteDZOvBxwU6l+Cri5gVL6PH
+	lSBwhEPyR1xP4DAzC0Hu0C+ef43G9d/YTfMl/jqQirI6bD6SuJ2a1EFWaGdby/esytx1nbNhjxn4+
+	A5MnzdhJLgy5Qj+p2JnrTRQDguN43GnqxikRjq2a06s9XufBynaiakBI2UhMzC4bjbwuSNm7pYzAb
+	reTD782uj28ZnbJYgPnjb83KyUlz8j5wiWE6xLQumch6rGpmCm7VyxoJhWPhhaLtWr9iO3EVgVDty
+	5gwipjxg==;
 Received: from [4.28.11.157] (helo=localhost)
 	by bombadil.infradead.org with esmtpsa (Exim 4.98.2 #2 (Red Hat Linux))
-	id 1vvcgf-00000006Nb7-0tfZ;
-	Thu, 26 Feb 2026 14:49:57 +0000
+	id 1vvcge-00000006NaV-0ZWn;
+	Thu, 26 Feb 2026 14:49:56 +0000
 From: Christoph Hellwig <hch@lst.de>
 To: Eric Biggers <ebiggers@kernel.org>
 Cc: "Theodore Y. Ts'o" <tytso@mit.edu>,
@@ -42,9 +42,9 @@ Cc: "Theodore Y. Ts'o" <tytso@mit.edu>,
 	linux-ext4@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
 	linux-fsdevel@vger.kernel.org
-Subject: [PATCH 06/14] fscrypt: pass a byte offset to fscrypt_generate_dun
-Date: Thu, 26 Feb 2026 06:49:26 -0800
-Message-ID: <20260226144954.142278-7-hch@lst.de>
+Subject: [PATCH 03/14] ext4: factor out a io_submit_need_new_bio helper
+Date: Thu, 26 Feb 2026 06:49:23 -0800
+Message-ID: <20260226144954.142278-4-hch@lst.de>
 X-Mailer: git-send-email 2.47.3
 In-Reply-To: <20260226144954.142278-1-hch@lst.de>
 References: <20260226144954.142278-1-hch@lst.de>
@@ -57,85 +57,44 @@ MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
 
-Logical offsets into an inode are usually expressed as bytes in the VFS.
-Switch fscrypt_generate_dun to that convention and remove the
-ci_data_units_per_block_bits member in struct fscrypt_inode_info that
-was only used to cache the DUN shift based on the logical block size
-granularity.
+Factor out a helper to prepare for making this logic a bit more
+complex in the next commit.
 
 Signed-off-by: Christoph Hellwig <hch@lst.de>
 ---
- fs/crypto/fscrypt_private.h |  3 ---
- fs/crypto/inline_crypt.c    | 10 ++++------
- fs/crypto/keysetup.c        |  2 --
- 3 files changed, 4 insertions(+), 11 deletions(-)
+ fs/ext4/page-io.c | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
 
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 4e8e82a9ccf9..8d3c278a7591 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -278,9 +278,6 @@ struct fscrypt_inode_info {
- 	 */
- 	u8 ci_data_unit_bits;
+diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
+index 851d1267054a..88226979c503 100644
+--- a/fs/ext4/page-io.c
++++ b/fs/ext4/page-io.c
+@@ -440,14 +440,23 @@ static void io_submit_init_bio(struct ext4_io_submit *io,
+ 	wbc_init_bio(io->io_wbc, bio);
+ }
  
--	/* Cached value: log2 of number of data units per FS block */
--	u8 ci_data_units_per_block_bits;
--
- 	/* Hashed inode number.  Only set for IV_INO_LBLK_32 */
- 	u32 ci_hashed_ino;
- 
-diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index 702d13d138aa..5279565e9846 100644
---- a/fs/crypto/inline_crypt.c
-+++ b/fs/crypto/inline_crypt.c
-@@ -268,14 +268,12 @@ bool __fscrypt_inode_uses_inline_crypto(const struct inode *inode)
- EXPORT_SYMBOL_GPL(__fscrypt_inode_uses_inline_crypto);
- 
- static void fscrypt_generate_dun(const struct fscrypt_inode_info *ci,
--				 u64 lblk_num,
--				 u64 dun[BLK_CRYPTO_DUN_ARRAY_SIZE])
-+				 loff_t pos, u64 dun[BLK_CRYPTO_DUN_ARRAY_SIZE])
++static bool io_submit_need_new_bio(struct ext4_io_submit *io,
++				   struct buffer_head *bh)
++{
++	if (bh->b_blocknr != io->io_next_block)
++		return true;
++	if (!fscrypt_mergeable_bio_bh(io->io_bio, bh))
++		return true;
++	return false;
++}
++
+ static void io_submit_add_bh(struct ext4_io_submit *io,
+ 			     struct inode *inode,
+ 			     struct folio *folio,
+ 			     struct folio *io_folio,
+ 			     struct buffer_head *bh)
  {
--	u64 index = lblk_num << ci->ci_data_units_per_block_bits;
- 	union fscrypt_iv iv;
- 	int i;
- 
--	fscrypt_generate_iv(&iv, index, ci);
-+	fscrypt_generate_iv(&iv, pos >> ci->ci_data_unit_bits, ci);
- 
- 	BUILD_BUG_ON(FSCRYPT_MAX_IV_SIZE > BLK_CRYPTO_MAX_IV_SIZE);
- 	memset(dun, 0, BLK_CRYPTO_MAX_IV_SIZE);
-@@ -309,7 +307,7 @@ void fscrypt_set_bio_crypt_ctx(struct bio *bio, const struct inode *inode,
- 		return;
- 	ci = fscrypt_get_inode_info_raw(inode);
- 
--	fscrypt_generate_dun(ci, first_lblk, dun);
-+	fscrypt_generate_dun(ci, first_lblk << inode->i_blkbits, dun);
- 	bio_crypt_set_ctx(bio, ci->ci_enc_key.blk_key, dun, gfp_mask);
- }
- EXPORT_SYMBOL_GPL(fscrypt_set_bio_crypt_ctx);
-@@ -356,7 +354,7 @@ bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
- 	if (bc->bc_key != ci->ci_enc_key.blk_key)
- 		return false;
- 
--	fscrypt_generate_dun(ci, next_lblk, next_dun);
-+	fscrypt_generate_dun(ci, next_lblk << inode->i_blkbits, next_dun);
- 	return bio_crypt_dun_is_contiguous(bc, bio->bi_iter.bi_size, next_dun);
- }
- EXPORT_SYMBOL_GPL(fscrypt_mergeable_bio);
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index 40fa05688d3a..d83257e9945e 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -609,8 +609,6 @@ fscrypt_setup_encryption_info(struct inode *inode,
- 
- 	crypt_info->ci_data_unit_bits =
- 		fscrypt_policy_du_bits(&crypt_info->ci_policy, inode);
--	crypt_info->ci_data_units_per_block_bits =
--		inode->i_blkbits - crypt_info->ci_data_unit_bits;
- 
- 	res = setup_file_encryption_key(crypt_info, need_dirhash_key, &mk);
- 	if (res)
+-	if (io->io_bio && (bh->b_blocknr != io->io_next_block ||
+-			   !fscrypt_mergeable_bio_bh(io->io_bio, bh))) {
++	if (io->io_bio && io_submit_need_new_bio(io, bh)) {
+ submit_and_retry:
+ 		ext4_io_submit(io);
+ 	}
 -- 
 2.47.3
 
