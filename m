@@ -1,35 +1,35 @@
 Received: from bombadil.infradead.org (bombadil.infradead.org [198.137.202.133])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D871C3B8BAE;
-	Thu, 26 Feb 2026 14:50:02 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3F4473D523E;
+	Thu, 26 Feb 2026 14:50:04 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=198.137.202.133
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1772117407; cv=none; b=EvWkDOZbjvALf3uAtl18ydqvwWaHdamrcoIMEubg1+9olUU9apLSDRSyM7FExAIUVSz1jz8Vp7OZ2jpmjMtqjH0waDTMwWoRDmSLtcMlZ83z6xrRBEkFxdSBhObwon49JNDpRTT1y7sGRq6Cpz9yFc7/FBPw3GKpHVyUs8coHUU=
+	t=1772117407; cv=none; b=mtKg6NtvRFRD38BXyeA7xgFORhMp4gjYuLgs/vKLiPVwt8dIAm/Uw9NFpKZtxUSPDG6YN/z/2u8rMOgdZwJvjxNvDaQ8g7ex1vmmtTfpZ0mLPvxoE/FuapIl80MyJv9EwFLRiu3JOH1ejCsiFLDfh+yXzp0RVGS9bgmiHzUr51w=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
 	s=arc-20240116; t=1772117407; c=relaxed/simple;
-	bh=SV8HaUQAcvAu9qeBFPo8KnSTPpo0Bul7aZT5Z2G370Q=;
+	bh=A+4vy+4RK1kUPnebccm2loyE3KHwEU8iKIm9U5xKkFw=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=az8MFtDFHKtgJr0VVAf/Qx7JY+2eO1gSSkcp2uhdTT5DFl21lFnlcG9hAmRfvAaXOoLEmDqVZeV4sARn8zj0H8bgLTbuB+tEy3hr9aB/tFFyLtPo7tbPtci+9+5momt4XRMAfQurMlrUlHJWGL4xK93YmzEWdOlvTsW+rjGO8MA=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de; spf=none smtp.mailfrom=bombadil.srs.infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=AM5a6lH8; arc=none smtp.client-ip=198.137.202.133
+	 MIME-Version; b=GZOyRG0WjYY5/7spJ8rrhk8ch/89bAodD/geRtJfv+RK8mpwISw0WLkQmdM+uG9AVo0l1LNah4lotGx127191viP54k/tF6bYQL6MvrY3yLXPob8FEtk58k2jROcn9aDCCTeplJQbLiv5ekYJx2sH47zCJTWiaBZJHmg0SyNS6U=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de; spf=none smtp.mailfrom=bombadil.srs.infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=ffRKHdZC; arc=none smtp.client-ip=198.137.202.133
 Authentication-Results: smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de
 Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=bombadil.srs.infradead.org
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="AM5a6lH8"
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="ffRKHdZC"
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
 	d=infradead.org; s=bombadil.20210309; h=Content-Transfer-Encoding:
 	MIME-Version:References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:Sender
 	:Reply-To:Content-Type:Content-ID:Content-Description;
-	bh=wdIEsKTzA9SnbF5IiASm761ocVgdBQM29TC5lUjPX2c=; b=AM5a6lH8QBV7r3VGXzAiWJ9gB0
-	jgLPsfbFRfea51sZM7mCdiHd/UhEP0rcDgx13btlsfNyltlGpyrNMtC546mEPrU2FTEtQhgcJTfph
-	M+J38sFp6s6UHxmEfI3XMyow3APfefz4SjoJLx3ANk0vfud3F4ExMi4qu2nC8g120IaQloykKA/Kx
-	T5vJ8+sIDs0roUmhmJWurURtPawval24xcp30kWvFfvqAzSzxWebcdQ0ZvNw1FISH/h3l8oEfjYnV
-	0dKG2ATg+R0cCvw2HoVo82/KokMlYai+gc8baTtQFYOSvdqVsX3Zvkko6Qv8Ib6OhHPHPT5b1yUQH
-	72KOmYtA==;
+	bh=vJIR63fOKuGqtgGoQQV4cldpXLTqze0KpgUsQCTuVLs=; b=ffRKHdZCrwomuJXjaqakcRkgAt
+	bnIrLIxmZ9u6mlM+vTai5rKYee30S1uzlHj/rbKDjSeMGjzqxn0gDCU7U6UHxzqLNdK4maQhr+ajb
+	JaeGFwtjUH9jMf9yC/ZlAzFil/H6359zvr8kvmcCi69+jON+I8gvmjuyb+F3jVjrJztinXX8hF+Ah
+	zZmJSKg7E8BiFr1guq4VsaMc3tThEZMwVRI9QD6N7b6RHoLAZViV6PUI8iuPAKmCbZW3nWHYEz4/x
+	jgZv7rO3wJ7DkJFgriRX6puFv6jemi7Hc37moB1gvquEQP2FrRVMOxCv2hl5QhShSFYsFbD5+fJm2
+	tnQ+5Sxw==;
 Received: from [4.28.11.157] (helo=localhost)
 	by bombadil.infradead.org with esmtpsa (Exim 4.98.2 #2 (Red Hat Linux))
-	id 1vvcgd-00000006NaF-37tW;
-	Thu, 26 Feb 2026 14:49:55 +0000
+	id 1vvcgg-00000006NcU-2es9;
+	Thu, 26 Feb 2026 14:49:58 +0000
 From: Christoph Hellwig <hch@lst.de>
 To: Eric Biggers <ebiggers@kernel.org>
 Cc: "Theodore Y. Ts'o" <tytso@mit.edu>,
@@ -42,9 +42,9 @@ Cc: "Theodore Y. Ts'o" <tytso@mit.edu>,
 	linux-ext4@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
 	linux-fsdevel@vger.kernel.org
-Subject: [PATCH 01/14] ext4: initialize the write hint in io_submit_init_bio
-Date: Thu, 26 Feb 2026 06:49:21 -0800
-Message-ID: <20260226144954.142278-2-hch@lst.de>
+Subject: [PATCH 13/14] fscrypt: pass a real sector_t to fscrypt_zeroout_range
+Date: Thu, 26 Feb 2026 06:49:33 -0800
+Message-ID: <20260226144954.142278-14-hch@lst.de>
 X-Mailer: git-send-email 2.47.3
 In-Reply-To: <20260226144954.142278-1-hch@lst.de>
 References: <20260226144954.142278-1-hch@lst.de>
@@ -57,46 +57,100 @@ MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
 
-Make io_submit_init_bio complete by also initializing the write hint.
+While the pblk argument to fscrypt_zeroout_range is declared as a
+sector_t, it actually is interpreted as a logical block size unit, which
+is highly unusual.  Switch to passing the 512 byte units that sector_t is
+defined for.
 
 Signed-off-by: Christoph Hellwig <hch@lst.de>
 ---
- fs/ext4/page-io.c | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
+ fs/crypto/bio.c         | 5 ++---
+ fs/ext4/inode.c         | 3 ++-
+ fs/f2fs/file.c          | 2 +-
+ include/linux/fscrypt.h | 6 +++---
+ 4 files changed, 8 insertions(+), 8 deletions(-)
 
-diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-index a8c95eee91b7..a3644d6cb65f 100644
---- a/fs/ext4/page-io.c
-+++ b/fs/ext4/page-io.c
-@@ -416,6 +416,7 @@ void ext4_io_submit_init(struct ext4_io_submit *io,
+diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
+index 7d57ffb1e8c6..4a45bd28e0da 100644
+--- a/fs/crypto/bio.c
++++ b/fs/crypto/bio.c
+@@ -114,7 +114,7 @@ static int fscrypt_zeroout_range_inline_crypt(const struct inode *inode,
+  * fscrypt_zeroout_range() - zero out a range of blocks in an encrypted file
+  * @inode: the file's inode
+  * @pos: the first file position (in bytes) to zero out
+- * @pblk: the first filesystem physical block to zero out
++ * @sector: the first sector to zero out
+  * @len: bytes to zero out
+  *
+  * Zero out filesystem blocks in an encrypted regular file on-disk, i.e. write
+@@ -128,7 +128,7 @@ static int fscrypt_zeroout_range_inline_crypt(const struct inode *inode,
+  * Return: 0 on success; -errno on failure.
+  */
+ int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
+-			  sector_t pblk, u64 len)
++			  sector_t sector, u64 len)
+ {
+ 	const struct fscrypt_inode_info *ci = fscrypt_get_inode_info_raw(inode);
+ 	const unsigned int du_bits = ci->ci_data_unit_bits;
+@@ -137,7 +137,6 @@ int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
+ 	const unsigned int du_per_page = 1U << du_per_page_bits;
+ 	u64 du_index = pos >> du_bits;
+ 	u64 du_remaining = len >> du_bits;
+-	sector_t sector = pblk << (inode->i_blkbits - SECTOR_SHIFT);
+ 	struct page *pages[16]; /* write up to 16 pages at a time */
+ 	unsigned int nr_pages;
+ 	unsigned int i;
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 675ef741cb30..d0028d6d3de1 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -406,7 +406,8 @@ int ext4_issue_zeroout(struct inode *inode, ext4_lblk_t lblk, ext4_fsblk_t pblk,
+ 
+ 	if (IS_ENCRYPTED(inode) && S_ISREG(inode->i_mode))
+ 		return fscrypt_zeroout_range(inode,
+-				(loff_t)lblk << inode->i_blkbits, pblk,
++				(loff_t)lblk << inode->i_blkbits,
++				pblk << (inode->i_blkbits - SECTOR_SHIFT),
+ 				len << inode->i_blkbits);
+ 
+ 	ret = sb_issue_zeroout(inode->i_sb, pblk, len, GFP_NOFS);
+diff --git a/fs/f2fs/file.c b/fs/f2fs/file.c
+index 5b7013f7f6a1..ad435dea656a 100644
+--- a/fs/f2fs/file.c
++++ b/fs/f2fs/file.c
+@@ -4163,7 +4163,7 @@ static int f2fs_secure_erase(struct block_device *bdev, struct inode *inode,
+ 	if (!ret && (flags & F2FS_TRIM_FILE_ZEROOUT)) {
+ 		if (IS_ENCRYPTED(inode))
+ 			ret = fscrypt_zeroout_range(inode,
+-					(loff_t)off << inode->i_blkbits, block,
++					(loff_t)off << inode->i_blkbits, sector,
+ 					len << inode->i_blkbits);
+ 		else
+ 			ret = blkdev_issue_zeroout(bdev, sector, nr_sects,
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 90ac62fda926..54712ec61ffb 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -450,8 +450,8 @@ u64 fscrypt_fname_siphash(const struct inode *dir, const struct qstr *name);
+ 
+ /* bio.c */
+ bool fscrypt_decrypt_bio(struct bio *bio);
+-int fscrypt_zeroout_range(const struct inode *inode, loff_t pos, sector_t pblk,
+-			  u64 len);
++int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
++			  sector_t sector, u64 len);
+ 
+ /* hooks.c */
+ int fscrypt_file_open(struct inode *inode, struct file *filp);
+@@ -756,7 +756,7 @@ static inline bool fscrypt_decrypt_bio(struct bio *bio)
  }
  
- static void io_submit_init_bio(struct ext4_io_submit *io,
-+			       struct inode *inode,
- 			       struct buffer_head *bh)
+ static inline int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
+-					sector_t pblk, u64 len)
++					sector_t sector, u64 len)
  {
- 	struct bio *bio;
-@@ -430,6 +431,7 @@ static void io_submit_init_bio(struct ext4_io_submit *io,
- 	bio->bi_end_io = ext4_end_bio;
- 	bio->bi_private = ext4_get_io_end(io->io_end);
- 	io->io_bio = bio;
-+	io->io_bio->bi_write_hint = inode->i_write_hint;
- 	io->io_next_block = bh->b_blocknr;
- 	wbc_init_bio(io->io_wbc, bio);
+ 	return -EOPNOTSUPP;
  }
-@@ -445,10 +447,8 @@ static void io_submit_add_bh(struct ext4_io_submit *io,
- submit_and_retry:
- 		ext4_io_submit(io);
- 	}
--	if (io->io_bio == NULL) {
--		io_submit_init_bio(io, bh);
--		io->io_bio->bi_write_hint = inode->i_write_hint;
--	}
-+	if (io->io_bio == NULL)
-+		io_submit_init_bio(io, inode, bh);
- 	if (!bio_add_folio(io->io_bio, io_folio, bh->b_size, bh_offset(bh)))
- 		goto submit_and_retry;
- 	wbc_account_cgroup_owner(io->io_wbc, folio, bh->b_size);
 -- 
 2.47.3
 
