@@ -1,141 +1,102 @@
-Received: from mail-wr1-f51.google.com (mail-wr1-f51.google.com [209.85.221.51])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+Received: from bombadil.infradead.org (bombadil.infradead.org [198.137.202.133])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1FE24396D2C
-	for <linux-fscrypt@vger.kernel.org>; Sat, 28 Feb 2026 07:57:20 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=pass smtp.client-ip=209.85.221.51
-ARC-Seal:i=2; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1772265441; cv=pass; b=CiU62RPJzkG128v+n4gEGl+RjX4DcxoR0H6yH6VLSsLbptOEgqrPK5wwFh+EZYVeuvVmqlC39kT1CYIY41UcGr/mIuR1zJiymjhioAR8Ckh2f9mmtEQ9Rc0CU+RM8+lP1mL7TIQwrfKonAGF1RygDGKKPUcesB0jhv5r5rf0NfA=
-ARC-Message-Signature:i=2; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1772265441; c=relaxed/simple;
-	bh=6PdqOpfgB3YMOOlux3bduC+ojGyQw/085BF80Hxj8Hc=;
-	h=MIME-Version:References:In-Reply-To:From:Date:Message-ID:Subject:
-	 To:Cc:Content-Type; b=CRSz91r20v0WRHq0d1kE7XR1MZ3O1IAJrP+ZvGYHcmcfngJ5kE7jdE8LRxvauBuLsgxIBRTXWNmgFitQqYzmOc6h3sser9k7sgVt/fSradGhZUZnhvBZXw1959MRemU57lk6lObF9mcLup8VOWcglgwMHbpUfFQCpEIt4a1/xiM=
-ARC-Authentication-Results:i=2; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b=Vbt4Wigh; arc=pass smtp.client-ip=209.85.221.51
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 66BA83E0C74;
+	Mon,  2 Mar 2026 14:19:26 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=198.137.202.133
+ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
+	t=1772461167; cv=none; b=YukEYYpyfkU8mVCVBs1MbUt+B+RflfwkJOLuqcAY4ovpEnWdGwqUkVCvepzyXS/ZWytnLWlWiEIPicRWBHHjf5s05EF/ZeWPCMnyFS1QISasUjha7xCpPhWnf6m7pomGrI6uKI93yQ+5ZmTW5KBz8tpaMFnw//k1V2j3sYdvU/U=
+ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
+	s=arc-20240116; t=1772461167; c=relaxed/simple;
+	bh=sMj5Rrk0tnxZzVImADVa/k3m7uqKi3l93kY0BsAiUXM=;
+	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
+	 MIME-Version; b=B651zsnmz+8wBsKqvT7PmQXm3Mx3jbiy4uRen4yO/fe4fwQ1BSKxEHueHVuxaopkElcbkXUI1HUtFs1qthEK5KFZo++4LeBFhKu1YUQvLbzQEZG7KGd13MvP8JT2Ulv5xz5YBdYH9hvwlG0p/s7H3iHY8wQ18+gPctBZTgXrn6w=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de; spf=none smtp.mailfrom=bombadil.srs.infradead.org; dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b=TApuq1k9; arc=none smtp.client-ip=198.137.202.133
+Authentication-Results: smtp.subspace.kernel.org; dmarc=fail (p=none dis=none) header.from=lst.de
+Authentication-Results: smtp.subspace.kernel.org; spf=none smtp.mailfrom=bombadil.srs.infradead.org
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b="Vbt4Wigh"
-Received: by mail-wr1-f51.google.com with SMTP id ffacd0b85a97d-4398f8403edso2192735f8f.1
-        for <linux-fscrypt@vger.kernel.org>; Fri, 27 Feb 2026 23:57:19 -0800 (PST)
-ARC-Seal: i=1; a=rsa-sha256; t=1772265438; cv=none;
-        d=google.com; s=arc-20240605;
-        b=HaVk5j+wwdiPghs7DICgVvACdh4UHcRCW7/WRhQTSSh6K+ldJU2NDcq+88i9MWjm+V
-         eVHYI8Mq74UEW2xFZtZr9gP2hjBfgsPUAV1BedgSY7IHIuBM7SslOSEbr/6h/SttW0e8
-         TEM6RbJ7wVvsi2TTSfmHJOydW4oHO04j8EIggQsz+UhFeFBvx8NouHoqQnisiRkUZpxE
-         BFu76/TXFgIIBo002dx5DgtSC82MOXZOJOmk8XkVtfOBcdzfYnOsqVLw6cUYZ/ETqQws
-         kjxb6eWHxMPMWSQGyMEYiaGnWHyKiQMolKRCbyXENWh7v5QWNZysvFlDZwzT9PQ6hFVy
-         zHjg==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
-        h=content-transfer-encoding:cc:to:subject:message-id:date:from
-         :in-reply-to:references:mime-version:dkim-signature;
-        bh=ClMAoK6WITuHcNfY7J0tERhWJlZRJZGKOpSkq0A50FQ=;
-        fh=nee0FpqxoDynj34XRFjrP9ho7SbKh8UGFl9qO9nw2oE=;
-        b=HkInzbGocN4Fld/ST1rMCXpxgpnMzvfXnYazW/tBa/Pzhe53CheynGr8PRCxTC/QOf
-         rqpeX3hdhToVP/pG8EVk4fnarrTmjVChJ+nEyxiIAW0xy+seEzu3hXblp2T2dU289y2j
-         3ZPQ4v1Vv0RFscm5KjRgtgDY5QIjUIbXiMPjRXFb0PAkESehThvnHC+m3F5rQu5npipP
-         Hdc7QAyTA441rUvMl+m8OrNT5WsXDVvfBg3Fc+Z3J3NewsPVkmyYVyDzCld3jOxPn6ap
-         7WfbZXr87Cyu5NHQFTbeSVdkqwocYmGzrlWdab6YTAExRrCJezVOXPEAfWM0VkRRGFns
-         3mcQ==;
-        darn=vger.kernel.org
-ARC-Authentication-Results: i=1; mx.google.com; arc=none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=suse.com; s=google; t=1772265438; x=1772870238; darn=vger.kernel.org;
-        h=content-transfer-encoding:cc:to:subject:message-id:date:from
-         :in-reply-to:references:mime-version:from:to:cc:subject:date
-         :message-id:reply-to;
-        bh=ClMAoK6WITuHcNfY7J0tERhWJlZRJZGKOpSkq0A50FQ=;
-        b=Vbt4WighTUGP+oXtWsfyZsltXqfo6+swatGLEdwqw8HOMXUzJQ7k2UoUQjxP//tcfj
-         s9N+MX9Ipxw83tnOHvudb4TyAyI8FCDUPR2tK+Ewh0j+jm+4zYd6e/XJROtE2cv/yD9b
-         K/opeqNAkvON7Vq8CZn1ZWZXdVSzAINrdtTL1StdkB+x9FID+sQAv7ETgvTqqWLM+JwU
-         Z5L4Zc9WFQD7ya26sb1shoa/LuLzx9QleW6EQXT34Dcdbli4nZbhzeLdOWwjlblpCmCU
-         jxqp+lVO2+NSumQWufcdTISg8r8yyFNBRbagOw0pXNQ+TDMb5gd+Ee/lOdniQpJZyfR3
-         4Ejg==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20230601; t=1772265438; x=1772870238;
-        h=content-transfer-encoding:cc:to:subject:message-id:date:from
-         :in-reply-to:references:mime-version:x-gm-gg:x-gm-message-state:from
-         :to:cc:subject:date:message-id:reply-to;
-        bh=ClMAoK6WITuHcNfY7J0tERhWJlZRJZGKOpSkq0A50FQ=;
-        b=VlebMF+/D6aogZwL0UizpsRET/oRf3Y/yyvPUzhX9qD3xTXUvojafvwNQSNlUGEMTP
-         gjOirr7I1VQceGIkTJ/VtcuDsc/i1YuI15o1LBVjyBhu9Vsy/9NL5k763ws7iZDbUyWs
-         Laa1xQmc26c0a2dCPeh3GQTioEp6GaMaJ7/HsECoEsL56WmuX9LPpFQSTlCBsPDF/oeH
-         WiCBD9a/iKIsXNFLSo6/7ibD6CAJ49TrAlbtceuurPbuDDHDzvMafZ+yw4wle2tYk4fd
-         s+v2xI5m6WGTtxhI3BfrkE7Uc206NBVoyu4ZXvg4B6oP7lmnH73ewiMxaaIseP2w0sQ8
-         JhEQ==
-X-Forwarded-Encrypted: i=1; AJvYcCWkpaA5xuD/ihPmumXYnu7bIG4eoQxmqJq2VudDubxQwJafkw7c31wp2U0pUFOwNVb3CsnPfKzXr2OIWTMx@vger.kernel.org
-X-Gm-Message-State: AOJu0YxV+2vaoL54gUjZ9dSra2j0RZQZZIBZdVGfhJIua2a7Hd9IVcyp
-	N4nyxEJUeEHFULodXpxoPO8ryXD7kZS6VWt9+xNFdmqMTydiUomSqN3U2OWsMGu86YPdnv5HZeg
-	hrU5vAZxppLUIRJhPvyzW4oF8JOznK1zerB1S3LUbaA==
-X-Gm-Gg: ATEYQzxWNM0bqFQj1t1TX+pM93h8ymNty/+FadynvhmmKwjt4P1kALETvc2tYOL6iVP
-	8FeIfS+40A9KSUXMZvUy+eI+SyCS5kskLgRm5gUoLs9f68EiaMrf7oLyqzMhveoAwNM/UpYMzAg
-	Qi9s3FrTRn+x9FbKtN2cIxh4iG27BgnenWnnm1zdsyb0X8YHYDq4qhpcxQ5wpV5DgTfAwRtioMc
-	Rt1R2BCcdF+WStHsmokUr43r+U2Qkzd8sPjW0WEWBr5xgicpJaDBAJWnx+Fdif8lAwN1KEOGvKl
-	iMtyc9xv0ZomUnIg6I2CqpCjEUGnlKu7KaQJ4cbhG78fMiEhATPQCzEyxrnCbbWazKaLwN0nLKp
-	C1jD8
-X-Received: by 2002:a5d:5d0d:0:b0:437:771b:26b with SMTP id
- ffacd0b85a97d-4399ddfc43cmr9839007f8f.26.1772265438557; Fri, 27 Feb 2026
- 23:57:18 -0800 (PST)
+	dkim=pass (2048-bit key) header.d=infradead.org header.i=@infradead.org header.b="TApuq1k9"
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed;
+	d=infradead.org; s=bombadil.20210309; h=Content-Transfer-Encoding:
+	MIME-Version:References:In-Reply-To:Message-ID:Date:Subject:Cc:To:From:Sender
+	:Reply-To:Content-Type:Content-ID:Content-Description;
+	bh=olHs/EBkSlbRjwcneX6lFlR0i6BJlKrjnJjRCQNIpEw=; b=TApuq1k9pvOvmvL+kNfV9T5QgJ
+	XYl/mRKaDOQ0/oBdffoZ4OpZIWuQ+nEvqlnRH4OU1DY6j74mQ3fOgRX3eQHSjgBulhh16geGrsUBR
+	mS2ttvc3VCOIlAcuGddtd/G7E1t9UlUzzEuNyW3XZb26e8HxTZgU7F6O/A7uK4RtQU5GplPwQHcsa
+	QMAcN7P2fPWVbacmYFcF8Vg4noi94rCBBCmtjZUhdRcZvgPtostYb8n8iDsCDOVEv3Rlo1VTM9enn
+	CWp4kQBVZiazWIuRlqRut3PTyB0vPWrX+fyD2623ZKbtBC3YfmeAiFcsZ05Q37wQDwdF4W5DQZypk
+	ly+tJ/qQ==;
+Received: from [2604:3d08:797f:2840::9d5f] (helo=localhost)
+	by bombadil.infradead.org with esmtpsa (Exim 4.98.2 #2 (Red Hat Linux))
+	id 1vx47J-0000000DDRg-2Ws4;
+	Mon, 02 Mar 2026 14:19:25 +0000
+From: Christoph Hellwig <hch@lst.de>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: "Theodore Y. Ts'o" <tytso@mit.edu>,
+	Jaegeuk Kim <jaegeuk@kernel.org>,
+	Andreas Dilger <adilger.kernel@dilger.ca>,
+	Chao Yu <chao@kernel.org>,
+	Christian Brauner <brauner@kernel.org>,
+	"Darrick J. Wong" <djwong@kernel.org>,
+	linux-fscrypt@vger.kernel.org,
+	linux-ext4@vger.kernel.org,
+	linux-f2fs-devel@lists.sourceforge.net,
+	linux-fsdevel@vger.kernel.org
+Subject: [PATCH 01/14] ext4: initialize the write hint in io_submit_init_bio
+Date: Mon,  2 Mar 2026 06:18:06 -0800
+Message-ID: <20260302141922.370070-2-hch@lst.de>
+X-Mailer: git-send-email 2.47.3
+In-Reply-To: <20260302141922.370070-1-hch@lst.de>
+References: <20260302141922.370070-1-hch@lst.de>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-References: <20260206182336.1397715-1-neelx@suse.com> <20260221205606.GA23260@quark>
- <CAPjX3Fet5M2C=1TDNRhrqmanvJ2=aFdtQXfXK7MuxiOkz2rNUw@mail.gmail.com> <CAEg-Je80=M9nS=Dmj3FiGfXTEP_fDYytAv0ouN_iu+GzRrHp+A@mail.gmail.com>
-In-Reply-To: <CAEg-Je80=M9nS=Dmj3FiGfXTEP_fDYytAv0ouN_iu+GzRrHp+A@mail.gmail.com>
-From: Daniel Vacek <neelx@suse.com>
-Date: Sat, 28 Feb 2026 08:57:06 +0100
-X-Gm-Features: AaiRm50fp_4Fyhos6nvwQgL-IlBc5T53PNbqLb3xsg-h7pbpyOz2GPW0NAm_PCQ
-Message-ID: <CAPjX3Ff0=OOWcPHWam0WEGUY-xx860NHQt=igfZ9102-Zj1nOw@mail.gmail.com>
-Subject: Re: [PATCH v6 00/43] btrfs: add fscrypt support
-To: Neal Gompa <ngompa13@gmail.com>
-Cc: Eric Biggers <ebiggers@kernel.org>, Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>, 
-	"Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Jens Axboe <axboe@kernel.dk>, 
-	David Sterba <dsterba@suse.com>, linux-block@vger.kernel.org, 
-	linux-fscrypt@vger.kernel.org, linux-btrfs@vger.kernel.org, 
-	linux-kernel@vger.kernel.org
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: quoted-printable
+Content-Transfer-Encoding: 8bit
+X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by bombadil.infradead.org. See http://www.infradead.org/rpr.html
 
-On Fri, 27 Feb 2026 at 23:26, Neal Gompa <ngompa13@gmail.com> wrote:
-> On Fri, Feb 27, 2026 at 10:55=E2=80=AFAM Daniel Vacek <neelx@suse.com> wr=
-ote:
-> > On Sat, 21 Feb 2026 at 21:56, Eric Biggers <ebiggers@kernel.org> wrote:
-> > > On Fri, Feb 06, 2026 at 07:22:32PM +0100, Daniel Vacek wrote:
-> > > > Hello,
-> > > >
-> > > > These are the remaining parts from former series [1] from Omar, Swe=
-et Tea
-> > > > and Josef.  Some bits of it were split into the separate set [2] be=
-fore.
-> > > >
-> > > > Notably, at this stage encryption is not supported with RAID5/6 set=
-up
-> > > > and send is also isabled for now.
-> > >
-> > > Where does this series apply to?  There's no base-commit or git tree,
-> > > and it doesn't apply to mainline or btrfs/for-next.
-> >
-> > Hi Eric,
-> >
-> > My apologies, I did not explicitly mention the base. I'll do it next ti=
-me.
-> > This was based on for-next @20260127 (commit 80dbfe6512d9c).
-> > Since then, some changes occurred that will require additional
-> > touches. No wonder it does not apply anymore.
-> >
->
-> When you make your next revision, can you also provide a tag or branch
-> that I can use to grab the patches for testing? It would be easier for
-> me than trying to yoink them down from the emails with how many of
-> them there are...
+Make io_submit_init_bio complete by also initializing the write hint.
 
-Sure
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+---
+ fs/ext4/page-io.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
---nX
+diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
+index a8c95eee91b7..b8cf9f6f9e0b 100644
+--- a/fs/ext4/page-io.c
++++ b/fs/ext4/page-io.c
+@@ -416,6 +416,7 @@ void ext4_io_submit_init(struct ext4_io_submit *io,
+ }
+ 
+ static void io_submit_init_bio(struct ext4_io_submit *io,
++			       struct inode *inode,
+ 			       struct buffer_head *bh)
+ {
+ 	struct bio *bio;
+@@ -429,6 +430,7 @@ static void io_submit_init_bio(struct ext4_io_submit *io,
+ 	bio->bi_iter.bi_sector = bh->b_blocknr * (bh->b_size >> 9);
+ 	bio->bi_end_io = ext4_end_bio;
+ 	bio->bi_private = ext4_get_io_end(io->io_end);
++	bio->bi_write_hint = inode->i_write_hint;
+ 	io->io_bio = bio;
+ 	io->io_next_block = bh->b_blocknr;
+ 	wbc_init_bio(io->io_wbc, bio);
+@@ -445,10 +447,8 @@ static void io_submit_add_bh(struct ext4_io_submit *io,
+ submit_and_retry:
+ 		ext4_io_submit(io);
+ 	}
+-	if (io->io_bio == NULL) {
+-		io_submit_init_bio(io, bh);
+-		io->io_bio->bi_write_hint = inode->i_write_hint;
+-	}
++	if (io->io_bio == NULL)
++		io_submit_init_bio(io, inode, bh);
+ 	if (!bio_add_folio(io->io_bio, io_folio, bh->b_size, bh_offset(bh)))
+ 		goto submit_and_retry;
+ 	wbc_account_cgroup_owner(io->io_wbc, folio, bh->b_size);
+-- 
+2.47.3
 
-> --
-> =E7=9C=9F=E5=AE=9F=E3=81=AF=E3=81=84=E3=81=A4=E3=82=82=E4=B8=80=E3=81=A4=
-=EF=BC=81/ Always, there's only one truth!
