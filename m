@@ -1,100 +1,63 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-1.web.codeaurora.org [10.30.226.201])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BB49E1A2C04;
-	Sun, 12 Apr 2026 00:19:37 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 77DFE1AA7A6;
+	Tue, 14 Apr 2026 00:38:27 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=10.30.226.201
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1775953177; cv=none; b=rgIrNtXEyP/Nr4VvNcdYRQgUWa/DaJBHZ/WxqIvjVeIEEb84j8vvQuhdstb0PyYGQKJJPk8VkgW84VapTp63j+1eBxO3zs3Tv6k/oxT8JO9zEBXXgDptNZvCGWDSw5U6w3MruiYiVvvXO7fzpz3RxKReC5guTKGNk2X+3F/Ibd8=
+	t=1776127107; cv=none; b=T/sEhUKkCXBYKk0aN6M+hJgCXI3041bBkOa0aYjiM6Lq1hGk0shLOTkNQvKw1FTJ0Xsx0UOuuw5m3htUn+/2bu9ZylnJ7YnB9PigNspBi3gQCPqRZS4PK0Z5aTCoQxeCn3E54ivboFMsAbPDthyzcSXgNLJmywbdtMPTX1J8J8s=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1775953177; c=relaxed/simple;
-	bh=bHcod1uxP1ivKIc/+dttd5Ip/4XLZ0zlpJ4vYMeOYgw=;
-	h=Date:From:To:Cc:Subject:Message-ID:MIME-Version:Content-Type:
-	 Content-Disposition; b=b+tnfTyfbxadYXi1c3tBQ104t2PYfTePKVO3ufCXmY31aPrqP50fB0ge5aG97ukgjv5g8mGZeMWLYSHwXdSbNivRvF33ikXEqCVtDywg9K/DsxZtMrqNB/HdUlDYtt7k9OLbzBBBN0/vXSKmewsjlaXNlHA2DOhHZvPEaEcrBRw=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=E7/hKr8W; arc=none smtp.client-ip=10.30.226.201
+	s=arc-20240116; t=1776127107; c=relaxed/simple;
+	bh=vquBGZDDcr8I+SrjnwzXt0aC2jgbidZkGZbvCyRf4qA=;
+	h=Subject:From:In-Reply-To:References:Message-Id:Date:To:Cc; b=FffKRK8+HtM76oAWRpLA8Ab7HAqAQA1OtGWEzxKrXjFvbwM5NT63vtkHxW5B/La94ZsKvrcAYFZKvfd03wNoziVwhAir8LMWLt2bFWdjCnM/QqxBRsZ/usfDnV8ZAD26sfv6weEgkDaH7P6FEuA02H7fCn/fU35jzGAOBlaQgxA=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=udqUjDCn; arc=none smtp.client-ip=10.30.226.201
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="E7/hKr8W"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 22B28C19425;
-	Sun, 12 Apr 2026 00:19:37 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="udqUjDCn"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 5D29DC2BCAF;
+	Tue, 14 Apr 2026 00:38:27 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=kernel.org;
-	s=k20201202; t=1775953177;
-	bh=bHcod1uxP1ivKIc/+dttd5Ip/4XLZ0zlpJ4vYMeOYgw=;
-	h=Date:From:To:Cc:Subject:From;
-	b=E7/hKr8WOoaKcB8CXqmH1Psj6fKTj4JHkgdWgP/3jp75hiOIkbD42uE28515Qaux+
-	 52Qh4wZOstcto7UR19Wo/Axpo4CT2ZKgFWRbdPwwzNhCiprzCAc3shLuL3ZhtuzeAs
-	 3Z/+R3Nd7IVLf2hShVtLnlxZE26zeRkvnjm6nW/50aBxZIQOVil+5RepV0eyMfml6N
-	 1njr9Sg5Ezphu+4qcNSBEeMqQfq68721u1R4we26tyKhpSZLChloYgKLCLVk/6N+5R
-	 F9Vta5A99OPzUjtR75w3wLGwS2yqZDs35y/M+JLts8wYEhHITl8ZEf76pZtY7MYuR8
-	 ht9FVghpcf2Rw==
-Date: Sat, 11 Apr 2026 17:18:20 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-	linux-kernel@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>,
-	Jaegeuk Kim <jaegeuk@kernel.org>, Christoph Hellwig <hch@lst.de>
-Subject: [GIT PULL] fscrypt updates for 7.1
-Message-ID: <20260412001820.GA6632@sol>
+	s=k20201202; t=1776127107;
+	bh=vquBGZDDcr8I+SrjnwzXt0aC2jgbidZkGZbvCyRf4qA=;
+	h=Subject:From:In-Reply-To:References:Date:To:Cc:From;
+	b=udqUjDCn+brac9KkQOkdLq8i11o9y9VubW2FrefzlUql9YAE7RJ7fKVX4P1b7cN3n
+	 ZZCZ62Dafiy5CJNf8tKibPenX2egRcv+2NDNv3+IlW+zXKbinUqscpIujxbxXr0cM+
+	 7XOK+kbqizjLxAwRnqiQoqbpJp4LXxt/+1Oh6Qx3to7X5TIUkEaUXwLGCkoUaVcXE7
+	 Ch7A/JseNF9qpzPOeZojvbsgS6GU2f/X+CJAqhOoI5U9CW+mfOS/pHWH+wJNsVLMrf
+	 Y/I68HnQqVPtGhRfVTcHOfTwVdhv3H00dKZpRbHgRggqwpwwYmJCLIKkSgw8oUHAMr
+	 8kdlrtwgCnxFA==
+Received: from [10.30.226.235] (localhost [IPv6:::1])
+	by aws-us-west-2-korg-oddjob-rhel9-1.codeaurora.org (Postfix) with ESMTP id B9DAF3809A0B;
+	Tue, 14 Apr 2026 00:37:59 +0000 (UTC)
+Subject: Re: [GIT PULL] fscrypt updates for 7.1
+From: pr-tracker-bot@kernel.org
+In-Reply-To: <20260412001820.GA6632@sol>
+References: <20260412001820.GA6632@sol>
+X-PR-Tracked-List-Id: <linux-fsdevel.vger.kernel.org>
+X-PR-Tracked-Message-Id: <20260412001820.GA6632@sol>
+X-PR-Tracked-Remote: https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
+X-PR-Tracked-Commit-Id: 1546d3feb5e533fbee6710bd51b2847b2ec23623
+X-PR-Merge-Tree: torvalds/linux.git
+X-PR-Merge-Refname: refs/heads/master
+X-PR-Merge-Commit-Id: 9932f00bf40d281151de5694bc0f097cb9b5616c
+Message-Id: <177612707834.625472.17166940906300633902.pr-tracker-bot@kernel.org>
+Date: Tue, 14 Apr 2026 00:37:58 +0000
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, Christoph Hellwig <hch@lst.de>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
-MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
 
-The following changes since commit 1f318b96cc84d7c2ab792fcc0bfd42a7ca890681:
+The pull request you sent on Sat, 11 Apr 2026 17:18:20 -0700:
 
-  Linux 7.0-rc3 (2026-03-08 16:56:54 -0700)
+> https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
 
-are available in the Git repository at:
+has been merged into torvalds/linux.git:
+https://git.kernel.org/torvalds/c/9932f00bf40d281151de5694bc0f097cb9b5616c
 
-  https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
+Thank you!
 
-for you to fetch changes up to 1546d3feb5e533fbee6710bd51b2847b2ec23623:
-
-  fscrypt: use AES library for v1 key derivation (2026-03-25 12:06:33 -0700)
-
-----------------------------------------------------------------
-
-- Various cleanups for the interface between fs/crypto/ and
-  filesystems, from Christoph Hellwig
-
-- Simplify and optimize the implementation of v1 key derivation by
-  using the AES library instead of the crypto_skcipher API
-
-----------------------------------------------------------------
-Christoph Hellwig (14):
-      ext4: initialize the write hint in io_submit_init_bio
-      ext4: open code fscrypt_set_bio_crypt_ctx_bh
-      ext4: factor out a io_submit_need_new_bio helper
-      ext4, fscrypt: merge fscrypt_mergeable_bio_bh into io_submit_need_new_bio
-      fscrypt: move fscrypt_set_bio_crypt_ctx_bh to buffer.c
-      fscrypt: pass a byte offset to fscrypt_generate_dun
-      fscrypt: pass a byte offset to fscrypt_mergeable_bio
-      fscrypt: pass a byte offset to fscrypt_set_bio_crypt_ctx
-      fscrypt: pass a byte offset to fscrypt_zeroout_range_inline_crypt
-      fscrypt: pass a byte length to fscrypt_zeroout_range_inline_crypt
-      fscrypt: pass a byte offset to fscrypt_zeroout_range
-      fscrypt: pass a byte length to fscrypt_zeroout_range
-      fscrypt: pass a real sector_t to fscrypt_zeroout_range
-      ext4: use a byte granularity cursor in ext4_mpage_readpages
-
-Eric Biggers (1):
-      fscrypt: use AES library for v1 key derivation
-
- fs/buffer.c                 | 18 +++++++++-
- fs/crypto/Kconfig           |  2 +-
- fs/crypto/bio.c             | 38 +++++++++-----------
- fs/crypto/fscrypt_private.h |  3 --
- fs/crypto/inline_crypt.c    | 86 +++++---------------------------------------
- fs/crypto/keysetup.c        |  2 --
- fs/crypto/keysetup_v1.c     | 87 +++++++++++++++------------------------------
- fs/ext4/inode.c             |  5 ++-
- fs/ext4/page-io.c           | 28 +++++++++++----
- fs/ext4/readpage.c          | 10 +++---
- fs/f2fs/data.c              |  7 ++--
- fs/f2fs/file.c              |  4 ++-
- fs/iomap/direct-io.c        |  6 ++--
- include/linux/fscrypt.h     | 37 +++++--------------
- 14 files changed, 120 insertions(+), 213 deletions(-)
+-- 
+Deet-doot-dot, I am a bot.
+https://korg.docs.kernel.org/prtracker.html
