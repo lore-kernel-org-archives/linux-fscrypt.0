@@ -1,37 +1,58 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BB1F73E5A35
-	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:54:38 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 991ED3E5A1D
+	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:54:44 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1778662480; cv=none; b=Mrxtv6Rm1Q4G6bpgqtxWeEH3BIoTg3MVLh5rxKmKY8bcp+lIk+aMdvheWW2dfGx74coBOHdcjk9eOwgZ4HW/PdF3XKsr/8CL9sDx07C0IZHEPsk46FzAbctRO28zVwvnE+is4vMnvlpsfiGkczOw7Pmz4k5/9Zlz3VL06voqjIM=
+	t=1778662486; cv=none; b=g+NUX7//3Cv40YvxftyfXoEjlYfa7sKezHPosCNmLmsfi27pqQlHAN4IrUIAhcS8uGjF1kJwOdbUVVbelj2tTKiVTQu3uLVY7A2A43KezBtImKr66sy9OepbvSNECjjODXFP1KvwfHxyC1aWbh/wjyV6MLqnOonS9wTMCRcKumQ=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1778662480; c=relaxed/simple;
-	bh=lWxB75BNTILHGGJD00vxjWLW77hD3j4iDQOUZjqe/7o=;
+	s=arc-20240116; t=1778662486; c=relaxed/simple;
+	bh=9W+Yz6kcru6FCkZ/2fANNCmMGeQfje/au4SLvh9fG1w=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=W2ATMqOqWkcTrD8Dx2zGkC56jL0BAlWB+SvBmu/nbYnvB37g4Q2z+MkYSHNCJ1ugz3vPpzEbiLM/2AmpLOB8j0wijfwMPyiCdSmWwAcEq8SvxTdH7WcRh2kH4Owxk/T/kcCTK4PV3CsF4WUXkiOEAzTOwL/kDqSqScru7tuvLa4=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
+	 MIME-Version; b=PjZQnHCQj5L68W3qi/Mcg/iavDkMeYr1yucgBWsQQGHX5avZUpfZ7eRRqpphjRzilyh2fr35q2yclrlSrtHGl2TSKHBbeYqIro+yrDQCZT2lkp6N+rruLxvJ4mx4YQA6JYhGDT0Kf/Vmzx8wYbyK6rQF+j7tiMYhDkt7GlJQibE=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=BfjwRo5Z; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=BfjwRo5Z; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="BfjwRo5Z";
+	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="BfjwRo5Z"
+Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 260625CB07;
-	Wed, 13 May 2026 08:54:20 +0000 (UTC)
-Authentication-Results: smtp-out1.suse.de;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id 8F6C17664E;
+	Wed, 13 May 2026 08:54:24 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
+	t=1778662464; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=RIfv4PY3hIncFTDaYw8M4gfpft5+1aD1ckQbNPUfxpI=;
+	b=BfjwRo5ZQgsuttmLh0re5Kan1C46Ld4fFiC7zV8fNu/O1WhCEzzi7Q6NqHS8NWK7FSlEGP
+	UByoGDhheux1Zh2P+ShGFjvOD9gAT3UD7sSt+cRpE7FwYf5Y2nBJx3gmcEcfDPJBxYkjXW
+	VWmu2uC1jCkfCMILOl5vfzy6ld8gTqk=
+Authentication-Results: smtp-out2.suse.de;
 	none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
+	t=1778662464; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:
+	 content-transfer-encoding:content-transfer-encoding:
+	 in-reply-to:in-reply-to:references:references;
+	bh=RIfv4PY3hIncFTDaYw8M4gfpft5+1aD1ckQbNPUfxpI=;
+	b=BfjwRo5ZQgsuttmLh0re5Kan1C46Ld4fFiC7zV8fNu/O1WhCEzzi7Q6NqHS8NWK7FSlEGP
+	UByoGDhheux1Zh2P+ShGFjvOD9gAT3UD7sSt+cRpE7FwYf5Y2nBJx3gmcEcfDPJBxYkjXW
+	VWmu2uC1jCkfCMILOl5vfzy6ld8gTqk=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id F31F1593A9;
-	Wed, 13 May 2026 08:54:19 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 697E6593A9;
+	Wed, 13 May 2026 08:54:24 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id mK7YOjs8BGpERwAAD6G6ig
-	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:19 +0000
+	id cM0cGUA8BGpERwAAD6G6ig
+	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:24 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -44,10 +65,12 @@ Cc: linux-block@vger.kernel.org,
 	Daniel Vacek <neelx@suse.com>,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
-	linux-kernel@vger.kernel.org
-Subject: [PATCH v7 06/43] fscrypt: add a process_bio hook to fscrypt_operations
-Date: Wed, 13 May 2026 10:52:40 +0200
-Message-ID: <20260513085340.3673127-7-neelx@suse.com>
+	linux-kernel@vger.kernel.org,
+	Omar Sandoval <osandov@osandov.com>,
+	Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+Subject: [PATCH v7 11/43] btrfs: add inode encryption contexts
+Date: Wed, 13 May 2026 10:52:45 +0200
+Message-ID: <20260513085340.3673127-12-neelx@suse.com>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20260513085340.3673127-1-neelx@suse.com>
 References: <20260513085340.3673127-1-neelx@suse.com>
@@ -58,83 +81,340 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Spamd-Result: default: False [-4.00 / 50.00];
-	REPLY(-4.00)[]
-X-Rspamd-Queue-Id: 260625CB07
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Spam-Score: -4.00
-X-Spam-Level: 
-X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
 X-Spam-Flag: NO
-X-Rspamd-Action: no action
+X-Spam-Score: -6.80
+X-Spamd-Result: default: False [-6.80 / 50.00];
+	REPLY(-4.00)[];
+	BAYES_HAM(-3.00)[100.00%];
+	MID_CONTAINS_FROM(1.00)[];
+	NEURAL_HAM_LONG(-1.00)[-1.000];
+	R_MISSING_CHARSET(0.50)[];
+	NEURAL_HAM_SHORT(-0.20)[-1.000];
+	MIME_GOOD(-0.10)[text/plain];
+	DBL_BLOCKED_OPENRESOLVER(0.00)[imap1.dmz-prg2.suse.org:helo,suse.com:email,suse.com:mid];
+	ARC_NA(0.00)[];
+	MIME_TRACE(0.00)[0:+];
+	TO_DN_SOME(0.00)[];
+	RCPT_COUNT_TWELVE(0.00)[14];
+	RCVD_VIA_SMTP_AUTH(0.00)[];
+	FUZZY_RATELIMITED(0.00)[rspamd.com];
+	FROM_HAS_DN(0.00)[];
+	TO_MATCH_ENVRCPT_ALL(0.00)[];
+	FROM_EQ_ENVFROM(0.00)[];
+	RCVD_COUNT_TWO(0.00)[2];
+	R_RATELIMIT(0.00)[to_ip_from(RLjpbzrka5mc1bf4fb9cmz1e4f)];
+	DKIM_SIGNED(0.00)[suse.com:s=susede1];
+	RCVD_TLS_ALL(0.00)[]
+X-Spam-Level: 
 
-From: Josef Bacik <josef@toxicpanda.com>
+From: Omar Sandoval <osandov@osandov.com>
 
-This will allow file systems to set a process_bio hook for inline
-encryption.  This will be utilized by btrfs in order to make sure the
-checksumming work is done on the encrypted bio's.
+fscrypt stores a context item with encrypted inodes that contains the
+related encryption information.  fscrypt provides an arbitrary blob for
+the filesystem to store, and it does not clearly fit into an existing
+structure, so this goes in a new item type.
 
+Signed-off-by: Omar Sandoval <osandov@osandov.com>
+Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/2c638e5fa1b7868dbf79d932b15364c3c30ca9de.1706116485.git.josef@toxicpanda.com/
- * No changes since.
+v7 changes:
+ * Fix a path leak as found by Chri's AI review.
+v6 changes:
+ * Shorten the inode context key macro name to BTRFS_FSCRYPT_INODE_CTX_KEY.
+v5: https://lore.kernel.org/linux-btrfs/5a88efb484b0874a7430b83bc6e5f6b9aa5858d5.1706116485.git.josef@toxicpanda.com/
 ---
- fs/crypto/inline_crypt.c |  2 +-
- include/linux/fscrypt.h  | 14 ++++++++++++++
- 2 files changed, 15 insertions(+), 1 deletion(-)
+ fs/btrfs/fscrypt.c              | 116 ++++++++++++++++++++++++++++++++
+ fs/btrfs/fscrypt.h              |   2 +
+ fs/btrfs/inode.c                |  19 ++++++
+ fs/btrfs/ioctl.c                |   8 ++-
+ include/uapi/linux/btrfs_tree.h |  10 +++
+ 5 files changed, 153 insertions(+), 2 deletions(-)
 
-diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index c51c6eb2259f..fde844aaac1a 100644
---- a/fs/crypto/inline_crypt.c
-+++ b/fs/crypto/inline_crypt.c
-@@ -179,7 +179,7 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
- 	err = blk_crypto_init_key(blk_key, key_bytes, key_size, key_type,
- 				  crypto_mode, fscrypt_get_dun_bytes(ci),
- 				  1U << ci->ci_data_unit_bits,
--				  NULL);
-+				  sb->s_cop->process_bio);
- 	if (err) {
- 		fscrypt_err(inode, "error %d initializing blk-crypto key", err);
- 		goto fail;
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index dda5b1d32f78..a1cbd1be154c 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -16,6 +16,7 @@
- #include <linux/fs.h>
- #include <linux/mm.h>
- #include <linux/slab.h>
-+#include <linux/blk-crypto.h>
- #include <uapi/linux/fscrypt.h>
+diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
+index 6cfba7d94e72..c503f817cbe7 100644
+--- a/fs/btrfs/fscrypt.c
++++ b/fs/btrfs/fscrypt.c
+@@ -1,10 +1,126 @@
+ // SPDX-License-Identifier: GPL-2.0
+ 
++#include <linux/iversion.h>
+ #include "ctree.h"
++#include "accessors.h"
+ #include "btrfs_inode.h"
++#include "disk-io.h"
++#include "fs.h"
+ #include "fscrypt.h"
++#include "ioctl.h"
++#include "messages.h"
++#include "transaction.h"
++#include "xattr.h"
++
++static int btrfs_fscrypt_get_context(struct inode *inode, void *ctx, size_t len)
++{
++	struct btrfs_key key = {
++		.objectid = btrfs_ino(BTRFS_I(inode)),
++		.type = BTRFS_FSCRYPT_INODE_CTX_KEY,
++		.offset = 0,
++	};
++	struct btrfs_path *path;
++	struct extent_buffer *leaf;
++	unsigned long ptr;
++	int ret;
++
++
++	path = btrfs_alloc_path();
++	if (!path)
++		return -ENOMEM;
++
++	ret = btrfs_search_slot(NULL, BTRFS_I(inode)->root, &key, path, 0, 0);
++	if (ret) {
++		len = -ENOENT;
++		goto out;
++	}
++
++	leaf = path->nodes[0];
++	ptr = btrfs_item_ptr_offset(leaf, path->slots[0]);
++	/* fscrypt provides max context length, but it could be less */
++	len = min_t(size_t, len, btrfs_item_size(leaf, path->slots[0]));
++	read_extent_buffer(leaf, ctx, ptr, len);
++
++out:
++	btrfs_free_path(path);
++	return len;
++}
++
++static int btrfs_fscrypt_set_context(struct inode *inode, const void *ctx,
++				     size_t len, void *fs_data)
++{
++	struct btrfs_trans_handle *trans = fs_data;
++	struct btrfs_key key = {
++		.objectid = btrfs_ino(BTRFS_I(inode)),
++		.type = BTRFS_FSCRYPT_INODE_CTX_KEY,
++		.offset = 0,
++	};
++	struct btrfs_path *path = NULL;
++	struct extent_buffer *leaf;
++	unsigned long ptr;
++	int ret;
++
++	if (!trans)
++		trans = btrfs_start_transaction(BTRFS_I(inode)->root, 2);
++	if (IS_ERR(trans))
++		return PTR_ERR(trans);
++
++	path = btrfs_alloc_path();
++	if (!path) {
++		ret = -ENOMEM;
++		goto out_err;
++	}
++
++	ret = btrfs_search_slot(trans, BTRFS_I(inode)->root, &key, path, 0, 1);
++	if (ret < 0)
++		goto out_err;
++
++	if (ret > 0) {
++		btrfs_release_path(path);
++		ret = btrfs_insert_empty_item(trans, BTRFS_I(inode)->root, path, &key, len);
++		if (ret)
++			goto out_err;
++	}
++
++	leaf = path->nodes[0];
++	ptr = btrfs_item_ptr_offset(leaf, path->slots[0]);
++
++	len = min_t(size_t, len, btrfs_item_size(leaf, path->slots[0]));
++	write_extent_buffer(leaf, ctx, ptr, len);
++	btrfs_mark_buffer_dirty(trans, leaf);
++	btrfs_release_path(path);
++
++	if (fs_data)
++		goto out_err;
++
++	BTRFS_I(inode)->flags |= BTRFS_INODE_ENCRYPT;
++	btrfs_sync_inode_flags_to_i_flags(BTRFS_I(inode));
++	inode_inc_iversion(inode);
++	inode_set_ctime_current(inode);
++	ret = btrfs_update_inode(trans, BTRFS_I(inode));
++	if (ret)
++		goto out_abort;
++	btrfs_free_path(path);
++	btrfs_end_transaction(trans);
++	return 0;
++out_abort:
++	btrfs_abort_transaction(trans, ret);
++out_err:
++	if (!fs_data)
++		btrfs_end_transaction(trans);
++	btrfs_free_path(path);
++	return ret;
++}
++
++static bool btrfs_fscrypt_empty_dir(struct inode *inode)
++{
++	return inode->i_size == BTRFS_EMPTY_DIR_SIZE;
++}
+ 
+ const struct fscrypt_operations btrfs_fscrypt_ops = {
+ 	.inode_info_offs = (int)offsetof(struct btrfs_inode, i_crypt_info) -
+ 			   (int)offsetof(struct btrfs_inode, vfs_inode),
++	.get_context = btrfs_fscrypt_get_context,
++	.set_context = btrfs_fscrypt_set_context,
++	.empty_dir = btrfs_fscrypt_empty_dir,
+ };
+diff --git a/fs/btrfs/fscrypt.h b/fs/btrfs/fscrypt.h
+index 7f4e6888bd43..80adb7e56826 100644
+--- a/fs/btrfs/fscrypt.h
++++ b/fs/btrfs/fscrypt.h
+@@ -5,6 +5,8 @@
+ 
+ #include <linux/fscrypt.h>
+ 
++#include "fs.h"
++
+ extern const struct fscrypt_operations btrfs_fscrypt_ops;
+ 
+ #endif /* BTRFS_FSCRYPT_H */
+diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
+index 8f89e44b2d53..14bad4cdb900 100644
+--- a/fs/btrfs/inode.c
++++ b/fs/btrfs/inode.c
+@@ -60,6 +60,7 @@
+ #include "defrag.h"
+ #include "dir-item.h"
+ #include "file-item.h"
++#include "fscrypt.h"
+ #include "uuid-tree.h"
+ #include "ioctl.h"
+ #include "file.h"
+@@ -6529,6 +6530,9 @@ int btrfs_new_inode_prepare(struct btrfs_new_inode_args *args,
+ 	struct inode *inode = args->inode;
+ 	int ret;
+ 
++	if (fscrypt_is_nokey_name(args->dentry))
++		return -ENOKEY;
++
+ 	if (!args->orphan) {
+ 		ret = fscrypt_setup_filename(dir, &args->dentry->d_name, 0,
+ 					     &args->fname);
+@@ -6564,6 +6568,9 @@ int btrfs_new_inode_prepare(struct btrfs_new_inode_args *args,
+ 	if (dir->i_security)
+ 		(*trans_num_items)++;
+ #endif
++	/* 1 to add fscrypt item */
++	if (args->encrypt)
++		(*trans_num_items)++;
+ 	if (args->orphan) {
+ 		/* 1 to add orphan item */
+ 		(*trans_num_items)++;
+@@ -6776,6 +6783,11 @@ int btrfs_create_new_inode(struct btrfs_trans_handle *trans,
+ 	BTRFS_I(inode)->i_otime_sec = ts.tv_sec;
+ 	BTRFS_I(inode)->i_otime_nsec = ts.tv_nsec;
+ 
++	if (args->encrypt) {
++		BTRFS_I(inode)->flags |= BTRFS_INODE_ENCRYPT;
++		btrfs_sync_inode_flags_to_i_flags(BTRFS_I(inode));
++	}
++
+ 	/*
+ 	 * We're going to fill the inode item now, so at this point the inode
+ 	 * must be fully initialized.
+@@ -6849,6 +6861,13 @@ int btrfs_create_new_inode(struct btrfs_trans_handle *trans,
+ 			goto discard;
+ 		}
+ 	}
++	if (args->encrypt) {
++		ret = fscrypt_set_context(inode, trans);
++		if (ret) {
++			btrfs_abort_transaction(trans, ret);
++			goto discard;
++		}
++	}
+ 
+ 	ret = btrfs_add_inode_to_root(BTRFS_I(inode), false);
+ 	if (WARN_ON(ret)) {
+diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
+index a39460bf68a7..6a37dd3cc5ee 100644
+--- a/fs/btrfs/ioctl.c
++++ b/fs/btrfs/ioctl.c
+@@ -153,6 +153,8 @@ static unsigned int btrfs_inode_flags_to_fsflags(const struct btrfs_inode *inode
+ 		iflags |= FS_DIRSYNC_FL;
+ 	if (flags & BTRFS_INODE_NODATACOW)
+ 		iflags |= FS_NOCOW_FL;
++	if (flags & BTRFS_INODE_ENCRYPT)
++		iflags |= FS_ENCRYPT_FL;
+ 	if (ro_flags & BTRFS_INODE_RO_VERITY)
+ 		iflags |= FS_VERITY_FL;
+ 
+@@ -181,12 +183,14 @@ void btrfs_sync_inode_flags_to_i_flags(struct btrfs_inode *inode)
+ 		new_fl |= S_NOATIME;
+ 	if (inode->flags & BTRFS_INODE_DIRSYNC)
+ 		new_fl |= S_DIRSYNC;
++	if (inode->flags & BTRFS_INODE_ENCRYPT)
++		new_fl |= S_ENCRYPTED;
+ 	if (inode->ro_flags & BTRFS_INODE_RO_VERITY)
+ 		new_fl |= S_VERITY;
+ 
+ 	set_mask_bits(&inode->vfs_inode.i_flags,
+ 		      S_SYNC | S_APPEND | S_IMMUTABLE | S_NOATIME | S_DIRSYNC |
+-		      S_VERITY, new_fl);
++		      S_VERITY | S_ENCRYPTED, new_fl);
+ }
  
  /*
-@@ -205,6 +206,19 @@ struct fscrypt_operations {
- 	 */
- 	struct block_device **(*get_devices)(struct super_block *sb,
- 					     unsigned int *num_devs);
+@@ -199,7 +203,7 @@ static int check_fsflags(unsigned int old_flags, unsigned int flags)
+ 		      FS_NOATIME_FL | FS_NODUMP_FL | \
+ 		      FS_SYNC_FL | FS_DIRSYNC_FL | \
+ 		      FS_NOCOMP_FL | FS_COMPR_FL |
+-		      FS_NOCOW_FL))
++		      FS_NOCOW_FL | FS_ENCRYPT_FL))
+ 		return -EOPNOTSUPP;
+ 
+ 	/* COMPR and NOCOMP on new/old are valid */
+diff --git a/include/uapi/linux/btrfs_tree.h b/include/uapi/linux/btrfs_tree.h
+index cc3b9f7dccaf..3cec245268e7 100644
+--- a/include/uapi/linux/btrfs_tree.h
++++ b/include/uapi/linux/btrfs_tree.h
+@@ -167,6 +167,8 @@
+ #define BTRFS_VERITY_DESC_ITEM_KEY	36
+ #define BTRFS_VERITY_MERKLE_ITEM_KEY	37
+ 
++#define BTRFS_FSCRYPT_INODE_CTX_KEY	41
 +
-+	/*
-+	 * A callback if the file system requires the ability to process the
-+	 * encrypted bio, used only with inline encryption.
-+	 *
-+	 * @orig_bio: the original bio submitted.
-+	 * @enc_bio: the encrypted bio.
-+	 *
-+	 * For writes the enc_bio will be different from the orig_bio, for reads
-+	 * they will be the same.  For reads we get the bio before it is
-+	 * decrypted, for writes we get the bio before it is submitted.
-+	 */
-+	blk_crypto_process_bio_t process_bio;
+ #define BTRFS_ORPHAN_ITEM_KEY		48
+ /* reserve 2-15 close to the inode for later flexibility */
+ 
+@@ -431,6 +433,7 @@ static inline __u8 btrfs_dir_flags_to_ftype(__u8 flags)
+ #define BTRFS_INODE_NOATIME		(1U << 9)
+ #define BTRFS_INODE_DIRSYNC		(1U << 10)
+ #define BTRFS_INODE_COMPRESS		(1U << 11)
++#define BTRFS_INODE_ENCRYPT		(1U << 12)
+ 
+ #define BTRFS_INODE_ROOT_ITEM_INIT	(1U << 31)
+ 
+@@ -447,6 +450,7 @@ static inline __u8 btrfs_dir_flags_to_ftype(__u8 flags)
+ 	 BTRFS_INODE_NOATIME |						\
+ 	 BTRFS_INODE_DIRSYNC |						\
+ 	 BTRFS_INODE_COMPRESS |						\
++	 BTRFS_INODE_ENCRYPT |						\
+ 	 BTRFS_INODE_ROOT_ITEM_INIT)
+ 
+ #define BTRFS_INODE_RO_VERITY		(1U << 0)
+@@ -1075,6 +1079,12 @@ enum {
+ 	BTRFS_NR_FILE_EXTENT_TYPES = 3,
  };
  
- int fscrypt_d_revalidate(struct inode *dir, const struct qstr *name,
++enum btrfs_encryption_type {
++	BTRFS_ENCRYPTION_NONE,
++	BTRFS_ENCRYPTION_FSCRYPT,
++	BTRFS_NR_ENCRYPTION_TYPES,
++};
++
+ struct btrfs_file_extent_item {
+ 	/*
+ 	 * transaction id that created this extent
 -- 
 2.53.0
 
