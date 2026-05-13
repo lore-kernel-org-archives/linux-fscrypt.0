@@ -1,58 +1,37 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id EB5753FF897
-	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:55:42 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id B1A55401A13
+	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:55:47 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1778662544; cv=none; b=ggM7sXe5Hzm7Ri3gDbOVc9AOMKKeryRSzA2ZcteludqZHbj7FUgpX7+gmwR8WOpH521y7AAVeoDKSSWvF4rpHj6iMs7esX9B8H3xRBP/DQmUmso0ar3pqbcMdBNEa31uU+ibNoQQ9MjPckMOIQOTn6BjjCwjYTYoBcn2AfoXwwY=
+	t=1778662549; cv=none; b=p8lfkwM1TtcOhJVY2rI139VoauSUc1wNHZaeFv/ND1g4WUjh7D4xoQXt12aUVZkSavQm67/1rgIoOOufDoexoRZyc9IWuBGup9VnHAzLnc1cf3z5CtpNUHHN/zamkaYqVXfgn22y8nvPX56sw4r/3z1m4+bBM8lBSJJin+bBbCo=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1778662544; c=relaxed/simple;
-	bh=DEnORXHmoQgwwGPcMDhEW44AW0Ue4rHR08tXzQJtIXw=;
+	s=arc-20240116; t=1778662549; c=relaxed/simple;
+	bh=bstH3yoiWLkH01mk72Z2o8aRD0giEyllOvQ5UINcbL4=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=YhlYCCSTqVRTkb13xF2ly1Okv+YZNLENcsQ2IDXuE7exJiBsmvpp2CZ0sYepBfa8dFFTahQeqNjib8M7FSCVhbgHGbcePc9XVMZjHobGuKWuZcty+fi+X00rjKlRGq76SS6Z5SxAHZsfxqXbI2PRE7WZceXiP0XJop/0dbt4k1k=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=UAafPuvA; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=UAafPuvA; arc=none smtp.client-ip=195.135.223.130
+	 MIME-Version; b=EaJQR1kzWvuTx7yhH/ssHJtMKuUTjfZ5ZLdI3AKzQRBMRJHjjBPyyOWeSLqlfzLKGCOWqF2DlM5vhKFNsrhtt9LwqxAUs5xcGt2zcRTB1DY/N1rZzhYBOygXZ4dz0VSZzj5Vw+PwjdjuL7YCw2jo4LqOy0k2ujg2IG4ABMrEH3s=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="UAafPuvA";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="UAafPuvA"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 76F00625AE;
-	Wed, 13 May 2026 08:54:33 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1778662473; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=E2slESMQWzpw5l3XyaJIAXq3fLmXEBsU03dFbqKhyUc=;
-	b=UAafPuvAPZ93Qh+L55EoE+DHSvXY2TCops3JCovh7270m79yIHN8SzGVhoVxholBkAzx4/
-	Ne7Ar7kc+Gj7FNTv8TjaNv4f3ARfib/FySMadGGEzLg0LfNYeBeIotzXnEZvdVKzbAjoYz
-	p2+5C3CAq8xM1568c6p6U+uNM2Uep8Q=
-Authentication-Results: smtp-out1.suse.de;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id 388F276691;
+	Wed, 13 May 2026 08:54:35 +0000 (UTC)
+Authentication-Results: smtp-out2.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1778662473; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=E2slESMQWzpw5l3XyaJIAXq3fLmXEBsU03dFbqKhyUc=;
-	b=UAafPuvAPZ93Qh+L55EoE+DHSvXY2TCops3JCovh7270m79yIHN8SzGVhoVxholBkAzx4/
-	Ne7Ar7kc+Gj7FNTv8TjaNv4f3ARfib/FySMadGGEzLg0LfNYeBeIotzXnEZvdVKzbAjoYz
-	p2+5C3CAq8xM1568c6p6U+uNM2Uep8Q=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 5647D593AA;
-	Wed, 13 May 2026 08:54:33 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 17975593A9;
+	Wed, 13 May 2026 08:54:35 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id 0NCfFEk8BGpERwAAD6G6ig
-	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:33 +0000
+	id mAw9BUs8BGpERwAAD6G6ig
+	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:35 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -66,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v7 22/43] btrfs: populate the ordered_extent with the fscrypt context
-Date: Wed, 13 May 2026 10:52:56 +0200
-Message-ID: <20260513085340.3673127-23-neelx@suse.com>
+Subject: [PATCH v7 25/43] btrfs: pass through fscrypt_extent_info to the file extent helpers
+Date: Wed, 13 May 2026 10:52:59 +0200
+Message-ID: <20260513085340.3673127-26-neelx@suse.com>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20260513085340.3673127-1-neelx@suse.com>
 References: <20260513085340.3673127-1-neelx@suse.com>
@@ -79,186 +58,121 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
+X-Rspamd-Queue-Id: 388F276691
+X-Spam-Score: -4.00
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
+X-Rspamd-Action: no action
 X-Spam-Flag: NO
-X-Spam-Score: -6.80
-X-Spamd-Result: default: False [-6.80 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	MID_CONTAINS_FROM(1.00)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[imap1.dmz-prg2.suse.org:helo,suse.com:email,suse.com:mid];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	TO_DN_SOME(0.00)[];
-	RCPT_COUNT_TWELVE(0.00)[12];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	FROM_HAS_DN(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_COUNT_TWO(0.00)[2];
-	R_RATELIMIT(0.00)[to_ip_from(RLdafymbgddseoxkryad1wgu8n)];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	RCVD_TLS_ALL(0.00)[]
 X-Spam-Level: 
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-The fscrypt_extent_info will be tied to the extent_map lifetime, so it
-will be created when we create the IO em, or it'll already exist in the
-NOCOW case. Use this fscrypt_info when creating the ordered extent to
-make sure everything is passed through properly.
+Now that we have the fscrypt_extnet_info in all of the supporting
+structures, pass this through and set the file extent encryption bit
+accordingly from the supporting structures.  In subsequent patches code
+will be added to populate these appropriately.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-No changes in v7.
-v6 changes:
- * Splitted the dio-related hunks from inode.c to direct-io.c as upstream
-   refactored in the meantime.
- * Pass fscrypt_info using the file_extent structure to follow the
-   upstream cleanup.
-v5: https://lore.kernel.org/linux-btrfs/33e650f3e91ed0318211301beb27fa613382f28e.1706116485.git.josef@toxicpanda.com/
+v5: https://lore.kernel.org/linux-btrfs/a8b9dd312a4504f209e861cca5289a528b30ff95.1706116485.git.josef@toxicpanda.com/
+ * No changes since.
 ---
- fs/btrfs/direct-io.c |  4 +++-
- fs/btrfs/inode.c     | 36 ++++++++++++++++++++++++++++++------
- 2 files changed, 33 insertions(+), 7 deletions(-)
+ fs/btrfs/inode.c    | 16 ++++++++++------
+ fs/btrfs/tree-log.c |  2 +-
+ 2 files changed, 11 insertions(+), 7 deletions(-)
 
-diff --git a/fs/btrfs/direct-io.c b/fs/btrfs/direct-io.c
-index 5a53739e9445..e46bca590f35 100644
---- a/fs/btrfs/direct-io.c
-+++ b/fs/btrfs/direct-io.c
-@@ -140,7 +140,7 @@ static int lock_extent_direct(struct inode *inode, u64 lockstart, u64 lockend,
- static struct extent_map *btrfs_create_dio_extent(struct btrfs_inode *inode,
- 						  struct btrfs_dio_data *dio_data,
- 						  const u64 start,
--						  const struct btrfs_file_extent *file_extent,
-+						  struct btrfs_file_extent *file_extent,
- 						  const int type)
- {
- 	struct extent_map *em = NULL;
-@@ -150,6 +150,7 @@ static struct extent_map *btrfs_create_dio_extent(struct btrfs_inode *inode,
- 		em = btrfs_create_io_em(inode, start, file_extent, type);
- 		if (IS_ERR(em))
- 			goto out;
-+		file_extent->fscrypt_info = em->fscrypt_info;
- 	}
- 
- 	ordered = btrfs_alloc_ordered_extent(inode, start, file_extent,
-@@ -276,6 +277,7 @@ static int btrfs_get_blocks_direct_write(struct extent_map **map,
- 		}
- 		space_reserved = true;
- 
-+		file_extent.fscrypt_info = em->fscrypt_info;
- 		em2 = btrfs_create_dio_extent(BTRFS_I(inode), dio_data, start,
- 					      &file_extent, type);
- 		btrfs_dec_nocow_writers(bg);
 diff --git a/fs/btrfs/inode.c b/fs/btrfs/inode.c
-index c6c8ae05e471..eab7950372ae 100644
+index eab7950372ae..cdd2d7bc50cc 100644
 --- a/fs/btrfs/inode.c
 +++ b/fs/btrfs/inode.c
-@@ -1121,10 +1121,11 @@ static void submit_one_async_extent(struct async_chunk *async_chunk,
- 		ret = PTR_ERR(em);
- 		goto out_free_reserve;
- 	}
--	btrfs_free_extent_map(em);
+@@ -3056,7 +3056,9 @@ int btrfs_writepage_cow_fixup(struct folio *folio)
+ }
  
-+	file_extent.fscrypt_info = em->fscrypt_info;
- 	ordered = btrfs_alloc_ordered_extent(inode, start, &file_extent,
- 					     1U << BTRFS_ORDERED_COMPRESSED);
-+	btrfs_free_extent_map(em);
- 	if (IS_ERR(ordered)) {
- 		btrfs_drop_extent_map_range(inode, start, end, false);
- 		ret = PTR_ERR(ordered);
-@@ -1263,10 +1264,11 @@ static int cow_one_range(struct btrfs_inode *inode, struct folio *locked_folio,
- 		ret = PTR_ERR(em);
- 		goto free_reserved;
- 	}
--	btrfs_free_extent_map(em);
+ static int insert_reserved_file_extent(struct btrfs_trans_handle *trans,
+-				       struct btrfs_inode *inode, u64 file_pos,
++				       struct btrfs_inode *inode,
++				       struct fscrypt_extent_info *fscrypt_info,
++				       u64 file_pos,
+ 				       struct btrfs_file_extent_item *stack_fi,
+ 				       const bool update_inode_bytes,
+ 				       u64 qgroup_reserved)
+@@ -3180,7 +3182,7 @@ static int insert_ordered_extent_file_extent(struct btrfs_trans_handle *trans,
+ 	btrfs_set_stack_file_extent_num_bytes(&stack_fi, num_bytes);
+ 	btrfs_set_stack_file_extent_ram_bytes(&stack_fi, ram_bytes);
+ 	btrfs_set_stack_file_extent_compression(&stack_fi, oe->compress_type);
+-	btrfs_set_stack_file_extent_encryption(&stack_fi, BTRFS_ENCRYPTION_NONE);
++	btrfs_set_stack_file_extent_encryption(&stack_fi, oe->encryption_type);
+ 	/* Other encoding is reserved and always 0 */
  
-+	file_extent.fscrypt_info = em->fscrypt_info;
- 	ordered = btrfs_alloc_ordered_extent(inode, file_offset, &file_extent,
- 					     1U << BTRFS_ORDERED_REGULAR);
-+	btrfs_free_extent_map(em);
- 	if (IS_ERR(ordered)) {
- 		btrfs_drop_extent_map_range(inode, file_offset, cur_end, false);
- 		ret = PTR_ERR(ordered);
-@@ -1933,18 +1935,32 @@ static int nocow_one_range(struct btrfs_inode *inode, struct folio *locked_folio
- 			   u64 file_pos, bool is_prealloc)
+ 	/*
+@@ -3193,7 +3195,7 @@ static int insert_ordered_extent_file_extent(struct btrfs_trans_handle *trans,
+ 			     test_bit(BTRFS_ORDERED_ENCODED, &oe->flags) ||
+ 			     test_bit(BTRFS_ORDERED_TRUNCATED, &oe->flags);
+ 
+-	return insert_reserved_file_extent(trans, oe->inode,
++	return insert_reserved_file_extent(trans, oe->inode, oe->fscrypt_info,
+ 					   oe->file_offset, &stack_fi,
+ 					   update_inode_bytes, oe->qgroup_rsv);
+ }
+@@ -9288,6 +9290,7 @@ static struct btrfs_trans_handle *insert_prealloc_file_extent(
+ 				       struct btrfs_trans_handle *trans_in,
+ 				       struct btrfs_inode *inode,
+ 				       struct btrfs_key *ins,
++				       struct fscrypt_extent_info *fscrypt_info,
+ 				       u64 file_offset)
  {
- 	struct btrfs_ordered_extent *ordered;
-+	struct extent_map *em;
- 	const u64 len = nocow_args->file_extent.num_bytes;
- 	const u64 end = file_pos + len - 1;
- 	int ret = 0;
+ 	struct btrfs_file_extent_item stack_fi;
+@@ -9307,7 +9310,8 @@ static struct btrfs_trans_handle *insert_prealloc_file_extent(
+ 	btrfs_set_stack_file_extent_num_bytes(&stack_fi, len);
+ 	btrfs_set_stack_file_extent_ram_bytes(&stack_fi, len);
+ 	btrfs_set_stack_file_extent_compression(&stack_fi, BTRFS_COMPRESS_NONE);
+-	btrfs_set_stack_file_extent_encryption(&stack_fi, BTRFS_ENCRYPTION_NONE);
++	btrfs_set_stack_file_extent_encryption(&stack_fi, fscrypt_info? BTRFS_ENCRYPTION_FSCRYPT:
++									BTRFS_ENCRYPTION_NONE);
+ 	/* Other encoding is reserved and always 0 */
  
- 	btrfs_lock_extent(&inode->io_tree, file_pos, end, cached);
+ 	ret = btrfs_qgroup_release_data(inode, file_offset, len, &qgroup_released);
+@@ -9315,7 +9319,7 @@ static struct btrfs_trans_handle *insert_prealloc_file_extent(
+ 		return ERR_PTR(ret);
  
--	if (is_prealloc) {
--		struct extent_map *em;
-+	/*
-+	 * We only want to do this lookup if we're encrypted, otherwise
-+	 * fsrypt_info will be null and we can avoid this lookup.
-+	 */
-+	if (IS_ENCRYPTED(&inode->vfs_inode)) {
-+		em = btrfs_get_extent(inode, NULL, file_pos, len);
-+		if (IS_ERR(em)) {
-+			btrfs_unlock_extent(&inode->io_tree, file_pos, end, cached);
-+			return PTR_ERR(em);
-+		}
-+		nocow_args->file_extent.fscrypt_info = fscrypt_get_extent_info(em->fscrypt_info);
-+		btrfs_free_extent_map(em);
-+	}
+ 	if (trans) {
+-		ret = insert_reserved_file_extent(trans, inode,
++		ret = insert_reserved_file_extent(trans, inode, fscrypt_info,
+ 						  file_offset, &stack_fi,
+ 						  true, qgroup_released);
+ 		if (ret)
+@@ -9408,7 +9412,7 @@ static int __btrfs_prealloc_file_range(struct inode *inode, int mode,
  
-+	if (is_prealloc) {
- 		em = btrfs_create_io_em(inode, file_pos, &nocow_args->file_extent,
- 					BTRFS_ORDERED_PREALLOC);
- 		if (IS_ERR(em)) {
-+			fscrypt_put_extent_info(nocow_args->file_extent.fscrypt_info);
- 			ret = PTR_ERR(em);
- 			goto error;
- 		}
-@@ -1955,6 +1971,7 @@ static int nocow_one_range(struct btrfs_inode *inode, struct folio *locked_folio
- 					     is_prealloc
- 					     ? (1U << BTRFS_ORDERED_PREALLOC)
- 					     : (1U << BTRFS_ORDERED_NOCOW));
-+	fscrypt_put_extent_info(nocow_args->file_extent.fscrypt_info);
- 	if (IS_ERR(ordered)) {
- 		if (is_prealloc)
- 			btrfs_drop_extent_map_range(inode, file_pos, end, false);
-@@ -7657,7 +7674,13 @@ struct extent_map *btrfs_create_io_em(struct btrfs_inode *inode, u64 start,
- 	em->flags |= EXTENT_FLAG_PINNED;
- 	if (type == BTRFS_ORDERED_COMPRESSED)
- 		btrfs_extent_map_set_compression(em, file_extent->compression);
--	btrfs_extent_map_set_encryption(em, BTRFS_ENCRYPTION_NONE);
-+
-+	if (file_extent->fscrypt_info) {
-+		btrfs_extent_map_set_encryption(em, BTRFS_ENCRYPTION_FSCRYPT);
-+		em->fscrypt_info = fscrypt_get_extent_info(file_extent->fscrypt_info);
-+	} else {
-+		btrfs_extent_map_set_encryption(em, BTRFS_ENCRYPTION_NONE);
-+	}
+ 		last_alloc = ins.offset;
+ 		trans = insert_prealloc_file_extent(trans, BTRFS_I(inode),
+-						    &ins, cur_offset);
++						    &ins, NULL, cur_offset);
+ 		/*
+ 		 * Now that we inserted the prealloc extent we can finally
+ 		 * decrement the number of reservations in the block group.
+diff --git a/fs/btrfs/tree-log.c b/fs/btrfs/tree-log.c
+index 3229a60bffb7..60aa763d2fa4 100644
+--- a/fs/btrfs/tree-log.c
++++ b/fs/btrfs/tree-log.c
+@@ -5150,7 +5150,7 @@ static int log_one_extent(struct btrfs_trans_handle *trans,
+ 	u64 block_start = btrfs_extent_map_block_start(em);
+ 	u64 block_len;
+ 	int ret;
+-	u8 encryption = BTRFS_ENCRYPTION_NONE;
++	u8 encryption = btrfs_extent_map_encryption(em);
  
- 	ret = btrfs_replace_extent_map_range(inode, em, true);
- 	if (ret) {
-@@ -10209,11 +10232,12 @@ ssize_t btrfs_do_encoded_write(struct kiocb *iocb, struct iov_iter *from,
- 		ret = PTR_ERR(em);
- 		goto out_free_reserved;
- 	}
--	btrfs_free_extent_map(em);
- 
-+	file_extent.fscrypt_info = em->fscrypt_info;
- 	ordered = btrfs_alloc_ordered_extent(inode, start, &file_extent,
- 				       (1U << BTRFS_ORDERED_ENCODED) |
- 				       (1U << BTRFS_ORDERED_COMPRESSED));
-+	btrfs_free_extent_map(em);
- 	if (IS_ERR(ordered)) {
- 		btrfs_drop_extent_map_range(inode, start, end, false);
- 		ret = PTR_ERR(ordered);
+ 	btrfs_set_stack_file_extent_generation(&fi, trans->transid);
+ 	if (em->flags & EXTENT_FLAG_PREALLOC)
 -- 
 2.53.0
 
