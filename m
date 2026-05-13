@@ -1,58 +1,37 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A18E03E9C17
-	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:55:49 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A7C7240758B
+	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:55:53 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1778662551; cv=none; b=oIXYN0owhbXdnNeo0ZersA+MopCVNptugsiTk+0TIZ/OokNuR5WpF8P499LCHprcPOBegBS0GEDgfJyT0Ls4GBVCJk6mof01IAp3axU0BQ4K+ZPbQ3Vjx1tpn1NNPTP/UZYhjKwa1nci1sg66TnkS0pfPYNhn7hCvXCG+9R9ppU=
+	t=1778662555; cv=none; b=dr4gt0Tcs918aVdRWt1jNvs1JEp9xzqp7/r+7jC1qiw1KmwPL78HppoRgRkDHXN6iPQuST3ZjSHYvbZyZdIUM9ero+HZTVdzEEzSmnEsXplmvoqYkfPxuuVruI7EDGA5FFVgEAqKjX99vThkkIa2RHHijZhdozWzYPjWZ1405tg=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1778662551; c=relaxed/simple;
-	bh=S2SZKkQkHhh9CtMTcidQNseMd3gn84Dpu5qB3PZhl6w=;
+	s=arc-20240116; t=1778662555; c=relaxed/simple;
+	bh=LoS7YHoAFW/usKm4yX9l3Fb7XUmfVNqSE1Z0mZx4M3A=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=nEHDEwY+E0iSao2b1jzGtFB67AhOhLcsnj0EkadcFFJAKnpFnoK6yzr0O3esx82r3fHkNbuPvezgQakFLAmP6acwHfI19nvc0dhUFYWIz7CMDGhueml1f7wwhwgsYPLO7AbdWvsTjR9dEpE8eE+eMt8PL50T51ZD7ykv80vkLoY=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=jDmNLSJ4; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=jDmNLSJ4; arc=none smtp.client-ip=195.135.223.130
+	 MIME-Version; b=Mz9c65yjyBIb+nxhqRwrng2diw5t3SxGzGH3oaFRaxGjfyiz5qEHgPe8l5wjriJZGBB+1hwhkcfSWVMvhw/0ca6RanyMUwMf/rdZN0ge4R4FcDZlHq9SqoAefdwJACwWHHzUKvDt+5A456a9w1+EBu3p1dgV80xMhV/cUhGzs0o=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="jDmNLSJ4";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="jDmNLSJ4"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 9D6B4625D1;
-	Wed, 13 May 2026 08:54:34 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1778662474; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=06OoF/z0hCEj+Lw4v/RHUl4Ln+xArgKVEQHWuCuuSk4=;
-	b=jDmNLSJ4rrMUDYKEXoeoFMn4IA2lmWT3ikmRopcgszQVSguEU+CKlboLTyxfv5ClrZHDFq
-	hX+cXZQxGA4yebbiTkG0P/4VWo75jrFO9GQj/XQgz6ZwOF3Rh/iwh8WqrejN6L34obRYWw
-	sKITvclt16SvSzjKqhpDf+Q4nBmy1HY=
-Authentication-Results: smtp-out1.suse.de;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id 619777666C;
+	Wed, 13 May 2026 08:54:39 +0000 (UTC)
+Authentication-Results: smtp-out2.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1778662474; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=06OoF/z0hCEj+Lw4v/RHUl4Ln+xArgKVEQHWuCuuSk4=;
-	b=jDmNLSJ4rrMUDYKEXoeoFMn4IA2lmWT3ikmRopcgszQVSguEU+CKlboLTyxfv5ClrZHDFq
-	hX+cXZQxGA4yebbiTkG0P/4VWo75jrFO9GQj/XQgz6ZwOF3Rh/iwh8WqrejN6L34obRYWw
-	sKITvclt16SvSzjKqhpDf+Q4nBmy1HY=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 7C905593A9;
-	Wed, 13 May 2026 08:54:34 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 40EDA593AC;
+	Wed, 13 May 2026 08:54:39 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id AJPvHUo8BGpERwAAD6G6ig
-	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:34 +0000
+	id UKhmD088BGpERwAAD6G6ig
+	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:39 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -66,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v7 24/43] btrfs: add extent encryption context tree item type
-Date: Wed, 13 May 2026 10:52:58 +0200
-Message-ID: <20260513085340.3673127-25-neelx@suse.com>
+Subject: [PATCH v7 30/43] btrfs: add a bio argument to btrfs_csum_one_bio
+Date: Wed, 13 May 2026 10:53:04 +0200
+Message-ID: <20260513085340.3673127-31-neelx@suse.com>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20260513085340.3673127-1-neelx@suse.com>
 References: <20260513085340.3673127-1-neelx@suse.com>
@@ -79,300 +58,143 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
+X-Rspamd-Queue-Id: 619777666C
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spam-Score: -4.00
 X-Spam-Level: 
-X-Spamd-Result: default: False [-6.80 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	MID_CONTAINS_FROM(1.00)[];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	RCVD_COUNT_TWO(0.00)[2];
-	FROM_HAS_DN(0.00)[];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	TO_DN_SOME(0.00)[];
-	RCPT_COUNT_TWELVE(0.00)[12];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	URIBL_BLOCKED(0.00)[imap1.dmz-prg2.suse.org:helo,suse.com:mid,suse.com:email];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[imap1.dmz-prg2.suse.org:helo,suse.com:mid,suse.com:email];
-	R_RATELIMIT(0.00)[to_ip_from(RLdafymbgddseoxkryad1wgu8n)];
-	RCVD_TLS_ALL(0.00)[]
+X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
 X-Spam-Flag: NO
-X-Spam-Score: -6.80
+X-Rspamd-Action: no action
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-The fscrypt encryption context will be stored as a new tree item type.
-This gives us flexibility to include different things in the future.
-
-Also update the tree-checker to validate the new item type.
+We only ever needed the bbio in btrfs_csum_one_bio, since that has the
+bio embedded in it.  However with encryption we'll have a different bio
+with the encrypted data in it, and the original bbio.  Update
+btrfs_csum_one_bio to take the bio we're going to csum as an argument,
+which will allow us to csum the encrypted bio and stuff the csums into
+the corresponding bbio to be used later when the IO completes.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v7 changes:
- * Keep the original error if any as suggested by Chris' AI review.
- * Fix a comment in check_fscrypt_context() to match the new design
-   as suggested by Chris' AI review.
+No changes in v7.
 v6 changes:
- * Not much left from the original commit.
-   - This was reworked so that the encryption context is now a separate
-     tree item with it's unique key.
-   - It is tightly related to the file extent item but still optional and
-     only used for encrypted extents.
-   - The content (and hence the size as well) comes from the fscrrypt
-     subsystem and it is not touched by btrfs at all.
-   - It's handled as a raw binary data (u8 *).
-   - This patch makes sure it is correctly removed when the related extent
-     is dropped.
- * As a result, the following patch https://lore.kernel.org/linux-btrfs/f0d9b2d3a40b7a963a977d3dfb62793ff7b065d1.1706116485.git.josef@toxicpanda.com/
-   ("btrfs: explicitly track file extent length for replace and drop")
-   was dropped as not applicable.  There's no need to track the size
-   anymore as it just matches the size of the stored item.
-
-   [RFC]: Should I have kept the structure with __u8 type? Like:
-
-   |  struct btrfs_encryption_info {
-   |        __u8 context[0];
-   |  };
-
-   I did remove it as it was only used to extend the file extent item
-   structure and hence no longer needed.
-v5: https://lore.kernel.org/linux-btrfs/7ee9171262857336011bf0e121846617c5181fa4.1706116485.git.josef@toxicpanda.com/
-    ("btrfs: add an optional encryption context to the end of file extents")
+ * Adapted for async csums.  For writes we have to stick with sync
+   csums.  Otherwise fscrypt would have to hand us the bounced bio
+   instead of releasing it.  Though that is not implemented yet.
+v5: https://lore.kernel.org/linux-btrfs/595a2e46dae3d18bceb5dfa60ac3ae23760fc800.1706116485.git.josef@toxicpanda.com/
 ---
- fs/btrfs/file.c                 | 65 +++++++++++++++++++++++++++++++++
- fs/btrfs/tree-checker.c         | 56 ++++++++++++++++++++++++++--
- include/uapi/linux/btrfs_tree.h |  8 ++++
- 3 files changed, 125 insertions(+), 4 deletions(-)
+ fs/btrfs/bio.c       |  4 ++--
+ fs/btrfs/bio.h       |  1 +
+ fs/btrfs/file-item.c | 13 ++++++-------
+ fs/btrfs/file-item.h |  2 +-
+ 4 files changed, 10 insertions(+), 10 deletions(-)
 
-diff --git a/fs/btrfs/file.c b/fs/btrfs/file.c
-index 8b0ebdeca9dd..fe7baecbf83b 100644
---- a/fs/btrfs/file.c
-+++ b/fs/btrfs/file.c
-@@ -151,6 +151,7 @@ int btrfs_drop_extents(struct btrfs_trans_handle *trans,
- 	u64 extent_offset = 0;
- 	u64 extent_end = 0;
- 	u64 last_end = args->start;
-+	u64 first_ctx = 1, last_ctx = 0;
- 	int del_nr = 0;
- 	int del_slot = 0;
- 	int extent_type;
-@@ -408,6 +409,12 @@ int btrfs_drop_extents(struct btrfs_trans_handle *trans,
- 				del_nr++;
- 			}
- 
-+			if (btrfs_file_extent_encryption(leaf, fi) == BTRFS_ENCRYPTION_FSCRYPT) {
-+				if (first_ctx > last_ctx)
-+					first_ctx = key.offset;
-+				last_ctx = key.offset;
-+			}
-+
- 			if (update_refs &&
- 			    extent_type == BTRFS_FILE_EXTENT_INLINE) {
- 				args->bytes_found += extent_end - key.offset;
-@@ -497,6 +504,64 @@ int btrfs_drop_extents(struct btrfs_trans_handle *trans,
- 		args->extent_inserted = true;
- 	}
- 
-+	if (first_ctx <= last_ctx) {
-+		int slot, nritems;
-+
-+		btrfs_release_path(path);
-+
-+		key.objectid = ino;
-+		key.type = BTRFS_FSCRYPT_CTX_KEY;
-+		key.offset = first_ctx;
-+
-+		ret = btrfs_search_slot(trans, root, &key, path, modify_tree, !!modify_tree);
-+		if (ret < 0)
-+			goto out_ctx;
-+next_leaf:
-+		leaf = path->nodes[0];
-+		slot = path->slots[0];
-+
-+		del_slot = slot;
-+		del_nr = 0;
-+		nritems = btrfs_header_nritems(leaf);
-+		while (slot < nritems) {
-+			btrfs_item_key_to_cpu(leaf, &key, slot);
-+			if (key.objectid > ino ||
-+			    key.type > BTRFS_FSCRYPT_CTX_KEY ||
-+			    key.offset > last_ctx)
-+				break;
-+			del_nr++;
-+			slot++;
-+		}
-+		if (del_nr) {
-+			ret = btrfs_del_items(trans, root, path, del_slot, del_nr);
-+			if (unlikely(ret)) {
-+				btrfs_abort_transaction(trans, ret);
-+				goto out_ctx;
-+			}
-+
-+			if (slot == nritems) {
-+				ret = btrfs_next_leaf(root, path);
-+				if (!ret)
-+					goto next_leaf;
-+				if (ret > 0)
-+					ret = 0;
-+			}
-+		}
-+out_ctx:
-+		if (args->path && args->extent_inserted) {
-+			int err;
-+
-+			btrfs_release_path(path);
-+
-+			key.objectid = ino;
-+			key.type = BTRFS_EXTENT_DATA_KEY;
-+			key.offset = args->start;
-+			err = btrfs_search_slot(trans, root, &key, path, 0, 0);
-+			if (err && ret >= 0)
-+				ret = err;
-+		}
-+	}
-+
- 	if (!args->path)
- 		btrfs_free_path(path);
- 	else if (!args->extent_inserted)
-diff --git a/fs/btrfs/tree-checker.c b/fs/btrfs/tree-checker.c
-index 61987353b138..fa20bdf9f1d1 100644
---- a/fs/btrfs/tree-checker.c
-+++ b/fs/btrfs/tree-checker.c
-@@ -186,6 +186,7 @@ static bool check_prev_ino(struct extent_buffer *leaf,
- 	       key->type == BTRFS_INODE_EXTREF_KEY ||
- 	       key->type == BTRFS_DIR_INDEX_KEY ||
- 	       key->type == BTRFS_DIR_ITEM_KEY ||
-+	       key->type == BTRFS_FSCRYPT_CTX_KEY ||
- 	       key->type == BTRFS_EXTENT_DATA_KEY, "key->type=%u", key->type);
- 
- 	/*
-@@ -204,6 +205,39 @@ static bool check_prev_ino(struct extent_buffer *leaf,
- 		prev_key->objectid, key->objectid);
- 	return false;
+diff --git a/fs/btrfs/bio.c b/fs/btrfs/bio.c
+index 689cc41409e5..b79fc467445d 100644
+--- a/fs/btrfs/bio.c
++++ b/fs/btrfs/bio.c
+@@ -600,9 +600,9 @@ static int btrfs_bio_csum(struct btrfs_bio *bbio)
+ 	if (bbio->bio.bi_opf & REQ_META)
+ 		return btree_csum_one_bio(bbio);
+ #ifdef CONFIG_BTRFS_EXPERIMENTAL
+-	return btrfs_csum_one_bio(bbio, true);
++	return btrfs_csum_one_bio(bbio, &bbio->bio, true);
+ #else
+-	return btrfs_csum_one_bio(bbio, false);
++	return btrfs_csum_one_bio(bbio, &bbio->bio, false);
+ #endif
  }
-+
-+static int check_fscrypt_context(struct extent_buffer *leaf,
-+				 struct btrfs_key *key, int slot,
-+				 struct btrfs_key *prev_key)
-+{
-+	u32 sectorsize = leaf->fs_info->sectorsize;
-+	u32 item_size = btrfs_item_size(leaf, slot);
-+
-+	if (unlikely(!IS_ALIGNED(key->offset, sectorsize))) {
-+		file_extent_err(leaf, slot,
-+"unaligned file_offset for encryption context, have %llu should be aligned to %u",
-+			key->offset, sectorsize);
-+		return -EUCLEAN;
-+	}
-+
-+	/*
-+	 * Previous key must have the same key->objectid (ino).  It can be
-+	 * XATTR_ITEM, INODE_ITEM, FSCRYPT_INODE_CTX_KEY, or another FSCRYPT_CTX_KEY.
-+	 * But if objectids mismatch, it means we have a missing INODE_ITEM.
-+	 */
-+	if (unlikely(!check_prev_ino(leaf, key, slot, prev_key)))
-+		return -EUCLEAN;
-+
-+	if (unlikely(item_size > BTRFS_MAX_EXTENT_CTX_SIZE)) {
-+		file_extent_err(leaf, slot,
-+	"invalid encryption context size, have %u expect a maximum of %u",
-+				item_size, BTRFS_MAX_EXTENT_CTX_SIZE);
-+		return -EUCLEAN;
-+	}
-+
-+	return 0;
-+}
-+
- static int check_extent_data_item(struct extent_buffer *leaf,
- 				  struct btrfs_key *key, int slot,
- 				  struct btrfs_key *prev_key)
-@@ -214,6 +248,7 @@ static int check_extent_data_item(struct extent_buffer *leaf,
- 	u32 item_size = btrfs_item_size(leaf, slot);
- 	u64 extent_end;
- 	u8 policy;
-+	u8 fe_type;
  
- 	if (unlikely(!IS_ALIGNED(key->offset, sectorsize))) {
- 		file_extent_err(leaf, slot,
-@@ -244,12 +279,12 @@ static int check_extent_data_item(struct extent_buffer *leaf,
- 				SZ_4K);
- 		return -EUCLEAN;
- 	}
--	if (unlikely(btrfs_file_extent_type(leaf, fi) >=
--		     BTRFS_NR_FILE_EXTENT_TYPES)) {
-+
-+	fe_type = btrfs_file_extent_type(leaf, fi);
-+	if (unlikely(fe_type >= BTRFS_NR_FILE_EXTENT_TYPES)) {
- 		file_extent_err(leaf, slot,
- 		"invalid type for file extent, have %u expect range [0, %u]",
--			btrfs_file_extent_type(leaf, fi),
--			BTRFS_NR_FILE_EXTENT_TYPES - 1);
-+			fe_type, BTRFS_NR_FILE_EXTENT_TYPES - 1);
- 		return -EUCLEAN;
- 	}
+diff --git a/fs/btrfs/bio.h b/fs/btrfs/bio.h
+index 303ed6c7103d..43f7544029ac 100644
+--- a/fs/btrfs/bio.h
++++ b/fs/btrfs/bio.h
+@@ -59,6 +59,7 @@ struct btrfs_bio {
+ 			struct btrfs_ordered_sum *sums;
+ 			struct work_struct csum_work;
+ 			struct completion csum_done;
++			struct bio *csum_bio;
+ 			struct bvec_iter csum_saved_iter;
+ 			u64 orig_physical;
+ 			u64 orig_logical;
+diff --git a/fs/btrfs/file-item.c b/fs/btrfs/file-item.c
+index 020d30709770..986914078708 100644
+--- a/fs/btrfs/file-item.c
++++ b/fs/btrfs/file-item.c
+@@ -771,11 +771,10 @@ int btrfs_lookup_csums_bitmap(struct btrfs_root *root, struct btrfs_path *path,
+ 	return ret;
+ }
  
-@@ -298,6 +333,16 @@ static int check_extent_data_item(struct extent_buffer *leaf,
+-static void csum_one_bio(struct btrfs_bio *bbio, struct bvec_iter *src)
++static void csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, struct bvec_iter *src)
+ {
+ 	struct btrfs_inode *inode = bbio->inode;
+ 	struct btrfs_fs_info *fs_info = inode->root->fs_info;
+-	struct bio *bio = &bbio->bio;
+ 	struct btrfs_ordered_sum *sums = bbio->sums;
+ 	struct bvec_iter iter = *src;
+ 	phys_addr_t paddr;
+@@ -803,19 +802,18 @@ static void csum_one_bio_work(struct work_struct *work)
+ 
+ 	ASSERT(btrfs_op(&bbio->bio) == BTRFS_MAP_WRITE);
+ 	ASSERT(bbio->async_csum == true);
+-	csum_one_bio(bbio, &bbio->csum_saved_iter);
++	csum_one_bio(bbio, bbio->csum_bio, &bbio->csum_saved_iter);
+ 	complete(&bbio->csum_done);
+ }
+ 
+ /*
+  * Calculate checksums of the data contained inside a bio.
+  */
+-int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async)
++int btrfs_csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, bool async)
+ {
+ 	struct btrfs_ordered_extent *ordered = bbio->ordered;
+ 	struct btrfs_inode *inode = bbio->inode;
+ 	struct btrfs_fs_info *fs_info = inode->root->fs_info;
+-	struct bio *bio = &bbio->bio;
+ 	struct btrfs_ordered_sum *sums;
+ 	unsigned nofs_flag;
+ 
+@@ -834,12 +832,13 @@ int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async)
+ 	btrfs_add_ordered_sum(ordered, sums);
+ 
+ 	if (!async) {
+-		csum_one_bio(bbio, &bbio->bio.bi_iter);
++		csum_one_bio(bbio, bio, &bio->bi_iter);
  		return 0;
  	}
- 
-+	if (policy == BTRFS_ENCRYPTION_FSCRYPT) {
-+		/* Only regular and prealloc extents should have an encryption context */
-+		if (unlikely(fe_type != BTRFS_FILE_EXTENT_REG &&
-+			     fe_type != BTRFS_FILE_EXTENT_PREALLOC)) {
-+			file_extent_err(leaf, slot,
-+		"invalid type for encrypted file extent, have %u", fe_type);
-+			return -EUCLEAN;
-+		}
-+	}
-+
- 	/* Regular or preallocated extent has fixed item size */
- 	if (unlikely(item_size != sizeof(*fi))) {
- 		file_extent_err(leaf, slot,
-@@ -2198,6 +2243,9 @@ static enum btrfs_tree_block_status check_leaf_item(struct extent_buffer *leaf,
- 	case BTRFS_EXTENT_CSUM_KEY:
- 		ret = check_csum_item(leaf, key, slot, prev_key);
- 		break;
-+	case BTRFS_FSCRYPT_CTX_KEY:
-+		ret = check_fscrypt_context(leaf, key, slot, prev_key);
-+		break;
- 	case BTRFS_DIR_ITEM_KEY:
- 	case BTRFS_DIR_INDEX_KEY:
- 	case BTRFS_XATTR_ITEM_KEY:
-diff --git a/include/uapi/linux/btrfs_tree.h b/include/uapi/linux/btrfs_tree.h
-index 7b1922c3265a..26b793396132 100644
---- a/include/uapi/linux/btrfs_tree.h
-+++ b/include/uapi/linux/btrfs_tree.h
-@@ -168,6 +168,7 @@
- #define BTRFS_VERITY_MERKLE_ITEM_KEY	37
- 
- #define BTRFS_FSCRYPT_INODE_CTX_KEY	41
-+#define BTRFS_FSCRYPT_CTX_KEY		42
- 
- #define BTRFS_ORPHAN_ITEM_KEY		48
- /* reserve 2-15 close to the inode for later flexibility */
-@@ -1079,6 +1080,13 @@ enum {
- 	BTRFS_NR_FILE_EXTENT_TYPES = 3,
- };
- 
-+/*
-+ * Currently just the FSCRYPT_SET_CONTEXT_MAX_SIZE, which is larger than the
-+ * current extent context size from fscrypt, so this should give us plenty of
-+ * breathing room for expansion later.
-+ */
-+#define BTRFS_MAX_EXTENT_CTX_SIZE 40
-+
- enum btrfs_encryption_type {
- 	BTRFS_ENCRYPTION_NONE,
- 	BTRFS_ENCRYPTION_FSCRYPT,
+ 	init_completion(&bbio->csum_done);
+ 	bbio->async_csum = true;
+-	bbio->csum_saved_iter = bbio->bio.bi_iter;
++	bbio->csum_bio = bio;
++	bbio->csum_saved_iter = bio->bi_iter;
+ 	INIT_WORK(&bbio->csum_work, csum_one_bio_work);
+ 	schedule_work(&bbio->csum_work);
+ 	return 0;
+diff --git a/fs/btrfs/file-item.h b/fs/btrfs/file-item.h
+index 6c678787c770..e170bac310ac 100644
+--- a/fs/btrfs/file-item.h
++++ b/fs/btrfs/file-item.h
+@@ -64,7 +64,7 @@ int btrfs_lookup_file_extent(struct btrfs_trans_handle *trans,
+ int btrfs_insert_data_csums(struct btrfs_trans_handle *trans,
+ 			    struct btrfs_root *root,
+ 			    struct btrfs_ordered_sum *sums);
+-int btrfs_csum_one_bio(struct btrfs_bio *bbio, bool async);
++int btrfs_csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, bool async);
+ int btrfs_alloc_dummy_sum(struct btrfs_bio *bbio);
+ int btrfs_lookup_csums_range(struct btrfs_root *root, u64 start, u64 end,
+ 			     struct list_head *list, int search_commit,
 -- 
 2.53.0
 
