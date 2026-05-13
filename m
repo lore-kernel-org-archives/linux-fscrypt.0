@@ -1,58 +1,37 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 0E8943E5A23
-	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:55:15 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id ACA4D3F9F20
+	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:55:23 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1778662520; cv=none; b=FFYSY7B1t3WLLqpi/GcN6k2EoqXhtpePLkxFWATd9A9YwKXrd4u7zYzzjXAUpWCpakLwBjCmwt8qd+hj2mVVbfdOKfBipgHAOFtaZFYa1LQluNL6V4X3SF9vx9/QcG4mHfSnHRZMLFuYN/6Lu1ot4zeZ8l6mBgOreQ1QU6FLn6o=
+	t=1778662525; cv=none; b=gmQV4m2CwxB/AkQJ3uUmraY2EvcHF1RBh+CE5n45XImiUtQ1LFUPR4xRqmzffU+A+mKRg4TBBUczn7DG1vxzAktJG9z85r+YE4ESsB3kkh/nFASjQYCZZ0tNpTvENowgyyhdFUCozkVok7liYLCR0jtlH4sLRRDOL+pV+eAKCJo=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1778662520; c=relaxed/simple;
-	bh=oTx+s53o9QGSa978UB27L5OMElk2vZ4l8K3wpgDRjfw=;
+	s=arc-20240116; t=1778662525; c=relaxed/simple;
+	bh=E2zsscr+gIRqaz6Z/xBCtNiDsxch4QYQPOHcJ3IkMJE=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=KqozpllhxbIaDttTrmteJzvpG2JEu9rA5Qs3B2K2AAM6hD6WH/Xy8eDyeNG1+UB8gl2j7z3UGtJmboOoV0avYnW+p9XMhWp+mexPuCW1/m4CVmUxW8s/M+B6QmIUbHbdrK4J/cftj6ZLj8uC0npT8ldQJTm9E/fJPJci9uLp8kM=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=VafArh8L; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=VafArh8L; arc=none smtp.client-ip=195.135.223.130
+	 MIME-Version; b=FXC3pU/Mlx2gGq6ieR9oGzGfA6X7LAr+8C5qp+xymlysStAw2QvXvFzwXznGL4SQZJfyYCRD4NeF6aRiJdbBHSjBKint1qTuLFPTxIjHuzgfRfww9kPUAZ2gG+Q5JB/8cT2t/XPkCkihwax5gT6/+FwnU6L8lC2t4jZxHmH5+WI=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="VafArh8L";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="VafArh8L"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 558B0625AA;
-	Wed, 13 May 2026 08:54:25 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1778662465; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=Bh7wEy+EWi6DcUGs41lBk5quKr6fivESv2tl2GRiB7s=;
-	b=VafArh8L4kcmJeThd0uZrsYhPwq7S3ILoNT6uAiAmL8nhUtvnKSUMb8UbuCyetopVF/ptu
-	+HdmTi25kb4xhZl2Z5buoMbmiBBEfi2J56nSBZYZ5PB5YXdHo25+5o1ZzC4pU7qHpDwcwk
-	cl8tGsCANIjC3WCdaDicIV+Qb3QXR4E=
-Authentication-Results: smtp-out1.suse.de;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id DE71476655;
+	Wed, 13 May 2026 08:54:28 +0000 (UTC)
+Authentication-Results: smtp-out2.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1778662465; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=Bh7wEy+EWi6DcUGs41lBk5quKr6fivESv2tl2GRiB7s=;
-	b=VafArh8L4kcmJeThd0uZrsYhPwq7S3ILoNT6uAiAmL8nhUtvnKSUMb8UbuCyetopVF/ptu
-	+HdmTi25kb4xhZl2Z5buoMbmiBBEfi2J56nSBZYZ5PB5YXdHo25+5o1ZzC4pU7qHpDwcwk
-	cl8tGsCANIjC3WCdaDicIV+Qb3QXR4E=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 2E56B593A9;
-	Wed, 13 May 2026 08:54:25 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id B873B593A9;
+	Wed, 13 May 2026 08:54:28 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id yFXNCkE8BGpERwAAD6G6ig
-	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:25 +0000
+	id CAmQLEQ8BGpERwAAD6G6ig
+	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:28 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -65,12 +44,10 @@ Cc: linux-block@vger.kernel.org,
 	Daniel Vacek <neelx@suse.com>,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	Omar Sandoval <osandov@osandov.com>,
-	Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v7 12/43] btrfs: add new FEATURE_INCOMPAT_ENCRYPT flag
-Date: Wed, 13 May 2026 10:52:46 +0200
-Message-ID: <20260513085340.3673127-13-neelx@suse.com>
+	linux-kernel@vger.kernel.org
+Subject: [PATCH v7 16/43] btrfs: select encryption dependencies if FS_ENCRYPTION
+Date: Wed, 13 May 2026 10:52:50 +0200
+Message-ID: <20260513085340.3673127-17-neelx@suse.com>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20260513085340.3673127-1-neelx@suse.com>
 References: <20260513085340.3673127-1-neelx@suse.com>
@@ -81,119 +58,55 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
-X-Spam-Flag: NO
-X-Spam-Score: -6.80
-X-Spamd-Result: default: False [-6.80 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	MID_CONTAINS_FROM(1.00)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.com:email,suse.com:mid,imap1.dmz-prg2.suse.org:helo];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	TO_DN_SOME(0.00)[];
-	RCPT_COUNT_TWELVE(0.00)[14];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	FROM_HAS_DN(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_COUNT_TWO(0.00)[2];
-	R_RATELIMIT(0.00)[to_ip_from(RLjpbzrka5mc1bf4fb9cmz1e4f)];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	RCVD_TLS_ALL(0.00)[]
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
+X-Rspamd-Queue-Id: DE71476655
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spam-Score: -4.00
 X-Spam-Level: 
+X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
+X-Spam-Flag: NO
+X-Rspamd-Action: no action
 
-From: Omar Sandoval <osandov@osandov.com>
+From: Josef Bacik <josef@toxicpanda.com>
 
-As encrypted files will be incompatible with older filesystem versions,
-new filesystems should be created with an incompat flag for fscrypt,
-which will gate access to the encryption ioctls.
+We need this to make sure the appropriate encryption algorithms are
+turned on in our config if we have FS_ENCRYPTION enabled, and
+additionally we only support inline encryption with the fallback block
+crypto, so we need to make sure we pull in those dependencies.
 
-Signed-off-by: Omar Sandoval <osandov@osandov.com>
-Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/ccbea52046c1dadbbef926bfc878cc23af952729.1706116485.git.josef@toxicpanda.com/
- * No changes since.
+v7 changes:
+ * Alsos depend on BLK_INLINE_ENCRYPTION as suggested by Chris' AI review.
+No changes in v6.
+v5: https://lore.kernel.org/linux-btrfs/396f5067b2551a9f2de4b439509e1a285985d358.1706116485.git.josef@toxicpanda.com/
 ---
- fs/btrfs/fs.h              | 3 ++-
- fs/btrfs/super.c           | 5 +++++
- fs/btrfs/sysfs.c           | 6 ++++++
- include/uapi/linux/btrfs.h | 1 +
- 4 files changed, 14 insertions(+), 1 deletion(-)
+ fs/btrfs/Kconfig | 4 ++++
+ 1 file changed, 4 insertions(+)
 
-diff --git a/fs/btrfs/fs.h b/fs/btrfs/fs.h
-index a4758d94b32e..dbdb73722c14 100644
---- a/fs/btrfs/fs.h
-+++ b/fs/btrfs/fs.h
-@@ -322,7 +322,8 @@ enum {
- 	(BTRFS_FEATURE_INCOMPAT_SUPP_STABLE |	\
- 	 BTRFS_FEATURE_INCOMPAT_RAID_STRIPE_TREE | \
- 	 BTRFS_FEATURE_INCOMPAT_EXTENT_TREE_V2 | \
--	 BTRFS_FEATURE_INCOMPAT_REMAP_TREE)
-+	 BTRFS_FEATURE_INCOMPAT_REMAP_TREE |	\
-+	 BTRFS_FEATURE_INCOMPAT_ENCRYPT)
+diff --git a/fs/btrfs/Kconfig b/fs/btrfs/Kconfig
+index 5e75438e0b73..3a41392135da 100644
+--- a/fs/btrfs/Kconfig
++++ b/fs/btrfs/Kconfig
+@@ -16,6 +16,10 @@ config BTRFS_FS
+ 	select RAID6_PQ
+ 	select XOR_BLOCKS
+ 	select XXHASH
++	select FS_ENCRYPTION_ALGS if FS_ENCRYPTION
++	select FS_ENCRYPTION_INLINE_CRYPT if FS_ENCRYPTION
++	select BLK_INLINE_ENCRYPTION if FS_ENCRYPTION
++	select BLK_INLINE_ENCRYPTION_FALLBACK if FS_ENCRYPTION
+ 	depends on PAGE_SIZE_LESS_THAN_256KB
  
- #else
- 
-diff --git a/fs/btrfs/super.c b/fs/btrfs/super.c
-index efaa0788c1fc..84df97363611 100644
---- a/fs/btrfs/super.c
-+++ b/fs/btrfs/super.c
-@@ -2563,6 +2563,11 @@ static int __init btrfs_print_mod_info(void)
- 			", fsverity=yes"
- #else
- 			", fsverity=no"
-+#endif
-+#ifdef CONFIG_FS_ENCRYPTION
-+			", fscrypt=yes"
-+#else
-+			", fscrypt=no"
- #endif
- 			;
- 
-diff --git a/fs/btrfs/sysfs.c b/fs/btrfs/sysfs.c
-index 0d14570c8bc2..3fe57843f902 100644
---- a/fs/btrfs/sysfs.c
-+++ b/fs/btrfs/sysfs.c
-@@ -305,6 +305,9 @@ BTRFS_FEAT_ATTR_INCOMPAT(remap_tree, REMAP_TREE);
- #ifdef CONFIG_FS_VERITY
- BTRFS_FEAT_ATTR_COMPAT_RO(verity, VERITY);
- #endif
-+#ifdef CONFIG_FS_ENCRYPTION
-+BTRFS_FEAT_ATTR_INCOMPAT(encryption, ENCRYPT);
-+#endif /* CONFIG_FS_ENCRYPTION */
- 
- /*
-  * Features which depend on feature bits and may differ between each fs.
-@@ -338,6 +341,9 @@ static struct attribute *btrfs_supported_feature_attrs[] = {
- #ifdef CONFIG_FS_VERITY
- 	BTRFS_FEAT_ATTR_PTR(verity),
- #endif
-+#ifdef CONFIG_FS_ENCRYPTION
-+	BTRFS_FEAT_ATTR_PTR(encryption),
-+#endif /* CONFIG_FS_ENCRYPTION */
- 	NULL
- };
- 
-diff --git a/include/uapi/linux/btrfs.h b/include/uapi/linux/btrfs.h
-index 9165154a274d..2f6a46e5f4ce 100644
---- a/include/uapi/linux/btrfs.h
-+++ b/include/uapi/linux/btrfs.h
-@@ -335,6 +335,7 @@ struct btrfs_ioctl_fs_info_args {
- #define BTRFS_FEATURE_INCOMPAT_ZONED		(1ULL << 12)
- #define BTRFS_FEATURE_INCOMPAT_EXTENT_TREE_V2	(1ULL << 13)
- #define BTRFS_FEATURE_INCOMPAT_RAID_STRIPE_TREE	(1ULL << 14)
-+#define BTRFS_FEATURE_INCOMPAT_ENCRYPT		(1ULL << 15)
- #define BTRFS_FEATURE_INCOMPAT_SIMPLE_QUOTA	(1ULL << 16)
- #define BTRFS_FEATURE_INCOMPAT_REMAP_TREE	(1ULL << 17)
- 
+ 	help
 -- 
 2.53.0
 
