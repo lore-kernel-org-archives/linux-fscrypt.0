@@ -1,37 +1,37 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BF99342314F
-	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:56:21 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A7C943E5EE1
+	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:56:25 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1778662583; cv=none; b=UPIagaLMVzR1wVmQgdmzCDs2y7JEIyoQFRrma1OgckSD4yJEMchXJvmMf4+EIZLyvFkf56sIZ5SRy7WVPoouy2kQxakgdnBXsobguOLW60e9o89rPgq5v6t34E+XI5Dle4Fci629dy2pMPx8N+NkMiVJzIcraci75UJGbmbAxGc=
+	t=1778662587; cv=none; b=Wj2FgkHwyHjlL1xZllZfmlJgOvzGpN3uIw/nH1hiAgvUOrq/xLCd3ZV/M308o+YTqlBnIq3LOudFl/AJIOHOzCtfNVsyR9KxaHYy1PGYWtI7m20Iltvh4paKY1shyhob0N2rFc/lC1EEmgF8efokgXQy0E7tMG+2i0EioqsSvMg=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1778662583; c=relaxed/simple;
-	bh=FeXqo2cfD20WHw55uPZX5zZXnkmMkpxQ2YLl088KrTA=;
+	s=arc-20240116; t=1778662587; c=relaxed/simple;
+	bh=I7iO4BmQo38BToOEua6C/olmLwBr2k8kSLaPJRbOE5A=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=U+AmmxSlMbBu2TQQdGrbEMj/PyYPSlLxwUIh2ZqBd0l3Qyd2NFZm8jBSTKOHT6pNvhy9kP5Yv0afXI/60XloqPeREjdgCstGfUw99/X6+DGIODCeX1huIPP3Y1jTHzUndN1kT7I+DXFbQ1WawFt/e97lKxWe8uVlKk+ptqyUwdA=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
+	 MIME-Version; b=Lp7aJVNRXD2s0x4GZEC/BZcu2yehO1BYQrQWk25O3hyHIgyM9UHXTUDFWz/2V/StKdjxZKl+cqrFxAGtk/808iqDbFWzIwhoz1lVilxsZB7g+tPbAWIr3ntVAMPNt8C0Sm3uKD6bjDuf6IYIMkqevdx0c484gqVgNGdWIWlgmQQ=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
 Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 672B95C958;
-	Wed, 13 May 2026 08:54:47 +0000 (UTC)
-Authentication-Results: smtp-out1.suse.de;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id 38B707664F;
+	Wed, 13 May 2026 08:54:42 +0000 (UTC)
+Authentication-Results: smtp-out2.suse.de;
 	none
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 3FBD5593A9;
-	Wed, 13 May 2026 08:54:47 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 1281F593A9;
+	Wed, 13 May 2026 08:54:42 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id gJ4TD1c8BGpERwAAD6G6ig
-	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:47 +0000
+	id SG8SBFI8BGpERwAAD6G6ig
+	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:42 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -45,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v7 41/43] btrfs: disable auto defrag on encrypted files
-Date: Wed, 13 May 2026 10:53:15 +0200
-Message-ID: <20260513085340.3673127-42-neelx@suse.com>
+Subject: [PATCH v7 33/43] btrfs: implement read repair for encryption
+Date: Wed, 13 May 2026 10:53:07 +0200
+Message-ID: <20260513085340.3673127-34-neelx@suse.com>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20260513085340.3673127-1-neelx@suse.com>
 References: <20260513085340.3673127-1-neelx@suse.com>
@@ -63,54 +63,287 @@ X-Rspamd-Pre-Result: action=no action;
 	Message is reply to one we originated
 X-Spamd-Result: default: False [-4.00 / 50.00];
 	REPLY(-4.00)[]
-X-Rspamd-Queue-Id: 672B95C958
+X-Rspamd-Queue-Id: 38B707664F
+X-Spam-Score: -4.00
 X-Rspamd-Pre-Result: action=no action;
 	module=replies;
 	Message is reply to one we originated
-X-Spam-Score: -4.00
-X-Spam-Level: 
-X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
-X-Spam-Flag: NO
+X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
 X-Rspamd-Action: no action
+X-Spam-Flag: NO
+X-Spam-Level: 
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-We will drop the inode and re-look it up to do defrag with auto defrag,
-which means we could lose the encryption policy.
+In order to do read repair we will allocate sectorsize bio's and read
+them one at a time, repairing any sectors that don't match their csum.
+In order to do this we re-submit the IO's after it's failed, and at this
+point we still need the fscrypt_extent_info for these new bio's.
 
-Auto defrag needs to be reworked to just hold onto the inode for
-scheduling later so we don't lose the context.  For now just disable it
-if the file is encrypted.
+Add the fscrypt_extent_info to the read part of the union in the
+btrfs_bio, and then pass this through all the places where we do reads.
+Additionally add the orig_start, because we need to be able to put the
+correct extent offset for the encryption context.
+
+With these in place we can utilize the normal read repair path.  The
+only exception is that the actual repair of the bad copies has to be
+triggered from the ->process_bio callback, because this is the encrypted
+data.  If we waited until the end_io we would have the decrypted data
+and we don't want to write that to the disk.  This is the only change to
+the normal read repair path, we trigger the fixup of the broken sectors
+in ->process_bio, and then we skip that part if we successfully repair
+the sector in ->process_bio once we get to the endio.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v5: https://lore.kernel.org/linux-btrfs/b717912bf88797b3044a3c2724b59b1ecc17ea78.1706116485.git.josef@toxicpanda.com/
- * No changes since.
+v7 changes:
+ * Follow upstream fscrypt cleanup and use byte offsets instead of
+   logical block numbers in the new api.  As a result remove the
+   btrfs_set_bio_crypt_ctx_from_extent() and btrfs_mergeable_encrypted_bio()
+   helpers and directly use fscrypt_set_bio_crypt_ctx_from_extent()
+   and fscrypt_mergeable_extent_bio().
+v6 changes:
+ * Fixed UAF bug with !ordered case doing bbio->end_io(bbio) >>>
+   fscrypt_put_extent_info(bbio->fscrypt_info).
+   - We can simply put the fscrypt_info first and then end the bio.
+   - Also no need to clear the bbio->fscrypt_info pointer as bbio is
+     just going to be freed.  That cleans up the code a bit.
+ * Adapted to bs > ps changes.
+ * Updated and re-wrap the comments.
+ * Moved the dio-related changes from inode.c to direct-io.c
+   as upstream refactored in the meantime.
+v5: https://lore.kernel.org/linux-btrfs/310c0ebdc78613b6f379595e160206013f75b6dc.1706116485.git.josef@toxicpanda.com/
 ---
- fs/btrfs/defrag.c | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ fs/btrfs/bio.c         | 76 +++++++++++++++++++++++++++++++++++++-----
+ fs/btrfs/bio.h         | 10 +++++-
+ fs/btrfs/compression.c |  2 ++
+ fs/btrfs/direct-io.c   |  2 ++
+ fs/btrfs/extent_io.c   |  2 ++
+ 5 files changed, 83 insertions(+), 9 deletions(-)
 
-diff --git a/fs/btrfs/defrag.c b/fs/btrfs/defrag.c
-index a828ec45bb5f..652b8423f01e 100644
---- a/fs/btrfs/defrag.c
-+++ b/fs/btrfs/defrag.c
-@@ -126,6 +126,14 @@ void btrfs_add_inode_defrag(struct btrfs_inode *inode, u32 extent_thresh)
- 	if (!need_auto_defrag(fs_info))
- 		return;
+diff --git a/fs/btrfs/bio.c b/fs/btrfs/bio.c
+index 729c5aff5c3d..3a8f32c5157f 100644
+--- a/fs/btrfs/bio.c
++++ b/fs/btrfs/bio.c
+@@ -98,6 +98,9 @@ static struct btrfs_bio *btrfs_split_bio(struct btrfs_fs_info *fs_info,
+ 		bbio->ordered = orig_bbio->ordered;
+ 		bbio->orig_logical = orig_bbio->orig_logical;
+ 		orig_bbio->orig_logical += map_length;
++	} else if (is_data_bbio(bbio)) {
++		bbio->fscrypt_info = fscrypt_get_extent_info(orig_bbio->fscrypt_info);
++		bbio->orig_start = orig_bbio->orig_start;
+ 	}
+ 
+ 	bbio->csum_search_commit_root = orig_bbio->csum_search_commit_root;
+@@ -125,6 +128,8 @@ void btrfs_bio_end_io(struct btrfs_bio *bbio, blk_status_t status)
+ 		/* Free bio that was never submitted to the underlying device. */
+ 		if (bbio_has_ordered_extent(bbio))
+ 			btrfs_put_ordered_extent(bbio->ordered);
++		else if (is_data_bbio(bbio))
++			fscrypt_put_extent_info(bbio->fscrypt_info);
+ 		bio_put(&bbio->bio);
+ 
+ 		bbio = orig_bbio;
+@@ -148,6 +153,8 @@ void btrfs_bio_end_io(struct btrfs_bio *bbio, blk_status_t status)
+ 			bbio->end_io(bbio);
+ 			btrfs_put_ordered_extent(ordered);
+ 		} else {
++			if (is_data_bbio(bbio))
++				fscrypt_put_extent_info(bbio->fscrypt_info);
+ 			bbio->end_io(bbio);
+ 		}
+ 	}
+@@ -175,6 +182,23 @@ static void btrfs_repair_done(struct btrfs_failed_bio *fbio)
+ 	}
+ }
+ 
++static void handle_repair(struct btrfs_bio *repair_bbio, phys_addr_t *paddrs)
++{
++	struct btrfs_failed_bio *fbio = repair_bbio->private;
++	struct btrfs_inode *inode = repair_bbio->inode;
++	struct btrfs_fs_info *fs_info = inode->root->fs_info;
++	const u32 step = min(fs_info->sectorsize, PAGE_SIZE);
++	const u64 logical = repair_bbio->saved_iter.bi_sector << SECTOR_SHIFT;
++	int mirror = repair_bbio->mirror_num;
++
++	do {
++		mirror = prev_repair_mirror(fbio, mirror);
++		btrfs_repair_io_failure(fs_info, btrfs_ino(inode),
++				  repair_bbio->file_offset, fs_info->sectorsize,
++				  logical, paddrs, step, mirror);
++	} while (mirror != fbio->bbio->mirror_num);
++}
++
+ static void btrfs_end_repair_bio(struct btrfs_bio *repair_bbio,
+ 				 struct btrfs_device *dev)
+ {
+@@ -187,7 +211,6 @@ static void btrfs_end_repair_bio(struct btrfs_bio *repair_bbio,
+ 	 */
+ 	struct bvec_iter saved_iter = repair_bbio->saved_iter;
+ 	const u32 step = min(fs_info->sectorsize, PAGE_SIZE);
+-	const u64 logical = repair_bbio->saved_iter.bi_sector << SECTOR_SHIFT;
+ 	const u32 nr_steps = repair_bbio->saved_iter.bi_size / step;
+ 	int mirror = repair_bbio->mirror_num;
+ 	phys_addr_t paddrs[BTRFS_MAX_BLOCKSIZE / PAGE_SIZE];
+@@ -197,6 +220,13 @@ static void btrfs_end_repair_bio(struct btrfs_bio *repair_bbio,
+ 	/* Repair bbio should be eaxctly one block sized. */
+ 	ASSERT(repair_bbio->saved_iter.bi_size == fs_info->sectorsize);
  
 +	/*
-+	 * Since we have to read the inode at defrag time disable auto defrag
-+	 * for encrypted inodes until we have code to read the parent and load
-+	 * the encryption context.
++	 * If we got here from the encrypted path with ->csum_ok set then
++	 * we've already csumed and repaired this sector, we're all done.
 +	 */
-+	if (IS_ENCRYPTED(&inode->vfs_inode))
-+		return;
++	if (repair_bbio->csum_ok)
++		goto done;
 +
- 	if (test_bit(BTRFS_INODE_IN_DEFRAG, &inode->runtime_flags))
- 		return;
+ 	btrfs_bio_for_each_block(paddr, &repair_bbio->bio, &saved_iter, step) {
+ 		ASSERT(slot < nr_steps);
+ 		paddrs[slot] = paddr;
+@@ -215,17 +245,17 @@ static void btrfs_end_repair_bio(struct btrfs_bio *repair_bbio,
+ 			goto done;
+ 		}
  
++		fscrypt_set_bio_crypt_ctx_from_extent(&repair_bbio->bio,
++						       repair_bbio->fscrypt_info,
++						       repair_bbio->file_offset -
++						       repair_bbio->orig_start,
++						       GFP_NOFS);
++
+ 		btrfs_submit_bbio(repair_bbio, mirror);
+ 		return;
+ 	}
+ 
+-	do {
+-		mirror = prev_repair_mirror(fbio, mirror);
+-		btrfs_repair_io_failure(fs_info, btrfs_ino(inode),
+-				  repair_bbio->file_offset, fs_info->sectorsize,
+-				  logical, paddrs, step, mirror);
+-	} while (mirror != fbio->bbio->mirror_num);
+-
++	handle_repair(repair_bbio, paddrs);
+ done:
+ 	btrfs_repair_done(fbio);
+ 	bio_put(&repair_bbio->bio);
+@@ -294,6 +324,14 @@ static struct btrfs_failed_bio *repair_one_sector(struct btrfs_bio *failed_bbio,
+ 	repair_bbio = btrfs_bio(repair_bio);
+ 	btrfs_bio_init(repair_bbio, failed_bbio->inode, failed_bbio->file_offset + bio_offset,
+ 		       NULL, fbio);
++	repair_bbio->fscrypt_info = fscrypt_get_extent_info(failed_bbio->fscrypt_info);
++	repair_bbio->orig_start = failed_bbio->orig_start;
++
++	fscrypt_set_bio_crypt_ctx_from_extent(repair_bio,
++					      failed_bbio->fscrypt_info,
++					      repair_bbio->file_offset -
++					      failed_bbio->orig_start,
++					      GFP_NOFS);
+ 
+ 	mirror = next_repair_mirror(fbio, failed_bbio->mirror_num);
+ 	btrfs_debug(fs_info, "submitting repair read to mirror %d", mirror);
+@@ -331,7 +369,29 @@ blk_status_t btrfs_check_encrypted_read_bio(struct btrfs_bio *bbio, struct bio *
+ 		}
+ 	}
+ 
++	/*
++	 * Read repair is slightly different for encrypted bio's.  This
++	 * callback is before we decrypt the bio in the block crypto layer,
++	 * we're not actually in the endio handler.
++	 *
++	 * We don't trigger the repair process here either, that is handled
++	 * in the actual endio path because we don't want to create another
++	 * pseudo endio path through this callback.  This is because when we
++	 * call btrfs_repair_done() we want to call the endio for the original
++	 * bbio. Short circuiting that for the encrypted case would be ugly.
++	 * We really want to the repair case to be handled generically.
++	 *
++	 * However for the actual repair part we need to use this page
++	 * pre-decrypted, which is why we call the btrfs_repair_io_failure()
++	 * code from this path.  The repair path is synchronous so we are
++	 * safe there.  Then we simply mark the repair bbio as completed so
++	 * the actual btrfs_end_repair_bio() code can skip the repair part.
++	 */
++	if (bbio->bio.bi_pool == &btrfs_repair_bioset)
++		handle_repair(bbio, paddrs);
+ 	bbio->csum_ok = true;
++	fscrypt_put_extent_info(bbio->fscrypt_info);
++	bbio->fscrypt_info = NULL;
+ 	return BLK_STS_OK;
+ }
+ 
+diff --git a/fs/btrfs/bio.h b/fs/btrfs/bio.h
+index 456d32db9e9e..7a8ff4378cba 100644
+--- a/fs/btrfs/bio.h
++++ b/fs/btrfs/bio.h
+@@ -15,6 +15,7 @@
+ struct btrfs_bio;
+ struct btrfs_fs_info;
+ struct btrfs_inode;
++struct fscrypt_extent_info;
+ 
+ #define BTRFS_BIO_INLINE_CSUM_SIZE	64
+ 
+@@ -38,13 +39,20 @@ struct btrfs_bio {
+ 	union {
+ 		/*
+ 		 * For data reads: checksumming and original I/O information.
+-		 * (for internal use in the btrfs_submit_bbio() machinery only)
++		 * (for internal use in the btrfs_submit_bbio() machinery only).
++		 *
++		 * The fscrypt context is used for read repair, this is the
++		 * only thing not internal to btrfs_submit_bbio() machinery.
+ 		 */
+ 		struct {
+ 			u8 *csum;
+ 			u8 csum_inline[BTRFS_BIO_INLINE_CSUM_SIZE];
+ 			bool csum_ok;
+ 			struct bvec_iter saved_iter;
++
++			/* Used for read repair. */
++			struct fscrypt_extent_info *fscrypt_info;
++			u64 orig_start;
+ 		};
+ 
+ 		/*
+diff --git a/fs/btrfs/compression.c b/fs/btrfs/compression.c
+index e235a2ac5838..8269258d0dc4 100644
+--- a/fs/btrfs/compression.c
++++ b/fs/btrfs/compression.c
+@@ -592,6 +592,8 @@ void btrfs_submit_compressed_read(struct btrfs_bio *bbio)
+ 	cb->compress_type = btrfs_extent_map_compression(em);
+ 	cb->orig_bbio = bbio;
+ 	cb->bbio.csum_search_commit_root = bbio->csum_search_commit_root;
++	cb->bbio.fscrypt_info = fscrypt_get_extent_info(em->fscrypt_info);
++	cb->bbio.orig_start = 0;
+ 
+ 	fscrypt_set_bio_crypt_ctx_from_extent(&cb->bbio.bio, em->fscrypt_info, 0, GFP_NOFS);
+ 	btrfs_free_extent_map(em);
+diff --git a/fs/btrfs/direct-io.c b/fs/btrfs/direct-io.c
+index 4891bf233536..bef4e2f953e4 100644
+--- a/fs/btrfs/direct-io.c
++++ b/fs/btrfs/direct-io.c
+@@ -764,6 +764,8 @@ static void btrfs_dio_submit_io(const struct iomap_iter *iter, struct bio *bio,
+ 	} else {
+ 		fscrypt_info = dio_data->fscrypt_info;
+ 		offset = file_offset - dio_data->orig_start;
++		bbio->fscrypt_info = fscrypt_get_extent_info(fscrypt_info);
++		bbio->orig_start = dio_data->orig_start;
+ 	}
+ 
+ 	fscrypt_set_bio_crypt_ctx_from_extent(&bbio->bio, fscrypt_info, offset, GFP_NOFS);
+diff --git a/fs/btrfs/extent_io.c b/fs/btrfs/extent_io.c
+index 5e9cdcdc996a..32e39837294b 100644
+--- a/fs/btrfs/extent_io.c
++++ b/fs/btrfs/extent_io.c
+@@ -795,6 +795,8 @@ static void alloc_new_bio(struct btrfs_inode *inode,
+ 	} else {
+ 		fscrypt_info = bio_ctrl->fscrypt_info;
+ 		offset = file_offset - bio_ctrl->orig_start;
++		bbio->fscrypt_info = fscrypt_get_extent_info(fscrypt_info);
++		bbio->orig_start = bio_ctrl->orig_start;
+ 	}
+ 
+ 	fscrypt_set_bio_crypt_ctx_from_extent(&bbio->bio, fscrypt_info, offset, GFP_NOFS);
 -- 
 2.53.0
 
