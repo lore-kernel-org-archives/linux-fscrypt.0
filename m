@@ -1,37 +1,37 @@
-Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 75BF63EF0CE
-	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:56:18 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BF99342314F
+	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:56:21 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1778662581; cv=none; b=FO2UD0ulTvgX6CUncIDQF6sYbSAtlLi+cTxEN4bEbgxdLVMN0y99IXV/pPTAgizICrLABf5eOsyc6Qmvtv3g16LlD8uPijJCkdRTBVEA9X6hUL03rIQALQbCNPEArhBnmRzxVJTIkzO34Mu5oPBjjjEqzcWqDA7yTra2uSxvGls=
+	t=1778662583; cv=none; b=UPIagaLMVzR1wVmQgdmzCDs2y7JEIyoQFRrma1OgckSD4yJEMchXJvmMf4+EIZLyvFkf56sIZ5SRy7WVPoouy2kQxakgdnBXsobguOLW60e9o89rPgq5v6t34E+XI5Dle4Fci629dy2pMPx8N+NkMiVJzIcraci75UJGbmbAxGc=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1778662581; c=relaxed/simple;
-	bh=Y6sHGvRDJoOsosMXONsfbKapiaJC10RMBV8sC/N7Pwg=;
+	s=arc-20240116; t=1778662583; c=relaxed/simple;
+	bh=FeXqo2cfD20WHw55uPZX5zZXnkmMkpxQ2YLl088KrTA=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=k3MEjvfh0juUSunU0165Ny746bWrkEkykooii8r4XdmJ+DwM8L90dpWux+CB/OittNsZojAAopNXMC3qVge3Osa7ioKoC92A/vn184qegPaB0BVd6aV5IG+AXgBoumEE1KvwvjDe+dcNUhHWEW9AvR8MwDeZoINWeMxKveoY6I4=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
+	 MIME-Version; b=U+AmmxSlMbBu2TQQdGrbEMj/PyYPSlLxwUIh2ZqBd0l3Qyd2NFZm8jBSTKOHT6pNvhy9kP5Yv0afXI/60XloqPeREjdgCstGfUw99/X6+DGIODCeX1huIPP3Y1jTHzUndN1kT7I+DXFbQ1WawFt/e97lKxWe8uVlKk+ptqyUwdA=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.130
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
 Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id 4F94D7665D;
-	Wed, 13 May 2026 08:54:41 +0000 (UTC)
-Authentication-Results: smtp-out2.suse.de;
+	by smtp-out1.suse.de (Postfix) with ESMTPS id 672B95C958;
+	Wed, 13 May 2026 08:54:47 +0000 (UTC)
+Authentication-Results: smtp-out1.suse.de;
 	none
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id B3CD8593A9;
-	Wed, 13 May 2026 08:54:40 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 3FBD5593A9;
+	Wed, 13 May 2026 08:54:47 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id sN1uK1A8BGpERwAAD6G6ig
-	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:40 +0000
+	id gJ4TD1c8BGpERwAAD6G6ig
+	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:47 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -45,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v7 32/43] btrfs: implement process_bio cb for fscrypt
-Date: Wed, 13 May 2026 10:53:06 +0200
-Message-ID: <20260513085340.3673127-33-neelx@suse.com>
+Subject: [PATCH v7 41/43] btrfs: disable auto defrag on encrypted files
+Date: Wed, 13 May 2026 10:53:15 +0200
+Message-ID: <20260513085340.3673127-42-neelx@suse.com>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20260513085340.3673127-1-neelx@suse.com>
 References: <20260513085340.3673127-1-neelx@suse.com>
@@ -63,7 +63,7 @@ X-Rspamd-Pre-Result: action=no action;
 	Message is reply to one we originated
 X-Spamd-Result: default: False [-4.00 / 50.00];
 	REPLY(-4.00)[]
-X-Rspamd-Queue-Id: 4F94D7665D
+X-Rspamd-Queue-Id: 672B95C958
 X-Rspamd-Pre-Result: action=no action;
 	module=replies;
 	Message is reply to one we originated
@@ -75,236 +75,42 @@ X-Rspamd-Action: no action
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-We are going to be checksumming the encrypted data, so we have to
-implement the ->process_bio fscrypt callback.  This will provide us with
-the original bio and the encrypted bio to do work on.  For WRITE's this
-will happen after the encrypted bio has been encrypted.  For READ's this
-will happen after the read has completed and before the decryption step
-is done.
+We will drop the inode and re-look it up to do defrag with auto defrag,
+which means we could lose the encryption policy.
 
-For write's this is straightforward, we can just pass in the encrypted
-bio to btrfs_csum_one_bio and then the csums will be added to the bbio
-as normal.
-
-For read's this is relatively straightforward, but requires some care.
-We assume (because that's how it works currently) that the encrypted bio
-match the original bio, this is important because we save the iter of
-the bio before we submit.  If this changes in the future we'll need a
-hook to give us the bi_iter of the decryption bio before it's submitted.
-We check the csums before decryption.  If it doesn't match we simply
-error out and we let the normal path handle the repair work.
+Auto defrag needs to be reworked to just hold onto the inode for
+scheduling later so we don't lose the context.  For now just disable it
+if the file is encrypted.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-v7 changes:
- * Fixed array overflow stack corruption for bios > max blocksize (>64KiB)
-   as reported by Chris' AI review.
-v6 changes:
- * Adapt to btrfs_data_csum_ok() changes for bs > ps.  Mostly follow
-   what was done in 052fd7a5cace ("btrfs: make read verification
-   handle bs > ps cases without large folios").
- * Rename bbio::csum_done to csum_ok due to name collision.
-   With upstream, member name csum_done was used for async csums.
-v5: https://lore.kernel.org/linux-btrfs/ca32684b01ff8c252be515509137e0a4a0e5db7a.1706116485.git.josef@toxicpanda.com/
+v5: https://lore.kernel.org/linux-btrfs/b717912bf88797b3044a3c2724b59b1ecc17ea78.1706116485.git.josef@toxicpanda.com/
+ * No changes since.
 ---
- fs/btrfs/bio.c       | 44 +++++++++++++++++++++++++++++++++++++++++++-
- fs/btrfs/bio.h       |  3 +++
- fs/btrfs/file-item.c | 14 ++++++++++++--
- fs/btrfs/fscrypt.c   | 29 +++++++++++++++++++++++++++++
- 4 files changed, 87 insertions(+), 3 deletions(-)
+ fs/btrfs/defrag.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
 
-diff --git a/fs/btrfs/bio.c b/fs/btrfs/bio.c
-index 3e2ee19aab50..729c5aff5c3d 100644
---- a/fs/btrfs/bio.c
-+++ b/fs/btrfs/bio.c
-@@ -301,6 +301,40 @@ static struct btrfs_failed_bio *repair_one_sector(struct btrfs_bio *failed_bbio,
- 	return fbio;
- }
+diff --git a/fs/btrfs/defrag.c b/fs/btrfs/defrag.c
+index a828ec45bb5f..652b8423f01e 100644
+--- a/fs/btrfs/defrag.c
++++ b/fs/btrfs/defrag.c
+@@ -126,6 +126,14 @@ void btrfs_add_inode_defrag(struct btrfs_inode *inode, u32 extent_thresh)
+ 	if (!need_auto_defrag(fs_info))
+ 		return;
  
-+blk_status_t btrfs_check_encrypted_read_bio(struct btrfs_bio *bbio, struct bio *enc_bio)
-+{
-+	struct btrfs_inode *inode = bbio->inode;
-+	struct btrfs_fs_info *fs_info = inode->root->fs_info;
-+	struct bvec_iter iter = bbio->saved_iter;
-+	struct btrfs_device *dev = bbio->bio.bi_private;
-+	const u32 blocksize = fs_info->sectorsize;
-+	const u32 step = min(blocksize, PAGE_SIZE);
-+	const u32 nr_steps = iter.bi_size / step;
-+	phys_addr_t paddrs[BTRFS_MAX_BLOCKSIZE / PAGE_SIZE];
-+	phys_addr_t paddr;
-+	unsigned int slot = 0;
-+	u32 offset = 0;
-+
 +	/*
-+	 * We have to use a copy of iter in case there's an error,
-+	 * btrfs_check_read_bio will handle submitting the repair bios.
++	 * Since we have to read the inode at defrag time disable auto defrag
++	 * for encrypted inodes until we have code to read the parent and load
++	 * the encryption context.
 +	 */
-+	btrfs_bio_for_each_block(paddr, enc_bio, &iter, step) {
-+		ASSERT(slot < nr_steps);
-+		paddrs[slot] = paddr;
-+		slot++;
-+		offset += step;
-+		if (IS_ALIGNED(offset, blocksize)) {
-+			if (!btrfs_data_csum_ok(bbio, dev, offset - blocksize, paddrs))
-+				return BLK_STS_IOERR;
-+			slot = 0;
-+		}
-+	}
++	if (IS_ENCRYPTED(&inode->vfs_inode))
++		return;
 +
-+	bbio->csum_ok = true;
-+	return BLK_STS_OK;
-+}
-+
- static void btrfs_check_read_bio(struct btrfs_bio *bbio, struct btrfs_device *dev)
- {
- 	struct btrfs_inode *inode = bbio->inode;
-@@ -330,6 +364,10 @@ static void btrfs_check_read_bio(struct btrfs_bio *bbio, struct btrfs_device *de
- 	/* Clear the I/O error. A failed repair will reset it. */
- 	bbio->bio.bi_status = BLK_STS_OK;
+ 	if (test_bit(BTRFS_INODE_IN_DEFRAG, &inode->runtime_flags))
+ 		return;
  
-+	/* This was an encrypted bio and we've already done the csum check. */
-+	if (status == BLK_STS_OK && bbio->csum_ok)
-+		goto out;
-+
- 	btrfs_bio_for_each_block(paddr, &bbio->bio, iter, step) {
- 		paddrs[(offset / step) % nr_steps] = paddr;
- 		offset += step;
-@@ -341,6 +379,7 @@ static void btrfs_check_read_bio(struct btrfs_bio *bbio, struct btrfs_device *de
- 							 paddrs, fbio);
- 		}
- 	}
-+out:
- 	if (bbio->csum != bbio->csum_inline)
- 		kvfree(bbio->csum);
- 
-@@ -859,10 +898,13 @@ static bool btrfs_submit_chunk(struct btrfs_bio *bbio, int mirror_num)
- 		/*
- 		 * Csum items for reloc roots have already been cloned at this
- 		 * point, so they are handled as part of the no-checksum case.
-+		 *
-+		 * Encrypted inodes are csum'ed via the ->process_bio callback.
- 		 */
- 		if (!(inode->flags & BTRFS_INODE_NODATASUM) &&
- 		    !test_bit(BTRFS_FS_STATE_NO_DATA_CSUMS, &fs_info->fs_state) &&
--		    !btrfs_is_data_reloc_root(inode->root) && !bbio->is_remap) {
-+		    !btrfs_is_data_reloc_root(inode->root) && !bbio->is_remap &&
-+		    !IS_ENCRYPTED(&inode->vfs_inode)) {
- 			if (should_async_write(bbio) &&
- 			    btrfs_wq_submit_bio(bbio, bioc, &smap, mirror_num))
- 				goto done;
-diff --git a/fs/btrfs/bio.h b/fs/btrfs/bio.h
-index 43f7544029ac..456d32db9e9e 100644
---- a/fs/btrfs/bio.h
-+++ b/fs/btrfs/bio.h
-@@ -43,6 +43,7 @@ struct btrfs_bio {
- 		struct {
- 			u8 *csum;
- 			u8 csum_inline[BTRFS_BIO_INLINE_CSUM_SIZE];
-+			bool csum_ok;
- 			struct bvec_iter saved_iter;
- 		};
- 
-@@ -130,5 +131,7 @@ void btrfs_submit_repair_write(struct btrfs_bio *bbio, int mirror_num, bool dev_
- int btrfs_repair_io_failure(struct btrfs_fs_info *fs_info, u64 ino, u64 fileoff,
- 			    u32 length, u64 logical, const phys_addr_t paddrs[],
- 			    unsigned int step, int mirror_num);
-+blk_status_t btrfs_check_encrypted_read_bio(struct btrfs_bio *bbio,
-+					    struct bio *enc_bio);
- 
- #endif
-diff --git a/fs/btrfs/file-item.c b/fs/btrfs/file-item.c
-index 986914078708..72d9d3243460 100644
---- a/fs/btrfs/file-item.c
-+++ b/fs/btrfs/file-item.c
-@@ -338,6 +338,14 @@ static int search_csum_tree(struct btrfs_fs_info *fs_info,
- 	return ret;
- }
- 
-+static inline bool inode_skip_csum(struct btrfs_inode *inode)
-+{
-+	struct btrfs_fs_info *fs_info = inode->root->fs_info;
-+
-+	return (inode->flags & BTRFS_INODE_NODATASUM) ||
-+		test_bit(BTRFS_FS_STATE_NO_DATA_CSUMS, &fs_info->fs_state);
-+}
-+
- /*
-  * Lookup the checksum for the read bio in csum tree.
-  *
-@@ -357,8 +365,7 @@ int btrfs_lookup_bio_sums(struct btrfs_bio *bbio)
- 	int ret = 0;
- 	u32 bio_offset = 0;
- 
--	if ((inode->flags & BTRFS_INODE_NODATASUM) ||
--	    test_bit(BTRFS_FS_STATE_NO_DATA_CSUMS, &fs_info->fs_state))
-+	if (inode_skip_csum(inode))
- 		return 0;
- 
- 	/*
-@@ -817,6 +824,9 @@ int btrfs_csum_one_bio(struct btrfs_bio *bbio, struct bio *bio, bool async)
- 	struct btrfs_ordered_sum *sums;
- 	unsigned nofs_flag;
- 
-+	if (inode_skip_csum(inode))
-+		return 0;
-+
- 	nofs_flag = memalloc_nofs_save();
- 	sums = kvzalloc(btrfs_ordered_sum_size(fs_info, bio->bi_iter.bi_size),
- 		       GFP_KERNEL);
-diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
-index 5d34a8b94da5..924ee3df7f32 100644
---- a/fs/btrfs/fscrypt.c
-+++ b/fs/btrfs/fscrypt.c
-@@ -16,6 +16,7 @@
- #include "transaction.h"
- #include "volumes.h"
- #include "xattr.h"
-+#include "file-item.h"
- 
- /*
-  * From a given location in a leaf, read a name into a qstr (usually a
-@@ -212,6 +213,33 @@ static struct block_device **btrfs_fscrypt_get_devices(struct super_block *sb,
- 	return devs;
- }
- 
-+static blk_status_t btrfs_process_encrypted_bio(struct bio *orig_bio,
-+						struct bio *enc_bio)
-+{
-+	struct btrfs_bio *bbio;
-+
-+	/*
-+	 * If our bio is from the normal fs_bio_set then we know this is a
-+	 * mirror split and we can skip it, we'll get the real bio on the last
-+	 * mirror and we can process that one.
-+	 */
-+	if (orig_bio->bi_pool == &fs_bio_set)
-+		return BLK_STS_OK;
-+
-+	bbio = btrfs_bio(orig_bio);
-+
-+	if (bio_op(orig_bio) == REQ_OP_READ) {
-+		/*
-+		 * We have ->saved_iter based on the orig_bio, so if the block
-+		 * layer changes we need to notice this asap so we can update
-+		 * our code to handle the new world order.
-+		 */
-+		ASSERT(orig_bio == enc_bio);
-+		return btrfs_check_encrypted_read_bio(bbio, enc_bio);
-+	}
-+	return btrfs_csum_one_bio(bbio, enc_bio, false);
-+}
-+
- int btrfs_fscrypt_load_extent_info(struct btrfs_inode *inode,
- 				   struct btrfs_path *path,
- 				   struct btrfs_key *key,
-@@ -327,4 +355,5 @@ const struct fscrypt_operations btrfs_fscrypt_ops = {
- 	.set_context = btrfs_fscrypt_set_context,
- 	.empty_dir = btrfs_fscrypt_empty_dir,
- 	.get_devices = btrfs_fscrypt_get_devices,
-+	.process_bio = btrfs_process_encrypted_bio,
- };
 -- 
 2.53.0
 
