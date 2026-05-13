@@ -1,16 +1,16 @@
 Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 75B053FA5C6
-	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:56:55 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 47AC83E9C24
+	for <linux-fscrypt@vger.kernel.org>; Wed, 13 May 2026 08:57:02 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1778662616; cv=none; b=D30zj4iYHnegkA1JC7C/eNgGwVa4l5/BZuEZQvcqf4t2twSmuXop0I2/s8gwGy8O6+/hhsbeP8sngZTwBAgXpjY8G7jsG9LTWjxtES+zHT0MhEz2ViYMukEO7Wdcz0S2W+0JJIQe4qNGAvEbh9amJqkcP4tKqa4w2EVq0pu8CKw=
+	t=1778662623; cv=none; b=B7efDlzVMvIhTmOLpIrTTk114QuEUSOECjzaegnq03M1hjLAZLw40bvOwbPGj2iIlvvCR68xTFMkFLZdoTUtSjTGPmjJti8QtxpWYdQE6hXQj5Gu4Fa7maYH0KIJLx9YIzNozyOrEe0yp3MaareIG3BGHQ/8RtQHjFGCS3uMkBo=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1778662616; c=relaxed/simple;
-	bh=esIb391sZGRZSHZilGwTjYpzvTY2uRldxrINHdARghY=;
+	s=arc-20240116; t=1778662623; c=relaxed/simple;
+	bh=sj+D8+YdmYwbe3A3rsYn4/PyDAXXPM9Q719WZGnilC4=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=uCPS2T8B2ig1+YFIRLahKw6BNmcum2f7oLZnqwrU9PpN65ydF7VHlMG0qqcB5weuWCYz7mrgdOPe7+TJJsj3PcyJfBRDsK/ppoi5daWH33wwrfPMipmCr5WOekU2OmhLwKespoRjS2u2i+Q/TebdtG/b6pYm6hgBF2zXPS1nvDk=
+	 MIME-Version; b=p3DxXpokrVr9nFV9Tt89HXinZJWX6sn7QOCH6GnN1jvy4wFYfdAKFBRXnAatBQw3MqvuZkPUrRRKvqmWy9ugqx1j4ON+PYhuqXYYot3YMCnC+Dp5GhaOxXPLrwE/dB9Nu1koK7ObYnPE9QTPAwbZyPXf3sFEvgZGEAimxkZ/+hA=
 ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
@@ -18,20 +18,20 @@ Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id E516976666;
-	Wed, 13 May 2026 08:54:46 +0000 (UTC)
+	by smtp-out2.suse.de (Postfix) with ESMTPS id 41FAF76668;
+	Wed, 13 May 2026 08:54:48 +0000 (UTC)
 Authentication-Results: smtp-out2.suse.de;
 	none
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id C4054593A9;
-	Wed, 13 May 2026 08:54:46 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 222A6593A9;
+	Wed, 13 May 2026 08:54:48 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id cOM7L1Y8BGpERwAAD6G6ig
-	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:46 +0000
+	id SKzbB1g8BGpERwAAD6G6ig
+	(envelope-from <neelx@suse.com>); Wed, 13 May 2026 08:54:48 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: Chris Mason <clm@fb.com>,
 	Josef Bacik <josef@toxicpanda.com>,
@@ -45,9 +45,9 @@ Cc: linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v7 40/43] btrfs: support encryption with log replay
-Date: Wed, 13 May 2026 10:53:14 +0200
-Message-ID: <20260513085340.3673127-41-neelx@suse.com>
+Subject: [PATCH v7 42/43] btrfs: disable encryption on RAID5/6
+Date: Wed, 13 May 2026 10:53:16 +0200
+Message-ID: <20260513085340.3673127-43-neelx@suse.com>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20260513085340.3673127-1-neelx@suse.com>
 References: <20260513085340.3673127-1-neelx@suse.com>
@@ -63,7 +63,7 @@ X-Rspamd-Pre-Result: action=no action;
 	Message is reply to one we originated
 X-Spamd-Result: default: False [-4.00 / 50.00];
 	REPLY(-4.00)[]
-X-Rspamd-Queue-Id: E516976666
+X-Rspamd-Queue-Id: 41FAF76668
 X-Rspamd-Pre-Result: action=no action;
 	module=replies;
 	Message is reply to one we originated
@@ -75,58 +75,80 @@ X-Rspamd-Action: no action
 
 From: Josef Bacik <josef@toxicpanda.com>
 
-Log replay needs a few tweaks in order to make sure everything works
-with encryption.
+The RAID5/6 code will re-arrange bios and submit them through a
+different mechanism.  This is problematic with inline encryption as we
+have to get the bio and csum it after it's been encrypted, and the
+raid5/6 bio's don't have the btrfs_bio embedded, so we have no way to
+get the csums put on disk.
 
-1. Copy in the fscrypt context if we find one in the log.
-2. Set NEEDS_FULL_SYNC when we update the inode context so all of the
-   items are copied into the log at fsync time.
-
-This makes replay of encrypted files work properly.
+This isn't an unsolvable problem, but would require a bit of reworking.
+Since we discourage users from using this code currently simply don't
+allow encryption on RAID5/6 setups.  If there's sufficient demand in the
+future we can add the support for this.
 
 Signed-off-by: Josef Bacik <josef@toxicpanda.com>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
 
-No changes in v7.
-v6 changes:
- * Adapted to the redesigned encryption context storing.
-   - No need to specially handle the extent item now.
-     It is not any different to before and the
-     new context items are simply copied.
-v5: https://lore.kernel.org/linux-btrfs/d1ada7ac632c2ab554a840c7ba29b53a93b9855f.1706116485.git.josef@toxicpanda.com/
+v7 changes:
+ * Prevent converting to RAID5/6 if encryption is already enabled as
+   suggested by Chris' AI review.
+No changes in v6.
+v5: https://lore.kernel.org/linux-btrfs/941f02bb923edadae1aea4ae3e5aa6ba05d1215a.1706116485.git.josef@toxicpanda.com/
 ---
- fs/btrfs/fscrypt.c  | 1 +
- fs/btrfs/tree-log.c | 4 +++-
- 2 files changed, 4 insertions(+), 1 deletion(-)
+ fs/btrfs/ioctl.c   | 4 ++++
+ fs/btrfs/super.c   | 6 ++++++
+ fs/btrfs/volumes.c | 5 +++++
+ 3 files changed, 15 insertions(+)
 
-diff --git a/fs/btrfs/fscrypt.c b/fs/btrfs/fscrypt.c
-index a972c8eadfef..b57d2b0ca9fa 100644
---- a/fs/btrfs/fscrypt.c
-+++ b/fs/btrfs/fscrypt.c
-@@ -145,6 +145,7 @@ static int btrfs_fscrypt_set_context(struct inode *inode, const void *ctx,
- 			goto out_err;
- 	}
+diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
+index 2e0b79f41197..873fe08cd19c 100644
+--- a/fs/btrfs/ioctl.c
++++ b/fs/btrfs/ioctl.c
+@@ -5165,6 +5165,10 @@ long btrfs_ioctl(struct file *file, unsigned int
+ 			return -EOPNOTSUPP;
+ 		if (sb_rdonly(fs_info->sb))
+ 			return -EROFS;
++		if (btrfs_fs_incompat(fs_info, RAID56)) {
++			btrfs_warn(fs_info, "can't enable encryption with RAID5/6");
++			return -EINVAL;
++		}
+ 		/*
+ 		 *  If we crash before we commit, nothing encrypted could have
+ 		 * been written so it doesn't matter whether the encrypted
+diff --git a/fs/btrfs/super.c b/fs/btrfs/super.c
+index 7ec07d0bb473..5072ead57d49 100644
+--- a/fs/btrfs/super.c
++++ b/fs/btrfs/super.c
+@@ -734,6 +734,12 @@ bool btrfs_check_options(const struct btrfs_fs_info *info,
+ 	if (btrfs_check_mountopts_zoned(info, mount_opt))
+ 		ret = false;
  
-+	set_bit(BTRFS_INODE_NEEDS_FULL_SYNC, &BTRFS_I(inode)->runtime_flags);
- 	leaf = path->nodes[0];
- 	ptr = btrfs_item_ptr_offset(leaf, path->slots[0]);
++	if (btrfs_fs_incompat(info, RAID56) &&
++	    btrfs_raw_test_opt(*mount_opt, TEST_DUMMY_ENCRYPTION)) {
++		btrfs_err(info, "cannot use test_dummy_encryption with RAID5/6");
++		ret = false;
++	}
++
+ 	if (!test_bit(BTRFS_FS_STATE_REMOUNTING, &info->fs_state)) {
+ 		if (btrfs_raw_test_opt(*mount_opt, SPACE_CACHE)) {
+ 			btrfs_warn(info,
+diff --git a/fs/btrfs/volumes.c b/fs/btrfs/volumes.c
+index a88e68f90564..d70735d501c4 100644
+--- a/fs/btrfs/volumes.c
++++ b/fs/btrfs/volumes.c
+@@ -6053,6 +6053,11 @@ struct btrfs_block_group *btrfs_create_chunk(struct btrfs_trans_handle *trans,
  
-diff --git a/fs/btrfs/tree-log.c b/fs/btrfs/tree-log.c
-index f3b839950855..4336f90e3223 100644
---- a/fs/btrfs/tree-log.c
-+++ b/fs/btrfs/tree-log.c
-@@ -2929,7 +2929,9 @@ static int replay_one_buffer(struct extent_buffer *eb,
- 			continue;
+ 	lockdep_assert_held(&info->chunk_mutex);
  
- 		/* these keys are simply copied */
--		if (wc->log_key.type == BTRFS_XATTR_ITEM_KEY) {
-+		if (wc->log_key.type == BTRFS_XATTR_ITEM_KEY ||
-+		    wc->log_key.type == BTRFS_FSCRYPT_INODE_CTX_KEY ||
-+		    wc->log_key.type == BTRFS_FSCRYPT_CTX_KEY) {
- 			ret = overwrite_item(wc);
- 			if (ret)
- 				break;
++	if (type & BTRFS_BLOCK_GROUP_RAID56_MASK && btrfs_fs_incompat(info, ENCRYPT)) {
++		btrfs_warn(info, "RAID5/6 not yet supported on encrypted filesystem");
++		return ERR_PTR(-EINVAL);
++	}
++
+ 	if (!alloc_profile_is_valid(type, 0)) {
+ 		DEBUG_WARN("invalid alloc profile for type %llu", type);
+ 		return ERR_PTR(-EINVAL);
 -- 
 2.53.0
 
