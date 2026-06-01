@@ -1,32 +1,32 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A8E13220F2A;
-	Mon,  1 Jun 2026 22:49:22 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 19354224B15;
+	Mon,  1 Jun 2026 23:04:07 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1780354163; cv=none; b=aMJjoborfKcdtLCeXd3nLLo+qkeJ/zpuUmxb79z88oOLFKiNKN5X4qkrgeJ3DKWGoKFsVYRZUCWZh+xS8LU/j79NBC4XFD2pL15oax50V/SrrNwA5JjYDBlJzKQ7Oxp1hF2u2QjsVgLCtvH14ZqSAchQYWc9SLI4Ai03WI/wKV8=
+	t=1780355049; cv=none; b=bSjLwaP2rR6uWFfr78WeP2j6a5olqBxJrNWs/Wc5ZgVr3ZkJ0NahMVeDgDktQ4//zYdcQIJEXdoaR4ztdBh3SVj9wITLWFu58QmaULf2MVtxkToiPI3L5h0pe2o0aMkS9bDwNqiIpIiYdNK6f+4BB9ZS2PX7CrYgsf2gkmwlzAI=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1780354163; c=relaxed/simple;
-	bh=F+WSqdkpPPgftAppQyk1MHcuQ267mtpksfKrqBbVLck=;
+	s=arc-20240116; t=1780355049; c=relaxed/simple;
+	bh=hccmhEM7NFTJfTbJKCVZ0R2DpNIGlpyM1E4p9C7ezKM=;
 	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=KN/5JMKZ04lU73gchIC03oqk+yTE+jH2HlFQOLdCvHLA/V+8rRPw3fjT8etIbPLUWptny+9SAYq2RunGtH7UjGcV+OvBC6IEbMFTPbjlDDi+U0AyQIoYgjSYEumrBUKfYoE1qlAFxqLUj7SIxq5REwoVq+O2nJmU+uImZUFVnEs=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=TTV3ewj5; arc=none smtp.client-ip=100.103.45.18
+	 Content-Type:Content-Disposition:In-Reply-To; b=MiTQgcfMfoQVJ146yQrZUWn9XPoALWT1qJXsKvjD5sKp5tzJmHdUCHSy+tvwxd8BT6+imvk0wx2S+3i5VA70FL8oyhShzPi4aHnBJE5YOaEEK2gH846I3zH2aDWu+JoWehtsyBW/aEXqH0VnlXZRK4kcOExqOHVIQUiS5uM1ibs=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=VCkwUjVI; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="TTV3ewj5"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id E66EB1F00893;
-	Mon,  1 Jun 2026 22:49:21 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="VCkwUjVI"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 5BC141F00893;
+	Mon,  1 Jun 2026 23:04:07 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1780354162;
-	bh=GMHsW4wzBTs17hF6XmXmLDH/uJr0lfwJaTOBO8nbrCo=;
+	s=k20260515; t=1780355047;
+	bh=iTlom6GZ9mm24ZCyyYADF1m0w1466DE5A0K+MWuDAMs=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=TTV3ewj5NsSZQrG7aMRZ9SujP2Q49EJYG3y7929SCvuO91/roGdKCDVFWHXKv+4Jn
-	 EiFomtI701tUH5kLtL2n5/pRRvgJe0ABz1WdCTZ6Oam/CCJrZneUXCCPIqPskcTIgm
-	 eO6HtnbPHrh8jHSXd52Bcnd90jNWtWLkhV5GYM1UXke1GouPSGTSaWsEDgljBZEdYX
-	 2+fmEShszmbFcz7sTxCdGS1iRg3spQ6RIGP6GHaEvIyH9Ra95TMbeRWa+TR0PVZ5VM
-	 8YJ9aPVKv2QQKEMCEuWYpLz0hmc6eoagBe1l3ZwP0lXozXHQxmQnpjWGRWZjJqXx/j
-	 uTrZAvQoIMicw==
-Date: Mon, 1 Jun 2026 15:49:20 -0700
+	b=VCkwUjVI1WkDbktWYZdENab7TzGFkQZC/6kM4pTnZcZLaGE0JcoTLMkLK7w1YViJl
+	 KbVkaBjbRLE5sILzWg2mivI3IjavDGPpj4MGruENGwEFP0QtDQNy4d7bnssVEllgJr
+	 RSAt/+VzqwHimfUnRzzmlKoI8TX6ZaJryXkeulsvNBLUx41C/kijCI2uwBVMMx8TtB
+	 Nj+XHivSrUiBZJtpKX4HYeg/OSjUgOMG68rMYsFJCOo8uJCsLP/nsEg/UMVSg59+69
+	 2ICq9Y9ao6PlhGK0dN1d/2/gzu7Ehz6rXvDdxheB8kQyhZPZODtP92cbtEGt/CtRqD
+	 lM+tsW2mVkE+g==
+Date: Mon, 1 Jun 2026 16:04:06 -0700
 From: Eric Biggers <ebiggers@kernel.org>
 To: Daniel Vacek <neelx@suse.com>
 Cc: Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
@@ -35,11 +35,11 @@ Cc: Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>,
 	David Sterba <dsterba@suse.com>, linux-block@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org, linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v7 02/43] fscrypt: allow inline encryption for extent
- based encryption
-Message-ID: <20260601224920.GB25574@quark>
+Subject: Re: [PATCH v7 04/43] fscrypt: conditionally don't wipe mk secret
+ until the last active user is done
+Message-ID: <20260601230406.GC25574@quark>
 References: <20260513085340.3673127-1-neelx@suse.com>
- <20260513085340.3673127-3-neelx@suse.com>
+ <20260513085340.3673127-5-neelx@suse.com>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -48,25 +48,63 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20260513085340.3673127-3-neelx@suse.com>
+In-Reply-To: <20260513085340.3673127-5-neelx@suse.com>
 
-On Wed, May 13, 2026 at 10:52:36AM +0200, Daniel Vacek wrote:
+On Wed, May 13, 2026 at 10:52:38AM +0200, Daniel Vacek wrote:
 > From: Josef Bacik <josef@toxicpanda.com>
 > 
-> Instead of requiring -o inlinecrypt to enable inline encryption, allow
-> having s_cop->has_per_extent_encryption to indicate that this file
-> system supports inline encryption.
-> 
-> Signed-off-by: Josef Bacik <josef@toxicpanda.com>
-> Signed-off-by: Daniel Vacek <neelx@suse.com>
-> ---
-> 
-> v5: https://lore.kernel.org/linux-btrfs/ba0289bf103653d5d98ef576756c9a2a66192865.1706116485.git.josef@toxicpanda.com/
->  * No changes since.
+> Previously we were wiping the master key secret when we do
+> FS_IOC_REMOVE_ENCRYPTION_KEY, and then using the fact that it was
+> cleared as the mechanism from keeping new users from being setup.
 
-There are multiple places that check SB_INLINECRYPT, and just one was
-updated.  Perhaps we should just require that if a filesystem sets
-has_per_extent_encryption, then it also sets SB_INLINECRYPT
-unconditionally?
+This seems to be describing the state prior to commit 15baf55481de, not
+the current tip of tree.  We do still wipe on
+FS_IOC_REMOVE_ENCRYPTION_KEY, but there's a separate boolean that
+maintains the status and everyone looks at that now.
+
+>   * FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED
+>   *	Removal of this key has been initiated, but some inodes that were
+> - *	unlocked with it are still in-use.  Like ABSENT, ->mk_secret is wiped,
+> - *	and the key can no longer be used to unlock inodes.  Unlike ABSENT, the
+> - *	key is still in the keyring; ->mk_decrypted_inodes is nonempty; and
+> + *	unlocked with it are still in-use.
+> + *	For filesystems using per-extent encryption ->mk_secret is still
+> + *	being kept as the per-extent keys are derived at writeout time.
+> + *	Otherwise, like ABSENT, ->mk_secret is wiped, and the key can
+> + *	no longer be used to unlock inodes.  Unlike ABSENT, the key is
+> + *	still in the keyring; ->mk_decrypted_inodes is nonempty; and
+>   *	->mk_active_refs > 0, being equal to the size of ->mk_decrypted_inodes.
+
+This is saying that a bunch of things don't apply to extent-based
+encryption, due to being after the "Otherwise," when in fact they
+actually still do.  So the wording here needs improvement.  How about:
+
+    ->mk_secret exists only if the filesystem uses extent-based
+    encryption, to support key derivation during file data writeback;
+    otherwise it is wiped.  Either way, the key can no longer be used to
+    unlock inodes.  Unlike ABSENT, the key is still in the keyring;
+    ->mk_decrypted_inodes is nonempty; and ->mk_active_refs
+    > 0, being equal to the size of ->mk_decrypted_inodes.
+
+>   *
+>   *	This state transitions to ABSENT if ->mk_decrypted_inodes becomes empty,
+> diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+> index be8e6e8011f2..796e02a0db25 100644
+> --- a/fs/crypto/keyring.c
+> +++ b/fs/crypto/keyring.c
+> @@ -110,6 +110,14 @@ void fscrypt_put_master_key_activeref(struct super_block *sb,
+>  	WARN_ON_ONCE(mk->mk_present);
+>  	WARN_ON_ONCE(!list_empty(&mk->mk_decrypted_inodes));
+>  
+> +	/* We can't wipe the master key secret until the last activeref is
+> +	 * dropped on the master key with per-extent encryption since the key
+> +	 * derivation continues to happen as long as there are active refs.
+> +	 * Wipe it here now that we're done using it.
+> +	 */
+> +	if (sb->s_cop->has_per_extent_encryption)
+> +		wipe_master_key_secret(&mk->mk_secret);
+
+wipe_master_key_secret() is idempotent, so we might as well just do it
+unconditionally here.
 
 - Eric
