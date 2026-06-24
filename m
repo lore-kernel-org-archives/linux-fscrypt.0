@@ -1,58 +1,37 @@
 Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id C3FB333F586
-	for <linux-fscrypt@vger.kernel.org>; Wed, 24 Jun 2026 16:52:14 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 92C7833FE0F
+	for <linux-fscrypt@vger.kernel.org>; Wed, 24 Jun 2026 16:52:20 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1782319936; cv=none; b=Qp2lEv00X5gVOTzfN3HLY4VhgmegCQe655cWtcg9EKaGD0WfA5QAeESZfAOMqJADgpWv2kUOPnYOh/zL9AJ9JmebIE9kUQ2Ms1Af0uYmbCPahJ5F2y8ot8y/gPTX4n6cx9DXNodL5O5kC6qy77kklTtcB2/v0Wo5PQuVNfxREAQ=
+	t=1782319941; cv=none; b=jjPU5/PVEnYBO8dLfWfYbgvJ0JDNGL6vkIE0JvZDe+zR7F9lm2zOjOQC6t/dM71rYHXrlbhUxGEV+pQ5n0XT/ZGFwqUeSL5lcbO3Lpp5G7FwcBzTz0R1ThduKPp3i4y+Q5kSH4+1orX0QnxPcpirEf8c3rvAsfhJFUlPEv3goHY=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1782319936; c=relaxed/simple;
-	bh=xagaHRcjzEHGNolFIpLfZe4032gfUFMAmBd3ZZApIj8=;
+	s=arc-20240116; t=1782319941; c=relaxed/simple;
+	bh=qjNRDS6XHXAaqS0PwZfBzgrQukeeUDnP8fJAr05fr4A=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=UWx0V+Np8K3eNni9VlJO1qpFc+Vev1YRvwdeBKHdStqNrOHvQfY/joi3OY9rEg6LmVInDsVsmMmjREDjqMhTHvR6xveSB5Kx4IGMJ3bmDtwP0NLhxvW0IzikgPTQFfeYIbvSUCK8Gu12jlVRvIdv6FbtkEUCbzShgmUhHnErrcc=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=DmFtdY0F; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=DmFtdY0F; arc=none smtp.client-ip=195.135.223.131
+	 MIME-Version; b=UEpGyADhCDlLb6iL+JOq9S3t61t6h3k7Al5TwE0iFFGnZm3C8/hV6L0tDlaHW7vXf7afNi4+grZPdojCt1tQixs1mq2K2gYs9qr9Yhkowe+0eymEFBhfYnqfcWL7B5pLhtMs45mjzbfBhQKj+V6tonI+6YDMc24tVOZcOszvLZA=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; arc=none smtp.client-ip=195.135.223.131
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="DmFtdY0F";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="DmFtdY0F"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id 0EA6176038;
+	by smtp-out2.suse.de (Postfix) with ESMTPS id 6A15176061;
 	Wed, 24 Jun 2026 16:51:51 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1782319911; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=q8WFrdgxkPXzm4bjuwjrD+TEHnFQ05VmWZCgamA7Tik=;
-	b=DmFtdY0FPcO8ccghkmlKb9qH8F6Q4nSNRGJ9w0Kv3kDWFaVE7/CpTMW6T5YbAKOtykFLFb
-	QiZLd7MQeio2LKy4LXMj6U19XX0D/rZAvjZx+4eJFw59aPYNS65YWX/fjOEtFIwyKzUpo8
-	poCRud3/9ZtsLAB6w433uWc/I8NhLXg=
 Authentication-Results: smtp-out2.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1782319911; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=q8WFrdgxkPXzm4bjuwjrD+TEHnFQ05VmWZCgamA7Tik=;
-	b=DmFtdY0FPcO8ccghkmlKb9qH8F6Q4nSNRGJ9w0Kv3kDWFaVE7/CpTMW6T5YbAKOtykFLFb
-	QiZLd7MQeio2LKy4LXMj6U19XX0D/rZAvjZx+4eJFw59aPYNS65YWX/fjOEtFIwyKzUpo8
-	poCRud3/9ZtsLAB6w433uWc/I8NhLXg=
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id ED7A8779AB;
-	Wed, 24 Jun 2026 16:51:50 +0000 (UTC)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 555B6779AC;
+	Wed, 24 Jun 2026 16:51:51 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id 6L1/OSYLPGrUTgAAD6G6ig
-	(envelope-from <neelx@suse.com>); Wed, 24 Jun 2026 16:51:50 +0000
+	id GOxaFCcLPGrUTgAAD6G6ig
+	(envelope-from <neelx@suse.com>); Wed, 24 Jun 2026 16:51:51 +0000
 From: Daniel Vacek <neelx@suse.com>
 To: David Sterba <dsterba@suse.com>
 Cc: Daniel Vacek <neelx@suse.com>,
@@ -60,9 +39,9 @@ Cc: Daniel Vacek <neelx@suse.com>,
 	linux-btrfs@vger.kernel.org,
 	linux-kernel@vger.kernel.org,
 	Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v2 3/8] btrfs-progs: start tracking extent encryption context info
-Date: Wed, 24 Jun 2026 18:51:39 +0200
-Message-ID: <20260624165144.556908-4-neelx@suse.com>
+Subject: [PATCH v2 7/8] btrfs-progs: check: update inline extent length checking
+Date: Wed, 24 Jun 2026 18:51:43 +0200
+Message-ID: <20260624165144.556908-8-neelx@suse.com>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20260624165144.556908-1-neelx@suse.com>
 References: <20260624165144.556908-1-neelx@suse.com>
@@ -73,105 +52,85 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Queue-Id: 6A15176061
 X-Spam-Flag: NO
-X-Spamd-Result: default: False [-6.79 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	MID_CONTAINS_FROM(1.00)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.19)[-0.959];
-	MIME_GOOD(-0.10)[text/plain];
-	RCVD_COUNT_TWO(0.00)[2];
-	FROM_HAS_DN(0.00)[];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	TO_DN_SOME(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	RCPT_COUNT_FIVE(0.00)[6];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.com:email,suse.com:mid,dorminy.me:email,imap1.dmz-prg2.suse.org:helo];
-	RCVD_TLS_ALL(0.00)[]
+X-Spam-Score: -4.00
 X-Spam-Level: 
-X-Spam-Score: -6.79
+X-Rspamd-Action: no action
+X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
 
 From: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 
-This recapitulates the kernel change named 'btrfs: start tracking extent
-encryption context info".
+As part of the encryption changes, encrypted inline file extents record
+their actual data length in ram_bytes, like compressed inline file
+extents, while the item's length records the actual size. As such,
+encrypted inline extents must be treated like compressed ones for
+inode length consistency checking.
 
 Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
 Signed-off-by: Daniel Vacek <neelx@suse.com>
 ---
- kernel-shared/tree-checker.c    | 17 ++++++++++-------
- kernel-shared/uapi/btrfs_tree.h |  6 ++++++
- 2 files changed, 16 insertions(+), 7 deletions(-)
+ check/main.c | 24 ++++++++++++------------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
 
-diff --git a/kernel-shared/tree-checker.c b/kernel-shared/tree-checker.c
-index 5e716422..cd3d5d27 100644
---- a/kernel-shared/tree-checker.c
-+++ b/kernel-shared/tree-checker.c
-@@ -239,6 +239,8 @@ static int check_extent_data_item(struct extent_buffer *leaf,
- 	u32 sectorsize = fs_info->sectorsize;
- 	u32 item_size = btrfs_item_size(leaf, slot);
- 	u64 extent_end;
-+	u8 policy;
-+	u8 fe_type;
+diff --git a/check/main.c b/check/main.c
+index 2df55edc..4902cbd9 100644
+--- a/check/main.c
++++ b/check/main.c
+@@ -1722,7 +1722,7 @@ static int process_file_extent(struct btrfs_root *root,
+ 	u64 mask = gfs_info->sectorsize - 1;
+ 	u32 max_inline_size = min_t(u32, gfs_info->sectorsize,
+ 				BTRFS_MAX_INLINE_DATA_SIZE(gfs_info));
+-	u8 compression;
++	u8 compression, encryption;
+ 	int extent_type;
+ 	int ret;
  
- 	if (unlikely(!IS_ALIGNED(key->offset, sectorsize))) {
- 		file_extent_err(leaf, slot,
-@@ -269,12 +271,12 @@ static int check_extent_data_item(struct extent_buffer *leaf,
- 				SZ_4K);
- 		return -EUCLEAN;
- 	}
--	if (unlikely(btrfs_file_extent_type(leaf, fi) >=
--		     BTRFS_NR_FILE_EXTENT_TYPES)) {
-+
-+	fe_type = btrfs_file_extent_type(leaf, fi);
-+	if (unlikely(fe_type >= BTRFS_NR_FILE_EXTENT_TYPES)) {
- 		file_extent_err(leaf, slot,
- 		"invalid type for file extent, have %u expect range [0, %u]",
--			btrfs_file_extent_type(leaf, fi),
--			BTRFS_NR_FILE_EXTENT_TYPES - 1);
-+			fe_type, BTRFS_NR_FILE_EXTENT_TYPES - 1);
- 		return -EUCLEAN;
- 	}
+@@ -1747,25 +1747,25 @@ static int process_file_extent(struct btrfs_root *root,
+ 	fi = btrfs_item_ptr(eb, slot, struct btrfs_file_extent_item);
+ 	extent_type = btrfs_file_extent_type(eb, fi);
+ 	compression = btrfs_file_extent_compression(eb, fi);
++	encryption = btrfs_file_extent_encryption(eb, fi);
  
-@@ -290,10 +292,11 @@ static int check_extent_data_item(struct extent_buffer *leaf,
- 			BTRFS_NR_COMPRESS_TYPES - 1);
- 		return -EUCLEAN;
- 	}
--	if (unlikely(btrfs_file_extent_encryption(leaf, fi))) {
-+	policy = btrfs_file_extent_encryption(leaf, fi);
-+	if (unlikely(policy >= BTRFS_NR_ENCRYPTION_TYPES)) {
- 		file_extent_err(leaf, slot,
--			"invalid encryption for file extent, have %u expect 0",
--			btrfs_file_extent_encryption(leaf, fi));
-+			"invalid encryption for file extent, have %u expect range [0, %u]",
-+			policy, BTRFS_NR_ENCRYPTION_TYPES - 1);
- 		return -EUCLEAN;
- 	}
- 	if (btrfs_file_extent_type(leaf, fi) == BTRFS_FILE_EXTENT_INLINE) {
-diff --git a/kernel-shared/uapi/btrfs_tree.h b/kernel-shared/uapi/btrfs_tree.h
-index 1ca63711..74d307f1 100644
---- a/kernel-shared/uapi/btrfs_tree.h
-+++ b/kernel-shared/uapi/btrfs_tree.h
-@@ -1072,6 +1072,12 @@ enum {
- 	BTRFS_NR_FILE_EXTENT_TYPES = 3,
- };
- 
-+enum {
-+	BTRFS_ENCRYPTION_NONE,
-+	BTRFS_ENCRYPTION_FSCRYPT,
-+	BTRFS_NR_ENCRYPTION_TYPES,
-+};
-+
- struct btrfs_file_extent_item {
- 	/*
- 	 * transaction id that created this extent
+ 	if (extent_type == BTRFS_FILE_EXTENT_INLINE) {
+-		num_bytes = btrfs_file_extent_ram_bytes(eb, fi);
+-		if (num_bytes == 0)
++		u64 num_decoded_bytes = btrfs_file_extent_ram_bytes(eb, fi);
++		u64 num_disk_bytes =  btrfs_file_extent_inline_item_len(eb, slot);
++		if (num_decoded_bytes == 0)
+ 			rec->errors |= I_ERR_BAD_FILE_EXTENT;
+-		if (compression) {
+-			if (btrfs_file_extent_inline_item_len(eb, slot) >
+-			    max_inline_size ||
+-			    num_bytes > gfs_info->sectorsize)
++		if (compression || encryption) {
++			if (num_disk_bytes > max_inline_size ||
++			    num_decoded_bytes > gfs_info->sectorsize)
+ 				rec->errors |= I_ERR_FILE_EXTENT_TOO_LARGE;
+ 		} else {
+-			if (num_bytes > max_inline_size)
++			if (num_decoded_bytes > max_inline_size)
+ 				rec->errors |= I_ERR_FILE_EXTENT_TOO_LARGE;
+-			if (btrfs_file_extent_inline_item_len(eb, slot) !=
+-			    num_bytes)
++			if (num_disk_bytes != num_decoded_bytes)
+ 				rec->errors |= I_ERR_INLINE_RAM_BYTES_WRONG;
+ 		}
+-		rec->found_size += num_bytes;
+-		num_bytes = (num_bytes + mask) & ~mask;
++		rec->found_size += num_decoded_bytes;
++		num_bytes = (num_decoded_bytes + mask) & ~mask;
+ 	} else if (extent_type == BTRFS_FILE_EXTENT_REG ||
+ 		   extent_type == BTRFS_FILE_EXTENT_PREALLOC) {
+ 		num_bytes = btrfs_file_extent_num_bytes(eb, fi);
 -- 
 2.53.0
 
