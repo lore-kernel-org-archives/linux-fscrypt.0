@@ -1,31 +1,31 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 01C293812C8;
-	Wed, 24 Jun 2026 05:06:07 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3417C3815FB;
+	Wed, 24 Jun 2026 05:06:03 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1782277569; cv=none; b=CcCptgaZnfmN6VqAa5ouikOgAKADw3Xau8wDexKXfgbiG0NxKpzmC1tLXHrnw7tax/KHfffXsiOrkJKHPbt3HNz2cR6zKSaLCf2Qhz9Ti5gEY2+1IDwDJb3I9PIKhjAOBe43Dy3gnYdQNQdpNZZ//8zMdJh1AYo/H6DSSYeX0Xo=
+	t=1782277569; cv=none; b=uygOeqpepawSXq7lGWOT3ZB26rl/XkDg0+xM9BT1og8nRoYw0wA0/hsrQDaxwfaj+OfG5ELN1fkJ7Fjy0pJ/VYz0b4lGTeFmX0AAM3HvJNSy5MGwDSMWf7km0dk6jLQNJCqD/w8MxxScXRwznE28EU7ZQQuSmCVljnJunKj2oJI=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
 	s=arc-20240116; t=1782277569; c=relaxed/simple;
-	bh=VO38566/Gnj4AiTDe/+Op5b3oXjxlS2pyd6uXsCYnNw=;
+	bh=fbrY6GOWWCnVlUyXC3diA+ueji/meXK5nnA0DDbxMLs=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=Kce7/gnfqUxgl8yxMZloJhQCMqygaay9IYa5ywgCApS0DYBq1CA7/dfrn3rZ52YPw53sg0XCJ/z8l+y7rmMr65vosDwfX+UKy4REIysbo5stWYZeR5vyHlbOCf0hk+0tVhQGOEzNEzNfFzdCBWt4g/LI9I3Fv4dHQQ5xeSf4F7Y=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=DSFCnIkn; arc=none smtp.client-ip=100.103.45.18
+	 MIME-Version; b=MEEr8zEDw4Kb8gTOTHlyXVbj0vg64rs9OSUxrAwar2MIEHzSgDAjzyz4nOtFxQW6DaWl9lgnMWBbI7YyqmyeCalG7tYUoDMW0izhGoXVb61kZhtxDvY97+wSakj76n3F5hHDGHCXKMhjwn1LDXnjBYq54wdVuO+3NVadfkn7tnM=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=drFp7/0f; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="DSFCnIkn"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 70E5A1F00A3D;
-	Wed, 24 Jun 2026 05:06:07 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="drFp7/0f"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4C98A1F000E9;
+	Wed, 24 Jun 2026 05:06:03 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1782277567;
-	bh=klO3I4gbr+5T+kAUtraramyA7ErT+tHz21v36Ugnnss=;
+	s=k20260515; t=1782277563;
+	bh=FNBrhRvT1L2j4HNG5pR/0zJOfHASrRKcphBr80CPr8U=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=DSFCnIkn/LtHel2fVHfieqJbYzfA/4Ksjer9jr5GWn153GtlnJpsDLXDtfF3xpEuN
-	 l3ZRbwi5NE51QIdNstm6/YjUnvcyQ7waZPpgElau/+Jre/ueNo15r7TPII/QIcTmu6
-	 UUZGUqgh+BhGZxMa0/6GsHEWKDhzJV7Hky+H9o8I8ZvP6lF0wRVGSmEp1BkChRbcv2
-	 j0CCnaepJAIMdhdCjg6M/1wvCI/Hwtf9Tp2tv9CcvvoTO61nQEfqM+aiBpHYbOZ37M
-	 9DPgVlyvIxZlGDUuDCoXhPv+sp4Ib3LbQjVs0G70EyKXGur0phOnN9scbKNrqmOuWF
-	 Qw8564P8Z3mdg==
+	b=drFp7/0fY+I//RnSgKo3cKJAMnfjydlqUi+gx9+qYcHeSg+l1b2kUTLXH00vhA1Ws
+	 dvOMM9TigPK6cID3nmALvSFGsTJVwul9ash65CxugwT3niW8pXqcUBUsQm3P7FvqdQ
+	 gGf1U+ZbA+bDbTvNUxmUu/tMhoh17gk9htga6wK07sKce/tz9eq8G1ahsOcmslTcWL
+	 c4mUjwfNpJMgB53RvPThBgz5OB0hHUOBWPdszvprsHF6c6h39pj7cugmPU8EKdR6/8
+	 KyvYWSkhF8mRJ5Lh2vfropwECRFZ5151AouoL+ZhfnzuGnT3N6v5o0gOYT/eb8XmNj
+	 9nIBYt884xgWw==
 From: Eric Biggers <ebiggers@kernel.org>
 To: linux-fscrypt@vger.kernel.org
 Cc: linux-fsdevel@vger.kernel.org,
@@ -43,9 +43,9 @@ Cc: linux-fsdevel@vger.kernel.org,
 	Jaegeuk Kim <jaegeuk@kernel.org>,
 	Chao Yu <chao@kernel.org>,
 	Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 15/16] fscrypt: Merge bio.c and inline_crypt.c into block.c
-Date: Tue, 23 Jun 2026 22:03:33 -0700
-Message-ID: <20260624050334.124606-16-ebiggers@kernel.org>
+Subject: [PATCH 08/16] ext4: Further de-generalize the bio postprocessing code
+Date: Tue, 23 Jun 2026 22:03:26 -0700
+Message-ID: <20260624050334.124606-9-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.54.0
 In-Reply-To: <20260624050334.124606-1-ebiggers@kernel.org>
 References: <20260624050334.124606-1-ebiggers@kernel.org>
@@ -57,365 +57,243 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Now that fscrypt always uses blk-crypto on block-based filesystems,
-there's no meaningful difference between bio.c and inline_crypt.c.
-Therefore merge the two files into one named block.c.
-
-Note: I didn't carry over bio.c's "Copyright (C) 2015, Motorola
-Mobility", as none of the code that applied to remained.
+Since the bio postprocessing code in fs/ext4/readpage.c is now used only
+for fsverity, rename things accordingly.  Also don't create the caches
+at all when !CONFIG_FS_VERITY.
 
 Signed-off-by: Eric Biggers <ebiggers@kernel.org>
 ---
- fs/crypto/Makefile                    |   3 +-
- fs/crypto/bio.c                       | 100 --------------------------
- fs/crypto/{inline_crypt.c => block.c} |  96 +++++++++++++++++++++++--
- fs/crypto/fscrypt_private.h           |   2 +-
- include/linux/fscrypt.h               |  22 +++---
- 5 files changed, 101 insertions(+), 122 deletions(-)
- delete mode 100644 fs/crypto/bio.c
- rename fs/crypto/{inline_crypt.c => block.c} (79%)
+ fs/ext4/ext4.h     |  4 +--
+ fs/ext4/readpage.c | 66 ++++++++++++++++++++++------------------------
+ fs/ext4/super.c    |  6 ++---
+ 3 files changed, 37 insertions(+), 39 deletions(-)
 
-diff --git a/fs/crypto/Makefile b/fs/crypto/Makefile
-index 652c7180ec6d..b03e02f0f09d 100644
---- a/fs/crypto/Makefile
-+++ b/fs/crypto/Makefile
-@@ -8,7 +8,6 @@ fscrypto-y := crypto.o \
- 	      keyring.o \
- 	      keysetup.o \
- 	      keysetup_v1.o \
- 	      policy.o
+diff --git a/fs/ext4/ext4.h b/fs/ext4/ext4.h
+index 920a8ec1b948..af6cf0bbc5e2 100644
+--- a/fs/ext4/ext4.h
++++ b/fs/ext4/ext4.h
+@@ -3827,12 +3827,12 @@ static inline void ext4_set_de_type(struct super_block *sb,
+ }
  
--fscrypto-$(CONFIG_BLOCK) += bio.o
--fscrypto-$(CONFIG_FS_ENCRYPTION_INLINE_CRYPT) += inline_crypt.o
-+fscrypto-$(CONFIG_BLOCK) += block.o
-diff --git a/fs/crypto/bio.c b/fs/crypto/bio.c
-deleted file mode 100644
-index db095258cfca..000000000000
---- a/fs/crypto/bio.c
-+++ /dev/null
-@@ -1,100 +0,0 @@
--// SPDX-License-Identifier: GPL-2.0
--/*
-- * Utility functions for file contents encryption/decryption on
-- * block device-based filesystems.
-- *
-- * Copyright (C) 2015, Google, Inc.
-- * Copyright (C) 2015, Motorola Mobility
-- */
--
--#include <linux/bio.h>
--#include <linux/export.h>
--#include <linux/module.h>
--#include <linux/namei.h>
--#include <linux/pagemap.h>
--
--#include "fscrypt_private.h"
--
--struct fscrypt_zero_done {
--	atomic_t		pending;
--	blk_status_t		status;
--	struct completion	done;
--};
--
--static void fscrypt_zeroout_range_done(struct fscrypt_zero_done *done)
+ /* readpages.c */
+ int ext4_read_folio(struct file *file, struct folio *folio);
+ void ext4_readahead(struct readahead_control *rac);
+-extern int __init ext4_init_post_read_processing(void);
+-extern void ext4_exit_post_read_processing(void);
++extern int __init ext4_init_verity_caches(void);
++extern void ext4_exit_verity_caches(void);
+ 
+ /* symlink.c */
+ extern const struct inode_operations ext4_encrypted_symlink_inode_operations;
+ extern const struct inode_operations ext4_symlink_inode_operations;
+ extern const struct inode_operations ext4_fast_symlink_inode_operations;
+diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
+index 8af183798a33..322226290e65 100644
+--- a/fs/ext4/readpage.c
++++ b/fs/ext4/readpage.c
+@@ -45,16 +45,16 @@
+ #include <linux/backing-dev.h>
+ 
+ #include "ext4.h"
+ #include <trace/events/ext4.h>
+ 
+-#define NUM_PREALLOC_POST_READ_CTXS	128
++#define NUM_VERITY_WORKS 128
+ 
+-static struct kmem_cache *bio_post_read_ctx_cache;
+-static mempool_t *bio_post_read_ctx_pool;
++static struct kmem_cache *ext4_verity_work_cache;
++static mempool_t *ext4_verity_work_pool;
+ 
+-struct bio_post_read_ctx {
++struct ext4_verity_work {
+ 	struct bio *bio;
+ 	struct fsverity_info *vi;
+ 	struct work_struct work;
+ };
+ 
+@@ -63,39 +63,33 @@ static void __read_end_io(struct bio *bio)
+ 	struct folio_iter fi;
+ 
+ 	bio_for_each_folio_all(fi, bio)
+ 		folio_end_read(fi.folio, bio->bi_status == 0);
+ 	if (bio->bi_private)
+-		mempool_free(bio->bi_private, bio_post_read_ctx_pool);
++		mempool_free(bio->bi_private, ext4_verity_work_pool);
+ 	bio_put(bio);
+ }
+ 
+ static void verity_work(struct work_struct *work)
+ {
+-	struct bio_post_read_ctx *ctx =
+-		container_of(work, struct bio_post_read_ctx, work);
++	struct ext4_verity_work *ctx =
++		container_of(work, struct ext4_verity_work, work);
+ 	struct bio *bio = ctx->bio;
+ 	struct fsverity_info *vi = ctx->vi;
+ 
+ 	/*
+-	 * Free the bio_post_read_ctx right away, since it's no longer needed.
++	 * Free the ext4_verity_work right away, since it's no longer needed.
+ 	 * This relieves the pressure on the mempool as much as possible.
+ 	 */
+-	mempool_free(ctx, bio_post_read_ctx_pool);
++	mempool_free(ctx, ext4_verity_work_pool);
+ 	bio->bi_private = NULL;
+ 
+ 	fsverity_verify_bio(vi, bio);
+ 
+ 	__read_end_io(bio);
+ }
+ 
+-static bool bio_post_read_required(struct bio *bio)
 -{
--	if (atomic_dec_and_test(&done->pending))
--		complete(&done->done);
+-	return IS_ENABLED(CONFIG_FS_VERITY) && bio->bi_private &&
+-	       !bio->bi_status;
 -}
 -
--static void fscrypt_zeroout_range_end_io(struct bio *bio)
--{
--	struct fscrypt_zero_done *done = bio->bi_private;
--
--	if (bio->bi_status)
--		cmpxchg(&done->status, 0, bio->bi_status);
--	fscrypt_zeroout_range_done(done);
--	bio_put(bio);
--}
--
--/**
-- * fscrypt_zeroout_range() - zero out a range of blocks in an encrypted file
-- * @inode: the file's inode
-- * @pos: the first file position (in bytes) to zero out
-- * @sector: the first sector to zero out
-- * @len: bytes to zero out
-- *
-- * Zero out filesystem blocks in an encrypted regular file on-disk, i.e. write
-- * ciphertext blocks which decrypt to the all-zeroes block.  The blocks must be
-- * both logically and physically contiguous.  It's also assumed that the
-- * filesystem only uses a single block device, ->s_bdev.  @len must be a
-- * multiple of the file system logical block size.
-- *
-- * Note that since each block uses a different IV, this involves writing a
-- * different ciphertext to each block; we can't simply reuse the same one.
-- *
-- * Return: 0 on success; -errno on failure.
-- */
--int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
--			  sector_t sector, u64 len)
--{
--	struct fscrypt_zero_done done = {
--		.pending	= ATOMIC_INIT(1),
--		.done		= COMPLETION_INITIALIZER_ONSTACK(done.done),
--	};
--
--	if (len == 0)
--		return 0;
--
--	do {
--		struct bio *bio;
--		unsigned int n;
--
--		bio = bio_alloc(inode->i_sb->s_bdev, BIO_MAX_VECS, REQ_OP_WRITE,
--				GFP_NOFS);
--		bio->bi_iter.bi_sector = sector;
--		bio->bi_private = &done;
--		bio->bi_end_io = fscrypt_zeroout_range_end_io;
--		fscrypt_set_bio_crypt_ctx(bio, inode, pos, GFP_NOFS);
--
--		for (n = 0; n < BIO_MAX_VECS; n++) {
--			unsigned int bytes_this_page = min(len, PAGE_SIZE);
--
--			__bio_add_page(bio, ZERO_PAGE(0), bytes_this_page, 0);
--			len -= bytes_this_page;
--			pos += bytes_this_page;
--			sector += (bytes_this_page >> SECTOR_SHIFT);
--			if (!len || !fscrypt_mergeable_bio(bio, inode, pos))
--				break;
--		}
--
--		atomic_inc(&done.pending);
--		blk_crypto_submit_bio(bio);
--	} while (len);
--
--	fscrypt_zeroout_range_done(&done);
--
--	wait_for_completion(&done.done);
--	return blk_status_to_errno(done.status);
--}
--EXPORT_SYMBOL(fscrypt_zeroout_range);
-diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/block.c
-similarity index 79%
-rename from fs/crypto/inline_crypt.c
-rename to fs/crypto/block.c
-index 3c3a46c5af42..60e687da7760 100644
---- a/fs/crypto/inline_crypt.c
-+++ b/fs/crypto/block.c
-@@ -1,22 +1,22 @@
- // SPDX-License-Identifier: GPL-2.0
  /*
-- * Inline encryption support for fscrypt
-+ * File contents en/decryption on block-based filesystems
+  * I/O completion handler for multipage BIOs.
   *
-  * Copyright 2019 Google LLC
+  * The mpage code never puts partial pages into a BIO (except for end-of-file).
+  * If a page does not map to a contiguous run of blocks then it simply falls
+@@ -106,28 +100,28 @@ static bool bio_post_read_required(struct bio *bio)
+  * status of that page is hard.  See end_buffer_async_read() for the details.
+  * There is no point in duplicating all that complexity.
   */
+ static void mpage_end_io(struct bio *bio)
+ {
+-	if (bio_post_read_required(bio)) {
+-		struct bio_post_read_ctx *ctx = bio->bi_private;
++	if (IS_ENABLED(CONFIG_FS_VERITY) && bio->bi_private &&
++	    !bio->bi_status) {
++		struct ext4_verity_work *ctx = bio->bi_private;
  
- /*
-- * With "inline encryption", the block layer handles the decryption/encryption
-- * as part of the bio, instead of the filesystem doing the crypto itself via
-- * crypto API.  See Documentation/block/inline-encryption.rst.  fscrypt still
-- * provides the key and IV to use.
-+ * This file implements fscrypt's file contents en/decryption using blk-crypto
-+ * (Documentation/block/inline-encryption.rst).  fscrypt assigns a bio_crypt_ctx
-+ * with a key and IV to each bio, and the block layer does the en/decryption.
-+ *
-+ * This file's exported functions are called only by block-based filesystems.
-  */
- 
- #include <linux/blk-crypto.h>
- #include <linux/blkdev.h>
--#include <linux/buffer_head.h>
- #include <linux/export.h>
- #include <linux/sched/mm.h>
- #include <linux/slab.h>
- #include <linux/uio.h>
- 
-@@ -338,5 +338,89 @@ u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks)
- 	dun = ci->ci_hashed_ino + lblk;
- 
- 	return min_t(u64, nr_blocks, (u64)U32_MAX + 1 - dun);
+ 		INIT_WORK(&ctx->work, verity_work);
+ 		fsverity_enqueue_verify_work(&ctx->work);
+ 		return;
+ 	}
+ 	__read_end_io(bio);
  }
- EXPORT_SYMBOL_GPL(fscrypt_limit_io_blocks);
-+
-+struct fscrypt_zero_done {
-+	atomic_t		pending;
-+	blk_status_t		status;
-+	struct completion	done;
-+};
-+
-+static void fscrypt_zeroout_range_done(struct fscrypt_zero_done *done)
-+{
-+	if (atomic_dec_and_test(&done->pending))
-+		complete(&done->done);
-+}
-+
-+static void fscrypt_zeroout_range_end_io(struct bio *bio)
-+{
-+	struct fscrypt_zero_done *done = bio->bi_private;
-+
-+	if (bio->bi_status)
-+		cmpxchg(&done->status, 0, bio->bi_status);
-+	fscrypt_zeroout_range_done(done);
-+	bio_put(bio);
-+}
-+
-+/**
-+ * fscrypt_zeroout_range() - zero out a range of blocks in an encrypted file
-+ * @inode: the file's inode
-+ * @pos: the first file position (in bytes) to zero out
-+ * @sector: the first sector to zero out
-+ * @len: bytes to zero out
-+ *
-+ * Zero out filesystem blocks in an encrypted regular file on-disk, i.e. write
-+ * ciphertext blocks which decrypt to the all-zeroes block.  The blocks must be
-+ * both logically and physically contiguous.  It's also assumed that the
-+ * filesystem only uses a single block device, ->s_bdev.  @len must be a
-+ * multiple of the file system logical block size.
-+ *
-+ * Note that since each block uses a different IV, this involves writing a
-+ * different ciphertext to each block; we can't simply reuse the same one.
-+ *
-+ * Return: 0 on success; -errno on failure.
-+ */
-+int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
-+			  sector_t sector, u64 len)
-+{
-+	struct fscrypt_zero_done done = {
-+		.pending	= ATOMIC_INIT(1),
-+		.done		= COMPLETION_INITIALIZER_ONSTACK(done.done),
-+	};
-+
-+	if (len == 0)
+ 
+-static void ext4_set_bio_post_read_ctx(struct bio *bio,
+-				       const struct inode *inode,
+-				       struct fsverity_info *vi)
++static void ext4_set_verity_work(struct bio *bio, const struct inode *inode,
++				 struct fsverity_info *vi)
+ {
+ 	if (vi) {
+ 		/* Due to the mempool, this never fails. */
+-		struct bio_post_read_ctx *ctx =
+-			mempool_alloc(bio_post_read_ctx_pool, GFP_NOFS);
++		struct ext4_verity_work *ctx =
++			mempool_alloc(ext4_verity_work_pool, GFP_NOFS);
+ 
+ 		ctx->bio = bio;
+ 		ctx->vi = vi;
+ 		bio->bi_private = ctx;
+ 	}
+@@ -287,11 +281,11 @@ static int ext4_mpage_readpages(struct inode *inode, struct fsverity_info *vi,
+ 			 * __GFP_DIRECT_RECLAIM is set, see bio_alloc_bioset().
+ 			 */
+ 			bio = bio_alloc(bdev, bio_max_segs(nr_pages),
+ 					REQ_OP_READ, GFP_KERNEL);
+ 			fscrypt_set_bio_crypt_ctx(bio, inode, pos, GFP_KERNEL);
+-			ext4_set_bio_post_read_ctx(bio, inode, vi);
++			ext4_set_verity_work(bio, inode, vi);
+ 			bio->bi_iter.bi_sector = first_block << (blkbits - 9);
+ 			bio->bi_end_io = mpage_end_io;
+ 			if (rac)
+ 				bio->bi_opf |= REQ_RAHEAD;
+ 		}
+@@ -361,29 +355,33 @@ void ext4_readahead(struct readahead_control *rac)
+ 		fsverity_readahead(vi, readahead_index(rac),
+ 				   readahead_count(rac));
+ 	ext4_mpage_readpages(inode, vi, rac, NULL);
+ }
+ 
+-int __init ext4_init_post_read_processing(void)
++int __init ext4_init_verity_caches(void)
+ {
+-	bio_post_read_ctx_cache = KMEM_CACHE(bio_post_read_ctx, SLAB_RECLAIM_ACCOUNT);
++	if (!IS_ENABLED(CONFIG_FS_VERITY))
 +		return 0;
-+
-+	do {
-+		struct bio *bio;
-+		unsigned int n;
-+
-+		bio = bio_alloc(inode->i_sb->s_bdev, BIO_MAX_VECS, REQ_OP_WRITE,
-+				GFP_NOFS);
-+		bio->bi_iter.bi_sector = sector;
-+		bio->bi_private = &done;
-+		bio->bi_end_io = fscrypt_zeroout_range_end_io;
-+		fscrypt_set_bio_crypt_ctx(bio, inode, pos, GFP_NOFS);
-+
-+		for (n = 0; n < BIO_MAX_VECS; n++) {
-+			unsigned int bytes_this_page = min(len, PAGE_SIZE);
-+
-+			__bio_add_page(bio, ZERO_PAGE(0), bytes_this_page, 0);
-+			len -= bytes_this_page;
-+			pos += bytes_this_page;
-+			sector += (bytes_this_page >> SECTOR_SHIFT);
-+			if (!len || !fscrypt_mergeable_bio(bio, inode, pos))
-+				break;
-+		}
-+
-+		atomic_inc(&done.pending);
-+		blk_crypto_submit_bio(bio);
-+	} while (len);
-+
-+	fscrypt_zeroout_range_done(&done);
-+
-+	wait_for_completion(&done.done);
-+	return blk_status_to_errno(done.status);
-+}
-+EXPORT_SYMBOL(fscrypt_zeroout_range);
-diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index da9040407d4a..74329e0953d1 100644
---- a/fs/crypto/fscrypt_private.h
-+++ b/fs/crypto/fscrypt_private.h
-@@ -393,11 +393,11 @@ void fscrypt_init_hkdf(struct hmac_sha512_key *hkdf, const u8 *master_key,
++	ext4_verity_work_cache =
++		KMEM_CACHE(ext4_verity_work, SLAB_RECLAIM_ACCOUNT);
  
- void fscrypt_hkdf_expand(const struct hmac_sha512_key *hkdf, u8 context,
- 			 const u8 *info, unsigned int infolen,
- 			 u8 *okm, unsigned int okmlen);
+-	if (!bio_post_read_ctx_cache)
++	if (!ext4_verity_work_cache)
+ 		goto fail;
+-	bio_post_read_ctx_pool =
+-		mempool_create_slab_pool(NUM_PREALLOC_POST_READ_CTXS,
+-					 bio_post_read_ctx_cache);
+-	if (!bio_post_read_ctx_pool)
++	ext4_verity_work_pool = mempool_create_slab_pool(
++		NUM_VERITY_WORKS, ext4_verity_work_cache);
++	if (!ext4_verity_work_pool)
+ 		goto fail_free_cache;
+ 	return 0;
  
--/* inline_crypt.c */
-+/* block.c */
- #ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
- static inline bool
- fscrypt_using_inline_encryption(const struct fscrypt_inode_info *ci)
- {
- 	const struct inode *inode = ci->ci_inode;
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index acf5b28eb9d7..52ff014aeae6 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -444,14 +444,10 @@ int fscrypt_fname_disk_to_usr(const struct inode *inode,
- 			      struct fscrypt_str *oname);
- bool fscrypt_match_name(const struct fscrypt_name *fname,
- 			const u8 *de_name, u32 de_name_len);
- u64 fscrypt_fname_siphash(const struct inode *dir, const struct qstr *name);
- 
--/* bio.c */
--int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
--			  sector_t sector, u64 len);
--
- /* hooks.c */
- int fscrypt_file_open(struct inode *inode, struct file *filp);
- int __fscrypt_prepare_link(struct inode *inode, struct inode *dir,
- 			   struct dentry *dentry);
- int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
-@@ -735,18 +731,10 @@ static inline int fscrypt_d_revalidate(struct inode *dir, const struct qstr *nam
- 				       struct dentry *dentry, unsigned int flags)
- {
- 	return 1;
+ fail_free_cache:
+-	kmem_cache_destroy(bio_post_read_ctx_cache);
++	kmem_cache_destroy(ext4_verity_work_cache);
+ fail:
+ 	return -ENOMEM;
  }
  
--/* bio.c */
--
--static inline int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
--					sector_t sector, u64 len)
--{
--	return -EOPNOTSUPP;
--}
--
- /* hooks.c */
+-void ext4_exit_post_read_processing(void)
++void ext4_exit_verity_caches(void)
+ {
+-	mempool_destroy(bio_post_read_ctx_pool);
+-	kmem_cache_destroy(bio_post_read_ctx_cache);
++	if (!IS_ENABLED(CONFIG_FS_VERITY))
++		return;
++	mempool_destroy(ext4_verity_work_pool);
++	kmem_cache_destroy(ext4_verity_work_cache);
+ }
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 245f67d10ded..cb9ca0dc4664 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -7529,11 +7529,11 @@ static int __init ext4_init_fs(void)
  
- static inline int fscrypt_file_open(struct inode *inode, struct file *filp)
- {
- 	if (IS_ENCRYPTED(inode))
-@@ -842,20 +830,22 @@ static inline void fscrypt_set_ops(struct super_block *sb,
- {
+ 	err = ext4_init_pending();
+ 	if (err)
+ 		goto out7;
+ 
+-	err = ext4_init_post_read_processing();
++	err = ext4_init_verity_caches();
+ 	if (err)
+ 		goto out6;
+ 
+ 	err = ext4_init_pageio();
+ 	if (err)
+@@ -7578,11 +7578,11 @@ static int __init ext4_init_fs(void)
+ out3:
+ 	ext4_exit_system_zone();
+ out4:
+ 	ext4_exit_pageio();
+ out5:
+-	ext4_exit_post_read_processing();
++	ext4_exit_verity_caches();
+ out6:
+ 	ext4_exit_pending();
+ out7:
+ 	ext4_exit_es();
+ 
+@@ -7599,11 +7599,11 @@ static void __exit ext4_exit_fs(void)
+ 	destroy_inodecache();
+ 	ext4_exit_mballoc();
+ 	ext4_exit_sysfs();
+ 	ext4_exit_system_zone();
+ 	ext4_exit_pageio();
+-	ext4_exit_post_read_processing();
++	ext4_exit_verity_caches();
+ 	ext4_exit_es();
+ 	ext4_exit_pending();
  }
  
- #endif	/* !CONFIG_FS_ENCRYPTION */
- 
--/* inline_crypt.c */
-+/* block.c */
- #ifdef CONFIG_FS_ENCRYPTION_INLINE_CRYPT
- 
- void fscrypt_set_bio_crypt_ctx(struct bio *bio, const struct inode *inode,
- 			       loff_t pos, gfp_t gfp_mask);
- 
- bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
- 			   loff_t pos);
- 
- u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk, u64 nr_blocks);
-+int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
-+			  sector_t sector, u64 len);
- 
- #else /* CONFIG_FS_ENCRYPTION_INLINE_CRYPT */
- 
- static inline void fscrypt_set_bio_crypt_ctx(struct bio *bio,
- 					     const struct inode *inode,
-@@ -871,10 +861,16 @@ static inline bool fscrypt_mergeable_bio(struct bio *bio,
- static inline u64 fscrypt_limit_io_blocks(const struct inode *inode, u64 lblk,
- 					  u64 nr_blocks)
- {
- 	return nr_blocks;
- }
-+
-+static inline int fscrypt_zeroout_range(const struct inode *inode, loff_t pos,
-+					sector_t sector, u64 len)
-+{
-+	return -EOPNOTSUPP;
-+}
- #endif /* !CONFIG_FS_ENCRYPTION_INLINE_CRYPT */
- 
- /**
-  * fscrypt_has_encryption_key() - check whether an inode has had its key set up
-  * @inode: the inode to check
+ MODULE_AUTHOR("Remy Card, Stephen Tweedie, Andrew Morton, Andreas Dilger, Theodore Ts'o and others");
 -- 
 2.54.0
 
