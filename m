@@ -1,175 +1,141 @@
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Received: from mail-wr1-f44.google.com (mail-wr1-f44.google.com [209.85.221.44])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 662DF42A7B9
-	for <linux-fscrypt@vger.kernel.org>; Tue,  7 Jul 2026 14:28:13 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
-ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1783434497; cv=none; b=IIFrbB/v0PlYyHDwhw+zYjO0e7qT+JfX6jKE/CHxaueQEVQdg/TcS/PiUXBgLbemzXZJIYNTljJR44Ej+kwd/zMUUuZmMQ6IxwBrvJo1Wdb2YI8HQP5QZwRPNdJtgUn+ES76AVW4Tzijys8XqT4Y71O9c7ptEEdq89GypRaihn4=
-ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1783434497; c=relaxed/simple;
-	bh=sWcjTH0F7qORYwLNc3sX2+C5Jqq8ev01ZTC8ettyqo0=;
-	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=AGexXJi2aIsw6EouQzL7NywD0bKCcCoDMRBiFy0IvG5sUr2JTP3Na4XOsKYwCLQU1QRP30r/rJf8niZTu9LG2enub9fCXX4wYMzWrURcvpAFAXcBwFOlbTVuT9G8hOZ15Vumg0+4N3uEk1UdHyp+axfP9BSWZWOLSuz5R5blsGI=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=lhD8BqM4; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=lhD8BqM4; arc=none smtp.client-ip=195.135.223.130
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6868C429825
+	for <linux-fscrypt@vger.kernel.org>; Tue,  7 Jul 2026 14:33:26 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=pass smtp.client-ip=209.85.221.44
+ARC-Seal:i=2; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
+	t=1783434807; cv=pass; b=pC1rkHkkv2Gz3pAJEen+5FcuV8WZUhK+3uQQZXca/SWV2qkTkENbxYk88nUiG+PmKuf0u7fFJ1t74xL72lSKXQwaswQEYOkvMS5lddgMJwF/Irsu3d4TKk6TrJBM7iS5srjaoky4lkPX6v15Vy4WrHnvTGEl+ihUYyQyxhMPxf0=
+ARC-Message-Signature:i=2; a=rsa-sha256; d=subspace.kernel.org;
+	s=arc-20240116; t=1783434807; c=relaxed/simple;
+	bh=xYilDSxOI6do0n6SZKC31MPiyy1EBx+XTChNkNJ4Ayo=;
+	h=MIME-Version:References:In-Reply-To:From:Date:Message-ID:Subject:
+	 To:Cc:Content-Type; b=YlslIkgKSbT1WS0jvQUrnPAPx9BAlFbA/rzY6YMjQW8ms2tuM9s+gMc+n4M5SW7B6cF0e+KJ1V1sjKTCxaWklIZlJcbE2OGUpPFJ3cV2BCEZvqluxKoUG9UAoL537s/mQiKwP3G6ESZA+VMQhiA2aFl8t3zzAdrg5nBAgNpj8fk=
+ARC-Authentication-Results:i=2; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b=ev2D1lNt; arc=pass smtp.client-ip=209.85.221.44
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="lhD8BqM4";
-	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="lhD8BqM4"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 687DA75C22;
-	Tue,  7 Jul 2026 14:27:47 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1783434467; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=C99Pc89+/54jWcpyW2UjHVxQ3eEBnNVesDfo+OcPcX4=;
-	b=lhD8BqM4iVqUhMl4XGJTBYGp2EaHAAIpBR1AZy/BFrJLtBTXXufnTzJmTqv9B2SOie34Ur
-	SYF9X1kU3XvZ3M1o/4b9q2E9BroG/YWfwRLiJCEOGuvBhS9n79vSQ41wVQR0v+OP2KCNxj
-	xxSjnGp5qBIWgBBu8uD8YcdNr5KsG4A=
-Authentication-Results: smtp-out1.suse.de;
-	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
-	t=1783434467; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=C99Pc89+/54jWcpyW2UjHVxQ3eEBnNVesDfo+OcPcX4=;
-	b=lhD8BqM4iVqUhMl4XGJTBYGp2EaHAAIpBR1AZy/BFrJLtBTXXufnTzJmTqv9B2SOie34Ur
-	SYF9X1kU3XvZ3M1o/4b9q2E9BroG/YWfwRLiJCEOGuvBhS9n79vSQ41wVQR0v+OP2KCNxj
-	xxSjnGp5qBIWgBBu8uD8YcdNr5KsG4A=
-Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 51185779AF;
-	Tue,  7 Jul 2026 14:27:47 +0000 (UTC)
-Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
-	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id 8Lg5E+MMTWoLaQAAD6G6ig
-	(envelope-from <neelx@suse.com>); Tue, 07 Jul 2026 14:27:47 +0000
-From: Daniel Vacek <neelx@suse.com>
-To: David Sterba <dsterba@suse.com>
-Cc: Daniel Vacek <neelx@suse.com>,
-	linux-fscrypt@vger.kernel.org,
-	linux-btrfs@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Subject: [PATCH v3 6/7] btrfs-progs: check: update inline extent length checking
-Date: Tue,  7 Jul 2026 16:27:35 +0200
-Message-ID: <20260707142736.2330146-7-neelx@suse.com>
-X-Mailer: git-send-email 2.53.0
-In-Reply-To: <20260707142736.2330146-1-neelx@suse.com>
-References: <20260707142736.2330146-1-neelx@suse.com>
+	dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b="ev2D1lNt"
+Received: by mail-wr1-f44.google.com with SMTP id ffacd0b85a97d-475cb71a4ebso4313004f8f.0
+        for <linux-fscrypt@vger.kernel.org>; Tue, 07 Jul 2026 07:33:26 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1783434805; cv=none;
+        d=google.com; s=arc-20260327;
+        b=gymvlnI+YifX8yuzdnd/MIaCLZofQW7xa8rcpV76FI3WjjuMstvtxCLOqsD8jT3KyN
+         4ZtaQgDZ+05x/Ohs55IOn68abx5XvVfYem3mSckWq/wD6vQNu7HUboht4q4KafTdvmDa
+         9a01BlyuyQQINDyXoqz02FiyZiow73iSV40lObH2vTV8KXRNc9L+c7to8uMOWcw5oCeH
+         QWTyvZZEpRHvLYFKlN72kZACK+XtWoBc3XNC5RjKzh2oRPZbgzpnJRR5u2URmkb4lMPP
+         vG7XDza94bamhFoBzlDuEU//QXfmqitL70nfkb7GLlNb6aY5ZU5et5rPFnfOJJVTdKXP
+         RpsQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:dkim-signature;
+        bh=NEyRUcC0eInL1m14heAugAgai/7ecjcR50dungH3ju4=;
+        fh=KLbe2zx9auqhDFkoTsO0zUv8kuyZHDUGT/blhMlgLyA=;
+        b=Df4B4i0C6Nt8Bn0AewRH7chUkgWCgmnO9vmyfWgIWC7AnhMk3DM7GSBNuJSMmKmDPO
+         DJK2Lv6tYtIPHTO9XlEF648X9gSSq5GWNn3tVfPQNsytaUwjVBKEx6C4DR5oEZTq3t1H
+         fSkDuh23Cgwx2UiiNDexzaG9kkegkGD0jxRRFzsJeGAEcGD8swoA+STJkLmYj5WxtP90
+         CFai9UZhSfELD8fkyVvxWgafAcpUaT7t7uwDeGGhBOyD3Fo6NlD3IVhybeY2I89QwUV2
+         3VyrqZzXCx1Ls3SvJb0RvkEkGDKXGTxCsZwEPRFrxjBKiEiKC0S5v7aTKqVzVsvi2O76
+         fa0g==;
+        darn=vger.kernel.org
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=suse.com; s=google; t=1783434805; x=1784039605; darn=vger.kernel.org;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=NEyRUcC0eInL1m14heAugAgai/7ecjcR50dungH3ju4=;
+        b=ev2D1lNtzENVIvhWHnFT6xVDI8kWjyWmpShcqxe96CSgaDwc0KJWgDIODfIj7opaUZ
+         KtwcH43HlS3L3qituEtpIcDQv9XlK7KlLBi2UhRZbzPEURWXJsQgycWpFoiOK/oZDNlH
+         hbGNJ3hi/ebdsgfN4SihRkq2bLHKT+s8BgLb7lo3kG/qqsAablZF9vYZHJ7np2dUkdtU
+         WDvDxB+h+6p0K7NG4Tr2K5UdJHRPc5wMkjLmWY6eALA4j4QGVHWJ7Fa95wAudt5gPxvI
+         QMiY9lFfiME2wgjCliXtPD0GE4hLIEm+9iLxyESHMlA4/t5BOKVmss1kYlBZpSBTpEV5
+         jkJQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20251104; t=1783434805; x=1784039605;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-gg:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=NEyRUcC0eInL1m14heAugAgai/7ecjcR50dungH3ju4=;
+        b=diRWjDcFqXI3+KgR+kvl1XZnvUI6JROVjgSJ8yEpPiwsb+66giqxu0PzXHLOr286JV
+         kZzlKkd3HqTORldGmM8hrpu10Qx4FYBQSyX7t3r6aZWJjJVF9gQ1jFTuVeQqrtlQNgeu
+         q4VDkgYNY6MaTyp9Ht3RIm0DMfL0CHVgxALQ2hmHlsVTLIR+xcOfi1tHMUlFa/uLvjqR
+         XJ8qswrAe0wyaqy4rVIa7Ur3utQNDY8UEuemNX+L9kTB8EIekb1enTTHaRQpsV4h4RVu
+         cI+T+FO7CReMuDl+sB9VuKHREnldHGDEDujH9ZsOx45LZWseVQrZ3R9rlsnPvCaWuf40
+         cTvA==
+X-Gm-Message-State: AOJu0YyZBs+xE0qFLu+KZXfoHVUf7lQav44Bw46AZ/GPXd/Si065IVTo
+	JuO23BM2a16AsZvrRnDv/CxXODoPB/WKERF4/HFL7TKZPjrWoFilqNps0kj5NZGpIMD/M4FofbW
+	Ri1T/QUj0blywcHItz+1lJP3WKLJgkv1EY3EClC7a3Q==
+X-Gm-Gg: AfdE7ckEEu2KL5I1728+ewuo19bvc5qqs5yEWOcdckgdKIm9kzHUbUm3mtXy+meXtkx
+	6yUfU1PvyDNiTqsZRbdvg6rvGNva/zAEI093YHhfTWK0xIc8SKbOxDgOB1Ag7Az2V57VcvzIJLG
+	QX2imY7O30jBXfKyVAIHXT/1vgCSl1SBsLkiikX5UIis+iQPrGQNujezEEfdZMOyOfca4yYtnTK
+	bJQXTOPy5yHTKmdjqsp9uyItq8cBVwd7wyx3NrqKct+kymLoRt4pHkJdmgtSX6pIFtRbwIoL4gG
+	7d7amd0zi3OB7PWW2/rpHIiudFMtzq4Fcy2fwm29b9959Aw1wUM7JXF2eDlCifoKohcPBQ==
+X-Received: by 2002:adf:e5cb:0:b0:46c:cffc:7638 with SMTP id
+ ffacd0b85a97d-47de66cde20mr4676602f8f.30.1783434804628; Tue, 07 Jul 2026
+ 07:33:24 -0700 (PDT)
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-Spam-Flag: NO
-X-Spamd-Result: default: False [-6.80 / 50.00];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	MID_CONTAINS_FROM(1.00)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-0.998];
-	MIME_GOOD(-0.10)[text/plain];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[imap1.dmz-prg2.suse.org:helo,suse.com:email,suse.com:mid];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	R_RATELIMIT(0.00)[to_ip_from(RLjpbzrka5mc1bf4fb9cmz1e4f)];
-	TO_DN_SOME(0.00)[];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FUZZY_RATELIMITED(0.00)[rspamd.com];
-	FROM_HAS_DN(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_COUNT_TWO(0.00)[2];
-	RCPT_COUNT_FIVE(0.00)[6];
-	DKIM_SIGNED(0.00)[suse.com:s=susede1];
-	RCVD_TLS_ALL(0.00)[]
-X-Spam-Level: 
-X-Spam-Score: -6.80
+References: <20260707142736.2330146-1-neelx@suse.com>
+In-Reply-To: <20260707142736.2330146-1-neelx@suse.com>
+From: Daniel Vacek <neelx@suse.com>
+Date: Tue, 7 Jul 2026 16:33:13 +0200
+X-Gm-Features: AVVi8CeB-MDEZ61D59OuK3R240uy2Wkn9hf6StiihAh_syE3H7rsSsllB5ZZm1U
+Message-ID: <CAPjX3Fcqxu_CLJzzHV7qc32+PZF=Wh2hxqfndJGOCSda2H8Z5A@mail.gmail.com>
+Subject: Re: [PATCH v3 0/7] btrfs-progs: fscrypt updates
+To: David Sterba <dsterba@suse.com>, WenRuo Qu <wqu@suse.com>
+Cc: linux-fscrypt@vger.kernel.org, linux-btrfs@vger.kernel.org, 
+	linux-kernel@vger.kernel.org
+Content-Type: text/plain; charset="UTF-8"
 
-From: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
+On Tue, 7 Jul 2026 at 16:27, Daniel Vacek <neelx@suse.com> wrote:
+> This series is a rebase of an older set of fscrypt related changes from
+> Sweet Tea Dorminy and Josef Bacik found here:
+> https://github.com/josefbacik/btrfs-progs/tree/fscrypt
+>
+> It passed all my tests. Hopefully nothing blows. Enjoy testing.
+>
+> v3:
+>  * dropped first patch and improved inline extent length checking
+>  * correctly squashed the context key definitions into "btrfs-progs: add
+>    inode encryption contexts"
+>  * inline extents also show the encryption field now in tree dump
 
-As part of the encryption changes, encrypted inline file extents record
-their actual data length in ram_bytes, like compressed inline file
-extents, while the item's length records the actual size. As such,
-encrypted inline extents must be treated like compressed ones for
-inode length consistency checking.
+And I forgot to explicitly CC Qu as most of these changes are thanks
+to his review of v2.
 
-Signed-off-by: Sweet Tea Dorminy <sweettea-kernel@dorminy.me>
-Signed-off-by: Daniel Vacek <neelx@suse.com>
----
- check/main.c | 31 +++++++++++++++++--------------
- 1 file changed, 17 insertions(+), 14 deletions(-)
+--nX
 
-diff --git a/check/main.c b/check/main.c
-index 9447b01e..cadcfef0 100644
---- a/check/main.c
-+++ b/check/main.c
-@@ -1720,9 +1720,7 @@ static int process_file_extent(struct btrfs_root *root,
- 	u64 disk_bytenr = 0;
- 	u64 extent_offset = 0;
- 	u64 mask = gfs_info->sectorsize - 1;
--	u32 max_inline_size = min_t(u32, mask,
--				BTRFS_MAX_INLINE_DATA_SIZE(gfs_info));
--	u8 compression;
-+	u8 compression, encryption;
- 	int extent_type;
- 	int ret;
- 
-@@ -1747,25 +1745,30 @@ static int process_file_extent(struct btrfs_root *root,
- 	fi = btrfs_item_ptr(eb, slot, struct btrfs_file_extent_item);
- 	extent_type = btrfs_file_extent_type(eb, fi);
- 	compression = btrfs_file_extent_compression(eb, fi);
-+	encryption  = btrfs_file_extent_encryption(eb, fi);
- 
- 	if (extent_type == BTRFS_FILE_EXTENT_INLINE) {
--		num_bytes = btrfs_file_extent_ram_bytes(eb, fi);
--		if (num_bytes == 0)
-+		u32 max_inline_size = min_t(u32, mask,
-+					BTRFS_MAX_INLINE_DATA_SIZE(gfs_info));
-+		u64 num_disk_bytes = btrfs_file_extent_inline_item_len(eb, slot);
-+		u64 num_decoded_bytes = btrfs_file_extent_ram_bytes(eb, fi);
-+		if (num_decoded_bytes == 0)
- 			rec->errors |= I_ERR_BAD_FILE_EXTENT;
--		if (compression) {
--			if (btrfs_file_extent_inline_item_len(eb, slot) >
--			    max_inline_size ||
--			    num_bytes > gfs_info->sectorsize)
-+		if (compression || encryption) {
-+			if (encryption)
-+				max_inline_size = min_t(u32, gfs_info->sectorsize,
-+					BTRFS_MAX_INLINE_DATA_SIZE(gfs_info));
-+			if (num_disk_bytes > max_inline_size ||
-+			    num_decoded_bytes > gfs_info->sectorsize)
- 				rec->errors |= I_ERR_FILE_EXTENT_TOO_LARGE;
- 		} else {
--			if (num_bytes > max_inline_size)
-+			if (num_decoded_bytes > max_inline_size)
- 				rec->errors |= I_ERR_FILE_EXTENT_TOO_LARGE;
--			if (btrfs_file_extent_inline_item_len(eb, slot) !=
--			    num_bytes)
-+			if (num_disk_bytes != num_decoded_bytes)
- 				rec->errors |= I_ERR_INLINE_RAM_BYTES_WRONG;
- 		}
--		rec->found_size += num_bytes;
--		num_bytes = (num_bytes + mask) & ~mask;
-+		rec->found_size += num_decoded_bytes;
-+		num_bytes = (num_decoded_bytes + mask) & ~mask;
- 	} else if (extent_type == BTRFS_FILE_EXTENT_REG ||
- 		   extent_type == BTRFS_FILE_EXTENT_PREALLOC) {
- 		num_bytes = btrfs_file_extent_num_bytes(eb, fi);
--- 
-2.53.0
-
+> v2: https://lore.kernel.org/linux-btrfs/20260624165144.556908-1-neelx@suse.com/
+>  * works with v7 of the kernel fscrypt series
+>  * the on-disk format changed and parts of the series had to be reworked
+>    - particularly the encryption context is now stored as dedicated item
+>      and not glued onto extent data item
+>  * also parses the ENCRYPT inode item flag
+>
+> Daniel Vacek (1):
+>   btrfs-progs: recognize ENCRYPT inode item flag
+>
+> Sweet Tea Dorminy (6):
+>   btrfs-progs: add new FEATURE_INCOMPAT_ENCRYPT flag
+>   btrfs-progs: start tracking extent encryption context info
+>   btrfs-progs: add inode encryption contexts
+>   btrfs-progs: print encryptin type field of file extents
+>   btrfs-progs: handle fscrypt context items
+>   btrfs-progs: check: update inline extent length checking
+>
+>  check/main.c                    | 34 ++++++++++++++++++---------------
+>  kernel-shared/ctree.h           |  1 +
+>  kernel-shared/print-tree.c      | 28 +++++++++++++++++++++++++--
+>  kernel-shared/tree-checker.c    | 17 ++++++++++-------
+>  kernel-shared/uapi/btrfs.h      |  1 +
+>  kernel-shared/uapi/btrfs_tree.h | 11 +++++++++++
+>  libbtrfsutil/btrfs.h            |  1 +
+>  7 files changed, 69 insertions(+), 24 deletions(-)
+>
+> --
+> 2.53.0
+>
