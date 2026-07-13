@@ -1,31 +1,31 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D599D369D45;
-	Mon, 13 Jul 2026 02:39:35 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3AB0D37187C;
+	Mon, 13 Jul 2026 02:39:38 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1783910377; cv=none; b=efGka5VNPvRhMM7rxxpWlFlz535sk1WOnPkbQ5mkgSCRF+dgQNipLLxUhUUVJKDiWBsCxqUXxWEXY+5bt0MTtAJ/T0TlDRJCpkGxs5/bcVVWmZK5KO4B3dknOTQEtC0dFkNT4JG37fFoP748I9Y2RIhF6tpXDWz3mC+1eXh78/o=
+	t=1783910380; cv=none; b=VnAuavc0djZ8qsq8n73GEBGCM+9dOiw5C27C5vn0f+u7Fh+L2Cv/OKD43/N9QlTzEdcRG9wmLZ5pq8wNBTjvWYNcm4p1VrHEc3YT8+Y/LTMKxLEKHBwxnl/6cpLp2SKaMB9BH/yHMkHv9xC6TO6s6wzZsgX4oHrx2KJP1gwNoyo=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1783910377; c=relaxed/simple;
-	bh=9tMb0naYDp29ILI7tMnOD6nlLYWs4BHRasU28pJfyfU=;
+	s=arc-20240116; t=1783910380; c=relaxed/simple;
+	bh=BICFOTeGJxuw4S3sozP1B1tFp+JwzUlAKsvrXpF6C7k=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=C7ZN1g8IM4f3j2ZjwIgAQZawByvCyWUXrXDm8ryA+OUufrFwlA0ujmC+UxSWGGAQ8w7r9QaDD8U+tEtywAR5sPKv0ccD2LcnEZKQ60xAw5OVkkp2OijnMDGpP7lTOILeBW5hRxTRb6n6Stp8yNDL3cK5OakcsvW/lGuyxRGw1es=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=d+Phk90h; arc=none smtp.client-ip=100.103.45.18
+	 MIME-Version; b=TAGDla6RSclQgXVKTb8ae3YIVOqswlE+uAbqwbn7vaWZyym9g9V23mqnSOueZu6sC+3KO8i++teBRkV7vxN14X5BO7Advr8P2awrliyCyb1o67wva3VgY3v2AAdB4vk5Q9B23Q1BHwROqmN8MZ1yIg6KBPZ9EZKyzEOXevlPiWQ=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=aPGIZQ3b; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="d+Phk90h"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1CFDC1F000E9;
-	Mon, 13 Jul 2026 02:39:34 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="aPGIZQ3b"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id DE6671F00A3D;
+	Mon, 13 Jul 2026 02:39:35 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1783910375;
-	bh=QaORzSDkR90GYfmKCub9QkAr8t4t0KNC6u6lCI50uUA=;
+	s=k20260515; t=1783910377;
+	bh=heJf2lUsfHWx2MluoNOLNNCT5X8VE5KT5lfDTj6MDb4=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=d+Phk90hDIyyQR7xf45lSXzQN9S34n7eDLdI/5q0yuSibJapOgyfO9t+AkO8JJWmL
-	 zSJJK3F7T12A6eoFm9mQRG1QZL47sCf34o9gDaw1wpqUKgfd1dl5jhNu4kak/DFIeR
-	 kP8GcFl8sekY3LmOj3DRKJAt/12am9Vgelly1Fn74Evp2pBZUa6QAM/CuGaPl7hyxs
-	 YDbsMyMC/Hjx4Sx89Odhijd74zGOWbpIvWZ01RbPB7WweYP3IyTleQzSaDCBRCD+1v
-	 9BQmCdW7Acu6NFJk3V1rMbu6D7c8roAGtfQFg4T4iFa9CfdPdUSRrRqTFhZL2YPVXp
-	 UC+MxzbA7hRig==
+	b=aPGIZQ3b9j+h6Z0MyThuY/ZUQCSxgActPOPVfiyM8xdeZu8TstqIdUTmaMnprF4mr
+	 OqcBPDoE41PPE0bZe11h5ABtIn1j/8fdPmz4grktn1zusegI/Kwj/ni4vBbnhyfNn6
+	 pmPGtTaoSpL85dQ/O4DiG+MX6fHofacLEIL6KiVc2Zewi3nucU1OxKcyGEi2Ca7Gl7
+	 BJc6UfJ/+lhqGGPjbB5pq0Dx1ncUJgzhJRRzLhh2G98uk6bhenV+UpuShpgd5XJIeN
+	 LfkeI2T9jUISjTYa5vUj5CHw2T4opMTVJjL5RdGS5OTPPH/kVlYm38JMo/A7ubm3+X
+	 eZBcUNyGC4ygA==
 From: Eric Biggers <ebiggers@kernel.org>
 To: linux-fscrypt@vger.kernel.org
 Cc: linux-fsdevel@vger.kernel.org,
@@ -43,9 +43,9 @@ Cc: linux-fsdevel@vger.kernel.org,
 	Jaegeuk Kim <jaegeuk@kernel.org>,
 	Chao Yu <chao@kernel.org>,
 	Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH v3 03/17] blk-crypto: Allow control over whether hardware is used
-Date: Sun, 12 Jul 2026 22:36:54 -0400
-Message-ID: <20260713023708.9245-4-ebiggers@kernel.org>
+Subject: [PATCH v3 04/17] fscrypt: Fully disallow IV_INO_LBLK_32 with s_blocksize != PAGE_SIZE
+Date: Sun, 12 Jul 2026 22:36:55 -0400
+Message-ID: <20260713023708.9245-5-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 In-Reply-To: <20260713023708.9245-1-ebiggers@kernel.org>
 References: <20260713023708.9245-1-ebiggers@kernel.org>
@@ -57,164 +57,90 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-fscrypt uses inline encryption hardware only when the "inlinecrypt"
-mount option is given.  I'd like to keep that behavior even after
-standardizing on the blk-crypto API for file contents encryption.  That
-is, the default should continue to be the well-tested CPU-based
-encryption code, and the use of inline encryption hardware should
-continue to be an opt-in feature for systems where it's beneficial and
-has been fully validated (including verifying ciphertext correctness).
+FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32 with s_blocksize != PAGE_SIZE works
+only with the fs-layer implementation of file contents encryption, not
+blk-crypto.  This is a problem for standardizing on blk-crypto.
 
-To support this use case, extend blk_crypto_config with a new flag
-BLK_CRYPTO_CFG_ALLOW_HW.
+Fortunately, no one should be using this combination anyway.  It doesn't
+make sense because the entire point of IV_INO_LBLK_32 is to support
+inline encryption hardware that is limited to 32-bit DUNs.
 
-For now it's always set.  Later commits will change that.
+Thus, fully disallow IV_INO_LBLK_32 with s_blocksize != PAGE_SIZE.
 
+Reviewed-by: Christoph Hellwig <hch@lst.de>
 Signed-off-by: Eric Biggers <ebiggers@kernel.org>
 ---
- block/blk-crypto.c          | 11 ++++++++++-
- drivers/md/dm-inlinecrypt.c |  3 ++-
- fs/crypto/inline_crypt.c    |  4 +++-
- include/linux/blk-crypto.h  | 13 ++++++++++++-
- 4 files changed, 27 insertions(+), 4 deletions(-)
+ Documentation/filesystems/fscrypt.rst |  3 +++
+ fs/crypto/inline_crypt.c              | 13 -------------
+ fs/crypto/policy.c                    | 17 +++++++++++++++++
+ 3 files changed, 20 insertions(+), 13 deletions(-)
 
-diff --git a/block/blk-crypto.c b/block/blk-crypto.c
-index de60f03b4d4b..0fe6ef0eea1d 100644
---- a/block/blk-crypto.c
-+++ b/block/blk-crypto.c
-@@ -300,6 +300,7 @@ int __blk_crypto_rq_bio_prep(struct request *rq, struct bio *bio,
-  * @dun_bytes: number of bytes that will be used to specify the DUN when this
-  *	       key is used
-  * @data_unit_size: the data unit size to use for en/decryption
-+ * @flags: BLK_CRYPTO_CFG_* flags
-  *
-  * Return: 0 on success, -errno on failure.  The caller is responsible for
-  *	   zeroizing both blk_key and key_bytes when done with them.
-@@ -309,7 +310,7 @@ int blk_crypto_init_key(struct blk_crypto_key *blk_key,
- 			enum blk_crypto_key_type key_type,
- 			enum blk_crypto_mode_num crypto_mode,
- 			unsigned int dun_bytes,
--			unsigned int data_unit_size)
-+			unsigned int data_unit_size, int flags)
- {
- 	const struct blk_crypto_mode *mode;
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index c0dd35f1af12..92b8f311e211 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -336,6 +336,9 @@ per I/O request and may have only a small number of keyslots.  This
+ format results in some level of IV reuse, so it should only be used
+ when necessary due to hardware limitations.
  
-@@ -318,6 +319,9 @@ int blk_crypto_init_key(struct blk_crypto_key *blk_key,
- 	if (crypto_mode >= ARRAY_SIZE(blk_crypto_modes))
- 		return -EINVAL;
- 
-+	if (flags & ~BLK_CRYPTO_CFG_ALLOW_HW)
-+		return -EINVAL;
++IV_INO_LBLK_32 is supported only when the filesystem block size is
++equal to the page size.
 +
- 	mode = &blk_crypto_modes[crypto_mode];
- 	switch (key_type) {
- 	case BLK_CRYPTO_KEY_TYPE_RAW:
-@@ -328,6 +332,8 @@ int blk_crypto_init_key(struct blk_crypto_key *blk_key,
- 		if (key_size < mode->security_strength ||
- 		    key_size > BLK_CRYPTO_MAX_HW_WRAPPED_KEY_SIZE)
- 			return -EINVAL;
-+		if (!(flags & BLK_CRYPTO_CFG_ALLOW_HW))
-+			return -EINVAL;
- 		break;
- 	default:
- 		return -EINVAL;
-@@ -343,6 +349,7 @@ int blk_crypto_init_key(struct blk_crypto_key *blk_key,
- 	blk_key->crypto_cfg.dun_bytes = dun_bytes;
- 	blk_key->crypto_cfg.data_unit_size = data_unit_size;
- 	blk_key->crypto_cfg.key_type = key_type;
-+	blk_key->crypto_cfg.flags = flags;
- 	blk_key->data_unit_size_bits = ilog2(data_unit_size);
- 	blk_key->size = key_size;
- 	memcpy(blk_key->bytes, key_bytes, key_size);
-@@ -368,6 +375,8 @@ bool blk_crypto_config_supported_natively(struct block_device *bdev,
+ Key identifiers
+ ---------------
  
- 	if (!profile)
- 		return false;
-+	if (!(cfg->flags & BLK_CRYPTO_CFG_ALLOW_HW))
-+		return false;
- 	if (!(profile->modes_supported[cfg->crypto_mode] & cfg->data_unit_size))
- 		return false;
- 	if (profile->max_dun_bytes_supported < cfg->dun_bytes)
-diff --git a/drivers/md/dm-inlinecrypt.c b/drivers/md/dm-inlinecrypt.c
-index be1b4aa8f28b..35379f5c84df 100644
---- a/drivers/md/dm-inlinecrypt.c
-+++ b/drivers/md/dm-inlinecrypt.c
-@@ -406,7 +406,8 @@ static int inlinecrypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
- 
- 	err = blk_crypto_init_key(&ctx->key, key_bytes, ctx->key_size,
- 				  ctx->key_type, cipher->mode_num,
--				  dun_bytes, ctx->sector_size);
-+				  dun_bytes, ctx->sector_size,
-+				  BLK_CRYPTO_CFG_ALLOW_HW);
- 	if (err) {
- 		ti->error = "Error initializing blk-crypto key";
- 		goto bad;
 diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index 47324062fee5..aaf71f6068b0 100644
+index aaf71f6068b0..83dea8bc2c8c 100644
 --- a/fs/crypto/inline_crypt.c
 +++ b/fs/crypto/inline_crypt.c
-@@ -134,6 +134,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci,
- 	crypto_cfg.dun_bytes = fscrypt_get_dun_bytes(ci);
- 	crypto_cfg.key_type = is_hw_wrapped_key ?
- 		BLK_CRYPTO_KEY_TYPE_HW_WRAPPED : BLK_CRYPTO_KEY_TYPE_RAW;
-+	crypto_cfg.flags = BLK_CRYPTO_CFG_ALLOW_HW;
+@@ -112,19 +112,6 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci,
+ 	if (!(sb->s_flags & SB_INLINECRYPT))
+ 		return 0;
  
- 	devs = fscrypt_get_devices(sb, &num_devs);
- 	if (IS_ERR(devs))
-@@ -175,7 +176,8 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
- 
- 	err = blk_crypto_init_key(blk_key, key_bytes, key_size, key_type,
- 				  crypto_mode, fscrypt_get_dun_bytes(ci),
--				  1U << ci->ci_data_unit_bits);
-+				  1U << ci->ci_data_unit_bits,
-+				  BLK_CRYPTO_CFG_ALLOW_HW);
- 	if (err) {
- 		fscrypt_err(inode, "error %d initializing blk-crypto key", err);
- 		goto fail;
-diff --git a/include/linux/blk-crypto.h b/include/linux/blk-crypto.h
-index f7c3cb4a342f..5f40821f99cd 100644
---- a/include/linux/blk-crypto.h
-+++ b/include/linux/blk-crypto.h
-@@ -68,6 +68,15 @@ enum blk_crypto_key_type {
-  */
- #define BLK_CRYPTO_SW_SECRET_SIZE	32
- 
-+/* Flags for blk_crypto_config::flags: */
+-	/*
+-	 * When a page contains multiple logically contiguous filesystem blocks,
+-	 * some filesystem code only calls fscrypt_mergeable_bio() for the first
+-	 * block in the page. This is fine for most of fscrypt's IV generation
+-	 * strategies, where contiguous blocks imply contiguous IVs. But it
+-	 * doesn't work with IV_INO_LBLK_32. For now, simply exclude
+-	 * IV_INO_LBLK_32 with blocksize != PAGE_SIZE from inline encryption.
+-	 */
+-	if ((fscrypt_policy_flags(&ci->ci_policy) &
+-	     FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) &&
+-	    sb->s_blocksize != PAGE_SIZE)
+-		return 0;
+-
+ 	/*
+ 	 * On all the filesystem's block devices, blk-crypto must support the
+ 	 * crypto configuration that the file would use.
+diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
+index f40fb5924e75..a7322dba7557 100644
+--- a/fs/crypto/policy.c
++++ b/fs/crypto/policy.c
+@@ -177,6 +177,23 @@ static bool supported_iv_ino_lblk_policy(const struct fscrypt_policy_v2 *policy,
+ 			     type, sb->s_id);
+ 		return false;
+ 	}
 +
-+/*
-+ * If set, inline encryption hardware will be used if available.
-+ * If unset, CPU-based encryption will always be used (requires
-+ * CONFIG_BLK_INLINE_ENCRYPTION_FALLBACK)
-+ */
-+#define BLK_CRYPTO_CFG_ALLOW_HW		(1 << 0)
++	/*
++	 * IV_INO_LBLK_32 isn't compatible with inline encryption when
++	 * s_blocksize != PAGE_SIZE.  In that case the DUN can wrap around in
++	 * the middle of a page, but sometimes fscrypt_mergeable_bio() is called
++	 * only for the first block per page.  Since IV_INO_LBLK_32 exists only
++	 * to support inline encryption hardware that is limited to 32-bit DUNs,
++	 * just disallow IV_INO_LBLK_32 with s_blocksize != PAGE_SIZE entirely.
++	 */
++	if ((policy->flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32) &&
++	    sb->s_blocksize != PAGE_SIZE) {
++		fscrypt_warn(inode,
++			     "Can't use %s policy on filesystem '%s' with block size != PAGE_SIZE",
++			     type, sb->s_id);
++		return false;
++	}
 +
- /**
-  * struct blk_crypto_config - an inline encryption key's crypto configuration
-  * @crypto_mode: encryption algorithm this key is for
-@@ -77,12 +86,14 @@ enum blk_crypto_key_type {
-  *	filesystem block size or the disk sector size.
-  * @dun_bytes: the maximum number of bytes of DUN used when using this key
-  * @key_type: the type of this key -- either raw or hardware-wrapped
-+ * @flags: BLK_CRYPTO_CFG_* flags
-  */
- struct blk_crypto_config {
- 	enum blk_crypto_mode_num crypto_mode;
- 	unsigned int data_unit_size;
- 	unsigned int dun_bytes;
- 	enum blk_crypto_key_type key_type;
-+	int flags;
- };
+ 	return true;
+ }
  
- /**
-@@ -150,7 +161,7 @@ int blk_crypto_init_key(struct blk_crypto_key *blk_key,
- 			enum blk_crypto_key_type key_type,
- 			enum blk_crypto_mode_num crypto_mode,
- 			unsigned int dun_bytes,
--			unsigned int data_unit_size);
-+			unsigned int data_unit_size, int flags);
- 
- int blk_crypto_start_using_key(struct block_device *bdev,
- 			       const struct blk_crypto_key *key);
 -- 
 2.55.0
 
