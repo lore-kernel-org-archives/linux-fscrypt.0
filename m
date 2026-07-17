@@ -1,44 +1,43 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6620E34D90D;
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id B0C6936A34F;
 	Fri, 17 Jul 2026 04:46:52 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1784263613; cv=none; b=qLAlRi9okqIHALPNCnRcF2B/RO3eF58Pr/+cIhZDD+rIUEv2l+xStJr9SpHXYmN6xJZUsKzwFdj5XOPeEnjR/bzStE4PSGPMisDCO8PeL1F3KhBW6n2cTMkDFiuuI9OjHebLT97RcFlAvLlylBCGEOV+7krqYv6YLWkr+0/H8Uc=
+	t=1784263614; cv=none; b=qwIWxDc3mlvuxuwWXCVH/Z22i1NwlkhUlg+oaIPoBn/GXBm4dtTxL3yZe8GwhTJr91+SXYPwOHQQuLT+ud9cWsKDClTR5q9NNcT3flMP91cRsq3R1Bxj6HS1JfBcNGfBNppVZRmDJPnG96kk7f5Pb0Cj8PgIkhOY4Cj9d8ZuboE=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1784263613; c=relaxed/simple;
-	bh=GLhdkU8m47IprGSuIcwY3Tl1jAW+D8g0WIW1djqvZgs=;
+	s=arc-20240116; t=1784263614; c=relaxed/simple;
+	bh=PIgaHjUp+4+NhaLVAiXu0ME04kXs4iVeQNf6WFzpJR4=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=Ml6tmua2dQs/5S8vRAUD0PBcv4qT4QIYWrqAGtDsJzmcuHylDdJ1f5Xwo3bM0Id+goIdu4p/DIgtefKpfW/89gs5rRUM0XnZGTC5GUi2eo/fRtc/0ZgWbtFqpk6xRooyid3uZUu+NFO8CfSYnrfiorFFVg5gl/7+qTJzfvTC0gQ=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=XKMypAsl; arc=none smtp.client-ip=100.103.45.18
+	 MIME-Version; b=OqpOkyH6xMe0BTecseSSRBwHmFSZfsPYe2FfZp00cX192ZZYM1IM6obqn3zJkS4yMDkzcBELTIHdmIcfFsz5lQq6+laYAiWNFKj6881seHFBoqu2rszdfkcEJ2suscarxxJRUg+aYmw36L1MxAbsbArPTz+OQlyYu2lhSuVV/2w=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=kBChQT36; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="XKMypAsl"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id CD9CB1F00A3D;
-	Fri, 17 Jul 2026 04:46:51 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="kBChQT36"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 3E6E81F00A3E;
+	Fri, 17 Jul 2026 04:46:52 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
 	s=k20260515; t=1784263612;
-	bh=mGCNlnzFNUQxFaIeQbngU3BOCM42fvscJYZKV2r9/Is=;
+	bh=agHA0qcVhF5iE5cIt2nGc6gofuhGuU2FFdwJ8yLpydg=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=XKMypAslUyq2d+TsvRVFLLan4yH7/bgRXzBOkX27wLBIQvIBWsX+HHk/K+DLvcQ7l
-	 J5zLS+5+AFIs/avRzJl/8vXgmwZlejnahPfbjjz3YX98nPh11fSW/dakpKXIk0qfKz
-	 /RaEbik7Q5vQO/h5RV49AbYsdD5UKHqF7lXmsSMXBMeTgrkYBnjsbgPamifa1wE31b
-	 XoA3Et6vyt6xFeA5VzOxPbv8Wj9mk+stW3dPZwIwblA42p8P+1GLHf8lXOMe4Wz8/g
-	 NWmIjwRpwdlsIaARyW0p5tWHzC3t6p9sJjB4eb5t858zluYFNM6VLRwRrKpqdRJEgY
-	 rYu7twQI+iUGQ==
+	b=kBChQT36kDTyDFzwNkx03lKgNPpn57WXD8KZCwnDB6nSX+tLzk2yA4yZ9C27lyZWW
+	 +E5JBynR+xp2bNhy8l74ORHXVKH6A27+F4Yh7E7OZsPZkh8Ti3dmLVbgt3SPx5+wqD
+	 +rk5Eh96sSHT6J1aXBEHqg4TbCrZz3dml18trnltG+VGgboc5+ATGlJZMpm2VekIz5
+	 /K6ElybAZhPwNwXeNoD7zxuGlREXKXkDVww3+ZFfDxGtxMs3kpFGKo1EeJLRN6gqK7
+	 RZl8yWGpW0FpJD3y4J75escBuDqUvx8uTSqP6ytHOw/ovw7gUtnxHX7bR5z05JQ4Us
+	 tUaOqyERZmAHA==
 From: Eric Biggers <ebiggers@kernel.org>
 To: stable@vger.kernel.org
 Cc: linux-hardening@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org,
 	linux-kernel@vger.kernel.org,
-	Linus Torvalds <torvalds@linux-foundation.org>,
-	Ricardo Ribalda <ribalda@chromium.org>,
-	Richard Fitzgerald <rf@opensource.cirrus.com>,
-	Ben Dooks <ben.dooks@codethink.co.uk>,
+	Randy Dunlap <rdunlap@infradead.org>,
+	"Harry Yoo (Oracle)" <harry@kernel.org>,
+	"Vlastimil Babka (SUSE)" <vbabka@kernel.org>,
 	Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 6.12 4/7] default_gfp(): avoid using the "newfangled" __VA_OPT__ trick
-Date: Thu, 16 Jul 2026 21:43:00 -0700
-Message-ID: <20260717044303.425265-5-ebiggers@kernel.org>
+Subject: [PATCH 6.12 5/7] slab: recognize @GFP parameter as optional in kernel-doc
+Date: Thu, 16 Jul 2026 21:43:01 -0700
+Message-ID: <20260717044303.425265-6-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 In-Reply-To: <20260717044303.425265-1-ebiggers@kernel.org>
 References: <20260717044303.425265-1-ebiggers@kernel.org>
@@ -50,49 +49,59 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-From: Linus Torvalds <torvalds@linux-foundation.org>
+From: Randy Dunlap <rdunlap@infradead.org>
 
-commit 551d44200152cb26f75d2ef990aeb6185b7e37fd upstream.
+commit 7b5f5865fb11e60edd03c5e063e2d228b7062317 upstream.
 
-The default_gfp() helper that I added is not wrong, but it turns out
-that it causes unnecessary headaches for 'sparse' which doesn't support
-the use of __VA_OPT__ (introduced in C++20 and C23, and supported by gcc
-and clang for a long time).
+Since the @GFP parameter in kmalloc_obj() etc. is now optional, change
+the kernel-doc to indicate that it is optional. This avoids kernel-doc
+warnings:
 
-We do already use __VA_OPT__ in some other cases in the kernel (drm/xe
-and btrfs), but it has been fairly limited.  Now it triggers for pretty
-much everything, and sparse ends up not working at all.
+WARNING: include/linux/slab.h:1101 Excess function parameter 'GFP' description in 'kmalloc_obj'
+WARNING: include/linux/slab.h:1113 Excess function parameter 'GFP' description in 'kmalloc_objs'
+WARNING: include/linux/slab.h:1128 Excess function parameter 'GFP' description in 'kmalloc_flex'
 
-We can use the traditional gcc ',##__VA_ARGS__' syntax instead: it may
-not be the "C standard" way and is slightly less natural in this
-context, but it is the traditional model for this and avoids the sparse
-problem.
-
-Reported-and-tested-by: Ricardo Ribalda <ribalda@chromium.org>
-Reported-and-tested-by: Richard Fitzgerald <rf@opensource.cirrus.com>
-Reported-by: Ben Dooks <ben.dooks@codethink.co.uk>
 Fixes: e19e1b480ac7 ("add default_gfp() helper macro and use it in the new *alloc_obj() helpers")
-Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+Signed-off-by: Randy Dunlap <rdunlap@infradead.org>
+Acked-by: Harry Yoo (Oracle) <harry@kernel.org>
+Link: https://patch.msgid.link/20260617163125.2716279-1-rdunlap@infradead.org
+Signed-off-by: Vlastimil Babka (SUSE) <vbabka@kernel.org>
 Signed-off-by: Eric Biggers <ebiggers@kernel.org>
 ---
- include/linux/gfp.h | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
+ include/linux/slab.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/include/linux/gfp.h b/include/linux/gfp.h
-index abe4282fbdb1..c7621a0714c1 100644
---- a/include/linux/gfp.h
-+++ b/include/linux/gfp.h
-@@ -13,8 +13,8 @@ struct vm_area_struct;
- struct mempolicy;
- 
- /* Helper macro to avoid gfp flags if they are the default one */
--#define __default_gfp(a,...) a
--#define default_gfp(...) __default_gfp(__VA_ARGS__ __VA_OPT__(,) GFP_KERNEL)
-+#define __default_gfp(a,b,...) b
-+#define default_gfp(...) __default_gfp(,##__VA_ARGS__,GFP_KERNEL)
- 
- /* Convert GFP flags to their corresponding migrate type */
- #define GFP_MOVABLE_MASK (__GFP_RECLAIMABLE|__GFP_MOVABLE)
+diff --git a/include/linux/slab.h b/include/linux/slab.h
+index 18a149e51346..773843a71960 100644
+--- a/include/linux/slab.h
++++ b/include/linux/slab.h
+@@ -924,7 +924,7 @@ static __always_inline __alloc_size(1) void *kmalloc_noprof(size_t size, gfp_t f
+ /**
+  * kmalloc_obj - Allocate a single instance of the given type
+  * @VAR_OR_TYPE: Variable or type to allocate.
+- * @GFP: GFP flags for the allocation.
++ * @...: optional GFP flags for the allocation (GFP_KERNEL when not specified).
+  *
+  * Returns: newly allocated pointer to a @VAR_OR_TYPE on success, or NULL
+  * on failure.
+@@ -936,7 +936,7 @@ static __always_inline __alloc_size(1) void *kmalloc_noprof(size_t size, gfp_t f
+  * kmalloc_objs - Allocate an array of the given type
+  * @VAR_OR_TYPE: Variable or type to allocate an array of.
+  * @COUNT: How many elements in the array.
+- * @GFP: GFP flags for the allocation.
++ * @...: optional GFP flags for the allocation (GFP_KERNEL when not specified).
+  *
+  * Returns: newly allocated pointer to array of @VAR_OR_TYPE on success,
+  * or NULL on failure.
+@@ -949,7 +949,7 @@ static __always_inline __alloc_size(1) void *kmalloc_noprof(size_t size, gfp_t f
+  * @VAR_OR_TYPE: Variable or type to allocate (with its flex array).
+  * @FAM: The name of the flexible array member of the structure.
+  * @COUNT: How many flexible array member elements are desired.
+- * @GFP: GFP flags for the allocation.
++ * @...: optional GFP flags for the allocation (GFP_KERNEL when not specified).
+  *
+  * Returns: newly allocated pointer to @VAR_OR_TYPE on success, NULL on
+  * failure. If @FAM has been annotated with __counted_by(), the allocation
 -- 
 2.55.0
 
