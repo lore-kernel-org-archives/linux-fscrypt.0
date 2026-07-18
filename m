@@ -1,63 +1,110 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BFE242165EA;
-	Fri, 17 Jul 2026 16:10:13 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6AEC2288D0;
+	Sat, 18 Jul 2026 20:56:21 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1784304614; cv=none; b=pcDiPl6nddiB1tycQ0FVtQXZ+T5VnF0yVw69PdNosYwQ1aiH3gDA+bfqISKwKKDA2BabiLUV2l7LlwEvuVfQiSj6Z/mDawF+n3hOOPgK723tyS+o3Da8a/F6czGH64hhrRykI79wNClk+bdbx1v9hiKF/PbG0SYN2PrkPGD+aNs=
+	t=1784408182; cv=none; b=tFDEFu0nSOqkIFIo4G9snPE3zBW7VBfjqsYs0I0W95xXSyZeph5GoPUNjrkAIzNwVrBVBKsWSMk1y9XqV093aGKxKDGclJ5AzO/N1kYOvYbei+KtiS5kjPsWn6f6/gjnui3Qg7spTYgbofPpOAtC4hg7fF4hsN83ym5Ngmnaqr8=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1784304614; c=relaxed/simple;
-	bh=vq7SG+PrPQSq0mknfwuqqISPBJDjMYOuUhBn8XGP1ng=;
-	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=rUAlIZrnbfqI+R345mu2FIVBnxAUQm2kOEg9aSV/yqPyE4NkVdeDCCnfXglLUFWAgkM1n87ZCH7LNg6FWsLWdEFBmlDn7DVe4pfz9fLh4lMUCEHvSy/yOhN7v+C3VBL1/EHutV85KZWgHKIpPeVIkhx9r58v6PbAw/86Wj6COgM=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Nks8VVps; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1784408182; c=relaxed/simple;
+	bh=j86XqjC4uNX8trqmIuhMAATgDg++EYAkySrTiEyTG0o=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=h6ZOlA4bS1rCeuTKBcGg5fYvVRkGh78aIqTQi2kGHahhAwNwGNkVHJhJ1GxtcAfg+zRRxqRVkXymgbDObF5DnP2wXNqLskbq43wOPyURqaJLeQdhft0devV9eGaumibBAx6EXBj2fBhIMgoTHGapT7bXvR5L3OpWAwRBxzQDbTI=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=MeASEBsa; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Nks8VVps"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 7FD361F000E9;
-	Fri, 17 Jul 2026 16:10:12 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="MeASEBsa"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 69E151F000E9;
+	Sat, 18 Jul 2026 20:56:20 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1784304613;
-	bh=pIUW+eqslxS6fL0da7s3Tey79O3lS7y8FN9jNAzbHUI=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=Nks8VVps0U/b3zaewmXKNfqgQOMbquU7Es70xmRcf4GzWPzxGe1iL+bHpug9ag8ix
-	 q+36dKdX5LFmaH1p6qvDLg2kYEM3yf7LtV5gapPaLs/YLAOQitXDGVs6HK9Bk3WBpg
-	 GSBnHPzP1+V6ILFJmoFlQx3nUiocuphYiTrJoupT02pYvYmWLzjs2cPIOgFFtr6BYN
-	 hAyJv3gVq0QBxFJukK7aV9wFLxDb9MLOEphgLzE4oASCSUPxNoDVcaiIIOWFlYh+hN
-	 q4s8sPfDZAjR3XJfWCewHkbdoMfuBkfuYVg/qbPKI83XQDUcJshIuU8jpXDYoxMiqy
-	 t16QO366QOEbQ==
-Date: Fri, 17 Jul 2026 09:10:08 -0700
+	s=k20260515; t=1784408181;
+	bh=iOtEdLDyDCXHWeTF+An2Objigmk4V8wMlsD1fAj6n08=;
+	h=From:To:Cc:Subject:Date;
+	b=MeASEBsa5DQyuECPFFFi0hXvnj/gHCpBfpWQzkC0SZwGArFFtrTyDY9WSV523QfNM
+	 SGnhd3pck5OEEwyGpN9abtQ09FvzVIthnYN7zjkF5ZceWuJroAJ9j3JKLGKIpPGlK3
+	 Ipe36pZbIFLXX72aviU3AzADpJGGmAwv8G/egDXk0jXNkH3LW0K9Y59C7Glm6KCow9
+	 Rt96mcQdBPRQbHvi5fUvdnfoBvdlP9Ib4ILjsAkvcx2nrX2H3c9D71/BPkN0CzlL0O
+	 lbr7zvwNLy7iJ8Vi9Dlw9dyzY1K2T9IgLGOCkFh+e+wA8gJdpI8bG304ZsAqfJdl6I
+	 2uYUxilnHOTAw==
 From: Eric Biggers <ebiggers@kernel.org>
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-fsdevel@vger.kernel.org, linux-ext4@vger.kernel.org,
-	linux-f2fs-devel@lists.sourceforge.net, linux-block@vger.kernel.org,
-	Christoph Hellwig <hch@lst.de>, Theodore Ts'o <tytso@mit.edu>,
-	Andreas Dilger <adilger.kernel@dilger.ca>,
-	Baokun Li <libaokun@linux.alibaba.com>, Jan Kara <jack@suse.cz>,
-	Ojaswin Mujoo <ojaswin@linux.ibm.com>,
-	Ritesh Harjani <ritesh.list@gmail.com>,
-	Zhang Yi <yi.zhang@huawei.com>, Jaegeuk Kim <jaegeuk@kernel.org>,
-	Chao Yu <chao@kernel.org>
-Subject: Re: [PATCH v3 00/17] fscrypt: Standardize on blk-crypto
-Message-ID: <20260717161008.GB2046@quark>
-References: <20260713023708.9245-1-ebiggers@kernel.org>
+Cc: linux-kernel@vger.kernel.org,
+	Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH] fscrypt: Replace some variable-size memsets with fixed-size
+Date: Sat, 18 Jul 2026 13:56:06 -0700
+Message-ID: <20260718205606.50713-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20260713023708.9245-1-ebiggers@kernel.org>
+Content-Transfer-Encoding: 8bit
 
-On Sun, Jul 12, 2026 at 10:36:51PM -0400, Eric Biggers wrote:
->   ext4: Remove fs-layer file contents en/decryption code
->   ext4: Make ext4_bio_write_folio() return void
->   ext4: Further de-generalize the bio postprocessing code
->   f2fs: Remove fs-layer file contents en/decryption code
->   fs/buffer: Remove fs-layer decryption code
+For zeroing IVs and raw keys, remove the misguided optimization of
+zeroing the actual size used (typically 16 and 64 bytes respectively)
+instead of the max size (32 and 64 bytes respectively).  Using a
+compile-time constant size allows the compiler to specialize the memset
+for that size (typically by inlining a few 'mov' instructions), which
+is more important than zeroing a few extra bytes with these small sizes.
 
-Could we get acks from the ext4 and f2fs maintainers on these?
+Signed-off-by: Eric Biggers <ebiggers@kernel.org>
+---
+ fs/crypto/crypto.c      | 2 +-
+ fs/crypto/keysetup.c    | 4 ++--
+ fs/crypto/keysetup_v1.c | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
 
-- Eric
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 94dd6c89ddcd..3a280dcecc11 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -91,7 +91,7 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 index,
+ {
+ 	u8 flags = fscrypt_policy_flags(&ci->ci_policy);
+ 
+-	memset(iv, 0, ci->ci_mode->ivsize);
++	memset(iv, 0, sizeof(*iv));
+ 
+ 	if (flags & FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64) {
+ 		WARN_ON_ONCE(index > U32_MAX);
+diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+index cfd348e2252e..348e05283ee4 100644
+--- a/fs/crypto/keysetup.c
++++ b/fs/crypto/keysetup.c
+@@ -282,7 +282,7 @@ static int setup_per_mode_enc_key(struct fscrypt_inode_info *ci,
+ 				    hkdf_info, hkdf_infolen, raw_mode_key,
+ 				    mode->keysize);
+ 		err = fscrypt_prepare_key(prep_key, raw_mode_key, ci);
+-		memzero_explicit(raw_mode_key, mode->keysize);
++		memzero_explicit(raw_mode_key, sizeof(raw_mode_key));
+ 	}
+ 	if (err) {
+ 		kfree(new_node);
+@@ -412,7 +412,7 @@ static int fscrypt_setup_v2_file_key(struct fscrypt_inode_info *ci,
+ 				    ci->ci_nonce, FSCRYPT_FILE_NONCE_SIZE,
+ 				    derived_key, ci->ci_mode->keysize);
+ 		err = fscrypt_set_per_file_enc_key(ci, derived_key);
+-		memzero_explicit(derived_key, ci->ci_mode->keysize);
++		memzero_explicit(derived_key, sizeof(derived_key));
+ 	}
+ 	if (err)
+ 		return err;
+diff --git a/fs/crypto/keysetup_v1.c b/fs/crypto/keysetup_v1.c
+index e6e527c73f16..2d95a0048438 100644
+--- a/fs/crypto/keysetup_v1.c
++++ b/fs/crypto/keysetup_v1.c
+@@ -245,7 +245,7 @@ static int setup_v1_file_key_derived(struct fscrypt_inode_info *ci,
+ 
+ 	err = fscrypt_set_per_file_enc_key(ci, derived_key);
+ 
+-	memzero_explicit(derived_key, derived_keysize);
++	memzero_explicit(derived_key, sizeof(derived_key));
+ 	/* No need to zeroize 'aes', as its key is not secret. */
+ 	return err;
+ }
+
+base-commit: 2d0afaac9137e95e504bd3ad3512a9044745536b
+-- 
+2.55.0
+
