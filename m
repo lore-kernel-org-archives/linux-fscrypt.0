@@ -1,45 +1,40 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6F4FF377A95;
-	Sat, 18 Jul 2026 21:49:09 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3AF6C1EA84;
+	Sun, 19 Jul 2026 03:33:25 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1784411350; cv=none; b=KObP770UTThKPyFdNkLMSh7WxCJEC4qA/wI33gXrIojHN7Q7IIkyuPCON1UQjaonV/6mArKyNokpQqZFFR4BlNYDCysAikIt29xHe1vT/Ruwlq5DGp3T01S0n1aRcD82bCNM3y1tp41WzVp3p0wsGOGG2Pox5qh8casmdASZ7ew=
+	t=1784432007; cv=none; b=Hhpj7pyIJMHLWIn9DEaASIb5h5clH2hR6MDdZ2kmEnUAY+6AdF+qfNbEEps+qvN4ZyCG1YZslPIa7LYtQL0yUIyvrFilSeoJMzB03j90sqQHD1x5gtpcPnDhEz1DguuwnqJDhxIAJaL34WMJtUIM2+O9oH4MMbnlKtjMJnZysZY=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1784411350; c=relaxed/simple;
-	bh=UzN3AUg3yPouyeJusVqRGKrfZ7Pf/B3sUo/npKtT4aA=;
-	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=fGrABM8rMqr3PvuYZauSnFj0SEoExx2bmhqs4TcRVtmVpLs6+Ssm7ZRHptIRBDmGqAT18gQGm6wYD51Q2YegQSPltRiROlJdQA/P4gu2WGpoOGLLQuGDVQMc1+9Od8r8cRs0g3P9p7Xu8Pssxp1+BOQTw75nRdzr0qYN6x1Mo9s=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=BVtd71J2; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1784432007; c=relaxed/simple;
+	bh=auueHM22gwk3ZoyB7F0PqaSJr6Ppc2lH1hGfisJSHt4=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=BsMmHAypbucYmsMqZ5+W6bUoso526bTTearQ4LzO/eoz7sS8fp2sEdbA59GXCuT5MkzXAvQTtHSbFbow9qGfOgr0D2fjf3bTEwfOKOy1DGaD21+KcW3ayCGHnVRg2W6faEpJMRnjRRc9VSYpCAqNbgKK7x2m6ra3B6tqajbT5Mg=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Prx8SDZ2; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="BVtd71J2"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 6A2561F00A3E;
-	Sat, 18 Jul 2026 21:49:08 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Prx8SDZ2"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id A62D41F000E9;
+	Sun, 19 Jul 2026 03:33:25 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1784411349;
-	bh=0gESiSJCAMF2nF6DvOYmrqypPXEEEvUEZD60a26iDS0=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=BVtd71J2kLUxAd0N5bHGPILTOS3c1+n6T1M5mOBwIW6SdWiPcRncWpFHIx0b436s+
-	 pSQNwCQrgd9ZG0ciFXM4utybbl07BJ4GLQjeOOSS1eBd74D45gp0axnzoAfb3wAKPc
-	 zDNIc79Tlk7IyLdWa5bWxx7zuMVYpJxA3Rk3D1z/hlULVJo9zAMqhnk8uZyw0yy4/X
-	 uXp134DHz9C/K4J0nOX8y0K9ibwBK6ZhKtJmpe4b3IXpwumfKo/+hWj8E67c0Ocx4l
-	 xGbFXbJC4y9rV6M5r3EBnOsa/nzikQqdQFT2258BX5ZX4KwTLnk1fps4lV/Chj9wB3
-	 QH86kpdwUOFMQ==
+	s=k20260515; t=1784432005;
+	bh=sqXj9cTOh3TCwpf7vuFFoZoI/vAAVMm1ty+3JLUXvsw=;
+	h=From:To:Cc:Subject:Date;
+	b=Prx8SDZ25PdMrI2sbmjqKS/BsY3dljVK30ol7Jr+0+82Zh46J3YKQ7CJMalqtu1gr
+	 tmC4m2Gzeke+dagJROuuZ4Z3Gn1x+SBuYDbzYKJlyCgkU/hkz5FAWj71yjTs5KgoBW
+	 NOMX9hNCDOH7K3QPTyrQ7riBSuTPdsSVbe+eQMJfCgoGPkV0SlKRCwtbn05GIk79YG
+	 PfEmkKbNZ6MTFN0zk3ng92U7CTRGDkZ8Wgy81KBvdKh7kJ9nHTEbhb26/ahKxg6Ryl
+	 kO+OoAtB7lD0WZ+e9oQayjgMSLPGZvAycb4eTVlffFecIyai9Hf9QtLN86Z6or1VUk
+	 BnFzNovXMgNRA==
 From: Eric Biggers <ebiggers@kernel.org>
 To: linux-fscrypt@vger.kernel.org
-Cc: linux-block@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org,
-	linux-ext4@vger.kernel.org,
-	linux-f2fs-devel@lists.sourceforge.net,
-	linux-doc@vger.kernel.org,
-	Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 6/6] blk-crypto: Update docs for blk-crypto-fallback motivation
-Date: Sat, 18 Jul 2026 14:46:55 -0700
-Message-ID: <20260718214655.63186-7-ebiggers@kernel.org>
+Cc: linux-fsdevel@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	Eric Biggers <ebiggers@kernel.org>,
+	stable@vger.kernel.org
+Subject: [PATCH] fscrypt: Add missing superblock check in find_or_insert_direct_key()
+Date: Sat, 18 Jul 2026 20:31:20 -0700
+Message-ID: <20260719033120.122120-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
-In-Reply-To: <20260718214655.63186-1-ebiggers@kernel.org>
-References: <20260718214655.63186-1-ebiggers@kernel.org>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -48,47 +43,62 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-The "Objective" section of inline-encryption.rst suggests that
-blk-crypto-fallback is just for testing.  That's no longer accurate, so
-update it accordingly.  Also fix a typo later in the document.
+The legacy 'fscrypt_direct_keys' table caches master keys that are used
+by v1 encryption policies that have FSCRYPT_POLICY_FLAG_DIRECT_KEY.
+It's just a global table for all filesystems (since the keys can be
+provided by the legacy process-subscribed keyrings mechanism, which
+makes it difficult to reuse super_block::s_master_keys).
 
+The entries in it ('struct fscrypt_direct_key') do contain a super_block
+pointer, though, for passing to fscrypt_destroy_inline_crypt_key() when
+the last inode that references the key is evicted.
+
+However, when finding the fscrypt_direct_key for an inode, we weren't
+actually comparing the super_block pointer.  As a result, inodes with
+different super_blocks could point to the same fscrypt_direct_key.  That
+could extend the lifetime of a fscrypt_direct_key beyond the
+super_block it points to, causing a use-after-free later.
+
+Fix this by creating distinct fscrypt_direct_key structs for distinct
+super_block structs.
+
+Note that this problem doesn't exist in the v2 policy equivalent
+("per-mode keys"), since the data structures there are per super_block.
+
+Fixes: 22e9947a4b2b ("fscrypt: stop holding extra request_queue references")
+Cc: stable@vger.kernel.org
 Signed-off-by: Eric Biggers <ebiggers@kernel.org>
 ---
- Documentation/block/inline-encryption.rst | 14 +++++++-------
- 1 file changed, 7 insertions(+), 7 deletions(-)
+ fs/crypto/keysetup_v1.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
 
-diff --git a/Documentation/block/inline-encryption.rst b/Documentation/block/inline-encryption.rst
-index 0052c7011b48..0df964507f76 100644
---- a/Documentation/block/inline-encryption.rst
-+++ b/Documentation/block/inline-encryption.rst
-@@ -37,12 +37,12 @@ initialization vector for each sector, and can be tested for correctness.
- Objective
- =========
- 
--We want to support inline encryption in the kernel.  To make testing easier, we
--also want support for falling back to the kernel crypto API when actual inline
--encryption hardware is absent.  We also want inline encryption to work with
--layered devices like device-mapper and loopback (i.e. we want to be able to use
--the inline encryption hardware of the underlying devices if present, or else
--fall back to crypto API en/decryption).
-+We want to support inline encryption hardware in the kernel.  The API for using
-+such hardware should also support a fallback to the CPU, so that users only need
-+to use a single API and more of the code can be tested without actual hardware.
-+We also want inline encryption to work with layered devices like device-mapper
-+and loopback (i.e. we want to be able to use the inline encryption hardware of
-+the underlying devices if present, or else fall back to the CPU).
- 
- Constraints and notes
- =====================
-@@ -295,7 +295,7 @@ hardware implementations might not implement both features together correctly,
- and disallow the combination for now. Whenever a device supports integrity, the
- kernel will pretend that the device does not support hardware inline encryption
- (by setting the blk_crypto_profile in the request_queue of the device to NULL).
--When the crypto API fallback is enabled, this means that all bios with and
-+When the crypto API fallback is enabled, this means that all bios with an
- encryption context will use the fallback, and IO will complete as usual.  When
- the fallback is disabled, a bio with an encryption context will be failed.
- 
+diff --git a/fs/crypto/keysetup_v1.c b/fs/crypto/keysetup_v1.c
+index e6e527c73f167..7e3a58dc4b566 100644
+--- a/fs/crypto/keysetup_v1.c
++++ b/fs/crypto/keysetup_v1.c
+@@ -147,13 +147,19 @@ find_or_insert_direct_key(struct fscrypt_direct_key *to_insert,
+ 		if (memcmp(ci->ci_policy.v1.master_key_descriptor,
+ 			   dk->dk_descriptor, FSCRYPT_KEY_DESCRIPTOR_SIZE) != 0)
+ 			continue;
++		/* The sb is used at eviction time, so it must be the same. */
++		if (ci->ci_inode->i_sb != dk->dk_sb)
++			continue;
+ 		if (ci->ci_mode != dk->dk_mode)
+ 			continue;
+ 		if (!fscrypt_is_key_prepared(&dk->dk_key, ci))
+ 			continue;
+ 		if (crypto_memneq(raw_key, dk->dk_raw, ci->ci_mode->keysize))
+ 			continue;
+-		/* using existing tfm with same (descriptor, mode, raw_key) */
++		/*
++		 * Use an existing prepared key with the same (descriptor, sb,
++		 * mode, inlinecrypt, raw_key) combination.
++		 */
+ 		refcount_inc(&dk->dk_refcount);
+ 		spin_unlock(&fscrypt_direct_keys_lock);
+ 		free_direct_key(to_insert);
+
+base-commit: f2ec6312bf711369561bdcb22f8a63c0b118c479
 -- 
 2.55.0
 
