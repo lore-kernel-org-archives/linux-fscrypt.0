@@ -1,40 +1,40 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BCD421F30BB;
-	Mon, 20 Jul 2026 17:46:02 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3751F381AFC;
+	Mon, 20 Jul 2026 17:46:31 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1784569567; cv=none; b=GeVdAE60dMyXkQCo/R8jZ9yABLq9R9RlZlRt+Cd6LxrAOoh/l52u/HjH1+XjU+UYgibDp6zYZRJGzXX3wOHv/kKrCrv37PZL2WKIjRhJ75r6aefLIOXk5BsF+nWAhuFCLRX61+Q4MepyGqRnC59hoy+FFBFX7Or9DWcnAKXN6w4=
+	t=1784569596; cv=none; b=Mj8KEfIlz6FYMg54QaDl/hIkzGJyOx5ufLgwXbajMq5klMhvZuP2WvALVP3bQ19xGHkY7NHOXAb7XJHdoESfrOP9Uxj3CxTPygPEp09i2+3XR8/KI5eHAsf6no9eCpAC3OCUqpVfrok2Tsejyvy/ZdshaN1Tu0hQOmTqbl4wfe4=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1784569567; c=relaxed/simple;
-	bh=4yrRUW/0E+1AcZMdvG7swq047fVSvT/iSTNBDjNsbLU=;
+	s=arc-20240116; t=1784569596; c=relaxed/simple;
+	bh=JEVlNj4X9Gmu8sEAJ6Rz14EbWLVHWFQcBLYw4DpOmL4=;
 	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=N9MTbpCfk3QqkNKt92mpJTJzd87mi97TyjhGsuINMuwRBfwcmAiQtrR1TuvpKEEvWFRHQEt+S89XbczNyR+d5I3BJ3MVJgwwpkb8gW5HPJX/tNmYS3xxbsIv2H0fr/R0NE2vBiX54LgusI+bfKFucgsmmudGp3L7QatFx8+3dso=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=MABqk60c; arc=none smtp.client-ip=100.103.45.18
+	 Content-Type:Content-Disposition:In-Reply-To; b=vE5+tVNfoVQbnJ4XdBnC4uhZ3oJUlwv8EpRb69Aa5jEn4IxPoBMy9RdiFJELXmpNRn4xF5cw0oIPfA7ws72Ybua/8wTnAdOQYzOxmlZrOOvBYdmBeHjeMprYtTugfNlMSnXj8HrQkIfn1yB+Sjj5+ZhUEh8ng/HYLFjmgo6wm/U=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Irc6Ag3p; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="MABqk60c"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 7D4821F00A3A;
-	Mon, 20 Jul 2026 17:45:59 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Irc6Ag3p"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 1BCD51F000E9;
+	Mon, 20 Jul 2026 17:46:28 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1784569559;
-	bh=8Z7qNrG0KSkprPREAOZB1jiU9uYS06edPPc9UNtP1bw=;
+	s=k20260515; t=1784569588;
+	bh=T+oQx5zRk0RramzKmWugrGHNe9r+whhPX6H9rrwLW9E=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=MABqk60cV6yATXr0Ti5BqMdlfI2ZlHwHV8ww+qU5UTdaM3faehGsMI10u1H+aO9ed
-	 iVcfF/HvjX/dWF8Tyanrx11HNohPv/pSVMFov9mSsAf8fkGi4ef6MhiSfBcyoDxlSh
-	 KHOLJSiMtCm2XsZrNAQqbqAnSvvijK/C3VhPIuP18b+JW9Vbrd3HBMmCr8Mkf+bjG0
-	 sXVAJkWzcKr80G4vtj/d+qgI03U9UgAxh28fQ3icc+P2YOblN7STRFfZVAHG5CJKrz
-	 QA6eSkvBC34g0CZoblNS7ep2Nx6DEv3ZFLIuQ5lXaPsWO0mbe2xuU8GqAHioynWOVO
-	 uNA2HhR0IJvhQ==
-Date: Mon, 20 Jul 2026 10:45:58 -0700
+	b=Irc6Ag3p6Ou0huppQ3OOCKCCobwstUzjtQ9fK7JN8D1iuY5sfGRJOdlXfQMU6h4sE
+	 TlV5CgB5vVRjiYthr5OR3PADT3awQQTqqkPx4Mu2jHnRjawjK0bkL0dNFODi2ACIeN
+	 km8/l4duw2F1XhT7TOObevKb6eSPOuUAitwRa6ii02HxHqYNJhgHSQdWzKwfw6fNSL
+	 EyD38PZUZ3fIDrbm5zDQTOzZv/TLvhLe6EPOuxAdxALFG3ZM9/TJfWbtGgjn/hAEsX
+	 Rx1p6VoVy28eFyh8R6/ZRGaTtl5JBw6M6Rx90RNUS2FqvWYzGf37RlqNYcXgffmVpb
+	 5nH0U2OIuHS8Q==
+Date: Mon, 20 Jul 2026 10:46:26 -0700
 From: Eric Biggers <ebiggers@kernel.org>
 To: linux-fscrypt@vger.kernel.org
 Cc: linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org,
-	linux-f2fs-devel@lists.sourceforge.net, stable@vger.kernel.org
-Subject: Re: [PATCH] fscrypt: Avoid dynamic allocation in
- fscrypt_get_devices()
-Message-ID: <20260720174558.GC1865@quark>
-References: <20260719055602.78828-1-ebiggers@kernel.org>
+	stable@vger.kernel.org
+Subject: Re: [PATCH] fscrypt: Add missing superblock check in
+ find_or_insert_direct_key()
+Message-ID: <20260720174626.GD1865@quark>
+References: <20260719033120.122120-1-ebiggers@kernel.org>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -43,39 +43,34 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20260719055602.78828-1-ebiggers@kernel.org>
+In-Reply-To: <20260719033120.122120-1-ebiggers@kernel.org>
 
-On Sat, Jul 18, 2026 at 10:56:02PM -0700, Eric Biggers wrote:
-> When a blk_crypto_key starts being used or is evicted, fs/crypto/ calls
-> fscrypt_get_devices() to get the filesystem's list of block devices,
-> then iterates over them and calls blk_crypto_config_supported(),
-> blk_crypto_start_using_key(), or blk_crypto_evict_key() on each one.
+On Sat, Jul 18, 2026 at 08:31:20PM -0700, Eric Biggers wrote:
+> The legacy 'fscrypt_direct_keys' table caches master keys that are used
+> by v1 encryption policies that have FSCRYPT_POLICY_FLAG_DIRECT_KEY.
+> It's just a global table for all filesystems (since the keys can be
+> provided by the legacy process-subscribed keyrings mechanism, which
+> makes it difficult to reuse super_block::s_master_keys).
 > 
-> Currently, the block device pointers are placed in a dynamically
-> allocated array.  This dynamic allocation is problematic because:
+> The entries in it ('struct fscrypt_direct_key') do contain a super_block
+> pointer, though, for passing to fscrypt_destroy_inline_crypt_key() when
+> the last inode that references the key is evicted.
 > 
-> - It can fail, especially at the fscrypt_destroy_inline_crypt_key() call
->   site when it's invoked for inode eviction under direct reclaim.
+> However, when finding the fscrypt_direct_key for an inode, we weren't
+> actually comparing the super_block pointer.  As a result, inodes with
+> different super_blocks could point to the same fscrypt_direct_key.  That
+> could extend the lifetime of a fscrypt_direct_key beyond the
+> super_block it points to, causing a use-after-free later.
 > 
-> - fscrypt_destroy_inline_crypt_key() doesn't handle the failure.  It
->   just zeroizes and frees the blk_crypto_key without calling
->   blk_crypto_evict_key().  That causes a use-after-free.
+> Fix this by creating distinct fscrypt_direct_key structs for distinct
+> super_block structs.
 > 
-> For now, let's fix this in the straightforward and easily-backportable
-> way by switching to an on-stack array.  Currently the fscrypt
-> multi-device functionality is used only by f2fs, which has a hardcoded
-> limit of 8 block devices.  An on-stack array works fine for that.
-> 
-> (Of course, this solution won't scale up to large number of block
-> devices.  For that we'd need a different solution, like moving the block
-> device iteration into the filesystem.  Or in the case of btrfs, which
-> will only support blk-crypto-fallback, we should make it just call
-> blk-crypto-fallback directly, so the block devices won't be needed.)
+> Note that this problem doesn't exist in the v2 policy equivalent
+> ("per-mode keys"), since the data structures there are per super_block.
 > 
 > Fixes: 22e9947a4b2b ("fscrypt: stop holding extra request_queue references")
 > Cc: stable@vger.kernel.org
 > Signed-off-by: Eric Biggers <ebiggers@kernel.org>
-> ---
 
 Applied to https://git.kernel.org/pub/scm/fs/fscrypt/linux.git/log/?h=for-current
 
