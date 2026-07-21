@@ -1,70 +1,44 @@
-Received: from mout-b-203.mailbox.org (mout-b-203.mailbox.org [195.10.208.52])
+Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3B66439A7F4;
-	Tue, 21 Jul 2026 14:18:18 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.10.208.52
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id DE6244CA26E;
+	Tue, 21 Jul 2026 15:08:02 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1784643500; cv=none; b=rbXF7//mjzaZYCuT/DlLC8f1NIsLPNvDMkd8qvixP5Ff+dHSRCQKH9QHCftB2G0YAafrGeI/I/SZGgdxncP96ch1wmZAv6GVMi2JNZ4fehLy6IDRi04TwAOj0XdgNqIEL+ioPWwSD0Ke+mRbHnJvX6rFmzineCDxpM37CqRQBHg=
+	t=1784646484; cv=none; b=NpaoB5o5vZr3LEB5NjtZo21VwuMtHR9KGJ46VYNzwIHnMHqJiotFXCbM+svKJAhjOmCZVCYgGcWFip30W6gDpF5fF68boJGdzd7G8rmKDBc2sXpRLtACaa9DgAjmkmhqt4DzLESXpWB27XQ4RPPkCZDw8Hy7oisO7TJgU1LtveI=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1784643500; c=relaxed/simple;
-	bh=hCB41rPj0jz44XQJs9/HaHZ+zx9tuwL7mnGPQGZUMxQ=;
-	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=RXXEeqPCezdKYvGeORomHSPSaZWpiRFBYwYZZstGxO7724oyEJEZEfkjknUk+CD/etyGutx4mH2e+X0v3QU6WNsEW3ZewITNS1ygnhDKikf6IRxjI4ymMpLp/MsVuYFK2nGaxpU7wsrXjHO0eRiXu1VSutNHzg7bjFNZrpNWS3E=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=mandelbit.com; spf=pass smtp.mailfrom=mandelbit.com; dkim=pass (2048-bit key) header.d=mandelbit.com header.i=@mandelbit.com header.b=JfcLgWp3; arc=none smtp.client-ip=195.10.208.52
-Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=mandelbit.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=mandelbit.com
+	s=arc-20240116; t=1784646484; c=relaxed/simple;
+	bh=HnKAo1UB6Hizrs80DZIvXd/+C/2ggCPfNmCMS/YRiLo=;
+	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
+	 Content-Type:Content-Disposition:In-Reply-To; b=TyXFkkncrMYetpoDpD6mK71d73HrGs1jVTjeNJJyTDAnzGeoqTlPMAj+YX8e/B3GeM71+dkGs4Das85fN5J0aKZ8KCgkCD2tPFG7zhYjJ92yJ8n06aktPzP4SO7phbdAVkWLpy9pJrhd+Zrl6jigc/7sKUAhIqCMNotPSo0FQwc=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=cZNO1DWF; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=mandelbit.com header.i=@mandelbit.com header.b="JfcLgWp3"
-Received: from smtp102.mailbox.org (smtp102.mailbox.org [IPv6:2001:67c:2050:b231:465::102])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange x25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by mout-b-203.mailbox.org (Postfix) with ESMTPS id 4h4K3H1FNjzLlrV;
-	Tue, 21 Jul 2026 16:07:55 +0200 (CEST)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=mandelbit.com;
-	s=MBO0001; t=1784642875;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=MfzW64IqlFOm9N3cNKZG0XElklhfVlPozs5pACA20uY=;
-	b=JfcLgWp3YwVpfMKAzDqPorRz0sTU6tAS9ht+8ttoZndQCly1IJGOwdDeEKI+5EI6x7X/Ao
-	4gbGfFzCPr9xykaZsNVen7OmNX5d6OL6eumW7I6dxKP/BCWTw7VJaYYspLvVJhWruhYrIg
-	/jKFnNMiyISS+shvLdhcWnNn5kOXaIih1Y0d22NbYkpWXKDcfCwC+yqFSOEzIua81AMf9W
-	LwPWG4vy+udrNmgmSrVABojrrUKIHHF6wA4OX1pAimgo2MHTJ+uUBNYYuO08bAge9sBdlH
-	gJzPUQmqZuf5XersvXiSf3WDIKb/cX9EmKNv4rMk2Aw9aBPkfrHUf79r603khQ==
-Authentication-Results: outgoing_mbo_mout;
-	dkim=none;
-	spf=pass (outgoing_mbo_mout: domain of marco@mandelbit.com designates 2001:67c:2050:b231:465::102 as permitted sender) smtp.mailfrom=marco@mandelbit.com
-From: Marco Baffo <marco@mandelbit.com>
-To: linux-crypto@vger.kernel.org
-Cc: herbert@gondor.apana.org.au,
-	davem@davemloft.net,
-	ebiggers@kernel.org,
-	Jason@zx2c4.com,
-	ardb@kernel.org,
-	tytso@mit.edu,
-	jaegeuk@kernel.org,
-	linux-fscrypt@vger.kernel.org,
-	kbusch@kernel.org,
-	axboe@kernel.dk,
-	hch@lst.de,
-	sagi@grimberg.me,
-	hare@suse.de,
-	linux-nvme@lists.infradead.org,
-	andrew+netdev@lunn.ch,
-	edumazet@google.com,
-	kuba@kernel.org,
-	pabeni@redhat.com,
-	antonio@openvpn.net,
-	sd@queasysnail.net,
-	linux-kernel@vger.kernel.org,
-	Marco Baffo <marco@mandelbit.com>
-Subject: [PATCH 3/5] fscrypt: use HKDF library functions
-Date: Tue, 21 Jul 2026 16:06:42 +0200
-Message-ID: <20260721140644.780006-4-marco@mandelbit.com>
-In-Reply-To: <20260721140644.780006-1-marco@mandelbit.com>
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="cZNO1DWF"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 059ED1F000E9;
+	Tue, 21 Jul 2026 15:08:01 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1784646482;
+	bh=vDGDymem0VUfP+jqOIxAVTQPMbJkKt9Jjw02N2puQ/I=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=cZNO1DWFHSlc5dUYPLLXxXoihBSMDKyfEILKNnFwSm6iNuLrFKIXKql255HXJJT1T
+	 aOK6oBiM3eW4lVRqW6P323bmQCHyPT/j1mBNk48ko3aLTwlQUcsD4tdZMlhxDoqh0l
+	 3PNtXzakqreTpOMsPa70GWLHYpX8FYXb8iRFILpetH7VgTg0yPPVCXx4bio/LwQFpz
+	 d9lkyOFVzgQbtyrLohgj2r+VvU0ep2KLCcQCob09TPL4cAmaZjSsuL8hQO4CdsQ+c7
+	 ptJBhikRfHfv16Hrl1+jE8zuGudIS+2dK/gHiMAgDN7W9DJLrUS5N06UmmbdFE9HXs
+	 sCwmXs/0cN+Cw==
+Date: Tue, 21 Jul 2026 08:06:14 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+To: Marco Baffo <marco@mandelbit.com>
+Cc: linux-crypto@vger.kernel.org, herbert@gondor.apana.org.au,
+	davem@davemloft.net, Jason@zx2c4.com, ardb@kernel.org,
+	tytso@mit.edu, jaegeuk@kernel.org, linux-fscrypt@vger.kernel.org,
+	kbusch@kernel.org, axboe@kernel.dk, hch@lst.de, sagi@grimberg.me,
+	hare@suse.de, linux-nvme@lists.infradead.org, andrew+netdev@lunn.ch,
+	edumazet@google.com, kuba@kernel.org, pabeni@redhat.com,
+	antonio@openvpn.net, sd@queasysnail.net,
+	linux-kernel@vger.kernel.org
+Subject: Re: [PATCH 0/5] lib/crypto: add HKDF and convert fscrypt and NVMe
+Message-ID: <20260721150614.GA1932@sol>
 References: <20260721140644.780006-1-marco@mandelbit.com>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -72,115 +46,108 @@ List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-Rspamd-Queue-Id: 4h4K3H1FNjzLlrV
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20260721140644.780006-1-marco@mandelbit.com>
 
-Convert fscrypt to the common HKDF-SHA512 helpers without changing its
-derived keys. The info bytes are processed in the same order as before.
-An empty salt is equivalent to the previous 64-byte all-zero salt after
-HMAC key padding.
+Hi Marco,
 
-Signed-off-by: Marco Baffo <marco@mandelbit.com>
----
- fs/crypto/hkdf.c | 56 +++++++++++-------------------------------------
- 1 file changed, 13 insertions(+), 43 deletions(-)
+On Tue, Jul 21, 2026 at 04:06:39PM +0200, Marco Baffo wrote:
+> fscrypt and NVMe authentication each carry private HKDF
+> implementations. Add HKDF-SHA256, HKDF-SHA384, and HKDF-SHA512
+> functions to lib/crypto and convert both users.
+> 
+> Patches 1-4 are intended for review and inclusion.
+> 
+> Patch 5 is RFC only and is not intended to be applied. It shows how
+> the OVPN epoch-key code currently under development can use the new
+> HKDF API. That patch has an additional dependency on the OVPN epoch
+> series. It is included here to allow the API to be reviewed against
+> a third user. The OVPN conversion will be submitted separately once
+> its prerequisite code is ready.
+> 
+> HKDF-Expand accepts info as an array of segments and processes them as
+> if concatenated. This preserves the byte ordering used by fscrypt and
+> allows NVMe to encode HkdfLabel without allocating a temporary buffer.
+> 
+> HKDF-Extract produces a prepared HMAC key, avoiding repeated key setup
+> when the same PRK is expanded more than once. The implementation uses
+> the direct HMAC library functions and neither allocates memory nor
+> returns errors.
+> 
+> The series is intended for the libcrypto tree. Patches 3 and 4 need
+> review from the fscrypt and NVMe maintainers, respectively.
+> 
+> Tested with:
+> 
+> - HKDF KUnit tests
+> - NVMe authentication KUnit tests
+> - kvm-xfstests smoketest on ext4
+> - kvm-xfstests generic/582, generic/583, and generic/584 on ext4 and f2fs
+> - kvm-xfstests encrypt group on ext4 and f2fs
+> 
+> The following shortlog and diffstat refers only to the first 4 patches.
+> 
+> Marco Baffo (4):
+>   lib/crypto: add HKDF-SHA{256,384,512}
+>   lib/crypto: tests: add HKDF KUnit tests
+>   fscrypt: use HKDF library functions
+>   nvme-auth: use HKDF library functions for TLS PSK derivation
+> 
+>  drivers/nvme/common/auth.c    | 120 ++++++++-------
+>  fs/crypto/hkdf.c              |  56 ++-----
+>  include/crypto/hkdf.h         | 131 ++++++++++++++++
+>  lib/crypto/.kunitconfig       |   1 +
+>  lib/crypto/Makefile           |   4 +-
+>  lib/crypto/hkdf-sha256.c      |  22 +++
+>  lib/crypto/hkdf-sha512.c      |  34 +++++
+>  lib/crypto/hkdf-template.h    |  97 ++++++++++++
+>  lib/crypto/tests/Kconfig      |   8 +
+>  lib/crypto/tests/Makefile     |   1 +
+>  lib/crypto/tests/hkdf_kunit.c | 276 ++++++++++++++++++++++++++++++++++
+>  11 files changed, 653 insertions(+), 97 deletions(-)
+>  create mode 100644 include/crypto/hkdf.h
+>  create mode 100644 lib/crypto/hkdf-sha256.c
+>  create mode 100644 lib/crypto/hkdf-sha512.c
+>  create mode 100644 lib/crypto/hkdf-template.h
+>  create mode 100644 lib/crypto/tests/hkdf_kunit.c
 
-diff --git a/fs/crypto/hkdf.c b/fs/crypto/hkdf.c
-index 706f56d0076e..7df7d466a3e4 100644
---- a/fs/crypto/hkdf.c
-+++ b/fs/crypto/hkdf.c
-@@ -1,8 +1,6 @@
- // SPDX-License-Identifier: GPL-2.0
- /*
-- * Implementation of HKDF ("HMAC-based Extract-and-Expand Key Derivation
-- * Function"), aka RFC 5869.  See also the original paper (Krawczyk 2010):
-- * "Cryptographic Extraction and Key Derivation: The HKDF Scheme".
-+ * Key derivation using HKDF-SHA512.
-  *
-  * This is used to derive keys from the fscrypt master keys (or from the
-  * "software secrets" which hardware derives from the fscrypt master keys, in
-@@ -11,6 +9,8 @@
-  * Copyright 2019 Google LLC
-  */
- 
-+#include <crypto/hkdf.h>
-+
- #include "fscrypt_private.h"
- 
- /*
-@@ -24,19 +24,11 @@
-  * HKDF-SHA512 being much faster than HKDF-SHA256, as the longer digest size of
-  * SHA-512 causes HKDF-Expand to only need to do one iteration rather than two.
-  */
--#define HKDF_HASHLEN		SHA512_DIGEST_SIZE
- 
- /*
-- * HKDF consists of two steps:
-- *
-- * 1. HKDF-Extract: extract a pseudorandom key of length HKDF_HASHLEN bytes from
-- *    the input keying material and optional salt.
-- * 2. HKDF-Expand: expand the pseudorandom key into output keying material of
-- *    any length, parameterized by an application-specific info string.
-- *
-  * HKDF-Extract can be skipped if the input is already a pseudorandom key of
-- * length HKDF_HASHLEN bytes.  However, cipher modes other than AES-256-XTS take
-- * shorter keys, and we don't want to force users of those modes to provide
-+ * length SHA512_DIGEST_SIZE bytes.  However, cipher modes other than AES-256-XTS
-+ * take shorter keys, and we don't want to force users of those modes to provide
-  * unnecessarily long master keys.  Thus fscrypt still does HKDF-Extract.  No
-  * salt is used, since fscrypt master keys should already be pseudorandom and
-  * there's no way to persist a random salt per master key from kernel mode.
-@@ -50,13 +42,7 @@
- void fscrypt_init_hkdf(struct hmac_sha512_key *hkdf, const u8 *master_key,
- 		       unsigned int master_key_size)
- {
--	static const u8 default_salt[HKDF_HASHLEN];
--	u8 prk[HKDF_HASHLEN];
--
--	hmac_sha512_usingrawkey(default_salt, sizeof(default_salt),
--				master_key, master_key_size, prk);
--	hmac_sha512_preparekey(hkdf, prk, sizeof(prk));
--	memzero_explicit(prk, sizeof(prk));
-+	hkdf_sha512_extract(hkdf, NULL, 0, master_key, master_key_size);
- }
- 
- /*
-@@ -73,28 +59,12 @@ void fscrypt_hkdf_expand(const struct hmac_sha512_key *hkdf, u8 context,
- 			 const u8 *info, unsigned int infolen,
- 			 u8 *okm, unsigned int okmlen)
- {
--	struct hmac_sha512_ctx ctx;
--	u8 counter = 1;
--	u8 tmp[HKDF_HASHLEN];
--
--	WARN_ON_ONCE(okmlen > 255 * HKDF_HASHLEN);
-+	const struct hkdf_seg info_segs[] = {
-+		{ .data = "fscrypt\0", .len = 8 },
-+		{ .data = &context, .len = 1 },
-+		{ .data = info, .len = infolen },
-+	};
- 
--	for (unsigned int i = 0; i < okmlen; i += HKDF_HASHLEN) {
--		hmac_sha512_init(&ctx, hkdf);
--		if (i != 0)
--			hmac_sha512_update(&ctx, &okm[i - HKDF_HASHLEN],
--					   HKDF_HASHLEN);
--		hmac_sha512_update(&ctx, "fscrypt\0", 8);
--		hmac_sha512_update(&ctx, &context, 1);
--		hmac_sha512_update(&ctx, info, infolen);
--		hmac_sha512_update(&ctx, &counter, 1);
--		if (okmlen - i < HKDF_HASHLEN) {
--			hmac_sha512_final(&ctx, tmp);
--			memcpy(&okm[i], tmp, okmlen - i);
--			memzero_explicit(tmp, sizeof(tmp));
--		} else {
--			hmac_sha512_final(&ctx, &okm[i]);
--		}
--		counter++;
--	}
-+	hkdf_sha512_expand(hkdf, info_segs, ARRAY_SIZE(info_segs),
-+			   okm, okmlen);
- }
--- 
-2.43.0
+If we're going to reintroduce an HKDF library, this is probably the way
+to do it (no crypto_shash dependency).
 
+But I think the positive diffstat makes having an HKDF library at all in
+the kernel still kind of questionable.  HKDF is just a wrapper around
+HMAC and it can "unroll" to as little as 1-2 HMAC calls.  It's not
+really like the other crypto algorithms where the implementations can be
+very complex and we often have multiple arch-specific implementations.
+
+In drivers/nvme/common/auth.c, using the library actually ended up as
+more code than not using it.
+
+And in fs/crypto/hkdf.c this patchset only saves a bit (with some of the
+savings coming from deleting helpful comments).
+
+In the ovpn case, the extraction step isn't actually used.  Nor are
+multiple expansion iterations needed, since all the keys needing to be
+derived are at most the hash size.  So vs. using hmac_sha256_* directly
+it saves maybe 10-15 lines?  (Note that the diffstat in patch 5 isn't
+directly relevant, as the starting point was crypto_shash.)
+
+So then we end up with quite a bit of additional code in lib/crypto/, to
+support users where the diffstat is basically neutral.
+
+And this is only HKDF, so this hardly solves key derivation in general.
+Plenty of KDFs don't use HKDF at all, either ones based on block ciphers
+or stream ciphers, or newer hash functions that aren't vulnerable to
+length extension attacks so don't require the HMAC layer.  There are
+lots of other KDFs implemented in the kernel in various places.  Just to
+pick a couple random examples, extract_entropy() in
+drivers/char/random.c is doing a KDF, tcp_ao_calc_traffic_key() in
+net/ipv4/tcp_ao.c is doing a KDF.  Do those need to be libraries too?
+
+So overall I would suggest it might be best to hold off on this for now
+and just call the hmac_sha256_* functions directly from
+ovpn_expand_label().  (And again, only one iteration is actually needed
+there, so it doesn't even need to be the full HKDF-Expand.)
+
+- Eric
