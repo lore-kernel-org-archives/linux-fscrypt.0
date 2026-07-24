@@ -1,153 +1,163 @@
-Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id DE6244CA26E;
-	Tue, 21 Jul 2026 15:08:02 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 47D9F309EF4
+	for <linux-fscrypt@vger.kernel.org>; Fri, 24 Jul 2026 13:33:43 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.130
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1784646484; cv=none; b=NpaoB5o5vZr3LEB5NjtZo21VwuMtHR9KGJ46VYNzwIHnMHqJiotFXCbM+svKJAhjOmCZVCYgGcWFip30W6gDpF5fF68boJGdzd7G8rmKDBc2sXpRLtACaa9DgAjmkmhqt4DzLESXpWB27XQ4RPPkCZDw8Hy7oisO7TJgU1LtveI=
+	t=1784900024; cv=none; b=gjFh8otzr0f41lqMzlqn8208S2LvzYujVGrnGfNxPpXwWAC/GyHk4TMbitMnAHjLKlrs5xer9rxGl5qKCBu5aTwZBhAS4b5av28d6IG2uyr4JOsT4cuik3WImKMFlSDl3A9eaL3lzaOK8FRGOQ04tPYFaWkMYbtg0fVpmmE6BQ0=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1784646484; c=relaxed/simple;
-	bh=HnKAo1UB6Hizrs80DZIvXd/+C/2ggCPfNmCMS/YRiLo=;
-	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=TyXFkkncrMYetpoDpD6mK71d73HrGs1jVTjeNJJyTDAnzGeoqTlPMAj+YX8e/B3GeM71+dkGs4Das85fN5J0aKZ8KCgkCD2tPFG7zhYjJ92yJ8n06aktPzP4SO7phbdAVkWLpy9pJrhd+Zrl6jigc/7sKUAhIqCMNotPSo0FQwc=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=cZNO1DWF; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1784900024; c=relaxed/simple;
+	bh=Oho22ogpd79FN59/VMKoDYgBS/cSrYQqb3jikjHjFcI=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=Dph5A2eSX5haFLCIHM7bDRuYRhYmewmdfu2jsv6pZgBQsqFBoPMIAmy5QoiR8DyNc4h6Fm3l03EkcTt2DGxyghH7yclodROllR2goAJBnFJ9/4VGzcSJkDdh9k9lN+HT+tBOUIRA5r43ekv2MZPts3JFAwzKTOelnb539w2m65g=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=hMHi3EVW; dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b=hMHi3EVW; arc=none smtp.client-ip=195.135.223.130
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="cZNO1DWF"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 059ED1F000E9;
-	Tue, 21 Jul 2026 15:08:01 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1784646482;
-	bh=vDGDymem0VUfP+jqOIxAVTQPMbJkKt9Jjw02N2puQ/I=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=cZNO1DWFHSlc5dUYPLLXxXoihBSMDKyfEILKNnFwSm6iNuLrFKIXKql255HXJJT1T
-	 aOK6oBiM3eW4lVRqW6P323bmQCHyPT/j1mBNk48ko3aLTwlQUcsD4tdZMlhxDoqh0l
-	 3PNtXzakqreTpOMsPa70GWLHYpX8FYXb8iRFILpetH7VgTg0yPPVCXx4bio/LwQFpz
-	 d9lkyOFVzgQbtyrLohgj2r+VvU0ep2KLCcQCob09TPL4cAmaZjSsuL8hQO4CdsQ+c7
-	 ptJBhikRfHfv16Hrl1+jE8zuGudIS+2dK/gHiMAgDN7W9DJLrUS5N06UmmbdFE9HXs
-	 sCwmXs/0cN+Cw==
-Date: Tue, 21 Jul 2026 08:06:14 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-To: Marco Baffo <marco@mandelbit.com>
-Cc: linux-crypto@vger.kernel.org, herbert@gondor.apana.org.au,
-	davem@davemloft.net, Jason@zx2c4.com, ardb@kernel.org,
-	tytso@mit.edu, jaegeuk@kernel.org, linux-fscrypt@vger.kernel.org,
-	kbusch@kernel.org, axboe@kernel.dk, hch@lst.de, sagi@grimberg.me,
-	hare@suse.de, linux-nvme@lists.infradead.org, andrew+netdev@lunn.ch,
-	edumazet@google.com, kuba@kernel.org, pabeni@redhat.com,
-	antonio@openvpn.net, sd@queasysnail.net,
-	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH 0/5] lib/crypto: add HKDF and convert fscrypt and NVMe
-Message-ID: <20260721150614.GA1932@sol>
-References: <20260721140644.780006-1-marco@mandelbit.com>
+	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="hMHi3EVW";
+	dkim=pass (1024-bit key) header.d=suse.com header.i=@suse.com header.b="hMHi3EVW"
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
+	(No client certificate requested)
+	by smtp-out1.suse.de (Postfix) with ESMTPS id 59EDB7B88B;
+	Fri, 24 Jul 2026 13:33:41 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
+	t=1784900021; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:  content-transfer-encoding:content-transfer-encoding;
+	bh=87KJldLVO12YI6/aqcMypvZbGEc4Q23o2OfJPWjlafE=;
+	b=hMHi3EVWgudVW3Rtpsa9f6sJYDStIiDsU507vjY2B72mqcuP4Ckx6E3eLT1b9Gf/Ng1Fyw
+	Cr7k0Oz79bSZpwo0QMCO3Arc+4IUNQv1SdkQANJl14+v+otVdWWDxNWuWR55+Idz478ODU
+	D5WWY893wSPTtMERn8fnFt0W4Lz12SM=
+Authentication-Results: smtp-out1.suse.de;
+	dkim=pass header.d=suse.com header.s=susede1 header.b=hMHi3EVW
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.com; s=susede1;
+	t=1784900021; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:  content-transfer-encoding:content-transfer-encoding;
+	bh=87KJldLVO12YI6/aqcMypvZbGEc4Q23o2OfJPWjlafE=;
+	b=hMHi3EVWgudVW3Rtpsa9f6sJYDStIiDsU507vjY2B72mqcuP4Ckx6E3eLT1b9Gf/Ng1Fyw
+	Cr7k0Oz79bSZpwo0QMCO3Arc+4IUNQv1SdkQANJl14+v+otVdWWDxNWuWR55+Idz478ODU
+	D5WWY893wSPTtMERn8fnFt0W4Lz12SM=
+Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
+	(No client certificate requested)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 12998779C3;
+	Fri, 24 Jul 2026 13:33:38 +0000 (UTC)
+Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
+	by imap1.dmz-prg2.suse.org with ESMTPSA
+	id redGM7JpY2pIJgAAD6G6ig
+	(envelope-from <neelx@suse.com>); Fri, 24 Jul 2026 13:33:38 +0000
+From: Daniel Vacek <neelx@suse.com>
+To: fstests@vger.kernel.org
+Cc: linux-btrfs@vger.kernel.org,
+	linux-ext4@vger.kernel.org,
+	linux-xfs@vger.kernel.org,
+	linux-f2fs-devel@lists.sourceforge.net,
+	zlang@redhat.com,
+	hch@infradead.org,
+	djwong@kernel.org,
+	David Sterba <dsterba@suse.com>,
+	Daniel Vacek <neelx@suse.com>,
+	linux-fscrypt@vger.kernel.org
+Subject: [PATCH 00/12] fstests: introduce fscrypt support for btrfs
+Date: Fri, 24 Jul 2026 15:33:16 +0200
+Message-ID: <20260724133328.1837318-1-neelx@suse.com>
+X-Mailer: git-send-email 2.53.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20260721140644.780006-1-marco@mandelbit.com>
+Content-Transfer-Encoding: 8bit
+X-Spamd-Result: default: False [-3.01 / 50.00];
+	BAYES_HAM(-3.00)[100.00%];
+	MID_CONTAINS_FROM(1.00)[];
+	NEURAL_HAM_LONG(-1.00)[-1.000];
+	R_MISSING_CHARSET(0.50)[];
+	R_DKIM_ALLOW(-0.20)[suse.com:s=susede1];
+	NEURAL_HAM_SHORT(-0.20)[-1.000];
+	MIME_GOOD(-0.10)[text/plain];
+	MX_GOOD(-0.01)[];
+	FUZZY_RATELIMITED(0.00)[rspamd.com];
+	RCVD_VIA_SMTP_AUTH(0.00)[];
+	MIME_TRACE(0.00)[0:+];
+	ARC_NA(0.00)[];
+	TO_DN_SOME(0.00)[];
+	RCPT_COUNT_SEVEN(0.00)[11];
+	DNSWL_BLOCKED(0.00)[2a07:de40:b281:104:10:150:64:97:from];
+	DKIM_SIGNED(0.00)[suse.com:s=susede1];
+	FROM_EQ_ENVFROM(0.00)[];
+	FROM_HAS_DN(0.00)[];
+	SPAMHAUS_XBL(0.00)[2a07:de40:b281:104:10:150:64:97:from];
+	RCVD_TLS_ALL(0.00)[];
+	TO_MATCH_ENVRCPT_ALL(0.00)[];
+	RCVD_COUNT_TWO(0.00)[2];
+	DKIM_TRACE(0.00)[suse.com:+]
+X-Spam-Flag: NO
+X-Spam-Score: -3.01
+X-Spam-Level: 
+X-Rspamd-Queue-Id: 59EDB7B88B
+X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
+X-Rspamd-Action: no action
 
-Hi Marco,
+This is a rebase and cleanup of older patches [0] from Sweet Tea and Josef
+fixed to work with the recent kernel and btrfs-progs changes.
 
-On Tue, Jul 21, 2026 at 04:06:39PM +0200, Marco Baffo wrote:
-> fscrypt and NVMe authentication each carry private HKDF
-> implementations. Add HKDF-SHA256, HKDF-SHA384, and HKDF-SHA512
-> functions to lib/crypto and convert both users.
-> 
-> Patches 1-4 are intended for review and inclusion.
-> 
-> Patch 5 is RFC only and is not intended to be applied. It shows how
-> the OVPN epoch-key code currently under development can use the new
-> HKDF API. That patch has an additional dependency on the OVPN epoch
-> series. It is included here to allow the API to be reviewed against
-> a third user. The OVPN conversion will be submitted separately once
-> its prerequisite code is ready.
-> 
-> HKDF-Expand accepts info as an array of segments and processes them as
-> if concatenated. This preserves the byte ordering used by fscrypt and
-> allows NVMe to encode HkdfLabel without allocating a temporary buffer.
-> 
-> HKDF-Extract produces a prepared HMAC key, avoiding repeated key setup
-> when the same PRK is expanded more than once. The implementation uses
-> the direct HMAC library functions and neither allocates memory nor
-> returns errors.
-> 
-> The series is intended for the libcrypto tree. Patches 3 and 4 need
-> review from the fscrypt and NVMe maintainers, respectively.
-> 
-> Tested with:
-> 
-> - HKDF KUnit tests
-> - NVMe authentication KUnit tests
-> - kvm-xfstests smoketest on ext4
-> - kvm-xfstests generic/582, generic/583, and generic/584 on ext4 and f2fs
-> - kvm-xfstests encrypt group on ext4 and f2fs
-> 
-> The following shortlog and diffstat refers only to the first 4 patches.
-> 
-> Marco Baffo (4):
->   lib/crypto: add HKDF-SHA{256,384,512}
->   lib/crypto: tests: add HKDF KUnit tests
->   fscrypt: use HKDF library functions
->   nvme-auth: use HKDF library functions for TLS PSK derivation
-> 
->  drivers/nvme/common/auth.c    | 120 ++++++++-------
->  fs/crypto/hkdf.c              |  56 ++-----
->  include/crypto/hkdf.h         | 131 ++++++++++++++++
->  lib/crypto/.kunitconfig       |   1 +
->  lib/crypto/Makefile           |   4 +-
->  lib/crypto/hkdf-sha256.c      |  22 +++
->  lib/crypto/hkdf-sha512.c      |  34 +++++
->  lib/crypto/hkdf-template.h    |  97 ++++++++++++
->  lib/crypto/tests/Kconfig      |   8 +
->  lib/crypto/tests/Makefile     |   1 +
->  lib/crypto/tests/hkdf_kunit.c | 276 ++++++++++++++++++++++++++++++++++
->  11 files changed, 653 insertions(+), 97 deletions(-)
->  create mode 100644 include/crypto/hkdf.h
->  create mode 100644 lib/crypto/hkdf-sha256.c
->  create mode 100644 lib/crypto/hkdf-sha512.c
->  create mode 100644 lib/crypto/hkdf-template.h
->  create mode 100644 lib/crypto/tests/hkdf_kunit.c
+[0] https://github.com/btrfs/fstests/tree/fscrypt (227ac42)
 
-If we're going to reintroduce an HKDF library, this is probably the way
-to do it (no crypto_shash dependency).
+Daniel Vacek (1):
+  fscrypt-crypt-util: add support for per extent KDF
 
-But I think the positive diffstat makes having an HKDF library at all in
-the kernel still kind of questionable.  HKDF is just a wrapper around
-HMAC and it can "unroll" to as little as 1-2 HMAC calls.  It's not
-really like the other crypto algorithms where the implementations can be
-very complex and we often have multiple arch-specific implementations.
+Josef Bacik (4):
+  fstests: properly test for v1 encryption policies in encrypt tests
+  fstests: split generic/580 into two tests
+  fstests: split generic/581 into two tests
+  fstests: split generic/613 into two tests
 
-In drivers/nvme/common/auth.c, using the library actually ended up as
-more code than not using it.
+Sweet Tea Dorminy (7):
+  common/encrypt: separate data and inode nonces
+  common/encrypt: add btrfs to get_encryption_*nonce
+  common/encrypt: add btrfs to get_ciphertext_filename
+  common/encrypt: enable making a encrypted btrfs filesystem
+  common/verity: explicitly don't allow btrfs encryption
+  btrfs: add simple test of reflink of encrypted data
+  btrfs: test snapshotting encrypted subvol
 
-And in fs/crypto/hkdf.c this patchset only saves a bit (with some of the
-savings coming from deleting helpful comments).
+ common/encrypt           |  94 ++++++++++++++++++++++++----
+ common/verity            |   4 ++
+ src/fscrypt-crypt-util.c |  12 +++-
+ tests/btrfs/613          |  54 ++++++++++++++++
+ tests/btrfs/613.out      |  13 ++++
+ tests/btrfs/614          |  73 ++++++++++++++++++++++
+ tests/btrfs/614.out      | 111 ++++++++++++++++++++++++++++++++
+ tests/f2fs/002           |   2 +-
+ tests/generic/580        | 118 +++++++++++++++-------------------
+ tests/generic/580.out    |  40 ------------
+ tests/generic/581        |  89 +-------------------------
+ tests/generic/581.out    |  50 ---------------
+ tests/generic/593        |   1 +
+ tests/generic/613        |  24 +++----
+ tests/generic/613.out    |   5 +-
+ tests/generic/798        |  77 +++++++++++++++++++++++
+ tests/generic/798.out    |  44 +++++++++++++
+ tests/generic/799        | 132 +++++++++++++++++++++++++++++++++++++++
+ tests/generic/799.out    |  51 +++++++++++++++
+ tests/generic/800        | 115 ++++++++++++++++++++++++++++++++++
+ tests/generic/800.out    |  14 +++++
+ 21 files changed, 845 insertions(+), 278 deletions(-)
+ create mode 100755 tests/btrfs/613
+ create mode 100644 tests/btrfs/613.out
+ create mode 100755 tests/btrfs/614
+ create mode 100644 tests/btrfs/614.out
+ create mode 100755 tests/generic/798
+ create mode 100644 tests/generic/798.out
+ create mode 100755 tests/generic/799
+ create mode 100644 tests/generic/799.out
+ create mode 100755 tests/generic/800
+ create mode 100644 tests/generic/800.out
 
-In the ovpn case, the extraction step isn't actually used.  Nor are
-multiple expansion iterations needed, since all the keys needing to be
-derived are at most the hash size.  So vs. using hmac_sha256_* directly
-it saves maybe 10-15 lines?  (Note that the diffstat in patch 5 isn't
-directly relevant, as the starting point was crypto_shash.)
+-- 
+2.53.0
 
-So then we end up with quite a bit of additional code in lib/crypto/, to
-support users where the diffstat is basically neutral.
-
-And this is only HKDF, so this hardly solves key derivation in general.
-Plenty of KDFs don't use HKDF at all, either ones based on block ciphers
-or stream ciphers, or newer hash functions that aren't vulnerable to
-length extension attacks so don't require the HMAC layer.  There are
-lots of other KDFs implemented in the kernel in various places.  Just to
-pick a couple random examples, extract_entropy() in
-drivers/char/random.c is doing a KDF, tcp_ao_calc_traffic_key() in
-net/ipv4/tcp_ao.c is doing a KDF.  Do those need to be libraries too?
-
-So overall I would suggest it might be best to hold off on this for now
-and just call the hmac_sha256_* functions directly from
-ovpn_expand_label().  (And again, only one iteration is actually needed
-there, so it doesn't even need to be the full HKDF-Expand.)
-
-- Eric
