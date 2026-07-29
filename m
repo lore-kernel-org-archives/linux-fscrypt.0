@@ -1,39 +1,39 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 10D6C1799F;
-	Wed, 29 Jul 2026 15:21:27 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 2921E4119FC;
+	Wed, 29 Jul 2026 15:23:30 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1785338489; cv=none; b=IrhCGhP0nXGLTVmDPuhhoZ79Z2cZCYRdrOtCPZt9SKqy24BZbgrsN/9HGrtTLC36NdrpKLEkqC+Gehtpl0eZBB4fnHC6zjLYsP4s7Pa8DVWE0eCm/tkJB8rV6A0MqssaC5D9M+6Of7Fnfigq+nlDs4fzhdyXnFcDBrhFveRZgrM=
+	t=1785338612; cv=none; b=aeHaVz0q8XsT1U/XGMlvLAkgsvIPKFelmRbDFMIFMaf8/0E5gb11aodL9VgjzpTrxS/ALkNbDFzenlRQS5AhEWWuRxBaAChsubYtUOlsaKE6ofHCndJf2ZOCVKr1MDtEVtk8uOrg6n+RN7GFZFhVqovgpw4aGItREGxbzOAEmE8=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1785338489; c=relaxed/simple;
-	bh=sN4b0qs5cHEghQ3d+PFGTq66jo5xFpcTvktk6EV0g5o=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=g+SEbCkJXYFvTy5rpTV3BfitqbVvYmjnNoifGQhwPQiKqpZAaykLDgqMjKLTp1JOUlvRYoSJ2ODREt1D/7P5vV1oX8eqgEb48E1/ANgOTANqVeVt80yCgliN/zaNdXGMtxNLfU4Sn/pOUnaLoisxscPAiI3Z+H631tvEIR66LUU=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=CZIePGF5; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1785338612; c=relaxed/simple;
+	bh=m+1l9OCQ2499P4R8+Wp4R7hjePCcwbgglU6/3mD4C0Q=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=YJIJVd1i59kd0EjZQb2H9uL5yN3llsQEMEpTRbUh7Pxh+3b32iFHY3HOXQ9btYFDKVuQWFLlmuvKzv74WAvgIDd0JXUSIfdPmxbxEG6epVmRzpOeRgIP5bO/KJV09ZjrHYnJMWUnEG65Zc2PqPyy+o7BzcMdn98MaeG5gd7drQI=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=fBFSt2qe; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="CZIePGF5"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 9A6421F00A3A;
-	Wed, 29 Jul 2026 15:21:27 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="fBFSt2qe"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 400EA1F00A3A;
+	Wed, 29 Jul 2026 15:23:30 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1785338487;
-	bh=RltkKNIxqbXfedvBZ+fsnyiDQtz4LQ2Yf+BgfLGX4C4=;
+	s=k20260515; t=1785338610;
+	bh=r9MuuVbYjlaYdf0i4Dkeotbr1VPl+bXPqXMFVzlzhH0=;
 	h=From:To:Cc:Subject:Date;
-	b=CZIePGF5y8iamlnv1OPTRzFTRjlzBrELK+ed7QwOveIsbrrXqOKsuduH+M8JJuhej
-	 aIQB7qbTquqh4yJCwyezr1YAEpb8vUqL+Esa38aVFAi+0ZaO8jncf0f9CUKRmoD+je
-	 9LJo41ybmCVx8kPJMpChFsKc6LDkQJUkjqqwPQHu/PKMZkuzr/kJdD5B5vMQhDBuGj
-	 gtAfGo8N/710t6ty17KwsUgcY63bQOeOR97koKiO7/jy+nYI8qq2NNyIGICFunoIpu
-	 h+O3iWJo44OZnCPmUgW/shmxsAILS2m/+VYxAQTRjcTAg+gJVeRyo6MtbvU9W9zsEB
-	 039Q29ENBsmtQ==
+	b=fBFSt2qeY/3kt0gbhRAaY5ee8RKqnqcqIccVvhmn+9TzMPLaCm8q3sAYgenCFiQfh
+	 JgNHHMlrVUm2WyUABqdI7uvzeLkoITf7/kw73Wyz7i2RBCD39usG9nGclmZlTY03Fq
+	 QA5lAzuVKA599SHxIAxm3gFXjHu6nyZ35YtKK4ayvRU6Wx9Zz2JM5IPtblf8WKJZDy
+	 AwBNZWP0RHZggl9RoY54rWoXyxBui9z9MyisozNu5ogAomSEOufyPvvuqw3PXsBFDX
+	 M+QkpnRTaT6XpLNuE10ifWSh5sQuccW7VxWi9fts2o6T4gezodXhAgRupuaLLnxa//
+	 QGCCMMjTU/EUQ==
 From: Eric Biggers <ebiggers@kernel.org>
 To: stable@vger.kernel.org
 Cc: linux-fscrypt@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
 	Christoph Hellwig <hch@lst.de>,
 	Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 6.18] fscrypt: Avoid dynamic allocation in fscrypt_get_devices()
-Date: Wed, 29 Jul 2026 08:19:05 -0700
-Message-ID: <20260729151905.8303-1-ebiggers@kernel.org>
+Subject: [PATCH 6.12] fscrypt: Avoid dynamic allocation in fscrypt_get_devices()
+Date: Wed, 29 Jul 2026 08:21:27 -0700
+Message-ID: <20260729152127.11918-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -85,10 +85,10 @@ Signed-off-by: Eric Biggers <ebiggers@kernel.org>
  3 files changed, 44 insertions(+), 56 deletions(-)
 
 diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index 645cc49360729..500397ca8a26f 100644
+index 4b1f10f1cbd85..0a216d20e6950 100644
 --- a/fs/crypto/inline_crypt.c
 +++ b/fs/crypto/inline_crypt.c
-@@ -22,22 +22,14 @@
+@@ -21,22 +21,14 @@
  
  #include "fscrypt_private.h"
  
@@ -117,7 +117,7 @@ index 645cc49360729..500397ca8a26f 100644
  }
  
  static unsigned int fscrypt_get_dun_bytes(const struct fscrypt_inode_info *ci)
-@@ -96,7 +88,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci,
+@@ -94,7 +86,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci)
  	const struct inode *inode = ci->ci_inode;
  	struct super_block *sb = inode->i_sb;
  	struct blk_crypto_config crypto_cfg;
@@ -126,9 +126,9 @@ index 645cc49360729..500397ca8a26f 100644
  	unsigned int num_devs;
  	unsigned int i;
  
-@@ -135,20 +127,15 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci,
- 	crypto_cfg.key_type = is_hw_wrapped_key ?
- 		BLK_CRYPTO_KEY_TYPE_HW_WRAPPED : BLK_CRYPTO_KEY_TYPE_RAW;
+@@ -131,20 +123,15 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci)
+ 	crypto_cfg.data_unit_size = 1U << ci->ci_data_unit_bits;
+ 	crypto_cfg.dun_bytes = fscrypt_get_dun_bytes(ci);
  
 -	devs = fscrypt_get_devices(sb, &num_devs);
 -	if (IS_ERR(devs))
@@ -149,16 +149,16 @@ index 645cc49360729..500397ca8a26f 100644
  
  	return 0;
  }
-@@ -164,7 +151,7 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
- 	enum blk_crypto_key_type key_type = is_hw_wrapped ?
- 		BLK_CRYPTO_KEY_TYPE_HW_WRAPPED : BLK_CRYPTO_KEY_TYPE_RAW;
+@@ -157,7 +144,7 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
+ 	struct super_block *sb = inode->i_sb;
+ 	enum blk_crypto_mode_num crypto_mode = ci->ci_mode->blk_crypto_mode;
  	struct blk_crypto_key *blk_key;
 -	struct block_device **devs;
 +	struct block_device *devs[FSCRYPT_MAX_DEVICES];
  	unsigned int num_devs;
  	unsigned int i;
  	int err;
-@@ -182,17 +169,12 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
+@@ -175,17 +162,12 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
  	}
  
  	/* Start using blk-crypto on all the filesystem's block devices. */
@@ -177,7 +177,7 @@ index 645cc49360729..500397ca8a26f 100644
  	if (err) {
  		fscrypt_err(inode, "error %d starting to use blk-crypto", err);
  		goto fail;
-@@ -210,20 +192,21 @@ void fscrypt_destroy_inline_crypt_key(struct super_block *sb,
+@@ -203,20 +185,21 @@ void fscrypt_destroy_inline_crypt_key(struct super_block *sb,
  				      struct fscrypt_prepared_key *prep_key)
  {
  	struct blk_crypto_key *blk_key = prep_key->blk_key;
@@ -208,10 +208,10 @@ index 645cc49360729..500397ca8a26f 100644
  }
  
 diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index f6b75ce11d1c1..6f787cbeefd09 100644
+index 1bce35d6f4e25..8ceffecf28c80 100644
 --- a/fs/f2fs/super.c
 +++ b/fs/f2fs/super.c
-@@ -3659,24 +3659,27 @@ static bool f2fs_has_stable_inodes(struct super_block *sb)
+@@ -3282,24 +3282,27 @@ static bool f2fs_has_stable_inodes(struct super_block *sb)
  	return true;
  }
  
@@ -251,7 +251,7 @@ index f6b75ce11d1c1..6f787cbeefd09 100644
  
  static const struct fscrypt_operations f2fs_cryptops = {
 diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 516aba5b858b5..c009d4afe9185 100644
+index 772f822dc6b82..3cb1e449d8cfc 100644
 --- a/include/linux/fscrypt.h
 +++ b/include/linux/fscrypt.h
 @@ -57,6 +57,9 @@ struct fscrypt_name {
@@ -264,7 +264,7 @@ index 516aba5b858b5..c009d4afe9185 100644
  #ifdef CONFIG_FS_ENCRYPTION
  
  /* Crypto operations for filesystems */
-@@ -181,21 +184,20 @@ struct fscrypt_operations {
+@@ -175,21 +178,20 @@ struct fscrypt_operations {
  	bool (*has_stable_inodes)(struct super_block *sb);
  
  	/*
@@ -292,9 +292,9 @@ index 516aba5b858b5..c009d4afe9185 100644
 +		struct block_device *devs[FSCRYPT_MAX_DEVICES]);
  };
  
- int fscrypt_d_revalidate(struct inode *dir, const struct qstr *name,
+ int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags);
 
-base-commit: 221fc2f4d0eda59d02af2e751a9282fa013a8e97
+base-commit: 588b2d2beb4b3d1878a7fd9cdc876bab53326476
 -- 
 2.55.0
 
