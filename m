@@ -1,39 +1,39 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 755F53AAF5D;
-	Wed, 29 Jul 2026 15:27:45 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D6CD045516D;
+	Wed, 29 Jul 2026 15:29:05 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1785338866; cv=none; b=iv/Na9j+vnjNjhR+SGoaG+UXxzMlNT+kwRCSA3oojDkuS4oHE8FpU5ue9ZMmk2Z2U+RSGGuOxGdJVNMZMqb9SW6uQrYSj61Xh4MDALtbDVPH5/d9hY4PmrzUtPphlThX/SNa6s2QkDznV6qfpW3rydqsGpUQRUk9QfDvdLle4YU=
+	t=1785338947; cv=none; b=u7rK0142aIPx5TnoWEi4IF0BCqgroXXZId7lyb1cGPmatBj+cWaA4QflBa0/tZK7MWsYwdE3/opLpwVH7vXY7w+OFqDKWBzSvpUxopcWrF67/HNafodjVmQ7DNN5apZhVT8plOewMz+hZ+d1DBWvaOMQxktIP0QGT5eMG+1Av0s=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1785338866; c=relaxed/simple;
-	bh=CliCWhRLkfgDnRBdxvbbY6N4GsIrQcxDvRy9fi/Urm4=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=bIeTFS+bDR5fT8Gc+QnWpgWNaZ4LeOX5oMtMdMy6J3dSo8K9MCRoUn2GWypMUKblUi+LuWSA5AimKasP348blbOlC3mEBFwEeJld40SLifgYvPgvjvija1f9eeTZk7aGoWNA4AKIDjIOZA28KzwsvLj8VdHc8rlCmJh2cdW+DsI=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Xje73TiT; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1785338947; c=relaxed/simple;
+	bh=8FXNGIbcD7fVthHQ5MX5mh8TM8dY3SYmyPBAnyzpT54=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=nB9gZOMoUM7VCIEVjDVM1glHVG/G1p0LLZ+mAEo3oRFY6KLWQDqF8NoYZzTvwjdPSc702W76laalWeL4ahVGT580s75yGBXYJbVYaEp9+ioYbG7tgvzx9+ual/2aJ1Il3NFnpyEVwB6NIK7aup4SnFzDiUVQ7SSry/l2pZBNn8k=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=k/mKD4SE; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Xje73TiT"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id E1C1E1F00A3F;
-	Wed, 29 Jul 2026 15:27:44 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="k/mKD4SE"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 3EC5D1F000E9;
+	Wed, 29 Jul 2026 15:29:05 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1785338865;
-	bh=V0k1AZmb/TvfY7wNf00QwgRAmyWqz6BMjGXKysMVXCI=;
+	s=k20260515; t=1785338945;
+	bh=WaesI/5GaSHtwRmPEhp5DbEmRnvxo8PvnSq6mqTrtwY=;
 	h=From:To:Cc:Subject:Date;
-	b=Xje73TiTqYQPZPhEPQIExUs2UFQsFkWuaH+Kh88qKjzKJeOamBj+t0rKn6PsIGVP0
-	 2+Xf5twiaCwOOJo/TARfoGbM7cSPHArOvl/Qp+MyrqgSEHpSscUMIi7bqDG1kTaHNs
-	 NSaiYc5982FWa5ebgtkG1CvPE6GQZ/iCpzLMloYCY/orBM9/IAli/vd67QB/V0CDlA
-	 T6LTUmjRCm2MObWMUyjW7Ze68ygjpzB32YUZplxbU71vkcCB0I7PL/3YrngO5ha9S4
-	 OskiTSEe2m9/uGtMUaknTW/tCgoME3bXZn31F7KF3ubvEMVkeEHUGNId5E6zYlD68Z
-	 UGHLvXrJFOCmg==
+	b=k/mKD4SEwys5QfNsdVFqJKyPCrlfnT8f3PH+RGCWhoLU3FseuWLeBlpD7/KhsOAPw
+	 X2Deznag3Jpua9+LhoqGzgcqnTEmeDyvcvGzdlaaT7tayCHkVdulDctCvcVX+Zl8Be
+	 W8XEce8EPl7FFdCtdFY5cmjz3RRA8K3z5YbLPmRUpdSq2d326U4YelZ7gFfETQq2Fi
+	 dIF1xPNCV0sVfYAesmjIeJ344o2fBM8RF8QQLNj0gwBUmTWwNyZ7z6HFsZ73Pk+KuT
+	 /e5anCzSV8VNhln7X1W3NvHekBZkkbNwVddKfaVDNWdGTFg2+K6H0LT+9n3QC1DVAO
+	 PdwjXNuIQrgQA==
 From: Eric Biggers <ebiggers@kernel.org>
 To: stable@vger.kernel.org
 Cc: linux-fscrypt@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
 	Christoph Hellwig <hch@lst.de>,
 	Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 6.6] fscrypt: Avoid dynamic allocation in fscrypt_get_devices()
-Date: Wed, 29 Jul 2026 08:25:39 -0700
-Message-ID: <20260729152539.21888-1-ebiggers@kernel.org>
+Subject: [PATCH 6.1] fscrypt: Avoid dynamic allocation in fscrypt_get_devices()
+Date: Wed, 29 Jul 2026 08:26:55 -0700
+Message-ID: <20260729152655.28111-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -208,10 +208,10 @@ index 8bfb3ce864766..47645c5539bc8 100644
  }
  
 diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index c018d548e1634..95adc2c4c3c08 100644
+index 7c8e05a81a0c6..9d1b5699f5bf1 100644
 --- a/fs/f2fs/super.c
 +++ b/fs/f2fs/super.c
-@@ -3248,24 +3248,27 @@ static void f2fs_get_ino_and_lblk_bits(struct super_block *sb,
+@@ -3126,24 +3126,27 @@ static void f2fs_get_ino_and_lblk_bits(struct super_block *sb,
  	*lblk_bits_ret = 8 * sizeof(block_t);
  }
  
@@ -251,7 +251,7 @@ index c018d548e1634..95adc2c4c3c08 100644
  
  static const struct fscrypt_operations f2fs_cryptops = {
 diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index c895b12737a19..e55ba9f1e3839 100644
+index 4f5f8a6512132..fe842c9af9dcb 100644
 --- a/include/linux/fscrypt.h
 +++ b/include/linux/fscrypt.h
 @@ -57,6 +57,9 @@ struct fscrypt_name {
@@ -294,7 +294,7 @@ index c895b12737a19..e55ba9f1e3839 100644
  
  static inline struct fscrypt_info *fscrypt_get_info(const struct inode *inode)
 
-base-commit: c5596480c50e081668ff170e80db6314a033be11
+base-commit: dc5c83b7f5f83ea99aea5c771b1ec77458263a15
 -- 
 2.55.0
 
