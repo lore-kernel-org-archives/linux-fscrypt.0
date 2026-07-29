@@ -1,39 +1,39 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 2921E4119FC;
-	Wed, 29 Jul 2026 15:23:30 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 755F53AAF5D;
+	Wed, 29 Jul 2026 15:27:45 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1785338612; cv=none; b=aeHaVz0q8XsT1U/XGMlvLAkgsvIPKFelmRbDFMIFMaf8/0E5gb11aodL9VgjzpTrxS/ALkNbDFzenlRQS5AhEWWuRxBaAChsubYtUOlsaKE6ofHCndJf2ZOCVKr1MDtEVtk8uOrg6n+RN7GFZFhVqovgpw4aGItREGxbzOAEmE8=
+	t=1785338866; cv=none; b=iv/Na9j+vnjNjhR+SGoaG+UXxzMlNT+kwRCSA3oojDkuS4oHE8FpU5ue9ZMmk2Z2U+RSGGuOxGdJVNMZMqb9SW6uQrYSj61Xh4MDALtbDVPH5/d9hY4PmrzUtPphlThX/SNa6s2QkDznV6qfpW3rydqsGpUQRUk9QfDvdLle4YU=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1785338612; c=relaxed/simple;
-	bh=m+1l9OCQ2499P4R8+Wp4R7hjePCcwbgglU6/3mD4C0Q=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=YJIJVd1i59kd0EjZQb2H9uL5yN3llsQEMEpTRbUh7Pxh+3b32iFHY3HOXQ9btYFDKVuQWFLlmuvKzv74WAvgIDd0JXUSIfdPmxbxEG6epVmRzpOeRgIP5bO/KJV09ZjrHYnJMWUnEG65Zc2PqPyy+o7BzcMdn98MaeG5gd7drQI=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=fBFSt2qe; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1785338866; c=relaxed/simple;
+	bh=CliCWhRLkfgDnRBdxvbbY6N4GsIrQcxDvRy9fi/Urm4=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=bIeTFS+bDR5fT8Gc+QnWpgWNaZ4LeOX5oMtMdMy6J3dSo8K9MCRoUn2GWypMUKblUi+LuWSA5AimKasP348blbOlC3mEBFwEeJld40SLifgYvPgvjvija1f9eeTZk7aGoWNA4AKIDjIOZA28KzwsvLj8VdHc8rlCmJh2cdW+DsI=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Xje73TiT; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="fBFSt2qe"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 400EA1F00A3A;
-	Wed, 29 Jul 2026 15:23:30 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Xje73TiT"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id E1C1E1F00A3F;
+	Wed, 29 Jul 2026 15:27:44 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1785338610;
-	bh=r9MuuVbYjlaYdf0i4Dkeotbr1VPl+bXPqXMFVzlzhH0=;
+	s=k20260515; t=1785338865;
+	bh=V0k1AZmb/TvfY7wNf00QwgRAmyWqz6BMjGXKysMVXCI=;
 	h=From:To:Cc:Subject:Date;
-	b=fBFSt2qeY/3kt0gbhRAaY5ee8RKqnqcqIccVvhmn+9TzMPLaCm8q3sAYgenCFiQfh
-	 JgNHHMlrVUm2WyUABqdI7uvzeLkoITf7/kw73Wyz7i2RBCD39usG9nGclmZlTY03Fq
-	 QA5lAzuVKA599SHxIAxm3gFXjHu6nyZ35YtKK4ayvRU6Wx9Zz2JM5IPtblf8WKJZDy
-	 AwBNZWP0RHZggl9RoY54rWoXyxBui9z9MyisozNu5ogAomSEOufyPvvuqw3PXsBFDX
-	 M+QkpnRTaT6XpLNuE10ifWSh5sQuccW7VxWi9fts2o6T4gezodXhAgRupuaLLnxa//
-	 QGCCMMjTU/EUQ==
+	b=Xje73TiTqYQPZPhEPQIExUs2UFQsFkWuaH+Kh88qKjzKJeOamBj+t0rKn6PsIGVP0
+	 2+Xf5twiaCwOOJo/TARfoGbM7cSPHArOvl/Qp+MyrqgSEHpSscUMIi7bqDG1kTaHNs
+	 NSaiYc5982FWa5ebgtkG1CvPE6GQZ/iCpzLMloYCY/orBM9/IAli/vd67QB/V0CDlA
+	 T6LTUmjRCm2MObWMUyjW7Ze68ygjpzB32YUZplxbU71vkcCB0I7PL/3YrngO5ha9S4
+	 OskiTSEe2m9/uGtMUaknTW/tCgoME3bXZn31F7KF3ubvEMVkeEHUGNId5E6zYlD68Z
+	 UGHLvXrJFOCmg==
 From: Eric Biggers <ebiggers@kernel.org>
 To: stable@vger.kernel.org
 Cc: linux-fscrypt@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
 	Christoph Hellwig <hch@lst.de>,
 	Eric Biggers <ebiggers@kernel.org>
-Subject: [PATCH 6.12] fscrypt: Avoid dynamic allocation in fscrypt_get_devices()
-Date: Wed, 29 Jul 2026 08:21:27 -0700
-Message-ID: <20260729152127.11918-1-ebiggers@kernel.org>
+Subject: [PATCH 6.6] fscrypt: Avoid dynamic allocation in fscrypt_get_devices()
+Date: Wed, 29 Jul 2026 08:25:39 -0700
+Message-ID: <20260729152539.21888-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -85,7 +85,7 @@ Signed-off-by: Eric Biggers <ebiggers@kernel.org>
  3 files changed, 44 insertions(+), 56 deletions(-)
 
 diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
-index 4b1f10f1cbd85..0a216d20e6950 100644
+index 8bfb3ce864766..47645c5539bc8 100644
 --- a/fs/crypto/inline_crypt.c
 +++ b/fs/crypto/inline_crypt.c
 @@ -21,22 +21,14 @@
@@ -116,8 +116,8 @@ index 4b1f10f1cbd85..0a216d20e6950 100644
 +	return 1;
  }
  
- static unsigned int fscrypt_get_dun_bytes(const struct fscrypt_inode_info *ci)
-@@ -94,7 +86,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci)
+ static unsigned int fscrypt_get_dun_bytes(const struct fscrypt_info *ci)
+@@ -95,7 +87,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci)
  	const struct inode *inode = ci->ci_inode;
  	struct super_block *sb = inode->i_sb;
  	struct blk_crypto_config crypto_cfg;
@@ -126,8 +126,8 @@ index 4b1f10f1cbd85..0a216d20e6950 100644
  	unsigned int num_devs;
  	unsigned int i;
  
-@@ -131,20 +123,15 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci)
- 	crypto_cfg.data_unit_size = 1U << ci->ci_data_unit_bits;
+@@ -132,20 +124,15 @@ int fscrypt_select_encryption_impl(struct fscrypt_info *ci)
+ 	crypto_cfg.data_unit_size = sb->s_blocksize;
  	crypto_cfg.dun_bytes = fscrypt_get_dun_bytes(ci);
  
 -	devs = fscrypt_get_devices(sb, &num_devs);
@@ -149,7 +149,7 @@ index 4b1f10f1cbd85..0a216d20e6950 100644
  
  	return 0;
  }
-@@ -157,7 +144,7 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
+@@ -158,7 +145,7 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
  	struct super_block *sb = inode->i_sb;
  	enum blk_crypto_mode_num crypto_mode = ci->ci_mode->blk_crypto_mode;
  	struct blk_crypto_key *blk_key;
@@ -177,7 +177,7 @@ index 4b1f10f1cbd85..0a216d20e6950 100644
  	if (err) {
  		fscrypt_err(inode, "error %d starting to use blk-crypto", err);
  		goto fail;
-@@ -203,20 +185,21 @@ void fscrypt_destroy_inline_crypt_key(struct super_block *sb,
+@@ -209,20 +191,21 @@ void fscrypt_destroy_inline_crypt_key(struct super_block *sb,
  				      struct fscrypt_prepared_key *prep_key)
  {
  	struct blk_crypto_key *blk_key = prep_key->blk_key;
@@ -208,11 +208,11 @@ index 4b1f10f1cbd85..0a216d20e6950 100644
  }
  
 diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
-index 1bce35d6f4e25..8ceffecf28c80 100644
+index c018d548e1634..95adc2c4c3c08 100644
 --- a/fs/f2fs/super.c
 +++ b/fs/f2fs/super.c
-@@ -3282,24 +3282,27 @@ static bool f2fs_has_stable_inodes(struct super_block *sb)
- 	return true;
+@@ -3248,24 +3248,27 @@ static void f2fs_get_ino_and_lblk_bits(struct super_block *sb,
+ 	*lblk_bits_ret = 8 * sizeof(block_t);
  }
  
 -static struct block_device **f2fs_get_devices(struct super_block *sb,
@@ -251,7 +251,7 @@ index 1bce35d6f4e25..8ceffecf28c80 100644
  
  static const struct fscrypt_operations f2fs_cryptops = {
 diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 772f822dc6b82..3cb1e449d8cfc 100644
+index c895b12737a19..e55ba9f1e3839 100644
 --- a/include/linux/fscrypt.h
 +++ b/include/linux/fscrypt.h
 @@ -57,6 +57,9 @@ struct fscrypt_name {
@@ -263,9 +263,9 @@ index 772f822dc6b82..3cb1e449d8cfc 100644
 +
  #ifdef CONFIG_FS_ENCRYPTION
  
- /* Crypto operations for filesystems */
-@@ -175,21 +178,20 @@ struct fscrypt_operations {
- 	bool (*has_stable_inodes)(struct super_block *sb);
+ /*
+@@ -161,21 +164,20 @@ struct fscrypt_operations {
+ 				      int *ino_bits_ret, int *lblk_bits_ret);
  
  	/*
 -	 * Return an array of pointers to the block devices to which the
@@ -292,9 +292,9 @@ index 772f822dc6b82..3cb1e449d8cfc 100644
 +		struct block_device *devs[FSCRYPT_MAX_DEVICES]);
  };
  
- int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags);
+ static inline struct fscrypt_info *fscrypt_get_info(const struct inode *inode)
 
-base-commit: 588b2d2beb4b3d1878a7fd9cdc876bab53326476
+base-commit: c5596480c50e081668ff170e80db6314a033be11
 -- 
 2.55.0
 
