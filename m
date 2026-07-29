@@ -1,106 +1,300 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 5C2B21DF75B;
-	Wed, 29 Jul 2026 04:26:03 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 10D6C1799F;
+	Wed, 29 Jul 2026 15:21:27 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1785299164; cv=none; b=RCNhBE6jt4nLddLzDXXLhBnwqMvGofoBh6y9jXNYCvM8XUql7SocPy2fu0O5n6nrar9fmyTg5IGVo4/7eBNs7dPZQYmxTaHlKO+VQvoIj1KaD62lQ2AlusPTlpzre0OxUtRCyxAsSH0kuAd8cruInEWjP6L7zDN9lPD32+BCMh0=
+	t=1785338489; cv=none; b=IrhCGhP0nXGLTVmDPuhhoZ79Z2cZCYRdrOtCPZt9SKqy24BZbgrsN/9HGrtTLC36NdrpKLEkqC+Gehtpl0eZBB4fnHC6zjLYsP4s7Pa8DVWE0eCm/tkJB8rV6A0MqssaC5D9M+6Of7Fnfigq+nlDs4fzhdyXnFcDBrhFveRZgrM=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1785299164; c=relaxed/simple;
-	bh=hTMZPTDdi8g6kj/wnv6fWnGHbi5rAWijs/QysbMhV24=;
-	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=crjlYGNR5N0xvfb89sRQeB9EcFsa7IV47EPUUdaaKob66W62ZPf3yF78rw3ULP9At0aoM9Uulu62c7MqyqMsrTguMY6IxhxP3wZ71XcecIQSQqqQt+TdauNvBMlSs6mCbFvTAECNAb76vk4kgMyw/5FPGrUhmyx6myW4kvpIfnc=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=L5Iy4juM; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1785338489; c=relaxed/simple;
+	bh=sN4b0qs5cHEghQ3d+PFGTq66jo5xFpcTvktk6EV0g5o=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=g+SEbCkJXYFvTy5rpTV3BfitqbVvYmjnNoifGQhwPQiKqpZAaykLDgqMjKLTp1JOUlvRYoSJ2ODREt1D/7P5vV1oX8eqgEb48E1/ANgOTANqVeVt80yCgliN/zaNdXGMtxNLfU4Sn/pOUnaLoisxscPAiI3Z+H631tvEIR66LUU=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=CZIePGF5; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="L5Iy4juM"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id DA76E1F000E9;
-	Wed, 29 Jul 2026 04:26:02 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="CZIePGF5"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 9A6421F00A3A;
+	Wed, 29 Jul 2026 15:21:27 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1785299163;
-	bh=Cu6kJe54Jp9jq8VBOZ3GRpd4BKT6K0iv9qWpAAjqWvw=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=L5Iy4juMwxiNUOIxrYzm4UCT7je5quhou65+MjbP1oQy7cdmqVC6FpQTWhPkCyqyf
-	 bdSx0aVshkoamOy5FUciKOE7CPUHDMJX6I0K2gLFeoNTeLiZPADlElF5MNpcJ+dsBf
-	 6VmZiWdyUyV3EiN58Lv18EwXIVLY6I3eCXuBO1AqmyThO3lI240gT4VUb/hCCs5IDw
-	 irXBF6ZtEwMOhTcSkFLPyhgZ5JTpfXZcRMsIfGn5Hx18scyuh57+8aCpoPtFExXF/d
-	 jz/Y9+B9y4a5BnGeaGRk36RahmjZpjh0YcevrP/Y5Hnvl56Jk/haaRS5Ous8m7I97q
-	 OQp0U80gmz1KQ==
-Date: Tue, 28 Jul 2026 21:24:08 -0700
+	s=k20260515; t=1785338487;
+	bh=RltkKNIxqbXfedvBZ+fsnyiDQtz4LQ2Yf+BgfLGX4C4=;
+	h=From:To:Cc:Subject:Date;
+	b=CZIePGF5y8iamlnv1OPTRzFTRjlzBrELK+ed7QwOveIsbrrXqOKsuduH+M8JJuhej
+	 aIQB7qbTquqh4yJCwyezr1YAEpb8vUqL+Esa38aVFAi+0ZaO8jncf0f9CUKRmoD+je
+	 9LJo41ybmCVx8kPJMpChFsKc6LDkQJUkjqqwPQHu/PKMZkuzr/kJdD5B5vMQhDBuGj
+	 gtAfGo8N/710t6ty17KwsUgcY63bQOeOR97koKiO7/jy+nYI8qq2NNyIGICFunoIpu
+	 h+O3iWJo44OZnCPmUgW/shmxsAILS2m/+VYxAQTRjcTAg+gJVeRyo6MtbvU9W9zsEB
+	 039Q29ENBsmtQ==
 From: Eric Biggers <ebiggers@kernel.org>
-To: Zhan Xusheng <zhanxusheng1024@gmail.com>
-Cc: "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>,
-	linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
-	Zhan Xusheng <zhanxusheng@xiaomi.com>, stable@vger.kernel.org,
-	linux-fsdevel@vger.kernel.org
-Subject: Re: [PATCH] fscrypt: use the mount idmap for the owner check in
- fscrypt_ioctl_set_policy()
-Message-ID: <20260729042408.GA1705@sol>
-References: <20260725080004.929328-1-zhanxusheng1024@gmail.com>
- <20260726043406.GA1708@sol>
+To: stable@vger.kernel.org
+Cc: linux-fscrypt@vger.kernel.org,
+	linux-f2fs-devel@lists.sourceforge.net,
+	Christoph Hellwig <hch@lst.de>,
+	Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH 6.18] fscrypt: Avoid dynamic allocation in fscrypt_get_devices()
+Date: Wed, 29 Jul 2026 08:19:05 -0700
+Message-ID: <20260729151905.8303-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20260726043406.GA1708@sol>
+Content-Transfer-Encoding: 8bit
 
-On Sat, Jul 25, 2026 at 09:34:06PM -0700, Eric Biggers wrote:
-> [+Cc linux-fsdevel@vger.kernel.org]
-> 
-> On Sat, Jul 25, 2026 at 04:00:04PM +0800, Zhan Xusheng wrote:
-> > From: Zhan Xusheng <zhanxusheng@xiaomi.com>
-> > 
-> > fscrypt_ioctl_set_policy() calls inode_owner_or_capable() with
-> > &nop_mnt_idmap before allowing an encryption policy to be set, instead of
-> > the idmap of the mount the ioctl was issued on.
-> > 
-> > fscrypt is used by filesystems that support idmapped mounts (e.g. ext4,
-> > f2fs), so on such a mount this compares the caller's fsuid against the
-> > unmapped on-disk owner rather than the mapped owner: the actual owner can
-> > be wrongly denied with -EACCES and an unrelated caller wrongly allowed.
-> > Use file_mnt_idmap(filp) instead.
-> > 
-> > Fixes: 01beba7957a2 ("fs: port inode_owner_or_capable() to mnt_idmap")
-> > Cc: stable@vger.kernel.org
-> > Signed-off-by: Zhan Xusheng <zhanxusheng@xiaomi.com>
-> > ---
-> >  fs/crypto/policy.c | 2 +-
-> >  1 file changed, 1 insertion(+), 1 deletion(-)
-> > 
-> > diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-> > index 9915e39362db..c80b24a941ad 100644
-> > --- a/fs/crypto/policy.c
-> > +++ b/fs/crypto/policy.c
-> > @@ -534,7 +534,7 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
-> >  		return -EFAULT;
-> >  	policy.version = version;
-> >  
-> > -	if (!inode_owner_or_capable(&nop_mnt_idmap, inode))
-> > +	if (!inode_owner_or_capable(file_mnt_idmap(filp), inode))
-> >  		return -EACCES;
-> >  
-> >  	ret = mnt_want_write_file(filp);
-> > -- 
-> > 2.43.0
-> 
-> Thanks.  I don't think the Fixes commit is quite right: 01beba7957a2
-> seems to have been a behavior-preserving commit.  It even says that it
-> was "eliminating the possibility of any bugs" :-)
-> 
-> Really it seems a patch to this function was just missing entirely, but
-> I would probably use 14f3db5542e6 ("ext4: support idmapped mounts").
-> That's when the other ext4 ioctls got converted to use
-> file_mnt_user_ns() and the idmap support was enabled on ext4, but this
-> was missed.  (And ext4 was the first fscrypt-capable filesystem to get
-> idmap support.)  As usual, this also needs 'Cc stable'.
-> 
-> I guess I'll plan to take this through the fscrypt tree.  I'll update
-> the tags when committing if there's no other feedback.
+commit 6fe4e4b8259e1330945b5f3c9476e08473b8e0e8 upstream.
 
-Applied to https://git.kernel.org/pub/scm/fs/fscrypt/linux.git/log/?h=for-current
+When a blk_crypto_key starts being used or is evicted, fs/crypto/ calls
+fscrypt_get_devices() to get the filesystem's list of block devices,
+then iterates over them and calls blk_crypto_config_supported(),
+blk_crypto_start_using_key(), or blk_crypto_evict_key() on each one.
 
-- Eric
+Currently, the block device pointers are placed in a dynamically
+allocated array.  This dynamic allocation is problematic because:
+
+- It can fail, especially at the fscrypt_destroy_inline_crypt_key() call
+  site when it's invoked for inode eviction under direct reclaim.
+
+- fscrypt_destroy_inline_crypt_key() doesn't handle the failure.  It
+  just zeroizes and frees the blk_crypto_key without calling
+  blk_crypto_evict_key().  That causes a use-after-free.
+
+For now, let's fix this in the straightforward and easily-backportable
+way by switching to an on-stack array.  Currently the fscrypt
+multi-device functionality is used only by f2fs, which has a hardcoded
+limit of 8 block devices.  An on-stack array works fine for that.
+
+(Of course, this solution won't scale up to large number of block
+devices.  For that we'd need a different solution, like moving the block
+device iteration into the filesystem.  Or in the case of btrfs, which
+will only support blk-crypto-fallback, we should make it just call
+blk-crypto-fallback directly, so the block devices won't be needed.)
+
+Fixes: 22e9947a4b2b ("fscrypt: stop holding extra request_queue references")
+Cc: stable@vger.kernel.org
+Reported-by: Sashiko <sashiko-bot@kernel.org>
+Closes: https://sashiko.dev/#/patchset/20260713023708.9245-1-ebiggers%40kernel.org
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+Link: https://patch.msgid.link/20260719055602.78828-1-ebiggers@kernel.org
+Signed-off-by: Eric Biggers <ebiggers@kernel.org>
+---
+ fs/crypto/inline_crypt.c | 57 ++++++++++++++--------------------------
+ fs/f2fs/super.c          | 25 ++++++++++--------
+ include/linux/fscrypt.h  | 18 +++++++------
+ 3 files changed, 44 insertions(+), 56 deletions(-)
+
+diff --git a/fs/crypto/inline_crypt.c b/fs/crypto/inline_crypt.c
+index 645cc49360729..500397ca8a26f 100644
+--- a/fs/crypto/inline_crypt.c
++++ b/fs/crypto/inline_crypt.c
+@@ -22,22 +22,14 @@
+ 
+ #include "fscrypt_private.h"
+ 
+-static struct block_device **fscrypt_get_devices(struct super_block *sb,
+-						 unsigned int *num_devs)
++static unsigned int
++fscrypt_get_devices(struct super_block *sb,
++		    struct block_device *devs[FSCRYPT_MAX_DEVICES])
+ {
+-	struct block_device **devs;
+-
+-	if (sb->s_cop->get_devices) {
+-		devs = sb->s_cop->get_devices(sb, num_devs);
+-		if (devs)
+-			return devs;
+-	}
+-	devs = kmalloc(sizeof(*devs), GFP_KERNEL);
+-	if (!devs)
+-		return ERR_PTR(-ENOMEM);
++	if (sb->s_cop->get_devices)
++		return sb->s_cop->get_devices(sb, devs);
+ 	devs[0] = sb->s_bdev;
+-	*num_devs = 1;
+-	return devs;
++	return 1;
+ }
+ 
+ static unsigned int fscrypt_get_dun_bytes(const struct fscrypt_inode_info *ci)
+@@ -96,7 +88,7 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci,
+ 	const struct inode *inode = ci->ci_inode;
+ 	struct super_block *sb = inode->i_sb;
+ 	struct blk_crypto_config crypto_cfg;
+-	struct block_device **devs;
++	struct block_device *devs[FSCRYPT_MAX_DEVICES];
+ 	unsigned int num_devs;
+ 	unsigned int i;
+ 
+@@ -135,20 +127,15 @@ int fscrypt_select_encryption_impl(struct fscrypt_inode_info *ci,
+ 	crypto_cfg.key_type = is_hw_wrapped_key ?
+ 		BLK_CRYPTO_KEY_TYPE_HW_WRAPPED : BLK_CRYPTO_KEY_TYPE_RAW;
+ 
+-	devs = fscrypt_get_devices(sb, &num_devs);
+-	if (IS_ERR(devs))
+-		return PTR_ERR(devs);
+-
++	num_devs = fscrypt_get_devices(sb, devs);
+ 	for (i = 0; i < num_devs; i++) {
+ 		if (!blk_crypto_config_supported(devs[i], &crypto_cfg))
+-			goto out_free_devs;
++			return 0;
+ 	}
+ 
+ 	fscrypt_log_blk_crypto_impl(ci->ci_mode, devs, num_devs, &crypto_cfg);
+ 
+ 	ci->ci_inlinecrypt = true;
+-out_free_devs:
+-	kfree(devs);
+ 
+ 	return 0;
+ }
+@@ -164,7 +151,7 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
+ 	enum blk_crypto_key_type key_type = is_hw_wrapped ?
+ 		BLK_CRYPTO_KEY_TYPE_HW_WRAPPED : BLK_CRYPTO_KEY_TYPE_RAW;
+ 	struct blk_crypto_key *blk_key;
+-	struct block_device **devs;
++	struct block_device *devs[FSCRYPT_MAX_DEVICES];
+ 	unsigned int num_devs;
+ 	unsigned int i;
+ 	int err;
+@@ -182,17 +169,12 @@ int fscrypt_prepare_inline_crypt_key(struct fscrypt_prepared_key *prep_key,
+ 	}
+ 
+ 	/* Start using blk-crypto on all the filesystem's block devices. */
+-	devs = fscrypt_get_devices(sb, &num_devs);
+-	if (IS_ERR(devs)) {
+-		err = PTR_ERR(devs);
+-		goto fail;
+-	}
++	num_devs = fscrypt_get_devices(sb, devs);
+ 	for (i = 0; i < num_devs; i++) {
+ 		err = blk_crypto_start_using_key(devs[i], blk_key);
+ 		if (err)
+ 			break;
+ 	}
+-	kfree(devs);
+ 	if (err) {
+ 		fscrypt_err(inode, "error %d starting to use blk-crypto", err);
+ 		goto fail;
+@@ -210,20 +192,21 @@ void fscrypt_destroy_inline_crypt_key(struct super_block *sb,
+ 				      struct fscrypt_prepared_key *prep_key)
+ {
+ 	struct blk_crypto_key *blk_key = prep_key->blk_key;
+-	struct block_device **devs;
++	struct block_device *devs[FSCRYPT_MAX_DEVICES];
+ 	unsigned int num_devs;
+ 	unsigned int i;
+ 
+ 	if (!blk_key)
+ 		return;
+ 
+-	/* Evict the key from all the filesystem's block devices. */
+-	devs = fscrypt_get_devices(sb, &num_devs);
+-	if (!IS_ERR(devs)) {
+-		for (i = 0; i < num_devs; i++)
+-			blk_crypto_evict_key(devs[i], blk_key);
+-		kfree(devs);
+-	}
++	/*
++	 * Evict the key from all the filesystem's block devices.
++	 * This *must* be done before the key is freed.
++	 */
++	num_devs = fscrypt_get_devices(sb, devs);
++	for (i = 0; i < num_devs; i++)
++		blk_crypto_evict_key(devs[i], blk_key);
++
+ 	kfree_sensitive(blk_key);
+ }
+ 
+diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+index f6b75ce11d1c1..6f787cbeefd09 100644
+--- a/fs/f2fs/super.c
++++ b/fs/f2fs/super.c
+@@ -3659,24 +3659,27 @@ static bool f2fs_has_stable_inodes(struct super_block *sb)
+ 	return true;
+ }
+ 
+-static struct block_device **f2fs_get_devices(struct super_block *sb,
+-					      unsigned int *num_devs)
++static unsigned int
++f2fs_get_devices(struct super_block *sb,
++		 struct block_device *devs[FSCRYPT_MAX_DEVICES])
+ {
+ 	struct f2fs_sb_info *sbi = F2FS_SB(sb);
+-	struct block_device **devs;
++	int ndevs;
+ 	int i;
+ 
+-	if (!f2fs_is_multi_device(sbi))
+-		return NULL;
++	static_assert(MAX_DEVICES <= FSCRYPT_MAX_DEVICES);
+ 
+-	devs = kmalloc_array(sbi->s_ndevs, sizeof(*devs), GFP_KERNEL);
+-	if (!devs)
+-		return ERR_PTR(-ENOMEM);
++	if (!f2fs_is_multi_device(sbi)) {
++		devs[0] = sb->s_bdev;
++		return 1;
++	}
++	ndevs = sbi->s_ndevs;
++	if (WARN_ON_ONCE(ndevs > FSCRYPT_MAX_DEVICES))
++		ndevs = FSCRYPT_MAX_DEVICES;
+ 
+-	for (i = 0; i < sbi->s_ndevs; i++)
++	for (i = 0; i < ndevs; i++)
+ 		devs[i] = FDEV(i).bdev;
+-	*num_devs = sbi->s_ndevs;
+-	return devs;
++	return ndevs;
+ }
+ 
+ static const struct fscrypt_operations f2fs_cryptops = {
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 516aba5b858b5..c009d4afe9185 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -57,6 +57,9 @@ struct fscrypt_name {
+ /* Maximum value for the third parameter of fscrypt_operations.set_context(). */
+ #define FSCRYPT_SET_CONTEXT_MAX_SIZE	40
+ 
++/* Maximum supported number of block devices per filesystem */
++#define FSCRYPT_MAX_DEVICES	8
++
+ #ifdef CONFIG_FS_ENCRYPTION
+ 
+ /* Crypto operations for filesystems */
+@@ -181,21 +184,20 @@ struct fscrypt_operations {
+ 	bool (*has_stable_inodes)(struct super_block *sb);
+ 
+ 	/*
+-	 * Return an array of pointers to the block devices to which the
+-	 * filesystem may write encrypted file contents, NULL if the filesystem
+-	 * only has a single such block device, or an ERR_PTR() on error.
++	 * Retrieve the list of block devices to which the filesystem may write
++	 * encrypted file contents.
+ 	 *
+-	 * On successful non-NULL return, *num_devs is set to the number of
+-	 * devices in the returned array.  The caller must free the returned
+-	 * array using kfree().
++	 * This writes the block_device pointers to @devs and returns the count
++	 * (between 1 and FSCRYPT_MAX_DEVICES inclusively).
+ 	 *
+ 	 * If the filesystem can use multiple block devices (other than block
+ 	 * devices that aren't used for encrypted file contents, such as
+ 	 * external journal devices), and wants to support inline encryption,
+ 	 * then it must implement this function.  Otherwise it's not needed.
+ 	 */
+-	struct block_device **(*get_devices)(struct super_block *sb,
+-					     unsigned int *num_devs);
++	unsigned int (*get_devices)(
++		struct super_block *sb,
++		struct block_device *devs[FSCRYPT_MAX_DEVICES]);
+ };
+ 
+ int fscrypt_d_revalidate(struct inode *dir, const struct qstr *name,
+
+base-commit: 221fc2f4d0eda59d02af2e751a9282fa013a8e97
+-- 
+2.55.0
+
