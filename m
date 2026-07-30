@@ -1,109 +1,75 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6B0692C324C;
-	Thu, 30 Jul 2026 18:55:15 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BDD3923E334;
+	Thu, 30 Jul 2026 19:53:28 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1785437718; cv=none; b=b1zzJwDgqMm2OTe6O18nDD/BWjuZnzV1YsYjGlx8jYOjrL2xcnJ74gQFmYD3V5E2q54FEH/9CS5uPkW83tooFxF/xrLJ6p7HOWG6Ah5ejmguFg5ggtiuVF0WjIr+UqqvkWQZYCgsurpWWihyqey4xirogipVTPyXJgE2K67mcTo=
+	t=1785441209; cv=none; b=CsfcM7vv2ysUUVO8kfr1nYMMsfJYslc07KSTl29Xc3eulmd4e8+Ud5Rtq5gXU9lUHMGXbEscK+IANZCKGFsORypVeLLTfjZKtFA9F+3zXB1fMnIjit37e930jRncKTFnOt0IQ0vsCwJztopFCud7XzaB2Fe0MQ0MXXQ3CnGvdi4=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1785437718; c=relaxed/simple;
-	bh=5aA2U49N1iuNFz0GJexrhwc8RpBGM51tHK8UiJ+8S/4=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=ipUocZRCpW2XU+Au+LFt7pD66Dy98FHewjUUah1pTv04t2ZS2CX8fnoSPeVUbOGE7AG+MiHccIpMQwtHm3vrGreuCzh78s+BA8prw9V3tvVPi9HReqocn8m8czqNMq/DYs7uyusd/dwjfaGqOKxi3gAw0pcYyfdv3QFOnheqhms=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=UmTfwEIc; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1785441209; c=relaxed/simple;
+	bh=WzgDIfqwT5lmM09RSEWVlfpFJI7yd4ZdPOWtWx1rFSQ=;
+	h=Date:From:To:Cc:Subject:Message-Id:In-Reply-To:References:
+	 Mime-Version:Content-Type; b=hC+qrJj97JglRcNNwoOxsg9PbCgsmiNJRITPCnR9BnHTF4seqaMr9loytQzAZIdhdxsh+7eZg/iJdjMOdWY2gQe1PrNuX+F7Dr1EKPINCRIkzn5+/rO8QJ9uq+qdUtf1Wo1+2NQN4oSEiXsNbbdYsEpmDM9Vu2/HwkOFPqsev9g=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (1024-bit key) header.d=linux-foundation.org header.i=@linux-foundation.org header.b=iJnEVe1v; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="UmTfwEIc"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id AE5231F000E9;
-	Thu, 30 Jul 2026 18:55:14 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1785437715;
-	bh=Hfg/Gngqd8SEsjmvDZsSbSWbGJu/DBm8x/q7YUwOtSU=;
-	h=From:To:Cc:Subject:Date;
-	b=UmTfwEIcQAZ86kDM34UYJMbq473z2fsOFlb728dkck+ISBouYAxxdTTa17upWeCAd
-	 Fa952fHS1lUK5GYeiu4zWH3buJ4uR9EZ7TWSXC2lc9Un/KGctN/G4jrnRsJWN0Z3O4
-	 icXTXhrMyGzLgaCR3MW4oWiKwMahsSDodIrIUqVBEd2c77lrw/RFUYTdgTB14yJb7J
-	 AmQmDSvbuqXeefuq7nB6tIdLkstbSL/n0Y6OXGiQH8nG9JbgC7N9vYtzeMuWCwX/Px
-	 YQzQKRIk/AQZMRzMIxKwr9/DY5gDArP6OBunaEBI0dow0OGiJN54LSNJvA3RVVacLl
-	 FhFznXM7WnipQ==
-From: Eric Biggers <ebiggers@kernel.org>
-To: linux-mm@kvack.org,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Chris Li <chrisl@kernel.org>,
-	Kairui Song <kasong@tencent.com>
-Cc: linux-ext4@vger.kernel.org,
-	linux-f2fs-devel@lists.sourceforge.net,
-	linux-fscrypt@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	Kemeng Shi <shikemeng@huaweicloud.com>,
-	Nhat Pham <nphamcs@gmail.com>,
-	Baoquan He <baoquan.he@linux.dev>,
-	Barry Song <baohua@kernel.org>,
-	Youngjun Park <youngjun.park@lge.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	stable@vger.kernel.org
-Subject: [PATCH] mm/swap: reject swapon() on filesystem-level encrypted files
-Date: Thu, 30 Jul 2026 11:48:53 -0700
-Message-ID: <20260730184853.48347-1-ebiggers@kernel.org>
-X-Mailer: git-send-email 2.55.0
+	dkim=pass (1024-bit key) header.d=linux-foundation.org header.i=@linux-foundation.org header.b="iJnEVe1v"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 0EE6C1F000E9;
+	Thu, 30 Jul 2026 19:53:28 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+	d=linux-foundation.org; s=korg; t=1785441208;
+	bh=SYHnuwd5oBPShQry/A1IMV78wT87yQ12pmYbnlaWCNI=;
+	h=Date:From:To:Cc:Subject:In-Reply-To:References;
+	b=iJnEVe1voUvv8oU3L/LXlxlWg/TMzmxWX/p+WsY0i3YPuE5mFSEJ4cF0TMcimIXHY
+	 ghjBzhczgWPekjA8dP0c5k00yvs2tMguPZfnVAQ1KarieF9XzeUMVueazl7OX9zaeG
+	 yRbcWd3iB0SupGRkN7oe2OwtgLEhQG1wvVdm67wE=
+Date: Thu, 30 Jul 2026 12:53:27 -0700
+From: Andrew Morton <akpm@linux-foundation.org>
+To: Eric Biggers <ebiggers@kernel.org>
+Cc: linux-mm@kvack.org, Chris Li <chrisl@kernel.org>, Kairui Song
+ <kasong@tencent.com>, linux-ext4@vger.kernel.org,
+ linux-f2fs-devel@lists.sourceforge.net, linux-fscrypt@vger.kernel.org,
+ linux-kernel@vger.kernel.org, Kemeng Shi <shikemeng@huaweicloud.com>, Nhat
+ Pham <nphamcs@gmail.com>, Baoquan He <baoquan.he@linux.dev>, Barry Song
+ <baohua@kernel.org>, Youngjun Park <youngjun.park@lge.com>,
+ stable@vger.kernel.org
+Subject: Re: [PATCH] mm/swap: reject swapon() on filesystem-level encrypted
+ files
+Message-Id: <20260730125327.11fc9227d04f659a59136cdd@linux-foundation.org>
+In-Reply-To: <20260730184853.48347-1-ebiggers@kernel.org>
+References: <20260730184853.48347-1-ebiggers@kernel.org>
+X-Mailer: Sylpheed 3.8.0beta1 (GTK+ 2.24.33; x86_64-pc-linux-gnu)
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Mime-Version: 1.0
+Content-Type: text/plain; charset=US-ASCII
+Content-Transfer-Encoding: 7bit
 
-ext4 and f2fs don't prevent filesystem-level encrypted files from being
-set up directly as swap files.  In this case, encryption is bypassed.
+On Thu, 30 Jul 2026 11:48:53 -0700 Eric Biggers <ebiggers@kernel.org> wrote:
 
-No one should be doing this, vs. the methods of encrypted swap that
-actually do work (such as swapping to a dm-crypt device, or swapping to
-a loopback device on top of a filesystem-level encrypted file).
+> ext4 and f2fs don't prevent filesystem-level encrypted files from being
+> set up directly as swap files.  In this case, encryption is bypassed.
+> 
+> No one should be doing this, vs. the methods of encrypted swap that
+> actually do work (such as swapping to a dm-crypt device, or swapping to
+> a loopback device on top of a filesystem-level encrypted file).
+> 
+> Nevertheless, to prevent user error, make swapon() explicitly reject
+> this case.  Document this behavior in fscrypt.rst as well.
+> 
+> Fixes: 9bd8212f981e ("ext4 crypto: add encryption policy and password salt support")
+> Fixes: f424f664f0e8 ("f2fs crypto: add encryption policy and password salt support")
 
-Nevertheless, to prevent user error, make swapon() explicitly reject
-this case.  Document this behavior in fscrypt.rst as well.
+Ouch.  We are going to break ten year old setups?  I don't think we can
+do this!
 
-Fixes: 9bd8212f981e ("ext4 crypto: add encryption policy and password salt support")
-Fixes: f424f664f0e8 ("f2fs crypto: add encryption policy and password salt support")
-Cc: stable@vger.kernel.org
-Signed-off-by: Eric Biggers <ebiggers@kernel.org>
----
- Documentation/filesystems/fscrypt.rst | 4 ++++
- mm/swapfile.c                         | 4 ++++
- 2 files changed, 8 insertions(+)
+I think the best we can do is to emit loud warnings which point the
+operator to some Documentation/ which tells operator that this
+deprecated configuration will be disallowed in, umm, 2029.
 
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index c0dd35f1af12..cba1989777da 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -1238,6 +1238,10 @@ astute users may notice some differences in behavior:
- 
- - DAX (Direct Access) is not supported on encrypted files.
- 
-+- Encrypted files cannot be used directly as swap files.  To swap to
-+  an encrypted file, set up a loopback device on top of it.
-+  Alternatively, encrypted swap can use a dm-crypt device instead.
-+
- - The maximum length of an encrypted symlink is 2 bytes shorter than
-   the maximum length of an unencrypted symlink.  For example, on an
-   EXT4 filesystem with a 4K block size, unencrypted symlinks can be up
-diff --git a/mm/swapfile.c b/mm/swapfile.c
-index 78b49b0658ad..e4991da81b5f 100644
---- a/mm/swapfile.c
-+++ b/mm/swapfile.c
-@@ -3650,6 +3650,10 @@ SYSCALL_DEFINE2(swapon, const char __user *, specialfile, int, swap_flags)
- 		error = -EBUSY;
- 		goto bad_swap_unlock_inode;
- 	}
-+	if (IS_ENCRYPTED(inode)) {
-+		error = -EINVAL;
-+		goto bad_swap_unlock_inode;
-+	}
- 
- 	/*
- 	 * The swap subsystem needs a major overhaul to support this.
+> +  Alternatively, encrypted swap can use a dm-crypt device instead.
 
-base-commit: f5098b6bae761e346ebcd9da7f95622c04733cff
--- 
-2.55.0
-
+That's tautological.  s/ intead// ;)
