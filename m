@@ -1,48 +1,49 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3E7213B0581;
-	Thu, 30 Jul 2026 17:57:04 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6B0692C324C;
+	Thu, 30 Jul 2026 18:55:15 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1785434226; cv=none; b=J9CpBUQM8gzJGyP3AHvE5RAEOPNit5nS+e/vyg6q+9MRQbBps6FGeCHXjo6RPrX1gJ+Uetoo4HjCcrEXTnWpXdbhwwMb9pFIsnAoUHBPljkb2VgocuWnp3A/RB8H5VzxQC0UC7V+nsx5Xd2rn3dMj/RFcHdgL0pfD4aq9GrFNxU=
+	t=1785437718; cv=none; b=b1zzJwDgqMm2OTe6O18nDD/BWjuZnzV1YsYjGlx8jYOjrL2xcnJ74gQFmYD3V5E2q54FEH/9CS5uPkW83tooFxF/xrLJ6p7HOWG6Ah5ejmguFg5ggtiuVF0WjIr+UqqvkWQZYCgsurpWWihyqey4xirogipVTPyXJgE2K67mcTo=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1785434226; c=relaxed/simple;
-	bh=r7O8QD+ivm+bvq9bs6znr99IcSljYbBNKpR59/rpEPU=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=QZKwdntr4ev9VLpLd2kEyeGUNr1zhkdW94ld19XOZKS7uRcD1LFK82T/W52U2gIPqRw1OFCVK7qxwuLYMz7tJvbRL6HQkGtfHhIlrRkH8oL/nKJjXTQpgNCgfLNvw4KOggenHt5R/+8ZgVXtF0vbbleAZDgR9y6sAYSYZ6nE+jQ=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Cy1H54IO; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1785437718; c=relaxed/simple;
+	bh=5aA2U49N1iuNFz0GJexrhwc8RpBGM51tHK8UiJ+8S/4=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=ipUocZRCpW2XU+Au+LFt7pD66Dy98FHewjUUah1pTv04t2ZS2CX8fnoSPeVUbOGE7AG+MiHccIpMQwtHm3vrGreuCzh78s+BA8prw9V3tvVPi9HReqocn8m8czqNMq/DYs7uyusd/dwjfaGqOKxi3gAw0pcYyfdv3QFOnheqhms=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=UmTfwEIc; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Cy1H54IO"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 67A4F1F00A3A;
-	Thu, 30 Jul 2026 17:57:04 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="UmTfwEIc"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id AE5231F000E9;
+	Thu, 30 Jul 2026 18:55:14 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1785434224;
-	bh=abhw088q6gYCQxNch23PgT1atsdpk0ME6d8Iyr32PiE=;
+	s=k20260515; t=1785437715;
+	bh=Hfg/Gngqd8SEsjmvDZsSbSWbGJu/DBm8x/q7YUwOtSU=;
 	h=From:To:Cc:Subject:Date;
-	b=Cy1H54IOysiPRS76pS1Dp4whlY0kfSARu3n70I6mCwuid4tXNO/J2QUzQGw10enMm
-	 SbDBdkavAnVq00Jny93DwveIi5K9cRILVmqxAvPr7wYzFrtUjK/PV953TBeQtuoXAb
-	 LYFNmQKXQqrlbNGpf+xN/OyTPKp9xR3vBBxREo55Iej3GI6cmRSn9PEsMP87kc0Dqv
-	 tfG0tTEIFGBNTA77VhJ+CAHnyn0YCTV8eafhgSbBekvFM7QQK6cdNfeKcJ2ojvapVI
-	 bXd5pbFGLsZzZrgKkt0V2Vb0j3fBopS6evdnD9yI59mgu2237lcVLH3ksaLOS7ZNfI
-	 bVh7WIfmxo0vg==
+	b=UmTfwEIcQAZ86kDM34UYJMbq473z2fsOFlb728dkck+ISBouYAxxdTTa17upWeCAd
+	 Fa952fHS1lUK5GYeiu4zWH3buJ4uR9EZ7TWSXC2lc9Un/KGctN/G4jrnRsJWN0Z3O4
+	 icXTXhrMyGzLgaCR3MW4oWiKwMahsSDodIrIUqVBEd2c77lrw/RFUYTdgTB14yJb7J
+	 AmQmDSvbuqXeefuq7nB6tIdLkstbSL/n0Y6OXGiQH8nG9JbgC7N9vYtzeMuWCwX/Px
+	 YQzQKRIk/AQZMRzMIxKwr9/DY5gDArP6OBunaEBI0dow0OGiJN54LSNJvA3RVVacLl
+	 FhFznXM7WnipQ==
 From: Eric Biggers <ebiggers@kernel.org>
-To: linux-ext4@vger.kernel.org,
-	Theodore Ts'o <tytso@mit.edu>
-Cc: Andreas Dilger <adilger.kernel@dilger.ca>,
-	Baokun Li <libaokun@linux.alibaba.com>,
-	Jan Kara <jack@suse.cz>,
-	Ojaswin Mujoo <ojaswin@linux.ibm.com>,
-	Ritesh Harjani <ritesh.list@gmail.com>,
-	Zhang Yi <yi.zhang@huawei.com>,
-	Ira Weiny <iweiny@kernel.org>,
+To: linux-mm@kvack.org,
+	Andrew Morton <akpm@linux-foundation.org>,
+	Chris Li <chrisl@kernel.org>,
+	Kairui Song <kasong@tencent.com>
+Cc: linux-ext4@vger.kernel.org,
+	linux-f2fs-devel@lists.sourceforge.net,
 	linux-fscrypt@vger.kernel.org,
 	linux-kernel@vger.kernel.org,
+	Kemeng Shi <shikemeng@huaweicloud.com>,
+	Nhat Pham <nphamcs@gmail.com>,
+	Baoquan He <baoquan.he@linux.dev>,
+	Barry Song <baohua@kernel.org>,
+	Youngjun Park <youngjun.park@lge.com>,
 	Eric Biggers <ebiggers@kernel.org>,
-	Disha Goel <disgoel@linux.ibm.com>,
 	stable@vger.kernel.org
-Subject: [PATCH] ext4: don't enable DAX on new encrypted files
-Date: Thu, 30 Jul 2026 10:52:12 -0700
-Message-ID: <20260730175212.36923-1-ebiggers@kernel.org>
+Subject: [PATCH] mm/swap: reject swapon() on filesystem-level encrypted files
+Date: Thu, 30 Jul 2026 11:48:53 -0700
+Message-ID: <20260730184853.48347-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -52,136 +53,55 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Currently, when a new encrypted regular file is created, the call to
-ext4_set_inode_flags(inode, init=true) in __ext4_new_inode() is made
-before EXT4_INODE_ENCRYPT is set.  As a result, it can set S_DAX if the
-filesystem is mounted with "-o dax=always".
+ext4 and f2fs don't prevent filesystem-level encrypted files from being
+set up directly as swap files.  In this case, encryption is bypassed.
 
-EXT4_INODE_ENCRYPT then actually gets set a bit later in
-__ext4_new_inode(), when it calls fscrypt_set_context() which calls
-ext4_set_context().  ext4_set_context() sets EXT4_INODE_ENCRYPT and
-calls ext4_set_inode_flags(inode, init=false) to set S_ENCRYPTED too.
+No one should be doing this, vs. the methods of encrypted swap that
+actually do work (such as swapping to a dm-crypt device, or swapping to
+a loopback device on top of a filesystem-level encrypted file).
 
-This was intended to clear S_DAX as well.  However, this was broken by
-commit 043546e46dc7 ("fs/ext4: Only change S_DAX on inode load").  This
-causes data written to the file to bypass encryption, also causing
-xfstests failures such as generic/548 (when "-o dax=always" is used).
+Nevertheless, to prevent user error, make swapon() explicitly reject
+this case.  Document this behavior in fscrypt.rst as well.
 
-Fix this by simplifying the flow by making __ext4_new_inode() set
-EXT4_INODE_ENCRYPT earlier.  This makes it take effect in
-ext4_set_inode_flags(inode, init=true), making S_DAX never be set.
-
-Similarly, make EXT4_STATE_MAY_INLINE_DATA never be set in the first
-place on new encrypted inodes.  Then it doesn't need to be cleared.
-
-As a result of these simplifications, ext4_set_context() no longer needs
-to change inode flags or state when 'handle != NULL'.  Remove that too.
-
-Reported-by: Disha Goel <disgoel@linux.ibm.com>
-Reported-by: Ojaswin Mujoo <ojaswin@linux.ibm.com>
-Closes: https://lore.kernel.org/r/20260723085648.1500357-1-ojaswin@linux.ibm.com
-Fixes: 043546e46dc7 ("fs/ext4: Only change S_DAX on inode load")
+Fixes: 9bd8212f981e ("ext4 crypto: add encryption policy and password salt support")
+Fixes: f424f664f0e8 ("f2fs crypto: add encryption policy and password salt support")
 Cc: stable@vger.kernel.org
 Signed-off-by: Eric Biggers <ebiggers@kernel.org>
 ---
- fs/ext4/crypto.c | 40 ++++++++++++++++++++--------------------
- fs/ext4/ialloc.c |  4 ++++
- 2 files changed, 24 insertions(+), 20 deletions(-)
+ Documentation/filesystems/fscrypt.rst | 4 ++++
+ mm/swapfile.c                         | 4 ++++
+ 2 files changed, 8 insertions(+)
 
-diff --git a/fs/ext4/crypto.c b/fs/ext4/crypto.c
-index f41f320f4437..3971986de028 100644
---- a/fs/ext4/crypto.c
-+++ b/fs/ext4/crypto.c
-@@ -144,7 +144,13 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
- 	if (inode->i_ino == EXT4_ROOT_INO)
- 		return -EPERM;
+diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
+index c0dd35f1af12..cba1989777da 100644
+--- a/Documentation/filesystems/fscrypt.rst
++++ b/Documentation/filesystems/fscrypt.rst
+@@ -1238,6 +1238,10 @@ astute users may notice some differences in behavior:
  
--	if (WARN_ON_ONCE(IS_DAX(inode) && i_size_read(inode)))
-+	/*
-+	 * For new encrypted inodes, S_DAX is never set in the first place.
-+	 *
-+	 * For existing inodes, this is called only on empty directories.  ext4
-+	 * never sets S_DAX on directories.
-+	 */
-+	if (WARN_ON_ONCE(IS_DAX(inode)))
- 		return -EINVAL;
+ - DAX (Direct Access) is not supported on encrypted files.
  
- 	if (ext4_test_inode_flag(inode, EXT4_INODE_DAX))
-@@ -163,6 +169,14 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
- 	 */
- 
- 	if (handle) {
-+		/*
-+		 * __ext4_new_inode() should have already set the encrypt flag
-+		 * on the inode and avoided enabling inline data.
-+		 */
-+		if (WARN_ON_ONCE(!IS_ENCRYPTED(inode)))
-+			return -EINVAL;
-+		if (WARN_ON_ONCE(ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)))
-+			return -EINVAL;
- 		/*
- 		 * Since the inode is new it is ok to pass the
- 		 * XATTR_CREATE flag. This is necessary to match the
-@@ -170,21 +184,10 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
- 		 * function with the credits allocated for the new
- 		 * inode.
- 		 */
--		res = ext4_xattr_set_handle(handle, inode,
--					    EXT4_XATTR_INDEX_ENCRYPTION,
--					    EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
--					    ctx, len, XATTR_CREATE);
--		if (!res) {
--			ext4_set_inode_flag(inode, EXT4_INODE_ENCRYPT);
--			ext4_clear_inode_state(inode,
--					EXT4_STATE_MAY_INLINE_DATA);
--			/*
--			 * Update inode->i_flags - S_ENCRYPTED will be enabled,
--			 * S_DAX may be disabled
--			 */
--			ext4_set_inode_flags(inode, false);
--		}
--		return res;
-+		return ext4_xattr_set_handle(handle, inode,
-+					     EXT4_XATTR_INDEX_ENCRYPTION,
-+					     EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
-+					     ctx, len, XATTR_CREATE);
++- Encrypted files cannot be used directly as swap files.  To swap to
++  an encrypted file, set up a loopback device on top of it.
++  Alternatively, encrypted swap can use a dm-crypt device instead.
++
+ - The maximum length of an encrypted symlink is 2 bytes shorter than
+   the maximum length of an unencrypted symlink.  For example, on an
+   EXT4 filesystem with a 4K block size, unencrypted symlinks can be up
+diff --git a/mm/swapfile.c b/mm/swapfile.c
+index 78b49b0658ad..e4991da81b5f 100644
+--- a/mm/swapfile.c
++++ b/mm/swapfile.c
+@@ -3650,6 +3650,10 @@ SYSCALL_DEFINE2(swapon, const char __user *, specialfile, int, swap_flags)
+ 		error = -EBUSY;
+ 		goto bad_swap_unlock_inode;
  	}
++	if (IS_ENCRYPTED(inode)) {
++		error = -EINVAL;
++		goto bad_swap_unlock_inode;
++	}
  
- 	res = dquot_initialize(inode);
-@@ -205,10 +208,7 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
- 				    ctx, len, 0);
- 	if (!res) {
- 		ext4_set_inode_flag(inode, EXT4_INODE_ENCRYPT);
--		/*
--		 * Update inode->i_flags - S_ENCRYPTED will be enabled,
--		 * S_DAX may be disabled
--		 */
-+		/* Update inode->i_flags to set S_ENCRYPTED. */
- 		ext4_set_inode_flags(inode, false);
- 		res = ext4_mark_inode_dirty(handle, inode);
- 		if (res)
-diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-index a40cb27f8116..a5831fc536db 100644
---- a/fs/ext4/ialloc.c
-+++ b/fs/ext4/ialloc.c
-@@ -997,6 +997,8 @@ struct inode *__ext4_new_inode(struct mnt_idmap *idmap,
- 		err = fscrypt_prepare_new_inode(dir, inode, &encrypt);
- 		if (err)
- 			goto out;
-+		if (encrypt)
-+			i_flags |= EXT4_ENCRYPT_FL;
- 	}
- 
- 	err = dquot_initialize(inode);
-@@ -1306,6 +1308,8 @@ struct inode *__ext4_new_inode(struct mnt_idmap *idmap,
- 	ei->i_extra_isize = sbi->s_want_extra_isize;
- 	ei->i_inline_off = 0;
- 	if (ext4_has_feature_inline_data(sb) &&
-+	    /* Encrypted inodes cannot have inline data */
-+	    !(ei->i_flags & EXT4_ENCRYPT_FL) &&
- 	    (!(ei->i_flags & (EXT4_DAX_FL|EXT4_EA_INODE_FL)) || S_ISDIR(mode)))
- 		ext4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
- 	ret = inode;
+ 	/*
+ 	 * The swap subsystem needs a major overhaul to support this.
 
 base-commit: f5098b6bae761e346ebcd9da7f95622c04733cff
 -- 
