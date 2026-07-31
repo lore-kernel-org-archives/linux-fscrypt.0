@@ -1,86 +1,69 @@
-Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+Received: from mx0a-001b2d01.pphosted.com (mx0a-001b2d01.pphosted.com [148.163.156.1])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9EF553CB567
-	for <linux-fscrypt@vger.kernel.org>; Fri, 31 Jul 2026 11:57:45 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=195.135.223.131
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9235F3EB10F;
+	Fri, 31 Jul 2026 12:16:04 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=148.163.156.1
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1785499067; cv=none; b=hHk2cotGH09SdO4LV28YO9q866WkwEkEFynDCzJIvIOdQiJZO4huydOKWyWL79VdDDx5cjZc5t4wCnqGjrKyBS+EL4AXqtXOkbi/1clOyvnXWAyrkz6Q+bsqcNLeB1j+9BTYdYIKVOdHa5U+e7UhIoD26NeKSE62dFXRrYWSmG0=
+	t=1785500167; cv=none; b=Co/PpmIwLduwXIr+h2BcFV4h62QzfYRMv1joVpvI9X1ED7POncPvxCcf01BtKUmTK3XlrrrnQRXNbnetySvAlpBpQEBFOrYUhOWUOP1Cy927qED5j8L+l5wpBToBYeJbmwH8JBfPhktGOVWNhAVdMN7FbNfRzvVFfM4vjWLQkJI=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1785499067; c=relaxed/simple;
-	bh=4ebNtaYM47g+iC2MCt63BN9zreli2zWZpF2+WlYW8I0=;
+	s=arc-20240116; t=1785500167; c=relaxed/simple;
+	bh=UZ/Sln7YYeVyoGMNPMtP4Lomz1r5uacMZnllJTsyPsI=;
 	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=aOMxD87L67YEdi9t93ZVVcTnAFg/BG/gwJeDPY10qsSO9hW99qCJg38UkboKHir8hSW6ftzESoNfv7QGC2sqpL12PZI0wTWfX2vLbL6gR0+TBbCsQPFr984w26YPT1jyboz09LFDk7YbqzSRv4Iocc1KSABqLdFo3roYxDQ573c=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz; spf=pass smtp.mailfrom=suse.cz; dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.b=gCOk0P3G; dkim=permerror (0-bit key) header.d=suse.cz header.i=@suse.cz header.b=+0wE5aTs; dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.b=u8+nXhWi; dkim=permerror (0-bit key) header.d=suse.cz header.i=@suse.cz header.b=h43eim/X; arc=none smtp.client-ip=195.135.223.131
-Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.cz
+	 Content-Type:Content-Disposition:In-Reply-To; b=lb7ctk/rSOTjo2bh+Sv1gycTmjctgu6e3Hw4+ezcaSsBMoFRofXjQwrIUE/IIBLsT1Gn3ejSdp10CD0R7LZ2WMadmxmZ3qBsJ7p5wTPCykJEBXfeBRRsAXYWE5IAeeNz0QL8mIT+/LrYPdXPunKHUQ7IP0Y7rugpo89onJMk9Oo=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.ibm.com; spf=pass smtp.mailfrom=linux.ibm.com; dkim=pass (2048-bit key) header.d=ibm.com header.i=@ibm.com header.b=Gn/bsPY0; arc=none smtp.client-ip=148.163.156.1
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.ibm.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.ibm.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.b="gCOk0P3G";
-	dkim=permerror (0-bit key) header.d=suse.cz header.i=@suse.cz header.b="+0wE5aTs";
-	dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.b="u8+nXhWi";
-	dkim=permerror (0-bit key) header.d=suse.cz header.i=@suse.cz header.b="h43eim/X"
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by smtp-out2.suse.de (Postfix) with ESMTPS id A7A2F410C;
-	Fri, 31 Jul 2026 11:57:29 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
-	t=1785499053; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=cTgMwaWPzZIqwwhLFXF76DzOC7OTGrQ4O4jIUUHt9oQ=;
-	b=gCOk0P3GD5dKzTvHX7KVbUTO+wjDO5o+CRD0LHZHqlfvWA5G9X1+DImySUQsB0BTffUxCf
-	swMLe1ddV506Y+KTtd8u5sRkLXFRNN1avxVSQ61o9xEO3XP5ZgvKuPIR2YeEt+0kgV3J89
-	Ava/ERfm9lsLF0cXcrvt/N9WzOD3/es=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
-	s=susede2_ed25519; t=1785499053;
-	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=cTgMwaWPzZIqwwhLFXF76DzOC7OTGrQ4O4jIUUHt9oQ=;
-	b=+0wE5aTs2t+Temb2JJ7AoVE/qmIOek2/I/g3a7nFtWSuVx8uAWjcejv4geLaj5LEua8HWM
-	jNBBA8KfN81bWpBg==
-Authentication-Results: smtp-out2.suse.de;
-	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
-	t=1785499049; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=cTgMwaWPzZIqwwhLFXF76DzOC7OTGrQ4O4jIUUHt9oQ=;
-	b=u8+nXhWie/a1eXCl5tAmd9P5krNGYfWuSVTcTicn48zMiF74vkdqQyztJE/p2f21tH6LAx
-	c7NJGVx2/5FUnjnPQ5WUoe4WgHhaMdOmsPr8H1c26cn5g6RUZJngglBaMkgLDNRSU+5bxV
-	0hFA4mbY/4sjH3Mw/lafUGqHaO9jsgo=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
-	s=susede2_ed25519; t=1785499049;
-	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=cTgMwaWPzZIqwwhLFXF76DzOC7OTGrQ4O4jIUUHt9oQ=;
-	b=h43eim/XTeHwYYQc5OzZYiWItp2+ynW/A5GFBpA6jyBhGA8jiANwBIFpgeKEoFjl9aPMCb
-	1mUytZ3vslI0neBw==
-Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 87FD1779B0;
-	Fri, 31 Jul 2026 11:57:29 +0000 (UTC)
-Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
-	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id qjwtIamNbGr8ZwAAD6G6ig
-	(envelope-from <jack@suse.cz>); Fri, 31 Jul 2026 11:57:29 +0000
-Received: by quack3.suse.cz (Postfix, from userid 1000)
-	id 2BEACA13A4; Fri, 31 Jul 2026 13:57:29 +0200 (CEST)
-Date: Fri, 31 Jul 2026 13:57:29 +0200
-From: Jan Kara <jack@suse.cz>
+	dkim=pass (2048-bit key) header.d=ibm.com header.i=@ibm.com header.b="Gn/bsPY0"
+Received: from pps.filterd (m0356517.ppops.net [127.0.0.1])
+	by mx0a-001b2d01.pphosted.com (8.18.1.11/8.18.1.11) with ESMTP id 66VBm3PW1766156;
+	Fri, 31 Jul 2026 12:15:45 GMT
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=cc
+	:content-type:date:from:in-reply-to:message-id:mime-version
+	:references:subject:to; s=pp1; bh=/87/IHsO3lCniDuKp/DLkggwQfj3jV
+	AVmfXdYpPtzFc=; b=Gn/bsPY0ovYFMUw3VVaoZqRCa0EQTjyuEIVSwcj4L58/tg
+	XesYGSK6SiqNLEnEcCIo4e/mF2FeqbWgqYtpqZWfAApNXRImFosOU1myM5y+jwV4
+	JRk3A67OPPUy9AFrzyIKR2h4zLSGHGIGKHl3lfKV+TgQymV6AUiyBtLUydIqYU1m
+	Wx1KpXW3TI1s65+H3NK5h1KlpKb7BbZ97gozhp7lUF0YYaToZAtTflaTyW7Gw+m+
+	fD0NppEdH1HAFaTUI+JpJCFsrpogQYV6W373D7Hz5Q0OKeYGBzuwB3JqgGjJoz0z
+	mKKLkxDs5WYcE5SlBrQ61+c5SXtBYQdrNei9h+6g==
+Received: from ppma11.dal12v.mail.ibm.com (db.9e.1632.ip4.static.sl-reverse.com [50.22.158.219])
+	by mx0a-001b2d01.pphosted.com (PPS) with ESMTPS id 4fmv0y4xyn-1
+	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+	Fri, 31 Jul 2026 12:15:44 +0000 (GMT)
+Received: from pps.filterd (ppma11.dal12v.mail.ibm.com [127.0.0.1])
+	by ppma11.dal12v.mail.ibm.com (8.18.1.7/8.18.1.7) with ESMTP id 66VCBIGM004182;
+	Fri, 31 Jul 2026 12:15:43 GMT
+Received: from smtprelay02.fra02v.mail.ibm.com ([9.218.2.226])
+	by ppma11.dal12v.mail.ibm.com (PPS) with ESMTPS id 4fna5yfhqc-1
+	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
+	Fri, 31 Jul 2026 12:15:43 +0000 (GMT)
+Received: from smtpav02.fra02v.mail.ibm.com (smtpav02.fra02v.mail.ibm.com [10.20.54.101])
+	by smtprelay02.fra02v.mail.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 66VCFfDZ50659690
+	(version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
+	Fri, 31 Jul 2026 12:15:42 GMT
+Received: from smtpav02.fra02v.mail.ibm.com (unknown [127.0.0.1])
+	by IMSVA (Postfix) with ESMTP id D422520040;
+	Fri, 31 Jul 2026 12:15:41 +0000 (GMT)
+Received: from smtpav02.fra02v.mail.ibm.com (unknown [127.0.0.1])
+	by IMSVA (Postfix) with ESMTP id AD0B220043;
+	Fri, 31 Jul 2026 12:15:38 +0000 (GMT)
+Received: from li-dc0c254c-257c-11b2-a85c-98b6c1322444.ibm.com (unknown [9.124.209.143])
+	by smtpav02.fra02v.mail.ibm.com (Postfix) with ESMTPS;
+	Fri, 31 Jul 2026 12:15:38 +0000 (GMT)
+Date: Fri, 31 Jul 2026 17:45:36 +0530
+From: Ojaswin Mujoo <ojaswin@linux.ibm.com>
 To: Eric Biggers <ebiggers@kernel.org>
-Cc: linux-ext4@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, 
-	Andreas Dilger <adilger.kernel@dilger.ca>, Baokun Li <libaokun@linux.alibaba.com>, Jan Kara <jack@suse.cz>, 
-	Ojaswin Mujoo <ojaswin@linux.ibm.com>, Ritesh Harjani <ritesh.list@gmail.com>, 
-	Zhang Yi <yi.zhang@huawei.com>, Ira Weiny <iweiny@kernel.org>, linux-fscrypt@vger.kernel.org, 
-	linux-kernel@vger.kernel.org, Disha Goel <disgoel@linux.ibm.com>, stable@vger.kernel.org
+Cc: linux-ext4@vger.kernel.org, "Theodore Ts'o" <tytso@mit.edu>,
+        Andreas Dilger <adilger.kernel@dilger.ca>,
+        Baokun Li <libaokun@linux.alibaba.com>, Jan Kara <jack@suse.cz>,
+        Ritesh Harjani <ritesh.list@gmail.com>, Zhang Yi <yi.zhang@huawei.com>,
+        Ira Weiny <iweiny@kernel.org>, linux-fscrypt@vger.kernel.org,
+        linux-kernel@vger.kernel.org, Disha Goel <disgoel@linux.ibm.com>,
+        stable@vger.kernel.org
 Subject: Re: [PATCH] ext4: don't enable DAX on new encrypted files
-Message-ID: <4ramlo3giiu63es2enlu5ebbg5swq27pc45b2yso33pp3gtmgr@yd5hfhglyi6d>
+Message-ID: <amyR6P_-WWTTEaup@li-dc0c254c-257c-11b2-a85c-98b6c1322444.ibm.com>
 References: <20260730175212.36923-1-ebiggers@kernel.org>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -91,34 +74,36 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
 In-Reply-To: <20260730175212.36923-1-ebiggers@kernel.org>
-X-Spam-Score: -2.30
-X-Spam-Level: 
-X-Spam-Flag: NO
-X-Spamd-Result: default: False [-2.30 / 50.00];
-	BAYES_HAM(-3.00)[100.00%];
-	SUSPICIOUS_RECIPS(1.50)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	MID_RHS_NOT_FQDN(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	FREEMAIL_ENVRCPT(0.00)[gmail.com];
-	MISSING_XM_UA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	ARC_NA(0.00)[];
-	RCPT_COUNT_TWELVE(0.00)[14];
-	TAGGED_RCPT(0.00)[];
-	DKIM_SIGNED(0.00)[suse.cz:s=susede2_rsa,suse.cz:s=susede2_ed25519];
-	TO_DN_SOME(0.00)[];
-	FROM_HAS_DN(0.00)[];
-	FREEMAIL_CC(0.00)[vger.kernel.org,mit.edu,dilger.ca,linux.alibaba.com,suse.cz,linux.ibm.com,gmail.com,huawei.com,kernel.org];
-	RCVD_COUNT_THREE(0.00)[3];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_TLS_LAST(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.com:email,imap1.dmz-prg2.suse.org:helo,suse.cz:email]
+X-TM-AS-GCONF: 00
+X-Proofpoint-Reinject: loops=2 maxloops=12
+X-Proofpoint-GUID: bccxDvmbbCb-mKgYT23BOSSyFOxDXzJB
+X-Proofpoint-ORIG-GUID: Ot_mZbCNqSbCXoOm5AaZzsZw9FrqX67p
+X-Proofpoint-Spam-Info: AW1haW4tMjYwNzMxMDA5MCBTYWx0ZWRfX3N6ybJvhltjk
+ ZI2wdTtDI5uQHN2auZKUC8d9M+/uvrLn735JTo+7KXdPfZYF5mArslIHKI+4Rw6XNAXFcaa4F1F
+ 7aLdajaIhgJbpO/5OmWzBRXsEge1eDQ=
+X-Authority-Analysis: v=2.4 cv=dYuwG3Xe c=1 sm=1 tr=0 ts=6a6c91f1 cx=c_pps
+ a=aDMHemPKRhS1OARIsFnwRA==:117 a=aDMHemPKRhS1OARIsFnwRA==:17
+ a=kj9zAlcOel0A:10 a=RAioF0-LDSMA:10 a=VkNPw1HP01LnGYTKEx00:22
+ a=RnoormkPH1_aCDwRdu11:22 a=U7nrCbtTmkRpXpFmAIza:22 a=VwQbUJbxAAAA:8
+ a=VnNF1IyMAAAA:8 a=YVDjClEEQ8ZDZGE1TyEA:9 a=CjuIK1q_8ugA:10
+X-Proofpoint-Spam-Details-Enc: AW1haW4tMjYwNzMxMDA5MCBTYWx0ZWRfXyUqgvVFRdKYA
+ d343G5j8wQ83dtQ14sShNsDtdVayxmWF9lRwBFG83OPG2mLEmyOLChdy0GECMATBClmm5lPEy2A
+ SXACKUkXdYcI3ODhMKefFB1jPO6okYqEvgGBz9YtKTFeXhsNbV5mInWv9tA3w+59B5ggeGOJrMX
+ 3b5U7BG3dl6sMtIB/re9tLJvE10DPVqo+QQW/rfXT1XyrCyiweIfKb8M76S15k6Th48Dxa/rPKN
+ bxShmq7U2Me1pHbH1A552Mxsk54lW5S17biCtZquj52BDyje8R536eiucl2xK6e2Cv3JIXy6y4y
+ b7eOEECwjbviMklGOfyRdlGa/q9ibGstQ7DJjNG2xtnYeFdOokdCkBnN3KMtbxBc9X+AM227YXW
+ IOqpzpEHDqi4/qFFc+ScMv5S1IXdmBy6SXnd7q3qoWPX/t/JlID90GVPjezQvZQICYl+yhJgFNq
+ z2Tc/1ROnJFWNdSvaRg==
+X-Proofpoint-Virus-Version: vendor=baseguard
+ engine=ICAP:2.0.293,Aquarius:18.0.1143,Hydra:6.1.134,FMLib:17.12.100.49
+ definitions=2026-07-31_04,2026-07-30_01,2025-10-01_01
+X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0
+ priorityscore=1501 impostorscore=0 clxscore=1011 phishscore=0 malwarescore=0
+ spamscore=0 lowpriorityscore=0 bulkscore=0 suspectscore=0 adultscore=0
+ classifier=typeunknown authscore=0 authtc= authcc= route=outbound adjust=0
+ reason=mlx scancount=1 engine=8.22.0-2606150000 definitions=main-2607310090
 
-On Thu 30-07-26 10:52:12, Eric Biggers wrote:
+On Thu, Jul 30, 2026 at 10:52:12AM -0700, Eric Biggers wrote:
 > Currently, when a new encrypted regular file is created, the call to
 > ext4_set_inode_flags(inode, init=true) in __ext4_new_inode() is made
 > before EXT4_INODE_ENCRYPT is set.  As a result, it can set S_DAX if the
@@ -151,11 +136,15 @@ On Thu 30-07-26 10:52:12, Eric Biggers wrote:
 > Cc: stable@vger.kernel.org
 > Signed-off-by: Eric Biggers <ebiggers@kernel.org>
 
-Looks good! Feel free to add:
+Hey Eric, looks good and it passes all the failing tests in my dax
+setup.
 
-Reviewed-by: Jan Kara <jack@suse.cz>
+Feel free to add:
 
-								Honza
+Reviewed-by: Ojaswin Mujoo <ojaswin@linux.ibm.com>
+
+Regards,
+ojaswin
 
 > ---
 >  fs/ext4/crypto.c | 40 ++++++++++++++++++++--------------------
@@ -261,6 +250,3 @@ Reviewed-by: Jan Kara <jack@suse.cz>
 > -- 
 > 2.55.0
 > 
--- 
-Jan Kara <jack@suse.com>
-SUSE Labs, CR
