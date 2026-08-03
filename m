@@ -1,60 +1,68 @@
-Received: from mx0a-001b2d01.pphosted.com (mx0a-001b2d01.pphosted.com [148.163.156.1])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+Received: from mail-ej1-f53.google.com (mail-ej1-f53.google.com [209.85.218.53])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 452B0390C85;
-	Mon,  3 Aug 2026 08:01:24 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=148.163.156.1
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 50FAF3B9D86
+	for <linux-fscrypt@vger.kernel.org>; Mon,  3 Aug 2026 09:07:43 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=209.85.218.53
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1785744085; cv=none; b=dFVPUbZGh+EoFG8iweAd9tqI7+SKL++Zntu/sBVjEy3kZX3KelWOfk3CU9NHWYrvxjTxIIjEFE5/DBiA07rFxB0q2cbCQPTqAzAG4WsBT/VNuIfSyVoiL6k4JkuFwn4FmiU5Xg4QhkHLDBmJOSxD8EueaIqDtMzVyFVNxQMKXrA=
+	t=1785748070; cv=none; b=QKc/uJPiuUn0ORBGGwvupjpzFcCHIG0ntzRy6tPFbvDGLY98aBhLbYOMVqoeqTOBjGvjhnKCCxFnvdX+uV4rOg6eLIw4YNlNpwp3DvBJQCrxYrB32GSPFKhfrdwqo0E16SGwXEqJO9NFSWKYTPuaXYggEu5svnNeiSgNlpZazas=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1785744085; c=relaxed/simple;
-	bh=oX0ZyXAkCAcvQ22lCDHo+CwdEB9Y13OwMAkfuo895Ds=;
+	s=arc-20240116; t=1785748070; c=relaxed/simple;
+	bh=b16T4GW68hAFFc0osm9lAVRPnORne6TE2Xjz+8jsFek=;
 	h=Message-ID:Date:MIME-Version:Subject:To:Cc:References:From:
-	 In-Reply-To:Content-Type; b=bxYzUmDgYaW5ObUXV8alyx+KA7kv/JnO9sBh8mdT8xjU9a+CPwlMPkbGTx2l12OaIYL1eOd9QKFK1XOT3QB/NfHFQR2l78UQUa0KpgzA6zFAyHPqyq0vK64PZcMuwbODo1a8nLdUW+uiVqOsMcjt2EWQ4NrTyOPP8uqqgBBd42w=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.ibm.com; spf=pass smtp.mailfrom=linux.ibm.com; dkim=pass (2048-bit key) header.d=ibm.com header.i=@ibm.com header.b=ntxNSd3s; arc=none smtp.client-ip=148.163.156.1
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.ibm.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.ibm.com
+	 In-Reply-To:Content-Type; b=Fa1+FKoxtyb3mc74VSWq9SHufApKhjVxxBzg8eh/h6FrNUvjMgNm4ivqp2fdJMCdPLj1Y1nDzkZR1QIGknF5/3TgykYfaUaLhpZJqBAAv9OkZTgo1xwff4KhjkgxDBHmHR1M1XyL1Y51bbsHen6721A6qmCIrqlQOCCPtpQ/48g=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b=Z7FcCeXM; arc=none smtp.client-ip=209.85.218.53
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=ibm.com header.i=@ibm.com header.b="ntxNSd3s"
-Received: from pps.filterd (m0360083.ppops.net [127.0.0.1])
-	by mx0a-001b2d01.pphosted.com (8.18.1.11/8.18.1.11) with ESMTP id 672LlobN223138;
-	Mon, 3 Aug 2026 08:00:59 GMT
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ibm.com; h=cc
-	:content-transfer-encoding:content-type:date:from:in-reply-to
-	:message-id:mime-version:references:subject:to; s=pp1; bh=42GWTB
-	3NcWvfnxOcbHiWBnLyZbnmaKmM6GdZWBW/MQQ=; b=ntxNSd3srOGc1zVxxBbWO8
-	7mn4FSrXiO3OSMowQOqK778MVXYYSyhRQYeBPpglCDX5RDWrHCxlVpdfeI07rjvx
-	xCoPAj5Ql1H0LhhOFOYb8ffPPSdVXVzvDHIPO6tOGwKv4gGd4ApwAQmsXwzSYLsA
-	91CYLEZVV5/NejjSQIQd/lFy4l2L7ua1++9MZHb9L5peyIW+AUidJByy6toFR+Ec
-	dpE4VOPvqE+1Owmp76Z5P77CnFCywuGYVpJCi8EPyV/QRbTC+kxtOCd5UhmijGpF
-	rrE11E9KaXRDPPRKvFrDFN9zvtRuUCwG96z9VJye4COpv+RXl63H+V33mpCGD1BQ
-	==
-Received: from ppma22.wdc07v.mail.ibm.com (5c.69.3da9.ip4.static.sl-reverse.com [169.61.105.92])
-	by mx0a-001b2d01.pphosted.com (PPS) with ESMTPS id 4fs8a3qk58-1
-	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-	Mon, 03 Aug 2026 08:00:58 +0000 (GMT)
-Received: from pps.filterd (ppma22.wdc07v.mail.ibm.com [127.0.0.1])
-	by ppma22.wdc07v.mail.ibm.com (8.18.1.7/8.18.1.7) with ESMTP id 6737uOg8001363;
-	Mon, 3 Aug 2026 08:00:57 GMT
-Received: from smtprelay07.fra02v.mail.ibm.com ([9.218.2.229])
-	by ppma22.wdc07v.mail.ibm.com (PPS) with ESMTPS id 4fsugvvet9-1
-	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT);
-	Mon, 03 Aug 2026 08:00:56 +0000 (GMT)
-Received: from smtpav04.fra02v.mail.ibm.com (smtpav04.fra02v.mail.ibm.com [10.20.54.103])
-	by smtprelay07.fra02v.mail.ibm.com (8.14.9/8.14.9/NCO v10.0) with ESMTP id 67380s2C35193334
-	(version=TLSv1/SSLv3 cipher=DHE-RSA-AES256-GCM-SHA384 bits=256 verify=OK);
-	Mon, 3 Aug 2026 08:00:54 GMT
-Received: from smtpav04.fra02v.mail.ibm.com (unknown [127.0.0.1])
-	by IMSVA (Postfix) with ESMTP id B091D20040;
-	Mon,  3 Aug 2026 08:00:54 +0000 (GMT)
-Received: from smtpav04.fra02v.mail.ibm.com (unknown [127.0.0.1])
-	by IMSVA (Postfix) with ESMTP id A8F0E2004D;
-	Mon,  3 Aug 2026 08:00:50 +0000 (GMT)
-Received: from [9.39.27.127] (unknown [9.39.27.127])
-	by smtpav04.fra02v.mail.ibm.com (Postfix) with ESMTP;
-	Mon,  3 Aug 2026 08:00:50 +0000 (GMT)
-Message-ID: <17e787ea-7e0b-4887-b736-4e2f3dbeb245@linux.ibm.com>
-Date: Mon, 3 Aug 2026 13:30:48 +0530
+	dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b="Z7FcCeXM"
+Received: by mail-ej1-f53.google.com with SMTP id a640c23a62f3a-c197eaaab00so507727966b.0
+        for <linux-fscrypt@vger.kernel.org>; Mon, 03 Aug 2026 02:07:43 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=suse.com; s=google; t=1785748061; x=1786352861; darn=vger.kernel.org;
+        h=content-type:in-reply-to:autocrypt:from:content-language:references
+         :cc:to:subject:user-agent:mime-version:date:message-id:from:to:cc
+         :subject:date:message-id:reply-to:content-type;
+        bh=b16T4GW68hAFFc0osm9lAVRPnORne6TE2Xjz+8jsFek=;
+        b=Z7FcCeXMrLdA4ufKv3RkAK2XjzoZuT/WD08supKBZltexr6brLI0QqJPKhEFpp7sDA
+         HYwMxY6FxX3YOfFApphDCuPUATxu/y7qeBLbAYu2yqLWCsoazm1ItwgVq/96TCwk2TVB
+         NskwtZLSfce+7JT1U/CaS5eF+YV5r/p+7Fu0QSkZM/ct5NBcWxBaJYW5ejWTdqYrKH0g
+         iHU3TWlIcNrtWFPmirdzAJvhrbUHrEZ8uN5R6Xj2UsFTie7NP31NaB/rU1jAIK06snvc
+         WiKINhlA/NwAlwH1BiG08IOFmuWiCfghR5one6/3xPzDMazxuybkHNld5dcyXIFNMQOo
+         Guig==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20251104; t=1785748061; x=1786352861;
+        h=content-type:in-reply-to:autocrypt:from:content-language:references
+         :cc:to:subject:user-agent:mime-version:date:message-id:x-gm-gg
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to
+         :content-type;
+        bh=b16T4GW68hAFFc0osm9lAVRPnORne6TE2Xjz+8jsFek=;
+        b=UJ63J1iQiqrvjOvoVXC1T6z8S+WxSRNlQ+IDOS+VTbOz49qKpHNqG+YQNQ2OMpUQJz
+         uvhy7/ItdV6GKzAl/2nX+he1RajQkAOoVvJOn0LSKWiYnKh279SUQ5YAxoZCBOg3j8OQ
+         ox8S8GrN8smU/u4vkn6xnHXP0C+VCphnI62gsndLMIpOW8g4uUxrML/R4sLPjrkYlAGy
+         3fU/8hV/wiQPnubPMSfS02a8Ll4kxBZWehee3+lW1dCP8qF5VM9AlRZk0ILiPYsy6CQH
+         AhIwxJRpahp56LVI3NefCWisAgtgaXkXq+eyWvwK6B39aPjKuRSYFwsD3h/ifGuzizYw
+         yzEQ==
+X-Forwarded-Encrypted: i=1; AHgh+RrBwdsvX1YpySpcSqStv/JxsP07kJHsjWDnZVhaZFB7TWjYvPUUF40xgMLuB6XzetW4RxA8Et2rRXifJ7Tw@vger.kernel.org
+X-Gm-Message-State: AOJu0YwUNhTOD2G9thFtxdPLbDO8vmk86vYBdEPZJLdHQa0w5/YDU6gh
+	R0O6dQAs7oSv2deFhFZCGPzhGudL/PDieG63lbwnmMp8NfjXEq2dWgxMfUlb+5z0Bmo=
+X-Gm-Gg: AR+sD13gzzCdzPbKrrhJ4wYB1Kr6oSPu3/YCB6hjNfvdD9V4wcGJVe1Wd8ABNcfOEkR
+	OPlVL+9dlqlDr/rAYIlMzX8UCaW4P38uSmrPGMw4m9wpJGtI7t+/2mMEZPK5CVjmsMDDQhyYvCQ
+	XG6aTX5+m5D5P2tQ3u5Xfxi8fAIkifpBT0bi0vQrzCyq+gQKw2OjElt9QOPqTIB6kLGEMNuEmlx
+	1+O2v4eQPDxMbu7LBpC0ix4Bi8u+g8g37gr0XZuu+pTKvIXa7VEwNjK8h0R5FWWprtjYBnrO4B7
+	m0iBAApcziWdkJU0tB7xfTY64a41QwPmk9KCly5PnGUEA1K0pA10mwTxsdvJgZikz2XkVbotxZu
+	0ESr8+YZbuay6Omug5ghjlgm+rBHjuXc8IPkPQpGifkeKSvDbIXRfnXHnWZiYaFIgkEriSaGNEh
+	+eRn98wA7XTVDHq6Wr3JBwsZlJ/TFvwDTeL1R7QzUUOawjy9iwjAmM6XO8sCoJmg4AVywai9OcW
+	iY82/Mv8ShOqLOqeCNt9EGw/0tkVOx+06JqENzhFaUr1g62mcIBEuT1TzHNiaUlPFU33g86MYJp
+	WwM7QLTGydeMDak=
+X-Received: by 2002:a17:907:76fa:b0:c19:fb6e:5ff0 with SMTP id a640c23a62f3a-c1fe81a5d9fmr582774266b.15.1785748061532;
+        Mon, 03 Aug 2026 02:07:41 -0700 (PDT)
+Received: from ?IPV6:2a00:12d0:af5d:ad01:5d3f:14e6:9bcb:5112? (2a00-12d0-af5d-ad01-5d3f-14e6-9bcb-5112.ip.tng.de. [2a00:12d0:af5d:ad01:5d3f:14e6:9bcb:5112])
+        by smtp.gmail.com with ESMTPSA id a640c23a62f3a-c1fd445432dsm507440166b.41.2026.08.03.02.07.40
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Mon, 03 Aug 2026 02:07:41 -0700 (PDT)
+Message-ID: <5ca4d0e4-1747-45a7-a916-a7516bb1692b@suse.com>
+Date: Mon, 3 Aug 2026 11:07:39 +0200
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -62,199 +70,268 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 User-Agent: Mozilla Thunderbird
-Subject: Re: [PATCH] ext4: don't enable DAX on new encrypted files
-Content-Language: en-GB
-To: Eric Biggers <ebiggers@kernel.org>, linux-ext4@vger.kernel.org,
-        "Theodore Ts'o" <tytso@mit.edu>
-Cc: Andreas Dilger <adilger.kernel@dilger.ca>,
-        Baokun Li <libaokun@linux.alibaba.com>, Jan Kara <jack@suse.cz>,
-        Ojaswin Mujoo <ojaswin@linux.ibm.com>,
-        Ritesh Harjani
- <ritesh.list@gmail.com>,
-        Zhang Yi <yi.zhang@huawei.com>, Ira Weiny <iweiny@kernel.org>,
-        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
-        stable@vger.kernel.org
-References: <20260730175212.36923-1-ebiggers@kernel.org>
-From: Disha Goel <disgoel@linux.ibm.com>
-In-Reply-To: <20260730175212.36923-1-ebiggers@kernel.org>
+Subject: Re: [PATCH RFC 00/14] Remove PG_private by using page/folio->private
+ checks instead
+To: Zi Yan <ziy@nvidia.com>, David Hildenbrand <david@kernel.org>,
+ "Matthew Wilcox (Oracle)" <willy@infradead.org>,
+ Andrew Morton <akpm@linux-foundation.org>,
+ Muchun Song <muchun.song@linux.dev>, Lorenzo Stoakes <ljs@kernel.org>,
+ "Liam R. Howlett" <liam@infradead.org>, Vlastimil Babka <vbabka@kernel.org>,
+ Mike Rapoport <rppt@kernel.org>, Suren Baghdasaryan <surenb@google.com>,
+ Michal Hocko <mhocko@suse.com>, Baolin Wang <baolin.wang@linux.alibaba.com>,
+ Nico Pache <nico.pache@linux.dev>, Ryan Roberts <ryan.roberts@arm.com>,
+ Dev Jain <dev.jain@arm.com>, Barry Song <baohua@kernel.org>,
+ Lance Yang <lance.yang@linux.dev>, Usama Arif <usama.arif@linux.dev>,
+ Gregory Price <gourry@gourry.net>, Ying Huang
+ <ying.huang@linux.alibaba.com>, Alistair Popple <apopple@nvidia.com>,
+ Johannes Weiner <hannes@cmpxchg.org>, Qi Zheng <qi.zheng@linux.dev>,
+ Shakeel Butt <shakeel.butt@linux.dev>, Kairui Song <kasong@tencent.com>
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org,
+ Minchan Kim <minchan@kernel.org>,
+ Sergey Senozhatsky <senozhatsky@chromium.org>,
+ Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>,
+ Arnaldo Carvalho de Melo <acme@kernel.org>,
+ Namhyung Kim <namhyung@kernel.org>, Thomas Gleixner <tglx@kernel.org>,
+ Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@linux.intel.com>,
+ x86@kernel.org, Mark Rutland <mark.rutland@arm.com>,
+ Alexander Shishkin <alexander.shishkin@linux.intel.com>,
+ Jiri Olsa <jolsa@kernel.org>, Ian Rogers <irogers@google.com>,
+ Adrian Hunter <adrian.hunter@intel.com>, James Clark
+ <james.clark@linaro.org>, "H. Peter Anvin" <hpa@zytor.com>,
+ linux-perf-users@vger.kernel.org, Stefano Stabellini
+ <sstabellini@kernel.org>,
+ Oleksandr Tyshchenko <oleksandr_tyshchenko@epam.com>,
+ xen-devel@lists.xenproject.org, Eric Biggers <ebiggers@kernel.org>,
+ "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>,
+ linux-fscrypt@vger.kernel.org, Oscar Salvador <osalvador@suse.de>,
+ Chao Yu <chao@kernel.org>, linux-f2fs-devel@lists.sourceforge.net,
+ Gao Xiang <xiang@kernel.org>, Jan Kara <jack@suse.cz>,
+ Yue Hu <zbestahu@gmail.com>, Jeffle Xu <jefflexu@linux.alibaba.com>,
+ Sandeep Dhavale <dhavale@google.com>, Hongbo Li <hongbohbli@tencent.com>,
+ Chunhai Guo <guochunhai@vivo.com>, linux-erofs@lists.ozlabs.org,
+ linux-fsdevel@vger.kernel.org, Steven Rostedt <rostedt@goodmis.org>,
+ Masami Hiramatsu <mhiramat@kernel.org>,
+ Mathieu Desnoyers <mathieu.desnoyers@efficios.com>,
+ Matthew Brost <matthew.brost@intel.com>,
+ Joshua Hahn <joshua.hahnjy@gmail.com>, Rakie Kim <rakie.kim@sk.com>,
+ Byungchul Park <byungchul@sk.com>, Axel Rasmussen
+ <axelrasmussen@google.com>, Yuanchu Xie <yuanchu@google.com>,
+ Wei Xu <weixugc@google.com>, linux-trace-kernel@vger.kernel.org,
+ Trond Myklebust <trondmy@kernel.org>, Anna Schumaker <anna@kernel.org>,
+ linux-nfs@vger.kernel.org, Song Liu <song@kernel.org>,
+ Yu Kuai <yukuai@fygo.io>, Ilya Dryomov <idryomov@gmail.com>,
+ Alex Markuze <amarkuze@redhat.com>, Viacheslav Dubeyko <slava@dubeyko.com>,
+ Li Nan <magiclinan@didiglobal.com>, Xiao Ni <xiao@kernel.org>,
+ linux-raid@vger.kernel.org, ceph-devel@vger.kernel.org,
+ Richard Weinberger <richard@nod.at>, Zhihao Cheng <chengzhihao1@huawei.com>,
+ linux-mtd@lists.infradead.org, Baoquan He <baoquan.he@linux.dev>,
+ Pasha Tatashin <pasha.tatashin@soleen.com>,
+ Pratyush Yadav <pratyush@kernel.org>, Jonathan Corbet <corbet@lwn.net>,
+ Dave Young <ruirui.yang@linux.dev>, Shuah Khan <skhan@linuxfoundation.org>,
+ kexec@lists.infradead.org, linux-doc@vger.kernel.org
+References: <20260731-remove-pg_private-v1-0-142c97ba3562@nvidia.com>
+Content-Language: en-US
+From: =?UTF-8?B?SsO8cmdlbiBHcm/Dnw==?= <jgross@suse.com>
+Autocrypt: addr=jgross@suse.com; keydata=
+ xsBNBFOMcBYBCACgGjqjoGvbEouQZw/ToiBg9W98AlM2QHV+iNHsEs7kxWhKMjrioyspZKOB
+ ycWxw3ie3j9uvg9EOB3aN4xiTv4qbnGiTr3oJhkB1gsb6ToJQZ8uxGq2kaV2KL9650I1SJve
+ dYm8Of8Zd621lSmoKOwlNClALZNew72NjJLEzTalU1OdT7/i1TXkH09XSSI8mEQ/ouNcMvIJ
+ NwQpd369y9bfIhWUiVXEK7MlRgUG6MvIj6Y3Am/BBLUVbDa4+gmzDC9ezlZkTZG2t14zWPvx
+ XP3FAp2pkW0xqG7/377qptDmrk42GlSKN4z76ELnLxussxc7I2hx18NUcbP8+uty4bMxABEB
+ AAHNH0p1ZXJnZW4gR3Jvc3MgPGpncm9zc0BzdXNlLmNvbT7CwHkEEwECACMFAlOMcK8CGwMH
+ CwkIBwMCAQYVCAIJCgsEFgIDAQIeAQIXgAAKCRCw3p3WKL8TL8eZB/9G0juS/kDY9LhEXseh
+ mE9U+iA1VsLhgDqVbsOtZ/S14LRFHczNd/Lqkn7souCSoyWsBs3/wO+OjPvxf7m+Ef+sMtr0
+ G5lCWEWa9wa0IXx5HRPW/ScL+e4AVUbL7rurYMfwCzco+7TfjhMEOkC+va5gzi1KrErgNRHH
+ kg3PhlnRY0Udyqx++UYkAsN4TQuEhNN32MvN0Np3WlBJOgKcuXpIElmMM5f1BBzJSKBkW0Jc
+ Wy3h2Wy912vHKpPV/Xv7ZwVJ27v7KcuZcErtptDevAljxJtE7aJG6WiBzm+v9EswyWxwMCIO
+ RoVBYuiocc51872tRGywc03xaQydB+9R7BHPzsBNBFOMcBYBCADLMfoA44MwGOB9YT1V4KCy
+ vAfd7E0BTfaAurbG+Olacciz3yd09QOmejFZC6AnoykydyvTFLAWYcSCdISMr88COmmCbJzn
+ sHAogjexXiif6ANUUlHpjxlHCCcELmZUzomNDnEOTxZFeWMTFF9Rf2k2F0Tl4E5kmsNGgtSa
+ aMO0rNZoOEiD/7UfPP3dfh8JCQ1VtUUsQtT1sxos8Eb/HmriJhnaTZ7Hp3jtgTVkV0ybpgFg
+ w6WMaRkrBh17mV0z2ajjmabB7SJxcouSkR0hcpNl4oM74d2/VqoW4BxxxOD1FcNCObCELfIS
+ auZx+XT6s+CE7Qi/c44ibBMR7hyjdzWbABEBAAHCwF8EGAECAAkFAlOMcBYCGwwACgkQsN6d
+ 1ii/Ey9D+Af/WFr3q+bg/8v5tCknCtn92d5lyYTBNt7xgWzDZX8G6/pngzKyWfedArllp0Pn
+ fgIXtMNV+3t8Li1Tg843EXkP7+2+CQ98MB8XvvPLYAfW8nNDV85TyVgWlldNcgdv7nn1Sq8g
+ HwB2BHdIAkYce3hEoDQXt/mKlgEGsLpzJcnLKimtPXQQy9TxUaLBe9PInPd+Ohix0XOlY+Uk
+ QFEx50Ki3rSDl2Zt2tnkNYKUCvTJq7jvOlaPd6d/W0tZqpyy7KVay+K4aMobDsodB3dvEAs6
+ ScCnh03dDAFgIq5nsB11j3KPKdVoPlfucX2c7kGNH+LUMbzqV6beIENfNexkOfxHfw==
+In-Reply-To: <20260731-remove-pg_private-v1-0-142c97ba3562@nvidia.com>
+Content-Type: multipart/signed; micalg=pgp-sha256;
+ protocol="application/pgp-signature";
+ boundary="------------Vg9NJvq3ine0Gyx1IX0BEzQC"
+
+This is an OpenPGP/MIME signed message (RFC 4880 and 3156)
+--------------Vg9NJvq3ine0Gyx1IX0BEzQC
+Content-Type: multipart/mixed; boundary="------------1XNOHvG0ftKOzuceeKWaT2Id";
+ protected-headers="v1"
+From: =?UTF-8?B?SsO8cmdlbiBHcm/Dnw==?= <jgross@suse.com>
+To: Zi Yan <ziy@nvidia.com>, David Hildenbrand <david@kernel.org>,
+ "Matthew Wilcox (Oracle)" <willy@infradead.org>,
+ Andrew Morton <akpm@linux-foundation.org>,
+ Muchun Song <muchun.song@linux.dev>, Lorenzo Stoakes <ljs@kernel.org>,
+ "Liam R. Howlett" <liam@infradead.org>, Vlastimil Babka <vbabka@kernel.org>,
+ Mike Rapoport <rppt@kernel.org>, Suren Baghdasaryan <surenb@google.com>,
+ Michal Hocko <mhocko@suse.com>, Baolin Wang <baolin.wang@linux.alibaba.com>,
+ Nico Pache <nico.pache@linux.dev>, Ryan Roberts <ryan.roberts@arm.com>,
+ Dev Jain <dev.jain@arm.com>, Barry Song <baohua@kernel.org>,
+ Lance Yang <lance.yang@linux.dev>, Usama Arif <usama.arif@linux.dev>,
+ Gregory Price <gourry@gourry.net>, Ying Huang
+ <ying.huang@linux.alibaba.com>, Alistair Popple <apopple@nvidia.com>,
+ Johannes Weiner <hannes@cmpxchg.org>, Qi Zheng <qi.zheng@linux.dev>,
+ Shakeel Butt <shakeel.butt@linux.dev>, Kairui Song <kasong@tencent.com>
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org,
+ Minchan Kim <minchan@kernel.org>,
+ Sergey Senozhatsky <senozhatsky@chromium.org>,
+ Peter Zijlstra <peterz@infradead.org>, Ingo Molnar <mingo@redhat.com>,
+ Arnaldo Carvalho de Melo <acme@kernel.org>,
+ Namhyung Kim <namhyung@kernel.org>, Thomas Gleixner <tglx@kernel.org>,
+ Borislav Petkov <bp@alien8.de>, Dave Hansen <dave.hansen@linux.intel.com>,
+ x86@kernel.org, Mark Rutland <mark.rutland@arm.com>,
+ Alexander Shishkin <alexander.shishkin@linux.intel.com>,
+ Jiri Olsa <jolsa@kernel.org>, Ian Rogers <irogers@google.com>,
+ Adrian Hunter <adrian.hunter@intel.com>, James Clark
+ <james.clark@linaro.org>, "H. Peter Anvin" <hpa@zytor.com>,
+ linux-perf-users@vger.kernel.org, Stefano Stabellini
+ <sstabellini@kernel.org>,
+ Oleksandr Tyshchenko <oleksandr_tyshchenko@epam.com>,
+ xen-devel@lists.xenproject.org, Eric Biggers <ebiggers@kernel.org>,
+ "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>,
+ linux-fscrypt@vger.kernel.org, Oscar Salvador <osalvador@suse.de>,
+ Chao Yu <chao@kernel.org>, linux-f2fs-devel@lists.sourceforge.net,
+ Gao Xiang <xiang@kernel.org>, Jan Kara <jack@suse.cz>,
+ Yue Hu <zbestahu@gmail.com>, Jeffle Xu <jefflexu@linux.alibaba.com>,
+ Sandeep Dhavale <dhavale@google.com>, Hongbo Li <hongbohbli@tencent.com>,
+ Chunhai Guo <guochunhai@vivo.com>, linux-erofs@lists.ozlabs.org,
+ linux-fsdevel@vger.kernel.org, Steven Rostedt <rostedt@goodmis.org>,
+ Masami Hiramatsu <mhiramat@kernel.org>,
+ Mathieu Desnoyers <mathieu.desnoyers@efficios.com>,
+ Matthew Brost <matthew.brost@intel.com>,
+ Joshua Hahn <joshua.hahnjy@gmail.com>, Rakie Kim <rakie.kim@sk.com>,
+ Byungchul Park <byungchul@sk.com>, Axel Rasmussen
+ <axelrasmussen@google.com>, Yuanchu Xie <yuanchu@google.com>,
+ Wei Xu <weixugc@google.com>, linux-trace-kernel@vger.kernel.org,
+ Trond Myklebust <trondmy@kernel.org>, Anna Schumaker <anna@kernel.org>,
+ linux-nfs@vger.kernel.org, Song Liu <song@kernel.org>,
+ Yu Kuai <yukuai@fygo.io>, Ilya Dryomov <idryomov@gmail.com>,
+ Alex Markuze <amarkuze@redhat.com>, Viacheslav Dubeyko <slava@dubeyko.com>,
+ Li Nan <magiclinan@didiglobal.com>, Xiao Ni <xiao@kernel.org>,
+ linux-raid@vger.kernel.org, ceph-devel@vger.kernel.org,
+ Richard Weinberger <richard@nod.at>, Zhihao Cheng <chengzhihao1@huawei.com>,
+ linux-mtd@lists.infradead.org, Baoquan He <baoquan.he@linux.dev>,
+ Pasha Tatashin <pasha.tatashin@soleen.com>,
+ Pratyush Yadav <pratyush@kernel.org>, Jonathan Corbet <corbet@lwn.net>,
+ Dave Young <ruirui.yang@linux.dev>, Shuah Khan <skhan@linuxfoundation.org>,
+ kexec@lists.infradead.org, linux-doc@vger.kernel.org
+Message-ID: <5ca4d0e4-1747-45a7-a916-a7516bb1692b@suse.com>
+Subject: Re: [PATCH RFC 00/14] Remove PG_private by using page/folio->private
+ checks instead
+References: <20260731-remove-pg_private-v1-0-142c97ba3562@nvidia.com>
+In-Reply-To: <20260731-remove-pg_private-v1-0-142c97ba3562@nvidia.com>
+
+--------------1XNOHvG0ftKOzuceeKWaT2Id
+Content-Type: multipart/mixed; boundary="------------emnYBJyIfA0mAuf1FBk0JrWD"
+
+--------------emnYBJyIfA0mAuf1FBk0JrWD
 Content-Type: text/plain; charset=UTF-8; format=flowed
-Content-Transfer-Encoding: 7bit
-X-TM-AS-GCONF: 00
-X-Proofpoint-Reinject: loops=2 maxloops=12
-X-Authority-Analysis: v=2.4 cv=E6P9Y6dl c=1 sm=1 tr=0 ts=6a704aba cx=c_pps
- a=5BHTudwdYE3Te8bg5FgnPg==:117 a=5BHTudwdYE3Te8bg5FgnPg==:17
- a=IkcTkHD0fZMA:10 a=Sv0fKeRqtYgA:10 a=VkNPw1HP01LnGYTKEx00:22
- a=RnoormkPH1_aCDwRdu11:22 a=iQ6ETzBq9ecOQQE5vZCe:22 a=VwQbUJbxAAAA:8
- a=VnNF1IyMAAAA:8 a=ovQU41l7dhj9IMd-MlgA:9 a=QEXdDO2ut3YA:10
-X-Proofpoint-ORIG-GUID: b79nUqRkScouH3xfu6JhLmjGCmnklbvZ
-X-Proofpoint-GUID: 2z1O-lX0C4CUH2UlfhrSL0VakxhqMogu
-X-Proofpoint-Spam-Info: AW1haW4tMjYwODAzMDA2OCBTYWx0ZWRfXw8ABikuV8BfK
- XcS1/+zYfb6uAovv5Gnb1404YgLMKDzde8Z32ZevKrf1U62vCAyYqtGRfRZgpxsoyP2XsCUm6cp
- u/fIMno0CQFf/iACaphhSCfd6eMYBa4=
-X-Proofpoint-Spam-Details-Enc: AW1haW4tMjYwODAzMDA2OCBTYWx0ZWRfX/F1Yo/aj7dgw
- i0p6jkjgIMCtPlgxwtqcTrOZODsGZT3rS4LQ15Wk94jN/k84vL9B5vL7i1EYqcbiR4+PuD8TFhB
- wKJYkDkCC3sVi5OK0nNqINSJt3a8OsXI8Kagjo7KMbEJ6SXACYNRUPaH88tESWbLOQqnL6u6eCo
- cYIdE4ZhZnlJaduJo/Ao6XrqSDVgwQXpkTCQnh3fGFeHK5wK/H2B0xedA3h6q2HW2QvBjoSSm32
- 1EDoGR9Nmju+BI56FGlS44UV35x5+w0ipFtDXqs+Ymh8s0kv2b1la9nkKElCOEquJMHARh3LMTl
- zEM+6oKKK1cEHF6Lq0nIDF5XabLMUW4mJLjucb9eOJSAMpaqgxFtPL+lJYqNnlP9o1uiO69rU+3
- zw+uYuAdSNBLcg4PkIwlpvxn3GIcb2dVxel0KUGS6pSH1nORxxrwHfMisoCLgiKxA1MARE6/r72
- Xwl2RN83Q4yzhNwf7eA==
-X-Proofpoint-Virus-Version: vendor=baseguard
- engine=ICAP:2.0.293,Aquarius:18.0.1143,Hydra:6.1.134,FMLib:17.12.100.49
- definitions=2026-08-02_06,2026-07-30_01,2025-10-01_01
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0
- bulkscore=0 clxscore=1011 lowpriorityscore=0 priorityscore=1501
- suspectscore=0 adultscore=0 spamscore=0 malwarescore=0 impostorscore=0
- phishscore=0 classifier=typeunknown authscore=0 authtc= authcc=
- route=outbound adjust=0 reason=mlx scancount=1 engine=8.22.0-2606150000
- definitions=main-2608030068
+Content-Transfer-Encoding: base64
 
-On 30/07/26 11:22 pm, Eric Biggers wrote:
-> Currently, when a new encrypted regular file is created, the call to
-> ext4_set_inode_flags(inode, init=true) in __ext4_new_inode() is made
-> before EXT4_INODE_ENCRYPT is set.  As a result, it can set S_DAX if the
-> filesystem is mounted with "-o dax=always".
-> 
-> EXT4_INODE_ENCRYPT then actually gets set a bit later in
-> __ext4_new_inode(), when it calls fscrypt_set_context() which calls
-> ext4_set_context().  ext4_set_context() sets EXT4_INODE_ENCRYPT and
-> calls ext4_set_inode_flags(inode, init=false) to set S_ENCRYPTED too.
-> 
-> This was intended to clear S_DAX as well.  However, this was broken by
-> commit 043546e46dc7 ("fs/ext4: Only change S_DAX on inode load").  This
-> causes data written to the file to bypass encryption, also causing
-> xfstests failures such as generic/548 (when "-o dax=always" is used).
-> 
-> Fix this by simplifying the flow by making __ext4_new_inode() set
-> EXT4_INODE_ENCRYPT earlier.  This makes it take effect in
-> ext4_set_inode_flags(inode, init=true), making S_DAX never be set.
-> 
-> Similarly, make EXT4_STATE_MAY_INLINE_DATA never be set in the first
-> place on new encrypted inodes.  Then it doesn't need to be cleared.
-> 
-> As a result of these simplifications, ext4_set_context() no longer needs
-> to change inode flags or state when 'handle != NULL'.  Remove that too.
-> 
-> Reported-by: Disha Goel <disgoel@linux.ibm.com>
-> Reported-by: Ojaswin Mujoo <ojaswin@linux.ibm.com>
-> Closes: https://lore.kernel.org/r/20260723085648.1500357-1-ojaswin@linux.ibm.com
-> Fixes: 043546e46dc7 ("fs/ext4: Only change S_DAX on inode load")
-> Cc: stable@vger.kernel.org
-> Signed-off-by: Eric Biggers <ebiggers@kernel.org>
+T24gMDEuMDguMjYgMDQ6MTMsIFppIFlhbiB3cm90ZToNCj4gSGkgYWxsLA0KPiANCj4gVGhp
+cyBwYXRjaHNldCByZW1vdmVzIFBHX3ByaXZhdGUgdG8gbWFrZSBzcGFjZSBmb3IgdXBjb21p
+bmcgUEdfZm9saW8NCj4gKHJlc2VydmVkIGFzIF9fUEdfZm9saW8pIGZvciBpZGVudGlmeWlu
+ZyBwYWdlcyBmcm9tIGEgZm9saW8gKG1vcmUgZGV0YWlscw0KPiBpbiBOb3RlIGJlbG93KS4g
+SW5zdGVhZCBvZiBjaGVja2luZyBQR19wcml2YXRlLCBhbGwgY29kZSBpcyBjaGFuZ2VkIHRv
+DQo+IGNoZWNrIHBhZ2UvZm9saW8tPnByaXZhdGUgIT0gTlVMTCBpbnN0ZWFkLg0KDQpJJ20g
+YSBsaXR0bGUgYml0IHdvcnJpZWQgdGhhdCBwYWdlL2ZvbGlvLT5wcml2YXRlIGlzIGluIGEg
+dW5pb24sIHNvIHRvZGF5DQppdCBjb3VsZCAoaW4gdGhlb3J5KSBiZSAhPSBOVUxMIHdoaWxl
+IFBHX3ByaXZhdGUgaXNuJ3Qgc2V0Lg0KDQpJcyBpdCByZWFsbHkgbm90IHBvc3NpYmxlIHRv
+IGVudGVyIGEgcGF0aCB3aGVyZSBQR19wcml2YXRlIGlzIHRlc3RlZCB3aGlsZQ0KcGFnZS9m
+b2xpby0+cHJpdmF0ZSAhPSBOVUxMIGR1ZSB0byB0aGUgdW5pb24gYmVpbmcgdXNlZCBvdGhl
+cndpc2UgKFBHX3ByaXZhdGUNCm5vdCBzZXQpPw0KDQoNCkp1ZXJnZW4NCg==
+--------------emnYBJyIfA0mAuf1FBk0JrWD
+Content-Type: application/pgp-keys; name="OpenPGP_0xB0DE9DD628BF132F.asc"
+Content-Disposition: attachment; filename="OpenPGP_0xB0DE9DD628BF132F.asc"
+Content-Description: OpenPGP public key
+Content-Transfer-Encoding: quoted-printable
 
-I have tested on a -o dax=always ext4 filesystem on ppc64le with the 
-following xfstests configuration. All failing encryption tests in the
-generic group now pass.
+-----BEGIN PGP PUBLIC KEY BLOCK-----
 
-MOUNT_OPTIONS="-o block_validity,dax"
-MKFS_OPTIONS="-b 65536"
+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
+kt+z4drzFUyEjLM1vVvIMjkUoJs=3D
+=3DeeAB
+-----END PGP PUBLIC KEY BLOCK-----
 
-Feel free to add
-Tested-by: Disha Goel <disgoel@linux.ibm.com>
+--------------emnYBJyIfA0mAuf1FBk0JrWD--
 
-> ---
->   fs/ext4/crypto.c | 40 ++++++++++++++++++++--------------------
->   fs/ext4/ialloc.c |  4 ++++
->   2 files changed, 24 insertions(+), 20 deletions(-)
-> 
-> diff --git a/fs/ext4/crypto.c b/fs/ext4/crypto.c
-> index f41f320f4437..3971986de028 100644
-> --- a/fs/ext4/crypto.c
-> +++ b/fs/ext4/crypto.c
-> @@ -144,7 +144,13 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
->   	if (inode->i_ino == EXT4_ROOT_INO)
->   		return -EPERM;
->   
-> -	if (WARN_ON_ONCE(IS_DAX(inode) && i_size_read(inode)))
-> +	/*
-> +	 * For new encrypted inodes, S_DAX is never set in the first place.
-> +	 *
-> +	 * For existing inodes, this is called only on empty directories.  ext4
-> +	 * never sets S_DAX on directories.
-> +	 */
-> +	if (WARN_ON_ONCE(IS_DAX(inode)))
->   		return -EINVAL;
->   
->   	if (ext4_test_inode_flag(inode, EXT4_INODE_DAX))
-> @@ -163,6 +169,14 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
->   	 */
->   
->   	if (handle) {
-> +		/*
-> +		 * __ext4_new_inode() should have already set the encrypt flag
-> +		 * on the inode and avoided enabling inline data.
-> +		 */
-> +		if (WARN_ON_ONCE(!IS_ENCRYPTED(inode)))
-> +			return -EINVAL;
-> +		if (WARN_ON_ONCE(ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)))
-> +			return -EINVAL;
->   		/*
->   		 * Since the inode is new it is ok to pass the
->   		 * XATTR_CREATE flag. This is necessary to match the
-> @@ -170,21 +184,10 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
->   		 * function with the credits allocated for the new
->   		 * inode.
->   		 */
-> -		res = ext4_xattr_set_handle(handle, inode,
-> -					    EXT4_XATTR_INDEX_ENCRYPTION,
-> -					    EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
-> -					    ctx, len, XATTR_CREATE);
-> -		if (!res) {
-> -			ext4_set_inode_flag(inode, EXT4_INODE_ENCRYPT);
-> -			ext4_clear_inode_state(inode,
-> -					EXT4_STATE_MAY_INLINE_DATA);
-> -			/*
-> -			 * Update inode->i_flags - S_ENCRYPTED will be enabled,
-> -			 * S_DAX may be disabled
-> -			 */
-> -			ext4_set_inode_flags(inode, false);
-> -		}
-> -		return res;
-> +		return ext4_xattr_set_handle(handle, inode,
-> +					     EXT4_XATTR_INDEX_ENCRYPTION,
-> +					     EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
-> +					     ctx, len, XATTR_CREATE);
->   	}
->   
->   	res = dquot_initialize(inode);
-> @@ -205,10 +208,7 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
->   				    ctx, len, 0);
->   	if (!res) {
->   		ext4_set_inode_flag(inode, EXT4_INODE_ENCRYPT);
-> -		/*
-> -		 * Update inode->i_flags - S_ENCRYPTED will be enabled,
-> -		 * S_DAX may be disabled
-> -		 */
-> +		/* Update inode->i_flags to set S_ENCRYPTED. */
->   		ext4_set_inode_flags(inode, false);
->   		res = ext4_mark_inode_dirty(handle, inode);
->   		if (res)
-> diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-> index a40cb27f8116..a5831fc536db 100644
-> --- a/fs/ext4/ialloc.c
-> +++ b/fs/ext4/ialloc.c
-> @@ -997,6 +997,8 @@ struct inode *__ext4_new_inode(struct mnt_idmap *idmap,
->   		err = fscrypt_prepare_new_inode(dir, inode, &encrypt);
->   		if (err)
->   			goto out;
-> +		if (encrypt)
-> +			i_flags |= EXT4_ENCRYPT_FL;
->   	}
->   
->   	err = dquot_initialize(inode);
-> @@ -1306,6 +1308,8 @@ struct inode *__ext4_new_inode(struct mnt_idmap *idmap,
->   	ei->i_extra_isize = sbi->s_want_extra_isize;
->   	ei->i_inline_off = 0;
->   	if (ext4_has_feature_inline_data(sb) &&
-> +	    /* Encrypted inodes cannot have inline data */
-> +	    !(ei->i_flags & EXT4_ENCRYPT_FL) &&
->   	    (!(ei->i_flags & (EXT4_DAX_FL|EXT4_EA_INODE_FL)) || S_ISDIR(mode)))
->   		ext4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
->   	ret = inode;
-> 
-> base-commit: f5098b6bae761e346ebcd9da7f95622c04733cff
+--------------1XNOHvG0ftKOzuceeKWaT2Id--
 
--- 
-Regards,
-Disha
+--------------Vg9NJvq3ine0Gyx1IX0BEzQC
+Content-Type: application/pgp-signature; name="OpenPGP_signature.asc"
+Content-Description: OpenPGP digital signature
+Content-Disposition: attachment; filename="OpenPGP_signature.asc"
 
+-----BEGIN PGP SIGNATURE-----
+
+wsB5BAABCAAjFiEEhRJncuj2BJSl0Jf3sN6d1ii/Ey8FAmpwWlsFAwAAAAAACgkQsN6d1ii/Ey/i
+jgf/ZwJPxlL37xKWgHvTpcOyxx9OjPwR5NnmxhKYC+qK1G+dCKRR2aNsNRd92IvtuR/zlwoSK3Bz
+7Knn/QAX+Sr8+MzzkoSZZy4464mITxuVnjBsYOy1wmVfTRA9xJ5kPDsLcow9h9fba5YWY5JKjJEr
+fuIk59vC3iZC8TXbrwFnUB118QfIzPMfnHvl18ioDjqN/X6ooFJudXLB3hTrlpzsxtdu1OFI+TsY
+0FUiNapbbcLYtM5X9v/bo7LSqQNdjZKmfV2DVQHs8Vj2bH/TyrIG+SvEggEztdqBgec9T7Ix66uU
+FOasApx6jWOz0UmYAKKBF0iBOhSZaPnQhSA6xqkzCw==
+=lraB
+-----END PGP SIGNATURE-----
+
+--------------Vg9NJvq3ine0Gyx1IX0BEzQC--
