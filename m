@@ -1,37 +1,41 @@
-Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+Received: from mta1.migadu.com (out-194.mta1.migadu.com [95.215.58.194])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 177823F9F5B;
-	Tue, 11 Aug 2026 20:43:06 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id B14F440DB25
+	for <linux-fscrypt@vger.kernel.org>; Wed, 12 Aug 2026 09:30:24 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=95.215.58.194
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1786480988; cv=none; b=X9uL+++FWvp05XhbAwR/4wwwymoUplR6MkY425yLnkPSpnMIOGgXmhsrA4VJyrX45GNFdgZuiQyOEGuzVXTflXUiZXJpPWpD/j8SQQpkVctSwKE+XrzZ+Q0eLUuOIZQwYxTc40l+OS5sk83oLP9a5SlzLcPz4SEyY6waOwIrf1k=
+	t=1786527026; cv=none; b=OP9bAN+9HQbl1hOYUnAPs4cQJ0WJd14TQEDfYir/8kj28VnbUJ8CRUh6KLaLCa3XWZMznTygbDwUXUO/S+k5wNfm5fYnnfhRLw4D77WKNfmVY5bkWd59ffbpuJcawdl1E26hdiFH+jwamSExpFV21s+ImxHgUEyF3G6D2yjmcHo=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1786480988; c=relaxed/simple;
-	bh=HNWrA4Npyus9iEe5/qKE4hOoR7Pg96iHGa2EDjt2768=;
+	s=arc-20240116; t=1786527026; c=relaxed/simple;
+	bh=5Hb81DX76S8IAtLPuaQ2fxU+mq3IGFWwbuaXDXn7mzM=;
 	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=uV2hskp5fWV5zMc0nYGid3L8r8bN+0DTxnBYhz4/oGKW1o0fUZfW078ggnsheVXU0j9+CWQ36YGbd9vXPi98G5xdmQh7CImMHGGmwL7JCBhOpoicLLSh+eVN5anJYsvzv6qP5DQBF5WXI4PMo2Z5m9tgbz6IbxP6DcumrwDnnik=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=YXLgdApM; arc=none smtp.client-ip=100.103.45.18
+	 Content-Type:Content-Disposition:In-Reply-To; b=iyHAualu5+tlRWixO28akfF9NHkWZe10gt/FvmVUgcJxd+Q3UFHRjYqaW+vsTb04EuWxt+U4bwnqB68LWUxu60CfjDDHU2UzMOJOS+SA1S/FTIKEI4kknvEYRZRJFtkhy5GUXobB8WCRLBPUUsP2ivsqza4B+4TNFt0reBafhsQ=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.dev; spf=pass smtp.mailfrom=linux.dev; dkim=pass (1024-bit key) header.d=linux.dev header.i=@linux.dev header.b=hlXYeBwk; arc=none smtp.client-ip=95.215.58.194
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.dev
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.dev
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="YXLgdApM"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 049C71F000E9;
-	Tue, 11 Aug 2026 20:43:04 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1786480986;
-	bh=tmqgrBJxUvss5ev2qg4hR/y+Shhz4DNLrdh9R3vpGbM=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=YXLgdApMQVjB8O5UsuRCftLgsXmP3cSJYvwGgrqZ6b+hB2edLW/uSBh3oj2DAKDLB
-	 6IioToKp+fdIkMueq1I/JRHsiwugXBDmJ97vp4UxyiCAtTlbgjkSl4kj3fA2aKAij5
-	 Qgg6Hbg7EYU+2aNCB4H6ya401I1ujfkQIF2fhblv0bLnVJ432LahjN1sFPCZeRdz14
-	 Cw5oUW8a78hswG6XALU3IdgCkVcHjig6EUfeU9hkjUA2GGFHo2hnqTAj7OaCds1AU4
-	 UNwXanpKaMexoPY5I1l0K/a0V8GThMm0LE5dEKAkZ0GBpRhjDX5FR/2e1tnXNyczMQ
-	 ftS06T2V5gAHQ==
-Date: Tue, 11 Aug 2026 13:41:01 -0700
-From: Eric Biggers <ebiggers@kernel.org>
-To: Jan Sebastian =?iso-8859-1?Q?G=F6tte?= <contact@jaseg.de>
-Cc: Jan Sebastian =?iso-8859-1?Q?G=F6tte?= <linux@jaseg.de>,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Baoquan He <baoquan.he@linux.dev>, Mike Rapoport <rppt@kernel.org>,
+	dkim=pass (1024-bit key) header.d=linux.dev header.i=@linux.dev header.b="hlXYeBwk"
+X-Envelope-To: linux-fscrypt@vger.kernel.org
+DKIM-Signature: a=rsa-sha256; bh=5Hb81DX76S8IAtLPuaQ2fxU+mq3IGFWwbuaXDXn7mzM=;
+ c=simple/simple; d=linux.dev;
+ h=from:to:subject:date:message-id:mime-version:content-type; s=key1;
+ t=1786527022; v=1; x=1787131822;
+ b=hlXYeBwk7tGD+QEjBEfxeMzE4URZsux2Y8vFmYJn7Ik6c0sFjOJCsrfA8lQicELudzk+N9uk
+ cjhRj4IglN7aDdk4NlOmRSwQdwYry3T5SAQW82fj3LNniUfdKPZLQKa0vK1VIawJcEi7CZB0ApW
+ zBFn6qap78wJoykB2/zDxcBM=
+X-Envelope-To: linux-fscrypt@vger.kernel.org
+Received: from localhost (3.112.29.171)
+	by mta11.migadu.com with ESMTPS id 5cf300efea8cce09;
+	Wed, 12 Aug 2026 09:30:20 +0000
+X-Migadu-Scanner: mta11.migadu.com
+Authentication-Results: mta11.migadu.com;
+	none
+Date: Wed, 12 Aug 2026 17:30:08 +0800
+From: Baoquan He <baoquan.he@linux.dev>
+To: Jan Sebastian =?iso-8859-1?Q?G=F6tte?= <linux@jaseg.de>
+Cc: Andrew Morton <akpm@linux-foundation.org>,
+	Mike Rapoport <rppt@kernel.org>,
 	Pasha Tatashin <pasha.tatashin@soleen.com>,
 	Pratyush Yadav <pratyush@kernel.org>,
 	Dave Young <ruirui.yang@linux.dev>,
@@ -53,7 +57,8 @@ Cc: Jan Sebastian =?iso-8859-1?Q?G=F6tte?= <linux@jaseg.de>,
 	Marc Dionne <marc.dionne@auristor.com>,
 	Eric Dumazet <edumazet@google.com>,
 	Jakub Kicinski <kuba@kernel.org>, Paolo Abeni <pabeni@redhat.com>,
-	Simon Horman <horms@kernel.org>, "Theodore Y. Ts'o" <tytso@mit.edu>,
+	Simon Horman <horms@kernel.org>, Eric Biggers <ebiggers@kernel.org>,
+	"Theodore Y. Ts'o" <tytso@mit.edu>,
 	Jaegeuk Kim <jaegeuk@kernel.org>,
 	Alexander Viro <viro@zeniv.linux.org.uk>,
 	Christian Brauner <brauner@kernel.org>, Jan Kara <jack@suse.cz>,
@@ -68,12 +73,11 @@ Cc: Jan Sebastian =?iso-8859-1?Q?G=F6tte?= <linux@jaseg.de>,
 	linux-afs@lists.infradead.org, netdev@vger.kernel.org,
 	linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
 	dm-devel@lists.linux.dev
-Subject: Re: [PATCH v2 00/13] CRASH_WIPE_SECRETS: Wipe secrets before kdump
- (was: CRASH_ZEROIZE)
-Message-ID: <20260811204101.GA1905@sol>
+Subject: Re: [PATCH v2 01/13] kexec: add CRASH_WIPE_SECRETS to wipe secrets
+ before kdump
+Message-ID: <anw9ILJiO5xIjP4f@MiWiFi-R3L-srv>
 References: <20260811-crash-zeroize-rework-v2-0-9561d13c2340@jaseg.de>
- <20260811182012.GB2895176@google.com>
- <d242ab53-a39e-421d-ac39-4bee49be6ac0@jaseg.de>
+ <20260811-crash-zeroize-rework-v2-1-9561d13c2340@jaseg.de>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -83,25 +87,41 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset=iso-8859-1
 Content-Disposition: inline
 Content-Transfer-Encoding: 8bit
-In-Reply-To: <d242ab53-a39e-421d-ac39-4bee49be6ac0@jaseg.de>
+In-Reply-To: <20260811-crash-zeroize-rework-v2-1-9561d13c2340@jaseg.de>
 
-On Tue, Aug 11, 2026 at 09:38:20PM +0200, Jan Sebastian Götte wrote:
-> > Could you perhaps narrow the scope to one or two things that actually
-> > are useful and can reasonably be supported for the application?  For
-> > example, secretmem seems to be the only thing you mentioned that you're
-> > actually planning to use.
+On 08/11/26 at 07:52pm, Jan Sebastian Götte wrote:
+.....snip...
+> @@ -142,6 +170,7 @@ void __noclone __crash_kexec(struct pt_regs *regs)
+>  			crash_save_vmcoreinfo();
+>  			machine_crash_shutdown(&fixed_regs);
+>  			crash_cma_clear_pending_dma();
+> +			crash_wipe_secrets();
+
+I remember when crash_cma added this, we argued a lot about the risk,
+finally it's added in with an added note to tell it's an opt-in feature
+and risky. I don't know if it opens a Pandora box, I think anything
+wanted being here need prove anything else has been tried, and the thing
+is very very important. If we don't guard the door well, one day one guy
+cold come and said I need ask Oracle database to do some transactions
+before juming into kdump kernel because the actions will save billions
+of dollar. 
+
+And what does security people say about this wiping? Is it very
+important information and wiping is mandotary? There's no any other way
+to wipe it or pollute it, no way in kdump kernel? I noticed it's
+happening on en embedded target, is it possible you do this on your
+embedded kernel tree, but not mainline tree?
+
+Anyone who wants to do thing like this, please prepare answers for them,
+and be ready to accept failure.
+
+Thanks
+Baoquan
+
+>  			machine_kexec(kexec_crash_image);
+>  		}
+>  		kexec_unlock();
 > 
-> I'm open to whittling down the scope of this series. In my use case I need
-> at least secretmem as well as dm-crypt, which then pulls in the crypto tfm
-> stuff. Personally, I could live without the other bits, I just thought
-> they'd be easy enough to include.
-
-Please do reduce the scope.
-
-Note that even if dm-crypt is in scope, "crypto: api - wipe tfm contexts
-before kdump" is neither required nor sufficient.  For one, dm-crypt has
-its own copy of the key.  The wiping should be done by the kernel
-feature(s) that need it, as they know what actually needs to be wiped,
-and they can do so without the bottleneck of a new global list.
-
-- Eric
+> -- 
+> 2.53.0
+> 
