@@ -1,39 +1,39 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9B644352009;
-	Sat, 15 Aug 2026 18:31:30 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1ACDE2E413;
+	Sat, 15 Aug 2026 18:31:58 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1786818692; cv=none; b=LRvuaK+kDCWIiZAVVOJHbvK5krsCGh93pP7eJ5x3BmqpeJIVRVyUIAMednoqlS3ewShHNTMZ4djEptCGPdea6HVM3gBMhbeKVqY4ZYH5dkM5xv37LLgoqeBrkBCGZc+/aN90FfUajp3ArgPimex6qWAzvkmKPeuAx76vGsuvB3s=
+	t=1786818720; cv=none; b=AfBGeSR3mwLpic5g3ZWnudrT9/ZwPQWVJAP9RV6WkWdJeA57doN6luN1Kl4oaMgEU0sPiTXlnmO2pPdt4aNaaGPy/d2A8LJcVFPvJC/bBLTeQgZN3UsnhSL5fibK385tnjLQ1YRzw7e3z3Utk5QB7VsdPrzOrWny1wMrftl9LEA=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1786818692; c=relaxed/simple;
-	bh=NppdcHbmb/sMk7VTcH+bzRzl48cfArHUPkGwC6/XjZ4=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=mEHeyfo45Cq8oHLF32L4wWdUlNMX8bKbZJaUcto649Lz/SSm5uai6ZR2ZBXzJPAQ7/Ik8bf5/4SEwKmTsESjtun6QIEXnLTxWSraUfvyxIYyw6ZDXKVlAM3yd50fnkZeERxYxbhUAPvg8bV8FAwlDnwDGSm1SBjp55z3svHlKQI=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=PQ7SFz78; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1786818720; c=relaxed/simple;
+	bh=F3jhPD1aUnatMd9035m8oEkXNxF9O4EokTRtSfdLyq8=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=KGUEm6576Uo7Ze3oC7AIhGjho8waM6Lask9M6ShQ3nPRV74Q5aNv5umIJUK3LEJcgtQr3w9DwEGpjBAnSNx1eFEoALHYKnVHb8HSSLyTOntMnDARUzQs1xePapg/EEw+fsfg+mrA9m3CR79PdYWCXav6HtYBgphCwZKYD5Dvs18=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=F9tPETNE; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="PQ7SFz78"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 3F0851F000E9;
-	Sat, 15 Aug 2026 18:31:30 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="F9tPETNE"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 742891F000E9;
+	Sat, 15 Aug 2026 18:31:58 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1786818690;
-	bh=r5fGy2OFPUNmhNVgwyV7Gey86YkIt893wLNwRil+aqQ=;
+	s=k20260515; t=1786818718;
+	bh=cJnk7Q5UDBL5NHXqQEpFozUi3Cdab8QOvGiVLlPNemY=;
 	h=From:To:Cc:Subject:Date;
-	b=PQ7SFz78TQd7kgFrZrspw0hszM+mWcJ7fDmmULY86wmKZuuEI6RviWYpKJ1hciAcc
-	 t8u7ynRc7bbL11IM+msB+p75NFfaZIPDt3E7xaRI5lHWwrQK5TVCO8/ois2TIrG+Na
-	 EDnBCfbw9b2sy3ecBPNF1otzbVXjdVYT3IYjji6AXx7JWkM5F6ZQCqpG3VQVG1eSGu
-	 LU2Tux76Qv54L+NpLACHp/OvPPqlHg4yoD/6h20rm77xJf8L+jGFiuanLldYoh7bka
-	 cnk0SgMaDmdRZNinN6aPYdv6gPYR+jALSgDredZc7FB2bnQnugctyyZD7BvZrN0S1y
-	 0Tq5J/c9G0TpA==
+	b=F9tPETNEo5CADNrTkLOcU8maY1ArB3MnkRTDHqIz034JZJKOlEe+t7R0IUtg3jtsH
+	 zC+HWeXm0CHXXxz9x6XcvzVYEa41Orj2C92puuBVtPleTxq4HoL9q8Cq8is9+X3QMy
+	 b/Et+W0S5MUVIpDw74qDy3XG8+3DWu2IYGaWpSdebOvgKs0n1ZP4E0fZMI+ETTaHYK
+	 DawkaoxT8+mBjRkyN3PeVtTz+nMgcIXzpBPZg9m7uYfCLdwmFsEFnl22Im0TE0X7rr
+	 tyacUG5aW917j10yrF+uUJr2G0NZ1UuAixjwC6OXii4YRt5MlbMQp8C6We5waUB/FX
+	 rVh4AslD3Nxow==
 From: Eric Biggers <ebiggers@kernel.org>
 To: stable@vger.kernel.org
 Cc: linux-fscrypt@vger.kernel.org,
 	Eric Biggers <ebiggers@kernel.org>,
 	syzbot+f55b043dacf43776b50c@syzkaller.appspotmail.com,
 	Mohammed EL Kadiri <med08elkadiri@gmail.com>
-Subject: [PATCH 5.15] fscrypt: Replace mk_users keyring with simple list
-Date: Sat, 15 Aug 2026 11:31:26 -0700
-Message-ID: <20260815183126.101678-1-ebiggers@kernel.org>
+Subject: [PATCH 5.10] fscrypt: Replace mk_users keyring with simple list
+Date: Sat, 15 Aug 2026 11:31:41 -0700
+Message-ID: <20260815183141.101727-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -82,10 +82,10 @@ Signed-off-by: Eric Biggers <ebiggers@kernel.org>
  2 files changed, 113 insertions(+), 131 deletions(-)
 
 diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 373c434b375c..555d942342cc 100644
+index b746d7df3758..72db3df9dfad 100644
 --- a/fs/crypto/fscrypt_private.h
 +++ b/fs/crypto/fscrypt_private.h
-@@ -402,6 +402,19 @@ fscrypt_is_key_prepared(struct fscrypt_prepared_key *prep_key,
+@@ -403,6 +403,19 @@ fscrypt_is_key_prepared(struct fscrypt_prepared_key *prep_key,
  
  /* keyring.c */
  
@@ -105,7 +105,7 @@ index 373c434b375c..555d942342cc 100644
  /*
   * fscrypt_master_key_secret - secret key material of an in-use master key
   */
-@@ -488,19 +501,18 @@ struct fscrypt_master_key {
+@@ -489,19 +502,18 @@ struct fscrypt_master_key {
  	struct fscrypt_key_specifier		mk_spec;
  
  	/*
@@ -481,7 +481,7 @@ index 02f8bf8bd54d..51cd45785f0c 100644
  	err = 0;
  out_release_key:
 
-base-commit: aabd761612dbeb7d40750d485da219d11433718a
+base-commit: acccef89f184a697fee1c96a1dc9cccbba36937b
 -- 
 2.55.0
 
