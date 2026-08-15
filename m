@@ -1,39 +1,39 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 7AC981A6820;
-	Sat, 15 Aug 2026 18:31:12 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9B644352009;
+	Sat, 15 Aug 2026 18:31:30 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1786818674; cv=none; b=MVCF+41gOSq9b+MKO/umA/CRqoeplV3cCzymC62VXbNItFtWCwNv3nHic3sN+4UsT3XYy+I85nSqLizc0PrbEUZmVqUtBNw/pP/OiudKvoHG2CIUb3XNQGNDGkFJ8doWorhJCCMYzs32bdyiwPxJZOKah5N4GFENNELCRusoW8w=
+	t=1786818692; cv=none; b=LRvuaK+kDCWIiZAVVOJHbvK5krsCGh93pP7eJ5x3BmqpeJIVRVyUIAMednoqlS3ewShHNTMZ4djEptCGPdea6HVM3gBMhbeKVqY4ZYH5dkM5xv37LLgoqeBrkBCGZc+/aN90FfUajp3ArgPimex6qWAzvkmKPeuAx76vGsuvB3s=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1786818674; c=relaxed/simple;
-	bh=wsImOMeIighCx5MVYwoD26poss2Q4Zj9u5G0yR8awA0=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=b8P6E7TpckMDxjEVyGjbDQ7VZoYxlDPsQDrPCSWw/EDGkXcTg8jskKDpPt7x9uP5VzImC4stnM2qjOxnZ7vKpMJzXmvq4zQZuJxKpo9BLumxusBACTtaloRnYQP/PRmXE20F5WaIMrj2SgB05Aqq4VtcXO7HTp54oSfDXQ8Ww0A=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=SzCP7yJa; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1786818692; c=relaxed/simple;
+	bh=NppdcHbmb/sMk7VTcH+bzRzl48cfArHUPkGwC6/XjZ4=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=mEHeyfo45Cq8oHLF32L4wWdUlNMX8bKbZJaUcto649Lz/SSm5uai6ZR2ZBXzJPAQ7/Ik8bf5/4SEwKmTsESjtun6QIEXnLTxWSraUfvyxIYyw6ZDXKVlAM3yd50fnkZeERxYxbhUAPvg8bV8FAwlDnwDGSm1SBjp55z3svHlKQI=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=PQ7SFz78; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="SzCP7yJa"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id E465A1F000E9;
-	Sat, 15 Aug 2026 18:31:11 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="PQ7SFz78"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 3F0851F000E9;
+	Sat, 15 Aug 2026 18:31:30 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1786818672;
-	bh=yss4NKTcidIsJLxylzz8PPnXCt/m0PDvpVMO4RaufRA=;
+	s=k20260515; t=1786818690;
+	bh=r5fGy2OFPUNmhNVgwyV7Gey86YkIt893wLNwRil+aqQ=;
 	h=From:To:Cc:Subject:Date;
-	b=SzCP7yJa0bihJco5GZbEv4kw4Z/ggT7qhFy485A9MTS+ft2MaGTKhvbsqM3NvZM0x
-	 xjsk1fTVULB5R0i2jcyQrLhueCSpIErNoRkbqhJQzNdYHYsE+l6OwXOPXUnVc+ALrP
-	 22UTfYT9vUSA/klW28cGOWH40QXS/HszgnBkXu4+sJf/vIJt3sjT5UyRrzy6uYkRbx
-	 oseEC/G0LmYU3xMycGvHxYD9JR3/Cu8kjF6fpya09Pgb0R3x1p/sfKdqq6FpaTAM92
-	 Zu5N3D+rP5GxbSpTKna5t5q9qygEKLm4zW+nlO3Gsfucn15k8n1dLkuwHA+znFbGfy
-	 koalpRo3CQWjw==
+	b=PQ7SFz78TQd7kgFrZrspw0hszM+mWcJ7fDmmULY86wmKZuuEI6RviWYpKJ1hciAcc
+	 t8u7ynRc7bbL11IM+msB+p75NFfaZIPDt3E7xaRI5lHWwrQK5TVCO8/ois2TIrG+Na
+	 EDnBCfbw9b2sy3ecBPNF1otzbVXjdVYT3IYjji6AXx7JWkM5F6ZQCqpG3VQVG1eSGu
+	 LU2Tux76Qv54L+NpLACHp/OvPPqlHg4yoD/6h20rm77xJf8L+jGFiuanLldYoh7bka
+	 cnk0SgMaDmdRZNinN6aPYdv6gPYR+jALSgDredZc7FB2bnQnugctyyZD7BvZrN0S1y
+	 0Tq5J/c9G0TpA==
 From: Eric Biggers <ebiggers@kernel.org>
 To: stable@vger.kernel.org
 Cc: linux-fscrypt@vger.kernel.org,
 	Eric Biggers <ebiggers@kernel.org>,
 	syzbot+f55b043dacf43776b50c@syzkaller.appspotmail.com,
 	Mohammed EL Kadiri <med08elkadiri@gmail.com>
-Subject: [PATCH 6.1] fscrypt: Replace mk_users keyring with simple list
-Date: Sat, 15 Aug 2026 11:30:57 -0700
-Message-ID: <20260815183057.101594-1-ebiggers@kernel.org>
+Subject: [PATCH 5.15] fscrypt: Replace mk_users keyring with simple list
+Date: Sat, 15 Aug 2026 11:31:26 -0700
+Message-ID: <20260815183126.101678-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -82,10 +82,10 @@ Signed-off-by: Eric Biggers <ebiggers@kernel.org>
  2 files changed, 113 insertions(+), 131 deletions(-)
 
 diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
-index 88414cbd97ae..aabc3a4751df 100644
+index 373c434b375c..555d942342cc 100644
 --- a/fs/crypto/fscrypt_private.h
 +++ b/fs/crypto/fscrypt_private.h
-@@ -423,6 +423,19 @@ fscrypt_is_key_prepared(struct fscrypt_prepared_key *prep_key,
+@@ -402,6 +402,19 @@ fscrypt_is_key_prepared(struct fscrypt_prepared_key *prep_key,
  
  /* keyring.c */
  
@@ -105,7 +105,7 @@ index 88414cbd97ae..aabc3a4751df 100644
  /*
   * fscrypt_master_key_secret - secret key material of an in-use master key
   */
-@@ -513,19 +526,18 @@ struct fscrypt_master_key {
+@@ -488,19 +501,18 @@ struct fscrypt_master_key {
  	struct fscrypt_key_specifier		mk_spec;
  
  	/*
@@ -135,7 +135,7 @@ index 88414cbd97ae..aabc3a4751df 100644
  	/*
  	 * List of inodes that were unlocked using this key.  This allows the
 diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
-index 2a24b1f0ae68..e1cce06f4343 100644
+index 02f8bf8bd54d..51cd45785f0c 100644
 --- a/fs/crypto/keyring.c
 +++ b/fs/crypto/keyring.c
 @@ -64,18 +64,19 @@ static void fscrypt_free_master_key(struct rcu_head *head)
@@ -161,7 +161,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  	call_rcu(&mk->mk_rcu_head, fscrypt_free_master_key);
  }
  
-@@ -144,8 +145,8 @@ static void fscrypt_user_key_describe(const struct key *key, struct seq_file *m)
+@@ -141,8 +142,8 @@ static void fscrypt_user_key_describe(const struct key *key, struct seq_file *m)
  }
  
  /*
@@ -172,7 +172,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
   *
   * Note that the name of this key type really should be something like
   * ".fscrypt-user" instead of simply ".fscrypt".  But the shorter name is chosen
-@@ -159,30 +160,9 @@ static struct key_type key_type_fscrypt_user = {
+@@ -156,30 +157,9 @@ static struct key_type key_type_fscrypt_user = {
  	.describe		= fscrypt_user_key_describe,
  };
  
@@ -203,7 +203,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  /* Create ->s_master_keys if needed.  Synchronized by fscrypt_add_key_mutex. */
  static int allocate_filesystem_keyring(struct super_block *sb)
  {
-@@ -321,91 +301,94 @@ fscrypt_find_master_key(struct super_block *sb,
+@@ -318,91 +298,94 @@ fscrypt_find_master_key(struct super_block *sb,
  	return mk;
  }
  
@@ -357,7 +357,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  }
  
  /*
-@@ -429,13 +412,12 @@ static int add_new_master_key(struct super_block *sb,
+@@ -426,13 +409,12 @@ static int add_new_master_key(struct super_block *sb,
  	refcount_set(&mk->mk_struct_refs, 1);
  	mk->mk_spec = *mk_spec;
  
@@ -373,7 +373,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  		err = add_master_key_user(mk);
  		if (err)
  			goto out_put;
-@@ -463,19 +445,13 @@ static int add_existing_master_key(struct fscrypt_master_key *mk,
+@@ -460,19 +442,13 @@ static int add_existing_master_key(struct fscrypt_master_key *mk,
  	int err;
  
  	/*
@@ -398,7 +398,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  		err = add_master_key_user(mk);
  		if (err)
  			return err;
-@@ -830,7 +806,6 @@ int fscrypt_verify_key_added(struct super_block *sb,
+@@ -787,7 +763,6 @@ int fscrypt_verify_key_added(struct super_block *sb,
  {
  	struct fscrypt_key_specifier mk_spec;
  	struct fscrypt_master_key *mk;
@@ -406,7 +406,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  	int err;
  
  	mk_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
-@@ -842,13 +817,10 @@ int fscrypt_verify_key_added(struct super_block *sb,
+@@ -799,13 +774,10 @@ int fscrypt_verify_key_added(struct super_block *sb,
  		goto out;
  	}
  	down_read(&mk->mk_sem);
@@ -423,7 +423,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  	up_read(&mk->mk_sem);
  	fscrypt_put_master_key(mk);
  out:
-@@ -1041,16 +1013,18 @@ static int do_remove_key(struct file *filp, void __user *_uarg, bool all_users)
+@@ -998,16 +970,18 @@ static int do_remove_key(struct file *filp, void __user *_uarg, bool all_users)
  	down_write(&mk->mk_sem);
  
  	/* If relevant, remove current user's (or all users) claim to the key */
@@ -447,7 +447,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  			/*
  			 * Other users have still added the key too.  We removed
  			 * the current user's claim to the key, but we still
-@@ -1138,6 +1112,8 @@ int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
+@@ -1095,6 +1069,8 @@ int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
  	struct super_block *sb = file_inode(filp)->i_sb;
  	struct fscrypt_get_key_status_arg arg;
  	struct fscrypt_master_key *mk;
@@ -456,7 +456,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  	int err;
  
  	if (copy_from_user(&arg, uarg, sizeof(arg)))
-@@ -1170,19 +1146,13 @@ int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
+@@ -1127,19 +1103,13 @@ int fscrypt_ioctl_get_key_status(struct file *filp, void __user *uarg)
  	}
  
  	arg.status = FSCRYPT_KEY_STATUS_PRESENT;
@@ -481,7 +481,7 @@ index 2a24b1f0ae68..e1cce06f4343 100644
  	err = 0;
  out_release_key:
 
-base-commit: e4f7d8be268ecf717f94ee2e242afa79ddeacaed
+base-commit: aabd761612dbeb7d40750d485da219d11433718a
 -- 
 2.55.0
 
