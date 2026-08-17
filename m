@@ -1,31 +1,31 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A7D772FDC28;
-	Mon, 17 Aug 2026 03:25:22 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 524EC5733E;
+	Mon, 17 Aug 2026 03:25:23 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1786937123; cv=none; b=c1cIkcjFU1nkT6FG1HaqY3v4MTdHbZkev+eaOWcl6/QqCIQbCqrFYQkTLvpt70t6QzzzWiK1XcmCpAg15GLvueWMuXMdBzLnZVF2Xbl4XYQ4mD2hjGEC2j3ci/SRaNXrjkVlBHEShH/JxtB6x8gb7Vud2X7mYgs4t6oczl4YXos=
+	t=1786937124; cv=none; b=blpbc/lF07+dhhqo97aRP9MTg6Y4SYMjNQda9b50lvmJM5IglJxiTR9LY6JkJCfLSDevCjexcWFr90EgeuQvSO1re/Xck9kbMjy1qY4zCG6H0XTSAISAHUIsPu6jGPXfpQMwadHHgXHqJ7y3t0KCIBVxrB6+9Xul+h2H5vrD4xU=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1786937123; c=relaxed/simple;
-	bh=2DlhX5N6VdVhf7azZIpXl3c6wsXf/1UA+YlfKR4KyrI=;
+	s=arc-20240116; t=1786937124; c=relaxed/simple;
+	bh=rXAw6C0kINsbtOtOO/CgdIQ3saE0HiF55eOsWt0q7Jo=;
 	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=Q510705P4di6KiiZIk18yE7UILx2XyQeSvJEyuM+pT/qFXegPvYEJiQfp7l8eRZ5QWCwFZxWFhEPSyRpnJraWKSbQ8jQqvO+Gb+j1gtEiNq/wOorEcYjLthCd1g3gwVJymFSKYy9eQbEt/GUlsF4n6d/igXvw1uikI2SArQP82A=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=ntWpAp0y; arc=none smtp.client-ip=100.103.45.18
+	 MIME-Version; b=tu2wo8naI6Wu7URffyIlRX0tFWv0K/4Hc19VCCT42N9JMBTeQmlUSUZ46eM6ber5iQLsn5qChkGyPVL7SV2QmnR0c36VELzrErr7Rf/zzbIx4JCRKzdfCdPYKfzF5lwe5w5Es/re7pE5QKQjwlcmxkC/KO79SHOFlpy/eGY62aA=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=NnA3omT3; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="ntWpAp0y"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 92FAA1F00A3D;
-	Mon, 17 Aug 2026 03:25:21 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="NnA3omT3"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 860F21F000E9;
+	Mon, 17 Aug 2026 03:25:22 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1786937122;
-	bh=kIyxsQRwXPYJMW69I/QC+zsCrse+OYL4jC6euAdFArc=;
+	s=k20260515; t=1786937123;
+	bh=craASOyF6hTJdsisc6ZAWmFlfeWlY+kOXRvgiiaLn54=;
 	h=From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=ntWpAp0yOW0h/tmSpM2V7sq77+yUtmq4RD4TrncH1lWJOYkfYU/gt2zvS83kQXwIf
-	 uAepRrsh5AVacHNIP6YhrENUt4ai6nDcmtDarMFVW2++EzYkV1Ao/Hl6RDKeo72+wu
-	 ni9TaQMiRxwvPED/mUUxTVPk2QqpDvyWQ9+3mneqr/RAHMuJu4kxpn8dNERww/HwsJ
-	 m5QBGHXDXmwCFTrBKZCrZm1kaCheKpXt04R89qk6Pcs0Rnznu89L2gQrYj32JjIjjd
-	 jG+d+cXwj6Z8cSfwHtp7NG4p7u9v2HJnSG4AgyeHBrKjpGrwFaXIJi7kBQ8cW+mViG
-	 oaU9Ec8vdxC8A==
+	b=NnA3omT3F/5hCM7ku/BXauYdyPLqLWo7q0x2yJy45wJ6UN3Bs0+ajH3lCddo3mIb8
+	 NHrHwXuKdmdkXbyoajKY7kTvXT658fucui9sgYHGXPH5UMyZNxtzlqHekZwTRkrQXj
+	 xTYqF78GAm4dspeuuT0ucVCadCZFCIJgSdNElB3dXxy7ZINB5no2WqMO7ygj/BTXex
+	 4bS155kdJz4cpI26mT1cBo9gUZ5QVyBwJM/3HCdNypHtuI5zCfeINxV+tdv94Q2VLD
+	 GCn2ahgNFhVxLiwA51TNhpK+0WfEzNY+WehqkjHwLcOPqHTxMkmWwjlCG5mGQg11t6
+	 wjQ9PRsvFhD8g==
 From: Sasha Levin <sashal@kernel.org>
 To: stable@vger.kernel.org
 Cc: Sasha Levin <sashal@kernel.org>,
@@ -33,12 +33,12 @@ Cc: Sasha Levin <sashal@kernel.org>,
 	Eric Biggers <ebiggers@kernel.org>,
 	syzbot+f55b043dacf43776b50c@syzkaller.appspotmail.com,
 	Mohammed EL Kadiri <med08elkadiri@gmail.com>
-Subject: Re: [PATCH 5.10] fscrypt: Replace mk_users keyring with simple list
-Date: Sun, 16 Aug 2026 23:25:09 -0400
-Message-ID: <20260816211000.3@kernel.org>
+Subject: Re: [PATCH 5.15] fscrypt: Replace mk_users keyring with simple list
+Date: Sun, 16 Aug 2026 23:25:10 -0400
+Message-ID: <20260816211000.4@kernel.org>
 X-Mailer: git-send-email 2.53.0
-In-Reply-To: <20260815183141.101727-1-ebiggers@kernel.org>
-References: <20260815183141.101727-1-ebiggers@kernel.org>
+In-Reply-To: <20260815183126.101678-1-ebiggers@kernel.org>
+References: <20260815183126.101678-1-ebiggers@kernel.org>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -52,7 +52,7 @@ Content-Transfer-Encoding: 8bit
 > Change mk_users (the set of user claims to an fscrypt master key) from a
 > 'struct key' keyring to a simple linked list.
 
-Queued for 5.10, thanks.
+Queued for 5.15, thanks.
 
 -- 
 Thanks,
