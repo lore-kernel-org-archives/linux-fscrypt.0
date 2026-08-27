@@ -1,30 +1,30 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 632C3231C91;
-	Thu, 27 Aug 2026 03:30:50 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A6EC634F279;
+	Thu, 27 Aug 2026 03:31:05 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1787801451; cv=none; b=LdATobGepislEM/kVIHK9A6rZFl0wWpErd3d9ulxAyoq4L32EbCCoIsb6mhFJyNLNN65JMzPSYCARgEvfWlMo+CHDRVfFpM099HrSRBoWoVCrwNQaPaLagxLsvzdRtRNGASOZo2Y5Ix0BBD4alE2KTH2ZzQe807QiDu/5eH5tWI=
+	t=1787801466; cv=none; b=cwPpPO8uGeEZY1zcUV6RRD+S36vq31Lp66z/GzCOOIZI61mz0BTzzAfZttthy2UJZvYlD4Pr36Rm+gRo8fgeq+Q7YifWBZ/9wPgq92kTzFERs6gE2dbEbSTQI1PTrzu6D1mHe8ZMpXLvqmMOVrwJesnlMf3OcMbpUyzCYzh1tAg=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1787801451; c=relaxed/simple;
-	bh=gYhJAOsQk7puUTfkj815cj2BIYWVlmuOgxWNbeRUTPc=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=GFUSL7bTaHDljPZqLM0e6Vlu6s3usE8nvSwB6F/4n6fpqiObOYb3+i63TRZidXMF3JsLymD7AJUF6kznotZRumGGRpXBQ0Hmlm4d/pEQn1TTuowYSdxWZANW/XPsho6fw3jJxVRyGhWMTtgNGZI62A31n6ZWrJTDamPOCDzdeeg=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=TiQ0gsOj; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1787801466; c=relaxed/simple;
+	bh=LU0vbSNSxfF0p2/sBaqpmif39OQ1yIFgsr+3msNa/18=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=QirBM+4qh5TjfE7sXo9LhTf136hi54MxnRzPmz5nwvMc2TvKODE4xlZKbX0lMve6/0pdvEjOu5eTjoTkeDcHz7yq39dTZZdTXxXbWLTkplb0ZjkSNVVpZY76wVCp1BNbZEaMiIcivG4Yi0BiMuEfjRzRY1IqEGdVsPj0A7khZOo=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=dMYHYNA+; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="TiQ0gsOj"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id C0B9B1F000E9;
-	Thu, 27 Aug 2026 03:30:49 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="dMYHYNA+"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 12E321F000E9;
+	Thu, 27 Aug 2026 03:31:05 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1787801450;
-	bh=IGTUep1DNl60MOSvMrBny1FReEBDZF5Y3UrFFc7LUt8=;
+	s=k20260515; t=1787801465;
+	bh=Nmy2ReXr+u9YxVp+JLYKjGsSYx4btGirL1/+k+TXAhM=;
 	h=From:To:Cc:Subject:Date;
-	b=TiQ0gsOj9eHkgIugym9TL+lM3nhhoqAjy11A9bBRX3qEF3QDEup3aMsGSs5SKTDH0
-	 UOFLjNEPPA4YLaPqBQ64ZV1jrfG02fLIPQVWcMPR1/CTHTNHlrdk9e1nNPowBGUEJb
-	 5aNd/GD4lykKuvqBatSCjPAxI6HOWSDqC7Lt3yFa7Jc4lgXpN18SgAIzrKW2x0kCpf
-	 f/ioWABA163iYQaX1Ifemjz7bybCNvg9ZrwaD/4r65z0gWOfeHfsREat/hvdRVbSES
-	 /ItnUwhvILAya6bBghOTNjpZLqeOQNo7mvvC3OIyKUad6YpLFd7TVLg9+HhZt61r5N
-	 jA5Xupjk/dRZw==
+	b=dMYHYNA+o4S0S2UiA9ec28h02ZvOqlVF5T/M7wvdI1lUMBbQ1zONiq2iDOQni4N6H
+	 658ZV7bYXwhSjMSfjPmTTn1xlRe/lXNKD5Tp+i9posWJhDSkG92qf6uTjKI4DjdOoU
+	 OZ6YSIzzvHlq/5NuInIGOVCnZqfKz1KRuBjcREHf9FWxbTxlUvXI9aix7xbADW6CRq
+	 TX8moIqGFcdj5oVTZ/C2gj+M/dYktq6dcOky2T65lPRB4F+/xVNJRQSamIEMTGLg8r
+	 SHaG/3nZeagLiASAHyWg7NwmVhomoyTzkbKJ9WWrSFbphgc8uX36eHLDwBezKMLaB8
+	 y4Lj/7sphhcow==
 From: Eric Biggers <ebiggers@kernel.org>
 To: stable@vger.kernel.org
 Cc: linux-ext4@vger.kernel.org,
@@ -34,9 +34,9 @@ Cc: linux-ext4@vger.kernel.org,
 	Ojaswin Mujoo <ojaswin@linux.ibm.com>,
 	Jan Kara <jack@suse.cz>,
 	Theodore Ts'o <tytso@mit.edu>
-Subject: [PATCH 6.12] ext4: don't enable DAX on new encrypted files
-Date: Wed, 26 Aug 2026 20:28:15 -0700
-Message-ID: <20260827032815.82363-1-ebiggers@kernel.org>
+Subject: [PATCH 6.6] ext4: don't enable DAX on new encrypted files
+Date: Wed, 26 Aug 2026 20:28:57 -0700
+Message-ID: <20260827032857.82762-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -90,10 +90,10 @@ Signed-off-by: Theodore Ts'o <tytso@mit.edu>
  2 files changed, 24 insertions(+), 20 deletions(-)
 
 diff --git a/fs/ext4/crypto.c b/fs/ext4/crypto.c
-index 78cede130cbd..2d1f868cc3df 100644
+index 8292494a9b6c..8497f6125a8e 100644
 --- a/fs/ext4/crypto.c
 +++ b/fs/ext4/crypto.c
-@@ -144,7 +144,13 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+@@ -150,7 +150,13 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
  	if (inode->i_ino == EXT4_ROOT_INO)
  		return -EPERM;
  
@@ -108,7 +108,7 @@ index 78cede130cbd..2d1f868cc3df 100644
  		return -EINVAL;
  
  	if (ext4_test_inode_flag(inode, EXT4_INODE_DAX))
-@@ -163,6 +169,14 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+@@ -169,6 +175,14 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
  	 */
  
  	if (handle) {
@@ -123,7 +123,7 @@ index 78cede130cbd..2d1f868cc3df 100644
  		/*
  		 * Since the inode is new it is ok to pass the
  		 * XATTR_CREATE flag. This is necessary to match the
-@@ -170,21 +184,10 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+@@ -176,21 +190,10 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
  		 * function with the credits allocated for the new
  		 * inode.
  		 */
@@ -149,7 +149,7 @@ index 78cede130cbd..2d1f868cc3df 100644
  	}
  
  	res = dquot_initialize(inode);
-@@ -205,10 +208,7 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+@@ -211,10 +214,7 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
  				    ctx, len, 0);
  	if (!res) {
  		ext4_set_inode_flag(inode, EXT4_INODE_ENCRYPT);
@@ -162,10 +162,10 @@ index 78cede130cbd..2d1f868cc3df 100644
  		res = ext4_mark_inode_dirty(handle, inode);
  		if (res)
 diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-index 950cda9dc7cc..5aa49839dc7e 100644
+index 8daebea58027..aa5afd7a17b9 100644
 --- a/fs/ext4/ialloc.c
 +++ b/fs/ext4/ialloc.c
-@@ -993,6 +993,8 @@ struct inode *__ext4_new_inode(struct mnt_idmap *idmap,
+@@ -996,6 +996,8 @@ struct inode *__ext4_new_inode(struct mnt_idmap *idmap,
  		err = fscrypt_prepare_new_inode(dir, inode, &encrypt);
  		if (err)
  			goto out;
@@ -174,7 +174,7 @@ index 950cda9dc7cc..5aa49839dc7e 100644
  	}
  
  	err = dquot_initialize(inode);
-@@ -1303,6 +1305,8 @@ struct inode *__ext4_new_inode(struct mnt_idmap *idmap,
+@@ -1310,6 +1312,8 @@ struct inode *__ext4_new_inode(struct mnt_idmap *idmap,
  	ei->i_extra_isize = sbi->s_want_extra_isize;
  	ei->i_inline_off = 0;
  	if (ext4_has_feature_inline_data(sb) &&
@@ -184,7 +184,7 @@ index 950cda9dc7cc..5aa49839dc7e 100644
  		ext4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
  	ret = inode;
 
-base-commit: 14c37ff05f22da2fa7076d10f6a07c7ede330c83
+base-commit: dc6160265ffc795a1832bc1424f58291d152c7bb
 -- 
 2.55.0
 
