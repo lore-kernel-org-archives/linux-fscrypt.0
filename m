@@ -1,30 +1,30 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 4F3EB25A2C6;
-	Thu, 27 Aug 2026 03:31:28 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id CDF3721CA03;
+	Thu, 27 Aug 2026 03:42:07 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1787801489; cv=none; b=sbwadsF0G6aGNQ8HXmaByYlLeZiVaYkTqi84r6YmluvSSCbFEW5MTEgQgYs1lKAREnv1iow/B7qpT+xgbo7Iy8ibJLEQGqnONY7yF733sX55HYfOiV6GBS4kzZrfBhyF0Glag6AHMVTyhRgBupGloKrglEol4yzyReJFdGqH1A4=
+	t=1787802129; cv=none; b=UxrlC7EU+vjtFzCGPkNgD1l2HVkHXazKYdzqRMtXa/9SrnvztiTQIk9tRBVnFYbRRcYoWiJjmoINTYlBe/eaHZeA0mo1Mp2tQSYKxARq/AQrsbIzHioz10yHfK2YOo/Sof3eWpbON8XMQvAdSKvhoggbqIdGmG1G3hPiUVhi8aQ=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1787801489; c=relaxed/simple;
-	bh=AlhNxbF1hx/Uf549/Ae5jGe0IAxG1LUxZLHRGiE9lvk=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=FznAczb7BLxHLGBQGiNTJjpbXt2hqq+Ofy0crd1nfE5VlrYCapdeZfEUGsX79FvdyJ7Rh2VR40jtBiP9H7UYp2ouEwK1MFISGrIrTVka4rHkMYupXSpItIQnGvSUsr5fAJgcS5OlrN9ifpTwx0VRAdS6vcYg7R1HZe++FSfhkWs=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=YTuvzHul; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1787802129; c=relaxed/simple;
+	bh=PBYIZ8VrIJzpJ+EJhjaqnD4wQ2qWdr+aQNuBJvy/hKI=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=KCK2jncuUbqFkTfcfWXAJFFbgBKr2TvjU5Yc7AkGEdijghNi3Ru4BsQMchMSFqUVO+uvlm+SrD2Hd1VcdKi1pV0v9ftCUJn52HBgFJo27TaJMI9Z0t8efmAFIWrJaiHILtWf7+kBIi3ruTKBpDRI77Euv3t/GwZG/TDH6NP7yw4=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=B0qNBQqu; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="YTuvzHul"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id EEAA51F000E9;
-	Thu, 27 Aug 2026 03:31:27 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="B0qNBQqu"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 208781F000E9;
+	Thu, 27 Aug 2026 03:42:07 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1787801488;
-	bh=sk+e7M9FDeCgHi6xAOSRW6duNJ89bNmi4hGY1Er6DEk=;
+	s=k20260515; t=1787802127;
+	bh=jxXIQXsYcDcztJfTD/FuGQF/hzwWq/iFEhIaSs9Kyzs=;
 	h=From:To:Cc:Subject:Date;
-	b=YTuvzHul+tXzMS1DZa1cNyQPR6ouu1cX4LCr8CbmY+zP3/Hhy0ajxXl3Z8KmX9WSy
-	 B4P1NnX58pgpnX8RQ8SmnXAM1gt+KbmKoeKMrh56PJsdcfZ9v/wNG6V2WpdIBQQyrF
-	 HIplMK0ITCP81meAFNnf/JUd1cQVi9D6/4xFSk/SDvnT5usaGr7CHVIvJp2QU8uo/n
-	 YoaoInu3xcHQeLXC0y9bhTmoGnInHIVvELqbkJyVXo+fbpaAVwDJyU0XVQoUR5f/f5
-	 Ml57iUlMu0Q1LHaqdSXWC8VGagX8IiWJ72HipOIy/mPTke4E3o4jVahuPHtn4ZD9Oq
-	 gGVE5G0PgWoiA==
+	b=B0qNBQquD4BWIbGz1/Rh/ldsiSwUlbVUETuMabOfYfi2X6Po1FvNYnEwnJ3WOhYZX
+	 zHT0QxIjSYMZohthWUBCB/c3pgwy6er9uWFuvJXFEV5bBVGXXD91d1LUGUcl1H56Eg
+	 84Y0qT22F2rtsbPygyacbJcS2Ibw7dVFN+BV38k6FpLVMGy/3LoCL1GAv3yIwhUw3z
+	 U2Qu74g/7svVyHkZwIEIIdS320q7BSSnXRsuKR9MRNn6r/Rmfp4DXDd3YMPEbVnX/i
+	 ljbzpCMKVfnKEIPW4THzSEeCiY/DbIECWv4zekXuDD7/x+x85g602mMZlOdIt5eBnu
+	 PP3GKa2tRk8sQ==
 From: Eric Biggers <ebiggers@kernel.org>
 To: stable@vger.kernel.org
 Cc: linux-ext4@vger.kernel.org,
@@ -34,9 +34,9 @@ Cc: linux-ext4@vger.kernel.org,
 	Ojaswin Mujoo <ojaswin@linux.ibm.com>,
 	Jan Kara <jack@suse.cz>,
 	Theodore Ts'o <tytso@mit.edu>
-Subject: [PATCH 6.1] ext4: don't enable DAX on new encrypted files
-Date: Wed, 26 Aug 2026 20:29:17 -0700
-Message-ID: <20260827032917.82878-1-ebiggers@kernel.org>
+Subject: [PATCH 5.15] ext4: don't enable DAX on new encrypted files
+Date: Wed, 26 Aug 2026 20:38:33 -0700
+Message-ID: <20260827033833.135937-1-ebiggers@kernel.org>
 X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
@@ -85,15 +85,37 @@ Reviewed-by: Jan Kara <jack@suse.cz>
 Link: https://patch.msgid.link/20260730175212.36923-1-ebiggers@kernel.org
 Signed-off-by: Theodore Ts'o <tytso@mit.edu>
 ---
- fs/ext4/crypto.c | 40 ++++++++++++++++++++--------------------
  fs/ext4/ialloc.c |  4 ++++
+ fs/ext4/super.c  | 40 ++++++++++++++++++++--------------------
  2 files changed, 24 insertions(+), 20 deletions(-)
 
-diff --git a/fs/ext4/crypto.c b/fs/ext4/crypto.c
-index 8292494a9b6c..8497f6125a8e 100644
---- a/fs/ext4/crypto.c
-+++ b/fs/ext4/crypto.c
-@@ -150,7 +150,13 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
+index 2ee7467c0a6a..9f5d8acf31db 100644
+--- a/fs/ext4/ialloc.c
++++ b/fs/ext4/ialloc.c
+@@ -997,6 +997,8 @@ struct inode *__ext4_new_inode(struct user_namespace *mnt_userns,
+ 		err = fscrypt_prepare_new_inode(dir, inode, &encrypt);
+ 		if (err)
+ 			goto out;
++		if (encrypt)
++			i_flags |= EXT4_ENCRYPT_FL;
+ 	}
+ 
+ 	err = dquot_initialize(inode);
+@@ -1312,6 +1314,8 @@ struct inode *__ext4_new_inode(struct user_namespace *mnt_userns,
+ 	ei->i_extra_isize = sbi->s_want_extra_isize;
+ 	ei->i_inline_off = 0;
+ 	if (ext4_has_feature_inline_data(sb) &&
++	    /* Encrypted inodes cannot have inline data */
++	    !(ei->i_flags & EXT4_ENCRYPT_FL) &&
+ 	    (!(ei->i_flags & EXT4_DAX_FL) || S_ISDIR(mode)))
+ 		ext4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+ 	ret = inode;
+diff --git a/fs/ext4/super.c b/fs/ext4/super.c
+index 48628e917b70..c89e460180b8 100644
+--- a/fs/ext4/super.c
++++ b/fs/ext4/super.c
+@@ -1487,7 +1487,13 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
  	if (inode->i_ino == EXT4_ROOT_INO)
  		return -EPERM;
  
@@ -108,29 +130,14 @@ index 8292494a9b6c..8497f6125a8e 100644
  		return -EINVAL;
  
  	if (ext4_test_inode_flag(inode, EXT4_INODE_DAX))
-@@ -169,6 +175,14 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+@@ -1506,21 +1512,18 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
  	 */
  
  	if (handle) {
-+		/*
-+		 * __ext4_new_inode() should have already set the encrypt flag
-+		 * on the inode and avoided enabling inline data.
-+		 */
-+		if (WARN_ON_ONCE(!IS_ENCRYPTED(inode)))
-+			return -EINVAL;
-+		if (WARN_ON_ONCE(ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)))
-+			return -EINVAL;
- 		/*
- 		 * Since the inode is new it is ok to pass the
- 		 * XATTR_CREATE flag. This is necessary to match the
-@@ -176,21 +190,10 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
- 		 * function with the credits allocated for the new
- 		 * inode.
- 		 */
 -		res = ext4_xattr_set_handle(handle, inode,
 -					    EXT4_XATTR_INDEX_ENCRYPTION,
 -					    EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
--					    ctx, len, XATTR_CREATE);
+-					    ctx, len, 0);
 -		if (!res) {
 -			ext4_set_inode_flag(inode, EXT4_INODE_ENCRYPT);
 -			ext4_clear_inode_state(inode,
@@ -142,14 +149,22 @@ index 8292494a9b6c..8497f6125a8e 100644
 -			ext4_set_inode_flags(inode, false);
 -		}
 -		return res;
++		/*
++		 * __ext4_new_inode() should have already set the encrypt flag
++		 * on the inode and avoided enabling inline data.
++		 */
++		if (WARN_ON_ONCE(!IS_ENCRYPTED(inode)))
++			return -EINVAL;
++		if (WARN_ON_ONCE(ext4_test_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA)))
++			return -EINVAL;
 +		return ext4_xattr_set_handle(handle, inode,
 +					     EXT4_XATTR_INDEX_ENCRYPTION,
 +					     EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
-+					     ctx, len, XATTR_CREATE);
++					     ctx, len, 0);
  	}
  
  	res = dquot_initialize(inode);
-@@ -211,10 +214,7 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
+@@ -1541,10 +1544,7 @@ static int ext4_set_context(struct inode *inode, const void *ctx, size_t len,
  				    ctx, len, 0);
  	if (!res) {
  		ext4_set_inode_flag(inode, EXT4_INODE_ENCRYPT);
@@ -161,30 +176,8 @@ index 8292494a9b6c..8497f6125a8e 100644
  		ext4_set_inode_flags(inode, false);
  		res = ext4_mark_inode_dirty(handle, inode);
  		if (res)
-diff --git a/fs/ext4/ialloc.c b/fs/ext4/ialloc.c
-index be057f7ddc24..7e6555fb650d 100644
---- a/fs/ext4/ialloc.c
-+++ b/fs/ext4/ialloc.c
-@@ -996,6 +996,8 @@ struct inode *__ext4_new_inode(struct user_namespace *mnt_userns,
- 		err = fscrypt_prepare_new_inode(dir, inode, &encrypt);
- 		if (err)
- 			goto out;
-+		if (encrypt)
-+			i_flags |= EXT4_ENCRYPT_FL;
- 	}
- 
- 	err = dquot_initialize(inode);
-@@ -1311,6 +1313,8 @@ struct inode *__ext4_new_inode(struct user_namespace *mnt_userns,
- 	ei->i_extra_isize = sbi->s_want_extra_isize;
- 	ei->i_inline_off = 0;
- 	if (ext4_has_feature_inline_data(sb) &&
-+	    /* Encrypted inodes cannot have inline data */
-+	    !(ei->i_flags & EXT4_ENCRYPT_FL) &&
- 	    (!(ei->i_flags & EXT4_DAX_FL) || S_ISDIR(mode)))
- 		ext4_set_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
- 	ret = inode;
 
-base-commit: 05208478041ccec1b348d25e1df5c4013608590e
+base-commit: 945fa863f02cf8b1638546907f72dd0fc4d6ba85
 -- 
 2.55.0
 
