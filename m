@@ -1,47 +1,39 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D4B053264C1;
-	Fri, 28 Aug 2026 01:46:39 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 368A6233944;
+	Mon, 31 Aug 2026 17:58:17 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1787881601; cv=none; b=SgRBmdLW6tWB0LYhuk67bCE8M7IZ83Nolnm0ZcoejDk5ADumTAWuIyi88fRGblxtB7dUR9GUzflFVRxsUU0fW+29JCnklZkRC4hCUrQ1sNJ1XUBaqEU+yZQQHksfFMXYllUN6kor2TSvgBanBXM4Z7IyUNEurconNKINKJDEVQc=
+	t=1788199099; cv=none; b=YbVb9MePVMU9kRYuZ6Aj47WxRz2CVe62DJ9P/AT30I02IfsJZhfVwtEwooGBzZtGXhfljwfH57IlDOwjH1vv/fP8n+cqR5JeW0tHnrm386F1jnf26fqdTsF5DHbM3BdKwlmiS9nEDp0K1Ykt+QxMgKHTvCjNzhWX7j1NdzYNXAo=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1787881601; c=relaxed/simple;
-	bh=hqgCT4vJ679z/l/lWrEZtlqdUFm5kMnI0KnystEXAEA=;
-	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=dnQwLoghym3Cx2tIs45KGVitE5yWoRqFHhc4a1iQQUE2bruiLRIprXLocFSki4Pza8416W9xMsu3XDvn6+QjBF7Ydia6s3b3oRHefYZxYr0hw5r/jycAgO0F5QuY9rdUl6uwPsMkK39/0v09C2kDDmfEe3UImxdN7DiIY7hnF2E=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=RVLqyzxL; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1788199099; c=relaxed/simple;
+	bh=jYlByoaRCUxRRkyjfLu/xA70aQ+VziSSYvM4QRBxoGY=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=VRP91iVGkCrcdsWraFyx2mKUXlI8DkSYZn25fE0Dyl/NDYnIl2aQhFoq0t1+RZOb52XTptd0ZQ3ViBVQh5JJMlP9NWeHt7UsKnNc8mDLmXc336qkfn4hqPaL/Y9u0u6SyXPzsGcXHEUREc1RZZxc/s3Bv1vNEwLkvjd5UlehT60=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=ok647AGZ; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="RVLqyzxL"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 607791F00A3E;
-	Fri, 28 Aug 2026 01:46:38 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="ok647AGZ"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 9503C1F000E9;
+	Mon, 31 Aug 2026 17:58:17 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1787881599;
-	bh=hNAzuVZj1IIFZRlUnxjRcE2OX9vWGSOtCy3XeX1EJyI=;
-	h=From:To:Cc:Subject:Date:In-Reply-To:References;
-	b=RVLqyzxL7ISrUCgjBX8je3cd0dMyWR3mZvRf+Vh85oxXzaWK1IVLrZthVu6h5USeB
-	 kHBgFUbIUhNaYmsYBvlv+kwSy8lkHpmb4XOu+naqxUtUkBYNcsTiHe8BejrnQ0Ybh1
-	 8Z57yp2Ip86thp/fuZlgT0UbifnQkJDyd7GrycL+ymCiRxXLyc8Jvo8RHTi4S+k8Ik
-	 qkYYNZEj8mWQVZ/2TqRBXU+lCXvi1TGUh+aGn4dc0egZ1E+RhhMi9vx9wYjOmbq80F
-	 Q7efoZb/t1HB9bDqc/ZN1tF1FPDiN/8RxeNgDsZB046YPa92G7OAJ1yizw3vklKrR7
-	 BvvWYR44EOUuw==
-From: Sasha Levin <sashal@kernel.org>
-To: stable@vger.kernel.org
-Cc: Sasha Levin <sashal@kernel.org>,
-	linux-ext4@vger.kernel.org,
+	s=k20260515; t=1788199097;
+	bh=ktvRKtIGqqXYvl9p3K2R3omDvtm+OTnt3rQ/2HEs4ns=;
+	h=From:To:Cc:Subject:Date;
+	b=ok647AGZkSn1L9ocxiGhKvMHM8RqPKQ/7tkLCgq3KyQRURArUm1sDPklRD818zM5B
+	 QWrpTRA19KF5KiaD5wZi8t6ZwnL1W2CPaBvFjBzBYwfiJka/7c8gnYmFgbTLYTeRYV
+	 C5Lchv03ekux9lpnSXjrTy2xC8w78ZrKvfQi+l0UKiP3h9pz4xvZZXGlWllXr/0qlF
+	 gXarFxdQEVjB359iTvatwg14FU7aGuHu2RiqCq3YvCm8QLvJl+bOHIn7oG5Xo6Xj1V
+	 bBFpiEyD1Mm475VB32VBoI4zJEvDofjIPIWTpJFkIYCJoPquHtdBgl+NUsTcfLMa8m
+	 QNyEEqyaL0VKA==
+From: Eric Biggers <ebiggers@kernel.org>
+To: util-linux@vger.kernel.org
+Cc: Baoquan He <baoquan.he@linux.dev>,
 	linux-fscrypt@vger.kernel.org,
-	Eric Biggers <ebiggers@kernel.org>,
-	Disha Goel <disgoel@linux.ibm.com>,
-	Ojaswin Mujoo <ojaswin@linux.ibm.com>,
-	Jan Kara <jack@suse.cz>,
-	Theodore Ts'o <tytso@mit.edu>
-Subject: Re: [PATCH 5.10] ext4: don't enable DAX on new encrypted files
-Date: Thu, 27 Aug 2026 21:46:23 -0400
-Message-ID: <20260827-stable-daily-0010-ext4-dax-5-10@kernel.org>
-X-Mailer: git-send-email 2.53.0
-In-Reply-To: <20260827034018.136340-1-ebiggers@kernel.org>
-References: <20260827034018.136340-1-ebiggers@kernel.org>
+	Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH util-linux] swapon: document encryption support and limitations
+Date: Mon, 31 Aug 2026 10:57:38 -0700
+Message-ID: <20260831175738.37770-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -50,15 +42,39 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-> commit da32af420d6d466e247c43ac0b829edeac7ae0ad upstream.
->
-> Currently, when a new encrypted regular file is created, the call to
-> ext4_set_inode_flags(inode, init=true) in __ext4_new_inode() is made
-> before EXT4_INODE_ENCRYPT is set.  As a result, it can set S_DAX if the
-> filesystem is mounted with "-o dax=always".
+The Linux kernel was recently updated to explicitly disallow using a
+filesystem-level encrypted file directly as a swap file
+(https://git.kernel.org/linus/c310a8932a3107c9), since it was broken.
 
-Queued for 5.10, thanks.
+It is unlikely that anyone was doing this anyway, since encrypted swap
+is actually done in other ways, usually dm-crypt.  However, as requested
+(https://lore.kernel.org/linux-mm/amy7Biucbf-et5O2@MiWiFi-R3L-srv/) also
+update the swapon(8) man page to explicitly document this.
 
+Signed-off-by: Eric Biggers <ebiggers@kernel.org>
+---
+ sys-utils/swapon.8.adoc | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/sys-utils/swapon.8.adoc b/sys-utils/swapon.8.adoc
+index 923303cd3..ea4a786de 100644
+--- a/sys-utils/swapon.8.adoc
++++ b/sys-utils/swapon.8.adoc
+@@ -209,6 +209,12 @@ Since version 2.41, the command *mkswap --file* can create a new swap file with
+ 
+ Swap over *NFS* may not work.
+ 
++=== Encryption
++
++Swap can be encrypted by using a dm-crypt device as the swap device.
++
++A filesystem-level encrypted file can also be used as swap, but only if a loop device is set up on top of it (see *losetup*(8)) and that loop device is used as the swap device. Using a filesystem-level encrypted file directly as a swap file is unsupported.
++
+ === Suspend
+ 
+ *swapon* automatically detects and rewrites a swap space signature with old software suspend data (e.g., *S1SUSPEND*, *S2SUSPEND*, ...). The problem is that if we don't do it, then we get data corruption the next time an attempt at unsuspending is made.
+
+base-commit: c3275e32946289641faf567af6748539acb3e802
 -- 
-Thanks,
-Sasha
+2.55.0
+
