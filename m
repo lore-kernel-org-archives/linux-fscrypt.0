@@ -1,146 +1,190 @@
-Received: from mail-wr1-f47.google.com (mail-wr1-f47.google.com [209.85.221.47])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+Received: from BYAPR05CU005.outbound.protection.outlook.com (mail-westusazon11010031.outbound.protection.outlook.com [52.101.85.31])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 373D15867CC
-	for <linux-fscrypt@vger.kernel.org>; Tue,  8 Sep 2026 16:47:39 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=pass smtp.client-ip=209.85.221.47
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 61DBB322B8F;
+	Mon, 14 Sep 2026 02:24:28 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=fail smtp.client-ip=52.101.85.31
 ARC-Seal:i=2; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1788886062; cv=pass; b=UIHN7iIr/9SmLsaqvnHJSuFSpatLPNKl05vKg2OoQq/UE4tEc/jxYYPItYCmbcr4MwNOaJveDcivHnbS/sTf5Qc/8d6DCdSgbf1Cu5Goc21VLlM3UCxPA8hX66vBEi95yBeyzJu6WqEXiUMQw9ZUdHddPDRGHz/CxcmfVLOc7PI=
+	t=1789352677; cv=fail; b=GEnbeIABO8ORaVttFx3iJwcr94BMCPHHLJlb6icDtoSbEnpcub4XKUa3mfWKbCLZXo5K2wLNa/jQe0GIdAZzeXZmc8ZHsdvu1EzGQsh7dmVfHarny5poZXW/Xg8vp/drfptOmq/6YaT2lkeFZUa+/AHLgjyPyapS9L2TOPIH3OA=
 ARC-Message-Signature:i=2; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1788886062; c=relaxed/simple;
-	bh=mwAxvZMzHRoyoS5SlFNnDSEx6Xh8O3uTGsYLqZ4P580=;
-	h=MIME-Version:References:In-Reply-To:From:Date:Message-ID:Subject:
-	 To:Cc:Content-Type; b=HRa2MgvbQt62rpRLM3LuKPmNpB0UP60e4X2OaoeBgCUeVbCOPX+CDVGmJXUeTLDp+/GQbWPBu/UImKDckDLeeRHUSg9iDEx054lu1r2zf0uDTJCC2OkJgyubwCbB62M2VGiKXu12Q7clT+e1/9MmjyzmWUcPuewK9iXvzZopN0Y=
-ARC-Authentication-Results:i=2; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com; spf=pass smtp.mailfrom=suse.com; dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b=ZeWDij5q; arc=pass smtp.client-ip=209.85.221.47
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=suse.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.com
+	s=arc-20240116; t=1789352677; c=relaxed/simple;
+	bh=mlGhRQsDFVR+ZtrbFnxBErjRr3tinO9GhaaHYovRs8c=;
+	h=From:Date:Subject:Content-Type:Message-Id:References:In-Reply-To:
+	 To:Cc:MIME-Version; b=c56Qoy7SH/3ywtj5IN7CtyvH+QGCMv6W1zG4dIsUbijZCcYwl6oZd1ZLbWL7ZE9zwbBh90S+W9TEKeaEv+wIGO/fnDXv0Rlb+9z2FC6GQpxhSeKEubcazXmQaOyasX41CS4fpFCPHnU2BfK25N/x4uJfNyiD+syuCXO/DAQkyPo=
+ARC-Authentication-Results:i=2; smtp.subspace.kernel.org; dmarc=pass (p=reject dis=none) header.from=nvidia.com; spf=fail smtp.mailfrom=nvidia.com; dkim=pass (2048-bit key) header.d=Nvidia.com header.i=@Nvidia.com header.b=kRqDGMZw; arc=fail smtp.client-ip=52.101.85.31
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=reject dis=none) header.from=nvidia.com
+Authentication-Results: smtp.subspace.kernel.org; spf=fail smtp.mailfrom=nvidia.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=suse.com header.i=@suse.com header.b="ZeWDij5q"
-Received: by mail-wr1-f47.google.com with SMTP id ffacd0b85a97d-48441a2ba1bso3515516f8f.1
-        for <linux-fscrypt@vger.kernel.org>; Tue, 08 Sep 2026 09:47:39 -0700 (PDT)
-ARC-Seal: i=1; a=rsa-sha256; t=1788886058; cv=none;
-        d=google.com; s=arc-20260327;
-        b=a+AhVFKzX/TOE9bAiaM18dGh+Wv6q5mdLvYcRMnC7A6m16ELnj+FRRg6cd7r1BBbLD
-         JJ4kqiopnDhugGS9Jws9U0/yUqmyvY3Gv6vCsmf4GvYkf2OIb/9QW3d9OGbNffllmofA
-         7Hg8ijWmqyO41jUCMwZS5ODZMasIPkylkVcJNnlv0BgUEjSam684FbexQ7fzLhXL+qO7
-         UOeMkz4gSWaHE/EKgKj3+v5XRmchtnQ42r8XRgI4PT/28M3eapQTtbwW37T10xH4HE1g
-         rsKJf8Y0nPSYnpj5zUAVUYbxv4INGdvlq/ZXFZToXPfD2jegx9gY0XL6wvv6shBvSYng
-         ITVg==
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
-        h=cc:to:subject:message-id:date:from:in-reply-to:references
-         :mime-version:dkim-signature;
-        bh=lQTr2U76uYl3nor0tns8i6gi/m+LsiVvyKvG51LqGmw=;
-        fh=BqkZwmuBBDzMjNzjgWD61jT4VFjpyHji1KuQEqWetg4=;
-        b=Ei4tUuVO4YVowLS57D4q/kG4vFD8nHgSU4VSm/kcq++MTCXRA1We0PjwWR76cZbibJ
-         1IYN2FaHDiJKUD/j12tkVPqIrtbgRbojgOT9Yo+RuoFpi//rz4kPFOerQXxP3kXq4Yye
-         Z+A21T8hyPC8+iX02vLe/W+J3YwZDOjt8xsZdDteh88VkPmsWsXE8bezvR3uaCaOClIk
-         VAWdyyVI7PiJEI6aLMlebXQDlRoieOh+TX8soGLsnmRAVx/75WnNBqC1jEprSz3M5vK0
-         7QMvdjKdSzQvzPS8UN+AHBQCuPrc6Gft5uWtfeKZXL9+9zazwT0tTMU5ckN3QXf7K3Ju
-         7i0Q==;
-        darn=vger.kernel.org
-ARC-Authentication-Results: i=1; mx.google.com; arc=none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=suse.com; s=google; t=1788886058; x=1789490858; darn=vger.kernel.org;
-        h=content-type:cc:to:subject:message-id:date:from:in-reply-to
-         :references:mime-version:from:to:cc:subject:date:message-id:reply-to
-         :content-type;
-        bh=lQTr2U76uYl3nor0tns8i6gi/m+LsiVvyKvG51LqGmw=;
-        b=ZeWDij5qCX58pjNIOWqP5T0WwTbCTYmg9/C3jusLKLwjD09DWYEnX0tdae7ZguME6H
-         lhfsqRR1a1twNwVjmiRA+E0Z25HLxcD1pvX4jHJ31YZQGRC/53qQgUw+lJo4NKHkLrRl
-         425BHkFkIpOduF245QPbwxdQXdoQCVsk2ydZWdL7imUQtEWxlBpTYbCjPYw5HoDIPFwR
-         ZN8SdF1WQAaYoiNp1EhGISVBI/RZ/M1e08APN4/r16Oo98wmnJsQKDSWMv72NL/0O7s2
-         HmqaXM808bFk/ir0x0a7IPVbtg5GVCAvwUnHyidWwkWCBDD35wxITvIYgKUSz0wVWUgw
-         DuJA==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20251104; t=1788886058; x=1789490858;
-        h=content-type:cc:to:subject:message-id:date:from:in-reply-to
-         :references:mime-version:x-gm-gg:x-gm-message-state:from:to:cc
-         :subject:date:message-id:reply-to:content-type;
-        bh=lQTr2U76uYl3nor0tns8i6gi/m+LsiVvyKvG51LqGmw=;
-        b=bscZyde+aXXT6AaN2/ZsJFNzOVigY63qhUiyvLbQ2BRUJ6b0Qbc4pGpfEJIr1F68f2
-         mJ2WfVDwot4xAjknCbc6G7p4TRoehYnw2VuiMvNz5Rin6VPiqo1y+rK5VK80ac4LW+eX
-         FxEA3zInBAPmX74XNNVDoRjUYzeld8K2PqPWpuCLtlrdplFADs3N+mIGkksTXbZgsUjp
-         4G5fdhe3mAgaWqKWRRk46/ODts2iywFjdbE3JRfgEcOIC4ddM6EzvXAz7XcrVNv3jRrA
-         DIWD26ioWyjDSGnjZEj/vnHJXHJcDoSNvyqduNOeXpixb/bQvv0DZiaJwgyfiTj9RU4n
-         4GPw==
-X-Forwarded-Encrypted: i=1; AKwUvBxqHIO5wQkfpqxUOXI/yEpRyg1HKT3NpchrzBP8kQPoijQT9Y7pk+sn8smuCyQrfMS1QH8T8Rc9zV9sf/2Q@vger.kernel.org
-X-Gm-Message-State: AFuF++mDzEdHgHIfTsq5Pz/VQv+70j9Ldi9sXK96uDdWSY4O+X6SYWWw
-	S4dIuuK0saT1Sd8fUYHQgMNYOClKTx6XRIJPI3u9SU9iuNz/2Qn1CH3nzx3bnjn7QhVHKbv0fMM
-	NOrCKLkFRzPii+8VHQx0Ttky7tcWU+sYV5qGDRJnAHQ==
-X-Gm-Gg: AYBFou3s0veVCmxtPM602sUVbDFAz2rKTy6V0cjDS2eb4uURjs5CVAnXfRD2mXvb3qS
-	rTybMdqjPUslJSOYBb+TbdrC//oYrN8p7A5T03ZnaXq77RWRGnGeRKgnT5k4meN2pgt4AaINT02
-	T3C95lN/9RB1KEUTqhFmZvcJsrLEOM5yD24qS7JNFocnDehWMzMuMJ1/heW/82frVNCEkFC/SYO
-	U5yzw1X9C/gZmkZLBfYZYqSjDPM8t14ul/bWFwVzdGaaiZAp328jWZbwqfLrU5JDc6eJV129eQj
-	uoD9QLBrz5wPX/rMj4IyHL8HWHupjwJu2CTwRg8yfVm4KOFmbFd8acNFEC9/PXVVLc78cGqV3iW
-	hLe3kL63ROYtwJv6pbsqRz+FURRCNWsuexOzl0VUidA==
-X-Received: by 2002:a05:600c:138e:b0:49d:daa:af6e with SMTP id
- 5b1f17b1804b1-49d1c7b732amr46339715e9.16.1788886058021; Tue, 08 Sep 2026
- 09:47:38 -0700 (PDT)
+	dkim=pass (2048-bit key) header.d=Nvidia.com header.i=@Nvidia.com header.b="kRqDGMZw"
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none;
+ b=rmMBfM41hCQl2XW3g7EIBop/EqGWur1brbRj1iJ53Ox9aPxwj4LrSic6MiMAHW95wuzbS9rNoctKtt67gvUnXaJhVJAtj5mpRna2uPCbwsnMGZpQgI26qiV67NPs4WkkP6Zn3lmUv0ph1a22dPCU/CGfVG8sb5ZY+/5dJoVjbLa1lh2fvFhpiPifotHd/S6tFVG0lEW8i0RnJrJndkZIfYtJwa3Nio9Y4iKfQdn8pThCwBhMRYJayuLBfcYx6NtcbOq+RGC186MHUeZxoVNFRD8xTfimwPFWiyF1o3A8N/TPK6RJQXNX4qE9IOqHibKgn+tP52JmQ+pYj56BL1DJYg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector10001;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=b96eSbyk6ByBEFjiSyHVjmOBfJffseci+FgonfWLP2s=;
+ b=czmy0wvQVacafrIaJ/Iy3WrSCZ1cu5q64pjPuyK2XE/iwZilntHOSJhSX6wJm0ihw0kXgnCb8d2h62eY7V6yR5kMn2Ui6V6lBm5idz77ktEUdm34Ljejfm6yoJNEhxxvHWI0L9vhFHgwyfD8Q6CGom2/WJ9dTIIVXQ4fa2DF1oIbwIlMrbSDWAvxzuDNGJFue5Su7TTSh3lyb9StjjuDHFUfLURGjeuIxhbGktxcK6Ty9NkC/ebdzqGi4VXBTZ93BGPaP6tNgZxVA5v6NrFhM4V0BXU3LD61xLAfy0mxyOQxS0bBGUOkpDPSm5CrfGRp7eax+pD3EcniF1TbuUlbog==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=nvidia.com; dmarc=pass action=none header.from=nvidia.com;
+ dkim=pass header.d=nvidia.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=Nvidia.com;
+ s=selector2;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=b96eSbyk6ByBEFjiSyHVjmOBfJffseci+FgonfWLP2s=;
+ b=kRqDGMZwzfUXzsUUFMFhTWty4PlyGJFNKVjs7/JmmBcmoNl8Drv66GtEutIuDS45hLlc07wUQqqeETBtURA4j4gzJ1zaREZUbQHHjgHm0O/lprrP9o4gWqosIL14JugOiQsQ74/EDoebPzHU7++LJ1bIFLBJhr+Z9OWw3xzLAs+u2vSlMCXM8xuy4wcvrPlmRhTbHmmdltRI2sy+UGHMc/jyO71GPtdVV4z9PmIH9SuVj3p3ELlGkJ9q4eyfN9Fa06m6srxWlgEN9q7nRDrLtY4sggvzxz8kpPcJWmd5RlEI6/2otcy2TQyYIPkzgVYyXxLemkI/zXJlEav3dYKy2w==
+Authentication-Results: dkim=none (message not signed)
+ header.d=none;dmarc=none action=none header.from=nvidia.com;
+Received: from IA0PR12MB8374.namprd12.prod.outlook.com (2603:10b6:208:40e::7)
+ by DS0PR12MB6486.namprd12.prod.outlook.com (2603:10b6:8:c5::21) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.21.406.12; Mon, 14 Sep
+ 2026 02:24:17 +0000
+Received: from IA0PR12MB8374.namprd12.prod.outlook.com
+ ([fe80::d85f:4c87:ae84:3f16]) by IA0PR12MB8374.namprd12.prod.outlook.com
+ ([fe80::d85f:4c87:ae84:3f16%5]) with mapi id 15.21.0406.007; Mon, 14 Sep 2026
+ 02:24:17 +0000
+From: Zi Yan <ziy@nvidia.com>
+Date: Sun, 13 Sep 2026 22:24:02 -0400
+Subject: [PATCH v4 04/16] fscrypt: stop setting PG_private on bounce page
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+Message-Id: <20260913-remove-pg_private-v4-4-848550f7574e@nvidia.com>
+References: <20260913-remove-pg_private-v4-0-848550f7574e@nvidia.com>
+In-Reply-To: <20260913-remove-pg_private-v4-0-848550f7574e@nvidia.com>
+To: David Hildenbrand <david@kernel.org>, 
+ "Matthew Wilcox (Oracle)" <willy@infradead.org>, 
+ Andrew Morton <akpm@linux-foundation.org>, 
+ Muchun Song <muchun.song@linux.dev>, Lorenzo Stoakes <ljs@kernel.org>, 
+ "Liam R. Howlett" <liam@infradead.org>, Vlastimil Babka <vbabka@kernel.org>, 
+ Mike Rapoport <rppt@kernel.org>, Suren Baghdasaryan <surenb@google.com>, 
+ Michal Hocko <mhocko@suse.com>, Baolin Wang <baolin.wang@linux.alibaba.com>, 
+ Nico Pache <nico.pache@linux.dev>, Ryan Roberts <ryan.roberts@arm.com>, 
+ Dev Jain <dev.jain@arm.com>, Barry Song <baohua@kernel.org>, 
+ Lance Yang <lance.yang@linux.dev>, Usama Arif <usama.arif@linux.dev>, 
+ Gregory Price <gourry@gourry.net>, 
+ Ying Huang <ying.huang@linux.alibaba.com>, 
+ Alistair Popple <apopple@nvidia.com>, Johannes Weiner <hannes@cmpxchg.org>, 
+ Qi Zheng <qi.zheng@linux.dev>, Shakeel Butt <shakeel.butt@linux.dev>, 
+ Kairui Song <kasong@tencent.com>
+Cc: linux-mm@kvack.org, linux-kernel@vger.kernel.org, 
+ Zi Yan <ziy@nvidia.com>, Eric Biggers <ebiggers@kernel.org>, 
+ "Theodore Y. Ts'o" <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>, 
+ linux-fscrypt@vger.kernel.org
+X-Mailer: b4 0.16.0
+X-ClientProxiedBy: MN0PR03CA0011.namprd03.prod.outlook.com
+ (2603:10b6:208:52f::13) To IA0PR12MB8374.namprd12.prod.outlook.com
+ (2603:10b6:208:40e::7)
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-References: <20260513085340.3673127-1-neelx@suse.com> <20260513085340.3673127-10-neelx@suse.com>
- <20260602025436.GF2295@sol>
-In-Reply-To: <20260602025436.GF2295@sol>
-From: Daniel Vacek <neelx@suse.com>
-Date: Tue, 8 Sep 2026 18:47:27 +0200
-X-Gm-Features: AcwNN1WHoSNszmavv4wORasY461K9gsH-mc9zR1O6zdN1S5pOlfHSeHNoKmuOnY
-Message-ID: <CAPjX3Fd-YEgnzhMryAJi44tZNs_YsHRAAwsxaKbO_jpgvp=qQg@mail.gmail.com>
-Subject: Re: [PATCH v7 09/43] btrfs: add infrastructure for safe em freeing
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: IA0PR12MB8374:EE_|DS0PR12MB6486:EE_
+X-MS-Office365-Filtering-Correlation-Id: 444d3686-e5c3-40c9-6d30-08df1207471d
+X-MS-Exchange-SenderADCheck: 1
+X-MS-Exchange-AntiSpam-Relay: 0
+X-Microsoft-Antispam:
+	BCL:0;ARA:13230040|23010399003|7416014|366016|376014|1800799024|22082099003|18002099003|921020|10067099003|56012099006|11063799006;
+X-Microsoft-Antispam-Message-Info:
+	CFmEMJ710Akn5WIin2Pg03nulY4Iffx9/GRPq3ANf0oB2luRLZoR58kztgysvGx5xof8TJ55hKVQHi8CfLx4Cis5phLqrFkfsWkBj6NhvmSr9nAhkv0jwfgV6WpDgf7pGJy8r8QdYVTeNxJjLwFO7tiIalyIpRcXfufkMvI1IBwp0e7HrQgl9orm3Bd3gJOfi6b1btjLDbguZmVEhFhcivpe29+C1g/KMYXGiOZzi7m8teZBxJM5GHefGZcwfpeRv5QlmP46UAfFXy11etdS00vDErzHSX2FC6ub/tAHD/FHujULtT4toGEfjWiiBbrqFyxxpbFUj/c/XAfI/Yh9QiHyzYWeASZouYIXjU27p4lTUVenHLgbn3ehHrIrKSYt93Q/VGEXi8EvpucY591eI98dd8rrMqoVjBM1XPteGmGLdbTZ1TiBI7BJB9A9P+tCdnpjHNmPfa5WR/4kZ83HBslsf+4Hl3xY6/TWNnFDnvn2I3VwGsq0HlSgCYD0jEEO2T9LRFyK3CnkGRd2h2dQ09zpHRYj91HtfxpPsHGXpRmX/DkULUMPoYpZY/I/vD9SD6X/iy9mdCMakGzDw8p1MVG0qwQE4//ysAulKovi3/hC+1vAcSfUYnuW/xZHNgbwUQ3u4Q2fsZK64zHnZ5+9K8p6ZwH1S812eNmhWShJQU8qGoWgax2iO5ba4/o5Yf7/WUyjpPXSMoCGkx+lAZVlUQ==
+X-Forefront-Antispam-Report:
+	CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:IA0PR12MB8374.namprd12.prod.outlook.com;PTR:;CAT:NONE;SFS:(13230040)(23010399003)(7416014)(366016)(376014)(1800799024)(22082099003)(18002099003)(921020)(10067099003)(56012099006)(11063799006);DIR:OUT;SFP:1101;
+X-MS-Exchange-AntiSpam-MessageData-ChunkCount: 1
+X-MS-Exchange-AntiSpam-MessageData-0:
+	=?utf-8?B?bklxQXZRWTZLdmoyTVljYjJ5VTZqZjNNVUNEWDQzS05nRE8zVmNDSFJpdFUx?=
+ =?utf-8?B?U3YxOGExdGhrekJBOGZQYzhtTnV4YWVTNm9XRmxTdVhBSDJINi9IbVRuQTN1?=
+ =?utf-8?B?QnR4c0pFb2txQ1NxUTFSR1ZyWjhaaHZqTWhreUZuSEh1djRQajFOTzY1V0ZP?=
+ =?utf-8?B?cXo1ZVpBaHNyS3hlUkRhN1NYV2xzbjNtTmg4OUIyb1V3L0lOVkhuRUFOdUN0?=
+ =?utf-8?B?VmFEUUVXd1U2L1ZCN0IvekNOL1hLVWxFWnhRWTRtQnJRUjMwTFlmTXkxQURm?=
+ =?utf-8?B?QzNtU0REWXVaUEprZkJMYmpkbFN3a0dYMDVFeGJaT2hobFAyaG0zdnZ5ZDMv?=
+ =?utf-8?B?b2FyKzUrWTcyZkQyaWpCcnhHOUlvSlltKzhvK01hYXNTZUczdjB0eVJTNXQr?=
+ =?utf-8?B?dDVwY2NZQ1E4WmNmVzVRVXRrZjkwQXVyTlZLR24yTXNkcEtwNXg0ZlBDWWdx?=
+ =?utf-8?B?aFltdko3b1p3NmxDcjB1aG5FWm9sRjRYeUsvQkI2NE1IK1ZxcU5zaGNpMGNL?=
+ =?utf-8?B?b2taMTlKZktvQjlUb0pUaDJvS0JUTnZkS01UeGp0eEpPTnlKTHZvSDdPbHdw?=
+ =?utf-8?B?MTVJTHhUNkpjV0dyOFZLOURhUDJnaUVMYU9HN3daOEl2NVlWUmEyc3ZiS2hD?=
+ =?utf-8?B?Ri9PQzU0Zjhpb0dlQ3cyNCtYeENyY044ajlkK25hN0pZdkpqQ3BWU3FpOEJt?=
+ =?utf-8?B?dGZMSmM0OWJ5QThjaGpVdklsVitYOUxzempUWXl5QzBqQmU5R1psL1R0Z2h4?=
+ =?utf-8?B?UWtFT3dSK3d0MC9pQ3Y4N2IyYzBmSVVROXgxNE9CT0NFaDlBbUFMN2J2cERr?=
+ =?utf-8?B?T0QvYzhQZEN0VFBWQW9yNG5hQUlDUjgyaGdxZUx3TWJ5VStoYVZleWdVWUxX?=
+ =?utf-8?B?R21tUnhQR2Z1c0h5SkF0aGE0VCtoMlptVVhBcEF5TS9xL2hhUDlNNEo0MzNY?=
+ =?utf-8?B?UDFodU9CNUU0ZEtBQ09pRG1vSGVIdm1McitDMnR6dTBqYThDUTBRa0pYeitv?=
+ =?utf-8?B?dUZ5ZG9RU2lNQUdzeXlPYWVma0FIUlVxTmgvRGhFVDFIa2x3TnIrOHRQVDlh?=
+ =?utf-8?B?a3lhdGRUM2c0SHl6dXpJbUdpdDJwTHFBc29JNVJEbXFuMytGd1AvRC9BWVlU?=
+ =?utf-8?B?SDNiNlAxNHZuYkpNUzBjaEx2UnlSMjFRend0TWUwN1JJZGxmcjdmK0VKL1dr?=
+ =?utf-8?B?elVheGNUaDJRalRRemJnY20xSUZGMnVXcHMxV3FZTys3ditla0UvQVQ3Rzkx?=
+ =?utf-8?B?cEJmSDVRYXhqRWt3T0JFMENRR2g2VHA1aTIydVNHbGx5R245RzVXOEUzRGIw?=
+ =?utf-8?B?YlVyUlNrOFVkY2JhNUJhZ01BaEZBS25wUDMzRkdSZjdmZUw0aHBGL0VPWVBi?=
+ =?utf-8?B?aWNHbVJVRGFBakhvNCtjLzU4ZG5oN1M1bmI3WEFtK0cwM2cwZnR0L2pmNmMz?=
+ =?utf-8?B?dlhOU3p6S09rY0ZGTjVOVUpNb2RUMndLeWRibnliQVRDSU9mK2Q3RW5Ya2JC?=
+ =?utf-8?B?YU16a3dZL0NVL0QrQ3EvTm9McDlRb1g3bGhFTllueDhSRTB2YWh0WFBPUTFr?=
+ =?utf-8?B?RXJmQWt3VU1uUFZYdm1lNm1MSGl2UGJYSDk5SDhUQjZaTkJKM2pHS2U4STFR?=
+ =?utf-8?B?NnpjZFBXL1RLTWN0S0pHWU11ZVhWUVA1VDZnYkwvWDZkcEZrUENaY1dQTUk5?=
+ =?utf-8?B?TFBYZmNLQVFOM1NMbnBOYkRIc1FleHFRWnZWTzhTR3FMZ2Y5KzIrOEN1UnlM?=
+ =?utf-8?B?cjNVMHFFOUd5ZWFQVUlpNFJCbXg2NTdQNFlXb0N4OHVGS1oxSVhRNDUrUEx4?=
+ =?utf-8?B?dCtUbi9RSlpxVThPTEdYRzVWaExxaUNPemtPQ0Q1U3ZPa2VwZzk3UjcvbGRU?=
+ =?utf-8?B?US8wVG0ra2pBNCtRM1htTUlncmE2aUtNQWlDYldYUFpWMVBZRDdYUWlpd1ZQ?=
+ =?utf-8?B?OC80c252MHpaNHpSTmptVkxKMTlPb2pOYzFjeHJaOW95dWlPYUlQVWowUGxh?=
+ =?utf-8?B?VXFKMXNEaW16MXZrOE5pQVFPTHBubytEcm1nUnpyYlpQREU1SzI4T3RMMG14?=
+ =?utf-8?B?TzEzem81MVlFaTNwWDRBeXBmMWRHQWVVSFBYVkNWcW9haG5hS3RJUEJ1RjBU?=
+ =?utf-8?B?bjZycEU4M21zMXVOL1NyK0FTU2ZIU0puU0JxRy9OS3JrT1pwcTZwa0ZoUC9k?=
+ =?utf-8?B?dUdvenY2MHZkWFBQVHRNc1lxL1QwMFcwR3Vibmx6M2pYOVl6ZVp4Mk9TUEhu?=
+ =?utf-8?B?Z1hWNXNOYzQzelEySFZwOW1hS2RpckV2RzNhSVR6K1VTZFlSQTZiYVNaeXFx?=
+ =?utf-8?Q?B86Yt89tNfBUp3adO3?=
+X-OriginatorOrg: Nvidia.com
+X-MS-Exchange-CrossTenant-Network-Message-Id: 444d3686-e5c3-40c9-6d30-08df1207471d
+X-MS-Exchange-CrossTenant-AuthSource: IA0PR12MB8374.namprd12.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 14 Sep 2026 02:24:17.7978
+ (UTC)
+X-MS-Exchange-CrossTenant-FromEntityHeader: Hosted
+X-MS-Exchange-CrossTenant-Id: 43083d15-7273-40c1-b7db-39efd9ccc17a
+X-MS-Exchange-CrossTenant-MailboxType: HOSTED
+X-MS-Exchange-CrossTenant-UserPrincipalName: aJ3MVSfSSZCTSOGlh3f97ycp7Fcks0n7v7/nExCu6ws4fYnuf62uekayQ+XdgRaf
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DS0PR12MB6486
+
+The pointer to a plain text folio is stored in bound_page->private and
+cannot be NULL until the bounce_page is freed, making PG_private redundant.
+
+It prepares for a future commit that remove PG_private.
+
+No functional change intended.
+
+Assisted-by: LLM
 To: Eric Biggers <ebiggers@kernel.org>
-Cc: Chris Mason <clm@fb.com>, Josef Bacik <josef@toxicpanda.com>, "Theodore Y. Ts'o" <tytso@mit.edu>, 
-	Jaegeuk Kim <jaegeuk@kernel.org>, Jens Axboe <axboe@kernel.dk>, David Sterba <dsterba@suse.com>, 
-	linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org, 
-	linux-btrfs@vger.kernel.org, linux-kernel@vger.kernel.org, 
-	Boris Burkov <boris@bur.io>
-Content-Type: text/plain; charset="UTF-8"
+To: "Theodore Y. Ts'o" <tytso@mit.edu>
+To: Jaegeuk Kim <jaegeuk@kernel.org>
+Cc: linux-fscrypt@vger.kernel.org
+Cc: linux-kernel@vger.kernel.org
+Acked-by: Eric Biggers <ebiggers@kernel.org>
+Acked-by: Usama Arif <usama.arif@linux.dev>
+Acked-by: David Hildenbrand (Arm) <david@kernel.org>
+Signed-off-by: Zi Yan <ziy@nvidia.com>
+---
+ fs/crypto/crypto.c | 2 --
+ 1 file changed, 2 deletions(-)
 
-On Tue, 2 Jun 2026 at 04:56, Eric Biggers <ebiggers@kernel.org> wrote:
-> On Wed, May 13, 2026 at 10:52:43AM +0200, Daniel Vacek wrote:
-> > +/*
-> > + * Drop a ref for the extent map in the given tree.
-> > + *
-> > + * @tree:    tree that the em is a part of.
-> > + * @em:              the em to drop the reference to.
-> > + *
-> > + * Drop the reference count on @em by one, if the reference count hits 0 and
-> > + * there is an object on the em that can't be safely freed in the current
-> > + * context (if we are holding the extent_map_tree->lock for example), then add
-> > + * it to the freed_extents list on the extent_map_tree for later processing.
-> > + *
-> > + * This must be followed by a btrfs_free_pending_extent_maps() to clear
-> > + * the pending frees.
-> > + */
-> > +void btrfs_free_extent_map_safe(struct extent_map_tree *tree,
-> > +                             struct extent_map *em)
->
-> The "unsafe" btrfs_free_extent_map() still exists.  Assuming both
-> variants will continue to be needed, shouldn't the comment above the
-> "unsafe" variant be updated to document the preconditions for using it?
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 5286a124b0d98..aced5c50a4601 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -65,7 +65,6 @@ void fscrypt_free_bounce_page(struct page *bounce_page)
+ 	if (!bounce_page)
+ 		return;
+ 	set_page_private(bounce_page, (unsigned long)NULL);
+-	ClearPagePrivate(bounce_page);
+ 	mempool_free(bounce_page, fscrypt_bounce_page_pool);
+ }
+ EXPORT_SYMBOL(fscrypt_free_bounce_page);
+@@ -210,7 +209,6 @@ struct page *fscrypt_encrypt_pagecache_blocks(struct folio *folio,
+ 			return ERR_PTR(err);
+ 		}
+ 	}
+-	SetPagePrivate(ciphertext_page);
+ 	set_page_private(ciphertext_page, (unsigned long)folio);
+ 	return ciphertext_page;
+ }
 
-Actually this could be cleaned up and unified into a single function
-with optional argument.
+-- 
+2.53.0
 
-> > diff --git a/fs/btrfs/extent_map.h b/fs/btrfs/extent_map.h
-> > index 6f685f3c9327..a962012be1c3 100644
-> > --- a/fs/btrfs/extent_map.h
-> > +++ b/fs/btrfs/extent_map.h
-> > @@ -97,11 +97,18 @@ struct extent_map {
-> >       u32 flags;
-> >       refcount_t refs;
-> >       struct list_head list;
-> > +     struct list_head free_list;
-> > +};
->
-> The comment above this struct says "Keep this structure as compact as
-> possible, as we can have really large amounts of allocated extent maps
-> at any time."  Is there any way to avoid adding a whole list_head?
-
-Good catch. In fact we can reuse the old list member. No need for a new one.
-
---nX
-
-> - Eric
