@@ -1,55 +1,38 @@
-Received: from us-smtp-delivery-124.mimecast.com (us-smtp-delivery-124.mimecast.com [170.10.129.124])
+Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 26AF24A2E0F
-	for <linux-fscrypt@vger.kernel.org>; Wed, 16 Sep 2026 09:21:24 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=170.10.129.124
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 44F963AEF3A;
+	Fri, 18 Sep 2026 02:22:33 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1789550489; cv=none; b=cL4X+016TZhaSDJzdOfZ9Dw7LTT92doNTBjDEJetYdQiHsWwQw12fqWouHE4y+kg5bQqU8LUlafE9FSYWndAgSGsS1coA6W5PJ3Z6pW5JMGMQb79IQdf3QM5tT/NWGS2Um+01d7nouIKj2NrwYGjMfo4Ny6nap6sf5X4sEF7QG0=
+	t=1789698162; cv=none; b=QdRXAL1soE6dAT7dkA0E0/mhR5W1+enEh7pFPWOlmmPk6dktv0w2AtkoHJi+Fb+RIvR+3397VyYHjuX8eQ41/m1FuzXWPhtK8NXqqd/6rMr9gEaRSXkLLBmc6DbCV5B+0z4V3ncztkceJQgjIg2ystiiPJPSWoDrnqggLAst+1M=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1789550489; c=relaxed/simple;
-	bh=kYbrojFvUZB3MY1/al9oOqd2OaVm7IXuCjTlrA2wWiQ=;
+	s=arc-20240116; t=1789698162; c=relaxed/simple;
+	bh=Ep6O95+gdYUjNp8kjamyrzF44y1Pkd+E2Ueag5MVFgk=;
 	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=ByODudKDAPjO2txff61PSLZhvz+H+GIDZ5gDnorWyLbBfY8Kie36SU8UeiR/OqoCGAEXUG2i10uk/CrzcBy8cqQli4p3J4Unp5KEWBcIGbeJyQkk05M+ceULpJjRTJRacOAqFD0Pjaq0rE/dilSrSfjM8o3YQqxEKsPGdY9tMk8=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=redhat.com; spf=pass smtp.mailfrom=redhat.com; dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b=ewAdaSz4; arc=none smtp.client-ip=170.10.129.124
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=redhat.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=redhat.com
+	 Content-Type:Content-Disposition:In-Reply-To; b=pUfO8bI3iXrT/O5mP2W6mCes+8yHDCVS94jzXRcsW+puynBHEc8EUdMKinTdi/Ym4HAqJwtOFMvxbVSZqIvzzepxjZ5t9VQQA3+o9fgAri+3ad/5Q9StA46+mykrkjcq2PqQLz7j2dE2DzQwZL/PZ8iWkHl2tHe4bEHsSWOYoeU=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=MG5NPjMz; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=redhat.com header.i=@redhat.com header.b="ewAdaSz4"
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1789550482;
-	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
-	 to:to:cc:cc:mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=kH5FiRLDLSRuytv58SScZstNJyhhk8g/hOUPQB2O25A=;
-	b=ewAdaSz4lAI2JtKT6BOPUXUskM9OFQil7l7P4cY9rgB8EmXe4/OpbnJ509wOiMZgI9OYNz
-	SKc053dLj8kClcOZMSJti17BhpfnGALcX3Ni6ZGKB9T6NzUV/qrkmEaryuay/5RKVNXdmh
-	oWcRpk3TqWJMMf8FZmWuu7bCtUcXwT8=
-Received: from mx-prod-mc-05.mail-002.prod.us-west-2.aws.redhat.com
- (ec2-54-186-198-63.us-west-2.compute.amazonaws.com [54.186.198.63]) by
- relay.mimecast.com with ESMTP with STARTTLS (version=TLSv1.3,
- cipher=TLS_AES_256_GCM_SHA384) id us-mta-375-rnmgoSj7NX2So_-B9_kMWA-1; Wed,
- 16 Sep 2026 05:21:18 -0400
-X-MC-Unique: rnmgoSj7NX2So_-B9_kMWA-1
-X-Mimecast-MFC-AGG-ID: rnmgoSj7NX2So_-B9_kMWA_1789550477
-Received: from mx-prod-int-03.mail-002.prod.us-west-2.aws.redhat.com (mx-prod-int-03.mail-002.prod.us-west-2.aws.redhat.com [10.30.177.12])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (2048 bits) server-digest SHA256)
-	(No client certificate requested)
-	by mx-prod-mc-05.mail-002.prod.us-west-2.aws.redhat.com (Postfix) with ESMTPS id 51E521954B1E;
-	Wed, 16 Sep 2026 09:21:17 +0000 (UTC)
-Received: from ws (headnet03.pony-001.prod.iad2.dc.redhat.com [10.2.32.114])
-	by mx-prod-int-03.mail-002.prod.us-west-2.aws.redhat.com (Postfix) with ESMTPS id D21C81956052;
-	Wed, 16 Sep 2026 09:21:15 +0000 (UTC)
-Date: Wed, 16 Sep 2026 11:21:12 +0200
-From: Karel Zak <kzak@redhat.com>
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: util-linux@vger.kernel.org, Baoquan He <baoquan.he@linux.dev>, 
-	linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH util-linux] swapon: document encryption support and
- limitations
-Message-ID: <bxcsbo6pudezcwrrgbyrm6wslkiqhpk5namrbf6osu5nzuhkcb@aqftguervlyj>
-References: <20260831175738.37770-1-ebiggers@kernel.org>
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="MG5NPjMz"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 703CA1F000FF;
+	Fri, 18 Sep 2026 02:22:28 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1789698148;
+	bh=mhZqdanDOkFUucjSAGbEqLNZn6/bNs6d3aNen4B8Iwg=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=MG5NPjMz+V95lo7f/KgQHomjMX8Qc2jSnYLiIR9qRDuJ+Fjs1ofz9PJnt29+PQ77v
+	 pVC4oecWLphqaVZFwEj7wogCU31LTKbK0FPaL/yd9zl5mQ0WRp1n9UC5IpYeuxx+ni
+	 s1XjE3WIOwAUcjFEjdgWflKOhBDc6dOnw/vzdmfkGIYQowBZ+uHutuBQl3DbQl+SPr
+	 egZu5W/MwZ2n2J/+3dpNZcoF5H9AE+8zijlPrEoo6U+IQrnMPI5lNTL05KuMARIiGv
+	 lSBKAgAbPiCOP6gMaB4N/A+rbOEgdRnUJrtfiXVgnBBW/8I7sc0RfluRNJhqBgEkm4
+	 0btL49OChrT+g==
+Date: Thu, 17 Sep 2026 19:22:26 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+To: linux-fscrypt@vger.kernel.org
+Cc: linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH] fscrypt: Use aes_ecb_encrypt() for v1 key derivation
+Message-ID: <20260918022226.GA1703@sol>
+References: <20260831192411.99035-1-ebiggers@kernel.org>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -58,17 +41,23 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20260831175738.37770-1-ebiggers@kernel.org>
-X-Scanned-By: MIMEDefang 3.0 on 10.30.177.12
+In-Reply-To: <20260831192411.99035-1-ebiggers@kernel.org>
 
-On Mon, Aug 31, 2026 at 10:57:38AM -0700, Eric Biggers wrote:
->  sys-utils/swapon.8.adoc | 6 ++++++
->  1 file changed, 6 insertions(+)
+On Mon, Aug 31, 2026 at 12:24:11PM -0700, Eric Biggers wrote:
+> Now that there's a library function aes_ecb_encrypt(), use it instead of
+> a loop of aes_encrypt() calls.
+> 
+> Note that the use of AES-ECB here is purely for the key derivation
+> function used by the deprecated v1 encryption policies.  v2 encryption
+> policies use HKDF-SHA512 instead.  Nevertheless, the original version
+> has to continue to be supported for backwards compatibility.
+> 
+> Signed-off-by: Eric Biggers <ebiggers@kernel.org>
+> ---
+>  fs/crypto/Kconfig       | 2 +-
+>  fs/crypto/keysetup_v1.c | 5 ++---
+>  2 files changed, 3 insertions(+), 4 deletions(-)
 
-Applied. Thanks, and sorry for the delay.
+Applied to https://git.kernel.org/pub/scm/fs/fscrypt/linux.git/log/?h=for-next
 
-
--- 
- Karel Zak  <kzak@redhat.com>
- http://karelzak.blogspot.com
-
+- Eric
