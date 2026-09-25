@@ -1,146 +1,171 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id B4E6755C312;
-	Tue, 22 Sep 2026 15:31:30 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 137A71922FD
+	for <linux-fscrypt@vger.kernel.org>; Fri, 25 Sep 2026 04:09:04 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1790091091; cv=none; b=eydvb8VjEs9Uur6DiQznYL9pJbJx2XMCBNuCAbHU/yvl1S8L4wBoCh+qZ613Ltusxt6ZQLOo9f8eY+YqilUetkhK9kjfNGN2JRInRg7GdxW1Ze8i4jvBc4a/qaPO5oIQbZsu6WbuwSfAEhhIg/wSawlWBIdgEmIoYO/MEKpwRdI=
+	t=1790309346; cv=none; b=YR1FwpJ/nNkuP50FNw994vYsX0OiRJ6tY+f1oSgr5n7Z1Ls41TGWyjOjhnHM7pvAwXufFiJ1SHUi5XMCSkjKXwLhkPM/XuZYcUPXI8yb1oPUNyFLlKjNN8W0LMTv2KLCbiTSDMhf120qiyogXEK2Aydc2+Br6QBnHGd4SZ7yx9s=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1790091091; c=relaxed/simple;
-	bh=NALfkOxOZukdaM9bPf10hwBO/x1kAs+vxmEyMf4s694=;
-	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=GaZYUXX7pLzOKkV97cKsyoTrGWhkL96dOJR5Z+TdCfJtnOp/DDZ06gzxhoAqf6xX+f/e8KH9ydEWNoBCvspeerSfyfccGMYCcDR2DLFshMuFBFys2sBJxfMz1M9ZTFvT8djzeNSp4oDgHYJKzugYRZN5M6h9WX+Tc51KgAbMsuA=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=oxgbajWA; arc=none smtp.client-ip=100.103.45.18
+	s=arc-20240116; t=1790309346; c=relaxed/simple;
+	bh=acni0D8Juqmp6kxR4sBbVxs/lV/4ggSAUd9caHh0L9M=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=ucAU/kd9pkWklyri9j3GiRbJKaD+PwUwrlj0GYjOZlOb6rfE45Vc8HNUAph3EI8HecOQ2KNNUlqBvWseJUJ56/wO8KOBjpbaCGBq5LbeqxdH5xwbclOjjZp9c6U94ebgjev8jGRUgPe6lx3SRDcOAPpS4i1RrUq8Y4Gb3+aEP4I=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Aq/k1sqo; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="oxgbajWA"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 971F71F00893;
-	Tue, 22 Sep 2026 15:31:26 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Aq/k1sqo"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 85DEE1F000FF;
+	Fri, 25 Sep 2026 04:09:04 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1790091090;
-	bh=VFYj6sjedfWGEBuGl++9heS9zoD83sYWZIxoZFH52Mw=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=oxgbajWAx+ewgz3EYGgJPYtZfNNrVy2jiDvlrL0XB6QieOmgNe9oJ8tWYTAmWkd4E
-	 40O1bShYyuGwabzOZg2yryGvTCOWVoLErNmP15TezU6CcK1+IP50a2puK4iDmaw6R3
-	 PCwUfPw/jYwdSq8HtaOBJAU/3KQvk7VOfDVSLU+W6MZTQuGVG14os2s8QuaTXuRpZy
-	 c1E7BQMp5Oh5V6N9yXEOXRU2Ns8Xz5BjaAREZfd68p1jzII0svn4YeEB6D4D+XgUXP
-	 mn6RKCk0xuOhAtFCkmd48wAcJ6k5w8jrTIJhK2olCjTjtXsHqi1z/Ac++TcJ8CKg7E
-	 LVSLUkJaZCs2w==
-Date: Tue, 22 Sep 2026 15:31:25 +0000
-From: Jaegeuk Kim <jaegeuk@kernel.org>
-To: Nanzhe Zhao <nzzhao.sigma@gmail.com>
-Cc: Zi Yan <ziy@nvidia.com>, Qi Zheng <qi.zheng@linux.dev>,
-	Matthew Brost <matthew.brost@intel.com>,
-	Alistair Popple <apopple@nvidia.com>, ceph-devel@vger.kernel.org,
-	Eric Biggers <ebiggers@kernel.org>, xen-devel@lists.xenproject.org,
-	Gregory Price <gourry@gourry.net>,
-	Arnaldo Carvalho de Melo <acme@kernel.org>,
-	linux-fscrypt@vger.kernel.org,
-	Shuah Khan <skhan@linuxfoundation.org>,
-	David Hildenbrand <david@kernel.org>,
-	Suren Baghdasaryan <surenb@google.com>,
-	linux-kernel@vger.kernel.org, Nico Pache <nico.pache@linux.dev>,
-	linux-perf-users@vger.kernel.org,
-	Oleksandr Tyshchenko <oleksandr_tyshchenko@epam.com>,
-	Masami Hiramatsu <mhiramat@kernel.org>,
-	Jiri Olsa <jolsa@kernel.org>, linux-fsdevel@vger.kernel.org,
-	Andrew Morton <akpm@linux-foundation.org>,
-	Trond Myklebust <trondmy@kernel.org>,
-	Mark Rutland <mark.rutland@arm.com>, linux-doc@vger.kernel.org,
-	Dave Hansen <dave.hansen@linux.intel.com>,
-	Hongbo Li <hongbohbli@tencent.com>,
-	Ying Huang <ying.huang@linux.alibaba.com>,
-	Stefano Stabellini <sstabellini@kernel.org>,
-	Vlastimil Babka <vbabka@kernel.org>,
-	Sergey Senozhatsky <senozhatsky@chromium.org>,
-	Byungchul Park <byungchul@sk.com>,
-	linux-trace-kernel@vger.kernel.org,
-	Lorenzo Stoakes <ljs@kernel.org>,
-	Joshua Hahn <joshua.hahnjy@gmail.com>,
-	Barry Song <baohua@kernel.org>, Kairui Song <kasong@tencent.com>,
-	"Theodore Y. Ts'o" <tytso@mit.edu>,
-	Muchun Song <muchun.song@linux.dev>,
-	linux-f2fs-devel@lists.sourceforge.net,
-	Minchan Kim <minchan@kernel.org>, Lance Yang <lance.yang@linux.dev>,
-	Thomas Gleixner <tglx@kernel.org>, Anna Schumaker <anna@kernel.org>,
-	Pratyush Yadav <pratyush@kernel.org>,
-	Alex Markuze <amarkuze@redhat.com>,
-	Alexander Shishkin <alexander.shishkin@linux.intel.com>,
-	linux-mtd@lists.infradead.org, Chunhai Guo <guochunhai@vivo.com>,
-	Jonathan Corbet <corbet@lwn.net>, Dev Jain <dev.jain@arm.com>,
-	"Matthew Wilcox (Oracle)" <willy@infradead.org>,
-	Viacheslav Dubeyko <slava@dubeyko.com>,
-	Gao Xiang <xiang@kernel.org>, Wei Xu <weixugc@google.com>,
-	Baoquan He <baoquan.he@linux.dev>,
-	James Clark <james.clark@linaro.org>,
-	Steven Rostedt <rostedt@goodmis.org>,
-	Borislav Petkov <bp@alien8.de>,
-	Baolin Wang <baolin.wang@linux.alibaba.com>,
-	Shakeel Butt <shakeel.butt@linux.dev>,
-	Tal Zussman <tz2294@columbia.edu>,
-	Ilya Dryomov <idryomov@gmail.com>,
-	Oscar Salvador <osalvador@suse.de>, linux-nfs@vger.kernel.org,
-	linux-mm@kvack.org, linux-erofs@lists.ozlabs.org,
-	Mike Rapoport <rppt@kernel.org>, Ian Rogers <irogers@google.com>,
-	Michal Hocko <mhocko@suse.com>, Jan Kara <jack@suse.cz>,
-	Peter Zijlstra <peterz@infradead.org>,
-	Dave Young <ruirui.yang@linux.dev>,
-	Yuanchu Xie <yuanchu@google.com>,
-	"Liam R. Howlett" <liam@infradead.org>,
-	"H. Peter Anvin" <hpa@zytor.com>, Yue Hu <zbestahu@gmail.com>,
-	Rakie Kim <rakie.kim@sk.com>, Richard Weinberger <richard@nod.at>,
-	x86@kernel.org, Ingo Molnar <mingo@redhat.com>,
-	Axel Rasmussen <axelrasmussen@google.com>,
-	Ryan Roberts <ryan.roberts@arm.com>,
-	Pasha Tatashin <pasha.tatashin@soleen.com>,
-	Usama Arif <usama.arif@linux.dev>,
-	Jeffle Xu <jefflexu@linux.alibaba.com>,
-	Namhyung Kim <namhyung@kernel.org>, Juergen Gross <jgross@suse.com>,
-	kexec@lists.infradead.org, Adrian Hunter <adrian.hunter@intel.com>,
-	Johannes Weiner <hannes@cmpxchg.org>,
-	Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
-Subject: Re: [f2fs-dev] [PATCH v5 00/17] Remove PG_private by using
- page/folio->private checks instead
-Message-ID: <arKfTXizFeTeKYDx@google.com>
-References: <20260920-remove-pg_private-v5-0-bb68b6a21869@nvidia.com>
- <20260922041600.1240429-1-zhaonanzhe@xiaomi.com>
+	s=k20260515; t=1790309344;
+	bh=L64ou5Irz51ME6GMRItGeLq1nMD1U8FOOm3XMJapreA=;
+	h=From:To:Cc:Subject:Date;
+	b=Aq/k1sqoDEz7Al0c+Uj/MYaonGXG3M3FBGIVi9ns5cHgXLr3WEc3a+DalVAGJRRP9
+	 Ax1CK0YQJGsHhXd7wbtntzEDTiW9bU+vbgqRfjbrJFG+Y9Wg4MoUhtQAsl6HoVmgjh
+	 sOAE450qBRty9PqkwOe1pw415K7eoB9k7NGv2dYCf+2iRtkt/9CLnWB7h+T6XmeVbt
+	 7fLctr+ugoBez24JEV2uICl+cLLzJICVubyVtc+8i3RamTgqe8oUb0EfCCfNLhJGBF
+	 hep/KjwXdBYXsaw/WjnUivDrYP+CS+EEWKI1rKI6e1DML6B/++e+LKPFfN242jXuUN
+	 xCGBZyotycTRg==
+From: Eric Biggers <ebiggers@kernel.org>
+To: linux-fscrypt@vger.kernel.org
+Cc: Eric Biggers <ebiggers@kernel.org>
+Subject: [PATCH] fscrypt: Move several items from fscrypt_private.h to .c files
+Date: Thu, 24 Sep 2026 21:08:53 -0700
+Message-ID: <20260925040853.110410-1-ebiggers@kernel.org>
+X-Mailer: git-send-email 2.55.0
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <20260922041600.1240429-1-zhaonanzhe@xiaomi.com>
+Content-Transfer-Encoding: 8bit
 
-On 09/22, Nanzhe Zhao wrote:
-> Hi Zi Yan,
-> 
-> Thanks for the series. The cleanup is a nice help for the f2fs
-> large-folio work -- it removes the page-based private-flag plumbing that
-> my series would otherwise have to carry itself.
-> 
-> My large-folio series v2 [1] can be rebased on top of this series. The
-> only overlap is the PAGE_PRIVATE_* flag helpers, which I can re-express
-> on top of the F2FS_FOLIO_PRIVATE_* names while keeping the
-> f2fs_folio_state indirection.
-> 
-> Jaegeuk, do you have a preference on the ordering here? My personal
-> suggestion would be to review and merge this series first, and I'll
-> rebase on top of it.
+enum fscrypt_direction_t, struct fscrypt_symlink_data, and struct
+fscrypt_master_key_user are each used in only one file.  Move them to
+their respective files.
 
-Let's keep working on the f2fs tree, since we should not merge this in my tree.
-Later, we'd need to prepare how to address the merge conflict.
+Signed-off-by: Eric Biggers <ebiggers@kernel.org>
+---
+ fs/crypto/crypto.c          |  5 +++++
+ fs/crypto/fscrypt_private.h | 27 ---------------------------
+ fs/crypto/hooks.c           |  9 +++++++++
+ fs/crypto/keyring.c         | 13 +++++++++++++
+ 4 files changed, 27 insertions(+), 27 deletions(-)
 
-> 
-> [1] https://lore.kernel.org/linux-f2fs-devel/20260915041909.2903887-1-zhaonanzhe@xiaomi.com/
-> 
-> Thanks,
-> Nanzhe
-> 
-> 
-> _______________________________________________
-> Linux-f2fs-devel mailing list
-> Linux-f2fs-devel@lists.sourceforge.net
-> https://lists.sourceforge.net/lists/listinfo/linux-f2fs-devel
+diff --git a/fs/crypto/crypto.c b/fs/crypto/crypto.c
+index 5286a124b0d9..8f212e7f39f6 100644
+--- a/fs/crypto/crypto.c
++++ b/fs/crypto/crypto.c
+@@ -98,6 +98,11 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 index,
+ 	iv->index = cpu_to_le64(index);
+ }
+ 
++typedef enum {
++	FS_DECRYPT = 0,
++	FS_ENCRYPT,
++} fscrypt_direction_t;
++
+ /* Encrypt or decrypt a single "data unit" of file contents. */
+ static int fscrypt_crypt_data_unit(const struct fscrypt_inode_info *ci,
+ 				   fscrypt_direction_t rw, u64 index,
+diff --git a/fs/crypto/fscrypt_private.h b/fs/crypto/fscrypt_private.h
+index 74329e0953d1..e602c31b3844 100644
+--- a/fs/crypto/fscrypt_private.h
++++ b/fs/crypto/fscrypt_private.h
+@@ -219,15 +219,6 @@ fscrypt_policy_du_bits(const union fscrypt_policy *policy,
+ 	BUG();
+ }
+ 
+-/*
+- * For encrypted symlinks, the ciphertext length is stored at the beginning
+- * of the string in little-endian format.
+- */
+-struct fscrypt_symlink_data {
+-	__le16 len;
+-	char encrypted_path[];
+-} __packed;
+-
+ /**
+  * struct fscrypt_prepared_key - a key prepared for actual encryption/decryption
+  * @tfm: crypto API transform object
+@@ -321,11 +312,6 @@ struct fscrypt_inode_info {
+ 	u8 ci_nonce[FSCRYPT_FILE_NONCE_SIZE];
+ };
+ 
+-typedef enum {
+-	FS_DECRYPT = 0,
+-	FS_ENCRYPT,
+-} fscrypt_direction_t;
+-
+ /* crypto.c */
+ extern struct kmem_cache *fscrypt_inode_info_cachep;
+ int fscrypt_initialize(struct super_block *sb);
+@@ -473,19 +459,6 @@ fscrypt_is_key_prepared(const struct fscrypt_prepared_key *prep_key,
+ 
+ /* keyring.c */
+ 
+-/*
+- * fscrypt_master_key_user - a user's claim to a master key
+- */
+-struct fscrypt_master_key_user {
+-	struct list_head link;
+-	kuid_t uid;
+-	/*
+-	 * This 'struct key' contains no secret.  It exists solely to charge the
+-	 * appropriate user's key quota.
+-	 */
+-	struct key *quota_key;
+-};
+-
+ /*
+  * fscrypt_master_key_secret - secret key material of an in-use master key
+  */
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index a7a8a3f581a0..149498bdab94 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -9,6 +9,15 @@
+ 
+ #include "fscrypt_private.h"
+ 
++/*
++ * For encrypted symlinks, the ciphertext length is stored at the beginning
++ * of the string in little-endian format.
++ */
++struct fscrypt_symlink_data {
++	__le16 len;
++	char encrypted_path[];
++} __packed;
++
+ /**
+  * fscrypt_file_open() - prepare to open a possibly-encrypted regular file
+  * @inode: the inode being opened
+diff --git a/fs/crypto/keyring.c b/fs/crypto/keyring.c
+index 76e28d1e0064..874cc183ee62 100644
+--- a/fs/crypto/keyring.c
++++ b/fs/crypto/keyring.c
+@@ -145,6 +145,19 @@ static inline bool valid_key_spec(const struct fscrypt_key_specifier *spec)
+ 	return master_key_spec_len(spec) != 0;
+ }
+ 
++/*
++ * fscrypt_master_key_user - a user's claim to a master key
++ */
++struct fscrypt_master_key_user {
++	struct list_head link;
++	kuid_t uid;
++	/*
++	 * This 'struct key' contains no secret.  It exists solely to charge the
++	 * appropriate user's key quota.
++	 */
++	struct key *quota_key;
++};
++
+ static int fscrypt_user_key_instantiate(struct key *key,
+ 					struct key_preparsed_payload *prep)
+ {
+
+base-commit: 165768bb70265b5c38cf0b73fafd75be235f8b14
+-- 
+2.55.0
+
