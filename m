@@ -1,35 +1,36 @@
 Received: from fanzine2.igalia.com (fanzine2.igalia.com [213.97.179.56])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1D9DB3B6354;
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1DB044A8A16;
 	Fri, 25 Sep 2026 14:20:08 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=213.97.179.56
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1790346012; cv=none; b=e/hHTA2V6uHBoUes6Oiy4hTuIH9yx9/hgJwWJ5r0B1O5PMHFjdFmVUyflnnsFxw7z7j7bLcH/UZvp7YFBppJWHd2eXebHliAmY2GX6vvAut3NVpmrRHZ+80e4nJFUJbKqy4X2ts6OFyB/b3/zIa1Dr5q4WO18qhf0LKY3SzXb6M=
+	t=1790346013; cv=none; b=tK0DSB9DeHKnU6baTJ5bu3mKDo2pBQf+DViHwnJm6t/ag3GPqMvj86GEeGgCgbBJfSzJaJoQOFWCMp7Nl+gU3MVZ76oAPrUjbAp3afvaeHscwYCfwnn57+w+wbUnpd7XpeuBTDvEC4J5no4tqIlGFyIh6wP2L7aavPBzaqHezDU=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1790346012; c=relaxed/simple;
-	bh=8Tlt/Xs/lnHxi6mpME7i6h7KxXZvDx1I51vC8Ed+D28=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=HBpFcgK2O7RZu3DQYyDMb22JdF41NuwkrGK9icitOqsG9PtI5dAQZpLRS3B5x/4wBnWq2DpvHZdmxPZ7xtCyBVQQxQySkS4jo1t66m0bwJEP1fAPfRvRBE8EMulSxRFpMq+i1yoxx8kAa8JnLDAzJ0RhhTtl6SNUNV/CAvi5rMY=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=igalia.com; spf=pass smtp.mailfrom=igalia.com; dkim=pass (2048-bit key) header.d=igalia.com header.i=@igalia.com header.b=pEv09GjQ; arc=none smtp.client-ip=213.97.179.56
+	s=arc-20240116; t=1790346013; c=relaxed/simple;
+	bh=I2rMiwf6RZxnJqT46cQ7B0/M04KbIobpbJwq54s6TA4=;
+	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
+	 MIME-Version; b=flGNR4Y1ahLnDtagZVI9AW6He+gS3s7TrIsbP3E0rf66EbgWXCDSDe1Nqxarg8o1lhNoGt/zm8UKM5ufH052+bm5XhKmV9KnLSb8ZtfDY+KDWnjpdqFBOtoJ8t/lPoLiOJ6pQqZ+6Q1q4v4WIt8JYvCtyOb7letaVOTAMOOA4UY=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=igalia.com; spf=pass smtp.mailfrom=igalia.com; dkim=pass (2048-bit key) header.d=igalia.com header.i=@igalia.com header.b=pb3Jtd1B; arc=none smtp.client-ip=213.97.179.56
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=igalia.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=igalia.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=igalia.com header.i=@igalia.com header.b="pEv09GjQ"
+	dkim=pass (2048-bit key) header.d=igalia.com header.i=@igalia.com header.b="pb3Jtd1B"
 DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=igalia.com;
 	s=20170329; h=Content-Transfer-Encoding:MIME-Version:Message-ID:Date:Subject:
-	Cc:To:From:From:Reply-To; bh=zOjagqsbVpNgX2XaI8021zvpIWajVqwPcnsMhNeTeW8=; b=
-	pEv09GjQjsTk9YzLtkW/UeU3lXbfkYys6JUeux+z/UbwojQMedCQd0be+XLnYoZFUTf0fcvhhyYWy
-	9wlAqnWTIO+l/prP6R2NosWix/1TvZpoxtQ7PMYaIcuCUXyrbbPfyiqQdLCmnPB1zM08sPSYGt4aE
-	ghzmCrpa5dKirL0ze/pYCAzb6oFBSW8+USbk9bczyf2yWNVw0jvgQ8ej/m+LOG/eJnpGp+Qg8wqgR
-	eYvYjzlmemHdQa6fRQVpqokz/ZRYrL9RQtoSjkK6Sw90W4wKdKzuAt+2ADrzxLwbneo6463bXJtXA
-	RlYUIr4pHpLTMpSa50+OROm75D5s0sEJrQ==;
+	Cc:To:From:From:Reply-To; bh=MSuQPMNvWdQGl98a8NLc2lKTCTzV0NPoj/P4up09+SY=; b=
+	pb3Jtd1BmGMbhpL62V8hvHwgLVBt/zBpH7itPjaynkIwZXoTqgAjpz041wSEwlx38g0aKrO4SA3LX
+	2h++2ZW5DFMuxzsYYDuQVyyguieDPnmJe4/YozL4zsTI5heOE4scQ7rhL6AH6/4MXU3kaf4OUYPFR
+	9w87tFKGa0WlTIe9aTQHBgIawA/S22TUCicOO3+m3n6lrr5okcyoVDSXzpnd7wk0IIGiaQZ658GBc
+	OV32uU203v2AwLEv/0G4hWnVLUI0784piceX9uzkS6/wh5lFyblAfOnleaPfgLrG1+aTKVCbqRAng
+	PqnQR2RDKHzUGgAkNyV0u5o7skQCnCxL5Q==;
 Received: from ip40.wifi.igalia.com ([192.168.12.40] helo=zeus.local)
 	by fanzine2.igalia.com with esmtpsa 
 	(Cipher TLS1.3:ECDHE_SECP256R1__RSA_PSS_RSAE_SHA256__AES_256_GCM:256) (Exim)
-	id 1xA6mA-007B5Y-Hn; Fri, 25 Sep 2026 16:19:46 +0200
+	id 1xA6mA-007B5b-KJ; Fri, 25 Sep 2026 16:19:46 +0200
 Received: from berto by zeus.local with local (Exim 4.98.2)
 	(envelope-from <berto@igalia.com>)
-	id 1xA6mA-000000065Tf-0VY5;
+	id 1xA6mA-000000065Tl-0pJW;
 	Fri, 25 Sep 2026 16:19:46 +0200
 From: Alberto Garcia <berto@igalia.com>
 To: Theodore Ts'o <tytso@mit.edu>
@@ -42,11 +43,14 @@ Cc: Alberto Garcia <berto@igalia.com>,
 	Zhang Yi <yi.zhang@huawei.com>,
 	Eric Biggers <ebiggers@kernel.org>,
 	linux-fscrypt@vger.kernel.org,
-	linux-ext4@vger.kernel.org
-Subject: [PATCH 0/2] ext4: refuse encryption when block size > page size
-Date: Fri, 25 Sep 2026 16:19:17 +0200
-Message-ID: <cover.1790343958.git.berto@igalia.com>
+	linux-ext4@vger.kernel.org,
+	stable@vger.kernel.org
+Subject: [PATCH 2/2] ext4: reject encrypted inodes when block size > page size
+Date: Fri, 25 Sep 2026 16:19:19 +0200
+Message-ID: <aeb8efa8beb72721fb4b13cffe6eb22c795ec33f.1790343958.git.berto@igalia.com>
 X-Mailer: git-send-email 2.47.3
+In-Reply-To: <cover.1790343958.git.berto@igalia.com>
+References: <cover.1790343958.git.berto@igalia.com>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -55,52 +59,43 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-Hi,
+Encryption is not supported when a filesystem's block size is larger
+than the page size. ext4_check_large_folio() refuses to mount a
+filesystem like that if the "encrypt" feature is already enabled, and
+ext4_set_context() refuses to create encrypted inodes if the feature
+is enabled after mounting.
 
-encryption is not supported when a filesystem's block size is larger
-than the page size. Although the kernel refuses to mount such a
-filesystem if the "encrypt" feature is already set, it is possible to
-enable it on a mounted filesystem with e.g. tune2fs.
+However, a corrupted or hand-crafted filesystem can still have
+encrypted inodes even if the "encrypt" feature is not set, and those
+inodes can be unlocked if they're using v1 policies.
 
-# mkfs.ext4 -b 16384 /dev/vdb
-# mount /dev/vdb /mnt/
-# tune2fs -O encrypt /dev/vdb
-# mkdir /mnt/foo
-# fscrypt setup /mnt
-# fscrypt encrypt /mnt/foo/
-# head -c 20M /dev/urandom > /mnt/foo/data
-# sync
-[  116.014221] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 130040)
-[  116.014235] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
-[  116.014241] Buffer I/O error on device vdb, logical block 130040
-[...]
-[  116.014264] Buffer I/O error on device vdb, logical block 130049
-[  116.015505] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 66552)
-[  116.015520] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
-[  116.016451] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 65784)
-[  116.016459] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
+Check this in __ext4_iget() and reject them as corrupted.
 
-This affects all kernels starting from v6.19 up to v7.3-rc4.
+Fixes: 709f0f1f1bf5 ("ext4: add checks for large folio incompatibilities when BS > PS")
+Suggested-by: Eric Biggers <ebiggers@kernel.org>
+Cc: stable@vger.kernel.org # v6.19+
+Signed-off-by: Alberto Garcia <berto@igalia.com>
+---
+ fs/ext4/inode.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
 
-Note that this still allows encrypted inodes even when the 'encrypt'
-feature is missing as long as block size <= page size. With v1
-encryption policies they can be used normally.
-
-There's an additional bug that only affects kernels between v6.19 and
-v7.2 (but not v7.3), which will be dealt with separately.
-
-Regards,
-
-Berto
-
-Alberto Garcia (2):
-  ext4: refuse encryption when block size > page size
-  ext4: reject encrypted inodes when block size > page size
-
- fs/ext4/crypto.c | 9 +++++++++
- fs/ext4/inode.c  | 6 ++++++
- 2 files changed, 15 insertions(+)
-
+diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
+index 26f0f9714f03..31248fef8bce 100644
+--- a/fs/ext4/inode.c
++++ b/fs/ext4/inode.c
+@@ -5671,6 +5671,12 @@ struct inode *__ext4_iget(struct super_block *sb, unsigned long ino,
+ 		ret = -EFSCORRUPTED;
+ 		goto bad_inode;
+ 	}
++	if (IS_ENCRYPTED(inode) && sb->s_blocksize > PAGE_SIZE) {
++		ext4_error_inode(inode, function, line, 0,
++				 "encrypted inode with block size larger than page size");
++		ret = -EFSCORRUPTED;
++		goto bad_inode;
++	}
+ 
+ 	ext4_set_inode_mapping_order(inode);
+ 
 -- 
 2.47.3
 
