@@ -1,75 +1,52 @@
-Received: from mail-dy2-f15.google.com (mail-dy2-f15.google.com [74.125.229.15])
-	(using TLSv1.2 with cipher ECDHE-RSA-AES128-GCM-SHA256 (128/128 bits))
+Received: from fanzine2.igalia.com (fanzine2.igalia.com [213.97.179.56])
+	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id E6F0C2D77F7
-	for <linux-fscrypt@vger.kernel.org>; Fri, 25 Sep 2026 11:59:21 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=74.125.229.15
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1D9DB3B6354;
+	Fri, 25 Sep 2026 14:20:08 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=213.97.179.56
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1790337564; cv=none; b=eO4purwsqiW4twfCRWIWUUX5O2ezn1ZUAjGUZRMEiYX8uuBkO24Qq4nzgWTF8lnvi29IhI6N2xoigBAbHjnZaPmjrw+m7YCBX4TPQWts+A0oeArlt5zTNkmhSJSjP8EXKbpFxvguMI1YqRui3o5nw/b2Nsj30btQ7vVbcty6fvA=
+	t=1790346012; cv=none; b=e/hHTA2V6uHBoUes6Oiy4hTuIH9yx9/hgJwWJ5r0B1O5PMHFjdFmVUyflnnsFxw7z7j7bLcH/UZvp7YFBppJWHd2eXebHliAmY2GX6vvAut3NVpmrRHZ+80e4nJFUJbKqy4X2ts6OFyB/b3/zIa1Dr5q4WO18qhf0LKY3SzXb6M=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1790337564; c=relaxed/simple;
-	bh=TU/NU4ilfrc8fq5DP7Oob88utYP0oOVtTdIAEzR+93g=;
-	h=From:To:Cc:Subject:Date:Message-ID:In-Reply-To:References:
-	 MIME-Version; b=ed1dNf6S3zYFLtFeaNIC8VaR2Xd76uGrf7w0+KPLRIJJUqBHonGAO0MzNTjSljGzdWmHVpD3b5QTBt+gvWlEHnD7xZ7zNxNZsKe93qzKkd9xCcSslEXB6a+tMGZJT1zsEKFiurOiIfBEtONZ3uranp/eUSrPYbMy82JsXnuXN/c=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=gmail.com; spf=pass smtp.mailfrom=gmail.com; dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b=Y60Fx29O; arc=none smtp.client-ip=74.125.229.15
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=gmail.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=gmail.com
+	s=arc-20240116; t=1790346012; c=relaxed/simple;
+	bh=8Tlt/Xs/lnHxi6mpME7i6h7KxXZvDx1I51vC8Ed+D28=;
+	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=HBpFcgK2O7RZu3DQYyDMb22JdF41NuwkrGK9icitOqsG9PtI5dAQZpLRS3B5x/4wBnWq2DpvHZdmxPZ7xtCyBVQQxQySkS4jo1t66m0bwJEP1fAPfRvRBE8EMulSxRFpMq+i1yoxx8kAa8JnLDAzJ0RhhTtl6SNUNV/CAvi5rMY=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=igalia.com; spf=pass smtp.mailfrom=igalia.com; dkim=pass (2048-bit key) header.d=igalia.com header.i=@igalia.com header.b=pEv09GjQ; arc=none smtp.client-ip=213.97.179.56
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=igalia.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=igalia.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=gmail.com header.i=@gmail.com header.b="Y60Fx29O"
-Received: by mail-dy2-f15.google.com with SMTP id 5a478bee46e88-32dec843c37so1112552eec.3
-        for <linux-fscrypt@vger.kernel.org>; Fri, 25 Sep 2026 04:59:21 -0700 (PDT)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=gmail.com; s=20251104; t=1790337559; x=1790942359; darn=vger.kernel.org;
-        h=content-transfer-encoding:mime-version:references:in-reply-to
-         :message-id:date:subject:cc:to:from:from:to:cc:subject:date
-         :message-id:reply-to:content-type;
-        bh=2kddma/7cZm+wbf7qqg6isnlL54B7YPTTBFAkT066ys=;
-        b=Y60Fx29OIWzrBBzsvps4G1Q0D0zBxCR3ZpHQ8qezxZltfAH6Ammj9u2A1BFwtEhyko
-         aqarF+vXTJGh6xehEPM7Tppd6923A+itcbT36vDf22qjGS7dqruD8uI8ErBcd9hYMpkr
-         k1cxPWuqQvYsP1EwJwDuRWL2tIpG30z1PL6xiqZFoMMRsyhCS5MjEs9vwhBn1aktBS28
-         /uZjq5jUMHfwpmPeIIVLzz5y1zuCsSQqM+2+fliHgSocCH/pD409+jHogwTTVD5wZ/wy
-         weF2X8WWAqS8f/VXKsqI07kpDUQdRcAHYBmEZ6PQgdtbeODytUnBqEFu3BJMuRADOuKu
-         +c8Q==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20260707; t=1790337559; x=1790942359;
-        h=content-transfer-encoding:mime-version:references:in-reply-to
-         :message-id:date:subject:cc:to:from:x-gm-gg:x-gm-message-state:from
-         :to:cc:subject:date:message-id:reply-to:content-type;
-        bh=2kddma/7cZm+wbf7qqg6isnlL54B7YPTTBFAkT066ys=;
-        b=LA+bkMJwKlOzyDo38WayNTcZrFxuNQBhDRGi6BfyflN+g6Je0gMQo2Q3DflLeG/Ovr
-         mPwKwuYvlPH+HDzfMhl4DqBrLit4ITnd8/PpcRwZ+N+q2DdYEa4kJ5dIbOpYBxjMbkOC
-         8Pzlcm7mhSXaIEvaMF11K86w930inEV3yg/xymiut769jt/q+TZXJzyN9+0rm5mWTQht
-         vS+6Ov+LAZZNNLnwNwCyUzD/uLBBsBZeMY1aw7LT0fL2UnMObsBmmn2OYzqaR1eWjsln
-         0ln8N9B41e7XKStrud6oJCuxBd9ukpGPUJ6H/Th9LFO7rju3LcIRGfpMcRk+PfEEmUqW
-         dd5g==
-X-Gm-Message-State: AFuF++le/+fV3KiWoW3nSmkNGSuMHRK9KBBpc0oCMPbqiScBHRmua1F6
-	8bU1CBBMbFiBIutb8yB8q/LhUmGlEpsz4tbC6tSiT+c6BO9PI33O6A0x
-X-Gm-Gg: AYBFou1as4FiOd7rinN2rkRIOYrYGqUZVrycC4mvwhYLp2QRICb5s+9HJa8wCBooKev
-	AbmQCkfAygnFlGCsYDOQTZxtZ5HqYkmzKgexkqfjQajYGX+/iHXbACB267+aypIXlnpMe08G5SI
-	aaQb1ew2pzBQSI1hVqykFXjTJuk7tAXMlG1D9IrWtgFdQZauu+lO4/39EYwLpfDAs9ZMMSI7ChP
-	uQuIk0YcbDGuBaWrigfz4jMudJPB/BJY3Ck8afeBIiGnveomXMTOlIvy0yHBOQKx+qXLPKgcAmx
-	lT+BpEpDovWxlBj3h67aWSuT5k7WXWslsdBvo1KTxHvcSoS4+FiIr5c8avF0EQU5kU/reoCa2Kr
-	2Qpz0/IMQTgbclHoSzrLg7MqOV0155lufoEx1H6E7lB+0jSqheLhscBTawUQNlk8tOvcMkwk1N6
-	7IDEfbGWSiZawH9j0igL4WJpfBNaNjzIQ9FNjL8XXDnkFhXToo+DITrOCPnhgN0mSlgFcIBGB48
-	Atp2JYZQufi+i1NNryKUr/xckjS/Zls+sSuNVFXknftnmaRUyyZWnHEBKKpZU78ag21dtMUSiul
-	w1NvrG8ZBVPOqxtN3PlqYwVuBb71FbVWeeMJtpQOT+SPZrwngYi3iTly3j/VlYD7Rl5iXw==
-X-Received: by 2002:a05:7301:1f15:b0:33b:bfb7:31cc with SMTP id 5a478bee46e88-342710ae1f0mr49098eec.16.1790337558827;
-        Fri, 25 Sep 2026 04:59:18 -0700 (PDT)
-Received: from spider.bream-herring.ts.net ([103.6.151.236])
-        by smtp.gmail.com with ESMTPSA id 5a478bee46e88-341447576b9sm7457878eec.15.2026.09.25.04.59.17
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Fri, 25 Sep 2026 04:59:18 -0700 (PDT)
-From: Matthias Goergens <matthias.goergens@gmail.com>
-To: ebiggers@kernel.org
-Cc: linux-fscrypt@vger.kernel.org,
-	tytso@mit.edu,
-	jaegeuk@kernel.org
-Subject: Re: [PATCH] MAINTAINERS: List the fscrypt branches
-Date: Fri, 25 Sep 2026 19:59:15 +0800
-Message-ID: <20260925115915.1074569-1-matthias.goergens@gmail.com>
-X-Mailer: git-send-email 2.55.0
-In-Reply-To: <20260925041527.112609-1-ebiggers@kernel.org>
-References: <20260925041527.112609-1-ebiggers@kernel.org>
+	dkim=pass (2048-bit key) header.d=igalia.com header.i=@igalia.com header.b="pEv09GjQ"
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=igalia.com;
+	s=20170329; h=Content-Transfer-Encoding:MIME-Version:Message-ID:Date:Subject:
+	Cc:To:From:From:Reply-To; bh=zOjagqsbVpNgX2XaI8021zvpIWajVqwPcnsMhNeTeW8=; b=
+	pEv09GjQjsTk9YzLtkW/UeU3lXbfkYys6JUeux+z/UbwojQMedCQd0be+XLnYoZFUTf0fcvhhyYWy
+	9wlAqnWTIO+l/prP6R2NosWix/1TvZpoxtQ7PMYaIcuCUXyrbbPfyiqQdLCmnPB1zM08sPSYGt4aE
+	ghzmCrpa5dKirL0ze/pYCAzb6oFBSW8+USbk9bczyf2yWNVw0jvgQ8ej/m+LOG/eJnpGp+Qg8wqgR
+	eYvYjzlmemHdQa6fRQVpqokz/ZRYrL9RQtoSjkK6Sw90W4wKdKzuAt+2ADrzxLwbneo6463bXJtXA
+	RlYUIr4pHpLTMpSa50+OROm75D5s0sEJrQ==;
+Received: from ip40.wifi.igalia.com ([192.168.12.40] helo=zeus.local)
+	by fanzine2.igalia.com with esmtpsa 
+	(Cipher TLS1.3:ECDHE_SECP256R1__RSA_PSS_RSAE_SHA256__AES_256_GCM:256) (Exim)
+	id 1xA6mA-007B5Y-Hn; Fri, 25 Sep 2026 16:19:46 +0200
+Received: from berto by zeus.local with local (Exim 4.98.2)
+	(envelope-from <berto@igalia.com>)
+	id 1xA6mA-000000065Tf-0VY5;
+	Fri, 25 Sep 2026 16:19:46 +0200
+From: Alberto Garcia <berto@igalia.com>
+To: Theodore Ts'o <tytso@mit.edu>
+Cc: Alberto Garcia <berto@igalia.com>,
+	Andreas Dilger <adilger.kernel@dilger.ca>,
+	Baokun Li <libaokun@linux.alibaba.com>,
+	Jan Kara <jack@suse.cz>,
+	Ojaswin Mujoo <ojaswin@linux.ibm.com>,
+	Ritesh Harjani <ritesh.list@gmail.com>,
+	Zhang Yi <yi.zhang@huawei.com>,
+	Eric Biggers <ebiggers@kernel.org>,
+	linux-fscrypt@vger.kernel.org,
+	linux-ext4@vger.kernel.org
+Subject: [PATCH 0/2] ext4: refuse encryption when block size > page size
+Date: Fri, 25 Sep 2026 16:19:17 +0200
+Message-ID: <cover.1790343958.git.berto@igalia.com>
+X-Mailer: git-send-email 2.47.3
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -78,11 +55,52 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-On Thu, Sep 24, 2026 at 09:15:27PM -0700, Eric Biggers wrote:
-> The fscrypt entry in MAINTAINERS has a T: entry but it doesn't mention
-> which branches are used.  Update it to have a T: entry for each branch.
+Hi,
 
-Both branches exist and match what linux-next merges from this
-repository (fscrypt and fscrypt-current in Next/Trees).
+encryption is not supported when a filesystem's block size is larger
+than the page size. Although the kernel refuses to mount such a
+filesystem if the "encrypt" feature is already set, it is possible to
+enable it on a mounted filesystem with e.g. tune2fs.
 
-Reviewed-by: Matthias Goergens <matthias.goergens@gmail.com>
+# mkfs.ext4 -b 16384 /dev/vdb
+# mount /dev/vdb /mnt/
+# tune2fs -O encrypt /dev/vdb
+# mkdir /mnt/foo
+# fscrypt setup /mnt
+# fscrypt encrypt /mnt/foo/
+# head -c 20M /dev/urandom > /mnt/foo/data
+# sync
+[  116.014221] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 130040)
+[  116.014235] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
+[  116.014241] Buffer I/O error on device vdb, logical block 130040
+[...]
+[  116.014264] Buffer I/O error on device vdb, logical block 130049
+[  116.015505] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 66552)
+[  116.015520] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
+[  116.016451] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 65784)
+[  116.016459] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
+
+This affects all kernels starting from v6.19 up to v7.3-rc4.
+
+Note that this still allows encrypted inodes even when the 'encrypt'
+feature is missing as long as block size <= page size. With v1
+encryption policies they can be used normally.
+
+There's an additional bug that only affects kernels between v6.19 and
+v7.2 (but not v7.3), which will be dealt with separately.
+
+Regards,
+
+Berto
+
+Alberto Garcia (2):
+  ext4: refuse encryption when block size > page size
+  ext4: reject encrypted inodes when block size > page size
+
+ fs/ext4/crypto.c | 9 +++++++++
+ fs/ext4/inode.c  | 6 ++++++
+ 2 files changed, 15 insertions(+)
+
+-- 
+2.47.3
+
