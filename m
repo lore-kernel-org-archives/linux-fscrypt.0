@@ -1,124 +1,101 @@
-Received: from fanzine2.igalia.com (fanzine2.igalia.com [213.97.179.56])
+Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 879D84AA570;
-	Fri, 25 Sep 2026 15:32:02 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=213.97.179.56
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D98664E8DF5;
+	Fri, 25 Sep 2026 19:59:23 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1790350325; cv=none; b=WrHGVSjy8/ngi4ZPCRSAsPIouRWnj5nyi1lm6Ka4Hl9Zobp3WHtHD0xgmaP2w03XJiLcjF9IwEsrDK1KvaSYkhRqH0nkcDT6rnZrmczi4TpeLp3+pxtaV1YPxx1Jk+ZiHurgoxzSnZWSjIOmaTc8KqO7W6J5f+MuhLLXBFMjRV4=
+	t=1790366365; cv=none; b=EzSKlD4P4I0gYYBmT93Qd2pZpl0Z7GqkhqSHP8cYCRKac0VM4XaZMVuNAJVy9LjP2bT4QawAkmhkTWz9ogm4SNS4xeHO5l3HrH2ebEV7o9k9Y4NUnv7CaxOlFFQcZ0b+I7TJuEMz3n0yVjyZ3NaVp+yJcB2RsVH9CSa4hRpUsEs=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1790350325; c=relaxed/simple;
-	bh=++Cd2j1h2fgwiOv0UswAsmnkyWoWSPYzp2QkXdONUCc=;
-	h=From:To:Cc:Subject:Date:Message-ID:MIME-Version; b=rgv6pPgCJeDWJtsTsSu3PyoWGkyxbhLW11caDy876dQLBjhSkNyPDRwgP3lV3SHTySHu9J+NhX2YeqEoOZHKU7EUHNMM3oDkfGEfVX82KZo0MWmvDcHgUTeaBq5+IpSwSzr+1RbsdJvfOTdCHuDjwCZvXGFmhz/AJ+Xuizlg334=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=igalia.com; spf=pass smtp.mailfrom=igalia.com; dkim=pass (2048-bit key) header.d=igalia.com header.i=@igalia.com header.b=NMydczQZ; arc=none smtp.client-ip=213.97.179.56
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=igalia.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=igalia.com
+	s=arc-20240116; t=1790366365; c=relaxed/simple;
+	bh=0FQ83vRAkYlWE/9ny/4c1VRIcQ+iRevz5Ab6KyCK7yA=;
+	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
+	 Content-Type:Content-Disposition:In-Reply-To; b=Dz/6SvVMo2mVw/Gu0noXke+LsYK//S7RsWGMZObTC1Jtv8sdQm+wosof8x/L+DxLJqcog4pd49THJPJTIi4hzq4Hob4K83cS4dLAEpQMrpqKOa0wGrViWFRQTTb9fMIFkFpkoDYDnf4Mb4gqEeOaUjeAfQgKBUGaDR+JnRIHQio=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=cYTCJv2Z; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=igalia.com header.i=@igalia.com header.b="NMydczQZ"
-DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/relaxed; d=igalia.com;
-	s=20170329; h=Content-Transfer-Encoding:MIME-Version:Message-ID:Date:Subject:
-	Cc:To:From:From:Reply-To; bh=3x6amxJB/jppu/HXcJb5mrj7oqcPlprm3G67FMdho3k=; b=
-	NMydczQZyaHjqODWOgvEs3F/ZJvD8j9AmfXbre7AwptMAdJl0aC5No9ni1fxjb0IpDwz6V2FvYH04
-	Oj8mBWjUFsd3a/dcUUTq9+KBbA1p4ah/4tDuln84voBQy6JdrAVYU6T6F4yayYHjscadtmxWAieM3
-	q8f3yrjJJ7l5fpOiew+gtUJoawGuA14Ol7yxcQkWSCJRiVon9+BCugYrH0b208JEotwIETuHQJ20h
-	YWJzZCh9cqjpTvujRArt7VWHmfkLXrH1KoEtlPHND6jppzaR+l/sApM7x7ltt57avdMKZbz9aJsj6
-	rD8iKoMII1PuUND2rdZQduUxohIvoU6gww==;
-Received: from ip40.wifi.igalia.com ([192.168.12.40] helo=zeus.local)
-	by fanzine2.igalia.com with esmtpsa 
-	(Cipher TLS1.3:ECDHE_SECP256R1__RSA_PSS_RSAE_SHA256__AES_256_GCM:256) (Exim)
-	id 1xA7tc-007Cxw-Pf; Fri, 25 Sep 2026 17:31:32 +0200
-Received: from berto by zeus.local with local (Exim 4.98.2)
-	(envelope-from <berto@igalia.com>)
-	id 1xA7tc-00000006B1T-1ZKJ;
-	Fri, 25 Sep 2026 17:31:32 +0200
-From: Alberto Garcia <berto@igalia.com>
-To: stable@vger.kernel.org
-Cc: Alberto Garcia <berto@igalia.com>,
-	Theodore Ts'o <tytso@mit.edu>,
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="cYTCJv2Z"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 3CA2B1F000FF;
+	Fri, 25 Sep 2026 19:59:23 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1790366363;
+	bh=j0n1Su+cgngbLmmkdleAw6u2hJKqkzvmBS356gMf3Bs=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=cYTCJv2Zbjg7AuW/SdFXA7Xbyjq6/GdDZqz6mO89wJhKLAxXV0fwMQIJdXyTTgJs8
+	 jdZ72fSL96gHOSis6UnZByrfAz8mUtZ4/f48L4HnHdXy5tx7oZMg1urcnLmlj8tzi+
+	 8QKkQ3OhVxiT8UPxpTDZ+hGgWzMmShpocswYgM1p5/Kbax2vLgbBeqPFVVGovorRVk
+	 p//pNUXEZL86+VLKO0HJ2buWb2Qn9rBWjR0VSc8QQPVNpTVy+Bb6JCvLQgxmOuUzw7
+	 iYHSlxp6AfhMykm6gGLKTlzsaa7H+v4tPIU2Kyjvqn3IKVntSmeSGHLPfQaQxoz6c3
+	 /985Abyoall7w==
+Date: Fri, 25 Sep 2026 12:59:21 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+To: Alberto Garcia <berto@igalia.com>
+Cc: Theodore Ts'o <tytso@mit.edu>,
 	Andreas Dilger <adilger.kernel@dilger.ca>,
-	Baokun Li <libaokun@linux.alibaba.com>,
-	Jan Kara <jack@suse.cz>,
+	Baokun Li <libaokun@linux.alibaba.com>, Jan Kara <jack@suse.cz>,
 	Ojaswin Mujoo <ojaswin@linux.ibm.com>,
 	Ritesh Harjani <ritesh.list@gmail.com>,
-	Zhang Yi <yi.zhang@huawei.com>,
-	Eric Biggers <ebiggers@kernel.org>,
-	linux-ext4@vger.kernel.org,
-	linux-fscrypt@vger.kernel.org,
-	regressions@lists.linux.dev
-Subject: [PATCH 7.2.y] ext4: don't enable large folios on encrypted inodes
-Date: Fri, 25 Sep 2026 17:31:25 +0200
-Message-ID: <20260925153127.1472301-1-berto@igalia.com>
-X-Mailer: git-send-email 2.47.3
+	Zhang Yi <yi.zhang@huawei.com>, linux-fscrypt@vger.kernel.org,
+	linux-ext4@vger.kernel.org
+Subject: Re: [PATCH 0/2] ext4: refuse encryption when block size > page size
+Message-ID: <20260925195921.GA5511@quark>
+References: <cover.1790343958.git.berto@igalia.com>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <cover.1790343958.git.berto@igalia.com>
 
-Commit 709f0f1f1bf5 ("ext4: add checks for large folio
-incompatibilities when BS > PS") disables large folios at mount time
-if the "encrypt" feature is set. However, enabling that feature on a
-mounted filesystem circumvents that check, and writing encrypted data
-results in a crash:
+On Fri, Sep 25, 2026 at 04:19:17PM +0200, Alberto Garcia wrote:
+> Hi,
+> 
+> encryption is not supported when a filesystem's block size is larger
+> than the page size. Although the kernel refuses to mount such a
+> filesystem if the "encrypt" feature is already set, it is possible to
+> enable it on a mounted filesystem with e.g. tune2fs.
+> 
+> # mkfs.ext4 -b 16384 /dev/vdb
+> # mount /dev/vdb /mnt/
+> # tune2fs -O encrypt /dev/vdb
+> # mkdir /mnt/foo
+> # fscrypt setup /mnt
+> # fscrypt encrypt /mnt/foo/
+> # head -c 20M /dev/urandom > /mnt/foo/data
+> # sync
+> [  116.014221] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 130040)
+> [  116.014235] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
+> [  116.014241] Buffer I/O error on device vdb, logical block 130040
+> [...]
+> [  116.014264] Buffer I/O error on device vdb, logical block 130049
+> [  116.015505] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 66552)
+> [  116.015520] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
+> [  116.016451] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 65784)
+> [  116.016459] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
+> 
+> This affects all kernels starting from v6.19 up to v7.3-rc4.
+> 
+> Note that this still allows encrypted inodes even when the 'encrypt'
+> feature is missing as long as block size <= page size. With v1
+> encryption policies they can be used normally.
+> 
+> There's an additional bug that only affects kernels between v6.19 and
+> v7.2 (but not v7.3), which will be dealt with separately.
+> 
+> Regards,
+> 
+> Berto
+> 
+> Alberto Garcia (2):
+>   ext4: refuse encryption when block size > page size
+>   ext4: reject encrypted inodes when block size > page size
+> 
+>  fs/ext4/crypto.c | 9 +++++++++
+>  fs/ext4/inode.c  | 6 ++++++
+>  2 files changed, 15 insertions(+)
 
-  BUG: kernel NULL pointer dereference, address: 0000000000000028
-  Workqueue: ext4-rsv-conversion ext4_end_io_rsv_work
-  RIP: 0010:ext4_finish_bio+0xf7/0x3e0
-  Call Trace:
-   ext4_release_io_end+0x51/0x110
-   ext4_end_io_end+0x4c/0xe0
-   ext4_end_io_rsv_work+0xb3/0x100
+Reviewed-by: Eric Biggers <ebiggers@kernel.org>
 
-Fix this by disabling large folios on encrypted inodes, as is
-already done for inodes that use data journaling.
-
-This affects all kernels between v6.19 and v7.2, but it is not needed
-in v7.3, where the code was significantly refactored.
-
-Fixes: 709f0f1f1bf5 ("ext4: add checks for large folio incompatibilities when BS > PS")
-Signed-off-by: Alberto Garcia <berto@igalia.com>
----
-This affects all kernels between v6.19 and v7.2 but only the latter is
-still maintained, so I think that it only needs to be applied there.
-
-This patch has no upstream equivalent: in v7.3 the code was
-significantly refactored and the problem no longer happens, see commit
-b4e409c18c79 ("ext4: Remove fs-layer file contents en/decryption
-code").
-
-To reproduce the bug:
-
-# mkfs.ext4 /dev/vdb
-# mount /dev/vdb /mnt/
-# tune2fs -O encrypt /dev/vdb
-# mkdir /mnt/foo
-# fscrypt setup /mnt
-# fscrypt encrypt /mnt/foo/
-# head -c 20M /dev/urandom > /mnt/foo/data
-# sync
-BUG: kernel NULL pointer dereference, address: 0000000000000028
-Workqueue: ext4-rsv-conversion ext4_end_io_rsv_work
-[...]
-
- fs/ext4/inode.c | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
-
-diff --git a/fs/ext4/inode.c b/fs/ext4/inode.c
-index a33629b397b0..32f79f48a9dd 100644
---- a/fs/ext4/inode.c
-+++ b/fs/ext4/inode.c
-@@ -5287,7 +5287,8 @@ void ext4_set_inode_mapping_order(struct inode *inode)
- 	if (!min_order && !S_ISREG(inode->i_mode))
- 		return;
- 
--	if (ext4_test_inode_flag(inode, EXT4_INODE_JOURNAL_DATA))
-+	if (ext4_test_inode_flag(inode, EXT4_INODE_JOURNAL_DATA) ||
-+	    ext4_test_inode_flag(inode, EXT4_INODE_ENCRYPT))
- 		max_order = min_order;
- 
- 	mapping_set_folio_order_range(inode->i_mapping, min_order, max_order);
--- 
-2.47.3
-
+- Eric
