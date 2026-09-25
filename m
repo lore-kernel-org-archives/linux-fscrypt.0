@@ -1,44 +1,44 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id D98664E8DF5;
-	Fri, 25 Sep 2026 19:59:23 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 713213B9931;
+	Fri, 25 Sep 2026 20:08:35 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1790366365; cv=none; b=EzSKlD4P4I0gYYBmT93Qd2pZpl0Z7GqkhqSHP8cYCRKac0VM4XaZMVuNAJVy9LjP2bT4QawAkmhkTWz9ogm4SNS4xeHO5l3HrH2ebEV7o9k9Y4NUnv7CaxOlFFQcZ0b+I7TJuEMz3n0yVjyZ3NaVp+yJcB2RsVH9CSa4hRpUsEs=
+	t=1790366916; cv=none; b=fzZiMsZ6JxBJYBlUpgoxVn99vE8OH51Thyn/8fR1pNwUMXU5cO7ZeuIpLOIUC5kGs0c8EWmr6rZYhekRRJbnGRfKhNYF8OvCxCq1ueJA8rDfOJDouMrU7smJwAlbMC1AeqgJ7VZKiutUf/tGXtooQrjgGUlZXSOyCQFCHDP9wJE=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1790366365; c=relaxed/simple;
-	bh=0FQ83vRAkYlWE/9ny/4c1VRIcQ+iRevz5Ab6KyCK7yA=;
+	s=arc-20240116; t=1790366916; c=relaxed/simple;
+	bh=chxr91I8LvFS0U6PrOUB5xy3ENrOWUM4Cry8yVLBT7I=;
 	h=Date:From:To:Cc:Subject:Message-ID:References:MIME-Version:
-	 Content-Type:Content-Disposition:In-Reply-To; b=Dz/6SvVMo2mVw/Gu0noXke+LsYK//S7RsWGMZObTC1Jtv8sdQm+wosof8x/L+DxLJqcog4pd49THJPJTIi4hzq4Hob4K83cS4dLAEpQMrpqKOa0wGrViWFRQTTb9fMIFkFpkoDYDnf4Mb4gqEeOaUjeAfQgKBUGaDR+JnRIHQio=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=cYTCJv2Z; arc=none smtp.client-ip=100.103.45.18
+	 Content-Type:Content-Disposition:In-Reply-To; b=reFrAHr+kTI13PwgIOKjsEwzCFJfdKggHpBeYY1f9stsnQ5irHW5rwu77P4XUL+bNcFMXK8hUueRgy6MlJoaRD2KPtVfJ9/RHackSoxT/E2dVNked+B/EBHq7rSsUjg343sjlKEo0sjNUlWJ6v59fP/l8vB4P1fRIEJUxXKgg04=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=ZdGzOa0x; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="cYTCJv2Z"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 3CA2B1F000FF;
-	Fri, 25 Sep 2026 19:59:23 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="ZdGzOa0x"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id B696A1F000FF;
+	Fri, 25 Sep 2026 20:08:34 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1790366363;
-	bh=j0n1Su+cgngbLmmkdleAw6u2hJKqkzvmBS356gMf3Bs=;
+	s=k20260515; t=1790366915;
+	bh=Y2x54wdcn0WapveU4aWy1axddCHwlKG0h7ovOHaTYUk=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=cYTCJv2Zbjg7AuW/SdFXA7Xbyjq6/GdDZqz6mO89wJhKLAxXV0fwMQIJdXyTTgJs8
-	 jdZ72fSL96gHOSis6UnZByrfAz8mUtZ4/f48L4HnHdXy5tx7oZMg1urcnLmlj8tzi+
-	 8QKkQ3OhVxiT8UPxpTDZ+hGgWzMmShpocswYgM1p5/Kbax2vLgbBeqPFVVGovorRVk
-	 p//pNUXEZL86+VLKO0HJ2buWb2Qn9rBWjR0VSc8QQPVNpTVy+Bb6JCvLQgxmOuUzw7
-	 iYHSlxp6AfhMykm6gGLKTlzsaa7H+v4tPIU2Kyjvqn3IKVntSmeSGHLPfQaQxoz6c3
-	 /985Abyoall7w==
-Date: Fri, 25 Sep 2026 12:59:21 -0700
+	b=ZdGzOa0xq010uCUfVjmxL6SYk4g1kZwXFghVG8SGJww1FZjUDpJA6CORe1ohELZSD
+	 32iQiCVTG1SAkvHJHfWfkPfpySPHyCK1EVF6+s8yiL8BtgzLcpVAJo0yw9F0GN+V0/
+	 36g74eodAEuodVe/LRiBwph6bx3pDwPB2C6f1m9B+rchmwem7uOYT12KValIYAbqC4
+	 DImw9q+WqW7Xs2rLum0CY2bVH05zd29gabvXAjrbYBgyFiIjYOKhf1qL4FrkpyBtmL
+	 m0cRuqVVQwMmJBWeT+1mhqXJIYe0SN/0UszKK/t5nH+GI6gF2Q2aH2eFed3mnGyO8j
+	 ESkQielZ1deyQ==
+Date: Fri, 25 Sep 2026 13:08:33 -0700
 From: Eric Biggers <ebiggers@kernel.org>
 To: Alberto Garcia <berto@igalia.com>
-Cc: Theodore Ts'o <tytso@mit.edu>,
+Cc: stable@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>,
 	Andreas Dilger <adilger.kernel@dilger.ca>,
 	Baokun Li <libaokun@linux.alibaba.com>, Jan Kara <jack@suse.cz>,
 	Ojaswin Mujoo <ojaswin@linux.ibm.com>,
 	Ritesh Harjani <ritesh.list@gmail.com>,
-	Zhang Yi <yi.zhang@huawei.com>, linux-fscrypt@vger.kernel.org,
-	linux-ext4@vger.kernel.org
-Subject: Re: [PATCH 0/2] ext4: refuse encryption when block size > page size
-Message-ID: <20260925195921.GA5511@quark>
-References: <cover.1790343958.git.berto@igalia.com>
+	Zhang Yi <yi.zhang@huawei.com>, linux-ext4@vger.kernel.org,
+	linux-fscrypt@vger.kernel.org, regressions@lists.linux.dev
+Subject: Re: [PATCH 7.2.y] ext4: don't enable large folios on encrypted inodes
+Message-ID: <20260925200833.GB5511@quark>
+References: <20260925153127.1472301-1-berto@igalia.com>
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
@@ -47,54 +47,31 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <cover.1790343958.git.berto@igalia.com>
+In-Reply-To: <20260925153127.1472301-1-berto@igalia.com>
 
-On Fri, Sep 25, 2026 at 04:19:17PM +0200, Alberto Garcia wrote:
-> Hi,
+On Fri, Sep 25, 2026 at 05:31:25PM +0200, Alberto Garcia wrote:
+> Commit 709f0f1f1bf5 ("ext4: add checks for large folio
+> incompatibilities when BS > PS") disables large folios at mount time
+> if the "encrypt" feature is set. However, enabling that feature on a
+> mounted filesystem circumvents that check, and writing encrypted data
+> results in a crash:
 > 
-> encryption is not supported when a filesystem's block size is larger
-> than the page size. Although the kernel refuses to mount such a
-> filesystem if the "encrypt" feature is already set, it is possible to
-> enable it on a mounted filesystem with e.g. tune2fs.
+>   BUG: kernel NULL pointer dereference, address: 0000000000000028
+>   Workqueue: ext4-rsv-conversion ext4_end_io_rsv_work
+>   RIP: 0010:ext4_finish_bio+0xf7/0x3e0
+>   Call Trace:
+>    ext4_release_io_end+0x51/0x110
+>    ext4_end_io_end+0x4c/0xe0
+>    ext4_end_io_rsv_work+0xb3/0x100
 > 
-> # mkfs.ext4 -b 16384 /dev/vdb
-> # mount /dev/vdb /mnt/
-> # tune2fs -O encrypt /dev/vdb
-> # mkdir /mnt/foo
-> # fscrypt setup /mnt
-> # fscrypt encrypt /mnt/foo/
-> # head -c 20M /dev/urandom > /mnt/foo/data
-> # sync
-> [  116.014221] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 130040)
-> [  116.014235] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
-> [  116.014241] Buffer I/O error on device vdb, logical block 130040
-> [...]
-> [  116.014264] Buffer I/O error on device vdb, logical block 130049
-> [  116.015505] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 66552)
-> [  116.015520] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
-> [  116.016451] EXT4-fs warning (device vdb): ext4_end_bio:360: I/O error 19 writing to inode 19 starting block 65784)
-> [  116.016459] EXT4-fs (vdb): failed to convert unwritten extents to written extents -- potential data loss!  (inode 19, error -5)
+> Fix this by disabling large folios on encrypted inodes, as is
+> already done for inodes that use data journaling.
 > 
-> This affects all kernels starting from v6.19 up to v7.3-rc4.
+> This affects all kernels between v6.19 and v7.2, but it is not needed
+> in v7.3, where the code was significantly refactored.
 > 
-> Note that this still allows encrypted inodes even when the 'encrypt'
-> feature is missing as long as block size <= page size. With v1
-> encryption policies they can be used normally.
-> 
-> There's an additional bug that only affects kernels between v6.19 and
-> v7.2 (but not v7.3), which will be dealt with separately.
-> 
-> Regards,
-> 
-> Berto
-> 
-> Alberto Garcia (2):
->   ext4: refuse encryption when block size > page size
->   ext4: reject encrypted inodes when block size > page size
-> 
->  fs/ext4/crypto.c | 9 +++++++++
->  fs/ext4/inode.c  | 6 ++++++
->  2 files changed, 15 insertions(+)
+> Fixes: 709f0f1f1bf5 ("ext4: add checks for large folio incompatibilities when BS > PS")
+> Signed-off-by: Alberto Garcia <berto@igalia.com>
 
 Reviewed-by: Eric Biggers <ebiggers@kernel.org>
 
