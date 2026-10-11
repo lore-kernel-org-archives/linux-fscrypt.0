@@ -1,80 +1,131 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id DC783369981;
-	Sun, 11 Oct 2026 17:20:00 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id C4B463264E0;
+	Sun, 11 Oct 2026 17:20:41 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1791739202; cv=none; b=K7blGlKSfrCNmATfnGef5/GFexcbWgys7ugapJjOvXMjK8RFKiSYVjf3RANz3Fe1aiPVDFPrJ68Jj1FOnCP710qsVwH9mibVzAyT9YuMpxDmqq1DN6ef0jFhxh53szUSICLGyKX8Fh7fXj2RKlLI70Az8ma2sOGsC9KwwNVIqZw=
+	t=1791739242; cv=none; b=HHcgp1CZ68MmbErMiaPaDPoXcNmoEj7QSh6JAqhZulvjlkiZ8mG4DcWdopUzYNtiipIcB8aZsUmgVcp3KLBXCmetEnR8DIKEd2gly6+RAg3DYskCnjniETnz/N7VQI4GJPbYcg6CPOYZMGdUL32jr7VYLhbuzTaeOsZY+dD/W/c=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1791739202; c=relaxed/simple;
-	bh=oc0O8XkvUMP2tzBGbWN0OlBTJKtqt699LwmkipZ+kqQ=;
+	s=arc-20240116; t=1791739242; c=relaxed/simple;
+	bh=cECy2f3R+QC4k7AcbZ3rJfRyBAtLEtjH+ZDYsrKzmyM=;
 	h=Message-ID:From:Subject:To:Cc:In-Reply-To:References:Content-Type:
-	 Date; b=Ci5WcgBRILVmMQ0JwMtAMifonRLRWblehYR/X9UupPaPQoFxXj2LxSJOz0L+MJYCKwSeLT/A7YRmRyo6K8lF9N3Kd5tlS537jLOHjK8vLfCkjNkLGBG1o4vIZE38nXmxDgC5LDlHf9tR2C+YX/EkOO5afyYwTj4vxO1gPYxcRyg=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Smp8JCMJ; arc=none smtp.client-ip=100.103.45.18
+	 Date; b=GTwjRDFBpru/eHhUm+lC5lJX24d7qJbWRJNu7gKcH5JJLNe6wocUnZlf3vGR+KEGor+zj0+X8ceCqMVS3bV1a3cvlGc5i8bvfh+8A+oMf41ScPjNfoqmlgmBeQ+yywTUwLpeyZ6xs0JEd/hAfym8pyw1PoUIJakuVSTY7ioxjBg=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=Tu4c1Xh3; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Smp8JCMJ"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 6BFF31F0089B;
-	Sun, 11 Oct 2026 17:20:00 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="Tu4c1Xh3"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 363FF1F0089B;
+	Sun, 11 Oct 2026 17:20:41 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1791739200;
-	bh=H//fAcidb3kNGKMu3EOhq1Xt98UhoUClQZ/kWGD56DA=;
+	s=k20260515; t=1791739241;
+	bh=Ac6fOVmjsZ1AlUnhWFZiz83ODUBzHgfK1N+ESdH/LSk=;
 	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
-	b=Smp8JCMJfPregBKAlxSG1gRwbySKDdkXOfHuvVI40KGXQS2JNKMVlKxqeNRJf2bTv
-	 bTL/p6TSIbvqZpDWJi7noy4U2ATDMkqgOsKtQzQplL41VbPCel2cf45iKojFgHZOxr
-	 rUrLGaiZdULH/cCK4uJF8Sx4VmspHbPMykH5bdKm3yqpVTWE2EJHYXwuWTt5XmMvKg
-	 RoQswHyhGsoYwyy/q/OcmDbquNO1x4d1P2tNQwZqoTtv9Am0+SLY14lxZzhdDmREAw
-	 TcLS/g7Af/gvSSzQDj5K7oTCziiQ0f31RW/7UleMmY4zsRN+d2tZ59xGSYY9TauX2U
-	 aA04tSBtJP94A==
-Message-ID: <sashiko-outbox-167339@kernel.org>
+	b=Tu4c1Xh3t2g1OfI/+KpkT5O8k0vz5NP/ZA36vzmSDMAO2VKHt/440lNysgmWmDsTQ
+	 J2YGjvNgHGykHSpTMFC2bbAeNgAvcvdliAbw9ND5x+0vo8ZPGBaLiFqZFG8YGwFsDV
+	 VexJPNfqk7sfZ7dalGcg6oysKKR1jAT5qE2tA+qIWf460+tJcTUItV2ZPdRy/iJKuF
+	 8cMsOvm7Ie2dLF4dCQ7Jnq8hCKYY1/Qwnbxx/+qa+tzTqetkMUlpEmA8h3C2nl3xYV
+	 VOyEN86HflUFh28bcjLi8gaoj7WB0/kR0Kz4gAtgrkPEM/ven82MoEs7ePQhRgKSbf
+	 HRnN7lLTn4rgA==
+Message-ID: <sashiko-outbox-167341@kernel.org>
 From: sashiko-bot@kernel.org
-Subject: Re: [PATCH 04/13] blk-crypto: decrypt one data unit per crypto
- request
+Subject: Re: [PATCH 03/13] blk-crypto: reject fallback data unit sizes it
+ can't handle
 Reply-To: sashiko-reviews@lists.linux.dev
 To: "Baokun Li" <libaokun@linux.alibaba.com>
-Cc: linux-ext4@vger.kernel.org, tytso@mit.edu, linux-fscrypt@vger.kernel.org
-In-Reply-To: <20261011170958.1759230-5-libaokun@linux.alibaba.com>
+Cc: linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, tytso@mit.edu
+In-Reply-To: <20261011170958.1759230-4-libaokun@linux.alibaba.com>
 References: <20261011170958.1759230-1-libaokun@linux.alibaba.com>
- <20261011170958.1759230-5-libaokun@linux.alibaba.com>
+ <20261011170958.1759230-4-libaokun@linux.alibaba.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-Date: Sun, 11 Oct 2026 17:19:59 +0000
+Date: Sun, 11 Oct 2026 17:20:40 +0000
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 
-> __blk_crypto_fallback_decrypt_bio() decrypts the bio one bio_vec at a
-> time: it walks the bio_vecs with __bio_for_each_segment(), requires each
-> bio_vec to be data unit aligned and a multiple of the data unit size, and
-> decrypts every data unit in it with a scatterlist that covers the whole
-> bio_vec.
->=20
-> That requires a data unit to be contiguous in memory, and cannot express
-> a data unit that spans more than a page.  In preparation for supporting
-> such data units, collect the bio_vecs that make up one data unit in the
-> new blk_crypto_du_bvecs(), and decrypt the data unit with a single crypto
-> request whose scatterlist spans those bio_vecs.
->=20
-> Add a struct blk_crypto_du_ctx to describe one data unit, with
-> blk_crypto_du_ctx_init() to initialize it and blk_crypto_du_bvecs() to
-> fill in its bio_vecs.  The array that holds them is sized for one
-> bio_vec and lives on the stack, so a data unit that needs more than
-> one bio_vec is rejected with BLK_STS_INVAL for now.
->=20
-> Also add a blk_crypto_crypt_du() helper that en/decrypts one data unit.
-> Only the decryption path uses it in this patch; the encryption path will
-> be restructured the same way in a follow-up patch, with the bounce page
-> scatterlist as the destination.
->=20
-> No functional change intended.
->=20
-> Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
+Thank you for your contribution! Sashiko AI review found 1 potential issue(=
+s) to consider:
+- [High] block: NULL pointer deref in blk_crypto_fallback_evict_key() on se=
+tup failure
+--
 
-Sashiko has reviewed this patch and found no issues. It looks great!
+commit 9e7475fafabf0ae30868c1ceef29977b6846a713
+Author: Baokun Li <libaokun@linux.alibaba.com>
+
+    blk-crypto: reject fallback data unit sizes it can't handle
+
+This patch restricts the data unit sizes advertised by blk-crypto-fallback
+to only those it actually supports. It also rejects unsupported data unit
+sizes early when setting up the key, preventing failures during I/O.
+
+> diff --git a/block/blk-crypto-fallback.c b/block/blk-crypto-fallback.c
+> index 2a8f40a65158b..a75daadba4c86 100644
+> --- a/block/blk-crypto-fallback.c
+> +++ b/block/blk-crypto-fallback.c
+
+[ ... ]
+
+> @@ -612,16 +616,24 @@ static int blk_crypto_fallback_init(void)
+>  }
+> =20
+>  /*
+> - * Prepare blk-crypto-fallback for the specified crypto mode.
+> - * Returns -ENOPKG if the needed crypto API support is missing.
+> + * Prepare blk-crypto-fallback for the specified crypto configuration.
+> + * Returns -EOPNOTSUPP if the fallback can't handle the data unit size o=
+f the
+> + * configuration, or -ENOPKG if the needed crypto API support is missing.
+>   */
+> -int blk_crypto_fallback_start_using_mode(enum blk_crypto_mode_num mode_n=
+um)
+> +int blk_crypto_fallback_start_using_key(const struct blk_crypto_config *=
+cfg)
+>  {
+> +	enum blk_crypto_mode_num mode_num =3D cfg->crypto_mode;
+>  	const char *cipher_str =3D blk_crypto_modes[mode_num].cipher_str;
+>  	struct blk_crypto_fallback_keyslot *slotp;
+>  	unsigned int i;
+>  	int err =3D 0;
+> =20
+> +	if (!(BLK_CRYPTO_FALLBACK_DU_MASK & cfg->data_unit_size)) {
+> +		pr_warn_ratelimited("can't handle data unit size %u\n",
+> +				    cfg->data_unit_size);
+> +		return -EOPNOTSUPP;
+> +	}
+> +
+
+[Severity: High]
+Does this early return bypass blk_crypto_fallback_init() and leave
+blk_crypto_fallback_profile as NULL?
+
+If this is the first fallback usage, returning here means we haven't
+initialized the profile. If downstream callers (like dm-inlinecrypt) handle
+this -EOPNOTSUPP error by attempting to evict the partially initialized key,
+can it lead to a NULL pointer dereference?
+
+When target teardown calls blk_crypto_evict_key(), it will eventually call
+blk_crypto_fallback_evict_key(), which passes the uninitialized profile
+directly:
+
+block/blk-crypto-fallback.c:blk_crypto_fallback_evict_key() {
+	return __blk_crypto_evict_key(blk_crypto_fallback_profile, key);
+}
+
+This unvalidated profile pointer is then dereferenced when checking the num=
+ber
+of slots:
+
+block/blk-crypto-profile.c:__blk_crypto_evict_key() {
+	...
+	if (profile->num_slots =3D=3D 0) {
+	...
+}
+
+Could this cause a kernel panic if a user with device mapper access requests
+an unsupported data unit size?
 
 --=20
 Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261011170958.1759=
-230-1-libaokun@linux.alibaba.com?part=3D4
-
+230-1-libaokun@linux.alibaba.com?part=3D3
