@@ -1,74 +1,81 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9740E3546F3;
-	Sun, 11 Oct 2026 17:26:53 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 10C542989B5;
+	Sun, 11 Oct 2026 17:27:14 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1791739614; cv=none; b=XVp7FC1BDLK+49q6xAy15avp6+1/dknkkQ0jXHObe8/ZRjYtCAVLeM/RQdKHwzYqBHes3Oul0Fd0iYyfkjnpqrjofj2S8knilX71SCwikaVEZgB9gJgJ20Zez9dIbxECsUGPhLC6VjFJ5jF1yVu9zchEz1bhHNSwCpF+pgLVpdk=
+	t=1791739635; cv=none; b=PAaXo8EUHSngU8S4wEQ2r07PAu+PrD0z79IWMvr5kI9hNu4Ns5+uF11OLCYLpgm86ltJln2QB6QgondYrQ3C5nEQGKcbnEjq118wtA1LBZDg0JGZHEunju/xdB/rQiCuRWKggSsQx35ycz8433wCJbO9MRkCB3DONtiMWgC14gc=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1791739614; c=relaxed/simple;
-	bh=1Sziv7AFwvheSAPK5KVZ0KLVMKzZh2gT7FByMNWYtEk=;
+	s=arc-20240116; t=1791739635; c=relaxed/simple;
+	bh=guGB/e21XSJGdBmkwyQseye9ugCzEqPvR4ZAVHbWY+Q=;
 	h=Message-ID:From:Subject:To:Cc:In-Reply-To:References:Content-Type:
-	 Date; b=XZFJXEjTW6HIDT9+pDYjzmFDJYf2ZKjueLSgVplroJ+q2Kk0TtvX4NHYUStHJuJwXKsMnClXq1nmfa/YGPm93k/R011GrJxWm2dFrOXXM8ELWY+yX76egXdVmDovClIIBbiJCo5dZKtOtheIVtaoS2cDby0Wz/w2tlukoZl3cQE=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=ZSUSYIsx; arc=none smtp.client-ip=100.103.45.18
+	 Date; b=XGaWRd73P1QWdu/aFc6gCYNWD0teLKYLj1EtfcSGiZ3CrKClix9ypzT90VyPR7/4DVTb7O8c1zd2fr6TiU0upmGQUGvpk+D+sKDqrbVDPRrlznxvdvtBlL3bGeUy9sQvfmc+FUuRoTBNwQghCwJ3pA9KBIlNEfrJd61QJFD2Kqc=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=J2/SrAZr; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="ZSUSYIsx"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 19D3D1F0089B;
-	Sun, 11 Oct 2026 17:26:53 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="J2/SrAZr"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id C63D51F0089B;
+	Sun, 11 Oct 2026 17:27:13 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1791739613;
-	bh=1Sziv7AFwvheSAPK5KVZ0KLVMKzZh2gT7FByMNWYtEk=;
+	s=k20260515; t=1791739634;
+	bh=WF1O8ObFI2G169BSO57qYW5+i9LJkuYBW88TnBCrzdw=;
 	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
-	b=ZSUSYIsxXo+B6wCP12N7+dvVeFuV13Tcvio1Z3yX0YgjAwKzJjZIWMes7mOev8QY4
-	 bPT1NqQ47AKGks44OpNCuVPTktClmIZMbg23xouEAMe74gstpNP8DwzOp0IwCNx9ZR
-	 G1GR8lal3Dem8gksS3KpXw/cZpqHQeXktgwljJ4uI/6/uQs76Ti/OCNtRTmGkGtaWR
-	 KQtLrfD3WReqXv9p6EHCJvHRfeS1AqESEYvQoax3fyme5RyNEx5Vb1BizadWZmjnwH
-	 6FCm2tvEo8wcJQ5N+VuV144CDyogT4rszMJ3wpVUVp4xsTGnfFlCUW9HU7/3W8H21W
-	 3fALYz6Mr6ohA==
-Message-ID: <sashiko-outbox-167349@kernel.org>
+	b=J2/SrAZrfW58EUIreV/n+cOdmOIYIlLYZCnvR6Z5FpMcG2cFrjJRkTOkxJyXEATeg
+	 Jopb618CzC5NQ/5r++KHnNiqu31FmKAqQHHuEjRuq2ztCR8txH9bDsNf2wLyGQIY3s
+	 als9RnrBJyHvCcq5hE7PfBDjq+hyyPKIUWzXU+n4aWg/OtuZtGE3Bo2j3InINB0moy
+	 xVbyAJ/4emiUyEWD2VgD1KjxWC6p4LHaulDPfRpct3v+7UpkEgBTElHplHIewTENxr
+	 iOaZI+3fU7/lYSIRczRQYkA02yRxyQuO7U7fuD9mjorm4yhN4qXKWyrxAAMqB+ZpWk
+	 CrGBHWxh1R5SA==
+Message-ID: <sashiko-outbox-167350@kernel.org>
 From: sashiko-bot@kernel.org
-Subject: Re: [PATCH 01/13] ext4: refuse encryption when block size > page
- size
+Subject: Re: [PATCH 06/13] blk-crypto: support data units larger than a page
 Reply-To: sashiko-reviews@lists.linux.dev
 To: "Baokun Li" <libaokun@linux.alibaba.com>
-Cc: linux-ext4@vger.kernel.org, tytso@mit.edu, linux-fscrypt@vger.kernel.org
-In-Reply-To: <20261011170958.1759230-2-libaokun@linux.alibaba.com>
+Cc: tytso@mit.edu, linux-fscrypt@vger.kernel.org, linux-ext4@vger.kernel.org
+In-Reply-To: <20261011170958.1759230-7-libaokun@linux.alibaba.com>
 References: <20261011170958.1759230-1-libaokun@linux.alibaba.com>
- <20261011170958.1759230-2-libaokun@linux.alibaba.com>
+ <20261011170958.1759230-7-libaokun@linux.alibaba.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-Date: Sun, 11 Oct 2026 17:26:52 +0000
+Date: Sun, 11 Oct 2026 17:27:13 +0000
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 
-> From: Alberto Garcia <berto@igalia.com>
+> blk-crypto-fallback requires each data unit to be contained in a single
+> bio_vec, and fails a bio with a larger data unit with BLK_STS_INVAL.
+> fscrypt uses the filesystem block size as its data unit size, so
+> encrypted files are unusable on filesystems with a block size larger
+> than the page size; the write failure is silent and loses the data.
 >=20
-> Encryption is not supported when a filesystem's block size is larger
-> than the page size, and commit 709f0f1f1bf5 ("ext4: add checks for
-> large folio incompatibilities when BS > PS") added a check to refuse
-> mounting such a filesystem.
+> Since commit 5acc6f649a68 ("fscrypt: Always use blk-crypto for
+> contents on block-based filesystems") there is no fs-layer path left.
+> Fix this by describing a data unit by one bio_vec per page: data units
+> that fit keep using the bio_vec and the scatterlists in the data unit
+> context, and larger ones get arrays from the new blk_crypto_du_ctx_pool.
 >=20
-> However, it is also possible to enable the "encrypt" feature on a
-> filesystem that is already mounted (with tune2fs -O encrypt). Once
-> that happens it won't be possible to mount the filesystem again in
-> the future, but there is nothing preventing the user from setting an
-> encryption policy while the filesystem is still mounted.
+> The pool is a mempool backed by a dedicated slab cache, as kmalloc()
+> would round the element size up to the next power of two.  It is set
+> up when a key with such a data unit size is first used, and one array
+> is reused for all data units of a bio.
 >=20
-> Fix this by refusing to set an fscrypt context in ext4_set_context()
-> when the block size is larger than the page size.
+> A data unit must start at a data unit boundary (a page boundary for a
+> larger one), and the accepted data unit sizes grow to the number of
+> pages that fit in one encrypted bio, rounded down to a power of two.
+> An encrypted bio can run out of room before the source bio ends; free
+> its unused bounce pages with the new blk_crypto_free_enc_pages().
 >=20
-> Fixes: 709f0f1f1bf5 ("ext4: add checks for large folio incompatibilities =
-when BS > PS")
-> Cc: stable@vger.kernel.org # v6.19+
-> Signed-off-by: Alberto Garcia <berto@igalia.com>
+> One crypto request per data unit is kept, so the ciphertext of data
+> units that fit in a page is unchanged, and larger data units produce
+> the same ciphertext as inline encryption hardware.
+>=20
+> Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
 
 Sashiko has reviewed this patch and found no issues. It looks great!
 
 --=20
 Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261011170958.1759=
-230-1-libaokun@linux.alibaba.com?part=3D1
+230-1-libaokun@linux.alibaba.com?part=3D6
 
