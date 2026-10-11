@@ -1,69 +1,77 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 04E4F2FD7C3;
-	Sun, 11 Oct 2026 17:25:16 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id EA1742FD7C3;
+	Sun, 11 Oct 2026 17:26:07 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1791739517; cv=none; b=qLR3xfPIwC1y282VhTEh34FKoamKO+uAylmOvEOHcn3g7+n+D1CImukGNI1Gx/UDU1ch/FKfseaA5RGy0wSf7Gkl83GrdjTE4Le4IrF41I29qApsOa/otRnLYgJjgf08vmZUMYco+1j4QZTNdUoFerWjOGaCcfc2JgSsLS2Yd9Q=
+	t=1791739568; cv=none; b=eOfn+ASDkdp+nNVMrivEyLnKA/UX4nnvGXqpHIf3LdXUl1O4WIgTIacT76F5axZr6suXJmdM4pcAIu9WGWKJQy8XF/ADHcwNBE5DAhwdH8AANGZ9aGKcEpGb83QvwopLBMtaibut3Hybl2krvzTHF2Gvlu1bDHo1+4cAjXc4i4U=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1791739517; c=relaxed/simple;
-	bh=jIxJDFQiZGzw/PCfavsGFxQ8DuCxgNKEdhp5TRmjSqU=;
+	s=arc-20240116; t=1791739568; c=relaxed/simple;
+	bh=4jEv1Qx9yFjeKil1OJfXmbTcY7VtJ6zldEYTskfvar0=;
 	h=Message-ID:From:Subject:To:Cc:In-Reply-To:References:Content-Type:
-	 Date; b=f8CBQvn/EXAi3u9SM/86aMpF0ycOBKOu4t4qEz/PdCf5C3VBDtc1k/gUT1fY9x5MZH6dSqwPsan8+NckDDqhLmL0eQjQE1nrvQvx64V9OmoI/PV/PI18Aa8SAYUq30o6Ho6mcsJ0oUWk5pq7anMK4+wNi5oMG6F7SY7NCSuqshg=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=RYsYce5T; arc=none smtp.client-ip=100.103.45.18
+	 Date; b=BOPyRifbaGAPF4mX2DHY+yxaTkj57ghl3M22kFDhKws0/jgkF5o3EDhLPfgxQcNYa2EzcN9zpE1Iq7wX8DW2Qwq5gxcapFuM7knLDzehyLN/WUoi+2r9YjDsF/qq6TwqVbW6sSsG0/Mo8KKICt+ff3LLl8y9s12fSFU9OmdwlG0=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=HmfUhQAT; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="RYsYce5T"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 6B3641F0089B;
-	Sun, 11 Oct 2026 17:25:16 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="HmfUhQAT"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 4C3CC1F0089B;
+	Sun, 11 Oct 2026 17:26:07 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1791739516;
-	bh=dZuCxQRvQCO1UR7Jx8Ch8NljdeK8gwRIza8EqD9SKSs=;
+	s=k20260515; t=1791739567;
+	bh=4jEv1Qx9yFjeKil1OJfXmbTcY7VtJ6zldEYTskfvar0=;
 	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
-	b=RYsYce5TtlQ+6c8Xdp4QCEI0lxXF2z0CR5cnY4OWLuW+Qt4LLs9H0Ce/CjpHYF03A
-	 NBQEQohFojr1ZNkkutSqjWBEJmuQZryjtH5WvX+lfKD5GhsGPqsc6UI/euFReG3Dlu
-	 /veCa6mJfnNFRJKZiSmQgorWwXeiMEznsUWjLS7DrWahJ1teEzdN3ZNU013nz/U1aj
-	 b63VSHJ7da9iIAcmDkPaTSUUfxeRtyHodBGbX8/rDEX7qLbladKMo6Fs41otemUGrb
-	 Yr5GTwFXPR98ASEYkTOoxLKVIik09YIxjJYKTUITq7UcqhhchKSNd0XjxV7r3w7Ppr
-	 umD1LaCKiHduw==
-Message-ID: <sashiko-outbox-167347@kernel.org>
+	b=HmfUhQAT1qzxLLTTT2EUNphv3EWlsENLVqRWHHHM8NJP3nvkbmOg4niHdPFRSJiv9
+	 TNX2cpydJy5z7a3zuVaC9xZNo/R1J3Br2i2Tl4UOe7jAdKVJdcCMFgQDWCv61VUIs0
+	 bem/+gnj/p1KUpoXB1K7NmG8Mdwhx8t112oTXKbe5WRKxJPnTYYMJj8zLfaddcOYs6
+	 9aPl5+rUxn4iNksydDMs4SAPqXJKZajUuBPgqn4aFOA/p86eNuntcFRObSC8FAPZ+N
+	 5sQcTL9YRxAVkD7Z/l86i9zRBdy71Qp/58mX9xUZuCPzKMiZyBWJ1e7B9flhi92IDi
+	 ESVZzYbz8MbLQ==
+Message-ID: <sashiko-outbox-167348@kernel.org>
 From: sashiko-bot@kernel.org
-Subject: Re: [PATCH 07/13] iomap: align the direct I/O bios of encrypted
- files to the block size
+Subject: Re: [PATCH 05/13] blk-crypto: encrypt one data unit per crypto
+ request
 Reply-To: sashiko-reviews@lists.linux.dev
 To: "Baokun Li" <libaokun@linux.alibaba.com>
-Cc: tytso@mit.edu, linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org
-In-Reply-To: <20261011170958.1759230-8-libaokun@linux.alibaba.com>
+Cc: linux-ext4@vger.kernel.org, tytso@mit.edu, linux-fscrypt@vger.kernel.org
+In-Reply-To: <20261011170958.1759230-6-libaokun@linux.alibaba.com>
 References: <20261011170958.1759230-1-libaokun@linux.alibaba.com>
- <20261011170958.1759230-8-libaokun@linux.alibaba.com>
+ <20261011170958.1759230-6-libaokun@linux.alibaba.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-Date: Sun, 11 Oct 2026 17:25:15 +0000
+Date: Sun, 11 Oct 2026 17:26:06 +0000
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 
-> A bio that carries an encryption context must cover a whole number of
-> data units: its data unit number is generated from its first data unit
-> (see bio_crypt_set_ctx()), and it is only split at data unit
-> boundaries.
+> __blk_crypto_fallback_encrypt_bio() encrypts the source bio one bio_vec
+> at a time: it walks the bio with bio_iter_iovec(), which clamps each
+> bio_vec to a single page, encrypts all the data units of that bio_vec
+> into its bounce page with one crypto request per data unit, and starts a
+> new encrypted bio when all of its pages are in use.
 >=20
-> iomap attaches the encryption context of an encrypted file to the bios
-> that it builds for direct I/O, but it only cuts them at the logical
-> block size of the device.  A bio ends where the bio_vecs that fit into
-> it end, not at a fixed number of bytes: the extraction stops when the
-> bio is out of bio_vecs or when the iterator is exhausted, and a
-> bio_vec can cover a whole folio.
+> That structure cannot express a data unit that spans more than a page.
+> In preparation for supporting such data units, restructure the loop
+> around the data unit, the same way as the decryption path: collect the
+> bio_vecs that make up one data unit in blk_crypto_du_bvecs(), encrypt it
+> with a single crypto request whose scatterlist covers exactly those
+> bio_vecs, and advance the source bio by one data unit.
 >=20
-> A bio can end in the middle of a data unit, and a data unit that is
-> larger than a page makes this reachable without any misaligned input
-> at all: the extraction then stops in the middle of a folio, and a cut
-> [ ... ]
-> the logical block size of the device on to iomap expecting it to fail
-> with -EINVAL, while iomap checks only the file position and the
-> length, so such a request can reach bio submission.
+> Unlike the decryption path, which decrypts in place using one
+> scatterlist for both sides, the encryption path writes the ciphertext
+> to the bounce pages, so it fills the scatterlist for each side of the
+> crypto request, and calls the same blk_crypto_crypt_du() helper, with
+> the encryption direction and the bounce page scatterlist as the
+> destination.
+>=20
+> A data unit is now encrypted as soon as it is complete instead of when
+> all the data units of its bio_vec are, and the first bio_vec of a data
+> unit is added to the encrypted bio with the whole length of the source
+> bio_vec it starts in, as the data units that follow it in that bio_vec
+> share its bounce page.
+>=20
+> No functional change intended.
 >=20
 > Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
 
@@ -71,5 +79,5 @@ Sashiko has reviewed this patch and found no issues. It looks great!
 
 --=20
 Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261011170958.1759=
-230-1-libaokun@linux.alibaba.com?part=3D7
+230-1-libaokun@linux.alibaba.com?part=3D5
 
