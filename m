@@ -1,73 +1,66 @@
 Received: from smtp.kernel.org (aws-us-west-2-korg-mail-alma10-1.taild15c8.ts.net [100.103.45.18])
 	(using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A0D2930F52B;
-	Sun, 11 Oct 2026 17:16:43 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id C9255328635;
+	Sun, 11 Oct 2026 17:18:24 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.client-ip=100.103.45.18
 ARC-Seal:i=1; a=rsa-sha256; d=subspace.kernel.org; s=arc-20240116;
-	t=1791739004; cv=none; b=ud47FDL17j93H1J0oAEPoAyq1+VMYP/Y9DoiqX+cAYESHwxl8X3qF5o9epHgkVkCe9BRvKD44tHSWHlvD9ZOtAaqKGNGMtW2LCss82vlK9VvdtRXiz3JpMZzpZqEFJuNEaQ/h01Nv+ZW6RbWrCacsaYVPiEqmr3a6t/1n5Trc08=
+	t=1791739105; cv=none; b=BUJu7/XcZUz9NiW3tEzjz4Tk8ZCUe3eTI6w/XVjYoJC8d9/GQhB3F/KG/o+MnkMLo5lG/whlb/NYlNkTIEcG+wWVEsjaYh/jkVzCA3G+5E31z3fj0PBpkanDmcVlG0hCPtKfnTB1RK02OJbThTVbO+UVyom1Gr6MOBLbqWW2gq0=
 ARC-Message-Signature:i=1; a=rsa-sha256; d=subspace.kernel.org;
-	s=arc-20240116; t=1791739004; c=relaxed/simple;
-	bh=zaVsiEPEnxOoV2qavkSgOCbomZyMxQB+l01yalUtWs8=;
+	s=arc-20240116; t=1791739105; c=relaxed/simple;
+	bh=UYTbdUwAbo2wEhYq5RzyzKCuI5y/Swm24Oj9PAYf0L4=;
 	h=Message-ID:From:Subject:To:Cc:In-Reply-To:References:Content-Type:
-	 Date; b=nwdSmjrZSRIoOQGOt2ORq4iZvGqs/ljOuVRLNe6x5ejEBuBGLLw9DNtdK4p/E11d1NtSN5IaF+mnqELDIzBPHDOyvLkLhQwtv8X0naJBtTCOYGShrtvsDS1RtQ3V7426Oe6ATHVHofOUI1TajpeKI+eX7++aTYFkgZnIgUXhX3Y=
-ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=kOkpSGRK; arc=none smtp.client-ip=100.103.45.18
+	 Date; b=RxW+eyKKXWkiADnenaRc7m546vAZFiedNQ0dhbRxLtz0INQp/h1Z4dHhknlmPEFnHThTH7jAgl+Ad5uY7KNfw1bgcYW92cm7zLSVeQv6QLfti6YQrt3dmZQPSZjGJg4DvGtq4fPQEAnRMLRpi/8PyfCvD6qPvbB1HUOAIxYZIhw=
+ARC-Authentication-Results:i=1; smtp.subspace.kernel.org; dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b=CdH2lUQF; arc=none smtp.client-ip=100.103.45.18
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="kOkpSGRK"
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 064081F0089B;
-	Sun, 11 Oct 2026 17:16:42 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.b="CdH2lUQF"
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 7918D1F0089B;
+	Sun, 11 Oct 2026 17:18:24 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1791739003;
-	bh=zaVsiEPEnxOoV2qavkSgOCbomZyMxQB+l01yalUtWs8=;
+	s=k20260515; t=1791739104;
+	bh=UYTbdUwAbo2wEhYq5RzyzKCuI5y/Swm24Oj9PAYf0L4=;
 	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
-	b=kOkpSGRKqtGGbXXX9rBlOjbUPuXpkAIrt7oKs8UmVyiOaSFT2IOwr7hJkmW9u85Hi
-	 yHcfTDyR/K7+WJUUXVjr3OSkni2NsQqQdbnooYmleXQZdfLq5ep6S/EIAHbxPzaMuY
-	 mw1vym3yxQug42CW1wG6aJPppoQ9GNOi3SNBOwgo9VZw0ksCYJYzhHNRcHtLIf6pXY
-	 +mfrYgNIhq6RKeiWVyTlxAYcSiTp01XpOpJ7XtmyO7uLkVvE/DRwqs4mor/hpH07mx
-	 KQpTwsYRx+svtvhofR1A/sHU2NW7dG4dbhnb+1GMbm279QBETGjEv1fRgnHLSeJm54
-	 w/1Jh3c1b9ukQ==
-Message-ID: <sashiko-outbox-167337@kernel.org>
+	b=CdH2lUQFa8fdQmmHmekE8QAQhwxQ21FwQLQVv+Z54H1kO7dRDRCEtRb/s2orhai3m
+	 PnrbV7eqhsYkQecy3pzeFOe+MDCs5FROU7jQG6yZbBwW/7agutbk3UxI3Y8NUTky0e
+	 WNwpARkYwT3zlxIZjV4qcr+ayZIv7/FYgrn1fJ9NwOoaSQ1hbsu/XQ/4GwxlgHZpn4
+	 THiAedFueCBgtNY+A6ZqJva6fDwt/SRnmBk+KxO+YnB60p7eNp+LDA4rBWzyFsG152
+	 H5kzzejQ53xPy7hiHTZAAPLvMPLDa20g+QpcCUzTZSdY7J4j0bVCfWFX4hhPIdvInh
+	 CUZTTqZWN5B7w==
+Message-ID: <sashiko-outbox-167338@kernel.org>
 From: sashiko-bot@kernel.org
-Subject: Re: [PATCH 02/13] ext4: reject encrypted inodes when block size >
- page size
+Subject: Re: [PATCH 09/13] block: warn about bios that can't be split
 Reply-To: sashiko-reviews@lists.linux.dev
 To: "Baokun Li" <libaokun@linux.alibaba.com>
-Cc: linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org, tytso@mit.edu
-In-Reply-To: <20261011170958.1759230-3-libaokun@linux.alibaba.com>
+Cc: linux-ext4@vger.kernel.org, tytso@mit.edu, linux-fscrypt@vger.kernel.org
+In-Reply-To: <20261011170958.1759230-10-libaokun@linux.alibaba.com>
 References: <20261011170958.1759230-1-libaokun@linux.alibaba.com>
- <20261011170958.1759230-3-libaokun@linux.alibaba.com>
+ <20261011170958.1759230-10-libaokun@linux.alibaba.com>
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
-Date: Sun, 11 Oct 2026 17:16:42 +0000
+Date: Sun, 11 Oct 2026 17:18:24 +0000
 Precedence: bulk
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 
-> From: Alberto Garcia <berto@igalia.com>
+> bio_split_io_at() fails a bio that it can't split into a valid request
+> with -EINVAL: a bio may have too many discontiguous segments for the
+> queue, may have virtual boundary gaps that leave it without a block
+> sized split, and now that the split size is rounded down to the data
+> unit size of an encryption context, it may have a data unit that does
+> not fit in the room that the queue limits leave for the split.
 >=20
-> Encryption is not supported when a filesystem's block size is larger
-> than the page size. ext4_check_large_folio() refuses to mount a
-> filesystem like that if the "encrypt" feature is already enabled, and
-> ext4_set_context() refuses to create encrypted inodes if the feature
-> is enabled after mounting.
+> Nothing else says which queue limit caused the failure, and a limit that
+> is smaller than the data unit size, e.g. a max_sectors_kb that was
+> lowered below it, is accepted by the block layer, so warn about it, with
+> the bytes that fit and the alignment involved.
 >=20
-> However, a corrupted or hand-crafted filesystem can still have
-> encrypted inodes even if the "encrypt" feature is not set, and those
-> inodes can be unlocked if they're using v1 policies.
->=20
-> Check this in __ext4_iget() and reject them as corrupted.
->=20
-> Fixes: 709f0f1f1bf5 ("ext4: add checks for large folio incompatibilities =
-when BS > PS")
-> Suggested-by: Eric Biggers <ebiggers@kernel.org>
-> Cc: stable@vger.kernel.org # v6.19+
-> Signed-off-by: Alberto Garcia <berto@igalia.com>
+> Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
 
 Sashiko has reviewed this patch and found no issues. It looks great!
 
 --=20
 Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261011170958.1759=
-230-1-libaokun@linux.alibaba.com?part=3D2
+230-1-libaokun@linux.alibaba.com?part=3D9
 
