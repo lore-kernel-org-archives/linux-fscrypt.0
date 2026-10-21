@@ -1,64 +1,57 @@
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1792547615;
-	b=INvwG/p+efmC8nNAQwpbYAdX1lBYMmV8XfVDjfp6ac2U8pmmL5r0teIO5XYikmDS4wPe
-	 XzEzZ2pLmdt4qQQwSrAyDy2ERgFHSIA0xEQXB8awBQuVzmWSoLQS9IWWAbNMNmyqWumMY
-	 4pnD+bmaoPmkJ9q0YmfPOk+8yM4WvobyZ8+qzggL6VfeeIlfHwYCidA+t/hGqr0XNPeUa
-	 FvGx69Z09joBkSnnIiW1il3nJumV+wJSlbKcq864Qquh7Ueay0JXF4qExFZBQ4d7gDvMM
-	 DglBxpjAn+96Jlb82O7gzFyTMcxm8ifp83LharSaEF44yabJKk6sRUXvTNPphv57ECA==
+	t=1792603361;
+	b=JnjRQ7+eOEH1S5e7GyvBtmVRp3QxTe5I0eKnxie6xNazUKRX4e8Bu4CKOAg4cX/mLY7p
+	 G8HtbtmH/z4U9+Vvq209dJQxBdARO/XdUyVqvaHtzEN9z684WLNc6uB8TXofaIaTX82Aj
+	 7p2sKuh7k3IIPccxJHzEJUwba3zmQ5xSLXqSq2VA12/dLVaJ2WQ9ELQIOqg5VAtgBOCE4
+	 FLoG+1unQPvGXhSKmk7/yeZc8PjjEBhYFE8OeS/J+Ef7yZOk3KI/HkQoy08V0X1FBQJUu
+	 Xg1Vd9KHAmBJV/KShUgH5LzL0vlLxKMB7zBROruKW9sFl8d5sbcP6o5HUKxN1cUh5NQ==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1792547615;
-	h=Received:DKIM-Signature:Received:Subject:From:In-Reply-To:References:
-	 X-PR-Tracked-List-Id:X-PR-Tracked-Message-Id:X-PR-Tracked-Remote:
-	 X-PR-Tracked-Commit-Id:X-PR-Merge-Tree:X-PR-Merge-Refname:
-	 X-PR-Merge-Commit-Id:Message-Id:Date:To:Cc;
-	bh=jMlbbqXoNTNtXO6gJwUpwq7MXwdLhlzFO6lIbcOi9yA=;
-	b=bW4XdrGNNRR+9+rcPdJj8WeqcjT2kQvSRGACwiC0HU00Nn9k/nWzhVW8LUQLYxeg5ewb
-	 LE8ImJys81MGRswhOwJ7uv3GGb0aGfSbYraACcFyM8rNwfIhFyvDfEq4d7NlsCukAoJcP
-	 BdDuyNK/xbqrbAUBnnhlE/1eS09NKtV2AJ7xZJ00cHaILxHaR3QIzG0EQDvrknqInEqkf
-	 G0NlmvhKDeAb7XRdTMiS3LtEUgeAiB5ats5vKXyzMZqk9cuTT8k4qoaWODUhmdzSHbM+c
-	 GMaSfThvAFEVO4CbkVazqPLH4PZPvH+DKCMOaEZWMV+Zgh9smAMBmilgFMHNcf09bpA==
+	a=rsa-sha256; c=relaxed/relaxed; t=1792603361;
+	h=Received:DKIM-Signature:Date:From:To:Cc:Subject:Message-ID:
+	 References:MIME-Version:Content-Type:Content-Disposition:In-Reply-To;
+	bh=6LqR1VzY/7CZkjbT+gr5Y/FfDEr1ngYlH55EfU+izAs=;
+	b=5as2pPlyBny93kQ8AdWgsor0GKesQFOMDM+OvyKN5FrEcVIrc1An76ABmwJLO5+9pPgp
+	 AUL0+G5OX4lya6OB9+jXt50XtM3bSLvm8/dzWayNFvOzwKRJmnSxD/SCQIWzwxPb4eUuU
+	 vS4e65Z7fgoxoNfvyNvigFJPP7wMxxXjF1pT4BsFxPHVwcF/vgI5NyiohwEOOGWSdtzl+
+	 MPjh4phWaSPtpuhKvEFQL8rq4Ih1gUs4EcEsQ009tgzPClKS+dyCbC35cEVntdZaL+P/O
+	 8R+3rBDfKUgbFzCdKI4IMkcXlu1KxroJ0k4NiYyPMcQWdJqI9lxQZlvGFdd+10gBWmQ==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=LWftTZyf;
+	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=S2rfc6jT;
 	arc=none smtp.remote-ip=100.103.45.18
 Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 68447606A319;
-	Wed, 21 Oct 2026 01:53:35 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 13BFA606A31A;
+	Wed, 21 Oct 2026 17:22:41 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key, unprotected) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=LWftTZyf
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 44AD61F000C9;
-	Wed, 21 Oct 2026 01:53:35 +0000 (UTC)
+	dkim=pass (2048-bit key, unprotected) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=S2rfc6jT
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 618E31F000C1;
+	Wed, 21 Oct 2026 17:22:40 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1792547615;
-	bh=jMlbbqXoNTNtXO6gJwUpwq7MXwdLhlzFO6lIbcOi9yA=;
-	h=Subject:From:In-Reply-To:References:Date:To:Cc;
-	b=LWftTZyf5qFh651z62Q3085PCHrnh1U9pOC7Kagn6rioa6Um3Wr9+OqJqCjYbCk7y
-	 8n62fvVCveeoa0iNMkpspwN7DhqUee5RtpAqC0gxkLyW3f5uout9sG2VuZ7lhgKl8f
-	 VLHJjFAC6UQmk2x0LmlIgNq8yjFJogR1kdIcJ89jI8DrtfbCyw9lp32q1xQIQLlApS
-	 RvInnD5UlFxAN95SUgAgk6TUxr8cTHTKpMlYt5rwSFUiwXu8r60Neipzsj3XCv5UgM
-	 nuNzl9Hmy0jYYZGB5Nj41pd7ywDWohm0FgLj5iBY1DY9XZKe+8J1X3ORP9p/ZunTHV
-	 SNW7cc4y+Gozg==
-Received: from [10.30.226.235] (localhost [IPv6:::1])
-	by aws-us-west-2-korg-oddjob-rhel9-1.codeaurora.org (Postfix) with ESMTP id 3A5CD3809A0D;
-	Wed, 21 Oct 2026 01:53:35 +0000 (UTC)
-Subject: Re: [GIT PULL] fscrypt updates for 7.4
-From: pr-tracker-bot@kernel.org
-In-Reply-To: <20261019023501.GB3270@sol>
-References: <20261019023501.GB3270@sol>
-X-PR-Tracked-List-Id: <linux-fsdevel.vger.kernel.org>
-X-PR-Tracked-Message-Id: <20261019023501.GB3270@sol>
-X-PR-Tracked-Remote: https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
-X-PR-Tracked-Commit-Id: a63883d2c3d47ce6d41918c2453a4513b921eaaa
-X-PR-Merge-Tree: torvalds/linux.git
-X-PR-Merge-Refname: refs/heads/master
-X-PR-Merge-Commit-Id: fe178c26cae01b677a1fec59f9c276c7bf20517a
-Message-Id: <179254761373.320300.1681376073211424401.pr-tracker-bot@kernel.org>
-Date: Wed, 21 Oct 2026 01:53:33 +0000
-To: Eric Biggers <ebiggers@kernel.org>
-Cc: Linus Torvalds <torvalds@linux-foundation.org>, linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org, linux-kernel@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>, Jaegeuk Kim <jaegeuk@kernel.org>
+	s=k20260515; t=1792603360;
+	bh=6LqR1VzY/7CZkjbT+gr5Y/FfDEr1ngYlH55EfU+izAs=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=S2rfc6jTzi8rSn5ViYwDylfdCtbgIUsR9cMsl9JPmwcE2o7Shl124XcgoFdplNgUY
+	 GPvn7lOpmXk24mnVbuwXKEJuoFlSkh9CvOFLtv5Ydqnj9mLrVWdw1Uqer20V+Vrtt5
+	 70XBFTECdp07cRSdQvmKfaI9QNVcBMF9mAkdZVVh7Xyo3nhizBiuY0NaKiJbWLeQZc
+	 aG32N70AkZbF7TJUtzdJ5POtdgwYYyuBAEHVfC5AKiwK5hRb2cDDX1VPHZKoXJm6JK
+	 Owymr1kikulFhtwki7qcAxVGdjCwRSzwBQQLe2ZDGFPeIPNjWsjEXcIpfrgJ3Nix0Y
+	 1wOHycLudZl5g==
+Date: Wed, 21 Oct 2026 10:22:38 -0700
+From: Eric Biggers <ebiggers@kernel.org>
+To: Alex Markuze <amarkuze@redhat.com>
+Cc: ceph-devel@vger.kernel.org, idryomov@gmail.com, xiubo.li@clyso.com,
+	slava@dubeyko.com, viro@zeniv.linux.org.uk, brauner@kernel.org,
+	jack@suse.cz, linux-fsdevel@vger.kernel.org,
+	linux-fscrypt@vger.kernel.org, tytso@mit.edu, jaegeuk@kernel.org,
+	linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v5 5/5] ceph: fail quarantined subvolume access with
+ EACCES
+Message-ID: <20261021172238.GD1879@quark>
+References: <cover.1792527529.git.amarkuze@redhat.com>
+ <345a4e8317cde90293b0d4ee9d8a3edfd229e204.1792527529.git.amarkuze@redhat.com>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -67,16 +60,64 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <345a4e8317cde90293b0d4ee9d8a3edfd229e204.1792527529.git.amarkuze@redhat.com>
 
-The pull request you sent on Sun, 18 Oct 2026 19:35:01 -0700:
+On Tue, Oct 20, 2026 at 08:26:50PM +0000, Alex Markuze wrote:
+> +/*
+> + * fscrypt can cache the decrypted target in ->i_link, allowing the VFS to
+> + * bypass this callback. Checking those cache hits needs separate fscrypt
+> + * support; this check covers only accesses that reach ->get_link().
+> + */
+>  static const char *ceph_encrypted_get_link(struct dentry *dentry,
+>  					   struct inode *inode,
+>  					   struct delayed_call *done)
+>  {
+>  	struct ceph_inode_info *ci = ceph_inode(inode);
+> +	int err;
+>  
+>  	if (!dentry)
+>  		return ERR_PTR(-ECHILD);
+> +	err = ceph_symlink_revalidate(inode);
+> +	if (err)
+> +		return ERR_PTR(err);
+>  
+>  	return fscrypt_get_symlink(inode, ci->i_symlink, i_size_read(inode),
+>  				   done);
 
-> https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
+The function comment seems out of sync with the actual code, as the
+actual code disables the symlink target caching.
 
-has been merged into torvalds/linux.git:
-https://git.kernel.org/torvalds/c/fe178c26cae01b677a1fec59f9c276c7bf20517a
+>  	case FS_IOC_GET_ENCRYPTION_POLICY:
+>  		ret = vet_mds_for_fscrypt(file);
+> +		if (ret)
+> +			return ret;
+> +		ret = ceph_quarantine_revalidate(inode);
+>  		if (ret)
+>  			return ret;
+>  		return fscrypt_ioctl_get_policy(file, (void __user *)arg);
+>  
+>  	case FS_IOC_GET_ENCRYPTION_POLICY_EX:
+>  		ret = vet_mds_for_fscrypt(file);
+> +		if (ret)
+> +			return ret;
+> +		ret = ceph_quarantine_revalidate(inode);
+>  		if (ret)
+>  			return ret;
+>  		return fscrypt_ioctl_get_policy_ex(file, (void __user *)arg);
+> @@ -429,6 +439,9 @@ long ceph_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+>  
+>  	case FS_IOC_GET_ENCRYPTION_NONCE:
+>  		ret = vet_mds_for_fscrypt(file);
+> +		if (ret)
+> +			return ret;
+> +		ret = ceph_quarantine_revalidate(inode);
+>  		if (ret)
+>  			return ret;
+>  		return fscrypt_ioctl_get_nonce(file, (void __user *)arg);
 
-Thank you!
+Can you clarify why FS_IOC_SET_ENCRYPTION_POLICY doesn't need this too?
 
--- 
-Deet-doot-dot, I am a bot.
-https://korg.docs.kernel.org/prtracker.html
+- Eric
