@@ -1,50 +1,50 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.133
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.110
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1792662793;
-	b=HCTfvrbghTGIC4kSINhs/8QIieYLr596YcwDTE5isdTEj03+eXIstptUVOMp9KZROGDq
-	 vDOtkFzwMDWIaW5FeIz5WMVBsDSbioqTsnxsVR7uJBTtF1EIKTelh3nwuopeajHLlklnC
-	 dHr1fu1SjGLf1wdXROKTwuj14HumRpWGuyYfenIcv5sBF3hVBIHFhpEJG7z7RjD33uyP7
-	 6EUCPi0P8EjjJAblgFus8+juL9UKaDqrhhqIfkvBHy266cRbti5CiPi8HVXazFPEM81Gm
-	 izmn8IyyVpurvO6N+u2IZps0ilxGNhAIyOh5xObmeMBwKbNu3sKtP+/ONprFcQgZ5rA==
+	t=1792673519;
+	b=kwOmbNgF8w4EvmEpQqGdmheRltgYvK/gHLDCYRGJJ/cT9FHjFCbLJ/vMLQAyBLKWtObj
+	 w4WVMUaQKP0YgAnJePtYQiaN64clZ7HipWgDQGOVHT2pkDDNku6SMUWUgFjwxM4+BdrIG
+	 hcTUCVdH95IOT2H7INIt04L2AA9VL6YNqBfCp/lVfYT+lFTiucM8Zksn3r8LtcvMEtLZx
+	 w+vsWyCrutvTL0Qlcmr13tLBD2IQ6KMVTMWp76jZ6XFPZ78NFAB0Y4LHIzErQHBTZ3h4W
+	 te87dij3WQaqBB389bz1O+WFr22h/PIzzt91fWdwXpgNA6MzN/NOfQFcfdhOOHy7daQ==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1792662793;
+	a=rsa-sha256; c=relaxed/relaxed; t=1792673519;
 	h=DMARC-Filter:DKIM-Signature:X-Alimail-AntiSpam:Received:Message-ID:
 	 Date:MIME-Version:User-Agent:Subject:To:Cc:References:
 	 Content-Language:From:In-Reply-To:Content-Type:
 	 Content-Transfer-Encoding;
-	bh=3hFAvKk9tBYmSX3HTuZG8avtf81VKRoZtIyjamHt2Ns=;
-	b=SR85kHdezHTq5EElRSa3FvCSI+ybjINQcqysMyyjJ7lPiKE3h/EGDsYvEltZYU9Dvvg3
-	 zkXe5jwXJ4OgaIwG96aRZ3ZJfASzmq4eZpwFzEk+ETiMssxvbxRDEanzob+Z3XiK6Hsvs
-	 IBLOv+REWweqKAnS+PoFiJuXMRDOSrPiiFyAwukAfgh3XP/iT1qngzIBJdifvAB5sOBSo
-	 6iR1r0GEMgujXp6vEW6BdfuNFaK1KUW/HyDh5Zkk7o4oROMuUkVAoIR4y2K55YwClwg3W
-	 GspbraY8dpgYYBLx9GhG4v6yEBK89YgDn9AsupNmB/kBOC4x91OgefcJqlsF7PF8aNw==
+	bh=JJ+yvx8h9h7oxNTqk5GOk42TZ5zXpsHUleVZXM9ghI0=;
+	b=Jen0aIHdgpIyo1vNIcb2EENITgPAIv3Az/gCXjlgHTPUdooAvx58vjn/J4h8OKX62vmY
+	 kbhpL+INcRzvAsRdWNXWyL89ATLEdxtZ5V5PwubvdFCvJyeiSGtyClY3V9BXr6uUFrgW0
+	 yrUBhmmFyuo4xsqNa9Zt3+ccLElEhbQO4xzmRhdllLprZuUPqme7oja+i/cV6WGCY01as
+	 AoIxrHi+a4LwGnieNk5sBU2qwpAHFlVFIO71LR8XZ8MrjFT2u0pitt6MGdD1TVd/06GSj
+	 CTWrRo+yLhpdoT/rBObVm208xEe33CAn3EQbSQeRvCuBbQw7lCqHvhf9whfbloJuOPg==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
 	dmarc=pass header.from=linux.alibaba.com;
 	spf=pass smtp.mailfrom=linux.alibaba.com;
-	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=YubF1mf5;
-	arc=none smtp.remote-ip=115.124.30.133
-Received: from out30-133.freemail.mail.aliyun.com (out30-133.freemail.mail.aliyun.com [115.124.30.133])
+	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=LlABwMC1;
+	arc=none smtp.remote-ip=115.124.30.110
+Received: from out30-110.freemail.mail.aliyun.com (out30-110.freemail.mail.aliyun.com [115.124.30.110])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id AF1E5606A31A;
-	Thu, 22 Oct 2026 09:53:10 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org AF1E5606A31A
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id AE326606A31A;
+	Thu, 22 Oct 2026 12:51:54 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org AE326606A31A
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.alibaba.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.alibaba.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=YubF1mf5
+	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=LlABwMC1
 DKIM-Signature:v=1; a=rsa-sha256; c=relaxed/relaxed;
 	d=linux.alibaba.com; s=default;
-	t=1792662787; h=Message-ID:Date:MIME-Version:Subject:To:From:Content-Type;
-	bh=3hFAvKk9tBYmSX3HTuZG8avtf81VKRoZtIyjamHt2Ns=;
-	b=YubF1mf5Lp2GjZ4jFEFpyL+gPMHQ6ez6kgRijKFWzE8npNmfUvAj6SSMMqm+BPfDAnZnD4mmOE9ITnuzT61442osYJ8+s09K/E/nwl/LhwZDp58afXkiliSZ5fXFqJr9xJudhkk9T9ObAxvPnIBGRBSn8IE2tx3Kh2FKuTuQatw=
-X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R151e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033037009110;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=9;SR=0;TI=SMTPD_---0XDIreVh_1792662786;
-Received: from 30.221.132.50(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XDIreVh_1792662786 cluster:ay36)
+	t=1792673512; h=Message-ID:Date:MIME-Version:Subject:To:From:Content-Type;
+	bh=JJ+yvx8h9h7oxNTqk5GOk42TZ5zXpsHUleVZXM9ghI0=;
+	b=LlABwMC1mRDKvdEUTDmmL4G48o+OAckR8J8cTgwUli6m10D3tlAuSzhu5v9O0kQLBXNrIZpbhhsksi4EzWtSph7pvmDgnn9z+Cvb8Wx3y+rAwH6nixSN/R+0GrNNB+fAdocv8F1svWi+pLZnKSHVzhAJ/4jLX9QPUcG6m28+2LQ=
+X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R151e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033045098064;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=19;SR=0;TI=SMTPD_---0XDJERAJ_1792673509;
+Received: from 30.221.132.50(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XDJERAJ_1792673509 cluster:ay36)
           by smtp.aliyun-inc.com;
-          Thu, 22 Oct 2026 17:53:06 +0800
-Message-ID: <2810a9f7-4988-4e10-bac4-efa35458dfcd@linux.alibaba.com>
-Date: Thu, 22 Oct 2026 17:53:05 +0800
+          Thu, 22 Oct 2026 20:51:50 +0800
+Message-ID: <58c0fc65-8275-4d38-9d64-0f4638dbda34@linux.alibaba.com>
+Date: Thu, 22 Oct 2026 20:51:49 +0800
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -55,204 +55,64 @@ List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
 User-Agent: Mozilla Thunderbird
-Subject: Re: [PATCH v2 2/2] blk-crypto: fix missing smp_load_acquire() for
- tfms_inited[]
+Subject: Re: [PATCH 03/13] blk-crypto: reject fallback data unit sizes it
+ can't handle
 To: Eric Biggers <ebiggers@kernel.org>
-Cc: axboe@kernel.dk, linux-block@vger.kernel.org,
- linux-fscrypt@vger.kernel.org, hch@lst.de, dm-devel@lists.linux.dev,
- mpatocka@redhat.com, sweettea-kernel@dorminy.me, stable@vger.kernel.org
-References: <20261014071846.3666398-1-libaokun@linux.alibaba.com>
- <20261014071846.3666398-2-libaokun@linux.alibaba.com>
- <20261014161153.GC322435@quark>
- <006e3804-7e5e-4b8d-a299-3a47b8b643b3@linux.alibaba.com>
- <20261015183200.GC2170687@google.com>
- <f113d4bc-2db5-4ed4-b34f-fe972099ad12@linux.alibaba.com>
- <20261022071101.GA1857@sol>
+Cc: linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+ linux-block@vger.kernel.org, linux-fsdevel@vger.kernel.org,
+ linux-xfs@vger.kernel.org, jaegeuk@kernel.org, axboe@kernel.dk, hch@lst.de,
+ djwong@kernel.org, brauner@kernel.org, tytso@mit.edu, berto@igalia.com,
+ adilger.kernel@dilger.ca, jack@suse.cz, yi.zhang@huawei.com,
+ ojaswin@linux.ibm.com, ritesh.list@gmail.com, stable@vger.kernel.org
+References: <20261011170958.1759230-1-libaokun@linux.alibaba.com>
+ <20261011170958.1759230-4-libaokun@linux.alibaba.com>
+ <20261015184519.GF2170687@google.com>
 Content-Language: en-US
 From: Baokun Li <libaokun@linux.alibaba.com>
-In-Reply-To: <20261022071101.GA1857@sol>
+In-Reply-To: <20261015184519.GF2170687@google.com>
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-On 2026/10/22 15:11, Eric Biggers wrote:
-> On Thu, Oct 22, 2026 at 11:50:59AM +0800, Baokun Li wrote:
->> Hi Eric,
+On 2026/10/16 02:45, Eric Biggers wrote:
+> On Mon, Oct 12, 2026 at 01:09:48AM +0800, Baokun Li wrote:
+>> Such keys exist on filesystems whose
+>> block size is larger than the page size, because fscrypt uses the block
+>> size as its data unit size by default.
 >>
->> Sorry for the late reply.
+>> Fix this by advertising only the data unit sizes that the fallback
+>> really supports, and by rejecting keys that the fallback can't handle in
+>> blk_crypto_fallback_start_using_key(), so that the failure happens when
+>> the key is set up instead of during I/O, and before any data is written.
 >>
->> On 2026/10/16 02:32, Eric Biggers wrote:
->>> On Fri, Oct 16, 2026 at 01:36:17AM +0800, Baokun Li wrote:
->>>> That's what I was about to do for v3, but while looking for other
->>>> callers that inherit a key without calling start_using_key()
->>>> themselves, I found that dm-inlinecrypt has the same shape, so fixing
->>>> fscrypt alone wouldn't cover it -- only the constructor calls
->>>> start_using_key(), and the task submitting I/O reaches the key through
->>>> md->map:
->>>>
->>>>   dmsetup (ctr)                      I/O task
->>>>   ---------------------------------- -------------------------------
->>>>   blk_crypto_start_using_key()
->>>>    fallback_start_using_mode()
->>>>     init profile, keyslots, tfms[]
->>>>     smp_store_release(tfms_inited[m])
->>>>   rcu_assign_pointer(md->map, t)
->>>>                                      srcu_dereference(md->map)
->>>>                                       -> ti->private -> &ctx->key
->>>>                                      inlinecrypt_map() -> bio_prep()
->>>>                                        tfms_inited[m]  addr-dep, ok
->>>>                                        profile/keyslots/tfms[]  not
->>>>
->>>> dm's own grace periods would cover this, but all three are conditional:
->>>>
->>>>   drivers/md/dm.c:2533       if (old_map) dm_sync_table(md);
->>>>   drivers/md/dm.c:3015,3039  if (map) synchronize_srcu(&md->io_barrier);
->>>>   drivers/md/dm-ioctl.c:1651 add_disk() only when type == DM_TYPE_NONE
->>>>
->>>> so e.g. this sequence has no happens-before:
->>>>
->>>>   DM_DEV_CREATE
->>>>   DM_TABLE_LOAD (linear)       add_disk(), md->type set, not resumed
->>>>                                  -> a task opens the device here
->>>>   DM_TABLE_CLEAR
->>>>   DM_TABLE_LOAD (inlinecrypt)  ctr sets tfms_inited[]; no add_disk()
->>>>   DM_DEV_SUSPEND (resume)      old_map == NULL, all three skipped
->>>>                                  -> the already-open task does I/O
->>>>
->>>> This needs a weakly ordered machine and a deliberate ioctl order, so
->>>> it's not urgent.  Which would you prefer?
->>>>
->>>>   1. Leave it for now and fix only fscrypt_find_mode_key().
->>>>
->>>>   2. A separate smp_rmb() in inlinecrypt_map(), paired with the
->>>>      rcu_assign_pointer(md->map) in __bind().  Keeps the cost on
->>>>      dm-inlinecrypt only, but means a second site to get right.
->>>>
->>>>   3. Keep the barrier in blk_crypto_fallback_bio_prep() after all,
->>>>      documented as ordering the loads after the check rather than the
->>>>      flag itself.  One site covers both callers and any future one,
->>>>      at the cost of blk-crypto no longer relying on the caller for
->>>>      this part.
->>> So the device-mapper core doesn't order target_type::ctr before
->>> target_type::map?  Nearly every dm target's map function relies on the
->>> constructor having run first.  If this is an issue, it isn't specific to
->>> dm-inlinecrypt and it will need to be fixed in the device-mapper core.
->> It does, for everything map() reaches through the table:
->>
->>   ctr                               map
->>   ------------------------------    -------------------------------
->>   ctx->foo = ...                    map = srcu_dereference(md->map)
->>   ti->private = ctx                 ti  = map->targets[i]
->>   rcu_assign_pointer(md->map, t)    ctx = ti->private
->>           ^ release                   ctx->foo     ordered (addr-dep)
->>                                       some_global  not ordered
->>
->> The address dependency covers the whole object graph hanging off
->> ti->private, so no barrier needed there.
->>
->> But dm-inlinecrypt initializes globals from the ctr:
->>
->>   inlinecrypt_ctr()
->>     blk_crypto_start_using_key()
->>       blk_crypto_fallback_start_using_mode()
->>         blk_crypto_fallback_init()
->>           blk_crypto_fallback_profile = ...      global
->>           blk_crypto_keyslots = ...              global
->>         slotp->tfms[mode] = ...                  global
->>         smp_store_release(tfms_inited[mode])
->>
->>   inlinecrypt_map()
->>     __blk_crypto_submit_bio()
->>       blk_crypto_fallback_bio_prep()
->>         tfms_inited[bc->bc_key->...]   addr-dep on the key, ordered
->>         blk_crypto_fallback_profile    no dependency
->>         blk_crypto_keyslots            no dependency
->>         slotp->tfms[mode]              no dependency
->>
->> Those three don't depend on md->map, so nothing stops the CPU from
->> reading them before it.
->>
->> No other target does this, and neither of the usual patterns helps
->> here.
->>
->> Some targets create their globals at module_init (journal_io_cache,
->> dm_bufio_wq).  That isn't available to us:
->>
->>   * the state belongs to blk-crypto, not to dm;
->>   * nothing in blk-crypto-fallback.c is exported;
->>   * blk_crypto_start_using_key() needs the bdev and the key from the
->>     table line, neither of which exists at module_init.
->>
->> The others keep state per-target under ti->private (dm-crypt's cc->bs,
->> dm-verity's v->verify_wq, dm-integrity's ic->*).  The equivalent here
->> would be hanging the fallback state off struct blk_crypto_key, which
->> already lives in ti->private -- then the whole chain is
->> address-dependent and needs no barrier at all.  But that means:
->>
->>   * a profile pointer in an exported struct;
->>   * moving blk_crypto_keyslots into the profile as well, since
->>     blk_crypto_fallback_tfm() reads it as a bare global.
->>
->> That is far more than this bug is worth.
->>
->> A core fix can't go on the publish side either.  An unconditional
->> dm_sync_table() in __bind() still lets a reader that overlaps the grace
->> period see the new md->map with the stale globals.  That leaves an
->> acquire in dm_get_live_table(), i.e. a barrier per bio on every dm
->> device, for one target.
->>
->> So I still think the smallest fix is the single barrier from the
->> original patch.  That line carries two meanings:
->>
->>   if (WARN_ON_ONCE(!smp_load_acquire(&tfms_inited[cfg->crypto_mode])))
->>
->>   * False means start_using_key() was never called and we bail out.
->>     You're right that this half needs no barrier: the index is
->>     address-dependent on bc->bc_key, so the flag is read accurately
->>     either way.
->>
->>   * True means the mode was initialized and the globals behind the
->>     flag are safe to use.  That is the half that needs it -- without
->>     the barrier, nothing orders blk_crypto_fallback_profile,
->>     blk_crypto_keyslots and slotp->tfms[] against the initialization
->>     that smp_store_release() published.
->>
->> Any thoughts?
-> Well, it isn't great to be adding another barrier to every bio submitted
-> to work around insufficient ordering during one-time setup. 
+>> Fixes: 488f6682c832 ("block: blk-crypto-fallback for Inline Encryption")
+>> Cc: stable@vger.kernel.org
+>> Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
+> Several patches in this series are marked as fixes, but they seem to
+> only be needed for encryption with data_unit_size > PAGE_SIZE which is a
+> new feature in this series.  I don't think these should be marked as
+> fixes, as they will cause unnecessary backports, CVEs, etc.
 
-Agree. But in fact, the overhead of smp_load_acquire() is very small,
-and it is almost imperceptible even for hot paths.
+In this patch set, the five patches carrying the “Fixes” tag are
+1, 2, 3, 8, and 12.
 
->  The fscrypt case is easily fixable by the change I mentioned.  
-Yes.
-> The dm case I'm not
-> sure is a real problem.  For one, dm_get_live_table() actually already
-> has an smp_mb() in it; it's inside srcu_read_lock().
+Patches 1, 2, and 12 were included because my commit 709f0f1f1bf5
+(“ext4: add checks for large folio incompatibilities when BS > PS”)
+did not account for the fact that encryption can be enabled at mount
+time, making these issues accessible. Sorry about that.
 
-It's there, but it lands before both loads rather than between them:
+Patch 3 was added because the blk-crypto-fallback implementation did not
+limit the supported data unit size, setting it directly to 0xFFFFFFFF.
+This could cause silent data corruption, so I added an upper limit in
+the patch set and applied the “Fixes” tag. However, since this issue was
+unreachable prior to my patch mentioned above, I'm fine with removing
+the “Fixes” tag 
 
-  dm_submit_bio()
-    dm_get_live_table()
-      srcu_read_lock()
-        __srcu_read_lock()
-          smp_mb()                      /* B */
-      srcu_dereference(md->map)         <- load A
-    inlinecrypt_map()
-      __blk_crypto_submit_bio()
-        blk_crypto_fallback_bio_prep()
-          blk_crypto_fallback_profile   <- load B
+Patch 8 can also be triggered when the sector size is 512 but the
+filesystem block size is 4k, so a `Fixes` tag was added to it as well.
 
-I couldn't find a good way to fix it from the setup side. 
-
-However, hitting this needs a weakly ordered machine and a deliberate
-ioctl sequence, so I'm fine leaving it alone for now and revisiting
-if someone actually runs into it -- by then there may be a better
-answer than either of these.
-
-Any better ideas?
+If you think any of these are unnecessary, I can remove them in the next
+iteration.
 
 
-Thanks,
+Cheers,
 Baokun
-
-
