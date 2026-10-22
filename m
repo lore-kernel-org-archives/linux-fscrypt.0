@@ -1,50 +1,50 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.110
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.97
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1792673519;
-	b=kwOmbNgF8w4EvmEpQqGdmheRltgYvK/gHLDCYRGJJ/cT9FHjFCbLJ/vMLQAyBLKWtObj
-	 w4WVMUaQKP0YgAnJePtYQiaN64clZ7HipWgDQGOVHT2pkDDNku6SMUWUgFjwxM4+BdrIG
-	 hcTUCVdH95IOT2H7INIt04L2AA9VL6YNqBfCp/lVfYT+lFTiucM8Zksn3r8LtcvMEtLZx
-	 w+vsWyCrutvTL0Qlcmr13tLBD2IQ6KMVTMWp76jZ6XFPZ78NFAB0Y4LHIzErQHBTZ3h4W
-	 te87dij3WQaqBB389bz1O+WFr22h/PIzzt91fWdwXpgNA6MzN/NOfQFcfdhOOHy7daQ==
+	t=1792686655;
+	b=muWpyt5EVA28Ioh1VpT2XWKaehyDRsvzeozzdsvh1juDR1m0X1nGobTqBA+HKqNzIAlA
+	 esNYzG4hYUd9dDAzqIoL5srloCb6BB0VK7CjpCXIQxkGengQVg9ar0heblJhyCapRIC1q
+	 pLQFGSpDfZkBnrjsO6qTRtvP9yeCUFL5YtGFINbwEvEWH8S1b3GqbKSlCB8O24J4eJsU3
+	 qu1YZJFLC+HRvu+7siF8wMu3+9qyYa2mqMdNg5jeLNrY7/KAETMvwdzLPvj8ysw3PB0kT
+	 kUOBMxhAq5vIkFfokJdWP26HkF4iguWLzSBqlXqDNj+i/UMqVbbcUdG4CNpHtXhTCoQ==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1792673519;
+	a=rsa-sha256; c=relaxed/relaxed; t=1792686655;
 	h=DMARC-Filter:DKIM-Signature:X-Alimail-AntiSpam:Received:Message-ID:
 	 Date:MIME-Version:User-Agent:Subject:To:Cc:References:
 	 Content-Language:From:In-Reply-To:Content-Type:
 	 Content-Transfer-Encoding;
-	bh=JJ+yvx8h9h7oxNTqk5GOk42TZ5zXpsHUleVZXM9ghI0=;
-	b=Jen0aIHdgpIyo1vNIcb2EENITgPAIv3Az/gCXjlgHTPUdooAvx58vjn/J4h8OKX62vmY
-	 kbhpL+INcRzvAsRdWNXWyL89ATLEdxtZ5V5PwubvdFCvJyeiSGtyClY3V9BXr6uUFrgW0
-	 yrUBhmmFyuo4xsqNa9Zt3+ccLElEhbQO4xzmRhdllLprZuUPqme7oja+i/cV6WGCY01as
-	 AoIxrHi+a4LwGnieNk5sBU2qwpAHFlVFIO71LR8XZ8MrjFT2u0pitt6MGdD1TVd/06GSj
-	 CTWrRo+yLhpdoT/rBObVm208xEe33CAn3EQbSQeRvCuBbQw7lCqHvhf9whfbloJuOPg==
+	bh=tc4RtQ+McDeq8l1s8m84usBk75s9ZYG6jo3YuZ+d7zc=;
+	b=QTW7cUeHnSTTZQDRAtGSdqaP4ncAId1WMVuExFpwe5ifd0+WGhRFuivzTmygOMwkKQmZ
+	 DfGzsK9pix5QCl883pYsXg3VSEYAi/NE6hVJp7GlcKBCW4Bs05bNSfOdnL4/ncNIEeJN5
+	 a+LMOrJgJUj1PakxreJGJp74n4IJl2UwRZnwEQOC+ONO+0KSVlnykVB41mbmRiJFkPfUE
+	 FGb6RWeZmUE94HEwF/MsJPtz6phX11cBzJkTggRXH7jmESIGp+nToTo8ovczPD3tPZW3w
+	 xNGEn55sV40RBE73eMAll042rirARV/j2DiGH5MABRGWEITUta9QrFdAFjzogmu8HZA==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
 	dmarc=pass header.from=linux.alibaba.com;
 	spf=pass smtp.mailfrom=linux.alibaba.com;
-	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=LlABwMC1;
-	arc=none smtp.remote-ip=115.124.30.110
-Received: from out30-110.freemail.mail.aliyun.com (out30-110.freemail.mail.aliyun.com [115.124.30.110])
+	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=cjeqLWZM;
+	arc=none smtp.remote-ip=115.124.30.97
+Received: from out30-97.freemail.mail.aliyun.com (out30-97.freemail.mail.aliyun.com [115.124.30.97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id AE326606A31A;
-	Thu, 22 Oct 2026 12:51:54 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org AE326606A31A
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id AB43E606A31B;
+	Thu, 22 Oct 2026 16:30:51 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org AB43E606A31B
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.alibaba.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.alibaba.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=LlABwMC1
+	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=cjeqLWZM
 DKIM-Signature:v=1; a=rsa-sha256; c=relaxed/relaxed;
 	d=linux.alibaba.com; s=default;
-	t=1792673512; h=Message-ID:Date:MIME-Version:Subject:To:From:Content-Type;
-	bh=JJ+yvx8h9h7oxNTqk5GOk42TZ5zXpsHUleVZXM9ghI0=;
-	b=LlABwMC1mRDKvdEUTDmmL4G48o+OAckR8J8cTgwUli6m10D3tlAuSzhu5v9O0kQLBXNrIZpbhhsksi4EzWtSph7pvmDgnn9z+Cvb8Wx3y+rAwH6nixSN/R+0GrNNB+fAdocv8F1svWi+pLZnKSHVzhAJ/4jLX9QPUcG6m28+2LQ=
-X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R151e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033045098064;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=19;SR=0;TI=SMTPD_---0XDJERAJ_1792673509;
-Received: from 30.221.132.50(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XDJERAJ_1792673509 cluster:ay36)
+	t=1792686643; h=Message-ID:Date:MIME-Version:Subject:To:From:Content-Type;
+	bh=tc4RtQ+McDeq8l1s8m84usBk75s9ZYG6jo3YuZ+d7zc=;
+	b=cjeqLWZMtA9n3tPAe9DC01AJAWrdB/em+IUMc+LyPICucgcT9moGv+RkfJIAun0Ejqt3xrNb44Zk8BLiXyK4NZS0rL3BezLsgz3yqxx1TYfVh5SzCwjzikS4P+et78CTp88iMwBS1b0JpxUUtvAofrpqZ/YB7BZFuZdX+EuVtN8=
+X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R251e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033045133197;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=18;SR=0;TI=SMTPD_---0XDJckJa_1792686640;
+Received: from 30.170.203.187(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XDJckJa_1792686640 cluster:ay36)
           by smtp.aliyun-inc.com;
-          Thu, 22 Oct 2026 20:51:50 +0800
-Message-ID: <58c0fc65-8275-4d38-9d64-0f4638dbda34@linux.alibaba.com>
-Date: Thu, 22 Oct 2026 20:51:49 +0800
+          Fri, 23 Oct 2026 00:30:41 +0800
+Message-ID: <625e5190-d43e-4a2b-9296-da15c52d1a9a@linux.alibaba.com>
+Date: Fri, 23 Oct 2026 00:30:39 +0800
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -55,64 +55,106 @@ List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
 User-Agent: Mozilla Thunderbird
-Subject: Re: [PATCH 03/13] blk-crypto: reject fallback data unit sizes it
- can't handle
+Subject: Re: [PATCH 00/13] block, ext4: allow encryption with a block size
+ larger than the page size
 To: Eric Biggers <ebiggers@kernel.org>
 Cc: linux-ext4@vger.kernel.org, linux-fscrypt@vger.kernel.org,
  linux-block@vger.kernel.org, linux-fsdevel@vger.kernel.org,
  linux-xfs@vger.kernel.org, jaegeuk@kernel.org, axboe@kernel.dk, hch@lst.de,
  djwong@kernel.org, brauner@kernel.org, tytso@mit.edu, berto@igalia.com,
  adilger.kernel@dilger.ca, jack@suse.cz, yi.zhang@huawei.com,
- ojaswin@linux.ibm.com, ritesh.list@gmail.com, stable@vger.kernel.org
+ ojaswin@linux.ibm.com, ritesh.list@gmail.com
 References: <20261011170958.1759230-1-libaokun@linux.alibaba.com>
- <20261011170958.1759230-4-libaokun@linux.alibaba.com>
- <20261015184519.GF2170687@google.com>
+ <20261015185325.GG2170687@google.com>
 Content-Language: en-US
 From: Baokun Li <libaokun@linux.alibaba.com>
-In-Reply-To: <20261015184519.GF2170687@google.com>
+In-Reply-To: <20261015185325.GG2170687@google.com>
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
-On 2026/10/16 02:45, Eric Biggers wrote:
-> On Mon, Oct 12, 2026 at 01:09:48AM +0800, Baokun Li wrote:
->> Such keys exist on filesystems whose
->> block size is larger than the page size, because fscrypt uses the block
->> size as its data unit size by default.
+Hi Eric, Thank you for your feedback!
+On 2026/10/16 02:53, Eric Biggers wrote:
+> On Mon, Oct 12, 2026 at 01:09:45AM +0800, Baokun Li wrote:
+>> Motivation
+>> ==========
 >>
->> Fix this by advertising only the data unit sizes that the fallback
->> really supports, and by rejecting keys that the fallback can't handle in
->> blk_crypto_fallback_start_using_key(), so that the failure happens when
->> the key is set up instead of during I/O, and before any data is written.
+>> ext4 supports a block size larger than the page size (LBS), e.g. a 32k
+>> block size on a machine with 4k pages [1].  Encryption, however, is
+>> still refused on such a filesystem: file contents used to be encrypted
+>> page by page in the fs-layer path, which cannot handle a folio that
+>> covers several data units, so the checks that refuse encryption with
+>> such a block size stayed in place.
 >>
->> Fixes: 488f6682c832 ("block: blk-crypto-fallback for Inline Encryption")
->> Cc: stable@vger.kernel.org
->> Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
-> Several patches in this series are marked as fixes, but they seem to
-> only be needed for encryption with data_unit_size > PAGE_SIZE which is a
-> new feature in this series.  I don't think these should be marked as
-> fixes, as they will cause unnecessary backports, CVEs, etc.
+>> Since commit 5acc6f649a68 ("fscrypt: Always use blk-crypto for
+>> contents on block-based filesystems") file contents are always
+>> encrypted through blk-crypto.  Inline encryption hardware can already
+>> en/decrypt a data unit that spans several pages, but the fallback and
+>> the block layer cannot carry such a data unit:
+>>
+>>   1. blk-crypto-fallback en/decrypts a data unit with the bio_vecs of
+>>      a single page-clamped segment, so a larger data unit fails with
+>>      BLK_STS_INVAL;
+>>   2. the block layer requires every bio_vec of an encrypted bio to be
+>>      data unit aligned, and splits such a bio without rounding the
+>>      split size down to the data unit size;
+>>   3. iomap cuts the direct I/O bios of an encrypted file only at the
+>>      logical block size of the device, so a bio can end in the middle
+>>      of a data unit.
+>>
+>> This series adds the missing pieces on all three layers, removes the
+>> refusals, and enables large folios for encrypted files on the way.
+>>
+>> [1]: https://lore.kernel.org/all/20251121090654.631996-1-libaokun@huaweicloud.com
+> A high-level question: most of the complexity in this series is to
+> support crypto_data_unit_size > PAGE_SIZE, despite the actual goal being
+> to support fs_block_size > PAGE_SIZE.  It's left unstated that the
+> default of crypto_data_unit_size == fs_block_size is used.  However,
+> ext4 and f2fs already support crypto_data_unit_size < fs_block_size.
+>
+> Would leaving the crypto_data_unit_size at e.g. 4 KiB while increasing
+> fs_block_size be a simpler way to achieve the goal of this series?
 
-In this patch set, the five patches carrying the “Fixes” tag are
-1, 2, 3, 8, and 12.
+I initially followed the LBS approach of lifting the page-size
+restriction, keeping the existing default crypto_data_unit_size
+equal to fs_block_size. I had not considered using sub-block DUs.
 
-Patches 1, 2, and 12 were included because my commit 709f0f1f1bf5
-(“ext4: add checks for large folio incompatibilities when BS > PS”)
-did not account for the fact that encryption can be enabled at mount
-time, making these issues accessible. Sorry about that.
+After your reply, I implemented a variant using min(bs, PS) for
+new default v2 policies, recording a smaller DU explicitly on disk.
+This avoids patches 3-6 and the per-bvec alignment relaxation in
+patch 10, and is indeed much simpler.
 
-Patch 3 was added because the blk-crypto-fallback implementation did not
-limit the supported data unit size, setting it directly to 0xFFFFFFFF.
-This could cause silent data corruption, so I added an upper limit in
-the patch set and applied the “Fixes” tag. However, since this issue was
-unreachable prior to my patch mentioned above, I'm fine with removing
-the “Fixes” tag 
+Both variants retain large-folio support and showed similar gains,
+about twice their respective 4K-block controls. Although 32K DUs reduced
+decryption calls eightfold, I did not observe a consistent additional
+throughput benefit, or CPU savings at matched bandwidth, in the tested
+workloads.
 
-Patch 8 can also be triggered when the sector size is 512 but the
-filesystem block size is 4k, so a `Fixes` tag was added to it as well.
+> Or do you feel that would be incomplete, and you'd indeed like to
+> support crypto_data_unit_size = fs_block_size > PAGE_SIZE?
 
-If you think any of these are unnecessary, I can remove them in the next
-iteration.
+However, keeping DU = bs has a compatibility advantage for existing
+encrypted filesystems.
+
+For example, a 64K-block filesystem created with a default v2 policy
+on a 64K-page machine uses 64K DUs. Supporting DU > PAGE_SIZE would
+allow a 4K-page machine to use that format without re-encryption,
+assuming the other policy and backend requirements are met.
+
+This also covers otherwise-supported legacy v1 policies, which cannot
+encode smaller DUs.
+
+Explicit 4K v2 DUs can also be portable across page sizes, but
+choosing a smaller DU for new files does not make existing large-DU
+ciphertext readable on a smaller-page machine. I have not yet tested
+the cross-page-size migration.
+
+If you think supporting DU = bs > PS makes this series too broad,
+I can use the simpler sub-block version in the next revision and
+develop larger-DU support separately.
+
+Looking forward to hearing your thoughts.
 
 
-Cheers,
+Thanks,
 Baokun
+
