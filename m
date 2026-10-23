@@ -1,57 +1,55 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.98
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1792771697;
-	b=QzqTMTUvSyPfKATTbwvYBTT9Z1eLo8567YEroCsiLrfZ79F2KfCQiF29enxh03S+ByDi
-	 uBzAARpUPzQXZRPku82WXjgZ9kD/kvpE9IlDSgEfnJ0P0fmWef3QrZj1dPuYvc0cr+Yam
-	 6pox+Ue5gVW242aqRxamikiKRtQ9SBTm1bE2i7XndPwW8/NiqVKJaZLVbOKMih8G1IaPx
-	 EcP2hqEJW66mXzQaG/AHJ2lYy8v12Uqn6fjWAJrNbEb1O8kJL/JVtRb7IIFdMQ52GmiaC
-	 CB1+JlOD0H3UHNuXRd8ZNxnr1ZvIK0MQ/YpWJBWUNIh0qbVOHQLZqEtkmAC+Pjc4eYQ==
+	t=1792772409;
+	b=mY7sFUATlYFlvCQeJVOcryeDPuAyh8BLllPRK311OLGaSq+R0AO3+9/FN9hBuUxIRlIQ
+	 vW3BVAh1jy7nxMh412vkX1yArHpDEb4i5ZLHP5v3sfMWsI7TWrhjCAMg0RxFsg9m/fHWZ
+	 jXmsqo2Y2J36D4SM1INg6K0sgjJ6pFF6NQYVlX198M3Axv886Cs2GHPaP2IdAiFtBqdmz
+	 oKAyp3FFMoziV/F9J8hFMxA38SAI97wBPgN5Qyde1kxBo2KmdXu7GHMrkVxOvAEdvSJei
+	 RbJ4iDXSSScTqoFCqTWSqESA1tB5EK14nSSrzSTgN+a2juBVOdS3I67Ztoso+cZE4hQ==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1792771697;
-	h=DMARC-Filter:DKIM-Signature:X-Alimail-AntiSpam:Received:From:To:Cc:
-	 Subject:Date:Message-ID:X-Mailer:MIME-Version:Content-Type:
-	 Content-Transfer-Encoding;
-	bh=I52d5yYI1jKnpurs1AFfCbTEkdJyPAYumuiwLtVfgwc=;
-	b=zP/YBgQnt/YZfNgUW5BNokxGnS8OxAYI7TeEtbOQXhLwSuG/AqStsRXmr0B1N5cg1qQ7
-	 GtcnJU4vFomiKFzfp6MxfPv4Pl6ESpaiGbEljacujYBfyidMe/Ai64jykNm0jqs6L9GNR
-	 0Po05NAhJ8mfRBAUssJKdrm/ECHBvmS9vh607eDknxX9sb6CsAEnwkYwAesS9XTliu85E
-	 rYhlp9Difir9GnsH2xKhjJuXVGfEeuan5ACTA5xvTG2oJuF4y8K3usIUBLOHAngAPNseX
-	 HFjrL3niMz4yFtL17gErJSubCpv2Eop0RJuYfwNqIBp/IZSfhA6O7Qi+35Gprtxvxew==
+	a=rsa-sha256; c=relaxed/relaxed; t=1792772409;
+	h=Received:DKIM-Signature:Date:From:To:Cc:Subject:Message-ID:
+	 References:MIME-Version:Content-Type:Content-Disposition:In-Reply-To;
+	bh=lFKXhdz7b29163w5ty1D2Chrsll2Yyt/yyzKi1Ft4hU=;
+	b=1wMb+qxWrNcrRUeY9krrkz8vI2rKqJO3V9s6d0gAqJnnqL2iXwQQSZvnNbNoyDasELif
+	 b0u+5EKjA3cI22luAYBKfgHHfCeWysq6j12XWKJI4h4GlpOTsP079IATKfNrto93s8keO
+	 49n8lRLY/iTFsWxiRWShgbmNcl3uUEB6ldon9g7qwpK3KMbM2ZOHlWYGEf7StVwrze9kd
+	 29OMaVNFe+dU0IRuKS/e7H5zEs2vUQsTnDANB1dgcXmU3mT1Ph7n093ibchaYHoB4gboN
+	 WoLpDIKwac5HX+2oL1W+TCEki0yhFQqt2ZBCbeeZakW21UWeFjljM64RZz89XOSEx9A==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dmarc=pass header.from=linux.alibaba.com;
-	spf=pass smtp.mailfrom=linux.alibaba.com;
-	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=sVWkagat;
-	arc=none smtp.remote-ip=115.124.30.98
-Received: from out30-98.freemail.mail.aliyun.com (out30-98.freemail.mail.aliyun.com [115.124.30.98])
+	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=NYX6apH4;
+	arc=none smtp.remote-ip=100.103.45.18
+Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
+	 key-exchange X25519 server-signature ECDSA (prime256v1))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 2381A606A31B;
-	Fri, 23 Oct 2026 16:08:15 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 2381A606A31B
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.alibaba.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.alibaba.com
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9C3C1606A323;
+	Fri, 23 Oct 2026 16:20:09 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=sVWkagat
-DKIM-Signature:v=1; a=rsa-sha256; c=relaxed/relaxed;
-	d=linux.alibaba.com; s=default;
-	t=1792771693; h=From:To:Subject:Date:Message-ID:MIME-Version:Content-Type;
-	bh=I52d5yYI1jKnpurs1AFfCbTEkdJyPAYumuiwLtVfgwc=;
-	b=sVWkagat9/+qk85fKVxdB7hcUyjh9ItzYId3BqjQgoVvbVGBRRhaM8aliDYqMi81FZT9MtGbEpRXrFQThwo5k/4+/k4dMhysuQz7Q1+shf9MzDOCobtfPqbXRoPb/IUQ92A6uRpiY7TVPDDVjY1VyuBs3Q1BiADkYhLONxbYujI=
-X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R891e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033037009110;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=6;SR=0;TI=SMTPD_---0XDMPwbu_1792771667;
-Received: from x31h02109.sqa.na131.tbsite.net(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XDMPwbu_1792771667 cluster:ay36)
-          by smtp.aliyun-inc.com;
-          Sat, 24 Oct 2026 00:08:13 +0800
-From: Baokun Li <libaokun@linux.alibaba.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: ebiggers@kernel.org,
-	tytso@mit.edu,
-	jaegeuk@kernel.org,
-	stable@vger.kernel.org
-Subject: [PATCH v3] fscrypt: Fix missing barrier in fscrypt_find_mode_key()
-Date: Sat, 24 Oct 2026 00:07:47 +0800
-Message-ID: <20261023160747.1382973-1-libaokun@linux.alibaba.com>
-X-Mailer: git-send-email 2.43.7
+	dkim=pass (2048-bit key, unprotected) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=NYX6apH4
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id D85E31F01825;
+	Fri, 23 Oct 2026 16:20:08 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1792772409;
+	bh=lFKXhdz7b29163w5ty1D2Chrsll2Yyt/yyzKi1Ft4hU=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=NYX6apH4XjsuZbhZ2nkea+lMVyIY944cl0LUHsen297ujJ8tYK0Bbm8WYyHbavD1V
+	 HBlPPC7XJpUoofs/uOB6pSPlWMa8saidr1rTg8SgSH/Q1k9tGrngoixXjljR6B6PAq
+	 rzI90tjtjcS8jL38d09abhDYkW8EpDURsDwyv0FOUS5umplK24ggOyDQda12SLmuTg
+	 3NMURHfzk/s+xOrQHzLP9T/lezpnJj98PKqY9MIRcb3pKE9uDDYPmPMi1+7MNbPbVk
+	 Mcmy1jtKYbWmqjaYoDaLumIKZpfq/YG060V8fziI+xTT3xCvpffOsDzc8UTVV67VCn
+	 mtFaW+fA77OzA==
+Date: Fri, 23 Oct 2026 16:20:07 +0000
+From: Eric Biggers <ebiggers@kernel.org>
+To: Baokun Li <libaokun@linux.alibaba.com>
+Cc: linux-block@vger.kernel.org, axboe@kernel.dk,
+	linux-fscrypt@vger.kernel.org, hch@lst.de, dm-devel@lists.linux.dev,
+	mpatocka@redhat.com, sweettea-kernel@dorminy.me,
+	stable@vger.kernel.org, Sashiko <sashiko-bot@kernel.org>
+Subject: Re: [PATCH v3] blk-crypto: fix NULL deref and UAF in
+ __blk_crypto_evict_key()
+Message-ID: <20261023162007.GA2810556@google.com>
+References: <20261023081908.3505413-1-libaokun@linux.alibaba.com>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -61,83 +59,29 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20261023081908.3505413-1-libaokun@linux.alibaba.com>
 
-fscrypt_find_mode_key() walks an RCU list and hands out a per-mode
-key without an acquire:
+On Fri, Oct 23, 2026 at 04:19:08PM +0800, Baokun Li wrote:
+> Fix this by returning early from blk_crypto_fallback_evict_key() when
+> tfms_inited[] is not set for the key's mode.  tfms_inited[] is only set
+> after blk_crypto_fallback_init() has successfully initialized the
+> profile, so the crash above is no longer reachable.
+> 
+> The bug has been latent since commit c984ff1423ae ("blk-crypto:
+> dynamically allocate fallback profile") was merged in v6.5, and only
+> became actually triggerable when commit e7f57d2c47e2 ("dm-inlinecrypt:
+> add target for inline block device encryption") was merged in v7.2.
+> 
+> Fixes: c984ff1423ae ("blk-crypto: dynamically allocate fallback profile")
+> Cc: stable@vger.kernel.org
+> Reported-by: Sashiko <sashiko-bot@kernel.org>
+> Closes: https://patch.msgid.link/sashiko-outbox-167341@kernel.org
+> Suggested-by: Eric Biggers <ebiggers@kernel.org>
+> Link: https://patch.msgid.link/20261014155131.GB322435@quark
+> Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
 
-  setup task
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  setup_per_mode_enc_key()
-   ├─ fscrypt_prepare_key()
-   │  └─ fscrypt_prepare_inline_crypt_key()
-   │     └─ blk_crypto_start_using_key()
-   │        └─ blk_crypto_fallback_start_using_mode()
-   │           ├─ init profile, keyslots, tfms[]
-   │           └─ smp_store_release(tfms_inited[mode])  # init order
-   └─ list_add_tail_rcu(&new_node->link, ...)  # release -> finder
+Reviewed-by: Eric Biggers <ebiggers@kernel.org>
 
-  finding task (later submits the I/O itself)
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  fscrypt_find_mode_key()
-   ├─ list_for_each_entry_rcu(node, ...)
-   └─ return &node->key                 # no acquire, chain breaks
-  ...
-  blk_crypto_fallback_bio_prep()        # WRITE path
-   ├─ tfms_inited[mode]                 # addr-dep, reads true
-   ├─ blk_crypto_fallback_profile       # no dependency
-   ├─ blk_crypto_keyslots               # no dependency
-   └─ slotp->tfms[mode]                 # no dependency
-
-RCU publishes the node and the key reachable from it, so
-tfms_inited[mode] reads true through the address dependency.  The
-independent fallback globals are not covered by it and can be read as
-uninitialized.
-
-On a weakly ordered machine, a WRITE bio can crash in
-blk_crypto_get_keyslot() or crypto_sync_skcipher_setkey().
-
-Other tasks reach the key through fscrypt_inode_info's
-cmpxchg_release()/smp_load_acquire(), which is already ordered after
-the list walk; only the finding task's own later I/O was not.
-dm-inlinecrypt reaches its key only through srcu_dereference(md->map),
-with no acquire anywhere on the I/O path.
-
-Fix this by upgrading the control dependency to an acquire with
-smp_acquire__after_ctrl_dep() once a matching entry has been found.
-
-Fixes: dd015b566d50 ("fscrypt: Fix key setup in edge case with multiple data unit sizes")
-Cc: stable@vger.kernel.org
-Suggested-by: Eric Biggers <ebiggers@kernel.org>
-Link: https://patch.msgid.link/20261014161153.GC322435@quark
-Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
----
- fs/crypto/keysetup.c | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
-
-diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-index 892044ebcaca..984ef43982a3 100644
---- a/fs/crypto/keysetup.c
-+++ b/fs/crypto/keysetup.c
-@@ -205,8 +205,14 @@ fscrypt_find_mode_key(struct fscrypt_master_key *mk, u8 hkdf_context,
- 		if (node->hkdf_context == hkdf_context &&
- 		    node->mode_num == mode_num &&
- 		    node->data_unit_bits == ci->ci_data_unit_bits &&
--		    fscrypt_is_key_prepared(&node->key, ci))
-+		    fscrypt_is_key_prepared(&node->key, ci)) {
-+			/*
-+			 * Pairs with list_add_tail_rcu() in
-+			 * setup_per_mode_enc_key().
-+			 */
-+			smp_acquire__after_ctrl_dep();
- 			return &node->key;
-+		}
- 	}
- 	return NULL;
- }
-
-base-commit: 734bef548a96e8774d6eef5dfa2026c6edc4e80b
--- 
-2.43.7
-
+- Eric
