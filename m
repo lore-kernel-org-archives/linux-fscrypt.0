@@ -1,50 +1,54 @@
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1792865038;
-	b=ccvlMpWA2+7PwPmz2vHKh5wy6E7VEFGgycl0YKXXYZh0HDVgBEUkb/FhZZlIoOl2F1ax
-	 bUApOJkCEnOZTdNpZwOZQSAIN9IGJaX1XCMSEBJaJ+1/9cDpQUvXGnajzeO8OrJI/J7cP
-	 xxXcDYxwjEhLL2XWgM8pgLcSB+X8irNZ2DW0eFjqrd9GFZz1ZqETN9vFZKKaAEPO+CGCb
-	 qYsBfHB0T4fpIuu0I7CJvn0sc1xARTdWv9h5kmbOPaTTqDJh+StpCTob3gV0BxZXxtPkH
-	 uYxZd+rM+MPHnkaVq7JVpth6BKYMWhJva6jWF1jb8qQw+Fl5HyGSFPK1p4KoUOzYoOg==
+	t=1792865070;
+	b=IQ63jmZ7vm1YDs7aAibvVPTpdKpQrVDftb1Lae14olCfMJxbBZ4ml4tZN6CnmdtS88o0
+	 CuzHbo9OOoOxCbsUy5d8YEKzLmcB9n+WhF9pm3BS72AMtSVCay5es1JvumWpUlZlfK8yN
+	 pNKMfSr2h8/PacCHNXRMbLDtA+2twcer8LWBjO0ATm6elzWJW/U2seJj0icjpfGd8RZjc
+	 3w59pJmvkApXWUHomEqVR6xav4k2NpZxT6FwUe2lw6UD0grvmj6U0GFppxBe38gvyoth9
+	 2+jLYom1R01smI18BnQJ3VzmES4sBiUGFE/WscR6XA4tcnVRnvVdnpU7T7qpbpH3vZg==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1792865038;
-	h=Received:DKIM-Signature:Date:From:To:Subject:Message-ID:References:
-	 MIME-Version:Content-Type:Content-Disposition:In-Reply-To;
-	bh=UbjdQSVoNnfL93HHovqwgLtdv55CtCWFyy2MB1oF6gg=;
-	b=c5ZrSu6LXf6ccRM1XmNeZI+/Z/LTO3sQiDYpz7zyLABak6il55TyoPezLx8HJQL4jJ7C
-	 mk1XojaNOdyJU+eX5D82B63fhg+Lnznz2JzNg4jJMTQglZAbpblwPjVmIChz0vzw4zlMd
-	 Pk3wJSjhmPN6oFrX5xaOdYlu8aWENowPr5ftZkKgozV779tUZ0FLMljSChL93cyya7dCb
-	 mQr2Gt/iIRoy0iGWnySpI2b7mwCl5a9rtubswR76HWpEjmDRMZuK7ctNuYxy2GLx5ZR/L
-	 ZOEvcmDV7x5J3nRJtx07v74kbmKeUirVY48FKHQmZrZ70lOqOtAjkJoDUacu6XSB8aQ==
+	a=rsa-sha256; c=relaxed/relaxed; t=1792865070;
+	h=Received:DKIM-Signature:Date:From:To:Cc:Subject:Message-ID:
+	 References:MIME-Version:Content-Type:Content-Disposition:
+	 Content-Transfer-Encoding:In-Reply-To;
+	bh=WuFaVsQnEsxjjfPV6MVWqOly4eWoNzk8KL77FptK4VI=;
+	b=3ls2INl+c+rabpNcXM/lycfzHz5kcT+he6XGeCcJoQuns4rC8csQ2X0RPul/AHB0ZCTg
+	 VU3575u5lBEH5V9fZcIX0Cm5vCCgCPiQFbGNzdR8QdHFqXziVvUJ4MOJJ+OKmEOrEOw3u
+	 XX2PUh0VvosVwhuk/os5Z57bazSw2/0uyJGQO+qJ1vnFJhXTF77c3RQr7Qd5jz2OrC9kH
+	 SNpq8fLQaA1vM0+q53EVXgiXGIW/f0wvvkGL3jRM729+5o2dVk5vSYAINSK1LVmhkJItf
+	 7g6UZM8qjDbrlzUbdouCUD6ci4XpveB9JeYJbFMq8H71uY5UQIA3cli090NcZ7iuYVw==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b="d0/8yxEY";
+	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=l+d5gCXu;
 	arc=none smtp.remote-ip=100.103.45.18
 Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 2FC52606A31A
-	for <linux-fscrypt@vger.kernel.org>; Sat, 24 Oct 2026 18:03:57 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 4D927606A31A;
+	Sat, 24 Oct 2026 18:04:29 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key, unprotected) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=d0/8yxEY
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 9A08D1F01825
-	for <linux-fscrypt@vger.kernel.org>; Sat, 24 Oct 2026 18:03:57 +0000 (UTC)
+	dkim=pass (2048-bit key, unprotected) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=l+d5gCXu
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 8089B1F01828;
+	Sat, 24 Oct 2026 18:04:29 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1792865037;
-	bh=UbjdQSVoNnfL93HHovqwgLtdv55CtCWFyy2MB1oF6gg=;
-	h=Date:From:To:Subject:References:In-Reply-To;
-	b=d0/8yxEYtjFNw9U2Ok6FnS67UC8IodUzrTHLtoYUMfig+p9rtmOIjiq6+qNDkQZHF
-	 NdY2+iuKf0I1+FpjHWhc9l1V17cb9cM0XtRr0M1mFYs4xW+dcvNb+iUECSp9cEXeqc
-	 RdkPm8ctw5W2PcT2Q0PjuwzV+R1S2wZvOq3vHGetkii/uQ+fc9cgzk9yLvnxtZcCan
-	 j4sBcgpB4ey8Zf817SkdM9K9ylQh0bOBCRCeRIMFzCyhK9hV/bf8mand/Ph8P0AFcD
-	 DDAJCk/8K5ED0cCoJqQNR2mTUvLrEFnK+3N0NLiK6n76o17E9nfoGS1IvdfgQoWfH1
-	 1/1B2Km9e9nNQ==
-Date: Sat, 24 Oct 2026 11:03:56 -0700
+	s=k20260515; t=1792865069;
+	bh=WuFaVsQnEsxjjfPV6MVWqOly4eWoNzk8KL77FptK4VI=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=l+d5gCXulhz+B8QplBmZeI8wBVDt1VEUkCDs1SRtqNbvNdJlj9oe07deSdY9j7WaG
+	 uK1udjb5jH4Bc7Jyw0kkqo9PxSwRzmXY63xDu/mPDFT3AWWX85Z1fTMQ83AbIwX4J1
+	 vJCgCD73rsmp/jDehZkxwHAGwLaIdMWK3FtwzGznauJgGACrtortNRElwWhqUzDMBs
+	 AT9ZCPbGxIRRhs1ydSq+aYgZc61EqNRVV7+RedVwrE9R70VCkH08smNVx9iJQNvoyN
+	 +7fDm8rVLUPdB1zcV1P3UiWfdpn92Tq0kDcz3OVOuhbnHroMI0xvow72K1/uELskhp
+	 sO/LI5RNmcvpQ==
+Date: Sat, 24 Oct 2026 11:04:28 -0700
 From: Eric Biggers <ebiggers@kernel.org>
-To: linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH] fscrypt: Explicitly zeroize sw_secret in error path
-Message-ID: <20261024180356.GA2553@quark>
-References: <20261021224431.2353673-1-ebiggers@kernel.org>
+To: Baokun Li <libaokun@linux.alibaba.com>
+Cc: linux-fscrypt@vger.kernel.org, tytso@mit.edu, jaegeuk@kernel.org,
+	stable@vger.kernel.org
+Subject: Re: [PATCH v4] fscrypt: Fix missing barrier in
+ fscrypt_find_mode_key()
+Message-ID: <20261024180428.GB2553@quark>
+References: <20261024104350.2257313-1-libaokun@linux.alibaba.com>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -54,20 +58,64 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
+Content-Type: text/plain; charset=utf-8
 Content-Disposition: inline
-In-Reply-To: <20261021224431.2353673-1-ebiggers@kernel.org>
+Content-Transfer-Encoding: 8bit
+In-Reply-To: <20261024104350.2257313-1-libaokun@linux.alibaba.com>
 
-On Wed, Oct 21, 2026 at 10:44:31PM +0000, Eric Biggers wrote:
-> Explicitly zeroize the sw_secret array in the case where
-> fscrypt_derive_sw_secret() fails, in case anything was written to it.
-> Doesn't really matter, but this came up in a code review.
+On Sat, Oct 24, 2026 at 06:43:50PM +0800, Baokun Li wrote:
+> fscrypt_find_mode_key() walks an RCU list and hands out a per-mode
+> key without an acquire:
 > 
-> Signed-off-by: Eric Biggers <ebiggers@kernel.org>
+>   setup task
+>   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+>   setup_per_mode_enc_key()
+>    ├─ fscrypt_prepare_key()
+>    │  └─ fscrypt_prepare_inline_crypt_key()
+>    │     └─ blk_crypto_start_using_key()
+>    │        └─ blk_crypto_fallback_start_using_mode()
+>    │           ├─ init profile, keyslots, tfms[]
+>    │           └─ smp_store_release(tfms_inited[mode])  # init order
+>    └─ list_add_tail_rcu(&new_node->link, ...)  # release -> finder
+> 
+>   finding task (later submits the I/O itself)
+>   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+>   fscrypt_find_mode_key()
+>    ├─ list_for_each_entry_rcu(node, ...)
+>    └─ return &node->key                 # no acquire, chain breaks
+>   ...
+>   blk_crypto_fallback_bio_prep()        # WRITE path
+>    ├─ tfms_inited[mode]                 # addr-dep, reads true
+>    ├─ blk_crypto_fallback_profile       # no dependency
+>    ├─ blk_crypto_keyslots               # no dependency
+>    └─ slotp->tfms[mode]                 # no dependency
+> 
+> RCU publishes the node and the key reachable from it, so
+> tfms_inited[mode] reads true through the address dependency.  The
+> independent fallback globals are not covered by it and can be read as
+> uninitialized.
+> 
+> On a weakly ordered machine, a WRITE bio can crash in
+> blk_crypto_get_keyslot() or crypto_sync_skcipher_setkey().
+> 
+> Other tasks reach the key through fscrypt_inode_info's
+> cmpxchg_release()/smp_load_acquire(), which is already ordered after
+> the list walk; only the finding task's own later I/O was not.
+> 
+> Fix this by upgrading the control dependency to an acquire with
+> smp_acquire__after_ctrl_dep() once a matching entry has been found.
+> 
+> Fixes: dd015b566d50 ("fscrypt: Fix key setup in edge case with multiple data unit sizes")
+> Cc: stable@vger.kernel.org
+> Suggested-by: Eric Biggers <ebiggers@kernel.org>
+> Link: https://lore.kernel.org/r/20261014161153.GC322435@quark
+> Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
 > ---
->  fs/crypto/keyring.c | 4 +++-
->  1 file changed, 3 insertions(+), 1 deletion(-)
+> Changes since v3:
+>  * Update commit message and comments as suggested by Eric.
 
 Applied to https://git.kernel.org/pub/scm/fs/fscrypt/linux.git/log/?h=for-next
+
+Thanks!
 
 - Eric
