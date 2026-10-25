@@ -1,104 +1,104 @@
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=170.10.129.124
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1792953775;
-	b=fvJpbjZB/Vu0VZlfAkkOZduVVM9VjRZ+Y9KsOvGsS/PmF+pvTdcNehHycLRnCd6+Kgn6
-	 W3/48F+FJj0wNEQTnfnyRaHR5UEjcMsDaSQUKwcaoKBm42k6qHTmqgn0wqwOL7Sje8EYR
-	 Vgb4QGctajueevtjxNLTNUNWCVF+c1m2aWkdnxYaqjND413mbJBm5IN2LnJnqDwb/tjuS
-	 UYs3oiwpA+ntjtEzutOiQa4U5KEpANmVjzWj31yCHWFEdxlCK/U9JkSZ2nMmpGUmtoT7E
-	 eZQYtzzIkYz/p4sKKlNX1UZXHCtb5Ys9iqzBIWsv33frlsxSOm00f8wWm4L8DQzKSJw==
+	t=1792953782;
+	b=cyfnl9Wt4TBmMFCKtO9tPnBg9ywBVnE8483TW9WEtvnuFYAXkRmnznqYty4WCvx3JL/Z
+	 9k58E+3fWZ55hRl+BoCaSirqK5RxfsfqcpThvDhI0GhQbEQHkLurnnhYyWP4xUMDuCzOL
+	 2XXyCPucGjx7LleGBq/HqWpmc5FG7JAOl1nfvqj312jA6Wb6yU6sHKom60g5CI1rodhN0
+	 mCcWdDlp7SfqjYVXcRsvPi5ZcNPmndaYvMt4lL+uF1zOAUWTirDpYG/0hhcQZRxnC21Nl
+	 o3UkBwvgjAVIzBgPr8134G0TM9GvdDdJ/ewUrGnIL8HnOjXn88BTesyJevb1KzbxvLg==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1792953775;
+	a=rsa-sha256; c=relaxed/relaxed; t=1792953782;
 	h=DMARC-Filter:DKIM-Signature:Received:X-MC-Unique:
 	 X-Mimecast-MFC-AGG-ID:Received:DKIM-Signature:X-Google-DKIM-Signature:
 	 X-Forwarded-Encrypted:X-Gm-Message-State:X-Gm-Gg:X-Received:
 	 X-Received:Received:From:To:Cc:Subject:Date:Message-Id:X-Mailer:
 	 In-Reply-To:References:MIME-Version:Content-Transfer-Encoding;
-	bh=6DaWHhYgIwuBxobGINB7MVgdVFMWECs1oxNBivuWWWY=;
-	b=u/eTDF6duG8XEaAjFNZdS0XAeA2pbb9L4xv3kkJNVVpAEYdh74KQnvG3Z0+IqoTx+aG9
-	 urmMNIa6XMtmmhPZFukgC4KDcsD8moVcOzhHRvnGlP663vf0gG9xRXeqjUI2LUhTQ8arK
-	 8qEpHOicqFiONfI5BoGVhPke3qTjAQcAU7Gdy6BhG7+tVJqXPMV0kz5GNGCgzO+cdrZB6
-	 /hnW77+sT2rIL7/zInSQv/mjM+YmSRhdalkxQ04MOv85XGqmp7sATmIvbG90r3WjhGS+q
-	 BHNWf1FB37bk1dF6BgnlNpF6IZrfLNooCfWeezTZVQfJjq182OHHLZbMtwNASnzIjZQ==
+	bh=zEq3fV+AI6+Jq6Ar+nT4ArTrmS94UcpXesUCpWADxJ8=;
+	b=RoP4mFPPmuZcRKWPUy3zV5ChPBT9lu7jybGT2yEop8Fq1+19/ud9DJvXjiDDU2EUDnEH
+	 gyI8MFPOn1GgVvlfptuEH931065uuoJa6mYe85xgU6e41BgaTRlXDowpqwCYMfRV57g3s
+	 KhX6lJ0os2auI/P4NGARTI/kRbgEBkERNBx3kgTS6ocTwG+6tGSxOBR/Ox6Q16Sjn8yUd
+	 O9tzUkSdzmIrs1U4wOUgO0CdSPeH+6vVWN+9scCmHKhC6afvn2G7+dgfHxUUeGL+oyuah
+	 5lRig49cJoX2ub396WbE5h8aDcvdffGC3MN3R+VHjEtAWQCAhPLjsdA9vxLaQJdn2Yw==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
 	dmarc=pass header.from=redhat.com;
 	spf=pass smtp.mailfrom=redhat.com;
-	dkim=pass header.d=redhat.com header.i=@redhat.com header.a=rsa-sha256 header.s=mimecast20190719 header.b=PWzM30nI;
-	dkim=pass header.d=redhat.com header.i=@redhat.com header.a=rsa-sha256 header.s=google header.b=tVnVpHje;
+	dkim=pass header.d=redhat.com header.i=@redhat.com header.a=rsa-sha256 header.s=mimecast20190719 header.b=ZpTamWUL;
+	dkim=pass header.d=redhat.com header.i=@redhat.com header.a=rsa-sha256 header.s=google header.b=qF3p9Apk;
 	arc=none smtp.remote-ip=170.10.129.124
 Received: from us-smtp-delivery-124.mimecast.com (us-smtp-delivery-124.mimecast.com [170.10.129.124])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 57FD4606A329
-	for <linux-fscrypt@vger.kernel.org>; Sun, 25 Oct 2026 18:42:55 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 57FD4606A329
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 7784660A260B
+	for <linux-fscrypt@vger.kernel.org>; Sun, 25 Oct 2026 18:43:01 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 7784660A260B
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=redhat.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=redhat.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key, unprotected) header.d=redhat.com header.i=@redhat.com header.a=rsa-sha256 header.s=mimecast20190719 header.b=PWzM30nI;
-	dkim=pass (2048-bit key, unprotected) header.d=redhat.com header.i=@redhat.com header.a=rsa-sha256 header.s=google header.b=tVnVpHje
+	dkim=pass (1024-bit key, unprotected) header.d=redhat.com header.i=@redhat.com header.a=rsa-sha256 header.s=mimecast20190719 header.b=ZpTamWUL;
+	dkim=pass (2048-bit key, unprotected) header.d=redhat.com header.i=@redhat.com header.a=rsa-sha256 header.s=google header.b=qF3p9Apk
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=redhat.com;
-	s=mimecast20190719; t=1792953774;
+	s=mimecast20190719; t=1792953780;
 	h=from:from:reply-to:subject:subject:date:date:message-id:message-id:
 	 to:to:cc:cc:mime-version:mime-version:
 	 content-transfer-encoding:content-transfer-encoding:
 	 in-reply-to:in-reply-to:references:references;
-	bh=6DaWHhYgIwuBxobGINB7MVgdVFMWECs1oxNBivuWWWY=;
-	b=PWzM30nImfpG/iYmlCpzvUYdOQQmJ4iNaTraeXXtwlzsG1pjPIdrAxO09o0kTImphRedTA
-	+RNYSqx2r7jmA5NuCp6P0VCvtbk2BfTsltESCVfx3xwbfifSTUJ36shfqsjJ6tI1w8SAZ/
-	dGg+wEtemjMOCf3+6mrmKe6S1hXJPQ0=
-Received: from mail-ed1-f69.google.com (mail-ed1-f69.google.com
- [209.85.208.69]) by relay.mimecast.com with ESMTP with STARTTLS
+	bh=zEq3fV+AI6+Jq6Ar+nT4ArTrmS94UcpXesUCpWADxJ8=;
+	b=ZpTamWULO2vkdp8D7zXbww1PfOPaMh/Uo2PBj/ScK3fheFCJHzQlbC/qHPcFbur2WPUJLs
+	9d3g0iBxzVLZjTN7jIL2xM3q5YdXpNskp8JloGzMlpEWdA0sNhKtRJLMCx8v6K9BpRo/1t
+	UxZQ8usBGu8f43ABKjhfn44D/t+ofNI=
+Received: from mail-ej1-f70.google.com (mail-ej1-f70.google.com
+ [209.85.218.70]) by relay.mimecast.com with ESMTP with STARTTLS
  (version=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384) id
- us-mta-31-OPCa1YhxMmiDLgo5cKI8kw-1; Sun, 25 Oct 2026 14:42:53 -0400
-X-MC-Unique: OPCa1YhxMmiDLgo5cKI8kw-1
-X-Mimecast-MFC-AGG-ID: OPCa1YhxMmiDLgo5cKI8kw_1792953772
-Received: by mail-ed1-f69.google.com with SMTP id 4fb4d7f45d1cf-6b20352f43eso2259880a12.1
-        for <linux-fscrypt@vger.kernel.org>; Sun, 25 Oct 2026 11:42:53 -0700 (PDT)
+ us-mta-47-GXxTEEMzNOaubWYujiSkYQ-1; Sun, 25 Oct 2026 14:42:52 -0400
+X-MC-Unique: GXxTEEMzNOaubWYujiSkYQ-1
+X-Mimecast-MFC-AGG-ID: GXxTEEMzNOaubWYujiSkYQ_1792953771
+Received: by mail-ej1-f70.google.com with SMTP id a640c23a62f3a-c414c206673so262934166b.0
+        for <linux-fscrypt@vger.kernel.org>; Sun, 25 Oct 2026 11:42:52 -0700 (PDT)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=redhat.com; s=google; t=1792953772; x=1793558572; darn=vger.kernel.org;
+        d=redhat.com; s=google; t=1792953771; x=1793558571; darn=vger.kernel.org;
         h=content-transfer-encoding:mime-version:references:in-reply-to
          :message-id:date:subject:cc:to:from:from:to:cc:subject:date
          :message-id:reply-to:content-type;
-        bh=6DaWHhYgIwuBxobGINB7MVgdVFMWECs1oxNBivuWWWY=;
-        b=tVnVpHjeJHWyc+4qBdBCZFpyXKtQY4eAqsiMZ32EjZFUTevWDLdNiNvMwSwpfIZGg7
-         0wQb9lkF24BqwSHlNZfpqN0jPnNfPUnVpvB08ltclv2mxaLFcvMtqHP1dhyaU9eX9sAX
-         7O4z1F26ZAtUPBq+TgPQT+X7YLevSZcHfr94BeZzxkJ9pKMxS2ErMgN9pEbE++DZK2nz
-         aGwWuJch/RvcmHsf17XC9mKCzkVMcsphXS64TpmJajUWE04Jl6gN8Vq8Zo6b6VChSUBK
-         ooaxB/hv9P4UaA0mY3TzMUiozKiJR2gvM5B3VkkQ3i7Sm6JWmmDwmzP4b6/VcPfRA+Q2
-         xxnA==
+        bh=zEq3fV+AI6+Jq6Ar+nT4ArTrmS94UcpXesUCpWADxJ8=;
+        b=qF3p9ApkwLiKfPnGrfVeWryTCEvGSMwplkt+ENqnifmY4yk/LOENzAUL5wUD9MbXJ+
+         I1mKZsQ638WraIRJEWIgsiJn6NCSlwLumvpqJIHeQRU925xdRuWUv7Ex7+8s2IvSU8LM
+         yYmAgre4Y3wLxsYzs3GZanCZo+E1r2h7waRChIPqdrffC5p8HHJaxWdLc7zPblLiG62x
+         Bz/aHKAywTTq8FRXfkPwG3sXgJu24/YG9AWIu0KX3xYTb946nMoaDjed97V5NXP/MpVu
+         6yzdmPV5c1ZNJBmOa6xK9uUXbnb0QYz99eaMyKE2apRORifL56Bhv42JbaNY/F+aKFl1
+         LRJA==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20260707; t=1792953772; x=1793558572;
+        d=1e100.net; s=20260707; t=1792953771; x=1793558571;
         h=content-transfer-encoding:mime-version:references:in-reply-to
          :message-id:date:subject:cc:to:from:x-gm-gg:x-gm-message-state:from
          :to:cc:subject:date:message-id:reply-to:content-type;
-        bh=6DaWHhYgIwuBxobGINB7MVgdVFMWECs1oxNBivuWWWY=;
-        b=f0GqdXaliVMpH8NyuuT0DXoOynBxR1UOqpfHeXjRxriYnh4AbvsPD0EZi1g6XAz5iz
-         voTYcq45UYUj3wkeqEz1meZ5nBCxKEZAo5zWLXyxwo6VfMNmwGjgsGf9EaOH68GRXB0P
-         gmS/BGcUgBMAZbEn9dlLla19umXfXSTjFi0ra+kiqoqkcDeWPkEob8jYd6kTQvOyV3bX
-         2wJJqHe8KWbHcqZmcP8MI8f91sw+Kvquz5clFzoOVNctdnQqXIPHz9zm27/JDtcyV6db
-         +65o66RearhdCc7ZXxmACQrrWFompXNYt4NaWqCKKnX2+sSqPHwM77OFTb6uibBqIN+2
-         bS4g==
-X-Forwarded-Encrypted: i=1; AKwUvBxDqOAMlGwK/3nRqKdHw6rk0kTXTohXSOxyCtZrJ9I3rLRnPcAVvfw9zmJvRxMmpwxTpR1n7TDYOBtX8+lK@vger.kernel.org
-X-Gm-Message-State: AFq9FYL7ncECFg3RBRClexTZqtM6/69tel46QuAH92KfvwPXvNWILyPJ
-	/P6QuK1di7ya/dx/eqqWosQDvNjJERQ1NpIZjxSFmgvhplLlOABpwYbuCuSfrM/RFAqDADLD+Dz
-	5nZjDjP7+kJ/C1RfeP5mg5jTgtoc32GFp9GImXd5Pt0vXk6WJ2xprtjgB9WtyPOhhgYU=
-X-Gm-Gg: AYBFou2UJ/k9f2GuXfIvLsaRcPKIHF4LYDgmf24zFuN8hRnNNYLnJFGbW0gYGk698sW
-	eNgTAxBXFQTt13db+Ta0wKoi4KDEk6MfYdacWNwLAosV7zJNTHfNExGGLojyPWj5yi01p+LiHay
-	9YFlyxRoCf7PVwbO2Dmc8tfM4HREkjgdS8VnH99E6hIa03W/84r9nmHFQqyaMCALqSHFjhdHSTa
-	VvWZkBtGC7FY6Tnqvx8rxDpcvLFN58U+hgtGtl0PTfe/yGaCeT+VUEEZr7zKFsuxdWk2olufzAk
-	acyhxdDkpRIOFtvC933Kq/8L5F1qBAAIrdHj2ANkEKVQDa3yUQzMqbbkv5/P5ySVE01FaLU/M+l
-	PMezCdC4YqFCG+dolFp8NxqpvxqsTWyVGG6faPu1sLjtMaFn/818N/C48Zyza8HZGX/YeG4+Te6
-	FskmnKGO1GYVdqQglXSgbHowSgSB2A4GxE5ea0RxHn2ouceFQrLIHOT+k2mfWA72MaHAtv3/tDc
-	e0=
-X-Received: by 2002:a17:907:3f8d:b0:c3e:d0ca:d30a with SMTP id a640c23a62f3a-c46be3866c9mr565911366b.4.1792953771996;
-        Sun, 25 Oct 2026 11:42:51 -0700 (PDT)
-X-Received: by 2002:a17:907:3f8d:b0:c3e:d0ca:d30a with SMTP id a640c23a62f3a-c46be3866c9mr565908566b.4.1792953771631;
-        Sun, 25 Oct 2026 11:42:51 -0700 (PDT)
+        bh=zEq3fV+AI6+Jq6Ar+nT4ArTrmS94UcpXesUCpWADxJ8=;
+        b=FwSAjMTXvFA5Bp6ytz4NRV8fhSrLcLgnOX3W6XCKsG6Tf6wu1mKmj2L5GcqMibc1KJ
+         LHHKz2IhoZfTfsSmVaNQeykv2TKcN1A1fRZSWPuppMo72Ehn6dggCn9iucLYL6DFObsz
+         USUGpKGqdgN4KHZxhVN30NDtXAWdKGdrZBS08KfxBDJr4U5PVK0wzpwLORDc1+xZND0I
+         eXuffE/0zSo++22cJJ7rYLJrqjMmJWTzPO81svW2vq3Kx+5xGauIGTJ4rp6j5gZ3/evw
+         iZi354Ki/N79LCnJQOjTpqyjOc0/xasDQ2y2suUG3GIrtzj/w1WOsgbsU3XA/wJ3H5CP
+         tfyg==
+X-Forwarded-Encrypted: i=1; AKwUvByv3mvuEtMHoMjovNmXyhHeDobk/2FDgQDn71ftgS2Sf/tN6zeuH4EBrZtkmg97PrfE6kiKmCkeoK7tWMca@vger.kernel.org
+X-Gm-Message-State: AFq9FYJTZEir6snY1Nz9Nex5h5E3sZ8jGH5JnSt6KMgF/bY/HYhMraO8
+	d6lUEhEnCk99sHwbNyncGK+JJYwD+HEX5M54yLenCD88d/qCpJ/qZjDFKHr2WIElt2T0QF/qbam
+	f/iYYea3sGdrAXZnpXiwl/8jodcoEAl5ZoVUxEj+DIJge1lGhAw1yScbFEDjusAVabvU=
+X-Gm-Gg: AYBFou01SxU8gIu15lerUqosxqmtknkPTnBokRjUA71AQ2nTMlV9YM9gwaOVFNzLrcd
+	To1inbX4fTd70hzNUk+ahJme8nRCm1YKZ5QE4pRhCIMHEHygnoIDtiQKDqI1AQhgs9HHaFS+Xo1
+	dflK9xXTxrfDxysL5h9tEoRcDfJgzSqrzO44DuwYKbPowNPkdTstxN7YlawcZaZ4PzoTP6Nwtfm
+	aswcNdc3k8uvIA8PDK11Jlb2d9Hpiq0b8dAS7OF4fqKC2tuO6Pzv1/PXQcv+8pH1DSYu6XlHCYR
+	TUiEyI47fVPkCG/1JFjd2PwAtHFwoia7Fzwwb56LAtDaqxZS0Pn4KeyV8/WS50pV1FpPZdjgDzN
+	cmXC1L2x+Fkspl1PR4FPBezAFWqLJX7R2IhYHZ3mU9JgeHUKEY/SYvFi72ZFExZ1wS0INXkMP/M
+	VEPJz+phFbosR0jxSaeXDvXXLbg1hIsnDDH6RbJPh7bVEn+6bLUH5543anAIuRA+HVZDih8vUKe
+	Rk=
+X-Received: by 2002:a17:907:9412:b0:c40:a4f8:e036 with SMTP id a640c23a62f3a-c46bdfde8d6mr601520566b.43.1792953770960;
+        Sun, 25 Oct 2026 11:42:50 -0700 (PDT)
+X-Received: by 2002:a17:907:9412:b0:c40:a4f8:e036 with SMTP id a640c23a62f3a-c46bdfde8d6mr601518466b.43.1792953770582;
+        Sun, 25 Oct 2026 11:42:50 -0700 (PDT)
 Received: from cluster.. (4f.55.790d.ip4.static.sl-reverse.com. [13.121.85.79])
-        by smtp.gmail.com with ESMTPSA id a640c23a62f3a-c46bd66e51fsm230750866b.64.2026.10.25.11.42.50
+        by smtp.gmail.com with ESMTPSA id a640c23a62f3a-c46bd66e51fsm230750866b.64.2026.10.25.11.42.49
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Sun, 25 Oct 2026 11:42:51 -0700 (PDT)
+        Sun, 25 Oct 2026 11:42:50 -0700 (PDT)
 From: Alex Markuze <amarkuze@redhat.com>
 To: ceph-devel@vger.kernel.org
 Cc: idryomov@gmail.com,
@@ -113,9 +113,9 @@ Cc: idryomov@gmail.com,
 	tytso@mit.edu,
 	jaegeuk@kernel.org,
 	linux-kernel@vger.kernel.org
-Subject: [PATCH v6 3/5] ceph: add subvolume quarantine wire definitions
-Date: Sun, 25 Oct 2026 18:42:43 +0000
-Message-Id: <63fbc27fc8339ee0744d4488016d76cc2cc73e08.20261025T182649Z.ca9ae7a18449.git.amarkuze@redhat.com>
+Subject: [PATCH v6 2/5] fscrypt: allow filesystems to disable symlink target caching
+Date: Sun, 25 Oct 2026 18:42:42 +0000
+Message-Id: <aad6b176009101cb8dbf42e4f8c62a1883400050.20261025T182649Z.ca9ae7a18449.git.amarkuze@redhat.com>
 X-Mailer: git-send-email 2.34.1
 In-Reply-To: <cover.20261025T182649Z.ca9ae7a18449.git.amarkuze@redhat.com>
 References: <cover.20261025T182649Z.ca9ae7a18449.git.amarkuze@redhat.com>
@@ -130,63 +130,98 @@ Precedence: list
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
 
-The MDS reports -CEPH_EQUARANTINED in MClientCaps v14 when quarantine
-denies a client's access, and restricts that client's caps to PIN. The
-wire errno is 1000; the client must return EACCES to applications.
-MQuarantineDisable identifies the inode whose quarantine mark can be
-cleared when access is restored.
+The VFS can return a decrypted symlink target from inode->i_link without
+calling the filesystem's ->get_link(). A filesystem that revalidates
+access in ->get_link() therefore needs a way to prevent that cache from
+bypassing its checks. CephFS quarantine requires revalidation even for
+readlinkat() through an O_PATH descriptor opened before quarantine.
 
-Define the errno, message type and packed disable payload, and add the
-message name to ceph_msg_type_name(). The quarantine state and access
-patches consume these definitions; support is advertised after the
-cached-access checks are installed.
+Add a filesystem opt-out from decrypted symlink target caching. The
+option is fixed before inode creation and prevents both creation-time
+and lookup-time cache installation. Uncached targets use the existing
+delayed-free callback; cache readers need no special handling because
+the inode has no cached target.
+
+The Ceph quarantine access patch selects this option. Encrypted symlink
+readlink, traversal and lstat then allocate and decrypt a temporary
+target on each access. Filesystems that do not opt out retain caching.
 
 Signed-off-by: Alex Markuze <amarkuze@redhat.com>
 ---
- include/linux/ceph/ceph_fs.h | 13 +++++++++++++
- net/ceph/ceph_common.c       |  2 ++
- 2 files changed, 15 insertions(+)
+ fs/crypto/hooks.c       | 28 +++++++++++++++-------------
+ include/linux/fscrypt.h |  7 +++++++
+ 2 files changed, 22 insertions(+), 13 deletions(-)
 
-diff --git a/include/linux/ceph/ceph_fs.h b/include/linux/ceph/ceph_fs.h
-index d70bbce1a1b2b4ffffebe896ef46eb6853ab354b..5afccfa891cb045e9784eda1cc4741749aac4c06 100644
---- a/include/linux/ceph/ceph_fs.h
-+++ b/include/linux/ceph/ceph_fs.h
-@@ -154,6 +154,7 @@ const char *ceph_con_mode_name(int mode);
- #define CEPH_MSG_CLIENT_SNAP            0x312
- #define CEPH_MSG_CLIENT_CAPRELEASE      0x313
- #define CEPH_MSG_CLIENT_QUOTA           0x314
-+#define CEPH_MSG_CLIENT_QUARANTINE_DISABLE 0x315
+diff --git a/fs/crypto/hooks.c b/fs/crypto/hooks.c
+index a7a8a3f581a0460537f5ff955bc8b5d30573a033..6bc7ac82ec3470d633f2203a40c00a422b8e76a3 100644
+--- a/fs/crypto/hooks.c
++++ b/fs/crypto/hooks.c
+@@ -321,11 +321,13 @@ int __fscrypt_encrypt_symlink(struct inode *inode, const char *target,
+ 	 */
+ 	sd->encrypted_path[ciphertext_len] = '\0';
  
- /* pool ops */
- #define CEPH_MSG_POOLOP_REPLY           48
-@@ -921,4 +922,16 @@ struct ceph_mds_quota {
- 	__le64 max_files;	/* quota max. files */
- } __attribute__ ((packed));
+-	/* Cache the plaintext symlink target for later use by get_link() */
+-	err = -ENOMEM;
+-	inode->i_link = kmemdup(target, len + 1, GFP_NOFS);
+-	if (!inode->i_link)
+-		goto err_free_sd;
++	/* Cache the plaintext target unless the filesystem revalidates it. */
++	if (!inode->i_sb->s_cop->no_symlink_cache) {
++		err = -ENOMEM;
++		inode->i_link = kmemdup(target, len + 1, GFP_NOFS);
++		if (!inode->i_link)
++			goto err_free_sd;
++	}
  
-+/*
-+ * Cap oserrno used by the MDS when a subvolume is quarantined.
-+ * This is not a VFS errno; applications see -EACCES.
-+ */
-+#define CEPH_EQUARANTINED	1000
+ 	if (!disk_link->name)
+ 		disk_link->name = (unsigned char *)sd;
+@@ -411,12 +413,12 @@ const char *fscrypt_get_symlink(struct inode *inode, const void *caddr,
+ 	pstr.name[pstr.len] = '\0';
+ 
+ 	/*
+-	 * Cache decrypted symlink targets in i_link for later use.  Don't cache
+-	 * symlink targets encoded without the key, since those become outdated
+-	 * once the key is added.  This pairs with the READ_ONCE() above and in
+-	 * the VFS path lookup code.
++	 * Cache decrypted targets unless the filesystem revalidates them.
++	 * Don't cache targets encoded without the key, since those become
++	 * outdated once the key is added. This pairs with the READ_ONCE()
++	 * above and in the VFS path lookup code.
+ 	 */
+-	if (!has_key ||
++	if (inode->i_sb->s_cop->no_symlink_cache || !has_key ||
+ 	    cmpxchg_release(&inode->i_link, NULL, pstr.name) != NULL)
+ 		set_delayed_call(done, kfree_link, pstr.name);
+ 
+@@ -442,9 +444,9 @@ EXPORT_SYMBOL_GPL(fscrypt_get_symlink);
+  * This requires reading the symlink target from disk if needed, setting up the
+  * inode's encryption key if possible, and then decrypting or encoding the
+  * symlink target.  This makes lstat() more heavyweight than is normally the
+- * case.  However, decrypted symlink targets will be cached in ->i_link, so
+- * usually the symlink won't have to be read and decrypted again later if/when
+- * it is actually followed, readlink() is called, or lstat() is called again.
++ * case. Unless the filesystem sets no_symlink_cache, decrypted targets
++ * are cached in ->i_link, avoiding another read and decryption when the
++ * symlink is followed, readlink() is called, or lstat() is called again.
+  *
+  * Return: 0 on success, -errno on failure
+  */
+diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
+index 28f2108e29f3976ebe861c425b129ac0acec479b..ab77e685c75c5d1132db82e5cfa718ba6b2847fe 100644
+--- a/include/linux/fscrypt.h
++++ b/include/linux/fscrypt.h
+@@ -108,6 +108,13 @@ struct fscrypt_operations {
+ 	unsigned int supports_subblock_data_units : 1;
+ 
+ 	/*
++	 * Don't populate ->i_link, so every access calls ->get_link() and the
++	 * filesystem can revalidate access. Set before creating any inodes;
++	 * this option cannot invalidate previously cached targets.
++	 */
++	unsigned int no_symlink_cache : 1;
 +
-+/* MDS -> client: quarantine lifted for one inode (ino, oserrno). */
-+struct ceph_mds_quarantine_disable {
-+	__le64 ino;
-+	__le32 oserrno;
-+} __packed;
-+
- #endif
-diff --git a/net/ceph/ceph_common.c b/net/ceph/ceph_common.c
-index 67e88f30409dd3ffba9dadb6fda529f4101d830f..cc3d21fd7d5bf251bd58ce19f8c7d8a5b02fa1d7 100644
---- a/net/ceph/ceph_common.c
-+++ b/net/ceph/ceph_common.c
-@@ -83,6 +83,8 @@ const char *ceph_msg_type_name(int type)
- 	case CEPH_MSG_CLIENT_CAPS: return "client_caps";
- 	case CEPH_MSG_CLIENT_CAPRELEASE: return "client_cap_release";
- 	case CEPH_MSG_CLIENT_QUOTA: return "client_quota";
-+	case CEPH_MSG_CLIENT_QUARANTINE_DISABLE:
-+		return "client_quarantine_disable";
- 	case CEPH_MSG_CLIENT_SNAP: return "client_snap";
- 	case CEPH_MSG_CLIENT_LEASE: return "client_lease";
- 	case CEPH_MSG_POOLOP_REPLY: return "poolop_reply";
++	/*
+ 	 * This field exists only for backwards compatibility reasons and should
+ 	 * only be set by the filesystems that are setting it already.  It
+ 	 * contains the filesystem-specific key description prefix that is
 
