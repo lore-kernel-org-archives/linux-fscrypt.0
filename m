@@ -1,99 +1,100 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=pass header.oldest-pass=0 smtp.remote-ip=209.85.218.44
+Authentication-Results: smtp.subspace.kernel.org; arc=pass header.oldest-pass=0 smtp.remote-ip=209.85.208.44
 ARC-Seal: i=2; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=pass;
-	t=1793105105;
-	b=cuK14QdeggcLwICt7e7koDuqb7ki/84qN8qN5f0Ib9oRtwxje288DIpPJbpSQYqt1Sg/
-	 3DY7Kl3O/jw+QM9QomjyQqVJ8D87g+Ey/HaOot6rTZNKtxO2cOTQq+5yPMDkk7BiI06FO
-	 e59ozkUGw8QrQcIOnEA00BxqwEj9dfENHZfy/TJdMGkdYfF3Fc+hdNbBD3YpDnslX4zuA
-	 TKiL5pe+aC2Q0sdFjwXWBxXs/G8SryJlpGqh586Bvm7sV9NYAxBxfgm6u+dtstjrRSzpx
-	 f+DZeuZH4plD0pAspYTxF+h/+JME19jJFuPbjkFwJoUYA2r5KTcgqGNTxJNHjRHZ6Fw==
+	t=1793105210;
+	b=LI53gCnR+EGAUI+MKGX84URnBON3Y6pV+lWEWMLrPVkhuEpbYTtsQGR+9vvgpptvld75
+	 4qWz43q1jv0xzNZAUOCLRg4lnvQ1fXQkQmArtT9lyIKqBJrmGwQjlaRk0AxklerKY2oBo
+	 FpSCWS0Gugba66ptAfID7OoZ5zvJehkdLUDGqMJcvAI5j1uV1BvcH8/yEZdxE1gYk6fJT
+	 kyMoqHK9dkTA0tqlbuSHvbU8eUTGs8Vs5U0YRRTfyhkYQhk9utfPHDwQuvAsbOIuIo8Jb
+	 ZVSoe6Q5c94+PBV7CD77I/tjSvZjfU5/pFB9qJZcC7AoqnoL0mCFk3Fh/x3sXSWtpCA==
 ARC-Message-Signature: i=2; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1793105105;
+	a=rsa-sha256; c=relaxed/relaxed; t=1793105210;
 	h=DMARC-Filter:Received:DKIM-Signature:X-Google-DKIM-Signature:
 	 X-Forwarded-Encrypted:X-Gm-Message-State:X-Gm-Gg:X-Received:
 	 MIME-Version:References:In-Reply-To:From:Date:X-Gm-Features:
-	 Message-ID:Subject:To:Cc:Content-Type;
-	bh=tp5Z/PycBAJg9TMmmwDWZ/1o8EUvDrLUX04tXR+wyv0=;
-	b=c1SN+ODYzINqOkHScN/jPy5xuJR3vG2l1ExG1cDI/7GY6Mhbltsj+P0CdA7/jo3I39cY
-	 m6PyO58pAcy0L/CREa2LcY0LQjCL1ajeR/a0+z9P5Giop9hKx2AY9cp73Z1aTUXbcY2Va
-	 19rAgHH9Qwq3EZZn8ZdPzKZkHt/Wp6XaGbx1j2JpBo1VI+QDsEF3tQA5GQ1UcJnL8LXAp
-	 d/q1eA6w8ZyERbfvoncNdj4hpQBiOLeBYenahm4s06bPgdWiU8cIqCAheHGZR7k29EJKx
-	 ROdEYYZgrWhza5gYJJiFVaE5geMXZt19gbbMzhbU06sYhoAAQZOg5Ds5EmGwjHE1iJA==
+	 Message-ID:Subject:To:Cc:Content-Type:Content-Transfer-Encoding;
+	bh=tM9z4Y/40xyWfahMedWVRhKTHJQqTvitq9arJ2Ee7fw=;
+	b=QRxr0/c+10XYW/c79Yam7GHCQpEb3/bNpRIoe4y791OHqggf8HqT1YSEIrNFKzQq6+9P
+	 h6o1o0xdryqt5PIB3AUw8Gmv1LV0lD1lYb21vBEatpEcgaDSTV/vh8X4XobQwzEQdxpJ5
+	 kmYrwzDtCE1Gojz3m7Kqj/EBc7xE+oGKI241QmWmtx6kqvIdkXASX9mx9FVHyiu1jvb0i
+	 Qf5bxDItK208PLB1HtAaj8vd9ibX5OVpe82xNzj8S6GPMz6dBR0osfdaJvZ9J5o0GU3tI
+	 E75IWQ72erQKLCaXpEDOjygdMyQ90IicDKjAw8qq3pptuHu7rwSC12H3mg1MaZ352eQ==
 ARC-Authentication-Results: i=2; smtp.subspace.kernel.org; 
 	dmarc=pass header.from=clyso.com;
 	spf=pass smtp.mailfrom=clyso.com;
-	dkim=pass header.d=clyso.com header.i=@clyso.com header.a=rsa-sha256 header.s=google header.b=fYGlF2xZ;
-	arc=pass header.oldest-pass=0 smtp.remote-ip=209.85.218.44
-Received: from mail-ej1-f44.google.com (mail-ej1-f44.google.com [209.85.218.44])
+	dkim=pass header.d=clyso.com header.i=@clyso.com header.a=rsa-sha256 header.s=google header.b="kVg5w/kp";
+	arc=pass header.oldest-pass=0 smtp.remote-ip=209.85.208.44
+Received: from mail-ed1-f44.google.com (mail-ed1-f44.google.com [209.85.208.44])
 	(using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3D850606A334
-	for <linux-fscrypt@vger.kernel.org>; Tue, 27 Oct 2026 12:45:02 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 3D850606A334
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 42346606A31B
+	for <linux-fscrypt@vger.kernel.org>; Tue, 27 Oct 2026 12:46:49 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 42346606A31B
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=quarantine dis=none) header.from=clyso.com
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=clyso.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key, unprotected) header.d=clyso.com header.i=@clyso.com header.a=rsa-sha256 header.s=google header.b=fYGlF2xZ
-Received: by mail-ej1-f44.google.com with SMTP id a640c23a62f3a-c4677aad67bso429040666b.0
-        for <linux-fscrypt@vger.kernel.org>; Tue, 27 Oct 2026 05:45:02 -0700 (PDT)
-ARC-Seal: i=1; a=rsa-sha256; t=1793105101; cv=none;
+	dkim=pass (2048-bit key, unprotected) header.d=clyso.com header.i=@clyso.com header.a=rsa-sha256 header.s=google header.b=kVg5w/kp
+Received: by mail-ed1-f44.google.com with SMTP id 4fb4d7f45d1cf-6b1b13e09ffso5655151a12.3
+        for <linux-fscrypt@vger.kernel.org>; Tue, 27 Oct 2026 05:46:49 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1793105208; cv=none;
         d=google.com; s=arc-20260327;
-        b=Y7Uq42qKnHUHdfXtirDtysEVmvbRpKbPU73quTHRilz8zzi6XpqMUwuR/A69kN8QOX
-         VJ0i8HvtTX/tYFgEP/qp23In87ZCLzu5241mBM6gFAlv1/JtDXYe8JVIsgrrstckGe72
-         xUTOZE9WLOoLtaVezzwm172fcq0TmqInu6mTSuU/KmCzg3+U3m/B5F9z5k043urglHck
-         2ep5VEUrnaHwyPi37z0neetOdK9YtBtECcYEJ0TH3n3Z3W2C7/EW8QEE8A4tgnL9iCmq
-         Zwp41dcyyiLMGVsf6HwIRufK15E9bdqVHssCPclo0YVTamNYSM5ju6CyvHNh4m5Ohhxo
-         2WmA==
+        b=O5aIF0L8bBgby+cpmBJHk9lStizyPCHo32C8nrjHDckPz7qhOlWM9eu86rZZXjAdGh
+         uj1OiyQ2/i5VzMcI7ivDUBfxzYaYPkFyRqPQsBoxGCxqml8nQ/KdAoRnA8AKcfglqIDq
+         RI7zy/DBh+LZ3XyUPLs4hPcapNY867Ah34cbw4etVMSVud4PNWo/Hv6zM/7fseYXvX2A
+         1ZgAbaHD55NE+kE+3dtIZ5vrjaom/xVnqGbjPvvpEDIGfQvc4len6YckyrLAvsGbPzYc
+         khZxBelpzBWkGFNhPLjTlotrq35bP3mIfkx2r1NGQiFCCbidssYcfmolJ3GWiUBK/XlC
+         rxdQ==
 ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
-        h=cc:to:subject:message-id:date:from:in-reply-to:references
-         :mime-version:dkim-signature;
-        bh=tp5Z/PycBAJg9TMmmwDWZ/1o8EUvDrLUX04tXR+wyv0=;
-        fh=xlzvY62m57hDTnPIaX0uGBaw51SmopAmVek9y+VXkec=;
-        b=fFsI01ZmgeBKQsGvQnQy8RgikUR20bniTej+oIqP9r++zGtz86u4bFAXn2d9ehQykI
-         +fbQat8Cbdyt35L4TNpjxQ0E6fz1mE/ahZS7B0tJWVRHGFSpmgZphpGRXU1A+RtjFIir
-         z5cIMYxWTU4N1TAVYO+rPyY69pJVXuGvm6RyFDn95fpFpUlGtSFEs9PBn6Av0X9qF4l8
-         Eoa+/zABkIbYKvbLxHKzc7TgOhYW5v6LOM2H+uz3eB36Yl3u/lohnpt50an9qER/t7nj
-         qi2zIUHP6wqYmqbL4GqyMBO8BIdnDKLxfXHoQVA3RbZSR+M2z4GB3w2wpcg62Uiy0otN
-         XdXw==;
+        h=content-transfer-encoding:cc:to:subject:message-id:date:from
+         :in-reply-to:references:mime-version:dkim-signature;
+        bh=tM9z4Y/40xyWfahMedWVRhKTHJQqTvitq9arJ2Ee7fw=;
+        fh=eeXIDSgfLp+pQ2COEaM9sHRwv9Ff0srly4Pv7NB4Zrg=;
+        b=g7cR1Mw3bfiLFC7X97puplZF7bm0VQeTgRXGK2oEDAQ7YVZgmJJkqerQOlbJlsIrEN
+         PSrGweM6kjM2SotNCOau+P9LHKo7cTiR/6heX1xa2K0hUNWFoiZadtDiE+ahlzSPOP9r
+         aUGJT2UjmreX8fm7KwrVAbQmBwwW38n0L78eW70KxPRAvdHnw8hBl1gtYwUazwK7EVTR
+         TXBTFPBRNwj09ZzWh/r/ZSDzILVJuULmMOxDQ5RqaynAM9gIGTooTvbZczeFVYEC9ns9
+         XZr2hBkR0dXdJs1bCxfAHGqmMG3hJBvribbK8qr/sphQt73wRnanFxeDCzWO3d7pGTwk
+         O+sg==;
         darn=vger.kernel.org
 ARC-Authentication-Results: i=1; mx.google.com; arc=none
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=clyso.com; s=google; t=1793105101; x=1793709901; darn=vger.kernel.org;
-        h=content-type:cc:to:subject:message-id:date:from:in-reply-to
-         :references:mime-version:from:to:cc:subject:date:message-id:reply-to
-         :content-type;
-        bh=tp5Z/PycBAJg9TMmmwDWZ/1o8EUvDrLUX04tXR+wyv0=;
-        b=fYGlF2xZvMKZpXD35R3nsX3JNM8VYluoq0Sj5pX1aaLxFpGjyWGA43KLCVb2+L9ohT
-         3AEYCqTkA7WblXENEhH2k+nw0OAYFhNUcjuSClCZgJumuylOegdtXosZ4pDVkyS6L1Db
-         z/ewE+Sw5R165rqd36h2P2En56J8ih29CGIN6QKqlROosTvZ+ugDhzAA70CDkShIpFoT
-         ySjqyqzy7o4YsQx0o9MM6OXqjIM6EX+pi9ZsNDiiF4Sl6l2GlS86ZeN9Ufi1kpsoEsnL
-         G0xiTzsEOoMawiz7LwRXR5MsYFw7HUhYbicJXk7PCZJbx8R24ZeZu8BE1lVg3cMMTUKb
-         vcxA==
+        d=clyso.com; s=google; t=1793105208; x=1793710008; darn=vger.kernel.org;
+        h=content-transfer-encoding:content-type:cc:to:subject:message-id
+         :date:from:in-reply-to:references:mime-version:from:to:cc:subject
+         :date:message-id:reply-to:content-type;
+        bh=tM9z4Y/40xyWfahMedWVRhKTHJQqTvitq9arJ2Ee7fw=;
+        b=kVg5w/kp2jGxrl6CpkV9K3ZgAeMf4RSKfVYBiFxqoBCzzvh6F/b+oENnNnapRbKK4q
+         +ZNo+940q5f1BPSA/vcpzFOhFC/QO6A5KXF3rQ5vW4c/9OGQHcxVYXmSMaIBcvLFNmYF
+         UxJySwCRXMen2lXfJkswFYpjkjysn+dIzOkcX1IEzUYo/BTEqyNOYuuOlXf0Fj8npQYv
+         f1hQuJneZIccHeuPQs8cb2pTIp+3VcaKDBLgfGozaVTsOVhUJVIECQm4/rR1xs5RUrPR
+         F+9pQE5RuUBOPr3ysp8BuSc5CVdcbpGnOpgdGQfl/Iipg3bpkOTPNq2dTBAnjHRPUKFx
+         2HoQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20260707; t=1793105101; x=1793709901;
-        h=content-type:cc:to:subject:message-id:date:from:in-reply-to
-         :references:mime-version:x-gm-gg:x-gm-message-state:from:to:cc
-         :subject:date:message-id:reply-to:content-type;
-        bh=tp5Z/PycBAJg9TMmmwDWZ/1o8EUvDrLUX04tXR+wyv0=;
-        b=rWKSBIzKEdx1NRQDGnAjcqTizFWutl4qn8Q5EcqS13vDuUYiNwEEvbMs/sFti8m16s
-         ZCwsfHwivakmnHy1Ey7ky5g0Qe/or3mBQzPoya2gtxKJ9FEd8dqusSdlx/jAX47JBfbL
-         1Wu8vWqzTpmHkB7iOsGZr36CN+iNMsla4/O8PAJOtOnkklaXilTjyRnfeYGGz4AIZtK5
-         K0Fvnpz0XMnG6dwne4SI6RghLcgL6ZZXxSX+5F66T5DBnHCe3jL/jXLgjCVnXgq+qnCk
-         v4w2hxDproxgBjzhQP6t3pX5+KRblxdm3EFOrkEnvuez/Z2odZfbwRqJz/PmsYlW0Im+
-         KsQg==
-X-Forwarded-Encrypted: i=1; AKwUvByW4da5ccx+PYa4rcYGp2p3QwSNTT9LLoRxnkzXGBW08nzymWfgldoQY/gkN7eRKbOt87rMQuYokCYPt6kr@vger.kernel.org
-X-Gm-Message-State: AFq9FYI27Y2/w4DKS1Ynxny9kjb0FL4XlwDeTwC6fF/m4tJ9R/6x+lT1
-	ALMv0cbsm6MCvmqeiPCONpAOnpvrl03ItYL27fy9T33pedn6mw/lLpjDydBw4Yoij99XQJGAwXU
-	A0BF/FDRBU5d83G0vBtdlDlUFvleLr9p+OM75SO4/Qg==
-X-Gm-Gg: AYBFou1XA1kQTWq/xV33aVgNNVZTYeQLFaEe3YySyFptZMDrZNEWBgDlApOW0bXphrk
-	iNxgWfyRHHPvOqH7y9dw3MI8ZuchszskjSZKag9V047O/H/HhAy9+2o3AGI3q/Yx4z6bsB8ukq4
-	jjhjDQ7sWWGRs+Y6GYBFy+OtXI/vU8DeyAWeO21jNulfs1ql0PU7P0IZeoOo+RoaYPu8a/upDRg
-	9cS+Re5v9j/SqxomUQszKUFiUuDLBIQqRXW6PpeyNncqTb+gme05txCnS5UsqHytTdrVAJBrWRN
-	J687byq4GZqWKjYx/iNHNQIx9H0nVME4msvjt7iWmeea/5W2gd0R0ZjGYgt6n59P4/aGhAPOAZN
-	vj1eHWN+tD0edqIRf95WvrHPsbet6zK9p9K2PVDg=
-X-Received: by 2002:a17:907:3d56:b0:c46:2987:2156 with SMTP id
- a640c23a62f3a-c46bde530a6mr1170312866b.29.1793105101334; Tue, 27 Oct 2026
- 05:45:01 -0700 (PDT)
+        d=1e100.net; s=20260707; t=1793105208; x=1793710008;
+        h=content-transfer-encoding:content-type:cc:to:subject:message-id
+         :date:from:in-reply-to:references:mime-version:x-gm-gg
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to
+         :content-type;
+        bh=tM9z4Y/40xyWfahMedWVRhKTHJQqTvitq9arJ2Ee7fw=;
+        b=ah0wJIyqbtkCVGghAeKsCkDldE6F1Pe6FCl1g4dcf9plu//0veIVFMHUrt+e8ox1sC
+         Xxce/Z4UFjN11jxnPmbtyXb8jy6cAy9USg1GRyJ0k5TFsQFl4awex7g6A8tbXiFv+wxF
+         RC8/6o80inhsXwymM1Ts44o5akZ06I3Up5WT8pEC6VQC3glwWnccGqyBm8eT0YSZyEgt
+         2QsjgUUH1zGGOQQUhTtk0YMpyY7nkeiqJ2nd1Sk4+BeN5WbcC1gNeXOWhEQuH9aqr3oX
+         Ew0PfEEyajGHrR7lHwSt9TsjKRSvULIHK9zXuz6cOMsIdleIg2DreGCmTcQk1TN8Nzsv
+         TyTw==
+X-Forwarded-Encrypted: i=1; AKwUvBzAox6ib04nDt4h7m8qfYp5HFxEZQgK7lzp9q7MV0KA6V+bIMaWI4WUewvj8Yy2YVbap/TnUBkjfJ+7ZESw@vger.kernel.org
+X-Gm-Message-State: AFq9FYI8IzAm4hahRz3Z2cQelzpojvSmBGvgJiN1mqtVDE2HdqnAnDsL
+	2sw1SaF24vsZQzotWIqUQCAcwuRNSclW2DhXpjTQPt+XnVHt0W5LW4S5H7ZwzJoLAD9BX1fsTuR
+	5zMvrlHv6WgA77eN7pM+mKZZd9stIm0b7F3/PncwLXg==
+X-Gm-Gg: AYBFou2dqM7FI+B5gSxPZVnHxOx69nPhqmbOcwPDOyT9Cxd95vVp0Mo++AzCK0+q0yk
+	aNjPz3MKWxiqZpaDhY6AQrjXpxQZOs9wUZsYD3n2weYDtKp7Au3fHLe3zq/l+eHAPdFmFFdiGYY
+	9X5oDyr+BQzrubDxOI3MQ3iuMzhHjbVC1hW0gE77Nq7QPBE3UeEIMa4xQOjO67nehb89ITDPNgE
+	10Zo3F5FKHmqYWIvUDi9PsVeDX3C8JXk8quxka6bXjH+a/Wjr+ANRSNv3yvp21QTaRSZvD009Ov
+	dsuVRnpjzU5PJ2tBt+50kLfRhXLK00Tobw3/PMounEUGReVom1LvYydGq55BpOIFPkm1TggI2ud
+	4J6Saxw/f4K+R2e7c6aEjmLsyWmPMOBI4HbNLolGSltZ67jXgN2h7Hy3BZTAw
+X-Received: by 2002:a17:907:86a5:b0:c29:f5d5:5a9c with SMTP id
+ a640c23a62f3a-c46bde938ebmr1066468966b.38.1793105208250; Tue, 27 Oct 2026
+ 05:46:48 -0700 (PDT)
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -104,196 +105,300 @@ List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
 References: <cover.20261025T182649Z.ca9ae7a18449.git.amarkuze@redhat.com>
-In-Reply-To: <cover.20261025T182649Z.ca9ae7a18449.git.amarkuze@redhat.com>
+ <1b6167c472fe05e2cd650bde2ffc9421892ad4cc.20261025T182649Z.ca9ae7a18449.git.amarkuze@redhat.com>
+ <sashiko-outbox-184356@kernel.org>
+In-Reply-To: <sashiko-outbox-184356@kernel.org>
 From: Xiubo Li <xiubo.li@clyso.com>
-Date: Tue, 27 Oct 2026 13:44:28 +0100
-X-Gm-Features: AclHuK-ojbEjvM3prTzqiHVXlqJdtBT0a5aS99YgrWUgj8YCYdBw1ESDVDxY2OQ
-Message-ID: <CAOJNxRKQETQbti6Rgdeekkuo+GAT1xHOvt-G8YvoHsLeDbcP_w@mail.gmail.com>
-Subject: Re: [PATCH v6 0/5] ceph: support subvolume quarantine
-To: Alex Markuze <amarkuze@redhat.com>
-Cc: ceph-devel@vger.kernel.org, idryomov@gmail.com, slava@dubeyko.com, 
+Date: Tue, 27 Oct 2026 13:45:27 +0100
+X-Gm-Features: AclHuK-sYpg2h3MTlNgp-i_UZSC8bHA1yVOe6oLZ66x7r66CL4rBT9LPbMbxzKQ
+Message-ID: <CAOJNxR+6M7MLXOD5o-sd6uXMqp1AFwZJj2oNvVv7GW4Axoeb=g@mail.gmail.com>
+Subject: Re: [PATCH v6 4/5] ceph: record subvolume quarantine from MDS cap updates
+To: sashiko-reviews@lists.linux.dev
+Cc: Alex Markuze <amarkuze@redhat.com>, idryomov@gmail.com, slava@dubeyko.com, 
 	viro@zeniv.linux.org.uk, brauner@kernel.org, jack@suse.cz, 
-	linux-fsdevel@vger.kernel.org, linux-fscrypt@vger.kernel.org, 
-	ebiggers@kernel.org, tytso@mit.edu, jaegeuk@kernel.org, 
-	linux-kernel@vger.kernel.org
+	linux-fscrypt@vger.kernel.org, ebiggers@kernel.org, tytso@mit.edu, 
+	jaegeuk@kernel.org
 Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
 
 Hi Alex,
 
-Thanks for v6.  I tested it on a KASAN + lockdep.
+> +void ceph_handle_quarantine_disable(struct ceph_mds_client *mdsc,
+> +     struct ceph_mds_session *session,
+> +     struct ceph_msg *msg)
+> +{
+[...]
+> + if (msg->front.iov_len < sizeof(*h)) {
+[...]
+> + vino.ino =3D le64_to_cpu(h->ino);
+> + vino.snap =3D CEPH_NOSNAP;
+> + inode =3D ceph_find_inode(sb, vino);
 
-What is still slower with no quarantine at all (the MDS supports it, so
-quarantine_supported is set):
+The message is never validated beyond its length:
 
-  1. Non-owner path walks.  Every inode gets ACL_DONT_CACHE, so root,
-     other users and group access pay ceph_get_acl() on every path component.
-     d48 stat is 47% slower.  See 5/5, acl.c and ceph_set_ino_cb().
-  2. Owner path walks.  __ceph_do_getattr() takes i_ceph_lock twice per path
-      component.  d48 stat is 9% slower.  See 5/5,
-ceph_quarantine_head_cap_valid().
-  3. Snapshots outside a subvolume.  Every read() and stat() goes to the
-     MDS.  See 5/5, ceph_snapshot_has_path().
-  4. Async create is off whenever the inode has an LSM blob.  See 5/5,
-     ceph_atomic_open().
+  - h->oserrno is ignored;
+  - msg->hdr.version is never checked, and MQuarantineDisable is
+    versioned (HEAD_VERSION 1).
 
-All four can be fixed without weakening the quarantine checks.  My
-reply to 5/5 has the diffs I tested, each under the code it changes.
-"v6+fix" below is v6 5/5 plus those four diffs.  With them, the numbers
-are back to base, and my quarantine tests still pass, plus new ones for
-each change.
+A future v2 with a different layout, or a disable that carries an
+error, would clear the mark all the same.  Please reject unknown
+versions and act only on oserrno =3D=3D 0.
 
-Benchmark method, for every table in this thread:
+> +static bool ceph_quarantine_reply_can_clear(struct ceph_inode_info *ci,
+> +     struct ceph_mds_session *session)
+> +{
+[...]
+> + req =3D ceph_current_mds_request(mdsc->fsc);
+> + epoch =3D (u64)atomic64_read_acquire(&mdsc->quarantine_epoch);
+> + return req && !(epoch & 1) && req->r_quarantine_epoch =3D=3D epoch &&
+> + !atomic_read(&mdsc->quarantine_splices);
 
-  - ABBA order, 12 rounds: base v6 fix fix v6 base base v6 fix fix v6
-    base.  Each variant runs 4 rounds of 20000 ops, 80000 pooled.
-  - One Python process repeats one syscall and times each call with
-    perf_counter_ns().  It is pinned with taskset to a vCPU on a P core.
-    Without the pinning, the hybrid host gave bimodal results.
-  - The VM is rebooted before each campaign, because module reloads
-    eventually exhaust lockdep and turn it off mid-run.
-  - Paths:
-      d48 = /mnt/qa/outside/pb/d1/.../d48   (48 components)
-      d5  = /mnt/qa/outside/pb/s1/.../s5
-      mount -t ceph admin@<fsid>.a=/ /mnt/qa \
-            -o ms_mode=prefer-crc,noshare,nowsync
-  - "owner" runs as the uid that created the directories.  "non-owner"
-    runs the same loop as root, so acl_permission_check() falls through
-    to check_acl().
+r_quarantine_epoch is compared against the mount-wide epoch, which every
+splice on the mount moves.  In ceph_readdir_prepopulate(), splice_dentry()
+for entry N runs before ceph_fill_inode() for entry N+1, so a readdir
+reply invalidates itself after its first entry.  From then on the reply
+can never clear a mark from another rank.  This is sashiko's point; I
+agree with it.
 
-Non-owner, latency in us:
+Comparing against a snapshot taken when this reply started filling, or
+counting only splices from other tasks, would avoid the self-invalidation.
 
-  test            ops/s   p50    p90    p99   p99.9   max
-  d48 stat
-    base           7422  140.4  153.0  225.5  2174.8  6176.9
-    v6             4909  206.5  216.8  290.3   877.5  2918.2
-    v6+fix         8238  141.4  162.6  217.4   718.4  2132.9
-  d48 symlink stat
-    base           7334  143.3  153.2  190.7   359.2  2450.1
-    v6             4968  210.3  221.1  279.6   777.0  4999.7
-    v6+fix         7238  145.6  155.4  190.8   463.8  2456.1
-  d48 readlink
-    base           8482  138.5  148.3  174.6   307.1  1972.1
-    v6             5046  205.0  214.8  267.3   389.2  1020.8
-    v6+fix         7624  141.0  150.7  184.3   311.5  1233.9
-  d48 open+close
-    base           3826  257.6  277.1  912.5  1842.6  9565.7
-    v6             3026  323.3  346.3  975.5  1721.0  3465.7
-    v6+fix         3685  259.6  277.8  926.3  1755.6  2680.5
-  d5 stat
-    base          59504   15.3   17.6   32.7    51.3   565.1
-    v6            30720   42.0   42.9   52.9    78.8   662.5
-    v6+fix        48144   15.6   32.6   42.1    54.9   445.7
+> + ceph_quarantine_splice_start(parent->i_sb);
+[...]
+> + ceph_quarantine_move_start(moved, old_dir, new_dir);
 
-Owner, latency in us:
-
-  test            ops/s   p50    p90    p99   p99.9   max
-  d48 stat
-    base           7514  141.7  151.7  195.2   968.1  1719.4
-    v6             7393  154.4  164.5  202.9   739.2  1972.5
-    v6+fix         7695  143.0  152.8  189.4   809.2  1747.5
-  d48 symlink stat
-    base           6887  145.2  154.9  200.9   335.3  2198.3
-    v6             6409  159.3  169.8  215.4   348.4  2254.7
-    v6+fix         6605  147.2  157.2  209.1   331.1  2132.3
-  d48 readlink
-    base           6907  141.1  151.0  206.8   319.1  3761.8
-    v6             6350  154.2  164.3  229.1   373.0  4344.2
-    v6+fix         6801  143.0  153.0  207.9   319.2  1511.6
-  d5 stat
-    base          35110   32.0   32.7   42.8    74.3   926.0
-    v6            28277   34.6   37.2   45.7    75.5  1399.8
-    v6+fix        30807   32.7   33.8   44.2    87.6  1388.9
-
-pread is unchanged in all variants.  The owner numbers replace the
-"symlinks and cached dentry lookups" section of my previous mail.  That
-run did not pin the benchmark process, so plain stat looked like noise
-there.
-
-Snapshot test (plain directory, not a subvolume; 4M file, 52 entries),
-MDS requests counted with kprobe:ceph_mdsc_submit_request:
-
-                         base             v6                 v6+fix
-  read4k (x1024)         8 req, 0.14 s    1041 req, 0.91 s     9 req, 0.16 s
-  stat x1000             0 req, 0.07 s    6000 req, 4.49 s     0 req, 0.11 s
-  ls -l                 59 req, 0.12 s     950 req, 0.74 s    60 req, 0.12 s
-
-Async create, 500 O_CREAT opens on the nowsync mount, counted with
-kprobe:try_prep_async_create:
-
-  base: 500    v6: 0    v6+fix: 500
-
+5/5 changes both signatures again (struct ceph_quarantine_splice and
+the owner list).  Please introduce the final API here, so 5/5 does not
+have to rewrite every caller.
 
 Thanks,
 Xiubo
 
-On Sun, 25 Oct 2026 at 19:42, Alex Markuze <amarkuze@redhat.com> wrote:
+On Sun, 25 Oct 2026 at 20:12, <sashiko-bot@kernel.org> wrote:
 >
-> CephFS subvolume quarantine restricts ordinary access while allowing
-> recovery clients with q/Q MDS auth caps to operate. Add client support
-> for quarantine notifications and enforce them on cached access paths.
+> Thank you for your contribution! Sashiko AI review found 2 potential issu=
+e(s) to consider:
+> - [High] ceph: epoch self-invalidation in ceph_quarantine_reply_can_clear=
+()
+> - [High] ceph: __ceph_remove_cap() resets quarantine mark during cap migr=
+ation
+> --
 >
-> Based on the testing branch of https://github.com/ceph/ceph-client.git,
-> commit ed0502cb11f8 ("ceph: validate encoded xattr name lengths").
-> The full base is recorded below. The dcache and fscrypt prerequisites
-> are included in this five-patch series.
+> commit 8a2e69935d967838e52792bb963b124cfe229b88
+> Author: Alex Markuze <amarkuze@redhat.com>
 >
-> Changes since v5:
-> - Describe the dcache export as a prerequisite and remove Reported-by
->   and Closes tags for it.
-> - Reject foreign, disconnected and unhashed non-root aliases in ancestry
->   walks while accepting the live, unhashed superblock root.
-> - Reset quarantine state only when the lost or reconnecting session is
->   the reporting MDS rank, including when its cap is already absent.
-> - Check saved authorization's generation even when no inode is marked.
-> - Check snapshot path access and acquire normal wanted caps after
->   quarantine authorization.
-> - Clear detached xattr-buffer ownership after releasing its reference.
-> - Use synchronous CREATE for new inodes with an LSM security blob,
->   before async preparation, including before feature negotiation.
-> - Keep an existing quarantine mark across a zero-error IMPORT while
->   processing imported caps and negative quarantine errors normally.
-> - Use the incoming wire cap mask for clear decisions, so PIN-only updates
->   cannot acquire clear authority from capability bits retained in a merge.
-> - Update encrypted-symlink and capability comments to match their
->   interfaces.
+> ceph: record subvolume quarantine from MDS cap updates
 >
-> Validation: GCC x86_64 builds with fscrypt, ACLs and security enabled
-> passed W=1 vmlinux/modules for the final tree and the recording patch.
-> Twenty-six extracted-code quarantine state tests passed, using mocked
-> kernel context. Live cluster, boot, KASAN/lockdep, LSM policy,
-> failover, performance and LKMM validation have not been run.
+> This commit decodes the signed oserrno from MClientCaps v14 messages to
+> record a sticky subvolume quarantine mark and reporting MDS rank on each
+> inode, along with epoch-based caching and RCU parent walks to resolve
+> inherited quarantine state.
 >
-> Previous submission:
-> https://lore.kernel.org/r/cover.1792527529.git.amarkuze@redhat.com/
+> > diff --git a/fs/ceph/caps.c b/fs/ceph/caps.c
+> > index b27bcdc24d29f..b07814d0038cd 100644
+> > --- a/fs/ceph/caps.c
+> > +++ b/fs/ceph/caps.c
 >
-> Alex Markuze (5):
->   dcache: export d_find_alias_rcu() for modular filesystems
->   fscrypt: allow filesystems to disable symlink target caching
->   ceph: add subvolume quarantine wire definitions
->   ceph: record subvolume quarantine from MDS cap updates
->   ceph: fail quarantined subvolume access with EACCES
+> [ ... ]
 >
->  fs/ceph/acl.c                |  33 +-
->  fs/ceph/addr.c               |  72 ++-
->  fs/ceph/caps.c               | 323 +++++++++++-
->  fs/ceph/crypto.c             |   1 +
->  fs/ceph/debugfs.c            |   1 +
->  fs/ceph/dir.c                |  54 +-
->  fs/ceph/file.c               |  82 ++-
->  fs/ceph/inode.c              | 956 ++++++++++++++++++++++++++++++++++-
->  fs/ceph/ioctl.c              |  13 +
->  fs/ceph/mds_client.c         |  26 +-
->  fs/ceph/mds_client.h         |  30 +-
->  fs/ceph/super.c              |   4 +
->  fs/ceph/super.h              | 101 +++-
->  fs/ceph/xattr.c              |  60 ++-
->  fs/crypto/hooks.c            |  28 +-
->  fs/dcache.c                  |   1 +
->  include/linux/ceph/ceph_fs.h |  13 +
->  include/linux/fscrypt.h      |   7 +
->  net/ceph/ceph_common.c       |   2 +
->  19 files changed, 1706 insertions(+), 101 deletions(-)
+> > @@ -1264,6 +1265,11 @@ static void __ceph_remove_cap(struct ceph_inode_=
+info *ci, struct ceph_cap *cap,
+> >
+> >       mdsc =3D ceph_inode_to_fs_client(&ci->netfs.inode)->mdsc;
+> >
+> > +     /* Losing the reporting cap requires fresh MDS revalidation. */
+> > +     if (READ_ONCE(ci->i_qtine_mds) =3D=3D cap->mds &&
+> > +         ceph_quarantine_reset(ci))
+> > +             wake_up_all(&ci->i_cap_wq);
+> > +
+> >       /* remove from inode's cap rbtree, and clear auth cap */
+> >       rb_erase(&cap->ci_node, &ci->i_caps);
+> >       if (ci->i_auth_cap =3D=3D cap)
+> > @@ -3729,6 +3735,9 @@ struct cap_extra_info {
+> >       u8 *fscrypt_auth;
+> >       u32 fscrypt_auth_len;
+> >       u64 fscrypt_file_size;
+> > +     /* MClientCaps v14 oserrno; valid only when oserrno_valid is set =
+*/
+> > +     s32 oserrno;
+> > +     bool oserrno_valid;
+> >  };
+> >
+> >  /*
+> > @@ -3757,6 +3766,46 @@ static int parse_inline_data(void **p, void *end=
+,
+> >       return -EIO;
+> >  }
+> >
+> > +/*
+> > + * Record quarantine state carried by an MClientCaps oserrno.
+> > + * Caller holds i_ceph_lock. Returns true when waiters should be woken
+> > + * because quarantine changed or a pending reset was resolved.
+> > + *
+> > + * -EQUARANTINED refreshes the sticky flag and its reporting MDS rank.
+> > + * A current non-IMPORT grant above PIN with errno 0 clears that rank'=
+s mark.
+> > + * IMPORT may carry a default zero without assessing quarantine permis=
+sion.
+> > + * Another rank needs a successful metadata request for the current ep=
+och.
+> > + * A PIN-only update may zero qtine_errno while leaving the flag set.
+> > + */
+> > +static bool ceph_apply_quarantine(struct ceph_inode_info *ci, int mds,
+> > +                               int newcaps, int oserrno, bool is_impor=
+t)
+> > +{
+> > +     bool was, now, pending;
+> > +
+> > +     was =3D READ_ONCE(ci->i_qtine_errno) =3D=3D -CEPH_EQUARANTINED ||
+> > +           test_bit(CEPH_I_QUARANTINE_BIT, &ci->i_ceph_flags);
+> > +     pending =3D test_bit(CEPH_I_QUARANTINE_PENDING_BIT, &ci->i_ceph_f=
+lags);
+> > +
+> > +     if (!is_import && (newcaps & ~CEPH_CAP_PIN) && was && oserrno =3D=
+=3D 0 &&
+> > +         READ_ONCE(ci->i_qtine_mds) =3D=3D mds)
+> > +             ceph_quarantine_clear(ci);
+> > +
+> > +     if (oserrno =3D=3D -CEPH_EQUARANTINED) {
+> > +             ceph_quarantine_set(ci);
+> > +             WRITE_ONCE(ci->i_qtine_mds, mds);
+> > +     }
 >
+> [Severity: High]
+> When a quarantined inode's capability is migrated between MDS ranks via
+> handle_cap_export() or handle_cap_import(), removing the exporting rank's
+> cap calls ceph_remove_cap() -> __ceph_remove_cap(), which sees
+> ci->i_qtine_mds =3D=3D cap->mds and calls ceph_quarantine_reset(ci).
 >
-> base-commit: ed0502cb11f84fff29f374238e526ae94d9bdfde
+> When handle_cap_grant() then processes the CEPH_CAP_OP_IMPORT message fro=
+m
+> the new authoritative rank with the default oserrno =3D=3D 0,
+> ceph_apply_quarantine() leaves CEPH_I_QUARANTINE_PENDING_BIT set and keep=
+s
+> ci->i_qtine_mds set to the old exporting rank.
 >
+> As a result:
+> 1. ceph_inode_quarantine_direct() returns false and
+>    ceph_quarantine_walk_once() breaks out with CEPH_QWALK_INCOMPLETE inst=
+ead
+>    of reporting the retained quarantine mark as CEPH_Q_UNDER.
+> 2. Subsequent normal CEPH_CAP_OP_GRANT messages (above CEPH_CAP_PIN with
+>    oserrno =3D=3D 0) and CEPH_MSG_CLIENT_QUARANTINE_DISABLE messages from=
+ the
+>    new authoritative rank cannot clear the mark in ceph_apply_quarantine(=
+)
+>    or ceph_handle_quarantine_disable() because ci->i_qtine_mds still hold=
+s
+>    the pre-migration rank.
+>
+> Should capability migration preserve the active mark and transfer
+> ci->i_qtine_mds to the importing rank instead of resetting the mark to
+> pending when the old rank's cap is removed?
+>
+> [ ... ]
+>
+> > diff --git a/fs/ceph/inode.c b/fs/ceph/inode.c
+> > index 94f5215f8eed5..048e0d502eb4e 100644
+> > --- a/fs/ceph/inode.c
+> > +++ b/fs/ceph/inode.c
+>
+> [ ... ]
+>
+> > +static bool ceph_quarantine_reply_can_clear(struct ceph_inode_info *ci=
+,
+> > +                                         struct ceph_mds_session *sess=
+ion)
+> > +{
+> > +     struct ceph_mds_client *mdsc =3D ceph_sb_to_mdsc(ci->netfs.inode.=
+i_sb);
+> > +     struct ceph_mds_request *req;
+> > +     u64 epoch;
+> > +
+> > +     if (READ_ONCE(ci->i_qtine_mds) =3D=3D session->s_mds)
+> > +             return true;
+> > +     /* Different ranks have independent cap sequences. */
+> > +     req =3D ceph_current_mds_request(mdsc->fsc);
+> > +     epoch =3D (u64)atomic64_read_acquire(&mdsc->quarantine_epoch);
+> > +     return req && !(epoch & 1) && req->r_quarantine_epoch =3D=3D epoc=
+h &&
+> > +             !atomic_read(&mdsc->quarantine_splices);
+> > +}
+>
+> [ ... ]
+>
+> > @@ -1407,7 +1873,7 @@ int ceph_fill_inode(struct inode *inode, struct f=
+olio *locked_folio,
+> >       /* were we issued a capability? */
+> >       if (info_caps) {
+> >               if (!ceph_in_snap(inode)) {
+> > -                     ceph_add_cap(inode, session,
+> > +                     bool cap_current =3D ceph_add_cap(inode, session,
+> >                                    le64_to_cpu(info->cap.cap_id),
+> >                                    info_caps,
+> >                                    le32_to_cpu(info->cap.wanted),
+> > @@ -1416,6 +1882,14 @@ int ceph_fill_inode(struct inode *inode, struct =
+folio *locked_folio,
+> >                                    le64_to_cpu(info->cap.realm),
+> >                                    info->cap.flags, &new_cap);
+> >
+> > +                     /*
+> > +                      * Caps above PIN mean quarantine has been lifted=
+,
+> > +                      * including when the disable message was lost.
+> > +                      */
+> > +                     if (cap_current && (info_caps & ~CEPH_CAP_PIN) &&
+> > +                         ceph_quarantine_reply_can_clear(ci, session))
+> > +                             ceph_quarantine_clear(ci);
+>
+> [Severity: High]
+> Can ceph_quarantine_reply_can_clear() fail to clear quarantine on target
+> inodes and readdir entries when the reply comes from a rank different fro=
+m
+> ci->i_qtine_mds because reply processing itself increments
+> mdsc->quarantine_epoch?
+>
+> req->r_quarantine_epoch is sampled once in ceph_mdsc_create_request() and
+> never updated:
+>
+>   req->r_quarantine_epoch =3D atomic64_read_acquire(&mdsc->quarantine_epo=
+ch);
+>
+> During reply handling, ceph_fill_trace() processes parent_dir before
+> req->r_target_inode:
+>
+>   ceph_fill_trace()
+>     if (parent_dir)
+>       ceph_fill_inode(parent_dir, ...)
+>         ceph_quarantine_clear(ci) -> advances mdsc->quarantine_epoch by 2
+>     ...
+>     if (rinfo->head->is_target)
+>       ceph_fill_inode(in, ...)
+>         ceph_quarantine_reply_can_clear(ci, session)
+>
+> If both parent_dir and req->r_target_inode had CEPH_I_QUARANTINE_BIT set =
+on
+> another rank, clearing parent_dir increments mdsc->quarantine_epoch by 2.
+> When ceph_fill_inode() then runs for req->r_target_inode,
+> req->r_quarantine_epoch =3D=3D epoch is false, leaving the target inode's
+> quarantine mark set.
+>
+> The same self-invalidation happens in handle_reply() ->
+> ceph_readdir_prepopulate(), where each entry in the loop calls
+> ceph_fill_inode() and splice_dentry() (which calls
+> ceph_quarantine_splice_start() and ceph_quarantine_splice_finish(),
+> advancing mdsc->quarantine_epoch by 4), preventing
+> ceph_quarantine_reply_can_clear() from succeeding on subsequent entries i=
+n
+> the same readdir reply.
+>
+> In addition, any unrelated dentry splice or cross-directory rename on the
+> superblock while the MDS request is in flight (or sampling an odd
+> mdsc->quarantine_epoch in ceph_mdsc_create_request()) will cause
+> req->r_quarantine_epoch =3D=3D epoch to fail even when no new quarantine =
+mark was
+> set.
+>
+> --
+> Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/cover.20261025T18=
+2649Z.ca9ae7a18449.git.amarkuze@redhat.com?part=3D4
