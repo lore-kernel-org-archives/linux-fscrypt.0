@@ -1,111 +1,111 @@
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=148.163.135.74
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1793564190;
-	b=jf+ZIw735yWstT0+NzYORmKszHJ1XYhGyL05UalrKW83aGXWP0wmRGorhLdu42rRQ6cx
-	 gX+sI6WrSABxFJf7PBv1sR1C4711t6yLEXqm5NmmkuPurn89uCLbhncaBOCWlde1nhz8f
-	 TrqEym8qTiFNGuJW9i1LXr3z2Cad/GD4FHcRmLzXp0rMrsF/Df0mtIq2ZqEuWvElIpF+3
-	 xDf0wqvNr/nk8/uuEfxcj5gGjGoPhQyePbqpl1Osp/61thuDcDiMetz8XVADMGn8wjFWf
-	 knt/PA3xkVfv6IeToNp/XioIiDwktgLgA6VSSOtSBVmkD7anBTqa6/RLrHIEvRs/4Ag==
+	t=1793564191;
+	b=M7ERrlTI3viVzsayVXwS9ocJYDKit4feLcZ4M1jwUag+/G7brBNlx796RNcDgJ9s6Vcx
+	 GevskcDpt7VY3P3BbDytlhZTJ8wmGuIE40NrgwBXXr8xj9Cqxmg2RDejfq4ZSIZFi2Yzo
+	 eXWgaUk3KDpZfAeiZZ9vIl9RcKfleaE0A4zsV5mgApjFpzZtIugSkEmVAqLJOZ54l8OUy
+	 KlhELc4v6TiChxAOKmDnYqUbkuVkns2VOJ7M9tcvvh66CdtbBg8+yZvMpJS9usxPLAfhx
+	 oqfOXys25BSyJtdiGYrSr0ruwiFneG8ylisel/O1WKQnGEbfOc1nnHV/dHkM9lew+bQ==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1793564190;
+	a=rsa-sha256; c=relaxed/relaxed; t=1793564191;
 	h=DMARC-Filter:Received:DKIM-Signature:Received:Received:
 	 DKIM-Signature:X-Google-DKIM-Signature:X-Forwarded-Encrypted:
 	 X-Gm-Message-State:X-Gm-Gg:X-Received:X-Received:Received:From:Date:
 	 Subject:MIME-Version:Content-Type:Content-Transfer-Encoding:
 	 Message-Id:References:In-Reply-To:To:Cc:X-Mailer:
-	 X-Developer-Signature:X-Developer-Key:X-Proofpoint-GUID:
-	 X-Proofpoint-Spam-Info:X-Proofpoint-ORIG-GUID:
-	 X-Proofpoint-Spam-Details-Enc:X-Authority-Analysis:
-	 X-Proofpoint-Virus-Version:X-Proofpoint-Spam-Details;
-	bh=BtqvH3vjepU6l8Kv/btHJpUB6/evyy2CtbBRVPfKP2g=;
-	b=odAoKhTK6ZAOOSBtZpf6WtkK+wo1jRB8AkSuVknda2kHKnztqXyqxPWbuJJvIrVliTrR
-	 zEnR8xizi/BJllOn1d6GTdZ/D/9w3hrbB4er27dZga2PHQMaHo+uUBt1rsggzJgwSpBsK
-	 QxK9gVIppZl8W1/P1B4jHkX9WAgg3aUn/V2beh3Ma3m7Xfpd3fOQOYS6dbwpfHZDC8ZZM
-	 tEUh9C1sILM72LLpIfByft8ihsSMFrzA/CB368vD9SVJ0kc0telr7OtvX5MuOecz2cQ5V
-	 jxrMXvyNQ74NjlUgGGhIStvCqNx54x7ukOWNzl/biQqD9f3sWd3GrcI2d65oUpPVGBA==
+	 X-Developer-Signature:X-Developer-Key:X-Proofpoint-ORIG-GUID:
+	 X-Proofpoint-Spam-Info:X-Proofpoint-GUID:X-Authority-Analysis:
+	 X-Proofpoint-Spam-Details-Enc:X-Proofpoint-Virus-Version:
+	 X-Proofpoint-Spam-Details;
+	bh=BqTXqaIxt0sZIdIo6UKmgjkLMbcGDQb8Vj6tAnCQxek=;
+	b=XWbzFax6RCqWbdW4f+qHM7GjcI3+6jIkRzE3yim4D9cb65HH50ub6YcfbyD+0ptOhmg+
+	 9SftglDxoWshffEj491f723PMiXAkWu10i8TWVLZ4upi4lZXx6JoP82ue2WIAkrjxDoE3
+	 qZ00GniuIS/03ZYgYIhEJB/0IP6WVEj7M5+bmiyBIiHjBumBAZ/yAj0jqhJM7UjphoOnY
+	 myzO2pLVPP4+fdNEXAj00CGBrMnf92PYmtwJdqOsvYuLseQ2pMFnaTAMpWKuypC3A6lb4
+	 qorXSj+y/by3hcBLYzFb4lbYPrCeOcSYuTUX7IlnMNvu8h+xqprK0ucxHinyl975u1g==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
 	dmarc=pass header.from=columbia.edu;
 	spf=pass smtp.mailfrom=columbia.edu;
-	dkim=pass header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=pps01 header.b="BOTP6sX/";
-	dkim=pass header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=lionmail header.b=DKuIAHzK;
+	dkim=pass header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=pps01 header.b=TJG64jdv;
+	dkim=pass header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=lionmail header.b=YpdMkAvW;
 	arc=none smtp.remote-ip=148.163.135.74
 Received: from mx0a-00364e01.pphosted.com (mx0a-00364e01.pphosted.com [148.163.135.74])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 9A37D606A327
-	for <linux-fscrypt@vger.kernel.org>; Sun,  1 Nov 2026 20:16:29 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 9A37D606A327
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3BD5B606A32D
+	for <linux-fscrypt@vger.kernel.org>; Sun,  1 Nov 2026 20:16:31 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 3BD5B606A32D
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=columbia.edu
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=columbia.edu
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key, unprotected) header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=pps01 header.b=BOTP6sX/;
-	dkim=pass (2048-bit key, unprotected) header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=lionmail header.b=DKuIAHzK
-Received: from pps.filterd (m0167068.ppops.net [127.0.0.1])
-	by mx0a-00364e01.pphosted.com (8.18.1.11/8.18.1.11) with ESMTP id 6A1ESOAS3608610
-	for <linux-fscrypt@vger.kernel.org>; Sun, 1 Nov 2026 15:16:29 -0500
+	dkim=pass (2048-bit key, unprotected) header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=pps01 header.b=TJG64jdv;
+	dkim=pass (2048-bit key, unprotected) header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=lionmail header.b=YpdMkAvW
+Received: from pps.filterd (m0167072.ppops.net [127.0.0.1])
+	by mx0a-00364e01.pphosted.com (8.18.1.11/8.18.1.11) with ESMTP id 6A1GOUtw2275007
+	for <linux-fscrypt@vger.kernel.org>; Sun, 1 Nov 2026 15:16:30 -0500
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=columbia.edu; h=
 	cc:content-transfer-encoding:content-type:date:from:in-reply-to
-	:message-id:mime-version:references:subject:to; s=pps01; bh=Btqv
-	H3vjepU6l8Kv/btHJpUB6/evyy2CtbBRVPfKP2g=; b=BOTP6sX/PA1KGMzNmpuj
-	GA2x+BC6ZMwFxS5xglAmXbYWr/bJlTE5WAVQjiVB25TU0ySljkagQW6hjtyb69TI
-	A2jtVV9bHmm851HLuUlE7y6ABcJ8SjzbKPxws6UcqklSqdkRqqz+pkVNSiQqZlRf
-	etPckgxXVKmGU0hL4GUZ2aejLMKe1A88R8kxAzoc1M/TZbmK1x3pZaZ3Ou5mHX9f
-	rwbFLfvJHNaYAmaraiVkSQ0TmDoEosBTkG+1Sk5mADjAku9Up2Aq5uCrTrZyCIOW
-	P0O8YMygDnV16oy6TqganDPB8NuiiRfLwdfMbmy+HhEC3BJKgGKufEzaaQrFQhWl
-	RA==
-Received: from mail-vk1-f197.google.com (mail-vk1-f197.google.com [209.85.221.197])
-	by mx0a-00364e01.pphosted.com (PPS) with ESMTPS id 4hp77fhm23-1
+	:message-id:mime-version:references:subject:to; s=pps01; bh=BqTX
+	qaIxt0sZIdIo6UKmgjkLMbcGDQb8Vj6tAnCQxek=; b=TJG64jdvVFfZcvxcctU+
+	Eks2NAQ4Ak6/S12o0lVe0S6I8BOT8+fgifY4zlFiNb62u00yxwXiCetjKEcO2YLk
+	UpkEXUyaS7nicbe/fvUUYzZz1ury4X2Lf6scvZJ/9wRzbX5IEX7czXTDzjaE7fzh
+	ScmGjD71fxSRFDlYQUj+V6cvUaHwDpQ9gbD0G8+FqmLikYqHDEzMpT6LKzKO6nOq
+	NL0Zk6yBNYIX/3DGrDO9+/d7VcEQZpRnsqnUPMUgmSGhoRZVP1cPbjCA9ip1EQR8
+	zzVAocsbjHjSL7rRwvRd/8xR2bP6zQsTgY+krrMaGZ+Z3cGUzpFTx5uZrJVy7tlf
+	aQ==
+Received: from mail-vs1-f69.google.com (mail-vs1-f69.google.com [209.85.217.69])
+	by mx0a-00364e01.pphosted.com (PPS) with ESMTPS id 4hp8wxs17k-1
 	(version=TLSv1.3 cipher=TLS_AES_128_GCM_SHA256 bits=128 verify=NOT)
-	for <linux-fscrypt@vger.kernel.org>; Sun, 01 Nov 2026 15:16:28 -0500 (EST)
-Received: by mail-vk1-f197.google.com with SMTP id 71dfb90a1353d-5eaad995a7eso570248e0c.3
-        for <linux-fscrypt@vger.kernel.org>; Sun, 01 Nov 2026 12:16:28 -0800 (PST)
+	for <linux-fscrypt@vger.kernel.org>; Sun, 01 Nov 2026 15:16:30 -0500 (EST)
+Received: by mail-vs1-f69.google.com with SMTP id ada2fe7eead31-7c0bad5ec1cso605694137.1
+        for <linux-fscrypt@vger.kernel.org>; Sun, 01 Nov 2026 12:16:30 -0800 (PST)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=columbia.edu; s=lionmail; t=1793564187; x=1794168987; darn=vger.kernel.org;
+        d=columbia.edu; s=lionmail; t=1793564189; x=1794168989; darn=vger.kernel.org;
         h=cc:to:in-reply-to:references:message-id:content-transfer-encoding
          :content-type:mime-version:subject:date:from:from:to:cc:subject:date
          :message-id:reply-to:content-type;
-        bh=BtqvH3vjepU6l8Kv/btHJpUB6/evyy2CtbBRVPfKP2g=;
-        b=DKuIAHzKARzeprpqHeJ7BbvEloeJDiVMWpiA2qxqL0MlhLQnb+PX2qYMccKC8U0gSN
-         RBJ2o/ysQu6l7IBFGQbUSSttxE+VJvqb2epClRSETJVc2jtMZst5OO2QbrubaRkdOFxM
-         6Yzo5SgI/TqxkyjE/NakWTHP2uLk8GtoeUHpjQu1LqK7oFhL6NNBcGeMPQ0HnUkr4Rbn
-         gsk73N7PLw2LIPHnT6Ha/HZcnTZPXgFBcE4I8F+o8AjOtD+8SJ/QCihB5buQpBgLNvXD
-         zeQ/EJ2Bd9cSAJ+UaOlOpEU3GypslI1tlkCNWiXuqndhNfjo1AL4d3WjCspJ2qtiGV1+
-         VDxg==
+        bh=BqTXqaIxt0sZIdIo6UKmgjkLMbcGDQb8Vj6tAnCQxek=;
+        b=YpdMkAvWTJMPJ2txdznmb+h5yx9f22LGssPYaV8uOMkLkmV6aO5FAaLq1wG/sd7oCP
+         x+DQHqEb8e6qfc6SKHIlj62ZbdmNpctUitUi/pJryu1+R6y/pwzDWbPiPIjkO32ruwri
+         rFzFd3S1mRcs5D0R8V4par6Aam03bFNQZD21ILFWwZc1noSv0Yj3A4c8g50v0+TXfkER
+         hr6QtQVHlooN5u2AN+OJXuK7Ss+/+rxhsX2JREBf/GwyDuTMSKJMlluw/uyW+rMYxOQR
+         F9x4vJoebVXk+iLlMyO67BtnPDAlwnS3I/b8p7xbb/cICFcEeFzl/1cimeCxOejppa6H
+         IcbQ==
 X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20260707; t=1793564187; x=1794168987;
+        d=1e100.net; s=20260707; t=1793564189; x=1794168989;
         h=cc:to:in-reply-to:references:message-id:content-transfer-encoding
          :content-type:mime-version:subject:date:from:x-gm-gg
          :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to
          :content-type;
-        bh=BtqvH3vjepU6l8Kv/btHJpUB6/evyy2CtbBRVPfKP2g=;
-        b=aROuQ2yGkWs9ZymZYbmYVuAadlovsLrgUVaDL5pWQf2vriVPo8SSgu4L0Vf9h1U4JA
-         E2cmFH6c+WJmQsehzj9D+L3Pz8UHVAv/wLZ86nVrOK+jXmUjOlxLRO4kT7Dhe2MEaVUu
-         nstAktpVeGnsK05yNyvuRvNwXboKxN1q23JkpANpAycoGwBbIf+15BJc2IDeNZpORS3X
-         b+AqoGJQnCJSX//2uec2x+PcRss9+wF8TjIutNgkU2i1hujemoZHdMyLn+Btmw/qBGhv
-         NR4oCvSYntbQ3EHsMrz+RHNBjOuWMbdQDn5vfWUQMzH9F68v3R8f2r4A2ObVg98wNmjN
-         1F7g==
-X-Forwarded-Encrypted: i=1; AKwUvBygsShX0zEJs2xp3W18jBSWaW4MoYYifSKujcQSx9PUco9zPlsDe3AtxYCUcw3FEOWWE/qDfCIy5IOxXtUZ@vger.kernel.org
-X-Gm-Message-State: APuU4Z99qOZgBcj92WKDRlNmNDNPsHi5bxi+X/ekUNfI9rOKi762hJWW
-	iEUCqBXuamPGTyvLEDsszf3Ii7DMP11zxxPyBxTXNSxt9qarX667t93fHJPulCGHfaS15owIDg4
-	SzAxUdtSaBQrA29mMQpmPFIdJ8kMU6roRu5myH5NWTJwkKhBtdAaQy+S1UKRiVpw=
-X-Gm-Gg: AYBFou0vvfG9LlcuuSp4gU+FtWBCYHvChu/eGX32bWlwiikoNdy/x7NzMosPVpiyQSt
-	URX8dOK0FhNyRVxWL3NKRNq05TyH7ARHxI79R93E7JW41+IwxuRP3w6XHQYKBP9q03wcdfw+twf
-	Wb3mwXWrShgzeHgR7GXLsRPo/7xTwRqE84pgw4AHaTZVElxw6MEsVEjEJFxAayf7rEqNszIoAq5
-	k5hmd2e23zX+mfoTnKx8H5nXkq45c2UipHM81xp9IWRExYV62A6pSYAnSHUOZkqWVZFvGBOojU1
-	6+YRku25srUDPRHIvidgyh03jd+X/f4MNIT+S95ghezTyQf074O4tMwEuhBBMM0/nFFrziGMNSM
-	pLvNaq4JanxsYgOcpJuV+iDSBTwb+O1+x7CavembyTFZmpenHDFXtO2eOg5k=
-X-Received: by 2002:a05:6102:549e:b0:7a7:196a:84ea with SMTP id ada2fe7eead31-7d072719b19mr3163947137.34.1793564187641;
-        Sun, 01 Nov 2026 12:16:27 -0800 (PST)
-X-Received: by 2002:a05:6102:549e:b0:7a7:196a:84ea with SMTP id ada2fe7eead31-7d072719b19mr3163939137.34.1793564187191;
-        Sun, 01 Nov 2026 12:16:27 -0800 (PST)
+        bh=BqTXqaIxt0sZIdIo6UKmgjkLMbcGDQb8Vj6tAnCQxek=;
+        b=NSlBkshK1h/NIitemawgoZeJWwP8yFCcncge2EAK70gPCRxS0SBUdtI4YhiykyLrLH
+         BhTXJhBYk1amRjP8X1CXfXA63GlgcUFw/aeWsWqfsWK0yl2beRjJRPusGMbizOadcoss
+         L8IGfFAHBGNKfTBYkUNPsNwgQZsht6b5wyxhe2Rrh/98uucFI0Nyh/Ng8R2lgMVgz2V1
+         cSFOTi5FSgOLXFlkrfpPpHmJTK2A7xSy3lxScH5ALK6uu5TBwfenh0hMB4Iv2TnzC+s+
+         //CbAHN8S/TydoL/AEVhP27HU8SFwU3CFIEnhJivz6Z4mZbr6t216zUtChzMz1xCw/gr
+         yhpA==
+X-Forwarded-Encrypted: i=1; AKwUvBzw3y3AuKGPlb8cnYu3cVix7ygz6vD+atA/Sf69az6UJxMog+11VZTVdSqy9JaZt38xAazXzIdl2HOPFKYV@vger.kernel.org
+X-Gm-Message-State: APuU4Z9xTUj2wBIqFiM+bpLyODyVF/FzBVc6yWiceXDDde+QxqP6/Ceg
+	ztl7cxCAVrU679yZdDzkDkyMoskNP4RInhmQZugSLmSjzcEPoC5B15FXSb2sUWVku9Rne41FbSV
+	3evi0OTE4DL/1r/8ljGOEUE8jQgklmIxnmhCg7fbNCwIHFlYg714ieaAlyHMyK6g=
+X-Gm-Gg: AYBFou3yOtsVhiVgGWNjAVxNUhvu6PhkKsWBrXYNxniBLEptEHk2DoWPvEvjp3NQJDq
+	uqSRkujy0QEzoqdTHZQwmSqVmVtfz222uzh5EzVFeW8iW/F7qTwAZHKJlV86SkSOCR3fbSXD+aZ
+	nt8zfMwQeigZL31YSw1kG8OX9+mZgMsLfo03FWAjSZfW6B3Fo2QRWzza4sBV24VJOx82S8/FrGn
+	yXzqNZ1VyPppWE0AN9ySpaODzC839C6LIeGnX1/UPhKTtc1g+96wZAiHZEAOnTtfEyR/wSziY2q
+	RP8ZXV66eaiJdOTjtwBiKFieH7d35Fxw1LJ08NmBUQHBieN8O9JvCCaMGz4mSPphvgvfKRaYyje
+	Xfah4gAub3GLVDmSmdF2xihDtmdiC9Xojpw3uHOB96qUAIGY6r182RB85wJI=
+X-Received: by 2002:a05:6102:3ec5:b0:7cc:2bb7:131d with SMTP id ada2fe7eead31-7d072baa484mr2927964137.9.1793564189539;
+        Sun, 01 Nov 2026 12:16:29 -0800 (PST)
+X-Received: by 2002:a05:6102:3ec5:b0:7cc:2bb7:131d with SMTP id ada2fe7eead31-7d072baa484mr2927962137.9.1793564189082;
+        Sun, 01 Nov 2026 12:16:29 -0800 (PST)
 Received: from [127.0.1.1] ([37.142.157.119])
-        by smtp.gmail.com with ESMTPSA id ffacd0b85a97d-48e71b78a4csm15661423f8f.23.2026.11.01.12.16.24
+        by smtp.gmail.com with ESMTPSA id ffacd0b85a97d-48e71b78a4csm15661423f8f.23.2026.11.01.12.16.27
         (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Sun, 01 Nov 2026 12:16:26 -0800 (PST)
+        Sun, 01 Nov 2026 12:16:28 -0800 (PST)
 From: Tal Zussman <tz2294@columbia.edu>
-Date: Sun, 01 Nov 2026 15:16:13 -0500
-Subject: [PATCH 1/2] fscrypt: remove fscrypt_pagecache_page()
+Date: Sun, 01 Nov 2026 15:16:14 -0500
+Subject: [PATCH 2/2] fscrypt: remove fscrypt_is_bounce_page()
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -117,7 +117,7 @@ Precedence: list
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 7bit
-Message-Id: <20261101-fscrypt-page-helpers-v1-1-bcfbfaf6a237@columbia.edu>
+Message-Id: <20261101-fscrypt-page-helpers-v1-2-bcfbfaf6a237@columbia.edu>
 References: <20261101-fscrypt-page-helpers-v1-0-bcfbfaf6a237@columbia.edu>
 In-Reply-To: <20261101-fscrypt-page-helpers-v1-0-bcfbfaf6a237@columbia.edu>
 To: Eric Biggers <ebiggers@kernel.org>, "Theodore Y. Ts'o" <tytso@mit.edu>,
@@ -126,72 +126,71 @@ Cc: "Matthew Wilcox (Oracle)" <willy@infradead.org>,
         linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
         Tal Zussman <tz2294@columbia.edu>
 X-Mailer: b4 0.17-dev
-X-Developer-Signature: v=1; a=ed25519-sha256; t=1793564181; l=1135;
+X-Developer-Signature: v=1; a=ed25519-sha256; t=1793564181; l=1123;
  i=tz2294@columbia.edu; s=20250528; h=from:subject:message-id;
- bh=j0hglxfyXQKr4eI/+mHHcYxjY14CPbJUF3O9KwDO6K4=;
- b=c4dstX3JRXxdB6ucCvo+OW3XPyEFk8X21W409qAFvQSDcMAN2YAqAMtnHoOSQjwrnwNU0mR0Z
- n6Lq7+BaLbEChSq9oA6w8DgvOHtoEaAtWbYw2K89wsCYwQD4tGXIeLm
+ bh=FuaDbBzgAylLyOkBuu6fOUJHcXnEh9zDTWNhiRskaFA=;
+ b=2cJwYDDDrxsrDKPoMFODyRhRItzplz+Yx9oEv+a8snVPKzI6TGsnhK1uqKmGbTwaZaAyFWvNG
+ fIH82I14oOhAlPB4WGMiCOPGIpva2qkQtCcvMk/ZCD4PfO/iwJv4xUi
 X-Developer-Key: i=tz2294@columbia.edu; a=ed25519;
  pk=BIj5KdACscEOyAC0oIkeZqLB3L94fzBnDccEooxeM5Y=
-X-Proofpoint-GUID: ORCyEESzapzne5nkJMbvfPxOJDO2QYKZ
-X-Proofpoint-Spam-Info: AW1haW4tMjYxMTAxMDA4MCBTYWx0ZWRfX9UNMHBrQUoii
- Du6Ru+EtuOrTlCYGjfOGgHbBqgD69caXzzlYLZGWRpZLZ1ACxHDBB8X2dvQyj4uoIPO+IsX7Mab
- KaM1tcB6bWUnUGM+6UxyW7TSKAWapGgPoaQv3kccZXLzz82cNlMS
-X-Proofpoint-ORIG-GUID: ORCyEESzapzne5nkJMbvfPxOJDO2QYKZ
-X-Proofpoint-Spam-Details-Enc: AW1haW4tMjYxMTAxMDA4MCBTYWx0ZWRfX4gjkZWwCIabi
- rWpNhUzavPkuVHrERLuf4T+B7z8wENxukoEvYFrUV5Yd8J3cZrxyW9A2b5WLh39+u4t20snzA1y
- xvVZn7+/zit0KQ3YfjRwCmxuzWjulTg+i/O3VT1n3G7z/TPabAMDOwWERNTh604dNirQdRXzvfo
- zdRmkR7yW0bqCQHm+vD7fVCtPWAW92sGl8j/oqwilAhqOZ7b1qX0wvmMbrJWi7uy6Dns0Q2X+xz
- FqtfoXmEI/lh3J/e+QKiGrJXcQZBrMNE44IyKROT0uGl997ChxTACGjj45kNfIKLWFQUeNNHyJT
- p1dswlSCw7XThxWTOVAmzG31T9IVWi8cq+8JFNeDY18ta7VYZuDXS0tIV/Gjt0wChfLvH31jhZB
- rgHYxCf4+p7INrkBnvUusf49yIQiC7cYZKdi/SN+0iZYi5ZFrR82WrcZaXYE0DFvIlmauvNA/7R
- 295zc3jyPlN95DZ3gTw==
-X-Authority-Analysis: v=2.4 cv=OLOyTiaB c=1 sm=1 tr=0 ts=6ae79e1c cx=c_pps
- a=JIY1xp/sjQ9K5JH4t62bdg==:117 a=Qz3frfIdACK70Hl/8c7MJg==:17
+X-Proofpoint-ORIG-GUID: lmNv_uk1Jfb9SdrI4Qi62oQViZODGFvT
+X-Proofpoint-Spam-Info: AW1haW4tMjYxMTAxMDA4MCBTYWx0ZWRfX/uqxZqOYmVNx
+ B/p0GCcQmPuMiK7r9rfZT3DIs4tfTRoBlCM7QRnMKIkN9sKwSWqNMHaGN+8Qz3WSD9O+d0gMqHt
+ mz6CnL7xtxrNt/d8IMj5PyP94uvk0Hj9xCjieVcSQNAGcnBqqYB4
+X-Proofpoint-GUID: lmNv_uk1Jfb9SdrI4Qi62oQViZODGFvT
+X-Authority-Analysis: v=2.4 cv=TpZzFzXh c=1 sm=1 tr=0 ts=6ae79e1e cx=c_pps
+ a=5HAIKLe1ejAbszaTRHs9Ug==:117 a=Qz3frfIdACK70Hl/8c7MJg==:17
  a=IkcTkHD0fZMA:10 a=zJRp6_cAMcgA:10 a=x7bEGLp0ZPQA:10 a=A0y_DWxS2BwA:10
- a=VkNPw1HP01LnGYTKEx00:22 a=Da8U98TiO7q1upZEImrf:22 a=usPcmh10W0ubT8QP8_c3:22
- a=JcHXAtbk2vn7OX0MrtcA:9 a=QEXdDO2ut3YA:10 a=tNoRWFLymzeba-QzToBc:22
+ a=VkNPw1HP01LnGYTKEx00:22 a=Da8U98TiO7q1upZEImrf:22 a=SsB-OO3BMngHh3ZO9fOt:22
+ a=slkTkWUpcQ_TrhisGP8A:9 a=QEXdDO2ut3YA:10 a=gYDTvv6II1OnSo0itH1n:22
+X-Proofpoint-Spam-Details-Enc: AW1haW4tMjYxMTAxMDA4MCBTYWx0ZWRfX3lyH8DMXkYFZ
+ n1P2UjCs0smSQPw0ysY9VVOCuU2x2htyqGdY/1Qv70N95+n/7aYhLuWDxZ8C7Ak4GntBt5YzBV+
+ +wDhgxro2hNy5d4Ozif3oiCENYl84a8h28pOwfFuYdedPuvLMmuRkgU6TLCUNCRtnnBYCNwJEvD
+ zxzB100MapH3GT84MwUUh4ldVe105FZ3ei40f9SXFZv9dLuyjc+o+aqbKYtzOWmjjYD3rO5Np+1
+ px9i4GQNnNul2ILADMkKXHr7ZiaZbiyRN2mub7bo2lfbURdwmOWEf8p7cEJpKzzIvnv4ex2aLFP
+ QsVSUqpNm4HUC4D4n/U1QOQmLaGraICvb55+1x8DAMy+huxatpnsviWJfCGpw7MS0E8cIv+KQVD
+ p/OStnYjNUUu7PUePevPAauagivuFWkNPJzt4mBJAnaV+3vWZuztLP3eP3/Tl7gKlUszB/gTd8M
+ ZiF1jUqDVoo2Ds854mQ==
 X-Proofpoint-Virus-Version: vendor=nai engine=6900 definitions=11953
  signatures=596817
 X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0
- priorityscore=1501 phishscore=0 malwarescore=0 lowpriorityscore=10
- adultscore=0 clxscore=1011 bulkscore=10 impostorscore=10 spamscore=0
- suspectscore=0 classifier=typeunknown authscore=0 authtc= authcc=
+ suspectscore=0 spamscore=0 phishscore=0 clxscore=1015 malwarescore=0
+ priorityscore=1501 lowpriorityscore=10 impostorscore=10 bulkscore=10
+ adultscore=0 classifier=typeunknown authscore=0 authtc= authcc=
  route=outbound adjust=0 reason=mlx scancount=1 engine=8.22.0-2610300000
  definitions=main-2611010080
 
-fscrypt_pagecache_page() no longer has any callers, so remove it. This
-removes a use of page_private().
+fscrypt_is_bounce_page() no longer has any callers, so remove it. This
+removes a use of page->mapping.
 
 Signed-off-by: Tal Zussman <tz2294@columbia.edu>
 ---
- include/linux/fscrypt.h | 11 -----------
- 1 file changed, 11 deletions(-)
+ include/linux/fscrypt.h | 10 ----------
+ 1 file changed, 10 deletions(-)
 
 diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index 28f2108e29f3..e70f630fab0c 100644
+index e70f630fab0c..3a238bebbdf1 100644
 --- a/include/linux/fscrypt.h
 +++ b/include/linux/fscrypt.h
-@@ -361,11 +361,6 @@ static inline bool fscrypt_is_bounce_page(struct page *page)
- 	return page->mapping == NULL;
- }
+@@ -356,11 +356,6 @@ int fscrypt_decrypt_block_inplace(const struct inode *inode, struct page *page,
+ 				  unsigned int len, unsigned int offs,
+ 				  u64 lblk_num);
  
--static inline struct page *fscrypt_pagecache_page(struct page *bounce_page)
+-static inline bool fscrypt_is_bounce_page(struct page *page)
 -{
--	return (struct page *)page_private(bounce_page);
+-	return page->mapping == NULL;
 -}
 -
  static inline bool fscrypt_is_bounce_folio(const struct folio *folio)
  {
  	return folio->mapping == NULL;
-@@ -532,12 +527,6 @@ static inline bool fscrypt_is_bounce_page(struct page *page)
- 	return false;
+@@ -522,11 +517,6 @@ static inline int fscrypt_decrypt_block_inplace(const struct inode *inode,
+ 	return -EOPNOTSUPP;
  }
  
--static inline struct page *fscrypt_pagecache_page(struct page *bounce_page)
+-static inline bool fscrypt_is_bounce_page(struct page *page)
 -{
--	WARN_ON_ONCE(1);
--	return ERR_PTR(-EINVAL);
+-	return false;
 -}
 -
  static inline bool fscrypt_is_bounce_folio(const struct folio *folio)
