@@ -1,63 +1,57 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.119
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1793719928;
-	b=bUzDWKRpTfRYBuX5UoJSMqNi3ncj9Xc83grBULibOMBKAVsGQ6klF9jiVbAJ2qViaEx0
-	 BK+3Uvbd/fakbpaCEAjmxqFqxnCHdJ+EOHwFz9l5ZyK6pKkn5YlysH7AaRA7ZBHYO+6OD
-	 AX4rWx1r9wERBQn8lp5fyz/ZWuQ9M7M5DUySID7RTbspm5oJT96DxbBQjRvEo9TsOcUCj
-	 0ib5/pCUxiMeYt4DueIAtscEMZSaZrhdwH/a9Jk0DDzeF1hsoUP8ziV8+qZXMS8A3QgKX
-	 7vyqE/QR6NGgNJLQNU/Y+bzI/JmXJ2oH82appB1c+3XL1rgSjInY31ajbApOexugTgA==
+	t=1793720744;
+	b=JK+Mrxo4vxOSbeUkC60h9i1Aa7u0MVE+5BgZ5ITECBIANK6FPkW9NISDTG3OUbuLsoJh
+	 QhOa46q4LHfEN8bg0/cd0v2G0jjhAK+1lcIMtsQX22bs/CnmNfUblybGW6Aq3ST5rKzhy
+	 8DsrWTtjk9MLL95DItElcvMZ02OS36rgLd5uljxqMb3Sc6lhWMLJ/N+2HPKufCTAtokPj
+	 a5HflCCsmPLhCK8bjuvgbswqNCqYa6hWvX7u5BJd5nN3CfsN98MhSYddrmb/ukW0ZkPyf
+	 k2gn+dgYrgpZJKoDI14D0iPyYGaB7VZ8IK2Ri8vrIJcrdwYuaFbakD1v4i5fHccm1Bg==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1793719928;
-	h=DMARC-Filter:DKIM-Signature:X-Alimail-AntiSpam:Received:From:To:Cc:
-	 Subject:Date:Message-ID:X-Mailer:MIME-Version:
-	 Content-Transfer-Encoding;
-	bh=HmCkZORht9awkKXevmoWlUgHYW61U//k8/StSQKTvUw=;
-	b=J7/vFRacd2o/TZpWVhWZk7id5dRpEggY77Hq/El2MzdKNK6WMTycn232r97chQQrOHws
-	 uyIE6vbvgn3mI7VTyjhTDAAwTOjykc+z8A4ZwK0Wh0TMhgWWgxBphbKtow/8RiqLgpRSL
-	 kJCA4iHyAVYQGMtISdK4WAT+KO3mzxU6VPJaeM69DNuwVLoQQrhz8r0/2CJY1E8NNPLYZ
-	 9FQOig4nxnniiN/vkmJX1P9Fo2M1YrOED9fH1QS3WzqqMYN+GFLr8Q7GYA1bFZl+IJHH/
-	 lD/FfxmKBoJw7vZszumNADCYpxJZS7E/Qy41lbwh5cocvdxVLqRUlqj1Fa9ENhym3HQ==
+	a=rsa-sha256; c=relaxed/relaxed; t=1793720744;
+	h=Received:DKIM-Signature:Message-ID:From:Subject:Reply-To:To:Cc:
+	 In-Reply-To:References:Content-Type:Content-Transfer-Encoding:Date;
+	bh=O+VIe5Sva4ZfVt7FvpSwqSi7jWwmAVD5CxLUb/JvQHc=;
+	b=ZR9R4mQSwoC2it7v4T7yzr04JLy+Zy/I4tio+cybnl6g+WrIFo24glInCU9dA//saWKR
+	 opgAPQN+uoHU2RZX/iHr8CvAC4RLxYmXfcB8BwqM7yHRXa94G1Rv2mIweECWqhHrRhK8E
+	 iO/tAwlULaamj5OfHQwNpykvc8lRJMAO2UW9lsDg1pLQ9e/xRYXPCTXiFvi4i8V5bXNOw
+	 PzAtFCaXAgsCcboLxoASI3A6cbiKh6erOOkmq/pr6FTcQJccVIMNwcKKMLffhTB/IIwzl
+	 pZ8ESq2jFkzyEL9Jzrkg53HDKFbxUGB0gfZf8YYyWycsc4GQnZGusmLtVgsC4fh6HKw==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dmarc=pass header.from=linux.alibaba.com;
-	spf=pass smtp.mailfrom=linux.alibaba.com;
-	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=dRyzmM6J;
-	arc=none smtp.remote-ip=115.124.30.119
-Received: from out30-119.freemail.mail.aliyun.com (out30-119.freemail.mail.aliyun.com [115.124.30.119])
+	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b="Y/O57+wr";
+	arc=none smtp.remote-ip=100.103.45.18
+Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
+	 key-exchange X25519 server-signature ECDSA (prime256v1))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6FFAA606A326;
-	Tue,  3 Nov 2026 15:32:05 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 6FFAA606A326
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.alibaba.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.alibaba.com
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id C0CA3606A324;
+	Tue,  3 Nov 2026 15:45:43 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=dRyzmM6J
-DKIM-Signature:v=1; a=rsa-sha256; c=relaxed/relaxed;
-	d=linux.alibaba.com; s=default;
-	t=1793719922; h=From:To:Subject:Date:Message-ID:MIME-Version;
-	bh=HmCkZORht9awkKXevmoWlUgHYW61U//k8/StSQKTvUw=;
-	b=dRyzmM6J8TnZg+N5t+K0KcLi+exL75X7ofzeUsGqnp7UGh5NaQqTqpP8Br1kErnU6HzLiDo1Xr+517jaK2FjKuiU9Kege6EPfPW2CzqAHtkxxMZ3i7oU7MaTtAOqwJgaVBHmTGVSxG7tWQ++Y6tece+UR7DmK+qYrFEh4muiIFU=
-X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R851e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033037033178;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=12;SR=0;TI=SMTPD_---0XE3LUMI_1793719892;
-Received: from x31h02109.sqa.na131.tbsite.net(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XE3LUMI_1793719892 cluster:ay36)
-          by smtp.aliyun-inc.com;
-          Tue, 03 Nov 2026 23:32:02 +0800
-From: Baokun Li <libaokun@linux.alibaba.com>
-To: linux-fscrypt@vger.kernel.org
-Cc: ebiggers@kernel.org,
-	jaegeuk@kernel.org,
-	tytso@mit.edu,
-	linux-ext4@vger.kernel.org,
-	adilger.kernel@dilger.ca,
-	jack@suse.cz,
-	yi.zhang@huawei.com,
-	ojaswin@linux.ibm.com,
-	ritesh.list@gmail.com,
-	linux-kernel@vger.kernel.org
-Subject: [PATCH 0/4] ext4: support encryption with block size larger than page size
-Date: Tue,  3 Nov 2026 23:31:28 +0800
-Message-ID: <20261103153132.4154855-1-libaokun@linux.alibaba.com>
-X-Mailer: git-send-email 2.43.7
+	dkim=pass (2048-bit key, unprotected) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=Y/O57+wr
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id B52E51F000C1;
+	Tue,  3 Nov 2026 15:45:42 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1793720743;
+	bh=O+VIe5Sva4ZfVt7FvpSwqSi7jWwmAVD5CxLUb/JvQHc=;
+	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
+	b=Y/O57+wr1nQHWP9m3PK90OidszGkTi5nWNB3mYE+w4+vcxQ4j3YELiKD7ldz87Whb
+	 qY2pWsar4oIAlatlOVA3WKhDQWeXvH6IFjDbzLbLZ2popDJk6L/nvnGrL3+v7vaHOW
+	 VmQLjg6aSt6pxZon/+XM6gr8k3VUxgeQER2qGx9ia75V1KNR686bf2YuYs0g7EqndE
+	 Z/KZ4UL6MMgOjDrQLS1jBfOyue5mmtfwaL6sbOm6R6DoabaZFlgYCFr99Nnasf4nY4
+	 yG8XWzbQn6gWmQjnfTfBaRFwiF1qL1S8vAGp1BJ+cWJL+Qxgyili8GbBOovmUIzqkz
+	 FY9HABvV4glig==
+Message-ID: <sashiko-outbox-195647@kernel.org>
+From: sashiko-bot@kernel.org
+Subject: Re: [PATCH 2/4] fscrypt: Validate the test_dummy_encryption policy
+ for new inodes
+Reply-To: sashiko-reviews@lists.linux.dev
+To: "Baokun Li" <libaokun@linux.alibaba.com>, linux-fscrypt@vger.kernel.org
+Cc: ebiggers@kernel.org, jaegeuk@kernel.org, tytso@mit.edu, linux-ext4@vger.kernel.org, adilger.kernel@dilger.ca, jack@suse.cz, yi.zhang@huawei.com, ojaswin@linux.ibm.com, ritesh.list@gmail.com
+In-Reply-To: <20261103153132.4154855-3-libaokun@linux.alibaba.com>
+References: <20261103153132.4154855-1-libaokun@linux.alibaba.com>
+ <20261103153132.4154855-3-libaokun@linux.alibaba.com>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Date: Tue, 03 Nov 2026 15:45:42 +0000
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -66,106 +60,72 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
-MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
 
-Motivation
-==========
+Thank you for your contribution! Sashiko AI review found 1 potential issue(=
+s) to consider:
+- [Medium] fscrypt: missed S_CASEFOLD check in fscrypt_prepare_new_inode()
+--
 
-Currently ext4 refuses encryption on a filesystem whose block size
-is larger than page size.  The reason is in the fallback path:
-fscrypt takes the fs block size as the default data  unit size,
-while blk-crypto-fallback supports no data unit larger than a page.
+commit fa704dc171d6c1edb5f7cea48ff46447da451c52
+Author: Baokun Li <libaokun@linux.alibaba.com>
 
-fscrypt already supports a data unit size smaller than the block size.
-So when none is specified, taking the smaller of the block size and the
-page size as the data unit size is enough for fscrypt to support LBS.
+fscrypt: Validate the test_dummy_encryption policy for new inodes
 
-Based on v7.4-rc1.
+This commit validates the test_dummy_encryption policy in
+fscrypt_prepare_new_inode() when creating a new inode in an unencrypted
+directory so that unsupported policies are rejected before being applied.
 
-Patch Overview
-==============
+> diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
+> index a77b889d7578c..497ba67ec6fed 100644
+> --- a/fs/crypto/keysetup.c
+> +++ b/fs/crypto/keysetup.c
+> @@ -763,6 +763,14 @@ int fscrypt_prepare_new_inode(struct inode *dir, str=
+uct inode *inode,
+>  	    !S_ISLNK(inode->i_mode))
+>  		return 0;
+> =20
+> +	/*
+> +	 * A policy inherited from an encrypted directory was validated
+> +	 * when the directory's key was set up.  The test dummy policy was
+> +	 * not, so check it here.
+> +	 */
+> +	if (!IS_ENCRYPTED(dir) && !fscrypt_supported_policy(policy, inode))
+> +		return -EINVAL;
 
-Patch 1: Caps the default data unit at the page size and rejects the
-         policies that would exceed it.
-Patch 2: Validates the test_dummy_encryption policy before applying it.
-Patch 3: Sends a folio that covers a DUN wraparound to the buffer_head
-         path.
-Patch 4: Removes the block size > page size checks and enables large
-         folios for encrypted files.
+[Severity: Medium]
+Does fscrypt_supported_policy(policy, inode) miss the casefold check when
+creating a new subdirectory inside an unencrypted, casefolded directory with
+test_dummy_encryption=3Dv1?
 
-Testing
-=======
+When fscrypt_prepare_new_inode() is called by __ext4_new_inode() or
+f2fs_new_inode(), only inode->i_mode and inode->i_blkbits are set on the new
+inode. The filesystem has not yet inherited the casefold flag from dir or s=
+et
+S_CASEFOLD on inode->i_flags, which is why fscrypt_prepare_new_inode() chec=
+ks
+IS_CASEFOLDED(dir) && S_ISDIR(inode->i_mode) just below:
 
-kvm-xfstests -c ext4/all -g auto has been executed with no new failures.
+	return fscrypt_setup_encryption_info(inode, policy, nonce,
+					     IS_CASEFOLDED(dir) &&
+					     S_ISDIR(inode->i_mode));
 
-On ext4/32k, two groups of tests fail because they are not adapted, and
-no other regressions were observed:
+However, fscrypt_supported_policy() -> fscrypt_supported_v1_policy() checks
+IS_CASEFOLDED(inode):
 
- - the tests that use v1 policies: ext4/024, generic/395, 397, 398, 399,
-   419, 421, 429, 440, 576, 580, 581, 593, 613.
- - the tests that don't explicitly set the data unit size (generic/582,
-   583, 584): the kernel gets a 4K data unit by default on a 4K-page
-   machine while the tests still use the block size.
+	if (IS_CASEFOLDED(inode)) {
+		/* With v1, there's no way to derive dirhash keys. */
+		fscrypt_warn(inode,
+			     "v1 policies can't be used on casefolded directories");
+		return false;
+	}
 
-With the xfstests fix, the first group is skipped and the second group
-passes.  The fix will be sent separately.
+Since IS_CASEFOLDED(inode) is still false at this point, creating a
+subdirectory in an unencrypted casefolded directory under
+test_dummy_encryption=3Dv1 passes validation and creates a v1-encrypted,
+casefolded directory without an initialized dirhash key, triggering
+WARN_ON_ONCE(!ci->ci_dirhash_key_initialized) in fscrypt_fname_siphash() on
+subsequent lookups or creations.
 
-Benchmark
-=========
-
-Hardware: 96-core machine, 3.84T NVMe, 512G memory
-Filesystem: ext4, encryption on the fallback path
-
-Buffered sequential 1M writes and reads (1G, fsync) in MiB/s;
-medians of 3 runs.
-
-Base tree, 4k-block filesystem:
-
-  job         4k plain    4k enc
-  --------    --------    ------
-  seqwrite        1969      1418
-  seqread         1021       907
-
-LBS enabled, encrypted 4k-block vs 32k-block filesystem:
-
-  job         4k enc    32k enc    32k plain    4k->32k
-  --------    ------    -------    ---------    -------
-  seqwrite      1430       1958         2138       +37%
-  seqread        964       2004         1834      +108%
-
-Buffered sequential writes (1G, fsync) of the encrypted 4k-block
-filesystem across request sizes, base tree vs this series:
-
-  fio bs    Before    After    gain
-  ------    ------    -----    ----
-  4k        1272      1261     -1%
-  16k       1457      1803    +24%
-  64k       1499      2060    +37%
-  256k      1488      2103    +41%
-  1M        1418      1928    +36%
-
-Comments and questions are, as always, welcome.
-
-Thanks,
-Baokun
-
-Baokun Li (4):
-  fscrypt: Cap data units at the page size
-  fscrypt: Validate the test_dummy_encryption policy for new inodes
-  ext4: don't put a DUN wraparound in the middle of a read bio
-  ext4: allow large folios and bs > ps encryption
-
- Documentation/filesystems/fscrypt.rst | 19 +++++++++++++++----
- fs/crypto/fscrypt_private.h           |  4 +++-
- fs/crypto/keysetup.c                  |  8 ++++++++
- fs/crypto/policy.c                    | 11 ++++++++++-
- fs/ext4/crypto.c                      |  9 ---------
- fs/ext4/inode.c                       |  6 ------
- fs/ext4/readpage.c                    | 10 ++++++++++
- fs/ext4/super.c                       | 22 +---------------------
- 8 files changed, 47 insertions(+), 42 deletions(-)
-
--- 
-2.43.7
-
+--=20
+Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261103153132.4154=
+855-1-libaokun@linux.alibaba.com?part=3D2
