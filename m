@@ -1,111 +1,65 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=148.163.135.74
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.100
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1793564191;
-	b=M7ERrlTI3viVzsayVXwS9ocJYDKit4feLcZ4M1jwUag+/G7brBNlx796RNcDgJ9s6Vcx
-	 GevskcDpt7VY3P3BbDytlhZTJ8wmGuIE40NrgwBXXr8xj9Cqxmg2RDejfq4ZSIZFi2Yzo
-	 eXWgaUk3KDpZfAeiZZ9vIl9RcKfleaE0A4zsV5mgApjFpzZtIugSkEmVAqLJOZ54l8OUy
-	 KlhELc4v6TiChxAOKmDnYqUbkuVkns2VOJ7M9tcvvh66CdtbBg8+yZvMpJS9usxPLAfhx
-	 oqfOXys25BSyJtdiGYrSr0ruwiFneG8ylisel/O1WKQnGEbfOc1nnHV/dHkM9lew+bQ==
+	t=1793719930;
+	b=Uw+FA+jgW3npUx6UKY1nHimpshpt52X35qaWFZLYzGdo47j9D9n+oMNJUJPsqgVwecCa
+	 P17nQBXPAxkJkRkt4QCWtHKQXwatGYhf+sWQy+m/WZDIdN88B9PJ4BVhqZtgYs8pDW61C
+	 WzMfJ9/N35XBPOphVVJDVt3e6Ua5PA/5/0XAMe+ErXfIiVx0dCfHnaQUcDiGwjb8wTnq9
+	 1LQB7sWDau1sGkhwQ8LQz3SvLOxqDCO/Rs1v1o23vKK5AaqBBBluqpQf7Ezent8r+PyTk
+	 ARBsEIG8SxPoLd/n+8dXeBWKaNbVDAL3NRHzip6kmcVBF6xjjiMxpuiHAJBmVDBHWOw==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1793564191;
-	h=DMARC-Filter:Received:DKIM-Signature:Received:Received:
-	 DKIM-Signature:X-Google-DKIM-Signature:X-Forwarded-Encrypted:
-	 X-Gm-Message-State:X-Gm-Gg:X-Received:X-Received:Received:From:Date:
-	 Subject:MIME-Version:Content-Type:Content-Transfer-Encoding:
-	 Message-Id:References:In-Reply-To:To:Cc:X-Mailer:
-	 X-Developer-Signature:X-Developer-Key:X-Proofpoint-ORIG-GUID:
-	 X-Proofpoint-Spam-Info:X-Proofpoint-GUID:X-Authority-Analysis:
-	 X-Proofpoint-Spam-Details-Enc:X-Proofpoint-Virus-Version:
-	 X-Proofpoint-Spam-Details;
-	bh=BqTXqaIxt0sZIdIo6UKmgjkLMbcGDQb8Vj6tAnCQxek=;
-	b=XWbzFax6RCqWbdW4f+qHM7GjcI3+6jIkRzE3yim4D9cb65HH50ub6YcfbyD+0ptOhmg+
-	 9SftglDxoWshffEj491f723PMiXAkWu10i8TWVLZ4upi4lZXx6JoP82ue2WIAkrjxDoE3
-	 qZ00GniuIS/03ZYgYIhEJB/0IP6WVEj7M5+bmiyBIiHjBumBAZ/yAj0jqhJM7UjphoOnY
-	 myzO2pLVPP4+fdNEXAj00CGBrMnf92PYmtwJdqOsvYuLseQ2pMFnaTAMpWKuypC3A6lb4
-	 qorXSj+y/by3hcBLYzFb4lbYPrCeOcSYuTUX7IlnMNvu8h+xqprK0ucxHinyl975u1g==
+	a=rsa-sha256; c=relaxed/relaxed; t=1793719930;
+	h=DMARC-Filter:DKIM-Signature:X-Alimail-AntiSpam:Received:From:To:Cc:
+	 Subject:Date:Message-ID:X-Mailer:In-Reply-To:References:MIME-Version:
+	 Content-Transfer-Encoding;
+	bh=X5ZpIgBof+TLGiClZWygRJ4L7+XLfmAF6PbPLumsy60=;
+	b=qO7Z/mfxMupjy+tgiiG3NTDBtvkdyYTiyahTpXyD4PZN7z2V8MotpCgG77b1A9ymVJgI
+	 ZA1CJODV8x0ip6XP0egY+MENARmxIEmd17Jp2AE3yi9AmyiO+hal0Iv/RgWi8zpUrLwqp
+	 qiSNMSfzANfL/69XEJeJGlTHTMYytbSmMExfdaLssCVvfrx8zieaJa3o8+SFkNg01CyXJ
+	 1yFjBP3QMetN2Qmp2nx5Z5nPBLrwTdZWLy33A+945G2nlfcOTRNP0C2QJF6ERbh8dq0p0
+	 /+NVyltdJwXjouq2omVH8+Pc2D3pJOkaJVNIutrLFtQgmefuy4XozCpUeiHHOcv1FAg==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dmarc=pass header.from=columbia.edu;
-	spf=pass smtp.mailfrom=columbia.edu;
-	dkim=pass header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=pps01 header.b=TJG64jdv;
-	dkim=pass header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=lionmail header.b=YpdMkAvW;
-	arc=none smtp.remote-ip=148.163.135.74
-Received: from mx0a-00364e01.pphosted.com (mx0a-00364e01.pphosted.com [148.163.135.74])
+	dmarc=pass header.from=linux.alibaba.com;
+	spf=pass smtp.mailfrom=linux.alibaba.com;
+	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=yG6YTb9a;
+	arc=none smtp.remote-ip=115.124.30.100
+Received: from out30-100.freemail.mail.aliyun.com (out30-100.freemail.mail.aliyun.com [115.124.30.100])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 3BD5B606A32D
-	for <linux-fscrypt@vger.kernel.org>; Sun,  1 Nov 2026 20:16:31 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 3BD5B606A32D
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=columbia.edu
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=columbia.edu
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 96140606A329;
+	Tue,  3 Nov 2026 15:32:07 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 96140606A329
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.alibaba.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.alibaba.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key, unprotected) header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=pps01 header.b=TJG64jdv;
-	dkim=pass (2048-bit key, unprotected) header.d=columbia.edu header.i=@columbia.edu header.a=rsa-sha256 header.s=lionmail header.b=YpdMkAvW
-Received: from pps.filterd (m0167072.ppops.net [127.0.0.1])
-	by mx0a-00364e01.pphosted.com (8.18.1.11/8.18.1.11) with ESMTP id 6A1GOUtw2275007
-	for <linux-fscrypt@vger.kernel.org>; Sun, 1 Nov 2026 15:16:30 -0500
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=columbia.edu; h=
-	cc:content-transfer-encoding:content-type:date:from:in-reply-to
-	:message-id:mime-version:references:subject:to; s=pps01; bh=BqTX
-	qaIxt0sZIdIo6UKmgjkLMbcGDQb8Vj6tAnCQxek=; b=TJG64jdvVFfZcvxcctU+
-	Eks2NAQ4Ak6/S12o0lVe0S6I8BOT8+fgifY4zlFiNb62u00yxwXiCetjKEcO2YLk
-	UpkEXUyaS7nicbe/fvUUYzZz1ury4X2Lf6scvZJ/9wRzbX5IEX7czXTDzjaE7fzh
-	ScmGjD71fxSRFDlYQUj+V6cvUaHwDpQ9gbD0G8+FqmLikYqHDEzMpT6LKzKO6nOq
-	NL0Zk6yBNYIX/3DGrDO9+/d7VcEQZpRnsqnUPMUgmSGhoRZVP1cPbjCA9ip1EQR8
-	zzVAocsbjHjSL7rRwvRd/8xR2bP6zQsTgY+krrMaGZ+Z3cGUzpFTx5uZrJVy7tlf
-	aQ==
-Received: from mail-vs1-f69.google.com (mail-vs1-f69.google.com [209.85.217.69])
-	by mx0a-00364e01.pphosted.com (PPS) with ESMTPS id 4hp8wxs17k-1
-	(version=TLSv1.3 cipher=TLS_AES_128_GCM_SHA256 bits=128 verify=NOT)
-	for <linux-fscrypt@vger.kernel.org>; Sun, 01 Nov 2026 15:16:30 -0500 (EST)
-Received: by mail-vs1-f69.google.com with SMTP id ada2fe7eead31-7c0bad5ec1cso605694137.1
-        for <linux-fscrypt@vger.kernel.org>; Sun, 01 Nov 2026 12:16:30 -0800 (PST)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=columbia.edu; s=lionmail; t=1793564189; x=1794168989; darn=vger.kernel.org;
-        h=cc:to:in-reply-to:references:message-id:content-transfer-encoding
-         :content-type:mime-version:subject:date:from:from:to:cc:subject:date
-         :message-id:reply-to:content-type;
-        bh=BqTXqaIxt0sZIdIo6UKmgjkLMbcGDQb8Vj6tAnCQxek=;
-        b=YpdMkAvWTJMPJ2txdznmb+h5yx9f22LGssPYaV8uOMkLkmV6aO5FAaLq1wG/sd7oCP
-         x+DQHqEb8e6qfc6SKHIlj62ZbdmNpctUitUi/pJryu1+R6y/pwzDWbPiPIjkO32ruwri
-         rFzFd3S1mRcs5D0R8V4par6Aam03bFNQZD21ILFWwZc1noSv0Yj3A4c8g50v0+TXfkER
-         hr6QtQVHlooN5u2AN+OJXuK7Ss+/+rxhsX2JREBf/GwyDuTMSKJMlluw/uyW+rMYxOQR
-         F9x4vJoebVXk+iLlMyO67BtnPDAlwnS3I/b8p7xbb/cICFcEeFzl/1cimeCxOejppa6H
-         IcbQ==
-X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
-        d=1e100.net; s=20260707; t=1793564189; x=1794168989;
-        h=cc:to:in-reply-to:references:message-id:content-transfer-encoding
-         :content-type:mime-version:subject:date:from:x-gm-gg
-         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to
-         :content-type;
-        bh=BqTXqaIxt0sZIdIo6UKmgjkLMbcGDQb8Vj6tAnCQxek=;
-        b=NSlBkshK1h/NIitemawgoZeJWwP8yFCcncge2EAK70gPCRxS0SBUdtI4YhiykyLrLH
-         BhTXJhBYk1amRjP8X1CXfXA63GlgcUFw/aeWsWqfsWK0yl2beRjJRPusGMbizOadcoss
-         L8IGfFAHBGNKfTBYkUNPsNwgQZsht6b5wyxhe2Rrh/98uucFI0Nyh/Ng8R2lgMVgz2V1
-         cSFOTi5FSgOLXFlkrfpPpHmJTK2A7xSy3lxScH5ALK6uu5TBwfenh0hMB4Iv2TnzC+s+
-         //CbAHN8S/TydoL/AEVhP27HU8SFwU3CFIEnhJivz6Z4mZbr6t216zUtChzMz1xCw/gr
-         yhpA==
-X-Forwarded-Encrypted: i=1; AKwUvBzw3y3AuKGPlb8cnYu3cVix7ygz6vD+atA/Sf69az6UJxMog+11VZTVdSqy9JaZt38xAazXzIdl2HOPFKYV@vger.kernel.org
-X-Gm-Message-State: APuU4Z9xTUj2wBIqFiM+bpLyODyVF/FzBVc6yWiceXDDde+QxqP6/Ceg
-	ztl7cxCAVrU679yZdDzkDkyMoskNP4RInhmQZugSLmSjzcEPoC5B15FXSb2sUWVku9Rne41FbSV
-	3evi0OTE4DL/1r/8ljGOEUE8jQgklmIxnmhCg7fbNCwIHFlYg714ieaAlyHMyK6g=
-X-Gm-Gg: AYBFou3yOtsVhiVgGWNjAVxNUhvu6PhkKsWBrXYNxniBLEptEHk2DoWPvEvjp3NQJDq
-	uqSRkujy0QEzoqdTHZQwmSqVmVtfz222uzh5EzVFeW8iW/F7qTwAZHKJlV86SkSOCR3fbSXD+aZ
-	nt8zfMwQeigZL31YSw1kG8OX9+mZgMsLfo03FWAjSZfW6B3Fo2QRWzza4sBV24VJOx82S8/FrGn
-	yXzqNZ1VyPppWE0AN9ySpaODzC839C6LIeGnX1/UPhKTtc1g+96wZAiHZEAOnTtfEyR/wSziY2q
-	RP8ZXV66eaiJdOTjtwBiKFieH7d35Fxw1LJ08NmBUQHBieN8O9JvCCaMGz4mSPphvgvfKRaYyje
-	Xfah4gAub3GLVDmSmdF2xihDtmdiC9Xojpw3uHOB96qUAIGY6r182RB85wJI=
-X-Received: by 2002:a05:6102:3ec5:b0:7cc:2bb7:131d with SMTP id ada2fe7eead31-7d072baa484mr2927964137.9.1793564189539;
-        Sun, 01 Nov 2026 12:16:29 -0800 (PST)
-X-Received: by 2002:a05:6102:3ec5:b0:7cc:2bb7:131d with SMTP id ada2fe7eead31-7d072baa484mr2927962137.9.1793564189082;
-        Sun, 01 Nov 2026 12:16:29 -0800 (PST)
-Received: from [127.0.1.1] ([37.142.157.119])
-        by smtp.gmail.com with ESMTPSA id ffacd0b85a97d-48e71b78a4csm15661423f8f.23.2026.11.01.12.16.27
-        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
-        Sun, 01 Nov 2026 12:16:28 -0800 (PST)
-From: Tal Zussman <tz2294@columbia.edu>
-Date: Sun, 01 Nov 2026 15:16:14 -0500
-Subject: [PATCH 2/2] fscrypt: remove fscrypt_is_bounce_page()
+	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=yG6YTb9a
+DKIM-Signature:v=1; a=rsa-sha256; c=relaxed/relaxed;
+	d=linux.alibaba.com; s=default;
+	t=1793719925; h=From:To:Subject:Date:Message-ID:MIME-Version;
+	bh=X5ZpIgBof+TLGiClZWygRJ4L7+XLfmAF6PbPLumsy60=;
+	b=yG6YTb9aoQwYZb9xNoSaoTm3TbglTApLjqgs8Mm5Oquan+Bd9uUUONdbhpswFOCgK4ev6Rmu6RGSO5N8YZ3aNvNvtpRJFIzOxyeN/LfjcNDLlKD0rwLKwbmVcc1j8xQFH0/HujPmz74FieUx2r9jl2jLxA+LAV3jSJN2G58YN74=
+X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R821e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033037033178;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=12;SR=0;TI=SMTPD_---0XE3LUUD_1793719924;
+Received: from x31h02109.sqa.na131.tbsite.net(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XE3LUUD_1793719924 cluster:ay36)
+          by smtp.aliyun-inc.com;
+          Tue, 03 Nov 2026 23:32:04 +0800
+From: Baokun Li <libaokun@linux.alibaba.com>
+To: linux-fscrypt@vger.kernel.org
+Cc: ebiggers@kernel.org,
+	jaegeuk@kernel.org,
+	tytso@mit.edu,
+	linux-ext4@vger.kernel.org,
+	adilger.kernel@dilger.ca,
+	jack@suse.cz,
+	yi.zhang@huawei.com,
+	ojaswin@linux.ibm.com,
+	ritesh.list@gmail.com,
+	linux-kernel@vger.kernel.org
+Subject: [PATCH 3/4] ext4: don't put a DUN wraparound in the middle of a read bio
+Date: Tue,  3 Nov 2026 23:31:31 +0800
+Message-ID: <20261103153132.4154855-4-libaokun@linux.alibaba.com>
+X-Mailer: git-send-email 2.43.7
+In-Reply-To: <20261103153132.4154855-1-libaokun@linux.alibaba.com>
+References: <20261103153132.4154855-1-libaokun@linux.alibaba.com>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -115,88 +69,56 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Message-Id: <20261101-fscrypt-page-helpers-v1-2-bcfbfaf6a237@columbia.edu>
-References: <20261101-fscrypt-page-helpers-v1-0-bcfbfaf6a237@columbia.edu>
-In-Reply-To: <20261101-fscrypt-page-helpers-v1-0-bcfbfaf6a237@columbia.edu>
-To: Eric Biggers <ebiggers@kernel.org>, "Theodore Y. Ts'o" <tytso@mit.edu>,
-        Jaegeuk Kim <jaegeuk@kernel.org>
-Cc: "Matthew Wilcox (Oracle)" <willy@infradead.org>,
-        linux-fscrypt@vger.kernel.org, linux-kernel@vger.kernel.org,
-        Tal Zussman <tz2294@columbia.edu>
-X-Mailer: b4 0.17-dev
-X-Developer-Signature: v=1; a=ed25519-sha256; t=1793564181; l=1123;
- i=tz2294@columbia.edu; s=20250528; h=from:subject:message-id;
- bh=FuaDbBzgAylLyOkBuu6fOUJHcXnEh9zDTWNhiRskaFA=;
- b=2cJwYDDDrxsrDKPoMFODyRhRItzplz+Yx9oEv+a8snVPKzI6TGsnhK1uqKmGbTwaZaAyFWvNG
- fIH82I14oOhAlPB4WGMiCOPGIpva2qkQtCcvMk/ZCD4PfO/iwJv4xUi
-X-Developer-Key: i=tz2294@columbia.edu; a=ed25519;
- pk=BIj5KdACscEOyAC0oIkeZqLB3L94fzBnDccEooxeM5Y=
-X-Proofpoint-ORIG-GUID: lmNv_uk1Jfb9SdrI4Qi62oQViZODGFvT
-X-Proofpoint-Spam-Info: AW1haW4tMjYxMTAxMDA4MCBTYWx0ZWRfX/uqxZqOYmVNx
- B/p0GCcQmPuMiK7r9rfZT3DIs4tfTRoBlCM7QRnMKIkN9sKwSWqNMHaGN+8Qz3WSD9O+d0gMqHt
- mz6CnL7xtxrNt/d8IMj5PyP94uvk0Hj9xCjieVcSQNAGcnBqqYB4
-X-Proofpoint-GUID: lmNv_uk1Jfb9SdrI4Qi62oQViZODGFvT
-X-Authority-Analysis: v=2.4 cv=TpZzFzXh c=1 sm=1 tr=0 ts=6ae79e1e cx=c_pps
- a=5HAIKLe1ejAbszaTRHs9Ug==:117 a=Qz3frfIdACK70Hl/8c7MJg==:17
- a=IkcTkHD0fZMA:10 a=zJRp6_cAMcgA:10 a=x7bEGLp0ZPQA:10 a=A0y_DWxS2BwA:10
- a=VkNPw1HP01LnGYTKEx00:22 a=Da8U98TiO7q1upZEImrf:22 a=SsB-OO3BMngHh3ZO9fOt:22
- a=slkTkWUpcQ_TrhisGP8A:9 a=QEXdDO2ut3YA:10 a=gYDTvv6II1OnSo0itH1n:22
-X-Proofpoint-Spam-Details-Enc: AW1haW4tMjYxMTAxMDA4MCBTYWx0ZWRfX3lyH8DMXkYFZ
- n1P2UjCs0smSQPw0ysY9VVOCuU2x2htyqGdY/1Qv70N95+n/7aYhLuWDxZ8C7Ak4GntBt5YzBV+
- +wDhgxro2hNy5d4Ozif3oiCENYl84a8h28pOwfFuYdedPuvLMmuRkgU6TLCUNCRtnnBYCNwJEvD
- zxzB100MapH3GT84MwUUh4ldVe105FZ3ei40f9SXFZv9dLuyjc+o+aqbKYtzOWmjjYD3rO5Np+1
- px9i4GQNnNul2ILADMkKXHr7ZiaZbiyRN2mub7bo2lfbURdwmOWEf8p7cEJpKzzIvnv4ex2aLFP
- QsVSUqpNm4HUC4D4n/U1QOQmLaGraICvb55+1x8DAMy+huxatpnsviWJfCGpw7MS0E8cIv+KQVD
- p/OStnYjNUUu7PUePevPAauagivuFWkNPJzt4mBJAnaV+3vWZuztLP3eP3/Tl7gKlUszB/gTd8M
- ZiF1jUqDVoo2Ds854mQ==
-X-Proofpoint-Virus-Version: vendor=nai engine=6900 definitions=11953
- signatures=596817
-X-Proofpoint-Spam-Details: rule=outbound_notspam policy=outbound score=0
- suspectscore=0 spamscore=0 phishscore=0 clxscore=1015 malwarescore=0
- priorityscore=1501 lowpriorityscore=10 impostorscore=10 bulkscore=10
- adultscore=0 classifier=typeunknown authscore=0 authtc= authcc=
- route=outbound adjust=0 reason=mlx scancount=1 engine=8.22.0-2610300000
- definitions=main-2611010080
+Content-Transfer-Encoding: 8bit
 
-fscrypt_is_bounce_page() no longer has any callers, so remove it. This
-removes a use of page->mapping.
+Under IV_INO_LBLK_32, a file's DUNs wrap at 2^32, and the policy
+is only allowed when the block size equals the page size.
 
-Signed-off-by: Tal Zussman <tz2294@columbia.edu>
+ext4_mpage_readpages() adds a whole folio to one bio, but checks
+only the DUN of the first block. blk-crypto assumes the DUNs
+in a bio are contiguous and never wraps them, so blocks past
+the wraparound are read with the wrong DUNs.
+
+Writeback and direct I/O get this right, but with large folios
+a single folio can still span the wraparound.
+
+Fix this by routing such a folio through the buffer_head path,
+which submits one bio per block and so gives each block its own DUN.
+
+fscrypt_limit_io_blocks() tells whether the wraparound falls after
+the first block; a wraparound at the first block itself is already
+caught by fscrypt_mergeable_bio().
+
+A file's DUNs wrap at most once, so at most one folio per file takes
+the slower path, and the per-block bios can be merged again by the
+block layer.
+
+Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
 ---
- include/linux/fscrypt.h | 10 ----------
- 1 file changed, 10 deletions(-)
+ fs/ext4/readpage.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
 
-diff --git a/include/linux/fscrypt.h b/include/linux/fscrypt.h
-index e70f630fab0c..3a238bebbdf1 100644
---- a/include/linux/fscrypt.h
-+++ b/include/linux/fscrypt.h
-@@ -356,11 +356,6 @@ int fscrypt_decrypt_block_inplace(const struct inode *inode, struct page *page,
- 				  unsigned int len, unsigned int offs,
- 				  u64 lblk_num);
+diff --git a/fs/ext4/readpage.c b/fs/ext4/readpage.c
+index c7b6cdb2e124..43af6d9d6ddb 100644
+--- a/fs/ext4/readpage.c
++++ b/fs/ext4/readpage.c
+@@ -264,6 +264,16 @@ static int ext4_mpage_readpages(struct inode *inode, struct fsverity_info *vi,
+ 			folio_set_mappedtodisk(folio);
+ 		}
  
--static inline bool fscrypt_is_bounce_page(struct page *page)
--{
--	return page->mapping == NULL;
--}
--
- static inline bool fscrypt_is_bounce_folio(const struct folio *folio)
- {
- 	return folio->mapping == NULL;
-@@ -522,11 +517,6 @@ static inline int fscrypt_decrypt_block_inplace(const struct inode *inode,
- 	return -EOPNOTSUPP;
- }
- 
--static inline bool fscrypt_is_bounce_page(struct page *page)
--{
--	return false;
--}
--
- static inline bool fscrypt_is_bounce_folio(const struct folio *folio)
- {
- 	return false;
-
++		/*
++		 * blk-crypto assumes a bio's DUNs are contiguous, but under
++		 * IV_INO_LBLK_32 alone they wrap at 2^32.  A folio spanning
++		 * the wrap would be decrypted with wrong IVs, so it goes to
++		 * the buffer_head-based path, one bio per block.
++		 */
++		if (first_hole >
++		    fscrypt_limit_io_blocks(inode, pos >> blkbits, first_hole))
++			goto confused;
++
+ 		/*
+ 		 * This folio will go to BIO.  Do we need to send this
+ 		 * BIO off first?
 -- 
-2.39.5
+2.43.7
 
