@@ -1,57 +1,65 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.97
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1793720744;
-	b=JK+Mrxo4vxOSbeUkC60h9i1Aa7u0MVE+5BgZ5ITECBIANK6FPkW9NISDTG3OUbuLsoJh
-	 QhOa46q4LHfEN8bg0/cd0v2G0jjhAK+1lcIMtsQX22bs/CnmNfUblybGW6Aq3ST5rKzhy
-	 8DsrWTtjk9MLL95DItElcvMZ02OS36rgLd5uljxqMb3Sc6lhWMLJ/N+2HPKufCTAtokPj
-	 a5HflCCsmPLhCK8bjuvgbswqNCqYa6hWvX7u5BJd5nN3CfsN98MhSYddrmb/ukW0ZkPyf
-	 k2gn+dgYrgpZJKoDI14D0iPyYGaB7VZ8IK2Ri8vrIJcrdwYuaFbakD1v4i5fHccm1Bg==
+	t=1793722177;
+	b=zdZVAWbHHxKbbXx3xH+E3M8dbt8nsEmnmWY0qiTHnT/2Mr0wIx5oj8esGJ2V1yK6UMQU
+	 NInJ1GjHsbeqlJUU9D2n1HEeOMOsl4nuaWyhIrG58aNjqP1kX3yMOnPq3tsTMitb+2pFO
+	 /7Y4KvfumLzfSlfj3vbGfNE6KQwKsRCVfozsVI/Io+OPdoVATFU79vJA7U9Wb670Yt2pm
+	 q3FPK4EX94YzSxaV3znO3AmTSr1DDEYDXwxeQSlDMB1EXm5BI2gyy9/w+FSRr0jqRU8FL
+	 7XzKV7RUGQFLuSNpkqoJJdM/Jl4A18R+rilicnjFyh7sG3Rh+huJTVXZsFFQcFcG58g==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1793720744;
-	h=Received:DKIM-Signature:Message-ID:From:Subject:Reply-To:To:Cc:
-	 In-Reply-To:References:Content-Type:Content-Transfer-Encoding:Date;
-	bh=O+VIe5Sva4ZfVt7FvpSwqSi7jWwmAVD5CxLUb/JvQHc=;
-	b=ZR9R4mQSwoC2it7v4T7yzr04JLy+Zy/I4tio+cybnl6g+WrIFo24glInCU9dA//saWKR
-	 opgAPQN+uoHU2RZX/iHr8CvAC4RLxYmXfcB8BwqM7yHRXa94G1Rv2mIweECWqhHrRhK8E
-	 iO/tAwlULaamj5OfHQwNpykvc8lRJMAO2UW9lsDg1pLQ9e/xRYXPCTXiFvi4i8V5bXNOw
-	 PzAtFCaXAgsCcboLxoASI3A6cbiKh6erOOkmq/pr6FTcQJccVIMNwcKKMLffhTB/IIwzl
-	 pZ8ESq2jFkzyEL9Jzrkg53HDKFbxUGB0gfZf8YYyWycsc4GQnZGusmLtVgsC4fh6HKw==
+	a=rsa-sha256; c=relaxed/relaxed; t=1793722177;
+	h=DMARC-Filter:DKIM-Signature:X-Alimail-AntiSpam:Received:From:To:Cc:
+	 Subject:Date:Message-ID:X-Mailer:MIME-Version:
+	 Content-Transfer-Encoding;
+	bh=VvejGUVxmaiLNVk+Kiil53rHji7qg0RpKsHyxlR2IsQ=;
+	b=daKmjMfA1opgH3X/UkG+IJl7//CK6vvoITs60jlJP/OWne4faq8+uvlIzhk/lVGHDwSM
+	 FbyahgKKKDFCIKKlFixyDk2KPQciE57R4SejB06uQwR2rPuRB04WBZWft4YeQvM6D4JLw
+	 7YNY0LHQQgQ7XC4L5JJ0ziqyfso7Xvq1e5m/YT//a4gQ+bcgsY3dvA08kJBjnKkrMshWR
+	 bAU9to6q4BhXZQFo2QwCZvKdwCAvvYjd4C1r1Ir0qxb/h1TiNAQHDxxlXsI5TgHuHQKCG
+	 Vut76CmReyMYow5BrFEy9g8L0srCqOD0ZbL7cTqInArAnLG8Lpidv4tBt4ygN3Et78g==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b="Y/O57+wr";
-	arc=none smtp.remote-ip=100.103.45.18
-Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
+	dmarc=pass header.from=linux.alibaba.com;
+	spf=pass smtp.mailfrom=linux.alibaba.com;
+	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b="Afl9tf/y";
+	arc=none smtp.remote-ip=115.124.30.97
+Received: from out30-97.freemail.mail.aliyun.com (out30-97.freemail.mail.aliyun.com [115.124.30.97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1))
+	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id C0CA3606A324;
-	Tue,  3 Nov 2026 15:45:43 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id EA008606A328;
+	Tue,  3 Nov 2026 16:09:33 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org EA008606A328
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.alibaba.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.alibaba.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key, unprotected) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=Y/O57+wr
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id B52E51F000C1;
-	Tue,  3 Nov 2026 15:45:42 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1793720743;
-	bh=O+VIe5Sva4ZfVt7FvpSwqSi7jWwmAVD5CxLUb/JvQHc=;
-	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
-	b=Y/O57+wr1nQHWP9m3PK90OidszGkTi5nWNB3mYE+w4+vcxQ4j3YELiKD7ldz87Whb
-	 qY2pWsar4oIAlatlOVA3WKhDQWeXvH6IFjDbzLbLZ2popDJk6L/nvnGrL3+v7vaHOW
-	 VmQLjg6aSt6pxZon/+XM6gr8k3VUxgeQER2qGx9ia75V1KNR686bf2YuYs0g7EqndE
-	 Z/KZ4UL6MMgOjDrQLS1jBfOyue5mmtfwaL6sbOm6R6DoabaZFlgYCFr99Nnasf4nY4
-	 yG8XWzbQn6gWmQjnfTfBaRFwiF1qL1S8vAGp1BJ+cWJL+Qxgyili8GbBOovmUIzqkz
-	 FY9HABvV4glig==
-Message-ID: <sashiko-outbox-195647@kernel.org>
-From: sashiko-bot@kernel.org
-Subject: Re: [PATCH 2/4] fscrypt: Validate the test_dummy_encryption policy
- for new inodes
-Reply-To: sashiko-reviews@lists.linux.dev
-To: "Baokun Li" <libaokun@linux.alibaba.com>, linux-fscrypt@vger.kernel.org
-Cc: ebiggers@kernel.org, jaegeuk@kernel.org, tytso@mit.edu, linux-ext4@vger.kernel.org, adilger.kernel@dilger.ca, jack@suse.cz, yi.zhang@huawei.com, ojaswin@linux.ibm.com, ritesh.list@gmail.com
-In-Reply-To: <20261103153132.4154855-3-libaokun@linux.alibaba.com>
-References: <20261103153132.4154855-1-libaokun@linux.alibaba.com>
- <20261103153132.4154855-3-libaokun@linux.alibaba.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-Date: Tue, 03 Nov 2026 15:45:42 +0000
+	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=Afl9tf/y
+DKIM-Signature:v=1; a=rsa-sha256; c=relaxed/relaxed;
+	d=linux.alibaba.com; s=default;
+	t=1793722171; h=From:To:Subject:Date:Message-ID:MIME-Version;
+	bh=VvejGUVxmaiLNVk+Kiil53rHji7qg0RpKsHyxlR2IsQ=;
+	b=Afl9tf/y/rlR81qOGBfINq+CjMEXL1YvQfYVoJAl4jpgWq49/J6gsSVPyDPhUmiRlj57BfwPMq+SwS+9jWODMtuE3nVco0RzoHz12GEUZmlB9At+N7ak5jcz3o1a8BPDasOS7qqMZiIUJ5ufjwFXnBlnPFi4I14t/n8nK7ROVOg=
+X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R651e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033045133197;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=14;SR=0;TI=SMTPD_---0XE3LcOt_1793722147;
+Received: from x31h02109.sqa.na131.tbsite.net(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XE3LcOt_1793722147 cluster:ay36)
+          by smtp.aliyun-inc.com;
+          Wed, 04 Nov 2026 00:09:30 +0800
+From: Baokun Li <libaokun@linux.alibaba.com>
+To: fstests@vger.kernel.org
+Cc: zlang@kernel.org,
+	linux-fscrypt@vger.kernel.org,
+	ebiggers@kernel.org,
+	jaegeuk@kernel.org,
+	tytso@mit.edu,
+	linux-ext4@vger.kernel.org,
+	adilger.kernel@dilger.ca,
+	jack@suse.cz,
+	yi.zhang@huawei.com,
+	ojaswin@linux.ibm.com,
+	ritesh.list@gmail.com,
+	linux-kernel@vger.kernel.org
+Subject: [PATCH] common/encrypt: support block sizes larger than the page size
+Date: Wed,  4 Nov 2026 00:09:06 +0800
+Message-ID: <20261103160906.188544-1-libaokun@linux.alibaba.com>
+X-Mailer: git-send-email 2.43.7
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -60,72 +68,223 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
 
-Thank you for your contribution! Sashiko AI review found 1 potential issue(=
-s) to consider:
-- [Medium] fscrypt: missed S_CASEFOLD check in fscrypt_prepare_new_inode()
---
+v1 encryption policies use the filesystem block size as their data unit
+size, so they cannot be used on a filesystem whose block size exceeds
+the page size.  Make _require_scratch_encryption() skip such tests
+when a v1 policy is requested.  Tests that request a v2 policy but
+also exercise v1 policies, i.e. generic/580, 581, 593, and 613,
+call _require_v1_encryption_support() explicitly.
 
-commit fa704dc171d6c1edb5f7cea48ff46447da451c52
-Author: Baokun Li <libaokun@linux.alibaba.com>
+A v2 policy with log2_data_unit_size 0 uses min(bs, PS) as its data
+unit size, not the block size. Add _get_encryption_du_size() and
+use it to calculate the expected ciphertext.
 
-fscrypt: Validate the test_dummy_encryption policy for new inodes
+Also skip the v1 policy probe in _require_scratch_encryption() when a
+v2 policy is requested.  Update the ext4/309 and ext4/310 comments for
+the new default data unit size.
 
-This commit validates the test_dummy_encryption policy in
-fscrypt_prepare_new_inode() when creating a new inode in an unencrypted
-directory so that unsupported policies are rejected before being applied.
+Signed-off-by: Baokun Li <libaokun@linux.alibaba.com>
+---
+ common/encrypt    | 68 +++++++++++++++++++++++++++++++++++++++--------
+ tests/ext4/309    |  6 ++---
+ tests/ext4/310    |  2 +-
+ tests/generic/580 |  1 +
+ tests/generic/581 |  1 +
+ tests/generic/593 |  1 +
+ tests/generic/613 |  1 +
+ 7 files changed, 65 insertions(+), 15 deletions(-)
 
-> diff --git a/fs/crypto/keysetup.c b/fs/crypto/keysetup.c
-> index a77b889d7578c..497ba67ec6fed 100644
-> --- a/fs/crypto/keysetup.c
-> +++ b/fs/crypto/keysetup.c
-> @@ -763,6 +763,14 @@ int fscrypt_prepare_new_inode(struct inode *dir, str=
-uct inode *inode,
->  	    !S_ISLNK(inode->i_mode))
->  		return 0;
-> =20
-> +	/*
-> +	 * A policy inherited from an encrypted directory was validated
-> +	 * when the directory's key was set up.  The test dummy policy was
-> +	 * not, so check it here.
-> +	 */
-> +	if (!IS_ENCRYPTED(dir) && !fscrypt_supported_policy(policy, inode))
-> +		return -EINVAL;
+diff --git a/common/encrypt b/common/encrypt
+index c9e0853d8d8c..feaef0682a44 100644
+--- a/common/encrypt
++++ b/common/encrypt
+@@ -18,15 +18,21 @@
+ _require_scratch_encryption()
+ {
+ 	local arg
++	local policy_version=1
++	local prev=
+ 
+ 	_require_scratch
+ 	_require_xfs_io_command "set_encpolicy"
+ 
+ 	for arg; do
++		if [ "$prev" = "-v" ]; then
++			policy_version=$arg
++		fi
+ 		if [ "$arg" = "-s" ]; then
+ 			# -s option was added later.  Make sure it's available.
+ 			_require_xfs_io_command "set_encpolicy" "-s"
+ 		fi
++		prev=$arg
+ 	done
+ 
+ 	# The 'test_dummy_encryption' mount option interferes with trying to use
+@@ -56,13 +62,24 @@ _require_scratch_encryption()
+ 	# to set an encryption policy.  (For ext4 we could instead check for the
+ 	# presence of /sys/fs/ext4/features/encryption, but this is broken on
+ 	# some older kernels and is ext4-specific anyway.)
+-	mkdir $SCRATCH_MNT/tmpdir
+-	if _set_encpolicy $SCRATCH_MNT/tmpdir 2>&1 >>$seqres.full | \
+-		grep -Eq 'Inappropriate ioctl for device|Operation not supported'
+-	then
+-		_notrun "kernel does not support $FSTYP encryption"
++	#
++	# If the test requires a v2 policy, don't probe with a v1 policy:
++	# v1 policies are not supported when the block size exceeds the page
++	# size.  _require_encryption_policy_support() will check for the
++	# requested policy version below.
++	if [ "$policy_version" -le 1 ]; then
++		mkdir $SCRATCH_MNT/tmpdir
++		if _set_encpolicy $SCRATCH_MNT/tmpdir 2>&1 >>$seqres.full | \
++			grep -Eq 'Inappropriate ioctl for device|Operation not supported'
++		then
++			_notrun "kernel does not support $FSTYP encryption"
++		fi
++		rmdir $SCRATCH_MNT/tmpdir
++
++		# v1 policies use the block size as their data unit size,
++		# which doesn't work if the block size exceeds the page size.
++		_require_v1_encryption_support
+ 	fi
+-	rmdir $SCRATCH_MNT/tmpdir
+ 
+ 	# If required, check for support for the specific type of encryption
+ 	# policy required by the test.
+@@ -73,6 +90,39 @@ _require_scratch_encryption()
+ 	_scratch_unmount
+ }
+ 
++# Require that the filesystem supports v1 encryption policies.  v1
++# policies use the filesystem block size as their data unit size, so
++# they aren't supported when the block size exceeds the page size.
++#
++# The scratch filesystem must be mounted.
++_require_v1_encryption_support()
++{
++	local block_size=$(_get_block_size $SCRATCH_MNT)
++
++	if [ "$block_size" -gt "$(_get_page_size)" ]; then
++		_notrun "v1 encryption policies aren't supported on filesystems with block size > page size"
++	fi
++}
++
++# Get the data unit size in bytes for a v2 encryption policy with the
++# given log2_data_unit_size on the filesystem mounted at $1.  A zero
++# value selects min(filesystem block size, page size).
++_get_encryption_du_size()
++{
++	local mnt=$1
++	local log2_dusize=$2
++	local block_size=$(_get_block_size "$mnt")
++	local page_size=$(_get_page_size)
++
++	if [ "$log2_dusize" -ne 0 ]; then
++		echo $((1 << log2_dusize))
++	elif [ "$block_size" -gt "$page_size" ]; then
++		echo "$page_size"
++	else
++		echo "$block_size"
++	fi
++}
++
+ _require_encryption_policy_support()
+ {
+ 	local mnt=$1
+@@ -1014,11 +1064,7 @@ _verify_ciphertext_for_encryption_policy()
+ 	fi
+ 	_scratch_mount
+ 
+-	if (( log2_dusize != 0 )); then
+-		crypt_util_contents_args+=" --data-unit-size=$((1 << log2_dusize))"
+-	else
+-		crypt_util_contents_args+=" --data-unit-size=$(_get_block_size $SCRATCH_MNT)"
+-	fi
++	crypt_util_contents_args+=" --data-unit-size=$(_get_encryption_du_size $SCRATCH_MNT $log2_dusize)"
+ 
+ 	crypt_util_args+=" --fs-uuid=$(blkid -s UUID -o value $SCRATCH_DEV | tr -d -)"
+ 
+diff --git a/tests/ext4/309 b/tests/ext4/309
+index 6bc9b8cb4a4a..aa1b3b68fc8c 100755
+--- a/tests/ext4/309
++++ b/tests/ext4/309
+@@ -5,9 +5,9 @@
+ # FS QA Test No. ext4/309
+ #
+ # Verify that file contents encryption works on a filesystem with a block size
+-# larger than the page size.  fscrypt uses the block size as the data unit size
+-# by default, so this tests data units that span multiple pages, both for the
+-# writeback path and for the on-disk ciphertext.
++# larger than the page size.  fscrypt uses min(block size, page size) as the
++# default data unit size, so this tests 4K data units on a 32K-block
++# filesystem, both for the writeback path and for the on-disk ciphertext.
+ #
+ . ./common/preamble
+ _begin_fstest auto quick encrypt
+diff --git a/tests/ext4/310 b/tests/ext4/310
+index 215d3a83cd6d..84473930f8cb 100755
+--- a/tests/ext4/310
++++ b/tests/ext4/310
+@@ -6,7 +6,7 @@
+ #
+ # Test reading and writing an encrypted file with O_DIRECT on a filesystem
+ # with a block size larger than the page size.  The data unit size is the
+-# block size by default, so each data unit spans several pages here.
++# page size by default on such a filesystem.
+ #
+ . ./common/preamble
+ _begin_fstest auto quick encrypt
+diff --git a/tests/generic/580 b/tests/generic/580
+index eff3f2104bfe..bcb984d1fd82 100755
+--- a/tests/generic/580
++++ b/tests/generic/580
+@@ -20,6 +20,7 @@ _require_scratch_encryption -v 2
+ 
+ _scratch_mkfs_encrypted &>> $seqres.full
+ _scratch_mount
++_require_v1_encryption_support
+ 
+ test_with_policy_version()
+ {
+diff --git a/tests/generic/581 b/tests/generic/581
+index 2773c9108b35..54f31595a832 100755
+--- a/tests/generic/581
++++ b/tests/generic/581
+@@ -33,6 +33,7 @@ _require_scratch_encryption -v 2
+ 
+ _scratch_mkfs_encrypted &>> $seqres.full
+ _scratch_mount
++_require_v1_encryption_support
+ 
+ dir=$SCRATCH_MNT/dir
+ 
+diff --git a/tests/generic/593 b/tests/generic/593
+index 05f868f92422..61976df8194d 100755
+--- a/tests/generic/593
++++ b/tests/generic/593
+@@ -21,6 +21,7 @@ _require_command "$KEYCTL_PROG" keyctl
+ _init_session_keyring
+ _scratch_mkfs_encrypted &>> $seqres.full
+ _scratch_mount
++_require_v1_encryption_support
+ _require_add_enckey_by_key_id $SCRATCH_MNT
+ 
+ test_with_policy_version()
+diff --git a/tests/generic/613 b/tests/generic/613
+index 499af18ef476..aadb3893e73e 100755
+--- a/tests/generic/613
++++ b/tests/generic/613
+@@ -26,6 +26,7 @@ _require_command "$XZ_PROG" xz
+ 
+ _scratch_mkfs_encrypted &>> $seqres.full
+ _scratch_mount
++_require_v1_encryption_support
+ 
+ echo -e "\n# Adding encryption keys"
+ _add_enckey $SCRATCH_MNT "$TEST_RAW_KEY"
+-- 
+2.43.7
 
-[Severity: Medium]
-Does fscrypt_supported_policy(policy, inode) miss the casefold check when
-creating a new subdirectory inside an unencrypted, casefolded directory with
-test_dummy_encryption=3Dv1?
-
-When fscrypt_prepare_new_inode() is called by __ext4_new_inode() or
-f2fs_new_inode(), only inode->i_mode and inode->i_blkbits are set on the new
-inode. The filesystem has not yet inherited the casefold flag from dir or s=
-et
-S_CASEFOLD on inode->i_flags, which is why fscrypt_prepare_new_inode() chec=
-ks
-IS_CASEFOLDED(dir) && S_ISDIR(inode->i_mode) just below:
-
-	return fscrypt_setup_encryption_info(inode, policy, nonce,
-					     IS_CASEFOLDED(dir) &&
-					     S_ISDIR(inode->i_mode));
-
-However, fscrypt_supported_policy() -> fscrypt_supported_v1_policy() checks
-IS_CASEFOLDED(inode):
-
-	if (IS_CASEFOLDED(inode)) {
-		/* With v1, there's no way to derive dirhash keys. */
-		fscrypt_warn(inode,
-			     "v1 policies can't be used on casefolded directories");
-		return false;
-	}
-
-Since IS_CASEFOLDED(inode) is still false at this point, creating a
-subdirectory in an unencrypted casefolded directory under
-test_dummy_encryption=3Dv1 passes validation and creates a v1-encrypted,
-casefolded directory without an initialized dirhash key, triggering
-WARN_ON_ONCE(!ci->ci_dirhash_key_initialized) in fscrypt_fname_siphash() on
-subsequent lookups or creations.
-
---=20
-Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261103153132.4154=
-855-1-libaokun@linux.alibaba.com?part=3D2
