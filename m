@@ -1,59 +1,60 @@
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1794978120;
-	b=Be7boUSpsH+YCIt+lUI9Sg7Y9PKIBT/32OIFRripQWD8TDYnY4VUkJS9uqeRwO8jn5Hf
-	 wA4ZB83E7MHMyCWUzN7BvXjh/F5zth7GD6MtgX1r8raI1aJ6aWqbHgo6VCU4jsUI6bHS4
-	 gPs8cAxhJ7ugxT/Ls7QyIXiG27hpfiPnzkT8LNFgcex8dMN4TrEIyAiMpooVVpH1PMocE
-	 YFSRACsx206WCPWlcGuOLHohmssEiQlwdsed7rY5wI7qbFsfCz3ocv2EyEdA4MoU4LovR
-	 dD5IkVF/hkeP3mNUmjCmV2o6j7FMFOjX4uQOc3pNhMcfiuKee0c+9cj051Hvy3Gxfhg==
+	t=1795001505;
+	b=g8a0BaTY+6Qq0YkNrX5JpqRF2Sk9ZSNAkCMidhEzfos6XW/++aNkT7hY+gshCTvlsy4w
+	 oAx6BC3dk2+yAXIY4/qT84dn1sUCG3vNJyBoyqWhM+kWgC9rKR34IHkYJnvqvn3R+GqhE
+	 zf1Kh6q2fLKo+KftE+Q5Jf+9ORLme2/lDq6GvsgKoVBwXCv2LT6eLeNeP1Zq5ArVtgKmx
+	 AXyq/Cohi5rYUo9DoSKtHvYNaZTqF5TlrZPNbFdUTHJ9L9M6bqd7gJRHmil3pA7Ppwi0r
+	 oh8jAez7hBEAPtPcdKrG/4rWjutvMXRjLR/4MqUdElEhi2soiQkMJP6c/GwzGsP6Kjg==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1794978120;
+	a=rsa-sha256; c=relaxed/relaxed; t=1795001505;
 	h=Received:DKIM-Signature:Date:From:To:Cc:Subject:Message-ID:
 	 References:MIME-Version:Content-Type:Content-Disposition:In-Reply-To;
-	bh=buJAxVxDBcGm0+gFbF5F6hAK1IYNZp2MClhpS9+UJjA=;
-	b=UAYffMdn3TAyBVsS8Qhe1XuVGjZVTZvMfrnABRN+nvrf1l8a25jCpcl9JSaF83yD1+P9
-	 QL5kPqH9GERzG48HCwefz1UTVH2ZnNsvmeZH1UVniG5Rh4IrrT4QzDphquQ1cEEJOD/zW
-	 uHrvJLR5ckJBpEYo+zYXjx0xZVvFoTApA8s3gVQ4Uxl9BnOljC7Z3BbCXLu7h7v3iexgo
-	 RJhLi3+6uMp0ib1NeOWELHUqBFzX8iEUJz8WI/Qzc3KIcJVTiG2SiY8gwwiUkzqJnmoIe
-	 NycDmbprMaxLnnSHgB/4IB29xB/H+LkHbpAHTsC7i65T+G0vWdMT0lwnbO5mRNHgKlA==
+	bh=ti2hkmNuDOWadhSGxF1m8Eafguzo4rmwnOEmvRTOKQg=;
+	b=XMjADcqG3qBa4L5Fnih0WEO+0q+EeQU014JuCMzSvkYRLHNqO+ezniVBnDqqC9FBJ4mU
+	 SPvCvwfGRMPs5I+8/vT+apKcDRD3JvZQZRQICqaUbuvr05HeOzSMvlnAext0hrluMA1DW
+	 HkKAQhyjB0pY3H9Y+k5THuhcx3nNO6H2fZSn7+EQCpXOu7aWi5juJ09BiWaLHxcFhF/S3
+	 eX5n5J+aGbLr8bJoSL7Mv7/CNuWOIX76P8mGIxGhzq2qkfiuayRKUYP2gFXT12A7emsDN
+	 UQHdm4O5ERuL7dWCs9koJ/+Pm7D+hjpQUPdqTP34pXmffqbkciU1rLTBl7gtPKn53lQ==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=FfwTOhXU;
+	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=ODIO9pZm;
 	arc=none smtp.remote-ip=100.103.45.18
 Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 4F6AA606A31C;
-	Wed, 18 Nov 2026 05:02:00 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 4B7F7606A333;
+	Wed, 18 Nov 2026 11:31:45 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=FfwTOhXU
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 7E2DA1F000C4;
-	Wed, 18 Nov 2026 05:01:59 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=ODIO9pZm
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 7E32C1F000C4;
+	Wed, 18 Nov 2026 11:31:38 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1794978119;
-	bh=buJAxVxDBcGm0+gFbF5F6hAK1IYNZp2MClhpS9+UJjA=;
+	s=k20260515; t=1795001504;
+	bh=ti2hkmNuDOWadhSGxF1m8Eafguzo4rmwnOEmvRTOKQg=;
 	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=FfwTOhXUXPUk+CcNccykVkrwW0f62fCOj8ajYxrUk8D3gwNNG+f0orXOYe7MAP6Ze
-	 kGqxVltBqpd1DH89gmYIJRQdkwTRdgv+x1IaHQx05OnBeLDC13/CE/m6d56egTdOhe
-	 MvxdTCzQCk1HX7V4XjpEO/fGBS+XbXedJVssoX23MdbTqGwSKvDIHVWj9jYBd13NX7
-	 3F6hRp/2gQq3e+Gtf8QXIk2nMYsFwVOVQMeWE03BzAl+P1CvIwyKp9p7mYD4H8y3ti
-	 PIYiXHtwECD1jHhA2UZK5V8gyHBn9SCHHgUujAFow9r9rAOwcSXjeyelZGYhONYPmp
-	 0zgXOC8W4UxXw==
-Date: Tue, 17 Nov 2026 21:01:58 -0800
-From: Eric Biggers <ebiggers@kernel.org>
-To: Thorsten Blum <blum@kernel.org>
-Cc: David Sterba <dsterba@suse.com>, Chris Mason <mason@kernel.org>,
-	Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
-	Richard Weinberger <richard@nod.at>,
-	Zhihao Cheng <chengzhihao1@huawei.com>,
-	"Theodore Y. Ts'o" <tytso@mit.edu>, linux-btrfs@vger.kernel.org,
-	linux-kernel@vger.kernel.org,
-	linux-f2fs-devel@lists.sourceforge.net,
-	linux-mtd@lists.infradead.org, linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH 0/4] fscrypt: Add FSTR() helper macro and convert
- initializers
-Message-ID: <20261118050158.GC3400@sol>
-References: <20261118002845.574426-6-blum@kernel.org>
+	b=ODIO9pZmjYH1kZMTAUIhrLtNRhxyJLwHyVTBNB7l7Qu+neQPbJ9dCl0eBk9KYHa3N
+	 /Vieo866GiWsxthi2PUQXCbWvh7BRQTeI/1R4E+Q2venKkuYsOb1ezgQRhhlce+GFF
+	 QWo0r0zYe9OYi9XGyE5y7akfnlOg1+7ZUsUJv5E2WJKnR3gVsqqXd3KuIV3yez32wx
+	 R7c+/ueTUFxehQp+SxdgmsOXILl326ocUsp2E9Z9CbZ1UP0Vddrb6smC4h6oT+hWKJ
+	 zFv2q/4p84woUI1S5mY8V6fv2FtULFhqAgeueAomZXon5W5llDhHWjxKDEwOOFkehb
+	 lrg5Aisxxszqg==
+Date: Wed, 18 Nov 2026 12:31:35 +0100
+From: Carlos Maiolino <cem@kernel.org>
+To: Jan Kara <jack@suse.cz>
+Cc: Christian Brauner <brauner@kernel.org>, linux-fsdevel@vger.kernel.org, 
+	Andreas Gruenbacher <agruenba@redhat.com>, gfs2@lists.linux.dev, Mike Marshall <hubcap@omnibond.com>, 
+	Martin Brandenburg <martin@omnibond.com>, devel@lists.orangefs.org, Dave Kleikamp <shaggy@kernel.org>, 
+	jfs-discussion@lists.sourceforge.net, linux-xfs@vger.kernel.org, David Howells <dhowells@redhat.com>, 
+	Marc Dionne <marc.dionne@auristor.com>, linux-afs@lists.infradead.org, 
+	Miklos Szeredi <miklos@szeredi.hu>, fuse-devel@lists.linux.dev, linux-block@vger.kernel.org, 
+	Chuck Lever <cel@kernel.org>, Jeff Layton <jlayton@kernel.org>, linux-nfs@vger.kernel.org, 
+	Eric Biggers <ebiggers@kernel.org>, Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH 02/13] xfs: Drop pointless I_DIRTY_PAGES check in
+ xfs_can_free_cowblocks()
+Message-ID: <av2MieP4-v3axqLA@cronus.toxiclabs.cc>
+References: <20261113083336.15152-1-jack@suse.cz>
+ <20261113084700.739002-15-jack@suse.cz>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -65,16 +66,39 @@ Precedence: list
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20261118002845.574426-6-blum@kernel.org>
+In-Reply-To: <20261113084700.739002-15-jack@suse.cz>
 
-On Wed, Nov 18, 2026 at 01:28:46AM +0100, Thorsten Blum wrote:
-> Similar to QSTR(), add FSTR() to initialize struct fscrypt_str from a
-> NUL-terminated string without specifying its length.
+On Fri, Nov 13, 2026 at 09:47:02AM +0100, Jan Kara wrote:
+> PAGECACHE_TAG_DIRTY is the authoritative source of information about any
+> folio being dirty in the mapping. I_DIRTY_PAGES is just an approximation
+> used by writeback code that can get stale under certain situations. So
+> just rely on the authoritative check.
 > 
-> Use the helper for 8 initializers in btrfs, F2FS, and UBIFS, replacing
-> hard-coded lengths and explicit strlen() calls.
+> Signed-off-by: Jan Kara <jack@suse.cz>
+> ---
+>  fs/xfs/xfs_reflink.h | 3 +--
+>  1 file changed, 1 insertion(+), 2 deletions(-)
+> 
+> diff --git a/fs/xfs/xfs_reflink.h b/fs/xfs/xfs_reflink.h
+> index 683c1841e640..1310cc9fe829 100644
+> --- a/fs/xfs/xfs_reflink.h
+> +++ b/fs/xfs/xfs_reflink.h
+> @@ -17,8 +17,7 @@ xfs_can_free_cowblocks(struct xfs_inode *ip)
+>  {
+>  	struct inode *inode = VFS_I(ip);
+>  
+> -	if ((inode_state_read_once(inode) & I_DIRTY_PAGES) ||
+> -	    mapping_tagged(inode->i_mapping, PAGECACHE_TAG_DIRTY) ||
+> +	if (mapping_tagged(inode->i_mapping, PAGECACHE_TAG_DIRTY) ||
+>  	    mapping_tagged(inode->i_mapping, PAGECACHE_TAG_WRITEBACK) ||
+>  	    atomic_read(&inode->i_dio_count))
+>  		return false;
+> -- 
+> 2.53.0
 
-It would be worth stating explicitly that the new strlen() calls are
-constant-folded in most configurations (if they indeed are).
+For this patch, feel free to add:
 
-- Eric
+Reviewed-by: Carlos Maiolino <cmaiolino@redhat.com>
+
+> 
+> 
