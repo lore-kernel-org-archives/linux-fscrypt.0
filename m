@@ -1,52 +1,59 @@
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1794977814;
-	b=Jg89GL4clCCuHAiIsWdlbBqZ88vZXrM5VsBL+ZE20jhPPsG9qusOwcqmYHGsOu+TtjFz
-	 CcnUoBqk16T4rF0eSJ7kjhapePs3X+Fu6qRgRHw1cxHNYRGNrhr8lGhKysZys0v3hvDZQ
-	 VO7EFXKSrnI7oF2zVe441F6ZfVdtuEepTLKBn/1rOANJWBQqsT1cFPB3caKvr2/SHUCa5
-	 CelnB9Q4x09vmwBhi/nQ8aGE5MDjwdX+KTUIoRKUhDD9/Wqd4h6hIqW6a5jSV+Dtcjtx5
-	 JIiarVmgp+dCGoDVBGMHlzf+H62PubR8btsaJ+bmz6Xi8u3Ky0pyPmWCaJOn1CaBO0A==
+	t=1794978120;
+	b=Be7boUSpsH+YCIt+lUI9Sg7Y9PKIBT/32OIFRripQWD8TDYnY4VUkJS9uqeRwO8jn5Hf
+	 wA4ZB83E7MHMyCWUzN7BvXjh/F5zth7GD6MtgX1r8raI1aJ6aWqbHgo6VCU4jsUI6bHS4
+	 gPs8cAxhJ7ugxT/Ls7QyIXiG27hpfiPnzkT8LNFgcex8dMN4TrEIyAiMpooVVpH1PMocE
+	 YFSRACsx206WCPWlcGuOLHohmssEiQlwdsed7rY5wI7qbFsfCz3ocv2EyEdA4MoU4LovR
+	 dD5IkVF/hkeP3mNUmjCmV2o6j7FMFOjX4uQOc3pNhMcfiuKee0c+9cj051Hvy3Gxfhg==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1794977814;
+	a=rsa-sha256; c=relaxed/relaxed; t=1794978120;
 	h=Received:DKIM-Signature:Date:From:To:Cc:Subject:Message-ID:
-	 MIME-Version:Content-Type:Content-Disposition;
-	bh=vBJwOopXChuf+WSraUW68GSu98Ya2otWx9eT1uHGC8o=;
-	b=qfuRXotlL+H/IGFedDAO051uJDbybkxDLCJbuSTzxByNbCI2cS10SL5scZeaBCLbLdTf
-	 kwvBp6XhByRcKeGkKzpT0L6hW1dXcZ0cVzRxTyujbaP+FjecBYgJwCVGgfks53UVQRqeC
-	 e7+SWYSrF5UpVEJPf49H7G/24PwARntf0017boiOKpkCDJcJiFRy4ziP54V2XItX/EGY1
-	 zmheZfMDvblNUol+x5UplFeFnSxRPaVKm+RSOyqMnlhx9LbJ9JdQ3nIsEGtpDlDwv1Lsd
-	 UriD68zujq1lo9fZdYmSL+L8WE8G8OFkAqBt8X9WFYb8/xK9RsKa0plEffzpcPggwbg==
+	 References:MIME-Version:Content-Type:Content-Disposition:In-Reply-To;
+	bh=buJAxVxDBcGm0+gFbF5F6hAK1IYNZp2MClhpS9+UJjA=;
+	b=UAYffMdn3TAyBVsS8Qhe1XuVGjZVTZvMfrnABRN+nvrf1l8a25jCpcl9JSaF83yD1+P9
+	 QL5kPqH9GERzG48HCwefz1UTVH2ZnNsvmeZH1UVniG5Rh4IrrT4QzDphquQ1cEEJOD/zW
+	 uHrvJLR5ckJBpEYo+zYXjx0xZVvFoTApA8s3gVQ4Uxl9BnOljC7Z3BbCXLu7h7v3iexgo
+	 RJhLi3+6uMp0ib1NeOWELHUqBFzX8iEUJz8WI/Qzc3KIcJVTiG2SiY8gwwiUkzqJnmoIe
+	 NycDmbprMaxLnnSHgB/4IB29xB/H+LkHbpAHTsC7i65T+G0vWdMT0lwnbO5mRNHgKlA==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=Ivrfh1a7;
+	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=FfwTOhXU;
 	arc=none smtp.remote-ip=100.103.45.18
 Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6F25D606A31C;
-	Wed, 18 Nov 2026 04:56:54 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 4F6AA606A31C;
+	Wed, 18 Nov 2026 05:02:00 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=Ivrfh1a7
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id C51DF1F000C4;
-	Wed, 18 Nov 2026 04:56:53 +0000 (UTC)
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=FfwTOhXU
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 7E2DA1F000C4;
+	Wed, 18 Nov 2026 05:01:59 +0000 (UTC)
 DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1794977814;
-	bh=vBJwOopXChuf+WSraUW68GSu98Ya2otWx9eT1uHGC8o=;
-	h=Date:From:To:Cc:Subject;
-	b=Ivrfh1a7ae0NxHhBEJO8qi2xDzuc8cIcCveh758Q3Iy/XDgDXCD0A+xOT6Uc9O54T
-	 ClkzIIzfl7ZWqkjnmLMI5vwuZ4yuSZblSJYhLEcBnqm5Uy0zv1ZDbsbpLlSoDEps7a
-	 cawu/M/OCoI2wz3i95NEQRbTND9qjyAhacDzLR/pKDQHAZjDHlDzEPH28dwGA4Ozb3
-	 rPxd+mZk1/Ifw7E0QBsYS3sl1297OjpMkhCNpHS7nEB4bLvdvOGLpOzz4eGgSRaQDq
-	 51oZWz+wCQFoi+JDdwZ0B+XSlY4GrqYhzi7aU1NxUJJc29mRhNuiFYTiSloIdBBSuV
-	 DGuED0UIv1aFQ==
-Date: Tue, 17 Nov 2026 20:56:52 -0800
+	s=k20260515; t=1794978119;
+	bh=buJAxVxDBcGm0+gFbF5F6hAK1IYNZp2MClhpS9+UJjA=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=FfwTOhXUXPUk+CcNccykVkrwW0f62fCOj8ajYxrUk8D3gwNNG+f0orXOYe7MAP6Ze
+	 kGqxVltBqpd1DH89gmYIJRQdkwTRdgv+x1IaHQx05OnBeLDC13/CE/m6d56egTdOhe
+	 MvxdTCzQCk1HX7V4XjpEO/fGBS+XbXedJVssoX23MdbTqGwSKvDIHVWj9jYBd13NX7
+	 3F6hRp/2gQq3e+Gtf8QXIk2nMYsFwVOVQMeWE03BzAl+P1CvIwyKp9p7mYD4H8y3ti
+	 PIYiXHtwECD1jHhA2UZK5V8gyHBn9SCHHgUujAFow9r9rAOwcSXjeyelZGYhONYPmp
+	 0zgXOC8W4UxXw==
+Date: Tue, 17 Nov 2026 21:01:58 -0800
 From: Eric Biggers <ebiggers@kernel.org>
-To: Linus Torvalds <torvalds@linux-foundation.org>
-Cc: linux-fscrypt@vger.kernel.org, linux-fsdevel@vger.kernel.org,
-	linux-kernel@vger.kernel.org, Theodore Ts'o <tytso@mit.edu>,
-	Jaegeuk Kim <jaegeuk@kernel.org>, Ada Smith <adasmithgt@gmail.com>
-Subject: [GIT PULL] fscrypt fix for v7.4-rc4
-Message-ID: <20261118045652.GB3400@sol>
+To: Thorsten Blum <blum@kernel.org>
+Cc: David Sterba <dsterba@suse.com>, Chris Mason <mason@kernel.org>,
+	Jaegeuk Kim <jaegeuk@kernel.org>, Chao Yu <chao@kernel.org>,
+	Richard Weinberger <richard@nod.at>,
+	Zhihao Cheng <chengzhihao1@huawei.com>,
+	"Theodore Y. Ts'o" <tytso@mit.edu>, linux-btrfs@vger.kernel.org,
+	linux-kernel@vger.kernel.org,
+	linux-f2fs-devel@lists.sourceforge.net,
+	linux-mtd@lists.infradead.org, linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH 0/4] fscrypt: Add FSTR() helper macro and convert
+ initializers
+Message-ID: <20261118050158.GC3400@sol>
+References: <20261118002845.574426-6-blum@kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -58,28 +65,16 @@ Precedence: list
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
+In-Reply-To: <20261118002845.574426-6-blum@kernel.org>
 
-The following changes since commit 7475ea8b58616b33c04afb976cf0fbaad9dd63fb:
+On Wed, Nov 18, 2026 at 01:28:46AM +0100, Thorsten Blum wrote:
+> Similar to QSTR(), add FSTR() to initialize struct fscrypt_str from a
+> NUL-terminated string without specifying its length.
+> 
+> Use the helper for 8 initializers in btrfs, F2FS, and UBIFS, replacing
+> hard-coded lengths and explicit strlen() calls.
 
-  Linux 7.4-rc2 (2026-11-08 16:22:20 -0800)
+It would be worth stating explicitly that the new strlen() calls are
+constant-folded in most configurations (if they indeed are).
 
-are available in the Git repository at:
-
-  https://git.kernel.org/pub/scm/fs/fscrypt/linux.git tags/fscrypt-for-linus
-
-for you to fetch changes up to 2de253924266eeedb798fb662173726c90b0cf04:
-
-  fscrypt: Initialize ->ci_master_key before publication (2026-11-10 14:19:21 -0800)
-
-----------------------------------------------------------------
-
-Fix a NULL dereference that was theoretically possible if
-FS_IOC_SETFLAGS was called to set the casefold flag on an encrypted
-directory concurrently with its encryption key being set up.
-
-----------------------------------------------------------------
-Eric Biggers (1):
-      fscrypt: Initialize ->ci_master_key before publication
-
- fs/crypto/keysetup.c | 14 +++++++++++++-
- 1 file changed, 13 insertions(+), 1 deletion(-)
+- Eric
