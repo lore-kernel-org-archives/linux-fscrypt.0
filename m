@@ -1,102 +1,58 @@
 Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=195.135.223.130
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
 	t=1795013997;
-	b=5s4VbuEGkVLFQW/5WMcmmV8ZVGavOVCNjrtNEoj9j4muSxcNBc95W71FVvxwt7ApLXPv
-	 ZvrhHJIIj92oxpT51rI8HRyfTiO01Ah8XpgPF3eggU3+Bla6zLbcggfhupNDWR6boYFbL
-	 P2miU4IbleNN031jPGusyAoGbv9lst4L4OAu8ipF6+4/lqae22niSQpicD5fdBWOKIFDg
-	 UaQ6J06rM00rimAyZl6idcxEbqqyboijMuEcymAwe1AjHC0S8uzQ6GOnA+PGzMCAZP8GH
-	 oDKZgatxvBVZBNw0GTNOk5+0Pa9vH08lY2Ua7SaN2apTKIzKV4Ic/u9VqdgwZg4KCMA==
+	b=Qdw00BOgOoWF2njc8xZ55Gyw1QkCcrFeJ6+EDezWm/3TjMCjevW7UcHqRn2WZDH7UzXQ
+	 vVJWoqglmuxKi2UVU6+NxomT2/PXKnHjvpVJcuZ8Ti6jGcBOCsMkozK5qAaBFDd/p05vb
+	 qo413i4cjqK7Wmx2mSVuOLeFlYZtaVRcXQ6uDUCS+7si1E0ImSx+k1/pG3NlTgunoWqMY
+	 C/2uaJPp+Af3qYZreXdk+bZasEQGWZewiyxbJRe7yxImgtVR00WuUGjIsOYiaNxV+up8N
+	 f/S8p7qOxeuKc6PM4TkFqpyYmknsQBlppe8F78q05W1WtyhkrrfgOK1w3AvR1BJA46A==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
 	a=rsa-sha256; c=relaxed/relaxed; t=1795013997;
-	h=DMARC-Filter:Received:DKIM-Signature:DKIM-Signature:DKIM-Signature:
-	 DKIM-Signature:Received:Received:Received:From:To:Cc:Subject:Date:
-	 Message-ID:X-Mailer:In-Reply-To:References:MIME-Version:
+	h=DMARC-Filter:Received:Received:Received:Received:From:To:Cc:Subject:
+	 Date:Message-ID:X-Mailer:In-Reply-To:References:MIME-Version:
 	 X-Developer-Signature:X-Developer-Key:Content-Transfer-Encoding:
-	 X-Spam-Flag:X-Spam-Level:X-Spamd-Result:X-Spam-Score;
-	bh=Z98a10fHzT++6ngZEHshG/H2z2HCNkc0ofB6cf23iao=;
-	b=mYJA3GQ8n1ruKT8gf4nwKvyMAl17qgrGJsQrFim7ex1anmMP5Mz5rWA4Uhtomi8QTg6Z
-	 2ZgbhMXcmVZeI3jKDllitQ1Yk0Lc4geDfvzePMgdavUpsvtDBA4meAHBhBNnPBdkx1ySf
-	 NlF/VeegDKBtSSr6x0PEDmL5WBfencPEDqtoFSXcgGw1hZwtre7zqcxNfLjVHBzZM3x5B
-	 9w8wecJffxwZpnhebZSWtu0n0OJWqIngfwwdXTZDp2o0RtKe5Z5on8sNlW7hmGTehJwuy
-	 Dcfi+LQD+m1G+Bg2SWLeFxm6WkksdzCPgqc4RruJe4aSNhnOjphI7uUbLHrZdRBRU5Q==
+	 X-Rspamd-Pre-Result:X-Rspamd-Queue-Id:X-Rspamd-Pre-Result:
+	 X-Rspamd-Action:X-Rspamd-Server:X-Spam-Level:X-Spamd-Result:
+	 X-Spam-Flag:X-Spam-Score;
+	bh=VQb+bKWhxu6T8I0319SZX3JCOfe5xe2J2p1rpusenNw=;
+	b=rQ7SfsUpLy3/AGH4SBI2ellTH4dGm+K+6x3AT8OtNwHcZwJMdeXoBlx/BJ4NyF/zEInb
+	 R9dxAfT7p8YjPPl9iNlFBEaeeJs2n9e9lkf/JFJ9msVz/uRmTlTvZE1u4+n3A6pw1CgQ0
+	 DiHTTE0/o+UCBNSYgjQZuc5W+q8uVZ4Kob5/J68+jXvEjvU0dD1p28Qas08iaxTP7fFwZ
+	 zUrzF5Iovh3raiHjTpV5TNbDzNVEOREx1p/Awdp8thRxqc9cD2IeF9zEF3frqp2Jy6lfL
+	 g/kmyFVqPNUQfVrIOjYpiyfSEWQcnuZXO/PdvucgQ5/vDCLYRNS3wvvlhMCFFPZoJSg==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
 	dmarc=none header.from=suse.cz;
 	spf=pass smtp.mailfrom=suse.cz;
-	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=tSK36OE9;
-	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=yg2Ni58S;
-	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=tSK36OE9;
-	dkim=neutral header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=yg2Ni58S;
 	arc=none smtp.remote-ip=195.135.223.130
 Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id A6F41606A330;
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 5D227606A320;
 	Wed, 18 Nov 2026 14:59:56 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org A6F41606A330
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 5D227606A320
 Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.cz
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=tSK36OE9;
-	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=yg2Ni58S;
-	dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=tSK36OE9;
-	dkim=neutral header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=yg2Ni58S
-Received: from imap1.dmz-prg2.suse.org (unknown [10.150.64.97])
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id F1FE42233D;
+	by smtp-out1.suse.de (Postfix) with ESMTPS id 8C73C221AC;
 	Wed, 18 Nov 2026 14:59:54 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
-	t=1795013995; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=Z98a10fHzT++6ngZEHshG/H2z2HCNkc0ofB6cf23iao=;
-	b=tSK36OE9v7SyI2HI5hUXQxNCJ5O2xf+YfrZO22BNwpmeaRTxWeJHN0UKjSiZtmcaxRDFeu
-	M7cMVve+dldAytEavPMj3GCmhZUFJ7tWnxed2u5kyfDQY2KjMKd0AOfTYigwD0Ca7lhJbG
-	IYC81yrCqHK4eQCGUAfMt27yg9qTPco=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
-	s=susede2_ed25519; t=1795013995;
-	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=Z98a10fHzT++6ngZEHshG/H2z2HCNkc0ofB6cf23iao=;
-	b=yg2Ni58Sip3AkJDVvE/mUm2c+DZ5cVgirzssCJtcO7elDL568xTUhZB3WCfHOUbYMa9Azo
-	PApu2f04XwvHCnBw==
 Authentication-Results: smtp-out1.suse.de;
 	none
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
-	t=1795013995; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=Z98a10fHzT++6ngZEHshG/H2z2HCNkc0ofB6cf23iao=;
-	b=tSK36OE9v7SyI2HI5hUXQxNCJ5O2xf+YfrZO22BNwpmeaRTxWeJHN0UKjSiZtmcaxRDFeu
-	M7cMVve+dldAytEavPMj3GCmhZUFJ7tWnxed2u5kyfDQY2KjMKd0AOfTYigwD0Ca7lhJbG
-	IYC81yrCqHK4eQCGUAfMt27yg9qTPco=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
-	s=susede2_ed25519; t=1795013995;
-	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:
-	 content-transfer-encoding:content-transfer-encoding:
-	 in-reply-to:in-reply-to:references:references;
-	bh=Z98a10fHzT++6ngZEHshG/H2z2HCNkc0ofB6cf23iao=;
-	b=yg2Ni58Sip3AkJDVvE/mUm2c+DZ5cVgirzssCJtcO7elDL568xTUhZB3WCfHOUbYMa9Azo
-	PApu2f04XwvHCnBw==
 Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
 	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id BF69B13510;
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 58747134F6;
 	Wed, 18 Nov 2026 14:59:54 +0000 (UTC)
 Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
 	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id 3dApIWq9/WqRXwAAD6G6ig
+	id gMXSDWq9/WqIXwAAD6G6ig
 	(envelope-from <jack@suse.cz>); Wed, 18 Nov 2026 14:59:54 +0000
 Received: by quack.suse.cz (Postfix, from userid 1000)
-	id D818825095; Wed, 18 Nov 2026 15:59:53 +0100 (CET)
+	id C35E32508F; Wed, 18 Nov 2026 15:59:53 +0100 (CET)
 From: Jan Kara <jack@suse.cz>
 To: Christian Brauner <brauner@kernel.org>
 Cc: <linux-fsdevel@vger.kernel.org>,
@@ -122,9 +78,9 @@ Cc: <linux-fsdevel@vger.kernel.org>,
 	Jaegeuk Kim <jaegeuk@kernel.org>,
 	linux-fscrypt@vger.kernel.org,
 	Jan Kara <jack@suse.cz>
-Subject: [PATCH 04/13] fs: Provide inode_is_dirty() helper
-Date: Wed, 18 Nov 2026 15:59:38 +0100
-Message-ID: <20261118145941.1063127-17-jack@suse.cz>
+Subject: [PATCH 01/13] bdev: Drop pointless loop from blkdev_flush_mapping()
+Date: Wed, 18 Nov 2026 15:59:35 +0100
+Message-ID: <20261118145941.1063127-14-jack@suse.cz>
 X-Mailer: git-send-email 2.53.0
 In-Reply-To: <20261116171044.6938-1-jack@suse.cz>
 References: <20261116171044.6938-1-jack@suse.cz>
@@ -137,65 +93,77 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
-X-Developer-Signature: v=1; a=openpgp-sha256; l=953; i=jack@suse.cz; h=from:subject; bh=xOmo84WJOisQVAhQnOPGQkdou8zuAdb6TcwawJJufqw=; b=owEBbQGS/pANAwAIAZydqgc/ZEDZAcsmYgBq/b1ff2G0M3LorDLP5OvjOgq4WAHvSsH554SUA qj6hLx64miJATMEAAEIAB0WIQSrWdEr1p4yirVVKBycnaoHP2RA2QUCav29XwAKCRCcnaoHP2RA 2T5UB/9KJvhtw82D4mMQM54eKUuWbi9R83u4lELKEiH2F36FZd1r/AgFBX/9uQH4TTOJWHvKR7+ KfH/WOJ5T6kHoxPWqjLH3t7X2aUSKI2ncqkAFvbuxfs9mSBXmY/i9BZF9iuvv2mYsmkXoPqEHGe poSy22BuVH7SzXrFekCl7fzP6XuPcdzqHCtSslMd7blK+ngogp4qTRNKJ9wDVrdRWCMdMJ+QCsu mmZU6tvK8LNi3rT3015YXEU5rrpFlDu5A5CmW1aiJcUspRfTNoiMTHjzUFtVMDpqBDrwmNJOinh KSNxq4iJHwqJlaEwPAwWdJO2bgJfd+umAUs4bkZj0shiAL3/
+X-Developer-Signature: v=1; a=openpgp-sha256; l=1685; i=jack@suse.cz; h=from:subject; bh=z1JyqCsZ1lnse9oZn1LwdYUSEld1ft2x2CnQBKoqPus=; b=owEBbQGS/pANAwAIAZydqgc/ZEDZAcsmYgBq/b1dYcoAlm2vX4tK6XDG212WFtG10TkQz/+FW 9G3zmi8FbKJATMEAAEIAB0WIQSrWdEr1p4yirVVKBycnaoHP2RA2QUCav29XQAKCRCcnaoHP2RA 2RoiCACpP7sTwiHcRf/fSD2O9uYci8jFkLC/UilDQbiImo9IZbfBJh7PxLI/pcSWHRguMecGq44 1kCjlaPlpRm0ebnDuSGvxe4zo27aAMjlygNick1y8OCZkLS+Ln481KwHosRfyz1HdgW1Z7rb3D2 VXM05fMYrjyezK0jm8hXsnhgIV/J18iXp1yBQ/2iOts3IlCBKnofUpN8QyAT4mWom/9fnfbWeFp EgFrmZ/FXrtdybnV3JwagFu20pD0fvtOGnN5ikYpsOvVxIh8ErV5rkhJqS4QaqsHAKua000EKx1 siXdOGZeXsv/WDF3uTSs1X3RGQfNabZ8q2vKBOyf8hwXq1Z6
 X-Developer-Key: i=jack@suse.cz; a=openpgp; fpr=93C6099A142276A28BBE35D815BC833443038D8C
 Content-Transfer-Encoding: 8bit
-X-Spam-Flag: NO
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Queue-Id: 8C73C221AC
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Action: no action
+X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
 X-Spam-Level: 
-X-Spamd-Result: default: False [-15.80 / 50.00];
-	SUSE_INTERNAL_BYPASS(-9.00)[];
-	REPLY(-4.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	MID_CONTAINS_FROM(1.00)[];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	R_MISSING_CHARSET(0.50)[];
-	NEURAL_HAM_SHORT(-0.20)[-0.999];
-	MIME_GOOD(-0.10)[text/plain];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	RCPT_COUNT_TWELVE(0.00)[24];
-	TO_DN_SOME(0.00)[];
-	ARC_NA(0.00)[];
-	MIME_TRACE(0.00)[0:+];
-	RCVD_COUNT_THREE(0.00)[3];
-	DKIM_SIGNED(0.00)[suse.cz:s=susede2_rsa,suse.cz:s=susede2_ed25519];
-	FROM_HAS_DN(0.00)[];
-	R_RATELIMIT(0.00)[to_ip_from(RLyaw51ggmke6bkcxeyajg5whq)];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_TLS_LAST(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.cz:email,imap1.dmz-prg2.suse.org:helo]
-X-Spam-Score: -15.80
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
+X-Spam-Flag: NO
+X-Spam-Score: -4.00
 
-Provide inode_is_dirty() helper for use by filesystems (mostly fsync
-methods).
+bdev_write_inode() is really odd loop calling write_inode_now(). The
+bdev doesn't have any pages by now and if there are any dirty bits in
+the inode state, they are stale. Just call write_inode_now() once to
+clear them.
 
 Signed-off-by: Jan Kara <jack@suse.cz>
 ---
- include/linux/fs.h | 11 +++++++++++
- 1 file changed, 11 insertions(+)
+ block/bdev.c | 25 ++++++-------------------
+ 1 file changed, 6 insertions(+), 19 deletions(-)
 
-diff --git a/include/linux/fs.h b/include/linux/fs.h
-index 99caef43ff3c..025f5d890689 100644
---- a/include/linux/fs.h
-+++ b/include/linux/fs.h
-@@ -2217,6 +2217,17 @@ static inline void mark_inode_dirty_sync(struct inode *inode)
- 	__mark_inode_dirty(inode, I_DIRTY_SYNC);
+diff --git a/block/bdev.c b/block/bdev.c
+index f20f91b3176e..9fa72df4f47a 100644
+--- a/block/bdev.c
++++ b/block/bdev.c
+@@ -60,24 +60,6 @@ struct block_device *file_bdev(struct file *bdev_file)
+ }
+ EXPORT_SYMBOL(file_bdev);
+ 
+-static void bdev_write_inode(struct block_device *bdev)
+-{
+-	struct inode *inode = BD_INODE(bdev);
+-	int ret;
+-
+-	spin_lock(&inode->i_lock);
+-	while (inode_state_read(inode) & I_DIRTY) {
+-		spin_unlock(&inode->i_lock);
+-		ret = write_inode_now(inode, true);
+-		if (ret)
+-			pr_warn_ratelimited(
+-	"VFS: Dirty inode writeback failed for block device %pg (err=%d).\n",
+-				bdev, ret);
+-		spin_lock(&inode->i_lock);
+-	}
+-	spin_unlock(&inode->i_lock);
+-}
+-
+ /* Kill _all_ buffers and pagecache , dirty or not.. */
+ static void kill_bdev(struct block_device *bdev)
+ {
+@@ -755,7 +737,12 @@ static void blkdev_flush_mapping(struct block_device *bdev)
+ 	WARN_ON_ONCE(bdev->bd_holders);
+ 	sync_blockdev(bdev);
+ 	kill_bdev(bdev);
+-	bdev_write_inode(bdev);
++	/*
++	 * All data is written out and evicted but inode can have some stale
++	 * I_DIRTY bits set. Call write_inode_now() to get rid of them so that
++	 * the inode can be evicted.
++	 */
++	write_inode_now(BD_INODE(bdev), 1);
  }
  
-+/*
-+ * Check whether inode itself needs to be written out either at all or for
-+ * the purposes of datasync if @datasync is set.
-+ */
-+static inline bool inode_is_dirty(struct inode *inode, bool datasync)
-+{
-+	int mask = datasync ? I_DIRTY_DATASYNC : (I_DIRTY_INODE | I_DIRTY_TIME);
-+
-+	return inode_state_read_once(inode) & mask;
-+}
-+
- static inline void set_inode_metadata_writeback(struct inode *inode)
- {
- 	spin_lock(&inode->i_lock);
+ static void blkdev_put_whole(struct block_device *bdev)
 -- 
 2.53.0
 
