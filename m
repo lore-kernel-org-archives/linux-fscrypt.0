@@ -1,52 +1,52 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=91.218.175.107
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=91.218.175.181
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1795179090;
-	b=rgwJ84OKEkwENS7hVlsbfE1PllJFhMTn+B9MBOWqSqc2ywhyS4Ke8ubc7KvCEhCYiHvl
-	 6b0Tg+6P0frfV/v9G8MsrEye7ABP1Qjf0N7QBbd9143DqtrEzdUCcEXwQVByiUHLVkY7R
-	 EsYypR+osnvjUwppweNhJlWeOk7tGMDUwpGjSHW/S+yy4WYPFwxYerYSERtC0+YrRof1a
-	 mrlRk/gbpM2J+oF4gZscUN4LxWYHo0JmFlXgm0C3XaEJ6Zq1Z/BwWbi746tejcLD7sOLp
-	 2n3yFXBSplXYlhfoVGRUbjU+Jz4+n6Y0DI3mxwoAgjDkxhNcz0mz1fprmqUt0RGElnA==
+	t=1795180283;
+	b=BXCGxgaZZV7RVXQPo8D/iSG7Klr7VyCTn4Upr/K+M70WJPOj+8i1QihD+SHmWqVt2gUx
+	 +KWVCp3tIYxnNrnGO/28DQeRAxrekpjAXGF8yF+4Q9o0YG1sfvRXmkUAyg8+SwYOtim30
+	 v+J3qWnRH5tT8H/wEFAWDqu59lcDge0eRVT8Uddh2YA/HfREvtRxMZNywfs5P0DnwgkNJ
+	 lhNyFkpwJm7NySw+xLWeKiphwENY6yfPxZksixaCySYtanUUiyDQRHFrfLGiFJQApucwQ
+	 OBbNcFt9IiG4H5SS01qbIjJJJbCtBDXYlyB26LtLvk5t4liImSis5ICm3UkTG2lwopw==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795179090;
+	a=rsa-sha256; c=relaxed/relaxed; t=1795180283;
 	h=DMARC-Filter:X-Envelope-To:DKIM-Signature:X-Envelope-To:Received:
 	 X-Mizu-Trace-ID:X-Migadu-Flow:Date:From:To:Cc:Subject:Message-ID:
 	 References:MIME-Version:Content-Type:Content-Disposition:In-Reply-To;
-	bh=RwK+sZmEfro4R2XrALiEL0NIpL3hInhE+mN5nJsjAK8=;
-	b=VZVYwBiWDwXWZaLZhmk5izsubpvLxPXJTimktp0//TkRtislbrbLRfxySpSRVgmFU+aT
-	 90aaIgeFiGK6s535jC8FwL0cRGw/ldoULlIDvtBoSQV8r8pcGLCUBCfAPnVPimwD86+99
-	 0niEw1Cx5AKQDf8eqjhrnmOVj0Kj1pK0HhnxuGLIFwGkzyxOajTp0JCg2ea0s+NhCvLtH
-	 wgXoAPDG/f3oZrBLE7n4cSZWZrj/7Tr4iL4R44c2cYmYLUmQKMgMuAi8i2sZHtCiAxLqO
-	 +Z5rlNWtHGKLTO7rrdtBlu0NHFCtSfaTmVfnc/ApEEv/2ZBjTrXWqcfRBITu6+4Y26g==
+	bh=11EUqqsBHqKJhSEKaLjedxJRvUSCpiSlKRotGWVYopQ=;
+	b=4z87Ot+80w2rSjm9nwxB8hVR5e223tgi5NvV8dVxd3QaTsXsjPBZQ1SmA1QF6jTyjR8i
+	 5HHj+odsMBi/DDiaLcdp8y/A3elgmGbONX42GEaZMF+UAxHlKdNZ4gyVw0VGiadfaQ/A8
+	 Uj/j8QQDy7n3JwuXZ/FigzzqBSYkM7bbmjcGgOu34RGmOORNtPWJnhSsiW8IuEq/6a4Oz
+	 /C0PJ+Gr2mZKMkspGv+9Q3vsefXKs0bnY1z80XyJAYYhkvs0S3WJaGw1ENAkxM9IkwNX2
+	 fzp+6DYwrpnnA853WJmd7G5D66Dd5ffnSqvV8Qbk98hjUpmCWYIlw4w67lpxmYH2/wQ==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
 	dmarc=pass header.from=linux.dev;
 	spf=pass smtp.mailfrom=linux.dev;
-	dkim=pass header.d=linux.dev header.i=@linux.dev header.a=rsa-sha256 header.s=key1 header.b=CVboDCpu;
-	arc=none smtp.remote-ip=91.218.175.107
-Received: from mta0.migadu.com (out-107.mta0.migadu.com [91.218.175.107])
+	dkim=pass header.d=linux.dev header.i=@linux.dev header.a=rsa-sha256 header.s=key1 header.b=pcpMXMRk;
+	arc=none smtp.remote-ip=91.218.175.181
+Received: from mta0.migadu.com (out-181.mta0.migadu.com [91.218.175.181])
 	(using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 7421C60A2623
-	for <linux-fscrypt@vger.kernel.org>; Fri, 20 Nov 2026 12:51:28 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 7421C60A2623
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id BD87D606A32C
+	for <linux-fscrypt@vger.kernel.org>; Fri, 20 Nov 2026 13:11:22 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org BD87D606A32C
 Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.dev
 Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.dev
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key, unprotected) header.d=linux.dev header.i=@linux.dev header.a=rsa-sha256 header.s=key1 header.b=CVboDCpu
+	dkim=pass (1024-bit key, unprotected) header.d=linux.dev header.i=@linux.dev header.a=rsa-sha256 header.s=key1 header.b=pcpMXMRk
 X-Envelope-To: linux-fscrypt@vger.kernel.org
-DKIM-Signature: a=rsa-sha256; bh=/M71l9OR+PuswlMFy8Wbwhup3v6OafAF4YhJlLt/84U=;
+DKIM-Signature: a=rsa-sha256; bh=AFN9OOtQlK1HJO8cWelVMtGeAQ6PKLi87EwwnhaP1iY=;
  c=simple/simple; d=linux.dev;
  h=from:to:subject:date:message-id:mime-version:content-type; s=key1;
- t=1795179086; v=1; x=1795783886;
- b=CVboDCpuuv2WqQiy/vtf05zSEtSkLQsRJ/djYGgQWt91weN3dja9zelbY5vaAyy3HckRz8nB
- LTBIz+A0NBi0SxrULdX4yPc6ILwbmx6ofWOwOp9UzoFU9UnVUAYdYhC2d48tOPwt0UJKs6MIxos
- hQ8bQNPKUm99WaSVdem1tj90=
+ t=1795180281; v=1; x=1795785081;
+ b=pcpMXMRkQ4Ns6fd064vPWWatVGroU9IVtkGO3ROe58Y6pOfgmdrRaA8URbSyfTUF5AbEgZhD
+ i68/L46VO8eq6YVzH9zTsvTRNPM0a79tLxALqyXzHBnW3aN7CqxWw7P6596t4l+BKqmEoxYpK8c
+ D1wn0Zhz0yPrczpYDf0gH1hM=
 X-Envelope-To: linux-fscrypt@vger.kernel.org
-Received: by smtp.migadu.com with ESMTPS id 624a9615c12efaf1;
-	Fri, 20 Nov 2026 12:51:26 +0000
-X-Mizu-Trace-ID: 624a9615c12efaf1
+Received: by smtp.migadu.com with ESMTPS id 1d043ee31403846b;
+	Fri, 20 Nov 2026 13:11:20 +0000
+X-Mizu-Trace-ID: 1d043ee31403846b
 X-Migadu-Flow: FLOW_OUT
-Date: Fri, 20 Nov 2026 13:51:14 +0100
+Date: Fri, 20 Nov 2026 14:11:11 +0100
 From: "Pankaj Raghav (Samsung)" <pankaj.raghav@linux.dev>
 To: Jan Kara <jack@suse.cz>
 Cc: Christian Brauner <brauner@kernel.org>, linux-fsdevel@vger.kernel.org, 
@@ -57,12 +57,13 @@ Cc: Christian Brauner <brauner@kernel.org>, linux-fsdevel@vger.kernel.org,
 	linux-afs@lists.infradead.org, Miklos Szeredi <miklos@szeredi.hu>, fuse-devel@lists.linux.dev, 
 	linux-block@vger.kernel.org, Chuck Lever <cel@kernel.org>, Jeff Layton <jlayton@kernel.org>, 
 	linux-nfs@vger.kernel.org, Eric Biggers <ebiggers@kernel.org>, 
-	Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org
-Subject: Re: [PATCH 01/13] bdev: Drop pointless loop from
- blkdev_flush_mapping()
-Message-ID: <awBAeS9ROaFyOjzB@quentin>
+	Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, 
+	Carlos Maiolino <cmaiolino@redhat.com>
+Subject: Re: [PATCH 02/13] xfs: Drop pointless I_DIRTY_PAGES check in
+ xfs_can_free_cowblocks()
+Message-ID: <awBGYTkywYFOaYOI@quentin>
 References: <20261116171044.6938-1-jack@suse.cz>
- <20261118145941.1063127-14-jack@suse.cz>
+ <20261118145941.1063127-15-jack@suse.cz>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -74,74 +75,38 @@ Precedence: list
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <20261118145941.1063127-14-jack@suse.cz>
+In-Reply-To: <20261118145941.1063127-15-jack@suse.cz>
 
-On Wed, Nov 18, 2026 at 03:59:35PM +0100, Jan Kara wrote:
-> bdev_write_inode() is really odd loop calling write_inode_now(). The
-> bdev doesn't have any pages by now and if there are any dirty bits in
-> the inode state, they are stale. Just call write_inode_now() once to
-> clear them.
+On Wed, Nov 18, 2026 at 03:59:36PM +0100, Jan Kara wrote:
+> PAGECACHE_TAG_DIRTY is the authoritative source of information about any
+> folio being dirty in the mapping. I_DIRTY_PAGES is just an approximation
+> used by writeback code that can get stale under certain situations. So
+> just rely on the authoritative check.
 > 
+> Reviewed-by: Carlos Maiolino <cmaiolino@redhat.com>
 > Signed-off-by: Jan Kara <jack@suse.cz>
-
-When I looked at the commit that introduced bdev_write_inode()[1], it says
-to call write_inode_now() on the final put of the block device. At the
-moment, tt looks like we call bdev_write_inode() only when bd_openers is 0.
 
 Looks good,
 Reviewed-by: Pankaj Raghav (Samsung) <pankaj.raghav@linux.dev>
 
---
-Pankaj
-
-[1] 564f00f6c03a ("block_dev: only write bdev inode on close")
 > ---
->  block/bdev.c | 25 ++++++-------------------
->  1 file changed, 6 insertions(+), 19 deletions(-)
+>  fs/xfs/xfs_reflink.h | 3 +--
+>  1 file changed, 1 insertion(+), 2 deletions(-)
 > 
-> diff --git a/block/bdev.c b/block/bdev.c
-> index f20f91b3176e..9fa72df4f47a 100644
-> --- a/block/bdev.c
-> +++ b/block/bdev.c
-> @@ -60,24 +60,6 @@ struct block_device *file_bdev(struct file *bdev_file)
->  }
->  EXPORT_SYMBOL(file_bdev);
->  
-> -static void bdev_write_inode(struct block_device *bdev)
-> -{
-> -	struct inode *inode = BD_INODE(bdev);
-> -	int ret;
-> -
-> -	spin_lock(&inode->i_lock);
-> -	while (inode_state_read(inode) & I_DIRTY) {
-> -		spin_unlock(&inode->i_lock);
-> -		ret = write_inode_now(inode, true);
-> -		if (ret)
-> -			pr_warn_ratelimited(
-> -	"VFS: Dirty inode writeback failed for block device %pg (err=%d).\n",
-> -				bdev, ret);
-> -		spin_lock(&inode->i_lock);
-> -	}
-> -	spin_unlock(&inode->i_lock);
-> -}
-> -
->  /* Kill _all_ buffers and pagecache , dirty or not.. */
->  static void kill_bdev(struct block_device *bdev)
+> diff --git a/fs/xfs/xfs_reflink.h b/fs/xfs/xfs_reflink.h
+> index 683c1841e640..1310cc9fe829 100644
+> --- a/fs/xfs/xfs_reflink.h
+> +++ b/fs/xfs/xfs_reflink.h
+> @@ -17,8 +17,7 @@ xfs_can_free_cowblocks(struct xfs_inode *ip)
 >  {
-> @@ -755,7 +737,12 @@ static void blkdev_flush_mapping(struct block_device *bdev)
->  	WARN_ON_ONCE(bdev->bd_holders);
->  	sync_blockdev(bdev);
->  	kill_bdev(bdev);
-> -	bdev_write_inode(bdev);
-> +	/*
-> +	 * All data is written out and evicted but inode can have some stale
-> +	 * I_DIRTY bits set. Call write_inode_now() to get rid of them so that
-> +	 * the inode can be evicted.
-> +	 */
-> +	write_inode_now(BD_INODE(bdev), 1);
->  }
+>  	struct inode *inode = VFS_I(ip);
 >  
->  static void blkdev_put_whole(struct block_device *bdev)
+> -	if ((inode_state_read_once(inode) & I_DIRTY_PAGES) ||
+> -	    mapping_tagged(inode->i_mapping, PAGECACHE_TAG_DIRTY) ||
+> +	if (mapping_tagged(inode->i_mapping, PAGECACHE_TAG_DIRTY) ||
+>  	    mapping_tagged(inode->i_mapping, PAGECACHE_TAG_WRITEBACK) ||
+>  	    atomic_read(&inode->i_dio_count))
+>  		return false;
 > -- 
 > 2.53.0
 > 
