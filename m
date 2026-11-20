@@ -1,79 +1,68 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=pass header.oldest-pass=0 smtp.remote-ip=100.103.45.18
-ARC-Seal: i=2; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=pass;
-	t=1795148816;
-	b=lswlxrrtLZZfNbUxudT2p0d2ST8AQEHn8/vtyHtfwOaxV1yN1pM8QJGcDS1EOLNpUUxb
-	 wXpIWiU0JzM6RB0263MEfkn1ZEfho9QS5PehEnjA53vzRTqHbsbByAN8HPNQWTL1dux3/
-	 souXQOI/kS+gbBzRA/hZezES2maEvaNVrA+FsQEtzw4vA5tOldaA5u/VxZb7ybIkPklLe
-	 5x8IouAbiuTNOW8+NfPx3xpSqzqfEdXmZx1GG8s5P9jaTedmmXMYBrBIjITBqbUu7LgDJ
-	 ryUPETXFIqusJHYvQHWkOlG5vX356esY9+tWiIj26/3cE4CTCU+SpsYM5ny9lwRhYTA==
-ARC-Message-Signature: i=2; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795148816;
-	h=Received:DKIM-Signature:Received:From:Date:Subject:MIME-Version:
-	 Content-Type:Content-Transfer-Encoding:Message-Id:X-B4-Tracking:
-	 X-Change-ID:To:Cc:X-Mailer:X-Developer-Signature:X-Developer-Key:
-	 X-Endpoint-Received:X-Original-From:Reply-To;
-	bh=/7HhvEBlTjsYx3VJ0ZjxqLEYPqJcAw8xWS65A1UC11Q=;
-	b=BxZlD2DHdmre9zVCPe02A4+XVtdawKjMsLSPfM40sYf1DxoLuQv8eHmhkoBaYnOCO2j2
-	 tS11DRyQcyu8fhbIn0cyn/7WW/27jhPWVDHUiIudJon1fVF/SN42y45VHo2TRC3zZI1c5
-	 2FKL+/Davz82c8HoYGMOU7HHHjORilG01t+pN9ghNcLi/wL1bDACZPsYN3RdAbmMQcAji
-	 tgHS858ti2Fp8maxOH1WJg/fkeCC/YFynzruyNBbY0MNiJZmJXBApfrv5/mgFu79prF4F
-	 oe78nAxG3TtQxFq+AjVjt7gSViAE3v0+c7DfI/jKmZxDCgXUOPQOyF/5xu9X8rPGV/A==
-ARC-Authentication-Results: i=2; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=bXTqNSG2;
-	arc=pass header.oldest-pass=0 smtp.remote-ip=100.103.45.18
-Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1))
-	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 6FA47606A320;
-	Fri, 20 Nov 2026 04:26:56 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=bXTqNSG2
-Authentication-Results: smtp.kernel.org; arc=none smtp.remote-ip=100.80.115.77
-ARC-Seal: i=1; d=kernel.org; s=arc20260519; a=rsa-sha256; cv=none;
-	t=1795148816;
-	b=1ZQ820EV2lNYj0Wl3ggYn1UcEGcUNCfGFSle2iWh+pqhGOGCgS3xSKXF9wu32jPBWdVv
-	 svDWz2y5z6wxxZoipiBazK0xwt8zjtTDstHjMB1dN7fmPD9qff1KFKfWie0VNS0CdWJ8v
-	 7Q/M+xVfh0IDUWLZvkNUkWfXfZrOJyJmaENsMu8BfdyhiADQO6xjKsy6TfZmM7Gt53DzF
-	 QMfxoPJ9u4P11yail3Rx+Aa2N4cQBrImtsTr03dp2l3EYzYDas8Vgd2ZSKaUVSsYRdOZC
-	 GDxMRvdkbZ1VOHuImoTtudtY/KGz+SDjhdqkesmKLQ9LK+bYWLcIBNkCIgLm749WHgw==
-ARC-Message-Signature: i=1; d=kernel.org; s=arc20260519; a=rsa-sha256;
-	c=relaxed/relaxed; t=1795148816;
-	h=DKIM-Signature:Received:From:Date:Subject:MIME-Version:Content-Type:
-	 Content-Transfer-Encoding:Message-Id:X-B4-Tracking:X-Change-ID:To:Cc:
-	 X-Mailer:X-Developer-Signature:X-Developer-Key:X-Endpoint-Received:
-	 X-Original-From:Reply-To;
-	bh=/7HhvEBlTjsYx3VJ0ZjxqLEYPqJcAw8xWS65A1UC11Q=;
-	b=Liz8K+wcPCDhkLnnzqCk3yuoJdLqGUeZKj5H9LmVINrx/XfNOX0rgzwEiS47VaSBbs67
-	 pqLMrGauWsJK/DNiLUv2FiVL4cFk102JXh3pbb5X+Oi5h6vWQwxETZGjHSgT2QWVvFVwG
-	 Vvd1TQf1R1MIrOTsvxZG6pd47WGx/YEm4h8agepBnHghfol0BMUBobF6g4N5JmnGpFaze
-	 E7dkhnpzBaf0S8LlReAz3WyK6z7nixGsVcrJUbOXG4wCH853v5ccbOcy+w3fVYHpxlV8L
-	 SguoMga/KHACI9H9/D+06zZKBgPR3TTMNPI4b2YBEAt+K1Ch/b1GRVZVMUdmpsVl2Xg==
-ARC-Authentication-Results: i=1; smtp.kernel.org; 
-	arc=none smtp.remote-ip=100.80.115.77
-Received: from lkml.kernel.org (nexus.subspace.kernel.org [100.80.115.77])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=91.218.175.107
+ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
+	t=1795179090;
+	b=rgwJ84OKEkwENS7hVlsbfE1PllJFhMTn+B9MBOWqSqc2ywhyS4Ke8ubc7KvCEhCYiHvl
+	 6b0Tg+6P0frfV/v9G8MsrEye7ABP1Qjf0N7QBbd9143DqtrEzdUCcEXwQVByiUHLVkY7R
+	 EsYypR+osnvjUwppweNhJlWeOk7tGMDUwpGjSHW/S+yy4WYPFwxYerYSERtC0+YrRof1a
+	 mrlRk/gbpM2J+oF4gZscUN4LxWYHo0JmFlXgm0C3XaEJ6Zq1Z/BwWbi746tejcLD7sOLp
+	 2n3yFXBSplXYlhfoVGRUbjU+Jz4+n6Y0DI3mxwoAgjDkxhNcz0mz1fprmqUt0RGElnA==
+ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
+	a=rsa-sha256; c=relaxed/relaxed; t=1795179090;
+	h=DMARC-Filter:X-Envelope-To:DKIM-Signature:X-Envelope-To:Received:
+	 X-Mizu-Trace-ID:X-Migadu-Flow:Date:From:To:Cc:Subject:Message-ID:
+	 References:MIME-Version:Content-Type:Content-Disposition:In-Reply-To;
+	bh=RwK+sZmEfro4R2XrALiEL0NIpL3hInhE+mN5nJsjAK8=;
+	b=VZVYwBiWDwXWZaLZhmk5izsubpvLxPXJTimktp0//TkRtislbrbLRfxySpSRVgmFU+aT
+	 90aaIgeFiGK6s535jC8FwL0cRGw/ldoULlIDvtBoSQV8r8pcGLCUBCfAPnVPimwD86+99
+	 0niEw1Cx5AKQDf8eqjhrnmOVj0Kj1pK0HhnxuGLIFwGkzyxOajTp0JCg2ea0s+NhCvLtH
+	 wgXoAPDG/f3oZrBLE7n4cSZWZrj/7Tr4iL4R44c2cYmYLUmQKMgMuAi8i2sZHtCiAxLqO
+	 +Z5rlNWtHGKLTO7rrdtBlu0NHFCtSfaTmVfnc/ApEEv/2ZBjTrXWqcfRBITu6+4Y26g==
+ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
+	dmarc=pass header.from=linux.dev;
+	spf=pass smtp.mailfrom=linux.dev;
+	dkim=pass header.d=linux.dev header.i=@linux.dev header.a=rsa-sha256 header.s=key1 header.b=CVboDCpu;
+	arc=none smtp.remote-ip=91.218.175.107
+Received: from mta0.migadu.com (out-107.mta0.migadu.com [91.218.175.107])
+	(using TLSv1.3 with cipher TLS_AES_128_GCM_SHA256 (128/128 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.kernel.org (Postfix) with ESMTPS id 816471F000C6;
-	Fri, 20 Nov 2026 04:26:55 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1795148816;
-	bh=/7HhvEBlTjsYx3VJ0ZjxqLEYPqJcAw8xWS65A1UC11Q=;
-	h=From:Date:Subject:To:Cc:Reply-To;
-	b=bXTqNSG2D0I4PzxXReHLOVE8in1H80uJ+LPdBRlDZVzahHScwtoH7Bnb5e1Tn4+Fp
-	 ka0VUwx1jKTBJYtexJw7oajKz5NkqnbBGE4ZKBTxWKSqoPaOOBTg3SHTbFOQw3XQyA
-	 g7PhxvKmqiPvzs/u6sFG0wS8qqROI0zrzbLmZkHT/FLNqOWVRVpFmDrHeoJlYPDaye
-	 GX4MA2z1hVsn1yOisXl4VGMBQ2etrpDa8GCB3+HNLptugkFy39IDxcvx2SwL5L+QXD
-	 C5Y3a2hOdgB4D2cWVaHKrW+Mk9CUub46ZXhW+IOyx1fJBaJnbs4ezxCuLt8mWhLnvs
-	 KLVKLP4a5W07w==
-Received: from nexus.subspace.kernel.org (localhost [IPv6:::1])
-	by lkml.kernel.org (Postfix) with ESMTP id 11E8D49590;
-	Fri, 20 Nov 2026 04:26:55 +0000 (UTC)
-From: Suyuan Wang via B4 Relay <devnull+shyckless.gmail.com@kernel.org>
-Date: Fri, 20 Nov 2026 04:26:54 +0000
-Subject: [PATCH v2] fscrypt: Don't set a policy on immutable or append-only
- directories
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 7421C60A2623
+	for <linux-fscrypt@vger.kernel.org>; Fri, 20 Nov 2026 12:51:28 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 7421C60A2623
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.dev
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.dev
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (1024-bit key, unprotected) header.d=linux.dev header.i=@linux.dev header.a=rsa-sha256 header.s=key1 header.b=CVboDCpu
+X-Envelope-To: linux-fscrypt@vger.kernel.org
+DKIM-Signature: a=rsa-sha256; bh=/M71l9OR+PuswlMFy8Wbwhup3v6OafAF4YhJlLt/84U=;
+ c=simple/simple; d=linux.dev;
+ h=from:to:subject:date:message-id:mime-version:content-type; s=key1;
+ t=1795179086; v=1; x=1795783886;
+ b=CVboDCpuuv2WqQiy/vtf05zSEtSkLQsRJ/djYGgQWt91weN3dja9zelbY5vaAyy3HckRz8nB
+ LTBIz+A0NBi0SxrULdX4yPc6ILwbmx6ofWOwOp9UzoFU9UnVUAYdYhC2d48tOPwt0UJKs6MIxos
+ hQ8bQNPKUm99WaSVdem1tj90=
+X-Envelope-To: linux-fscrypt@vger.kernel.org
+Received: by smtp.migadu.com with ESMTPS id 624a9615c12efaf1;
+	Fri, 20 Nov 2026 12:51:26 +0000
+X-Mizu-Trace-ID: 624a9615c12efaf1
+X-Migadu-Flow: FLOW_OUT
+Date: Fri, 20 Nov 2026 13:51:14 +0100
+From: "Pankaj Raghav (Samsung)" <pankaj.raghav@linux.dev>
+To: Jan Kara <jack@suse.cz>
+Cc: Christian Brauner <brauner@kernel.org>, linux-fsdevel@vger.kernel.org, 
+	Andreas Gruenbacher <agruenba@redhat.com>, gfs2@lists.linux.dev, Mike Marshall <hubcap@omnibond.com>, 
+	Martin Brandenburg <martin@omnibond.com>, devel@lists.orangefs.org, Dave Kleikamp <shaggy@kernel.org>, 
+	jfs-discussion@lists.sourceforge.net, Carlos Maiolino <cem@kernel.org>, linux-xfs@vger.kernel.org, 
+	David Howells <dhowells@redhat.com>, Marc Dionne <marc.dionne@auristor.com>, 
+	linux-afs@lists.infradead.org, Miklos Szeredi <miklos@szeredi.hu>, fuse-devel@lists.linux.dev, 
+	linux-block@vger.kernel.org, Chuck Lever <cel@kernel.org>, Jeff Layton <jlayton@kernel.org>, 
+	linux-nfs@vger.kernel.org, Eric Biggers <ebiggers@kernel.org>, 
+	Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org
+Subject: Re: [PATCH 01/13] bdev: Drop pointless loop from
+ blkdev_flush_mapping()
+Message-ID: <awBAeS9ROaFyOjzB@quentin>
+References: <20261116171044.6938-1-jack@suse.cz>
+ <20261118145941.1063127-14-jack@suse.cz>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -83,102 +72,76 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
-Content-Type: text/plain; charset="utf-8"
-Content-Transfer-Encoding: 7bit
-Message-Id: <20261120-fscrypt-v2-1-fb752135ea32@gmail.com>
-X-B4-Tracking: v=1; b=H4sIAA3M/2oC/yXMQQ5AMBCF4avIrDVpu0BcRSwYU8aipIMQ6d0Vy
- y/537tBKDAJ1NkNgQ4WXnyCzTPAqfMjKR6SwWpbGGO1coLhWjdVlRrRuKGiUkOq10COz++paX/
- L3s+E2zuHGB9Z/Mw3awAAAA==
-X-Change-ID: 20261120-fscrypt-870cc1fd8e70
-To: ebiggers@kernel.org
-Cc: tytso@mit.edu, jaegeuk@kernel.org, linux-kernel@vger.kernel.org, 
- linux-fscrypt@vger.kernel.org
-X-Mailer: b4 0.15.2
-X-Developer-Signature: v=1; a=ed25519-sha256; t=1795148814; l=3139;
- i=shyckless@gmail.com; s=default; h=from:subject:message-id;
- bh=HdhE/JCVYL2ShTcy8TLudc8o8wzmup9lBguCVgI9jFA=;
- b=u5JY19oJwFRT9thLPhYwuqQwILk8t5gZKg9f70tbYfLu8UCqK/d5b2jUitWeBGrpXS21ya+vb
- YmGkAV+dFAnDI3X1EzpcXLIrqA0SZocPubH7LDtmBMk3iHLgs5OSyis
-X-Developer-Key: i=shyckless@gmail.com; a=ed25519;
- pk=pMtccVGiWES3bV+7YBFuBclkvq2n2HBHQ5azaBrK2lY=
-X-Endpoint-Received: by B4 Relay for shyckless@gmail.com/default with
- auth_id=1498
-X-Original-From: Suyuan Wang <shyckless@gmail.com>
-Reply-To: shyckless@gmail.com
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20261118145941.1063127-14-jack@suse.cz>
 
-From: Suyuan Wang <stevewong@hust.edu.cn>
+On Wed, Nov 18, 2026 at 03:59:35PM +0100, Jan Kara wrote:
+> bdev_write_inode() is really odd loop calling write_inode_now(). The
+> bdev doesn't have any pages by now and if there are any dirty bits in
+> the inode state, they are stale. Just call write_inode_now() once to
+> clear them.
+> 
+> Signed-off-by: Jan Kara <jack@suse.cz>
 
-FS_IOC_SET_ENCRYPTION_POLICY stores an encryption context in the
-directory (an xattr on ext4 and f2fs) and marks the inode as encrypted.
-fscrypt_ioctl_set_policy() checks inode_owner_or_capable(), but not the
-immutable or append-only inode flags, so the ioctl also succeeds on a
-directory with one of those flags set. Setting any other xattr on the
-same directory fails with -EPERM in may_write_xattr(), and
-FS_IOC_ENABLE_VERITY refuses such files as well.
+When I looked at the commit that introduced bdev_write_inode()[1], it says
+to call write_inode_now() on the final put of the block device. At the
+moment, tt looks like we call bdev_write_inode() only when bd_openers is 0.
 
-For example, on ext4 with the encrypt feature:
+Looks good,
+Reviewed-by: Pankaj Raghav (Samsung) <pankaj.raghav@linux.dev>
 
-	mkdir d && chattr +i d
-	setfattr -n user.x -v 1 d           -> Operation not permitted
-	FS_IOC_SET_ENCRYPTION_POLICY on d   -> succeeds, d now has a policy
+--
+Pankaj
 
-Return -EPERM for an immutable or append-only directory before setting
-the policy, as may_write_xattr() does. Calls that find the same policy
-already set still return 0, since they don't change the inode. Update
-the documented EPERM cases to match.
-
-Found with a static analysis tool and checked by hand.
-
-Fixes: 9bd8212f981e ("ext4 crypto: add encryption policy and password salt support")
-Fixes: f424f664f0e8 ("f2fs crypto: add encryption policy and password salt support")
-Cc: stable@vger.kernel.org
-Co-developed-by: Kaixuan Li <kaixuan.li@ntu.edu.sg>
-Signed-off-by: Kaixuan Li <kaixuan.li@ntu.edu.sg>
-Signed-off-by: Suyuan Wang <stevewong@hust.edu.cn>
----
-Changes in v2:
-- Point the Fixes tags at the ext4 and f2fs commits that added the
-  ioctls, and ask for a stable backport (Eric).
-- Document the new EPERM case in fscrypt.rst (Eric).
-
-Tested in QEMU (x86_64, ext4 with -O encrypt, v1 policy). Before the
-patch the ioctl succeeds on both immutable and append-only empty
-directories; with it both get -EPERM, and an ordinary empty directory
-still gets its policy.
-
-v1: https://lore.kernel.org/all/20261119-fscrypt-v1-1-c07e1dd93644@gmail.com/
----
- Documentation/filesystems/fscrypt.rst | 2 +-
- fs/crypto/policy.c                    | 2 ++
- 2 files changed, 3 insertions(+), 1 deletion(-)
-
-diff --git a/Documentation/filesystems/fscrypt.rst b/Documentation/filesystems/fscrypt.rst
-index 6e2e511a70bb..188295f09b21 100644
---- a/Documentation/filesystems/fscrypt.rst
-+++ b/Documentation/filesystems/fscrypt.rst
-@@ -736,7 +736,7 @@ FS_IOC_SET_ENCRYPTION_POLICY can fail with the following errors:
-   feature flag enabled using ``tune2fs -O encrypt`` or ``mkfs.ext4 -O
-   encrypt``.)
- - ``EPERM``: this directory may not be encrypted, e.g. because it is
--  the root directory of an ext4 filesystem
-+  the root directory of an ext4 filesystem or is immutable or append-only
- - ``EROFS``: the filesystem is readonly
- 
- Getting an encryption policy
-diff --git a/fs/crypto/policy.c b/fs/crypto/policy.c
-index 6dd510f93e6d..86a8254bc3a8 100644
---- a/fs/crypto/policy.c
-+++ b/fs/crypto/policy.c
-@@ -553,6 +553,8 @@ int fscrypt_ioctl_set_policy(struct file *filp, const void __user *arg)
- 			ret = -ENOTDIR;
- 		else if (IS_DEADDIR(inode))
- 			ret = -ENOENT;
-+		else if (IS_IMMUTABLE(inode) || IS_APPEND(inode))
-+			ret = -EPERM;
- 		else if (!inode->i_sb->s_cop->empty_dir(inode))
- 			ret = -ENOTEMPTY;
- 		else
-
-
-
-
+[1] 564f00f6c03a ("block_dev: only write bdev inode on close")
+> ---
+>  block/bdev.c | 25 ++++++-------------------
+>  1 file changed, 6 insertions(+), 19 deletions(-)
+> 
+> diff --git a/block/bdev.c b/block/bdev.c
+> index f20f91b3176e..9fa72df4f47a 100644
+> --- a/block/bdev.c
+> +++ b/block/bdev.c
+> @@ -60,24 +60,6 @@ struct block_device *file_bdev(struct file *bdev_file)
+>  }
+>  EXPORT_SYMBOL(file_bdev);
+>  
+> -static void bdev_write_inode(struct block_device *bdev)
+> -{
+> -	struct inode *inode = BD_INODE(bdev);
+> -	int ret;
+> -
+> -	spin_lock(&inode->i_lock);
+> -	while (inode_state_read(inode) & I_DIRTY) {
+> -		spin_unlock(&inode->i_lock);
+> -		ret = write_inode_now(inode, true);
+> -		if (ret)
+> -			pr_warn_ratelimited(
+> -	"VFS: Dirty inode writeback failed for block device %pg (err=%d).\n",
+> -				bdev, ret);
+> -		spin_lock(&inode->i_lock);
+> -	}
+> -	spin_unlock(&inode->i_lock);
+> -}
+> -
+>  /* Kill _all_ buffers and pagecache , dirty or not.. */
+>  static void kill_bdev(struct block_device *bdev)
+>  {
+> @@ -755,7 +737,12 @@ static void blkdev_flush_mapping(struct block_device *bdev)
+>  	WARN_ON_ONCE(bdev->bd_holders);
+>  	sync_blockdev(bdev);
+>  	kill_bdev(bdev);
+> -	bdev_write_inode(bdev);
+> +	/*
+> +	 * All data is written out and evicted but inode can have some stale
+> +	 * I_DIRTY bits set. Call write_inode_now() to get rid of them so that
+> +	 * the inode can be evicted.
+> +	 */
+> +	write_inode_now(BD_INODE(bdev), 1);
+>  }
+>  
+>  static void blkdev_put_whole(struct block_device *bdev)
+> -- 
+> 2.53.0
+> 
