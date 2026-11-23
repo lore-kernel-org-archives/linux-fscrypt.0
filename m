@@ -1,63 +1,115 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=195.135.223.130
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1795426934;
-	b=Uh+ZBJJx6BjP+WUdPYzRYZoiU3prbX2nSaQ0pp7Xe3WjX5/pjOngNTeCYSOcZKK+Na01
-	 WeYXjClPtkhnC+cIwAbVfQOw2ZMXvKz/H+C8JK5oILd8zvJNqjMiFvReudIRcLtKTPXid
-	 ipm5jAAYwrDDe8PMBOT+5ifpFkwevHicsivSXXsGRxwxW7vsYIe6MjC7KZVPBY0KRPZSH
-	 2dEO2ZANdB7u2VAbIwOBhoq4lsuhibprcl7j5wmW8bKQ1jULZy0kSxSKpj0Y69Oe8oL1I
-	 6iNLJIBbXwRAEGqn+K9K7EK9Ef36/17kOxd5/UuyIbdO5MQ+iVK5ozKh/Q1vXC8ybhg==
+	t=1795453854;
+	b=q9Bg0qn+A+o0ur0/xK206pd4PUtWFQ5mfdC8kesMX/jCiv50c3HWKUaGO0Lo8+j863i/
+	 YaHgd5HGvf//zriDjJcNnrFGHMz9V/ULN4cWAe3Kal4oqT2GlugyeZW7gq4o2/Gf1ZXO6
+	 F90adjI0uPLtljQmojjv+UEwQqXfJTwwmKxdHYRl4jb9ny4vfW9juK5bvwTmAF9oBpkoj
+	 JYJNxO0tWcsjdPmcN26wZ0W8d9dglcTX0vvWb5O0Lft1qHR3x5dwpJh3JaVvJW5NS5Ki1
+	 zP7tc+R7+dFq7/+zoPLUueUr1RQf8HZJtsSlHTegjCmKnXEGKx1fECf5VTuBaMEwo5g==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795426934;
-	h=Received:DKIM-Signature:Date:From:To:Cc:Subject:Message-ID:
-	 Mail-Followup-To:References:MIME-Version:Content-Type:
-	 Content-Disposition:In-Reply-To;
-	bh=FxTobsfCxRYvTDQx8sjXtNySJlBxYXFSYwqfbK6HcX4=;
-	b=lLUb89KikRzVBWGiM9bWAIaldU66kjobDWUnTf974hrPvxbt/8rI4QmjX7FzvIMc7uid
-	 H4Q/vC9QuZjVb8Qy9yw2g8mZJOxS/bRtxh1+JtVhUjcFxsm5w9wr/DUQhSwCfrpYDqgIp
-	 ltNLXI0kP0G6WUQU9WBPS9dWeJT91YQu5HTSfzmIpAY4L8/xUf0KTzSAJZk02oHzxUvby
-	 E4E/eU5k3kkaeAaiT+TR3SR3yhMY4HTg0pCjgpvXB5KSG9H0NSer2UEy1v3IWVce/wwdF
-	 Xtjqn87dt0bpwlvUPb44hly3zlotd2QqMW/C/CwCW9/z35wYblfmwud+ZY2m2AULhUw==
+	a=rsa-sha256; c=relaxed/relaxed; t=1795453854;
+	h=DMARC-Filter:Received:DKIM-Signature:DKIM-Signature:DKIM-Signature:
+	 DKIM-Signature:Received:Received:Received:Date:From:To:Cc:Subject:
+	 Message-ID:References:MIME-Version:Content-Type:Content-Disposition:
+	 In-Reply-To:X-Rspamd-Queue-Id:X-Spam-Level:X-Rspamd-Server:
+	 X-Rspamd-Action:X-Spam-Flag:X-Spamd-Result:X-Spam-Score;
+	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
+	b=W9SbyjDUyU+wdyFbWtHRJjLWjT3t4HzyxHlZTKzC+8Dp9NCmU02vz6r4GAMfTeUwEBAn
+	 XdCRsDONMoPNPqfQWr6J76F+SWgzOxjcumHp/76kzh9KxR7haZScvKV1pcQSZzNJpYFq4
+	 J+5QbrL+/1hmfnTXfBedSvG6gdN6v1ueq3MjEFFav8HEX/SRsEtsjcwcA0d5q8T6kZBHU
+	 R6kWVUb1slnZfW4wIfYsb2YF/gEbvbD5QdPEB0XIaIhKmaLX68N8aPPwNNXr7Im1ifYpW
+	 BjG9cxt5FV5YjEcxbfYLOx3tJ3lra336+Hk/hQc60o6tetLTobne3sscuC7WjfOIYyQ==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b="nMW5cnc/";
-	arc=none smtp.remote-ip=100.103.45.18
-Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
+	dmarc=none header.from=suse.cz;
+	spf=pass smtp.mailfrom=suse.cz;
+	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=w6AcXesO;
+	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=uk+7dI8H;
+	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b="k/9dx0+8";
+	dkim=neutral header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=VNtsusfa;
+	arc=none smtp.remote-ip=195.135.223.130
+Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1))
+	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1661D606A687;
-	Mon, 23 Nov 2026 09:42:13 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1CB1A606A338
+	for <linux-fscrypt@vger.kernel.org>; Mon, 23 Nov 2026 17:10:52 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 1CB1A606A338
+Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.cz
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=nMW5cnc/
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id A45F81F000C0;
-	Mon, 23 Nov 2026 09:42:03 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1795426933;
-	bh=FxTobsfCxRYvTDQx8sjXtNySJlBxYXFSYwqfbK6HcX4=;
-	h=Date:From:To:Cc:Subject:References:In-Reply-To;
-	b=nMW5cnc/NvQHD7Fvd7JMUVH4nVd0RekCqwGvZVjrrlJD6Eq3TzZHYyNySVIkxSqV/
-	 M5ftvQn6i+TW3rsFQM/ZU2+QCnlk1jGTKQs+4Y8W/UcJSImkbCLZbrqOAxFlLIlbcQ
-	 Z/nDrVSMPVqUe+ThqOY1h+slyt6DB0UG/nCog2lIw2R77fObhwBaIzlTF7T8eHAVwh
-	 O2k0iNQczR0Ls+EPKX0ZObqyphdoUkg7FiDYQ4/Curt8sUHOAp1WwDQ6wtvlmEBQ0g
-	 29Rj3OcYzYEsAV+9m3+XXXGMavqOE944HjlIvjI9InJr6MTtgidI01ZVJ+RJaJ5cTb
-	 VodgTT9NiFXzQ==
-Date: Mon, 23 Nov 2026 17:41:56 +0800
-From: Zorro Lang <zlang@kernel.org>
-To: Baokun Li <libaokun@linux.alibaba.com>
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org, 
-	ebiggers@kernel.org, jaegeuk@kernel.org, tytso@mit.edu, linux-ext4@vger.kernel.org, 
-	adilger.kernel@dilger.ca, jack@suse.cz, yi.zhang@huawei.com, ojaswin@linux.ibm.com, 
-	ritesh.list@gmail.com, linux-kernel@vger.kernel.org
-Subject: Re: [PATCH] common/encrypt: support block sizes larger than the page
- size
-Message-ID: <awQHLSS4hFskH0Us@zlang-mailbox>
-Mail-Followup-To: Baokun Li <libaokun@linux.alibaba.com>, 
-	fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org, ebiggers@kernel.org, 
-	jaegeuk@kernel.org, tytso@mit.edu, linux-ext4@vger.kernel.org, 
-	adilger.kernel@dilger.ca, jack@suse.cz, yi.zhang@huawei.com, ojaswin@linux.ibm.com, 
-	ritesh.list@gmail.com, linux-kernel@vger.kernel.org
-References: <20261103160906.188544-1-libaokun@linux.alibaba.com>
- <awHJso_ELIgRjbdg@zlang-mailbox>
- <a5ad29d3-eb4d-479d-af48-b679fe8b5d23@linux.alibaba.com>
+	dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=w6AcXesO;
+	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=uk+7dI8H;
+	dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=k/9dx0+8;
+	dkim=neutral header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=VNtsusfa
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
+	(No client certificate requested)
+	by smtp-out1.suse.de (Postfix) with ESMTPS id 0A18E220FE;
+	Mon, 23 Nov 2026 17:10:50 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
+	t=1795453851; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
+	b=w6AcXesOZ5YH48nwr4/Zbb2OvihyNPpA2GaS8A7O9z2oG9GBWmJ/46kSzJKa3VCgso4cw2
+	JZ4Hnb8sCgjDmnuMc+nIKSwP7dJLbQYA5qcgFiKSaOq9rPRJG87wC5i6XEzABIsGUQJrjL
+	mGPiW62u6voVv5zLFWZVR2/IFAMZr5A=
+DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
+	s=susede2_ed25519; t=1795453851;
+	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
+	b=uk+7dI8Hik0pNcS54lE0y3ylpW9rFqPZ/mPScz0rW6mN1wlfQSe8bME/EGxR9Ab6udLZqR
+	1XWUwDEX3tW9VtCQ==
+Authentication-Results: smtp-out1.suse.de;
+	dkim=pass header.d=suse.cz header.s=susede2_rsa header.b="k/9dx0+8";
+	dkim=pass header.d=suse.cz header.s=susede2_ed25519 header.b=VNtsusfa
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
+	t=1795453850; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
+	b=k/9dx0+842+5FtGIhxu7+7wPqr47yYCQpQ+WNd8f8xnShoAIDvn9O0jk9JRHRvvnY8kN//
+	jiEInyq0HEZOr+uduUd4dgB4Az4HSaYE7DOWdIo/rJumfwtP4xGnueR8ctNQpcSf2n58Jt
+	XVCWDpRbwlVe9lEYdHPr6fUoiyS5SHs=
+DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
+	s=susede2_ed25519; t=1795453850;
+	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
+	 mime-version:mime-version:content-type:content-type:
+	 in-reply-to:in-reply-to:references:references;
+	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
+	b=VNtsusfa+lQYA7pWPGu0Ny1HCtp7roepllJpMCXv8C23shYPD3duAhMPyEnc0n1KJWbwqK
+	s8LYDkt36KmCbxCQ==
+Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
+	(No client certificate requested)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id A6C1913510;
+	Mon, 23 Nov 2026 17:10:49 +0000 (UTC)
+Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
+	by imap1.dmz-prg2.suse.org with ESMTPSA
+	id MyN8IJlzBGvvAwAAD6G6ig
+	(envelope-from <jack@suse.cz>); Mon, 23 Nov 2026 17:10:49 +0000
+Received: by quack.suse.cz (Postfix, from userid 1000)
+	id E2AEA27683; Mon, 23 Nov 2026 18:10:38 +0100 (CET)
+Date: Mon, 23 Nov 2026 18:10:38 +0100
+From: Jan Kara <jack@suse.cz>
+To: sashiko-reviews@lists.linux.dev
+Cc: Jan Kara <jack@suse.cz>, Christian Brauner <brauner@kernel.org>, 
+	Andreas Gruenbacher <agruenba@redhat.com>, gfs2@lists.linux.dev, Mike Marshall <hubcap@omnibond.com>, 
+	Martin Brandenburg <martin@omnibond.com>, devel@lists.orangefs.org, Dave Kleikamp <shaggy@kernel.org>, 
+	Carlos Maiolino <cem@kernel.org>, David Howells <dhowells@redhat.com>, 
+	Marc Dionne <marc.dionne@auristor.com>, Miklos Szeredi <miklos@szeredi.hu>, Chuck Lever <cel@kernel.org>, 
+	Jeff Layton <jlayton@kernel.org>, Eric Biggers <ebiggers@kernel.org>, 
+	Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, Anna Schumaker <anna@kernel.org>
+Subject: Re: [PATCH v3 13/13] fs: Use inode_or_folios_dirty() in
+ __inode_lru_list_add()
+Message-ID: <mlnoenfbwzynuicu56rrmw7go5ijomamaidrsarjbmplsqrcjr@bdpui3vcohcg>
+References: <20261123085601.21199-1-jack@suse.cz>
+ <20261123090040.19006-26-jack@suse.cz>
+ <sashiko-outbox-228978@kernel.org>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -69,82 +121,86 @@ Precedence: list
 MIME-Version: 1.0
 Content-Type: text/plain; charset=us-ascii
 Content-Disposition: inline
-In-Reply-To: <a5ad29d3-eb4d-479d-af48-b679fe8b5d23@linux.alibaba.com>
+In-Reply-To: <sashiko-outbox-228978@kernel.org>
+X-Rspamd-Queue-Id: 0A18E220FE
+X-Spam-Level: 
+X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
+X-Rspamd-Action: no action
+X-Spam-Flag: NO
+X-Spamd-Result: default: False [-13.01 / 50.00];
+	SUSE_INTERNAL_BYPASS(-9.00)[];
+	BAYES_HAM(-3.00)[100.00%];
+	NEURAL_HAM_LONG(-1.00)[-1.000];
+	MID_RHS_NOT_FQDN(0.50)[];
+	R_DKIM_ALLOW(-0.20)[suse.cz:s=susede2_rsa,suse.cz:s=susede2_ed25519];
+	NEURAL_HAM_SHORT(-0.20)[-1.000];
+	MIME_GOOD(-0.10)[text/plain];
+	MX_GOOD(-0.01)[];
+	DKIM_SIGNED(0.00)[suse.cz:s=susede2_rsa,suse.cz:s=susede2_ed25519];
+	RCVD_COUNT_THREE(0.00)[3];
+	ARC_NA(0.00)[];
+	SPAMHAUS_XBL(0.00)[2a07:de40:b281:104:10:150:64:97:from];
+	RBL_SPAMHAUS_BLOCKED_OPENRESOLVER(0.00)[2a07:de40:b281:104:10:150:64:97:from];
+	RCPT_COUNT_TWELVE(0.00)[19];
+	MIME_TRACE(0.00)[0:+];
+	FROM_HAS_DN(0.00)[];
+	TO_MATCH_ENVRCPT_ALL(0.00)[];
+	TO_DN_SOME(0.00)[];
+	DNSWL_BLOCKED(0.00)[2a07:de40:b281:106:10:150:64:167:received];
+	FROM_EQ_ENVFROM(0.00)[];
+	RCVD_TLS_LAST(0.00)[];
+	RECEIVED_SPAMHAUS_BLOCKED_OPENRESOLVER(0.00)[2a07:de40:b281:106:10:150:64:167:received];
+	MISSING_XM_UA(0.00)[];
+	RCVD_VIA_SMTP_AUTH(0.00)[];
+	DKIM_TRACE(0.00)[suse.cz:+];
+	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.cz:dkim,suse.cz:email,suse.com:email,imap1.dmz-prg2.suse.org:rdns,imap1.dmz-prg2.suse.org:helo]
+X-Spam-Score: -13.01
 
-On Mon, Nov 23, 2026 at 11:39:19AM +0800, Baokun Li wrote:
-> Hi Zorro,
+On Mon 23-11-26 09:30:54, sashiko-bot@kernel.org wrote:
+> Thank you for your contribution! Sashiko AI review found 1 potential
+> issue to consider:
+> - [High] fs: UAF of inode->i_mapping in __inode_lru_list_add() after
+>   dev_dax teardown
+> --
 > 
-> Thank you for your review!
+> commit dba191eb05adecdae3b365e1982438c7882c5c1d
+> Author: Jan Kara <jack@suse.cz>
 > 
-> On 2026/11/22 01:04, Zorro Lang wrote:
-> > On Wed, Nov 04, 2026 at 12:09:06AM +0800, Baokun Li wrote:
-> >> +	#
-> >> +	# If the test requires a v2 policy, don't probe with a v1 policy:
-> >> +	# v1 policies are not supported when the block size exceeds the page
-> >> +	# size.  _require_encryption_policy_support() will check for the
-> >> +	# requested policy version below.
-> >> +	if [ "$policy_version" -le 1 ]; then
-> >> +		mkdir $SCRATCH_MNT/tmpdir
-> >> +		if _set_encpolicy $SCRATCH_MNT/tmpdir 2>&1 >>$seqres.full | \
-> >> +			grep -Eq 'Inappropriate ioctl for device|Operation not supported'
-> >> +		then
-> >> +			_notrun "kernel does not support $FSTYP encryption"
-> >> +		fi
-> >> +		rmdir $SCRATCH_MNT/tmpdir
-> >> +
-> >> +		# v1 policies use the block size as their data unit size,
-> >> +		# which doesn't work if the block size exceeds the page size.
-> >> +		_require_v1_encryption_support
-> > 
-> > How about do _require_v1_encryption_support at first:
-> > 
-> >   if [ "$policy_version" -le 1 ]; then
-> >       _require_v1_encryption_support
-> >       mkdir $SCRATCH_MNT/tmpdir
-> >       if _set_encpolicy $SCRATCH_MNT/tmpdir 2>&1 >>$seqres.full | \
-> > 
-> > In that case, if block_size > page_size, we can directly skip the test
-> > with an explicit reason, avoids a redundant mkdir/rmdir and ioctl call.
-> > 
+> fs: Use inode_or_folios_dirty() in __inode_lru_list_add()
 > 
-> Yes, this can avoid some unnecessary operations.
+> This commit replaces the I_DIRTY_ALL check in __inode_lru_list_add() with a
+> call to inode_or_folios_dirty().
 > 
+> > diff --git a/fs/inode.c b/fs/inode.c
+> > index de207f2f95a98..fb759033aa965 100644
+> > --- a/fs/inode.c
+> > +++ b/fs/inode.c
+> > @@ -552,7 +552,9 @@ static void __inode_lru_list_add(struct inode *inode, bool rotate)
+> >  {
+> >  	lockdep_assert_held(&inode->i_lock);
+> >  
+> > -	if (inode_state_read(inode) & (I_DIRTY_ALL | I_SYNC | I_FREEING | I_WILL_FREE))
+> > +	if (inode_state_read(inode) & (I_SYNC | I_FREEING | I_WILL_FREE))
+> > +		return;
+> > +	if (inode_or_folios_dirty(inode))
+> >  		return;
 > 
-> >>  # FS QA Test No. ext4/309
-> >>  #
-> >>  # Verify that file contents encryption works on a filesystem with a block size
-> >> -# larger than the page size.  fscrypt uses the block size as the data unit size
-> >> -# by default, so this tests data units that span multiple pages, both for the
-> >> -# writeback path and for the on-disk ciphertext.
-> >> +# larger than the page size.  fscrypt uses min(block size, page size) as the
-> >> +# default data unit size, so this tests 4K data units on a 32K-block
-> > 
-> > Does ext4/309 hardcode 32k ?
-> > 
+> [Severity: High]
+> Can inode_or_folios_dirty() cause a use-after-free on inode->i_mapping
+> when a device-dax character special file inode is added to the LRU after
+> dev_dax teardown?
 > 
-> No, that's actually just an example using a block size of 32k; I'll
-> rephrase that.
+> Unlike mapping_shrinkable(&inode->i_data) below and the other LRU and
+> eviction paths in fs/inode.c, inode_or_folios_dirty() dereferences
+> inode->i_mapping via mapping_tagged(inode->i_mapping, PAGECACHE_TAG_DIRTY)
+> whenever I_DIRTY_ALL is clear.
 
-Great, thanks!
+Hrm, this is right. We'd need to check inode->i_data and not
+inode->i_mapping. Christian, please just drop this patch. The code is
+correct as is (we hold i_lock) and the helper would do more harm than good
+here.
 
-> 
-> Additionally, the final plan has not been fully confirmed yet. I am
-> still working on the details with Eric. It is expected that all v1 use
-> cases will be converted to v2 later, and in the testing process, the
-> data unit size will be explicitly specified. Please refer to:
-> 
->   https://lore.kernel.org/r/20261104195127.GA1971@quark
-
-Thanks Baokun, good to know you're working on it with Eric Biggers. As the
-kernel patch is still under reviewing, please ping the fstests list when
-it's ready, in case I miss it :-D
-
-Thanks,
-Zorro
-
-> 
-> 
-> Cheers,
-> Baokun
-> 
-> 
+								Honza
+-- 
+Jan Kara <jack@suse.com>
+SUSE Labs, CR
