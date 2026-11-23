@@ -1,58 +1,49 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.113
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1795383848;
-	b=eAF9YPjEo2YSazvxkBWUgOMvMRXGy5eDyGUBtXTGJgdmmhMJnCyAsdiDOWn20ogNdka2
-	 3H8Eb6nfOlT11iB7o404KWsMK/9YyhT+2J5iK5kT9Yp1R0cb7AK6NVwCvt6VJqrQco8tN
-	 5lcM6bzgQ30N8Sx4wo4yq06UHmhl6xKVnwxqOEPcAInZCRAxE6MWstXSVBlUpSZmrlDAB
-	 v+zG8Ut4ccIFQvFWbHR28qgoVxjZl1JglVu3XjH4iuSJqFVX+CpO1mkY581iz+x1OZFEl
-	 U1yrHmialK1wFWD+jcfOPOr7vhkArUFEswT3F0kpawhwe7jDhDGDof+SmumDfF6Barg==
+	t=1795405167;
+	b=j4b3m3GoNVJXfLs4IJa7d8bHMwc/rWkWl0TiK8AEdkFNEge3MNkyhPGlVOQRwG8e+BO2
+	 eJTlhuIxscDpb5/7XBcLNktXZWgffu0JNU4107fGhXHFkEXa+xoy1sUCWxWa0krdmYCq2
+	 FYdIKV9f3I8b93TYRtXCjUv5YwrtRSEeCY5o9DyyBTmLfX1Mr/4Gi47rdHAaNM6TVdEaT
+	 Jt5/bKpGNkQkFU7odzj+13KowhIRqLsG6o6wW5hQEBNHhj6yLo7WooZZcQZVwAPAUV8Kj
+	 wEIOCn+6W3xBe2d7AzmM0mudhd0X7LkeqZivIvug4zptikMXDHSpLOg/BWjPiIFD4qA==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795383848;
-	h=Received:DKIM-Signature:Message-ID:From:Subject:Reply-To:To:Cc:
-	 In-Reply-To:References:Content-Type:Content-Transfer-Encoding:Date;
-	bh=Mm/8mRyZax2YVXg0RDS5bNGwonwO0wM6qVgh6f9a91o=;
-	b=bdu6diDKhPfiguNiKaFRmIyMCirLyDD8t8pHvsUClWbMDrX/xGwUs2wGDJVnUpwYwP1H
-	 9izL25Q6RCRxUkaqFOsEzpWKD9/YWr66MKE2Nm43xgEQXDKbVo59/4auYTni5b8bFdxq7
-	 /yg1ct+npw8RvFgNvnouqHxEqYOcsynttMX0+yp2mXgPolTcsnXNzTxT+QuYgVl++fSHz
-	 pn8bWhJXnaVsYQv6FHeOe0FhFNhn8Bt6WF4OvsVq0jfBy0C8kqoHFitehVApT++XSI9uu
-	 CbPrOsQ5hUI+pxQD+FuYj4MjiBgAgq96aFUTMPMDRwow0Ky1dxTDdm2xTtMu33S7nPQ==
+	a=rsa-sha256; c=relaxed/relaxed; t=1795405167;
+	h=DMARC-Filter:DKIM-Signature:X-Alimail-AntiSpam:Received:Message-ID:
+	 Date:MIME-Version:User-Agent:Subject:To:References:Content-Language:
+	 Cc:From:In-Reply-To:Content-Type:Content-Transfer-Encoding;
+	bh=T1PTWvwFn/wbYQN3ucBdR3DJrn6KnnE98b1wRi3pEIo=;
+	b=SfaOwZa5EYae40YrqyxIXMhtWhVN37D/Jsl/IhriktdnptjK/yLUPy1C9i5Js7SOQh0o
+	 YTWsj3OSGaj4BPXX0zvSWgMJ77UN4b0+QPLAFF4o9D72nqJOG2BHXe3YAZ5KdAY/5uiO3
+	 1JRoOcPloYdRXxPTSoYrP6WsSmfU6ciXnnwdalwb+EgtED3kkMxKxlxhLH6BjPLPKX2zW
+	 uTSBpESHj1bdKJ+JSYFeDwTqtF3/AWcuB5Kf+mNqUrDJOP94qMZfI7riNigbS08jPY11L
+	 itykdh1JeZeb0XvgaZjKP75QTiyi5ekhBWrQZS6UJZvh3WSPJBKufNL+TnkcqIVjTWw==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b="M55Og/By";
-	arc=none smtp.remote-ip=100.103.45.18
-Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
+	dmarc=pass header.from=linux.alibaba.com;
+	spf=pass smtp.mailfrom=linux.alibaba.com;
+	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=DsxXnwVg;
+	arc=none smtp.remote-ip=115.124.30.113
+Received: from out30-113.freemail.mail.aliyun.com (out30-113.freemail.mail.aliyun.com [115.124.30.113])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1))
+	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id DCCA1606A31A;
-	Sun, 22 Nov 2026 21:44:08 +0000 (UTC)
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id E2B31606A31A;
+	Mon, 23 Nov 2026 03:39:24 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org E2B31606A31A
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.alibaba.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.alibaba.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=M55Og/By
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 29E1E1F000C4;
-	Sun, 22 Nov 2026 21:44:08 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1795383848;
-	bh=Mm/8mRyZax2YVXg0RDS5bNGwonwO0wM6qVgh6f9a91o=;
-	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
-	b=M55Og/BymrlJdKLFKVKWp1OjpkfLljWc5uTtkxs6qKea8KygH+sGKno8KF2ot3lAn
-	 y6OMResxHO9opIYHoJ9/3ftAgu9ZgDjXk8Qo5SW1puTUG91y1A5Z1qa0Tn1tIGlmHf
-	 36PAYVU94ard+ECTiELMt9nUuKJjlLV6hlgSygMuak1R2FyXwiHJ+VSvE2nViQgGXo
-	 a6zl6FZdm5Yjzwb1U2T9clsvI/yEhWB+3cU5AotRKOAQn1hgV4HCaLw5tBHFqbBB92
-	 x1DWyIgxnyqXdrmH7MxOXJgtquuaNDIXPp2hePpSOBmJhVJrEUAyf1CMrY0JAvRomS
-	 sCtfxNCPN7oaA==
-Message-ID: <sashiko-outbox-228362@kernel.org>
-From: sashiko-bot@kernel.org
-Subject: Re: [PATCH] blk-crypto: avoid fs reclaim under profile->lock in the
- fallback
-Reply-To: sashiko-reviews@lists.linux.dev
-To: "Laveesh Bansal" <laveeshb@laveeshbansal.com>, "Jens Axboe" <axboe@kernel.dk>, "Eric
- Biggers" <ebiggers@kernel.org>
-Cc: "Christoph Hellwig" <hch@lst.de>, =?utf-8?b?VGhlb2RvcmUgWS4gVHMnbw==?= <tytso@mit.edu>, "Jaegeuk
- Kim" <jaegeuk@kernel.org>, syzbot+20d60aafd9a0d1f2a380@syzkaller.appspotmail.com, linux-fscrypt@vger.kernel.org, linux-crypto@vger.kernel.org
-In-Reply-To: <20261122213120.20974-1-laveeshb@laveeshbansal.com>
-References: <20261122213120.20974-1-laveeshb@laveeshbansal.com>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-Date: Sun, 22 Nov 2026 21:44:07 +0000
+	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=DsxXnwVg
+DKIM-Signature:v=1; a=rsa-sha256; c=relaxed/relaxed;
+	d=linux.alibaba.com; s=default;
+	t=1795405162; h=Message-ID:Date:MIME-Version:Subject:To:From:Content-Type;
+	bh=T1PTWvwFn/wbYQN3ucBdR3DJrn6KnnE98b1wRi3pEIo=;
+	b=DsxXnwVgEC0GBfv6rr/YMMo4mSeFgPLFoqFsKWiIJWsyGsANEctKP78v7KkVmAGObJIrHStUzmBkY0VbLPNk7szt2KXQXgl2G54tLjzHMCH5eQGCtXQbYPSW1sNjHlrDLJEu436OtYvLXxHY/e5XGHZTSrBjXst2qaQT91d6z5E=
+X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R111e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033037009110;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=13;SR=0;TI=SMTPD_---0XFCGc6V_1795405161;
+Received: from 30.221.149.19(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XFCGc6V_1795405161 cluster:ay36)
+          by smtp.aliyun-inc.com;
+          Mon, 23 Nov 2026 11:39:21 +0800
+Message-ID: <a5ad29d3-eb4d-479d-af48-b679fe8b5d23@linux.alibaba.com>
+Date: Mon, 23 Nov 2026 11:39:19 +0800
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -61,72 +52,85 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
+MIME-Version: 1.0
+User-Agent: Mozilla Thunderbird
+Subject: Re: [PATCH] common/encrypt: support block sizes larger than the page
+ size
+To: Zorro Lang <zlang@kernel.org>
+References: <20261103160906.188544-1-libaokun@linux.alibaba.com>
+ <awHJso_ELIgRjbdg@zlang-mailbox>
+Content-Language: en-US
+Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+ ebiggers@kernel.org, jaegeuk@kernel.org, tytso@mit.edu,
+ linux-ext4@vger.kernel.org, adilger.kernel@dilger.ca, jack@suse.cz,
+ yi.zhang@huawei.com, ojaswin@linux.ibm.com, ritesh.list@gmail.com,
+ linux-kernel@vger.kernel.org
+From: Baokun Li <libaokun@linux.alibaba.com>
+In-Reply-To: <awHJso_ELIgRjbdg@zlang-mailbox>
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
 
-Thank you for your contribution! Sashiko AI review found no new issues
-in this patch, but noticed 1 related pre-existing issue it does not
-introduce:
-- [High] block: NULL deref and OOB read in blk-crypto-fallback with
-  num_keyslots=3D0 [1]
---
+Hi Zorro,
 
-commit 7d0d16db31e8a22572290b726bc65b670e7fa101
-Author: Laveesh Bansal <laveeshb@laveeshbansal.com>
+Thank you for your review!
 
-blk-crypto: avoid fs reclaim under profile->lock in the fallback
+On 2026/11/22 01:04, Zorro Lang wrote:
+> On Wed, Nov 04, 2026 at 12:09:06AM +0800, Baokun Li wrote:
+>> +	#
+>> +	# If the test requires a v2 policy, don't probe with a v1 policy:
+>> +	# v1 policies are not supported when the block size exceeds the page
+>> +	# size.  _require_encryption_policy_support() will check for the
+>> +	# requested policy version below.
+>> +	if [ "$policy_version" -le 1 ]; then
+>> +		mkdir $SCRATCH_MNT/tmpdir
+>> +		if _set_encpolicy $SCRATCH_MNT/tmpdir 2>&1 >>$seqres.full | \
+>> +			grep -Eq 'Inappropriate ioctl for device|Operation not supported'
+>> +		then
+>> +			_notrun "kernel does not support $FSTYP encryption"
+>> +		fi
+>> +		rmdir $SCRATCH_MNT/tmpdir
+>> +
+>> +		# v1 policies use the block size as their data unit size,
+>> +		# which doesn't work if the block size exceeds the page size.
+>> +		_require_v1_encryption_support
+> 
+> How about do _require_v1_encryption_support at first:
+> 
+>   if [ "$policy_version" -le 1 ]; then
+>       _require_v1_encryption_support
+>       mkdir $SCRATCH_MNT/tmpdir
+>       if _set_encpolicy $SCRATCH_MNT/tmpdir 2>&1 >>$seqres.full | \
+> 
+> In that case, if block_size > page_size, we can directly skip the test
+> with an explicit reason, avoids a redundant mkdir/rmdir and ioctl call.
+> 
 
-This commit wraps the crypto_sync_skcipher_setkey() calls in the blk-crypto
-fallback with memalloc_noio_save() to prevent direct reclaim from recursing
-into filesystem key eviction while holding profile->lock.
+Yes, this can avoid some unnecessary operations.
 
-> diff --git a/block/blk-crypto-fallback.c b/block/blk-crypto-fallback.c
-> index 12e0b487e23ab..2df418f169328 100644
-> --- a/block/blk-crypto-fallback.c
-> +++ b/block/blk-crypto-fallback.c
-> @@ -89,17 +89,24 @@ static struct bio_set enc_bio_set;
->   */
->  static u8 blank_key[BLK_CRYPTO_MAX_RAW_KEY_SIZE];
-> =20
-> +/*
-> + * setkey can allocate while profile->lock is held, and reclaim takes th=
-at lock
-> + * to evict a key.  Use NOIO so those allocations can't recurse into the=
- fs.
-> + */
->  static void blk_crypto_fallback_evict_keyslot(unsigned int slot)
->  {
->  	struct blk_crypto_fallback_keyslot *slotp =3D &blk_crypto_keyslots[slot=
-];
 
-[Severity: High]
-This problem wasn't introduced by this patch, but can setting the
-num_keyslots module parameter to 0 cause an out-of-bounds read here and a
-NULL pointer dereference in blk_crypto_keyslot_index() [1]?
+>>  # FS QA Test No. ext4/309
+>>  #
+>>  # Verify that file contents encryption works on a filesystem with a block size
+>> -# larger than the page size.  fscrypt uses the block size as the data unit size
+>> -# by default, so this tests data units that span multiple pages, both for the
+>> -# writeback path and for the on-disk ciphertext.
+>> +# larger than the page size.  fscrypt uses min(block size, page size) as the
+>> +# default data unit size, so this tests 4K data units on a 32K-block
+> 
+> Does ext4/309 hardcode 32k ?
+> 
 
-When profile->num_slots is 0, __blk_crypto_evict_key() invokes
-keyslot_evict() with slot set to -1, which blk_crypto_fallback_evict_keyslo=
-t()
-uses as an unsigned index into the zero-length blk_crypto_keyslots[] array:
+No, that's actually just an example using a block size of 32k; I'll
+rephrase that.
 
-block/blk-crypto-profile.c:__blk_crypto_evict_key() {
-	if (profile->num_slots =3D=3D 0) {
-		if (profile->ll_ops.keyslot_evict) {
-			blk_crypto_hw_enter(profile);
-			err =3D profile->ll_ops.keyslot_evict(profile, key, -1);
-			blk_crypto_hw_exit(profile);
-			return err;
-		}
-		return 0;
-	}
-}
+Additionally, the final plan has not been fully confirmed yet. I am
+still working on the details with Eric. It is expected that all v1 use
+cases will be converted to v2 later, and in the testing process, the
+data unit size will be explicitly specified. Please refer to:
 
-Similarly, during encryption with num_slots =3D=3D 0, blk_crypto_get_keyslo=
-t()
-returns BLK_STS_OK with *slot_ptr =3D NULL, and
-blk_crypto_fallback_encrypt_bio() -> blk_crypto_fallback_tfm() ->
-blk_crypto_keyslot_index() dereferences slot->profile.
+  https://lore.kernel.org/r/20261104195127.GA1971@quark
 
-[1] https://sashiko.dev/#/bug/linux-3e1346dd-cfa2-4a1f-89e7-2cad97d10dce
 
---=20
-Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261122213120.2097=
-4-1-laveeshb@laveeshbansal.com?part=3D1
+Cheers,
+Baokun
+
