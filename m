@@ -1,89 +1,63 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=195.135.223.130
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1795424460;
-	b=q6V0p12ixLCh9034Ei1eU1Zk1zJetCbpK5YG/xdEB+MOUgw9xFDPIFTiGd53ahUsFF43
-	 bQ/zJs4pcsIYxZteZIDyAN7zRnVa0qZB5n+ltzq5ZUE8nYxqhw9kpz38Rl/djZ4Lq47X0
-	 k3+CZlK70cjTFnlxhDJRnQK0vxNwuVg2bhpXoDXkfethN3dYyES/7Xk8Txf8m1yWnvuSE
-	 L+85cK2KhpC4IBbya+vzHw43fQUBWubuVbWZqyuX5ddzxMXa5Ve+/0W4seHA36LONCtyG
-	 he+14WNdesAgohVSR8spIlb6GC+VG+96JC/jBdopr4tx/KFaSbvHpEaGHLxFNAmPluQ==
+	t=1795426256;
+	b=wGij7n7Jns1QLbV++LfWsSkLoV4ZG7o70O30ICcpzv3U4br6+rQGbVfvw3IWPB5mmkfu
+	 K9zoK2+hGJGucZu/FJ8YoTj2a0lMOtIuHqFKewsY/wVhM++FgX1ik73OqnESNG8dW/b0o
+	 9DSUVLAqC+sGro4lmJQe9Ahwd8wGHyVgGU90zg0jqlPfBzM8t4b0lgnCuyCIoACpSnQiM
+	 ziqcMaVdO+6OGPZ7HqOvrrvRfL+x1MduDgkJNj73nphfg1xNfYqc9qPyj81oYJgzzOvyi
+	 uDShrS1bJ/KPPz9uGyMiaWzWuyWmslHdNBJtuEfUAyMqge75WnuWF9ZRcWA1iU35akQ==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795424460;
-	h=DMARC-Filter:Received:Received:Received:Received:From:To:Cc:Subject:
-	 Date:Message-ID:X-Mailer:In-Reply-To:References:MIME-Version:
-	 X-Developer-Signature:X-Developer-Key:Content-Transfer-Encoding:
-	 X-Rspamd-Pre-Result:X-Rspamd-Server:X-Spamd-Result:X-Spam-Flag:
-	 X-Spam-Score:X-Spam-Level:X-Rspamd-Queue-Id:X-Rspamd-Pre-Result:
-	 X-Rspamd-Action;
-	bh=lpvhanw9TJqEMsFgXkrvlifU06FN6p6MwkWBWozOy8Q=;
-	b=tkXJCYxDu2Bu1ULfe/Va1l9Jpv+X/c5nkLuL/szN3JvZfBPktxs0/PIY09pu8EEabyFj
-	 xA5DOIp6IKyVJPFHTHfm73UhbMcrdQutjvOMLyR1hDbS43fVZ5jm7wG6CwJAMseGm3gRt
-	 OO/wtHuK/ScHI0UZXH+8caJEvxMEIqnv52U3ThxIBINw3YRMv/t9emHGxcc2sGZSPvE97
-	 7eKaAUg/VQT1bIlIoVpXMWEF5ivZajbC+VvmMNcwNzapUq+gwwfIWiFRrFb0vei8oysAV
-	 0ceLuRwFZA6i5jwd6FCKxSPRKrl4t7MzLbFkfLO/qII9DlzkcYj1uLQjebA2MKTDxjw==
+	a=rsa-sha256; c=relaxed/relaxed; t=1795426256;
+	h=Received:DKIM-Signature:Message-ID:From:Subject:Reply-To:To:Cc:
+	 In-Reply-To:References:Content-Type:Content-Transfer-Encoding:Date;
+	bh=HR3tGr01p/xd4kEORuODSHxO9W+SLv53b4nhMVjrxnA=;
+	b=tmkoGqfoG5XhUOG+wjhpWgp00OON9pCpeWWo9gEH3Eq8zvLAF+oy6R6EtQKgOIcR+q9K
+	 6V0iYPT1I5hDgmifE7KnrJqdFhK/o8kVj5JGhlkc5rfxMo4f5vYp8Cc18EaCPQROlrDNp
+	 4vyU2rlBuB1yEw8Y4sbhCyGP38r9hqUbgD7XagvPR336C6oqWhKArnoTW2wOUPhf36Xbg
+	 /Wvh49XRpBUWVtucxcyAmerUg6lIx9/X/HHnG8RQdBgOepHA3Zneqe65E9QPLVDX552Jt
+	 0lPd6w86rAvsKPMbHg1UVSryv2/2cTNibZ9cV1CSH2SJLlF2pVquGvSgukFSN3nrLPw==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dmarc=none header.from=suse.cz;
-	spf=pass smtp.mailfrom=suse.cz;
-	arc=none smtp.remote-ip=195.135.223.130
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=l2sQmqt6;
+	arc=none smtp.remote-ip=100.103.45.18
+Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
+	 key-exchange X25519 server-signature ECDSA (prime256v1))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 44483606A682;
-	Mon, 23 Nov 2026 09:01:00 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 44483606A682
-Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.cz
-Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id AA1BA220A3;
-	Mon, 23 Nov 2026 09:00:58 +0000 (UTC)
-Authentication-Results: smtp-out1.suse.de;
-	none
-Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id 68FFD13532;
-	Mon, 23 Nov 2026 09:00:58 +0000 (UTC)
-Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
-	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id tJ5XD8oABGv7BgAAD6G6ig
-	(envelope-from <jack@suse.cz>); Mon, 23 Nov 2026 09:00:58 +0000
-Received: by quack.suse.cz (Postfix, from userid 1000)
-	id 808472760A; Mon, 23 Nov 2026 10:00:57 +0100 (CET)
-From: Jan Kara <jack@suse.cz>
-To: Christian Brauner <brauner@kernel.org>
-Cc: <linux-fsdevel@vger.kernel.org>,
-	Andreas Gruenbacher <agruenba@redhat.com>,
-	gfs2@lists.linux.dev,
-	Mike Marshall <hubcap@omnibond.com>,
-	Martin Brandenburg <martin@omnibond.com>,
-	devel@lists.orangefs.org,
-	Dave Kleikamp <shaggy@kernel.org>,
-	jfs-discussion@lists.sourceforge.net,
-	Carlos Maiolino <cem@kernel.org>,
-	linux-xfs@vger.kernel.org,
-	David Howells <dhowells@redhat.com>,
-	Marc Dionne <marc.dionne@auristor.com>,
-	linux-afs@lists.infradead.org,
-	Miklos Szeredi <miklos@szeredi.hu>,
-	fuse-devel@lists.linux.dev,
-	<linux-block@vger.kernel.org>,
-	Chuck Lever <cel@kernel.org>,
-	Jeff Layton <jlayton@kernel.org>,
-	linux-nfs@vger.kernel.org,
-	Eric Biggers <ebiggers@kernel.org>,
-	Jaegeuk Kim <jaegeuk@kernel.org>,
-	linux-fscrypt@vger.kernel.org,
-	Jan Kara <jack@suse.cz>
-Subject: [PATCH v3 09/13] gfs2: Fix dirtiness checks in gfs2_write_inode() and evict_linked_inode()
-Date: Mon, 23 Nov 2026 10:00:44 +0100
-Message-ID: <20261123090040.19006-22-jack@suse.cz>
-X-Mailer: git-send-email 2.53.0
-In-Reply-To: <20261123085601.21199-1-jack@suse.cz>
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 67210606A321;
+	Mon, 23 Nov 2026 09:30:56 +0000 (UTC)
+Authentication-Results: smtp.subspace.kernel.org;
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=l2sQmqt6
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 370951F000C0;
+	Mon, 23 Nov 2026 09:30:55 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1795426256;
+	bh=HR3tGr01p/xd4kEORuODSHxO9W+SLv53b4nhMVjrxnA=;
+	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
+	b=l2sQmqt6fN50A1T5j2Rg3Laut2oeg6i/kGcP8NfVR+rBe9nnLrkX0MfUw6z9PcD8w
+	 lsJhzbMwviOpihMdjT1lFgWDyRL8BtYFs9zo6sWXD4uP6bj2xeGL5KLG8aejbD8mgg
+	 XJ/g9OKghNehnJgMnJBw/QBdsL0vGE0mefry+z3aSgBkkmjFw9CfUQOLj7AzXpRJ76
+	 sEbfwNmkSVMLUJ92Ulzz0uCBcbGXFkk4EO9BIIJhP1TQtxFQoZ2yNMLWeULFmNeO0s
+	 dVsenyaP0cC9TH9pxsRBHREbZhcjDqMWWKIdGE4rExeMC+KyjV/C/MrV7NCQtaHLsK
+	 3vRafunuHbxmg==
+Message-ID: <sashiko-outbox-228978@kernel.org>
+From: sashiko-bot@kernel.org
+Subject: Re: [PATCH v3 13/13] fs: Use inode_or_folios_dirty() in
+ __inode_lru_list_add()
+Reply-To: sashiko-reviews@lists.linux.dev
+To: "Jan Kara" <jack@suse.cz>, "Christian Brauner" <brauner@kernel.org>
+Cc: "Andreas Gruenbacher" <agruenba@redhat.com>, gfs2@lists.linux.dev, "Mike
+ Marshall" <hubcap@omnibond.com>, "Martin Brandenburg" <martin@omnibond.com>, devel@lists.orangefs.org, "Dave
+ Kleikamp" <shaggy@kernel.org>, "Carlos Maiolino" <cem@kernel.org>, "David
+ Howells" <dhowells@redhat.com>, "Marc Dionne" <marc.dionne@auristor.com>, "Miklos
+ Szeredi" <miklos@szeredi.hu>, "Chuck Lever" <cel@kernel.org>, "Jeff Layton" <jlayton@kernel.org>, "Eric
+ Biggers" <ebiggers@kernel.org>, "Jaegeuk Kim" <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, "Anna
+ Schumaker" <anna@kernel.org>
+In-Reply-To: <20261123090040.19006-26-jack@suse.cz>
 References: <20261123085601.21199-1-jack@suse.cz>
+ <20261123090040.19006-26-jack@suse.cz>
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+Date: Mon, 23 Nov 2026 09:30:54 +0000
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -92,60 +66,58 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
-MIME-Version: 1.0
-X-Developer-Signature: v=1; a=openpgp-sha256; l=1407; i=jack@suse.cz; h=from:subject; bh=VNCyIkn/glslaPM032BDlF6PyzMHDTmuaiaadhiEfv8=; b=owEBbQGS/pANAwAIAZydqgc/ZEDZAcsmYgBrBAC/crBm0TUVlw+aAlbOWDKQSd2UB+UtZWP1t gKye0F6v1qJATMEAAEIAB0WIQSrWdEr1p4yirVVKBycnaoHP2RA2QUCawQAvwAKCRCcnaoHP2RA 2fWKCACym/yM62OerHOpBJLwO+l0T8PQZHq8IDlrrFM5qyCtuGCk/yVfMfSDihPUm8aoHfHualH mi7RzqSZ3TMO1NOjqeHjPX+cE/OdkdB2QNWBAhlNLhRqY/eLEexCLLiEUCqx8OjsFya4W+zdB0Z PL8TlBmbw82XeGlM9cOd8kX7NJQ5V472z47nofimZFGtofcRUZh9gS/xNR7WNZaqtVdY8Y1tFKi cN4SxYlglM3RdKam0wfxeTnLFR14gC3GgQ0LAiC0u6Rv1F/Xq0eBGKexgsWoI20DXlGepnK0cHb 3g8L0rf59SSYKgIoBDusG/IFexuop7kK4Upjb/P+zLfMx07Z
-X-Developer-Key: i=jack@suse.cz; a=openpgp; fpr=93C6099A142276A28BBE35D815BC833443038D8C
-Content-Transfer-Encoding: 8bit
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Rspamd-Server: rspamd1.dmz-prg2.suse.org
-X-Spamd-Result: default: False [-4.00 / 50.00];
-	REPLY(-4.00)[]
-X-Spam-Flag: NO
-X-Spam-Score: -4.00
-X-Spam-Level: 
-X-Rspamd-Queue-Id: AA1BA220A3
-X-Rspamd-Pre-Result: action=no action;
-	module=replies;
-	Message is reply to one we originated
-X-Rspamd-Action: no action
 
-The checks are bogus because they check against inode->i_flags instead
-of inode->i_state. Use the inode_or_folios_dirty() helper which actually
-checks what was intended.
+Thank you for your contribution! Sashiko AI review found 1 potential
+issue to consider:
+- [High] fs: UAF of inode->i_mapping in __inode_lru_list_add() after
+  dev_dax teardown
+--
 
-Fixes: 957a7acd46e6 ("gfs2: Remove inode from ordered write list in gfs2_write_inode()")
-Fixes: bd67f17718cc ("gfs2: Fix data loss during inode evict")
-Reviewed-by: Andreas Gruenbacher <agruenba@redhat.com>
-Signed-off-by: Jan Kara <jack@suse.cz>
----
- fs/gfs2/super.c | 5 +++--
- 1 file changed, 3 insertions(+), 2 deletions(-)
+commit dba191eb05adecdae3b365e1982438c7882c5c1d
+Author: Jan Kara <jack@suse.cz>
 
-diff --git a/fs/gfs2/super.c b/fs/gfs2/super.c
-index 04bb4cf787d4..9b723dd591a5 100644
---- a/fs/gfs2/super.c
-+++ b/fs/gfs2/super.c
-@@ -460,7 +460,7 @@ static int gfs2_write_inode(struct inode *inode, struct writeback_control *wbc)
- 		mark_inode_dirty_sync(inode);
- 	else {
- 		spin_lock(&inode->i_lock);
--		if (!(inode->i_flags & I_DIRTY))
-+		if (!inode_or_folios_dirty(inode))
- 			gfs2_ordered_del_inode(ip);
- 		spin_unlock(&inode->i_lock);
- 	}
-@@ -1418,7 +1418,8 @@ static int evict_linked_inode(struct inode *inode, struct gfs2_holder *gh)
- 	struct address_space *metamapping = gfs2_glock2aspace(gl);
- 	int ret;
- 
--	if (!(test_bit(GLF_DIRTY, &gl->gl_flags) || inode->i_flags & I_DIRTY))
-+	if (!(test_bit(GLF_DIRTY, &gl->gl_flags) ||
-+	      inode_or_folios_dirty(inode)))
- 		goto clean;
- 
- 	/* The inode glock must be held exclusively and be instantiated. */
--- 
-2.53.0
+fs: Use inode_or_folios_dirty() in __inode_lru_list_add()
 
+This commit replaces the I_DIRTY_ALL check in __inode_lru_list_add() with a
+call to inode_or_folios_dirty().
+
+> diff --git a/fs/inode.c b/fs/inode.c
+> index de207f2f95a98..fb759033aa965 100644
+> --- a/fs/inode.c
+> +++ b/fs/inode.c
+> @@ -552,7 +552,9 @@ static void __inode_lru_list_add(struct inode *inode,=
+ bool rotate)
+>  {
+>  	lockdep_assert_held(&inode->i_lock);
+> =20
+> -	if (inode_state_read(inode) & (I_DIRTY_ALL | I_SYNC | I_FREEING | I_WIL=
+L_FREE))
+> +	if (inode_state_read(inode) & (I_SYNC | I_FREEING | I_WILL_FREE))
+> +		return;
+> +	if (inode_or_folios_dirty(inode))
+>  		return;
+
+[Severity: High]
+Can inode_or_folios_dirty() cause a use-after-free on inode->i_mapping
+when a device-dax character special file inode is added to the LRU after
+dev_dax teardown?
+
+Unlike mapping_shrinkable(&inode->i_data) below and the other LRU and
+eviction paths in fs/inode.c, inode_or_folios_dirty() dereferences
+inode->i_mapping via mapping_tagged(inode->i_mapping, PAGECACHE_TAG_DIRTY)
+whenever I_DIRTY_ALL is clear.
+
+When a device-dax character device is opened, dax_open() redirects the
+special file's inode->i_mapping to &dax_dev->inode.i_data, which is
+normally only reset to &inode->i_data in evict() -> cd_forget() if
+inode->i_cdev is still non-NULL.  If the dev_dax instance is unbound or
+deleted while the special file inode remains cached, cdev_purge() clears
+inode->i_cdev without restoring inode->i_mapping, and dev_dax_release() ->
+put_dax() -> dax_free_inode() frees dax_dev.  When the last reference to
+the special file inode is later dropped in iput_final() ->
+__inode_lru_list_add(), inode_or_folios_dirty() reads from the freed
+dax_dev->inode.i_data mapping.
+
+--=20
+Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261123085601.2119=
+9-1-jack@suse.cz?part=3D13
