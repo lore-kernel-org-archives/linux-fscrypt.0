@@ -1,49 +1,90 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=115.124.30.113
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=195.135.223.131
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1795405167;
-	b=j4b3m3GoNVJXfLs4IJa7d8bHMwc/rWkWl0TiK8AEdkFNEge3MNkyhPGlVOQRwG8e+BO2
-	 eJTlhuIxscDpb5/7XBcLNktXZWgffu0JNU4107fGhXHFkEXa+xoy1sUCWxWa0krdmYCq2
-	 FYdIKV9f3I8b93TYRtXCjUv5YwrtRSEeCY5o9DyyBTmLfX1Mr/4Gi47rdHAaNM6TVdEaT
-	 Jt5/bKpGNkQkFU7odzj+13KowhIRqLsG6o6wW5hQEBNHhj6yLo7WooZZcQZVwAPAUV8Kj
-	 wEIOCn+6W3xBe2d7AzmM0mudhd0X7LkeqZivIvug4zptikMXDHSpLOg/BWjPiIFD4qA==
+	t=1795424460;
+	b=NGJ0NlliKQUeUJ9hhOLbLYBFjiAUnszH+QcELKG2GCMNBOssR6P/tYKtnFtyJ+TZixlz
+	 E+U4aZCxoVWLKvigZLTwNJrbVBm3/5YQyv+vvdJpkkM70q5Y9ChwNLZO+HUreyghFmlGs
+	 kP8g32NMZyt4i+WqtHv2d8rOXf9nkfOJk2vB5Q43nhDld9wpDpmLnAIKYAr+oo9IwitBb
+	 o2/SaTRUG/VcAUuZ+U12nDRBjW3nIINs0sUtDhuS1r7eAd55ZW4jDAzibMwzux9gEOvHk
+	 9SIVr/06MNWdQeGPCGuWfaKdRmyEuG+BJ7+Q2RrYWc4x4oEO6eICEmhP/T9jhiI+nWQ==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795405167;
-	h=DMARC-Filter:DKIM-Signature:X-Alimail-AntiSpam:Received:Message-ID:
-	 Date:MIME-Version:User-Agent:Subject:To:References:Content-Language:
-	 Cc:From:In-Reply-To:Content-Type:Content-Transfer-Encoding;
-	bh=T1PTWvwFn/wbYQN3ucBdR3DJrn6KnnE98b1wRi3pEIo=;
-	b=SfaOwZa5EYae40YrqyxIXMhtWhVN37D/Jsl/IhriktdnptjK/yLUPy1C9i5Js7SOQh0o
-	 YTWsj3OSGaj4BPXX0zvSWgMJ77UN4b0+QPLAFF4o9D72nqJOG2BHXe3YAZ5KdAY/5uiO3
-	 1JRoOcPloYdRXxPTSoYrP6WsSmfU6ciXnnwdalwb+EgtED3kkMxKxlxhLH6BjPLPKX2zW
-	 uTSBpESHj1bdKJ+JSYFeDwTqtF3/AWcuB5Kf+mNqUrDJOP94qMZfI7riNigbS08jPY11L
-	 itykdh1JeZeb0XvgaZjKP75QTiyi5ekhBWrQZS6UJZvh3WSPJBKufNL+TnkcqIVjTWw==
+	a=rsa-sha256; c=relaxed/relaxed; t=1795424460;
+	h=DMARC-Filter:Received:Received:Received:Received:From:To:Cc:Subject:
+	 Date:Message-ID:X-Mailer:In-Reply-To:References:MIME-Version:
+	 X-Developer-Signature:X-Developer-Key:Content-Transfer-Encoding:
+	 X-Rspamd-Pre-Result:X-Rspamd-Queue-Id:X-Rspamd-Pre-Result:
+	 X-Rspamd-Action:X-Rspamd-Server:X-Spam-Level:X-Spamd-Result:
+	 X-Spam-Flag:X-Spam-Score;
+	bh=uPhxwqgRwFr2c0Wk/MJfXbhM5TnmiRTw7EakaKv1UGA=;
+	b=HJhCmbBhN75aP0BfK3wQm8Uq65TD/Sox1z/3QSuXE+8uFUALV7uEEHuNfTwcOgYHvkrn
+	 slB+yD2BXgPPN1ueEuhknGJpj8/z2FwB2adBrmBGvqx+KfOWYOILb8pqWDTtKb+Lm2dH0
+	 RLvL+w4uL9JJh+7z1rM+FILFYXeahclG391Jlih6o/2KJei69b2DwxR933964/5vYSMtE
+	 ZLSn3Zi/oHYLaNaajozERBwFGmFORSMlUBEwO8KdbAkAdJb0FQppYJlW1RE4MQ29tp9LC
+	 P5x/t9A0gojsh5U3chxmqDsCyCD68sASAANEhCBTMgLoMNdYf+gR3e8E8xt44JO1qjw==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dmarc=pass header.from=linux.alibaba.com;
-	spf=pass smtp.mailfrom=linux.alibaba.com;
-	dkim=pass header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=DsxXnwVg;
-	arc=none smtp.remote-ip=115.124.30.113
-Received: from out30-113.freemail.mail.aliyun.com (out30-113.freemail.mail.aliyun.com [115.124.30.113])
+	dmarc=none header.from=suse.cz;
+	spf=pass smtp.mailfrom=suse.cz;
+	arc=none smtp.remote-ip=195.135.223.131
+Received: from smtp-out2.suse.de (smtp-out2.suse.de [195.135.223.131])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id E2B31606A31A;
-	Mon, 23 Nov 2026 03:39:24 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org E2B31606A31A
-Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=linux.alibaba.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=linux.alibaba.com
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key, unprotected) header.d=linux.alibaba.com header.i=@linux.alibaba.com header.a=rsa-sha256 header.s=default header.b=DsxXnwVg
-DKIM-Signature:v=1; a=rsa-sha256; c=relaxed/relaxed;
-	d=linux.alibaba.com; s=default;
-	t=1795405162; h=Message-ID:Date:MIME-Version:Subject:To:From:Content-Type;
-	bh=T1PTWvwFn/wbYQN3ucBdR3DJrn6KnnE98b1wRi3pEIo=;
-	b=DsxXnwVgEC0GBfv6rr/YMMo4mSeFgPLFoqFsKWiIJWsyGsANEctKP78v7KkVmAGObJIrHStUzmBkY0VbLPNk7szt2KXQXgl2G54tLjzHMCH5eQGCtXQbYPSW1sNjHlrDLJEu436OtYvLXxHY/e5XGHZTSrBjXst2qaQT91d6z5E=
-X-Alimail-AntiSpam:AC=PASS;BC=-1|-1;BR=01201311R111e4;CH=green;DM=||false|;DS=||;FP=0|-1|-1|-1|0|-1|-1|-1;HT=maildocker-contentspam033037009110;MF=libaokun@linux.alibaba.com;NM=1;PH=DS;RN=13;SR=0;TI=SMTPD_---0XFCGc6V_1795405161;
-Received: from 30.221.149.19(mailfrom:libaokun@linux.alibaba.com fp:SMTPD_---0XFCGc6V_1795405161 cluster:ay36)
-          by smtp.aliyun-inc.com;
-          Mon, 23 Nov 2026 11:39:21 +0800
-Message-ID: <a5ad29d3-eb4d-479d-af48-b679fe8b5d23@linux.alibaba.com>
-Date: Mon, 23 Nov 2026 11:39:19 +0800
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 918DE606A32A;
+	Mon, 23 Nov 2026 09:00:59 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 918DE606A32A
+Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.cz
+Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
+	(No client certificate requested)
+	by smtp-out2.suse.de (Postfix) with ESMTPS id 01B2B1F7F3;
+	Mon, 23 Nov 2026 09:00:58 +0000 (UTC)
+Authentication-Results: smtp-out2.suse.de;
+	none
+Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
+	(No client certificate requested)
+	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id CF80413532;
+	Mon, 23 Nov 2026 09:00:57 +0000 (UTC)
+Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
+	by imap1.dmz-prg2.suse.org with ESMTPSA
+	id B2ulLMkABGvgBgAAD6G6ig
+	(envelope-from <jack@suse.cz>); Mon, 23 Nov 2026 09:00:57 +0000
+Received: by quack.suse.cz (Postfix, from userid 1000)
+	id 54A9B275FA; Mon, 23 Nov 2026 10:00:57 +0100 (CET)
+From: Jan Kara <jack@suse.cz>
+To: Christian Brauner <brauner@kernel.org>
+Cc: <linux-fsdevel@vger.kernel.org>,
+	Andreas Gruenbacher <agruenba@redhat.com>,
+	gfs2@lists.linux.dev,
+	Mike Marshall <hubcap@omnibond.com>,
+	Martin Brandenburg <martin@omnibond.com>,
+	devel@lists.orangefs.org,
+	Dave Kleikamp <shaggy@kernel.org>,
+	jfs-discussion@lists.sourceforge.net,
+	Carlos Maiolino <cem@kernel.org>,
+	linux-xfs@vger.kernel.org,
+	David Howells <dhowells@redhat.com>,
+	Marc Dionne <marc.dionne@auristor.com>,
+	linux-afs@lists.infradead.org,
+	Miklos Szeredi <miklos@szeredi.hu>,
+	fuse-devel@lists.linux.dev,
+	<linux-block@vger.kernel.org>,
+	Chuck Lever <cel@kernel.org>,
+	Jeff Layton <jlayton@kernel.org>,
+	linux-nfs@vger.kernel.org,
+	Eric Biggers <ebiggers@kernel.org>,
+	Jaegeuk Kim <jaegeuk@kernel.org>,
+	linux-fscrypt@vger.kernel.org,
+	Jan Kara <jack@suse.cz>,
+	"Pankaj Raghav (Samsung)" <pankaj.raghav@linux.dev>
+Subject: [PATCH v3 01/13] bdev: Drop pointless loop from blkdev_flush_mapping()
+Date: Mon, 23 Nov 2026 10:00:36 +0100
+Message-ID: <20261123090040.19006-14-jack@suse.cz>
+X-Mailer: git-send-email 2.53.0
+In-Reply-To: <20261123085601.21199-1-jack@suse.cz>
+References: <20261123085601.21199-1-jack@suse.cz>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -53,84 +94,78 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
-User-Agent: Mozilla Thunderbird
-Subject: Re: [PATCH] common/encrypt: support block sizes larger than the page
- size
-To: Zorro Lang <zlang@kernel.org>
-References: <20261103160906.188544-1-libaokun@linux.alibaba.com>
- <awHJso_ELIgRjbdg@zlang-mailbox>
-Content-Language: en-US
-Cc: fstests@vger.kernel.org, linux-fscrypt@vger.kernel.org,
- ebiggers@kernel.org, jaegeuk@kernel.org, tytso@mit.edu,
- linux-ext4@vger.kernel.org, adilger.kernel@dilger.ca, jack@suse.cz,
- yi.zhang@huawei.com, ojaswin@linux.ibm.com, ritesh.list@gmail.com,
- linux-kernel@vger.kernel.org
-From: Baokun Li <libaokun@linux.alibaba.com>
-In-Reply-To: <awHJso_ELIgRjbdg@zlang-mailbox>
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 7bit
+X-Developer-Signature: v=1; a=openpgp-sha256; l=1749; i=jack@suse.cz; h=from:subject; bh=GZumrknrM8DPyabr5Jne8KkRCS0p4/yNON9cCW4wy70=; b=owEBbQGS/pANAwAIAZydqgc/ZEDZAcsmYgBrBAC4xsOQMPEQ2oKCGhB4uItf13zp0U70aCwz8 BgxDEqYscuJATMEAAEIAB0WIQSrWdEr1p4yirVVKBycnaoHP2RA2QUCawQAuAAKCRCcnaoHP2RA 2Yg5B/42IPKKHMy6SSIbhPKxdCra8evAwnyXErezZac3fbRHGUyfm2yWf5konhAEdX/MLMTYQDt /cr4G9mwfK3/V0zMBR2I2u07NDAl2X9fnk7M+qBRQ5nMlv7nGooy48BccVa6qi1XdCekw9BZOuD 4/jDvTQy0fmEcr64knYRC+oSlc/r+nThyOkEAzk1iZCzdjjQhLZl6zAJDPcf1iL01TJwfwZ8GBO APpIdoItWy7+qAmaDZddSfNwxedGcf43/Ju1297VRa8qbXDM21j9E/fbmK+syjfw+MSZyjrtnsp OGwtIwKfv8OL3hw9OvBMuWeFt8mgXY4s8P0TNKFi7kyDubak
+X-Developer-Key: i=jack@suse.cz; a=openpgp; fpr=93C6099A142276A28BBE35D815BC833443038D8C
+Content-Transfer-Encoding: 8bit
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Queue-Id: 01B2B1F7F3
+X-Rspamd-Pre-Result: action=no action;
+	module=replies;
+	Message is reply to one we originated
+X-Rspamd-Action: no action
+X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
+X-Spam-Level: 
+X-Spamd-Result: default: False [-4.00 / 50.00];
+	REPLY(-4.00)[]
+X-Spam-Flag: NO
+X-Spam-Score: -4.00
 
-Hi Zorro,
+bdev_write_inode() is really odd loop calling write_inode_now(). The
+bdev doesn't have any pages by now and if there are any dirty bits in
+the inode state, they are stale. Just call write_inode_now() once to
+clear them.
 
-Thank you for your review!
+Reviewed-by: Pankaj Raghav (Samsung) <pankaj.raghav@linux.dev>
+Signed-off-by: Jan Kara <jack@suse.cz>
+---
+ block/bdev.c | 25 ++++++-------------------
+ 1 file changed, 6 insertions(+), 19 deletions(-)
 
-On 2026/11/22 01:04, Zorro Lang wrote:
-> On Wed, Nov 04, 2026 at 12:09:06AM +0800, Baokun Li wrote:
->> +	#
->> +	# If the test requires a v2 policy, don't probe with a v1 policy:
->> +	# v1 policies are not supported when the block size exceeds the page
->> +	# size.  _require_encryption_policy_support() will check for the
->> +	# requested policy version below.
->> +	if [ "$policy_version" -le 1 ]; then
->> +		mkdir $SCRATCH_MNT/tmpdir
->> +		if _set_encpolicy $SCRATCH_MNT/tmpdir 2>&1 >>$seqres.full | \
->> +			grep -Eq 'Inappropriate ioctl for device|Operation not supported'
->> +		then
->> +			_notrun "kernel does not support $FSTYP encryption"
->> +		fi
->> +		rmdir $SCRATCH_MNT/tmpdir
->> +
->> +		# v1 policies use the block size as their data unit size,
->> +		# which doesn't work if the block size exceeds the page size.
->> +		_require_v1_encryption_support
-> 
-> How about do _require_v1_encryption_support at first:
-> 
->   if [ "$policy_version" -le 1 ]; then
->       _require_v1_encryption_support
->       mkdir $SCRATCH_MNT/tmpdir
->       if _set_encpolicy $SCRATCH_MNT/tmpdir 2>&1 >>$seqres.full | \
-> 
-> In that case, if block_size > page_size, we can directly skip the test
-> with an explicit reason, avoids a redundant mkdir/rmdir and ioctl call.
-> 
-
-Yes, this can avoid some unnecessary operations.
-
-
->>  # FS QA Test No. ext4/309
->>  #
->>  # Verify that file contents encryption works on a filesystem with a block size
->> -# larger than the page size.  fscrypt uses the block size as the data unit size
->> -# by default, so this tests data units that span multiple pages, both for the
->> -# writeback path and for the on-disk ciphertext.
->> +# larger than the page size.  fscrypt uses min(block size, page size) as the
->> +# default data unit size, so this tests 4K data units on a 32K-block
-> 
-> Does ext4/309 hardcode 32k ?
-> 
-
-No, that's actually just an example using a block size of 32k; I'll
-rephrase that.
-
-Additionally, the final plan has not been fully confirmed yet. I am
-still working on the details with Eric. It is expected that all v1 use
-cases will be converted to v2 later, and in the testing process, the
-data unit size will be explicitly specified. Please refer to:
-
-  https://lore.kernel.org/r/20261104195127.GA1971@quark
-
-
-Cheers,
-Baokun
+diff --git a/block/bdev.c b/block/bdev.c
+index f20f91b3176e..9fa72df4f47a 100644
+--- a/block/bdev.c
++++ b/block/bdev.c
+@@ -60,24 +60,6 @@ struct block_device *file_bdev(struct file *bdev_file)
+ }
+ EXPORT_SYMBOL(file_bdev);
+ 
+-static void bdev_write_inode(struct block_device *bdev)
+-{
+-	struct inode *inode = BD_INODE(bdev);
+-	int ret;
+-
+-	spin_lock(&inode->i_lock);
+-	while (inode_state_read(inode) & I_DIRTY) {
+-		spin_unlock(&inode->i_lock);
+-		ret = write_inode_now(inode, true);
+-		if (ret)
+-			pr_warn_ratelimited(
+-	"VFS: Dirty inode writeback failed for block device %pg (err=%d).\n",
+-				bdev, ret);
+-		spin_lock(&inode->i_lock);
+-	}
+-	spin_unlock(&inode->i_lock);
+-}
+-
+ /* Kill _all_ buffers and pagecache , dirty or not.. */
+ static void kill_bdev(struct block_device *bdev)
+ {
+@@ -755,7 +737,12 @@ static void blkdev_flush_mapping(struct block_device *bdev)
+ 	WARN_ON_ONCE(bdev->bd_holders);
+ 	sync_blockdev(bdev);
+ 	kill_bdev(bdev);
+-	bdev_write_inode(bdev);
++	/*
++	 * All data is written out and evicted but inode can have some stale
++	 * I_DIRTY bits set. Call write_inode_now() to get rid of them so that
++	 * the inode can be evicted.
++	 */
++	write_inode_now(BD_INODE(bdev), 1);
+ }
+ 
+ static void blkdev_put_whole(struct block_device *bdev)
+-- 
+2.53.0
 
