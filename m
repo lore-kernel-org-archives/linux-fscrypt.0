@@ -1,115 +1,68 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=195.135.223.130
-ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1795453854;
-	b=q9Bg0qn+A+o0ur0/xK206pd4PUtWFQ5mfdC8kesMX/jCiv50c3HWKUaGO0Lo8+j863i/
-	 YaHgd5HGvf//zriDjJcNnrFGHMz9V/ULN4cWAe3Kal4oqT2GlugyeZW7gq4o2/Gf1ZXO6
-	 F90adjI0uPLtljQmojjv+UEwQqXfJTwwmKxdHYRl4jb9ny4vfW9juK5bvwTmAF9oBpkoj
-	 JYJNxO0tWcsjdPmcN26wZ0W8d9dglcTX0vvWb5O0Lft1qHR3x5dwpJh3JaVvJW5NS5Ki1
-	 zP7tc+R7+dFq7/+zoPLUueUr1RQf8HZJtsSlHTegjCmKnXEGKx1fECf5VTuBaMEwo5g==
-ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795453854;
-	h=DMARC-Filter:Received:DKIM-Signature:DKIM-Signature:DKIM-Signature:
-	 DKIM-Signature:Received:Received:Received:Date:From:To:Cc:Subject:
-	 Message-ID:References:MIME-Version:Content-Type:Content-Disposition:
-	 In-Reply-To:X-Rspamd-Queue-Id:X-Spam-Level:X-Rspamd-Server:
-	 X-Rspamd-Action:X-Spam-Flag:X-Spamd-Result:X-Spam-Score;
-	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
-	b=W9SbyjDUyU+wdyFbWtHRJjLWjT3t4HzyxHlZTKzC+8Dp9NCmU02vz6r4GAMfTeUwEBAn
-	 XdCRsDONMoPNPqfQWr6J76F+SWgzOxjcumHp/76kzh9KxR7haZScvKV1pcQSZzNJpYFq4
-	 J+5QbrL+/1hmfnTXfBedSvG6gdN6v1ueq3MjEFFav8HEX/SRsEtsjcwcA0d5q8T6kZBHU
-	 R6kWVUb1slnZfW4wIfYsb2YF/gEbvbD5QdPEB0XIaIhKmaLX68N8aPPwNNXr7Im1ifYpW
-	 BjG9cxt5FV5YjEcxbfYLOx3tJ3lra336+Hk/hQc60o6tetLTobne3sscuC7WjfOIYyQ==
-ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dmarc=none header.from=suse.cz;
-	spf=pass smtp.mailfrom=suse.cz;
-	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=w6AcXesO;
-	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=uk+7dI8H;
-	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b="k/9dx0+8";
-	dkim=neutral header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=VNtsusfa;
-	arc=none smtp.remote-ip=195.135.223.130
-Received: from smtp-out1.suse.de (smtp-out1.suse.de [195.135.223.130])
+Authentication-Results: smtp.subspace.kernel.org; arc=pass header.oldest-pass=0 smtp.remote-ip=165.173.182.15
+ARC-Seal: i=2; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=pass;
+	t=1795457684;
+	b=nbIE6ozgHuIxe0sRhj44xyOMGKoziueiBSDxluBEDwgZHlR+pTg4gSD2Qreg1L9U/XBB
+	 kyvUIgfqtk5OqFBJx2oD0CX/+f5iHSjG8lWa3c0fxYpHIWW456wYeHOXO68VCq08dXieb
+	 VmO6lQKsrxdXlyWFKV20Cy9PlObRc4g3rAiSIWxBW86XiH3j2X9azdCRNCRQJNmJHpnLn
+	 ER6GTTB8Q5RSKJyBuiUzJZm1+gGFFg+gnzk3FPBLgMk8MELzDy1LDOY2MzgGfNLK16eTB
+	 i9TvxmxZuxc/oml+5o7mf6tVysXgZxlrSSZTdXlMQ7WGeyEq2r8eMJdUNP9kQGEnGmw==
+ARC-Message-Signature: i=2; d=subspace.kernel.org; s=arc20261015;
+	a=rsa-sha256; c=relaxed/relaxed; t=1795457684;
+	h=DMARC-Filter:DKIM-Signature:Received:From:To:Cc:Subject:Date:
+	 Message-ID:X-Mailer:MIME-Version:Content-Transfer-Encoding:
+	 X-ZohoMailClient;
+	bh=yOy40zyrDNkufLfX1+5C1rSlLdTXQCSrlMTkU/yGIbE=;
+	b=kxNu6xUoBJwWoOhPdgksddAZjI4E7g2CDNpCHvlWmQJG8zmR5332m3sSUiQaWETveVuw
+	 5vIOwKbtAgFnZRBR7aKkTmQpxrzbRbLFf8OQqBqfOaUItJRRiIPL+i8lBwzFCw5GAuzle
+	 lLyAWTJUoIbAGNB0MzQlHDkFaCrbDT6/opCnF0OEzbeAaQAi3WO6SpmoISPUalSvHfdiV
+	 5Ohc191kBfeKX3kBA/Ti6fITS/Hz5YraL+eTliA/DZSZXkhs0GX8ZqT/UPA+VfiziQdmK
+	 5A0UUF+09LCjwW7G96QcAFMrh19nu5eWTr8jqGe2Qd6aOvPh+R9ApoCe3FVO2omzaEg==
+ARC-Authentication-Results: i=2; smtp.subspace.kernel.org; 
+	dmarc=none header.from=laveeshbansal.com;
+	spf=pass smtp.mailfrom=laveeshbansal.com;
+	dkim=pass header.d=laveeshbansal.com header.i=@laveeshbansal.com header.a=rsa-sha256 header.s=zoho header.b="WUZJWl/W";
+	arc=pass header.oldest-pass=0 smtp.remote-ip=165.173.182.15
+Received: from sender5-op-o15.zoho.com (sender5-op-o15.zoho.com [165.173.182.15])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
 	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 1CB1A606A338
-	for <linux-fscrypt@vger.kernel.org>; Mon, 23 Nov 2026 17:10:52 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 1CB1A606A338
-Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=suse.cz
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=suse.cz
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 74173606A31A;
+	Mon, 23 Nov 2026 18:14:43 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 74173606A31A
+Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=laveeshbansal.com
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=laveeshbansal.com
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=w6AcXesO;
-	dkim=pass header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=uk+7dI8H;
-	dkim=pass (1024-bit key) header.d=suse.cz header.i=@suse.cz header.a=rsa-sha256 header.s=susede2_rsa header.b=k/9dx0+8;
-	dkim=neutral header.d=suse.cz header.i=@suse.cz header.a=ed25519-sha256 header.s=susede2_ed25519 header.b=VNtsusfa
-Received: from imap1.dmz-prg2.suse.org (imap1.dmz-prg2.suse.org [IPv6:2a07:de40:b281:104:10:150:64:97])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by smtp-out1.suse.de (Postfix) with ESMTPS id 0A18E220FE;
-	Mon, 23 Nov 2026 17:10:50 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
-	t=1795453851; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
-	b=w6AcXesOZ5YH48nwr4/Zbb2OvihyNPpA2GaS8A7O9z2oG9GBWmJ/46kSzJKa3VCgso4cw2
-	JZ4Hnb8sCgjDmnuMc+nIKSwP7dJLbQYA5qcgFiKSaOq9rPRJG87wC5i6XEzABIsGUQJrjL
-	mGPiW62u6voVv5zLFWZVR2/IFAMZr5A=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
-	s=susede2_ed25519; t=1795453851;
-	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
-	b=uk+7dI8Hik0pNcS54lE0y3ylpW9rFqPZ/mPScz0rW6mN1wlfQSe8bME/EGxR9Ab6udLZqR
-	1XWUwDEX3tW9VtCQ==
-Authentication-Results: smtp-out1.suse.de;
-	dkim=pass header.d=suse.cz header.s=susede2_rsa header.b="k/9dx0+8";
-	dkim=pass header.d=suse.cz header.s=susede2_ed25519 header.b=VNtsusfa
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=suse.cz; s=susede2_rsa;
-	t=1795453850; h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
-	b=k/9dx0+842+5FtGIhxu7+7wPqr47yYCQpQ+WNd8f8xnShoAIDvn9O0jk9JRHRvvnY8kN//
-	jiEInyq0HEZOr+uduUd4dgB4Az4HSaYE7DOWdIo/rJumfwtP4xGnueR8ctNQpcSf2n58Jt
-	XVCWDpRbwlVe9lEYdHPr6fUoiyS5SHs=
-DKIM-Signature: v=1; a=ed25519-sha256; c=relaxed/relaxed; d=suse.cz;
-	s=susede2_ed25519; t=1795453850;
-	h=from:from:reply-to:date:date:message-id:message-id:to:to:cc:cc:
-	 mime-version:mime-version:content-type:content-type:
-	 in-reply-to:in-reply-to:references:references;
-	bh=/kG84OV1svRUYxEC9cAvJgk73HRiyZOTxHBca81Xqek=;
-	b=VNtsusfa+lQYA7pWPGu0Ny1HCtp7roepllJpMCXv8C23shYPD3duAhMPyEnc0n1KJWbwqK
-	s8LYDkt36KmCbxCQ==
-Received: from imap1.dmz-prg2.suse.org (localhost [127.0.0.1])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256)
-	(No client certificate requested)
-	by imap1.dmz-prg2.suse.org (Postfix) with ESMTPS id A6C1913510;
-	Mon, 23 Nov 2026 17:10:49 +0000 (UTC)
-Received: from dovecot-director2.suse.de ([2a07:de40:b281:106:10:150:64:167])
-	by imap1.dmz-prg2.suse.org with ESMTPSA
-	id MyN8IJlzBGvvAwAAD6G6ig
-	(envelope-from <jack@suse.cz>); Mon, 23 Nov 2026 17:10:49 +0000
-Received: by quack.suse.cz (Postfix, from userid 1000)
-	id E2AEA27683; Mon, 23 Nov 2026 18:10:38 +0100 (CET)
-Date: Mon, 23 Nov 2026 18:10:38 +0100
-From: Jan Kara <jack@suse.cz>
-To: sashiko-reviews@lists.linux.dev
-Cc: Jan Kara <jack@suse.cz>, Christian Brauner <brauner@kernel.org>, 
-	Andreas Gruenbacher <agruenba@redhat.com>, gfs2@lists.linux.dev, Mike Marshall <hubcap@omnibond.com>, 
-	Martin Brandenburg <martin@omnibond.com>, devel@lists.orangefs.org, Dave Kleikamp <shaggy@kernel.org>, 
-	Carlos Maiolino <cem@kernel.org>, David Howells <dhowells@redhat.com>, 
-	Marc Dionne <marc.dionne@auristor.com>, Miklos Szeredi <miklos@szeredi.hu>, Chuck Lever <cel@kernel.org>, 
-	Jeff Layton <jlayton@kernel.org>, Eric Biggers <ebiggers@kernel.org>, 
-	Jaegeuk Kim <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, Anna Schumaker <anna@kernel.org>
-Subject: Re: [PATCH v3 13/13] fs: Use inode_or_folios_dirty() in
- __inode_lru_list_add()
-Message-ID: <mlnoenfbwzynuicu56rrmw7go5ijomamaidrsarjbmplsqrcjr@bdpui3vcohcg>
-References: <20261123085601.21199-1-jack@suse.cz>
- <20261123090040.19006-26-jack@suse.cz>
- <sashiko-outbox-228978@kernel.org>
+	dkim=pass (1024-bit key, unprotected) header.d=laveeshbansal.com header.i=@laveeshbansal.com header.a=rsa-sha256 header.s=zoho header.b=WUZJWl/W
+ARC-Seal: i=1; a=rsa-sha256; t=1795457656; cv=none; 
+	d=zohomail.com; s=zohoarc; 
+	b=GO/PQr/knQKRwutlrxpwmQnlF4ufiC1/MxPjTAEzuUQ1JguR57eiMoVdXUD1X0AUduAakU6A5sLNMSyGaFSYW7Sp4oR8jNmF2f5WP04t0LCn25Up5MlHbWvURM+l4L9OwnxpM9F/ALmJf7zgJXHXmzEk04rjIWqUagq70iDzuFw=
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=zohomail.com; s=zohoarc; 
+	t=1795457656; h=Content-Transfer-Encoding:Cc:Cc:Date:Date:From:From:MIME-Version:Message-ID:Subject:Subject:To:To:Message-Id:Reply-To; 
+	bh=yOy40zyrDNkufLfX1+5C1rSlLdTXQCSrlMTkU/yGIbE=; 
+	b=awhHWwnYOwCb3N6C0YPM59LdRm3Y5BtyaYEuTOhHe7hijdDD+gIFhTAMqLfheZiDkFuQdnb0E/xEh03lFogFBLQx3zcoKpGGK+gX2/GEiP3POJFhYC0VQw8BFzCIzGQc7bpnmV4r6dAmaOrNqa72f56FOXjS9zSU0veebSdWEc0=
+ARC-Authentication-Results: i=1; mx.zohomail.com;
+	dkim=pass  header.i=laveeshbansal.com;
+	spf=pass  smtp.mailfrom=laveeshb@laveeshbansal.com;
+	dmarc=pass header.from=<laveeshb@laveeshbansal.com>
+DKIM-Signature: a=rsa-sha256; b=WUZJWl/WqOw+OCdZAhZQPiZ+P3MWrUa09CnEksyxXKsCB/Am4F1s50PJq0XhRWHTAPRz+UgEEK3KWCFOlcBNZ/xAFnk4XDXHVjt5GNseG/05CMmBT1aXVCLIhdsUht96tV/TvlU4ZfIVrSNekJMUVAR2wWzv/mHlX1xFmtcjGQk=; c=relaxed/relaxed; s=zoho; d=laveeshbansal.com; v=1; bh=yOy40zyrDNkufLfX1+5C1rSlLdTXQCSrlMTkU/yGIbE=; h=Content-Description:Content-ID:Content-Type:Content-Transfer-Encoding:Cc:Date:From:In-Reply-To:List-Subscribe:List-Post:List-Owner:List-Id:List-Archive:List-Help:List-Unsubscribe:MIME-Version:Message-ID:Resent-Sender:Resent-Cc:Resent-Date:Resent-To:Reply-To:Resent-Message-ID:Resent-From:Sender:Subject:To:Date:From:Message-Id:Reply-To:Subject:To:Cc;
+Received: by smtp.zohomail.com with SMTPS id 1795457654842487.56845822427283;
+	Mon, 23 Nov 2026 10:14:14 -0800 (PST)
+From: Laveesh Bansal <laveeshb@laveeshbansal.com>
+To: Jens Axboe <axboe@kernel.dk>,
+	Eric Biggers <ebiggers@kernel.org>
+Cc: Christoph Hellwig <hch@lst.de>,
+	"Theodore Y. Ts'o" <tytso@mit.edu>,
+	Jaegeuk Kim <jaegeuk@kernel.org>,
+	syzbot+20d60aafd9a0d1f2a380@syzkaller.appspotmail.com,
+	linux-block@vger.kernel.org,
+	linux-fscrypt@vger.kernel.org,
+	linux-f2fs-devel@lists.sourceforge.net,
+	linux-crypto@vger.kernel.org,
+	linux-kernel@vger.kernel.org
+Subject: [PATCH v2] blk-crypto: use a NOIO scope while holding profile->lock
+Date: Mon, 23 Nov 2026 10:14:08 -0800
+Message-ID: <20261123181408.62972-1-laveeshb@laveeshbansal.com>
+X-Mailer: git-send-email 2.54.0
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -119,88 +72,131 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
-Content-Type: text/plain; charset=us-ascii
-Content-Disposition: inline
-In-Reply-To: <sashiko-outbox-228978@kernel.org>
-X-Rspamd-Queue-Id: 0A18E220FE
-X-Spam-Level: 
-X-Rspamd-Server: rspamd2.dmz-prg2.suse.org
-X-Rspamd-Action: no action
-X-Spam-Flag: NO
-X-Spamd-Result: default: False [-13.01 / 50.00];
-	SUSE_INTERNAL_BYPASS(-9.00)[];
-	BAYES_HAM(-3.00)[100.00%];
-	NEURAL_HAM_LONG(-1.00)[-1.000];
-	MID_RHS_NOT_FQDN(0.50)[];
-	R_DKIM_ALLOW(-0.20)[suse.cz:s=susede2_rsa,suse.cz:s=susede2_ed25519];
-	NEURAL_HAM_SHORT(-0.20)[-1.000];
-	MIME_GOOD(-0.10)[text/plain];
-	MX_GOOD(-0.01)[];
-	DKIM_SIGNED(0.00)[suse.cz:s=susede2_rsa,suse.cz:s=susede2_ed25519];
-	RCVD_COUNT_THREE(0.00)[3];
-	ARC_NA(0.00)[];
-	SPAMHAUS_XBL(0.00)[2a07:de40:b281:104:10:150:64:97:from];
-	RBL_SPAMHAUS_BLOCKED_OPENRESOLVER(0.00)[2a07:de40:b281:104:10:150:64:97:from];
-	RCPT_COUNT_TWELVE(0.00)[19];
-	MIME_TRACE(0.00)[0:+];
-	FROM_HAS_DN(0.00)[];
-	TO_MATCH_ENVRCPT_ALL(0.00)[];
-	TO_DN_SOME(0.00)[];
-	DNSWL_BLOCKED(0.00)[2a07:de40:b281:106:10:150:64:167:received];
-	FROM_EQ_ENVFROM(0.00)[];
-	RCVD_TLS_LAST(0.00)[];
-	RECEIVED_SPAMHAUS_BLOCKED_OPENRESOLVER(0.00)[2a07:de40:b281:106:10:150:64:167:received];
-	MISSING_XM_UA(0.00)[];
-	RCVD_VIA_SMTP_AUTH(0.00)[];
-	DKIM_TRACE(0.00)[suse.cz:+];
-	DBL_BLOCKED_OPENRESOLVER(0.00)[suse.cz:dkim,suse.cz:email,suse.com:email,imap1.dmz-prg2.suse.org:rdns,imap1.dmz-prg2.suse.org:helo]
-X-Spam-Score: -13.01
+Content-Transfer-Encoding: 8bit
+X-ZohoMailClient: External
 
-On Mon 23-11-26 09:30:54, sashiko-bot@kernel.org wrote:
-> Thank you for your contribution! Sashiko AI review found 1 potential
-> issue to consider:
-> - [High] fs: UAF of inode->i_mapping in __inode_lru_list_add() after
->   dev_dax teardown
-> --
-> 
-> commit dba191eb05adecdae3b365e1982438c7882c5c1d
-> Author: Jan Kara <jack@suse.cz>
-> 
-> fs: Use inode_or_folios_dirty() in __inode_lru_list_add()
-> 
-> This commit replaces the I_DIRTY_ALL check in __inode_lru_list_add() with a
-> call to inode_or_folios_dirty().
-> 
-> > diff --git a/fs/inode.c b/fs/inode.c
-> > index de207f2f95a98..fb759033aa965 100644
-> > --- a/fs/inode.c
-> > +++ b/fs/inode.c
-> > @@ -552,7 +552,9 @@ static void __inode_lru_list_add(struct inode *inode, bool rotate)
-> >  {
-> >  	lockdep_assert_held(&inode->i_lock);
-> >  
-> > -	if (inode_state_read(inode) & (I_DIRTY_ALL | I_SYNC | I_FREEING | I_WILL_FREE))
-> > +	if (inode_state_read(inode) & (I_SYNC | I_FREEING | I_WILL_FREE))
-> > +		return;
-> > +	if (inode_or_folios_dirty(inode))
-> >  		return;
-> 
-> [Severity: High]
-> Can inode_or_folios_dirty() cause a use-after-free on inode->i_mapping
-> when a device-dax character special file inode is added to the LRU after
-> dev_dax teardown?
-> 
-> Unlike mapping_shrinkable(&inode->i_data) below and the other LRU and
-> eviction paths in fs/inode.c, inode_or_folios_dirty() dereferences
-> inode->i_mapping via mapping_tagged(inode->i_mapping, PAGECACHE_TAG_DIRTY)
-> whenever I_DIRTY_ALL is clear.
+Setting a key in blk-crypto-fallback can deadlock on profile->lock.
+blk_crypto_get_keyslot() holds it across keyslot_program, whose setkey
+allocates with GFP_KERNEL (Adiantum); direct reclaim can evict an fscrypt
+inode, and blk_crypto_evict_key() then takes profile->lock again. syzbot
+reports it as an fs_reclaim vs profile->lock cycle. Since
+commit 5acc6f649a68 ("fscrypt: Always use blk-crypto for contents on
+block-based filesystems") hitting it no longer needs -o inlinecrypt.
 
-Hrm, this is right. We'd need to check inode->i_data and not
-inode->i_mapping. Christian, please just drop this patch. The code is
-correct as is (we hold i_lock) and the helper would do more harm than good
-here.
+Enter a NOIO scope in blk_crypto_hw_enter() and leave it in
+blk_crypto_hw_exit(), so allocations made under the lock, by the
+fallback or a hardware driver, can't recurse into the filesystem. The
+saved flags live in the profile. blk_crypto_reprogram_all_keys() takes
+the lock directly, so it gets the same scope.
 
-								Honza
+Fixes: 488f6682c832 ("block: blk-crypto-fallback for Inline Encryption")
+Cc: stable@vger.kernel.org # v7.3+
+Reported-by: syzbot+20d60aafd9a0d1f2a380@syzkaller.appspotmail.com
+Closes: https://lore.kernel.org/r/6a9b25c3.b5d4176b.238c3e.0004.GAE@google.com
+Signed-off-by: Laveesh Bansal <laveeshb@laveeshbansal.com>
+---
+I used an LLM for the analysis, the patch and the test runs.
+
+Changes in v2:
+ - Moved the NOIO scope from the two setkey calls into
+   blk_crypto_hw_enter()/blk_crypto_hw_exit(), as Christoph suggested,
+   and added it to blk_crypto_reprogram_all_keys().
+ - The scope now also covers the hardware drivers' keyslot callbacks. I
+   could not test those; it only narrows reclaim for them.
+v1: https://lore.kernel.org/r/20261122213120.20974-1-laveeshb@laveeshbansal.com
+
+Tested on arm64 and x86_64 (QEMU, base c44104f3642d, KASAN and lockdep;
+patched runs include comment-only revisions): f2fs with an Adiantum
+policy, creating encrypted files and reading them back with O_DIRECT
+under a memory hog, about a minute per run. Runs showing each symptom:
+
+                                              base      v2
+  lockdep cycle warning, arm64                2 of 2    0 of 8
+  lockdep cycle warning, x86_64               6 of 6    0 of 12
+  task deadlocked on its own lock, arm64      0 of 2    0 of 8
+  task deadlocked on its own lock, x86_64     5 of 6    0 of 12
+  lockdep cycle warning, x86_64 as uid 65534  2 of 2    0 of 2
+  task deadlocked, x86_64 as uid 65534        1 of 2    0 of 2
+  profile->lock -> fs_reclaim edge in
+    lockdep's dump (runs that got to it)      3 of 3    0 of 18
+
+No KASAN reports. Under the hog memory runs out, and 3 of the 12 x86 runs
+stalled in page allocation, two without finishing; base stalls the same
+way. In one, the task holding profile->lock was waiting in the setkey
+allocation with kswapd queued behind it. That stall began earlier, in the
+RAM-backed disk's own allocation, and lockdep reported nothing: NOIO stops
+the allocation recursing into key eviction, not a wait for free memory.
+
+fstests -g encrypt on arm64 passes on f2fs and ext4. Could not reproduce
+on ext4; fstests not run on x86_64.
+
+ block/blk-crypto-profile.c         | 7 +++++++
+ include/linux/blk-crypto-profile.h | 1 +
+ 2 files changed, 8 insertions(+)
+
+diff --git a/block/blk-crypto-profile.c b/block/blk-crypto-profile.c
+index 53126c091b0b..395829fe7bcc 100644
+--- a/block/blk-crypto-profile.c
++++ b/block/blk-crypto-profile.c
+@@ -29,6 +29,7 @@
+ #include <linux/atomic.h>
+ #include <linux/mutex.h>
+ #include <linux/pm_runtime.h>
++#include <linux/sched/mm.h>
+ #include <linux/wait.h>
+ #include <linux/blkdev.h>
+ #include <linux/blk-integrity.h>
+@@ -53,11 +54,14 @@ static inline void blk_crypto_hw_enter(struct blk_crypto_profile *profile)
+ 	if (profile->dev)
+ 		pm_runtime_get_sync(profile->dev);
+ 	down_write(&profile->lock);
++	/* Reclaim evicts keys under this lock; don't recurse into the fs. */
++	profile->memflags = memalloc_noio_save();
+ }
+ 
+ static inline void blk_crypto_hw_exit(struct blk_crypto_profile *profile)
+ 	__releases(&profile->lock)
+ {
++	memalloc_noio_restore(profile->memflags);
+ 	up_write(&profile->lock);
+ 	if (profile->dev)
+ 		pm_runtime_put_sync(profile->dev);
+@@ -397,6 +401,7 @@ int __blk_crypto_evict_key(struct blk_crypto_profile *profile,
+  */
+ void blk_crypto_reprogram_all_keys(struct blk_crypto_profile *profile)
+ {
++	unsigned int memflags;
+ 	unsigned int slot;
+ 
+ 	if (profile->num_slots == 0)
+@@ -404,6 +409,7 @@ void blk_crypto_reprogram_all_keys(struct blk_crypto_profile *profile)
+ 
+ 	/* This is for device initialization, so don't resume the device */
+ 	down_write(&profile->lock);
++	memflags = memalloc_noio_save();
+ 	for (slot = 0; slot < profile->num_slots; slot++) {
+ 		const struct blk_crypto_key *key = profile->slots[slot].key;
+ 		int err;
+@@ -414,6 +420,7 @@ void blk_crypto_reprogram_all_keys(struct blk_crypto_profile *profile)
+ 		err = profile->ll_ops.keyslot_program(profile, key, slot);
+ 		WARN_ON(err);
+ 	}
++	memalloc_noio_restore(memflags);
+ 	up_write(&profile->lock);
+ }
+ EXPORT_SYMBOL_GPL(blk_crypto_reprogram_all_keys);
+diff --git a/include/linux/blk-crypto-profile.h b/include/linux/blk-crypto-profile.h
+index 4f39e9cd7576..9209b6a14b98 100644
+--- a/include/linux/blk-crypto-profile.h
++++ b/include/linux/blk-crypto-profile.h
+@@ -174,6 +174,7 @@ struct blk_crypto_profile {
+ 	 */
+ 	struct rw_semaphore lock;
+ 	struct lock_class_key lockdep_key;
++	unsigned int memflags;
+ 
+ 	/* List of idle slots, with least recently used slot at front */
+ 	wait_queue_head_t idle_slots_wait_queue;
 -- 
-Jan Kara <jack@suse.com>
-SUSE Labs, CR
+2.43.0
+
