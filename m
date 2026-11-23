@@ -1,63 +1,49 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=213.95.11.211
 ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
-	t=1795426256;
-	b=wGij7n7Jns1QLbV++LfWsSkLoV4ZG7o70O30ICcpzv3U4br6+rQGbVfvw3IWPB5mmkfu
-	 K9zoK2+hGJGucZu/FJ8YoTj2a0lMOtIuHqFKewsY/wVhM++FgX1ik73OqnESNG8dW/b0o
-	 9DSUVLAqC+sGro4lmJQe9Ahwd8wGHyVgGU90zg0jqlPfBzM8t4b0lgnCuyCIoACpSnQiM
-	 ziqcMaVdO+6OGPZ7HqOvrrvRfL+x1MduDgkJNj73nphfg1xNfYqc9qPyj81oYJgzzOvyi
-	 uDShrS1bJ/KPPz9uGyMiaWzWuyWmslHdNBJtuEfUAyMqge75WnuWF9ZRcWA1iU35akQ==
+	t=1795426301;
+	b=cMLFaJ5qVWzjy5TlG0oXnM6F8lJP7trN0fgV/cwzel6lCrieNXh4Fs6xTQ1BsYDZgHgu
+	 Lf9h+gfbWsAB2G0lSIvfIFiLHyyW2UoN6yEDdBxpGGlpQDiaJwvt316zxNUwLCnd5oJhM
+	 sXT7luxBh32al+J9t9MQxPlYImsSEP4sqJSSR855XAp7aXEKgcU+doaGxGGEQHlEFEvlJ
+	 osKvARlayC23feXraSCKRowiRR+PYjFSobqXfx6F3tBUM3hE2wZ9qxQ52HsT//+2ECKMF
+	 H9z12tbx4O0knLfROV8vQDZhxwe8mYIMfBrG018vFY2CrDVDrfxaoOZM7V7RutkMzwA==
 ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795426256;
-	h=Received:DKIM-Signature:Message-ID:From:Subject:Reply-To:To:Cc:
-	 In-Reply-To:References:Content-Type:Content-Transfer-Encoding:Date;
-	bh=HR3tGr01p/xd4kEORuODSHxO9W+SLv53b4nhMVjrxnA=;
-	b=tmkoGqfoG5XhUOG+wjhpWgp00OON9pCpeWWo9gEH3Eq8zvLAF+oy6R6EtQKgOIcR+q9K
-	 6V0iYPT1I5hDgmifE7KnrJqdFhK/o8kVj5JGhlkc5rfxMo4f5vYp8Cc18EaCPQROlrDNp
-	 4vyU2rlBuB1yEw8Y4sbhCyGP38r9hqUbgD7XagvPR336C6oqWhKArnoTW2wOUPhf36Xbg
-	 /Wvh49XRpBUWVtucxcyAmerUg6lIx9/X/HHnG8RQdBgOepHA3Zneqe65E9QPLVDX552Jt
-	 0lPd6w86rAvsKPMbHg1UVSryv2/2cTNibZ9cV1CSH2SJLlF2pVquGvSgukFSN3nrLPw==
+	a=rsa-sha256; c=relaxed/relaxed; t=1795426301;
+	h=DMARC-Filter:Received:Date:From:To:Cc:Subject:Message-ID:References:
+	 MIME-Version:Content-Type:Content-Disposition:In-Reply-To:User-Agent;
+	bh=qTfZwRq4CVPyDhqahNCbHKrfBgzSh0zQAJnCCnO1BqA=;
+	b=Z3D7ulNtRou5zk8p6zh1CXbW6t3cxAbO+joN2s0otld8tE7QBt9mty04bZxugrOlooqD
+	 50EQkl1d9LLIersaIoksCQgDGmgn/Kpun2Rz2DgUWKm5N3UCrQg70WJmBZ0sKIah5cToL
+	 I3C8RYBqGJ4p2eAhtZ7r3B0vF+/4zzndgX27CoOJ8dnkGfKahZh2z2vdvaDEaJ7R9eKTr
+	 D/qhO6nqZRzNKeEiN4ud03i1aX0C4w/S1V/q5DpCYE5jbglJR6yD2ulQkUfZMexXaWjxf
+	 SB83eFOXL0pzQVIhQU+9dmXAxLZPf15U6cPQ3MPqMgWBXELs44BUq/5KYDnUvTuwUrg==
 ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
-	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=l2sQmqt6;
-	arc=none smtp.remote-ip=100.103.45.18
-Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
-	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1))
+	dmarc=pass header.from=lst.de;
+	spf=pass smtp.mailfrom=lst.de;
+	arc=none smtp.remote-ip=213.95.11.211
+Received: from verein.lst.de (verein.lst.de [213.95.11.211])
+	(using TLSv1.2 with cipher ECDHE-ECDSA-AES256-GCM-SHA384 (256/256 bits))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 67210606A321;
-	Mon, 23 Nov 2026 09:30:56 +0000 (UTC)
-Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=l2sQmqt6
-Received: by smtp.kernel.org (Postfix) with ESMTPSA id 370951F000C0;
-	Mon, 23 Nov 2026 09:30:55 +0000 (UTC)
-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
-	s=k20260515; t=1795426256;
-	bh=HR3tGr01p/xd4kEORuODSHxO9W+SLv53b4nhMVjrxnA=;
-	h=From:Subject:Reply-To:To:Cc:In-Reply-To:References:Date;
-	b=l2sQmqt6fN50A1T5j2Rg3Laut2oeg6i/kGcP8NfVR+rBe9nnLrkX0MfUw6z9PcD8w
-	 lsJhzbMwviOpihMdjT1lFgWDyRL8BtYFs9zo6sWXD4uP6bj2xeGL5KLG8aejbD8mgg
-	 XJ/g9OKghNehnJgMnJBw/QBdsL0vGE0mefry+z3aSgBkkmjFw9CfUQOLj7AzXpRJ76
-	 sEbfwNmkSVMLUJ92Ulzz0uCBcbGXFkk4EO9BIIJhP1TQtxFQoZ2yNMLWeULFmNeO0s
-	 dVsenyaP0cC9TH9pxsRBHREbZhcjDqMWWKIdGE4rExeMC+KyjV/C/MrV7NCQtaHLsK
-	 3vRafunuHbxmg==
-Message-ID: <sashiko-outbox-228978@kernel.org>
-From: sashiko-bot@kernel.org
-Subject: Re: [PATCH v3 13/13] fs: Use inode_or_folios_dirty() in
- __inode_lru_list_add()
-Reply-To: sashiko-reviews@lists.linux.dev
-To: "Jan Kara" <jack@suse.cz>, "Christian Brauner" <brauner@kernel.org>
-Cc: "Andreas Gruenbacher" <agruenba@redhat.com>, gfs2@lists.linux.dev, "Mike
- Marshall" <hubcap@omnibond.com>, "Martin Brandenburg" <martin@omnibond.com>, devel@lists.orangefs.org, "Dave
- Kleikamp" <shaggy@kernel.org>, "Carlos Maiolino" <cem@kernel.org>, "David
- Howells" <dhowells@redhat.com>, "Marc Dionne" <marc.dionne@auristor.com>, "Miklos
- Szeredi" <miklos@szeredi.hu>, "Chuck Lever" <cel@kernel.org>, "Jeff Layton" <jlayton@kernel.org>, "Eric
- Biggers" <ebiggers@kernel.org>, "Jaegeuk Kim" <jaegeuk@kernel.org>, linux-fscrypt@vger.kernel.org, "Anna
- Schumaker" <anna@kernel.org>
-In-Reply-To: <20261123090040.19006-26-jack@suse.cz>
-References: <20261123085601.21199-1-jack@suse.cz>
- <20261123090040.19006-26-jack@suse.cz>
-Content-Type: text/plain; charset=utf-8
-Content-Transfer-Encoding: quoted-printable
-Date: Mon, 23 Nov 2026 09:30:54 +0000
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 33632606A321;
+	Mon, 23 Nov 2026 09:31:40 +0000 (UTC)
+DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 33632606A321
+Authentication-Results: smtp.subspace.kernel.org; dmarc=pass (p=none dis=none) header.from=lst.de
+Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=lst.de
+Received: by verein.lst.de (Postfix, from userid 2407)
+	id B75C368B05; Mon, 23 Nov 2026 10:31:34 +0100 (CET)
+Date: Mon, 23 Nov 2026 10:31:34 +0100
+From: Christoph Hellwig <hch@lst.de>
+To: Laveesh Bansal <laveeshb@laveeshbansal.com>
+Cc: Jens Axboe <axboe@kernel.dk>, Eric Biggers <ebiggers@kernel.org>,
+	Christoph Hellwig <hch@lst.de>, "Theodore Y. Ts'o" <tytso@mit.edu>,
+	Jaegeuk Kim <jaegeuk@kernel.org>,
+	syzbot+20d60aafd9a0d1f2a380@syzkaller.appspotmail.com,
+	linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org,
+	linux-f2fs-devel@lists.sourceforge.net,
+	linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH] blk-crypto: avoid fs reclaim under profile->lock in
+ the fallback
+Message-ID: <20261123093134.GA23224@lst.de>
+References: <20261122213120.20974-1-laveeshb@laveeshbansal.com>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -66,58 +52,26 @@ List-Subscribe: <mailto:linux-fscrypt+subscribe@vger.kernel.org>
 List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20261122213120.20974-1-laveeshb@laveeshbansal.com>
+User-Agent: Mutt/1.5.17 (2007-11-01)
 
-Thank you for your contribution! Sashiko AI review found 1 potential
-issue to consider:
-- [High] fs: UAF of inode->i_mapping in __inode_lru_list_add() after
-  dev_dax teardown
---
+On Sun, Nov 22, 2026 at 01:31:20PM -0800, Laveesh Bansal wrote:
+> Setting a key in blk-crypto-fallback can deadlock on profile->lock.
+> blk_crypto_get_keyslot() holds it across keyslot_program, whose setkey
+> allocates with GFP_KERNEL (Adiantum); direct reclaim can evict an fscrypt
+> inode, and blk_crypto_evict_key() then takes profile->lock again. syzbot
+> reports it as an fs_reclaim vs profile->lock cycle. Since
+> commit 5acc6f649a68 ("fscrypt: Always use blk-crypto for contents on
+> block-based filesystems") hitting it no longer needs -o inlinecrypt.
+> 
+> Use memalloc_noio_save() around both setkey calls (keyslot_program and
+> the blank-key clear in evict_keyslot), as blk_crypto_alloc_enc_bio()
+> does.
 
-commit dba191eb05adecdae3b365e1982438c7882c5c1d
-Author: Jan Kara <jack@suse.cz>
+Pleawe move these into blk_crypto_hw_enter/exit so that it is tied
+to the lock for which you enforce the NOIO context instead of hacking
+around the issue for specific allocations.
 
-fs: Use inode_or_folios_dirty() in __inode_lru_list_add()
-
-This commit replaces the I_DIRTY_ALL check in __inode_lru_list_add() with a
-call to inode_or_folios_dirty().
-
-> diff --git a/fs/inode.c b/fs/inode.c
-> index de207f2f95a98..fb759033aa965 100644
-> --- a/fs/inode.c
-> +++ b/fs/inode.c
-> @@ -552,7 +552,9 @@ static void __inode_lru_list_add(struct inode *inode,=
- bool rotate)
->  {
->  	lockdep_assert_held(&inode->i_lock);
-> =20
-> -	if (inode_state_read(inode) & (I_DIRTY_ALL | I_SYNC | I_FREEING | I_WIL=
-L_FREE))
-> +	if (inode_state_read(inode) & (I_SYNC | I_FREEING | I_WILL_FREE))
-> +		return;
-> +	if (inode_or_folios_dirty(inode))
->  		return;
-
-[Severity: High]
-Can inode_or_folios_dirty() cause a use-after-free on inode->i_mapping
-when a device-dax character special file inode is added to the LRU after
-dev_dax teardown?
-
-Unlike mapping_shrinkable(&inode->i_data) below and the other LRU and
-eviction paths in fs/inode.c, inode_or_folios_dirty() dereferences
-inode->i_mapping via mapping_tagged(inode->i_mapping, PAGECACHE_TAG_DIRTY)
-whenever I_DIRTY_ALL is clear.
-
-When a device-dax character device is opened, dax_open() redirects the
-special file's inode->i_mapping to &dax_dev->inode.i_data, which is
-normally only reset to &inode->i_data in evict() -> cd_forget() if
-inode->i_cdev is still non-NULL.  If the dev_dax instance is unbound or
-deleted while the special file inode remains cached, cdev_purge() clears
-inode->i_cdev without restoring inode->i_mapping, and dev_dax_release() ->
-put_dax() -> dax_free_inode() frees dax_dev.  When the last reference to
-the special file inode is later dropped in iput_final() ->
-__inode_lru_list_add(), inode_or_folios_dirty() reads from the freed
-dax_dev->inode.i_data mapping.
-
---=20
-Sashiko AI review =C2=B7 https://sashiko.dev/#/patchset/20261123085601.2119=
-9-1-jack@suse.cz?part=3D13
