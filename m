@@ -1,70 +1,58 @@
-Authentication-Results: smtp.subspace.kernel.org; arc=pass header.oldest-pass=0 smtp.remote-ip=165.173.182.15
-ARC-Seal: i=2; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=pass;
-	t=1795760800;
-	b=JXyUHNw3bNCbnq3sx5PamlddZNZ+w6e0JO6b8+D0Ytsuvt3kLJAxCPdeYSslqWVbbP7Q
-	 TDnBzVTz88dyODhozdqOVQMOQlblzPKCgXM+D8iMJfLpmwuKJMrLM5ZeFXsUtxW/3KLeq
-	 SRj2gk2pgTWwf7Ym72+wB+Wq6RlBP/SiufwaSohqeBC7bxpzGgaCMOAybMlEpNTaK0NUy
-	 PUDJnlPBVs7TssbTLy0DnlG3dYXJ0bJbIEIFvZMUjFitH0GELyuYKSmLbKea//oFF8RXN
-	 gu7nnklGLmC2bV53MI2eeGA7TZone6LG6VX3exAp2vDYgt4fYS2I7ryUbNiyTrfxQNw==
-ARC-Message-Signature: i=2; d=subspace.kernel.org; s=arc20261015;
-	a=rsa-sha256; c=relaxed/relaxed; t=1795760800;
-	h=DMARC-Filter:DKIM-Signature:Received:From:To:Cc:Subject:Date:
-	 Message-ID:X-Mailer:In-Reply-To:References:MIME-Version:
-	 Content-Transfer-Encoding:X-ZohoMailClient;
-	bh=bCNn9r8VG4aa0r4Am+eSfDy/QqMZMCKrbKXiHll/bkU=;
-	b=E/CjVHqSjax6FIhUmI52ts6VXfOiexYoQxnwnxzXr01+mCRGxk4uBg2AJOqKsTUu2tMY
-	 8dks4cL5yYSzKbqVJlv7PouJOc/L8ghQtZ4bDXBf4GNGqZyoY0RkdJ+sqd7hn2QWP5Cah
-	 BNexw484BQz81LnGGAjG6JKUaHnZXMWW0D+wgxBw0bK+S+1dTkUpmwlzuO0gACQklAznp
-	 q3xe6hV2W72quiYK/T2J/OgejEjN0ok0fSfJuWw8wuLFqRKA4xNEX1Zs6KUDwAGAomhER
-	 PKLzIncxKhe4PF0fli3b667fNk0giCHej3XHbDiM81gmT9GGw4UTqXwIAD9YrjInsRQ==
-ARC-Authentication-Results: i=2; smtp.subspace.kernel.org; 
-	dmarc=none header.from=laveeshbansal.com;
-	spf=pass smtp.mailfrom=laveeshbansal.com;
-	dkim=pass header.d=laveeshbansal.com header.i=@laveeshbansal.com header.a=rsa-sha256 header.s=zoho header.b=TiQ3U15R;
-	arc=pass header.oldest-pass=0 smtp.remote-ip=165.173.182.15
-Received: from sender5-op-o15.zoho.com (sender5-op-o15.zoho.com [165.173.182.15])
+Authentication-Results: smtp.subspace.kernel.org; arc=none smtp.remote-ip=100.103.45.18
+ARC-Seal: i=1; d=subspace.kernel.org; s=arc20261015; a=rsa-sha256; cv=none;
+	t=1795805294;
+	b=OxpIgAspnxJc7NpUUKNs7EWWY9wTHwMKOFi4Qkn+eEjTdvanqZE8cjvaWGfe5TYJJ837
+	 CuCZ2GUWuxeSeHXPwdP3OfNzYOP+0pfkHA7+56EZArB1PoJjJPGkbtcVSbrOh2QONDhej
+	 IMzxOAfQtxFzWWt9f2ckVUmPQfUqMS6zhgS9NR7jHdzZC7H4Mv9b128KXM7zasgitLuD9
+	 kGpTOgDd573REqPMnhK4ph/WSgwT8ZTeDhrNjvR4vD7RKxlAi/3nZqKOHoaKdf+h7kPl0
+	 ZWtmZ2hxUIeAscYhM15kxGpIqtt3RV89d94X9EoYyY2vfEjovaiv9VI36W9htzRQoOQ==
+ARC-Message-Signature: i=1; d=subspace.kernel.org; s=arc20261015;
+	a=rsa-sha256; c=relaxed/relaxed; t=1795805294;
+	h=Received:DKIM-Signature:Date:From:To:Cc:Subject:Message-ID:
+	 References:MIME-Version:Content-Type:Content-Disposition:In-Reply-To;
+	bh=kTWfwLU9AK6CypFMW27FabInezsO4qPOmYZqmCY8gzk=;
+	b=cQwLGy+cDdNhstdCNtPRcuAsDRsOMa/8V5kqNy0e8DV1OJQGR0F62VwZutprvwF7Hepu
+	 CivMr9O9HneCNQgCapc0aVUStXiNvNwW0sGmsXdqEN63tTItb53N7CLX8Hq0KM/0WjXr0
+	 G/NCIpr3k6vHQ/VM/y8SZmvqb9zThhL1kclhmK4diCA3QqL6UzL6+QcGBwAgBmBp6dv2N
+	 sSczhDybwKW7hNgZBpmFs4TTmyedCaz2XITM+jk0Gf+ufi6OCL9pqWtAZsPpx+Vh7E4I/
+	 NezZColMzEJoicYEizAA3P+bJ3EbgbsU5C0XWMgBgfXqm+8kXFNGA34kmFyTIcVZ4XA==
+ARC-Authentication-Results: i=1; smtp.subspace.kernel.org; 
+	dkim=pass header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=RQDG1jY3;
+	arc=none smtp.remote-ip=100.103.45.18
+Received: from smtp.kernel.org (quasi.space.kernel.org [100.103.45.18])
 	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
-	 key-exchange X25519 server-signature ECDSA (prime256v1) server-digest SHA256)
+	 key-exchange X25519 server-signature ECDSA (prime256v1))
 	(No client certificate requested)
-	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 01F04606A31C;
-	Fri, 27 Nov 2026 06:26:39 +0000 (UTC)
-DMARC-Filter: OpenDMARC Filter v1.4.2 smtp.subspace.kernel.org 01F04606A31C
-Authentication-Results: smtp.subspace.kernel.org; dmarc=none (p=none dis=none) header.from=laveeshbansal.com
-Authentication-Results: smtp.subspace.kernel.org; spf=pass smtp.mailfrom=laveeshbansal.com
+	by smtp.subspace.kernel.org (Postfix) with ESMTPS id 7CEB4606A31C;
+	Fri, 27 Nov 2026 18:48:14 +0000 (UTC)
 Authentication-Results: smtp.subspace.kernel.org;
-	dkim=pass (1024-bit key, unprotected) header.d=laveeshbansal.com header.i=@laveeshbansal.com header.a=rsa-sha256 header.s=zoho header.b=TiQ3U15R
-ARC-Seal: i=1; a=rsa-sha256; t=1795760783; cv=none; 
-	d=zohomail.com; s=zohoarc; 
-	b=Iq8+3O6SVynT2p7WX05aK+b7q9YoMkkRNFV3sfhmUDfefXMc9GdZKVzfp/G0qBb1pOMuqmV/5+IHeRerNmIZm5po6BzF/fMCCOhdyI3qgjiPB4wkQDxMYUV+sHdKFHroRNu3ak2OD32zXAtp151sSQvwnJgECfySt0Zo1vmy6+Y=
-ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=zohomail.com; s=zohoarc; 
-	t=1795760783; h=Content-Transfer-Encoding:Cc:Cc:Date:Date:From:From:In-Reply-To:MIME-Version:Message-ID:Subject:Subject:To:To:Message-Id:Reply-To; 
-	bh=bCNn9r8VG4aa0r4Am+eSfDy/QqMZMCKrbKXiHll/bkU=; 
-	b=jJlsb++oCttRggNA3bAp3KJoKJ1RkFzyGC50RoUTVTkfejfzP9YOJTUtyWcUATRbLTPS37mCMA479lREhVRYJpOuhpsqUP7iLn6GRW0yVnlTHE1IK1FnKZn1gqLWc6gtN9d0dNg3gLz5yCKHXlyQ3UPFzpYswkr1XcYIoZVH/k4=
-ARC-Authentication-Results: i=1; mx.zohomail.com;
-	dkim=pass  header.i=laveeshbansal.com;
-	spf=pass  smtp.mailfrom=laveeshb@laveeshbansal.com;
-	dmarc=pass header.from=<laveeshb@laveeshbansal.com>
-DKIM-Signature: a=rsa-sha256; b=TiQ3U15RQrizMzkNM3/UKGIzpdsVJHRMduzq6A5gQoelzNgKqo8ooAwP+xzJq5kblOfAfid1MiquAAU9ljG7zIJZT1EH54+nKavCqm0BIEdy6FfPeGk6yRjCfsLl3WW0eZ1ofQgZMGdhKvFcpUpDkQlLUl8xClgnQanoHNLTCwM=; c=relaxed/relaxed; s=zoho; d=laveeshbansal.com; v=1; bh=bCNn9r8VG4aa0r4Am+eSfDy/QqMZMCKrbKXiHll/bkU=; h=Content-Description:Content-ID:Content-Type:Content-Transfer-Encoding:Cc:Date:From:In-Reply-To:List-Subscribe:List-Post:List-Owner:List-Id:List-Archive:List-Help:List-Unsubscribe:MIME-Version:Message-ID:Resent-Sender:Resent-Cc:Resent-Date:Resent-To:Reply-To:Resent-Message-ID:Resent-From:Sender:Subject:To:Date:From:Message-Id:Reply-To:Subject:To:Cc;
-Received: by smtp.zohomail.com with SMTPS id 1795760780464754.4038009804824;
-	Thu, 26 Nov 2026 22:26:20 -0800 (PST)
-From: Laveesh Bansal <laveeshb@laveeshbansal.com>
-To: Christoph Hellwig <hch@lst.de>
-Cc: Jens Axboe <axboe@kernel.dk>,
-	Eric Biggers <ebiggers@kernel.org>,
+	dkim=pass (2048-bit key) header.d=kernel.org header.i=@kernel.org header.a=rsa-sha256 header.s=k20260515 header.b=RQDG1jY3
+Received: by smtp.kernel.org (Postfix) with ESMTPSA id 98EA81F0089A;
+	Fri, 27 Nov 2026 18:48:13 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=kernel.org;
+	s=k20260515; t=1795805294;
+	bh=kTWfwLU9AK6CypFMW27FabInezsO4qPOmYZqmCY8gzk=;
+	h=Date:From:To:Cc:Subject:References:In-Reply-To;
+	b=RQDG1jY3KRmCfeLg/3+43yn0523AOmfpBepgIF+hHdw2zdHKqvTNN91SZVu3I6YzP
+	 CRvLyJfFDbxlmZ9s5IvhBXVJPZ57m3wu8fIqE2BpEmW8DS6hz/w/zlb8eA5+xan9BM
+	 z0juE95k+S0Q+uPUXtWCL/lu6KckkbcKRJ77qtNTrHp4DHwX3RMVlfuLWHZIPUH5Fp
+	 Xs5R4SWilSG1tnUm3jBvfqQ+U4HLHfI4rFRZbxDzK9QnnqUL+SDcuD0hWS/4LLUvQb
+	 9IAQZGkI19cxmbmnPJiMNfDo58kZnU68ep7drZem52tZ07boy0TwZxfqlTjkc9zsr4
+	 hiP7BEGw8vYnA==
+Date: Fri, 27 Nov 2026 10:48:12 -0800
+From: Eric Biggers <ebiggers@kernel.org>
+To: Laveesh Bansal <laveeshb@laveeshbansal.com>
+Cc: Jens Axboe <axboe@kernel.dk>, Christoph Hellwig <hch@lst.de>,
 	"Theodore Y. Ts'o" <tytso@mit.edu>,
 	Jaegeuk Kim <jaegeuk@kernel.org>,
 	syzbot+20d60aafd9a0d1f2a380@syzkaller.appspotmail.com,
-	linux-block@vger.kernel.org,
-	linux-fscrypt@vger.kernel.org,
+	linux-block@vger.kernel.org, linux-fscrypt@vger.kernel.org,
 	linux-f2fs-devel@lists.sourceforge.net,
-	linux-crypto@vger.kernel.org,
-	linux-kernel@vger.kernel.org
-Subject: Re: [PATCH v2] blk-crypto: use a NOIO scope while holding profile->lock
-Date: Thu, 26 Nov 2026 22:26:17 -0800
-Message-ID: <20261127062617.29510-1-laveeshb@laveeshbansal.com>
-X-Mailer: git-send-email 2.54.0
-In-Reply-To: <20261125053308.GA20407@lst.de>
-References: <20261125053308.GA20407@lst.de>
+	linux-crypto@vger.kernel.org, linux-kernel@vger.kernel.org
+Subject: Re: [PATCH v3] blk-crypto: use a NOIO scope while holding
+ profile->lock
+Message-ID: <20261127184812.GC1974@quark>
+References: <20261125081417.77674-1-laveeshb@laveeshbansal.com>
 X-Mailing-List: linux-fscrypt@vger.kernel.org
 List-Id: <linux-fscrypt.vger.kernel.org>
 List-Post: <mailto:linux-fscrypt@vger.kernel.org>
@@ -74,21 +62,32 @@ List-Unsubscribe: <mailto:linux-fscrypt+unsubscribe@vger.kernel.org>
 List-Owner: <mailto:linux-fscrypt+owner@vger.kernel.org>
 Precedence: list
 MIME-Version: 1.0
-Content-Transfer-Encoding: 8bit
-X-ZohoMailClient: External
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+In-Reply-To: <20261125081417.77674-1-laveeshb@laveeshbansal.com>
 
-Hi Christoph
+On Wed, Nov 25, 2026 at 12:14:17AM -0800, Laveesh Bansal wrote:
+> Setting a key in blk-crypto-fallback can deadlock on profile->lock.
+> blk_crypto_get_keyslot() holds it across keyslot_program, whose setkey
+> allocates with GFP_KERNEL (Adiantum); direct reclaim can evict an fscrypt
+> inode, and blk_crypto_evict_key() then takes profile->lock again. syzbot
+> reports it as an fs_reclaim vs profile->lock cycle. Since
+> commit 5acc6f649a68 ("fscrypt: Always use blk-crypto for contents on
+> block-based filesystems") hitting it no longer needs -o inlinecrypt.
+> 
+> Enter a NOIO scope in blk_crypto_hw_enter() and leave it in
+> blk_crypto_hw_exit(), so allocations made under the lock, by the
+> fallback or a hardware driver, can't recurse into I/O or fs reclaim.
+> blk_crypto_reprogram_all_keys() takes the lock directly, so it gets the
+> same scope.
+> 
+> Fixes: 488f6682c832 ("block: blk-crypto-fallback for Inline Encryption")
+> Cc: stable@vger.kernel.org
+> Reported-by: syzbot+20d60aafd9a0d1f2a380@syzkaller.appspotmail.com
+> Closes: https://lore.kernel.org/r/6a9b25c3.b5d4176b.238c3e.0004.GAE@google.com
+> Suggested-by: Christoph Hellwig <hch@lst.de>
+> Signed-off-by: Laveesh Bansal <laveeshb@laveeshbansal.com>
 
-I sent v3 to address Eric's comments on v2.
+Reviewed-by: Eric Biggers <ebiggers@kernel.org>
 
-blk_crypto_hw_enter() now returns the saved flags and
-blk_crypto_hw_exit() takes them, instead of keeping them in the profile.
-The comment is reworded and the version is gone from the stable tag:
-
-https://lore.kernel.org/r/20261125081417.77674-1-laveeshb@laveeshbansal.com
-
-I did not carry over your Reviewed-by since the code changed. If you
-are ok with v3, please re-add it.
-
-Thanks
-Laveesh
+- Eric
